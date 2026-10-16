@@ -88,7 +88,7 @@ describe("default layout opening tabs", () => {
     defaultLayout(api);
     // Each of these shares a tab strip with at least one sibling. A stack with no entry here opens
     // on whichever panel happened to be added last, which is what this suite exists to prevent.
-    for (const id of ["canvas", "details", "checks", "review", "query"]) {
+    for (const id of ["canvas", "properties", "checks", "review", "query"]) {
       expect(added).toContain(id);
       expect(activated).toContain(id);
     }
@@ -104,10 +104,10 @@ describe("panel registry", () => {
       "changes",
       "checks",
       "coverage",
-      "details",
       "diff",
       "overview",
       "parts",
+      "properties",
       "query",
       "review",
       "rules",
@@ -172,9 +172,17 @@ describe("prunePanels", () => {
   // existing user's saved layout still names "files"; its hole is gone from the template, so
   // without the prune adoptPanel falls back to a blank div and they get an empty "Files" tab.
   it("closes a restored Files panel now that the registry has dropped it", () => {
-    const { api, removed } = fakeApi(["overview", "canvas", "details", "checks", "files"]);
+    const { api, removed } = fakeApi(["overview", "canvas", "properties", "checks", "files"]);
     prunePanels(api);
     expect(removed).toEqual(["files"]);
+  });
+
+  // Properties replaced Details (agni issue 902). A layout saved before then names "details", and its
+  // hole is gone, so it would otherwise restore as an empty tab beside the Properties the reconcile adds.
+  it("closes a restored Details panel now that Properties replaced it", () => {
+    const { api, removed } = fakeApi(["overview", "canvas", "details", "checks"]);
+    prunePanels(api);
+    expect(removed).toEqual(["details"]);
   });
 
   it("removes several retired panels in one pass without skipping any", () => {
@@ -224,11 +232,11 @@ describe("reconcilePanels", () => {
   });
 
   it("reopens only missing DEFAULT-OPEN panels for a legacy save; secondaries stay closed (WS9-042)", () => {
-    // Legacy save (unknown registry) missing a core panel (details) and a secondary (report).
+    // Legacy save (unknown registry) missing a core panel (properties) and a secondary (report).
     // Only the core one is reconciled open; the secondary is discoverable in the Panels menu.
-    const { api, added } = fakeApi(openIds.filter((id) => id !== "details" && id !== "report"));
+    const { api, added } = fakeApi(openIds.filter((id) => id !== "properties" && id !== "report"));
     reconcilePanels(api, []);
-    expect(added).toEqual(["details"]);
+    expect(added).toEqual(["properties"]);
   });
 
   // The tier this used to cover (a newly-registered SECONDARY, menu-only) no longer has an instance
@@ -284,8 +292,8 @@ describe("defaultLayout", () => {
     expect(at("canvas")?.direction).toBeUndefined(); // the centre is the anchor
 
     expect(at("overview")).toMatchObject({ direction: "left", reference: "canvas" });
-    expect(at("details")).toMatchObject({ direction: "below", reference: "overview" });
-    expect(at("parts")).toMatchObject({ direction: "within", reference: "details" });
+    expect(at("properties")).toMatchObject({ direction: "below", reference: "overview" });
+    expect(at("parts")).toMatchObject({ direction: "within", reference: "properties" });
 
     // The east rail is two stacks of two, not one stack of four, because a 15% column clips a four-tab
     // strip, and dockview gives no overflow affordance, so the fourth tab becomes unreachable.

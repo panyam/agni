@@ -1,0 +1,197 @@
+import { describe, it, expect } from "vitest";
+import { create } from "@bufbuild/protobuf";
+import { ClassSource, DesignSchema, Role } from "./gen/agni/v1/ir/ir_pb.js";
+import { PartSpecSchema } from "./gen/agni/v1/param/param_pb.js";
+import { ConversionReportSchema } from "./gen/agni/v1/webapi/design_pb.js";
+import type { FindingItem, FindingsState } from "./findings.js";
+import { type PropertiesInput, inventoryFromDesign, propertiesFor, reportLines } from "./properties.js";
+
+// A barrel jack J1 feeding a regulator U1, with a test point on the output, which is enough to
+// reach every level and every group the panel renders.
+const design = create(DesignSchema, {
+  libraries: [
+    {
+      name: "lib",
+      parts: [
+        { name: "JACK", pins: [{ designator: "1", name: "VIN" }, { designator: "2", name: "GND" }] },
+        { name: "LDO", pins: [{ designator: "1", name: "IN" }, { designator: "2", name: "GND" }, { designator: "10", name: "OUT" }] },
+        { name: "TP", pins: [{ designator: "1", name: "1" }] },
+      ],
+    },
+  ],
+  components: [
+    {
+      refDes: "J1",
+      mpn: "PJ-002A",
+      sections: [{ libraryRef: "lib", partRef: "JACK" }],
+      deviceClasses: [{ class: "connector", source: ClassSource.CONVENTION }],
+      attributes: { footprint: "BarrelJack" },
+    },
+    {
+      refDes: "U1",
+      mpn: "LM1117",
+      value: { input: "3.3V" },
+      sections: [{ libraryRef: "lib", partRef: "LDO" }],
+      deviceClasses: [{ class: "regulator", source: ClassSource.DATASHEET }],
+    },
+    { refDes: "TP1", sections: [{ libraryRef: "lib", partRef: "TP" }], deviceClasses: [{ class: "test_point", source: ClassSource.CONVENTION }] },
+  ],
+  nets: [
+    { name: "VIN", roles: [{ roleKind: Role.RAIL }], connections: [{ componentRef: "J1", pinRef: "1" }, { componentRef: "U1", pinRef: "1" }] },
+    {
+      name: "GND",
+      roles: [{ roleKind: Role.GROUND }],
+      connections: [{ componentRef: "J1", pinRef: "2" }, { componentRef: "U1", pinRef: "2" }],
+    },
+    { name: "3V3", roles: [{ roleKind: Role.RAIL }], connections: [{ componentRef: "U1", pinRef: "10" }, { componentRef: "TP1", pinRef: "1" }] },
+  ],
+});
+
+function finding(over: Partial<FindingItem>): FindingItem {
+  return {
+    rule: "r",
+    category: "",
+    profile: "",
+    severity: "error",
+    kind: "net",
+    subject: "",
+    pin: "",
+    netId: "",
+    busId: "",
+    message: "",
+    inconclusive: false,
+    sheets: [],
+    ...over,
+  } as FindingItem;
+}
+
+// ran is a completed run of three rules, which is what lets a count read as a count.
+function ran(findings: FindingItem[]): FindingsState {
+  return { findings, verdicts: [], focusedVerdict: "", selected: "", ruleCount: 3, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {}, saveNote: "" };
+}
+
+function input(over: Partial<PropertiesInput>): PropertiesInput {
+  return {
+    focus: { level: "design" },
+    designName: "gateway",
+    summary: "gateway.edn · faithful",
+    sheets: [{ id: "s1", name: "Power" }],
+    report: null,
+    inventory: inventoryFromDesign(design),
+    findings: null,
+    datasheet: null,
+    drawn: null,
+    ...over,
+  };
+}
+
+const group = (s: ReturnType<typeof propertiesFor>, name: string) => s.groups.find((g) => g.name === name);
+const row = (s: ReturnType<typeof propertiesFor>, label: string) => s.rows.find((r) => r.label === label)?.value;
+
+describe("inventoryFromDesign", () => {
+  it("lists a component's pins in datasheet order with their functional names and nets", () => {
+    const inv = inventoryFromDesign(design);
+    // "10" after "2", which a string sort gets wrong.
+    expect(inv.pinsOf.get("U1")).toEqual([
+      { pin: "1", name: "IN", net: "VIN" },
+      { pin: "2", name: "GND", net: "GND" },
+      { pin: "10", name: "OUT", net: "3V3" },
+    ]);
+  });
+
+  it("keeps no functional name that only repeats the designator", () => {
+    expect(inventoryFromDesign(design).pinsOf.get("TP1")).toEqual([{ pin: "1", name: "", net: "3V3" }]);
+  });
+});
+
+describe("propertiesFor", () => {
+  it("describes the design, with a findings count that says the checks have not run", () => {
+    const s = propertiesFor(input({}));
+    expect(s.crumbs.map((c) => c.label)).toEqual(["gateway"]);
+    expect(row(s, "components")).toBe("3");
+    expect(row(s, "nets")).toBe("3");
+    expect(row(s, "findings")).toBe("not checked yet");
+    expect(s.ask).toBeUndefined();
+  });
+
+  it("counts findings only once the run is complete, and keeps unresolved apart", () => {
+    const s = propertiesFor(input({ findings: ran([finding({}), finding({ inconclusive: true })]) }));
+    expect(row(s, "findings")).toBe("1 finding, 1 unresolved");
+  });
+
+  it("describes a sheet from what its drawing holds", () => {
+    const s = propertiesFor(input({ focus: { level: "sheet", sheetId: "s1" }, drawn: { refs: ["U1", "J1"], nets: ["VIN"] } }));
+    expect(s.crumbs.map((c) => c.label)).toEqual(["gateway", "Power"]);
+    expect(group(s, "components")?.refs.map((r) => r.label)).toEqual(["J1", "U1"]);
+    expect(group(s, "nets")?.refs[0].target).toEqual({ kind: "net", net: "VIN" });
+  });
+
+  it("describes a component with its pins, nets, classes and evidence tiers, and offers Ask", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: { kind: "component", ref: "U1" }, sheetId: "s1" } }));
+    expect(s.crumbs.map((c) => c.label)).toEqual(["gateway", "Power", "U1"]);
+    expect(row(s, "mpn")).toBe("LM1117");
+    expect(row(s, "value")).toBe("3.3V");
+    expect(row(s, "classes")).toBe("regulator (datasheet)");
+    expect(group(s, "pins")?.refs.map((r) => `${r.label} ${r.detail}`)).toEqual(["1 IN → VIN", "2 GND → GND", "10 OUT → 3V3"]);
+    expect(group(s, "nets")?.refs.map((r) => r.label)).toEqual(["3V3", "GND", "VIN"]);
+    expect(s.ask).toEqual({ kind: "component", ref: "U1" });
+  });
+
+  it("lists a net's pins, components and test points", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: { kind: "net", net: "3V3" } } }));
+    expect(row(s, "roles")).toBe("rail");
+    expect(group(s, "pins")?.refs.map((r) => r.label)).toEqual(["TP1.1", "U1.10"]);
+    expect(group(s, "test points")?.refs.map((r) => r.label)).toEqual(["TP1"]);
+  });
+
+  it("gives a pin its functional name and puts its component in the breadcrumb", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: { kind: "pin", ref: "U1", pin: "10" }, sheetId: "s1" } }));
+    expect(s.crumbs.map((c) => c.label)).toEqual(["gateway", "Power", "U1", "pin 10"]);
+    expect(row(s, "name")).toBe("OUT");
+    expect(row(s, "net")).toBe("3V3");
+  });
+
+  it("shows only the findings about the selection, and says when none were looked for", () => {
+    const f = [finding({ kind: "net", subject: "VIN", rule: "bulk-cap" }), finding({ kind: "net", subject: "GND", rule: "other" })];
+    const sel = { level: "entity" as const, sel: { kind: "net" as const, net: "VIN" } };
+    expect(group(propertiesFor(input({ focus: sel, findings: ran(f) })), "findings")?.refs.map((r) => r.label)).toEqual(["bulk-cap"]);
+    expect(group(propertiesFor(input({ focus: sel })), "findings")?.empty).toBe("not checked yet");
+  });
+
+  it("keeps the datasheet's outcomes apart: no corpus, no part number, no spec, and a spec", () => {
+    const at = (ref: string, corpusConnected: boolean, parts = [] as { refDes: string; mpn: string; spec: ReturnType<typeof create<typeof PartSpecSchema>> | undefined }[]) =>
+      propertiesFor(input({ focus: { level: "entity", sel: { kind: "component", ref } }, datasheet: { corpusConnected, parts } })).datasheet;
+    expect(at("U1", false)?.kind).toBe("no-corpus");
+    expect(at("TP1", true)?.kind).toBe("no-mpn");
+    expect(at("U1", true)).toEqual({ kind: "no-spec", mpn: "LM1117" });
+    const spec = create(PartSpecSchema, { mpn: "LM1117", parameters: [{ name: "VIN abs max" }] });
+    expect(at("U1", true, [{ refDes: "U1", mpn: "LM1117", spec }])?.kind).toBe("spec");
+  });
+
+  it("says when the netlist has no such entity rather than showing an empty part", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: { kind: "component", ref: "ZZ9" } } }));
+    expect(s.note).toContain("no component by that name");
+  });
+
+  it("says the design is still being read before the inventory arrives", () => {
+    const s = propertiesFor(input({ inventory: null, focus: { level: "entity", sel: { kind: "net", net: "VIN" } } }));
+    expect(s.note).toBe("Reading the design…");
+  });
+});
+
+describe("reportLines", () => {
+  it("counts glyphs by class and calls out unmapped and unresolved parts", () => {
+    const r = create(ConversionReportSchema, {
+      components: [
+        { refDes: "R1", kind: "glyph", deviceClass: "resistor" },
+        { refDes: "U1", kind: "box" },
+        { refDes: "U2", kind: "unresolved" },
+      ],
+    });
+    expect(reportLines(r)).toEqual({ counts: "box 1 · resistor 1 · unresolved 1", box: ["U1"], unresolved: ["U2"] });
+  });
+
+  it("is nothing for a faithful drawing", () => {
+    expect(reportLines(null)).toBeNull();
+  });
+});

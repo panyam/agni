@@ -372,3 +372,56 @@ describe("the checks table's severity marks", () => {
     });
   }, 90_000);
 });
+
+// agni issue 902. A click on the drawing selects, and Properties describes the selection. jsdom can
+// prove the panel renders a state, and only a browser can prove a real click on a painted part lands
+// there, that the panel is on screen rather than present and hidden, and that the query box the reader
+// typed in is untouched. The design is opened as a FOLDER, the spelling whose datasheet read failed
+// with invalid_argument on every open until agni issue 736.
+describe("Properties", () => {
+  it("describes a clicked part, keeps the typed query, and asks about it from Ask", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await page.fill("textarea.query-text", "net.rail(?n) => ?n");
+
+      const at = await page.evaluate(() => {
+        const el = document.querySelector('#svg-view [data-kind="component"][data-ref="U1"]');
+        if (!el) throw new Error("the drawing keys no U1");
+        const r = el.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      });
+      await page.mouse.click(at.x, at.y);
+
+      await page.waitForSelector('[data-component="properties"] .pr-title', { timeout: 30_000 });
+      expect(await page.locator('[data-component="properties"] .pr-title').innerText()).toBe("U1");
+      expect((await paintedAt(page, '[data-component="properties"] .pr-title')).ownedByProbe).toBe(true);
+      // The tutorial project seeds U1's part number, so the datasheet line names a spec rather than
+      // reporting no corpus, which is what the folder spelling showed before agni issue 736.
+      await page.waitForFunction(() => /parameters/.test(document.querySelector(".pr-datasheet")?.textContent ?? ""), null, {
+        timeout: 30_000,
+      });
+      expect(await page.inputValue("textarea.query-text")).toBe("net.rail(?n) => ?n");
+
+      await page.click(".pr-ask-go");
+      await page.waitForSelector(".query-row, .query-empty", { timeout: 30_000 });
+      expect(await page.inputValue("textarea.query-text")).not.toBe("net.rail(?n) => ?n");
+      expect(await page.locator(".query-selection-name").innerText()).toBe("U1");
+    });
+  }, 90_000);
+
+  it("selects the sheet for a click on empty paper", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      // A corner of the canvas inside the sheet border, where nothing is keyed.
+      const at = await page.evaluate(() => {
+        const r = document.querySelector("#svg-view svg")!.getBoundingClientRect();
+        return { x: r.left + r.width * 0.5, y: r.top + r.height * 0.97 };
+      });
+      await page.mouse.click(at.x, at.y);
+      await page.waitForFunction(() => document.querySelectorAll('[data-component="properties"] .pr-crumb').length === 2, null, {
+        timeout: 30_000,
+      });
+      expect(await page.locator('[data-component="properties"] .pr-kind').innerText()).toMatch(/sheet/i);
+    });
+  }, 90_000);
+});

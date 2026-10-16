@@ -37,6 +37,9 @@ export class SvgView {
   // pan). The renderer keys every element, so the document is its own pick index and the browser
   // resolves the hit.
   onPick: ((sel: Selection) => void) | null = null;
+  // onPickEmpty fires when a click lands on nothing keyed (the paper, a label, the frame), which
+  // names the sheet itself rather than an entity on it (agni issue 902).
+  onPickEmpty: (() => void) | null = null;
 
   constructor(private readonly host: HTMLElement) {
     this.layer = document.createElement("div");
@@ -216,6 +219,7 @@ export class SvgView {
       if (!wasDragging || moved || !this.onPick) return;
       const sel = pickAt(this.host.ownerDocument, e.clientX, e.clientY);
       if (sel) this.onPick(sel);
+      else this.onPickEmpty?.();
     });
     window.addEventListener("mousemove", (e) => {
       if (!dragging) return;
@@ -285,4 +289,24 @@ export function computeReveal(b: RevealBox, hostW: number, hostH: number): SvgVi
     tx: hostW / 2 - (b.x + b.w / 2) * scale,
     ty: hostH / 2 - (b.y + b.h / 2) * scale,
   };
+}
+
+// drawnOnSheet lists what the sheet on screen draws, read off the rendered document's entity keys,
+// or null when the SVG view holds no drawing (the WebGL and native modes draw elsewhere). A sheet's
+// membership is a property of its drawing, so this is the one place it can be read without asking
+// the server again.
+export function drawnOnSheet(host: HTMLElement): { refs: string[]; nets: string[] } | null {
+  const svg = host.querySelector("svg");
+  if (!svg) return null;
+  const refs = new Set<string>();
+  const nets = new Set<string>();
+  for (const el of svg.querySelectorAll('[data-kind="component"]')) {
+    const r = el.getAttribute("data-ref");
+    if (r) refs.add(r);
+  }
+  for (const el of svg.querySelectorAll('[data-kind="net"]')) {
+    const n = el.getAttribute("data-net");
+    if (n) nets.add(n);
+  }
+  return { refs: [...refs], nets: [...nets] };
 }

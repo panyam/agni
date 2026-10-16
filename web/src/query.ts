@@ -101,6 +101,9 @@ export interface QueryView {
   // entityQuery returns the preset for one entity kind, or undefined before the catalog has arrived.
   // A click then still highlights and asks nothing, rather than running a guess.
   entityQuery: (kind: string) => EntityQueryItem | undefined;
+  // askAbout selects sel and runs the served preset for its kind, as the panel's own ask button does.
+  // It is how Properties' Ask row reaches the query panel (agni issue 902).
+  askAbout: (sel: Selection) => void;
 }
 
 // EntityQueryItem is one served preset. query is the datalog a click on this kind of entity runs,

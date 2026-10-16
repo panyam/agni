@@ -24,7 +24,7 @@ import { projectBarIsland } from "./projectbar.js";
 import { partsPanelIsland } from "./partspanel.js";
 import { ViewerPresenter, type RenderView, type SavedFile } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
-import { SvgView } from "./svgview.js";
+import { SvgView, drawnOnSheet } from "./svgview.js";
 import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, useEngineFetch,
@@ -44,7 +44,9 @@ import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
 import { undrawnStrip } from "./undrawn.js";
 import { staleLinkStrip } from "./stalelink.js";
-import { entityBindings } from "./selection.js";
+import { selectionFromCell, type Selection } from "./selection.js";
+import { propertiesPanelIsland } from "./propertiespanel.js";
+import { PropertiesPresenter } from "./propertiespresenter.js";
 import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 
 // restoring is true while a URL is being replayed into the presenter (initial load or back/forward).
@@ -285,6 +287,7 @@ class AppRoot extends BaseComponent {
     const conventionEl = document.getElementById("convention-bar");
     const projectEl = document.getElementById("project-bar");
     const partsEl = document.getElementById("parts-panel");
+    const propertiesEl = document.getElementById("properties-panel");
     const sheetTabsEl = document.getElementById("sheet-tabs");
     if (!canvasEl || !pickerEl || !compareTreeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl || !sheetTabsEl)
       return children;
@@ -292,7 +295,7 @@ class AppRoot extends BaseComponent {
       return children;
     if (!sheetOverviewEl || !queryEl || !coverageEl || !partsEl || !reviewEl || !conventionEl) return children;
     if (!traceEl || !tablesEl) return children;
-    if (!projectEl) return children;
+    if (!projectEl || !propertiesEl) return children;
 
     const busyEl = document.getElementById("render-busy");
     // One app-level loader overlay drives both the viewer and the diff (they never run at once);
@@ -478,6 +481,7 @@ class AppRoot extends BaseComponent {
       if (comparePick.picker.isOpen()) return;
       if (isTextEntry(e.target)) return;
       void presenter.clearHighlights();
+      propertiesPresenter.selectDesign();
     });
     // The merged checks panel lists rule findings for the loaded design (grouped/sorted client-side)
     // and hosts the on-demand Run button; clicking a finding highlights its subject (net/ref_des),
@@ -510,7 +514,13 @@ class AppRoot extends BaseComponent {
     const query = queryPanelIsland(queryEl, this._eventBus, {
       onRun: (text, bindings, limit) => void presenter.runQuery(text, bindings, limit),
       onSaveCSV: () => void presenter.saveQueryCSV((a, s, n) => tablesPresenter.saveAnswer(a, s, n)),
-      onLocate: (kind, subject, sheet, reason, pin) => void presenter.locateEntity(kind, subject, sheet, reason, pin ?? ""),
+      onLocate: (kind, subject, sheet, reason, pin) => {
+        void presenter.locateEntity(kind, subject, sheet, reason, pin ?? "");
+        // A located cell is also selected, so Properties follows the walk through an answer. A pin
+        // arrives as its component and designator, the other cells name themselves.
+        const sel = kind === "pin" ? (pin ? { kind: "pin" as const, ref: subject, pin } : null) : selectionFromCell(kind, subject);
+        if (sel) propertiesPresenter.selectEntity(sel);
+      },
       // onInspect opens the check results for the selected entity through the EXISTING finding focus
       // (agni issue 259). Nothing re-evaluates, since selectFinding focuses a subject within the
       // results already computed. The identity argument mirrors selectionFromFinding, since the two
@@ -522,20 +532,35 @@ class AppRoot extends BaseComponent {
           sel.kind === "bus" ? (sel.busId ?? "") : (sel.netId ?? ""),
         ),
     });
-    // A click on the drawing highlights what was clicked, writes the query that asks what is known
-    // about it, and brings the Query panel forward if it is a background tab. The generated query
-    // stays editable, so a reader learns the query language by using the viewer.
-    svgView.onPick = (sel) => {
+    // Properties describes whatever is selected (agni issue 902). A click on the drawing selects and
+    // highlights, and leaves the query panel alone, since a stray click used to overwrite whatever the
+    // reader had typed there. Asking about the selection is the panel's Ask row, which runs the
+    // served preset in the query panel and brings it forward.
+    const properties = propertiesPanelIsland(propertiesEl, this._eventBus, {
+      onFocus: (focus) => {
+        propertiesPresenter.select(focus);
+        if (focus.level === "entity") locateSelection(focus.sel);
+      },
+      onAsk: (sel) => {
+        query.view.askAbout(sel);
+        if (dockApi) dockApi.getPanel("query")?.api.setActive();
+      },
+    });
+    const propertiesPresenter = new PropertiesPresenter(properties.view, {
+      getDesign: (req) => designClient().getDesign(req),
+      drawn: () => drawnOnSheet(svgEl),
+    });
+    const locateSelection = (sel: Selection) =>
       void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
-      // The panel names the pick, so the same bar carries the next question. A click on a result
-      // cell replaces the name with whatever it landed on.
-      query.view.setSelection(sel);
-      // The preset comes from the server (query.EntityQueries), so the query text is checked where
-      // the relations it names are defined. Before the catalog arrives there is no preset, and a
-      // click then highlights and asks nothing rather than running a guess.
-      const preset = query.view.entityQuery(sel.kind);
-      if (preset) query.view.setQuery(preset.query, entityBindings(preset.binds, sel));
-      if (dockApi) dockApi.getPanel("query")?.api.setActive();
+    svgView.onPick = (sel) => {
+      locateSelection(sel);
+      propertiesPresenter.selectEntity(sel);
+      if (dockApi) dockApi.getPanel("properties")?.api.setActive();
+    };
+    // A click on empty paper names the sheet being looked at.
+    svgView.onPickEmpty = () => {
+      propertiesPresenter.selectSheet();
+      if (dockApi) dockApi.getPanel("properties")?.api.setActive();
     };
 
     // In the interface-coverage panel (WS9-041), clicking a signal locates its net through the same
@@ -595,15 +620,21 @@ class AppRoot extends BaseComponent {
       canvas,
       renderView,
       {
-        sheetNavs: [sheetTabs.view],
-        summary: setSummary,
+        sheetNavs: [sheetTabs.view, { setState: (st) => propertiesPresenter.setSheets(st) }],
+        summary: (text) => propertiesPresenter.setSummary(text),
         controls: controls.view,
-        findings: findings.view,
+        findings: {
+          setState: (st) => {
+            findings.view.setState(st);
+            propertiesPresenter.setFindings(st);
+          },
+          setFindingLocateNote: (note) => findings.view.setFindingLocateNote(note),
+        },
         expectationCaption: setExpectCaption,
         undrawnNote: setUndrawnNote,
         staleLinkNote: setStaleLinkNote,
         rules: rules.view,
-        report: setReport,
+        report: (report) => propertiesPresenter.setReport(report),
         // A saved report goes to the visitor's machine as a download, and its rows link back to this
         // viewer under the page's own base (agni issue 127).
         download: saveFile,
@@ -627,7 +658,12 @@ class AppRoot extends BaseComponent {
         review: review.view,
         conventionBar: conventionBar.view,
         projectBar: projectBar.view,
-        parts: parts.view,
+        parts: {
+          setState: (st) => {
+            parts.view.setState(st);
+            propertiesPresenter.setDatasheet(st);
+          },
+        },
       },
       queryClient(),
       reviewClient(),
@@ -664,6 +700,7 @@ class AppRoot extends BaseComponent {
       conventionBar.island,
       projectBar.island,
       parts.island,
+      properties.island,
     );
     return children;
   }
@@ -681,55 +718,6 @@ function saveFile(file: SavedFile): void {
   a.remove();
   // Revoked on the next turn, since a click starts the download asynchronously in some browsers.
   setTimeout(() => URL.revokeObjectURL(url), 0);
-}
-
-function setSummary(text: string): void {
-  const el = document.getElementById("design-summary");
-  if (el) el.textContent = text;
-}
-
-// setReport renders the auto-layout conversion report into the detail panel: a per-label count
-// line, then call-outs for the unmapped (box) and unresolved components, the latter pointing at
-// --symbol-path. A null/empty report hides the panel (e.g. the faithful layout).
-function setReport(report: { components: { refDes: string; deviceClass: string; kind: string }[] } | null): void {
-  const el = document.getElementById("conversion-report");
-  if (!el) return;
-  el.replaceChildren();
-  if (!report || report.components.length === 0) {
-    el.style.display = "none";
-    return;
-  }
-  el.style.display = "";
-
-  // Group ref-des by label: the device class for a glyph, else the kind (provided/box/unresolved).
-  const byLabel = new Map<string, string[]>();
-  for (const c of report.components) {
-    const label = c.kind === "glyph" ? c.deviceClass : c.kind;
-    (byLabel.get(label) ?? byLabel.set(label, []).get(label)!).push(c.refDes);
-  }
-
-  const heading = document.createElement("h4");
-  heading.textContent = "Conversion";
-  el.appendChild(heading);
-
-  const counts = document.createElement("div");
-  counts.className = "report-counts";
-  counts.textContent = [...byLabel.entries()]
-    .sort((a, b) => a[0].localeCompare(b[0]))
-    .map(([label, refs]) => `${label} ${refs.length}`)
-    .join(" · ");
-  el.appendChild(counts);
-
-  const callout = (cls: string, text: string) => {
-    const d = document.createElement("div");
-    d.className = cls;
-    d.textContent = text;
-    el.appendChild(d);
-  };
-  const box = byLabel.get("box");
-  if (box) callout("report-box", `${box.length} unmapped (no device glyph): ${box.join(" ")}`);
-  const un = byLabel.get("unresolved");
-  if (un) callout("report-unresolved", `${un.length} unresolved — pass --symbol-path: ${un.join(" ")}`);
 }
 
 // Boot the dock shell before the island lifecycle. The dock adopts the server-rendered holes

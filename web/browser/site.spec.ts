@@ -18,6 +18,10 @@ import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
 import { serveStatic, type StaticServer } from "./staticserver.js";
 
+// The design's summary line, which Properties shows at the design level (agni issue 902). It names
+// the read, so "faithful" in it says the schematic was drawn rather than an auto-layout.
+const DESIGN_SUMMARY = '[data-component="properties"] dd[data-row="read"]';
+
 const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 const prefix = "/agni/demo/";
 let browser: Browser;
@@ -133,7 +137,7 @@ describe("the static demo under /agni/demo/", () => {
         await page.click(`text=${title}`);
         expect(await checks(page)).toBeGreaterThan(0);
         expect(new URL(page.url()).pathname).toContain(`${prefix}designs/${mount}/`);
-        expect(await page.locator("#design-summary").textContent()).toContain("faithful");
+        expect(await page.locator(DESIGN_SUMMARY).textContent()).toContain("faithful");
         expect(await serverOrFlagText(page)).toEqual([]);
         expect(log.api).toEqual([]);
         expect(log.failed).toEqual([]);
@@ -236,7 +240,7 @@ describe("the static demo under /agni/demo/", () => {
       await page.setInputFiles("#drop-input", [join(dir, "companion-demo.edn"), join(dir, "companion-demo.eds")]);
       await expect.poll(() => page.locator("#drop-dialog").evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
       await page.locator(".drop-design-open").first().click();
-      await expect.poll(() => page.locator("#design-summary").textContent(), { timeout: 60_000 }).toContain("faithful");
+      await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 60_000 }).toContain("faithful");
       expect(new URL(page.url()).pathname).toMatch(new RegExp(`^${prefix}designs/local/drop-[a-z0-9]+/companion-demo\\.edn/view`));
       expect(log.failed).toEqual([]);
       expect(log.errors).toEqual([]);

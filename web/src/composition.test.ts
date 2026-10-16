@@ -300,8 +300,8 @@ describe("run checks, then locate a finding", () => {
 // the renderer keys the element, SvgView resolves the click, selection.ts writes the query, and
 // main.ts hands it to the panel and brings that panel forward. Each of those has its own test; this
 // is the one that fails if they are not connected to each other.
-describe("clicking the drawing asks a question about what was clicked", () => {
-  it("turns a click on a keyed element into a query in the panel", async () => {
+describe("clicking the drawing selects what was clicked, and Ask asks about it", () => {
+  it("names a click in Properties, leaves the query box alone, and runs the preset from Ask", async () => {
     // The SVG the server would send, keyed the way core/render/svg.go keys it.
     const wire = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
     wire.setAttribute("data-kind", "net");
@@ -314,22 +314,32 @@ describe("clicking the drawing asks a question about what was clicked", () => {
     document.elementFromPoint = ((x: number, y: number) => (x === 400 && y === 300 ? wire : null)) as typeof document.elementFromPoint;
 
     try {
+      const box = () => document.querySelector<HTMLTextAreaElement>('[data-component="query"] textarea');
+      const typed = box()?.value ?? "";
       const host = document.getElementById("svg-view");
       expect(host, "the page declares no #svg-view host").toBeTruthy();
       host!.dispatchEvent(new MouseEvent("mousedown", { clientX: 400, clientY: 300, bubbles: true }));
       window.dispatchEvent(new MouseEvent("mouseup", { clientX: 400, clientY: 300, bubbles: true }));
 
-      // The query panel holds the served preset, and its binding chip names the net that was clicked
-      // (agni issue 793).
+      // Properties names the pick (agni issue 902), and the query box keeps whatever was in it,
+      // since a stray click used to overwrite a query the reader had typed.
       await vi.waitFor(() => {
-        const box = document.querySelector<HTMLTextAreaElement>('[data-component="query"] textarea');
-        expect(box?.value ?? "").toContain("?net");
+        expect(document.querySelector('[data-component="properties"] .pr-kind')?.textContent).toBe("net");
+        expect(document.querySelector('[data-component="properties"] .pr-title')?.textContent).toBe("PMIC_CORE_3V3");
+      }, 3000);
+      expect(box()?.value ?? "").toBe(typed);
+
+      // Ask runs the served preset, and its binding chip names the net that was clicked (agni issue
+      // 793). main.ts wiring the Ask row to the query panel is its own edit to leave out.
+      const ask = document.querySelector<HTMLButtonElement>('[data-component="properties"] .pr-ask-go');
+      expect(ask, "Properties offers no Ask row for a net").toBeTruthy();
+      ask!.click();
+      await vi.waitFor(() => {
+        expect(box()?.value ?? "").toContain("?net");
         const bound = document.querySelector<HTMLInputElement>('[data-component="query"] .query-binding-value');
         expect(bound?.value ?? "").toBe("PMIC_CORE_3V3");
       }, 3000);
-      // And the panel names what was picked, which is where the next hop is offered from. main.ts
-      // pushing the selection is a separate call from the one that writes the query, so it is a
-      // separate thing to leave unwired.
+      // And the query panel names what was asked about, which is where the next hop is offered from.
       const named = document.querySelector('[data-component="query"] .query-selection-name');
       expect(named?.textContent ?? "").toBe("PMIC_CORE_3V3");
     } finally {

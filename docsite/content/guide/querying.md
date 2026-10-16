@@ -664,13 +664,14 @@ and a query and a check in the same session then answer under the same vocabular
 Datasheet (`param.max`) facts are not yet wired into the viewer. A query over `param.max` returns nothing
 there, and datasheet joins stay on the CLI for now.
 
-A search or a click on the drawing fills the box with a query whose variables are bound to what you
-searched for or clicked. The values show as chips under the box, one per variable, so the query
-stays the same sentence whatever you picked. Edit a chip's value to ask about something else, or
+A click on the drawing selects what you clicked and describes it in the **Properties** panel, and
+leaves the query box alone. Its **Ask** row, or a search, fills the box with a query whose variables
+are bound to what you picked or searched for. The values show as chips under the box, one per
+variable, so the query stays the same sentence whatever you picked. Edit a chip's value to ask about something else, or
 remove it to leave the variable free and widen the question. Editing a bound variable out of the
 query drops its chip.
 
-A question about one thing you clicked asks for its first 50 rows, so a click on a ground net with a
+A question about one thing you picked asks for its first 50 rows, so a click on a ground net with a
 thousand pins draws quickly. The count under the answer then reads `50 of 1229 result(s)` with a
 **show all** button that asks the same question again without the limit. A query you write and run
 yourself is never cut.
