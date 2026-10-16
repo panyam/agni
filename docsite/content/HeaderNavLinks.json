@@ -38,6 +38,7 @@
       { "name": "User guide", "url": "guide/", "group": true },
       { "name": "Getting started", "url": "guide/getting-started/" },
       { "name": "Concepts", "url": "guide/concepts/" },
+      { "name": "Projects and designs", "url": "guide/projects/" },
       { "name": "Checks and reports", "url": "guide/checks-and-reports/" },
       { "name": "Comparing revisions", "url": "guide/comparing-revisions/" },
       { "name": "Querying", "url": "guide/querying/" },
@@ -84,7 +85,7 @@
     "icon": "play",
     "children": [
       { "name": "Open a board in your browser", "url": "demo/" },
-      { "name": "Playgrounds", "url": "demos/" }
+      { "name": "About the demo", "url": "demos/" }
     ]
   },
   {

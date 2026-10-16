@@ -65,6 +65,39 @@ Every net of both revisions is then accounted for once: an unchanged net as `equ
 under its kind, and a rename as one entry covering its old and new names. The API takes it as
 `include_equal` on `DiffDesignsRequest`.
 
+## Declared revisions
+
+A later revision usually sits in the same folder as the first, with a board of its own. Declare it
+in the design's `design.yaml`, under `revisions`, with its own entry and companions:
+
+```yaml
+name: gateway
+entry: gateway.edn
+companions: [gateway.kicad_sch, gateway.kicad_pcb]
+revisions:
+  - entry: gateway-rev-b.edn
+    companions: [gateway-rev-b.kicad_pcb]
+```
+
+Naming a declared revision's entry, or one of its companions, reads that revision with its own
+views, so rev B's board-tier rules run against rev B's copper. A file belongs to one revision at
+most, so a board is never borrowed by a netlist it was not drawn for.
+
+A revision you have not declared reads exactly as named, with no board. Its connectivity diffs as
+well as a declared one's, but a check of it runs no board-tier rule, and `check` says on stderr which
+ones did not run. Without that note a revision with fewer findings could be read as a cleaner board
+when its copper was never read. The tutorial project keeps `gateway-rev-c.edn` undeclared to show
+the difference:
+
+```
+agni check examples/tutorial-project/designs/gateway/gateway-rev-b.edn
+agni check examples/tutorial-project/designs/gateway/gateway-rev-c.edn
+```
+
+[Projects and designs](../projects/) covers the rest of `design.yaml`, and
+[the architecture page](../../architecture/projects-and-designs/) says why companions and revisions
+are declared file by file rather than inferred.
+
 ## In the viewer
 
 `agni serve` renders the same diff visually, so when you open two revisions the changed
