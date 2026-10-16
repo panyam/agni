@@ -2,12 +2,14 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/service"
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
@@ -813,5 +815,29 @@ func TestReviewCoverageRefusalLeavesNoOutputFile(t *testing.T) {
 	}
 	if _, err := os.Stat(p); err == nil {
 		t.Errorf("a refused run created %s", p)
+	}
+}
+
+// `review --format html` writes the page RenderReviewReport renders from the same run, which is the
+// page the viewer's Save report saves, so the two cannot drift (agni issue 1030). Only the generated
+// line differs between two renders.
+func TestReviewHTMLIsTheRenderedReviewReport(t *testing.T) {
+	freshWorkspace(t)
+	args := []string{"--checklist", "testdata/review/mini.yaml", "testdata/review/can-broken.edn"}
+	page := runReview(t, append([]string{"--format", "html"}, args...)...)
+	var rv webapi.Review
+	if err := protojson.Unmarshal([]byte(runReview(t, append([]string{"--format", "json"}, args...)...)), &rv); err != nil {
+		t.Fatal(err)
+	}
+	svc := service.NewReviewService(nil, nil, nil, nil, nil, service.ReviewEnv{}, "", nil)
+	resp, err := svc.RenderReviewReport(context.Background(), &webapi.RenderReviewReportRequest{Review: &rv, Links: &webapi.ReportLinks{}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(rv.GetResults().GetAreas()) == 0 {
+		t.Fatal("the run scored no areas, so two empty pages would compare equal")
+	}
+	if got, want := writtenAt.ReplaceAllString(page, "T"), writtenAt.ReplaceAllString(string(resp.GetContent()), "T"); got != want {
+		t.Errorf("review --format html differs from RenderReviewReport's page for the same run:\n--- cli\n%s\n--- rpc\n%s", got, want)
 	}
 }

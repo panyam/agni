@@ -6,7 +6,7 @@ import { CheckService, CheckReportFormat, CheckDesignResponseSchema, type CheckD
 import { BROWSER_MOUNT } from "./wasm/drop.js";
 import { QueryService, type QuerySet, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
 import type { TableAnswer } from "./tables.js";
-import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
+import { ReviewService, type Review } from "./gen/agni/v1/webapi/review_pb.js";
 import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import type { ResolveDesignResponse } from "./gen/agni/v1/webapi/project_pb.js";
 import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
@@ -895,11 +895,7 @@ export class ViewerPresenter {
     const held = this.heldRun();
     if (!held) return;
     const { names, run } = held;
-    // A dropped design lives in this tab's worker alone, so a link to it would open nothing later.
-    const links =
-      this.mount === BROWSER_MOUNT
-        ? { withheld: "This design was opened from the reader's own files, which the browser keeps only in the tab that opened them, so a link to it would open nothing." }
-        : { urlBase: this.views.linkBase ?? "", designUri: artifactUri(this.mount, this.path) };
+    const links = this.reportLinks();
     try {
       const resp = await this.checks.renderCheckReport({
         uri: artifactUri(this.mount, this.path),
@@ -915,6 +911,34 @@ export class ViewerPresenter {
       this.saveNote = `Could not save the report: ${err instanceof Error ? err.message : String(err)}`;
     }
     this.pushFindings();
+  }
+
+  // reportLinks is where a saved report's rows link back to: this viewer, under the page's own base.
+  // A dropped design lives in this tab's worker alone, so a link to it would open nothing later.
+  private reportLinks(): { withheld?: string; urlBase?: string; designUri?: string } {
+    return this.mount === BROWSER_MOUNT
+      ? { withheld: "This design was opened from the reader's own files, which the browser keeps only in the tab that opened them, so a link to it would open nothing." }
+      : { urlBase: this.views.linkBase ?? "", designUri: artifactUri(this.mount, this.path) };
+  }
+
+  // reviewWire holds each run the review panel shows as the server returned it, by name, so Save
+  // report sends the run itself and nothing is scored again (agni issue 1030).
+  private reviewWire = new Map<string, Review>();
+
+  // saveReviewReport writes the selected checklist run as the page `agni review --format html` writes,
+  // through the same rpc, and downloads it. A failure is said in the panel.
+  async saveReviewReport(): Promise<void> {
+    if (!this.reviews || !this.views.download) return;
+    const review = this.reviewWire.get(this.reviewState.selected);
+    if (!review) return;
+    try {
+      const resp = await this.reviews.renderReviewReport({ review, links: this.reportLinks() });
+      this.views.download({ filename: resp.filename, contentType: resp.contentType, content: resp.content });
+      this.reviewState.saveNote = "";
+    } catch (err) {
+      this.reviewState.saveNote = `Could not save the report: ${err instanceof Error ? err.message : String(err)}`;
+    }
+    this.pushReview();
   }
 
   // heldRun is the selection's run as one CheckDesignResponse, assembled from what each rule returned,
@@ -1159,6 +1183,7 @@ export class ViewerPresenter {
   private async refreshReviews(): Promise<void> {
     if (!this.views.review || !this.reviews) return;
     this.reviewState = emptyReview();
+    this.reviewWire.clear();
     if (!this.mount || !this.path) {
       this.pushReview();
       return;
@@ -1168,6 +1193,7 @@ export class ViewerPresenter {
     try {
       const resp = await this.reviews.listReviews({ filter: `design="${artifactUri(this.mount, this.path)}"` });
       this.reviewState.runs = resp.reviews.map(reviewFromWire);
+      for (const r of resp.reviews) this.reviewWire.set(r.name, r);
       // Newest first comes from the server, so the head is the latest run.
       this.reviewState.selected = this.reviewState.runs[0]?.name ?? "";
     } catch (e) {
@@ -1267,6 +1293,7 @@ export class ViewerPresenter {
         overlay: this.overlay(),
       });
       const run = reviewFromWire(created);
+      this.reviewWire.set(created.name, created);
       // Prepend rather than refetch, since the new run is the newest and the server already handed
       // back the whole document.
       this.reviewState.runs = [run, ...this.reviewState.runs];

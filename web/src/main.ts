@@ -637,6 +637,8 @@ class AppRoot extends BaseComponent {
         const sel = selectionFromCell(kind, subject);
         if (sel) propertiesPresenter.selectEntity(sel);
       },
+      // The checklist page, written by the rpc `agni review --format html` calls (agni issue 1030).
+      onSave: () => void presenter.saveReviewReport(),
     }, { staticHost: onStaticHost });
     // The relation catalog (WS9-037) is static per build and design-independent, so fetch it once
     // at startup and push it to the panel's picker; a failure just leaves the picker empty (the

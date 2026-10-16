@@ -26,7 +26,6 @@ import (
 	"github.com/panyam/agni/core/diff"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/render"
-	rpt "github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/core/results"
 	"github.com/panyam/agni/core/review"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -1058,12 +1057,18 @@ func reviewCmd() *cobra.Command {
 					return writeTableCSV(cmd.OutOrStdout(), service.ReviewTables(reviews[0])[0], orderBy)
 				case format == "html":
 					// The checklist page, items in the manifest's order with one row per question and
-					// every finding per item (markdown caps the Detail cell at three).
-					meta, err := checklistMeta(cmd, ll, args[0], srvSpec)
+					// every finding per item (markdown caps the Detail cell at three). It is rendered
+					// by the rpc the viewer's Save report calls, so the two pages match (agni 1030).
+					links, err := checklistLinks(cmd, ll, args[0], srvSpec)
 					if err != nil {
 						return err
 					}
-					return rpt.ChecklistHTML(cmd.OutOrStdout(), buildChecklist(rep, meta))
+					page, err := svc.RenderReviewReport(cmd.Context(), &webapi.RenderReviewReportRequest{Review: reviews[0], Links: links})
+					if err != nil {
+						return err
+					}
+					_, err = cmd.OutOrStdout().Write(page.GetContent())
+					return err
 				case format == "" || format == "markdown":
 					out = review.RenderMarkdown(rep)
 				default:

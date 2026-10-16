@@ -16,6 +16,7 @@ import (
 	"connectrpc.com/connect"
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/fshost"
+	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 	"github.com/panyam/agni/internal/projects"
@@ -106,6 +107,7 @@ type parityClients struct {
 	query  webapiconnect.QueryServiceClient
 	ws     webapiconnect.WorkspaceServiceClient
 	table  webapiconnect.TableServiceClient
+	review webapiconnect.ReviewServiceClient
 }
 
 func newParityClients(t *testing.T, h http.Handler) parityClients {
@@ -115,6 +117,7 @@ func newParityClients(t *testing.T, h http.Handler) parityClients {
 	c := srv.Client()
 	return parityClients{
 		design: webapiconnect.NewDesignServiceClient(c, srv.URL),
+		review: webapiconnect.NewReviewServiceClient(c, srv.URL),
 		check:  webapiconnect.NewCheckServiceClient(c, srv.URL),
 		query:  webapiconnect.NewQueryServiceClient(c, srv.URL),
 		ws:     webapiconnect.NewWorkspaceServiceClient(c, srv.URL),
@@ -239,6 +242,35 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		if a != b {
 			t.Errorf("RenderCheckReport %s: the wasm engine writes a different file from the server", format)
 		}
+	}
+	// A checklist run saved from the Review panel is rendered by whichever host the page runs on (agni
+	// issue 1030), so both write one run's page identically. The run is a value, so neither reads a
+	// store, which the browser engine does not have.
+	rv := &webapi.Review{Results: &checkspb.CheckResults{
+		Design:   &checkspb.DesignRef{Source: design, ContentHash: "abc123"},
+		Manifest: "Parity",
+		Areas: []*checkspb.ReviewArea{{Name: "Interfaces", Items: []*checkspb.ReviewItem{{
+			Id: "I1", Title: "the CAN interface is terminated", Outcome: "fail",
+			Findings: []*checkspb.Finding{{Rule: "can-term", Subject: &checkspb.Subject{Kind: "net", Ref: "CANH"}, Message: "not terminated"}},
+		}}}},
+	}}
+	renderReview := func(c parityClients) (string, error) {
+		r, err := c.review.RenderReviewReport(ctx, connect.NewRequest(&webapi.RenderReviewReportRequest{Review: rv, Links: &webapi.ReportLinks{UrlBase: "http://h", DesignUri: design}}))
+		if err != nil {
+			return "", err
+		}
+		return writtenAt.ReplaceAllString(string(r.Msg.GetContent()), "<time>"), nil
+	}
+	pa, errA := renderReview(served)
+	pb, errB := renderReview(wasm)
+	if errA != nil || errB != nil {
+		t.Fatalf("RenderReviewReport: served err %v, wasm err %v", errA, errB)
+	}
+	if !strings.Contains(pa, "the CAN interface is terminated") {
+		t.Fatal("RenderReviewReport: the page lacks its item, so two broken pages would compare equal")
+	}
+	if pa != pb {
+		t.Error("RenderReviewReport: the wasm engine writes a different page from the server")
 	}
 	// A run saved as csv is tabulated and encoded by whichever host the page runs on (agni issue 956),
 	// so both lay out and write one run identically. The run is the server's, sent to each.

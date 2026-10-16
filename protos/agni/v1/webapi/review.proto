@@ -75,6 +75,28 @@ service ReviewService {
   // not parse is an error. The checklists are values, so a client runs one by sending it to
   // CreateReview.
   rpc ListChecklists(ListChecklistsRequest) returns (ListChecklistsResponse);
+
+  // RenderReviewReport writes a review the caller already holds as the checklist page `agni review
+  // --format html` writes (agni issue 1030): the manifest's areas and items in its own order, each
+  // with its outcome and every finding behind it. It runs nothing and reads no store, so a run that
+  // was never stored (validate_only) renders as a stored one does, and the CLI's page and the
+  // viewer's saved one come from this one renderer.
+  rpc RenderReviewReport(RenderReviewReportRequest) returns (RenderReviewReportResponse);
+}
+
+message RenderReviewReportRequest {
+  // review is the run to write, as CreateReview or GetReview returned it. Nothing is re-run.
+  Review review = 1;
+  // links makes each finding a link into a viewer serving the design, as on the check report.
+  ReportLinks links = 2;
+}
+
+message RenderReviewReportResponse {
+  bytes content = 1;
+  // content_type is "text/html; charset=utf-8".
+  string content_type = 2;
+  // filename is a name to save under, from the design, such as "gateway.agni-review.html".
+  string filename = 3;
 }
 
 // Review is one stored review run.

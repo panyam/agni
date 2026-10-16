@@ -77,8 +77,12 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
   const createReview = vi.fn(async (_req: { parent: string; designUri: string; manifest: unknown }) =>
     doc("reviews/r3", "2026-08-11T08:00:00Z", ["pass", "pass", "fail"]),
   );
+  const renderReviewReport = vi.fn(async (_req: { review: { name: string }; links: unknown }) => ({
+    content: new TextEncoder().encode("<html>"), contentType: "text/html; charset=utf-8", filename: "board.agni-review.html",
+  }));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const reviews = { listReviews, getReviewManifest, createReview } as any;
+  const reviews = { listReviews, getReviewManifest, createReview, renderReviewReport } as any;
+  const download = vi.fn();
   const listDir = vi.fn(async (_req: { uri: string }) => ({
     entries: [
       { name: "board.edn", uri: "mount://m/proj/board.edn", isDir: false, format: "edif" },
@@ -121,6 +125,8 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
       rules: { setState: vi.fn() },
       report: vi.fn(),
       query: stubQueryView(),
+      download,
+      linkBase: "http://h/agni/demo",
       review: wireReview ? { setState: onReview } : undefined,
       conventionBar: wireConventionBar ? { setState: onConvention } : undefined,
     },
@@ -128,7 +134,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
     wireClients ? reviews : undefined,
     wireClients ? workspace : undefined,
   );
-  return { presenter, onReview, onConvention, listReviews, getReviewManifest, createReview, listDir, getNamingConvention, checkDesign: checks.checkDesign, listRules: checks.listRules, runQuery };
+  return { presenter, onReview, onConvention, listReviews, getReviewManifest, createReview, renderReviewReport, download, listDir, getNamingConvention, checkDesign: checks.checkDesign, listRules: checks.listRules, runQuery };
 }
 
 function lastState(onReview: ReturnType<typeof vi.fn>): ReviewState {
@@ -424,5 +430,39 @@ describe("naming convention", () => {
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.setConvention("proj/house.yaml");
     expect(h.getNamingConvention).not.toHaveBeenCalled();
+  });
+});
+
+// agni issue 1030: Save report writes the run shown, as the server returned it, through the rpc
+// `agni review --format html` calls, so nothing is scored again and the two pages match.
+describe("saving a checklist run", () => {
+  it("sends the selected run itself, with links into this viewer, and downloads the page", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.showReview("reviews/r1");
+    await h.presenter.saveReviewReport();
+    expect(h.renderReviewReport).toHaveBeenCalledTimes(1);
+    const sent = h.renderReviewReport.mock.calls[0][0];
+    expect(sent.review.name).toBe("reviews/r1");
+    expect(sent.links).toEqual({ urlBase: "http://h/agni/demo", designUri: artifactUri("m", "proj/board.edn") });
+    expect(h.download).toHaveBeenCalledWith(expect.objectContaining({ filename: "board.agni-review.html" }));
+    expect(h.createReview).not.toHaveBeenCalled();
+  });
+
+  it("saves a run it just created", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    await h.presenter.createReview();
+    await h.presenter.saveReviewReport();
+    expect(h.renderReviewReport.mock.calls[0][0].review.name).toBe("reviews/r3");
+  });
+
+  it("says in the panel why a save failed", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.renderReviewReport.mockRejectedValueOnce(new Error("boom"));
+    await h.presenter.saveReviewReport();
+    expect(lastState(h.onReview).saveNote).toContain("boom");
+    expect(h.download).not.toHaveBeenCalled();
   });
 });

@@ -51,6 +51,9 @@ const (
 	// ReviewServiceListChecklistsProcedure is the fully-qualified name of the ReviewService's
 	// ListChecklists RPC.
 	ReviewServiceListChecklistsProcedure = "/agni.v1.webapi.ReviewService/ListChecklists"
+	// ReviewServiceRenderReviewReportProcedure is the fully-qualified name of the ReviewService's
+	// RenderReviewReport RPC.
+	ReviewServiceRenderReviewReportProcedure = "/agni.v1.webapi.ReviewService/RenderReviewReport"
 )
 
 // ReviewServiceClient is a client for the agni.v1.webapi.ReviewService service.
@@ -91,6 +94,12 @@ type ReviewServiceClient interface {
 	// not parse is an error. The checklists are values, so a client runs one by sending it to
 	// CreateReview.
 	ListChecklists(context.Context, *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error)
+	// RenderReviewReport writes a review the caller already holds as the checklist page `agni review
+	// --format html` writes (agni issue 1030): the manifest's areas and items in its own order, each
+	// with its outcome and every finding behind it. It runs nothing and reads no store, so a run that
+	// was never stored (validate_only) renders as a stored one does, and the CLI's page and the
+	// viewer's saved one come from this one renderer.
+	RenderReviewReport(context.Context, *connect.Request[webapi.RenderReviewReportRequest]) (*connect.Response[webapi.RenderReviewReportResponse], error)
 }
 
 // NewReviewServiceClient constructs a client for the agni.v1.webapi.ReviewService service. By
@@ -140,17 +149,24 @@ func NewReviewServiceClient(httpClient connect.HTTPClient, baseURL string, opts 
 			connect.WithSchema(reviewServiceMethods.ByName("ListChecklists")),
 			connect.WithClientOptions(opts...),
 		),
+		renderReviewReport: connect.NewClient[webapi.RenderReviewReportRequest, webapi.RenderReviewReportResponse](
+			httpClient,
+			baseURL+ReviewServiceRenderReviewReportProcedure,
+			connect.WithSchema(reviewServiceMethods.ByName("RenderReviewReport")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // reviewServiceClient implements ReviewServiceClient.
 type reviewServiceClient struct {
-	createReview      *connect.Client[webapi.CreateReviewRequest, webapi.Review]
-	getReview         *connect.Client[webapi.GetReviewRequest, webapi.Review]
-	listReviews       *connect.Client[webapi.ListReviewsRequest, webapi.ListReviewsResponse]
-	deleteReview      *connect.Client[webapi.DeleteReviewRequest, emptypb.Empty]
-	getReviewManifest *connect.Client[webapi.GetReviewManifestRequest, webapi.GetReviewManifestResponse]
-	listChecklists    *connect.Client[webapi.ListChecklistsRequest, webapi.ListChecklistsResponse]
+	createReview       *connect.Client[webapi.CreateReviewRequest, webapi.Review]
+	getReview          *connect.Client[webapi.GetReviewRequest, webapi.Review]
+	listReviews        *connect.Client[webapi.ListReviewsRequest, webapi.ListReviewsResponse]
+	deleteReview       *connect.Client[webapi.DeleteReviewRequest, emptypb.Empty]
+	getReviewManifest  *connect.Client[webapi.GetReviewManifestRequest, webapi.GetReviewManifestResponse]
+	listChecklists     *connect.Client[webapi.ListChecklistsRequest, webapi.ListChecklistsResponse]
+	renderReviewReport *connect.Client[webapi.RenderReviewReportRequest, webapi.RenderReviewReportResponse]
 }
 
 // CreateReview calls agni.v1.webapi.ReviewService.CreateReview.
@@ -181,6 +197,11 @@ func (c *reviewServiceClient) GetReviewManifest(ctx context.Context, req *connec
 // ListChecklists calls agni.v1.webapi.ReviewService.ListChecklists.
 func (c *reviewServiceClient) ListChecklists(ctx context.Context, req *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error) {
 	return c.listChecklists.CallUnary(ctx, req)
+}
+
+// RenderReviewReport calls agni.v1.webapi.ReviewService.RenderReviewReport.
+func (c *reviewServiceClient) RenderReviewReport(ctx context.Context, req *connect.Request[webapi.RenderReviewReportRequest]) (*connect.Response[webapi.RenderReviewReportResponse], error) {
+	return c.renderReviewReport.CallUnary(ctx, req)
 }
 
 // ReviewServiceHandler is an implementation of the agni.v1.webapi.ReviewService service.
@@ -221,6 +242,12 @@ type ReviewServiceHandler interface {
 	// not parse is an error. The checklists are values, so a client runs one by sending it to
 	// CreateReview.
 	ListChecklists(context.Context, *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error)
+	// RenderReviewReport writes a review the caller already holds as the checklist page `agni review
+	// --format html` writes (agni issue 1030): the manifest's areas and items in its own order, each
+	// with its outcome and every finding behind it. It runs nothing and reads no store, so a run that
+	// was never stored (validate_only) renders as a stored one does, and the CLI's page and the
+	// viewer's saved one come from this one renderer.
+	RenderReviewReport(context.Context, *connect.Request[webapi.RenderReviewReportRequest]) (*connect.Response[webapi.RenderReviewReportResponse], error)
 }
 
 // NewReviewServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -266,6 +293,12 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 		connect.WithSchema(reviewServiceMethods.ByName("ListChecklists")),
 		connect.WithHandlerOptions(opts...),
 	)
+	reviewServiceRenderReviewReportHandler := connect.NewUnaryHandler(
+		ReviewServiceRenderReviewReportProcedure,
+		svc.RenderReviewReport,
+		connect.WithSchema(reviewServiceMethods.ByName("RenderReviewReport")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.ReviewService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ReviewServiceCreateReviewProcedure:
@@ -280,6 +313,8 @@ func NewReviewServiceHandler(svc ReviewServiceHandler, opts ...connect.HandlerOp
 			reviewServiceGetReviewManifestHandler.ServeHTTP(w, r)
 		case ReviewServiceListChecklistsProcedure:
 			reviewServiceListChecklistsHandler.ServeHTTP(w, r)
+		case ReviewServiceRenderReviewReportProcedure:
+			reviewServiceRenderReviewReportHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -311,4 +346,8 @@ func (UnimplementedReviewServiceHandler) GetReviewManifest(context.Context, *con
 
 func (UnimplementedReviewServiceHandler) ListChecklists(context.Context, *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.ListChecklists is not implemented"))
+}
+
+func (UnimplementedReviewServiceHandler) RenderReviewReport(context.Context, *connect.Request[webapi.RenderReviewReportRequest]) (*connect.Response[webapi.RenderReviewReportResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.ReviewService.RenderReviewReport is not implemented"))
 }

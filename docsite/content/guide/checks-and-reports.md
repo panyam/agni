@@ -294,6 +294,12 @@ uses, so a cell a spreadsheet would read as a formula is guarded in both. The ro
 rule order, which can differ from the CLI's, and are otherwise the same. The **Tables** panel shows
 the same run as tables before you save, one tab per table, and saves whichever is on screen.
 
+The **Review** panel's **Save report** does the same for a checklist run. It downloads the page `agni
+review --format html` writes, `<design>.agni-review.html`, with the checklist's items in the
+manifest's order and every finding behind each. The engine renders the run the panel shows (the
+`RenderReviewReport` rpc, which the CLI's `--format html` also calls), so nothing is scored again and
+the two pages differ only in when they were written and in how each names the design.
+
 On the browser-only demo the engine runs in the page, so saving a design you dropped sends nothing
 anywhere. Its rows link back into the viewer you saved it from. A design opened from your own files
 gets no links, and the page says why, because the browser keeps those files only in the tab that

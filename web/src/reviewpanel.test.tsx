@@ -196,3 +196,32 @@ describe("reviewPanel history", () => {
     expect(handlers.onCreate).toHaveBeenCalled();
   });
 });
+
+// agni issue 1030: a run shown can be saved as the checklist page, and a failed save says why.
+describe("Save report", () => {
+  function mountSaving(state: Partial<ReviewState>) {
+    const onSave = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = reviewPanelIsland(el, null, { onSelectRun: vi.fn(), onSelectChecklist: vi.fn(), onCreate: vi.fn(), onLocate: vi.fn(), onSave });
+    panel.island.activate();
+    panel.view.setState({ ...emptyReview(), ...state });
+    return { el, onSave };
+  }
+
+  it("offers Save report on a shown run and asks the host to save it", () => {
+    const { el, onSave } = mountSaving({ runs: [run()], selected: "reviews/r1" });
+    el.querySelector<HTMLButtonElement>(".rv-save")!.click();
+    expect(onSave).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers no save with no run to save, or with no host to save it", () => {
+    expect(mountSaving({ runs: [], selected: "" }).el.querySelector(".rv-save")).toBeNull();
+    expect(mount({ runs: [run()], selected: "reviews/r1" }).el.querySelector(".rv-save")).toBeNull();
+  });
+
+  it("says why the last save failed", () => {
+    const { el } = mountSaving({ runs: [run()], selected: "reviews/r1", saveNote: "Could not save the report: boom" });
+    expect(el.querySelector(".rv-save-note")!.textContent).toContain("boom");
+  });
+});
