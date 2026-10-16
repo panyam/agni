@@ -94,9 +94,21 @@ func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 	//
 	// Whitespace-insensitive because protojson varies the spacing after a colon on purpose to
 	// discourage byte-comparing its output, so `"verdicts": []` and `"verdicts":  []` are both it.
-	js := strings.Join(strings.Fields(runCheck(t, "--format", "json", design)), " ")
+	raw = runCheck(t, "--format", "json", design)
+	js := strings.Join(strings.Fields(raw), " ")
 	if !strings.Contains(js, `"verdicts": []`) {
 		t.Errorf("expected an empty verdicts key, got:\n%s", js)
+	}
+	// A finding names the verdict it came from (agni issue 485), which is the finding's own identity
+	// rather than verdict data, so those ids are taken out before looking for anything else.
+	var resp webapi.CheckDesignResponse
+	if err := protojson.Unmarshal([]byte(raw), &resp); err != nil {
+		t.Fatal(err)
+	}
+	for _, f := range resp.GetFindings() {
+		for _, id := range f.GetVerdictIds() {
+			js = strings.ReplaceAll(js, `"`+id+`"`, `""`)
+		}
 	}
 	if strings.Contains(js, "i2c-pull-up:(net:") {
 		t.Error("verdict data must not ride along in the default json")

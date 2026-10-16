@@ -160,6 +160,16 @@ message Finding {
   // a fact rather than a hope (agni issue 259), and counting a finding under two entities would break
   // that. Context makes the finding REACHABLE from the other entity; it does not make it ABOUT it.
   repeated ContextSubject context = 11;
+  // verdict_ids names the verdicts this finding was projected from, each spelled as check.VerdictID
+  // computes it (`<rule>:(<kind>:<ref>,...)`), so a consumer holding only the finding, such as a
+  // review item, links to the proof by a real id (agni issue 485). A verdict id is not recoverable
+  // from the finding's subject and context, since a verdict may be keyed on a tuple, on an entity the
+  // finding lists as context, or on an element such as a signal that no finding field can hold.
+  //
+  // Empty when the rule states no considered set, because such a rule publishes no verdicts and an id
+  // would name nothing a viewer can resolve. A finding from a check run carries one id; the field is
+  // repeated so a consumer that folds findings together keeps every id.
+  repeated string verdict_ids = 12;
 }
 
 // CheckReport is the severity-organized pivot over one check run: THE report shape, rendered by the

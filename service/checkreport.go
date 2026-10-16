@@ -131,16 +131,7 @@ func VerdictReport(run *webapi.CheckDesignResponse, rules []*check.Rule, meta re
 	for _, v := range run.GetVerdicts() {
 		verdicts = append(verdicts, VerdictFromProto(v))
 	}
-	findings := make([]check.Finding, 0, len(run.GetFindings()))
-	for _, f := range run.GetFindings() {
-		findings = append(findings, check.Finding{
-			Subject:  check.Entity{Kind: f.GetSubject().GetKind(), Ref: f.GetSubject().GetRef(), Pin: f.GetSubject().GetPin()},
-			Rule:     f.GetRule(),
-			Severity: f.GetSeverity(),
-			Message:  f.GetMessage(),
-		})
-	}
-	return report.Build(verdicts, findings, rules, meta)
+	return report.Build(verdicts, FindingsFromProto(run.GetFindings()), rules, meta)
 }
 
 // SkippedRuleDocs carries a run's skipped rules into a document's form.

@@ -83,7 +83,7 @@ class DatasheetCitation(_message.Message):
     def __init__(self, doc: _Optional[str] = ..., doc_ref: _Optional[str] = ..., page: _Optional[int] = ..., section: _Optional[str] = ..., method: _Optional[str] = ..., confidence: _Optional[float] = ..., verification: _Optional[str] = ..., verified_revision: _Optional[str] = ..., corpus: _Optional[str] = ...) -> None: ...
 
 class Finding(_message.Message):
-    __slots__ = ("rule", "severity", "subject", "message", "inconclusive", "provenance", "sheets", "locate_reason", "datasheets", "context")
+    __slots__ = ("rule", "severity", "subject", "message", "inconclusive", "provenance", "sheets", "locate_reason", "datasheets", "context", "verdict_ids")
     RULE_FIELD_NUMBER: _ClassVar[int]
     SEVERITY_FIELD_NUMBER: _ClassVar[int]
     SUBJECT_FIELD_NUMBER: _ClassVar[int]
@@ -94,6 +94,7 @@ class Finding(_message.Message):
     LOCATE_REASON_FIELD_NUMBER: _ClassVar[int]
     DATASHEETS_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    VERDICT_IDS_FIELD_NUMBER: _ClassVar[int]
     rule: str
     severity: str
     subject: Subject
@@ -104,7 +105,8 @@ class Finding(_message.Message):
     locate_reason: LocateReason
     datasheets: _containers.RepeatedCompositeFieldContainer[DatasheetCitation]
     context: _containers.RepeatedCompositeFieldContainer[ContextSubject]
-    def __init__(self, rule: _Optional[str] = ..., severity: _Optional[str] = ..., subject: _Optional[_Union[Subject, _Mapping]] = ..., message: _Optional[str] = ..., inconclusive: _Optional[bool] = ..., provenance: _Optional[_Union[_ir_pb2.Provenance, _Mapping]] = ..., sheets: _Optional[_Iterable[str]] = ..., locate_reason: _Optional[_Union[LocateReason, str]] = ..., datasheets: _Optional[_Iterable[_Union[DatasheetCitation, _Mapping]]] = ..., context: _Optional[_Iterable[_Union[ContextSubject, _Mapping]]] = ...) -> None: ...
+    verdict_ids: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, rule: _Optional[str] = ..., severity: _Optional[str] = ..., subject: _Optional[_Union[Subject, _Mapping]] = ..., message: _Optional[str] = ..., inconclusive: _Optional[bool] = ..., provenance: _Optional[_Union[_ir_pb2.Provenance, _Mapping]] = ..., sheets: _Optional[_Iterable[str]] = ..., locate_reason: _Optional[_Union[LocateReason, str]] = ..., datasheets: _Optional[_Iterable[_Union[DatasheetCitation, _Mapping]]] = ..., context: _Optional[_Iterable[_Union[ContextSubject, _Mapping]]] = ..., verdict_ids: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class WitnessTerm(_message.Message):
     __slots__ = ("label", "value")

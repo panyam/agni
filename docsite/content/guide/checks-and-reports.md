@@ -300,6 +300,11 @@ manifest's order and every finding behind each. The engine renders the run the p
 `RenderReviewReport` rpc, which the CLI's `--format html` also calls), so nothing is scored again and
 the two pages differ only in when they were written and in how each names the design.
 
+Each finding on the checklist page links to the verdict it was produced from, by the id the run
+stamped on it, so the link opens the same proof the check report's row for that verdict opens. A
+finding from a rule that states no considered set, such as a query that declares no domain, has no
+verdict to open and is listed without a link.
+
 On the browser-only demo the engine runs in the page, so saving a design you dropped sends nothing
 anywhere. Its rows link back into the viewer you saved it from. A design opened from your own files
 gets no links, and the page says why, because the browser keeps those files only in the tab that
