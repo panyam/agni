@@ -661,12 +661,15 @@ The panel runs the query on the server, over the open file, so you get the same 
 `agni query` without leaving the design. The **vocabulary** control in the top bar applies here too,
 and a query and a check in the same session then answer under the same vocabulary.
 
-Datasheet (`param.max`) facts are not yet wired into the viewer. A query over `param.max` returns nothing
-there, and datasheet joins stay on the CLI for now.
+Datasheet relations (`param.max`, `param.typ`) answer in the viewer when the design's project has a
+`params/` corpus or the server was started with `--params`, the same corpus `agni query` reads.
 
 A click on the drawing selects what you clicked and describes it in the **Properties** panel, and
-leaves the query box alone. Its **Ask** row, or a search, fills the box with a query whose variables
-are bound to what you picked or searched for. The values show as chips under the box, one per
+leaves the query box alone. Properties lists a few **Ask** questions for what you selected ("What
+nets does it touch?", "Which test points reach its nets?"), and each opens in a query tab of its own,
+named for the question and the part, so a query you were writing stays in its tab. **+** opens an
+empty tab. A search fills the box in the tab you are on. Either way the query's variables are bound
+to what you picked or searched for. The values show as chips under the box, one per
 variable, so the query stays the same sentence whatever you picked. Edit a chip's value to ask about something else, or
 remove it to leave the variable free and widen the question. Editing a bound variable out of the
 query drops its chip.

@@ -40,15 +40,25 @@ finding row produce one value.
 
 A click selects what it lands on and the Properties panel describes it (agni issue 902). It used to
 write the served preset into the query box and run it, which mixed looking around with asking a
-question, and a stray click overwrote whatever the reader had typed. Asking is now the panel's Ask
-row, which runs that same preset in the query panel, so the query is still left in the box, editable,
-and using the viewer still teaches the language.
+question, and a stray click overwrote whatever the reader had typed. Asking is now one of the panel's
+Ask rows, each a question the server words and writes (several per kind, `EntityQuery.label`), and
+each opens a query tab of its own, so the query is still left in a box, editable, and using the
+viewer still teaches the language.
 
 **Something is always selected.** The design is the root, a click on empty paper selects the sheet on
 screen (`SvgView.onPickEmpty`), Escape selects the design, and an entity sits under the sheet it was
 picked on. The breadcrumb heading the panel moves between those levels, and every reference in it (a
 pin's net, a net's components) moves the selection, so a reader can walk the design inside the panel.
-A located query cell selects too, so the panel follows a walk through an answer.
+A located query cell selects too, and so does a finding clicked in the Checks or Review panel, so the
+panel follows a walk through an answer or a run.
+
+**Where a part or net is drawn is asked once per selection.** Properties lists those sheets, each a
+link to it. No rpc answers "where is this drawn" on its own, but every entity in a query answer
+carries the sheets it is drawn on, so the viewer asks the served find-by-name query with the whole
+name anchored and reads the row of the right kind (`drawnSheets`), since a part and a net can share a
+name. A bus is listed by its members instead, read off the IR's record of the bus
+(`InputDiagnostics.unmodeled_buses`), because the `bus` relation records the construct a reader saw
+and nothing about its members.
 
 **The panel reads the design once per open** (`PropertiesPresenter`, `INVENTORY_PATHS`). It asks
 `GetDesign` for the netlist IR under a field mask naming only what it shows, about 1.8 MB of JSON on
@@ -68,9 +78,8 @@ A result cell is the second way a reader names an entity. The server types each 
 an entity kind (`RunQueryResponse.column_kinds`, derived from the relation catalog's arg labels), so
 a component or net cell reads back as the same `Selection` a canvas click produces
 (`selectionFromCell`). Clicking one locates it, as it always did, and now also selects it, so the
-query panel names what is selected and offers the served preset for that kind as a plain-language
-question. Taking it fills the box and runs, which lands the reader on a fresh set of cells to walk
-from. The preset's text is the same for every pick. It names the variables to bind
+query panel names what is selected and offers the kind's first served question. Taking it opens a
+tab and runs, which lands the reader on a fresh set of cells to walk from. The preset's text is the same for every pick. It names the variables to bind
 (`EntityQuery.binds`), and `entityBindings` fills each from the selection field of the same name, so
 the pick reaches the query as a value shown in a chip rather than spliced text (agni issue 793).
 The list is explicit because one preset's input is another's output: the pin preset answers `?net`
@@ -78,9 +87,23 @@ and the net preset asks about one.
 
 Two things are deliberate here. A cell click does not itself re-run the query, because scanning a
 result set and highlighting each row in turn is what the locate affordance was for, and a click that
-replaced the table would take that away. And the question's wording lives on the client (`askLabel`,
-beside the locate-reason copy) while the query it runs comes from the server, the same split every
-other served preset uses.
+replaced the table would take that away. And the question's wording comes from the server with its
+query (`EntityQuery.label`), because a kind now has several questions and a client copy of their
+wording would drift from the list the server sends.
+
+### Each question is a tab
+
+The query panel hosts any number of tabs (`querytabs.ts`). An Ask row, the selection bar's question
+and "+" each open one, so a question never overwrites another, and each tab keeps its own query,
+bindings and answer. The tabs are the panel's own strip rather than dockview tabs, so none lands in a
+saved dock layout, and the last one has no close button.
+
+The presenter answers a run in the tab that asked (`runQuery`'s `tab`, `QueryView.setState(result,
+tab)`), so an answer arriving after the reader moved to another tab still lands where it belongs, and
+Save CSV saves the answer of the tab it was pressed in. **The drawing follows the tab in front.** A tab
+remembers the cell it last located, and bringing it forward locates that cell again. A tab that
+located nothing releases what the previous tab had located (`releaseFocus`), back to the findings
+alone, so the canvas never shows a cell from an answer no longer on screen.
 
 **A pin cell takes its other half from its row.** A pin's identity is two fields, so the cell holding
 `5` names nothing until you know it means U7's pin 5, which is why a pin column typed as a scalar for

@@ -2,6 +2,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { propertiesPanelIsland } from "./propertiespanel.jsx";
 import type { PropertiesState } from "./properties.js";
+import type { EntityQueryItem } from "./query.js";
 
 function mount(state: PropertiesState) {
   const onFocus = vi.fn();
@@ -14,6 +15,11 @@ function mount(state: PropertiesState) {
   return { el, onFocus, onAsk };
 }
 
+const QUESTIONS: EntityQueryItem[] = [
+  { kind: "component", label: "What nets does it touch?", query: "component.net(?ref, ?net) => ?net", teaches: "projection", binds: ["ref"] },
+  { kind: "component", label: "Which test points reach its nets?", query: "q2", teaches: "t", binds: ["ref"] },
+];
+
 const component: PropertiesState = {
   crumbs: [
     { label: "gateway", focus: { level: "design" } },
@@ -24,11 +30,12 @@ const component: PropertiesState = {
   title: "U1",
   rows: [{ label: "mpn", value: "LM1117" }],
   groups: [
+    { name: "sheets", refs: [{ label: "Power", sheet: "s1" }] },
     { name: "nets", refs: [{ label: "VIN", target: { kind: "net", net: "VIN" } }] },
     { name: "findings", refs: [], empty: "not checked yet" },
   ],
   datasheet: { kind: "no-corpus" },
-  ask: { kind: "component", ref: "U1" },
+  ask: { sel: { kind: "component", ref: "U1" }, questions: QUESTIONS },
 };
 
 describe("PropertiesPanel", () => {
@@ -42,7 +49,7 @@ describe("PropertiesPanel", () => {
 
   it("moves to a referenced entity on the sheet it was reached from", () => {
     const { el, onFocus } = mount(component);
-    el.querySelector<HTMLButtonElement>(".pr-ref-go")!.click();
+    el.querySelector<HTMLButtonElement>(".pr-ref-go:not(.pr-ref-sheet)")!.click();
     expect(onFocus).toHaveBeenCalledWith({ level: "entity", sel: { kind: "net", net: "VIN" }, sheetId: "s1" });
   });
 
@@ -58,12 +65,19 @@ describe("PropertiesPanel", () => {
     expect(el2.querySelector(".pr-datasheet")?.textContent).toContain("The corpus has no spec for LM1117");
   });
 
-  it("asks the served question about the selection from the Ask row", () => {
+  it("moves to a sheet the selection is drawn on", () => {
+    const { el, onFocus } = mount(component);
+    el.querySelector<HTMLButtonElement>(".pr-ref-sheet")!.click();
+    expect(onFocus).toHaveBeenCalledWith({ level: "sheet", sheetId: "s1" });
+  });
+
+  it("lists one Ask row per served question, and each asks its own question about the selection", () => {
     const { el, onAsk } = mount(component);
-    const ask = el.querySelector<HTMLButtonElement>(".pr-ask-go")!;
-    expect(ask.textContent).toBe("What is U1 connected to?");
-    ask.click();
-    expect(onAsk).toHaveBeenCalledWith({ kind: "component", ref: "U1" });
+    const asks = [...el.querySelectorAll<HTMLButtonElement>(".pr-ask-go")];
+    expect(asks.map((a) => a.textContent)).toEqual(["What nets does it touch?", "Which test points reach its nets?"]);
+    expect(asks[0].title).toContain("component.net(?ref, ?net) => ?net");
+    asks[1].click();
+    expect(onAsk).toHaveBeenCalledWith({ kind: "component", ref: "U1" }, QUESTIONS[1]);
   });
 
   it("offers no Ask row where there is nothing to ask", () => {

@@ -2,7 +2,8 @@ import { For, Show, createMemo } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import { type Crumb, type Datasheet, type Focus, type PropertiesState, type Ref, reportLines } from "./properties.js";
-import { askLabel, type Selection } from "./selection.js";
+import type { EntityQueryItem } from "./query.js";
+import type { Selection } from "./selection.js";
 
 // PropertiesView is the command-down port: the presenter pushes one state per focus.
 export interface PropertiesView {
@@ -12,8 +13,8 @@ export interface PropertiesView {
 export interface PropertiesHandlers {
   // onFocus moves the selection, from a crumb or a reference inside the panel.
   onFocus: (f: Focus) => void;
-  // onAsk opens the served question about the selection in the query panel.
-  onAsk: (sel: Selection) => void;
+  // onAsk opens one served question about the selection in a query tab of its own.
+  onAsk: (sel: Selection, question: EntityQueryItem) => void;
 }
 
 function emptyState(): PropertiesState {
@@ -41,7 +42,18 @@ function RefList(props: { refs: Ref[]; empty?: string; onFocus: (f: Focus) => vo
         <For each={props.refs}>
           {(r) => (
             <li class="pr-ref">
-              <Show when={r.target} fallback={<span class="pr-ref-label">{r.label}</span>}>
+              <Show
+                when={r.target}
+                fallback={
+                  <Show when={r.sheet} fallback={<span class="pr-ref-label">{r.label}</span>}>
+                    {(id) => (
+                      <button type="button" class="pr-ref-go pr-ref-sheet" title={`show sheet ${r.label}`} onClick={() => props.onFocus({ level: "sheet", sheetId: id() })}>
+                        {r.label}
+                      </button>
+                    )}
+                  </Show>
+                }
+              >
                 {(t) => (
                   <button type="button" class="pr-ref-go" onClick={() => props.onFocus({ level: "entity", sel: t(), sheetId: props.sheetId })}>
                     {r.label}
@@ -142,13 +154,19 @@ function PropertiesPanel(props: { state: () => PropertiesState; handlers: Proper
           </div>
         )}
       </Show>
+      {/* The served questions about the selection, each opening a query tab of its own. The hover
+          shows the query, so a reader sees what will run before running it. */}
       <Show when={s().ask}>
-        {(sel) => (
+        {(a) => (
           <div class="pr-ask">
             <span class="pr-section">ask</span>
-            <button type="button" class="pr-ask-go" onClick={() => props.handlers.onAsk(sel())}>
-              {askLabel(sel())}
-            </button>
+            <For each={a().questions}>
+              {(q) => (
+                <button type="button" class="pr-ask-go" title={`${q.query}\n\n${q.teaches}`} onClick={() => props.handlers.onAsk(a().sel, q)}>
+                  {q.label}
+                </button>
+              )}
+            </For>
           </div>
         )}
       </Show>

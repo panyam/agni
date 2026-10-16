@@ -178,20 +178,3 @@ export function sameSelection(a: Selection | null, b: Selection | null): boolean
       return a.busId === b.busId;
   }
 }
-
-// askLabel is the plain-language question the preset for this selection answers, for the button that
-// takes the next hop. The copy lives on the client, like the relation-group labels and the
-// locate-reason messages, because the SERVER owns the query and the client owns its wording.
-export function askLabel(sel: Selection): string {
-  const name = labelFor(sel);
-  switch (sel.kind) {
-    case "pin":
-      return `What is ${name} wired to?`;
-    case "component":
-      return `What is ${name} connected to?`;
-    case "net":
-      return `What is on ${name}?`;
-    case "bus":
-      return `What is in ${name}?`;
-  }
-}

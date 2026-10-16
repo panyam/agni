@@ -71,7 +71,10 @@ function harness() {
   // Spies for the ports these tests assert on; every other port defaults to a no-op in
   // stubQueryView, so a method added to QueryView is one edit there rather than a runtime failure
   // in a test that never mentions it. The spies are held separately so they keep their Mock type.
-  const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn() };
+  const query = { setLocateNote: vi.fn(), setCurrentSheet: vi.fn(), setFindings: vi.fn(), setState: vi.fn(), clearAnswers: vi.fn() };
+  // runQuery answers every query with one row naming the query it was asked, so a test can tell
+  // which answer landed where.
+  const runQuery = vi.fn(async (req: { query: string }) => ({ columns: ["q"], columnKinds: [""], rows: [{ cells: [req.query] }], total: 0 }));
   // Two nav surfaces (tabs + tree), as in the app, to prove the presenter fans state to both.
   const navA = { setState: vi.fn() };
   const navB = { setState: vi.fn() };
@@ -111,8 +114,8 @@ function harness() {
     // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
-  });
-  return { presenter, onUndrawnNote, onStaleLinkNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
+  }, { runQuery } as any);
+  return { presenter, runQuery, onUndrawnNote, onStaleLinkNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -1244,3 +1247,56 @@ describe("the considered set is invalidated with the findings", () => {
     expect(h.presenter.verdictList()).toHaveLength(0);
   });
 })
+
+// agni issue 902: the query panel hosts tabs, and the presenter answers each in the tab that asked.
+describe("query tabs", () => {
+  it("sends each answer to the tab that asked, and saves the answer of the tab named", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    await h.presenter.runQuery("first(?x) => ?x", {}, 0, "q1");
+    await h.presenter.runQuery("second(?x) => ?x", {}, 0, "q2");
+    const landed = h.query.setState.mock.calls.filter((c) => !c[0].loading).map((c) => [c[1], c[0].rows[0].cells[0]]);
+    expect(landed).toEqual([
+      ["q1", "first(?x) => ?x"],
+      ["q2", "second(?x) => ?x"],
+    ]);
+    const saved: unknown[] = [];
+    await h.presenter.saveQueryCSV(async (a) => (saved.push(a), ""), "q1");
+    expect((saved[0] as { value: { rows: { cells: string[] }[] } }).value.rows[0].cells[0]).toBe("first(?x) => ?x");
+    h.presenter.forgetQueryTab("q1");
+    await h.presenter.saveQueryCSV(async (a) => (saved.push(a), ""), "q1");
+    expect(saved).toHaveLength(1);
+  });
+
+  it("empties every tab's answer when the vocabulary changes", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn", "");
+    await h.presenter.setConvention("");
+    expect(h.query.clearAnswers).toHaveBeenCalled();
+  });
+});
+
+describe("a finding click selects", () => {
+  it("returns what the focused finding is about, and nothing when the click toggles it off", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub" }],
+    });
+    await openAndCheck(h, "m", "board.kicad_sch");
+    expect(await h.presenter.selectFinding("STUB")).toMatchObject({ kind: "net", net: "STUB" });
+    expect(await h.presenter.selectFinding("STUB")).toBeNull();
+  });
+
+  it("puts the drawing back to the findings alone when a query tab with nothing located comes forward", async () => {
+    const h = harness();
+    h.checkDesign.mockResolvedValue({
+      findings: [{ rule: "single-pin-net", severity: "info", subject: { kind: "net", ref: "STUB", pin: "" }, message: "stub" }],
+    });
+    await openAndCheck(h, "m", "board.kicad_sch");
+    const base = h.canvas.setHighlights.mock.calls.at(-1)![0];
+    await h.presenter.locateEntity("component", "U1");
+    expect(h.canvas.setHighlights.mock.calls.at(-1)![0]).not.toEqual(base);
+    await h.presenter.releaseFocus();
+    expect(h.canvas.setHighlights.mock.calls.at(-1)![0]).toEqual(base);
+  });
+});

@@ -14,6 +14,7 @@ import type { QueryView } from "./query.js";
 export function stubQueryView(over: Partial<QueryView> = {}): QueryView {
   return {
     setState: () => {},
+    clearAnswers: () => {},
     setRelations: () => {},
     setExamples: () => {},
     setLocateNote: () => {},
@@ -23,7 +24,7 @@ export function stubQueryView(over: Partial<QueryView> = {}): QueryView {
     setSelection: () => {},
     setCurrentSheet: () => {},
     setFindings: () => {},
-    entityQuery: () => undefined,
+    questionsFor: () => [],
     askAbout: () => {},
     ...over,
   };

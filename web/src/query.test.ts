@@ -1,5 +1,7 @@
 import { describe, it, expect } from "vitest";
-import { bindingsInUse, cellKind, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
+import { create } from "@bufbuild/protobuf";
+import { RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
+import { bindingsInUse, cellKind, drawnSheets, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
 import { resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
@@ -198,5 +200,32 @@ describe("groupRelations", () => {
     ]);
     expect(groups.map((g) => g.label)).toEqual(["Netlist", "Library", "Predicates"]);
     expect(groups[1].items.map((r) => r.name)).toEqual(["net.has_test_point"]);
+  });
+});
+
+// Properties reads where a selected part or net is drawn off the find-by-name answer for its whole
+// name (agni issue 902).
+describe("drawnSheets", () => {
+  // A part and a net sharing a name, as a find-by-name answer types them, row by row.
+  const resp = create(RunQueryResponseSchema, {
+    columns: ["name", "kind"],
+    columnKinds: ["", ""],
+    rows: [
+      { cells: ["VBUS", "component"], cellKinds: ["component", ""], cellEntity: [1, 0] },
+      { cells: ["VBUS", "net"], cellKinds: ["net", ""], cellEntity: [2, 0] },
+    ],
+    entities: [
+      { kind: "component", ref: "VBUS", sheetIds: ["s1"] },
+      { kind: "net", ref: "VBUS", sheetIds: ["s2", "s3"] },
+    ],
+  });
+
+  it("reads the sheets off the row of the kind asked about", () => {
+    expect(drawnSheets(resp, "net", "VBUS")).toEqual(["s2", "s3"]);
+    expect(drawnSheets(resp, "component", "VBUS")).toEqual(["s1"]);
+  });
+
+  it("is none when the answer does not name it", () => {
+    expect(drawnSheets(resp, "net", "GND")).toEqual([]);
   });
 });

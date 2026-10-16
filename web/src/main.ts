@@ -39,7 +39,7 @@ import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle } from "./highlightstyle.js";
 import { appBase, currentLocation, hasFile, locationToUrl, setBase, setStaticHost, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
-import { LocateReason } from "./query.js";
+import { LocateReason, drawnSheets, searchPattern } from "./query.js";
 import { delayedBusy } from "./busy.js";
 import { expectationCaptionStrip } from "./expectcaption.js";
 import { undrawnStrip } from "./undrawn.js";
@@ -487,7 +487,11 @@ class AppRoot extends BaseComponent {
     // and hosts the on-demand Run button; clicking a finding highlights its subject (net/ref_des),
     // pressing Run evaluates the current rule selection (WS9).
     const findings = findingsPanelIsland(findingsEl, this._eventBus, {
-      onSelect: (subject, sheet, netId) => void presenter.selectFinding(subject, sheet, netId),
+      // A finding names its subject, so clicking one selects it too and Properties follows.
+      onSelect: (subject, sheet, netId) =>
+        void presenter.selectFinding(subject, sheet, netId).then((sel) => {
+          if (sel) propertiesPresenter.selectEntity(sel);
+        }),
       // A context entity is not a finding, so it locates through the same path a query result cell
       // does (locateEntity) rather than through selectFinding, whose lookup is by finding subject
       // and would find nothing (agni issue 349).
@@ -512,8 +516,15 @@ class AppRoot extends BaseComponent {
     // The datalog query panel (WS9-036) runs an ad-hoc query. The presenter evaluates
     // it over the open design and pushes results back through query.view.
     const query = queryPanelIsland(queryEl, this._eventBus, {
-      onRun: (text, bindings, limit) => void presenter.runQuery(text, bindings, limit),
-      onSaveCSV: () => void presenter.saveQueryCSV((a, s, n) => tablesPresenter.saveAnswer(a, s, n)),
+      onRun: (text, bindings, limit, tab) => void presenter.runQuery(text, bindings, limit, tab),
+      onSaveCSV: (tab) => void presenter.saveQueryCSV((a, s, n) => tablesPresenter.saveAnswer(a, s, n), tab),
+      // A tab coming forward shows what it last located, so the drawing matches the answer in front.
+      // One that located nothing releases what the tab before it had located.
+      onActivate: (_tab, located, previous) => {
+        if (located) void presenter.locateEntity(located.kind, located.subject, located.sheet, located.reason, located.pin ?? "");
+        else if (previous) void presenter.releaseFocus();
+      },
+      onClose: (tab) => presenter.forgetQueryTab(tab),
       onLocate: (kind, subject, sheet, reason, pin) => {
         void presenter.locateEntity(kind, subject, sheet, reason, pin ?? "");
         // A located cell is also selected, so Properties follows the walk through an answer. A pin
@@ -534,21 +545,38 @@ class AppRoot extends BaseComponent {
     });
     // Properties describes whatever is selected (agni issue 902). A click on the drawing selects and
     // highlights, and leaves the query panel alone, since a stray click used to overwrite whatever the
-    // reader had typed there. Asking about the selection is the panel's Ask row, which runs the
-    // served preset in the query panel and brings it forward.
+    // reader had typed there. Asking about the selection is one of the panel's Ask rows, each opening a
+    // served question in a query tab of its own and bringing the query panel forward.
     const properties = propertiesPanelIsland(propertiesEl, this._eventBus, {
       onFocus: (focus) => {
+        // A sheet reference names a sheet the selection is drawn on, which may not be the one on screen.
+        if (focus.level === "sheet" && focus.sheetId !== propertiesPresenter.activeSheetId()) void presenter.showSheet(focus.sheetId);
         propertiesPresenter.select(focus);
         if (focus.level === "entity") locateSelection(focus.sel);
       },
-      onAsk: (sel) => {
-        query.view.askAbout(sel);
+      onAsk: (sel, question) => {
+        query.view.askAbout(sel, question);
         if (dockApi) dockApi.getPanel("query")?.api.setActive();
       },
     });
+    // Where a selected part or net is drawn is the engine's answer to the served find-by-name query,
+    // anchored to the whole name, since each entity in a query answer carries the sheets it is drawn
+    // on. Before the catalog arrives there is no template, and the panel lists no sheets.
+    let findByName: { query: string; bind: string } | null = null;
     const propertiesPresenter = new PropertiesPresenter(properties.view, {
       getDesign: (req) => designClient().getDesign(req),
       drawn: () => drawnOnSheet(svgEl),
+      drawnOn: async (uri, sel) => {
+        if (!findByName) return [];
+        const name = sel.kind === "net" ? (sel.net ?? "") : (sel.ref ?? "");
+        const resp = await queryClient().runQuery({
+          uri,
+          query: findByName.query,
+          overlay: presenter.overlayConfig(),
+          bindings: { [findByName.bind]: { kind: { case: "text", value: `^${searchPattern(name)}$` } } },
+        });
+        return drawnSheets(resp, sel.kind, name);
+      },
     });
     const locateSelection = (sel: Selection) =>
       void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
@@ -594,7 +622,11 @@ class AppRoot extends BaseComponent {
       onSelectRun: (name) => presenter.showReview(name),
       onSelectChecklist: (ref) => presenter.setChecklist(ref),
       onCreate: () => void presenter.createReview(),
-      onLocate: (kind, subject) => void presenter.locateEntity(kind, subject),
+      onLocate: (kind, subject) => {
+        void presenter.locateEntity(kind, subject);
+        const sel = selectionFromCell(kind, subject);
+        if (sel) propertiesPresenter.selectEntity(sel);
+      },
     }, { staticHost: onStaticHost });
     // The relation catalog (WS9-037) is static per build and design-independent, so fetch it once
     // at startup and push it to the panel's picker; a failure just leaves the picker empty (the
@@ -604,11 +636,13 @@ class AppRoot extends BaseComponent {
       .then((r) => {
         query.view.setRelations(r.relations);
         query.view.setExamples(r.examples); // WS14-002: starter queries beside the relation picker
-        query.view.setEntityQueries(r.entityQueries); // the click-to-ask presets
+        query.view.setEntityQueries(r.entityQueries); // the questions about a selection
+        propertiesPresenter.setQuestions(r.entityQueries);
         // The find-by-name template (agni issue 338). A server that sends none leaves the panel
         // with no search mode, since the template names relations only the server defines.
         const sq = r.searchQuery;
         query.view.setSearch(sq ? { query: sq.query, teaches: sq.teaches, bind: sq.bind, pattern: sq.pattern } : null);
+        findByName = sq ? { query: sq.query, bind: sq.bind } : null;
       })
       .catch(() => {});
     // The presenter fans sheet state to every surface in sheetNavs, here only the top tab strip

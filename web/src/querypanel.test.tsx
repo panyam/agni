@@ -62,7 +62,7 @@ describe("querypanel", () => {
     typeQuery(el, "  component.net(?r,?n) => ?r  ");
     el.querySelector<HTMLButtonElement>("button.query-run")!.click();
     expect(onRun).toHaveBeenCalledOnce();
-    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r", {});
+    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r", {}, 0, "q1");
   });
 
   it("disables Run for an empty query and while a run is loading", () => {
@@ -221,7 +221,7 @@ describe("querypanel", () => {
     el.querySelector<HTMLButtonElement>(".query-example")!.click();
     // Clicking fills the textarea AND runs the query.
     expect(el.querySelector<HTMLTextAreaElement>("textarea.query-text")!.value).toBe("component.net(?r,?n) => ?r, ?n");
-    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r, ?n", {});
+    expect(onRun).toHaveBeenCalledWith("component.net(?r,?n) => ?r, ?n", {}, 0, "q1");
   });
 
   it("keeps the helper chrome in a drawer: closed by default, opened by the handle, closed on textarea click", () => {
@@ -364,8 +364,8 @@ describe("resizable result columns", () => {
 // kind, so pin → net → parts → other nets is a loop the reader can go round without typing.
 describe("walking from a result row", () => {
   const PRESETS = [
-    { kind: "component", query: "component.net(?ref, ?net) => ?net", teaches: "projection", binds: ["ref"] },
-    { kind: "net", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] },
+    { kind: "component", label: "What nets does it touch?", query: "component.net(?ref, ?net) => ?net", teaches: "projection", binds: ["ref"] },
+    { kind: "net", label: "What pins are on it?", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] },
   ];
   const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
   const netCell = (el: HTMLElement) =>
@@ -380,7 +380,7 @@ describe("walking from a result row", () => {
 
     el.querySelector<HTMLButtonElement>(".query-row .query-locate")!.click(); // the R1 component cell
     expect(el.querySelector(".query-selection-name")!.textContent).toBe("R1");
-    expect(el.querySelector(".query-ask")!.textContent).toContain("What is R1 connected to?");
+    expect(el.querySelector(".query-ask")!.textContent).toContain("What nets does it touch?");
   });
 
   it("takes the hop: the question fills the box with the preset, binds the pick, and runs it", () => {
@@ -391,7 +391,7 @@ describe("walking from a result row", () => {
 
     el.querySelector<HTMLButtonElement>(".query-ask")!.click();
     const asked = "component.net(?ref, ?net) => ?ref";
-    expect(onRun).toHaveBeenCalledWith(asked, { net: "SDA" }, STARTING_POINT_LIMIT);
+    expect(onRun).toHaveBeenCalledWith(asked, { net: "SDA" }, STARTING_POINT_LIMIT, "q2");
     // The query stays in the box, editable, because the hop is meant to teach the sentence that
     // made it, and the value it was asked about shows beside it (agni issue 793).
     expect(box(el).value).toBe(asked);
@@ -469,7 +469,7 @@ describe("querypanel search", () => {
     typeTerm(el, "  CAN  ");
     el.querySelector<HTMLButtonElement>(".query-run")!.click();
 
-    expect(onRun).toHaveBeenCalledWith(SEARCH.query, { pattern: "(?i)CAN" });
+    expect(onRun).toHaveBeenCalledWith(SEARCH.query, { pattern: "(?i)CAN" }, 0, "q1");
     // Back in query mode with the sentence that answered visible and editable, which is the whole
     // reason search is a mode on this panel rather than a widget of its own. The query is the served
     // text, and the term reaches it as a bound value shown beside it (agni issue 793).
@@ -868,7 +868,7 @@ describe("querypanel unresolved and gated", () => {
 // agni issue 793: a search or a click binds its values rather than splicing them into the text, and
 // the chips are how the reader sees and changes them.
 describe("bound values", () => {
-  const PRESET = { kind: "net", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] };
+  const PRESET = { kind: "net", label: "What pins are on it?", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] };
   const ask = (panel: ReturnType<typeof mountPanel>["panel"]) => {
     panel.view.setEntityQueries([PRESET]);
     panel.view.setSelection({ kind: "net", net: "SDA" });
@@ -884,7 +884,7 @@ describe("bound values", () => {
     input.value = "SCL";
     input.dispatchEvent(new Event("input", { bubbles: true }));
     runBtn(el).click();
-    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "SCL" });
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "SCL" }, 0, "q2");
   });
 
   it("unbinds a removed chip, leaving its variable free", () => {
@@ -894,7 +894,7 @@ describe("bound values", () => {
     el.querySelector<HTMLButtonElement>(".query-binding-remove")!.click();
     expect(chips(el)).toEqual([]);
     runBtn(el).click();
-    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, {});
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, {}, 0, "q2");
   });
 
   it("drops a binding whose variable the reader edited out of the query", () => {
@@ -905,7 +905,7 @@ describe("bound values", () => {
     box(el).dispatchEvent(new Event("input", { bubbles: true }));
     expect(chips(el)).toEqual([]);
     runBtn(el).click();
-    expect(onRun).toHaveBeenLastCalledWith("component.net(?ref, ?n) => ?ref", {});
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?ref, ?n) => ?ref", {}, 0, "q2");
   });
 
   it("clears the bindings when an example replaces the query", () => {
@@ -914,7 +914,7 @@ describe("bound values", () => {
     el.querySelector<HTMLButtonElement>(".query-ask")!.click();
     pushExamples([{ label: "nets", query: "component.net(?ref, ?net) => ?net", teaches: "t" }]);
     el.querySelector<HTMLButtonElement>(".query-example")!.click();
-    expect(onRun).toHaveBeenLastCalledWith("component.net(?ref, ?net) => ?net", {});
+    expect(onRun).toHaveBeenLastCalledWith("component.net(?ref, ?net) => ?net", {}, 0, "q2");
     expect(chips(el)).toEqual([]);
   });
 
@@ -923,14 +923,14 @@ describe("bound values", () => {
     panel.view.setQuery(PRESET.query, { net: "GND" });
     expect(box(el).value).toBe(PRESET.query);
     expect(chips(el)).toEqual([["?net =", "GND"]]);
-    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" }, STARTING_POINT_LIMIT);
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" }, STARTING_POINT_LIMIT, "q2");
   });
 });
 
 // agni issue 896: a question about one picked entity asks for the first rows, says how many the
 // limit left out, and "show all" asks the same question again without it.
 describe("a limited answer", () => {
-  const PRESET = { kind: "net", query: "pin.net(?ref, ?pin, ?net) => ?ref, ?pin", teaches: "t", binds: ["net"] };
+  const PRESET = { kind: "net", label: "What pins are on it?", query: "pin.net(?ref, ?pin, ?net) => ?ref, ?pin", teaches: "t", binds: ["net"] };
   const limited = (total: number): QueryResult => ({
     ...emptyResult(),
     ran: true,
@@ -955,7 +955,7 @@ describe("a limited answer", () => {
     box.value = "component.net(?ref, ?net) => ?ref";
     box.dispatchEvent(new Event("input", { bubbles: true }));
     showAll(el)!.click();
-    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" });
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" }, 0, "q2");
   });
 
   it("offers nothing more when the answer is whole", () => {
@@ -992,5 +992,101 @@ describe("saving an answer as csv", () => {
     const { el, push } = mountPanel();
     push(answered());
     expect(el.querySelector(".query-save-csv")).toBeNull();
+  });
+});
+
+// agni issue 902: the panel hosts any number of query tabs, each with its own question and answer.
+describe("query tabs", () => {
+  const PRESETS = [
+    { kind: "net", label: "What pins are on it?", query: "pin.net(?ref, ?pin, ?net) => ?ref, ?pin", teaches: "t", binds: ["net"] },
+    { kind: "net", label: "Which test points are on it?", query: "tp(?tp, ?net) => ?tp", teaches: "t", binds: ["net"] },
+  ];
+  const tabs = (el: HTMLElement) => [...el.querySelectorAll(".query-tab-go")].map((t) => t.textContent);
+  const front = (el: HTMLElement) => el.querySelector(".query-tab.on .query-tab-go")!.textContent;
+  const box = (el: HTMLElement) => el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
+  const tab = (el: HTMLElement, title: string) => [...el.querySelectorAll<HTMLButtonElement>(".query-tab-go")].find((t) => t.textContent === title)!;
+  const answered = (cell: string): QueryResult => ({
+    ...emptyResult(),
+    ran: true,
+    columns: ["ref"],
+    columnKinds: [""],
+    rows: [{ cells: [cell], cites: [], cellSheets: [[]], cellReasons: [0], cellKinds: [""], cellRefs: [""] }],
+  });
+
+  it("opens an asked question in a tab named for it, and leaves the typed query in its own tab", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    typeQuery(el, "net.rail(?n) => ?n");
+    panel.view.askAbout({ kind: "net", net: "SDA" }, PRESETS[1]);
+    expect(tabs(el)).toEqual(["Query 1", "SDA: Which test points are on it?"]);
+    expect(front(el)).toBe("SDA: Which test points are on it?");
+    expect(box(el).value).toBe(PRESETS[1].query);
+    expect(onRun).toHaveBeenLastCalledWith(PRESETS[1].query, { net: "SDA" }, STARTING_POINT_LIMIT, "q2");
+    tab(el, "Query 1").click();
+    expect(box(el).value).toBe("net.rail(?n) => ?n");
+  });
+
+  it("asks the kind's first question when none is named", () => {
+    const { el, panel } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    panel.view.askAbout({ kind: "net", net: "SDA" });
+    expect(front(el)).toBe("SDA: What pins are on it?");
+  });
+
+  it("keeps each tab's answer, including one that arrives after the reader moved on", () => {
+    const { el, panel, push } = mountPanel();
+    panel.view.setEntityQueries(PRESETS);
+    push(answered("from tab 1"));
+    panel.view.askAbout({ kind: "net", net: "SDA" });
+    panel.view.setState(answered("late for tab 1"), "q1");
+    panel.view.setState(answered("for tab 2"), "q2");
+    expect(el.querySelector(".query-row")!.textContent).toContain("for tab 2");
+    tab(el, "Query 1").click();
+    expect(el.querySelector(".query-row")!.textContent).toContain("late for tab 1");
+  });
+
+  it("opens an empty tab with +, and closes any tab but the last", () => {
+    const { el } = mountPanel();
+    expect(el.querySelector(".query-tab-close")).toBeNull();
+    el.querySelector<HTMLButtonElement>(".query-tab-new")!.click();
+    expect(tabs(el)).toEqual(["Query 1", "Query 2"]);
+    expect(front(el)).toBe("Query 2");
+    expect(box(el).value).toBe("");
+    el.querySelector<HTMLButtonElement>(".query-tab.on .query-tab-close")!.click();
+    expect(tabs(el)).toEqual(["Query 1"]);
+    expect(el.querySelector(".query-tab-close")).toBeNull();
+  });
+
+  it("tells the host what a tab coming forward had located, so the drawing matches it", () => {
+    const onActivate = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onLocate: vi.fn(), onActivate });
+    panel.island.activate();
+    pushLocatable((s) => panel.view.setState(s));
+    el.querySelector<HTMLButtonElement>(".query-row .query-locate")!.click(); // R1, in tab 1
+    el.querySelector<HTMLButtonElement>(".query-tab-new")!.click();
+    const r1 = { kind: "component", subject: "R1", sheet: undefined, reason: LocateReason.UNSPECIFIED };
+    expect(onActivate).toHaveBeenLastCalledWith("q2", undefined, r1);
+    tab(el, "Query 1").click();
+    expect(onActivate).toHaveBeenLastCalledWith("q1", r1, undefined);
+  });
+
+  it("tells the host when a tab closes, so it can drop the answer it kept", () => {
+    const onClose = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun: vi.fn(), onClose });
+    panel.island.activate();
+    el.querySelector<HTMLButtonElement>(".query-tab-new")!.click();
+    el.querySelector<HTMLButtonElement>(".query-tab.on .query-tab-close")!.click();
+    expect(onClose).toHaveBeenCalledWith("q2");
+  });
+
+  it("serves a kind's questions in the server's order", () => {
+    const { panel } = mountPanel();
+    panel.view.setEntityQueries([...PRESETS, { kind: "component", label: "c", query: "c", teaches: "", binds: ["ref"] }]);
+    expect(panel.view.questionsFor("net").map((q) => q.label)).toEqual(["What pins are on it?", "Which test points are on it?"]);
+    expect(panel.view.questionsFor("bus")).toEqual([]);
   });
 });

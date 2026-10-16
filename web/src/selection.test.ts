@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { askLabel, bestOf, entityBindings, labelFor, pickAt, sameSelection, selectionFromCell, selectionFromElement, type Selection } from "./selection.js";
+import { bestOf, entityBindings, labelFor, pickAt, sameSelection, selectionFromCell, selectionFromElement, type Selection } from "./selection.js";
 
 function el(attrs: Record<string, string>): Element {
   const e = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
@@ -139,15 +139,6 @@ describe("reading a result cell", () => {
   it("ignores the ref for every other kind", () => {
     expect(selectionFromCell("component", "R1", "U9")).toEqual({ kind: "component", ref: "R1" });
     expect(selectionFromCell("net", "SDA", "U9")).toEqual({ kind: "net", net: "SDA" });
-  });
-});
-
-describe("wording the next question", () => {
-  it("asks about each kind in its own terms", () => {
-    expect(askLabel({ kind: "pin", ref: "U7", pin: "12" })).toBe("What is U7.12 wired to?");
-    expect(askLabel({ kind: "component", ref: "R1" })).toBe("What is R1 connected to?");
-    expect(askLabel({ kind: "net", net: "SDA" })).toBe("What is on SDA?");
-    expect(askLabel({ kind: "bus", busId: "D[7:0]" })).toBe("What is in D[7:0]?");
   });
 });
 
