@@ -1,9 +1,11 @@
 package wasmengine
 
 import (
+	"io/fs"
 	"net/http"
 	"net/http/httptest"
 	"testing"
+	"testing/fstest"
 )
 
 // fakeHeap is a heap a test grows by hand, and a collection shrinks to what it says survives.
@@ -46,6 +48,30 @@ func TestCollectorCollectsAfterARequestOnlyOnceTheHeapDoubled(t *testing.T) {
 	ask()
 	if f.gcs != 3 || served != 4 {
 		t.Fatalf("got %d collections over %d requests, want 3 over 4", f.gcs, served)
+	}
+}
+
+// A read collects between its files once the heap is a fixed allowance past what last survived,
+// whatever the live heap is, since a read's garbage dwarfs what it keeps.
+func TestOpeningAFileCollectsOnceTheHeapIsPastItsHeadroom(t *testing.T) {
+	f := &fakeHeap{bytes: 10 << 20, survives: 10 << 20}
+	c := f.collector()
+	c.collect()
+	files := c.files(fstest.MapFS{"a.kicad_sch": {Data: []byte("x")}})
+	open := func() {
+		if _, err := fs.ReadFile(files, "a.kicad_sch"); err != nil {
+			t.Fatal(err)
+		}
+	}
+	f.bytes = 10<<20 + fileHeadroom // past double the live heap, but not past the allowance
+	open()
+	if f.gcs != 1 {
+		t.Fatalf("a heap within its headroom collected on open (%d collections)", f.gcs)
+	}
+	f.bytes++
+	open()
+	if f.gcs != 2 {
+		t.Fatalf("a heap past its headroom ran %d collections on open, want 2", f.gcs)
 	}
 }
 

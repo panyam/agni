@@ -83,8 +83,8 @@ type Options struct {
 	Version string
 	// CollectBetweenRequests is set by a caller that has turned the Go collector's automatic cycles
 	// off (debug.SetGCPercent(-1)), as cmd/agni-wasm does. The engine then collects after a request
-	// when the heap has doubled since its last collection, as well as after each layer it loads, and
-	// never during a request (agni issue 1010). A native caller leaves it off, since its collector
+	// when the heap has doubled since its last collection, and likewise as each file opens, as well as
+	// after each layer it loads, so never in the middle of evaluating (agni issue 1010). A native caller leaves it off, since its collector
 	// runs concurrently on other cores and is cheap there.
 	CollectBetweenRequests bool
 }
@@ -143,15 +143,22 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	// Every read goes through one cache, so a second request on a design costs its answer rather than
 	// a re-parse (agni issue 895). The engine is rebuilt on every mount change, which drops the
 	// in-memory entries and keeps what Store holds.
+	var gc *collector
+	if o.CollectBetweenRequests {
+		gc = processCollector
+		wrapped := make([]fshost.Mount, len(ms))
+		for i, m := range ms {
+			wrapped[i] = fshost.Mount{Name: m.Name, FS: gc.files(m.FS)}
+		}
+		ms = wrapped
+	}
 	files := fshost.New(ms...)
 	if o.Version == "" {
 		o.Version = StoreVersion()
 	}
 	root := files.Root()
 	collect := runtime.GC
-	var gc *collector
-	if o.CollectBetweenRequests {
-		gc = processCollector
+	if gc != nil {
 		collect = gc.collect
 	}
 	cache := service.NewDesignCache(designCache).Persist(o.Store, func(fp []byte) (*formats.Touched, bool) {
