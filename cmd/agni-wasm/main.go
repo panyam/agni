@@ -23,13 +23,15 @@ import (
 )
 
 // The collector's automatic cycles are OFF (agni issue 1010), and the engine collects between
-// requests and after each layer it loads instead (wasmengine.Options.CollectBetweenRequests). Go's wasm
+// requests, between the files a read opens, and after each layer it loads instead
+// (wasmengine.Options.CollectBetweenRequests). Go's wasm
 // port has one thread and no asynchronous preemption, so a concurrent cycle runs beside a request and
 // slows it until the cycle ends: two of them cost 5 s of a 7.8 s Jetson check, and with them gone the
 // check took 2.6 s, while a forced collection over the same heap takes 20 to 57 ms. In Chromium, Run
-// checks on Jetson went from 2926 to 1173 ms on one worker and from 4780 to 2397 ms over two lanes. A
-// request's garbage now stands until it ends, which raised the serve worker after a read from 355 to
-// 621 MB and the two-lane peak from 873 to 1159 MB (`make wasm-bench`). Changing GOGC instead only
+// checks on Jetson went from 2926 to 1173 ms on one worker and from 4780 to 2397 ms over two lanes. Collecting
+// between requests alone let a read's garbage stand until the layer ended, which raised the serve
+// worker after a read from 355 to 623 MB and the two-lane peak from 873 to 1154 MB (`make
+// wasm-bench`); collecting between its files too brought them to 335 and 858 MB. Changing GOGC instead only
 // moves where a cycle lands: 200 and 400 took 6.2 and 8.7 s, and GOGC=off under a GOMEMLIMIT of
 // 700 MiB took 12.7 s.
 //

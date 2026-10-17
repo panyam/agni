@@ -780,8 +780,9 @@ default on Jetson (agni 988, recorded on `cmd/agni-wasm`'s `main`). One collecti
 the cache reads does (`DesignCache.AfterLoad`, which only the browser engine sets): Jetson's check
 went from 1343 to 805 MB (agni 1000). **The browser engine's automatic collection is OFF** (agni
 1010): Go's wasm port has one thread, so a concurrent cycle ran beside a rule and took Jetson's check
-from 2.6 to 7.8 s, and the engine now collects only after a layer loads and after a request that
-doubled the heap (`wasmengine.Options.CollectBetweenRequests`). A rule that suddenly costs seconds in
+from 2.6 to 7.8 s, and the engine now collects only after a layer loads, after a request that
+doubled the heap, and between a read's files once the heap is 128 MB past what last survived
+(`wasmengine.Options.CollectBetweenRequests`), since a wasm memory keeps its largest size. A rule that suddenly costs seconds in
 the browser and milliseconds natively is this shape, so read `make wasm-layers GODEBUG=gctrace=1`
 before the rule. **Which stage raised a peak** is
 `Agni-Timing: memory` (the page's `?timing=memory`, the CLI's `--timing-memory`): each stage carries
