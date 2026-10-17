@@ -21,11 +21,12 @@ export function findingFeedback(f: { rule: string; severity: string; inconclusiv
 // what they expected and submit.
 export function feedbackIssueURL(fb: FindingFeedback, repo = "panyam/agni"): string {
   const rule = fb.rule ? `\`${fb.rule}\`` : "a rule my project wrote";
-  const how = fb.inconclusive ? `an inconclusive ${fb.severity}` : `a ${fb.severity}`;
+  // The severity is named as a value, since an article before it read "a error".
+  const how = `severity ${fb.severity}${fb.inconclusive ? ", inconclusive" : ""}`;
   const body = [
     "<!-- This names only agni's rule, the finding's severity and the engine version, nothing from your design. Describe what you expected without naming nets, parts or files. -->",
     "",
-    `A finding from ${rule}, ${how}, looks wrong on a design I can't share.`,
+    `A finding from ${rule} (${how}) looks wrong on a design I can't share.`,
     "",
     `agni ${fb.version || "(version unknown)"}`,
     "",

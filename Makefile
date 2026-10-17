@@ -250,13 +250,13 @@ wasm-bench: agni ui wasm
 # check model, the fact base), from a fresh read and from a restore, natively and then compiled to wasm
 # under Node, where the live heap matches native and the runtime's memory is the worker's (agni issue
 # 981). Not in the gate, for the same reason as wasm-bench. env -i because the wasm runtime copies the
-# whole environment into its memory and refuses one over its limit, with GOGC and GOMEMLIMIT passed
-# through so a sweep reaches the wasm half too (agni issue 988).
+# whole environment into its memory and refuses one over its limit, with GOGC, GOMEMLIMIT and GODEBUG
+# passed through so a sweep or a gctrace reaches the wasm half too (agni issues 988, 1010).
 #   make wasm-layers BOARD=tools/samples/boards/jetson-agx-thor-baseboard DESIGN=.
 wasm-layers:
 	$(GO) run ./tools/wasmbench --layers --dir $(abspath $(BOARD)) --design $(DESIGN)
 	tmp=$$(mktemp -d) && GOOS=js GOARCH=wasm $(GO) build -o $$tmp/wasmbench.wasm ./tools/wasmbench && \
-	env -i PATH="$$PATH" HOME=$$tmp $(if $(GOGC),GOGC=$(GOGC)) $(if $(GOMEMLIMIT),GOMEMLIMIT=$(GOMEMLIMIT)) node "$$($(GO) env GOROOT)/lib/wasm/wasm_exec_node.js" $$tmp/wasmbench.wasm \
+	env -i PATH="$$PATH" HOME=$$tmp $(if $(GOGC),GOGC=$(GOGC)) $(if $(GOMEMLIMIT),GOMEMLIMIT=$(GOMEMLIMIT)) $(if $(GODEBUG),GODEBUG=$(GODEBUG)) node "$$($(GO) env GOROOT)/lib/wasm/wasm_exec_node.js" $$tmp/wasmbench.wasm \
 		--layers --dir $(abspath $(BOARD)) --design $(DESIGN); rc=$$?; rm -rf $$tmp; exit $$rc
 
 # The browser-only public demo as static files (agni issue 856): a landing page over the seeded

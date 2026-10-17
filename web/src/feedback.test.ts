@@ -20,8 +20,13 @@ describe("a wrong-finding report", () => {
     const url = decoded(feedbackIssueURL(findingFeedback(finding, true, "v0.2.4")));
     expect(url).toContain("i2c-pull-up");
     expect(url).toContain("v0.2.4");
-    expect(url).toContain("error");
+    expect(url).toContain("(severity error)");
     for (const name of ["I2C_SCL_SECRET", "VDD_SECRET", "U17", "pull-up to"]) expect(url).not.toContain(name);
+  });
+
+  it("says when the finding was inconclusive", () => {
+    const url = decoded(feedbackIssueURL(findingFeedback({ ...finding, severity: "warning", inconclusive: true }, true, "v0.2.4")));
+    expect(url).toContain("(severity warning, inconclusive)");
   });
 
   it("never names a rule the project wrote", () => {
