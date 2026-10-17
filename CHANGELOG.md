@@ -10,6 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.2.4] - 2026-10-16
+
+A compose bundle and `agni trial` for trying a release on your own machine and reporting back
+without the design, a `looks wrong?` link per finding, parse-error positions, query links, verdict ids
+on findings, checklists scored with no review store, and the hierarchy note on every page.  A failed
+request under `--format json` now writes the Connect error.  The full write-up is
+[RELEASES/v0.2.4.md](RELEASES/v0.2.4.md).
+
 ## [0.2.3] - 2026-10-16
 
 A server keeps each rule's check results with the design's cached model, so a rule already run on
