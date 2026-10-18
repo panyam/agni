@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.2.5] - 2026-10-18
+
+The browser engine collects between requests rather than beside them, so Jetson's first Run checks
+on the deployed demo went from 11.5 s to 4.6 s (agni issue 1010).  The public-demo exercise reports a
+design's load apart from its questions (agni issue 1060), and agni moves to jaala v0.1.69.  The full
+write-up is [RELEASES/v0.2.5.md](RELEASES/v0.2.5.md).
+
 ## [0.2.4] - 2026-10-16
 
 A compose bundle and `agni trial` for trying a release on your own machine and reporting back
