@@ -271,8 +271,9 @@ export function loadDetail(s: LoadSplit): string {
   return `${parts.join(", ")}; cache ${s.cache || "none"}`;
 }
 
-// sumSplits adds the splits of several requests, such as every request an open made, into one. The
-// requests may overlap, so outsideMs is the sum of each request's own wait rather than wall time.
+// sumSplits adds the splits of several requests, such as every request an open made, into one. It
+// leaves outsideMs unset, since requests queued behind each other on one worker each wait for the
+// ones ahead, so the sum of their waits can exceed the time they all took.
 export function sumSplits(splits: readonly LoadSplit[]): LoadSplit {
   const by = new Map<string, number>();
   const sum: LoadSplit = { rpc: splits.map((s) => s.rpc).join("+"), engineMs: 0, loadMs: 0, rulesMs: 0, otherMs: 0, load: [], cache: "" };
@@ -282,7 +283,6 @@ export function sumSplits(splits: readonly LoadSplit[]): LoadSplit {
     sum.loadMs += s.loadMs;
     sum.rulesMs += s.rulesMs;
     sum.otherMs += s.otherMs;
-    if (s.outsideMs !== undefined) sum.outsideMs = (sum.outsideMs ?? 0) + s.outsideMs;
     for (const l of s.load) {
       const m = /^(.*) (\d+) ms$/.exec(l);
       if (m) by.set(m[1], (by.get(m[1]) ?? 0) + Number(m[2]));

@@ -154,7 +154,7 @@ describe("splitting a request between loading and answering", () => {
     const b = loadSplit(line("ListRules", { totalMicros: 100_000, stages: [{ name: "restore.design", startMicros: 0, micros: 50_000 }], lookups: [{ layer: "design", source: "store" }], page: { startMs: 10, wallMs: 150 } }))!;
     const s = sumSplits([a, b]);
     expect(s.loadMs).toBe(300);
-    expect(s.outsideMs).toBe(150);
+    expect(s.outsideMs).toBeUndefined();
     expect(s.load).toEqual(["restore.design 300 ms"]);
     expect(s.cache).toBe("design=store");
   });

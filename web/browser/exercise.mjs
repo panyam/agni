@@ -197,8 +197,10 @@ function checksTiming(log, design, run) {
 
 // openLoad is the "1. load" row for a seed: the design files the open fetched and, with --timing,
 // what every request before Run checks spent loading the design rather than answering (agni issue
-// 1060). It is paid once per visit, where every later question runs on what it loaded.
+// 1060). It is paid once per visit, where every later question runs on what it loaded. Its time is
+// the engine's loading alone, since "1. open" already gives the wall time.
 function openLoad(log, design, beforeMs) {
+  // Read now, before Run checks fetches the check worker's copy of the files.
   const files = log.fetches.map((l) => /^agni fetch .+?: (\{.*\})$/.exec(l)).filter(Boolean).map((m) => JSON.parse(m[1]));
   const mb = (files.reduce((n, f) => n + Number(f.bytes ?? 0), 0) / (1 << 20)).toFixed(1);
   const fetched = `${files.length} design files fetched, ${mb} MB`;
@@ -212,7 +214,7 @@ function openLoad(log, design, beforeMs) {
     return;
   }
   const s = sumSplits(splits);
-  add("1. load", design, "ok", `${fetched}; ${splits.length} requests: ${loadDetail(s)}`, (s.outsideMs ?? 0) + s.loadMs);
+  add("1. load", design, "ok", `${fetched}; ${splits.length} requests: ${loadDetail(s)}`, s.loadMs);
 }
 
 // checksAgain clicks Run checks a second time on the same page. The viewer keeps each rule's verdict
@@ -377,8 +379,9 @@ for (const seed of seeds) {
     const slow = slowestFetch(log.fetches);
     return { ms: drawn - t, detail: `first sheet drawn; rule catalog after ${Math.round(since(t))} ms; ${seed.meta.trim()}${slow ? `; ${slow}` : ""}` };
   });
+  // The load is read before Run checks, whose own loading is the checks load row's.
+  if (ok) openLoad(log, seed.title, await page.evaluate(() => performance.now()));
   const run = ok && (await checks(page, seed.title));
-  if (ok) openLoad(log, seed.title, run ? run.t0 : Infinity);
   if (run) {
     checksTiming(log, seed.title, run);
     await checksAgain(page, seed.title, log);
