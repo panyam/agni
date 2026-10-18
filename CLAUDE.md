@@ -565,7 +565,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   over `tools/samples/` skips `._` names (the oracle's `globCorpus`, agni 812). The old Makefile also
   wrote an EMPTY tarball under GNU tar that still passed `make verify`; it runs under `pipefail` now.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
-  Run `make proto` and `make proto-check` under the pinned Go (`GOTOOLCHAIN=go1.26.4`) when yours is newer,
+  Run `make proto` and `make proto-check`, and only those, under the pinned Go (`GOTOOLCHAIN=go1.26.4`) when yours is newer,
   because `protoc-gen-go` formats comments with the Go that built it, and 1.27 rewrote comments in
   generated files the change never touched (agni 994).
   `make proto-check` fails the gate on any of them being stale. The Python half uses buf's REMOTE
@@ -708,8 +708,12 @@ misread (a wrapper reporting its own status rather than make's, which turns red 
 commit-first ordering rule, and a per-clone `pnpm install`), one that makes a fine tree read RED (a stray
 `agni serve` on :8080 fails three verdict-link tests, so reproduce against unmodified `main` before
 reporting a regression), plus what a run leaves behind and the generated-code rules. **From a worktree run
-`make -k testall`**: a worktree build carries no VCS stamp, so `browser-test` fails there (#957) and a
-plain `make` stops before `python-test`, `tutorial-runs-check` and `docsite-images-check` ever run.
+`make -k testall`**, since a plain `make` stops at the first failure before `python-test`,
+`tutorial-runs-check` and `docsite-images-check` ever run. **Build in a worktree with the default Go,
+never `GOTOOLCHAIN=go1.26.4`.** Go 1.26.4 finds a repository only by a `.git` DIRECTORY and a linked
+worktree's `.git` is a file, so it runs no git and stamps `(devel)` (go1.27 fixed it, golang/go#58218).
+A `(devel)` wasm has an empty `StoreVersion` and keeps nothing, so `browser-test` and rung 12's capture
+fail and a timed walk reports `design=built` where it should read `design=store` (#957).
 **`tutorial-runs-check` regenerates captures and does not read the prose quoting them**, so a
 tutorial can cite numbers a change moved and the gate stays green. A capture step that exits non-zero
 and captures nothing is a build error unless its spec sets `exit: true` (agni 825). A checkout from
