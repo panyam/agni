@@ -1,7 +1,7 @@
 // The public demo exercise's report logic (web/browser/exercise-report.ts), tested here because
 // the unit run reads src/ and its config is held identical to the workbench's (hack/fixture_copies.txt).
 import { describe, expect, it } from "vitest";
-import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, markersFrom, pendingFiles, slowestFetch, table, type Row } from "../browser/exercise-report.js";
+import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, loadDetail, loadSplit, markersFrom, pendingFiles, slowestFetch, sumSplits, table, type Row } from "../browser/exercise-report.js";
 
 const row = (status: Row["status"]): Row => ({ step: "s", design: "d", status, detail: "" });
 
@@ -96,5 +96,66 @@ describe("the public demo exercise's report", () => {
     ];
     expect(slowestFetch(lines)).toBe("slowest file jetson/b.kicad_pcb 84.0 MB in 31.2 s after 2 attempts");
     expect(slowestFetch([])).toBe("");
+  });
+});
+
+// agni issue 1060: a timed request split into loading the design and answering it.
+describe("splitting a request between loading and answering", () => {
+  const line = (rpc: string, t: object) => `agni timing ${rpc}: ${JSON.stringify(t)}`;
+  // A Jetson-shaped Run checks: build.model holds read.board, which holds build.board, then the rules
+  // and a locate pass, with the page waiting far longer than the engine took.
+  const check = line("CheckDesign", {
+    totalMicros: 2_600_000,
+    stages: [
+      { name: "resolve.overlay", startMicros: 0, micros: 5_000 },
+      { name: "build.model", startMicros: 10_000, micros: 1_513_000 },
+      { name: "read.board", startMicros: 20_000, micros: 1_440_000 },
+      { name: "build.board", startMicros: 30_000, micros: 1_268_000 },
+      { name: "rules", startMicros: 1_530_000, micros: 810_000 },
+      { name: "locate", startMicros: 2_350_000, micros: 200_000 },
+    ],
+    lookups: [
+      { layer: "model", source: "built" },
+      { layer: "board", source: "built" },
+    ],
+    page: { startMs: 817, wallMs: 3_100 },
+  });
+
+  it("counts a nested stage once, inside its outermost parent", () => {
+    const s = loadSplit(check)!;
+    expect(s.loadMs).toBe(1_518);
+    expect(s.load).toEqual(["build.model 1513 ms", "resolve.overlay 5 ms"]);
+    expect(s.rulesMs).toBe(810);
+    expect(s.otherMs).toBe(272);
+  });
+
+  it("puts the page's wait outside the engine apart from the engine's own loading", () => {
+    const s = loadSplit(check)!;
+    expect(s.outsideMs).toBe(500);
+    expect(s.startMs).toBe(817);
+    expect(loadDetail(s)).toBe("500 ms outside the engine, 1.5 s loading (build.model 1513 ms, resolve.overlay 5 ms), 272 ms other engine work; cache model=built board=built");
+  });
+
+  it("reads a request that ran no rules as loading alone", () => {
+    const s = loadSplit(line("GetDesign", { totalMicros: 300_000, stages: [{ name: "restore.design", startMicros: 0, micros: 250_000 }] }))!;
+    expect(s.rulesMs).toBe(0);
+    expect(s.loadMs).toBe(250);
+    expect(s.outsideMs).toBeUndefined();
+  });
+
+  it("returns nothing for a line that is not a timing or carries no engine total", () => {
+    expect(loadSplit("agni fetch a.kicad_pcb: {}")).toBeUndefined();
+    expect(loadSplit(line("CheckDesign", { page: { startMs: 1, wallMs: 2 }, error: "aborted" }))).toBeUndefined();
+    expect(loadSplit("agni timing CheckDesign: {not json")).toBeUndefined();
+  });
+
+  it("adds an open's requests into one load, merging their stages by name", () => {
+    const a = loadSplit(line("GetDesign", { totalMicros: 300_000, stages: [{ name: "restore.design", startMicros: 0, micros: 250_000 }], lookups: [{ layer: "design", source: "store" }], page: { startMs: 0, wallMs: 400 } }))!;
+    const b = loadSplit(line("ListRules", { totalMicros: 100_000, stages: [{ name: "restore.design", startMicros: 0, micros: 50_000 }], lookups: [{ layer: "design", source: "store" }], page: { startMs: 10, wallMs: 150 } }))!;
+    const s = sumSplits([a, b]);
+    expect(s.loadMs).toBe(300);
+    expect(s.outsideMs).toBeUndefined();
+    expect(s.load).toEqual(["restore.design 300 ms"]);
+    expect(s.cache).toBe("design=store");
   });
 });

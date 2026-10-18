@@ -233,10 +233,12 @@ WASM_BUILD_ID = $(shell git diff HEAD 2>/dev/null | sha256sum | cut -c1-16)
 
 # The engine as WebAssembly (agni issue 178), for the viewer's `?engine=wasm` mode, which runs it in
 # a Web Worker with no server answering the API. Writes the wasm and Go's loader script beside the
-# viewer bundle; both are gitignored build output.
+# viewer bundle; both are gitignored build output. The loader is installed writable, since a toolchain
+# GOTOOLCHAIN downloaded lives read-only in the module cache, and a cp keeps that mode, so the next
+# build could not overwrite its own copy.
 wasm:
 	GOOS=js GOARCH=wasm $(GO) build -ldflags "-X github.com/panyam/agni/internal/wasmengine.buildID=$(WASM_BUILD_ID)" -o web/static/agni.wasm ./cmd/agni-wasm
-	cp "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" web/static/wasm_exec.js
+	install -m 644 "$$($(GO) env GOROOT)/lib/wasm/wasm_exec.js" web/static/wasm_exec.js
 
 # Measure the engine on one board natively and in a Chromium Web Worker, side by side (agni issue
 # 852). Not in the gate: a real board takes minutes and lives in the samples corpus.

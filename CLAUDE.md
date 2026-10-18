@@ -772,7 +772,10 @@ engine. A stage is recorded with `timing.Begin(ctx, "name")()` from `core/timing
 nobody asked, and the record travels in headers so no answer changes run to run. Under `?timing` the
 page also logs each request's start and wall time on its own clock, and the exercise's `--timing`
 turns them into a `checks breakdown` row, every request of a Run checks plus the page's own time
-(agni 968). **A browser worker's MEMORY is measured with `make wasm-layers`** (what each layer of an
+(agni 968). **A walk reports loading a design apart from asking it questions** (agni 1060): `1. load`
+and `checks load` are paid once per visit, and `checks rules`, `checks again` and the query rows are
+what a question costs on a loaded design, so a mission log leads with those, and `wasm-bench` prints
+its rows in the same two groups. **A browser worker's MEMORY is measured with `make wasm-layers`** (what each layer of an
 open design holds, native and wasm, with `GOGC` and `GOMEMLIMIT` passed through) **and `make
 wasm-bench`** (each lane's wasm memory beside its live Go heap). Wasm memory never shrinks, and
 collecting harder does not lower it reliably: a lower GOGC or a memory limit peaked HIGHER than the

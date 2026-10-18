@@ -192,3 +192,104 @@ export function breakdownDetail(b: Breakdown): string {
   });
   return `${b.requests.length} requests: ${reqs.join("; ") || "none"}; in requests ${sec(b.inRequestsMs)}, page outside them ${sec(b.pageMs)}`;
 }
+
+// A LoadSplit divides one timed request between loading the design and answering it (agni issue
+// 1060), so a row can report the one-time cost apart from what a question costs on a loaded design.
+// outsideMs is the page's wait outside the engine, which on the browser engine is mostly the
+// design's files reaching the worker. loadMs is the outermost stages that read, restore, build,
+// collect or resolve, and rulesMs the rule evaluation. otherMs is the engine's remaining time, such
+// as locating findings in the drawing.
+export interface LoadSplit {
+  rpc: string;
+  // startMs is when the page sent the request, on its own clock.
+  startMs?: number;
+  wallMs?: number;
+  engineMs: number;
+  outsideMs?: number;
+  loadMs: number;
+  rulesMs: number;
+  otherMs: number;
+  // load names the outermost loading stages, widest first, as "build.model 1013 ms".
+  load: string[];
+  // cache is which tier answered each cached read, as "model=built design=store".
+  cache: string;
+}
+
+const LOADING = /^(read|restore|build|collect|resolve)\./;
+
+// loadSplit reads one "agni timing <rpc>: <RequestTiming>" line, or undefined when the line is not
+// one or carries no engine total. Stages nest (timing.proto), so only a stage starting after the
+// previous outermost one ended is counted, or a child's time would be counted again in its parent's.
+export function loadSplit(line: string): LoadSplit | undefined {
+  const m = TIMING.exec(line);
+  if (!m) return undefined;
+  let t;
+  try {
+    t = JSON.parse(m[2]);
+  } catch {
+    return undefined;
+  }
+  if (t?.totalMicros === undefined) return undefined;
+  const us = (v: unknown) => Number(v ?? 0);
+  const stages = [...(t.stages ?? [])].sort((a, b) => us(a.startMicros) - us(b.startMicros));
+  const outer: { name: string; micros: number }[] = [];
+  let end = -Infinity;
+  for (const s of stages) {
+    const start = us(s.startMicros);
+    if (start < end) continue;
+    outer.push({ name: String(s.name), micros: us(s.micros) });
+    end = start + us(s.micros);
+  }
+  const loading = outer.filter((s) => LOADING.test(s.name)).sort((a, b) => b.micros - a.micros);
+  const loadMs = loading.reduce((n, s) => n + s.micros, 0) / 1000;
+  const rulesMs = outer.filter((s) => s.name === "rules").reduce((n, s) => n + s.micros, 0) / 1000;
+  const engineMs = us(t.totalMicros) / 1000;
+  const split: LoadSplit = {
+    rpc: m[1],
+    engineMs,
+    loadMs,
+    rulesMs,
+    otherMs: Math.max(0, engineMs - loadMs - rulesMs),
+    load: loading.map((s) => `${s.name} ${Math.round(s.micros / 1000)} ms`),
+    cache: (t.lookups ?? []).map((l: { layer: string; source: string }) => `${l.layer}=${l.source}`).join(" "),
+  };
+  if (typeof t.page?.startMs === "number") split.startMs = t.page.startMs;
+  const wall = t.page?.wallMs;
+  if (typeof wall === "number") {
+    split.wallMs = wall;
+    split.outsideMs = Math.max(0, wall - engineMs);
+  }
+  return split;
+}
+
+// loadDetail is a LoadSplit's loading half as one row's detail.
+export function loadDetail(s: LoadSplit): string {
+  const parts = [];
+  if (s.outsideMs !== undefined) parts.push(`${sec(s.outsideMs)} outside the engine`);
+  parts.push(`${sec(s.loadMs)} loading${s.load.length ? ` (${s.load.slice(0, 3).join(", ")})` : ""}`);
+  if (s.otherMs >= 1) parts.push(`${sec(s.otherMs)} other engine work`);
+  return `${parts.join(", ")}; cache ${s.cache || "none"}`;
+}
+
+// sumSplits adds the splits of several requests, such as every request an open made, into one. It
+// leaves outsideMs unset, since requests queued behind each other on one worker each wait for the
+// ones ahead, so the sum of their waits can exceed the time they all took.
+export function sumSplits(splits: readonly LoadSplit[]): LoadSplit {
+  const by = new Map<string, number>();
+  const sum: LoadSplit = { rpc: splits.map((s) => s.rpc).join("+"), engineMs: 0, loadMs: 0, rulesMs: 0, otherMs: 0, load: [], cache: "" };
+  const cache: string[] = [];
+  for (const s of splits) {
+    sum.engineMs += s.engineMs;
+    sum.loadMs += s.loadMs;
+    sum.rulesMs += s.rulesMs;
+    sum.otherMs += s.otherMs;
+    for (const l of s.load) {
+      const m = /^(.*) (\d+) ms$/.exec(l);
+      if (m) by.set(m[1], (by.get(m[1]) ?? 0) + Number(m[2]));
+    }
+    for (const c of s.cache.split(" ")) if (c && !cache.includes(c)) cache.push(c);
+  }
+  sum.load = [...by].sort((a, b) => b[1] - a[1]).map(([n, ms]) => `${n} ${ms} ms`);
+  sum.cache = cache.join(" ");
+  return sum;
+}
