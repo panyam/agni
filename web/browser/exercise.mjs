@@ -16,7 +16,7 @@ import { mkdirSync, readFileSync, writeFileSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
-import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, markersFrom, pendingFiles, slowestFetch, table } from "./exercise-report.ts";
+import { breakdownDetail, checksBreakdown, classify, exitCode, leaks, loadDetail, loadSplit, markersFrom, pendingFiles, slowestFetch, sumSplits, table } from "./exercise-report.ts";
 import { serveStatic } from "./staticserver.ts";
 import { storedZip, walk } from "./storedzip.ts";
 
@@ -141,8 +141,8 @@ async function opened(page) {
 // checks runs every rule and measures the longest gap between the page thread's frames while they
 // run, which is how a visitor feels a blocked page. The time runs from the click until the button
 // resets, so on a seed it includes reading the whole design, which drawing the first sheet does not.
-async function checks(page, design) {
-  return step("checks", design, async () => {
+async function checks(page, design, name = "checks", log = undefined) {
+  return step(name, design, async () => {
     await page.evaluate(() => {
       const g = (window.__gap = { max: 0, last: performance.now(), on: true, t0: performance.now() });
       const tick = (t) => {
@@ -162,36 +162,65 @@ async function checks(page, design) {
       return { gap: window.__gap.max, t0: window.__gap.t0, t1: performance.now() };
     });
     const n = await page.locator(".check-locate").count();
-    return { ms, detail: `${n} finding rows, longest frame gap ${Math.round(gap)} ms`, n, t0, t1 };
+    let asked = "";
+    if (log && timed) {
+      const b = checksBreakdown(log.timings, t0, t1);
+      asked = `; ${b.requests.length} requests: ${b.requests.map((r) => `${r.rpc} ${Math.round(r.wallMs)} ms`).join(", ") || "none"}`;
+    }
+    return { ms, detail: `${n} finding rows, longest frame gap ${Math.round(gap)} ms${asked}`, n, t0, t1 };
   });
 }
 
-// checksTiming adds two rows for the design's last Run checks. "checks timing" breaks its CheckDesign
-// down: its total, its widest stages, its slowest rules and which cache tier answered each read.
-// "checks breakdown" accounts for the whole click-to-reset time: every request the run made, when it
+// checksTiming adds three rows for the design's last Run checks (agni issues 968, 1060). "checks
+// breakdown" accounts for the whole click-to-reset time: every request the run made, when it
 // started, how long the page waited and how much of that the engine spent, and the time the page
-// spent outside every request (agni issue 968). Only with --timing.
+// spent outside every request. "checks load" is its CheckDesign's one-time part, the wait outside
+// the engine (the design's files reaching the worker) and the stages that read, restore and build,
+// with which cache tier answered each read. "checks rules" is the evaluation alone, what a change to
+// a rule or to jaala moves. Only with --timing.
 function checksTiming(log, design, run) {
   if (!timed) return;
   const b = checksBreakdown(log.timings, run.t0, run.t1);
   add("checks breakdown", design, b.requests.length ? "ok" : "fail", b.requests.length ? breakdownDetail(b) : "the page logged no timed request during Run checks", b.totalMs);
   const line = log.timings.filter((t) => t.startsWith("agni timing CheckDesign: ")).pop();
-  if (!line) {
-    add("checks timing", design, "fail", "the page logged no CheckDesign timing, so ?timing did not reach the engine");
+  const s = line && loadSplit(line);
+  if (!s) {
+    add("checks load", design, "fail", "the page logged no CheckDesign timing, so ?timing did not reach the engine");
     return;
   }
-  const t = JSON.parse(line.slice("agni timing CheckDesign: ".length));
+  add("checks load", design, "ok", loadDetail(s), (s.outsideMs ?? 0) + s.loadMs);
   const ms = (us) => `${Math.round(Number(us ?? 0) / 1000)} ms`;
-  const stages = [...(t.stages ?? [])].sort((a, b) => Number(b.micros ?? 0) - Number(a.micros ?? 0)).slice(0, 4);
+  const t = JSON.parse(line.slice("agni timing CheckDesign: ".length));
   const rules = (t.rules ?? []).slice(0, 3);
-  const cache = (t.lookups ?? []).map((l) => `${l.layer}=${l.source}`).join(" ");
-  add(
-    "checks timing",
-    design,
-    "ok",
-    `stages ${stages.map((s) => `${s.name} ${ms(s.micros)}`).join(", ")}; slowest rules ${rules.map((r) => `${r.rule} ${ms(r.micros)}`).join(", ")}; cache ${cache || "none"}`,
-    Number(t.totalMicros ?? 0) / 1000,
-  );
+  add("checks rules", design, "ok", `${t.rulesEvaluated ?? "?"} rules; slowest ${rules.map((r) => `${r.rule} ${ms(r.micros)}`).join(", ") || "none"}`, s.rulesMs);
+}
+
+// openLoad is the "1. load" row for a seed: the design files the open fetched and, with --timing,
+// what every request before Run checks spent loading the design rather than answering (agni issue
+// 1060). It is paid once per visit, where every later question runs on what it loaded.
+function openLoad(log, design, beforeMs) {
+  const files = log.fetches.map((l) => /^agni fetch .+?: (\{.*\})$/.exec(l)).filter(Boolean).map((m) => JSON.parse(m[1]));
+  const mb = (files.reduce((n, f) => n + Number(f.bytes ?? 0), 0) / (1 << 20)).toFixed(1);
+  const fetched = `${files.length} design files fetched, ${mb} MB`;
+  if (!timed) {
+    add("1. load", design, "ok", fetched);
+    return;
+  }
+  const splits = log.timings.map(loadSplit).filter((s) => s && s.startMs !== undefined && s.startMs < beforeMs);
+  if (!splits.length) {
+    add("1. load", design, "fail", `${fetched}; the page logged no timed request before Run checks`);
+    return;
+  }
+  const s = sumSplits(splits);
+  add("1. load", design, "ok", `${fetched}; ${splits.length} requests: ${loadDetail(s)}`, (s.outsideMs ?? 0) + s.loadMs);
+}
+
+// checksAgain clicks Run checks a second time on the same page. The viewer keeps each rule's verdict
+// and asks only for rules it lacks, and the worker keeps each rule's results on the design's model
+// (agni 390), so this is the wait a reader has once the design is loaded. With --timing it lists the
+// requests the click made.
+async function checksAgain(page, design, log) {
+  return checks(page, design, "checks again", log);
 }
 
 // walkDesign is step 4 on one open design: a finding into the drawing, a query, a trace and a saved
@@ -349,8 +378,10 @@ for (const seed of seeds) {
     return { ms: drawn - t, detail: `first sheet drawn; rule catalog after ${Math.round(since(t))} ms; ${seed.meta.trim()}${slow ? `; ${slow}` : ""}` };
   });
   const run = ok && (await checks(page, seed.title));
+  if (ok) openLoad(log, seed.title, run ? run.t0 : Infinity);
   if (run) {
     checksTiming(log, seed.title, run);
+    await checksAgain(page, seed.title, log);
     await walkDesign(page, seed.title, log);
     await step("1. reopen after a reload", seed.title, async () => {
       const t2 = performance.now();

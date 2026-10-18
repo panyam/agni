@@ -8,6 +8,7 @@ import { CheckService } from "../gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "../gen/agni/v1/webapi/query_pb.js";
 import { startEngine } from "./client.js";
 import type { Files, WorkerStats } from "./client.js";
+import { loadSplit, type LoadSplit } from "../../browser/exercise-report.js";
 
 export interface BenchArgs {
   // mount is the server mount holding the board, and files its paths within it, fetched from /raw/.
@@ -114,6 +115,7 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const jobsBytesBeforeCheck = await engine.lanes.jobs.memoryBytes();
   let stageMemory = "";
   let allocRules = "";
+  let split = undefined as LoadSplit | undefined;
   t = performance.now();
   const report = (
     await checks.getCheckReport(
@@ -123,11 +125,19 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
         onHeader: (h) => {
           stageMemory = memoryStages(h.get("Agni-Timing"), jobsBytesBeforeCheck);
           allocRules = allocators(h.get("Agni-Timing"));
+          split = loadSplit(`agni timing CheckDesign: ${h.get("Agni-Timing") ?? ""}`);
         },
       },
     )
   ).report;
   const checkMS = performance.now() - t;
+
+  // The same check again on the worker that just ran it, which keeps each rule's results on the
+  // design's model (agni 390): the wait once the design is loaded, against check_load_ms and
+  // check_rules_ms above, the one-time part and the evaluation of the run before (agni issue 1060).
+  t = performance.now();
+  await checks.getCheckReport({ uri });
+  const checkAgainMS = performance.now() - t;
 
   t = performance.now();
   const rows = (await query.runQuery({ uri, query: a.query })).rows.length;
@@ -157,6 +167,9 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
     compose_ms: Math.round(composeMS),
     read_ms: Math.round(readMS),
     check_ms: Math.round(checkMS),
+    check_load_ms: split ? Math.round(split.loadMs) : "",
+    check_rules_ms: split ? Math.round(split.rulesMs) : "",
+    check_again_ms: Math.round(checkAgainMS),
     rules: report?.rulesRun ?? 0,
     findings: (report?.sections ?? []).reduce((n, s) => n + s.count, 0),
     query_ms: Math.round(queryMS),

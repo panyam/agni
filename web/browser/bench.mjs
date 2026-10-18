@@ -73,14 +73,20 @@ try {
   const reload = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES, serveShrinkRatio: SERVE_SHRINK });
   await browser.close();
 
-  const rows = ["files", "bytes", "components", "nets", "boot_ms", "fetch_ms", "compose_ms", "read_ms", "check_ms", "rules", "findings", "query_ms", "query_rows",
-    "query_during_check_ms", "check_still_running", "first_check_ms", "lane_restarts", "serve_mb_after_read", "serve_live_mb_after_read", "stats_gc_ms", "query_after_restart_ms", "serve_mb_after_restart", "serve_idle_checks", "jobs_mb_before_check", "check_memory_stages", "check_alloc_rules", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
+  // The rows in two groups (agni issue 1060): loading the design, paid once per worker, and asking it
+  // questions once it is loaded. check_ms is the second check, on a fresh worker on two lanes, so it
+  // belongs with loading, while check_rules_ms is its evaluation alone.
+  const loading = ["files", "bytes", "components", "nets", "boot_ms", "fetch_ms", "compose_ms", "read_ms", "check_ms", "check_load_ms", "first_check_ms", "lane_restarts", "serve_mb_after_read", "serve_live_mb_after_read", "stats_gc_ms", "jobs_mb_before_check", "check_memory_stages"];
+  const asking = ["check_rules_ms", "check_again_ms", "rules", "findings", "query_ms", "query_rows", "query_during_check_ms", "check_still_running", "query_after_restart_ms", "serve_mb_after_restart", "serve_idle_checks", "check_alloc_rules", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
   console.log(`| ${board} | native | wasm, one worker | two lanes, serve limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | the same reloaded, limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | lanes / native |`);
   console.log("|---|---|---|---|---|---|");
-  for (const r of rows) {
-    const n = native[r], w = wasm[r];
-    const ratio = r.endsWith("_ms") && n > 0 && w !== undefined ? (w / n).toFixed(1) + "x" : "";
-    console.log(`| ${r} | ${n ?? ""} | ${one[r] ?? ""} | ${w ?? ""} | ${reload[r] ?? ""} | ${ratio} |`);
+  for (const [group, rows] of [["loading the design", loading], ["asking it questions", asking]]) {
+    console.log(`| **${group}** | | | | | |`);
+    for (const r of rows) {
+      const n = native[r], w = wasm[r];
+      const ratio = r.endsWith("_ms") && n > 0 && w !== undefined ? (w / n).toFixed(1) + "x" : "";
+      console.log(`| ${r} | ${n ?? ""} | ${one[r] ?? ""} | ${w ?? ""} | ${reload[r] ?? ""} | ${ratio} |`);
+    }
   }
   console.log(JSON.stringify({ native, one, wasm, reload }));
 } finally {
