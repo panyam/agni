@@ -24,6 +24,7 @@ var unconnectedComponent = &check.Rule{
 	},
 	Detail:              ruleDoc("unconnected-component"),
 	Eval:                unconnectedComponentVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -54,7 +55,7 @@ func unconnectedComponentVerdicts(ctx context.Context, m check.Model) []check.Ve
 	}
 
 	var out []check.Verdict
-	for _, c := range m.Components() {
+	for _, c := range check.ScopedComponents(ctx, m) {
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: c.RefDes}}}
 		switch {
 		case c.RefDes == "":

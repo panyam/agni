@@ -238,6 +238,20 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		return msgOf(r, err)
 	})
 	sections := report.(*webapi.GetCheckReportResponse).GetReport().GetSections()
+	// A check asked about one subject answers on both hosts alike (agni issue 897), so the viewer's
+	// question about a selected net does not depend on which engine the page runs.
+	whole, err := served.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snapOn(served)}))
+	if err != nil || len(whole.Msg.GetVerdicts()) == 0 {
+		t.Fatalf("CheckDesign: err %v with %d verdicts, so there is no subject to ask about", err, len(whole.Msg.GetVerdicts()))
+	}
+	subject := whole.Msg.GetVerdicts()[0].GetSubjects()[0]
+	scoped := ask("CheckDesign scoped", func(c parityClients) (proto.Message, error) {
+		r, err := c.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snapOn(c), Subjects: []*checkspb.Subject{subject}}))
+		return msgOf(r, err)
+	})
+	if len(scoped.(*webapi.CheckDesignResponse).GetVerdicts()) == 0 {
+		t.Fatalf("CheckDesign about %s:%s: no verdicts, so two empty answers would compare equal", subject.GetKind(), subject.GetRef())
+	}
 	if ruleFrom != "" {
 		if len(sections) == 0 {
 			t.Fatal("GetCheckReport: no findings, so two empty reports would compare equal")

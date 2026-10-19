@@ -30,6 +30,12 @@ func Bind(vals map[string]Value) datalog.Option {
 	return datalog.Bind(m)
 }
 
+// BindEach gives one goal variable several values, so the goal answers for each of them, as a rule
+// asked about a few nets binds its subject variable to their names (agni issue 897).
+func BindEach(name string, vals []Value) datalog.Option {
+	return datalog.Bind(map[datalog.Var][]ns.Value{datalog.Var(strings.TrimPrefix(name, "?")): vals})
+}
+
 // ParseBinding reads one `name=value` pair, the form `agni query --bind` takes. The value is read
 // as the query language reads a constant: a quoted value is text, one that parses as a number is a
 // number, and any other bare word is text, so `--bind n=GND` needs no quotes. In a position the

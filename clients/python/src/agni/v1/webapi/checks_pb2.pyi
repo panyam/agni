@@ -22,14 +22,16 @@ CHECK_REPORT_FORMAT_RESULTS_JSON: CheckReportFormat
 CHECK_REPORT_FORMAT_HTML: CheckReportFormat
 
 class CheckDesignRequest(_message.Message):
-    __slots__ = ("snapshot", "rules", "work_budget")
+    __slots__ = ("snapshot", "rules", "work_budget", "subjects")
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     RULES_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
+    SUBJECTS_FIELD_NUMBER: _ClassVar[int]
     snapshot: str
     rules: _containers.RepeatedScalarFieldContainer[str]
     work_budget: int
-    def __init__(self, snapshot: _Optional[str] = ..., rules: _Optional[_Iterable[str]] = ..., work_budget: _Optional[int] = ...) -> None: ...
+    subjects: _containers.RepeatedCompositeFieldContainer[_checks_pb2.Subject]
+    def __init__(self, snapshot: _Optional[str] = ..., rules: _Optional[_Iterable[str]] = ..., work_budget: _Optional[int] = ..., subjects: _Optional[_Iterable[_Union[_checks_pb2.Subject, _Mapping]]] = ...) -> None: ...
 
 class OverlayConfig(_message.Message):
     __slots__ = ("config", "ignore_project")

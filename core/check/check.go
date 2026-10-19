@@ -261,6 +261,9 @@ type Rule struct {
 	// MIGRATION-ONLY. Once every rule converts (agni issue 391) the filter in RunVerdicts is a
 	// tautology and the field can go.
 	StatesConsideredSet bool
+	// Scoping says how the rule answers a run asked about some nets or parts (agni issue 897). The
+	// zero value runs the rule whole and keeps what the scope covers; see Scoping.
+	Scoping Scoping
 }
 
 // Findings is the rule's verdicts projected onto the findings contract, the violations alone, which
@@ -370,9 +373,13 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 	if wantFindings {
 		gate = unresolvedSymbolGate(m)
 	}
+	scope := SubjectScope(ctx)
 	for _, r := range rules {
 		if err := ctx.Err(); err != nil {
 			return nil, nil, err
+		}
+		if scope != nil && r.Scoping == ScopeDesignWide {
+			continue // nothing it concludes is about the scope's subjects; SplitDesignWide names it
 		}
 		gated := false
 		if wantFindings {
@@ -392,6 +399,11 @@ func run(ctx context.Context, m Model, rules []*Rule, wantFindings, wantVerdicts
 		ruled := timing.BeginRule(ctx)
 		evaluated := r.Eval(ctx, m)
 		ruled(r.Name)
+		if scope != nil {
+			// Narrowed before findings are projected, so a finding stays exactly when its verdict
+			// does, whether or not the rule read the scope itself.
+			evaluated = scope.verdicts(evaluated)
+		}
 		if wantFindings && !gated {
 			for _, f := range findingsOf(r, evaluated) {
 				f.Rule, f.Severity = r.Name, r.Severity

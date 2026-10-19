@@ -26,6 +26,7 @@ var inputProtection = &check.Rule{
 	},
 	Detail:              ruleDoc("input-protection"),
 	Eval:                inputProtectionVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -42,7 +43,7 @@ var inputProtection = &check.Rule{
 // and the walk already knows which one it is.
 func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		if m.IsGroundNet(n) {
 			continue // the return path, not a power entry
 		}

@@ -31,6 +31,7 @@ var i2cRedundantPullUp = &check.Rule{
 	},
 	Detail:              ruleDoc("i2c-redundant-pull-up"),
 	Eval:                i2cRedundantPullUpVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -54,6 +55,7 @@ var i2cPullUpSplitRail = &check.Rule{
 	},
 	Detail:              ruleDoc("i2c-pull-up-split-rail"),
 	Eval:                i2cPullUpSplitRailVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -64,7 +66,7 @@ var i2cPullUpSplitRail = &check.Rule{
 // pull-up" is a fact worth stating, and a rule reporting only the doubled ones could not distinguish a
 // clean board from an unexamined one.
 func i2cRedundantPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
-	return pullUpCountVerdicts(m, "i2c-redundant-pull-up", func(rails []string) bool {
+	return pullUpCountVerdicts(ctx, m, "i2c-redundant-pull-up", func(rails []string) bool {
 		return len(rails) == 1
 	}, func(n string, terms []check.PullUpTermination) string {
 		return fmt.Sprintf("I2C net has %d pull-up resistors to %s", len(terms), terms[0].Rail)
@@ -74,7 +76,7 @@ func i2cRedundantPullUpVerdicts(ctx context.Context, m check.Model) []check.Verd
 // i2cPullUpSplitRailVerdicts decides every I2C net, failing one with more than one resistor, landing
 // on DIFFERENT rails.
 func i2cPullUpSplitRailVerdicts(ctx context.Context, m check.Model) []check.Verdict {
-	return pullUpCountVerdicts(m, "i2c-pull-up-split-rail", func(rails []string) bool {
+	return pullUpCountVerdicts(ctx, m, "i2c-pull-up-split-rail", func(rails []string) bool {
 		return len(rails) > 1
 	}, func(n string, terms []check.PullUpTermination) string {
 		return fmt.Sprintf("I2C net is pulled up to %s", strings.Join(distinctRails(terms), " and "))
@@ -91,9 +93,9 @@ func i2cPullUpSplitRailVerdicts(ctx context.Context, m check.Model) []check.Verd
 //
 // A net with ZERO pull-ups is NOT considered here. It is i2c-pull-up's subject, that rule is an
 // error where these are warnings, and reporting the same absence three times would treble one defect.
-func pullUpCountVerdicts(m check.Model, rule string, fires func(rails []string) bool, message func(string, []check.PullUpTermination) string) []check.Verdict {
+func pullUpCountVerdicts(ctx context.Context, m check.Model, rule string, fires func(rails []string) bool, message func(string, []check.PullUpTermination) string) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		if !isI2C(n.Name) {
 			continue
 		}

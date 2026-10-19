@@ -65,6 +65,7 @@ func TestRemoteAnswersAsTheLocalCommandDoes(t *testing.T) {
 		{"check text", checkCmd, "/CheckDesign", []string{design}},
 		{"check json", checkCmd, "/CheckDesign", []string{design, "--format", "json"}},
 		{"check verdicts", checkCmd, "/CheckDesign", []string{design, "--verdicts"}},
+		{"check subject", checkCmd, "/CheckDesign", []string{design, "--verdicts", "--subject", "component:U1"}},
 		{"check markdown", checkCmd, "/GetCheckReport", []string{design, "--format", "markdown"}},
 		{"trace text", traceCmd, "/TraceDesign", []string{design, "--from", "J1.1", "--to", "U1.1"}},
 		{"trace json", traceCmd, "/TraceDesign", []string{design, "--from", "J1.1", "--to", "U1.1", "--format", "json"}},

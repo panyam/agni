@@ -29,6 +29,7 @@ var reverseBlockingAbsent = &check.Rule{
 	},
 	Detail:              ruleDoc("reverse-blocking-absent"),
 	Eval:                reverseBlockingVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -39,7 +40,7 @@ var reverseBlockingAbsent = &check.Rule{
 // signal pin on every connector as reverse-protected (agni issue 391).
 func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		if n.Attributes[netgraph.AttrExternal] == "true" || m.IsGroundNet(n) {
 			continue
 		}

@@ -46,8 +46,8 @@ type railCandidate struct {
 // cannot type power pins at all the second channel is absent everywhere, so gating would make the
 // rule a silent no-op there. The two-channel section of docsite/content/build/check-rule.md covers
 // this case.
-func eachRailCandidate(m check.Model, yield func(railCandidate)) {
-	for _, n := range m.Nets() {
+func eachRailCandidate(ctx context.Context, m check.Model, yield func(railCandidate)) {
+	for _, n := range check.ScopedNets(ctx, m) {
 		if m.IsGroundNet(n) {
 			continue
 		}
@@ -90,6 +90,7 @@ var railNotClassified = &check.Rule{
 	},
 	Detail:              ruleDoc("rail-not-classified"),
 	Eval:                railNotClassifiedVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -106,7 +107,7 @@ var railNotClassified = &check.Rule{
 // eachRailCandidate says why the missing channel is reported rather than dropped.
 func railNotClassifiedVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	eachRailCandidate(m, func(rc railCandidate) {
+	eachRailCandidate(ctx, m, func(rc railCandidate) {
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: rc.net.GetName(), NetID: rc.net.GetId()}}}
 		switch {
 		case rc.supplies == 0:

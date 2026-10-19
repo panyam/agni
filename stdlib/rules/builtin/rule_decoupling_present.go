@@ -23,6 +23,7 @@ var decouplingPresent = &check.Rule{
 	},
 	Detail:              ruleDoc("decoupling-present"),
 	Eval:                decouplingPresentVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -81,7 +82,7 @@ func notARail(m check.Model, n *ir.Net) string {
 // sits, and deleting that capacitor changes the witness or flips the verdict.
 func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		hasPowerIn := check.Exists(n.Connections, func(c *ir.Connection) bool {
 			return !check.IsVirtualRef(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 		})

@@ -13,11 +13,11 @@ import (
 // entity set, pin.on_net, pin-scope pin.electrical_type), so the Go side is the bring-up reference
 // until that vocabulary has more users. Twin discipline is in docsite/content/build/check-rule.md.
 var unconnectedPin = &check.Rule{
-	Name:       "unconnected-pin",
-	Severity:   "warning",
-	Summary:    "A pin lands on no net and is not marked no-connect.",
-	Impact:     "A single forgotten pin on an otherwise-wired part is the most common capture slip: an enable left floating, a feedback pin missed, one gate input skipped. unconnected-component only fires when every pin is unwired, so the one-pin miss is invisible to it, and it surfaces at bring-up as a part that almost works.",
-	Remedy:     "Connect the pin to its intended net, or mark it no-connect where the datasheet says the pin may be left open.",
+	Name:               "unconnected-pin",
+	Severity:           "warning",
+	Summary:            "A pin lands on no net and is not marked no-connect.",
+	Impact:             "A single forgotten pin on an otherwise-wired part is the most common capture slip: an enable left floating, a feedback pin missed, one gate input skipped. unconnected-component only fires when every pin is unwired, so the one-pin miss is invisible to it, and it surfaces at bring-up as a part that almost works.",
+	Remedy:             "Connect the pin to its intended net, or mark it no-connect where the datasheet says the pin may be left open.",
 	Primitives:         []string{"pin-role", "select", "traverse"},
 	Reads:              []string{"net.names", "pin.electrical_type", "pin.no_connect", "pin.on_net"},
 	RequiresCapability: []check.Capability{check.CapNoConnectChannel},
@@ -26,8 +26,9 @@ var unconnectedPin = &check.Rule{
 		check.KeyTier:         "R",
 		check.KeyDistribution: check.DistOpen,
 	},
-	Detail:       ruleDoc("unconnected-pin"),
-	Eval: unconnectedPinVerdicts,
+	Detail:              ruleDoc("unconnected-pin"),
+	Eval:                unconnectedPinVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -49,7 +50,7 @@ func unconnectedPinVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 		return nil
 	}
 	var out []check.Verdict
-	for _, p := range m.Pins() {
+	for _, p := range check.ScopedPins(ctx, m) {
 		ref, pin := p.Component.RefDes, p.Designator
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: ref, Pin: pin}}}
 		switch m.PinDir(ref, pin) {

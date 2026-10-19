@@ -32,6 +32,9 @@ var wireNoJunction = &check.Rule{
 	RequiresCapability:  []check.Capability{check.CapJunctionTaps},
 	Eval:                wireNoJunctionVerdicts,
 	StatesConsideredSet: true,
+	// Its subjects are wire ends, which no net or part names, so a run asked about some
+	// nets or parts leaves it out (agni issue 897).
+	Scoping: check.ScopeDesignWide,
 }
 
 // wireNoJunctionVerdicts decides every wire-end-on-wire-body tap, the ones something joins and the
