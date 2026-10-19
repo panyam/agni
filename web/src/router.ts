@@ -182,6 +182,17 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   return designsPrefix() + segs.join("/") + "/" + page + (q ? `?${q}` : "");
 }
 
+// keepTiming carries the address's ?timing onto url, for a page that moves the reader to another of
+// its own pages. The Load page hands its query to the viewer whole, so a drop opened with ?timing
+// keeps it through both (agni issue 914's timings, lost on a drop's way to its Load page until this).
+export function keepTiming(url: string, search: string): string {
+  const t = new URLSearchParams(search).get("timing");
+  if (t === null) return url;
+  const u = new URL(url, "http://x");
+  u.searchParams.set("timing", t);
+  return u.pathname + u.search;
+}
+
 // dropPageUrl is where files are dropped or picked, the browser mount's Load page with no design. It
 // ends in a slash on every host, since a static host serves it as a folder's index.html.
 export function dropPageUrl(): string {
