@@ -5,6 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/mounts"
 	goal "github.com/panyam/goapplib"
 )
@@ -50,24 +51,49 @@ type ViewerPage struct {
 	// Host is "static" when the page is a plain file with no agni server behind it, so the bundle
 	// reads every design's files as static files and answers everything in the worker.
 	Host string
+	// Build names the agni that wrote the page. The Load page keys its record of a read design on it
+	// and the viewer checks it, since another build may read a file differently and keeps a store of
+	// its own (agni issue 1072).
+	Build string
 }
 
 // Load populates the page before render. The shell is static and per-file data arrives over
 // the Connect API, so there is nothing to fetch here yet.
 func (p *ViewerPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
 	p.Title = "Agni viewer"
-	p.Engine = app.Context.engine
+	p.fill(app.Context)
+	return nil, false
+}
+
+// fill sets the shell fields the viewer and the Load page both carry.
+func (p *ViewerPage) fill(a *serveApp) {
+	p.Engine = a.engine
 	if p.Engine == "" {
 		p.Engine = engineServer
 	}
-	p.WasmMaxBytes = app.Context.wasmMaxBytes
+	p.WasmMaxBytes = a.wasmMaxBytes
 	if p.WasmMaxBytes <= 0 {
 		p.WasmMaxBytes = defaultWasmMaxBytes
 	}
-	p.Base = app.Context.basePath()
-	if app.Context.static {
+	p.Base = a.basePath()
+	if a.static {
 		p.Host = "static"
 	}
+	p.Build = version.Version()
+}
+
+// LoadPage reads a design into the engine's store before the viewer opens it, and is where files are
+// dropped (agni issue 1072). It carries the viewer's shell fields, because it starts the same engine
+// the viewer will ask and must name the same build. goapplib maps this type to LoadPage.html by name.
+type LoadPage struct {
+	ViewerPage
+}
+
+// Load populates the Load page before render. Like the viewer's, the shell is the same for every
+// design, which the bundle reads from the URL.
+func (p *LoadPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
+	p.Title = "Agni: loading a design"
+	p.fill(app.Context)
 	return nil, false
 }
 
@@ -137,6 +163,11 @@ func newPageApp(dir string, sa *serveApp) *goal.App[*serveApp] {
 // the routing discriminator (see designsRouter).
 const viewSegment = "/view"
 
+// loadSegment terminates a design's Load page URL, the mirror of LOAD_SEGMENT in web/src/router.ts
+// (agni issue 1072). The browser mount's Load page, where files are dropped, names no design and ends
+// in "/load/".
+const loadSegment = "/load"
+
 // pageHandler renders one goapplib page as a standalone http.Handler. goal.Register only registers
 // onto a mux, so the page gets a private mux whose single "/" pattern matches everything reaching
 // it. The browse/work split needs this because a ServeMux {path...} wildcard must be the LAST
@@ -145,18 +176,21 @@ func pageHandler[V goal.View[*serveApp]](app *goal.App[*serveApp]) http.Handler 
 	return goal.Register[V](app, nil, "/")
 }
 
-// designsRouter splits the one /designs/ URL space between its two pages by the trailing verb. A
-// design's work page ends in /view, and everything else is a folder, which the browse page renders.
-// Folders are the default so that the space root ("/designs/", naming no mount) and a bare mount
-// root land on the browser instead of 404ing, matching what router.ts's parseUrl treats as
-// addressable.
-func designsRouter(browse, work http.Handler) http.Handler {
+// designsRouter splits the one /designs/ URL space between its pages by the trailing verb. A
+// design's work page ends in /view, its Load page in /load (or /load/, where files are dropped), and
+// everything else is a folder, which the browse page renders. Folders are the default so that the
+// space root ("/designs/", naming no mount) and a bare mount root land on the browser instead of
+// 404ing, matching what router.ts's parseUrl treats as addressable.
+func designsRouter(browse, work, load http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, viewSegment) {
+		switch {
+		case strings.HasSuffix(r.URL.Path, viewSegment):
 			work.ServeHTTP(w, r)
-			return
+		case strings.HasSuffix(strings.TrimSuffix(r.URL.Path, "/"), loadSegment):
+			load.ServeHTTP(w, r)
+		default:
+			browse.ServeHTTP(w, r)
 		}
-		browse.ServeHTTP(w, r)
 	})
 }
 
@@ -170,7 +204,7 @@ func designsRouter(browse, work http.Handler) http.Handler {
 func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	browse := pageHandler[*BrowsePage](app)
 	mux.Handle("/", pageHandler[*LandingPage](app))
-	mux.Handle("/designs/", designsRouter(browse, pageHandler[*ViewerPage](app)))
+	mux.Handle("/designs/", designsRouter(browse, pageHandler[*ViewerPage](app), pageHandler[*LoadPage](app)))
 	// The retired /files/ space (WS9-049) redirects rather than 404s, so shared links keep resolving.
 	mux.HandleFunc("/files/", redirectLegacyFiles)
 }

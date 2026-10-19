@@ -3,7 +3,8 @@
 // compile JSX into Solid's reactive runtime calls.
 //
 // Three app bundles: the viewer (src/main.ts -> static/app.js), the design browser
-// (src/browse.ts -> static/browse.js, WS9-049) and the landing page (src/landing.ts). They are
+// (src/browse.ts -> static/browse.js, WS9-049) and the landing page (src/landing.ts), plus the Load
+// page's plain-DOM bundle (src/load.ts, agni issue 1072). They are
 // separate pages with separate entries so each page downloads only what it uses: the browse page
 // carries neither dockview nor the WebGL renderer. The datasheets workbench, and pdf.js with it, is
 // built from datasheet/web, its own package (agni issue 744).
@@ -55,7 +56,17 @@ const benchBuild = {
   logLevel: "info",
 };
 
-const builds = [...appBundles.map(solidBuild), benchBuild];
+// The Load page (agni issue 1072), which reads a design before the viewer opens it. It is plain DOM,
+// with no Solid core to count, so it is not one of appBundles.
+const loadBuild = {
+  entryPoints: ["src/load.ts"],
+  bundle: true,
+  format: "esm",
+  outfile: "static/load.js",
+  logLevel: "info",
+};
+
+const builds = [...appBundles.map(solidBuild), benchBuild, loadBuild];
 
 // The engine worker (agni issues 178 and 863) is goapplib's wasmhost worker, shipped prebuilt as a
 // classic script because it loads Go's wasm_exec.js with importScripts. It is copied beside the

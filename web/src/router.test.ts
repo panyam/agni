@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bindsFromLink, emptyLocation, hasDir, hasFile, locationToUrl, parseUrl, setBase, setStaticHost, type ViewerLocation } from "./router.js";
+import { bindsFromLink, dropPageUrl, emptyLocation, hasDir, hasFile, locationToUrl, pageOf, parseUrl, setBase, setStaticHost, swapPage, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -196,6 +196,55 @@ describe("the router under a base path, on a static host (agni issue 856)", () =
       setBase("/");
       setStaticHost(false);
     }
+  });
+});
+
+// agni issue 1072: a design's Load page sits beside its viewer, at the same address with the other
+// verb, and carries the same query.
+describe("the Load page's address", () => {
+  it("reads a /load address as the design it names, with its query", () => {
+    const l = parseUrl("/designs/m/boards/b.edn/load", "?verdict=v1&rule=r");
+    expect(hasFile(l)).toBe(true);
+    expect([l.mount, l.path, l.verdict, l.rule]).toEqual(["m", "boards/b.edn", "v1", "r"]);
+    expect(locationToUrl(l, "load")).toBe("/designs/m/boards/b.edn/load?verdict=v1&rule=r");
+    expect(pageOf("/designs/m/boards/b.edn/load")).toBe("load");
+    expect(pageOf("/designs/m/boards/b.edn/view")).toBe("view");
+    expect(pageOf("/designs/m/boards/")).toBe("");
+  });
+
+  it("swaps between the two pages keeping the query whole", () => {
+    expect(swapPage("/designs/m/b.edn/view", "?timing=1&verdict=v", "load")).toBe("/designs/m/b.edn/load?timing=1&verdict=v");
+    expect(swapPage("/agni/demo/designs/m/b.edn/load/", "?sheet=s", "view")).toBe("/agni/demo/designs/m/b.edn/view/?sheet=s");
+  });
+
+  it("names the drop page with a trailing slash on every host", () => {
+    expect(dropPageUrl()).toBe("/designs/local/load/");
+    expect(hasFile(parseUrl("/designs/local/load/", ""))).toBe(false);
+  });
+
+  // A static host serves only the pages `agni site` wrote, so a dropped design's path rides in the
+  // query of the browser mount's one page.
+  it("puts a dropped design's path in the query on a static host, and reads it back", () => {
+    setBase("/agni/demo/");
+    setStaticHost(true);
+    try {
+      const l = loc({ mount: "local", path: "drop-abc/gateway.zip", sheet: "s1" });
+      const view = locationToUrl(l);
+      expect(view).toBe("/agni/demo/designs/local/view/?d=drop-abc%2Fgateway.zip&sheet=s1");
+      expect(locationToUrl(l, "load")).toBe("/agni/demo/designs/local/load/?d=drop-abc%2Fgateway.zip&sheet=s1");
+      const q = view.indexOf("?");
+      expect(parseUrl(view.slice(0, q), view.slice(q))).toEqual(l);
+      expect(parseUrl("/agni/demo/designs/local/load/", "?d=drop-abc/gateway.zip").path).toBe("drop-abc/gateway.zip");
+      // A served mount keeps its path in the address.
+      expect(locationToUrl(loc({ mount: "rb", path: "b.kicad_sch" }), "load")).toBe("/agni/demo/designs/rb/b.kicad_sch/load");
+    } finally {
+      setBase("/");
+      setStaticHost(false);
+    }
+  });
+
+  it("keeps a dropped design's path in the address on a server", () => {
+    expect(locationToUrl(loc({ mount: "local", path: "drop-abc/g.zip" }))).toBe("/designs/local/drop-abc/g.zip/view");
   });
 });
 

@@ -82,13 +82,14 @@ and the Connect handlers are glue over them. Which service owns which RPC is on
 
 ## The pages
 
-There are four server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
+There are five server-rendered shells, each with its own bundle, so a page downloads what it uses and no more.
 
 | URL | Page | Bundle | What it is |
 |---|---|---|---|
 | `/` | `LandingPage` | `landing.js` | Where am I going: the destinations, this browser's recents, and the designs the server's projects declare. Also the catch-all, so an unmatched URL offers choices instead of 404ing |
 | `/designs/<mount>/<dir>/` | `BrowsePage` | `browse.js` | The design tree plus a read-only first-sheet preview |
 | `/designs/<mount>/<path>/view` | `ViewerPage` | `app.js` | The work page: WebGL canvas, checks, query, diff |
+| `/designs/<mount>/<path>/load`, `/designs/local/load/` | `LoadPage` | `load.js` | Reads a design into the engine's store before the viewer opens it, step by step, then opens the viewer at the same address (agni issue 1072). With no design, the browser mount's page is where files are dropped and where kept drops are listed |
 
 The extraction workbench, `DatasheetsPage` at `/datasheets/files/<mount>/<path>` with its own bundle
 `datasheets.js`, is served by `agnids` rather than `agni serve` (agni issue 744), and is built from its
@@ -97,8 +98,10 @@ TS modules in `web-shared/` (URIs, recents, pan and zoom maths, the workbench's 
 pruned-mount note), and the landing page links the workbench only when `agni serve --datasheets-url`
 names where it runs.
 
-The `/designs/` space holds two pages behind one pattern, split by the trailing `/view`, because a
-`ServeMux` pattern's `{path...}` wildcard must be its last segment. `/files/` is the retired
+The `/designs/` space holds three pages behind one pattern, split by the trailing `/view` or `/load`,
+because a `ServeMux` pattern's `{path...}` wildcard must be its last segment. The viewer opens only a
+design the Load page recorded reading on this engine and build, and sends any other to its `/load`
+with the query whole (`web/src/admit.ts`), so every link into the viewer still lands. `/files/` is the retired
 pre-WS9-049 space and permanently redirects.
 
 **A new page takes SIX edits**, and three of them fail quietly. They are the template (`web/templates/X.html`,

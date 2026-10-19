@@ -75,10 +75,11 @@ describe("one design under both engines", () => {
       expect(analysis).toEqual([]);
 
       // Two lanes (agni issue 911): the checks ran on a worker of their own, so each worker fetched
-      // the design's files, and a query never waits behind a check. A third worker loaded the design
-      // after the first sheet and fetched them too, then ended (agni issue 1061), so two are left.
+      // the design's files, and a query never waits behind a check. The Load page read the design on
+      // two workers of its own before the viewer opened (agni issue 1072), its drawing on one and its
+      // board on another that ended, so the files were fetched four times and two workers are left.
       expect(page.workers().filter((w) => new URL(w.url()).pathname.endsWith("/agni-worker.js"))).toHaveLength(2);
-      expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.edn")).toHaveLength(3);
+      expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.edn")).toHaveLength(4);
     });
   });
 
@@ -109,6 +110,34 @@ describe("one design under both engines", () => {
       const again = await openAndCheck(page, "?engine=wasm");
       expect(again.rows.length).toBeGreaterThan(0);
       expect(await storedBlobs(page)).toEqual(before);
+    });
+  });
+});
+
+// agni issue 1072: the viewer opens only a design the Load page read, so a link straight to /view is
+// read on /load first and lands where it pointed, and once read a reload opens it directly.
+describe("a link to a design this browser has not read", () => {
+  it("goes through the Load page, lands on the address it named, and a reload skips the Load page", async () => {
+    await withPage(browser, async (page) => {
+      const pages: string[] = [];
+      page.on("framenavigated", (f) => {
+        if (f === page.mainFrame()) pages.push(new URL(f.url()).pathname);
+      });
+      // A trace link carries its question in the address, which the viewer keeps as its own state, so
+      // landing where it pointed shows as the same question in the final address.
+      await page.goto(`${base()}${gateway}?engine=wasm&trace=R1.1%2CR1.2`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".checks-run", { timeout: 60_000 });
+      await expect.poll(() => new URL(page.url()).searchParams.get("trace"), { timeout: 60_000 }).toBe("R1.1,R1.2");
+      const at = new URL(page.url());
+      expect(at.pathname).toBe(gateway);
+      expect(at.searchParams.get("engine")).toBe("wasm");
+      expect(at.searchParams.has("loaded")).toBe(false);
+      expect(pages).toContain(gateway.replace(/\/view$/, "/load"));
+
+      pages.length = 0;
+      await page.reload({ waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".checks-run", { timeout: 60_000 });
+      expect(pages).toEqual([gateway]);
     });
   });
 });

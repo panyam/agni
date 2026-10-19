@@ -22,7 +22,7 @@ func fakeWebDir(t *testing.T) string {
 	if err := os.MkdirAll(filepath.Join(dir, "static"), 0o755); err != nil {
 		t.Fatal(err)
 	}
-	for _, f := range []string{"app.js", "app.css", "agni.wasm", "wasm_exec.js", "agni-worker.js"} {
+	for _, f := range []string{"app.js", "load.js", "app.css", "agni.wasm", "wasm_exec.js", "agni-worker.js"} {
 		if err := os.WriteFile(filepath.Join(dir, "static", f), []byte("x"), 0o644); err != nil {
 			t.Fatal(err)
 		}
@@ -48,7 +48,8 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 		return string(b)
 	}
 	landing := read("index.html")
-	for _, want := range []string{`href="/agni/demo/designs/gateway/designs/gateway/view/"`, "Sample Board", `href="/agni/demo/designs/local/view/"`} {
+	// Each seed and the drop page open through the Load page (agni issue 1072).
+	for _, want := range []string{`href="/agni/demo/designs/gateway/designs/gateway/load/"`, "Sample Board", `href="/agni/demo/designs/local/load/"`} {
 		if !strings.Contains(landing, want) {
 			t.Errorf("landing page lacks %s", want)
 		}
@@ -56,6 +57,17 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 	for _, page := range []string{"designs/gateway/designs/gateway/view/index.html", "designs/local/view/index.html"} {
 		shell := read(page)
 		for _, want := range []string{`href="/agni/demo/static/app.css"`, `src="/agni/demo/static/app.js"`, `data-base="/agni/demo/"`, `data-host="static"`, `data-engine="wasm"`} {
+			if !strings.Contains(shell, want) {
+				t.Errorf("%s lacks %s", page, want)
+			}
+		}
+		if strings.Contains(shell, `"/static/`) {
+			t.Errorf("%s loads an asset from the site root", page)
+		}
+	}
+	for _, page := range []string{"designs/gateway/designs/gateway/load/index.html", "designs/local/load/index.html"} {
+		shell := read(page)
+		for _, want := range []string{`src="/agni/demo/static/load.js"`, `data-base="/agni/demo/"`, `data-host="static"`, `data-engine="wasm"`, `data-build="`} {
 			if !strings.Contains(shell, want) {
 				t.Errorf("%s lacks %s", page, want)
 			}
@@ -84,11 +96,13 @@ func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
 	if err := writeSite(out, fakeWebDir(t), "/", []string{"gw=" + seed}, io.Discard); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := os.Stat(filepath.Join(out, "designs", "gw", "gateway", "view", "index.html")); err != nil {
-		t.Errorf("no viewer page for the design: %v", err)
+	for _, page := range []string{"view", "load"} {
+		if _, err := os.Stat(filepath.Join(out, "designs", "gw", "gateway", page, "index.html")); err != nil {
+			t.Errorf("no %s page for the design: %v", page, err)
+		}
 	}
 	landing, err := os.ReadFile(filepath.Join(out, "index.html"))
-	if err != nil || !strings.Contains(string(landing), `href="/designs/gw/gateway/view/"`) {
+	if err != nil || !strings.Contains(string(landing), `href="/designs/gw/gateway/load/"`) {
 		t.Errorf("landing page does not link the design: %v", err)
 	}
 	b, err := os.ReadFile(filepath.Join(out, "files", "gw.json"))

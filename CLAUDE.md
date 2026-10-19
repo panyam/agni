@@ -293,7 +293,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   engine runs as a `serve` and a `jobs` worker (#911), and every worker keeps what it parsed in the
   origin's private file system, keyed on `wasmengine.StoreVersion`, so a wasm built with plain `go
   build` from a dirty tree persists nothing, and one built by `make wasm` names its uncommitted diff. Dropped
-  files go into the browser mount `local`, which nothing ever lists on a server, and
+  files go into the browser mount `local` and the browser's IndexedDB (`web/src/drops.ts`, agni 1072),
+  so they survive a reload; nothing ever lists `local` on a server, and
   `ProposeDesigns` / `agni propose` group them into designs. `agni site` (`make demo-site`) writes
   the whole thing as static files under a prefix. Architecture is in `architecture/web-services.md`,
   "The same contract in the browser". `make wasm wasm-test` builds and smoke-tests it under Node.
@@ -774,9 +775,10 @@ the sheet off the response rather than choosing, which is C32 at one more call s
 board tier's format (`formats.HasBoard`), and the board is read when its sheet is opened or a
 board-tier rule runs. Reading it on open made the Jetson seed's first sheet and rule catalog wait
 about 30 s in the browser, since everything on the worker queues behind the request that opens. The
-viewer instead sends an `Ingest` of the open snapshot with `read_board` once the first sheet is drawn,
-on a `prepare` worker that ends when it answers and leaves the parsed board in the shared store for
-the jobs worker to restore (agni 1061).
+Load page reads it before the viewer opens (agni 1072): `GetDesign`, then an `Ingest` with
+`read_board` on a `prepare` worker that ends when it answers and leaves the parsed board in the shared
+store for the jobs worker to restore. The viewer opens only a design the Load page recorded
+(`web/src/admit.ts`, `loaded.ts`) and sends any other to `/load` with its address whole.
 **Nor must a query that asks nothing of the copper** (agni 987). A model is built with a
 `BoardTier`: rule runs pass `ReadBoard`, a query passes it only when `query.ReadsFrom` names a
 `board.*` relation (`boardTierFor`, which sees through its rules and library members), and coverage

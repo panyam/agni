@@ -1,7 +1,8 @@
-// Dropping files on the viewer (agni issue 854). Files go into the browser mount through the page's
-// "Open files" input, which is the same path a drag takes, the engine proposes the designs they make,
-// and opening one reads it in the page. The server under test mounts the tutorial project as `tut`,
-// so the dropped copy can be compared with the served one.
+// Dropping files on the Load page (agni issues 854 and 1072). Files go into the browser mount through
+// the page's "Open files" input, which is the same path a drag takes, and into the browser's saved
+// drops. The engine proposes the designs they make, and opening one reads it on its Load page and then
+// opens the viewer. The server under test mounts the tutorial project as `tut`, so the dropped copy
+// can be compared with the served one.
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
@@ -41,16 +42,16 @@ async function runChecks(page: Page): Promise<string[]> {
   return page.locator(".check-locate").allTextContents();
 }
 
-describe("dropping files on the viewer", () => {
+describe("dropping files on the Load page", () => {
   it("opens a dropped zip's declared design and finds what the server finds in the same files", async () => {
     let served: string[] = [];
     await withPage(browser, async (page) => {
-      await page.goto(`${base()}/designs/tut/designs/gateway/view`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/designs/tut/designs/gateway/load`, { waitUntil: "domcontentloaded" });
       served = await runChecks(page);
     });
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/designs/local/view?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-open:not([hidden])", { timeout: 60_000 });
       await page.setInputFiles("#drop-input", { name: "tutorial.zip", mimeType: "application/zip", buffer: storedZip(tutorial) });
 
@@ -76,7 +77,7 @@ describe("dropping files on the viewer", () => {
   it("opens a folder picked whole, with the design its design.yaml declares", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/designs/local/view?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
       await page.setInputFiles("#drop-folder-input", gateway);
 
@@ -96,7 +97,7 @@ describe("dropping files on the viewer", () => {
   it("proposes a design.yaml for loose files and opens the design it declares", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/designs/local/view?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-open:not([hidden])", { timeout: 60_000 });
       const loose = walk(gateway).filter((p) => !p.endsWith("design.yaml") && !p.includes(`${sep}symbols${sep}`));
       await page.setInputFiles("#drop-input", loose);
@@ -124,7 +125,7 @@ describe("dropping files on the viewer", () => {
   it("declares and opens a design proposed from a zip with no design.yaml", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
-      await page.goto(`${base()}/designs/local/view?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-open:not([hidden])", { timeout: 60_000 });
       const zip = storedZip(gateway, (p) => !p.endsWith("design.yaml"));
       await page.setInputFiles("#drop-input", { name: "gateway.zip", mimeType: "application/zip", buffer: zip });
@@ -140,6 +141,48 @@ describe("dropping files on the viewer", () => {
       // The zip carries the gateway's symbols/ beside the proposed design.yaml, and a design in no
       // project still reads its own symbol library (agni issue 887), so every part is drawn.
       expect((await page.locator("#undrawn-note").textContent())?.trim() ?? "").toBe("");
+      expect(log.errors).toEqual([]);
+    });
+  });
+
+  // A drop is kept in the browser's storage, so the viewer reopens it after a reload without the
+  // Load page, and without a single request to the server.
+  it("reopens a dropped design after a reload, from what the browser kept", async () => {
+    await withPage(browser, async (page) => {
+      const log = record(page);
+      await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
+      await page.setInputFiles("#drop-folder-input", gateway);
+      const dialog = page.locator("#drop-dialog");
+      await expect.poll(() => dialog.evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
+      await dialog.locator(".drop-design-open").first().click();
+      const first = await runChecks(page);
+      expect(first.length).toBeGreaterThan(0);
+      const viewer = page.url();
+      expect(new URL(viewer).searchParams.has("loaded"), "the Load page's marker stayed in the address").toBe(false);
+
+      const pages: string[] = [];
+      page.on("framenavigated", (f) => {
+        if (f === page.mainFrame()) pages.push(new URL(f.url()).pathname);
+      });
+      await page.reload({ waitUntil: "domcontentloaded" });
+      expect(await runChecks(page)).toEqual(first);
+      expect(pages.filter((p) => p.endsWith("/load")), "a reload of a read design went back through the Load page").toEqual([]);
+      expect(page.url()).toBe(viewer);
+
+      // The drop page lists it, and deleting it sends the next open of the design back to the Load
+      // page, which says the files are gone.
+      await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
+      const row = page.locator(".ld-drop").first();
+      await expect.poll(() => row.textContent(), { timeout: 30_000 }).toContain("gateway");
+      await row.locator(".ld-drop-delete").click();
+      // The delete is an IndexedDB transaction, which a navigation started before it commits aborts.
+      await expect.poll(() => page.locator(".ld-drop").count(), { timeout: 30_000 }).toBe(0);
+      await page.goto(viewer, { waitUntil: "domcontentloaded" });
+      const failed = page.locator("#load-failed");
+      await expect.poll(() => failed.isVisible(), { timeout: 60_000 }).toBe(true);
+      expect(await failed.textContent()).toContain("no longer keeps");
+      expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
       expect(log.errors).toEqual([]);
     });
   });
