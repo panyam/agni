@@ -150,7 +150,7 @@ async function opened(page) {
 // checks runs every rule and measures the longest gap between the page thread's frames while they
 // run, which is how a visitor feels a blocked page. The time runs from the click until the button
 // resets, so on a seed it includes reading the whole design, which drawing the first sheet does not.
-async function checks(page, design, name = "checks", log = undefined) {
+async function checks(page, design, name = "checks", log = undefined, expectRun = false) {
   return step(name, design, async () => {
     await page.evaluate(() => {
       const g = (window.__gap = { max: 0, last: performance.now(), on: true, t0: performance.now() });
@@ -162,8 +162,24 @@ async function checks(page, design, name = "checks", log = undefined) {
       requestAnimationFrame(tick);
     });
     const t = performance.now();
+    const label = async () => (await page.locator(".checks-run").textContent())?.trim();
+    const runs = () => (log ? log.timings.filter((l) => l.startsWith("agni timing CheckDesign: ")).length : 0);
+    const before = runs();
     await page.click(".checks-run");
-    await poll(async () => (await page.locator(".checks-run").textContent())?.trim() === "Run checks");
+    if (expectRun && log && timed) {
+      // A page still finishing its open (a reload restoring its panels) can ignore the click and start
+      // no run, so click again, at most once a second, until this run's CheckDesign has answered.
+      let clicked = performance.now();
+      await poll(async () => {
+        if (runs() > before) return true;
+        if (performance.now() - clicked > 1000 && (await label()) === "Run checks") {
+          await page.click(".checks-run");
+          clicked = performance.now();
+        }
+        return false;
+      }, 180_000);
+    }
+    await poll(async () => (await label()) === "Run checks");
     const ms = since(t);
     // t0 and t1 are on the page's clock, which the timing lines' starts are on too.
     const { gap, t0, t1 } = await page.evaluate(() => {
@@ -417,14 +433,15 @@ for (const seed of seeds) {
     await walkDesign(page, seed.title, log);
     await step("1. reopen after a reload", seed.title, async () => {
       const t2 = performance.now();
-      await page.reload({ waitUntil: "domcontentloaded" });
+      // The viewer rewrites its URL as it is used, dropping ?timing, so the reload names it again.
+      await page.goto(timedURL(page.url()), { waitUntil: "domcontentloaded" });
       const drawn = await opened(page);
       return { ms: drawn - t2, detail: "first sheet drawn after a reload" };
     });
     // A fresh page over the store the first visit filled: the load and then the check restore the
     // board rather than parsing it.
     await backgroundLoad(log, seed.title, 1, "background load after a reload");
-    const again = await checks(page, seed.title, "checks after a reload", log);
+    const again = await checks(page, seed.title, "checks after a reload", log, true);
     if (again) checksTiming(log, seed.title, again, " after a reload");
   }
   network(log, seed.title, undefined);
