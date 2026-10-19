@@ -39,7 +39,7 @@ func subjectEntities(subs []*checkspb.Subject) []check.Entity {
 func noteDesignWide(w io.Writer, skipped []*webapi.SkippedRule) {
 	var rules []string
 	for _, s := range skipped {
-		if s.GetReason() == check.DesignWideReason {
+		if s.GetDesignWide() {
 			rules = append(rules, s.GetName())
 		}
 	}

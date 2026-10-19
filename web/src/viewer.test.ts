@@ -488,13 +488,13 @@ describe("ViewerPresenter", () => {
 
     // agni issue 897: a rule the design cannot run at all is the Checks panel's to report, so a
     // selection's answer names only the rules the scope left out.
-    it("names, of the rules a selection's answer skipped, only those the catalog calls available", async () => {
+    it("names, of the rules a selection's answer skipped, only those its scope left out", async () => {
       const h = harness();
       h.listRules.mockResolvedValueOnce({
         rules: [
           { name: "single-pin-net", severity: "error", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
           { name: "symbol-unresolved", severity: "warning", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
-          { name: "wire-no-junction", severity: "warning", summary: "", reads: [], tags: {}, available: false, unavailableReason: "no wires" },
+          { name: "wire-no-junction", severity: "warning", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
         ],
       });
       await h.presenter.openFile("m", "board.eds");
@@ -503,8 +503,8 @@ describe("ViewerPresenter", () => {
         findings: [],
         verdicts: [],
         skipped: [
-          { name: "symbol-unresolved", reason: "concludes about the design as a whole" },
-          { name: "wire-no-junction", reason: "no wires" },
+          { name: "symbol-unresolved", reason: "concludes about the design as a whole", designWide: true },
+          { name: "wire-no-junction", reason: "no wires", designWide: false },
         ],
       } as never);
       const r = await h.presenter.checkSelection({ kind: "net", ref: "VBUS", pin: "" });

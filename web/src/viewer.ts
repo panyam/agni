@@ -756,16 +756,16 @@ export class ViewerPresenter {
   }
 
   // checkSelection is Properties' question about one selected net, part or pin: the selected rules,
-  // asked about it alone. It answers null when no rule is selected. notAsked are the rules the
-  // catalog calls available that the answer skipped, which is the ones the scope left out, such as a
-  // rule concluding about the whole design; a rule this design cannot run at all is the Checks
-  // panel's to report, and listing it per selection would bury the rest.
+  // asked about it alone. It answers null when no rule is selected. notAsked are the rules the scope
+  // left out (SkippedRule.design_wide), which conclude about the whole design; a rule this design
+  // cannot run at all is the Checks panel's to report, and listing it per selection would bury the
+  // rest.
   async checkSelection(sel: SubjectRef): Promise<{ resp: CheckDesignResponse; notAsked: { name: string; reason: string }[] } | null> {
     const rules = [...this.doc.selectedRules];
     if (rules.length === 0) return null;
     const resp = await this.checkScoped(rules, [sel]);
     const notAsked = (resp.skipped ?? [])
-      .filter((sk) => this.doc.rulesByName.get(sk.name)?.available !== false)
+      .filter((sk) => sk.designWide)
       .map((sk) => ({ name: sk.name, reason: sk.reason }));
     return { resp, notAsked };
   }
