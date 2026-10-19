@@ -15,7 +15,7 @@ import type { Component, Design, Net } from "./gen/agni/v1/ir/ir_pb.js";
 import { ClassSource, Role } from "./gen/agni/v1/ir/ir_pb.js";
 import type { PartSpec } from "./gen/agni/v1/param/param_pb.js";
 import type { ConversionReport } from "./gen/agni/v1/webapi/design_pb.js";
-import { checkedState, findingsFor, type FindingItem, type FindingsState } from "./findings.js";
+import { checkedState, findingsFor, type FindingItem, type FindingsState, type VerdictItem } from "./findings.js";
 import type { EntityQueryItem } from "./query.js";
 import { labelFor, type Selection } from "./selection.js";
 
@@ -152,6 +152,8 @@ export interface Ref {
   detail?: string;
   target?: Selection;
   sheet?: string;
+  // verdict makes the reference show that verdict's proof on the drawing.
+  verdict?: string;
 }
 
 export interface Group {
@@ -188,6 +190,16 @@ export interface PropertiesState {
   note?: string;
 }
 
+// SelectionChecks is what CheckDesign answered about the selection alone (agni issue 897): the
+// selected rules asked about one net, part or pin. asking is the wait, no-rules says nothing was
+// selected to ask, failed carries the engine's reason. notAsked are the rules the answer skipped with
+// the engine's reason for each, such as a rule that concludes about the design as a whole.
+export type SelectionChecks =
+  | { state: "asking" }
+  | { state: "no-rules" }
+  | { state: "failed"; error: string }
+  | { state: "answered"; verdicts: VerdictItem[]; notAsked: { name: string; reason: string }[] };
+
 // PropertiesInput is what the panel's host holds when it asks for a state.
 export interface PropertiesInput {
   focus: Focus;
@@ -206,6 +218,9 @@ export interface PropertiesInput {
   // drawnOn is the sheets the selected entity is drawn on, as the engine located it: null while that
   // answer is on its way, and absent where nobody asks (a host with no engine to ask).
   drawnOn?: string[] | null;
+  // checks is the selection's own check answer, absent where nobody asks (a host with no engine to
+  // ask, or a selection no scope covers, a bus), and the panel then lists the run's findings.
+  checks?: SelectionChecks;
 }
 
 // propertiesFor derives the panel's state for one focus.
@@ -322,9 +337,66 @@ function sheetView(input: PropertiesInput, sheetId: string): Omit<PropertiesStat
   };
 }
 
+// OUTCOME_ORDER puts what a reader acts on first: a failure, then a check that could not decide.
+const OUTCOME_ORDER = ["fail", "inconclusive"];
+
+// checksLine counts a selection's verdicts by outcome, worst first, with the words the checks panel
+// uses, and says when a rule was left out because it answers for the design as a whole.
+function checksLine(c: SelectionChecks): string {
+  switch (c.state) {
+    case "asking":
+      return "checking…";
+    case "no-rules":
+      return "no rules selected";
+    case "failed":
+      return `could not check: ${c.error}`;
+    case "answered": {
+      if (c.verdicts.length === 0) return "no selected rule considers it";
+      const n = new Map<string, number>();
+      for (const v of c.verdicts) n.set(v.outcome, (n.get(v.outcome) ?? 0) + 1);
+      const order = ["fail", "inconclusive", "pass", "no-limit", "not-considered"];
+      // An outcome this list does not know sorts last rather than first.
+      const rank = (o: string) => (order.includes(o) ? order.indexOf(o) : order.length);
+      const words: Record<string, string> = { "no-limit": "no limit", "not-considered": "not considered" };
+      return [...n.entries()]
+        .sort((a, b) => rank(a[0]) - rank(b[0]))
+        .map(([o, k]) => `${k} ${words[o] ?? o}`)
+        .join(", ");
+    }
+  }
+}
+
+// checksGroup is the selection's checks: each failing or undecided verdict, which shows its proof
+// when clicked, worst first. The counts and the rules not asked go in the rows.
+function checksGroup(c: SelectionChecks): Group {
+  const acted = c.state === "answered" ? c.verdicts.filter((v) => OUTCOME_ORDER.includes(v.outcome)) : [];
+  acted.sort((a, b) => OUTCOME_ORDER.indexOf(a.outcome) - OUTCOME_ORDER.indexOf(b.outcome) || (a.rule < b.rule ? -1 : a.rule > b.rule ? 1 : 0));
+  return {
+    name: "checks",
+    refs: acted.map((v) => ({ label: v.rule, detail: v.statement || v.outcome, verdict: v.id })),
+    empty: c.state === "answered" ? "nothing failing" : checksLine(c),
+  };
+}
+
+// checksRows are the selection's check counts and the rules the answer skipped, grouped by the
+// engine's reason, so a rule missing from the answer reads as not asked rather than as passing.
+function checksRows(c: SelectionChecks): Row[] {
+  const rows: Row[] = [{ label: "checks", value: checksLine(c) }];
+  if (c.state !== "answered") return rows;
+  const byReason = new Map<string, string[]>();
+  for (const r of c.notAsked) byReason.set(r.reason, [...(byReason.get(r.reason) ?? []), r.name]);
+  for (const [reason, names] of byReason) rows.push({ label: "not asked", value: `${[...names].sort().join(", ")}: ${reason}` });
+  return rows;
+}
+
 function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesState, "crumbs"> {
   const mine = input.findings ? findingsFor(input.findings.findings, [sel]) : [];
-  const findingsGroup: Group = { name: "findings", refs: findingRefs(mine), empty: input.findings && checkedState(input.findings) === "complete" ? "none" : "not checked yet" };
+  // A selection checked on its own shows that answer, and only a host with nothing to ask falls back
+  // to the run's findings (agni issue 897).
+  const findingsGroup: Group = input.checks
+    ? checksGroup(input.checks)
+    : { name: "findings", refs: findingRefs(mine), empty: input.findings && checkedState(input.findings) === "complete" ? "none" : "not checked yet" };
+  const extraRows: Row[] = input.checks ? checksRows(input.checks) : [];
   const questions = input.questions.filter((q) => q.kind === sel.kind);
   const base = { kind: sel.kind, title: labelFor(sel), ask: questions.length ? { sel, questions } : undefined };
   const sheetsGroup: Group[] =
@@ -346,7 +418,7 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
       const nets = [...new Set(pins.map((p) => p.net))].sort(byDesignator);
       return {
         ...base,
-        rows: c ? componentRows(c) : [],
+        rows: [...(c ? componentRows(c) : []), ...extraRows],
         groups: [
           ...sheetsGroup,
           { name: "pins", refs: pins.map((p) => pinRef(sel.ref ?? "", p)), empty: "no connected pins" },
@@ -365,7 +437,7 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
       const testPoints = comps.filter((r) => inv?.testPoints.has(r));
       return {
         ...base,
-        rows: n ? netRows(n) : [],
+        rows: [...(n ? netRows(n) : []), ...extraRows],
         groups: [
           ...sheetsGroup,
           {
@@ -392,7 +464,7 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
       const name = inv?.pinName.get(ref + PIN_SEP + pin) ?? "";
       const rows: Row[] = [{ label: "designator", value: pin }];
       if (name) rows.push({ label: "name", value: name });
-      rows.push({ label: "net", value: at?.net || "unconnected" });
+      rows.push({ label: "net", value: at?.net || "unconnected" }, ...extraRows);
       return {
         ...base,
         rows,

@@ -305,6 +305,18 @@ async function walkDesign(page, design, log) {
     const locate = page.locator(".query-row td:nth-child(2) .query-locate").first();
     if ((await locate.count()) === 0) return { status: "not available", detail: "no net to select" };
     const net = (await locate.textContent())?.trim() ?? "";
+    // Selecting the net also asks the selected rules about it alone, in Properties (agni issue 897).
+    // The page notes when that answer lands, for the next step, since the ask below runs meanwhile.
+    await page.evaluate(() => {
+      const w = window;
+      w.__checkT0 = performance.now();
+      w.__checkT1 = undefined;
+      const done = () => {
+        const v = document.querySelector('[data-component="properties"] dd[data-row="checks"]')?.textContent ?? "";
+        if (v && v !== "checking…" && w.__checkT1 === undefined) w.__checkT1 = performance.now();
+      };
+      new MutationObserver(done).observe(document.querySelector('[data-component="properties"]') ?? document.body, { subtree: true, childList: true, characterData: true });
+    });
     await locate.click();
     await page.waitForSelector(".query-ask:not([disabled])", { timeout: 60_000 });
     const before = (await page.locator(".query-count").textContent()) ?? "";
@@ -329,6 +341,19 @@ async function walkDesign(page, design, log) {
   });
   // The worker keeps what it read between questions (agni issue 974). One replaced after every
   // request fetched the design's files again for the next, so a question asked twice must fetch none.
+  // The selected net's own checks, which Properties asks for on selecting it (agni issue 897), timed from
+  // the click that selected it to the answer, on the page's clock.
+  await step("4. check the selected net", design, async () => {
+    if (!(await page.evaluate(() => window.__checkT0 !== undefined))) return { status: "not available", detail: "no net was selected" };
+    const row = page.locator('[data-component="properties"] dd[data-row="checks"]');
+    if ((await row.count()) === 0) return { status: "not available", detail: "this viewer does not check a selection (#897)" };
+    await page.waitForFunction(() => window.__checkT1 !== undefined, null, { polling: "raf", timeout: 120_000 });
+    const ms = await page.evaluate(() => window.__checkT1 - window.__checkT0);
+    const counts = (await row.textContent())?.trim() ?? "";
+    const net = (await page.locator('[data-component="properties"] .pr-title').textContent())?.trim() ?? "";
+    if (counts.startsWith("could not check")) return { status: "fail", ms, detail: `${net}: ${counts}` };
+    return { ms, detail: `${net}: ${counts}` };
+  });
   await step("4. ask again", design, async () => {
     const before = log.requests.length;
     // Every design has a net, so this answers rows wherever the walk got this far, and its count

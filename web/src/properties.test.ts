@@ -3,7 +3,7 @@ import { clone, create } from "@bufbuild/protobuf";
 import { ClassSource, DesignSchema, InputDiagnosticsSchema, Role } from "./gen/agni/v1/ir/ir_pb.js";
 import { PartSpecSchema } from "./gen/agni/v1/param/param_pb.js";
 import { ConversionReportSchema } from "./gen/agni/v1/webapi/design_pb.js";
-import type { FindingItem, FindingsState } from "./findings.js";
+import type { FindingItem, FindingsState, VerdictItem } from "./findings.js";
 import { type PropertiesInput, type ServedFacts, inventoryFromDesign, propertiesFor, reportLines } from "./properties.js";
 import type { EntityQueryItem } from "./query.js";
 
@@ -276,5 +276,68 @@ describe("reportLines", () => {
 
   it("is nothing for a faithful drawing", () => {
     expect(reportLines(null)).toBeNull();
+  });
+});
+
+// agni issue 897: a selected net, part or pin shows the selected rules' answer about it alone, which
+// the presenter asks CheckDesign for.
+describe("a selection's own checks", () => {
+  const verdict = (rule: string, outcome: string, statement = ""): VerdictItem => ({
+    id: `${rule}:(net:VIN)`,
+    rule,
+    outcome,
+    subjects: [{ kind: "net", subject: "VIN", pin: "", netId: "", busId: "" }],
+    statement,
+    terms: [],
+    context: [],
+    reason: "",
+  });
+  const net = { level: "entity" as const, sel: { kind: "net" as const, net: "VIN" } };
+
+  it("lists the failing and undecided verdicts worst first, each showing its proof, and counts every outcome", () => {
+    const s = propertiesFor(
+      input({
+        focus: net,
+        checks: {
+          state: "answered",
+          verdicts: [verdict("b-rule", "pass"), verdict("z-rule", "inconclusive", "no datasheet"), verdict("a-rule", "fail", "no pull-up"), verdict("c-rule", "not-considered")],
+          notAsked: [],
+        },
+      }),
+    );
+    expect(group(s, "checks")?.refs).toEqual([
+      { label: "a-rule", detail: "no pull-up", verdict: "a-rule:(net:VIN)" },
+      { label: "z-rule", detail: "no datasheet", verdict: "z-rule:(net:VIN)" },
+    ]);
+    expect(row(s, "checks")).toBe("1 fail, 1 inconclusive, 1 pass, 1 not considered");
+    // The run's findings group gives way to it, rather than listing the same answers twice.
+    expect(group(s, "findings")).toBeUndefined();
+  });
+
+  it("names the rules it did not ask, with the engine's reason, so their absence does not read as a pass", () => {
+    const why = "concludes about the design as a whole, so it is not asked of a net or part";
+    const s = propertiesFor(
+      input({ focus: net, checks: { state: "answered", verdicts: [verdict("a-rule", "pass")], notAsked: [{ name: "symbol-unresolved", reason: why }, { name: "bus-not-modeled", reason: why }] } }),
+    );
+    expect(row(s, "not asked")).toBe(`bus-not-modeled, symbol-unresolved: ${why}`);
+    expect(group(s, "checks")?.empty).toBe("nothing failing");
+  });
+
+  it("says when it is asking, when no rule is selected, when it could not ask, and when nothing considers the selection", () => {
+    const say = (checks: Parameters<typeof input>[0]["checks"]) => {
+      const s = propertiesFor(input({ focus: net, checks }));
+      return [row(s, "checks"), group(s, "checks")?.empty];
+    };
+    expect(say({ state: "asking" })).toEqual(["checking…", "checking…"]);
+    expect(say({ state: "no-rules" })).toEqual(["no rules selected", "no rules selected"]);
+    expect(say({ state: "failed", error: "no netlist" })).toEqual(["could not check: no netlist", "could not check: no netlist"]);
+    expect(say({ state: "answered", verdicts: [], notAsked: [] })[0]).toBe("no selected rule considers it");
+  });
+
+  it("falls back to the run's findings where nothing asks", () => {
+    const s = propertiesFor(input({ focus: net }));
+    expect(group(s, "findings")).toBeDefined();
+    expect(group(s, "checks")).toBeUndefined();
+    expect(row(s, "checks")).toBeUndefined();
   });
 });

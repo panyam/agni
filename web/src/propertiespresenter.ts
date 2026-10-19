@@ -8,19 +8,21 @@
 
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import type { ConversionReport, GetDesignRequestSchema, GetDesignResponse } from "./gen/agni/v1/webapi/design_pb.js";
-import type { FindingsState } from "./findings.js";
+import type { FindingsState, VerdictItem } from "./findings.js";
 import type { EntityQueryItem } from "./query.js";
 import {
   type DatasheetJoin,
   type Focus,
   INVENTORY_PATHS,
   type Inventory,
+  type SelectionChecks,
   SERVED_QUERIES,
   inventoryFromDesign,
   propertiesFor,
 } from "./properties.js";
 import type { PropertiesView } from "./propertiespanel.js";
 import { type Selection, sameSelection } from "./selection.js";
+import type { SubjectRef } from "./router.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 
 export interface PropertiesSources {
@@ -35,6 +37,27 @@ export interface PropertiesSources {
   // inventory gets the pin names and test points the engine decides (SERVED_QUERIES). Absent, or
   // failing, the panel shows no pin names and no test points rather than guessing them.
   ask?: (uri: string, query: string) => Promise<string[][]>;
+  // check asks the selected rules about one net, part or pin alone (agni issue 897), null when no rule
+  // is selected. Absent, the panel lists the run's findings for the selection instead.
+  check?: (subject: SubjectRef) => Promise<{ verdicts: VerdictItem[]; notAsked: { name: string; reason: string }[] } | null>;
+  // checkKey names what a check is asked under (the selected rules and the vocabulary), so the panel
+  // asks again when it changes.
+  checkKey?: () => string;
+}
+
+// subjectOf is the subject a selection's checks are asked about, or null for a bus, which no scope
+// covers.
+export function subjectOf(sel: Selection): SubjectRef | null {
+  switch (sel.kind) {
+    case "net":
+      return sel.net ? { kind: "net", ref: sel.net, pin: "" } : null;
+    case "component":
+      return sel.ref ? { kind: "component", ref: sel.ref, pin: "" } : null;
+    case "pin":
+      return sel.ref && sel.pin ? { kind: "pin", ref: sel.ref, pin: sel.pin } : null;
+    default:
+      return null;
+  }
 }
 
 export class PropertiesPresenter {
@@ -56,6 +79,9 @@ export class PropertiesPresenter {
   // located is where the selected entity is drawn, for the selection it was asked for, so an answer
   // that arrives after the reader moved on is dropped rather than shown against the new selection.
   private located: { sel: Selection; sheets: string[] } | null = null;
+  // checked is the selection's own check answer, for the selection and the rules it was asked about,
+  // so an answer for a selection the reader left, or under rules since changed, is never shown.
+  private checked: { sel: Selection; key: string; value: SelectionChecks } | null = null;
 
   constructor(
     private readonly view: PropertiesView,
@@ -74,6 +100,7 @@ export class PropertiesPresenter {
     if (changed) {
       this.focus = { level: "design" };
       this.located = null;
+      this.checked = null;
       this.inventory = null;
       this.designName = "";
       this.datasheet = null;
@@ -97,6 +124,8 @@ export class PropertiesPresenter {
   setFindings(state: FindingsState): void {
     this.findings = state;
     this.push();
+    // The rule selection or the vocabulary may have changed with it, which the answer was asked under.
+    if (this.focus.level === "entity" && this.checked && this.checked.key !== this.checkKey()) void this.check(this.focus.sel);
   }
 
   setDatasheet(join: DatasheetJoin): void {
@@ -113,7 +142,10 @@ export class PropertiesPresenter {
   select(focus: Focus): void {
     this.focus = focus;
     this.push();
-    if (focus.level === "entity") void this.locate(focus.sel);
+    if (focus.level === "entity") {
+      void this.locate(focus.sel);
+      void this.check(focus.sel);
+    }
   }
 
   // selectEntity is a pick from the drawing or a result cell, made on the sheet on screen.
@@ -155,6 +187,41 @@ export class PropertiesPresenter {
       this.located = { sel, sheets: [] };
     }
     this.push();
+  }
+
+  private checkKey(): string {
+    return this.src.checkKey?.() ?? "";
+  }
+
+  // check asks the selected rules about the selection alone (agni issue 897). An answer arriving after
+  // the reader moved on, or after the rules changed, is dropped, since the next ask is already out.
+  private async check(sel: Selection): Promise<void> {
+    const subject = subjectOf(sel);
+    if (!this.src.check || !subject) {
+      this.checked = null;
+      return;
+    }
+    const key = this.checkKey();
+    if (this.checked && sameSelection(this.checked.sel, sel) && this.checked.key === key && this.checked.value.state !== "failed") return;
+    this.checked = { sel, key, value: { state: "asking" } };
+    this.push();
+    let value: SelectionChecks;
+    try {
+      const r = await this.src.check(subject);
+      value = r ? { state: "answered", verdicts: r.verdicts, notAsked: r.notAsked } : { state: "no-rules" };
+    } catch (e) {
+      value = { state: "failed", error: e instanceof Error ? e.message : String(e) };
+    }
+    if (!this.isSelected(sel) || this.checked?.key !== key || !sameSelection(this.checked.sel, sel)) return;
+    this.checked = { sel, key, value };
+    this.push();
+  }
+
+  // checks is the selection's check answer for the panel: undefined where nothing asks, so the panel
+  // falls back to the run's findings.
+  private checks(): SelectionChecks | undefined {
+    if (this.focus.level !== "entity" || !this.checked) return undefined;
+    return sameSelection(this.checked.sel, this.focus.sel) ? this.checked.value : undefined;
   }
 
   // drawnOn is what the panel says about where the selection is drawn: nothing without an engine to
@@ -210,6 +277,7 @@ export class PropertiesPresenter {
         drawn: this.focus.level === "sheet" && this.focus.sheetId === this.activeSheet ? this.src.drawn() : null,
         questions: this.questions,
         drawnOn: this.drawnOn(),
+        checks: this.checks(),
       }),
     );
   }

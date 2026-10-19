@@ -68,11 +68,29 @@ export class DocumentStore {
   // engineVersion is the build answering, off ListRules, which a finding's report link names.
   engineVersion = "";
 
-  // findVerdict looks one up across every rule's cached considered set. Linear over a few thousand
-  // rows at worst (the sum of the considered sets, not rules times subjects), too few for an index
-  // to matter.
+  // scoped holds verdicts answered for some subjects alone (agni issue 897): a selection's checks in
+  // Properties, or a link that named its verdict's subjects. They are kept APART from `run`, which
+  // holds whole rules, because a rule answered for one net is not that rule's answer for the design,
+  // and folding it in would show the checks panel a subset as the whole. Dropped with the run.
+  scoped: CheckDesignResponse["verdicts"] = [];
+
+  // keepScoped adds a scoped answer's verdicts, each id once, the newest answer winning.
+  keepScoped(vs: CheckDesignResponse["verdicts"]): void {
+    const ids = new Set(vs.map((v) => v.id));
+    this.scoped = [...this.scoped.filter((v) => !ids.has(v.id)), ...vs];
+  }
+
+  // dropRun forgets every answer about the design: the whole run and the scoped ones.
+  dropRun(): void {
+    this.run = null;
+    this.scoped = [];
+  }
+
+  // findVerdict looks one up across every rule's cached considered set, then the scoped answers.
+  // Linear over a few thousand rows at worst (the sum of the considered sets, not rules times
+  // subjects), too few for an index to matter.
   findVerdict(id: string): VerdictItem | undefined {
-    const v = this.run?.resp.verdicts.find((x) => x.id === id);
+    const v = this.run?.resp.verdicts.find((x) => x.id === id) ?? this.scoped.find((x) => x.id === id);
     return v ? verdictItem(v) : undefined;
   }
 
@@ -198,7 +216,7 @@ export class DocumentStore {
 
 // verdictItem is one wire verdict as the panel shows it: its outcome as a word, its subjects, and the
 // statement and terms its witness rests on.
-function verdictItem(v: CheckDesignResponse["verdicts"][number]): VerdictItem {
+export function verdictItem(v: CheckDesignResponse["verdicts"][number]): VerdictItem {
   return {
     id: v.id,
     rule: v.rule,

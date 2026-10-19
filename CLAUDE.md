@@ -364,7 +364,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the catalog (21.78s to 1.95s on a 3980-component
   board, and paid per click, because each click from a report is a fresh page load). The rule is
   minted rather than recovered, since `VerdictID` is generated and never parsed; a link without it
-  still resolves by the slow route, which is what keeps saved reports working. A TRACE link needs no
+  still resolves by the slow route, which is what keeps saved reports working. It carries the verdict's
+  subjects too (`subject=net:SDA`, `check.SubjectParam`'s spelling, agni 897), so the viewer asks that
+  rule about them alone, held apart from the run in `Document.scoped`. A TRACE link needs no
   such hint because it carries the question rather than a conclusion. Semantics and the two ways the
   halves used to disagree are in `guide/checks-and-reports.md`.
 - **`--remote <url>` on `query`, `check`, `trace` and `review` sends the command's request to a running
@@ -627,7 +629,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   sent, a TWIN fixture both test suites read holds the two to one answer (agni 1045):
   `core/review/testdata/tally_twin.json`, `core/results/testdata/severity_twin.json`,
   `core/query/testdata/binding_twin.json`, `core/facts/testdata/kind_order.json`,
-  `service/testdata/natural_twin.json`. A new client copy of engine logic gets one, or better, comes
+  `service/testdata/natural_twin.json`, `core/check/testdata/subject_param_twin.json`. A new client copy of engine logic gets one, or better, comes
   off the wire (a parse error's caret is `TextPosition.caret`, drawn by the engine).
 - **Every question about a design names a snapshot, and only `Ingest` names files** (agni 1061,
   `service/snapshot.go`, "The services" in `architecture/web-services.md`). Ingest resolves the

@@ -423,7 +423,7 @@ describe("ViewerPresenter", () => {
       nativeAvailable: true,
       availableLayouts: ["faithful", "grid"],
     } as any);
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "", rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
@@ -440,8 +440,8 @@ describe("ViewerPresenter", () => {
   // to every available rule) before it could resolve anything. On a real board that was 56 rules and
   // about fifteen seconds, paid again on every click, because each click is a fresh page load.
   describe("a verdict link runs only the rule it names", () => {
-    function linkLoc(rule: string) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
+    function linkLoc(rule: string, subjects: string[] = []) {
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, subjects, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
     }
     // The rules the run actually asked the server for, flattened across calls.
     function asked(h: ReturnType<typeof harness>): string[] {
@@ -468,6 +468,31 @@ describe("ViewerPresenter", () => {
       expect(asked(h)).toEqual(expect.arrayContaining(["single-pin-net", "diff-pair-naming"]));
     });
 
+    // agni issue 897: a link that names its verdict's subjects asks the rule about them alone, and the
+    // answer resolves the verdict without counting as the rule's run.
+    it("asks the named rule about the link's subjects alone, resolves the verdict and leaves the rule pending", async () => {
+      const h = harness();
+      h.checkDesign.mockImplementation(async (req) =>
+        ((req as { subjects?: unknown[] }).subjects?.length
+          ? { findings: [], verdicts: [{ id: "single-pin-net:(net:VBUS)", rule: "single-pin-net", outcome: 2, subjects: [{ kind: "net", ref: "VBUS" }], witness: { statement: "one pin" } }] }
+          : { findings: [] }) as never,
+      );
+      await h.presenter.restore(linkLoc("single-pin-net", ["net:VBUS"]));
+      expect(h.checkDesign).toHaveBeenCalledOnce();
+      expect(h.checkDesign.mock.calls[0][0]).toMatchObject({ rules: ["single-pin-net"], subjects: [{ kind: "net", ref: "VBUS", pin: "" }] });
+      expect(h.presenter.verdictList()).toEqual([]); // the run holds no rule, so the panel shows it pending
+      expect(lastFindings(h).pending).toBe(2);
+      // The address the focused verdict writes back names its subjects too.
+      expect(h.onLocation).toHaveBeenLastCalledWith(expect.objectContaining({ verdict: "single-pin-net:(net:VBUS)", rule: "single-pin-net", subjects: ["net:VBUS"] }));
+    });
+
+    it("runs the whole rule when the scoped answer lacks the verdict", async () => {
+      const h = harness();
+      await h.presenter.restore(linkLoc("single-pin-net", ["net:VBUS"]));
+      const calls = h.checkDesign.mock.calls.map((c) => c[0] as { rules?: string[]; subjects?: unknown[] });
+      expect(calls.map((c) => [c.rules, (c.subjects ?? []).length])).toEqual([[["single-pin-net"], 1], [["single-pin-net"], 0]]);
+    });
+
     // The scoped run must not shrink the ruleset the Run button would use afterwards.
     it("leaves the full selection in place for the next run", async () => {
       const h = harness();
@@ -485,7 +510,7 @@ describe("ViewerPresenter", () => {
   describe("stale verdict links", () => {
     // A location naming a verdict and the revision it was computed against.
     function linkLoc(hash: string) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash, rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, verdict: "some-rule:net:VBUS", hash, rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
     }
     function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
       h.getDesign.mockResolvedValue({
@@ -556,7 +581,7 @@ describe("ViewerPresenter", () => {
 
   it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
     const h = harness(); // default design has only s1
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" });
     expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
   });
 
