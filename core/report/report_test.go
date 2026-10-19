@@ -203,17 +203,41 @@ func TestTraceURLRefusesWhatItCannotPromise(t *testing.T) {
 // working.
 func TestVerdictURLCarriesTheRule(t *testing.T) {
 	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
-	got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", "i2c-pull-up")
+	got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", "i2c-pull-up", nil)
 	want := "http://h:8080/designs/m/b.edn/view?verdict=i2c-pull-up%3A%28net%3ASDA%29&rule=i2c-pull-up"
 	if got != want {
 		t.Errorf("VerdictURL = %q, want %q", got, want)
 	}
-	if got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", ""); strings.Contains(got, "rule=") {
+	if got := VerdictURL(meta, "i2c-pull-up:(net:SDA)", "", nil); strings.Contains(got, "rule=") {
 		t.Errorf("an unnamed rule must not appear in the link: %q", got)
 	}
 	withHash := Report{URLBase: "http://h:8080", MountPath: "m/b.edn", ContentHash: "sha256:abc"}
-	if got := VerdictURL(withHash, "r:(net:N)", "r"); !strings.Contains(got, "hash=sha256%3Aabc") || !strings.Contains(got, "rule=r") {
+	if got := VerdictURL(withHash, "r:(net:N)", "r", nil); !strings.Contains(got, "hash=sha256%3Aabc") || !strings.Contains(got, "rule=r") {
 		t.Errorf("the rule must not displace the revision hash: %q", got)
+	}
+}
+
+// The subjects ride with the rule, so the viewer asks that one rule about the verdict's own nets and
+// parts (agni issue 897), every element of a relation's tuple in the rule's order.
+func TestVerdictURLCarriesTheSubjects(t *testing.T) {
+	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	got := VerdictURL(meta, "copper-clearance:(net:A,net:B)", "copper-clearance", []string{"net:A", "pin:U7.3"})
+	want := "http://h:8080/designs/m/b.edn/view?verdict=copper-clearance%3A%28net%3AA%2Cnet%3AB%29&rule=copper-clearance&subject=net%3AA&subject=pin%3AU7.3"
+	if got != want {
+		t.Errorf("VerdictURL = %q, want %q", got, want)
+	}
+	if got := VerdictURL(Report{}, "r:(net:N)", "r", []string{"net:N"}); got != "" {
+		t.Errorf("a run with no server named minted %q", got)
+	}
+}
+
+// The report's own verdict rows go through the same function with the verdict's subjects, so every
+// link in a saved page carries them.
+func TestReportVerdictRowsLinkTheirSubjects(t *testing.T) {
+	meta := Report{URLBase: "http://h", MountPath: "m/b.edn"}
+	r := rowOf(check.Verdict{Rule: "r", Outcome: check.Fail, Subjects: []check.Entity{check.NetNameEntity("SDA"), check.BusEntity("D[7:0]")}}, meta)
+	if !strings.HasSuffix(r.URL, "&rule=r&subject=net%3ASDA") {
+		t.Errorf("row URL = %q, want the net and not the bus", r.URL)
 	}
 }
 

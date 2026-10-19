@@ -3,6 +3,8 @@ import { create } from "@bufbuild/protobuf";
 import { GetDesignResponseSchema, type GetDesignResponse } from "./gen/agni/v1/webapi/design_pb.js";
 import { INVENTORY_PATHS, SERVED_QUERIES, type PropertiesState } from "./properties.js";
 import { PropertiesPresenter } from "./propertiespresenter.js";
+import type { VerdictItem } from "./findings.js";
+import type { SubjectRef } from "./router.js";
 
 function design(name: string, nets: string[]): GetDesignResponse {
   return create(GetDesignResponseSchema, { name, design: { nets: nets.map((n) => ({ name: n })) } });
@@ -117,5 +119,75 @@ describe("PropertiesPresenter", () => {
     p.selectEntity({ kind: "component", ref: "U1" });
     p.selectDesign();
     expect(last().kind).toBe("design");
+  });
+});
+
+// agni issue 897: selecting a net, part or pin asks the selected rules about it alone.
+describe("a selection's own checks", () => {
+  function checking(check: (s: SubjectRef) => Promise<{ verdicts: VerdictItem[]; notAsked: { name: string; reason: string }[] } | null>, key = () => "k1") {
+    const states: PropertiesState[] = [];
+    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign: async () => design("g", ["VIN"]), drawn: () => null, check, checkKey: key });
+    p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
+    return { p, last: () => states[states.length - 1] };
+  }
+  const answer = (rule: string) => ({ verdicts: [{ id: `${rule}:(net:VIN)`, rule, outcome: "fail", subjects: [], statement: "s", terms: [], context: [], reason: "" }], notAsked: [] });
+  const checksRow = (s: PropertiesState) => s.rows.find((r) => r.label === "checks")?.value;
+
+  it("asks about the selection on selecting it, saying so while it waits", async () => {
+    let resolve!: (v: ReturnType<typeof answer>) => void;
+    const check = vi.fn((_s: SubjectRef) => new Promise<ReturnType<typeof answer>>((r) => (resolve = r)));
+    const { p, last } = checking(check);
+    p.selectEntity({ kind: "pin", ref: "U1", pin: "3" });
+    expect(check).toHaveBeenCalledWith({ kind: "pin", ref: "U1", pin: "3" });
+    expect(checksRow(last())).toBe("checking…");
+    resolve(answer("r"));
+    await vi.waitFor(() => expect(checksRow(last())).toBe("1 fail"));
+  });
+
+  it("drops an answer for a selection the reader has left", async () => {
+    const pending: ((v: ReturnType<typeof answer>) => void)[] = [];
+    const check = vi.fn((_s: SubjectRef) => new Promise<ReturnType<typeof answer>>((r) => pending.push(r)));
+    const { p, last } = checking(check);
+    p.selectEntity({ kind: "net", net: "VIN" });
+    p.selectEntity({ kind: "component", ref: "U1" });
+    pending[0](answer("about-vin"));
+    await new Promise((r) => setTimeout(r, 0));
+    expect(checksRow(last())).toBe("checking…");
+    pending[1](answer("about-u1"));
+    await vi.waitFor(() => expect(last().groups.find((g) => g.name === "checks")?.refs.map((r) => r.label)).toEqual(["about-u1"]));
+  });
+
+  it("asks again when the rules it was asked under change, and not otherwise", async () => {
+    let key = "k1";
+    const check = vi.fn(async (_s: SubjectRef) => answer("r"));
+    const { p } = checking(check, () => key);
+    p.selectEntity({ kind: "net", net: "VIN" });
+    await vi.waitFor(() => expect(check).toHaveBeenCalledTimes(1));
+    const ran = { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 1, pending: 0, running: false, catalogLoading: false, skipped: [], ruleSummaries: {}, saveNote: "" };
+    p.setFindings(ran);
+    p.select({ level: "entity", sel: { kind: "net", net: "VIN" } });
+    expect(check).toHaveBeenCalledTimes(1);
+    key = "k2";
+    p.setFindings(ran);
+    await vi.waitFor(() => expect(check).toHaveBeenCalledTimes(2));
+  });
+
+  it("asks nothing about a bus, which no scope covers, and lists the run's findings instead", () => {
+    const check = vi.fn(async (_s: SubjectRef) => answer("r"));
+    const { p, last } = checking(check);
+    p.selectEntity({ kind: "bus", busId: "D[7:0]" });
+    expect(check).not.toHaveBeenCalled();
+    expect(last().groups.find((g) => g.name === "findings")).toBeDefined();
+  });
+
+  it("says no rule is selected, and says why it could not ask", async () => {
+    const { p, last } = checking(async () => null);
+    p.selectEntity({ kind: "net", net: "VIN" });
+    await vi.waitFor(() => expect(checksRow(last())).toBe("no rules selected"));
+    const failing = checking(async () => {
+      throw new Error("no netlist");
+    });
+    failing.p.selectEntity({ kind: "net", net: "VIN" });
+    await vi.waitFor(() => expect(checksRow(failing.last())).toBe("could not check: no netlist"));
   });
 });

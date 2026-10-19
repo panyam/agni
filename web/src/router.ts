@@ -41,6 +41,11 @@ export interface ViewerLocation {
   // Not derived from the id, deliberately. VerdictID is generated and never parsed, because its
   // escaping is what lets a subject ref carry its own colons and commas.
   rule: string;
+  // subjects are the verdict's nets, parts and pins in check.SubjectParam's spelling (`net:SDA`,
+  // `pin:U7.3`), empty when the link named none (agni issue 897). Like `rule`, a HINT: the viewer
+  // asks that one rule about these subjects alone rather than running it over the whole design, and a
+  // link without them resolves by the whole rule. They mean nothing without the verdict.
+  subjects: string[];
   // trace is a pin-to-pin question the viewer should ask on arrival, "U1.3,J1.1", "" when none.
   //
   // It carries the QUESTION rather than an answer, so unlike `verdict` it needs no `hash`. Two pin
@@ -119,7 +124,7 @@ const BROWSER_MOUNT = "local";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -162,6 +167,7 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   if (loc.verdict && loc.hash) params.set("hash", loc.hash);
   // Only alongside its verdict, or the next run gets scoped to a rule nothing on screen asked about.
   if (loc.verdict && loc.rule) params.set("rule", loc.rule);
+  if (loc.verdict) for (const sub of loc.subjects) params.append("subject", sub);
   if (loc.trace) params.set("trace", loc.trace);
   // Only alongside its trace, and only when it is not the server default.
   if (loc.trace && loc.traceHops > 0) params.set("hops", String(loc.traceHops));
@@ -255,6 +261,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.verdict = params.get("verdict") ?? "";
   loc.hash = params.get("hash") ?? "";
   loc.rule = params.get("rule") ?? "";
+  loc.subjects = loc.verdict ? params.getAll("subject").filter((sub) => subjectFromParam(sub) !== null) : [];
   loc.trace = params.get("trace") ?? "";
   // A hops that is not a positive integer is DROPPED rather than clamped, so a mangled radius falls
   // back to the server default instead of asking a question nobody wrote.
@@ -273,6 +280,37 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
 // currentLocation reads the browser's current URL into a ViewerLocation.
 export function currentLocation(): ViewerLocation {
   return parseUrl(window.location.pathname, window.location.search);
+}
+
+// A SubjectRef is one subject a scoped check is asked about, as the wire's checks.Subject spells it.
+export interface SubjectRef {
+  kind: "net" | "component" | "pin";
+  ref: string;
+  pin: string;
+}
+
+// subjectFromParam reads check.SubjectParam's spelling, `net:NAME`, `component:REF` or `pin:REF.PIN`,
+// or answers null for one naming nothing a scope covers. The kind ends at the first colon and a pin
+// splits at its last dot, as on the Go side, which core/check/testdata/subject_param_twin.json holds
+// both readers to.
+export function subjectFromParam(s: string): SubjectRef | null {
+  const at = s.indexOf(":");
+  if (at < 0) return null;
+  const kind = s.slice(0, at);
+  const ref = s.slice(at + 1);
+  if (!ref) return null;
+  if (kind === "net" || kind === "component") return { kind, ref, pin: "" };
+  if (kind !== "pin") return null;
+  const dot = ref.lastIndexOf(".");
+  if (dot <= 0 || dot === ref.length - 1) return null;
+  return { kind: "pin", ref: ref.slice(0, dot), pin: ref.slice(dot + 1) };
+}
+
+// subjectParam spells a subject for a link, "" for a kind no scope covers.
+export function subjectParam(s: { kind: string; subject: string; pin: string }): string {
+  if (s.kind === "net" || s.kind === "component") return `${s.kind}:${s.subject}`;
+  if (s.kind === "pin" && s.pin) return `pin:${s.subject}.${s.pin}`;
+  return "";
 }
 
 // bindsFromLink reads a link's `bind` values, each `name=value` as `--bind` spells it, into the query

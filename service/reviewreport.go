@@ -109,7 +109,7 @@ func evidenceOf(it *checkspb.ReviewItem, meta report.Checklist) []report.Checkli
 		if ids := f.GetVerdictIds(); len(ids) > 0 {
 			e.URL = report.VerdictURL(report.Report{
 				URLBase: meta.URLBase, MountPath: meta.MountPath, ContentHash: meta.ContentHash,
-			}, ids[0], f.GetRule())
+			}, ids[0], f.GetRule(), check.SubjectParams([]check.Entity{subject}))
 		}
 		out = append(out, e)
 	}

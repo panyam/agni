@@ -12,29 +12,26 @@ import (
 )
 
 // parseSubjects reads `check --subject` values into the wire subjects a scoped CheckDesign takes
-// (agni issue 897). Each is kind:ref, the spelling a verdict id gives its elements, with a pin's ref
-// and designator joined by its last dot, so `pin:U7.3` is pin 3 of U7.
+// (agni issue 897), in check.SubjectParam's spelling, which a verdict link's subject= carries too.
 func parseSubjects(args []string) ([]*checkspb.Subject, error) {
 	var out []*checkspb.Subject
 	for _, a := range args {
-		kind, ref, ok := strings.Cut(a, ":")
-		if !ok || ref == "" {
-			return nil, fmt.Errorf("--subject %q: want net:NAME, component:REF or pin:REF.PIN", a)
+		e, err := check.ParseSubjectParam(a)
+		if err != nil {
+			return nil, fmt.Errorf("--subject %w", err)
 		}
-		switch kind {
-		case check.KindNet, check.KindComponent:
-			out = append(out, &checkspb.Subject{Kind: kind, Ref: ref})
-		case check.KindPin:
-			i := strings.LastIndex(ref, ".")
-			if i <= 0 || i == len(ref)-1 {
-				return nil, fmt.Errorf("--subject %q: a pin is pin:REF.PIN, such as pin:U7.3", a)
-			}
-			out = append(out, &checkspb.Subject{Kind: kind, Ref: ref[:i], Pin: ref[i+1:]})
-		default:
-			return nil, fmt.Errorf("--subject %q: kind %q is not one a rule answers for (want net, component or pin)", a, kind)
-		}
+		out = append(out, &checkspb.Subject{Kind: e.Kind, Ref: e.Ref, Pin: e.Pin})
 	}
 	return out, nil
+}
+
+// subjectEntities reads a verdict's wire subjects back into the entities a link names.
+func subjectEntities(subs []*checkspb.Subject) []check.Entity {
+	out := make([]check.Entity, 0, len(subs))
+	for _, s := range subs {
+		out = append(out, check.Entity{Kind: s.GetKind(), Ref: s.GetRef(), Pin: s.GetPin()})
+	}
+	return out
 }
 
 // noteDesignWide names the rules a scoped check left out because they conclude about the design as a
@@ -42,7 +39,7 @@ func parseSubjects(args []string) ([]*checkspb.Subject, error) {
 func noteDesignWide(w io.Writer, skipped []*webapi.SkippedRule) {
 	var rules []string
 	for _, s := range skipped {
-		if s.GetReason() == check.DesignWideReason {
+		if s.GetDesignWide() {
 			rules = append(rules, s.GetName())
 		}
 	}

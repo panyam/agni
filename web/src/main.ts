@@ -49,6 +49,7 @@ import { hierarchyStrip } from "./hierarchy.js";
 import { selectionFromCell, type Selection } from "./selection.js";
 import { propertiesPanelIsland } from "./propertiespanel.js";
 import { PropertiesPresenter } from "./propertiespresenter.js";
+import { verdictItem } from "./document.js";
 import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 
 // restoring is true while a URL is being replayed into the presenter (initial load or back/forward).
@@ -389,6 +390,8 @@ class AppRoot extends BaseComponent {
         query.view.askAbout(sel, question);
         if (dockApi) dockApi.getPanel("query")?.api.setActive();
       },
+      // A verdict in the selection's checks shows its proof, as a verdict row in the checks panel does.
+      onVerdict: (id) => void presenter.locateVerdict(id),
     });
     // Where a selected part or net is drawn is the engine's answer to the served find-by-name query,
     // anchored to the whole name, since each entity in a query answer carries the sheets it is drawn
@@ -411,6 +414,14 @@ class AppRoot extends BaseComponent {
         const resp = await queryClient().runQuery({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), query, omitLocations: true });
         return resp.rows.map((r) => r.cells);
       },
+      // The selected rules asked about the selection alone (agni issue 897), on the design the Load page
+      // read, so the answer comes from the engine's kept results or a run over that subject.
+      check: async (subject) => {
+        const r = await presenter.checkSelection(subject);
+        if (!r) return null;
+        return { verdicts: (r.resp.verdicts ?? []).map(verdictItem), notAsked: r.notAsked };
+      },
+      checkKey: () => presenter.checkKey(),
     });
     const locateSelection = (sel: Selection) =>
       void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);

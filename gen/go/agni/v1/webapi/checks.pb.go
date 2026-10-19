@@ -345,7 +345,12 @@ type SkippedRule struct {
 	// reason is check.Available's own explanation ("design carries no board geometry"), not a
 	// reconstruction. The rule decides why it cannot run; a second sentence written here would be a
 	// second opinion that drifts.
-	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	Reason string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	// design_wide is set when the rule was left out only because the request named subjects and the
+	// rule concludes about the design as a whole (agni issue 897), so it would run on an unscoped
+	// request. A client tells the rules a scope left out from the rules this design cannot run at all
+	// by this field, never by the reason's text.
+	DesignWide    bool `protobuf:"varint,3,opt,name=design_wide,json=designWide,proto3" json:"design_wide,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -392,6 +397,13 @@ func (x *SkippedRule) GetReason() string {
 		return x.Reason
 	}
 	return ""
+}
+
+func (x *SkippedRule) GetDesignWide() bool {
+	if x != nil {
+		return x.DesignWide
+	}
+	return false
 }
 
 type GetCheckReportRequest struct {
@@ -1605,10 +1617,12 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\bfindings\x18\x01 \x03(\v2\x17.agni.v1.checks.FindingR\bfindings\x125\n" +
 	"\askipped\x18\x02 \x03(\v2\x1b.agni.v1.webapi.SkippedRuleR\askipped\x123\n" +
 	"\bverdicts\x18\x03 \x03(\v2\x17.agni.v1.checks.VerdictR\bverdicts\x12R\n" +
-	"\x14unexpanded_hierarchy\x18\x04 \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\"9\n" +
+	"\x14unexpanded_hierarchy\x18\x04 \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\"Z\n" +
 	"\vSkippedRule\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
-	"\x06reason\x18\x02 \x01(\tR\x06reason\"\x84\x01\n" +
+	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x1f\n" +
+	"\vdesign_wide\x18\x03 \x01(\bR\n" +
+	"designWide\"\x84\x01\n" +
 	"\x15GetCheckReportRequest\x12\x1a\n" +
 	"\bsnapshot\x18\x06 \x01(\tR\bsnapshot\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rulesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\aoverlayR\x03uriR\tboard_uriR\bas_named\"M\n" +

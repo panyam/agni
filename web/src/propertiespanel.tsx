@@ -15,6 +15,8 @@ export interface PropertiesHandlers {
   onFocus: (f: Focus) => void;
   // onAsk opens one served question about the selection in a query tab of its own.
   onAsk: (sel: Selection, question: EntityQueryItem) => void;
+  // onVerdict shows one of the selection's verdicts with its proof on the drawing (agni issue 897).
+  onVerdict?: (id: string) => void;
 }
 
 function emptyState(): PropertiesState {
@@ -35,7 +37,7 @@ function datasheetLine(d: Datasheet): string {
   }
 }
 
-function RefList(props: { refs: Ref[]; empty?: string; onFocus: (f: Focus) => void; sheetId?: string }) {
+function RefList(props: { refs: Ref[]; empty?: string; onFocus: (f: Focus) => void; onVerdict?: (id: string) => void; sheetId?: string }) {
   return (
     <Show when={props.refs.length > 0} fallback={<div class="pr-empty">{props.empty ?? "none"}</div>}>
       <ul class="pr-refs">
@@ -45,7 +47,22 @@ function RefList(props: { refs: Ref[]; empty?: string; onFocus: (f: Focus) => vo
               <Show
                 when={r.target}
                 fallback={
-                  <Show when={r.sheet} fallback={<span class="pr-ref-label">{r.label}</span>}>
+                  <Show
+                    when={r.sheet}
+                    fallback={
+                      <Show when={r.verdict && props.onVerdict} fallback={<span class="pr-ref-label">{r.label}</span>}>
+                        <button
+                          type="button"
+                          class="pr-ref-go pr-ref-verdict"
+                          data-verdict={r.verdict}
+                          title="show this verdict's proof on the drawing"
+                          onClick={() => props.onVerdict?.(r.verdict ?? "")}
+                        >
+                          {r.label}
+                        </button>
+                      </Show>
+                    }
+                  >
                     {(id) => (
                       <button type="button" class="pr-ref-go pr-ref-sheet" title={`show sheet ${r.label}`} onClick={() => props.onFocus({ level: "sheet", sheetId: id() })}>
                         {r.label}
@@ -131,11 +148,11 @@ function PropertiesPanel(props: { state: () => PropertiesState; handlers: Proper
       </Show>
       <For each={s().groups}>
         {(g) => (
-          <details class="pr-group" open={g.refs.length > 0 && g.refs.length <= 12}>
+          <details class="pr-group" data-group={g.name} open={g.refs.length > 0 && g.refs.length <= 12}>
             <summary>
               {g.name} <span class="pr-count">({g.refs.length})</span>
             </summary>
-            <RefList refs={g.refs} empty={g.empty} onFocus={props.handlers.onFocus} sheetId={sheetId()} />
+            <RefList refs={g.refs} empty={g.empty} onFocus={props.handlers.onFocus} onVerdict={props.handlers.onVerdict} sheetId={sheetId()} />
           </details>
         )}
       </For>

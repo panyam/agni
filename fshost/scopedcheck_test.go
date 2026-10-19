@@ -51,7 +51,7 @@ func TestADesignWideRuleIsSkippedUnderAScope(t *testing.T) {
 	f := newCheckFixture(t, check.Fail, true, nil)
 	const rule = "symbol-unresolved"
 	resp := f.check(t, &webapi.CheckDesignRequest{Rules: []string{rule}, Subjects: netSubject("GND")})
-	if len(resp.GetSkipped()) != 1 || resp.GetSkipped()[0].GetName() != rule || resp.GetSkipped()[0].GetReason() != check.DesignWideReason {
+	if len(resp.GetSkipped()) != 1 || resp.GetSkipped()[0].GetName() != rule || resp.GetSkipped()[0].GetReason() != check.DesignWideReason || !resp.GetSkipped()[0].GetDesignWide() {
 		t.Fatalf("scoped check skipped %v, want %s as design-wide", resp.GetSkipped(), rule)
 	}
 	if len(resp.GetVerdicts()) != 0 || len(resp.GetFindings()) != 0 {

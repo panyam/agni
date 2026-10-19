@@ -54,12 +54,14 @@ class CheckDesignResponse(_message.Message):
     def __init__(self, findings: _Optional[_Iterable[_Union[_checks_pb2.Finding, _Mapping]]] = ..., skipped: _Optional[_Iterable[_Union[SkippedRule, _Mapping]]] = ..., verdicts: _Optional[_Iterable[_Union[_checks_pb2.Verdict, _Mapping]]] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[_ir_pb2.UnexpandedHierarchy, _Mapping]]] = ...) -> None: ...
 
 class SkippedRule(_message.Message):
-    __slots__ = ("name", "reason")
+    __slots__ = ("name", "reason", "design_wide")
     NAME_FIELD_NUMBER: _ClassVar[int]
     REASON_FIELD_NUMBER: _ClassVar[int]
+    DESIGN_WIDE_FIELD_NUMBER: _ClassVar[int]
     name: str
     reason: str
-    def __init__(self, name: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
+    design_wide: bool
+    def __init__(self, name: _Optional[str] = ..., reason: _Optional[str] = ..., design_wide: _Optional[bool] = ...) -> None: ...
 
 class GetCheckReportRequest(_message.Message):
     __slots__ = ("snapshot", "rules")

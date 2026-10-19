@@ -17,7 +17,7 @@ import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
-import { type ViewerLocation, bindsFromLink } from "./router.js";
+import { type SubjectRef, type ViewerLocation, bindsFromLink, subjectFromParam, subjectParam } from "./router.js";
 import { DocumentStore } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
@@ -556,7 +556,7 @@ export class ViewerPresenter {
       this.pushSheets(target?.id ?? "");
       if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
-      this.doc.run = null; // a run is of one design, with its own tiers and so its own skipped rules
+      this.doc.dropRun(); // a run is of one design, with its own tiers and so its own skipped rules
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks run on demand (Run button)
       this.assembleFindings(); // empty until a run; pushes the "press Run" state + zero overview counts
@@ -606,7 +606,7 @@ export class ViewerPresenter {
     this.linkHash = loc.hash;
     this.views.staleLinkNote(staleLinkNote(this.linkHash, this.doc.designContentHash));
     if (loc.verdict) {
-      await this.runChecksForLink(loc.rule);
+      await this.runChecksForLink(loc.rule, loc.subjects, loc.verdict);
       await this.locateVerdict(loc.verdict);
     }
     // A trace link needs no run first, because it carries the QUESTION rather than a derived id, so
@@ -655,6 +655,8 @@ export class ViewerPresenter {
       // Named from the focused verdict rather than remembered from the URL, so a verdict reached by
       // clicking in the panel produces the same cheap link as one arrived at from a report.
       rule: this.focusedVerdict ? (this.doc.findVerdict(this.focusedVerdict)?.rule ?? "") : "",
+      // Its subjects too, so the link asks the rule about them alone (agni issue 897).
+      subjects: this.focusedVerdict ? (this.doc.findVerdict(this.focusedVerdict)?.subjects ?? []).map(subjectParam).filter((p) => p !== "") : [],
       // The trace the panel is showing, so a typed route is addressable and the address bar never
       // disagrees with the panel.
       trace: this.tracedPins,
@@ -714,13 +716,26 @@ export class ViewerPresenter {
   // something first. Running the whole catalog was 56 rules and about fifteen seconds per click on
   // the board this was measured against, since each click is a fresh page load.
   //
+  // A link that also names the verdict's subjects asks that rule about them alone (agni issue 897),
+  // and its answer is kept apart from the run, so the rule stays pending in the checks panel. When
+  // that answer lacks the verdict (a link from an older revision), the rule runs whole, as before.
+  //
   // An unnamed rule (an older or hand-typed link) or one the catalog does not have falls back to
   // the full run, because the alternative is resolving nothing and reporting it as a stale link.
   // The rest of the catalog stays PENDING afterwards; the reader who wants it presses Run.
-  private async runChecksForLink(rule: string): Promise<void> {
+  private async runChecksForLink(rule: string, subjects: string[] = [], verdict = ""): Promise<void> {
     if (!rule || !this.doc.rulesByName.has(rule)) {
       await this.runChecks();
       return;
+    }
+    const refs = subjects.map(subjectFromParam).filter((s): s is SubjectRef => s !== null);
+    if (refs.length > 0) {
+      try {
+        await this.checkScoped([rule], refs);
+      } catch {
+        // Falls through to the whole rule.
+      }
+      if (this.doc.findVerdict(verdict)) return;
     }
     const restore = this.doc.selectedRules;
     this.doc.selectedRules = [rule];
@@ -730,6 +745,35 @@ export class ViewerPresenter {
       this.doc.selectedRules = restore;
     }
     this.assembleFindings();
+  }
+
+  // checkScoped asks CheckDesign for rules about some subjects alone (agni issue 897) and keeps the
+  // verdicts it answers apart from the run (Document.scoped), under the convention the run uses.
+  async checkScoped(rules: string[], subjects: SubjectRef[]): Promise<CheckDesignResponse> {
+    const resp = await this.checks.checkDesign({ snapshot: await this.checked(), rules, subjects });
+    this.doc.keepScoped(resp.verdicts ?? []);
+    return resp;
+  }
+
+  // checkSelection is Properties' question about one selected net, part or pin: the selected rules,
+  // asked about it alone. It answers null when no rule is selected. notAsked are the rules the scope
+  // left out (SkippedRule.design_wide), which conclude about the whole design; a rule this design
+  // cannot run at all is the Checks panel's to report, and listing it per selection would bury the
+  // rest.
+  async checkSelection(sel: SubjectRef): Promise<{ resp: CheckDesignResponse; notAsked: { name: string; reason: string }[] } | null> {
+    const rules = [...this.doc.selectedRules];
+    if (rules.length === 0) return null;
+    const resp = await this.checkScoped(rules, [sel]);
+    const notAsked = (resp.skipped ?? [])
+      .filter((sk) => sk.designWide)
+      .map((sk) => ({ name: sk.name, reason: sk.reason }));
+    return { resp, notAsked };
+  }
+
+  // checkKey names what a selection's checks were asked under, the selected rules and the
+  // vocabulary, so Properties asks again when either changes.
+  checkKey(): string {
+    return `${this.doc.conventionRef}\u0000${this.doc.selectedRules.join(",")}`;
   }
 
   // runChecks is the on-demand check trigger (the Run button). It fetches the selected rules not
@@ -1031,7 +1075,7 @@ export class ViewerPresenter {
   private async reloadForConvention(): Promise<void> {
     // A verdict is keyed by rule name, which is what a convention changes, so a surviving run could
     // claim coverage for a rule nobody ran.
-    this.doc.run = null;
+    this.doc.dropRun();
     this.focusedVerdict = "";
     // Query results were computed under the previous vocabulary too (`net.rail` answers differently),
     // so leaving them would show two vocabularies at once.

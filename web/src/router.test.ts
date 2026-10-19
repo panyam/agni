@@ -1,5 +1,7 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageOf, parseUrl, setBase, setStaticHost, swapPage, type ViewerLocation } from "./router.js";
+import { bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageOf, parseUrl, setBase, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -277,5 +279,34 @@ describe("query links", () => {
 
   it("reads bindings as --bind spells them, a quoted value as text without its quotes", () => {
     expect(bindsFromLink(["net=GND", 't="3"', "=x", "v=3.3"])).toEqual({ net: "GND", t: "3", v: "3.3" });
+  });
+});
+
+// agni issue 897: a verdict link names its subjects in check.SubjectParam's spelling, which the Go
+// side writes and both sides read, held to one answer by the twin fixture.
+describe("a verdict link's subjects", () => {
+  it("reads the twin's subjects as the Go side does, and refuses what it refuses", () => {
+    const twin = JSON.parse(readFileSync(join(process.cwd(), "../core/check/testdata/subject_param_twin.json"), "utf8")) as {
+      cases: { param: string; kind: string; ref: string; pin: string }[];
+      bad: string[];
+    };
+    expect(twin.cases.length).toBeGreaterThanOrEqual(5);
+    for (const c of twin.cases) {
+      expect(subjectFromParam(c.param), c.param).toEqual({ kind: c.kind, ref: c.ref, pin: c.pin });
+      expect(subjectParam({ kind: c.kind, subject: c.ref, pin: c.pin }), c.param).toBe(c.param);
+    }
+    for (const b of twin.bad) expect(subjectFromParam(b), b).toBeNull();
+  });
+
+  it("carries the subjects with their verdict, and none without one", () => {
+    const l = loc({ mount: "m", path: "b.edn", verdict: "v", rule: "r", subjects: ["net:SDA", "pin:U7.3"] });
+    const url = locationToUrl(l);
+    expect(url).toBe("/designs/m/b.edn/view?verdict=v&rule=r&subject=net%3ASDA&subject=pin%3AU7.3");
+    const q = url.indexOf("?");
+    expect(parseUrl(url.slice(0, q), url.slice(q)).subjects).toEqual(["net:SDA", "pin:U7.3"]);
+    expect(locationToUrl(loc({ mount: "m", path: "b.edn", subjects: ["net:SDA"] }))).not.toContain("subject=");
+    expect(parseUrl("/designs/m/b.edn/view", "?subject=net:SDA").subjects).toEqual([]);
+    // A spelling no scope covers is dropped rather than asked.
+    expect(parseUrl("/designs/m/b.edn/view", "?verdict=v&subject=bus:D&subject=net:SDA").subjects).toEqual(["net:SDA"]);
   });
 });

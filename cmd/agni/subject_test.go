@@ -33,9 +33,9 @@ func TestParseSubjects(t *testing.T) {
 func TestNoteDesignWideNamesTheRulesLeftOut(t *testing.T) {
 	var b bytes.Buffer
 	noteDesignWide(&b, []*webapi.SkippedRule{
-		{Name: "symbol-unresolved", Reason: check.DesignWideReason},
+		{Name: "symbol-unresolved", Reason: check.DesignWideReason, DesignWide: true},
 		{Name: "copper-clearance", Reason: check.NoBoardReason},
-		{Name: "bus-not-modeled", Reason: check.DesignWideReason},
+		{Name: "bus-not-modeled", Reason: check.DesignWideReason, DesignWide: true},
 	})
 	if got := b.String(); !strings.Contains(got, "2 rule(s)") || !strings.Contains(got, "bus-not-modeled, symbol-unresolved") || strings.Contains(got, "copper-clearance") {
 		t.Errorf("note = %q, want the two design-wide rules alone", got)

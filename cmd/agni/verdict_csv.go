@@ -3,6 +3,7 @@ package main
 import (
 	"io"
 
+	"github.com/panyam/agni/core/check"
 	rpt "github.com/panyam/agni/core/report"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/service"
@@ -26,6 +27,8 @@ var verdictCSVColumns = columnNames(service.VerdictColumns)
 // produces them), so the csv and the json describe one run in one order unless --order-by asks
 // otherwise. A row's url links to the viewer when meta names a server, and is empty otherwise.
 func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict, meta rpt.Report, orderBy ...string) error {
-	link := func(v *checkspb.Verdict) string { return rpt.VerdictURL(meta, v.GetId(), v.GetRule()) }
+	link := func(v *checkspb.Verdict) string {
+		return rpt.VerdictURL(meta, v.GetId(), v.GetRule(), check.SubjectParams(subjectEntities(v.GetSubjects())))
+	}
 	return writeTableCSV(w, service.VerdictsTable(vs, link), orderBy)
 }

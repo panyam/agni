@@ -273,7 +273,7 @@ func rowOf(v check.Verdict, meta Report) Row {
 	for _, c := range v.Context {
 		r.Context = append(r.Context, check.EntityRef(c.Entity))
 	}
-	r.URL = VerdictURL(meta, r.ID, v.Rule)
+	r.URL = VerdictURL(meta, r.ID, v.Rule, check.SubjectParams(v.Subjects))
 	return r
 }
 
@@ -341,7 +341,7 @@ func QuerySetURL(meta Report, set, query string) string {
 // A MISSING LINK IS THE CORRECT ANSWER for a loose file, not a gap to fill with a guess (issue 392),
 // because a URL built from an invented mount resolves on nobody's server. The content hash rides along
 // so the viewer can flag a link computed against different bytes.
-func VerdictURL(meta Report, id, rule string) string {
+func VerdictURL(meta Report, id, rule string, subjects []string) string {
 	if meta.URLBase == "" || meta.MountPath == "" {
 		return ""
 	}
@@ -357,6 +357,12 @@ func VerdictURL(meta Report, id, rule string) string {
 	// which keeps saved reports working.
 	if rule != "" {
 		u += "&rule=" + url.QueryEscape(rule)
+	}
+	// The subjects ride along too, in check.SubjectParam's spelling, so the viewer asks that rule
+	// about this verdict's own nets and parts rather than the whole design (agni issue 897). Like the
+	// rule, a HINT: a link without them resolves by running the whole rule.
+	for _, s := range subjects {
+		u += "&subject=" + url.QueryEscape(s)
 	}
 	return u
 }

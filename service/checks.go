@@ -197,7 +197,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		var designWide []*check.Rule
 		runnable, designWide = check.SplitDesignWide(scope, runnable)
 		for _, r := range designWide {
-			skipped = append(skipped, &webapi.SkippedRule{Name: r.Name, Reason: check.DesignWideReason})
+			skipped = append(skipped, &webapi.SkippedRule{Name: r.Name, Reason: check.DesignWideReason, DesignWide: true})
 		}
 		ctx = check.WithSubjectScope(ctx, scope)
 	}

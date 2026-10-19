@@ -271,6 +271,13 @@ about a different net, because a verdict id is built from a rule name and a subj
 against an edited design just as readily. A server that could not hash the file gets its own weaker
 banner rather than the benefit of the doubt, since a link nobody could check has not been checked.
 
+**A link also names its rule and the verdict's nets, parts and pins** (`rule=` and `subject=`, the
+spelling `--subject` takes), so the viewer asks that one rule about those subjects alone rather than
+running the catalog over the whole board. Both are hints on top of the verdict id. A link without
+them, such as one in a report saved before they existed, still opens the same verdict by running the
+whole rule, and so does a link whose design has changed so much that the scoped answer no longer
+holds the verdict.
+
 The easiest way to get all of this right is not to assemble it by hand. `agni open <design>` serves
 the board and prints the matching `agni check --mount … --server …` line, and because one process
 mints the mount and serves it, the two cannot disagree.

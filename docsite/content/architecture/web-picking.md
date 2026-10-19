@@ -60,6 +60,18 @@ name. A bus is listed by its members instead, read off the IR's record of the bu
 (`InputDiagnostics.unmodeled_buses`), because the `bus` relation records the construct a reader saw
 and nothing about its members.
 
+**A selected net, part or pin is checked on its own** (agni issue 897). Properties asks
+`CheckDesign` for the rules ticked in the Rules panel with `subjects` naming the selection, and lists
+what fails or could not decide, each showing its proof on the drawing when clicked, above a count of
+every outcome. The rules the answer skipped are named with the engine's reason, so a rule that
+concludes about the whole design (`symbol-unresolved`) reads as not asked rather than as passing. The
+answer is held apart from the Checks panel's run (`Document.scoped`), because a rule answered for one
+net is not that rule's answer for the board, and an answer for a selection the reader has left, or
+for rules since changed, is dropped. A bus is not a subject a scope covers, so it keeps the run's
+findings. The design is read before the viewer opens (agni issue 1072), so the first selection on
+Jetson in the browser costs about 1.6 s, the restore and model build a first Run checks pays too, and
+each later one about 300 ms.
+
 **The panel reads the design once per open** (`PropertiesPresenter`, `INVENTORY_PATHS`). It asks
 `GetDesign` for the netlist IR under a field mask naming only what it shows, about 1.8 MB of JSON on
 the largest seed, and indexes it. A per-click read was the alternative, but a component's nets cannot

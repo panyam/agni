@@ -190,6 +190,11 @@ message SkippedRule {
   // reconstruction. The rule decides why it cannot run; a second sentence written here would be a
   // second opinion that drifts.
   string reason = 2;
+  // design_wide is set when the rule was left out only because the request named subjects and the
+  // rule concludes about the design as a whole (agni issue 897), so it would run on an unscoped
+  // request. A client tells the rules a scope left out from the rules this design cannot run at all
+  // by this field, never by the reason's text.
+  bool design_wide = 3;
 }
 
 message GetCheckReportRequest {
