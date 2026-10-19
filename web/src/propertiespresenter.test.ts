@@ -191,3 +191,28 @@ describe("a selection's own checks", () => {
     await vi.waitFor(() => expect(checksRow(failing.last())).toBe("could not check: no netlist"));
   });
 });
+
+// agni issue 918: a cancelled run ends the worker a selection's check was queued on, so a failed
+// answer is asked again when a run ends, and not on every other push.
+describe("a selection's checks after a cancelled run", () => {
+  it("asks a failed selection again when a run ends, and only then", async () => {
+    let fail = true;
+    const check = vi.fn(async (_s: SubjectRef) => {
+      if (fail) throw new Error("stopped");
+      return { verdicts: [], notAsked: [] };
+    });
+    const states: PropertiesState[] = [];
+    const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign: async () => design("g", ["VIN"]), drawn: () => null, check, checkKey: () => "k" });
+    p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
+    p.selectEntity({ kind: "net", net: "VIN" });
+    await vi.waitFor(() => expect(states[states.length - 1].rows.find((r) => r.label === "checks")?.value).toBe("could not check: stopped"));
+    const base = { findings: [], verdicts: [], focusedVerdict: "", selected: "", ruleCount: 1, pending: 1, catalogLoading: false, skipped: [], ruleSummaries: {}, saveNote: "" };
+    p.setFindings({ ...base, running: false });
+    expect(check).toHaveBeenCalledTimes(1);
+    p.setFindings({ ...base, running: true });
+    fail = false;
+    p.setFindings({ ...base, running: false, cancelled: true });
+    await vi.waitFor(() => expect(check).toHaveBeenCalledTimes(2));
+    await vi.waitFor(() => expect(states[states.length - 1].rows.find((r) => r.label === "checks")?.value).toBe("no selected rule considers it"));
+  });
+});

@@ -447,3 +447,42 @@ describe("reporting a wrong finding", () => {
     expect(links[0].getAttribute("target")).toBe("_blank");
   });
 });
+
+// agni issue 918: the Run button stops a run in flight, and a stopped run says so.
+describe("cancelling from the checks panel", () => {
+  function mountWithCancel(over: Partial<FindingsState>) {
+    const onRun = vi.fn();
+    const onCancel = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = findingsPanelIsland(el, null, { onSelect: vi.fn(), onLocateContext: vi.fn(), onRun, onCancel, onSelectVerdict: vi.fn() });
+    panel.island.activate();
+    panel.view.setState(state(over));
+    return { el, onRun, onCancel, panel };
+  }
+
+  it("turns Run into an enabled Cancel while a run is in flight, which cancels rather than runs", () => {
+    const { el, onRun, onCancel } = mountWithCancel({ running: true, pending: 2 });
+    const button = el.querySelector<HTMLButtonElement>(".checks-run")!;
+    expect(button.textContent?.trim()).toBe("Cancel");
+    expect(button.disabled).toBe(false);
+    button.click();
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(onRun).not.toHaveBeenCalled();
+  });
+
+  it("says a run was cancelled and how many rules it left unrun, until the next run starts", () => {
+    const { el, panel } = mountWithCancel({ cancelled: true, pending: 3 });
+    expect(el.querySelector(".checks-cancelled")?.textContent).toContain("Cancelled. 3 selected rules were not run.");
+    expect(el.querySelector(".checks-run")?.textContent?.trim()).toBe("Run checks (3)");
+    panel.view.setState(state({ cancelled: true, running: true, pending: 3 }));
+    expect(el.querySelector(".checks-cancelled")).toBeNull();
+  });
+
+  it("keeps the button disabled while running where the host cannot cancel", () => {
+    const { el } = mountPanel({ running: true });
+    const button = el.querySelector<HTMLButtonElement>(".checks-run")!;
+    expect(button.textContent?.trim()).toBe("Running…");
+    expect(button.disabled).toBe(true);
+  });
+});

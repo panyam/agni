@@ -49,6 +49,9 @@ function ChecksPanel(props: {
   // issue 349). onSelect cannot, because its finding-by-subject lookup would not find it.
   onLocateContext: (kind: string, subject: string, pin: string) => void;
   onRun: () => void;
+  // onCancel stops the run in flight (agni issue 918). Absent, the button stays disabled while a run
+  // is under way, as it did before a run could be stopped.
+  onCancel?: () => void;
   // onSelectVerdict focuses a verdict by its derived id (see viewer.ts locateVerdict). A passing
   // verdict has no finding, so onSelect's lookup by subject cannot serve it.
   onSelectVerdict: (id: string) => void;
@@ -122,7 +125,7 @@ function ChecksPanel(props: {
 
   const runLabel = () => {
     const s = props.state();
-    if (s.running) return "Running…";
+    if (s.running) return props.onCancel ? "Cancel" : "Running…";
     if (s.catalogLoading) return "Loading rules…";
     return s.pending > 0 ? `Run checks (${s.pending})` : "Run checks";
   };
@@ -130,7 +133,13 @@ function ChecksPanel(props: {
   return (
     <div class="checks">
       <div class="checks-toolbar">
-        <button type="button" class="checks-run" disabled={props.state().running || props.state().catalogLoading} onClick={() => props.onRun()}>
+        <button
+          type="button"
+          class="checks-run"
+          classList={{ "checks-cancel": props.state().running && !!props.onCancel }}
+          disabled={(props.state().running && !props.onCancel) || props.state().catalogLoading}
+          onClick={() => (props.state().running ? props.onCancel?.() : props.onRun())}
+        >
           {runLabel()}
         </button>
         <Show when={props.onSave}>
@@ -166,6 +175,13 @@ function ChecksPanel(props: {
           focused={() => props.state().focusedVerdict}
           onSelectVerdict={props.onSelectVerdict}
         />
+      </Show>
+
+      {/* A stopped run leaves its unanswered rules pending, which reads as clean without this. */}
+      <Show when={props.state().cancelled && !props.state().running}>
+        <div class="checks-cancelled" role="status">
+          Cancelled. {props.state().pending} selected rule{props.state().pending === 1 ? " was" : "s were"} not run.
+        </div>
       </Show>
 
       <Show when={props.state().saveNote !== ""}>
@@ -434,6 +450,7 @@ export function findingsPanelIsland(
     onSelect: (subject: string, sheet?: string, netId?: string) => void;
     onLocateContext: (kind: string, subject: string, pin: string) => void;
     onRun: () => void;
+    onCancel?: () => void;
     onSelectVerdict: (id: string) => void;
     onSave?: (format: "html" | "json" | "csv") => void;
   },
@@ -467,6 +484,7 @@ export function findingsPanelIsland(
         onSelect={handlers.onSelect}
         onLocateContext={handlers.onLocateContext}
         onRun={handlers.onRun}
+        onCancel={handlers.onCancel}
         onSelectVerdict={handlers.onSelectVerdict}
         onSave={handlers.onSave}
       />

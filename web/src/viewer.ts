@@ -205,6 +205,14 @@ export class ViewerPresenter {
   // checksRunning is true while runChecks is in flight (the on-demand Run), so the panel disables its
   // Run button and the presenter guards against a re-entrant run.
   private checksRunning = false;
+  // checksAbort stops the run in flight (agni issue 918). On the browser engine aborting a request
+  // ends the jobs lane's worker and starts a fresh one; on a server it cancels the request, whose
+  // context stops the run. checksCancelled says the last run was stopped, so the panel does not read
+  // what it left unanswered as clean, until the next run or design.
+  private checksAbort: AbortController | null = null;
+  private checksCancelled = false;
+  // reviewAbort stops a checklist run in flight, the same way.
+  private reviewAbort: AbortController | null = null;
 
   // focusedVerdict is the id currently drawn as a proof, "" when none. It rides the URL so a link
   // reopens on the same proof, and it is cleared by anything that replaces the highlight, since a
@@ -557,6 +565,7 @@ export class ViewerPresenter {
       if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
       this.doc.dropRun(); // a run is of one design, with its own tiers and so its own skipped rules
+      this.checksCancelled = false;
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks run on demand (Run button)
       this.assembleFindings(); // empty until a run; pushes the "press Run" state + zero overview counts
@@ -783,26 +792,38 @@ export class ViewerPresenter {
   // button meanwhile.
   async runChecks(): Promise<void> {
     if (this.checksRunning || this.doc.catalogLoading || !this.doc.mount || !this.doc.path) return;
+    const abort = new AbortController();
+    this.checksAbort = abort;
+    this.checksCancelled = false;
     this.checksRunning = true;
-    this.pushFindings(); // reflect running=true (disables the Run button)
+    this.pushFindings(); // reflect running=true (the Run button becomes Cancel)
     this.setBusy(true, "running checks…");
     try {
-      await this.runSelection();
-      await this.refreshExpectations(); // the sidecar reconcile's full run is deferred to here too
-      await this.refreshCoverage();
+      await this.runSelection(abort.signal);
+      // the sidecar reconcile's full run is deferred to here too
+      if (!abort.signal.aborted) await this.refreshExpectations(abort.signal);
+      if (!abort.signal.aborted) await this.refreshCoverage(abort.signal);
     } finally {
+      this.checksAbort = null;
+      this.checksCancelled = abort.signal.aborted;
       this.checksRunning = false;
       this.setBusy(false);
       this.pushFindings(); // running=false + refreshed pending count
     }
   }
 
+  // cancelChecks stops the run in flight (agni issue 918). The rules it had not answered stay pending,
+  // and what it had answered is kept, since each rule's answer arrives whole.
+  cancelChecks(): void {
+    this.checksAbort?.abort();
+  }
+
   // runSelection asks CheckDesign for the selected rules the run lacks and folds the answer into it,
   // then assembles the visible list and lights up every current finding when the reader asked for
   // that. A geometry-only file (no netlist) makes CheckDesign fail, which leaves the run as it was and
   // those rules pending.
-  private async runSelection(): Promise<void> {
-    await this.doc.runMissing(this.checks, () => this.checked());
+  private async runSelection(signal?: AbortSignal): Promise<void> {
+    await this.doc.runMissing(this.checks, () => this.checked(), signal);
     this.assembleFindings();
     await this.setHighlights(subjectsToSpecs(this.field())); // every finding at once, when the reader asked for it
   }
@@ -839,6 +860,7 @@ export class ViewerPresenter {
       ruleCount: this.doc.selectedRules.length,
       pending,
       running: this.checksRunning,
+      cancelled: this.checksCancelled,
       catalogLoading: this.doc.catalogLoading,
       // Only the SELECTED rules, since a rule nobody ticked being unavailable is not news. Sorted so
       // the list is stable across runs rather than following response order.
@@ -1224,7 +1246,10 @@ export class ViewerPresenter {
     if (!this.views.review || !this.reviews) return;
     if (this.reviewState.running) return;
     if (!this.doc.mount || !this.doc.path || !this.reviewState.checklist) return;
-    this.reviewState = { ...this.reviewState, running: true, error: "" };
+    const abort = new AbortController();
+    this.reviewAbort = abort;
+    const signal = abort.signal;
+    this.reviewState = { ...this.reviewState, running: true, error: "", cancelled: false };
     this.pushReview();
     this.setBusy(true, "running review…");
     try {
@@ -1246,14 +1271,14 @@ export class ViewerPresenter {
       let created: Review;
       if (this.reviewState.storeConfigured) {
         try {
-          created = await this.reviews.createReview(req);
+          created = await this.reviews.createReview(req, { signal });
         } catch (e) {
           if (!isStoreUnconfigured(e)) throw e;
           this.reviewState.storeConfigured = false;
-          created = await this.reviews.createReview({ ...req, validateOnly: true });
+          created = await this.reviews.createReview({ ...req, validateOnly: true }, { signal });
         }
       } else {
-        created = await this.reviews.createReview({ ...req, validateOnly: true });
+        created = await this.reviews.createReview({ ...req, validateOnly: true }, { signal });
       }
       // A run nothing stored has no name, so the page names it to tell its runs apart.
       if (!created.name) created.name = `page/${++this.pageRuns}`;
@@ -1266,12 +1291,21 @@ export class ViewerPresenter {
       this.reviewState.runs = [run, ...this.reviewState.runs];
       this.reviewState.selected = run.name;
     } catch (e) {
-      this.reviewState.error = messageOf(e);
+      // A run the reader stopped is not a failure to report.
+      if (signal.aborted) this.reviewState.cancelled = true;
+      else this.reviewState.error = messageOf(e);
     } finally {
+      this.reviewAbort = null;
       this.reviewState.running = false;
       this.setBusy(false);
       this.pushReview();
     }
+  }
+
+  // cancelReview stops the checklist run in flight, which shares the jobs lane with a check run
+  // (agni issue 918).
+  cancelReview(): void {
+    this.reviewAbort?.abort();
   }
 
   // showReview selects a stored run. The document is already held, so this is local.
@@ -1345,14 +1379,14 @@ export class ViewerPresenter {
   // it to the coverage panel, a no-op when the panel is unwired. A design with no detected
   // interface (or a fetch failure) pushes an empty state, so the panel shows its empty message
   // rather than stale coverage from the previous design.
-  private async refreshCoverage(): Promise<void> {
+  private async refreshCoverage(signal?: AbortSignal): Promise<void> {
     if (!this.views.coverage) return;
     if (!this.doc.mount || !this.doc.path) {
       this.views.coverage.setState(emptyCoverage());
       return;
     }
     try {
-      const resp = await this.checks.getInterfaceCoverage({ snapshot: await this.checked() });
+      const resp = await this.checks.getInterfaceCoverage({ snapshot: await this.checked() }, { signal });
       this.views.coverage.setState(coverageFromResponse(resp));
     } catch {
       this.views.coverage.setState(emptyCoverage());
@@ -1392,17 +1426,17 @@ export class ViewerPresenter {
   // reconciles against a FULL check run (every rule), not the checks-panel's selection, so a
   // "missing" row means the rule ran and did not fire, not that it was deselected. Runs as part of the
   // on-demand check run (runChecks); a design with no sidecar leaves the panel empty.
-  private async refreshExpectations(): Promise<void> {
+  private async refreshExpectations(signal?: AbortSignal): Promise<void> {
     this.doc.expectations = [];
     this.doc.expectationFindings = [];
     this.doc.hasSidecar = false;
     if (this.doc.mount && this.doc.path) {
       try {
-        const exp = await this.checks.getExpectations({ snapshot: await this.drawn() });
+        const exp = await this.checks.getExpectations({ snapshot: await this.drawn() }, { signal });
         this.doc.hasSidecar = exp.hasSidecar;
         this.doc.expectations = exp.expectations.map((e) => ({ rule: e.rule, subjects: e.subjects, pending: e.pending, why: e.why }));
         if (this.doc.hasSidecar) {
-          const resp = await this.checks.checkDesign({ snapshot: await this.checked(), rules: [] });
+          const resp = await this.checks.checkDesign({ snapshot: await this.checked(), rules: [] }, { signal });
           this.doc.expectationFindings = resp.findings.map((f) => ({
             rule: f.rule,
             category: "",

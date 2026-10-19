@@ -141,6 +141,9 @@ export interface ReviewState {
   storeConfigured: boolean;
   // error is a message to show instead of results, "" when fine.
   error: string;
+  // cancelled is true when the reader stopped the last checklist run (agni issue 918). Absent means
+  // not cancelled.
+  cancelled?: boolean;
   // saveNote says why the last Save report failed, "" when it did not (agni issue 1030).
   saveNote: string;
 }

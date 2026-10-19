@@ -319,6 +319,7 @@ class AppRoot extends BaseComponent {
       // and would find nothing (agni issue 349).
       onLocateContext: (kind, subject, pin) => void presenter.locateEntity(kind, subject, undefined, LocateReason.UNSPECIFIED, pin),
       onRun: () => void presenter.runChecks(),
+      onCancel: () => presenter.cancelChecks(),
       // A verdict is addressed by its derived id, not by subject, because a passing verdict has no
       // finding for selectFinding to look up and two rules can hold verdicts about one subject.
       onSelectVerdict: (id) => void presenter.locateVerdict(id),
@@ -467,6 +468,7 @@ class AppRoot extends BaseComponent {
       onSelectRun: (name) => presenter.showReview(name),
       onSelectChecklist: (ref) => presenter.setChecklist(ref),
       onCreate: () => void presenter.createReview(),
+      onCancel: () => presenter.cancelReview(),
       onLocate: (kind, subject) => {
         void presenter.locateEntity(kind, subject);
         const sel = selectionFromCell(kind, subject);

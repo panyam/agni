@@ -229,3 +229,24 @@ describe("Save report", () => {
     expect(el.querySelector(".rv-save-note")!.textContent).toContain("boom");
   });
 });
+
+// agni issue 918: a checklist run in flight can be stopped from its button.
+describe("cancelling from the review panel", () => {
+  it("turns Run review into Cancel while running and says when a run was cancelled", () => {
+    const onCancel = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const handlers = { onSelectRun: vi.fn(), onSelectChecklist: vi.fn(), onCreate: vi.fn(), onCancel, onLocate: vi.fn() };
+    const panel = reviewPanelIsland(el, null, handlers);
+    panel.island.activate();
+    panel.view.setState({ ...emptyReview(), checklist: "c", checklists: [{ ref: "c", label: "C" }], running: true } as ReviewState);
+    const button = el.querySelector<HTMLButtonElement>(".rv-run")!;
+    expect(button.textContent?.trim()).toBe("Cancel");
+    button.click();
+    expect(onCancel).toHaveBeenCalledOnce();
+    expect(handlers.onCreate).not.toHaveBeenCalled();
+    panel.view.setState({ ...emptyReview(), checklist: "c", checklists: [{ ref: "c", label: "C" }], cancelled: true } as ReviewState);
+    expect(el.querySelector(".rv-cancelled")?.textContent).toContain("Cancelled");
+    expect(el.querySelector(".rv-run")?.textContent?.trim()).toBe("Run review");
+  });
+});

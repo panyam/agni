@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { laneFor, mountingFetch, wouldShrink, SHRINK_RATIO, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
+import { abortable, laneFor, mountingFetch, wouldShrink, SHRINK_RATIO, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
 
 // A recording engine of its lanes, design source and network, so a test can see where each request
 // went. `replace` swaps a lane's worker for an empty one, as an abort does. The prepare lane starts a
@@ -330,5 +330,31 @@ describe("wouldShrink", () => {
   });
   it("keeps a worker that reports no heap, built against goapplib before 0.7.4", () => {
     expect(wouldShrink(held(977), SHRINK_RATIO)).toBe(false);
+  });
+});
+
+// agni issue 918: a request is answered only once its design's files reach the worker, and a Cancel
+// pressed meanwhile must not wait for them.
+describe("cancelling a request the engine has not reached yet", () => {
+  it("rejects as soon as its signal fires, while its files are still on their way", async () => {
+    const h = harness(listing);
+    let arrive!: () => void;
+    const files = new Promise<void>((r) => (arrive = r));
+    const source = { ...h.source, fetchFile: async (m: string, p: string) => (await files, h.source.fetchFile(m, p)) };
+    const f = mountingFetch({ engine: h.engine, source, network: h.network, maxBytes: 10_000 });
+    const abort = new AbortController();
+    const asked = f(new Request("http://h/agni.v1.webapi.CheckService/CheckDesign", { method: "POST", body: JSON.stringify({ uri: "mount://tut/designs/gateway" }), signal: abort.signal }));
+    abort.abort();
+    await expect(asked).rejects.toThrow();
+    expect(h.engineCalls).toEqual([]);
+    // The files go on arriving, and the next request finds them in the worker.
+    arrive();
+    await ask(f, "CheckService/CheckDesign", "mount://tut/designs/gateway");
+    expect(h.engineCalls).toEqual(["/agni.v1.webapi.CheckService/CheckDesign"]);
+  });
+
+  it("passes an answer through untouched when nothing is cancelled", async () => {
+    await expect(abortable(new AbortController().signal, Promise.resolve(7))).resolves.toBe(7);
+    await expect(abortable(new AbortController().signal, Promise.reject(new Error("no netlist")))).rejects.toThrow("no netlist");
   });
 });

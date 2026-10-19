@@ -155,3 +155,63 @@ async function storedBlobs(page: Page): Promise<Record<string, number>> {
     return out;
   });
 }
+
+// agni issue 918: a check run can be stopped on either engine, the button comes back, the panel says
+// the run was cancelled, and the next run answers.
+describe("cancelling Run checks", () => {
+  // held keeps every matching request waiting until release, so a run is still in flight when the
+  // test presses Cancel. A request the page aborted meanwhile is gone, so continuing it may throw.
+  function hold(page: Page, pattern: string) {
+    let open!: () => void;
+    const released = new Promise<void>((r) => (open = r));
+    const handler = async (route: import("playwright-core").Route) => {
+      await released;
+      await route.continue().catch(() => undefined);
+    };
+    return {
+      on: () => page.route(pattern, handler),
+      release: async () => {
+        open();
+        await page.unroute(pattern, handler);
+      },
+    };
+  }
+
+  async function cancelThenRun(page: Page, held: ReturnType<typeof hold>): Promise<void> {
+    await page.waitForFunction(() => /\(\d+\)/.test(document.querySelector(".checks-run")?.textContent ?? ""), null, { timeout: 60_000 });
+    await held.on();
+    await page.click(".checks-run");
+    await expect.poll(() => page.locator(".checks-run").textContent(), { timeout: 30_000 }).toBe("Cancel");
+    await page.click(".checks-run");
+    await expect.poll(() => page.locator(".checks-run").textContent(), { timeout: 30_000 }).toMatch(/^Run checks \(\d+\)$/);
+    expect(await page.locator(".checks-cancelled").textContent()).toMatch(/^Cancelled\. \d+ selected rules? (was|were) not run\.$/);
+    expect(await page.locator(".check-locate").count()).toBe(0);
+    await held.release();
+    await page.click(".checks-run");
+    await page.waitForSelector(".check-locate", { timeout: 60_000 });
+    expect(await page.locator(".checks-cancelled").count()).toBe(0);
+  }
+
+  it("stops a run on the server engine, and the next run answers", async () => {
+    await withPage(browser, async (page) => {
+      const errors: string[] = [];
+      page.on("pageerror", (e) => errors.push(String(e)));
+      await page.goto(`${base()}${gateway}`, { waitUntil: "domcontentloaded" });
+      await cancelThenRun(page, hold(page, "**/agni.v1.webapi.CheckService/CheckDesign"));
+      expect(errors).toEqual([]);
+    });
+  });
+
+  // On the browser engine the run is on the jobs lane, and the jobs worker fetches the design's files
+  // before it answers, which is where the run is held.
+  it("stops a run on the browser engine, and the next run answers", async () => {
+    await withPage(browser, async (page) => {
+      const errors: string[] = [];
+      page.on("pageerror", (e) => errors.push(String(e)));
+      await page.goto(`${base()}${gateway}?engine=wasm`, { waitUntil: "domcontentloaded" });
+      await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
+      await cancelThenRun(page, hold(page, "**/raw/**"));
+      expect(errors).toEqual([]);
+    });
+  });
+});
