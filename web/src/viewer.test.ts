@@ -486,6 +486,32 @@ describe("ViewerPresenter", () => {
       expect(h.onLocation).toHaveBeenLastCalledWith(expect.objectContaining({ verdict: "single-pin-net:(net:VBUS)", rule: "single-pin-net", subjects: ["net:VBUS"] }));
     });
 
+    // agni issue 897: a rule the design cannot run at all is the Checks panel's to report, so a
+    // selection's answer names only the rules the scope left out.
+    it("names, of the rules a selection's answer skipped, only those the catalog calls available", async () => {
+      const h = harness();
+      h.listRules.mockResolvedValueOnce({
+        rules: [
+          { name: "single-pin-net", severity: "error", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+          { name: "symbol-unresolved", severity: "warning", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+          { name: "wire-no-junction", severity: "warning", summary: "", reads: [], tags: {}, available: false, unavailableReason: "no wires" },
+        ],
+      });
+      await h.presenter.openFile("m", "board.eds");
+      h.presenter.setRuleSelection(["single-pin-net", "symbol-unresolved", "wire-no-junction"]);
+      h.checkDesign.mockResolvedValueOnce({
+        findings: [],
+        verdicts: [],
+        skipped: [
+          { name: "symbol-unresolved", reason: "concludes about the design as a whole" },
+          { name: "wire-no-junction", reason: "no wires" },
+        ],
+      } as never);
+      const r = await h.presenter.checkSelection({ kind: "net", ref: "VBUS", pin: "" });
+      expect(r?.notAsked).toEqual([{ name: "symbol-unresolved", reason: "concludes about the design as a whole" }]);
+      expect(h.checkDesign).toHaveBeenLastCalledWith(expect.objectContaining({ subjects: [{ kind: "net", ref: "VBUS", pin: "" }] }));
+    });
+
     it("runs the whole rule when the scoped answer lacks the verdict", async () => {
       const h = harness();
       await h.presenter.restore(linkLoc("single-pin-net", ["net:VBUS"]));

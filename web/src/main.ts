@@ -419,7 +419,7 @@ class AppRoot extends BaseComponent {
       check: async (subject) => {
         const r = await presenter.checkSelection(subject);
         if (!r) return null;
-        return { verdicts: (r.resp.verdicts ?? []).map(verdictItem), notAsked: (r.resp.skipped ?? []).map((sk) => ({ name: sk.name, reason: sk.reason })) };
+        return { verdicts: (r.resp.verdicts ?? []).map(verdictItem), notAsked: r.notAsked };
       },
       checkKey: () => presenter.checkKey(),
     });
