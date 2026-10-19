@@ -12,6 +12,7 @@ cmd/agni:compareLayouts
 cmd/agni:Design
 fshost:Design
 service:Design
+service:parse
 cmd/agni:readDesign
 cmd/agni:readDesignWithConfig
 service:designIR
