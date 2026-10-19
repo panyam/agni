@@ -19,10 +19,12 @@
   .ld-step-detail { color: #777; font-size: 12px; }
   .ld-failed { border-left: 3px solid #b91c1c; background: #fff7f7; padding: 10px 14px; margin: 0 0 16px; white-space: pre-wrap; }
   .ld-actions { display: flex; gap: 8px; margin: 0 0 24px; }
+  .ld-actions .drop-open { margin: 0; }
   .ld-drops h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin: 24px 0 8px; border-top: 1px solid #e5e5e5; padding-top: 10px; }
+  .ld-drop-list { list-style: none; margin: 0; padding: 0; }
   .ld-drop { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
   .ld-drop-name { flex: 1 1 auto; font-weight: 600; word-break: break-all; }
-  .ld-drop-meta { color: #777; font-size: 12px; }
+  .ld-drop-meta { color: #777; font-size: 12px; font-weight: 400; }
   .ld-empty { color: #888; }
   .ld-main .engine-note { margin: 0 0 16px; }
 </style>
@@ -56,7 +58,7 @@
       </div>
       <div class="ld-drops">
         <h2>Kept in this browser</h2>
-        <ul id="saved-drops" class="st-list"></ul>
+        <ul id="saved-drops" class="ld-drop-list"></ul>
       </div>
     </section>
   </div>
