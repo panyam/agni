@@ -114,8 +114,17 @@ A few contract details bite if missed.
 ## Kept reads
 
 `service.DesignCache` keeps what a request read, in two layers (agni issue 895). `CachingLoader`
-wraps a host's loader and keeps the parsed design, each drawing and the board, handing every caller
-a copy, since `check.NewModel` stamps datasheet classes into the design it is given.
+wraps a host's loader and keeps the design, each drawing and the board, handing every caller a copy,
+since `check.NewModel` stamps datasheet classes into the design it is given. The design is kept at two
+levels (agni issue 1061). The parse (`formats.Loader.ParseDesign`) reads no configuration and is keyed
+on the URI and the symbol search path alone, and the derived design (`formats.DeriveDesign`, the
+classes, roles, values and datasheet classes) is keyed on the parse and the overlay's identity. So a
+second project's conventions, or a request's own intent, derive from the kept parse and do not read
+the files again. Both are stored in the browser, so a worker under the same overlay restores the
+derived design, and one under another overlay restores the parse and pays only the derive, about 22
+ms of Jetson's 200 ms parse natively. Each level has its timing stages (`build.parse`,
+`restore.parse`, `derive.design`, `build.design`) and a `parse=` and `design=` entry in the cache
+line.
 `BuildModelCached` keeps the check model and its fact base on top, SHARED rather than copied, which
 is safe because rules only read a model and its memo is built for concurrent use. The query, check,
 report, coverage and review surfaces read through it.
@@ -143,7 +152,7 @@ recorder stamps every name the read opens, walks or fails to find. A hit re-stam
 sub-sheet, a companion or a symbol library invalidates an entry without anyone listing it. Two rules
 keep it from serving a wrong answer. Read options carry an identity only when `Overlay.ReadOptions`
 could compute one (`WithIdentity`), and a read under options with none, or with an option the
-identity does not cover, is never kept. A read that recorded nothing went around the Loader and is
+identity does not cover, keeps only its parse, which names no option, and derives again each time. A read that recorded nothing went around the Loader and is
 never kept either. A new host must read through `LoaderIn`, or its reads are simply never cached.
 
 The server and the browser engine run the same cache. The browser engine is rebuilt on every mount

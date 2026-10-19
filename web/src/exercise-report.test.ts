@@ -143,6 +143,14 @@ describe("splitting a request between loading and answering", () => {
     expect(s.outsideMs).toBeUndefined();
   });
 
+  // agni issue 1061: an overlay with no identity derives its design from the kept parse on every
+  // request, outside any build stage, and that is loading too.
+  it("counts a derive outside any build as loading", () => {
+    const s = loadSplit(line("CheckDesign", { totalMicros: 300_000, stages: [{ name: "derive.design", startMicros: 0, micros: 40_000 }, { name: "rules", startMicros: 40_000, micros: 200_000 }] }))!;
+    expect(s.loadMs).toBe(40);
+    expect(s.rulesMs).toBe(200);
+  });
+
   it("returns nothing for a line that is not a timing or carries no engine total", () => {
     expect(loadSplit("agni fetch a.kicad_pcb: {}")).toBeUndefined();
     expect(loadSplit(line("CheckDesign", { page: { startMs: 1, wallMs: 2 }, error: "aborted" }))).toBeUndefined();

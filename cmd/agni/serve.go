@@ -101,7 +101,7 @@ func serveCmd() *cobra.Command {
 			"what the last two are for")
 	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().Int64Var(&queryBudget, "query-budget", 0, "cap each query's work, in the units a fact base counts (comparisons, generator rows and the connections a circuit walk examines), for queries and query-backed rules alike; a request may ask for less but never more. 0 enforces nothing, so a deployment can watch what its queries cost first (see --query-budget-warn)")
-	c.Flags().IntVar(&designCache, "design-cache", defaultDesignCache, "how many reads to keep between requests: a design, a drawing, a board or a built model each count once, so one design asked for by queries and the viewer holds about four. Each is checked against its files on every use and read again when one changed. 0 keeps none")
+	c.Flags().IntVar(&designCache, "design-cache", defaultDesignCache, "how many reads to keep between requests: a parse, a derived design, a drawing, a board or a built model each count once, so one design asked for by queries and the viewer holds about five. Each is checked against its files on every use and read again when one changed. 0 keeps none")
 	c.Flags().Int64Var(&queryBudgetWarn, "query-budget-warn", defaultQueryBudgetWarn, "log each query whose work passes this, with a suggested --query-budget; 0 logs nothing")
 	c.Flags().DurationVar(&slowRequest, "slow-request", 0, "log each request that takes longer than this (e.g. 2s), with the stage that took the most, which cache tier answered each read, its slowest rules, and its query plan when evaluating was the slowest stage; 0 logs nothing. A client can ask for any request's breakdown with an Agni-Timing header")
 	c.Flags().StringArrayVar(&nativeTools, "enable-native", nil, "allow a native golden renderer by tool name, e.g. kicad-cli (repeatable; off by default)")
@@ -161,7 +161,7 @@ type viewerOpts struct {
 
 	// wasmMaxBytes is the largest design the page analyses in the browser (agni issue 852).
 	wasmMaxBytes int64
-	// designCache is how many reads (a design, a drawing, a board, a built model) the server keeps
+	// designCache is how many reads (a parse, a derived design, a drawing, a board, a built model) the server keeps
 	// between requests (agni issue 895). 0 keeps none.
 	designCache int
 }
@@ -181,7 +181,7 @@ const defaultWasmMaxBytes = 128 << 20
 
 // defaultDesignCache keeps two or three large designs warm with each one's drawing and model, which is
 // what a person moving between a few boards in the viewer asks for (agni issue 895).
-const defaultDesignCache = 12
+const defaultDesignCache = 15
 
 // runViewer builds and runs the viewer server for both `serve` and `open`.
 func runViewer(cmd *cobra.Command, o viewerOpts) error {

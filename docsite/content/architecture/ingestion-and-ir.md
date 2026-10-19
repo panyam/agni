@@ -346,7 +346,8 @@ network that no netlist labels.
 
 There is a constraint on the order, and it is the kind that fails silently. The convention pass
 REPLACES the set it writes, so it has to run first; the datasheet pass joins on the MPN another pass
-fills, so it has to run after that one. `Loader.ReadDesign` is where that order lives.
+fills, so it has to run after that one. `formats.DeriveDesign`, the configured half of
+`Loader.ReadDesign`, is where that order lives.
 
 Before the datasheet tier, a net was a rail because of its NAME, and the built-in vocabulary is
 start-anchored, so a project naming rails function-first had to declare its own lexicon or the engine

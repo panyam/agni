@@ -6,6 +6,9 @@ import (
 	"sync/atomic"
 	"testing"
 	"time"
+
+	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // TestAWaiterBuildsAgainWhenTheBuildersCallerGoesAway: a request waiting on another's read gets the
@@ -85,5 +88,24 @@ func TestAWaiterGetsAFailedReadsError(t *testing.T) {
 	}
 	if n := builds.Load(); n != 1 {
 		t.Errorf("built %d times, want one", n)
+	}
+}
+
+// TestTheParseRequestReachesTheHostsLoader: every host reads through LoaderFor, so the parse level
+// gets a configuration-free design from any of them only if the request survives it (agni issue 1061).
+// control: a read with a vocabulary and no parse request still runs the configured passes.
+func TestTheParseRequestReachesTheHostsLoader(t *testing.T) {
+	base := &formats.Loader{}
+	if l := LoaderFor(base, withParseOnly()); l == nil || !l.ParseOnly {
+		t.Error("a parse request alone reached the host's loader as a full read")
+	}
+	if l := LoaderFor(base, WithSymbolPaths([]string{"lib"}), withParseOnly()); !l.ParseOnly || len(l.SymbolPaths) != 1 {
+		t.Errorf("a parse request with symbol paths gave ParseOnly %v and %d symbol paths", l.ParseOnly, len(l.SymbolPaths))
+	}
+	if l := LoaderFor(base, WithLexicon(classify.DefaultLexicon())); l.ParseOnly {
+		t.Error("control: a read that asked for no parse is parse-only")
+	}
+	if base.ParseOnly {
+		t.Error("the shared loader was changed")
 	}
 }

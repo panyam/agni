@@ -65,6 +65,10 @@ type Loader struct {
 	// datasheet layer (C17). The pass needs one string per part, and the corpus, its loading and its
 	// staleness rules stay with the caller.
 	DeviceClassFor func(mpn string) string
+	// ParseOnly makes ReadDesign stop after ParseDesign, leaving the passes that read configuration
+	// to the caller (agni issue 1061). A host reaches it through a read option rather than a method of
+	// its own, so every host that reads through LoaderIn supports it without a change.
+	ParseOnly bool
 }
 
 // Open reads one file in this loader's name space, from FS when it carries one and from the host
@@ -184,11 +188,25 @@ func (l *Loader) sourceName() func(string) string {
 }
 
 // ReadDesign reads a design file into the netlist IR, picking the reader by extension, then runs
-// the format-neutral ingestion passes in order. Two of the orderings fail silently when wrong. Stamp
-// REPLACES the device-class set, so the datasheet class pass must run after it, and that pass joins
-// on the MPN StampMPN fills, so it must run after that too. See
+// the format-neutral ingestion passes in order. It is ParseDesign followed by DeriveDesign, or ParseDesign alone under ParseOnly. Two of the
+// orderings fail silently when wrong. Stamp REPLACES the device-class set, so the datasheet class pass
+// must run after it, and that pass joins on the MPN StampMPN fills, so it must run after that too. See
 // docsite/content/architecture/ingestion-and-ir.md#derived-fields-and-the-tiers-that-fill-them.
 func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
+	d, err := l.ParseDesign(path)
+	if err != nil || (l != nil && l.ParseOnly) {
+		return d, err
+	}
+	DeriveDesign(d, l.lexicon(), l.deviceClassFor())
+	return d, nil
+}
+
+// ParseDesign is the half of ReadDesign that reads no configuration: the reader, the locator
+// renaming, the per-instance net ids and the part numbers. Its result depends on the files alone (and
+// on SymbolPaths, which decide which files are read), so a host can keep it across projects and
+// conventions and derive it again for each (agni issue 1061). A caller that wants a usable design
+// calls ReadDesign, or DeriveDesign on what this returns.
+func (l *Loader) ParseDesign(path string) (*ir.Design, error) {
 	ext := lowerExt(path)
 	f := byExt[ext]
 	if f == nil || f.Design == nil {
@@ -204,9 +222,21 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	// The format-neutral per-instance net id (WS9). A no-op for netgraph-based readers, which set it
 	// already; a direct-IR reader like EDIF gets it from its connections.
 	netgraph.StampNetIDs(d)
-	// Device classes (WS3-071), against THIS loader's lexicon (WS3-106), so the vocabulary arrives
-	// with the read and there is no install-before-read ordering to get wrong.
-	lex := l.lexicon()
+	// Fill ir.Component.mpn from the component's own attributes or its part type (agni issue 519).
+	// Not a lexicon pass, since a part number is an identifier the source states and not a name this
+	// engine interprets, and no lexicon pass reads it.
+	classify.StampMPN(d)
+	return d, nil
+}
+
+// DeriveDesign runs the passes of ReadDesign that read configuration over a parsed design, in place:
+// device classes, net roles, values and power pins from lex (nil means the process defaults), then
+// the classes a datasheet establishes from deviceClassFor (nil means no corpus). It expects a design
+// straight from ParseDesign, since Stamp replaces the class set and a second derive over its own
+// output is not a supported input.
+func DeriveDesign(d *ir.Design, lex *classify.Lexicon, deviceClassFor func(mpn string) string) {
+	// Device classes (WS3-071), against the read's lexicon (WS3-106), so the vocabulary arrives with
+	// the read and there is no install-before-read ordering to get wrong.
 	lex.Stamp(d)
 	// Each net's role SET from the same lexicon (WS3-072); see Lexicon.StampNetRoles.
 	lex.StampNetRoles(d)
@@ -216,15 +246,10 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 	lex.StampValues(d)
 	// POWER_IN on supply pins a reader left under-typed (WS3-072 PR2); see Lexicon.StampPowerInPins.
 	lex.StampPowerInPins(d)
-	// Fill ir.Component.mpn from the component's own attributes or its part type (agni issue 519).
-	// Not a lexicon pass, since a part number is an identifier the source states and not a name this
-	// engine interprets.
-	classify.StampMPN(d)
 	// The classes only a DATASHEET can establish (agni issue 710, C9's evidence-tier variant). LAST
-	// of the class passes, for the two orderings in the doc comment. A read with no corpus skips it
-	// and is unchanged by it.
-	classify.StampClassesFromSpecs(d, l.deviceClassFor())
-	return d, nil
+	// of the class passes, for the two orderings in ReadDesign's comment. A read with no corpus skips
+	// it and is unchanged by it.
+	classify.StampClassesFromSpecs(d, deviceClassFor)
 }
 
 // BoardGeometry reads a design's board-geometry sidecar (WS1-006), or (nil, nil) when the

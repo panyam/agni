@@ -197,7 +197,7 @@ export function breakdownDetail(b: Breakdown): string {
 // 1060), so a row can report the one-time cost apart from what a question costs on a loaded design.
 // outsideMs is the page's wait outside the engine, which on the browser engine is mostly the
 // design's files reaching the worker. loadMs is the outermost stages that read, restore, build,
-// collect or resolve, and rulesMs the rule evaluation. otherMs is the engine's remaining time, such
+// derive, collect or resolve, and rulesMs the rule evaluation. otherMs is the engine's remaining time, such
 // as locating findings in the drawing.
 export interface LoadSplit {
   rpc: string;
@@ -215,7 +215,7 @@ export interface LoadSplit {
   cache: string;
 }
 
-const LOADING = /^(read|restore|build|collect|resolve)\./;
+const LOADING = /^(read|restore|build|derive|collect|resolve)\./;
 
 // loadSplit reads one "agni timing <rpc>: <RequestTiming>" line, or undefined when the line is not
 // one or carries no engine total. Stages nest (timing.proto), so only a stage starting after the
