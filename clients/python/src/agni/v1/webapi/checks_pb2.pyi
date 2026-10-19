@@ -37,6 +37,26 @@ class CheckDesignRequest(_message.Message):
     work_budget: int
     def __init__(self, rules: _Optional[_Iterable[str]] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ...) -> None: ...
 
+class LoadDesignRequest(_message.Message):
+    __slots__ = ("uri", "overlay", "board_uri", "as_named")
+    URI_FIELD_NUMBER: _ClassVar[int]
+    OVERLAY_FIELD_NUMBER: _ClassVar[int]
+    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
+    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    uri: str
+    overlay: OverlayConfig
+    board_uri: str
+    as_named: bool
+    def __init__(self, uri: _Optional[str] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+
+class LoadDesignResponse(_message.Message):
+    __slots__ = ("has_board", "board_persisted")
+    HAS_BOARD_FIELD_NUMBER: _ClassVar[int]
+    BOARD_PERSISTED_FIELD_NUMBER: _ClassVar[int]
+    has_board: bool
+    board_persisted: bool
+    def __init__(self, has_board: _Optional[bool] = ..., board_persisted: _Optional[bool] = ...) -> None: ...
+
 class OverlayConfig(_message.Message):
     __slots__ = ("config", "ignore_project")
     CONFIG_FIELD_NUMBER: _ClassVar[int]

@@ -37,6 +37,16 @@ service CheckService {
   // offending element (it matches PackedSheet primitive keys).
   rpc CheckDesign(CheckDesignRequest) returns (CheckDesignResponse);
 
+  // LoadDesign reads everything a CheckDesign over the same request reads before its rules run (the
+  // netlist, the board and the model over them) and runs nothing (agni issue 1061). A host keeps what
+  // it read, so a CheckDesign that follows starts from rules rather than from a board parse.
+  //
+  // The browser sends it from a worker that ends when it answers, so the board's parse leaves its
+  // peak memory in no worker that lives on: the jobs worker later restores the parsed board from the
+  // shared store, which allocates a small fraction of what the parse did. board_persisted says
+  // whether that store now holds it.
+  rpc LoadDesign(LoadDesignRequest) returns (LoadDesignResponse);
+
   // GetExpectations returns a design's expected findings from its `<design>.expect.yaml` sidecar
   // (WS6-006), if one sits beside the file. Expectations are static per design and independent of
   // which rule subset a CheckDesign run uses, so they are their own resource: the viewer fetches
@@ -122,6 +132,27 @@ message CheckDesignRequest {
   // circuit walk examines. It can only LOWER the
   // deployment's own budget, never raise it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself inconclusive, naming the budget, and the other rules still answer.
   int64 work_budget = 6;
+}
+
+// LoadDesignRequest names a design the way a CheckDesignRequest does, so LoadDesign reads exactly the
+// tiers the check would and keeps them under the same keys.
+message LoadDesignRequest {
+  string uri = 1;
+  OverlayConfig overlay = 2;
+  string board_uri = 3;
+  bool as_named = 4;
+}
+
+// LoadDesignResponse says what LoadDesign left for a later request.
+message LoadDesignResponse {
+  // has_board is whether the design has a board tier at all. A design with none has nothing slow
+  // left to read.
+  bool has_board = 1;
+  // board_persisted is whether the parsed board is in the host's persistent store, written by this
+  // call or an earlier one, so another process restores it rather than parsing it. It is false on a
+  // host with no store (agni serve keeps it in memory instead), for a build whose version names no
+  // revision, and when the store refused the write.
+  bool board_persisted = 2;
 }
 
 // OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped

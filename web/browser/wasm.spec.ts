@@ -75,9 +75,10 @@ describe("one design under both engines", () => {
       expect(analysis).toEqual([]);
 
       // Two lanes (agni issue 911): the checks ran on a worker of their own, so each worker fetched
-      // the design's files, and a query never waits behind a check.
+      // the design's files, and a query never waits behind a check. A third worker loaded the design
+      // after the first sheet and fetched them too, then ended (agni issue 1061), so two are left.
       expect(page.workers().filter((w) => new URL(w.url()).pathname.endsWith("/agni-worker.js"))).toHaveLength(2);
-      expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.edn")).toHaveLength(2);
+      expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.edn")).toHaveLength(3);
     });
   });
 

@@ -1,16 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { laneFor, mountingFetch, wouldShrink, SHRINK_RATIO, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
 
-// A recording engine of two lanes, design source and network, so a test can see where each request
-// went. `replace` swaps a lane's worker for an empty one, as an abort does.
+// A recording engine of its lanes, design source and network, so a test can see where each request
+// went. `replace` swaps a lane's worker for an empty one, as an abort does. The prepare lane starts a
+// worker per request, as the real one does; `holdPrepares` keeps each prepare unanswered until the
+// returned release is called, and `released` counts the prepare workers ended without a request.
 function harness(listing: DesignFiles | Error) {
   const engineCalls: string[] = [];
-  const laneCalls: Record<LaneName, string[]> = { serve: [], jobs: [] };
+  const laneCalls: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
   const networkCalls: string[] = [];
   const mounted: Record<string, string[]> = {};
-  const laneMounted: Record<LaneName, string[]> = { serve: [], jobs: [] };
+  const laneMounted: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
   const fetched: string[] = [];
-  const workers: Record<LaneName, object> = { serve: {}, jobs: {} };
+  const workers: Record<LaneName, object> = { serve: {}, jobs: {}, prepare: {} };
+  const prepareWorkers: object[] = [];
+  let released = 0;
+  let hold: Promise<void> | undefined;
   const lane = (name: LaneName): EngineLane => ({
     fetch: async (input) => {
       const path = new URL((input as Request).url).pathname;
@@ -27,13 +32,47 @@ function harness(listing: DesignFiles | Error) {
     memoryBytes: async () => 0,
     stats: async () => ({ memoryBytes: 0 }),
   });
-  const lanes = { serve: lane("serve"), jobs: lane("jobs") };
+  const prepare: EngineLane = {
+    ...lane("prepare"),
+    begin: async () => {
+      const w = {};
+      prepareWorkers.push(w);
+      let ended = false;
+      return {
+        holder: w,
+        fetch: async (input) => {
+          const path = new URL((input as Request).url).pathname;
+          laneCalls.prepare.push(path);
+          if (hold) await hold;
+          ended = true;
+          return new Response("{}");
+        },
+        release: () => {
+          if (!ended) released++;
+          ended = true;
+        },
+      };
+    },
+    add: async (_holder, mount, files) => {
+      mounted[mount] = [...(mounted[mount] ?? []), ...Object.keys(files)];
+      laneMounted.prepare.push(...Object.keys(files));
+    },
+  };
+  const lanes = { serve: lane("serve"), jobs: lane("jobs"), prepare };
   const engine: WasmEngine = {
     fetch: (input, init) => lanes[laneFor(new URL((input as Request).url))].fetch(input, init),
     add: async () => {},
     lanes,
-    memoryBytes: async () => ({ serve: 0, jobs: 0 }),
-    stats: async () => ({ serve: { memoryBytes: 0 }, jobs: { memoryBytes: 0 } }),
+    memoryBytes: async () => ({ serve: 0, jobs: 0, prepare: 0 }),
+    stats: async () => ({ serve: { memoryBytes: 0 }, jobs: { memoryBytes: 0 }, prepare: { memoryBytes: 0 } }),
+  };
+  const holdPrepares = () => {
+    let release!: () => void;
+    hold = new Promise<void>((r) => (release = r));
+    return () => {
+      hold = undefined;
+      release();
+    };
   };
   const replace = (name: LaneName) => {
     workers[name] = {};
@@ -54,7 +93,7 @@ function harness(listing: DesignFiles | Error) {
       return new Uint8Array([1]);
     },
   };
-  return { engine, network, source, engineCalls, laneCalls, networkCalls, mounted, laneMounted, fetched, replace, lists: () => lists };
+  return { engine, network, source, engineCalls, laneCalls, networkCalls, mounted, laneMounted, fetched, replace, lists: () => lists, prepareWorkers, holdPrepares, released: () => released };
 }
 
 const listing: DesignFiles = {
@@ -155,6 +194,46 @@ describe("mountingFetch", () => {
   });
 });
 
+describe("the prepare lane", () => {
+  it("brings the files into each prepare request's own worker, which nothing else uses", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ask(f, "CheckService/LoadDesign", "mount://tut/designs/gateway");
+    await ask(f, "CheckService/LoadDesign", "mount://tut/designs/gateway");
+    expect(h.laneCalls.prepare).toEqual(["/agni.v1.webapi.CheckService/LoadDesign", "/agni.v1.webapi.CheckService/LoadDesign"]);
+    expect(h.prepareWorkers).toHaveLength(2);
+    // Each worker started empty, so each was given the design's two files.
+    expect(h.laneMounted.prepare).toHaveLength(4);
+    expect(h.laneCalls.jobs).toEqual([]);
+    expect(h.lists()).toBe(1);
+  });
+
+  it("holds a check sent while a prepare is under way until the prepare answers", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    const release = h.holdPrepares();
+    const loading = ask(f, "CheckService/LoadDesign", "mount://tut/designs/gateway");
+    const checking = ask(f, "CheckService/CheckDesign", "mount://tut/designs/gateway");
+    const querying = ask(f, "QueryService/RunQuery", "mount://tut/designs/gateway");
+    await querying;
+    await new Promise((r) => setTimeout(r, 10));
+    expect(h.laneCalls.serve).toEqual(["/agni.v1.webapi.QueryService/RunQuery"]);
+    expect(h.laneCalls.jobs).toEqual([]);
+    release();
+    await Promise.all([loading, checking]);
+    expect(h.laneCalls.jobs).toEqual(["/agni.v1.webapi.CheckService/CheckDesign"]);
+  });
+
+  it("ends the prepare worker unused when the design goes to the server", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 1000 });
+    await ask(f, "CheckService/LoadDesign", "mount://tut/designs/gateway");
+    expect(h.networkCalls).toEqual(["/agni.v1.webapi.CheckService/LoadDesign"]);
+    expect(h.laneCalls.prepare).toEqual([]);
+    expect(h.released()).toBe(1);
+  });
+});
+
 describe("laneFor", () => {
   it("routes the requests that run rules or compare designs to the jobs lane, under any prefix", () => {
     const at = (p: string) => laneFor(new URL(`http://h${p}`));
@@ -165,6 +244,7 @@ describe("laneFor", () => {
     expect(at("/agni.v1.webapi.CheckService/ListRules")).toBe("serve");
     expect(at("/agni.v1.webapi.QueryService/RunQuery")).toBe("serve");
     expect(at("/agni.v1.webapi.DesignService/GetSheet")).toBe("serve");
+    expect(at("/agni/demo/agni.v1.webapi.CheckService/LoadDesign")).toBe("prepare");
   });
 });
 

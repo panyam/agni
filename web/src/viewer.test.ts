@@ -72,7 +72,9 @@ function harness() {
   // Two mock clients mirror the WS9-026 service split, with rendering RPCs on the design client,
   // rules/findings/expectations on the checks client.
   const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
-  const checks = { checkDesign, listRules, getExpectations } as any;
+  // loadDesign answers like an engine that persisted the board; the open never waits on it.
+  const loadDesign = vi.fn(async (_req: { uri: string }) => ({ hasBoard: true, boardPersisted: true }));
+  const checks = { checkDesign, listRules, getExpectations, loadDesign } as any;
   const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
   // Spies for the ports these tests assert on; every other port defaults to a no-op in
   // stubQueryView, so a method added to QueryView is one edit there rather than a runtime failure
@@ -134,7 +136,7 @@ function harness() {
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
   }, { runQuery, runQueries, listQuerySets } as any);
-  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
+  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, loadDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -1062,6 +1064,30 @@ describe("on-demand checks (WS9)", () => {
     expect(fs.findings).toHaveLength(0);
     expect(fs.ruleCount).toBe(2);
     expect(fs.pending).toBe(2); // both selected rules await a run
+  });
+
+  // The board is read in the background once the first sheet is up (agni issue 1061), and the open
+  // finishes, Run included, whether or not that read has answered.
+  it("loads a design with a board in the background after its first sheet, without waiting on it", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValueOnce({
+      name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }],
+      nativeAvailable: true, availableLayouts: ["faithful"],
+    });
+    const never = deferred<{ hasBoard: boolean; boardPersisted: boolean }>();
+    h.loadDesign.mockReturnValueOnce(never.promise);
+    await h.presenter.openFile("m", "board.edn");
+    expect(h.loadDesign).toHaveBeenCalledOnce();
+    expect(h.loadDesign.mock.calls[0][0]).toMatchObject({ uri: artifactUri("m", "board.edn") });
+    expect(h.loadDesign.mock.invocationCallOrder[0]).toBeGreaterThan(h.getSheet.mock.invocationCallOrder[0]);
+    expect(lastFindings(h).catalogLoading).toBe(false);
+  });
+
+  it("does not load a design that has no board", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    expect(h.loadDesign).not.toHaveBeenCalled();
   });
 
   // The first sheet draws before ListRules answers, and a Run pressed in that window used to run an

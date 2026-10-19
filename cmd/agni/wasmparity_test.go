@@ -198,6 +198,11 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 			return msgOf(r, err)
 		})
 	}
+	// The page sends it after the first sheet draws (agni issue 1061), on either host.
+	ask("LoadDesign", func(c parityClients) (proto.Message, error) {
+		r, err := c.check.LoadDesign(ctx, connect.NewRequest(&webapi.LoadDesignRequest{Uri: design}))
+		return msgOf(r, err)
+	})
 	report := ask("GetCheckReport", func(c parityClients) (proto.Message, error) {
 		r, err := c.check.GetCheckReport(ctx, connect.NewRequest(&webapi.GetCheckReportRequest{Uri: design}))
 		return msgOf(r, err)

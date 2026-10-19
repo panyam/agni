@@ -217,6 +217,38 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	return resp, nil
 }
 
+// LoadDesign reads what a CheckDesign with the same uri, overlay, board and as_named would read before
+// its rules run, through the same model key, and runs nothing (agni issue 1061). The model is kept in
+// the loader's cache when it can be, so the check that follows finds it built. A host whose loader
+// persists reads also reports whether the board is now in that store.
+func (s *CheckService) LoadDesign(ctx context.Context, req *webapi.LoadDesignRequest) (*webapi.LoadDesignResponse, error) {
+	u, err := ParseArtifactURI(req.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
+	if err != nil {
+		return nil, err
+	}
+	board, err := optionalArtifactURI(req.GetBoardUri())
+	if err != nil {
+		return nil, err
+	}
+	nu, bu, _, err := s.projects.TierURIs(ctx, u, board, req.GetAsNamed())
+	if err != nil {
+		return nil, err
+	}
+	b, err := buildModelEntry(ctx, s.loader, nu, bu, ov, s.specs, ReadBoard)
+	if err != nil {
+		return nil, err
+	}
+	resp := &webapi.LoadDesignResponse{HasBoard: b.model.HasBoard()}
+	if p, ok := s.loader.(interface{ BoardPersisted(artifact.URI) bool }); ok && resp.HasBoard {
+		resp.BoardPersisted = p.BoardPersisted(boardReadURI(nu, bu))
+	}
+	return resp, nil
+}
+
 // GetExpectations returns a design's expected findings from its sidecar (WS6-006). A missing
 // sidecar yields an empty list, and only an invalid uri or a malformed sidecar is an error. The
 // `fires` entries come first, then the `pending` ones, which the client reconciles against
