@@ -60,11 +60,11 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 		return nil, err
 	}
 	aOpts, bOpts := as.Overlay.ReadOptions(), bs.Overlay.ReadOptions()
-	a, err := s.loader.Design(actx, as.Netlist, aOpts...)
+	a, err := LoaderOr(as, s.loader).Design(actx, as.Netlist, aOpts...)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
-	b, err := s.loader.Design(bctx, bs.Netlist, bOpts...)
+	b, err := LoaderOr(bs, s.loader).Design(bctx, bs.Netlist, bOpts...)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
@@ -73,8 +73,8 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	if req.GetIncludeEqual() {
 		AppendEqualNets(resp, rep)
 	}
-	gA := BuildGeometry(actx, s.loader, as.Geometry, aOpts...)
-	gB := BuildGeometry(bctx, s.loader, bs.Geometry, bOpts...)
+	gA := BuildGeometry(actx, LoaderOr(as, s.loader), as.Geometry, aOpts...)
+	gB := BuildGeometry(bctx, LoaderOr(bs, s.loader), bs.Geometry, bOpts...)
 	// Plain netlist models, NOT BuildModel. Diff runs no rules and annotateDiffSheets reads only
 	// Nets(), so the board and params tiers would be dead weight. This is the one intended
 	// exception to the WS9-048 full-model rule.

@@ -42,6 +42,11 @@ service SnapshotService {
   // it was.
   rpc UpdateSnapshot(UpdateSnapshotRequest) returns (Snapshot);
   rpc DeleteSnapshot(DeleteSnapshotRequest) returns (google.protobuf.Empty);
+  // UploadBlobs stores file contents for a manifest an Ingest names (agni issue 1061), keyed by
+  // their SHA-256, and answers each one's hash. The server keeps what it can within its limit and
+  // may drop a blob no snapshot holds, so a client sends a blob only when an Ingest reports it
+  // missing.
+  rpc UploadBlobs(UploadBlobsRequest) returns (UploadBlobsResponse);
 }
 
 // Snapshot is one loaded design. The fields up to overlay are its DEFINITION, which a client sets on
@@ -79,6 +84,21 @@ message Snapshot {
   SnapshotConsistency consistency = 9;
   // project is the project the design belongs to, "projects/{project}", empty for none. Output only.
   string project = 10;
+  // files is the design's files when the client sends them rather than naming files the host
+  // serves: each file's path within uri's mount, its SHA-256 and its size. With files set, uri's
+  // mount is read from these files alone, so a design, its companions, its project's descriptor and
+  // config directories all have to be listed; ListDesignFiles names that set. Its contents are sent
+  // with UploadBlobs. Paths are the client's own, so every locator an answer records reads as it
+  // would on the client (C28). Part of the definition.
+  repeated SnapshotFile files = 11;
+}
+
+// SnapshotFile is one file of a design a client sends, named within its mount.
+message SnapshotFile {
+  string path = 1;
+  // sha256 is "sha256:<hex>", as DesignFile.sha256 is.
+  string sha256 = 2;
+  int64 size = 3;
 }
 
 // SnapshotTiers are the artifacts a snapshot's definition resolved to (C32's ResolveSources).
@@ -145,7 +165,7 @@ message UpdateSnapshotRequest {
   // snapshot carries the new definition and names the snapshot to update.
   Snapshot snapshot = 1;
   // update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-  // overlay). Empty replaces the whole definition, and the same definition again reads the files
+  // overlay, files). Empty replaces the whole definition, and the same definition again reads the files
   // again, which is how a stale snapshot is refreshed.
   google.protobuf.FieldMask update_mask = 2;
   // read_board is as on IngestRequest.
@@ -154,6 +174,22 @@ message UpdateSnapshotRequest {
 
 message DeleteSnapshotRequest {
   string name = 1;
+}
+
+// BlobsMissing is the detail on an Ingest or UpdateSnapshot that names files whose contents the host
+// does not hold (FAILED_PRECONDITION): their hashes, which the client sends with UploadBlobs before
+// asking again.
+message BlobsMissing {
+  repeated string sha256 = 1;
+}
+
+message UploadBlobsRequest {
+  repeated bytes contents = 1;
+}
+
+message UploadBlobsResponse {
+  // sha256 is each content's hash, "sha256:<hex>", in the request's order.
+  repeated string sha256 = 1;
 }
 
 // SnapshotUnavailable is the detail on an error from a question whose snapshot cannot answer it: one

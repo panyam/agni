@@ -27,7 +27,7 @@ func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.Get
 		return nil, err
 	}
 	ov, nu, bu := snap.Overlay, snap.Netlist, snap.Board
-	m, bases, err := BuildModelCachedTier(ctx, s.loader, nu, bu, ov, s.specs, SkipBoard)
+	m, bases, err := BuildModelCachedTier(ctx, LoaderOr(snap, s.loader), nu, bu, ov, s.specs, SkipBoard)
 	if err != nil {
 		return nil, err
 	}

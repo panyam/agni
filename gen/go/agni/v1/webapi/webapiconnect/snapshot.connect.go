@@ -48,6 +48,9 @@ const (
 	// SnapshotServiceDeleteSnapshotProcedure is the fully-qualified name of the SnapshotService's
 	// DeleteSnapshot RPC.
 	SnapshotServiceDeleteSnapshotProcedure = "/agni.v1.webapi.SnapshotService/DeleteSnapshot"
+	// SnapshotServiceUploadBlobsProcedure is the fully-qualified name of the SnapshotService's
+	// UploadBlobs RPC.
+	SnapshotServiceUploadBlobsProcedure = "/agni.v1.webapi.SnapshotService/UploadBlobs"
 )
 
 // SnapshotServiceClient is a client for the agni.v1.webapi.SnapshotService service.
@@ -65,6 +68,11 @@ type SnapshotServiceClient interface {
 	// it was.
 	UpdateSnapshot(context.Context, *connect.Request[webapi.UpdateSnapshotRequest]) (*connect.Response[webapi.Snapshot], error)
 	DeleteSnapshot(context.Context, *connect.Request[webapi.DeleteSnapshotRequest]) (*connect.Response[emptypb.Empty], error)
+	// UploadBlobs stores file contents for a manifest an Ingest names (agni issue 1061), keyed by
+	// their SHA-256, and answers each one's hash. The server keeps what it can within its limit and
+	// may drop a blob no snapshot holds, so a client sends a blob only when an Ingest reports it
+	// missing.
+	UploadBlobs(context.Context, *connect.Request[webapi.UploadBlobsRequest]) (*connect.Response[webapi.UploadBlobsResponse], error)
 }
 
 // NewSnapshotServiceClient constructs a client for the agni.v1.webapi.SnapshotService service. By
@@ -108,6 +116,12 @@ func NewSnapshotServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(snapshotServiceMethods.ByName("DeleteSnapshot")),
 			connect.WithClientOptions(opts...),
 		),
+		uploadBlobs: connect.NewClient[webapi.UploadBlobsRequest, webapi.UploadBlobsResponse](
+			httpClient,
+			baseURL+SnapshotServiceUploadBlobsProcedure,
+			connect.WithSchema(snapshotServiceMethods.ByName("UploadBlobs")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -118,6 +132,7 @@ type snapshotServiceClient struct {
 	listSnapshots  *connect.Client[webapi.ListSnapshotsRequest, webapi.ListSnapshotsResponse]
 	updateSnapshot *connect.Client[webapi.UpdateSnapshotRequest, webapi.Snapshot]
 	deleteSnapshot *connect.Client[webapi.DeleteSnapshotRequest, emptypb.Empty]
+	uploadBlobs    *connect.Client[webapi.UploadBlobsRequest, webapi.UploadBlobsResponse]
 }
 
 // Ingest calls agni.v1.webapi.SnapshotService.Ingest.
@@ -145,6 +160,11 @@ func (c *snapshotServiceClient) DeleteSnapshot(ctx context.Context, req *connect
 	return c.deleteSnapshot.CallUnary(ctx, req)
 }
 
+// UploadBlobs calls agni.v1.webapi.SnapshotService.UploadBlobs.
+func (c *snapshotServiceClient) UploadBlobs(ctx context.Context, req *connect.Request[webapi.UploadBlobsRequest]) (*connect.Response[webapi.UploadBlobsResponse], error) {
+	return c.uploadBlobs.CallUnary(ctx, req)
+}
+
 // SnapshotServiceHandler is an implementation of the agni.v1.webapi.SnapshotService service.
 type SnapshotServiceHandler interface {
 	// Ingest creates a snapshot from a source. It resolves the design's tiers and composes its config,
@@ -160,6 +180,11 @@ type SnapshotServiceHandler interface {
 	// it was.
 	UpdateSnapshot(context.Context, *connect.Request[webapi.UpdateSnapshotRequest]) (*connect.Response[webapi.Snapshot], error)
 	DeleteSnapshot(context.Context, *connect.Request[webapi.DeleteSnapshotRequest]) (*connect.Response[emptypb.Empty], error)
+	// UploadBlobs stores file contents for a manifest an Ingest names (agni issue 1061), keyed by
+	// their SHA-256, and answers each one's hash. The server keeps what it can within its limit and
+	// may drop a blob no snapshot holds, so a client sends a blob only when an Ingest reports it
+	// missing.
+	UploadBlobs(context.Context, *connect.Request[webapi.UploadBlobsRequest]) (*connect.Response[webapi.UploadBlobsResponse], error)
 }
 
 // NewSnapshotServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -199,6 +224,12 @@ func NewSnapshotServiceHandler(svc SnapshotServiceHandler, opts ...connect.Handl
 		connect.WithSchema(snapshotServiceMethods.ByName("DeleteSnapshot")),
 		connect.WithHandlerOptions(opts...),
 	)
+	snapshotServiceUploadBlobsHandler := connect.NewUnaryHandler(
+		SnapshotServiceUploadBlobsProcedure,
+		svc.UploadBlobs,
+		connect.WithSchema(snapshotServiceMethods.ByName("UploadBlobs")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.SnapshotService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case SnapshotServiceIngestProcedure:
@@ -211,6 +242,8 @@ func NewSnapshotServiceHandler(svc SnapshotServiceHandler, opts ...connect.Handl
 			snapshotServiceUpdateSnapshotHandler.ServeHTTP(w, r)
 		case SnapshotServiceDeleteSnapshotProcedure:
 			snapshotServiceDeleteSnapshotHandler.ServeHTTP(w, r)
+		case SnapshotServiceUploadBlobsProcedure:
+			snapshotServiceUploadBlobsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -238,4 +271,8 @@ func (UnimplementedSnapshotServiceHandler) UpdateSnapshot(context.Context, *conn
 
 func (UnimplementedSnapshotServiceHandler) DeleteSnapshot(context.Context, *connect.Request[webapi.DeleteSnapshotRequest]) (*connect.Response[emptypb.Empty], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.SnapshotService.DeleteSnapshot is not implemented"))
+}
+
+func (UnimplementedSnapshotServiceHandler) UploadBlobs(context.Context, *connect.Request[webapi.UploadBlobsRequest]) (*connect.Response[webapi.UploadBlobsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.SnapshotService.UploadBlobs is not implemented"))
 }

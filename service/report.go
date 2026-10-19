@@ -44,7 +44,7 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 		return nil, err
 	}
 	u, ov, nu, bu, gu := snap.Design, snap.Overlay, snap.Netlist, snap.Board, snap.Geometry
-	m, _, err := BuildModelCached(ctx, s.loader, nu, bu, ov, s.specs)
+	m, _, err := BuildModelCached(ctx, LoaderOr(snap, s.loader), nu, bu, ov, s.specs)
 	if err != nil {
 		return nil, err
 	}
@@ -61,7 +61,7 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 		return nil, err
 	}
 	rep := CheckReportProto(u.String(), findings, rules)
-	AnnotateReport(rep, BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...), m)
+	AnnotateReport(rep, BuildGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...), m)
 	return &webapi.GetCheckReportResponse{Report: rep}, nil
 }
 

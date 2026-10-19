@@ -46,7 +46,7 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 	}
 	// The hash is provenance, so an unreadable source records none, as a review's does. It is the
 	// netlist tier's, since a design folder does not hash.
-	hash, err := s.loader.DesignHash(ctx, nu)
+	hash, err := LoaderOr(snap, s.loader).DesignHash(ctx, nu)
 	if err != nil {
 		hash = ""
 	}

@@ -29,9 +29,16 @@ type ProjectResolver struct {
 	// SnapshotLimit is how many snapshots the resolver holds before evicting the least recently asked
 	// (agni issue 1061). Zero means defaultSnapshots.
 	SnapshotLimit int
+	// Uploads builds what a design a client sends as files is read through (see UploadHost). Nil
+	// means this host takes no files, and an ingest of one is refused.
+	Uploads UploadHost
+	// UploadMaxBytes is how much uploaded content the host keeps, the least recently used dropped
+	// past it. Zero means defaultUploadBytes.
+	UploadMaxBytes int64
 
 	snapMu sync.Mutex
 	snaps  *snapshotRegistry
+	ups    *uploads
 }
 
 // Overlay composes the config for one design, its project's where it has one, and the request's own

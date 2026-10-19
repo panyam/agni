@@ -147,8 +147,12 @@ The output is the one the local command prints, because the CLI already builds t
 server receives and renders the response it gets back. On the Jetson board a warm query takes 0.02 s
 end to end against 0.33 s run locally, and a check 0.18 s against 1.39 s.
 
-The server has to read the same filesystem, since a path is addressed through whichever of the
-server's mounts contains it, and one it does not serve is an error rather than a quiet local read.
+The design's files go with the request, so the server needs no copy of them (agni issue 1061). The
+CLI sends the manifest of the files its analysis reads (the design's folder, its project's descriptor
+and the config directories the project names, the set `ListDesignFiles` names for a browser), and
+the server asks for the contents it does not already hold, so a second run of an unchanged design
+sends the manifest alone. A server started with `--upload-max-bytes 0` takes no files, and keeps what
+it was sent within that limit otherwise, 1 GB by default.
 The server answers with the datasheet corpus and profiles it was started with, so `--params` and
 `--profile-path` are refused with `--remote` rather than ignored, and so is `--timing`, which would
 time this process. The server's own `--slow-request` and the `Agni-Timing` header time the request

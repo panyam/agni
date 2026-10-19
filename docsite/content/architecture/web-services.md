@@ -31,6 +31,19 @@ so it recovers from either by ingesting again under that id or updating, and ask
 `Ingest` under an id in use with the same definition answers that snapshot, after reading what
 `read_board` asks, which is what lets a client send it again without asking first.
 
+A client can also send a design's files instead of naming files the host serves (agni issue 1061,
+step 4b). The definition then carries a manifest, each file's path within the design's mount, its
+SHA-256 and its size, and the contents travel apart: an `Ingest` naming contents the host does not
+hold fails with FAILED_PRECONDITION and a `BlobsMissing` detail, the client sends them with
+`UploadBlobs`, and asks again. The paths and mount name are the client's own, so every locator an
+answer records reads as it would on the client (C28). Each manifest is read through a host of its
+own, over those files alone, with its own small cache, shared by every snapshot of the same files; a
+cache keyed on the URI would otherwise serve one upload's reads, or the host's own mount of the same
+name, for another. A server keeps uploaded contents up to `--upload-max-bytes` (1 GB), the least
+recently used dropped first, and a snapshot keeps its own files however many uploads come after it.
+`agni <command> --remote` sends designs this way, and the browser engine takes no manifests, since
+dropped files already reach it through its `local` mount.
+
 | Service | RPC | What it does |
 |---|---|---|
 | Workspace | ListMounts | the mount names a tree roots on; `opens` drops the ones holding nothing that client can open and returns how many, so the sidebar can account for a mount an operator configured and cannot find |
@@ -38,6 +51,7 @@ so it recovers from either by ingesting again under that id or updating, and ask
 | Workspace | ListDesignFiles | every file a design's analysis reads (its folder, its project's descriptor, the config directories the project names) with a size and hash each, for a page analysing it in the browser to fetch from `/raw/<mount>/<path>`; refused over 256 MB |
 | Workspace | ProposeDesigns | the designs a folder of files makes, each with the `design.yaml` that would declare it, and every file no design reads with the reason; a folder holding a `design.yaml` is reported as declared, and a `.zip` reads as a folder on the browser's mount |
 | Snapshot | Ingest | load a design once, its tiers resolved and its config composed, and name it `snapshots/{id}` for every question after; `read_board` builds the model with its board too |
+| Snapshot | UploadBlobs | store the contents of a design a client sends as files, keyed by SHA-256, for the manifest an Ingest names |
 | Snapshot | GetSnapshot, ListSnapshots, UpdateSnapshot, DeleteSnapshot | the standard methods over the snapshots a host holds; an update re-reads the design, whole or by `update_mask`, under the same name |
 | Design | GetDesign | load and summarize one design: sheet list, effective layout, available layouts, native availability |
 | Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |

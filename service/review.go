@@ -161,13 +161,13 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	netlistURI, boardURI := snap.Netlist, snap.Board
 	// The budget reaches every checklist query through ctx (agni issue 792); an item past it reads
 	// inconclusive, naming the budget, and the others still answer.
-	rep, cat, unexpanded, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
+	rep, cat, unexpanded, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), LoaderOr(snap, s.loader), netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
 	if err != nil {
 		return nil, err
 	}
 	// The hash is provenance, not a precondition, so an unreadable source records no hash. It is taken
 	// from the NETLIST tier the run scored, not the request's URI, because a design folder does not hash.
-	hash, err := s.loader.DesignHash(ctx, netlistURI)
+	hash, err := LoaderOr(snap, s.loader).DesignHash(ctx, netlistURI)
 	if err != nil {
 		hash = ""
 	}
@@ -218,7 +218,7 @@ func (s *ReviewService) ListChecklists(ctx context.Context, req *webapi.ListChec
 	if err != nil {
 		return nil, err
 	}
-	lists, project, err := s.projects.Checklists(ctx, snap.Design)
+	lists, project, err := snap.ProjectsOr(s.projects).Checklists(ctx, snap.Design)
 	if err != nil {
 		return nil, err
 	}
@@ -354,8 +354,8 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 //
 // It returns the per-request catalog, overlay spliced on, because the stored document records the
 // rules that ACTUALLY ran.
-func (s *ReviewService) runOne(ctx context.Context, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, []*ir.UnexpandedHierarchy, error) {
-	m, _, err := BuildModelCached(ctx, s.loader, designURI, boardURI, ov, s.specs)
+func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, []*ir.UnexpandedHierarchy, error) {
+	m, _, err := BuildModelCached(ctx, loader, designURI, boardURI, ov, s.specs)
 	if err != nil {
 		return review.Report{}, nil, nil, err
 	}

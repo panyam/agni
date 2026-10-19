@@ -27,7 +27,7 @@ from google.protobuf import empty_pb2 as google_dot_protobuf_dot_empty__pb2
 from google.protobuf import field_mask_pb2 as google_dot_protobuf_dot_field__mask__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1d\x61gni/v1/webapi/snapshot.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xfb\x02\n\x08Snapshot\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n\x0brevision_id\x18\x02 \x01(\tR\nrevisionId\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n\tboard_uri\x18\x04 \x01(\tR\x08\x62oardUri\x12!\n\x0cgeometry_uri\x18\x05 \x01(\tR\x0bgeometryUri\x12\x19\n\x08\x61s_named\x18\x06 \x01(\x08R\x07\x61sNamed\x12\x37\n\x07overlay\x18\x07 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x33\n\x05tiers\x18\x08 \x01(\x0b\x32\x1d.agni.v1.webapi.SnapshotTiersR\x05tiers\x12\x45\n\x0b\x63onsistency\x18\t \x01(\x0b\x32#.agni.v1.webapi.SnapshotConsistencyR\x0b\x63onsistency\x12\x18\n\x07project\x18\n \x01(\tR\x07project\"\xb8\x01\n\rSnapshotTiers\x12\x1f\n\x0bnetlist_uri\x18\x01 \x01(\tR\nnetlistUri\x12\x1b\n\tboard_uri\x18\x02 \x01(\tR\x08\x62oardUri\x12!\n\x0cgeometry_uri\x18\x03 \x01(\tR\x0bgeometryUri\x12\x1d\n\nboard_read\x18\x04 \x01(\x08R\tboardRead\x12\'\n\x0f\x62oard_persisted\x18\x05 \x01(\x08R\x0e\x62oardPersisted\"\xaf\x01\n\x13SnapshotConsistency\x12\x1d\n\nboard_only\x18\x01 \x03(\tR\tboardOnly\x12(\n\x10\x62oard_only_count\x18\x02 \x01(\x05R\x0e\x62oardOnlyCount\x12!\n\x0cnetlist_only\x18\x03 \x03(\tR\x0bnetlistOnly\x12,\n\x12netlist_only_count\x18\x04 \x01(\x05R\x10netlistOnlyCount\"\x85\x01\n\rIngestRequest\x12\x34\n\x08snapshot\x18\x01 \x01(\x0b\x32\x18.agni.v1.webapi.SnapshotR\x08snapshot\x12\x1f\n\x0bsnapshot_id\x18\x02 \x01(\tR\nsnapshotId\x12\x1d\n\nread_board\x18\x03 \x01(\x08R\treadBoard\"(\n\x12GetSnapshotRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"j\n\x14ListSnapshotsRequest\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"w\n\x15ListSnapshotsResponse\x12\x36\n\tsnapshots\x18\x01 \x03(\x0b\x32\x18.agni.v1.webapi.SnapshotR\tsnapshots\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xa9\x01\n\x15UpdateSnapshotRequest\x12\x34\n\x08snapshot\x18\x01 \x01(\x0b\x32\x18.agni.v1.webapi.SnapshotR\x08snapshot\x12;\n\x0bupdate_mask\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.FieldMaskR\nupdateMask\x12\x1d\n\nread_board\x18\x03 \x01(\x08R\treadBoard\"+\n\x15\x44\x65leteSnapshotRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"\xcf\x01\n\x13SnapshotUnavailable\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x42\n\x06reason\x18\x02 \x01(\x0e\x32*.agni.v1.webapi.SnapshotUnavailable.ReasonR\x06reason\x12\x18\n\x07\x63hanged\x18\x03 \x03(\tR\x07\x63hanged\"F\n\x06Reason\x12\x16\n\x12REASON_UNSPECIFIED\x10\x00\x12\x12\n\x0eREASON_MISSING\x10\x01\x12\x10\n\x0cREASON_STALE\x10\x02\x32\xa3\x03\n\x0fSnapshotService\x12\x41\n\x06Ingest\x12\x1d.agni.v1.webapi.IngestRequest\x1a\x18.agni.v1.webapi.Snapshot\x12K\n\x0bGetSnapshot\x12\".agni.v1.webapi.GetSnapshotRequest\x1a\x18.agni.v1.webapi.Snapshot\x12\\\n\rListSnapshots\x12$.agni.v1.webapi.ListSnapshotsRequest\x1a%.agni.v1.webapi.ListSnapshotsResponse\x12Q\n\x0eUpdateSnapshot\x12%.agni.v1.webapi.UpdateSnapshotRequest\x1a\x18.agni.v1.webapi.Snapshot\x12O\n\x0e\x44\x65leteSnapshot\x12%.agni.v1.webapi.DeleteSnapshotRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1d\x61gni/v1/webapi/snapshot.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xaf\x03\n\x08Snapshot\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n\x0brevision_id\x18\x02 \x01(\tR\nrevisionId\x12\x10\n\x03uri\x18\x03 \x01(\tR\x03uri\x12\x1b\n\tboard_uri\x18\x04 \x01(\tR\x08\x62oardUri\x12!\n\x0cgeometry_uri\x18\x05 \x01(\tR\x0bgeometryUri\x12\x19\n\x08\x61s_named\x18\x06 \x01(\x08R\x07\x61sNamed\x12\x37\n\x07overlay\x18\x07 \x01(\x0b\x32\x1d.agni.v1.webapi.OverlayConfigR\x07overlay\x12\x33\n\x05tiers\x18\x08 \x01(\x0b\x32\x1d.agni.v1.webapi.SnapshotTiersR\x05tiers\x12\x45\n\x0b\x63onsistency\x18\t \x01(\x0b\x32#.agni.v1.webapi.SnapshotConsistencyR\x0b\x63onsistency\x12\x18\n\x07project\x18\n \x01(\tR\x07project\x12\x32\n\x05\x66iles\x18\x0b \x03(\x0b\x32\x1c.agni.v1.webapi.SnapshotFileR\x05\x66iles\"N\n\x0cSnapshotFile\x12\x12\n\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n\x06sha256\x18\x02 \x01(\tR\x06sha256\x12\x12\n\x04size\x18\x03 \x01(\x03R\x04size\"\xb8\x01\n\rSnapshotTiers\x12\x1f\n\x0bnetlist_uri\x18\x01 \x01(\tR\nnetlistUri\x12\x1b\n\tboard_uri\x18\x02 \x01(\tR\x08\x62oardUri\x12!\n\x0cgeometry_uri\x18\x03 \x01(\tR\x0bgeometryUri\x12\x1d\n\nboard_read\x18\x04 \x01(\x08R\tboardRead\x12\'\n\x0f\x62oard_persisted\x18\x05 \x01(\x08R\x0e\x62oardPersisted\"\xaf\x01\n\x13SnapshotConsistency\x12\x1d\n\nboard_only\x18\x01 \x03(\tR\tboardOnly\x12(\n\x10\x62oard_only_count\x18\x02 \x01(\x05R\x0e\x62oardOnlyCount\x12!\n\x0cnetlist_only\x18\x03 \x03(\tR\x0bnetlistOnly\x12,\n\x12netlist_only_count\x18\x04 \x01(\x05R\x10netlistOnlyCount\"\x85\x01\n\rIngestRequest\x12\x34\n\x08snapshot\x18\x01 \x01(\x0b\x32\x18.agni.v1.webapi.SnapshotR\x08snapshot\x12\x1f\n\x0bsnapshot_id\x18\x02 \x01(\tR\nsnapshotId\x12\x1d\n\nread_board\x18\x03 \x01(\x08R\treadBoard\"(\n\x12GetSnapshotRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"j\n\x14ListSnapshotsRequest\x12\x1b\n\tpage_size\x18\x01 \x01(\x05R\x08pageSize\x12\x1d\n\npage_token\x18\x02 \x01(\tR\tpageToken\x12\x16\n\x06\x66ilter\x18\x03 \x01(\tR\x06\x66ilter\"w\n\x15ListSnapshotsResponse\x12\x36\n\tsnapshots\x18\x01 \x03(\x0b\x32\x18.agni.v1.webapi.SnapshotR\tsnapshots\x12&\n\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\"\xa9\x01\n\x15UpdateSnapshotRequest\x12\x34\n\x08snapshot\x18\x01 \x01(\x0b\x32\x18.agni.v1.webapi.SnapshotR\x08snapshot\x12;\n\x0bupdate_mask\x18\x02 \x01(\x0b\x32\x1a.google.protobuf.FieldMaskR\nupdateMask\x12\x1d\n\nread_board\x18\x03 \x01(\x08R\treadBoard\"+\n\x15\x44\x65leteSnapshotRequest\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\"&\n\x0c\x42lobsMissing\x12\x16\n\x06sha256\x18\x01 \x03(\tR\x06sha256\"0\n\x12UploadBlobsRequest\x12\x1a\n\x08\x63ontents\x18\x01 \x03(\x0cR\x08\x63ontents\"-\n\x13UploadBlobsResponse\x12\x16\n\x06sha256\x18\x01 \x03(\tR\x06sha256\"\xcf\x01\n\x13SnapshotUnavailable\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x42\n\x06reason\x18\x02 \x01(\x0e\x32*.agni.v1.webapi.SnapshotUnavailable.ReasonR\x06reason\x12\x18\n\x07\x63hanged\x18\x03 \x03(\tR\x07\x63hanged\"F\n\x06Reason\x12\x16\n\x12REASON_UNSPECIFIED\x10\x00\x12\x12\n\x0eREASON_MISSING\x10\x01\x12\x10\n\x0cREASON_STALE\x10\x02\x32\xfb\x03\n\x0fSnapshotService\x12\x41\n\x06Ingest\x12\x1d.agni.v1.webapi.IngestRequest\x1a\x18.agni.v1.webapi.Snapshot\x12K\n\x0bGetSnapshot\x12\".agni.v1.webapi.GetSnapshotRequest\x1a\x18.agni.v1.webapi.Snapshot\x12\\\n\rListSnapshots\x12$.agni.v1.webapi.ListSnapshotsRequest\x1a%.agni.v1.webapi.ListSnapshotsResponse\x12Q\n\x0eUpdateSnapshot\x12%.agni.v1.webapi.UpdateSnapshotRequest\x1a\x18.agni.v1.webapi.Snapshot\x12O\n\x0e\x44\x65leteSnapshot\x12%.agni.v1.webapi.DeleteSnapshotRequest\x1a\x16.google.protobuf.Empty\x12V\n\x0bUploadBlobs\x12\".agni.v1.webapi.UploadBlobsRequest\x1a#.agni.v1.webapi.UploadBlobsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,27 +36,35 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
   _globals['_SNAPSHOT']._serialized_start=142
-  _globals['_SNAPSHOT']._serialized_end=521
-  _globals['_SNAPSHOTTIERS']._serialized_start=524
-  _globals['_SNAPSHOTTIERS']._serialized_end=708
-  _globals['_SNAPSHOTCONSISTENCY']._serialized_start=711
-  _globals['_SNAPSHOTCONSISTENCY']._serialized_end=886
-  _globals['_INGESTREQUEST']._serialized_start=889
-  _globals['_INGESTREQUEST']._serialized_end=1022
-  _globals['_GETSNAPSHOTREQUEST']._serialized_start=1024
-  _globals['_GETSNAPSHOTREQUEST']._serialized_end=1064
-  _globals['_LISTSNAPSHOTSREQUEST']._serialized_start=1066
-  _globals['_LISTSNAPSHOTSREQUEST']._serialized_end=1172
-  _globals['_LISTSNAPSHOTSRESPONSE']._serialized_start=1174
-  _globals['_LISTSNAPSHOTSRESPONSE']._serialized_end=1293
-  _globals['_UPDATESNAPSHOTREQUEST']._serialized_start=1296
-  _globals['_UPDATESNAPSHOTREQUEST']._serialized_end=1465
-  _globals['_DELETESNAPSHOTREQUEST']._serialized_start=1467
-  _globals['_DELETESNAPSHOTREQUEST']._serialized_end=1510
-  _globals['_SNAPSHOTUNAVAILABLE']._serialized_start=1513
-  _globals['_SNAPSHOTUNAVAILABLE']._serialized_end=1720
-  _globals['_SNAPSHOTUNAVAILABLE_REASON']._serialized_start=1650
-  _globals['_SNAPSHOTUNAVAILABLE_REASON']._serialized_end=1720
-  _globals['_SNAPSHOTSERVICE']._serialized_start=1723
-  _globals['_SNAPSHOTSERVICE']._serialized_end=2142
+  _globals['_SNAPSHOT']._serialized_end=573
+  _globals['_SNAPSHOTFILE']._serialized_start=575
+  _globals['_SNAPSHOTFILE']._serialized_end=653
+  _globals['_SNAPSHOTTIERS']._serialized_start=656
+  _globals['_SNAPSHOTTIERS']._serialized_end=840
+  _globals['_SNAPSHOTCONSISTENCY']._serialized_start=843
+  _globals['_SNAPSHOTCONSISTENCY']._serialized_end=1018
+  _globals['_INGESTREQUEST']._serialized_start=1021
+  _globals['_INGESTREQUEST']._serialized_end=1154
+  _globals['_GETSNAPSHOTREQUEST']._serialized_start=1156
+  _globals['_GETSNAPSHOTREQUEST']._serialized_end=1196
+  _globals['_LISTSNAPSHOTSREQUEST']._serialized_start=1198
+  _globals['_LISTSNAPSHOTSREQUEST']._serialized_end=1304
+  _globals['_LISTSNAPSHOTSRESPONSE']._serialized_start=1306
+  _globals['_LISTSNAPSHOTSRESPONSE']._serialized_end=1425
+  _globals['_UPDATESNAPSHOTREQUEST']._serialized_start=1428
+  _globals['_UPDATESNAPSHOTREQUEST']._serialized_end=1597
+  _globals['_DELETESNAPSHOTREQUEST']._serialized_start=1599
+  _globals['_DELETESNAPSHOTREQUEST']._serialized_end=1642
+  _globals['_BLOBSMISSING']._serialized_start=1644
+  _globals['_BLOBSMISSING']._serialized_end=1682
+  _globals['_UPLOADBLOBSREQUEST']._serialized_start=1684
+  _globals['_UPLOADBLOBSREQUEST']._serialized_end=1732
+  _globals['_UPLOADBLOBSRESPONSE']._serialized_start=1734
+  _globals['_UPLOADBLOBSRESPONSE']._serialized_end=1779
+  _globals['_SNAPSHOTUNAVAILABLE']._serialized_start=1782
+  _globals['_SNAPSHOTUNAVAILABLE']._serialized_end=1989
+  _globals['_SNAPSHOTUNAVAILABLE_REASON']._serialized_start=1919
+  _globals['_SNAPSHOTUNAVAILABLE_REASON']._serialized_end=1989
+  _globals['_SNAPSHOTSERVICE']._serialized_start=1992
+  _globals['_SNAPSHOTSERVICE']._serialized_end=2499
 # @@protoc_insertion_point(module_scope)

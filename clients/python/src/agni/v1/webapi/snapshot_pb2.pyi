@@ -11,7 +11,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class Snapshot(_message.Message):
-    __slots__ = ("name", "revision_id", "uri", "board_uri", "geometry_uri", "as_named", "overlay", "tiers", "consistency", "project")
+    __slots__ = ("name", "revision_id", "uri", "board_uri", "geometry_uri", "as_named", "overlay", "tiers", "consistency", "project", "files")
     NAME_FIELD_NUMBER: _ClassVar[int]
     REVISION_ID_FIELD_NUMBER: _ClassVar[int]
     URI_FIELD_NUMBER: _ClassVar[int]
@@ -22,6 +22,7 @@ class Snapshot(_message.Message):
     TIERS_FIELD_NUMBER: _ClassVar[int]
     CONSISTENCY_FIELD_NUMBER: _ClassVar[int]
     PROJECT_FIELD_NUMBER: _ClassVar[int]
+    FILES_FIELD_NUMBER: _ClassVar[int]
     name: str
     revision_id: str
     uri: str
@@ -32,7 +33,18 @@ class Snapshot(_message.Message):
     tiers: SnapshotTiers
     consistency: SnapshotConsistency
     project: str
-    def __init__(self, name: _Optional[str] = ..., revision_id: _Optional[str] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., geometry_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., overlay: _Optional[_Union[_checks_pb2.OverlayConfig, _Mapping]] = ..., tiers: _Optional[_Union[SnapshotTiers, _Mapping]] = ..., consistency: _Optional[_Union[SnapshotConsistency, _Mapping]] = ..., project: _Optional[str] = ...) -> None: ...
+    files: _containers.RepeatedCompositeFieldContainer[SnapshotFile]
+    def __init__(self, name: _Optional[str] = ..., revision_id: _Optional[str] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., geometry_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., overlay: _Optional[_Union[_checks_pb2.OverlayConfig, _Mapping]] = ..., tiers: _Optional[_Union[SnapshotTiers, _Mapping]] = ..., consistency: _Optional[_Union[SnapshotConsistency, _Mapping]] = ..., project: _Optional[str] = ..., files: _Optional[_Iterable[_Union[SnapshotFile, _Mapping]]] = ...) -> None: ...
+
+class SnapshotFile(_message.Message):
+    __slots__ = ("path", "sha256", "size")
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    SHA256_FIELD_NUMBER: _ClassVar[int]
+    SIZE_FIELD_NUMBER: _ClassVar[int]
+    path: str
+    sha256: str
+    size: int
+    def __init__(self, path: _Optional[str] = ..., sha256: _Optional[str] = ..., size: _Optional[int] = ...) -> None: ...
 
 class SnapshotTiers(_message.Message):
     __slots__ = ("netlist_uri", "board_uri", "geometry_uri", "board_read", "board_persisted")
@@ -109,6 +121,24 @@ class DeleteSnapshotRequest(_message.Message):
     NAME_FIELD_NUMBER: _ClassVar[int]
     name: str
     def __init__(self, name: _Optional[str] = ...) -> None: ...
+
+class BlobsMissing(_message.Message):
+    __slots__ = ("sha256",)
+    SHA256_FIELD_NUMBER: _ClassVar[int]
+    sha256: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, sha256: _Optional[_Iterable[str]] = ...) -> None: ...
+
+class UploadBlobsRequest(_message.Message):
+    __slots__ = ("contents",)
+    CONTENTS_FIELD_NUMBER: _ClassVar[int]
+    contents: _containers.RepeatedScalarFieldContainer[bytes]
+    def __init__(self, contents: _Optional[_Iterable[bytes]] = ...) -> None: ...
+
+class UploadBlobsResponse(_message.Message):
+    __slots__ = ("sha256",)
+    SHA256_FIELD_NUMBER: _ClassVar[int]
+    sha256: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, sha256: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class SnapshotUnavailable(_message.Message):
     __slots__ = ("name", "reason", "changed")

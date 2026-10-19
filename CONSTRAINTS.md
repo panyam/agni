@@ -590,7 +590,10 @@ analysis request then carries that name and nothing else about the design: no `u
 `as_named`, and no `overlay`. A question that could also name files or config could read the design a
 second way beside its snapshot, which is the two-reads-of-one-design shape C32 exists to stop. The
 config still travels as a value, on the ingest rather than on each question. `ListRelations` keeps an
-`overlay` for the vocabulary asked about before any design is read, and refuses one beside a snapshot. The authority is a
+`overlay` for the vocabulary asked about before any design is read, and refuses one beside a snapshot.
+An ingest's source is either files the host serves, named by that URI, or the files themselves, a
+manifest of paths within the URI's mount with their hashes and the contents sent apart (step 4b). The
+manifest is part of the definition, so the design a snapshot reads is still named by value. The authority is a
 key in a server-defined namespace and the URI is not a host path; nothing above the Loader may treat
 it as a filesystem path.
 
@@ -685,6 +688,11 @@ not AIP-133's `Create` because a client may send its ingest again under an id it
 definition answers the snapshot it already is, so a client recovering from a host that lost it, or a
 browser page giving each worker its own copy, need not ask first. A different definition under that
 id is `ALREADY_EXISTS`.
+
+The contents a client uploads for an ingest (`UploadBlobs`) are not a resource. They have no name
+beyond their hash, no lifetime a client can rely on, and nothing to get, list or delete: the server
+keeps them as a cache it may drop, and an ingest that needs one it dropped says so, so the client
+sends it again.
 
 The read-only carve-out is narrow on purpose. It does NOT license a stateless query to wear a
 `name`; that failure is called out below and is unchanged. It licenses exactly the case where an
@@ -949,6 +957,15 @@ than an exemption: an `fs.ValidPath` is unrooted, so those paths already satisfy
 constraint bites a NEW host that opens files by absolute path. A file outside every mount is recorded
 by base name, which loses its directory and is the deliberate price of never publishing one.
 Rationale in [Decisions](DECISIONS.md), "A recorded locator is renamed once at read time".
+
+**As amended by agni issue 1061, a design a client SENDS records its locators as the client names
+them.** An uploaded design is a manifest of files, each named by its path within the design's mount,
+and the server reads them as that one mount, under the client's own mount name. So a finding's
+source file, a query's citation and the design's URI in an answer are what the same command run on
+the client records, which `TestRemoteAnswersAsTheLocalCommandDoes` holds byte for byte against a
+server with no mounts at all. The rule is unchanged in what it forbids: the server's machine appears
+in nothing, since it never had a path for these files, and the client chose paths relative to its own
+mount, never its host paths.
 
 ## C29: The fact layer is the primitive and depends on no query engine
 **Rule:** Relations, the tuple they project into, and the registry they install themselves in live in
