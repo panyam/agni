@@ -230,11 +230,14 @@ function ChecksPanel(props: {
         <Show
           when={props.state().findings.length > 0}
           fallback={
-            <div class="findings-empty">
-              {props.state().pending > 0
-                ? `Press Run checks to evaluate ${props.state().pending} rule${props.state().pending === 1 ? "" : "s"}.`
-                : "No findings."}
-            </div>
+            // While a run is under way its own line says so, and "Press Run checks" would contradict it.
+            <Show when={!props.state().running}>
+              <div class="findings-empty">
+                {props.state().pending > 0
+                  ? `Press Run checks to evaluate ${props.state().pending} rule${props.state().pending === 1 ? "" : "s"}.`
+                  : "No findings."}
+              </div>
+            </Show>
           }
         >
           <table class="checks-table">

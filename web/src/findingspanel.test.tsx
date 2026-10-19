@@ -482,6 +482,8 @@ describe("cancelling from the checks panel", () => {
   it("says the run is under way in the panel, how many rules it is running", () => {
     const { el, panel } = mountWithCancel({ running: true, pending: 4 });
     expect(el.querySelector(".checks-running")?.textContent).toContain("Running 4 selected rules…");
+    // "Press Run checks" would contradict the run under way.
+    expect(el.querySelector(".findings-empty")).toBeNull();
     panel.view.setState(state({ running: false, pending: 0 }));
     expect(el.querySelector(".checks-running")).toBeNull();
   });
