@@ -36,7 +36,7 @@ func (availNative) Available(artifact.URI) bool { return true }
 
 func TestGetDesignFaithful(t *testing.T) {
 	svc := NewDesignService(fakeLoader{geom: twoSheetGeom()}, availNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -71,7 +71,7 @@ func TestGetDesignAutoLayoutCountsFromIR(t *testing.T) {
 		Nets:         []*ir.Net{{Name: "A"}, {Name: "B"}, {Name: "C"}},
 	}
 	svc := NewDesignService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.edn"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -97,7 +97,7 @@ func TestGetDesignCarriesUnexpandedHierarchy(t *testing.T) {
 		},
 	}
 	svc := NewDesignService(fakeLoader{design: d, geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.edn"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -109,9 +109,10 @@ func TestGetDesignCarriesUnexpandedHierarchy(t *testing.T) {
 
 func TestGetSheetSelectorAndFormats(t *testing.T) {
 	svc := NewDesignService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.eds")
 	get := func(sel string, format webapi.SheetFormat) (*webapi.GetSheetResponse, error) {
 		resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
-			Uri: "mount://m/x.eds", Sheet: sel, Format: format,
+			Snapshot: snap, Sheet: sel, Format: format,
 		})
 		if err != nil {
 			return nil, err
@@ -153,7 +154,7 @@ func TestGetLayoutReport(t *testing.T) {
 		{RefDes: "U9", Cell: "box", Kind: graph.KindBox},
 	}}
 	svc := NewDesignService(fakeLoader{report: rep}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: "mount://m/x.edn"})
+	resp, err := svc.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -169,15 +170,29 @@ func TestGetLayoutReport(t *testing.T) {
 	}
 
 	// A build failure (e.g. no netlist to classify) yields an empty report, not an error.
-	failing := NewDesignService(fakeLoader{err: errors.New("no netlist")}, noNative{}, render.Style{}, nil)
-	resp, err = failing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: "mount://m/x.eds"})
+	failing := NewDesignService(reportErrLoader{err: errors.New("no netlist")}, noNative{}, render.Style{}, nil)
+	resp, err = failing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, failing.Snapshots(), "mount://m/x.eds")})
 	if err != nil || len(resp.GetReport().GetComponents()) != 0 {
 		t.Errorf("build failure = (%+v, %v), want an empty report and no error", resp.GetReport(), err)
 	}
 
 	// But a resolve failure (unknown mount) is still an error, not an empty report.
 	missing := NewDesignService(fakeLoader{err: ErrNotFound}, noNative{}, render.Style{}, nil)
-	if _, err = missing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: "mount://no/x"}); !errors.Is(err, ErrNotFound) {
+	if _, err = missing.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, missing.Snapshots(), "mount://no/x")}); !errors.Is(err, ErrNotFound) {
 		t.Errorf("unknown mount err = %v, want ErrNotFound", err)
 	}
+	unresolved := NewDesignService(reportErrLoader{err: ErrNotFound}, noNative{}, render.Style{}, nil)
+	if _, err = unresolved.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, unresolved.Snapshots(), "mount://no/x")}); !errors.Is(err, ErrNotFound) {
+		t.Errorf("unresolved report err = %v, want ErrNotFound", err)
+	}
+}
+
+// reportErrLoader reads a netlist and fails the layout report alone.
+type reportErrLoader struct {
+	fakeLoader
+	err error
+}
+
+func (f reportErrLoader) Report(context.Context, artifact.URI, bool, ...ReadOption) (*graph.ConversionReport, error) {
+	return nil, f.err
 }

@@ -48,21 +48,23 @@ def tabs(client: Client, base: str, head: str, audit: query_pb2.QuerySet) -> Lis
     def add(resp: tables_pb2.TabulateResponse, names=None) -> None:
         out.extend((name, to_rows(t)) for name, t in table_sheets(resp, names))
 
-    diff = client.diff_designs(a_uri=base, b_uri=head, include_equal=True)
+    # Each revision is ingested once, and every question about it names its snapshot.
+    a, b = client.ingest(base), client.ingest(head)
+    diff = client.diff_designs(a_snapshot=a, b_snapshot=b, include_equal=True)
     add(client.tabulate(diff=diff), {"diff": "Diff"})
 
-    answers = client.run_queries(uri=head, set=audit)
+    answers = client.run_queries(snapshot=b, set=audit)
     add(client.tabulate(query_set=answers, order_by=ORDER_BY))
 
     # The project's own default checklist, the first one it declares, run on the newer revision.
-    lists = client.list_checklists(design_uri=head)
+    lists = client.list_checklists(snapshot=b)
     if not lists.checklists:
         raise SystemExit(f"{head} belongs to no project with a checklist, so there is nothing to review")
-    review = client.create_review(design_uri=head, manifest=lists.checklists[0].manifest)
+    review = client.create_review(snapshot=b, manifest=lists.checklists[0].manifest)
     add(client.tabulate(review=review), {"review": "Review", "review_summary": "Review summary"})
 
     # Skipped rules sit beside the findings, so a reader sees which rules the run was silent on.
-    checked = {t.name: t for t in client.tabulate(check=client.check_design(uri=head)).tables}
+    checked = {t.name: t for t in client.tabulate(check=client.check_design(snapshot=b)).tables}
     for table, tab in [("findings", "Findings"), ("skipped", "Skipped rules"), ("verdicts", "Verdicts"), ("verdicts_by_rule", "Verdicts by rule")]:
         out.append((tab, to_rows(checked[table])))
     return out

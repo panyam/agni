@@ -17,6 +17,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/proto"
 )
 
 // TestToConnectErr pins the one sentinel-to-code table every adapter shares, the mapping the
@@ -25,23 +26,43 @@ func TestToConnectErr(t *testing.T) {
 	cases := []struct {
 		err  error
 		want connect.Code
+		// detail is the SnapshotUnavailable a snapshot error carries, and nil for every other error.
+		detail *webapi.SnapshotUnavailable
 	}{
-		{fmt.Errorf("no such mount: %w", service.ErrNotFound), connect.CodeNotFound},
-		{fmt.Errorf("%w: escaped", service.ErrInvalidPath), connect.CodeInvalidArgument},
-		{fmt.Errorf("%w: no netlist", service.ErrInvalidArgument), connect.CodeInvalidArgument},
-		{service.ErrNativeNoTool, connect.CodeUnimplemented},
-		{service.ErrNativeNotEnabled, connect.CodeFailedPrecondition},
-		{service.ErrNativeNotFound, connect.CodeFailedPrecondition},
-		{fmt.Errorf("%w: exec blew up", service.ErrInternal), connect.CodeInternal},
+		{fmt.Errorf("no such mount: %w", service.ErrNotFound), connect.CodeNotFound, nil},
+		{fmt.Errorf("%w: escaped", service.ErrInvalidPath), connect.CodeInvalidArgument, nil},
+		{fmt.Errorf("%w: no netlist", service.ErrInvalidArgument), connect.CodeInvalidArgument, nil},
+		{service.ErrNativeNoTool, connect.CodeUnimplemented, nil},
+		{service.ErrNativeNotEnabled, connect.CodeFailedPrecondition, nil},
+		{service.ErrNativeNotFound, connect.CodeFailedPrecondition, nil},
+		{fmt.Errorf("%w: exec blew up", service.ErrInternal), connect.CodeInternal, nil},
 		// A request that stopped rather than failed (agni issues 792, 795).
-		{fmt.Errorf("query: evaluation stopped: %w", context.Canceled), connect.CodeCanceled},
-		{fmt.Errorf("query: evaluation stopped: %w", context.DeadlineExceeded), connect.CodeDeadlineExceeded},
-		{fmt.Errorf("%w: work passed its budget of 5", service.ErrResourceExhausted), connect.CodeResourceExhausted},
-		{errors.New("unclassified"), connect.CodeInvalidArgument},
+		{fmt.Errorf("query: evaluation stopped: %w", context.Canceled), connect.CodeCanceled, nil},
+		{fmt.Errorf("query: evaluation stopped: %w", context.DeadlineExceeded), connect.CodeDeadlineExceeded, nil},
+		{fmt.Errorf("%w: work passed its budget of 5", service.ErrResourceExhausted), connect.CodeResourceExhausted, nil},
+		{errors.New("unclassified"), connect.CodeInvalidArgument, nil},
+		// A snapshot the host does not hold, or whose files changed (agni issue 1061).
+		{&service.SnapshotError{Name: "snapshots/gone"}, connect.CodeNotFound,
+			&webapi.SnapshotUnavailable{Name: "snapshots/gone", Reason: webapi.SnapshotUnavailable_REASON_MISSING}},
+		{fmt.Errorf("check: %w", &service.SnapshotError{Name: "snapshots/old", Stale: true, Changed: []string{"mount://m/d.edn", "mount://m/d.kicad_pcb"}}), connect.CodeFailedPrecondition,
+			&webapi.SnapshotUnavailable{Name: "snapshots/old", Reason: webapi.SnapshotUnavailable_REASON_STALE, Changed: []string{"mount://m/d.edn", "mount://m/d.kicad_pcb"}}},
+		{fmt.Errorf("%w: snapshots/taken", service.ErrAlreadyExists), connect.CodeAlreadyExists, nil},
 	}
 	for _, c := range cases {
-		if got := connect.CodeOf(toConnectErr(c.err)); got != c.want {
+		ce := ConnectError(c.err)
+		if got := ce.Code(); got != c.want {
 			t.Errorf("toConnectErr(%v) = %v, want %v", c.err, got, c.want)
+		}
+		var got *webapi.SnapshotUnavailable
+		for _, d := range ce.Details() {
+			if v, err := d.Value(); err == nil {
+				if su, ok := v.(*webapi.SnapshotUnavailable); ok {
+					got = su
+				}
+			}
+		}
+		if (got == nil) != (c.detail == nil) || (got != nil && !proto.Equal(got, c.detail)) {
+			t.Errorf("toConnectErr(%v) detail = %v, want %v", c.err, got, c.detail)
 		}
 	}
 	// The not-enabled gate carries the actionable hint.
@@ -125,9 +146,10 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 		Name:  "A",
 		Items: []review.Item{{ID: "1", Title: "t1", Note: "manual"}},
 	}}}
-	a := NewReview(service.NewReviewService(memReviewLoader{design: &ir.Design{}, man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, "", nil))
+	svc := service.NewReviewService(memReviewLoader{design: &ir.Design{}, man: man}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, "", nil)
+	a := NewReview(svc)
 	resp, err := a.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{
-		Manifest: service.ManifestProto(man), DesignUri: "mount://m/d.edn",
+		Manifest: service.ManifestProto(man), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.edn"),
 	}))
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -136,8 +158,13 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 		t.Fatalf("created review = %+v", resp.Msg)
 	}
 
-	failing := NewReview(service.NewReviewService(memReviewLoader{err: fmt.Errorf("no netlist: %w", service.ErrInvalidArgument)}, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, "", nil))
-	_, err = failing.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{Manifest: service.ManifestProto(man), DesignUri: "mount://m/d.edn"}))
+	// The loader fails once the design is ingested, so the error comes from the review's own read.
+	fl := &memReviewLoader{design: &ir.Design{}, man: man}
+	fsvc := service.NewReviewService(fl, service.NewMemReviewStore(), check.DefaultCatalog(), nil, nil, service.ReviewEnv{ProducerVersion: "test"}, "", nil)
+	snap := snapOf(t, fsvc.Snapshots(), "mount://m/d.edn")
+	fl.design, fl.err = nil, fmt.Errorf("no netlist: %w", service.ErrInvalidArgument)
+	failing := NewReview(fsvc)
+	_, err = failing.CreateReview(context.Background(), connect.NewRequest(&webapi.CreateReviewRequest{Manifest: service.ManifestProto(man), Snapshot: snap}))
 	if connect.CodeOf(err) != connect.CodeInvalidArgument {
 		t.Fatalf("want InvalidArgument, got %v", err)
 	}

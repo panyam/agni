@@ -24,8 +24,9 @@ import { type Selection, sameSelection } from "./selection.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 
 export interface PropertiesSources {
-  // getDesign is DesignService.GetDesign on whichever engine serves the page.
-  getDesign: (req: MessageInitShape<typeof GetDesignRequestSchema>) => Promise<GetDesignResponse>;
+  // getDesign is DesignService.GetDesign of the design uri names, on whichever engine serves the page,
+  // asking for readMask's paths. The source names the snapshot (agni issue 1061).
+  getDesign: (uri: string, readMask: string[]) => Promise<GetDesignResponse>;
   // drawn reads what the sheet on screen draws, or null when no drawing is on screen.
   drawn: () => { refs: string[]; nets: string[] } | null;
   // drawnOn asks the engine which sheets draw a component or a net. Absent, the panel lists none.
@@ -175,7 +176,7 @@ export class PropertiesPresenter {
     try {
       const asked = (q: string) => (this.src.ask ? this.src.ask(key, q).catch(() => [] as string[][]) : Promise.resolve([] as string[][]));
       const [resp, names, tps] = await Promise.all([
-        this.src.getDesign({ uri: key, readMask: { paths: ["name", ...INVENTORY_PATHS] } }),
+        this.src.getDesign(key, ["name", ...INVENTORY_PATHS]),
         asked(SERVED_QUERIES.pinNames),
         asked(SERVED_QUERIES.testPoints),
       ]);

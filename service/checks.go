@@ -73,6 +73,7 @@ type ConventionLoader interface {
 // baseConvention names the startup convention already composed into catalog, so a request that sends
 // its own replaces it rather than stacking on it; pass "" when the catalog carries none.
 func NewCheckService(loader Loader, catalog *check.Catalog, specs param.ParamProvider, baseConvention string, conventions ConventionLoader, projects *ProjectResolver) *CheckService {
+	projects = orEmptyResolver(projects)
 	return &CheckService{loader: loader, catalog: catalog, specs: specs, baseConvention: baseConvention, conventions: conventions, projects: projects}
 }
 
@@ -107,20 +108,28 @@ func (s *CheckService) GetNamingConvention(ctx context.Context, req *webapi.GetN
 	return &webapi.GetNamingConventionResponse{Convention: cfg}, nil
 }
 
-// ListRules returns the catalog a run under the same uri and overlay would use, each rule in its
-// wire form with its availability from check.Available. The uri is optional, and when given it
-// picks the project whose catalog is listed. The design itself is never loaded, so ListRules works
-// before a file is chosen.
+// Snapshots is the SnapshotService over this service's loader, resolver, datasheet corpus and base
+// convention, so a snapshot is composed exactly as a check of it reads (agni issue 1061). A host
+// serves it beside this service rather than building one of its own.
+func (s *CheckService) Snapshots() *SnapshotService {
+	return NewSnapshotService(s.loader, s.projects, s.specs, s.baseConvention)
+}
+
+// ListRules returns the catalog a check of the same snapshot would run, each rule in its wire form
+// with its availability from check.Available. The snapshot is optional, and without one the server's
+// own catalog is listed. The design's files are not read, so ListRules works before a file is chosen.
 func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
-	u, err := optionalArtifactURI(req.GetUri())
+	_, snap, ok, err := s.projects.OptionalSnapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	// A request convention replaces the server's (WS3-124), so listing the service's own catalog
+	// A snapshot's convention replaces the server's (WS3-124), so listing the service's own catalog
 	// would show rules that will not run and hide the ones that will.
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
-	if err != nil {
-		return nil, err
+	ov := snap.Overlay
+	if !ok {
+		if ov, err = s.projects.Overlay(ctx, artifact.URI{}, nil, s.baseConvention); err != nil {
+			return nil, err
+		}
 	}
 	cat, err := ov.Catalog(s.catalog)
 	if err != nil {
@@ -155,25 +164,13 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 // catalog. Each finding's sheets locate its subject in the design's geometry (WS9-024), and a
 // design with no resolvable geometry gets findings without sheets rather than an error.
 func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	// The snapshot resolved the tiers and composed the config when it was ingested (agni issue 1061),
+	// so a check of a companion analyses the netlist and annotates against the schematic (agni 656).
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	// Per-request overlay config (WS3-102) resolves through the same ComposeOverlay a review uses.
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
-	if err != nil {
-		return nil, err
-	}
-	board, err := optionalArtifactURI(req.GetBoardUri())
-	if err != nil {
-		return nil, err
-	}
-	// Tiers from the design's declaration, so a check addressed at a companion analyses the netlist
-	// and annotates against the schematic (agni issue 656).
-	nu, bu, gu, err := s.projects.TierURIs(ctx, u, board, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
+	ov, nu, bu, gu := snap.Overlay, snap.Netlist, snap.Board, snap.Geometry
 	b, err := buildModelEntry(ctx, s.loader, nu, bu, ov, s.specs, ReadBoard)
 	if err != nil {
 		return nil, err
@@ -217,48 +214,16 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	return resp, nil
 }
 
-// LoadDesign reads what a CheckDesign with the same uri, overlay, board and as_named would read before
-// its rules run, through the same model key, and runs nothing (agni issue 1061). The model is kept in
-// the loader's cache when it can be, so the check that follows finds it built. A host whose loader
-// persists reads also reports whether the board is now in that store.
-func (s *CheckService) LoadDesign(ctx context.Context, req *webapi.LoadDesignRequest) (*webapi.LoadDesignResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
-	if err != nil {
-		return nil, err
-	}
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
-	if err != nil {
-		return nil, err
-	}
-	board, err := optionalArtifactURI(req.GetBoardUri())
-	if err != nil {
-		return nil, err
-	}
-	nu, bu, _, err := s.projects.TierURIs(ctx, u, board, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
-	b, err := buildModelEntry(ctx, s.loader, nu, bu, ov, s.specs, ReadBoard)
-	if err != nil {
-		return nil, err
-	}
-	resp := &webapi.LoadDesignResponse{HasBoard: b.model.HasBoard()}
-	if p, ok := s.loader.(interface{ BoardPersisted(artifact.URI) bool }); ok && resp.HasBoard {
-		resp.BoardPersisted = p.BoardPersisted(boardReadURI(nu, bu))
-	}
-	return resp, nil
-}
-
 // GetExpectations returns a design's expected findings from its sidecar (WS6-006). A missing
 // sidecar yields an empty list, and only an invalid uri or a malformed sidecar is an error. The
 // `fires` entries come first, then the `pending` ones, which the client reconciles against
 // CheckDesign.
 func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpectationsRequest) (*webapi.GetExpectationsResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	e, err := s.loader.Expectations(ctx, u)
+	e, err := s.loader.Expectations(ctx, snap.Design)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
@@ -273,25 +238,16 @@ func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpec
 // MPN resolves to a seeded PartSpec with that spec's parameters. A nil provider or an unseeded design
 // yields an empty list rather than an error. The join needs no board, so none is passed.
 func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetComponentParamsRequest) (*webapi.GetComponentParamsResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	// Through the snapshot's overlay, as CheckDesign is, so the panel shows the same specs a check
+	// judges by, and its netlist rather than the name it was ingested under, which for a design
+	// folder names no file a reader takes (agni issue 736).
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	// Through the project's overlay, as CheckDesign is, so the panel shows the same specs a check
-	// judges by. It used the server's corpus alone, which inside a project with its own params/
-	// showed a different spec than the verdict rested on, or none.
-	ov, err := s.projects.Overlay(ctx, u, nil, s.baseConvention)
-	if err != nil {
-		return nil, err
-	}
+	ov := snap.Overlay
 	specs := ov.SpecsOver(s.specs)
-	// The entry, never the request URI, which for a design folder names no file a reader takes and
-	// failed every open with invalid_argument while the panel showed nothing (agni issue 736).
-	nu, _, _, err := s.projects.TierURIs(ctx, u, artifact.URI{}, false)
-	if err != nil {
-		return nil, err
-	}
-	m, err := BuildModelTier(ctx, s.loader, nu, artifact.URI{}, specs, SkipBoard, ov.ReadOptions()...)
+	m, err := BuildModelTier(ctx, s.loader, snap.Netlist, artifact.URI{}, specs, SkipBoard, ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

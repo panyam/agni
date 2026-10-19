@@ -14,12 +14,19 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkizAIKD1J1blF1ZXJ5UmVxdWVzdBINCgVxdWVyeRgBIAEoCRIuCgdvdmVybGF5GAIgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIRCglib2FyZF91cmkYAyABKAkSCwoDdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEj8KCGJpbmRpbmdzGAcgAygLMi0uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0LkJpbmRpbmdzRW50cnkSFgoOb21pdF9sb2NhdGlvbnMYCCABKAgSDQoFbGltaXQYCSABKAUaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASKvAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSEgoKY2VsbF9raW5kcxgFIAMoCRIRCgljZWxsX3JlZnMYBiADKAkSEwoLY2VsbF9lbnRpdHkYByADKAUSEgoKY2l0ZV9pbmRleBgIIAMoBRIQCghjZWxsX3doeRgJIAMoCUoECAIQA0oECAMQBEoECAQQBVIFY2l0ZXNSC2NlbGxfc2hlZXRzUgxjZWxsX3JlYXNvbnMidwoMQW5zd2VyRW50aXR5EgwKBGtpbmQYASABKAkSCwoDcmVmGAIgASgJEgsKA3BpbhgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkSLAoGcmVhc29uGAUgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uIu0CChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkSDAoEd29yaxgGIAEoAxJACghiaW5kaW5ncxgHIAMoCzIuLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2UuQmluZGluZ3NFbnRyeRIuCghlbnRpdGllcxgIIAMoCzIcLmFnbmkudjEud2ViYXBpLkFuc3dlckVudGl0eRIPCgdzb3VyY2VzGAkgAygJEg0KBXRvdGFsGAogASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAEiNgoKUXVlcnlWYWx1ZRIOCgR0ZXh0GAEgASgJSAASEAoGbnVtYmVyGAIgASgBSABCBgoEa2luZCJhChRMaXN0UmVsYXRpb25zUmVxdWVzdBIMCgRwYXRoGAEgASgJEgsKA3VyaRgCIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZyKAAQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCXNpZ25hdHVyZRgGIAEoCRISCgpkZWZpbml0aW9uGAcgAygJIscBCg1SZWxhdGlvbkVudHJ5EgwKBHBhdGgYASABKAkSEgoKZW50cnlfa2luZBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkSCwoDZG9jGAQgASgJEg4KBmRldGFpbBgFIAEoCRIOCgZtb2R1bGUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCRIQCghpbmZlcnJlZBgIIAMoCRIuCgdtZW1iZXJzGAkgAygLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSI9CgxFeGFtcGxlUXVlcnkSDQoFbGFiZWwYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSJZCgtFbnRpdHlRdWVyeRIMCgRraW5kGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkSDQoFYmluZHMYBCADKAkSDQoFbGFiZWwYBSABKAkiTAoLU2VhcmNoUXVlcnkSDQoFcXVlcnkYASABKAkSDwoHdGVhY2hlcxgCIAEoCRIMCgRiaW5kGAMgASgJEg8KB3BhdHRlcm4YBCABKAkijgIKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkSMwoOZW50aXR5X3F1ZXJpZXMYAyADKAsyGy5hZ25pLnYxLndlYmFwaS5FbnRpdHlRdWVyeRIxCgxzZWFyY2hfcXVlcnkYBCABKAsyGy5hZ25pLnYxLndlYmFwaS5TZWFyY2hRdWVyeRIsCgVlbnRyeRgFIAEoCzIdLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uRW50cnkiWAoIUXVlcnlTZXQSDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSKwoHcXVlcmllcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkixwEKCk5hbWVkUXVlcnkSDAoEbmFtZRgBIAEoCRINCgVxdWVyeRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRI6CghiaW5kaW5ncxgEIAMoCzIoLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkuQmluZGluZ3NFbnRyeRpLCg1CaW5kaW5nc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEud2ViYXBpLlF1ZXJ5VmFsdWU6AjgBIskBChFSdW5RdWVyaWVzUmVxdWVzdBIlCgNzZXQYASABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldBILCgN1cmkYAiABKAkSLgoHb3ZlcmxheRgDIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSEQoJYm9hcmRfdXJpGAQgASgJEhAKCGFzX25hbWVkGAUgASgIEhMKC3dvcmtfYnVkZ2V0GAYgASgDEhYKDm9taXRfbG9jYXRpb25zGAcgASgIIngKElJ1blF1ZXJpZXNSZXNwb25zZRINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIOCgZzb3VyY2UYAyABKAkSMQoHcmVzdWx0cxgEIAMoCzIgLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnlSZXN1bHQipgEKEE5hbWVkUXVlcnlSZXN1bHQSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIwCgZyZXN1bHQYAyABKAsyIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlEg0KBWVycm9yGAQgASgJEi4KCGVycm9yX2F0GAUgASgLMhwuYWduaS52MS53ZWJhcGkuVGV4dFBvc2l0aW9uIksKDFRleHRQb3NpdGlvbhIOCgZvZmZzZXQYASABKAUSDAoEbGluZRgCIAEoBRIOCgZjb2x1bW4YAyABKAUSDQoFY2FyZXQYBCABKAkiKgoUTGlzdFF1ZXJ5U2V0c1JlcXVlc3QSEgoKZGVzaWduX3VyaRgBIAEoCSJbChVMaXN0UXVlcnlTZXRzUmVzcG9uc2USDwoHcHJvamVjdBgBIAEoCRIxCgpxdWVyeV9zZXRzGAIgAygLMh0uYWduaS52MS53ZWJhcGkuTmFtZWRRdWVyeVNldCJUCg1OYW1lZFF1ZXJ5U2V0EgwKBG5hbWUYASABKAkSJQoDc2V0GAIgASgLMhguYWduaS52MS53ZWJhcGkuUXVlcnlTZXQSDgoGc291cmNlGAMgASgJIiQKFFBhcnNlUXVlcnlTZXRSZXF1ZXN0EgwKBHRleHQYASABKAkiPgoVUGFyc2VRdWVyeVNldFJlc3BvbnNlEiUKA3NldBgBIAEoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5U2V0MswDCgxRdWVyeVNlcnZpY2USTQoIUnVuUXVlcnkSHy5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlcXVlc3QaIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlElMKClJ1blF1ZXJpZXMSIS5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXNwb25zZRJcCg1MaXN0UmVsYXRpb25zEiQuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVzcG9uc2USXAoNTGlzdFF1ZXJ5U2V0cxIkLmFnbmkudjEud2ViYXBpLkxpc3RRdWVyeVNldHNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFF1ZXJ5U2V0c1Jlc3BvbnNlElwKDVBhcnNlUXVlcnlTZXQSJC5hZ25pLnYxLndlYmFwaS5QYXJzZVF1ZXJ5U2V0UmVxdWVzdBolLmFnbmkudjEud2ViYXBpLlBhcnNlUXVlcnlTZXRSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkitwIKD1J1blF1ZXJ5UmVxdWVzdBIQCghzbmFwc2hvdBgKIAEoCRINCgVxdWVyeRgBIAEoCRITCgt3b3JrX2J1ZGdldBgGIAEoAxI/CghiaW5kaW5ncxgHIAMoCzItLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdC5CaW5kaW5nc0VudHJ5EhYKDm9taXRfbG9jYXRpb25zGAggASgIEg0KBWxpbWl0GAkgASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAFKBAgCEANKBAgDEARKBAgEEAVKBAgFEAZSB292ZXJsYXlSCWJvYXJkX3VyaVIDdXJpUghhc19uYW1lZCKvAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSEgoKY2VsbF9raW5kcxgFIAMoCRIRCgljZWxsX3JlZnMYBiADKAkSEwoLY2VsbF9lbnRpdHkYByADKAUSEgoKY2l0ZV9pbmRleBgIIAMoBRIQCghjZWxsX3doeRgJIAMoCUoECAIQA0oECAMQBEoECAQQBVIFY2l0ZXNSC2NlbGxfc2hlZXRzUgxjZWxsX3JlYXNvbnMidwoMQW5zd2VyRW50aXR5EgwKBGtpbmQYASABKAkSCwoDcmVmGAIgASgJEgsKA3BpbhgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkSLAoGcmVhc29uGAUgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uIu0CChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkSDAoEd29yaxgGIAEoAxJACghiaW5kaW5ncxgHIAMoCzIuLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2UuQmluZGluZ3NFbnRyeRIuCghlbnRpdGllcxgIIAMoCzIcLmFnbmkudjEud2ViYXBpLkFuc3dlckVudGl0eRIPCgdzb3VyY2VzGAkgAygJEg0KBXRvdGFsGAogASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAEiNgoKUXVlcnlWYWx1ZRIOCgR0ZXh0GAEgASgJSAASEAoGbnVtYmVyGAIgASgBSABCBgoEa2luZCJxChRMaXN0UmVsYXRpb25zUmVxdWVzdBIQCghzbmFwc2hvdBgEIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIMCgRwYXRoGAEgASgJSgQIAhADUgN1cmkigAEKDFJlbGF0aW9uSW5mbxIMCgRuYW1lGAEgASgJEgwKBGFyZ3MYAiADKAkSDwoHc3VtbWFyeRgDIAEoCRIMCgRraW5kGAQgASgJEg4KBmRldGFpbBgFIAEoCRIRCglzaWduYXR1cmUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCSLHAQoNUmVsYXRpb25FbnRyeRIMCgRwYXRoGAEgASgJEhIKCmVudHJ5X2tpbmQYAiABKAkSEQoJc2lnbmF0dXJlGAMgASgJEgsKA2RvYxgEIAEoCRIOCgZkZXRhaWwYBSABKAkSDgoGbW9kdWxlGAYgASgJEhIKCmRlZmluaXRpb24YByADKAkSEAoIaW5mZXJyZWQYCCADKAkSLgoHbWVtYmVycxgJIAMoCzIdLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uRW50cnkiPQoMRXhhbXBsZVF1ZXJ5Eg0KBWxhYmVsGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkiWQoLRW50aXR5UXVlcnkSDAoEa2luZBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJEg0KBWJpbmRzGAQgAygJEg0KBWxhYmVsGAUgASgJIkwKC1NlYXJjaFF1ZXJ5Eg0KBXF1ZXJ5GAEgASgJEg8KB3RlYWNoZXMYAiABKAkSDAoEYmluZBgDIAEoCRIPCgdwYXR0ZXJuGAQgASgJIo4CChVMaXN0UmVsYXRpb25zUmVzcG9uc2USLwoJcmVsYXRpb25zGAEgAygLMhwuYWduaS52MS53ZWJhcGkuUmVsYXRpb25JbmZvEi4KCGV4YW1wbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuRXhhbXBsZVF1ZXJ5EjMKDmVudGl0eV9xdWVyaWVzGAMgAygLMhsuYWduaS52MS53ZWJhcGkuRW50aXR5UXVlcnkSMQoMc2VhcmNoX3F1ZXJ5GAQgASgLMhsuYWduaS52MS53ZWJhcGkuU2VhcmNoUXVlcnkSLAoFZW50cnkYBSABKAsyHS5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkVudHJ5IlgKCFF1ZXJ5U2V0Eg0KBXRpdGxlGAEgASgJEhAKCHByZWFtYmxlGAIgASgJEisKB3F1ZXJpZXMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5IscBCgpOYW1lZFF1ZXJ5EgwKBG5hbWUYASABKAkSDQoFcXVlcnkYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSOgoIYmluZGluZ3MYBCADKAsyKC5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5LkJpbmRpbmdzRW50cnkaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASK0AQoRUnVuUXVlcmllc1JlcXVlc3QSEAoIc25hcHNob3QYCCABKAkSJQoDc2V0GAEgASgLMhguYWduaS52MS53ZWJhcGkuUXVlcnlTZXQSEwoLd29ya19idWRnZXQYBiABKAMSFgoOb21pdF9sb2NhdGlvbnMYByABKAhKBAgCEANKBAgDEARKBAgEEAVKBAgFEAZSA3VyaVIHb3ZlcmxheVIJYm9hcmRfdXJpUghhc19uYW1lZCJ4ChJSdW5RdWVyaWVzUmVzcG9uc2USDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSDgoGc291cmNlGAMgASgJEjEKB3Jlc3VsdHMYBCADKAsyIC5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5UmVzdWx0IqYBChBOYW1lZFF1ZXJ5UmVzdWx0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSMAoGcmVzdWx0GAMgASgLMiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRINCgVlcnJvchgEIAEoCRIuCghlcnJvcl9hdBgFIAEoCzIcLmFnbmkudjEud2ViYXBpLlRleHRQb3NpdGlvbiJLCgxUZXh0UG9zaXRpb24SDgoGb2Zmc2V0GAEgASgFEgwKBGxpbmUYAiABKAUSDgoGY29sdW1uGAMgASgFEg0KBWNhcmV0GAQgASgJIjoKFExpc3RRdWVyeVNldHNSZXF1ZXN0EhAKCHNuYXBzaG90GAIgASgJSgQIARACUgpkZXNpZ25fdXJpIlsKFUxpc3RRdWVyeVNldHNSZXNwb25zZRIPCgdwcm9qZWN0GAEgASgJEjEKCnF1ZXJ5X3NldHMYAiADKAsyHS5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5U2V0IlQKDU5hbWVkUXVlcnlTZXQSDAoEbmFtZRgBIAEoCRIlCgNzZXQYAiABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldBIOCgZzb3VyY2UYAyABKAkiJAoUUGFyc2VRdWVyeVNldFJlcXVlc3QSDAoEdGV4dBgBIAEoCSI+ChVQYXJzZVF1ZXJ5U2V0UmVzcG9uc2USJQoDc2V0GAEgASgLMhguYWduaS52MS53ZWJhcGkuUXVlcnlTZXQyzAMKDFF1ZXJ5U2VydmljZRJNCghSdW5RdWVyeRIfLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USUwoKUnVuUXVlcmllcxIhLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1Jlc3BvbnNlElwKDUxpc3RSZWxhdGlvbnMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXNwb25zZRJcCg1MaXN0UXVlcnlTZXRzEiQuYWduaS52MS53ZWJhcGkuTGlzdFF1ZXJ5U2V0c1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UXVlcnlTZXRzUmVzcG9uc2USXAoNUGFyc2VRdWVyeVNldBIkLmFnbmkudjEud2ViYXBpLlBhcnNlUXVlcnlTZXRSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuUGFyc2VRdWVyeVNldFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
  */
 export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
+  /**
+   * snapshot names the design to query, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 10;
+   */
+  snapshot: string;
+
   /**
    * query is the datalog text, the same surface `agni query` accepts:
    *   component.mpn(?r,?m), component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
@@ -27,62 +34,6 @@ export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
    * @generated from field: string query = 1;
    */
   query: string;
-
-  /**
-   * overlay carries the per-request rule-catalog configuration (WS3-102). A query runs no rules, so
-   * only its LEXICON half does anything here — and it does a great deal.
-   *
-   * The lexicon decides which net names are rails, grounds, and feedback nodes, and it is applied at
-   * the design READ because those roles are resolved once at ingestion. So it does not merely add a
-   * relation: it changes the answer of `rail`, `feedback`, `pin.type`, and everything derived from
-   * them. A project whose rails are named function-first sees one rail on a four-rail board without
-   * it, which is a correct answer to a question they did not ask.
-   *
-   * That is also why this field is on the ad-hoc query surface at all. Authoring a lexicon is a loop
-   * (write a pattern, ask which nets are rails now, adjust), and query is the natural tool for that
-   * loop; without this it could not participate in it.
-   *
-   * The convention's RULES half is accepted and ignored, deliberately rather than by oversight: a
-   * project keeps one conventions file carrying both halves, and a query legitimately consumes only
-   * one of them.
-   *
-   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 2;
-   */
-  overlay?: OverlayConfig | undefined;
-
-  /**
-   * board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
-   * relations (board.layer, board.track_width, board.via_drill) have facts to range over. Empty means
-   * no board is attached, and those relations are then simply empty — which is indistinguishable, in
-   * a result table, from a board with nothing to report. Same ref semantics as `path`.
-   *
-   * @generated from field: string board_uri = 3;
-   */
-  boardUri: string;
-
-  /**
-   * uri names the design to query.
-   *
-   * @generated from field: string uri = 4;
-   */
-  uri: string;
-
-  /**
-   * as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-   * companion view of a different entry. Without it, a ref belonging to a declared design resolves
-   * to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-   * companion, copper from a board one.
-   *
-   * It exists because the CLI is a client of this service and carries the same flag. Resolution
-   * happens here, once, so a caller that wants the file itself has to be able to say so; without
-   * this field the service would silently override the CLI's own opt-out (agni issue 656).
-   *
-   * Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-   * how two views of one design are checked against each other.
-   *
-   * @generated from field: bool as_named = 5;
-   */
-  asNamed: boolean;
 
   /**
    * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
@@ -405,6 +356,23 @@ export const QueryValueSchema: GenMessage<QueryValue> = /*@__PURE__*/
  */
 export type ListRelationsRequest = Message<"agni.v1.webapi.ListRelationsRequest"> & {
   /**
+   * snapshot, "snapshots/{snapshot}", names the design whose config decides the vocabulary, its
+   * project's library and its own included (agni issue 1061). Empty lists the shipped vocabulary.
+   *
+   * @generated from field: string snapshot = 4;
+   */
+  snapshot: string;
+
+  /**
+   * overlay adds a config's libraries to the shipped vocabulary when no snapshot is named, which is
+   * how `agni query --relations --lib <dir>` lists a library's members before any design is read.
+   * With a snapshot it is refused, since the snapshot's config is already the vocabulary.
+   *
+   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 3;
+   */
+  overlay?: OverlayConfig | undefined;
+
+  /**
    * path names a place in the namespace tree to describe in `entry`: "net" a module,
    * "net.has_test_point" a member, and "." the root module. Empty asks for the flat catalog, as
    * before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
@@ -413,24 +381,6 @@ export type ListRelationsRequest = Message<"agni.v1.webapi.ListRelationsRequest"
    * @generated from field: string path = 1;
    */
   path: string;
-
-  /**
-   * uri, when set, names a design whose project's own library joins the catalog (agni issue 773), so
-   * its members list and describe beside the shipped ones. Empty answers for the shipped vocabulary
-   * alone. A project library that does not compose is an error rather than a catalog without it.
-   *
-   * @generated from field: string uri = 2;
-   */
-  uri: string;
-
-  /**
-   * overlay carries library modules sent with the request (AnalysisConfig.library_modules, agni
-   * issue 788), so the catalog lists and describes them as a query sent with the same overlay would
-   * read them. They join the design's project library when uri is set too.
-   *
-   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 3;
-   */
-  overlay?: OverlayConfig | undefined;
 };
 
 /**
@@ -849,32 +799,16 @@ export const NamedQuerySchema: GenMessage<NamedQuery> = /*@__PURE__*/
  */
 export type RunQueriesRequest = Message<"agni.v1.webapi.RunQueriesRequest"> & {
   /**
+   * snapshot names the design to query, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 8;
+   */
+  snapshot: string;
+
+  /**
    * @generated from field: agni.v1.webapi.QuerySet set = 1;
    */
   set?: QuerySet | undefined;
-
-  /**
-   * uri, overlay, board_uri and as_named mean what they mean on RunQueryRequest, and apply to the one
-   * read every query in the set shares.
-   *
-   * @generated from field: string uri = 2;
-   */
-  uri: string;
-
-  /**
-   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 3;
-   */
-  overlay?: OverlayConfig | undefined;
-
-  /**
-   * @generated from field: string board_uri = 4;
-   */
-  boardUri: string;
-
-  /**
-   * @generated from field: bool as_named = 5;
-   */
-  asNamed: boolean;
 
   /**
    * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
@@ -1036,11 +970,11 @@ export const TextPositionSchema: GenMessage<TextPosition> = /*@__PURE__*/
  */
 export type ListQuerySetsRequest = Message<"agni.v1.webapi.ListQuerySetsRequest"> & {
   /**
-   * design_uri is the design whose project's query sets are listed.
+   * snapshot names the design whose project's query sets to list, "snapshots/{snapshot}" (agni issue 1061).
    *
-   * @generated from field: string design_uri = 1;
+   * @generated from field: string snapshot = 2;
    */
-  designUri: string;
+  snapshot: string;
 };
 
 /**

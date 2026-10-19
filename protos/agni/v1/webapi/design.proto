@@ -86,23 +86,11 @@ message SheetRef {
 }
 
 message GetDesignRequest {
+  // snapshot names the design to describe, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 7;
   // layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
   // empty uses the default. Ignored for geometry-bearing files, which render faithfully.
   string layout = 1;
-  // uri names the design to load, "mount://<mount>/<path>".
-  string uri = 2;
-  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
-  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-  // companion, copper from a board one.
-  //
-  // It exists because the CLI is a client of this service and carries the same flag. Resolution
-  // happens here, once, so a caller that wants the file itself has to be able to say so; without
-  // this field the service would silently override the CLI's own opt-out (agni issue 656).
-  //
-  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-  // how two views of one design are checked against each other.
-  bool as_named = 3;
   // read_mask selects what the response carries (agni issue 836). Unset, the response is the summary
   // it has always been, with no IR, because the viewer asks on every open and a large board's IR is
   // megabytes. Set, it keeps exactly the paths named, over GetDesignResponse: `design` for the whole
@@ -117,6 +105,8 @@ message GetDesignRequest {
   // mask selects `design`.
   repeated string nets = 5;
   repeated string ref_des = 6;
+  reserved 2, 3;
+  reserved "uri", "as_named";
 }
 
 message GetDesignResponse {
@@ -180,6 +170,8 @@ message GetDesignResponse {
 }
 
 message GetSheetRequest {
+  // snapshot names the design whose sheet to draw, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 7;
   // sheet selects by id, name, or 0-based index; empty selects the first sheet.
   string sheet = 1;
   string layout = 2;
@@ -188,20 +180,8 @@ message GetSheetRequest {
   // symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
   // faithful layout (always the design's own symbols).
   SymbolSource symbols = 4;
-  // uri names the design the sheet belongs to.
-  string uri = 5;
-  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
-  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-  // companion, copper from a board one.
-  //
-  // It exists because the CLI is a client of this service and carries the same flag. Resolution
-  // happens here, once, so a caller that wants the file itself has to be able to say so; without
-  // this field the service would silently override the CLI's own opt-out (agni issue 656).
-  //
-  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-  // how two views of one design are checked against each other.
-  bool as_named = 6;
+  reserved 5, 6;
+  reserved "uri", "as_named";
 }
 
 message GetSheetResponse {
@@ -214,6 +194,8 @@ message GetSheetResponse {
 }
 
 message HighlightSheetRequest {
+  // snapshot names the design whose sheet to highlight, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 8;
   // sheet/layout/symbols select the same geometry as the GetSheet call being overlaid.
   string sheet = 1;
   string layout = 2;
@@ -223,12 +205,8 @@ message HighlightSheetRequest {
   SheetFormat format = 4;
   // specs are the highlight layers to resolve, in paint order (a later spec wins overlaps).
   repeated agni.v1.geom.HighlightSpec specs = 5;
-  // uri names the design the sheet belongs to.
-  string uri = 6;
-  // as_named matches GetSheetRequest's, and must, or a highlight would be drawn against a different
-  // artifact than the sheet it lands on: the two calls resolve one design and have to resolve it the
-  // same way.
-  bool as_named = 7;
+  reserved 6, 7;
+  reserved "uri", "as_named";
 }
 
 message HighlightSheetResponse {
@@ -241,22 +219,12 @@ message HighlightSheetResponse {
 }
 
 message GetLayoutReportRequest {
+  // snapshot names the design whose auto-layout to report on, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 4;
   // symbols selects the node artwork the report explains; unset means GLYPH.
   SymbolSource symbols = 1;
-  // uri names the design to report on.
-  string uri = 2;
-  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
-  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-  // companion, copper from a board one.
-  //
-  // It exists because the CLI is a client of this service and carries the same flag. Resolution
-  // happens here, once, so a caller that wants the file itself has to be able to say so; without
-  // this field the service would silently override the CLI's own opt-out (agni issue 656).
-  //
-  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-  // how two views of one design are checked against each other.
-  bool as_named = 3;
+  reserved 2, 3;
+  reserved "uri", "as_named";
 }
 
 message GetLayoutReportResponse {
@@ -275,8 +243,8 @@ enum TraceOutcome {
 }
 
 message TraceDesignRequest {
-  // uri names the design to trace over, "mount://<mount>/<path>".
-  string uri = 1;
+  // snapshot names the design to trace through, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 6;
   // from / to are the endpoint pins, as ref-des and pin designator.
   TraceEndpoint from = 2;
   TraceEndpoint to = 3;
@@ -285,10 +253,8 @@ message TraceDesignRequest {
   // the value it rests on: nothing about a route degrades with distance, so a no-route can be
   // re-asked wider and the reader has to be able to see what was asked the first time.
   int32 hops = 4;
-  // as_named reads exactly the artifact this uri names, as it does on every other design request.
-  // A trace resolves tiers too: the walk is over the netlist and the sheets come from the geometry
-  // companion, which for a netlist entry is a different artifact.
-  bool as_named = 5;
+  reserved 1, 5;
+  reserved "uri", "as_named";
 }
 
 // TraceEndpoint names one pin of one component.

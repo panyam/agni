@@ -22,9 +22,10 @@ service DiffService {
 // DiffDesignsRequest names the two designs: a is the old revision, b the new, each as a
 // artifact URI like every other file-addressing request.
 message DiffDesignsRequest {
-  // a_uri is the OLD design and b_uri the NEW one; the report is what changed from a to b.
-  string a_uri = 1;
-  string b_uri = 2;
+  // a_snapshot names the earlier revision, "snapshots/{snapshot}" (agni issue 1061).
+  string a_snapshot = 5;
+  // b_snapshot names the later revision, "snapshots/{snapshot}" (agni issue 1061).
+  string b_snapshot = 6;
   // near_renames, when set, also pairs a net that was renamed AND changed slightly with its old
   // self, reported as renamed-approx with the evidence behind each pairing (agni issue 817). Unset
   // is off, as `agni diff` is without --rename-approx: the pass ASSIGNS a best match among
@@ -36,6 +37,8 @@ message DiffDesignsRequest {
   // what changed and a large board has thousands of unchanged nets. The status maps the viewer tints
   // by are unaffected. A net's connections are in the design itself (GetDesign's read_mask).
   bool include_equal = 4;
+  reserved 1, 2;
+  reserved "a_uri", "b_uri";
 }
 
 // NearRenameOptions tunes the near-rename pass. It matches nets by CONNECTIVITY, never by name: an

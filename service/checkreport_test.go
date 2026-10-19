@@ -14,7 +14,7 @@ import (
 
 // reportRun runs the catalog over a design with one unpulled I2C net, so the run has a finding, a
 // failing verdict and passing ones, and returns the service that ran it.
-func reportRun(t *testing.T) (*CheckService, *webapi.CheckDesignResponse) {
+func reportRun(t *testing.T) (*CheckService, *webapi.CheckDesignResponse, string) {
 	t.Helper()
 	d := &ir.Design{Nets: []*ir.Net{{
 		Name:        "SDA",
@@ -22,22 +22,23 @@ func reportRun(t *testing.T) (*CheckService, *webapi.CheckDesignResponse) {
 	}}}
 	svc := NewCheckService(fakeLoader{design: d, hash: "sha256:abc"}, check.DefaultCatalog(), nil, "", nil, nil).
 		WithEnv(ReviewEnv{ProducerVersion: "v9.9.9-test", Intent: true})
-	run, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/board.edn", Rules: []string{"i2c-pull-up"}})
+	snap := snapOf(t, svc.Snapshots(), "mount://m/board.edn")
+	run, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snap, Rules: []string{"i2c-pull-up"}})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(run.GetFindings()) == 0 || len(run.GetVerdicts()) == 0 {
 		t.Fatalf("the run found %d findings and %d verdicts, so the report has nothing to carry", len(run.GetFindings()), len(run.GetVerdicts()))
 	}
-	return svc, run
+	return svc, run, snap
 }
 
 // TestRenderCheckReportWritesTheResultsDocument holds the JSON form to the document `agni check
 // --results-out` writes: the producer, the design's hash, the selected catalog and the run's findings.
 func TestRenderCheckReportWritesTheResultsDocument(t *testing.T) {
-	svc, run := reportRun(t)
+	svc, run, snap := reportRun(t)
 	resp, err := svc.RenderCheckReport(context.Background(), &webapi.RenderCheckReportRequest{
-		Uri: "mount://m/board.edn", Rules: []string{"i2c-pull-up"}, Run: run,
+		Snapshot: snap, Rules: []string{"i2c-pull-up"}, Run: run,
 		Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON,
 	})
 	if err != nil {
@@ -71,11 +72,11 @@ func TestRenderCheckReportWritesTheResultsDocument(t *testing.T) {
 // TestRenderCheckReportWritesTheVerdictPage holds the HTML form to the run's verdicts, and its links
 // to what the caller asked for.
 func TestRenderCheckReportWritesTheVerdictPage(t *testing.T) {
-	svc, run := reportRun(t)
+	svc, run, snap := reportRun(t)
 	render := func(links *webapi.ReportLinks) string {
 		t.Helper()
 		resp, err := svc.RenderCheckReport(context.Background(), &webapi.RenderCheckReportRequest{
-			Uri: "mount://m/board.edn", Rules: []string{"i2c-pull-up"}, Run: run, Links: links,
+			Snapshot: snap, Rules: []string{"i2c-pull-up"}, Run: run, Links: links,
 			Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML,
 		})
 		if err != nil {
@@ -104,10 +105,10 @@ func TestRenderCheckReportWritesTheVerdictPage(t *testing.T) {
 }
 
 func TestRenderCheckReportRefusesAnIncompleteRequest(t *testing.T) {
-	svc, run := reportRun(t)
+	svc, run, snap := reportRun(t)
 	for name, req := range map[string]*webapi.RenderCheckReportRequest{
-		"no run":    {Uri: "mount://m/board.edn", Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML},
-		"no format": {Uri: "mount://m/board.edn", Run: run},
+		"no run":    {Snapshot: snap, Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML},
+		"no format": {Snapshot: snap, Run: run},
 	} {
 		if _, err := svc.RenderCheckReport(context.Background(), req); !errors.Is(err, ErrInvalidArgument) {
 			t.Errorf("%s: err = %v, want ErrInvalidArgument", name, err)

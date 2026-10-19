@@ -2,12 +2,12 @@ from __future__ import annotations
 
 import pytest
 
-from agni import CLI_ONLY, AgniError, CliUnsupported, Client, parse
+from agni import CLI_ONLY, AgniError, CliTransport, CliUnsupported, Client, parse
 from agni.transport import _unknown_field_paths
 from agni.v1.param import param_pb2
-from agni.v1.webapi import checks_pb2, query_pb2, validate_pb2
+from agni.v1.webapi import checks_pb2, query_pb2, snapshot_pb2, validate_pb2
 
-from conftest import DESIGN, FIXTURE
+from conftest import DESIGN, FIXTURE, snap
 
 BAD_QUERY = "x"
 
@@ -25,23 +25,106 @@ def test_lenient_parse_skips_a_field_from_a_newer_server():
 
 def test_connect_surfaces_the_error_code_and_message(connect: Client):
     with pytest.raises(AgniError) as e:
-        connect.run_query(uri=DESIGN, query=BAD_QUERY)
+        connect.run_query(snapshot=snap(connect), query=BAD_QUERY)
     assert e.value.code == "invalid_argument"
     assert "neither an atom nor a comparison" in str(e.value)
 
 
 def test_cli_surfaces_the_exit_status_and_stderr(cli: Client):
     with pytest.raises(AgniError) as e:
-        cli.run_query(uri=DESIGN, query=BAD_QUERY)
+        cli.run_query(snapshot=snap(cli), query=BAD_QUERY)
     assert e.value.code.startswith("exit_") and e.value.code != "exit_0"
     assert "neither an atom nor a comparison" in e.value.detail
 
 
 def test_cli_refuses_a_field_it_has_no_flag_for(cli: Client):
-    req = query_pb2.RunQueryRequest(uri=DESIGN, query="entity(?x, ?k) => ?x")
-    req.overlay.SetInParent()
+    # An overlay carrying nothing the CLI sends, which no command could be given, is refused when the
+    # snapshot is defined.
+    req = snapshot_pb2.IngestRequest(snapshot=snapshot_pb2.Snapshot(uri=DESIGN))
+    req.snapshot.overlay.SetInParent()
     with pytest.raises(CliUnsupported, match="overlay"):
-        cli.run_query(req)
+        cli.ingest_snapshot(req)
+    # A library overlay is refused by a command with no --lib, at the question.
+    lib = snap(cli, overlay={"config": {"library_modules": [{"path": "probe", "text": "x(?n: net) :- net.name(?n);"}]}})
+    with pytest.raises(CliUnsupported, match="overlay"):
+        cli.check_design(snapshot=lib)
+    # And a request field the command has no flag for, as before snapshots.
+    with pytest.raises(CliUnsupported, match="work_budget"):
+        cli.check_design(snapshot=snap(cli), work_budget=5)
+    with pytest.raises(CliUnsupported, match="geometry_uri"):
+        cli.ingest(DESIGN, geometry_uri=DESIGN + "/gateway.eds")
+
+
+class _Recording(CliTransport):
+    """A CliTransport that records each argv instead of running it, and answers an empty message."""
+
+    def __init__(self) -> None:
+        super().__init__("agni")
+        self.argvs: list = []
+
+    def _run_text(self, args, allow_failure=False, stdin=None):
+        self.argvs.append(list(args))
+        return "{}"
+
+
+def test_cli_ingest_get_delete_round_trip():
+    t = _Recording()
+    c = Client(t)
+    name = c.ingest(DESIGN, board_uri="mount://tut/boards/x.kicad_pcb")
+    assert name == "snapshots/cli-1"
+    assert c.ingest(DESIGN) == "snapshots/cli-2", "each ingest is a snapshot of its own"
+    got = c.get_snapshot(name)
+    assert (got.name, got.uri, got.board_uri, got.as_named) == (name, DESIGN, "mount://tut/boards/x.kicad_pcb", False)
+    assert not got.HasField("tiers"), "the CLI resolves no tiers"
+    assert [s.name for s in c.list_snapshots().snapshots] == ["snapshots/cli-1", "snapshots/cli-2"]
+    assert [s.name for s in c.list_snapshots(filter='uri="nope"').snapshots] == []
+    # A named ingest of the same definition is that snapshot again, and of another is refused.
+    assert c.ingest(DESIGN, snapshot_id="mine") == "snapshots/mine"
+    assert c.ingest(DESIGN, snapshot_id="mine") == "snapshots/mine"
+    with pytest.raises(AgniError) as e:
+        c.ingest(DESIGN, as_named=True, snapshot_id="mine")
+    assert e.value.code == "already_exists"
+    up = c.update_snapshot(snapshot={"name": name, "as_named": True}, update_mask={"paths": ["as_named"]})
+    assert (up.uri, up.board_uri, up.as_named) == (DESIGN, "mount://tut/boards/x.kicad_pcb", True)
+    c.delete_snapshot(name)
+    for ask in (lambda: c.get_snapshot(name), lambda: c.delete_snapshot(name), lambda: c.run_query(snapshot=name, query="q")):
+        with pytest.raises(AgniError) as e:
+            ask()
+        assert e.value.code == "not_found"
+    assert t.argvs == [], "no snapshot rpc, and no question naming a missing snapshot, runs the binary"
+
+
+def test_cli_argv_carries_the_snapshot_definition():
+    """The board and naming a snapshot defines reach each command as the flags the old request
+    fields produced, and its library as --lib."""
+    t = _Recording()
+    c = Client(t)
+    board = c.ingest(DESIGN, board_uri="mount://tut/boards/b.kicad_pcb", as_named=True)
+    named = c.ingest(DESIGN + "/gateway.edn", as_named=True)
+    lib = c.ingest(DESIGN, overlay={"config": {"library_modules": [{"path": "probe", "text": "x(?n: net) :- net.name(?n);"}]}})
+    plain = c.ingest(DESIGN)
+    c.check_design(snapshot=board, rules=["r1"])
+    c.run_query(snapshot=board, query="q", work_budget=7)
+    c.create_review(snapshot=board, manifest={"name": "m"})
+    c.get_layout_report(snapshot=named)
+    c.get_design(snapshot=named)
+    c.diff_designs(a_snapshot=plain, b_snapshot=plain)
+    c.run_query(snapshot=lib, query="q")
+    assert t.argvs[:6] == [
+        ["check", DESIGN, "--format", "json", "--verdicts", "--rule", "r1", "--board-path", "mount://tut/boards/b.kicad_pcb", "--as-named"],
+        ["query", DESIGN, "q", "--format", "json", "--budget", "7", "--board-path", "mount://tut/boards/b.kicad_pcb", "--as-named"],
+        ["review", DESIGN, "--checklist", "-", "--format", "json", "--board-path", "mount://tut/boards/b.kicad_pcb", "--as-named"],
+        ["render", DESIGN + "/gateway.edn", "--report", "--report-format", "json", "--as-named"],
+        ["stats", DESIGN + "/gateway.edn", "--format", "json", "--as-named"],
+        ["diff", DESIGN, DESIGN, "--format", "json"],
+    ]
+    assert t.argvs[6][:5] == ["query", DESIGN, "q", "--format", "json"] and t.argvs[6][5] == "--lib", t.argvs[6]
+    # A definition field a command has no flag for is refused at the question, never dropped.
+    with pytest.raises(CliUnsupported, match="board_uri"):
+        c.get_design(snapshot=board)
+    with pytest.raises(CliUnsupported, match="as_named"):
+        c.diff_designs(a_snapshot=named, b_snapshot=named)
+    assert len(t.argvs) == 7
 
 
 def test_cli_refuses_an_rpc_no_command_serves(cli: Client):

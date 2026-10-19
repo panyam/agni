@@ -320,39 +320,21 @@ func (x *ReviewSummary) GetProvisional() int32 {
 
 type CreateReviewRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot names the design this run is about, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,10,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// parent is the project the run belongs to, "projects/{project}", empty when the design resolves
 	// to none. It is the CALLER's answer rather than something derived here, because the caller has
 	// already resolved the design to decide which config to send and re-deriving it in the service
 	// would be a second resolution that could disagree with the first.
 	Parent string `protobuf:"bytes,6,opt,name=parent,proto3" json:"parent,omitempty"`
-	// design_uri is the one design this run is about.
-	//
-	// A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
-	// a host path. Nothing above the Loader may treat it as one.
-	DesignUri string `protobuf:"bytes,1,opt,name=design_uri,json=designUri,proto3" json:"design_uri,omitempty"`
-	// board_uri attaches a board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC items
-	// resolve pass/fail rather than not-applicable (WS3-089). It WINS over a board the design declares.
-	// Empty means the declared board when there is one, and otherwise none, in which case a netlist
-	// entry reads its board items not-applicable (agni issue 646).
-	BoardUri string `protobuf:"bytes,2,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	// ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
 	// (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
 	RatifiedFloor float64 `protobuf:"fixed64,3,opt,name=ratified_floor,json=ratifiedFloor,proto3" json:"ratified_floor,omitempty"`
-	// overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
-	// service was constructed with.
-	Overlay *OverlayConfig `protobuf:"bytes,4,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
 	// that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
 	// held to exactly the same rules as one read from a file. It is also stored with the run, so the
 	// archived document scores against the checklist it actually saw.
 	Manifest *checks.ReviewManifest `protobuf:"bytes,5,opt,name=manifest,proto3" json:"manifest,omitempty"`
-	// as_named reads exactly the artifact design_uri names, even when the enclosing design declares it a
-	// companion view of a different entry. Without it, the design's tiers are resolved the way every
-	// other analysis request resolves them: analysis from the entry, copper from a declared board.
-	//
-	// It exists because the CLI's `review` is a client of this service and carries the same flag, so
-	// resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
-	AsNamed bool `protobuf:"varint,7,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
 	// a fact base counts, candidate comparisons, each row a generator emits and the connections a
 	// circuit walk examines. It can only LOWER the
@@ -396,23 +378,16 @@ func (*CreateReviewRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{4}
 }
 
+func (x *CreateReviewRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
 func (x *CreateReviewRequest) GetParent() string {
 	if x != nil {
 		return x.Parent
-	}
-	return ""
-}
-
-func (x *CreateReviewRequest) GetDesignUri() string {
-	if x != nil {
-		return x.DesignUri
-	}
-	return ""
-}
-
-func (x *CreateReviewRequest) GetBoardUri() string {
-	if x != nil {
-		return x.BoardUri
 	}
 	return ""
 }
@@ -424,25 +399,11 @@ func (x *CreateReviewRequest) GetRatifiedFloor() float64 {
 	return 0
 }
 
-func (x *CreateReviewRequest) GetOverlay() *OverlayConfig {
-	if x != nil {
-		return x.Overlay
-	}
-	return nil
-}
-
 func (x *CreateReviewRequest) GetManifest() *checks.ReviewManifest {
 	if x != nil {
 		return x.Manifest
 	}
 	return nil
-}
-
-func (x *CreateReviewRequest) GetAsNamed() bool {
-	if x != nil {
-		return x.AsNamed
-	}
-	return false
 }
 
 func (x *CreateReviewRequest) GetWorkBudget() int64 {
@@ -681,8 +642,7 @@ func (x *DeleteReviewRequest) GetName() string {
 
 type GetReviewManifestRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// uri names the stored checklist, with the same semantics as CreateReviewRequest.board_uri: a key
-	// the Loader resolves, never a host path.
+	// uri names the stored checklist, a key the Loader resolves, never a host path.
 	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -771,9 +731,8 @@ func (x *GetReviewManifestResponse) GetManifest() *checks.ReviewManifest {
 
 type ListChecklistsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// design_uri is the design whose project's checklists are listed. A URI's authority is a key the
-	// injected Loader resolves, never a host path.
-	DesignUri     string `protobuf:"bytes,1,opt,name=design_uri,json=designUri,proto3" json:"design_uri,omitempty"`
+	// snapshot names the design whose checklists to list, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot      string `protobuf:"bytes,2,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -808,9 +767,9 @@ func (*ListChecklistsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_review_proto_rawDescGZIP(), []int{11}
 }
 
-func (x *ListChecklistsRequest) GetDesignUri() string {
+func (x *ListChecklistsRequest) GetSnapshot() string {
 	if x != nil {
-		return x.DesignUri
+		return x.Snapshot
 	}
 	return ""
 }
@@ -891,19 +850,17 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\banswered\x18\x03 \x01(\x05R\banswered\x12\x12\n" +
 	"\x04pass\x18\x04 \x01(\x05R\x04pass\x12\x12\n" +
 	"\x04fail\x18\x05 \x01(\x05R\x04fail\x12 \n" +
-	"\vprovisional\x18\x06 \x01(\x05R\vprovisional\"\xe6\x02\n" +
-	"\x13CreateReviewRequest\x12\x16\n" +
-	"\x06parent\x18\x06 \x01(\tR\x06parent\x12\x1d\n" +
-	"\n" +
-	"design_uri\x18\x01 \x01(\tR\tdesignUri\x12\x1b\n" +
-	"\tboard_uri\x18\x02 \x01(\tR\bboardUri\x12%\n" +
-	"\x0eratified_floor\x18\x03 \x01(\x01R\rratifiedFloor\x127\n" +
-	"\aoverlay\x18\x04 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12:\n" +
-	"\bmanifest\x18\x05 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\x12\x19\n" +
-	"\bas_named\x18\a \x01(\bR\aasNamed\x12\x1f\n" +
+	"\vprovisional\x18\x06 \x01(\x05R\vprovisional\"\xb4\x02\n" +
+	"\x13CreateReviewRequest\x12\x1a\n" +
+	"\bsnapshot\x18\n" +
+	" \x01(\tR\bsnapshot\x12\x16\n" +
+	"\x06parent\x18\x06 \x01(\tR\x06parent\x12%\n" +
+	"\x0eratified_floor\x18\x03 \x01(\x01R\rratifiedFloor\x12:\n" +
+	"\bmanifest\x18\x05 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\x12\x1f\n" +
 	"\vwork_budget\x18\b \x01(\x03R\n" +
 	"workBudget\x12#\n" +
-	"\rvalidate_only\x18\t \x01(\bR\fvalidateOnly\"&\n" +
+	"\rvalidate_only\x18\t \x01(\bR\fvalidateOnlyJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03J\x04\b\x04\x10\x05J\x04\b\a\x10\bR\n" +
+	"design_uriR\tboard_uriR\aoverlayR\bas_named\"&\n" +
 	"\x10GetReviewRequest\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\"\x80\x01\n" +
 	"\x12ListReviewsRequest\x12\x16\n" +
@@ -920,10 +877,10 @@ const file_agni_v1_webapi_review_proto_rawDesc = "" +
 	"\x18GetReviewManifestRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"W\n" +
 	"\x19GetReviewManifestResponse\x12:\n" +
-	"\bmanifest\x18\x01 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\"6\n" +
-	"\x15ListChecklistsRequest\x12\x1d\n" +
-	"\n" +
-	"design_uri\x18\x01 \x01(\tR\tdesignUri\"r\n" +
+	"\bmanifest\x18\x01 \x01(\v2\x1e.agni.v1.checks.ReviewManifestR\bmanifest\"E\n" +
+	"\x15ListChecklistsRequest\x12\x1a\n" +
+	"\bsnapshot\x18\x02 \x01(\tR\bsnapshotJ\x04\b\x01\x10\x02R\n" +
+	"design_uri\"r\n" +
 	"\x16ListChecklistsResponse\x12\x18\n" +
 	"\aproject\x18\x01 \x01(\tR\aproject\x12>\n" +
 	"\n" +
@@ -967,40 +924,38 @@ var file_agni_v1_webapi_review_proto_goTypes = []any{
 	(*ListChecklistsResponse)(nil),     // 12: agni.v1.webapi.ListChecklistsResponse
 	(*ReportLinks)(nil),                // 13: agni.v1.webapi.ReportLinks
 	(*checks.CheckResults)(nil),        // 14: agni.v1.checks.CheckResults
-	(*OverlayConfig)(nil),              // 15: agni.v1.webapi.OverlayConfig
-	(*checks.ReviewManifest)(nil),      // 16: agni.v1.checks.ReviewManifest
-	(*NamedChecklist)(nil),             // 17: agni.v1.webapi.NamedChecklist
-	(*emptypb.Empty)(nil),              // 18: google.protobuf.Empty
+	(*checks.ReviewManifest)(nil),      // 15: agni.v1.checks.ReviewManifest
+	(*NamedChecklist)(nil),             // 16: agni.v1.webapi.NamedChecklist
+	(*emptypb.Empty)(nil),              // 17: google.protobuf.Empty
 }
 var file_agni_v1_webapi_review_proto_depIdxs = []int32{
 	2,  // 0: agni.v1.webapi.RenderReviewReportRequest.review:type_name -> agni.v1.webapi.Review
 	13, // 1: agni.v1.webapi.RenderReviewReportRequest.links:type_name -> agni.v1.webapi.ReportLinks
 	14, // 2: agni.v1.webapi.Review.results:type_name -> agni.v1.checks.CheckResults
 	3,  // 3: agni.v1.webapi.Review.summary:type_name -> agni.v1.webapi.ReviewSummary
-	15, // 4: agni.v1.webapi.CreateReviewRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	16, // 5: agni.v1.webapi.CreateReviewRequest.manifest:type_name -> agni.v1.checks.ReviewManifest
-	2,  // 6: agni.v1.webapi.ListReviewsResponse.reviews:type_name -> agni.v1.webapi.Review
-	16, // 7: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
-	17, // 8: agni.v1.webapi.ListChecklistsResponse.checklists:type_name -> agni.v1.webapi.NamedChecklist
-	4,  // 9: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
-	5,  // 10: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
-	6,  // 11: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
-	8,  // 12: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
-	9,  // 13: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
-	11, // 14: agni.v1.webapi.ReviewService.ListChecklists:input_type -> agni.v1.webapi.ListChecklistsRequest
-	0,  // 15: agni.v1.webapi.ReviewService.RenderReviewReport:input_type -> agni.v1.webapi.RenderReviewReportRequest
-	2,  // 16: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
-	2,  // 17: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
-	7,  // 18: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
-	18, // 19: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
-	10, // 20: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
-	12, // 21: agni.v1.webapi.ReviewService.ListChecklists:output_type -> agni.v1.webapi.ListChecklistsResponse
-	1,  // 22: agni.v1.webapi.ReviewService.RenderReviewReport:output_type -> agni.v1.webapi.RenderReviewReportResponse
-	16, // [16:23] is the sub-list for method output_type
-	9,  // [9:16] is the sub-list for method input_type
-	9,  // [9:9] is the sub-list for extension type_name
-	9,  // [9:9] is the sub-list for extension extendee
-	0,  // [0:9] is the sub-list for field type_name
+	15, // 4: agni.v1.webapi.CreateReviewRequest.manifest:type_name -> agni.v1.checks.ReviewManifest
+	2,  // 5: agni.v1.webapi.ListReviewsResponse.reviews:type_name -> agni.v1.webapi.Review
+	15, // 6: agni.v1.webapi.GetReviewManifestResponse.manifest:type_name -> agni.v1.checks.ReviewManifest
+	16, // 7: agni.v1.webapi.ListChecklistsResponse.checklists:type_name -> agni.v1.webapi.NamedChecklist
+	4,  // 8: agni.v1.webapi.ReviewService.CreateReview:input_type -> agni.v1.webapi.CreateReviewRequest
+	5,  // 9: agni.v1.webapi.ReviewService.GetReview:input_type -> agni.v1.webapi.GetReviewRequest
+	6,  // 10: agni.v1.webapi.ReviewService.ListReviews:input_type -> agni.v1.webapi.ListReviewsRequest
+	8,  // 11: agni.v1.webapi.ReviewService.DeleteReview:input_type -> agni.v1.webapi.DeleteReviewRequest
+	9,  // 12: agni.v1.webapi.ReviewService.GetReviewManifest:input_type -> agni.v1.webapi.GetReviewManifestRequest
+	11, // 13: agni.v1.webapi.ReviewService.ListChecklists:input_type -> agni.v1.webapi.ListChecklistsRequest
+	0,  // 14: agni.v1.webapi.ReviewService.RenderReviewReport:input_type -> agni.v1.webapi.RenderReviewReportRequest
+	2,  // 15: agni.v1.webapi.ReviewService.CreateReview:output_type -> agni.v1.webapi.Review
+	2,  // 16: agni.v1.webapi.ReviewService.GetReview:output_type -> agni.v1.webapi.Review
+	7,  // 17: agni.v1.webapi.ReviewService.ListReviews:output_type -> agni.v1.webapi.ListReviewsResponse
+	17, // 18: agni.v1.webapi.ReviewService.DeleteReview:output_type -> google.protobuf.Empty
+	10, // 19: agni.v1.webapi.ReviewService.GetReviewManifest:output_type -> agni.v1.webapi.GetReviewManifestResponse
+	12, // 20: agni.v1.webapi.ReviewService.ListChecklists:output_type -> agni.v1.webapi.ListChecklistsResponse
+	1,  // 21: agni.v1.webapi.ReviewService.RenderReviewReport:output_type -> agni.v1.webapi.RenderReviewReportResponse
+	15, // [15:22] is the sub-list for method output_type
+	8,  // [8:15] is the sub-list for method input_type
+	8,  // [8:8] is the sub-list for extension type_name
+	8,  // [8:8] is the sub-list for extension extendee
+	0,  // [0:8] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_review_proto_init() }

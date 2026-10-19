@@ -24,46 +24,12 @@ const (
 
 type RunQueryRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot names the design to query, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,10,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// query is the datalog text, the same surface `agni query` accepts:
 	//
 	//	component.mpn(?r,?m), component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
-	// overlay carries the per-request rule-catalog configuration (WS3-102). A query runs no rules, so
-	// only its LEXICON half does anything here — and it does a great deal.
-	//
-	// The lexicon decides which net names are rails, grounds, and feedback nodes, and it is applied at
-	// the design READ because those roles are resolved once at ingestion. So it does not merely add a
-	// relation: it changes the answer of `rail`, `feedback`, `pin.type`, and everything derived from
-	// them. A project whose rails are named function-first sees one rail on a four-rail board without
-	// it, which is a correct answer to a question they did not ask.
-	//
-	// That is also why this field is on the ad-hoc query surface at all. Authoring a lexicon is a loop
-	// (write a pattern, ask which nets are rails now, adjust), and query is the natural tool for that
-	// loop; without this it could not participate in it.
-	//
-	// The convention's RULES half is accepted and ignored, deliberately rather than by oversight: a
-	// project keeps one conventions file carrying both halves, and a query legitimately consumes only
-	// one of them.
-	Overlay *OverlayConfig `protobuf:"bytes,2,opt,name=overlay,proto3" json:"overlay,omitempty"`
-	// board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
-	// relations (board.layer, board.track_width, board.via_drill) have facts to range over. Empty means
-	// no board is attached, and those relations are then simply empty — which is indistinguishable, in
-	// a result table, from a board with nothing to report. Same ref semantics as `path`.
-	BoardUri string `protobuf:"bytes,3,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
-	// uri names the design to query.
-	Uri string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
-	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
-	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-	// companion, copper from a board one.
-	//
-	// It exists because the CLI is a client of this service and carries the same flag. Resolution
-	// happens here, once, so a caller that wants the file itself has to be able to say so; without
-	// this field the service would silently override the CLI's own opt-out (agni issue 656).
-	//
-	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-	// how two views of one design are checked against each other.
-	AsNamed bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
 	// a fact base counts, candidate comparisons, each row a generator emits and the connections a
 	// circuit walk examines. It can only LOWER the
@@ -122,39 +88,18 @@ func (*RunQueryRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{0}
 }
 
+func (x *RunQueryRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
 func (x *RunQueryRequest) GetQuery() string {
 	if x != nil {
 		return x.Query
 	}
 	return ""
-}
-
-func (x *RunQueryRequest) GetOverlay() *OverlayConfig {
-	if x != nil {
-		return x.Overlay
-	}
-	return nil
-}
-
-func (x *RunQueryRequest) GetBoardUri() string {
-	if x != nil {
-		return x.BoardUri
-	}
-	return ""
-}
-
-func (x *RunQueryRequest) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *RunQueryRequest) GetAsNamed() bool {
-	if x != nil {
-		return x.AsNamed
-	}
-	return false
 }
 
 func (x *RunQueryRequest) GetWorkBudget() int64 {
@@ -622,19 +567,18 @@ func (*QueryValue_Number) isQueryValue_Kind() {}
 
 type ListRelationsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot, "snapshots/{snapshot}", names the design whose config decides the vocabulary, its
+	// project's library and its own included (agni issue 1061). Empty lists the shipped vocabulary.
+	Snapshot string `protobuf:"bytes,4,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	// overlay adds a config's libraries to the shipped vocabulary when no snapshot is named, which is
+	// how `agni query --relations --lib <dir>` lists a library's members before any design is read.
+	// With a snapshot it is refused, since the snapshot's config is already the vocabulary.
+	Overlay *OverlayConfig `protobuf:"bytes,3,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// path names a place in the namespace tree to describe in `entry`: "net" a module,
 	// "net.has_test_point" a member, and "." the root module. Empty asks for the flat catalog, as
 	// before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
 	// with the suggestion a query would get.
-	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
-	// uri, when set, names a design whose project's own library joins the catalog (agni issue 773), so
-	// its members list and describe beside the shipped ones. Empty answers for the shipped vocabulary
-	// alone. A project library that does not compose is an error rather than a catalog without it.
-	Uri string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
-	// overlay carries library modules sent with the request (AnalysisConfig.library_modules, agni
-	// issue 788), so the catalog lists and describes them as a query sent with the same overlay would
-	// read them. They join the design's project library when uri is set too.
-	Overlay       *OverlayConfig `protobuf:"bytes,3,opt,name=overlay,proto3" json:"overlay,omitempty"`
+	Path          string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -669,16 +613,9 @@ func (*ListRelationsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{5}
 }
 
-func (x *ListRelationsRequest) GetPath() string {
+func (x *ListRelationsRequest) GetSnapshot() string {
 	if x != nil {
-		return x.Path
-	}
-	return ""
-}
-
-func (x *ListRelationsRequest) GetUri() string {
-	if x != nil {
-		return x.Uri
+		return x.Snapshot
 	}
 	return ""
 }
@@ -688,6 +625,13 @@ func (x *ListRelationsRequest) GetOverlay() *OverlayConfig {
 		return x.Overlay
 	}
 	return nil
+}
+
+func (x *ListRelationsRequest) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
 }
 
 // RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
@@ -1372,13 +1316,9 @@ func (x *NamedQuery) GetBindings() map[string]*QueryValue {
 
 type RunQueriesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Set   *QuerySet              `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
-	// uri, overlay, board_uri and as_named mean what they mean on RunQueryRequest, and apply to the one
-	// read every query in the set shares.
-	Uri      string         `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
-	Overlay  *OverlayConfig `protobuf:"bytes,3,opt,name=overlay,proto3" json:"overlay,omitempty"`
-	BoardUri string         `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
-	AsNamed  bool           `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	// snapshot names the design to query, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string    `protobuf:"bytes,8,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	Set      *QuerySet `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
 	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
 	// a fact base counts, candidate comparisons, each row a generator emits and the connections a
 	// circuit walk examines. It can only LOWER the
@@ -1420,39 +1360,18 @@ func (*RunQueriesRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{14}
 }
 
+func (x *RunQueriesRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
 func (x *RunQueriesRequest) GetSet() *QuerySet {
 	if x != nil {
 		return x.Set
 	}
 	return nil
-}
-
-func (x *RunQueriesRequest) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *RunQueriesRequest) GetOverlay() *OverlayConfig {
-	if x != nil {
-		return x.Overlay
-	}
-	return nil
-}
-
-func (x *RunQueriesRequest) GetBoardUri() string {
-	if x != nil {
-		return x.BoardUri
-	}
-	return ""
-}
-
-func (x *RunQueriesRequest) GetAsNamed() bool {
-	if x != nil {
-		return x.AsNamed
-	}
-	return false
 }
 
 func (x *RunQueriesRequest) GetWorkBudget() int64 {
@@ -1701,8 +1620,8 @@ func (x *TextPosition) GetCaret() string {
 
 type ListQuerySetsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// design_uri is the design whose project's query sets are listed.
-	DesignUri     string `protobuf:"bytes,1,opt,name=design_uri,json=designUri,proto3" json:"design_uri,omitempty"`
+	// snapshot names the design whose project's query sets to list, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot      string `protobuf:"bytes,2,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1737,9 +1656,9 @@ func (*ListQuerySetsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{18}
 }
 
-func (x *ListQuerySetsRequest) GetDesignUri() string {
+func (x *ListQuerySetsRequest) GetSnapshot() string {
 	if x != nil {
-		return x.DesignUri
+		return x.Snapshot
 	}
 	return ""
 }
@@ -1953,13 +1872,11 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\xac\x03\n" +
-	"\x0fRunQueryRequest\x12\x14\n" +
-	"\x05query\x18\x01 \x01(\tR\x05query\x127\n" +
-	"\aoverlay\x18\x02 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
-	"\tboard_uri\x18\x03 \x01(\tR\bboardUri\x12\x10\n" +
-	"\x03uri\x18\x04 \x01(\tR\x03uri\x12\x19\n" +
-	"\bas_named\x18\x05 \x01(\bR\aasNamed\x12\x1f\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x80\x03\n" +
+	"\x0fRunQueryRequest\x12\x1a\n" +
+	"\bsnapshot\x18\n" +
+	" \x01(\tR\bsnapshot\x12\x14\n" +
+	"\x05query\x18\x01 \x01(\tR\x05query\x12\x1f\n" +
 	"\vwork_budget\x18\x06 \x01(\x03R\n" +
 	"workBudget\x12I\n" +
 	"\bbindings\x18\a \x03(\v2-.agni.v1.webapi.RunQueryRequest.BindingsEntryR\bbindings\x12%\n" +
@@ -1967,7 +1884,7 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x05limit\x18\t \x01(\x05R\x05limit\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xeb\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\aoverlayR\tboard_uriR\x03uriR\bas_named\"\xeb\x01\n" +
 	"\bQueryRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x1d\n" +
 	"\n" +
@@ -2003,11 +1920,11 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"QueryValue\x12\x14\n" +
 	"\x04text\x18\x01 \x01(\tH\x00R\x04text\x12\x18\n" +
 	"\x06number\x18\x02 \x01(\x01H\x00R\x06numberB\x06\n" +
-	"\x04kind\"u\n" +
-	"\x14ListRelationsRequest\x12\x12\n" +
-	"\x04path\x18\x01 \x01(\tR\x04path\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\x127\n" +
-	"\aoverlay\x18\x03 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\"\xba\x01\n" +
+	"\x04kind\"\x8a\x01\n" +
+	"\x14ListRelationsRequest\x12\x1a\n" +
+	"\bsnapshot\x18\x04 \x01(\tR\bsnapshot\x127\n" +
+	"\aoverlay\x18\x03 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04pathJ\x04\b\x02\x10\x03R\x03uri\"\xba\x01\n" +
 	"\fRelationInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x12\n" +
 	"\x04args\x18\x02 \x03(\tR\x04args\x12\x18\n" +
@@ -2064,16 +1981,13 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\bbindings\x18\x04 \x03(\v2(.agni.v1.webapi.NamedQuery.BindingsEntryR\bbindings\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\x8a\x02\n" +
-	"\x11RunQueriesRequest\x12*\n" +
-	"\x03set\x18\x01 \x01(\v2\x18.agni.v1.webapi.QuerySetR\x03set\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\x127\n" +
-	"\aoverlay\x18\x03 \x01(\v2\x1d.agni.v1.webapi.OverlayConfigR\aoverlay\x12\x1b\n" +
-	"\tboard_uri\x18\x04 \x01(\tR\bboardUri\x12\x19\n" +
-	"\bas_named\x18\x05 \x01(\bR\aasNamed\x12\x1f\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xde\x01\n" +
+	"\x11RunQueriesRequest\x12\x1a\n" +
+	"\bsnapshot\x18\b \x01(\tR\bsnapshot\x12*\n" +
+	"\x03set\x18\x01 \x01(\v2\x18.agni.v1.webapi.QuerySetR\x03set\x12\x1f\n" +
 	"\vwork_budget\x18\x06 \x01(\x03R\n" +
 	"workBudget\x12%\n" +
-	"\x0eomit_locations\x18\a \x01(\bR\romitLocations\"\x9a\x01\n" +
+	"\x0eomit_locations\x18\a \x01(\bR\romitLocationsJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\x03uriR\aoverlayR\tboard_uriR\bas_named\"\x9a\x01\n" +
 	"\x12RunQueriesResponse\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n" +
 	"\bpreamble\x18\x02 \x01(\tR\bpreamble\x12\x16\n" +
@@ -2089,10 +2003,10 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\x06offset\x18\x01 \x01(\x05R\x06offset\x12\x12\n" +
 	"\x04line\x18\x02 \x01(\x05R\x04line\x12\x16\n" +
 	"\x06column\x18\x03 \x01(\x05R\x06column\x12\x14\n" +
-	"\x05caret\x18\x04 \x01(\tR\x05caret\"5\n" +
-	"\x14ListQuerySetsRequest\x12\x1d\n" +
-	"\n" +
-	"design_uri\x18\x01 \x01(\tR\tdesignUri\"o\n" +
+	"\x05caret\x18\x04 \x01(\tR\x05caret\"D\n" +
+	"\x14ListQuerySetsRequest\x12\x1a\n" +
+	"\bsnapshot\x18\x02 \x01(\tR\bsnapshotJ\x04\b\x01\x10\x02R\n" +
+	"design_uri\"o\n" +
 	"\x15ListQuerySetsResponse\x12\x18\n" +
 	"\aproject\x18\x01 \x01(\tR\aproject\x12<\n" +
 	"\n" +
@@ -2153,51 +2067,49 @@ var file_agni_v1_webapi_query_proto_goTypes = []any{
 	nil,                           // 23: agni.v1.webapi.RunQueryRequest.BindingsEntry
 	nil,                           // 24: agni.v1.webapi.RunQueryResponse.BindingsEntry
 	nil,                           // 25: agni.v1.webapi.NamedQuery.BindingsEntry
-	(*OverlayConfig)(nil),         // 26: agni.v1.webapi.OverlayConfig
-	(checks.LocateReason)(0),      // 27: agni.v1.checks.LocateReason
+	(checks.LocateReason)(0),      // 26: agni.v1.checks.LocateReason
+	(*OverlayConfig)(nil),         // 27: agni.v1.webapi.OverlayConfig
 }
 var file_agni_v1_webapi_query_proto_depIdxs = []int32{
-	26, // 0: agni.v1.webapi.RunQueryRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	23, // 1: agni.v1.webapi.RunQueryRequest.bindings:type_name -> agni.v1.webapi.RunQueryRequest.BindingsEntry
-	27, // 2: agni.v1.webapi.AnswerEntity.reason:type_name -> agni.v1.checks.LocateReason
-	1,  // 3: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
-	24, // 4: agni.v1.webapi.RunQueryResponse.bindings:type_name -> agni.v1.webapi.RunQueryResponse.BindingsEntry
-	2,  // 5: agni.v1.webapi.RunQueryResponse.entities:type_name -> agni.v1.webapi.AnswerEntity
-	26, // 6: agni.v1.webapi.ListRelationsRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	7,  // 7: agni.v1.webapi.RelationEntry.members:type_name -> agni.v1.webapi.RelationEntry
-	6,  // 8: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
-	8,  // 9: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
-	9,  // 10: agni.v1.webapi.ListRelationsResponse.entity_queries:type_name -> agni.v1.webapi.EntityQuery
-	10, // 11: agni.v1.webapi.ListRelationsResponse.search_query:type_name -> agni.v1.webapi.SearchQuery
-	7,  // 12: agni.v1.webapi.ListRelationsResponse.entry:type_name -> agni.v1.webapi.RelationEntry
-	13, // 13: agni.v1.webapi.QuerySet.queries:type_name -> agni.v1.webapi.NamedQuery
-	25, // 14: agni.v1.webapi.NamedQuery.bindings:type_name -> agni.v1.webapi.NamedQuery.BindingsEntry
-	12, // 15: agni.v1.webapi.RunQueriesRequest.set:type_name -> agni.v1.webapi.QuerySet
-	26, // 16: agni.v1.webapi.RunQueriesRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	16, // 17: agni.v1.webapi.RunQueriesResponse.results:type_name -> agni.v1.webapi.NamedQueryResult
-	3,  // 18: agni.v1.webapi.NamedQueryResult.result:type_name -> agni.v1.webapi.RunQueryResponse
-	17, // 19: agni.v1.webapi.NamedQueryResult.error_at:type_name -> agni.v1.webapi.TextPosition
-	20, // 20: agni.v1.webapi.ListQuerySetsResponse.query_sets:type_name -> agni.v1.webapi.NamedQuerySet
-	12, // 21: agni.v1.webapi.NamedQuerySet.set:type_name -> agni.v1.webapi.QuerySet
-	12, // 22: agni.v1.webapi.ParseQuerySetResponse.set:type_name -> agni.v1.webapi.QuerySet
-	4,  // 23: agni.v1.webapi.RunQueryRequest.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
-	4,  // 24: agni.v1.webapi.RunQueryResponse.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
-	4,  // 25: agni.v1.webapi.NamedQuery.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
-	0,  // 26: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
-	14, // 27: agni.v1.webapi.QueryService.RunQueries:input_type -> agni.v1.webapi.RunQueriesRequest
-	5,  // 28: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
-	18, // 29: agni.v1.webapi.QueryService.ListQuerySets:input_type -> agni.v1.webapi.ListQuerySetsRequest
-	21, // 30: agni.v1.webapi.QueryService.ParseQuerySet:input_type -> agni.v1.webapi.ParseQuerySetRequest
-	3,  // 31: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
-	15, // 32: agni.v1.webapi.QueryService.RunQueries:output_type -> agni.v1.webapi.RunQueriesResponse
-	11, // 33: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
-	19, // 34: agni.v1.webapi.QueryService.ListQuerySets:output_type -> agni.v1.webapi.ListQuerySetsResponse
-	22, // 35: agni.v1.webapi.QueryService.ParseQuerySet:output_type -> agni.v1.webapi.ParseQuerySetResponse
-	31, // [31:36] is the sub-list for method output_type
-	26, // [26:31] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	23, // 0: agni.v1.webapi.RunQueryRequest.bindings:type_name -> agni.v1.webapi.RunQueryRequest.BindingsEntry
+	26, // 1: agni.v1.webapi.AnswerEntity.reason:type_name -> agni.v1.checks.LocateReason
+	1,  // 2: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
+	24, // 3: agni.v1.webapi.RunQueryResponse.bindings:type_name -> agni.v1.webapi.RunQueryResponse.BindingsEntry
+	2,  // 4: agni.v1.webapi.RunQueryResponse.entities:type_name -> agni.v1.webapi.AnswerEntity
+	27, // 5: agni.v1.webapi.ListRelationsRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	7,  // 6: agni.v1.webapi.RelationEntry.members:type_name -> agni.v1.webapi.RelationEntry
+	6,  // 7: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
+	8,  // 8: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
+	9,  // 9: agni.v1.webapi.ListRelationsResponse.entity_queries:type_name -> agni.v1.webapi.EntityQuery
+	10, // 10: agni.v1.webapi.ListRelationsResponse.search_query:type_name -> agni.v1.webapi.SearchQuery
+	7,  // 11: agni.v1.webapi.ListRelationsResponse.entry:type_name -> agni.v1.webapi.RelationEntry
+	13, // 12: agni.v1.webapi.QuerySet.queries:type_name -> agni.v1.webapi.NamedQuery
+	25, // 13: agni.v1.webapi.NamedQuery.bindings:type_name -> agni.v1.webapi.NamedQuery.BindingsEntry
+	12, // 14: agni.v1.webapi.RunQueriesRequest.set:type_name -> agni.v1.webapi.QuerySet
+	16, // 15: agni.v1.webapi.RunQueriesResponse.results:type_name -> agni.v1.webapi.NamedQueryResult
+	3,  // 16: agni.v1.webapi.NamedQueryResult.result:type_name -> agni.v1.webapi.RunQueryResponse
+	17, // 17: agni.v1.webapi.NamedQueryResult.error_at:type_name -> agni.v1.webapi.TextPosition
+	20, // 18: agni.v1.webapi.ListQuerySetsResponse.query_sets:type_name -> agni.v1.webapi.NamedQuerySet
+	12, // 19: agni.v1.webapi.NamedQuerySet.set:type_name -> agni.v1.webapi.QuerySet
+	12, // 20: agni.v1.webapi.ParseQuerySetResponse.set:type_name -> agni.v1.webapi.QuerySet
+	4,  // 21: agni.v1.webapi.RunQueryRequest.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
+	4,  // 22: agni.v1.webapi.RunQueryResponse.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
+	4,  // 23: agni.v1.webapi.NamedQuery.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
+	0,  // 24: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
+	14, // 25: agni.v1.webapi.QueryService.RunQueries:input_type -> agni.v1.webapi.RunQueriesRequest
+	5,  // 26: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
+	18, // 27: agni.v1.webapi.QueryService.ListQuerySets:input_type -> agni.v1.webapi.ListQuerySetsRequest
+	21, // 28: agni.v1.webapi.QueryService.ParseQuerySet:input_type -> agni.v1.webapi.ParseQuerySetRequest
+	3,  // 29: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
+	15, // 30: agni.v1.webapi.QueryService.RunQueries:output_type -> agni.v1.webapi.RunQueriesResponse
+	11, // 31: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
+	19, // 32: agni.v1.webapi.QueryService.ListQuerySets:output_type -> agni.v1.webapi.ListQuerySetsResponse
+	22, // 33: agni.v1.webapi.QueryService.ParseQuerySet:output_type -> agni.v1.webapi.ParseQuerySetResponse
+	29, // [29:34] is the sub-list for method output_type
+	24, // [24:29] is the sub-list for method input_type
+	24, // [24:24] is the sub-list for extension type_name
+	24, // [24:24] is the sub-list for extension extendee
+	0,  // [0:24] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_query_proto_init() }

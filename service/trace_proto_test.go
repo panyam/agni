@@ -110,11 +110,12 @@ func TestTraceDesignServesTheSameAnswerAsTheWalk(t *testing.T) {
 	d := traceServiceFixture()
 	svc := NewDesignService(fakeLoader{design: d}, noNative{}, render.Style{}, nil)
 	ctx := context.Background()
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
 
 	routed, err := svc.TraceDesign(ctx, &webapi.TraceDesignRequest{
-		Uri:  "mount://m/x.edn",
-		From: &webapi.TraceEndpoint{RefDes: "U1", Pin: "1"},
-		To:   &webapi.TraceEndpoint{RefDes: "U2", Pin: "1"},
+		Snapshot: snap,
+		From:     &webapi.TraceEndpoint{RefDes: "U1", Pin: "1"},
+		To:       &webapi.TraceEndpoint{RefDes: "U2", Pin: "1"},
 	})
 	if err != nil {
 		t.Fatalf("TraceDesign: %v", err)
@@ -130,9 +131,9 @@ func TestTraceDesignServesTheSameAnswerAsTheWalk(t *testing.T) {
 	}
 
 	unresolved, err := svc.TraceDesign(ctx, &webapi.TraceDesignRequest{
-		Uri:  "mount://m/x.edn",
-		From: &webapi.TraceEndpoint{RefDes: "U99", Pin: "1"},
-		To:   &webapi.TraceEndpoint{RefDes: "U2", Pin: "1"},
+		Snapshot: snap,
+		From:     &webapi.TraceEndpoint{RefDes: "U99", Pin: "1"},
+		To:       &webapi.TraceEndpoint{RefDes: "U2", Pin: "1"},
 	})
 	if err != nil {
 		t.Fatalf("TraceDesign on a bad endpoint: %v", err)

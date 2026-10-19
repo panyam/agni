@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/design.proto.
  */
 export const file_agni_v1_webapi_design: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIo8BChBHZXREZXNpZ25SZXF1ZXN0Eg4KBmxheW91dBgBIAEoCRILCgN1cmkYAiABKAkSEAoIYXNfbmFtZWQYAyABKAgSLQoJcmVhZF9tYXNrGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLkZpZWxkTWFzaxIMCgRuZXRzGAUgAygJEg8KB3JlZl9kZXMYBiADKAkilQMKEUdldERlc2lnblJlc3BvbnNlEgwKBG5hbWUYASABKAkSFQoNc291cmNlX2Zvcm1hdBgCIAEoCRIXCg9jb21wb25lbnRfY291bnQYAyABKAUSEQoJbmV0X2NvdW50GAQgASgFEi8KB3VuZHJhd24YCSADKAsyHi5hZ25pLnYxLmdlb20uVW5kcmF3blBsYWNlbWVudBIOCgZsYXlvdXQYBSABKAkSKAoGc2hlZXRzGAYgAygLMhguYWduaS52MS53ZWJhcGkuU2hlZXRSZWYSGAoQbmF0aXZlX2F2YWlsYWJsZRgHIAEoCBIZChFhdmFpbGFibGVfbGF5b3V0cxgIIAMoCRIUCgxjb250ZW50X2hhc2gYCiABKAkSPQoUdW5leHBhbmRlZF9oaWVyYXJjaHkYCyADKAsyHy5hZ25pLnYxLmlyLlVuZXhwYW5kZWRIaWVyYXJjaHkSIgoGZGVzaWduGAwgASgLMhIuYWduaS52MS5pci5EZXNpZ24SFgoOaGllcmFyY2h5X25vdGUYDSABKAkiqwEKD0dldFNoZWV0UmVxdWVzdBINCgVzaGVldBgBIAEoCRIOCgZsYXlvdXQYAiABKAkSKwoGZm9ybWF0GAMgASgOMhsuYWduaS52MS53ZWJhcGkuU2hlZXRGb3JtYXQSLQoHc3ltYm9scxgEIAEoDjIcLmFnbmkudjEud2ViYXBpLlN5bWJvbFNvdXJjZRILCgN1cmkYBSABKAkSEAoIYXNfbmFtZWQYBiABKAgiWQoQR2V0U2hlZXRSZXNwb25zZRIrCgZwYWNrZWQYASABKAsyGS5hZ25pLnYxLmdlb20uUGFja2VkU2hlZXRIABINCgNzdmcYAiABKAlIAEIJCgdjb250ZW50It0BChVIaWdobGlnaHRTaGVldFJlcXVlc3QSDQoFc2hlZXQYASABKAkSDgoGbGF5b3V0GAIgASgJEi0KB3N5bWJvbHMYAyABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2USKwoGZm9ybWF0GAQgASgOMhsuYWduaS52MS53ZWJhcGkuU2hlZXRGb3JtYXQSKgoFc3BlY3MYBSADKAsyGy5hZ25pLnYxLmdlb20uSGlnaGxpZ2h0U3BlYxILCgN1cmkYBiABKAkSEAoIYXNfbmFtZWQYByABKAgiYwoWSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRIvCgZwYWNrZWQYASABKAsyHS5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCJmChZHZXRMYXlvdXRSZXBvcnRSZXF1ZXN0Ei0KB3N5bWJvbHMYASABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2USCwoDdXJpGAIgASgJEhAKCGFzX25hbWVkGAMgASgIIksKF0dldExheW91dFJlcG9ydFJlc3BvbnNlEjAKBnJlcG9ydBgBIAEoCzIgLmFnbmkudjEud2ViYXBpLkNvbnZlcnNpb25SZXBvcnQimQEKElRyYWNlRGVzaWduUmVxdWVzdBILCgN1cmkYASABKAkSKwoEZnJvbRgCIAEoCzIdLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kcG9pbnQSKQoCdG8YAyABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EgwKBGhvcHMYBCABKAUSEAoIYXNfbmFtZWQYBSABKAgiLQoNVHJhY2VFbmRwb2ludBIPCgdyZWZfZGVzGAEgASgJEgsKA3BpbhgCIAEoCSI7ChNUcmFjZURlc2lnblJlc3BvbnNlEiQKBXRyYWNlGAEgASgLMhUuYWduaS52MS53ZWJhcGkuVHJhY2Ui+wEKBVRyYWNlEiYKBGZyb20YASABKAsyGC5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZBIkCgJ0bxgCIAEoCzIYLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kEi0KB291dGNvbWUYAyABKA4yHC5hZ25pLnYxLndlYmFwaS5UcmFjZU91dGNvbWUSDgoGcmVhc29uGAQgASgJEg4KBnJhZGl1cxgFIAEoBRItCgljcm9zc2luZ3MYBiADKAsyGi5hZ25pLnYxLndlYmFwaS5UcmFjZUNyb3NzEiYKBG5ldHMYByADKAsyGC5hZ25pLnYxLndlYmFwaS5UcmFjZU5ldCJtCghUcmFjZUVuZBIvCghlbmRwb2ludBgBIAEoCzIdLmFnbmkudjEud2ViYXBpLlRyYWNlRW5kcG9pbnQSEAoIcGluX25hbWUYAiABKAkSCwoDbmV0GAMgASgJEhEKCXNoZWV0X2lkcxgEIAMoCSJzCgpUcmFjZUNyb3NzEg8KB3JlZl9kZXMYASABKAkSDQoFY2xhc3MYAiABKAkSEQoJZW50ZXJfcGluGAMgASgJEhAKCGV4aXRfcGluGAQgASgJEhAKCGZyb21fbmV0GAUgASgJEg4KBnRvX25ldBgGIAEoCSJ9CghUcmFjZU5ldBIMCgRuYW1lGAEgASgJEigKBXN0dWJzGAIgAygLMhkuYWduaS52MS53ZWJhcGkuVHJhY2VTdHViEhQKDHN0dWJzX2VsaWRlZBgDIAEoBRIQCghidXNfbGlrZRgEIAEoCBIRCglzaGVldF9pZHMYBSADKAkiOAoJVHJhY2VTdHViEg8KB3JlZl9kZXMYASABKAkSCwoDcGluGAIgASgJEg0KBWNsYXNzGAMgASgJIkcKEENvbnZlcnNpb25SZXBvcnQSMwoKY29tcG9uZW50cxgBIAMoCzIfLmFnbmkudjEud2ViYXBpLkNvbXBvbmVudFJlcG9ydCJzCg9Db21wb25lbnRSZXBvcnQSDwoHcmVmX2RlcxgBIAEoCRIOCgZzeW1ib2wYAiABKAkSFAoMZGV2aWNlX2NsYXNzGAMgASgJEgwKBGNlbGwYBCABKAkSDAoEa2luZBgFIAEoCRINCgVsYWJlbBgGIAEoCSpzCgtTaGVldEZvcm1hdBIcChhTSEVFVF9GT1JNQVRfVU5TUEVDSUZJRUQQABIXChNTSEVFVF9GT1JNQVRfUEFDS0VEEAESFAoQU0hFRVRfRk9STUFUX1NWRxACEhcKE1NIRUVUX0ZPUk1BVF9OQVRJVkUQAypiCgxTeW1ib2xTb3VyY2USHQoZU1lNQk9MX1NPVVJDRV9VTlNQRUNJRklFRBAAEhcKE1NZTUJPTF9TT1VSQ0VfR0xZUEgQARIaChZTWU1CT0xfU09VUkNFX0ZBSVRIRlVMEAIqgQEKDFRyYWNlT3V0Y29tZRIdChlUUkFDRV9PVVRDT01FX1VOU1BFQ0lGSUVEEAASGAoUVFJBQ0VfT1VUQ09NRV9ST1VURUQQARIaChZUUkFDRV9PVVRDT01FX05PX1JPVVRFEAISHAoYVFJBQ0VfT1VUQ09NRV9VTlJFU09MVkVEEAMyzQMKDURlc2lnblNlcnZpY2USUAoJR2V0RGVzaWduEiAuYWduaS52MS53ZWJhcGkuR2V0RGVzaWduUmVxdWVzdBohLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlc3BvbnNlEk0KCEdldFNoZWV0Eh8uYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuR2V0U2hlZXRSZXNwb25zZRJfCg5IaWdobGlnaHRTaGVldBIlLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkhpZ2hsaWdodFNoZWV0UmVzcG9uc2USYgoPR2V0TGF5b3V0UmVwb3J0EiYuYWduaS52MS53ZWJhcGkuR2V0TGF5b3V0UmVwb3J0UmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlc3BvbnNlElYKC1RyYWNlRGVzaWduEiIuYWduaS52MS53ZWJhcGkuVHJhY2VEZXNpZ25SZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuVHJhY2VEZXNpZ25SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed, file_agni_v1_ir_ir, file_google_protobuf_field_mask]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9kZXNpZ24ucHJvdG8SDmFnbmkudjEud2ViYXBpIjcKCFNoZWV0UmVmEgoKAmlkGAEgASgJEgwKBG5hbWUYAiABKAkSEQoJcGFyZW50X2lkGAMgASgJIp0BChBHZXREZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAcgASgJEg4KBmxheW91dBgBIAEoCRItCglyZWFkX21hc2sYBCABKAsyGi5nb29nbGUucHJvdG9idWYuRmllbGRNYXNrEgwKBG5ldHMYBSADKAkSDwoHcmVmX2RlcxgGIAMoCUoECAIQA0oECAMQBFIDdXJpUghhc19uYW1lZCKVAwoRR2V0RGVzaWduUmVzcG9uc2USDAoEbmFtZRgBIAEoCRIVCg1zb3VyY2VfZm9ybWF0GAIgASgJEhcKD2NvbXBvbmVudF9jb3VudBgDIAEoBRIRCgluZXRfY291bnQYBCABKAUSLwoHdW5kcmF3bhgJIAMoCzIeLmFnbmkudjEuZ2VvbS5VbmRyYXduUGxhY2VtZW50Eg4KBmxheW91dBgFIAEoCRIoCgZzaGVldHMYBiADKAsyGC5hZ25pLnYxLndlYmFwaS5TaGVldFJlZhIYChBuYXRpdmVfYXZhaWxhYmxlGAcgASgIEhkKEWF2YWlsYWJsZV9sYXlvdXRzGAggAygJEhQKDGNvbnRlbnRfaGFzaBgKIAEoCRI9ChR1bmV4cGFuZGVkX2hpZXJhcmNoeRgLIAMoCzIfLmFnbmkudjEuaXIuVW5leHBhbmRlZEhpZXJhcmNoeRIiCgZkZXNpZ24YDCABKAsyEi5hZ25pLnYxLmlyLkRlc2lnbhIWCg5oaWVyYXJjaHlfbm90ZRgNIAEoCSK5AQoPR2V0U2hlZXRSZXF1ZXN0EhAKCHNuYXBzaG90GAcgASgJEg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRIrCgZmb3JtYXQYAyABKA4yGy5hZ25pLnYxLndlYmFwaS5TaGVldEZvcm1hdBItCgdzeW1ib2xzGAQgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlSgQIBRAGSgQIBhAHUgN1cmlSCGFzX25hbWVkIlkKEEdldFNoZWV0UmVzcG9uc2USKwoGcGFja2VkGAEgASgLMhkuYWduaS52MS5nZW9tLlBhY2tlZFNoZWV0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCLrAQoVSGlnaGxpZ2h0U2hlZXRSZXF1ZXN0EhAKCHNuYXBzaG90GAggASgJEg0KBXNoZWV0GAEgASgJEg4KBmxheW91dBgCIAEoCRItCgdzeW1ib2xzGAMgASgOMhwuYWduaS52MS53ZWJhcGkuU3ltYm9sU291cmNlEisKBmZvcm1hdBgEIAEoDjIbLmFnbmkudjEud2ViYXBpLlNoZWV0Rm9ybWF0EioKBXNwZWNzGAUgAygLMhsuYWduaS52MS5nZW9tLkhpZ2hsaWdodFNwZWNKBAgGEAdKBAgHEAhSA3VyaVIIYXNfbmFtZWQiYwoWSGlnaGxpZ2h0U2hlZXRSZXNwb25zZRIvCgZwYWNrZWQYASABKAsyHS5hZ25pLnYxLmdlb20uUGFja2VkSGlnaGxpZ2h0SAASDQoDc3ZnGAIgASgJSABCCQoHY29udGVudCJ0ChZHZXRMYXlvdXRSZXBvcnRSZXF1ZXN0EhAKCHNuYXBzaG90GAQgASgJEi0KB3N5bWJvbHMYASABKA4yHC5hZ25pLnYxLndlYmFwaS5TeW1ib2xTb3VyY2VKBAgCEANKBAgDEARSA3VyaVIIYXNfbmFtZWQiSwoXR2V0TGF5b3V0UmVwb3J0UmVzcG9uc2USMAoGcmVwb3J0GAEgASgLMiAuYWduaS52MS53ZWJhcGkuQ29udmVyc2lvblJlcG9ydCKnAQoSVHJhY2VEZXNpZ25SZXF1ZXN0EhAKCHNuYXBzaG90GAYgASgJEisKBGZyb20YAiABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EikKAnRvGAMgASgLMh0uYWduaS52MS53ZWJhcGkuVHJhY2VFbmRwb2ludBIMCgRob3BzGAQgASgFSgQIARACSgQIBRAGUgN1cmlSCGFzX25hbWVkIi0KDVRyYWNlRW5kcG9pbnQSDwoHcmVmX2RlcxgBIAEoCRILCgNwaW4YAiABKAkiOwoTVHJhY2VEZXNpZ25SZXNwb25zZRIkCgV0cmFjZRgBIAEoCzIVLmFnbmkudjEud2ViYXBpLlRyYWNlIvsBCgVUcmFjZRImCgRmcm9tGAEgASgLMhguYWduaS52MS53ZWJhcGkuVHJhY2VFbmQSJAoCdG8YAiABKAsyGC5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZBItCgdvdXRjb21lGAMgASgOMhwuYWduaS52MS53ZWJhcGkuVHJhY2VPdXRjb21lEg4KBnJlYXNvbhgEIAEoCRIOCgZyYWRpdXMYBSABKAUSLQoJY3Jvc3NpbmdzGAYgAygLMhouYWduaS52MS53ZWJhcGkuVHJhY2VDcm9zcxImCgRuZXRzGAcgAygLMhguYWduaS52MS53ZWJhcGkuVHJhY2VOZXQibQoIVHJhY2VFbmQSLwoIZW5kcG9pbnQYASABKAsyHS5hZ25pLnYxLndlYmFwaS5UcmFjZUVuZHBvaW50EhAKCHBpbl9uYW1lGAIgASgJEgsKA25ldBgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkicwoKVHJhY2VDcm9zcxIPCgdyZWZfZGVzGAEgASgJEg0KBWNsYXNzGAIgASgJEhEKCWVudGVyX3BpbhgDIAEoCRIQCghleGl0X3BpbhgEIAEoCRIQCghmcm9tX25ldBgFIAEoCRIOCgZ0b19uZXQYBiABKAkifQoIVHJhY2VOZXQSDAoEbmFtZRgBIAEoCRIoCgVzdHVicxgCIAMoCzIZLmFnbmkudjEud2ViYXBpLlRyYWNlU3R1YhIUCgxzdHVic19lbGlkZWQYAyABKAUSEAoIYnVzX2xpa2UYBCABKAgSEQoJc2hlZXRfaWRzGAUgAygJIjgKCVRyYWNlU3R1YhIPCgdyZWZfZGVzGAEgASgJEgsKA3BpbhgCIAEoCRINCgVjbGFzcxgDIAEoCSJHChBDb252ZXJzaW9uUmVwb3J0EjMKCmNvbXBvbmVudHMYASADKAsyHy5hZ25pLnYxLndlYmFwaS5Db21wb25lbnRSZXBvcnQicwoPQ29tcG9uZW50UmVwb3J0Eg8KB3JlZl9kZXMYASABKAkSDgoGc3ltYm9sGAIgASgJEhQKDGRldmljZV9jbGFzcxgDIAEoCRIMCgRjZWxsGAQgASgJEgwKBGtpbmQYBSABKAkSDQoFbGFiZWwYBiABKAkqcwoLU2hlZXRGb3JtYXQSHAoYU0hFRVRfRk9STUFUX1VOU1BFQ0lGSUVEEAASFwoTU0hFRVRfRk9STUFUX1BBQ0tFRBABEhQKEFNIRUVUX0ZPUk1BVF9TVkcQAhIXChNTSEVFVF9GT1JNQVRfTkFUSVZFEAMqYgoMU3ltYm9sU291cmNlEh0KGVNZTUJPTF9TT1VSQ0VfVU5TUEVDSUZJRUQQABIXChNTWU1CT0xfU09VUkNFX0dMWVBIEAESGgoWU1lNQk9MX1NPVVJDRV9GQUlUSEZVTBACKoEBCgxUcmFjZU91dGNvbWUSHQoZVFJBQ0VfT1VUQ09NRV9VTlNQRUNJRklFRBAAEhgKFFRSQUNFX09VVENPTUVfUk9VVEVEEAESGgoWVFJBQ0VfT1VUQ09NRV9OT19ST1VURRACEhwKGFRSQUNFX09VVENPTUVfVU5SRVNPTFZFRBADMs0DCg1EZXNpZ25TZXJ2aWNlElAKCUdldERlc2lnbhIgLmFnbmkudjEud2ViYXBpLkdldERlc2lnblJlcXVlc3QaIS5hZ25pLnYxLndlYmFwaS5HZXREZXNpZ25SZXNwb25zZRJNCghHZXRTaGVldBIfLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLkdldFNoZWV0UmVzcG9uc2USXwoOSGlnaGxpZ2h0U2hlZXQSJS5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5IaWdobGlnaHRTaGVldFJlc3BvbnNlEmIKD0dldExheW91dFJlcG9ydBImLmFnbmkudjEud2ViYXBpLkdldExheW91dFJlcG9ydFJlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5HZXRMYXlvdXRSZXBvcnRSZXNwb25zZRJWCgtUcmFjZURlc2lnbhIiLmFnbmkudjEud2ViYXBpLlRyYWNlRGVzaWduUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLlRyYWNlRGVzaWduUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_geom_geom, file_agni_v1_geom_geom_packed, file_agni_v1_ir_ir, file_google_protobuf_field_mask]);
 
 /**
  * SheetRef identifies a drawable sheet within a design.
@@ -58,36 +58,19 @@ export const SheetRefSchema: GenMessage<SheetRef> = /*@__PURE__*/
  */
 export type GetDesignRequest = Message<"agni.v1.webapi.GetDesignRequest"> & {
   /**
+   * snapshot names the design to describe, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 7;
+   */
+  snapshot: string;
+
+  /**
    * layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
    * empty uses the default. Ignored for geometry-bearing files, which render faithfully.
    *
    * @generated from field: string layout = 1;
    */
   layout: string;
-
-  /**
-   * uri names the design to load, "mount://<mount>/<path>".
-   *
-   * @generated from field: string uri = 2;
-   */
-  uri: string;
-
-  /**
-   * as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-   * companion view of a different entry. Without it, a ref belonging to a declared design resolves
-   * to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-   * companion, copper from a board one.
-   *
-   * It exists because the CLI is a client of this service and carries the same flag. Resolution
-   * happens here, once, so a caller that wants the file itself has to be able to say so; without
-   * this field the service would silently override the CLI's own opt-out (agni issue 656).
-   *
-   * Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-   * how two views of one design are checked against each other.
-   *
-   * @generated from field: bool as_named = 3;
-   */
-  asNamed: boolean;
 
   /**
    * read_mask selects what the response carries (agni issue 836). Unset, the response is the summary
@@ -263,6 +246,13 @@ export const GetDesignResponseSchema: GenMessage<GetDesignResponse> = /*@__PURE_
  */
 export type GetSheetRequest = Message<"agni.v1.webapi.GetSheetRequest"> & {
   /**
+   * snapshot names the design whose sheet to draw, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 7;
+   */
+  snapshot: string;
+
+  /**
    * sheet selects by id, name, or 0-based index; empty selects the first sheet.
    *
    * @generated from field: string sheet = 1;
@@ -288,30 +278,6 @@ export type GetSheetRequest = Message<"agni.v1.webapi.GetSheetRequest"> & {
    * @generated from field: agni.v1.webapi.SymbolSource symbols = 4;
    */
   symbols: SymbolSource;
-
-  /**
-   * uri names the design the sheet belongs to.
-   *
-   * @generated from field: string uri = 5;
-   */
-  uri: string;
-
-  /**
-   * as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-   * companion view of a different entry. Without it, a ref belonging to a declared design resolves
-   * to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-   * companion, copper from a board one.
-   *
-   * It exists because the CLI is a client of this service and carries the same flag. Resolution
-   * happens here, once, so a caller that wants the file itself has to be able to say so; without
-   * this field the service would silently override the CLI's own opt-out (agni issue 656).
-   *
-   * Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-   * how two views of one design are checked against each other.
-   *
-   * @generated from field: bool as_named = 6;
-   */
-  asNamed: boolean;
 };
 
 /**
@@ -362,6 +328,13 @@ export const GetSheetResponseSchema: GenMessage<GetSheetResponse> = /*@__PURE__*
  */
 export type HighlightSheetRequest = Message<"agni.v1.webapi.HighlightSheetRequest"> & {
   /**
+   * snapshot names the design whose sheet to highlight, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 8;
+   */
+  snapshot: string;
+
+  /**
    * sheet/layout/symbols select the same geometry as the GetSheet call being overlaid.
    *
    * @generated from field: string sheet = 1;
@@ -392,22 +365,6 @@ export type HighlightSheetRequest = Message<"agni.v1.webapi.HighlightSheetReques
    * @generated from field: repeated agni.v1.geom.HighlightSpec specs = 5;
    */
   specs: HighlightSpec[];
-
-  /**
-   * uri names the design the sheet belongs to.
-   *
-   * @generated from field: string uri = 6;
-   */
-  uri: string;
-
-  /**
-   * as_named matches GetSheetRequest's, and must, or a highlight would be drawn against a different
-   * artifact than the sheet it lands on: the two calls resolve one design and have to resolve it the
-   * same way.
-   *
-   * @generated from field: bool as_named = 7;
-   */
-  asNamed: boolean;
 };
 
 /**
@@ -454,35 +411,18 @@ export const HighlightSheetResponseSchema: GenMessage<HighlightSheetResponse> = 
  */
 export type GetLayoutReportRequest = Message<"agni.v1.webapi.GetLayoutReportRequest"> & {
   /**
+   * snapshot names the design whose auto-layout to report on, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 4;
+   */
+  snapshot: string;
+
+  /**
    * symbols selects the node artwork the report explains; unset means GLYPH.
    *
    * @generated from field: agni.v1.webapi.SymbolSource symbols = 1;
    */
   symbols: SymbolSource;
-
-  /**
-   * uri names the design to report on.
-   *
-   * @generated from field: string uri = 2;
-   */
-  uri: string;
-
-  /**
-   * as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-   * companion view of a different entry. Without it, a ref belonging to a declared design resolves
-   * to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-   * companion, copper from a board one.
-   *
-   * It exists because the CLI is a client of this service and carries the same flag. Resolution
-   * happens here, once, so a caller that wants the file itself has to be able to say so; without
-   * this field the service would silently override the CLI's own opt-out (agni issue 656).
-   *
-   * Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-   * how two views of one design are checked against each other.
-   *
-   * @generated from field: bool as_named = 3;
-   */
-  asNamed: boolean;
 };
 
 /**
@@ -514,11 +454,11 @@ export const GetLayoutReportResponseSchema: GenMessage<GetLayoutReportResponse> 
  */
 export type TraceDesignRequest = Message<"agni.v1.webapi.TraceDesignRequest"> & {
   /**
-   * uri names the design to trace over, "mount://<mount>/<path>".
+   * snapshot names the design to trace through, "snapshots/{snapshot}" (agni issue 1061).
    *
-   * @generated from field: string uri = 1;
+   * @generated from field: string snapshot = 6;
    */
-  uri: string;
+  snapshot: string;
 
   /**
    * from / to are the endpoint pins, as ref-des and pin designator.
@@ -541,15 +481,6 @@ export type TraceDesignRequest = Message<"agni.v1.webapi.TraceDesignRequest"> & 
    * @generated from field: int32 hops = 4;
    */
   hops: number;
-
-  /**
-   * as_named reads exactly the artifact this uri names, as it does on every other design request.
-   * A trace resolves tiers too: the walk is over the netlist and the sheets come from the geometry
-   * companion, which for a netlist entry is a different artifact.
-   *
-   * @generated from field: bool as_named = 5;
-   */
-  asNamed: boolean;
 };
 
 /**

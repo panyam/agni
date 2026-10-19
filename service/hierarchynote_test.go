@@ -57,24 +57,25 @@ func renderSurfaces(t *testing.T, name string) surfaces {
 	var out surfaces
 
 	dsvc := NewDesignService(l, noNative{}, render.Style{}, nil)
-	d, err := dsvc.GetDesign(ctx, &webapi.GetDesignRequest{Uri: uri})
+	d, err := dsvc.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: snapOf(t, dsvc.Snapshots(), uri)})
 	if err != nil {
 		t.Fatal(err)
 	}
 	out.designNote = d.GetHierarchyNote()
 
 	csvc := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil)
-	run, err := csvc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: uri})
+	csnap := snapOf(t, csvc.Snapshots(), uri)
+	run, err := csvc.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: csnap})
 	if err != nil {
 		t.Fatal(err)
 	}
 	out.checkRunLen = len(run.GetUnexpandedHierarchy())
-	page, err := csvc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{Uri: uri, Run: run, Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML})
+	page, err := csvc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{Snapshot: csnap, Run: run, Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML})
 	if err != nil {
 		t.Fatal(err)
 	}
 	out.checkPage = string(page.GetContent())
-	js, err := csvc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{Uri: uri, Run: run, Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON})
+	js, err := csvc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{Snapshot: csnap, Run: run, Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -89,7 +90,7 @@ func renderSurfaces(t *testing.T, name string) surfaces {
 		t.Fatal(err)
 	}
 	rsvc := NewReviewService(manifestLoader{l}, nil, check.DefaultCatalog(), nil, nil, testReviewEnv, "", nil)
-	rv, err := rsvc.CreateReview(ctx, &webapi.CreateReviewRequest{DesignUri: uri, Manifest: ManifestProto(m), ValidateOnly: true})
+	rv, err := rsvc.CreateReview(ctx, &webapi.CreateReviewRequest{Snapshot: snapOf(t, rsvc.Snapshots(), uri), Manifest: ManifestProto(m), ValidateOnly: true})
 	if err != nil {
 		t.Fatal(err)
 	}

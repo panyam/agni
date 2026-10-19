@@ -39,8 +39,8 @@ func queryDesign() *ir.Design {
 func TestRunQueryReturnsRowsAndProvenance(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri:   "mount://m/x.edn",
-		Query: `component.net(?r,?n) => ?r, ?n`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"),
+		Query:    `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -82,7 +82,7 @@ func TestRunQueryColumnKinds(t *testing.T) {
 		{`component.mpn(?r,?m) => ?r, ?m`, []string{"component", ""}}, // mpn is a scalar label
 	}
 	for _, tc := range cases {
-		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: tc.query})
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: tc.query})
 		if err != nil {
 			t.Fatalf("%s: %v", tc.query, err)
 		}
@@ -122,7 +122,7 @@ func searchDesign() *ir.Design {
 func TestRunQueryPolymorphicCellKinds(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `entity(?name, ?kind)`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `entity(?name, ?kind)`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -176,7 +176,7 @@ func TestEntityKindRejectsUnknownKinds(t *testing.T) {
 func TestRunQueryConstantKindTypesTheColumn(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `entity(?name, "net")`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `entity(?name, "net")`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -196,7 +196,7 @@ func TestRunQueryConstantKindTypesTheColumn(t *testing.T) {
 func TestRunQueryOrdinaryQueryCarriesNoCellKinds(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `component.net(?r,?n) => ?r, ?n`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -218,7 +218,7 @@ func TestRunQueryPerRowKindDrivesSheetsAndReasons(t *testing.T) {
 	}}
 	svc := NewQueryService(fakeLoader{design: searchDesign(), geom: g}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `entity(?name, ?kind)`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `entity(?name, ?kind)`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -248,7 +248,7 @@ func TestRunQueryPerRowKindDrivesSheetsAndReasons(t *testing.T) {
 func TestRunQueryKindArgWithoutNameStaysScalar(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `bus(?label, ?kind)`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `bus(?label, ?kind)`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -301,7 +301,7 @@ func pinDesign() *ir.Design {
 func TestRunQueryPinColumnCarriesItsRef(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: pinDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `pin.net(?ref, ?pin, ?net)`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `pin.net(?ref, ?pin, ?net)`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -334,7 +334,7 @@ func TestRunQueryPinColumnCarriesItsRef(t *testing.T) {
 func TestRunQueryPinRefFromAConstant(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: pinDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `pin.net("U1", ?pin, ?net)`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `pin.net("U1", ?pin, ?net)`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -355,7 +355,7 @@ func TestRunQueryPinRefFromAConstant(t *testing.T) {
 func TestRunQueryDatasheetPinIsNotADesignPin(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `param.pin(?mpn, ?pin, ?name, ?function)`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `param.pin(?mpn, ?pin, ?name, ?function)`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -375,7 +375,7 @@ func TestRunQueryPinResolvesThroughItsComponent(t *testing.T) {
 	}}
 	svc := NewQueryService(fakeLoader{design: pinDesign(), geom: g}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `pin.net(?ref, ?pin, ?net)`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `pin.net(?ref, ?pin, ?net)`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -416,7 +416,7 @@ func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
 	}}
 	svc := NewQueryService(fakeLoader{design: queryDesign(), geom: g}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.kicad_sch", Query: `component.net(?r,?n) => ?r, ?n`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -439,7 +439,7 @@ func TestRunQueryNetCellSheetsFromNetlist(t *testing.T) {
 	d.Nets[0].Attributes = map[string]string{netgraph.AttrSheets: netgraph.EncodeSheets([]string{"s1", "s2"})}
 	svc := NewQueryService(fakeLoader{design: d}, nil, nil) // no geometry
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `component.net(?r,?n) => ?r, ?n`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -471,7 +471,7 @@ func TestRunQueryCellReasons(t *testing.T) {
 	}}}
 	svc := NewQueryService(fakeLoader{design: d, geom: g}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.kicad_sch", Query: `component.net(?r,?n) => ?r, ?n`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Query: `component.net(?r,?n) => ?r, ?n`,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -507,7 +507,7 @@ func TestRunQueryCellReasons(t *testing.T) {
 func TestRunQueryUnknownRelationSuggests(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: "compnent.net(?r,?n) => ?r",
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: "compnent.net(?r,?n) => ?r",
 	})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument", err)
@@ -520,7 +520,7 @@ func TestRunQueryUnknownRelationSuggests(t *testing.T) {
 func TestRunQueryMalformedIsInvalidArgument(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/x.edn", Query: `component.net(?r,?n =>`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `component.net(?r,?n =>`,
 	})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument for a parse failure", err)
@@ -530,8 +530,8 @@ func TestRunQueryMalformedIsInvalidArgument(t *testing.T) {
 func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri:   "mount://m/x.edn",
-		Query: `component.net(?r,?n), ?n = "NOSUCHNET" => ?r`,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"),
+		Query:    `component.net(?r,?n), ?n = "NOSUCHNET" => ?r`,
 	})
 	if err != nil {
 		t.Fatalf("a well-formed no-match query should not error: %v", err)
@@ -543,7 +543,7 @@ func TestRunQueryNoMatchIsEmptyNotError(t *testing.T) {
 
 func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
 	svc := NewQueryService(fakeLoader{err: errors.New("no netlist")}, nil, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.eds", Query: `component.net(?r,?n) => ?r`})
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds"), Query: "component.class(?r, ?c) => ?r"})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err = %v, want ErrInvalidArgument for an unloadable design", err)
 	}
@@ -551,7 +551,7 @@ func TestRunQueryUnloadableIsInvalidArgument(t *testing.T) {
 
 func TestRunQueryNotFoundPropagates(t *testing.T) {
 	svc := NewQueryService(fakeLoader{err: ErrNotFound}, nil, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://bad/x.edn", Query: `component.net(?r,?n) => ?r`})
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://bad/x.edn"), Query: "component.class(?r, ?c) => ?r"})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("err = %v, want ErrNotFound to pass through", err)
 	}
@@ -694,7 +694,7 @@ func TestExamplesEvaluate(t *testing.T) {
 	}
 	for _, e := range resp.GetExamples() {
 		if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-			Uri: "mount://m/x.edn", Query: e.GetQuery(),
+			Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: e.GetQuery(),
 		}); err != nil {
 			t.Errorf("example %q failed to evaluate: %v", e.GetLabel(), err)
 		}
@@ -724,7 +724,7 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 	}
 	// Values from the tutorial board: a part, one of its pins, and the net that pin sits on, which
 	// carries a test point. The board has no bus, so the bus presets are evaluated and answer nothing.
-	const uri = "mount://m/designs/gateway/gateway.edn"
+	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")
 	values := map[string]string{"ref": "U1", "pin": "2", "net": "PMIC_CORE_3V3", "bus": "DATA"}
 	for _, e := range resp.GetEntityQueries() {
 		if len(e.GetBinds()) == 0 {
@@ -738,12 +738,12 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 			written = strings.ReplaceAll(written, "?"+v+")", `"`+values[v]+`")`)
 			written = strings.ReplaceAll(written, "?"+v+" ", `"`+values[v]+`" `)
 		}
-		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: e.GetQuery(), Bindings: bind})
+		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: e.GetQuery(), Bindings: bind})
 		if err != nil {
 			t.Errorf("%s %q failed to evaluate: %v\n  query: %s", e.GetKind(), e.GetLabel(), err, e.GetQuery())
 			continue
 		}
-		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: written})
+		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: written})
 		if err != nil {
 			t.Fatalf("the preset with its values written in (%s): %v", written, err)
 		}
@@ -769,7 +769,7 @@ func rowCells(r *webapi.RunQueryResponse) string {
 // guard: the malformed-query message reaches the caller (the panel shows it inline).
 func TestRunQueryParseErrorMessagePreserved(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: `!!!`})
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: `!!!`})
 	if err == nil || strings.TrimSpace(err.Error()) == "" {
 		t.Fatalf("want a non-empty parse error message, got %v", err)
 	}
@@ -827,7 +827,7 @@ func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
 	ask := func(ov *webapi.OverlayConfig) []string {
 		t.Helper()
 		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-			Uri: "mount://m/review/conv-demo.edn", Query: "net.rail(?n) => ?n", Overlay: ov,
+			Snapshot: ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/review/conv-demo.edn", Overlay: ov}), Query: "net.rail(?n) => ?n",
 		})
 		if err != nil {
 			t.Fatalf("RunQuery: %v", err)
@@ -859,8 +859,8 @@ func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
 	// A rule whose name collides with the convention's own namespace would fail a catalog composition.
 	conv.Rules = append(conv.Rules, &configpb.NamingRule{Name: "signal-net-naming", Allow: []string{"^X"}})
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: "mount://m/review/conv-demo.edn", Query: "net.rail(?n) => ?n",
-		Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}},
+		Snapshot: ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/review/conv-demo.edn", Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}}}),
+		Query:    "net.rail(?n) => ?n",
 	})
 	if err != nil {
 		t.Fatalf("a query must not fail on the rules half of a convention it does not use: %v", err)
@@ -1011,9 +1011,10 @@ func TestColumnKindsSurvivesARecursiveRule(t *testing.T) {
 // rather than recording the same cancellation against every query left.
 func TestACancelledQueryStopsAsCancelled(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
 	ctx, cancel := context.WithCancel(context.Background())
 	cancel()
-	_, err := svc.RunQuery(ctx, &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: "net.reaches(?a, ?b) => ?a, ?b"})
+	_, err := svc.RunQuery(ctx, &webapi.RunQueryRequest{Snapshot: snap, Query: "net.reaches(?a, ?b) => ?a, ?b"})
 	if !errors.Is(err, context.Canceled) || errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("RunQuery with a cancelled context: err = %v, want context.Canceled and not invalid argument", err)
 	}
@@ -1021,10 +1022,10 @@ func TestACancelledQueryStopsAsCancelled(t *testing.T) {
 		{Name: "a", Query: "net.reaches(?a, ?b) => ?a, ?b"},
 		{Name: "b", Query: "component.net(?r, ?n) => ?r"},
 	}}
-	if _, err := svc.RunQueries(ctx, &webapi.RunQueriesRequest{Uri: "mount://m/x.edn", Set: set}); !errors.Is(err, context.Canceled) {
+	if _, err := svc.RunQueries(ctx, &webapi.RunQueriesRequest{Snapshot: snap, Set: set}); !errors.Is(err, context.Canceled) {
 		t.Errorf("RunQueries with a cancelled context: err = %v, want context.Canceled", err)
 	}
-	if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: "net.reaches(?a, ?b) => ?a, ?b"}); err != nil {
+	if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: "net.reaches(?a, ?b) => ?a, ?b"}); err != nil {
 		t.Errorf("the same query with a live context failed, so the cancelled run proves nothing: %v", err)
 	}
 }

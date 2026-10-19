@@ -14,7 +14,9 @@ import (
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/service"
 	_ "github.com/panyam/agni/stdlib/rules/builtin"
+	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
 const countedRule = "test/counted"
@@ -26,6 +28,9 @@ type checkFixture struct {
 	evals  *atomic.Int64
 	svc    *service.CheckService
 	design string
+	// snaps is the snapshot ingested for each overlay, by its text, so a check under one overlay asks
+	// the same snapshot every time, as a client does.
+	snaps map[string]string
 }
 
 // newCheckFixture builds the fixture. outcome is what the counted rule answers, and cached false
@@ -65,14 +70,22 @@ func newCheckFixture(t *testing.T, outcome check.Outcome, cached bool, wrap func
 	}
 	loader := service.NewCachingLoader(New(ms...), c)
 	svc := service.NewCheckService(loader, cat, nil, "", nil, res)
-	return &checkFixture{dir: dir, evals: evals, svc: svc, design: "mount://m/designs/gateway"}
+	return &checkFixture{dir: dir, evals: evals, svc: svc, design: "mount://m/designs/gateway", snaps: map[string]string{}}
 }
 
 func (f *checkFixture) check(t *testing.T, req *webapi.CheckDesignRequest) *webapi.CheckDesignResponse {
 	t.Helper()
-	if req.Uri == "" {
-		req.Uri = f.design
+	return f.checkUnder(t, nil, req)
+}
+
+// checkUnder checks the design's snapshot under ov, ingesting it the first time ov is asked.
+func (f *checkFixture) checkUnder(t *testing.T, ov *webapi.OverlayConfig, req *webapi.CheckDesignRequest) *webapi.CheckDesignResponse {
+	t.Helper()
+	key := prototext.Format(ov)
+	if f.snaps[key] == "" {
+		f.snaps[key] = ingestWith(t, f.svc.Snapshots(), &webapi.Snapshot{Uri: f.design, Overlay: ov})
 	}
+	req.Snapshot = f.snaps[key]
 	resp, err := f.svc.CheckDesign(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
@@ -82,8 +95,13 @@ func (f *checkFixture) check(t *testing.T, req *webapi.CheckDesignRequest) *weba
 
 func (f *checkFixture) counted(t *testing.T, req *webapi.CheckDesignRequest) {
 	t.Helper()
+	f.countedUnder(t, nil, req)
+}
+
+func (f *checkFixture) countedUnder(t *testing.T, ov *webapi.OverlayConfig, req *webapi.CheckDesignRequest) {
+	t.Helper()
 	req.Rules = []string{countedRule}
-	f.check(t, req)
+	f.checkUnder(t, ov, req)
 }
 
 // touch rewrites a file in the fixture with one byte more and a later time, so its stamp moves
@@ -100,6 +118,14 @@ func (f *checkFixture) touch(t *testing.T, rel string) {
 	}
 	later := time.Now().Add(2 * time.Second)
 	_ = os.Chtimes(p, later, later)
+	// A snapshot whose files changed is stale, so each is read again, as a client told so does.
+	for _, name := range f.snaps {
+		if _, err := f.svc.Snapshots().UpdateSnapshot(context.Background(), &webapi.UpdateSnapshotRequest{
+			Snapshot: &webapi.Snapshot{Name: name, Uri: f.design}, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"uri"}},
+		}); err != nil {
+			t.Fatal(err)
+		}
+	}
 }
 
 func (f *checkFixture) wantEvals(t *testing.T, want int64, why string) {
@@ -140,11 +166,11 @@ func TestADifferentConventionEvaluatesTheRuleAgain(t *testing.T) {
 	f := newCheckFixture(t, check.Fail, true, nil)
 	f.counted(t, &webapi.CheckDesignRequest{})
 	conv := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: &configpb.NamingConvention{Name: "other"}}}
-	f.counted(t, &webapi.CheckDesignRequest{Overlay: conv})
+	f.countedUnder(t, conv, &webapi.CheckDesignRequest{})
 	f.wantEvals(t, 2, "a check under another convention was answered from the project's")
-	f.counted(t, &webapi.CheckDesignRequest{Overlay: &webapi.OverlayConfig{IgnoreProject: true}})
+	f.countedUnder(t, &webapi.OverlayConfig{IgnoreProject: true}, &webapi.CheckDesignRequest{})
 	f.wantEvals(t, 3, "a check ignoring the project was answered from the project's")
-	f.counted(t, &webapi.CheckDesignRequest{Overlay: conv})
+	f.countedUnder(t, conv, &webapi.CheckDesignRequest{})
 	f.wantEvals(t, 3, "the second check under the other convention ran the rule again")
 }
 

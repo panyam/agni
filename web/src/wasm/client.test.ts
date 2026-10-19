@@ -8,6 +8,7 @@ import { laneFor, mountingFetch, wouldShrink, SHRINK_RATIO, type DesignFiles, ty
 function harness(listing: DesignFiles | Error) {
   const engineCalls: string[] = [];
   const laneCalls: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
+  const laneBodies: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
   const networkCalls: string[] = [];
   const mounted: Record<string, string[]> = {};
   const laneMounted: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
@@ -21,6 +22,7 @@ function harness(listing: DesignFiles | Error) {
       const path = new URL((input as Request).url).pathname;
       engineCalls.push(path);
       laneCalls[name].push(path);
+      laneBodies[name].push(await (input as Request).clone().text());
       return new Response("{}");
     },
     holder: async () => workers[name],
@@ -93,7 +95,7 @@ function harness(listing: DesignFiles | Error) {
       return new Uint8Array([1]);
     },
   };
-  return { engine, network, source, engineCalls, laneCalls, networkCalls, mounted, laneMounted, fetched, replace, lists: () => lists, prepareWorkers, holdPrepares, released: () => released };
+  return { engine, network, source, engineCalls, laneCalls, laneBodies, networkCalls, mounted, laneMounted, fetched, replace, lists: () => lists, prepareWorkers, holdPrepares, released: () => released };
 }
 
 const listing: DesignFiles = {
@@ -107,6 +109,14 @@ const listing: DesignFiles = {
 
 const ask = (f: typeof globalThis.fetch, rpc: string, uri: string) =>
   f(new Request(`http://h/agni.v1.webapi.${rpc}`, { method: "POST", body: JSON.stringify({ uri }) }));
+
+// ingest is the page's Ingest of uri under id, as SnapshotRegistry sends it, and askSnap a question
+// naming that snapshot (agni issue 1061).
+const INGEST_PATH = "/agni.v1.webapi.SnapshotService/Ingest";
+const ingest = (f: typeof globalThis.fetch, uri: string, id: string, readBoard = false) =>
+  f(new Request(`http://h${INGEST_PATH}`, { method: "POST", body: JSON.stringify({ snapshot: { uri }, snapshotId: id, ...(readBoard ? { readBoard } : {}) }) }));
+const askSnap = (f: typeof globalThis.fetch, rpc: string, snapshot: string) =>
+  f(new Request(`http://h/agni.v1.webapi.${rpc}`, { method: "POST", body: JSON.stringify({ snapshot }) }));
 
 describe("mountingFetch", () => {
   it("brings a design's files in once, then answers in the worker", async () => {
@@ -198,9 +208,9 @@ describe("the prepare lane", () => {
   it("brings the files into each prepare request's own worker, which nothing else uses", async () => {
     const h = harness(listing);
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
-    await ask(f, "CheckService/LoadDesign", "mount://tut/designs/gateway");
-    await ask(f, "CheckService/LoadDesign", "mount://tut/designs/gateway");
-    expect(h.laneCalls.prepare).toEqual(["/agni.v1.webapi.CheckService/LoadDesign", "/agni.v1.webapi.CheckService/LoadDesign"]);
+    await ingest(f, "mount://tut/designs/gateway", "s1", true);
+    await ingest(f, "mount://tut/designs/gateway", "s1", true);
+    expect(h.laneCalls.prepare).toEqual([INGEST_PATH, INGEST_PATH]);
     expect(h.prepareWorkers).toHaveLength(2);
     // Each worker started empty, so each was given the design's two files.
     expect(h.laneMounted.prepare).toHaveLength(4);
@@ -211,24 +221,26 @@ describe("the prepare lane", () => {
   it("holds a check sent while a prepare is under way until the prepare answers", async () => {
     const h = harness(listing);
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
     const release = h.holdPrepares();
-    const loading = ask(f, "CheckService/LoadDesign", "mount://tut/designs/gateway");
-    const checking = ask(f, "CheckService/CheckDesign", "mount://tut/designs/gateway");
-    const querying = ask(f, "QueryService/RunQuery", "mount://tut/designs/gateway");
+    const loading = ingest(f, "mount://tut/designs/gateway", "s1", true);
+    const checking = askSnap(f, "CheckService/CheckDesign", "snapshots/s1");
+    const querying = askSnap(f, "QueryService/RunQuery", "snapshots/s1");
     await querying;
     await new Promise((r) => setTimeout(r, 10));
-    expect(h.laneCalls.serve).toEqual(["/agni.v1.webapi.QueryService/RunQuery"]);
+    expect(h.laneCalls.serve).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery"]);
     expect(h.laneCalls.jobs).toEqual([]);
     release();
     await Promise.all([loading, checking]);
-    expect(h.laneCalls.jobs).toEqual(["/agni.v1.webapi.CheckService/CheckDesign"]);
+    // The jobs worker was never given the snapshot, so it is ingested there before the check.
+    expect(h.laneCalls.jobs).toEqual([INGEST_PATH, "/agni.v1.webapi.CheckService/CheckDesign"]);
   });
 
   it("ends the prepare worker unused when the design goes to the server", async () => {
     const h = harness(listing);
     const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 1000 });
-    await ask(f, "CheckService/LoadDesign", "mount://tut/designs/gateway");
-    expect(h.networkCalls).toEqual(["/agni.v1.webapi.CheckService/LoadDesign"]);
+    await ingest(f, "mount://tut/designs/gateway", "s1", true);
+    expect(h.networkCalls).toEqual([INGEST_PATH]);
     expect(h.laneCalls.prepare).toEqual([]);
     expect(h.released()).toBe(1);
   });
@@ -244,7 +256,56 @@ describe("laneFor", () => {
     expect(at("/agni.v1.webapi.CheckService/ListRules")).toBe("serve");
     expect(at("/agni.v1.webapi.QueryService/RunQuery")).toBe("serve");
     expect(at("/agni.v1.webapi.DesignService/GetSheet")).toBe("serve");
-    expect(at("/agni/demo/agni.v1.webapi.CheckService/LoadDesign")).toBe("prepare");
+    // An Ingest that reads the board goes to a worker of its own, and any other to the serve lane.
+    expect(laneFor(new URL("http://h/agni/demo/agni.v1.webapi.SnapshotService/Ingest"), true)).toBe("prepare");
+    expect(at("/agni.v1.webapi.SnapshotService/Ingest")).toBe("serve");
+  });
+});
+
+// agni issue 1061: a question names a snapshot, and each worker keeps its own, so the page's ingest
+// of a snapshot is what tells a worker its files and is sent to every worker before its first
+// question about it.
+describe("snapshots across the lanes", () => {
+  it("brings the files a snapshot's ingest named into the worker a question about it reaches", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
+    await askSnap(f, "CheckService/CheckDesign", "snapshots/s1");
+    expect(h.laneMounted.jobs).toEqual(["designs/gateway/gateway.edn", "project.yaml"]);
+    expect(h.laneCalls.jobs).toEqual([INGEST_PATH, "/agni.v1.webapi.CheckService/CheckDesign"]);
+    expect(h.lists()).toBe(1);
+  });
+
+  it("ingests into a worker once, and again into the worker that replaces it", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
+    await askSnap(f, "QueryService/RunQuery", "snapshots/s1");
+    await askSnap(f, "DesignService/GetSheet", "snapshots/s1");
+    // The serve worker took the page's own ingest, so it is asked with nothing sent ahead.
+    expect(h.laneCalls.serve).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery", "/agni.v1.webapi.DesignService/GetSheet"]);
+    h.replace("serve");
+    await askSnap(f, "QueryService/RunQuery", "snapshots/s1");
+    expect(h.laneCalls.serve.slice(3)).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery"]);
+  });
+
+  it("sends a worker the ingest without read_board, under the snapshot's own id", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1", true);
+    await askSnap(f, "CheckService/CheckDesign", "snapshots/s1");
+    const sent = JSON.parse(h.laneBodies.jobs[0]);
+    expect(sent).toEqual({ snapshot: { uri: "mount://tut/designs/gateway" }, snapshotId: "s1" });
+    expect(h.laneCalls.prepare).toEqual([INGEST_PATH]);
+  });
+
+  it("asks the server about a snapshot whose design went to the server", async () => {
+    const h = harness(listing);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 1000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
+    await askSnap(f, "CheckService/CheckDesign", "snapshots/s1");
+    expect(h.networkCalls).toEqual([INGEST_PATH, "/agni.v1.webapi.CheckService/CheckDesign"]);
+    expect(h.engineCalls).toEqual([]);
   });
 });
 

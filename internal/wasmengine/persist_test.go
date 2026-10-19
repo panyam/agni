@@ -37,11 +37,12 @@ func opened(t *testing.T, eng *Engine) []proto.Message {
 	srv := httptest.NewServer(eng.Handler)
 	defer srv.Close()
 	ctx := context.Background()
-	d, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Uri: "mount://m"}))
+	snap := snapAt(t, srv)
+	d, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snap}))
 	if err != nil {
 		t.Fatal(err)
 	}
-	c, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Uri: "mount://m"}))
+	c, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snap}))
 	if err != nil {
 		t.Fatal(err)
 	}

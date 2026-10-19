@@ -97,9 +97,8 @@ func fixtureManifest(t *testing.T, name string) *checkspb.ReviewManifest {
 func TestCreateReviewOverFixtures(t *testing.T) {
 	svc := newReviewSvc()
 	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
-		Manifest:  fixtureManifest(t, "review/mini.yaml"),
-		DesignUri: "mount://m/review/can-broken.edn",
-		BoardUri:  "mount://m/conformance/drc.fires.kicad_pcb",
+		Manifest: fixtureManifest(t, "review/mini.yaml"),
+		Snapshot: ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/review/can-broken.edn", BoardUri: "mount://m/conformance/drc.fires.kicad_pcb"}),
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -132,8 +131,8 @@ func TestCreateReviewOverFixtures(t *testing.T) {
 func TestCreateReviewBoardURIGate(t *testing.T) {
 	svc := newReviewSvc()
 	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
-		Manifest:  fixtureManifest(t, "review/mini.yaml"),
-		DesignUri: "mount://m/review/can-broken.edn",
+		Manifest: fixtureManifest(t, "review/mini.yaml"),
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/review/can-broken.edn"),
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -159,11 +158,13 @@ func TestCreateReviewErrors(t *testing.T) {
 		Items: []*checkspb.ManifestItem{{Id: "i", Binding: &checkspb.ItemBinding{Rule: "bulk-cap", Profile: "CAN"}}},
 	}}}
 	design := "review/can-broken.edn"
+	snap := snapOf(t, svc.Snapshots(), "mount://m/"+design)
+	boardAtNetlist := ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/" + design, BoardUri: "mount://m/review/can-broken.edn"})
 	cases := map[string]*webapi.CreateReviewRequest{
 		"empty design_ref": {Manifest: fixtureManifest(t, "review/mini.yaml")},
-		"absent manifest":  {DesignUri: "mount://m/" + design},
-		"invalid manifest": {Manifest: twoBindings, DesignUri: "mount://m/" + design},
-		"board at netlist": {Manifest: fixtureManifest(t, "review/mini.yaml"), DesignUri: "mount://m/" + design, BoardUri: "mount://m/review/can-broken.edn"},
+		"absent manifest":  {Snapshot: snap},
+		"invalid manifest": {Manifest: twoBindings, Snapshot: snap},
+		"board at netlist": {Manifest: fixtureManifest(t, "review/mini.yaml"), Snapshot: boardAtNetlist},
 	}
 	for name, req := range cases {
 		if _, err := svc.CreateReview(ctx, req); err == nil {
@@ -186,8 +187,8 @@ func TestGetReviewManifest(t *testing.T) {
 		t.Fatalf("resolved manifest is empty: %+v", got.GetManifest())
 	}
 	resp, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{
-		Manifest:  got.GetManifest(),
-		DesignUri: "mount://m/review/can-broken.edn",
+		Manifest: got.GetManifest(),
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/review/can-broken.edn"),
 	})
 	if err != nil {
 		t.Fatalf("CreateReview with the resolved manifest: %v", err)
@@ -281,7 +282,7 @@ func runOneItem(t *testing.T, p profiles.Profile, d *ir.Design) string {
 	cat := check.CatalogWith(profiles.Source("t", []profiles.Profile{p}))
 	byName := map[string][]profiles.Profile{p.Name: {p}}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), cat, byName, nil, testReviewEnv, "", nil)
-	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "mount://m/d"})
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d")})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}
@@ -416,7 +417,7 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 	}
 	svc := NewReviewService(stubReviewLoader{design: d, man: man}, NewMemReviewStore(), check.CatalogWith(srcs...),
 		map[string][]profiles.Profile{name: ps}, nil, testReviewEnv, "", nil)
-	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "mount://m/d"})
+	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d")})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}
@@ -430,11 +431,9 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 // mutable vocabulary would show up as a race or a flipped outcome rather than passing by luck.
 func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 	svc := NewReviewService(fsReviewLoader{base: "../cmd/agni/testdata"}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "", nil)
-	req := func(conventions string) *webapi.CreateReviewRequest {
-		r := &webapi.CreateReviewRequest{
-			Manifest:  fixtureManifest(t, "review/conv.yaml"),
-			DesignUri: "mount://m/review/conv-demo.edn",
-		}
+	man := fixtureManifest(t, "review/conv.yaml")
+	req := func(conventions string) (*webapi.CreateReviewRequest, error) {
+		def := &webapi.Snapshot{Uri: "mount://m/review/conv-demo.edn"}
 		if conventions != "" {
 			// The convention travels as a VALUE, so the caller decides where it came from; here that is
 			// the same YAML the CLI test uses, read by the test rather than by the service.
@@ -442,9 +441,13 @@ func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 			if err != nil {
 				t.Fatalf("naming.Load: %v", err)
 			}
-			r.Overlay = &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: cfg}}
+			def.Overlay = &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: cfg}}
 		}
-		return r
+		snap, err := svc.Snapshots().Ingest(context.Background(), &webapi.IngestRequest{Snapshot: def})
+		if err != nil {
+			return nil, err
+		}
+		return &webapi.CreateReviewRequest{Manifest: man, Snapshot: snap.GetName()}, nil
 	}
 	// Item 64 is keyed on a pin's electrical type, which ONLY the ingestion stamp can set (no
 	// model-side name fallback exists for a pin direction), so this asserts the READ each request
@@ -459,7 +462,12 @@ func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 			wg.Add(1)
 			go func() {
 				defer wg.Done()
-				resp, err := svc.CreateReview(context.Background(), req(tc.conventions))
+				r, err := req(tc.conventions)
+				if err != nil {
+					t.Errorf("Ingest(%q): %v", tc.conventions, err)
+					return
+				}
+				resp, err := svc.CreateReview(context.Background(), r)
 				if err != nil {
 					t.Errorf("CreateReview(%q): %v", tc.conventions, err)
 					return

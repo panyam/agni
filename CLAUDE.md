@@ -625,6 +625,17 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `core/query/testdata/binding_twin.json`, `core/facts/testdata/kind_order.json`,
   `service/testdata/natural_twin.json`. A new client copy of engine logic gets one, or better, comes
   off the wire (a parse error's caret is `TextPosition.caret`, drawn by the engine).
+- **Every question about a design names a snapshot, and only `Ingest` names files** (agni 1061,
+  `service/snapshot.go`, "The services" in `architecture/web-services.md`). Ingest resolves the
+  tiers and composes the overlay once; ids are random, so two ingests are two snapshots sharing one
+  cache beneath. A snapshot records the files its questions read and refuses a question once one
+  changed (stale, FAILED_PRECONDITION), and a host that lost one answers NOT_FOUND, both with a
+  `SnapshotUnavailable` detail the viewer recovers from (`web/src/snapshots.ts`). Snapshots live on
+  the `ProjectResolver` the services share, so a host composing services over two resolvers holds
+  two sets and a question names one neither holds; each service's `Snapshots()` is the
+  SnapshotService over its own loader and resolver. Each browser worker holds its own, and
+  `mountingFetch` replays the page's ingest into a worker before its first question about it. The
+  CLI ingests, asks and deletes per command, locally or over `--remote`.
 - **A server and the browser engine keep what a request read** (agni 895, `service.DesignCache`;
   "Kept reads" in `architecture/web-services.md`). Validity is the files the read touched, recorded by
   `formats.Loader` through `service.LoaderIn`, so a new host that reads around `LoaderIn` is never
@@ -743,8 +754,10 @@ surfaces disagree with no resolver involved. Given no board,
 `BuildModel` asks the loader for one at the DESIGN's own URI, and the CLI's `localLoader` resolves a
 descriptor inside `Board` while the served `osLoader` reads exactly what it is handed. So a loader
 can attach a companion the service never resolved, which makes "the CLI reads it" evidence about the
-loader rather than about the request. Every analysis rpc now calls `TierURIs` first, and a new one
-that reads a design owes that call.
+loader rather than about the request. Since agni 1061 a question names a SNAPSHOT and the tiers are
+resolved once, by `SnapshotService.Ingest`, so no analysis rpc can skip the call: a new one takes
+`snapshot` and reads `Snap.Netlist`/`Board`/`Geometry`, which `TestC22AnalysisRequestsNameASnapshot`
+holds every analysis request to.
 
 **A trace answer carries where each net and endpoint is DRAWN**, per net rather than one sheet for the
 answer, because a route crossing three sheets is when a reader most wants to choose (agni 657). An
@@ -758,8 +771,9 @@ the sheet off the response rather than choosing, which is C32 at one more call s
 board tier's format (`formats.HasBoard`), and the board is read when its sheet is opened or a
 board-tier rule runs. Reading it on open made the Jetson seed's first sheet and rule catalog wait
 about 30 s in the browser, since everything on the worker queues behind the request that opens. The
-viewer instead sends `LoadDesign` once the first sheet is drawn, on a `prepare` worker that ends when
-it answers and leaves the parsed board in the shared store for the jobs worker to restore (agni 1061).
+viewer instead sends an `Ingest` of the open snapshot with `read_board` once the first sheet is drawn,
+on a `prepare` worker that ends when it answers and leaves the parsed board in the shared store for
+the jobs worker to restore (agni 1061).
 **Nor must a query that asks nothing of the copper** (agni 987). A model is built with a
 `BoardTier`: rule runs pass `ReadBoard`, a query passes it only when `query.ReadsFrom` names a
 `board.*` relation (`boardTierFor`, which sees through its rules and library members), and coverage

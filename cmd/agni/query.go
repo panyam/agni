@@ -171,6 +171,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			// --remote sends the same request to a running server (agni issue 998), so everything below
 			// reads one answer whichever engine produced it.
 			var svc queryAPI
+			var snaps snapshotAPI
 			addr := cliArgURI
 			if remoteURL != "" {
 				if err := refuseLocalOnly(cmd, "params"); err != nil {
@@ -180,7 +181,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if err != nil {
 					return err
 				}
-				svc, addr = r.query(), r.uri
+				svc, snaps, addr = r.query(), r.snapshots(), r.uri
 			} else {
 				var specs param.ParamProvider
 				if paramsDir != "" {
@@ -190,7 +191,8 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 					}
 					specs = set
 				}
-				svc = service.NewQueryService(&localLoader{loader: newLoader()}, specs, cliProjects())
+				ll := &localLoader{loader: newLoader()}
+				svc, snaps = service.NewQueryService(ll, specs, cliProjects()), service.NewSnapshotService(ll, cliProjects(), specs, "")
 			}
 			designURI, err := addr(args[0])
 			if err != nil {
@@ -200,14 +202,20 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			if err != nil {
 				return err
 			}
+			// --conventions and --lib ride the snapshot's definition, so the lexicon reaches the read.
+			snap, drop, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: designURI, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
+			if err != nil {
+				return rpcFailed(err)
+			}
+			defer drop()
 			if setPath != "" {
 				if queryLimit != 0 {
 					return fmt.Errorf("--limit caps one query's answer; a set's queries write their own limit")
 				}
-				return runQuerySet(cmd, svc, setPath, designURI, boardURI, overlay, format, title, budget, queryLinker(cmd, srvSpec, args[0]))
+				return runQuerySet(cmd, svc, setPath, snap, format, title, budget, queryLinker(cmd, srvSpec, args[0]))
 			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
-				Uri: designURI, Query: args[1], Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed,
+				Snapshot: snap, Query: args[1],
 				OmitLocations: queryOmitLocations,
 				Bindings:      service.BindingsProto(bind),
 				Limit:         queryLimit,
@@ -259,15 +267,27 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 // ListRelationsResponse for the path (C31); for the root that is the entry, not the flat catalog.
 func printRelations(ctx context.Context, w io.Writer, path, design string, cfg *webapi.AnalysisConfig, format string, verbose bool) error {
 	svc := service.NewQueryService(nil, nil, cliProjects())
-	uri, err := cliArgURI(design)
-	if err != nil {
-		return err
+	// A design's project library joins the tree through a snapshot of it, and with no design the
+	// --lib directories ride the request alone.
+	req := &webapi.ListRelationsRequest{Overlay: &webapi.OverlayConfig{Config: cfg}}
+	if design != "" {
+		uri, err := cliArgURI(design)
+		if err != nil {
+			return err
+		}
+		ll := &localLoader{loader: newLoader()}
+		snap, drop, err := ingest(ctx, service.NewSnapshotService(ll, cliProjects(), nil, ""), &webapi.Snapshot{Uri: uri, Overlay: req.Overlay})
+		if err != nil {
+			return rpcFailed(err)
+		}
+		defer drop()
+		req = &webapi.ListRelationsRequest{Snapshot: snap}
 	}
 	describe := func(p string) (*webapi.RelationEntry, error) {
 		if p == "" {
 			p = "."
 		}
-		resp, err := svc.ListRelations(ctx, &webapi.ListRelationsRequest{Path: p, Uri: uri, Overlay: &webapi.OverlayConfig{Config: cfg}})
+		resp, err := svc.ListRelations(ctx, &webapi.ListRelationsRequest{Path: p, Snapshot: req.Snapshot, Overlay: req.Overlay})
 		if err != nil {
 			return nil, rpcFailed(err)
 		}
@@ -411,9 +431,9 @@ func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rp
 // path is a set file, - for stdin, or the name of a set the design's project keeps in its queries/
 // directory (agni issue 745), which ListQuerySets answers as it does for the viewer. Only a name
 // ending .yaml or .yml is read as a file, the rule --checklist follows.
-func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI string, overlay *webapi.OverlayConfig, format, title string, budget int64, link linker) error {
+func runQuerySet(cmd *cobra.Command, svc queryAPI, path, snap, format, title string, budget int64, link linker) error {
 	named := path
-	set, path, err := readQuerySet(cmd, svc, path, designURI)
+	set, path, err := readQuerySet(cmd, svc, path, snap)
 	if err != nil {
 		return err
 	}
@@ -421,7 +441,7 @@ func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI str
 		set.Title = title
 	}
 	resp, err := svc.RunQueries(cmd.Context(), &webapi.RunQueriesRequest{
-		Set: service.QuerySetProto(set), Uri: designURI, BoardUri: boardURI, Overlay: overlay, AsNamed: readAsNamed, WorkBudget: budget,
+		Set: service.QuerySetProto(set), Snapshot: snap, WorkBudget: budget,
 		OmitLocations: queryOmitLocations,
 	})
 	if err != nil {
@@ -460,7 +480,7 @@ func runQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI, boardURI str
 }
 
 // readQuerySet reads the set --set names, and the name to report it under.
-func readQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI string) (query.QuerySet, string, error) {
+func readQuerySet(cmd *cobra.Command, svc queryAPI, path, snap string) (query.QuerySet, string, error) {
 	var b []byte
 	var err error
 	switch {
@@ -471,7 +491,7 @@ func readQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI string) (que
 	case strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml"):
 		b, err = os.ReadFile(path)
 	default:
-		return projectQuerySet(cmd, svc, path, designURI)
+		return projectQuerySet(cmd, svc, path, snap)
 	}
 	if err != nil {
 		return query.QuerySet{}, path, err
@@ -485,8 +505,8 @@ func readQuerySet(cmd *cobra.Command, svc queryAPI, path, designURI string) (que
 
 // projectQuerySet finds the set called name among those the design's project keeps, and names the
 // ones it does keep when there is no such set.
-func projectQuerySet(cmd *cobra.Command, svc queryAPI, name, designURI string) (query.QuerySet, string, error) {
-	resp, err := svc.ListQuerySets(cmd.Context(), &webapi.ListQuerySetsRequest{DesignUri: designURI})
+func projectQuerySet(cmd *cobra.Command, svc queryAPI, name, snap string) (query.QuerySet, string, error) {
+	resp, err := svc.ListQuerySets(cmd.Context(), &webapi.ListQuerySetsRequest{Snapshot: snap})
 	if err != nil {
 		return query.QuerySet{}, name, rpcFailed(err)
 	}

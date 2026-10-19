@@ -1,6 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
 import { ViewerPresenter } from "./viewer.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
+import type { OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
+import { fakeSnapshots, snapName } from "./testsnaps.js";
 import { NO_PROJECT_LABEL, PLAIN_LABEL, projectLabel, type ProjectState } from "./project.js";
 
 // A viewer harness wired with a ProjectService whose resolution the test controls. Everything else
@@ -66,6 +68,7 @@ function harness(
     { listDir } as any,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     { resolveDesign } as any,
+    fakeSnapshots(),
   );
   return { presenter, onProject, onConvention, onReview, resolveDesign, listRules, checkDesign, listDir, createReview, getReviewManifest, listChecklists };
 }
@@ -163,10 +166,9 @@ describe("the built-in catalog toggle", () => {
     const h = harness(inProject);
     await h.presenter.openFile("m", "d/gateway.edn");
     await h.presenter.setPlainCatalog(true);
-    const calls = h.checkDesign.mock.calls as unknown as Array<[{ overlay?: { ignoreProject?: boolean }; uri: string }]>;
+    const calls = h.checkDesign.mock.calls as unknown as Array<[{ snapshot: string }]>;
     const req = calls[calls.length - 1][0];
-    expect(req.overlay?.ignoreProject).toBe(true);
-    expect(req.uri).toBe(artifactUri("m", "d/gateway.edn"));
+    expect(req.snapshot).toBe(snapName(artifactUri("m", "d/gateway.edn"), { ignoreProject: true } as OverlayConfig));
   });
 
   it("says the built-in catalog is in effect, distinctly from having no project", async () => {
@@ -215,7 +217,7 @@ describe("the config pickers offer one kind each", () => {
       checklists: [{ name: "shared", manifest: { name: "Team checklist" } }, { name: "review", manifest: { name: "Sample Board design review" } }],
     });
     await h.presenter.openFile("m", "d/gateway.edn");
-    expect(h.listChecklists).toHaveBeenCalledWith({ designUri: artifactUri("m", "d/gateway.edn") });
+    expect(h.listChecklists).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "d/gateway.edn")) });
     expect(refs(h.onReview, "checklists")).toEqual(["shared", "review"]);
   });
 

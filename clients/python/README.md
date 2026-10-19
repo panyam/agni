@@ -12,8 +12,17 @@ from agni import Client, CliTransport, ConnectTransport
 
 c = Client(CliTransport("agni", mounts={"tut": "examples/tutorial-project"}))
 # or: c = Client(ConnectTransport("http://127.0.0.1:8080"))
-resp = c.run_query(uri="mount://tut/designs/gateway", query='component.class(?c, "resistor") => ?c')
+snap = c.ingest("mount://tut/designs/gateway")
+resp = c.run_query(snapshot=snap, query='component.class(?c, "resistor") => ?c')
+c.delete_snapshot(snap)
 ```
+
+Every question names a snapshot, a design loaded once under one config (agni issue 1061). `ingest`
+returns its name, and takes the `board_uri`, `as_named` and `overlay` a request used to carry.
+A server holds a snapshot until it is deleted or evicted, and a question naming one it no longer holds
+raises `AgniError` with code `not_found`, so a long-running script ingests again. The CLI transport has
+no server, so it keeps each definition itself under a name it mints (`snapshots/cli-1`) and turns it
+back into flags for every command it runs.
 
 The guide, `docsite/content/build/other-languages.md`, covers choosing a transport, which rpcs the
 CLI covers, where the two differ today, and writing tables to xlsx.

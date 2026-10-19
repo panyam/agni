@@ -72,6 +72,7 @@ func servedParityMux(t *testing.T, ms []mounts.Mount) http.Handler {
 		Diff:      service.NewDiffService(loader, resolver),
 		Query:     service.NewQueryService(loader, nil, resolver),
 		Review:    review,
+		Snapshot:  check.Snapshots(),
 	}.Register(mux)
 	return mux
 }
@@ -102,6 +103,7 @@ func memCopy(t *testing.T, root string) fs.FS {
 }
 
 type parityClients struct {
+	snap   webapiconnect.SnapshotServiceClient
 	design webapiconnect.DesignServiceClient
 	check  webapiconnect.CheckServiceClient
 	query  webapiconnect.QueryServiceClient
@@ -116,6 +118,7 @@ func newParityClients(t *testing.T, h http.Handler) parityClients {
 	t.Cleanup(srv.Close)
 	c := srv.Client()
 	return parityClients{
+		snap:   webapiconnect.NewSnapshotServiceClient(c, srv.URL),
 		design: webapiconnect.NewDesignServiceClient(c, srv.URL),
 		review: webapiconnect.NewReviewServiceClient(c, srv.URL),
 		check:  webapiconnect.NewCheckServiceClient(c, srv.URL),
@@ -165,6 +168,17 @@ func TestWasmEngineAnswersAsTheServerDoes(t *testing.T) {
 func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom string) {
 	t.Helper()
 	ctx := context.Background()
+	// Each host ingests the design into a snapshot of its own, whose name is random, so a question
+	// names the snapshot of the host it is asked of.
+	snaps := map[webapiconnect.SnapshotServiceClient]string{}
+	for _, c := range []parityClients{served, wasm} {
+		s, err := c.snap.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: design}}))
+		if err != nil {
+			t.Fatalf("Ingest %s: %v", design, err)
+		}
+		snaps[c.snap] = s.Msg.GetName()
+	}
+	snapOn := func(c parityClients) string { return snaps[c.snap] }
 	ask := func(name string, call func(parityClients) (proto.Message, error)) proto.Message {
 		t.Helper()
 		a, errA := call(served)
@@ -180,7 +194,7 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	}
 
 	got := ask("GetDesign", func(c parityClients) (proto.Message, error) {
-		r, err := c.design.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Uri: design}))
+		r, err := c.design.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snapOn(c)}))
 		return msgOf(r, err)
 	})
 	sheets := got.(*webapi.GetDesignResponse).GetSheets()
@@ -194,17 +208,25 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	}
 	for _, s := range sheets {
 		ask("GetSheet "+s.GetId(), func(c parityClients) (proto.Message, error) {
-			r, err := c.design.GetSheet(ctx, connect.NewRequest(&webapi.GetSheetRequest{Uri: design, Sheet: s.GetId()}))
+			r, err := c.design.GetSheet(ctx, connect.NewRequest(&webapi.GetSheetRequest{Snapshot: snapOn(c), Sheet: s.GetId()}))
 			return msgOf(r, err)
 		})
 	}
-	// The page sends it after the first sheet draws (agni issue 1061), on either host.
-	ask("LoadDesign", func(c parityClients) (proto.Message, error) {
-		r, err := c.check.LoadDesign(ctx, connect.NewRequest(&webapi.LoadDesignRequest{Uri: design}))
-		return msgOf(r, err)
+	// The page ingests with read_board after the first sheet draws (agni issue 1061), on either host.
+	// The name is the one field that is the host's own, since each host picks it at random.
+	ask("Ingest read_board", func(c parityClients) (proto.Message, error) {
+		r, err := c.snap.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: design}, ReadBoard: true}))
+		if err != nil {
+			return nil, err
+		}
+		if r.Msg.GetName() == "" {
+			return nil, fmt.Errorf("the snapshot has no name")
+		}
+		r.Msg.Name = ""
+		return r.Msg, nil
 	})
 	report := ask("GetCheckReport", func(c parityClients) (proto.Message, error) {
-		r, err := c.check.GetCheckReport(ctx, connect.NewRequest(&webapi.GetCheckReportRequest{Uri: design}))
+		r, err := c.check.GetCheckReport(ctx, connect.NewRequest(&webapi.GetCheckReportRequest{Snapshot: snapOn(c)}))
 		return msgOf(r, err)
 	})
 	sections := report.(*webapi.GetCheckReportResponse).GetReport().GetSections()
@@ -226,11 +248,11 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	// own run, and the files must be the same bytes apart from when they were written.
 	for _, format := range []webapi.CheckReportFormat{webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON, webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML} {
 		render := func(c parityClients) (string, error) {
-			run, err := c.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Uri: design}))
+			run, err := c.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snapOn(c)}))
 			if err != nil {
 				return "", err
 			}
-			r, err := c.check.RenderCheckReport(ctx, connect.NewRequest(&webapi.RenderCheckReportRequest{Uri: design, Run: run.Msg, Format: format}))
+			r, err := c.check.RenderCheckReport(ctx, connect.NewRequest(&webapi.RenderCheckReportRequest{Snapshot: snapOn(c), Run: run.Msg, Format: format}))
 			if err != nil {
 				return "", err
 			}
@@ -279,7 +301,7 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	}
 	// A checklist is scored on the browser engine with validate_only, since it keeps no review store
 	// (agni issue 931), so both hosts score one checklist alike and neither stores it.
-	lists, err := served.review.ListChecklists(ctx, connect.NewRequest(&webapi.ListChecklistsRequest{DesignUri: design}))
+	lists, err := served.review.ListChecklists(ctx, connect.NewRequest(&webapi.ListChecklistsRequest{Snapshot: snapOn(served)}))
 	if err != nil {
 		t.Fatalf("ListChecklists: %v", err)
 	}
@@ -291,7 +313,7 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	if len(lists.Msg.GetChecklists()) > 0 {
 		score := func(c parityClients) (*webapi.Review, error) {
 			r, err := c.review.CreateReview(ctx, connect.NewRequest(&webapi.CreateReviewRequest{
-				DesignUri: design, Manifest: lists.Msg.GetChecklists()[0].GetManifest(), ValidateOnly: true,
+				Snapshot: snapOn(c), Manifest: lists.Msg.GetChecklists()[0].GetManifest(), ValidateOnly: true,
 			}))
 			if err != nil {
 				return nil, err
@@ -314,7 +336,7 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	}
 	// A run saved as csv is tabulated and encoded by whichever host the page runs on (agni issue 956),
 	// so both lay out and write one run identically. The run is the server's, sent to each.
-	run, err := served.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Uri: design}))
+	run, err := served.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snapOn(served)}))
 	if err != nil {
 		t.Fatalf("CheckDesign: %v", err)
 	}
@@ -330,13 +352,13 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		return msgOf(r, err)
 	})
 	ask("RunQuery", func(c parityClients) (proto.Message, error) {
-		r, err := c.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Uri: design, Query: query}))
+		r, err := c.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snapOn(c), Query: query}))
 		return msgOf(r, err)
 	})
 	// A project's query sets are read off its queries/ directory by whichever host serves the page
 	// (agni issue 745). A fixture carrying project config keeps sets, so both listing none is a failure.
 	sets := ask("ListQuerySets", func(c parityClients) (proto.Message, error) {
-		r, err := c.query.ListQuerySets(ctx, connect.NewRequest(&webapi.ListQuerySetsRequest{DesignUri: design}))
+		r, err := c.query.ListQuerySets(ctx, connect.NewRequest(&webapi.ListQuerySetsRequest{Snapshot: snapOn(c)}))
 		return msgOf(r, err)
 	}).(*webapi.ListQuerySetsResponse)
 	if ruleFrom != "" && len(sets.GetQuerySets()) == 0 {

@@ -18,7 +18,7 @@ func TestIncludeEqualAccountsForEveryNet(t *testing.T) {
 	ask := func(equal bool) *webapi.DiffDesignsResponse {
 		t.Helper()
 		resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
-			AUri: "mount://m/gateway.edn", BUri: "mount://m/gateway-rev-b.edn", IncludeEqual: equal,
+			ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway-rev-b.edn"), IncludeEqual: equal,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -43,8 +43,9 @@ func TestIncludeEqualAccountsForEveryNet(t *testing.T) {
 	}
 	names := map[string]bool{}
 	for _, uri := range []string{"gateway.edn", "gateway-rev-b.edn"} {
-		r, err := NewQueryService(fsQueryLoader{base: base}, nil, nil).RunQuery(context.Background(),
-			&webapi.RunQueryRequest{Uri: "mount://m/" + uri, Query: `entity(?n, "net") => ?n`})
+		qs := NewQueryService(fsQueryLoader{base: base}, nil, nil)
+		r, err := qs.RunQuery(context.Background(),
+			&webapi.RunQueryRequest{Snapshot: snapOf(t, qs.Snapshots(), "mount://m/"+uri), Query: `entity(?n, "net") => ?n`})
 		if err != nil {
 			t.Fatal(err)
 		}

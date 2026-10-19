@@ -332,6 +332,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	apiPaths := server.API{
 		Workspace: service.NewWorkspaceService(osWorkspace(mounts)).WithDesignFiles(projectResolver, osFiles(mounts)),
 		Project:   service.NewProjectService(projectStore),
+		Snapshot:  checkSvc.Snapshots(),
 		Design:    service.NewDesignService(loader, nativeR, style, projectResolver),
 		Check:     checkSvc,
 		Diff:      service.NewDiffService(loader, projectResolver),

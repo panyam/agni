@@ -26,9 +26,10 @@ const (
 // artifact URI like every other file-addressing request.
 type DiffDesignsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// a_uri is the OLD design and b_uri the NEW one; the report is what changed from a to b.
-	AUri string `protobuf:"bytes,1,opt,name=a_uri,json=aUri,proto3" json:"a_uri,omitempty"`
-	BUri string `protobuf:"bytes,2,opt,name=b_uri,json=bUri,proto3" json:"b_uri,omitempty"`
+	// a_snapshot names the earlier revision, "snapshots/{snapshot}" (agni issue 1061).
+	ASnapshot string `protobuf:"bytes,5,opt,name=a_snapshot,json=aSnapshot,proto3" json:"a_snapshot,omitempty"`
+	// b_snapshot names the later revision, "snapshots/{snapshot}" (agni issue 1061).
+	BSnapshot string `protobuf:"bytes,6,opt,name=b_snapshot,json=bSnapshot,proto3" json:"b_snapshot,omitempty"`
 	// near_renames, when set, also pairs a net that was renamed AND changed slightly with its old
 	// self, reported as renamed-approx with the evidence behind each pairing (agni issue 817). Unset
 	// is off, as `agni diff` is without --rename-approx: the pass ASSIGNS a best match among
@@ -74,16 +75,16 @@ func (*DiffDesignsRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_diff_proto_rawDescGZIP(), []int{0}
 }
 
-func (x *DiffDesignsRequest) GetAUri() string {
+func (x *DiffDesignsRequest) GetASnapshot() string {
 	if x != nil {
-		return x.AUri
+		return x.ASnapshot
 	}
 	return ""
 }
 
-func (x *DiffDesignsRequest) GetBUri() string {
+func (x *DiffDesignsRequest) GetBSnapshot() string {
 	if x != nil {
-		return x.BUri
+		return x.BSnapshot
 	}
 	return ""
 }
@@ -826,12 +827,14 @@ var File_agni_v1_webapi_diff_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_diff_proto_rawDesc = "" +
 	"\n" +
-	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"\xa9\x01\n" +
-	"\x12DiffDesignsRequest\x12\x13\n" +
-	"\x05a_uri\x18\x01 \x01(\tR\x04aUri\x12\x13\n" +
-	"\x05b_uri\x18\x02 \x01(\tR\x04bUri\x12D\n" +
+	"\x19agni/v1/webapi/diff.proto\x12\x0eagni.v1.webapi\x1a\x13agni/v1/ir/ir.proto\"\xd7\x01\n" +
+	"\x12DiffDesignsRequest\x12\x1d\n" +
+	"\n" +
+	"a_snapshot\x18\x05 \x01(\tR\taSnapshot\x12\x1d\n" +
+	"\n" +
+	"b_snapshot\x18\x06 \x01(\tR\tbSnapshot\x12D\n" +
 	"\fnear_renames\x18\x03 \x01(\v2!.agni.v1.webapi.NearRenameOptionsR\vnearRenames\x12#\n" +
-	"\rinclude_equal\x18\x04 \x01(\bR\fincludeEqual\"\xe1\x04\n" +
+	"\rinclude_equal\x18\x04 \x01(\bR\fincludeEqualJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\x05a_uriR\x05b_uri\"\xe1\x04\n" +
 	"\x11NearRenameOptions\x12-\n" +
 	"\x10min_old_coverage\x18\x01 \x01(\x01H\x00R\x0eminOldCoverage\x88\x01\x01\x12D\n" +
 	"\x1cmin_old_coverage_significant\x18\x02 \x01(\x01H\x01R\x19minOldCoverageSignificant\x88\x01\x01\x12-\n" +

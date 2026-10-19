@@ -252,23 +252,11 @@ func (x *SheetRef) GetParentId() string {
 
 type GetDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot names the design to describe, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,7,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
 	// empty uses the default. Ignored for geometry-bearing files, which render faithfully.
 	Layout string `protobuf:"bytes,1,opt,name=layout,proto3" json:"layout,omitempty"`
-	// uri names the design to load, "mount://<mount>/<path>".
-	Uri string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
-	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
-	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-	// companion, copper from a board one.
-	//
-	// It exists because the CLI is a client of this service and carries the same flag. Resolution
-	// happens here, once, so a caller that wants the file itself has to be able to say so; without
-	// this field the service would silently override the CLI's own opt-out (agni issue 656).
-	//
-	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-	// how two views of one design are checked against each other.
-	AsNamed bool `protobuf:"varint,3,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	// read_mask selects what the response carries (agni issue 836). Unset, the response is the summary
 	// it has always been, with no IR, because the viewer asks on every open and a large board's IR is
 	// megabytes. Set, it keeps exactly the paths named, over GetDesignResponse: `design` for the whole
@@ -317,25 +305,18 @@ func (*GetDesignRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{1}
 }
 
+func (x *GetDesignRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
 func (x *GetDesignRequest) GetLayout() string {
 	if x != nil {
 		return x.Layout
 	}
 	return ""
-}
-
-func (x *GetDesignRequest) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *GetDesignRequest) GetAsNamed() bool {
-	if x != nil {
-		return x.AsNamed
-	}
-	return false
 }
 
 func (x *GetDesignRequest) GetReadMask() *fieldmaskpb.FieldMask {
@@ -545,6 +526,8 @@ func (x *GetDesignResponse) GetHierarchyNote() string {
 
 type GetSheetRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot names the design whose sheet to draw, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,7,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// sheet selects by id, name, or 0-based index; empty selects the first sheet.
 	Sheet  string `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
 	Layout string `protobuf:"bytes,2,opt,name=layout,proto3" json:"layout,omitempty"`
@@ -552,21 +535,7 @@ type GetSheetRequest struct {
 	Format SheetFormat `protobuf:"varint,3,opt,name=format,proto3,enum=agni.v1.webapi.SheetFormat" json:"format,omitempty"`
 	// symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
 	// faithful layout (always the design's own symbols).
-	Symbols SymbolSource `protobuf:"varint,4,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
-	// uri names the design the sheet belongs to.
-	Uri string `protobuf:"bytes,5,opt,name=uri,proto3" json:"uri,omitempty"`
-	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
-	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-	// companion, copper from a board one.
-	//
-	// It exists because the CLI is a client of this service and carries the same flag. Resolution
-	// happens here, once, so a caller that wants the file itself has to be able to say so; without
-	// this field the service would silently override the CLI's own opt-out (agni issue 656).
-	//
-	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-	// how two views of one design are checked against each other.
-	AsNamed       bool `protobuf:"varint,6,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	Symbols       SymbolSource `protobuf:"varint,4,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -601,6 +570,13 @@ func (*GetSheetRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{3}
 }
 
+func (x *GetSheetRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
 func (x *GetSheetRequest) GetSheet() string {
 	if x != nil {
 		return x.Sheet
@@ -627,20 +603,6 @@ func (x *GetSheetRequest) GetSymbols() SymbolSource {
 		return x.Symbols
 	}
 	return SymbolSource_SYMBOL_SOURCE_UNSPECIFIED
-}
-
-func (x *GetSheetRequest) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *GetSheetRequest) GetAsNamed() bool {
-	if x != nil {
-		return x.AsNamed
-	}
-	return false
 }
 
 type GetSheetResponse struct {
@@ -730,6 +692,8 @@ func (*GetSheetResponse_Svg) isGetSheetResponse_Content() {}
 
 type HighlightSheetRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot names the design whose sheet to highlight, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,8,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// sheet/layout/symbols select the same geometry as the GetSheet call being overlaid.
 	Sheet   string       `protobuf:"bytes,1,opt,name=sheet,proto3" json:"sheet,omitempty"`
 	Layout  string       `protobuf:"bytes,2,opt,name=layout,proto3" json:"layout,omitempty"`
@@ -738,13 +702,7 @@ type HighlightSheetRequest struct {
 	// Unset means PACKED, matching GetSheet.
 	Format SheetFormat `protobuf:"varint,4,opt,name=format,proto3,enum=agni.v1.webapi.SheetFormat" json:"format,omitempty"`
 	// specs are the highlight layers to resolve, in paint order (a later spec wins overlaps).
-	Specs []*geom.HighlightSpec `protobuf:"bytes,5,rep,name=specs,proto3" json:"specs,omitempty"`
-	// uri names the design the sheet belongs to.
-	Uri string `protobuf:"bytes,6,opt,name=uri,proto3" json:"uri,omitempty"`
-	// as_named matches GetSheetRequest's, and must, or a highlight would be drawn against a different
-	// artifact than the sheet it lands on: the two calls resolve one design and have to resolve it the
-	// same way.
-	AsNamed       bool `protobuf:"varint,7,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	Specs         []*geom.HighlightSpec `protobuf:"bytes,5,rep,name=specs,proto3" json:"specs,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -777,6 +735,13 @@ func (x *HighlightSheetRequest) ProtoReflect() protoreflect.Message {
 // Deprecated: Use HighlightSheetRequest.ProtoReflect.Descriptor instead.
 func (*HighlightSheetRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *HighlightSheetRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
 }
 
 func (x *HighlightSheetRequest) GetSheet() string {
@@ -812,20 +777,6 @@ func (x *HighlightSheetRequest) GetSpecs() []*geom.HighlightSpec {
 		return x.Specs
 	}
 	return nil
-}
-
-func (x *HighlightSheetRequest) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *HighlightSheetRequest) GetAsNamed() bool {
-	if x != nil {
-		return x.AsNamed
-	}
-	return false
 }
 
 type HighlightSheetResponse struct {
@@ -915,22 +866,10 @@ func (*HighlightSheetResponse_Svg) isHighlightSheetResponse_Content() {}
 
 type GetLayoutReportRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
+	// snapshot names the design whose auto-layout to report on, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,4,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// symbols selects the node artwork the report explains; unset means GLYPH.
-	Symbols SymbolSource `protobuf:"varint,1,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
-	// uri names the design to report on.
-	Uri string `protobuf:"bytes,2,opt,name=uri,proto3" json:"uri,omitempty"`
-	// as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-	// companion view of a different entry. Without it, a ref belonging to a declared design resolves
-	// to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-	// companion, copper from a board one.
-	//
-	// It exists because the CLI is a client of this service and carries the same flag. Resolution
-	// happens here, once, so a caller that wants the file itself has to be able to say so; without
-	// this field the service would silently override the CLI's own opt-out (agni issue 656).
-	//
-	// Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-	// how two views of one design are checked against each other.
-	AsNamed       bool `protobuf:"varint,3,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	Symbols       SymbolSource `protobuf:"varint,1,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -965,25 +904,18 @@ func (*GetLayoutReportRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{7}
 }
 
+func (x *GetLayoutReportRequest) GetSnapshot() string {
+	if x != nil {
+		return x.Snapshot
+	}
+	return ""
+}
+
 func (x *GetLayoutReportRequest) GetSymbols() SymbolSource {
 	if x != nil {
 		return x.Symbols
 	}
 	return SymbolSource_SYMBOL_SOURCE_UNSPECIFIED
-}
-
-func (x *GetLayoutReportRequest) GetUri() string {
-	if x != nil {
-		return x.Uri
-	}
-	return ""
-}
-
-func (x *GetLayoutReportRequest) GetAsNamed() bool {
-	if x != nil {
-		return x.AsNamed
-	}
-	return false
 }
 
 type GetLayoutReportResponse struct {
@@ -1032,8 +964,8 @@ func (x *GetLayoutReportResponse) GetReport() *ConversionReport {
 
 type TraceDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// uri names the design to trace over, "mount://<mount>/<path>".
-	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
+	// snapshot names the design to trace through, "snapshots/{snapshot}" (agni issue 1061).
+	Snapshot string `protobuf:"bytes,6,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// from / to are the endpoint pins, as ref-des and pin designator.
 	From *TraceEndpoint `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
 	To   *TraceEndpoint `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
@@ -1041,11 +973,7 @@ type TraceDesignRequest struct {
 	// radii this is a SEARCH BUDGET rather than an electrical claim, which is why the response repeats
 	// the value it rests on: nothing about a route degrades with distance, so a no-route can be
 	// re-asked wider and the reader has to be able to see what was asked the first time.
-	Hops int32 `protobuf:"varint,4,opt,name=hops,proto3" json:"hops,omitempty"`
-	// as_named reads exactly the artifact this uri names, as it does on every other design request.
-	// A trace resolves tiers too: the walk is over the netlist and the sheets come from the geometry
-	// companion, which for a netlist entry is a different artifact.
-	AsNamed       bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
+	Hops          int32 `protobuf:"varint,4,opt,name=hops,proto3" json:"hops,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1080,9 +1008,9 @@ func (*TraceDesignRequest) Descriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{9}
 }
 
-func (x *TraceDesignRequest) GetUri() string {
+func (x *TraceDesignRequest) GetSnapshot() string {
 	if x != nil {
-		return x.Uri
+		return x.Snapshot
 	}
 	return ""
 }
@@ -1106,13 +1034,6 @@ func (x *TraceDesignRequest) GetHops() int32 {
 		return x.Hops
 	}
 	return 0
-}
-
-func (x *TraceDesignRequest) GetAsNamed() bool {
-	if x != nil {
-		return x.AsNamed
-	}
-	return false
 }
 
 // TraceEndpoint names one pin of one component.
@@ -1763,14 +1684,13 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	"\bSheetRef\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12\x1b\n" +
-	"\tparent_id\x18\x03 \x01(\tR\bparentId\"\xbd\x01\n" +
-	"\x10GetDesignRequest\x12\x16\n" +
-	"\x06layout\x18\x01 \x01(\tR\x06layout\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\x12\x19\n" +
-	"\bas_named\x18\x03 \x01(\bR\aasNamed\x127\n" +
+	"\tparent_id\x18\x03 \x01(\tR\bparentId\"\xc7\x01\n" +
+	"\x10GetDesignRequest\x12\x1a\n" +
+	"\bsnapshot\x18\a \x01(\tR\bsnapshot\x12\x16\n" +
+	"\x06layout\x18\x01 \x01(\tR\x06layout\x127\n" +
 	"\tread_mask\x18\x04 \x01(\v2\x1a.google.protobuf.FieldMaskR\breadMask\x12\x12\n" +
 	"\x04nets\x18\x05 \x03(\tR\x04nets\x12\x17\n" +
-	"\aref_des\x18\x06 \x03(\tR\x06refDes\"\xb8\x04\n" +
+	"\aref_des\x18\x06 \x03(\tR\x06refDesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x03uriR\bas_named\"\xb8\x04\n" +
 	"\x11GetDesignResponse\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12#\n" +
 	"\rsource_format\x18\x02 \x01(\tR\fsourceFormat\x12'\n" +
@@ -1785,42 +1705,38 @@ const file_agni_v1_webapi_design_proto_rawDesc = "" +
 	" \x01(\tR\vcontentHash\x12R\n" +
 	"\x14unexpanded_hierarchy\x18\v \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\x12*\n" +
 	"\x06design\x18\f \x01(\v2\x12.agni.v1.ir.DesignR\x06design\x12%\n" +
-	"\x0ehierarchy_note\x18\r \x01(\tR\rhierarchyNote\"\xd9\x01\n" +
-	"\x0fGetSheetRequest\x12\x14\n" +
+	"\x0ehierarchy_note\x18\r \x01(\tR\rhierarchyNote\"\xe3\x01\n" +
+	"\x0fGetSheetRequest\x12\x1a\n" +
+	"\bsnapshot\x18\a \x01(\tR\bsnapshot\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
 	"\x06layout\x18\x02 \x01(\tR\x06layout\x123\n" +
 	"\x06format\x18\x03 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x126\n" +
-	"\asymbols\x18\x04 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x12\x10\n" +
-	"\x03uri\x18\x05 \x01(\tR\x03uri\x12\x19\n" +
-	"\bas_named\x18\x06 \x01(\bR\aasNamed\"f\n" +
+	"\asymbols\x18\x04 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbolsJ\x04\b\x05\x10\x06J\x04\b\x06\x10\aR\x03uriR\bas_named\"f\n" +
 	"\x10GetSheetResponse\x123\n" +
 	"\x06packed\x18\x01 \x01(\v2\x19.agni.v1.geom.PackedSheetH\x00R\x06packed\x12\x12\n" +
 	"\x03svg\x18\x02 \x01(\tH\x00R\x03svgB\t\n" +
-	"\acontent\"\x92\x02\n" +
-	"\x15HighlightSheetRequest\x12\x14\n" +
+	"\acontent\"\x9c\x02\n" +
+	"\x15HighlightSheetRequest\x12\x1a\n" +
+	"\bsnapshot\x18\b \x01(\tR\bsnapshot\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\x12\x16\n" +
 	"\x06layout\x18\x02 \x01(\tR\x06layout\x126\n" +
 	"\asymbols\x18\x03 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x123\n" +
 	"\x06format\x18\x04 \x01(\x0e2\x1b.agni.v1.webapi.SheetFormatR\x06format\x121\n" +
-	"\x05specs\x18\x05 \x03(\v2\x1b.agni.v1.geom.HighlightSpecR\x05specs\x12\x10\n" +
-	"\x03uri\x18\x06 \x01(\tR\x03uri\x12\x19\n" +
-	"\bas_named\x18\a \x01(\bR\aasNamed\"p\n" +
+	"\x05specs\x18\x05 \x03(\v2\x1b.agni.v1.geom.HighlightSpecR\x05specsJ\x04\b\x06\x10\aJ\x04\b\a\x10\bR\x03uriR\bas_named\"p\n" +
 	"\x16HighlightSheetResponse\x127\n" +
 	"\x06packed\x18\x01 \x01(\v2\x1d.agni.v1.geom.PackedHighlightH\x00R\x06packed\x12\x12\n" +
 	"\x03svg\x18\x02 \x01(\tH\x00R\x03svgB\t\n" +
-	"\acontent\"}\n" +
-	"\x16GetLayoutReportRequest\x126\n" +
-	"\asymbols\x18\x01 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbols\x12\x10\n" +
-	"\x03uri\x18\x02 \x01(\tR\x03uri\x12\x19\n" +
-	"\bas_named\x18\x03 \x01(\bR\aasNamed\"S\n" +
+	"\acontent\"\x87\x01\n" +
+	"\x16GetLayoutReportRequest\x12\x1a\n" +
+	"\bsnapshot\x18\x04 \x01(\tR\bsnapshot\x126\n" +
+	"\asymbols\x18\x01 \x01(\x0e2\x1c.agni.v1.webapi.SymbolSourceR\asymbolsJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04R\x03uriR\bas_named\"S\n" +
 	"\x17GetLayoutReportResponse\x128\n" +
-	"\x06report\x18\x01 \x01(\v2 .agni.v1.webapi.ConversionReportR\x06report\"\xb7\x01\n" +
-	"\x12TraceDesignRequest\x12\x10\n" +
-	"\x03uri\x18\x01 \x01(\tR\x03uri\x121\n" +
+	"\x06report\x18\x01 \x01(\v2 .agni.v1.webapi.ConversionReportR\x06report\"\xc1\x01\n" +
+	"\x12TraceDesignRequest\x12\x1a\n" +
+	"\bsnapshot\x18\x06 \x01(\tR\bsnapshot\x121\n" +
 	"\x04from\x18\x02 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\x04from\x12-\n" +
 	"\x02to\x18\x03 \x01(\v2\x1d.agni.v1.webapi.TraceEndpointR\x02to\x12\x12\n" +
-	"\x04hops\x18\x04 \x01(\x05R\x04hops\x12\x19\n" +
-	"\bas_named\x18\x05 \x01(\bR\aasNamed\":\n" +
+	"\x04hops\x18\x04 \x01(\x05R\x04hopsJ\x04\b\x01\x10\x02J\x04\b\x05\x10\x06R\x03uriR\bas_named\":\n" +
 	"\rTraceEndpoint\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x10\n" +
 	"\x03pin\x18\x02 \x01(\tR\x03pin\"B\n" +

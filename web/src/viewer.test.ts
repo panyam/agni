@@ -8,6 +8,8 @@ import { stubQueryView } from "./testviews.js";
 import { BASE_HIGHLIGHT_ALPHA, BASE_HIGHLIGHT_COLOR, HighlightShape } from "./highlights.js";
 import { SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
+import type { Snapshot } from "./gen/agni/v1/webapi/snapshot_pb.js";
+import { fakeSnapshots, snapName } from "./testsnaps.js";
 
 // Fakes for the presenter's collaborators. The presenter only calls typed methods, so plain
 // stubs suffice, with no DOM and no transport. getSheet returns the oneof-shaped response the real
@@ -49,10 +51,10 @@ function harness() {
       ? { content: { case: "svg", value: "<svg data-mode='svg'/>" } }
       : { content: { case: "packed", value: { sheetId: "s1" } } },
   );
-  const checkDesign = vi.fn(async (_req: { uri: string; rules?: string[] }) => ({ findings: [] as { rule: string; severity: string; subject: { kind: string; ref: string; pin: string }; message: string; sheets?: string[]; inconclusive?: boolean }[] }));
+  const checkDesign = vi.fn(async (_req: { snapshot: string; rules?: string[] }) => ({ findings: [] as { rule: string; severity: string; subject: { kind: string; ref: string; pin: string }; message: string; sheets?: string[]; inconclusive?: boolean }[] }));
   // listRules returns a small two-rule catalog by default (one connectivity, one naming), both
   // available, so opening a file default-selects both. Tests that need a specific catalog override.
-  const listRules = vi.fn(async (_req: { uri: string }) => ({
+  const listRules = vi.fn(async (_req: { snapshot: string }) => ({
     rules: [
       { name: "single-pin-net", severity: "info", summary: "stub net", reads: ["net.pin_count"], tags: { category: "connectivity" }, available: true, unavailableReason: "" },
       { name: "diff-pair-naming", severity: "warning", summary: "diff pair", reads: ["net.names"], tags: { category: "naming" }, available: true, unavailableReason: "" },
@@ -65,16 +67,18 @@ function harness() {
   const highlightSheet = vi.fn(async (_req: object) => ({ content: { case: "svg", value: "<svg data-overlay/>" } }));
   // getExpectations returns no sidecar by default, so opening a file leaves the panel empty; tests
   // that exercise the expectations panel override it.
-  const getExpectations = vi.fn(async (_req: { uri: string }) => ({
+  const getExpectations = vi.fn(async (_req: { snapshot: string }) => ({
     expectations: [] as { rule: string; subjects: string[]; pending: boolean }[],
     hasSidecar: false,
   }));
   // Two mock clients mirror the WS9-026 service split, with rendering RPCs on the design client,
   // rules/findings/expectations on the checks client.
   const client = { getDesign, getSheet, getLayoutReport, highlightSheet } as any;
-  // loadDesign answers like an engine that persisted the board; the open never waits on it.
-  const loadDesign = vi.fn(async (_req: { uri: string }) => ({ hasBoard: true, boardPersisted: true }));
-  const checks = { checkDesign, listRules, getExpectations, loadDesign } as any;
+  // readBoard answers like an engine that persisted the board; the open never waits on it.
+  const fake = fakeSnapshots();
+  const readBoard = vi.fn(fake.readBoard);
+  const snaps = { ...fake, readBoard };
+  const checks = { checkDesign, listRules, getExpectations } as any;
   const canvas = { showSheet: vi.fn(), setHighlights: vi.fn() } as any;
   // Spies for the ports these tests assert on; every other port defaults to a no-op in
   // stubQueryView, so a method added to QueryView is one edit there rather than a runtime failure
@@ -90,7 +94,7 @@ function harness() {
       { name: req.set.queries[1].name, error: "unknown relation" },
     ],
   }));
-  const listQuerySets = vi.fn(async (_req: { designUri: string }) => ({
+  const listQuerySets = vi.fn(async (_req: { snapshot: string }) => ({
     project: "projects/p",
     querySets: [{ name: "power", source: "mount://m/queries/power.yaml", set: { title: "Power", queries: [] } }],
   }));
@@ -135,8 +139,8 @@ function harness() {
     // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
-  }, { runQuery, runQueries, listQuerySets } as any);
-  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, loadDesign, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
+  }, { runQuery, runQueries, listQuerySets } as any, undefined, undefined, undefined, snaps);
+  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -573,7 +577,7 @@ describe("ViewerPresenter", () => {
     });
     await openAndCheck(h, "m", "board.edn");
     // The active ruleset is the default (both catalog rules), run in one call by the Run button.
-    expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net", "diff-pair-naming"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] });
     const last = lastFindings(h);
     expect(last.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
     expect(last.selected).toBe("");
@@ -790,7 +794,7 @@ describe("ViewerPresenter", () => {
   it("opening a file fetches the rule catalog and default-selects the available rules", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn");
-    expect(h.listRules).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn") });
+    expect(h.listRules).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")) });
     const rs = lastRules(h);
     expect(rs.rules.map((r: { name: string }) => r.name)).toEqual(["single-pin-net", "diff-pair-naming"]);
     expect(rs.selected).toEqual(["single-pin-net", "diff-pair-naming"]);
@@ -810,7 +814,7 @@ describe("ViewerPresenter", () => {
     });
     await openAndCheck(h, "m", "board.edn");
 
-    expect(h.getExpectations).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn") });
+    expect(h.getExpectations).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")) });
     // The caption (the non-anchored verdict) shows single-pin-net matched exactly; the pending row
     // is excluded.
     const capCalls = h.onExpectCaption.mock.calls;
@@ -1075,19 +1079,35 @@ describe("on-demand checks (WS9)", () => {
       sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }],
       nativeAvailable: true, availableLayouts: ["faithful"],
     });
-    const never = deferred<{ hasBoard: boolean; boardPersisted: boolean }>();
-    h.loadDesign.mockReturnValueOnce(never.promise);
+    const never = deferred<Snapshot>();
+    h.readBoard.mockReturnValueOnce(never.promise);
     await h.presenter.openFile("m", "board.edn");
-    expect(h.loadDesign).toHaveBeenCalledOnce();
-    expect(h.loadDesign.mock.calls[0][0]).toMatchObject({ uri: artifactUri("m", "board.edn") });
-    expect(h.loadDesign.mock.invocationCallOrder[0]).toBeGreaterThan(h.getSheet.mock.invocationCallOrder[0]);
+    expect(h.readBoard).toHaveBeenCalledOnce();
+    expect(h.readBoard.mock.calls[0][0]).toBe(artifactUri("m", "board.edn"));
+    expect(h.readBoard.mock.invocationCallOrder[0]).toBeGreaterThan(h.getSheet.mock.invocationCallOrder[0]);
     expect(lastFindings(h).catalogLoading).toBe(false);
   });
 
   it("does not load a design that has no board", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn");
-    expect(h.loadDesign).not.toHaveBeenCalled();
+    expect(h.readBoard).not.toHaveBeenCalled();
+  });
+
+  it("logs what the background board read reported", async () => {
+    const h = harness();
+    h.getDesign.mockResolvedValueOnce({
+      name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }],
+      nativeAvailable: true, availableLayouts: ["faithful"],
+    });
+    const info = vi.spyOn(console, "info").mockImplementation(() => {});
+    try {
+      await h.presenter.openFile("m", "board.edn");
+      await vi.waitFor(() => expect(info).toHaveBeenCalledWith(expect.stringMatching(/^agni loaded mount:\/\/m\/board\.edn in \d+ ms: board persisted$/)));
+    } finally {
+      info.mockRestore();
+    }
   });
 
   // The first sheet draws before ListRules answers, and a Run pressed in that window used to run an
@@ -1104,11 +1124,11 @@ describe("on-demand checks (WS9)", () => {
     await h.presenter.runChecks();
     expect(h.checkDesign).not.toHaveBeenCalled();
 
-    catalog.resolve(await h.listRules.getMockImplementation()!({ uri: "" }));
+    catalog.resolve(await h.listRules.getMockImplementation()!({ snapshot: "" }));
     await opening;
     expect(lastFindings(h).catalogLoading).toBe(false);
     await h.presenter.runChecks();
-    expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net", "diff-pair-naming"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] });
   });
 
   it("a Run pressed while a second design's catalog loads does not run the first design's rules on it", async () => {
@@ -1141,7 +1161,7 @@ describe("on-demand checks (WS9)", () => {
     });
     await h.presenter.openFile("m", "board.edn");
     await h.presenter.runChecks();
-    expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net", "diff-pair-naming"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] });
     const fs = lastFindings(h);
     expect(fs.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
     expect(fs.pending).toBe(0);
@@ -1154,7 +1174,7 @@ describe("on-demand checks (WS9)", () => {
     await h.presenter.setRuleSelection(["single-pin-net"]); // toggle only, so no fetch
     expect(h.checkDesign).not.toHaveBeenCalled();
     await h.presenter.runChecks(); // runs only the selected rule
-    expect(h.checkDesign).toHaveBeenCalledWith({ uri: artifactUri("m", "board.edn"), rules: ["single-pin-net"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net"] });
     h.checkDesign.mockClear();
     await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]); // adds an unrun rule
     expect(h.checkDesign).not.toHaveBeenCalled(); // still no fetch on a toggle
@@ -1430,7 +1450,7 @@ describe("query sets", () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn", "");
     await vi.waitFor(() => expect(h.query.setQuerySets).toHaveBeenLastCalledWith([{ name: "power", source: "mount://m/queries/power.yaml", set: { title: "Power", queries: [] } }]));
-    expect(h.listQuerySets).toHaveBeenCalledWith({ designUri: "mount://m/proj/board.edn" });
+    expect(h.listQuerySets).toHaveBeenCalledWith({ snapshot: snapName("mount://m/proj/board.edn") });
   });
 
   it("answers a set into its tabs, an error in the tab of the query that failed", async () => {

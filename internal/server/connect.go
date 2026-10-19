@@ -27,9 +27,25 @@ func toConnectErr(err error) error { return ConnectError(err) }
 // CLI writes a failed request through it under --format json, so a script reading the CLI and a
 // client reading the API see one error shape.
 func ConnectError(err error) *connect.Error {
+	// A snapshot the host cannot answer from carries what a client needs to recover: ingest it again
+	// when it is missing, update it when it is stale (agni issue 1061).
+	var se *service.SnapshotError
+	if errors.As(err, &se) {
+		code := connect.CodeNotFound
+		if se.Stale {
+			code = connect.CodeFailedPrecondition
+		}
+		ce := connect.NewError(code, err)
+		if d, derr := connect.NewErrorDetail(se.Detail()); derr == nil {
+			ce.AddDetail(d)
+		}
+		return ce
+	}
 	switch {
 	case errors.Is(err, service.ErrNotFound):
 		return connect.NewError(connect.CodeNotFound, err)
+	case errors.Is(err, service.ErrAlreadyExists):
+		return connect.NewError(connect.CodeAlreadyExists, err)
 	case errors.Is(err, service.ErrNativeNoTool):
 		return connect.NewError(connect.CodeUnimplemented, err)
 	case errors.Is(err, service.ErrNativeNotEnabled):
@@ -173,14 +189,6 @@ func (a *Check) ListRules(ctx context.Context, req *connect.Request[webapi.ListR
 
 func (a *Check) CheckDesign(ctx context.Context, req *connect.Request[webapi.CheckDesignRequest]) (*connect.Response[webapi.CheckDesignResponse], error) {
 	resp, err := a.svc.CheckDesign(ctx, req.Msg)
-	if err != nil {
-		return nil, toConnectErr(err)
-	}
-	return connect.NewResponse(resp), nil
-}
-
-func (a *Check) LoadDesign(ctx context.Context, req *connect.Request[webapi.LoadDesignRequest]) (*connect.Response[webapi.LoadDesignResponse], error) {
-	resp, err := a.svc.LoadDesign(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
 	}
@@ -434,6 +442,55 @@ func (a *Project) ListDesigns(ctx context.Context, req *connect.Request[webapi.L
 
 func (a *Project) ResolveDesign(ctx context.Context, req *connect.Request[webapi.ResolveDesignRequest]) (*connect.Response[webapi.ResolveDesignResponse], error) {
 	resp, err := a.svc.ResolveDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+// Snapshot adapts service.SnapshotService to the generated Connect handler interface.
+type Snapshot struct {
+	webapiconnect.UnimplementedSnapshotServiceHandler
+	svc *service.SnapshotService
+}
+
+// NewSnapshot wraps svc for Connect.
+func NewSnapshot(svc *service.SnapshotService) *Snapshot { return &Snapshot{svc: svc} }
+
+func (a *Snapshot) Ingest(ctx context.Context, req *connect.Request[webapi.IngestRequest]) (*connect.Response[webapi.Snapshot], error) {
+	resp, err := a.svc.Ingest(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Snapshot) GetSnapshot(ctx context.Context, req *connect.Request[webapi.GetSnapshotRequest]) (*connect.Response[webapi.Snapshot], error) {
+	resp, err := a.svc.GetSnapshot(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Snapshot) ListSnapshots(ctx context.Context, req *connect.Request[webapi.ListSnapshotsRequest]) (*connect.Response[webapi.ListSnapshotsResponse], error) {
+	resp, err := a.svc.ListSnapshots(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Snapshot) UpdateSnapshot(ctx context.Context, req *connect.Request[webapi.UpdateSnapshotRequest]) (*connect.Response[webapi.Snapshot], error) {
+	resp, err := a.svc.UpdateSnapshot(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Snapshot) DeleteSnapshot(ctx context.Context, req *connect.Request[webapi.DeleteSnapshotRequest]) (*connect.Response[emptypb.Empty], error) {
+	resp, err := a.svc.DeleteSnapshot(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
 	}

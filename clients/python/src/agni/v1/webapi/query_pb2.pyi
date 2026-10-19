@@ -9,7 +9,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class RunQueryRequest(_message.Message):
-    __slots__ = ("query", "overlay", "board_uri", "uri", "as_named", "work_budget", "bindings", "omit_locations", "limit")
+    __slots__ = ("snapshot", "query", "work_budget", "bindings", "omit_locations", "limit")
     class BindingsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -17,25 +17,19 @@ class RunQueryRequest(_message.Message):
         key: str
         value: QueryValue
         def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[QueryValue, _Mapping]] = ...) -> None: ...
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     QUERY_FIELD_NUMBER: _ClassVar[int]
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
-    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     BINDINGS_FIELD_NUMBER: _ClassVar[int]
     OMIT_LOCATIONS_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     query: str
-    overlay: _checks_pb2_1.OverlayConfig
-    board_uri: str
-    uri: str
-    as_named: bool
     work_budget: int
     bindings: _containers.MessageMap[str, QueryValue]
     omit_locations: bool
     limit: int
-    def __init__(self, query: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., omit_locations: _Optional[bool] = ..., limit: _Optional[int] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., query: _Optional[str] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., omit_locations: _Optional[bool] = ..., limit: _Optional[int] = ...) -> None: ...
 
 class QueryRow(_message.Message):
     __slots__ = ("cells", "cell_kinds", "cell_refs", "cell_entity", "cite_index", "cell_why")
@@ -107,14 +101,14 @@ class QueryValue(_message.Message):
     def __init__(self, text: _Optional[str] = ..., number: _Optional[float] = ...) -> None: ...
 
 class ListRelationsRequest(_message.Message):
-    __slots__ = ("path", "uri", "overlay")
-    PATH_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("snapshot", "overlay", "path")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     OVERLAY_FIELD_NUMBER: _ClassVar[int]
-    path: str
-    uri: str
+    PATH_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     overlay: _checks_pb2_1.OverlayConfig
-    def __init__(self, path: _Optional[str] = ..., uri: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ...) -> None: ...
+    path: str
+    def __init__(self, snapshot: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., path: _Optional[str] = ...) -> None: ...
 
 class RelationInfo(_message.Message):
     __slots__ = ("name", "args", "summary", "kind", "detail", "signature", "definition")
@@ -236,22 +230,16 @@ class NamedQuery(_message.Message):
     def __init__(self, name: _Optional[str] = ..., query: _Optional[str] = ..., description: _Optional[str] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ...) -> None: ...
 
 class RunQueriesRequest(_message.Message):
-    __slots__ = ("set", "uri", "overlay", "board_uri", "as_named", "work_budget", "omit_locations")
+    __slots__ = ("snapshot", "set", "work_budget", "omit_locations")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     SET_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
-    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     OMIT_LOCATIONS_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     set: QuerySet
-    uri: str
-    overlay: _checks_pb2_1.OverlayConfig
-    board_uri: str
-    as_named: bool
     work_budget: int
     omit_locations: bool
-    def __init__(self, set: _Optional[_Union[QuerySet, _Mapping]] = ..., uri: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., omit_locations: _Optional[bool] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., set: _Optional[_Union[QuerySet, _Mapping]] = ..., work_budget: _Optional[int] = ..., omit_locations: _Optional[bool] = ...) -> None: ...
 
 class RunQueriesResponse(_message.Message):
     __slots__ = ("title", "preamble", "source", "results")
@@ -292,10 +280,10 @@ class TextPosition(_message.Message):
     def __init__(self, offset: _Optional[int] = ..., line: _Optional[int] = ..., column: _Optional[int] = ..., caret: _Optional[str] = ...) -> None: ...
 
 class ListQuerySetsRequest(_message.Message):
-    __slots__ = ("design_uri",)
-    DESIGN_URI_FIELD_NUMBER: _ClassVar[int]
-    design_uri: str
-    def __init__(self, design_uri: _Optional[str] = ...) -> None: ...
+    __slots__ = ("snapshot",)
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    def __init__(self, snapshot: _Optional[str] = ...) -> None: ...
 
 class ListQuerySetsResponse(_message.Message):
     __slots__ = ("project", "query_sets")

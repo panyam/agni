@@ -80,7 +80,7 @@ areas:
 		t.Fatalf("GetReviewManifest: %v", err)
 	}
 	created, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{
-		Manifest: man.GetManifest(), DesignUri: "mount://m/board.edn",
+		Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/board.edn"),
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -132,7 +132,7 @@ func TestCreateReviewRecordsProvenance(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: "mount://m/board.edn", RatifiedFloor: 0.5})
+	rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/board.edn"), RatifiedFloor: 0.5})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}
@@ -166,7 +166,7 @@ func TestReviewResourceLifecycle(t *testing.T) {
 	}
 	create := func(design string) string {
 		t.Helper()
-		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: "mount://m/" + design})
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/"+design)})
 		if err != nil {
 			t.Fatalf("CreateReview(%s): %v", design, err)
 		}
@@ -219,7 +219,7 @@ func TestListReviewsPaging(t *testing.T) {
 	}
 	var created []string
 	for i := range 5 {
-		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), DesignUri: "mount://m/" + fmt.Sprintf("d%d.edn", i)})
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man.GetManifest(), Snapshot: snapOf(t, svc.Snapshots(), "mount://m/"+fmt.Sprintf("d%d.edn", i))})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -265,7 +265,7 @@ func TestReviewResourcesNeedAStore(t *testing.T) {
 	}}}
 	calls := map[string]func() error{
 		"CreateReview": func() error {
-			_, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man, DesignUri: "mount://m/d.edn"})
+			_, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Manifest: man, Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.edn")})
 			return err
 		},
 		"GetReview": func() error {
@@ -430,7 +430,7 @@ func TestValidateOnlyScoresWithoutStoring(t *testing.T) {
 	stored, _ := dirReviewSvc(t, store)
 	unstored, _ := dirReviewSvc(t, nil)
 	for name, svc := range map[string]*ReviewService{"with a store": stored, "with no store": unstored} {
-		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{DesignUri: "mount://m/d.edn", Manifest: man, ValidateOnly: true})
+		rv, err := svc.CreateReview(ctx, &webapi.CreateReviewRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.edn"), Manifest: man, ValidateOnly: true})
 		if err != nil {
 			t.Fatalf("%s: CreateReview: %v", name, err)
 		}

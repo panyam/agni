@@ -33,6 +33,13 @@ func (l *recordingLoader) record(method string, opts []ReadOption) {
 	l.seen[method] = append(l.seen[method], ReadOpts(opts...))
 }
 
+// reset forgets every call recorded so far.
+func (l *recordingLoader) reset() {
+	l.mu.Lock()
+	defer l.mu.Unlock()
+	l.seen = map[string][]ReadOptions{}
+}
+
 // symbolPathsFor returns the symbol paths every recorded call to method saw, one entry per call.
 func (l *recordingLoader) symbolPathsFor(method string) [][]string {
 	l.mu.Lock()
@@ -119,22 +126,22 @@ func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 	cases := []struct {
 		name   string
 		method string
-		call   func(*DesignService) error
+		call   func(*testing.T, *DesignService) error
 	}{
-		{"GetDesign", "Geometry", func(s *DesignService) error {
-			_, err := s.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: uri})
+		{"GetDesign", "Geometry", func(t *testing.T, s *DesignService) error {
+			_, err := s.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
 			return err
 		}},
-		{"GetSheet", "Geometry", func(s *DesignService) error {
-			_, err := s.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: uri})
+		{"GetSheet", "Geometry", func(t *testing.T, s *DesignService) error {
+			_, err := s.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
 			return err
 		}},
-		{"HighlightSheet", "Geometry", func(s *DesignService) error {
-			_, err := s.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{Uri: uri})
+		{"HighlightSheet", "Geometry", func(t *testing.T, s *DesignService) error {
+			_, err := s.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
 			return err
 		}},
-		{"GetLayoutReport", "Report", func(s *DesignService) error {
-			_, err := s.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: uri})
+		{"GetLayoutReport", "Report", func(t *testing.T, s *DesignService) error {
+			_, err := s.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snapOf(t, s.Snapshots(), uri)})
 			return err
 		}},
 	}
@@ -142,7 +149,7 @@ func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			ld := newRecordingLoader()
 			svc := NewDesignService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
-			if err := tc.call(svc); err != nil {
+			if err := tc.call(t, svc); err != nil {
 				t.Fatalf("%s: %v", tc.name, err)
 			}
 			got := ld.symbolPathsFor(tc.method)
@@ -170,7 +177,9 @@ func TestSymbolPathsReachTheNetlistReadsBesideTheRender(t *testing.T) {
 	svc := NewDesignService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
 	// A netlist extension, so GetDesign takes the auto-layout branch that reads the IR for its counts.
 	uri := "mount://m/p/board.edn"
-	if _, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: uri}); err != nil {
+	snap := snapOf(t, svc.Snapshots(), uri)
+	ld.reset() // the ingest's own read is not GetDesign's
+	if _, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snap}); err != nil {
 		t.Fatal(err)
 	}
 	got := ld.symbolPathsFor("Design")
@@ -194,9 +203,11 @@ func TestSymbolPathsReachTheNetlistReadsBesideTheRender(t *testing.T) {
 func TestDiffReadsBothSidesConfigured(t *testing.T) {
 	ld := newRecordingLoader()
 	svc := NewDiffService(ld, symbolProjectResolver("/host/p/symbols"))
+	a, b := snapOf(t, svc.Snapshots(), "mount://m/p/a.edn"), snapOf(t, svc.Snapshots(), "mount://m/p/b.edn")
+	ld.reset() // each ingest reads its netlist, and the reads counted here are the diff's
 	_, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
-		AUri: "mount://m/p/a.edn",
-		BUri: "mount://m/p/b.edn",
+		ASnapshot: a,
+		BSnapshot: b,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -228,7 +239,7 @@ func TestDiffReadsBothSidesConfigured(t *testing.T) {
 func TestNoProjectResolverReadsUnderDefaults(t *testing.T) {
 	ld := newRecordingLoader()
 	svc := NewDesignService(ld, noNative{}, render.Style{}, nil)
-	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/loose.kicad_sch"}); err != nil {
+	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/loose.kicad_sch")}); err != nil {
 		t.Fatal(err)
 	}
 	for i, paths := range ld.symbolPathsFor("Geometry") {

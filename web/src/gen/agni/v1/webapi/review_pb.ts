@@ -6,7 +6,7 @@ import type { GenFile, GenMessage, GenService } from "@bufbuild/protobuf/codegen
 import { fileDesc, messageDesc, serviceDesc } from "@bufbuild/protobuf/codegenv2";
 import type { CheckResults, ReviewManifest } from "../checks/checks_pb";
 import { file_agni_v1_checks_checks } from "../checks/checks_pb";
-import type { OverlayConfig, ReportLinks } from "./checks_pb";
+import type { ReportLinks } from "./checks_pb";
 import { file_agni_v1_webapi_checks } from "./checks_pb";
 import type { NamedChecklist } from "./config_pb";
 import { file_agni_v1_webapi_config } from "./config_pb";
@@ -18,7 +18,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/review.proto.
  */
 export const file_agni_v1_webapi_review: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIm8KGVJlbmRlclJldmlld1JlcG9ydFJlcXVlc3QSJgoGcmV2aWV3GAEgASgLMhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EioKBWxpbmtzGAIgASgLMhsuYWduaS52MS53ZWJhcGkuUmVwb3J0TGlua3MiVQoaUmVuZGVyUmV2aWV3UmVwb3J0UmVzcG9uc2USDwoHY29udGVudBgBIAEoDBIUCgxjb250ZW50X3R5cGUYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkidQoGUmV2aWV3EgwKBG5hbWUYASABKAkSLQoHcmVzdWx0cxgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkNoZWNrUmVzdWx0cxIuCgdzdW1tYXJ5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuUmV2aWV3U3VtbWFyeSJyCg1SZXZpZXdTdW1tYXJ5Eg0KBXRvdGFsGAEgASgFEg8KB2NvdmVyZWQYAiABKAUSEAoIYW5zd2VyZWQYAyABKAUSDAoEcGFzcxgEIAEoBRIMCgRmYWlsGAUgASgFEhMKC3Byb3Zpc2lvbmFsGAYgASgFIoQCChNDcmVhdGVSZXZpZXdSZXF1ZXN0Eg4KBnBhcmVudBgGIAEoCRISCgpkZXNpZ25fdXJpGAEgASgJEhEKCWJvYXJkX3VyaRgCIAEoCRIWCg5yYXRpZmllZF9mbG9vchgDIAEoARIuCgdvdmVybGF5GAQgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIwCghtYW5pZmVzdBgFIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0EhAKCGFzX25hbWVkGAcgASgIEhMKC3dvcmtfYnVkZ2V0GAggASgDEhUKDXZhbGlkYXRlX29ubHkYCSABKAgiIAoQR2V0UmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIlsKEkxpc3RSZXZpZXdzUmVxdWVzdBIOCgZwYXJlbnQYBCABKAkSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIlcKE0xpc3RSZXZpZXdzUmVzcG9uc2USJwoHcmV2aWV3cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJldmlldxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIicKGEdldFJldmlld01hbmlmZXN0UmVxdWVzdBILCgN1cmkYASABKAkiTQoZR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZRIwCghtYW5pZmVzdBgBIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0IisKFUxpc3RDaGVja2xpc3RzUmVxdWVzdBISCgpkZXNpZ25fdXJpGAEgASgJIl0KFkxpc3RDaGVja2xpc3RzUmVzcG9uc2USDwoHcHJvamVjdBgBIAEoCRIyCgpjaGVja2xpc3RzGAIgAygLMh4uYWduaS52MS53ZWJhcGkuTmFtZWRDaGVja2xpc3QygAUKDVJldmlld1NlcnZpY2USSwoMQ3JlYXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuQ3JlYXRlUmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJFCglHZXRSZXZpZXcSIC5hZ25pLnYxLndlYmFwaS5HZXRSZXZpZXdSZXF1ZXN0GhYuYWduaS52MS53ZWJhcGkuUmV2aWV3ElYKC0xpc3RSZXZpZXdzEiIuYWduaS52MS53ZWJhcGkuTGlzdFJldmlld3NSZXF1ZXN0GiMuYWduaS52MS53ZWJhcGkuTGlzdFJldmlld3NSZXNwb25zZRJLCgxEZWxldGVSZXZpZXcSIy5hZ25pLnYxLndlYmFwaS5EZWxldGVSZXZpZXdSZXF1ZXN0GhYuZ29vZ2xlLnByb3RvYnVmLkVtcHR5EmgKEUdldFJldmlld01hbmlmZXN0EiguYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3TWFuaWZlc3RSZXF1ZXN0GikuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZRJfCg5MaXN0Q2hlY2tsaXN0cxIlLmFnbmkudjEud2ViYXBpLkxpc3RDaGVja2xpc3RzUmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkxpc3RDaGVja2xpc3RzUmVzcG9uc2USawoSUmVuZGVyUmV2aWV3UmVwb3J0EikuYWduaS52MS53ZWJhcGkuUmVuZGVyUmV2aWV3UmVwb3J0UmVxdWVzdBoqLmFnbmkudjEud2ViYXBpLlJlbmRlclJldmlld1JlcG9ydFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_agni_v1_webapi_config, file_google_protobuf_empty]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9yZXZpZXcucHJvdG8SDmFnbmkudjEud2ViYXBpIm8KGVJlbmRlclJldmlld1JlcG9ydFJlcXVlc3QSJgoGcmV2aWV3GAEgASgLMhYuYWduaS52MS53ZWJhcGkuUmV2aWV3EioKBWxpbmtzGAIgASgLMhsuYWduaS52MS53ZWJhcGkuUmVwb3J0TGlua3MiVQoaUmVuZGVyUmV2aWV3UmVwb3J0UmVzcG9uc2USDwoHY29udGVudBgBIAEoDBIUCgxjb250ZW50X3R5cGUYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkidQoGUmV2aWV3EgwKBG5hbWUYASABKAkSLQoHcmVzdWx0cxgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkNoZWNrUmVzdWx0cxIuCgdzdW1tYXJ5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuUmV2aWV3U3VtbWFyeSJyCg1SZXZpZXdTdW1tYXJ5Eg0KBXRvdGFsGAEgASgFEg8KB2NvdmVyZWQYAiABKAUSEAoIYW5zd2VyZWQYAyABKAUSDAoEcGFzcxgEIAEoBRIMCgRmYWlsGAUgASgFEhMKC3Byb3Zpc2lvbmFsGAYgASgFIu8BChNDcmVhdGVSZXZpZXdSZXF1ZXN0EhAKCHNuYXBzaG90GAogASgJEg4KBnBhcmVudBgGIAEoCRIWCg5yYXRpZmllZF9mbG9vchgDIAEoARIwCghtYW5pZmVzdBgFIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0EhMKC3dvcmtfYnVkZ2V0GAggASgDEhUKDXZhbGlkYXRlX29ubHkYCSABKAhKBAgBEAJKBAgCEANKBAgEEAVKBAgHEAhSCmRlc2lnbl91cmlSCWJvYXJkX3VyaVIHb3ZlcmxheVIIYXNfbmFtZWQiIAoQR2V0UmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIlsKEkxpc3RSZXZpZXdzUmVxdWVzdBIOCgZwYXJlbnQYBCABKAkSEQoJcGFnZV9zaXplGAEgASgFEhIKCnBhZ2VfdG9rZW4YAiABKAkSDgoGZmlsdGVyGAMgASgJIlcKE0xpc3RSZXZpZXdzUmVzcG9uc2USJwoHcmV2aWV3cxgBIAMoCzIWLmFnbmkudjEud2ViYXBpLlJldmlldxIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkiIwoTRGVsZXRlUmV2aWV3UmVxdWVzdBIMCgRuYW1lGAEgASgJIicKGEdldFJldmlld01hbmlmZXN0UmVxdWVzdBILCgN1cmkYASABKAkiTQoZR2V0UmV2aWV3TWFuaWZlc3RSZXNwb25zZRIwCghtYW5pZmVzdBgBIAEoCzIeLmFnbmkudjEuY2hlY2tzLlJldmlld01hbmlmZXN0IjsKFUxpc3RDaGVja2xpc3RzUmVxdWVzdBIQCghzbmFwc2hvdBgCIAEoCUoECAEQAlIKZGVzaWduX3VyaSJdChZMaXN0Q2hlY2tsaXN0c1Jlc3BvbnNlEg8KB3Byb2plY3QYASABKAkSMgoKY2hlY2tsaXN0cxgCIAMoCzIeLmFnbmkudjEud2ViYXBpLk5hbWVkQ2hlY2tsaXN0MoAFCg1SZXZpZXdTZXJ2aWNlEksKDENyZWF0ZVJldmlldxIjLmFnbmkudjEud2ViYXBpLkNyZWF0ZVJldmlld1JlcXVlc3QaFi5hZ25pLnYxLndlYmFwaS5SZXZpZXcSRQoJR2V0UmV2aWV3EiAuYWduaS52MS53ZWJhcGkuR2V0UmV2aWV3UmVxdWVzdBoWLmFnbmkudjEud2ViYXBpLlJldmlldxJWCgtMaXN0UmV2aWV3cxIiLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkxpc3RSZXZpZXdzUmVzcG9uc2USSwoMRGVsZXRlUmV2aWV3EiMuYWduaS52MS53ZWJhcGkuRGVsZXRlUmV2aWV3UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJoChFHZXRSZXZpZXdNYW5pZmVzdBIoLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVxdWVzdBopLmFnbmkudjEud2ViYXBpLkdldFJldmlld01hbmlmZXN0UmVzcG9uc2USXwoOTGlzdENoZWNrbGlzdHMSJS5hZ25pLnYxLndlYmFwaS5MaXN0Q2hlY2tsaXN0c1JlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5MaXN0Q2hlY2tsaXN0c1Jlc3BvbnNlEmsKElJlbmRlclJldmlld1JlcG9ydBIpLmFnbmkudjEud2ViYXBpLlJlbmRlclJldmlld1JlcG9ydFJlcXVlc3QaKi5hZ25pLnYxLndlYmFwaS5SZW5kZXJSZXZpZXdSZXBvcnRSZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks, file_agni_v1_webapi_config, file_google_protobuf_empty]);
 
 /**
  * @generated from message agni.v1.webapi.RenderReviewReportRequest
@@ -191,6 +191,13 @@ export const ReviewSummarySchema: GenMessage<ReviewSummary> = /*@__PURE__*/
  */
 export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> & {
   /**
+   * snapshot names the design this run is about, "snapshots/{snapshot}" (agni issue 1061).
+   *
+   * @generated from field: string snapshot = 10;
+   */
+  snapshot: string;
+
+  /**
    * parent is the project the run belongs to, "projects/{project}", empty when the design resolves
    * to none. It is the CALLER's answer rather than something derived here, because the caller has
    * already resolved the design to decide which config to send and re-deriving it in the service
@@ -201,40 +208,12 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
   parent: string;
 
   /**
-   * design_uri is the one design this run is about.
-   *
-   * A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
-   * a host path. Nothing above the Loader may treat it as one.
-   *
-   * @generated from field: string design_uri = 1;
-   */
-  designUri: string;
-
-  /**
-   * board_uri attaches a board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC items
-   * resolve pass/fail rather than not-applicable (WS3-089). It WINS over a board the design declares.
-   * Empty means the declared board when there is one, and otherwise none, in which case a netlist
-   * entry reads its board items not-applicable (agni issue 646).
-   *
-   * @generated from field: string board_uri = 2;
-   */
-  boardUri: string;
-
-  /**
    * ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
    * (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
    *
    * @generated from field: double ratified_floor = 3;
    */
   ratifiedFloor: number;
-
-  /**
-   * overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
-   * service was constructed with.
-   *
-   * @generated from field: agni.v1.webapi.OverlayConfig overlay = 4;
-   */
-  overlay?: OverlayConfig | undefined;
 
   /**
    * manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
@@ -245,18 +224,6 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
    * @generated from field: agni.v1.checks.ReviewManifest manifest = 5;
    */
   manifest?: ReviewManifest | undefined;
-
-  /**
-   * as_named reads exactly the artifact design_uri names, even when the enclosing design declares it a
-   * companion view of a different entry. Without it, the design's tiers are resolved the way every
-   * other analysis request resolves them: analysis from the entry, copper from a declared board.
-   *
-   * It exists because the CLI's `review` is a client of this service and carries the same flag, so
-   * resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
-   *
-   * @generated from field: bool as_named = 7;
-   */
-  asNamed: boolean;
 
   /**
    * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
@@ -400,8 +367,7 @@ export const DeleteReviewRequestSchema: GenMessage<DeleteReviewRequest> = /*@__P
  */
 export type GetReviewManifestRequest = Message<"agni.v1.webapi.GetReviewManifestRequest"> & {
   /**
-   * uri names the stored checklist, with the same semantics as CreateReviewRequest.board_uri: a key
-   * the Loader resolves, never a host path.
+   * uri names the stored checklist, a key the Loader resolves, never a host path.
    *
    * @generated from field: string uri = 1;
    */
@@ -437,12 +403,11 @@ export const GetReviewManifestResponseSchema: GenMessage<GetReviewManifestRespon
  */
 export type ListChecklistsRequest = Message<"agni.v1.webapi.ListChecklistsRequest"> & {
   /**
-   * design_uri is the design whose project's checklists are listed. A URI's authority is a key the
-   * injected Loader resolves, never a host path.
+   * snapshot names the design whose checklists to list, "snapshots/{snapshot}" (agni issue 1061).
    *
-   * @generated from field: string design_uri = 1;
+   * @generated from field: string snapshot = 2;
    */
-  designUri: string;
+  snapshot: string;
 };
 
 /**

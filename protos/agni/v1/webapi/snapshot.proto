@@ -1,0 +1,177 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/webapi/checks.proto";
+import "google/protobuf/empty.proto";
+import "google/protobuf/field_mask.proto";
+
+// This file: SnapshotService, a design loaded once and asked many questions (agni issue 1061).
+//
+// Every analysis rpc names a snapshot rather than files. A snapshot is created by Ingest from a
+// source, resolves the design's tiers and its config once, and is what CheckDesign, RunQuery,
+// GetSheet and the rest answer about. So a question never resolves a companion, a project or a
+// convention again, and two questions about one snapshot cannot read the design two ways.
+//
+// Each Ingest makes a new snapshot with an id of its own, even of the same files under the same
+// config: two ingests are two designs a client can change apart. What the server read for them is
+// still shared underneath, keyed on the files' content, so a second ingest of one design costs a
+// lookup and holds no second copy until one of the two is updated.
+//
+// A snapshot's files stay live. It records every file its questions read, and a question asked
+// after one of them changed is refused as stale (FAILED_PRECONDITION) rather than answered from the
+// files as they are now, so an answer is always about the revision it names. UpdateSnapshot reads
+// it again, whole or one tier at a time.
+//
+// A snapshot is held in the host's memory. A server keeps it until it is deleted or evicted, and a
+// browser worker until the worker ends, so a client keeps each snapshot's definition and ingests it
+// again, under the same id, when a question answers NOT_FOUND.
+service SnapshotService {
+  // Ingest creates a snapshot from a source. It resolves the design's tiers and composes its config,
+  // and reads no design file, since opening a KiCad design draws from its schematic's geometry and
+  // parses its netlist only for the first check or query, so a design that cannot be read fails at
+  // its first question. With read_board it builds the model a check builds, board included, so a
+  // later check finds it parsed; opening a design must not wait on its board (agni issue 943).
+  rpc Ingest(IngestRequest) returns (Snapshot);
+  rpc GetSnapshot(GetSnapshotRequest) returns (Snapshot);
+  rpc ListSnapshots(ListSnapshotsRequest) returns (ListSnapshotsResponse);
+  // UpdateSnapshot replaces a snapshot's definition, whole or by update_mask, and reads it again.
+  // Its id stays and its revision_id moves on. An update that cannot be read leaves the snapshot as
+  // it was.
+  rpc UpdateSnapshot(UpdateSnapshotRequest) returns (Snapshot);
+  rpc DeleteSnapshot(DeleteSnapshotRequest) returns (google.protobuf.Empty);
+}
+
+// Snapshot is one loaded design. The fields up to overlay are its DEFINITION, which a client sets on
+// Ingest and changes with UpdateSnapshot. The rest are output only.
+message Snapshot {
+  // name is "snapshots/{snapshot}". The id is assigned by the host unless Ingest names one.
+  string name = 1;
+  // revision_id names this definition over the netlist as it was read, a hash of the definition, the
+  // tiers it resolved to and the netlist entry's content, so two hosts that ingested one definition
+  // over the same netlist report the same one. It moves on an UpdateSnapshot that changed any of
+  // them. A change to another tier's file is caught as stale rather than by the revision, since
+  // hashing a large board on every ingest cost about a second in a browser worker.
+  string revision_id = 2;
+
+  // uri names the design, a key the Loader resolves and never a host path. The entry, its folder and
+  // a declared companion all name one design and resolve to the same tiers (C32).
+  string uri = 3;
+  // board_uri attaches a board-geometry export other than the one the design declares, such as a
+  // fab's returned file or a layout under review. Empty uses the design's own.
+  string board_uri = 4;
+  // geometry_uri draws the design from a schematic other than the one the design declares. Empty
+  // uses the design's own.
+  string geometry_uri = 5;
+  // as_named reads exactly the artifact uri names, even when the design declares it a companion of a
+  // different entry. Reading a companion as a netlist is how two views of one design are compared.
+  bool as_named = 6;
+  // overlay is the config every question about this snapshot is answered under: conventions,
+  // profiles, intent, parameters, libraries and query sets, the request's own or the project's.
+  OverlayConfig overlay = 7;
+
+  // tiers are the artifacts the definition resolved to. Output only.
+  SnapshotTiers tiers = 8;
+  // consistency compares the tiers that have been read with each other, so a board updated on its own
+  // that no longer matches its netlist says so. Absent until two tiers have been read. Output only.
+  SnapshotConsistency consistency = 9;
+  // project is the project the design belongs to, "projects/{project}", empty for none. Output only.
+  string project = 10;
+}
+
+// SnapshotTiers are the artifacts a snapshot's definition resolved to (C32's ResolveSources).
+message SnapshotTiers {
+  // netlist_uri is what analysis reads.
+  string netlist_uri = 1;
+  // board_uri is the copper tier, empty when the design has none.
+  string board_uri = 2;
+  // geometry_uri is what its sheets are drawn from.
+  string geometry_uri = 3;
+  // board_read is whether this host has read the board for this snapshot, and board_persisted
+  // whether that board is in the host's persistent store, so another process restores it rather
+  // than parsing it. Both are false on a host that has not read the board yet.
+  bool board_read = 4;
+  bool board_persisted = 5;
+}
+
+// SnapshotConsistency compares a snapshot's tiers by reference designator. A difference is reported
+// rather than refused, because a board part on its way into the netlist is an ordinary state of a
+// design being edited, and the cross-view rules say what each difference means.
+message SnapshotConsistency {
+  // board_only and netlist_only are the reference designators found in one tier and not the other,
+  // sorted, at most 20 each; the counts are the full numbers.
+  repeated string board_only = 1;
+  int32 board_only_count = 2;
+  repeated string netlist_only = 3;
+  int32 netlist_only_count = 4;
+}
+
+message IngestRequest {
+  // snapshot is the definition to ingest. Its name, revision_id and output fields are ignored.
+  Snapshot snapshot = 1;
+  // snapshot_id names the new snapshot, "snapshots/{snapshot_id}", instead of one the host assigns.
+  // A browser page passes the id it holds to each worker it asks, since every worker keeps its own
+  // snapshots. An id already in use with the same definition returns that snapshot, after reading
+  // what read_board asks, so a client can send its ingest again without asking first whether the
+  // host still holds it. The same id with a different definition is ALREADY_EXISTS.
+  string snapshot_id = 2;
+  // read_board reads the board now, so a later question finds it parsed (agni issue 1061). The
+  // browser's prepare lane sends this from a worker that ends when it answers, leaving the board in
+  // the store for the worker that runs the checks.
+  bool read_board = 3;
+}
+
+message GetSnapshotRequest {
+  string name = 1;
+}
+
+message ListSnapshotsRequest {
+  int32 page_size = 1;
+  string page_token = 2;
+  // filter narrows the listing (AIP-160). Only `uri` is supported, `uri="mount://m/board"`, which
+  // matches a snapshot's definition exactly. Anything else is an error.
+  string filter = 3;
+}
+
+message ListSnapshotsResponse {
+  // snapshots are ordered by name.
+  repeated Snapshot snapshots = 1;
+  string next_page_token = 2;
+}
+
+message UpdateSnapshotRequest {
+  // snapshot carries the new definition and names the snapshot to update.
+  Snapshot snapshot = 1;
+  // update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
+  // overlay). Empty replaces the whole definition, and the same definition again reads the files
+  // again, which is how a stale snapshot is refreshed.
+  google.protobuf.FieldMask update_mask = 2;
+  // read_board is as on IngestRequest.
+  bool read_board = 3;
+}
+
+message DeleteSnapshotRequest {
+  string name = 1;
+}
+
+// SnapshotUnavailable is the detail on an error from a question whose snapshot cannot answer it: one
+// the host does not hold (NOT_FOUND) or one whose files changed since they were read
+// (FAILED_PRECONDITION). It is how a client tells these apart from a design file that is missing,
+// which no ingest would fix: on MISSING it ingests the snapshot again under the same name, and on
+// STALE it updates it, then asks again.
+message SnapshotUnavailable {
+  enum Reason {
+    REASON_UNSPECIFIED = 0;
+    REASON_MISSING = 1;
+    REASON_STALE = 2;
+  }
+  string name = 1;
+  Reason reason = 2;
+  // changed names, for a STALE snapshot, the netlist tier when its entry file no longer reads as it
+  // did, and every tier otherwise, since the file that moved may be any tier's or one a tier read
+  // beneath its entry (a sub-sheet, a symbol library). They are artifact URIs, never the host's own
+  // paths.
+  repeated string changed = 3;
+}

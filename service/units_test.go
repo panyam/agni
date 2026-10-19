@@ -16,8 +16,9 @@ import (
 // comparison between two units before the query runs rather than answering nothing.
 func TestComparingTwoDeclaredUnitsIsRefused(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	ask := func(q string) error {
-		_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: q})
+		_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: q})
 		return err
 	}
 	err := ask(`net.max_voltage(?n, ?v), board.track_width(?n, ?w), ?v < ?w => ?n`)
@@ -39,7 +40,7 @@ func TestAnAbsentAggregateSaysWhy(t *testing.T) {
 	}
 	svc := NewQueryService(fsQueryLoader{base: project}, specs, nil)
 	uri := "mount://m/designs/gateway/gateway.edn"
-	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: `param.max(?m, ?s, ?v) => ?m, sum(?v)`})
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), uri), Query: `param.max(?m, ?s, ?v) => ?m, sum(?v)`})
 	if err != nil {
 		t.Fatal(err)
 	}

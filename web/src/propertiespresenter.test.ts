@@ -8,7 +8,7 @@ function design(name: string, nets: string[]): GetDesignResponse {
   return create(GetDesignResponseSchema, { name, design: { nets: nets.map((n) => ({ name: n })) } });
 }
 
-function harness(getDesign = vi.fn(async (_req: unknown) => design("gateway", ["VIN"]))) {
+function harness(getDesign = vi.fn(async (_uri: string, _readMask: string[]) => design("gateway", ["VIN"]))) {
   const states: PropertiesState[] = [];
   const p = new PropertiesPresenter({ setState: (s) => states.push(s) }, { getDesign, drawn: () => ({ refs: ["U1"], nets: [] }) });
   const last = () => states[states.length - 1];
@@ -27,7 +27,7 @@ describe("PropertiesPresenter", () => {
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s2" });
     await vi.waitFor(() => expect(last().crumbs[0].label).toBe("gateway"));
     expect(getDesign).toHaveBeenCalledTimes(1);
-    expect(getDesign.mock.calls[0][0]).toEqual({ uri: "mount://m/d", readMask: { paths: ["name", ...INVENTORY_PATHS] } });
+    expect(getDesign.mock.calls[0]).toEqual(["mount://m/d", ["name", ...INVENTORY_PATHS]]);
   });
 
   // agni issue 1045: a net's test points and a pin's name are the engine's answers, asked once per open.

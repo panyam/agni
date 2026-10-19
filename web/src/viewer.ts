@@ -1,3 +1,5 @@
+import { snapshots } from "./api.js";
+import type { SnapshotSource } from "./snapshots.js";
 import { Code, ConnectError, type Client } from "@connectrpc/connect";
 import { emptyProject, type ProjectState, type ProjectBarView } from "./project.js";
 import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
@@ -264,7 +266,22 @@ export class ViewerPresenter {
     // projects resolves the open design to its project, so a review is stored under the project
     // whose config scored it. Optional like the rest; without it a run stores unparented.
     private readonly projects?: ProjectClient,
+    // snaps ingests each design this page asks about and names its snapshot (agni issue 1061). The
+    // page's own registry unless a test hands one in.
+    private readonly snaps: SnapshotSource = snapshots(),
   ) {}
+
+  // drawn is the open design's snapshot under no overlay, which every drawing question names, so a
+  // change of convention draws nothing again.
+  private drawn(): Promise<string> {
+    return this.snaps.of(artifactUri(this.doc.mount, this.doc.path));
+  }
+
+  // checked is the open design's snapshot under the convention the page shows, which every
+  // rule-running question names. With no convention chosen it is the drawn one.
+  private checked(): Promise<string> {
+    return this.snaps.of(artifactUri(this.doc.mount, this.doc.path), this.overlay());
+  }
 
   // runQuery evaluates an ad-hoc datalog query over the open design (WS9-036) and pushes the result
   // to the query panel. With no file open it reports that as the panel's error rather than calling
@@ -293,7 +310,7 @@ export class ViewerPresenter {
       // screen were computed under, and a Query panel answering under the server's would contradict
       // it (WS3-113).
       const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, { kind: { case: "text" as const, value } }]));
-      const resp = await this.query.runQuery({ uri: artifactUri(this.doc.mount, this.doc.path), query: text, overlay: this.overlay(), bindings: wire, limit });
+      const resp = await this.query.runQuery({ snapshot: await this.checked(), query: text, bindings: wire, limit });
       this.answers.set(tab, resp);
       push(resultFromResponse(resp, (ids) => this.doc.sheetBadges(ids)));
     } catch (e) {
@@ -311,7 +328,7 @@ export class ViewerPresenter {
     if (!this.views.query || !this.query) return;
     this.views.query.setQuerySets([]);
     try {
-      const resp = await this.query.listQuerySets({ designUri: artifactUri(mount, path) });
+      const resp = await this.query.listQuerySets({ snapshot: await this.snaps.of(artifactUri(mount, path)) });
       if (mount !== this.doc.mount || path !== this.doc.path) return;
       this.views.query.setQuerySets(resp.querySets.filter((s) => s.set).map((s) => ({ name: s.name, source: s.source, set: s.set! })));
     } catch {
@@ -331,7 +348,7 @@ export class ViewerPresenter {
     }
     for (const t of tabs) push(emptyResult(true), t);
     try {
-      const resp = await this.query.runQueries({ uri: artifactUri(this.doc.mount, this.doc.path), set, overlay: this.overlay() });
+      const resp = await this.query.runQueries({ snapshot: await this.checked(), set });
       resp.results.forEach((r, i) => {
         const tab = tabs[i];
         if (!tab) return;
@@ -435,7 +452,7 @@ export class ViewerPresenter {
       return;
     }
     const symbols = this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH;
-    const resp = await this.client.getLayoutReport({ uri: artifactUri(this.doc.mount, this.doc.path), symbols });
+    const resp = await this.client.getLayoutReport({ snapshot: await this.drawn(), symbols });
     this.views.report(resp.report ?? null);
   }
 
@@ -508,7 +525,7 @@ export class ViewerPresenter {
     if (changed) void this.loadQuerySets(mount, path);
     this.setBusy(true, "loading design…");
     try {
-      const d = await this.client.getDesign({ uri: artifactUri(mount, path), layout: this.currentLayout });
+      const d = await this.client.getDesign({ snapshot: await this.snaps.of(artifactUri(mount, path)), layout: this.currentLayout });
       this.doc.sheets = d.sheets;
       // Adopt the effective layout the server chose (the request may have been empty or
       // unavailable for this file), and report the options to the UI.
@@ -582,9 +599,9 @@ export class ViewerPresenter {
     const uri = artifactUri(mount, path);
     const started = performance.now();
     try {
-      const r = await this.checks.loadDesign({ uri, overlay: this.overlay() });
+      const r = (await this.snaps.readBoard(uri, this.overlay())).tiers;
       const ms = Math.round(performance.now() - started);
-      console.info(`agni loaded ${uri} in ${ms} ms: board ${r.hasBoard ? (r.boardPersisted ? "persisted" : "not persisted") : "absent"}`);
+      console.info(`agni loaded ${uri} in ${ms} ms: board ${r?.boardRead ? (r.boardPersisted ? "persisted" : "not persisted") : "absent"}`);
     } catch (e) {
       console.warn(`agni could not load ${uri} ahead of its checks:`, e);
     }
@@ -631,7 +648,7 @@ export class ViewerPresenter {
   private async openSetMember(setName: string, name: string): Promise<void> {
     if (!this.views.query || !this.query || !this.doc.mount || !this.doc.path) return;
     try {
-      const resp = await this.query.listQuerySets({ designUri: artifactUri(this.doc.mount, this.doc.path) });
+      const resp = await this.query.listQuerySets({ snapshot: await this.drawn() });
       const set = resp.querySets.find((s) => s.name === setName)?.set;
       const member = set?.queries.find((q) => q.name === name);
       if (set && member) {
@@ -687,7 +704,7 @@ export class ViewerPresenter {
       this.doc.catalogLoading = true;
       this.pushFindings();
     }
-    await this.doc.loadCatalog(this.checks, artifactUri(mount, path), this.overlay());
+    await this.doc.loadCatalog(this.checks, () => this.snaps.of(artifactUri(mount, path), this.overlay()));
     this.pushRules();
   }
 
@@ -762,7 +779,7 @@ export class ViewerPresenter {
   // that. A geometry-only file (no netlist) makes CheckDesign fail, which leaves the run as it was and
   // those rules pending.
   private async runSelection(): Promise<void> {
-    await this.doc.runMissing(this.checks, this.overlay());
+    await this.doc.runMissing(this.checks, () => this.checked());
     this.assembleFindings();
     await this.setHighlights(subjectsToSpecs(this.field())); // every finding at once, when the reader asked for it
   }
@@ -832,8 +849,7 @@ export class ViewerPresenter {
     const links = this.reportLinks();
     try {
       const resp = await this.checks.renderCheckReport({
-        uri: artifactUri(this.doc.mount, this.doc.path),
-        overlay: this.overlay(),
+        snapshot: await this.checked(),
         rules: names,
         run,
         format: format === "html" ? CheckReportFormat.HTML : CheckReportFormat.RESULTS_JSON,
@@ -1135,7 +1151,7 @@ export class ViewerPresenter {
     // issues 829, 859). A failure keeps the descriptor's own list rather than offering nothing.
     if (this.projectResolved?.project && this.reviews) {
       try {
-        declared = (await this.reviews.listChecklists({ designUri: artifactUri(this.doc.mount, this.doc.path) })).checklists;
+        declared = (await this.reviews.listChecklists({ snapshot: await this.drawn() })).checklists;
       } catch {
         // the descriptor's own checklists stand
       }
@@ -1199,9 +1215,8 @@ export class ViewerPresenter {
         // whose config scored it. An empty parent is a real answer, since a design on a mounted
         // folder often belongs to no project.
         parent: await this.designParent(),
-        designUri: artifactUri(this.doc.mount, this.doc.path),
+        snapshot: await this.checked(),
         manifest,
-        overlay: this.overlay(),
       };
       // An engine that keeps no store still scores a checklist with validate_only (agni issue 931),
       // the browser engine always among them, and this page holds the run instead of a store.
@@ -1275,7 +1290,7 @@ export class ViewerPresenter {
     view.setState(loadingTrace());
     let state;
     try {
-      const resp = await this.client.traceDesign({ uri: artifactUri(this.doc.mount, this.doc.path), from, to, hops });
+      const resp = await this.client.traceDesign({ snapshot: await this.drawn(), from, to, hops });
       if (!resp.trace) {
         view.setState(errorTrace("The server answered with no trace"));
         return;
@@ -1314,7 +1329,7 @@ export class ViewerPresenter {
       return;
     }
     try {
-      const resp = await this.checks.getInterfaceCoverage({ uri: artifactUri(this.doc.mount, this.doc.path), overlay: this.overlay() });
+      const resp = await this.checks.getInterfaceCoverage({ snapshot: await this.checked() });
       this.views.coverage.setState(coverageFromResponse(resp));
     } catch {
       this.views.coverage.setState(emptyCoverage());
@@ -1332,7 +1347,7 @@ export class ViewerPresenter {
       return;
     }
     try {
-      const resp = await this.checks.getComponentParams({ uri: artifactUri(this.doc.mount, this.doc.path) });
+      const resp = await this.checks.getComponentParams({ snapshot: await this.drawn() });
       this.views.parts.setState(partsFromResponse(resp));
     } catch {
       this.views.parts.setState(emptyParts());
@@ -1360,11 +1375,11 @@ export class ViewerPresenter {
     this.doc.hasSidecar = false;
     if (this.doc.mount && this.doc.path) {
       try {
-        const exp = await this.checks.getExpectations({ uri: artifactUri(this.doc.mount, this.doc.path) });
+        const exp = await this.checks.getExpectations({ snapshot: await this.drawn() });
         this.doc.hasSidecar = exp.hasSidecar;
         this.doc.expectations = exp.expectations.map((e) => ({ rule: e.rule, subjects: e.subjects, pending: e.pending, why: e.why }));
         if (this.doc.hasSidecar) {
-          const resp = await this.checks.checkDesign({ uri: artifactUri(this.doc.mount, this.doc.path), rules: [], overlay: this.overlay() });
+          const resp = await this.checks.checkDesign({ snapshot: await this.checked(), rules: [] });
           this.doc.expectationFindings = resp.findings.map((f) => ({
             rule: f.rule,
             category: "",
@@ -1455,7 +1470,7 @@ export class ViewerPresenter {
     }
     try {
       const resp = await this.client.highlightSheet({
-        uri: artifactUri(this.doc.mount, this.doc.path),
+        snapshot: await this.drawn(),
         sheet: this.currentSheet,
         layout: this.currentLayout,
         symbols: this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH,
@@ -1591,7 +1606,7 @@ export class ViewerPresenter {
   // native slot's view (native and SVG share the SVG host). Throws on RPC failure.
   private async renderSheet(sheetId: string, format: SheetFormat): Promise<void> {
     const symbols = this.faithfulSymbols ? SymbolSource.FAITHFUL : SymbolSource.GLYPH;
-    const resp = await this.client.getSheet({ uri: artifactUri(this.doc.mount, this.doc.path), sheet: sheetId, layout: this.currentLayout, format, symbols });
+    const resp = await this.client.getSheet({ snapshot: await this.drawn(), sheet: sheetId, layout: this.currentLayout, format, symbols });
     switch (resp.content.case) {
       case "packed":
         this.canvas.showSheet(resp.content.value);

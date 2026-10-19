@@ -6,6 +6,8 @@
 // the panel. It is independent of ViewerPresenter, so the single-file viewer keeps its own
 // file, sheet and highlight state while a diff is open.
 
+import { snapshots } from "./api.js";
+import type { SnapshotSource } from "./snapshots.js";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { DesignService, SheetFormat, SymbolSource } from "./gen/agni/v1/webapi/design_pb.js";
@@ -142,7 +144,14 @@ export class DiffPresenter {
     private readonly designs: DesignClient,
     private readonly view: DiffRenderView,
     private readonly onState: (s: DiffState) => void,
+    // snaps names each side's snapshot (agni issue 1061), the page's registry unless a test hands one
+    // in. A comparison draws, so each side is its snapshot under no overlay, the one the viewer draws.
+    private readonly snaps: SnapshotSource = snapshots(),
   ) {}
+
+  private snap(r: DiffFileRef): Promise<string> {
+    return this.snaps.of(artifactUri(r.mount, r.path));
+  }
 
   private label(r: DiffFileRef): string {
     return `${r.mount}:${r.path}`;
@@ -174,10 +183,11 @@ export class DiffPresenter {
     this.bRef = b;
     this.view.setBusy(true);
     try {
+      const [sa, sb] = await Promise.all([this.snap(a), this.snap(b)]);
       const [resp, da, db] = await Promise.all([
-        this.diff.diffDesigns({ aUri: artifactUri(a.mount, a.path), bUri: artifactUri(b.mount, b.path) }),
-        this.designs.getDesign({ uri: artifactUri(a.mount, a.path), layout: "" }),
-        this.designs.getDesign({ uri: artifactUri(b.mount, b.path), layout: "" }),
+        this.diff.diffDesigns({ aSnapshot: sa, bSnapshot: sb }),
+        this.designs.getDesign({ snapshot: sa, layout: "" }),
+        this.designs.getDesign({ snapshot: sb, layout: "" }),
       ]);
       this.componentStatus = resp.componentStatus;
       this.netStatus = resp.netStatus;
@@ -355,7 +365,7 @@ export class DiffPresenter {
     if (sheetId) {
       try {
         const resp = await this.designs.getSheet({
-          uri: artifactUri(ref.mount, ref.path),
+          snapshot: await this.snap(ref),
           sheet: sheetId,
           layout,
           format: SheetFormat.SVG,
@@ -456,7 +466,7 @@ export class DiffPresenter {
   private async fetchOverlay(ref: DiffFileRef, layout: string, sheetId: string, specs: ReturnType<typeof sideSpecs>): Promise<string> {
     try {
       const o = await this.designs.highlightSheet({
-        uri: artifactUri(ref.mount, ref.path),
+        snapshot: await this.snap(ref),
         sheet: sheetId,
         layout,
         symbols: SymbolSource.GLYPH,

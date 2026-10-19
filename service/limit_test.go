@@ -26,11 +26,12 @@ func netPreset(t *testing.T) string {
 
 func TestALimitedAnswerSaysHowManyRowsItLeftOut(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	q := netPreset(t)
 	ask := func(limit int32) *webapi.RunQueryResponse {
 		t.Helper()
 		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-			Uri: uri, Query: q, Bindings: map[string]*webapi.QueryValue{"net": text("GND")}, Limit: limit, OmitLocations: true,
+			Snapshot: snap, Query: q, Bindings: map[string]*webapi.QueryValue{"net": text("GND")}, Limit: limit, OmitLocations: true,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -61,6 +62,7 @@ func TestALimitedAnswerSaysHowManyRowsItLeftOut(t *testing.T) {
 
 func TestTheSmallerOfTwoLimitsApplies(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	q := netPreset(t)
 	for _, c := range []struct {
 		written string
@@ -72,7 +74,7 @@ func TestTheSmallerOfTwoLimitsApplies(t *testing.T) {
 		{" limit 2", 0, 2},
 	} {
 		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-			Uri: uri, Query: q + c.written, Bindings: map[string]*webapi.QueryValue{"net": text("GND")}, Limit: c.limit, OmitLocations: true,
+			Snapshot: snap, Query: q + c.written, Bindings: map[string]*webapi.QueryValue{"net": text("GND")}, Limit: c.limit, OmitLocations: true,
 		})
 		if err != nil {
 			t.Fatalf("%q with limit %d: %v", c.written, c.limit, err)
@@ -88,7 +90,8 @@ func TestTheSmallerOfTwoLimitsApplies(t *testing.T) {
 
 func TestANegativeLimitIsInvalid(t *testing.T) {
 	svc, uri := tutorialQueries()
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: netPreset(t), Bindings: map[string]*webapi.QueryValue{"net": text("GND")}, Limit: -1})
+	snap := snapOf(t, svc.Snapshots(), uri)
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: netPreset(t), Bindings: map[string]*webapi.QueryValue{"net": text("GND")}, Limit: -1})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("err = %v, want an invalid argument", err)
 	}
@@ -98,10 +101,11 @@ func TestANegativeLimitIsInvalid(t *testing.T) {
 // no row (agni issue 896), so it must answer exactly what the join did.
 func TestTheNetPresetAnswersAsTheJoinItReplaced(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	bind := map[string]*webapi.QueryValue{"net": text("GND")}
 	ask := func(q string) string {
 		t.Helper()
-		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: q, Bindings: bind, OmitLocations: true})
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: q, Bindings: bind, OmitLocations: true})
 		if err != nil {
 			t.Fatal(err)
 		}

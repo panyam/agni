@@ -40,7 +40,7 @@ func checklistNames(r *webapi.ListChecklistsResponse) []string {
 }
 
 func listService(store ProjectStore) *ReviewService {
-	return NewReviewService(nil, NewMemReviewStore(), check.DefaultCatalog(), nil, nil, testReviewEnv, "", &ProjectResolver{Store: store})
+	return NewReviewService(dirReviewLoader{}, NewMemReviewStore(), check.DefaultCatalog(), nil, nil, testReviewEnv, "", &ProjectResolver{Store: store})
 }
 
 // The viewer's picker read the project as its own descriptor declares it and missed what it inherits
@@ -56,7 +56,8 @@ func TestListChecklistsIncludesInheritedOnes(t *testing.T) {
 			Checklists: []*webapi.NamedChecklist{{Name: "house"}},
 		}},
 	}}
-	got, err := listService(store).ListChecklists(context.Background(), &webapi.ListChecklistsRequest{DesignUri: "mount://m/d/board.edn"})
+	svc := listService(store)
+	got, err := svc.ListChecklists(context.Background(), &webapi.ListChecklistsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d/board.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -69,12 +70,14 @@ func TestListChecklistsIncludesInheritedOnes(t *testing.T) {
 }
 
 func TestListChecklistsTellsNoProjectFromNoChecklists(t *testing.T) {
-	none, err := listService(declaringStore{design: &webapi.Design{Uri: "mount://m/d"}}).ListChecklists(context.Background(), &webapi.ListChecklistsRequest{DesignUri: "mount://m/d/board.edn"})
+	svc := listService(declaringStore{design: &webapi.Design{Uri: "mount://m/d"}})
+	none, err := svc.ListChecklists(context.Background(), &webapi.ListChecklistsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d/board.edn")})
 	if err != nil || none.GetProject() != "" || len(none.GetChecklists()) != 0 {
 		t.Errorf("a design in no project = %v, %v; want no project and no checklists", none, err)
 	}
 	bare := extendingStore{projects: map[string]*webapi.Project{"projects/team": {Name: "projects/team", Config: &webapi.AnalysisConfig{}}}}
-	got, err := listService(bare).ListChecklists(context.Background(), &webapi.ListChecklistsRequest{DesignUri: "mount://m/d/board.edn"})
+	svc = listService(bare)
+	got, err := svc.ListChecklists(context.Background(), &webapi.ListChecklistsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d/board.edn")})
 	if err != nil || got.GetProject() != "projects/team" || len(got.GetChecklists()) != 0 {
 		t.Errorf("a project declaring none = %v, %v; want its name and no checklists", got, err)
 	}
@@ -82,10 +85,14 @@ func TestListChecklistsTellsNoProjectFromNoChecklists(t *testing.T) {
 
 func TestListChecklistsReportsABrokenDescriptor(t *testing.T) {
 	broken := extendingStore{err: errors.New("design.yaml: line 3: field chekclists not found")}
-	if _, err := listService(broken).ListChecklists(context.Background(), &webapi.ListChecklistsRequest{DesignUri: "mount://m/d/board.edn"}); err == nil {
+	ingest := func(uri string) error {
+		_, err := listService(broken).Snapshots().Ingest(context.Background(), &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: uri}})
+		return err
+	}
+	if err := ingest("mount://m/d/board.edn"); err == nil {
 		t.Error("a descriptor that does not parse must be an error, not an empty list")
 	}
-	if _, err := listService(broken).ListChecklists(context.Background(), &webapi.ListChecklistsRequest{DesignUri: "not a uri"}); !errors.Is(err, ErrInvalidArgument) {
+	if err := ingest("not a uri"); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("a malformed uri = %v, want an invalid argument", err)
 	}
 }

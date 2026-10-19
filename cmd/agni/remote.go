@@ -15,6 +15,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"google.golang.org/protobuf/types/known/emptypb"
 )
 
 // remoteMountTimeout bounds the ListMounts call --remote makes before anything else, so a wrong
@@ -161,7 +162,42 @@ type (
 		CreateReview(context.Context, *webapi.CreateReviewRequest) (*webapi.Review, error)
 		RenderReviewReport(context.Context, *webapi.RenderReviewReportRequest) (*webapi.RenderReviewReportResponse, error)
 	}
+	snapshotAPI interface {
+		Ingest(context.Context, *webapi.IngestRequest) (*webapi.Snapshot, error)
+		DeleteSnapshot(context.Context, *webapi.DeleteSnapshotRequest) (*emptypb.Empty, error)
+	}
 )
+
+// ingest loads the design a command asks about and returns the snapshot's name, and a function that
+// deletes it once the command is done (agni issue 1061). The CLI is a client of the services like any
+// other, so a local run and a --remote one ingest and ask the same way, and a server is not left
+// holding a snapshot nobody will ask about.
+func ingest(ctx context.Context, api snapshotAPI, def *webapi.Snapshot) (string, func(), error) {
+	snap, err := api.Ingest(ctx, &webapi.IngestRequest{Snapshot: def})
+	if err != nil {
+		return "", func() {}, err
+	}
+	name := snap.GetName()
+	return name, func() {
+		_, _ = api.DeleteSnapshot(context.WithoutCancel(ctx), &webapi.DeleteSnapshotRequest{Name: name})
+	}, nil
+}
+
+type remoteSnapshot struct {
+	c webapiconnect.SnapshotServiceClient
+}
+
+func (r *remoteServer) snapshots() snapshotAPI {
+	return remoteSnapshot{webapiconnect.NewSnapshotServiceClient(r.http, r.url)}
+}
+
+func (r remoteSnapshot) Ingest(ctx context.Context, req *webapi.IngestRequest) (*webapi.Snapshot, error) {
+	return unary(ctx, r.c.Ingest, req)
+}
+
+func (r remoteSnapshot) DeleteSnapshot(ctx context.Context, req *webapi.DeleteSnapshotRequest) (*emptypb.Empty, error) {
+	return unary(ctx, r.c.DeleteSnapshot, req)
+}
 
 // unary calls one Connect method and returns the bare message, so a remote call reads like the
 // in-process one.

@@ -35,15 +35,20 @@ export const JOB_RPCS: ReadonlySet<string> = new Set([
   "agni.v1.webapi.DiffService/DiffDesigns",
 ]);
 
-// PREPARE_RPCS are the requests the prepare lane answers, each on a worker that ends after it.
-export const PREPARE_RPCS: ReadonlySet<string> = new Set(["agni.v1.webapi.CheckService/LoadDesign"]);
+// INGEST is the procedure that loads a design into a worker (agni issue 1061). One that reads the
+// board goes to the prepare lane, on a worker that ends after it, and any other to the serve lane.
+export const INGEST = "agni.v1.webapi.SnapshotService/Ingest";
 
 // laneFor is the lane a request's URL goes to, by its Connect procedure (the last two path segments,
-// so a page served under a prefix routes the same).
-export function laneFor(url: URL): LaneName {
-  const procedure = url.pathname.split("/").slice(-2).join("/");
-  if (PREPARE_RPCS.has(procedure)) return "prepare";
+// so a page served under a prefix routes the same). readBoard is an Ingest body's read_board.
+export function laneFor(url: URL, readBoard = false): LaneName {
+  const procedure = procedureOf(url);
+  if (procedure === INGEST && readBoard) return "prepare";
   return JOB_RPCS.has(procedure) ? "jobs" : "serve";
+}
+
+function procedureOf(url: URL): string {
+  return url.pathname.split("/").slice(-2).join("/");
 }
 
 // An EngineLane is one worker of the engine, replaced after an abort. Files reach the worker that is
@@ -304,6 +309,11 @@ export interface MountingOptions {
 // worker does not already hold, by hash, are fetched and added under the same mount name. Each lane
 // brings its own, and a lane's replacement worker brings them again, since it starts empty (#911).
 //
+// A question names a snapshot rather than files (agni issue 1061). The page's Ingest of each snapshot
+// passes through here, so its files are the ones that Ingest named, and the Ingest is sent again to
+// any worker that is asked about the snapshot without holding it: each worker keeps its own, and a
+// replacement starts with none.
+//
 // A design whose file set is over `maxBytes`, or whose listing fails, is analysed by the server
 // instead, and `onServer` hears why once per design. Every later request naming it goes to the
 // network, so one design never has its answers split between two engines.
@@ -387,10 +397,20 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     return p;
   };
 
+  // Every worker keeps its own snapshots (agni issue 1061), so the page's ingest of each is kept and
+  // sent to a worker before the first question that worker is asked about it.
+  const ingests = new Map<string, { url: string; body: string; uris: Set<string> }>(); // snapshot -> the page's ingest of it
+  const ingested = new WeakMap<object, Set<string>>(); // worker -> the snapshots it holds
+  const holds = (worker: object): Set<string> => {
+    let set = ingested.get(worker);
+    if (!set) ingested.set(worker, (set = new Set()));
+    return set;
+  };
+
   // send answers req on its lane, bringing the design's files into the worker first unless they
-  // already live in the page (a browser mount, which every worker is given at start).
-  const send = async (req: Request, uris: Set<string>, bringFiles: boolean): Promise<Response> => {
-    const name = laneFor(new URL(req.url));
+  // already live in the page (a browser mount, which every worker is given at start), and ingesting
+  // each snapshot it names that the worker does not hold. ingestOf is the snapshot req itself ingests.
+  const send = async (req: Request, uris: Set<string>, bringFiles: boolean, name: LaneName, snaps: string[], ingestOf?: string): Promise<Response> => {
     const lane = engine.lanes[name];
     if (name === "jobs") await afterPrepares();
     const run = lane.begin ? await lane.begin() : undefined;
@@ -406,11 +426,23 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
         return network(req);
       }
     }
-    return run ? run.fetch(req) : lane.fetch(req);
+    const on = (r: Request) => (run ? run.fetch(r) : lane.fetch(r));
+    const worker = run?.holder ?? (await lane.holder());
+    for (const snap of snaps) {
+      const page = ingests.get(snap);
+      if (!page || holds(worker).has(snap)) continue;
+      const r = await on(new Request(page.url, { method: "POST", headers: { "content-type": "application/json", "connect-protocol-version": "1" }, body: page.body }));
+      // A worker that cannot ingest it answers the question with NOT_FOUND, which the page's
+      // transport recovers from or reports.
+      if (r.ok) holds(worker).add(snap);
+    }
+    const resp = await on(req);
+    if (ingestOf && resp.ok) holds(worker).add(ingestOf);
+    return resp;
   };
-  const tracked = (req: Request, uris: Set<string>, bringFiles: boolean): Promise<Response> => {
-    const p = send(req, uris, bringFiles);
-    if (laneFor(new URL(req.url)) === "prepare") {
+  const tracked = (req: Request, uris: Set<string>, bringFiles: boolean, name: LaneName, snaps: string[], ingestOf?: string): Promise<Response> => {
+    const p = send(req, uris, bringFiles, name, snaps, ingestOf);
+    if (name === "prepare") {
       const settled = p.then(
         () => {},
         () => {},
@@ -423,16 +455,34 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
 
   return async (input, init) => {
     const req = new Request(input, init);
+    const url = new URL(req.url);
     const uris = new Set<string>();
+    const snaps = new Set<string>();
+    let body: Record<string, unknown> | undefined;
     try {
-      collectMountURIs(JSON.parse(await req.clone().text()), uris);
+      body = JSON.parse(await req.clone().text());
+      collectMountURIs(body, uris);
+      collectSnapshots(body, snaps);
     } catch {
       // not JSON, so nothing to bring in
     }
+    let ingestOf: string | undefined;
+    let readBoard = false;
+    if (procedureOf(url) === INGEST && body) {
+      readBoard = body.readBoard === true;
+      if (typeof body.snapshotId === "string" && body.snapshotId) {
+        ingestOf = `snapshots/${body.snapshotId}`;
+        // Kept without read_board, so a worker given it later reads the netlist alone.
+        if (!ingests.has(ingestOf)) ingests.set(ingestOf, { url: req.url, body: JSON.stringify({ ...body, readBoard: undefined }), uris: new Set(uris) });
+      }
+    }
+    // A question names its snapshot rather than files, so its files are the ones its ingest named.
+    for (const snap of snaps) for (const u of ingests.get(snap)?.uris ?? []) uris.add(u);
+    const name = laneFor(url, readBoard);
     const inBrowser = [...uris].some((u) => browserMounts.has(mountOf(u)));
-    if (inBrowser) return tracked(req, uris, false);
-    if (passthrough(new URL(req.url))) return network(req);
-    return tracked(req, uris, true);
+    if (inBrowser) return tracked(req, uris, false, name, [...snaps], ingestOf);
+    if (passthrough(url)) return network(req);
+    return tracked(req, uris, true, name, [...snaps], ingestOf);
   };
 }
 
@@ -449,6 +499,17 @@ function collectMountURIs(v: unknown, out: Set<string>): void {
     for (const x of v) collectMountURIs(x, out);
   } else if (v && typeof v === "object") {
     for (const x of Object.values(v)) collectMountURIs(x, out);
+  }
+}
+
+// collectSnapshots finds every string value in a decoded JSON body that names a snapshot.
+function collectSnapshots(v: unknown, out: Set<string>): void {
+  if (typeof v === "string") {
+    if (v.startsWith("snapshots/")) out.add(v);
+  } else if (Array.isArray(v)) {
+    for (const x of v) collectSnapshots(x, out);
+  } else if (v && typeof v === "object") {
+    for (const x of Object.values(v)) collectSnapshots(x, out);
   }
 }
 

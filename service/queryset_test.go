@@ -35,12 +35,12 @@ func newCounting(g *geom.SchematicGeometry) (countingLoader, *int, *int) {
 	return countingLoader{fakeLoader: fakeLoader{design: queryDesign(), geom: g}, designs: &d, geoms: &gm}, &d, &gm
 }
 
-func setReq(queries ...string) *webapi.RunQueriesRequest {
+func setReq(snap string, queries ...string) *webapi.RunQueriesRequest {
 	s := &webapi.QuerySet{Title: "t"}
 	for i, q := range queries {
 		s.Queries = append(s.Queries, &webapi.NamedQuery{Name: string(rune('a' + i)), Query: q})
 	}
-	return &webapi.RunQueriesRequest{Uri: "mount://m/x.kicad_sch", Set: s}
+	return &webapi.RunQueriesRequest{Snapshot: snap, Set: s}
 }
 
 var setGeometry = &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "s1", Placements: []*geom.SymbolPlacement{{RefDes: "R1"}}}}}
@@ -54,7 +54,8 @@ func TestRunQueriesMatchesRunQueryPerQuery(t *testing.T) {
 		`component.net(?r,"nope") => count(?r)`,
 	}
 	svc := NewQueryService(fakeLoader{design: queryDesign(), geom: setGeometry}, nil, nil)
-	got, err := svc.RunQueries(context.Background(), setReq(queries...))
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch")
+	got, err := svc.RunQueries(context.Background(), setReq(snap, queries...))
 	if err != nil {
 		t.Fatalf("RunQueries: %v", err)
 	}
@@ -62,7 +63,7 @@ func TestRunQueriesMatchesRunQueryPerQuery(t *testing.T) {
 		t.Fatalf("results = %d, want %d", len(got.GetResults()), len(queries))
 	}
 	for i, q := range queries {
-		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.kicad_sch", Query: q})
+		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: q})
 		if err != nil {
 			t.Fatalf("RunQuery(%s): %v", q, err)
 		}
@@ -75,11 +76,13 @@ func TestRunQueriesMatchesRunQueryPerQuery(t *testing.T) {
 
 func TestRunQueriesReadsTheDesignOnce(t *testing.T) {
 	one, d1, _ := newCounting(setGeometry)
-	if _, err := NewQueryService(one, nil, nil).RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.kicad_sch", Query: `component.net(?r,?n) => ?r`}); err != nil {
+	onesvc := NewQueryService(one, nil, nil)
+	if _, err := onesvc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snapOf(t, onesvc.Snapshots(), "mount://m/x.kicad_sch"), Query: `component.net(?r,?n) => ?r`}); err != nil {
 		t.Fatal(err)
 	}
 	set, dN, gN := newCounting(setGeometry)
-	_, err := NewQueryService(set, nil, nil).RunQueries(context.Background(), setReq(
+	setsvc := NewQueryService(set, nil, nil)
+	_, err := setsvc.RunQueries(context.Background(), setReq(snapOf(t, setsvc.Snapshots(), "mount://m/x.kicad_sch"),
 		`component.net(?r,?n) => ?r`, `component.net(?r,?n) => ?n`, `component.net(?r,?n) => ?r, ?n`))
 	if err != nil {
 		t.Fatal(err)
@@ -94,7 +97,8 @@ func TestRunQueriesReadsTheDesignOnce(t *testing.T) {
 
 func TestRunQueriesOfScalarsLoadsNoGeometry(t *testing.T) {
 	l, _, g := newCounting(setGeometry)
-	if _, err := NewQueryService(l, nil, nil).RunQueries(context.Background(), setReq(`component.net(?r,?n) => count(?r)`)); err != nil {
+	lsvc := NewQueryService(l, nil, nil)
+	if _, err := lsvc.RunQueries(context.Background(), setReq(snapOf(t, lsvc.Snapshots(), "mount://m/x.kicad_sch"), `component.net(?r,?n) => count(?r)`)); err != nil {
 		t.Fatal(err)
 	}
 	if *g != 0 {
@@ -104,7 +108,7 @@ func TestRunQueriesOfScalarsLoadsNoGeometry(t *testing.T) {
 
 func TestRunQueriesReportsABadQueryByName(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
-	got, err := svc.RunQueries(context.Background(), setReq(`component.net(?r,?n) => ?r`, `compnent.net(?r,?n)`, `component.net(?r`))
+	got, err := svc.RunQueries(context.Background(), setReq(snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), `component.net(?r,?n) => ?r`, `compnent.net(?r,?n)`, `component.net(?r`))
 	if err != nil {
 		t.Fatalf("a bad query failed the whole set: %v", err)
 	}
@@ -124,9 +128,10 @@ func TestRunQueriesReportsABadQueryByName(t *testing.T) {
 }
 
 func TestRunQueriesPreambleReachesEveryQuery(t *testing.T) {
-	req := setReq(`on(?r) => ?r`, `on(?r) => count(?r)`)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	req := setReq(snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), `on(?r) => ?r`, `on(?r) => count(?r)`)
 	req.Set.Preamble = `on(?r) :- component.net(?r, ?_);`
-	got, err := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil).RunQueries(context.Background(), req)
+	got, err := svc.RunQueries(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,12 +147,13 @@ func TestRunQueriesPreambleReachesEveryQuery(t *testing.T) {
 
 func TestRunQueriesUnusableSetIsInvalidArgument(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
-	req := setReq(`component.net(?r,?n)`, `component.net(?r,?n)`)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch")
+	req := setReq(snap, `component.net(?r,?n)`, `component.net(?r,?n)`)
 	req.Set.Queries[1].Name = "a"
 	if _, err := svc.RunQueries(context.Background(), req); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("repeated name: err = %v, want invalid argument", err)
 	}
-	if _, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Uri: "mount://m/x.kicad_sch"}); !errors.Is(err, ErrInvalidArgument) {
+	if _, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Snapshot: snap}); !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("empty set: err = %v, want invalid argument", err)
 	}
 }
@@ -155,9 +161,10 @@ func TestRunQueriesUnusableSetIsInvalidArgument(t *testing.T) {
 // A set's query that would not parse says where in its own text, and one that parsed and named a
 // relation the design lacks has nowhere to point (agni jaala v0.1.62 ParseError).
 func TestRunQueriesSaysWhereABadQueryStopped(t *testing.T) {
-	req := setReq(`compnent.net(?r,?n)`, `component.net(?r ?n)`)
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	req := setReq(snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), `compnent.net(?r,?n)`, `component.net(?r ?n)`)
 	req.Set.Preamble = `on(?r) :- component.net(?r, ?_)`
-	got, err := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil).RunQueries(context.Background(), req)
+	got, err := svc.RunQueries(context.Background(), req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -176,8 +183,9 @@ func TestRunQueriesSaysWhereABadQueryStopped(t *testing.T) {
 
 // RunQuery's error keeps the syntax error in its chain, so the transport can say where.
 func TestRunQueryKeepsWhereItStopped(t *testing.T) {
-	_, err := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil).RunQuery(context.Background(),
-		&webapi.RunQueryRequest{Uri: "mount://m/x.kicad_sch", Query: `component.net(?r ?n)`})
+	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
+	_, err := svc.RunQuery(context.Background(),
+		&webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Query: `component.net(?r ?n)`})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("err %v, want an invalid argument", err)
 	}

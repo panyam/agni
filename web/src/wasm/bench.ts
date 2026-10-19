@@ -1,6 +1,7 @@
 // The browser half of the wasm bench (agni issue 852). It runs the real worker over one board and
 // times the questions tools/wasmbench times natively, so the two can be compared row for row. It is
 // a measurement entry, loaded only by web/browser/bench.mjs, and no page ships it.
+import { SnapshotService } from "../gen/agni/v1/webapi/snapshot_pb.js";
 import { createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { DesignService } from "../gen/agni/v1/webapi/design_pb.js";
@@ -66,11 +67,14 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   const query = createClient(QueryService, transport);
   const uri = `mount://bench/${a.design}`;
 
+  // The read is the ingest and the open's GetDesign, as the page's first sheet waits on both. Each
+  // lane's worker is ingested under the same id before its first question (agni issue 1061).
   t = performance.now();
-  await design.getDesign({ uri });
+  const snapshot = (await createClient(SnapshotService, transport).ingest({ snapshot: { uri }, snapshotId: "bench" })).name;
+  await design.getDesign({ snapshot });
   const readMS = performance.now() - t;
 
-  const count = async (q: string) => Number((await query.runQuery({ uri, query: q })).rows[0]?.cells[0] ?? 0);
+  const count = async (q: string) => Number((await query.runQuery({ snapshot, query: q })).rows[0]?.cells[0] ?? 0);
   const components = await count(a.countComponents);
   const nets = await count(a.countNets);
   // The worker after reading the design and building its model: its memory beside its live heap, and
@@ -93,13 +97,13 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   t = performance.now();
   let firstCheckMS = -1; // stays -1 when the abort ended it
   const started = t;
-  const running = checks.getCheckReport({ uri }, { signal: ctl.signal }).then(
+  const running = checks.getCheckReport({ snapshot }, { signal: ctl.signal }).then(
     () => void (firstCheckMS = performance.now() - started),
     () => undefined,
   );
   await new Promise((r) => setTimeout(r, 500));
   let t2 = performance.now();
-  await query.runQuery({ uri, query: a.query });
+  await query.runQuery({ snapshot, query: a.query });
   const queryDuringCheckMS = performance.now() - t2;
   const stillRunning = await Promise.race([running.then(() => false), new Promise<boolean>((r) => setTimeout(() => r(true), 0))]);
   t2 = performance.now();
@@ -119,7 +123,7 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   t = performance.now();
   const report = (
     await checks.getCheckReport(
-      { uri },
+      { snapshot },
       {
         headers: { "Agni-Timing": "memory" },
         onHeader: (h) => {
@@ -136,11 +140,11 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   // design's model (agni 390): the wait once the design is loaded, against check_load_ms and
   // check_rules_ms above, the one-time part and the evaluation of the run before (agni issue 1060).
   t = performance.now();
-  await checks.getCheckReport({ uri });
+  await checks.getCheckReport({ snapshot });
   const checkAgainMS = performance.now() - t;
 
   t = performance.now();
-  const rows = (await query.runQuery({ uri, query: a.query })).rows.length;
+  const rows = (await query.runQuery({ snapshot, query: a.query })).rows.length;
   const queryMS = performance.now() - t;
   const mem = await engine.memoryBytes();
 
@@ -151,7 +155,7 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   if (a.serveMaxBytes) {
     await new Promise((r) => setTimeout(r, 1000));
     t = performance.now();
-    await query.runQuery({ uri, query: a.query });
+    await query.runQuery({ snapshot, query: a.query });
     queryAfterRestartMS = performance.now() - t;
     restoredMB = Math.round((await engine.memoryBytes()).serve / (1 << 20));
   }

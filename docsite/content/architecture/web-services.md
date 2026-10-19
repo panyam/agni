@@ -14,12 +14,31 @@ split follows resource lifetimes. Workspace navigation, one design's rendering, 
 design, the two-design diff, ad-hoc datalog search, stored reviews, declared projects and datasheet
 documents are independent concerns with independent cadences.
 
+Every question about a design names a snapshot of it, `snapshots/{id}`, rather than its files (agni
+issue 1061). `SnapshotService.Ingest` takes the design's URI, any board or drawing override,
+`as_named` and the overlay config, resolves the design's tiers and composes its config once, and
+returns the snapshot. It reads no design file, since an open draws a KiCad design from its
+schematic's geometry and parses its netlist only for the first check or query, so a design that
+cannot be read fails at its first question. Each analysis rpc below then carries only `snapshot`, so no
+question resolves a companion, a project or a convention again (C22, C32). Each ingest is a new
+snapshot with a random id, and what two snapshots of one design read is shared beneath them in the
+cache. A snapshot records every file its questions read, and a question asked after one changed is
+refused as stale (FAILED_PRECONDITION) rather than answered from files it never read;
+`UpdateSnapshot` reads it again, whole or by `update_mask`. A host holds a snapshot until it is
+deleted or evicted, so a missing one is NOT_FOUND, and both errors carry a `SnapshotUnavailable`
+detail. The viewer mints each snapshot's id itself and keeps its definition (`web/src/snapshots.ts`),
+so it recovers from either by ingesting again under that id or updating, and asks once more.
+`Ingest` under an id in use with the same definition answers that snapshot, after reading what
+`read_board` asks, which is what lets a client send it again without asking first.
+
 | Service | RPC | What it does |
 |---|---|---|
 | Workspace | ListMounts | the mount names a tree roots on; `opens` drops the ones holding nothing that client can open and returns how many, so the sidebar can account for a mount an operator configured and cannot find |
 | Workspace | ListDir | one directory level, each file labeled with its reader `format` and the `kind` of client that opens it (design, datasheet, or neither); `opens` declares what the caller can open, which drops folders with none of it anywhere beneath them (a bounded server-side walk, since one level of listing cannot see that far) and is what lets the two trees prune the same mounts to opposite answers |
 | Workspace | ListDesignFiles | every file a design's analysis reads (its folder, its project's descriptor, the config directories the project names) with a size and hash each, for a page analysing it in the browser to fetch from `/raw/<mount>/<path>`; refused over 256 MB |
 | Workspace | ProposeDesigns | the designs a folder of files makes, each with the `design.yaml` that would declare it, and every file no design reads with the reason; a folder holding a `design.yaml` is reported as declared, and a `.zip` reads as a folder on the browser's mount |
+| Snapshot | Ingest | load a design once, its tiers resolved and its config composed, and name it `snapshots/{id}` for every question after; `read_board` builds the model with its board too |
+| Snapshot | GetSnapshot, ListSnapshots, UpdateSnapshot, DeleteSnapshot | the standard methods over the snapshots a host holds; an update re-reads the design, whole or by `update_mask`, under the same name |
 | Design | GetDesign | load and summarize one design: sheet list, effective layout, available layouts, native availability |
 | Design | GetSheet | one rendered sheet, where `format` picks PACKED (columnar bytes for WebGL), SVG (the verification backend), or NATIVE (the format's own tool) |
 | Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
@@ -272,18 +291,22 @@ the browser rather than from the contract.
   files again and restored its board.
 - **A design's board is read once its first sheet is drawn, in a worker that then ends** (agni issue
   1061). Opening a design leaves the board alone, so the first sheet draws first (agni issue 943),
-  and the viewer then sends `CheckService.LoadDesign`, which reads what a `CheckDesign` reads before
-  its rules run and runs nothing. The page answers it on a third lane, `prepare` (`PREPARE_RPCS`),
-  which starts a worker for the request and ends it once it has answered. The parse leaves its peak
+  and the viewer then sends an `Ingest` of the open snapshot with `read_board`, which builds the
+  model a `CheckDesign` builds, board included, and runs nothing. The page answers it on a third
+  lane, `prepare`, which starts a worker for the request and ends it once it has answered. The parse leaves its peak
   in that worker alone, since a worker's memory only shrinks when it ends, and the parsed board goes
   into the shared store. The jobs worker then restores it, which allocates about 23 MB on Jetson
   where the parse allocated 412 MB. A jobs request sent while a prepare is under way waits for it
   (`mountingFetch`), so a Run checks pressed mid-load restores the board rather than parsing it
-  beside the prepare worker. `LoadDesignResponse.board_persisted` says whether the store took the
-  board, and the viewer logs one line when the load settles. A server answers `LoadDesign` in its
-  own process, where the model it builds is kept for the check that follows. In the cache, a request
+  beside the prepare worker. The snapshot's `tiers.board_persisted` says whether the store took the
+  board, and the viewer logs one line when the load settles. A server answers it in its own
+  process, where the model it builds is kept for the check that follows. In the cache, a request
   waiting on another's read builds it again when the other request was cancelled, so an abandoned
-  `LoadDesign` never fails the check waiting on it.
+  load never fails the check waiting on it.
+- **Every worker keeps its own snapshots.** The page's `Ingest` of each passes through
+  `mountingFetch`, which keeps it, brings the files it named into any worker a question about that
+  snapshot reaches, and sends the worker the same `Ingest`, without `read_board`, before that
+  worker's first question about it. A replacement worker starts with none, so it is given them again.
 
 The browser and the server read through different adapters over one set of ports, `fshost` over
 in-memory trees and `osLoader` over host paths, and two adapters behind one port can disagree with

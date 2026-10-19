@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/param"
@@ -25,6 +26,12 @@ import (
 type ProjectResolver struct {
 	Store  ProjectStore
 	Config ConfigResolver
+	// SnapshotLimit is how many snapshots the resolver holds before evicting the least recently asked
+	// (agni issue 1061). Zero means defaultSnapshots.
+	SnapshotLimit int
+
+	snapMu sync.Mutex
+	snaps  *snapshotRegistry
 }
 
 // Overlay composes the config for one design, its project's where it has one, and the request's own

@@ -22,40 +22,14 @@ CHECK_REPORT_FORMAT_RESULTS_JSON: CheckReportFormat
 CHECK_REPORT_FORMAT_HTML: CheckReportFormat
 
 class CheckDesignRequest(_message.Message):
-    __slots__ = ("rules", "overlay", "uri", "board_uri", "as_named", "work_budget")
+    __slots__ = ("snapshot", "rules", "work_budget")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     RULES_FIELD_NUMBER: _ClassVar[int]
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     rules: _containers.RepeatedScalarFieldContainer[str]
-    overlay: OverlayConfig
-    uri: str
-    board_uri: str
-    as_named: bool
     work_budget: int
-    def __init__(self, rules: _Optional[_Iterable[str]] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ...) -> None: ...
-
-class LoadDesignRequest(_message.Message):
-    __slots__ = ("uri", "overlay", "board_uri", "as_named")
-    URI_FIELD_NUMBER: _ClassVar[int]
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
-    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
-    uri: str
-    overlay: OverlayConfig
-    board_uri: str
-    as_named: bool
-    def __init__(self, uri: _Optional[str] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
-
-class LoadDesignResponse(_message.Message):
-    __slots__ = ("has_board", "board_persisted")
-    HAS_BOARD_FIELD_NUMBER: _ClassVar[int]
-    BOARD_PERSISTED_FIELD_NUMBER: _ClassVar[int]
-    has_board: bool
-    board_persisted: bool
-    def __init__(self, has_board: _Optional[bool] = ..., board_persisted: _Optional[bool] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., rules: _Optional[_Iterable[str]] = ..., work_budget: _Optional[int] = ...) -> None: ...
 
 class OverlayConfig(_message.Message):
     __slots__ = ("config", "ignore_project")
@@ -86,18 +60,12 @@ class SkippedRule(_message.Message):
     def __init__(self, name: _Optional[str] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class GetCheckReportRequest(_message.Message):
-    __slots__ = ("rules", "overlay", "uri", "board_uri", "as_named")
+    __slots__ = ("snapshot", "rules")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     RULES_FIELD_NUMBER: _ClassVar[int]
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     rules: _containers.RepeatedScalarFieldContainer[str]
-    overlay: OverlayConfig
-    uri: str
-    board_uri: str
-    as_named: bool
-    def __init__(self, rules: _Optional[_Iterable[str]] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., rules: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetCheckReportResponse(_message.Message):
     __slots__ = ("report",)
@@ -116,24 +84,18 @@ class ReportLinks(_message.Message):
     def __init__(self, url_base: _Optional[str] = ..., design_uri: _Optional[str] = ..., withheld: _Optional[str] = ...) -> None: ...
 
 class RenderCheckReportRequest(_message.Message):
-    __slots__ = ("uri", "overlay", "rules", "run", "format", "links", "board_uri", "as_named")
-    URI_FIELD_NUMBER: _ClassVar[int]
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("snapshot", "rules", "run", "format", "links")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     RULES_FIELD_NUMBER: _ClassVar[int]
     RUN_FIELD_NUMBER: _ClassVar[int]
     FORMAT_FIELD_NUMBER: _ClassVar[int]
     LINKS_FIELD_NUMBER: _ClassVar[int]
-    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
-    uri: str
-    overlay: OverlayConfig
+    snapshot: str
     rules: _containers.RepeatedScalarFieldContainer[str]
     run: CheckDesignResponse
     format: CheckReportFormat
     links: ReportLinks
-    board_uri: str
-    as_named: bool
-    def __init__(self, uri: _Optional[str] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., rules: _Optional[_Iterable[str]] = ..., run: _Optional[_Union[CheckDesignResponse, _Mapping]] = ..., format: _Optional[_Union[CheckReportFormat, str]] = ..., links: _Optional[_Union[ReportLinks, _Mapping]] = ..., board_uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., rules: _Optional[_Iterable[str]] = ..., run: _Optional[_Union[CheckDesignResponse, _Mapping]] = ..., format: _Optional[_Union[CheckReportFormat, str]] = ..., links: _Optional[_Union[ReportLinks, _Mapping]] = ...) -> None: ...
 
 class RenderCheckReportResponse(_message.Message):
     __slots__ = ("content", "content_type", "filename")
@@ -158,10 +120,10 @@ class GetNamingConventionResponse(_message.Message):
     def __init__(self, convention: _Optional[_Union[_naming_pb2.NamingConvention, _Mapping]] = ...) -> None: ...
 
 class GetExpectationsRequest(_message.Message):
-    __slots__ = ("uri",)
-    URI_FIELD_NUMBER: _ClassVar[int]
-    uri: str
-    def __init__(self, uri: _Optional[str] = ...) -> None: ...
+    __slots__ = ("snapshot",)
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    def __init__(self, snapshot: _Optional[str] = ...) -> None: ...
 
 class RuleExpectation(_message.Message):
     __slots__ = ("rule", "subjects", "pending", "why")
@@ -184,12 +146,10 @@ class GetExpectationsResponse(_message.Message):
     def __init__(self, expectations: _Optional[_Iterable[_Union[RuleExpectation, _Mapping]]] = ..., has_sidecar: _Optional[bool] = ...) -> None: ...
 
 class ListRulesRequest(_message.Message):
-    __slots__ = ("overlay", "uri")
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    overlay: OverlayConfig
-    uri: str
-    def __init__(self, overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., uri: _Optional[str] = ...) -> None: ...
+    __slots__ = ("snapshot",)
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    def __init__(self, snapshot: _Optional[str] = ...) -> None: ...
 
 class RuleInfo(_message.Message):
     __slots__ = ("name", "severity", "summary", "reads", "tags", "available", "unavailable_reason", "impact", "detail", "remedy", "shipped")
@@ -233,14 +193,10 @@ class ListRulesResponse(_message.Message):
     def __init__(self, rules: _Optional[_Iterable[_Union[RuleInfo, _Mapping]]] = ..., engine_version: _Optional[str] = ...) -> None: ...
 
 class GetInterfaceCoverageRequest(_message.Message):
-    __slots__ = ("uri", "overlay", "as_named")
-    URI_FIELD_NUMBER: _ClassVar[int]
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
-    uri: str
-    overlay: OverlayConfig
-    as_named: bool
-    def __init__(self, uri: _Optional[str] = ..., overlay: _Optional[_Union[OverlayConfig, _Mapping]] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    __slots__ = ("snapshot",)
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    def __init__(self, snapshot: _Optional[str] = ...) -> None: ...
 
 class SignalCoverage(_message.Message):
     __slots__ = ("name", "net", "state")
@@ -269,10 +225,10 @@ class GetInterfaceCoverageResponse(_message.Message):
     def __init__(self, interfaces: _Optional[_Iterable[_Union[InterfaceCoverage, _Mapping]]] = ...) -> None: ...
 
 class GetComponentParamsRequest(_message.Message):
-    __slots__ = ("uri",)
-    URI_FIELD_NUMBER: _ClassVar[int]
-    uri: str
-    def __init__(self, uri: _Optional[str] = ...) -> None: ...
+    __slots__ = ("snapshot",)
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    def __init__(self, snapshot: _Optional[str] = ...) -> None: ...
 
 class ComponentParams(_message.Message):
     __slots__ = ("ref_des", "mpn", "spec", "corpus")

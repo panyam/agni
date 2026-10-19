@@ -82,7 +82,7 @@ func TestDiffDesigns(t *testing.T) {
 	}
 	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": old, "b.edn": newer}}, nil)
 	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
-		AUri: "mount://m/a.edn", BUri: "mount://m/b.edn",
+		ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/a.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/b.edn"),
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -187,7 +187,7 @@ func TestDiffDesignsSheetMaps(t *testing.T) {
 		designs: map[string]*ir.Design{"a.edn": old, "b.edn": newer},
 		geo:     map[string]*geom.SchematicGeometry{"a.edn": geoA, "b.edn": geoB},
 	}, nil)
-	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a.edn", BUri: "mount://m/b.edn"})
+	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/a.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/b.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -242,7 +242,7 @@ func TestDiffDesignsSharedPlacements(t *testing.T) {
 	}}
 	designs := map[string]*ir.Design{"a.edn": {Components: []*ir.Component{{RefDes: "R2"}}}, "b.edn": {Components: []*ir.Component{{RefDes: "R4"}}}}
 	svc := NewDiffService(pairLoader{designs: designs, geo: map[string]*geom.SchematicGeometry{"a.edn": geoA, "b.edn": geoB}}, nil)
-	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a.edn", BUri: "mount://m/b.edn"})
+	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/a.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/b.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -268,7 +268,7 @@ func TestDiffDesignsSharedPlacements(t *testing.T) {
 
 	// One side without geometry: no sample, not an error.
 	svc = NewDiffService(pairLoader{designs: designs, geo: map[string]*geom.SchematicGeometry{"a.edn": geoA}}, nil)
-	resp, err = svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a.edn", BUri: "mount://m/b.edn"})
+	resp, err = svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/a.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/b.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -284,7 +284,7 @@ func TestDiffDesignsNoGeometry(t *testing.T) {
 	old := &ir.Design{Components: []*ir.Component{{RefDes: "R2"}}}
 	newer := &ir.Design{}
 	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": old, "b.edn": newer}}, nil)
-	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a.edn", BUri: "mount://m/b.edn"})
+	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/a.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/b.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -296,19 +296,23 @@ func TestDiffDesignsNoGeometry(t *testing.T) {
 	}
 }
 
-// TestDiffDesignsLoadErrors checks that either side failing to load fails the whole call with
-// the loader's mapped code. There is no partial diff.
+// TestDiffDesignsLoadErrors checks that either side failing to load fails with the loader's mapped
+// code, so there is no partial diff, and that a side naming no snapshot the host holds is not found.
 func TestDiffDesignsLoadErrors(t *testing.T) {
 	svc := NewDiffService(pairLoader{designs: map[string]*ir.Design{"a.edn": {}}}, nil)
-	_, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
-		AUri: "mount://m/a.edn", BUri: "mount://m/missing.edn",
-	})
+	a := snapOf(t, svc.Snapshots(), "mount://m/a.edn")
+	missing := snapOf(t, svc.Snapshots(), "mount://m/missing.edn")
+	if _, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: a, BSnapshot: missing}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("want ErrNotFound for the b side's missing file, got %v", err)
+	}
+	if _, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: missing, BSnapshot: a}); !errors.Is(err, ErrNotFound) {
+		t.Fatalf("want ErrNotFound for the a side's missing file, got %v", err)
+	}
+	_, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: a, BSnapshot: "snapshots/missing"})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("want ErrNotFound for the missing b side, got %v", err)
 	}
-	_, err = svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
-		AUri: "mount://m/missing.edn", BUri: "mount://m/a.edn",
-	})
+	_, err = svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: "snapshots/missing", BSnapshot: a})
 	if !errors.Is(err, ErrNotFound) {
 		t.Fatalf("want ErrNotFound for the missing a side, got %v", err)
 	}
@@ -363,7 +367,7 @@ func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 		designs: map[string]*ir.Design{"a": dA, "b": dB},
 		geo:     map[string]*geom.SchematicGeometry{"a": gA, "b": gB},
 	}, nil)
-	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{AUri: "mount://m/a", BUri: "mount://m/b"})
+	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/a"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/b")})
 	if err != nil {
 		t.Fatal(err)
 	}

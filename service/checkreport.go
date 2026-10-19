@@ -28,30 +28,19 @@ func (s *CheckService) WithEnv(env ReviewEnv) *CheckService {
 // HTML form is the page `agni check --verdicts --format html` writes, and both CLI paths call this,
 // so a report saved from the viewer and one the CLI wrote differ only in their timestamps.
 //
-// The request's uri, overlay, rules, board_uri and as_named have to be the ones the run used. They
-// decide the catalog the report describes and the netlist tier whose content hash it records, and
-// nothing here can check them against the run.
+// The request's snapshot and rules have to be the ones the run used. They decide the catalog the
+// report describes and the netlist tier whose content hash it records, and nothing here can check
+// them against the run.
 func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.RenderCheckReportRequest) (*webapi.RenderCheckReportResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
-	if err != nil {
-		return nil, err
-	}
 	if req.GetRun() == nil {
 		return nil, fmt.Errorf("%w: RenderCheckReport needs the run to write", ErrInvalidArgument)
 	}
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
+	u, ov, nu := snap.Design, snap.Overlay, snap.Netlist
 	cat, err := ov.Catalog(s.catalog)
-	if err != nil {
-		return nil, err
-	}
-	board, err := optionalArtifactURI(req.GetBoardUri())
-	if err != nil {
-		return nil, err
-	}
-	nu, _, _, err := s.projects.TierURIs(ctx, u, board, req.GetAsNamed())
 	if err != nil {
 		return nil, err
 	}
@@ -75,14 +64,14 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 				// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
 				CoverageAxis: true,
 			},
-			Design: &checkspb.DesignRef{Source: req.GetUri(), ContentHash: hash, UnexpandedHierarchy: run.GetUnexpandedHierarchy()},
+			Design: &checkspb.DesignRef{Source: u.String(), ContentHash: hash, UnexpandedHierarchy: run.GetUnexpandedHierarchy()},
 			// Provenance comes off the resolved overlay the run used, as a review's does. See
 			// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 			Run: RunConfigProto(ov.Provenance(RunProvenance{
 				Params:      s.specs != nil,
 				Profiles:    s.env.Profiles,
 				Intent:      s.env.Intent,
-				Conventions: req.GetOverlay().GetConfig().GetConventions().GetName(),
+				Conventions: snap.Config.GetConfig().GetConventions().GetName(),
 			}), 0),
 			Catalog:  results.RuleRecords(cat.Filter(check.Facets{Names: req.GetRules()})),
 			Skipped:  SkippedRuleDocs(run.GetSkipped()),
@@ -104,7 +93,7 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 			mountPath = strings.TrimPrefix(lu.String(), "mount://")
 		}
 		meta := report.Report{
-			Design:        req.GetUri(),
+			Design:        u.String(),
 			Generated:     time.Now().UTC().Format("2006-01-02 15:04:05 UTC"),
 			ContentHash:   hash,
 			URLBase:       strings.TrimSuffix(links.GetUrlBase(), "/"),
@@ -112,7 +101,7 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 			LinksWithheld: links.GetWithheld(),
 			// The run's own record of what its read left out, in the sentence the CLI prints (agni
 			// issue 717).
-			HierarchyNote: report.HierarchyNote(req.GetUri(), run.GetUnexpandedHierarchy()),
+			HierarchyNote: report.HierarchyNote(u.String(), run.GetUnexpandedHierarchy()),
 		}
 		var buf bytes.Buffer
 		// The composed catalog, not the selection, so a rule an overlay added carries its prose like a

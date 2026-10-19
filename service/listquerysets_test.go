@@ -49,8 +49,10 @@ func TestListQuerySetsIncludesInheritedOnesAndResolvesNothingElse(t *testing.T) 
 		}},
 	}}
 	res := &setResolver{}
-	svc := NewQueryService(nil, nil, &ProjectResolver{Store: store, Config: res})
-	got, err := svc.ListQuerySets(context.Background(), &webapi.ListQuerySetsRequest{DesignUri: "mount://m/d/board.edn"})
+	svc := NewQueryService(fakeLoader{}, nil, &ProjectResolver{Store: store, Config: res})
+	snap := snapOf(t, svc.Snapshots(), "mount://m/d/board.edn")
+	res.asked = nil
+	got, err := svc.ListQuerySets(context.Background(), &webapi.ListQuerySetsRequest{Snapshot: snap})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -67,14 +69,18 @@ func TestListQuerySetsIncludesInheritedOnesAndResolvesNothingElse(t *testing.T) 
 
 func TestListQuerySetsTellsNoProjectFromNoSets(t *testing.T) {
 	res := &setResolver{}
-	none, err := NewQueryService(nil, nil, &ProjectResolver{Store: declaringStore{design: &webapi.Design{Uri: "mount://m/d"}}, Config: res}).
-		ListQuerySets(context.Background(), &webapi.ListQuerySetsRequest{DesignUri: "mount://m/d/board.edn"})
+	nosvc := NewQueryService(fakeLoader{}, nil, &ProjectResolver{Store: declaringStore{design: &webapi.Design{Uri: "mount://m/d"}}, Config: res})
+	nosnap := snapOf(t, nosvc.Snapshots(), "mount://m/d/board.edn")
+	res.asked = nil
+	none, err := nosvc.ListQuerySets(context.Background(), &webapi.ListQuerySetsRequest{Snapshot: nosnap})
 	if err != nil || none.GetProject() != "" || len(none.GetQuerySets()) != 0 {
 		t.Errorf("a design in no project = %v, %v; want no project and no sets", none, err)
 	}
 	bare := extendingStore{projects: map[string]*webapi.Project{"projects/team": {Name: "projects/team", Config: &webapi.AnalysisConfig{}}}}
-	got, err := NewQueryService(nil, nil, &ProjectResolver{Store: bare, Config: res}).
-		ListQuerySets(context.Background(), &webapi.ListQuerySetsRequest{DesignUri: "mount://m/d/board.edn"})
+	baresvc := NewQueryService(fakeLoader{}, nil, &ProjectResolver{Store: bare, Config: res})
+	baresnap := snapOf(t, baresvc.Snapshots(), "mount://m/d/board.edn")
+	res.asked = nil
+	got, err := baresvc.ListQuerySets(context.Background(), &webapi.ListQuerySetsRequest{Snapshot: baresnap})
 	if err != nil || got.GetProject() != "projects/team" || len(got.GetQuerySets()) != 0 {
 		t.Errorf("a project keeping none = %v, %v; want its name and no sets", got, err)
 	}
@@ -86,12 +92,12 @@ func TestListQuerySetsTellsNoProjectFromNoSets(t *testing.T) {
 // A host that cannot resolve project config refuses a project naming sets, rather than listing none.
 func TestListQuerySetsRefusesWhatItCannotRead(t *testing.T) {
 	store := extendingStore{projects: map[string]*webapi.Project{"projects/team": {Name: "projects/team", Config: &webapi.AnalysisConfig{QuerySetUris: []string{"mount://m/q"}}}}}
-	_, err := NewQueryService(nil, nil, &ProjectResolver{Store: store}).ListQuerySets(context.Background(), &webapi.ListQuerySetsRequest{DesignUri: "mount://m/d/board.edn"})
+	_, err := NewQueryService(fakeLoader{}, nil, &ProjectResolver{Store: store}).Snapshots().Ingest(context.Background(), &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/d/board.edn"}})
 	if !errors.Is(err, ErrInvalidArgument) {
 		t.Errorf("err = %v, want an invalid argument", err)
 	}
 	broken := extendingStore{err: errors.New("project.yaml: line 3: field qeuries not found")}
-	if _, err := NewQueryService(nil, nil, &ProjectResolver{Store: broken}).ListQuerySets(context.Background(), &webapi.ListQuerySetsRequest{DesignUri: "mount://m/d/board.edn"}); err == nil {
+	if _, err := NewQueryService(fakeLoader{}, nil, &ProjectResolver{Store: broken}).Snapshots().Ingest(context.Background(), &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/d/board.edn"}}); err == nil {
 		t.Error("a descriptor that does not parse must be an error, not an empty list")
 	}
 }

@@ -31,8 +31,9 @@ func irDesign() *ir.Design {
 
 func askDesign(t *testing.T, l fakeLoader, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
 	t.Helper()
-	req.Uri = "mount://m/x.edn"
-	return NewDesignService(l, noNative{}, render.Style{}, nil).GetDesign(context.Background(), req)
+	svc := NewDesignService(l, noNative{}, render.Style{}, nil)
+	req.Snapshot = snapOf(t, svc.Snapshots(), "mount://m/x.edn")
+	return svc.GetDesign(context.Background(), req)
 }
 
 func mask(paths ...string) *fieldmaskpb.FieldMask { return &fieldmaskpb.FieldMask{Paths: paths} }

@@ -121,7 +121,7 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 		Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "5"}, {ComponentRef: "U2", PinRef: "5"}},
 	}}}
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
-	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -137,7 +137,7 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 
 	// A loader ErrNotFound (unknown mount) stays classified as not-found for the transport.
 	bad := NewCheckService(fakeLoader{err: fmt.Errorf("no such mount: %w", ErrNotFound)}, check.DefaultCatalog(), nil, "", nil, nil)
-	if _, err := bad.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://no/x"}); !errors.Is(err, ErrNotFound) {
+	if _, err := bad.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, bad.Snapshots(), "mount://no/x")}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("want ErrNotFound, got %v", err)
 	}
 }
@@ -155,7 +155,7 @@ func TestGetInterfaceCoverage(t *testing.T) {
 		{Name: "SPI_IO3", Connections: []*ir.Connection{conn("U1", "6")}}, // single-pin -> dangling
 	}}
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
-	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Uri: "mount://m/x.edn"})
+	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -183,7 +183,7 @@ func TestGetInterfaceCoverageFindsADeclaredHost(t *testing.T) {
 		Nets:       []*ir.Net{{Name: "GND", Connections: []*ir.Connection{{ComponentRef: "U2", PinRef: "9"}}}},
 	}
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
-	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Uri: "mount://m/x.edn"})
+	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -214,7 +214,7 @@ func TestListRules(t *testing.T) {
 	// catalog's own count, not the built-in slice.
 	catalog := check.DefaultCatalog()
 	svc := NewCheckService(fakeLoader{}, catalog, nil, "", nil, nil)
-	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d.pdf"})
+	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.pdf")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +262,7 @@ func TestCheckDesignSubsetAndSubject(t *testing.T) {
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
 
 	// Full run: both rules fire.
-	full, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
+	full, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -276,7 +276,7 @@ func TestCheckDesignSubsetAndSubject(t *testing.T) {
 
 	// Subset: only i2c-pull-up requested, so unconnected-component must not appear.
 	sub, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{
-		Uri: "mount://m/x.edn", Rules: []string{"i2c-pull-up"},
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Rules: []string{"i2c-pull-up"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -325,7 +325,7 @@ func TestCheckDesignSheets(t *testing.T) {
 		},
 	}}
 	svc := NewCheckService(fakeLoader{design: d, geom: g}, check.DefaultCatalog(), nil, "", nil, nil)
-	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -341,7 +341,7 @@ func TestCheckDesignSheets(t *testing.T) {
 	}
 
 	// The severity pivot carries the same join (the report panel shares the navigation).
-	rep, err := svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Uri: "mount://m/x.edn"})
+	rep, err := svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -361,7 +361,7 @@ func TestCheckDesignSheets(t *testing.T) {
 
 	// Geometry failure degrades to empty sheets, not an error.
 	noGeom := NewCheckService(fakeLoader{design: d, geomErr: fmt.Errorf("no geometry")}, check.DefaultCatalog(), nil, "", nil, nil)
-	resp, err = noGeom.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"})
+	resp, err = noGeom.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, noGeom.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -409,7 +409,7 @@ func TestCheckDesignNetSheetsFromAttribute(t *testing.T) {
 		{Id: "/b"},
 	}}
 	svc := NewCheckService(fakeLoader{design: d, geom: g}, check.DefaultCatalog(), nil, "", nil, nil)
-	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.kicad_pro"})
+	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pro")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -451,7 +451,7 @@ func TestHighlightSheet(t *testing.T) {
 
 	// PACKED (the default): primitives 0 (NET1 wire), 1 (R1 rect), 2 (R1 pin).
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Uri: "mount://m/x.eds", Specs: specs,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds"), Specs: specs,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -466,7 +466,7 @@ func TestHighlightSheet(t *testing.T) {
 
 	// SVG: a transparent overlay document carrying the spec color.
 	resp, err = svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Uri: "mount://m/x.eds", Format: webapi.SheetFormat_SHEET_FORMAT_SVG, Specs: specs,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds"), Format: webapi.SheetFormat_SHEET_FORMAT_SVG, Specs: specs,
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -478,7 +478,7 @@ func TestHighlightSheet(t *testing.T) {
 
 	// NATIVE has no overlay, so it is classified invalid-argument for the transport.
 	if _, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Uri: "mount://m/x.eds", Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds"), Format: webapi.SheetFormat_SHEET_FORMAT_NATIVE,
 	}); !errors.Is(err, ErrInvalidArgument) {
 		t.Fatalf("want ErrInvalidArgument for NATIVE, got %v", err)
 	}
@@ -510,7 +510,7 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 	}}}
 	svc := NewCheckService(fakeLoader{design: d}, catalog, nil, "", nil, nil)
 
-	list, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d.pdf"})
+	list, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.pdf")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -525,7 +525,7 @@ func TestSecondSourceFlowsThroughService(t *testing.T) {
 	}
 
 	sub, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{
-		Uri: "mount://m/x.edn", Rules: []string{"demo/every-net"},
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Rules: []string{"demo/every-net"},
 	})
 	if err != nil {
 		t.Fatal(err)
@@ -566,7 +566,7 @@ func TestGetDesignListsBoardSheet(t *testing.T) {
 		board:      testBoard(),
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.kicad_pcb"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -606,7 +606,7 @@ func TestGetDesignListsTheBoardWithoutReadingIt(t *testing.T) {
 		reads: &reads,
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.kicad_pcb"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -617,7 +617,7 @@ func TestGetDesignListsTheBoardWithoutReadingIt(t *testing.T) {
 		t.Errorf("GetDesign read the board %d times to list it, want none", reads)
 	}
 	// Positive control: the counter does count, since opening the board sheet reads it.
-	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG}); err != nil {
+	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb"), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG}); err != nil {
 		t.Fatal(err)
 	}
 	if reads == 0 {
@@ -631,7 +631,7 @@ func TestGetSheetBoard(t *testing.T) {
 		board:      testBoard(),
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG})
+	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb"), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -640,7 +640,7 @@ func TestGetSheetBoard(t *testing.T) {
 		t.Fatalf("SVG format must answer with the board document, ok=%v", ok)
 	}
 	// PACKED gets the WS7-035 packed board: same envelope, board sheet id, triangle records.
-	resp, err = svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_PACKED})
+	resp, err = svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb"), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_PACKED})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -657,7 +657,7 @@ func TestHighlightSheetBoard(t *testing.T) {
 	}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Uri: "mount://m/x.kicad_pcb", Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb"), Sheet: "board", Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
 		Specs: []*geom.HighlightSpec{{Nets: []string{"SIG"}}},
 	})
 	if err != nil {
@@ -674,14 +674,14 @@ func TestHighlightSheetBoard(t *testing.T) {
 func TestBoardSheetAbsent(t *testing.T) {
 	ld := fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.edn"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if len(resp.GetSheets()) != 1 {
 		t.Fatalf("no-board file lists %d sheets, want 1", len(resp.GetSheets()))
 	}
-	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Uri: "mount://m/x.edn", Sheet: "board"}); !errors.Is(err, ErrNotFound) {
+	if _, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Sheet: "board"}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("board sheet on a boardless file = %v, want ErrNotFound", err)
 	}
 }
@@ -699,7 +699,7 @@ func TestHighlightSheetCompanionNameJoin(t *testing.T) {
 	svc := NewDesignService(fakeLoader{design: d, geom: g}, noNative{}, render.Style{}, nil)
 
 	resp, err := svc.HighlightSheet(context.Background(), &webapi.HighlightSheetRequest{
-		Uri: "mount://m/x.edn", Sheet: "P1",
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Sheet: "P1",
 		Format: webapi.SheetFormat_SHEET_FORMAT_SVG,
 		Specs:  []*geom.HighlightSpec{{NetIds: []string{"n1"}}},
 	})
@@ -746,7 +746,7 @@ func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 	g := twoSheetGeom()
 	g.Undrawn = []*geom.UndrawnPlacement{{RefDes: "U1", CellRef: "MCU", LibraryRef: "Acme", SheetId: "P1"}}
 	svc := NewDesignService(fakeLoader{geom: g}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -759,7 +759,7 @@ func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 
 	// The common case, and the one that keeps a banner worth reading.
 	clean := NewDesignService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
-	got, err := clean.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	got, err := clean.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, clean.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -775,7 +775,7 @@ func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 // late to say so (agni issue 392).
 func TestGetDesignReportsContentHash(t *testing.T) {
 	svc := NewDesignService(fakeLoader{geom: twoSheetGeom(), hash: "sha256:abc"}, noNative{}, render.Style{}, nil)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -793,7 +793,7 @@ func TestGetDesignSurvivesAnUnhashableFile(t *testing.T) {
 		fakeLoader{geom: twoSheetGeom(), hashErr: errors.New("permission denied")},
 		noNative{}, render.Style{}, nil,
 	)
-	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: "mount://m/x.eds"})
+	resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
 		t.Fatalf("a hash failure must not fail the open: %v", err)
 	}
@@ -850,7 +850,7 @@ func TestListRulesSaysWhichRulesShip(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewCheckService(fakeLoader{}, catalog, nil, "", nil, nil).WithEnv(ReviewEnv{ProducerVersion: "v9.9.9"})
-	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d.pdf"})
+	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.pdf")})
 	if err != nil {
 		t.Fatal(err)
 	}

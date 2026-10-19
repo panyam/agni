@@ -40,17 +40,8 @@ type DiffService struct {
 // NewDiffService returns a DiffService backed by the given loader. A nil projects resolver means
 // this deployment resolves no projects.
 func NewDiffService(loader DesignLoader, projects *ProjectResolver) *DiffService {
+	projects = orEmptyResolver(projects)
 	return &DiffService{loader: loader, projects: projects}
-}
-
-// readOptions composes one side's per-read config from its project. Each side resolves its own,
-// because a diff may span two projects.
-func (s *DiffService) readOptions(ctx context.Context, uri artifact.URI) ([]ReadOption, error) {
-	ov, err := s.projects.Overlay(ctx, uri, nil, "")
-	if err != nil {
-		return nil, err
-	}
-	return ov.ReadOptions(), nil
 }
 
 // DiffDesigns loads both designs' netlist IR and returns the classified report plus the
@@ -58,28 +49,22 @@ func (s *DiffService) readOptions(ctx context.Context, uri artifact.URI) ([]Read
 // (unknown mount -> ErrNotFound, escaping path or parse failure -> invalid argument); there
 // is no partial diff.
 func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRequest) (*webapi.DiffDesignsResponse, error) {
-	aURI, err := ParseArtifactURI(req.GetAUri())
+	// Each side is its own snapshot with its own config, because a diff may span two projects, and
+	// each side's reads are recorded on its own snapshot.
+	actx, as, err := s.projects.Snapshot(ctx, req.GetASnapshot())
 	if err != nil {
 		return nil, err
 	}
-	bURI, err := ParseArtifactURI(req.GetBUri())
+	bctx, bs, err := s.projects.Snapshot(ctx, req.GetBSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	// Each side resolves its OWN config, because a diff may span two projects.
-	aOpts, err := s.readOptions(ctx, aURI)
-	if err != nil {
-		return nil, err
-	}
-	bOpts, err := s.readOptions(ctx, bURI)
-	if err != nil {
-		return nil, err
-	}
-	a, err := s.loader.Design(ctx, aURI, aOpts...)
+	aOpts, bOpts := as.Overlay.ReadOptions(), bs.Overlay.ReadOptions()
+	a, err := s.loader.Design(actx, as.Netlist, aOpts...)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
-	b, err := s.loader.Design(ctx, bURI, bOpts...)
+	b, err := s.loader.Design(bctx, bs.Netlist, bOpts...)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
@@ -88,8 +73,8 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	if req.GetIncludeEqual() {
 		AppendEqualNets(resp, rep)
 	}
-	gA := BuildGeometry(ctx, s.loader, aURI, aOpts...)
-	gB := BuildGeometry(ctx, s.loader, bURI, bOpts...)
+	gA := BuildGeometry(actx, s.loader, as.Geometry, aOpts...)
+	gB := BuildGeometry(bctx, s.loader, bs.Geometry, bOpts...)
 	// Plain netlist models, NOT BuildModel. Diff runs no rules and annotateDiffSheets reads only
 	// Nets(), so the board and params tiers would be dead weight. This is the one intended
 	// exception to the WS9-048 full-model rule.

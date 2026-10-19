@@ -60,45 +60,11 @@ service QueryService {
 }
 
 message RunQueryRequest {
+  // snapshot names the design to query, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 10;
   // query is the datalog text, the same surface `agni query` accepts:
   //   component.mpn(?r,?m), component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
   string query = 1;
-  // overlay carries the per-request rule-catalog configuration (WS3-102). A query runs no rules, so
-  // only its LEXICON half does anything here — and it does a great deal.
-  //
-  // The lexicon decides which net names are rails, grounds, and feedback nodes, and it is applied at
-  // the design READ because those roles are resolved once at ingestion. So it does not merely add a
-  // relation: it changes the answer of `rail`, `feedback`, `pin.type`, and everything derived from
-  // them. A project whose rails are named function-first sees one rail on a four-rail board without
-  // it, which is a correct answer to a question they did not ask.
-  //
-  // That is also why this field is on the ad-hoc query surface at all. Authoring a lexicon is a loop
-  // (write a pattern, ask which nets are rails now, adjust), and query is the natural tool for that
-  // loop; without this it could not participate in it.
-  //
-  // The convention's RULES half is accepted and ignored, deliberately rather than by oversight: a
-  // project keeps one conventions file carrying both halves, and a query legitimately consumes only
-  // one of them.
-  OverlayConfig overlay = 2;
-  // board_uri attaches a SEPARATE board-geometry export (.kicad_pcb / IPC-2581) so the board.*
-  // relations (board.layer, board.track_width, board.via_drill) have facts to range over. Empty means
-  // no board is attached, and those relations are then simply empty — which is indistinguishable, in
-  // a result table, from a board with nothing to report. Same ref semantics as `path`.
-  string board_uri = 3;
-  // uri names the design to query.
-  string uri = 4;
-  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
-  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-  // companion, copper from a board one.
-  //
-  // It exists because the CLI is a client of this service and carries the same flag. Resolution
-  // happens here, once, so a caller that wants the file itself has to be able to say so; without
-  // this field the service would silently override the CLI's own opt-out (agni issue 656).
-  //
-  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-  // how two views of one design are checked against each other.
-  bool as_named = 5;
   // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
   // a fact base counts, candidate comparisons, each row a generator emits and the connections a
   // circuit walk examines. It can only LOWER the
@@ -123,6 +89,8 @@ message RunQueryRequest {
   // Zero leaves the query's own limit, if any, as it is. RunQueryResponse.total says how many rows
   // the limit left out.
   int32 limit = 9;
+  reserved 2, 3, 4, 5;
+  reserved "overlay", "board_uri", "uri", "as_named";
 }
 
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns. Its provenance
@@ -245,20 +213,22 @@ message QueryValue {
 }
 
 message ListRelationsRequest {
+  // snapshot, "snapshots/{snapshot}", names the design whose config decides the vocabulary, its
+  // project's library and its own included (agni issue 1061). Empty lists the shipped vocabulary.
+  string snapshot = 4;
+  // overlay adds a config's libraries to the shipped vocabulary when no snapshot is named, which is
+  // how `agni query --relations --lib <dir>` lists a library's members before any design is read.
+  // With a snapshot it is refused, since the snapshot's config is already the vocabulary.
+  OverlayConfig overlay = 3;
   // path names a place in the namespace tree to describe in `entry`: "net" a module,
   // "net.has_test_point" a member, and "." the root module. Empty asks for the flat catalog, as
   // before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
   // with the suggestion a query would get.
   string path = 1;
-  // uri, when set, names a design whose project's own library joins the catalog (agni issue 773), so
-  // its members list and describe beside the shipped ones. Empty answers for the shipped vocabulary
-  // alone. A project library that does not compose is an error rather than a catalog without it.
-  string uri = 2;
-  // overlay carries library modules sent with the request (AnalysisConfig.library_modules, agni
-  // issue 788), so the catalog lists and describes them as a query sent with the same overlay would
-  // read them. They join the design's project library when uri is set too.
-  OverlayConfig overlay = 3;
+  reserved 2;
+  reserved "uri";
 }
+
 
 // RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
 // `args` the labels a template inserts as `?arg` (so `component.net` inserts
@@ -397,13 +367,9 @@ message NamedQuery {
 }
 
 message RunQueriesRequest {
+  // snapshot names the design to query, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 8;
   QuerySet set = 1;
-  // uri, overlay, board_uri and as_named mean what they mean on RunQueryRequest, and apply to the one
-  // read every query in the set shares.
-  string uri = 2;
-  OverlayConfig overlay = 3;
-  string board_uri = 4;
-  bool as_named = 5;
   // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
   // a fact base counts, candidate comparisons, each row a generator emits and the connections a
   // circuit walk examines. It can only LOWER the
@@ -411,6 +377,8 @@ message RunQueriesRequest {
   int64 work_budget = 6;
   // omit_locations is RunQueryRequest's, for every query in the set.
   bool omit_locations = 7;
+  reserved 2, 3, 4, 5;
+  reserved "uri", "overlay", "board_uri", "as_named";
 }
 
 message RunQueriesResponse {
@@ -454,8 +422,10 @@ message TextPosition {
 }
 
 message ListQuerySetsRequest {
-  // design_uri is the design whose project's query sets are listed.
-  string design_uri = 1;
+  // snapshot names the design whose project's query sets to list, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 2;
+  reserved 1;
+  reserved "design_uri";
 }
 
 message ListQuerySetsResponse {

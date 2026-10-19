@@ -37,16 +37,6 @@ service CheckService {
   // offending element (it matches PackedSheet primitive keys).
   rpc CheckDesign(CheckDesignRequest) returns (CheckDesignResponse);
 
-  // LoadDesign reads everything a CheckDesign over the same request reads before its rules run (the
-  // netlist, the board and the model over them) and runs nothing (agni issue 1061). A host keeps what
-  // it read, so a CheckDesign that follows starts from rules rather than from a board parse.
-  //
-  // The browser sends it from a worker that ends when it answers, so the board's parse leaves its
-  // peak memory in no worker that lives on: the jobs worker later restores the parsed board from the
-  // shared store, which allocates a small fraction of what the parse did. board_persisted says
-  // whether that store now holds it.
-  rpc LoadDesign(LoadDesignRequest) returns (LoadDesignResponse);
-
   // GetExpectations returns a design's expected findings from its `<design>.expect.yaml` sidecar
   // (WS6-006), if one sits beside the file. Expectations are static per design and independent of
   // which rule subset a CheckDesign run uses, so they are their own resource: the viewer fetches
@@ -97,62 +87,19 @@ service CheckService {
 }
 
 message CheckDesignRequest {
+  // snapshot names the design to check, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 7;
   // rules names the subset of rules to run (by RuleInfo.name); empty runs the full catalog, so an
   // existing caller is unchanged. A selection lets the client run only what it wants to see (and
   // avoid running expensive rules it did not select).
   repeated string rules = 1;
-  // overlay carries the per-request rule-catalog configuration; empty keeps the catalog the service
-  // was constructed with.
-  OverlayConfig overlay = 2;
-  // uri names the design to check.
-  string uri = 3;
-  // board_uri attaches a SEPARATE board-geometry export to a netlist design, so board-tier rules
-  // resolve pass/fail instead of not-applicable. Empty uses the design's own board — its sidecar, or
-  // the layout its descriptor declares as a companion — which is the ordinary case.
-  //
-  // It exists for the board that is NOT a declared companion: a fab's returned file, or a layout under
-  // review that has not landed in the design yet. `review` and `query` have taken one since WS3-089;
-  // `check` could not, so the one command most likely to be asked "does this layout pass" was the one
-  // that could not be pointed at a layout.
-  string board_uri = 4;
-  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
-  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-  // companion, copper from a board one.
-  //
-  // It exists because the CLI is a client of this service and carries the same flag. Resolution
-  // happens here, once, so a caller that wants the file itself has to be able to say so; without
-  // this field the service would silently override the CLI's own opt-out (agni issue 656).
-  //
-  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-  // how two views of one design are checked against each other.
-  bool as_named = 5;
   // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
   // a fact base counts, candidate comparisons, each row a generator emits and the connections a
   // circuit walk examines. It can only LOWER the
   // deployment's own budget, never raise it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself inconclusive, naming the budget, and the other rules still answer.
   int64 work_budget = 6;
-}
-
-// LoadDesignRequest names a design the way a CheckDesignRequest does, so LoadDesign reads exactly the
-// tiers the check would and keeps them under the same keys.
-message LoadDesignRequest {
-  string uri = 1;
-  OverlayConfig overlay = 2;
-  string board_uri = 3;
-  bool as_named = 4;
-}
-
-// LoadDesignResponse says what LoadDesign left for a later request.
-message LoadDesignResponse {
-  // has_board is whether the design has a board tier at all. A design with none has nothing slow
-  // left to read.
-  bool has_board = 1;
-  // board_persisted is whether the parsed board is in the host's persistent store, written by this
-  // call or an earlier one, so another process restores it rather than parsing it. It is false on a
-  // host with no store (agni serve keeps it in memory instead), for a build whose version names no
-  // revision, and when the store refused the write.
-  bool board_persisted = 2;
+  reserved 2, 3, 4, 5;
+  reserved "overlay", "uri", "board_uri", "as_named";
 }
 
 // OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
@@ -240,28 +187,12 @@ message SkippedRule {
 }
 
 message GetCheckReportRequest {
+  // snapshot names the design to report on, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 6;
   // Same selector semantics as CheckDesignRequest.rules: names the subset to run, empty = all.
   repeated string rules = 1;
-  // Same semantics as CheckDesignRequest.overlay. It is here too because this RPC also RUNS the
-  // rules: an overlay honored by one and not the other would make the same flag change the findings
-  // in one --format and not another.
-  OverlayConfig overlay = 2;
-  // uri names the design to report on.
-  string uri = 3;
-  // Same semantics as CheckDesignRequest.board_uri.
-  string board_uri = 4;
-  // as_named reads exactly the artifact this uri names, even when the enclosing design declares it a
-  // companion view of a different entry. Without it, a ref belonging to a declared design resolves
-  // to the artifact each TIER should read: analysis from the entry, sheets from a schematic
-  // companion, copper from a board one.
-  //
-  // It exists because the CLI is a client of this service and carries the same flag. Resolution
-  // happens here, once, so a caller that wants the file itself has to be able to say so; without
-  // this field the service would silently override the CLI's own opt-out (agni issue 656).
-  //
-  // Reading a companion AS a netlist is a legitimate diagnostic rather than only a mistake: it is
-  // how two views of one design are checked against each other.
-  bool as_named = 5;
+  reserved 2, 3, 4, 5;
+  reserved "overlay", "uri", "board_uri", "as_named";
 }
 
 message GetCheckReportResponse {
@@ -295,11 +226,8 @@ message ReportLinks {
 }
 
 message RenderCheckReportRequest {
-  // uri names the design the run read, as CheckDesignRequest.uri did. It decides the project whose
-  // catalog the report describes and the netlist tier whose content hash it records.
-  string uri = 1;
-  // overlay is the per-request config the run used, the same value CheckDesignRequest carried.
-  OverlayConfig overlay = 2;
+  // snapshot names the design the run read. It decides the project whose catalog the report describes and the netlist whose content hash it records, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 9;
   // rules is the selection the run used, empty meaning the whole catalog, as CheckDesignRequest.rules.
   repeated string rules = 3;
   // run is the CheckDesign answer to write out. Nothing is re-run.
@@ -307,10 +235,8 @@ message RenderCheckReportRequest {
   CheckReportFormat format = 5;
   // links applies to CHECK_REPORT_FORMAT_HTML only.
   ReportLinks links = 6;
-  // board_uri and as_named have CheckDesignRequest's meaning and must match the run's request, since
-  // they decide which netlist tier the content hash is taken from.
-  string board_uri = 7;
-  bool as_named = 8;
+  reserved 1, 2, 7, 8;
+  reserved "uri", "overlay", "board_uri", "as_named";
 }
 
 message RenderCheckReportResponse {
@@ -331,8 +257,10 @@ message GetNamingConventionResponse {
 }
 
 message GetExpectationsRequest {
-  // uri names the design whose expectation sidecar to read.
-  string uri = 1;
+  // snapshot names the design whose expectation sidecar to read, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 2;
+  reserved 1;
+  reserved "uri";
 }
 
 // RuleExpectation is one expected-findings entry from a design's sidecar: a rule that should fire
@@ -361,18 +289,10 @@ message GetExpectationsResponse {
 // today), so the catalog is the same for any design. The fields are kept so availability can become
 // design-dependent (e.g. once the datasheet parameter layer lands) without a wire change.
 message ListRulesRequest {
-  // overlay carries the per-request rule-catalog configuration, so the listed catalog is the one a
-  // check run under the SAME overlay would use (WS9-128).
-  //
-  // It is here because a request convention REPLACES the server's (WS3-124), which changes which
-  // rules exist. A client that listed the server's catalog and then ran under its own convention
-  // would select rules that no longer exist and miss the ones that now do, so its own naming rules
-  // would never run and the server's would have stopped: naming checks would silently vanish, which
-  // reads as a design with no naming problems.
-  OverlayConfig overlay = 1;
-  // uri names the design whose availability decides which rules apply; empty lists the whole
-  // catalog without availability.
-  string uri = 2;
+  // snapshot names the design whose config and availability decide the listed catalog, so it is the one a check of that snapshot runs. Empty lists the server's catalog without availability, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 3;
+  reserved 1, 2;
+  reserved "overlay", "uri";
 }
 
 // RuleInfo is the catalog entry for one rule: its identity, its prose (one-line summary, impact,
@@ -405,12 +325,10 @@ message ListRulesResponse {
 }
 
 message GetInterfaceCoverageRequest {
-  // uri names the design to project coverage over.
-  string uri = 1;
-  // overlay and as_named mean what they mean on CheckDesignRequest, so the coverage panel reads the
-  // design the way the check it sits beside does (agni issue 833).
-  OverlayConfig overlay = 2;
-  bool as_named = 3;
+  // snapshot names the design to project coverage over, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 4;
+  reserved 1, 2, 3;
+  reserved "uri", "overlay", "as_named";
 }
 
 // SignalCoverage is one required interface signal's state (WS9-041). net is the matched net name,
@@ -436,8 +354,10 @@ message GetInterfaceCoverageResponse {
 }
 
 message GetComponentParamsRequest {
-  // uri names the design whose components to join against the datasheet corpus.
-  string uri = 1;
+  // snapshot names the design whose components to join against the datasheet corpus, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 2;
+  reserved 1;
+  reserved "uri";
 }
 
 // ComponentParams is one design component joined to its datasheet spec: the ref_des the viewer

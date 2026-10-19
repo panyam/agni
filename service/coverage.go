@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"github.com/panyam/agni/artifact"
 	"sort"
 	"time"
 
@@ -23,18 +22,11 @@ import (
 // the bare file against the built-ins alone, so a project's lexicon, its own profiles and its intent
 // were absent from the panel while present in the findings beside it.
 func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.GetInterfaceCoverageRequest) (*webapi.GetInterfaceCoverageResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	ov, err := s.projects.Overlay(ctx, u, req.GetOverlay(), s.baseConvention)
-	if err != nil {
-		return nil, err
-	}
-	nu, bu, _, err := s.projects.TierURIs(ctx, u, artifact.URI{}, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
+	ov, nu, bu := snap.Overlay, snap.Netlist, snap.Board
 	m, bases, err := BuildModelCachedTier(ctx, s.loader, nu, bu, ov, s.specs, SkipBoard)
 	if err != nil {
 		return nil, err

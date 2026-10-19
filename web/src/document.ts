@@ -140,14 +140,15 @@ export class DocumentStore {
     return this.selectedRules.flatMap((name) => vs.filter((v) => v.rule === name).map(verdictItem));
   }
 
-  // runMissing asks CheckDesign for the selected rules the run lacks and folds the answer into it. A
-  // geometry-only file (no netlist) makes CheckDesign fail, which leaves the run as it was and those
-  // rules pending.
-  async runMissing(checks: Pick<CheckClient, "checkDesign">, overlay: OverlayConfig | undefined): Promise<void> {
+  // runMissing asks CheckDesign for the selected rules the run lacks and folds the answer into it.
+  // snapshot is the open design's snapshot under the page's convention, asked for only when a rule
+  // is missing (agni issue 1061). A geometry-only file (no netlist) fails, which leaves the run as it
+  // was and those rules pending.
+  async runMissing(checks: Pick<CheckClient, "checkDesign">, snapshot: () => Promise<string>): Promise<void> {
     const missing = this.selectedRules.filter((n) => !this.ran(n));
     if (missing.length === 0 || !this.mount || !this.path) return;
     try {
-      const resp = await checks.checkDesign({ uri: artifactUri(this.mount, this.path), rules: missing, overlay });
+      const resp = await checks.checkDesign({ snapshot: await snapshot(), rules: missing });
       // ?? [] because a hand-built response (a test stub, an older server) may omit a list, and a
       // missing field must degrade to "nothing was skipped" or "this rule stated no considered set"
       // rather than throwing mid-run and losing the findings too.
@@ -166,12 +167,12 @@ export class DocumentStore {
     }
   }
 
-  // loadCatalog fetches the rule catalog a run under overlay would use (ListRules) and defaults the
+  // loadCatalog fetches the rule catalog a check of snapshot would run (ListRules) and defaults the
   // active ruleset to every available rule. A failure leaves an empty catalog (the panel shows "No
   // rules.") rather than erroring the open.
-  async loadCatalog(checks: Pick<CheckClient, "listRules">, uri: string, overlay: OverlayConfig | undefined): Promise<void> {
+  async loadCatalog(checks: Pick<CheckClient, "listRules">, snapshot: () => Promise<string>): Promise<void> {
     try {
-      const resp = await checks.listRules({ uri, overlay });
+      const resp = await checks.listRules({ snapshot: await snapshot() });
       this.rules = resp.rules.map((r) => ({
         name: r.name,
         severity: r.severity,
