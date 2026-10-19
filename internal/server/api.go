@@ -14,11 +14,14 @@ import (
 type API struct {
 	Workspace *service.WorkspaceService
 	Project   *service.ProjectService
-	Design    *service.DesignService
-	Check     *service.CheckService
-	Diff      *service.DiffService
-	Query     *service.QueryService
-	Review    *service.ReviewService
+	// Snapshot ingests the designs every other service answers about (agni issue 1061). It must hold
+	// the same ProjectResolver they do, or a question names a snapshot none of them holds.
+	Snapshot *service.SnapshotService
+	Design   *service.DesignService
+	Check    *service.CheckService
+	Diff     *service.DiffService
+	Query    *service.QueryService
+	Review   *service.ReviewService
 	// Timing times the requests that ask, and logs the slow ones (agni issue 914). Its zero value
 	// still answers a request that asks with the Agni-Timing header.
 	Timing Timing
@@ -38,6 +41,7 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 	queried := append([]connect.HandlerOption{timed}, queryOpts...)
 	add(webapiconnect.NewWorkspaceServiceHandler(NewWorkspace(a.Workspace), timed))
 	add(webapiconnect.NewProjectServiceHandler(NewProject(a.Project), timed))
+	add(webapiconnect.NewSnapshotServiceHandler(NewSnapshot(a.Snapshot), timed))
 	add(webapiconnect.NewDesignServiceHandler(NewDesign(a.Design), timed))
 	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...))
 	add(webapiconnect.NewDiffServiceHandler(NewDiff(a.Diff), timed))

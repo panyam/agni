@@ -29,8 +29,14 @@ func checklistsCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			ll := &localLoader{loader: newLoader()}
+			snap, drop, err := ingest(cmd.Context(), service.NewSnapshotService(ll, cliProjects(), nil, ""), &webapi.Snapshot{Uri: u})
+			if err != nil {
+				return rpcFailed(err)
+			}
+			defer drop()
 			svc := service.NewReviewService(nil, nil, nil, nil, nil, service.ReviewEnv{}, "", cliProjects())
-			resp, err := svc.ListChecklists(cmd.Context(), &webapi.ListChecklistsRequest{DesignUri: u})
+			resp, err := svc.ListChecklists(cmd.Context(), &webapi.ListChecklistsRequest{Snapshot: snap})
 			if err != nil {
 				return rpcFailed(err)
 			}

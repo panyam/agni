@@ -42,14 +42,16 @@ func TestLayoutReportAndComponentParamsReadTheDesignsTiers(t *testing.T) {
 		t.Run(spelling, func(t *testing.T) {
 			l := &uriLoader{recordingLoader: newRecordingLoader()}
 			ds := NewDesignService(l, noNative{}, render.DefaultStyle, projects)
-			if _, err := ds.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Uri: spelling}); err != nil {
+			snap := snapOf(t, ds.Snapshots(), spelling)
+			l.design = nil // the ingest's own read, so what is counted below is GetComponentParams'
+			if _, err := ds.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snap}); err != nil {
 				t.Fatalf("GetLayoutReport: %v", err)
 			}
 			if len(l.report) != 1 || l.report[0] != "mount://m/d/board.eds" {
 				t.Errorf("GetLayoutReport read %v, want the declared schematic companion alone", l.report)
 			}
 			cs := NewCheckService(l, nil, nil, "", nil, projects)
-			if _, err := cs.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: spelling}); err != nil {
+			if _, err := cs.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Snapshot: snap}); err != nil {
 				t.Fatalf("GetComponentParams: %v", err)
 			}
 			if len(l.design) == 0 {

@@ -1,7 +1,8 @@
 import { describe, it, expect, vi } from "vitest";
-import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
+import { artifactUri } from "@agni/web-shared/uri.js";
 import { DesignPreview, captionFor, pickPreviewSheet, type PreviewView } from "./preview.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
+import { fakeSnapshots, snapName } from "./testsnaps.js";
 
 // Fakes follow the diffpresenter.test.ts harness, with plain stubs behind the typed client and a
 // recording view. defer lets a test hold a response open so an out-of-order landing is reachable.
@@ -29,7 +30,7 @@ function harness(over: { getDesign?: ReturnType<typeof vi.fn>; getSheet?: Return
   const setCaption = vi.fn();
   const view: PreviewView = { showSvg, showNote, setCaption };
   const client = { getDesign, getSheet } as unknown as ConstructorParameters<typeof DesignPreview>[0];
-  return { preview: new DesignPreview(client, view), getDesign, getSheet, showSvg, showNote, setCaption };
+  return { preview: new DesignPreview(client, view, fakeSnapshots()), getDesign, getSheet, showSvg, showNote, setCaption };
 }
 
 // deferred is a promise a test resolves by hand, so two loads can be landed in a chosen order.
@@ -47,9 +48,9 @@ describe("DesignPreview", () => {
     // An EMPTY layout is the request that makes the preview faithful-first, because the server resolves
     // "" to the faithful layout whenever the file carries geometry. Pinning it stops a later edit
     // from hard-coding a layout and silently drawing every design as a netlist graph.
-    expect(h.getDesign).toHaveBeenCalledWith({ uri: artifactUri("corpus", "boards/amp.kicad_sch"), layout: "" });
+    expect(h.getDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("corpus", "boards/amp.kicad_sch")), layout: "" });
     expect(h.getSheet).toHaveBeenCalledWith({
-      uri: artifactUri("corpus", "boards/amp.kicad_sch"),
+      snapshot: snapName(artifactUri("corpus", "boards/amp.kicad_sch")),
       sheet: "s1",
       layout: "",
       format: SheetFormat.SVG,
@@ -90,8 +91,8 @@ describe("DesignPreview", () => {
   it("drops a stale load still waiting on the design lookup", async () => {
     const slow = deferred<{ sheets: { id: string; name: string }[] }>();
     const base = { name: "Fast", sourceFormat: "kicad-sch", componentCount: 1, netCount: 1 };
-    const getDesign = vi.fn((req: { uri: string }) =>
-      uriPath(req.uri) === "slow.kicad_sch" ? slow.promise : Promise.resolve({ ...base, sheets: [{ id: "f1", name: "Fast" }] }),
+    const getDesign = vi.fn((req: { snapshot: string }) =>
+      req.snapshot === snapName(artifactUri("corpus", "slow.kicad_sch")) ? slow.promise : Promise.resolve({ ...base, sheets: [{ id: "f1", name: "Fast" }] }),
     );
     const h = harness({ getDesign });
 
@@ -109,8 +110,8 @@ describe("DesignPreview", () => {
 
   it("drops a stale load already waiting on the sheet render", async () => {
     const slow = deferred<{ content: { case: "svg"; value: string } }>();
-    const getSheet = vi.fn((req: { uri: string }) =>
-      uriPath(req.uri) === "slow.kicad_sch" ? slow.promise : Promise.resolve({ content: { case: "svg" as const, value: "<svg id='fast'/>" } }),
+    const getSheet = vi.fn((req: { snapshot: string }) =>
+      req.snapshot === snapName(artifactUri("corpus", "slow.kicad_sch")) ? slow.promise : Promise.resolve({ content: { case: "svg" as const, value: "<svg id='fast'/>" } }),
     );
     const h = harness({ getSheet });
 

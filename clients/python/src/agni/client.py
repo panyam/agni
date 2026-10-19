@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Optional, Protocol
+from typing import Any, Mapping, Optional, Protocol, Union
 
+from google.protobuf import empty_pb2
 from google.protobuf.message import Message
 
 from agni import services
-from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, tables_pb2, workspace_pb2
+from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, workspace_pb2
 
 
 class Transport(Protocol):
@@ -22,7 +23,13 @@ class Client:
 
         c = Client(CliTransport(mounts={"tut": "examples/tutorial-project"}))
         c = Client(ConnectTransport("http://127.0.0.1:8080"))
-        rows = c.run_query(uri="mount://tut/designs/gateway", query='component.class(?c,"resistor") => ?c')
+        snap = c.ingest("mount://tut/designs/gateway")
+        rows = c.run_query(snapshot=snap, query='component.class(?c,"resistor") => ?c')
+        c.delete_snapshot(snap)
+
+    Every question names a snapshot, the design loaded once under one config (agni issue 1061), so
+    a script ingests each design it asks about and passes the name ``ingest`` returns as
+    ``snapshot=``, or ``a_snapshot=`` and ``b_snapshot=`` to ``diff_designs``.
 
     The named methods cover the questions an analysis script asks. Every other rpc is reachable
     through ``call``, which resolves the request and response types from the generated descriptors.
@@ -48,6 +55,53 @@ class Client:
                 f"got {request.DESCRIPTOR.full_name}"
             )
         return self.transport.call(rpc, request)
+
+    def ingest(
+        self,
+        uri: str,
+        *,
+        board_uri: str = "",
+        geometry_uri: str = "",
+        as_named: bool = False,
+        overlay: Optional[Union[checks_pb2.OverlayConfig, Mapping[str, Any]]] = None,
+        read_board: bool = False,
+        snapshot_id: str = "",
+    ) -> str:
+        """Load the design ``uri`` names and return the snapshot's name, ``snapshots/<id>``, which every
+        question takes as ``snapshot=``.
+
+        ``board_uri`` and ``geometry_uri`` attach a board or schematic other than the ones the design
+        declares, ``as_named`` reads exactly the artifact named, and ``overlay`` is the config every
+        question is answered under. ``ingest_snapshot`` returns the whole ``Snapshot`` instead.
+        """
+        snap = snapshot_pb2.Snapshot(uri=uri, board_uri=board_uri, geometry_uri=geometry_uri, as_named=as_named, overlay=overlay)
+        resp = self.call("SnapshotService", "Ingest", snapshot=snap, read_board=read_board, snapshot_id=snapshot_id)
+        return resp.name  # type: ignore[attr-defined]
+
+    def ingest_snapshot(self, request: Optional[snapshot_pb2.IngestRequest] = None, **fields) -> snapshot_pb2.Snapshot:
+        """Ingest a definition, ``snapshot={"uri": ...}``, and return the snapshot with what its tiers
+        resolved to. Over the CLI the snapshot carries its name and definition alone."""
+        return self.call("SnapshotService", "Ingest", request, **fields)  # type: ignore[return-value]
+
+    def get_snapshot(self, request: Optional[Union[snapshot_pb2.GetSnapshotRequest, str]] = None, **fields) -> snapshot_pb2.Snapshot:
+        """The snapshot a name names, as ``get_snapshot("snapshots/x")`` or ``name=``."""
+        if isinstance(request, str):
+            request, fields = None, {"name": request, **fields}
+        return self.call("SnapshotService", "GetSnapshot", request, **fields)  # type: ignore[return-value]
+
+    def list_snapshots(self, request: Optional[snapshot_pb2.ListSnapshotsRequest] = None, **fields) -> snapshot_pb2.ListSnapshotsResponse:
+        return self.call("SnapshotService", "ListSnapshots", request, **fields)  # type: ignore[return-value]
+
+    def update_snapshot(self, request: Optional[snapshot_pb2.UpdateSnapshotRequest] = None, **fields) -> snapshot_pb2.Snapshot:
+        """Replace a snapshot's definition, whole or by ``update_mask``, and read it again under the same
+        name. The same definition again is how a stale snapshot is refreshed."""
+        return self.call("SnapshotService", "UpdateSnapshot", request, **fields)  # type: ignore[return-value]
+
+    def delete_snapshot(self, request: Optional[Union[snapshot_pb2.DeleteSnapshotRequest, str]] = None, **fields) -> empty_pb2.Empty:
+        """Forget a snapshot, as ``delete_snapshot("snapshots/x")`` or ``name=``."""
+        if isinstance(request, str):
+            request, fields = None, {"name": request, **fields}
+        return self.call("SnapshotService", "DeleteSnapshot", request, **fields)  # type: ignore[return-value]
 
     def check_design(self, request: Optional[checks_pb2.CheckDesignRequest] = None, **fields) -> checks_pb2.CheckDesignResponse:
         """Run the rule catalog. Over the CLI the response carries no ``verdicts``; see the README."""

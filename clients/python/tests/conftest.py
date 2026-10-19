@@ -27,6 +27,20 @@ MOUNTS = {"tut": str(FIXTURE)}
 
 DESIGN = "mount://tut/designs/gateway"
 
+_HELD: dict = {}
+
+
+def snap(client: Client, uri: str = DESIGN, **definition) -> str:
+    """The snapshot of ``uri`` under ``definition`` that ``client`` ingested, ingesting it on first use.
+
+    A snapshot is held per client, since each transport names its own, so two transports asked one
+    question each name a snapshot of their own and the answers compare while the names never do.
+    """
+    key = (id(client), uri, repr(sorted(definition.items())))
+    if key not in _HELD:
+        _HELD[key] = client.ingest(uri, **definition)
+    return _HELD[key]
+
 
 @pytest.fixture(scope="session")
 def isolated(tmp_path_factory):

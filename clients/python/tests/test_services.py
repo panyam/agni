@@ -22,6 +22,11 @@ def test_every_webapi_service_is_in_the_table():
     assert declared == set(services.RPCS)
 
 
+# Named methods that take plain arguments rather than the rpc's request, and what each returns in
+# place of its response.
+CONVENIENCES = {"ingest": str}
+
+
 def test_named_methods_carry_their_rpc_types():
     """Each typed method's annotations match the rpc it calls, so the hints cannot lie."""
     src_rpc = {}
@@ -33,6 +38,10 @@ def test_named_methods_carry_their_rpc_types():
         service, method = (s.split('"')[1] for s in call)
         src_rpc[name] = services.lookup(service, method)
         hints = typing.get_type_hints(fn)
+        if name in CONVENIENCES:
+            assert "request" not in hints and hints["return"] is CONVENIENCES[name], name
+            continue
         assert hints["return"] is src_rpc[name].response, name
         assert typing.get_args(hints["request"])[0] is src_rpc[name].request, name
     assert len(src_rpc) >= 10
+    assert set(CONVENIENCES) <= set(src_rpc), "a declared convenience is no longer a method"

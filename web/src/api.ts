@@ -11,6 +11,8 @@ import { ProjectService } from "./gen/agni/v1/webapi/project_pb.js";
 import { QueryService } from "./gen/agni/v1/webapi/query_pb.js";
 import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { TableService } from "./gen/agni/v1/webapi/tables_pb.js";
+import { SnapshotService } from "./gen/agni/v1/webapi/snapshot_pb.js";
+import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
 
 // engineFetch, when set, answers every client's requests in place of the network, which is how the
 // in-browser engine serves the same clients `agni serve` does (agni issue 178).
@@ -72,12 +74,29 @@ function withPage(t: string, page: { startMs: number; wallMs: number }): string 
 }
 
 // newTransport builds a Connect transport rooted at baseUrl. It defaults to "/" so the
-// app talks to the same origin that served it (the `agni serve` dev server).
-export function newTransport(baseUrl = "/") {
+// app talks to the same origin that served it (the `agni serve` dev server). A question whose
+// snapshot the host no longer holds is recovered through the page's registry and asked again
+// (agni issue 1061), except on the transport the registry itself ingests through.
+export function newTransport(baseUrl = "/", recover = true) {
   const mode = timingMode();
   const interceptors = mode ? [timingInterceptor(mode)] : [];
+  if (recover) interceptors.push(recoveringInterceptor(() => registry));
   if (engineFetch) return createConnectTransport({ baseUrl: new URL(baseUrl, location.href).href, fetch: engineFetch, interceptors });
   return createConnectTransport({ baseUrl, interceptors });
+}
+
+let registry: SnapshotRegistry | undefined;
+
+// snapshots is the page's one SnapshotRegistry, made on first use over the engine the page chose,
+// so every client asks about the same snapshots.
+export function snapshots(): SnapshotRegistry {
+  registry ??= new SnapshotRegistry(createClient(SnapshotService, newTransport("/", false)));
+  return registry;
+}
+
+// resetSnapshots forgets the page's registry, for a test that changes the engine between pages.
+export function resetSnapshots(): void {
+  registry = undefined;
 }
 
 // workspaceClient returns a typed client for WorkspaceService (mounts and their contents).

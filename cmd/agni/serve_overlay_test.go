@@ -163,9 +163,11 @@ func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 		t.Fatal(err)
 	}
 	resp, err := reviewSvc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
-		Manifest:  service.ManifestProto(man),
-		DesignUri: "mount://m/testdata/review/conv-demo.edn",
-		Overlay:   &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Intent: di}},
+		Manifest: service.ManifestProto(man),
+		Snapshot: ingestWith(t, reviewSvc.Snapshots(), &webapi.Snapshot{
+			Uri:     "mount://m/testdata/review/conv-demo.edn",
+			Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Intent: di}},
+		}),
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)
@@ -270,13 +272,15 @@ func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
 
 	// A request naming its own convention gets ITS rule and not the server's.
 	resp, err := checkSvc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{
-		Uri: "mount://m/testdata/review/conv-demo.edn",
-		Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: &configpb.NamingConvention{
-			Name: "acme",
-			Rules: []*configpb.NamingRule{{
-				Name: "signal-net-naming", Severity: "warning", Allow: []string{"^ACME_"},
-			}},
-		}}},
+		Snapshot: ingestWith(t, checkSvc.Snapshots(), &webapi.Snapshot{
+			Uri: "mount://m/testdata/review/conv-demo.edn",
+			Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: &configpb.NamingConvention{
+				Name: "acme",
+				Rules: []*configpb.NamingRule{{
+					Name: "signal-net-naming", Severity: "warning", Allow: []string{"^ACME_"},
+				}},
+			}}},
+		}),
 	})
 	if err != nil {
 		t.Fatalf("GetCheckReport: %v", err)

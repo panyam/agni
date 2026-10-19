@@ -97,15 +97,8 @@ const boardSheetID = "board"
 // It reads the board at the design's resolved board tier, which is where GetDesign looked when it
 // listed the sheet (C32). Reading at the request URI refused the Board sheet of every design named
 // by its folder or its netlist entry, since neither is the board (agni issue 865).
-func (s *DesignService) boardFor(ctx context.Context, uri artifact.URI, asNamed bool) (*geom.BoardGeometry, error) {
-	src, err := s.projects.Sources(ctx, uri, asNamed)
-	if err != nil {
-		return nil, err
-	}
-	if uri, err = ParseArtifactURI(src.BoardURI); err != nil {
-		return nil, err
-	}
-	b, err := s.loader.Board(ctx, uri)
+func (s *DesignService) boardFor(ctx context.Context, snap Snap) (*geom.BoardGeometry, error) {
+	b, err := s.loader.Board(ctx, snap.BoardRead())
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
@@ -160,21 +153,8 @@ type DesignService struct {
 // NewDesignService returns a DesignService backed by the given ports and render style. A nil
 // projects resolver means this deployment resolves no projects.
 func NewDesignService(loader Loader, native NativeRenderer, style render.Style, projects *ProjectResolver) *DesignService {
+	projects = orEmptyResolver(projects)
 	return &DesignService{loader: loader, native: native, style: style, projects: projects}
-}
-
-// readOptions composes the per-read config this design's project supplies: its naming vocabulary and
-// the symbol libraries it declares. A design belonging to no project yields no options, which is the
-// ordinary loose-file case. A descriptor that exists and does not parse returns its error rather than
-// reading under the defaults.
-//
-// It passes no request overlay, since the four design surfaces carry no OverlayConfig on the wire.
-func (s *DesignService) readOptions(ctx context.Context, uri artifact.URI) ([]ReadOption, error) {
-	ov, err := s.projects.Overlay(ctx, uri, nil, "")
-	if err != nil {
-		return nil, err
-	}
-	return ov.ReadOptions(), nil
 }
 
 // ClassifyLoadErr keeps an already-classified loader error (unknown mount, containment) and
@@ -252,23 +232,11 @@ func (s *DesignService) GetDesign(ctx context.Context, req *webapi.GetDesignRequ
 // designIR is the design's netlist tier read as every analysis reads it, narrowed to the requested
 // nets and components. It is a copy, because the loader may hand the same message to later reads.
 func (s *DesignService) designIR(ctx context.Context, req *webapi.GetDesignRequest) (*ir.Design, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	src, err := s.projects.Sources(ctx, u, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
-	nu, err := ParseArtifactURI(src.NetlistURI)
-	if err != nil {
-		return nil, err
-	}
-	opts, err := s.readOptions(ctx, u)
-	if err != nil {
-		return nil, err
-	}
-	d, err := s.loader.Design(ctx, nu, opts...)
+	d, err := s.loader.Design(ctx, snap.Netlist, snap.Overlay.ReadOptions()...)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
@@ -282,35 +250,17 @@ func (s *DesignService) designIR(ctx context.Context, req *webapi.GetDesignReque
 // sheets. Netlist formats also carry IR counts; a geometry-only .eds does not, so its name comes
 // from the geometry's design ref and its counts stay zero.
 func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesignRequest) (*webapi.GetDesignResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
-	if err != nil {
-		return nil, err
-	}
-	// The design's declaration decides which artifact each tier reads, so a netlist entry whose
+	// The snapshot's tiers decide which artifact each question reads, so a netlist entry whose
 	// schematic lives in a declared companion renders that companion's sheets rather than falling
 	// back to an auto-layout (agni issue 656). Every layout question below asks the GEOMETRY tier and
 	// every netlist question asks the netlist tier.
-	src, err := s.projects.Sources(ctx, u, req.GetAsNamed())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	gu, err := ParseArtifactURI(src.GeometryURI)
-	if err != nil {
-		return nil, err
-	}
-	nu, err := ParseArtifactURI(src.NetlistURI)
-	if err != nil {
-		return nil, err
-	}
-	bu, err := ParseArtifactURI(src.BoardURI)
-	if err != nil {
-		return nil, err
-	}
+	u, gu, nu, bu := snap.Design, snap.Geometry, snap.Netlist, snap.BoardRead()
 	layout := layoutForFile(gu.Path, req.GetLayout())
-	opts, err := s.readOptions(ctx, u)
-	if err != nil {
-		return nil, err
-	}
+	opts := snap.Overlay.ReadOptions()
 	g, err := s.loader.Geometry(ctx, gu, layout, false, opts...)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
@@ -356,7 +306,7 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 	// A faithful file that IS its own netlist tier reports no counts, because netlisting a drawing
 	// counts per-sheet segments nothing joins. The same board reads 5219 components and 4572 nets off
 	// its schematic export against 3980 and 1617 off its netlist.
-	if layout != faithfulLayout || src.NetlistURI != src.GeometryURI {
+	if layout != faithfulLayout || nu.String() != gu.String() {
 		if d, err := s.loader.Design(ctx, nu, opts...); err == nil {
 			if resp.Name == "" {
 				resp.Name = d.GetName()
@@ -377,21 +327,15 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 // source. A resolve error (unknown mount / escaping path) is returned; a file with no netlist has
 // nothing to classify, so that returns an empty report rather than an error.
 func (s *DesignService) GetLayoutReport(ctx context.Context, req *webapi.GetLayoutReportRequest) (*webapi.GetLayoutReportResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	opts, err := s.readOptions(ctx, u)
-	if err != nil {
-		return nil, err
-	}
+	opts := snap.Overlay.ReadOptions()
 	// The report explains a drawing, so it reads the GEOMETRY tier, as the CLI's render --report does.
-	// Passing the request URI through read a design folder as no netlist at all (agni issue 736).
-	_, _, gu, err := s.projects.TierURIs(ctx, u, artifact.URI{}, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
+	// Passing the design's name through read a design folder as no netlist at all (agni issue 736).
+	gu := snap.Geometry
 	rep, err := s.loader.Report(ctx, gu, faithful, opts...)
 	if err != nil {
 		if errors.Is(err, ErrNotFound) || errors.Is(err, ErrInvalidPath) {
@@ -446,16 +390,17 @@ func ReportProto(r *graph.ConversionReport) *webapi.ConversionReport { return re
 // tool). A bad selector classifies as ErrNotFound; an unexpected native-render failure (past the
 // ErrNative* gates) as ErrInternal.
 func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetRequest) (*webapi.GetSheetResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
+	u := snap.Design
 	// The synthetic board sheet renders from the board sidecar, not the schematic geometry. SVG
 	// comes from BoardSVG, and PACKED (and UNSPECIFIED) from PackBoard, the WS7-035 tier, whose
 	// envelope matches the schematic pack so the canvas draws it with one extra draw mode.
 	// NATIVE has no board pages and answers with the SVG document.
 	if req.GetSheet() == boardSheetID {
-		b, err := s.boardFor(ctx, u, req.GetAsNamed())
+		b, err := s.boardFor(ctx, snap)
 		if err != nil {
 			return nil, err
 		}
@@ -475,20 +420,10 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 		requested = faithfulLayout
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	opts, err := s.readOptions(ctx, u)
-	if err != nil {
-		return nil, err
-	}
+	opts := snap.Overlay.ReadOptions()
 	// The geometry tier, so a sheet request against a netlist entry renders the schematic companion
 	// the design declares rather than an auto-layout of the netlist (agni issue 656).
-	gsrc, err := s.projects.Sources(ctx, u, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
-	gu, err := ParseArtifactURI(gsrc.GeometryURI)
-	if err != nil {
-		return nil, err
-	}
+	gu := snap.Geometry
 	g, err := s.loader.Geometry(ctx, gu, layoutForFile(gu.Path, requested), faithful, opts...)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
@@ -536,7 +471,7 @@ func (s *DesignService) GetSheet(ctx context.Context, req *webapi.GetSheetReques
 // describes the same geometry as the base render it stacks on. NATIVE (a golden shell-out with
 // no overlay concept) classifies as ErrInvalidArgument.
 func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.HighlightSheetRequest) (*webapi.HighlightSheetResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
@@ -547,7 +482,7 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	// transparent SVG framed exactly like the BoardSVG base or as primitive-index groups over the
 	// SAME PackBoard primitive table the PACKED GetSheet returned.
 	if req.GetSheet() == boardSheetID {
-		b, err := s.boardFor(ctx, u, req.GetAsNamed())
+		b, err := s.boardFor(ctx, snap)
 		if err != nil {
 			return nil, err
 		}
@@ -561,19 +496,9 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 		}, nil
 	}
 	faithful := req.GetSymbols() == webapi.SymbolSource_SYMBOL_SOURCE_FAITHFUL
-	opts, err := s.readOptions(ctx, u)
-	if err != nil {
-		return nil, err
-	}
-	// Same resolution as GetSheet's, so a highlight is drawn against the artifact the sheet came from.
-	hsrc, err := s.projects.Sources(ctx, u, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
-	hu, err := ParseArtifactURI(hsrc.GeometryURI)
-	if err != nil {
-		return nil, err
-	}
+	opts := snap.Overlay.ReadOptions()
+	// Same tier as GetSheet's, so a highlight is drawn against the artifact the sheet came from.
+	hu := snap.Geometry
 	g, err := s.loader.Geometry(ctx, hu, layoutForFile(hu.Path, req.GetLayout()), faithful, opts...)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
@@ -588,7 +513,7 @@ func (s *DesignService) HighlightSheet(ctx context.Context, req *webapi.Highligh
 	}
 
 	// A NAME-ONLY canvas needs id-only net specs resolved to net names (nameJoinSpecs).
-	specs := s.nameJoinSpecs(ctx, u, g, req.GetSpecs(), opts...)
+	specs := s.nameJoinSpecs(ctx, snap.Design, g, req.GetSpecs(), opts...)
 
 	resp := &webapi.HighlightSheetResponse{}
 	if req.GetFormat() == webapi.SheetFormat_SHEET_FORMAT_SVG {

@@ -36,8 +36,21 @@ func diffResponse(cmd *cobra.Command, a, b string, renameApprox, includeEqual bo
 	if err != nil {
 		return nil, err
 	}
-	svc := service.NewDiffService(&localLoader{loader: newLoader()}, cliProjects())
-	req := &webapi.DiffDesignsRequest{AUri: aURI, BUri: bURI, IncludeEqual: includeEqual}
+	ll := &localLoader{loader: newLoader()}
+	snaps := service.NewSnapshotService(ll, cliProjects(), nil, "")
+	// Each side is a snapshot of its own, resolved as the text diff resolves it (C32).
+	aSnap, dropA, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: aURI, AsNamed: readAsNamed})
+	if err != nil {
+		return nil, rpcFailed(err)
+	}
+	defer dropA()
+	bSnap, dropB, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: bURI, AsNamed: readAsNamed})
+	if err != nil {
+		return nil, rpcFailed(err)
+	}
+	defer dropB()
+	svc := service.NewDiffService(ll, cliProjects())
+	req := &webapi.DiffDesignsRequest{ASnapshot: aSnap, BSnapshot: bSnap, IncludeEqual: includeEqual}
 	if renameApprox {
 		req.NearRenames = &webapi.NearRenameOptions{} // the calibrated thresholds
 	}

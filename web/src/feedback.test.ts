@@ -40,7 +40,7 @@ describe("a wrong-finding report", () => {
     doc.mount = "m";
     doc.path = "b.edn";
     const rule = (name: string, shipped: boolean) => ({ name, severity: "error", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "", shipped });
-    await doc.loadCatalog({ listRules: async () => ({ rules: [rule("i2c-pull-up", true), rule("acme-profiles/x", false)], engineVersion: "v0.2.4" }) } as never, "mount://m/b.edn", undefined);
+    await doc.loadCatalog({ listRules: async () => ({ rules: [rule("i2c-pull-up", true), rule("acme-profiles/x", false)], engineVersion: "v0.2.4" }) } as never, async () => "snapshots/t");
     const item = (r: string) => doc.findingItem({ rule: r, severity: "error", message: "about I2C_SCL_SECRET", subject: { kind: "net", ref: "I2C_SCL_SECRET" } } as never);
     const shipped = decoded(item("i2c-pull-up").reportUrl ?? "");
     const project = decoded(item("acme-profiles/x").reportUrl ?? "");

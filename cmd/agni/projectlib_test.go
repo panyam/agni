@@ -142,7 +142,7 @@ func TestLibFlagAnswersAsTheInlineRequestDoes(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := service.NewQueryService(&localLoader{loader: newLoader()}, nil, cliProjects())
-	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: q, Overlay: &webapi.OverlayConfig{Config: cfg}})
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: uri, Overlay: &webapi.OverlayConfig{Config: cfg}}), Query: q})
 	if err != nil {
 		t.Fatalf("RunQuery with the modules inline: %v", err)
 	}
@@ -192,8 +192,8 @@ func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 		t.Fatal("the tutorial project declares no house checklist")
 	}
 	rv, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
-		DesignUri: "mount://tut/designs/gateway",
-		Manifest:  house.GetManifest(),
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://tut/designs/gateway"),
+		Manifest: house.GetManifest(),
 	})
 	if err != nil {
 		t.Fatalf("CreateReview: %v", err)

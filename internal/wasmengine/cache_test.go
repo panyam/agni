@@ -32,7 +32,8 @@ func TestConcurrentRequestsShareOneReadAndAgree(t *testing.T) {
 	// Each answer alone first, from its own engine, so the baseline owes nothing to a warm cache.
 	want := make([]proto.Message, len(requests))
 	for i, call := range requests {
-		m, err := call(serve())
+		s := serve()
+		m, err := call(s, snapAt(t, s))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -43,6 +44,7 @@ func TestConcurrentRequestsShareOneReadAndAgree(t *testing.T) {
 	}
 
 	srv := serve()
+	snap := snapAt(t, srv)
 	var wg sync.WaitGroup
 	errs := make(chan string, 64)
 	for round := 0; round < 4; round++ {
@@ -50,7 +52,7 @@ func TestConcurrentRequestsShareOneReadAndAgree(t *testing.T) {
 			wg.Add(1)
 			go func(i int, call request) {
 				defer wg.Done()
-				got, err := call(srv)
+				got, err := call(srv, snap)
 				if err != nil {
 					errs <- err.Error()
 					return
@@ -68,36 +70,37 @@ func TestConcurrentRequestsShareOneReadAndAgree(t *testing.T) {
 	}
 }
 
-type request func(*httptest.Server) (proto.Message, error)
+type request func(s *httptest.Server, snap string) (proto.Message, error)
 
-// requests are what a viewer asks of a design as it opens: two queries, the checks and the report.
+// requests are what a viewer asks of a design's snapshot as it opens: two queries, the checks and the
+// report.
 // A query's work is zeroed, since it is a counter on the shared base that concurrent queries add to.
 var requests = []request{
-	func(s *httptest.Server) (proto.Message, error) {
-		r, err := webapiconnect.NewQueryServiceClient(s.Client(), s.URL).RunQuery(context.Background(), connect.NewRequest(&webapi.RunQueryRequest{Uri: "mount://m", Query: `entity(?n, "net") => count(?n)`}))
+	func(s *httptest.Server, snap string) (proto.Message, error) {
+		r, err := webapiconnect.NewQueryServiceClient(s.Client(), s.URL).RunQuery(context.Background(), connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: `entity(?n, "net") => count(?n)`}))
 		if err != nil {
 			return nil, err
 		}
 		r.Msg.Work = 0
 		return r.Msg, nil
 	},
-	func(s *httptest.Server) (proto.Message, error) {
-		r, err := webapiconnect.NewQueryServiceClient(s.Client(), s.URL).RunQuery(context.Background(), connect.NewRequest(&webapi.RunQueryRequest{Uri: "mount://m", Query: `component.net(?r, ?n) => ?r, ?n`}))
+	func(s *httptest.Server, snap string) (proto.Message, error) {
+		r, err := webapiconnect.NewQueryServiceClient(s.Client(), s.URL).RunQuery(context.Background(), connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: `component.net(?r, ?n) => ?r, ?n`}))
 		if err != nil {
 			return nil, err
 		}
 		r.Msg.Work = 0
 		return r.Msg, nil
 	},
-	func(s *httptest.Server) (proto.Message, error) {
-		r, err := webapiconnect.NewCheckServiceClient(s.Client(), s.URL).CheckDesign(context.Background(), connect.NewRequest(&webapi.CheckDesignRequest{Uri: "mount://m"}))
+	func(s *httptest.Server, snap string) (proto.Message, error) {
+		r, err := webapiconnect.NewCheckServiceClient(s.Client(), s.URL).CheckDesign(context.Background(), connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snap}))
 		if err != nil {
 			return nil, err
 		}
 		return r.Msg, nil
 	},
-	func(s *httptest.Server) (proto.Message, error) {
-		r, err := webapiconnect.NewCheckServiceClient(s.Client(), s.URL).GetCheckReport(context.Background(), connect.NewRequest(&webapi.GetCheckReportRequest{Uri: "mount://m"}))
+	func(s *httptest.Server, snap string) (proto.Message, error) {
+		r, err := webapiconnect.NewCheckServiceClient(s.Client(), s.URL).GetCheckReport(context.Background(), connect.NewRequest(&webapi.GetCheckReportRequest{Snapshot: snap}))
 		if err != nil {
 			return nil, err
 		}
@@ -119,10 +122,13 @@ func TestTwoLibrariesOnOneKeptDesignAnswerApart(t *testing.T) {
 	defer srv.Close()
 	q := webapiconnect.NewQueryServiceClient(srv.Client(), srv.URL)
 	count := func(body string) string {
-		r, err := q.RunQuery(context.Background(), connect.NewRequest(&webapi.RunQueryRequest{
+		snap := ingestAt(t, srv.Client(), srv.URL, &webapi.Snapshot{
 			Uri:     "mount://m",
-			Query:   `probe.picked(?n) => count(?n)`,
 			Overlay: &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{LibraryModules: []*webapi.LibraryModule{{Path: "probe", Text: body}}}},
+		})
+		r, err := q.RunQuery(context.Background(), connect.NewRequest(&webapi.RunQueryRequest{
+			Snapshot: snap,
+			Query:    `probe.picked(?n) => count(?n)`,
 		}))
 		if err != nil {
 			t.Fatal(err)

@@ -581,7 +581,16 @@ locator when a value would do.
 
 ARTIFACTS are the deliberate exception: a design, a board export, and any large parsed input are named
 by an opaque URI (`mount://<mount>/<path>`) that the injected Loader port resolves (C13), because they
-are megabytes, need format-reader dispatch, and are re-requested across many RPCs. The authority is a
+are megabytes, need format-reader dispatch, and are re-requested across many RPCs.
+
+**As amended by agni issue 1061, a question names a SNAPSHOT, and only an ingest names files.**
+`SnapshotService.Ingest` takes the design's URI, its board and drawing overrides, `as_named`, and the
+overlay config, resolves the tiers and composes the config once, and returns `snapshots/{id}`. Every
+analysis request then carries that name and nothing else about the design: no `uri`, no `*_uri`, no
+`as_named`, and no `overlay`. A question that could also name files or config could read the design a
+second way beside its snapshot, which is the two-reads-of-one-design shape C32 exists to stop. The
+config still travels as a value, on the ingest rather than on each question. `ListRelations` keeps an
+`overlay` for the vocabulary asked about before any design is read, and refuses one beside a snapshot. The authority is a
 key in a server-defined namespace and the URI is not a host path; nothing above the Loader may treat
 it as a filesystem path.
 
@@ -627,7 +636,10 @@ free of I/O while still serving a browser, which holds a ref and no filesystem: 
 it is named in the contract instead of hiding inside a run, and a caller that already has the value
 never triggers it.
 
-**Verify:** `TestC22WebAPICarriesNoLocatorPair` (`internal/constraints`) fails on a `*_path` or
+**Verify:** `TestC22AnalysisRequestsNameASnapshot` (`internal/constraints`) sweeps the analysis
+services' request messages by descriptor and fails on one carrying a `uri`, a `*_uri`, `as_named` or
+an `overlay`, or naming no snapshot; its exempt methods ask about a stored convention, checklist or
+review, or a set's text, rather than a loaded design. `TestC22WebAPICarriesNoLocatorPair` (`internal/constraints`) fails on a `*_path` or
 `*_ref` FIELD in `protos/agni/v1/webapi/`, because an
 artifact is named by a single `uri` (or `*_uri` where a message names more than one), and a config
 travels as a value. It reads field declarations rather than the whole line, so `ref_des` and
@@ -643,8 +655,9 @@ impl files (`transport_guard_test.go`, `TestNoFilesystemImports`); the vocabular
 a `name`, standard `Create` / `Get` / `List` / `Delete` methods, AIP-160
 `filter` and AIP-158 `page_size` / `page_token` on the list. Everything else in
 `protos/agni/v1/webapi/` stays verb-shaped (`GetDesign`, `ListDir`, `RunQuery`, `DiffDesigns`,
-`CheckDesign`), addressed by an artifact URI (C22). The resources today are `ReviewService`'s
-`Review` (WS9-053) and `ProjectService`'s `Project` / `Design` (agni issue 170). A new rpc picks its
+`CheckDesign`), addressed by a snapshot (C22). The resources today are `ReviewService`'s
+`Review` (WS9-053), `ProjectService`'s `Project` / `Design` (agni issue 170) and `SnapshotService`'s
+`Snapshot` (agni issue 1061). A new rpc picks its
 side by ONE question: does what it returns still exist after the call? A derived view of files on
 disk does not, and is verb-shaped. Persisted state does, and is a resource.
 
@@ -662,6 +675,16 @@ mounts, and a URI does not. And it is a PARENT (reviews nest under
 `projects/{p}/reviews/{r}`), which a thing with no name cannot be. Mutators are absent because
 creation is genuinely out of scope rather than pending: scaffolding a project means authoring design
 intent, a judgment step with a confidentiality boundary, not a server operation.
+
+**A snapshot is a full resource whose create is a custom method, `Ingest`** (agni issue 1061, AIP-136).
+It is the server's state: a loaded design with its tiers and config resolved, held until it is
+deleted or evicted, and changed in place by `UpdateSnapshot` with an `update_mask` over its
+definition. Its id is random, so two ingests of one design are two snapshots a client can change
+apart, and what they read is still shared beneath them in the DesignCache, keyed on content. It is
+not AIP-133's `Create` because a client may send its ingest again under an id it chose: the same
+definition answers the snapshot it already is, so a client recovering from a host that lost it, or a
+browser page giving each worker its own copy, need not ask first. A different definition under that
+id is `ALREADY_EXISTS`.
 
 The read-only carve-out is narrow on purpose. It does NOT license a stateless query to wear a
 `name`; that failure is called out below and is unchanged. It licenses exactly the case where an
@@ -682,9 +705,10 @@ is worse than either convention. It invites clients to hold a `name` that is rea
 what was never stable, and eventually ask why deleting it does not work.
 
 **Verify:** every message in `protos/agni/v1/webapi/` carrying a `name` field is served by the
-standard methods and no bespoke mutator, meaning the four of them for a server-assigned id, `Get` and
-`List` alone for a declared one; every rpc that reads a design and returns a derived view takes
-a single artifact `uri` and returns no `name`; a resource's `List` carries `page_size`, `page_token`, and
+standard methods and no bespoke mutator, meaning the four of them for a server-assigned id (with
+`Ingest` in `Create`'s place for a snapshot), `Get` and `List` alone for a declared one; every rpc
+that reads a design and returns a derived view takes a snapshot and returns no `name`
+(`TestC22AnalysisRequestsNameASnapshot`); a resource's `List` carries `page_size`, `page_token`, and
 `filter`, and its service rejects a filter it does not implement rather than ignoring it
 (`service.parseReviewFilter`, `service.parseProjectFilter`).
 
@@ -1041,7 +1065,8 @@ will read it.
 ## C32: One design resolves the same way on every surface, and so do the links to it
 **Rule:** A design resolves to the same TIERS however it is named and whichever surface reads it. The
 entry, the enclosing folder, and a declared companion all name one design, and the CLI and the
-service compose it identically. An answer that names an entity carries that entity's KIND wherever it
+service compose it identically. Since agni issue 1061 that resolution happens ONCE, when the design is
+ingested, and every question about it reads the tiers its snapshot holds, so no rpc can skip it. An answer that names an entity carries that entity's KIND wherever it
 is produced, so a client can act on the answer without re-deriving what a column meant. A link one
 surface mints resolves, and lands, the same as the equivalent link the other mints.
 **Why:** `service.SourcesFor` is what resolves a named path to a design's tiers, and for most of 2026
@@ -1083,7 +1108,9 @@ Per-rpc coverage is the other half, and it was missing where it mattered: 656 fi
 report and trace and left `CreateReview` resolving nothing, so a browser review read no board for
 another two weeks (agni 646). `TestCreateReviewReadsTheDeclaredBoard` (`service`) pins that rpc.
 A resolver test cannot catch this shape, because the resolver was right and one caller never asked
-it, so an rpc that reads a design owes a test that it resolved tiers first.
+it, so an rpc that reads a design owed a test that it resolved tiers first. Since agni issue 1061 the
+rpcs cannot ask, since a question carries only a snapshot, and `Ingest` is the one caller of
+`TierURIs` on the served path. DiffDesigns read each side's raw URI until then, with no test noticing.
 
 ## C33: A function body is not copied into a second package
 **Rule:** When code in one package needs logic another package already has, the logic moves to a

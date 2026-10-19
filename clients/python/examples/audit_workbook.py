@@ -4,8 +4,9 @@
     python examples/audit_workbook.py -o audit.xlsx --server http://127.0.0.1:8080
     python examples/audit_workbook.py -o audit.xlsx --folder ~/boards/foo --design designs/foo
 
-The tables go to agni as ONE query set, so the design is read once for all of them, whether the
-transport is the CLI (no --server) or a server started with the same --mount. The layout of each
+The design is ingested once and every question names that snapshot. The tables go to agni as ONE
+query set, so the design is read once for all of them, whether the transport is the CLI (no
+--server) or a server started with the same --mount. The layout of each
 sheet (tab names, which tables) is this script's business; agni answers the questions, and
 `Client.tabulate` turns each answer into the tables agni projects, and `tables_to_xlsx` writes them.
 """
@@ -36,8 +37,12 @@ def build(client: Client, design: str, out: str) -> List[str]:
         title="Netlist audit",
         queries=[query_pb2.NamedQuery(name=name, query=q) for name, q in TABLES],
     )
-    sheets = table_sheets(client.tabulate(query_set=client.run_queries(uri=design, set=audit)))
-    checked = table_sheets(client.tabulate(check=client.check_design(uri=design)), {"findings": "Findings"})
+    snap = client.ingest(design)
+    try:
+        sheets = table_sheets(client.tabulate(query_set=client.run_queries(snapshot=snap, set=audit)))
+        checked = table_sheets(client.tabulate(check=client.check_design(snapshot=snap)), {"findings": "Findings"})
+    finally:
+        client.delete_snapshot(snap)
     sheets.append(checked[0])
     tables_to_xlsx(out, sheets)
     return [name for name, _ in sheets]

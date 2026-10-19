@@ -42,7 +42,8 @@ func TestTheBoardSheetGetDesignListsOpens(t *testing.T) {
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, &ProjectResolver{Store: declaringStore{design: design}})
 	ctx := context.Background()
 	for _, uri := range []string{"mount://m/d", "mount://m/d/gateway.edn", "mount://m/d/gateway.kicad_pcb"} {
-		d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Uri: uri})
+		snap := snapOf(t, svc.Snapshots(), uri)
+		d, err := svc.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: snap})
 		if err != nil {
 			t.Fatalf("%s: GetDesign: %v", uri, err)
 		}
@@ -53,10 +54,10 @@ func TestTheBoardSheetGetDesignListsOpens(t *testing.T) {
 		if !listed {
 			t.Fatalf("%s: GetDesign lists no board sheet, so opening one proves nothing", uri)
 		}
-		if _, err := svc.GetSheet(ctx, &webapi.GetSheetRequest{Uri: uri, Sheet: boardSheetID}); err != nil {
+		if _, err := svc.GetSheet(ctx, &webapi.GetSheetRequest{Snapshot: snap, Sheet: boardSheetID}); err != nil {
 			t.Errorf("%s: GetSheet board: %v", uri, err)
 		}
-		if _, err := svc.HighlightSheet(ctx, &webapi.HighlightSheetRequest{Uri: uri, Sheet: boardSheetID, Specs: []*geom.HighlightSpec{{Nets: []string{"SIG"}}}}); err != nil {
+		if _, err := svc.HighlightSheet(ctx, &webapi.HighlightSheetRequest{Snapshot: snap, Sheet: boardSheetID, Specs: []*geom.HighlightSpec{{Nets: []string{"SIG"}}}}); err != nil {
 			t.Errorf("%s: HighlightSheet board: %v", uri, err)
 		}
 	}

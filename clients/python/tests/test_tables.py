@@ -92,7 +92,7 @@ def test_xlsx_writes_a_large_sheet_in_linear_time(tmp_path):
 
 from agni.v1.webapi import diff_pb2, review_pb2  # noqa: E402
 
-from conftest import DESIGN  # noqa: E402
+from conftest import DESIGN, snap  # noqa: E402
 
 
 @pytest.fixture(params=["cli", "connect"])
@@ -105,7 +105,9 @@ def _by_name(resp):
 
 
 def test_tabulate_a_diff_keeps_near_rename_evidence(client, tmp_path):
-    diff = client.diff_designs(a_uri=DESIGN + "/gateway-rev-b.edn", b_uri=DESIGN + "/gateway-rev-c.edn", near_renames={})
+    diff = client.diff_designs(
+        a_snapshot=snap(client, DESIGN + "/gateway-rev-b.edn"), b_snapshot=snap(client, DESIGN + "/gateway-rev-c.edn"), near_renames={}
+    )
     out = client.tabulate(diff=diff, order_by=["change_class", "subject"])
     header, rows = _by_name(out)["diff"]
     # The header `agni diff --format csv` publishes: one table, change_class naming each row's kind.
@@ -117,7 +119,9 @@ def test_tabulate_a_diff_keeps_near_rename_evidence(client, tmp_path):
 
 
 def test_tabulate_a_diff_carries_unchanged_nets_when_asked(client):
-    diff = client.diff_designs(a_uri=DESIGN + "/gateway.edn", b_uri=DESIGN + "/gateway-rev-b.edn", include_equal=True)
+    diff = client.diff_designs(
+        a_snapshot=snap(client, DESIGN + "/gateway.edn"), b_snapshot=snap(client, DESIGN + "/gateway-rev-b.edn"), include_equal=True
+    )
     _, rows = _by_name(client.tabulate(diff=diff))["diff"]
     assert sum(1 for r in rows if r[0] == "net-equal") == 10
     assert [r[1] for r in rows if r[0] == "net-renamed"] == ["CLK_IN", "CLK_OUT"]
@@ -139,7 +143,7 @@ _CHECKLIST = checks.ReviewManifest(
 
 
 def test_tabulate_a_review_keeps_checklist_order(client, tmp_path):
-    out = client.tabulate(review=client.create_review(design_uri=DESIGN, manifest=_CHECKLIST))
+    out = client.tabulate(review=client.create_review(snapshot=snap(client), manifest=_CHECKLIST))
     tables = _by_name(out)
     header, rows = tables["review"]
     assert header == ["area", "id", "title", "outcome", "note", "findings", "unmet"]
@@ -152,7 +156,7 @@ def test_tabulate_a_review_keeps_checklist_order(client, tmp_path):
 
 
 def test_tabulate_gives_the_cli_csv_tables(client, tmp_path):
-    out = client.tabulate(check=client.check_design(uri=DESIGN), order_by=["rule", "subjects"])
+    out = client.tabulate(check=client.check_design(snapshot=snap(client)), order_by=["rule", "subjects"])
     tables = {t.name: t for t in out.tables}
     assert list(tables) == ["findings", "verdicts", "verdicts_by_rule", "skipped"]
     header, rows = to_rows(tables["verdicts"])
@@ -171,7 +175,7 @@ def test_tabulate_gives_the_cli_csv_tables(client, tmp_path):
 
 def test_tabulate_refuses_an_unknown_order_column(client):
     with pytest.raises(Exception, match="nope"):
-        client.tabulate(check=client.check_design(uri=DESIGN), order_by=["nope"])
+        client.tabulate(check=client.check_design(snapshot=snap(client)), order_by=["nope"])
 
 
 # The table rows an answer becomes are the engine's (agni issue 862). These are the public functions

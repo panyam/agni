@@ -20,7 +20,7 @@ func TestDiffDesignsPairsANearRenameWhenAsked(t *testing.T) {
 	ask := func(near *webapi.NearRenameOptions) []*webapi.DiffReport_NetChange {
 		t.Helper()
 		resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
-			AUri: "mount://m/gateway-rev-b.edn", BUri: "mount://m/gateway-rev-c.edn", NearRenames: near,
+			ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway-rev-b.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway-rev-c.edn"), NearRenames: near,
 		})
 		if err != nil {
 			t.Fatal(err)
@@ -64,7 +64,7 @@ func TestANearRenameThresholdOverridesTheDefault(t *testing.T) {
 	svc := NewDiffService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project", "designs", "gateway")}, nil)
 	strict := 0.9
 	resp, err := svc.DiffDesigns(context.Background(), &webapi.DiffDesignsRequest{
-		AUri: "mount://m/gateway-rev-b.edn", BUri: "mount://m/gateway-rev-c.edn",
+		ASnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway-rev-b.edn"), BSnapshot: snapOf(t, svc.Snapshots(), "mount://m/gateway-rev-c.edn"),
 		NearRenames: &webapi.NearRenameOptions{MinNewCoverageSignificant: &strict},
 	})
 	if err != nil {

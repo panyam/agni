@@ -24,7 +24,7 @@ func cancelled() context.Context {
 
 func TestACancelledCheckStopsAsCancelled(t *testing.T) {
 	svc := NewCheckService(fakeLoader{design: queryDesign()}, check.DefaultCatalog(), nil, "", nil, nil)
-	req := &webapi.CheckDesignRequest{Uri: "mount://m/x.edn"}
+	req := &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn")}
 	if _, err := svc.CheckDesign(cancelled(), req); !errors.Is(err, context.Canceled) {
 		t.Errorf("CheckDesign with a cancelled context: err = %v, want context.Canceled", err)
 	}
@@ -36,8 +36,8 @@ func TestACancelledCheckStopsAsCancelled(t *testing.T) {
 func TestACancelledReviewStopsAsCancelled(t *testing.T) {
 	svc := newReviewSvc()
 	req := &webapi.CreateReviewRequest{
-		Manifest:  fixtureManifest(t, "review/mini.yaml"),
-		DesignUri: "mount://m/review/can-broken.edn",
+		Manifest: fixtureManifest(t, "review/mini.yaml"),
+		Snapshot: snapOf(t, svc.Snapshots(), "mount://m/review/can-broken.edn"),
 	}
 	if _, err := svc.CreateReview(cancelled(), req); !errors.Is(err, context.Canceled) {
 		t.Errorf("CreateReview with a cancelled context: err = %v, want context.Canceled", err)
@@ -51,11 +51,12 @@ const joinQuery = "component.net(?r, ?n), component.net(?r2, ?n) => ?r, ?r2"
 
 func TestAQueryPastItsBudgetIsResourceExhausted(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
-	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: joinQuery, WorkBudget: 5})
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: joinQuery, WorkBudget: 5})
 	if !errors.Is(err, ErrResourceExhausted) || !strings.Contains(err.Error(), "budget of 5") {
 		t.Errorf("a query past its budget: err = %v, want resource exhausted naming the budget of 5", err)
 	}
-	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: joinQuery, WorkBudget: 10_000_000})
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: joinQuery, WorkBudget: 10_000_000})
 	if err != nil {
 		t.Fatalf("the same query under a budget it fits in: %v", err)
 	}
@@ -69,9 +70,10 @@ func TestAQueryPastItsBudgetIsResourceExhausted(t *testing.T) {
 func TestEachQueryInASetHasItsOwnBudget(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	const cheap = "component.net(?r, ?n) => ?r"
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
 	cost := func(q string) int64 {
 		t.Helper()
-		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: q})
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: q})
 		if err != nil {
 			t.Fatalf("%s: %v", q, err)
 		}
@@ -82,7 +84,7 @@ func TestEachQueryInASetHasItsOwnBudget(t *testing.T) {
 		t.Fatalf("the cheap query costs %d and the join %d, so no budget separates them", c, j)
 	}
 	set := &webapi.QuerySet{Title: "t", Queries: []*webapi.NamedQuery{{Name: "join", Query: joinQuery}, {Name: "cheap", Query: cheap}}}
-	resp, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Uri: "mount://m/x.edn", Set: set, WorkBudget: c})
+	resp, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Snapshot: snap, Set: set, WorkBudget: c})
 	if err != nil {
 		t.Fatalf("RunQueries: %v", err)
 	}
@@ -102,7 +104,7 @@ func TestEachQueryInASetHasItsOwnBudget(t *testing.T) {
 // interceptor sets it), and a request asking for more still gets the deployment's.
 func TestARequestCannotRaiseTheBudget(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
-	_, err := svc.RunQuery(query.WithBudget(context.Background(), 5), &webapi.RunQueryRequest{Uri: "mount://m/x.edn", Query: joinQuery, WorkBudget: 10_000_000})
+	_, err := svc.RunQuery(query.WithBudget(context.Background(), 5), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: joinQuery, WorkBudget: 10_000_000})
 	if !errors.Is(err, ErrResourceExhausted) {
 		t.Errorf("a request asking for more than the deployment's budget: err = %v, want resource exhausted", err)
 	}
@@ -116,9 +118,10 @@ func TestAChecklistItemPastItsBudgetIsInconclusive(t *testing.T) {
 		{ID: "n", Title: "a manual item", Note: "checked by hand"},
 	}}}}
 	svc := NewReviewService(stubReviewLoader{design: queryDesign(), man: man}, NewMemReviewStore(), check.DefaultCatalog(), nil, nil, testReviewEnv, "", nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/d")
 	ask := func(budget int64) *webapi.Review {
 		t.Helper()
-		resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), DesignUri: "mount://m/d", WorkBudget: budget})
+		resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{Manifest: ManifestProto(man), Snapshot: snap, WorkBudget: budget})
 		if err != nil {
 			t.Fatalf("CreateReview with budget %d: %v", budget, err)
 		}
@@ -159,9 +162,10 @@ func TestACheckRulePastItsBudgetIsInconclusive(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := NewCheckService(fakeLoader{design: queryDesign()}, cat, nil, "", nil, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
 	ask := func(budget int64) string {
 		t.Helper()
-		resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.edn", WorkBudget: budget})
+		resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snap, WorkBudget: budget})
 		if err != nil {
 			t.Fatalf("CheckDesign with budget %d: %v", budget, err)
 		}

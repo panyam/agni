@@ -181,6 +181,7 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	paths := server.API{
 		Workspace: service.NewWorkspaceService(files.Workspace()).WithDesignFiles(resolver, files.Workspace()),
 		Project:   service.NewProjectService(store),
+		Snapshot:  check.Snapshots(),
 		Design:    service.NewDesignService(host, nil, render.DefaultStyle, resolver),
 		Check:     check,
 		Diff:      service.NewDiffService(host, resolver),

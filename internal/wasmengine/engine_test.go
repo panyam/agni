@@ -2,6 +2,8 @@ package wasmengine
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -40,17 +42,29 @@ func readTree(t *testing.T, dir string) map[string][]byte {
 
 func checkReport(t *testing.T, h *wasmhost.Host) string {
 	t.Helper()
+	// The host rebuilds its engine when files are added, so the design is ingested on each ask.
+	ing := hostDo(t, h, "/agni.v1.webapi.SnapshotService/Ingest", `{"snapshot":{"uri":"mount://tut/designs/gateway"}}`)
+	var snap struct{ Name string }
+	if err := json.Unmarshal([]byte(ing), &snap); err != nil || snap.Name == "" {
+		t.Fatalf("Ingest answered %s (%v)", ing, err)
+	}
+	return hostDo(t, h, "/agni.v1.webapi.CheckService/GetCheckReport", fmt.Sprintf(`{"snapshot":%q}`, snap.Name))
+}
+
+// hostDo posts a JSON body to a Connect method on h and returns the answer's body.
+func hostDo(t *testing.T, h *wasmhost.Host, url, body string) string {
+	t.Helper()
 	res, err := h.Do(context.Background(), wasmhost.Request{
 		Method: "POST",
-		URL:    "/agni.v1.webapi.CheckService/GetCheckReport",
+		URL:    url,
 		Header: http.Header{"Content-Type": {"application/json"}},
-		Body:   []byte(`{"uri":"mount://tut/designs/gateway"}`),
+		Body:   []byte(body),
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
 	if res.Status != http.StatusOK {
-		t.Fatalf("GetCheckReport: %d %s", res.Status, res.Body)
+		t.Fatalf("%s: %d %s", url, res.Status, res.Body)
 	}
 	return string(res.Body)
 }
@@ -100,14 +114,15 @@ func TestADesignInNoProjectDrawsWithItsOwnSymbols(t *testing.T) {
 	srv := httptest.NewServer(eng.Handler)
 	defer srv.Close()
 	ctx := context.Background()
-	d, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Uri: "mount://m"}))
+	snap := snapAt(t, srv)
+	d, err := webapiconnect.NewDesignServiceClient(srv.Client(), srv.URL).GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snap}))
 	if err != nil {
 		t.Fatal(err)
 	}
 	if n := len(d.Msg.GetUndrawn()); n != 0 {
 		t.Errorf("%d placements undrawn, so the design's own symbols/ did not reach the read", n)
 	}
-	c, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).GetCheckReport(ctx, connect.NewRequest(&webapi.GetCheckReportRequest{Uri: "mount://m"}))
+	c, err := webapiconnect.NewCheckServiceClient(srv.Client(), srv.URL).GetCheckReport(ctx, connect.NewRequest(&webapi.GetCheckReportRequest{Snapshot: snap}))
 	if err != nil {
 		t.Fatal(err)
 	}

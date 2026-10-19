@@ -28,7 +28,7 @@ import { SvgView, drawnOnSheet } from "./svgview.js";
 import { compareButton } from "./compare.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, useEngineFetch,
-  tableClient, timingMode,
+  tableClient, timingMode, snapshots,
 } from "./api.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine } from "./wasm/client.js";
@@ -436,15 +436,15 @@ class AppRoot extends BaseComponent {
           const stem = `${sideLabel(pair.a).replace(/\.[^.]+$/, "")}-vs-${sideLabel(pair.b).replace(/\.[^.]+$/, "")}`;
           if (source === "compare") {
             const resp = await diffClient().diffDesigns({
-              aUri: artifactUri(pair.a.mount, pair.a.path),
-              bUri: artifactUri(pair.b.mount, pair.b.path),
+              aSnapshot: await snapshots().of(artifactUri(pair.a.mount, pair.a.path)),
+              bSnapshot: await snapshots().of(artifactUri(pair.b.mount, pair.b.path)),
               nearRenames: opts.nearRenames ? {} : undefined,
               includeEqual: opts.equal,
             });
             return { answer: { case: "diff", value: resp }, label: `${sideLabel(pair.a)} to ${sideLabel(pair.b)}`, stem };
           }
           const side = source === "compare-a" ? pair.a : pair.b;
-          const run = await checksClient().checkDesign({ uri: artifactUri(side.mount, side.path), rules: [], overlay: presenter.overlayConfig() });
+          const run = await checksClient().checkDesign({ snapshot: await snapshots().of(artifactUri(side.mount, side.path), presenter.overlayConfig()), rules: [] });
           return { answer: { case: "check", value: run }, label: `Checks on ${sideLabel(side)}`, stem: sideLabel(side).replace(/\.[^.]+$/, "") };
         },
       },
@@ -576,21 +576,20 @@ class AppRoot extends BaseComponent {
     // on. Before the catalog arrives there is no template, and the panel lists no sheets.
     let findByName: { query: string; bind: string } | null = null;
     const propertiesPresenter = new PropertiesPresenter(properties.view, {
-      getDesign: (req) => designClient().getDesign(req),
+      getDesign: async (uri, readMask) => designClient().getDesign({ snapshot: await snapshots().of(uri), readMask: { paths: readMask } }),
       drawn: () => drawnOnSheet(svgEl),
       drawnOn: async (uri, sel) => {
         if (!findByName) return [];
         const name = sel.kind === "net" ? (sel.net ?? "") : (sel.ref ?? "");
         const resp = await queryClient().runQuery({
-          uri,
+          snapshot: await snapshots().of(uri, presenter.overlayConfig()),
           query: findByName.query,
-          overlay: presenter.overlayConfig(),
           bindings: { [findByName.bind]: { kind: { case: "text", value: `^${searchPattern(name)}$` } } },
         });
         return drawnSheets(resp, sel.kind, name);
       },
       ask: async (uri, query) => {
-        const resp = await queryClient().runQuery({ uri, query, overlay: presenter.overlayConfig(), omitLocations: true });
+        const resp = await queryClient().runQuery({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), query, omitLocations: true });
         return resp.rows.map((r) => r.cells);
       },
     });

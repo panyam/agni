@@ -64,6 +64,7 @@ func traceCmd() *cobra.Command {
 			// --remote asks a running server the same question (agni issue 998). --render still draws
 			// here, from this machine's copy of the design.
 			var svc traceAPI = service.NewDesignService(ll, nil, render.Style{}, cliProjects())
+			var snaps snapshotAPI = service.NewSnapshotService(ll, cliProjects(), nil, "")
 			addr := cliArgURI
 			if remoteURL != "" {
 				if err := refuseLocalOnly(cmd); err != nil {
@@ -73,17 +74,22 @@ func traceCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				svc, addr = r.trace(), r.uri
+				svc, snaps, addr = r.trace(), r.snapshots(), r.uri
 			}
 			uri, err := addr(args[0])
 			if err != nil {
 				return err
 			}
+			snap, drop, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: uri})
+			if err != nil {
+				return rpcFailed(err)
+			}
+			defer drop()
 			resp, err := svc.TraceDesign(cmd.Context(), &webapi.TraceDesignRequest{
-				Uri:  uri,
-				From: &webapi.TraceEndpoint{RefDes: a.RefDes, Pin: a.Pin},
-				To:   &webapi.TraceEndpoint{RefDes: b.RefDes, Pin: b.Pin},
-				Hops: int32(hops),
+				Snapshot: snap,
+				From:     &webapi.TraceEndpoint{RefDes: a.RefDes, Pin: a.Pin},
+				To:       &webapi.TraceEndpoint{RefDes: b.RefDes, Pin: b.Pin},
+				Hops:     int32(hops),
 			})
 			if err != nil {
 				return rpcFailed(err)

@@ -68,7 +68,7 @@ func TestCoverageReadsTheProjectsProfiles(t *testing.T) {
 		t.Fatal(err)
 	}
 	svc := service.NewCheckService(&localLoader{loader: newLoader()}, check.DefaultCatalog(), nil, "", nil, cliProjects())
-	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Uri: uri})
+	resp, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Snapshot: snapOf(t, svc.Snapshots(), uri)})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -30,14 +30,19 @@ from agni import Client, CliTransport, ConnectTransport, rows_as_dicts
 cli = Client(CliTransport("agni", mounts={"tut": "examples/tutorial-project"}))
 srv = Client(ConnectTransport("http://127.0.0.1:8080"))
 
-answer = cli.run_query(uri="mount://tut/designs/gateway",
-                       query='component.class(?c, "resistor") => ?c')
+snap = cli.ingest("mount://tut/designs/gateway")
+answer = cli.run_query(snapshot=snap, query='component.class(?c, "resistor") => ?c')
 for row in rows_as_dicts(answer):
     print(row["c"])
+cli.delete_snapshot(snap)
 ```
 
-A design is named by its `mount://` URI on both transports, so one request object works on either.
-`CliTransport` turns its `mounts` into `--mount` flags. A server has to be started with the same
+A design is loaded once with `ingest`, which takes its `mount://` URI and any `board_uri`, `as_named`
+or library `overlay`, and every question then names the snapshot it returns (agni issue 1061). A
+server resolves the design's tiers and config when it ingests and holds the snapshot until it is
+deleted or evicted, so a script that asks after a long pause may get `not_found` and ingest again.
+`CliTransport` records the definition and mints a name, since each `agni` command reads the design
+itself, and turns its `mounts` into `--mount` flags. A server has to be started with the same
 mounts:
 
 ```sh
@@ -52,7 +57,7 @@ A query's variables are bound with `agni.bindings`, which types each value, so a
 an `int` or `float` a number:
 
 ```python
-client.run_query(uri="mount://tut/designs/gateway", query="component.net(?ref, ?net) => ?net",
+client.run_query(snapshot=snap, query="component.net(?ref, ?net) => ?net",
                  bindings=agni.bindings({"ref": "U1"}))
 ```
 
@@ -66,7 +71,7 @@ it directly, prototyping an analysis before it moves into agni as a library rela
 `get_design` carries it when a `read_mask` asks, and only the parts asked for:
 
 ```python
-d = client.get_design(uri="mount://tut/designs/gateway",
+d = client.get_design(snapshot=snap,
                       read_mask={"paths": ["design.nets", "design.components.mpn"]},
                       nets=["PMIC_EN"]).design
 for net in d.nets:
@@ -120,7 +125,7 @@ and `params` print a wire message with no rpc behind it, and `CliTransport.run` 
 is C31's declared exception and has no wire message. `create_review` runs `agni review`, sending the
 manifest on stdin, and answers the same `Review` as the server except that it is unnamed, because the
 CLI stores nothing (agni issue 734). Getting, listing and deleting stored reviews need a server. To
-run a project's own checklist, ask `list_checklists(design_uri=…)` for the checklists its project
+run a project's own checklist, ask `list_checklists(snapshot=…)` for the checklists its project
 declares, inherited ones included, and send one's `manifest` to `create_review`; the first is the
 project's default (agni issue 859).
 
@@ -148,7 +153,7 @@ it field by field, and each declaration fails once the difference goes away:
 - `CreateReview` over the CLI has an empty `name`, because the CLI stores nothing. The two runs also
   differ in `results.meta.created_at`, which the test clears on both sides before comparing.
 - `GetLayoutReport` on a design FOLDER answers an empty report from the server (agni issue 736).
-  Name the entry file with `as_named` until that lands.
+  Ingest the entry file with `as_named` until that lands.
 
 ## Tables and workbooks
 

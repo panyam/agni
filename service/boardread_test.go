@@ -37,7 +37,9 @@ func routedDesign() (boardCountingLoader, *atomic.Int32) {
 
 func runOn(t *testing.T, l boardCountingLoader, q string, overlay *webapi.OverlayConfig) *webapi.RunQueryResponse {
 	t.Helper()
-	resp, err := NewQueryService(l, nil, nil).RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: "mount://m/x.kicad_sch", Query: q, Overlay: overlay})
+	svc := NewQueryService(l, nil, nil)
+	snap := ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/x.kicad_sch", Overlay: overlay})
+	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: q})
 	if err != nil {
 		t.Fatalf("%s: %v", q, err)
 	}
@@ -98,7 +100,8 @@ func TestAQuerySetReadsTheBoardWhenAnyQueryNeedsIt(t *testing.T) {
 			for i, q := range tc.qs {
 				set.Queries = append(set.Queries, &webapi.NamedQuery{Name: string(rune('a' + i)), Query: q})
 			}
-			resp, err := NewQueryService(l, nil, nil).RunQueries(context.Background(), &webapi.RunQueriesRequest{Uri: "mount://m/x.kicad_sch", Set: set})
+			svc := NewQueryService(l, nil, nil)
+			resp, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch"), Set: set})
 			if err != nil {
 				t.Fatal(err)
 			}
@@ -118,10 +121,11 @@ func TestAQuerySetReadsTheBoardWhenAnyQueryNeedsIt(t *testing.T) {
 func TestCoverageAndPartParametersReadNoBoard(t *testing.T) {
 	l, boards := routedDesign()
 	svc := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil)
-	if _, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Uri: "mount://m/x.kicad_sch"}); err != nil {
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch")
+	if _, err := svc.GetInterfaceCoverage(context.Background(), &webapi.GetInterfaceCoverageRequest{Snapshot: snap}); err != nil {
 		t.Fatal(err)
 	}
-	if _, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/x.kicad_sch"}); err != nil {
+	if _, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Snapshot: snap}); err != nil {
 		t.Fatal(err)
 	}
 	if n := boards.Load(); n != 0 {
@@ -132,7 +136,8 @@ func TestCoverageAndPartParametersReadNoBoard(t *testing.T) {
 // A check run still reads the board, since its board-tier rules need it.
 func TestACheckRunStillReadsTheBoard(t *testing.T) {
 	l, boards := routedDesign()
-	if _, err := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil).CheckDesign(context.Background(), &webapi.CheckDesignRequest{Uri: "mount://m/x.kicad_sch"}); err != nil {
+	svc := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil)
+	if _, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.kicad_sch")}); err != nil {
 		t.Fatal(err)
 	}
 	if boards.Load() == 0 {

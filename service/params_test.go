@@ -29,7 +29,7 @@ func TestGetComponentParams(t *testing.T) {
 	})
 
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), provider, "", nil, nil)
-	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/d.pdf"})
+	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.pdf")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -48,7 +48,7 @@ func TestGetComponentParams(t *testing.T) {
 	}
 
 	noParams := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), nil, "", nil, nil)
-	empty, err := noParams.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/d.pdf"})
+	empty, err := noParams.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Snapshot: snapOf(t, noParams.Snapshots(), "mount://m/d.pdf")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -77,7 +77,7 @@ func TestGetComponentParamsLayersTheProjectAndNamesTheCorpus(t *testing.T) {
 	projects := &ProjectResolver{Store: projectWithParams{}, Config: &recordingResolver{specs: param.ParamSet{"LDO": projectLDO}}}
 
 	svc := NewCheckService(fakeLoader{design: d}, check.DefaultCatalog(), shared, "", nil, projects)
-	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Uri: "mount://m/d/board.edn"})
+	resp, err := svc.GetComponentParams(context.Background(), &webapi.GetComponentParamsRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d/board.edn")})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -99,7 +99,7 @@ func TestListRulesCountsTheParameterSetARunWouldCarry(t *testing.T) {
 	const rule = "supply-exceeds-abs-max"
 	listed := func(svc *CheckService) *webapi.RuleInfo {
 		t.Helper()
-		resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Uri: "mount://m/d/board.edn"})
+		resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d/board.edn")})
 		if err != nil {
 			t.Fatal(err)
 		}

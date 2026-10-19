@@ -38,8 +38,6 @@ const (
 	// CheckServiceCheckDesignProcedure is the fully-qualified name of the CheckService's CheckDesign
 	// RPC.
 	CheckServiceCheckDesignProcedure = "/agni.v1.webapi.CheckService/CheckDesign"
-	// CheckServiceLoadDesignProcedure is the fully-qualified name of the CheckService's LoadDesign RPC.
-	CheckServiceLoadDesignProcedure = "/agni.v1.webapi.CheckService/LoadDesign"
 	// CheckServiceGetExpectationsProcedure is the fully-qualified name of the CheckService's
 	// GetExpectations RPC.
 	CheckServiceGetExpectationsProcedure = "/agni.v1.webapi.CheckService/GetExpectations"
@@ -73,15 +71,6 @@ type CheckServiceClient interface {
 	// Each finding's subject (kind + ref) is the join key the viewer uses to highlight the
 	// offending element (it matches PackedSheet primitive keys).
 	CheckDesign(context.Context, *connect.Request[webapi.CheckDesignRequest]) (*connect.Response[webapi.CheckDesignResponse], error)
-	// LoadDesign reads everything a CheckDesign over the same request reads before its rules run (the
-	// netlist, the board and the model over them) and runs nothing (agni issue 1061). A host keeps what
-	// it read, so a CheckDesign that follows starts from rules rather than from a board parse.
-	//
-	// The browser sends it from a worker that ends when it answers, so the board's parse leaves its
-	// peak memory in no worker that lives on: the jobs worker later restores the parsed board from the
-	// shared store, which allocates a small fraction of what the parse did. board_persisted says
-	// whether that store now holds it.
-	LoadDesign(context.Context, *connect.Request[webapi.LoadDesignRequest]) (*connect.Response[webapi.LoadDesignResponse], error)
 	// GetExpectations returns a design's expected findings from its `<design>.expect.yaml` sidecar
 	// (WS6-006), if one sits beside the file. Expectations are static per design and independent of
 	// which rule subset a CheckDesign run uses, so they are their own resource: the viewer fetches
@@ -149,12 +138,6 @@ func NewCheckServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(checkServiceMethods.ByName("CheckDesign")),
 			connect.WithClientOptions(opts...),
 		),
-		loadDesign: connect.NewClient[webapi.LoadDesignRequest, webapi.LoadDesignResponse](
-			httpClient,
-			baseURL+CheckServiceLoadDesignProcedure,
-			connect.WithSchema(checkServiceMethods.ByName("LoadDesign")),
-			connect.WithClientOptions(opts...),
-		),
 		getExpectations: connect.NewClient[webapi.GetExpectationsRequest, webapi.GetExpectationsResponse](
 			httpClient,
 			baseURL+CheckServiceGetExpectationsProcedure,
@@ -198,7 +181,6 @@ func NewCheckServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 type checkServiceClient struct {
 	listRules            *connect.Client[webapi.ListRulesRequest, webapi.ListRulesResponse]
 	checkDesign          *connect.Client[webapi.CheckDesignRequest, webapi.CheckDesignResponse]
-	loadDesign           *connect.Client[webapi.LoadDesignRequest, webapi.LoadDesignResponse]
 	getExpectations      *connect.Client[webapi.GetExpectationsRequest, webapi.GetExpectationsResponse]
 	getCheckReport       *connect.Client[webapi.GetCheckReportRequest, webapi.GetCheckReportResponse]
 	renderCheckReport    *connect.Client[webapi.RenderCheckReportRequest, webapi.RenderCheckReportResponse]
@@ -215,11 +197,6 @@ func (c *checkServiceClient) ListRules(ctx context.Context, req *connect.Request
 // CheckDesign calls agni.v1.webapi.CheckService.CheckDesign.
 func (c *checkServiceClient) CheckDesign(ctx context.Context, req *connect.Request[webapi.CheckDesignRequest]) (*connect.Response[webapi.CheckDesignResponse], error) {
 	return c.checkDesign.CallUnary(ctx, req)
-}
-
-// LoadDesign calls agni.v1.webapi.CheckService.LoadDesign.
-func (c *checkServiceClient) LoadDesign(ctx context.Context, req *connect.Request[webapi.LoadDesignRequest]) (*connect.Response[webapi.LoadDesignResponse], error) {
-	return c.loadDesign.CallUnary(ctx, req)
 }
 
 // GetExpectations calls agni.v1.webapi.CheckService.GetExpectations.
@@ -265,15 +242,6 @@ type CheckServiceHandler interface {
 	// Each finding's subject (kind + ref) is the join key the viewer uses to highlight the
 	// offending element (it matches PackedSheet primitive keys).
 	CheckDesign(context.Context, *connect.Request[webapi.CheckDesignRequest]) (*connect.Response[webapi.CheckDesignResponse], error)
-	// LoadDesign reads everything a CheckDesign over the same request reads before its rules run (the
-	// netlist, the board and the model over them) and runs nothing (agni issue 1061). A host keeps what
-	// it read, so a CheckDesign that follows starts from rules rather than from a board parse.
-	//
-	// The browser sends it from a worker that ends when it answers, so the board's parse leaves its
-	// peak memory in no worker that lives on: the jobs worker later restores the parsed board from the
-	// shared store, which allocates a small fraction of what the parse did. board_persisted says
-	// whether that store now holds it.
-	LoadDesign(context.Context, *connect.Request[webapi.LoadDesignRequest]) (*connect.Response[webapi.LoadDesignResponse], error)
 	// GetExpectations returns a design's expected findings from its `<design>.expect.yaml` sidecar
 	// (WS6-006), if one sits beside the file. Expectations are static per design and independent of
 	// which rule subset a CheckDesign run uses, so they are their own resource: the viewer fetches
@@ -337,12 +305,6 @@ func NewCheckServiceHandler(svc CheckServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(checkServiceMethods.ByName("CheckDesign")),
 		connect.WithHandlerOptions(opts...),
 	)
-	checkServiceLoadDesignHandler := connect.NewUnaryHandler(
-		CheckServiceLoadDesignProcedure,
-		svc.LoadDesign,
-		connect.WithSchema(checkServiceMethods.ByName("LoadDesign")),
-		connect.WithHandlerOptions(opts...),
-	)
 	checkServiceGetExpectationsHandler := connect.NewUnaryHandler(
 		CheckServiceGetExpectationsProcedure,
 		svc.GetExpectations,
@@ -385,8 +347,6 @@ func NewCheckServiceHandler(svc CheckServiceHandler, opts ...connect.HandlerOpti
 			checkServiceListRulesHandler.ServeHTTP(w, r)
 		case CheckServiceCheckDesignProcedure:
 			checkServiceCheckDesignHandler.ServeHTTP(w, r)
-		case CheckServiceLoadDesignProcedure:
-			checkServiceLoadDesignHandler.ServeHTTP(w, r)
 		case CheckServiceGetExpectationsProcedure:
 			checkServiceGetExpectationsHandler.ServeHTTP(w, r)
 		case CheckServiceGetCheckReportProcedure:
@@ -414,10 +374,6 @@ func (UnimplementedCheckServiceHandler) ListRules(context.Context, *connect.Requ
 
 func (UnimplementedCheckServiceHandler) CheckDesign(context.Context, *connect.Request[webapi.CheckDesignRequest]) (*connect.Response[webapi.CheckDesignResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.CheckService.CheckDesign is not implemented"))
-}
-
-func (UnimplementedCheckServiceHandler) LoadDesign(context.Context, *connect.Request[webapi.LoadDesignRequest]) (*connect.Response[webapi.LoadDesignResponse], error) {
-	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.CheckService.LoadDesign is not implemented"))
 }
 
 func (UnimplementedCheckServiceHandler) GetExpectations(context.Context, *connect.Request[webapi.GetExpectationsRequest]) (*connect.Response[webapi.GetExpectationsResponse], error) {

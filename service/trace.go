@@ -2,7 +2,6 @@ package service
 
 import (
 	"context"
-	"github.com/panyam/agni/artifact"
 
 	"github.com/panyam/agni/core/check"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -112,21 +111,13 @@ func traceOutcomeFromProto(o webapi.TraceOutcome) check.TraceOutcome {
 // cannot disagree. A design with no netlist is an ERROR rather than an empty trace, because an empty
 // answer is indistinguishable from "these two pins are not connected".
 func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesignRequest) (*webapi.TraceDesignResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
+	// The walk is over the snapshot's NETLIST and the sheets come from its geometry tier, a different
+	// artifact for a netlist entry (C32).
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	opts, err := s.readOptions(ctx, u)
-	if err != nil {
-		return nil, err
-	}
-	// Tiers come from the design's declaration, like every other read here. The walk is over the
-	// NETLIST and the sheets come from the geometry companion, a different artifact for a netlist
-	// entry (C32).
-	nu, _, gu, err := s.projects.TierURIs(ctx, u, artifact.URI{}, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
+	opts, nu, gu := snap.Overlay.ReadOptions(), snap.Netlist, snap.Geometry
 	d, err := s.loader.Design(ctx, nu, opts...)
 	if err != nil {
 		return nil, err

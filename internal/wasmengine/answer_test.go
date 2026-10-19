@@ -21,7 +21,7 @@ func gatewayQuery(t *testing.T, req *webapi.RunQueryRequest) *webapi.RunQueryRes
 	}
 	srv := httptest.NewServer(eng.Handler)
 	t.Cleanup(srv.Close)
-	req.Uri = "mount://m"
+	req.Snapshot = snapAt(t, srv)
 	r, err := webapiconnect.NewQueryServiceClient(srv.Client(), srv.URL).RunQuery(context.Background(), connect.NewRequest(req))
 	if err != nil {
 		t.Fatal(err)

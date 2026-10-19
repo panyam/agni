@@ -53,20 +53,18 @@ class SheetRef(_message.Message):
     def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., parent_id: _Optional[str] = ...) -> None: ...
 
 class GetDesignRequest(_message.Message):
-    __slots__ = ("layout", "uri", "as_named", "read_mask", "nets", "ref_des")
+    __slots__ = ("snapshot", "layout", "read_mask", "nets", "ref_des")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     LAYOUT_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
     READ_MASK_FIELD_NUMBER: _ClassVar[int]
     NETS_FIELD_NUMBER: _ClassVar[int]
     REF_DES_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     layout: str
-    uri: str
-    as_named: bool
     read_mask: _field_mask_pb2.FieldMask
     nets: _containers.RepeatedScalarFieldContainer[str]
     ref_des: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, layout: _Optional[str] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., read_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ..., nets: _Optional[_Iterable[str]] = ..., ref_des: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., layout: _Optional[str] = ..., read_mask: _Optional[_Union[_field_mask_pb2.FieldMask, _Mapping]] = ..., nets: _Optional[_Iterable[str]] = ..., ref_des: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class GetDesignResponse(_message.Message):
     __slots__ = ("name", "source_format", "component_count", "net_count", "undrawn", "layout", "sheets", "native_available", "available_layouts", "content_hash", "unexpanded_hierarchy", "design", "hierarchy_note")
@@ -99,20 +97,18 @@ class GetDesignResponse(_message.Message):
     def __init__(self, name: _Optional[str] = ..., source_format: _Optional[str] = ..., component_count: _Optional[int] = ..., net_count: _Optional[int] = ..., undrawn: _Optional[_Iterable[_Union[_geom_pb2.UndrawnPlacement, _Mapping]]] = ..., layout: _Optional[str] = ..., sheets: _Optional[_Iterable[_Union[SheetRef, _Mapping]]] = ..., native_available: _Optional[bool] = ..., available_layouts: _Optional[_Iterable[str]] = ..., content_hash: _Optional[str] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[_ir_pb2.UnexpandedHierarchy, _Mapping]]] = ..., design: _Optional[_Union[_ir_pb2.Design, _Mapping]] = ..., hierarchy_note: _Optional[str] = ...) -> None: ...
 
 class GetSheetRequest(_message.Message):
-    __slots__ = ("sheet", "layout", "format", "symbols", "uri", "as_named")
+    __slots__ = ("snapshot", "sheet", "layout", "format", "symbols")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     SHEET_FIELD_NUMBER: _ClassVar[int]
     LAYOUT_FIELD_NUMBER: _ClassVar[int]
     FORMAT_FIELD_NUMBER: _ClassVar[int]
     SYMBOLS_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     sheet: str
     layout: str
     format: SheetFormat
     symbols: SymbolSource
-    uri: str
-    as_named: bool
-    def __init__(self, sheet: _Optional[str] = ..., layout: _Optional[str] = ..., format: _Optional[_Union[SheetFormat, str]] = ..., symbols: _Optional[_Union[SymbolSource, str]] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., sheet: _Optional[str] = ..., layout: _Optional[str] = ..., format: _Optional[_Union[SheetFormat, str]] = ..., symbols: _Optional[_Union[SymbolSource, str]] = ...) -> None: ...
 
 class GetSheetResponse(_message.Message):
     __slots__ = ("packed", "svg")
@@ -123,22 +119,20 @@ class GetSheetResponse(_message.Message):
     def __init__(self, packed: _Optional[_Union[_geom_packed_pb2.PackedSheet, _Mapping]] = ..., svg: _Optional[str] = ...) -> None: ...
 
 class HighlightSheetRequest(_message.Message):
-    __slots__ = ("sheet", "layout", "symbols", "format", "specs", "uri", "as_named")
+    __slots__ = ("snapshot", "sheet", "layout", "symbols", "format", "specs")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     SHEET_FIELD_NUMBER: _ClassVar[int]
     LAYOUT_FIELD_NUMBER: _ClassVar[int]
     SYMBOLS_FIELD_NUMBER: _ClassVar[int]
     FORMAT_FIELD_NUMBER: _ClassVar[int]
     SPECS_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     sheet: str
     layout: str
     symbols: SymbolSource
     format: SheetFormat
     specs: _containers.RepeatedCompositeFieldContainer[_geom_packed_pb2.HighlightSpec]
-    uri: str
-    as_named: bool
-    def __init__(self, sheet: _Optional[str] = ..., layout: _Optional[str] = ..., symbols: _Optional[_Union[SymbolSource, str]] = ..., format: _Optional[_Union[SheetFormat, str]] = ..., specs: _Optional[_Iterable[_Union[_geom_packed_pb2.HighlightSpec, _Mapping]]] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., sheet: _Optional[str] = ..., layout: _Optional[str] = ..., symbols: _Optional[_Union[SymbolSource, str]] = ..., format: _Optional[_Union[SheetFormat, str]] = ..., specs: _Optional[_Iterable[_Union[_geom_packed_pb2.HighlightSpec, _Mapping]]] = ...) -> None: ...
 
 class HighlightSheetResponse(_message.Message):
     __slots__ = ("packed", "svg")
@@ -149,14 +143,12 @@ class HighlightSheetResponse(_message.Message):
     def __init__(self, packed: _Optional[_Union[_geom_packed_pb2.PackedHighlight, _Mapping]] = ..., svg: _Optional[str] = ...) -> None: ...
 
 class GetLayoutReportRequest(_message.Message):
-    __slots__ = ("symbols", "uri", "as_named")
+    __slots__ = ("snapshot", "symbols")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     SYMBOLS_FIELD_NUMBER: _ClassVar[int]
-    URI_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     symbols: SymbolSource
-    uri: str
-    as_named: bool
-    def __init__(self, symbols: _Optional[_Union[SymbolSource, str]] = ..., uri: _Optional[str] = ..., as_named: _Optional[bool] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., symbols: _Optional[_Union[SymbolSource, str]] = ...) -> None: ...
 
 class GetLayoutReportResponse(_message.Message):
     __slots__ = ("report",)
@@ -165,17 +157,15 @@ class GetLayoutReportResponse(_message.Message):
     def __init__(self, report: _Optional[_Union[ConversionReport, _Mapping]] = ...) -> None: ...
 
 class TraceDesignRequest(_message.Message):
-    __slots__ = ("uri", "to", "hops", "as_named")
-    URI_FIELD_NUMBER: _ClassVar[int]
+    __slots__ = ("snapshot", "to", "hops")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     FROM_FIELD_NUMBER: _ClassVar[int]
     TO_FIELD_NUMBER: _ClassVar[int]
     HOPS_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
-    uri: str
+    snapshot: str
     to: TraceEndpoint
     hops: int
-    as_named: bool
-    def __init__(self, uri: _Optional[str] = ..., to: _Optional[_Union[TraceEndpoint, _Mapping]] = ..., hops: _Optional[int] = ..., as_named: _Optional[bool] = ..., **kwargs) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., to: _Optional[_Union[TraceEndpoint, _Mapping]] = ..., hops: _Optional[int] = ..., **kwargs) -> None: ...
 
 class TraceEndpoint(_message.Message):
     __slots__ = ("ref_des", "pin")

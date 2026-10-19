@@ -35,7 +35,7 @@ func TestRevisionIdentityAgreesAcrossEverySpelling(t *testing.T) {
 
 	got := map[string]string{}
 	for _, spelling := range []string{"mount://m/d", "mount://m/d/board.edn", "mount://m/d/board.eds"} {
-		resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Uri: spelling})
+		resp, err := svc.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), spelling)})
 		if err != nil {
 			t.Fatalf("GetDesign(%s): %v", spelling, err)
 		}
@@ -75,9 +75,15 @@ func TestReviewRecordsTheEntrysRevision(t *testing.T) {
 	l := &hashRecordingLoader{boardRecordingLoader: &boardRecordingLoader{board: "mount://m/d/board.kicad_pcb"}}
 	svc := NewReviewService(l, NewMemReviewStore(), check.DefaultCatalog(), nil, nil, testReviewEnv, "",
 		&ProjectResolver{Store: declaringStore{design: withBoardCompanion()}})
+	snap := snapOf(t, svc.Snapshots(), "mount://m/d")
+	// Ingesting names the snapshot's own revision from every tier it resolved; what the review
+	// records is asked afterwards.
+	l.mu.Lock()
+	l.hashed = nil
+	l.mu.Unlock()
 	if _, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
-		DesignUri: "mount://m/d",
-		Manifest:  fixtureManifest(t, "review/mini.yaml"),
+		Snapshot: snap,
+		Manifest: fixtureManifest(t, "review/mini.yaml"),
 	}); err != nil {
 		t.Fatalf("CreateReview: %v", err)
 	}

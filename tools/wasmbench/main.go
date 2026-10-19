@@ -116,9 +116,16 @@ func Run(dir, design string) (Result, error) {
 	ds := webapiconnect.NewDesignServiceClient(http.DefaultClient, srv.URL)
 	cs := webapiconnect.NewCheckServiceClient(http.DefaultClient, srv.URL)
 	qs := webapiconnect.NewQueryServiceClient(http.DefaultClient, srv.URL)
+	ss := webapiconnect.NewSnapshotServiceClient(http.DefaultClient, srv.URL)
 
+	// The read is the ingest and the open's GetDesign, what a page waits on before its first sheet.
 	t = time.Now()
-	d, err := ds.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Uri: uri}))
+	snap, err := ss.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: uri}}))
+	if err != nil {
+		return res, fmt.Errorf("Ingest: %w", err)
+	}
+	name := snap.Msg.GetName()
+	d, err := ds.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: name}))
 	if err != nil {
 		return res, fmt.Errorf("GetDesign: %w", err)
 	}
@@ -130,7 +137,7 @@ func Run(dir, design string) (Result, error) {
 		q   string
 		out *int32
 	}{{CountComponents, &res.Components}, {CountNets, &res.Nets}} {
-		r, err := qs.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Uri: uri, Query: c.q}))
+		r, err := qs.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: name, Query: c.q}))
 		if err != nil {
 			return res, fmt.Errorf("%s: %w", c.q, err)
 		}
@@ -141,7 +148,7 @@ func Run(dir, design string) (Result, error) {
 	}
 
 	t = time.Now()
-	c, err := cs.GetCheckReport(ctx, connect.NewRequest(&webapi.GetCheckReportRequest{Uri: uri}))
+	c, err := cs.GetCheckReport(ctx, connect.NewRequest(&webapi.GetCheckReportRequest{Snapshot: name}))
 	if err != nil {
 		return res, fmt.Errorf("GetCheckReport: %w", err)
 	}
@@ -152,7 +159,7 @@ func Run(dir, design string) (Result, error) {
 	}
 
 	t = time.Now()
-	q, err := qs.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Uri: uri, Query: Query}))
+	q, err := qs.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: name, Query: Query}))
 	if err != nil {
 		return res, fmt.Errorf("RunQuery: %w", err)
 	}

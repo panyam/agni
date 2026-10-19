@@ -27,6 +27,7 @@ func tutorialQueries() (*QueryService, string) {
 
 func TestABoundQueryAnswersAsTheWrittenConstant(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	for _, c := range []struct {
 		name, bound, written string
 		bind                 map[string]*webapi.QueryValue
@@ -34,11 +35,11 @@ func TestABoundQueryAnswersAsTheWrittenConstant(t *testing.T) {
 		{"text", `component.net(?r, ?n) => ?n`, `component.net("U1", ?n) => ?n`, map[string]*webapi.QueryValue{"r": text("U1")}},
 		{"number", `net.pin_count(?n, ?c), ?c >= ?min => ?n`, `net.pin_count(?n, ?c), ?c >= 3 => ?n`, map[string]*webapi.QueryValue{"min": number(3)}},
 	} {
-		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: c.bound, Bindings: c.bind})
+		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: c.bound, Bindings: c.bind})
 		if err != nil {
 			t.Fatalf("%s: bound: %v", c.name, err)
 		}
-		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: c.written})
+		want, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: c.written})
 		if err != nil {
 			t.Fatalf("%s: written: %v", c.name, err)
 		}
@@ -56,8 +57,9 @@ func TestABoundQueryAnswersAsTheWrittenConstant(t *testing.T) {
 
 func TestABindingTheGoalDoesNotUseIsInvalid(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
-		Uri: uri, Query: `component.net(?r, ?n) => ?n`, Bindings: map[string]*webapi.QueryValue{"zz": text("U1")},
+		Snapshot: snap, Query: `component.net(?r, ?n) => ?n`, Bindings: map[string]*webapi.QueryValue{"zz": text("U1")},
 	})
 	if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), "?zz") {
 		t.Errorf("err = %v, want an invalid argument naming ?zz", err)
@@ -68,12 +70,13 @@ func TestABindingTheGoalDoesNotUseIsInvalid(t *testing.T) {
 // answer differently, so bindings are per query rather than per set.
 func TestEachQueryInASetBindsItsOwnVariables(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	const q = `component.net(?r, ?n) => ?n`
 	set := &webapi.QuerySet{Title: "t", Queries: []*webapi.NamedQuery{
 		{Name: "u1", Query: q, Bindings: map[string]*webapi.QueryValue{"r": text("U1")}},
 		{Name: "j1", Query: q, Bindings: map[string]*webapi.QueryValue{"r": text("J1")}},
 	}}
-	resp, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Uri: uri, Set: set})
+	resp, err := svc.RunQueries(context.Background(), &webapi.RunQueriesRequest{Snapshot: snap, Set: set})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,9 +96,10 @@ func TestEachQueryInASetBindsItsOwnVariables(t *testing.T) {
 // answering nothing.
 func TestABindingInANumberPositionIsReadAsANumber(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	const q = `net.pin_count(?n, ?c), ?c >= ?min => ?n`
 	asked := func(v *webapi.QueryValue) (*webapi.RunQueryResponse, error) {
-		return svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: q, Bindings: map[string]*webapi.QueryValue{"min": v}})
+		return svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: q, Bindings: map[string]*webapi.QueryValue{"min": v}})
 	}
 	asNumber, err := asked(number(3))
 	if err != nil {
@@ -121,10 +125,11 @@ func TestABindingInANumberPositionIsReadAsANumber(t *testing.T) {
 // sorts before "9".
 func TestAnUntypedBindingKeepsItsOwnType(t *testing.T) {
 	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
 	const q = `entity(?n, "net"), ?a < ?b => ?n`
 	asked := func(a, b *webapi.QueryValue) int {
 		t.Helper()
-		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Uri: uri, Query: q, Bindings: map[string]*webapi.QueryValue{"a": a, "b": b}})
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: q, Bindings: map[string]*webapi.QueryValue{"a": a, "b": b}})
 		if err != nil {
 			t.Fatal(err)
 		}

@@ -73,16 +73,23 @@ func TestEngineAnswersThroughTheJSExports(t *testing.T) {
 	}
 	await(t, agni.Call("add", "tut", files))
 
-	body := []byte(`{"uri":"mount://tut/designs/gateway"}`)
-	arr := js.Global().Get("Uint8Array").New(len(body))
-	js.CopyBytesToJS(arr, body)
-	headers := js.Global().Get("Object").New()
-	headers.Set("Content-Type", "application/json")
-	res := await(t, agni.Call("http", "POST", "/agni.v1.webapi.CheckService/GetCheckReport", headers, arr))
-
-	out := make([]byte, res.Get("body").Get("length").Int())
-	js.CopyBytesToGo(out, res.Get("body"))
-	if status := res.Get("status").Int(); status != 200 {
+	post := func(path, body string) (int, []byte) {
+		arr := js.Global().Get("Uint8Array").New(len(body))
+		js.CopyBytesToJS(arr, []byte(body))
+		headers := js.Global().Get("Object").New()
+		headers.Set("Content-Type", "application/json")
+		res := await(t, agni.Call("http", "POST", path, headers, arr))
+		out := make([]byte, res.Get("body").Get("length").Int())
+		js.CopyBytesToGo(out, res.Get("body"))
+		return res.Get("status").Int(), out
+	}
+	// A question names a snapshot, so the design is ingested first, under the id a page would mint
+	// (agni issue 1061).
+	if status, out := post("/agni.v1.webapi.SnapshotService/Ingest", `{"snapshot":{"uri":"mount://tut/designs/gateway"},"snapshotId":"js"}`); status != 200 {
+		t.Fatalf("Ingest: status %d, body %.300s", status, out)
+	}
+	status, out := post("/agni.v1.webapi.CheckService/GetCheckReport", `{"snapshot":"snapshots/js"}`)
+	if status != 200 {
 		t.Fatalf("GetCheckReport: status %d, body %.300s", status, out)
 	}
 	if !strings.Contains(string(out), "gateway-profiles/") {

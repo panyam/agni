@@ -280,8 +280,19 @@ func cliArgURI(arg string) (string, error) {
 // It goes through the same code serve does, so a design checked from the terminal and in the
 // browser compose the same config and agree about what a board was measured against.
 func cliProjects() *service.ProjectResolver {
-	return &service.ProjectResolver{Store: cliProjectStore{}, Config: cliProjectConfig{}}
+	cliResolverOnce.Do(func() {
+		cliResolver = &service.ProjectResolver{Store: cliProjectStore{}, Config: cliProjectConfig{}}
+	})
+	return cliResolver
 }
+
+// cliResolver is one resolver for the process, so the snapshot a command ingests is the one every
+// service it asks holds (agni issue 1061). Its store and config read the mount table at call time, so
+// sharing it shares no stale state.
+var (
+	cliResolver     *service.ProjectResolver
+	cliResolverOnce sync.Once
+)
 
 // cliProjectStore and cliProjectConfig read the run's mounts at CALL time rather than holding a
 // snapshot.

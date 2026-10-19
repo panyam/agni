@@ -48,7 +48,7 @@ describe("DocumentStore on its own", () => {
         { name: "b", severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" },
       ],
     }));
-    await doc.loadCatalog({ listRules } as never, "mount://m/b.edn", undefined);
+    await doc.loadCatalog({ listRules } as never, async () => "snapshots/t");
     expect(doc.selectedRules).toEqual(["a", "b"]);
     const checkDesign = vi.fn(async (req: { rules: string[] }) => ({
       findings: req.rules.map((r) => ({ rule: r, severity: "info", message: r, subject: { kind: "net", ref: "N" } })),
@@ -56,11 +56,14 @@ describe("DocumentStore on its own", () => {
       skipped: [],
     }));
     doc.selectedRules = ["a"];
-    await doc.runMissing({ checkDesign } as never, undefined);
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
     doc.selectedRules = ["a", "b"];
-    await doc.runMissing({ checkDesign } as never, undefined);
-    await doc.runMissing({ checkDesign } as never, undefined);
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
     expect(checkDesign.mock.calls.map((c) => c[0].rules)).toEqual([["a"], ["b"]]);
+    // Each run names the open design's snapshot (agni issue 1061), and so does the catalog.
+    expect(checkDesign.mock.calls.map((c) => (c[0] as { snapshot?: string }).snapshot)).toEqual(["snapshots/t", "snapshots/t"]);
+    expect(listRules.mock.calls[0]).toEqual([{ snapshot: "snapshots/t" }]);
     expect(doc.run?.resp.findings.map((f) => f.rule)).toEqual(["a", "b"]);
     expect(doc.heldRun()?.names).toEqual(["a", "b"]);
   });
@@ -77,13 +80,13 @@ describe("the held run keeps what the read left out", () => {
     const listRules = vi.fn(async () => ({
       rules: [{ name: "a", severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" }],
     }));
-    await doc.loadCatalog({ listRules } as never, "mount://m/hier.edn", undefined);
+    await doc.loadCatalog({ listRules } as never, async () => "snapshots/t");
     const blocks = [
       { name: "SUB", kind: "edif_cell", instanceCount: 212, prov: { sourceFile: "hier.edn", nativeId: "SUB", nativeIdKind: "edif-cell", span: { byteOffset: 40n, byteLength: 120n, line: 5, column: 5 } } },
       { name: "PSU", kind: "edif_cell", instanceCount: 9, prov: { sourceFile: "hier.edn", nativeId: "PSU", nativeIdKind: "edif-cell", span: { byteOffset: 400n, byteLength: 90n, line: 40, column: 5 } } },
     ];
     const checkDesign = vi.fn(async () => ({ findings: [], verdicts: [], skipped: [], unexpandedHierarchy: blocks }));
-    await doc.runMissing({ checkDesign } as never, undefined);
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
     // toMatchObject because the rebuilt run is a created message, which adds its type names.
     const held = doc.heldRun()?.run.unexpandedHierarchy;
     expect(held).toHaveLength(2);

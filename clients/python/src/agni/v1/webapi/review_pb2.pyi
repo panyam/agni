@@ -54,26 +54,20 @@ class ReviewSummary(_message.Message):
     def __init__(self, total: _Optional[int] = ..., covered: _Optional[int] = ..., answered: _Optional[int] = ..., fail: _Optional[int] = ..., provisional: _Optional[int] = ..., **kwargs) -> None: ...
 
 class CreateReviewRequest(_message.Message):
-    __slots__ = ("parent", "design_uri", "board_uri", "ratified_floor", "overlay", "manifest", "as_named", "work_budget", "validate_only")
+    __slots__ = ("snapshot", "parent", "ratified_floor", "manifest", "work_budget", "validate_only")
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     PARENT_FIELD_NUMBER: _ClassVar[int]
-    DESIGN_URI_FIELD_NUMBER: _ClassVar[int]
-    BOARD_URI_FIELD_NUMBER: _ClassVar[int]
     RATIFIED_FLOOR_FIELD_NUMBER: _ClassVar[int]
-    OVERLAY_FIELD_NUMBER: _ClassVar[int]
     MANIFEST_FIELD_NUMBER: _ClassVar[int]
-    AS_NAMED_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     VALIDATE_ONLY_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
     parent: str
-    design_uri: str
-    board_uri: str
     ratified_floor: float
-    overlay: _checks_pb2_1.OverlayConfig
     manifest: _checks_pb2.ReviewManifest
-    as_named: bool
     work_budget: int
     validate_only: bool
-    def __init__(self, parent: _Optional[str] = ..., design_uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., ratified_floor: _Optional[float] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., manifest: _Optional[_Union[_checks_pb2.ReviewManifest, _Mapping]] = ..., as_named: _Optional[bool] = ..., work_budget: _Optional[int] = ..., validate_only: _Optional[bool] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., parent: _Optional[str] = ..., ratified_floor: _Optional[float] = ..., manifest: _Optional[_Union[_checks_pb2.ReviewManifest, _Mapping]] = ..., work_budget: _Optional[int] = ..., validate_only: _Optional[bool] = ...) -> None: ...
 
 class GetReviewRequest(_message.Message):
     __slots__ = ("name",)
@@ -120,10 +114,10 @@ class GetReviewManifestResponse(_message.Message):
     def __init__(self, manifest: _Optional[_Union[_checks_pb2.ReviewManifest, _Mapping]] = ...) -> None: ...
 
 class ListChecklistsRequest(_message.Message):
-    __slots__ = ("design_uri",)
-    DESIGN_URI_FIELD_NUMBER: _ClassVar[int]
-    design_uri: str
-    def __init__(self, design_uri: _Optional[str] = ...) -> None: ...
+    __slots__ = ("snapshot",)
+    SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    snapshot: str
+    def __init__(self, snapshot: _Optional[str] = ...) -> None: ...
 
 class ListChecklistsResponse(_message.Message):
     __slots__ = ("project", "checklists")

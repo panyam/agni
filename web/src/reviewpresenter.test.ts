@@ -6,6 +6,12 @@ import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import type { ReviewState } from "./review.js";
 import type { ConventionState } from "./conventions.js";
 import { stubQueryView } from "./testviews.js";
+import type { OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
+import { fakeSnapshots, snapName } from "./testsnaps.js";
+
+const BOARD = artifactUri("m", "proj/board.edn");
+// HOUSE is the overlay the convention bar's "house" vocabulary rides on, as far as a snapshot name tells.
+const HOUSE = { ignoreProject: false, config: { conventions: { name: "house" } } } as unknown as OverlayConfig;
 
 // doc builds a run document as the server returns it, a Review resource wrapping a CheckResults.
 function doc(name: string, createdAt: string, outcomes: string[]) {
@@ -74,7 +80,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
   const getReviewManifest = vi.fn(async (_req: { mount: string; ref: string }) => ({
     manifest: { name: "Sample Board review", areas: [] },
   }));
-  const createReview = vi.fn(async (_req: { parent: string; designUri: string; manifest: unknown }) =>
+  const createReview = vi.fn(async (_req: { parent: string; snapshot: string; manifest: unknown }) =>
     doc("reviews/r3", "2026-08-11T08:00:00Z", ["pass", "pass", "fail"]),
   );
   const renderReviewReport = vi.fn(async (_req: { review: { name: string }; links: unknown }) => ({
@@ -104,7 +110,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any;
 
-  const runQuery = vi.fn(async (_req: { uri: string; query: string; overlay?: unknown }) => ({
+  const runQuery = vi.fn(async (_req: { snapshot: string; query: string }) => ({
     columns: ["n"], columnKinds: [], rows: [],
   }));
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -134,6 +140,8 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
     wireClients ? query : undefined,
     wireClients ? reviews : undefined,
     wireClients ? workspace : undefined,
+    undefined,
+    fakeSnapshots(),
   );
   return { presenter, onReview, onConvention, listReviews, getReviewManifest, createReview, renderReviewReport, download, listDir, getNamingConvention, checkDesign: checks.checkDesign, listRules: checks.listRules, runQuery };
 }
@@ -239,7 +247,7 @@ describe("review presenter — creating", () => {
       // No project client in this harness, so the run stores unparented, which is the right answer
       // for a design that resolves to none.
       parent: "",
-      designUri: artifactUri("m", "proj/board.edn"),
+      snapshot: snapName(BOARD),
       manifest: { name: "Sample Board review", areas: [] },
     });
     const s = lastState(h.onReview);
@@ -259,7 +267,7 @@ describe("review presenter — creating", () => {
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.createReview();
     expect(h.createReview).toHaveBeenCalledTimes(1);
-    expect(h.createReview.mock.calls[0][0]).toMatchObject({ designUri: artifactUri("m", "proj/board.edn"), validateOnly: true });
+    expect(h.createReview.mock.calls[0][0]).toMatchObject({ snapshot: snapName(BOARD), validateOnly: true });
     const s = lastState(h.onReview);
     expect(s.storeConfigured).toBe(false);
     expect(s.error).toBe("");
@@ -289,7 +297,7 @@ describe("review presenter — creating", () => {
     const sent = h.createReview.mock.calls[0][0];
     expect(sent.manifest).toBeDefined();
     expect(Object.keys(sent)).not.toContain("manifestPath");
-    expect(sent.designUri).toBe(artifactUri("m", "proj/board.edn"));
+    expect(sent.snapshot).toBe(snapName(BOARD));
   });
 
   it("reports a bad checklist inline and keeps the existing history", async () => {
@@ -350,7 +358,7 @@ describe("naming convention", () => {
     await h.presenter.setConvention("proj/house.yaml");
     await h.presenter.createReview();
     const sent = h.createReview.mock.calls[0][0] as Record<string, unknown>;
-    expect(sent.overlay).toBeDefined();
+    expect(sent.snapshot).toBe(snapName(BOARD, HOUSE));
   });
 
   it("sends no overlay while the server's convention applies", async () => {
@@ -358,7 +366,7 @@ describe("naming convention", () => {
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.createReview();
     const sent = h.createReview.mock.calls[0][0] as Record<string, unknown>;
-    expect(sent.overlay).toBeUndefined();
+    expect(sent.snapshot).toBe(snapName(BOARD));
   });
 
   it("resolves through the server rather than parsing yaml in the browser", async () => {
@@ -403,7 +411,7 @@ describe("naming convention", () => {
     await h.presenter.runChecks();
     expect(h.checkDesign.mock.calls.length).toBeGreaterThan(before);
     const last = h.checkDesign.mock.calls.at(-1)![0] as Record<string, unknown>;
-    expect(last.overlay).toBeDefined();
+    expect(last.snapshot).toBe(snapName(BOARD, HOUSE));
   });
 
   // A regression found by driving the real app. Switching the vocabulary changes which rules EXIST,
@@ -417,7 +425,7 @@ describe("naming convention", () => {
     await h.presenter.setConvention("proj/house.yaml");
     expect(h.listRules.mock.calls.length).toBeGreaterThan(before);
     const last = h.listRules.mock.calls.at(-1)![0] as Record<string, unknown>;
-    expect(last.overlay, "the catalog must be listed under the SAME overlay a run would use").toBeDefined();
+    expect(last.snapshot, "the catalog must be listed under the SAME overlay a run would use").toBe(snapName(BOARD, HOUSE));
   });
 
   it("re-reads the catalog when going back to the server's vocabulary too", async () => {
@@ -427,7 +435,7 @@ describe("naming convention", () => {
     const before = h.listRules.mock.calls.length;
     await h.presenter.setConvention("");
     expect(h.listRules.mock.calls.length).toBeGreaterThan(before);
-    expect((h.listRules.mock.calls.at(-1)![0] as Record<string, unknown>).overlay).toBeUndefined();
+    expect((h.listRules.mock.calls.at(-1)![0] as Record<string, unknown>).snapshot).toBe(snapName(BOARD));
   });
 
   // The Query panel must answer under the SAME vocabulary the bar names. Before this, the bar could
@@ -440,7 +448,7 @@ describe("naming convention", () => {
     await h.presenter.runQuery("net.rail(?n) => ?n");
     const calls = h.runQuery.mock.calls;
     const sent = calls[calls.length - 1][0] as Record<string, unknown>;
-    expect(sent.overlay, "the query panel would otherwise answer under a different vocabulary than the bar names").toBeDefined();
+    expect(sent.snapshot, "the query panel would otherwise answer under a different vocabulary than the bar names").toBe(snapName(BOARD, HOUSE));
   });
 
   it("sends no overlay on a query while the server's vocabulary applies", async () => {
@@ -448,7 +456,7 @@ describe("naming convention", () => {
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.runQuery("net.rail(?n) => ?n");
     const qcalls = h.runQuery.mock.calls;
-    expect((qcalls[qcalls.length - 1][0] as Record<string, unknown>).overlay).toBeUndefined();
+    expect((qcalls[qcalls.length - 1][0] as Record<string, unknown>).snapshot).toBe(snapName(BOARD));
   });
 
   it("offers the yaml files beside the design as choices", async () => {

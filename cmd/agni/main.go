@@ -424,11 +424,17 @@ func statsJSON(cmd *cobra.Command, design string, maskPaths, nets, refs []string
 	if err != nil {
 		return err
 	}
-	req := &webapi.GetDesignRequest{Uri: string(uri), AsNamed: readAsNamed, Nets: nets, RefDes: refs}
+	ll := &localLoader{loader: newLoader()}
+	snap, drop, err := ingest(cmd.Context(), service.NewSnapshotService(ll, cliProjects(), nil, ""), &webapi.Snapshot{Uri: string(uri), AsNamed: readAsNamed})
+	if err != nil {
+		return rpcFailed(err)
+	}
+	defer drop()
+	req := &webapi.GetDesignRequest{Snapshot: snap, Nets: nets, RefDes: refs}
 	if len(maskPaths) > 0 {
 		req.ReadMask = &fieldmaskpb.FieldMask{Paths: maskPaths}
 	}
-	svc := service.NewDesignService(&localLoader{loader: newLoader()}, nil, render.Style{}, cliProjects())
+	svc := service.NewDesignService(ll, nil, render.Style{}, cliProjects())
 	resp, err := svc.GetDesign(cmd.Context(), req)
 	if err != nil {
 		return rpcFailed(err)
@@ -575,6 +581,7 @@ func checkCmd() *cobra.Command {
 			// --remote sends the same requests to a running server (agni issue 998). The rule names
 			// are still resolved here, against the catalog this design's project composes.
 			var svc checkAPI
+			var snaps snapshotAPI
 			addr := cliArgURI
 			if remoteURL != "" {
 				if err := refuseLocalOnly(cmd, "params", "profile-path"); err != nil {
@@ -584,7 +591,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				svc, addr = r.check(), r.uri
+				svc, snaps, addr = r.check(), r.snapshots(), r.uri
 			} else {
 				var specs param.ParamProvider
 				if paramsDir != "" {
@@ -594,8 +601,9 @@ func checkCmd() *cobra.Command {
 					}
 					specs = set
 				}
-				svc = service.NewCheckService(ll, catalog, specs, "", nil, cliProjects()).
+				local := service.NewCheckService(ll, catalog, specs, "", nil, cliProjects()).
 					WithEnv(service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""})
+				svc, snaps = local, local.Snapshots()
 			}
 			ctx := cmd.Context()
 			// Addressed once, since every request below names the same two artifacts.
@@ -607,12 +615,17 @@ func checkCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			snap, drop, err := ingest(ctx, snaps, &webapi.Snapshot{Uri: designURI, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
+			if err != nil {
+				return rpcFailed(err)
+			}
+			defer drop()
 			var failFindings []*checkspb.Finding
 			// --results-out takes one path through the service for every format (WS3-103). The document
 			// holds findings in run order and the terminal output is rendered FROM it, so the file and
 			// the terminal show the same artifact.
 			if resultsOut != "" {
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: snap, Rules: names})
 				if err != nil {
 					return rpcFailed(err)
 				}
@@ -621,7 +634,7 @@ func checkCmd() *cobra.Command {
 				// this run, with provenance off the composed overlay and the deployment flags the env
 				// carries, and the terminal output is rendered back from the same bytes.
 				rendered, err := svc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{
-					Uri: designURI, Overlay: overlay, Rules: names, Run: resp, BoardUri: boardURI, AsNamed: readAsNamed,
+					Snapshot: snap, Rules: names, Run: resp,
 					Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON,
 				})
 				if err != nil {
@@ -650,7 +663,7 @@ func checkCmd() *cobra.Command {
 			}
 			switch format {
 			case "markdown", "report":
-				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
+				rresp, err := svc.GetCheckReport(ctx, &webapi.GetCheckReportRequest{Snapshot: snap, Rules: names})
 				if err != nil {
 					return rpcFailed(err)
 				}
@@ -664,7 +677,7 @@ func checkCmd() *cobra.Command {
 				}
 				failFindings = reportFindings(rresp.GetReport())
 			default: // text, json and csv all need the raw findings
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Uri: designURI, Rules: names, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: snap, Rules: names})
 				if err != nil {
 					return rpcFailed(err)
 				}
@@ -698,7 +711,7 @@ func checkCmd() *cobra.Command {
 						// used. `catalog` lacks the project's rules and the --conventions rules, which would
 						// then render under a bare name with no summary, impact or remedy (agni issue 411).
 						rendered, err := svc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{
-							Uri: designURI, Overlay: overlay, Rules: names, Run: resp, BoardUri: boardURI, AsNamed: readAsNamed,
+							Snapshot: snap, Rules: names, Run: resp,
 							Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML,
 							Links:  &webapi.ReportLinks{UrlBase: meta.URLBase, DesignUri: linkURI(meta.MountPath), Withheld: meta.LinksWithheld},
 						})
@@ -935,6 +948,7 @@ func reviewCmd() *cobra.Command {
 			env := service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""}
 			ll := &localLoader{loader: newLoader()}
 			var svc reviewAPI = service.NewReviewService(ll, service.NewMemReviewStore(), catalog, byName, specs, env, "", cliProjects())
+			var snaps snapshotAPI = service.NewSnapshotService(ll, cliProjects(), specs, "")
 			// --remote scores the checklist on a running server (agni issue 998). Every create is
 			// validate_only, so the server keeps no run, as the in-memory store above keeps none past
 			// the command.
@@ -948,7 +962,7 @@ func reviewCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				svc, addr = r.review(), r.uri
+				svc, snaps, addr = r.review(), r.snapshots(), r.uri
 			}
 			// One create per design, since a stored run is about ONE design. The loop is the rollup.
 			var docs []*checkspb.CheckResults
@@ -983,17 +997,21 @@ func reviewCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
+				// --conventions rides the snapshot's definition as a value and the service composes it
+				// (WS3-102).
+				snap, drop, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: designURI, BoardUri: boardURI, AsNamed: readAsNamed, Overlay: overlay})
+				if err != nil {
+					return rpcFailed(err)
+				}
 				rv, err := svc.CreateReview(cmd.Context(), &webapi.CreateReviewRequest{
 					// Stored under the design's project when it has one. Resolved here rather than in
 					// CreateReview, since a second resolution could disagree and file the run under a
 					// project other than the one whose rules scored it.
 					Parent:   parent,
-					Manifest: service.ManifestProto(man), DesignUri: designURI, BoardUri: boardURI, RatifiedFloor: ratifiedFloor,
-					AsNamed:      readAsNamed,
+					Manifest: service.ManifestProto(man), Snapshot: snap, RatifiedFloor: ratifiedFloor,
 					ValidateOnly: true,
-					// --conventions rides the REQUEST as a value and the service composes it (WS3-102).
-					Overlay: overlay,
 				})
+				drop()
 				if err != nil {
 					return rpcFailed(err)
 				}

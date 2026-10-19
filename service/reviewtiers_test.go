@@ -69,10 +69,10 @@ func TestCreateReviewReadsTheDeclaredBoard(t *testing.T) {
 			l := &boardRecordingLoader{board: board}
 			svc := NewReviewService(l, NewMemReviewStore(), check.DefaultCatalog(), nil, nil, testReviewEnv, "",
 				&ProjectResolver{Store: declaringStore{design: withBoardCompanion()}})
+			snap := ingestWith(t, svc.Snapshots(), &webapi.Snapshot{Uri: "mount://m/d/board.edn", AsNamed: tc.asNamed})
 			_, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
-				DesignUri: "mount://m/d/board.edn",
-				Manifest:  fixtureManifest(t, "review/mini.yaml"),
-				AsNamed:   tc.asNamed,
+				Snapshot: snap,
+				Manifest: fixtureManifest(t, "review/mini.yaml"),
 			})
 			if err != nil {
 				t.Fatalf("CreateReview: %v", err)

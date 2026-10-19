@@ -36,6 +36,7 @@ type QueryService struct {
 // provider, using the default naive datalog evaluator. Pass a nil provider when no datasheet corpus
 // is wired; the model's param.* relations then yield no rows (never an error).
 func NewQueryService(loader Loader, specs param.ParamProvider, projects *ProjectResolver) *QueryService {
+	projects = orEmptyResolver(projects)
 	return &QueryService{loader: loader, eval: query.Default, specs: specs, projects: projects}
 }
 
@@ -44,11 +45,7 @@ func NewQueryService(loader Loader, specs param.ParamProvider, projects *Project
 // malformed query are both invalid arguments, so the panel shows the parse error inline. A query
 // that matches nothing returns an empty row set, not an error.
 func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest) (*webapi.RunQueryResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
-	if err != nil {
-		return nil, err
-	}
-	boardURI, err := optionalArtifactURI(req.GetBoardUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +54,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 		// %w on both, so the transport finds the syntax error's position (TextPositionOf).
 		return nil, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
 	}
-	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed(), q)
+	d, err := s.read(ctx, snap, q)
 	if err != nil {
 		return nil, err
 	}
@@ -100,11 +97,7 @@ func stopped(err error) bool {
 // A set that is unusable as a whole is an invalid argument, and a design that cannot be read fails
 // the call as it would fail RunQuery.
 func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesRequest) (*webapi.RunQueriesResponse, error) {
-	u, err := ParseArtifactURI(req.GetUri())
-	if err != nil {
-		return nil, err
-	}
-	boardURI, err := optionalArtifactURI(req.GetBoardUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
@@ -119,12 +112,12 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 			qs = append(qs, q)
 		}
 	}
-	d, err := s.read(ctx, u, boardURI, req.GetUri(), req.GetOverlay(), req.GetAsNamed(), qs...)
+	d, err := s.read(ctx, snap, qs...)
 	if err != nil {
 		return nil, err
 	}
 	ctx = query.NarrowBudget(ctx, req.GetWorkBudget())
-	out := &webapi.RunQueriesResponse{Title: set.Title, Preamble: set.Preamble, Source: req.GetUri()}
+	out := &webapi.RunQueriesResponse{Title: set.Title, Preamble: set.Preamble, Source: snap.Design.String()}
 	for i, nq := range set.Queries {
 		res := &webapi.NamedQueryResult{Name: nq.Name, Description: nq.Description}
 		out.Results = append(out.Results, res)
@@ -193,11 +186,11 @@ func BindingsProto(m map[string]query.Value) map[string]*webapi.QueryValue {
 // ListQuerySets answers which query sets the design's project keeps, inherited ones first (agni
 // issue 745). See ProjectResolver.QuerySets for what an absent project and an empty one answer.
 func (s *QueryService) ListQuerySets(ctx context.Context, req *webapi.ListQuerySetsRequest) (*webapi.ListQuerySetsResponse, error) {
-	u, err := ParseArtifactURI(req.GetDesignUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	sets, project, err := s.projects.QuerySets(ctx, u)
+	sets, project, err := s.projects.QuerySets(ctx, snap.Design)
 	if err != nil {
 		return nil, err
 	}
@@ -245,25 +238,18 @@ type designRead struct {
 	drawnNets  map[string]bool
 }
 
-// read resolves the design's tiers, composes its overlay, and builds the model and fact base once,
-// with the board tier only when one of qs reads it (agni issue 987).
-func (s *QueryService) read(ctx context.Context, u, boardURI artifact.URI, source string, overlay *webapi.OverlayConfig, asNamed bool, qs ...query.Query) (*designRead, error) {
-	// The overlay is composed BEFORE the read because its lexicon has to reach the READ (see
-	// readopt.go), which decides what `net.rail`, `net.feedback` and their derivatives answer (WS3-113).
-	// Its RULES half is ignored and no base convention is passed, since a query composes no catalog
-	// and a conventions file carrying rules is still valid for a query.
-	ov, err := s.projects.Overlay(ctx, u, overlay, "")
-	if err != nil {
-		return nil, err
-	}
+// read builds the snapshot's model and fact base once, with the board tier only when one of qs reads
+// it (agni issue 987).
+func (s *QueryService) read(ctx context.Context, snap Snap, qs ...query.Query) (*designRead, error) {
+	// The snapshot's overlay carries the lexicon the READ was stamped with (see readopt.go), which
+	// decides what `net.rail`, `net.feedback` and their derivatives answer (WS3-113). A query composes
+	// no catalog, so the overlay's rules are not read here.
+	//
 	// One FULL Model (netlist, board, params; WS9-048) backs the board.* and param.* relations and
-	// the per-cell locate classifier (WS9-039). Tiers come from the design's declaration, so a query
-	// addressed at a schematic companion counts the netlist's 1617 nets rather than the drawing's
-	// 4572 per-sheet segments (agni issue 656).
-	nu, bu, gu, err := s.projects.TierURIs(ctx, u, boardURI, asNamed)
-	if err != nil {
-		return nil, err
-	}
+	// the per-cell locate classifier (WS9-039). The snapshot's tiers come from the design's
+	// declaration, so a query of a schematic companion counts the netlist's 1617 nets rather than the
+	// drawing's 4572 per-sheet segments (agni issue 656).
+	u, ov, nu, bu, gu, source := snap.Design, snap.Overlay, snap.Netlist, snap.Board, snap.Geometry, snap.Design.String()
 	// The project's own library joins the vocabulary here, so every query surface that reads through
 	// this function sees it (agni issue 773). A library that does not compose fails the read rather
 	// than answering without it.
@@ -595,7 +581,7 @@ func entityKind(s string) string {
 // A request naming a path answers that one place in the namespace tree instead (describeEntry), and
 // an unknown path is ErrInvalidArgument carrying the engine's suggestion.
 func (s *QueryService) ListRelations(ctx context.Context, req *webapi.ListRelationsRequest) (*webapi.ListRelationsResponse, error) {
-	reg, err := s.catalogRegistry(ctx, req.GetUri(), req.GetOverlay())
+	reg, err := s.catalogRegistry(ctx, req.GetSnapshot(), req.GetOverlay())
 	if err != nil {
 		return nil, err
 	}
@@ -651,26 +637,25 @@ func portableCites(cites []string, designPath string) []string {
 	return out
 }
 
-// catalogRegistry is the vocabulary a catalog request describes: the shipped one, or with a design
-// named, that design's project's library joined to it, resolved exactly as a query on that design
-// would resolve it.
-func (s *QueryService) catalogRegistry(ctx context.Context, uri string, overlay *webapi.OverlayConfig) (*facts.Registry, error) {
-	u, err := optionalArtifactURI(uri)
+// catalogRegistry is the vocabulary a catalog request describes: the shipped one with overlay's
+// libraries, or with a snapshot named, its project's library and its own joined to it, exactly as a
+// query of that snapshot reads.
+func (s *QueryService) catalogRegistry(ctx context.Context, name string, overlay *webapi.OverlayConfig) (*facts.Registry, error) {
+	_, snap, ok, err := s.projects.OptionalSnapshot(ctx, name)
 	if err != nil {
 		return nil, err
 	}
-	if u.IsZero() {
+	if ok && overlay != nil {
+		return nil, fmt.Errorf("%w: ListRelations takes a snapshot or an overlay, not both; the snapshot's config is its vocabulary", ErrInvalidArgument)
+	}
+	if !ok {
 		ov, err := ComposeOverlay(overlay, "")
 		if err != nil {
 			return nil, err
 		}
 		return ov.Registry()
 	}
-	ov, err := s.projects.Overlay(ctx, u, overlay, "")
-	if err != nil {
-		return nil, err
-	}
-	return ov.Registry()
+	return snap.Overlay.Registry()
 }
 
 // describeEntry is one place in the namespace tree as the wire carries it, with a module's direct

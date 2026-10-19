@@ -92,6 +92,7 @@ type ReviewService struct {
 // store may be nil, which disables the review resource methods; pass a MemReviewStore for a caller
 // that wants runs without persisting them, as `agni review` does.
 func NewReviewService(loader ReviewLoader, store ReviewStore, catalog *check.Catalog, byName map[string][]profiles.Profile, specs param.ParamProvider, env ReviewEnv, baseConvention string, projects *ProjectResolver) *ReviewService {
+	projects = orEmptyResolver(projects)
 	return &ReviewService{loader: loader, store: store, catalog: catalog, byName: byName, specs: specs, env: env, baseConvention: baseConvention, projects: projects}
 }
 
@@ -119,14 +120,14 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err != nil {
 		return nil, err
 	}
-	designURI, err := ParseArtifactURI(req.GetDesignUri())
+	if req.GetSnapshot() == "" {
+		return nil, fmt.Errorf("%w: CreateReview needs a snapshot", ErrInvalidArgument)
+	}
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	boardURI, err := optionalArtifactURI(req.GetBoardUri())
-	if err != nil {
-		return nil, err
-	}
+	designURI := snap.Design
 	// A validate_only run is never stored, so it needs no store, and a server started without
 	// --review-store still answers it.
 	var store ReviewStore
@@ -135,9 +136,6 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			return nil, err
 		}
 	}
-	if req.GetDesignUri() == "" {
-		return nil, fmt.Errorf("%w: CreateReview needs a design_ref", ErrInvalidArgument)
-	}
 	if req.GetManifest() == nil {
 		return nil, fmt.Errorf("%w: CreateReview needs a manifest (resolve a stored one with GetReviewManifest)", ErrInvalidArgument)
 	}
@@ -145,13 +143,9 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err := review.ValidateStructure(man); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
-	// Per-request overlay config (WS3-102), composed BEFORE the design is read, because net roles
-	// are resolved at ingestion and its lexicon half has to reach the read. An empty overlay leaves the
-	// service's own catalog and the default vocabulary in place.
-	ov, err := s.projects.Overlay(ctx, designURI, req.GetOverlay(), s.baseConvention)
-	if err != nil {
-		return nil, err
-	}
+	// The snapshot's overlay was composed when it was ingested, before the design was read, because
+	// net roles are resolved at ingestion and its lexicon has to reach the read (WS3-102).
+	ov := snap.Overlay
 	// The manifest's inline queries compile against the vocabulary the review runs with, the design's
 	// project library and any library sent with the request included (agni issues 779, 788), so a query
 	// naming a house member validates here exactly as it will run.
@@ -162,12 +156,9 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err := review.Validate(man, review.WithVocabulary(vocab)); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
-	// Tiers from the design's declaration, the same call CheckDesign makes, so a review in the browser
-	// scores against the board the design declares, as the CLI's does (agni issues 646, 656; C32).
-	netlistURI, boardURI, _, err := s.projects.TierURIs(ctx, designURI, boardURI, req.GetAsNamed())
-	if err != nil {
-		return nil, err
-	}
+	// The snapshot's tiers, the ones CheckDesign reads, so a review in the browser scores against the
+	// board the design declares, as the CLI's does (agni issues 646, 656; C32).
+	netlistURI, boardURI := snap.Netlist, snap.Board
 	// The budget reaches every checklist query through ctx (agni issue 792); an item past it reads
 	// inconclusive, naming the budget, and the others still answer.
 	rep, cat, unexpanded, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
@@ -199,7 +190,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			Params:      s.specs != nil,
 			Profiles:    s.env.Profiles,
 			Intent:      s.env.Intent,
-			Conventions: req.GetOverlay().GetConfig().GetConventions().GetName(),
+			Conventions: snap.Config.GetConfig().GetConventions().GetName(),
 		}), req.GetRatifiedFloor()),
 		// The catalog snapshot is the one composed for THIS run, overlay included, not the service's base.
 		Catalog:          results.RuleRecords(cat.Rules()),
@@ -223,11 +214,11 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 // so it serves a host with no filesystem as CreateReview does. See ProjectResolver.Checklists for what
 // an absent project and an empty one each answer.
 func (s *ReviewService) ListChecklists(ctx context.Context, req *webapi.ListChecklistsRequest) (*webapi.ListChecklistsResponse, error) {
-	u, err := ParseArtifactURI(req.GetDesignUri())
+	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
-	lists, project, err := s.projects.Checklists(ctx, u)
+	lists, project, err := s.projects.Checklists(ctx, snap.Design)
 	if err != nil {
 		return nil, err
 	}

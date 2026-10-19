@@ -6,6 +6,7 @@ import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { SheetFormat, TraceSchema, TraceOutcome } from "./gen/agni/v1/webapi/design_pb.js";
 import { stubQueryView } from "./testviews.js";
 import type { TraceState } from "./trace.js";
+import { fakeSnapshots, snapName } from "./testsnaps.js";
 
 // harness builds a presenter with only what the trace path needs; every other collaborator is a stub
 // sufficient for openFile to complete. wireTrace off is the unwired-panel case, which must be a
@@ -25,7 +26,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
         { name: "VCC", stubs: [], stubsElided: 0, busLike: true, sheetIds: [] },
       ],
     });
-  const traceDesign = vi.fn(async (_req: { uri: string; from: unknown; to: unknown; hops?: number }) => {
+  const traceDesign = vi.fn(async (_req: { snapshot: string; from: unknown; to: unknown; hops?: number }) => {
     if (opts.fail) throw opts.fail;
     return { trace: answer };
   });
@@ -78,7 +79,7 @@ function harness(opts: { wireTrace?: boolean; trace?: ReturnType<typeof create<t
     query: stubQueryView(),
     trace: wireTrace ? { setState: onTrace } : undefined,
     location: opts.onLocation,
-  });
+  }, undefined, undefined, undefined, undefined, fakeSnapshots());
   return { presenter, onTrace, traceDesign, canvas, getSheet: client.getSheet };
 }
 
@@ -93,7 +94,7 @@ describe("trace presenter", () => {
     await h.presenter.openFile("m", "proj/board.edn");
     await h.presenter.runTrace("U1.3", "J1.1");
     expect(h.traceDesign).toHaveBeenCalledWith({
-      uri: artifactUri("m", "proj/board.edn"),
+      snapshot: snapName(artifactUri("m", "proj/board.edn")),
       from: { refDes: "U1", pin: "3" },
       to: { refDes: "J1", pin: "1" },
       hops: 0,
@@ -160,7 +161,7 @@ describe("a trace arriving in the URL", () => {
       q: "",
     });
     expect(h.traceDesign).toHaveBeenCalledWith({
-      uri: artifactUri("m", "proj/board.edn"),
+      snapshot: snapName(artifactUri("m", "proj/board.edn")),
       from: { refDes: "U1", pin: "3" },
       to: { refDes: "J1", pin: "1" },
       hops: 0,

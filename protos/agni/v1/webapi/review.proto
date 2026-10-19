@@ -150,39 +150,21 @@ message ReviewSummary {
 }
 
 message CreateReviewRequest {
+  // snapshot names the design this run is about, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 10;
   // parent is the project the run belongs to, "projects/{project}", empty when the design resolves
   // to none. It is the CALLER's answer rather than something derived here, because the caller has
   // already resolved the design to decide which config to send and re-deriving it in the service
   // would be a second resolution that could disagree with the first.
   string parent = 6;
-  // design_uri is the one design this run is about.
-  //
-  // A URI's authority is a key in a server-defined namespace that the injected Loader resolves, NOT
-  // a host path. Nothing above the Loader may treat it as one.
-  string design_uri = 1;
-  // board_uri attaches a board-geometry export (.kicad_pcb / IPC-2581) so board-tier DRC items
-  // resolve pass/fail rather than not-applicable (WS3-089). It WINS over a board the design declares.
-  // Empty means the declared board when there is one, and otherwise none, in which case a netlist
-  // entry reads its board items not-applicable (agni issue 646).
-  string board_uri = 2;
   // ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
   // (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
   double ratified_floor = 3;
-  // overlay carries the per-request rule-catalog configuration (WS3-102); empty keeps the catalog the
-  // service was constructed with.
-  OverlayConfig overlay = 4;
   // manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
   // that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
   // held to exactly the same rules as one read from a file. It is also stored with the run, so the
   // archived document scores against the checklist it actually saw.
   agni.v1.checks.ReviewManifest manifest = 5;
-  // as_named reads exactly the artifact design_uri names, even when the enclosing design declares it a
-  // companion view of a different entry. Without it, the design's tiers are resolved the way every
-  // other analysis request resolves them: analysis from the entry, copper from a declared board.
-  //
-  // It exists because the CLI's `review` is a client of this service and carries the same flag, so
-  // resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
-  bool as_named = 7;
   // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
   // a fact base counts, candidate comparisons, each row a generator emits and the connections a
   // circuit walk examines. It can only LOWER the
@@ -192,6 +174,8 @@ message CreateReviewRequest {
   // with no name and its document with no created_at. It needs no review store, which is how the CLI
   // asks a server for a review (`agni review --remote`) without leaving a run in that server's list.
   bool validate_only = 9;
+  reserved 1, 2, 4, 7;
+  reserved "design_uri", "board_uri", "overlay", "as_named";
 }
 
 message GetReviewRequest {
@@ -227,8 +211,7 @@ message DeleteReviewRequest {
 }
 
 message GetReviewManifestRequest {
-  // uri names the stored checklist, with the same semantics as CreateReviewRequest.board_uri: a key
-  // the Loader resolves, never a host path.
+  // uri names the stored checklist, a key the Loader resolves, never a host path.
   string uri = 1;
 }
 
@@ -242,9 +225,10 @@ message GetReviewManifestResponse {
 // when a stored run had to embed the checklist it scored.
 
 message ListChecklistsRequest {
-  // design_uri is the design whose project's checklists are listed. A URI's authority is a key the
-  // injected Loader resolves, never a host path.
-  string design_uri = 1;
+  // snapshot names the design whose checklists to list, "snapshots/{snapshot}" (agni issue 1061).
+  string snapshot = 2;
+  reserved 1;
+  reserved "design_uri";
 }
 
 message ListChecklistsResponse {
