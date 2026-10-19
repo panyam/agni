@@ -91,6 +91,17 @@ func fieldValue(f facts.Row, fld facts.Field) Value {
 
 func ftoa(f float64) string { return strconv.FormatFloat(f, 'g', -1, 64) }
 
+// Work is what evaluation over b has cost in the units a work budget charges: the engine's own
+// count (Base.Work) plus what the circuit walks charged for their own steps (facts.Env.Spend), which
+// the engine counts against a budget but reports apart from its work.
+func Work(b *Base) int64 {
+	w := b.Work()
+	if env := facts.EnvOf(b.Source()); env != nil {
+		w += env.Spent()
+	}
+	return w
+}
+
 // NewBase projects a Model into its fact base over the process-default relation vocabulary. Use
 // NewBaseFrom to supply one explicitly.
 //

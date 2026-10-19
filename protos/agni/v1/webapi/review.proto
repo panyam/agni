@@ -184,7 +184,8 @@ message CreateReviewRequest {
   // resolving here without it would override the CLI's own opt-out (agni issues 646, 656).
   bool as_named = 7;
   // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-  // a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+  // a fact base counts, candidate comparisons, each row a generator emits and the connections a
+  // circuit walk examines. It can only LOWER the
   // deployment's own budget, never raise it, and zero leaves that budget as it is. A checklist item whose query passes its budget reads inconclusive, naming the budget, and the other items still answer.
   int64 work_budget = 8;
   // validate_only scores the run and returns it without storing it (AIP-163), so the Review comes back

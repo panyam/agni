@@ -86,7 +86,8 @@ export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
 
   /**
    * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-   * a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+   * a fact base counts, candidate comparisons, each row a generator emits and the connections a
+   * circuit walk examines. It can only LOWER the
    * deployment's own budget, never raise it, and zero leaves that budget as it is. A query past its budget fails with RESOURCE_EXHAUSTED, naming the budget.
    *
    * @generated from field: int64 work_budget = 6;
@@ -877,7 +878,8 @@ export type RunQueriesRequest = Message<"agni.v1.webapi.RunQueriesRequest"> & {
 
   /**
    * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-   * a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+   * a fact base counts, candidate comparisons, each row a generator emits and the connections a
+   * circuit walk examines. It can only LOWER the
    * deployment's own budget, never raise it, and zero leaves that budget as it is. Each query in the set has the whole budget; one past it reports that in its own result.
    *
    * @generated from field: int64 work_budget = 6;

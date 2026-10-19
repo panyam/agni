@@ -260,7 +260,8 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
 
   /**
    * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-   * a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+   * a fact base counts, candidate comparisons, each row a generator emits and the connections a
+   * circuit walk examines. It can only LOWER the
    * deployment's own budget, never raise it, and zero leaves that budget as it is. A checklist item whose query passes its budget reads inconclusive, naming the budget, and the other items still answer.
    *
    * @generated from field: int64 work_budget = 8;

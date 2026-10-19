@@ -182,6 +182,17 @@ name matches), `?` is one character, and `[...]` is a character class, so `DATA[
 with the bracket inside a class, `DATA[[]1:0]`. Before jaala v0.1.8 a `[` was literal, so a pattern
 written for a bracketed name before then now means something else.
 
+The string functions build a name as well as test one. `str.concat`, `str.replace`, `str.lower`,
+`str.upper`, `str.capitalize` and `str.split` each put their result last, so they read as an
+expression (`?l = str.replace(?h, "CANH", "CANL")`). `str.concat` runs from any two of its three
+arguments. Given the whole name and its tail it binds the head, and holds for nothing when the name
+does not end that way. That pairs the two halves of a differential pair by the base name they share:
+
+{{ agniRun "content/guide/runs/query-entity-pair-by-concat.yaml" }}
+
+`str.split` gives one row per part, or only the part at an index you bind, where a negative index
+counts from the end.
+
 The cases only this relation reaches are the ones worth finding during a review. A part connected to
 nothing:
 

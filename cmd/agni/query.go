@@ -241,7 +241,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so a net or part column puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
 	c.Flags().StringArrayVar(&bindArgs, "bind", nil, "give a query variable a value, as name=value (repeatable): `--bind n=GND` asks the query with ?n bound to GND, exactly as if \"GND\" were written in its place. A value that parses as a number binds a number; quote it (n=\"3\") to bind text. A name the query does not use is an error")
-	c.Flags().Int64Var(&budget, "budget", 0, "stop a query past this much work, in the units a fact base counts (comparisons plus generator rows), as `agni serve --query-budget` does. 0, the default, sets none")
+	c.Flags().Int64Var(&budget, "budget", 0, "stop a query past this much work, in the units a fact base counts (comparisons, generator rows and the connections a circuit walk examines), as `agni serve --query-budget` does. 0, the default, sets none")
 	c.Flags().StringArrayVar(&libDirs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the query, beside any the design's project carries. Repeatable")
 	remoteFlag(c, &remoteURL)
 	serverFlag(c, &serverVal)

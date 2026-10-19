@@ -316,6 +316,10 @@ message DatalogBodyAggregate {
 message DatalogAtom {
   string relation = 1;
   repeated DatalogTerm args = 2;
+  // fact is the variable `edge(?a, ?b) as ?r` binds to the fact the atom matched, without its leading
+  // "?" (panyam/jaala#279). Empty when the atom binds none. Only a positive atom over a fact relation
+  // may set it, and the engine refuses it anywhere else.
+  string fact = 3;
 }
 
 // DatalogCompare is a built-in predicate over two terms, evaluated once both are bound. Numeric when

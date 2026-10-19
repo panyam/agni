@@ -1,0 +1,5 @@
+# str.concat run backwards: given a net's name and a suffix, it binds the head, so the two halves of a
+# pair named NAME_H and NAME_L meet on the base name they share.
+fixture: examples/tutorial-project
+script: |
+  agni query designs/gateway/gateway.edn 'entity(?h, "net"), str.concat(?base, "H", ?h), str.concat(?base, "L", ?l), entity(?l, "net") => ?base, ?h, ?l'

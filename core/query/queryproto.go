@@ -229,7 +229,7 @@ func compareFromProto(p *checkspb.DatalogCompare) (Compare, error) {
 }
 
 func atomProto(a Atom) *checkspb.DatalogAtom {
-	out := &checkspb.DatalogAtom{Relation: a.Relation}
+	out := &checkspb.DatalogAtom{Relation: a.Relation, Fact: string(a.Fact)}
 	for _, t := range a.Args {
 		out.Args = append(out.Args, qtermProto(t))
 	}
@@ -237,7 +237,7 @@ func atomProto(a Atom) *checkspb.DatalogAtom {
 }
 
 func atomFromProto(p *checkspb.DatalogAtom) (Atom, error) {
-	a := Atom{Relation: p.GetRelation()}
+	a := Atom{Relation: p.GetRelation(), Fact: Var(p.GetFact())}
 	for _, pt := range p.GetArgs() {
 		t, err := qtermFromProto(pt)
 		if err != nil {

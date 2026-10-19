@@ -135,6 +135,9 @@ func walk(ctx context.Context, rel string, src ns.Source, args []ns.Arg, third f
 		}
 		cites[0] = rel + " from " + name
 		r := m.Reach(start, topologyReachHops)
+		if err := env.Spend(ctx, reachCost(r)); err != nil {
+			return err
+		}
 		for _, dst := range r.Nets {
 			vals = append(vals[:0], ns.Value{S: name}, ns.Value{S: dst.Name})
 			if v, ok := third(r, dst); ok {
@@ -146,4 +149,15 @@ func walk(ctx context.Context, rel string, src ns.Source, args []ns.Arg, third f
 		}
 	}
 	return nil
+}
+
+// reachCost is what one walk examined, the connections on every net it reached. The engine charges a
+// generator per row it emits, and a walk reads each reached net's connections to find the next
+// crossing, so without this a walk over wide nets costs a budget little more than its answer does.
+func reachCost(r check.Reach) int64 {
+	var n int64
+	for _, net := range r.Nets {
+		n += int64(len(net.Connections))
+	}
+	return n
 }

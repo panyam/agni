@@ -96,7 +96,9 @@ An unbound `from` walks from every net on the board. agni's evaluator plans each
 walk starts from whatever binds `from` first, whichever order the body is written in; a shipped rule
 that opened with the walk once took `agni check` from thirteen seconds to not finishing at all, before
 the planner existed (WS3-114). When nothing in the body binds `from`, the full walk is what the query
-asked for, and on a large board it costs accordingly.
+asked for, and on a large board it costs accordingly. Each walk charges a query's work budget
+for the connections it examines as well as for the rows it emits, so a budgeted full walk stops
+partway through instead of after the last start net.
 
 ### Where this is going
 
