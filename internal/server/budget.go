@@ -13,7 +13,7 @@ import (
 
 // Budget is the work budget a server applies to every query it evaluates, and how it reports the
 // queries that cost the most (agni issue 792). Work is the unit a fact base counts: candidate
-// comparisons plus each row a generator emits.
+// comparisons, each row a generator emits, and the connections a circuit walk examines.
 type Budget struct {
 	// Enforce caps each evaluation's work. Zero enforces nothing, so a deployment can watch what its
 	// queries cost (Warn) before it chooses a cap.

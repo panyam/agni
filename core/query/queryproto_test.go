@@ -28,7 +28,7 @@ func fullQuery() Query {
 		Rules: []Rule{{
 			Head: Atom{Relation: "big_net", Args: []Term{{Var: "n"}}},
 			Body: Body{Literals: []Literal{
-				{Pos: &Atom{Relation: "net.pin_count", Args: []Term{{Var: "n"}, {Var: "v"}}}},
+				{Pos: &Atom{Relation: "net.pin_count", Args: []Term{{Var: "n"}, {Var: "v"}}, Fact: "f"}},
 				{Neg: &Atom{Relation: "component.class", Args: []Term{
 					{Var: "c"}, {Const: &Value{S: "test_point"}},
 				}}},
@@ -111,7 +111,7 @@ func TestQueryProtoKnowsEveryEngineField(t *testing.T) {
 		reflect.TypeFor[Body]():          {"Literals"},
 		reflect.TypeFor[Literal]():       {"Pos", "Neg", "Compare", "Agg"},
 		reflect.TypeFor[BodyAggregate](): {"Result", "Agg", "Body"},
-		reflect.TypeFor[Atom]():          {"Relation", "Args"},
+		reflect.TypeFor[Atom]():          {"Relation", "Args", "Fact"},
 		reflect.TypeFor[Compare]():       {"Left", "Op", "Right"},
 		reflect.TypeFor[Term]():          {"Var", "Const", "Agg", "Expr"},
 		reflect.TypeFor[Expr]():          {"Op", "Func", "Args"},

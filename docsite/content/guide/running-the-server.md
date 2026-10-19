@@ -344,8 +344,8 @@ This line is from the tutorial project's board with `--query-budget-warn 100`:
 query cost: /agni.v1.webapi.QueryService/RunQuery spent 394 work units, over the 100 warning threshold; no budget is enforced, and --query-budget 3940 would allow ten times this cost: component.net(?a, ?n), component.net(?b, ?n) => ?a, ?b
 ```
 
-One unit is one tuple a rule derives or one fact a lookup reads, so the number grows with the
-board. On a public 1,123-part sample board the heaviest shipped example query cost about one
+One unit is one tuple a rule derives or one fact a lookup reads, and a circuit walk such as
+`net.reaches` adds one for each connection it examines, so the number grows with the board. On a public 1,123-part sample board the heaviest shipped example query cost about one
 million units. `agni query --format json` and the `RunQuery` response report what an answer cost
 as `work`. A served request also stops when its caller goes away, which returns `canceled` rather
 than an error about the request.

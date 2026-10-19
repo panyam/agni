@@ -295,12 +295,14 @@ class DatalogBodyAggregate(_message.Message):
     def __init__(self, result: _Optional[str] = ..., agg: _Optional[_Union[DatalogAggregate, _Mapping]] = ..., body: _Optional[_Union[DatalogBody, _Mapping]] = ...) -> None: ...
 
 class DatalogAtom(_message.Message):
-    __slots__ = ("relation", "args")
+    __slots__ = ("relation", "args", "fact")
     RELATION_FIELD_NUMBER: _ClassVar[int]
     ARGS_FIELD_NUMBER: _ClassVar[int]
+    FACT_FIELD_NUMBER: _ClassVar[int]
     relation: str
     args: _containers.RepeatedCompositeFieldContainer[DatalogTerm]
-    def __init__(self, relation: _Optional[str] = ..., args: _Optional[_Iterable[_Union[DatalogTerm, _Mapping]]] = ...) -> None: ...
+    fact: str
+    def __init__(self, relation: _Optional[str] = ..., args: _Optional[_Iterable[_Union[DatalogTerm, _Mapping]]] = ..., fact: _Optional[str] = ...) -> None: ...
 
 class DatalogCompare(_message.Message):
     __slots__ = ("left", "op", "right")

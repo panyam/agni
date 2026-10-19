@@ -15,8 +15,8 @@ type budgetKey struct{}
 
 // WithBudget returns ctx carrying a work budget for every query evaluated under it (agni issue 792):
 // a served query's own, and each query a check or review's query-backed rules evaluate. Work is what
-// Base.Work counts, candidate comparisons plus each row a generator emits. Zero or less carries no
-// budget, so an unbudgeted context stays unbudgeted.
+// query.Work counts, candidate comparisons, each row a generator emits, and the connections a circuit
+// walk examines. Zero or less carries no budget, so an unbudgeted context stays unbudgeted.
 //
 // A budget applies per evaluation, so each query in a set, and each rule in a run, has the whole of
 // it rather than sharing one.

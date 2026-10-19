@@ -113,7 +113,8 @@ type CheckDesignRequest struct {
 	// how two views of one design are checked against each other.
 	AsNamed bool `protobuf:"varint,5,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
 	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-	// a fact base counts, candidate comparisons plus each row a generator emits. It can only LOWER the
+	// a fact base counts, candidate comparisons, each row a generator emits and the connections a
+	// circuit walk examines. It can only LOWER the
 	// deployment's own budget, never raise it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself inconclusive, naming the budget, and the other rules still answer.
 	WorkBudget    int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	unknownFields protoimpl.UnknownFields

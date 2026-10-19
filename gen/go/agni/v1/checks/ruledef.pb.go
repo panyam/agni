@@ -1960,9 +1960,13 @@ func (x *DatalogBodyAggregate) GetBody() *DatalogBody {
 // DatalogAtom applies a relation to argument terms. The relation is a fact relation, a built-in, or a
 // relation the program's own rules define.
 type DatalogAtom struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Relation      string                 `protobuf:"bytes,1,opt,name=relation,proto3" json:"relation,omitempty"`
-	Args          []*DatalogTerm         `protobuf:"bytes,2,rep,name=args,proto3" json:"args,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Relation string                 `protobuf:"bytes,1,opt,name=relation,proto3" json:"relation,omitempty"`
+	Args     []*DatalogTerm         `protobuf:"bytes,2,rep,name=args,proto3" json:"args,omitempty"`
+	// fact is the variable `edge(?a, ?b) as ?r` binds to the fact the atom matched, without its leading
+	// "?" (panyam/jaala#279). Empty when the atom binds none. Only a positive atom over a fact relation
+	// may set it, and the engine refuses it anywhere else.
+	Fact          string `protobuf:"bytes,3,opt,name=fact,proto3" json:"fact,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2009,6 +2013,13 @@ func (x *DatalogAtom) GetArgs() []*DatalogTerm {
 		return x.Args
 	}
 	return nil
+}
+
+func (x *DatalogAtom) GetFact() string {
+	if x != nil {
+		return x.Fact
+	}
+	return ""
 }
 
 // DatalogCompare is a built-in predicate over two terms, evaluated once both are bound. Numeric when
@@ -2891,10 +2902,11 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x14DatalogBodyAggregate\x12\x16\n" +
 	"\x06result\x18\x01 \x01(\tR\x06result\x122\n" +
 	"\x03agg\x18\x02 \x01(\v2 .agni.v1.checks.DatalogAggregateR\x03agg\x12/\n" +
-	"\x04body\x18\x03 \x01(\v2\x1b.agni.v1.checks.DatalogBodyR\x04body\"Z\n" +
+	"\x04body\x18\x03 \x01(\v2\x1b.agni.v1.checks.DatalogBodyR\x04body\"n\n" +
 	"\vDatalogAtom\x12\x1a\n" +
 	"\brelation\x18\x01 \x01(\tR\brelation\x12/\n" +
-	"\x04args\x18\x02 \x03(\v2\x1b.agni.v1.checks.DatalogTermR\x04args\"\x84\x01\n" +
+	"\x04args\x18\x02 \x03(\v2\x1b.agni.v1.checks.DatalogTermR\x04args\x12\x12\n" +
+	"\x04fact\x18\x03 \x01(\tR\x04fact\"\x84\x01\n" +
 	"\x0eDatalogCompare\x12/\n" +
 	"\x04left\x18\x01 \x01(\v2\x1b.agni.v1.checks.DatalogTermR\x04left\x12\x0e\n" +
 	"\x02op\x18\x02 \x01(\tR\x02op\x121\n" +

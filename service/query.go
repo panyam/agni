@@ -314,7 +314,7 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind map[string]query.Value, omitLocations bool) (*webapi.RunQueryResponse, error) {
 	// Work is measured on this read's own fact base, so it is this query's alone, and reported so a
 	// deployment can see what its queries cost before it sets a budget (agni issue 792).
-	before := d.base.Work()
+	before := query.Work(d.base)
 	opts := query.EvalOptions(ctx)
 	if len(bind) > 0 {
 		opts = append(opts, query.Bind(bind))
@@ -341,7 +341,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	if err != nil {
 		return nil, err
 	}
-	work := d.base.Work() - before
+	work := query.Work(d.base) - before
 	cols := q.Columns()
 	kinds, kindVars, refTerms := columnKindsIn(d.reg, q)
 	// Query and Source come from the request rather than being re-derived, so a saved response
