@@ -171,7 +171,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		return nil, err
 	}
 	ov, nu, bu, gu := snap.Overlay, snap.Netlist, snap.Board, snap.Geometry
-	b, err := buildModelEntry(ctx, s.loader, nu, bu, ov, s.specs, ReadBoard)
+	b, err := buildModelEntry(ctx, LoaderOr(snap, s.loader), nu, bu, ov, s.specs, ReadBoard)
 	if err != nil {
 		return nil, err
 	}
@@ -207,7 +207,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		// reading the design again (agni issue 717).
 		UnexpandedHierarchy: m.UnexpandedHierarchy(),
 	}
-	g := BuildGeometry(ctx, s.loader, gu, ov.ReadOptions()...)
+	g := BuildGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...)
 	endLocate := timing.Begin(ctx, "locate")
 	AnnotateSheets(resp.Findings, g, m)
 	endLocate()
@@ -223,7 +223,7 @@ func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpec
 	if err != nil {
 		return nil, err
 	}
-	e, err := s.loader.Expectations(ctx, snap.Design)
+	e, err := LoaderOr(snap, s.loader).Expectations(ctx, snap.Design)
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
@@ -247,7 +247,7 @@ func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetCo
 	}
 	ov := snap.Overlay
 	specs := ov.SpecsOver(s.specs)
-	m, err := BuildModelTier(ctx, s.loader, snap.Netlist, artifact.URI{}, specs, SkipBoard, ov.ReadOptions()...)
+	m, err := BuildModelTier(ctx, LoaderOr(snap, s.loader), snap.Netlist, artifact.URI{}, specs, SkipBoard, ov.ReadOptions()...)
 	if err != nil {
 		return nil, err
 	}

@@ -69,7 +69,7 @@ func (x SnapshotUnavailable_Reason) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use SnapshotUnavailable_Reason.Descriptor instead.
 func (SnapshotUnavailable_Reason) EnumDescriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{9, 0}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{13, 0}
 }
 
 // Snapshot is one loaded design. The fields up to overlay are its DEFINITION, which a client sets on
@@ -105,7 +105,14 @@ type Snapshot struct {
 	// that no longer matches its netlist says so. Absent until two tiers have been read. Output only.
 	Consistency *SnapshotConsistency `protobuf:"bytes,9,opt,name=consistency,proto3" json:"consistency,omitempty"`
 	// project is the project the design belongs to, "projects/{project}", empty for none. Output only.
-	Project       string `protobuf:"bytes,10,opt,name=project,proto3" json:"project,omitempty"`
+	Project string `protobuf:"bytes,10,opt,name=project,proto3" json:"project,omitempty"`
+	// files is the design's files when the client sends them rather than naming files the host
+	// serves: each file's path within uri's mount, its SHA-256 and its size. With files set, uri's
+	// mount is read from these files alone, so a design, its companions, its project's descriptor and
+	// config directories all have to be listed; ListDesignFiles names that set. Its contents are sent
+	// with UploadBlobs. Paths are the client's own, so every locator an answer records reads as it
+	// would on the client (C28). Part of the definition.
+	Files         []*SnapshotFile `protobuf:"bytes,11,rep,name=files,proto3" json:"files,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -210,6 +217,75 @@ func (x *Snapshot) GetProject() string {
 	return ""
 }
 
+func (x *Snapshot) GetFiles() []*SnapshotFile {
+	if x != nil {
+		return x.Files
+	}
+	return nil
+}
+
+// SnapshotFile is one file of a design a client sends, named within its mount.
+type SnapshotFile struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	Path  string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
+	// sha256 is "sha256:<hex>", as DesignFile.sha256 is.
+	Sha256        string `protobuf:"bytes,2,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	Size          int64  `protobuf:"varint,3,opt,name=size,proto3" json:"size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SnapshotFile) Reset() {
+	*x = SnapshotFile{}
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SnapshotFile) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SnapshotFile) ProtoMessage() {}
+
+func (x *SnapshotFile) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SnapshotFile.ProtoReflect.Descriptor instead.
+func (*SnapshotFile) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *SnapshotFile) GetPath() string {
+	if x != nil {
+		return x.Path
+	}
+	return ""
+}
+
+func (x *SnapshotFile) GetSha256() string {
+	if x != nil {
+		return x.Sha256
+	}
+	return ""
+}
+
+func (x *SnapshotFile) GetSize() int64 {
+	if x != nil {
+		return x.Size
+	}
+	return 0
+}
+
 // SnapshotTiers are the artifacts a snapshot's definition resolved to (C32's ResolveSources).
 type SnapshotTiers struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -230,7 +306,7 @@ type SnapshotTiers struct {
 
 func (x *SnapshotTiers) Reset() {
 	*x = SnapshotTiers{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -242,7 +318,7 @@ func (x *SnapshotTiers) String() string {
 func (*SnapshotTiers) ProtoMessage() {}
 
 func (x *SnapshotTiers) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[1]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -255,7 +331,7 @@ func (x *SnapshotTiers) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SnapshotTiers.ProtoReflect.Descriptor instead.
 func (*SnapshotTiers) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{1}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *SnapshotTiers) GetNetlistUri() string {
@@ -310,7 +386,7 @@ type SnapshotConsistency struct {
 
 func (x *SnapshotConsistency) Reset() {
 	*x = SnapshotConsistency{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -322,7 +398,7 @@ func (x *SnapshotConsistency) String() string {
 func (*SnapshotConsistency) ProtoMessage() {}
 
 func (x *SnapshotConsistency) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -335,7 +411,7 @@ func (x *SnapshotConsistency) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SnapshotConsistency.ProtoReflect.Descriptor instead.
 func (*SnapshotConsistency) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *SnapshotConsistency) GetBoardOnly() []string {
@@ -386,7 +462,7 @@ type IngestRequest struct {
 
 func (x *IngestRequest) Reset() {
 	*x = IngestRequest{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -398,7 +474,7 @@ func (x *IngestRequest) String() string {
 func (*IngestRequest) ProtoMessage() {}
 
 func (x *IngestRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -411,7 +487,7 @@ func (x *IngestRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use IngestRequest.ProtoReflect.Descriptor instead.
 func (*IngestRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *IngestRequest) GetSnapshot() *Snapshot {
@@ -444,7 +520,7 @@ type GetSnapshotRequest struct {
 
 func (x *GetSnapshotRequest) Reset() {
 	*x = GetSnapshotRequest{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -456,7 +532,7 @@ func (x *GetSnapshotRequest) String() string {
 func (*GetSnapshotRequest) ProtoMessage() {}
 
 func (x *GetSnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -469,7 +545,7 @@ func (x *GetSnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetSnapshotRequest.ProtoReflect.Descriptor instead.
 func (*GetSnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetSnapshotRequest) GetName() string {
@@ -492,7 +568,7 @@ type ListSnapshotsRequest struct {
 
 func (x *ListSnapshotsRequest) Reset() {
 	*x = ListSnapshotsRequest{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -504,7 +580,7 @@ func (x *ListSnapshotsRequest) String() string {
 func (*ListSnapshotsRequest) ProtoMessage() {}
 
 func (x *ListSnapshotsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -517,7 +593,7 @@ func (x *ListSnapshotsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSnapshotsRequest.ProtoReflect.Descriptor instead.
 func (*ListSnapshotsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *ListSnapshotsRequest) GetPageSize() int32 {
@@ -552,7 +628,7 @@ type ListSnapshotsResponse struct {
 
 func (x *ListSnapshotsResponse) Reset() {
 	*x = ListSnapshotsResponse{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -564,7 +640,7 @@ func (x *ListSnapshotsResponse) String() string {
 func (*ListSnapshotsResponse) ProtoMessage() {}
 
 func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -577,7 +653,7 @@ func (x *ListSnapshotsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListSnapshotsResponse.ProtoReflect.Descriptor instead.
 func (*ListSnapshotsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListSnapshotsResponse) GetSnapshots() []*Snapshot {
@@ -599,7 +675,7 @@ type UpdateSnapshotRequest struct {
 	// snapshot carries the new definition and names the snapshot to update.
 	Snapshot *Snapshot `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-	// overlay). Empty replaces the whole definition, and the same definition again reads the files
+	// overlay, files). Empty replaces the whole definition, and the same definition again reads the files
 	// again, which is how a stale snapshot is refreshed.
 	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	// read_board is as on IngestRequest.
@@ -610,7 +686,7 @@ type UpdateSnapshotRequest struct {
 
 func (x *UpdateSnapshotRequest) Reset() {
 	*x = UpdateSnapshotRequest{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -622,7 +698,7 @@ func (x *UpdateSnapshotRequest) String() string {
 func (*UpdateSnapshotRequest) ProtoMessage() {}
 
 func (x *UpdateSnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -635,7 +711,7 @@ func (x *UpdateSnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateSnapshotRequest.ProtoReflect.Descriptor instead.
 func (*UpdateSnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpdateSnapshotRequest) GetSnapshot() *Snapshot {
@@ -668,7 +744,7 @@ type DeleteSnapshotRequest struct {
 
 func (x *DeleteSnapshotRequest) Reset() {
 	*x = DeleteSnapshotRequest{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -680,7 +756,7 @@ func (x *DeleteSnapshotRequest) String() string {
 func (*DeleteSnapshotRequest) ProtoMessage() {}
 
 func (x *DeleteSnapshotRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -693,7 +769,7 @@ func (x *DeleteSnapshotRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteSnapshotRequest.ProtoReflect.Descriptor instead.
 func (*DeleteSnapshotRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *DeleteSnapshotRequest) GetName() string {
@@ -701,6 +777,142 @@ func (x *DeleteSnapshotRequest) GetName() string {
 		return x.Name
 	}
 	return ""
+}
+
+// BlobsMissing is the detail on an Ingest or UpdateSnapshot that names files whose contents the host
+// does not hold (FAILED_PRECONDITION): their hashes, which the client sends with UploadBlobs before
+// asking again.
+type BlobsMissing struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Sha256        []string               `protobuf:"bytes,1,rep,name=sha256,proto3" json:"sha256,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BlobsMissing) Reset() {
+	*x = BlobsMissing{}
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[10]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BlobsMissing) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BlobsMissing) ProtoMessage() {}
+
+func (x *BlobsMissing) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[10]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BlobsMissing.ProtoReflect.Descriptor instead.
+func (*BlobsMissing) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{10}
+}
+
+func (x *BlobsMissing) GetSha256() []string {
+	if x != nil {
+		return x.Sha256
+	}
+	return nil
+}
+
+type UploadBlobsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Contents      [][]byte               `protobuf:"bytes,1,rep,name=contents,proto3" json:"contents,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadBlobsRequest) Reset() {
+	*x = UploadBlobsRequest{}
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[11]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadBlobsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadBlobsRequest) ProtoMessage() {}
+
+func (x *UploadBlobsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[11]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadBlobsRequest.ProtoReflect.Descriptor instead.
+func (*UploadBlobsRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{11}
+}
+
+func (x *UploadBlobsRequest) GetContents() [][]byte {
+	if x != nil {
+		return x.Contents
+	}
+	return nil
+}
+
+type UploadBlobsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// sha256 is each content's hash, "sha256:<hex>", in the request's order.
+	Sha256        []string `protobuf:"bytes,1,rep,name=sha256,proto3" json:"sha256,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UploadBlobsResponse) Reset() {
+	*x = UploadBlobsResponse{}
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[12]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UploadBlobsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UploadBlobsResponse) ProtoMessage() {}
+
+func (x *UploadBlobsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[12]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UploadBlobsResponse.ProtoReflect.Descriptor instead.
+func (*UploadBlobsResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{12}
+}
+
+func (x *UploadBlobsResponse) GetSha256() []string {
+	if x != nil {
+		return x.Sha256
+	}
+	return nil
 }
 
 // SnapshotUnavailable is the detail on an error from a question whose snapshot cannot answer it: one
@@ -723,7 +935,7 @@ type SnapshotUnavailable struct {
 
 func (x *SnapshotUnavailable) Reset() {
 	*x = SnapshotUnavailable{}
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -735,7 +947,7 @@ func (x *SnapshotUnavailable) String() string {
 func (*SnapshotUnavailable) ProtoMessage() {}
 
 func (x *SnapshotUnavailable) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_snapshot_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -748,7 +960,7 @@ func (x *SnapshotUnavailable) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SnapshotUnavailable.ProtoReflect.Descriptor instead.
 func (*SnapshotUnavailable) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_webapi_snapshot_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SnapshotUnavailable) GetName() string {
@@ -776,7 +988,7 @@ var File_agni_v1_webapi_snapshot_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xfb\x02\n" +
+	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xaf\x03\n" +
 	"\bSnapshot\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vrevision_id\x18\x02 \x01(\tR\n" +
@@ -789,7 +1001,12 @@ const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\x05tiers\x18\b \x01(\v2\x1d.agni.v1.webapi.SnapshotTiersR\x05tiers\x12E\n" +
 	"\vconsistency\x18\t \x01(\v2#.agni.v1.webapi.SnapshotConsistencyR\vconsistency\x12\x18\n" +
 	"\aproject\x18\n" +
-	" \x01(\tR\aproject\"\xb8\x01\n" +
+	" \x01(\tR\aproject\x122\n" +
+	"\x05files\x18\v \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\"N\n" +
+	"\fSnapshotFile\x12\x12\n" +
+	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
+	"\x06sha256\x18\x02 \x01(\tR\x06sha256\x12\x12\n" +
+	"\x04size\x18\x03 \x01(\x03R\x04size\"\xb8\x01\n" +
 	"\rSnapshotTiers\x12\x1f\n" +
 	"\vnetlist_uri\x18\x01 \x01(\tR\n" +
 	"netlistUri\x12\x1b\n" +
@@ -827,7 +1044,13 @@ const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\n" +
 	"read_board\x18\x03 \x01(\bR\treadBoard\"+\n" +
 	"\x15DeleteSnapshotRequest\x12\x12\n" +
-	"\x04name\x18\x01 \x01(\tR\x04name\"\xcf\x01\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\"&\n" +
+	"\fBlobsMissing\x12\x16\n" +
+	"\x06sha256\x18\x01 \x03(\tR\x06sha256\"0\n" +
+	"\x12UploadBlobsRequest\x12\x1a\n" +
+	"\bcontents\x18\x01 \x03(\fR\bcontents\"-\n" +
+	"\x13UploadBlobsResponse\x12\x16\n" +
+	"\x06sha256\x18\x01 \x03(\tR\x06sha256\"\xcf\x01\n" +
 	"\x13SnapshotUnavailable\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12B\n" +
 	"\x06reason\x18\x02 \x01(\x0e2*.agni.v1.webapi.SnapshotUnavailable.ReasonR\x06reason\x12\x18\n" +
@@ -835,13 +1058,14 @@ const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\x06Reason\x12\x16\n" +
 	"\x12REASON_UNSPECIFIED\x10\x00\x12\x12\n" +
 	"\x0eREASON_MISSING\x10\x01\x12\x10\n" +
-	"\fREASON_STALE\x10\x022\xa3\x03\n" +
+	"\fREASON_STALE\x10\x022\xfb\x03\n" +
 	"\x0fSnapshotService\x12A\n" +
 	"\x06Ingest\x12\x1d.agni.v1.webapi.IngestRequest\x1a\x18.agni.v1.webapi.Snapshot\x12K\n" +
 	"\vGetSnapshot\x12\".agni.v1.webapi.GetSnapshotRequest\x1a\x18.agni.v1.webapi.Snapshot\x12\\\n" +
 	"\rListSnapshots\x12$.agni.v1.webapi.ListSnapshotsRequest\x1a%.agni.v1.webapi.ListSnapshotsResponse\x12Q\n" +
 	"\x0eUpdateSnapshot\x12%.agni.v1.webapi.UpdateSnapshotRequest\x1a\x18.agni.v1.webapi.Snapshot\x12O\n" +
-	"\x0eDeleteSnapshot\x12%.agni.v1.webapi.DeleteSnapshotRequest\x1a\x16.google.protobuf.EmptyB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x0eDeleteSnapshot\x12%.agni.v1.webapi.DeleteSnapshotRequest\x1a\x16.google.protobuf.Empty\x12V\n" +
+	"\vUploadBlobs\x12\".agni.v1.webapi.UploadBlobsRequest\x1a#.agni.v1.webapi.UploadBlobsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_snapshot_proto_rawDescOnce sync.Once
@@ -856,47 +1080,54 @@ func file_agni_v1_webapi_snapshot_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_webapi_snapshot_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_webapi_snapshot_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
+var file_agni_v1_webapi_snapshot_proto_msgTypes = make([]protoimpl.MessageInfo, 14)
 var file_agni_v1_webapi_snapshot_proto_goTypes = []any{
 	(SnapshotUnavailable_Reason)(0), // 0: agni.v1.webapi.SnapshotUnavailable.Reason
 	(*Snapshot)(nil),                // 1: agni.v1.webapi.Snapshot
-	(*SnapshotTiers)(nil),           // 2: agni.v1.webapi.SnapshotTiers
-	(*SnapshotConsistency)(nil),     // 3: agni.v1.webapi.SnapshotConsistency
-	(*IngestRequest)(nil),           // 4: agni.v1.webapi.IngestRequest
-	(*GetSnapshotRequest)(nil),      // 5: agni.v1.webapi.GetSnapshotRequest
-	(*ListSnapshotsRequest)(nil),    // 6: agni.v1.webapi.ListSnapshotsRequest
-	(*ListSnapshotsResponse)(nil),   // 7: agni.v1.webapi.ListSnapshotsResponse
-	(*UpdateSnapshotRequest)(nil),   // 8: agni.v1.webapi.UpdateSnapshotRequest
-	(*DeleteSnapshotRequest)(nil),   // 9: agni.v1.webapi.DeleteSnapshotRequest
-	(*SnapshotUnavailable)(nil),     // 10: agni.v1.webapi.SnapshotUnavailable
-	(*OverlayConfig)(nil),           // 11: agni.v1.webapi.OverlayConfig
-	(*fieldmaskpb.FieldMask)(nil),   // 12: google.protobuf.FieldMask
-	(*emptypb.Empty)(nil),           // 13: google.protobuf.Empty
+	(*SnapshotFile)(nil),            // 2: agni.v1.webapi.SnapshotFile
+	(*SnapshotTiers)(nil),           // 3: agni.v1.webapi.SnapshotTiers
+	(*SnapshotConsistency)(nil),     // 4: agni.v1.webapi.SnapshotConsistency
+	(*IngestRequest)(nil),           // 5: agni.v1.webapi.IngestRequest
+	(*GetSnapshotRequest)(nil),      // 6: agni.v1.webapi.GetSnapshotRequest
+	(*ListSnapshotsRequest)(nil),    // 7: agni.v1.webapi.ListSnapshotsRequest
+	(*ListSnapshotsResponse)(nil),   // 8: agni.v1.webapi.ListSnapshotsResponse
+	(*UpdateSnapshotRequest)(nil),   // 9: agni.v1.webapi.UpdateSnapshotRequest
+	(*DeleteSnapshotRequest)(nil),   // 10: agni.v1.webapi.DeleteSnapshotRequest
+	(*BlobsMissing)(nil),            // 11: agni.v1.webapi.BlobsMissing
+	(*UploadBlobsRequest)(nil),      // 12: agni.v1.webapi.UploadBlobsRequest
+	(*UploadBlobsResponse)(nil),     // 13: agni.v1.webapi.UploadBlobsResponse
+	(*SnapshotUnavailable)(nil),     // 14: agni.v1.webapi.SnapshotUnavailable
+	(*OverlayConfig)(nil),           // 15: agni.v1.webapi.OverlayConfig
+	(*fieldmaskpb.FieldMask)(nil),   // 16: google.protobuf.FieldMask
+	(*emptypb.Empty)(nil),           // 17: google.protobuf.Empty
 }
 var file_agni_v1_webapi_snapshot_proto_depIdxs = []int32{
-	11, // 0: agni.v1.webapi.Snapshot.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	2,  // 1: agni.v1.webapi.Snapshot.tiers:type_name -> agni.v1.webapi.SnapshotTiers
-	3,  // 2: agni.v1.webapi.Snapshot.consistency:type_name -> agni.v1.webapi.SnapshotConsistency
-	1,  // 3: agni.v1.webapi.IngestRequest.snapshot:type_name -> agni.v1.webapi.Snapshot
-	1,  // 4: agni.v1.webapi.ListSnapshotsResponse.snapshots:type_name -> agni.v1.webapi.Snapshot
-	1,  // 5: agni.v1.webapi.UpdateSnapshotRequest.snapshot:type_name -> agni.v1.webapi.Snapshot
-	12, // 6: agni.v1.webapi.UpdateSnapshotRequest.update_mask:type_name -> google.protobuf.FieldMask
-	0,  // 7: agni.v1.webapi.SnapshotUnavailable.reason:type_name -> agni.v1.webapi.SnapshotUnavailable.Reason
-	4,  // 8: agni.v1.webapi.SnapshotService.Ingest:input_type -> agni.v1.webapi.IngestRequest
-	5,  // 9: agni.v1.webapi.SnapshotService.GetSnapshot:input_type -> agni.v1.webapi.GetSnapshotRequest
-	6,  // 10: agni.v1.webapi.SnapshotService.ListSnapshots:input_type -> agni.v1.webapi.ListSnapshotsRequest
-	8,  // 11: agni.v1.webapi.SnapshotService.UpdateSnapshot:input_type -> agni.v1.webapi.UpdateSnapshotRequest
-	9,  // 12: agni.v1.webapi.SnapshotService.DeleteSnapshot:input_type -> agni.v1.webapi.DeleteSnapshotRequest
-	1,  // 13: agni.v1.webapi.SnapshotService.Ingest:output_type -> agni.v1.webapi.Snapshot
-	1,  // 14: agni.v1.webapi.SnapshotService.GetSnapshot:output_type -> agni.v1.webapi.Snapshot
-	7,  // 15: agni.v1.webapi.SnapshotService.ListSnapshots:output_type -> agni.v1.webapi.ListSnapshotsResponse
-	1,  // 16: agni.v1.webapi.SnapshotService.UpdateSnapshot:output_type -> agni.v1.webapi.Snapshot
-	13, // 17: agni.v1.webapi.SnapshotService.DeleteSnapshot:output_type -> google.protobuf.Empty
-	13, // [13:18] is the sub-list for method output_type
-	8,  // [8:13] is the sub-list for method input_type
-	8,  // [8:8] is the sub-list for extension type_name
-	8,  // [8:8] is the sub-list for extension extendee
-	0,  // [0:8] is the sub-list for field type_name
+	15, // 0: agni.v1.webapi.Snapshot.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	3,  // 1: agni.v1.webapi.Snapshot.tiers:type_name -> agni.v1.webapi.SnapshotTiers
+	4,  // 2: agni.v1.webapi.Snapshot.consistency:type_name -> agni.v1.webapi.SnapshotConsistency
+	2,  // 3: agni.v1.webapi.Snapshot.files:type_name -> agni.v1.webapi.SnapshotFile
+	1,  // 4: agni.v1.webapi.IngestRequest.snapshot:type_name -> agni.v1.webapi.Snapshot
+	1,  // 5: agni.v1.webapi.ListSnapshotsResponse.snapshots:type_name -> agni.v1.webapi.Snapshot
+	1,  // 6: agni.v1.webapi.UpdateSnapshotRequest.snapshot:type_name -> agni.v1.webapi.Snapshot
+	16, // 7: agni.v1.webapi.UpdateSnapshotRequest.update_mask:type_name -> google.protobuf.FieldMask
+	0,  // 8: agni.v1.webapi.SnapshotUnavailable.reason:type_name -> agni.v1.webapi.SnapshotUnavailable.Reason
+	5,  // 9: agni.v1.webapi.SnapshotService.Ingest:input_type -> agni.v1.webapi.IngestRequest
+	6,  // 10: agni.v1.webapi.SnapshotService.GetSnapshot:input_type -> agni.v1.webapi.GetSnapshotRequest
+	7,  // 11: agni.v1.webapi.SnapshotService.ListSnapshots:input_type -> agni.v1.webapi.ListSnapshotsRequest
+	9,  // 12: agni.v1.webapi.SnapshotService.UpdateSnapshot:input_type -> agni.v1.webapi.UpdateSnapshotRequest
+	10, // 13: agni.v1.webapi.SnapshotService.DeleteSnapshot:input_type -> agni.v1.webapi.DeleteSnapshotRequest
+	12, // 14: agni.v1.webapi.SnapshotService.UploadBlobs:input_type -> agni.v1.webapi.UploadBlobsRequest
+	1,  // 15: agni.v1.webapi.SnapshotService.Ingest:output_type -> agni.v1.webapi.Snapshot
+	1,  // 16: agni.v1.webapi.SnapshotService.GetSnapshot:output_type -> agni.v1.webapi.Snapshot
+	8,  // 17: agni.v1.webapi.SnapshotService.ListSnapshots:output_type -> agni.v1.webapi.ListSnapshotsResponse
+	1,  // 18: agni.v1.webapi.SnapshotService.UpdateSnapshot:output_type -> agni.v1.webapi.Snapshot
+	17, // 19: agni.v1.webapi.SnapshotService.DeleteSnapshot:output_type -> google.protobuf.Empty
+	13, // 20: agni.v1.webapi.SnapshotService.UploadBlobs:output_type -> agni.v1.webapi.UploadBlobsResponse
+	15, // [15:21] is the sub-list for method output_type
+	9,  // [9:15] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_snapshot_proto_init() }
@@ -911,7 +1142,7 @@ func file_agni_v1_webapi_snapshot_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_snapshot_proto_rawDesc), len(file_agni_v1_webapi_snapshot_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   10,
+			NumMessages:   14,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

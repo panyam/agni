@@ -2,10 +2,12 @@ package main
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/hex"
+	"errors"
 	"fmt"
 	"net/http"
 	"net/url"
-	"path/filepath"
 	"strings"
 	"time"
 
@@ -15,6 +17,8 @@ import (
 	"github.com/panyam/agni/artifact"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
+	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/proto"
 	"google.golang.org/protobuf/types/known/emptypb"
 )
 
@@ -25,22 +29,19 @@ const remoteMountTimeout = 5 * time.Second
 // remoteFlag adds --remote to a command whose answer comes from one service request (agni issue 998).
 func remoteFlag(cmd *cobra.Command, remote *string) {
 	cmd.Flags().StringVar(remote, "remote", "",
-		"send this command's request to the agni serve at this URL instead of reading the design here, "+
-			"so a server that already holds the design answers from what it kept. The output is the "+
-			"same; only where the engine ran changes. A path is addressed through the server's own "+
-			"mounts, so the server must serve it, and a path it does not serve is an error rather "+
-			"than a local read")
+		"send this command's request to the agni serve at this URL instead of reading the design here. "+
+			"The design's files go with it, those the server does not already hold, so the server needs "+
+			"no copy of them, and one that kept what it read answers from that. The output is the same; "+
+			"only where the engine ran changes")
 }
 
-// remoteServer is a running `agni serve` this command sends its request to, with the mount table it
-// reported, so a local path can be addressed as the server addresses it.
+// remoteServer is a running `agni serve` this command sends its request to.
 type remoteServer struct {
-	url    string
-	http   *http.Client
-	mounts []*webapi.Mount
+	url  string
+	http *http.Client
 }
 
-// dialRemote asks the server at raw for its mounts.
+// dialRemote checks the server at raw answers, by asking it for its mounts.
 //
 // UNREACHABLE IS AN ERROR HERE, unlike --server's link check (verifyServerMount), because --server
 // only decides whether a link is printed while --remote is where the answer comes from. Falling back
@@ -53,71 +54,18 @@ func dialRemote(ctx context.Context, raw string) (*remoteServer, error) {
 	r := &remoteServer{url: strings.TrimRight(raw, "/"), http: http.DefaultClient}
 	ctx, cancel := context.WithTimeout(ctx, remoteMountTimeout)
 	defer cancel()
-	resp, err := webapiconnect.NewWorkspaceServiceClient(r.http, r.url).
-		ListMounts(ctx, connect.NewRequest(&webapi.ListMountsRequest{}))
-	if err != nil {
-		return nil, fmt.Errorf("--remote %s: could not list the server's mounts: %w", r.url, err)
+	if _, err := webapiconnect.NewWorkspaceServiceClient(r.http, r.url).
+		ListMounts(ctx, connect.NewRequest(&webapi.ListMountsRequest{})); err != nil {
+		return nil, fmt.Errorf("--remote %s: could not reach the server: %w", r.url, err)
 	}
-	r.mounts = resp.Msg.GetMounts()
 	return r, nil
 }
 
-// uri addresses a command-line argument through the server's mounts. An empty argument stays empty,
-// as cliArgURI keeps an unsupplied optional flag unsupplied.
-//
-// An argument that is already a mount URI is sent as written, naming the server's mount. A path is
-// made absolute and addressed through the server mount whose root contains it, the longest root
-// winning as inDeclared does locally. That only works when the server reads the same filesystem
-// this command does, which is the case --remote is for: a warm server on this machine.
+// uri names a command-line argument as this process does (cliArgURI), with this machine's own
+// mounts: under --remote the design's files are sent with it (agni issue 1061), so the server needs
+// no mount of its own over the path, and every locator in the answer reads as a local run's does.
 func (r *remoteServer) uri(arg string) (string, error) {
-	if arg == "" {
-		return "", nil
-	}
-	if strings.Contains(arg, "://") {
-		u, err := artifact.Parse(arg)
-		if err != nil {
-			return "", err
-		}
-		return u.String(), nil
-	}
-	abs, err := filepath.Abs(arg)
-	if err != nil {
-		return "", err
-	}
-	abs = realPath(abs)
-	var best *webapi.Mount
-	var bestRel string
-	for _, m := range r.mounts {
-		root := realPath(filepath.Clean(m.GetRoot()))
-		rel, err := filepath.Rel(root, abs)
-		if err != nil || rel == ".." || strings.HasPrefix(rel, ".."+string(filepath.Separator)) {
-			continue
-		}
-		if best == nil || len(m.GetRoot()) > len(best.GetRoot()) {
-			best, bestRel = m, rel
-		}
-	}
-	if best == nil {
-		names := make([]string, len(r.mounts))
-		for i, m := range r.mounts {
-			names[i] = m.GetName() + "=" + m.GetRoot()
-		}
-		return "", fmt.Errorf("--remote %s serves no mount containing %s (it serves %s); start it with --mount <name>=<dir> over that path", r.url, abs, strings.Join(names, ", "))
-	}
-	u, err := artifact.New(best.GetName(), filepath.ToSlash(bestRel))
-	if err != nil {
-		return "", err
-	}
-	return u.String(), nil
-}
-
-// realPath resolves symlinks where it can, so a path under /tmp and a root under /private/tmp (both
-// spellings of one macOS directory) compare equal. A path that does not resolve is kept as given.
-func realPath(p string) string {
-	if r, err := filepath.EvalSymlinks(p); err == nil {
-		return r
-	}
-	return p
+	return cliArgURI(arg)
 }
 
 // refuseLocalOnly names the flags a --remote run cannot honour, because each one configures the
@@ -191,8 +139,121 @@ func (r *remoteServer) snapshots() snapshotAPI {
 	return remoteSnapshot{webapiconnect.NewSnapshotServiceClient(r.http, r.url)}
 }
 
+// Ingest sends the design as files: the manifest of the files its analysis reads, with their
+// contents uploaded only when the server reports them missing, so a second run of an unchanged
+// design sends the manifest alone (agni issue 1061).
 func (r remoteSnapshot) Ingest(ctx context.Context, req *webapi.IngestRequest) (*webapi.Snapshot, error) {
+	req = proto.Clone(req).(*webapi.IngestRequest)
+	read, err := sendFiles(ctx, req.GetSnapshot())
+	if err != nil {
+		return nil, err
+	}
+	snap, err := unary(ctx, r.c.Ingest, req)
+	var ce *connect.Error
+	if err == nil || !errors.As(err, &ce) {
+		return snap, err
+	}
+	var missing []string
+	for _, d := range ce.Details() {
+		if v, derr := d.Value(); derr == nil {
+			if bm, ok := v.(*webapi.BlobsMissing); ok {
+				missing = append(missing, bm.GetSha256()...)
+			}
+		}
+	}
+	if len(missing) == 0 {
+		return nil, err
+	}
+	if err := r.upload(ctx, missing, read); err != nil {
+		return nil, err
+	}
 	return unary(ctx, r.c.Ingest, req)
+}
+
+// uploadBatchBytes bounds one UploadBlobs request, so a large board goes in several.
+const uploadBatchBytes = 64 << 20
+
+// upload sends the contents of the files whose hashes the server asked for.
+func (r remoteSnapshot) upload(ctx context.Context, hashes []string, read func(sha string) ([]byte, error)) error {
+	var batch [][]byte
+	var size int
+	flush := func() error {
+		if len(batch) == 0 {
+			return nil
+		}
+		_, err := unary(ctx, r.c.UploadBlobs, &webapi.UploadBlobsRequest{Contents: batch})
+		batch, size = nil, 0
+		return err
+	}
+	for _, h := range hashes {
+		b, err := read(h)
+		if err != nil {
+			return err
+		}
+		if size+len(b) > uploadBatchBytes {
+			if err := flush(); err != nil {
+				return err
+			}
+		}
+		batch, size = append(batch, b), size+len(b)
+	}
+	return flush()
+}
+
+// sendFiles fills def's manifest with the files its design's analysis reads on this machine, as
+// ListDesignFiles names them for a browser, plus a --board-path outside that set, and answers how to
+// read a file's contents by its hash.
+func sendFiles(ctx context.Context, def *webapi.Snapshot) (func(sha string) ([]byte, error), error) {
+	u, err := artifact.Parse(def.GetUri())
+	if err != nil {
+		return nil, err
+	}
+	ws, err := workspace()
+	if err != nil {
+		return nil, err
+	}
+	files := osFiles(ws.Mounts())
+	listed, err := service.NewWorkspaceService(osWorkspace(ws.Mounts())).WithDesignFiles(cliProjects(), files).
+		ListDesignFiles(ctx, &webapi.ListDesignFilesRequest{Uri: def.GetUri()})
+	if err != nil {
+		return nil, fmt.Errorf("--remote: listing %s's files to send: %w", def.GetUri(), err)
+	}
+	byHash := map[string]string{}
+	have := map[string]bool{}
+	for _, f := range listed.GetFiles() {
+		def.Files = append(def.Files, &webapi.SnapshotFile{Path: f.GetPath(), Sha256: f.GetSha256(), Size: f.GetSize()})
+		byHash[f.GetSha256()], have[f.GetPath()] = f.GetPath(), true
+	}
+	if b := def.GetBoardUri(); b != "" {
+		bu, err := artifact.Parse(b)
+		if err != nil {
+			return nil, err
+		}
+		if bu.Mount != u.Mount {
+			return nil, fmt.Errorf("--remote sends the design's mount alone, and --board-path %s is in another; put the board under %s", b, u.Mount)
+		}
+		if !have[bu.Path] {
+			c, err := files.ReadFile(ctx, bu)
+			if err != nil {
+				return nil, err
+			}
+			sum := sha256.Sum256(c)
+			h := "sha256:" + hex.EncodeToString(sum[:])
+			def.Files = append(def.Files, &webapi.SnapshotFile{Path: bu.Path, Sha256: h, Size: int64(len(c))})
+			byHash[h] = bu.Path
+		}
+	}
+	return func(sha string) ([]byte, error) {
+		p, ok := byHash[sha]
+		if !ok {
+			return nil, fmt.Errorf("--remote: the server asked for a file this design does not have (%s)", sha)
+		}
+		f, err := artifact.New(u.Mount, p)
+		if err != nil {
+			return nil, err
+		}
+		return files.ReadFile(ctx, f)
+	}, nil
 }
 
 func (r remoteSnapshot) DeleteSnapshot(ctx context.Context, req *webapi.DeleteSnapshotRequest) (*emptypb.Empty, error) {

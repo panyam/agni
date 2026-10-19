@@ -369,9 +369,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **`--remote <url>` on `query`, `check`, `trace` and `review` sends the command's request to a running
   `agni serve`** (agni 998) and renders the response exactly as the local run does, which
   `TestRemoteAnswersAsTheLocalCommandDoes` holds byte for byte. It is a different flag from `--server`,
-  which only says where LINKS point. A path is addressed through the server's own mounts
-  (`ListMounts`, longest root wins), so it needs the same filesystem, and an unserved path or an
-  unreachable server is an error, never a local read. Flags that configure this process's engine
+  which only says where LINKS point. The design's files go with the request (agni 1061, step 4b): a
+  manifest of the files `ListDesignFiles` would list, under this machine's own mount names, and the
+  contents the server reports missing (`BlobsMissing`, then `UploadBlobs`), so the server needs no
+  shared filesystem and an unreachable server is an error, never a local read. A server reads an
+  uploaded design through a host and a CACHE of its own per manifest, because the upload keeps the
+  client's mount name and a shared cache keyed on the URI would serve one upload's reads for another. Flags that configure this process's engine
   (`--params`, `--profile-path`, `--timing`) are refused rather than ignored. A remote review is
   `CreateReview` with `validate_only`, so the server stores nothing.
 - **`review --coverage` renders as markdown ALONE and refuses an explicit `--format`.** The two are

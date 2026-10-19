@@ -83,6 +83,30 @@ type Snap struct {
 	// Config is the overlay config the definition carried, before it was composed with the project's.
 	Config   *webapi.OverlayConfig
 	Revision string
+	// Loader and Projects are what a snapshot of files the client sent reads through, and nil for one
+	// of files the host serves, which reads through the service's own (agni issue 1061). They are
+	// apart from the host's because a cache keys a read on its URI, and an upload names its files
+	// with the client's own mount, which may be one the host also serves.
+	Loader   *CachingLoader
+	Projects *ProjectResolver
+}
+
+// LoaderOr is the loader to read s through: its upload's, or the service's l.
+func LoaderOr[L any](s Snap, l L) L {
+	if s.Loader != nil {
+		if v, ok := any(s.Loader).(L); ok {
+			return v
+		}
+	}
+	return l
+}
+
+// ProjectsOr is the resolver for s's project: its upload's, or the service's r.
+func (s Snap) ProjectsOr(r *ProjectResolver) *ProjectResolver {
+	if s.Projects != nil {
+		return s.Projects
+	}
+	return r
 }
 
 // BoardRead is the artifact the board is read from: the board tier, or the netlist's own artifact for
@@ -96,10 +120,13 @@ type snapshotEntry struct {
 	def *webapi.Snapshot
 	// touched is every file a question about this snapshot read, as it stamped when first read.
 	touched *formats.Touched
+	// upload is the host of the files a client sent, nil for a snapshot of the host's own files. A
+	// snapshot holds its upload, so it stays readable however many uploads come after it.
+	upload *uploadHost
 	// changedTiers names the tiers whose entry file no longer hashes as it did, for a stale error. It
 	// names tiers rather than the files touched recorded, which on a server are host paths (C28).
 	changedTiers func(ctx context.Context) []string
-	used    uint64
+	used         uint64
 }
 
 // snapshotRegistry holds a host's snapshots, the least recently asked evicted past max.
@@ -326,8 +353,10 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 				def.AsNamed = next.GetAsNamed()
 			case "overlay":
 				def.Overlay = next.GetOverlay()
+			case "files":
+				def.Files = next.GetFiles()
 			default:
-				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, board_uri, geometry_uri, as_named and overlay", ErrInvalidArgument, p)
+				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, board_uri, geometry_uri, as_named, overlay and files", ErrInvalidArgument, p)
 			}
 		}
 	}
@@ -367,11 +396,20 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 	if err != nil {
 		return nil, err
 	}
-	ov, err := s.projects.Overlay(ctx, u, def.GetOverlay(), s.baseConvention)
+	// A design sent as files is read from them alone, through a host of its own (agni issue 1061).
+	res, ld := s.projects, s.loader
+	var up *uploadHost
+	if len(def.GetFiles()) > 0 {
+		if up, err = s.projects.uploaded(u.Mount, def.GetFiles()); err != nil {
+			return nil, err
+		}
+		res, ld = up.resolver, up.loader
+	}
+	ov, err := res.Overlay(ctx, u, def.GetOverlay(), s.baseConvention)
 	if err != nil {
 		return nil, err
 	}
-	nu, bu, gu, err := s.projects.TierURIs(ctx, u, board, def.GetAsNamed())
+	nu, bu, gu, err := res.TierURIs(ctx, u, board, def.GetAsNamed())
 	if err != nil {
 		return nil, err
 	}
@@ -380,6 +418,7 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 	}
 	e := &snapshotEntry{
 		snap:    Snap{Name: name, Design: u, Netlist: nu, Board: bu, Geometry: gu, AsNamed: def.GetAsNamed(), Overlay: ov, Config: def.GetOverlay()},
+		upload:  up,
 		touched: formats.NewTouched(),
 	}
 	rctx := withTouched(ctx, e.touched)
@@ -389,8 +428,11 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 	if !bu.IsZero() {
 		out.Tiers.BoardUri = bu.String()
 	}
-	if s.projects.Store != nil {
-		if _, p, err := s.projects.Store.ResolveDesign(ctx, u); err == nil && p != nil {
+	if up != nil {
+		e.snap.Loader, e.snap.Projects = up.loader, up.resolver
+	}
+	if res.Store != nil {
+		if _, p, err := res.Store.ResolveDesign(ctx, u); err == nil && p != nil {
 			out.Project = p.GetName()
 		}
 	}
@@ -400,13 +442,13 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 	// first question, as it did before snapshots. With read_board, the model a check would build is
 	// built and kept, board included (agni issue 1061).
 	if !readBoard {
-	} else if ml, ok := s.loader.(ModelLoader); !ok {
+	} else if ml, ok := ld.(ModelLoader); !ok {
 		return nil, fmt.Errorf("%w: this host reads no boards, so read_board cannot be honoured", ErrInvalidArgument)
 	} else if b, err := buildModelEntry(rctx, ml, nu, bu, ov, s.specs, ReadBoard); err != nil {
 		return nil, err
 	} else if b.model.HasBoard() {
 		out.Tiers.BoardRead = true
-		if p, ok := s.loader.(interface{ BoardPersisted(artifact.URI) bool }); ok {
+		if p, ok := ld.(interface{ BoardPersisted(artifact.URI) bool }); ok {
 			out.Tiers.BoardPersisted = p.BoardPersisted(boardReadURI(nu, bu))
 		}
 		if bg, err := ml.Board(rctx, boardReadURI(nu, bu)); err == nil && bg != nil {
@@ -416,10 +458,10 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 	// Only the netlist's entry is hashed, which an open hashes anyway for its verdict links. Hashing
 	// every tier hashed Jetson's 81 MB board on every ingest, about a second in wasm on each worker.
 	tiers := []artifact.URI{nu, bu, gu}
-	hash := tierHash(rctx, s.loader, nu)
+	hash := tierHash(rctx, ld, nu)
 	e.snap.Revision = revisionOf(def, tiers, hash)
 	e.changedTiers = func(ctx context.Context) []string {
-		if tierHash(ctx, s.loader, nu) != hash {
+		if tierHash(ctx, ld, nu) != hash {
 			return []string{nu.String()}
 		}
 		// The file that moved was another tier's, or one a tier read beneath its entry (a sub-sheet,
@@ -452,6 +494,7 @@ func definitionOf(s *webapi.Snapshot) *webapi.Snapshot {
 		GeometryUri: s.GetGeometryUri(),
 		AsNamed:     s.GetAsNamed(),
 		Overlay:     s.GetOverlay(),
+		Files:       s.GetFiles(),
 	}
 }
 

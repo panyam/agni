@@ -190,7 +190,7 @@ func (s *QueryService) ListQuerySets(ctx context.Context, req *webapi.ListQueryS
 	if err != nil {
 		return nil, err
 	}
-	sets, project, err := s.projects.QuerySets(ctx, snap.Design)
+	sets, project, err := snap.ProjectsOr(s.projects).QuerySets(ctx, snap.Design)
 	if err != nil {
 		return nil, err
 	}
@@ -224,6 +224,8 @@ func QuerySetProto(s query.QuerySet) *webapi.QuerySet {
 // fact base over it, and the schematic geometry, which loads once and only when some answer has a
 // cell to place on a sheet.
 type designRead struct {
+	// loader is what the snapshot reads through, an upload's or the service's.
+	loader Loader
 	u      artifact.URI
 	source string
 	model  check.Model
@@ -259,11 +261,11 @@ func (s *QueryService) read(ctx context.Context, snap Snap, qs ...query.Query) (
 	}
 	// Kept between requests when the loader caches (agni issue 895), so a second query on a design
 	// costs its evaluation rather than a read and a projection of every relation.
-	model, baseOver, err := BuildModelCachedTier(ctx, s.loader, nu, bu, ov, s.specs, boardTierFor(reg, qs...))
+	model, baseOver, err := BuildModelCachedTier(ctx, LoaderOr(snap, s.loader), nu, bu, ov, s.specs, boardTierFor(reg, qs...))
 	if err != nil {
 		return nil, err
 	}
-	return &designRead{u: u, source: source, model: model, base: baseOver(reg), reg: reg, ov: ov, gu: gu}, nil
+	return &designRead{loader: LoaderOr(snap, s.loader), u: u, source: source, model: model, base: baseOver(reg), reg: reg, ov: ov, gu: gu}, nil
 }
 
 // boardTierFor is ReadBoard when any of qs reads a board.* relation, its own rules and the library
@@ -360,7 +362,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	locate := navigable && !omitLocations
 	var drawnComps, drawnNets map[string]bool
 	if locate {
-		ix, drawnComps, drawnNets = d.geometry(ctx, s.loader)
+		ix, drawnComps, drawnNets = d.geometry(ctx, d.loader)
 	}
 	// Each entity the cells name is located once and kept in resp.Entities, and each citation once
 	// in resp.Sources, so a net on a thousand rows costs one entry rather than a thousand copies of

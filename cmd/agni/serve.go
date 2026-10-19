@@ -24,6 +24,7 @@ import (
 	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/fshost"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/paramclient"
@@ -67,6 +68,7 @@ func serveCmd() *cobra.Command {
 	var engine string
 	var wasmMaxBytes int64
 	var designCache int
+	var uploadMaxBytes int64
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -87,6 +89,7 @@ func serveCmd() *cobra.Command {
 				engine:          engine,
 				wasmMaxBytes:    wasmMaxBytes,
 				designCache:     designCache,
+				uploadMaxBytes:  uploadMaxBytes,
 			})
 		},
 	}
@@ -101,6 +104,7 @@ func serveCmd() *cobra.Command {
 			"what the last two are for")
 	c.Flags().StringVar(&mountRoot, "mount-root", "", "expose every subdirectory of this path as a mount named after it, so folders can be bind-mounted in without a --mount flag each; an explicit --mount of the same name wins, and a missing root yields no mounts rather than an error")
 	c.Flags().Int64Var(&queryBudget, "query-budget", 0, "cap each query's work, in the units a fact base counts (comparisons, generator rows and the connections a circuit walk examines), for queries and query-backed rules alike; a request may ask for less but never more. 0 enforces nothing, so a deployment can watch what its queries cost first (see --query-budget-warn)")
+	c.Flags().Int64Var(&uploadMaxBytes, "upload-max-bytes", 1<<30, "how much of the designs clients send as files (agni query --remote and the like) the server keeps, the least recently used dropped past it; a client sends a file again when it is asked for. 0 takes no files from clients")
 	c.Flags().IntVar(&designCache, "design-cache", defaultDesignCache, "how many reads to keep between requests: a parse, a derived design, a drawing, a board or a built model each count once, so one design asked for by queries and the viewer holds about five. Each is checked against its files on every use and read again when one changed. 0 keeps none")
 	c.Flags().Int64Var(&queryBudgetWarn, "query-budget-warn", defaultQueryBudgetWarn, "log each query whose work passes this, with a suggested --query-budget; 0 logs nothing")
 	c.Flags().DurationVar(&slowRequest, "slow-request", 0, "log each request that takes longer than this (e.g. 2s), with the stage that took the most, which cache tier answered each read, its slowest rules, and its query plan when evaluating was the slowest stage; 0 logs nothing. A client can ask for any request's breakdown with an Agni-Timing header")
@@ -164,6 +168,9 @@ type viewerOpts struct {
 	// designCache is how many reads (a parse, a derived design, a drawing, a board, a built model) the server keeps
 	// between requests (agni issue 895). 0 keeps none.
 	designCache int
+	// uploadMaxBytes is how much of the designs clients send as files the server keeps (agni issue
+	// 1061). 0 takes none.
+	uploadMaxBytes int64
 }
 
 // The two engines a viewer page can analyse its design on.
@@ -289,6 +296,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// One resolver for every rule-running surface. Per-design config reaches a run through this,
 	// and the startup flags below are only the DEFAULT for a design with no project (agni issue 173).
 	projectResolver := &service.ProjectResolver{Store: projectStore, Config: &osProjectConfig{mounts: mounts}}
+	if o.uploadMaxBytes > 0 {
+		projectResolver.Uploads, projectResolver.UploadMaxBytes = uploadedHost, o.uploadMaxBytes
+	}
 	// --conventions is the DEPLOYMENT default for this server's project (WS3-102). Its lexicon is
 	// installed process-wide, at startup and never mutated after (C22). Its RULES join the catalog
 	// inside serveRuleServices. A request that names its own conventions REPLACES both halves for
@@ -697,3 +707,12 @@ func osWorkspace(ms []mounts.Mount) service.Workspace { return mounts.NewWorkspa
 
 // osFiles reads files inside the mounts, for ListDesignFiles.
 func osFiles(ms []mounts.Mount) service.FileReader { return mounts.NewWorkspace(ms) }
+
+// uploadedHost reads a design a client sent as files (agni issue 1061): its files as the one mount
+// they name, through the same in-memory host the browser engine reads its files through, with the
+// projects they declare.
+func uploadedHost(mount string, files map[string][]byte) (service.CacheableLoader, *service.ProjectResolver) {
+	fsys := fshost.MemFS(files)
+	ms := []fshost.Mount{{Name: mount, FS: fsys}}
+	return fshost.New(ms...), &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: mount, FS: fsys}), Config: &fshost.ConfigResolver{Mounts: ms}}
+}

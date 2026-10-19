@@ -14,16 +14,16 @@ import (
 	"github.com/panyam/agni/mounts"
 )
 
-// remoteParityServer serves the tutorial project as `agni serve --mount tut=<root>` would, and sets
-// this process's mount table to the same one, so a local run and a remote one name the design alike.
-// served reports the procedures the server has answered so far.
+// remoteParityServer is an `agni serve` with no mounts at all, and this process mounts the tutorial
+// project as tut, so a remote run's answer comes from the files it sent (agni issue 1061). served
+// reports the procedures the server has answered so far.
 func remoteParityServer(t *testing.T) (url, design string, served func() []string) {
 	t.Helper()
 	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "tutorial-project"))
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := servedParityMux(t, []mounts.Mount{{Name: "tut", Root: root}})
+	mux := servedMuxFor(t, []mounts.Mount{{Name: "tut", Root: root}}, nil)
 	var mu sync.Mutex
 	var procs []string
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -94,9 +94,10 @@ func TestRemoteAnswersAsTheLocalCommandDoes(t *testing.T) {
 }
 
 // TestRemoteRefusesWhatItCannotSend holds the two refusals --remote makes rather than answering from
-// somewhere else: a flag that configures this process's engine, and a path the server does not serve.
+// somewhere else: a flag that configures this process's engine, and a design whose files this
+// process cannot list to send, which is refused before anything reaches the server.
 func TestRemoteRefusesWhatItCannotSend(t *testing.T) {
-	url, design, _ := remoteParityServer(t)
+	url, design, served := remoteParityServer(t)
 	run := func(mk func() *cobra.Command, args ...string) error {
 		cmd := mk()
 		cmd.SetOut(&bytes.Buffer{})
@@ -112,9 +113,15 @@ func TestRemoteRefusesWhatItCannotSend(t *testing.T) {
 	if err == nil || !strings.Contains(err.Error(), "--timing times this process") {
 		t.Errorf("query --timing --remote: err = %v, want the timing refusal", err)
 	}
+	before := len(served())
 	err = run(queryCmd, filepath.Join(t.TempDir(), "elsewhere.kicad_sch"), `component.mpn(?r, ?m) => ?r`)
-	if err == nil || !strings.Contains(err.Error(), "serves no mount containing") {
-		t.Errorf("query of a path outside the server's mounts: err = %v, want the unserved-path refusal", err)
+	if err == nil || !strings.Contains(err.Error(), "files to send") {
+		t.Errorf("query of a path that is not here: err = %v, want the refusal to list its files", err)
+	}
+	for _, p := range served()[before:] {
+		if strings.HasSuffix(p, "/Ingest") {
+			t.Errorf("a design whose files could not be listed was ingested anyway (%s)", p)
+		}
 	}
 }
 

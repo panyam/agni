@@ -47,9 +47,17 @@ var parityMounts = []struct{ name, dir string }{
 // basename that a real `serve --mount` does not.
 func servedParityMux(t *testing.T, ms []mounts.Mount) http.Handler {
 	t.Helper()
+	return servedMuxFor(t, ms, ms)
+}
+
+// servedMuxFor is servedParityMux with this process's mounts (cli) apart from the server's own
+// (ms), for a client whose files the server does not share. The server takes uploaded files, as
+// `agni serve` does by default (agni issue 1061).
+func servedMuxFor(t *testing.T, cli, ms []mounts.Mount) http.Handler {
+	t.Helper()
 	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
 	cliMountSpecs = nil
-	for _, m := range ms {
+	for _, m := range cli {
 		cliMountSpecs = append(cliMountSpecs, m.Name+"="+m.Root)
 	}
 	cliWSOnce, cliWSVal, cliWSErr = sync.Once{}, nil, nil
@@ -58,7 +66,7 @@ func servedParityMux(t *testing.T, ms []mounts.Mount) http.Handler {
 		cliWSOnce = sync.Once{}
 	})
 	loader := &osLoader{mounts: ms, loader: newLoader()}
-	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: ms}}
+	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: ms}, Uploads: uploadedHost}
 	check, review, err := serveRuleServices(loader, nil, nil, "", nil, resolver, nil)
 	if err != nil {
 		t.Fatal(err)

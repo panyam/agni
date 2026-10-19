@@ -195,3 +195,23 @@ func TestGetReviewManifestAdapter(t *testing.T) {
 		t.Fatalf("want NotFound, got %v", err)
 	}
 }
+
+// TestAnIngestMissingBlobsSaysWhich: a client sends a design's contents only when asked, so the
+// error naming them carries the hashes it needs (agni issue 1061).
+func TestAnIngestMissingBlobsSaysWhich(t *testing.T) {
+	ce := ConnectError(fmt.Errorf("ingest: %w", &service.BlobsMissingError{Hashes: []string{"sha256:aa", "sha256:bb"}}))
+	if ce.Code() != connect.CodeFailedPrecondition {
+		t.Fatalf("code %v, want failed_precondition", ce.Code())
+	}
+	var got *webapi.BlobsMissing
+	for _, d := range ce.Details() {
+		if v, err := d.Value(); err == nil {
+			if bm, ok := v.(*webapi.BlobsMissing); ok {
+				got = bm
+			}
+		}
+	}
+	if !proto.Equal(got, &webapi.BlobsMissing{Sha256: []string{"sha256:aa", "sha256:bb"}}) {
+		t.Errorf("detail %v, want both hashes", got)
+	}
+}

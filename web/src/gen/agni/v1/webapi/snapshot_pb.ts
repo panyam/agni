@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/snapshot.proto.
  */
 export const file_agni_v1_webapi_snapshot: GenFile = /*@__PURE__*/
-  fileDesc("Ch1hZ25pL3YxL3dlYmFwaS9zbmFwc2hvdC5wcm90bxIOYWduaS52MS53ZWJhcGkingIKCFNuYXBzaG90EgwKBG5hbWUYASABKAkSEwoLcmV2aXNpb25faWQYAiABKAkSCwoDdXJpGAMgASgJEhEKCWJvYXJkX3VyaRgEIAEoCRIUCgxnZW9tZXRyeV91cmkYBSABKAkSEAoIYXNfbmFtZWQYBiABKAgSLgoHb3ZlcmxheRgHIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSLAoFdGllcnMYCCABKAsyHS5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdFRpZXJzEjgKC2NvbnNpc3RlbmN5GAkgASgLMiMuYWduaS52MS53ZWJhcGkuU25hcHNob3RDb25zaXN0ZW5jeRIPCgdwcm9qZWN0GAogASgJInoKDVNuYXBzaG90VGllcnMSEwoLbmV0bGlzdF91cmkYASABKAkSEQoJYm9hcmRfdXJpGAIgASgJEhQKDGdlb21ldHJ5X3VyaRgDIAEoCRISCgpib2FyZF9yZWFkGAQgASgIEhcKD2JvYXJkX3BlcnNpc3RlZBgFIAEoCCJ1ChNTbmFwc2hvdENvbnNpc3RlbmN5EhIKCmJvYXJkX29ubHkYASADKAkSGAoQYm9hcmRfb25seV9jb3VudBgCIAEoBRIUCgxuZXRsaXN0X29ubHkYAyADKAkSGgoSbmV0bGlzdF9vbmx5X2NvdW50GAQgASgFImQKDUluZ2VzdFJlcXVlc3QSKgoIc25hcHNob3QYASABKAsyGC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdBITCgtzbmFwc2hvdF9pZBgCIAEoCRISCgpyZWFkX2JvYXJkGAMgASgIIiIKEkdldFNuYXBzaG90UmVxdWVzdBIMCgRuYW1lGAEgASgJIk0KFExpc3RTbmFwc2hvdHNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJdChVMaXN0U25hcHNob3RzUmVzcG9uc2USKwoJc25hcHNob3RzGAEgAygLMhguYWduaS52MS53ZWJhcGkuU25hcHNob3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIogBChVVcGRhdGVTbmFwc2hvdFJlcXVlc3QSKgoIc25hcHNob3QYASABKAsyGC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdBIvCgt1cGRhdGVfbWFzaxgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE1hc2sSEgoKcmVhZF9ib2FyZBgDIAEoCCIlChVEZWxldGVTbmFwc2hvdFJlcXVlc3QSDAoEbmFtZRgBIAEoCSK4AQoTU25hcHNob3RVbmF2YWlsYWJsZRIMCgRuYW1lGAEgASgJEjoKBnJlYXNvbhgCIAEoDjIqLmFnbmkudjEud2ViYXBpLlNuYXBzaG90VW5hdmFpbGFibGUuUmVhc29uEg8KB2NoYW5nZWQYAyADKAkiRgoGUmVhc29uEhYKElJFQVNPTl9VTlNQRUNJRklFRBAAEhIKDlJFQVNPTl9NSVNTSU5HEAESEAoMUkVBU09OX1NUQUxFEAIyowMKD1NuYXBzaG90U2VydmljZRJBCgZJbmdlc3QSHS5hZ25pLnYxLndlYmFwaS5Jbmdlc3RSZXF1ZXN0GhguYWduaS52MS53ZWJhcGkuU25hcHNob3QSSwoLR2V0U25hcHNob3QSIi5hZ25pLnYxLndlYmFwaS5HZXRTbmFwc2hvdFJlcXVlc3QaGC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdBJcCg1MaXN0U25hcHNob3RzEiQuYWduaS52MS53ZWJhcGkuTGlzdFNuYXBzaG90c1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0U25hcHNob3RzUmVzcG9uc2USUQoOVXBkYXRlU25hcHNob3QSJS5hZ25pLnYxLndlYmFwaS5VcGRhdGVTbmFwc2hvdFJlcXVlc3QaGC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdBJPCg5EZWxldGVTbmFwc2hvdBIlLmFnbmkudjEud2ViYXBpLkRlbGV0ZVNuYXBzaG90UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_agni_v1_webapi_checks, file_google_protobuf_empty, file_google_protobuf_field_mask]);
+  fileDesc("Ch1hZ25pL3YxL3dlYmFwaS9zbmFwc2hvdC5wcm90bxIOYWduaS52MS53ZWJhcGkiywIKCFNuYXBzaG90EgwKBG5hbWUYASABKAkSEwoLcmV2aXNpb25faWQYAiABKAkSCwoDdXJpGAMgASgJEhEKCWJvYXJkX3VyaRgEIAEoCRIUCgxnZW9tZXRyeV91cmkYBSABKAkSEAoIYXNfbmFtZWQYBiABKAgSLgoHb3ZlcmxheRgHIAEoCzIdLmFnbmkudjEud2ViYXBpLk92ZXJsYXlDb25maWcSLAoFdGllcnMYCCABKAsyHS5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdFRpZXJzEjgKC2NvbnNpc3RlbmN5GAkgASgLMiMuYWduaS52MS53ZWJhcGkuU25hcHNob3RDb25zaXN0ZW5jeRIPCgdwcm9qZWN0GAogASgJEisKBWZpbGVzGAsgAygLMhwuYWduaS52MS53ZWJhcGkuU25hcHNob3RGaWxlIjoKDFNuYXBzaG90RmlsZRIMCgRwYXRoGAEgASgJEg4KBnNoYTI1NhgCIAEoCRIMCgRzaXplGAMgASgDInoKDVNuYXBzaG90VGllcnMSEwoLbmV0bGlzdF91cmkYASABKAkSEQoJYm9hcmRfdXJpGAIgASgJEhQKDGdlb21ldHJ5X3VyaRgDIAEoCRISCgpib2FyZF9yZWFkGAQgASgIEhcKD2JvYXJkX3BlcnNpc3RlZBgFIAEoCCJ1ChNTbmFwc2hvdENvbnNpc3RlbmN5EhIKCmJvYXJkX29ubHkYASADKAkSGAoQYm9hcmRfb25seV9jb3VudBgCIAEoBRIUCgxuZXRsaXN0X29ubHkYAyADKAkSGgoSbmV0bGlzdF9vbmx5X2NvdW50GAQgASgFImQKDUluZ2VzdFJlcXVlc3QSKgoIc25hcHNob3QYASABKAsyGC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdBITCgtzbmFwc2hvdF9pZBgCIAEoCRISCgpyZWFkX2JvYXJkGAMgASgIIiIKEkdldFNuYXBzaG90UmVxdWVzdBIMCgRuYW1lGAEgASgJIk0KFExpc3RTbmFwc2hvdHNSZXF1ZXN0EhEKCXBhZ2Vfc2l6ZRgBIAEoBRISCgpwYWdlX3Rva2VuGAIgASgJEg4KBmZpbHRlchgDIAEoCSJdChVMaXN0U25hcHNob3RzUmVzcG9uc2USKwoJc25hcHNob3RzGAEgAygLMhguYWduaS52MS53ZWJhcGkuU25hcHNob3QSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJIogBChVVcGRhdGVTbmFwc2hvdFJlcXVlc3QSKgoIc25hcHNob3QYASABKAsyGC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdBIvCgt1cGRhdGVfbWFzaxgCIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5GaWVsZE1hc2sSEgoKcmVhZF9ib2FyZBgDIAEoCCIlChVEZWxldGVTbmFwc2hvdFJlcXVlc3QSDAoEbmFtZRgBIAEoCSIeCgxCbG9ic01pc3NpbmcSDgoGc2hhMjU2GAEgAygJIiYKElVwbG9hZEJsb2JzUmVxdWVzdBIQCghjb250ZW50cxgBIAMoDCIlChNVcGxvYWRCbG9ic1Jlc3BvbnNlEg4KBnNoYTI1NhgBIAMoCSK4AQoTU25hcHNob3RVbmF2YWlsYWJsZRIMCgRuYW1lGAEgASgJEjoKBnJlYXNvbhgCIAEoDjIqLmFnbmkudjEud2ViYXBpLlNuYXBzaG90VW5hdmFpbGFibGUuUmVhc29uEg8KB2NoYW5nZWQYAyADKAkiRgoGUmVhc29uEhYKElJFQVNPTl9VTlNQRUNJRklFRBAAEhIKDlJFQVNPTl9NSVNTSU5HEAESEAoMUkVBU09OX1NUQUxFEAIy+wMKD1NuYXBzaG90U2VydmljZRJBCgZJbmdlc3QSHS5hZ25pLnYxLndlYmFwaS5Jbmdlc3RSZXF1ZXN0GhguYWduaS52MS53ZWJhcGkuU25hcHNob3QSSwoLR2V0U25hcHNob3QSIi5hZ25pLnYxLndlYmFwaS5HZXRTbmFwc2hvdFJlcXVlc3QaGC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdBJcCg1MaXN0U25hcHNob3RzEiQuYWduaS52MS53ZWJhcGkuTGlzdFNuYXBzaG90c1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0U25hcHNob3RzUmVzcG9uc2USUQoOVXBkYXRlU25hcHNob3QSJS5hZ25pLnYxLndlYmFwaS5VcGRhdGVTbmFwc2hvdFJlcXVlc3QaGC5hZ25pLnYxLndlYmFwaS5TbmFwc2hvdBJPCg5EZWxldGVTbmFwc2hvdBIlLmFnbmkudjEud2ViYXBpLkRlbGV0ZVNuYXBzaG90UmVxdWVzdBoWLmdvb2dsZS5wcm90b2J1Zi5FbXB0eRJWCgtVcGxvYWRCbG9icxIiLmFnbmkudjEud2ViYXBpLlVwbG9hZEJsb2JzUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLlVwbG9hZEJsb2JzUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_webapi_checks, file_google_protobuf_empty, file_google_protobuf_field_mask]);
 
 /**
  * Snapshot is one loaded design. The fields up to overlay are its DEFINITION, which a client sets on
@@ -102,6 +102,18 @@ export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
    * @generated from field: string project = 10;
    */
   project: string;
+
+  /**
+   * files is the design's files when the client sends them rather than naming files the host
+   * serves: each file's path within uri's mount, its SHA-256 and its size. With files set, uri's
+   * mount is read from these files alone, so a design, its companions, its project's descriptor and
+   * config directories all have to be listed; ListDesignFiles names that set. Its contents are sent
+   * with UploadBlobs. Paths are the client's own, so every locator an answer records reads as it
+   * would on the client (C28). Part of the definition.
+   *
+   * @generated from field: repeated agni.v1.webapi.SnapshotFile files = 11;
+   */
+  files: SnapshotFile[];
 };
 
 /**
@@ -110,6 +122,37 @@ export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
  */
 export const SnapshotSchema: GenMessage<Snapshot> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_snapshot, 0);
+
+/**
+ * SnapshotFile is one file of a design a client sends, named within its mount.
+ *
+ * @generated from message agni.v1.webapi.SnapshotFile
+ */
+export type SnapshotFile = Message<"agni.v1.webapi.SnapshotFile"> & {
+  /**
+   * @generated from field: string path = 1;
+   */
+  path: string;
+
+  /**
+   * sha256 is "sha256:<hex>", as DesignFile.sha256 is.
+   *
+   * @generated from field: string sha256 = 2;
+   */
+  sha256: string;
+
+  /**
+   * @generated from field: int64 size = 3;
+   */
+  size: bigint;
+};
+
+/**
+ * Describes the message agni.v1.webapi.SnapshotFile.
+ * Use `create(SnapshotFileSchema)` to create a new message.
+ */
+export const SnapshotFileSchema: GenMessage<SnapshotFile> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_snapshot, 1);
 
 /**
  * SnapshotTiers are the artifacts a snapshot's definition resolved to (C32's ResolveSources).
@@ -158,7 +201,7 @@ export type SnapshotTiers = Message<"agni.v1.webapi.SnapshotTiers"> & {
  * Use `create(SnapshotTiersSchema)` to create a new message.
  */
 export const SnapshotTiersSchema: GenMessage<SnapshotTiers> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 1);
+  messageDesc(file_agni_v1_webapi_snapshot, 2);
 
 /**
  * SnapshotConsistency compares a snapshot's tiers by reference designator. A difference is reported
@@ -197,7 +240,7 @@ export type SnapshotConsistency = Message<"agni.v1.webapi.SnapshotConsistency"> 
  * Use `create(SnapshotConsistencySchema)` to create a new message.
  */
 export const SnapshotConsistencySchema: GenMessage<SnapshotConsistency> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 2);
+  messageDesc(file_agni_v1_webapi_snapshot, 3);
 
 /**
  * @generated from message agni.v1.webapi.IngestRequest
@@ -236,7 +279,7 @@ export type IngestRequest = Message<"agni.v1.webapi.IngestRequest"> & {
  * Use `create(IngestRequestSchema)` to create a new message.
  */
 export const IngestRequestSchema: GenMessage<IngestRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 3);
+  messageDesc(file_agni_v1_webapi_snapshot, 4);
 
 /**
  * @generated from message agni.v1.webapi.GetSnapshotRequest
@@ -253,7 +296,7 @@ export type GetSnapshotRequest = Message<"agni.v1.webapi.GetSnapshotRequest"> & 
  * Use `create(GetSnapshotRequestSchema)` to create a new message.
  */
 export const GetSnapshotRequestSchema: GenMessage<GetSnapshotRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 4);
+  messageDesc(file_agni_v1_webapi_snapshot, 5);
 
 /**
  * @generated from message agni.v1.webapi.ListSnapshotsRequest
@@ -283,7 +326,7 @@ export type ListSnapshotsRequest = Message<"agni.v1.webapi.ListSnapshotsRequest"
  * Use `create(ListSnapshotsRequestSchema)` to create a new message.
  */
 export const ListSnapshotsRequestSchema: GenMessage<ListSnapshotsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 5);
+  messageDesc(file_agni_v1_webapi_snapshot, 6);
 
 /**
  * @generated from message agni.v1.webapi.ListSnapshotsResponse
@@ -307,7 +350,7 @@ export type ListSnapshotsResponse = Message<"agni.v1.webapi.ListSnapshotsRespons
  * Use `create(ListSnapshotsResponseSchema)` to create a new message.
  */
 export const ListSnapshotsResponseSchema: GenMessage<ListSnapshotsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 6);
+  messageDesc(file_agni_v1_webapi_snapshot, 7);
 
 /**
  * @generated from message agni.v1.webapi.UpdateSnapshotRequest
@@ -322,7 +365,7 @@ export type UpdateSnapshotRequest = Message<"agni.v1.webapi.UpdateSnapshotReques
 
   /**
    * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-   * overlay). Empty replaces the whole definition, and the same definition again reads the files
+   * overlay, files). Empty replaces the whole definition, and the same definition again reads the files
    * again, which is how a stale snapshot is refreshed.
    *
    * @generated from field: google.protobuf.FieldMask update_mask = 2;
@@ -342,7 +385,7 @@ export type UpdateSnapshotRequest = Message<"agni.v1.webapi.UpdateSnapshotReques
  * Use `create(UpdateSnapshotRequestSchema)` to create a new message.
  */
 export const UpdateSnapshotRequestSchema: GenMessage<UpdateSnapshotRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 7);
+  messageDesc(file_agni_v1_webapi_snapshot, 8);
 
 /**
  * @generated from message agni.v1.webapi.DeleteSnapshotRequest
@@ -359,7 +402,64 @@ export type DeleteSnapshotRequest = Message<"agni.v1.webapi.DeleteSnapshotReques
  * Use `create(DeleteSnapshotRequestSchema)` to create a new message.
  */
 export const DeleteSnapshotRequestSchema: GenMessage<DeleteSnapshotRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 8);
+  messageDesc(file_agni_v1_webapi_snapshot, 9);
+
+/**
+ * BlobsMissing is the detail on an Ingest or UpdateSnapshot that names files whose contents the host
+ * does not hold (FAILED_PRECONDITION): their hashes, which the client sends with UploadBlobs before
+ * asking again.
+ *
+ * @generated from message agni.v1.webapi.BlobsMissing
+ */
+export type BlobsMissing = Message<"agni.v1.webapi.BlobsMissing"> & {
+  /**
+   * @generated from field: repeated string sha256 = 1;
+   */
+  sha256: string[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.BlobsMissing.
+ * Use `create(BlobsMissingSchema)` to create a new message.
+ */
+export const BlobsMissingSchema: GenMessage<BlobsMissing> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_snapshot, 10);
+
+/**
+ * @generated from message agni.v1.webapi.UploadBlobsRequest
+ */
+export type UploadBlobsRequest = Message<"agni.v1.webapi.UploadBlobsRequest"> & {
+  /**
+   * @generated from field: repeated bytes contents = 1;
+   */
+  contents: Uint8Array[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.UploadBlobsRequest.
+ * Use `create(UploadBlobsRequestSchema)` to create a new message.
+ */
+export const UploadBlobsRequestSchema: GenMessage<UploadBlobsRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_snapshot, 11);
+
+/**
+ * @generated from message agni.v1.webapi.UploadBlobsResponse
+ */
+export type UploadBlobsResponse = Message<"agni.v1.webapi.UploadBlobsResponse"> & {
+  /**
+   * sha256 is each content's hash, "sha256:<hex>", in the request's order.
+   *
+   * @generated from field: repeated string sha256 = 1;
+   */
+  sha256: string[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.UploadBlobsResponse.
+ * Use `create(UploadBlobsResponseSchema)` to create a new message.
+ */
+export const UploadBlobsResponseSchema: GenMessage<UploadBlobsResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_snapshot, 12);
 
 /**
  * SnapshotUnavailable is the detail on an error from a question whose snapshot cannot answer it: one
@@ -397,7 +497,7 @@ export type SnapshotUnavailable = Message<"agni.v1.webapi.SnapshotUnavailable"> 
  * Use `create(SnapshotUnavailableSchema)` to create a new message.
  */
 export const SnapshotUnavailableSchema: GenMessage<SnapshotUnavailable> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_snapshot, 9);
+  messageDesc(file_agni_v1_webapi_snapshot, 13);
 
 /**
  * @generated from enum agni.v1.webapi.SnapshotUnavailable.Reason
@@ -423,7 +523,7 @@ export enum SnapshotUnavailable_Reason {
  * Describes the enum agni.v1.webapi.SnapshotUnavailable.Reason.
  */
 export const SnapshotUnavailable_ReasonSchema: GenEnum<SnapshotUnavailable_Reason> = /*@__PURE__*/
-  enumDesc(file_agni_v1_webapi_snapshot, 9, 0);
+  enumDesc(file_agni_v1_webapi_snapshot, 13, 0);
 
 /**
  * This file: SnapshotService, a design loaded once and asked many questions (agni issue 1061).
@@ -499,6 +599,19 @@ export const SnapshotService: GenService<{
     methodKind: "unary";
     input: typeof DeleteSnapshotRequestSchema;
     output: typeof EmptySchema;
+  },
+  /**
+   * UploadBlobs stores file contents for a manifest an Ingest names (agni issue 1061), keyed by
+   * their SHA-256, and answers each one's hash. The server keeps what it can within its limit and
+   * may drop a blob no snapshot holds, so a client sends a blob only when an Ingest reports it
+   * missing.
+   *
+   * @generated from rpc agni.v1.webapi.SnapshotService.UploadBlobs
+   */
+  uploadBlobs: {
+    methodKind: "unary";
+    input: typeof UploadBlobsRequestSchema;
+    output: typeof UploadBlobsResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_snapshot, 0);

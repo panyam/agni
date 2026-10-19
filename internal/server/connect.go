@@ -41,6 +41,15 @@ func ConnectError(err error) *connect.Error {
 		}
 		return ce
 	}
+	// An ingest naming files whose contents were not sent says which, so the client sends those.
+	var bm *service.BlobsMissingError
+	if errors.As(err, &bm) {
+		ce := connect.NewError(connect.CodeFailedPrecondition, err)
+		if d, derr := connect.NewErrorDetail(bm.Detail()); derr == nil {
+			ce.AddDetail(d)
+		}
+		return ce
+	}
 	switch {
 	case errors.Is(err, service.ErrNotFound):
 		return connect.NewError(connect.CodeNotFound, err)
@@ -491,6 +500,14 @@ func (a *Snapshot) UpdateSnapshot(ctx context.Context, req *connect.Request[weba
 
 func (a *Snapshot) DeleteSnapshot(ctx context.Context, req *connect.Request[webapi.DeleteSnapshotRequest]) (*connect.Response[emptypb.Empty], error) {
 	resp, err := a.svc.DeleteSnapshot(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Snapshot) UploadBlobs(ctx context.Context, req *connect.Request[webapi.UploadBlobsRequest]) (*connect.Response[webapi.UploadBlobsResponse], error) {
+	resp, err := a.svc.UploadBlobs(ctx, req.Msg)
 	if err != nil {
 		return nil, toConnectErr(err)
 	}
