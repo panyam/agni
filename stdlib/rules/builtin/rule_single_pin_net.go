@@ -25,6 +25,7 @@ var singlePinNet = &check.Rule{
 	},
 	Detail:              ruleDoc("single-pin-net"),
 	Eval:                singlePinNetVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -38,7 +39,7 @@ var singlePinNet = &check.Rule{
 // changes when the count does (docsite/content/build/evidence.md).
 func singlePinNetVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		count := len(n.Connections)
 		terms := []check.WitnessTerm{{Label: "connections", Value: strconv.Itoa(count)}}
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}, Outcome: check.Pass}

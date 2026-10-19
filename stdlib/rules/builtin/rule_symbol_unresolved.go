@@ -36,6 +36,9 @@ var symbolUnresolved = &check.Rule{
 	Detail:              ruleDoc("symbol-unresolved"),
 	Eval:                symbolUnresolvedVerdicts,
 	StatesConsideredSet: true,
+	// Its subjects are symbol references, which no net or part names, so a run asked about some
+	// nets or parts leaves it out (agni issue 897).
+	Scoping: check.ScopeDesignWide,
 }
 
 // unresolvedMessage names the affected placements, because the reference alone does not say how

@@ -27,6 +27,7 @@ var powerInputNotDriven = &check.Rule{
 	},
 	Detail:              ruleDoc("power-input-not-driven"),
 	Eval:                powerInputNotDrivenVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -48,7 +49,7 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 	typesPowerOut := m.FormatTypesPowerOut()
 
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		dirs := check.NetDirs(m, n)
 		powerIns := check.CountDir(dirs, func(d ir.PinDirection) bool { return d == ir.PinDirection_PIN_DIRECTION_POWER_IN })
 		if powerIns == 0 {

@@ -26,6 +26,7 @@ var floatingInput = &check.Rule{
 	},
 	Detail:              ruleDoc("floating-input"),
 	Eval:                floatingInputVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -45,7 +46,7 @@ var floatingInput = &check.Rule{
 // those pins, so retyping the driver as an input drops the count to zero and flips the verdict.
 func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		// A diode/LED/TVS terminal is typed INPUT by some libraries but is not a logic input, so it
 		// counts toward ncOrIn and not logicInputs. Excluding it per pin rather than per net keeps a
 		// floating IC input that carries a clamp diode firing.

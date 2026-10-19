@@ -25,6 +25,7 @@ var esdProtection = &check.Rule{
 	},
 	Detail:              ruleDoc("esd-protection"),
 	Eval:                esdProtectionVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -43,7 +44,7 @@ var esdProtection = &check.Rule{
 // and cites the document it was read from.
 func esdProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		if !check.ExternalSignalNet(m, n) {
 			continue // not a connector-facing signal net, so not a subject of an ESD rule
 		}

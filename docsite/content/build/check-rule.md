@@ -365,6 +365,40 @@ slice is not equal to an empty one. A converted rule would otherwise diverge fro
 design while agreeing about every finding. Twinned rules have three things that must agree (the Go body,
 the spec twin, and the verdicts), and the trap affects about a quarter of the catalog.
 
+## Answer for one net or part
+
+`CheckDesign` takes `subjects`, and the CLI `--subject`, so the viewer can ask every rule about the
+net or part someone selected (agni issue 897). The answer for a subject is defined as the findings and
+verdicts a full run reports with that subject in the verdict's tuple, and a component covers its own
+pins. `check.Run` enforces that by narrowing every rule's results to the scope after the rule returns,
+so a new rule is correct under a scope without doing anything. It is just no faster.
+
+`Rule.Scoping` is how a rule says more than that.
+
+| Scoping | What the rule does | When to use it |
+|---|---|---|
+| `ScopeFiltered` (the zero value) | runs over the whole design, and the run narrows the answer | the rule compares every subject against the rest of the design, or its outer loop is not over its subjects |
+| `ScopeSubjects` | narrows its own outer loop with `check.ScopedNets`, `ScopedComponents` or `ScopedPins` | the loop enumerates the verdict's subject and nothing outside the loop depends on which subjects it visited |
+| `ScopeDesignWide` | is not run under a scope, and the service names it in `skipped` | the verdict's subject is a symbol file, a drawn bus or a wire end, which no net or part names |
+
+A rule built with `query.RuleFromQuery` declares `ScopeSubjects` by itself, and binds the scope's
+names to `SubjectVar` (and a pin rule's designators to `PinVar`) in the finding, domain and evidence
+goals. The exception is a rule whose `TupleVars` name a second net or part, since a scope naming that
+element reaches verdicts the subject binding would leave out, so it stays filtered.
+
+Only the inner loop may still see the whole design. `i2c-redundant-pull-up` narrows the I2C nets it
+visits and still walks every resistor from each, because the walk is the evidence. Narrowing the
+partner set as well, the other ref-des in a `duplicate-ref-des` comparison for example, would answer
+a different question.
+
+`TestScopedRunMatchesFilteredFullRun` in `internal/composetest` holds every rule in the composed
+catalog to the definition on three boards, asking each rule about a spread of the subjects its full
+run named and about one net and one part it named nothing about. It also calls a `ScopeSubjects`
+rule's `Eval` directly, outside the run's narrowing, and fails one that returns verdicts outside the
+scope, which is how a rule that declares the scope and still walks the whole board gets caught. And it
+fails a rule that is not `ScopeDesignWide` whose verdicts name no net, part or pin, because the run
+keeps such a verdict for every subject, as it must for the unresolved-symbol gate's inconclusive.
+
 ## A rule has one severity, so a severity axis means two rules
 
 `check.Run` stamps `Finding.Severity` from the rule's own metadata over whatever `Eval` set, because the

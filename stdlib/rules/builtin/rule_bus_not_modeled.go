@@ -33,6 +33,9 @@ var busNotModeled = &check.Rule{
 	Detail:              ruleDoc("bus-not-modeled"),
 	Eval:                busNotModeledVerdicts,
 	StatesConsideredSet: true,
+	// Its subjects are drawn buses, which no net or part names, so a run asked about some
+	// nets or parts leaves it out (agni issue 897).
+	Scoping: check.ScopeDesignWide,
 }
 
 // busNotModeledVerdicts decides every bus construct the reader detected. This rule can state a

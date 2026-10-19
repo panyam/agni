@@ -455,6 +455,7 @@ func checkCmd() *cobra.Command {
 	var orderBy []string
 	var srvSpec serverSpec
 	var remoteURL string
+	var subjectArgs []string
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -492,6 +493,21 @@ func checkCmd() *cobra.Command {
 			}
 			if len(orderBy) > 0 && format != "csv" {
 				return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
+			}
+			subjects, err := parseSubjects(subjectArgs)
+			if err != nil {
+				return err
+			}
+			// A scoped run answers for some nets or parts, and a report or a results document reads as
+			// the design's whole run, so --subject is refused where its answer would be mistaken for one.
+			if len(subjects) > 0 {
+				if resultsOut != "" {
+					return fmt.Errorf("--subject answers for some nets or parts, and --results-out writes the whole run's document")
+				}
+				switch format {
+				case "markdown", "report", "html":
+					return fmt.Errorf("--subject answers for some nets or parts, and --format %s is a report of the whole run (want text, json or csv)", format)
+				}
 			}
 			switch failOn {
 			case "", "error", "warning", "info":
@@ -625,7 +641,7 @@ func checkCmd() *cobra.Command {
 			// holds findings in run order and the terminal output is rendered FROM it, so the file and
 			// the terminal show the same artifact.
 			if resultsOut != "" {
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: snap, Rules: names})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: snap, Rules: names, Subjects: subjects})
 				if err != nil {
 					return rpcFailed(err)
 				}
@@ -677,11 +693,12 @@ func checkCmd() *cobra.Command {
 				}
 				failFindings = reportFindings(rresp.GetReport())
 			default: // text, json and csv all need the raw findings
-				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: snap, Rules: names})
+				resp, err := svc.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: snap, Rules: names, Subjects: subjects})
 				if err != nil {
 					return rpcFailed(err)
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
+				noteDesignWide(cmd.ErrOrStderr(), resp.GetSkipped())
 				// --verdicts selects the CONSIDERED SET instead of the violations, which is what each
 				// rule concluded about every subject it looked at, passes included. --fail-on still reads
 				// the findings, since a pass is not a gate condition.
@@ -757,6 +774,7 @@ func checkCmd() *cobra.Command {
 	outFileFlag(cmd, &outPath)
 	cmd.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so subject puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
+	cmd.Flags().StringArrayVar(&subjectArgs, "subject", nil, "answer for this net, component or pin alone, spelled net:NAME, component:REF or pin:REF.PIN (repeatable). Each rule reports what a full run reports with it as a subject, and a component covers its own pins. A rule that concludes about the design as a whole is not run and is listed as skipped. text, json and csv only")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")
 	cmd.Flags().StringVar(&profilePath, "profile-path", "", "directory of YAML interface-profile declarations; their rules join the catalog alongside the built-in profiles")

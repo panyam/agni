@@ -46,7 +46,14 @@ type ruleRun struct {
 // A run stopped by its context stores nothing. Under a work budget, a rule that came back
 // inconclusive is not stored, since the budget may be what stopped it and a request with a larger one
 // is owed the real answer; its results still answer this request.
+//
+// A run under a subject scope (agni issue 897) answers a kept rule by narrowing its whole run to the
+// scope, and evaluates the rest under the scope without storing them, since a scoped answer is not
+// the rule's answer for the design.
 func (b *builtModel) runKept(ctx context.Context, base *check.Catalog, rules []*check.Rule) ([]check.Finding, []check.Verdict, error) {
+	if scope := check.SubjectScope(ctx); scope != nil {
+		return b.runScoped(ctx, scope, base, rules)
+	}
 	if !b.kept {
 		timing.Cached(ctx, "results", "uncached")
 		return check.RunAll(ctx, b.model, rules)
@@ -98,6 +105,61 @@ func (b *builtModel) runKept(ctx context.Context, base *check.Catalog, rules []*
 		b.results.mu.Unlock()
 	}
 
+	return joinRuns(have)
+}
+
+// runScoped is runKept under a scope: kept rules narrowed to it, the others evaluated under it, and
+// the two joined in check.RunAll's order.
+func (b *builtModel) runScoped(ctx context.Context, scope *check.Scope, base *check.Catalog, rules []*check.Rule) ([]check.Finding, []check.Verdict, error) {
+	have := map[string]ruleRun{}
+	var missing []*check.Rule
+	if b.kept {
+		b.results.mu.Lock()
+		for _, r := range rules {
+			if run, ok := b.results.rules[ruleKey{base, r.Name}]; ok {
+				fs, vs := scope.Results(run.findings, run.verdicts)
+				have[r.Name] = ruleRun{findings: fs, verdicts: vs}
+			} else {
+				missing = append(missing, r)
+			}
+		}
+		b.results.mu.Unlock()
+	} else {
+		missing = rules
+	}
+	switch {
+	case !b.kept:
+		timing.Cached(ctx, "results", "uncached")
+	case len(missing) == 0:
+		timing.Cached(ctx, "results", "memory")
+	default:
+		timing.Cached(ctx, "results", "scoped")
+	}
+	if len(missing) > 0 {
+		fs, vs, err := check.RunAll(ctx, b.model, missing)
+		if err != nil {
+			return nil, nil, err
+		}
+		for _, r := range missing {
+			have[r.Name] = ruleRun{}
+		}
+		for _, f := range fs {
+			run := have[f.Rule]
+			run.findings = append(run.findings, f)
+			have[f.Rule] = run
+		}
+		for _, v := range vs {
+			run := have[v.Rule]
+			run.verdicts = append(run.verdicts, v)
+			have[v.Rule] = run
+		}
+	}
+	return joinRuns(have)
+}
+
+// joinRuns lays per-rule results out in check.RunAll's order, by rule name and within a rule as that
+// rule's run left them.
+func joinRuns(have map[string]ruleRun) ([]check.Finding, []check.Verdict, error) {
 	names := make([]string, 0, len(have))
 	for n := range have {
 		names = append(names, n)

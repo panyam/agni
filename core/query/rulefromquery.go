@@ -8,6 +8,7 @@ import (
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/jaala/datalog"
 )
 
 // FindingQuery declares a datalog-backed check rule (WS3-038), a datalog program whose every answer
@@ -221,6 +222,9 @@ func buildRule(fq FindingQuery) *check.Rule {
 	if len(r.Reads) == 0 {
 		r.Reads = ReadsFrom(fq.vocabulary(), q)
 	}
+	if fq.bindsScope() {
+		r.Scoping = check.ScopeSubjects
+	}
 	// findingFor projects one answer row onto the violation it reports. It is shared by both eval
 	// shapes below so the finding a rule emits cannot depend on whether its author declared a domain.
 	findingFor := func(m check.Model, row Row) check.Finding {
@@ -241,7 +245,11 @@ func buildRule(fq FindingQuery) *check.Rule {
 	// passed over are not in the answer and the only accurate report is failures-only.
 	if fq.Domain == nil {
 		r.Eval = check.FailuresOnly(func(ctx context.Context, m check.Model) []check.Finding {
-			rows, err := Default.Eval(ctx, q, sharedBase(fq.vocabulary(), m), EvalOptions(ctx)...)
+			opts, none := fq.scopeOptions(ctx)
+			if none {
+				return []check.Finding{}
+			}
+			rows, err := Default.Eval(ctx, q, sharedBase(fq.vocabulary(), m), opts...)
 			if err != nil {
 				// Construction validated this query, so this is the ENGINE failing on a design. An
 				// inconclusive finding says the rule could not decide, where nil would read as a clean
@@ -261,10 +269,14 @@ func buildRule(fq FindingQuery) *check.Rule {
 	// The failing verdicts are built here rather than through check.FailuresOnly, because that adapter
 	// sees only the Finding, whose subject is singular, and the subject tuple has to come from the ROW.
 	r.Eval = func(ctx context.Context, m check.Model) []check.Verdict {
+		opts, none := fq.scopeOptions(ctx)
+		if none {
+			return nil
+		}
 		base := sharedBase(fq.vocabulary(), m)
 		var vs []check.Verdict
 		failed := map[string]bool{}
-		rows, err := Default.Eval(ctx, q, base, EvalOptions(ctx)...)
+		rows, err := Default.Eval(ctx, q, base, opts...)
 		if err != nil {
 			// The failing half never ran, so any considered set would report every subject as passing
 			// on evidence never gathered. One inconclusive verdict says the rule could not decide
@@ -296,7 +308,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 				Finding:  &f,
 			})
 		}
-		drows, err := Default.Eval(ctx, fq.Domain.Query, base, EvalOptions(ctx)...)
+		drows, err := Default.Eval(ctx, fq.Domain.Query, base, opts...)
 		if err != nil {
 			// Keep the findings. A defect must never disappear because the coverage half failed, even
 			// though the rule then reports fewer passes than it examined.
@@ -307,7 +319,7 @@ func buildRule(fq FindingQuery) *check.Rule {
 		// means no evidence rather than an error, so a pass loses its chips and not itself.
 		evidence := map[string][]check.ContextSubject{}
 		if fq.Domain.Evidence != nil {
-			if erows, err := Default.Eval(ctx, *fq.Domain.Evidence, base, EvalOptions(ctx)...); err == nil {
+			if erows, err := Default.Eval(ctx, *fq.Domain.Evidence, base, opts...); err == nil {
 				for _, row := range erows {
 					subjects := fq.tuple(row)
 					if len(subjects) == 0 {
@@ -393,6 +405,61 @@ func (fq FindingQuery) subjectShape() []string {
 // tupleKey names a subject tuple for set membership. It reuses VerdictID's escaping rather than
 // joining refs with a separator, because a net name is passed through from a source file and may
 // contain anything, including whatever separator looked safe.
+// bindsScope reports whether a scope can be bound into the rule's goals (agni issue 897), which needs
+// the subject variable to be the only element of the verdict's tuple a scope can name. A tuple
+// element of another kind, such as the required signal a profile rule pairs with its host, names
+// nothing a scope holds, so it does not stand in the way. A second net or part in the tuple does,
+// because a scope naming it reaches verdicts the subject variable's binding would leave out, so that
+// rule runs whole and the run filters it.
+func (fq FindingQuery) bindsScope() bool {
+	for _, tv := range fq.TupleVars {
+		switch tv.Kind {
+		case check.KindNet, check.KindComponent, check.KindPin:
+			return false
+		}
+	}
+	return true
+}
+
+// scopeOptions are the evaluation options for one run: the work budget, plus the scope's subjects
+// bound to SubjectVar when the rule can bind them. A pin-subject rule binds the parts the scope
+// reaches, and the pins' designators to PinVar when the scope names pins alone. none reports a scope holding nothing of the rule's
+// kind, which needs no evaluation, since the run would keep none of its rows.
+func (fq FindingQuery) scopeOptions(ctx context.Context) (opts []datalog.Option, none bool) {
+	opts = EvalOptions(ctx)
+	s := check.SubjectScope(ctx)
+	if s == nil || !fq.bindsScope() {
+		return opts, false
+	}
+	var names []string
+	if fq.Kind == check.KindNet {
+		names = s.NetNames()
+	} else {
+		names = s.RefDes()
+	}
+	if len(names) == 0 {
+		return nil, true
+	}
+	opts = append(opts, BindEach(fq.SubjectVar, texts(names)))
+	if fq.Kind == check.KindPin && fq.PinVar != "" {
+		// Asked about U7.3 alone, the rule evaluates that pin rather than every pin of U7. Two pins
+		// of two parts bind both designators on both parts, a few pins more than asked, which the run
+		// narrows.
+		if pins, ok := s.PinDesignators(); ok {
+			opts = append(opts, BindEach(fq.PinVar, texts(pins)))
+		}
+	}
+	return opts, false
+}
+
+func texts(ss []string) []Value {
+	out := make([]Value, len(ss))
+	for i, s := range ss {
+		out[i] = Text(s)
+	}
+	return out
+}
+
 func tupleKey(es []check.Entity) string {
 	return check.VerdictID(check.Verdict{Subjects: es})
 }

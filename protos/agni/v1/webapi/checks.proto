@@ -98,6 +98,12 @@ message CheckDesignRequest {
   // circuit walk examines. It can only LOWER the
   // deployment's own budget, never raise it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself inconclusive, naming the budget, and the other rules still answer.
   int64 work_budget = 6;
+  // subjects narrows the run to these nets, components and pins (agni issue 897). Each rule answers
+  // for them alone: the findings and verdicts are the ones a full run reports with one of them as a
+  // subject, and a component covers its own pins. Empty checks the whole design. A rule that
+  // concludes about the design as a whole has no answer for a subset, so it is not run and is named
+  // in `skipped`. A net matches by net_id when both sides carry one, and by name otherwise.
+  repeated agni.v1.checks.Subject subjects = 8;
   reserved 2, 3, 4, 5;
   reserved "overlay", "uri", "board_uri", "as_named";
 }

@@ -27,6 +27,7 @@ var esdClampNotTVS = &check.Rule{
 	},
 	Detail:              ruleDoc("esd-clamp-not-tvs"),
 	Eval:                esdClampNotTVSVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -40,7 +41,7 @@ var esdClampNotTVS = &check.Rule{
 // a TVS), so its passes are narrow too, and each names the device it credits.
 func esdClampNotTVSVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		if !check.ExternalSignalNet(m, n) {
 			continue // not a connector-facing signal net, so not a subject of an ESD rule
 		}

@@ -161,7 +161,7 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 
 // CheckDesign runs the rule checks over a loaded design's netlist IR. A geometry-only file with no
 // netlist is an invalid argument. request.rules selects the subset to run, empty meaning the whole
-// catalog. Each finding's sheets locate its subject in the design's geometry (WS9-024), and a
+// catalog, and request.subjects the nets and parts to answer for, empty meaning all of them. Each finding's sheets locate its subject in the design's geometry (WS9-024), and a
 // design with no resolvable geometry gets findings without sheets rather than an error.
 func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {
 	// The snapshot resolved the tiers and composed the config when it was ingested (agni issue 1061),
@@ -185,6 +185,22 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	// "can this rule ever run" and the panel wants "did it run on this design", so a rule gated on
 	// this design is reported in `skipped` rather than vanishing from the findings.
 	runnable, skipped := partitionAvailable(rules, m)
+	// A run asked about some nets or parts answers for those alone (agni issue 897). The rules that
+	// conclude about the design as a whole have no answer for a subset, so they are named rather than
+	// run and filtered down to an empty list that would read as clean.
+	if subjects := req.GetSubjects(); len(subjects) > 0 {
+		es := make([]check.Entity, len(subjects))
+		for i, sub := range subjects {
+			es[i] = subjectFromProto(sub)
+		}
+		scope := check.NewScope(es...)
+		var designWide []*check.Rule
+		runnable, designWide = check.SplitDesignWide(scope, runnable)
+		for _, r := range designWide {
+			skipped = append(skipped, &webapi.SkippedRule{Name: r.Name, Reason: check.DesignWideReason})
+		}
+		ctx = check.WithSubjectScope(ctx, scope)
+	}
 	// Verdicts come from the SAME runnable set as the findings. A skipped rule contributes no
 	// verdicts, since it considered nothing.
 	// The request's context reaches every rule, so a check nobody is waiting for stops and says so

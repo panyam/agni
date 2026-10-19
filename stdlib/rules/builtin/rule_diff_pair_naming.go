@@ -24,6 +24,7 @@ var diffPairNaming = &check.Rule{
 	},
 	Detail:              ruleDoc("diff-pair-naming"),
 	Eval:                diffPairNamingVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -42,7 +43,7 @@ func diffPairNamingVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 	uses := check.DiffConventionPresent(m)
 
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		neg, ok := check.ExpectedDiffNegative(n.Name)
 		if !ok {
 			continue // not a differential-positive name, so not this rule's subject

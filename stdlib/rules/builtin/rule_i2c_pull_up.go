@@ -27,6 +27,7 @@ var i2cPullUp = &check.Rule{
 	},
 	Detail:              ruleDoc("i2c-pull-up"),
 	Eval:                i2cPullUpVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -37,7 +38,7 @@ var i2cPullUp = &check.Rule{
 // the entities the viewer highlights.
 func i2cPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		if !isI2C(n.Name) {
 			continue
 		}

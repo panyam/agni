@@ -22,6 +22,7 @@ var bulkCap = &check.Rule{
 	},
 	Detail:              ruleDoc("bulk-cap"),
 	Eval:                bulkCapVerdicts,
+	Scoping:             check.ScopeSubjects,
 	StatesConsideredSet: true,
 }
 
@@ -34,7 +35,7 @@ var bulkCap = &check.Rule{
 // names the capacitor, so a reviewer can go and look at it.
 func bulkCapVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
-	for _, n := range m.Nets() {
+	for _, n := range check.ScopedNets(ctx, m) {
 		named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"
 		if !named || m.IsGroundNet(n) {
 			continue
