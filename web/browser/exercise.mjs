@@ -433,6 +433,9 @@ for (const seed of seeds) {
     await walkDesign(page, seed.title, log);
     await step("1. reopen after a reload", seed.title, async () => {
       const t2 = performance.now();
+      // The reloaded page starts its clock again, so a line the first visit logged could fall inside
+      // a later run's window on the new clock and be counted as that run's. Only the new page's count.
+      log.timings.length = 0;
       // The viewer rewrites its URL as it is used, dropping ?timing, so the reload names it again.
       await page.goto(timedURL(page.url()), { waitUntil: "domcontentloaded" });
       const drawn = await opened(page);

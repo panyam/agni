@@ -23,10 +23,12 @@ import (
 )
 
 // A DesignCache keeps what reading a design produced, so a second request for the same design does
-// not read it again (agni issue 895). It holds two layers. CachingLoader keeps the parsed design, its
-// drawings and its board, which every surface reads through. BuildModelCached keeps the check model
-// and its fact base on top, which a query or a check needs and building costs a further 100ms on a
-// large board.
+// not read it again (agni issue 895). It holds three levels, each keyed on the one below (agni issue
+// 1061). CachingLoader keeps the parse, which reads no configuration, and the design derived from it
+// under an overlay's conventions and corpus, beside the drawings and the board; every surface reads
+// through it. BuildModelCached keeps the check model and its fact base on top, which a query or a check
+// needs and building costs a further 100ms on a large board. The rule results a check keeps live on
+// the model's entry (keptresults.go).
 //
 // An entry is keyed by what was asked (the URI, the layout, the read options' identity) and checked
 // on every hit against what the read touched: every file it opened, walked or looked for, as a
@@ -35,12 +37,12 @@ import (
 // library all invalidate it without anyone listing them.
 //
 // Two rules keep it from serving a wrong answer. A read whose options carry no identity is never
-// cached (see WithIdentity), and neither is a read that recorded no files, since that read went
+// cached past the parse (see WithIdentity), and nothing is cached from a read that recorded no files, since that read went
 // around the formats.Loader and nothing could tell when it went stale.
 //
 // It is the same code in `agni serve` and the browser engine. In the browser the engine is rebuilt
-// on every mount change, which drops its in-memory entries with it, and the parsed design, drawing and
-// board are also kept in a BlobStore that outlives the worker (see Persist).
+// on every mount change, which drops its in-memory entries with it, and the parse, the derived design,
+// the drawing and the board are also kept in a BlobStore that outlives the worker (see Persist).
 type DesignCache struct {
 	mu       sync.Mutex
 	max      int
@@ -433,19 +435,56 @@ func NewCachingLoader(l CacheableLoader, c *DesignCache) *CachingLoader {
 // Cache is the DesignCache this loader reads through, for the services that keep a model on top.
 func (l *CachingLoader) Cache() *DesignCache { return l.cache }
 
-// Design returns a copy of the design's IR, read once per identity while its files are unchanged.
+// Design returns a copy of the design's IR, derived once per identity from the parse while its files
+// are unchanged. Both are stored, so a later worker under the same overlay restores the derived design
+// and one under another overlay restores the parse and pays only the derive (about a tenth of the
+// parse on a large board).
 func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
+	o := ReadOpts(opts...)
+	derive := func(ctx context.Context) (any, error) {
+		p, err := l.parse(ctx, uri, o.SymbolPaths)
+		if err != nil {
+			return nil, err
+		}
+		d := proto.Clone(p).(*ir.Design)
+		defer timing.Begin(ctx, "derive.design")()
+		formats.DeriveDesign(d, o.Lexicon, o.DeviceClassFor)
+		return d, nil
+	}
 	ok, key := l.key("design", uri.String(), opts)
 	if !ok {
-		return l.CacheableLoader.Design(ctx, uri, opts...)
+		// Options with no identity cannot key the derived design, but the parse they derive from
+		// needs none, so only the derive is paid again.
+		v, err := derive(ctx)
+		if err != nil {
+			return nil, err
+		}
+		return v.(*ir.Design), nil
 	}
+	v, err := l.cache.getPersisted(ctx, key, designCodec, derive)
+	if err != nil {
+		return nil, err
+	}
+	return proto.Clone(v.(*ir.Design)).(*ir.Design), nil
+}
+
+// parse returns the design's configuration-free parse, read once per URI and symbol search path
+// (agni issue 1061). It is keyed on no overlay, so two projects' conventions or a request's own
+// intent derive from one parse rather than reading the files again. The value is the cache's own,
+// for Design to copy before deriving into it.
+func (l *CachingLoader) parse(ctx context.Context, uri artifact.URI, symbolPaths []string) (*ir.Design, error) {
+	key := cacheKey("parse", uri.String(), strings.Join(symbolPaths, "\x01"))
 	v, err := l.cache.getPersisted(ctx, key, designCodec, func(ctx context.Context) (any, error) {
+		opts := []ReadOption{withParseOnly()}
+		if len(symbolPaths) > 0 {
+			opts = append(opts, WithSymbolPaths(symbolPaths))
+		}
 		return l.CacheableLoader.Design(ctx, uri, opts...)
 	})
 	if err != nil {
 		return nil, err
 	}
-	return proto.Clone(v.(*ir.Design)).(*ir.Design), nil
+	return v.(*ir.Design), nil
 }
 
 // Geometry returns a copy of the drawing, read once per layout, symbol source and identity.

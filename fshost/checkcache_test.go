@@ -60,7 +60,8 @@ func newCheckFixture(t *testing.T, outcome check.Outcome, cached bool, wrap func
 	res := &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: "m", FS: ms[0].FS}), Config: resolver}
 	var c *service.DesignCache
 	if cached {
-		c = service.NewDesignCache(8)
+		// Room for three overlays' designs and models over one parse, so nothing here is evicted.
+		c = service.NewDesignCache(10)
 	}
 	loader := service.NewCachingLoader(New(ms...), c)
 	svc := service.NewCheckService(loader, cat, nil, "", nil, res)

@@ -133,8 +133,9 @@ type Engine struct {
 // decides whether one ships), and no query budget, since the only person waiting on a query is the
 // one who asked it.
 // designCache is how many reads the browser engine keeps: fewer than a server, since a tab's memory
-// is the visitor's.
-const designCache = 8
+// is the visitor's. One open design with its board checked holds about seven (the parse, the derived
+// design, a drawing, the board and a model with and without it).
+const designCache = 10
 
 func New(ms ...fshost.Mount) (*Engine, error) { return NewWith(Options{}, ms...) }
 

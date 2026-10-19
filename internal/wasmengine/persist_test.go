@@ -83,8 +83,10 @@ func TestASecondWorkerRestoresTheReadAndAnswersTheSame(t *testing.T) {
 	if store.puts.Load() != written {
 		t.Errorf("the second worker stored %d more layers, so it read what it should have restored", store.puts.Load()-written)
 	}
-	if second.Cache.Restored() != written {
-		t.Errorf("the second worker restored %d layers; the first stored %d", second.Cache.Restored(), written)
+	// The first worker stored the parse as well as the design derived from it (agni issue 1061). The
+	// second, under the same overlay, restores the derived design and never needs the parse.
+	if second.Cache.Restored() != written-1 {
+		t.Errorf("the second worker restored %d layers; the first stored %d, one of them the parse", second.Cache.Restored(), written)
 	}
 	for i := range want {
 		if !proto.Equal(got[i], want[i]) {

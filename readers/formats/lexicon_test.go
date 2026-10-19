@@ -7,6 +7,7 @@ import (
 
 	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"google.golang.org/protobuf/proto"
 )
 
 // railVocab builds a role lexicon that treats one extra name as a power rail, standing in for a
@@ -93,4 +94,44 @@ func TestNilLexiconReadsAsDefaults(t *testing.T) {
 			}
 		})
 	}
+}
+
+// TestParseOnlyStopsBeforeTheConfiguredPasses is the parse level of agni issue 1061: a loader asked
+// for the parse returns the design before any vocabulary reaches it, and deriving that parse is the
+// whole of ReadDesign, over every reader the tutorial board uses.
+func TestParseOnlyStopsBeforeTheConfiguredPasses(t *testing.T) {
+	for _, f := range []string{"../edif/testdata/basic.edn", "../../examples/tutorial-project/designs/gateway/gateway.edn", "../kicad/testdata/hier_root.kicad_sch"} {
+		read, err := (&Loader{}).ReadDesign(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		parsed, err := (&Loader{ParseOnly: true}).ReadDesign(f)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if roled, classed := stamped(read); roled == 0 || classed == 0 {
+			t.Fatalf("%s: a full read gave %d nets a role and %d parts a class, so an unstamped parse proves nothing", f, roled, classed)
+		}
+		if roled, classed := stamped(parsed); roled != 0 || classed != 0 {
+			t.Errorf("%s: the parse carries %d net roles and %d part classes, so a vocabulary reached it", f, roled, classed)
+		}
+		DeriveDesign(parsed, nil, nil)
+		if !proto.Equal(parsed, read) {
+			t.Errorf("%s: deriving the parse differs from ReadDesign", f)
+		}
+	}
+}
+
+func stamped(d *ir.Design) (roled, classed int) {
+	for _, n := range d.GetNets() {
+		if len(n.GetRoles()) > 0 {
+			roled++
+		}
+	}
+	for _, c := range d.GetComponents() {
+		if len(c.GetDeviceClasses()) > 0 {
+			classed++
+		}
+	}
+	return roled, classed
 }

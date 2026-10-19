@@ -179,21 +179,29 @@ Gate any such check on full resolution rather than reporting the phantom finding
 ## What the Loader does after your reader returns
 
 `Loader.ReadDesign` picks the reader by extension, runs it, and then applies a few format-neutral
-normalization passes so every reader's output is consistent (`readers/formats/loader.go`):
+normalization passes so every reader's output is consistent (`readers/formats/loader.go`). It is two
+halves. `ParseDesign` runs the passes that read no configuration, and `DeriveDesign` the ones that read
+a project's vocabulary or datasheet corpus:
 
 ```go
+// ParseDesign
 d, err := f.Design(l, path)
 // ...
 relocateSources(d, l.sourceName()) // locators name the mount path, not the host path
 netgraph.StampNetIDs(d)            // deterministic per-instance net ids
-lex := l.lexicon()
+classify.StampMPN(d)               // fill ir.Component.mpn from the aliases or the part type
+
+// DeriveDesign(d, lex, deviceClassFor)
 lex.Stamp(d)                       // component device_classes
 lex.StampNetRoles(d)               // net roles (ir.Role) from the naming lexicon
 lex.StampValues(d)                 // component values as machine-comparable quantities
 lex.StampPowerInPins(d)            // fill POWER_IN on under-typed supply pins
-classify.StampMPN(d)               // fill ir.Component.mpn from the aliases or the part type
-classify.StampClassesFromSpecs(d, l.deviceClassFor()) // device classes a datasheet states
+classify.StampClassesFromSpecs(d, deviceClassFor) // device classes a datasheet states
 ```
+
+A server and the browser engine keep the parse and derive it again for each overlay (agni issue
+1061), so a new pass goes in the half that matches what it reads. A pass that reads a vocabulary
+placed in `ParseDesign` would be kept under one project's conventions and served under another's.
 
 These run for every reader, so a new reader does not have to reproduce them. Build a faithful IR
 (components, nets, pins, provenance) and the shared passes fill in the derived facts. If your

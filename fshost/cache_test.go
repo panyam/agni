@@ -11,8 +11,10 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/param"
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/service"
+	"google.golang.org/protobuf/proto"
 )
 
 // hierCopy copies the KiCad hierarchy fixture (a root and the child sheet it instantiates twice) into
@@ -60,13 +62,14 @@ func hasSuffix(names map[string]bool, suffix string) bool {
 }
 
 // TestASecondReadIsServedFromTheCache is the point of agni issue 895: the same design asked twice is
-// read once.
+// read once. A read misses twice, at the parse and at the design derived from it (agni issue 1061),
+// and the second ask hits the derived design without reaching the parse.
 func TestASecondReadIsServedFromTheCache(t *testing.T) {
 	_, l, c := hierCopy(t)
 	netNames(t, l)
 	netNames(t, l)
-	if hits, misses := c.Stats(); hits != 1 || misses != 1 {
-		t.Fatalf("hits %d misses %d, want one read and one hit", hits, misses)
+	if hits, misses := c.Stats(); hits != 1 || misses != 2 {
+		t.Fatalf("hits %d misses %d, want one read (the parse and the derive) and one hit", hits, misses)
 	}
 }
 
@@ -90,27 +93,74 @@ func TestEditingASubSheetReadsTheDesignAgain(t *testing.T) {
 	if !hasSuffix(names, "SIGNAL_RENAMED") || hasSuffix(names, "/amp1/SIG") {
 		t.Fatalf("the edited sub-sheet was not read again: %v", names)
 	}
-	if _, misses := c.Stats(); misses != 2 {
-		t.Fatalf("misses %d, want 2 (the first read and the read after the edit)", misses)
+	if _, misses := c.Stats(); misses != 4 {
+		t.Fatalf("misses %d, want 4 (the first read and the read after the edit, each at the parse and the design)", misses)
 	}
 }
 
 // TestOptionsWithNoIdentityAreNeverCached: a lexicon passed without the overlay's identity could be
-// anything, so two reads under it are two reads.
+// anything, so two reads under it derive twice. The parse reads no options, so every read after the
+// first hits it, and nothing else (agni issue 1061).
 func TestOptionsWithNoIdentityAreNeverCached(t *testing.T) {
 	_, l, c := hierCopy(t)
 	opt := service.WithLexicon(classify.DefaultLexicon())
 	netNames(t, l, opt)
 	netNames(t, l, opt)
-	if hits, _ := c.Stats(); hits != 0 {
-		t.Fatalf("hits %d: a read whose options carry no identity was served from the cache", hits)
+	if hits, misses := c.Stats(); hits != 1 || misses != 1 {
+		t.Fatalf("hits %d misses %d: want the parse read once and hit once, and no derived design kept", hits, misses)
 	}
 	// And an identity that does not cover every option is not one.
 	partial := []service.ReadOption{service.WithIdentity("id", 0), opt}
 	netNames(t, l, partial...)
 	netNames(t, l, partial...)
-	if hits, _ := c.Stats(); hits != 0 {
-		t.Fatalf("hits %d: an identity covering fewer options than the read applied was used", hits)
+	if hits, misses := c.Stats(); hits != 3 || misses != 1 {
+		t.Fatalf("hits %d misses %d: an identity covering fewer options than the read applied was used", hits, misses)
+	}
+}
+
+// TestAnotherConventionDerivesFromTheSameParse is agni issue 1061's step 3: the parse is keyed on no
+// configuration, so a second overlay pays the derive and not the read, and its design is the one an
+// uncached read under it gives. control: an edited file reads the parse again.
+func TestAnotherConventionDerivesFromTheSameParse(t *testing.T) {
+	dir, l, c := hierCopy(t)
+	u := artifact.URI{Mount: "m", Path: "hier_root.kicad_sch"}
+	a := []service.ReadOption{service.WithIdentity("a", 0)}
+	// A vocabulary naming no role at all, so a design derived under the wrong one cannot pass.
+	lex := &classify.Lexicon{Role: &classify.RoleVocab{}, Class: classify.DefaultClassVocab(), Value: classify.DefaultValueVocab()}
+	b := []service.ReadOption{service.WithLexicon(lex), service.WithIdentity("b", 1)}
+	da, err := l.Design(context.Background(), u, a...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, misses := c.Stats(); misses != 2 {
+		t.Fatalf("misses %d, want the parse and the first derive", misses)
+	}
+	db, err := l.Design(context.Background(), u, b...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if hits, misses := c.Stats(); hits != 1 || misses != 3 {
+		t.Fatalf("hits %d misses %d: the second overlay read the files again instead of deriving from the parse", hits, misses)
+	}
+	if roled(da) == 0 {
+		t.Fatal("the default vocabulary gave no net a role, so the other vocabulary's design cannot differ")
+	}
+	if n := roled(db); n != 0 {
+		t.Errorf("%d nets carry a role under a vocabulary naming none, so the derive read the first overlay's design", n)
+	}
+	uncached, err := New(Mount{Name: "m", FS: os.DirFS(dir)}).Design(context.Background(), u, b...)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !proto.Equal(db, uncached) {
+		t.Error("the design derived from the kept parse differs from an uncached read under the same options")
+	}
+	child := filepath.Join(dir, "hier_child.kicad_sch")
+	later := time.Now().Add(2 * time.Second)
+	_ = os.Chtimes(child, later, later)
+	netNames(t, l, b...)
+	if hits, misses := c.Stats(); hits != 1 || misses != 5 {
+		t.Fatalf("hits %d misses %d: after an edit, want the parse read again and derived again", hits, misses)
 	}
 }
 
@@ -169,6 +219,16 @@ func TestAModelIsKeptWhenTheCorpusIsLocal(t *testing.T) {
 	}
 }
 
+func roled(d *ir.Design) int {
+	n := 0
+	for _, net := range d.GetNets() {
+		if len(net.GetRoles()) > 0 {
+			n++
+		}
+	}
+	return n
+}
+
 // TestAfterLoadRunsOncePerRead covers agni issue 1000: the browser engine collects after each layer
 // the cache reads, and a hit, which made nothing, collects nothing.
 func TestAfterLoadRunsOncePerRead(t *testing.T) {
@@ -177,7 +237,7 @@ func TestAfterLoadRunsOncePerRead(t *testing.T) {
 	c.AfterLoad(func() { loads++ })
 	netNames(t, l)
 	netNames(t, l)
-	if _, misses := c.Stats(); loads != int(misses) || loads != 1 {
-		t.Fatalf("AfterLoad ran %d times over %d reads, want once per read", loads, misses)
+	if _, misses := c.Stats(); loads != int(misses) || loads != 2 {
+		t.Fatalf("AfterLoad ran %d times over %d levels read, want once per level (the parse and the design)", loads, misses)
 	}
 }

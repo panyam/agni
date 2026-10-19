@@ -628,7 +628,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **A server and the browser engine keep what a request read** (agni 895, `service.DesignCache`;
   "Kept reads" in `architecture/web-services.md`). Validity is the files the read touched, recorded by
   `formats.Loader` through `service.LoaderIn`, so a new host that reads around `LoaderIn` is never
-  cached rather than served stale. **Whether a corpus fetches over the network is `param.Fetches`,
+  cached rather than served stale. **The design is kept as a PARSE and a design DERIVED from it**
+  (agni 1061): `formats.Loader.ParseDesign` reads no configuration and is keyed without the overlay,
+  and `formats.DeriveDesign` applies the vocabulary and corpus per overlay, so a new ingestion pass that
+  reads a project's config belongs in `DeriveDesign` or it is kept under one project and served under
+  another. **Whether a corpus fetches over the network is `param.Fetches`,
   never a `Prefetcher` type assertion**: `SpecsOver` wraps every corpus in a `Layered`, which always
   implements `Prefetch`, and asking the interface kept no model for any project with `params/` (agni
   915). With the fact base kept, **a query's `work` is what THIS request spent**, so a warm server can

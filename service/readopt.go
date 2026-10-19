@@ -35,6 +35,10 @@ type ReadOptions struct {
 	// under them is never cached.
 	Identity string
 
+	// parseOnly asks the host for the read before the passes that read configuration (see
+	// formats.Loader.ParseOnly). Only CachingLoader sets it, for the parse level it keeps.
+	parseOnly bool
+
 	// fields counts the options above that were applied, and identityCovers how many of them the
 	// identity was computed over. A caller that adds an option the identity does not know about
 	// leaves the two unequal, so the identity no longer describes the read.
@@ -72,6 +76,12 @@ func WithDeviceClasses(f func(mpn string) string) ReadOption {
 // ReadOptions.Intent).
 func WithDesignIntent(di *configpb.DesignIntent) ReadOption {
 	return func(o *ReadOptions) { o.Intent = di; o.fields++ }
+}
+
+// withParseOnly asks for the configuration-free parse (see ReadOptions.parseOnly). It is not one of
+// the fields an identity covers, because the parse level is keyed without one.
+func withParseOnly() ReadOption {
+	return func(o *ReadOptions) { o.parseOnly = true }
 }
 
 // ReadOpts resolves options to a value, for a loader implementation to read. Exported because the
