@@ -1,8 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"strings"
 	"testing"
+
+	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
 func TestParseSubjects(t *testing.T) {
@@ -23,5 +27,22 @@ func TestParseSubjects(t *testing.T) {
 		if _, err := parseSubjects([]string{bad}); err == nil || !strings.Contains(err.Error(), "--subject") {
 			t.Errorf("parseSubjects(%q) = %v, want a --subject error", bad, err)
 		}
+	}
+}
+
+func TestNoteDesignWideNamesTheRulesLeftOut(t *testing.T) {
+	var b bytes.Buffer
+	noteDesignWide(&b, []*webapi.SkippedRule{
+		{Name: "symbol-unresolved", Reason: check.DesignWideReason},
+		{Name: "copper-clearance", Reason: check.NoBoardReason},
+		{Name: "bus-not-modeled", Reason: check.DesignWideReason},
+	})
+	if got := b.String(); !strings.Contains(got, "2 rule(s)") || !strings.Contains(got, "bus-not-modeled, symbol-unresolved") || strings.Contains(got, "copper-clearance") {
+		t.Errorf("note = %q, want the two design-wide rules alone", got)
+	}
+	b.Reset()
+	noteDesignWide(&b, []*webapi.SkippedRule{{Name: "copper-clearance", Reason: check.NoBoardReason}})
+	if b.Len() != 0 {
+		t.Errorf("a run with no design-wide rule left out noted %q", b.String())
 	}
 }

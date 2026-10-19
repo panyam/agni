@@ -2,10 +2,13 @@ package main
 
 import (
 	"fmt"
+	"io"
+	"sort"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
 // parseSubjects reads `check --subject` values into the wire subjects a scoped CheckDesign takes
@@ -32,4 +35,21 @@ func parseSubjects(args []string) ([]*checkspb.Subject, error) {
 		}
 	}
 	return out, nil
+}
+
+// noteDesignWide names the rules a scoped check left out because they conclude about the design as a
+// whole, so a rule missing from the answer reads as not asked rather than as clean.
+func noteDesignWide(w io.Writer, skipped []*webapi.SkippedRule) {
+	var rules []string
+	for _, s := range skipped {
+		if s.GetReason() == check.DesignWideReason {
+			rules = append(rules, s.GetName())
+		}
+	}
+	if len(rules) == 0 {
+		return
+	}
+	sort.Strings(rules)
+	fmt.Fprintf(w, "note: %d rule(s) conclude about the design as a whole and were not asked about --subject: %s. Run without --subject for their answer.\n",
+		len(rules), strings.Join(rules, ", "))
 }

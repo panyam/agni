@@ -698,6 +698,7 @@ func checkCmd() *cobra.Command {
 					return rpcFailed(err)
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
+				noteDesignWide(cmd.ErrOrStderr(), resp.GetSkipped())
 				// --verdicts selects the CONSIDERED SET instead of the violations, which is what each
 				// rule concluded about every subject it looked at, passes included. --fail-on still reads
 				// the findings, since a pass is not a gate condition.
