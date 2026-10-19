@@ -73,7 +73,7 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 	if _, err := os.Stat(filepath.Join(webDir, "templates", "ViewerPage.html")); err != nil {
 		return fmt.Errorf("--web-dir %q has no templates/ViewerPage.html", webDir)
 	}
-	for _, need := range []string{"app.js", "agni.wasm", "wasm_exec.js", "agni-worker.js"} {
+	for _, need := range []string{"app.js", "load.js", "agni.wasm", "wasm_exec.js", "agni-worker.js"} {
 		if _, err := os.Stat(filepath.Join(webDir, "static", need)); err != nil {
 			return fmt.Errorf("--web-dir %q has no static/%s; run `make ui wasm` first", webDir, need)
 		}
@@ -119,12 +119,16 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 		}
 		for _, d := range designs {
 			pages = append(pages, d.addr)
+			// A seed is opened through its Load page, which reads it before the viewer opens it (agni
+			// issue 1072).
 			sa.siteSeeds = append(sa.siteSeeds, siteSeed{
-				Title: d.title, Href: d.addr + "/", Format: d.format,
+				Title: d.title, Href: loadAddr(d.addr) + "/", Format: d.format,
 				Size: humanBytes(listing.GetTotalSize()), Licence: licenceOf(dir), Note: d.note,
 			})
 		}
 	}
+	// The browser mount has one viewer page and one Load page, and a dropped design names its path
+	// in their query, since a static host serves only the pages written here.
 	pages = append(pages, "designs/"+wasmengine.BrowserMount+"/view")
 
 	app := newPageApp(webDir, sa)
@@ -132,12 +136,22 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 	if err != nil {
 		return err
 	}
-	for _, p := range pages {
-		dst := filepath.Join(out, filepath.FromSlash(p), "index.html")
+	load, err := renderPage(pageHandler[*LoadPage](app))
+	if err != nil {
+		return err
+	}
+	write := func(addr string, page []byte) error {
+		dst := filepath.Join(out, filepath.FromSlash(addr), "index.html")
 		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
 			return err
 		}
-		if err := os.WriteFile(dst, viewer, 0o644); err != nil {
+		return os.WriteFile(dst, page, 0o644)
+	}
+	for _, p := range pages {
+		if err := write(p, viewer); err != nil {
+			return err
+		}
+		if err := write(loadAddr(p), load); err != nil {
 			return err
 		}
 	}
@@ -150,6 +164,11 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 	}
 	fmt.Fprintf(notes, "wrote %s: %d example design(s) and the drop page, under %s\n", out, len(sa.siteSeeds), sa.basePath())
 	return nil
+}
+
+// loadAddr is the Load page's address beside a viewer address.
+func loadAddr(viewAddr string) string {
+	return strings.TrimSuffix(viewAddr, "/view") + "/load"
 }
 
 // renderPage renders a page handler's output as the static file a host will serve.

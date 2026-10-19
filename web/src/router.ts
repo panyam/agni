@@ -101,6 +101,22 @@ function designsPrefix(): string {
 // migrating the URL space again.
 const VIEW_SEGMENT = "view";
 
+// LOAD_SEGMENT ends a design's Load page, the page that reads a design into the engine's store
+// before the viewer opens it (agni issue 1072). It carries the same query string as /view, which it
+// hands on when the design is read.
+const LOAD_SEGMENT = "load";
+
+// A DesignPage is one of the two pages a design's URL can end in.
+export type DesignPage = typeof VIEW_SEGMENT | typeof LOAD_SEGMENT;
+
+// DROP_PARAM carries a dropped design's path within the browser mount on a static host. Such a host
+// serves only the pages `agni site` wrote, so a design under designs/local/<drop>/... has no page of
+// its own there, and its path rides in the query of the browser mount's one page instead.
+const DROP_PARAM = "d";
+
+// BROWSER_MOUNT is the mount dropped files go into, the same name as wasm/drop.ts's.
+const BROWSER_MOUNT = "local";
+
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
   return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
@@ -128,7 +144,7 @@ function isRenderMode(s: string | null): s is RenderMode {
 // page lives at /designs/<mount>/<path...>/view, with the sheet and view knobs in the query string
 // because sheet ids and layout names are not guaranteed path-safe. A folder is the same path with a
 // trailing slash (/designs/<mount>/ for a mount root) and no query. With neither it is "/".
-export function locationToUrl(loc: ViewerLocation): string {
+export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGMENT): string {
   if (hasDir(loc)) {
     const segs = [loc.mount, ...loc.path.split("/")].filter((s) => s !== "").map(encodeURIComponent);
     return designsPrefix() + segs.join("/") + "/";
@@ -158,8 +174,35 @@ export function locationToUrl(loc: ViewerLocation): string {
     params.set("set", loc.set);
     params.set("q", loc.q);
   }
+  if (staticHost && loc.mount === BROWSER_MOUNT) {
+    const all = new URLSearchParams([[DROP_PARAM, loc.path], ...params]);
+    return `${designsPrefix()}${BROWSER_MOUNT}/${page}/?${all.toString()}`;
+  }
   const q = params.toString();
-  return designsPrefix() + segs.join("/") + "/" + VIEW_SEGMENT + (q ? `?${q}` : "");
+  return designsPrefix() + segs.join("/") + "/" + page + (q ? `?${q}` : "");
+}
+
+// dropPageUrl is where files are dropped or picked, the browser mount's Load page with no design. It
+// ends in a slash on every host, since a static host serves it as a folder's index.html.
+export function dropPageUrl(): string {
+  return `${designsPrefix()}${BROWSER_MOUNT}/${LOAD_SEGMENT}/`;
+}
+
+// swapPage is the address of the other page of the design at pathname+search, the query kept whole
+// (a static host's dropped design names its path there).
+export function swapPage(pathname: string, search: string, page: DesignPage): string {
+  const slash = pathname.endsWith("/");
+  const p = slash ? pathname.slice(0, -1) : pathname;
+  const at = p.lastIndexOf("/");
+  return `${p.slice(0, at + 1)}${page}${slash ? "/" : ""}${search}`;
+}
+
+// pageOf says which of a design's two pages a pathname is, or "" for one that is neither.
+export function pageOf(pathname: string): DesignPage | "" {
+  const p = pathname.endsWith("/") ? pathname.slice(0, -1) : pathname;
+  if (p.endsWith(`/${VIEW_SEGMENT}`)) return VIEW_SEGMENT;
+  if (p.endsWith(`/${LOAD_SEGMENT}`)) return LOAD_SEGMENT;
+  return "";
 }
 
 // parseUrl reads a location back out of a pathname+search pair (as read from window.location). The
@@ -171,7 +214,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   const loc = emptyLocation();
   if (!pathname.startsWith(designsPrefix())) return loc;
   let rest = pathname.slice(designsPrefix().length);
-  if (staticHost && rest.endsWith(`/${VIEW_SEGMENT}/`)) rest = rest.slice(0, -1);
+  if (staticHost && (rest.endsWith(`/${VIEW_SEGMENT}/`) || rest.endsWith(`/${LOAD_SEGMENT}/`))) rest = rest.slice(0, -1);
   const isDir = rest.endsWith("/");
   const segs = rest
     .split("/")
@@ -184,12 +227,15 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
     loc.isDir = true;
     return loc; // folders carry no sheet or view knobs
   }
-  if (segs[segs.length - 1] !== VIEW_SEGMENT) return loc; // not a design URL
+  const last = segs[segs.length - 1];
+  if (last !== VIEW_SEGMENT && last !== LOAD_SEGMENT) return loc; // not a design URL
   segs.pop();
+  const params = new URLSearchParams(search);
+  // A dropped design on a static host names its path in the query (see DROP_PARAM).
+  if (staticHost && segs.length === 1 && segs[0] === BROWSER_MOUNT && params.get(DROP_PARAM)) segs.push(...(params.get(DROP_PARAM) ?? "").split("/"));
   if (segs.length < 2) return loc; // a design needs a mount and at least one path segment
   loc.mount = segs[0];
   loc.path = segs.slice(1).join("/");
-  const params = new URLSearchParams(search);
   loc.sheet = params.get("sheet") ?? "";
   const mode = params.get("mode");
   loc.mode = isRenderMode(mode) ? mode : "";

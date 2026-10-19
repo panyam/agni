@@ -241,7 +241,11 @@ describe("the static demo under /agni/demo/", () => {
       await expect.poll(() => page.locator("#drop-dialog").evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
       await page.locator(".drop-design-open").first().click();
       await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 60_000 }).toContain("faithful");
-      expect(new URL(page.url()).pathname).toMatch(new RegExp(`^${prefix}designs/local/drop-[a-z0-9]+/companion-demo\\.edn/view`));
+      // A static host serves only the pages `agni site` wrote, so a dropped design's path rides in the
+      // query of the browser mount's one viewer page (agni issue 1072).
+      const at = new URL(page.url());
+      expect(at.pathname).toBe(`${prefix}designs/local/view/`);
+      expect(at.searchParams.get("d") ?? "").toMatch(/^drop-[a-z0-9]+\/companion-demo\.edn$/);
       expect(log.failed).toEqual([]);
       expect(log.errors).toEqual([]);
     });

@@ -26,18 +26,19 @@ import { ViewerPresenter, type RenderView, type SavedFile } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
 import { SvgView, drawnOnSheet } from "./svgview.js";
 import { compareButton } from "./compare.js";
+import { designListing, loadedKey, onStaticHost, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
-  projectClient, useEngineFetch,
-  tableClient, timingMode, snapshots,
+  projectClient, tableClient, snapshots,
 } from "./api.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine } from "./wasm/client.js";
-import { fetchFile } from "./wasm/fetchfile.js";
-import { BROWSER_MOUNT, installDrop } from "./wasm/drop.js";
-import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
+import type { WasmEngine } from "./wasm/client.js";
+import { BROWSER_MOUNT } from "./wasm/drop.js";
+import { browserDropStore, dropOf } from "./drops.js";
+import { wasLoaded } from "./loaded.js";
+import { admit } from "./admit.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
-import { appBase, currentLocation, hasFile, locationToUrl, setBase, setStaticHost, type ViewerLocation } from "./router.js";
+import { appBase, currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { LocateReason, drawnSheets, searchPattern } from "./query.js";
 import { delayedBusy } from "./busy.js";
@@ -73,188 +74,6 @@ function syncUrl(loc: ViewerLocation): void {
   if (restoring) return;
   const url = withEngineParams(locationToUrl(loc));
   if (url !== window.location.pathname + window.location.search) window.history.pushState(null, "", url);
-}
-
-// engineParams are the query parameters that choose this page's engine. They ride along on every
-// URL the page pushes, so a refresh or a back/forward keeps the engine the visitor asked for.
-const engineParams = (() => {
-  const q = new URLSearchParams(window.location.search);
-  const out = new URLSearchParams();
-  for (const k of ["engine", "wasm-max-bytes"]) {
-    const v = q.get(k);
-    if (v !== null) out.set(k, v);
-  }
-  return out;
-})();
-
-function withEngineParams(url: string): string {
-  if (!engineParams.size) return url;
-  const u = new URL(url, window.location.origin);
-  engineParams.forEach((v, k) => u.searchParams.set(k, v));
-  return u.pathname + u.search;
-}
-
-// pageEngine is the engine this page analyses its design on: the URL's `engine=`, else the one the
-// server wrote into the shell (`agni serve --engine`), else the server.
-function pageEngine(): string {
-  // A page served as plain files has no server to analyse anything, so it runs in the browser.
-  if (onStaticHost) return "wasm";
-  return engineParams.get("engine") ?? document.querySelector<HTMLElement>(".app")?.dataset.engine ?? "server";
-}
-
-// The shell says where the app is served and whether an agni server is behind it (agni issue 856).
-// Both are read before anything builds or reads a URL.
-const shell = document.querySelector<HTMLElement>(".app")?.dataset ?? {};
-const onStaticHost = shell.host === "static";
-setBase(shell.base || "/");
-setStaticHost(onStaticHost);
-
-// fileURL is where one of a mount's files is fetched from: the server's read-only /raw/ route, or
-// the same path under the static site's raw/ folder, which `agni site` writes with that layout.
-function fileURL(mount: string, path: string): URL {
-  return new URL(`${appBase()}raw/${encodeURIComponent(mount)}/${path.split("/").map(encodeURIComponent).join("/")}`, location.href);
-}
-
-// wasmMaxBytes is the largest design the page analyses in the browser: the URL's `wasm-max-bytes=`,
-// else the server's `--wasm-max-bytes` from the shell (agni issue 852).
-function wasmMaxBytes(): number {
-  const v = engineParams.get("wasm-max-bytes") ?? document.querySelector<HTMLElement>(".app")?.dataset.wasmMaxBytes;
-  const n = Number(v);
-  return v && Number.isFinite(n) && n > 0 ? n : Number.POSITIVE_INFINITY;
-}
-
-// showEngineNote says, in the top bar, that a design left the engine the page asked for.
-function showEngineNote(text: string): void {
-  const el = document.getElementById("engine-note");
-  if (!el) return;
-  el.textContent = text;
-  el.hidden = false;
-}
-
-// hideEngineNote clears the top bar's note when it is still about `about`, such as a file whose
-// stalled fetch went through on a later attempt.
-function hideEngineNote(about: string): void {
-  const el = document.getElementById("engine-note");
-  if (el?.textContent?.includes(about)) el.hidden = true;
-}
-
-// refuseBrowserMounts answers, on the server engine, every request naming a dropped design with a
-// refusal and a note rather than sending it, since the server has never seen those files (agni issue
-// 854). Requests about the server's own mounts pass.
-function refuseBrowserMounts(): void {
-  const reason = "A dropped design is analysed in the browser and never sent to the server, so it needs the browser engine";
-  const network = globalThis.fetch.bind(globalThis);
-  if (currentLocation().mount === BROWSER_MOUNT) showEngineNote(`${reason}.`);
-  useEngineFetch(async (input, init) => {
-    const req = new Request(input, init);
-    const body = await req.clone().text();
-    if (body.includes(`"mount://${BROWSER_MOUNT}/`) || body.includes(`"mount://${BROWSER_MOUNT}"`)) {
-      showEngineNote(`${reason}.`);
-      return new Response(JSON.stringify({ code: "failed_precondition", message: reason }), {
-        status: 400,
-        headers: { "Content-Type": "application/json" },
-      });
-    }
-    return network(req);
-  });
-}
-
-// installPageDrop wires dropping files on the page (agni issue 854). On the server engine a drop is
-// refused with the reason, so a visitor's files never leave the browser by accident.
-function installPageDrop(engine: WasmEngine | undefined): void {
-  const dialog = document.getElementById("drop-dialog") as HTMLDialogElement | null;
-  const button = document.getElementById("drop-open");
-  const input = document.getElementById("drop-input") as HTMLInputElement | null;
-  if (!dialog || !button || !input) return;
-  const folderButton = document.getElementById("drop-folder") ?? undefined;
-  const folderInput = (document.getElementById("drop-folder-input") as HTMLInputElement | null) ?? undefined;
-  const files = workspaceClient();
-  installDrop({
-    engine,
-    propose: (uri) => files.proposeDesigns({ uri }),
-    open: (path) => {
-      const segs = [BROWSER_MOUNT, ...path.split("/")].map(encodeURIComponent).join("/");
-      window.history.pushState(null, "", withEngineParams(`${appBase()}designs/${segs}/view`));
-      window.dispatchEvent(new PopStateEvent("popstate"));
-    },
-    refuse: (reason) => showEngineNote(`${reason}.`),
-    target: document.body,
-    dialog,
-    button,
-    input,
-    folderButton,
-    folderInput,
-  });
-}
-
-// SERVE_LANE_MAX_BYTES is the serve worker's memory limit (agni issues 911, 974, 990). A worker that has
-// crept past it is replaced, when its live heap says a replacement would come back smaller
-// (wouldShrink in wasm/client.ts), by one that restores the open design from the browser's cache. A
-// worker that is past it only because the open design is that large is kept.
-const SERVE_LANE_MAX_BYTES = 512 << 20;
-
-// startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853): the engine
-// loads in a worker, and every client the page builds afterwards talks to it, bringing in each
-// design's files from the server the first time a request names it. The design keeps the URL it has
-// under the server engine. Listings and file reads go to the server, which owns the mount namespace.
-// It must finish before the app root builds its clients. The assets sit beside this bundle, so the
-// page works under any path prefix.
-async function startPageEngine(): Promise<WasmEngine | undefined> {
-  if (pageEngine() !== "wasm") {
-    refuseBrowserMounts();
-    return undefined;
-  }
-  const asset = (name: string) => new URL(name, import.meta.url).href;
-  const engine = await startEngine(
-    { worker: asset("agni-worker.js"), wasm: asset("agni.wasm"), exec: asset("wasm_exec.js") },
-    {
-      serveMaxBytes: SERVE_LANE_MAX_BYTES,
-      onRestart: (lane, s) =>
-        console.info(
-          `agni: the ${lane} worker held ${Math.round(s.memoryBytes / (1 << 20))} MB, ${Math.round((s.heap?.heapAlloc ?? 0) / (1 << 20))} MB of it live, and was replaced`,
-        ),
-    },
-  );
-  const network = globalThis.fetch.bind(globalThis);
-  const timed = timingMode() !== "";
-  const files = workspaceClient();
-  const workspacePath = `/${WorkspaceService.typeName}/`;
-  useEngineFetch(
-    mountingFetch({
-      engine,
-      source: {
-        // A static site lists each mount whole, in files/<mount>.json beside its raw/ folder, since a
-        // seeded mount is one design and there is no server to ask.
-        list: onStaticHost
-          ? async (uri) => {
-              const res = await network(new URL(`${appBase()}files/${encodeURIComponent(mountOf(uri))}.json`, location.href));
-              if (!res.ok) throw new Error(`${mountOf(uri)}: ${res.status}`);
-              return (await res.json()) as DesignFiles;
-            }
-          : (uri) => files.listDesignFiles({ uri }),
-        // A transfer that stops sending is abandoned and asked for again, and the top bar says which
-        // file is slow, rather than the page waiting on it forever (agni issue 1002).
-        fetchFile: (mount, path) =>
-          fetchFile(network, fileURL(mount, path), {
-            onStall: (s) =>
-              showEngineNote(
-                `Fetching ${path} stalled after ${Math.round(s.bytes / (1 << 20))} MB; ${s.attempt < s.attempts ? `asking again (${s.attempt + 1} of ${s.attempts})` : "giving up"}.`,
-              ),
-            onDone: (d) => {
-              if (d.attempts > 1) hideEngineNote(path);
-              if (timed) console.info(`agni fetch ${mount}/${path}: ${JSON.stringify({ bytes: d.bytes, ms: Math.round(d.ms), attempts: d.attempts })}`);
-            },
-          }),
-      },
-      network,
-      // With no server, workspace calls are the worker's too.
-      passthrough: (url) => !onStaticHost && url.pathname.startsWith(workspacePath),
-      browserMounts: new Set([BROWSER_MOUNT]),
-      maxBytes: wasmMaxBytes(),
-      onServer: (f) => showEngineNote(`Analysed on the server: ${f.reason}.`),
-    }),
-  );
-  return engine;
 }
 
 class AppRoot extends BaseComponent {
@@ -788,23 +607,61 @@ const menuEl = document.getElementById("panels-menu");
 // dockApi is kept so entering a comparison can open/focus the Diff panel (WS9-005).
 const dockApi = dockEl && parkEl && menuEl ? createViewerDock(dockEl, parkEl, menuEl, window.localStorage) : null;
 
+// drops are the files dropped into this browser, which the Load page kept (agni issue 1072).
+const drops = browserDropStore();
+
+function storage(): Storage | undefined {
+  try {
+    return window.localStorage;
+  } catch {
+    return undefined;
+  }
+}
+
+// admitted asks admit.ts whether this page opens its design, and goes to the Load page when not.
+async function admitted(): Promise<boolean> {
+  const a = await admit({
+    pathname: window.location.pathname,
+    search: window.location.search,
+    dropMountPrefix: `${appBase()}designs/${BROWSER_MOUNT}/`,
+    stamp: async (mount, path) => (await designListing(mount, path, drops))?.stamp ?? "",
+    loaded: (mount, path, stamp) => wasLoaded(storage(), loadedKey(mount, path), stamp),
+  });
+  if (!a.open) {
+    window.location.replace(withEngineParams(a.goTo));
+    return false;
+  }
+  if (a.replaceWith) window.history.replaceState(null, "", a.replaceWith);
+  return true;
+}
+
+// addDrop gives the engine a dropped design's files, which only this browser holds, once per drop.
+const added = new Set<string>();
+async function addDrop(engine: WasmEngine | undefined, path: string): Promise<void> {
+  const id = dropOf(path);
+  if (!engine || !id || added.has(id)) return;
+  const files = await drops.files(id);
+  if (!Object.keys(files).length) {
+    showEngineNote("This browser no longer keeps the files of this dropped design: drop them again.");
+    return;
+  }
+  await engine.add(BROWSER_MOUNT, files);
+  added.add(id);
+}
+
 const bus = new EventBus();
 const controller = new LifecycleController(bus);
-void startPageEngine()
-  .then(async (engine) => {
+void admitted()
+  .then(async (open) => {
+    if (!open) return null;
+    const engine = await startPageEngine();
     const root = new AppRoot("app", document.body, bus);
     await controller.initializeFromRoot(root);
     return { root, engine };
   })
-  .then(async ({ root, engine }) => {
-    const presenter = root.presenter;
-    if (!presenter) return;
-    installPageDrop(engine);
-    const here = currentLocation();
-    if (engine && here.mount === BROWSER_MOUNT && hasFile(here)) {
-      // A reload empties the worker, and a dropped design existed nowhere else.
-      showEngineNote("Dropped files live only in the tab they were dropped into, and a reload empties it: drop them again.");
-    }
+  .then(async (booted) => {
+    const presenter = booted?.root.presenter;
+    if (!booted || !presenter) return;
     // applyUrl opens whatever the current URL addresses. The restoring flag keeps this replay from
     // pushing a duplicate history entry (see syncUrl); it runs once at boot (deep-link refresh) and
     // again on every popstate (browser back/forward).
@@ -813,6 +670,7 @@ void startPageEngine()
       // A folder location cannot reach this page. The server routes a folder URL to the browse page
       // and only a /view URL here (WS9-049 phase 2), and syncUrl only pushes file locations.
       if (!hasFile(loc)) return; // not a design URL, so leave the empty shell as-is
+      if (loc.mount === BROWSER_MOUNT) await addDrop(booted.engine, loc.path);
       restoring = true;
       try {
         await presenter.restore(loc);

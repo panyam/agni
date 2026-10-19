@@ -33,9 +33,6 @@ const out = flag("--out");
 // walks the Jetson seed alone.
 const only = flag("--only")?.split(",");
 const control = args.includes("--control");
-// --no-background-load walks a demo built before agni issue 1061, whose viewer loads nothing ahead
-// of Run checks and so never logs the line backgroundLoad waits for.
-const backgroundLoads = !args.includes("--no-background-load");
 // --timing opens every design with ?timing=1, so the page asks each request where its time went
 // (agni issue 914), and adds a row breaking Run checks down for each design.
 // --timing-memory does the same with ?timing=memory, so each stage also carries the worker's memory
@@ -222,10 +219,34 @@ function checksTiming(log, design, run, suffix = "") {
   add(`checks rules${suffix}`, design, "ok", `${t.rulesEvaluated ?? "?"} rules; slowest ${rules.map((r) => `${r.rule} ${ms(r.micros)}`).join(", ") || "none"}`, s.rulesMs);
 }
 
-// openLoad is the "1. load" row for a seed: the design files the open fetched and, with --timing,
+// loadPage is the "load page" row: the Load page reading the design into the store until it opens
+// the viewer (agni issue 1072), timed from the address the walk went to. The page logs one line when
+// the read is done, and a board the engine kept nowhere a later worker can restore it from fails the
+// row, since the read then bought nothing. A demo built before the Load page opens the viewer
+// straight away and logs no line, which the row says.
+//
+// On arrival the log's timings and fetches restart with the viewer, since the page's clock does.
+async function loadPage(page, log, design, t, name) {
+  return step(name, design, async () => {
+    await page.waitForURL((u) => /\/view\/?$/.test(u.pathname), { timeout: 300_000 });
+    const ms = since(t);
+    const line = log.loads[log.loads.length - 1];
+    const files = log.fetches.length;
+    log.timings.length = 0;
+    log.fetches.length = 0;
+    if (!line) return { status: "not available", ms, detail: "this demo opens a design without a Load page (#1072)" };
+    const m = /in (\d+) ms: board (.+)$/.exec(line);
+    if (!m) throw new Error(`unreadable load line: ${line}`);
+    const fetched = timed ? `; ${files} design files fetched` : "";
+    return { status: m[2] === "not persisted" ? "fail" : "ok", ms, detail: `board ${m[2]}, read in ${m[1]} ms${fetched}` };
+  });
+}
+
+// openLoad is the "1. load" row for a seed: the design files the viewer fetched and, with --timing,
 // what every request before Run checks spent loading the design rather than answering (agni issue
-// 1060). It is paid once per visit, where every later question runs on what it loaded. Its time is
-// the engine's loading alone, since "1. open" already gives the wall time.
+// 1060). With the Load page in front (agni issue 1072) that is a restore from the store, paid once
+// per visit, where every later question runs on what it loaded. Its time is the engine's loading
+// alone, since "1. open" already gives the wall time.
 function openLoad(log, design, beforeMs) {
   // Read now, before Run checks fetches the check worker's copy of the files.
   const files = log.fetches.map((l) => /^agni fetch .+?: (\{.*\})$/.exec(l)).filter(Boolean).map((m) => JSON.parse(m[1]));
@@ -242,23 +263,6 @@ function openLoad(log, design, beforeMs) {
   }
   const s = sumSplits(splits);
   add("1. load", design, "ok", `${fetched}; ${splits.length} requests: ${loadDetail(s)}`, s.loadMs);
-}
-
-// backgroundLoad waits for the load the viewer starts once the first sheet is drawn (agni issue
-// 1061), the (n+1)th the page has logged, and reports it as a row. The walk then runs checks on a
-// loaded design, as a reader who looks at the first sheet before pressing Run does. A board the
-// engine kept nowhere a later worker can restore it from fails the row, since the load then bought
-// nothing.
-async function backgroundLoad(log, design, n, name = "1. background load") {
-  return step(name, design, async () => {
-    if (!backgroundLoads) return { status: "not available", detail: "walked with --no-background-load" };
-    await poll(async () => log.loads.length > n, 180_000);
-    const line = log.loads[n];
-    if (line.startsWith("agni load skipped ")) return { status: "not available", detail: "the design has no board" };
-    const m = /in (\d+) ms: board (.+)$/.exec(line);
-    if (!m) throw new Error(`unreadable load line: ${line}`);
-    return { status: m[2] === "not persisted" ? "fail" : "ok", ms: Number(m[1]), detail: `board ${m[2]}` };
-  });
 }
 
 // checksAgain clicks Run checks a second time on the same page. The viewer keeps each rule's verdict
@@ -414,9 +418,10 @@ for (const seed of seeds) {
   if (only && !only.includes(mount)) continue;
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const log = record(page);
+  await page.goto(timedURL(seed.href), { waitUntil: "domcontentloaded" });
+  const read = await loadPage(page, log, seed.title, performance.now(), "1. load page");
   const t = performance.now();
-  const ok = await step("1. open", seed.title, async () => {
-    await page.goto(timedURL(seed.href), { waitUntil: "domcontentloaded" });
+  const ok = read && await step("1. open", seed.title, async () => {
     const drawn = await opened(page).catch((e) => {
       throw new Error(`${e.message}, ${pendingFiles(log.requests, prefix, performance.now())}`);
     });
@@ -425,7 +430,6 @@ for (const seed of seeds) {
   });
   // The load is read before Run checks, whose own loading is the checks load row's.
   if (ok) openLoad(log, seed.title, await page.evaluate(() => performance.now()));
-  if (ok) await backgroundLoad(log, seed.title, 0);
   const run = ok && (await checks(page, seed.title));
   if (run) {
     checksTiming(log, seed.title, run);
@@ -436,14 +440,16 @@ for (const seed of seeds) {
       // The reloaded page starts its clock again, so a line the first visit logged could fall inside
       // a later run's window on the new clock and be counted as that run's. Only the new page's count.
       log.timings.length = 0;
+      const loads = log.loads.length;
       // The viewer rewrites its URL as it is used, dropping ?timing, so the reload names it again.
       await page.goto(timedURL(page.url()), { waitUntil: "domcontentloaded" });
       const drawn = await opened(page);
+      // A design the Load page read opens straight away on a reload (agni issue 1072).
+      if (log.loads.length > loads) return { status: "fail", ms: drawn - t2, detail: "the reload went back through the Load page" };
       return { ms: drawn - t2, detail: "first sheet drawn after a reload" };
     });
-    // A fresh page over the store the first visit filled: the load and then the check restore the
-    // board rather than parsing it.
-    await backgroundLoad(log, seed.title, 1, "background load after a reload");
+    // A fresh page over the store the first visit filled: the check restores the board rather than
+    // parsing it.
     const again = await checks(page, seed.title, "checks after a reload", log, true);
     if (again) checksTiming(log, seed.title, again, " after a reload");
   }
@@ -456,7 +462,7 @@ for (const seed of seeds) {
 async function drop(design, input, files, markers) {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const log = record(page);
-  await page.goto(timedURL("designs/local/view/"), { waitUntil: "domcontentloaded" });
+  await page.goto(timedURL("designs/local/load/"), { waitUntil: "domcontentloaded" });
   const button = input === "#drop-folder-input" ? "#drop-folder" : "#drop-open";
   const ready = await page
     .waitForSelector(`${button}:not([hidden])`, { timeout: 60_000 })
@@ -475,12 +481,14 @@ async function drop(design, input, files, markers) {
     return { detail: `proposed ${names.map((n) => n.trim()).join("; ")}` };
   });
   if (proposed) {
+    const opening = performance.now();
     await page.locator(".drop-design-open").first().click();
-    const ok = await step("2. open", design, async () => {
+    const read = await loadPage(page, log, design, opening, "2. load page");
+    const ok = read && await step("2. open", design, async () => {
       await opened(page);
-      return { ms: since(t), detail: `drop to first sheet drawn; ${new URL(page.url()).pathname}` };
+      const at = new URL(page.url());
+      return { ms: since(t), detail: `drop to first sheet drawn; ${at.pathname}${at.searchParams.get("d") ? `?d=${at.searchParams.get("d")}` : ""}` };
     });
-    if (ok) await backgroundLoad(log, design, 0, "2. background load");
     const run = ok && (await checks(page, design));
     if (run) {
       checksTiming(log, design, run);

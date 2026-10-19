@@ -1070,44 +1070,18 @@ describe("on-demand checks (WS9)", () => {
     expect(fs.pending).toBe(2); // both selected rules await a run
   });
 
-  // The board is read in the background once the first sheet is up (agni issue 1061), and the open
-  // finishes, Run included, whether or not that read has answered.
-  it("loads a design with a board in the background after its first sheet, without waiting on it", async () => {
+  // The Load page reads the board before the viewer opens (agni issue 1072), so opening a design with
+  // a board leaves it to the store rather than reading it again.
+  it("opens a design with a board without reading the board", async () => {
     const h = harness();
     h.getDesign.mockResolvedValueOnce({
       name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
       sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }],
       nativeAvailable: true, availableLayouts: ["faithful"],
     });
-    const never = deferred<Snapshot>();
-    h.readBoard.mockReturnValueOnce(never.promise);
     await h.presenter.openFile("m", "board.edn");
-    expect(h.readBoard).toHaveBeenCalledOnce();
-    expect(h.readBoard.mock.calls[0][0]).toBe(artifactUri("m", "board.edn"));
-    expect(h.readBoard.mock.invocationCallOrder[0]).toBeGreaterThan(h.getSheet.mock.invocationCallOrder[0]);
-    expect(lastFindings(h).catalogLoading).toBe(false);
-  });
-
-  it("does not load a design that has no board", async () => {
-    const h = harness();
-    await h.presenter.openFile("m", "board.edn");
+    expect(h.getSheet).toHaveBeenCalled();
     expect(h.readBoard).not.toHaveBeenCalled();
-  });
-
-  it("logs what the background board read reported", async () => {
-    const h = harness();
-    h.getDesign.mockResolvedValueOnce({
-      name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
-      sheets: [{ id: "s1", name: "S1" }, { id: "board", name: "Board" }],
-      nativeAvailable: true, availableLayouts: ["faithful"],
-    });
-    const info = vi.spyOn(console, "info").mockImplementation(() => {});
-    try {
-      await h.presenter.openFile("m", "board.edn");
-      await vi.waitFor(() => expect(info).toHaveBeenCalledWith(expect.stringMatching(/^agni loaded mount:\/\/m\/board\.edn in \d+ ms: board persisted$/)));
-    } finally {
-      info.mockRestore();
-    }
   });
 
   // The first sheet draws before ListRules answers, and a Run pressed in that window used to run an

@@ -16,10 +16,14 @@ rule catalog, answers queries, traces a signal and scores a checklist, the same 
 a server. The browser engine keeps no review store, so a checklist run lasts until you leave the
 page; it still shows every item's verdict and saves as the checklist page.
 
-You can also drop a folder or a `.zip` of your own design files on the page, or pick them with its
-"Open files" button. The page proposes which designs the files make, shows each as the `design.yaml`
-that would declare it, and lets you edit that before opening one. Dropped files stay in the tab and
+You can also drop a folder or a `.zip` of your own design files on the demo's "Open files" page, or
+pick them with its buttons. The page proposes which designs the files make, shows each as the
+`design.yaml` that would declare it, and lets you edit that before opening one. Dropped files are kept
+in your browser's storage, so a reload reopens them, and the same page lists them with a Delete. They
 are never sent anywhere.
+
+Every design, a seed or your own, is read on a Load page before the viewer opens it, which shows each
+step as it reads. A design read once opens straight in the viewer on the next visit.
 
 The browser engine has a size limit, 128 MB of design files by default. A page served by
 `agni serve --engine wasm` sends a design over `--wasm-max-bytes` to the server and says so in its

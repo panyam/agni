@@ -1,0 +1,72 @@
+{{# include "./BasePage.html" #}}
+
+{{ define "HeadExtra" }}
+<style>
+  /* agni issue 1072: the Load page reads a design into the engine's store before the viewer opens
+     it, and is where files are dropped. It reads its shell from .app as the viewer does, so it keeps
+     the class and undoes the viewer's full-screen layout. */
+  .app.ld-app { display: block; height: auto; min-height: 100vh; overflow: auto; }
+  .ld-main { max-width: 760px; margin: 0 auto; padding: 32px 20px 60px; }
+  .ld-main h1 { font-size: 18px; margin: 0 0 4px; color: #222; word-break: break-all; }
+  .ld-sub { color: #666; margin: 0 0 20px; }
+  .ld-steps { list-style: none; margin: 0 0 20px; padding: 0; }
+  .ld-step { display: flex; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+  .ld-step-mark { flex: 0 0 18px; color: #999; }
+  .ld-step[data-state="running"] .ld-step-mark { color: #2563eb; }
+  .ld-step[data-state="done"] .ld-step-mark { color: #15803d; }
+  .ld-step[data-state="failed"] .ld-step-mark { color: #b91c1c; }
+  .ld-step-label { flex: 1 1 auto; }
+  .ld-step-detail { color: #777; font-size: 12px; }
+  .ld-failed { border-left: 3px solid #b91c1c; background: #fff7f7; padding: 10px 14px; margin: 0 0 16px; white-space: pre-wrap; }
+  .ld-actions { display: flex; gap: 8px; margin: 0 0 24px; }
+  .ld-drops h2 { font-size: 11px; text-transform: uppercase; letter-spacing: 0.03em; color: #888; margin: 24px 0 8px; border-top: 1px solid #e5e5e5; padding-top: 10px; }
+  .ld-drop { display: flex; align-items: baseline; gap: 10px; padding: 6px 0; border-bottom: 1px solid #f0f0f0; }
+  .ld-drop-name { flex: 1 1 auto; font-weight: 600; word-break: break-all; }
+  .ld-drop-meta { color: #777; font-size: 12px; }
+  .ld-empty { color: #888; }
+  .ld-main .engine-note { margin: 0 0 16px; }
+</style>
+{{ end }}
+
+{{ define "Body" }}
+<div class="app ld-app" data-engine="{{ .Engine }}" data-wasm-max-bytes="{{ .WasmMaxBytes }}" data-base="{{ .Base }}" data-host="{{ .Host }}" data-build="{{ .Build }}">
+  <div class="ld-main">
+    <nav class="vw-crumb"><a class="ld-home" href="{{ .Base }}">Agni</a> / <a class="ld-home" href="{{ .Base }}designs/">Designs</a></nav>
+    <div id="engine-note" class="engine-note" role="status" hidden></div>
+
+    <!-- Reading one design, filled by the bundle when the address names one. -->
+    <section id="load-design" hidden>
+      <h1 id="load-title"></h1>
+      <p class="ld-sub">Reading the design into this browser's store, so the viewer opens it without reading it again.</p>
+      <ul id="load-steps" class="ld-steps"></ul>
+      <div id="load-failed" class="ld-failed" role="alert" hidden></div>
+      <div class="ld-actions"><a id="load-anyway" href="" hidden>Open the viewer anyway</a></div>
+    </section>
+
+    <!-- Dropping or picking files, shown when the address names the browser mount and no design. -->
+    <section id="load-drop" hidden>
+      <h1>Open your own design</h1>
+      <p class="ld-sub">Drop a KiCad project folder, an EDIF netlist with its schematic export, or a zip of either on this page.
+        The files are read in your browser and kept in its storage until you delete them. They are never uploaded.</p>
+      <div class="ld-actions">
+        <button id="drop-open" class="drop-open" type="button" hidden>Open files…</button>
+        <input id="drop-input" type="file" multiple hidden />
+        <button id="drop-folder" class="drop-open" type="button" hidden>Open folder…</button>
+        <input id="drop-folder-input" type="file" webkitdirectory multiple hidden />
+      </div>
+      <div class="ld-drops">
+        <h2>Kept in this browser</h2>
+        <ul id="saved-drops" class="st-list"></ul>
+      </div>
+    </section>
+  </div>
+</div>
+<!-- agni issue 854: the designs a drop of files makes, each as an editable design.yaml. -->
+<dialog id="drop-dialog" class="drop-dialog"></dialog>
+{{ end }}
+
+{{ define "AppScript" }}
+<script type="module" src="{{ .Base }}static/load.js"></script>
+{{ end }}
+
+{{ define "LoadPage" }}{{ template "BasePage" . }}{{ end }}

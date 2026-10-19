@@ -130,6 +130,8 @@ func TestEveryPageOffersAWayHome(t *testing.T) {
 	for _, path := range []string{
 		"/designs/",                          // the folder browser
 		"/designs/m/boards/b.kicad_sch/view", // a design's work page
+		"/designs/m/boards/b.kicad_sch/load", // its Load page (agni issue 1072)
+		"/designs/local/load/",               // where files are dropped
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, path, nil))
@@ -150,6 +152,8 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 	// loading app.js IS the viewer, whatever else it renders.
 	browseMarkers := []string{`id="browse-tree"`, `id="browse-preview"`, "/static/browse.js"}
 	workMarkers := []string{`id="dock"`, `id="panel-park"`, "/static/app.js"}
+	// The Load page (agni issue 1072) reads a design, or takes dropped files, before the viewer opens.
+	loadMarkers := []string{`id="load-steps"`, `id="saved-drops"`, "/static/load.js"}
 
 	for _, tc := range []struct {
 		path       string
@@ -160,6 +164,11 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 		{"/designs/corpus/boards/", browseMarkers, workMarkers}, // a subfolder
 		{"/designs/corpus/b.kicad_sch/view", workMarkers, browseMarkers},
 		{"/designs/corpus/boards/b.kicad_sch/view?sheet=root", workMarkers, browseMarkers},
+		{"/designs/corpus/b.kicad_sch/load", loadMarkers, append(workMarkers, browseMarkers...)},
+		{"/designs/corpus/boards/b.kicad_sch/load?verdict=x&rule=r", loadMarkers, append(workMarkers, browseMarkers...)},
+		{"/designs/local/load/", loadMarkers, append(workMarkers, browseMarkers...)},
+		// The suffix is matched as a whole segment, so a folder named loads stays a folder.
+		{"/designs/corpus/loads/", browseMarkers, append(workMarkers, loadMarkers...)},
 	} {
 		rec := httptest.NewRecorder()
 		mux.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, tc.path, nil))

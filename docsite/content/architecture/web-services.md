@@ -220,18 +220,20 @@ abandoned and asked for again, up to three attempts, and the top bar names the f
 seeds on the deployed demo timed out at 180 s on their first open with nothing saying why. Under `?timing` the page logs each file as `agni fetch <file>`
 with its size, time and attempts.
 
-Files dropped on the page, or picked with its "Open files" button, go into the browser mount `local`
-under a folder of their own and nowhere else (agni issue 854). A `.zip` among them reads as the folder
-it was made from. The page asks the worker for `ProposeDesigns` over that folder and shows each
-proposal as its `design.yaml`, which the visitor can edit; opening one writes that descriptor into
-the mount and shows the design at `/designs/local/<folder>/<entry>/view` in the same page, without a
-reload, since the files exist only in that tab's worker. The descriptor is written under the mount's
-`.agni-overlay/` folder, whose files read over the same paths (`fshost.OverlayDir`), because a design
-that came out of a zip sits under a path the mount holds as a file, and the mount refuses a file
-beneath a file. Every request naming `local` goes to the
-worker, workspace calls included, and none is ever listed on the server. On the `server` engine a
-`local` design is refused with a note rather than sent, because the server has never seen it and
-would need it uploaded, which a drop must not do by accident.
+Files dropped on the Load page's drop target (`/designs/local/load/`), or picked with its "Open
+files" and "Open folder" buttons, go into the browser mount `local` under a folder of their own and
+into the browser's IndexedDB, and nowhere else (agni issues 854 and 1072). A `.zip` among them reads
+as the folder it was made from. The page asks the worker for `ProposeDesigns` over that folder and
+shows each proposal as its `design.yaml`, which the visitor can edit; opening one writes that
+descriptor beside the kept files and reads the design on its Load page. The descriptor is written
+under the mount's `.agni-overlay/` folder, whose files read over the same paths (`fshost.OverlayDir`),
+because a design that came out of a zip sits under a path the mount holds as a file, and the mount
+refuses a file beneath a file. A kept drop survives a reload and the navigation to the viewer, which
+gives the engine the drop's files before its first question (`web/src/drops.ts`), and the drop page
+lists what it keeps with a Delete. Every request naming `local` goes to the worker, workspace calls
+included, and none is ever listed on the server. On the `server` engine a `local` design is refused
+with a note rather than sent, because the server has never seen it and would need it uploaded, which
+a drop must not do by accident.
 
 With no agni server at all, `agni site` writes the same pages as plain files for a static host
 (agni issue 856). The shell then says it is static (`data-host`) and gives its path prefix
@@ -303,20 +305,27 @@ the browser rather than from the contract.
   successor would restore the same design to the same size. Before that (agni issue 974) a restored
   Jetson baseboard at 548 MB was replaced after every request, and each query fetched the design's
   files again and restored its board.
-- **A design's board is read once its first sheet is drawn, in a worker that then ends** (agni issue
-  1061). Opening a design leaves the board alone, so the first sheet draws first (agni issue 943),
-  and the viewer then sends an `Ingest` of the open snapshot with `read_board`, which builds the
-  model a `CheckDesign` builds, board included, and runs nothing. The page answers it on a third
-  lane, `prepare`, which starts a worker for the request and ends it once it has answered. The parse leaves its peak
-  in that worker alone, since a worker's memory only shrinks when it ends, and the parsed board goes
-  into the shared store. The jobs worker then restores it, which allocates about 23 MB on Jetson
-  where the parse allocated 412 MB. A jobs request sent while a prepare is under way waits for it
-  (`mountingFetch`), so a Run checks pressed mid-load restores the board rather than parsing it
-  beside the prepare worker. The snapshot's `tiers.board_persisted` says whether the store took the
-  board, and the viewer logs one line when the load settles. A server answers it in its own
-  process, where the model it builds is kept for the check that follows. In the cache, a request
-  waiting on another's read builds it again when the other request was cancelled, so an abandoned
-  load never fails the check waiting on it.
+- **A design is read on its Load page before the viewer opens it** (agni issue 1072). A design's
+  address has two pages, `/designs/<mount>/<path>/load` and `/view`, with the same query. The Load
+  page asks `GetDesign`, which parses the drawing, and then sends an `Ingest` with `read_board`,
+  which builds the model a `CheckDesign` builds, board included, and runs nothing. The page answers
+  that one on a third lane, `prepare`, which starts a worker for the request and ends it once it has
+  answered, so the parse leaves its peak in that worker alone and the parsed board goes into the
+  shared store. The jobs worker then restores it, which allocates about 23 MB on Jetson where the
+  parse allocated 412 MB. When both answer, the page records what it read in `localStorage` (the
+  engine, the build that wrote the page, the design and its files' content hashes, `web/src/loaded.ts`)
+  and opens the viewer. The viewer opens only a design with a matching record and sends any other to
+  its Load page with the address whole (`web/src/admit.ts`), so a link to a design this browser has
+  not read is read first and lands where it pointed. The record is a convenience: the engine checks
+  every stored read against the files' content, so a record that outlived its store costs a slower
+  open and never a wrong answer, and the Load page marks the viewer's address (`loaded=1`) so a
+  browser that keeps no record does not send a reader back and forth. The viewer itself still never
+  parses the board on open (agni issue 943). A server answers the same `Ingest` in its own process,
+  where the model it builds is kept for the check that follows. In the cache, a request waiting on
+  another's read builds it again when the other request was cancelled, so an abandoned load never
+  fails the check waiting on it. On a static host the browser mount has one page of each kind, and a
+  dropped design names its path in their query (`?d=<drop>/<entry>`), since such a host serves only
+  the pages `agni site` wrote.
 - **Every worker keeps its own snapshots.** The page's `Ingest` of each passes through
   `mountingFetch`, which keeps it, brings the files it named into any worker a question about that
   snapshot reaches, and sends the worker the same `Ingest`, without `read_board`, before that

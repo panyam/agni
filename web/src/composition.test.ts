@@ -41,6 +41,7 @@ const servedFields: Record<string, string> = {
   "{{ .WasmMaxBytes }}": "134217728",
   "{{ .Base }}": "/",
   "{{ .Host }}": "",
+  "{{ .Build }}": "",
 };
 
 function pageBody(): string {
@@ -131,7 +132,8 @@ beforeAll(async () => {
   // A DESIGN url, not the bare page. This is what makes the test exercise the restore loop rather
   // than only the mount. main.ts reads the URL at boot and replays it through presenter.restore, so
   // every client the open path needs gets used the way a deep-link refresh uses it.
-  window.history.replaceState(null, "", "/designs/m/d/b.edn/view");
+  // It arrives as the Load page sends a reader once it has read the design (agni issue 1072).
+  window.history.replaceState(null, "", "/designs/m/d/b.edn/view?loaded=1");
   document.body.innerHTML = pageBody();
   await import("./main.js");
 
