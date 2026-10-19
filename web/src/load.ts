@@ -8,7 +8,7 @@
 
 import { designListing, loadedKey, pageEngine, refuseBrowserMounts, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
 import { designClient, snapshots, workspaceClient } from "./api.js";
-import { currentLocation, dropPageUrl, emptyLocation, hasFile, locationToUrl, swapPage } from "./router.js";
+import { currentLocation, dropPageUrl, emptyLocation, hasFile, keepTiming, locationToUrl, swapPage } from "./router.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 import { LoadFlow, type LoadStep } from "./loadflow.js";
 import { LOADED_PARAM, recordLoaded } from "./loaded.js";
@@ -41,9 +41,9 @@ function viewerUrl(): string {
   return u.pathname + u.search;
 }
 
-// loadUrl is the Load page's address for a dropped design.
+// loadUrl is the Load page's address for a dropped design, with the drop page's engine and timing.
 function loadUrl(path: string): string {
-  return withEngineParams(locationToUrl({ ...emptyLocation(), mount: BROWSER_MOUNT, path }, "load"));
+  return keepTiming(withEngineParams(locationToUrl({ ...emptyLocation(), mount: BROWSER_MOUNT, path }, "load")), window.location.search);
 }
 
 function renderSteps(list: HTMLElement, steps: LoadStep[]): void {

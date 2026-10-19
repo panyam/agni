@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { bindsFromLink, dropPageUrl, emptyLocation, hasDir, hasFile, locationToUrl, pageOf, parseUrl, setBase, setStaticHost, swapPage, type ViewerLocation } from "./router.js";
+import { bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageOf, parseUrl, setBase, setStaticHost, swapPage, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -215,6 +215,14 @@ describe("the Load page's address", () => {
   it("swaps between the two pages keeping the query whole", () => {
     expect(swapPage("/designs/m/b.edn/view", "?timing=1&verdict=v", "load")).toBe("/designs/m/b.edn/load?timing=1&verdict=v");
     expect(swapPage("/agni/demo/designs/m/b.edn/load/", "?sheet=s", "view")).toBe("/agni/demo/designs/m/b.edn/view/?sheet=s");
+  });
+
+  // A drop opened from a page asked with ?timing keeps it, so the Load page and the viewer report
+  // their timings as a seed's do.
+  it("carries ?timing onto the address a drop opens, and adds nothing without it", () => {
+    expect(keepTiming("/designs/local/drop-a/g/load?engine=wasm", "?engine=wasm&timing=1")).toBe("/designs/local/drop-a/g/load?engine=wasm&timing=1");
+    expect(keepTiming("/designs/local/load/?d=drop-a%2Fg", "?timing=memory")).toBe("/designs/local/load/?d=drop-a%2Fg&timing=memory");
+    expect(keepTiming("/designs/local/drop-a/g/load", "?engine=wasm")).toBe("/designs/local/drop-a/g/load");
   });
 
   it("names the drop page with a trailing slash on every host", () => {
