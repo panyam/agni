@@ -29,18 +29,26 @@ const flag = (name) => {
 const siteDir = flag("--site");
 const url = flag("--url");
 const out = flag("--out");
+// --only names the seeds to walk by mount, and "drops" for the dropped designs, so `--only jetson`
+// walks the Jetson seed alone.
 const only = flag("--only")?.split(",");
 const control = args.includes("--control");
+// --no-background-load walks a demo built before agni issue 1061, whose viewer loads nothing ahead
+// of Run checks and so never logs the line backgroundLoad waits for.
+const backgroundLoads = !args.includes("--no-background-load");
 // --timing opens every design with ?timing=1, so the page asks each request where its time went
 // (agni issue 914), and adds a row breaking Run checks down for each design.
-const timed = args.includes("--timing");
+// --timing-memory does the same with ?timing=memory, so each stage also carries the worker's memory
+// as it ended (agni issue 994), and the checks load row says what the jobs worker held after the run.
+const timedMemory = args.includes("--timing-memory");
+const timed = timedMemory || args.includes("--timing");
 const timedURL = (href) => {
   const u = new URL(href, base);
-  if (timed) u.searchParams.set("timing", "1");
+  if (timed) u.searchParams.set("timing", timedMemory ? "memory" : "1");
   return u.href;
 };
 if (!siteDir === !url) {
-  console.error("usage: node browser/exercise.mjs (--site <built demo folder> | --url <deployed demo>) [--prefix /agni/demo/] [--out report.md] [--only m1,m2] [--control]");
+  console.error("usage: node browser/exercise.mjs (--site <built demo folder> | --url <deployed demo>) [--prefix /agni/demo/] [--out report.md] [--only m1,m2,drops] [--control]");
   process.exit(2);
 }
 
@@ -71,11 +79,12 @@ const browser = await chromium.launch().catch((e) => {
 
 // record keeps every request a page makes, with its body, for the network split and step 5.
 function record(page) {
-  const log = { requests: [], failed: [], errors: [], timings: [], fetches: [] };
+  const log = { requests: [], failed: [], errors: [], timings: [], fetches: [], loads: [] };
   page.on("console", (m) => {
     const t = m.text();
     if (t.startsWith("agni timing ")) log.timings.push(t);
     if (t.startsWith("agni fetch ")) log.fetches.push(t);
+    if (t.startsWith("agni loaded ") || t.startsWith("agni load skipped ")) log.loads.push(t);
   });
   const seen = new Map();
   page.on("request", (r) => {
@@ -178,21 +187,23 @@ async function checks(page, design, name = "checks", log = undefined) {
 // the engine (the design's files reaching the worker) and the stages that read, restore and build,
 // with which cache tier answered each read. "checks rules" is the evaluation alone, what a change to
 // a rule or to jaala moves. Only with --timing.
-function checksTiming(log, design, run) {
+function checksTiming(log, design, run, suffix = "") {
   if (!timed) return;
   const b = checksBreakdown(log.timings, run.t0, run.t1);
-  add("checks breakdown", design, b.requests.length ? "ok" : "fail", b.requests.length ? breakdownDetail(b) : "the page logged no timed request during Run checks", b.totalMs);
+  add(`checks breakdown${suffix}`, design, b.requests.length ? "ok" : "fail", b.requests.length ? breakdownDetail(b) : "the page logged no timed request during Run checks", b.totalMs);
   const line = log.timings.filter((t) => t.startsWith("agni timing CheckDesign: ")).pop();
   const s = line && loadSplit(line);
   if (!s) {
-    add("checks load", design, "fail", "the page logged no CheckDesign timing, so ?timing did not reach the engine");
+    add(`checks load${suffix}`, design, "fail", "the page logged no CheckDesign timing, so ?timing did not reach the engine");
     return;
   }
-  add("checks load", design, "ok", loadDetail(s), (s.outsideMs ?? 0) + s.loadMs);
   const ms = (us) => `${Math.round(Number(us ?? 0) / 1000)} ms`;
   const t = JSON.parse(line.slice("agni timing CheckDesign: ".length));
+  const peak = Math.max(0, ...(t.stages ?? []).map((st) => Number(st.sysBytes ?? 0)));
+  const held = peak ? `; the checking worker held ${Math.round(peak / (1 << 20))} MB` : "";
+  add(`checks load${suffix}`, design, "ok", loadDetail(s) + held, (s.outsideMs ?? 0) + s.loadMs);
   const rules = (t.rules ?? []).slice(0, 3);
-  add("checks rules", design, "ok", `${t.rulesEvaluated ?? "?"} rules; slowest ${rules.map((r) => `${r.rule} ${ms(r.micros)}`).join(", ") || "none"}`, s.rulesMs);
+  add(`checks rules${suffix}`, design, "ok", `${t.rulesEvaluated ?? "?"} rules; slowest ${rules.map((r) => `${r.rule} ${ms(r.micros)}`).join(", ") || "none"}`, s.rulesMs);
 }
 
 // openLoad is the "1. load" row for a seed: the design files the open fetched and, with --timing,
@@ -215,6 +226,23 @@ function openLoad(log, design, beforeMs) {
   }
   const s = sumSplits(splits);
   add("1. load", design, "ok", `${fetched}; ${splits.length} requests: ${loadDetail(s)}`, s.loadMs);
+}
+
+// backgroundLoad waits for the load the viewer starts once the first sheet is drawn (agni issue
+// 1061), the (n+1)th the page has logged, and reports it as a row. The walk then runs checks on a
+// loaded design, as a reader who looks at the first sheet before pressing Run does. A board the
+// engine kept nowhere a later worker can restore it from fails the row, since the load then bought
+// nothing.
+async function backgroundLoad(log, design, n, name = "1. background load") {
+  return step(name, design, async () => {
+    if (!backgroundLoads) return { status: "not available", detail: "walked with --no-background-load" };
+    await poll(async () => log.loads.length > n, 180_000);
+    const line = log.loads[n];
+    if (line.startsWith("agni load skipped ")) return { status: "not available", detail: "the design has no board" };
+    const m = /in (\d+) ms: board (.+)$/.exec(line);
+    if (!m) throw new Error(`unreadable load line: ${line}`);
+    return { status: m[2] === "not persisted" ? "fail" : "ok", ms: Number(m[1]), detail: `board ${m[2]}` };
+  });
 }
 
 // checksAgain clicks Run checks a second time on the same page. The viewer keeps each rule's verdict
@@ -381,6 +409,7 @@ for (const seed of seeds) {
   });
   // The load is read before Run checks, whose own loading is the checks load row's.
   if (ok) openLoad(log, seed.title, await page.evaluate(() => performance.now()));
+  if (ok) await backgroundLoad(log, seed.title, 0);
   const run = ok && (await checks(page, seed.title));
   if (run) {
     checksTiming(log, seed.title, run);
@@ -392,6 +421,11 @@ for (const seed of seeds) {
       const drawn = await opened(page);
       return { ms: drawn - t2, detail: "first sheet drawn after a reload" };
     });
+    // A fresh page over the store the first visit filled: the load and then the check restore the
+    // board rather than parsing it.
+    await backgroundLoad(log, seed.title, 1, "background load after a reload");
+    const again = await checks(page, seed.title, "checks after a reload", log);
+    if (again) checksTiming(log, seed.title, again, " after a reload");
   }
   network(log, seed.title, undefined);
   await page.close();
@@ -426,6 +460,7 @@ async function drop(design, input, files, markers) {
       await opened(page);
       return { ms: since(t), detail: `drop to first sheet drawn; ${new URL(page.url()).pathname}` };
     });
+    if (ok) await backgroundLoad(log, design, 0, "2. background load");
     const run = ok && (await checks(page, design));
     if (run) {
       checksTiming(log, design, run);
@@ -441,12 +476,13 @@ const text = (paths) => paths.filter((p) => /\.(edn|eds|kicad_sch|kicad_pcb)$/.t
 const gatewayMarkers = markersFrom(text(walk(gateway)));
 
 // 2. The tutorial board as a folder, then as a zip.
-await drop("gateway, as a folder", "#drop-folder-input", gateway, gatewayMarkers);
-await drop("gateway, as a zip", "#drop-input", { name: "gateway.zip", mimeType: "application/zip", buffer: storedZip(gateway) }, gatewayMarkers);
+const drops = !only || only.includes("drops");
+if (drops) await drop("gateway, as a folder", "#drop-folder-input", gateway, gatewayMarkers);
+if (drops) await drop("gateway, as a zip", "#drop-input", { name: "gateway.zip", mimeType: "application/zip", buffer: storedZip(gateway) }, gatewayMarkers);
 
 // 3. An EDIF netlist with its schematic export.
 add("3. real EDIF pair", "", "not available", "#928, the samples corpus holds no .edn with its .eds");
-await drop("companion-demo .edn + .eds (synthetic)", "#drop-input", companionPair, markersFrom(text(companionPair)));
+if (drops) await drop("companion-demo .edn + .eds (synthetic)", "#drop-input", companionPair, markersFrom(text(companionPair)));
 
 await browser.close();
 site?.close();

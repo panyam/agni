@@ -539,6 +539,12 @@ export class ViewerPresenter {
       this.pushSheets(target?.id ?? "");
       if (target) await this.showSheet(target.id);
       else this.syncLocation(); // no sheets to render, but the file selection still owns the URL
+      // The board is the slow read, and opening leaves it alone so the first sheet draws first (agni
+      // issue 943). It loads now, in the background, so a Run checks finds it read (agni issue 1061).
+      if (newFile) {
+        if (d.sheets.some((s) => s.id === "board")) void this.loadDesign(mount, path);
+        else console.info(`agni load skipped ${artifactUri(mount, path)}: the design has no board`);
+      }
       this.doc.run = null; // a run is of one design, with its own tiers and so its own skipped rules
       this.setBusyPhase("loading rules…");
       await this.loadRules(mount, path); // catalog + default selection; checks run on demand (Run button)
@@ -566,6 +572,21 @@ export class ViewerPresenter {
         this.doc.catalogLoading = false;
         this.pushFindings();
       }
+    }
+  }
+
+  // loadDesign asks the engine to read what a Run checks reads before its rules, without waiting on it.
+  // It logs one line when it settles, which the public demo's walk waits on, and says so when the
+  // engine kept the board nowhere a later worker can restore it from.
+  private async loadDesign(mount: string, path: string): Promise<void> {
+    const uri = artifactUri(mount, path);
+    const started = performance.now();
+    try {
+      const r = await this.checks.loadDesign({ uri, overlay: this.overlay() });
+      const ms = Math.round(performance.now() - started);
+      console.info(`agni loaded ${uri} in ${ms} ms: board ${r.hasBoard ? (r.boardPersisted ? "persisted" : "not persisted") : "absent"}`);
+    } catch (e) {
+      console.warn(`agni could not load ${uri} ahead of its checks:`, e);
     }
   }
 

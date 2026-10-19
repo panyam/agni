@@ -261,6 +261,20 @@ the browser rather than from the contract.
   successor would restore the same design to the same size. Before that (agni issue 974) a restored
   Jetson baseboard at 548 MB was replaced after every request, and each query fetched the design's
   files again and restored its board.
+- **A design's board is read once its first sheet is drawn, in a worker that then ends** (agni issue
+  1061). Opening a design leaves the board alone, so the first sheet draws first (agni issue 943),
+  and the viewer then sends `CheckService.LoadDesign`, which reads what a `CheckDesign` reads before
+  its rules run and runs nothing. The page answers it on a third lane, `prepare` (`PREPARE_RPCS`),
+  which starts a worker for the request and ends it once it has answered. The parse leaves its peak
+  in that worker alone, since a worker's memory only shrinks when it ends, and the parsed board goes
+  into the shared store. The jobs worker then restores it, which allocates about 23 MB on Jetson
+  where the parse allocated 412 MB. A jobs request sent while a prepare is under way waits for it
+  (`mountingFetch`), so a Run checks pressed mid-load restores the board rather than parsing it
+  beside the prepare worker. `LoadDesignResponse.board_persisted` says whether the store took the
+  board, and the viewer logs one line when the load settles. A server answers `LoadDesign` in its
+  own process, where the model it builds is kept for the check that follows. In the cache, a request
+  waiting on another's read builds it again when the other request was cancelled, so an abandoned
+  `LoadDesign` never fails the check waiting on it.
 
 The browser and the server read through different adapters over one set of ports, `fshost` over
 in-memory trees and `osLoader` over host paths, and two adapters behind one port can disagree with

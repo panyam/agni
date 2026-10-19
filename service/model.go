@@ -72,6 +72,15 @@ const (
 	SkipBoard BoardTier = false
 )
 
+// boardReadURI is the artifact a model's board is read from: the separate board when the request
+// names one, and the design itself otherwise, whose loader finds its sidecar or declared companion.
+func boardReadURI(uri, boardURI artifact.URI) artifact.URI {
+	if !boardURI.IsZero() {
+		return boardURI
+	}
+	return uri
+}
+
 // BuildModelTier is BuildModel with the board tier chosen by the caller. With SkipBoard the loader is
 // never asked for a board, boardURI included.
 func BuildModelTier(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, board BoardTier, opts ...ReadOption) (check.Model, error) {
@@ -81,10 +90,7 @@ func BuildModelTier(ctx context.Context, loader ModelLoader, uri, boardURI artif
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
-	boardFrom := uri
-	if !boardURI.IsZero() {
-		boardFrom = boardURI
-	}
+	boardFrom := boardReadURI(uri, boardURI)
 	var bg *geom.BoardGeometry
 	if board == ReadBoard {
 		endBoard := timing.Begin(ctx, "read.board")

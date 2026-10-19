@@ -753,7 +753,9 @@ the sheet off the response rather than choosing, which is C32 at one more call s
 **Opening a design must not parse its board** (agni 943). `GetDesign` lists the Board sheet from the
 board tier's format (`formats.HasBoard`), and the board is read when its sheet is opened or a
 board-tier rule runs. Reading it on open made the Jetson seed's first sheet and rule catalog wait
-about 30 s in the browser, since everything on the worker queues behind the request that opens.
+about 30 s in the browser, since everything on the worker queues behind the request that opens. The
+viewer instead sends `LoadDesign` once the first sheet is drawn, on a `prepare` worker that ends when
+it answers and leaves the parsed board in the shared store for the jobs worker to restore (agni 1061).
 **Nor must a query that asks nothing of the copper** (agni 987). A model is built with a
 `BoardTier`: rule runs pass `ReadBoard`, a query passes it only when `query.ReadsFrom` names a
 `board.*` relation (`boardTierFor`, which sees through its rules and library members), and coverage

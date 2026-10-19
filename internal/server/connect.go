@@ -179,6 +179,14 @@ func (a *Check) CheckDesign(ctx context.Context, req *connect.Request[webapi.Che
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Check) LoadDesign(ctx context.Context, req *connect.Request[webapi.LoadDesignRequest]) (*connect.Response[webapi.LoadDesignResponse], error) {
+	resp, err := a.svc.LoadDesign(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Check) GetExpectations(ctx context.Context, req *connect.Request[webapi.GetExpectationsRequest]) (*connect.Response[webapi.GetExpectationsResponse], error) {
 	resp, err := a.svc.GetExpectations(ctx, req.Msg)
 	if err != nil {

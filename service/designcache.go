@@ -5,6 +5,7 @@ import (
 	"crypto/sha256"
 	"encoding/binary"
 	"encoding/hex"
+	"errors"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -80,6 +81,8 @@ type cacheEntry struct {
 	err     error
 	touched *formats.Touched
 	used    uint64
+	// persisted is whether the persistent tier holds this value, restored from it or written to it.
+	persisted bool
 }
 
 // NewDesignCache keeps at most max entries, evicting the least recently used. Each layer's entry
@@ -207,7 +210,12 @@ func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *proto
 			}
 			c.mu.Unlock()
 			if e.err != nil {
-				// A failed build is not retried here, so one bad read is not run twice for one request.
+				// A build that stopped because ITS caller went away says nothing about the read, so a
+				// caller still waiting builds it again (agni issue 1061). Any other failure is not
+				// retried here, so one bad read is not run twice for one request.
+				if ctx.Err() == nil && (errors.Is(e.err, context.Canceled) || errors.Is(e.err, context.DeadlineExceeded)) {
+					continue
+				}
 				return nil, e.err
 			}
 			continue
@@ -229,7 +237,7 @@ func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *proto
 		v, t, ok := c.restore(ctx, key, codec)
 		endRestore()
 		if ok {
-			e.val, e.touched = v, t
+			e.val, e.touched, e.persisted = v, t, true
 			c.restored.Add(1)
 			timing.Cached(ctx, layer, "store")
 		} else {
@@ -238,7 +246,7 @@ func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *proto
 			e.val, e.err = build(withTouched(ctx, e.touched))
 			endBuild()
 			if e.err == nil {
-				c.save(ctx, key, codec, e.val, e.touched)
+				e.persisted = c.save(ctx, key, codec, e.val, e.touched)
 			}
 		}
 		if c.loaded != nil {
@@ -300,23 +308,42 @@ func (c *DesignCache) restore(ctx context.Context, key string, codec *protoCodec
 	return v, t, true
 }
 
-// save stores a value the persistent tier may keep. A read that cannot be fingerprinted, or a store
-// that refuses, leaves only the in-memory entry.
-func (c *DesignCache) save(ctx context.Context, key string, codec *protoCodec, v any, t *formats.Touched) {
+// save stores a value the persistent tier may keep, and reports whether the store took it. A read
+// that cannot be fingerprinted, or a store that refuses, leaves only the in-memory entry.
+func (c *DesignCache) save(ctx context.Context, key string, codec *protoCodec, v any, t *formats.Touched) bool {
 	if c.store == nil || codec == nil {
-		return
+		return false
 	}
 	fp, ok := t.Fingerprint()
 	if !ok {
-		return
+		return false
 	}
 	payload, err := codec.encode(v)
 	if err != nil {
-		return
+		return false
 	}
 	b := binary.AppendUvarint(make([]byte, 0, binary.MaxVarintLen64+len(fp)+len(payload)), uint64(len(fp)))
 	b = append(append(b, fp...), payload...)
-	_ = c.store.store.Put(ctx, c.store.storeKey(key), b)
+	return c.store.store.Put(ctx, c.store.storeKey(key), b) == nil
+}
+
+// persisted reports whether key's value is held in memory and is in the persistent tier too.
+func (c *DesignCache) persisted(key string) bool {
+	if c == nil {
+		return false
+	}
+	c.mu.Lock()
+	e, ok := c.entries[key]
+	c.mu.Unlock()
+	if !ok {
+		return false
+	}
+	select {
+	case <-e.ready:
+		return e.err == nil && e.persisted
+	default:
+		return false
+	}
 }
 
 // protoCodec writes one of the cache's proto layers for the persistent tier. A layer may be absent (a
@@ -461,6 +488,13 @@ func (l *CachingLoader) Board(ctx context.Context, uri artifact.URI) (*geom.Boar
 		return nil, nil
 	}
 	return proto.Clone(b).(*geom.BoardGeometry), nil
+}
+
+// BoardPersisted reports whether the board read for uri is in the cache's persistent tier, so another
+// process over the same files restores it rather than parsing it.
+func (l *CachingLoader) BoardPersisted(uri artifact.URI) bool {
+	ok, key := l.key("board", uri.String(), nil)
+	return ok && l.cache.persisted(key)
 }
 
 func (l *CachingLoader) key(kind, what string, opts []ReadOption) (bool, string) {

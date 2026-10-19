@@ -10,15 +10,20 @@
 // The jobs lane takes the requests that run rules or compare designs, and the serve lane everything
 // else. Aborting a request on a lane ends that lane's worker and starts a fresh one, which is the only
 // way to stop a Go job that never yields.
-import { startLane, workerMemory, workerStats, addFiles, type Files, type Lane, type WorkerStats } from "@panyam/tsappkit/wasmhost";
+//
+// A third lane, prepare, loads a design ahead of its checks (agni issue 1061). Each request there gets
+// a worker of its own that ends once it has answered, so the board's parse leaves its peak memory in
+// no worker that lives on, and the jobs worker restores the parsed board from the shared store. Jobs
+// requests wait while a prepare is under way, so the two never parse one board side by side.
+import { startLane, startWorker, workerFetch, workerMemory, workerStats, addFiles, type Files, type Lane, type WorkerStats } from "@panyam/tsappkit/wasmhost";
 
 export type { Files, WorkerStats };
 
 // The namespace the wasm build exports under, wasmengine.Namespace on the Go side.
 const namespace = "agni";
 
-// A LaneName names one of the engine's workers.
-export type LaneName = "serve" | "jobs";
+// A LaneName names one of the engine's lanes.
+export type LaneName = "serve" | "jobs" | "prepare";
 
 // JOB_RPCS are the requests the jobs lane answers: each runs rules over a whole design or compares
 // two, so each can hold a worker for seconds. Everything else is quick once the design is read.
@@ -30,10 +35,14 @@ export const JOB_RPCS: ReadonlySet<string> = new Set([
   "agni.v1.webapi.DiffService/DiffDesigns",
 ]);
 
+// PREPARE_RPCS are the requests the prepare lane answers, each on a worker that ends after it.
+export const PREPARE_RPCS: ReadonlySet<string> = new Set(["agni.v1.webapi.CheckService/LoadDesign"]);
+
 // laneFor is the lane a request's URL goes to, by its Connect procedure (the last two path segments,
 // so a page served under a prefix routes the same).
 export function laneFor(url: URL): LaneName {
   const procedure = url.pathname.split("/").slice(-2).join("/");
+  if (PREPARE_RPCS.has(procedure)) return "prepare";
   return JOB_RPCS.has(procedure) ? "jobs" : "serve";
 }
 
@@ -51,6 +60,18 @@ export interface EngineLane {
   // stats is the worker's wasm memory and its live Go heap, collecting garbage first, which pauses
   // the worker. For measuring; the lane's own limit asks the same at idle moments.
   stats(): Promise<WorkerStats>;
+  // begin is set on a lane that starts a worker per request (prepare). It resolves to that worker and
+  // the fetch to send the request on, which ends the worker once it has answered; release ends it
+  // for a request that is sent elsewhere instead. A caller bringing files in first uses this rather
+  // than holder, since the worker it fills is the one the request must reach.
+  begin?(): Promise<LaneRun>;
+}
+
+// A LaneRun is one request's own worker on a lane that keeps none (EngineLane.begin).
+export interface LaneRun {
+  holder: object;
+  fetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response>;
+  release(): void;
 }
 
 export interface WasmEngine {
@@ -147,7 +168,52 @@ export async function startEngine(assets: EngineAssets, opts: EngineOptions = {}
     ),
   );
   const jobs = opts.oneLane ? serve : engineLane(startLane(start));
-  const lanes: Record<LaneName, EngineLane> = { serve, jobs };
+
+  // The prepare lane's worker answers one request and ends. Its answer is read whole before the
+  // worker goes, which suits LoadDesign's few bytes.
+  const begin = async (): Promise<LaneRun> => {
+    let ended = false;
+    let w: Worker | undefined;
+    const end = () => {
+      if (ended) return;
+      ended = true;
+      w?.terminate();
+    };
+    try {
+      w = await startWorker(start);
+      await ensureKept(w);
+    } catch (err) {
+      end();
+      throw err;
+    }
+    const worker = w;
+    return {
+      holder: worker,
+      fetch: async (input, init) => {
+        try {
+          const res = await workerFetch(worker)(input, init);
+          const body = await res.arrayBuffer();
+          return new Response(body, { status: res.status, statusText: res.statusText, headers: res.headers });
+        } finally {
+          end();
+        }
+      },
+      release: end,
+    };
+  };
+  const prepare: EngineLane = opts.oneLane
+    ? serve
+    : {
+        begin,
+        fetch: async (input, init) => (await begin()).fetch(input, init),
+        holder: async () => {
+          throw new Error("the prepare lane keeps no worker between requests");
+        },
+        add: (holder, name, files) => addFiles(holder as Worker, name, files),
+        memoryBytes: async () => 0,
+        stats: async () => ({ memoryBytes: 0 }),
+      };
+  const lanes: Record<LaneName, EngineLane> = { serve, jobs, prepare };
   await Promise.all([serve.holder(), jobs.holder()]);
 
   return {
@@ -167,11 +233,11 @@ export async function startEngine(assets: EngineAssets, opts: EngineOptions = {}
     lanes,
     memoryBytes: async () => {
       const [s, j] = await Promise.all([serve.memoryBytes(), jobs.memoryBytes()]);
-      return { serve: s, jobs: j };
+      return { serve: s, jobs: j, prepare: 0 };
     },
     stats: async () => {
       const s = await serve.stats();
-      return { serve: s, jobs: jobs === serve ? s : await jobs.stats() };
+      return { serve: s, jobs: jobs === serve ? s : await jobs.stats(), prepare: { memoryBytes: 0 } };
     },
   };
 }
@@ -230,7 +296,9 @@ export interface MountingOptions {
   onServer?: (f: ServerFallback) => void;
 }
 
-// mountingFetch is the engine's fetch with the design's files brought in first (agni issue 853). A
+// mountingFetch is the engine's fetch with the design's files brought in first (agni issue 853), and
+// with each jobs request held while a prepare request is under way (agni issue 1061), so a Run checks
+// sent mid-load restores the board the prepare worker is about to store instead of parsing it too. A
 // design keeps its server URL under the in-browser engine: before a request reaches a lane, every
 // `mount://` URI in its body is listed through `source`, once per design, and the files that lane's
 // worker does not already hold, by hash, are fetched and added under the same mount name. Each lane
@@ -252,6 +320,10 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
   const held = new WeakMap<object, Map<string, Map<string, string>>>(); // worker -> mount -> path -> sha256
   const bringing = new WeakMap<object, Map<string, Promise<void>>>(); // worker -> uri -> the bring under way
   const onServerSide = new Set<string>(); // uris analysed by the server engine
+  const preparing = new Set<Promise<void>>(); // prepare requests under way, settled when each answers
+  const afterPrepares = async () => {
+    while (preparing.size) await Promise.allSettled([...preparing]);
+  };
   const toServer = (uri: string, reason: string) => {
     if (onServerSide.has(uri)) return;
     onServerSide.add(uri);
@@ -281,10 +353,10 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     return p;
   };
 
-  const bring = async (uri: string, lane: EngineLane): Promise<void> => {
+  const bring = async (uri: string, lane: EngineLane, into?: object): Promise<void> => {
     const set = await list(uri);
     if (!set) return;
-    const holder = await lane.holder();
+    const holder = into ?? (await lane.holder());
     let under = bringing.get(holder);
     if (!under) bringing.set(holder, (under = new Map()));
     let p = under.get(uri);
@@ -315,6 +387,40 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     return p;
   };
 
+  // send answers req on its lane, bringing the design's files into the worker first unless they
+  // already live in the page (a browser mount, which every worker is given at start).
+  const send = async (req: Request, uris: Set<string>, bringFiles: boolean): Promise<Response> => {
+    const name = laneFor(new URL(req.url));
+    const lane = engine.lanes[name];
+    if (name === "jobs") await afterPrepares();
+    const run = lane.begin ? await lane.begin() : undefined;
+    if (bringFiles) {
+      try {
+        await Promise.all([...uris].map((u) => bring(u, lane, run?.holder)));
+      } catch (err) {
+        run?.release();
+        throw err;
+      }
+      if ([...uris].some((u) => onServerSide.has(u))) {
+        run?.release();
+        return network(req);
+      }
+    }
+    return run ? run.fetch(req) : lane.fetch(req);
+  };
+  const tracked = (req: Request, uris: Set<string>, bringFiles: boolean): Promise<Response> => {
+    const p = send(req, uris, bringFiles);
+    if (laneFor(new URL(req.url)) === "prepare") {
+      const settled = p.then(
+        () => {},
+        () => {},
+      );
+      preparing.add(settled);
+      void settled.then(() => preparing.delete(settled));
+    }
+    return p;
+  };
+
   return async (input, init) => {
     const req = new Request(input, init);
     const uris = new Set<string>();
@@ -324,12 +430,9 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
       // not JSON, so nothing to bring in
     }
     const inBrowser = [...uris].some((u) => browserMounts.has(mountOf(u)));
-    if (inBrowser) return engine.fetch(req);
+    if (inBrowser) return tracked(req, uris, false);
     if (passthrough(new URL(req.url))) return network(req);
-    const lane = engine.lanes[laneFor(new URL(req.url))];
-    await Promise.all([...uris].map((u) => bring(u, lane)));
-    if ([...uris].some((u) => onServerSide.has(u))) return network(req);
-    return lane.fetch(req);
+    return tracked(req, uris, true);
   };
 }
 
