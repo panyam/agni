@@ -479,6 +479,13 @@ describe("cancelling from the checks panel", () => {
     expect(el.querySelector(".checks-cancelled")).toBeNull();
   });
 
+  it("says the run is under way in the panel, how many rules it is running", () => {
+    const { el, panel } = mountWithCancel({ running: true, pending: 4 });
+    expect(el.querySelector(".checks-running")?.textContent).toContain("Running 4 selected rules…");
+    panel.view.setState(state({ running: false, pending: 0 }));
+    expect(el.querySelector(".checks-running")).toBeNull();
+  });
+
   it("keeps the button disabled while running where the host cannot cancel", () => {
     const { el } = mountPanel({ running: true });
     const button = el.querySelector<HTMLButtonElement>(".checks-run")!;

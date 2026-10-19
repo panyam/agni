@@ -1638,6 +1638,16 @@ describe("cancelling a check run", () => {
     expect(lastFindings(h).cancelled).toBe(false);
   });
 
+  // The page overlay would cover Cancel itself, and the lanes exist so the rest of the page stays
+  // usable while rules run.
+  it("raises no page overlay for a run, which would cover Cancel", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    (h.render.setBusy as ReturnType<typeof vi.fn>).mockClear();
+    await h.presenter.runChecks();
+    expect(h.render.setBusy).not.toHaveBeenCalledWith(true, expect.anything());
+  });
+
   it("does nothing with no run in flight", async () => {
     const h = harness();
     await h.presenter.openFile("m", "board.edn");

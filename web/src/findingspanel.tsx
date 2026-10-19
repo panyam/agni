@@ -177,6 +177,13 @@ function ChecksPanel(props: {
         />
       </Show>
 
+      {/* The run under way, said in the panel rather than over the page, which stays usable. */}
+      <Show when={props.state().running}>
+        <div class="checks-running" role="status">
+          Running {props.state().pending} selected rule{props.state().pending === 1 ? "" : "s"}…
+        </div>
+      </Show>
+
       {/* A stopped run leaves its unanswered rules pending, which reads as clean without this. */}
       <Show when={props.state().cancelled && !props.state().running}>
         <div class="checks-cancelled" role="status">

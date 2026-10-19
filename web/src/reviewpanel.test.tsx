@@ -245,6 +245,7 @@ describe("cancelling from the review panel", () => {
     button.click();
     expect(onCancel).toHaveBeenCalledOnce();
     expect(handlers.onCreate).not.toHaveBeenCalled();
+    expect(el.querySelector(".rv-running")?.textContent).toContain("Scoring the checklist");
     panel.view.setState({ ...emptyReview(), checklist: "c", checklists: [{ ref: "c", label: "C" }], cancelled: true } as ReviewState);
     expect(el.querySelector(".rv-cancelled")?.textContent).toContain("Cancelled");
     expect(el.querySelector(".rv-run")?.textContent?.trim()).toBe("Run review");

@@ -796,8 +796,9 @@ export class ViewerPresenter {
     this.checksAbort = abort;
     this.checksCancelled = false;
     this.checksRunning = true;
+    // No page overlay: the Checks panel says the run is under way and offers Cancel, and the rest of
+    // the page stays usable, which is what the engine's separate lanes are for (agni issues 911, 918).
     this.pushFindings(); // reflect running=true (the Run button becomes Cancel)
-    this.setBusy(true, "running checks…");
     try {
       await this.runSelection(abort.signal);
       // the sidecar reconcile's full run is deferred to here too
@@ -807,7 +808,6 @@ export class ViewerPresenter {
       this.checksAbort = null;
       this.checksCancelled = abort.signal.aborted;
       this.checksRunning = false;
-      this.setBusy(false);
       this.pushFindings(); // running=false + refreshed pending count
     }
   }
@@ -1250,8 +1250,8 @@ export class ViewerPresenter {
     this.reviewAbort = abort;
     const signal = abort.signal;
     this.reviewState = { ...this.reviewState, running: true, error: "", cancelled: false };
+    // As with a check run, the Review panel shows the run and its Cancel, and nothing covers the page.
     this.pushReview();
-    this.setBusy(true, "running review…");
     try {
       // A project's checklist is already a value. Only a file found beside the design is resolved.
       const chosen = this.checklistChoices.find((c) => c.ref === this.reviewState.checklist);
@@ -1297,7 +1297,6 @@ export class ViewerPresenter {
     } finally {
       this.reviewAbort = null;
       this.reviewState.running = false;
-      this.setBusy(false);
       this.pushReview();
     }
   }

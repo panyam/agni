@@ -164,6 +164,9 @@ function ReviewPanel(props: {
         <Show when={props.state().error}>
           <div class="rv-error" role="alert">{props.state().error}</div>
         </Show>
+        <Show when={props.state().running}>
+          <div class="rv-running" role="status">Scoring the checklist…</div>
+        </Show>
         <Show when={props.state().cancelled && !props.state().running}>
           <div class="rv-cancelled" role="status">Cancelled. The checklist was not scored.</div>
         </Show>

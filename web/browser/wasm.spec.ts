@@ -182,6 +182,8 @@ describe("cancelling Run checks", () => {
     await held.on();
     await page.click(".checks-run");
     await expect.poll(() => page.locator(".checks-run").textContent(), { timeout: 30_000 }).toBe("Cancel");
+    // Past the busy overlay's delay, which once covered the whole page during a run, Cancel included.
+    await page.waitForTimeout(1000);
     await page.click(".checks-run");
     await expect.poll(() => page.locator(".checks-run").textContent(), { timeout: 30_000 }).toMatch(/^Run checks \(\d+\)$/);
     expect(await page.locator(".checks-cancelled").textContent()).toMatch(/^Cancelled\. \d+ selected rules? (was|were) not run\.$/);
