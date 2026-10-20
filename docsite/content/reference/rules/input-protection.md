@@ -34,7 +34,9 @@ walk, a series element split the net and the rule saw nothing, so a fuse-protect
 accident, and an unprotected connector-bead-regulator path passed too (the false negative this
 upgrade closes). Fuse OR TVS satisfies the rule; a per-design "which protections are required"
 policy is rule configuration (WS3-006). Ground-named nets are skipped, and an unresolved external
-net reports not-considered.
+net reports not-considered. A net the board drives itself also reports not-considered, because its connector is an
+outlet the board powers rather than a power entry (agni issue 1016). reverse-blocking-absent asks
+the same question through `check.BoardSource`, and its page lists the shapes that count.
 
 ### Query structure
 

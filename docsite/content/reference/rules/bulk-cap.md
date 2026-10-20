@@ -37,12 +37,20 @@ role was stamped) are excluded
 unresolved external nets are skipped (the cap may live in an unread sheet). Distinguishing
 bulk from local decoupling by value is a datasheet-joined refinement (WS10).
 
+A capacitor across a fitted zero-ohm link counts as on the rail, because the link joins two names
+for one rail (agni issue 1015). A converter's output node and the rail it feeds are often split by a
+0 Ohm resistor that sizes the current path or lets a bench measure it, and the capacitors sit on the
+converter's side. A link counts when its value parses to zero ohms, or when its value text carries a
+token like `0R` (a library name such as `R_0R_22.4A_0603` parses to nothing as a whole). The walk
+never crosses into a ground, and a series resistor of any other value still ends the rail. A pass
+names the link beside the capacitor.
+
 ### Query structure
 
 select rails by fact, require a capacitor member.
 
     select N in nets where (global(N) or power_driven(N)) and not ground_name(N)
-      and not exists P in N.connections where class(P) == capacitor
+      and not rail_capacitor(N)
 
 Reads: component.class, net.attributes (global, power_driven, external), net.names (the
 ground-name skip), on_net. Tier R.
