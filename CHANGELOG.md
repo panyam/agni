@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-10-20
+
+agni moves to jaala v0.1.85, where a comparison against a constant binds its variable and a goal
+column can be a constant, with answers unchanged, and the README names what has shipped since it was
+written (PR 1111).  The full write-up is [RELEASES/v0.3.3.md](RELEASES/v0.3.3.md).
+
 ## [0.3.2] - 2026-10-20
 
 A hierarchical EDIF netlist can be read whole, from `--flatten-hierarchy`, `Snapshot.flatten_hierarchy`,
