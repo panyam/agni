@@ -187,3 +187,42 @@ func TestUnrelatedNamesDoNotMatch(t *testing.T) {
 		}
 	}
 }
+
+// A pin name folds underscores where a net name keeps them, because a datasheet splits a subscript
+// with a space and a symbol library with an underscore. The fold runs after the index rewrite, so a
+// bank-and-pin name keeps the digit that separates it from a different pin.
+func TestPinNameFoldsTheSubscriptAndKeepsTheBank(t *testing.T) {
+	for _, c := range [][2]string{
+		{"VCC_A", "VCCA"},
+		{"V CCA", "VCCA"},
+		{"VDD\u200b", "VDD"},
+		{"PA01", "PA1"},
+		{"\uff56\uff44\uff44", "VDD"}, // fullwidth vdd lifted out of a PDF
+		{"IO0_1", "IO01"},
+		{"IO1", "IO1"},
+	} {
+		if got := PinName(c[0]); got != c[1] {
+			t.Errorf("PinName(%q) = %q, want %q", c[0], got, c[1])
+		}
+	}
+	if Canonical("VCC_A") != "VCC_A" {
+		t.Error("Canonical folded an underscore, which a net name must keep")
+	}
+}
+
+// A designator keeps its leading zeros, which only the index rewrite would drop, and still sheds
+// what a PDF paste adds.
+func TestPinNumberKeepsZerosAndDropsPasteArtifacts(t *testing.T) {
+	for _, c := range [][2]string{
+		{"01", "01"},
+		{"A01", "A01"},
+		{"b2", "B2"},
+		{"1\u200b", "1"},
+		{"\uff11\uff14", "14"},
+		{" A 2 ", "A2"},
+	} {
+		if got := PinNumber(c[0]); got != c[1] {
+			t.Errorf("PinNumber(%q) = %q, want %q", c[0], got, c[1])
+		}
+	}
+}

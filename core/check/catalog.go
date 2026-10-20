@@ -367,6 +367,8 @@ func capabilityMet(c Capability, m Model) bool {
 		return len(m.NetClassDefs()) > 0
 	case CapJunctionTaps:
 		return m.SuppliesDiagnostic(string(CapJunctionTaps))
+	case CapRangeLabels:
+		return m.SuppliesDiagnostic(string(CapRangeLabels))
 	}
 	return true
 }
@@ -387,6 +389,8 @@ func capabilityReason(c Capability) string {
 		return "design declares no net-class definitions, so there is no declared limit to compare against"
 	case CapJunctionTaps:
 		return "this format's reader does not examine wire geometry, so no T-tap was checked"
+	case CapRangeLabels:
+		return "this format's reader does not record how it reads a bus-spelled label, so no label was checked"
 	}
 	return "source format lacks a capability this rule requires"
 }

@@ -32,12 +32,12 @@ func auditModel() *check.RecordingModel {
 		Params: map[string]string{"priority": "2147483647", "is_default": "true", "track_width": "0.25", "via_drill": "0.3"},
 	})
 	// The fixture stands in for a reader that computed its diagnostics (agni issue 309). Without
-	// these declarations duplicate-ref-des and wire-no-junction gate to not-applicable, exactly as
+	// these declarations duplicate-ref-des, wire-no-junction and bus-spelling-not-a-bus gate to not-applicable, exactly as
 	// they now do on a format whose reader never looked, and the audit would stop exercising them.
 	if d.InputDiagnostics == nil {
 		d.InputDiagnostics = &ir.InputDiagnostics{}
 	}
-	d.InputDiagnostics.Supplied = append(d.InputDiagnostics.Supplied, "ref_des_collisions", "junction_taps")
+	d.InputDiagnostics.Supplied = append(d.InputDiagnostics.Supplied, "ref_des_collisions", "junction_taps", "range_labels")
 	return check.NewRecordingModel(check.NewModel(d, check.WithBoard(drcBoard()), check.WithParamProvider(param.ParamSet{})))
 }
 

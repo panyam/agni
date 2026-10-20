@@ -195,13 +195,13 @@ func busWire(kind geom.WireGeometry_Kind, pts []*geom.Point, uuid, name, src str
 // busLabelFor returns the name of the range-bus label (e.g. "DATA[0..7]") placed on this bus
 // polyline, or "" if none (WS1-034, WS7-042b). It uses the same name normalization and predicate
 // as the netlist detector (collectBuses) so the finding subject and the geometry name match
-// exactly. netgraph.IsBusName also accepts the `[hi:lo]` spelling, which KiCad reads as a plain
-// scalar (docsite/content/architecture/net-solving.md).
+// exactly, so a `[hi:lo]` label, which KiCad reads as a plain scalar, names no bus here either
+// (agni issue 605, docsite/content/architecture/net-solving.md).
 func busLabelFor(root *node, pts []*geom.Point) string {
 	for _, tag := range []string{"label", "global_label"} {
 		for _, l := range root.Children(tag) {
 			name := unescapeName(atomOf(l.Arg(1)))
-			if !netgraph.IsBusName(name) {
+			if !isKiCadBusLabel(name) {
 				continue
 			}
 			if p := sheetPt(l.Child("at")); p != nil && pointOnPolyline(p, pts) {

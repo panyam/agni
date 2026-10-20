@@ -7,7 +7,10 @@ go 1.26.4
 // e.g. require github.com/panyam/agni v1.2.3
 require github.com/panyam/agni v0.0.0
 
-require google.golang.org/protobuf v1.36.11 // indirect
+require (
+	golang.org/x/text v0.41.0 // indirect
+	google.golang.org/protobuf v1.36.11 // indirect
+)
 
 // TODO: DELETE this replace when you host the overlay outside the agni repo. It only exists so
 // the in-repo template builds against the engine working tree (no release tag needed here).

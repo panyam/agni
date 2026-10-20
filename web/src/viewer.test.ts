@@ -1173,6 +1173,16 @@ describe("on-demand checks (WS9)", () => {
     expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] }, { signal: expect.any(AbortSignal) });
   });
 
+  // The page boots its panels before it opens a design, and a push in that window (Escape clears the
+  // highlights) must not offer a Run that has no design to run against.
+  it("a push before any design opens says the catalog is loading", async () => {
+    const h = harness();
+    await h.presenter.clearHighlights();
+    expect(lastFindings(h).catalogLoading).toBe(true);
+    await h.presenter.runChecks();
+    expect(h.checkDesign).not.toHaveBeenCalled();
+  });
+
   it("a Run pressed while a second design's catalog loads does not run the first design's rules on it", async () => {
     const h = harness();
     await h.presenter.openFile("m", "a.edn");

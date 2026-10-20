@@ -18,7 +18,7 @@
 	(symbol (lib_id "test:R") (at 80 50 0) (unit 1) (uuid "r2")
 		(property "Reference" "R2" (at 77 49 0) (effects (font (size 1.27 1.27)))))
 	(bus (pts (xy 45 40) (xy 85 40)) (uuid "bus1"))
-	(label "DATA[1:0]" (at 65 40 0) (effects (font (size 1.27 1.27))))
+	(label "DATA[0..1]" (at 65 40 0) (effects (font (size 1.27 1.27))))
 	(wire (pts (xy 50 46.19) (xy 50 42)) (uuid "w1"))
 	(bus_entry (at 50 42) (size 2 -2) (uuid "be1"))
 	(label "DATA0" (at 50 44 0) (effects (font (size 1.27 1.27))))

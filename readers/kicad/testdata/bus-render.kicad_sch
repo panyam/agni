@@ -8,6 +8,6 @@
 	(label "SIG" (at 100 100 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
 	(bus (pts (xy 100 120) (xy 150 120)) (uuid "bus-1"))
 	(bus_entry (at 150 120) (size 2.54 2.54) (uuid "be-1"))
-	(label "DATA[7:0]" (at 100 120 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
+	(label "DATA[0..7]" (at 100 120 0) (effects (font (size 1.27 1.27)) (justify left bottom)))
 	(bus_alias "DATA" (members "DATA0" "DATA1" "DATA2" "DATA3" "DATA4" "DATA5" "DATA6" "DATA7"))
 )

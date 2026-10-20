@@ -427,8 +427,8 @@ func TestReadBusGeometry(t *testing.T) {
 	}
 	// The bus is NAMED by the range label on its wire (WS7-042b), the key a bus finding joins on; it
 	// still has no net_id (its member nets are unmodeled).
-	if bus.GetNet() != "DATA[7:0]" {
-		t.Errorf("bus name = %q, want %q (the range label on the bus)", bus.GetNet(), "DATA[7:0]")
+	if bus.GetNet() != "DATA[0..7]" {
+		t.Errorf("bus name = %q, want %q (the range label on the bus)", bus.GetNet(), "DATA[0..7]")
 	}
 	if bus.GetNetId() != "" {
 		t.Errorf("bus net_id = %q, want none (members unmodeled)", bus.GetNetId())
@@ -453,6 +453,29 @@ func TestReadBusGeometry(t *testing.T) {
 	if pts := entry.GetPolylines()[0].GetPoints(); len(pts) != 2 ||
 		pts[0].X != 150_000_000 || pts[0].Y != -120_000_000 || pts[1].X != 152_540_000 || pts[1].Y != -122_540_000 {
 		t.Errorf("bus_entry points = %+v, want (150,-120)->(152.54,-122.54) in Mnm", pts)
+	}
+}
+
+// TestColonLabelNamesNoBusWire is busLabelFor's half of agni issue 605. KiCad reads `DATA[7:0]` as a
+// scalar, so the bus trunk it sits on carries no bus name, the same answer collectBuses gives.
+func TestColonLabelNamesNoBusWire(t *testing.T) {
+	src := bytes.ReplaceAll(readFixture(t, "bus-render.kicad_sch"), []byte(`"DATA[0..7]"`), []byte(`"DATA[7:0]"`))
+	g, err := ReadSchematicGeometry(bytes.NewReader(src), "bus-render.kicad_sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	n := 0
+	for _, w := range g.Sheets[0].Wires {
+		if w.GetKind() != geom.WireGeometry_KIND_BUS {
+			continue
+		}
+		n++
+		if w.GetNet() != "" {
+			t.Errorf("bus name = %q, want none for a colon-spelled label", w.GetNet())
+		}
+	}
+	if n != 1 {
+		t.Fatalf("bus wires = %d, want 1", n)
 	}
 }
 

@@ -51,6 +51,10 @@ type Model interface {
 	// (WS1-034). Empty for sources with no bus; the bus-not-modeled rule reports each so a bussed
 	// design is flagged, not silently mis-read.
 	UnmodeledBuses() []*ir.BusNotModeled
+	// RangeLabels are the labels spelled with an index range, each saying whether the format reads
+	// it as a bus (agni issue 605). Gate on SuppliesDiagnostic("range_labels") before reading an
+	// empty slice as "no misspelled bus", since a reader that never looked returns the same nothing.
+	RangeLabels() []*ir.RangeLabel
 	// UnresolvedSymbols are symbol references the reader could not open or parse (WS1-052), each
 	// with the placements that lost their pins. Non-empty means the netlist is INCOMPLETE by an
 	// unknown amount, and a rule reading connectivity cannot tell those pinless parts from a design

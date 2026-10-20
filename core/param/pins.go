@@ -5,6 +5,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/panyam/agni/core/ident"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
@@ -113,17 +114,18 @@ func ResolvePin(spec *parampb.PartSpec, name, designator, packageRef string) (*p
 // the TXB0104's two NC pins), and collapsing it to the first match is the bug pin binding
 // exists to prevent. An empty name matches nothing.
 //
-// Matching normalizes case and drops spaces and underscores, so "V CCA" from a document
-// producer and "VCC_A" from a symbol library both reach "VCCA". Nothing fuzzier, since a
-// near-miss name is a different pin.
+// Names compare on ident.PinName, so "V CCA" from a document producer and "VCC_A" from a
+// symbol library both reach "VCCA", and a name pasted out of a PDF with a zero-width space or
+// a zero-padded index still matches (agni issue 702). Nothing fuzzier, since a near-miss name
+// is a different pin.
 func PinsByName(spec *parampb.PartSpec, name string) []*parampb.Pin {
-	key := normalizePinName(name)
+	key := ident.PinName(name)
 	if key == "" {
 		return nil
 	}
 	var out []*parampb.Pin
 	for _, p := range spec.GetPins() {
-		if normalizePinName(p.GetName()) == key {
+		if ident.PinName(p.GetName()) == key {
 			out = append(out, p)
 		}
 	}
@@ -256,24 +258,9 @@ func hasPackageSuffix(mpn, suffix string) bool {
 	return false
 }
 
-// normalizePinName reduces a pin name to its comparison key, upper case with no spaces or
-// underscores. It is narrower than the model layer's symbol normalization, which also drops
-// parentheses, because stripping more would merge different terminals.
-func normalizePinName(s string) string {
-	var b strings.Builder
-	for _, r := range strings.ToUpper(s) {
-		if r == ' ' || r == '_' {
-			continue
-		}
-		b.WriteRune(r)
-	}
-	return b.String()
-}
-
-// normalizePinNumber reduces a designator to its comparison key, upper case with all
-// whitespace removed. Ball designators are alphanumeric ("B2"), so numeric parsing is not an
-// option. Leading zeros are NOT stripped, so "01" and "1" stay different keys, because a
-// pinout that writes one never writes the other.
+// normalizePinNumber reduces a designator to its comparison key, ident.PinNumber. Ball
+// designators are alphanumeric ("B2"), so numeric parsing is not an option, and leading zeros
+// are kept, so "01" and "1" stay different keys.
 func normalizePinNumber(s string) string {
-	return strings.ToUpper(strings.Join(strings.Fields(s), ""))
+	return ident.PinNumber(s)
 }

@@ -9,6 +9,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 
 | Rule | Source | Severity | What it checks |
 |---|---|---|---|
+| [bus-spelling-not-a-bus](bus-spelling-not-a-bus/) | built-in | warning | A label is spelled like a bus, and this format reads it as one plain net. |
 | [crystal-load-caps](crystal-load-caps/) | built-in | warning | A passive crystal has an oscillator terminal with no load capacitor to ground. |
 | [dangling-endpoint](dangling-endpoint/) | built-in | warning | A wire endpoint terminates on nothing (no pin, junction, label, or other wire). |
 | [dl/power-pin-mistyped](dl-power-pin-mistyped/) | datalog | warning | A pin named like power/ground but not typed power_in sits alone on its net. |

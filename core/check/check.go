@@ -342,6 +342,12 @@ const (
 	// the JOINED half, since a reader recording only the silent taps (the KiCad reader until agni issue
 	// 420) has not examined the considered set.
 	CapJunctionTaps Capability = "junction_taps"
+
+	// CapRangeLabels means the READER recorded every label spelled with an index range and whether
+	// its format reads that spelling as a bus. Only the KiCad reader does, because KiCad is the format
+	// whose bus spelling differs from the others, so elsewhere bus-spelling-not-a-bus would find
+	// nothing and read as a pass.
+	CapRangeLabels Capability = "range_labels"
 )
 
 // Run evaluates rules over a Model and returns findings sorted by rule, then subject. The caller

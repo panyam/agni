@@ -209,6 +209,16 @@ message InputDiagnostics {
   // and gEDA readers skip `type=subcircuit` and `source=` in the same way (agni issue 134) and are
   // the intended second and third. Named in `supplied` by every reader that looked.
   repeated UnexpandedHierarchy unexpanded_hierarchy = 10;
+  // Every label spelled with an index range, and whether this format reads it as a bus (agni issue
+  // 605). The spelling is the user's claim that the label names a bus, and a format that reads it
+  // as one plain net instead merges every signal they meant to keep apart. KiCad reads only
+  // `PREFIX[first..last]` as a bus, so a KiCad label written `DATA[7:0]`, the xschem and gEDA
+  // spelling, is recorded here with reads_as_bus false.
+  //
+  // It holds the labels that DO read as buses too, so the rule over it partitions rather than
+  // filters. Declared through `supplied` ("range_labels"), since a reader that never looked returns
+  // the same nothing as a sheet with no range label.
+  repeated RangeLabel range_labels = 11;
   // The diagnostics this reader COMPUTED, named by their field name here ("ref_des_collisions",
   // "dangling_endpoints", ...), whether or not it found any.
   //
@@ -345,6 +355,15 @@ message JoinedTap {
   string label = 4;      // the label text when join_kind is "label", else empty
   int32 segments = 5;
   Provenance prov = 6;
+}
+
+// RangeLabel is one label whose name carries an index range, as the source spells it. reads_as_bus
+// says whether this format's own tool treats it as a bus, which decides whether the members the
+// range names are separate signals or one net under a bus-shaped name.
+message RangeLabel {
+  string label = 1;
+  bool reads_as_bus = 2;
+  Provenance prov = 3;
 }
 
 message DanglingEndpoint {

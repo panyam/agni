@@ -177,7 +177,7 @@ class Design(_message.Message):
     def __init__(self, name: _Optional[str] = ..., ir_version: _Optional[str] = ..., source_format: _Optional[str] = ..., libraries: _Optional[_Iterable[_Union[PartLibrary, _Mapping]]] = ..., components: _Optional[_Iterable[_Union[Component, _Mapping]]] = ..., nets: _Optional[_Iterable[_Union[Net, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[Sheet, _Mapping]]] = ..., input_diagnostics: _Optional[_Union[InputDiagnostics, _Mapping]] = ..., footprints: _Optional[_Iterable[_Union[Footprint, _Mapping]]] = ..., layers: _Optional[_Iterable[_Union[Layer, _Mapping]]] = ..., stackup: _Optional[_Union[Stackup, _Mapping]] = ..., constraints: _Optional[_Iterable[_Union[Constraint, _Mapping]]] = ..., bom: _Optional[_Iterable[_Union[BomLine, _Mapping]]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., fidelity: _Optional[_Iterable[_Union[FidelityFragment, _Mapping]]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class InputDiagnostics(_message.Message):
-    __slots__ = ("dangling_endpoints", "ref_des_collisions", "no_junction_endpoints", "unmodeled_buses", "unresolved_symbols", "resolved_symbols", "joined_taps", "unannotated_components", "unexpanded_hierarchy", "supplied")
+    __slots__ = ("dangling_endpoints", "ref_des_collisions", "no_junction_endpoints", "unmodeled_buses", "unresolved_symbols", "resolved_symbols", "joined_taps", "unannotated_components", "unexpanded_hierarchy", "range_labels", "supplied")
     DANGLING_ENDPOINTS_FIELD_NUMBER: _ClassVar[int]
     REF_DES_COLLISIONS_FIELD_NUMBER: _ClassVar[int]
     NO_JUNCTION_ENDPOINTS_FIELD_NUMBER: _ClassVar[int]
@@ -187,6 +187,7 @@ class InputDiagnostics(_message.Message):
     JOINED_TAPS_FIELD_NUMBER: _ClassVar[int]
     UNANNOTATED_COMPONENTS_FIELD_NUMBER: _ClassVar[int]
     UNEXPANDED_HIERARCHY_FIELD_NUMBER: _ClassVar[int]
+    RANGE_LABELS_FIELD_NUMBER: _ClassVar[int]
     SUPPLIED_FIELD_NUMBER: _ClassVar[int]
     dangling_endpoints: _containers.RepeatedCompositeFieldContainer[DanglingEndpoint]
     ref_des_collisions: _containers.RepeatedCompositeFieldContainer[RefDesCollision]
@@ -197,8 +198,9 @@ class InputDiagnostics(_message.Message):
     joined_taps: _containers.RepeatedCompositeFieldContainer[JoinedTap]
     unannotated_components: _containers.RepeatedCompositeFieldContainer[UnannotatedComponent]
     unexpanded_hierarchy: _containers.RepeatedCompositeFieldContainer[UnexpandedHierarchy]
+    range_labels: _containers.RepeatedCompositeFieldContainer[RangeLabel]
     supplied: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, dangling_endpoints: _Optional[_Iterable[_Union[DanglingEndpoint, _Mapping]]] = ..., ref_des_collisions: _Optional[_Iterable[_Union[RefDesCollision, _Mapping]]] = ..., no_junction_endpoints: _Optional[_Iterable[_Union[DanglingEndpoint, _Mapping]]] = ..., unmodeled_buses: _Optional[_Iterable[_Union[BusNotModeled, _Mapping]]] = ..., unresolved_symbols: _Optional[_Iterable[_Union[UnresolvedSymbol, _Mapping]]] = ..., resolved_symbols: _Optional[_Iterable[_Union[ResolvedSymbol, _Mapping]]] = ..., joined_taps: _Optional[_Iterable[_Union[JoinedTap, _Mapping]]] = ..., unannotated_components: _Optional[_Iterable[_Union[UnannotatedComponent, _Mapping]]] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[UnexpandedHierarchy, _Mapping]]] = ..., supplied: _Optional[_Iterable[str]] = ...) -> None: ...
+    def __init__(self, dangling_endpoints: _Optional[_Iterable[_Union[DanglingEndpoint, _Mapping]]] = ..., ref_des_collisions: _Optional[_Iterable[_Union[RefDesCollision, _Mapping]]] = ..., no_junction_endpoints: _Optional[_Iterable[_Union[DanglingEndpoint, _Mapping]]] = ..., unmodeled_buses: _Optional[_Iterable[_Union[BusNotModeled, _Mapping]]] = ..., unresolved_symbols: _Optional[_Iterable[_Union[UnresolvedSymbol, _Mapping]]] = ..., resolved_symbols: _Optional[_Iterable[_Union[ResolvedSymbol, _Mapping]]] = ..., joined_taps: _Optional[_Iterable[_Union[JoinedTap, _Mapping]]] = ..., unannotated_components: _Optional[_Iterable[_Union[UnannotatedComponent, _Mapping]]] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[UnexpandedHierarchy, _Mapping]]] = ..., range_labels: _Optional[_Iterable[_Union[RangeLabel, _Mapping]]] = ..., supplied: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UnexpandedHierarchy(_message.Message):
     __slots__ = ("name", "kind", "instance_count", "prov", "reason")
@@ -271,6 +273,16 @@ class JoinedTap(_message.Message):
     segments: int
     prov: Provenance
     def __init__(self, x: _Optional[int] = ..., y: _Optional[int] = ..., join_kind: _Optional[str] = ..., label: _Optional[str] = ..., segments: _Optional[int] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+
+class RangeLabel(_message.Message):
+    __slots__ = ("label", "reads_as_bus", "prov")
+    LABEL_FIELD_NUMBER: _ClassVar[int]
+    READS_AS_BUS_FIELD_NUMBER: _ClassVar[int]
+    PROV_FIELD_NUMBER: _ClassVar[int]
+    label: str
+    reads_as_bus: bool
+    prov: Provenance
+    def __init__(self, label: _Optional[str] = ..., reads_as_bus: _Optional[bool] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class DanglingEndpoint(_message.Message):
     __slots__ = ("x", "y", "prov")
