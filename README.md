@@ -28,10 +28,20 @@ so every analysis downstream is written once and works on all of them.
   geometry or an auto-laid-out netlist graph.
 - **Runs a browser viewer.** `agni open <design>` serves one board and prints its URL; `agni serve` opens a
   tree of them. Either renders the design, runs the checks, and locates each finding on the canvas.
+- **Runs in the browser with nothing installed.** The engine also compiles to WebAssembly, so the
+  [public demo](https://panyam.github.io/agni/demo/) opens a KiCad or EDIF design you drop on the
+  page, checks it, queries it and saves a report, without sending the design anywhere.
 - **Answers datalog queries.** `agni query` asks arbitrary questions of the design fact base,
-  the same fact base the rules are built on.
+  the same fact base the rules are built on. The engine is
+  [jaala](https://github.com/panyam/jaala).
+- **Walks a review checklist and traces signals.** `agni review` scores a design against a team's
+  checklist and saves the page, and `agni trace --from U7.3 --to U12.4` follows a signal through
+  the series parts between two pins.
 - **Checks against datasheets.** It joins a design against extracted datasheet limits and
   checks, for example, that a rail stays inside a part's recommended operating range.
+- **Serves the same answers to other tools.** The services the CLI calls are Connect rpcs that
+  `agni serve` exposes, `--remote` sends `query`, `check`, `trace` and `review` to a running server,
+  and [`clients/python`](clients/python) is a typed Python client over the CLI or a server.
 
 ## Try it in 60 seconds
 
@@ -68,6 +78,18 @@ make demo
 
 Load `showcase.fires.kicad_pro` in the left tree, press Run checks, and click a finding to
 locate its net on the schematic. See [demo/README.md](demo/README.md).
+
+With nothing to build, the [public demo](https://panyam.github.io/agni/demo/) does the same in
+the browser, over seed boards or files you drop on it.
+
+To run a release over your own boards, each
+[GitHub release](https://github.com/panyam/agni/releases) attaches a compose bundle pinned to it,
+over the `ghcr.io/panyam/agni` image:
+
+```
+AGNI_DESIGNS=./designs docker compose up -d     # the viewer at http://localhost:8080
+docker compose run --rm trial /designs/<board>  # a trial report that holds nothing from the board
+```
 
 ## How it works
 
@@ -114,6 +136,10 @@ renderers draw, and a parameter IR that N datasheet extractors fill and the chec
 | gEDA gschem | `.sch` (sniffed) | yes | schematic |
 | Telesis | `.tel` | yes | none |
 
+A hierarchical EDIF netlist reads its top cell by default and says which blocks it left out.
+`--flatten-hierarchy`, `flatten_hierarchy: true` in a design's `design.yaml`, or the viewer's
+**Read every block** reads every block it places.
+
 ## Documentation
 
 Full documentation lives at [panyam.github.io/agni](https://panyam.github.io/agni/).
@@ -129,6 +155,7 @@ Full documentation lives at [panyam.github.io/agni](https://panyam.github.io/agn
 - [examples/README.md](examples/README.md) lists runnable walkthroughs, one per feature.
 - [CONSTRAINTS.md](CONSTRAINTS.md) holds the enforceable architectural rules. Read it before
   proposing changes.
+- [SECURITY.md](SECURITY.md) says how to report a vulnerability.
 - [Open core](https://panyam.github.io/agni/decisions/open-core/) explains the split between this
   public engine and a private extension that adds proprietary readers and rules without forking
   it.
@@ -150,7 +177,7 @@ the pinned sample corpus. `CONTRIBUTING.md` has the details.
 pnpm install                      # once: the web workspace (web/, web-shared/, datasheet/web/)
 make build                        # web bundle + go build ./...
 make install                      # install the agni CLI to $GOBIN
-make testall                      # the full gate: vet, tests, bundle, web unit tests
+make testall                      # the full gate: vet, lint, gosec, gitleaks, Go, wasm, web, browser and Python tests, docs checks
 ```
 
 ## License
