@@ -85,6 +85,22 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 			t.Errorf("listed %s is not under raw/: %v", f.GetPath(), err)
 		}
 	}
+	wantBoards(t, &listing, "designs/gateway/gateway.kicad_pcb")
+}
+
+// wantBoards fails unless the listing flags exactly want as board files, as ListDesignFiles would
+// for the seeded designs (agni issue 992).
+func wantBoards(t *testing.T, listing *webapi.ListDesignFilesResponse, want ...string) {
+	t.Helper()
+	var got []string
+	for _, f := range listing.GetFiles() {
+		if f.GetBoard() {
+			got = append(got, f.GetPath())
+		}
+	}
+	if strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("the listing flags %v as boards, want %v", got, want)
+	}
 }
 
 // TestSiteSeedsAFolderThatIsItselfADesign seeds the gateway's own folder, whose design.yaml declares
@@ -121,6 +137,7 @@ func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
 			t.Errorf("listed %s is not under raw/: %v", f.GetPath(), err)
 		}
 	}
+	wantBoards(t, &listing, "gateway/gateway.kicad_pcb")
 }
 
 // TestSiteWritesTheListingsTheFileTreesRead writes two seeds and reads back what the page answers

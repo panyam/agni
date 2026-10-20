@@ -50,6 +50,15 @@ func ConnectError(err error) *connect.Error {
 		}
 		return ce
 	}
+	// A question that read a file its engine was held back from says which, so the client sends it.
+	var fw *service.FilesWithheldError
+	if errors.As(err, &fw) {
+		ce := connect.NewError(connect.CodeFailedPrecondition, err)
+		if d, derr := connect.NewErrorDetail(fw.Detail()); derr == nil {
+			ce.AddDetail(d)
+		}
+		return ce
+	}
 	switch {
 	case errors.Is(err, service.ErrNotFound):
 		return connect.NewError(connect.CodeNotFound, err)

@@ -261,11 +261,33 @@ export function wouldShrink(s: WorkerStats, ratio: number): boolean {
 }
 
 // A DesignFiles lists one design's files, as WorkspaceService.ListDesignFiles answers. The type is
-// structural so this module does not import the generated client.
+// structural so this module does not import the generated client. `board` marks the design's board
+// file when it is a file of its own (agni issue 992).
 export interface DesignFiles {
   mount: string;
-  files: { path: string; sha256: string }[];
+  files: { path: string; sha256: string; board?: boolean }[];
   totalSize: bigint | number;
+}
+
+// WITHHELD_PREFIX starts the placeholder the serve worker is given in place of a design's board file
+// (agni issue 992), which the engine recognises (internal/wasmengine/withheld.go). The two spellings
+// are held together by internal/wasmengine/testdata/withheld_twin.json.
+export const WITHHELD_PREFIX = "\0agni withheld\n";
+
+// withheldPlaceholder is the placeholder for a held-back file whose content hash is sha256.
+export function withheldPlaceholder(sha256: string): Uint8Array {
+  return new TextEncoder().encode(`${WITHHELD_PREFIX}${sha256}\n`);
+}
+
+// asksForWithheld reports whether a worker's error response is the engine saying a question read a
+// file it was held back from: FAILED_PRECONDITION with a BlobsMissing detail, as Connect writes it.
+async function asksForWithheld(resp: Response): Promise<boolean> {
+  try {
+    const body = (await resp.json()) as { code?: string; details?: { type?: string }[] };
+    return body.code === "failed_precondition" && (body.details ?? []).some((d) => d.type === "agni.v1.webapi.BlobsMissing");
+  } catch {
+    return false;
+  }
 }
 
 // Placement says where one request's design is analysed. A design the worker cannot hold goes to the
@@ -312,7 +334,17 @@ export interface MountingOptions {
 // A question names a snapshot rather than files (agni issue 1061). The page's Ingest of each snapshot
 // passes through here, so its files are the ones that Ingest named, and the Ingest is sent again to
 // any worker that is asked about the snapshot without holding it: each worker keeps its own, and a
-// replacement starts with none.
+// replacement starts with none. Files reaching a worker rebuild its engine, which drops the snapshots
+// it held, so a worker given files is ingested again before its next question.
+//
+// The serve lane is given a placeholder for a design's board file rather than its bytes (agni issue
+// 992), since a query, a coverage or a trace builds no board, and on Jetson the board is 85 of the 92
+// MB. A question there that reads the board after all, such as the Board sheet or a query naming a
+// board relation, is refused by the engine as reading a held-back file, and is sent again once the
+// files are in. The engine decides, because only it knows which questions read the board, and it
+// refuses every question once one has read around a placeholder, so none is answered from a design
+// missing its copper. The jobs and prepare lanes always get every file, since a rule run reads the
+// board.
 //
 // A design whose file set is over `maxBytes`, or whose listing fails, is analysed by the server
 // instead, and `onServer` hears why once per design. Every later request naming it goes to the
@@ -327,7 +359,8 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
   const maxBytes = o.maxBytes ?? Number.POSITIVE_INFINITY;
   const onServer = o.onServer ?? (() => {});
   const listings = new Map<string, Promise<DesignFiles | undefined>>(); // uri -> its files, or undefined when it went to the server
-  const held = new WeakMap<object, Map<string, Map<string, string>>>(); // worker -> mount -> path -> sha256
+  const held = new WeakMap<object, Map<string, Map<string, string>>>(); // worker -> mount -> path -> sha256, or HELD + sha256 for a placeholder
+  const heldBack = new WeakMap<object, Set<string>>(); // worker -> the uris it holds a placeholder of
   const bringing = new WeakMap<object, Map<string, Promise<void>>>(); // worker -> uri -> the bring under way
   const onServerSide = new Set<string>(); // uris analysed by the server engine
   const preparing = new Set<Promise<void>>(); // prepare requests under way, settled when each answers
@@ -363,36 +396,49 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     return p;
   };
 
-  const bring = async (uri: string, lane: EngineLane, into?: object): Promise<void> => {
+  // bring puts a design's files into a worker. withhold gives it a placeholder for the board file
+  // instead of the board's bytes, unless it already holds them.
+  const bring = async (uri: string, lane: EngineLane, into?: object, withhold = false): Promise<void> => {
     const set = await list(uri);
     if (!set) return;
     const holder = into ?? (await lane.holder());
     let under = bringing.get(holder);
     if (!under) bringing.set(holder, (under = new Map()));
-    let p = under.get(uri);
+    const key = withhold ? `${uri} ${HELD}` : uri;
+    let p = under.get(key);
     if (!p) {
+      const whole = withhold ? under.get(uri) : undefined;
       p = (async () => {
+        // A placeholder added after the bytes would replace them.
+        if (whole) await whole;
         let mounts = held.get(holder);
         if (!mounts) held.set(holder, (mounts = new Map()));
         const have = mounts.get(set.mount) ?? new Map<string, string>();
-        const want = set.files.filter((f) => have.get(f.path) !== f.sha256);
+        const placeholder = (f: { sha256: string; board?: boolean }) => withhold && f.board === true;
+        const want = set.files.filter((f) => have.get(f.path) !== f.sha256 && !(placeholder(f) && have.get(f.path) === HELD + f.sha256));
         if (!want.length) return;
         const files: Files = {};
         await Promise.all(
           want.map(async (f) => {
-            files[f.path] = await source.fetchFile(set.mount, f.path);
+            files[f.path] = placeholder(f) ? withheldPlaceholder(f.sha256) : await source.fetchFile(set.mount, f.path);
           }),
         );
         await lane.add(holder, set.mount, files);
-        for (const f of want) have.set(f.path, f.sha256);
+        for (const f of want) have.set(f.path, placeholder(f) ? HELD + f.sha256 : f.sha256);
         mounts.set(set.mount, have);
+        // The worker's engine was rebuilt over the new files, without the snapshots it held.
+        ingested.delete(holder);
+        let backs = heldBack.get(holder);
+        if (!backs) heldBack.set(holder, (backs = new Set()));
+        if (set.files.some((f) => have.get(f.path) === HELD + f.sha256)) backs.add(uri);
+        else backs.delete(uri);
       })().catch((err: unknown) => {
         // Forget a failed bring so the next request retries it. The request itself still goes to
         // the engine, which answers not-found the way the server would.
-        under.delete(uri);
+        under.delete(key);
         console.warn(`could not bring ${uri} into the browser engine:`, err);
       });
-      under.set(uri, p);
+      under.set(key, p);
     }
     return p;
   };
@@ -410,13 +456,15 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
   // send answers req on its lane, bringing the design's files into the worker first unless they
   // already live in the page (a browser mount, which every worker is given at start), and ingesting
   // each snapshot it names that the worker does not hold. ingestOf is the snapshot req itself ingests.
+  // On the serve lane the board files are held back, and brought in when the engine says req read one.
   const send = async (req: Request, uris: Set<string>, bringFiles: boolean, name: LaneName, snaps: string[], ingestOf?: string): Promise<Response> => {
     const lane = engine.lanes[name];
     if (name === "jobs") await afterPrepares();
     const run = lane.begin ? await lane.begin() : undefined;
+    const withhold = name === "serve";
     if (bringFiles) {
       try {
-        await Promise.all([...uris].map((u) => bring(u, lane, run?.holder)));
+        await Promise.all([...uris].map((u) => bring(u, lane, run?.holder, withhold)));
       } catch (err) {
         run?.release();
         throw err;
@@ -434,17 +482,28 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     }
     const on = (r: Request) => (run ? run.fetch(r) : lane.fetch(r));
     const worker = run?.holder ?? (await lane.holder());
-    for (const snap of snaps) {
-      const page = ingests.get(snap);
-      if (!page || holds(worker).has(snap)) continue;
-      const r = await on(new Request(page.url, { method: "POST", headers: { "content-type": "application/json", "connect-protocol-version": "1" }, body: page.body }));
-      // A worker that cannot ingest it answers the question with NOT_FOUND, which the page's
-      // transport recovers from or reports.
-      if (r.ok) holds(worker).add(snap);
-    }
-    const resp = await on(req);
-    if (ingestOf && resp.ok) holds(worker).add(ingestOf);
-    return resp;
+    const ask = async (question: Request): Promise<Response> => {
+      for (const snap of snaps) {
+        const page = ingests.get(snap);
+        if (!page || holds(worker).has(snap)) continue;
+        const r = await on(new Request(page.url, { method: "POST", headers: { "content-type": "application/json", "connect-protocol-version": "1" }, body: page.body }));
+        // A worker that cannot ingest it answers the question with NOT_FOUND, which the page's
+        // transport recovers from or reports.
+        if (r.ok) holds(worker).add(snap);
+      }
+      const resp = await on(question);
+      if (ingestOf && resp.ok) holds(worker).add(ingestOf);
+      return resp;
+    };
+    const backs = heldBack.get(worker);
+    if (!backs?.size) return ask(req);
+    const again = req.clone();
+    const resp = await ask(req);
+    if (resp.ok || !(await asksForWithheld(resp.clone()))) return resp;
+    // The engine refuses every question once one has read a placeholder, so every design it holds
+    // one of gets its files, not only this request's.
+    await Promise.all([...new Set([...backs, ...uris])].map((u) => bring(u, lane, worker)));
+    return ask(again);
   };
   const tracked = (req: Request, uris: Set<string>, bringFiles: boolean, name: LaneName, snaps: string[], ingestOf?: string): Promise<Response> => {
     const p = send(req, uris, bringFiles, name, snaps, ingestOf);
@@ -491,6 +550,9 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     return abortable(req.signal, tracked(req, uris, true, name, [...snaps], ingestOf));
   };
 }
+
+// HELD marks a path a worker holds a placeholder of, in mountingFetch's record of what each holds.
+const HELD = "held ";
 
 // abortable rejects as soon as signal fires, whatever stage the request is in (agni issue 918). A
 // request waits on its design's files reaching the worker before the lane sees it, and only the lane

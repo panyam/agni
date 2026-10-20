@@ -15,6 +15,7 @@ import (
 
 	"github.com/panyam/agni/fshost"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/wasmengine"
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
@@ -105,6 +106,13 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 		if err != nil {
 			return fmt.Errorf("--seed %s: %w", name, err)
 		}
+		designs, err := seedDesigns(root, name)
+		if err != nil {
+			return fmt.Errorf("--seed %s: %w", name, err)
+		}
+		if err := markBoards(listing, root, name, designs); err != nil {
+			return fmt.Errorf("--seed %s: %w", name, err)
+		}
 		b, err := protoJSON(listing)
 		if err != nil {
 			return err
@@ -122,10 +130,6 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 		mounts.Mounts = append(mounts.Mounts, mount)
 		if err := writeProto(filepath.Join(out, "dirs", name+".json"), tree); err != nil {
 			return err
-		}
-		designs, err := seedDesigns(root, name)
-		if err != nil {
-			return fmt.Errorf("--seed %s: %w", name, err)
 		}
 		for _, d := range designs {
 			pages = append(pages, d.addr)
@@ -281,7 +285,33 @@ func writeProto(dst string, m proto.Message) error {
 	return os.WriteFile(dst, []byte(b), 0o644)
 }
 
-type seededDesign struct{ addr, title, format, note string }
+type seededDesign struct{ uri, addr, title, format, note string }
+
+// markBoards flags each seeded design's board file in the mount's listing as ListDesignFiles flags
+// it, which a static host cannot be asked, so the page holds a board back from its serve worker on a
+// static host as it does on a server (agni issue 992).
+func markBoards(listing *webapi.ListDesignFilesResponse, root, mount string, designs []seededDesign) error {
+	m := fshost.Mount{Name: mount, FS: os.DirFS(root)}
+	host := fshost.New(m)
+	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: m.Name, FS: m.FS}), Config: &fshost.ConfigResolver{Mounts: []fshost.Mount{m}}}
+	svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(resolver, host.Workspace())
+	boards := map[string]bool{}
+	for _, d := range designs {
+		resp, err := svc.ListDesignFiles(context.Background(), &webapi.ListDesignFilesRequest{Uri: d.uri})
+		if err != nil {
+			return err
+		}
+		for _, f := range resp.GetFiles() {
+			if f.GetBoard() {
+				boards[f.GetPath()] = true
+			}
+		}
+	}
+	for _, f := range listing.GetFiles() {
+		f.Board = boards[f.GetPath()]
+	}
+	return nil
+}
 
 // seedDesigns are the designs a seed folder makes, as ProposeDesigns groups them, each with the
 // address its viewer page is written at.
@@ -325,6 +355,7 @@ func seedDesigns(dir, mount string) ([]seededDesign, error) {
 			format = "design folder"
 		}
 		out = append(out, seededDesign{
+			uri:    "mount://" + mount + "/" + rel,
 			addr:   path.Join("designs", mount, rel, "view"),
 			title:  fmt.Sprintf("%s (%s)", title, mount),
 			format: format,

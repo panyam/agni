@@ -122,6 +122,7 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 	sort.Strings(paths)
 
 	resp := &webapi.ListDesignFilesResponse{Mount: u.Mount}
+	board := s.boardFile(ctx, u)
 	for _, p := range paths {
 		fu, err := artifact.New(u.Mount, p)
 		if err != nil {
@@ -139,9 +140,24 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 			return nil, fmt.Errorf("%w: the design's files exceed %d MB", ErrResourceExhausted, DesignFilesMaxBytes>>20)
 		}
 		sum := sha256.Sum256(b)
-		resp.Files = append(resp.Files, &webapi.DesignFile{Path: p, Size: int64(len(b)), Sha256: "sha256:" + hex.EncodeToString(sum[:])})
+		resp.Files = append(resp.Files, &webapi.DesignFile{Path: p, Size: int64(len(b)), Sha256: "sha256:" + hex.EncodeToString(sum[:]), Board: board != "" && p == board})
 	}
 	return resp, nil
+}
+
+// boardFile is the path within u's mount of the design's board tier, as Ingest resolves it, when the
+// board is a file of its own that neither the netlist nor the drawing is read from, and "" otherwise.
+// The browser engine holds that file back from a worker until a question there reads the board (agni
+// issue 992).
+func (s *WorkspaceService) boardFile(ctx context.Context, u artifact.URI) string {
+	if s.projects == nil || s.projects.Store == nil {
+		return ""
+	}
+	nu, bu, gu, err := s.projects.TierURIs(ctx, u, artifact.URI{}, false)
+	if err != nil || bu.IsZero() || bu.Mount != u.Mount || bu == nu || bu == gu {
+		return ""
+	}
+	return bu.Path
 }
 
 // isDir reports whether u names a directory, by listing its parent.

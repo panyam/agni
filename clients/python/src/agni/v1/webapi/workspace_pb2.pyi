@@ -86,14 +86,16 @@ class ListDesignFilesResponse(_message.Message):
     def __init__(self, mount: _Optional[str] = ..., files: _Optional[_Iterable[_Union[DesignFile, _Mapping]]] = ..., total_size: _Optional[int] = ...) -> None: ...
 
 class DesignFile(_message.Message):
-    __slots__ = ("path", "size", "sha256")
+    __slots__ = ("path", "size", "sha256", "board")
     PATH_FIELD_NUMBER: _ClassVar[int]
     SIZE_FIELD_NUMBER: _ClassVar[int]
     SHA256_FIELD_NUMBER: _ClassVar[int]
+    BOARD_FIELD_NUMBER: _ClassVar[int]
     path: str
     size: int
     sha256: str
-    def __init__(self, path: _Optional[str] = ..., size: _Optional[int] = ..., sha256: _Optional[str] = ...) -> None: ...
+    board: bool
+    def __init__(self, path: _Optional[str] = ..., size: _Optional[int] = ..., sha256: _Optional[str] = ..., board: _Optional[bool] = ...) -> None: ...
 
 class ProposeDesignsRequest(_message.Message):
     __slots__ = ("uri",)

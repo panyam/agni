@@ -7,7 +7,8 @@ import { createConnectTransport } from "@connectrpc/connect-web";
 import { DesignService } from "../gen/agni/v1/webapi/design_pb.js";
 import { CheckService } from "../gen/agni/v1/webapi/checks_pb.js";
 import { QueryService } from "../gen/agni/v1/webapi/query_pb.js";
-import { startEngine } from "./client.js";
+import { WorkspaceService } from "../gen/agni/v1/webapi/workspace_pb.js";
+import { mountingFetch, startEngine } from "./client.js";
 import type { Files, WorkerStats } from "./client.js";
 import { loadSplit, type LoadSplit } from "../../browser/exercise-report.js";
 
@@ -25,6 +26,14 @@ export interface BenchArgs {
   serveMaxBytes?: number;
   // serveShrinkRatio overrides the lane's wouldShrink ratio, for measuring where it should sit.
   serveShrinkRatio?: number;
+  // pageMount, when set, brings the files in as the page does, through mountingFetch, each lane's own
+  // as its first request names the design, listed by the server under this mount, where the design is
+  // pagePath. Otherwise every file is fetched up front and given to every lane.
+  pageMount?: string;
+  pagePath?: string;
+  // holdBoard false drops the listing's board flags, so the serve lane is given the board as it was
+  // before agni issue 992, for the comparison.
+  holdBoard?: boolean;
 }
 
 async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
@@ -42,30 +51,67 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
   });
   const bootMS = performance.now() - t;
 
-  t = performance.now();
-  const files: Files = {};
+  const raw = async (mount: string, p: string) => {
+    const res = await fetch(`/raw/${mount}/${p.split("/").map(encodeURIComponent).join("/")}`);
+    if (!res.ok) throw new Error(`${p}: ${res.status}`);
+    return new Uint8Array(await res.arrayBuffer());
+  };
+  let fetchMS = -1;
+  let composeMS = -1;
   let bytes = 0;
-  await Promise.all(
-    a.files.map(async (p) => {
-      const res = await fetch(`/raw/${a.mount}/${p.split("/").map(encodeURIComponent).join("/")}`);
-      if (!res.ok) throw new Error(`${p}: ${res.status}`);
-      files[p] = new Uint8Array(await res.arrayBuffer());
-      bytes += files[p].byteLength;
-    }),
-  );
-  const fetchMS = performance.now() - t;
+  let fetchedFiles = 0;
+  // The files given up front live in the page, as a dropped design's do, so mountingFetch brings none
+  // in and only ingests the snapshot into each worker before its first question, a replacement's
+  // included (agni issue 1061).
+  let engineFetch = mountingFetch({
+    engine,
+    source: { list: async () => Promise.reject(new Error("nothing to list")), fetchFile: async () => Promise.reject(new Error("nothing to fetch")) },
+    network: globalThis.fetch.bind(globalThis),
+    browserMounts: new Set(["bench"]),
+  });
+  let uri = `mount://bench/${a.design}`;
+  if (a.pageMount !== undefined) {
+    const listing = createClient(WorkspaceService, createConnectTransport({ baseUrl: location.origin }));
+    engineFetch = mountingFetch({
+      engine,
+      source: {
+        list: async (u) => {
+          const set = await listing.listDesignFiles({ uri: u });
+          return a.holdBoard === false ? { ...set, files: set.files.map((f) => ({ path: f.path, sha256: f.sha256 })) } : set;
+        },
+        fetchFile: async (mount, p) => {
+          const b = await raw(mount, p);
+          bytes += b.byteLength;
+          fetchedFiles++;
+          return b;
+        },
+      },
+      network: globalThis.fetch.bind(globalThis),
+    });
+    uri = `mount://${a.pageMount}/${a.pagePath ?? a.design}`;
+  } else {
+    t = performance.now();
+    const files: Files = {};
+    await Promise.all(
+      a.files.map(async (p) => {
+        files[p] = await raw(a.mount, p);
+        bytes += files[p].byteLength;
+      }),
+    );
+    fetchedFiles = a.files.length;
+    fetchMS = performance.now() - t;
 
-  // Mounted under the same name as natively, so the URIs the two halves ask about match.
-  t = performance.now();
-  await engine.add("bench", files);
-  const composeMS = performance.now() - t;
+    // Mounted under the same name as natively, so the URIs the two halves ask about match.
+    t = performance.now();
+    await engine.add("bench", files);
+    composeMS = performance.now() - t;
+  }
 
-  const transport = createConnectTransport({ baseUrl: location.origin, fetch: (i, init) => engine.fetch(i, init) });
+  const transport = createConnectTransport({ baseUrl: location.origin, fetch: engineFetch });
   const jobsOnly = createClient(CheckService, createConnectTransport({ baseUrl: location.origin, fetch: (i, init) => engine.lanes.jobs.fetch(i, init) }));
   const design = createClient(DesignService, transport);
   const checks = createClient(CheckService, transport);
   const query = createClient(QueryService, transport);
-  const uri = `mount://bench/${a.design}`;
 
   // The read is the ingest and the open's GetDesign, as the page's first sheet waits on both. Each
   // lane's worker is ingested under the same id before its first question (agni issue 1061).
@@ -162,13 +208,13 @@ async function bench(a: BenchArgs): Promise<Record<string, number | string>> {
 
   return {
     host: "wasm (Chromium worker)",
-    files: a.files.length,
+    files: fetchedFiles,
     bytes,
     components,
     nets,
     boot_ms: Math.round(bootMS),
-    fetch_ms: Math.round(fetchMS),
-    compose_ms: Math.round(composeMS),
+    fetch_ms: fetchMS < 0 ? "" : Math.round(fetchMS),
+    compose_ms: composeMS < 0 ? "" : Math.round(composeMS),
     read_ms: Math.round(readMS),
     check_ms: Math.round(checkMS),
     check_load_ms: split ? Math.round(split.loadMs) : "",

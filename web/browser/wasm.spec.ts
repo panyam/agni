@@ -80,6 +80,10 @@ describe("one design under both engines", () => {
       // board on another that ended, so the files were fetched four times and two workers are left.
       expect(page.workers().filter((w) => new URL(w.url()).pathname.endsWith("/agni-worker.js"))).toHaveLength(2);
       expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.edn")).toHaveLength(4);
+      // The Load page's and the viewer's serve workers were each given a placeholder for the board,
+      // since opening the design and asking a query read none (agni issue 992), so the board was
+      // fetched twice, by the prepare worker and the jobs worker.
+      expect(wasm.network.filter((p) => p === "/raw/tut/designs/gateway/gateway.kicad_pcb")).toHaveLength(2);
     });
   });
 

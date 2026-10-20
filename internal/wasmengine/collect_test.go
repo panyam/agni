@@ -76,20 +76,21 @@ func TestOpeningAFileCollectsOnceTheHeapIsPastItsHeadroom(t *testing.T) {
 }
 
 // The option is what turns the per-request collection on, and an engine without it serves the mux
-// itself, so a native caller pays nothing.
+// itself, so a native caller pays nothing. Every engine guards against a held-back file (agni issue
+// 992), so the mux is looked for inside that guard.
 func TestOnlyAnEngineAskedToCollectWrapsItsHandler(t *testing.T) {
 	plain, err := New()
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := plain.Handler.(*http.ServeMux); !ok {
-		t.Fatalf("an engine without CollectBetweenRequests serves %T, want the *http.ServeMux", plain.Handler)
+	if _, ok := plain.Handler.(*guarded).next.(*http.ServeMux); !ok {
+		t.Fatalf("an engine without CollectBetweenRequests serves %T, want the *http.ServeMux", plain.Handler.(*guarded).next)
 	}
 	collecting, err := NewWith(Options{CollectBetweenRequests: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, ok := collecting.Handler.(*http.ServeMux); ok {
+	if _, ok := collecting.Handler.(*guarded).next.(*http.ServeMux); ok {
 		t.Fatal("an engine with CollectBetweenRequests serves the bare mux, so nothing collects after a request")
 	}
 	rec := httptest.NewRecorder()

@@ -108,3 +108,28 @@ func TestListDesignFilesRefusesWhatItCannotList(t *testing.T) {
 		t.Errorf("a host without WithDesignFiles: err %v, want invalid argument", err)
 	}
 }
+
+// TestListDesignFilesMarksTheBoard holds the board flag to the board tier Ingest resolves, which the
+// browser engine holds back from a worker until a question there reads the board (agni issue 992).
+// Only the current revision's declared board is marked, under every spelling of the design, and a
+// design read exactly as named has no board of its own to mark.
+func TestListDesignFilesMarksTheBoard(t *testing.T) {
+	svc := designFilesSvc(t)
+	boards := func(uri string) []string {
+		var out []string
+		for _, f := range listDesignFiles(t, svc, uri).GetFiles() {
+			if f.GetBoard() {
+				out = append(out, f.GetPath())
+			}
+		}
+		return out
+	}
+	for _, uri := range []string{"mount://tut/designs/gateway", "mount://tut/designs/gateway/gateway.edn", "mount://tut/designs/gateway/gateway.kicad_sch"} {
+		if got := strings.Join(boards(uri), ","); got != "designs/gateway/gateway.kicad_pcb" {
+			t.Errorf("%s marks %q as the board, want designs/gateway/gateway.kicad_pcb", uri, got)
+		}
+	}
+	if got := boards("mount://tut/designs/gateway/gateway-rev-c.edn"); len(got) != 0 {
+		t.Errorf("rev C declares no board, and %v were marked", got)
+	}
+}

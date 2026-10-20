@@ -299,6 +299,21 @@ the browser rather than from the contract.
   through its context (agni issue 795). Files dropped on the page are kept by the page
   (`WasmEngine.add`) and copied into every worker, replacements included, since nothing else could
   bring them back.
+- **The serve worker is given a placeholder for the board** (agni issue 992). Opening a design, a
+  query that names no `board.*` relation, a coverage and a trace build no board there (agni issue
+  987), yet the worker used to hold the board file's bytes in its mount, 85 of the Jetson baseboard's
+  92 MB. `ListDesignFiles` flags the design's board tier when it is a file of its own
+  (`DesignFile.board`, resolved as `Ingest` resolves it, and `agni site` writes the same flag into a
+  static listing), and `mountingFetch` gives the serve lane a short placeholder at that path, so the
+  folder lists, stats and resolves as it does with the file in place. The jobs and prepare lanes get
+  every file. Opening a placeholder fails, and the engine then answers every question as
+  `FAILED_PRECONDITION` with a `BlobsMissing` detail naming the file's hash
+  (`internal/wasmengine/withheld.go`), whatever its service made of the failed read, because a reader
+  that treats an unreadable sibling as an absent one would otherwise answer from a design missing its
+  copper, and a cache would keep that answer. The page then brings the board in, which rebuilds the
+  engine, ingests the snapshot again and asks again. The engine decides rather than the page because
+  only it knows which questions read the board: the Board sheet does, and so does a query whose
+  library member reads a board relation the query text never names.
 - **A parsed design outlives the worker that read it** (agni issue 911). The design cache keeps its
   proto layers (the design, its drawings, its board) in the origin's private file system as well,
   through goapplib's `wasmhost.BrowserCache`, which every worker of the page shares and a reload

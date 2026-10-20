@@ -7,7 +7,7 @@
 import { spawn, execFileSync } from "node:child_process";
 import { readdirSync, statSync } from "node:fs";
 import { createServer } from "node:net";
-import { join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, posix, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { chromium } from "playwright-core";
 
@@ -37,7 +37,9 @@ const port = await new Promise((ok) => {
   });
 });
 const base = `http://127.0.0.1:${port}`;
-const server = spawn(join(repo, "bin", "agni"), ["serve", "--addr", `127.0.0.1:${port}`, "--mount", `board=${dir}`, "--web-dir", join(repo, "web")], {
+// The lanes runs bring the files in as the page does (agni issue 992), listed by the server under a
+// mount holding the board's folder, since a design is addressed by its path within its mount.
+const server = spawn(join(repo, "bin", "agni"), ["serve", "--addr", `127.0.0.1:${port}`, "--mount", `board=${dir}`, "--mount", `parent=${dirname(dir)}`, "--web-dir", join(repo, "web")], {
   cwd: repo,
   env: { ...process.env, HOME: "/tmp", XDG_CONFIG_HOME: "/tmp" },
   stdio: "ignore",
@@ -55,6 +57,8 @@ try {
   const SERVE_MAX_BYTES = Number(process.env.SERVE_MAX_MB ?? 700) * (1 << 20);
   // SERVE_SHRINK overrides the serve lane's wouldShrink ratio, to measure where it should sit.
   const SERVE_SHRINK = process.env.SERVE_SHRINK === undefined ? undefined : Number(process.env.SERVE_SHRINK);
+  // BENCH_HOLD_BOARD=0 gives the serve lane the board's bytes, as before agni issue 992.
+  const page = { pageMount: "parent", pagePath: posix.join(basename(dir), design), holdBoard: process.env.BENCH_HOLD_BOARD !== "0" };
   const run = async (ctx, cfg) => {
     const page = await ctx.newPage();
     await page.goto(`${base}/healthz`);
@@ -69,8 +73,8 @@ try {
   };
   const one = await run(await browser.newContext(), { oneLane: true });
   const lanesCtx = await browser.newContext();
-  const wasm = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES, serveShrinkRatio: SERVE_SHRINK });
-  const reload = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES, serveShrinkRatio: SERVE_SHRINK });
+  const wasm = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES, serveShrinkRatio: SERVE_SHRINK, ...page });
+  const reload = await run(lanesCtx, { serveMaxBytes: SERVE_MAX_BYTES, serveShrinkRatio: SERVE_SHRINK, ...page });
   await browser.close();
 
   // The rows in two groups (agni issue 1060): loading the design, paid once per worker, and asking it
@@ -78,7 +82,8 @@ try {
   // belongs with loading, while check_rules_ms is its evaluation alone.
   const loading = ["files", "bytes", "components", "nets", "boot_ms", "fetch_ms", "compose_ms", "read_ms", "check_ms", "check_load_ms", "first_check_ms", "lane_restarts", "serve_mb_after_read", "serve_live_mb_after_read", "stats_gc_ms", "jobs_mb_before_check", "check_memory_stages"];
   const asking = ["check_rules_ms", "check_again_ms", "rules", "findings", "query_ms", "query_rows", "query_during_check_ms", "check_still_running", "query_after_restart_ms", "serve_mb_after_restart", "serve_idle_checks", "check_alloc_rules", "abort_to_answer_ms", "serve_mb", "jobs_mb", "peak_mb"];
-  console.log(`| ${board} | native | wasm, one worker | two lanes, serve limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | the same reloaded, limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | lanes / native |`);
+  const held = page.holdBoard ? "board held back from serve" : "board given to serve";
+  console.log(`| ${board} | native | wasm, one worker | two lanes as the page brings files, ${held}, serve limit ${Math.round(SERVE_MAX_BYTES / (1 << 20))} MB | the same reloaded | lanes / native |`);
   console.log("|---|---|---|---|---|---|");
   for (const [group, rows] of [["loading the design", loading], ["asking it questions", asking]]) {
     console.log(`| **${group}** | | | | | |`);
