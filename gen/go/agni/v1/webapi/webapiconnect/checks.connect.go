@@ -60,10 +60,11 @@ const (
 
 // CheckServiceClient is a client for the agni.v1.webapi.CheckService service.
 type CheckServiceClient interface {
-	// ListRules returns the rule catalog the service runs: one RuleInfo per rule, with its tags
-	// (open classification the client groups/filters by) and whether it can run against the design.
-	// The catalog is static per service build, so the client fetches it once; only availability
-	// depends on the design. A CheckDesign call names the subset to actually run.
+	// ListRules returns the rule catalog a check of the snapshot runs: one RuleInfo per rule, with its
+	// tags (open classification the client groups and filters by) and whether it runs on the design.
+	// A rule is available exactly when a whole CheckDesign of the same snapshot would not report it in
+	// skipped (agni issue 950). The netlist is read to decide that and the board is not. A CheckDesign
+	// call names the subset to actually run.
 	ListRules(context.Context, *connect.Request[webapi.ListRulesRequest]) (*connect.Response[webapi.ListRulesResponse], error)
 	// CheckDesign runs the rule checks over a loaded design and returns the findings. Checks
 	// are a run-on-demand action, potentially slower than a metadata fetch, so loading a design
@@ -231,10 +232,11 @@ func (c *checkServiceClient) GetNamingConvention(ctx context.Context, req *conne
 
 // CheckServiceHandler is an implementation of the agni.v1.webapi.CheckService service.
 type CheckServiceHandler interface {
-	// ListRules returns the rule catalog the service runs: one RuleInfo per rule, with its tags
-	// (open classification the client groups/filters by) and whether it can run against the design.
-	// The catalog is static per service build, so the client fetches it once; only availability
-	// depends on the design. A CheckDesign call names the subset to actually run.
+	// ListRules returns the rule catalog a check of the snapshot runs: one RuleInfo per rule, with its
+	// tags (open classification the client groups and filters by) and whether it runs on the design.
+	// A rule is available exactly when a whole CheckDesign of the same snapshot would not report it in
+	// skipped (agni issue 950). The netlist is read to decide that and the board is not. A CheckDesign
+	// call names the subset to actually run.
 	ListRules(context.Context, *connect.Request[webapi.ListRulesRequest]) (*connect.Response[webapi.ListRulesResponse], error)
 	// CheckDesign runs the rule checks over a loaded design and returns the findings. Checks
 	// are a run-on-demand action, potentially slower than a metadata fetch, so loading a design

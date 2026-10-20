@@ -133,6 +133,42 @@ func TestCoverageAndPartParametersReadNoBoard(t *testing.T) {
 	}
 }
 
+// ListRules says a board-tier rule will run on a design whose board tier is a board format without
+// reading the board, since it answers on every open (agni issues 943, 950). The run that follows reads
+// the board and runs the rule, which is the agreement the listing promises and the counter's positive
+// control.
+func TestListRulesReadsNoBoardAndListsTheBoardRules(t *testing.T) {
+	l, boards := routedDesign()
+	svc := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.kicad_pcb")
+	listed, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Snapshot: snap})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := boards.Load(); n != 0 {
+		t.Errorf("ListRules asked for the board %d times, want none", n)
+	}
+	var tw *webapi.RuleInfo
+	for _, r := range listed.GetRules() {
+		if r.GetName() == "track-width" {
+			tw = r
+		}
+	}
+	if tw == nil || !tw.GetAvailable() {
+		t.Fatalf("track-width listed %v, want available, since the run attaches the board", tw)
+	}
+	run, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snap, Rules: []string{"track-width"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if boards.Load() == 0 {
+		t.Fatal("the run read no board, so the counter proves nothing")
+	}
+	if len(run.GetSkipped()) != 0 {
+		t.Errorf("the run skipped %v, which ListRules called available", run.GetSkipped())
+	}
+}
+
 // A check run still reads the board, since its board-tier rules need it.
 func TestACheckRunStillReadsTheBoard(t *testing.T) {
 	l, boards := routedDesign()

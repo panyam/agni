@@ -300,6 +300,9 @@ Availability derives from what a rule reads, not from a stored flag. A rule that
 whose provider layer is absent, a datasheet parameter before the parameter layer is loaded for
 instance, reports as unavailable. That keeps a green "no findings" distinguishable from "never
 ran." When the missing layer arrives, the same rule becomes available with no change to its code.
+`ListRules` answers availability for a design by asking the gate a run asks, of the same model
+without its board, so the catalog the viewer selects from is the set a run of that design runs, the
+source-format capabilities below included (agni issue 950).
 
 The catalog is composed from sources rather than being a global. A rule source yields rules, the
 built-ins are one source, an embedder's Go suite is another, and the datalog, profile and intent

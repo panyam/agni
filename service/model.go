@@ -90,6 +90,9 @@ func BuildModelTier(ctx context.Context, loader ModelLoader, uri, boardURI artif
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
+	if d == nil {
+		return nil, fmt.Errorf("%w: %s carries no netlist", ErrInvalidArgument, uri)
+	}
 	boardFrom := boardReadURI(uri, boardURI)
 	var bg *geom.BoardGeometry
 	if board == ReadBoard {

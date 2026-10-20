@@ -58,7 +58,7 @@ dropped files already reach it through its `local` mount.
 | Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
 | Design | GetLayoutReport | how an auto-layout drew each component (glyph, box, provided symbol, or unresolved) |
 | Design | TraceDesign | walk from one pin to another through the series parts between them and return the route, the same answer `agni trace` prints |
-| Check | ListRules | the rule catalog with tags and per-design availability, static per build, fetched once |
+| Check | ListRules | the rule catalog with tags and per-design availability, which is true exactly for the rules a whole CheckDesign of the snapshot runs; it reads the netlist and never the board |
 | Check | CheckDesign | run a rule subset and return findings, where each subject joins the packed primitive keys for highlighting |
 | Check | GetExpectations | the design's expectation sidecar as its own resource, reconciled against findings client-side |
 | Check | GetCheckReport | the severity-organized report, the same shape as `agni check --format report` |

@@ -77,9 +77,16 @@ and the last thing they would think to doubt.
 
 It is deliberately NOT the outcome vocabulary below. A flat rule sweep has no checklist item to
 score, so it reports which rules were gated and why, and nothing more. `check.Available` is asked here
-with the MODEL, where `ListRules` asks it with a nil one, because "can this rule ever run" and
-"did it run on this design" are different questions, and only the second can tell a reader their result is narrower
-than their selection.
+with the run's MODEL, and `ListRules` asks the same gate of that model built without its board, so a
+rule `ListRules` calls available is exactly a rule a whole run of the same snapshot does not skip
+(agni issue 950). The viewer selects the available rules and runs those, so a listing that disagreed
+with the run either hid a rule's findings, as it did for every datasheet-tier rule in agni issue 940,
+or offered a checkbox the run would skip. The board is not read for the listing, since `ListRules`
+answers on every open (agni issue 943); whether the run attaches one follows from the board tier's
+format, as the Board sheet does. `skipped` still matters with the listing right, because a run of an
+explicit rule list can name a rule the listing called unavailable, and a scoped run names the
+design-wide rules it set aside. `TestListRulesAvailableIsWhatARunRuns` holds the agreement on the
+server and the browser engine alike.
 
 The results document carries it too, beside `catalog`, so `agni check --format json` and an
 `agni results` re-render both show it and self-containment holds. An IMPORTED vendor report leaves it
