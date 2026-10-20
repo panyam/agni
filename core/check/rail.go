@@ -102,3 +102,73 @@ func FirstOnRail(m Model, n *ir.Net, class ComponentClass) (string, JoinedNet) {
 	}
 	return "", JoinedNet{}
 }
+
+// BoardSource names what drives n from the board itself, and "" when nothing does. A connector on
+// such a net is an outlet the board powers, so the rules asking how power ENTERS through a connector
+// leave the net out (agni issue 1016). Jetson's +3V3 feeds an SFP cage and an M.2 socket from the
+// board's own 3.3 V buck through a 0 Ohm link.
+//
+// A converter's output counts outright, read from structure because a vendor symbol often types
+// every pin passive: a switching net reached through an inductor and a feedback net, together, within
+// the power-entry walk's radius. A boost converter's INPUT reaches its switch node through the
+// inductor as well, and asking for the feedback divider too keeps that input a supply entry, since a
+// boost's divider sits on its output side.
+//
+// A power-output pin on a fitted part other than a connector counts only when nothing on the walk is
+// the input of another part with a power output. A dual-role USB-C port is the shape that rule keeps:
+// a load switch sources VBUS and a PD controller's power path sinks it, so power can still arrive
+// through the connector and the entry rules still judge it.
+func BoardSource(m Model, n *ir.Net) string {
+	r := m.Reach(n, PowerPathReachHops)
+	var sw, coil, fb, out string
+	var sinks []string
+	for _, rn := range r.Nets {
+		for _, c := range rn.Connections {
+			ref := c.ComponentRef
+			if IsVirtualRef(ref) || !m.IsFitted(ref) || m.HasClass(ref, ClassConnector) {
+				continue
+			}
+			switch ConnDir(m, c) {
+			case ir.PinDirection_PIN_DIRECTION_POWER_OUT:
+				if out == "" {
+					out = ref + "'s power output on " + rn.GetName()
+				}
+			case ir.PinDirection_PIN_DIRECTION_POWER_IN:
+				sinks = append(sinks, ref)
+			}
+		}
+		if step, ok := r.Parent[rn.GetName()]; ok && sw == "" && m.HasClass(step.Through, ClassInductor) && m.HasAnyRole(rn, ir.Role_ROLE_SWITCHING) {
+			sw, coil = rn.GetName(), step.Through
+		}
+		if fb == "" && m.HasAnyRole(rn, ir.Role_ROLE_FEEDBACK) {
+			fb = rn.GetName()
+		}
+	}
+	switch {
+	case sw != "" && fb != "":
+		return "a converter's output, its switch node " + sw + " behind inductor " + coil + " and its feedback on " + fb
+	case out != "" && !anyPowerSource(m, sinks):
+		return out
+	}
+	return ""
+}
+
+// anyPowerSource reports whether any of refs has a power-output pin anywhere in the design, which
+// makes its power input on a net a path power can take onward rather than a load.
+func anyPowerSource(m Model, refs []string) bool {
+	if len(refs) == 0 {
+		return false
+	}
+	want := map[string]bool{}
+	for _, r := range refs {
+		want[r] = true
+	}
+	for _, n := range m.Nets() {
+		for _, c := range n.Connections {
+			if want[c.ComponentRef] && ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_OUT {
+				return true
+			}
+		}
+	}
+	return false
+}

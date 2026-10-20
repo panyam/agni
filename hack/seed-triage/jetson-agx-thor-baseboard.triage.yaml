@@ -100,11 +100,6 @@ findings:
       subjects:
         - net:/USB DP Alt mode/USBC1_VBUS
         - net:/USB Debug, PD/USBC0_VBUS
-    - class: false-positive
-      ticket: 1016
-      why: The connectors on +3V3 are the SFP cage J12 (VCC_R, VCC_T) and the M.2 socket J14 (3.3V), both powered by the board's own 3.3 V buck through R258 from /DCDC/3V3_OUT. The rule takes any connector on a powered net as a supply entry, so it treats these outlets as inputs.
-      subjects:
-        - net:+3V3
     - class: design-choice
       why: VCC_IN from the keyed Mini-Fit J2 reaches VCC through the LTC4412 ideal-diode controller U6 driving Q2 and Q39, which blocks backfeed from VCC's other sources. The 20 V buck U65 and U6's own IN pin sit on the connector side by design, and polarity rests on the keyed connector.
       subjects:
