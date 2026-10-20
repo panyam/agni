@@ -78,9 +78,10 @@ func roundTrip(t *testing.T, d *ir.Design, path string) *ir.Design {
 // see it. They are listed here rather than quietly normalized away, because the next person to hit
 // one needs to know it is the reader's loss being reported and not a writer bug to go and fix:
 //
-//   - InputDiagnostics.UnexpandedHierarchy. extract scopes to the design's top cell and drops every
-//     sub-cell's contents, so writing a hierarchical design emits a flat one and the re-read lists no
-//     unexpanded cell. Making this pass would mean emitting a sub-cell whose contents no longer
+//   - InputDiagnostics.UnexpandedHierarchy. Read without FlattenHierarchy, extract scopes to the
+//     design's top cell and drops every sub-cell's contents, so writing a hierarchical design emits a
+//     flat one and the re-read lists no unexpanded cell. A flattened read writes back whole
+//     (TestFlattenedDesignWritesAndReadsBack). Making this pass would mean emitting a sub-cell whose contents no longer
 //     exist, which is fabricating structure.
 //   - Provenance.SourceFile. Different by construction; the writer takes a design, not a path.
 //   - InputDiagnostics.UnmodeledBuses, and with them the NAMELESS PINS an array port leaves behind.

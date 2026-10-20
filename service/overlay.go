@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"path"
+	"slices"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -51,6 +52,11 @@ type Overlay struct {
 	// a query vocabulary by Registry.
 	Library     []LibraryModule
 	LibraryDocs map[string]string
+	// FlattenHierarchy reads the design's hierarchical netlist as its whole schematic (agni issue
+	// 718). It is a choice of the snapshot rather than of a project's config, and rides the overlay
+	// because every read and every cache key already goes through ReadOptions and Identity. Set it
+	// with WithFlattenHierarchy, which folds it into the identity.
+	FlattenHierarchy bool
 	// conventionName is the source name of the convention THIS overlay carries, from a project or the
 	// deployment default. A request-supplied convention replaces it by name (WS3-124).
 	conventionName string
@@ -186,12 +192,34 @@ func (o Overlay) ReadOptions() []ReadOption {
 	if o.DesignIntent != nil {
 		opts = append(opts, WithDesignIntent(o.DesignIntent))
 	}
+	if o.FlattenHierarchy {
+		opts = append(opts, WithFlattenHierarchy())
+	}
 	// Last, naming every option above, so a read under these options can be cached (agni issue
 	// 895). An overlay that cannot identify itself adds nothing and its reads are never cached.
 	if id, ok := o.Identity(); ok && id != "" {
 		opts = append(opts, WithIdentity(id, len(opts)))
 	}
 	return opts
+}
+
+// WithFlattenHierarchy returns o with its design reads flattening a hierarchical netlist when on is
+// set, and o unchanged otherwise. The choice joins the identity, so a cache never serves a flattened
+// read for an unflattened one. An overlay that cannot identify itself stays unidentifiable, while a
+// zero overlay gains an identity naming the choice alone.
+func (o Overlay) WithFlattenHierarchy(on bool) Overlay {
+	if !on || o.FlattenHierarchy {
+		return o
+	}
+	switch {
+	case o.id != nil:
+		o.id = &overlayID{parts: slices.Clone(o.id.parts)}
+	case o.isZero():
+		o.id = &overlayID{}
+	}
+	o.FlattenHierarchy = true
+	o.id.add("flatten_hierarchy", []byte{1})
+	return o
 }
 
 // DeviceClassLookup adapts a param provider to the one question the ingestion class pass asks of it:

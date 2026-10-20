@@ -1,0 +1,13 @@
+(edif CYCLE
+  (edifVersion 2 0 0)
+  (design CYCLE (cellRef TOP (libraryRef WORK)))
+  (library WORK
+    (cell LOOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (instance L2 (viewRef V (cellRef LOOP))))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance L1 (viewRef V (cellRef LOOP))))))))

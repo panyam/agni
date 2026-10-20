@@ -18,7 +18,7 @@ import (
 // uses, so a read option reaches the read the same way whichever host made it.
 func LoaderFor(base *formats.Loader, opts ...ReadOption) *formats.Loader {
 	o := ReadOpts(opts...)
-	if o.Lexicon == nil && len(o.SymbolPaths) == 0 && o.DeviceClassFor == nil && !o.parseOnly {
+	if o.Lexicon == nil && len(o.SymbolPaths) == 0 && o.DeviceClassFor == nil && !o.parseOnly && !o.FlattenHierarchy {
 		return base
 	}
 	cp := formats.Loader{}
@@ -41,6 +41,9 @@ func LoaderFor(base *formats.Loader, opts ...ReadOption) *formats.Loader {
 		cp.DeviceClassFor = o.DeviceClassFor
 	}
 	cp.ParseOnly = o.parseOnly
+	if o.FlattenHierarchy {
+		cp.FlattenHierarchy = true
+	}
 	return &cp
 }
 

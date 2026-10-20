@@ -23,6 +23,10 @@ import (
 // it reaches resolution as a resolver FIELD rather than as ambient state.
 var readAsNamed bool
 
+// readFlatten is the --flatten-hierarchy flag's binding, set once at startup like readAsNamed. It
+// rides every snapshot the CLI ingests (ingest) and every read no service mediates (designOverlay).
+var readFlatten bool
+
 // designResolver answers "which artifacts should this read open" for the CLI, as a client of
 // ProjectService.
 //

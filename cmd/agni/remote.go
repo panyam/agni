@@ -121,6 +121,10 @@ type (
 // other, so a local run and a --remote one ingest and ask the same way, and a server is not left
 // holding a snapshot nobody will ask about.
 func ingest(ctx context.Context, api snapshotAPI, def *webapi.Snapshot) (string, func(), error) {
+	if readFlatten && !def.GetFlattenHierarchy() {
+		def = proto.Clone(def).(*webapi.Snapshot)
+		def.FlattenHierarchy = true
+	}
 	snap, err := api.Ingest(ctx, &webapi.IngestRequest{Snapshot: def})
 	if err != nil {
 		return "", func() {}, err

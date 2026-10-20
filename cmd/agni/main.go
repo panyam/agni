@@ -87,6 +87,12 @@ func rootCmd() *cobra.Command {
 			"reads the design's entry instead, because a companion is a view of the design rather than a "+
 			"second source of it. Use this to read a companion as a netlist on purpose, e.g. to check that "+
 			"two views of one design still agree.")
+	root.PersistentFlags().BoolVar(&readFlatten, "flatten-hierarchy", false,
+		"read a hierarchical netlist as its whole schematic, walking into every block cell its top "+
+			"cell places. Without it only the top cell is read and the blocks are named in a note. A "+
+			"net inside a block is named by the block's path (/A1/MID), and a part inside a block "+
+			"placed more than once carries the path in its ref-des (B2/R1). Only EDIF has blocks to "+
+			"walk today, and a flat netlist reads the same either way.")
 	root.PersistentFlags().StringArrayVar(&symbolPaths, "symbol-path", nil,
 		"directory to search for .sym symbol files, needed to netlist xschem/gEDA schematics "+
 			"(repeatable; the schematic's own directory is always searched). Defaults to "+
@@ -289,7 +295,11 @@ func designOverlay(ctx context.Context, path string) (service.Overlay, error) {
 	if err != nil {
 		return service.Overlay{}, err
 	}
-	return cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, "")
+	ov, err := cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, "")
+	if err != nil {
+		return service.Overlay{}, err
+	}
+	return ov.WithFlattenHierarchy(readFlatten), nil
 }
 
 // noteSource writes a resolution note to w, if there is one. Notes go to stderr so a redirect never

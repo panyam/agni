@@ -291,7 +291,9 @@ state this in their header, above the counts, in the sentence the CLI prints on 
 
 It names the five largest skipped cells and totals the rest. The list travels with the run
 (`CheckDesignResponse.unexpanded_hierarchy`, and the results document's `design` record), so a
-report saved later from the viewer says it as well. A flat design gets no such line. The markdown and
+report saved later from the viewer says it as well. A flat design gets no such line. Read with
+`--flatten-hierarchy` (`Snapshot.flatten_hierarchy` on the wire), the design is the whole schematic
+and the line goes away, unless a block places itself and the walk stops there. The markdown and
 text output carry no header band, so on those formats the stderr note is the only place it is said.
 
 The page needs no JavaScript and loads nothing from the network, so it survives being emailed,

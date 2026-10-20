@@ -69,6 +69,11 @@ type Loader struct {
 	// to the caller (agni issue 1061). A host reaches it through a read option rather than a method of
 	// its own, so every host that reads through LoaderIn supports it without a change.
 	ParseOnly bool
+	// FlattenHierarchy makes a hierarchical netlist read as its whole schematic, walking into every
+	// block cell its top cell places, rather than as its top cell alone (agni issue 718). Only the
+	// EDIF reader has blocks to walk today. It changes what the design contains, so a host keying a
+	// parse must key on it (service.CachingLoader does).
+	FlattenHierarchy bool
 }
 
 // Open reads one file in this loader's name space, from FS when it carries one and from the host

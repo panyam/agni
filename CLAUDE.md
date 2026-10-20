@@ -968,10 +968,14 @@ which reads as "the design does not have that".
   stats` adds a `not extracted:` line, both HTML reports state it in their header, and the viewer
   shows a canvas strip and lists the cells in Properties (agni 717). Every one of those says the
   sentence `report.HierarchyNote` builds, and a report gets the list off the RUN
-  (`CheckDesignResponse` and `DesignRef` carry it), so it reads no design to say it. It is still WRONG,
-  because descending into the sub-cells is the EDIF sibling of issue 134 and has not landed, so
-  read the note rather than the counts. It is deliberately not a finding, since being hierarchical
-  is a limit of the read rather than a defect.
+  (`CheckDesignResponse` and `DesignRef` carry it), so it reads no design to say it. Unflattened it is still WRONG,
+  so read the note rather than the counts. It is deliberately not a finding, since being hierarchical
+  is a limit of the read rather than a defect. **`--flatten-hierarchy` (`Snapshot.flatten_hierarchy`)
+  reads the blocks** (agni 718), OFF by default because it renames every interior net and moves a
+  diff. It rides the OVERLAY so its identity keys every cache tier, and the parse key names it too;
+  a new read path that builds options without `Overlay.ReadOptions` drops it silently. Its naming
+  rules are in `architecture/ingestion-and-ir.md`, and it is unverified on a real multi-cell export
+  until #718 says otherwise.
 
 **Before believing a measurement or a green test, read `docsite/content/build/evidence.md`.** A
 negative result needs a positive control, a positive rate needs a precision check, and every new test
