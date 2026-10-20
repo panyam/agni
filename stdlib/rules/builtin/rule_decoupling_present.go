@@ -79,7 +79,8 @@ func notARail(m check.Model, n *ir.Net) string {
 // be drawn on a sheet this read did not open.
 //
 // A pass NAMES the capacitor in the witness and in Context, so a reviewer can go and see where it
-// sits, and deleting that capacitor changes the witness or flips the verdict.
+// sits, and deleting that capacitor changes the witness or flips the verdict. A capacitor across a
+// zero-ohm link counts, as in bulk-cap (agni issue 1015).
 func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
@@ -95,18 +96,14 @@ func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdi
 		}
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
-		decap := firstOnNet(m, n, check.ClassCapacitor)
+		decap, at := check.FirstOnRail(m, n, check.ClassCapacitor)
 		switch {
 		case n.Attributes[netgraph.AttrExternal] == "true":
 			v.Outcome = check.NotConsidered
 			v.Reason = "the rail continues onto a sheet this read did not open, so its decoupling may be drawn outside it"
 		case decap != "":
 			v.Outcome = check.Pass
-			v.Witness = &check.Witness{
-				Statement: "capacitor " + decap + " sits on the rail",
-				Terms:     []check.WitnessTerm{{Label: "decoupling capacitor", Value: decap}},
-			}
-			v.Context = compContext(decap, "capacitor on the rail")
+			v.Witness, v.Context = railCapacitorWitness(decap, at, "decoupling capacitor")
 		default:
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{
@@ -138,7 +135,7 @@ var decouplingPresentSpec = &check.Spec{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 		check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "component.dnp"}}}}}},
-		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "component.dnp"}}}}}}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.rail_capacitor"}}},
 	}},
 	Message: "power rail has no decoupling capacitor",
 }

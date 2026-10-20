@@ -28,6 +28,14 @@ skipped even though their pins are power_in too, because decoupling is a supply-
 same capacitor already sits on the ground side. Cross-sheet rails are skipped (the cap may live on a
 sheet we did not read). Capacitor identity is the shared component.class fact.
 
+A capacitor across a fitted zero-ohm link counts as on the rail, because the link joins two names
+for one rail (agni issue 1015). A converter's output node and the rail it feeds are often split by a
+0 Ohm resistor that sizes the current path or lets a bench measure it, and the capacitors sit on the
+converter's side. A link counts when its value parses to zero ohms, or when its value text carries a
+token like `0R` (a library name such as `R_0R_22.4A_0603` parses to nothing as a whole). The walk
+never crosses into a ground, and a series resistor of any other value still ends the rail. A pass
+names the link beside the capacitor.
+
 ### Two nets that declare a supply pin and are not rails
 
 A power-input pin is much weaker evidence of a supply rail than it looks, and on one real
@@ -69,7 +77,7 @@ select power nets that are plausibly rails and carry no capacitor member.
       and not exists Q in N.connections where class(Q) == transistor and role(Q) == gate
       and not (exists L in N.connections where class(L) == inductor
                and exists Q in N.connections where class(Q) == transistor)
-      and not exists C in N.connections where class(C) == capacitor
+      and not rail_capacitor(N)
 
 Reads: component.class, net.attributes (external), net.names (the ground-name skip), on_net,
 pin.electrical_type. Tier R.

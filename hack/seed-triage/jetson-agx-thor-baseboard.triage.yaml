@@ -9,11 +9,6 @@ findings:
       why: N$54 is the module's PMIC backup-battery input through D1 and R6, which the module decouples on its own side.
       subjects:
         - net:Net-(D1-C)
-    - class: false-positive
-      ticket: 1015
-      why: +12V is joined to the 12 V buck's output node /DCDC/12V_OUT through R22, a 0 Ohm 22.4 A link, and four 22 uF capacitors (C222, C235, C306, C307) sit on that node beside U8's output. The rule stops at the 0 Ohm link and finds no capacitor on +12V.
-      subjects:
-        - net:+12V
   decoupling-present:
     - class: design-choice
       why: N$54 is the module's PMIC backup-battery input (J1 D37, PMIC_BBATT) through D1 and R6, which the module decouples on its own side.
