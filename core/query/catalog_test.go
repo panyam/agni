@@ -99,6 +99,10 @@ var entitySuggestingLabels = map[string]bool{
 // genuinely NOT one. Each needed a hand-written guard in the old inference; here each is a line
 // somebody wrote on purpose.
 var deliberateScalars = map[string]string{
+	// jaala's path.step reads a step of a path VALUE that graph.paths built, whatever relation it walked,
+	// so its ends are values of that relation rather than entities of one kind (jaala v0.1.79).
+	"path.step/from": "an end of a step in a path value, of whatever kind the walked relation joins",
+	"path.step/to":   "an end of a step in a path value, of whatever kind the walked relation joins",
 	// A datasheet pin belongs to a part TYPE, not to a placement, so there is nothing on the canvas
 	// to locate. This pair is why the old code needed its pin/ref_des pairing guard.
 	"param.pin/pin":       "a pin of a part type, not a placement",

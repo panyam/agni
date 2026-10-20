@@ -12,7 +12,7 @@ const noResistor = `component.class(?r,"resistor"), component.net(?r,?n)`
 
 // TestAggregateOverNothingIsOneRow pins that with no group-by column the whole answer is one group,
 // and it exists when nothing matched, so a count answers 0 rather than no rows (agni issue 726).
-// COUNT and SUM are 0 and LIST is empty. MIN and MAX have no number to report, so they answer
+// COUNT and SUM are 0 and LIST is the empty list `[]` (a list value since jaala v0.1.79). MIN and MAX have no number to report, so they answer
 // absent rather than an empty string that would read as a value (panyam/jaala#122).
 func TestAggregateOverNothingIsOneRow(t *testing.T) {
 	rows := runQuery(t, check.NewModel(aggFixture()),
@@ -26,7 +26,10 @@ func TestAggregateOverNothingIsOneRow(t *testing.T) {
 			t.Errorf("%s = %+v, want the number 0", col, v)
 		}
 	}
-	for _, col := range []Var{"list(r)", "min(r)", "max(r)"} {
+	if v := b["list(r)"]; v.S != "[]" || v.Num != nil || v.Absent {
+		t.Errorf("list(r) = %+v, want the empty list []", v)
+	}
+	for _, col := range []Var{"min(r)", "max(r)"} {
 		v, ok := b[col]
 		if !ok {
 			t.Errorf("%s is missing from the row, want it present and empty", col)
@@ -35,8 +38,8 @@ func TestAggregateOverNothingIsOneRow(t *testing.T) {
 		if v.S != "" || v.Num != nil {
 			t.Errorf("%s = %+v, want no value", col, v)
 		}
-		if wantAbsent := col != "list(r)"; v.Absent != wantAbsent {
-			t.Errorf("%s absent = %v, want %v", col, v.Absent, wantAbsent)
+		if !v.Absent {
+			t.Errorf("%s absent = false, want absent", col)
 		}
 	}
 	if len(rows[0].Cites) != 0 {

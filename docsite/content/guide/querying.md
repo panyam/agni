@@ -328,8 +328,9 @@ artefact of what was opened. It is the net-side twin of `component.attr`.
 
 ### Count parts per net (aggregation)
 
-`count`, `min`, `max`, `sum` and `list` summarize. Group by the plain columns. The aggregate reduces
-the rest:
+`count`, `min`, `max`, `sum`, `avg` and `list` summarize. Group by the plain columns. The aggregate
+reduces the rest. `list` answers a list value, written as its JSON text (`["R1","R2"]`), so a script
+reading a cell parses it rather than splitting on spaces:
 
 {{ agniRun "content/guide/runs/query-aggregation.yaml" }}
 
@@ -341,8 +342,8 @@ rather than "no results":
 net.ground(?n), component.net(?tp,?n), component.class(?tp,"test_point") => count(distinct ?tp)
 ```
 
-`count` and `sum` over nothing are `0` and `list` is empty. `min` and `max` have no number to report,
-so their cells are absent.
+`count` and `sum` over nothing are `0` and `list` is the empty list `[]`. `min`, `max` and `avg` have no
+number to report, so their cells are absent.
 A projection that does group, such as `=> ?n, count(?r)`, still answers nothing when nothing
 matched, because there is no net to name a group after.
 
@@ -407,6 +408,19 @@ entity(?n, "net"), ?c = count(distinct ?tp) : { component.net(?tp, ?n), componen
 
 The variable the braces share with the clause (`?n` here) has to be bound outside them by a relation
 as well as inside them. `net.test_point_count` in the shipped library is this clause.
+
+### Keep a row when part of it is missing (optional)
+
+`optional { ... }` keeps the row whether or not the braces match, and a variable only the braces bind
+is absent where they do not. Every resistor with its part number, and the resistors that have none
+still listed:
+
+```
+component.class(?r, "resistor"), optional { component.mpn(?r, ?m) } => ?r, ?m
+```
+
+Without `optional`, a resistor with no part number would drop out of the answer, which reads the same
+as a design with no such resistor.
 
 ### Sort and page an answer (order by, limit)
 
@@ -650,6 +664,19 @@ bridge the same two nets you get the shorter one and no mention of the other. An
 on a rail or a plane, because the walk refuses to enter one at all. For the pin-to-pin form, which
 does end on a rail and reports the test points sitting on each net along the way, use
 [`agni trace`](../cli-reference/#trace-file).
+
+`net.reaches` and `net.route` are the walk the rules use, so a query and a rule agree on what is
+reachable. For a walk over a relation of your own, the engine's `graph.closure(rel, from, to, min, max, hops)`
+and `graph.paths` take the step relation by name and stay within the hops you give them. Every net two
+resistor crossings or fewer from CAN1_CANH:
+
+```
+step(?a, ?b) :- component.class(?r, "resistor"), component.net(?r, ?a), component.net(?r, ?b), ?a != ?b;
+graph.closure("step", "CAN1_CANH", ?to, 1, 2, ?h) => ?to, ?h
+```
+
+Unlike `net.reaches`, this walk enters rails, so a rail's step ends the question only if your step
+relation says so.
 
 ## Asking under your own vocabulary
 

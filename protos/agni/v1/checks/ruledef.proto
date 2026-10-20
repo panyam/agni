@@ -292,13 +292,16 @@ message DatalogBody {
 }
 
 // DatalogLiteral is exactly one of a positive atom, a negated atom (stratified negation), a
-// comparison built-in, or a body aggregate.
+// comparison built-in, a body aggregate, or an optional body.
 message DatalogLiteral {
   oneof literal {
     DatalogAtom pos = 1;
     DatalogAtom neg = 2;
     DatalogCompare compare = 3;
     DatalogBodyAggregate agg = 4;
+    // opt is `optional { body }`, a left outer join: the clause's row holds whether body matches or
+    // not, and a variable only body binds is absent when it does not.
+    DatalogBody opt = 5;
   }
 }
 

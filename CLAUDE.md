@@ -468,7 +468,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   R10, and `column_types` overrides one. Cells travel raw: the csv encoder guards formulas and
   `tables_to_xlsx` keeps a cell starting `=` as text. `check --verdicts --format json` is the whole
   CheckDesign response, verdicts included.
-- **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/list`
+- **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/avg/list`
   group by the projection's plain columns; `count(distinct ?x)` reduces the SET of values instead.
   The trap is that a goal joining two things yields one binding per combination, so on
   a net carrying 7 test points and 20 capacitors `count(?tp)` is 140 and `count(distinct ?tp)` is 7.

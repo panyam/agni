@@ -59,7 +59,7 @@ func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
 		"Nets with no test point":                "I2C_SCL,MCU_NRST",
 		"Two-terminal parts probed on both nets": "SYN-CAP-100N/C1,SYN-CAP-100N/C2,SYN-RES-4K7/R1,SYN-TVS-5V/D1",
 		"Two-terminal parts probed on one net":   "SYN-RES-10K/R3/VCC_3V3/MCU_NRST,SYN-RES-4K7/R2/VCC_3V3/I2C_SCL",
-		"MPNs never probed on both nets":         "SYN-RES-10K/R3",
+		"MPNs never probed on both nets":         `SYN-RES-10K/["R3"]`,
 	} {
 		if got := col0(name); got != want {
 			t.Errorf("%s = %q, want %q", name, got, want)

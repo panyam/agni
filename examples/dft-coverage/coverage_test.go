@@ -20,7 +20,7 @@ func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
 		"both ends probed":   {bothQuery, "R1"},
 		"one end probed":     {oneQuery, "C1/GND,C2/GND,R2/SENSE"},
 		"neither end probed": {neitherQuery, "R3,R4"},
-		"neither, by MPN":    {byMPNQuery, "DEMO-RES-4K7/2/R3 R4"},
+		"neither, by MPN":    {byMPNQuery, `DEMO-RES-4K7/2/["R3","R4"]`},
 		"unprobed nets":      {unprobedQuery, "GND,SENSE,STRAP"},
 	} {
 		got, err := rows(d, c.q)

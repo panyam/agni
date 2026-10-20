@@ -273,16 +273,18 @@ class DatalogBody(_message.Message):
     def __init__(self, literals: _Optional[_Iterable[_Union[DatalogLiteral, _Mapping]]] = ...) -> None: ...
 
 class DatalogLiteral(_message.Message):
-    __slots__ = ("pos", "neg", "compare", "agg")
+    __slots__ = ("pos", "neg", "compare", "agg", "opt")
     POS_FIELD_NUMBER: _ClassVar[int]
     NEG_FIELD_NUMBER: _ClassVar[int]
     COMPARE_FIELD_NUMBER: _ClassVar[int]
     AGG_FIELD_NUMBER: _ClassVar[int]
+    OPT_FIELD_NUMBER: _ClassVar[int]
     pos: DatalogAtom
     neg: DatalogAtom
     compare: DatalogCompare
     agg: DatalogBodyAggregate
-    def __init__(self, pos: _Optional[_Union[DatalogAtom, _Mapping]] = ..., neg: _Optional[_Union[DatalogAtom, _Mapping]] = ..., compare: _Optional[_Union[DatalogCompare, _Mapping]] = ..., agg: _Optional[_Union[DatalogBodyAggregate, _Mapping]] = ...) -> None: ...
+    opt: DatalogBody
+    def __init__(self, pos: _Optional[_Union[DatalogAtom, _Mapping]] = ..., neg: _Optional[_Union[DatalogAtom, _Mapping]] = ..., compare: _Optional[_Union[DatalogCompare, _Mapping]] = ..., agg: _Optional[_Union[DatalogBodyAggregate, _Mapping]] = ..., opt: _Optional[_Union[DatalogBody, _Mapping]] = ...) -> None: ...
 
 class DatalogBodyAggregate(_message.Message):
     __slots__ = ("result", "agg", "body")

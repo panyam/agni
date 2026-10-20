@@ -93,6 +93,10 @@ Defined in Datalog over the relations above rather than projected from the desig
 | Relation | Summary |
 |---|---|
 | `absent(value)` | reports whether the field carried no value at all, which is different from an empty string and from zero; `not absent(?x)` reads "this field is stated" |
+| `coalesce(value, fallback, result)` | binds the value, or the fallback when the value is absent |
+| `list.at(list, index, value)` | binds the value at an index from 0, a negative one counting from the end (-1 is the last) |
+| `list.length(list, length)` | binds how many values the list holds |
+| `list.member(list, index, value)` | binds each value of the list with its index from 0; given a value, binds where it is |
 | [`net.reaches(from, net, hops?)`](net.reaches/) | transitive reachability through series pass elements (R/L/ferrite/fuse); the optional third argument binds the EXACT number of crossings, so a radius is written `net.reaches(?a,?b,?h), ?h <= 2` and not `net.reaches(?a,?b,2)`, which means exactly two |
 | [`net.route(from, net, path)`](net.route/) | the same walk as `net.reaches`, with the route it found bound as a readable value (`VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3`), so a connectivity answer carries the evidence for itself; one route per pair, and a route never ends on a rail because the walk refuses one |
 | `num.add(a, b, c)` | c = a + b, run from any two of the three; units follow the vocabulary's table |
@@ -102,6 +106,12 @@ Defined in Datalog over the relations above rather than projected from the desig
 | `num.sub(a, b, c)` | c = a - b, run from any two of the three; units follow the vocabulary's table |
 | `num.unit(number, unit)` | binds the number's unit ("V", "A"), or absent for a number without one; the number must be bound |
 | `num.value(number, value)` | binds the number without its unit, so 5 V and 5 A both bind 5; the number must be bound |
+| `path.edge(path, index, edge)` | binds each edge of a path over a relation of three arguments, index from 0 |
+| `path.edges(path, edges)` | binds the path's edges as a list |
+| `path.length(path, steps)` | binds how many steps the path takes |
+| `path.node(path, index, node)` | binds each node of the path, index from 0 |
+| `path.nodes(path, nodes)` | binds the path's nodes as a list |
+| `path.step(path, index, from, to)` | binds each step of the path, index from 0 |
 | `str.capitalize(string, capitalized)` | binds the string with its first character in upper case and the rest as written |
 | `str.concat(head, tail, text)` | text is head followed by tail, run from any two of the three; cutting a head or tail off holds for none when text lacks it |
 | `str.contains(string, substring)` | reports whether a string contains a substring |

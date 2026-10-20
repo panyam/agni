@@ -128,6 +128,11 @@ func ValidateRelationsFrom(reg *facts.Registry, q Query) error {
 					return err
 				}
 				continue
+			case lit.Opt != nil:
+				if err := check(*lit.Opt, where); err != nil {
+					return err
+				}
+				continue
 			default:
 				continue
 			}
@@ -167,6 +172,10 @@ func bodyProto(b Body) *checkspb.DatalogBody {
 					Result: string(lit.Agg.Result), Agg: aggregateProto(lit.Agg.Agg), Body: bodyProto(lit.Agg.Body),
 				}},
 			})
+		case lit.Opt != nil:
+			out.Literals = append(out.Literals, &checkspb.DatalogLiteral{
+				Literal: &checkspb.DatalogLiteral_Opt{Opt: bodyProto(*lit.Opt)},
+			})
 		}
 	}
 	return out
@@ -202,6 +211,12 @@ func bodyFromProto(p *checkspb.DatalogBody) (Body, error) {
 			b.Literals = append(b.Literals, Literal{Agg: &BodyAggregate{
 				Result: Var(l.Agg.GetResult()), Agg: aggregateFromProto(l.Agg.GetAgg()), Body: body,
 			}})
+		case *checkspb.DatalogLiteral_Opt:
+			body, err := bodyFromProto(l.Opt)
+			if err != nil {
+				return Body{}, err
+			}
+			b.Literals = append(b.Literals, Literal{Opt: &body})
 		default:
 			return Body{}, fmt.Errorf("query: literal is empty (no variant set)")
 		}
