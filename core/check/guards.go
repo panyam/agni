@@ -181,6 +181,25 @@ func IsGroundName(name string) bool { return classify.ActiveRoleVocab().IsGround
 // via --conventions, and hierarchical sheet prefixes ("/psu/12V") are stripped first.
 func IsPowerRailName(name string) bool { return classify.ActiveRoleVocab().IsRail(name) }
 
+// Unpopulated reports whether every part on a net is marked do-not-populate, so the assembled board
+// carries the copper and nothing on it (agni issue 961). Power flags and power symbols count for
+// neither side, and a net with no real part on it is not unpopulated. A rule that would demand
+// something of the net, a capacitor or a clamp, leaves such a net out, since crediting no unfitted part
+// while still judging the unfitted circuit reports a fault on hardware that is never built.
+func Unpopulated(m Model, n *ir.Net) bool {
+	real := false
+	for _, c := range n.Connections {
+		if IsVirtualRef(c.ComponentRef) {
+			continue
+		}
+		if m.IsFitted(c.ComponentRef) {
+			return false
+		}
+		real = true
+	}
+	return real
+}
+
 // PowerPinReachable reports a power-direction pin on the net or on any net in its 2-hop
 // series reach (WS3-011), so the split between esd and input-protection does not depend on
 // whether a bead sits between the connector and the regulator.

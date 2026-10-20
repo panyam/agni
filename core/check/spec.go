@@ -317,6 +317,10 @@ var specFacts = map[string]factDef{
 		reads: []string{"net.pin_count"}, primitives: []string{"count"},
 		get: func(ev *evalEnv) any { return len(ev.ents["net"].(*ir.Net).Connections) },
 	},
+	"net.unpopulated": { // every part on the net is marked do-not-populate (agni issue 961)
+		reads: []string{"component.dnp"},
+		get:   func(ev *evalEnv) any { return Unpopulated(ev.m, ev.ents["net"].(*ir.Net)) },
+	},
 	"net.attr.external":     netAttrFact("external"),
 	"net.attr.global":       netAttrFact("global"),
 	"net.attr.power_driven": netAttrFact("power_driven"),

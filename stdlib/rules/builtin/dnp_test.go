@@ -111,3 +111,59 @@ func TestADoNotPopulateTestPointStillCovers(t *testing.T) {
 		t.Errorf("a board whose only test point is unfitted still declares the convention; fired on %v, want exactly VCC", got)
 	}
 }
+
+// markDNP marks the named parts of d do-not-populate.
+func markDNP(d *ir.Design, refs ...string) *ir.Design {
+	for _, c := range d.Components {
+		for _, ref := range refs {
+			if c.RefDes == ref {
+				if c.Attributes == nil {
+					c.Attributes = map[string]string{}
+				}
+				c.Attributes["dnp"] = "yes"
+			}
+		}
+	}
+	return d
+}
+
+// A circuit left unfitted as a whole is never built, so a rule that no longer credits its unfitted
+// capacitor or clamp must not judge it either (agni issue 961). Jetson's Tag-Connect JTAG translator
+// (J20, U59, R341, R342, C237) is one, and crediting alone failed its rail and its reset line.
+func TestAnUnfittedCircuitIsNotJudged(t *testing.T) {
+	rail := func() *ir.Design {
+		d := pinDesign(map[string][]supplyPin{
+			"U1": {{"VCC", "1", pwrIn}, {"GND", "2", pwrIn}}, "C1": twoPin(),
+		}, map[string][]string{"TC_VCC": {"U1.1", "C1.1"}, "GND": {"U1.2", "C1.2"}})
+		for _, n := range d.Nets {
+			if n.Name == "TC_VCC" {
+				n.Attributes = map[string]string{"power_driven": "true"}
+			}
+		}
+		return d
+	}
+	if got := verdictOn(t, decouplingPresent, markDNP(rail(), "U1", "C1"), "TC_VCC"); got != "" {
+		t.Errorf("decoupling-present on a rail whose only load is unfitted = %q, want no verdict", got)
+	}
+	if got := verdictOn(t, decouplingPresent, markDNP(rail(), "C1"), "TC_VCC"); got != string(check.Fail) {
+		t.Errorf("decoupling-present on a fitted load with its capacitor unfitted = %q, want fail", got)
+	}
+	if got := verdictOn(t, bulkCap, markDNP(rail(), "U1", "C1"), "TC_VCC"); got != string(check.NotConsidered) {
+		t.Errorf("bulk-cap on a rail whose every part is unfitted = %q, want not-considered", got)
+	}
+	if got := verdictOn(t, bulkCap, markDNP(rail(), "C1"), "TC_VCC"); got != string(check.Fail) {
+		t.Errorf("bulk-cap on a fitted rail with its capacitor unfitted = %q, want fail", got)
+	}
+
+	line := func() *ir.Design {
+		return pinDesign(map[string][]supplyPin{
+			"J1": twoPin(), "R1": twoPin(), "U1": {{"TRST", "1", ir.PinDirection_PIN_DIRECTION_INPUT}},
+		}, map[string][]string{"TC_TRST": {"J1.1", "R1.1"}, "TRST": {"R1.2", "U1.1"}})
+	}
+	if got := verdictOn(t, esdProtection, markDNP(line(), "J1", "R1"), "TC_TRST"); got != string(check.NotConsidered) {
+		t.Errorf("esd-protection on a connector net whose every part is unfitted = %q, want not-considered", got)
+	}
+	if got := verdictOn(t, esdProtection, line(), "TC_TRST"); got != string(check.Fail) {
+		t.Errorf("esd-protection on the fitted line = %q, want fail", got)
+	}
+}

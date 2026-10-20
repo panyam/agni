@@ -277,6 +277,13 @@ everything built on it (the TVS and ICESD reach, the power path, the bias and pu
 `not component.dnp(?r)`, which is how the ESD profile and the datalog twins leave an unfitted clamp
 or capacitor out.
 
+Crediting alone breaks a circuit left unfitted as a whole. Jetson's Tag-Connect JTAG translator (the
+connector, the translator, its capacitor and both resistors) is all DNP, so with its capacitor no
+longer counted `decoupling-present` and `bulk-cap` failed its rail, and `esd-protection` failed its
+reset line. A rule whose credit #961 changed therefore also leaves out a net with no fitted part
+(`check.Unpopulated`, the `net.unpopulated` spec fact), and `decoupling-present` asks for a FITTED
+supply pin.
+
 A test point is the one part that keeps its credit. The probe lands on its pad, which is copper on the
 bare board whether or not anything is placed there, and a pad-only test point is marked DNP for exactly
 that reason. Every test point on the RoyalBlue54L Feather seed is a `TestPoint_Pad` footprint marked
