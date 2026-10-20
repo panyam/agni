@@ -356,12 +356,15 @@ async function walkDesign(page, design, log) {
   });
   await step("4. ask again", design, async () => {
     const before = log.requests.length;
-    // Every design has a net, so this answers rows wherever the walk got this far, and its count
-    // differs from the last step's. The last step may have answered nothing, which shows no count
-    // and leaves an empty-answer note that must not satisfy the wait.
-    await page.fill("textarea.query-text", "net.pin_count(?n, ?c) => ?n, ?c order by ?c desc limit 2");
+    // Every design has a net, so this answers rows wherever the walk got this far. The wait below is
+    // for the count to change, so the limit is chosen to answer a count other than the one on screen:
+    // a fixed limit 2 never changed it on a two-net design whose last answer was 2 rows (agni 975).
+    // The last step may also have answered nothing, which shows no count and leaves an empty-answer
+    // note that must not satisfy the wait.
     const counted = page.locator(".query-count");
     const shown = (await counted.count()) ? ((await counted.textContent()) ?? "") : "";
+    const limit = /^1 result\(s\)/.test(shown.trim()) ? 2 : 1;
+    await page.fill("textarea.query-text", `net.pin_count(?n, ?c) => ?n, ?c order by ?c desc limit ${limit}`);
     const t = performance.now();
     await page.click("button.query-run");
     await page.waitForFunction(
