@@ -1,7 +1,7 @@
 #agni-run 9e07a742bb2bb996
 floating-input  1 fail
-    fail  FLOAT  all 2 of the net's pins are inputs or no-connects, and 2 of them are logic
-                 inputs
+    fail  FLOAT  all 2 of the net's fitted pins are inputs or no-connects, and 2 of them are
+                 logic inputs
 
 output-output-conflict  1 fail, 1 pass
     fail  FIGHT  net has 2 driving components; at most one may drive
