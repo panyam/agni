@@ -292,7 +292,9 @@ report how each step went. The report holds counts, timings and the names of rul
 no net name, reference designator, part number, design name or path, because its type has no field
 for one. A rule a project wrote is counted without its name. It prints a link that opens the report
 as a GitHub issue to read before submitting. The compose bundle runs it as its `trial` service; see
-[Trying agni on your own boards](../trying-agni/).
+[Trying agni on your own boards](../trying-agni/). On a hierarchical netlist pass
+`--flatten-hierarchy`, or the report counts the top cell alone and says how many blocks it did not
+read. A flattened report says so on its design line.
 
 | flag | what it does |
 |---|---|

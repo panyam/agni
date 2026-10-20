@@ -127,6 +127,25 @@ def test_cli_argv_carries_the_snapshot_definition():
     assert len(t.argvs) == 7
 
 
+def test_cli_argv_carries_flatten_hierarchy():
+    """A snapshot ingested with flatten_hierarchy reaches every command that reads it as
+    --flatten-hierarchy, and a definition without it adds nothing (agni issue 1104)."""
+    t = _Recording()
+    c = Client(t)
+    flat = c.ingest(DESIGN, flatten_hierarchy=True)
+    plain = c.ingest(DESIGN)
+    assert c.get_snapshot(flat).flatten_hierarchy and not c.get_snapshot(plain).flatten_hierarchy
+    assert c.get_snapshot(flat) == c.ingest_snapshot(snapshot={"uri": DESIGN, "flatten_hierarchy": True}, snapshot_id=flat.split("/")[1])
+    c.check_design(snapshot=flat)
+    c.run_query(snapshot=flat, query="q")
+    c.create_review(snapshot=flat, manifest={"name": "m"})
+    c.get_design(snapshot=flat)
+    c.get_layout_report(snapshot=flat)
+    c.get_design(snapshot=plain)
+    assert [a[-1] for a in t.argvs[:5]] == ["--flatten-hierarchy"] * 5, t.argvs
+    assert "--flatten-hierarchy" not in t.argvs[5]
+
+
 def test_cli_refuses_an_rpc_no_command_serves(cli: Client):
     # GetReview reads a stored run, and the CLI stores none. CreateReview served as this example until
     # agni issue 734 gave it a command.

@@ -23,7 +23,8 @@ from agni import Client, CliTransport, ConnectTransport
 REPO = Path(__file__).resolve().parents[3]
 FIXTURE = REPO / "examples" / "tutorial-project"
 AGNI = os.environ.get("AGNI_BIN", str(REPO / "bin" / "agni"))
-MOUNTS = {"tut": str(FIXTURE)}
+# hier is the EDIF reader's hierarchical fixture, for the reads --flatten-hierarchy changes.
+MOUNTS = {"tut": str(FIXTURE), "hier": str(REPO / "readers" / "edif" / "testdata")}
 
 DESIGN = "mount://tut/designs/gateway"
 

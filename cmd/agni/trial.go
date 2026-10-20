@@ -99,11 +99,8 @@ func runTrial(ctx context.Context, uri string) (feedback.Report, error) {
 	snaps := service.NewSnapshotService(ll, cliProjects(), nil, "")
 	// The design is ingested in the read step, and every later step asks about that snapshot.
 	var snap string
-	defer func() {
-		if snap != "" {
-			_, _ = snaps.DeleteSnapshot(context.WithoutCancel(ctx), &webapi.DeleteSnapshotRequest{Name: snap})
-		}
-	}()
+	drop := func() {}
+	defer func() { drop() }()
 
 	step := func(s feedback.Step, run func() (feedback.Status, error)) {
 		start := time.Now()
@@ -115,11 +112,12 @@ func runTrial(ctx context.Context, uri string) (feedback.Report, error) {
 	}
 
 	step(feedback.StepRead, func() (feedback.Status, error) {
-		s, err := snaps.Ingest(ctx, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: uri}})
-		if err != nil {
+		// Through ingest, so --flatten-hierarchy reads a hierarchical netlist whole here as it does
+		// for every other command (agni issue 1103).
+		var err error
+		if snap, drop, err = ingest(ctx, snaps, &webapi.Snapshot{Uri: uri}); err != nil {
 			return "", err
 		}
-		snap = s.GetName()
 		d, err := design.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: snap})
 		if err != nil {
 			return "", err
@@ -130,6 +128,7 @@ func runTrial(ctx context.Context, uri string) (feedback.Report, error) {
 			Nets:             int(d.GetNetCount()),
 			Sheets:           len(d.GetSheets()),
 			UnexpandedBlocks: len(d.GetUnexpandedHierarchy()),
+			Flattened:        readFlatten,
 		}
 		for _, s := range d.GetSheets() {
 			rep.Shape.HasBoard = rep.Shape.HasBoard || s.GetId() == "board"

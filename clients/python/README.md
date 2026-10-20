@@ -18,7 +18,8 @@ c.delete_snapshot(snap)
 ```
 
 Every question names a snapshot, a design loaded once under one config (agni issue 1061). `ingest`
-returns its name, and takes the `board_uri`, `as_named` and `overlay` a request used to carry.
+returns its name, and takes the `board_uri`, `as_named` and `overlay` a request used to carry, and
+`flatten_hierarchy`, which reads a hierarchical EDIF netlist whole as `--flatten-hierarchy` does.
 A server holds a snapshot until it is deleted or evicted, and a question naming one it no longer holds
 raises `AgniError` with code `not_found`, so a long-running script ingests again. The CLI transport has
 no server, so it keeps each definition itself under a name it mints (`snapshots/cli-1`) and turns it
