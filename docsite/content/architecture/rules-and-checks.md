@@ -289,10 +289,14 @@ bare board whether or not anything is placed there, and a pad-only test point is
 that reason. Every test point on the RoyalBlue54L Feather seed is a `TestPoint_Pad` footprint marked
 DNP, so leaving them out turned its four uncovered rails into a board with no probe convention at all.
 
-The other direction is still open. A rule that BLAMES a part, such as `floating-input` counting an
-unfitted IC's input pins, or a rating rule checking a DNP part's voltage, still judges it as though it
-were fitted. Whether a DNP part should be judged at all is a different question from whether it may be
-credited, and it is tracked separately.
+A rule that BLAMES a part judges no unfitted one either (agni issue 1082). The rules that judge a part
+on the assembled board, its own rating or an LED's orientation, are wrapped in `check.OnFittedParts`,
+which makes any verdict naming an unfitted part, or a pin of one, not considered and says which part.
+It is opt-in, because a rule about a part can matter when the part is not fitted: two unfitted parts
+sharing a reference designator are still a netlist defect. `floating-input` counts the assembled board,
+so an input whose only pull is unfitted is alone on its net and fails. A connector counts there
+whether or not it is fitted, since a board shipped with its header loose marks the header DNP and its
+pads are still the board's interface.
 
 ## The evaluation model
 

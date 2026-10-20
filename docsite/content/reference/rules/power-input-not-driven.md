@@ -9,9 +9,14 @@ Connect the supply pin to the rail that feeds it, and check that the rail itself
 
 ### What it means
 
-A net that has a power-input pin (a VCC/VDD/rail-consuming pin) but no power
-source, meaning no driving pin (output, power-output or bidirectional) and no power flag
-asserting the rail is fed elsewhere.
+A net that has a power-input pin (a VCC/VDD/rail-consuming pin) but no power source and no power
+flag asserting the rail is fed elsewhere.
+
+What counts as a source depends on the net, as it does in KiCad's ERC. A net carrying a power
+symbol (GND, +3V3) is a named supply, and only a power-output pin feeds it, so a logic output or a
+strap pin tied to ground does not. Any other net is a signal that happens to reach a supply-typed
+pin, such as a module connector's power-good input on an open-drain flag, and any driving pin
+(output, bidirectional, tri-state, open-collector or open-emitter) feeds it (agni issue 1082).
 
 ### Why engineers want it
 

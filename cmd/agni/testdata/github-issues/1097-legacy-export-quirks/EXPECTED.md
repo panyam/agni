@@ -20,6 +20,11 @@ File: `one_pin_net.tel`
 
 ## 3. EDIF escaped MPN
 
+`edif_escaped_mpn.edn` spells the cell `PART&07`, which is not a legal EDIF identifier: `&` escapes
+only an identifier that starts with a digit. `edif_renamed_part.edn` is the legal form the guide page
+(`docsite/content/guide/older-comparison-tools.md`) runs, a stand-in identifier `PART_07` with the real
+name in `rename` and the part number in a property.
+
 File: `edif_escaped_mpn.edn`
 
 - Cell/MPN token `PART&07` (EDIF escape for `PART-07`).

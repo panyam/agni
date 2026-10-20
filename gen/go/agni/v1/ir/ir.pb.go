@@ -41,31 +41,45 @@ const (
 	PinDirection_PIN_DIRECTION_NO_CONNECT  PinDirection = 6
 	PinDirection_PIN_DIRECTION_POWER_IN    PinDirection = 7
 	PinDirection_PIN_DIRECTION_POWER_OUT   PinDirection = 8
+	// A tri-state output drives its net only while enabled, so a net it shares with another tri-state
+	// pin is a bus rather than a conflict. It answers "is this net driven" and is no hard driver.
+	PinDirection_PIN_DIRECTION_TRISTATE PinDirection = 9
+	// An open-collector (or open-drain) output can only pull its net low, so several on one net are a
+	// wire-OR, which needs a pull-up rather than being a conflict.
+	PinDirection_PIN_DIRECTION_OPEN_COLLECTOR PinDirection = 10
+	// An open-emitter (or open-source) output can only pull its net high, the mirror of open-collector.
+	PinDirection_PIN_DIRECTION_OPEN_EMITTER PinDirection = 11
 )
 
 // Enum value maps for PinDirection.
 var (
 	PinDirection_name = map[int32]string{
-		0: "PIN_DIRECTION_UNSPECIFIED",
-		1: "PIN_DIRECTION_INPUT",
-		2: "PIN_DIRECTION_OUTPUT",
-		3: "PIN_DIRECTION_INOUT",
-		4: "PIN_DIRECTION_PASSIVE",
-		5: "PIN_DIRECTION_POWER",
-		6: "PIN_DIRECTION_NO_CONNECT",
-		7: "PIN_DIRECTION_POWER_IN",
-		8: "PIN_DIRECTION_POWER_OUT",
+		0:  "PIN_DIRECTION_UNSPECIFIED",
+		1:  "PIN_DIRECTION_INPUT",
+		2:  "PIN_DIRECTION_OUTPUT",
+		3:  "PIN_DIRECTION_INOUT",
+		4:  "PIN_DIRECTION_PASSIVE",
+		5:  "PIN_DIRECTION_POWER",
+		6:  "PIN_DIRECTION_NO_CONNECT",
+		7:  "PIN_DIRECTION_POWER_IN",
+		8:  "PIN_DIRECTION_POWER_OUT",
+		9:  "PIN_DIRECTION_TRISTATE",
+		10: "PIN_DIRECTION_OPEN_COLLECTOR",
+		11: "PIN_DIRECTION_OPEN_EMITTER",
 	}
 	PinDirection_value = map[string]int32{
-		"PIN_DIRECTION_UNSPECIFIED": 0,
-		"PIN_DIRECTION_INPUT":       1,
-		"PIN_DIRECTION_OUTPUT":      2,
-		"PIN_DIRECTION_INOUT":       3,
-		"PIN_DIRECTION_PASSIVE":     4,
-		"PIN_DIRECTION_POWER":       5,
-		"PIN_DIRECTION_NO_CONNECT":  6,
-		"PIN_DIRECTION_POWER_IN":    7,
-		"PIN_DIRECTION_POWER_OUT":   8,
+		"PIN_DIRECTION_UNSPECIFIED":    0,
+		"PIN_DIRECTION_INPUT":          1,
+		"PIN_DIRECTION_OUTPUT":         2,
+		"PIN_DIRECTION_INOUT":          3,
+		"PIN_DIRECTION_PASSIVE":        4,
+		"PIN_DIRECTION_POWER":          5,
+		"PIN_DIRECTION_NO_CONNECT":     6,
+		"PIN_DIRECTION_POWER_IN":       7,
+		"PIN_DIRECTION_POWER_OUT":      8,
+		"PIN_DIRECTION_TRISTATE":       9,
+		"PIN_DIRECTION_OPEN_COLLECTOR": 10,
+		"PIN_DIRECTION_OPEN_EMITTER":   11,
 	}
 )
 
@@ -3201,7 +3215,7 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\x84\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xe2\x02\n" +
 	"\fPinDirection\x12\x1d\n" +
 	"\x19PIN_DIRECTION_UNSPECIFIED\x10\x00\x12\x17\n" +
 	"\x13PIN_DIRECTION_INPUT\x10\x01\x12\x18\n" +
@@ -3211,7 +3225,11 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x13PIN_DIRECTION_POWER\x10\x05\x12\x1c\n" +
 	"\x18PIN_DIRECTION_NO_CONNECT\x10\x06\x12\x1a\n" +
 	"\x16PIN_DIRECTION_POWER_IN\x10\a\x12\x1b\n" +
-	"\x17PIN_DIRECTION_POWER_OUT\x10\b*j\n" +
+	"\x17PIN_DIRECTION_POWER_OUT\x10\b\x12\x1a\n" +
+	"\x16PIN_DIRECTION_TRISTATE\x10\t\x12 \n" +
+	"\x1cPIN_DIRECTION_OPEN_COLLECTOR\x10\n" +
+	"\x12\x1e\n" +
+	"\x1aPIN_DIRECTION_OPEN_EMITTER\x10\v*j\n" +
 	"\vClassSource\x12\x1c\n" +
 	"\x18CLASS_SOURCE_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17CLASS_SOURCE_CONVENTION\x10\x01\x12\x1a\n" +

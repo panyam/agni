@@ -13,14 +13,18 @@ import (
 // (absent-tolerant, like the rest of check).
 
 // IsDriver reports whether a pin can source a signal onto its net: a plain output, a power source
-// (a regulator output or a PWR_FLAG, mapped to POWER_OUT), or a bidirectional pin (it drives when
-// enabled). INOUT is a driver for "is this net driven?" but not counted as a hard driver for the
-// two-drivers conflict, where a shared bus of INOUT pins is legal.
+// (a regulator output or a PWR_FLAG, mapped to POWER_OUT), a bidirectional or tri-state pin (it
+// drives when enabled), or an open-collector or open-emitter output (it drives one way). All but
+// OUTPUT and POWER_OUT answer "is this net driven?" without being hard drivers for the two-drivers
+// conflict, where a shared bus and a wire-OR are both legal (agni issue 1082).
 func IsDriver(d ir.PinDirection) bool {
 	switch d {
 	case ir.PinDirection_PIN_DIRECTION_OUTPUT,
 		ir.PinDirection_PIN_DIRECTION_POWER_OUT,
-		ir.PinDirection_PIN_DIRECTION_INOUT:
+		ir.PinDirection_PIN_DIRECTION_INOUT,
+		ir.PinDirection_PIN_DIRECTION_TRISTATE,
+		ir.PinDirection_PIN_DIRECTION_OPEN_COLLECTOR,
+		ir.PinDirection_PIN_DIRECTION_OPEN_EMITTER:
 		return true
 	}
 	return false

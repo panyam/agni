@@ -567,8 +567,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   ticket). A class is a judgement in its `why` unless an oracle backs it. KiCad's own ERC and DRC are
   one (agni 967): `hack/kicad_oracle.sh` writes `<seed>.kicad.oracle` beside each record, a group of a
   rule KiCad mirrors says `kicad: agrees` or `disagrees`, and what KiCad alone reports sits under
-  `kicad_only`, all held by `TestSeedTriageAgainstKiCad`. KiCad names a copper island it merged
-  inconsistently between runs, which matters on the tutorial gateway, whose planted faults overlap.
+  `kicad_only`, all held by `TestSeedTriageAgainstKiCad`. **Draw a planted copper fault as a near miss,
+  never an overlap**: KiCad reads overlapping copper as one island and names it inconsistently between
+  runs, so until agni 1082 it could not check the gateway's faults at all.
 - **The samples tarballs are built in `panyam/agni-samples` with its `make dist`**, which since
   v0.1.1 runs on Linux as well as macOS. v0.1.0 was packed by macOS tar and carried a `._name`
   AppleDouble shadow beside every file, and a shadow sorts ahead of the file it shadows, so any walk
@@ -920,7 +921,9 @@ component.dnp(?r)`. Two exceptions are deliberate and each cost a wrong first ve
 keeps its credit, since a pad-only one is marked DNP because nothing is placed and a probe lands on
 the copper (every test point on the Feather seed). And crediting alone fails a circuit unfitted as a
 whole, so a rule whose credit changed also leaves out a net with no fitted part (`check.Unpopulated`,
-spec fact `net.unpopulated`). A rule that BLAMES an unfitted part is still open (#1082).
+spec fact `net.unpopulated`). A rule that BLAMES a part judges no unfitted one: a rating or
+orientation rule is wrapped in `check.OnFittedParts` (opt-in, since two unfitted parts sharing a
+ref-des are still a defect), and `floating-input` counts fitted pins, a connector's included (agni 1082).
 `architecture/rules-and-checks.md` states the policy.
 
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,

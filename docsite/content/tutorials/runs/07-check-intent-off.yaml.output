@@ -3,6 +3,7 @@ findings by rule:
   bulk-cap               2
   decoupling-present     1
   esd-protection         393
+  floating-input         3
   i2c-pull-up            28
   i2c-redundant-pull-up  4
   input-protection       5
@@ -11,7 +12,6 @@ findings by rule:
   reverse-blocking-absent 11
   single-pin-net         2
   test-point-coverage    36
-  unspecified-pin-with-driver 1
 
-533 finding(s) total
-26048 subject(s) considered by 41 rule(s), 1059 not considered (--verdicts for the detail)
+535 finding(s) total
+26065 subject(s) considered by 41 rule(s), 1042 not considered (--verdicts for the detail)

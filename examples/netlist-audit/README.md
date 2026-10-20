@@ -28,6 +28,14 @@ agni query <design> --set audit.yaml --format markdown
 and from the Python client, where `clients/python/examples/audit_workbook.py` sends its tables as one
 set and writes a spreadsheet sheet per query.
 
+## Interpreting comparison tables
+
+If you are checking these tables against an older netlist-export spreadsheet, some rows will differ for
+reasons in the export rather than the design: pins named by a letter, nets with one pin, EDIF cells
+named by a stand-in identifier, and Telesis package lines sharing a footprint.
+[Beside an older comparison tool](https://panyam.github.io/agni/guide/older-comparison-tools/) goes
+through each on a synthetic fixture.
+
 ## Run it
 
 ```

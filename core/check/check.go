@@ -244,6 +244,8 @@ type Rule struct {
 	// when it is done (agni issue 795); the runners check it between rules regardless, so a rule that
 	// ignores it delays a cancellation by one rule at most.
 	Eval func(context.Context, Model) []Verdict
+	// onFittedParts records that OnFittedParts has wrapped Eval, so marking a rule twice wraps it once.
+	onFittedParts bool
 	// SubjectShape declares the KINDS of a verdict's subject tuple, in the rule's order, for a rule
 	// whose subject is a relation between entities. Empty means one subject of whatever kind the rule
 	// enumerates. It tells a reader how to spell a verdict id without running the check, e.g.

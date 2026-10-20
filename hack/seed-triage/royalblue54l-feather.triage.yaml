@@ -76,6 +76,11 @@ findings:
       kicad: agrees
       subjects:
         - net:VDD
+    - class: defect
+      why: GND carries power symbols and no power flag, and nothing on it is a power output, so its power-input pins have no source on the schematic. KiCad's ERC reports the same. Harmless electrically, since ground is the reference.
+      kicad: agrees
+      subjects:
+        - net:GND
   reverse-blocking-absent:
     - class: design-choice
       why: VBUS from the USB-C port feeds the nPM1300's VBUS input directly, and the design relies on the PMIC's own input stage and power path to keep the battery from back-feeding the port. Not checked against the nPM1300 datasheet.
@@ -108,12 +113,6 @@ findings:
       subjects:
         - net:GND
 kicad_only:
-  power_pin_not_driven:
-    - class: missed
-      why: No power flag marks GND as fed, the same gap the record calls a defect on +BATT and VDD. agni passes it because power-input-not-driven counts four signal pins tied to ground (U2.29, U2.31, U6.1, U6.16) as drivers.
-      ticket: 1082
-      subjects:
-        - net:GND
   annular_width:
     - class: unread
       why: The board file does not parse for agni, so no board-tier rule runs on the Feather. KiCad reads it.

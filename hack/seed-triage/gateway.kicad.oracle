@@ -9,20 +9,29 @@
 # Library warnings are left out. A line is one violation: tool, type, severity, the subject in
 # agni's spelling (a net, two nets joined by | for a pair, or - for none), then KiCad's description
 # and its items, tab-separated. A pin is resolved to its net through KiCad's own netlist.
+drc	clearance	error	net:CAN1_CANH|net:I2C_SCL	Clearance violation ( clearance 0.2000 mm; actual 0.1250 mm)	Track [CAN1_CANH] on F.Cu, length 34.0000 mm	Track [I2C_SCL] on F.Cu, length 70.0000 mm
+drc	clearance	error	net:CAN1_CANL|net:I2C_SDA	Clearance violation ( clearance 0.2000 mm; actual 0.0500 mm)	Track [CAN1_CANL] on F.Cu, length 40.0000 mm	Track [I2C_SDA] on F.Cu, length 76.0000 mm
+drc	clearance	error	net:CAN1_RXD|net:PMIC_CORE_3V3	Clearance violation ( clearance 0.2000 mm; actual 0.0500 mm)	Track [PMIC_CORE_3V3] on F.Cu, length 16.0000 mm	Track [CAN1_RXD] on F.Cu, length 52.0000 mm
+drc	clearance	error	net:CAN1_RXD|net:PMIC_PG	Clearance violation ( clearance 0.2000 mm; actual 0.0500 mm)	Track [CAN1_RXD] on F.Cu, length 52.0000 mm	Track [PMIC_PG] on F.Cu, length 88.0000 mm
+drc	clearance	error	net:CAN1_TXD|net:MCU_NRST	Clearance violation ( clearance 0.2000 mm; actual 0.0500 mm)	Track [MCU_NRST] on F.Cu, length 82.0000 mm	Track [CAN1_TXD] on F.Cu, length 46.0000 mm
+drc	clearance	error	net:CAN1_TXD|net:PMIC_MAIN_12V0	Clearance violation ( clearance 0.2000 mm; actual 0.0500 mm)	Track [PMIC_MAIN_12V0] on F.Cu, length 10.0000 mm	Track [CAN1_TXD] on F.Cu, length 46.0000 mm
+drc	clearance	error	net:GND|net:XTAL_OUT	Clearance violation ( clearance 0.2000 mm; actual 0.0500 mm)	Track [GND] on F.Cu, length 28.0000 mm	Track [XTAL_OUT] on F.Cu, length 64.0000 mm
+drc	clearance	error	net:PMIC_EN|net:XTAL_IN	Clearance violation ( clearance 0.2000 mm; actual 0.0500 mm)	Track [PMIC_EN] on F.Cu, length 94.0000 mm	Track [XTAL_IN] on F.Cu, length 58.0000 mm
+drc	clearance	error	net:PMIC_IO_1V8|net:XTAL_IN	Clearance violation ( clearance 0.2000 mm; actual 0.0500 mm)	Track [XTAL_IN] on F.Cu, length 58.0000 mm	Track [PMIC_IO_1V8] on F.Cu, length 22.0000 mm
 drc	copper_edge_clearance	error	net:CAN1_CANH	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [CAN1_CANH] of R1 on F.Cu
 drc	copper_edge_clearance	error	net:CAN1_CANH	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 3 [CAN1_CANH] of J1 on F.Cu
 drc	copper_edge_clearance	error	net:CAN1_CANH	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 5 [CAN1_CANH] of U4 on F.Cu
 drc	copper_edge_clearance	error	net:CAN1_CANH	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [CAN1_CANH] on F.Cu, length 34.0000 mm
-drc	copper_edge_clearance	error	net:CAN1_CANH	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [CAN1_CANH] on F.Cu, length 70.0000 mm
 drc	copper_edge_clearance	error	net:CAN1_CANL	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [CAN1_CANL] of R1 on F.Cu
 drc	copper_edge_clearance	error	net:CAN1_CANL	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 4 [CAN1_CANL] of J1 on F.Cu
 drc	copper_edge_clearance	error	net:CAN1_CANL	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 6 [CAN1_CANL] of U4 on F.Cu
 drc	copper_edge_clearance	error	net:CAN1_CANL	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [CAN1_CANL] on F.Cu, length 40.0000 mm
-drc	copper_edge_clearance	error	net:CAN1_CANL	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [CAN1_CANL] on F.Cu, length 76.0000 mm
 drc	copper_edge_clearance	error	net:CAN1_RXD	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 4 [CAN1_RXD] of U4 on F.Cu
 drc	copper_edge_clearance	error	net:CAN1_RXD	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 7 [CAN1_RXD] of U3 on F.Cu
+drc	copper_edge_clearance	error	net:CAN1_RXD	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [CAN1_RXD] on F.Cu, length 52.0000 mm
 drc	copper_edge_clearance	error	net:CAN1_TXD	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 3 [CAN1_TXD] of U4 on F.Cu
 drc	copper_edge_clearance	error	net:CAN1_TXD	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 6 [CAN1_TXD] of U3 on F.Cu
+drc	copper_edge_clearance	error	net:CAN1_TXD	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [CAN1_TXD] on F.Cu, length 46.0000 mm
 drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [GND] of C1 on F.Cu
 drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [GND] of C2 on F.Cu
 drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [GND] of C3 on F.Cu
@@ -37,13 +46,15 @@ drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board se
 drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 3 [GND] of U2 on F.Cu
 drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 3 [GND] of U3 on F.Cu
 drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [GND] on F.Cu, length 28.0000 mm
-drc	copper_edge_clearance	error	net:GND	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [GND] on F.Cu, length 64.0000 mm
 drc	copper_edge_clearance	error	net:I2C_SCL	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 3 [I2C_SCL] of U5 on F.Cu
 drc	copper_edge_clearance	error	net:I2C_SCL	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 8 [I2C_SCL] of U3 on F.Cu
+drc	copper_edge_clearance	error	net:I2C_SCL	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [I2C_SCL] on F.Cu, length 70.0000 mm
 drc	copper_edge_clearance	error	net:I2C_SDA	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 4 [I2C_SDA] of U5 on F.Cu
 drc	copper_edge_clearance	error	net:I2C_SDA	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 9 [I2C_SDA] of U3 on F.Cu
+drc	copper_edge_clearance	error	net:I2C_SDA	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [I2C_SDA] on F.Cu, length 76.0000 mm
 drc	copper_edge_clearance	error	net:MCU_NRST	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [MCU_NRST] of R3 on F.Cu
 drc	copper_edge_clearance	error	net:MCU_NRST	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 10 [MCU_NRST] of U3 on F.Cu
+drc	copper_edge_clearance	error	net:MCU_NRST	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [MCU_NRST] on F.Cu, length 82.0000 mm
 drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_CORE_3V3] of C1 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_CORE_3V3] of C2 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_CORE_3V3] of TP1 on F.Cu
@@ -53,33 +64,31 @@ drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation
 drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [PMIC_CORE_3V3] of U1 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [PMIC_CORE_3V3] of U3 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_CORE_3V3] on F.Cu, length 16.0000 mm
-drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_CORE_3V3] on F.Cu, length 52.0000 mm
-drc	copper_edge_clearance	error	net:PMIC_CORE_3V3	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_CORE_3V3] on F.Cu, length 88.0000 mm
 drc	copper_edge_clearance	error	net:PMIC_EN	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_EN] of R2 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_EN	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 4 [PMIC_EN] of U1 on F.Cu
+drc	copper_edge_clearance	error	net:PMIC_EN	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_EN] on F.Cu, length 94.0000 mm
 drc	copper_edge_clearance	error	net:PMIC_IO_1V8	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_IO_1V8] of C3 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_IO_1V8	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_IO_1V8] of C4 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_IO_1V8	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_IO_1V8] of TP2 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_IO_1V8	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_IO_1V8] of U3 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_IO_1V8	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [PMIC_IO_1V8] of U2 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_IO_1V8	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_IO_1V8] on F.Cu, length 22.0000 mm
-drc	copper_edge_clearance	error	net:PMIC_IO_1V8	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_IO_1V8] on F.Cu, length 58.0000 mm
-drc	copper_edge_clearance	error	net:PMIC_IO_1V8	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_IO_1V8] on F.Cu, length 94.0000 mm
 drc	copper_edge_clearance	error	net:PMIC_MAIN_12V0	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_MAIN_12V0] of D1 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_MAIN_12V0	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_MAIN_12V0] of J1 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_MAIN_12V0	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [PMIC_MAIN_12V0] of U1 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_MAIN_12V0	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [PMIC_MAIN_12V0] of R2 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_MAIN_12V0	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_MAIN_12V0] on F.Cu, length 10.0000 mm
-drc	copper_edge_clearance	error	net:PMIC_MAIN_12V0	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_MAIN_12V0] on F.Cu, length 46.0000 mm
-drc	copper_edge_clearance	error	net:PMIC_MAIN_12V0	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_MAIN_12V0] on F.Cu, length 82.0000 mm
 drc	copper_edge_clearance	error	net:PMIC_PG	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [PMIC_PG] of R3 on F.Cu
 drc	copper_edge_clearance	error	net:PMIC_PG	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 5 [PMIC_PG] of U1 on F.Cu
+drc	copper_edge_clearance	error	net:PMIC_PG	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [PMIC_PG] on F.Cu, length 88.0000 mm
 drc	copper_edge_clearance	error	net:XTAL_IN	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [XTAL_IN] of C5 on F.Cu
 drc	copper_edge_clearance	error	net:XTAL_IN	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [XTAL_IN] of Y1 on F.Cu
 drc	copper_edge_clearance	error	net:XTAL_IN	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 4 [XTAL_IN] of U3 on F.Cu
+drc	copper_edge_clearance	error	net:XTAL_IN	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [XTAL_IN] on F.Cu, length 58.0000 mm
 drc	copper_edge_clearance	error	net:XTAL_OUT	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 1 [XTAL_OUT] of C6 on F.Cu
 drc	copper_edge_clearance	error	net:XTAL_OUT	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 2 [XTAL_OUT] of Y1 on F.Cu
 drc	copper_edge_clearance	error	net:XTAL_OUT	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Pad 5 [XTAL_OUT] of U3 on F.Cu
+drc	copper_edge_clearance	error	net:XTAL_OUT	Board edge clearance violation (board setup constraints edge clearance 0.5000 mm; actual 0.0000 mm)	Rectangle on Edge.Cuts	Track [XTAL_OUT] on F.Cu, length 64.0000 mm
 drc	silk_edge_clearance	warning	-	Silkscreen clipped by board edge	Rectangle on Edge.Cuts	Reference field of C1
 drc	silk_edge_clearance	warning	-	Silkscreen clipped by board edge	Rectangle on Edge.Cuts	Reference field of C2
 drc	silk_edge_clearance	warning	-	Silkscreen clipped by board edge	Rectangle on Edge.Cuts	Reference field of C3
@@ -100,67 +109,76 @@ drc	silk_edge_clearance	warning	-	Silkscreen clipped by board edge	Rectangle on 
 drc	silk_edge_clearance	warning	-	Silkscreen clipped by board edge	Rectangle on Edge.Cuts	Reference field of U5
 drc	silk_edge_clearance	warning	-	Silkscreen clipped by board edge	Rectangle on Edge.Cuts	Reference field of Y1
 drc	track_dangling	warning	net:CAN1_CANH	Track has unconnected end	Track [CAN1_CANH] on F.Cu, length 34.0000 mm
-drc	track_dangling	warning	net:CAN1_CANH	Track has unconnected end	Track [CAN1_CANH] on F.Cu, length 70.0000 mm
 drc	track_dangling	warning	net:CAN1_CANL	Track has unconnected end	Track [CAN1_CANL] on F.Cu, length 40.0000 mm
-drc	track_dangling	warning	net:CAN1_CANL	Track has unconnected end	Track [CAN1_CANL] on F.Cu, length 76.0000 mm
+drc	track_dangling	warning	net:CAN1_RXD	Track has unconnected end	Track [CAN1_RXD] on F.Cu, length 52.0000 mm
+drc	track_dangling	warning	net:CAN1_TXD	Track has unconnected end	Track [CAN1_TXD] on F.Cu, length 46.0000 mm
 drc	track_dangling	warning	net:GND	Track has unconnected end	Track [GND] on F.Cu, length 28.0000 mm
-drc	track_dangling	warning	net:GND	Track has unconnected end	Track [GND] on F.Cu, length 64.0000 mm
+drc	track_dangling	warning	net:I2C_SCL	Track has unconnected end	Track [I2C_SCL] on F.Cu, length 70.0000 mm
+drc	track_dangling	warning	net:I2C_SDA	Track has unconnected end	Track [I2C_SDA] on F.Cu, length 76.0000 mm
+drc	track_dangling	warning	net:MCU_NRST	Track has unconnected end	Track [MCU_NRST] on F.Cu, length 82.0000 mm
 drc	track_dangling	warning	net:PMIC_CORE_3V3	Track has unconnected end	Track [PMIC_CORE_3V3] on F.Cu, length 16.0000 mm
-drc	track_dangling	warning	net:PMIC_CORE_3V3	Track has unconnected end	Track [PMIC_CORE_3V3] on F.Cu, length 52.0000 mm
-drc	track_dangling	warning	net:PMIC_CORE_3V3	Track has unconnected end	Track [PMIC_CORE_3V3] on F.Cu, length 88.0000 mm
+drc	track_dangling	warning	net:PMIC_EN	Track has unconnected end	Track [PMIC_EN] on F.Cu, length 94.0000 mm
 drc	track_dangling	warning	net:PMIC_IO_1V8	Track has unconnected end	Track [PMIC_IO_1V8] on F.Cu, length 22.0000 mm
-drc	track_dangling	warning	net:PMIC_IO_1V8	Track has unconnected end	Track [PMIC_IO_1V8] on F.Cu, length 58.0000 mm
-drc	track_dangling	warning	net:PMIC_IO_1V8	Track has unconnected end	Track [PMIC_IO_1V8] on F.Cu, length 94.0000 mm
 drc	track_dangling	warning	net:PMIC_MAIN_12V0	Track has unconnected end	Track [PMIC_MAIN_12V0] on F.Cu, length 10.0000 mm
-drc	track_dangling	warning	net:PMIC_MAIN_12V0	Track has unconnected end	Track [PMIC_MAIN_12V0] on F.Cu, length 46.0000 mm
-drc	track_dangling	warning	net:PMIC_MAIN_12V0	Track has unconnected end	Track [PMIC_MAIN_12V0] on F.Cu, length 82.0000 mm
+drc	track_dangling	warning	net:PMIC_PG	Track has unconnected end	Track [PMIC_PG] on F.Cu, length 88.0000 mm
+drc	track_dangling	warning	net:XTAL_IN	Track has unconnected end	Track [XTAL_IN] on F.Cu, length 58.0000 mm
+drc	track_dangling	warning	net:XTAL_OUT	Track has unconnected end	Track [XTAL_OUT] on F.Cu, length 64.0000 mm
 drc	track_width	error	net:CAN1_CANH	Track width (board setup constraints min width 0.2000 mm; actual 0.1000 mm)	Track [CAN1_CANH] on F.Cu, length 34.0000 mm
-drc	unconnected_items	error	net:CAN1_CANH	Missing connection between items	Pad 5 [CAN1_CANH] of U4 on F.Cu	Pad 3 [CAN1_CANH] of J1 on F.Cu
-drc	unconnected_items	error	net:CAN1_CANH	Missing connection between items	Track [CAN1_CANH] on F.Cu, length 70.0000 mm	Pad 1 [CAN1_CANH] of R1 on F.Cu
-drc	unconnected_items	error	net:CAN1_CANH	Missing connection between items	Track [CAN1_CANH] on F.Cu, length 70.0000 mm	Pad 5 [CAN1_CANH] of U4 on F.Cu
-drc	unconnected_items	error	net:CAN1_CANL	Missing connection between items	Pad 6 [CAN1_CANL] of U4 on F.Cu	Pad 4 [CAN1_CANL] of J1 on F.Cu
-drc	unconnected_items	error	net:CAN1_CANL	Missing connection between items	Pad 6 [CAN1_CANL] of U4 on F.Cu	Track [CAN1_CANL] on F.Cu, length 76.0000 mm
-drc	unconnected_items	error	net:CAN1_CANL	Missing connection between items	Track [CAN1_CANL] on F.Cu, length 76.0000 mm	Pad 2 [CAN1_CANL] of R1 on F.Cu
-drc	unconnected_items	error	net:CAN1_RXD	Missing connection between items	Pad 4 [CAN1_RXD] of U4 on F.Cu	Pad 7 [CAN1_RXD] of U3 on F.Cu
-drc	unconnected_items	error	net:CAN1_TXD	Missing connection between items	Pad 3 [CAN1_TXD] of U4 on F.Cu	Pad 6 [CAN1_TXD] of U3 on F.Cu
+drc	unconnected_items	error	net:CAN1_CANH	Missing connection between items	Pad 3 [CAN1_CANH] of J1 on F.Cu	Pad 5 [CAN1_CANH] of U4 on F.Cu
+drc	unconnected_items	error	net:CAN1_CANH	Missing connection between items	Track [CAN1_CANH] on F.Cu, length 34.0000 mm	Pad 1 [CAN1_CANH] of R1 on F.Cu
+drc	unconnected_items	error	net:CAN1_CANH	Missing connection between items	Track [CAN1_CANH] on F.Cu, length 34.0000 mm	Pad 5 [CAN1_CANH] of U4 on F.Cu
+drc	unconnected_items	error	net:CAN1_CANL	Missing connection between items	Pad 4 [CAN1_CANL] of J1 on F.Cu	Pad 6 [CAN1_CANL] of U4 on F.Cu
+drc	unconnected_items	error	net:CAN1_CANL	Missing connection between items	Track [CAN1_CANL] on F.Cu, length 40.0000 mm	Pad 2 [CAN1_CANL] of R1 on F.Cu
+drc	unconnected_items	error	net:CAN1_CANL	Missing connection between items	Track [CAN1_CANL] on F.Cu, length 40.0000 mm	Pad 6 [CAN1_CANL] of U4 on F.Cu
+drc	unconnected_items	error	net:CAN1_RXD	Missing connection between items	Pad 4 [CAN1_RXD] of U4 on F.Cu	Track [CAN1_RXD] on F.Cu, length 52.0000 mm
+drc	unconnected_items	error	net:CAN1_RXD	Missing connection between items	Track [CAN1_RXD] on F.Cu, length 52.0000 mm	Pad 7 [CAN1_RXD] of U3 on F.Cu
+drc	unconnected_items	error	net:CAN1_TXD	Missing connection between items	Pad 3 [CAN1_TXD] of U4 on F.Cu	Track [CAN1_TXD] on F.Cu, length 46.0000 mm
+drc	unconnected_items	error	net:CAN1_TXD	Missing connection between items	Track [CAN1_TXD] on F.Cu, length 46.0000 mm	Pad 6 [CAN1_TXD] of U3 on F.Cu
+drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C1 on F.Cu	Pad 2 [GND] of C6 on F.Cu
 drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C2 on F.Cu	Pad 2 [GND] of C1 on F.Cu
 drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C2 on F.Cu	Pad 2 [GND] of C3 on F.Cu
+drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C2 on F.Cu	Pad 3 [GND] of U2 on F.Cu
 drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C3 on F.Cu	Pad 3 [GND] of U3 on F.Cu
-drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C4 on F.Cu	Pad 2 [GND] of C5 on F.Cu
-drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C4 on F.Cu	Pad 2 [GND] of U4 on F.Cu
 drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C5 on F.Cu	Pad 2 [GND] of C6 on F.Cu
-drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C5 on F.Cu	Track [GND] on F.Cu, length 28.0000 mm
-drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of C6 on F.Cu	Pad 2 [GND] of C1 on F.Cu
-drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of D1 on F.Cu	Pad 2 [GND] of U5 on F.Cu
+drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of U4 on F.Cu	Pad 2 [GND] of C4 on F.Cu
 drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of U4 on F.Cu	Pad 2 [GND] of J1 on F.Cu
+drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of U4 on F.Cu	Pad 2 [GND] of U5 on F.Cu
 drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of U5 on F.Cu	Pad 2 [GND] of C5 on F.Cu
+drc	unconnected_items	error	net:GND	Missing connection between items	Pad 2 [GND] of U5 on F.Cu	Pad 2 [GND] of D1 on F.Cu
 drc	unconnected_items	error	net:GND	Missing connection between items	Pad 3 [GND] of U1 on F.Cu	Pad 2 [GND] of C1 on F.Cu
-drc	unconnected_items	error	net:GND	Missing connection between items	Pad 3 [GND] of U2 on F.Cu	Pad 2 [GND] of C2 on F.Cu
-drc	unconnected_items	error	net:I2C_SCL	Missing connection between items	Pad 3 [I2C_SCL] of U5 on F.Cu	Pad 8 [I2C_SCL] of U3 on F.Cu
-drc	unconnected_items	error	net:I2C_SDA	Missing connection between items	Pad 4 [I2C_SDA] of U5 on F.Cu	Pad 9 [I2C_SDA] of U3 on F.Cu
-drc	unconnected_items	error	net:MCU_NRST	Missing connection between items	Pad 1 [MCU_NRST] of R3 on F.Cu	Pad 10 [MCU_NRST] of U3 on F.Cu
-drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 1 [PMIC_CORE_3V3] of C1 on F.Cu	Pad 1 [PMIC_CORE_3V3] of U5 on F.Cu
-drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 1 [PMIC_CORE_3V3] of C2 on F.Cu	Pad 1 [PMIC_CORE_3V3] of U2 on F.Cu
+drc	unconnected_items	error	net:GND	Missing connection between items	Track [GND] on F.Cu, length 28.0000 mm	Pad 2 [GND] of C5 on F.Cu
+drc	unconnected_items	error	net:I2C_SCL	Missing connection between items	Pad 3 [I2C_SCL] of U5 on F.Cu	Track [I2C_SCL] on F.Cu, length 70.0000 mm
+drc	unconnected_items	error	net:I2C_SCL	Missing connection between items	Pad 8 [I2C_SCL] of U3 on F.Cu	Pad 3 [I2C_SCL] of U5 on F.Cu
+drc	unconnected_items	error	net:I2C_SDA	Missing connection between items	Pad 4 [I2C_SDA] of U5 on F.Cu	Track [I2C_SDA] on F.Cu, length 76.0000 mm
+drc	unconnected_items	error	net:I2C_SDA	Missing connection between items	Pad 9 [I2C_SDA] of U3 on F.Cu	Pad 4 [I2C_SDA] of U5 on F.Cu
+drc	unconnected_items	error	net:MCU_NRST	Missing connection between items	Pad 1 [MCU_NRST] of R3 on F.Cu	Track [MCU_NRST] on F.Cu, length 82.0000 mm
+drc	unconnected_items	error	net:MCU_NRST	Missing connection between items	Track [MCU_NRST] on F.Cu, length 82.0000 mm	Pad 10 [MCU_NRST] of U3 on F.Cu
 drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 1 [PMIC_CORE_3V3] of TP1 on F.Cu	Pad 1 [PMIC_CORE_3V3] of C1 on F.Cu
+drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 1 [PMIC_CORE_3V3] of U2 on F.Cu	Pad 1 [PMIC_CORE_3V3] of C2 on F.Cu
 drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 1 [PMIC_CORE_3V3] of U2 on F.Cu	Pad 2 [PMIC_CORE_3V3] of U1 on F.Cu
+drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 1 [PMIC_CORE_3V3] of U5 on F.Cu	Pad 1 [PMIC_CORE_3V3] of C1 on F.Cu
 drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 1 [PMIC_CORE_3V3] of U5 on F.Cu	Pad 1 [PMIC_CORE_3V3] of U4 on F.Cu
 drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 2 [PMIC_CORE_3V3] of U1 on F.Cu	Pad 1 [PMIC_CORE_3V3] of C1 on F.Cu
 drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Pad 2 [PMIC_CORE_3V3] of U3 on F.Cu	Pad 1 [PMIC_CORE_3V3] of U2 on F.Cu
-drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Track [PMIC_CORE_3V3] on F.Cu, length 52.0000 mm	Pad 1 [PMIC_CORE_3V3] of TP1 on F.Cu
-drc	unconnected_items	error	net:PMIC_EN	Missing connection between items	Pad 4 [PMIC_EN] of U1 on F.Cu	Pad 1 [PMIC_EN] of R2 on F.Cu
-drc	unconnected_items	error	net:PMIC_IO_1V8	Missing connection between items	Pad 1 [PMIC_IO_1V8] of C4 on F.Cu	Track [PMIC_IO_1V8] on F.Cu, length 94.0000 mm
+drc	unconnected_items	error	net:PMIC_CORE_3V3	Missing connection between items	Track [PMIC_CORE_3V3] on F.Cu, length 16.0000 mm	Pad 1 [PMIC_CORE_3V3] of TP1 on F.Cu
+drc	unconnected_items	error	net:PMIC_EN	Missing connection between items	Pad 1 [PMIC_EN] of R2 on F.Cu	Pad 4 [PMIC_EN] of U1 on F.Cu
+drc	unconnected_items	error	net:PMIC_EN	Missing connection between items	Track [PMIC_EN] on F.Cu, length 94.0000 mm	Pad 1 [PMIC_EN] of R2 on F.Cu
+drc	unconnected_items	error	net:PMIC_IO_1V8	Missing connection between items	Pad 1 [PMIC_IO_1V8] of C3 on F.Cu	Pad 1 [PMIC_IO_1V8] of U3 on F.Cu
+drc	unconnected_items	error	net:PMIC_IO_1V8	Missing connection between items	Pad 1 [PMIC_IO_1V8] of C4 on F.Cu	Track [PMIC_IO_1V8] on F.Cu, length 22.0000 mm
 drc	unconnected_items	error	net:PMIC_IO_1V8	Missing connection between items	Pad 1 [PMIC_IO_1V8] of TP2 on F.Cu	Pad 1 [PMIC_IO_1V8] of C3 on F.Cu
-drc	unconnected_items	error	net:PMIC_IO_1V8	Missing connection between items	Pad 1 [PMIC_IO_1V8] of TP2 on F.Cu	Track [PMIC_IO_1V8] on F.Cu, length 58.0000 mm
-drc	unconnected_items	error	net:PMIC_IO_1V8	Missing connection between items	Pad 1 [PMIC_IO_1V8] of U3 on F.Cu	Pad 1 [PMIC_IO_1V8] of C3 on F.Cu
 drc	unconnected_items	error	net:PMIC_IO_1V8	Missing connection between items	Pad 1 [PMIC_IO_1V8] of U3 on F.Cu	Pad 2 [PMIC_IO_1V8] of U2 on F.Cu
+drc	unconnected_items	error	net:PMIC_IO_1V8	Missing connection between items	Track [PMIC_IO_1V8] on F.Cu, length 22.0000 mm	Pad 1 [PMIC_IO_1V8] of TP2 on F.Cu
 drc	unconnected_items	error	net:PMIC_MAIN_12V0	Missing connection between items	Pad 1 [PMIC_MAIN_12V0] of D1 on F.Cu	Pad 1 [PMIC_MAIN_12V0] of J1 on F.Cu
+drc	unconnected_items	error	net:PMIC_MAIN_12V0	Missing connection between items	Pad 1 [PMIC_MAIN_12V0] of J1 on F.Cu	Track [PMIC_MAIN_12V0] on F.Cu, length 10.0000 mm
 drc	unconnected_items	error	net:PMIC_MAIN_12V0	Missing connection between items	Pad 1 [PMIC_MAIN_12V0] of U1 on F.Cu	Pad 1 [PMIC_MAIN_12V0] of D1 on F.Cu
 drc	unconnected_items	error	net:PMIC_MAIN_12V0	Missing connection between items	Pad 2 [PMIC_MAIN_12V0] of R2 on F.Cu	Pad 1 [PMIC_MAIN_12V0] of U1 on F.Cu
-drc	unconnected_items	error	net:PMIC_MAIN_12V0	Missing connection between items	Track [PMIC_MAIN_12V0] on F.Cu, length 82.0000 mm	Pad 2 [PMIC_MAIN_12V0] of R2 on F.Cu
-drc	unconnected_items	error	net:PMIC_PG	Missing connection between items	Pad 2 [PMIC_PG] of R3 on F.Cu	Pad 5 [PMIC_PG] of U1 on F.Cu
-drc	unconnected_items	error	net:XTAL_IN	Missing connection between items	Pad 1 [XTAL_IN] of C5 on F.Cu	Pad 1 [XTAL_IN] of Y1 on F.Cu
+drc	unconnected_items	error	net:PMIC_PG	Missing connection between items	Pad 2 [PMIC_PG] of R3 on F.Cu	Track [PMIC_PG] on F.Cu, length 88.0000 mm
+drc	unconnected_items	error	net:PMIC_PG	Missing connection between items	Pad 5 [PMIC_PG] of U1 on F.Cu	Pad 2 [PMIC_PG] of R3 on F.Cu
+drc	unconnected_items	error	net:XTAL_IN	Missing connection between items	Pad 1 [XTAL_IN] of Y1 on F.Cu	Pad 1 [XTAL_IN] of C5 on F.Cu
 drc	unconnected_items	error	net:XTAL_IN	Missing connection between items	Pad 4 [XTAL_IN] of U3 on F.Cu	Pad 1 [XTAL_IN] of C5 on F.Cu
+drc	unconnected_items	error	net:XTAL_IN	Missing connection between items	Track [XTAL_IN] on F.Cu, length 58.0000 mm	Pad 1 [XTAL_IN] of Y1 on F.Cu
 drc	unconnected_items	error	net:XTAL_OUT	Missing connection between items	Pad 1 [XTAL_OUT] of C6 on F.Cu	Pad 2 [XTAL_OUT] of Y1 on F.Cu
+drc	unconnected_items	error	net:XTAL_OUT	Missing connection between items	Pad 2 [XTAL_OUT] of Y1 on F.Cu	Track [XTAL_OUT] on F.Cu, length 64.0000 mm
 drc	unconnected_items	error	net:XTAL_OUT	Missing connection between items	Pad 5 [XTAL_OUT] of U3 on F.Cu	Pad 1 [XTAL_OUT] of C6 on F.Cu
 erc	label_dangling	error	-	Label not connected	Global Label 'CAN1_CANH'
 erc	label_dangling	error	-	Label not connected	Global Label 'CAN1_CANH'
