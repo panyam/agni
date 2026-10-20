@@ -208,7 +208,7 @@ function ChecksPanel(props: {
       <Show when={props.state().skipped.length > 0}>
         <div class="checks-skipped" role="status">
           <div class="checks-skipped-head">
-            {props.state().skipped.length} selected rule{props.state().skipped.length === 1 ? "" : "s"} could not run on this design
+            {props.state().skipped.length} rule{props.state().skipped.length === 1 ? "" : "s"} could not run on this design
           </div>
           <ul class="checks-skipped-list">
             <For each={props.state().skipped}>

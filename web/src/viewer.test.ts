@@ -1121,6 +1121,23 @@ describe("on-demand checks (WS9)", () => {
     expect(fs.pending).toBe(2); // both selected rules await a run
   });
 
+  // agni issue 950: a rule this design cannot run is listed unavailable and left unticked, and the
+  // Checks panel still names it with its reason, before any run, so it never reads as a clean board.
+  // A rule the reader unticked is not news and stays out.
+  it("names the rules this design cannot run, ticked or not, and leaves out a rule the reader unticked", async () => {
+    const h = harness();
+    h.listRules.mockResolvedValueOnce({
+      rules: [
+        { name: "single-pin-net", severity: "error", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+        { name: "diff-pair-naming", severity: "warning", summary: "", reads: [], tags: {}, available: true, unavailableReason: "" },
+        { name: "unconnected-pin", severity: "warning", summary: "", reads: [], tags: {}, available: false, unavailableReason: "source format cannot express intentional no-connect" },
+      ],
+    });
+    await h.presenter.openFile("m", "board.edn");
+    await h.presenter.setRuleSelection(["single-pin-net"]);
+    expect(lastFindings(h).skipped).toEqual([{ rule: "unconnected-pin", reason: "source format cannot express intentional no-connect" }]);
+  });
+
   // The Load page reads the board before the viewer opens (agni issue 1072), so opening a design with
   // a board leaves it to the store rather than reading it again.
   it("opens a design with a board without reading the board", async () => {

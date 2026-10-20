@@ -464,7 +464,7 @@ function QueryPanel(props: {
     // are the engine's own words, passed through unreworded as the checks panel does, because the
     // rule decides why it cannot run.
     const gated = st.skipped.length
-      ? `\n\n${st.skipped.length} selected rule(s) could not run on this design at all, so they report nothing anywhere:\n` +
+      ? `\n\n${st.skipped.length} rule(s) could not run on this design at all, so they report nothing anywhere:\n` +
         st.skipped.map((s) => `  ${s.rule}: ${s.reason}`).join("\n")
       : "";
     return (
