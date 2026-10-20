@@ -3,8 +3,10 @@
 ### What it is
 
 `pin.type(ref_des, pin, etype)` yields a pin's electrical type, where `etype` is the direction
-string the symbol declares: `input`, `output`, `inout`, `power_in`, `power_out`, `passive`,
-`no_connect`, or `unspecified`. Unlike `pin.role`, a row is emitted for every pin; a direction the
+string the symbol declares: `input`, `output`, `inout`, `tri_state`, `open_collector`,
+`open_emitter`, `power_in`, `power_out`, `passive`, `no_connect`, or `unspecified`. The three output
+kinds that cannot drive both ways on their own (a tri-state, open-collector or open-emitter pin) keep
+their own types since agni issue 1082, read from KiCad and gEDA. Unlike `pin.role`, a row is emitted for every pin; a direction the
 tool has no mapping for reads as `unspecified` rather than being dropped.
 
 ### For hardware engineers

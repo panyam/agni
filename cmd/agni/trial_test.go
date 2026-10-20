@@ -6,6 +6,7 @@ import (
 	"net/url"
 	"path/filepath"
 	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -84,4 +85,69 @@ func TestOnlyAShippedRuleIsNamed(t *testing.T) {
 	if _, ok := feedback.Shipped("acme-profiles/can-esd-missing", shipped); ok {
 		t.Error("a project's rule was accepted as a shipped one")
 	}
+}
+
+// A trial under --flatten-hierarchy reads every block of a hierarchical netlist, and counts what a
+// flattened read of the design holds rather than the top cell alone (agni issue 1103).
+func TestATrialReadsEveryBlockUnderFlattenHierarchy(t *testing.T) {
+	for _, path := range []string{
+		"../../readers/edif/testdata/hier_blocks.edn",
+		"testdata/github-issues/1085-hierarchical-edif/hier_two_subcells.edn",
+	} {
+		t.Run(filepath.Base(path), func(t *testing.T) {
+			freshWorkspace(t)
+			prev := readFlatten
+			t.Cleanup(func() { readFlatten = prev })
+			uri, err := cliArgURI(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			trial := func(flatten bool) feedback.Shape {
+				readFlatten = flatten
+				rep, err := runTrial(context.Background(), uri)
+				if err != nil {
+					t.Fatal(err)
+				}
+				if st := rep.Steps[0]; st.Status != feedback.StatusOK {
+					t.Fatalf("read step: %s (%s)", st.Status, st.Error)
+				}
+				return rep.Shape
+			}
+
+			top := trial(false)
+			if top.UnexpandedBlocks == 0 || top.Flattened {
+				t.Fatalf("without the flag the read left %d blocks out, flattened %v; the fixture should be hierarchical and read top-cell only", top.UnexpandedBlocks, top.Flattened)
+			}
+			whole := trial(true)
+			stats := flattenedStats(t, path)
+			if whole.UnexpandedBlocks != 0 || !whole.Flattened {
+				t.Errorf("with the flag the read left %d blocks out, flattened %v; want 0 and true", whole.UnexpandedBlocks, whole.Flattened)
+			}
+			if whole.Components != stats.Components || whole.Nets != stats.Nets {
+				t.Errorf("trial counted %d components and %d nets, a flattened read %d and %d", whole.Components, whole.Nets, stats.Components, stats.Nets)
+			}
+			if whole.Components <= top.Components {
+				t.Errorf("flattened %d components against the top cell's %d; flattening should read more", whole.Components, top.Components)
+			}
+			if md := (feedback.Report{Shape: whole}).Markdown(); !strings.Contains(md, "hierarchy flattened") {
+				t.Errorf("report line %q does not say the read was flattened", md)
+			}
+		})
+	}
+}
+
+// flattenedStats is what `agni stats --flatten-hierarchy` counts for path.
+func flattenedStats(t *testing.T, path string) feedback.Shape {
+	t.Helper()
+	readFlatten = true
+	out := runCLI(t, statsCmd(), path)
+	count := func(label string) int {
+		m := regexp.MustCompile(label + `:\s+(\d+)`).FindStringSubmatch(out)
+		if m == nil {
+			t.Fatalf("stats has no %s line:\n%s", label, out)
+		}
+		n, _ := strconv.Atoi(m[1])
+		return n
+	}
+	return feedback.Shape{Components: count("components"), Nets: count("nets")}
 }

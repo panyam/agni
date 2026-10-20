@@ -220,7 +220,8 @@ def _set_bindings(set_dict: dict) -> dict:
 
 
 def _read_flags(req: Message, d: snapshot_pb2.Snapshot) -> List[str]:
-    """The flags a read takes: the request's budget, and the board and naming its snapshot defines."""
+    """The flags a read takes: the request's budget, and the board, naming and hierarchy its snapshot
+    defines."""
     out: List[str] = []
     budget = getattr(req, "work_budget", 0)
     if budget:
@@ -229,6 +230,8 @@ def _read_flags(req: Message, d: snapshot_pb2.Snapshot) -> List[str]:
         out += ["--board-path", d.board_uri]
     if d.as_named:
         out.append("--as-named")
+    if d.flatten_hierarchy:
+        out.append("--flatten-hierarchy")
     return out
 
 
@@ -237,7 +240,7 @@ def _check_argv(fmt: str, verdicts: bool = False) -> Callable[[Message, Lookup],
     # CheckDesign response, verdicts included, as a server returns it (agni issue 822).
     def argv(req: Message, snap: Lookup) -> List[str]:
         _only(req, ("snapshot", "rules"))
-        d = _definition(req, snap, ("board_uri", "as_named"))
+        d = _definition(req, snap, ("board_uri", "as_named", "flatten_hierarchy"))
         out = ["check", d.uri, "--format", fmt] + (["--verdicts"] if verdicts else [])
         for r in req.rules:
             out += ["--rule", r]
@@ -293,14 +296,14 @@ def _write_library(d: Optional[snapshot_pb2.Snapshot], root: str) -> List[str]:
 
 def _query_argv(req: Message, snap: Lookup) -> List[str]:
     _only(req, ("snapshot", "query", "work_budget", "bindings", "omit_locations", "limit"))
-    d = _definition(req, snap, ("board_uri", "as_named", "overlay"))
+    d = _definition(req, snap, ("board_uri", "as_named", "flatten_hierarchy", "overlay"))
     limit = ["--limit", str(req.limit)] if req.limit else []
     return ["query", d.uri, req.query, "--format", "json"] + _read_flags(req, d) + _bind_flags(req) + _locate_flags(req) + limit
 
 
 def _query_set_argv(req: Message, snap: Lookup) -> List[str]:
     _only(req, ("snapshot", "set", "work_budget", "omit_locations"))
-    d = _definition(req, snap, ("board_uri", "as_named", "overlay"))
+    d = _definition(req, snap, ("board_uri", "as_named", "flatten_hierarchy", "overlay"))
     return ["query", d.uri, "--set", "-", "--format", "json"] + _read_flags(req, d) + _locate_flags(req)
 
 
@@ -315,7 +318,7 @@ def _query_set_stdin(req: Message) -> str:
 
 def _review_argv(req: Message, snap: Lookup) -> List[str]:
     _only(req, ("snapshot", "manifest", "ratified_floor"))
-    d = _definition(req, snap, ("board_uri", "as_named", "overlay"))
+    d = _definition(req, snap, ("board_uri", "as_named", "flatten_hierarchy", "overlay"))
     out = ["review", d.uri, "--checklist", "-", "--format", "json"] + _read_flags(req, d)
     if req.ratified_floor:
         out += ["--ratified-floor", repr(req.ratified_floor)]
@@ -342,7 +345,7 @@ def _design_argv(req: Message, snap: Lookup) -> List[str]:
     # GetDesign is `stats --format json`, which builds the same message through the same service
     # (agni issue 836). The read_mask, nets and ref_des select what it carries, as on the wire.
     _only(req, ("snapshot", "read_mask", "nets", "ref_des"))
-    d = _definition(req, snap, ("as_named",))
+    d = _definition(req, snap, ("as_named", "flatten_hierarchy"))
     out = ["stats", d.uri, "--format", "json"]
     if req.HasField("read_mask") and req.read_mask.paths:
         out += ["--mask", ",".join(req.read_mask.paths)]
@@ -375,7 +378,7 @@ def _diff_argv(req: Message, snap: Lookup) -> List[str]:
 
 def _trace_argv(req: Message, snap: Lookup) -> List[str]:
     _only(req, ("snapshot", "from", "to", "hops"))
-    d = _definition(req, snap, ("as_named",))
+    d = _definition(req, snap, ("as_named", "flatten_hierarchy"))
     src, dst = getattr(req, "from"), req.to
     out = ["trace", d.uri, "--from", f"{src.ref_des}.{src.pin}", "--to", f"{dst.ref_des}.{dst.pin}", "--format", "json"]
     if req.hops:
@@ -385,7 +388,7 @@ def _trace_argv(req: Message, snap: Lookup) -> List[str]:
 
 def _layout_argv(req: Message, snap: Lookup) -> List[str]:
     _only(req, ("snapshot",))
-    d = _definition(req, snap, ("as_named",))
+    d = _definition(req, snap, ("as_named", "flatten_hierarchy"))
     return ["render", d.uri, "--report", "--report-format", "json"] + _read_flags(req, d)
 
 
@@ -534,12 +537,14 @@ class _CliSnapshots:
 
 # The fields of a snapshot's definition, the ones UpdateSnapshot can change, and those a CLI command
 # can be given. No command has a flag for geometry_uri, so a definition setting it is refused.
-_DEFINITION = ("uri", "board_uri", "geometry_uri", "as_named", "overlay")
-_CLI_DEFINITION = ("uri", "board_uri", "as_named", "overlay")
+_DEFINITION = ("uri", "board_uri", "geometry_uri", "as_named", "flatten_hierarchy", "overlay")
+_CLI_DEFINITION = ("uri", "board_uri", "as_named", "flatten_hierarchy", "overlay")
 
 
 def _definition_of(s: snapshot_pb2.Snapshot) -> snapshot_pb2.Snapshot:
-    d = snapshot_pb2.Snapshot(uri=s.uri, board_uri=s.board_uri, geometry_uri=s.geometry_uri, as_named=s.as_named)
+    d = snapshot_pb2.Snapshot(
+        uri=s.uri, board_uri=s.board_uri, geometry_uri=s.geometry_uri, as_named=s.as_named, flatten_hierarchy=s.flatten_hierarchy
+    )
     if s.HasField("overlay"):
         d.overlay.CopyFrom(s.overlay)
     return d

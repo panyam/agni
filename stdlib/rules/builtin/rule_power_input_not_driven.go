@@ -55,7 +55,16 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 		if powerIns == 0 {
 			continue // no supply pin here, so this net is not a subject of a supply rule
 		}
-		drivers := check.CountDir(dirs, check.IsDriver)
+		// On a net carrying a power symbol only a power source feeds its supply pins, as KiCad's ERC
+		// holds, because a logic output there is a signal pin tied to the rail. That passed a ground fed
+		// by four strap pins until agni issue 1082. Elsewhere any driver counts, since a supply-typed pin
+		// on an ordinary net (a module connector's power-good input, say) is fed by whatever drives it.
+		feeds := check.IsDriver
+		powerNet := powerSymbolNet(m, n)
+		if powerNet {
+			feeds = func(d ir.PinDirection) bool { return d == ir.PinDirection_PIN_DIRECTION_POWER_OUT }
+		}
+		drivers := check.CountDir(dirs, feeds)
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		switch {
@@ -90,8 +99,12 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 			v.Reason = notASupply(m, n)
 		default:
 			v.Outcome = check.Fail
+			statement := fmt.Sprintf("%d power-input pin(s) sit on the net and no pin on it drives", powerIns)
+			if powerNet {
+				statement = fmt.Sprintf("%d power-input pin(s) sit on a net carrying a power symbol, and no power-output pin or power flag feeds them", powerIns)
+			}
 			v.Witness = &check.Witness{
-				Statement: fmt.Sprintf("%d power-input pin(s) sit on the net and no pin on it drives", powerIns),
+				Statement: statement,
 				Terms: []check.WitnessTerm{
 					{Label: "power inputs", Value: strconv.Itoa(powerIns)},
 					{Label: "drivers", Value: "0"},
@@ -105,8 +118,16 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 	return out
 }
 
-// powerInputNotDrivenSpec is the rule's declarative twin (WS3-003). The driver set mirrors
-// IsDriver: output, power_out, and inout (a bidirectional drives when enabled).
+// powerSymbolNet reports whether a net carries a power symbol, a virtual power-input pin such as a
+// KiCad #PWR, which makes it a named supply net that only a power source can feed.
+func powerSymbolNet(m check.Model, n *ir.Net) bool {
+	return check.Exists(n.Connections, func(c *ir.Connection) bool {
+		return check.IsVirtualRef(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+	})
+}
+
+// powerInputNotDrivenSpec is the rule's declarative twin (WS3-003). A net carrying a power symbol
+// needs a power_out pin; any other net needs any driver, as the Go rule decides.
 var powerInputNotDrivenSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
@@ -114,7 +135,16 @@ var powerInputNotDrivenSpec = &check.Spec{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}},
-		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.In{T: check.Fact{Name: "pin.electrical_type"}, Set: []string{"output", "power_out", "inout"}}}},
+		check.Or{Xs: []check.Expr{
+			check.And{Xs: []check.Expr{
+				check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.IsTrue{T: check.Fact{Name: "conn.virtual"}}, check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}}}},
+				check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_out"}}}},
+			}},
+			check.And{Xs: []check.Expr{
+				check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.IsTrue{T: check.Fact{Name: "conn.virtual"}}, check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}}}}},
+				check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.In{T: check.Fact{Name: "pin.electrical_type"}, Set: []string{"output", "power_out", "inout", "tri_state", "open_collector", "open_emitter"}}}},
+			}},
+		}},
 	}},
 	Message: "net has a power-input pin but no power source",
 }

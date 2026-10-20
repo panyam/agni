@@ -167,3 +167,47 @@ func TestAnUnfittedCircuitIsNotJudged(t *testing.T) {
 		t.Errorf("esd-protection on the fitted line = %q, want fail", got)
 	}
 }
+
+// On the assembled board an unfitted part has no pins, so an input whose only pull is unfitted is
+// alone on its net and floats. A connector's pads stay the board's interface when its header is not
+// fitted, and an input that only unfitted parts listen to is no subject (agni issue 1082).
+func TestFloatingInputCountsTheAssembledBoard(t *testing.T) {
+	in := ir.PinDirection_PIN_DIRECTION_INPUT
+	design := func(dnp ...string) *ir.Design {
+		return markDNP(pinDesign(map[string][]supplyPin{
+			"U1": {{"EN", "1", in}, {"HS", "2", in}}, "R1": twoPin(), "J1": twoPin(),
+		}, map[string][]string{"EN": {"U1.1", "R1.1"}, "HDR": {"U1.2", "J1.1"}, "RAIL": {"R1.2"}}), dnp...)
+	}
+	if got := verdictOn(t, floatingInput, design("R1"), "EN"); got != string(check.Fail) {
+		t.Errorf("an input whose only pull is unfitted = %q, want fail", got)
+	}
+	if got := verdictOn(t, floatingInput, design(), "EN"); got != string(check.NotConsidered) {
+		t.Errorf("an input with its pull fitted = %q, want not-considered", got)
+	}
+	if got := verdictOn(t, floatingInput, design("J1"), "HDR"); got == string(check.Fail) {
+		t.Errorf("an input on an unfitted header's pad = %q, want no failure", got)
+	}
+	if got := verdictOn(t, floatingInput, design("U1"), "EN"); got != string(check.NotConsidered) {
+		t.Errorf("a net whose only input is unfitted = %q, want not-considered", got)
+	}
+	twin := len(floatingInputSpec.Eval(context.Background(), check.NewModel(design("R1"))))
+	if twin != 1 {
+		t.Errorf("the twin found %d failures on the unfitted pull, want 1", twin)
+	}
+}
+
+// The rules that judge a part's own rating or orientation judge no unfitted part.
+func TestTheRatingRulesJudgeFittedPartsOnly(t *testing.T) {
+	want := map[string]bool{
+		"supply-exceeds-abs-max": true, "regulator-output-exceeds-abs-max": true,
+		"fet-vdss-below-switched-rail": true, "load-switch-trip-above-fet-rating": true,
+		"rail-nominal-out-of-recommended": true, "pin-exceeds-abs-max": true,
+		"pin-out-of-recommended": true, "pin-tracking-violated": true, "pin-tracking-advisory": true,
+		"cap-voltage": true, "led-polarity": true,
+	}
+	for _, r := range rules {
+		if r.JudgesFittedParts() != want[r.Name] {
+			t.Errorf("%s judges fitted parts only = %v, want %v", r.Name, r.JudgesFittedParts(), want[r.Name])
+		}
+	}
+}

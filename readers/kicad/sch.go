@@ -411,9 +411,11 @@ func partPins(sym *node) []*ir.Pin {
 	return pins
 }
 
-// mapSchDirection normalizes a KiCad pin electrical type onto ir.PinDirection. Types with
-// no clean mapping (tri_state, open_collector, ...) fall through to UNSPECIFIED and keep
-// their raw spelling in attributes["direction_raw"].
+// mapSchDirection normalizes a KiCad pin electrical type onto ir.PinDirection. tri_state,
+// open_collector and open_emitter keep their own values (agni issue 1082), since reading them as
+// UNSPECIFIED reported a pin whose library declares a type as having none. KiCad's `unspecified`
+// and any spelling not listed fall through to UNSPECIFIED and keep their raw spelling in
+// attributes["direction_raw"].
 func mapSchDirection(raw string) ir.PinDirection {
 	switch raw {
 	case "input":
@@ -430,6 +432,12 @@ func mapSchDirection(raw string) ir.PinDirection {
 		return ir.PinDirection_PIN_DIRECTION_POWER_OUT
 	case "no_connect":
 		return ir.PinDirection_PIN_DIRECTION_NO_CONNECT
+	case "tri_state":
+		return ir.PinDirection_PIN_DIRECTION_TRISTATE
+	case "open_collector":
+		return ir.PinDirection_PIN_DIRECTION_OPEN_COLLECTOR
+	case "open_emitter":
+		return ir.PinDirection_PIN_DIRECTION_OPEN_EMITTER
 	default:
 		return ir.PinDirection_PIN_DIRECTION_UNSPECIFIED
 	}

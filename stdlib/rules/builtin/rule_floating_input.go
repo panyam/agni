@@ -18,7 +18,7 @@ var floatingInput = &check.Rule{
 	Impact:     "A floating logic input drifts, picks up noise, and can oscillate or sit in the forbidden region where both transistors of a CMOS stage conduct. Behavior is non-deterministic and often temperature- and board-dependent, the worst kind of intermittent bug.",
 	Remedy:     "Tie the input to its inactive level through a pull-up or pull-down, or drive it from the logic that was meant to. A CMOS input is never safe to leave floating, including on a pin the firmware does not use.",
 	Primitives: []string{"select", "traverse", "count", "exists", "pin-role"},
-	Reads:      []string{"component.class", "net.attributes", "net.pin_count", "on_net", "pin.electrical_type"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.pin_count", "on_net", "pin.electrical_type"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "R",
@@ -50,9 +50,23 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 		// A diode/LED/TVS terminal is typed INPUT by some libraries but is not a logic input, so it
 		// counts toward ncOrIn and not logicInputs. Excluding it per pin rather than per net keeps a
 		// floating IC input that carries a clamp diode firing.
-		logicInputs, ncOrIn := 0, 0
+		//
+		// A part marked do-not-populate has no pins on the assembled board, so only fitted parts are
+		// counted (agni issue 1082). An input whose only pull is unfitted is then alone on its net,
+		// which is the floating input this rule exists for. A connector counts either way, because its
+		// pads are the board's interface whether or not a header is soldered to them, and a board
+		// shipped with its header loose marks it DNP.
+		logicInputs, ncOrIn, pins, unfittedInputs := 0, 0, 0, 0
 		for _, c := range n.Connections {
-			switch check.ConnDir(m, c) {
+			dir := check.ConnDir(m, c)
+			if !m.IsFitted(c.ComponentRef) && !m.HasClass(c.ComponentRef, check.ClassConnector) {
+				if dir == ir.PinDirection_PIN_DIRECTION_INPUT && !m.HasClass(c.ComponentRef, check.ClassDiode) {
+					unfittedInputs++
+				}
+				continue
+			}
+			pins++
+			switch dir {
 			case ir.PinDirection_PIN_DIRECTION_INPUT:
 				ncOrIn++
 				if !m.HasClass(c.ComponentRef, check.ClassDiode) {
@@ -62,13 +76,16 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 				ncOrIn++
 			}
 		}
-		if logicInputs < 1 || len(n.Connections) < 2 {
-			continue // nothing to float, or single-pin-net's finding
+		if len(n.Connections) < 2 || logicInputs+unfittedInputs < 1 {
+			continue // single-pin-net's finding, or nothing to float
 		}
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
 		passive := firstPassive(m, n)
 		switch {
+		case logicInputs < 1:
+			v.Outcome = check.NotConsidered
+			v.Reason = "every logic input on the net belongs to a part marked do-not-populate, so nothing on the assembled board listens to it"
 		case n.Attributes[netgraph.AttrExternal] == "true":
 			v.Outcome = check.NotConsidered
 			v.Reason = "the net continues onto a sheet this read did not open, so a driver may exist outside it"
@@ -76,12 +93,12 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 			v.Outcome = check.NotConsidered
 			v.Reason = "the net carries a passive part, which may be the pull that fixes it or a series element hiding the driver, so it is not provably floating"
 			v.Context = compContext(passive, "passive on the net")
-		case ncOrIn == len(n.Connections):
+		case ncOrIn == pins:
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{
-				Statement: fmt.Sprintf("all %d of the net's pins are inputs or no-connects, and %d of them are logic inputs", len(n.Connections), logicInputs),
+				Statement: fmt.Sprintf("all %d of the net's fitted pins are inputs or no-connects, and %d of them are logic inputs", pins, logicInputs),
 				Terms: []check.WitnessTerm{
-					{Label: "pins", Value: strconv.Itoa(len(n.Connections))},
+					{Label: "pins", Value: strconv.Itoa(pins)},
 					{Label: "logic inputs", Value: strconv.Itoa(logicInputs)},
 				},
 			}
@@ -90,10 +107,10 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 		default:
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
-				Statement: fmt.Sprintf("%d of the net's %d pins are neither input nor no-connect, so the net is not input-only", len(n.Connections)-ncOrIn, len(n.Connections)),
+				Statement: fmt.Sprintf("%d of the net's %d fitted pins are neither input nor no-connect, so the net is not input-only", pins-ncOrIn, pins),
 				Terms: []check.WitnessTerm{
-					{Label: "pins", Value: strconv.Itoa(len(n.Connections))},
-					{Label: "non-input pins", Value: strconv.Itoa(len(n.Connections) - ncOrIn)},
+					{Label: "pins", Value: strconv.Itoa(pins)},
+					{Label: "non-input pins", Value: strconv.Itoa(pins - ncOrIn)},
 				},
 			}
 		}
@@ -102,6 +119,13 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return out
 }
 
+// notUnfitted holds for a part on the assembled board, which is a fitted part or a connector whose
+// pads stay the board's interface when its header is not fitted, as floatingInputVerdicts counts.
+var notUnfitted = check.Not{X: check.And{Xs: []check.Expr{
+	check.IsTrue{T: check.Fact{Name: "component.dnp"}},
+	check.Not{X: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "connector"}}},
+}}}
+
 // floatingInputSpec is the rule's declarative twin (WS3-003). Diode terminals are excluded from
 // the logic-input count and still count toward "all pins input or no-connect", as in
 // floatingInputVerdicts.
@@ -109,13 +133,20 @@ var floatingInputSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
-		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.In{T: check.Fact{Name: "component.class"}, Set: []string{"resistor", "capacitor", "inductor", "ferrite", "fuse", "test_point"}}}},
+		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{
+			check.In{T: check.Fact{Name: "component.class"}, Set: []string{"resistor", "capacitor", "inductor", "ferrite", "fuse", "test_point"}},
+			notUnfitted,
+		}}}},
 		check.Cmp{L: check.Fact{Name: "net.pin_count"}, Op: ">=", R: check.Lit{V: 2}},
 		check.Cmp{L: check.CountOf{Over: "net.connections", Where: check.And{Xs: []check.Expr{
 			check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "input"}},
 			check.Not{X: check.In{T: check.Fact{Name: "component.class"}, Set: []string{"diode", "led", "tvs"}}},
+			notUnfitted,
 		}}}, Op: ">=", R: check.Lit{V: 1}},
-		check.Cmp{L: check.CountOf{Over: "net.connections", Where: check.In{T: check.Fact{Name: "pin.electrical_type"}, Set: []string{"input", "no_connect"}}}, Op: "==", R: check.Fact{Name: "net.pin_count"}},
+		check.Cmp{L: check.CountOf{Over: "net.connections", Where: check.And{Xs: []check.Expr{
+			check.In{T: check.Fact{Name: "pin.electrical_type"}, Set: []string{"input", "no_connect"}},
+			notUnfitted,
+		}}}, Op: "==", R: check.CountOf{Over: "net.connections", Where: notUnfitted}},
 	}},
 	Message: "net carries only input pins; nothing drives it",
 }

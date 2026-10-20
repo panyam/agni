@@ -83,6 +83,7 @@ type Shape struct {
 	Sheets           int    `json:"sheets"`
 	HasBoard         bool   `json:"has_board"`
 	UnexpandedBlocks int    `json:"unexpanded_blocks"` // hierarchical blocks the read left out, counted
+	Flattened        bool   `json:"flattened"`         // the read ran with --flatten-hierarchy
 }
 
 // StepResult is one step's outcome and how long it took.
@@ -174,7 +175,10 @@ func (r Report) Markdown() string {
 	s := r.Shape
 	fmt.Fprintf(&b, "Design: %s, %d components, %d nets, %d sheets, board %s", s.Format, s.Components, s.Nets, s.Sheets, yesNo(s.HasBoard))
 	if s.UnexpandedBlocks > 0 {
-		fmt.Fprintf(&b, ", %d hierarchical blocks not read", s.UnexpandedBlocks)
+		fmt.Fprintf(&b, ", %d hierarchical blocks not read (--flatten-hierarchy reads them)", s.UnexpandedBlocks)
+	}
+	if s.Flattened {
+		b.WriteString(", hierarchy flattened")
 	}
 	b.WriteString(".\n\n| step | status | time |\n|---|---|---|\n")
 	for _, st := range r.Steps {

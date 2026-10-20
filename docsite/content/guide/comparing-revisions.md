@@ -122,3 +122,5 @@ The browser-only demo cannot open a comparison yet, because its Compare picker l
 
 - [Checks and reports](../checks-and-reports/) runs the rule catalog on either revision.
 - [CLI reference](../cli-reference/) documents `diff` and the other commands.
+- [Beside an older comparison tool](../older-comparison-tools/) explains the rows where this diff and a
+  netlist-export spreadsheet disagree.

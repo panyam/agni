@@ -439,8 +439,8 @@ func netAttrFact(key string) factDef {
 	}
 }
 
-// DirString maps a pin direction to the string vocabulary Specs compare against. Unmapped
-// directions (tristate, ...) read as "unspecified" until a rule needs them. PASSIVE is
+// DirString maps a pin direction to the string vocabulary Specs and the pin.type relation compare
+// against, spelled as KiCad spells the types. PASSIVE is
 // mapped because unspecified-pin-with-driver reads "unspecified" as "the author declared
 // nothing", and a passive pin declares something (otherwise every two-terminal part fires).
 func DirString(d ir.PinDirection) string {
@@ -459,6 +459,12 @@ func DirString(d ir.PinDirection) string {
 		return "power_out"
 	case ir.PinDirection_PIN_DIRECTION_NO_CONNECT:
 		return "no_connect"
+	case ir.PinDirection_PIN_DIRECTION_TRISTATE:
+		return "tri_state"
+	case ir.PinDirection_PIN_DIRECTION_OPEN_COLLECTOR:
+		return "open_collector"
+	case ir.PinDirection_PIN_DIRECTION_OPEN_EMITTER:
+		return "open_emitter"
 	}
 	return "unspecified"
 }

@@ -353,6 +353,11 @@ func directionName(p *ir.Pin) string {
 		return "OUTPUT"
 	case ir.PinDirection_PIN_DIRECTION_INOUT:
 		return "INOUT"
+	case ir.PinDirection_PIN_DIRECTION_TRISTATE,
+		ir.PinDirection_PIN_DIRECTION_OPEN_COLLECTOR,
+		ir.PinDirection_PIN_DIRECTION_OPEN_EMITTER:
+		// EDIF's port grammar has INPUT, OUTPUT and INOUT alone, and each of these drives its net.
+		return "OUTPUT"
 	}
 	return p.GetAttributes()["direction_raw"]
 }

@@ -18,6 +18,9 @@ class PinDirection(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PIN_DIRECTION_NO_CONNECT: _ClassVar[PinDirection]
     PIN_DIRECTION_POWER_IN: _ClassVar[PinDirection]
     PIN_DIRECTION_POWER_OUT: _ClassVar[PinDirection]
+    PIN_DIRECTION_TRISTATE: _ClassVar[PinDirection]
+    PIN_DIRECTION_OPEN_COLLECTOR: _ClassVar[PinDirection]
+    PIN_DIRECTION_OPEN_EMITTER: _ClassVar[PinDirection]
 
 class UnexpandedReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -66,6 +69,9 @@ PIN_DIRECTION_POWER: PinDirection
 PIN_DIRECTION_NO_CONNECT: PinDirection
 PIN_DIRECTION_POWER_IN: PinDirection
 PIN_DIRECTION_POWER_OUT: PinDirection
+PIN_DIRECTION_TRISTATE: PinDirection
+PIN_DIRECTION_OPEN_COLLECTOR: PinDirection
+PIN_DIRECTION_OPEN_EMITTER: PinDirection
 UNEXPANDED_REASON_UNSPECIFIED: UnexpandedReason
 UNEXPANDED_REASON_NOT_WALKED: UnexpandedReason
 UNEXPANDED_REASON_CYCLE: UnexpandedReason

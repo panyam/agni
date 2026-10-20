@@ -61,8 +61,8 @@ func loadPins(open SymbolOpener) func(string) ([]symread.Pin, bool) {
 // `pwr` marks a power/ground pin, which on a placed part is a supply INPUT (the chip draws
 // power); gEDA does not distinguish power_in from power_out, so a rare power-output pin
 // typed `pwr` is miscategorized, tolerated because the rail's power symbol marks the net
-// External (so power-input-not-driven does not false-fire on it). Unmapped types stay
-// UNSPECIFIED.
+// External (so power-input-not-driven does not false-fire on it). `tri`, `oc` and `oe` keep their
+// own values (agni issue 1082). Unmapped types stay UNSPECIFIED.
 func pinDir(pintype string) ir.PinDirection {
 	switch pintype {
 	case "in":
@@ -75,6 +75,12 @@ func pinDir(pintype string) ir.PinDirection {
 		return ir.PinDirection_PIN_DIRECTION_PASSIVE
 	case "pwr":
 		return ir.PinDirection_PIN_DIRECTION_POWER_IN
+	case "tri":
+		return ir.PinDirection_PIN_DIRECTION_TRISTATE
+	case "oc":
+		return ir.PinDirection_PIN_DIRECTION_OPEN_COLLECTOR
+	case "oe":
+		return ir.PinDirection_PIN_DIRECTION_OPEN_EMITTER
 	}
 	return ir.PinDirection_PIN_DIRECTION_UNSPECIFIED
 }
