@@ -575,7 +575,11 @@ type DesignFile struct {
 	Path string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
 	Size int64  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
 	// sha256 is the file's content hash, "sha256:<hex>", so a client can tell a cached copy is current.
-	Sha256        string `protobuf:"bytes,3,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	Sha256 string `protobuf:"bytes,3,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	// board is set on the design's board tier when it is a file of its own, one the netlist and the
+	// drawing are not read from, so a host answering a question that reads no board need not hold it
+	// (agni issue 992).
+	Board         bool `protobuf:"varint,4,opt,name=board,proto3" json:"board,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -629,6 +633,13 @@ func (x *DesignFile) GetSha256() string {
 		return x.Sha256
 	}
 	return ""
+}
+
+func (x *DesignFile) GetBoard() bool {
+	if x != nil {
+		return x.Board
+	}
+	return false
 }
 
 type ProposeDesignsRequest struct {
@@ -920,12 +931,13 @@ const file_agni_v1_webapi_workspace_proto_rawDesc = "" +
 	"\x05mount\x18\x01 \x01(\tR\x05mount\x120\n" +
 	"\x05files\x18\x02 \x03(\v2\x1a.agni.v1.webapi.DesignFileR\x05files\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x03R\ttotalSize\"L\n" +
+	"total_size\x18\x03 \x01(\x03R\ttotalSize\"b\n" +
 	"\n" +
 	"DesignFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x12\n" +
 	"\x04size\x18\x02 \x01(\x03R\x04size\x12\x16\n" +
-	"\x06sha256\x18\x03 \x01(\tR\x06sha256\")\n" +
+	"\x06sha256\x18\x03 \x01(\tR\x06sha256\x12\x14\n" +
+	"\x05board\x18\x04 \x01(\bR\x05board\")\n" +
 	"\x15ProposeDesignsRequest\x12\x10\n" +
 	"\x03uri\x18\x01 \x01(\tR\x03uri\"\xa0\x01\n" +
 	"\x16ProposeDesignsResponse\x128\n" +

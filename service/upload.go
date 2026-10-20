@@ -40,6 +40,22 @@ func (e *BlobsMissingError) Detail() *webapi.BlobsMissing {
 	return &webapi.BlobsMissing{Sha256: e.Hashes}
 }
 
+// FilesWithheldError is a question that read a file whose contents its host was not given, which the
+// browser engine does with a design's board until a question needs it (agni issue 992). Hashes are
+// the withheld files' content hashes, and a transport carries them as a webapi.BlobsMissing detail,
+// the same shape an Ingest naming unsent files answers with, so a client sends those files and asks
+// again.
+type FilesWithheldError struct{ Hashes []string }
+
+func (e *FilesWithheldError) Error() string {
+	return fmt.Sprintf("%d of the design's files were held back from this engine and the question reads them; send them and ask again", len(e.Hashes))
+}
+
+// Detail is the error as the wire carries it.
+func (e *FilesWithheldError) Detail() *webapi.BlobsMissing {
+	return &webapi.BlobsMissing{Sha256: e.Hashes}
+}
+
 // An UploadHost is what a host reads a client's files through: a loader over files, keyed by their
 // path within the one mount named mount, and a resolver over the projects those files declare. It
 // is the host's to build, since only a host can make a file system (C13); a nil UploadHost is a host

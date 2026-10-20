@@ -170,6 +170,10 @@ message DesignFile {
   int64 size = 2;
   // sha256 is the file's content hash, "sha256:<hex>", so a client can tell a cached copy is current.
   string sha256 = 3;
+  // board is set on the design's board tier when it is a file of its own, one the netlist and the
+  // drawing are not read from, so a host answering a question that reads no board need not hold it
+  // (agni issue 992).
+  bool board = 4;
 }
 
 message ProposeDesignsRequest {

@@ -786,6 +786,12 @@ store for the jobs worker to restore. The viewer opens only a design the Load pa
 `board.*` relation (`boardTierFor`, which sees through its rules and library members), and coverage
 and part parameters pass `SkipBoard`. On Jetson the board is 385 of the 547 MB a model with it holds.
 A new surface that builds a model chooses its tier, because `BuildModelCached` reads the board.
+**The browser's serve worker is not even given the board's bytes** (agni 992). `ListDesignFiles`
+flags the board tier's file (`DesignFile.board`), the serve lane gets a placeholder at its path, and
+an engine that opens one refuses every question until the files arrive (`internal/wasmengine/withheld.go`),
+so `mountingFetch` brings the board and asks again. A new serve-lane surface that reads the board
+needs no change for this, and a page-side rule deciding which rpcs read the board is the bug shape,
+since a library member can read `board.*` under a query that never names it.
 
 **A jaala bump can change a rule's plan, so time Jetson's Run checks across one.** v0.1.57 started
 the ESD profile rules from the TVS index and walked the board once per TVS net, about 10 times slower,

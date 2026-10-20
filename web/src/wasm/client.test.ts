@@ -1,11 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { abortable, laneFor, mountingFetch, wouldShrink, SHRINK_RATIO, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
+import { readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { abortable, laneFor, mountingFetch, withheldPlaceholder, wouldShrink, SHRINK_RATIO, WITHHELD_PREFIX, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
 
 // A recording engine of its lanes, design source and network, so a test can see where each request
 // went. `replace` swaps a lane's worker for an empty one, as an abort does. The prepare lane starts a
 // worker per request, as the real one does; `holdPrepares` keeps each prepare unanswered until the
 // returned release is called, and `released` counts the prepare workers ended without a request.
-function harness(listing: DesignFiles | Error) {
+// `given` is the bytes each lane's worker holds per path. A request whose path `readsBoard` names is
+// refused as the engine refuses it, while the worker holds a placeholder for a file (agni issue 992).
+function harness(listing: DesignFiles | Error, readsBoard: (path: string) => boolean = () => false) {
   const engineCalls: string[] = [];
   const laneCalls: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
   const laneBodies: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
@@ -13,6 +18,7 @@ function harness(listing: DesignFiles | Error) {
   const mounted: Record<string, string[]> = {};
   const laneMounted: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
   const fetched: string[] = [];
+  const given: Record<LaneName, Record<string, Uint8Array>> = { serve: {}, jobs: {}, prepare: {} };
   const workers: Record<LaneName, object> = { serve: {}, jobs: {}, prepare: {} };
   const prepareWorkers: object[] = [];
   let released = 0;
@@ -23,11 +29,13 @@ function harness(listing: DesignFiles | Error) {
       engineCalls.push(path);
       laneCalls[name].push(path);
       laneBodies[name].push(await (input as Request).clone().text());
+      if (readsBoard(path) && Object.values(given[name]).some(isPlaceholder)) return withheldError();
       return new Response("{}");
     },
     holder: async () => workers[name],
     add: async (holder, mount, files) => {
       expect(holder).toBe(workers[name]);
+      Object.assign(given[name], files);
       mounted[mount] = [...(mounted[mount] ?? []), ...Object.keys(files)];
       laneMounted[name].push(...Object.keys(files));
     },
@@ -56,6 +64,7 @@ function harness(listing: DesignFiles | Error) {
       };
     },
     add: async (_holder, mount, files) => {
+      Object.assign(given.prepare, files);
       mounted[mount] = [...(mounted[mount] ?? []), ...Object.keys(files)];
       laneMounted.prepare.push(...Object.keys(files));
     },
@@ -78,6 +87,7 @@ function harness(listing: DesignFiles | Error) {
   };
   const replace = (name: LaneName) => {
     workers[name] = {};
+    given[name] = {};
   };
   const network = (async (input: RequestInfo | URL) => {
     networkCalls.push(new URL((input as Request).url).pathname);
@@ -95,8 +105,18 @@ function harness(listing: DesignFiles | Error) {
       return new Uint8Array([1]);
     },
   };
-  return { engine, network, source, engineCalls, laneCalls, laneBodies, networkCalls, mounted, laneMounted, fetched, replace, lists: () => lists, prepareWorkers, holdPrepares, released: () => released };
+  return { given, engine, network, source, engineCalls, laneCalls, laneBodies, networkCalls, mounted, laneMounted, fetched, replace, lists: () => lists, prepareWorkers, holdPrepares, released: () => released };
 }
+
+const isPlaceholder = (b: Uint8Array) => new TextDecoder().decode(b).startsWith(WITHHELD_PREFIX);
+
+// withheldError is the engine's refusal of a question that read a held-back file, as Connect writes
+// it (internal/wasmengine/withheld.go).
+const withheldError = () =>
+  new Response(JSON.stringify({ code: "failed_precondition", message: "held back", details: [{ type: "agni.v1.webapi.BlobsMissing", value: "" }] }), {
+    status: 400,
+    headers: { "content-type": "application/json" },
+  });
 
 const listing: DesignFiles = {
   mount: "tut",
@@ -356,5 +376,75 @@ describe("cancelling a request the engine has not reached yet", () => {
   it("passes an answer through untouched when nothing is cancelled", async () => {
     await expect(abortable(new AbortController().signal, Promise.resolve(7))).resolves.toBe(7);
     await expect(abortable(new AbortController().signal, Promise.reject(new Error("no netlist")))).rejects.toThrow("no netlist");
+  });
+});
+
+// agni issue 992: the serve lane builds no board for a query, a coverage or a trace, so it is given a
+// placeholder for the board file, and the board's bytes only when the engine says a question read it.
+const BOARD = "designs/gateway/gateway.kicad_pcb";
+const withBoard: DesignFiles = {
+  mount: "tut",
+  files: [...listing.files, { path: BOARD, sha256: "sha256:c", board: true }],
+  totalSize: 3000n,
+};
+const GET_SHEET = "/agni.v1.webapi.DesignService/GetSheet";
+
+describe("holding the board back from the serve lane", () => {
+  it("gives the serve worker a placeholder for the board, and fetches no board, for a plain query and the open", async () => {
+    const h = harness(withBoard);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
+    expect((await askSnap(f, "QueryService/RunQuery", "snapshots/s1")).ok).toBe(true);
+    expect((await askSnap(f, "DesignService/GetDesign", "snapshots/s1")).ok).toBe(true);
+    expect(h.fetched.sort()).toEqual(["designs/gateway/gateway.edn", "project.yaml"]);
+    // The board's path is still in the mount, so the design resolves as it does with the file there.
+    expect(new TextDecoder().decode(h.given.serve[BOARD])).toBe(`${WITHHELD_PREFIX}sha256:c\n`);
+    expect(h.laneCalls.serve).toEqual([INGEST_PATH, "/agni.v1.webapi.QueryService/RunQuery", "/agni.v1.webapi.DesignService/GetDesign"]);
+  });
+
+  it("brings the board into the serve worker and asks again when the engine says a question read it", async () => {
+    const h = harness(withBoard, (p) => p === GET_SHEET);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
+    const resp = await askSnap(f, "DesignService/GetSheet", "snapshots/s1");
+    expect(resp.ok).toBe(true);
+    expect(isPlaceholder(h.given.serve[BOARD])).toBe(false);
+    expect(h.fetched).toContain(BOARD);
+    // The files rebuilt the worker's engine, so the snapshot is ingested again before the question.
+    expect(h.laneCalls.serve).toEqual([INGEST_PATH, GET_SHEET, INGEST_PATH, GET_SHEET]);
+    // Once the board is in, nothing is held back and nothing is asked twice.
+    await askSnap(f, "DesignService/GetSheet", "snapshots/s1");
+    expect(h.laneCalls.serve.slice(4)).toEqual([GET_SHEET]);
+    expect(h.fetched.filter((p) => p === BOARD)).toHaveLength(1);
+  });
+
+  it("always gives the jobs and prepare workers the board's bytes", async () => {
+    const h = harness(withBoard);
+    const f = mountingFetch({ engine: h.engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    await ingest(f, "mount://tut/designs/gateway", "s1");
+    await ingest(f, "mount://tut/designs/gateway", "s1", true);
+    await askSnap(f, "CheckService/CheckDesign", "snapshots/s1");
+    for (const lane of ["jobs", "prepare"] as const) {
+      expect(h.given[lane][BOARD], lane).toBeDefined();
+      expect(isPlaceholder(h.given[lane][BOARD]), lane).toBe(false);
+    }
+    expect(isPlaceholder(h.given.serve[BOARD])).toBe(true);
+    expect(h.fetched.filter((p) => p === BOARD)).toHaveLength(2);
+  });
+
+  it("passes a refusal that is not about a held-back file through untouched", async () => {
+    const h = harness(withBoard);
+    const refusing: EngineLane = { ...h.engine.lanes.serve, fetch: async () => new Response(JSON.stringify({ code: "not_found", message: "no such sheet" }), { status: 404 }) };
+    const engine = { ...h.engine, lanes: { ...h.engine.lanes, serve: refusing } };
+    const f = mountingFetch({ engine, source: h.source, network: h.network, maxBytes: 10_000 });
+    const resp = await ask(f, "DesignService/GetSheet", "mount://tut/designs/gateway");
+    expect(resp.status).toBe(404);
+    expect(h.fetched).not.toContain(BOARD);
+  });
+
+  it("writes the placeholder the engine recognises, twinned through withheld_twin.json", () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const twin = JSON.parse(readFileSync(join(here, "..", "..", "..", "internal", "wasmengine", "testdata", "withheld_twin.json"), "utf8")) as { sha256: string; placeholder: string };
+    expect(new TextDecoder().decode(withheldPlaceholder(twin.sha256))).toBe(twin.placeholder);
   });
 });

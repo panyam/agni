@@ -153,6 +153,14 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 		}
 		ms = wrapped
 	}
+	// A file the page held back reads as a placeholder (agni issue 992), outermost so that a Stat
+	// through the collector's Open still sees the file.
+	held := &withholding{}
+	withheld := make([]fshost.Mount, len(ms))
+	for i, m := range ms {
+		withheld[i] = fshost.Mount{Name: m.Name, FS: held.files(m.FS)}
+	}
+	ms = withheld
 	files := fshost.New(ms...)
 	if o.Version == "" {
 		o.Version = StoreVersion()
@@ -192,5 +200,6 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 	if gc != nil {
 		h = gc.after(mux)
 	}
+	h = held.guard(h)
 	return &Engine{Handler: h, Paths: paths, Warnings: e.Warnings(), Cache: cache}, nil
 }
