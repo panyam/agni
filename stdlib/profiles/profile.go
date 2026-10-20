@@ -16,6 +16,7 @@ import (
 	"context"
 	"fmt"
 	"maps"
+	"slices"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -126,12 +127,34 @@ type requirementEntry struct {
 // RegisterRequirementWithValidator. termination is the only built-in taking params, so it is the only
 // one with a validator.
 var requirementRegistry = map[string]requirementEntry{
-	"signal-missing":  {compile: func(p Profile, _ Requirement) *check.Rule { return p.signalMissingRule() }},
+	"signal-missing":  {compile: func(p Profile, _ Requirement) *check.Rule { return p.onSignalNets(p.signalMissingRule()) }},
 	"host-incomplete": {compile: func(p Profile, _ Requirement) *check.Rule { return p.hostIncompleteRule() }},
 	"missing-pullup":  {compile: func(p Profile, _ Requirement) *check.Rule { return p.pullupRule() }},
-	"signal-dangling": {compile: func(p Profile, _ Requirement) *check.Rule { return p.danglingRule() }},
-	"termination":     {compile: terminationRule, validate: validateTermination},
-	"esd":             {compile: esdRule},
+	"signal-dangling": {compile: func(p Profile, _ Requirement) *check.Rule { return p.onSignalNets(p.danglingRule()) }},
+	"termination": {compile: func(p Profile, r Requirement) *check.Rule { return p.onSignalNets(terminationRule(p, r)) },
+		validate: validateTermination},
+	"esd": {compile: func(p Profile, r Requirement) *check.Rule { return p.onSignalNets(esdRule(p, r)) }},
+}
+
+// onSignalNets answers a request about subjects none of which is a net matching one of this profile's
+// signals with nothing, before the rule's query derives whether the interface is in use, which is
+// design-wide and about a millisecond a rule on a large board (agni issue 1070). Every verdict these
+// requirement types state is about such a net, so the answer is the one the query would give, as
+// TestScopedRunMatchesFilteredFullRun holds. A request naming no subjects runs the rule as before.
+func (p Profile) onSignalNets(r *check.Rule) *check.Rule {
+	if r == nil {
+		return nil
+	}
+	eval := r.Eval
+	r.Eval = func(ctx context.Context, m check.Model) []check.Verdict {
+		if check.SubjectScope(ctx) != nil && !slices.ContainsFunc(check.ScopedNets(ctx, m), func(n *ir.Net) bool {
+			return anySignalMatches(n.GetName(), p.Signals)
+		}) {
+			return nil
+		}
+		return eval(ctx, m)
+	}
+	return r
 }
 
 // RegisterRequirement adds a requirement-type compiler under name, overwriting any existing entry.
@@ -528,6 +551,8 @@ func (p Profile) pullupRule() *check.Rule {
 		Primitives:          []string{"select", "pattern", "traverse", "exists", "reach"},
 		Eval:                p.pullupVerdicts(pullups),
 		StatesConsideredSet: true,
+		// It walks only the nets a request asked about (agni issue 1070).
+		Scoping: check.ScopeSubjects,
 	}
 }
 
@@ -541,18 +566,23 @@ func (p Profile) pullupVerdicts(pullups []Signal) func(context.Context, check.Mo
 	rule := p.lname() + "-missing-pullup"
 	name := p.Name
 	return func(ctx context.Context, m check.Model) []check.Verdict {
-		if !InUse(m, p) {
-			return nil
-		}
-		var out []check.Verdict
-		for _, n := range m.Nets() {
+		// The signal nets come first and the design-wide InUse gate after, so a request about nets
+		// none of this profile's signals match (agni issue 1070) never pays for the gate.
+		var nets []*ir.Net
+		for _, n := range check.ScopedNets(ctx, m) {
 			// A net with NO connections is not a subject, mirroring the datalog form's component.net.
 			// On a read whose symbols did not resolve the net NAMES survive and the connections do not,
 			// and matching by name alone turned that into four confident findings about buses whose
 			// pins the reader never saw. matchSignalNet applies the same condition for coverage.
-			if !anySignalMatches(n.GetName(), pullups) || len(n.GetConnections()) == 0 {
-				continue
+			if anySignalMatches(n.GetName(), pullups) && len(n.GetConnections()) > 0 {
+				nets = append(nets, n)
 			}
+		}
+		if len(nets) == 0 || !InUse(m, p) {
+			return nil
+		}
+		var out []check.Verdict
+		for _, n := range nets {
 			outcome, w, ctx := check.PullUpVerdict(m, n)
 			v := check.Verdict{
 				Subjects: []check.Entity{{Kind: check.KindNet, Ref: n.GetName(), NetID: n.GetId()}},

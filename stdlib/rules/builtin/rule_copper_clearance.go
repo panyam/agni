@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"math"
+	"slices"
 	"sort"
 
 	"github.com/panyam/agni/core/check"
@@ -47,6 +48,9 @@ var copperClearance = &check.Rule{
 	SubjectShape:        []string{check.KindNet, check.KindNet},
 	Eval:                copperClearanceVerdicts,
 	StatesConsideredSet: true,
+	// Asked about some nets, it measures only the segments of those nets against their neighbours
+	// (agni issue 1070), the pairs a full sweep filtered to them would hold.
+	Scoping: check.ScopeSubjects,
 }
 
 // copperClearanceVerdicts decides every PAIR of nets whose copper shares a layer and comes close
@@ -128,25 +132,68 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 	// set the full walk measured.
 	byLayer := map[string][]*flatSeg{}
 	widest := map[string]int64{}
+	longest := map[string]int64{} // the widest x extent of a segment on the layer, for the scoped window
 	for i := range segs {
 		sg := &segs[i]
 		byLayer[sg.s.Layer] = append(byLayer[sg.s.Layer], sg)
 		widest[sg.s.Layer] = max64(widest[sg.s.Layer], sg.s.Width)
+		longest[sg.s.Layer] = max64(longest[sg.s.Layer], sg.maxX-sg.minX)
 	}
-	for layer, ls := range byLayer {
-		sort.Slice(ls, func(i, j int) bool { return ls[i].minX < ls[j].minX })
-		for p, a := range ls {
-			// bboxNear pads by floor + (a.Width+b.Width)/2, which never exceeds this; the extra
-			// nanometre covers the integer halving.
-			reach := a.maxX + floor + (a.s.Width+widest[layer])/2 + 1
-			for _, b := range ls[p+1:] {
-				if b.minX > reach {
-					break
+	// Asked about some nets (agni issue 1070), only the pairs with a segment of one of them are
+	// measured. Each such segment looks up the segments whose left edge lies within the reach bboxNear
+	// allows of it, and a pair of two scoped segments is measured once, from the one earlier in board
+	// order, so every count and tie-break matches the full sweep's.
+	if scope := check.SubjectScope(ctx); scope != nil {
+		inScope := map[string]bool{}
+		for i := range segs {
+			if n := segs[i].net; !inScope[n] && scope.Covers(check.NetNameEntity(n)) {
+				inScope[n] = true
+			}
+		}
+		for layer, ls := range byLayer {
+			// A layer holding none of the scoped nets' copper has no pair to measure, and sorting it is
+			// most of the cost left.
+			if !slices.ContainsFunc(ls, func(sg *flatSeg) bool { return inScope[sg.net] }) {
+				continue
+			}
+			sort.Slice(ls, func(i, j int) bool { return ls[i].minX < ls[j].minX })
+			for _, f := range ls {
+				if !inScope[f.net] {
+					continue
 				}
-				if a.idx < b.idx {
-					measure(a, b)
-				} else {
-					measure(b, a)
+				reach := floor + (f.s.Width+widest[layer])/2 + 1
+				from := sort.Search(len(ls), func(i int) bool { return ls[i].minX >= f.minX-reach-longest[layer] })
+				for _, b := range ls[from:] {
+					if b.minX > f.maxX+reach {
+						break
+					}
+					if b == f || (inScope[b.net] && b.idx < f.idx) {
+						continue
+					}
+					if f.idx < b.idx {
+						measure(f, b)
+					} else {
+						measure(b, f)
+					}
+				}
+			}
+		}
+	} else {
+		for layer, ls := range byLayer {
+			sort.Slice(ls, func(i, j int) bool { return ls[i].minX < ls[j].minX })
+			for p, a := range ls {
+				// bboxNear pads by floor + (a.Width+b.Width)/2, which never exceeds this; the extra
+				// nanometre covers the integer halving.
+				reach := a.maxX + floor + (a.s.Width+widest[layer])/2 + 1
+				for _, b := range ls[p+1:] {
+					if b.minX > reach {
+						break
+					}
+					if a.idx < b.idx {
+						measure(a, b)
+					} else {
+						measure(b, a)
+					}
 				}
 			}
 		}
