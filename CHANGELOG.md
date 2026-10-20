@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.2] - 2026-10-20
+
+A hierarchical EDIF netlist can be read whole, from `--flatten-hierarchy`, `Snapshot.flatten_hierarchy`,
+a design's `design.yaml` or the viewer's Read every block (PRs 1101, 1106, 1109).  KiCad pin types
+tri-state, open-collector and open-emitter are kept, a power net's supply pins need a power source, no
+rule judges an unfitted part (PR 1108), a KiCad board read skips undrawn footprint graphics while
+parsing (PR 1110), and the security scanners join the gate (PR 1100).  The full write-up is
+[RELEASES/v0.3.2.md](RELEASES/v0.3.2.md).
+
 ## [0.3.1] - 2026-10-20
 
 v0.3.0 with its release check fixed: the compose smoke asks about a snapshot of the design, and a web
