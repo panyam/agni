@@ -212,3 +212,20 @@ func TestFlattenedDesignWritesAndReadsBack(t *testing.T) {
 		}
 	}
 }
+
+// TestInstanceNamedPartsInSeveralBlocksStayApart covers agni issue 1105. hier_noref.edn carries no
+// designators, so each part is named by its instance name, and R1 sits in the top cell and in two
+// different blocks. The top cell keeps its R1, each block's R1 takes its path, and SHEET_A's R2,
+// which nothing else uses, keeps its name.
+func TestInstanceNamedPartsInSeveralBlocksStayApart(t *testing.T) {
+	d := readFlat(t, "hier_noref.edn")
+	if got := strings.Join(refs(d), " "); got != "R1 SA/R1 R2 SB/R1" {
+		t.Errorf("components = %s, want R1 SA/R1 R2 SB/R1", got)
+	}
+	p := partition(d)
+	for _, pin := range []string{"R1.A", "SA/R1.A", "R2.A", "SB/R1.A"} {
+		if p[pin] != "SIG" {
+			t.Errorf("%s on %q, want SIG", pin, p[pin])
+		}
+	}
+}

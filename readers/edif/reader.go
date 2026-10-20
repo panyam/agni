@@ -141,6 +141,7 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 		insts[i] = lf.node
 	}
 	namedByInstance := !anyDesignator(insts)
+	shared := h.namesInSeveralBlocks()
 	refByID := make(map[string]string, len(insts))
 	pinsByID := make(map[string]map[string][]string, len(insts))
 	byKey := make(map[string]*ir.Component, len(insts))
@@ -152,6 +153,12 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 		sec.Prov.NativeId = occurrence(lf.path, id)
 		if refDes == "" && namedByInstance {
 			refDes = parseName(lf.node.Arg(1)).best()
+			// An instance name is unique within its cell and nowhere else, so with no designator to
+			// say two of them are one part, one inside a block that another cell also uses is that
+			// block's own (agni issue 1105).
+			if lf.path != "" && !lf.repeated && shared[refDes] {
+				refDes = lf.path + "/" + refDes
+			}
 		}
 		if refDes != "" && lf.repeated {
 			refDes = lf.path + "/" + refDes
