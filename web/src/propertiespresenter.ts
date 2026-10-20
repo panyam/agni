@@ -122,10 +122,15 @@ export class PropertiesPresenter {
   }
 
   setFindings(state: FindingsState): void {
+    const runEnded = (this.findings?.running ?? false) && !state.running;
     this.findings = state;
     this.push();
     // The rule selection or the vocabulary may have changed with it, which the answer was asked under.
-    if (this.focus.level === "entity" && this.checked && this.checked.key !== this.checkKey()) void this.check(this.focus.sel);
+    // A failed answer is asked again when a run ends, since a cancelled run ends the worker a
+    // selection's check was queued on (agni issue 918); a design that cannot be checked at all fails
+    // once per run rather than on every push.
+    const failedByRun = runEnded && this.checked?.value.state === "failed";
+    if (this.focus.level === "entity" && this.checked && (this.checked.key !== this.checkKey() || failedByRun)) void this.check(this.focus.sel);
   }
 
   setDatasheet(join: DatasheetJoin): void {

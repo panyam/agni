@@ -285,7 +285,14 @@ the browser rather than from the contract.
   two workers held about 850 MB against one's 455 MB (`make wasm-bench` prints both configurations).
   Aborting a request ends its lane's worker and starts an empty one, which brings
   the design's files in again on its next request and restores the design from the browser's cache
-  (next bullet) rather than reading it. Files dropped on the page are kept by the page
+  (next bullet) rather than reading it. The Checks panel's Cancel and the Review panel's are such
+  an abort (agni issue 918): one `AbortController` per run, its signal on every call the run makes,
+  and `mountingFetch` rejecting at once when it fires, since a request waits on its design's files
+  reaching the worker before the lane sees it and only the lane stops on the signal. On Jetson the
+  button comes back in about 10 ms and the next run, on the fresh worker, answers in about 3 s.
+  A selection's check queued behind the stopped run dies with the worker, so Properties asks it
+  again when the run ends. On a server the signal cancels the HTTP request, and the run stops
+  through its context (agni issue 795). Files dropped on the page are kept by the page
   (`WasmEngine.add`) and copied into every worker, replacements included, since nothing else could
   bring them back.
 - **A parsed design outlives the worker that read it** (agni issue 911). The design cache keeps its

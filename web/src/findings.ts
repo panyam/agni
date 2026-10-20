@@ -128,8 +128,11 @@ export interface FindingsState {
   // so a design opens, or the selection changes, with the results uncomputed. It badges the Run button
   // and tells "press Run to evaluate" (pending > 0, empty list) from "ran clean" (pending 0, empty list).
   pending: number;
-  // running is true while a check run is in flight, so the panel disables the Run button.
+  // running is true while a check run is in flight, so the panel turns the Run button into Cancel.
   running: boolean;
+  // cancelled is true when the last run was stopped before it answered (agni issue 918), so the rules
+  // it left pending read as not run rather than as clean. Absent means not cancelled.
+  cancelled?: boolean;
   // catalogLoading is true from the moment a design starts opening until its rule catalog
   // (ListRules) answers. The first sheet can draw before then, and a Run pressed in that window has
   // no ruleset to run, so the panel disables the button and says why (agni 868).

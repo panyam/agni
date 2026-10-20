@@ -426,6 +426,12 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
         return network(req);
       }
     }
+    // A request cancelled while its files were on their way stops here, before any worker sees it,
+    // and the files it brought stay for the next one (agni issue 918).
+    if (req.signal.aborted) {
+      run?.release();
+      throw req.signal.reason ?? new DOMException("aborted", "AbortError");
+    }
     const on = (r: Request) => (run ? run.fetch(r) : lane.fetch(r));
     const worker = run?.holder ?? (await lane.holder());
     for (const snap of snaps) {
@@ -480,10 +486,36 @@ export function mountingFetch(o: MountingOptions): typeof globalThis.fetch {
     for (const snap of snaps) for (const u of ingests.get(snap)?.uris ?? []) uris.add(u);
     const name = laneFor(url, readBoard);
     const inBrowser = [...uris].some((u) => browserMounts.has(mountOf(u)));
-    if (inBrowser) return tracked(req, uris, false, name, [...snaps], ingestOf);
+    if (inBrowser) return abortable(req.signal, tracked(req, uris, false, name, [...snaps], ingestOf));
     if (passthrough(url)) return network(req);
-    return tracked(req, uris, true, name, [...snaps], ingestOf);
+    return abortable(req.signal, tracked(req, uris, true, name, [...snaps], ingestOf));
   };
+}
+
+// abortable rejects as soon as signal fires, whatever stage the request is in (agni issue 918). A
+// request waits on its design's files reaching the worker before the lane sees it, and only the lane
+// stops on the signal, so without this a Cancel pressed during that wait did nothing until every file
+// had arrived, 85 MB on the Jetson board. The work it leaves behind finishes harmlessly: the files
+// land in the worker for the next request, and the lane drops a request whose signal has fired.
+export function abortable<T>(signal: AbortSignal, work: Promise<T>): Promise<T> {
+  if (signal.aborted) {
+    work.catch(() => undefined);
+    return Promise.reject(signal.reason ?? new DOMException("aborted", "AbortError"));
+  }
+  return new Promise<T>((resolve, reject) => {
+    const stop = () => reject(signal.reason ?? new DOMException("aborted", "AbortError"));
+    signal.addEventListener("abort", stop, { once: true });
+    work.then(
+      (v) => {
+        signal.removeEventListener("abort", stop);
+        resolve(v);
+      },
+      (e) => {
+        signal.removeEventListener("abort", stop);
+        reject(e);
+      },
+    );
+  });
 }
 
 // mountOf is a `mount://` URI's mount name.

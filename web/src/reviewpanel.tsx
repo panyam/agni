@@ -110,6 +110,9 @@ function ReviewPanel(props: {
   onSelectRun: (name: string) => void;
   onSelectChecklist: (ref: string) => void;
   onCreate: () => void;
+  // onCancel stops the checklist run in flight (agni issue 918). Absent, the button stays disabled
+  // while a run is under way.
+  onCancel?: () => void;
   onLocate: (kind: string, subject: string) => void;
   // onSave writes the shown run as the checklist page `agni review --format html` writes. Absent,
   // the panel offers no save.
@@ -151,15 +154,21 @@ function ReviewPanel(props: {
           <button
             type="button"
             class="rv-run"
-            disabled={props.state().running || !props.state().checklist}
-            onClick={() => props.onCreate()}
+            disabled={(props.state().running && !props.onCancel) || !props.state().checklist}
+            onClick={() => (props.state().running ? props.onCancel?.() : props.onCreate())}
           >
-            {props.state().running ? "Running…" : "Run review"}
+            {props.state().running ? (props.onCancel ? "Cancel" : "Running…") : "Run review"}
           </button>
         </div>
 
         <Show when={props.state().error}>
           <div class="rv-error" role="alert">{props.state().error}</div>
+        </Show>
+        <Show when={props.state().running}>
+          <div class="rv-running" role="status">Scoring the checklist…</div>
+        </Show>
+        <Show when={props.state().cancelled && !props.state().running}>
+          <div class="rv-cancelled" role="status">Cancelled. The checklist was not scored.</div>
         </Show>
 
         <Show when={props.state().runs.length > 0}>
@@ -236,6 +245,7 @@ export function reviewPanelIsland(
     onSelectRun: (name: string) => void;
     onSelectChecklist: (ref: string) => void;
     onCreate: () => void;
+    onCancel?: () => void;
     onLocate: (kind: string, subject: string) => void;
     onSave?: () => void;
   },
@@ -251,6 +261,7 @@ export function reviewPanelIsland(
         onSelectRun={handlers.onSelectRun}
         onSelectChecklist={handlers.onSelectChecklist}
         onCreate={handlers.onCreate}
+        onCancel={handlers.onCancel}
         onLocate={handlers.onLocate}
         onSave={handlers.onSave}
         staticHost={opts.staticHost ?? false}

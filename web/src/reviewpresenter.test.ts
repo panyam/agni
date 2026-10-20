@@ -249,7 +249,7 @@ describe("review presenter — creating", () => {
       parent: "",
       snapshot: snapName(BOARD),
       manifest: { name: "Sample Board review", areas: [] },
-    });
+    }, { signal: expect.any(AbortSignal) });
     const s = lastState(h.onReview);
     expect(s.selected).toBe("reviews/r3");
     expect(s.runs[0].name).toBe("reviews/r3");
@@ -504,5 +504,32 @@ describe("saving a checklist run", () => {
     await h.presenter.saveReviewReport();
     expect(lastState(h.onReview).saveNote).toContain("boom");
     expect(h.download).not.toHaveBeenCalled();
+  });
+});
+
+// agni issue 918: a checklist run shares the jobs lane with a check run and can be stopped too.
+describe("review presenter — cancelling", () => {
+  it("stops a checklist run and says so rather than reporting an error", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.createReview.mockImplementationOnce(
+      ((_req: unknown, opts?: { signal?: AbortSignal }) =>
+        new Promise<never>((_resolve, reject) => {
+          // A Connect client rejects a signal that has already fired, without sending anything.
+          if (opts?.signal?.aborted) reject(new DOMException("stopped", "AbortError"));
+          opts?.signal?.addEventListener("abort", () => reject(new DOMException("stopped", "AbortError")));
+        })) as never,
+    );
+    const running = h.presenter.createReview();
+    await vi.waitFor(() => expect(lastState(h.onReview).running).toBe(true));
+    // Cancelled before the request goes out, while the checklist is still being resolved.
+    h.presenter.cancelReview();
+    await running;
+    const s = lastState(h.onReview);
+    expect(s.running).toBe(false);
+    expect(s.cancelled).toBe(true);
+    expect(s.error).toBe("");
+    await h.presenter.createReview();
+    expect(lastState(h.onReview).cancelled).toBe(false);
   });
 });

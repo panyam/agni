@@ -162,11 +162,14 @@ export class DocumentStore {
   // snapshot is the open design's snapshot under the page's convention, asked for only when a rule
   // is missing (agni issue 1061). A geometry-only file (no netlist) fails, which leaves the run as it
   // was and those rules pending.
-  async runMissing(checks: Pick<CheckClient, "checkDesign">, snapshot: () => Promise<string>): Promise<void> {
+  //
+  // signal stops the request (agni issue 918). A stopped run folds in nothing, so the rules it was
+  // asked for stay pending.
+  async runMissing(checks: Pick<CheckClient, "checkDesign">, snapshot: () => Promise<string>, signal?: AbortSignal): Promise<void> {
     const missing = this.selectedRules.filter((n) => !this.ran(n));
     if (missing.length === 0 || !this.mount || !this.path) return;
     try {
-      const resp = await checks.checkDesign({ snapshot: await snapshot(), rules: missing });
+      const resp = await checks.checkDesign({ snapshot: await snapshot(), rules: missing }, { signal });
       // ?? [] because a hand-built response (a test stub, an older server) may omit a list, and a
       // missing field must degrade to "nothing was skipped" or "this rule stated no considered set"
       // rather than throwing mid-run and losing the findings too.

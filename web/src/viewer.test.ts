@@ -628,7 +628,7 @@ describe("ViewerPresenter", () => {
     });
     await openAndCheck(h, "m", "board.edn");
     // The active ruleset is the default (both catalog rules), run in one call by the Run button.
-    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] }, { signal: expect.any(AbortSignal) });
     const last = lastFindings(h);
     expect(last.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
     expect(last.selected).toBe("");
@@ -865,7 +865,7 @@ describe("ViewerPresenter", () => {
     });
     await openAndCheck(h, "m", "board.edn");
 
-    expect(h.getExpectations).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")) });
+    expect(h.getExpectations).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")) }, { signal: expect.any(AbortSignal) });
     // The caption (the non-anchored verdict) shows single-pin-net matched exactly; the pending row
     // is excluded.
     const capCalls = h.onExpectCaption.mock.calls;
@@ -1153,7 +1153,7 @@ describe("on-demand checks (WS9)", () => {
     await opening;
     expect(lastFindings(h).catalogLoading).toBe(false);
     await h.presenter.runChecks();
-    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] }, { signal: expect.any(AbortSignal) });
   });
 
   it("a Run pressed while a second design's catalog loads does not run the first design's rules on it", async () => {
@@ -1186,7 +1186,7 @@ describe("on-demand checks (WS9)", () => {
     });
     await h.presenter.openFile("m", "board.edn");
     await h.presenter.runChecks();
-    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net", "diff-pair-naming"] }, { signal: expect.any(AbortSignal) });
     const fs = lastFindings(h);
     expect(fs.findings.map((f: { subject: string }) => f.subject)).toEqual(["STUB"]);
     expect(fs.pending).toBe(0);
@@ -1199,7 +1199,7 @@ describe("on-demand checks (WS9)", () => {
     await h.presenter.setRuleSelection(["single-pin-net"]); // toggle only, so no fetch
     expect(h.checkDesign).not.toHaveBeenCalled();
     await h.presenter.runChecks(); // runs only the selected rule
-    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net"] });
+    expect(h.checkDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("m", "board.edn")), rules: ["single-pin-net"] }, { signal: expect.any(AbortSignal) });
     h.checkDesign.mockClear();
     await h.presenter.setRuleSelection(["single-pin-net", "diff-pair-naming"]); // adds an unrun rule
     expect(h.checkDesign).not.toHaveBeenCalled(); // still no fetch on a toggle
@@ -1593,5 +1593,66 @@ describe("the run-wide field is opt-in", () => {
     await h.presenter.selectFinding("STUB");
     await h.presenter.setShowAllFindings(false);
     expect(last(h)).toEqual([{ nets: ["STUB"], shape: HighlightShape.PATH }]);
+  });
+});
+
+// agni issue 918: a run in flight can be stopped, and what it left unanswered reads as not run.
+describe("cancelling a check run", () => {
+  // untilAborted answers only by rejecting when the call's signal fires, as an engine abort does.
+  const untilAborted = (_req: unknown, opts?: { signal?: AbortSignal }) =>
+    new Promise<never>((_resolve, reject) => {
+      // A Connect client rejects a signal that has already fired, without sending anything.
+      if (opts?.signal?.aborted) reject(new DOMException("stopped", "AbortError"));
+      opts?.signal?.addEventListener("abort", () => reject(new DOMException("stopped", "AbortError")));
+    });
+
+  it("stops the run, leaves its rules pending, says it was cancelled, and the next run answers", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockImplementationOnce(untilAborted as never);
+    const running = h.presenter.runChecks();
+    await vi.waitFor(() => expect(lastFindings(h).running).toBe(true));
+    h.presenter.cancelChecks();
+    await running;
+    const after = lastFindings(h);
+    expect(after.running).toBe(false);
+    expect(after.cancelled).toBe(true);
+    expect(after.pending).toBe(2);
+    // A stopped run goes no further, so the sidecar and coverage calls after it are not made.
+    expect(h.getExpectations).not.toHaveBeenCalled();
+
+    await h.presenter.runChecks();
+    expect(lastFindings(h).cancelled).toBe(false);
+    expect(lastFindings(h).pending).toBe(0);
+  });
+
+  it("forgets a cancel when another design opens", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockImplementationOnce(untilAborted as never);
+    const running = h.presenter.runChecks();
+    await vi.waitFor(() => expect(lastFindings(h).running).toBe(true));
+    h.presenter.cancelChecks();
+    await running;
+    await h.presenter.openFile("m", "other.edn");
+    expect(lastFindings(h).cancelled).toBe(false);
+  });
+
+  // The page overlay would cover Cancel itself, and the lanes exist so the rest of the page stays
+  // usable while rules run.
+  it("raises no page overlay for a run, which would cover Cancel", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    (h.render.setBusy as ReturnType<typeof vi.fn>).mockClear();
+    await h.presenter.runChecks();
+    expect(h.render.setBusy).not.toHaveBeenCalledWith(true, expect.anything());
+  });
+
+  it("does nothing with no run in flight", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.presenter.cancelChecks();
+    await h.presenter.runChecks();
+    expect(lastFindings(h).cancelled).toBe(false);
   });
 });
