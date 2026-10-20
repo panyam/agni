@@ -15,6 +15,7 @@ from first read through to a house checklist gating CI, adding one capability at
 - **[Trying agni on your own boards](trying-agni/)** runs a release from one compose file, walks the guided trial, and sends back a report that holds nothing from your design.
 - **[Checks and reports](checks-and-reports/)** runs the rule catalog and explains its findings.
 - **[Comparing revisions](comparing-revisions/)** diffs two revisions as a schematic redline.
+- **[Beside an older comparison tool](older-comparison-tools/)** explains the rows where a semantic diff and a netlist-export spreadsheet disagree.
 - **[Querying](querying/)** searches a design as data, with every answer cited.
 - **[Naming conventions](naming-conventions/)** encodes house style and checks it on every export.
 - **[Interface profiles](interface-profiles/)** declares a bus's signals and checks every design against it.

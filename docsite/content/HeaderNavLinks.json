@@ -42,6 +42,7 @@
       { "name": "Trying agni on your own boards", "url": "guide/trying-agni/" },
       { "name": "Checks and reports", "url": "guide/checks-and-reports/" },
       { "name": "Comparing revisions", "url": "guide/comparing-revisions/" },
+      { "name": "Beside an older comparison tool", "url": "guide/older-comparison-tools/" },
       { "name": "Querying", "url": "guide/querying/" },
       { "name": "Naming conventions", "url": "guide/naming-conventions/" },
       { "name": "Interface profiles", "url": "guide/interface-profiles/" },

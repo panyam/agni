@@ -1,0 +1,6 @@
+# Two revisions with identical connectivity, one pin named by a letter alone (D_K_ONLY.K). agni keeps
+# the pin, so the diff is empty (agni issue 1097).
+fixture: cmd/agni/testdata/github-issues/1097-legacy-export-quirks
+steps:
+  - script: agni diff letter_pin_rev_a.edn letter_pin_rev_b.edn
+  - script: agni query letter_pin_rev_a.edn 'pin.net(?r, ?p, ?n) => ?r, ?p, ?n'
