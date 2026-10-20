@@ -465,6 +465,9 @@ export function findingsPanelIsland(
     onSave?: (format: "html" | "json" | "csv") => void;
   },
 ): { island: SolidIsland; view: FindingsView } {
+  // The panel mounts before the page has opened a design, and until one opens there is no catalog,
+  // so it starts loading. Starting idle offered an enabled Run that the presenter ignored for want of
+  // a design, and the click was lost.
   const [state, setState] = signalView<FindingsState>({
     findings: [],
     verdicts: [],
@@ -473,7 +476,7 @@ export function findingsPanelIsland(
     ruleCount: 0,
     pending: 0,
     running: false,
-    catalogLoading: false,
+    catalogLoading: true,
     skipped: [],
     ruleSummaries: {},
     saveNote: "",

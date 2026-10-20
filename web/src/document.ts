@@ -36,8 +36,9 @@ export class DocumentStore {
 
   // catalogLoading is true while the open design's rule catalog has not arrived. A new design sets it
   // before its first sheet draws, since that sheet can draw before ListRules answers, and until then
-  // selectedRules is empty or still the previous design's (agni 868).
-  catalogLoading = false;
+  // selectedRules is empty or still the previous design's (agni 868). It starts true, because before
+  // the first design opens there is no catalog either, and a push in that window must not offer Run.
+  catalogLoading = true;
   // rules is the catalog for the open design (ListRules), and selectedRules the active ruleset the
   // user has checked, the subset CheckDesign runs. It defaults to every available rule so a design
   // opens showing all runnable checks. Group-by/filter/search are the panel's own view state.

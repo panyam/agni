@@ -97,6 +97,20 @@ describe("checks panel Run button (on-demand checks)", () => {
   });
 });
 
+// The panel mounts before the page opens a design, which waits on admission and the engine, and a
+// Run pressed in that window found no design and did nothing, with the button still enabled.
+it("a freshly mounted panel offers no Run until a design's catalog arrives", () => {
+  const onRun = vi.fn();
+  const el = document.createElement("div");
+  document.body.appendChild(el);
+  findingsPanelIsland(el, null, { onSelect: vi.fn(), onLocateContext: vi.fn(), onRun, onSelectVerdict: vi.fn() }).island.activate();
+  const run = el.querySelector<HTMLButtonElement>("button.checks-run")!;
+  expect(run.disabled).toBe(true);
+  expect(run.textContent).toBe("Loading rules…");
+  run.click();
+  expect(onRun).not.toHaveBeenCalled();
+});
+
 describe("checks panel empty states", () => {
   it("distinguishes no-rules, not-yet-run, and ran-clean", () => {
     const none = mountPanel({ findings: [], ruleCount: 0 });
