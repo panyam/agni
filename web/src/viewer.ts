@@ -194,6 +194,9 @@ export class ViewerPresenter {
   // synthetic glyphs. Only meaningful when the design ships symbols (availableLayouts has
   // "faithful") and the current layout is an auto-layout.
   private faithfulSymbols = false;
+  // flattened is whether this page reads hierarchical netlists whole, kept so every address it writes
+  // says so too (agni issue 1102).
+  private flattened = false;
 
   // findings holds the rule findings for the open design, and selectedSubject the one the user
   // clicked (highlighted in the viewer), "" for none.
@@ -605,6 +608,7 @@ export class ViewerPresenter {
     if (loc.mode) this.mode = loc.mode;
     this.currentLayout = loc.layout; // empty -> server picks the effective layout, as on a fresh open
     this.faithfulSymbols = loc.symbols;
+    this.flattened = loc.flatten;
     await this.openFile(loc.mount, loc.path, loc.sheet, true);
     // A verdict id in the link RUNS THE CHECKS before resolving it, a deliberate exception to
     // checks being on-demand (WS9). A cold load has an empty verdict cache, so without this a
@@ -659,6 +663,7 @@ export class ViewerPresenter {
       mode: this.mode,
       layout: this.currentLayout,
       symbols: this.faithfulSymbols,
+      flatten: this.flattened,
       verdict: this.focusedVerdict,
       hash: this.linkHash,
       // Named from the focused verdict rather than remembered from the URL, so a verdict reached by

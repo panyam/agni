@@ -19,6 +19,12 @@ class PinDirection(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     PIN_DIRECTION_POWER_IN: _ClassVar[PinDirection]
     PIN_DIRECTION_POWER_OUT: _ClassVar[PinDirection]
 
+class UnexpandedReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
+    __slots__ = ()
+    UNEXPANDED_REASON_UNSPECIFIED: _ClassVar[UnexpandedReason]
+    UNEXPANDED_REASON_NOT_WALKED: _ClassVar[UnexpandedReason]
+    UNEXPANDED_REASON_CYCLE: _ClassVar[UnexpandedReason]
+
 class ClassSource(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
     CLASS_SOURCE_UNSPECIFIED: _ClassVar[ClassSource]
@@ -60,6 +66,9 @@ PIN_DIRECTION_POWER: PinDirection
 PIN_DIRECTION_NO_CONNECT: PinDirection
 PIN_DIRECTION_POWER_IN: PinDirection
 PIN_DIRECTION_POWER_OUT: PinDirection
+UNEXPANDED_REASON_UNSPECIFIED: UnexpandedReason
+UNEXPANDED_REASON_NOT_WALKED: UnexpandedReason
+UNEXPANDED_REASON_CYCLE: UnexpandedReason
 CLASS_SOURCE_UNSPECIFIED: ClassSource
 CLASS_SOURCE_CONVENTION: ClassSource
 CLASS_SOURCE_DATASHEET: ClassSource
@@ -186,16 +195,18 @@ class InputDiagnostics(_message.Message):
     def __init__(self, dangling_endpoints: _Optional[_Iterable[_Union[DanglingEndpoint, _Mapping]]] = ..., ref_des_collisions: _Optional[_Iterable[_Union[RefDesCollision, _Mapping]]] = ..., no_junction_endpoints: _Optional[_Iterable[_Union[DanglingEndpoint, _Mapping]]] = ..., unmodeled_buses: _Optional[_Iterable[_Union[BusNotModeled, _Mapping]]] = ..., unresolved_symbols: _Optional[_Iterable[_Union[UnresolvedSymbol, _Mapping]]] = ..., resolved_symbols: _Optional[_Iterable[_Union[ResolvedSymbol, _Mapping]]] = ..., joined_taps: _Optional[_Iterable[_Union[JoinedTap, _Mapping]]] = ..., unannotated_components: _Optional[_Iterable[_Union[UnannotatedComponent, _Mapping]]] = ..., unexpanded_hierarchy: _Optional[_Iterable[_Union[UnexpandedHierarchy, _Mapping]]] = ..., supplied: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class UnexpandedHierarchy(_message.Message):
-    __slots__ = ("name", "kind", "instance_count", "prov")
+    __slots__ = ("name", "kind", "instance_count", "prov", "reason")
     NAME_FIELD_NUMBER: _ClassVar[int]
     KIND_FIELD_NUMBER: _ClassVar[int]
     INSTANCE_COUNT_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
     name: str
     kind: str
     instance_count: int
     prov: Provenance
-    def __init__(self, name: _Optional[str] = ..., kind: _Optional[str] = ..., instance_count: _Optional[int] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+    reason: UnexpandedReason
+    def __init__(self, name: _Optional[str] = ..., kind: _Optional[str] = ..., instance_count: _Optional[int] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ..., reason: _Optional[_Union[UnexpandedReason, str]] = ...) -> None: ...
 
 class UnannotatedComponent(_message.Message):
     __slots__ = ("ref_des", "instances")

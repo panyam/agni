@@ -161,9 +161,14 @@ type Design struct {
 	// Naming a revision's entry reads it with its own companions, so a later netlist is checked against
 	// its own board rather than none, and a companion is never borrowed from another revision. A file
 	// in the folder that no revision lists still reads exactly as named.
-	Revisions     []*DesignRevision `protobuf:"bytes,8,rep,name=revisions,proto3" json:"revisions,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Revisions []*DesignRevision `protobuf:"bytes,8,rep,name=revisions,proto3" json:"revisions,omitempty"`
+	// flatten_hierarchy says this design's netlist is read whole, walking into every hierarchical block
+	// its top level places, as Snapshot.flatten_hierarchy asks for one read (agni issues 718, 1102). It
+	// is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a snapshot cannot
+	// turn off what its design declares. It applies to every revision.
+	FlattenHierarchy bool `protobuf:"varint,9,opt,name=flatten_hierarchy,json=flattenHierarchy,proto3" json:"flatten_hierarchy,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Design) Reset() {
@@ -243,6 +248,13 @@ func (x *Design) GetRevisions() []*DesignRevision {
 		return x.Revisions
 	}
 	return nil
+}
+
+func (x *Design) GetFlattenHierarchy() bool {
+	if x != nil {
+		return x.FlattenHierarchy
+	}
+	return false
 }
 
 // DesignRevision is one declared revision of a design: its netlist entry and its own views.
@@ -754,7 +766,7 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
 	"\x03uri\x18\x03 \x01(\tR\x03uri\x126\n" +
-	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06configJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\x84\x02\n" +
+	"\x06config\x18\t \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06configJ\x04\b\x04\x10\x05J\x04\b\x05\x10\x06J\x04\b\x06\x10\aJ\x04\b\a\x10\bJ\x04\b\b\x10\t\"\xb1\x02\n" +
 	"\x06Design\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x14\n" +
 	"\x05title\x18\x02 \x01(\tR\x05title\x12\x10\n" +
@@ -762,7 +774,8 @@ const file_agni_v1_webapi_project_proto_rawDesc = "" +
 	"\tentry_uri\x18\x04 \x01(\tR\bentryUri\x12%\n" +
 	"\x0ecompanion_uris\x18\x05 \x03(\tR\rcompanionUris\x126\n" +
 	"\x06config\x18\a \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12<\n" +
-	"\trevisions\x18\b \x03(\v2\x1e.agni.v1.webapi.DesignRevisionR\trevisionsJ\x04\b\x06\x10\a\"T\n" +
+	"\trevisions\x18\b \x03(\v2\x1e.agni.v1.webapi.DesignRevisionR\trevisions\x12+\n" +
+	"\x11flatten_hierarchy\x18\t \x01(\bR\x10flattenHierarchyJ\x04\b\x06\x10\a\"T\n" +
 	"\x0eDesignRevision\x12\x1b\n" +
 	"\tentry_uri\x18\x01 \x01(\tR\bentryUri\x12%\n" +
 	"\x0ecompanion_uris\x18\x02 \x03(\tR\rcompanionUris\"'\n" +

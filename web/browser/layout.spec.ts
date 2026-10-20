@@ -375,12 +375,27 @@ describe("the hierarchical-read notice", () => {
   const sentence =
     "hier.edn is hierarchical and only its top cell was read. 1 sub-cell holding 1 instance was not extracted (SUB: 1). Counts and checks cover the top cell alone.";
 
+  // agni issue 1102: the strip's button re-opens the design read whole, which the engine answers
+  // with no unexpanded cell, so the strip is gone. The visible strip before the click is the control.
+  it("reads every block when asked, and then has nothing left to say", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "edif", "hier.edn");
+      const button = page.locator(".hierarchy-note.on button.hierarchy-read-all");
+      await button.waitFor({ state: "visible", timeout: 30_000 });
+      await Promise.all([page.waitForURL(/[?&]flatten=1/, { timeout: 30_000 }), button.click()]);
+      await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
+      await page.waitForTimeout(1500);
+      expect(await page.locator(".hierarchy-note.on").count()).toBe(0);
+      expect(page.url()).toContain("flatten=1");
+    });
+  }, 120_000);
+
   it("is painted on a hierarchical design, below the controls and clear of them", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "edif", "hier.edn");
       const note = page.locator(".hierarchy-note.on");
       await note.waitFor({ state: "visible", timeout: 30_000 });
-      expect((await note.textContent())?.trim()).toBe(sentence);
+      expect((await note.locator("span").textContent())?.trim()).toBe(sentence);
 
       const geometry = await page.evaluate(() => {
         const box = (sel: string) => {

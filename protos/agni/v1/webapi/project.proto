@@ -141,6 +141,11 @@ message Design {
   // its own board rather than none, and a companion is never borrowed from another revision. A file
   // in the folder that no revision lists still reads exactly as named.
   repeated DesignRevision revisions = 8;
+  // flatten_hierarchy says this design's netlist is read whole, walking into every hierarchical block
+  // its top level places, as Snapshot.flatten_hierarchy asks for one read (agni issues 718, 1102). It
+  // is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a snapshot cannot
+  // turn off what its design declares. It applies to every revision.
+  bool flatten_hierarchy = 9;
 
   reserved 6;
 }

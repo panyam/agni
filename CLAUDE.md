@@ -973,9 +973,11 @@ which reads as "the design does not have that".
   is a limit of the read rather than a defect. **`--flatten-hierarchy` (`Snapshot.flatten_hierarchy`)
   reads the blocks** (agni 718), OFF by default because it renames every interior net and moves a
   diff. It rides the OVERLAY so its identity keys every cache tier, and the parse key names it too;
-  a new read path that builds options without `Overlay.ReadOptions` drops it silently. Its naming
-  rules are in `architecture/ingestion-and-ir.md`, and it is unverified on a real multi-cell export
-  until #718 says otherwise.
+  a new read path that builds options without `Overlay.ReadOptions` drops it silently. A design
+  declares it once with `flatten_hierarchy: true` in `design.yaml` (`ProjectResolver.Overlay` ORs it
+  in), and the viewer asks with `?flatten=1`, which the strip's Read every block button adds and the
+  page's ONE snapshot registry carries into every ingest (agni 1102). Its naming rules are in
+  `architecture/ingestion-and-ir.md`, and it is unverified on a real multi-cell export.
 
 **Before believing a measurement or a green test, read `docsite/content/build/evidence.md`.** A
 negative result needs a positive control, a positive rate needs a precision check, and every new test

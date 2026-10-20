@@ -17,6 +17,10 @@ export interface ViewerLocation {
   mode: RenderMode | "";
   layout: string;
   symbols: boolean;
+  // flatten reads the design's hierarchical netlist whole (Snapshot.flatten_hierarchy, agni issue
+  // 1102). It is a property of the page rather than of one question, since every snapshot the page
+  // ingests carries it (pageFlattens), so it rides every address the viewer writes.
+  flatten: boolean;
   // verdict is the id of the focused verdict ("i2c-pull-up:net:SDA"), "" when none.
   //
   // SELECTION STATE, like `sheet`, and not the resource form. A server-resolved `GET /checks/<id>`
@@ -124,7 +128,7 @@ const BROWSER_MOUNT = "local";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -161,6 +165,7 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   if (loc.mode) params.set("mode", loc.mode);
   if (loc.layout) params.set("layout", loc.layout);
   if (loc.symbols) params.set("sym", "1");
+  if (loc.flatten) params.set(FLATTEN_PARAM, "1");
   if (loc.verdict) params.set("verdict", loc.verdict);
   // Only alongside its verdict, or the address bar keeps asserting a provenance nothing on screen
   // depends on.
@@ -186,6 +191,22 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
   }
   const q = params.toString();
   return designsPrefix() + segs.join("/") + "/" + page + (q ? `?${q}` : "");
+}
+
+// FLATTEN_PARAM is the query parameter asking for a design's hierarchical netlist read whole.
+export const FLATTEN_PARAM = "flatten";
+
+// pageFlattens reports whether the page at search asks for hierarchical netlists read whole. The Load
+// page and the viewer share the address's query, so both ingest the same way.
+export function pageFlattens(search: string): boolean {
+  return new URLSearchParams(search).get(FLATTEN_PARAM) === "1";
+}
+
+// withFlatten is url with the page asking for its design read whole, every other parameter kept.
+export function withFlatten(url: string): string {
+  const u = new URL(url, "http://x");
+  u.searchParams.set(FLATTEN_PARAM, "1");
+  return u.pathname + u.search;
 }
 
 // keepTiming carries the address's ?timing onto url, for a page that moves the reader to another of
@@ -258,6 +279,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.mode = isRenderMode(mode) ? mode : "";
   loc.layout = params.get("layout") ?? "";
   loc.symbols = params.get("sym") === "1";
+  loc.flatten = params.get(FLATTEN_PARAM) === "1";
   loc.verdict = params.get("verdict") ?? "";
   loc.hash = params.get("hash") ?? "";
   loc.rule = params.get("rule") ?? "";

@@ -103,6 +103,11 @@ func TestUnflattenedReadIsTheTopCell(t *testing.T) {
 	if strings.Join(names, " ") != "LED_DRV RC" {
 		t.Errorf("unexpanded_hierarchy = %v, want LED_DRV RC", names)
 	}
+	for _, u := range d.GetInputDiagnostics().GetUnexpandedHierarchy() {
+		if u.GetReason() != ir.UnexpandedReason_UNEXPANDED_REASON_NOT_WALKED {
+			t.Errorf("%s reason = %v, want NOT_WALKED on a top-level read", u.GetName(), u.GetReason())
+		}
+	}
 }
 
 // TestCellPlacedTwiceYieldsTwoSets guards the failure #718 names, two placements read as one merged
@@ -144,8 +149,8 @@ func TestCyclicCellIsListedNotWalked(t *testing.T) {
 		t.Errorf("components = %v, want R1 from the one placement walked", got)
 	}
 	u := d.GetInputDiagnostics().GetUnexpandedHierarchy()
-	if len(u) != 1 || u[0].GetName() != "LOOP" {
-		t.Errorf("unexpanded_hierarchy = %v, want LOOP", u)
+	if len(u) != 1 || u[0].GetName() != "LOOP" || u[0].GetReason() != ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE {
+		t.Errorf("unexpanded_hierarchy = %v, want LOOP for a cycle", u)
 	}
 }
 

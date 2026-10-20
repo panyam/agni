@@ -1,4 +1,4 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { hierarchyNote, hierarchyStrip } from "./hierarchy.js";
 
 const sentence =
@@ -30,6 +30,23 @@ describe("hierarchyStrip", () => {
     set(hierarchyNote(""));
     expect(el.classList.contains("on")).toBe(false);
     expect(el.textContent).toBe("");
+  });
+
+  it("offers to read every block, and runs what the page asked when clicked (agni issue 1102)", () => {
+    const el = document.createElement("div");
+    const readAll = vi.fn();
+    hierarchyStrip(el, readAll)(hierarchyNote(sentence));
+    const b = el.querySelector("button.hierarchy-read-all") as HTMLButtonElement | null;
+    expect(b?.textContent).toBe("Read every block");
+    expect(el.querySelector("span")?.textContent).toBe(sentence);
+    b?.click();
+    expect(readAll).toHaveBeenCalledTimes(1);
+  });
+
+  it("offers nothing on a page already reading designs whole", () => {
+    const el = document.createElement("div");
+    hierarchyStrip(el)(hierarchyNote(sentence));
+    expect(el.querySelector("button")).toBeNull();
   });
 
   it("is a no-op without an element", () => {

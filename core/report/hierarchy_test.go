@@ -59,3 +59,23 @@ func TestBothPagesStateTheReadLimitAboveTheCounts(t *testing.T) {
 		}
 	}
 }
+
+// TestCycleNoteSaysWhatTheWalkLeftOut covers agni issue 1102: a flattened read lists only blocks that
+// place themselves, and the top-level sentence would claim a partial read that did not happen.
+func TestCycleNoteSaysWhatTheWalkLeftOut(t *testing.T) {
+	cycle := ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE
+	one := []*ir.UnexpandedHierarchy{{Name: "LOOP", Kind: "edif_cell", InstanceCount: 2, Reason: cycle}}
+	if got, want := HierarchyNote("mount://m/hier_cycle.edn", one), "hier_cycle.edn is hierarchical and 1 sub-cell holding 2 instances could not be expanded, because it places itself (LOOP: 2). Counts and checks leave its contents out."; got != want {
+		t.Errorf("one cycle:\n got %q\nwant %q", got, want)
+	}
+	two := []*ir.UnexpandedHierarchy{{Name: "A", Kind: "edif_cell", InstanceCount: 1, Reason: cycle}, {Name: "B", Kind: "edif_cell", InstanceCount: 3, Reason: cycle}}
+	if got, want := HierarchyNote("x.edn", two), "x.edn is hierarchical and 2 sub-cells holding 4 instances could not be expanded, because each places itself (B: 3, A: 1). Counts and checks leave their contents out."; got != want {
+		t.Errorf("two cycles:\n got %q\nwant %q", got, want)
+	}
+	for _, r := range []ir.UnexpandedReason{ir.UnexpandedReason_UNEXPANDED_REASON_UNSPECIFIED, ir.UnexpandedReason_UNEXPANDED_REASON_NOT_WALKED} {
+		top := []*ir.UnexpandedHierarchy{{Name: "SUB", Kind: "edif_cell", InstanceCount: 1, Reason: r}}
+		if got, want := HierarchyNote("hier.edn", top), "hier.edn is hierarchical and only its top cell was read. 1 sub-cell holding 1 instance was not extracted (SUB: 1). Counts and checks cover the top cell alone."; got != want {
+			t.Errorf("reason %v:\n got %q\nwant %q", r, got, want)
+		}
+	}
+}

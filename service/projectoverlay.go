@@ -80,7 +80,13 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 	if r != nil {
 		store = r.Store
 	}
-	return OverlayFor(ctx, resolver, store, p, d, req, baseConvention)
+	ov, err := OverlayFor(ctx, resolver, store, p, d, req, baseConvention)
+	if err != nil {
+		return Overlay{}, err
+	}
+	// A design that declares its netlist be read whole is read whole by every surface, the browser
+	// included, with no flag (agni issue 1102).
+	return ov.WithFlattenHierarchy(d.GetFlattenHierarchy()), nil
 }
 
 // Checklists returns the checklists a design's project declares, inherited ones included in the order

@@ -81,6 +81,9 @@ type designYAML struct {
 	// Symbols is this design's own symbol library, optional and defaulting to `symbols` beside the
 	// descriptor.
 	Symbols *string `yaml:"symbols,omitempty"`
+	// FlattenHierarchy reads the design's netlist whole, walking into every hierarchical block
+	// (webapi.Design.flatten_hierarchy, agni issue 1102).
+	FlattenHierarchy bool `yaml:"flatten_hierarchy,omitempty"`
 }
 
 type revisionYAML struct {
@@ -273,7 +276,7 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
 		return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
 	}
 	entry := CleanRel(y.Entry)
-	out := &webapi.Design{Title: orName(y.Title, y.Name), EntryUri: entry}
+	out := &webapi.Design{Title: orName(y.Title, y.Name), EntryUri: entry, FlattenHierarchy: y.FlattenHierarchy}
 	seen := map[string]bool{entry: true}
 	for _, c := range y.Companions {
 		if err := validRel("companions", c); err != nil {

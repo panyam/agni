@@ -331,8 +331,8 @@ func depth(path string) int {
 	return strings.Count(path, "/") + 1
 }
 
-// unexpandedEntry describes a cell whose contents a read left out.
-func unexpandedEntry(c *node, src string) *ir.UnexpandedHierarchy {
+// unexpandedEntry describes a cell whose contents a read left out, and why.
+func unexpandedEntry(c *node, src string, reason ir.UnexpandedReason) *ir.UnexpandedHierarchy {
 	var ci []*node
 	collect(c, "instance", &ci)
 	nm := parseName(c.Arg(1))
@@ -341,5 +341,6 @@ func unexpandedEntry(c *node, src string) *ir.UnexpandedHierarchy {
 		Kind:          "edif_cell",
 		InstanceCount: num.Int32(len(ci)),
 		Prov:          &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind},
+		Reason:        reason,
 	}
 }

@@ -55,16 +55,16 @@ func TestStatsFlattensAHierarchicalEDIF(t *testing.T) {
 }
 
 // TestHierarchyNoteNamesTheFlag holds the CLI's note to naming --flatten-hierarchy while the flag is
-// off, and to dropping it once on, where a block still listed was kept out by a cycle.
+// off, and to dropping it on a flattened read, where a block still listed was kept out by a cycle
+// the flag cannot help with, whether the flag or a design.yaml asked for flattening.
 func TestHierarchyNoteNamesTheFlag(t *testing.T) {
 	blocks := []*ir.UnexpandedHierarchy{{Name: "SUB", Kind: "edif_cell", InstanceCount: 1}}
 	if got := hierarchyNote("board.edn", blocks); !strings.Contains(got, "Pass --flatten-hierarchy to read every block.") {
 		t.Errorf("note without the flag = %q, want it to name the flag", got)
 	}
-	readFlatten = true
-	t.Cleanup(func() { readFlatten = false })
-	if got := hierarchyNote("board.edn", blocks); strings.Contains(got, "--flatten-hierarchy") {
-		t.Errorf("note with the flag on = %q, want no hint", got)
+	cycles := []*ir.UnexpandedHierarchy{{Name: "LOOP", Kind: "edif_cell", InstanceCount: 2, Reason: ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE}}
+	if got := hierarchyNote("board.edn", cycles); strings.Contains(got, "--flatten-hierarchy") {
+		t.Errorf("note on a flattened read = %q, want no hint", got)
 	}
 }
 

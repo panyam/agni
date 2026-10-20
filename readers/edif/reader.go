@@ -608,7 +608,7 @@ func unexpandedCells(root, scope *node, h *hierarchy, src string) []*ir.Unexpand
 	if h.flattened {
 		var out []*ir.UnexpandedHierarchy
 		for _, c := range h.cycles {
-			out = append(out, unexpandedEntry(c, src))
+			out = append(out, unexpandedEntry(c, src, ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE))
 		}
 		return out
 	}
@@ -619,7 +619,7 @@ func unexpandedCells(root, scope *node, h *hierarchy, src string) []*ir.Unexpand
 		if c == scope {
 			continue
 		}
-		if e := unexpandedEntry(c, src); e.GetInstanceCount() > 0 {
+		if e := unexpandedEntry(c, src, ir.UnexpandedReason_UNEXPANDED_REASON_NOT_WALKED); e.GetInstanceCount() > 0 {
 			out = append(out, e)
 		}
 	}

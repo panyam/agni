@@ -2,6 +2,7 @@ package fshost
 
 import (
 	"context"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -25,7 +26,12 @@ type flattenFixture struct {
 // an unflattened snapshot of one file share every cache tier and only the keys can keep them apart.
 func newFlattenFixture(t *testing.T) *flattenFixture {
 	t.Helper()
-	ms := []Mount{{Name: "m", FS: os.DirFS(filepath.Join("..", "readers", "edif", "testdata"))}}
+	return newFlattenFixtureOver(t, os.DirFS(filepath.Join("..", "readers", "edif", "testdata")))
+}
+
+func newFlattenFixtureOver(t *testing.T, fsys fs.FS) *flattenFixture {
+	t.Helper()
+	ms := []Mount{{Name: "m", FS: fsys}}
 	res := &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: "m", FS: ms[0].FS}), Config: &ConfigResolver{Mounts: ms}}
 	loader := service.NewCachingLoader(New(ms...), service.NewDesignCache(32))
 	chk := service.NewCheckService(loader, check.DefaultCatalog(), nil, "", nil, res)
@@ -98,5 +104,33 @@ func TestFlattenedSnapshotIsOneModelAcrossServices(t *testing.T) {
 		if st != "unchanged" && st != "" {
 			t.Errorf("two flattened ingests differ on %s: %s", ref, st)
 		}
+	}
+}
+
+// TestDesignDeclaresItsNetlistBeReadWhole holds a design.yaml's flatten_hierarchy to a snapshot that
+// asks for nothing, which is how the browser opens a declared design (agni issue 1102).
+func TestDesignDeclaresItsNetlistBeReadWhole(t *testing.T) {
+	ctx := context.Background()
+	b, err := os.ReadFile(filepath.Join("..", "readers", "edif", "testdata", "hier_blocks.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	f := newFlattenFixtureOver(t, MemFS(map[string][]byte{
+		"board/hier_blocks.edn": b,
+		"board/design.yaml":     []byte("name: board\nentry: hier_blocks.edn\nflatten_hierarchy: true\n"),
+	}))
+	s, err := f.snaps.Ingest(ctx, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/board/hier_blocks.edn"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if n := f.components(t, s.GetName()); n != 11 {
+		t.Errorf("a design declaring flatten_hierarchy reads %d components, want 11", n)
+	}
+	run, err := f.check.CheckDesign(ctx, &webapi.CheckDesignRequest{Snapshot: s.GetName()})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u := run.GetUnexpandedHierarchy(); len(u) != 0 {
+		t.Errorf("CheckDesign lists %v unexpanded, want none", u)
 	}
 }

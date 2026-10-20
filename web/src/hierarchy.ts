@@ -18,15 +18,30 @@ export function hierarchyNote(served: string | undefined): string | null {
 // hierarchyStrip wraps the notice element, mirroring undrawnStrip: it renders the note and hides the
 // element entirely when there is none, so a flat design carries no chrome. A null element is a
 // no-op.
-export function hierarchyStrip(el: HTMLElement | null): (note: string | null) => void {
+//
+// readAll, when given, is what the strip's "Read every block" button does: the browser's form of the
+// CLI's --flatten-hierarchy hint, offered where the reader learns the read was partial (agni issue
+// 1102). A page already reading designs whole passes none, since a note it still shows lists blocks
+// that place themselves, which reading again would not reach.
+export function hierarchyStrip(el: HTMLElement | null, readAll?: () => void): (note: string | null) => void {
   return (note) => {
     if (!el) return;
     if (!note) {
       el.classList.remove("on");
-      el.textContent = "";
+      el.replaceChildren();
       return;
     }
-    el.textContent = note;
+    const text = document.createElement("span");
+    text.textContent = note;
+    el.replaceChildren(text);
+    if (readAll) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "hierarchy-read-all";
+      b.textContent = "Read every block";
+      b.addEventListener("click", readAll);
+      el.append(" ", b);
+    }
     el.classList.add("on");
   };
 }

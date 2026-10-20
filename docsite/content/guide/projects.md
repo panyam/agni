@@ -120,6 +120,13 @@ one you leave undeclared.
 per design where everything in `project.yaml` is per team. [Design intent](../design-intent/) covers
 its forms. A design can also keep its own `symbols/` beside its descriptor.
 
+`flatten_hierarchy: true` reads a hierarchical netlist whole, walking into every block its top level
+places, for every surface that opens the design: the CLI with no flag, a server, and the browser.
+Without it a hierarchical EDIF reads as its top cell, and `--flatten-hierarchy` or the viewer's
+**Read every block** asks for the whole design one read at a time. The naming rules for what a walk
+reads are in [Ingestion and the IR](../../architecture/ingestion-and-ir/). A release older than the one
+that added the key refuses a `design.yaml` carrying it, as it refuses any key it does not know.
+
 Companions and revisions are listed file by file and never inferred from what sits in the folder,
 because a later revision beside the entry is a design of its own, and inferring would diff it against
 itself.
