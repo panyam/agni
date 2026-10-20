@@ -366,3 +366,21 @@ def test_an_ingest_returns_its_definition_on_both_transports(cli: Client, connec
         c.delete_snapshot(s.name)
         got[label] = (s.uri, s.board_uri, s.as_named)
     assert got["cli"] == got["connect"] == (DESIGN, "", False)
+
+
+def test_a_flattened_read_counts_every_block_on_both_transports(cli: Client, connect: Client):
+    """hier_blocks.edn places LED_DRV once and RC twice under its top cell (agni issues 718, 1104)."""
+    uri = "mount://hier/hier_blocks.edn"
+    got = {}
+    for label, c in (("cli", cli), ("connect", connect)):
+        counts = []
+        for flatten in (False, True):
+            name = c.ingest(uri, flatten_hierarchy=flatten)
+            d = c.get_design(snapshot=name)
+            c.delete_snapshot(name)
+            counts.append((d.component_count, d.net_count, len(d.unexpanded_hierarchy)))
+        got[label] = counts
+    assert got["cli"] == got["connect"], got
+    top, whole = got["cli"]
+    assert top[2] > 0, "the fixture should read top-cell only without the flag"
+    assert whole == (11, 9, 0), whole

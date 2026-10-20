@@ -63,6 +63,7 @@ class Client:
         board_uri: str = "",
         geometry_uri: str = "",
         as_named: bool = False,
+        flatten_hierarchy: bool = False,
         overlay: Optional[Union[checks_pb2.OverlayConfig, Mapping[str, Any]]] = None,
         read_board: bool = False,
         snapshot_id: str = "",
@@ -72,9 +73,19 @@ class Client:
 
         ``board_uri`` and ``geometry_uri`` attach a board or schematic other than the ones the design
         declares, ``as_named`` reads exactly the artifact named, and ``overlay`` is the config every
-        question is answered under. ``ingest_snapshot`` returns the whole ``Snapshot`` instead.
+        question is answered under. ``flatten_hierarchy`` reads a hierarchical netlist (an EDIF export
+        whose top cell places blocks) whole, as the CLI's ``--flatten-hierarchy`` does; left off, every
+        question is answered over the top cell alone. ``ingest_snapshot`` returns the whole
+        ``Snapshot`` instead.
         """
-        snap = snapshot_pb2.Snapshot(uri=uri, board_uri=board_uri, geometry_uri=geometry_uri, as_named=as_named, overlay=overlay)
+        snap = snapshot_pb2.Snapshot(
+            uri=uri,
+            board_uri=board_uri,
+            geometry_uri=geometry_uri,
+            as_named=as_named,
+            flatten_hierarchy=flatten_hierarchy,
+            overlay=overlay,
+        )
         resp = self.call("SnapshotService", "Ingest", snapshot=snap, read_board=read_board, snapshot_id=snapshot_id)
         return resp.name  # type: ignore[attr-defined]
 
