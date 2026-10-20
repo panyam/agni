@@ -154,12 +154,6 @@ findings:
       subjects:
         - net:FLASH_PWR
         - net:VCC_IN
-  unspecified-pin-with-driver:
-    - class: false-positive
-      why: The TXU0304 symbol declares U59 pin 8 (OE), tied to +1V8 to keep the JTAG translator enabled, as tri_state, and KiCad's ERC reads it so. The KiCad reader keeps a tri_state pin as UNSPECIFIED, so the rule takes a declared type for a missing one.
-      ticket: 1082
-      subjects:
-        - net:+1V8
 kicad_only:
   clearance:
     - class: missed

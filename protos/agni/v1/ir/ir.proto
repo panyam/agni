@@ -79,6 +79,14 @@ enum PinDirection {
   PIN_DIRECTION_NO_CONNECT = 6;
   PIN_DIRECTION_POWER_IN = 7;
   PIN_DIRECTION_POWER_OUT = 8;
+  // A tri-state output drives its net only while enabled, so a net it shares with another tri-state
+  // pin is a bus rather than a conflict. It answers "is this net driven" and is no hard driver.
+  PIN_DIRECTION_TRISTATE = 9;
+  // An open-collector (or open-drain) output can only pull its net low, so several on one net are a
+  // wire-OR, which needs a pull-up rather than being a conflict.
+  PIN_DIRECTION_OPEN_COLLECTOR = 10;
+  // An open-emitter (or open-source) output can only pull its net high, the mirror of open-collector.
+  PIN_DIRECTION_OPEN_EMITTER = 11;
 }
 
 // --- Tier 1: netlist (frozen) ---
