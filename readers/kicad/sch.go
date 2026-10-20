@@ -86,10 +86,11 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 		// Declared even when the slice is empty, because this reader looked, so an empty list
 		// means "no collisions" here, where on a reader that cannot look it would mean "nobody
 		// asked" (agni issue 309).
-		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps"},
+		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps", "range_labels"},
 		NoJunctionEndpoints:   noJunction,
 		JoinedTaps:            joinedTaps,
 		UnmodeledBuses:        collectBuses(root, src, nil),
+		RangeLabels:           rangeLabels(root, src),
 		UnresolvedSymbols:     unresolvedSyms,
 		ResolvedSymbols:       libs.resolvedSymbols(),
 		UnannotatedComponents: refdes.Unannotated(d.Components),

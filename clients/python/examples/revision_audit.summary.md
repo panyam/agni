@@ -119,7 +119,7 @@
 
 ## Skipped rules
 
-6 rows
+7 rows
 
 | rule | reason |
 |---|---|

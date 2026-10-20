@@ -70,6 +70,7 @@ var rules = []*check.Rule{
 	check.OnFittedParts(ledPolarity),
 	pinNetConflict,
 	busNotModeled,
+	busSpellingNotABus,
 	symbolUnresolved,
 	unannotatedComponents,
 }

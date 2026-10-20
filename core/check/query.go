@@ -376,6 +376,10 @@ func (m *irModel) UnmodeledBuses() []*ir.BusNotModeled {
 	return m.d.GetInputDiagnostics().GetUnmodeledBuses()
 }
 
+func (m *irModel) RangeLabels() []*ir.RangeLabel {
+	return m.d.GetInputDiagnostics().GetRangeLabels()
+}
+
 func (m *irModel) PinDir(refDes, pin string) ir.PinDirection {
 	return m.pinDir[refDes+"\x00"+pin]
 }

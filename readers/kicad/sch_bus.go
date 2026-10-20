@@ -19,8 +19,9 @@ import (
 // buses (agni issue 939). Group buses are not recorded here at all; judging one would mean checking
 // each PREFIX.MEMBER, and KiCad lets a group leave members unbroken-out.
 //
-// The label test is netgraph.IsBusName, which accepts `DATA[7..0]` and also xschem's `DATA[7:0]`.
-// KiCad itself reads the colon form as a plain scalar (kicadBusVectorRe in sch_hier_nets.go).
+// The label test is isKiCadBusLabel, KiCad's own `DATA[0..7]` and nothing else. xschem's `DATA[7:0]`
+// is a plain scalar to KiCad, so it is no bus here, and rangeLabels records it for
+// bus-spelling-not-a-bus instead (agni issue 605).
 //
 // qualify maps each MEMBER name into the same net-name space the sheet's member NETS live in. On a
 // sub-sheet instance a member label `DATA0` becomes the net `/amp1/DATA0` (sheetScope.local), so bare
@@ -58,9 +59,34 @@ func collectBuses(root *node, src string, qualify func(string) string) []*ir.Bus
 	for _, tag := range []string{"label", "global_label"} {
 		for _, l := range root.Children(tag) {
 			name := unescapeName(atomOf(l.Arg(1)))
-			if netgraph.IsBusName(name) {
+			if isKiCadBusLabel(name) {
 				add("bus", name, netgraph.ExpandBusName(name))
 			}
+		}
+	}
+	return out
+}
+
+// isKiCadBusLabel reports whether a label is a bus to KiCad, which reads only its vector spelling
+// `PREFIX[first..last]`. netgraph.IsBusName also accepts `[hi:lo]` because xschem and gEDA write it,
+// and the two readers of a KiCad label (collectBuses and busLabelFor) both ask this one instead.
+func isKiCadBusLabel(name string) bool { return kicadBusVectorRe.MatchString(name) }
+
+// rangeLabels records every label on one sheet spelled with an index range in either dialect, and
+// whether KiCad reads it as a bus. A colon-spelled label is one scalar net to KiCad, so a user who
+// meant a bus by it has merged its members, and that is what bus-spelling-not-a-bus reports. Deduped
+// by name within the sheet, as collectBuses is.
+func rangeLabels(root *node, src string) []*ir.RangeLabel {
+	var out []*ir.RangeLabel
+	seen := map[string]bool{}
+	for _, tag := range []string{"label", "global_label", "hierarchical_label"} {
+		for _, l := range root.Children(tag) {
+			name := unescapeName(atomOf(l.Arg(1)))
+			if seen[name] || !netgraph.IsBusName(name) {
+				continue
+			}
+			seen[name] = true
+			out = append(out, &ir.RangeLabel{Label: name, ReadsAsBus: isKiCadBusLabel(name), Prov: &ir.Provenance{SourceFile: src}})
 		}
 	}
 	return out

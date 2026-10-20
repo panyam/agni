@@ -1,6 +1,7 @@
 package kicad
 
 import (
+	"bytes"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -48,12 +49,18 @@ func TestHierBusMembersDoNotCross(t *testing.T) {
 }
 
 // TestHierBusMemberQualification pins fix (b). A bus's member names are qualified into the same
-// net-name space as the sheet's member NETS, so bus-not-modeled resolves correctly per instance. On
-// this fully-tapped fixture every member of every bus is an actual net, so the finding is silent; the
-// sub-sheet bus's members are the qualified `/sub/DATAn`. Before the fix, collectBuses emitted bare
-// members that never matched the sub-sheet's `/sub/DATAn` nets, so the flag false-fired.
+// net-name space as the sheet's member NETS, so bus-not-modeled resolves correctly per instance. The
+// fixture is the hier_bus pair with each sheet's local bus label respelled in KiCad's vector syntax
+// while the sheet pin keeps its colon, so each sheet carries its own bus and neither crosses. Every
+// member of every bus is then an actual net, so the finding is silent, and the sub-sheet bus's
+// members are the qualified `/sub/DATAn`. Before the fix, collectBuses emitted bare members that
+// never matched the sub-sheet's `/sub/DATAn` nets, so the flag false-fired.
 func TestHierBusMemberQualification(t *testing.T) {
-	d, _, err := ReadSchematicHierarchyNets("hier_bus_root.kicad_sch", readFixture(t, "hier_bus_root.kicad_sch"), hierOpen(t))
+	localBus := func(b []byte) []byte {
+		return bytes.ReplaceAll(b, []byte(`(label "DATA[1:0]"`), []byte(`(label "DATA[0..1]"`))
+	}
+	open := func(rel string) ([]byte, error) { return localBus(readFixture(t, rel)), nil }
+	d, _, err := ReadSchematicHierarchyNets("hier_bus_root.kicad_sch", localBus(readFixture(t, "hier_bus_root.kicad_sch")), open)
 	if err != nil {
 		t.Fatal(err)
 	}

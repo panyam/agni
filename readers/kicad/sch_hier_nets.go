@@ -82,10 +82,11 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 		DanglingEndpoints: hierDangles(dangles, w.srcs),
 		RefDesCollisions:  collisions,
 		// Declared even when empty, so an empty list reads as "looked, found none" (agni issue 309).
-		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps"},
+		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps", "range_labels"},
 		NoJunctionEndpoints:   w.in.noJunction,
 		JoinedTaps:            w.in.joinedTaps,
 		UnmodeledBuses:        w.buses,
+		RangeLabels:           w.ranges,
 		UnresolvedSymbols:     unresolvedSyms,
 		ResolvedSymbols:       w.libs.resolvedSymbols(),
 		UnannotatedComponents: refdes.Unannotated(d.Components),
@@ -498,6 +499,7 @@ type hierNetWalker struct {
 	in       netInputs
 	srcs     []string            // per-instance source file, indexed by the instance's offset band
 	buses    []*ir.BusNotModeled // bus constructs detected across sheets (WS1-034)
+	ranges   []*ir.RangeLabel    // range-spelled labels, one per name and source file (agni issue 605)
 	complete bool
 	open     func(relPath string) ([]byte, error)
 }
@@ -543,6 +545,13 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 	w.comps.collect(root, src, instPath)
 	collectSheetNets(root, sc, &w.in)
 	w.buses = append(w.buses, collectBuses(root, src, sc.local)...)
+	for _, r := range rangeLabels(root, src) {
+		if !slices.ContainsFunc(w.ranges, func(o *ir.RangeLabel) bool {
+			return o.GetLabel() == r.GetLabel() && o.GetProv().GetSourceFile() == src
+		}) {
+			w.ranges = append(w.ranges, r)
+		}
+	}
 	w.d.Sheets = append(w.d.Sheets, &ir.Sheet{
 		Id:   id,
 		Name: name,
