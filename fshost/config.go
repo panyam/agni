@@ -288,7 +288,7 @@ func foldFile(h io.Writer, fsys fs.FS, name, rel string) error {
 // foldCount writes a count, so a tree's entries cannot be confused with another tree's.
 func foldCount(h io.Writer, n int) {
 	var b [8]byte
-	binary.BigEndian.PutUint64(b[:], uint64(n))
+	binary.BigEndian.PutUint64(b[:], uint64(n)) // #nosec G115 -- n is a count, never negative
 	h.Write(b[:])
 }
 

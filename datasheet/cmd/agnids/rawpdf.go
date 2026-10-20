@@ -41,6 +41,6 @@ func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
 			return
 		}
 		w.Header().Set("Content-Type", "application/pdf")
-		http.ServeFile(w, r, abs)
+		http.ServeFile(w, r, abs) // #nosec G703 -- abs comes from mounts.Resolve, which refuses a path outside its mount
 	})
 }

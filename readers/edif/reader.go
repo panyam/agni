@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/num"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/refdes"
 )
@@ -143,7 +144,7 @@ func extract(root *node, src string) *ir.Design {
 			byKey[key] = comp
 			order = append(order, key)
 		}
-		sec.Index = int32(len(comp.Sections))
+		sec.Index = num.Int32(len(comp.Sections))
 		comp.Sections = append(comp.Sections, sec)
 		// Aggregate section properties to the component level, first section winning a key
 		// conflict. The per-section attributes remain authoritative.
@@ -570,7 +571,7 @@ func unexpandedCells(root, scope *node, src string) []*ir.UnexpandedHierarchy {
 		out = append(out, &ir.UnexpandedHierarchy{
 			Name:          nm.best(),
 			Kind:          "edif_cell",
-			InstanceCount: int32(len(ci)),
+			InstanceCount: num.Int32(len(ci)),
 			Prov:          &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind},
 		})
 	}

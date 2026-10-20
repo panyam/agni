@@ -3,6 +3,7 @@ package render
 import (
 	"encoding/binary"
 
+	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	geomath "github.com/panyam/agni/internal/geomath"
 )
@@ -71,11 +72,11 @@ func (c *primCollector) build() (vertices, records []byte, keys []*geom.Primitiv
 	for i, p := range c.prims {
 		first := vcount
 		for _, pt := range p.pts {
-			vertices = binary.LittleEndian.AppendUint32(vertices, uint32(int32(pt[0]-ox)))
-			vertices = binary.LittleEndian.AppendUint32(vertices, uint32(int32(pt[1]-oy)))
+			vertices = binary.LittleEndian.AppendUint32(vertices, uint32(num.Int32(pt[0]-ox))) // #nosec G115 -- the int32's two's-complement bits, which the reader decodes as an int32
+			vertices = binary.LittleEndian.AppendUint32(vertices, uint32(num.Int32(pt[1]-oy))) // #nosec G115 -- the int32's two's-complement bits, which the reader decodes as an int32
 			vcount++
 		}
-		records = appendRecord(records, p.kind, p.group, first, uint32(len(p.pts)))
+		records = appendRecord(records, p.kind, p.group, first, num.Uint32(len(p.pts)))
 		if p.refDes != "" || p.net != "" || p.busID != "" {
 			keys = append(keys, &geom.PrimitiveKey{Primitive: uint32(i), RefDes: p.refDes, Net: p.net, NetId: p.netID, Pin: p.pin, BusId: p.busID})
 		}

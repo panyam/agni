@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/geomath"
@@ -398,7 +399,7 @@ func joinedTaps(wires []netgraph.Wire, joins map[netgraph.Point]tapJoin, segment
 		out = append(out, &ir.JoinedTap{
 			X: t.At.X, Y: t.At.Y,
 			JoinKind: j.kind, Label: j.label,
-			Segments: int32(segments[t.At]),
+			Segments: num.Int32(segments[t.At]),
 			Prov:     tapProv(t.WireId, src),
 		})
 	}

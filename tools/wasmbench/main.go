@@ -179,7 +179,7 @@ func readDir(dir string) (map[string][]byte, int64, error) {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		b, err := os.ReadFile(p) // #nosec G304 -- a benchmark reading the design the developer named
+		b, err := os.ReadFile(p) // #nosec G304 G122 -- a benchmark reading the design the developer named
 		if err != nil {
 			return err
 		}

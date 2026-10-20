@@ -7,6 +7,7 @@ package symread
 import (
 	"strings"
 
+	"github.com/panyam/agni/core/num"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/internal/refdes"
@@ -200,7 +201,7 @@ func (d Dialect) NewComponent(ref, sym string, attrs map[string]string, src stri
 // the promoted component-level Value is filled from the first section that carries one.
 func (d Dialect) AddSection(comp *ir.Component, sym string, attrs map[string]string, src string) {
 	sec := &ir.ComponentSection{
-		Index:      int32(len(comp.Sections)),
+		Index:      num.Int32(len(comp.Sections)),
 		PartRef:    sym,
 		LibraryRef: d.Lib,
 		Attributes: map[string]string{},

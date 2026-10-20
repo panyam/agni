@@ -9,6 +9,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 
 	"github.com/spf13/cobra"
 
@@ -69,7 +70,7 @@ func serveCmd() *cobra.Command {
 			} else {
 				fmt.Fprintf(cmd.ErrOrStderr(), "serving the datasheets workbench from %s at http://%s/datasheets/ with %d mount(s) (Ctrl-C to stop)\n", webDir, displayAddr(addr), len(ms))
 			}
-			return skhttp.ListenAndServeGraceful(&http.Server{Addr: addr, Handler: mux})
+			return skhttp.ListenAndServeGraceful(&http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second})
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8090", "address to listen on")

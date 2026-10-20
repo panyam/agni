@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math"
 
+	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	geomath "github.com/panyam/agni/internal/geomath"
 )
@@ -136,14 +137,14 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 	var labels []*geom.PackedLabel
 	for _, pl := range collectLabels(g, sheet, style) {
 		labels = append(labels, &geom.PackedLabel{
-			X:           int32(pl.x - ox),
-			Y:           int32(pl.y - oy),
+			X:           num.Int32(pl.x - ox),
+			Y:           num.Int32(pl.y - oy),
 			Text:        pl.text,
-			Height:      int32(pl.height),
+			Height:      num.Int32(pl.height),
 			RotationDeg: pl.rotationDeg,
 			Justify:     pl.justify,
 			Color:       pl.color,
-			MaxWidth:    int32(pl.maxWidth),
+			MaxWidth:    num.Int32(pl.maxWidth),
 		})
 	}
 
@@ -156,10 +157,10 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 		}
 		bb := im.Bbox
 		images = append(images, &geom.PackedImage{
-			X:           int32(bb.Min.X - ox),
-			Y:           int32(bb.Min.Y - oy),
-			W:           int32(bb.Max.X - bb.Min.X),
-			H:           int32(bb.Max.Y - bb.Min.Y),
+			X:           num.Int32(bb.Min.X - ox),
+			Y:           num.Int32(bb.Min.Y - oy),
+			W:           num.Int32(bb.Max.X - bb.Min.X),
+			H:           num.Int32(bb.Max.Y - bb.Min.Y),
 			Mime:        im.Mime,
 			Data:        im.Data,
 			RotationDeg: im.RotationDeg,
@@ -172,7 +173,7 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 		LayoutVersion: packLayoutVersion,
 		FontFamily:    style.Font,
 		// Indexed by group so the mapping can't drift from the group constants.
-		GroupColors: schematicGroupColors(style, hasBus),
+		GroupColors:     schematicGroupColors(style, hasBus),
 		BackgroundColor: style.Page,
 		OriginX:         ox,
 		OriginY:         oy,

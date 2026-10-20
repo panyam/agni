@@ -13,6 +13,7 @@ import (
 	"sync"
 
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/core/num"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/timing"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -550,7 +551,7 @@ func onlyIn(a, b map[string]bool) ([]string, int32) {
 		}
 	}
 	sort.Strings(out)
-	n := int32(len(out))
+	n := num.Int32(len(out))
 	if len(out) > 20 {
 		out = out[:20]
 	}

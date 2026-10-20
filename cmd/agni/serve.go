@@ -375,7 +375,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes}), mux)
 	}
 
-	srv := &http.Server{Addr: addr, Handler: mux}
+	// A client that never finishes its headers holds a connection open, so headers get a deadline.
+	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
 	urls := serveURLs(addr, lanIPs)
 	if o.banner != nil {
 		o.banner(urls, len(mounts))

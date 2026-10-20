@@ -307,7 +307,9 @@ scan on every pull request would mostly re-answer last week's question and still
 published between pull requests. `.github/workflows/vulncheck.yml` runs it weekly and on each
 release tag and files an issue when it fails, and `make audit` runs it with the three scanners the
 gate does run. Those three (`lint`, `seccheck`, `secrets`) run each tool through `go run` at the
-version the Makefile pins, so nothing has to be installed. A gosec finding is fixed or annotated on
+version the Makefile pins, so nothing has to be installed, and gosec runs under the Go that `go.mod`
+names, because under a newer one its SSA-based rules (G115 and the taint rules) skip without a word.
+A gosec finding is fixed or annotated on
 its line as `// #nosec G<n> -- <why>`, and a gitleaks false positive is allowlisted by exact value in
 `.gitleaks.toml`.
 

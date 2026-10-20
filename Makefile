@@ -150,8 +150,13 @@ vulncheck:
 
 # gosec at medium severity and above over each shipped module. A finding is fixed, or annotated on its
 # line as `// #nosec G<n> -- <why>`, so the reason travels with the code to any scanner that reads it.
+#
+# It runs under the Go that go.mod names, as CI does. Under a newer Go than gosec's analysis library
+# reads, its SSA-based rules (G115 integer overflow, G703 and G710 taint, G112, G122) skip without a
+# word, so a developer on Go 1.27 saw a clean run where CI on 1.26.4 found 100 more.
+GO_MOD_VERSION := $(shell awk '/^go /{print $$2; exit}' go.mod)
 seccheck:
-	@for m in $(SHIPPED_MODULES); do echo "==> gosec $$m"; (cd $$m && $(GO) run $(GOSEC) -quiet -severity=medium ./...) || exit 1; done
+	@for m in $(SHIPPED_MODULES); do echo "==> gosec $$m (go$(GO_MOD_VERSION))"; (cd $$m && GOTOOLCHAIN=go$(GO_MOD_VERSION) $(GO) run $(GOSEC) -quiet -severity=medium ./...) || exit 1; done
 
 # Committed secrets, over the whole history. A known-fake value is allowlisted by exact value in
 # .gitleaks.toml, so a real secret of the same shape is still reported.

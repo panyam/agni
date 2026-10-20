@@ -3,6 +3,7 @@ package render
 import (
 	"math"
 
+	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
@@ -116,8 +117,8 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 			continue
 		}
 		labels = append(labels, &geom.PackedLabel{
-			X: int32(t.GetAt().X - ox), Y: int32(t.GetAt().Y - oy),
-			Text: boardTextLine(t), Height: int32(boardTextHeight(t)),
+			X: num.Int32(t.GetAt().X - ox), Y: num.Int32(t.GetAt().Y - oy),
+			Text: boardTextLine(t), Height: num.Int32(boardTextHeight(t)),
 			RotationDeg: int32(math.Round(t.GetRotationDeg())),
 			Justify:     justifyWord(t), Color: style.Field,
 		})

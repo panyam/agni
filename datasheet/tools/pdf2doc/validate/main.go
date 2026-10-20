@@ -15,7 +15,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "usage: validate <doc-ir.textproto>")
 		os.Exit(2)
 	}
-	f, err := os.Open(os.Args[1])
+	f, err := os.Open(os.Args[1]) // #nosec G703 G304 -- a validator reading the file the developer named
 	if err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)

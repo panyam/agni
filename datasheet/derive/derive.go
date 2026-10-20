@@ -19,11 +19,12 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/panyam/agni/core/num"
+	"github.com/panyam/agni/core/param"
+	"github.com/panyam/agni/datasheet/doc"
 	derivepb "github.com/panyam/agni/datasheet/gen/go/agni/v1/derive"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/datasheet/doc"
-	"github.com/panyam/agni/core/param"
 )
 
 // Version is the derive stage's toolchain pin, recorded in every RunManifest. Bump
@@ -135,9 +136,9 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 			extractTable(spec, manifest, pg, t, kind)
 		}
 	}
-	manifest.ParametersEmitted = int32(len(spec.Parameters))
-	manifest.PinsEmitted = int32(len(spec.Pins))
-	manifest.PackagesEmitted = int32(len(spec.Packages))
+	manifest.ParametersEmitted = num.Int32(len(spec.Parameters))
+	manifest.PinsEmitted = num.Int32(len(spec.Pins))
+	manifest.PackagesEmitted = num.Int32(len(spec.Packages))
 	if err := param.Validate(spec); err != nil {
 		return nil, nil, fmt.Errorf("derive: emitted spec fails validation (a derive bug, not a data gap): %w", err)
 	}
@@ -404,12 +405,12 @@ func extractTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg *do
 			return nil
 		}
 		// Exact hit first, else a merged cell whose span covers this row.
-		if c := doc.CellAt(t, row, int32(col)); c != nil {
+		if c := doc.CellAt(t, row, num.Int32(col)); c != nil {
 			return c
 		}
 		for _, c := range t.Cells {
 			rs := max(c.RowSpan, 1)
-			if c.Col == int32(col) && c.Row < row && c.Row+rs > row {
+			if c.Col == num.Int32(col) && c.Row < row && c.Row+rs > row {
 				return c
 			}
 		}

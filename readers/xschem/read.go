@@ -21,6 +21,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/panyam/agni/core/num"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/internal/refdes"
@@ -298,7 +299,7 @@ func lastBraceC(o object) string {
 func irResolved(rs []symread.Resolved) []*ir.ResolvedSymbol {
 	var out []*ir.ResolvedSymbol
 	for _, r := range rs {
-		out = append(out, &ir.ResolvedSymbol{Symref: r.Symref, Kind: "xschem_sym", PinCount: int32(r.PinCount)})
+		out = append(out, &ir.ResolvedSymbol{Symref: r.Symref, Kind: "xschem_sym", PinCount: num.Int32(r.PinCount)})
 	}
 	return out
 }

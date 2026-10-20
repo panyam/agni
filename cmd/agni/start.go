@@ -267,7 +267,7 @@ func copyFile(src, dst string) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, b, 0o644) // #nosec G306 -- a project the user creates, in their own tree
+	return os.WriteFile(dst, b, 0o644) // #nosec G306 G703 -- a project the user creates, in their own tree
 }
 
 // report tells the operator what was created and what was COPIED from where. The copy is what can

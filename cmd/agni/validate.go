@@ -13,6 +13,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/panyam/agni/core/num"
 	"github.com/panyam/agni/core/validate"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/readers/formats"
@@ -133,8 +134,8 @@ func validateFile(l *formats.Loader, path string, explicit bool) *webapi.FileVal
 		} else {
 			fv.Problems = append(fv.Problems, prefixed("netlist", validate.Design(d))...)
 			fv.Netlist = &webapi.NetlistCounts{
-				Components: int32(len(d.GetComponents())),
-				Nets:       int32(len(d.GetNets())),
+				Components: num.Int32(len(d.GetComponents())),
+				Nets:       num.Int32(len(d.GetNets())),
 			}
 		}
 	}
@@ -150,11 +151,11 @@ func validateFile(l *formats.Loader, path string, explicit bool) *webapi.FileVal
 				wires += len(s.GetWires())
 			}
 			fv.Geometry = &webapi.GeometryCounts{
-				Sheets:     int32(len(g.GetSheets())),
-				Symbols:    int32(len(g.GetSymbols())),
+				Sheets:     num.Int32(len(g.GetSheets())),
+				Symbols:    num.Int32(len(g.GetSymbols())),
 				Placements: int32(placements),
 				Wires:      int32(wires),
-				Resolved:   int32(validate.Resolved(g)),
+				Resolved:   num.Int32(validate.Resolved(g)),
 			}
 		}
 	}

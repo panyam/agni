@@ -322,7 +322,7 @@ func copyImages(src, dst string, names map[string]bool) error {
 		if err != nil {
 			return fmt.Errorf("image %q referenced but not found in %s: %w", name, src, err)
 		}
-		if err := os.WriteFile(filepath.Join(dst, name), b, 0o644); err != nil { // #nosec G306 -- committed docs pages
+		if err := os.WriteFile(filepath.Join(dst, name), b, 0o644); err != nil { // #nosec G306 G703 -- committed docs pages
 			return err
 		}
 	}

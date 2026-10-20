@@ -706,7 +706,10 @@ canonicalizing belongs on the comparison and never at the projector.
 in the gate. `vulncheck` is not, since the advisory database moves without the code, and runs weekly
 and per tag in `vulncheck.yml`; `make audit` runs all four. A gosec finding is fixed or annotated on
 its own line as `// #nosec G<n> -- <why>`, never excluded in the Makefile, so the reason reaches an
-outside scanner too. gitleaks installs as `github.com/zricethezav/gitleaks/v8`, its module path,
+outside scanner too. **gosec runs under the Go `go.mod` names (`GOTOOLCHAIN`)**, because under a newer
+Go its SSA rules (G115, G703, G710, G112, G122) skip silently: a local 1.27 run read clean where CI
+found 100 findings. A narrowing of a count or coordinate goes through `core/num`, which saturates,
+since a design file can come from anyone and a wrapped `int32` reads as a real value. gitleaks installs as `github.com/zricethezav/gitleaks/v8`, its module path,
 whatever its repo is called. `SECURITY.md` is the reporting policy.
 
 **`make oracle` is a separate suite and is NOT in the gate.** It cross-checks the KiCad reader

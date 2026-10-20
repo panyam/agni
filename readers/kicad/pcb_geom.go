@@ -7,6 +7,7 @@ import (
 	"sort"
 	"strconv"
 
+	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/internal/geomath"
 	"github.com/panyam/agni/internal/refdes"
@@ -47,7 +48,7 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 		for _, l := range lt.Kids[1:] { // Kids[0] is the "layers" head atom
 			name := atomOf(l.Arg(1))
 			g.Layers = append(g.Layers, &geom.BoardLayer{
-				Number: int32(atoi(l.Head())),
+				Number: num.Int32(atoi(l.Head())),
 				Name:   name,
 				Kind:   atomOf(l.Arg(2)),
 			})
