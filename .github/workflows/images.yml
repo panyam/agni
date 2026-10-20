@@ -19,6 +19,8 @@ on:
       - datasheet/tools/pdf2doc/**
       - hack/image_smoke.sh
       - hack/compose_smoke.sh
+      # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
+      - protos/agni/v1/webapi/**
       - deploy/**
       - .github/workflows/images.yml
       - .github/workflows/release.yml
@@ -33,6 +35,8 @@ on:
       - datasheet/tools/pdf2doc/**
       - hack/image_smoke.sh
       - hack/compose_smoke.sh
+      # The smoke scripts speak the wire, so a change to a request they send runs them (agni 1068).
+      - protos/agni/v1/webapi/**
       - deploy/**
       - .github/workflows/images.yml
       - .github/workflows/release.yml

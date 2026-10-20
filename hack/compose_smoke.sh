@@ -33,11 +33,14 @@ curl -fsS "http://127.0.0.1:$port/" >/dev/null || fail "the viewer did not answe
 
 rpc() { curl -fsS -H 'Content-Type: application/json' -d "$2" "http://127.0.0.1:$port/agni.v1.webapi.$1"; }
 design=mount://designs/designs/gateway
-rpc DesignService/GetDesign "{\"uri\":\"$design\"}" | grep -q '"componentCount"' || fail "GetDesign did not read the mounted design"
+# Every question names a snapshot of the design, ingested once (agni 1061).
+snapshot=$(rpc SnapshotService/Ingest "{\"snapshot\":{\"uri\":\"$design\"}}" | python3 -c 'import json,sys; print(json.load(sys.stdin)["name"])') \
+  || fail "Ingest did not take the mounted design"
+rpc DesignService/GetDesign "{\"snapshot\":\"$snapshot\"}" | grep -q '"componentCount"' || fail "GetDesign did not read the mounted design"
 
 # A run the store keeps proves the reviews volume is writable by the image's user.
-manifest=$(rpc ReviewService/ListChecklists "{\"designUri\":\"$design\"}" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["checklists"][0]["manifest"]))')
-rpc ReviewService/CreateReview "{\"designUri\":\"$design\",\"manifest\":$manifest}" | grep -Eq '"name": ?"reviews/' \
+manifest=$(rpc ReviewService/ListChecklists "{\"snapshot\":\"$snapshot\"}" | python3 -c 'import json,sys; print(json.dumps(json.load(sys.stdin)["checklists"][0]["manifest"]))')
+rpc ReviewService/CreateReview "{\"snapshot\":\"$snapshot\",\"manifest\":$manifest}" | grep -Eq '"name": ?"reviews/' \
   || fail "CreateReview did not store a run, so the reviews volume is not writable"
 
 compose run --rm trial /designs/designs/gateway >"$work/report.md" 2>"$work/trial.err" || { cat "$work/trial.err" >&2; fail "the trial did not run"; }
