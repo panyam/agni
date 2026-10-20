@@ -1,0 +1,21 @@
+(edif ISSUE1095
+  (edifVersion 2 0 0)
+  (design ISSUE1095 (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance TP1 (viewRef V (cellRef TP)) (designator "TP1"))
+          (instance TP2 (viewRef V (cellRef TP)) (designator "TP2"))
+          (net GND (joined (portRef 2 (instanceRef U1)) (portRef 1 (instanceRef TP1)) (portRef 1 (instanceRef TP2))))
+          (net SIG1 (joined (portRef 3 (instanceRef U1))))
+          (net SIG2 (joined (portRef 4 (instanceRef U1))))
+          (net SIG3 (joined (portRef 5 (instanceRef U1))))
+          (net SIG4 (joined (portRef 6 (instanceRef U1))))
+          (net SIG5 (joined (portRef 7 (instanceRef U1))))
+          (net SIG6 (joined (portRef 8 (instanceRef U1))))
+          (net SIG7 (joined (portRef 9 (instanceRef U1))))
+          (net SIG8 (joined (portRef 10 (instanceRef U1))))
+          (net SIG9 (joined (portRef 11 (instanceRef U1))))
+          (net SIG10 (joined (portRef 12 (instanceRef U1)))))))))

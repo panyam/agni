@@ -1,0 +1,21 @@
+$PACKAGES
+
+'FOOT_TP_SHARED' ! 'MPN_SMALL_PAD' ;  TP_A TP_B
+
+'FOOT_TP_SHARED' ! 'MPN_LARGE_PAD' ;  TP_C
+
+$NETS
+
+'NET_A' ; TP_A.1
+
+'NET_B' ; TP_B.1
+
+'NET_C' ; TP_C.1
+
+$PINS
+
+$A_PROPERTIES
+
+'Pin Type' 'TEST' ;  TP_A.1 TP_B.1 TP_C.1
+
+$END

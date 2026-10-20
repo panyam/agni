@@ -1,0 +1,21 @@
+(edif ISSUE1085
+  (edifVersion 2 0 0)
+  (design ISSUE1085 (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell SUB_A
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance D1 (viewRef V (cellRef LED)) (designator "D1"))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (net NET_LED_CATHODE (joined (portRef K (instanceRef D1)) (portRef 1 (instanceRef R1))))
+          (net NET_LED_ANODE (joined (portRef A (instanceRef D1)))))))
+    (cell SUB_B
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance C1 (viewRef V (cellRef CAP)) (designator "C1"))
+          (net NET_DECAP (joined (portRef 1 (instanceRef C1)))))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef SUB_A)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef SUB_B)) (designator "U2")))))))
