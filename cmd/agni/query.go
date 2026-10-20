@@ -137,7 +137,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				return err
 			}
 			if len(bind) > 0 && setPath != "" {
-				return fmt.Errorf("--bind applies to one query; a set binds each query's variables under its own bind key")
+				return fmt.Errorf("--bind applies to one query; a set binds each query's variables under its own bind: key")
 			}
 			if specLib {
 				specs, err := param.LoadSet(os.DirFS(paramsDir))
