@@ -19,6 +19,7 @@ import (
 	"github.com/panyam/agni/service"
 	goal "github.com/panyam/goapplib"
 	"github.com/spf13/cobra"
+	"google.golang.org/protobuf/proto"
 )
 
 // siteCmd writes the public demo as plain files for a static host (agni issue 856): a landing page
@@ -87,6 +88,7 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 
 	sa := &serveApp{engine: engineWasm, base: base, static: true}
 	var pages []string // design addresses, relative to the base
+	mounts := &webapi.ListMountsResponse{}
 	for _, spec := range seeds {
 		name, dir, ok := strings.Cut(spec, "=")
 		if !ok || name == "" || dir == "" || strings.ContainsAny(name, "/ ") {
@@ -113,6 +115,14 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 		if err := os.WriteFile(filepath.Join(out, "files", name+".json"), []byte(b), 0o644); err != nil {
 			return err
 		}
+		mount, tree, err := siteDir(root, name)
+		if err != nil {
+			return fmt.Errorf("--seed %s: %w", name, err)
+		}
+		mounts.Mounts = append(mounts.Mounts, mount)
+		if err := writeProto(filepath.Join(out, "dirs", name+".json"), tree); err != nil {
+			return err
+		}
 		designs, err := seedDesigns(root, name)
 		if err != nil {
 			return fmt.Errorf("--seed %s: %w", name, err)
@@ -126,6 +136,9 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 				Size: humanBytes(listing.GetTotalSize()), Licence: licenceOf(dir), Note: d.note,
 			})
 		}
+	}
+	if err := writeProto(filepath.Join(out, "mounts.json"), mounts); err != nil {
+		return err
 	}
 	// The browser mount has one viewer page and one Load page, and a dropped design names its path
 	// in their query, since a static host serves only the pages written here.
@@ -217,6 +230,55 @@ func copySeed(src, dst, mount, under string) (*webapi.ListDesignFilesResponse, e
 	})
 	sort.Slice(resp.Files, func(i, j int) bool { return resp.Files[i].GetPath() < resp.Files[j].GetPath() })
 	return resp, err
+}
+
+// siteDir is a seed's mount as ListMounts names it, and every entry under it as ListDir answers
+// for each folder, each folder's own entries following their parent's in one listing. A static host
+// has no server to list a mount, and the page's engine holds only the files it was given, so the
+// page answers its file trees from these (agni issue 978). They are the answers the browser engine
+// gives over the same files, which name the mount as its root rather than a host path.
+func siteDir(root, mount string) (*webapi.Mount, *webapi.ListDirResponse, error) {
+	host := fshost.New(fshost.Mount{Name: mount, FS: os.DirFS(root)})
+	svc := service.NewWorkspaceService(host.Workspace())
+	ctx := context.Background()
+	ms, err := svc.ListMounts(ctx, &webapi.ListMountsRequest{})
+	if err != nil {
+		return nil, nil, err
+	}
+	if len(ms.GetMounts()) != 1 {
+		return nil, nil, fmt.Errorf("listing mount %s answered %d mounts", mount, len(ms.GetMounts()))
+	}
+	m := ms.GetMounts()[0]
+	out := &webapi.ListDirResponse{}
+	var walk func(uri string) error
+	walk = func(uri string) error {
+		resp, err := svc.ListDir(ctx, &webapi.ListDirRequest{Uri: uri})
+		if err != nil {
+			return err
+		}
+		out.Entries = append(out.Entries, resp.GetEntries()...)
+		for _, e := range resp.GetEntries() {
+			if e.GetIsDir() {
+				if err := walk(e.GetUri()); err != nil {
+					return err
+				}
+			}
+		}
+		return nil
+	}
+	return m, out, walk(m.GetUri())
+}
+
+// writeProto writes a message as the protojson a page reads, making its folder.
+func writeProto(dst string, m proto.Message) error {
+	b, err := protoJSON(m)
+	if err != nil {
+		return err
+	}
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		return err
+	}
+	return os.WriteFile(dst, []byte(b), 0o644)
 }
 
 type seededDesign struct{ addr, title, format, note string }

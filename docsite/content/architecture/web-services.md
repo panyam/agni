@@ -239,7 +239,11 @@ With no agni server at all, `agni site` writes the same pages as plain files for
 (agni issue 856). The shell then says it is static (`data-host`) and gives its path prefix
 (`data-base`), so every asset and link goes under the prefix, workspace calls go to the worker too,
 and a seeded mount's files come from `files/<mount>.json`, a listing in `ListDesignFiles`' shape,
-and the files under `raw/<mount>/`. A static host serves a design's page as `…/view/index.html`, so
+and the files under `raw/<mount>/`. The file trees are the exception to the worker answering
+workspace calls, because the worker holds only the files the page gave it, so asking it which mounts
+exist answers none. `agni site` writes the answers its own `WorkspaceService` gives over each seed,
+`mounts.json` for `ListMounts` and `dirs/<mount>.json` for `ListDir` of every folder in the mount, and
+the page answers both from those (`web/src/staticworkspace.ts`, agni issue 978). A static host serves a design's page as `…/view/index.html`, so
 on such a page the router reads an address ending `/view/` as the design.
 
 The public demo is this site, deployed with the docs. `make docs-site` builds the docsite into

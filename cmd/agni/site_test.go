@@ -123,6 +123,66 @@ func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
 	}
 }
 
+// TestSiteWritesTheListingsTheFileTreesRead writes two seeds and reads back what the page answers
+// ListMounts and ListDir from on a static host (agni issue 978): every seed's mount, naming no host
+// path, and each mount's entries as the server's ListDir names them, folders included, down to the
+// gateway's other revision two folders below the mount root.
+func TestSiteWritesTheListingsTheFileTreesRead(t *testing.T) {
+	out := t.TempDir()
+	tutorial := filepath.Join("..", "..", "examples", "tutorial-project")
+	seeds := []string{"gateway=" + tutorial, "gw=" + filepath.Join(tutorial, "designs", "gateway")}
+	if err := writeSite(out, fakeWebDir(t), "/", seeds, io.Discard); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(out, "mounts.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	var mounts webapi.ListMountsResponse
+	if err := protojson.Unmarshal(b, &mounts); err != nil {
+		t.Fatal(err)
+	}
+	var got []string
+	for _, m := range mounts.GetMounts() {
+		got = append(got, m.GetName()+" "+m.GetUri())
+		if m.GetRoot() != m.GetName() {
+			t.Errorf("mount %s names its root %q, want its own name rather than a host path", m.GetName(), m.GetRoot())
+		}
+	}
+	if want := []string{"gateway mount://gateway", "gw mount://gw"}; strings.Join(got, ",") != strings.Join(want, ",") {
+		t.Errorf("mounts %v, want %v", got, want)
+	}
+	entries := func(mount string) map[string]*webapi.DirEntry {
+		t.Helper()
+		b, err := os.ReadFile(filepath.Join(out, "dirs", mount+".json"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		var dir webapi.ListDirResponse
+		if err := protojson.Unmarshal(b, &dir); err != nil {
+			t.Fatal(err)
+		}
+		byURI := map[string]*webapi.DirEntry{}
+		for _, e := range dir.GetEntries() {
+			byURI[e.GetUri()] = e
+		}
+		return byURI
+	}
+	gateway := entries("gateway")
+	for _, uri := range []string{"mount://gateway/designs", "mount://gateway/designs/gateway"} {
+		if e := gateway[uri]; e == nil || !e.GetIsDir() {
+			t.Errorf("gateway lists %s as %v, want a folder", uri, e)
+		}
+	}
+	rev := gateway["mount://gateway/designs/gateway/gateway-rev-c.edn"]
+	if rev == nil || rev.GetName() != "gateway-rev-c.edn" || rev.GetFormat() != "edif" || rev.GetKind() != webapi.FileKind_FILE_KIND_DESIGN {
+		t.Errorf("gateway lists rev C as %v, want an edif design", rev)
+	}
+	if e := entries("gw")["mount://gw/gateway/gateway.edn"]; e == nil || e.GetKind() != webapi.FileKind_FILE_KIND_DESIGN {
+		t.Errorf("gw lists gateway.edn as %v, want a design", e)
+	}
+}
+
 func TestSiteRefusesWithoutABuiltEngine(t *testing.T) {
 	web := fakeWebDir(t)
 	os.Remove(filepath.Join(web, "static", "agni.wasm"))
