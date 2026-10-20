@@ -10,6 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-20
+
+Every analysis rpc names a snapshot of the design, ingested once, which is why this is a minor
+release.  The browser demo reads a design on a Load page first, checks a selected net on its own and
+can cancel a run.  No rule credits a do-not-populate part, the seed triage is checked against KiCad's
+own ERC and DRC, and agni moves to jaala v0.1.84, whose `list` answers JSON.  The full write-up is
+[RELEASES/v0.3.0.md](RELEASES/v0.3.0.md).
+
 ## [0.2.5] - 2026-10-18
 
 The browser engine collects between requests rather than beside them, so Jetson's first Run checks
