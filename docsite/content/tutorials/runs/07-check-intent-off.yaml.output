@@ -2,16 +2,16 @@
 findings by rule:
   bulk-cap               2
   decoupling-present     1
-  esd-protection         397
+  esd-protection         393
   i2c-pull-up            28
   i2c-redundant-pull-up  4
-  input-protection       7
+  input-protection       5
   jetson-profiles/pcie-esd-missing 48
   jetson/active-low-overbar 2
-  reverse-blocking-absent 15
+  reverse-blocking-absent 11
   single-pin-net         2
   test-point-coverage    36
   unspecified-pin-with-driver 1
 
-543 finding(s) total
-26062 subject(s) considered by 41 rule(s), 1052 not considered (--verdicts for the detail)
+533 finding(s) total
+26048 subject(s) considered by 41 rule(s), 1059 not considered (--verdicts for the detail)
