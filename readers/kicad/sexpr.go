@@ -26,9 +26,24 @@ func parse(r io.Reader) (*node, error) {
 // parses without skipping, and classifies filled_polygon as a known drop.
 var boardSkips = []string{"filled_polygon"}
 
-// parseBoard parses a .kicad_pcb, leaving out boardSkips.
+// footprintGraphicSkips leave out a footprint graphic on a layer footprintLayerDrawn refuses, which
+// boardGraphics drops anyway. Deciding it while parsing keeps those lines from being built at all:
+// on the Jetson seed they are most of an 85 MB board, and building them set a browser worker's peak
+// memory for the visit (agni issue 1005). boardGraphics still filters, so the two cannot disagree.
+var footprintGraphicSkips = func() []sexpr.SkipWhen {
+	var out []sexpr.SkipWhen
+	for _, base := range graphicHeads {
+		out = append(out, sexpr.SkipWhen{
+			Head: "fp_" + base, Child: "layer",
+			Drop: func(layer string) bool { return !footprintLayerDrawn(layer) },
+		})
+	}
+	return out
+}()
+
+// parseBoard parses a .kicad_pcb, leaving out boardSkips and footprintGraphicSkips.
 func parseBoard(r io.Reader) (*node, error) {
-	return sexpr.ParseSkipping(r, sexpr.KiCadStrings, boardSkips...)
+	return sexpr.ParseWith(r, sexpr.KiCadStrings, sexpr.Skips{Heads: boardSkips, When: footprintGraphicSkips})
 }
 
 // atomOf returns the text of an atom node, or "" for a list or nil.

@@ -417,7 +417,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945), which is how an 80 MB
   board holds under 4 times its size, so never assign a parsed node's `Atom`; put a new node in its
   parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out of the
-  tree, and the KiCad board reads skip `filled_polygon` (agni 946); the census parses unskipped. A
+  tree, and the KiCad board reads skip `filled_polygon` (agni 946); the census parses unskipped.
+  `ParseWith` also skips a list by one child's value (`SkipWhen`), reading ahead without building, which
+  is how a board read drops footprint graphics on undrawn layers at parse (agni 1005). A
   board keeps footprint graphics on the silkscreen, fab and courtyard layers alone
   (`footprintLayerDrawn`), since one vendor library's user-layer artwork was 322,600 of Jetson's
   326,626 footprint lines and most of its 273 MB board geometry (agni 946).
