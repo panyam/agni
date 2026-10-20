@@ -321,6 +321,17 @@ var specFacts = map[string]factDef{
 		reads: []string{"component.dnp"},
 		get:   func(ev *evalEnv) any { return Unpopulated(ev.m, ev.ents["net"].(*ir.Net)) },
 	},
+	"net.rail_capacitor": { // a fitted capacitor sits on the net or across a zero-ohm link from it (agni issue 1015)
+		reads: []string{"component.class", "component.dnp", "on_net"}, primitives: []string{"exists", "traverse"},
+		get: func(ev *evalEnv) any {
+			ref, _ := FirstOnRail(ev.m, ev.ents["net"].(*ir.Net), ClassCapacitor)
+			return ref != ""
+		},
+	},
+	"net.board_driven": { // the board drives the net itself, so a connector on it is an outlet (agni issue 1016)
+		reads: []string{"component.class", "component.dnp", "on_net", "pin.electrical_type"}, primitives: []string{"reach", "pin-role"},
+		get: func(ev *evalEnv) any { return BoardSource(ev.m, ev.ents["net"].(*ir.Net)) != "" },
+	},
 	"net.attr.external":     netAttrFact("external"),
 	"net.attr.global":       netAttrFact("global"),
 	"net.attr.power_driven": netAttrFact("power_driven"),

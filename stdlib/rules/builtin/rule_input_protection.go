@@ -18,7 +18,7 @@ var inputProtection = &check.Rule{
 	Impact:     "An unprotected power input passes every upstream fault into the board: a shorted load takes out the cable or supply instead of a fuse, and a hot-plug transient or miswired adapter reaches the regulator unclamped. A classic review finding with real field consequences.",
 	Remedy:     "Put a fuse and a clamp in the path between the connector and the rail: a fuse for the sustained fault, a TVS for the transient.",
 	Primitives: []string{"select", "traverse", "exists", "pin-role", "pattern", "reach"},
-	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net", "pin.electrical_type"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
 		check.KeyTier:         "R",
@@ -38,7 +38,8 @@ var inputProtection = &check.Rule{
 // this reason, and a connector net reaching no supply pin yields no verdict at all.
 //
 // The pass names the fuse or TVS it credits, so the evidence points at a part rather than asserting
-// that one exists. The failure names the exposed rail rather than the connector again. On a board
+// that one exists. A net the board drives itself is NotConsidered, since its connector is an outlet
+// (check.BoardSource, agni issue 1016). The failure names the exposed rail rather than the connector again. On a board
 // with a protected 5 V path and a bare 3V3 path off one connector, the finding is about the 3V3 path,
 // and the walk already knows which one it is.
 func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
@@ -59,10 +60,14 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		}
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}}
+		src := check.BoardSource(m, n)
 		switch {
 		case n.Attributes[netgraph.AttrExternal] == "true":
 			v.Outcome = check.NotConsidered
 			v.Reason = "the net continues onto a sheet this read did not open, so its fuse or clamp may be drawn outside it"
+		case src != "":
+			v.Outcome = check.NotConsidered
+			v.Reason = "the board drives this net itself, from " + src + ", so its connector is an outlet rather than a power entry"
 		case report.Unprotected != "":
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{
@@ -100,6 +105,7 @@ var inputProtectionSpec = &check.Spec{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 		check.ExistsIn{Over: "net.connections", Where: check.IsTrue{T: check.Fact{Name: "component.exposed_connector"}}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.board_driven"}}},
 		check.IsTrue{T: check.Call{Fn: "unprotected_power_reach"}},
 	}},
 	Message: "connector feeds a power input with no fuse or TVS in the path",

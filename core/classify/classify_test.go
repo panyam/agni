@@ -199,6 +199,7 @@ func TestClassifyTVSFamilies(t *testing.T) {
 		{"a single-channel ESD diode", mpn("D37", "TPD1E0B04DPYR"), ClassTVS},
 		{"a TVS diode known only by part number", mpn("D8", "PESD5Z5.0F"), ClassTVS},
 		{"a VBUS clamp", mpn("D7", "ESDA25P35-1U1M"), ClassTVS},
+		{"a power TVS on a supply input", mpn("D2", "PTVS26VS1UR,115"), ClassTVS},
 		{"a family named in the Value", &ir.Component{RefDes: "U3", Attributes: map[string]string{"Value": "TPD3E001DRLR"}}, ClassTVS},
 		// The bare word stays a diode-only refinement, since an IC's description mentioning ESD
 		// protection does not make it a suppressor.

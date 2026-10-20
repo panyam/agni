@@ -1,16 +1,15 @@
 #agni-run a2dde53370408264
 #agni-step
 comparing:
-  ours:   agni <version> — 93 finding(s) over mount://jetson/designs/jetson
+  ours:   agni <version> — 90 finding(s) over mount://jetson/designs/jetson
   theirs: kicad-cli pcb drc 10.0.6 — 957 finding(s) over designs/jetson   [no coverage axis: its silence is not a pass]
 
 entities flagged:
-  both         2
-  ours only    88
-  theirs only  258
+  both         1
+  ours only    87
+  theirs only  259
 
 ours only:
-  net +12V
   net /CSI/CSIA_3V3
   net /CSI/CSIA_5V
   net /CSI/CSIA_I2C_VCC
@@ -312,6 +311,7 @@ theirs only:
   component U78
   component U8
   component Y2
+  net +3V3
   net +5V_SOM
   net /CSI/CAM0.CSI2_CLK+
   net /CSI/CAM0.CSI2_CLK-
@@ -362,7 +362,6 @@ theirs only:
 rules seen on the same entity (an observation about these two documents,
 not a claim that the rules ask the same question):
   ours                         theirs                             entities
-  reverse-blocking-absent      kicad-drc/clearance                1
   test-point-coverage          kicad-drc/clearance                1
 
 not comparable (a finding naming no component or net): ours 0, theirs 86

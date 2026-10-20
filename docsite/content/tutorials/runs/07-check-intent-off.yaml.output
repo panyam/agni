@@ -1,17 +1,17 @@
 #agni-run cc6ab018255b7b3d
 findings by rule:
-  bulk-cap               2
+  bulk-cap               1
   decoupling-present     1
   esd-protection         393
   floating-input         3
   i2c-pull-up            28
   i2c-redundant-pull-up  4
-  input-protection       5
+  input-protection       4
   jetson-profiles/pcie-esd-missing 48
   jetson/active-low-overbar 2
-  reverse-blocking-absent 11
+  reverse-blocking-absent 10
   single-pin-net         2
   test-point-coverage    36
 
-535 finding(s) total
-26065 subject(s) considered by 41 rule(s), 1042 not considered (--verdicts for the detail)
+532 finding(s) total
+26060 subject(s) considered by 41 rule(s), 1047 not considered (--verdicts for the detail)

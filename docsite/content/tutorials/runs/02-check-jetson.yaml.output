@@ -1,19 +1,17 @@
 #agni-run 707aec19ecec6cf4
 findings by rule:
-  bulk-cap               2
+  bulk-cap               1
   decoupling-present     1
   esd-protection         10
   floating-input         3
   i2c-pull-up            30
   i2c-redundant-pull-up  4
-  input-protection       1
   rail-not-classified    1
-  reverse-blocking-absent 4
+  reverse-blocking-absent 3
   single-pin-net         2
   test-point-coverage    27
 
 first 50:
-  [warning] bulk-cap: +12V (power rail has no bulk capacitor)
   [warning] bulk-cap: Net-(D1-C) (power rail has no bulk capacitor)
   [warning] decoupling-present: Net-(D1-C) (power rail has no decoupling capacitor)
   [info] esd-protection: /SFP/SFI_CONN_RX_N (externally-exposed signal net has no ESD protection)
@@ -63,6 +61,7 @@ first 50:
   [warning] i2c-redundant-pull-up: /I2C_{SYS}.SDA (I2C net has 2 pull-up resistors to +3V3)
   [warning] i2c-redundant-pull-up: /USB Debug, PD/DEBUG_SCL (I2C net has 2 pull-up resistors to +3V3)
   [warning] i2c-redundant-pull-up: /USB Debug, PD/DEBUG_SDA (I2C net has 2 pull-up resistors to +3V3)
+  [warning] rail-not-classified: /USB Debug, PD/FTDI_3V3 (net "/USB Debug, PD/FTDI_3V3" declares 3.3V in its name and feeds 4 supply pin(s) (e.g. U31 pin 3), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in the project's conventions lexicon)
 
-85 finding(s) total
-24131 subject(s) considered by 35 rule(s), 609 not considered (--verdicts for the detail)
+82 finding(s) total
+24126 subject(s) considered by 35 rule(s), 614 not considered (--verdicts for the detail)

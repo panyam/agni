@@ -1,16 +1,15 @@
 #agni-run b8c112d1c493e5e9
 findings by rule:
-  bulk-cap               2
+  bulk-cap               1
   decoupling-present     1
   esd-protection         10
   floating-input         3
   i2c-pull-up            30
   i2c-redundant-pull-up  4
-  input-protection       1
   rail-not-classified    1
-  reverse-blocking-absent 4
+  reverse-blocking-absent 3
   single-pin-net         2
   test-point-coverage    27
 
-85 finding(s) total
-24249 subject(s) considered by 41 rule(s), 648 not considered (--verdicts for the detail)
+82 finding(s) total
+24244 subject(s) considered by 41 rule(s), 653 not considered (--verdicts for the detail)

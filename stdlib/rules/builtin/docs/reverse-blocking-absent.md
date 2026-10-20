@@ -86,6 +86,14 @@ reports its path as unblocked rather than guessing which way the part faces.
 - A transistor on the path that a seeded datasheet identifies as an ideal-diode / ORing controller
   (above). An UNIDENTIFIED transistor gives an inconclusive finding instead.
 - Ground and read-gap (external) nets, excluded up front.
+- A net the board drives itself is not-considered, since its connector is an outlet rather than a
+  way power arrives (agni issue 1016). A converter's output counts, read as a switch node behind an
+  inductor plus a feedback net within the walk, and so does a power-output pin on a part other than a
+  connector. A power-output pin does not count when the walk also finds the input of another part
+  that has a power output, which is a dual-role USB-C port: a load switch sources VBUS and a PD
+  controller's power path sinks it, so power can still arrive and the rule still judges the net. A
+  boost converter's input reaches its switch node through the inductor too, and stays judged because
+  its feedback divider sits on the output side.
 
 ### Fixing a finding
 

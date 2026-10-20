@@ -38,6 +38,8 @@ var reverseBlockingAbsent = &check.Rule{
 // is in the way (see docsite/content/build/check-rule.md#five-outcomes-and-the-three-that-are-not-a-pass).
 // A connector net reaching NO power input gets no verdict, since counting it would claim every
 // signal pin on every connector as reverse-protected (agni issue 391).
+// A connector net the board drives itself is NotConsidered, since the connector is an outlet
+// (check.BoardSource, agni issue 1016).
 func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
@@ -56,6 +58,12 @@ func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		}
 
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.GetName()}}}
+		if src := check.BoardSource(m, n); src != "" {
+			v.Outcome = check.NotConsidered
+			v.Reason = "the board drives this net itself, from " + src + ", so its connector is an outlet rather than a way power arrives"
+			out = append(out, v)
+			continue
+		}
 		switch outcome {
 		case pathProtected:
 			v.Outcome = check.Pass

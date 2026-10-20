@@ -38,6 +38,25 @@ func firstPassive(m check.Model, n *ir.Net) string {
 	return ""
 }
 
+// railCapacitorWitness is the pass evidence for a capacitor check.FirstOnRail found. A capacitor
+// across a zero-ohm link names the link and the net it sits on, so a reviewer looking at the rail
+// itself is told where to look. label is the rule's word for the capacitor.
+func railCapacitorWitness(ref string, at check.JoinedNet, label string) (*check.Witness, []check.ContextSubject) {
+	if at.Via == "" {
+		return &check.Witness{
+			Statement: "capacitor " + ref + " sits on the rail",
+			Terms:     []check.WitnessTerm{{Label: label, Value: ref}},
+		}, compContext(ref, "capacitor on the rail")
+	}
+	return &check.Witness{
+		Statement: "capacitor " + ref + " sits on " + at.Net.GetName() + ", which zero-ohm link " + at.Via + " joins to the rail",
+		Terms:     []check.WitnessTerm{{Label: label, Value: ref}, {Label: "zero-ohm link", Value: at.Via}},
+	}, []check.ContextSubject{
+		{Entity: check.Entity{Kind: check.KindComponent, Ref: ref}, Role: "capacitor on the rail"},
+		{Entity: check.Entity{Kind: check.KindComponent, Ref: at.Via}, Role: "zero-ohm link"},
+	}
+}
+
 // compContext is the one-entity Context a witness attaches when it names a part. Role is the
 // author's word for what the part is doing in the proof, which is what a viewer renders beside the
 // chip it lights up.
