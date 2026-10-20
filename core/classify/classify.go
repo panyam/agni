@@ -87,7 +87,7 @@ var tokenClasses = map[string]ComponentClass{
 //
 // Only a family match promotes an IC. The bare words "tvs" and "esd" keep refining a diode alone,
 // because an IC's free-text description mentioning "ESD protection" says nothing about what it is.
-var tvsFamilies = regexp.MustCompile(`^(tpd\d+e|pesd|esda|esd\d|usblc|rclamp|prtr|sp05|sm712|smaj|smbj|smcj|p6ke)`)
+var tvsFamilies = regexp.MustCompile(`^(tpd\d+e|pesd|esda|esd\d|usblc|rclamp|prtr|sp05|sm712|smaj|smbj|smcj|p6ke|ptvs)`)
 
 // isTVSFamily reports whether any token names a known suppressor family.
 func isTVSFamily(tokens []string) bool {

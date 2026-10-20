@@ -94,12 +94,6 @@ findings:
         - net:/USB Debug, PD/DEBUG_SDA
         - net:/I2C_{SYS}.SCL
         - net:/I2C_{SYS}.SDA
-  input-protection:
-    - class: false-positive
-      ticket: 1014
-      why: D2, a Nexperia PTVS26VS1UR 26 V TVS, clamps VCC_IN to ground at the Mini-Fit input J2, but the classifier knows no ptvs part-number family and reads D2 as a plain diode, so the rule sees no clamp.
-      subjects:
-        - net:VCC_IN
   rail-not-classified:
     - class: needs-intent
       why: FTDI_3V3 is the FT230X's 3.3 V regulator output, a real rail whose name the built-in vocabulary does not match; a project would declare it in its conventions lexicon.
