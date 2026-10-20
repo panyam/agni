@@ -131,15 +131,45 @@ func Parse(r io.Reader, mode StringMode) (*Node, error) {
 // and its parent's Kids hold nothing for it. A reader names what it never reads, such as a KiCad
 // board's zone fills, which are about a fifth of a large board's atoms (agni issue 946).
 func ParseSkipping(r io.Reader, mode StringMode, skip ...string) (*Node, error) {
+	return ParseWith(r, mode, Skips{Heads: skip})
+}
+
+// Skips names the lists a parse leaves out. A list in Heads is left out by its head alone. A list
+// matching a When rule is left out by the value of one of its children, which the head cannot
+// decide, such as a KiCad footprint graphic on a layer no reader draws (agni issue 1005).
+type Skips struct {
+	Heads []string
+	When  []SkipWhen
+}
+
+// SkipWhen leaves out a list whose head is Head when its child list (Child value ...) holds a value
+// Drop refuses. Only a direct child counts, the first one found decides, and a list with no such child
+// is kept. The parse reads ahead to the child without building nodes, so a list left out costs its
+// tokens and nothing else, and a list kept is tokenized twice and built once.
+type SkipWhen struct {
+	Head, Child string
+	Drop        func(value string) bool
+}
+
+// ParseWith is Parse leaving out the lists s names, wherever they sit. A skipped list is still
+// tokenized, so its strings cannot unbalance the parse, but it builds no node and its parent's Kids
+// hold nothing for it.
+func ParseWith(r io.Reader, mode StringMode, s Skips) (*Node, error) {
 	src, err := readAll(r)
 	if err != nil {
 		return nil, err
 	}
 	t := &tokenizer{src: src, mode: mode}
-	if len(skip) > 0 {
-		t.skip = make(map[string]bool, len(skip))
-		for _, s := range skip {
-			t.skip[s] = true
+	if len(s.Heads) > 0 {
+		t.skip = make(map[string]bool, len(s.Heads))
+		for _, h := range s.Heads {
+			t.skip[h] = true
+		}
+	}
+	if len(s.When) > 0 {
+		t.when = make(map[string]SkipWhen, len(s.When))
+		for _, w := range s.When {
+			t.when[w.Head] = w
 		}
 	}
 	tok, err := t.scan()
@@ -228,7 +258,8 @@ type tokenizer struct {
 	atoms  map[string]*Node // the shared bare atoms, by text
 	quoted map[string]*Node // the shared quoted atoms, by text
 
-	skip map[string]bool // heads of the lists ParseSkipping leaves out
+	skip map[string]bool     // heads of the lists ParseSkipping leaves out
+	when map[string]SkipWhen // heads of the lists left out by a child's value, see SkipWhen
 }
 
 // line is the 1-based line of the next unread byte, which is where Parse's own errors point. It is
@@ -438,10 +469,11 @@ func (t *tokenizer) parseList() (*Node, error) {
 	}
 }
 
-// skipped reads past the list just opened when its head is one ParseSkipping leaves out, and reports
-// whether it did. Otherwise it leaves the position where it was, so the list parses as usual.
+// skipped reads past the list just opened when the parse leaves it out, by its head or by a SkipWhen
+// rule, and reports whether it did. Otherwise it leaves the position where it was, so the list parses
+// as usual.
 func (t *tokenizer) skipped() (bool, error) {
-	if len(t.skip) == 0 {
+	if len(t.skip) == 0 && len(t.when) == 0 {
 		return false, nil
 	}
 	at := t.pos
@@ -449,25 +481,74 @@ func (t *tokenizer) skipped() (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	if head.kind != tokAtom || !t.skip[head.text] {
-		t.pos = at
-		return false, nil
+	if head.kind == tokAtom && t.skip[head.text] {
+		_, err := t.readToClose("")
+		return err == nil, err
 	}
-	for depth := 1; depth > 0; {
-		tok, err := t.scan()
+	if w, ok := t.when[head.text]; ok && head.kind == tokAtom {
+		value, err := t.readToClose(w.Child)
 		if err != nil {
 			return false, err
 		}
+		if value != nil && w.Drop(*value) {
+			return true, nil
+		}
+	}
+	t.pos = at
+	return false, nil
+}
+
+// readToClose reads to the end of the list whose head was just read, building nothing. With a child
+// name it also returns the value of the first direct child list (child value ...), or nil when there
+// is none.
+func (t *tokenizer) readToClose(child string) (*string, error) {
+	var value *string
+	for depth := 1; depth > 0; {
+		tok, err := t.scan()
+		if err != nil {
+			return nil, err
+		}
 		switch tok.kind {
 		case tokEOF:
-			return false, fmt.Errorf("sexpr: unexpected EOF inside list")
+			return nil, fmt.Errorf("sexpr: unexpected EOF inside list")
 		case tokLParen:
 			depth++
+			if depth != 2 || child == "" || value != nil {
+				continue
+			}
+			name, err := t.scan()
+			if err != nil {
+				return nil, err
+			}
+			switch name.kind {
+			case tokLParen:
+				depth++
+				continue
+			case tokRParen:
+				depth--
+				continue
+			}
+			if name.kind != tokAtom || name.text != child {
+				continue
+			}
+			v, err := t.scan()
+			if err != nil {
+				return nil, err
+			}
+			switch v.kind {
+			case tokAtom, tokString:
+				s := v.text
+				value = &s
+			case tokLParen:
+				depth++
+			case tokRParen:
+				depth--
+			}
 		case tokRParen:
 			depth--
 		}
 	}
-	return true, nil
+	return value, nil
 }
 
 // node returns a zeroed Node from the current slab, starting a new slab when it runs out.
