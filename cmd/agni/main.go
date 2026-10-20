@@ -90,7 +90,8 @@ func rootCmd() *cobra.Command {
 	root.PersistentFlags().BoolVar(&readFlatten, "flatten-hierarchy", false,
 		"read a hierarchical netlist as its whole schematic, walking into every block cell its top "+
 			"cell places. Without it only the top cell is read and the blocks are named in a note. A "+
-			"net inside a block is named by the block's path (/A1/MID), and a part inside a block "+
+			"net inside a block keeps its name when no other net carries it and is otherwise named by "+
+			"the block's path (/A1/MID), and a part inside a block "+
 			"placed more than once carries the path in its ref-des (B2/R1). Only EDIF has blocks to "+
 			"walk today, and a flat netlist reads the same either way.")
 	root.PersistentFlags().StringArrayVar(&symbolPaths, "symbol-path", nil,

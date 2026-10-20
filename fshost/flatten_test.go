@@ -59,15 +59,15 @@ func TestFlattenedSnapshotIsOneModelAcrossServices(t *testing.T) {
 	flat := f.ingest(t, true)
 
 	// The top cell's blocks carry no designator, so unflattened only U5 and J1 have a ref-des; any
-	// count but 8 tells the two reads apart.
-	if n := f.components(t, top); n == 8 {
+	// count but 11 tells the two reads apart.
+	if n := f.components(t, top); n == 11 {
 		t.Errorf("unflattened query sees %d components, want the top cell's alone", n)
 	}
-	if n := f.components(t, flat); n != 8 {
-		t.Errorf("flattened query sees %d components, want 8", n)
+	if n := f.components(t, flat); n != 11 {
+		t.Errorf("flattened query sees %d components, want 11", n)
 	}
 	// Asked again in the other order, so an answer kept under the wrong key shows either way.
-	if n := f.components(t, top); n == 8 {
+	if n := f.components(t, top); n == 11 {
 		t.Errorf("unflattened query after a flattened one sees the flattened %d components", n)
 	}
 

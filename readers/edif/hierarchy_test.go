@@ -43,11 +43,12 @@ func refs(d *ir.Design) []string {
 }
 
 // TestHierarchicalEDIFFlattens reads hier_blocks.edn, whose top cell places a connector, one gate of
-// U5, the block LED_DRV once (A1) and the block RC twice (B1, B2).
+// U5, the block LED_DRV once (A1) and the block RC twice (B1, B2). LED_DRV and RC each hold a local
+// net named MID, so all three are qualified, and LED_DRV's SENSE is unique and keeps its name.
 func TestHierarchicalEDIFFlattens(t *testing.T) {
 	d := readFlat(t, "hier_blocks.edn")
 
-	wantRefs := []string{"U5", "J1", "R1", "D1", "B1/R1", "B1/C1", "B2/R1", "B2/C1"}
+	wantRefs := []string{"U5", "J1", "R1", "D1", "TP2", "B1/R1", "B1/C1", "B1/TP1", "B2/R1", "B2/C1", "B2/TP1"}
 	if got := refs(d); strings.Join(got, " ") != strings.Join(wantRefs, " ") {
 		t.Errorf("components = %v, want %v", got, wantRefs)
 	}
@@ -58,6 +59,7 @@ func TestHierarchicalEDIFFlattens(t *testing.T) {
 		"U5.2": "OUT1", "B1/R1.B": "OUT1", "B1/C1.1": "OUT1",
 		"B2/R1.B": "OUT2", "B2/C1.1": "OUT2",
 		"R1.B": "/A1/MID", "D1.A": "/A1/MID", "U5.3": "/A1/MID",
+		"TP2.1": "SENSE", "B1/TP1.1": "/B1/MID", "B2/TP1.1": "/B2/MID",
 	}
 	got := partition(d)
 	if len(got) != len(want) {
@@ -72,7 +74,7 @@ func TestHierarchicalEDIFFlattens(t *testing.T) {
 	for _, n := range d.GetNets() {
 		nets = append(nets, n.GetName())
 	}
-	if w := "VCC NET_LED_CATHODE GND OUT1 OUT2 /A1/MID"; strings.Join(nets, " ") != w {
+	if w := "VCC NET_LED_CATHODE GND OUT1 OUT2 /A1/MID SENSE /B1/MID /B2/MID"; strings.Join(nets, " ") != w {
 		t.Errorf("nets = %v, want %s", nets, w)
 	}
 	if u := d.GetInputDiagnostics().GetUnexpandedHierarchy(); len(u) != 0 {

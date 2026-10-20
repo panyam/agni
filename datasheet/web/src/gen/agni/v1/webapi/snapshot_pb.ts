@@ -118,8 +118,8 @@ export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
   /**
    * flatten_hierarchy reads a hierarchical netlist as its whole schematic, walking into every block
    * cell its top cell places, rather than as its top cell alone (agni issue 718). A net crossing a
-   * block's port joins its parent's, a net inside a block is named by the block's instance path
-   * ("/A1/MID"), and a part inside a block placed more than once carries that path ("B2/R1"). A flat
+   * block's port joins its parent's, a net inside a block keeps its name when no other net carries
+   * it and is otherwise named by the block's instance path ("/A1/MID"), and a part inside a block placed more than once carries that path ("B2/R1"). A flat
    * netlist reads the same either way. Only EDIF has blocks to walk today. Part of the definition.
    *
    * @generated from field: bool flatten_hierarchy = 12;

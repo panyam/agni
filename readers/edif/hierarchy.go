@@ -15,8 +15,10 @@ import (
 // Three rules decide identity, each written in docsite/content/architecture/ingestion-and-ir.md:
 //
 //   - A net crossing a block's port is ONE net with its parent's, named by its shallowest piece. A net
-//     inside a block that reaches no port is qualified by the block's instance path, "/A1/MID",
-//     because sheets reuse local and generated names and joining them by name would merge two nets.
+//     inside a block that reaches no port keeps its name when no other net in the design carries it
+//     and its block is placed once. Otherwise it is qualified by the block's instance path,
+//     "/A1/MID", because sheets reuse local and generated names and joining them by name would merge
+//     two nets.
 //   - A part keeps the designator the file states, and parts sharing one are sections of one
 //     component wherever they sit, since a multi-gate part split across sheets is one part.
 //   - A part reached through a block the design places more than once is qualified by its instance
@@ -36,6 +38,8 @@ type leaf struct {
 type netPiece struct {
 	node *node
 	path string
+	// repeated is set when a block on the path is placed more than once, as for leaf.
+	repeated bool
 }
 
 // hierarchy is what a read extracts from: the parts, the nets as groups of pieces that are one
@@ -213,7 +217,7 @@ func flattenFrom(root, top *node) *hierarchy {
 		var nets []*node
 		collect(c, "net", &nets)
 		for _, n := range nets {
-			h.nets = append(h.nets, []netPiece{{node: n, path: path}})
+			h.nets = append(h.nets, []netPiece{{node: n, path: path, repeated: repeated}})
 		}
 		for _, ch := range children {
 			walk(ch.cell, ch.path, ch.repeated, stack)
@@ -299,6 +303,25 @@ func (h *hierarchy) joinAcrossPorts() {
 		g[0] = named
 	}
 	h.nets = out
+}
+
+// netNames names each net group: its naming piece's own name, qualified by the piece's block path
+// unless the piece is in the top cell, or its name is carried by no other group and its block is
+// placed once.
+func (h *hierarchy) netNames() []string {
+	seen := map[string]int{}
+	for _, g := range h.nets {
+		seen[parseName(g[0].node.Arg(1)).best()]++
+	}
+	out := make([]string, len(h.nets))
+	for i, g := range h.nets {
+		name := parseName(g[0].node.Arg(1)).best()
+		if p := g[0]; p.path != "" && (p.repeated || seen[name] > 1) {
+			name = "/" + p.path + "/" + name
+		}
+		out[i] = name
+	}
+	return out
 }
 
 // depth is how many blocks deep a path is, 0 for the top cell.

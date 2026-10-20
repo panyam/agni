@@ -186,8 +186,9 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 		d.Components = append(d.Components, byKey[key])
 	}
 
-	for _, g := range h.nets {
-		d.Nets = append(d.Nets, netOf(g, src, refByID, pinsByID, h.blockPaths))
+	names := h.netNames()
+	for i, g := range h.nets {
+		d.Nets = append(d.Nets, netOf(g, names[i], src, refByID, pinsByID, h.blockPaths))
 	}
 	// One struct for every diagnostic, built once, since a fresh InputDiagnostics per signal
 	// drops the previous one. Always set, because this reader looks at every cell and so
@@ -410,15 +411,11 @@ func instanceOf(n *node, src string) (refDes string, sec *ir.ComponentSection, i
 // physical designator.
 //
 // pieces are the (net) lists that are one electrical net once a hierarchy is flattened, the naming
-// piece first, and a flat read passes one. A piece inside a block names the net only when no
-// shallower piece does, qualified by the block's path. Inside a block, a portRef naming the block's
-// own port, or naming a block placed in it (blockPaths), is a join between pieces, not a pin.
-func netOf(pieces []netPiece, src string, refByID map[string]string, pinsByID map[string]map[string][]string, blockPaths map[string]string) *ir.Net {
+// piece first, and a flat read passes one; name is the net's name (hierarchy.netNames). Inside a
+// block, a portRef naming the block's own port, or naming a block placed in it (blockPaths), is a
+// join between pieces, not a pin.
+func netOf(pieces []netPiece, name, src string, refByID map[string]string, pinsByID map[string]map[string][]string, blockPaths map[string]string) *ir.Net {
 	nm := parseName(pieces[0].node.Arg(1))
-	name := nm.best()
-	if p := pieces[0].path; p != "" {
-		name = "/" + p + "/" + name
-	}
 	net := &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind}}
 	for _, piece := range pieces {
 		addConnections(net, piece, src, refByID, pinsByID, blockPaths)
