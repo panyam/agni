@@ -13,6 +13,7 @@ import (
 func TestSharedBaseIsOnePerModel(t *testing.T) {
 	reg := facts.DefaultRegistry()
 	m := check.NewModel(&ir.Design{})
+	//lint:ignore SA4000 the two calls are meant to return one base, which is what the test asserts
 	if sharedBase(reg, m) != sharedBase(reg, m) {
 		t.Error("two rules over one model built two fact bases")
 	}

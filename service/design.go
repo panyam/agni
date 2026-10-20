@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/core/num"
 
 	"google.golang.org/protobuf/proto"
 
@@ -312,8 +313,8 @@ func (s *DesignService) designSummary(ctx context.Context, req *webapi.GetDesign
 				resp.Name = d.GetName()
 			}
 			resp.SourceFormat = d.GetSourceFormat()
-			resp.ComponentCount = int32(len(d.GetComponents()))
-			resp.NetCount = int32(len(d.GetNets()))
+			resp.ComponentCount = num.Int32(len(d.GetComponents()))
+			resp.NetCount = num.Int32(len(d.GetNets()))
 			resp.UnexpandedHierarchy = d.GetInputDiagnostics().GetUnexpandedHierarchy()
 			// The viewer's strip shows this sentence as sent, so the page and the CLI say it in one
 			// wording (agni issue 717).

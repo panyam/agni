@@ -52,7 +52,7 @@ func reportError(cmd *cobra.Command, err error, stderr io.Writer) {
 	case "", "-":
 		_, _ = cmd.OutOrStdout().Write(body)
 	default:
-		_ = os.WriteFile(out, body, 0o644)
+		_ = os.WriteFile(out, body, 0o644) // #nosec G306 -- a report the user asked for, meant to be read by others
 	}
 }
 

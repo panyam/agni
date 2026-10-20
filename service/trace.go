@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/num"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
@@ -19,7 +20,7 @@ func TraceProto(t check.Trace) *webapi.Trace {
 		To:      traceEndProto(t.To),
 		Outcome: traceOutcomeProto(t.Outcome),
 		Reason:  t.Reason,
-		Radius:  int32(t.Radius),
+		Radius:  num.Int32(t.Radius),
 	}
 	for _, c := range t.Crossings {
 		p.Crossings = append(p.Crossings, &webapi.TraceCross{
@@ -28,7 +29,7 @@ func TraceProto(t check.Trace) *webapi.Trace {
 		})
 	}
 	for _, n := range t.Nets {
-		tn := &webapi.TraceNet{Name: n.Name, StubsElided: int32(n.StubsElided), BusLike: n.BusLike}
+		tn := &webapi.TraceNet{Name: n.Name, StubsElided: num.Int32(n.StubsElided), BusLike: n.BusLike}
 		for _, s := range n.Stubs {
 			tn.Stubs = append(tn.Stubs, &webapi.TraceStub{RefDes: s.RefDes, Pin: s.Pin, Class: s.Class})
 		}

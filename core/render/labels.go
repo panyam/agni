@@ -143,7 +143,7 @@ func worksheetLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, textH
 	// top row; geom is Y-up, so the top row has the highest y.
 	for i := int64(0); i < fl.rows; i++ {
 		cy := fl.b + (fl.t-fl.b)*(2*i+1)/(2*fl.rows)
-		label := string(rune('A' + (fl.rows - 1 - i)))
+		label := string(rune('A' + (fl.rows - 1 - i))) // #nosec G115 -- a frame's row index, a handful of letters
 		out = append(out, placedLabel{fl.l + fl.m/2, cy, label, rulerH, 0, "center center", style.Ruler, 0})
 		out = append(out, placedLabel{fl.r - fl.m/2, cy, label, rulerH, 0, "center center", style.Ruler, 0})
 	}

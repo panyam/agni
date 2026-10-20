@@ -28,7 +28,7 @@ import (
 
 // Load reads and parses a convention YAML file.
 func Load(path string) (*configpb.NamingConvention, error) {
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(path) // #nosec G304 -- reads a file the user named
 	if err != nil {
 		return nil, err
 	}

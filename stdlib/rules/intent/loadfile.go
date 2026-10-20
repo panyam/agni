@@ -12,7 +12,7 @@ import (
 // dependency lives here, isolated from the WASM-clean Parse/Load path. Unlike profiles' LoadDir, this
 // reads one file rather than a directory to merge, because a design has ONE intended architecture.
 func LoadFile(path string) (Declaration, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- reads a file the user named
 	if err != nil {
 		return Declaration{}, fmt.Errorf("intent: reading --intent-path %q: %w", path, err)
 	}
@@ -27,7 +27,7 @@ func LoadFile(path string) (Declaration, error) {
 // LoadFileProto reads a single intent declaration from a YAML file as its proto, validated (see
 // ParseProto). The CLI's --intent-path sends it on the request.
 func LoadFileProto(path string) (*configpb.DesignIntent, error) {
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(path) // #nosec G304 -- reads a file the user named
 	if err != nil {
 		return nil, fmt.Errorf("intent: reading --intent-path %q: %w", path, err)
 	}

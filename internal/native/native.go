@@ -97,7 +97,7 @@ func nativeRendererFor(absPath string) (nativeRenderer, bool) {
 
 // readHead reads up to n leading bytes of a file for format sniffing.
 func readHead(path string, n int) ([]byte, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- reads the design or the output of the native tool the user runs
 	if err != nil {
 		return nil, err
 	}
@@ -215,7 +215,7 @@ func runRender(ctx context.Context, r nativeRenderer, bin, absPath string, page 
 
 	ctx, cancel := context.WithTimeout(ctx, nativeTimeout)
 	defer cancel()
-	cmd := exec.CommandContext(ctx, bin, r.args(absPath, outDir, page)...)
+	cmd := exec.CommandContext(ctx, bin, r.args(absPath, outDir, page)...) // #nosec G204 -- runs the native tool the user configured, with arguments agni builds
 	// Run in outDir so xschem, which writes plot.svg to its working directory, lands its output
 	// where readOnlySVG looks. kicad-cli and lepton-cli take an explicit output path.
 	cmd.Dir = outDir
@@ -290,7 +290,7 @@ func readOnlySVG(dir string) (string, error) {
 	if len(svgs) != 1 {
 		return "", fmt.Errorf("native render produced %d svg files, want 1", len(svgs))
 	}
-	b, err := os.ReadFile(filepath.Join(dir, svgs[0]))
+	b, err := os.ReadFile(filepath.Join(dir, svgs[0])) // #nosec G304 -- reads the design or the output of the native tool the user runs
 	if err != nil {
 		return "", err
 	}

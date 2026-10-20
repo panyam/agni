@@ -81,11 +81,11 @@ type Loader struct {
 // at. The returned file is the caller's to Close.
 func (l *Loader) Open(name string) (fs.File, error) {
 	if l == nil {
-		return os.Open(name)
+		return os.Open(name) // #nosec G304 -- opens the path its host hands it; a server resolves it through mounts first
 	}
 	l.Touched.note(l.FS, name)
 	if l.FS == nil {
-		return os.Open(name)
+		return os.Open(name) // #nosec G304 -- opens the path its host hands it; a server resolves it through mounts first
 	}
 	return l.FS.Open(name)
 }
@@ -94,11 +94,11 @@ func (l *Loader) Open(name string) (fs.File, error) {
 // parsed twice, and the multi-file walks that hand whole sub-files to a parser.
 func (l *Loader) ReadFile(name string) ([]byte, error) {
 	if l == nil {
-		return os.ReadFile(name)
+		return os.ReadFile(name) // #nosec G304 -- opens the path its host hands it; a server resolves it through mounts first
 	}
 	l.Touched.note(l.FS, name)
 	if l.FS == nil {
-		return os.ReadFile(name)
+		return os.ReadFile(name) // #nosec G304 -- opens the path its host hands it; a server resolves it through mounts first
 	}
 	return fs.ReadFile(l.FS, name)
 }

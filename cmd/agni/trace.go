@@ -8,6 +8,7 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 
+	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 
 	"github.com/panyam/agni/core/check"
@@ -89,7 +90,7 @@ func traceCmd() *cobra.Command {
 				Snapshot: snap,
 				From:     &webapi.TraceEndpoint{RefDes: a.RefDes, Pin: a.Pin},
 				To:       &webapi.TraceEndpoint{RefDes: b.RefDes, Pin: b.Pin},
-				Hops:     int32(hops),
+				Hops:     num.Int32(hops),
 			})
 			if err != nil {
 				return rpcFailed(err)

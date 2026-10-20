@@ -16,6 +16,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/num"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/refdes"
 )
@@ -246,7 +247,7 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 
 	for _, b := range f.Boms {
 		for _, it := range b.Items {
-			bl := &ir.BomLine{Mpn: it.InternalPartNumber, Quantity: int32(it.Quantity), Attributes: map[string]string{}, Prov: prov()}
+			bl := &ir.BomLine{Mpn: it.InternalPartNumber, Quantity: num.Int32(it.Quantity), Attributes: map[string]string{}, Prov: prov()}
 			for _, rd := range it.RefDes {
 				bl.RefDes = append(bl.RefDes, rd.Name)
 			}

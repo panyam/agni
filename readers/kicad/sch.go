@@ -5,6 +5,7 @@ import (
 	"io"
 	"sort"
 
+	"github.com/panyam/agni/core/num"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/refdes"
 )
@@ -141,7 +142,7 @@ func (a *libAccum) collect(root *node, src string) {
 		}
 		// An embedded definition cannot fail to resolve, and it still belongs in the considered
 		// set. A schematic that carries all its own symbols is the ordinary case, and leaving it out would leave that run with nothing to say about the references it read fine.
-		a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: id, Kind: "kicad_sym_embedded", PinCount: int32(len(pt.Pins))})
+		a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: id, Kind: "kicad_sym_embedded", PinCount: num.Int32(len(pt.Pins))})
 		prefix := libPrefix(id)
 		lib := a.byName[prefix]
 		if lib == nil {
@@ -188,7 +189,7 @@ func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src
 				Pins:             partPins(sym),
 				Prov:             &ir.Provenance{SourceFile: src},
 			}
-			a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: sec.PartRef, Kind: "kicad_sym_lib", PinCount: int32(len(pt.Pins))})
+			a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: sec.PartRef, Kind: "kicad_sym_lib", PinCount: num.Int32(len(pt.Pins))})
 			prefix := libPrefix(sec.PartRef)
 			lib := a.byName[prefix]
 			if lib == nil {
@@ -263,7 +264,7 @@ func (a *compAccum) collect(root *node, src, instPath string) {
 			a.refOrder = append(a.refOrder, ref)
 		}
 		sec := &ir.ComponentSection{
-			Index:      int32(unitOf(ps) - 1),
+			Index:      num.Int32(unitOf(ps) - 1),
 			PartRef:    symbolKey(ps),
 			LibraryRef: libPrefix(symbolKey(ps)),
 			Attributes: map[string]string{},

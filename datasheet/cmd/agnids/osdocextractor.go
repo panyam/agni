@@ -41,10 +41,10 @@ func (e *osDocExtractor) Extract(ctx context.Context, uri artifact.URI) (*docpb.
 		return nil, err
 	}
 	args := append(append([]string{}, e.cmd[1:]...), pdfAbs, "-o", outAbs)
-	if out, err := exec.CommandContext(ctx, e.cmd[0], args...).CombinedOutput(); err != nil {
+	if out, err := exec.CommandContext(ctx, e.cmd[0], args...).CombinedOutput(); err != nil { // #nosec G204 -- runs the configured pdf2doc over paths mounts.Resolve admitted
 		return nil, fmt.Errorf("pdf2doc %q: %v: %s", e.cmd[0], err, strings.TrimSpace(string(out)))
 	}
-	f, err := os.Open(outAbs)
+	f, err := os.Open(outAbs) // #nosec G304 -- outAbs comes from resolveSibling, which resolves inside the mount
 	if err != nil {
 		return nil, err
 	}

@@ -27,7 +27,7 @@ func rawFileHandler(ms []mounts.Mount) http.Handler {
 			http.NotFound(w, r)
 			return
 		}
-		f, err := os.Open(abs)
+		f, err := os.Open(abs) // #nosec G304 G703 -- abs comes from mounts.Resolve, which refuses a path outside its mount
 		if err != nil {
 			http.NotFound(w, r)
 			return

@@ -35,7 +35,7 @@ func censusCmd() *cobra.Command {
 			counts := map[key]int{}
 			scanned := 0
 			scan := func(path string) {
-				data, err := os.ReadFile(path)
+				data, err := os.ReadFile(path) // #nosec G304 -- reads a file the user named
 				if err != nil {
 					return
 				}

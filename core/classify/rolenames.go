@@ -94,14 +94,6 @@ type RoleVocab struct {
 	gate, source, drain []*regexp.Regexp
 }
 
-func mustCompileRole(pats ...string) []*regexp.Regexp {
-	out := make([]*regexp.Regexp, len(pats))
-	for i, p := range pats {
-		out[i] = regexp.MustCompile("(?i)" + p)
-	}
-	return out
-}
-
 // defaultLexicon is the built-in naming policy, in the SAME schema a project's conventions section
 // carries, so the engine, the wire and the viewer read one definition of the vocabularies (C2). A
 // hand-written Go twin lost three vocabularies twice (WS3-117, agni 680). What the four

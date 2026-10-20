@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/core/num"
 	"sort"
 
 	"github.com/panyam/agni/core/check"
@@ -217,12 +218,12 @@ func renameEvidenceProto(e *diff.RenameEvidence) *webapi.DiffReport_RenameEviden
 		OldCoverage:            e.OldCoverage,
 		OldCoverageSignificant: e.OldCoverageSignificant,
 		NewCoverageSignificant: e.NewCoverageSignificant,
-		Overlap:                int32(e.Overlap),
-		OverlapSignificant:     int32(e.OverlapSignificant),
-		OldEndpoints:           int32(e.OldEndpoints),
-		NewEndpoints:           int32(e.NewEndpoints),
-		OldSignificant:         int32(e.OldSignificant),
-		NewSignificant:         int32(e.NewSignificant),
+		Overlap:                num.Int32(e.Overlap),
+		OverlapSignificant:     num.Int32(e.OverlapSignificant),
+		OldEndpoints:           num.Int32(e.OldEndpoints),
+		NewEndpoints:           num.Int32(e.NewEndpoints),
+		OldSignificant:         num.Int32(e.OldSignificant),
+		NewSignificant:         num.Int32(e.NewSignificant),
 	}
 }
 

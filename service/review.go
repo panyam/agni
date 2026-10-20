@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/panyam/agni/artifact"
+	"github.com/panyam/agni/core/num"
 	"strconv"
 	"strings"
 
@@ -238,8 +239,8 @@ func ReviewOf(name string, doc *checkspb.CheckResults) *webapi.Review {
 	}
 	t := review.TallyOf(outcomes...)
 	return &webapi.Review{Name: name, Results: doc, Summary: &webapi.ReviewSummary{
-		Total: int32(t.Total), Covered: int32(t.Covered()), Answered: int32(t.Answered()),
-		Pass: int32(t.Pass), Fail: int32(t.Fail), Provisional: int32(t.Provisional),
+		Total: num.Int32(t.Total), Covered: num.Int32(t.Covered()), Answered: num.Int32(t.Answered()),
+		Pass: num.Int32(t.Pass), Fail: num.Int32(t.Fail), Provisional: num.Int32(t.Provisional),
 	}}
 }
 

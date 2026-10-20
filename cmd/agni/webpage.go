@@ -149,7 +149,7 @@ func redirectLegacyFiles(w http.ResponseWriter, r *http.Request) {
 	if r.URL.RawQuery != "" {
 		target += "?" + r.URL.RawQuery
 	}
-	http.Redirect(w, r, target, http.StatusMovedPermanently)
+	http.Redirect(w, r, target, http.StatusMovedPermanently) // #nosec G710 -- target always starts /designs/, so the redirect stays on this site
 }
 
 // newPageApp builds the goapplib App that renders the viewer's pages from templates under

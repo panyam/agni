@@ -59,7 +59,7 @@ func deriveCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
-			if err := os.WriteFile(outSpec, specText, 0o644); err != nil {
+			if err := os.WriteFile(outSpec, specText, 0o644); err != nil { // #nosec G306 -- derived specs the user asked for, read by the engine
 				return err
 			}
 			if outManifest != "" {
@@ -67,7 +67,7 @@ func deriveCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				if err := os.WriteFile(outManifest, mText, 0o644); err != nil {
+				if err := os.WriteFile(outManifest, mText, 0o644); err != nil { // #nosec G306 -- derived specs the user asked for, read by the engine
 					return err
 				}
 			}

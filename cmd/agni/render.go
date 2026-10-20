@@ -397,7 +397,7 @@ func buildRegistry(classFlags []string, classFile string) (*graph.Registry, erro
 	reg := graph.DefaultRegistry()
 	var lines []string
 	if classFile != "" {
-		b, err := os.ReadFile(classFile)
+		b, err := os.ReadFile(classFile) // #nosec G304 -- reads or writes a file the user named
 		if err != nil {
 			return nil, err
 		}
@@ -434,7 +434,7 @@ func buildRegistry(classFlags []string, classFile string) (*graph.Registry, erro
 func writeBoard(out string, b *geom.BoardGeometry) error {
 	w := os.Stdout
 	if out != "" && out != "-" {
-		f, err := os.Create(out)
+		f, err := os.Create(out) // #nosec G304 -- reads or writes a file the user named
 		if err != nil {
 			return err
 		}
@@ -456,7 +456,7 @@ func writeBoard(out string, b *geom.BoardGeometry) error {
 func writeRender(out string, g *geom.SchematicGeometry, sheet *geom.SheetGeometry, format string, specs []*geom.HighlightSpec, opts ...render.Option) error {
 	w := os.Stdout
 	if out != "" && out != "-" {
-		f, err := os.Create(out)
+		f, err := os.Create(out) // #nosec G304 -- reads or writes a file the user named
 		if err != nil {
 			return err
 		}

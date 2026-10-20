@@ -34,7 +34,7 @@ func redirectOut(cmd *cobra.Command, out string) (func(), error) {
 	if out == "" || out == "-" {
 		return func() {}, nil
 	}
-	f, err := os.Create(out)
+	f, err := os.Create(out) // #nosec G304 -- writes the -o file the user named
 	if err != nil {
 		return nil, err
 	}

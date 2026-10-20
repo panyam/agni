@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -127,6 +127,44 @@ install:
 # Static analysis over the engine module (the examples-test loop builds the example modules).
 vet:
 	$(GO) vet ./...
+
+# Security and lint scanners. Each runs through `go run` at the version pinned here, so CI and a
+# developer's machine run the same one with nothing installed. Bump a version here, never to @latest.
+# They cover the two modules agni ships, the root and datasheet (the agnids binary and image); the
+# examples are not shipped and stay out of scope.
+STATICCHECK := honnef.co/go/tools/cmd/staticcheck@v0.8.2
+GOVULNCHECK := golang.org/x/vuln/cmd/govulncheck@v1.8.0
+GOSEC := github.com/securego/gosec/v2/cmd/gosec@v2.29.0
+GITLEAKS := github.com/zricethezav/gitleaks/v8@v8.30.1
+SHIPPED_MODULES := . datasheet
+
+# staticcheck over each shipped module.
+lint:
+	@for m in $(SHIPPED_MODULES); do echo "==> staticcheck $$m"; (cd $$m && $(GO) run $(STATICCHECK) ./...) || exit 1; done
+
+# Known vulnerabilities reachable from each shipped module. It is time-sensitive rather than
+# change-sensitive, because the advisory database moves on its own, so it runs weekly and on each
+# release tag (.github/workflows/vulncheck.yml) and in `make audit`, not in the gate.
+vulncheck:
+	@GOVULNCHECK=$(GOVULNCHECK) MODULES="$(SHIPPED_MODULES)" hack/vulncheck.sh
+
+# gosec at medium severity and above over each shipped module. A finding is fixed, or annotated on its
+# line as `// #nosec G<n> -- <why>`, so the reason travels with the code to any scanner that reads it.
+#
+# It runs under the Go that go.mod names, as CI does. Under a newer Go than gosec's analysis library
+# reads, its SSA-based rules (G115 integer overflow, G703 and G710 taint, G112, G122) skip without a
+# word, so a developer on Go 1.27 saw a clean run where CI on 1.26.4 found 100 more.
+GO_MOD_VERSION := $(shell awk '/^go /{print $$2; exit}' go.mod)
+seccheck:
+	@for m in $(SHIPPED_MODULES); do echo "==> gosec $$m (go$(GO_MOD_VERSION))"; (cd $$m && GOTOOLCHAIN=go$(GO_MOD_VERSION) $(GO) run $(GOSEC) -quiet -severity=medium ./...) || exit 1; done
+
+# Committed secrets, over the whole history. A known-fake value is allowlisted by exact value in
+# .gitleaks.toml, so a real secret of the same shape is still reported.
+secrets:
+	$(GO) run $(GITLEAKS) detect --source . --config .gitleaks.toml --redact
+
+# Every scanner, vulncheck included. lint, seccheck and secrets also run in the gate (testall).
+audit: lint seccheck secrets vulncheck
 
 # CONSTRAINT C19 ratchet (WS1-042): fail on a NEW `func ... *ir.Design` outside the allowed
 # producer/entry paths — engine processing reads through check.Model. Run --dump to rebaseline.
@@ -343,7 +381,7 @@ catalog-docs-check: catalog-docs
 # browser-test came back in on 2026-09-08 once the demo work was done, which is what the note that
 # took it out said to do. It was worth re-timing rather than trusting that note: the reason given was
 # "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
-testall: vet ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test browser-test python-test catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
+testall: vet lint seccheck secrets ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test browser-test python-test catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
@@ -630,12 +668,18 @@ TAG_REFS = $(V) $(foreach m,$(SUB_MODS_TO_TAG),$(m)/$(V))
 # preference: the Go module proxy will not serve a tag in any other shape, and a mistagged
 # release is only fixable by deleting a published tag. The already-exists check catches a re-run
 # before it half-creates a set of refs.
-define check_version
+# check_semver checks V's shape alone. compose-release runs after the tag exists, so it cannot use
+# check_version, which also refuses a tag already made.
+define check_semver
 	if [ -z "$(V)" ]; then echo "Usage: make $@ V=v0.1.0"; exit 1; fi; \
 	case "$(V)" in \
 		v[0-9]*.[0-9]*.[0-9]*) ;; \
 		*) echo "V must be v-prefixed semver, e.g. v0.1.0 (the Go module proxy will not serve other shapes)"; exit 1;; \
-	esac; \
+	esac
+endef
+
+define check_version
+	$(check_semver); \
 	if git rev-parse -q --verify "refs/tags/$(V)" >/dev/null; then \
 		echo "tag $(V) already exists locally; pick the next version or delete it first"; exit 1; \
 	fi
@@ -662,7 +706,7 @@ tag:
 # version as its default, and the env example beside it, written to dist/ for `gh release create`.
 #   make compose-release V=v0.2.4
 compose-release:
-	@$(check_version)
+	@$(check_semver)
 	mkdir -p dist
 	sed 's/$${AGNI_VERSION:-latest}/$${AGNI_VERSION:-$(V)}/' deploy/compose.yaml > dist/compose.yaml
 	sed 's/^AGNI_VERSION=latest/AGNI_VERSION=$(V)/' deploy/env.example > dist/env.example

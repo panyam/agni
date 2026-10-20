@@ -5,6 +5,7 @@ import (
 	"regexp"
 	"strings"
 
+	"github.com/panyam/agni/core/num"
 	derivepb "github.com/panyam/agni/datasheet/gen/go/agni/v1/derive"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
@@ -451,7 +452,7 @@ func extractPinTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg 
 		for _, c := range t.Cells {
 			rs := max(c.RowSpan, 1)
 			cs := max(c.ColSpan, 1)
-			if int32(col) >= c.Col && int32(col) < c.Col+cs && row >= c.Row && row < c.Row+rs {
+			if num.Int32(col) >= c.Col && num.Int32(col) < c.Col+cs && row >= c.Row && row < c.Row+rs {
 				return strings.TrimSpace(c.Text)
 			}
 		}

@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/panyam/agni/core/facts"
+	"github.com/panyam/agni/core/num"
 	"github.com/panyam/jaala/ns"
 
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -24,7 +25,7 @@ func QueryProto(q Query) *checkspb.DatalogQuery {
 		out.Rules = append(out.Rules, &checkspb.DatalogRule{
 			Head:      atomProto(r.Head),
 			Body:      bodyProto(r.Body),
-			Hops:      int32(r.Hops),
+			Hops:      num.Int32(r.Hops),
 			HeadTypes: argTypeProtos(r.HeadTypes),
 		})
 	}
@@ -40,7 +41,7 @@ func QueryProto(q Query) *checkspb.DatalogQuery {
 	for _, v := range q.After {
 		out.After = append(out.After, valueProto(v))
 	}
-	out.Limit, out.Offset = int32(q.Limit), int32(q.Offset)
+	out.Limit, out.Offset = num.Int32(q.Limit), num.Int32(q.Offset)
 	return out
 }
 

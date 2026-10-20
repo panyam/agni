@@ -12,6 +12,7 @@ import (
 	"github.com/panyam/agni"
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/num"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/fshost"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -63,8 +64,8 @@ func Layers(dir, design string) (LayersResult, error) {
 	}
 	mfs := fshost.MemFS(files)
 	after := heap()
-	held := Layer{Name: "design files", MS: time.Since(t).Milliseconds(), RetainedMB: mb(int64(after.HeapAlloc) - int64(before.HeapAlloc)),
-		AllocatedMB: mb(int64(after.TotalAlloc) - int64(before.TotalAlloc)), HeapMB: mb(int64(after.HeapAlloc)), SysMB: mb(int64(after.Sys))}
+	held := Layer{Name: "design files", MS: time.Since(t).Milliseconds(), RetainedMB: mb(num.Int64(after.HeapAlloc) - num.Int64(before.HeapAlloc)),
+		AllocatedMB: mb(num.Int64(after.TotalAlloc) - num.Int64(before.TotalAlloc)), HeapMB: mb(num.Int64(after.HeapAlloc)), SysMB: mb(num.Int64(after.Sys))}
 	store := &wasmhost.MemCache{}
 	if res.Fresh, _, err = layerPass(mfs, store, design); err != nil {
 		return res, err
@@ -138,10 +139,10 @@ func layerPass(mfs fs.FS, store service.BlobStore, design string) ([]Layer, int6
 		layers = append(layers, Layer{
 			Name:        name,
 			MS:          ms,
-			RetainedMB:  mb(int64(after.HeapAlloc) - int64(prev.HeapAlloc)),
-			AllocatedMB: mb(int64(after.TotalAlloc) - int64(before.TotalAlloc)),
-			HeapMB:      mb(int64(after.HeapAlloc)),
-			SysMB:       mb(int64(after.Sys)),
+			RetainedMB:  mb(num.Int64(after.HeapAlloc) - num.Int64(prev.HeapAlloc)),
+			AllocatedMB: mb(num.Int64(after.TotalAlloc) - num.Int64(before.TotalAlloc)),
+			HeapMB:      mb(num.Int64(after.HeapAlloc)),
+			SysMB:       mb(num.Int64(after.Sys)),
 		})
 		prev = after
 		return nil

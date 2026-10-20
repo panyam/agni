@@ -137,7 +137,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				return err
 			}
 			if len(bind) > 0 && setPath != "" {
-				return fmt.Errorf("--bind applies to one query; a set binds each query's variables under its own bind:")
+				return fmt.Errorf("--bind applies to one query; a set binds each query's variables under its own bind: key")
 			}
 			if specLib {
 				specs, err := param.LoadSet(os.DirFS(paramsDir))
@@ -489,7 +489,7 @@ func readQuerySet(cmd *cobra.Command, svc queryAPI, path, snap string) (query.Qu
 		path = "stdin"
 		b, err = io.ReadAll(cmd.InOrStdin())
 	case strings.HasSuffix(path, ".yaml") || strings.HasSuffix(path, ".yml"):
-		b, err = os.ReadFile(path)
+		b, err = os.ReadFile(path) // #nosec G304 -- reads a file the user named
 	default:
 		return projectQuerySet(cmd, svc, path, snap)
 	}

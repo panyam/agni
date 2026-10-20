@@ -6,6 +6,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/panyam/agni/core/num"
 	"github.com/panyam/agni/core/timing"
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
@@ -16,18 +17,18 @@ const timedRules = 20
 
 // TimingProto is a request's timing snapshot as the RequestTiming a client reads (agni issue 914).
 func TimingProto(procedure string, s timing.Snapshot) *webapi.RequestTiming {
-	out := &webapi.RequestTiming{Procedure: procedure, TotalMicros: s.Total.Microseconds(), RulesEvaluated: int32(len(s.Rules))}
+	out := &webapi.RequestTiming{Procedure: procedure, TotalMicros: s.Total.Microseconds(), RulesEvaluated: num.Int32(len(s.Rules))}
 	for _, st := range s.Stages {
 		out.Stages = append(out.Stages, &webapi.TimedStage{
 			Name: st.Name, StartMicros: st.Start.Microseconds(), Micros: st.Dur.Microseconds(),
-			SysBytes: int64(st.Sys), HeapBytes: int64(st.HeapAlloc),
+			SysBytes: num.Int64(st.Sys), HeapBytes: num.Int64(st.HeapAlloc),
 		})
 	}
 	for _, l := range s.Lookups {
 		out.Lookups = append(out.Lookups, &webapi.CacheLookup{Layer: l.Layer, Source: l.Source})
 	}
 	for _, r := range listedRules(s.Rules) {
-		out.Rules = append(out.Rules, &webapi.RuleTiming{Rule: r.Name, Micros: r.Dur.Microseconds(), AllocBytes: int64(r.Alloc)})
+		out.Rules = append(out.Rules, &webapi.RuleTiming{Rule: r.Name, Micros: r.Dur.Microseconds(), AllocBytes: num.Int64(r.Alloc)})
 	}
 	for _, p := range s.Plans {
 		out.Plans = append(out.Plans, &webapi.QueryPlan{Query: p.Query, Plan: p.Text})

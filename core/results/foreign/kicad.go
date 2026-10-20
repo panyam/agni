@@ -19,6 +19,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/panyam/agni/core/num"
 	"github.com/panyam/agni/core/results"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -176,7 +177,7 @@ func severity(s string) string {
 // summarize builds the ImportSummary from the per-finding join outcomes, bucketing the residue by
 // class and keeping a few verbatim examples of each so a reader can judge whether it is benign.
 func summarize(total, joined int, unjoined map[string][]string) *checkspb.ImportSummary {
-	s := &checkspb.ImportSummary{Findings: int32(total), Joined: int32(joined)}
+	s := &checkspb.ImportSummary{Findings: num.Int32(total), Joined: num.Int32(joined)}
 	reasons := make([]string, 0, len(unjoined))
 	for r := range unjoined {
 		reasons = append(reasons, r)
@@ -191,7 +192,7 @@ func summarize(total, joined int, unjoined map[string][]string) *checkspb.Import
 		}
 		s.Unjoined = append(s.Unjoined, &checkspb.UnjoinedReason{
 			Reason:   r,
-			Count:    int32(len(unjoined[r])),
+			Count:    num.Int32(len(unjoined[r])),
 			Examples: ex,
 		})
 	}

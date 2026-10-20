@@ -51,7 +51,7 @@ func trialCmd() *cobra.Command {
 			}
 			out := cmd.OutOrStdout()
 			if outPath != "" && outPath != "-" {
-				f, err := os.Create(outPath)
+				f, err := os.Create(outPath) // #nosec G304 -- writes the report file the user named
 				if err != nil {
 					return err
 				}

@@ -213,7 +213,7 @@ func projectRootAbove(abs string) (root, id string, err error) {
 		dir = filepath.Dir(abs)
 	}
 	for range maxProjectWalk + 1 {
-		f, openErr := os.Open(filepath.Join(dir, projects.ProjectDescriptor))
+		f, openErr := os.Open(filepath.Join(dir, projects.ProjectDescriptor)) // #nosec G304 -- reads the project descriptor under a mount root the user declared
 		if openErr == nil {
 			declared, _, _, parseErr := projects.ParseProject(f)
 			f.Close()

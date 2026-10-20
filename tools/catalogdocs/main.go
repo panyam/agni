@@ -136,7 +136,7 @@ func genRules() error {
 			label := linkLabel(s.prefix, r.Name)
 			body := prepareDetail(r.Detail, "rules", images)
 			page := frontMatter(label, r.Summary) + remedySection(r.Remedy) + body
-			if err := os.WriteFile(filepath.Join(outDir, slug+".md"), []byte(page), 0o644); err != nil {
+			if err := os.WriteFile(filepath.Join(outDir, slug+".md"), []byte(page), 0o644); err != nil { // #nosec G306 -- committed docs pages
 				return err
 			}
 			rows = append(rows, catalogRow{
@@ -154,7 +154,7 @@ func genRules() error {
 			}
 		}
 	}
-	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(rulesIndex(rows)), 0o644)
+	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(rulesIndex(rows)), 0o644) // #nosec G306 -- committed docs pages
 }
 
 // pageSlug is a rule's page filename stem, the bare name for built-ins (prefix "") and
@@ -205,14 +205,14 @@ func genRelations() error {
 			body += def
 		}
 		page := frontMatter(rel.Name, rel.Summary) + body
-		if err := os.WriteFile(filepath.Join(outDir, rel.Name+".md"), []byte(page), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(outDir, rel.Name+".md"), []byte(page), 0o644); err != nil { // #nosec G306 -- committed docs pages
 			return err
 		}
 	}
 	if err := copyImages(*relImgSrc, imgOut, images); err != nil {
 		return err
 	}
-	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(relationsIndex(rels)), 0o644)
+	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(relationsIndex(rels)), 0o644) // #nosec G306 -- committed docs pages
 }
 
 // definitionSection renders a derived member's definition as the engine registered it: the typed
@@ -291,7 +291,7 @@ func frontMatter(name, summary string) string {
 // rule, relation or image ref drops its file rather than lingering as an orphan the freshness check
 // cannot see. Files with other extensions survive.
 func resetDir(dir, ext string) error {
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- committed docs pages
 		return err
 	}
 	entries, err := os.ReadDir(dir)
@@ -314,15 +314,15 @@ func copyImages(src, dst string, names map[string]bool) error {
 	if len(names) == 0 {
 		return nil
 	}
-	if err := os.MkdirAll(dst, 0o755); err != nil {
+	if err := os.MkdirAll(dst, 0o755); err != nil { // #nosec G301 -- committed docs pages
 		return err
 	}
 	for name := range names {
-		b, err := os.ReadFile(filepath.Join(src, name))
+		b, err := os.ReadFile(filepath.Join(src, name)) // #nosec G304 -- a docs generator reading the repo's own sources
 		if err != nil {
 			return fmt.Errorf("image %q referenced but not found in %s: %w", name, src, err)
 		}
-		if err := os.WriteFile(filepath.Join(dst, name), b, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(dst, name), b, 0o644); err != nil { // #nosec G306 G703 -- committed docs pages
 			return err
 		}
 	}

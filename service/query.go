@@ -9,6 +9,7 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/facts"
+	"github.com/panyam/agni/core/num"
 	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/core/query"
 	"github.com/panyam/agni/core/timing"
@@ -379,7 +380,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 			e.Reason = cellReason(d.model, kind, ref, drawnComps, drawnNets, len(e.SheetIds) > 0)
 		}
 		resp.Entities = append(resp.Entities, e)
-		n := int32(len(resp.Entities))
+		n := num.Int32(len(resp.Entities))
 		entityAt[key] = n
 		return n
 	}
@@ -729,5 +730,5 @@ func TextPositionOf(err error) *webapi.TextPosition {
 	if !ok {
 		return nil
 	}
-	return &webapi.TextPosition{Offset: int32(p.Offset), Line: int32(p.Line), Column: int32(p.Column), Caret: p.Caret}
+	return &webapi.TextPosition{Offset: num.Int32(p.Offset), Line: num.Int32(p.Line), Column: num.Int32(p.Column), Caret: p.Caret}
 }

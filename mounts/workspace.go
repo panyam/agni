@@ -53,5 +53,5 @@ func (w *Workspace) ReadFile(_ context.Context, uri artifact.URI) ([]byte, error
 	if err != nil {
 		return nil, err
 	}
-	return os.ReadFile(abs)
+	return os.ReadFile(abs) // #nosec G304 -- abs comes from Resolve, which refuses a path outside its mount
 }

@@ -166,7 +166,7 @@ func runStart(w io.Writer, designPath, dir, name, title string) error {
 		}
 	}
 
-	if err := os.MkdirAll(designDir, 0o755); err != nil {
+	if err := os.MkdirAll(designDir, 0o755); err != nil { // #nosec G301 -- a project the user creates, in their own tree
 		return err
 	}
 	if !adopted {
@@ -174,7 +174,7 @@ func runStart(w io.Writer, designPath, dir, name, title string) error {
 		if err != nil {
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(root, projects.ProjectDescriptor), body, 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(root, projects.ProjectDescriptor), body, 0o644); err != nil { // #nosec G306 -- a project the user creates, in their own tree
 			return err
 		}
 	}
@@ -202,7 +202,7 @@ func runStart(w io.Writer, designPath, dir, name, title string) error {
 
 // existingProjectID returns the id declared by a project.yaml at root, and whether there was one.
 func existingProjectID(root string) (string, bool) {
-	f, err := os.Open(filepath.Join(root, projects.ProjectDescriptor))
+	f, err := os.Open(filepath.Join(root, projects.ProjectDescriptor)) // #nosec G304 -- reads or writes inside the project the user is creating
 	if err != nil {
 		return "", false
 	}
@@ -215,7 +215,7 @@ func existingProjectID(root string) (string, bool) {
 }
 
 func writeDescriptorFile(path string, emit func(io.Writer) error) error {
-	f, err := os.Create(path)
+	f, err := os.Create(path) // #nosec G304 -- reads or writes inside the project the user is creating
 	if err != nil {
 		return err
 	}
@@ -263,11 +263,11 @@ func indentYAML(doc, key, pad string) string {
 }
 
 func copyFile(src, dst string) error {
-	b, err := os.ReadFile(src)
+	b, err := os.ReadFile(src) // #nosec G304 -- reads or writes inside the project the user is creating
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(dst, b, 0o644)
+	return os.WriteFile(dst, b, 0o644) // #nosec G306 G703 -- a project the user creates, in their own tree
 }
 
 // report tells the operator what was created and what was COPIED from where. The copy is what can

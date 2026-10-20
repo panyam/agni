@@ -295,10 +295,10 @@ func (c *DesignCache) restore(ctx context.Context, key string, codec *protoCodec
 		return nil, nil, false
 	}
 	n, k := binary.Uvarint(b)
-	if k <= 0 || uint64(len(b)-k) < n {
+	if k <= 0 || uint64(len(b)-k) < n { // #nosec G115 -- k > 0 is the varint's length within b, so len(b)-k is not negative
 		return nil, nil, false
 	}
-	fp, payload := b[k:k+int(n)], b[k+int(n):]
+	fp, payload := b[k:k+int(n)], b[k+int(n):] // #nosec G115 -- n <= len(b)-k, checked just above
 	t, ok := c.store.check(fp)
 	if !ok {
 		return nil, nil, false
@@ -565,12 +565,6 @@ type builtModel struct {
 	// overlay finds it. Only a kept entry stores rule results.
 	kept    bool
 	results ruleResults
-}
-
-// base returns the fact base over reg, built once. The registry is the overlay's, and the overlay is
-// in the model's key, so one model rarely sees more than one.
-func (b *builtModel) base(reg *facts.Registry) *query.Base {
-	return b.baseFor(context.Background(), reg)
 }
 
 // baseFor is base, timing the projection as the request's "factbase" stage when it builds one.

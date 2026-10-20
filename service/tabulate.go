@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/num"
 	rpt "github.com/panyam/agni/core/report"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -355,7 +356,7 @@ func (t *SourceTable) Cite(row *webapi.QueryRow, cites []string) {
 		n, ok := t.at[c]
 		if !ok {
 			t.resp.Sources = append(t.resp.Sources, c)
-			n = int32(len(t.resp.Sources) - 1)
+			n = num.Int32(len(t.resp.Sources) - 1)
 			t.at[c] = n
 		}
 		row.CiteIndex = append(row.CiteIndex, n)

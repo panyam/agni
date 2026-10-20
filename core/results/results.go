@@ -15,6 +15,7 @@ import (
 	"sort"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/num"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -104,10 +105,10 @@ func Pivot(source string, fs []*checkspb.Finding, summaries map[string]string, r
 		bySeverity[UnresolvedSection] = unresolved
 	}
 
-	rep := &checkspb.CheckReport{Source: source, RulesRun: int32(rulesRun)}
+	rep := &checkspb.CheckReport{Source: source, RulesRun: num.Int32(rulesRun)}
 	for _, sev := range order {
 		sfs := bySeverity[sev]
-		section := &checkspb.CheckReport_SeveritySection{Severity: sev, Count: int32(len(sfs))}
+		section := &checkspb.CheckReport_SeveritySection{Severity: sev, Count: num.Int32(len(sfs))}
 		groups := map[string]*checkspb.CheckReport_RuleGroup{}
 		for _, f := range sfs {
 			g := groups[f.GetRule()]

@@ -58,7 +58,7 @@ func resultsCmd() *cobra.Command {
 				return fmt.Errorf("%s: %w", args[0], err)
 			}
 			if compare != "" {
-				ob, err := os.ReadFile(compare)
+				ob, err := os.ReadFile(compare) // #nosec G304 -- reads a file the user named
 				if err != nil {
 					return err
 				}
@@ -159,7 +159,7 @@ func writeResults(path string, doc *checkspb.CheckResults) error {
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(path, b, 0o644)
+	return os.WriteFile(path, b, 0o644) // #nosec G306 -- a report the user asked for, meant to be read by others
 }
 
 // hashSource returns "sha256:<hex>" over a file's bytes, or "" when it cannot be read. An unreadable

@@ -211,9 +211,7 @@ func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
 
 	prims := f.primitives(nmPerUnit)
 	pkgPins := f.packagePins()
-	for _, pl := range f.placements(src, nmPerUnit, prims, pkgPins) {
-		g.Placements = append(g.Placements, pl)
-	}
+	g.Placements = append(g.Placements, f.placements(src, nmPerUnit, prims, pkgPins)...)
 	g.Nets = f.copperNets(nmPerUnit, prims)
 	g.Graphics = f.graphics(nmPerUnit)
 	g.Zones = f.zones(nmPerUnit)

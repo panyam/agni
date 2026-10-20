@@ -122,7 +122,7 @@ func Run(dir, design string) (Result, error) {
 	t = time.Now()
 	snap, err := ss.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: uri}}))
 	if err != nil {
-		return res, fmt.Errorf("Ingest: %w", err)
+		return res, fmt.Errorf("ingest: %w", err)
 	}
 	name := snap.Msg.GetName()
 	d, err := ds.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: name}))
@@ -142,7 +142,7 @@ func Run(dir, design string) (Result, error) {
 			return res, fmt.Errorf("%s: %w", c.q, err)
 		}
 		if rows := r.Msg.GetRows(); len(rows) == 1 && len(rows[0].GetCells()) == 1 {
-			n, _ := strconv.Atoi(rows[0].GetCells()[0])
+			n, _ := strconv.ParseInt(rows[0].GetCells()[0], 10, 32)
 			*c.out = int32(n)
 		}
 	}
@@ -179,7 +179,7 @@ func readDir(dir string) (map[string][]byte, int64, error) {
 		if err != nil || d.IsDir() {
 			return err
 		}
-		b, err := os.ReadFile(p)
+		b, err := os.ReadFile(p) // #nosec G304 G122 -- a benchmark reading the design the developer named
 		if err != nil {
 			return err
 		}

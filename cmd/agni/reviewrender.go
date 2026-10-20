@@ -28,7 +28,7 @@ const companionOverlapFloor = 0.5
 // skipped, and a companion whose net names poorly overlap the design's is flagged as likely
 // mis-paired. Returns a human summary.
 func renderReviewImages(reports []review.Report, sources []string, outDir, companionFlag string) (string, error) {
-	if err := os.MkdirAll(outDir, 0o755); err != nil {
+	if err := os.MkdirAll(outDir, 0o755); err != nil { // #nosec G301 -- a report the user asked for, meant to be read by others
 		return "", fmt.Errorf("--render %s: %w", outDir, err)
 	}
 	reg, err := buildRegistry(nil, "")
@@ -60,7 +60,7 @@ func renderReviewImages(reports []review.Report, sources []string, outDir, compa
 		}
 		stem := strings.TrimSuffix(filepath.Base(src), filepath.Ext(src))
 		destDir := filepath.Join(outDir, stem)
-		if err := os.MkdirAll(destDir, 0o755); err != nil {
+		if err := os.MkdirAll(destDir, 0o755); err != nil { // #nosec G301 -- a report the user asked for, meant to be read by others
 			return "", fmt.Errorf("--render: %w", err)
 		}
 		wrote := 0
@@ -70,7 +70,7 @@ func renderReviewImages(reports []review.Report, sources []string, outDir, compa
 			}
 			svg := render.SheetSVGHighlighted(g, sheet, specs)
 			out := filepath.Join(destDir, sheetFileName(sheet)+".svg")
-			if err := os.WriteFile(out, []byte(svg), 0o644); err != nil {
+			if err := os.WriteFile(out, []byte(svg), 0o644); err != nil { // #nosec G306 -- a report the user asked for, meant to be read by others
 				return "", fmt.Errorf("--render write %s: %w", out, err)
 			}
 			wrote++
