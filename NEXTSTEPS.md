@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-20, at `63aee31e` (PR 1114).
+Last pruned 2026-10-20, at `9d12c4e5`.
 
 ## At a glance
 
@@ -19,18 +19,19 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
 
 - **#851 `mission_public_demo`** closed on 2026-10-20 at its done-when (deployed walk at `2ead7d59`,
   94 ok). #855, #923 and #949 stay `waiting`, off any mission. `make exercise-public-demo` remains.
-- **#845 `mission_browser_review`**, 16 of 19, three P3s (#759, #774, #904). Its exercise last ran
+- **#845 `mission_browser_review`**, 16 of 20, four P3s (#759, #774, #904, #1117). Its exercise last ran
   2026-10-16, 30 PRs ago, across the snapshot and Load page changes, so run it before picking one.
 - **#909 `mission_ask`**, filed, not active. #910 (P1, MCP on `agni serve`) is its first ticket and
   the natural next mission to activate.
 - **Possible next mission**: moving a house netlist audit off its spreadsheet. #820, #821 and #1093 are
   its tickets, and `guide/older-comparison-tools.md` its first page. Not yet a mission.
 - This run: PRs 1112 and 1116 merged (#1009, #1014, #1015, #1016 closed); #1115 filed `waiting`.
-  PR 1114 merged from another clone (#605, #702). #1032 carries both `P3` and `waiting`, for retriage.
+  PR 1114 merged (#605, #702, and the `drop.spec.ts` flake); it filed #1113 (P3, off-mission) and
+  #1117 (P3, on #845). #1032 carries both `P3` and `waiting`, for retriage.
 
 ## Open, ranked
 
-1. **Run #845's exercise**, then its three P3s (#759, #774, #904) and a checklist for one sample board.
+1. **Run #845's exercise**, then its four P3s (#759, #774, #904, #1117) and a checklist for one sample board.
 2. **#910 on `mission_ask`**, the next mission to activate, MCP tools over the existing services. Every service is transport-neutral,
    so it is an adapter, not new analysis.
 3. **Jetson's load**, off any mission: #1061's edit-session half. Measure with the exercise's

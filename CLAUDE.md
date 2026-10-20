@@ -529,7 +529,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   first, so a mirrored placement at 90 or 270 swapped its two pins onto each other's nets until agni
   issue 577; the fix is the INVERSE angle rather than a reordering, which is why the renderer needed
   no change. A bus VECTOR is spelled `[first..last]` and only that, so a KiCad label written
-  `DATA[1:0]` is a plain scalar name (xschem and gEDA do use that form). Two buses WIRED together
+  `DATA[1:0]` is a plain scalar name (xschem and gEDA do use that form), which the reader records in
+  `range_labels` for `bus-spelling-not-a-bus` to report (agni 605). Two buses WIRED together
   share the members whose names match, while a bus crossing a SHEET PIN pairs off by bit position,
   ascending index. All of it is in `architecture/net-solving.md`, and **none of it is visible in a net
   COUNT**, because a pin swap moves one connection out of a net and another in, so one demo board
@@ -698,7 +699,9 @@ once. Measured against a shipped in-house checker on a real board, EVERY warning
 string-comparison artifact and none was a design defect. `Canonical` is the one canonical form, used
 on BOTH sides; `\s` does NOT match U+200B, which is the defence that looks right and is not.
 **A pin name is compared loosely and a NET name is not**, because a vendor table is inconsistent with
-itself while a net name is the design's own identifier. **A caller comparing many against many
+itself while a net name is the design's own identifier. `ident.PinName` is the loose key, folding underscores AFTER the
+index rewrite so `IO0_1` never meets a different `IO1`, and `ident.PinNumber` keeps a designator's
+zeros (agni 702). **A caller comparing many against many
 builds a map keyed on `Canonical` rather than nesting `Compare`**, since two hundred rows against
 sixteen hundred nets is 320,000 comparisons however fast one is.
 
@@ -735,7 +738,10 @@ server for the handful of assertions that need layout, because jsdom has none an
 present in the DOM and invisible to a reader, which is how v0.2.0 shipped a viewer whose query
 surface booted hidden behind the Trace tab. It was outside the gate until PR 629. Read
 `docsite/content/build/the-gate.md` for what belongs in it, and `build/evidence.md` for the two ways
-a layout assertion passes while proving nothing.
+a layout assertion passes while proving nothing. **A spec that times out on CI waiting for a result, in a different
+test each run, and passes locally is often a click landing in a boot window**, which locally is
+20 ms wide. Sample the element's state every 20 ms from first paint with the wasm download held back
+by `page.route`, which is how PR 1114 found a Run button enabled before any design had opened.
 
 **A module that BUILDS is not a module that is tidy**, and the gate now asks both. `tidyall-check`
 runs `go mod tidy` over the root and every example module and fails on any difference (~5s, near the
