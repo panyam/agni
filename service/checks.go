@@ -17,6 +17,7 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/expect"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // CheckService runs the rule checks over a design's netlist IR and serves the rule catalog, over
@@ -116,10 +117,12 @@ func (s *CheckService) Snapshots() *SnapshotService {
 }
 
 // ListRules returns the catalog a check of the same snapshot would run, each rule in its wire form
-// with its availability from check.Available. The snapshot is optional, and without one the server's
-// own catalog is listed. The design's files are not read, so ListRules works before a file is chosen.
+// with its availability, which is true exactly for the rules a whole CheckDesign of that snapshot
+// does not report in `skipped` (listedGate). The design's netlist is read for it and its board is
+// not. The snapshot is optional, and without one the server's own catalog is listed with the
+// design-less availability, so ListRules works before a file is chosen.
 func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
-	_, snap, ok, err := s.projects.OptionalSnapshot(ctx, req.GetSnapshot())
+	ctx, snap, ok, err := s.projects.OptionalSnapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
@@ -135,13 +138,14 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 	if err != nil {
 		return nil, err
 	}
-	// Whether the run would carry a parameter set is known without a read: the project's params/ or this
-	// host's own corpus (agni issue 940).
-	params := ov.SpecsOver(s.specs) != nil
+	avail := s.listedGate(ctx, snap, ok, ov)
+	if err := ctx.Err(); err != nil {
+		return nil, err
+	}
 	resp := &webapi.ListRulesResponse{EngineVersion: s.env.ProducerVersion}
 	shipped := ShippedRules()
 	for _, r := range cat.Rules() {
-		ok, reason := check.ListedAvailable(r, params)
+		ok, reason := avail(r)
 		resp.Rules = append(resp.Rules, &webapi.RuleInfo{
 			Name:              r.Name,
 			Severity:          r.Severity,
@@ -181,9 +185,9 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		return nil, err
 	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
-	// check.Available is asked HERE with the model, where ListRules asks it with nil. ListRules wants
-	// "can this rule ever run" and the panel wants "did it run on this design", so a rule gated on
-	// this design is reported in `skipped` rather than vanishing from the findings.
+	// check.Available is asked HERE with the model a run reads, board included, and ListRules asks the
+	// same gate of that model without the board (listedGate), so the two agree. A rule gated on this
+	// design is reported in `skipped` rather than vanishing from the findings.
 	runnable, skipped := partitionAvailable(rules, m)
 	// A run asked about some nets or parts answers for those alone (agni issue 897). The rules that
 	// conclude about the design as a whole have no answer for a subset, so they are named rather than
@@ -263,7 +267,9 @@ func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetCo
 	}
 	ov := snap.Overlay
 	specs := ov.SpecsOver(s.specs)
-	m, err := BuildModelTier(ctx, LoaderOr(snap, s.loader), snap.Netlist, artifact.URI{}, specs, SkipBoard, ov.ReadOptions()...)
+	// The kept board-less model, which ListRules built on the same open, so the panel builds no second
+	// one (agni issue 950).
+	m, _, err := BuildModelCachedTier(ctx, LoaderOr(snap, s.loader), snap.Netlist, snap.Board, ov, s.specs, SkipBoard)
 	if err != nil {
 		return nil, err
 	}
@@ -413,6 +419,31 @@ func FindingProtos(fs []check.Finding) []*checkspb.Finding {
 		out = append(out, FindingProto(f))
 	}
 	return out
+}
+
+// listedGate is the availability ListRules reports for each rule of a snapshot's catalog, the answer a
+// run of that snapshot would give (agni issue 950). It asks check.Available's gate of the model a run
+// builds, without the board, which is the same entry a query or the coverage panel reads, so a later
+// question about the design builds no second one. The board is never read here (agni issue 943):
+// whether the run attaches one is decided by the board tier's format, as it is for the Board sheet.
+//
+// Without a snapshot, or for one whose netlist cannot be read, there is no run to agree with, and the
+// design-less answer stands, where only the parameter set gates, known from the project's params/
+// and this host's own corpus (agni issue 940). A run of an unreadable design fails rather than
+// skipping rules.
+func (s *CheckService) listedGate(ctx context.Context, snap Snap, ok bool, ov Overlay) func(*check.Rule) (bool, string) {
+	params := ov.SpecsOver(s.specs) != nil
+	designLess := func(r *check.Rule) (bool, string) { return check.ListedAvailable(r, params) }
+	if !ok {
+		return designLess
+	}
+	defer timing.Begin(ctx, "availability")()
+	b, err := buildModelEntry(ctx, LoaderOr(snap, s.loader), snap.Netlist, snap.Board, ov, s.specs, SkipBoard)
+	if err != nil {
+		return designLess
+	}
+	board := formats.HasBoard(boardReadURI(snap.Netlist, snap.Board).Path)
+	return func(r *check.Rule) (bool, string) { return check.AvailableBoardUnread(r, b.model, board) }
 }
 
 // partitionAvailable splits selected rules into those that can evaluate on this design and those that

@@ -257,8 +257,9 @@ without inventing anything, and the remedy lives in the message the way it does 
 #### What a count leaves out
 
 **A gated rule reports nothing anywhere**, which is the largest thing a per-entity count leaves out.
-`FindingsState.skipped` is design-wide, so the count states how many selected rules could not run at
-all and gives the engine's own reasons on hover. A clean entity under a half-gated ruleset is a much
+`FindingsState.skipped` is design-wide, so the count states how many rules could not run at all (the
+ones the catalog lists unavailable for this design, and any selected rule a run skipped) and gives the
+engine's own reasons on hover. A clean entity under a half-gated ruleset is a much
 weaker statement than a clean entity under a full one, and nothing on the entity itself can say so.
 
 **And the count says what it is not.** An entity view enumerates attention; a review pass enumerates

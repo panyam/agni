@@ -977,13 +977,10 @@ func (x *GetExpectationsResponse) GetHasSidecar() bool {
 	return false
 }
 
-// ListRulesRequest identifies the design against which rule availability is reported. Both fields
-// are currently advisory: availability derives from each rule's declared Reads (design-independent
-// today), so the catalog is the same for any design. The fields are kept so availability can become
-// design-dependent (e.g. once the datasheet parameter layer lands) without a wire change.
+// ListRulesRequest names the design whose catalog and availability are reported.
 type ListRulesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// snapshot names the design whose config and availability decide the listed catalog, so it is the one a check of that snapshot runs. Empty lists the server's catalog without availability, "snapshots/{snapshot}" (agni issue 1061).
+	// snapshot names the design whose config and availability decide the listed catalog, so it is the one a check of that snapshot runs, "snapshots/{snapshot}" (agni issue 1061). Empty lists the server's own catalog, where only a missing datasheet parameter set makes a rule unavailable. A snapshot whose netlist cannot be read is listed the same way, since a run of it fails rather than skipping rules.
 	Snapshot      string `protobuf:"bytes,3,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1037,7 +1034,7 @@ type RuleInfo struct {
 	Summary           string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
 	Reads             []string               `protobuf:"bytes,4,rep,name=reads,proto3" json:"reads,omitempty"`                                                                         // facts the rule reads (docs/15 vocabulary)
 	Tags              map[string]string      `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // open classification: category, tier, distribution, provider keys
-	Available         bool                   `protobuf:"varint,6,opt,name=available,proto3" json:"available,omitempty"`                                                                // can the rule produce meaningful findings against this design now
+	Available         bool                   `protobuf:"varint,6,opt,name=available,proto3" json:"available,omitempty"`                                                                // a whole CheckDesign of this snapshot runs the rule rather than skipping it
 	UnavailableReason string                 `protobuf:"bytes,7,opt,name=unavailable_reason,json=unavailableReason,proto3" json:"unavailable_reason,omitempty"`                        // why not, when available is false (e.g. "needs the datasheet parameter layer")
 	Impact            string                 `protobuf:"bytes,8,opt,name=impact,proto3" json:"impact,omitempty"`                                                                       // what goes wrong when the rule is violated (check.Rule.Impact)
 	Detail            string                 `protobuf:"bytes,9,opt,name=detail,proto3" json:"detail,omitempty"`                                                                       // long-form markdown: meaning, rationale, query structure (check.Rule.Detail)

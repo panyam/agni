@@ -285,8 +285,9 @@ func Available(r *Rule, m Model) (ok bool, reason string) {
 	return available(r, m, m != nil && m.HasParams())
 }
 
-// ListedAvailable is Available for a catalog listed against a design without building its model, as
-// ListRules does, given whether the run would carry a datasheet parameter set. Only a run can say
+// ListedAvailable is Available for a catalog listed with no design model, as ListRules does with no
+// snapshot or one whose netlist cannot be read, given whether the run would carry a datasheet
+// parameter set. Only a run can say
 // whether a board or a source capability is present, so those gate nothing here, as with a nil model.
 // The parameter set is known before any read, from the design's project and the host's own corpus,
 // and asking a nil model instead called every datasheet-tier rule unavailable on a project with
@@ -294,6 +295,25 @@ func Available(r *Rule, m Model) (ok bool, reason string) {
 func ListedAvailable(r *Rule, params bool) (ok bool, reason string) {
 	return available(r, nil, params)
 }
+
+// AvailableBoardUnread is Available for a model built without its board tier, given whether the run
+// would attach a board. ListRules asks it, because opening a design must not parse the board (agni
+// issue 943) while the listing must still say what a run of that design would skip (agni issue 950).
+// The parameter set and every source-format capability are read off m exactly as the run's model
+// answers them, so m must be built from the same netlist, overlay and corpus as the run's. Whether a
+// board is attached is known from the board tier's format without reading it, as GetDesign lists the
+// Board sheet.
+func AvailableBoardUnread(r *Rule, m Model, board bool) (ok bool, reason string) {
+	return available(r, boardAsRun{Model: m, board: board}, m.HasParams())
+}
+
+// boardAsRun answers HasBoard as the run would, for a model built without the board.
+type boardAsRun struct {
+	Model
+	board bool
+}
+
+func (b boardAsRun) HasBoard() bool { return b.board || b.Model.HasBoard() }
 
 // available is the shared gate: params says whether the run carries a datasheet parameter set, and m,
 // when non-nil, answers the board and capability questions.

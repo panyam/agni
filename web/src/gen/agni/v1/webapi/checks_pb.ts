@@ -509,16 +509,13 @@ export const GetExpectationsResponseSchema: GenMessage<GetExpectationsResponse> 
   messageDesc(file_agni_v1_webapi_checks, 13);
 
 /**
- * ListRulesRequest identifies the design against which rule availability is reported. Both fields
- * are currently advisory: availability derives from each rule's declared Reads (design-independent
- * today), so the catalog is the same for any design. The fields are kept so availability can become
- * design-dependent (e.g. once the datasheet parameter layer lands) without a wire change.
+ * ListRulesRequest names the design whose catalog and availability are reported.
  *
  * @generated from message agni.v1.webapi.ListRulesRequest
  */
 export type ListRulesRequest = Message<"agni.v1.webapi.ListRulesRequest"> & {
   /**
-   * snapshot names the design whose config and availability decide the listed catalog, so it is the one a check of that snapshot runs. Empty lists the server's catalog without availability, "snapshots/{snapshot}" (agni issue 1061).
+   * snapshot names the design whose config and availability decide the listed catalog, so it is the one a check of that snapshot runs, "snapshots/{snapshot}" (agni issue 1061). Empty lists the server's own catalog, where only a missing datasheet parameter set makes a rule unavailable. A snapshot whose netlist cannot be read is listed the same way, since a run of it fails rather than skipping rules.
    *
    * @generated from field: string snapshot = 3;
    */
@@ -573,7 +570,7 @@ export type RuleInfo = Message<"agni.v1.webapi.RuleInfo"> & {
   tags: { [key: string]: string };
 
   /**
-   * can the rule produce meaningful findings against this design now
+   * a whole CheckDesign of this snapshot runs the rule rather than skipping it
    *
    * @generated from field: bool available = 6;
    */
@@ -880,10 +877,11 @@ export const CheckReportFormatSchema: GenEnum<CheckReportFormat> = /*@__PURE__*/
  */
 export const CheckService: GenService<{
   /**
-   * ListRules returns the rule catalog the service runs: one RuleInfo per rule, with its tags
-   * (open classification the client groups/filters by) and whether it can run against the design.
-   * The catalog is static per service build, so the client fetches it once; only availability
-   * depends on the design. A CheckDesign call names the subset to actually run.
+   * ListRules returns the rule catalog a check of the snapshot runs: one RuleInfo per rule, with its
+   * tags (open classification the client groups and filters by) and whether it runs on the design.
+   * A rule is available exactly when a whole CheckDesign of the same snapshot would not report it in
+   * skipped (agni issue 950). The netlist is read to decide that and the board is not. A CheckDesign
+   * call names the subset to actually run.
    *
    * @generated from rpc agni.v1.webapi.CheckService.ListRules
    */

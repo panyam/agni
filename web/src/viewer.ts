@@ -862,12 +862,17 @@ export class ViewerPresenter {
       running: this.checksRunning,
       cancelled: this.checksCancelled,
       catalogLoading: this.doc.catalogLoading,
-      // Only the SELECTED rules, since a rule nobody ticked being unavailable is not news. Sorted so
-      // the list is stable across runs rather than following response order.
-      skipped: this.doc.selectedRules
-        .filter((n) => skippedAt.has(n))
-        .map((n) => ({ rule: n, reason: skippedAt.get(n) ?? "" }))
-        .sort((a, b) => a.rule.localeCompare(b.rule)),
+      // The rules this design cannot run, which the catalog lists unavailable and leaves unticked
+      // (agni issue 950), with a selected rule a run skipped all the same. A rule the reader unticked
+      // themselves is not news, so it is left out. Named here, on the panel that opens by default,
+      // because an unanswered question otherwise reads as a clean board. Sorted so the list is stable
+      // across runs rather than following response order.
+      skipped: [
+        ...this.doc.rules.filter((r) => !r.available).map((r) => ({ rule: r.name, reason: r.unavailableReason })),
+        ...this.doc.selectedRules
+          .filter((n) => skippedAt.has(n) && this.doc.rulesByName.get(n)?.available !== false)
+          .map((n) => ({ rule: n, reason: skippedAt.get(n) ?? "" })),
+      ].sort((a, b) => a.rule.localeCompare(b.rule)),
       ruleSummaries,
       saveNote: this.saveNote,
     };
