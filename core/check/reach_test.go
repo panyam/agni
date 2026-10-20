@@ -102,3 +102,42 @@ func TestReachBetween(t *testing.T) {
 		t.Error("VCC is unreachable (rail stop); Between must be false, not panic")
 	}
 }
+
+// A part marked do-not-populate joins nothing on the assembled board, so the walk does not cross an
+// unfitted link, and a clamp or a power pin that is unfitted is not reached (agni issue 961). The
+// fixture puts a TVS behind R1, a 0 Ohm option link.
+func TestTheWalkSkipsDoNotPopulateParts(t *testing.T) {
+	design := func(dnp ...string) *ir.Design {
+		d := &ir.Design{
+			Components: []*ir.Component{
+				{RefDes: "R1", Prov: &ir.Provenance{SourceFile: "t"}},
+				{RefDes: "D1", Prov: &ir.Provenance{SourceFile: "t"}, Attributes: map[string]string{"device_class": "tvs"}},
+			},
+			Nets: []*ir.Net{tnet("SIG", "R1.1"), tnet("SIG_F", "R1.2", "D1.1")},
+		}
+		for _, c := range d.Components {
+			for _, ref := range dnp {
+				if c.RefDes == ref {
+					if c.Attributes == nil {
+						c.Attributes = map[string]string{}
+					}
+					c.Attributes["dnp"] = "yes"
+				}
+			}
+		}
+		return d
+	}
+	reached := func(d *ir.Design) (int, string) {
+		m := NewModel(d)
+		return len(m.Reach(m.Nets()[0], 3).Nets), ReachableOfClass(m, m.Nets()[0], ClassTVS)
+	}
+	if n, tvs := reached(design()); n != 2 || tvs != "D1" {
+		t.Fatalf("every part fitted: reached %d nets and TVS %q, want 2 and D1", n, tvs)
+	}
+	if n, tvs := reached(design("R1")); n != 1 || tvs != "" {
+		t.Errorf("R1 unfitted: reached %d nets and TVS %q, want 1 and none", n, tvs)
+	}
+	if n, tvs := reached(design("D1")); n != 2 || tvs != "" {
+		t.Errorf("D1 unfitted: reached %d nets and TVS %q, want 2 and none", n, tvs)
+	}
+}

@@ -468,7 +468,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   R10, and `column_types` overrides one. Cells travel raw: the csv encoder guards formulas and
   `tables_to_xlsx` keeps a cell starting `=` as text. `check --verdicts --format json` is the whole
   CheckDesign response, verdicts included.
-- **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/list`
+- **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/avg/list`
   group by the projection's plain columns; `count(distinct ?x)` reduces the SET of values instead.
   The trap is that a goal joining two things yields one binding per combination, so on
   a net carrying 7 test points and 20 capacitors `count(?tp)` is 140 and `count(distinct ?tp)` is 7.
@@ -563,8 +563,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   (agni 857), and `TestSeedTriage` fails on any finding that appears, disappears or sits untriaged.
   A change that moves a seed's findings regenerates the records with `make seed-triage` and
   classifies each new group (`defect`, `design-choice`, `needs-intent`, or `false-positive` with its
-  ticket). A class is a judgement in its `why` unless an oracle backs it; #967 is checking them
-  against KiCad's own ERC and DRC.
+  ticket). A class is a judgement in its `why` unless an oracle backs it. KiCad's own ERC and DRC are
+  one (agni 967): `hack/kicad_oracle.sh` writes `<seed>.kicad.oracle` beside each record, a group of a
+  rule KiCad mirrors says `kicad: agrees` or `disagrees`, and what KiCad alone reports sits under
+  `kicad_only`, all held by `TestSeedTriageAgainstKiCad`. KiCad names a copper island it merged
+  inconsistently between runs, which matters on the tutorial gateway, whose planted faults overlap.
 - **The samples tarballs are built in `panyam/agni-samples` with its `make dist`**, which since
   v0.1.1 runs on Linux as well as macOS. v0.1.0 was packed by macOS tar and carried a `._name`
   AppleDouble shadow beside every file, and a shadow sorts ahead of the file it shadows, so any walk

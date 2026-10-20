@@ -14,10 +14,11 @@ import (
 // firstOnNet names the first part of a class on a net, in connection order, or "" when the net
 // carries none. Connection order rather than any ranking, because the witness is evidence that ONE
 // exists and the rule's own question is existential; picking a "best" one would imply a judgement
-// the rule never made.
+// the rule never made. A part marked do-not-populate is skipped, since the assembled board has none
+// to credit (agni issue 961).
 func firstOnNet(m check.Model, n *ir.Net, class check.ComponentClass) string {
 	for _, c := range n.Connections {
-		if m.HasClass(c.ComponentRef, class) {
+		if m.HasClass(c.ComponentRef, class) && m.IsFitted(c.ComponentRef) {
 			return c.ComponentRef
 		}
 	}

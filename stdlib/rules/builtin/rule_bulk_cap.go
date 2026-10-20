@@ -14,7 +14,7 @@ var bulkCap = &check.Rule{
 	Impact:     "A rail with zero capacitance has no charge reservoir: every load transient sags the rail, and the regulator's feedback loop may oscillate. Boards usually survive the lab and fail under real load patterns.",
 	Remedy:     "Add a bulk reservoir capacitor where the rail enters, sized from the load step the rail has to absorb and from the regulator's own stability requirement.",
 	Primitives: []string{"select", "exists", "traverse", "pattern"},
-	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
 		check.KeyTier:         "R",
@@ -47,6 +47,9 @@ func bulkCapVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 		case n.Attributes[netgraph.AttrExternal] == "true":
 			v.Outcome = check.NotConsidered
 			v.Reason = "the rail continues onto a sheet this read did not open, so its reservoir may be drawn outside it"
+		case check.Unpopulated(m, n):
+			v.Outcome = check.NotConsidered
+			v.Reason = "every part on the rail is marked do-not-populate, so the assembled board has no rail here to hold up"
 		case bulk != "":
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
@@ -73,8 +76,9 @@ var bulkCapSpec = &check.Spec{
 	Where: check.And{Xs: []check.Expr{
 		check.Or{Xs: []check.Expr{check.IsTrue{T: check.Fact{Name: "net.attr.global"}}, check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.unpopulated"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
-		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}}}},
+		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "component.dnp"}}}}}}},
 	}},
 	Message: "power rail has no bulk capacitor",
 }

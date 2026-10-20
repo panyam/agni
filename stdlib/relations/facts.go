@@ -106,6 +106,7 @@ const (
 	// component.device_class is the class the part's DATASHEET declares (PartSpec.device_class),
 	// joined by MPN (WS10-013). Empty without --params. WithParamProvider also merges it into
 	// component.class's set, so HasClass answers from it too.
+	RelComponentDNP         = "component.dnp"          // component.dnp(ref_des): the part is marked do-not-populate. doc: facts/docs/component.dnp.md
 	RelComponentDeviceClass = "component.device_class" // component.device_class(ref_des, class): the datasheet-declared device class. doc: facts/docs/component.device_class.md
 
 	// bus(label, kind) is a reader-detected bus construct not yet expanded (WS1-034 Phase 1). label
@@ -216,6 +217,7 @@ func Facts(m check.Model) []facts.Row {
 	out = append(out, netAttrFacts(m)...)
 	out = append(out, componentAttrFacts(m)...)
 	out = append(out, componentClassFacts(m)...)
+	out = append(out, componentDNPFacts(m)...)
 	out = append(out, esdRatedFacts(m)...)
 	out = append(out, componentDeviceClassFacts(m)...)
 	out = append(out, netGroundFacts(m)...)
@@ -924,6 +926,20 @@ func componentClassFacts(m check.Model) []facts.Row {
 	for _, c := range m.Components() {
 		for _, cl := range m.Classes(c.RefDes) {
 			out = append(out, facts.Row{Relation: RelComponentClass, Subject: c.RefDes, Value: string(cl), Cites: cite(irCite(c.Prov))})
+		}
+	}
+	return out
+}
+
+// componentDNPFacts emits component.dnp(ref) for each component the design marks do-not-populate
+// (agni issue 961). The part stays in the netlist, so its class, pins and nets are all still facts;
+// this is what a query negates to stop crediting it with a role on the assembled board, as the Go rules
+// ask Model.IsFitted.
+func componentDNPFacts(m check.Model) []facts.Row {
+	var out []facts.Row
+	for _, c := range m.Components() {
+		if !m.IsFitted(c.RefDes) {
+			out = append(out, facts.Row{Relation: RelComponentDNP, Subject: c.RefDes, Cites: cite(irCite(c.Prov))})
 		}
 	}
 	return out

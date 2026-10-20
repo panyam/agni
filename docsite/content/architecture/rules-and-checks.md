@@ -269,8 +269,30 @@ the split-rail and redundant-pull-up rules, the interface profiles and the cover
 pulled to 1.8 V by one fitted resistor beside a DNP one to 3.3 V, and counting both read as a line
 pulled to two rails.
 
-The same question applies wherever a part is credited, a decoupling capacitor, a TVS on a connector
-line, a series part a reach walk crosses, and those rules do not ask it yet.
+The same question applies wherever a part is credited, and since agni issue 961 every crediting rule
+asks it. The reach walk crosses no unfitted part, so a 0 Ohm option link left out is no path, and
+everything built on it (the TVS and ICESD reach, the power path, the bias and pull-up walks,
+`net.reaches` and `net.route`) inherits that. A capacitor marked DNP decouples nothing for
+`decoupling-present`, `bulk-cap` or `crystal-load-caps`. A query says the same thing with
+`not component.dnp(?r)`, which is how the ESD profile and the datalog twins leave an unfitted clamp
+or capacitor out.
+
+Crediting alone breaks a circuit left unfitted as a whole. Jetson's Tag-Connect JTAG translator (the
+connector, the translator, its capacitor and both resistors) is all DNP, so with its capacitor no
+longer counted `decoupling-present` and `bulk-cap` failed its rail, and `esd-protection` failed its
+reset line. A rule whose credit #961 changed therefore also leaves out a net with no fitted part
+(`check.Unpopulated`, the `net.unpopulated` spec fact), and `decoupling-present` asks for a FITTED
+supply pin.
+
+A test point is the one part that keeps its credit. The probe lands on its pad, which is copper on the
+bare board whether or not anything is placed there, and a pad-only test point is marked DNP for exactly
+that reason. Every test point on the RoyalBlue54L Feather seed is a `TestPoint_Pad` footprint marked
+DNP, so leaving them out turned its four uncovered rails into a board with no probe convention at all.
+
+The other direction is still open. A rule that BLAMES a part, such as `floating-input` counting an
+unfitted IC's input pins, or a rating rule checking a DNP part's voltage, still judges it as though it
+were fitted. Whether a DNP part should be judged at all is a different question from whether it may be
+credited, and it is tracked separately.
 
 ## The evaluation model
 

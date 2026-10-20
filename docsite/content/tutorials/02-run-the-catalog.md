@@ -118,17 +118,17 @@ Look at the last line of that first run again. Every run ends with it, whether o
 anything:
 
 ```
-24118 subject(s) considered by 35 rule(s), 625 not considered (--verdicts for the detail)
+24114 subject(s) considered by 35 rule(s), 626 not considered (--verdicts for the detail)
 ```
 
 This is the half a findings list cannot give you. A run that finds nothing and a run whose rules all
 examined the wrong thing produce an identical list of findings, namely none, so the findings alone
 can never tell you which one you are holding.
 
-Read the three numbers separately. **24118 considered** is how many subjects were actually judged.
+Read the three numbers separately. **24114 considered** is how many subjects were actually judged.
 **35 rules** is how many were willing to say what they looked at, which is not the same as how many
 ran, because most of the catalog has no subject in scope on any given board, and a rule with nothing
-to say is not a gap. **625 not considered** is the one worth reading closely, and it gets its own
+to say is not a gap. **626 not considered** is the one worth reading closely, and it gets its own
 look below.
 
 A second line can appear under that one:
@@ -165,7 +165,7 @@ is the default and the rows are a flag:
 rule was willing to judge that subject and something stopped it, so it says what stopped it rather
 than passing on incomplete evidence.
 
-On this board most of the 625 are one of three kinds. 319 are `netclass-via-drill` declining nets
+On this board most of the 626 are one of three kinds. 319 are `netclass-via-drill` declining nets
 that carry no via, which have no drill to compare. 156 are `floating-input` declining a net that
 carries a passive part, because a resistor on a net might be the pull that fixes it, might be a series
 element with the driver on the far side, or might be a footprint nobody stuffed, and a netlist cannot

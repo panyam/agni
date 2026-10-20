@@ -38,7 +38,7 @@ var crystalLoadCapsQ = query.FindingQuery{
 		},
 	},
 	Query: query.MustParse(`
-		cap_on(?net)   :- component.net(?c, ?net), component.class(?c, "capacitor");
+		cap_on(?net)   :- component.net(?c, ?net), component.class(?c, "capacitor"), not component.dnp(?c);
 		clockpart(?y)  :- component.class(?y, "clock"), not component.class(?y, "oscillator"), not component.class(?y, "ceramic_resonator");
 		term(?y, ?net) :- clockpart(?y), component.net(?y, ?net), not net.rail(?net);
 		powered(?y)    :- clockpart(?y), component.net(?y, ?r), net.rail(?r), not net.ground(?r);

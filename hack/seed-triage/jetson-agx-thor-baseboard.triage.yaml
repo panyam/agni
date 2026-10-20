@@ -115,7 +115,8 @@ findings:
         - net:VCC_IN
   single-pin-net:
     - class: defect
-      why: Two unused FMC pins (J18 B24, B25) lack the no-connect flag every other unused pin on the connector carries; KiCad's own netlist also leaves them unconnected. Harmless electrically.
+      why: Two unused FMC pins (J18 B24, B25) lack the no-connect flag every other unused pin on the connector carries; KiCad's ERC reports both pins not connected. Harmless electrically.
+      kicad: agrees
       subjects:
         - net:unconnected-(J18-PadB24)
         - net:unconnected-(J18-PadB25)
@@ -154,7 +155,22 @@ findings:
         - net:FLASH_PWR
         - net:VCC_IN
   unspecified-pin-with-driver:
-    - class: defect
-      why: The TXU0304 symbol leaves U59 pin 8 (OE), tied to +1V8 to keep the JTAG translator enabled, with no electrical type. A symbol-library gap, harmless electrically.
+    - class: false-positive
+      why: The TXU0304 symbol declares U59 pin 8 (OE), tied to +1V8 to keep the JTAG translator enabled, as tri_state, and KiCad's ERC reads it so. The KiCad reader keeps a tri_state pin as UNSPECIFIED, so the rule takes a declared type for a missing one.
+      ticket: 1082
       subjects:
         - net:+1V8
+kicad_only:
+  clearance:
+    - class: missed
+      why: Every one is the board's own rule hs_zone_clearance in jetson-agx-thor-baseboard.kicad_dru, 1 mm between a diff-pair track and a zone on its layer. agni reads no .kicad_dru, so copper-clearance checks the board's minimums alone.
+      ticket: 142
+      subjects:
+        - "*"
+  pin_to_pin:
+    - class: declined
+      why: Each net wire-ORs two open-drain flags, the camera load switches' FLG and the converters' P_GOOD, which their symbols type as outputs, and each carries a pull-up. output-output-conflict reads the pull-up as the open-drain idiom and passes, where KiCad's pin matrix sees two outputs.
+      subjects:
+        - net:/CSI/CAM_CTRL.CSIA_FLG
+        - net:/CSI/CAM_CTRL.CSIB_FLG
+        - net:/DCDC/~{VDDIN_PWR_BAD}

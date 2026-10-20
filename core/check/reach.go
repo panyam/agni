@@ -86,7 +86,9 @@ func (m *irModel) walk(start *ir.Net, hops int, admitTerminus bool) Reach {
 		var next []*ir.Net
 		for _, n := range frontier {
 			for _, c := range n.Connections {
-				if !passClass(m.ComponentClass(c.ComponentRef)) {
+				// A part marked do-not-populate joins nothing on the assembled board, so a link left out
+				// to select an option is no path (agni issue 961).
+				if !passClass(m.ComponentClass(c.ComponentRef)) || !m.IsFitted(c.ComponentRef) {
 					continue
 				}
 				others := m.passNets[c.ComponentRef]

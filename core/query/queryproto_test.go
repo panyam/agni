@@ -59,6 +59,9 @@ func fullQuery() Query {
 						{Pos: &Atom{Relation: "pin.net", Args: []Term{{Var: "r"}, {Var: "p"}, {Var: "n"}}}},
 					}},
 				}},
+				{Opt: &Body{Literals: []Literal{
+					{Pos: &Atom{Relation: "component.mpn", Args: []Term{{Var: "r"}, {Var: "m"}}}},
+				}}},
 			}},
 			Hops: 2,
 			HeadTypes: []ns.ArgType{
@@ -109,7 +112,7 @@ func TestQueryProtoKnowsEveryEngineField(t *testing.T) {
 		reflect.TypeFor[Query]():         {"Rules", "Goal", "Select", "Having", "OrderBy", "After", "Limit", "Offset"},
 		reflect.TypeFor[Rule]():          {"Head", "Body", "Hops", "HeadTypes"},
 		reflect.TypeFor[Body]():          {"Literals"},
-		reflect.TypeFor[Literal]():       {"Pos", "Neg", "Compare", "Agg"},
+		reflect.TypeFor[Literal]():       {"Pos", "Neg", "Compare", "Agg", "Opt"},
 		reflect.TypeFor[BodyAggregate](): {"Result", "Agg", "Body"},
 		reflect.TypeFor[Atom]():          {"Relation", "Args", "Fact"},
 		reflect.TypeFor[Compare]():       {"Left", "Op", "Right"},

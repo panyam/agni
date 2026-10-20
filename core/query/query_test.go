@@ -734,7 +734,7 @@ func TestEvalErrors(t *testing.T) {
 		"arity mismatch":     `component.mpn(?a,?b,?c) => ?a`,
 		"unbound compare":    `?x < ?y => ?x`,
 		"select existential": `component.mpn(?r,?m), not param.max(?m,"VIN",?v) => ?v`,
-		"unknown aggregate":  `component.mpn(?r,?m) => ?r, avg(?m)`,
+		"unknown aggregate":  `component.mpn(?r,?m) => ?r, median(?m)`,
 		"negate unknown rel": `component.mpn(?r,?m), not nope(?m) => ?m`,
 	}
 	for name, text := range cases {
@@ -977,15 +977,15 @@ func TestDistinctReducesValuesNotBindings(t *testing.T) {
 	}
 }
 
-// TestListNamesTheGroupMembers: list joins the members sorted, and is binding-wise until asked
+// TestListNamesTheGroupMembers: list is a list value of the members sorted, in its JSON text, and is binding-wise until asked
 // otherwise, the same rule count follows, so the two columns describe the same set.
 func TestListNamesTheGroupMembers(t *testing.T) {
 	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net),
 		component.class(?c,"capacitor"), component.net(?c,?net) => ?net, list(?tp), list(distinct ?tp)`)
-	if got["DOUBLE"] != "list(distinct tp)=TP4 list(tp)=TP4 TP4" {
+	if got["DOUBLE"] != `list(distinct tp)=["TP4"] list(tp)=["TP4","TP4"]` {
 		t.Errorf("DOUBLE = %q, want the bare list to repeat per binding and distinct to collapse it", got["DOUBLE"])
 	}
-	if got["BOTH"] != "list(distinct tp)=TP2 TP3 list(tp)=TP2 TP3" {
+	if got["BOTH"] != `list(distinct tp)=["TP2","TP3"] list(tp)=["TP2","TP3"]` {
 		t.Errorf("BOTH = %q, want sorted members", got["BOTH"])
 	}
 }

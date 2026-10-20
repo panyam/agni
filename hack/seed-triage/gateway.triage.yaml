@@ -6,7 +6,8 @@ design: examples/tutorial-project/designs/gateway
 findings:
   copper-clearance:
     - class: defect
-      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it. KiCad's DRC reports none of these pairs, because each is drawn as two tracks of different nets overlapping end to end, and KiCad reads the overlap as one copper island under one name (agni 1082).
+      kicad: disagrees
       subjects:
         - net:CAN1_CANH|net:I2C_SCL
         - net:CAN1_CANL|net:I2C_SDA
@@ -77,6 +78,7 @@ findings:
         - net:PMIC_MAIN_12V0
   track-width:
     - class: defect
-      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it.
+      why: The tutorial board is drawn with this fault on purpose, so the ladder has something to find; its design.yaml and the tutorial pages say which rung teaches it. KiCad's DRC reports the same 0.1 mm track. It overlaps I2C_SCL's track, and KiCad names the merged island inconsistently, so one run reported it under I2C_SCL (agni 1082).
+      kicad: agrees
       subjects:
         - net:CAN1_CANH

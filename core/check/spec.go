@@ -317,6 +317,10 @@ var specFacts = map[string]factDef{
 		reads: []string{"net.pin_count"}, primitives: []string{"count"},
 		get: func(ev *evalEnv) any { return len(ev.ents["net"].(*ir.Net).Connections) },
 	},
+	"net.unpopulated": { // every part on the net is marked do-not-populate (agni issue 961)
+		reads: []string{"component.dnp"},
+		get:   func(ev *evalEnv) any { return Unpopulated(ev.m, ev.ents["net"].(*ir.Net)) },
+	},
 	"net.attr.external":     netAttrFact("external"),
 	"net.attr.global":       netAttrFact("global"),
 	"net.attr.power_driven": netAttrFact("power_driven"),
@@ -390,6 +394,15 @@ var specFacts = map[string]factDef{
 	"via.annular": {
 		reads: []string{"board.copper"},
 		get:   func(ev *evalEnv) any { return int(ev.ents["via"].(BoardVia).Annular()) },
+	},
+	"component.dnp": { // whether the in-scope connection's component, or the component itself, is marked do-not-populate (agni issue 961)
+		reads: []string{"component.dnp"},
+		get: func(ev *evalEnv) any {
+			if c, ok := ev.ents["conn"].(*ir.Connection); ok {
+				return !ev.m.IsFitted(c.ComponentRef)
+			}
+			return !ev.m.IsFitted(ev.ents["component"].(*ir.Component).RefDes)
+		},
 	},
 	"component.class": { // device class of the in-scope connection's component, or the component itself
 		reads: []string{"component.class"},

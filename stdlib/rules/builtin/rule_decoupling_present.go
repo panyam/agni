@@ -15,7 +15,7 @@ var decouplingPresent = &check.Rule{
 	Impact:     "Chips draw current in sharp transients; without a local capacitor the rail sags and bounces at the pin. The board often works on the bench and then fails intermittently in the field (resets, corrupted logic, EMC failures), which is why decoupling review is a fixture of every design checklist.",
 	Remedy:     "Add a decoupling capacitor from the rail to ground at each supply pin, and place it at the pin in layout. A capacitor drawn on the rail but placed across the board does not decouple it.",
 	Primitives: []string{"select", "traverse", "exists", "pin-role", "pattern"},
-	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net", "pin.electrical_type"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
 		check.KeyTier:         "R",
@@ -83,8 +83,9 @@ func notARail(m check.Model, n *ir.Net) string {
 func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
+		// A supply pin on a part marked do-not-populate draws nothing on the assembled board (agni 961).
 		hasPowerIn := check.Exists(n.Connections, func(c *ir.Connection) bool {
-			return !check.IsVirtualRef(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+			return !check.IsVirtualRef(c.ComponentRef) && m.IsFitted(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 		})
 		if !hasPowerIn || m.IsGroundNet(n) {
 			continue // not a rail feeding a supply pin, or the reference the decoupling returns to
@@ -136,8 +137,8 @@ var decouplingPresentSpec = &check.Spec{
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
-		check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}}}}},
-		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}}}},
+		check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "component.dnp"}}}}}},
+		check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "capacitor"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "component.dnp"}}}}}}},
 	}},
 	Message: "power rail has no decoupling capacitor",
 }

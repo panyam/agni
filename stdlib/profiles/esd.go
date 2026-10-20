@@ -59,14 +59,16 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 			query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
 			query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
 			query.Pos(query.Rel("component.net", query.V(c.v), query.V("rn"))),
-			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class)))))
+			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class))),
+			query.Neg(query.Rel("component.dnp", query.V(c.v)))))
 	}
 	rules = append(rules, query.Def(query.Rel("esd_ok", query.V("n")),
 		query.Pos(query.Rel("needs_esd", query.V("n"))),
 		query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
 		query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
 		query.Pos(query.Rel("component.net", query.V("u"), query.V("rn"))),
-		query.Pos(query.Rel("component.esd_rated", query.V("u")))))
+		query.Pos(query.Rel("component.esd_rated", query.V("u"))),
+		query.Neg(query.Rel("component.dnp", query.V("u")))))
 
 	rules = append(rules, query.Def(query.Rel("unprotected", query.V("n")),
 		query.Pos(query.Rel("needs_esd", query.V("n"))),
@@ -97,14 +99,16 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 			query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
 			query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
 			query.Pos(query.Rel("component.net", query.V(c.v), query.V("rn"))),
-			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class)))))
+			query.Pos(query.Rel("component.class", query.V(c.v), query.Str(c.class))),
+			query.Neg(query.Rel("component.dnp", query.V(c.v)))))
 	}
 	rules = append(rules, query.Def(query.Rel("esd_by", query.V("n"), query.V("u")),
 		query.Pos(query.Rel("needs_esd", query.V("n"))),
 		query.Pos(query.Rel("net.reaches", query.V("n"), query.V("rn"), query.V("h"))),
 		query.Cmp(query.V("h"), "<=", query.Num(check.ProtectionReachHops)),
 		query.Pos(query.Rel("component.net", query.V("u"), query.V("rn"))),
-		query.Pos(query.Rel("component.esd_rated", query.V("u")))))
+		query.Pos(query.Rel("component.esd_rated", query.V("u"))),
+		query.Neg(query.Rel("component.dnp", query.V("u")))))
 
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("unprotected", query.V("n")))}, query.V("n"))

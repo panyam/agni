@@ -1779,7 +1779,7 @@ func (x *DatalogBody) GetLiterals() []*DatalogLiteral {
 }
 
 // DatalogLiteral is exactly one of a positive atom, a negated atom (stratified negation), a
-// comparison built-in, or a body aggregate.
+// comparison built-in, a body aggregate, or an optional body.
 type DatalogLiteral struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Literal:
@@ -1788,6 +1788,7 @@ type DatalogLiteral struct {
 	//	*DatalogLiteral_Neg
 	//	*DatalogLiteral_Compare
 	//	*DatalogLiteral_Agg
+	//	*DatalogLiteral_Opt
 	Literal       isDatalogLiteral_Literal `protobuf_oneof:"literal"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1866,6 +1867,15 @@ func (x *DatalogLiteral) GetAgg() *DatalogBodyAggregate {
 	return nil
 }
 
+func (x *DatalogLiteral) GetOpt() *DatalogBody {
+	if x != nil {
+		if x, ok := x.Literal.(*DatalogLiteral_Opt); ok {
+			return x.Opt
+		}
+	}
+	return nil
+}
+
 type isDatalogLiteral_Literal interface {
 	isDatalogLiteral_Literal()
 }
@@ -1886,6 +1896,12 @@ type DatalogLiteral_Agg struct {
 	Agg *DatalogBodyAggregate `protobuf:"bytes,4,opt,name=agg,proto3,oneof"`
 }
 
+type DatalogLiteral_Opt struct {
+	// opt is `optional { body }`, a left outer join: the clause's row holds whether body matches or
+	// not, and a variable only body binds is absent when it does not.
+	Opt *DatalogBody `protobuf:"bytes,5,opt,name=opt,proto3,oneof"`
+}
+
 func (*DatalogLiteral_Pos) isDatalogLiteral_Literal() {}
 
 func (*DatalogLiteral_Neg) isDatalogLiteral_Literal() {}
@@ -1893,6 +1909,8 @@ func (*DatalogLiteral_Neg) isDatalogLiteral_Literal() {}
 func (*DatalogLiteral_Compare) isDatalogLiteral_Literal() {}
 
 func (*DatalogLiteral_Agg) isDatalogLiteral_Literal() {}
+
+func (*DatalogLiteral_Opt) isDatalogLiteral_Literal() {}
 
 // DatalogBodyAggregate binds result to an aggregate over the bindings of body, reduced once per value
 // of the variables body shares with the rest of the clause: `part(?r), ?c = count(?n) : { pin(?r, ?n,
@@ -2892,12 +2910,13 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x04unit\x18\x05 \x01(\tR\x04unit\x12\x16\n" +
 	"\x06domain\x18\x06 \x03(\tR\x06domain\"I\n" +
 	"\vDatalogBody\x12:\n" +
-	"\bliterals\x18\x01 \x03(\v2\x1e.agni.v1.checks.DatalogLiteralR\bliterals\"\xf3\x01\n" +
+	"\bliterals\x18\x01 \x03(\v2\x1e.agni.v1.checks.DatalogLiteralR\bliterals\"\xa4\x02\n" +
 	"\x0eDatalogLiteral\x12/\n" +
 	"\x03pos\x18\x01 \x01(\v2\x1b.agni.v1.checks.DatalogAtomH\x00R\x03pos\x12/\n" +
 	"\x03neg\x18\x02 \x01(\v2\x1b.agni.v1.checks.DatalogAtomH\x00R\x03neg\x12:\n" +
 	"\acompare\x18\x03 \x01(\v2\x1e.agni.v1.checks.DatalogCompareH\x00R\acompare\x128\n" +
-	"\x03agg\x18\x04 \x01(\v2$.agni.v1.checks.DatalogBodyAggregateH\x00R\x03aggB\t\n" +
+	"\x03agg\x18\x04 \x01(\v2$.agni.v1.checks.DatalogBodyAggregateH\x00R\x03agg\x12/\n" +
+	"\x03opt\x18\x05 \x01(\v2\x1b.agni.v1.checks.DatalogBodyH\x00R\x03optB\t\n" +
 	"\aliteral\"\x93\x01\n" +
 	"\x14DatalogBodyAggregate\x12\x16\n" +
 	"\x06result\x18\x01 \x01(\tR\x06result\x122\n" +
@@ -3065,26 +3084,27 @@ var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	24, // 44: agni.v1.checks.DatalogLiteral.neg:type_name -> agni.v1.checks.DatalogAtom
 	25, // 45: agni.v1.checks.DatalogLiteral.compare:type_name -> agni.v1.checks.DatalogCompare
 	23, // 46: agni.v1.checks.DatalogLiteral.agg:type_name -> agni.v1.checks.DatalogBodyAggregate
-	29, // 47: agni.v1.checks.DatalogBodyAggregate.agg:type_name -> agni.v1.checks.DatalogAggregate
-	21, // 48: agni.v1.checks.DatalogBodyAggregate.body:type_name -> agni.v1.checks.DatalogBody
-	26, // 49: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
-	26, // 50: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
-	26, // 51: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
-	28, // 52: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
-	29, // 53: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
-	27, // 54: agni.v1.checks.DatalogTerm.expr:type_name -> agni.v1.checks.DatalogExpr
-	26, // 55: agni.v1.checks.DatalogExpr.args:type_name -> agni.v1.checks.DatalogTerm
-	33, // 56: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
-	34, // 57: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
-	31, // 58: agni.v1.checks.ProfileDef.host:type_name -> agni.v1.checks.ProfileHost
-	37, // 59: agni.v1.checks.ProfileNamingMap.suffixes:type_name -> agni.v1.checks.ProfileNamingMap.SuffixesEntry
-	38, // 60: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
-	5,  // 61: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
-	62, // [62:62] is the sub-list for method output_type
-	62, // [62:62] is the sub-list for method input_type
-	62, // [62:62] is the sub-list for extension type_name
-	62, // [62:62] is the sub-list for extension extendee
-	0,  // [0:62] is the sub-list for field type_name
+	21, // 47: agni.v1.checks.DatalogLiteral.opt:type_name -> agni.v1.checks.DatalogBody
+	29, // 48: agni.v1.checks.DatalogBodyAggregate.agg:type_name -> agni.v1.checks.DatalogAggregate
+	21, // 49: agni.v1.checks.DatalogBodyAggregate.body:type_name -> agni.v1.checks.DatalogBody
+	26, // 50: agni.v1.checks.DatalogAtom.args:type_name -> agni.v1.checks.DatalogTerm
+	26, // 51: agni.v1.checks.DatalogCompare.left:type_name -> agni.v1.checks.DatalogTerm
+	26, // 52: agni.v1.checks.DatalogCompare.right:type_name -> agni.v1.checks.DatalogTerm
+	28, // 53: agni.v1.checks.DatalogTerm.constant:type_name -> agni.v1.checks.DatalogValue
+	29, // 54: agni.v1.checks.DatalogTerm.agg:type_name -> agni.v1.checks.DatalogAggregate
+	27, // 55: agni.v1.checks.DatalogTerm.expr:type_name -> agni.v1.checks.DatalogExpr
+	26, // 56: agni.v1.checks.DatalogExpr.args:type_name -> agni.v1.checks.DatalogTerm
+	33, // 57: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
+	34, // 58: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
+	31, // 59: agni.v1.checks.ProfileDef.host:type_name -> agni.v1.checks.ProfileHost
+	37, // 60: agni.v1.checks.ProfileNamingMap.suffixes:type_name -> agni.v1.checks.ProfileNamingMap.SuffixesEntry
+	38, // 61: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
+	5,  // 62: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
+	63, // [63:63] is the sub-list for method output_type
+	63, // [63:63] is the sub-list for method input_type
+	63, // [63:63] is the sub-list for extension type_name
+	63, // [63:63] is the sub-list for extension extendee
+	0,  // [0:63] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_ruledef_proto_init() }
@@ -3124,6 +3144,7 @@ func file_agni_v1_checks_ruledef_proto_init() {
 		(*DatalogLiteral_Neg)(nil),
 		(*DatalogLiteral_Compare)(nil),
 		(*DatalogLiteral_Agg)(nil),
+		(*DatalogLiteral_Opt)(nil),
 	}
 	file_agni_v1_checks_ruledef_proto_msgTypes[26].OneofWrappers = []any{
 		(*DatalogTerm_Var)(nil),

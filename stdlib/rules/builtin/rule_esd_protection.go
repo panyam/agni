@@ -13,7 +13,7 @@ var esdProtection = &check.Rule{
 	Impact:     "A signal that leaves the board through a connector is a direct ESD path into the IC behind it. Human contact discharges kilovolts; an unclamped data pin takes the hit. Failures are intermittent, latent, and appear in the field as flaky ports and dead interfaces.",
 	Remedy:     "Fit an ESD TVS from the exposed signal to ground on the connector side of everything it protects. A clamp placed behind the transceiver protects nothing.",
 	Primitives: []string{"reach", "select", "traverse", "exists", "pin-role", "pattern", "param-join"},
-	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect", "param.esd_rating"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect", "param.esd_rating"},
 	// The IC-ESD credit is an exemption rather than the finding basis. esd-protection is a netlist
 	// rule and stays applicable (reports over external nets) with no --params, unlike a
 	// datasheet rule whose finding requires the seeded value.
@@ -53,6 +53,9 @@ func esdProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 		rated, ratedWitness := check.ICESDCredit(m, n)
 		zener := check.ReachableOfClass(m, n, check.ClassZener)
 		switch {
+		case check.Unpopulated(m, n):
+			v.Outcome = check.NotConsidered
+			v.Reason = "every part on the net, the connector included, is marked do-not-populate, so nothing behind it is built to protect"
 		case tvs != "":
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
@@ -89,6 +92,7 @@ var esdProtectionSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
+		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.unpopulated"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.global"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},

@@ -104,7 +104,7 @@ func resonatorRedundantLoadCapsVerdicts(ctx context.Context, m check.Model) []ch
 			// ground. A coupling or series cap between two signals is not a load cap.
 			var capRef string
 			for _, conn := range t.net.Connections {
-				if conn.ComponentRef != ref && m.HasClass(conn.ComponentRef, check.ClassCapacitor) && groundRef[conn.ComponentRef] {
+				if conn.ComponentRef != ref && m.HasClass(conn.ComponentRef, check.ClassCapacitor) && groundRef[conn.ComponentRef] && m.IsFitted(conn.ComponentRef) {
 					capRef = conn.ComponentRef
 					break
 				}

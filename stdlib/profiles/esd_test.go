@@ -208,3 +208,17 @@ func TestESDStillReportsTheUnclampedLine(t *testing.T) {
 		t.Errorf("findings = %v, want the unclamped line alone", got)
 	}
 }
+
+// A TVS marked do-not-populate clamps nothing, so the line it sits on is reported like the unclamped
+// one (agni issue 961).
+func TestADoNotPopulateTVSClampsNothing(t *testing.T) {
+	d := canExposed()
+	d.Components[2].Attributes = map[string]string{"dnp": "yes"}
+	got := map[string]bool{}
+	for _, f := range esdFindings(t, d) {
+		got[check.EntityRef(f.Subject)] = true
+	}
+	if !got["BUS_CANH"] || !got["BUS_CANL"] {
+		t.Errorf("with TVS1 unfitted, want BUS_CANH and BUS_CANL reported, got %v", got)
+	}
+}

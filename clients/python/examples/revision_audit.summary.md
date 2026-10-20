@@ -69,11 +69,11 @@
 
 | mpn | list(distinct part) | provenance |
 |---|---|---|
-| ACME-CAP-100N | C2 C4 | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:GND ; designs/gateway/gateway-rev-b.edn:PMIC_CORE_3V3 ; designs/gateway/gateway-rev-b.edn:PMIC_IO_1V8 |
-| ACME-CAP-10U | C3 | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:GND ; designs/gateway/gateway-rev-b.edn:PMIC_IO_1V8 |
-| ACME-CAP-18P | C5 C6 | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:CLK_IN ; designs/gateway/gateway-rev-b.edn:CLK_OUT ; designs/gateway/gateway-rev-b.edn:GND |
-| ACME-CAP-22U | C1 | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:GND ; designs/gateway/gateway-rev-b.edn:PMIC_CORE_3V3 |
-| ACME-RES-10K | R2 R3 | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:MCU_NRST ; designs/gateway/gateway-rev-b.edn:PMIC_EN ; designs/gateway/gateway-rev-b.edn:PMIC_MAIN_12V0 ; designs/gateway/gateway-rev-b.edn:PMIC_PG |
+| ACME-CAP-100N | ["C2","C4"] | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:GND ; designs/gateway/gateway-rev-b.edn:PMIC_CORE_3V3 ; designs/gateway/gateway-rev-b.edn:PMIC_IO_1V8 |
+| ACME-CAP-10U | ["C3"] | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:GND ; designs/gateway/gateway-rev-b.edn:PMIC_IO_1V8 |
+| ACME-CAP-18P | ["C5","C6"] | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:CLK_IN ; designs/gateway/gateway-rev-b.edn:CLK_OUT ; designs/gateway/gateway-rev-b.edn:GND |
+| ACME-CAP-22U | ["C1"] | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:GND ; designs/gateway/gateway-rev-b.edn:PMIC_CORE_3V3 |
+| ACME-RES-10K | ["R2","R3"] | designs/gateway/gateway-rev-b.edn ; designs/gateway/gateway-rev-b.edn:MCU_NRST ; designs/gateway/gateway-rev-b.edn:PMIC_EN ; designs/gateway/gateway-rev-b.edn:PMIC_MAIN_12V0 ; designs/gateway/gateway-rev-b.edn:PMIC_PG |
 
 ## PMIC rails
 

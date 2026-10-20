@@ -109,7 +109,7 @@ func ICESDCredit(m Model, n *ir.Net) (string, *Witness) {
 	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
 		for _, c := range rn.Connections {
 			spec := m.PartSpec(c.ComponentRef)
-			if spec == nil {
+			if spec == nil || !m.IsFitted(c.ComponentRef) {
 				continue
 			}
 			limits := EsdRatingLimits(spec)
@@ -181,15 +181,38 @@ func IsGroundName(name string) bool { return classify.ActiveRoleVocab().IsGround
 // via --conventions, and hierarchical sheet prefixes ("/psu/12V") are stripped first.
 func IsPowerRailName(name string) bool { return classify.ActiveRoleVocab().IsRail(name) }
 
+// Unpopulated reports whether every part on a net is marked do-not-populate, so the assembled board
+// carries the copper and nothing on it (agni issue 961). Power flags and power symbols count for
+// neither side, and a net with no real part on it is not unpopulated. A rule that would demand
+// something of the net, a capacitor or a clamp, leaves such a net out, since crediting no unfitted part
+// while still judging the unfitted circuit reports a fault on hardware that is never built.
+func Unpopulated(m Model, n *ir.Net) bool {
+	real := false
+	for _, c := range n.Connections {
+		if IsVirtualRef(c.ComponentRef) {
+			continue
+		}
+		if m.IsFitted(c.ComponentRef) {
+			return false
+		}
+		real = true
+	}
+	return real
+}
+
 // PowerPinReachable reports a power-direction pin on the net or on any net in its 2-hop
 // series reach (WS3-011), so the split between esd and input-protection does not depend on
 // whether a bead sits between the connector and the regulator.
 func PowerPinReachable(m Model, n *ir.Net) bool {
 	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
-		if CountDir(NetDirs(m, rn), func(d ir.PinDirection) bool {
-			return d == ir.PinDirection_PIN_DIRECTION_POWER_IN || d == ir.PinDirection_PIN_DIRECTION_POWER_OUT
-		}) >= 1 {
-			return true
+		for _, c := range rn.Connections {
+			// A part marked do-not-populate has no power pin on the assembled board (agni issue 961).
+			if !m.IsFitted(c.ComponentRef) {
+				continue
+			}
+			if d := ConnDir(m, c); d == ir.PinDirection_PIN_DIRECTION_POWER_IN || d == ir.PinDirection_PIN_DIRECTION_POWER_OUT {
+				return true
+			}
 		}
 	}
 	return false
@@ -216,7 +239,8 @@ func TVSReachable(m Model, n *ir.Net) bool { return ReachableOfClass(m, n, Class
 func ReachableOfClass(m Model, n *ir.Net, class ComponentClass) string {
 	for _, rn := range m.Reach(n, ProtectionReachHops).Nets {
 		for _, c := range rn.Connections {
-			if m.HasClass(c.ComponentRef, class) {
+			// A clamp marked do-not-populate protects nothing on the assembled board (agni issue 961).
+			if m.HasClass(c.ComponentRef, class) && m.IsFitted(c.ComponentRef) {
 				return c.ComponentRef
 			}
 		}
@@ -277,7 +301,8 @@ func netBias(m Model, n *ir.Net, found *[]string) (up, down bool) {
 	}
 	for _, c := range n.GetConnections() {
 		ref := c.GetComponentRef()
-		if !m.HasClass(ref, ClassResistor) {
+		// An unfitted resistor biases nothing on the assembled board (agni issue 961).
+		if !m.HasClass(ref, ClassResistor) || !m.IsFitted(ref) {
 			continue
 		}
 		for _, far := range m.Nets() {
@@ -322,7 +347,8 @@ func ACCoupled(m Model, n *ir.Net) bool {
 	}
 	for _, c := range n.GetConnections() {
 		ref := c.GetComponentRef()
-		if !m.HasClass(ref, ClassCapacitor) {
+		// An unfitted series capacitor couples nothing on the assembled board (agni issue 961).
+		if !m.HasClass(ref, ClassCapacitor) || !m.IsFitted(ref) {
 			continue
 		}
 		for _, far := range m.Nets() {
@@ -384,7 +410,8 @@ func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 	r := m.Reach(n, PowerPathReachHops)
 	protectorOn := func(net *ir.Net) string {
 		for _, c := range net.Connections {
-			if m.HasClass(c.ComponentRef, ClassFuse) || m.HasClass(c.ComponentRef, ClassTVS) {
+			// An unfitted fuse or TVS protects nothing on the assembled board (agni issue 961).
+			if (m.HasClass(c.ComponentRef, ClassFuse) || m.HasClass(c.ComponentRef, ClassTVS)) && m.IsFitted(c.ComponentRef) {
 				return c.ComponentRef
 			}
 		}
@@ -392,8 +419,9 @@ func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 	}
 	var out PowerPathReport
 	for _, target := range r.Nets {
+		// A load marked do-not-populate draws nothing on the assembled board (agni issue 961).
 		hasPowerIn := Exists(target.Connections, func(c *ir.Connection) bool {
-			return !IsVirtualRef(c.ComponentRef) && ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+			return !IsVirtualRef(c.ComponentRef) && m.IsFitted(c.ComponentRef) && ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 		})
 		if !hasPowerIn {
 			continue

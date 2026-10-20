@@ -76,6 +76,7 @@ var builtinSchema = map[string][]facts.Field{
 	RelNetGround:             {facts.FieldSubject},                                      // net.ground(net)
 	RelNetExternal:           {facts.FieldSubject},                                      // net.external(net)
 	RelEsdRated:              {facts.FieldSubject},                                      // component.esd_rated(ref), WS3-076, datasheet tier
+	RelComponentDNP:          {facts.FieldSubject},                                      // component.dnp(ref), agni 961
 	RelComponentDeviceClass:  {facts.FieldSubject, facts.FieldValue},                    // component.device_class(ref, class), WS10-013, datasheet tier
 	RelBus:                   {facts.FieldSubject, facts.FieldValue},                    // bus(label, kind), reader-detected unmodeled bus (WS1-034)
 	RelEntity:                {facts.FieldSubject, facts.FieldValue},                    // entity(name, kind), the enumeration relation, what a name search ranges over
@@ -131,6 +132,7 @@ var builtinCatalog = []facts.RelationInfo{
 	{Name: "net.attr", Args: []string{"net", "key", "value"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "a net-level attribute DECLARED by the source file (external, global, power_driven), the twin of component.attr; a role the engine derived is net.role", Kind: facts.KindNetlist},
 	{Name: "component.attr", Args: []string{"ref_des", "key", "value"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a component-level attribute (e.g. interface, MPN)", Kind: facts.KindNetlist},
 	{Name: "component.class", Args: []string{"ref_des", "class"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "a device class the part is in (a family tag too, e.g. a TVS is both tvs and diode)", Kind: facts.KindNetlist},
+	{Name: "component.dnp", Args: []string{"ref_des"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the part is marked do-not-populate: it stays in the netlist but is not fitted, so nothing should credit it with a role", Kind: facts.KindNetlist},
 	{Name: "component.esd_rated", Args: []string{"ref_des"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the part carries a datasheet ESD rating at or above the credit floor (needs datasheet parameters)", Kind: facts.KindDatasheet},
 	{Name: "component.device_class", Args: []string{"ref_des", "class"}, ArgKinds: map[string]facts.ArgKind{"ref_des": {Entity: check.KindComponent}}, Summary: "the device class the part's datasheet declares (authoritative over the ref-des/keyword class; needs datasheet parameters)", Kind: facts.KindDatasheet},
 	{Name: "net.ground", Args: []string{"net"}, ArgKinds: map[string]facts.ArgKind{"net": {Entity: check.KindNet}}, Summary: "the net is a ground rail (name-derived)", Kind: facts.KindNetlist},
