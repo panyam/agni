@@ -744,7 +744,8 @@ test each run, and passes locally is often a click landing in a boot window**, w
 by `page.route`, which is how PR 1114 found a Run button enabled before any design had opened.
 **`HEADED=1` shows any browser spec in a visible Chrome** (`make browser-test HEADED=1`, `SLOWMO=<ms>`
 paces it). **Mission #845's walk is `web/browser/review-walk.spec.ts`**, in the gate, and `make
-exercise-browser-review` runs it alone and prints the step table for the mission log; headed, it stops
+exercise-browser-review` runs it alone on Jetson (`WALK_DESIGN=gateway` for the small board the gate
+walks) and prints the step table for the mission log; headed, it stops
 before each step to explain it (`walkguide.ts`) until `STEP_BY_STEP=0`. A viewer change that breaks the
 walk fails it on that PR, so update the spec there rather than loosening it (agni 1118).
 

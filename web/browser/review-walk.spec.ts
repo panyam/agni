@@ -27,10 +27,20 @@ import { pause, stepByStep } from "./walkguide.js";
 
 const base = (): string => inject("baseUrl");
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
-const project = join(repoRoot, "examples/tutorial-project");
-const design = join(project, "designs/gateway");
+// WALK_DESIGN picks the board. The gate walks the tutorial project's small synthetic gateway, and
+// `make exercise-browser-review` defaults to Jetson, Antmicro's baseboard in examples/jetson-project,
+// whose files `make -C examples/jetson-project board` copies in from the fetched samples corpus.
+const walks = {
+  gateway: { mount: "tut", project: "examples/tutorial-project", path: "designs/gateway" },
+  jetson: { mount: "jetson", project: "examples/jetson-project", path: "designs/jetson" },
+};
+const which = (process.env.WALK_DESIGN || "gateway") as keyof typeof walks;
+const walk = walks[which];
+if (!walk) throw new Error(`WALK_DESIGN=${which} names no walk; use one of ${Object.keys(walks).join(", ")}`);
+const project = join(repoRoot, walk.project);
+const design = join(project, walk.path);
 const auditSet = join(repoRoot, "examples/netlist-audit/audit.yaml");
-const label = "gateway (tut)";
+const label = `${walk.path.split("/").pop()} (${walk.mount})`;
 
 // The CLI half runs a binary built from this tree, from an empty directory with HOME pointed at it, so
 // a developer's ~/.config/agni/agni.yaml cannot add its mounts or web_dir to the run.
@@ -107,6 +117,7 @@ describe("the browser-review walk", () => {
   it("goes from a checklist to a saved report", async () => {
     const rows: Row[] = [];
     const out = process.env.EXERCISE_OUT;
+    if (out) mkdirSync(out, { recursive: true });
     const page = await browser.newPage({ viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
     const pageErrors: string[] = [];
     const failed: string[] = [];
@@ -133,7 +144,7 @@ describe("the browser-review walk", () => {
 
     try {
       await step("open", async () => {
-        await page.goto(`${base()}/designs/tut/designs/gateway/view`, { waitUntil: "networkidle" });
+        await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" });
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
         await page.waitForFunction(() => /\(\d+\)/.test(document.querySelector(".checks-run")?.textContent ?? ""), null, {
           timeout: 60_000,
@@ -203,10 +214,18 @@ describe("the browser-review walk", () => {
 
       await step("click a query cell", async () => {
         await page.click(`.query-tab-go[title="Parts on nets"]`);
-        const cell = page.locator(".query-row .query-locate").first();
-        await cell.waitFor({ timeout: 30_000 });
-        const name = (await cell.innerText()).trim();
-        await cell.click();
+        await page.locator(".query-row .query-locate").first().waitFor({ timeout: 30_000 });
+        // A virtual symbol (#FLG01, #PWR03) is a row with nothing to draw, so the walk takes the first
+        // placed part. A part drawn on another sheet is selected without the canvas moving, and its
+        // cell's sheet chip is how a reader goes there, so the walk clicks that too.
+        const cell = page.locator(".query-row td:nth-child(2)").filter({ has: page.locator(".query-locate") }).filter({ hasNotText: /^\s*#/ }).first();
+        const name = (await cell.locator(".query-locate").innerText()).trim();
+        await cell.locator(".query-locate").click();
+        if ((await settled(page)) === 0 && (await cell.locator(".sheet-badge").count()) > 0) {
+          const sheet = (await cell.locator(".sheet-badge").first().innerText()).trim();
+          await cell.locator(".sheet-badge").first().click();
+          return `${name}, on sheet ${sheet}: ${await lit(page, "the cell")}`;
+        }
         return `${name}: ${await lit(page, "the cell")}`;
       });
 
@@ -227,7 +246,7 @@ describe("the browser-review walk", () => {
         await runChecklist(page, name);
         const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), page.click(".rv-save")]);
         const saved = readFileSync((await download.path())!, "utf8");
-        const cli = agni("review", design, "--checklist", name, "--format", "html", "--server", base(), "--mount", `tut=${project}`);
+        const cli = agni("review", design, "--checklist", name, "--format", "html", "--server", base(), "--mount", `${walk.mount}=${project}`);
         if (out) {
           writeFileSync(join(out, `review-walk-viewer-${name}.html`), saved);
           writeFileSync(join(out, `review-walk-cli-${name}.html`), cli);
@@ -242,9 +261,12 @@ describe("the browser-review walk", () => {
           (m) => m[1] !== "step",
         );
         if (steps.length === 0) throw new Error("the trial report listed no steps");
-        const bad = steps.filter((m) => m[2] !== "ok").map((m) => `${m[1]}: ${m[2]}`);
+        // A step the design has nothing for (a project with no query sets) says skipped, which is an
+        // answer rather than a failure.
+        const bad = steps.filter((m) => m[2] !== "ok" && m[2] !== "skipped").map((m) => `${m[1]}: ${m[2]}`);
         if (bad.length) throw new Error(bad.join("; "));
-        return `${steps.length} steps ok`;
+        const skipped = steps.filter((m) => m[2] === "skipped").map((m) => m[1]);
+        return `${steps.length - skipped.length} steps ok${skipped.length ? `, skipped: ${skipped.join(", ")}` : ""}`;
       });
 
       await step("page health", async () => {
@@ -255,10 +277,7 @@ describe("the browser-review walk", () => {
     } finally {
       await page.close();
       const text = table(rows);
-      if (out) {
-        mkdirSync(out, { recursive: true });
-        writeFileSync(join(out, "browser-review.md"), `${text}\n`);
-      }
+      if (out) writeFileSync(join(out, "browser-review.md"), `${text}\n`);
     }
 
     expect(rows.filter((r) => r.status === "fail").map((r) => `${r.step}: ${r.detail}`)).toEqual([]);

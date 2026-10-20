@@ -272,12 +272,17 @@ browser-test: ui wasm
 # in a visible Chrome and stops before each step to explain what it does and what the product does,
 # until you press Next; STEP_BY_STEP=0 plays it straight through. SLOWMO=<ms> paces each action (250
 # by default when headed). A headless run never stops.
+# WALK_DESIGN picks the board: jetson (the default, Antmicro's baseboard in examples/jetson-project, copied
+# in from the samples corpus) or gateway (the tutorial project's small synthetic board the gate walks).
 #   make exercise-browser-review
 #   make exercise-browser-review HEADED=1
 #   make exercise-browser-review HEADED=1 STEP_BY_STEP=0
-exercise-browser-review: ui
+#   make exercise-browser-review WALK_DESIGN=gateway
+WALK_DESIGN ?= jetson
+exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
 	mkdir -p $(EXERCISE_OUT)
-	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) STEP_BY_STEP=$(STEP_BY_STEP) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/review-walk.spec.ts; \
+	cd web && WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) STEP_BY_STEP=$(STEP_BY_STEP) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/review-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/browser-review.md 2>/dev/null; exit $$status
 
 # WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
