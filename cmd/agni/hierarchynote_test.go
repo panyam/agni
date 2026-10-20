@@ -148,3 +148,17 @@ func TestIssue1085FixtureMatchesItsGolden(t *testing.T) {
 		t.Errorf("unexpanded_hierarchy = %v, want none", u)
 	}
 }
+
+// TestStatsSaysACycleLeftABlockOut holds the stats line on a flattened read that a self-placing
+// block stopped (agni issue 1102), which must not claim the counts are the top cell's.
+func TestStatsSaysACycleLeftABlockOut(t *testing.T) {
+	readFlatten = true
+	t.Cleanup(func() { readFlatten = false })
+	out := runCLI(t, statsCmd(), "../../readers/edif/testdata/hier_cycle.edn")
+	if !strings.Contains(out, "not extracted:       1 sub-cell holding 2 instances (it places itself, so the counts above leave it out)") {
+		t.Errorf("stats on a cycle:\n%s", out)
+	}
+	if strings.Contains(out, "top cell only") {
+		t.Errorf("stats on a flattened read claims a top-cell read:\n%s", out)
+	}
+}
