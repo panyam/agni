@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -45,5 +46,34 @@ func TestSharedTriStateAndOpenCollectorOutputsDoNotConflict(t *testing.T) {
 	}
 	if got := verdictOn(t, outputOutputConflict, design(output, output), "BUS"); got != string(check.Fail) {
 		t.Errorf("output-output-conflict on two push-pull outputs = %q, want fail", got)
+	}
+}
+
+// On a net carrying a power symbol only a power output feeds a supply pin, so a logic output tied to
+// ground does not pass it, as KiCad's ERC holds. On an ordinary net a supply-typed pin is fed by any
+// driver, so a module connector's power-good input on an open-drain flag stays clean (agni issue 1082).
+func TestOnlyAPowerSourceFeedsAPowerNet(t *testing.T) {
+	design := func(symbol bool, source ir.PinDirection) *ir.Design {
+		d := pinDesign(map[string][]supplyPin{
+			"U1": {{"VSS", "1", pwrIn}}, "U2": {{"STRAP", "1", source}},
+		}, map[string][]string{"RAIL": {"U1.1", "U2.1"}})
+		if symbol {
+			d.Nets[0].Connections = append(d.Nets[0].Connections,
+				&ir.Connection{ComponentRef: "#PWR01", PinRef: "1", Attributes: map[string]string{"direction": "power_in"}})
+		}
+		return d
+	}
+	if got := verdictOn(t, powerInputNotDriven, design(true, output), "RAIL"); got != string(check.Fail) {
+		t.Errorf("a power net fed only by a logic output = %q, want fail", got)
+	}
+	if got := verdictOn(t, powerInputNotDriven, design(true, pwrOut), "RAIL"); got != string(check.Pass) {
+		t.Errorf("a power net fed by a power output = %q, want pass", got)
+	}
+	if got := verdictOn(t, powerInputNotDriven, design(false, output), "RAIL"); got != string(check.Pass) {
+		t.Errorf("an ordinary net whose supply-typed pin an output drives = %q, want pass", got)
+	}
+	twin := func(d *ir.Design) int { return len(powerInputNotDrivenSpec.Eval(context.Background(), check.NewModel(d))) }
+	if a, b, c := twin(design(true, output)), twin(design(true, pwrOut)), twin(design(false, output)); a != 1 || b != 0 || c != 0 {
+		t.Errorf("the twin's findings = %d, %d, %d, want 1, 0, 0", a, b, c)
 	}
 }
