@@ -400,7 +400,13 @@ func statsCmd() *cobra.Command {
 			fmt.Fprintf(w, "nets:                %d\n", len(d.Nets))
 			// The counts above cover what the read EXTRACTED, which on a hierarchical design is the top
 			// level alone. Said here as well as in the stderr note (agni issue 707).
-			if blocks := d.GetInputDiagnostics().GetUnexpandedHierarchy(); len(blocks) > 0 {
+			if blocks := d.GetInputDiagnostics().GetUnexpandedHierarchy(); rpt.HierarchyCycles(blocks) {
+				why := "they place themselves, so the counts above leave them out"
+				if len(blocks) == 1 {
+					why = "it places itself, so the counts above leave it out"
+				}
+				fmt.Fprintf(w, "not extracted:       %s (%s)\n", rpt.HierarchySummary(blocks), why)
+			} else if len(blocks) > 0 {
 				fmt.Fprintf(w, "not extracted:       %s (counts above are the top %s only)\n",
 					rpt.HierarchySummary(blocks), rpt.HierarchyNoun(blocks))
 			}

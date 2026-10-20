@@ -153,7 +153,7 @@ describe("a trace arriving in the URL", () => {
     const h = harness();
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
-      symbols: false, verdict: "", hash: "", rule: "", subjects: [], trace: "U1.3,J1.1", traceHops: 0,
+      symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "U1.3,J1.1", traceHops: 0,
       query: "",
       title: "",
       binds: [],
@@ -174,7 +174,7 @@ describe("a trace arriving in the URL", () => {
     const h = harness();
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
-      symbols: false, verdict: "", hash: "", rule: "", subjects: [], trace: "U1.3,J1.1", traceHops: 2,
+      symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "U1.3,J1.1", traceHops: 2,
       query: "",
       title: "",
       binds: [],
@@ -189,7 +189,7 @@ describe("a trace arriving in the URL", () => {
     const h = harness();
     await h.presenter.restore({
       mount: "m", path: "proj/board.edn", isDir: false, sheet: "", mode: "", layout: "",
-      symbols: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0,
+      symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0,
       query: "",
       title: "",
       binds: [],

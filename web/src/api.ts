@@ -13,6 +13,7 @@ import { ReviewService } from "./gen/agni/v1/webapi/review_pb.js";
 import { TableService } from "./gen/agni/v1/webapi/tables_pb.js";
 import { SnapshotService } from "./gen/agni/v1/webapi/snapshot_pb.js";
 import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
+import { pageFlattens } from "./router.js";
 
 // engineFetch, when set, answers every client's requests in place of the network, which is how the
 // in-browser engine serves the same clients `agni serve` does (agni issue 178).
@@ -90,7 +91,7 @@ let registry: SnapshotRegistry | undefined;
 // snapshots is the page's one SnapshotRegistry, made on first use over the engine the page chose,
 // so every client asks about the same snapshots.
 export function snapshots(): SnapshotRegistry {
-  registry ??= new SnapshotRegistry(createClient(SnapshotService, newTransport("/", false)));
+  registry ??= new SnapshotRegistry(createClient(SnapshotService, newTransport("/", false)), undefined, { flatten: pageFlattens(globalThis.location?.search ?? "") });
   return registry;
 }
 

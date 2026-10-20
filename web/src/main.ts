@@ -38,7 +38,7 @@ import { wasLoaded } from "./loaded.js";
 import { admit } from "./admit.js";
 import { createViewerDock, openDiffPanel, closeDiffPanel } from "./dock.js";
 import { highlightMenu, loadHighlightStyle, loadShowAll } from "./highlightstyle.js";
-import { appBase, currentLocation, hasFile, locationToUrl, type ViewerLocation } from "./router.js";
+import { appBase, currentLocation, hasFile, locationToUrl, pageFlattens, withFlatten, type ViewerLocation } from "./router.js";
 import { GROUP_BOARD_COPPER_BACK, GROUP_BOARD_COPPER_FRONT } from "./packed.js";
 import { LocateReason, drawnSheets, searchPattern } from "./query.js";
 import { delayedBusy } from "./busy.js";
@@ -127,7 +127,12 @@ class AppRoot extends BaseComponent {
     const setExpectCaption = expectationCaptionStrip(document.getElementById("expect-caption"));
     const setUndrawnNote = undrawnStrip(document.getElementById("undrawn-note"));
     const setStaleLinkNote = staleLinkStrip(document.getElementById("stale-link-note"));
-    const setHierarchyNote = hierarchyStrip(document.getElementById("hierarchy-note"));
+    // Reading every block is a fresh page under ?flatten=1, since the page's snapshots are all
+    // ingested one way (agni issue 1102).
+    const setHierarchyNote = hierarchyStrip(
+      document.getElementById("hierarchy-note"),
+      pageFlattens(window.location.search) ? undefined : () => window.location.assign(withFlatten(window.location.pathname + window.location.search)),
+    );
     const readoutEl = document.getElementById("readout");
     const svgView = new SvgView(svgEl);
     // Clicking the drawing selects what is under the cursor and asks the query engine about it. The

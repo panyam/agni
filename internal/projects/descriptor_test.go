@@ -52,6 +52,21 @@ func TestParseDesignUntitledFallsBackToID(t *testing.T) {
 	}
 }
 
+func TestParseDesignReadsFlattenHierarchy(t *testing.T) {
+	for src, want := range map[string]bool{
+		"name: b\nentry: b.edn\nflatten_hierarchy: true\n": true,
+		"name: b\nentry: b.edn\n":                          false,
+	} {
+		_, d, err := ParseDesign(strings.NewReader(src))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if d.GetFlattenHierarchy() != want {
+			t.Errorf("%q: flatten_hierarchy = %v, want %v", src, d.GetFlattenHierarchy(), want)
+		}
+	}
+}
+
 func TestParseDesignRejects(t *testing.T) {
 	cases := []struct{ name, yaml, want string }{
 		{"no name", "entry: a.edn\n", "name is required"},

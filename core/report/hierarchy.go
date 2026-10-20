@@ -26,10 +26,45 @@ const hierarchyNoteListed = 5
 // It takes the diagnostic rather than the design, so it reads nothing else. A hierarchical design is
 // not a defect, so this is never a finding. The largest blocks are named first, because that is where
 // most of the missing design is.
+//
+// A flattened read lists only the blocks that place themselves (UNEXPANDED_REASON_CYCLE), and saying
+// "only its top cell was read" there would be false, so those get a sentence of their own (agni issue
+// 1102).
 func HierarchyNote(file string, blocks []*ir.UnexpandedHierarchy) string {
 	if len(blocks) == 0 {
 		return ""
 	}
+	named := hierarchyNamed(blocks)
+	noun := HierarchyNoun(blocks)
+	if HierarchyCycles(blocks) {
+		verb, its := "each places itself", "their"
+		if len(blocks) == 1 {
+			verb, its = "it places itself", "its"
+		}
+		return fmt.Sprintf("%s is hierarchical and %s could not be expanded, because %s (%s). Counts and checks leave %s contents out.",
+			path.Base(file), HierarchySummary(blocks), verb, named, its)
+	}
+	verb := "were"
+	if len(blocks) == 1 {
+		verb = "was"
+	}
+	return fmt.Sprintf("%s is hierarchical and only its top %s was read. %s %s not extracted (%s). Counts and checks cover the top %s alone.",
+		path.Base(file), noun, HierarchySummary(blocks), verb, named, noun)
+}
+
+// HierarchyCycles reports whether every listed block was left out because it places itself, which is
+// all a flattened read leaves out.
+func HierarchyCycles(blocks []*ir.UnexpandedHierarchy) bool {
+	for _, b := range blocks {
+		if b.GetReason() != ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE {
+			return false
+		}
+	}
+	return len(blocks) > 0
+}
+
+// hierarchyNamed is the note's parenthetical, the largest blocks first with their instance counts.
+func hierarchyNamed(blocks []*ir.UnexpandedHierarchy) string {
 	sorted := slices.Clone(blocks)
 	slices.SortStableFunc(sorted, func(a, b *ir.UnexpandedHierarchy) int {
 		return cmp.Or(cmp.Compare(b.GetInstanceCount(), a.GetInstanceCount()), cmp.Compare(a.GetName(), b.GetName()))
@@ -41,13 +76,7 @@ func HierarchyNote(file string, blocks []*ir.UnexpandedHierarchy) string {
 	if extra := len(sorted) - hierarchyNoteListed; extra > 0 {
 		named = append(named, fmt.Sprintf("%d more", extra))
 	}
-	noun := HierarchyNoun(blocks)
-	verb := "were"
-	if len(blocks) == 1 {
-		verb = "was"
-	}
-	return fmt.Sprintf("%s is hierarchical and only its top %s was read. %s %s not extracted (%s). Counts and checks cover the top %s alone.",
-		path.Base(file), noun, HierarchySummary(blocks), verb, strings.Join(named, ", "), noun)
+	return strings.Join(named, ", ")
 }
 
 // HierarchyNoun names the construct the way its format's users do, falling back to "block".

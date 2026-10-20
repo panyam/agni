@@ -55,16 +55,16 @@ func TestStatsFlattensAHierarchicalEDIF(t *testing.T) {
 }
 
 // TestHierarchyNoteNamesTheFlag holds the CLI's note to naming --flatten-hierarchy while the flag is
-// off, and to dropping it once on, where a block still listed was kept out by a cycle.
+// off, and to dropping it on a flattened read, where a block still listed was kept out by a cycle
+// the flag cannot help with, whether the flag or a design.yaml asked for flattening.
 func TestHierarchyNoteNamesTheFlag(t *testing.T) {
 	blocks := []*ir.UnexpandedHierarchy{{Name: "SUB", Kind: "edif_cell", InstanceCount: 1}}
 	if got := hierarchyNote("board.edn", blocks); !strings.Contains(got, "Pass --flatten-hierarchy to read every block.") {
 		t.Errorf("note without the flag = %q, want it to name the flag", got)
 	}
-	readFlatten = true
-	t.Cleanup(func() { readFlatten = false })
-	if got := hierarchyNote("board.edn", blocks); strings.Contains(got, "--flatten-hierarchy") {
-		t.Errorf("note with the flag on = %q, want no hint", got)
+	cycles := []*ir.UnexpandedHierarchy{{Name: "LOOP", Kind: "edif_cell", InstanceCount: 2, Reason: ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE}}
+	if got := hierarchyNote("board.edn", cycles); strings.Contains(got, "--flatten-hierarchy") {
+		t.Errorf("note on a flattened read = %q, want no hint", got)
 	}
 }
 
@@ -146,5 +146,19 @@ func TestIssue1085FixtureMatchesItsGolden(t *testing.T) {
 	}
 	if u := d.GetInputDiagnostics().GetUnexpandedHierarchy(); len(u) != 0 {
 		t.Errorf("unexpanded_hierarchy = %v, want none", u)
+	}
+}
+
+// TestStatsSaysACycleLeftABlockOut holds the stats line on a flattened read that a self-placing
+// block stopped (agni issue 1102), which must not claim the counts are the top cell's.
+func TestStatsSaysACycleLeftABlockOut(t *testing.T) {
+	readFlatten = true
+	t.Cleanup(func() { readFlatten = false })
+	out := runCLI(t, statsCmd(), "../../readers/edif/testdata/hier_cycle.edn")
+	if !strings.Contains(out, "not extracted:       1 sub-cell holding 2 instances (it places itself, so the counts above leave it out)") {
+		t.Errorf("stats on a cycle:\n%s", out)
+	}
+	if strings.Contains(out, "top cell only") {
+		t.Errorf("stats on a flattened read claims a top-cell read:\n%s", out)
 	}
 }

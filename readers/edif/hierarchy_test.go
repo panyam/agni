@@ -103,6 +103,11 @@ func TestUnflattenedReadIsTheTopCell(t *testing.T) {
 	if strings.Join(names, " ") != "LED_DRV RC" {
 		t.Errorf("unexpanded_hierarchy = %v, want LED_DRV RC", names)
 	}
+	for _, u := range d.GetInputDiagnostics().GetUnexpandedHierarchy() {
+		if u.GetReason() != ir.UnexpandedReason_UNEXPANDED_REASON_NOT_WALKED {
+			t.Errorf("%s reason = %v, want NOT_WALKED on a top-level read", u.GetName(), u.GetReason())
+		}
+	}
 }
 
 // TestCellPlacedTwiceYieldsTwoSets guards the failure #718 names, two placements read as one merged
@@ -144,8 +149,8 @@ func TestCyclicCellIsListedNotWalked(t *testing.T) {
 		t.Errorf("components = %v, want R1 from the one placement walked", got)
 	}
 	u := d.GetInputDiagnostics().GetUnexpandedHierarchy()
-	if len(u) != 1 || u[0].GetName() != "LOOP" {
-		t.Errorf("unexpanded_hierarchy = %v, want LOOP", u)
+	if len(u) != 1 || u[0].GetName() != "LOOP" || u[0].GetReason() != ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE {
+		t.Errorf("unexpanded_hierarchy = %v, want LOOP for a cycle", u)
 	}
 }
 
@@ -204,6 +209,23 @@ func TestFlattenedDesignWritesAndReadsBack(t *testing.T) {
 	for pin, net := range want {
 		if got[pin] != net {
 			t.Errorf("re-read puts %s on %q, want %q", pin, got[pin], net)
+		}
+	}
+}
+
+// TestInstanceNamedPartsInSeveralBlocksStayApart covers agni issue 1105. hier_noref.edn carries no
+// designators, so each part is named by its instance name, and R1 sits in the top cell and in two
+// different blocks. The top cell keeps its R1, each block's R1 takes its path, and SHEET_A's R2,
+// which nothing else uses, keeps its name.
+func TestInstanceNamedPartsInSeveralBlocksStayApart(t *testing.T) {
+	d := readFlat(t, "hier_noref.edn")
+	if got := strings.Join(refs(d), " "); got != "R1 SA/R1 R2 SB/R1" {
+		t.Errorf("components = %s, want R1 SA/R1 R2 SB/R1", got)
+	}
+	p := partition(d)
+	for _, pin := range []string{"R1.A", "SA/R1.A", "R2.A", "SB/R1.A"} {
+		if p[pin] != "SIG" {
+			t.Errorf("%s on %q, want SIG", pin, p[pin])
 		}
 	}
 }

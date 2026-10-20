@@ -23,6 +23,11 @@ import (
 //     component wherever they sit, since a multi-gate part split across sheets is one part.
 //   - A part reached through a block the design places more than once is qualified by its instance
 //     path, "B2/R1", so two placements are two sets of parts rather than one merged set.
+//   - A file with no designators names each part by its instance name, which is unique within its
+//     cell only. A name used in more than one cell instance is qualified by its block's path in every
+//     block it appears in ("A1/R1"), the top cell keeping its own, so two cells' R1 are two parts. A
+//     multi-gate part split across sheets then reads as two, which shows, where a wrong merge would
+//     hide a part.
 
 // leaf is one placed part, reached through path, the block instance names above it joined by "/",
 // empty in the top cell.
@@ -323,6 +328,22 @@ func (h *hierarchy) netNames() []string {
 	return out
 }
 
+// namesInSeveralBlocks is every instance name the walk met in more than one cell instance, which a
+// file naming its parts by instance name (no designators) cannot tell apart by name alone.
+func (h *hierarchy) namesInSeveralBlocks() map[string]bool {
+	at := map[string]string{}
+	out := map[string]bool{}
+	for _, lf := range h.leaves {
+		n := parseName(lf.node.Arg(1)).best()
+		if p, seen := at[n]; !seen {
+			at[n] = lf.path
+		} else if p != lf.path {
+			out[n] = true
+		}
+	}
+	return out
+}
+
 // depth is how many blocks deep a path is, 0 for the top cell.
 func depth(path string) int {
 	if path == "" {
@@ -331,8 +352,8 @@ func depth(path string) int {
 	return strings.Count(path, "/") + 1
 }
 
-// unexpandedEntry describes a cell whose contents a read left out.
-func unexpandedEntry(c *node, src string) *ir.UnexpandedHierarchy {
+// unexpandedEntry describes a cell whose contents a read left out, and why.
+func unexpandedEntry(c *node, src string, reason ir.UnexpandedReason) *ir.UnexpandedHierarchy {
 	var ci []*node
 	collect(c, "instance", &ci)
 	nm := parseName(c.Arg(1))
@@ -341,5 +362,6 @@ func unexpandedEntry(c *node, src string) *ir.UnexpandedHierarchy {
 		Kind:          "edif_cell",
 		InstanceCount: num.Int32(len(ci)),
 		Prov:          &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind},
+		Reason:        reason,
 	}
 }

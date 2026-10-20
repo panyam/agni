@@ -238,11 +238,25 @@ message InputDiagnostics {
 // is how many instances the block's own contents hold, counted once however many times the block is
 // placed and not following the blocks it places in turn. It is the useful half of the message: "SUB holds 212 instances and none were read" says how much of the design is
 // missing, where "this design is hierarchical" does not. prov locates the block's declaration.
+// reason says why the read left the block out, which decides what a surface tells the reader.
 message UnexpandedHierarchy {
   string name = 1;
   string kind = 2;
   int32 instance_count = 3;
   Provenance prov = 4;
+  UnexpandedReason reason = 5;
+}
+
+// UnexpandedReason is why a read left a hierarchical block's contents out.
+enum UnexpandedReason {
+  // UNEXPANDED_REASON_UNSPECIFIED is a reader that predates the field, read as NOT_WALKED.
+  UNEXPANDED_REASON_UNSPECIFIED = 0;
+  // UNEXPANDED_REASON_NOT_WALKED is a read of the top level alone, which reads every block when
+  // asked to flatten (Snapshot.flatten_hierarchy, agni issue 718).
+  UNEXPANDED_REASON_NOT_WALKED = 1;
+  // UNEXPANDED_REASON_CYCLE is a block a flattened read refused to enter because it places itself,
+  // directly or through the blocks it places (agni issue 1102).
+  UNEXPANDED_REASON_CYCLE = 2;
 }
 
 // UnannotatedComponent is one placeholder designator and every placement wearing it. Keyed per

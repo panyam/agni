@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageOf, parseUrl, setBase, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
+import { bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageFlattens, pageOf, parseUrl, setBase, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -102,6 +102,17 @@ describe("router", () => {
     expect(parseUrl("/designs/m/b.eds/view", "?sym=1").symbols).toBe(true);
     expect(parseUrl("/designs/m/b.eds/view", "?sym=0").symbols).toBe(false);
     expect(parseUrl("/designs/m/b.eds/view", "").symbols).toBe(false);
+  });
+
+  it("carries flatten through every address the viewer writes (agni issue 1102)", () => {
+    const url = locationToUrl(loc({ mount: "m", path: "b.edn", sheet: "root", flatten: true }));
+    expect(url).toBe("/designs/m/b.edn/view?sheet=root&flatten=1");
+    expect(parseUrl("/designs/m/b.edn/view", "?sheet=root&flatten=1").flatten).toBe(true);
+    expect(parseUrl("/designs/m/b.edn/view", "?flatten=0").flatten).toBe(false);
+    expect(parseUrl("/designs/m/b.edn/view", "").flatten).toBe(false);
+    expect(pageFlattens("?flatten=1&timing=1")).toBe(true);
+    expect(pageFlattens("?timing=1")).toBe(false);
+    expect(withFlatten("/designs/m/b.edn/view?sheet=root")).toBe("/designs/m/b.edn/view?sheet=root&flatten=1");
   });
 
   it("marks a folder with a trailing slash and carries no view knobs", () => {

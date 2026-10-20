@@ -27,10 +27,20 @@ export interface SnapshotCalls {
   updateSnapshot(req: UpdateInit): Promise<Snapshot>;
 }
 
-// A Definition is what a page ingests: a design, and the config its rule-running questions carry.
+// A Definition is what a page ingests: a design, the config its rule-running questions carry, and
+// whether its hierarchical netlist is read whole.
 interface Definition {
   uri: string;
   overlay?: OverlayConfig;
+  flattenHierarchy?: boolean;
+}
+
+// RegistryOptions are what every snapshot a page ingests shares.
+export interface RegistryOptions {
+  // flatten reads every design's hierarchical netlist whole (Snapshot.flatten_hierarchy, agni issue
+  // 1102). It is the page's, from its address (pageFlattens), so a design read under one choice
+  // is never asked about under the other.
+  flatten?: boolean;
 }
 
 // SnapshotSource names a design's snapshot under a config, which is all a presenter asks of the
@@ -54,7 +64,13 @@ export class SnapshotRegistry implements SnapshotSource {
   constructor(
     private readonly calls: SnapshotCalls,
     private readonly newId: () => string = randomId,
+    private readonly options: RegistryOptions = {},
   ) {}
+
+  // def is the definition the page ingests uri under.
+  private def(uri: string, overlay?: OverlayConfig): Definition {
+    return this.options.flatten ? { uri, overlay, flattenHierarchy: true } : { uri, overlay };
+  }
 
   // of returns the name of the snapshot of uri under overlay, ingesting it on first use. A failed
   // ingest is forgotten, so the next ask tries again rather than failing forever.
@@ -62,7 +78,7 @@ export class SnapshotRegistry implements SnapshotSource {
     const key = keyOf(uri, overlay);
     let p = this.byKey.get(key);
     if (!p) {
-      const def: Definition = { uri, overlay };
+      const def = this.def(uri, overlay);
       p = this.calls.ingest({ snapshot: def, snapshotId: this.newId() }).then((s) => {
         this.defs.set(s.name, def);
         return s.name;
@@ -77,7 +93,7 @@ export class SnapshotRegistry implements SnapshotSource {
   // checks finds it parsed (agni issue 1061). It answers the snapshot as the host reports it.
   async readBoard(uri: string, overlay?: OverlayConfig): Promise<Snapshot> {
     const name = await this.of(uri, overlay);
-    return this.calls.ingest({ snapshot: { uri, overlay }, snapshotId: idOf(name), readBoard: true });
+    return this.calls.ingest({ snapshot: this.def(uri, overlay), snapshotId: idOf(name), readBoard: true });
   }
 
   // uriOf is the design a snapshot this page ingested names, or undefined for one it did not.

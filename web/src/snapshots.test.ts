@@ -6,7 +6,7 @@ import { SnapshotUnavailableSchema, SnapshotUnavailable_Reason, type Snapshot } 
 import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
 
 // A registry over recorded SnapshotService calls, minting ids in order.
-function registry() {
+function registry(options: { flatten?: boolean } = {}) {
   const ingests: unknown[] = [];
   const updates: unknown[] = [];
   let n = 0;
@@ -20,7 +20,7 @@ function registry() {
       return {} as Snapshot;
     }),
   };
-  return { reg: new SnapshotRegistry(calls, () => `id${++n}`), calls, ingests, updates };
+  return { reg: new SnapshotRegistry(calls, () => `id${++n}`, options), calls, ingests, updates };
 }
 
 const conv = create(OverlayConfigSchema, { config: { conventions: { name: "acme" } } });
@@ -64,6 +64,29 @@ describe("SnapshotRegistry", () => {
     expect(updates).toEqual([{ snapshot: { name, uri: "mount://m/b.edn", overlay: conv } }]);
     // control: a snapshot this page never ingested is left alone.
     expect(await reg.recover("snapshots/other", SnapshotUnavailable_Reason.MISSING)).toBe(false);
+  });
+});
+
+describe("SnapshotRegistry on a page reading designs whole", () => {
+  it("asks every ingest, board read and recovery for the netlist read whole (agni issue 1102)", async () => {
+    const { reg, ingests, updates } = registry({ flatten: true });
+    const name = await reg.of("mount://m/b.edn");
+    await reg.readBoard("mount://m/b.edn");
+    await reg.recover(name, SnapshotUnavailable_Reason.MISSING);
+    await reg.recover(name, SnapshotUnavailable_Reason.STALE);
+    expect(ingests).toEqual([
+      { snapshot: { uri: "mount://m/b.edn", overlay: undefined, flattenHierarchy: true }, snapshotId: "id1" },
+      { snapshot: { uri: "mount://m/b.edn", overlay: undefined, flattenHierarchy: true }, snapshotId: "id1", readBoard: true },
+      { snapshot: { uri: "mount://m/b.edn", overlay: undefined, flattenHierarchy: true }, snapshotId: "id1" },
+    ]);
+    expect(updates).toEqual([{ snapshot: { name, uri: "mount://m/b.edn", overlay: undefined, flattenHierarchy: true } }]);
+  });
+
+  it("leaves the field out on a page that does not ask", async () => {
+    const { reg, ingests } = registry();
+    await reg.readBoard("mount://m/b.edn");
+    for (const req of ingests) expect((req as { snapshot: object }).snapshot).not.toHaveProperty("flattenHierarchy");
+    expect(ingests).toHaveLength(2);
   });
 });
 
