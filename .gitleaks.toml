@@ -1,0 +1,9 @@
+# gitleaks configuration for agni. It extends the default rules and allowlists only values known to
+# be harmless, each by exact value, so a real secret of the same shape is still reported.
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "A Go constant named key holding the SVG attribute prefix stroke-width=, in a since-deleted render test"
+regexTarget = "match"
+regexes = ['''^key = `stroke-width="$''']

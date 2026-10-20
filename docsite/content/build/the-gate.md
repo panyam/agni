@@ -8,12 +8,12 @@ lies to you in three specific ways, and most of this page is about them.
 ```mermaid
 flowchart LR
     T(["make testall"])
-    T --> V["vet<br/>ir-model-check<br/>fixture-copies-check"]
+    T --> V["vet<br/>lint<br/>seccheck<br/>secrets<br/>ir-model-check<br/>fixture-copies-check"]
     T --> E["test<br/>examples-test<br/>docsite-test"]
     T --> W["ui<br/>web-test<br/>browser-test"]
     T --> P["python-test"]
     T --> G["proto-check<br/>catalog-docs-check<br/>tutorial-runs-check<br/>docsite-images-check<br/>tidyall-check"]
-    V --- Vn["Go hygiene, C19 ratchet,<br/>duplicated fixtures"]
+    V --- Vn["Go hygiene, staticcheck, gosec,<br/>gitleaks, C19 ratchet,<br/>duplicated fixtures"]
     E --- En["engine, example modules, docsite wiring"]
     W --- Wn["bundle, typecheck, vitest,<br/>layout in a real Chromium"]
     G --- Gn["generated trees and module manifests<br/>still match their source"]
@@ -300,6 +300,16 @@ can leave a git worktree under `.claude/worktrees/`, a second full copy of the s
 now. Like the stamp trap, it came from a check reading the working directory rather than the commit.
 
 ## What the gate does NOT run
+
+`make vulncheck` runs govulncheck over the root and `datasheet` modules, and is outside `testall`
+because its answer changes without the code changing. The advisory database moves on its own, so a
+scan on every pull request would mostly re-answer last week's question and still miss an advisory
+published between pull requests. `.github/workflows/vulncheck.yml` runs it weekly and on each
+release tag and files an issue when it fails, and `make audit` runs it with the three scanners the
+gate does run. Those three (`lint`, `seccheck`, `secrets`) run each tool through `go run` at the
+version the Makefile pins, so nothing has to be installed. A gosec finding is fixed or annotated on
+its line as `// #nosec G<n> -- <why>`, and a gitleaks false positive is allowlisted by exact value in
+`.gitleaks.toml`.
 
 `make oracle` cross-checks the KiCad reader against real boards, and is outside `testall` because of
 what it costs. It reads a design's schematic our way, reads the same design's `.kicad_pcb` for the
