@@ -60,7 +60,8 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 		// by four strap pins until agni issue 1082. Elsewhere any driver counts, since a supply-typed pin
 		// on an ordinary net (a module connector's power-good input, say) is fed by whatever drives it.
 		feeds := check.IsDriver
-		if powerSymbolNet(m, n) {
+		powerNet := powerSymbolNet(m, n)
+		if powerNet {
 			feeds = func(d ir.PinDirection) bool { return d == ir.PinDirection_PIN_DIRECTION_POWER_OUT }
 		}
 		drivers := check.CountDir(dirs, feeds)
@@ -98,8 +99,12 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 			v.Reason = notASupply(m, n)
 		default:
 			v.Outcome = check.Fail
+			statement := fmt.Sprintf("%d power-input pin(s) sit on the net and no pin on it drives", powerIns)
+			if powerNet {
+				statement = fmt.Sprintf("%d power-input pin(s) sit on a net carrying a power symbol, and no power-output pin or power flag feeds them", powerIns)
+			}
 			v.Witness = &check.Witness{
-				Statement: fmt.Sprintf("%d power-input pin(s) sit on the net and no pin on it drives", powerIns),
+				Statement: statement,
 				Terms: []check.WitnessTerm{
 					{Label: "power inputs", Value: strconv.Itoa(powerIns)},
 					{Label: "drivers", Value: "0"},

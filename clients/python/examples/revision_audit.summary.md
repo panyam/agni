@@ -107,15 +107,15 @@
 
 ## Findings
 
-24 rows
+21 rows
 
 | severity | inconclusive | rule | kind | subject | pin | net_id | message | source_file | native_id | context |
 |---|---|---|---|---|---|---|---|---|---|---|
-| error | false | copper-clearance | net | CAN1_CANH |  |  | copper of "CAN1_CANH" and "I2C_SCL" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.175mm near (5.00, -84.00)mm |  |  | neighbour=I2C_SCL |
-| error | false | copper-clearance | net | CAN1_CANL |  |  | copper of "CAN1_CANL" and "I2C_SDA" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.250mm near (5.00, -85.50)mm |  |  | neighbour=I2C_SDA |
-| error | false | copper-clearance | net | CAN1_RXD |  |  | copper of "CAN1_RXD" and "PMIC_CORE_3V3" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm |  |  | neighbour=PMIC_CORE_3V3 |
-| error | false | copper-clearance | net | CAN1_RXD |  |  | copper of "CAN1_RXD" and "PMIC_PG" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.250mm near (5.00, -79.50)mm |  |  | neighbour=PMIC_PG |
-| error | false | copper-clearance | net | CAN1_TXD |  |  | copper of "CAN1_TXD" and "MCU_NRST" closer than the 0.127mm fabrication floor at 1 place(s); worst gap -0.250mm near (5.00, -78.00)mm |  |  | neighbour=MCU_NRST |
+| error | false | copper-clearance | net | CAN1_CANH |  |  | copper of "CAN1_CANH" and "I2C_SCL" closer than the 0.127mm fabrication floor at 1 place(s); worst gap 0.125mm near (5.00, -84.00)mm |  |  | neighbour=I2C_SCL |
+| error | false | copper-clearance | net | CAN1_CANL |  |  | copper of "CAN1_CANL" and "I2C_SDA" closer than the 0.127mm fabrication floor at 1 place(s); worst gap 0.050mm near (5.00, -85.50)mm |  |  | neighbour=I2C_SDA |
+| error | false | copper-clearance | net | CAN1_RXD |  |  | copper of "CAN1_RXD" and "PMIC_CORE_3V3" closer than the 0.127mm fabrication floor at 1 place(s); worst gap 0.050mm near (5.00, -79.80)mm |  |  | neighbour=PMIC_CORE_3V3 |
+| error | false | copper-clearance | net | CAN1_RXD |  |  | copper of "CAN1_RXD" and "PMIC_PG" closer than the 0.127mm fabrication floor at 1 place(s); worst gap 0.050mm near (5.00, -79.80)mm |  |  | neighbour=PMIC_PG |
+| error | false | copper-clearance | net | CAN1_TXD |  |  | copper of "CAN1_TXD" and "MCU_NRST" closer than the 0.127mm fabrication floor at 1 place(s); worst gap 0.050mm near (5.00, -78.30)mm |  |  | neighbour=MCU_NRST |
 
 ## Skipped rules
 
@@ -131,7 +131,7 @@
 
 ## Verdicts
 
-271 rows
+268 rows
 
 | verdict_id | url | rule | outcome | subjects | statement | context | terms | reason |
 |---|---|---|---|---|---|---|---|---|
@@ -148,7 +148,7 @@
 | rule | pass | fail | inconclusive | no-limit | not-considered | total |
 |---|---|---|---|---|---|---|
 | annular-width | 15 | 0 | 0 | 0 | 0 | 15 |
-| copper-clearance | 0 | 12 | 0 | 0 | 0 | 12 |
+| copper-clearance | 0 | 9 | 0 | 0 | 0 | 9 |
 | crystal-load-caps | 2 | 0 | 0 | 0 | 0 | 2 |
 | decoupling-present | 2 | 1 | 0 | 0 | 0 | 3 |
 | duplicate-net-name | 15 | 0 | 0 | 0 | 0 | 15 |
