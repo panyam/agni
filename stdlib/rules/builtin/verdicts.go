@@ -27,10 +27,11 @@ func firstOnNet(m check.Model, n *ir.Net, class check.ComponentClass) string {
 
 // firstPassive names the first passive part on a net in connection order, or "" when there is none.
 // Broader than firstOnNet with one class, since `check.IsPassiveClass` spans the R/C/L/ferrite/fuse/
-// test-point family that makes a net not-provably-floating.
+// test-point family that makes a net not-provably-floating. A part marked do-not-populate is skipped,
+// since it is no pull on the assembled board (agni issue 1082).
 func firstPassive(m check.Model, n *ir.Net) string {
 	for _, c := range n.Connections {
-		if check.IsPassiveClass(m.ComponentClass(c.ComponentRef)) {
+		if check.IsPassiveClass(m.ComponentClass(c.ComponentRef)) && m.IsFitted(c.ComponentRef) {
 			return c.ComponentRef
 		}
 	}

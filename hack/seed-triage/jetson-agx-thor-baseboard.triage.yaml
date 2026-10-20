@@ -19,6 +19,13 @@ findings:
       why: N$54 is the module's PMIC backup-battery input (J1 D37, PMIC_BBATT) through D1 and R6, which the module decouples on its own side.
       subjects:
         - net:Net-(D1-C)
+  floating-input:
+    - class: design-choice
+      why: Each is an equalization strap of U33, a TUSB1046 redriver, with a 1 kOhm pull-up and a 1 kOhm pull-down both marked do-not-populate, so on the assembled board the pin is left open. Its EQ and SSEQ pins are four-level strap inputs, where open selects one of the levels, so leaving both straps off is a setting. Not checked against the TUSB1046 datasheet.
+      subjects:
+        - net:/USB DP Alt mode/USBC1_DPEQ0
+        - net:/USB DP Alt mode/USBC1_EQ0
+        - net:/USB DP Alt mode/USBC1_SSEQ0
   esd-protection:
     - class: design-choice
       why: The SFP cage's 10G lines are AC-coupled pairs where a TVS's capacitance would cost signal integrity, its low-speed control pins (TX_FAULT, TX_DISABLE, rate select) go through 1 kOhm or 0 Ohm series parts, and SH is the cage shield returned to ground through an RC network; the module protects its own end.

@@ -18,7 +18,9 @@ func init() {
 }
 
 // rules is the built-in rule set, in evaluation order, and the single registry. Adding a rule
-// means writing it in a rule_*.go file and adding one line here. check.Run evaluates these, and the
+// means writing it in a rule_*.go file and adding one line here. A rule that judges a part on the
+// assembled board (its rating, its orientation) is wrapped in check.OnFittedParts, so it judges no
+// part marked do-not-populate. check.Run evaluates these, and the
 // catalog groups them for display.
 var rules = []*check.Rule{
 	singlePinNet,
@@ -46,18 +48,18 @@ var rules = []*check.Rule{
 	i2cPullUp,
 	i2cRedundantPullUp,
 	i2cPullUpSplitRail,
-	supplyExceedsAbsMax,
-	regulatorOutputExceedsAbsMax,
-	fetVdssBelowRail,
-	loadSwitchTripAboveFetRating,
+	check.OnFittedParts(supplyExceedsAbsMax),
+	check.OnFittedParts(regulatorOutputExceedsAbsMax),
+	check.OnFittedParts(fetVdssBelowRail),
+	check.OnFittedParts(loadSwitchTripAboveFetRating),
 	reverseBlockingAbsent,
-	railNominalOutOfRecommended,
-	pinExceedsAbsMax,
-	pinOutOfRecommended,
-	pinTrackingViolated,
-	pinTrackingAdvisory,
+	check.OnFittedParts(railNominalOutOfRecommended),
+	check.OnFittedParts(pinExceedsAbsMax),
+	check.OnFittedParts(pinOutOfRecommended),
+	check.OnFittedParts(pinTrackingViolated),
+	check.OnFittedParts(pinTrackingAdvisory),
 	railNotClassified,
-	capVoltage,
+	check.OnFittedParts(capVoltage),
 	diffPairNaming,
 	trackWidth,
 	netclassTrackWidth,
@@ -65,7 +67,7 @@ var rules = []*check.Rule{
 	holeSize,
 	annularWidth,
 	copperClearance,
-	ledPolarity,
+	check.OnFittedParts(ledPolarity),
 	pinNetConflict,
 	busNotModeled,
 	symbolUnresolved,

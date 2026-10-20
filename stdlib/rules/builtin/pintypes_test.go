@@ -72,7 +72,9 @@ func TestOnlyAPowerSourceFeedsAPowerNet(t *testing.T) {
 	if got := verdictOn(t, powerInputNotDriven, design(false, output), "RAIL"); got != string(check.Pass) {
 		t.Errorf("an ordinary net whose supply-typed pin an output drives = %q, want pass", got)
 	}
-	twin := func(d *ir.Design) int { return len(powerInputNotDrivenSpec.Eval(context.Background(), check.NewModel(d))) }
+	twin := func(d *ir.Design) int {
+		return len(powerInputNotDrivenSpec.Eval(context.Background(), check.NewModel(d)))
+	}
 	if a, b, c := twin(design(true, output)), twin(design(true, pwrOut)), twin(design(false, output)); a != 1 || b != 0 || c != 0 {
 		t.Errorf("the twin's findings = %d, %d, %d, want 1, 0, 0", a, b, c)
 	}

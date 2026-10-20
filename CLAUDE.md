@@ -920,7 +920,9 @@ component.dnp(?r)`. Two exceptions are deliberate and each cost a wrong first ve
 keeps its credit, since a pad-only one is marked DNP because nothing is placed and a probe lands on
 the copper (every test point on the Feather seed). And crediting alone fails a circuit unfitted as a
 whole, so a rule whose credit changed also leaves out a net with no fitted part (`check.Unpopulated`,
-spec fact `net.unpopulated`). A rule that BLAMES an unfitted part is still open (#1082).
+spec fact `net.unpopulated`). A rule that BLAMES a part judges no unfitted one: a rating or
+orientation rule is wrapped in `check.OnFittedParts` (opt-in, since two unfitted parts sharing a
+ref-des are still a defect), and `floating-input` counts fitted pins, a connector's included (agni 1082).
 `architecture/rules-and-checks.md` states the policy.
 
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
