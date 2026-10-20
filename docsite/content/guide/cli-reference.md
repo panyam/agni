@@ -25,12 +25,11 @@ Print component, section, and net counts for one design. Run it first to confirm
 read your design the way you expect before trusting anything downstream.
 
 The counts cover what the read extracted. On a hierarchical EDIF netlist that is the top cell
-alone, because the reader does not descend into sub-cells yet, and `stats` then adds a line
-saying how much it left out. Every command that reads the design prints the same fact to stderr,
-naming the largest cells:
+alone unless you pass `--flatten-hierarchy`, and `stats` then adds a line saying how much it left
+out. Every command that reads the design prints the same fact to stderr, naming the largest cells:
 
 ```text
-note: board.edn is hierarchical and only its top cell was read. 7 sub-cells holding 74 instances were not extracted (B: 40, E: 12, G: 9, D: 7, A: 3, 2 more). Counts and checks cover the top cell alone.
+note: board.edn is hierarchical and only its top cell was read. 7 sub-cells holding 74 instances were not extracted (B: 40, E: 12, G: 9, D: 7, A: 3, 2 more). Counts and checks cover the top cell alone. Pass --flatten-hierarchy to read every block.
 ...
 not extracted:       7 sub-cells holding 74 instances (counts above are the top cell only)
 ```
@@ -504,8 +503,10 @@ agni emit board.kicad_sch board.edn
 
 Both writers are lossy-bounded and state their limits, so a conversion carries what the IR holds
 rather than what the source file held. The EDIF writer emits the netlist tier only. A hierarchical
-design writes out FLAT, because the reader scopes a read to the design's top cell and drops every
-sub-cell's contents before the writer sees it, and array bus declarations are not written because
+design writes out FLAT. Read without `--flatten-hierarchy` that is its top cell alone, since the
+reader drops every sub-cell's contents before the writer sees it; read with it, the file is the
+whole schematic in one cell, with each block's parts and nets under their path names. Array bus
+declarations are not written because
 the diagnostic they reach the IR as does not record which port declared them.
 
 An EDIF instance needs a name, because a net anchors each of its pins with an `instanceRef` naming
@@ -573,6 +574,7 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 |---|---|
 | `--symbol-path <dir>` | directory to search for symbol files (`.sym` for xschem/gEDA, `.kicad_sym` for KiCad) so schematics that name rather than embed their symbols resolve to pin-level nets and faithful artwork. Repeatable, searched recursively, and the schematic's own directory is always searched. Defaults to `AGNI_SYMBOL_PATH` (colon-separated) when the flag is absent, which is how the container image supplies its bundled libraries to every subcommand. |
 | `--mount <name>=<path>` | expose a folder as a named mount (repeatable). Every command takes it, not just `serve`. An artifact is addressed as `mount://<mount>/<path>`, and with a matching `--mount` the CLI and a server produce **identical URIs for the same design**, so a review created either way records the same design and the two are directly comparable. Without it the CLI mints a mount per argument, rooted at the enclosing project when there is one, so `agni check some/board.edn` still works with no configuration. You may also pass a full `mount://...` URI in place of a path. |
+| `--flatten-hierarchy` | read a hierarchical netlist as its whole schematic, walking into every block cell the top cell places. A net crossing a block's port is one net with its parent's and keeps the parent's name, a net inside a block keeps its name when it is unique and is otherwise named by the block's path (`/A1/MID`), and a part inside a block placed more than once carries the path in its ref-des (`B2/R1`). Parts sharing a designator are sections of one component wherever they sit. A flat netlist reads the same either way, and only EDIF has blocks to walk today. Over `--remote` it rides the snapshot (`Snapshot.flatten_hierarchy`). |
 | `--as-named` | read exactly the file named, even when its `design.yaml` declares it a companion view of a different entry. Without it, analysing a declared companion (a schematic export, a board) reads the design's entry instead, because a companion is a view of the design rather than a second source of it. Reach for this when reading a view as a netlist is the point, such as checking that two views of one design still agree. |
 | `--version` | print the build version and exit. |
 

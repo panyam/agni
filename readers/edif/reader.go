@@ -12,13 +12,28 @@ import (
 	"github.com/panyam/agni/internal/refdes"
 )
 
-// Read parses an EDIF 2.0.0 netlist into an ir.Design.
+// Options configures a read beyond the file itself.
+type Options struct {
+	// FlattenHierarchy walks from the design's top cell into every block cell it places, so a
+	// hierarchical netlist reads as its whole schematic (agni issue 718). Off, only the top cell is
+	// read and the blocks are listed in InputDiagnostics.unexpanded_hierarchy. A flat netlist reads
+	// identically either way.
+	FlattenHierarchy bool
+}
+
+// Read parses an EDIF 2.0.0 netlist into an ir.Design, reading a hierarchical one's top cell alone.
+// It is ReadWith under the zero Options.
+func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
+	return ReadWith(r, sourceFile, Options{})
+}
+
+// ReadWith parses an EDIF 2.0.0 netlist into an ir.Design.
 //
 // Fidelity: lossy-bounded (netlist subset). We extract components, part
 // references, and net connectivity, not the full EDIF document. See CONSTRAINTS
 // C6. sourceFile is recorded in provenance only; the caller owns file I/O so the
 // core stays runtime-agnostic (CONSTRAINTS C1).
-func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
+func ReadWith(r io.Reader, sourceFile string, opts Options) (*ir.Design, error) {
 	root, err := parse(r)
 	if err != nil {
 		return nil, err
@@ -29,7 +44,7 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	if len(ver) > 0 && ver[0] != "2" {
 		return nil, fmt.Errorf("edif: unsupported version %s (reader supports 2.0.0)", strings.Join(ver, "."))
 	}
-	d := extract(root, sourceFile)
+	d := extract(root, sourceFile, opts.FlattenHierarchy)
 	d.IrVersion = "0"
 	d.SourceFormat = "edif-2.0.0"
 	if len(ver) > 0 {
@@ -84,7 +99,7 @@ const edifNativeIDKind = "edif-rename-id"
 // components (grouped from instances by ref_des), and nets. Instances and nets are
 // collected from anywhere in the tree since they only occur inside the single
 // (contents ...) block.
-func extract(root *node, src string) *ir.Design {
+func extract(root *node, src string, flatten bool) *ir.Design {
 	d := &ir.Design{Attributes: map[string]string{}, Prov: &ir.Provenance{SourceFile: src}}
 
 	dn := findFirst(root, "design")
@@ -98,45 +113,58 @@ func extract(root *node, src string) *ir.Design {
 	}
 	recordRootRefs(d, root, dn)
 
-	var libs []*node
-	collect(root, "library", &libs)
-	for _, l := range libs {
-		d.Libraries = append(d.Libraries, libraryOf(l, src))
-	}
-
 	// Scope extraction to the design's root cell so a hierarchical design's sub-cell
 	// contents are not merged into the top netlist (WS1-004), falling back to the whole
-	// document when the root cell cannot be resolved. The cells left out are recorded as
-	// InputDiagnostics.unexpanded_hierarchy below (agni issue 707).
+	// document when the root cell cannot be resolved. Unflattened, the cells left out are
+	// recorded as InputDiagnostics.unexpanded_hierarchy below (agni issue 707); flattened,
+	// the walk descends into them (agni issue 718, hierarchy.go).
 	scope := root
 	if tc := topCell(root); tc != nil {
 		scope = tc
+	}
+	h := topOnly(scope)
+	if flatten && scope != root {
+		h = flattenFrom(root, scope)
+	}
+
+	var libs []*node
+	collect(root, "library", &libs)
+	for _, l := range libs {
+		d.Libraries = append(d.Libraries, libraryOf(l, src, h.blocks))
 	}
 	// One physical component is often several EDIF instances, such as the sections of a
 	// multi-gate IC, connector banks, or a relay's coil and contacts. Group instances by
 	// ref_des into one Component with N sections (WS1-001). Designator-less instances are
 	// keyed by their internal id so they are not merged together.
-	var insts []*node
-	collect(scope, "instance", &insts)
+	insts := make([]*node, len(h.leaves))
+	for i, lf := range h.leaves {
+		insts[i] = lf.node
+	}
 	namedByInstance := !anyDesignator(insts)
 	refByID := make(map[string]string, len(insts))
 	pinsByID := make(map[string]map[string][]string, len(insts))
 	byKey := make(map[string]*ir.Component, len(insts))
 	var order []string
-	for _, in := range insts {
-		refDes, sec, id, pinMap := instanceOf(in, src)
+	for _, lf := range h.leaves {
+		refDes, sec, id, pinMap := instanceOf(lf.node, src)
+		// Inside a block an instance id repeats across placements and across cells, so its locator is
+		// the occurrence path, which is what an emitter anchors a net's instanceRef on.
+		sec.Prov.NativeId = occurrence(lf.path, id)
 		if refDes == "" && namedByInstance {
-			refDes = parseName(in.Arg(1)).best()
+			refDes = parseName(lf.node.Arg(1)).best()
+		}
+		if refDes != "" && lf.repeated {
+			refDes = lf.path + "/" + refDes
 		}
 		if id != "" && refDes != "" {
-			refByID[id] = refDes
+			refByID[instKey(lf.path, id)] = refDes
 		}
 		if id != "" && pinMap != nil {
-			pinsByID[id] = pinMap
+			pinsByID[instKey(lf.path, id)] = pinMap
 		}
 		key := refDes
 		if key == "" {
-			key = "\x00" + id
+			key = "\x00" + instKey(lf.path, id)
 		}
 		comp := byKey[key]
 		if comp == nil {
@@ -158,10 +186,9 @@ func extract(root *node, src string) *ir.Design {
 		d.Components = append(d.Components, byKey[key])
 	}
 
-	var nets []*node
-	collect(scope, "net", &nets)
-	for _, nn := range nets {
-		d.Nets = append(d.Nets, netOf(nn, src, refByID, pinsByID))
+	names := h.netNames()
+	for i, g := range h.nets {
+		d.Nets = append(d.Nets, netOf(g, names[i], src, refByID, pinsByID, h.blockPaths))
 	}
 	// One struct for every diagnostic, built once, since a fresh InputDiagnostics per signal
 	// drops the previous one. Always set, because this reader looks at every cell and so
@@ -175,17 +202,21 @@ func extract(root *node, src string) *ir.Design {
 	d.InputDiagnostics = &ir.InputDiagnostics{
 		UnmodeledBuses:        collectArrayBuses(root, src),
 		UnannotatedComponents: refdes.Unannotated(d.Components),
-		UnexpandedHierarchy:   unexpandedCells(root, scope, src),
+		UnexpandedHierarchy:   unexpandedCells(root, scope, h, src),
 		Supplied:              []string{"unexpanded_hierarchy"},
 	}
 	return d
 }
 
 // libraryOf converts an EDIF (library ...) node into an ir.PartLibrary with its parts.
-func libraryOf(n *node, src string) *ir.PartLibrary {
+// A cell in skip is a block the read walked into, a sheet rather than a part, and gets no part type.
+func libraryOf(n *node, src string, skip map[*node]bool) *ir.PartLibrary {
 	name := parseName(n.Arg(1)).Display
 	lib := &ir.PartLibrary{Name: name, Prov: &ir.Provenance{SourceFile: src}}
 	for _, c := range n.Children("cell") {
+		if skip[c] {
+			continue
+		}
 		lib.Parts = append(lib.Parts, partTypeOf(c, src))
 	}
 	return lib
@@ -378,34 +409,50 @@ func instanceOf(n *node, src string) (refDes string, sec *ir.ComponentSection, i
 // fans out to one Connection per pin. A port with no mapping keeps the port name, which
 // also keeps keys stable for the common `&N`-style port whose stripped name equals its
 // physical designator.
-func netOf(n *node, src string, refByID map[string]string, pinsByID map[string]map[string][]string) *ir.Net {
-	nm := parseName(n.Arg(1))
-	net := &ir.Net{Name: nm.best(), Prov: &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind}}
+//
+// pieces are the (net) lists that are one electrical net once a hierarchy is flattened, the naming
+// piece first, and a flat read passes one; name is the net's name (hierarchy.netNames). Inside a
+// block, a portRef naming the block's own port, or naming a block placed in it (blockPaths), is a
+// join between pieces, not a pin.
+func netOf(pieces []netPiece, name, src string, refByID map[string]string, pinsByID map[string]map[string][]string, blockPaths map[string]string) *ir.Net {
+	nm := parseName(pieces[0].node.Arg(1))
+	net := &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind}}
+	for _, piece := range pieces {
+		addConnections(net, piece, src, refByID, pinsByID, blockPaths)
+	}
+	return net
+}
+
+// addConnections appends one piece's pins to net.
+func addConnections(net *ir.Net, piece netPiece, src string, refByID map[string]string, pinsByID map[string]map[string][]string, blockPaths map[string]string) {
 	var prs []*node
-	collect(n, "portRef", &prs)
+	collect(piece.node, "portRef", &prs)
 	for _, pr := range prs {
 		inst := ""
 		if ins := pr.Child("instanceRef"); ins != nil {
 			inst = atom(ins.Arg(1))
+		}
+		key := instKey(piece.path, inst)
+		if _, block := blockPaths[key]; block || (inst == "" && piece.path != "") {
+			continue
 		}
 		// An instanceRef that resolves to no ref_des (power/ground/off-page symbol, or a
 		// top-level port ref with no instanceRef) is keyed by the "" no-ref marker, NOT by the
 		// export-unstable internal id, which would make the connection read as changed on every
 		// revision diff (WS1-004). The raw id stays in provenance only.
 		port := portName(pr.Arg(1))
-		pins := pinsByID[inst][port]
+		pins := pinsByID[key][port]
 		if len(pins) == 0 {
 			pins = []string{port}
 		}
 		for _, pin := range pins {
 			net.Connections = append(net.Connections, &ir.Connection{
-				ComponentRef: refByID[inst],
+				ComponentRef: refByID[key],
 				PinRef:       pin,
-				Prov:         &ir.Provenance{SourceFile: src, NativeId: inst, NativeIdKind: edifNativeIDKind},
+				Prov:         &ir.Provenance{SourceFile: src, NativeId: occurrence(piece.path, inst), NativeIdKind: edifNativeIDKind},
 			})
 		}
 	}
-	return net
 }
 
 // propValue extracts the scalar value from an EDIF (property ...) node, handling the
@@ -551,9 +598,19 @@ func topCell(root *node) *node {
 // therefore never read (WS1-004 scopes it to the top cell, agni issue 707). A cell with no instances
 // is a leaf part and loses nothing. When the top cell cannot be resolved, scope is the whole document
 // and extract read everything, so nothing is listed.
-func unexpandedCells(root, scope *node, src string) []*ir.UnexpandedHierarchy {
+//
+// A flattened read walked into every block it placed, so it lists only the blocks a cycle kept it
+// out of. A block nothing places is a definition the design never uses and loses nothing either.
+func unexpandedCells(root, scope *node, h *hierarchy, src string) []*ir.UnexpandedHierarchy {
 	if scope == root {
 		return nil
+	}
+	if h.flattened {
+		var out []*ir.UnexpandedHierarchy
+		for _, c := range h.cycles {
+			out = append(out, unexpandedEntry(c, src))
+		}
+		return out
 	}
 	var cells []*node
 	collect(root, "cell", &cells)
@@ -562,18 +619,9 @@ func unexpandedCells(root, scope *node, src string) []*ir.UnexpandedHierarchy {
 		if c == scope {
 			continue
 		}
-		var ci []*node
-		collect(c, "instance", &ci)
-		if len(ci) == 0 {
-			continue
+		if e := unexpandedEntry(c, src); e.GetInstanceCount() > 0 {
+			out = append(out, e)
 		}
-		nm := parseName(c.Arg(1))
-		out = append(out, &ir.UnexpandedHierarchy{
-			Name:          nm.best(),
-			Kind:          "edif_cell",
-			InstanceCount: num.Int32(len(ci)),
-			Prov:          &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind},
-		})
 	}
 	return out
 }

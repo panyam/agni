@@ -356,8 +356,10 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 				def.Overlay = next.GetOverlay()
 			case "files":
 				def.Files = next.GetFiles()
+			case "flatten_hierarchy":
+				def.FlattenHierarchy = next.GetFlattenHierarchy()
 			default:
-				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, board_uri, geometry_uri, as_named, overlay and files", ErrInvalidArgument, p)
+				return nil, fmt.Errorf("%w: %q is not a field UpdateSnapshot can change; it can change uri, board_uri, geometry_uri, as_named, overlay, files and flatten_hierarchy", ErrInvalidArgument, p)
 			}
 		}
 	}
@@ -410,6 +412,7 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 	if err != nil {
 		return nil, err
 	}
+	ov = ov.WithFlattenHierarchy(def.GetFlattenHierarchy())
 	nu, bu, gu, err := res.TierURIs(ctx, u, board, def.GetAsNamed())
 	if err != nil {
 		return nil, err
@@ -496,6 +499,8 @@ func definitionOf(s *webapi.Snapshot) *webapi.Snapshot {
 		AsNamed:     s.GetAsNamed(),
 		Overlay:     s.GetOverlay(),
 		Files:       s.GetFiles(),
+
+		FlattenHierarchy: s.GetFlattenHierarchy(),
 	}
 }
 

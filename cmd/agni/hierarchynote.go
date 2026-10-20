@@ -10,11 +10,15 @@ import (
 // viewer's strip also show (agni issue 717); this adds only the CLI's framing.
 //
 // It is in the register of resolutionNote because it is the same kind of statement, about what the
-// READ covered rather than about the design.
+// READ covered rather than about the design. Without --flatten-hierarchy it also names the flag,
+// which the shared sentence cannot, since the viewer and the reports have no flags (agni issue 718).
 func hierarchyNote(file string, blocks []*ir.UnexpandedHierarchy) string {
 	s := rpt.HierarchyNote(file, blocks)
 	if s == "" {
 		return ""
+	}
+	if !readFlatten {
+		s += " Pass --flatten-hierarchy to read every block."
 	}
 	return "note: " + s + "\n"
 }

@@ -112,9 +112,15 @@ type Snapshot struct {
 	// config directories all have to be listed; ListDesignFiles names that set. Its contents are sent
 	// with UploadBlobs. Paths are the client's own, so every locator an answer records reads as it
 	// would on the client (C28). Part of the definition.
-	Files         []*SnapshotFile `protobuf:"bytes,11,rep,name=files,proto3" json:"files,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Files []*SnapshotFile `protobuf:"bytes,11,rep,name=files,proto3" json:"files,omitempty"`
+	// flatten_hierarchy reads a hierarchical netlist as its whole schematic, walking into every block
+	// cell its top cell places, rather than as its top cell alone (agni issue 718). A net crossing a
+	// block's port joins its parent's, a net inside a block keeps its name when no other net carries
+	// it and is otherwise named by the block's instance path ("/A1/MID"), and a part inside a block placed more than once carries that path ("B2/R1"). A flat
+	// netlist reads the same either way. Only EDIF has blocks to walk today. Part of the definition.
+	FlattenHierarchy bool `protobuf:"varint,12,opt,name=flatten_hierarchy,json=flattenHierarchy,proto3" json:"flatten_hierarchy,omitempty"`
+	unknownFields    protoimpl.UnknownFields
+	sizeCache        protoimpl.SizeCache
 }
 
 func (x *Snapshot) Reset() {
@@ -222,6 +228,13 @@ func (x *Snapshot) GetFiles() []*SnapshotFile {
 		return x.Files
 	}
 	return nil
+}
+
+func (x *Snapshot) GetFlattenHierarchy() bool {
+	if x != nil {
+		return x.FlattenHierarchy
+	}
+	return false
 }
 
 // SnapshotFile is one file of a design a client sends, named within its mount.
@@ -988,7 +1001,7 @@ var File_agni_v1_webapi_snapshot_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\n" +
-	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xaf\x03\n" +
+	"\x1dagni/v1/webapi/snapshot.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/webapi/checks.proto\x1a\x1bgoogle/protobuf/empty.proto\x1a google/protobuf/field_mask.proto\"\xdc\x03\n" +
 	"\bSnapshot\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vrevision_id\x18\x02 \x01(\tR\n" +
@@ -1002,7 +1015,8 @@ const file_agni_v1_webapi_snapshot_proto_rawDesc = "" +
 	"\vconsistency\x18\t \x01(\v2#.agni.v1.webapi.SnapshotConsistencyR\vconsistency\x12\x18\n" +
 	"\aproject\x18\n" +
 	" \x01(\tR\aproject\x122\n" +
-	"\x05files\x18\v \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\"N\n" +
+	"\x05files\x18\v \x03(\v2\x1c.agni.v1.webapi.SnapshotFileR\x05files\x12+\n" +
+	"\x11flatten_hierarchy\x18\f \x01(\bR\x10flattenHierarchy\"N\n" +
 	"\fSnapshotFile\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x16\n" +
 	"\x06sha256\x18\x02 \x01(\tR\x06sha256\x12\x12\n" +

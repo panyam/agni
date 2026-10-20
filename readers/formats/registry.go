@@ -247,7 +247,7 @@ func readEDIF(l *Loader, path string) (*ir.Design, error) {
 		return nil, err
 	}
 	defer f.Close()
-	return edif.Read(f, path)
+	return edif.ReadWith(f, path, edif.Options{FlattenHierarchy: l != nil && l.FlattenHierarchy})
 }
 
 // readIPC2581 reads an IPC-2581 file. .xml is ambiguous, so sniff for the IPC-2581 root

@@ -34,6 +34,9 @@ type ReadOptions struct {
 	// can identify itself. Empty means the options cannot be told apart from any others, and a read
 	// under them is never cached.
 	Identity string
+	// FlattenHierarchy reads a hierarchical netlist as its whole schematic (formats.Loader's field of
+	// the same name). It belongs to the PARSE, so CachingLoader keys the parse on it as well.
+	FlattenHierarchy bool
 
 	// parseOnly asks the host for the read before the passes that read configuration (see
 	// formats.Loader.ParseOnly). Only CachingLoader sets it, for the parse level it keeps.
@@ -76,6 +79,11 @@ func WithDeviceClasses(f func(mpn string) string) ReadOption {
 // ReadOptions.Intent).
 func WithDesignIntent(di *configpb.DesignIntent) ReadOption {
 	return func(o *ReadOptions) { o.Intent = di; o.fields++ }
+}
+
+// WithFlattenHierarchy reads a hierarchical netlist as its whole schematic (agni issue 718).
+func WithFlattenHierarchy() ReadOption {
+	return func(o *ReadOptions) { o.FlattenHierarchy = true; o.fields++ }
 }
 
 // withParseOnly asks for the configuration-free parse (see ReadOptions.parseOnly). It is not one of

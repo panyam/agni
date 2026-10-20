@@ -442,7 +442,7 @@ func (l *CachingLoader) Cache() *DesignCache { return l.cache }
 func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
 	o := ReadOpts(opts...)
 	derive := func(ctx context.Context) (any, error) {
-		p, err := l.parse(ctx, uri, o.SymbolPaths)
+		p, err := l.parse(ctx, uri, o.SymbolPaths, o.FlattenHierarchy)
 		if err != nil {
 			return nil, err
 		}
@@ -468,16 +468,23 @@ func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...Re
 	return proto.Clone(v.(*ir.Design)).(*ir.Design), nil
 }
 
-// parse returns the design's configuration-free parse, read once per URI and symbol search path
-// (agni issue 1061). It is keyed on no overlay, so two projects' conventions or a request's own
+// parse returns the design's configuration-free parse, read once per URI, symbol search path and
+// hierarchy choice (agni issues 1061, 718). It is keyed on no overlay, so two projects' conventions or a request's own
 // intent derive from one parse rather than reading the files again. The value is the cache's own,
 // for Design to copy before deriving into it.
-func (l *CachingLoader) parse(ctx context.Context, uri artifact.URI, symbolPaths []string) (*ir.Design, error) {
-	key := cacheKey("parse", uri.String(), strings.Join(symbolPaths, "\x01"))
+func (l *CachingLoader) parse(ctx context.Context, uri artifact.URI, symbolPaths []string, flatten bool) (*ir.Design, error) {
+	parts := []string{"parse", uri.String(), strings.Join(symbolPaths, "\x01")}
+	if flatten {
+		parts = append(parts, "flat")
+	}
+	key := cacheKey(parts...)
 	v, err := l.cache.getPersisted(ctx, key, designCodec, func(ctx context.Context) (any, error) {
 		opts := []ReadOption{withParseOnly()}
 		if len(symbolPaths) > 0 {
 			opts = append(opts, WithSymbolPaths(symbolPaths))
+		}
+		if flatten {
+			opts = append(opts, WithFlattenHierarchy())
 		}
 		return l.CacheableLoader.Design(ctx, uri, opts...)
 	})
