@@ -104,36 +104,6 @@ func (id *overlayID) value() (string, bool) {
 	return "sha256:" + hex.EncodeToString(h.Sum(nil)), true
 }
 
-// inherit folds in an overlay this one is layered on top of.
-//
-// A zero overlay contributes nothing and is identified as such. A non-zero one with no identity of its
-// own is unidentifiable, because it holds only composed values and this scheme does not hash those.
-func (id *overlayID) inherit(label string, o Overlay) {
-	if id == nil {
-		return
-	}
-	switch {
-	case o.isZero():
-		id.add(label, nil)
-	case o.id == nil:
-		id.unidentifiable(label)
-	default:
-		v, ok := o.id.value()
-		if !ok {
-			id.unidentifiable(label)
-			return
-		}
-		id.add(label, []byte(v))
-	}
-}
-
-// isZero reports whether this overlay contributes nothing to a run. It asks about the tiers an
-// overlay can carry rather than comparing against a zero struct, because the unexported bookkeeping
-// fields are not part of what it contributes.
-func (o Overlay) isZero() bool {
-	return o.Lexicon == nil && len(o.Sources) == 0 && o.Specs == nil && len(o.SymbolPaths) == 0 && len(o.Library) == 0
-}
-
 // Identity returns a value that differs whenever anything this overlay was composed FROM differs,
 // and reports false when the composition cannot be fully identified.
 //

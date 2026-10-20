@@ -155,9 +155,7 @@ func candidateTitles(pg *docpb.Page, t *docpb.Table) []string {
 	if t.Title != "" {
 		out = append(out, t.Title)
 	}
-	for _, text := range bandCells(t) {
-		out = append(out, text)
-	}
+	out = append(out, bandCells(t)...)
 	if t.Bbox != nil {
 		type cand struct {
 			gap  float64

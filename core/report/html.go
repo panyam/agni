@@ -48,7 +48,7 @@ func funcs() template.FuncMap {
 	return template.FuncMap{
 		// css injects the shared stylesheet. template.CSS marks it pre-escaped, since it is ours and
 		// html/template would otherwise escape the braces.
-		"css": func() template.CSS { return template.CSS(CSS) },
+		"css": func() template.CSS { return template.CSS(CSS) }, // #nosec G203 -- CSS is the embedded stylesheet, not input
 		// outcomeClass maps an outcome to its CSS class, keeping the vocabulary in one place.
 		"outcomeClass": func(o check.Outcome) string {
 			switch o {

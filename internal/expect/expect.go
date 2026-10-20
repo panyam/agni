@@ -63,7 +63,7 @@ type Expectations struct {
 // Load reads and parses a `<design>.expect.yaml` sidecar. A missing file is an error, since the
 // caller decides which designs should have one. An empty file is a valid "no findings" expectation.
 func Load(path string) (*Expectations, error) {
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(path) // #nosec G304 -- reads an expectations file a design names, under its mount
 	if err != nil {
 		return nil, err
 	}

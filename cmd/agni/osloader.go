@@ -94,7 +94,7 @@ func (l *osLoader) Manifest(ctx context.Context, uri artifact.URI) (review.Manif
 	if err != nil {
 		return review.Manifest{}, err
 	}
-	f, err := os.Open(abs)
+	f, err := os.Open(abs) // #nosec G304 -- abs comes from mounts.Resolve, which refuses a path outside its mount
 	if err != nil {
 		return review.Manifest{}, err
 	}

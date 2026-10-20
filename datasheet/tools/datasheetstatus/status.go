@@ -62,7 +62,7 @@ func classify(docExists bool, pdfHash, storedHash, storedProducer, curToolchain 
 // hashPDF returns the "sha256:"-prefixed hex digest of a file's bytes. It must match how
 // tools/pdf2doc stamps Document.content_hash, or every extracted file reads stale-source.
 func hashPDF(path string) (string, error) {
-	b, err := os.ReadFile(path)
+	b, err := os.ReadFile(path) // #nosec G304 -- a status tool reading the corpus the developer named
 	if err != nil {
 		return "", err
 	}

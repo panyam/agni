@@ -83,7 +83,7 @@ func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*dsapi
 		if e.IsDir() || !strings.HasSuffix(e.Name(), ".json") {
 			continue
 		}
-		data, err := os.ReadFile(filepath.Join(dir, e.Name()))
+		data, err := os.ReadFile(filepath.Join(dir, e.Name())) // #nosec G304 -- reads the annotation store under a corpus the server was started with
 		if err != nil {
 			return nil, err
 		}
@@ -110,12 +110,12 @@ func (s *osAnnotationStore) Save(ctx context.Context, uri artifact.URI, author s
 	lock.Lock()
 	defer lock.Unlock()
 
-	if err := os.MkdirAll(dir, 0o755); err != nil {
+	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- the shared corpus, which the engine reads too
 		return err
 	}
 	out, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(set)
 	if err != nil {
 		return err
 	}
-	return os.WriteFile(file, out, 0o644)
+	return os.WriteFile(file, out, 0o644) // #nosec G306 -- the shared corpus, which the engine reads too
 }

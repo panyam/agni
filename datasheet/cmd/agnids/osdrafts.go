@@ -108,7 +108,7 @@ func (s *osDraftStore) Save(_ context.Context, d *dsapi.Draft, baseVersion strin
 	if err != nil {
 		return "", err
 	}
-	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(abs), 0o755); err != nil { // #nosec G301 -- the shared corpus, which the engine reads too
 		return "", err
 	}
 	if err := writeAtomic(abs, out); err != nil {
@@ -154,7 +154,7 @@ func publishSpec(dir string, spec *parampb.PartSpec) (*corpus.Promoted, error) {
 		return nil, err
 	}
 	dst := filepath.Join(dir, filepath.FromSlash(p.File))
-	prevText, prevErr := os.ReadFile(dst) // a replaced file is restored, a new one removed
+	prevText, prevErr := os.ReadFile(dst) // #nosec G304 -- dst is a path inside the corpus store. A replaced file is restored, a new one removed
 	if err := writeAtomic(dst, p.Text); err != nil {
 		return nil, err
 	}

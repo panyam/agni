@@ -31,7 +31,7 @@ func newOSReviewStore(dir string) (*osReviewStore, error) {
 	info, err := os.Stat(dir)
 	switch {
 	case errors.Is(err, os.ErrNotExist):
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return nil, fmt.Errorf("--review-store %s: %w", dir, err)
 		}
 	case err != nil:
@@ -89,11 +89,11 @@ func (s *osReviewStore) Create(_ context.Context, parent string, doc *checkspb.C
 	}
 	id := fmt.Sprintf("%s.%09dZ-%s", now.Format("20060102T150405"), now.Nanosecond(), hex.EncodeToString(suffix[:]))
 	if dir := s.dirFor(parent); dir != s.dir {
-		if err := os.MkdirAll(dir, 0o755); err != nil {
+		if err := os.MkdirAll(dir, 0o700); err != nil {
 			return "", "", err
 		}
 	}
-	f, err := os.OpenFile(s.path(parent, id), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o644)
+	f, err := os.OpenFile(s.path(parent, id), os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o600)
 	if err != nil {
 		return "", "", err
 	}

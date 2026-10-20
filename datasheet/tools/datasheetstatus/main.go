@@ -196,7 +196,7 @@ func statusOf(pdfPath, toolchain string) (PDFStatus, error) {
 		return "", err
 	}
 	sib := strings.TrimSuffix(pdfPath, filepath.Ext(pdfPath)) + docSiblingSuffix
-	f, err := os.Open(sib)
+	f, err := os.Open(sib) // #nosec G304 -- a status tool reading the corpus the developer named
 	if err != nil {
 		if os.IsNotExist(err) {
 			return classify(false, pdfHash, "", "", toolchain), nil

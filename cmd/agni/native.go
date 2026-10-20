@@ -46,7 +46,7 @@ func nativeRenderCmd() *cobra.Command {
 				_, err := cmd.OutOrStdout().Write([]byte(svg))
 				return err
 			}
-			if err := os.WriteFile(out, []byte(svg), 0o644); err != nil {
+			if err := os.WriteFile(out, []byte(svg), 0o644); err != nil { // #nosec G306 -- a report the user asked for, meant to be read by others
 				return err
 			}
 			fmt.Fprintf(cmd.ErrOrStderr(), "wrote %s (native render of %s)\n", out, filepath.Base(abs))
@@ -82,7 +82,7 @@ func nativeOpenCmd() *cobra.Command {
 			if _, err := exec.LookPath(bin); err != nil {
 				return nativeHint(native.ErrNotFound, abs)
 			}
-			run := exec.CommandContext(cmd.Context(), bin, cmdArgs...)
+			run := exec.CommandContext(cmd.Context(), bin, cmdArgs...) // #nosec G204 -- runs the native tool the user configured, with arguments agni builds
 			run.Stdout, run.Stderr = cmd.OutOrStdout(), cmd.ErrOrStderr()
 			// Block until the GUI exits. A macOS `open -a` launcher returns immediately (the app
 			// outlives it), but a direct X11 binary (xschem, lepton-schematic) must stay attached

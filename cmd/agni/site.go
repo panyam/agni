@@ -80,7 +80,7 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 			return fmt.Errorf("--web-dir %q has no static/%s; run `make ui wasm` first", webDir, need)
 		}
 	}
-	if err := os.MkdirAll(out, 0o755); err != nil {
+	if err := os.MkdirAll(out, 0o755); err != nil { // #nosec G301 -- a static site a web server serves to anyone
 		return err
 	}
 	if err := copyTree(filepath.Join(webDir, "static"), filepath.Join(out, "static")); err != nil {
@@ -117,10 +117,10 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 		if err != nil {
 			return err
 		}
-		if err := os.MkdirAll(filepath.Join(out, "files"), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Join(out, "files"), 0o755); err != nil { // #nosec G301 -- a static site a web server serves to anyone
 			return err
 		}
-		if err := os.WriteFile(filepath.Join(out, "files", name+".json"), []byte(b), 0o644); err != nil {
+		if err := os.WriteFile(filepath.Join(out, "files", name+".json"), []byte(b), 0o644); err != nil { // #nosec G306 -- a static site a web server serves to anyone
 			return err
 		}
 		mount, tree, err := siteDir(root, name)
@@ -159,10 +159,10 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 	}
 	write := func(addr string, page []byte) error {
 		dst := filepath.Join(out, filepath.FromSlash(addr), "index.html")
-		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil { // #nosec G301 -- a static site a web server serves to anyone
 			return err
 		}
-		return os.WriteFile(dst, page, 0o644)
+		return os.WriteFile(dst, page, 0o644) // #nosec G306 -- a static site a web server serves to anyone
 	}
 	for _, p := range pages {
 		if err := write(p, viewer); err != nil {
@@ -176,7 +176,7 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 	if err != nil {
 		return err
 	}
-	if err := os.WriteFile(filepath.Join(out, "index.html"), landing, 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(out, "index.html"), landing, 0o644); err != nil { // #nosec G306 -- a static site a web server serves to anyone
 		return err
 	}
 	fmt.Fprintf(notes, "wrote %s: %d example design(s) and the drop page, under %s\n", out, len(sa.siteSeeds), sa.basePath())
@@ -222,10 +222,10 @@ func copySeed(src, dst, mount, under string) (*webapi.ListDesignFilesResponse, e
 			return err
 		}
 		target := filepath.Join(dst, filepath.FromSlash(p))
-		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil { // #nosec G301 -- a static site a web server serves to anyone
 			return err
 		}
-		if err := os.WriteFile(target, b, 0o644); err != nil {
+		if err := os.WriteFile(target, b, 0o644); err != nil { // #nosec G306 -- a static site a web server serves to anyone
 			return err
 		}
 		resp.Files = append(resp.Files, &webapi.DesignFile{Path: path.Join(under, p), Size: int64(len(b)), Sha256: fshost.ContentHash(fsys, p)})
@@ -279,10 +279,10 @@ func writeProto(dst string, m proto.Message) error {
 	if err != nil {
 		return err
 	}
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil { // #nosec G301 -- a static site a web server serves to anyone
 		return err
 	}
-	return os.WriteFile(dst, []byte(b), 0o644)
+	return os.WriteFile(dst, []byte(b), 0o644) // #nosec G306 -- a static site a web server serves to anyone
 }
 
 type seededDesign struct{ uri, addr, title, format, note string }
@@ -381,7 +381,7 @@ func yamlField(text, key string) string {
 // licenceOf is the first line of a seed's LICENSE file, which names the licence its files carry.
 func licenceOf(dir string) string {
 	for _, n := range []string{"LICENSE", "LICENSE.txt", "LICENSE.md", "LICENCE"} {
-		b, err := os.ReadFile(filepath.Join(dir, n))
+		b, err := os.ReadFile(filepath.Join(dir, n)) // #nosec G304 -- reads the built viewer bundle the site is assembled from
 		if err != nil {
 			continue
 		}
@@ -416,7 +416,7 @@ func copyTree(src, dst string) error {
 		}
 		target := filepath.Join(dst, rel)
 		if d.IsDir() {
-			return os.MkdirAll(target, 0o755)
+			return os.MkdirAll(target, 0o755) // #nosec G301 -- a static site a web server serves to anyone
 		}
 		return copyFile(p, target)
 	})

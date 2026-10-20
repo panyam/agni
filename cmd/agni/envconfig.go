@@ -62,7 +62,7 @@ type envConfig struct {
 func loadEnvConfig(cwd string, getenv func(string) string) (envConfig, string, error) {
 	for _, dir := range envConfigSearch(cwd, getenv) {
 		path := filepath.Join(dir, envConfigName)
-		b, err := os.ReadFile(path)
+		b, err := os.ReadFile(path) // #nosec G304 -- reads agni.yaml from the working directory or the user config directory
 		if err != nil {
 			continue
 		}

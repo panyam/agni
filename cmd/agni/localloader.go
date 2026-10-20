@@ -179,7 +179,7 @@ func (l *localLoader) designEntry(ctx context.Context, uri artifact.URI) (artifa
 // GetReviewManifest, which serves a client holding a ref. Both share this one read so they agree
 // on what a well-formed manifest is.
 func loadManifest(path string) (review.Manifest, error) {
-	f, err := os.Open(path)
+	f, err := os.Open(path) // #nosec G304 -- reads a file the user named or one its descriptor declares
 	if err != nil {
 		return review.Manifest{}, err
 	}

@@ -35,7 +35,7 @@ func (l *osDocLoader) Document(ctx context.Context, uri artifact.URI) (*docpb.Do
 	if err != nil {
 		return nil, err
 	}
-	f, err := os.Open(abs)
+	f, err := os.Open(abs) // #nosec G304 -- abs comes from resolveSibling, which resolves inside the mount
 	if err != nil {
 		if errors.Is(err, fs.ErrNotExist) {
 			return nil, nil // not yet extracted

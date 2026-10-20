@@ -656,7 +656,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return rpcFailed(err)
 				}
-				if err := os.WriteFile(resultsOut, rendered.GetContent(), 0o644); err != nil {
+				if err := os.WriteFile(resultsOut, rendered.GetContent(), 0o644); err != nil { // #nosec G306 -- a report the user asked for, meant to be read by others
 					return err
 				}
 				doc, err := results.Parse(rendered.GetContent())

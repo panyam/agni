@@ -567,12 +567,6 @@ type builtModel struct {
 	results ruleResults
 }
 
-// base returns the fact base over reg, built once. The registry is the overlay's, and the overlay is
-// in the model's key, so one model rarely sees more than one.
-func (b *builtModel) base(reg *facts.Registry) *query.Base {
-	return b.baseFor(context.Background(), reg)
-}
-
 // baseFor is base, timing the projection as the request's "factbase" stage when it builds one.
 func (b *builtModel) baseFor(ctx context.Context, reg *facts.Registry) *query.Base {
 	b.mu.Lock()

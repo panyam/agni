@@ -76,6 +76,8 @@ func New(opts ...Option) (*Engine, error) {
 // The check asks check.BuiltinRules rather than measuring the composed catalog. stdlib/profiles
 // registers its own source from an init and this package imports it, so a program missing the
 // built-ins still composes a NON-EMPTY catalog holding the interface-profile rules alone.
+//
+//lint:ignore ST1012 a public name embedders already match on; renaming it is an API change of its own
 var MissingBuiltinsError = errors.New(
 	`agni: the built-in rule catalog is not installed, so none of the shipped EE rules will run and a ` +
 		`design is checked only against whatever this program composed itself. ` +
@@ -84,6 +86,8 @@ var MissingBuiltinsError = errors.New(
 // MissingRelationsError reports that no relation catalog was installed, so the fact base is empty
 // and every datalog-authored rule matches nothing. Without this error the mistake neither fails to
 // build nor errors at runtime.
+//
+//lint:ignore ST1012 a public name embedders already match on; renaming it is an API change of its own
 var MissingRelationsError = errors.New(
 	`agni: no fact relations are installed, so every datalog rule matches nothing and reports clean. ` +
 		`Add: import _ "github.com/panyam/agni/stdlib/relations"`)

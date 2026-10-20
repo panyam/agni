@@ -217,7 +217,6 @@ func busMembersAscending(name string) []string {
 // labelled reports, per pin, whether its branch's name is a bus LABEL drawn on this sheet rather than
 // one inferred from the sheet pins, since only a label gives the members a name on this sheet.
 func sheetBusNames(root *node, aliases map[string][]string) (names map[netgraph.Point]string, labelled map[netgraph.Point]bool) {
-	type seg struct{ a, b netgraph.Point }
 	var segs []netgraph.Wire
 	for _, b := range root.Children("bus") {
 		pts := xyPoints(b.Child("pts"), sheetPt)
