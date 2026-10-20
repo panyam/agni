@@ -17,6 +17,7 @@ import { join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
 import { serveStatic, type StaticServer } from "./staticserver.js";
+import { expectCompareTables, gatewayDiffRows } from "./comparetables.js";
 
 // The design's summary line, which Properties shows at the design level (agni issue 902). It names
 // the read, so "faithful" in it says the schematic was drawn rather than an auto-layout.
@@ -145,6 +146,34 @@ describe("the static demo under /agni/demo/", () => {
       });
     });
   }
+
+  // The Compare picker lists the site's designs from the files `agni site` wrote, since a static host
+  // has no server to list a mount and the page's engine holds only the files it was given (agni
+  // issue 978).
+  it("compares the Sample Board against another revision picked from the Compare picker", async () => {
+    const want = gatewayDiffRows();
+    await withPage(browser, async (page) => {
+      const log = record(page);
+      await page.goto(base, { waitUntil: "domcontentloaded" });
+      await page.click("text=Sample Board");
+      await page.waitForSelector(DESIGN_SUMMARY, { timeout: 60_000 });
+      await page.click("#compare button");
+      const tree = page.locator("#compare-tree");
+      // The tree opens down to the folder holding the open design, which holds its other revisions.
+      await tree.locator("li li li > button.node.dir", { hasText: "gateway" }).click({ timeout: 60_000 });
+      await tree.getByText("gateway-rev-c.edn").click();
+      await expect
+        .poll(() => page.locator(".diff-file").allTextContents(), { timeout: 60_000 })
+        .toEqual(["A gateway:designs/gateway", "B gateway:designs/gateway/gateway-rev-c.edn"]);
+      // The pair was compared, so the legend counts its changes, and nothing failed.
+      await page.waitForSelector(".diff-legend .diff-chip", { timeout: 60_000 });
+      expect(await page.locator(".diff-error").count()).toBe(0);
+      await expectCompareTables(page, want);
+      expect(log.api).toEqual([]);
+      expect(log.failed).toEqual([]);
+      expect(log.errors).toEqual([]);
+    });
+  });
 
   // A report saved from the viewer is written by the engine in the page, in the forms agni check writes,
   // and nothing leaves for a server to do it (agni issue 127).

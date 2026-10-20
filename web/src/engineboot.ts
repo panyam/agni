@@ -13,6 +13,7 @@ import { artifactUri } from "@agni/web-shared/uri.js";
 import { dropOf, type DropStore } from "./drops.js";
 import { filesStamp, type LoadedKey } from "./loaded.js";
 import type { Listing } from "./loadflow.js";
+import { staticWorkspace, type SiteRead } from "./staticworkspace.js";
 
 // PageEngineOptions are what a page hears from the engine it starts.
 export interface PageEngineOptions {
@@ -136,8 +137,11 @@ export async function startPageEngine(opts: PageEngineOptions = {}): Promise<Was
   const timed = timingMode() !== "";
   const files = workspaceClient();
   const workspacePath = `/${WorkspaceService.typeName}/`;
+  // The worker holds only the files the page gave it, so on a static host the file trees' listings
+  // come from the ones `agni site` wrote (agni issue 978).
+  const listings = (f: typeof globalThis.fetch) => (onStaticHost ? staticWorkspace(siteJSON(network), f) : f);
   useEngineFetch(
-    mountingFetch({
+    listings(mountingFetch({
       engine,
       source: {
         // A static site lists each mount whole, in files/<mount>.json beside its raw/ folder, since a
@@ -170,9 +174,18 @@ export async function startPageEngine(opts: PageEngineOptions = {}): Promise<Was
       browserMounts: new Set([BROWSER_MOUNT]),
       maxBytes: wasmMaxBytes(),
       onServer: (f) => showEngineNote(`Analysed on the server: ${f.reason}.`),
-    }),
+    })),
   );
   return engine;
+}
+
+// siteJSON reads one of a static site's own files under the app's base.
+function siteJSON(network: typeof globalThis.fetch): SiteRead {
+  return async (path) => {
+    const res = await network(new URL(`${appBase()}${path}`, location.href));
+    if (!res.ok) throw new Error(`${path}: ${res.status}`);
+    return res.json();
+  };
 }
 
 // shellBuild is the build that wrote the page, which a record of a load is keyed on, since another
