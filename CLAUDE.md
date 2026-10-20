@@ -571,7 +571,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   rule KiCad mirrors says `kicad: agrees` or `disagrees`, and what KiCad alone reports sits under
   `kicad_only`, all held by `TestSeedTriageAgainstKiCad`. **Draw a planted copper fault as a near miss,
   never an overlap**: KiCad reads overlapping copper as one island and names it inconsistently between
-  runs, so until agni 1082 it could not check the gateway's faults at all.
+  runs, so until agni 1082 it could not check the gateway's faults at all. **`make seed-triage` rewrites
+  every record file whole**, reordering keys and requoting `'*'`, so a change that only REMOVES records
+  edits them by hand and lets `TestSeedTriage` confirm the result. Restore the files before running the
+  update a second time, because it diffs against the file on disk and turns the records the first run
+  removed into `untriaged` groups.
 - **The samples tarballs are built in `panyam/agni-samples` with its `make dist`**, which since
   v0.1.1 runs on Linux as well as macOS. v0.1.0 was packed by macOS tar and carried a `._name`
   AppleDouble shadow beside every file, and a shadow sorts ahead of the file it shadows, so any walk
@@ -927,6 +931,18 @@ spec fact `net.unpopulated`). A rule that BLAMES a part judges no unfitted one: 
 orientation rule is wrapped in `check.OnFittedParts` (opt-in, since two unfitted parts sharing a
 ref-des are still a defect), and `floating-input` counts fitted pins, a connector's included (agni 1082).
 `architecture/rules-and-checks.md` states the policy.
+
+**A 0 Ohm link splits one rail into two nets, and a rule asking what sits on a rail asks
+`check.FirstOnRail`** (agni 1015), which crosses fitted zero-ohm links and never a ground. Values
+written as a library's part name (`R_0R_22.4A_0603` on Jetson) parse to NO number, so
+`check.ZeroOhmLink` also reads a `0R` token out of the text; every other value in such a name stays
+unread (#1115). **A connector on a net the board drives is an outlet** (agni 1016):
+`check.BoardSource` finds a switch node behind an inductor plus a feedback net, or a `power_out` pin,
+and the power-entry rules mark the net not-considered. A vendor buck types every pin passive, so the
+structural half matters. A `power_out` pin does not count when the walk also reaches another
+power-converting part's input, which keeps a dual-role USB-C port judged. A boost converter's input
+also reaches its switch node, and the feedback requirement keeps it judged. The rule pages carry the
+shapes.
 
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
 so `12V_FB`, `12V_SW`, `12V_MODE1` and `12V_VDRV` all match the rail vocabulary and none carries 12V.
