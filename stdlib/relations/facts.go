@@ -755,7 +755,11 @@ func pinFacts(m check.Model) []facts.Row {
 		if role := m.PinRole(ref, des); role != check.RoleUnknown {
 			out = append(out, facts.Row{Relation: RelPinRole, Subject: ref, Object: des, Value: string(role), Cites: cites})
 		}
-		out = append(out, facts.Row{Relation: RelPinType, Subject: ref, Object: des, Value: check.DirString(m.PinDir(ref, des)), Cites: cites})
+		// A pin no part type declares (a part from a cell the file never defines, agni issue 975) has no
+		// direction to state, and "unspecified" is a direction a library declares.
+		if m.PinDeclared(ref, des) {
+			out = append(out, facts.Row{Relation: RelPinType, Subject: ref, Object: des, Value: check.DirString(m.PinDir(ref, des)), Cites: cites})
+		}
 		if net := m.PinNetName(ref, des); net != "" {
 			out = append(out, facts.Row{Relation: RelPinNet, Subject: ref, Object: des, Value: net, Cites: cites})
 		}
