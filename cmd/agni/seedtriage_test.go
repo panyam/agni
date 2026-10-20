@@ -45,7 +45,10 @@ type triageGroup struct {
 	Outcome string `yaml:"outcome,omitempty"`
 	Why     string `yaml:"why"`
 	// Ticket is the issue tracking a false positive, required for that class.
-	Ticket   int      `yaml:"ticket,omitempty"`
+	Ticket int `yaml:"ticket,omitempty"`
+	// Kicad is "agrees" or "disagrees" for a rule KiCad's ERC or DRC mirrors, and empty otherwise
+	// (agni issue 967). TestSeedTriageAgainstKiCad holds it to the seed's oracle.
+	Kicad    string   `yaml:"kicad,omitempty"`
 	Subjects []string `yaml:"subjects"`
 }
 
@@ -54,6 +57,9 @@ type triageRecord struct {
 	// Design is the path the check reads, relative to the repo root.
 	Design   string                   `yaml:"design"`
 	Findings map[string][]triageGroup `yaml:"findings"`
+	// KicadOnly holds the violations KiCad reports and agni does not, keyed by KiCad's check, each
+	// group classed declined, missed or unread (agni issue 967).
+	KicadOnly map[string][]triageGroup `yaml:"kicad_only,omitempty"`
 }
 
 // seedDesignDirs are the designs the demo seeds, keyed by the name each one's design.yaml declares,

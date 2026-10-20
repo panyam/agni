@@ -58,18 +58,22 @@ findings:
   power-input-not-driven:
     - class: needs-intent
       why: The debugger's nRF52833 runs from VDDH, and in that mode its internal regulator drives these VDD pins, which the symbol types power_in. That is the part's pin function, a datasheet fact the run has no parameter set for (agni issue 935).
+      kicad: agrees
       subjects:
         - net:/Debugger/nRF52_VDD
     - class: defect
       why: VBUS arrives through the USB-C connector, whose pins are passive, and no power flag marks the net as fed, so the nPM1300's VBUS input has no driver on the schematic. KiCad's ERC reports the same. Harmless electrically; the net was split by agni issue 936 until it was read whole.
+      kicad: agrees
       subjects:
         - net:/Debugger/USB.VBUS
     - class: defect
       why: The cell arrives through J4 and the BAT header pin J2.1, both passive, and the nPM1300's VBAT (U2.19) is typed power_in, so with no power flag on +BATT nothing drives it on the schematic. Harmless electrically.
+      kicad: agrees
       subjects:
         - net:+BATT
     - class: defect
       why: VDD is fed by the nPM1300's VOUT2 (U2.32) through the bridged solder jumper JP1, which splits it into its own net N$1, and no power flag marks VDD as fed, so its power-input pins have no driver on the schematic. Harmless electrically.
+      kicad: agrees
       subjects:
         - net:VDD
   reverse-blocking-absent:
@@ -103,3 +107,28 @@ findings:
       why: The nRF52833 symbol leaves its ground pins VSS_PA (U5.25) and VSS (U5.37) with no electrical type, the same symbol-library gap as pin 20, harmless electrically.
       subjects:
         - net:GND
+kicad_only:
+  power_pin_not_driven:
+    - class: missed
+      why: No power flag marks GND as fed, the same gap the record calls a defect on +BATT and VDD. agni passes it because power-input-not-driven counts four signal pins tied to ground (U2.29, U2.31, U6.1, U6.16) as drivers.
+      ticket: 1082
+      subjects:
+        - net:GND
+  annular_width:
+    - class: unread
+      why: The board file does not parse for agni, so no board-tier rule runs on the Feather. KiCad reads it.
+      ticket: 681
+      subjects:
+        - "*"
+  clearance:
+    - class: unread
+      why: The board file does not parse for agni, so no board-tier rule runs on the Feather. KiCad reads it.
+      ticket: 681
+      subjects:
+        - "*"
+  drill_out_of_range:
+    - class: unread
+      why: The board file does not parse for agni, so no board-tier rule runs on the Feather. KiCad reads it, and reports most of its blind vias with a 0.00001 mm hole, which looks like the same malformed via definitions.
+      ticket: 681
+      subjects:
+        - "*"

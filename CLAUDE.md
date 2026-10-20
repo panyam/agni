@@ -563,8 +563,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   (agni 857), and `TestSeedTriage` fails on any finding that appears, disappears or sits untriaged.
   A change that moves a seed's findings regenerates the records with `make seed-triage` and
   classifies each new group (`defect`, `design-choice`, `needs-intent`, or `false-positive` with its
-  ticket). A class is a judgement in its `why` unless an oracle backs it; #967 is checking them
-  against KiCad's own ERC and DRC.
+  ticket). A class is a judgement in its `why` unless an oracle backs it. KiCad's own ERC and DRC are
+  one (agni 967): `hack/kicad_oracle.sh` writes `<seed>.kicad.oracle` beside each record, a group of a
+  rule KiCad mirrors says `kicad: agrees` or `disagrees`, and what KiCad alone reports sits under
+  `kicad_only`, all held by `TestSeedTriageAgainstKiCad`. KiCad names a copper island it merged
+  inconsistently between runs, which matters on the tutorial gateway, whose planted faults overlap.
 - **The samples tarballs are built in `panyam/agni-samples` with its `make dist`**, which since
   v0.1.1 runs on Linux as well as macOS. v0.1.0 was packed by macOS tar and carried a `._name`
   AppleDouble shadow beside every file, and a shadow sorts ahead of the file it shadows, so any walk
