@@ -341,6 +341,13 @@ The browser suite runs inside `testall`. It needs a Chromium installed per machi
 exec playwright-core install chromium`; CI installs and caches one) and starts its own server on a
 kernel-picked port, so it will not fight a dev server you already have.
 
+`HEADED=1` runs the suite in a visible Chrome, and `SLOWMO=<ms>` paces each action, which is the
+quickest way to see why a layout assertion failed. One spec is a walk rather than a layout check.
+`review-walk.spec.ts` goes through mission #845's review from checklist to saved report, asserting
+structure rather than today's counts, and `make exercise-browser-review` runs it on its own and writes
+the step table the mission log quotes. Run headed, it stops before each step to say what the step
+does and what the product does underneath, until `STEP_BY_STEP=0`.
+
 **A Chromium that is present can still be the wrong one, and the message blames the wrong thing.**
 Playwright pins a browser BUILD per release, so `playwright-core` 1.62.1 wants chromium 1234 and a
 cache holding only 1243 fails with `Looks like Playwright was just installed or updated`. That reads
