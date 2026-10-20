@@ -186,7 +186,11 @@ describe("query results table", () => {
       // full string and the assertion passes. Found by mutating the rule and watching the test stay
       // green.
       const caveat = `${count} .query-findings-caveat`;
-      expect(await page.locator(caveat).textContent()).toBe("selected rules, this subject only");
+      // The rules this design cannot run ride with it (agni issue 950), named so a clean count is never
+      // read as a full one. They are the ones the Checks panel lists, so the count is read from there.
+      const cannot = await page.locator(".checks-skipped-list li").count();
+      expect(cannot, "the Checks panel names no rule this bare schematic cannot run").toBeGreaterThan(0);
+      expect(await page.locator(caveat).textContent()).toBe(`selected rules, this subject only · ${cannot} rule(s) could not run`);
       const box = await page.locator(caveat).boundingBox();
       expect(box?.width ?? 0).toBeGreaterThan(0);
       expect((await paintedAt(page, caveat)).ownedByProbe).toBe(true);
