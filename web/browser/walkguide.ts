@@ -19,7 +19,7 @@ const explanations: Record<string, string> = {
     "number on Run checks is how many rules have not run yet.",
   "checklist picker":
     "The Review panel's picker lists the checklists the project declares, including ones inherited " +
-    "through `extends`. It asks ReviewService.ListChecklists, the same rpc `agni checklists` asks, so " +
+    "through 'extends'. It asks ReviewService.ListChecklists, the same rpc 'agni checklists' asks, so " +
     "the two must list the same names.",
   "run checklist":
     "Run one checklist. Each item is a question bound to a rule, a query or a manual check, and the " +
@@ -43,10 +43,10 @@ const explanations: Record<string, string> = {
     "cells click into the drawing the same way.",
   "save the report":
     "Run the house checklist and save the report. The viewer asks ReviewService.RenderReviewReport for " +
-    "the page, the same rpc `agni review --format html` calls, so the saved file must match the CLI's " +
+    "the page, the same rpc 'agni review --format html' calls, so the saved file must match the CLI's " +
     "byte for byte apart from the time it was written.",
   "agni trial":
-    "Outside the browser, `agni trial` walks the same design the way a release trial on someone " +
+    "Outside the browser, 'agni trial' walks the same design the way a release trial on someone " +
     "else's machine would, and reports each step without any design content.",
   "page health":
     "Finally, the page itself: no uncaught errors and no failed requests during the whole walk.",
