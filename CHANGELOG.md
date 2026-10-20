@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.1] - 2026-10-20
+
+v0.3.0 with its release check fixed: the compose smoke asks about a snapshot of the design, and a web
+API proto change now runs the images workflow (PR 1084).  It is the release to use.  The full
+write-up, v0.3.0's included, is [RELEASES/v0.3.1.md](RELEASES/v0.3.1.md).
+
 ## [0.3.0] - 2026-10-20
 
 Every analysis rpc names a snapshot of the design, ingested once, which is why this is a minor
