@@ -1,7 +1,7 @@
 // TODO: rename this module to your own path, e.g. github.com/yourorg/agni-overlay.
 module github.com/panyam/agni/examples/extension-template
 
-go 1.26.4
+go 1.26.9
 
 // TODO: pin a published engine version once you copy this module OUT of the agni repo,
 // e.g. require github.com/panyam/agni v1.2.3

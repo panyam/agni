@@ -1,6 +1,6 @@
 module github.com/panyam/agni/examples/render-board
 
-go 1.26.4
+go 1.26.9
 
 require (
 	github.com/panyam/agni v0.0.0

@@ -65,7 +65,7 @@ Four items are gated, #677 (only the "declare a NEW class" half, gated on the cl
   that pins the client against `GetCheckReport`. "Improving" it would hide the drift it exists to catch.
 - **Two failures in a fresh worktree are not yours.** `TestCheckWebAssets` and, in the `datasheet`
   module, `TestCheckWorkbenchAssets` need a built web bundle, and `TestSampleBoard*` needs the gitignored samples corpus (`make samples`, or an ABSOLUTE symlink to the main checkout's `tools/samples`, since a relative one resolves from `tools/`). A worktree
-  built under `GOTOOLCHAIN=go1.26.4` carries no VCS stamp, which fails the browser-cache test and rung
+  built under `GOTOOLCHAIN=go1.26.9` carries no VCS stamp, which fails the browser-cache test and rung
   12's capture in `tutorial-runs-check` (#957); the default Go 1.27 stamps a worktree and passes both.
 - **The two `DesignHash` implementations differ on purpose** (see `OUT_OF_SCOPE.md`). Every caller now
   passes a resolved tier, so unifying them buys symmetry nobody can observe.

@@ -24,7 +24,7 @@ Two example modules back this guide, both in the engine repo under `examples/`:
 
 ## Prerequisites
 
-Go 1.26.4 or later and the public engine module `github.com/panyam/agni`. An extension depends on
+Go 1.26.9 or later and the public engine module `github.com/panyam/agni`. An extension depends on
 the engine. The engine never depends on the extension. That one-way arrow keeps your private code
 out of the open-source repo.
 
