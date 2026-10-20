@@ -137,11 +137,35 @@ func allDigits(s string) bool {
 // multi-valued cell is split by Alternatives BEFORE this runs, so no separator depends on the
 // whitespace surviving. The index last, once the digits are ASCII.
 func Canonical(s string) string {
+	return canonIndex(clean(s))
+}
+
+// clean is every stage of Canonical before the index rewrite.
+func clean(s string) string {
 	s = norm.NFKC.String(s)
 	s = stripFormatRunes(s)
 	s = strings.ToUpper(s)
-	s = stripSpace(s)
-	return canonIndex(s)
+	return stripSpace(s)
+}
+
+// PinName is the key a pin's FUNCTIONAL name is compared on, Canonical with underscores removed.
+//
+// Pin names are compared more loosely than net names because the two sides split a subscript
+// differently: a datasheet prints `V CCA` and a symbol library writes `VCC_A`. A net name is the
+// design's own identifier and keeps its underscores, which is also why this is not folded into
+// Canonical, whose fuzzy pass splits on them.
+//
+// The underscore goes AFTER the index rewrite, so `IO0_1` keys as `IO01` and never meets a distinct
+// `IO1` on the same part. Dropping it first would let the index rewrite strip the bank digit's zero.
+func PinName(s string) string {
+	return strings.ReplaceAll(Canonical(s), "_", "")
+}
+
+// PinNumber is the key a pin's package designator is compared on. It is Canonical without the index
+// rewrite, so `01` and `A01` keep their zeros, since a pinout that writes one never writes the other,
+// while a zero-width or full-width character pasted out of a PDF still settles.
+func PinNumber(s string) string {
+	return clean(s)
 }
 
 // altSeparators are the ways a document writes several names in one cell. All three were observed

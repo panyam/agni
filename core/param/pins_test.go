@@ -118,6 +118,42 @@ func TestNameSurvivesRepackaging(t *testing.T) {
 	}
 }
 
+// A pin name arrives from a symbol library or a netlist and is compared against the name a
+// datasheet printed, so it carries what a PDF paste adds. These are the four rows measured on
+// agni issue 702; the first three missed before PinsByName compared through core/ident.
+func TestPinsByNameMatchesAcrossDocuments(t *testing.T) {
+	spec := &parampb.PartSpec{Pins: []*parampb.Pin{
+		{Id: "vdd", Name: "VDD"},
+		{Id: "pa1", Name: "PA1"},
+		{Id: "vcca", Name: "V CCA"},
+		{Id: "io0_1", Name: "IO0_1"},
+		{Id: "io1", Name: "IO1"},
+	}}
+	for _, c := range []struct{ query, want string }{
+		{"VDD\u200b", "vdd"},
+		{"PA01", "pa1"},
+		{"\uff56\uff44\uff44", "vdd"},
+		{"VCC_A", "vcca"},
+		{"IO01", "io1"},
+		{"IO0_1", "io0_1"},
+	} {
+		hits := PinsByName(spec, c.query)
+		if len(hits) != 1 || hits[0].GetId() != c.want {
+			t.Errorf("PinsByName(%q) = %v, want [%s]", c.query, pinIDs(hits), c.want)
+		}
+	}
+}
+
+// The same paste artifacts reach ResolvePin, and a pin that resolved nowhere was skipped by every
+// pin-level rule without a word.
+func TestResolvePinReadsAPastedName(t *testing.T) {
+	spec := readFixture(t, "txb0104.textproto")
+	p, err := ResolvePin(spec, "VCCB\u200b", "", "")
+	if err != nil || p.GetId() != "vccb" {
+		t.Fatalf("ResolvePin(VCCB+U+200B) = %v, %v, want the vccb pin", p.GetId(), err)
+	}
+}
+
 func TestResolvePin(t *testing.T) {
 	spec := readFixture(t, "txb0104.textproto")
 
