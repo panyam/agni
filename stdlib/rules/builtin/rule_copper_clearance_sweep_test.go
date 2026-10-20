@@ -164,3 +164,38 @@ func TestTheSweepMeasuresWhatEveryPairMeasured(t *testing.T) {
 		t.Fatalf("the boards compared gave %d failing and %d passing pairs, too few to prove the sweep", fails, passes)
 	}
 }
+
+// agni issue 1070: asked about some nets, the rule measures only their segments' neighbours, and its
+// answer must be the full sweep's verdicts about those nets, count for count. The scopes here hold
+// one net, and two or three nets that are each other's neighbours, which is the case where a pair
+// could be measured from both ends.
+func TestAScopedSweepGivesTheFullSweepsVerdictsAboutItsNets(t *testing.T) {
+	asked, both := 0, 0
+	for seed := int64(1); seed <= 25; seed++ {
+		m := check.NewModel(&ir.Design{}, check.WithBoard(denseBoard(seed, 400)))
+		full := copperClearanceVerdicts(context.Background(), m)
+		for _, nets := range [][]string{{"N1"}, {"N2", "N3"}, {"N4", "N5", "N6"}, {"N0", "N11"}} {
+			es := make([]check.Entity, len(nets))
+			for i, n := range nets {
+				es[i] = check.NetNameEntity(n)
+			}
+			scope := check.NewScope(es...)
+			_, want := scope.Results(nil, full)
+			got := copperClearanceVerdicts(check.WithSubjectScope(context.Background(), scope), m)
+			if !(len(got) == 0 && len(want) == 0) && !reflect.DeepEqual(got, want) {
+				t.Errorf("seed %d, asked about %v: the scoped sweep gives %d verdicts and the full sweep filtered %d, or their counts differ", seed, nets, len(got), len(want))
+			}
+			asked++
+			for _, v := range want {
+				if scope.Covers(v.Subjects[0]) && scope.Covers(v.Subjects[1]) {
+					both++
+				}
+			}
+		}
+	}
+	// Positive control: some answers are pairs both of whose nets were asked about, the case a pair
+	// measured from both ends would double count.
+	if asked < 100 || both < 10 {
+		t.Fatalf("%d scoped questions, %d pairs inside a scope, too few to prove anything", asked, both)
+	}
+}

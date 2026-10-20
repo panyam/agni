@@ -23,23 +23,40 @@ func TestScopedRunMatchesFilteredFullRun(t *testing.T) {
 		t.Fatal(err)
 	}
 	rules := e.Catalog().Rules()
-	for name, path := range map[string]string{
-		"gateway": "../../examples/tutorial-project/designs/gateway/gateway.edn",
-		"jetson":  "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch",
-		"feather": "../../tools/samples/boards/royalblue54L-feather/RoyalBlue54L-Feather.kicad_sch",
+	// The gateway and Jetson are read with their boards, so the board-tier rules (copper-clearance and
+	// the rest) are asked too (agni issue 1070); without one they skip and prove nothing here. The
+	// feather's board does not parse, which the public demo walk reports as "board absent".
+	for name, files := range map[string]struct{ design, board string }{
+		"gateway": {"../../examples/tutorial-project/designs/gateway/gateway.edn", "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb"},
+		"jetson":  {"../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch", "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"},
+		"feather": {"../../tools/samples/boards/royalblue54L-feather/RoyalBlue54L-Feather.kicad_sch", ""},
 	} {
+		path := files.design
 		t.Run(name, func(t *testing.T) {
-			if _, err := os.Stat(path); err != nil {
-				// Fatal rather than skipped: a missing corpus must not read as a pass.
-				t.Fatalf("%s missing (run `make samples-oracle` for the sample boards): %v", path, err)
+			for _, f := range []string{files.design, files.board} {
+				if f == "" {
+					continue
+				}
+				if _, err := os.Stat(f); err != nil {
+					// Fatal rather than skipped: a missing corpus must not read as a pass.
+					t.Fatalf("%s missing (run `make samples-oracle` for the sample boards): %v", f, err)
+				}
 			}
 			d, err := (&formats.Loader{}).ReadDesign(path)
 			if err != nil {
 				t.Fatal(err)
 			}
+			var opts []check.ModelOption
+			if files.board != "" {
+				board, err := (&formats.Loader{}).BoardGeometry(files.board)
+				if err != nil {
+					t.Fatal(err)
+				}
+				opts = append(opts, check.WithBoard(board))
+			}
 			ctx := context.Background()
 			// Each side gets its own model, so nothing one side cached can make the other agree.
-			full, scoped := check.NewModel(d), check.NewModel(d)
+			full, scoped := check.NewModel(d, opts...), check.NewModel(d, opts...)
 			fullF, fullV, err := check.RunAll(ctx, full, rules)
 			if err != nil {
 				t.Fatal(err)

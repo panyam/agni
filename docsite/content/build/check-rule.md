@@ -381,10 +381,26 @@ so a new rule is correct under a scope without doing anything. It is just no fas
 | `ScopeSubjects` | narrows its own outer loop with `check.ScopedNets`, `ScopedComponents` or `ScopedPins` | the loop enumerates the verdict's subject and nothing outside the loop depends on which subjects it visited |
 | `ScopeDesignWide` | is not run under a scope, and the service names it in `skipped` | the verdict's subject is a symbol file, a drawn bus or a wire end, which no net or part names |
 
+A rule built from a `check.Spec` declares `ScopeSubjects` by itself too (agni issue 1070), since the
+interpreter builds each element's subject before it evaluates anything and skips an element the scope
+does not cover.
+
 A rule built with `query.RuleFromQuery` declares `ScopeSubjects` by itself, and binds the scope's
 names to `SubjectVar` (and a pin rule's designators to `PinVar`) in the finding, domain and evidence
 goals. The exception is a rule whose `TupleVars` name a second net or part, since a scope naming that
 element reaches verdicts the subject binding would leave out, so it stays filtered.
+
+A relation rule narrows by its pairs. `copper-clearance` decides `(net, net)` pairs, so under a scope
+it measures each scoped net's segments against whatever lies within reach of them, from the same
+per-layer index the full sweep builds. A pair with both nets in the scope is measured once, from its
+earlier segment in board order, so every count and tie-break matches the full sweep's, and
+`TestAScopedSweepGivesTheFullSweepsVerdictsAboutItsNets` holds it there. On Jetson, the whole catalog
+asked about one I2C net went from 66 ms of rule time to 9 ms, and `copper-clearance` from 23 ms to 4.
+
+A rule whose answer depends on a design-wide gate puts the cheap subject test first. A profile's
+`missing-pullup` matches the scoped nets against its signals before asking whether the interface is
+in use, and the profile's other net rules answer nothing when no scoped net matches one of its signals,
+before their query derives `in_use`, which costs about a millisecond a rule on a large board.
 
 Only the inner loop may still see the whole design. `i2c-redundant-pull-up` narrows the I2C nets it
 visits and still walks every resistor from each, because the walk is the evidence. Narrowing the
@@ -392,7 +408,8 @@ partner set as well, the other ref-des in a `duplicate-ref-des` comparison for e
 a different question.
 
 `TestScopedRunMatchesFilteredFullRun` in `internal/composetest` holds every rule in the composed
-catalog to the definition on three boards, asking each rule about a spread of the subjects its full
+catalog to the definition on three boards, two of them read with their copper so the board rules are
+asked too, asking each rule about a spread of the subjects its full
 run named and about one net and one part it named nothing about. It also calls a `ScopeSubjects`
 rule's `Eval` directly, outside the run's narrowing, and fails one that returns verdicts outside the
 scope, which is how a rule that declares the scope and still walks the whole board gets caught. And it

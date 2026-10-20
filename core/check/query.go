@@ -18,8 +18,11 @@ import (
 // irModel is the default Model, a fact projection computed once over an ir.Design and shared by
 // every rule in a Run.
 type irModel struct {
-	d         *ir.Design
-	pinDir    map[string]ir.PinDirection  // "refdes\x00pin" -> direction
+	d      *ir.Design
+	pinDir map[string]ir.PinDirection // "refdes\x00pin" -> direction
+	// pinListed is the pins of parts from undeclared cells already in pins, read off connections
+	// (agni issue 975), so a pin two nets name is listed once.
+	pinListed map[string]bool
 	pinName   map[string]string           // "refdes\x00pin" -> declared pin name (for role derivation)
 	pinless   map[string]bool             // ref-des whose resolved part types declare no pins at all
 	unfitted  map[string]bool             // ref-des the design marks do-not-populate
@@ -80,6 +83,7 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	m := &irModel{
 		d:         d,
 		pinDir:    map[string]ir.PinDirection{},
+		pinListed: map[string]bool{},
 		pinName:   map[string]string{},
 		pinConn:   map[string]bool{},
 		pinNet:    map[string]string{},
@@ -99,6 +103,10 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	// directions. The loose "/part" key matches when a section omits the library ref. This is
 	// the index the ingestion classify pass uses (WS3-071), so part resolution never drifts.
 	parts := classify.PartIndex(d)
+	// undeclared are the components placed from a cell no part type in the file declares (agni issue
+	// 975). Their pins are read off the netlist's connections below, since the connections are all
+	// the file says about them.
+	undeclared := map[string]*ir.Component{}
 	for _, c := range d.Components {
 		if dnpMarked(c) {
 			if m.unfitted == nil {
@@ -134,6 +142,9 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 				}
 			}
 		}
+		if first == nil && len(c.Sections) > 0 {
+			undeclared[c.RefDes] = c
+		}
 		m.classSet[c.RefDes] = m.componentClassesOf(c, first)
 		if first != nil && declared == 0 {
 			if m.pinless == nil {
@@ -162,6 +173,12 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 			m.connected[c.ComponentRef] = true
 			key := c.ComponentRef + "\x00" + c.PinRef
 			m.pinConn[key] = true
+			// A part from an undeclared cell has the pins its connections name, with no direction or
+			// name, so PinDeclared stays false for them and a rule that needs a direction skips them.
+			if uc := undeclared[c.ComponentRef]; uc != nil && !m.pinListed[key] {
+				m.pins = append(m.pins, PinInst{Component: uc, Designator: c.PinRef})
+				m.pinListed[key] = true
+			}
 			if first, seen := m.pinNet[key]; !seen {
 				m.pinNet[key] = n.Name
 			} else if first != n.Name && !collided[c.ComponentRef] && !refdes.IsPlaceholder(c.ComponentRef) {

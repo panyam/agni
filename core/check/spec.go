@@ -493,17 +493,13 @@ func (s *Spec) Eval(ctx context.Context, m Model) []Finding {
 func (s *Spec) Verdicts(ctx context.Context, m Model) []Verdict {
 	over := specOvers[s.Over]
 	out := []Verdict{}
+	// A request asking about some subjects (agni issue 1070) skips every other element before its
+	// clauses run. A spec's verdict is about its element alone, so what this skips is exactly what
+	// the run would drop afterwards.
+	asked := SubjectScope(ctx)
 	for _, e := range over.elems(m) {
 		if ctx.Err() != nil {
 			return out
-		}
-		ents := map[string]any{over.scope: e}
-		if over.bind != nil {
-			over.bind(e, ents)
-		}
-		ev := &evalEnv{m: m, spec: s, ents: ents}
-		if s.Scope != nil && !ev.expr(s.Scope) {
-			continue // out of scope, so no verdict
 		}
 		// A spec quantifies over ONE entity set, so its subject tuple is always a 1-tuple. The AST
 		// cannot express a relation between two entities, so the interpreter needs no notion of arity.
@@ -513,6 +509,17 @@ func (s *Spec) Verdicts(ctx context.Context, m Model) []Verdict {
 		}
 		if over.netID != nil {
 			subj.NetID = over.netID(e)
+		}
+		if asked != nil && !asked.Covers(subj) {
+			continue
+		}
+		ents := map[string]any{over.scope: e}
+		if over.bind != nil {
+			over.bind(e, ents)
+		}
+		ev := &evalEnv{m: m, spec: s, ents: ents}
+		if s.Scope != nil && !ev.expr(s.Scope) {
+			continue // out of scope, so no verdict
 		}
 		v := Verdict{Subjects: []Entity{subj}}
 		if s.Where == nil || ev.expr(s.Where) {
@@ -740,6 +747,11 @@ func (s *Spec) Rule(meta Rule) *Rule {
 	// considered set. A nil Scope claims every element, so the author must narrow it when the rule
 	// is about a subset.
 	meta.StatesConsideredSet = true
+	// Verdicts skips the elements a request did not ask about, so every spec rule narrows itself,
+	// unless its author said it concludes about the design as a whole.
+	if meta.Scoping == ScopeFiltered {
+		meta.Scoping = ScopeSubjects
+	}
 	meta.Reads = s.DerivedReads()
 	meta.Primitives = s.DerivedPrimitives()
 	return &meta

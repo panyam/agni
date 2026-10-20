@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -77,5 +78,33 @@ func TestMDIODoesNotMatchMDCLK(t *testing.T) {
 	}
 	if fs := check.RunBackground(check.NewModel(d), Compile(MDIO)); len(fs) != 0 {
 		t.Fatalf("MDCLK/MDIOX are not an MDIO bus: want 0 findings, got %d: %+v", len(fs), fs)
+	}
+}
+
+// agni issue 1070: asked about some nets, a profile's rules answer for those nets alone, and give the
+// verdicts a whole run filtered to them gives. Each rule's raw answer is checked too, so a rule that
+// still walked the whole board would fail here rather than only run slowly.
+func TestProfileRulesAskedAboutOneNetAnswerForItAlone(t *testing.T) {
+	m := check.NewModel(mdioBroken())
+	ctx := context.Background()
+	compared := 0
+	for _, r := range Compile(MDIO) {
+		full := r.Eval(ctx, m)
+		for _, n := range []string{"ETH_MDIO", "ETH_MDC", "NOT_A_NET"} {
+			scope := check.NewScope(check.NetNameEntity(n))
+			_, want := scope.Results(nil, full)
+			got := r.Eval(check.WithSubjectScope(ctx, scope), m)
+			if _, in := scope.Results(nil, got); len(in) != len(got) {
+				t.Errorf("%s about %s answered %d verdicts about other subjects", r.Name, n, len(got)-len(in))
+			}
+			if len(got) != len(want) {
+				t.Errorf("%s about %s: %d verdicts, the whole run filtered %d", r.Name, n, len(got), len(want))
+			}
+			compared += len(want)
+		}
+	}
+	// The broken bus fails its pull-up and the profile considers both signals, so some answers exist.
+	if compared < 2 {
+		t.Fatalf("compared %d verdicts, too few to prove anything", compared)
 	}
 }
