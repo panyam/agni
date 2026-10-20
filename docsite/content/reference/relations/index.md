@@ -12,6 +12,7 @@ The relations a datalog query joins over. Each documented relation links to its 
 | [`bus(label, kind)`](bus/) | a reader-detected bus not yet expanded into member nets (WS1-034) |
 | [`component.attr(ref_des, key, value)`](component.attr/) | a component-level attribute (e.g. interface, MPN) |
 | [`component.class(ref_des, class)`](component.class/) | a device class the part is in (a family tag too, e.g. a TVS is both tvs and diode) |
+| [`component.dnp(ref_des)`](component.dnp/) | the part is marked do-not-populate: it stays in the netlist but is not fitted, so nothing should credit it with a role |
 | [`component.mpn(ref_des, mpn)`](component.mpn/) | the design-side part identity (manufacturer part number) |
 | [`component.net(ref_des, net)`](component.net/) | a component sits on a net |
 | [`component.net_count(ref_des, count)`](component.net_count/) | the number of distinct nets a component touches (0 for a part wired to nothing) |

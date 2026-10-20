@@ -3,6 +3,7 @@ package lib_test
 import (
 	"context"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -41,8 +42,14 @@ func probeDesign() *ir.Design {
 // sorted, so a comparison reads the whole answer at once.
 func answers(t *testing.T, q string) []string {
 	t.Helper()
+	return answersOver(t, probeDesign(), q)
+}
+
+// answersOver is answers over a design of the caller's.
+func answersOver(t *testing.T, d *ir.Design, q string) []string {
+	t.Helper()
 	parsed := query.MustParse(q)
-	rows, err := (query.Naive{}).Eval(context.Background(), parsed, query.NewBase(check.NewModel(probeDesign())))
+	rows, err := (query.Naive{}).Eval(context.Background(), parsed, query.NewBase(check.NewModel(d)))
 	if err != nil {
 		t.Fatalf("%s: %v", q, err)
 	}
@@ -204,5 +211,26 @@ func TestADocForNothingFailsComposition(t *testing.T) {
 	stray := facts.WithDocs(map[string]string{"net.no_such_member": "## net.no_such_member\n"})
 	if _, err := facts.NewRegistry(append(facts.Registered(), stray)...); err == nil {
 		t.Error("a doc for a path nothing defines composed; it must fail at load")
+	}
+}
+
+// A test point marked do-not-populate still probes, since a test point is a pad on the bare board
+// and KiCad libraries mark a pad-only one DNP because nothing is placed on it (agni issue 961). So
+// component.dnp names TP2 and TP3 while the probe members still count them.
+func TestADoNotPopulateTestPointStillProbes(t *testing.T) {
+	d := probeDesign()
+	for _, c := range d.Components {
+		if c.RefDes == "TP2" || c.RefDes == "TP3" {
+			c.Attributes = map[string]string{"dnp": "yes"}
+		}
+	}
+	if got, want := answersOver(t, d, `component.dnp(?r) => ?r`), []string{"TP2", "TP3"}; !slices.Equal(got, want) {
+		t.Errorf("component.dnp = %v, want %v", got, want)
+	}
+	if got := answers(t, `component.dnp(?r) => ?r`); len(got) != 0 {
+		t.Errorf("component.dnp on a design with every part fitted = %v, want none", got)
+	}
+	if got, want := answersOver(t, d, `net.test_point_count(?n, ?c) => ?n, ?c`), []string{"A/2", "B/1", "C/0", "D/0"}; !slices.Equal(got, want) {
+		t.Errorf("test_point_count with TP2 and TP3 unfitted = %v, want %v", got, want)
 	}
 }

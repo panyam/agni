@@ -391,6 +391,15 @@ var specFacts = map[string]factDef{
 		reads: []string{"board.copper"},
 		get:   func(ev *evalEnv) any { return int(ev.ents["via"].(BoardVia).Annular()) },
 	},
+	"component.dnp": { // whether the in-scope connection's component, or the component itself, is marked do-not-populate (agni issue 961)
+		reads: []string{"component.dnp"},
+		get: func(ev *evalEnv) any {
+			if c, ok := ev.ents["conn"].(*ir.Connection); ok {
+				return !ev.m.IsFitted(c.ComponentRef)
+			}
+			return !ev.m.IsFitted(ev.ents["component"].(*ir.Component).RefDes)
+		},
+	},
 	"component.class": { // device class of the in-scope connection's component, or the component itself
 		reads: []string{"component.class"},
 		get: func(ev *evalEnv) any {

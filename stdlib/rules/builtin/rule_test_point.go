@@ -73,7 +73,10 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 			check.Not{X: check.IsTrue{T: check.Call{Fn: "not_a_supply"}}},
 		}},
 		// THE VIOLATION, and the only clause that is one, is an in-scope rail with no test point on
-		// it. A pass means the rail carries one.
+		// it. A pass means the rail carries one. A test point marked do-not-populate still counts,
+		// unlike every other credited part, because the probe lands on its pad and the pad is copper on
+		// the bare board. Pad-only test points are marked DNP for exactly that reason, since nothing
+		// is placed on them (agni issue 961).
 		Where:   check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "test_point"}}}},
 		Message: "rail carries no test point; bring-up and factory test cannot probe it",
 	}

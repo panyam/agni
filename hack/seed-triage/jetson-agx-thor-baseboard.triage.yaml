@@ -14,11 +14,19 @@ findings:
       why: +12V is joined to the 12 V buck's output node /DCDC/12V_OUT through R22, a 0 Ohm 22.4 A link, and four 22 uF capacitors (C222, C235, C306, C307) sit on that node beside U8's output. The rule stops at the 0 Ohm link and finds no capacitor on +12V.
       subjects:
         - net:+12V
+    - class: design-choice
+      why: TC_VCC is the Tag-Connect J20's target-voltage pin, feeding U59's VCCA (a TXU0304 translator). Both the 0 Ohm option R341 from +3V3 and the 100 nF C237 are marked do-not-populate, so on the assembled board the debug probe powers VCCA and nothing on the board decouples it. That leaves the decoupling to the probe's cable end, by choice of assembly option (agni 961).
+      subjects:
+        - net:/SoM_IO2/TC_VCC
   decoupling-present:
     - class: design-choice
       why: N$54 is the module's PMIC backup-battery input (J1 D37, PMIC_BBATT) through D1 and R6, which the module decouples on its own side.
       subjects:
         - net:Net-(D1-C)
+    - class: design-choice
+      why: TC_VCC is the Tag-Connect J20's target-voltage pin, feeding U59's VCCA (a TXU0304 translator). Both the 0 Ohm option R341 from +3V3 and the 100 nF C237 are marked do-not-populate, so on the assembled board the debug probe powers VCCA and nothing on the board decouples it. That leaves the decoupling to the probe's cable end, by choice of assembly option (agni 961).
+      subjects:
+        - net:/SoM_IO2/TC_VCC
   esd-protection:
     - class: design-choice
       why: The SFP cage's 10G lines are AC-coupled pairs where a TVS's capacitance would cost signal integrity, its low-speed control pins (TX_FAULT, TX_DISABLE, rate select) go through 1 kOhm or 0 Ohm series parts, and SH is the cage shield returned to ground through an RC network; the module protects its own end.

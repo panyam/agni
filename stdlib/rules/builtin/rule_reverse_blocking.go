@@ -123,6 +123,11 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 	for _, rn := range r.Nets {
 		for _, c := range rn.GetConnections() {
 			ref := c.GetComponentRef()
+			// A controller or transistor marked do-not-populate blocks nothing on the assembled board
+			// (agni issue 961).
+			if !m.IsFitted(ref) {
+				continue
+			}
 			if m.HasClass(ref, check.ClassIdealDiodeController) {
 				return pathProtected, ref
 			}
@@ -197,7 +202,8 @@ const (
 func hasPowerInput(m check.Model, n *ir.Net) bool {
 	return check.Exists(n.GetConnections(), func(c *ir.Connection) bool {
 		ref := c.GetComponentRef()
-		return !check.IsVirtualRef(ref) && !m.HasClass(ref, check.ClassConnector) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+		// A load marked do-not-populate draws nothing on the assembled board (agni issue 961).
+		return !check.IsVirtualRef(ref) && m.IsFitted(ref) && !m.HasClass(ref, check.ClassConnector) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 	})
 }
 

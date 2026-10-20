@@ -1,6 +1,7 @@
 package builtin
 
 import (
+	"context"
 	"testing"
 
 	"github.com/panyam/agni/core/check"
@@ -44,5 +45,69 @@ func TestADoNotPopulatePullUpPullsNothing(t *testing.T) {
 	}
 	if got := verdictOn(t, i2cPullUp, pullUpDesign("R2"), "I2C_SCL"); got != string(check.Pass) {
 		t.Errorf("i2c-pull-up with one pull-up fitted = %q, want pass", got)
+	}
+}
+
+// A capacitor marked do-not-populate decouples nothing, so a rail whose only capacitor is unfitted
+// has none (agni issue 961). The spec twin is asked the same question.
+func TestADoNotPopulateCapacitorDecouplesNothing(t *testing.T) {
+	design := func(dnp bool) *ir.Design {
+		d := pinDesign(map[string][]supplyPin{
+			"U1": {{"VDD", "1", pwrIn}, {"GND", "2", pwrIn}}, "C1": twoPin(),
+		}, map[string][]string{"VDD_CORE": {"U1.1", "C1.1"}, "GND": {"U1.2", "C1.2"}})
+		if dnp {
+			for _, c := range d.Components {
+				if c.RefDes == "C1" {
+					c.Attributes = map[string]string{"dnp": "yes"}
+				}
+			}
+		}
+		return d
+	}
+	if got := verdictOn(t, decouplingPresent, design(true), "VDD_CORE"); got != string(check.Fail) {
+		t.Errorf("decoupling-present with its only capacitor unfitted = %q, want fail", got)
+	}
+	if got := verdictOn(t, decouplingPresent, design(false), "VDD_CORE"); got != string(check.Pass) {
+		t.Errorf("decoupling-present with the capacitor fitted = %q, want pass", got)
+	}
+	twin := func(d *ir.Design) int {
+		return len(decouplingPresentSpec.Eval(context.Background(), check.NewModel(d)))
+	}
+	if twin(design(true)) != 1 || twin(design(false)) != 0 {
+		t.Errorf("decoupling-present twin findings = %d unfitted, %d fitted, want 1 and 0", twin(design(true)), twin(design(false)))
+	}
+}
+
+// A test point marked do-not-populate still covers its rail, because the probe lands on the pad,
+// which is copper on the bare board. The RoyalBlue54L Feather marks every one of its pad test points
+// DNP for that reason (agni issue 961).
+func TestADoNotPopulateTestPointStillCovers(t *testing.T) {
+	comp := func(ref string, dnp bool) *ir.Component {
+		c := &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
+		if dnp {
+			c.Attributes = map[string]string{"dnp": "yes"}
+		}
+		return c
+	}
+	fired := func(d *ir.Design) []string {
+		var out []string
+		for _, f := range testPointCoverage.Findings(context.Background(), check.NewModel(d)) {
+			out = append(out, check.EntityRef(f.Subject))
+		}
+		return out
+	}
+	covered := &ir.Design{
+		Components: []*ir.Component{comp("TP1", true), comp("TP2", true), comp("U1", false)},
+		Nets:       []*ir.Net{tnet("GND", "U1.1", "TP1.1"), tnet("VCC", "U1.2", "TP2.1")},
+	}
+	if got := fired(covered); len(got) != 0 {
+		t.Errorf("rails covered by unfitted pad test points fired on %v, want none", got)
+	}
+	uncovered := &ir.Design{
+		Components: []*ir.Component{comp("TP1", true), comp("U1", false)},
+		Nets:       []*ir.Net{tnet("GND", "U1.1", "TP1.1"), tnet("VCC", "U1.2")},
+	}
+	if got := fired(uncovered); len(got) != 1 || got[0] != "VCC" {
+		t.Errorf("a board whose only test point is unfitted still declares the convention; fired on %v, want exactly VCC", got)
 	}
 }
