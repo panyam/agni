@@ -132,6 +132,20 @@ async function step(name, design, body) {
   }
 }
 
+// visit opens a design's first page outside any step, so a navigation that throws (the network gone,
+// net::ERR_INTERNET_DISCONNECTED) fails the row named and the walk goes on to the next design rather
+// than ending with no table (agni 1009). A visit that succeeds adds no row.
+async function visit(page, href, name, design) {
+  const t = performance.now();
+  try {
+    await page.goto(timedURL(href), { waitUntil: "domcontentloaded" });
+    return true;
+  } catch (e) {
+    add(name, design, "fail", String(e.message ?? e).split("\n")[0], since(t));
+    return false;
+  }
+}
+
 // opened waits for a design's first sheet and its rule catalog. A click on Run checks before the
 // catalog arrives runs nothing (agni 868), so the walk waits for the button's rule count. A sheet
 // counts as drawn when the readout reports what it drew, SVG elements or WebGL primitives. Any other
@@ -225,9 +239,11 @@ function checksTiming(log, design, run, suffix = "") {
 // row, since the read then bought nothing. A demo built before the Load page opens the viewer
 // straight away and logs no line, which the row says.
 //
-// On arrival the log's timings and fetches restart with the viewer, since the page's clock does.
-async function loadPage(page, log, design, t, name) {
+// On arrival the log's timings and fetches restart with the viewer, since the page's clock does. act
+// is whatever sends the page there, run inside the step so its failure is this row's.
+async function loadPage(page, log, design, t, name, act = async () => {}) {
   return step(name, design, async () => {
+    await act();
     await page.waitForURL((u) => /\/view\/?$/.test(u.pathname), { timeout: 300_000 });
     const ms = since(t);
     const line = log.loads[log.loads.length - 1];
@@ -446,7 +462,10 @@ for (const seed of seeds) {
   if (only && !only.includes(mount)) continue;
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const log = record(page);
-  await page.goto(timedURL(seed.href), { waitUntil: "domcontentloaded" });
+  if (!(await visit(page, seed.href, "1. load page", seed.title))) {
+    await page.close();
+    continue;
+  }
   const read = await loadPage(page, log, seed.title, performance.now(), "1. load page");
   const t = performance.now();
   const ok = read && await step("1. open", seed.title, async () => {
@@ -490,7 +509,10 @@ for (const seed of seeds) {
 async function drop(design, input, files, markers) {
   const page = await browser.newPage({ viewport: { width: 1400, height: 1000 } });
   const log = record(page);
-  await page.goto(timedURL("designs/local/load/"), { waitUntil: "domcontentloaded" });
+  if (!(await visit(page, "designs/local/load/", "2. drop", design))) {
+    await page.close();
+    return;
+  }
   const button = input === "#drop-folder-input" ? "#drop-folder" : "#drop-open";
   const ready = await page
     .waitForSelector(`${button}:not([hidden])`, { timeout: 60_000 })
@@ -510,8 +532,7 @@ async function drop(design, input, files, markers) {
   });
   if (proposed) {
     const opening = performance.now();
-    await page.locator(".drop-design-open").first().click();
-    const read = await loadPage(page, log, design, opening, "2. load page");
+    const read = await loadPage(page, log, design, opening, "2. load page", () => page.locator(".drop-design-open").first().click());
     const ok = read && await step("2. open", design, async () => {
       await opened(page);
       const at = new URL(page.url());
