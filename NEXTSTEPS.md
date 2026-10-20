@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-18, at `7bb3493a` (PR 1063).
+Last pruned 2026-10-20, at `e719bbce` (PR 1083).
 
 ## At a glance
 
@@ -17,29 +17,26 @@ Two missions are active, one per worktree, and a third is filed. `MISSION=missio
 (the retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
 blocked-by links rather than here. Log each exercise run on the mission issue.
 
-- **#845 `mission_browser_review`**, 16 of 19. What is left is three P3s (#759, #774, #904). Done-when
-  also wants one sample board walked, and no sample board carries a checklist yet, so that run needs
-  one first.
-- **#851 `mission_public_demo`**, 50 of 70. #1010 closed (PR 1059): deployed Jetson Run checks went
-  from 11.5 s to 4.6 s. The local `--timing` walk at `7bb3493a` splits Jetson's first Run checks into
-  `checks load` 2.8 s (`read.board` 1.8 s) and `checks rules` 1.0 s, with `checks again` 124 ms, so
-  loading is now the larger half. It exits 2 only on the known #975 row.
-- **Seed triage on #851** (`hack/seed-triage/`): the Jetson record holds three false positives, each
-  with its ticket (#1014, #1015, #1016). #961 and #967 are filed; #967's first run found KiCad's DRC
-  reporting 357 `clearance` violations on Jetson where agni reports none.
+- **#851 `mission_public_demo`**, 60 of 74. Since v0.2.5 the demo reads a design on a Load page
+  before the viewer opens it (#1072), checks a selected net on its own (#897), cancels a run (#918),
+  and keeps the board out of the serve worker (#992). Every seed record now says whether KiCad's ERC
+  and DRC agree (#967). The last walk on the PR 1083 branch exited 0, 94 rows ok.
+- **Seed triage on #851** (`hack/seed-triage/`): false positives #1014, #1015, #1016 and #1082 (four
+  verdicts the KiCad comparison and the DNP work found, the KiCad reader's `tri_state` among them).
+  Jetson's 357 KiCad clearance violations are its `.kicad_dru` rules, on #142.
+- **#845 `mission_browser_review`**, 16 of 19, three P3s (#759, #774, #904) and a checklist for one
+  sample board.
 - **#909 `mission_ask`**, filed, not active. #910 (P1, MCP on `agni serve`) is its first ticket.
-- This run: v0.2.5 tagged; PRs 1059, 1062 (jaala v0.1.69) and 1063 merged; #1010 and #1060 closed;
-  #1061 filed (load a design once into a store, shaped for edit sessions).
+- This run: PR 1083 merged (#961, #967, jaala v0.1.84); dropped #978, #918, #897 and #992 (closed).
 
 ## Open, ranked
 
-1. **Jetson's load on `mission_public_demo`.** #1061's first step measures restoring a built model
-   and board against rebuilding them, since `read.board` is most of `checks load`. Then #992 (the
-   serve worker still receives the board's 85 MB file) and #1005 (the board read's remaining
-   allocation). Measure with the exercise's `--timing`, `make wasm-bench` and `make wasm-layers`,
-   and read CLAUDE.md on the bench's two misleading rows first.
-2. **#978 (the static Compare picker is empty), #918 (Cancel on Run checks) and #897**, on
-   `mission_public_demo`.
+1. **The seed false positives, #1082 first**, on `mission_public_demo`. Its `tri_state` item and its
+   GND-driver item each move a seed verdict, and the gateway fixture item would make KiCad an oracle
+   for the tutorial's copper faults (it restamps every tutorial capture). Then #1014, #1015, #1016.
+2. **Jetson's load**, #1005 (the board read's remaining allocation) and the rest of #1061. Measure
+   with the exercise's `--timing`, `make wasm-bench` and `make wasm-layers`, and read CLAUDE.md on
+   the bench's two misleading rows first.
 3. **#605, KiCad accepts `[hi:lo]` as a bus**, off any mission. It absorbed #758.
 4. **#702, `PinsByName` compares pin names outside `core/ident`.** Decide first whether
    underscore-folding belongs in `core/ident` for pin names.

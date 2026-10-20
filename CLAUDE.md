@@ -468,7 +468,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   R10, and `column_types` overrides one. Cells travel raw: the csv encoder guards formulas and
   `tables_to_xlsx` keeps a cell starting `=` as text. `check --verdicts --format json` is the whole
   CheckDesign response, verdicts included.
-- **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `count/min/max/sum/avg/list`
+- **Aggregation reduces BINDINGS, not values, unless you say `distinct`.** `list` answers a list VALUE in
+  its JSON text (`["R3","R4"]`, `[]` over nothing) since jaala v0.1.79, so never split a cell on spaces. `count/min/max/sum/avg/list`
   group by the projection's plain columns; `count(distinct ?x)` reduces the SET of values instead.
   The trap is that a goal joining two things yields one binding per combination, so on
   a net carrying 7 test points and 20 capacitors `count(?tp)` is 140 and `count(distinct ?tp)` is 7.
@@ -902,7 +903,12 @@ first on a design that reaches it unstamped.
 net classes, class definitions and the board's own minimums (`board_rules`, which the copper rules
 check against before their fixed floors). A sub-sheet has a stem of its own, so it reads alone.
 **A do-not-populate part stays in the netlist, and a rule crediting a part asks `Model.IsFitted`**
-(agni 938). Only the pull-up walks ask so far; #961 tracks the rest, and
+(agni 938, 961). The reach walk crosses no unfitted part, and a query says the same with `not
+component.dnp(?r)`. Two exceptions are deliberate and each cost a wrong first version. A TEST POINT
+keeps its credit, since a pad-only one is marked DNP because nothing is placed and a probe lands on
+the copper (every test point on the Feather seed). And crediting alone fails a circuit unfitted as a
+whole, so a rule whose credit changed also leaves out a net with no fitted part (`check.Unpopulated`,
+spec fact `net.unpopulated`). A rule that BLAMES an unfitted part is still open (#1082).
 `architecture/rules-and-checks.md` states the policy.
 
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
