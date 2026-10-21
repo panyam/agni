@@ -8,8 +8,8 @@ go 1.26.9
 require github.com/panyam/agni v0.0.0
 
 require (
-	golang.org/x/text v0.41.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 )
 
 // TODO: DELETE this replace when you host the overlay outside the agni repo. It only exists so
