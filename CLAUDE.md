@@ -359,7 +359,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   serving it from one process, so a minted mount is as linkable as a declared one, and it blocks
   until Ctrl-C because the links live exactly as long as the server does. `self:PORT` fails on a
   taken port rather than moving. **A link names the design's declared ENTRY whatever you pointed the
-  command at, and carries the revision it was read at**, which the viewer checks before it draws.
+  command at, and carries the revision it was read at**, which the viewer checks before it draws. Both
+  report rpcs resolve `ReportLinks.design_uri` to the entry themselves (`linkMountPath`, agni 1120), so
+  a client may send the design's folder, as the viewer does.
   **A verdict link also carries `rule=`**, so the viewer resolves it by running ONE rule rather than
   the catalog (21.78s to 1.95s on a 3980-component
   board, and paid per click, because each click from a report is a fresh page load). The rule is

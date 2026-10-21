@@ -42,9 +42,9 @@ const explanations: Record<string, string> = {
     "Ask follows up on the selected part with a canned question, which opens as a new query tab. Its " +
     "cells click into the drawing the same way.",
   "save the report":
-    "Run the house checklist and save the report. The viewer asks ReviewService.RenderReviewReport for " +
-    "the page, the same rpc 'agni review --format html' calls, so the saved file must match the CLI's " +
-    "byte for byte apart from the time it was written.",
+    "Run each checklist and save its report. The viewer asks ReviewService.RenderReviewReport for " +
+    "the page, the same rpc 'agni review --format html' calls, so each saved file must match the CLI's " +
+    "byte for byte apart from the time it was written, links included.",
   "agni trial":
     "Outside the browser, 'agni trial' walks the same design the way a release trial on someone " +
     "else's machine would, and reports each step without any design content.",

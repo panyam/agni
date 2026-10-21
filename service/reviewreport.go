@@ -22,19 +22,15 @@ import (
 //
 // A request with no review, or with links naming a design that is not a mount URI, is an invalid
 // argument.
-func (s *ReviewService) RenderReviewReport(_ context.Context, req *webapi.RenderReviewReportRequest) (*webapi.RenderReviewReportResponse, error) {
+func (s *ReviewService) RenderReviewReport(ctx context.Context, req *webapi.RenderReviewReportRequest) (*webapi.RenderReviewReportResponse, error) {
 	doc := req.GetReview().GetResults()
 	if doc == nil {
 		return nil, fmt.Errorf("%w: RenderReviewReport needs the review to write", ErrInvalidArgument)
 	}
 	links := req.GetLinks()
-	mountPath := ""
-	if links.GetDesignUri() != "" {
-		lu, err := ParseArtifactURI(links.GetDesignUri())
-		if err != nil {
-			return nil, err
-		}
-		mountPath = strings.TrimPrefix(lu.String(), "mount://")
+	mountPath, err := linkMountPath(ctx, s.projects, links.GetDesignUri())
+	if err != nil {
+		return nil, err
 	}
 	meta := report.Checklist{
 		Design:        doc.GetDesign().GetSource(),
