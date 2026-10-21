@@ -84,13 +84,9 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 		return &webapi.RenderCheckReportResponse{Content: b, ContentType: "application/json", Filename: name + ".agni-check.json"}, nil
 	case webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML:
 		links := req.GetLinks()
-		mountPath := ""
-		if links.GetDesignUri() != "" {
-			lu, err := ParseArtifactURI(links.GetDesignUri())
-			if err != nil {
-				return nil, err
-			}
-			mountPath = strings.TrimPrefix(lu.String(), "mount://")
+		mountPath, err := linkMountPath(ctx, s.projects, links.GetDesignUri())
+		if err != nil {
+			return nil, err
 		}
 		meta := report.Report{
 			Design:        u.String(),

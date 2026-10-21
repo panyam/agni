@@ -242,17 +242,23 @@ describe("the browser-review walk", () => {
       });
 
       await step("save the report", async () => {
-        const name = checklists.includes("house") ? "house" : checklists[0];
-        await runChecklist(page, name);
-        const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), page.click(".rv-save")]);
-        const saved = readFileSync((await download.path())!, "utf8");
-        const cli = agni("review", design, "--checklist", name, "--format", "html", "--server", base(), "--mount", `${walk.mount}=${project}`);
-        if (out) {
-          writeFileSync(join(out, `review-walk-viewer-${name}.html`), saved);
-          writeFileSync(join(out, `review-walk-cli-${name}.html`), cli);
+        // Every checklist, since a page whose items carry no finding has no link to compare, and the
+        // links are where the viewer and the CLI once disagreed (agni issue 1120).
+        const saved: string[] = [];
+        for (const name of checklists) {
+          await runChecklist(page, name);
+          const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), page.click(".rv-save")]);
+          const viewer = readFileSync((await download.path())!, "utf8");
+          const cli = agni("review", design, "--checklist", name, "--format", "html", "--server", base(), "--mount", `${walk.mount}=${project}`);
+          if (out) {
+            writeFileSync(join(out, `review-walk-viewer-${name}.html`), viewer);
+            writeFileSync(join(out, `review-walk-cli-${name}.html`), cli);
+          }
+          expect(normalise(viewer), `the saved ${name} page should be the page \`agni review --format html\` writes`).toBe(normalise(cli));
+          const links = (viewer.match(/href="http[^"]*\/view\?/g) ?? []).length;
+          saved.push(`${name} (${links} links)`);
         }
-        expect(normalise(saved), "the saved page should be the page `agni review --format html` writes").toBe(normalise(cli));
-        return `${download.suggestedFilename()} matches \`agni review --checklist ${name} --format html\``;
+        return `${saved.join(", ")} match \`agni review --format html\``;
       });
 
       await step("agni trial", async () => {
