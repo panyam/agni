@@ -30,6 +30,7 @@ first six end to end in one tour.
 | 12 | [netlist-audit/](netlist-audit/) | A netlist audit as one query set: the tables a review workbook holds, as named queries in `audit.yaml` sharing a preamble of derived relations, all answered over one read of the design (`query.ParseQuerySet`, `agni query --set`). | ready |
 | 13 | [design-review/](design-review/) | A review checklist run against a board: every item resolves to pass, fail, not-applicable, needs-a-declaration, or nothing covers it. The rung that composes the others, and the only one whose point is what it CANNOT answer. | ready |
 | 14 | [whole-enchilada/](whole-enchilada/) | The capstone: rungs 2 to 6 end to end in one tour (convergence, checks, diff, emit, and both renderers). | ready |
+| 15 | [ask-over-mcp/](ask-over-mcp/) | Ask a design questions the way an LLM client does: start `agni mcp`, connect an MCP client, and make the calls a model makes, reading back the question, the rows with their provenance, and the link (or why there is none). | ready |
 
 A first read should start with `whole-enchilada` for the tour, then use rungs 1-13 to go deep
 on each step.

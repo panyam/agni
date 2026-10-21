@@ -369,6 +369,16 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   rule about them alone, held apart from the run in `Document.scoped`. A TRACE link needs no
   such hint because it carries the question rather than a conclusion. Semantics and the two ways the
   halves used to disagree are in `guide/checks-and-reports.md`.
+- **`agni serve --mcp` and `agni mcp` serve the analysis over MCP** (agni 910, `internal/mcpserver`),
+  the first at `/mcp` beside the Connect API and the second over stdio, composed by the same
+  `runViewer`. The query language's tools (`query`, `explain`, `schema`, `look`, `values`) are
+  jaala's `frontends/mcp` with a `design` argument agni adds; agni registers `check`, `trace`,
+  `diff`, `design`, `checklists`, `review`, `query_set` and `designs`. jaala evaluates a query and
+  agni presents it through `QueryService.ReadQuery` and `QueryRead.Present`, which is `RunQuery`'s
+  own projection, and `Tabulate` (C35), so a new query field reaches MCP with no change there.
+  `Run.BaseFor` is what keeps the board read only for a program reading `board.*`, as `RunQuery`
+  does. `TestMCPAnswersAsConnectDoes` asks every tool and its rpc the same question over one server,
+  so a new tool belongs in it. A list in `bind` is refused because agni's wire binds one value.
 - **`--remote <url>` on `query`, `check`, `trace` and `review` sends the command's request to a running
   `agni serve`** (agni 998) and renders the response exactly as the local run does, which
   `TestRemoteAnswersAsTheLocalCommandDoes` holds byte for byte. It is a different flag from `--server`,

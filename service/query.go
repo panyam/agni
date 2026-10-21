@@ -330,17 +330,25 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	if err != nil {
 		return nil, err
 	}
-	work := query.Work(d.base) - before
+	resp := d.present(ctx, q, queryText, table, 0, len(table.Rows), bind, omitLocations)
+	resp.Work = query.Work(d.base) - before
+	if total >= 0 {
+		resp.Total = int32(total)
+	}
+	return resp, nil
+}
+
+// present is the response for rows [lo, hi) of table, which q evaluated over d's base with bind,
+// echoing queryText as the response's query. RunQuery presents every row of its own evaluation, and
+// a QueryRead presents a page of an evaluation someone else ran, so both answer in one shape.
+func (d *designRead) present(ctx context.Context, q query.Query, queryText string, table *query.Table, lo, hi int, bind map[string]query.Value, omitLocations bool) *webapi.RunQueryResponse {
 	cols := q.Columns()
 	kinds, kindVars, refTerms := columnKindsIn(d.reg, q)
 	// Query and Source come from the request rather than being re-derived, so a saved response
 	// cannot describe a different run than the one that produced these rows.
 	resp := &webapi.RunQueryResponse{
 		Columns: make([]string, len(cols)), ColumnKinds: kinds,
-		Query: queryText, Source: d.source, Work: work, Bindings: BindingsProto(bind),
-	}
-	if total >= 0 {
-		resp.Total = int32(total)
+		Query: queryText, Source: d.source, Bindings: BindingsProto(bind),
 	}
 	for i, c := range cols {
 		resp.Columns[i] = string(c)
@@ -391,7 +399,8 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		colAt[c] = i
 	}
 	sources := NewSourceTable(resp)
-	for ri, values := range table.Rows {
+	for ri := lo; ri < hi; ri++ {
+		values := table.Rows[ri]
 		bound := func(v query.Var) query.Value {
 			if i, ok := colAt[v]; ok {
 				return values[i]
@@ -452,7 +461,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 		}
 		resp.Rows = append(resp.Rows, row)
 	}
-	return resp, nil
+	return resp
 }
 
 // drawnEntities collects the ref_des with a symbol placement and the nets with a wire in the
