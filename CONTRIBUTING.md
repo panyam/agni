@@ -336,7 +336,9 @@ circuit, the hardware primer, prerequisite knowledge, then the reviewer's guide.
   that parses and reads badly.
 - **Rendering captures come from a fixture, never a customer board.** Capture the before/after pair
   from the showcase boards (`cmd/agni/testdata/conformance/showcase.{passes,fires}.kicad_*`),
-  `examples/tutorial-project/`, or a tiny hand-authored fixture, for the reasons in `CLAUDE.md`
+  `examples/tutorial-project/`, a public board from the pinned samples corpus that the demo already
+  shows (Jetson through `examples/jetson-project`, under its own open licence), or a tiny
+  hand-authored fixture, for the reasons in `CLAUDE.md`
   under "What does not belong in this repo". A browser-automation screenshot lands in the CWD, which
   is the REPO ROOT, and a bare `.png` there is not ignored (`bin/` and `.playwright-mcp/` are), so
   move captures out of the tree before staging and stage by explicit path. That is the stray-file
