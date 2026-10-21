@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -262,8 +262,28 @@ web-test:
 # Needs a browser once per machine:  cd web && pnpm exec playwright-core install chromium
 # The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
 # with a dev server you already have running.
+# HEADED=1 shows the browser instead of running it headless, SLOWMO=<ms> paces it (agni issue 1118).
 browser-test: ui wasm
-	cd web && pnpm run test:browser
+	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm run test:browser
+
+# The browser-review walk, mission #845's exercise (agni issue 1118): the gated spec
+# web/browser/review-walk.spec.ts run on its own, printing one row per step and writing them as
+# markdown for the mission log. The same walk runs in browser-test on every push. HEADED=1 shows it
+# in a visible Chrome and stops before each step to explain what it does and what the product does,
+# until you press Next; STEP_BY_STEP=0 plays it straight through. SLOWMO=<ms> paces each action (250
+# by default when headed). A headless run never stops.
+# WALK_DESIGN picks the board: jetson (the default, Antmicro's baseboard in examples/jetson-project, copied
+# in from the samples corpus) or gateway (the tutorial project's small synthetic board the gate walks).
+#   make exercise-browser-review
+#   make exercise-browser-review HEADED=1
+#   make exercise-browser-review HEADED=1 STEP_BY_STEP=0
+#   make exercise-browser-review WALK_DESIGN=gateway
+WALK_DESIGN ?= jetson
+exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
+	mkdir -p $(EXERCISE_OUT)
+	cd web && WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) STEP_BY_STEP=$(STEP_BY_STEP) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/review-walk.spec.ts; \
+		status=$$?; cat $(EXERCISE_OUT)/browser-review.md 2>/dev/null; exit $$status
 
 # WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
 # build of the same commit parsed into the browser's cache (wasmengine.StoreVersion, agni issue 911).

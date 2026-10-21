@@ -19,6 +19,7 @@
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { launch, withPage } from "./browser.js";
+import { growQueryPanel } from "./panels.js";
 
 const base = (): string => inject("baseUrl");
 
@@ -34,19 +35,6 @@ afterAll(async () => {
 async function openViewer(page: Page, mount: string, file: string): Promise<void> {
   await page.goto(`${base()}/designs/${mount}/${file}/view`, { waitUntil: "networkidle" });
   await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
-}
-
-// growQueryPanel enlarges the docked query panel, the same thing dragging its sash does. The dock
-// opens it a couple of rows tall, which is not enough for the results table to be on screen at all.
-async function growQueryPanel(page: Page): Promise<void> {
-  await page.evaluate(() => {
-    const overlay = document.querySelector(".query")?.closest<HTMLElement>(".dv-render-overlay");
-    if (!overlay) throw new Error("query panel is not in a dock overlay");
-    overlay.style.top = "420px";
-    overlay.style.height = "560px";
-    window.dispatchEvent(new Event("resize"));
-  });
-  await page.waitForTimeout(200);
 }
 
 // runQuery types a query into the box and runs it, for the questions find-by-name cannot ask.
