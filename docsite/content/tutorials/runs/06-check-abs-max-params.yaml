@@ -1,7 +1,7 @@
-# Rung 6: the same rule with the transcribed NTS0102 spec in place, verdicts included so the passes
+# Rung 6: the same rules with the transcribed NTS0102 spec in place, verdicts included so the passes
 # show what each one was compared against.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: designs/jetson
 script: |
-  agni check --verdicts designs/jetson --rule supply-exceeds-abs-max
+  agni check --verdicts designs/jetson --rule supply-exceeds-abs-max --rule pin-exceeds-abs-max
