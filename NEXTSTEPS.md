@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-22, at `c88fb204`.
+Last pruned 2026-10-22, at `ebe5febb`.
 
 ## At a glance
 
@@ -17,22 +17,26 @@ One mission is active. `MISSION=mission_<slug> queue.sh`
 (the retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
 blocked-by links rather than here. Log each exercise run on the mission issue.
 
-- **#845 `mission_browser_review`**, 20 of 22, next ready #774, then #904. `make
-  exercise-browser-review` passed at `463cfbdd` (Jetson 11 of 11, gateway 12 of 12); headed, it walks
-  step by step with an explanation at each stop.
+- **#845 `mission_browser_review`**, 22 of 28, next ready #1140 and #1141 (P2, the sheet dock on a
+  hierarchical design), then #904, #1142, #1143 and #1144. `make
+  exercise-browser-review` passed at `ebe5febb` (Jetson 11 of 11), after #774's picker and #1136's
+  descriptors; headed, it walks step by step with an explanation at each stop.
 - **#909 `mission_ask`** closed on 2026-10-22 at its done-when (Jetson 7 of 7, gateway 9 of 9 at
   `c88fb204`). `make exercise-mcp-ask` remains, and no ticket is left on it.
 - **#851 `mission_public_demo`** closed on 2026-10-20. #855, #923 and #949 stay `waiting`, off any
   mission. `make exercise-public-demo` remains.
 - **Possible next mission**: moving a house netlist audit off its spreadsheet. #820, #821 and #1093 are
   its tickets, and `guide/older-comparison-tools.md` its first page. Not yet a mission.
-- This run: PRs 1125, 1128, 1129 and 1130 merged (#759 with Reset layout, #1115, #1117, #1126); a patch
-  release follows this checkpoint. #909 closed. #1032 carries both `P3` and `waiting`, for retriage.
+- This run: PRs 1131 (#774, the relation picker drills module by module) and 1139 (#1136, one descriptor
+  schema with every tier named and a design extending its project) merged; a patch release follows
+  this checkpoint. URL sources in a descriptor are parked as #1138 (`waiting`). #1032 carries both
+  `P3` and `waiting`, for retriage.
 
 ## Open, ranked
 
-1. **#845's last two tickets**, #774 (drill-down in the relation picker) and #904 (select an area and
-   ask about it).
+1. **#845's queue**, #1140 and #1141 first (unique sheet ids on a hierarchical EDIF, and a sheet dock
+   that lists sheets as a tree), then #904 (select an area and ask about it) and the P3 sheet-dock
+   tickets #1142 to #1144.
 2. **Decide the strap band's unreadable value.** A declared band whose resistor's value does not read
    (`DNP`, a typo) passes with "the design does not contradict it", because
    `TestStrapValueUnreadableIsSilent` chose silence over a finding; inconclusive is the alternative.

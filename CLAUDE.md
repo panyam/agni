@@ -776,7 +776,10 @@ test each run, and passes locally is often a click landing in a boot window**, w
 20 ms wide. Sample the element's state every 20 ms from first paint with the wasm download held back
 by `page.route`, which is how PR 1114 found a Run button enabled before any design had opened.
 **`HEADED=1` shows any browser spec in a visible Chrome** (`make browser-test HEADED=1`, `SLOWMO=<ms>`
-paces it). **Mission #845's walk is `web/browser/review-walk.spec.ts`**, in the gate, and `make
+paces it). **One spec run by hand** (`cd web && pnpm exec vitest run -c vitest.browser.config.ts
+browser/<spec>`) **uses whatever `web/static/agni.wasm` and `bin/agni` are on disk**, where `make
+browser-test` rebuilds both, so run `make wasm agni` after a Go change first; a stale wasm read a
+fixed proposal as still broken (agni 1136). **Mission #845's walk is `web/browser/review-walk.spec.ts`**, in the gate, and `make
 exercise-browser-review` runs it alone on Jetson (`WALK_DESIGN=gateway` for the small board the gate
 walks) and prints the step table for the mission log; headed, it stops
 before each step to explain it (`walkguide.ts`) until `STEP_BY_STEP=0`. A viewer change that breaks the
