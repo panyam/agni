@@ -31,8 +31,8 @@ sheet we did not read). Capacitor identity is the shared component.class fact.
 A capacitor across a fitted zero-ohm link counts as on the rail, because the link joins two names
 for one rail (agni issue 1015). A converter's output node and the rail it feeds are often split by a
 0 Ohm resistor that sizes the current path or lets a bench measure it, and the capacitors sit on the
-converter's side. A link counts when its value parses to zero ohms, or when its value text carries a
-token like `0R` (a library name such as `R_0R_22.4A_0603` parses to nothing as a whole). The walk
+converter's side. A link counts when its value is zero ohms, including a value a library wrote as its part
+name, such as `R_0R_22.4A_0603`, which ingestion reads as 0 Ohm (agni issue 1115). The walk
 never crosses into a ground, and a series resistor of any other value still ends the rail. A pass
 names the link beside the capacitor.
 

@@ -1,6 +1,7 @@
 package classify
 
 import (
+	"math"
 	"testing"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -119,5 +120,50 @@ func TestStampValuesIsIdempotent(t *testing.T) {
 	StampValues(d)
 	if got := d.Components[0].GetValue().GetValue(); got != first {
 		t.Errorf("re-stamp changed the value: %v then %v", first, got)
+	}
+}
+
+// A library that names its parts by value writes that name as the Value (agni issue 1115). Every
+// passive on the Jetson baseboard does, and none had a value until the name was read. Only a token with
+// a prefix or a unit, in the class's own unit, is the value, so the package size and the rating beside
+// it are never mistaken for one, and a name holding two different values reads as none.
+func TestStampValuesReadsALibraryPartName(t *testing.T) {
+	for _, tc := range []struct {
+		value, class string
+		want         float64
+		unit         string
+	}{
+		{"R_10k_0402", "resistor", 10e3, UnitOhm},
+		{"R_2k2_0402", "resistor", 2200, UnitOhm},
+		{"R_49R9_0402", "resistor", 49.9, UnitOhm},
+		{"R_0R001_0805", "resistor", 0.001, UnitOhm},
+		{"R_0R_22.4A_0603", "resistor", 0, UnitOhm},
+		{"C_100n_0402", "capacitor", 1e-7, "F"},
+		{"C_4u7_25V_0402", "capacitor", 4.7e-6, "F"},
+		{"L_1u8_6.8A_WE-MAPI-4020", "inductor", 1.8e-6, "H"},
+	} {
+		d := &ir.Design{Components: []*ir.Component{compWithValue("X1", tc.value, tc.class)}}
+		StampValues(d)
+		q := d.Components[0].GetValue()
+		if q.Value == nil || math.Abs(q.GetValue()-tc.want) > 1e-12*math.Max(1, tc.want) || q.GetUnit() != tc.unit {
+			t.Errorf("%s (%s) = %v %q, want %v %q", tc.value, tc.class, q.Value, q.GetUnit(), tc.want, tc.unit)
+		}
+		if q.GetInput() != tc.value {
+			t.Errorf("%s keeps %q as its input, want the whole name a finding can quote", tc.value, q.GetInput())
+		}
+	}
+
+	for _, tc := range []struct{ value, class, why string }{
+		{"R_0402", "resistor", "a bare package size is not ohms"},
+		{"C_25V_0402", "capacitor", "a voltage rating is not a capacitance"},
+		{"R_10k_22k_0402", "resistor", "two different values say nothing reliable"},
+		{"U_100n_QFN48", "ic", "an IC has no unit of its own"},
+		{"C_0R_0402", "capacitor", "ohms on a capacitor are not its value"},
+	} {
+		d := &ir.Design{Components: []*ir.Component{compWithValue("X1", tc.value, tc.class)}}
+		StampValues(d)
+		if q := d.Components[0].GetValue(); q.Value != nil {
+			t.Errorf("%s (%s) read as %v %q; %s", tc.value, tc.class, q.GetValue(), q.GetUnit(), tc.why)
+		}
 	}
 }
