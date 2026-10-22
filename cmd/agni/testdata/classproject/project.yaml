@@ -3,3 +3,4 @@
 # a difference in how its design classifies can only have come from the datasheet.
 name: classdemo
 title: Datasheet-classified parts
+params: [params]

@@ -31,7 +31,16 @@ projects/gateway                      a set of designs that share configuration
 
 A **project** owns what is shared across designs: the team's naming vocabulary, its interface
 profiles, its seeded parameters, its review checklists. A **design** owns what is specific to it:
-which file is the analysis source, which files are views of it, and its design intent.
+which file is the analysis source, which files are views of it, its design intent, and which project
+it belongs to.
+
+Both descriptors share ONE schema (agni issue 1136), and the file's name says which role it plays.
+Only a design names its own files (`entry`, `companions`, `revisions`, `flatten_hierarchy`), and any
+of those in a `project.yaml` is a load error. Every other section is open to both, and a design's
+own layer goes on top of its project's, so a board kept under an older naming scheme carries its own
+`conventions:` and a board with a peculiarity adds a checklist. Before 1136 the two had separate
+schemas, a design could carry only its intent and symbols, and nothing in that split was about what
+the config was, only about where a team was allowed to write it.
 
 Both ids are **declared** by an operator, in a `project.yaml` and a `design.yaml`, rather than
 derived from a folder path, so the id survives the
@@ -41,6 +50,10 @@ folder being renamed or moved between mounts and gives a review run a parent to 
 # project.yaml
 name: gateway
 title: Sample Board review project
+profiles: [profiles]
+params: [params]
+lib: [lib]
+queries: [queries]
 conventions:
   name: gateway
   lexicon:
@@ -60,18 +73,28 @@ checklists:
 # designs/gateway/design.yaml
 name: gateway
 title: Sample Board
+extends: ../../project.yaml
+symbols: [symbols]
 entry: gateway.edn
 companions:
   - gateway.kicad_sch
   - gateway.kicad_pcb
 ```
 
-A project's naming vocabulary and its checklists are sections of `project.yaml`. `conventions` is
-bound to the `config.NamingConvention` proto, the schema a standalone `--conventions` file also
-uses, and `checklists` maps a name to a review manifest. Its interface profiles, seeded parameters,
-symbol libraries, derived relations and query sets are directories found beside the descriptor by
-their conventional names (`profiles/`, `params/`, `symbols/`, `lib/`, `queries/`), and the
-descriptor can name a different directory for any of them or opt out with an empty value.
+A naming vocabulary, checklists and intent are sections of a descriptor. `conventions` is bound to
+the `config.NamingConvention` proto, the schema a standalone `--conventions` file also uses, and
+`checklists` maps a name to a review manifest. Interface profiles, seeded parameters, symbol
+libraries, derived relations and query sets are files the descriptor NAMES, under `profiles`,
+`params`, `symbols`, `lib` and `queries`, each a list of paths relative to the descriptor or
+`mount://` URIs, and each path a file or a directory of them.
+
+**Nothing is found by its folder's name.** Until agni issue 1136 those five were directories
+discovered beside `project.yaml` by their conventional names, which had two costs. A flag naming the
+project's own directory loaded it twice (`--profile-path` doubled every profile finding, issue 450),
+and the only way to run without a tier was to move its directory aside, so a tutorial capture opened
+with `mv profiles profiles-off`. A tier is now in a run because a descriptor wrote its path, and
+deleting the line takes it out. A path that names nothing is a load error rather than an absent
+tier, since the operator who wrote it asked for that tier.
 
 **The first checklist written is the project's default**, the one `agni review <design>` runs when
 no `--checklist` is given, and the CLI says which it ran. `--checklist` takes a name or a file. A
@@ -80,10 +103,8 @@ any other value names one of the project's checklists, so the tutorial project's
 with `--checklist house`.
 
 Both used to be files beside the descriptor, `conventions.yaml` and `review.yaml`, until agni issue
-828 folded them in. A project folder still holding either is refused at load, as is a
-`conventions:` key holding a file name or the old `checklist:` key, and each message says where the
-content goes now. Reading past the old file would quietly drop a whole tier, which is why it is an
-error rather than ignored.
+828 folded them in. The checks that refused those older layouts by name went in 1136, and a section
+holding a file name now fails as any malformed section does, at its line.
 
 ## The netlist is the source; the rest are views
 
@@ -178,8 +199,7 @@ A tier whose absence changes the answer while still looking like an answer belon
 that changes the answer.
 
 **The descriptor is what binds config, and its absence fails exactly that way.** A team folder can
-hold `profiles/`, `params/` and `lib/` at their conventional names and still bind none of them,
-because nothing declared a project.
+hold `profiles/`, `params/` and `lib/` and still bind none of them, because nothing named them.
 
 <details>
 <summary>What that cost on one folder, and why only the server was affected</summary>
@@ -212,11 +232,11 @@ different configuration.
 ### Where the analysis tier is carried
 
 One `AnalysisConfig` carries the analysis tier everywhere it appears (on a `Project`, on a `Design`,
-and on a request), so adding a tier is one schema change every surface gets. The fields each one
-populates keep the scopes apart, and a `Design` sets only its intent, because a board has its own
-architecture where conventions and profiles describe the team. The conventions, the checklists and a
-design's intent travel as values, read once from the descriptors, while the directory tiers travel
-as URIs a config resolver reads. The message's own header in
+and on a request), so adding a tier is one schema change every surface gets. A design's config is
+layered over its project's chain (`mergeConfig`): the file tiers accumulate, checklists layer by
+name, and the nearer convention or intent replaces the further one. The conventions, the checklists
+and the intent travel as values, read once from the descriptors, while the file tiers travel as URIs
+a config resolver reads. The message's own header in
 `protos/agni/v1/webapi/config.proto` carries the rest.
 
 Whether a given host can RESOLVE the ref-shaped tiers is a property of the deployment, not of the
@@ -231,12 +251,21 @@ A project can declare that it layers on another's config:
 ```yaml
 # project.yaml
 name: gateway
-extends: projects/house
+extends: ../house/project.yaml
 ```
 
-`projects/house` is an ordinary project that happens to declare config and no designs. Shared config is
-a project with nothing under `designs/`, rather than a second kind of document with its own format,
-its own loader and its own id rules.
+`extends` names the descriptor by where it is, a path relative to this one or a `mount://` URI, and
+the store answers with that project's resource name (`projects/house`), so nothing above the store
+walks a path. `house` is an ordinary project that happens to declare config and no designs. Shared
+config is a project no design extends directly, rather than a second kind of document with its own
+format, its own loader and its own id rules.
+
+A design is the last link of the same chain, naming its project with `extends: ../../project.yaml`.
+It is never found under a project by where it sits, so a design and its project can live anywhere a
+mount reaches, and a project's designs are the descriptors that name it. A design naming no project
+while a `project.yaml` sits in a folder above it is a load error, because that is the shape of a
+forgotten `extends`, and reading on would check the board against the built-in config with nothing
+said.
 
 The chain composes **root-first**, so a project overrides what it inherits, matching every other layer
 here (a request overrides a project, a project overrides the deployment default). The ref-shaped tiers
@@ -253,7 +282,9 @@ conventions or its checklists, by writing them in a config-only project the othe
 **Inheritance is declared, never ambient.** A deployment-wide
 config that applied unless overridden would bring back the bug per-design config fixed, with one team's
 profiles reaching every board on the server. An `extends` is written in a descriptor, scoped to the
-project that wrote it, and reaches no design that did not ask for it.
+descriptor that wrote it, and reaches no design that did not ask for it. Since agni issue 1136 that
+holds for a design's link to its project too, which was found by walking up from the design's folder
+before.
 
 Cycles are an error naming the loop, and the chain is bounded at four levels. Both refuse rather than
 resolving partway, as everything else in this layer does, because a config that silently
@@ -399,7 +430,7 @@ broken profile or library cannot hide a project's sets. The viewer's Sets menu a
 since leaving it out would read as the project keeping no such set.
 
 **A project's own library of derived relations resolves through the same edge** (agni issue 773).
-`lib/` beside `project.yaml` is discovered like `profiles/`, travels as `library_uris`, and is read
+What a descriptor names under `lib` travels as `library_uris`, and is read
 by the config resolver into module texts on `ResolvedConfig.Library`. `Overlay.Registry` composes
 them with the shipped vocabulary once per distinct library, and `QueryService.read` builds each
 design's fact base over the result, so every query surface sees the project's members and no other

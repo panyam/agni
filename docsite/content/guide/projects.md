@@ -3,10 +3,10 @@ title: "Projects and designs"
 description: "Lay out a project.yaml and a design.yaml so every command finds your config without flags."
 ---
 
-A **project** is a folder holding the configuration a team shares across its boards. A **design** is
-one board inside it, with a statement of which file is which. Two small YAML files declare them, and
-once they exist `agni check designs/gateway` picks up your naming conventions, profiles, parameters
-and checklists with no flags at all.
+A **project** is the configuration a team shares across its boards. A **design** is one board, with a
+statement of which file is which and the project it belongs to. Two small YAML files declare them,
+with one schema between them, and once they exist `agni check designs/gateway` picks up your naming
+conventions, profiles, parameters and checklists with no flags at all.
 
 This page is the layout. [Projects and designs](../../architecture/projects-and-designs/) in the
 architecture section explains why it works this way.
@@ -17,13 +17,13 @@ The tutorial project, `examples/tutorial-project`, uses every part of it:
 
 ```
 tutorial-project/
-├── project.yaml              name, conventions:, checklists:
+├── project.yaml              name, conventions:, checklists:, and the files below
 ├── profiles/can.yaml         interface profiles
 ├── params/                   published part specs, one per MPN
 ├── lib/house.dl              the project's own derived relations
 ├── queries/power-review.yaml query sets
 └── designs/gateway/
-    ├── design.yaml           entry, companions, revisions, intent:
+    ├── design.yaml           extends:, entry, companions, revisions, intent:
     ├── gateway.edn           the entry, the netlist analysis reads
     ├── gateway.kicad_sch     companion views of the same design
     ├── gateway.kicad_pcb
@@ -41,6 +41,10 @@ flags.
 ```yaml
 name: gateway
 title: Sample Board review project
+profiles: [profiles]
+params: [params]
+lib: [lib]
+queries: [queries]
 conventions:
   name: gateway
   lexicon:
@@ -63,37 +67,39 @@ file takes. [Naming conventions](../naming-conventions/) covers what goes in it.
 `agni review <design>` runs, and `--checklist <name>` picks another. `agni checklists <design>`
 lists them.
 
-`extends: projects/<name>` layers this project over another one's config, which is how several
+`extends: ../house/project.yaml` layers this project over another one's config, which is how several
 projects share one set of conventions or checklists. The shared one is an ordinary project with no
 designs. The architecture page covers how the layers compose.
 
-Every key is checked. An unknown key, or a `conventions.yaml` or `review.yaml` left beside the
-descriptor from an older layout, is a load error that says where the content goes.
+Every key is checked, and an unknown one is a load error naming its line.
 
-## The directories a project discovers
+## The files a project names
 
-Beside `project.yaml`, agni looks for five directories by their conventional names and composes each
-one it finds into every run on the project's designs:
+Five keys name the files a project's runs read, each a list of paths relative to the descriptor or
+`mount://` URIs, and each path a file or a directory of them:
 
-- `profiles/` holds [interface profiles](../interface-profiles/), which supersede a built-in profile
+- `profiles` names [interface profiles](../interface-profiles/), which supersede a built-in profile
   of the same name.
-- `params/` holds published part specs, layered over a shared corpus part by part (see
+- `params` names published part specs, layered over a shared corpus part by part (see
   [Datasheets](../datasheets/)).
-- `symbols/` holds a symbol library for schematics that reference external symbols.
-- `lib/` holds derived relations, one `.dl` module per file, which every query can call (see
+- `symbols` names symbol libraries for schematics that reference external symbols.
+- `lib` names derived relations, one `.dl` module per file, which every query can call (see
   [Querying](../querying/)).
-- `queries/` holds query sets, which `agni query --set <name>` runs and the viewer's Sets menu opens.
+- `queries` names query sets, which `agni query --set <name>` runs and the viewer's Sets menu opens.
 
-`project.yaml` can name a different directory for any of these, or opt out of one with an empty
-value. Because they are discovered, a flag naming the same directory adds nothing, and for
-`profiles/` it is refused, since the profiles would load twice. To run without a tier, move its
-directory aside.
+Nothing is read for its folder's name, so a folder called `profiles/` that no descriptor names is not
+in the run, and to run without a tier you delete its line. A path that names nothing is a load error,
+since reading on without it would report as though the team declared no such tier. A flag naming a
+directory the project already names adds nothing, and for `profiles` it is refused, since the
+profiles would load twice.
 
 ## design.yaml
 
 ```yaml
 name: gateway
 title: Sample Board
+extends: ../../project.yaml
+symbols: [symbols]
 entry: gateway.edn
 companions:
   - gateway.kicad_sch
@@ -106,6 +112,11 @@ intent:
     PMIC_CORE_3V3: {nominal: 3.3, domain: io}
 ```
 
+`extends` names the design's project, and a design takes its project's config only by naming it. A
+design that names none while a `project.yaml` sits in a folder above it is a load error, since that is
+the shape of a forgotten `extends`. A design that names none in a tree with no project reads on its
+own, with whatever its descriptor declares.
+
 `entry` is the file analysis reads, normally the netlist the team produces. `companions` are other
 views of the same design, a drawn schematic for sheets and a board for copper. They are drawn and
 checked against, never read as a second source of components. Naming the design folder, the entry
@@ -116,9 +127,16 @@ you named instead.
 own board. [Comparing revisions](../comparing-revisions/#declared-revisions) covers what happens to
 one you leave undeclared.
 
-`intent:` declares what the board is supposed to contain, its modules, rails and pin maps, and is
-per design where everything in `project.yaml` is per team. [Design intent](../design-intent/) covers
-its forms. A design can also keep its own `symbols/` beside its descriptor.
+`intent:` declares what the board is supposed to contain, its modules, rails and pin maps.
+[Design intent](../design-intent/) covers its forms.
+
+A design can declare any section a project can, and its own layer goes on top of its project's. Most
+designs declare only their intent and their own symbol library, but a board kept under an older
+naming scheme can carry its own `conventions:`, and a board with a peculiarity can add a checklist.
+A design's convention or intent replaces its project's, a checklist of the same name replaces the
+project's in place, and the files it names are read beside the project's. Only a design declares
+`entry`, `companions`, `revisions` and `flatten_hierarchy`, and any of those in a `project.yaml` is a
+load error.
 
 `flatten_hierarchy: true` reads a hierarchical netlist whole, walking into every block its top level
 places, for every surface that opens the design: the CLI with no flag, a server, and the browser.

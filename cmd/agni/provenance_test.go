@@ -40,13 +40,13 @@ func projectFixture(t *testing.T) string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	project := "name: prov\ntitle: Provenance fixture\nconventions:\n"
+	project := "name: prov\ntitle: Provenance fixture\nparams: [params]\nconventions:\n"
 	for _, line := range strings.Split(strings.TrimRight(string(conv), "\n"), "\n") {
 		project += "  " + line + "\n"
 	}
 	write("project.yaml", project)
 	copyIn("testdata/review/can-broken.edn", "designs/d/board.edn")
-	write("designs/d/design.yaml", "name: d\ntitle: D\nentry: board.edn\n")
+	write("designs/d/design.yaml", "name: d\nextends: ../../project.yaml\ntitle: D\nentry: board.edn\n")
 	// A params directory with one seeded spec, so the corpus is genuinely attached rather than merely
 	// declared. Its contents do not matter, since RunConfig.params reports only that a corpus reached
 	// the run.

@@ -19,13 +19,13 @@ func mapFS(files map[string]string) fstest.MapFS {
 // demoStore is the layout a review project takes:
 //
 //	project.yaml                      the project
-//	designs/gateway/design.yaml       entry gateway.edn, board + schematic companions
+//	designs/gateway/design.yaml       extends it, entry gateway.edn, board + schematic companions
 //	designs/gateway/symbols/          a subfolder of the design, not a design of its own
 //	scratch/loose.edn                 belongs to no design
 func demoStore() *FSStore {
 	return NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"project.yaml":                              "name: gateway\ntitle: Gateway program\nconventions: {name: gateway}\n",
-		"designs/gateway/design.yaml":               "name: gateway\ntitle: Sample Board\nentry: gateway.edn\ncompanions: [gateway.kicad_pcb, gateway.kicad_sch]\n",
+		"designs/gateway/design.yaml":               "name: gateway\ntitle: Sample Board\nextends: ../../project.yaml\nentry: gateway.edn\ncompanions: [gateway.kicad_pcb, gateway.kicad_sch]\n",
 		"designs/gateway/gateway.edn":               "x",
 		"designs/gateway/gateway.kicad_pcb":         "x",
 		"designs/gateway/gateway.kicad_sch":         "x",
@@ -270,28 +270,13 @@ func TestFSStoreProjectWithNoSections(t *testing.T) {
 	}
 }
 
-// A conventions.yaml or review.yaml beside project.yaml is the layout before agni issue 828. Reading
-// the project without it would drop a tier and read as a team that declared none, so the load fails
-// and names where the content goes.
-func TestFSStoreRefusesFormerProjectFiles(t *testing.T) {
-	ctx := context.Background()
-	if _, err := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: p\n"})}).Project(ctx, "projects/p"); err != nil {
-		t.Fatalf("positive control: a project with neither file must load: %v", err)
-	}
-	for file, want := range map[string]string{"conventions.yaml": "under conventions:", "review.yaml": "under checklists:"} {
-		s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: p\n", file: "name: x\n"})})
-		_, err := s.Projects(ctx)
-		if err == nil || !strings.Contains(err.Error(), file+" is no longer read") || !strings.Contains(err.Error(), want) {
-			t.Errorf("%s: error = %v, want it refused and pointed %s", file, err, want)
-		}
-	}
-}
-
-func TestParseProjectRefusesTheFileForms(t *testing.T) {
+// A section is written inline, so a section holding a file name fails at its line rather than reading
+// as a project that declared none.
+func TestParseProjectRefusesMalformedSections(t *testing.T) {
 	for label, c := range map[string]struct{ doc, want string }{
-		"conventions naming a file": {"name: p\nconventions: house.yaml\n", "written inline under conventions:"},
-		"checklist key":             {"name: p\nchecklist: review.yaml\n", "written inline under checklists:"},
-		"checklist naming a file":   {"name: p\nchecklists: {review: review.yaml}\n", "not a file name"},
+		"conventions naming a file": {"name: p\nconventions: house.yaml\n", "must be a mapping"},
+		"checklist key":             {"name: p\nchecklist: review.yaml\n", "field checklist not found"},
+		"checklist naming a file":   {"name: p\nchecklists: {review: review.yaml}\n", "must be a checklist (name, areas)"},
 		"checklists as a list":      {"name: p\nchecklists: [review]\n", "must map a name to a checklist"},
 		"unknown conventions key":   {"name: p\nconventions: {nmae: x}\n", `unknown key "nmae"`},
 		"invalid checklist":         {"name: p\nchecklists: {review: {name: R, areas: [{name: A, items: [{title: no id}]}]}}\n", `checklist "review"`},
@@ -303,64 +288,14 @@ func TestParseProjectRefusesTheFileForms(t *testing.T) {
 	}
 }
 
-// TestFSStoreDiscoversALibraryAndHonoursAnOptOut covers the lib/ tier (agni issue 773): a project
-// with a lib/ directory carries it as a library URI with nothing declared, and an empty `lib:`
-// declaration turns it off with the directory still in place, the way every discovered tier is
-// turned off.
-func TestFSStoreDiscoversALibraryAndHonoursAnOptOut(t *testing.T) {
-	for name, c := range map[string]struct {
-		descriptor string
-		want       []string
-	}{
-		"discovered": {"name: p\n", []string{"mount://m/lib"}},
-		"declared":   {"name: p\nlib: lib\n", []string{"mount://m/lib"}},
-		"opted out":  {"name: p\nlib: \"\"\n", nil},
-		"elsewhere":  {"name: p\nlib: shared/dl\n", nil},
-	} {
-		t.Run(name, func(t *testing.T) {
-			s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
-				"project.yaml": c.descriptor,
-				"lib/house.dl": "x(?n: net) :- net.rail(?n);\n",
-			})})
-			p, err := s.Project(context.Background(), "projects/p")
-			if err != nil {
-				t.Fatal(err)
-			}
-			if got := p.GetConfig().GetLibraryUris(); strings.Join(got, ",") != strings.Join(c.want, ",") {
-				t.Errorf("library uris = %v, want %v", got, c.want)
-			}
-		})
-	}
-}
-
-// A design's intent is a section of its design.yaml (agni issue 824). An intent.yaml left beside the
-// descriptor fails the read and names where its declarations go, because reading the design without
-// it would drop every intent rule and look like a board that declares nothing.
-func TestFSStoreRefusesAFormerIntentFile(t *testing.T) {
-	files := map[string]string{
-		"project.yaml":                "name: gateway\n",
-		"designs/gateway/design.yaml": "name: gateway\nentry: gateway.edn\n",
-		"designs/gateway/gateway.edn": "x",
-	}
-	ctx := context.Background()
-	if _, _, err := NewFSStore(Tree{Mount: "m", FS: mapFS(files)}).ResolveDesign(ctx, testURI(t, "m", "designs/gateway")); err != nil {
-		t.Fatalf("positive control: the design without intent.yaml must resolve: %v", err)
-	}
-	files["designs/gateway/intent.yaml"] = "name: gateway\nmodules: []\n"
-	_, _, err := NewFSStore(Tree{Mount: "m", FS: mapFS(files)}).ResolveDesign(ctx, testURI(t, "m", "designs/gateway"))
-	if err == nil || !strings.Contains(err.Error(), "intent.yaml is no longer read") || !strings.Contains(err.Error(), "design.yaml") {
-		t.Fatalf("a stray intent.yaml must fail the read and say where its declarations go, got %v", err)
-	}
-}
-
-// A design's intent section reaches its config as a value (agni issue 828), so nothing above the
+// A design's intent section reaches its config as a value (agni issue 824), so nothing above the
 // store opens design.yaml again, and a design without one carries none.
 func TestFSStoreCarriesTheDesignsIntent(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"project.yaml":          "name: gateway\n",
-		"designs/a/design.yaml": "name: a\nentry: a.edn\nintent:\n  modules:\n  - {name: X, class: soc}\n",
+		"designs/a/design.yaml": "name: a\nextends: ../../project.yaml\nentry: a.edn\nintent:\n  modules:\n  - {name: X, class: soc}\n",
 		"designs/a/a.edn":       "x",
-		"designs/b/design.yaml": "name: b\nentry: b.edn\n",
+		"designs/b/design.yaml": "name: b\nextends: ../../project.yaml\nentry: b.edn\n",
 		"designs/b/b.edn":       "x",
 	})})
 	ctx := context.Background()
@@ -380,37 +315,136 @@ func TestFSStoreCarriesTheDesignsIntent(t *testing.T) {
 	}
 }
 
-func TestParseDesignRefusesIntentNamingAFile(t *testing.T) {
-	_, _, err := ParseDesign(strings.NewReader("name: a\nentry: a.edn\nintent: intent.yaml\n"))
-	if err == nil || !strings.Contains(err.Error(), "declared inline") {
-		t.Fatalf("intent naming a file must fail and say it is declared inline now, got %v", err)
+// Every tier a run reads is named in a descriptor (agni issue 1136). A directory or a single file
+// becomes a URI, a folder with a tier's conventional name that nothing names is not read, and a path
+// naming nothing fails the load rather than reading as a team that declared no such tier.
+func TestFSStoreReadsOnlyTheSourcesADescriptorNames(t *testing.T) {
+	files := map[string]string{
+		"lib/house.dl":         "x(?n: net) :- net.rail(?n);\n",
+		"queries/power.yaml":   "queries: []\n",
+		"profiles/can.yaml":    "x",
+		"shared/params/a.json": "x",
 	}
-}
-
-// TestFSStoreDiscoversQuerySetsAndHonoursAnOptOut covers the queries/ tier (agni issue 745) the way
-// the library test covers lib/: discovered with nothing declared, and off with an empty declaration.
-func TestFSStoreDiscoversQuerySetsAndHonoursAnOptOut(t *testing.T) {
 	for name, c := range map[string]struct {
 		descriptor string
-		want       []string
+		lib, qs    []string
+		profiles   []string
+		params     []string
 	}{
-		"discovered": {"name: p\n", []string{"mount://m/queries"}},
-		"declared":   {"name: p\nqueries: queries\n", []string{"mount://m/queries"}},
-		"opted out":  {"name: p\nqueries: \"\"\n", nil},
-		"elsewhere":  {"name: p\nqueries: shared/tables\n", nil},
+		"nothing named":   {descriptor: "name: p\n"},
+		"directories":     {descriptor: "name: p\nlib: [lib]\nqueries: [queries/]\n", lib: []string{"mount://m/lib"}, qs: []string{"mount://m/queries"}},
+		"a single file":   {descriptor: "name: p\nprofiles: [profiles/can.yaml]\n", profiles: []string{"mount://m/profiles/can.yaml"}},
+		"a mount uri":     {descriptor: "name: p\nparams: ['mount://m/shared/params']\n", params: []string{"mount://m/shared/params"}},
+		"several sources": {descriptor: "name: p\nlib: [lib, lib/house.dl]\n", lib: []string{"mount://m/lib", "mount://m/lib/house.dl"}},
 	} {
 		t.Run(name, func(t *testing.T) {
-			s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
-				"project.yaml":       c.descriptor,
-				"queries/power.yaml": "queries:\n  - {name: Rails, query: \"net.rail(?n) => ?n\"}\n",
-			})})
-			p, err := s.Project(context.Background(), "projects/p")
+			fs := map[string]string{"project.yaml": c.descriptor}
+			for k, v := range files {
+				fs[k] = v
+			}
+			p, err := NewFSStore(Tree{Mount: "m", FS: mapFS(fs)}).Project(context.Background(), "projects/p")
 			if err != nil {
 				t.Fatal(err)
 			}
-			if got := p.GetConfig().GetQuerySetUris(); strings.Join(got, ",") != strings.Join(c.want, ",") {
-				t.Errorf("query set uris = %v, want %v", got, c.want)
+			cfg := p.GetConfig()
+			for tier, pair := range map[string][2][]string{
+				"lib": {cfg.GetLibraryUris(), c.lib}, "queries": {cfg.GetQuerySetUris(), c.qs},
+				"profiles": {cfg.GetProfileUris(), c.profiles}, "params": {cfg.GetParamUris(), c.params},
+			} {
+				if strings.Join(pair[0], ",") != strings.Join(pair[1], ",") {
+					t.Errorf("%s = %v, want %v", tier, pair[0], pair[1])
+				}
 			}
 		})
+	}
+	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: p\nprofiles: [ifaces]\n"})})
+	if _, err := s.Projects(context.Background()); err == nil || !strings.Contains(err.Error(), `profiles "ifaces" names nothing`) {
+		t.Errorf("a source naming nothing: error = %v, want the load refused naming it", err)
+	}
+	s = NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: p\nlib: [../outside]\n"})})
+	if _, err := s.Projects(context.Background()); err == nil || !strings.Contains(err.Error(), "escapes its mount") {
+		t.Errorf("a source leaving the mount: error = %v, want it refused", err)
+	}
+}
+
+// A design names its project (agni issue 1136), so its project is the one it names wherever the two
+// sit, and a project's designs are the ones naming it, not the ones under its folder.
+func TestFSStoreADesignBelongsToTheProjectItNames(t *testing.T) {
+	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
+		"teams/house/project.yaml":  "name: house\n",
+		"teams/other/project.yaml":  "name: other\n",
+		"boards/a/design.yaml":      "name: a\nextends: ../../teams/house/project.yaml\nentry: a.edn\n",
+		"boards/a/a.edn":            "x",
+		"teams/other/b/design.yaml": "name: b\nextends: ../../house/project.yaml\nentry: b.edn\n",
+		"teams/other/b/b.edn":       "x",
+		"teams/other/c/design.yaml": "name: c\nextends: ../project.yaml\nentry: c.edn\n",
+		"teams/other/c/c.edn":       "x",
+	})})
+	ctx := context.Background()
+	for team, want := range map[string]string{"projects/house": "projects/house/designs/a,projects/house/designs/b", "projects/other": "projects/other/designs/c"} {
+		ds, err := s.Designs(ctx, team)
+		if err != nil {
+			t.Fatal(err)
+		}
+		var got []string
+		for _, d := range ds {
+			got = append(got, d.GetName())
+		}
+		if strings.Join(got, ",") != want {
+			t.Errorf("Designs(%s) = %v, want %s", team, got, want)
+		}
+	}
+	d, p, err := s.ResolveDesign(ctx, testURI(t, "m", "teams/other/b/b.edn"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if p.GetName() != "projects/house" || d.GetName() != "projects/house/designs/b" {
+		t.Errorf("a design under one project's folder naming another resolved to %q in %q, want house's", d.GetName(), p.GetName())
+	}
+}
+
+// A design that names no parent while a project descriptor sits above it is the shape of a forgotten
+// `extends`, and reading on would run the board on the built-in config with nothing said.
+func TestFSStoreRefusesAForgottenExtends(t *testing.T) {
+	files := map[string]string{
+		"project.yaml":          "name: p\n",
+		"designs/a/design.yaml": "name: a\nextends: ../../project.yaml\nentry: a.edn\n",
+		"designs/a/a.edn":       "x",
+	}
+	ctx := context.Background()
+	if _, p, err := NewFSStore(Tree{Mount: "m", FS: mapFS(files)}).ResolveDesign(ctx, testURI(t, "m", "designs/a")); err != nil || p.GetName() != "projects/p" {
+		t.Fatalf("positive control: a design naming its project resolves to it, got %v, %v", p, err)
+	}
+	files["designs/a/design.yaml"] = "name: a\nentry: a.edn\n"
+	_, _, err := NewFSStore(Tree{Mount: "m", FS: mapFS(files)}).ResolveDesign(ctx, testURI(t, "m", "designs/a"))
+	if err == nil || !strings.Contains(err.Error(), "extends nothing, and m:project.yaml sits above it") {
+		t.Fatalf("error = %v, want the forgotten extends named", err)
+	}
+}
+
+// A project names the descriptor it extends by path or by mount:// URI, and the store hands it on as
+// that project's resource name, which is what the service walks the chain by.
+func TestFSStoreNamesAProjectsParentByResourceName(t *testing.T) {
+	s := NewFSStore(
+		Tree{Mount: "m", FS: mapFS(map[string]string{
+			"house/project.yaml": "name: house\nconventions: {name: house}\n",
+			"a/project.yaml":     "name: a\nextends: ../house/project.yaml\n",
+			"b/project.yaml":     "name: b\nextends: 'mount://shared/project.yaml'\n",
+		})},
+		Tree{Mount: "shared", FS: mapFS(map[string]string{"project.yaml": "name: shared\n"})},
+	)
+	ctx := context.Background()
+	for name, want := range map[string]string{"projects/a": "projects/house", "projects/b": "projects/shared"} {
+		p, err := s.Project(ctx, name)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if got := p.GetConfig().GetExtends(); got != want {
+			t.Errorf("%s extends %q, want %q", name, got, want)
+		}
+	}
+	s = NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"a/project.yaml": "name: a\nextends: ../house/project.yaml\n"})})
+	if _, err := s.Projects(ctx); err == nil || !strings.Contains(err.Error(), "names nothing") {
+		t.Errorf("extending a descriptor that is not there: error = %v, want it refused", err)
 	}
 }

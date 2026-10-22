@@ -255,9 +255,9 @@ func writeTutorialLikeProject(t *testing.T, root string) {
 			t.Fatal(err)
 		}
 	}
-	mk("project.yaml", "name: board\ntitle: Test project\n")
+	mk("project.yaml", "name: board\ntitle: Test project\nprofiles: [profiles]\n")
 	mk("profiles/can.yaml", canProfileYAML)
-	mk("designs/board/design.yaml", "name: board\ntitle: Test board\nentry: board.edn\n")
+	mk("designs/board/design.yaml", "name: board\nextends: ../../project.yaml\ntitle: Test board\nentry: board.edn\n")
 	mk("designs/board/board.edn", minimalEDN)
 }
 

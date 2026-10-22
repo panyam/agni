@@ -133,3 +133,30 @@ func TestListDesignFilesMarksTheBoard(t *testing.T) {
 		t.Errorf("rev C declares no board, and %v were marked", got)
 	}
 }
+
+// A design's files are what its whole extends chain names (agni issue 1136): each project's
+// descriptor and the files and folders it names, and what the design names itself, a single file
+// included. A file in a folder a descriptor never names is not read, so it is not listed, since the
+// browser's engine fetches exactly this list.
+func TestListDesignFilesFollowsTheExtendsChain(t *testing.T) {
+	m := fshost.Mount{Name: "m", FS: fshost.MemFS(map[string][]byte{
+		"house/project.yaml":      []byte("name: house\nprofiles: [profiles/can.yaml]\n"),
+		"house/profiles/can.yaml": []byte("x"),
+		"house/profiles/lin.yaml": []byte("x"),
+		"team/project.yaml":       []byte("name: team\nextends: ../house/project.yaml\nlib: [lib]\n"),
+		"team/lib/house.dl":       []byte("x"),
+		"team/params/a.textproto": []byte("x"),
+		"team/b/design.yaml":      []byte("name: b\nextends: ../project.yaml\nentry: b.edn\nqueries: [../../shared/q/power.yaml]\n"),
+		"team/b/b.edn":            []byte("x"),
+		"shared/q/power.yaml":     []byte("x"),
+		"shared/q/other.yaml":     []byte("x"),
+	})}
+	host := fshost.New(m)
+	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: m.Name, FS: m.FS})}
+	svc := service.NewWorkspaceService(host.Workspace()).WithDesignFiles(resolver, host.Workspace())
+	got := strings.Join(filePaths(listDesignFiles(t, svc, "mount://m/team/b")), ",")
+	want := "house/profiles/can.yaml,house/project.yaml,shared/q/power.yaml,team/b/b.edn,team/b/design.yaml,team/lib/house.dl,team/project.yaml"
+	if got != want {
+		t.Errorf("files = %s\nwant    %s", got, want)
+	}
+}

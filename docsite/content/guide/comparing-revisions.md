@@ -72,6 +72,7 @@ in the design's `design.yaml`, under `revisions`, with its own entry and compani
 
 ```yaml
 name: gateway
+extends: ../../project.yaml
 entry: gateway.edn
 companions: [gateway.kicad_sch, gateway.kicad_pcb]
 revisions:

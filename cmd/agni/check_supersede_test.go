@@ -158,7 +158,7 @@ func TestReviewReportsAProjectsOwnSupersessions(t *testing.T) {
 	proj := t.TempDir()
 	writeTutorialLikeProject(t, proj)
 	if err := os.WriteFile(filepath.Join(proj, "project.yaml"),
-		[]byte("name: board\ntitle: Test project\nchecklists:\n  review:\n    name: Test checklist\n    areas:\n      - name: Interfaces\n        items:\n          - {id: \"I1\", title: the CAN interface is complete, profile: CAN}\n"), 0o644); err != nil {
+		[]byte("name: board\ntitle: Test project\nprofiles: [profiles]\nchecklists:\n  review:\n    name: Test checklist\n    areas:\n      - name: Interfaces\n        items:\n          - {id: \"I1\", title: the CAN interface is complete, profile: CAN}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	t.Chdir(proj)
@@ -191,7 +191,7 @@ func TestReviewSupersessionNoteIsNotRepeatedPerDesign(t *testing.T) {
 	proj := t.TempDir()
 	writeTutorialLikeProject(t, proj)
 	if err := os.WriteFile(filepath.Join(proj, "project.yaml"),
-		[]byte("name: board\ntitle: Test project\nchecklists:\n  review:\n    name: Test checklist\n    areas:\n      - name: Interfaces\n        items:\n          - {id: \"I1\", title: the CAN interface is complete, profile: CAN}\n"), 0o644); err != nil {
+		[]byte("name: board\ntitle: Test project\nprofiles: [profiles]\nchecklists:\n  review:\n    name: Test checklist\n    areas:\n      - name: Interfaces\n        items:\n          - {id: \"I1\", title: the CAN interface is complete, profile: CAN}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	second := filepath.Join(proj, "designs", "board2")
@@ -199,7 +199,7 @@ func TestReviewSupersessionNoteIsNotRepeatedPerDesign(t *testing.T) {
 		t.Fatal(err)
 	}
 	for name, body := range map[string]string{
-		"design.yaml": "name: board2\ntitle: Second board\nentry: board.edn\n",
+		"design.yaml": "name: board2\ntitle: Second board\nextends: ../../project.yaml\nentry: board.edn\n",
 		"board.edn":   minimalEDN,
 	} {
 		if err := os.WriteFile(filepath.Join(second, name), []byte(body), 0o644); err != nil {

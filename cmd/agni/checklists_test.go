@@ -38,9 +38,9 @@ func sharedChecklistTree(t *testing.T) string {
 		t.Fatal(err)
 	}
 	write("house/project.yaml", "name: house\ntitle: House\nchecklists:\n  rails:\n"+indent("testdata/intent/rails-checklist.yaml"))
-	write("proj/project.yaml", "name: proj\ntitle: Proj\nextends: projects/house\nchecklists:\n  review:\n"+indent("testdata/review/mini.yaml"))
+	write("proj/project.yaml", "name: proj\ntitle: Proj\nextends: ../house/project.yaml\nchecklists:\n  review:\n"+indent("testdata/review/mini.yaml"))
 	write("proj/designs/d/board.edn", string(design))
-	write("proj/designs/d/design.yaml", "name: d\ntitle: D\nentry: board.edn\n")
+	write("proj/designs/d/design.yaml", "name: d\nextends: ../../project.yaml\ntitle: D\nentry: board.edn\n")
 	write("agni.yaml", "mounts:\n  t: "+root+"\n")
 	// A --mount or a mount table left by another test would shut this agni.yaml out.
 	freshWorkspace(t)

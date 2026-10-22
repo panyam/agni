@@ -8,6 +8,8 @@ import (
 	"sort"
 	"strings"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/readers/formats"
@@ -50,8 +52,8 @@ func (s *WorkspaceService) ProposeDesigns(ctx context.Context, req *webapi.Propo
 //
 //   - A folder holding a `design.yaml` is DECLARED, and every file under it belongs to that design.
 //     The proposal reports the descriptor rather than guessing over it.
-//   - A `project.yaml`'s folder lends its descriptor and its profiles, params, symbols and lib
-//     directories to the designs under it, so those are support files, not unread ones.
+//   - A `project.yaml` and the files it names (profiles, params, symbols, lib, queries) are support
+//     files, not unread ones, and a design proposed under it extends it.
 //   - (Netlists go first, so a netlist claims the KiCad schematic and board of its own name as its
 //     views before either can become a design of its own; see the netlist rule below.)
 //   - A `.kicad_pro` claims the `.kicad_sch` of its stem as the entry, that sheet's child sheets, and
@@ -102,6 +104,8 @@ type proposer struct {
 	resp    webapi.ProposeDesignsResponse
 	// kicadDirs are the folders holding a KiCad design, for its libraries to attach to.
 	kicadDirs map[string]*webapi.ProposedDesign
+	// projectDirs are the folders holding a project descriptor, which a proposal under one extends.
+	projectDirs []string
 }
 
 func (p *proposer) claim(f string) { p.claimed[f] = true }
@@ -152,9 +156,16 @@ func (p *proposer) declared() {
 	}
 }
 
-// projectTiers are the directories a project's config is read from by default, which
-// internal/projects's descriptor defaults name.
-var projectTiers = []string{"profiles", "params", "symbols", "lib", "queries"}
+// projectSources is the part of a project descriptor propose reads: the files it names, which are
+// support files rather than designs or unread ones. internal/projects owns the descriptor's schema and
+// checks it strictly; this reads it loosely, since a proposal only sorts files.
+type projectSources struct {
+	Profiles []string `yaml:"profiles"`
+	Params   []string `yaml:"params"`
+	Symbols  []string `yaml:"symbols"`
+	Lib      []string `yaml:"lib"`
+	Queries  []string `yaml:"queries"`
+}
 
 func (p *proposer) projects() {
 	for _, f := range p.files {
@@ -163,14 +174,48 @@ func (p *proposer) projects() {
 		}
 		d := dirOf(f)
 		p.support(f)
-		for _, t := range projectTiers {
-			for _, g := range p.files {
-				if under(joinPath(d, t), g) && p.free(g) {
-					p.support(g)
+		p.projectDirs = append(p.projectDirs, d)
+		text, err := p.read(f)
+		if err != nil {
+			continue
+		}
+		var src projectSources
+		if yaml.Unmarshal(text, &src) != nil {
+			continue
+		}
+		for _, list := range [][]string{src.Profiles, src.Params, src.Symbols, src.Lib, src.Queries} {
+			for _, ref := range list {
+				named := path.Clean(joinPath(d, ref))
+				for _, g := range p.files {
+					if (g == named || under(named, g)) && p.free(g) {
+						p.support(g)
+					}
 				}
 			}
 		}
 	}
+}
+
+// extendsFor is the `extends` a proposal in folder writes: the nearest project descriptor at or above
+// it, relative to the folder, or "" when no project encloses it. A design is never found under its
+// project by where it sits, so a proposal names it.
+func (p *proposer) extendsFor(folder string) string {
+	best := ""
+	found := false
+	for _, d := range p.projectDirs {
+		if (d == "" || folder == d || strings.HasPrefix(folder, d+"/")) && (!found || len(d) > len(best)) {
+			best, found = d, true
+		}
+	}
+	if !found {
+		return ""
+	}
+	rest := strings.TrimPrefix(strings.TrimPrefix(folder, best), "/")
+	up := ""
+	if rest != "" {
+		up = strings.Repeat("../", strings.Count(rest, "/")+1)
+	}
+	return up + ProjectDescriptorName
 }
 
 func (p *proposer) support(f string) {
@@ -460,7 +505,11 @@ func (p *proposer) descriptor(entry string, companions []string, revisions []*we
 		return u
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "name: %s\nentry: %s\n", yamlScalar(designID(stemOf(entry))), yamlScalar(rel(entry)))
+	fmt.Fprintf(&b, "name: %s\n", yamlScalar(designID(stemOf(entry))))
+	if parent := p.extendsFor(dir); parent != "" {
+		fmt.Fprintf(&b, "extends: %s\n", yamlScalar(parent))
+	}
+	fmt.Fprintf(&b, "entry: %s\n", yamlScalar(rel(entry)))
 	if len(companions) > 0 {
 		b.WriteString("companions:\n")
 		for _, c := range companions {

@@ -11,6 +11,7 @@ import (
 	"path"
 	"sort"
 	"strings"
+	"time"
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/param"
@@ -51,12 +52,12 @@ func (c *ConfigResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCo
 	// than what the config named. One URI can resolve to different bytes on two servers.
 	var read []DigestRoot
 	for _, uri := range cfg.GetProfileUris() {
-		d, err := c.dir(uri)
+		d, sub, err := c.source(uri)
 		if err != nil {
 			return service.ResolvedConfig{}, err
 		}
 		read = append(read, d)
-		ps, err := profiles.LoadFS(d.FS, d.Name)
+		ps, err := profiles.LoadFS(sub, ".")
 		if err != nil {
 			return service.ResolvedConfig{}, fmt.Errorf("%s profiles %s: %w", namespace, uri, err)
 		}
@@ -65,15 +66,11 @@ func (c *ConfigResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCo
 		out.Profiles = true
 	}
 	for _, uri := range cfg.GetParamUris() {
-		d, err := c.dir(uri)
+		d, sub, err := c.source(uri)
 		if err != nil {
 			return service.ResolvedConfig{}, err
 		}
 		read = append(read, d)
-		sub, err := fs.Sub(d.FS, d.Name)
-		if err != nil {
-			return service.ResolvedConfig{}, err
-		}
 		set, err := param.LoadSet(sub)
 		if err != nil {
 			return service.ResolvedConfig{}, fmt.Errorf("%s params %s: %w", namespace, uri, err)
@@ -101,22 +98,18 @@ func (c *ConfigResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCo
 	// A project's own library is read here and composed by the service (Overlay.Registry), so a module
 	// that does not parse or collides is reported when a query first runs over it, naming the file.
 	for _, uri := range cfg.GetLibraryUris() {
-		d, err := c.dir(uri)
+		d, sub, err := c.source(uri)
 		if err != nil {
 			return service.ResolvedConfig{}, err
 		}
 		read = append(read, d)
-		sub, err := fs.Sub(d.FS, d.Name)
-		if err != nil {
-			return service.ResolvedConfig{}, err
-		}
 		mods, docs, err := lib.Read(sub)
 		if err != nil {
 			return service.ResolvedConfig{}, fmt.Errorf("%s library %s: %w", namespace, uri, err)
 		}
 		for _, m := range mods {
 			out.Library = append(out.Library, service.LibraryModule{
-				Path: m.Path, Language: datalog.LanguageName, Text: m.Text, Source: strings.TrimSuffix(uri, "/") + "/" + m.File,
+				Path: m.Path, Language: datalog.LanguageName, Text: m.Text, Source: under(uri, d) + "/" + m.File,
 			})
 		}
 		for p, doc := range docs {
@@ -128,21 +121,17 @@ func (c *ConfigResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCo
 	}
 	// A project's query sets, one per `.yaml` or `.yml` file, parsed as `agni query --set` parses one.
 	for _, uri := range cfg.GetQuerySetUris() {
-		d, err := c.dir(uri)
+		d, sub, err := c.source(uri)
 		if err != nil {
 			return service.ResolvedConfig{}, err
 		}
 		read = append(read, d)
-		sub, err := fs.Sub(d.FS, d.Name)
-		if err != nil {
-			return service.ResolvedConfig{}, err
-		}
 		sets, err := readQuerySets(sub)
 		if err != nil {
 			return service.ResolvedConfig{}, fmt.Errorf("%s query sets %s: %w", namespace, uri, err)
 		}
 		for _, s := range sets {
-			s.Source = strings.TrimSuffix(uri, "/") + "/" + s.Source
+			s.Source = under(uri, d) + "/" + s.Source
 			out.QuerySets = append(out.QuerySets, s)
 		}
 	}
@@ -176,6 +165,93 @@ func (c *ConfigResolver) dir(uri string) (DigestRoot, error) {
 	}
 	return DigestRoot{}, fmt.Errorf("no such mount %q: %w", u.Mount, service.ErrNotFound)
 }
+
+// source resolves a config URI to what its tier's loader reads, an FS whose root holds the tier's
+// files. A directory is that directory, and a single FILE is a root holding that file alone, so a
+// descriptor can name `profiles/can.yaml` as well as `profiles/` and the loaders need no second form.
+func (c *ConfigResolver) source(uri string) (DigestRoot, fs.FS, error) {
+	d, err := c.dir(uri)
+	if err != nil {
+		return DigestRoot{}, nil, err
+	}
+	info, err := fs.Stat(d.FS, d.Name)
+	if err != nil {
+		return DigestRoot{}, nil, fmt.Errorf("%s: %w", uri, err)
+	}
+	if !info.IsDir() {
+		return d, oneFile{fsys: d.FS, name: d.Name, info: info}, nil
+	}
+	sub, err := fs.Sub(d.FS, d.Name)
+	if err != nil {
+		return DigestRoot{}, nil, err
+	}
+	return d, sub, nil
+}
+
+// under is the URI of the directory a source's files sit in: the source itself, or the folder holding
+// it when it names one file, so a file's own name is not written twice.
+func under(uri string, d DigestRoot) string {
+	if info, err := fs.Stat(d.FS, d.Name); err == nil && !info.IsDir() {
+		return uri[:strings.LastIndex(uri, "/")]
+	}
+	return strings.TrimSuffix(uri, "/")
+}
+
+// oneFile is an FS whose root directory holds one file of another FS, under its base name.
+type oneFile struct {
+	fsys fs.FS
+	name string
+	info fs.FileInfo
+}
+
+func (o oneFile) Open(name string) (fs.File, error) {
+	switch name {
+	case ".":
+		return &oneFileRoot{entry: fs.FileInfoToDirEntry(o.info)}, nil
+	case path.Base(o.name):
+		return o.fsys.Open(o.name)
+	}
+	return nil, &fs.PathError{Op: "open", Path: name, Err: fs.ErrNotExist}
+}
+
+func (o oneFile) ReadDir(name string) ([]fs.DirEntry, error) {
+	if name != "." {
+		return nil, &fs.PathError{Op: "readdir", Path: name, Err: fs.ErrNotExist}
+	}
+	return []fs.DirEntry{fs.FileInfoToDirEntry(o.info)}, nil
+}
+
+// oneFileRoot is oneFile's root directory, opened.
+type oneFileRoot struct {
+	entry fs.DirEntry
+	read  bool
+}
+
+func (r *oneFileRoot) Stat() (fs.FileInfo, error) { return rootInfo{}, nil }
+func (r *oneFileRoot) Read([]byte) (int, error) {
+	return 0, &fs.PathError{Op: "read", Path: ".", Err: fs.ErrInvalid}
+}
+func (r *oneFileRoot) Close() error { return nil }
+func (r *oneFileRoot) ReadDir(n int) ([]fs.DirEntry, error) {
+	if r.read {
+		if n > 0 {
+			return nil, io.EOF
+		}
+		return nil, nil
+	}
+	r.read = true
+	return []fs.DirEntry{r.entry}, nil
+}
+
+// rootInfo describes oneFile's root directory.
+type rootInfo struct{}
+
+func (rootInfo) Name() string       { return "." }
+func (rootInfo) Size() int64        { return 0 }
+func (rootInfo) Mode() fs.FileMode  { return fs.ModeDir | 0o555 }
+func (rootInfo) ModTime() time.Time { return time.Time{} }
+func (rootInfo) IsDir() bool        { return true }
+func (rootInfo) Sys() any           { return nil }
 
 // ProfileSourceName is the catalog namespace a project's interface profiles appear under, so a
 // finding reads `gateway-profiles/can-esd-missing` and says which project asked for it.

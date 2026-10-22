@@ -4,6 +4,7 @@
 # descriptor matches rev A's, so the two revisions are read the same way and differ only by the edit.
 name: jetson-agx-thor-baseboard-rev-b
 title: Jetson AGX Thor baseboard, rev B
+extends: ../../project.yaml
 entry: jetson-agx-thor-baseboard.kicad_sch
 companions:
   - jetson-agx-thor-baseboard.kicad_pcb

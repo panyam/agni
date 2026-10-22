@@ -3,7 +3,6 @@ package wasmengine
 import (
 	"context"
 	"net/http/httptest"
-	"path/filepath"
 	"sync"
 	"testing"
 
@@ -19,9 +18,8 @@ import (
 // Every answer must equal the one the same request got alone, and under -race the shared model, fact
 // base and cache must not race.
 func TestConcurrentRequestsShareOneReadAndAgree(t *testing.T) {
-	dir := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
 	serve := func() *httptest.Server {
-		eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(readTree(t, dir))})
+		eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(gatewayAlone(t))})
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -113,8 +111,7 @@ var requests = []request{
 // between requests (agni issue 895) and jaala keeps derived relations on a fact base for later queries
 // (panyam/jaala#140), so a library's answer leaking into the next request is the failure to fear.
 func TestTwoLibrariesOnOneKeptDesignAnswerApart(t *testing.T) {
-	dir := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
-	eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(readTree(t, dir))})
+	eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(gatewayAlone(t))})
 	if err != nil {
 		t.Fatal(err)
 	}

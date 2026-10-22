@@ -1,7 +1,7 @@
 # What the rail relation returns under the BUILT-IN vocabulary, which is the "before" half of the
 # lexicon loop.
 #
-# Two things move aside, and neither is padding. The conventions section of project.yaml, because
+# Two things are left out, and neither is padding. The conventions section of project.yaml, because
 # the project declares it and it therefore applies automatically, which makes the before-state otherwise unreachable by
 # naming this design. And the params corpus, because a seeded datasheet's pin functions establish
 # the rail role on their own (agni issue 280), so with it in place this board classifies four rails
@@ -16,5 +16,5 @@
 fixture: examples/tutorial-project
 script: |
   sed -i.orig '/^conventions:/,/^$/d' project.yaml
-  mv params params-off
+  sed -i.orig2 '/^params:/d' project.yaml
   agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n'

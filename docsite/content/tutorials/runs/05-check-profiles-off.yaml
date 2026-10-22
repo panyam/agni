@@ -1,12 +1,12 @@
-# Rung 5: the built-in profile tier on its own, with the project's profiles/ moved aside. No shipped
+# Rung 5: the built-in profile tier on its own, with the project's profiles line deleted. No shipped
 # profile finds an interface in use on this board, so the profile rules say nothing.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: designs/jetson
 show: |
-  mv profiles profiles-off
+  sed -i.orig '/^profiles:/d' project.yaml
   agni check --verdicts designs/jetson
 script: |
-  mv profiles profiles-off
+  sed -i.orig '/^profiles:/d' project.yaml
   agni check --verdicts designs/jetson 2>/dev/null | grep -c '^profile/' || true
   agni check designs/jetson 2>/dev/null | tail -2

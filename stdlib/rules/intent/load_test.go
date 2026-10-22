@@ -71,17 +71,13 @@ func TestParseRejects(t *testing.T) {
 	}
 }
 
-// A file written for the nine-form layout fails at load and says what to write instead, rather than
-// reading as a design that declares nothing (agni issue 824).
-func TestParseRefusesTheEarlierLayout(t *testing.T) {
+// A key the intent section does not have fails at load, with the line, rather than reading as a design
+// that declares nothing. A form at the top level is no intent section at all.
+func TestParseRefusesAnUnknownForm(t *testing.T) {
 	for label, c := range map[string]struct{ doc, want string }{
-		"forms at the top level":    {"name: N\nmodules:\n  - {name: X, class: soc}\n", `sits under "intent:"`},
-		"voltage_domains in intent": {"name: N\nintent:\n  voltage_domains:\n  - {name: io, nominal: 3.3, rails: [3V3]}\n", "nets: {RAIL: {nominal: VOLTS, domain: NAME}}"},
-		"protections in intent":     {"name: N\nintent:\n  protections:\n  - {rail: 3V3, kind: ovp}\n", "protect: [ovp, discharge]"},
-		"net_properties in intent":  {"name: N\nintent:\n  net_properties:\n  - {net: NRST, property: reset-polarity, value: low}\n", "reset: low|high"},
-		"rail_budgets in intent":    {"name: N\nintent:\n  rail_budgets:\n  - {rail: 3V3, peak: 1}\n", "peak: AMPS"},
-		"subsystems in intent":      {"name: N\nintent:\n  subsystems:\n  - {name: reset, nets: [NRST]}\n", "modules: [{name: NAME, nets:"},
-		"intent naming a file":      {"name: N\nintent: intent.yaml\n", "declared inline"},
+		"forms at the top level":    {"name: N\nmodules:\n  - {name: X, class: soc}\n", `no "intent:" section`},
+		"voltage_domains in intent": {"name: N\nintent:\n  voltage_domains:\n  - {name: io, nominal: 3.3, rails: [3V3]}\n", `unknown key "voltage_domains"`},
+		"intent naming a file":      {"name: N\nintent: intent.yaml\n", "must be a mapping"},
 	} {
 		_, err := Parse([]byte(c.doc))
 		if err == nil || !strings.Contains(err.Error(), c.want) {

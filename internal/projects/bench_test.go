@@ -34,11 +34,10 @@ func benchDir(b *testing.B, projects, designs, noise int) Tree {
 	}
 	for p := range projects {
 		base := fmt.Sprintf("p%02d", p)
-		write(base+"/project.yaml", fmt.Sprintf("name: p%02d\ntitle: Project %02d\n", p, p))
-		write(base+"/conventions.yaml", fmt.Sprintf("name: p%02d\nlexicon:\n  net:\n    rail:\n      patterns: [\"^R%d\"]\n", p, p))
+		write(base+"/project.yaml", fmt.Sprintf("name: p%02d\ntitle: Project %02d\nconventions:\n  name: p%02d\n  lexicon:\n    net:\n      rail:\n        patterns: [\"^R%d\"]\n", p, p, p, p))
 		for d := range designs {
 			dd := fmt.Sprintf("%s/designs/d%02d", base, d)
-			write(dd+"/design.yaml", fmt.Sprintf("name: d%02d\nentry: board.edn\n", d))
+			write(dd+"/design.yaml", fmt.Sprintf("name: d%02d\nextends: ../../project.yaml\nentry: board.edn\n", d))
 			write(dd+"/board.edn", "x")
 		}
 	}

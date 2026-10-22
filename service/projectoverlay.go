@@ -89,65 +89,65 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 	return ov.WithFlattenHierarchy(d.GetFlattenHierarchy()), nil
 }
 
-// Checklists returns the checklists a design's project declares, inherited ones included in the order
-// ResolveExtends composes them, and the project's name. A design in no project, or a deployment that
-// resolves none, returns (nil, "", nil), and a project declaring none returns (nil, name, nil), so a
-// caller can tell an operator which fix applies. A descriptor that exists and does not parse is an
-// error, as for Overlay.
+// Checklists returns the checklists a design reads, its project's and its own, inherited ones first in
+// the order ResolveExtends composes them, and the project's name. A design in no project still has the
+// checklists it declares itself. A design resolving nothing, or a deployment that resolves none,
+// returns (nil, "", nil), and a project whose chain declares none returns (nil, name, nil), so a caller
+// can tell an operator which fix applies. A descriptor that exists and does not parse is an error, as
+// for Overlay.
 func (r *ProjectResolver) Checklists(ctx context.Context, uri artifact.URI) ([]*webapi.NamedChecklist, string, error) {
-	if r == nil || r.Store == nil {
-		return nil, "", nil
+	cfg, project, err := r.designConfig(ctx, uri)
+	if err != nil || cfg == nil {
+		return nil, project, err
 	}
-	_, p, err := r.Store.ResolveDesign(ctx, uri)
-	switch {
-	case errors.Is(err, ErrNotFound):
-		return nil, "", nil
-	case err != nil:
-		return nil, "", err
-	case p == nil:
-		return nil, "", nil
-	}
-	cfg, err := ResolveExtends(ctx, r.Store, p)
-	if err != nil {
-		return nil, "", err
-	}
-	return cfg.GetChecklists(), p.GetName(), nil
+	return cfg.GetChecklists(), project, nil
 }
 
-// QuerySets returns the query sets a design's project keeps, inherited ones first, and the project's
-// name, answering an absent project and an empty one as Checklists does. Only the query-set tier is
-// resolved, so a listing reads no profile, corpus or library and a broken one cannot fail it. A set
-// file that does not parse fails the listing, since leaving it out would read as the project having
-// no such set.
+// QuerySets returns the query sets a design keeps, its project's and its own, inherited ones first,
+// and the project's name, answering an absent project and an empty one as Checklists does. Only the
+// query-set tier is resolved, so a listing reads no profile, corpus or library and a broken one cannot
+// fail it. A set file that does not parse fails the listing, since leaving it out would read as the
+// design having no such set.
 func (r *ProjectResolver) QuerySets(ctx context.Context, uri artifact.URI) ([]NamedQuerySet, string, error) {
-	if r == nil || r.Store == nil {
-		return nil, "", nil
-	}
-	_, p, err := r.Store.ResolveDesign(ctx, uri)
-	switch {
-	case errors.Is(err, ErrNotFound):
-		return nil, "", nil
-	case err != nil:
-		return nil, "", err
-	case p == nil:
-		return nil, "", nil
-	}
-	cfg, err := ResolveExtends(ctx, r.Store, p)
-	if err != nil {
-		return nil, "", err
+	cfg, project, err := r.designConfig(ctx, uri)
+	if err != nil || cfg == nil {
+		return nil, project, err
 	}
 	uris := cfg.GetQuerySetUris()
 	if len(uris) == 0 {
-		return nil, p.GetName(), nil
+		return nil, project, nil
 	}
 	if r.Config == nil {
-		return nil, "", fmt.Errorf("%w: project %s names query sets and this host cannot resolve project config", ErrInvalidArgument, p.GetName())
+		return nil, "", fmt.Errorf("%w: %s names query sets and this host cannot resolve project config", ErrInvalidArgument, uri)
 	}
-	res, err := r.Config.ResolveConfig(ctx, &webapi.AnalysisConfig{QuerySetUris: uris}, p.GetName())
+	res, err := r.Config.ResolveConfig(ctx, &webapi.AnalysisConfig{QuerySetUris: uris}, project)
 	if err != nil {
 		return nil, "", err
 	}
-	return res.QuerySets, p.GetName(), nil
+	return res.QuerySets, project, nil
+}
+
+// designConfig is the config a design composes, its project's chain with the design's own descriptor
+// layered on top, as OverlayFor composes it, and the project's name. A uri naming no design returns a
+// nil config.
+func (r *ProjectResolver) designConfig(ctx context.Context, uri artifact.URI) (*webapi.AnalysisConfig, string, error) {
+	if r == nil || r.Store == nil {
+		return nil, "", nil
+	}
+	d, p, err := r.Store.ResolveDesign(ctx, uri)
+	switch {
+	case errors.Is(err, ErrNotFound):
+		return nil, "", nil
+	case err != nil:
+		return nil, "", err
+	case d == nil:
+		return nil, "", nil
+	}
+	inherited, err := ResolveExtends(ctx, r.Store, p)
+	if err != nil {
+		return nil, "", err
+	}
+	return mergeConfig(inherited, d.GetConfig()), p.GetName(), nil
 }
 
 // PickChecklist returns the checklist called name, or the first, which is the project's default, when

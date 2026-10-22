@@ -1,3 +1,4 @@
 name: clocks
 title: Three parts a netlist cannot type
+extends: ../../project.yaml
 entry: clocks.edn

@@ -3,7 +3,6 @@ package wasmengine
 import (
 	"context"
 	"net/http/httptest"
-	"path/filepath"
 	"testing"
 
 	"connectrpc.com/connect"
@@ -14,8 +13,7 @@ import (
 
 func gatewayQuery(t *testing.T, req *webapi.RunQueryRequest) *webapi.RunQueryResponse {
 	t.Helper()
-	dir := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
-	eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(readTree(t, dir))})
+	eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(gatewayAlone(t))})
 	if err != nil {
 		t.Fatal(err)
 	}

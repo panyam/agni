@@ -43,9 +43,10 @@ func (s *WorkspaceService) WithDesignFiles(projects *ProjectResolver, files File
 }
 
 // ListDesignFiles lists every file a design's analysis reads (agni issue 853): the design's folder,
-// recursively, which holds its entry, companions, revisions and descriptor; the project's
-// descriptor; and every directory the project's config names (profiles, params, symbols, lib). It
-// is what a host that analyses the design somewhere else, the in-browser engine first, fetches.
+// recursively, which holds its entry, companions, revisions and descriptor; every file or directory
+// its descriptor names; and, for each project up its extends chain, that project's descriptor and
+// what it names (profiles, params, symbols, lib, queries). It is what a host that analyses the design
+// somewhere else, the in-browser engine first, fetches.
 //
 // Every listed path is in the design's own mount. A config URI naming another mount is refused,
 // since a client mounting the files under one name would resolve it to nothing and analyse the
@@ -79,24 +80,50 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 			}
 			designDir = du.Path
 		}
-		if project != nil {
-			pu, err := artifact.Parse(project.GetUri())
-			if err != nil {
-				return nil, err
-			}
-			singles = append(singles, joinPath(pu.Path, ProjectDescriptorName))
-			cfg := project.GetConfig()
+		// What the design names itself, then each project up its extends chain, descriptor and sources.
+		addConfig := func(cfg *webapi.AnalysisConfig) error {
 			for _, list := range [][]string{cfg.GetProfileUris(), cfg.GetParamUris(), cfg.GetSymbolPathUris(), cfg.GetLibraryUris(), cfg.GetQuerySetUris()} {
 				for _, raw := range list {
 					cu, err := artifact.Parse(raw)
 					if err != nil {
-						return nil, err
+						return err
 					}
 					if cu.Mount != u.Mount {
-						return nil, fmt.Errorf("%w: project config %s is in another mount than the design", ErrInvalidArgument, raw)
+						return fmt.Errorf("%w: config %s is in another mount than the design", ErrInvalidArgument, raw)
 					}
-					dirs = append(dirs, cu.Path)
+					// A source may name one file as well as a directory.
+					if dir, err := s.isDir(ctx, cu); err == nil && !dir {
+						singles = append(singles, cu.Path)
+					} else {
+						dirs = append(dirs, cu.Path)
+					}
 				}
+			}
+			return nil
+		}
+		if design != nil {
+			if err := addConfig(design.GetConfig()); err != nil {
+				return nil, err
+			}
+		}
+		for depth := 0; project != nil && depth <= maxExtendsDepth; depth++ {
+			pu, err := artifact.Parse(project.GetUri())
+			if err != nil {
+				return nil, err
+			}
+			if pu.Mount != u.Mount {
+				return nil, fmt.Errorf("%w: project %s is in another mount than the design", ErrInvalidArgument, project.GetName())
+			}
+			singles = append(singles, joinPath(pu.Path, ProjectDescriptorName))
+			if err := addConfig(project.GetConfig()); err != nil {
+				return nil, err
+			}
+			next := project.GetConfig().GetExtends()
+			if next == "" {
+				break
+			}
+			if project, err = s.projects.Store.Project(ctx, next); err != nil {
+				return nil, ClassifyLoadErr(err)
 			}
 		}
 	}

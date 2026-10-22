@@ -14,8 +14,8 @@ That runs the `review` checklist in `project.yaml` over the bundled board with e
 project supplies, and prints one outcome per item. `make help` lists the rest.
 
 Note what the command does **not** carry: no `--conventions`, no `--profile-path`, no `--params`, no
-`--intent-path`. The board resolves to this project, and the project's config is read from
-`project.yaml` and from beside it. That is also what keeps it from reaching anywhere else. A design in another project,
+`--intent-path`. The board's `design.yaml` names this project, and the project's config is what
+`project.yaml` declares and the files it names. That is also what keeps it from reaching anywhere else. A design in another project,
 or in none, cannot be checked against these rules, because config travels along the design-to-project
 edge rather than along the command line.
 
@@ -31,16 +31,16 @@ This is the shape a real review project takes. Two kinds of file live here.
 | `project.yaml` `conventions:` | house naming, which says which net names are rails and what a legal name looks like |
 | `project.yaml` `checklists.review` | the checklist of questions this team asks of every board, and the project's default since it is written first |
 | `project.yaml` `checklists.house` | a second checklist whose inline query calls this project's own library in `lib/`, run with `--checklist house` |
-| `profiles/` | interface declarations, one per bus this team designs with |
-| `params/` | datasheet parameter sets, one per part worth checking against its limits |
-| `lib/` | this team's own derived relations, one Datalog module per `.dl` file, such as `house.pmic_rail` |
+| `profiles/` | interface declarations, one per bus this team designs with, named by `profiles:` in `project.yaml` |
+| `params/` | datasheet parameter sets, one per part worth checking against its limits, named by `params:` |
+| `lib/` | this team's own derived relations, one Datalog module per `.dl` file, such as `house.pmic_rail`, named by `lib:` |
 | `reports/<design>/` | the outcome of a run on one design, written by `make report` |
 
 **Per-design**, one set per folder under `designs/`:
 
 | Path | What it is |
 |---|---|
-| `design.yaml` | the design's name, which file is its entry, and which files are views of it |
+| `design.yaml` | the design's name, the project it `extends`, which file is its entry, and which files are views of it |
 | `gateway.edn` | the netlist, `gateway-rev-b.edn` a later revision of it, and `gateway-rev-c.edn` one more that renames and rewires a net, for `diff --rename-approx` |
 | `gateway.kicad_sch` | the same board as a KiCad schematic, with `symbols/` as an external library |
 | `gateway.kicad_pcb` | the same board's copper, for the board-tier checks |

@@ -35,7 +35,7 @@ func reboundCANProject(t *testing.T) string {
 	}
 	design := strings.NewReplacer("CAN_CANH", "CAN_BUSH", "CAN_CANL", "CAN_BUSL", "CAN_TXD", "CAN_BTX").Replace(string(b))
 	write("designs/d/board.edn", design)
-	write("designs/d/design.yaml", "name: d\ntitle: D\nentry: board.edn\n")
+	write("designs/d/design.yaml", "name: d\nextends: ../../project.yaml\ntitle: D\nentry: board.edn\n")
 	write("profiles/can.yaml", `name: CAN
 signals:
   - {name: CANH, suffix: _BUSH, anchor: true}
@@ -47,6 +47,7 @@ requirements:
 `)
 	write("project.yaml", `name: rebound
 title: Rebound
+profiles: [profiles]
 checklists:
   review:
     name: rebound review

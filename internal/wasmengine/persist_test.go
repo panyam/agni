@@ -3,7 +3,6 @@ package wasmengine
 import (
 	"context"
 	"net/http/httptest"
-	"path/filepath"
 	"sync/atomic"
 	"testing"
 
@@ -51,7 +50,7 @@ func opened(t *testing.T, eng *Engine) []proto.Message {
 
 func gatewayEngine(t *testing.T, store service.BlobStore, version string, edit func(map[string][]byte)) *Engine {
 	t.Helper()
-	files := readTree(t, filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway"))
+	files := gatewayAlone(t)
 	if edit != nil {
 		edit(files)
 	}
@@ -125,7 +124,7 @@ func TestAnotherEngineVersionRestoresNothing(t *testing.T) {
 
 func TestAnEngineWithNoVersionStoresNothing(t *testing.T) {
 	store := &countingStore{}
-	eng, err := NewWith(Options{Store: store, Version: ""}, fshost.Mount{Name: "m", FS: fshost.MemFS(readTree(t, filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")))})
+	eng, err := NewWith(Options{Store: store, Version: ""}, fshost.Mount{Name: "m", FS: fshost.MemFS(gatewayAlone(t))})
 	if err != nil {
 		t.Fatal(err)
 	}

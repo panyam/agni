@@ -40,20 +40,6 @@ type designDoc struct {
 	Intent yaml.Node `yaml:"intent"`
 }
 
-// earlierForms names the forms the six replaced, and what each became, so a file written for the
-// earlier layout fails with the spelling to use rather than reading as a design with no intent.
-var earlierForms = map[string]string{
-	"voltage_domains": "nets: {RAIL: {nominal: VOLTS, domain: NAME}}",
-	"protections":     "nets: {RAIL: {protect: [ovp, discharge]}}",
-	"net_properties":  "nets: {NET: {reset: low|high, strap: low|high, ac_coupled: true}}",
-	"rail_budgets":    "nets: {RAIL: {peak: AMPS}}",
-	"subsystems":      "modules: [{name: NAME, nets: [...], class or mpn for its source}]",
-}
-
-// intentKeys are the intent section's keys, for recognising a file that puts them at the top level.
-var intentKeys = []string{"modules", "nets", "sequences", "strap_groups", "io_map", "margin_factor", "components",
-	"voltage_domains", "protections", "net_properties", "rail_budgets", "subsystems"}
-
 // Parse reads a design's intent from its descriptor (or a file of the same shape) into a Declaration
 // and validates it. The declaration takes the design's name. A malformed declaration fails at load,
 // where the error can teach, rather than at run. Parse is WASM-clean (yaml only, no os); LoadFile adds
@@ -87,15 +73,6 @@ func ParseProto(b []byte) (*configpb.DesignIntent, error) {
 
 // parseSection binds a descriptor-shaped document's intent section, with the document's name.
 func parseSection(b []byte) (string, *configpb.DesignIntent, error) {
-	var top map[string]yaml.Node
-	if err := yaml.Unmarshal(b, &top); err != nil {
-		return "", nil, fmt.Errorf("intent: invalid YAML: %w", err)
-	}
-	for _, k := range intentKeys {
-		if _, ok := top[k]; ok {
-			return "", nil, fmt.Errorf("intent: %q is at the top level; a design's intent now sits under \"intent:\" in its design.yaml (agni issue 824)", k)
-		}
-	}
 	var doc designDoc
 	if err := yaml.Unmarshal(b, &doc); err != nil {
 		return "", nil, fmt.Errorf("intent: invalid YAML: %w", err)
@@ -113,22 +90,10 @@ func parseSection(b []byte) (string, *configpb.DesignIntent, error) {
 	return doc.Name, in, nil
 }
 
-// DecodeSection binds a design descriptor's intent section to its proto, refusing the earlier
-// layouts with the spelling to use instead. It checks SHAPE only (keys, types, the earlier forms);
-// FromProto is what validates the declarations, so a store can read a descriptor without compiling
-// rules from it.
+// DecodeSection binds a descriptor's intent section to its proto. It checks SHAPE only (keys and
+// types); FromProto is what validates the declarations, so a store can read a descriptor without
+// compiling rules from it.
 func DecodeSection(n *yaml.Node) (*configpb.DesignIntent, error) {
-	if n.Kind == yaml.ScalarNode {
-		return nil, fmt.Errorf("intent names a file (%q); a design's intent is now declared inline under intent: in its design.yaml (agni issue 824)", n.Value)
-	}
-	if n.Kind == yaml.MappingNode {
-		for i := 0; i+1 < len(n.Content); i += 2 {
-			k := n.Content[i].Value
-			if hint, ok := earlierForms[k]; ok {
-				return nil, fmt.Errorf("%q is no longer a form; write it as %s (agni issue 824)", k, hint)
-			}
-		}
-	}
 	in := &configpb.DesignIntent{}
 	// A misspelled key is an error naming its line, not a fact that silently declares nothing.
 	if err := yamlpb.Decode(n, in); err != nil {

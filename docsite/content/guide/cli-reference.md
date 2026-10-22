@@ -615,7 +615,7 @@ netlists (`.tel`, netlist only, no geometry), and `.sch` (xschem / gEDA / legacy
 header).
 
 A schematic that references external symbols resolves them by one of three routes, in the order they
-are searched: its own `sym-lib-table` for a KiCad project, the `symbols` library its design descriptor
-declares (defaulting to `symbols` beside the descriptor), and any `--symbol-path` directory. A design
+are searched: its own `sym-lib-table` for a KiCad project, the `symbols` libraries its design and project
+descriptors name, and any `--symbol-path` directory. A design
 that belongs to a project needs no flag, and the flag remains for a library the
 project does not know about.
