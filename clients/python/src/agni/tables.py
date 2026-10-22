@@ -47,6 +47,25 @@ def table_sheets(resp: tables_pb2.TabulateResponse, names: Optional[Mapping[str,
 
 # Excel refuses these in a sheet name and caps the name at 31 characters.
 _BAD_SHEET = re.compile(r"[\[\]:*?/\\]")
+# openpyxl column width is in "character units"; cap avoids one long Detail cell stretching a sheet.
+_MAX_COL_WIDTH = 80
+_MIN_COL_WIDTH = 8
+
+
+def _autofit_columns(ws) -> None:
+    """Set each column width from the longest cell in that column (header included)."""
+    from openpyxl.utils import get_column_letter
+
+    if ws.max_column < 1 or ws.max_row < 1:
+        return
+    for col_idx in range(1, ws.max_column + 1):
+        longest = 0
+        for row_idx in range(1, ws.max_row + 1):
+            value = ws.cell(row=row_idx, column=col_idx).value
+            if value is not None:
+                longest = max(longest, len(str(value)))
+        letter = get_column_letter(col_idx)
+        ws.column_dimensions[letter].width = min(max(longest + 1, _MIN_COL_WIDTH), _MAX_COL_WIDTH)
 
 
 def tables_to_xlsx(path: str, sheets: Sequence[Tuple[str, Table]]) -> None:
@@ -84,6 +103,7 @@ def tables_to_xlsx(path: str, sheets: Sequence[Tuple[str, Table]]) -> None:
         ws.freeze_panes = "A2"
         if header:
             ws.auto_filter.ref = f"A1:{get_column_letter(len(header))}{len(rows) + 1}"
+        _autofit_columns(ws)
     wb.save(path)
 
 

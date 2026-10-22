@@ -52,7 +52,11 @@ def test_xlsx_has_header_freeze_and_filter(tmp_path):
     assert ws.auto_filter.ref == "A1:B3"
     # "007" stays a string: a cell is what agni sent, not a guess at its type.
     assert ws["B3"].value == "007"
+    assert ws.column_dimensions["B"].width == 8
     assert wb["Plain"].auto_filter.ref == "A1:A4"
+    out2 = tmp_path / "wide.xlsx"
+    tables_to_xlsx(str(out2), [("Wide", (["note"], [["a much longer cell than the default column"]]))])
+    assert openpyxl.load_workbook(out2)["Wide"].column_dimensions["A"].width > 8
 
 
 @pytest.mark.parametrize("name", ["", "a" * 32, "a/b", "x[1]"])
