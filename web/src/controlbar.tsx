@@ -30,7 +30,9 @@ function Controls(props: {
   return (
     <div class="controls">
       <div class="render-mode">
-        <For each={MODES}>
+        {/* WebGL is offered only to a page already in it (`?mode=webgl`), since it lags on a large
+            design (agni issue 1132). */}
+        <For each={MODES.filter((m) => m.mode !== "webgl" || props.state().mode === "webgl")}>
           {(m) => (
             <button
               type="button"

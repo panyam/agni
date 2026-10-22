@@ -162,9 +162,17 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	netlistURI, boardURI := snap.Netlist, snap.Board
 	// The budget reaches every checklist query through ctx (agni issue 792); an item past it reads
 	// inconclusive, naming the budget, and the others still answer.
-	rep, cat, unexpanded, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), LoaderOr(snap, s.loader), netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
+	loader := LoaderOr(snap, s.loader)
+	rep, cat, m, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), loader, netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
 	if err != nil {
 		return nil, err
+	}
+	unexpanded := m.UnexpandedHierarchy()
+	areas := reviewAreaProtos(rep)
+	// Each finding names the sheets its subject is drawn on, as CheckDesign's do, so the Review panel
+	// opens the right sheet on a click and says why when there is none (agni issue 1132).
+	if gl, ok := loader.(GeometryLoader); ok {
+		AnnotateSheets(reviewFindings(areas), BuildGeometry(ctx, gl, snap.Geometry, ov.ReadOptions()...), m)
 	}
 	// The hash is provenance, not a precondition, so an unreadable source records no hash. It is taken
 	// from the NETLIST tier the run scored, not the request's URI, because a design folder does not hash.
@@ -197,7 +205,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 		Catalog:          results.RuleRecords(cat.Rules()),
 		Manifest:         man.Name,
 		ManifestSnapshot: req.GetManifest(),
-		Areas:            reviewAreaProtos(rep),
+		Areas:            areas,
 	}
 	if store == nil {
 		return ReviewOf("", doc), nil
@@ -355,7 +363,7 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 //
 // It returns the per-request catalog, overlay spliced on, because the stored document records the
 // rules that ACTUALLY ran.
-func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, []*ir.UnexpandedHierarchy, error) {
+func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designURI, boardURI artifact.URI, man review.Manifest, floor float64, ov Overlay) (review.Report, *check.Catalog, check.Model, error) {
 	m, _, err := BuildModelCached(ctx, loader, designURI, boardURI, ov, s.specs)
 	if err != nil {
 		return review.Report{}, nil, nil, err
@@ -383,7 +391,7 @@ func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designU
 	if err != nil {
 		return review.Report{}, nil, nil, err
 	}
-	return rep, cat, m.UnexpandedHierarchy(), nil
+	return rep, cat, m, nil
 }
 
 // reviewClosures builds the presence and scope closures a review run needs over a design's Model and
@@ -463,6 +471,17 @@ func reviewAreaProtos(r review.Report) []*checkspb.ReviewArea {
 		out = append(out, area)
 	}
 	return out
+}
+
+// reviewFindings flattens every item's findings, the review-shaped counterpart of AnnotateReport's walk.
+func reviewFindings(areas []*checkspb.ReviewArea) []*checkspb.Finding {
+	var all []*checkspb.Finding
+	for _, a := range areas {
+		for _, it := range a.GetItems() {
+			all = append(all, it.GetFindings()...)
+		}
+	}
+	return all
 }
 
 // reviewParent validates an optional parent project name. Empty is legal and means "no project",

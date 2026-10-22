@@ -104,7 +104,7 @@ describe("reviewPanel", () => {
     const finding = el.querySelector(".rv-finding") as HTMLButtonElement;
     expect(finding.textContent).toContain("VIN");
     finding.click();
-    expect(handlers.onLocate).toHaveBeenCalledWith("net", "VIN");
+    expect(handlers.onLocate).toHaveBeenCalledWith(expect.objectContaining({ kind: "net", subject: "VIN" }));
   });
 
   it("renders an unknown outcome under its own name rather than dropping or passing it", () => {

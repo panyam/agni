@@ -6,7 +6,7 @@ import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
 import type { FindingItem } from "./findings.js";
 
 // SheetTile is one row of the overview, a sheet and how many current findings live on it. A zero
-// count renders as a "clean" tile rather than being omitted.
+// count draws no badge, so only a sheet with something on it carries a number (agni issue 1132).
 //
 // `count` is DEFECTS and `unresolved` is the inconclusive results the rule could not decide, kept
 // apart because the tile's count reads as "problems on this sheet" (agni issue 350). A sheet with
@@ -19,12 +19,14 @@ export interface SheetTile {
 }
 
 // OverviewState is the whole panel's state. It holds the tiles in design order, the sheet currently
-// shown, and the active-rule count so the panel can tell "no rules selected" from "all clean", like
-// the findings panel.
+// shown, the active-rule count so the panel can tell "no rules selected" from "all clean", like
+// the findings panel, and how many of those rules have run, since a count before any run is a
+// claim about nothing.
 export interface OverviewState {
   tiles: SheetTile[];
   activeId: string;
   ruleCount: number;
+  ranCount: number;
 }
 
 // OverviewView is the command-down surface the presenter pushes OverviewState to.

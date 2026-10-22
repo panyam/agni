@@ -22,6 +22,9 @@ export interface InterfaceCoverageItem {
 
 export interface CoverageState {
   interfaces: InterfaceCoverageItem[];
+  // asked is true once the design's coverage was fetched, which a check run does. Before that, an
+  // empty list means nobody asked rather than nothing matched (agni issue 1132).
+  asked?: boolean;
 }
 
 export interface CoverageView {
@@ -40,6 +43,7 @@ export function coverageFromResponse(resp: GetInterfaceCoverageResponse): Covera
       anchor: ic.anchorNet,
       signals: ic.signals.map((s) => ({ name: s.name, net: s.net, state: s.state })),
     })),
+    asked: true,
   };
 }
 

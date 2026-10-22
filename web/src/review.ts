@@ -146,6 +146,9 @@ export interface ReviewState {
   cancelled?: boolean;
   // saveNote says why the last Save report failed, "" when it did not (agni issue 1030).
   saveNote: string;
+  // locateNote says why the last finding clicked highlights nothing, "" when it was drawn (agni
+  // issue 1132). Optional, so a state built before it read as no note.
+  locateNote?: string;
 }
 
 export interface ReviewView {
@@ -203,7 +206,8 @@ export function reviewFromWire(rv: Review): ReviewRunView {
           message: f.message,
           inconclusive: f.inconclusive ?? false,
           context: contextFromWire(f.context),
-          sheets: [],
+          // Badged by id alone: the panel needs a sheet to open, and the label is the viewer's to look up.
+          sheets: (f.sheets ?? []).map((id) => ({ id, name: id })),
           locateReason: f.locateReason ?? LocateReason.UNSPECIFIED,
         })),
       })),

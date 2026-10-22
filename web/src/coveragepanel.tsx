@@ -23,7 +23,13 @@ function CoveragePanel(props: { state: () => CoverageState; onLocate: (net: stri
     <div class="coverage">
       <Show
         when={props.state().interfaces.length > 0}
-        fallback={<div class="coverage-empty">No interface profiles detected in this design.</div>}
+        fallback={
+          <div class="coverage-empty">
+            {props.state().asked
+              ? "No interface profiles detected in this design."
+              : "Interface profiles are matched when you press Run checks."}
+          </div>
+        }
       >
         <For each={props.state().interfaces}>
           {(iface) => (
