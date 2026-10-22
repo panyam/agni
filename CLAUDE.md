@@ -1103,9 +1103,10 @@ until the count is listed there on purpose (agni 727).
 ## Issues and missions
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
-and the command that exercises it. Several are active at once, one per worktree: #844
-`mission_real_board_tutorial`, #845 `mission_browser_review`, #851 `mission_public_demo`. #843
-`mission_revision_audit` closed on 2026-10-04; its exercise lives on as the example it built. A
+and the command that exercises it. Several may be active at once, one per worktree, and #845
+`mission_browser_review` is. #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo`
+(2026-10-20) and #909 `mission_ask` (2026-10-22) have closed, and their exercises live on as the
+example #843 built, `make exercise-public-demo` and `make exercise-mcp-ask`. A
 mission is blocked by each ticket it needs, and its tickets carry its `mission_<slug>` label. **A new
 issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
 filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names

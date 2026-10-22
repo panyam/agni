@@ -13,34 +13,31 @@ Last pruned 2026-10-22, at `c88fb204`.
 
 ## At a glance
 
-Two missions are active. `MISSION=mission_<slug> queue.sh`
+One mission is active. `MISSION=mission_<slug> queue.sh`
 (the retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
 blocked-by links rather than here. Log each exercise run on the mission issue.
 
-- **#909 `mission_ask`**, 3 of 3. `make exercise-mcp-ask` passes on both boards at `c88fb204` (Jetson 7 of
-  7, gateway 9 of 9), and a diff answer now carries one link that opens (#1126). Its done-when is met
-  by the script; ask its five questions once by hand in Claude Code against `agni serve --mcp`, since
-  no script checks a model in the loop, then close it.
 - **#845 `mission_browser_review`**, 20 of 22, next ready #774, then #904. `make
   exercise-browser-review` passed at `463cfbdd` (Jetson 11 of 11, gateway 12 of 12); headed, it walks
   step by step with an explanation at each stop.
+- **#909 `mission_ask`** closed on 2026-10-22 at its done-when (Jetson 7 of 7, gateway 9 of 9 at
+  `c88fb204`). `make exercise-mcp-ask` remains, and no ticket is left on it.
 - **#851 `mission_public_demo`** closed on 2026-10-20. #855, #923 and #949 stay `waiting`, off any
   mission. `make exercise-public-demo` remains.
 - **Possible next mission**: moving a house netlist audit off its spreadsheet. #820, #821 and #1093 are
   its tickets, and `guide/older-comparison-tools.md` its first page. Not yet a mission.
 - This run: PRs 1125, 1128, 1129 and 1130 merged (#759 with Reset layout, #1115, #1117, #1126); a patch
-  release follows this checkpoint. #1032 carries both `P3` and `waiting`, for retriage.
+  release follows this checkpoint. #909 closed. #1032 carries both `P3` and `waiting`, for retriage.
 
 ## Open, ranked
 
-1. **Close #909** after the by-hand check above.
-2. **#845's last two tickets**, #774 (drill-down in the relation picker) and #904 (select an area and
+1. **#845's last two tickets**, #774 (drill-down in the relation picker) and #904 (select an area and
    ask about it).
-3. **Decide the strap band's unreadable value.** A declared band whose resistor's value does not read
+2. **Decide the strap band's unreadable value.** A declared band whose resistor's value does not read
    (`DNP`, a typo) passes with "the design does not contradict it", because
    `TestStrapValueUnreadableIsSilent` chose silence over a finding; inconclusive is the alternative.
    #1115 fixed the Jetson case by reading library names. File it once decided.
-4. **Jetson's load**, off any mission: #1061's edit-session half. Measure with the exercise's
+3. **Jetson's load**, off any mission: #1061's edit-session half. Measure with the exercise's
    `--timing`, `make wasm-bench` and `make wasm-layers` (pass `BOARD` and `DESIGN`, since a shell's own
    `DESIGN` overrides the Makefile's), and read CLAUDE.md on the bench's two misleading rows first.
 
