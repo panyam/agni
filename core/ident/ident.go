@@ -14,6 +14,7 @@
 package ident
 
 import (
+	"regexp"
 	"strconv"
 	"strings"
 	"unicode"
@@ -157,9 +158,24 @@ func clean(s string) string {
 //
 // The underscore goes AFTER the index rewrite, so `IO0_1` keys as `IO01` and never meets a distinct
 // `IO1` on the same part. Dropping it first would let the index rewrite strip the bank digit's zero.
+//
+// A subscript written as markup folds the same way (agni issue 1160): KiCad's `VCC_{A}` and a
+// datasheet's `VCC(A)` both key as `VCCA`, since a symbol library and a pin table print one supply
+// pin those two ways. The parenthesized form folds only for one to three letters or digits, which is
+// how a pin table prints a domain, so a longer note such as `PB3(SWO_TRACE)` is left as written.
+// KiCad's overbar `~{RESET}` is NOT folded, since it marks an active-low pin, a different pin from
+// `RESET`.
 func PinName(s string) string {
+	s = scriptMarkup.ReplaceAllString(s, "$1")
+	s = parenSubscript.ReplaceAllString(s, "$1$2")
 	return strings.ReplaceAll(Canonical(s), "_", "")
 }
+
+// scriptMarkup is KiCad's subscript and superscript text markup, `_{x}` and `^{x}`.
+var scriptMarkup = regexp.MustCompile(`[_^]\{([^{}]*)\}`)
+
+// parenSubscript is a pin table's parenthesized subscript, `VCC(A)`, directly after the name.
+var parenSubscript = regexp.MustCompile(`([A-Za-z0-9])\(([A-Za-z0-9]{1,3})\)`)
 
 // PinNumber is the key a pin's package designator is compared on. It is Canonical without the index
 // rewrite, so `01` and `A01` keep their zeros, since a pinout that writes one never writes the other,

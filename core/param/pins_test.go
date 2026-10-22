@@ -368,3 +368,15 @@ func TestPinRelations(t *testing.T) {
 		t.Errorf("a relationless spec must answer empty, got %d", len(got))
 	}
 }
+
+// agni issue 1160: a symbol library's KiCad markup and a pin table's parentheses name one supply
+// pin, so the NTS0102's VCC_{A} resolves to the spec's VCC(A) and its VCC_{B} to VCC(B).
+func TestASubscriptedSupplyPinResolvesAcrossSpellings(t *testing.T) {
+	spec := &parampb.PartSpec{Pins: []*parampb.Pin{{Id: "vcca", Name: "VCC(A)"}, {Id: "vccb", Name: "VCC(B)"}}}
+	for name, want := range map[string]string{"VCC_{A}": "vcca", "VCC_{B}": "vccb", "VCCA": "vcca"} {
+		got, err := ResolvePin(spec, name, "3", "")
+		if err != nil || got.GetId() != want {
+			t.Errorf("ResolvePin(%q) = %v, %v; want pin %s", name, got.GetId(), err, want)
+		}
+	}
+}

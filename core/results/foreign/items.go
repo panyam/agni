@@ -41,8 +41,11 @@ var itemPatterns = []itemPattern{
 	// Board: pads. Two spellings, one with a layer suffix and one (the pad-stack forms) without.
 	{"pad", regexp.MustCompile(`^Pad (?P<pin>\S+) \[(?P<net>[^\]]*)\] of (?P<ref>\S+) on `)},
 	{"pad", regexp.MustCompile(`^(?:PTH|NPTH|SMD) pad (?P<pin>\S+) \[(?P<net>[^\]]*)\] of (?P<ref>\S+)`)},
-	// Board: copper carrying a net but belonging to no part.
-	{"track", regexp.MustCompile(`^(?:Track|Arc) \[(?P<net>[^\]]*)\] on `)},
+	// An unplated hole has no pin number and no net, so KiCad names only its part (agni issue 1023).
+	{"pad", regexp.MustCompile(`^NPTH pad of (?P<ref>\S+)`)},
+	// Board: copper carrying a net but belonging to no part. A curved track is "Track (arc) [...]",
+	// which was 71 of the 85 items left unjoined on Jetson's DRC report (agni issue 1023).
+	{"track", regexp.MustCompile(`^(?:Track(?: \(arc\))?|Arc) \[(?P<net>[^\]]*)\] on `)},
 	{"via", regexp.MustCompile(`^Via \[(?P<net>[^\]]*)\]`)},
 	{"zone", regexp.MustCompile(`^Zone \[(?P<net>[^\]]*)\]`)},
 	{"footprint", regexp.MustCompile(`^Footprint (?P<ref>\S+)`)},

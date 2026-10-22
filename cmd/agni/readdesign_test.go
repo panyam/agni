@@ -337,3 +337,41 @@ func TestResolveSourceEntryWithNoCompanionsIsSilent(t *testing.T) {
 		t.Errorf("note = %q, want none", src.Note)
 	}
 }
+
+// agni issue 1023: naming one sheet of a KiCad design's hierarchy reads that sheet as named, as any
+// undeclared sibling is, and says it is a sub-sheet of the design, since read alone it is checked as
+// though it were the whole board.
+func TestNamingASubSheetSaysItIsOneSheetOfTheDesign(t *testing.T) {
+	dir := t.TempDir()
+	for _, f := range []string{"hier_numeric_root", "hier_numeric_power", "hier_numeric_power_1", "hier_numeric_io", "hier_numeric_io_1"} {
+		b, err := os.ReadFile(filepath.Join("..", "..", "readers", "kicad", "testdata", f+".kicad_sch"))
+		if err != nil {
+			t.Fatal(err)
+		}
+		write(t, filepath.Join(dir, f+".kicad_sch"), string(b))
+	}
+	write(t, filepath.Join(dir, "notes.kicad_sch"), "(kicad_sch)")
+	write(t, filepath.Join(dir, projects.DesignDescriptor), "name: numeric\nentry: hier_numeric_root.kicad_sch\n")
+
+	sub := filepath.Join(dir, "hier_numeric_io_1.kicad_sch")
+	src, err := resolve(t, sub)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if localOf(src.NetlistURI) != sub {
+		t.Errorf("the sub-sheet should still be read as named, got %s", src.NetlistURI)
+	}
+	if !strings.Contains(src.Note, "hier_numeric_io_1.kicad_sch is a sub-sheet of") || !strings.Contains(src.Note, "hier_numeric_root.kicad_sch") {
+		t.Errorf("note = %q, want it to say the file is a sub-sheet of the design's entry", src.Note)
+	}
+
+	for _, other := range []string{"notes.kicad_sch", "hier_numeric_root.kicad_sch"} {
+		src, err := resolve(t, filepath.Join(dir, other))
+		if err != nil {
+			t.Fatal(err)
+		}
+		if strings.Contains(src.Note, "sub-sheet") {
+			t.Errorf("%s is not a sub-sheet, but the note says %q", other, src.Note)
+		}
+	}
+}
