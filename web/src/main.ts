@@ -16,6 +16,7 @@ import { sheetOverviewPanelIsland } from "./sheetoverviewpanel.js";
 import { queryPanelIsland } from "./querypanel.js";
 import { coveragePanelIsland } from "./coveragepanel.js";
 import { tracePanelIsland } from "./tracepanel.js";
+import { tracePicks } from "./tracepick.js";
 import { tablesPanelIsland } from "./tablespanel.js";
 import { TablesPresenter, type TablesSourceKey } from "./tables.js";
 import { reviewPanelIsland } from "./reviewpanel.js";
@@ -402,6 +403,13 @@ class AppRoot extends BaseComponent {
       },
       // A verdict in the selection's checks shows its proof, as a verdict row in the checks panel does.
       onVerdict: (id) => void presenter.locateVerdict(id),
+      // A part names only its ref-des, so the trace field then lists that part's pins to pick from.
+      onTrace: (end, sel) => {
+        // The tab comes forward first, since the field's focus is what opens its list and a hidden
+        // field takes none.
+        if (dockApi) dockApi.getPanel("trace")?.api.setActive();
+        trace.view.setEnd(end, sel.kind === "pin" ? `${sel.ref}.${sel.pin}` : `${sel.ref ?? ""}.`);
+      },
     });
     // Where a selected part or net is drawn is the engine's answer to the served find-by-name query,
     // anchored to the whole name, since each entity in a query answer carries the sheets it is drawn
@@ -432,6 +440,8 @@ class AppRoot extends BaseComponent {
         return { verdicts: (r.resp.verdicts ?? []).map(verdictItem), notAsked: r.notAsked };
       },
       checkKey: () => presenter.checkKey(),
+      // The trace pickers list the parts and pins Properties has already read.
+      onInventory: (inv) => trace.view.setPicks(tracePicks(inv)),
     });
     const locateSelection = (sel: Selection) =>
       void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);

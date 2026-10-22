@@ -95,6 +95,9 @@ func TestRuleDocsOneToOne(t *testing.T) {
 		if r.Detail != intentDoc(key) {
 			t.Errorf("rule %q: Detail does not come from docs/%s.md (single-source violated)", r.Name, key)
 		}
+		if r.DocPage != "intent-"+key {
+			t.Errorf("rule %q: DocPage %q, want the page DocRules writes for %q, intent-%s", r.Name, r.DocPage, key, key)
+		}
 	}
 	for _, k := range docKeys {
 		if !emitted[k] {

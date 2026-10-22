@@ -551,3 +551,41 @@ describe("cancelling from the checks panel", () => {
     expect(button.disabled).toBe(true);
   });
 });
+
+describe("a rule group links to the rule's reference page", () => {
+  const url = "https://panyam.github.io/agni/reference/rules/i2c-pull-up/";
+  const groupBy = (el: HTMLElement, axis: string) => {
+    const sel = el.querySelector(".checks-groupby select") as HTMLSelectElement;
+    sel.value = axis;
+    sel.dispatchEvent(new Event("change"));
+  };
+  const findings = [f({ rule: "i2c-pull-up", category: "connectivity", subject: "SDA" }), f({ rule: "acme/house-rule", category: "connectivity", subject: "SCL" })];
+
+  it("links a documented rule's header to its page, in a new tab, and leaves an undocumented one bare", () => {
+    const { el } = mountPanel({ findings, ruleDocs: { "i2c-pull-up": url } });
+    groupBy(el, "rule");
+    const links = [...el.querySelectorAll<HTMLAnchorElement>(".check-group-doc")];
+    expect(links).toHaveLength(1);
+    expect(links[0].href).toBe(url);
+    expect(links[0].target).toBe("_blank");
+    expect(links[0].closest("tr")!.querySelector(".check-group-name")!.textContent).toBe("i2c-pull-up");
+    expect(links[0].closest("button")).toBeNull();
+    // The header keeps the rule's spelling, since copper-clearance is an identifier and not a title.
+    expect(el.querySelector(".check-group-head")!.classList.contains("rule")).toBe(true);
+  });
+
+  it("does not fold the group when the link is clicked", () => {
+    const { el } = mountPanel({ findings, ruleDocs: { "i2c-pull-up": url } });
+    groupBy(el, "rule");
+    const link = el.querySelector<HTMLAnchorElement>(".check-group-doc")!;
+    link.addEventListener("click", (e) => e.preventDefault());
+    link.click();
+    expect([...el.querySelectorAll("tr.check-row")].map((r) => r.textContent)).toEqual(expect.arrayContaining([expect.stringContaining("SDA")]));
+  });
+
+  it("shows no link on a header that names a category rather than a rule", () => {
+    const { el } = mountPanel({ findings, ruleDocs: { connectivity: url, "i2c-pull-up": url } });
+    groupBy(el, "category");
+    expect(el.querySelectorAll(".check-group-doc")).toHaveLength(0);
+  });
+});

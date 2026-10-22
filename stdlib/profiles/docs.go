@@ -3,6 +3,7 @@ package profiles
 import (
 	"embed"
 	"fmt"
+	"slices"
 
 	"github.com/panyam/agni/core/check"
 )
@@ -56,10 +57,20 @@ func DocRules() []*check.Rule {
 			Summary:  d.summary,
 			Remedy:   d.remedy,
 			Detail:   ruleDoc(req),
+			DocPage:  docPage(req),
 			Tags:     map[string]string{check.KeyCategory: check.CategoryConnectivity, check.KeyDistribution: check.DistOpen},
 		})
 	}
 	return out
+}
+
+// docPage is the docsite page that explains a requirement type's rules, whichever profile compiled
+// them, and empty for a type with no page (host-incomplete, or one an overlay registers).
+func docPage(reqType string) string {
+	if !slices.Contains(requirementDocs, reqType) {
+		return ""
+	}
+	return "profile-" + reqType
 }
 
 // ruleDocs embeds the per-REQUIREMENT documentation, one docs/<type>.md per entry in

@@ -76,5 +76,10 @@ func DocRules() []*check.Rule { return dlRules }
 func Queries() []query.FindingQuery { return []query.FindingQuery{powerPinMistypedQ, crystalLoadCapsQ} }
 
 func init() {
+	for _, r := range dlRules {
+		if r.Detail != "" {
+			r.DocPage = "dl-" + r.Name
+		}
+	}
 	check.RegisterSource(check.NewSource("dl", dlRules))
 }

@@ -341,3 +341,11 @@ describe("a selection's own checks", () => {
     expect(row(s, "checks")).toBeUndefined();
   });
 });
+
+describe("the selected entity", () => {
+  it("names a selected part to the panel, and nothing at the design level", () => {
+    const sel = { kind: "component" as const, ref: "U1" };
+    expect(propertiesFor(input({ focus: { level: "entity", sel } })).sel).toEqual(sel);
+    expect(propertiesFor(input({})).sel).toBeUndefined();
+  });
+});

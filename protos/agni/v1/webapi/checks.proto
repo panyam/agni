@@ -324,6 +324,10 @@ message RuleInfo {
   // and never another, since a project's rule is namespaced by the project's own name (agni issue
   // 1057).
   bool shipped = 11;
+  // doc_url is the published reference page that explains the rule, empty when no page does, as for a
+  // project's own rule or a profile requirement type that has none. Several rules can share one page,
+  // since every intent/subsystem-<slug> rule is explained on intent-subsystem.
+  string doc_url = 12;
 }
 
 message ListRulesResponse {

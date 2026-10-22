@@ -293,18 +293,33 @@ function ChecksPanel(props: {
                     <Show when={sec.value !== null}>
                       <tr class="check-group">
                         <td colspan={5}>
-                          <button type="button" class="check-group-head" onClick={() => toggleGroup(sec.value!)}>
-                            <span class="check-group-twist">{collapsed().has(sec.value!) ? "▸" : "▾"}</span>
-                            <span class="check-group-name">{sec.value || "(none)"}</span>
-                            <Show when={sec.count > 0 || sec.unresolved === 0}>
-                              <span class="finding-group-badge">{sec.count}</span>
+                          <div class="check-group-line">
+                            <button type="button" class={`check-group-head${axis() === "rule" ? " rule" : ""}`} onClick={() => toggleGroup(sec.value!)}>
+                              <span class="check-group-twist">{collapsed().has(sec.value!) ? "▸" : "▾"}</span>
+                              <span class="check-group-name">{sec.value || "(none)"}</span>
+                              <Show when={sec.count > 0 || sec.unresolved === 0}>
+                                <span class="finding-group-badge">{sec.count}</span>
+                              </Show>
+                              <Show when={sec.unresolved > 0}>
+                                <span class="finding-group-unresolved" title={`${sec.unresolved} inconclusive: the rule could not decide`}>
+                                  {sec.unresolved}?
+                                </span>
+                              </Show>
+                            </button>
+                            {/* Beside the toggle rather than inside it, since a link inside a button is
+                                invalid markup and its click would also fold the group. */}
+                            <Show when={axis() === "rule" && props.state().ruleDocs?.[sec.value!]}>
+                              <a
+                                class="check-group-doc"
+                                href={props.state().ruleDocs![sec.value!]}
+                                target="_blank"
+                                rel="noopener"
+                                title="what this rule checks and why, in the rule reference"
+                              >
+                                docs ↗
+                              </a>
                             </Show>
-                            <Show when={sec.unresolved > 0}>
-                              <span class="finding-group-unresolved" title={`${sec.unresolved} inconclusive: the rule could not decide`}>
-                                {sec.unresolved}?
-                              </span>
-                            </Show>
-                          </button>
+                          </div>
                         </td>
                       </tr>
                     </Show>

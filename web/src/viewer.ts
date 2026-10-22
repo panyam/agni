@@ -905,7 +905,11 @@ export class ViewerPresenter {
     const failedRules = failed?.rules.filter((n) => this.doc.selectedRules.includes(n) && !this.doc.ran(n)) ?? [];
     const skippedAt = new Map((this.doc.run?.resp.skipped ?? []).map((sk) => [sk.name, sk.reason]));
     const ruleSummaries: Record<string, string> = {};
-    for (const r of this.doc.rules) if (r.summary) ruleSummaries[r.name] = r.summary;
+    const ruleDocs: Record<string, string> = {};
+    for (const r of this.doc.rules) {
+      if (r.summary) ruleSummaries[r.name] = r.summary;
+      if (r.docUrl) ruleDocs[r.name] = r.docUrl;
+    }
     const state: FindingsState = {
       findings: this.findings,
       verdicts: this.verdictList(),
@@ -930,6 +934,7 @@ export class ViewerPresenter {
           .map((n) => ({ rule: n, reason: skippedAt.get(n) ?? "" })),
       ].sort((a, b) => a.rule.localeCompare(b.rule)),
       ruleSummaries,
+      ruleDocs,
       saveNote: this.saveNote,
     };
     this.views.findings.setState(state);

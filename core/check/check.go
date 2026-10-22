@@ -208,8 +208,14 @@ type Rule struct {
 	// ("add a bulk capacitor at the rail's entry") and never a designator or a computed value. Where
 	// the fix needs a number the engine cannot derive (an I2C pull-up's resistance), say what to size
 	// it from and stop, since an invented value would read as the engine's authority.
-	Remedy     string
-	Detail     string   // long-form markdown: meaning, rationale, diagram, query structure
+	Remedy string
+	Detail string // long-form markdown: meaning, rationale, diagram, query structure
+	// DocPage is the stem of the docsite page that explains this rule, under reference/rules/, and
+	// empty when no page does. The source that compiles the rule sets it, because a rule's name and its
+	// page differ wherever one page covers a family. Every intent/subsystem-<slug> rule is explained on
+	// intent-subsystem, and every profile's signal-missing rule on profile-signal-missing.
+	// tools/catalogdocs names the pages from it and the rules service links to them.
+	DocPage    string
 	Primitives []string // query primitives Eval composes
 	Reads      []string // facts the rule reads, in the fact vocabulary (net.pin_count, on_net, param.max(...))
 	// OptionalReads is the subset of Reads a rule consults only to EXEMPT findings, so their absence

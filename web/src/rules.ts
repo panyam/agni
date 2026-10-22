@@ -21,6 +21,9 @@ export interface RuleItem {
   unavailableReason: string;
   // shipped is whether agni ships the rule, so a report leaving the machine may name it (agni 1057).
   shipped?: boolean;
+  // docUrl is the published page explaining the rule, absent or "" when none does (a project's own
+  // rule). The server names it, since one page can explain a family of rules.
+  docUrl?: string;
 }
 
 export interface RulesState {

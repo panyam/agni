@@ -158,6 +158,7 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 			Available:         ok,
 			UnavailableReason: reason,
 			Shipped:           shipped[r.Name],
+			DocUrl:            RuleDocURL(r),
 		})
 	}
 	return resp, nil
@@ -618,6 +619,17 @@ func datasheetCitationsFromProto(ps []*checkspb.DatasheetCitation) []*check.Data
 		})
 	}
 	return out
+}
+
+// RuleDocsBase is where the published docsite serves the rule reference pages.
+const RuleDocsBase = "https://panyam.github.io/agni/reference/rules/"
+
+// RuleDocURL is the published page explaining r, or "" when r names no page (check.Rule.DocPage).
+func RuleDocURL(r *check.Rule) string {
+	if r.DocPage == "" {
+		return ""
+	}
+	return RuleDocsBase + r.DocPage + "/"
 }
 
 // ShippedRules is the names of the rules agni ships, its default catalog's, which a sanitized report

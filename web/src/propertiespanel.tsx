@@ -17,6 +17,8 @@ export interface PropertiesHandlers {
   onAsk: (sel: Selection, question: EntityQueryItem) => void;
   // onVerdict shows one of the selection's verdicts with its proof on the drawing (agni issue 897).
   onVerdict?: (id: string) => void;
+  // onTrace names the selected part or pin as one end of a trace (agni issue 1133).
+  onTrace?: (end: "from" | "to", sel: Selection) => void;
 }
 
 function emptyState(): PropertiesState {
@@ -97,6 +99,11 @@ function PropertiesPanel(props: { state: () => PropertiesState; handlers: Proper
     return sheet?.level === "sheet" ? sheet.sheetId : undefined;
   });
   const report = createMemo(() => reportLines(s().report));
+  // traceable is a selected part or pin, either of which can end a trace.
+  const traceable = () => {
+    const sel = s().sel;
+    return sel && (sel.kind === "component" || sel.kind === "pin") ? sel : undefined;
+  };
   return (
     <div class="properties">
       <nav class="pr-crumbs" aria-label="Selection">
@@ -184,6 +191,19 @@ function PropertiesPanel(props: { state: () => PropertiesState; handlers: Proper
                 </button>
               )}
             </For>
+          </div>
+        )}
+      </Show>
+      <Show when={props.handlers.onTrace && traceable()}>
+        {(sel) => (
+          <div class="pr-trace">
+            <span class="pr-section">trace</span>
+            <button type="button" class="pr-ask-go pr-trace-from" onClick={() => props.handlers.onTrace!("from", sel())}>
+              from here
+            </button>
+            <button type="button" class="pr-ask-go pr-trace-to" onClick={() => props.handlers.onTrace!("to", sel())}>
+              to here
+            </button>
           </div>
         )}
       </Show>

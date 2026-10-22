@@ -14,6 +14,11 @@ import (
 // It runs before an importing package's own var initializers, so a blank-importing binary has the
 // built-ins at startup.
 func init() {
+	for _, r := range rules {
+		if r.Detail != "" {
+			r.DocPage = r.Name
+		}
+	}
 	check.RegisterBuiltins(rules, specs)
 }
 

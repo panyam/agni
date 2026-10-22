@@ -78,3 +78,82 @@ describe("tracePanel", () => {
     expect(el.querySelector<HTMLButtonElement>("button.trace-run")!.disabled).toBe(true);
   });
 });
+
+describe("picking a trace's endpoints", () => {
+  const picks = {
+    components: [{ ref: "J1", detail: "2 pins" }, { ref: "U1", detail: "2 pins" }],
+    pins: new Map([
+      ["J1", [{ pin: "1", name: "VBUS", net: "VCC" }, { pin: "2", name: "", net: "GND" }]],
+      ["U1", [{ pin: "3", name: "SDA", net: "SDA" }, { pin: "4", name: "SCL", net: "SCL" }]],
+    ]),
+    examples: ["J1.1", "U1.3"] as [string, string],
+  };
+  function mountPicking() {
+    const m = mount();
+    m.view.setPicks(picks);
+    const [from, to] = [...m.el.querySelectorAll<HTMLInputElement>("input.trace-pin")];
+    return { ...m, from, to };
+  }
+  const type = (input: HTMLInputElement, text: string) => {
+    input.focus();
+    input.value = text;
+    input.dispatchEvent(new InputEvent("input", { bubbles: true }));
+  };
+  const key = (input: HTMLInputElement, k: string) => input.dispatchEvent(new KeyboardEvent("keydown", { key: k, bubbles: true }));
+  const listed = (el: HTMLElement) => [...el.querySelectorAll(".trace-pick-value")].map((n) => n.textContent);
+
+  it("names real pins of the open design in the placeholders", () => {
+    const { from, to } = mountPicking();
+    expect(from.placeholder).toBe("from, e.g. J1.1");
+    expect(to.placeholder).toBe("to, e.g. U1.3");
+  });
+
+  it("lists the design's parts on focus and narrows them as the reader types", () => {
+    const { el, from } = mountPicking();
+    from.focus();
+    expect(listed(el)).toEqual(["J1", "U1"]);
+    expect(from.getAttribute("aria-expanded")).toBe("true");
+    type(from, "sda");
+    expect(listed(el)).toEqual(["U1.3"]);
+  });
+
+  it("lists a chosen part's pins, and a chosen pin fills the field and moves on to the other end", () => {
+    const { el, from, to } = mountPicking();
+    from.focus();
+    [...el.querySelectorAll<HTMLElement>(".trace-pick")].find((n) => n.textContent?.startsWith("U1"))!.dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(from.value).toBe("U1.");
+    expect(listed(el)).toEqual(["U1.3", "U1.4"]);
+    [...el.querySelectorAll<HTMLElement>(".trace-pick")][1].dispatchEvent(new MouseEvent("mousedown", { bubbles: true }));
+    expect(from.value).toBe("U1.4");
+    expect(document.activeElement).toBe(to);
+  });
+
+  it("picks with the arrow keys and Enter, and Escape closes the list", () => {
+    const { el, from, onTrace } = mountPicking();
+    type(from, "J1.");
+    key(from, "ArrowDown");
+    key(from, "ArrowDown");
+    expect(from.getAttribute("aria-activedescendant")).toBe("trace-pick-1");
+    key(from, "Enter");
+    expect(from.value).toBe("J1.2");
+    expect(onTrace).not.toHaveBeenCalled();
+    from.focus();
+    key(from, "Escape");
+    expect(el.querySelector(".trace-picks")).toBeNull();
+  });
+
+  it("traces exactly what was typed when Enter meets no highlighted entry", () => {
+    const { from, to, onTrace } = mountPicking();
+    type(to, "J1.1");
+    type(from, "u7.3");
+    key(from, "Enter");
+    expect(onTrace).toHaveBeenCalledWith("u7.3", "J1.1");
+  });
+
+  it("fills one end from outside the panel", () => {
+    const { from, view } = mountPicking();
+    view.setEnd("from", "U1.3");
+    expect(from.value).toBe("U1.3");
+    expect(document.activeElement).toBe(from);
+  });
+});

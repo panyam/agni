@@ -67,7 +67,7 @@ func TestPageSlugsUnique(t *testing.T) {
 				continue
 			}
 			total++
-			slug := pageSlug(s.prefix, r.Name)
+			slug := r.DocPage
 			label := linkLabel(s.prefix, r.Name)
 			if prev, dup := seen[slug]; dup {
 				t.Errorf("slug %q claimed by both %q and %q", slug, prev, label)

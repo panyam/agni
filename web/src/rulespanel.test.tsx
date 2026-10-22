@@ -174,6 +174,18 @@ describe("rulespanel rule prose (WS9-020)", () => {
   });
 });
 
+describe("a rule's reference page", () => {
+  it("links a rule the server names a page for, in a new tab, and no other", () => {
+    const url = "https://panyam.github.io/agni/reference/rules/single-pin-net/";
+    const { el } = mountPanel([{ ...rule("single-pin-net", "connectivity"), docUrl: url }, rule("unconnected-component", "connectivity")]);
+    const links = [...el.querySelectorAll<HTMLAnchorElement>(".rule-doc")];
+    expect(links).toHaveLength(1);
+    expect(links[0].href).toBe(url);
+    expect(links[0].target).toBe("_blank");
+    expect(links[0].closest("li")!.querySelector(".rule-name")!.textContent).toBe("single-pin-net");
+  });
+});
+
 // agni issue 1117: a catalog that did not load says why, where "No rules." would read as a design
 // with no rules at all.
 describe("a catalog that did not load", () => {

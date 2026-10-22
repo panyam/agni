@@ -1043,7 +1043,11 @@ type RuleInfo struct {
 	// overlay composing it. A report that crosses the confidentiality boundary may name a shipped rule
 	// and never another, since a project's rule is namespaced by the project's own name (agni issue
 	// 1057).
-	Shipped       bool `protobuf:"varint,11,opt,name=shipped,proto3" json:"shipped,omitempty"`
+	Shipped bool `protobuf:"varint,11,opt,name=shipped,proto3" json:"shipped,omitempty"`
+	// doc_url is the published reference page that explains the rule, empty when no page does, as for a
+	// project's own rule or a profile requirement type that has none. Several rules can share one page,
+	// since every intent/subsystem-<slug> rule is explained on intent-subsystem.
+	DocUrl        string `protobuf:"bytes,12,opt,name=doc_url,json=docUrl,proto3" json:"doc_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1153,6 +1157,13 @@ func (x *RuleInfo) GetShipped() bool {
 		return x.Shipped
 	}
 	return false
+}
+
+func (x *RuleInfo) GetDocUrl() string {
+	if x != nil {
+		return x.DocUrl
+	}
+	return ""
 }
 
 type ListRulesResponse struct {
@@ -1658,7 +1669,7 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\vhas_sidecar\x18\x02 \x01(\bR\n" +
 	"hasSidecar\"H\n" +
 	"\x10ListRulesRequest\x12\x1a\n" +
-	"\bsnapshot\x18\x03 \x01(\tR\bsnapshotJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\aoverlayR\x03uri\"\x8a\x03\n" +
+	"\bsnapshot\x18\x03 \x01(\tR\bsnapshotJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03R\aoverlayR\x03uri\"\xa3\x03\n" +
 	"\bRuleInfo\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
 	"\bseverity\x18\x02 \x01(\tR\bseverity\x12\x18\n" +
@@ -1671,7 +1682,8 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\x06detail\x18\t \x01(\tR\x06detail\x12\x16\n" +
 	"\x06remedy\x18\n" +
 	" \x01(\tR\x06remedy\x12\x18\n" +
-	"\ashipped\x18\v \x01(\bR\ashipped\x1a7\n" +
+	"\ashipped\x18\v \x01(\bR\ashipped\x12\x17\n" +
+	"\adoc_url\x18\f \x01(\tR\x06docUrl\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
 	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"j\n" +

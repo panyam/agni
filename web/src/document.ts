@@ -218,6 +218,7 @@ export class DocumentStore {
         available: r.available,
         unavailableReason: r.unavailableReason,
         shipped: r.shipped,
+        docUrl: r.docUrl,
       }));
       this.engineVersion = resp.engineVersion ?? "";
       this.catalogError = "";

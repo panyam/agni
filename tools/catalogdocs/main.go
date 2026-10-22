@@ -91,8 +91,8 @@ func run() error {
 }
 
 // ruleSource is one origin of documented rules. label fills the index's Source column. prefix
-// namespaces the page slug and link so a non-built-in name never collides with a built-in of the
-// same name. imgSrc is the dir holding this source's docs/images, empty when it ships no cards.
+// namespaces the link label the way the catalog composes the rule's name, and each rule's DocPage
+// names its page. imgSrc is the dir holding this source's docs/images, empty when it ships no cards.
 type ruleSource struct {
 	rules  []*check.Rule
 	label  string
@@ -132,7 +132,10 @@ func genRules() error {
 			if strings.TrimSpace(r.Detail) == "" {
 				continue
 			}
-			slug := pageSlug(s.prefix, r.Name)
+			slug := r.DocPage
+			if slug == "" {
+				return fmt.Errorf("%s rule %q has a Detail and no DocPage", s.label, r.Name)
+			}
 			label := linkLabel(s.prefix, r.Name)
 			body := prepareDetail(r.Detail, "rules", images)
 			page := frontMatter(label, r.Summary) + remedySection(r.Remedy) + body
@@ -155,15 +158,6 @@ func genRules() error {
 		}
 	}
 	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(rulesIndex(rows)), 0o644) // #nosec G306 -- committed docs pages
-}
-
-// pageSlug is a rule's page filename stem, the bare name for built-ins (prefix "") and
-// "<prefix>-<name>" otherwise.
-func pageSlug(prefix, name string) string {
-	if prefix == "" {
-		return name
-	}
-	return prefix + "-" + name
 }
 
 // linkLabel is a rule's display text, the bare name for built-ins and otherwise "<prefix>/<name>",

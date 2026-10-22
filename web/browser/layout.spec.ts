@@ -779,3 +779,60 @@ describe("the top bar's menu buttons", () => {
     });
   });
 });
+
+// agni issue 1133: the trace pickers' list sits inside the docked Trace panel, where a dropdown
+// floating over the panel would be clipped by its edge, so the reader has to be able to see and click it.
+describe("the trace pickers", () => {
+  it("fill an end from Properties, list the part's pins where they can be clicked, and trace the pick", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      const at = await page.evaluate(() => {
+        const r = document.querySelector('#svg-view [data-kind="component"][data-ref="U1"]')!.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      });
+      await page.mouse.click(at.x, at.y);
+      await page.click(".pr-trace-from", { timeout: 30_000 });
+
+      const from = page.locator('input.trace-pin[aria-label="Start pin"]');
+      await page.waitForFunction(() => document.querySelectorAll(".trace-pick.pin").length > 0, null, { timeout: 30_000 });
+      expect(await from.inputValue()).toBe("U1.");
+      expect((await paintedAt(page, ".trace-pick.pin")).ownedByProbe).toBe(true);
+
+      const first = (await page.locator(".trace-pick.pin .trace-pick-value").first().innerText()).trim();
+      await page.locator(".trace-pick.pin").first().click();
+      expect(await from.inputValue()).toBe(first);
+
+      const to = page.locator('input.trace-pin[aria-label="End pin"]');
+      await to.fill("J1.");
+      await to.press("ArrowDown");
+      await to.press("Enter");
+      expect(await to.inputValue()).toMatch(/^J1\.\S+$/);
+      await page.click("button.trace-run");
+      await page.waitForSelector(".trace-headline", { timeout: 30_000 });
+    });
+  }, 90_000);
+});
+
+// agni issue 1133: a rule group's docs link sits on the header's line, beside the count, where jsdom
+// can say it exists and cannot say where it lands. The first version wrapped under the name, and the
+// next was pushed to the row's far end by the toggle growing into the line.
+describe("a rule group's docs link", () => {
+  it("sits beside the group's count, on the same line", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await page.click(".checks-run:not([disabled])", { timeout: 30_000 });
+      await page.waitForSelector("tr.check-row", { timeout: 60_000 });
+      await page.selectOption(".checks-groupby select", "rule");
+      const at = await page.evaluate(() => {
+        const row = [...document.querySelectorAll("tr.check-group")].find((r) => r.querySelector(".check-group-doc"));
+        if (!row) throw new Error("no rule group carries a docs link");
+        const badge = row.querySelector(".finding-group-badge, .finding-group-unresolved")!.getBoundingClientRect();
+        const link = row.querySelector(".check-group-doc")!.getBoundingClientRect();
+        return { gap: link.left - badge.right, dy: Math.abs(link.top + link.height / 2 - (badge.top + badge.height / 2)) };
+      });
+      expect(at.dy).toBeLessThan(4);
+      expect(at.gap).toBeGreaterThanOrEqual(0);
+      expect(at.gap).toBeLessThan(24);
+    });
+  }, 120_000);
+});
