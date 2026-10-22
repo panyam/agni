@@ -10,6 +10,16 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.6] - 2026-10-22
+
+`project.yaml` and `design.yaml` share one schema in which every tier a run reads is named, and a
+design names its project with `extends`, so a board can carry its own convention or checklist and a
+moved tier folder fails the load rather than vanishing (PR 1139).  The relation picker drills module
+by module (PR 1131), trace endpoints are picked from the design and each rule links to its page
+(PR 1135), and the analysis panels say what they mean (PR 1134).  Every existing descriptor must be
+migrated, listed under Breaking with the steps.  The full write-up is
+[RELEASES/v0.3.6.md](RELEASES/v0.3.6.md).
+
 ## [0.3.5] - 2026-10-22
 
 A value a library writes as its part name (`R_10k_0402`) is read, so every passive on the Jetson
