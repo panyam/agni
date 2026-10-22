@@ -191,6 +191,22 @@ function ChecksPanel(props: {
         </div>
       </Show>
 
+      {/* A failed run leaves its rules pending too, and without this reads as a Run never pressed (agni issue 1117). */}
+      <Show when={!props.state().running && props.state().runError}>
+        <div class="checks-error" role="alert">
+          <div class="checks-error-head">
+            The run failed, so {props.state().runError!.rules.length} selected rule{props.state().runError!.rules.length === 1 ? " was" : "s were"} not run.
+          </div>
+          <div class="checks-error-message">{props.state().runError!.message}</div>
+          <details class="checks-error-rules">
+            <summary>Rules not run</summary>
+            <ul>
+              <For each={props.state().runError!.rules}>{(rule) => <li>{rule}</li>}</For>
+            </ul>
+          </details>
+        </div>
+      </Show>
+
       <Show when={props.state().saveNote !== ""}>
         <div class="checks-save-note" role="status">{props.state().saveNote}</div>
       </Show>
@@ -225,7 +241,15 @@ function ChecksPanel(props: {
 
       <Show
         when={props.state().ruleCount > 0}
-        fallback={<div class="findings-empty">{props.state().catalogLoading ? "Loading rules…" : "No rules selected."}</div>}
+        fallback={
+          props.state().catalogLoading ? (
+            <div class="findings-empty">Loading rules…</div>
+          ) : props.state().catalogError ? (
+            <div class="checks-error" role="alert">The rule catalog did not load, so no rules can run. {props.state().catalogError}</div>
+          ) : (
+            <div class="findings-empty">No rules selected.</div>
+          )
+        }
       >
         <Show
           when={props.state().findings.length > 0}

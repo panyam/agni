@@ -93,3 +93,70 @@ describe("the held run keeps what the read left out", () => {
     expect(held).toMatchObject(blocks);
   });
 });
+
+// agni issue 1117: a failed run keeps its reason and the rules it left pending, and so does a failed
+// catalog, where both used to be swallowed by a bare catch.
+describe("the store keeps why a request failed", () => {
+  const listRules = vi.fn(async () => ({
+    rules: ["a", "b"].map((name) => ({ name, severity: "info", summary: "", impact: "", remedy: "", detail: "", reads: [], tags: {}, available: true, unavailableReason: "" })),
+  }));
+  async function opened(): Promise<DocumentStore> {
+    const doc = new DocumentStore();
+    doc.mount = "m";
+    doc.path = "b.edn";
+    await doc.loadCatalog({ listRules } as never, async () => "snapshots/t");
+    return doc;
+  }
+
+  it("keeps a failed run's reason and rules, folds in nothing, and clears it on the next run", async () => {
+    const doc = await opened();
+    const checkDesign = vi.fn().mockRejectedValueOnce(new Error("[invalid_argument] invalid argument: mount://m/b.svg carries no netlist"));
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    expect(doc.runError).toEqual({ message: "[invalid_argument] invalid argument: mount://m/b.svg carries no netlist", rules: ["a", "b"] });
+    expect(doc.run).toBeNull();
+
+    checkDesign.mockResolvedValueOnce({ findings: [], verdicts: [], skipped: [] });
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t");
+    expect(doc.runError).toBeNull();
+    expect(doc.ran("a") && doc.ran("b")).toBe(true);
+  });
+
+  it("counts a snapshot that cannot be had as a failed run", async () => {
+    const doc = await opened();
+    const checkDesign = vi.fn();
+    await doc.runMissing({ checkDesign } as never, async () => {
+      throw new Error("snapshot is stale");
+    });
+    expect(checkDesign).not.toHaveBeenCalled();
+    expect(doc.runError).toEqual({ message: "snapshot is stale", rules: ["a", "b"] });
+  });
+
+  it("keeps no failure for a run the reader stopped", async () => {
+    const doc = await opened();
+    const abort = new AbortController();
+    abort.abort();
+    const checkDesign = vi.fn().mockRejectedValueOnce(new DOMException("stopped", "AbortError"));
+    await doc.runMissing({ checkDesign } as never, async () => "snapshots/t", abort.signal);
+    expect(checkDesign).toHaveBeenCalledOnce();
+    expect(doc.runError).toBeNull();
+  });
+
+  it("drops a failure with the run", async () => {
+    const doc = await opened();
+    await doc.runMissing({ checkDesign: vi.fn().mockRejectedValueOnce(new Error("boom")) } as never, async () => "snapshots/t");
+    expect(doc.runError).not.toBeNull();
+    doc.dropRun();
+    expect(doc.runError).toBeNull();
+  });
+
+  it("keeps why the catalog did not load, and clears it when one does", async () => {
+    const doc = new DocumentStore();
+    await doc.loadCatalog({ listRules: vi.fn().mockRejectedValueOnce(new Error("snapshot not found")) } as never, async () => "snapshots/t");
+    expect(doc.rules).toEqual([]);
+    expect(doc.catalogError).toBe("snapshot not found");
+    expect(doc.catalogLoading).toBe(false);
+    await doc.loadCatalog({ listRules } as never, async () => "snapshots/t");
+    expect(doc.catalogError).toBe("");
+    expect(doc.selectedRules).toEqual(["a", "b"]);
+  });
+});

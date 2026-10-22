@@ -55,6 +55,14 @@ export class DocumentStore {
   // repeated Run costs nothing; asking for the whole selection again cost Jetson 0.3 to 0.8 s in the
   // browser for an answer already on screen. null until a run.
   run: { rules: Set<string>; resp: CheckDesignResponse } | null = null;
+  // runError says why the last run failed and which rules it asked for, which it left pending
+  // (agni issue 1117), null when the last run did not fail. Without it a failed run reads as a Run
+  // never pressed, and a stale or lost snapshot, a worker that died, a budget the server enforced and
+  // a geometry-only file with no netlist all look the same.
+  runError: { message: string; rules: string[] } | null = null;
+  // catalogError says why ListRules failed, "" when it answered, so an empty catalog is not read as
+  // a design with no rules (agni issue 1117).
+  catalogError = "";
 
   // expectations are the design's expectation sidecar entries, expectationFindings the findings the
   // full run produced for reconciling against them, and hasSidecar whether the design has one.
@@ -84,6 +92,7 @@ export class DocumentStore {
   // dropRun forgets every answer about the design: the whole run and the scoped ones.
   dropRun(): void {
     this.run = null;
+    this.runError = null;
     this.scoped = [];
   }
 
@@ -161,12 +170,14 @@ export class DocumentStore {
 
   // runMissing asks CheckDesign for the selected rules the run lacks and folds the answer into it.
   // snapshot is the open design's snapshot under the page's convention, asked for only when a rule
-  // is missing (agni issue 1061). A geometry-only file (no netlist) fails, which leaves the run as it
-  // was and those rules pending.
+  // is missing (agni issue 1061). A failure leaves the run as it was and those rules pending, and
+  // keeps the reason on runError (agni issue 1117). A geometry-only file fails this way, since the
+  // engine reads a file with no netlist as an invalid argument and says so in its message.
   //
   // signal stops the request (agni issue 918). A stopped run folds in nothing, so the rules it was
-  // asked for stay pending.
+  // asked for stay pending, and it is no failure, since the reader stopped it.
   async runMissing(checks: Pick<CheckClient, "checkDesign">, snapshot: () => Promise<string>, signal?: AbortSignal): Promise<void> {
+    this.runError = null;
     const missing = this.selectedRules.filter((n) => !this.ran(n));
     if (missing.length === 0 || !this.mount || !this.path) return;
     try {
@@ -184,14 +195,14 @@ export class DocumentStore {
         this.run.resp.verdicts.push(...resp.verdicts);
         this.run.resp.skipped.push(...resp.skipped);
       }
-    } catch {
-      // no netlist etc.: the run stands, and the rules it lacks stay pending.
+    } catch (e) {
+      if (!signal?.aborted) this.runError = { message: messageOf(e), rules: missing };
     }
   }
 
   // loadCatalog fetches the rule catalog a check of snapshot would run (ListRules) and defaults the
-  // active ruleset to every available rule. A failure leaves an empty catalog (the panel shows "No
-  // rules.") rather than erroring the open.
+  // active ruleset to every available rule. A failure leaves an empty catalog and the reason on
+  // catalogError, which both panels show (agni issue 1117), rather than erroring the open.
   async loadCatalog(checks: Pick<CheckClient, "listRules">, snapshot: () => Promise<string>): Promise<void> {
     try {
       const resp = await checks.listRules({ snapshot: await snapshot() });
@@ -209,13 +220,20 @@ export class DocumentStore {
         shipped: r.shipped,
       }));
       this.engineVersion = resp.engineVersion ?? "";
-    } catch {
+      this.catalogError = "";
+    } catch (e) {
       this.rules = [];
+      this.catalogError = messageOf(e);
     }
     this.rulesByName = new Map(this.rules.map((r) => [r.name, r]));
     this.selectedRules = defaultSelection(this.rules);
     this.catalogLoading = false;
   }
+}
+
+// messageOf pulls a human-readable message off a thrown value for inline display.
+export function messageOf(e: unknown): string {
+  return e instanceof Error ? e.message : String(e);
 }
 
 // verdictItem is one wire verdict as the panel shows it: its outcome as a word, its subjects, and the

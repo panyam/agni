@@ -133,10 +133,16 @@ export interface FindingsState {
   // cancelled is true when the last run was stopped before it answered (agni issue 918), so the rules
   // it left pending read as not run rather than as clean. Absent means not cancelled.
   cancelled?: boolean;
+  // runError says why the last run failed and names the selected rules it left pending (agni issue
+  // 1117), so they read as not run rather than as a Run never pressed. Absent when it did not fail.
+  runError?: { message: string; rules: string[] };
   // catalogLoading is true from the moment a design starts opening until its rule catalog
   // (ListRules) answers. The first sheet can draw before then, and a Run pressed in that window has
   // no ruleset to run, so the panel disables the button and says why (agni 868).
   catalogLoading: boolean;
+  // catalogError says why the rule catalog did not load, so an empty selection does not read as
+  // "No rules selected." (agni issue 1117). Absent or "" when it loaded.
+  catalogError?: string;
   // skipped names the selected rules that could NOT run on this design, and why. A rule whose fact
   // tier the design lacks (a board rule on a netlist, a datasheet rule with no corpus) is gated before it
   // evaluates and produces no findings, so without this list an unanswered question reads as a clean

@@ -1701,3 +1701,73 @@ describe("cancelling a check run", () => {
     expect(lastFindings(h).cancelled).toBe(false);
   });
 });
+
+// agni issue 1117: a run that fails says why and which rules it left pending. It used to end with no
+// findings and no message, so the panel read as if Run had never been pressed.
+describe("a check run that fails", () => {
+  it("says why, names the rules it left pending, and the next run that answers clears it", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockRejectedValueOnce(new ConnectError("work budget exhausted", Code.ResourceExhausted));
+    await h.presenter.runChecks();
+    const after = lastFindings(h);
+    expect(after.running).toBe(false);
+    expect(after.cancelled).toBe(false);
+    expect(after.pending).toBe(2);
+    expect(after.runError?.message).toContain("work budget exhausted");
+    expect(after.runError?.rules).toEqual(["single-pin-net", "diff-pair-naming"]);
+
+    await h.presenter.runChecks();
+    expect(lastFindings(h).runError).toBeUndefined();
+    expect(lastFindings(h).pending).toBe(0);
+  });
+
+  it("names only the rules still selected", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockRejectedValueOnce(new Error("the engine worker stopped"));
+    await h.presenter.runChecks();
+    await h.presenter.setRuleSelection(["diff-pair-naming"]);
+    expect(lastFindings(h).runError).toEqual({ message: "the engine worker stopped", rules: ["diff-pair-naming"] });
+  });
+
+  it("forgets a failure when another design opens", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockRejectedValueOnce(new Error("boom"));
+    await h.presenter.runChecks();
+    expect(lastFindings(h).runError).toBeDefined();
+    await h.presenter.openFile("m", "other.edn");
+    expect(lastFindings(h).runError).toBeUndefined();
+  });
+
+  it("reports a cancelled run as cancelled, never as failed", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn");
+    h.checkDesign.mockImplementationOnce(((_req: unknown, opts?: { signal?: AbortSignal }) =>
+      new Promise<never>((_resolve, reject) => {
+        opts?.signal?.addEventListener("abort", () => reject(new DOMException("stopped", "AbortError")));
+      })) as never);
+    const running = h.presenter.runChecks();
+    await vi.waitFor(() => expect(lastFindings(h).running).toBe(true));
+    h.presenter.cancelChecks();
+    await running;
+    expect(lastFindings(h).cancelled).toBe(true);
+    expect(lastFindings(h).runError).toBeUndefined();
+  });
+
+  it("says why the rule catalog did not load, to both panels, and forgets it once a catalog loads", async () => {
+    const h = harness();
+    h.listRules.mockRejectedValueOnce(new ConnectError("snapshot not found", Code.NotFound));
+    await h.presenter.openFile("m", "board.edn");
+    expect(lastRules(h).rules).toEqual([]);
+    expect(lastRules(h).error).toContain("snapshot not found");
+    expect(lastFindings(h).catalogError).toContain("snapshot not found");
+    expect(lastFindings(h).ruleCount).toBe(0);
+
+    await h.presenter.openFile("m", "other.edn");
+    expect(lastRules(h).error).toBe("");
+    expect(lastFindings(h).catalogError).toBe("");
+    expect(lastFindings(h).ruleCount).toBe(2);
+  });
+});
