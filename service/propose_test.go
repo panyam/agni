@@ -239,3 +239,21 @@ func TestProposeARealKicadBoard(t *testing.T) {
 		}
 	}
 }
+
+// A design reads only the sources its descriptor names (agni issue 1136), so a proposal names the
+// folder holding a KiCad design's own symbol libraries, or its schematic draws without them.
+func TestProposeNamesADesignsSymbolLibraries(t *testing.T) {
+	r := propose(t, map[string]string{
+		"g/board.kicad_pro":             "{}",
+		"g/board.kicad_sch":             "(kicad_sch)",
+		"g/symbols/board.kicad_sym":     "",
+		"g/symbols/extra.kicad_sym":     "",
+		"g/fp/board.pretty/r.kicad_mod": "",
+	})
+	if len(r.GetDesigns()) != 1 {
+		t.Fatalf("designs %v", r.GetDesigns())
+	}
+	if y := r.GetDesigns()[0].GetDesignYaml(); !strings.Contains(y, "symbols:\n  - symbols\n") || strings.Contains(y, "fp") {
+		t.Errorf("design.yaml:\n%s\nwant the symbols folder named once, and no footprint folder", y)
+	}
+}

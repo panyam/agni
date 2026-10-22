@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"path"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -440,7 +441,12 @@ func kicadLibrary(f string) bool {
 	return b == "sym-lib-table" || b == "fp-lib-table"
 }
 
+// libraries attaches each KiCad library to the KiCad design beside or above it. A folder of symbol
+// libraries is named under the proposal's `symbols:`, since a design reads only the sources its
+// descriptor names (agni issue 1136), and a schematic referencing external symbols would otherwise
+// draw without them.
 func (p *proposer) libraries() {
+	symbolDirs := map[*webapi.ProposedDesign][]string{}
 	for _, f := range p.files {
 		if !p.free(f) || !kicadLibrary(f) {
 			continue
@@ -450,12 +456,28 @@ func (p *proposer) libraries() {
 				p.claim(f)
 				pd.Files = append(pd.Files, f)
 				sort.Strings(pd.Files)
+				if ext(f) == ".kicad_sym" && dirOf(f) != pd.GetFolder() && !slices.Contains(symbolDirs[pd], dirOf(f)) {
+					symbolDirs[pd] = append(symbolDirs[pd], dirOf(f))
+				}
 				break
 			}
 			if d == "" {
 				break
 			}
 		}
+	}
+	for pd, dirs := range symbolDirs {
+		sort.Strings(dirs)
+		var b strings.Builder
+		b.WriteString("symbols:\n")
+		for _, d := range dirs {
+			rel := d
+			if pd.GetFolder() != "" {
+				rel = strings.TrimPrefix(d, pd.GetFolder()+"/")
+			}
+			fmt.Fprintf(&b, "  - %s\n", yamlScalar(rel))
+		}
+		pd.DesignYaml += b.String()
 	}
 }
 
