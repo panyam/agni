@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.5] - 2026-10-22
+
+A value a library writes as its part name (`R_10k_0402`) is read, so every passive on the Jetson
+baseboard has one and a strap band that passed unchecked is judged (PR 1128).  A failed check run or
+rule catalog says so in the viewer (PR 1129), and a diff has a viewer link, `?against=`, which
+`agni diff --server` prints and the MCP `diff` tool returns (PR 1130).  `report.DesignURL` is removed
+and the MCP `diff` answer's `links` becomes `link`, both listed under Breaking with migrations.  The
+full write-up is [RELEASES/v0.3.5.md](RELEASES/v0.3.5.md).
+
 ## [0.3.4] - 2026-10-22
 
 agni serves its analysis over MCP, from `agni serve --mcp` and `agni mcp` (PR 1122), and
