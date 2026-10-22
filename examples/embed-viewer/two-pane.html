@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Report beside the viewer</title>
+<style>
+  body { margin: 0; display: grid; grid-template-columns: 3fr 2fr; height: 100vh; }
+  iframe { width: 100%; height: 100%; border: 0; }
+  #report { border-left: 1px solid #ccc; }
+</style>
+</head>
+<body>
+<!--
+  A saved check report beside the viewer it links into (agni issue 1156). Open it as
+  two-pane.html?viewer=<a viewer design URL>&report=<a report's URL>, the report written with
+  `agni check --format html --server <that viewer's server>`.
+
+  Nothing here talks to either frame. The viewer's frame is named agni-viewer, which every report
+  link targets, so a click in the report moves the viewer beside it: the report's own script asks
+  the viewer to apply the link over postMessage, and with scripts off the link loads in that frame.
+-->
+<iframe id="viewer" name="agni-viewer" title="agni viewer"></iframe>
+<iframe id="report" title="check report"></iframe>
+<script>
+  const q = new URLSearchParams(location.search);
+  if (q.get("viewer")) document.getElementById("viewer").src = q.get("viewer");
+  if (q.get("report")) document.getElementById("report").src = q.get("report");
+</script>
+</body>
+</html>

@@ -20,6 +20,16 @@ var tmplFS embed.FS
 //go:embed style.css
 var CSS string
 
+// viewerLinkJS moves an open viewer when a report link is clicked rather than loading it again
+// (agni issue 1156). Every report link targets the window it looks for, ViewerTarget.
+//
+//go:embed viewerlink.js
+var viewerLinkJS string
+
+// ViewerTarget is the window name every report link opens in, so clicks reuse one viewer tab, or a
+// frame of that name beside the report, rather than opening a tab each.
+const ViewerTarget = "agni-viewer"
+
 // HTML writes the report as one self-contained page.
 //
 // html/template rather than string building, because every subject, message and witness came out of
@@ -49,6 +59,9 @@ func funcs() template.FuncMap {
 		// css injects the shared stylesheet. template.CSS marks it pre-escaped, since it is ours and
 		// html/template would otherwise escape the braces.
 		"css": func() template.CSS { return template.CSS(CSS) }, // #nosec G203 -- CSS is the embedded stylesheet, not input
+		// viewerScript is the embedded script that moves an open viewer, ours and never input.
+		"viewerScript": func() template.JS { return template.JS(viewerLinkJS) }, // #nosec G203 -- the embedded viewerlink.js, not input
+		"viewerTarget": func() string { return ViewerTarget },
 		// outcomeClass maps an outcome to its CSS class, keeping the vocabulary in one place.
 		"outcomeClass": func(o check.Outcome) string {
 			switch o {
