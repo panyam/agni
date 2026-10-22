@@ -114,6 +114,7 @@ tidyall:
 
 # Build all packages.
 build: ui
+	mkdir -p bin
 	$(GO) build -o bin ./...
 
 # Build the agni CLI into bin/.
