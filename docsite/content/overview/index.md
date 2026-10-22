@@ -45,7 +45,7 @@ the read-first version.
 - **[Use it](../guide/)** covers running the tool on a design, one feature per page.
 - **[Build on it](../build/)** covers adding readers, rules, or an extension.
 - **[Understand it](../architecture/)** covers how the internals fit together, by subsystem.
-- **[Learn the domain](../learn/)** is twelve chapters on what a hardware engineer knows, each
+- **[Learn the domain](../learn/)** is thirteen chapters on what a hardware engineer knows, each
   ending in the rules that encode it.
 - **[Reference](../reference/)** holds the rule and relation catalogs, the glossary, the
   software-to-hardware analogy and the format primers.

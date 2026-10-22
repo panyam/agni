@@ -36,7 +36,7 @@ expensive to rediscover.
 | Measuring something, or trusting a green test | `build/evidence.md` |
 | Learning the domain from a software background | `reference/analogy.md`, `reference/edif-primer.md` |
 | Asking a "no related Y" question, or any query past one clause | `guide/querying.md` (derived relations: `;` splits clauses, `:-` names one) |
-| Why a rule exists at all, as engineering rather than as code | `learn/` (twelve chapters, EE1-EE7) |
+| Why a rule exists at all, as engineering rather than as code | `learn/` (thirteen chapters, EE1-EE7) |
 
 `guide/` is the user-facing manual (getting-started, concepts, running-the-server,
 checks-and-reports, comparing-revisions, querying, naming-conventions, interface-profiles,
@@ -44,7 +44,7 @@ design-intent, datasheets, cli-reference).
 `tutorials/` walks one board from first read to a CI gate. `reference/` also holds the GENERATED
 rule and relation catalogs.
 
-`learn/` is the DOMAIN course, the axis the other sections do not cover. Its twelve chapters teach
+`learn/` is the DOMAIN course, the axis the other sections do not cover. Its thirteen chapters teach
 what a hardware engineer knows, each ending in the rules that encode it. `tutorials/` teaches
 the tool and assumes the domain; the rule pages explain the check and assume the instinct. `learn/`
 is the layer between. `learn/levels.md` defines EE1 through EE7 (parts, nets, roles, failure modes,
