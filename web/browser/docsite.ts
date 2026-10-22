@@ -39,7 +39,10 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
     command: "go",
     args: ["run", "."],
     cwd: resolve(repoRoot, "docsite"),
-    env: { ...process.env, AGNI_DOCS_ENV: "dev", AGNI_DOCS_PORT: `:${port}` },
+    // AGNI_DOCS_RUNS=stored serves every run capture as committed. The server renders every page at
+    // startup, and without it a stale capture was regenerated into the working tree, leaving tracked
+    // files modified after a test run (agni issue 1149). tutorial-runs-check is what judges staleness.
+    env: { ...process.env, AGNI_DOCS_ENV: "dev", AGNI_DOCS_PORT: `:${port}`, AGNI_DOCS_RUNS: "stored" },
     base,
     // The docsite answers under a path prefix, so its health check is not the bare base.
     health: `${base}/agni/`,

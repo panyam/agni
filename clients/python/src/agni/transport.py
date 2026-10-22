@@ -8,6 +8,7 @@ to read whichever way it arrived.
 
 from __future__ import annotations
 
+import base64
 import json
 import os
 import subprocess
@@ -15,7 +16,7 @@ import tempfile
 import urllib.error
 import urllib.request
 from dataclasses import dataclass
-from typing import Callable, Dict, List, Mapping, Optional, Sequence, Type, TypeVar
+from typing import Any, Callable, Dict, List, Mapping, Optional, Sequence, Type, TypeVar
 
 from google.protobuf import json_format, unknown_fields
 from google.protobuf.descriptor import FieldDescriptor
@@ -143,13 +144,31 @@ def _unknown_field_paths(msg: Message, path: str = "") -> List[str]:
 
 def _connect_error(rpc: Rpc, e: urllib.error.HTTPError) -> AgniError:
     raw = e.read().decode("utf-8", errors="replace")
-    code, message = f"http_{e.code}", raw
+    code, message, unavailable = f"http_{e.code}", raw, None
     try:
         doc = json.loads(raw)
         code, message = doc.get("code", code), doc.get("message", raw)
+        unavailable = _snapshot_unavailable(doc.get("details") or [])
     except ValueError:
         pass
-    return AgniError(f"{rpc.service}/{rpc.method}: {message}", code=code, detail=raw)
+    return AgniError(f"{rpc.service}/{rpc.method}: {message}", code=code, detail=raw, snapshot_unavailable=unavailable)
+
+
+_SNAPSHOT_UNAVAILABLE = snapshot_pb2.SnapshotUnavailable.DESCRIPTOR.full_name
+
+
+def _snapshot_unavailable(details: List[Any]) -> Optional[snapshot_pb2.SnapshotUnavailable]:
+    """The SnapshotUnavailable among a Connect error's details, or None. Connect sends each detail
+    as its type name and its binary encoding in unpadded base64."""
+    for d in details:
+        if not isinstance(d, dict) or d.get("type") != _SNAPSHOT_UNAVAILABLE:
+            continue
+        value = str(d.get("value", ""))
+        try:
+            return snapshot_pb2.SnapshotUnavailable.FromString(base64.b64decode(value + "=" * (-len(value) % 4)))
+        except Exception:  # a malformed detail is the same as none: the error still raises
+            return None
+    return None
 
 
 # --- the CLI ---------------------------------------------------------------------------------------

@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
-from typing import Any, Mapping, Optional, Protocol, Union
+from typing import Any, Dict, Mapping, Optional, Protocol, Union
 
 from google.protobuf import empty_pb2
 from google.protobuf.message import Message
 
 from agni import services
+from agni.errors import AgniError
 from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, workspace_pb2
 
 
@@ -37,6 +38,9 @@ class Client:
 
     def __init__(self, transport: Transport) -> None:
         self.transport = transport
+        # The definition of each snapshot this client ingested, by name, so a question about one the
+        # server lost or saw change can be recovered (agni issue 1067).
+        self._definitions: Dict[str, snapshot_pb2.Snapshot] = {}
 
     def call(self, service: str, method: str, request: Optional[Message] = None, **fields) -> Message:
         """Call any rpc by name, e.g. ``call("ProjectService", "ListProjects")``.
@@ -54,7 +58,55 @@ class Client:
                 f"{service}/{method} takes {rpc.request.DESCRIPTOR.full_name}, "
                 f"got {request.DESCRIPTOR.full_name}"
             )
-        return self.transport.call(rpc, request)
+        try:
+            resp = self.transport.call(rpc, request)
+        except AgniError as e:
+            # A server holds a snapshot until it evicts it or restarts, and refuses one whose files
+            # changed (agni issue 1061). Asked about a snapshot this client ingested, the client
+            # ingests it again under its name, or updates a stale one, and asks once more, as the
+            # viewer does (web/src/snapshots.ts). The CLI transport mints names locally and never
+            # raises this.
+            if service == "SnapshotService" or not self._recover(e):
+                raise
+            resp = self.transport.call(rpc, request)
+        self._remember(service, method, request, resp)
+        return resp
+
+    def _remember(self, service: str, method: str, request: Message, resp: Message) -> None:
+        """Keep, or forget, the definition of the snapshot a SnapshotService call named."""
+        if service != "SnapshotService":
+            return
+        if method == "Ingest":
+            definition = snapshot_pb2.Snapshot()
+            definition.CopyFrom(request.snapshot)  # type: ignore[attr-defined]
+            definition.ClearField("name")
+            self._definitions[resp.name] = definition  # type: ignore[attr-defined]
+        elif method == "UpdateSnapshot" and request.snapshot.name in self._definitions:  # type: ignore[attr-defined]
+            definition = self._definitions[request.snapshot.name]  # type: ignore[attr-defined]
+            if request.HasField("update_mask") and request.update_mask.paths:  # type: ignore[attr-defined]
+                request.update_mask.MergeMessage(request.snapshot, definition)  # type: ignore[attr-defined]
+            else:
+                definition.CopyFrom(request.snapshot)  # type: ignore[attr-defined]
+                definition.ClearField("name")
+        elif method == "DeleteSnapshot":
+            self._definitions.pop(request.name, None)  # type: ignore[attr-defined]
+
+    def _recover(self, e: AgniError) -> bool:
+        """Make the snapshot an error names answerable again, reporting whether it did anything."""
+        d = e.snapshot_unavailable
+        if d is None or e.code not in ("not_found", "failed_precondition"):
+            return False
+        definition = self._definitions.get(d.name)
+        if definition is None:
+            return False
+        if d.reason == snapshot_pb2.SnapshotUnavailable.REASON_STALE:
+            snap = snapshot_pb2.Snapshot()
+            snap.CopyFrom(definition)
+            snap.name = d.name
+            self.call("SnapshotService", "UpdateSnapshot", snapshot=snap)
+        else:
+            self.call("SnapshotService", "Ingest", snapshot=definition, snapshot_id=d.name.removeprefix("snapshots/"))
+        return True
 
     def ingest(
         self,

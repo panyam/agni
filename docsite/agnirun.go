@@ -180,6 +180,15 @@ func (st runStep) shown() string {
 	return st.Script
 }
 
+// runsModeEnv set to "stored" serves every capture as written, whatever its stamp, and never runs
+// or writes one (agni issue 1149). The browser suite's docsite server sets it, since it renders every
+// page at startup and a stale capture would otherwise be regenerated into the working tree, which is
+// how a local browser run left tracked captures modified and once hid stale ones from
+// tutorial-runs-check. Authoring and `make tutorial-runs` leave it unset and regenerate as before.
+const runsModeEnv = "AGNI_DOCS_RUNS"
+
+func storedRunsOnly() bool { return os.Getenv(runsModeEnv) == "stored" }
+
 // outputSuffix is appended to the spec's path to name its captured output.
 const outputSuffix = ".output"
 
@@ -217,6 +226,13 @@ func runOrLoad(relativePath string) (runSpec, []string, error) {
 		return spec, nil, err
 	}
 	outPath := specPath + outputSuffix
+	if storedRunsOnly() {
+		bodies, _, err := readOutput(outPath)
+		if err != nil {
+			return spec, nil, fmt.Errorf("no stored capture (%w), and %s=stored never runs one; run make tutorial-runs", err, runsModeEnv)
+		}
+		return spec, bodies, nil
+	}
 	// A capture whose section count does not match the step count is stale whatever its stamp says,
 	// since that is what a hand-edited capture looks like.
 	if bodies, stamp, err := readOutput(outPath); err == nil && stamp == want && len(bodies) == len(spec.steps()) {
