@@ -39,19 +39,19 @@ jobs:
       run:
         working-directory: docsite
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-go@v5
+      - uses: actions/checkout@v7
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           # The version is the project's, not this workflow's: it comes from `packageManager` in
           # docsite/package.json, so a developer's pnpm and CI's cannot drift apart silently. The path is
           # relative to the repository root, which is what this input requires.
           package_json_file: docsite/package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -69,7 +69,7 @@ jobs:
 
       # Chromium for the demo's browser spec, as ci.yml installs it for the gate's.
       - name: Cache the Chromium build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
@@ -79,7 +79,7 @@ jobs:
 
       # The demo's seeds beyond the tutorial come from the samples corpus, cached on its pin as ci.yml
       # caches it.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: tools/samples
           key: samples-${{ hashFiles('hack/samples.pin') }}
@@ -100,7 +100,7 @@ jobs:
 
       - name: Disable Jekyll
         run: touch dist/.nojekyll
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v5
         with:
           path: docsite/dist
 
@@ -119,4 +119,4 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - id: deployment
-        uses: actions/deploy-pages@v4
+        uses: actions/deploy-pages@v5

@@ -56,14 +56,14 @@ jobs:
           - kind: agnids
             file: Dockerfile.agnids
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
 
       # load: true puts the image in the runner's daemon so the smoke test can run it. The cache is
       # scoped per image, so the two builds do not evict each other's layers.
       - name: Build
-        uses: docker/build-push-action@v6
+        uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.file }}
