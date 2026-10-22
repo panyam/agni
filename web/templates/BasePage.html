@@ -16,6 +16,7 @@
     .panels-list { position: absolute; right: 6px; top: 100%; z-index: 1000; min-width: 140px; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
     .panels-item { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; padding: 4px 10px; cursor: pointer; white-space: pre; }
     .panels-item:hover { background: #eef; }
+    .panels-reset { border-top: 1px solid #ddd; margin-top: 2px; }
     .highlight-menu { position: relative; padding: 4px 6px; }
     .highlight-panel { padding: 8px; min-width: 190px; }
     .highlight-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
@@ -206,7 +207,10 @@
        like the query table, because these columns are not peers — the message deserves the room the
        severity dot does not. */
     .checks-table th, .checks-table td { text-align: left; padding: 3px 6px; border-bottom: 1px solid #eee; vertical-align: top; overflow-wrap: anywhere; }
-    .checks-table th { color: #444; font-weight: 600; border-bottom: 1px solid #ddd; }
+    /* A header never wraps, so a column is at least as wide as its label; with the cells' overflow-wrap:
+       anywhere alone, a narrow rail shrank every column to one character a line (agni issue 759). */
+    .checks-table th { color: #444; font-weight: 600; border-bottom: 1px solid #ddd; white-space: nowrap; }
+    .checks-table th * { white-space: nowrap; }
     .check-sort button { font: inherit; font-weight: 600; color: #444; border: 0; background: none; padding: 0; cursor: pointer; display: inline-flex; align-items: center; gap: 3px; }
     .check-sort.active button { color: #2563eb; }
     .check-sort-dir { font-size: 9px; }

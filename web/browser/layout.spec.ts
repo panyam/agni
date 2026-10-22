@@ -626,3 +626,106 @@ describe("Review", () => {
     });
   }, 120_000);
 });
+
+// agni issue 759. The boot layout's sizes, which only a browser can measure. The Query panel opened at
+// a fifth of the dock's height, too short for a single result row under its tab strip and query box,
+// so the #845 walk and these specs enlarged it by hand before they could click one. The Checks
+// table's headers wrapped a letter per line in the east rail. And Changes, re-added beside the diff
+// after a reader closed it, never took its rail width, because a panel-level setSize is dropped.
+describe("the default dock", () => {
+  it("opens the query panel tall enough to show an answer's first rows", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await runQuery(page, "component.net(?part, ?net) => ?part, ?net");
+      const seen = await page.evaluate(() => {
+        const panel = document.querySelector(".query")?.closest(".dv-render-overlay") ?? document.querySelector(".query");
+        const box = panel!.getBoundingClientRect();
+        const bottom = Math.min(box.bottom, window.innerHeight);
+        return Array.from(document.querySelectorAll(".query-row")).filter((r) => {
+          const b = r.getBoundingClientRect();
+          return b.height > 0 && b.top >= box.top && b.bottom <= bottom;
+        }).length;
+      });
+      expect(seen, "result rows wholly on screen inside the query panel, with nothing enlarged").toBeGreaterThanOrEqual(3);
+    });
+  }, 90_000);
+
+  it("keeps every checks-table header on one line", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await page.click(".checks-run");
+      await page.waitForSelector(".check-row", { timeout: 60_000 });
+      const lines = await page.$$eval(".checks-table th", (ths) =>
+        ths
+          .filter((th) => (th.textContent ?? "").trim() !== "")
+          .map((th) => {
+            // The text's block height against the header's font size. A sort arrow sits beside its
+            // label at a smaller size, so the boxes' tops differ on one line; their span does not.
+            const range = document.createRange();
+            range.selectNodeContents(th);
+            const rects = Array.from(range.getClientRects()).filter((r) => r.height > 0);
+            const span = Math.max(...rects.map((r) => r.bottom)) - Math.min(...rects.map((r) => r.top));
+            return { label: (th.textContent ?? "").trim(), lines: span / parseFloat(getComputedStyle(th).fontSize) };
+          }),
+      );
+      expect(lines.length, "the table has headers to measure").toBeGreaterThan(2);
+      for (const l of lines) expect(l.lines, `header "${l.label}" spans more than one line`).toBeLessThan(1.8);
+    });
+  }, 90_000);
+
+  it("resets a rearranged dock to the default from the Panels menu, keeping what the panels hold", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      const queryHeight = () =>
+        page.evaluate(() => {
+          const tab = Array.from(document.querySelectorAll(".tab")).find((t) => t.textContent?.trim().startsWith("Query"));
+          return Math.round(tab?.closest(".groupview")?.getBoundingClientRect().height ?? 0);
+        });
+      const hasTab = (title: string) => page.locator(".tab", { hasText: title }).count();
+      const defaultHeight = await queryHeight();
+
+      await page.fill("textarea.query-text", "component.class(?c, \"resistor\") => ?c");
+      const rules = page.locator(".tab", { hasText: "Rules" });
+      await rules.hover();
+      await rules.locator(".dv-default-tab-action").click();
+      await expect.poll(() => hasTab("Rules")).toBe(0);
+      await growQueryPanel(page);
+      expect(await queryHeight(), "the drag made the query panel taller").toBeGreaterThan(defaultHeight + 100);
+
+      await page.click(".panels-btn");
+      await page.click(".panels-reset");
+      await expect.poll(() => hasTab("Rules")).toBe(1);
+      // Within a few pixels: at boot the dock is resized once more after the layout applies (the
+      // header settles) and dockview shares that out, so boot lands a little under the 320px asked for.
+      await expect.poll(async () => Math.abs((await queryHeight()) - defaultHeight)).toBeLessThan(8);
+      expect(await page.inputValue("textarea.query-text"), "the query box keeps what was typed").toBe('component.class(?c, "resistor") => ?c');
+
+      // The default is what the browser keeps now, so a reload opens it rather than the old arrangement.
+      await page.reload({ waitUntil: "networkidle" });
+      await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
+      await expect.poll(() => hasTab("Rules")).toBe(1);
+      await expect.poll(async () => Math.abs((await queryHeight()) - defaultHeight)).toBeLessThan(8);
+    });
+  }, 90_000);
+
+  it("gives Changes its rail width when a comparison adds it back", async () => {
+    await withPage(browser, async (page) => {
+      await page.goto(`${base()}/designs/tut/designs/gateway/gateway.edn/view`, { waitUntil: "networkidle" });
+      await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
+      const tab = page.locator(".tab", { hasText: "Changes" });
+      await tab.hover();
+      await tab.locator(".dv-default-tab-action").click();
+      await expect.poll(() => page.locator(".tab", { hasText: "Changes" }).count()).toBe(0);
+      await page.click("#compare button");
+      await page.locator("#compare-tree").getByText("gateway-rev-c.edn").click();
+      await page.locator(".tab", { hasText: "Changes" }).waitFor({ timeout: 30_000 });
+      await page.waitForTimeout(500);
+      const width = await page.evaluate(() => {
+        const tab = Array.from(document.querySelectorAll(".tab")).find((t) => t.textContent?.includes("Changes"));
+        return tab?.closest(".groupview")?.getBoundingClientRect().width ?? 0;
+      });
+      expect(width, "the Changes column's width").toBeGreaterThan(220);
+      expect(width).toBeLessThan(300);
+    });
+  }, 90_000);
+});
