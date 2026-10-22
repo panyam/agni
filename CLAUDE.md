@@ -808,7 +808,8 @@ building until some later change needs a requirement it never recorded. `make ti
 because a bump that touched the root alone left every nested module stale and failed this check (PR
 782). A new module outside `examples/` needs a line there.
 
-**`make testall` is the full gate, and CI runs exactly it.** Read
+**`make testall` is the full gate, and CI runs exactly it**, as its two halves `testall-core` and
+`browser-test` in parallel jobs (agni 1147). Read
 `docsite/content/build/the-gate.md` before trusting a run, since the gate has three ways to be
 misread (a wrapper reporting its own status rather than make's, which turns red green, a
 commit-first ordering rule, and a per-clone `pnpm install`), one that makes a fine tree read RED (a stray

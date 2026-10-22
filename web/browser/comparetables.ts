@@ -5,6 +5,7 @@
 // on the drawing.
 
 import { expect } from "vitest";
+import { agniBin } from "./agnibin.js";
 import type { Page } from "playwright-core";
 import { execFileSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
@@ -20,9 +21,9 @@ const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 export function gatewayDiffRows(): string[] {
   const home = mkdtempSync(join(tmpdir(), "agni-home-"));
   const csv = execFileSync(
-    "go",
+    agniBin(),
     [
-      "run", "./cmd/agni", "diff",
+      "diff",
       "examples/tutorial-project/designs/gateway/gateway.edn",
       "examples/tutorial-project/designs/gateway/gateway-rev-c.edn",
       "--rename-approx", "--format", "csv",

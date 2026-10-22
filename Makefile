@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -264,8 +264,17 @@ web-test:
 # The suite starts and stops its own agni server on a port the kernel picks, so it does not collide
 # with a dev server you already have running.
 # HEADED=1 shows the browser instead of running it headless, SLOWMO=<ms> paces it (agni issue 1118).
-browser-test: ui wasm
+# samples-oracle because site.spec.ts seeds the static demo with the RoyalBlue Feather board, which
+# testall used to fetch before this ran; run on its own, or as its own CI job, it fetches it itself.
+browser-test: ui wasm samples-oracle
 	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm run test:browser
+
+# hooks installs an opt-in pre-push hook that runs the browser suite before a push (hack/pre-push.sh).
+# CI runs the suite on every push anyway; the hook is for hearing about a layout break in two minutes
+# on your own machine rather than after the CI queue. `git push --no-verify` skips it.
+hooks:
+	ln -sf ../../hack/pre-push.sh "$$(git rev-parse --git-common-dir)/hooks/pre-push"
+	@echo "installed $$(git rev-parse --git-common-dir)/hooks/pre-push"
 
 # The browser-review walk, mission #845's exercise (agni issue 1118): the gated spec
 # web/browser/review-walk.spec.ts run on its own, printing one row per step and writing them as
@@ -415,7 +424,11 @@ catalog-docs-check: catalog-docs
 # browser-test came back in on 2026-09-08 once the demo work was done, which is what the note that
 # took it out said to do. It was worth re-timing rather than trusting that note: the reason given was
 # "minutes per run", and it is 17s for 12 assertions on top of a `ui` build the gate already does.
-testall: vet lint seccheck secrets ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test browser-test python-test catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
+testall: testall-core browser-test
+
+# testall-core is the gate without the browser suite. CI runs the two as parallel jobs, so the gate
+# takes as long as the longer half rather than both (agni issue 1147); `make testall` still runs both.
+testall-core: vet lint seccheck secrets ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own
