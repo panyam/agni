@@ -25,8 +25,9 @@ export function viewportFor(size: { width: number; height: number }): { width: n
 export async function launch(): Promise<Browser> {
   const slowMo = Number(process.env.SLOWMO ?? (headed ? 250 : 0)) || 0;
   try {
-    // A headed window asks for the size the headless page uses; the OS shrinks it to fit the screen.
-    return await chromium.launch({ headless: !headed, slowMo, args: headed ? ["--window-size=1400,1000"] : [] });
+    // A headed window is left to fit the screen. Asking for 1400x1000 on a shorter laptop screen left
+    // the view jumping between two offsets as the walk acted.
+    return await chromium.launch({ headless: !headed, slowMo, args: headed ? ["--start-maximized"] : [] });
   } catch (e) {
     const why = e instanceof Error ? e.message : String(e);
     throw new Error(

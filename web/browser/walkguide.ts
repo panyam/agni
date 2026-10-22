@@ -6,6 +6,8 @@
 // never stops, whatever STEP_BY_STEP says, since nobody is there to press Next and CI would wait
 // forever.
 
+import { appendFileSync } from "node:fs";
+import { join } from "node:path";
 import type { Page } from "playwright-core";
 
 export const stepByStep = process.env.HEADED === "1" && process.env.STEP_BY_STEP !== "0";
@@ -214,7 +216,29 @@ export async function act<T>(page: Page, action: () => Promise<T>): Promise<T> {
     return await action();
   } finally {
     await page.evaluate(showBusy, running).catch(() => {});
+    await trace(page);
   }
+}
+
+// trace records where the page and its window sit after each of the walk's actions, in a headed
+// run, to EXERCISE_OUT/headed-trace.txt. A view that jumps can move without the page scrolling at
+// all (the window re-fitted to the screen, or the visual viewport panned), which nothing measured
+// inside the page shows, so this is the evidence a report of one needs.
+async function trace(page: Page): Promise<void> {
+  const out = process.env.EXERCISE_OUT;
+  if (!out) return;
+  const at = await page
+    .evaluate(() => ({
+      scrollY: window.scrollY,
+      viewportTop: window.visualViewport?.offsetTop ?? 0,
+      viewportHeight: window.visualViewport?.height ?? 0,
+      innerHeight: window.innerHeight,
+      screenY: window.screenY,
+      outerHeight: window.outerHeight,
+      screenHeight: window.screen.availHeight,
+    }))
+    .catch(() => undefined);
+  if (at) appendFileSync(join(out, "headed-trace.txt"), `${running}: ${JSON.stringify(at)}\n`);
 }
 
 // showBusy raises the loader, creating it when a navigation has removed it. It runs in the page.
