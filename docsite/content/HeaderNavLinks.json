@@ -78,6 +78,7 @@
       { "name": "Datasheet layer", "url": "architecture/datasheet-layer/" },
       { "name": "Web app and presenter", "url": "architecture/web-app/" },
       { "name": "Web service contract", "url": "architecture/web-services/" },
+      { "name": "Questions, links and the live page", "url": "architecture/viewer-control/" },
       { "name": "Picking and querying", "url": "architecture/web-picking/" },
       { "name": "Working in the web client", "url": "architecture/web-client/" },
       { "name": "Stack and platform", "url": "architecture/stack/" }

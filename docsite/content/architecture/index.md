@@ -25,6 +25,8 @@ were built. Read them in any order. Each stands on its own.
   presenter contract.
 - **[Web service contract](web-services/)** lists the Connect services behind `agni serve` and the
   contract details a caller has to know.
+- **[Questions, links and the live page](viewer-control/)** says which layer a feature that shows
+  something in the viewer belongs in: an answer, a link, or a call to a page already open.
 - **[Picking and querying](web-picking/)** explains how a reader names an entity in the viewer and
   what the viewer can then say about it.
 - **[Working in the web client](web-client/)** walks through the edits a new panel takes, and the
