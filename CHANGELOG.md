@@ -10,6 +10,12 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.7] - 2026-10-22
+
+Every page of a hierarchical EDIF export gets its own sheet id and name, and the viewer's Sheets dock
+nests sheets under their parents, names a shared sheet name by its path and explains its count pills
+(PR 1145).  The full write-up is [RELEASES/v0.3.7.md](RELEASES/v0.3.7.md).
+
 ## [0.3.6] - 2026-10-22
 
 `project.yaml` and `design.yaml` share one schema in which every tier a run reads is named, and a
