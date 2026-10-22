@@ -596,6 +596,9 @@ func checkCmd() *cobra.Command {
 			if err != nil {
 				return err
 			}
+			if err := resolveAgainst.CheckNames(ruleNames); err != nil {
+				return fmt.Errorf("--rule: %w", err)
+			}
 			selected := resolveAgainst.Filter(facets)
 			if len(selected) == 0 && format == "text" {
 				fmt.Fprintln(cmd.OutOrStdout(), "no rules selected")

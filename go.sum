@@ -37,8 +37,8 @@ github.com/panyam/jaala/frontends/nl v0.1.87 h1:zWiVsMkfmS35rO+JnmQe3pHmgfKFMOZ5
 github.com/panyam/jaala/frontends/nl v0.1.87/go.mod h1:sTGHrAark7/Q5XUVQsLMu/56sme3wsU1jJQvxSLY3Yg=
 github.com/panyam/mcpkit v0.8.2 h1:GdyeHiNNNk8xWGa6V85bGG+8xNGvRvnY4unkvmYw+SI=
 github.com/panyam/mcpkit v0.8.2/go.mod h1:oyXzY3bqeNfH8mixWE78assaIZqpbfz54DQAmYd4wTk=
-github.com/panyam/servicekit v0.1.5 h1:4MeRZvVd2jaJg5A3+2Czkdguf/lqzUHwoEvkbN0JSZs=
-github.com/panyam/servicekit v0.1.5/go.mod h1:wk/9hY9Vgl83WuYJt7n4NYPvV6nbxnZwpKpNRIAPoR8=
+github.com/panyam/servicekit v0.1.6 h1:TJeXz62aef8p4/P4i6eRzkcb3lEUvV3+f6HNZYlZNhU=
+github.com/panyam/servicekit v0.1.6/go.mod h1:wk/9hY9Vgl83WuYJt7n4NYPvV6nbxnZwpKpNRIAPoR8=
 github.com/panyam/templar v0.1.2 h1:JFOx31tCFDfu299iF8fKA0yu6fDB4vopEaB/coT1kMQ=
 github.com/panyam/templar v0.1.2/go.mod h1:Pqn7VhOod9MGZ0GqrwoHw16jFjiAxPgWXZBAFou1fZ0=
 github.com/pb33f/ordered-map/v2 v2.3.1 h1:5319HDO0aw4DA4gzi+zv4FXU9UlSs3xGZ40wcP1nBjY=

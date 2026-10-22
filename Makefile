@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -284,6 +284,19 @@ exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	mkdir -p $(EXERCISE_OUT) && rm -f $(EXERCISE_OUT)/headed-trace.txt
 	cd web && WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) STEP_BY_STEP=$(STEP_BY_STEP) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/review-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/browser-review.md 2>/dev/null; exit $$status
+
+# The ask-over-MCP mission's exercise (#909, agni issue 1121): the mission's five questions asked of
+# one design through an MCP client, as the calls a model would make, over `agni serve --mcp` on a free
+# port. Each reply must state its question, carry links that open in the viewer, hold the rows the CLI
+# answers to the same request, and contain what examples/ask-over-mcp/exercise/<design>.yaml pins. It
+# prints one row per call and writes them as markdown to $(EXERCISE_OUT)/mcp-ask.md for the mission
+# log. WALK_DESIGN picks the board as exercise-browser-review does: jetson (the default) or gateway.
+#   make exercise-mcp-ask
+#   make exercise-mcp-ask WALK_DESIGN=gateway
+exercise-mcp-ask: agni ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
+	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board rev-b)
+	mkdir -p $(EXERCISE_OUT)
+	cd examples/ask-over-mcp && AGNI_BIN=$(CURDIR)/bin/agni $(GO) run . exercise --out $(EXERCISE_OUT)/mcp-ask.md exercise/$(WALK_DESIGN).yaml
 
 # WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
 # build of the same commit parsed into the browser's cache (wasmengine.StoreVersion, agni issue 911).

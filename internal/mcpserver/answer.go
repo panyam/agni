@@ -36,11 +36,12 @@ type answering struct {
 type shown struct {
 	Design   string                   `json:"design"`
 	Query    string                   `json:"query"`
-	Bindings map[string]string        `json:"bindings,omitempty"`
+	Bindings map[string][]string      `json:"bindings,omitempty"`
 	Link     string                   `json:"link,omitempty"`
 	NoLink   string                   `json:"no_link,omitempty"`
 	Answer   any                      `json:"answer"`
 	Tables   any                      `json:"tables"`
+	bind     query.Bindings           // the values bound, for the text
 	tables   []*webapi.Table          // the projected tables, for the text
 	resp     *webapi.RunQueryResponse // the answer, for the text's counts
 	page     mcp.Answer               // where the page sits in the whole answer
@@ -76,12 +77,9 @@ func (a *answering) presentOnce(page mcp.Answer) (*shown, error) {
 	if a.read == nil {
 		return nil, fmt.Errorf("the answer was not read from %s", a.design)
 	}
-	bind := map[string]query.Value{}
+	bind := query.Bindings{}
 	for name, vals := range page.Bind {
-		if len(vals) != 1 {
-			return nil, fmt.Errorf("bind: ?%s has %d values, and agni binds one value per variable; ask once per value", name, len(vals))
-		}
-		bind[name] = vals[0]
+		bind[name] = vals
 	}
 	resp, err := a.read.Present(a.ctx, a.q, page.Program, page.Table, page.Offset, page.Offset+page.Len, bind)
 	if err != nil {
@@ -91,11 +89,13 @@ func (a *answering) presentOnce(page mcp.Answer) (*shown, error) {
 	if err != nil {
 		return nil, err
 	}
-	sh := &shown{Design: a.design.String(), Query: page.Program, Answer: protoJSON(resp), Tables: tablesJSON(tabs.GetTables()), tables: tabs.GetTables(), resp: resp, page: page}
+	sh := &shown{Design: a.design.String(), Query: page.Program, Answer: protoJSON(resp), Tables: tablesJSON(tabs.GetTables()), tables: tabs.GetTables(), resp: resp, page: page, bind: bind}
 	if len(bind) > 0 {
-		sh.Bindings = map[string]string{}
-		for name, v := range bind {
-			sh.Bindings[name] = query.Display(v)
+		sh.Bindings = map[string][]string{}
+		for name, vals := range bind {
+			for _, v := range vals {
+				sh.Bindings[name] = append(sh.Bindings[name], query.Display(v))
+			}
 		}
 	}
 	meta, why := a.s.linkMeta(a.snap)
@@ -113,8 +113,8 @@ func (a *answering) format(page mcp.Answer) string {
 	}
 	var b strings.Builder
 	fmt.Fprintf(&b, "design: %s\nquery: %s\n", sh.Design, strings.Join(strings.Fields(sh.Query), " "))
-	for _, name := range sortedKeys(sh.Bindings) {
-		fmt.Fprintf(&b, "bind: ?%s = %s\n", name, sh.Bindings[name])
+	for _, line := range query.FormatBindings(sh.bind) {
+		fmt.Fprintf(&b, "bind: %s\n", line)
 	}
 	b.WriteString("\n")
 	for _, t := range sh.tables {

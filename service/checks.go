@@ -184,6 +184,9 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if err != nil {
 		return nil, err
 	}
+	if err := cat.CheckNames(req.GetRules()); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
+	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
 	// check.Available is asked HERE with the model a run reads, board included, and ListRules asks the
 	// same gate of that model without the board (listedGate), so the two agree. A rule gated on this

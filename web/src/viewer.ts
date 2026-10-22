@@ -28,7 +28,7 @@ import { hierarchyNote } from "./hierarchy.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
-import { type QueryResult, type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse } from "./query.js";
+import { type Bindings, type QueryResult, type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse, wireBinding } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
@@ -300,7 +300,8 @@ export class ViewerPresenter {
   // the panel shows inline rather than as a toast. The busy flag rides in the pushed result so the
   // panel disables Run while a query runs.
   //
-  // bindings are the values the query's variables are bound to (agni issue 793), sent as text. limit
+  // bindings are the values the query's variables are bound to (agni issue 793), sent as text, a list
+  // as a list of text values (agni issue 1121). limit
   // caps the rows (agni issue 896), 0 for the whole answer. tab names the query panel tab that asked
   // (agni issue 902), and the answer goes back to it, "" meaning the tab in front.
   //
@@ -308,7 +309,7 @@ export class ViewerPresenter {
   // reader is looking at rather than running the query again (agni issues 898 and 956).
   private answers = new Map<string, RunQueryResponse>();
 
-  async runQuery(text: string, bindings: Record<string, string> = {}, limit = 0, tab = ""): Promise<void> {
+  async runQuery(text: string, bindings: Bindings = {}, limit = 0, tab = ""): Promise<void> {
     if (!this.views.query || !this.query) return;
     const push = (r: QueryResult) => (tab ? this.views.query?.setState(r, tab) : this.views.query?.setState(r));
     if (!this.doc.mount || !this.doc.path) {
@@ -320,7 +321,7 @@ export class ViewerPresenter {
       // The overlay goes here too, because the vocabulary bar names the convention the answers on
       // screen were computed under, and a Query panel answering under the server's would contradict
       // it (WS3-113).
-      const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, { kind: { case: "text" as const, value } }]));
+      const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, wireBinding(value)]));
       const resp = await this.query.runQuery({ snapshot: await this.checked(), query: text, bindings: wire, limit });
       this.answers.set(tab, resp);
       push(resultFromResponse(resp, (ids) => this.doc.sheetBadges(ids)));

@@ -1,6 +1,7 @@
 package check
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"regexp"
@@ -189,6 +190,111 @@ func (c *Catalog) Rules() []*Rule { return c.rules }
 // Lookup returns the rule with the exact composed name (bare for built-ins,
 // "source/name" for the rest), or nil.
 func (c *Catalog) Lookup(name string) *Rule { return c.byName[name] }
+
+// CheckNames refuses rule names c does not hold, so a misspelled rule fails rather than running
+// nothing and reading as a clean run (agni issue 1121). The error names each unknown rule, says which
+// source superseded one that a project's rules replaced, and offers the closest names c does hold.
+// Every name known, or none asked, is nil.
+func (c *Catalog) CheckNames(names []string) error {
+	var problems []string
+	for _, n := range names {
+		if c.byName[n] != nil {
+			continue
+		}
+		if by := c.supersededBy(n); by != "" {
+			problems = append(problems, fmt.Sprintf("rule %q was superseded by %s, whose rules run in its place", n, by))
+			continue
+		}
+		msg := fmt.Sprintf("no rule named %q", n)
+		if near := c.nearNames(n, 3); len(near) > 0 {
+			msg += "; did you mean " + strings.Join(near, ", ") + "?"
+		}
+		problems = append(problems, msg)
+	}
+	if len(problems) == 0 {
+		return nil
+	}
+	return errors.New(strings.Join(problems, "; "))
+}
+
+func (c *Catalog) supersededBy(name string) string {
+	for _, s := range c.superseded {
+		if slices.Contains(s.Rules, name) {
+			return s.By
+		}
+	}
+	return ""
+}
+
+// nearNames is up to n of c's rule names closest to name, compared without the source prefix or
+// hyphens. One whose letters run in order inside the other (i2c-pull-up in i2c-missing-pullup) comes
+// first, then the rest within a third of the name's length by edit distance, nearest first.
+func (c *Catalog) nearNames(name string, n int) []string {
+	flat := func(s string) string { return strings.ReplaceAll(s[strings.LastIndex(s, "/")+1:], "-", "") }
+	type near struct {
+		name   string
+		within bool
+		d      int
+	}
+	want := flat(name)
+	limit := max(2, len(want)/3)
+	var out []near
+	for _, r := range c.rules {
+		have := flat(r.Name)
+		within := subsequence(want, have) || subsequence(have, want)
+		if d := editDistance(want, have); within || d <= limit {
+			out = append(out, near{r.Name, within, d})
+		}
+	}
+	slices.SortStableFunc(out, func(a, b near) int {
+		if a.within != b.within {
+			if a.within {
+				return -1
+			}
+			return 1
+		}
+		return a.d - b.d
+	})
+	names := make([]string, 0, n)
+	for i := 0; i < len(out) && i < n; i++ {
+		names = append(names, out[i].name)
+	}
+	return names
+}
+
+// subsequence reports whether every letter of short appears in long, in order.
+func subsequence(short, long string) bool {
+	if short == "" {
+		return false
+	}
+	i := 0
+	for j := 0; j < len(long) && i < len(short); j++ {
+		if long[j] == short[i] {
+			i++
+		}
+	}
+	return i == len(short)
+}
+
+func editDistance(a, b string) int {
+	prev := make([]int, len(b)+1)
+	for j := range prev {
+		prev[j] = j
+	}
+	for i := 1; i <= len(a); i++ {
+		cur := make([]int, len(b)+1)
+		cur[0] = i
+		for j := 1; j <= len(b); j++ {
+			cost := 1
+			if a[i-1] == b[j-1] {
+				cost = 0
+			}
+			cur[j] = min(prev[j]+1, cur[j-1]+1, prev[j-1]+cost)
+		}
+		prev = cur
+	}
+	return prev[len(b)]
+}
 
 // Filter selects over the composed catalog with the same Facets semantics as the
 // package-level Filter. That includes the source tag, so "--tag source=<name>" selects one

@@ -248,7 +248,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().StringVar(&setPath, "set", "", "a query set (a .yaml file, - for stdin, or the name of a set in the design's project queries/ directory): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so a net or part column puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	c.Flags().StringVar(&title, "title", "", "name this view, shown as the heading in --format markdown and html. A saved question is a view; without a title it renders under its own query")
-	c.Flags().StringArrayVar(&bindArgs, "bind", nil, "give a query variable a value, as name=value (repeatable): `--bind n=GND` asks the query with ?n bound to GND, exactly as if \"GND\" were written in its place. A value that parses as a number binds a number; quote it (n=\"3\") to bind text. A name the query does not use is an error")
+	c.Flags().StringArrayVar(&bindArgs, "bind", nil, "give a query variable a value, as name=value (repeatable): `--bind n=GND` asks the query with ?n bound to GND, exactly as if \"GND\" were written in its place. A value that parses as a number binds a number; quote it (n=\"3\") to bind text. Naming a variable twice binds it to both values, and the query answers for each (`--bind n=I2C_SDA --bind n=I2C_SCL`). A name the query does not use is an error")
 	c.Flags().Int64Var(&budget, "budget", 0, "stop a query past this much work, in the units a fact base counts (comparisons, generator rows and the connections a circuit walk examines), as `agni serve --query-budget` does. 0, the default, sets none")
 	c.Flags().StringArrayVar(&libDirs, "lib", nil, "a directory of derived-relation modules (<module.path>.dl, optional docs/<member.path>.md) sent with the query, beside any the design's project carries. Repeatable")
 	remoteFlag(c, &remoteURL)
@@ -513,7 +513,8 @@ func projectQuerySet(cmd *cobra.Command, svc queryAPI, name, snap string) (query
 	var have []string
 	for _, s := range resp.GetQuerySets() {
 		if s.GetName() == name {
-			return service.QuerySetFromProto(s.GetSet()), s.GetSource(), nil
+			set, err := service.QuerySetFromProto(s.GetSet())
+			return set, s.GetSource(), err
 		}
 		have = append(have, s.GetName())
 	}
@@ -569,7 +570,7 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 // provenance.source_file, and a new output format has to keep the rule itself.
 func tableFromProto(resp *webapi.RunQueryResponse, title, queryText, source string) rpt.Table {
 	t := rpt.Table{Title: title, Query: queryText, Source: source, Columns: resp.GetColumns(),
-		Bindings: query.FormatBindings(service.BindingsFromProto(resp.GetBindings())), Total: int(resp.GetTotal())}
+		Bindings: formatBindings(resp.GetBindings()), Total: int(resp.GetTotal())}
 	for _, r := range resp.GetRows() {
 		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: service.RowCites(resp, r), Why: r.GetCellWhy()})
 	}
@@ -603,20 +604,23 @@ func addLibraries(cfg *webapi.AnalysisConfig, dirs []string) error {
 	return nil
 }
 
-// parseBindings reads each --bind name=value into the values the query is asked with.
-func parseBindings(args []string) (map[string]query.Value, error) {
-	if len(args) == 0 {
-		return nil, nil
+// parseBindings reads each --bind name=value into the values the query is asked with; a name given
+// more than once binds its variable to each value.
+func parseBindings(args []string) (query.Bindings, error) {
+	b, err := query.ParseBindings(args)
+	if err != nil {
+		return nil, fmt.Errorf("--bind: %w", err)
 	}
-	out := map[string]query.Value{}
-	for _, a := range args {
-		name, v, err := query.ParseBinding(a)
-		if err != nil {
-			return nil, fmt.Errorf("--bind: %w", err)
-		}
-		out[name] = v
+	return b, nil
+}
+
+// formatBindings spells an answer's echoed bindings as a document states them beside its query.
+func formatBindings(m map[string]*webapi.QueryValue) []string {
+	b, err := service.BindingsFromProto(m)
+	if err != nil {
+		return []string{err.Error()}
 	}
-	return out, nil
+	return query.FormatBindings(b)
 }
 
 // withCaret adds the line a query that would not parse stopped on, with a caret under the place, as

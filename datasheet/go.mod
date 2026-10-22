@@ -6,7 +6,7 @@ require (
 	connectrpc.com/connect v1.20.0
 	github.com/panyam/agni v0.0.0
 	github.com/panyam/goapplib v0.7.6
-	github.com/panyam/servicekit v0.1.5
+	github.com/panyam/servicekit v0.1.6
 	github.com/spf13/cobra v1.10.2
 	google.golang.org/protobuf v1.36.12
 )

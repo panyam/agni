@@ -2,6 +2,7 @@ package check
 
 import (
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -192,5 +193,39 @@ func TestSourceWithoutDeclarationStillAugments(t *testing.T) {
 	}
 	if len(c.Superseded()) != 0 {
 		t.Errorf("Superseded() = %+v, want empty", c.Superseded())
+	}
+}
+
+// CheckNames refuses a name the catalog does not hold, so a misspelled --rule fails rather than running
+// nothing (agni issue 1121). It offers the near names, and says a superseded rule was replaced rather
+// than calling it unknown.
+func TestCheckNamesRefusesWhatTheCatalogLacks(t *testing.T) {
+	core := NewSource("profile", []*Rule{
+		tagged("spi-missing", map[string]string{"profile": "SPI"}),
+		tagged("can-missing", map[string]string{"profile": "CAN"}),
+	})
+	overlay := NewSupersedingSource("profile-overlay", []*Rule{
+		tagged("spi-missing", map[string]string{"profile": "SPI"}),
+	}, Facets{Tags: map[string][]string{"profile": {"SPI"}, KeySource: {"profile"}}})
+	c, err := NewCatalog(core, overlay)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := c.CheckNames(nil); err != nil {
+		t.Errorf("no names: %v", err)
+	}
+	if err := c.CheckNames([]string{"profile/can-missing", "profile-overlay/spi-missing"}); err != nil {
+		t.Errorf("names the catalog holds: %v", err)
+	}
+	err = c.CheckNames([]string{"profile/canmissing"})
+	if err == nil || !strings.Contains(err.Error(), `no rule named "profile/canmissing"`) || !strings.Contains(err.Error(), "did you mean profile/can-missing") {
+		t.Errorf("a misspelling: %v, want it refused with profile/can-missing offered", err)
+	}
+	err = c.CheckNames([]string{"profile/spi-missing"})
+	if err == nil || !strings.Contains(err.Error(), "superseded by profile-overlay") {
+		t.Errorf("a superseded rule: %v, want it named as superseded by profile-overlay", err)
+	}
+	if err := c.CheckNames([]string{"zzzzqqq"}); err == nil || strings.Contains(err.Error(), "did you mean") {
+		t.Errorf("a name near nothing: %v, want refused with no suggestion", err)
 	}
 }

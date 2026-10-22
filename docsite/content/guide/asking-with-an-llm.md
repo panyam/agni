@@ -50,7 +50,8 @@ Datalog engine underneath agni, and each takes a `design` beside its own argumen
   rather than `SDA`.
 - `query` runs a question and answers its rows. A value the user gave goes in `bind`, by its
   variable's name, rather than being pasted into the question, so a net named with a quote in it
-  can't change what is asked.
+  can't change what is asked. A list there asks about each value at once, so "which of these three
+  nets has no pull-up" is one call.
 - `explain` says where a question's work went and, when it answers nothing, which part matched
   nothing.
 
@@ -59,10 +60,12 @@ agni adds the rest:
 - `designs` lists the designs a server answers about, by the name the other tools take
   (`tut/designs/gateway`), with each one's declared revisions.
 - `check` runs the [rule catalog](../checks-and-reports/), or the rules you name, and answers the
-  findings, a count per rule and outcome, and a link per failing verdict.
+  findings, a count per rule and outcome, and a link per failing verdict. A rule name that doesn't
+  exist is refused with the closest ones it does have, rather than answered as an empty, clean run.
 - `trace` follows a signal from one pin to another through the series parts between them, and says
   where each net on the way can be probed.
-- `diff` compares two revisions, as [comparing revisions](../comparing-revisions/) describes.
+- `diff` compares two revisions, as [comparing revisions](../comparing-revisions/) describes. The
+  viewer has no view of a diff yet, so its answer links each revision instead and says so.
 - `design` reads the IR itself, narrowed to the nets or parts asked about.
 - `checklists` and `review` list a design's review checklists and score one. Nothing is saved.
 - `query_set` runs one of the project's saved query sets.
@@ -91,6 +94,15 @@ two stay apart here as they do in `agni trace`.
 ## What it doesn't do
 
 agni hosts no model, so the client brings its own, and nothing about a design leaves the machine
-except through the client you pointed at it. A bound variable takes one value; to ask about two nets,
-ask twice. And a model that never calls the tools can still make things up, so the useful habit is
-to look for the question above each answer and the link below it.
+except through the client you pointed at it. And a model that never calls the tools can still make
+things up, so the useful habit is to look for the question above each answer and the link below it.
+
+## Checking that it works
+
+`make exercise-mcp-ask` asks five questions a reviewer usually starts with (missing pull-ups, what a
+bus line connects to and whether it is protected, rails with no test point, what changed between two
+revisions, and a trace from a pin to a connector) through an MCP client, as the calls a model would
+make. Each reply has to state its question, carry links that open in the viewer, hold the same rows
+the CLI answers to the same request, and contain the rows the design is known to have. The questions
+live in `examples/ask-over-mcp/exercise/`, one file per board, and `WALK_DESIGN=gateway` runs the
+tutorial board instead of the Jetson baseboard.

@@ -8,7 +8,7 @@ require (
 	github.com/panyam/jaala/frontends/mcp v0.1.87
 	github.com/panyam/jaala/frontends/nl v0.1.87
 	github.com/panyam/mcpkit v0.8.2
-	github.com/panyam/servicekit v0.1.5
+	github.com/panyam/servicekit v0.1.6
 	github.com/spf13/cobra v1.10.2
 	github.com/spf13/pflag v1.0.10
 	golang.org/x/text v0.42.0

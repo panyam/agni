@@ -277,6 +277,15 @@ func rowOf(v check.Verdict, meta Report) Row {
 	return r
 }
 
+// DesignURL is the viewer link that opens the design itself, "" when this run cannot promise one. A
+// diff answer links each revision this way, since the viewer has no view of a diff (agni issue 1121).
+func DesignURL(meta Report) string {
+	if meta.URLBase == "" || meta.MountPath == "" {
+		return ""
+	}
+	return meta.URLBase + "/designs/" + meta.MountPath + "/view"
+}
+
 // TraceURL is the viewer link that re-asks a pin-to-pin question, "" when this run cannot promise
 // one, under the same two conditions as VerdictURL.
 //

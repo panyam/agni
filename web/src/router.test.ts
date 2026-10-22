@@ -291,6 +291,20 @@ describe("query links", () => {
   it("reads bindings as --bind spells them, a quoted value as text without its quotes", () => {
     expect(bindsFromLink(["net=GND", 't="3"', "=x", "v=3.3"])).toEqual({ net: "GND", t: "3", v: "3.3" });
   });
+
+  // agni issue 1121: a variable bound to a list repeats its name, one bind per value.
+  it("reads a name given more than once as a list in link order, and one given once as a value", () => {
+    expect(bindsFromLink(["net=I2C_SDA", "r=R1", 'net="I2C_SCL"'])).toEqual({ net: ["I2C_SDA", "I2C_SCL"], r: "R1" });
+  });
+
+  it("round-trips every value of a list binding, in order", () => {
+    const loc = { ...emptyLocation(), mount: "m", path: "b.edn", query: "component.net(?r, ?net) => ?r", binds: ["net=I2C_SDA", "net=I2C_SCL"] };
+    const url = locationToUrl(loc);
+    expect(url).toContain("bind=net%3DI2C_SDA&bind=net%3DI2C_SCL");
+    const back = reparse(url);
+    expect(back.binds).toEqual(loc.binds);
+    expect(bindsFromLink(back.binds)).toEqual({ net: ["I2C_SDA", "I2C_SCL"] });
+  });
 });
 
 // agni issue 897: a verdict link names its subjects in check.SubjectParam's spelling, which the Go

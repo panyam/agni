@@ -205,11 +205,23 @@ message RunQueryResponse {
 // parses binds a number in a number position, text that does not is refused, and a number in a name
 // position matches by its text. Where nothing types the variable, this field decides, as `3.3`
 // versus `"3.3"` written into the query would.
+//
+// A list binds the variable to each of its values, and the goal answers for every one of them, as if
+// it were joined with a relation holding exactly those values (agni issue 1121): `?net` bound to
+// [I2C_SDA, I2C_SCL] answers both nets in one answer, an aggregate reduces across all of them, and an
+// empty list matches nothing. Its values are text or numbers; a list inside a list is refused as an
+// invalid argument.
 message QueryValue {
   oneof kind {
     string text = 1;
     double number = 2;
+    QueryValueList list = 3;
   }
+}
+
+// QueryValueList is the values one variable ranges over.
+message QueryValueList {
+  repeated QueryValue values = 1;
 }
 
 message ListRelationsRequest {

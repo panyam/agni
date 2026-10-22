@@ -180,6 +180,28 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		}
 	})
 
+	t.Run("query with a list binding", func(t *testing.T) {
+		const program = `pin.net(?ref, ?pin, ?net) => ?ref, ?pin, ?net`
+		_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program, "bind": map[string]any{"net": []any{"I2C_SDA", "I2C_SCL"}}})
+		text := func(v string) *webapi.QueryValue { return &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: v}} }
+		resp, err := s.api.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: program,
+			Bindings: map[string]*webapi.QueryValue{"net": {Kind: &webapi.QueryValue_List{List: &webapi.QueryValueList{Values: []*webapi.QueryValue{text("I2C_SDA"), text("I2C_SCL")}}}}}}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		nets := map[string]bool{}
+		for _, r := range resp.Msg.GetRows() {
+			nets[r.GetCells()[2]] = true
+		}
+		if !nets["I2C_SDA"] || !nets["I2C_SCL"] || len(nets) != 2 {
+			t.Fatalf("Connect answered nets %v, want both I2C nets and nothing else", nets)
+		}
+		sameTables(t, "list-bound query", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Query{Query: resp.Msg}}))
+		if !strings.Contains(a.Link, "bind=net%3DI2C_SDA") || !strings.Contains(a.Link, "bind=net%3DI2C_SCL") {
+			t.Errorf("the link %q doesn't carry both values", a.Link)
+		}
+	})
+
 	t.Run("check", func(t *testing.T) {
 		_, a := callMCP(t, s.mcp, "check", map[string]any{"design": mcpGateway})
 		resp, err := s.api.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snap}))
@@ -334,16 +356,6 @@ func TestMCPTraceToAPinTheDesignLacksIsAToolError(t *testing.T) {
 	callMCP(t, s.mcp, "trace", map[string]any{"design": mcpGateway, "from": "J1.1", "to": "U1.1"})
 }
 
-// jaala lets a variable range over a list, and agni's answers carry one value per variable, so a list
-// is refused with what to do instead.
-func TestMCPRefusesAListBinding(t *testing.T) {
-	s := serveMCP(t, mcpserver.Options{})
-	res, err := s.mcp.ToolCallFull(context.Background(), "query", map[string]any{"design": mcpGateway, "program": `pin.net(?r, ?p, ?net) => ?r`, "bind": map[string]any{"net": []any{"I2C_SDA", "I2C_SCL"}}})
-	if err != nil || !res.IsError || !strings.Contains(res.Content[0].Text, "one value per variable") {
-		t.Errorf("a list binding: %v %v", res, err)
-	}
-}
-
 // `agni mcp` serves the same tools over stdio as `serve --mcp` does over HTTP, and answers a query.
 func TestAgniMCPServesTheSameToolsOverStdio(t *testing.T) {
 	home := t.TempDir()
@@ -390,5 +402,18 @@ func TestAgniMCPServesTheSameToolsOverStdio(t *testing.T) {
 	}
 	if a.Link != "" || !strings.Contains(a.NoLink, "--server") {
 		t.Errorf("without --server, link %q and no_link %q", a.Link, a.NoLink)
+	}
+}
+
+// A check naming a rule that doesn't exist is the question's mistake, so the agent hears it as one with
+// the rule it probably meant, rather than reading an empty run as a clean design (agni issue 1121).
+func TestMCPCheckOfAnUnknownRuleIsAToolError(t *testing.T) {
+	s := serveMCP(t, mcpserver.Options{})
+	res, err := s.mcp.ToolCallFull(context.Background(), "check", map[string]any{"design": mcpGateway, "rules": []any{"i2c-missing-pullup"}})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !res.IsError || len(res.Content) == 0 || !strings.Contains(res.Content[0].Text, "did you mean i2c-pull-up") {
+		t.Errorf("check of an unknown rule answered %+v, want a tool error offering i2c-pull-up", res)
 	}
 }

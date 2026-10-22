@@ -2,6 +2,7 @@ package service
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/results"
@@ -51,6 +52,9 @@ func (s *CheckService) GetCheckReport(ctx context.Context, req *webapi.GetCheckR
 	cat, err := ov.Catalog(s.catalog)
 	if err != nil {
 		return nil, err
+	}
+	if err := cat.CheckNames(req.GetRules()); err != nil {
+		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
 	// The report names the design by its URI, not by the mount-relative half. A report is a wire

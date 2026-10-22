@@ -1,0 +1,63 @@
+# Mission #909's five questions of the tutorial gateway, each as the calls a model would make. The
+# rows each pins are what the design holds, so a question asked wrong fails even when the MCP answer
+# and the CLI's agree.
+folder: ../../tutorial-project
+design: designs/gateway
+revision: designs/gateway/gateway-rev-b.edn
+questions:
+  - ask: Which I2C nets have no pull-up, and which rail would one go to?
+    calls:
+      - tool: check
+        args: {design: "{design}", rules: [i2c-pull-up]}
+        cli: [check, "{design}", --rule, i2c-pull-up, --format, csv]
+        table: findings
+        has: ["| I2C_SCL |", "| I2C_SDA |"]
+      - tool: query
+        args:
+          design: "{design}"
+          program: pin.net(?r, ?p, ?bus), pin.net(?r, ?q, ?rail), net.rail(?rail), not net.ground(?rail) => ?r, ?rail
+          bind: {bus: [I2C_SCL, I2C_SDA]}
+        cli: [query, "{design}", "pin.net(?r, ?p, ?bus), pin.net(?r, ?q, ?rail), net.rail(?rail), not net.ground(?rail) => ?r, ?rail", --bind, bus=I2C_SCL, --bind, bus=I2C_SDA, --format, csv]
+        table: query
+        has: ["| U3 | PMIC_CORE_3V3 |", "| U5 | PMIC_CORE_3V3 |"]
+  - ask: What does the CAN high net connect to, and is it protected?
+    calls:
+      - tool: query
+        args: {design: "{design}", program: "pin.net(?r, ?p, ?n), component.class(?r, ?c) => ?r, ?p, ?c", bind: {n: CAN1_CANH}}
+        cli: [query, "{design}", "pin.net(?r, ?p, ?n), component.class(?r, ?c) => ?r, ?p, ?c", --bind, n=CAN1_CANH, --format, csv]
+        table: query
+        has: ["| J1 | 3 | connector |", "| R1 | 1 | resistor |", "| U4 | 5 | ic |"]
+      - tool: check
+        args: {design: "{design}", rules: [esd-protection]}
+        cli: [check, "{design}", --rule, esd-protection, --format, csv]
+        table: findings
+        has: ["| CAN1_CANH |", "no ESD protection"]
+  - ask: Which rails have no test point?
+    calls:
+      - tool: query
+        args: {design: "{design}", program: "net.rail(?net), not net.has_test_point(?net) => ?net"}
+        cli: [query, "{design}", "net.rail(?net), not net.has_test_point(?net) => ?net", --format, csv]
+        table: query
+        has: ["| GND |", "| PMIC_MAIN_12V0 |"]
+  - ask: What changed on the power nets between rev A and rev B?
+    calls:
+      - tool: diff
+        args: {design: "{design}/gateway.edn", against: "{revision}"}
+        cli: [diff, "{design}/gateway.edn", "{revision}", --format, csv]
+        table: diff
+        has: ["| net-hard | PMIC_CORE_3V3 |", "R4.1\\|R5.1"]
+  - ask: Trace from the MCU's pin to the connector and tell me where I can probe.
+    calls:
+      - tool: trace
+        args: {design: "{design}", from: U3.6, to: J1.3}
+        cli: [trace, "{design}", --from, U3.6, --to, J1.3, --format, json]
+        has: ["no route: U3.6 (CANTX) --> J1.3 (CANH)"]
+      - tool: trace
+        args: {design: "{design}", from: U4.5, to: J1.3}
+        cli: [trace, "{design}", --from, U4.5, --to, J1.3, --format, json]
+        has: ["net CAN1_CANH", "also: R1.1 (resistor)"]
+      - tool: trace
+        args: {design: "{design}", from: U3.99, to: J1.3}
+        cli: [trace, "{design}", --from, U3.99, --to, J1.3, --format, json]
+        has: ["U3 declares no pin 99"]
+        fails: true

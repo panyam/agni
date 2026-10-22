@@ -14,7 +14,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/query.proto.
  */
 export const file_agni_v1_webapi_query: GenFile = /*@__PURE__*/
-  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkitwIKD1J1blF1ZXJ5UmVxdWVzdBIQCghzbmFwc2hvdBgKIAEoCRINCgVxdWVyeRgBIAEoCRITCgt3b3JrX2J1ZGdldBgGIAEoAxI/CghiaW5kaW5ncxgHIAMoCzItLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdC5CaW5kaW5nc0VudHJ5EhYKDm9taXRfbG9jYXRpb25zGAggASgIEg0KBWxpbWl0GAkgASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAFKBAgCEANKBAgDEARKBAgEEAVKBAgFEAZSB292ZXJsYXlSCWJvYXJkX3VyaVIDdXJpUghhc19uYW1lZCKvAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSEgoKY2VsbF9raW5kcxgFIAMoCRIRCgljZWxsX3JlZnMYBiADKAkSEwoLY2VsbF9lbnRpdHkYByADKAUSEgoKY2l0ZV9pbmRleBgIIAMoBRIQCghjZWxsX3doeRgJIAMoCUoECAIQA0oECAMQBEoECAQQBVIFY2l0ZXNSC2NlbGxfc2hlZXRzUgxjZWxsX3JlYXNvbnMidwoMQW5zd2VyRW50aXR5EgwKBGtpbmQYASABKAkSCwoDcmVmGAIgASgJEgsKA3BpbhgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkSLAoGcmVhc29uGAUgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uIu0CChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkSDAoEd29yaxgGIAEoAxJACghiaW5kaW5ncxgHIAMoCzIuLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2UuQmluZGluZ3NFbnRyeRIuCghlbnRpdGllcxgIIAMoCzIcLmFnbmkudjEud2ViYXBpLkFuc3dlckVudGl0eRIPCgdzb3VyY2VzGAkgAygJEg0KBXRvdGFsGAogASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAEiNgoKUXVlcnlWYWx1ZRIOCgR0ZXh0GAEgASgJSAASEAoGbnVtYmVyGAIgASgBSABCBgoEa2luZCJxChRMaXN0UmVsYXRpb25zUmVxdWVzdBIQCghzbmFwc2hvdBgEIAEoCRIuCgdvdmVybGF5GAMgASgLMh0uYWduaS52MS53ZWJhcGkuT3ZlcmxheUNvbmZpZxIMCgRwYXRoGAEgASgJSgQIAhADUgN1cmkigAEKDFJlbGF0aW9uSW5mbxIMCgRuYW1lGAEgASgJEgwKBGFyZ3MYAiADKAkSDwoHc3VtbWFyeRgDIAEoCRIMCgRraW5kGAQgASgJEg4KBmRldGFpbBgFIAEoCRIRCglzaWduYXR1cmUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCSLHAQoNUmVsYXRpb25FbnRyeRIMCgRwYXRoGAEgASgJEhIKCmVudHJ5X2tpbmQYAiABKAkSEQoJc2lnbmF0dXJlGAMgASgJEgsKA2RvYxgEIAEoCRIOCgZkZXRhaWwYBSABKAkSDgoGbW9kdWxlGAYgASgJEhIKCmRlZmluaXRpb24YByADKAkSEAoIaW5mZXJyZWQYCCADKAkSLgoHbWVtYmVycxgJIAMoCzIdLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uRW50cnkiPQoMRXhhbXBsZVF1ZXJ5Eg0KBWxhYmVsGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkiWQoLRW50aXR5UXVlcnkSDAoEa2luZBgBIAEoCRINCgVxdWVyeRgCIAEoCRIPCgd0ZWFjaGVzGAMgASgJEg0KBWJpbmRzGAQgAygJEg0KBWxhYmVsGAUgASgJIkwKC1NlYXJjaFF1ZXJ5Eg0KBXF1ZXJ5GAEgASgJEg8KB3RlYWNoZXMYAiABKAkSDAoEYmluZBgDIAEoCRIPCgdwYXR0ZXJuGAQgASgJIo4CChVMaXN0UmVsYXRpb25zUmVzcG9uc2USLwoJcmVsYXRpb25zGAEgAygLMhwuYWduaS52MS53ZWJhcGkuUmVsYXRpb25JbmZvEi4KCGV4YW1wbGVzGAIgAygLMhwuYWduaS52MS53ZWJhcGkuRXhhbXBsZVF1ZXJ5EjMKDmVudGl0eV9xdWVyaWVzGAMgAygLMhsuYWduaS52MS53ZWJhcGkuRW50aXR5UXVlcnkSMQoMc2VhcmNoX3F1ZXJ5GAQgASgLMhsuYWduaS52MS53ZWJhcGkuU2VhcmNoUXVlcnkSLAoFZW50cnkYBSABKAsyHS5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkVudHJ5IlgKCFF1ZXJ5U2V0Eg0KBXRpdGxlGAEgASgJEhAKCHByZWFtYmxlGAIgASgJEisKB3F1ZXJpZXMYAyADKAsyGi5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5IscBCgpOYW1lZFF1ZXJ5EgwKBG5hbWUYASABKAkSDQoFcXVlcnkYAiABKAkSEwoLZGVzY3JpcHRpb24YAyABKAkSOgoIYmluZGluZ3MYBCADKAsyKC5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5LkJpbmRpbmdzRW50cnkaSwoNQmluZGluZ3NFbnRyeRILCgNrZXkYASABKAkSKQoFdmFsdWUYAiABKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlOgI4ASK0AQoRUnVuUXVlcmllc1JlcXVlc3QSEAoIc25hcHNob3QYCCABKAkSJQoDc2V0GAEgASgLMhguYWduaS52MS53ZWJhcGkuUXVlcnlTZXQSEwoLd29ya19idWRnZXQYBiABKAMSFgoOb21pdF9sb2NhdGlvbnMYByABKAhKBAgCEANKBAgDEARKBAgEEAVKBAgFEAZSA3VyaVIHb3ZlcmxheVIJYm9hcmRfdXJpUghhc19uYW1lZCJ4ChJSdW5RdWVyaWVzUmVzcG9uc2USDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSDgoGc291cmNlGAMgASgJEjEKB3Jlc3VsdHMYBCADKAsyIC5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5UmVzdWx0IqYBChBOYW1lZFF1ZXJ5UmVzdWx0EgwKBG5hbWUYASABKAkSEwoLZGVzY3JpcHRpb24YAiABKAkSMAoGcmVzdWx0GAMgASgLMiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRINCgVlcnJvchgEIAEoCRIuCghlcnJvcl9hdBgFIAEoCzIcLmFnbmkudjEud2ViYXBpLlRleHRQb3NpdGlvbiJLCgxUZXh0UG9zaXRpb24SDgoGb2Zmc2V0GAEgASgFEgwKBGxpbmUYAiABKAUSDgoGY29sdW1uGAMgASgFEg0KBWNhcmV0GAQgASgJIjoKFExpc3RRdWVyeVNldHNSZXF1ZXN0EhAKCHNuYXBzaG90GAIgASgJSgQIARACUgpkZXNpZ25fdXJpIlsKFUxpc3RRdWVyeVNldHNSZXNwb25zZRIPCgdwcm9qZWN0GAEgASgJEjEKCnF1ZXJ5X3NldHMYAiADKAsyHS5hZ25pLnYxLndlYmFwaS5OYW1lZFF1ZXJ5U2V0IlQKDU5hbWVkUXVlcnlTZXQSDAoEbmFtZRgBIAEoCRIlCgNzZXQYAiABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldBIOCgZzb3VyY2UYAyABKAkiJAoUUGFyc2VRdWVyeVNldFJlcXVlc3QSDAoEdGV4dBgBIAEoCSI+ChVQYXJzZVF1ZXJ5U2V0UmVzcG9uc2USJQoDc2V0GAEgASgLMhguYWduaS52MS53ZWJhcGkuUXVlcnlTZXQyzAMKDFF1ZXJ5U2VydmljZRJNCghSdW5RdWVyeRIfLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdBogLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2USUwoKUnVuUXVlcmllcxIhLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1Jlc3BvbnNlElwKDUxpc3RSZWxhdGlvbnMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UmVsYXRpb25zUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXNwb25zZRJcCg1MaXN0UXVlcnlTZXRzEiQuYWduaS52MS53ZWJhcGkuTGlzdFF1ZXJ5U2V0c1JlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5MaXN0UXVlcnlTZXRzUmVzcG9uc2USXAoNUGFyc2VRdWVyeVNldBIkLmFnbmkudjEud2ViYXBpLlBhcnNlUXVlcnlTZXRSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuUGFyc2VRdWVyeVNldFJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
+  fileDesc("ChphZ25pL3YxL3dlYmFwaS9xdWVyeS5wcm90bxIOYWduaS52MS53ZWJhcGkitwIKD1J1blF1ZXJ5UmVxdWVzdBIQCghzbmFwc2hvdBgKIAEoCRINCgVxdWVyeRgBIAEoCRITCgt3b3JrX2J1ZGdldBgGIAEoAxI/CghiaW5kaW5ncxgHIAMoCzItLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVxdWVzdC5CaW5kaW5nc0VudHJ5EhYKDm9taXRfbG9jYXRpb25zGAggASgIEg0KBWxpbWl0GAkgASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAFKBAgCEANKBAgDEARKBAgEEAVKBAgFEAZSB292ZXJsYXlSCWJvYXJkX3VyaVIDdXJpUghhc19uYW1lZCKvAQoIUXVlcnlSb3cSDQoFY2VsbHMYASADKAkSEgoKY2VsbF9raW5kcxgFIAMoCRIRCgljZWxsX3JlZnMYBiADKAkSEwoLY2VsbF9lbnRpdHkYByADKAUSEgoKY2l0ZV9pbmRleBgIIAMoBRIQCghjZWxsX3doeRgJIAMoCUoECAIQA0oECAMQBEoECAQQBVIFY2l0ZXNSC2NlbGxfc2hlZXRzUgxjZWxsX3JlYXNvbnMidwoMQW5zd2VyRW50aXR5EgwKBGtpbmQYASABKAkSCwoDcmVmGAIgASgJEgsKA3BpbhgDIAEoCRIRCglzaGVldF9pZHMYBCADKAkSLAoGcmVhc29uGAUgASgOMhwuYWduaS52MS5jaGVja3MuTG9jYXRlUmVhc29uIu0CChBSdW5RdWVyeVJlc3BvbnNlEg8KB2NvbHVtbnMYASADKAkSJgoEcm93cxgCIAMoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5Um93EhQKDGNvbHVtbl9raW5kcxgDIAMoCRINCgVxdWVyeRgEIAEoCRIOCgZzb3VyY2UYBSABKAkSDAoEd29yaxgGIAEoAxJACghiaW5kaW5ncxgHIAMoCzIuLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJ5UmVzcG9uc2UuQmluZGluZ3NFbnRyeRIuCghlbnRpdGllcxgIIAMoCzIcLmFnbmkudjEud2ViYXBpLkFuc3dlckVudGl0eRIPCgdzb3VyY2VzGAkgAygJEg0KBXRvdGFsGAogASgFGksKDUJpbmRpbmdzRW50cnkSCwoDa2V5GAEgASgJEikKBXZhbHVlGAIgASgLMhouYWduaS52MS53ZWJhcGkuUXVlcnlWYWx1ZToCOAEiZgoKUXVlcnlWYWx1ZRIOCgR0ZXh0GAEgASgJSAASEAoGbnVtYmVyGAIgASgBSAASLgoEbGlzdBgDIAEoCzIeLmFnbmkudjEud2ViYXBpLlF1ZXJ5VmFsdWVMaXN0SABCBgoEa2luZCI8Cg5RdWVyeVZhbHVlTGlzdBIqCgZ2YWx1ZXMYASADKAsyGi5hZ25pLnYxLndlYmFwaS5RdWVyeVZhbHVlInEKFExpc3RSZWxhdGlvbnNSZXF1ZXN0EhAKCHNuYXBzaG90GAQgASgJEi4KB292ZXJsYXkYAyABKAsyHS5hZ25pLnYxLndlYmFwaS5PdmVybGF5Q29uZmlnEgwKBHBhdGgYASABKAlKBAgCEANSA3VyaSKAAQoMUmVsYXRpb25JbmZvEgwKBG5hbWUYASABKAkSDAoEYXJncxgCIAMoCRIPCgdzdW1tYXJ5GAMgASgJEgwKBGtpbmQYBCABKAkSDgoGZGV0YWlsGAUgASgJEhEKCXNpZ25hdHVyZRgGIAEoCRISCgpkZWZpbml0aW9uGAcgAygJIscBCg1SZWxhdGlvbkVudHJ5EgwKBHBhdGgYASABKAkSEgoKZW50cnlfa2luZBgCIAEoCRIRCglzaWduYXR1cmUYAyABKAkSCwoDZG9jGAQgASgJEg4KBmRldGFpbBgFIAEoCRIOCgZtb2R1bGUYBiABKAkSEgoKZGVmaW5pdGlvbhgHIAMoCRIQCghpbmZlcnJlZBgIIAMoCRIuCgdtZW1iZXJzGAkgAygLMh0uYWduaS52MS53ZWJhcGkuUmVsYXRpb25FbnRyeSI9CgxFeGFtcGxlUXVlcnkSDQoFbGFiZWwYASABKAkSDQoFcXVlcnkYAiABKAkSDwoHdGVhY2hlcxgDIAEoCSJZCgtFbnRpdHlRdWVyeRIMCgRraW5kGAEgASgJEg0KBXF1ZXJ5GAIgASgJEg8KB3RlYWNoZXMYAyABKAkSDQoFYmluZHMYBCADKAkSDQoFbGFiZWwYBSABKAkiTAoLU2VhcmNoUXVlcnkSDQoFcXVlcnkYASABKAkSDwoHdGVhY2hlcxgCIAEoCRIMCgRiaW5kGAMgASgJEg8KB3BhdHRlcm4YBCABKAkijgIKFUxpc3RSZWxhdGlvbnNSZXNwb25zZRIvCglyZWxhdGlvbnMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5SZWxhdGlvbkluZm8SLgoIZXhhbXBsZXMYAiADKAsyHC5hZ25pLnYxLndlYmFwaS5FeGFtcGxlUXVlcnkSMwoOZW50aXR5X3F1ZXJpZXMYAyADKAsyGy5hZ25pLnYxLndlYmFwaS5FbnRpdHlRdWVyeRIxCgxzZWFyY2hfcXVlcnkYBCABKAsyGy5hZ25pLnYxLndlYmFwaS5TZWFyY2hRdWVyeRIsCgVlbnRyeRgFIAEoCzIdLmFnbmkudjEud2ViYXBpLlJlbGF0aW9uRW50cnkiWAoIUXVlcnlTZXQSDQoFdGl0bGUYASABKAkSEAoIcHJlYW1ibGUYAiABKAkSKwoHcXVlcmllcxgDIAMoCzIaLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkixwEKCk5hbWVkUXVlcnkSDAoEbmFtZRgBIAEoCRINCgVxdWVyeRgCIAEoCRITCgtkZXNjcmlwdGlvbhgDIAEoCRI6CghiaW5kaW5ncxgEIAMoCzIoLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnkuQmluZGluZ3NFbnRyeRpLCg1CaW5kaW5nc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEud2ViYXBpLlF1ZXJ5VmFsdWU6AjgBIrQBChFSdW5RdWVyaWVzUmVxdWVzdBIQCghzbmFwc2hvdBgIIAEoCRIlCgNzZXQYASABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldBITCgt3b3JrX2J1ZGdldBgGIAEoAxIWCg5vbWl0X2xvY2F0aW9ucxgHIAEoCEoECAIQA0oECAMQBEoECAQQBUoECAUQBlIDdXJpUgdvdmVybGF5Uglib2FyZF91cmlSCGFzX25hbWVkIngKElJ1blF1ZXJpZXNSZXNwb25zZRINCgV0aXRsZRgBIAEoCRIQCghwcmVhbWJsZRgCIAEoCRIOCgZzb3VyY2UYAyABKAkSMQoHcmVzdWx0cxgEIAMoCzIgLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnlSZXN1bHQipgEKEE5hbWVkUXVlcnlSZXN1bHQSDAoEbmFtZRgBIAEoCRITCgtkZXNjcmlwdGlvbhgCIAEoCRIwCgZyZXN1bHQYAyABKAsyIC5hZ25pLnYxLndlYmFwaS5SdW5RdWVyeVJlc3BvbnNlEg0KBWVycm9yGAQgASgJEi4KCGVycm9yX2F0GAUgASgLMhwuYWduaS52MS53ZWJhcGkuVGV4dFBvc2l0aW9uIksKDFRleHRQb3NpdGlvbhIOCgZvZmZzZXQYASABKAUSDAoEbGluZRgCIAEoBRIOCgZjb2x1bW4YAyABKAUSDQoFY2FyZXQYBCABKAkiOgoUTGlzdFF1ZXJ5U2V0c1JlcXVlc3QSEAoIc25hcHNob3QYAiABKAlKBAgBEAJSCmRlc2lnbl91cmkiWwoVTGlzdFF1ZXJ5U2V0c1Jlc3BvbnNlEg8KB3Byb2plY3QYASABKAkSMQoKcXVlcnlfc2V0cxgCIAMoCzIdLmFnbmkudjEud2ViYXBpLk5hbWVkUXVlcnlTZXQiVAoNTmFtZWRRdWVyeVNldBIMCgRuYW1lGAEgASgJEiUKA3NldBgCIAEoCzIYLmFnbmkudjEud2ViYXBpLlF1ZXJ5U2V0Eg4KBnNvdXJjZRgDIAEoCSIkChRQYXJzZVF1ZXJ5U2V0UmVxdWVzdBIMCgR0ZXh0GAEgASgJIj4KFVBhcnNlUXVlcnlTZXRSZXNwb25zZRIlCgNzZXQYASABKAsyGC5hZ25pLnYxLndlYmFwaS5RdWVyeVNldDLMAwoMUXVlcnlTZXJ2aWNlEk0KCFJ1blF1ZXJ5Eh8uYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXF1ZXN0GiAuYWduaS52MS53ZWJhcGkuUnVuUXVlcnlSZXNwb25zZRJTCgpSdW5RdWVyaWVzEiEuYWduaS52MS53ZWJhcGkuUnVuUXVlcmllc1JlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5SdW5RdWVyaWVzUmVzcG9uc2USXAoNTGlzdFJlbGF0aW9ucxIkLmFnbmkudjEud2ViYXBpLkxpc3RSZWxhdGlvbnNSZXF1ZXN0GiUuYWduaS52MS53ZWJhcGkuTGlzdFJlbGF0aW9uc1Jlc3BvbnNlElwKDUxpc3RRdWVyeVNldHMSJC5hZ25pLnYxLndlYmFwaS5MaXN0UXVlcnlTZXRzUmVxdWVzdBolLmFnbmkudjEud2ViYXBpLkxpc3RRdWVyeVNldHNSZXNwb25zZRJcCg1QYXJzZVF1ZXJ5U2V0EiQuYWduaS52MS53ZWJhcGkuUGFyc2VRdWVyeVNldFJlcXVlc3QaJS5hZ25pLnYxLndlYmFwaS5QYXJzZVF1ZXJ5U2V0UmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_webapi_checks]);
 
 /**
  * @generated from message agni.v1.webapi.RunQueryRequest
@@ -323,6 +323,12 @@ export const RunQueryResponseSchema: GenMessage<RunQueryResponse> = /*@__PURE__*
  * position matches by its text. Where nothing types the variable, this field decides, as `3.3`
  * versus `"3.3"` written into the query would.
  *
+ * A list binds the variable to each of its values, and the goal answers for every one of them, as if
+ * it were joined with a relation holding exactly those values (agni issue 1121): `?net` bound to
+ * [I2C_SDA, I2C_SCL] answers both nets in one answer, an aggregate reduces across all of them, and an
+ * empty list matches nothing. Its values are text or numbers; a list inside a list is refused as an
+ * invalid argument.
+ *
  * @generated from message agni.v1.webapi.QueryValue
  */
 export type QueryValue = Message<"agni.v1.webapi.QueryValue"> & {
@@ -341,6 +347,12 @@ export type QueryValue = Message<"agni.v1.webapi.QueryValue"> & {
      */
     value: number;
     case: "number";
+  } | {
+    /**
+     * @generated from field: agni.v1.webapi.QueryValueList list = 3;
+     */
+    value: QueryValueList;
+    case: "list";
   } | { case: undefined; value?: undefined };
 };
 
@@ -350,6 +362,25 @@ export type QueryValue = Message<"agni.v1.webapi.QueryValue"> & {
  */
 export const QueryValueSchema: GenMessage<QueryValue> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 4);
+
+/**
+ * QueryValueList is the values one variable ranges over.
+ *
+ * @generated from message agni.v1.webapi.QueryValueList
+ */
+export type QueryValueList = Message<"agni.v1.webapi.QueryValueList"> & {
+  /**
+   * @generated from field: repeated agni.v1.webapi.QueryValue values = 1;
+   */
+  values: QueryValue[];
+};
+
+/**
+ * Describes the message agni.v1.webapi.QueryValueList.
+ * Use `create(QueryValueListSchema)` to create a new message.
+ */
+export const QueryValueListSchema: GenMessage<QueryValueList> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_query, 5);
 
 /**
  * @generated from message agni.v1.webapi.ListRelationsRequest
@@ -388,7 +419,7 @@ export type ListRelationsRequest = Message<"agni.v1.webapi.ListRelationsRequest"
  * Use `create(ListRelationsRequestSchema)` to create a new message.
  */
 export const ListRelationsRequestSchema: GenMessage<ListRelationsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 5);
+  messageDesc(file_agni_v1_webapi_query, 6);
 
 /**
  * RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
@@ -450,7 +481,7 @@ export type RelationInfo = Message<"agni.v1.webapi.RelationInfo"> & {
  * Use `create(RelationInfoSchema)` to create a new message.
  */
 export const RelationInfoSchema: GenMessage<RelationInfo> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 6);
+  messageDesc(file_agni_v1_webapi_query, 7);
 
 /**
  * RelationEntry is one place in the namespace tree, for drill-down: a module listing what it holds,
@@ -528,7 +559,7 @@ export type RelationEntry = Message<"agni.v1.webapi.RelationEntry"> & {
  * Use `create(RelationEntrySchema)` to create a new message.
  */
 export const RelationEntrySchema: GenMessage<RelationEntry> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 7);
+  messageDesc(file_agni_v1_webapi_query, 8);
 
 /**
  * ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog
@@ -559,7 +590,7 @@ export type ExampleQuery = Message<"agni.v1.webapi.ExampleQuery"> & {
  * Use `create(ExampleQuerySchema)` to create a new message.
  */
 export const ExampleQuerySchema: GenMessage<ExampleQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 8);
+  messageDesc(file_agni_v1_webapi_query, 9);
 
 /**
  * EntityQuery is one question a viewer offers about a selected entity: the datalog that asks
@@ -619,7 +650,7 @@ export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
  * Use `create(EntityQuerySchema)` to create a new message.
  */
 export const EntityQuerySchema: GenMessage<EntityQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 9);
+  messageDesc(file_agni_v1_webapi_query, 10);
 
 /**
  * SearchQuery is the query the panel's search mode runs: find a design's entities by name (agni
@@ -666,7 +697,7 @@ export type SearchQuery = Message<"agni.v1.webapi.SearchQuery"> & {
  * Use `create(SearchQuerySchema)` to create a new message.
  */
 export const SearchQuerySchema: GenMessage<SearchQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 10);
+  messageDesc(file_agni_v1_webapi_query, 11);
 
 /**
  * @generated from message agni.v1.webapi.ListRelationsResponse
@@ -716,7 +747,7 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
  * Use `create(ListRelationsResponseSchema)` to create a new message.
  */
 export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 11);
+  messageDesc(file_agni_v1_webapi_query, 12);
 
 /**
  * QuerySet is a named list of queries sharing a preamble of derived relations. It travels as values
@@ -751,7 +782,7 @@ export type QuerySet = Message<"agni.v1.webapi.QuerySet"> & {
  * Use `create(QuerySetSchema)` to create a new message.
  */
 export const QuerySetSchema: GenMessage<QuerySet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 12);
+  messageDesc(file_agni_v1_webapi_query, 13);
 
 /**
  * NamedQuery is one entry of a QuerySet. name is unique within the set and identifies the entry's
@@ -792,7 +823,7 @@ export type NamedQuery = Message<"agni.v1.webapi.NamedQuery"> & {
  * Use `create(NamedQuerySchema)` to create a new message.
  */
 export const NamedQuerySchema: GenMessage<NamedQuery> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 13);
+  messageDesc(file_agni_v1_webapi_query, 14);
 
 /**
  * @generated from message agni.v1.webapi.RunQueriesRequest
@@ -833,7 +864,7 @@ export type RunQueriesRequest = Message<"agni.v1.webapi.RunQueriesRequest"> & {
  * Use `create(RunQueriesRequestSchema)` to create a new message.
  */
 export const RunQueriesRequestSchema: GenMessage<RunQueriesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 14);
+  messageDesc(file_agni_v1_webapi_query, 15);
 
 /**
  * @generated from message agni.v1.webapi.RunQueriesResponse
@@ -871,7 +902,7 @@ export type RunQueriesResponse = Message<"agni.v1.webapi.RunQueriesResponse"> & 
  * Use `create(RunQueriesResponseSchema)` to create a new message.
  */
 export const RunQueriesResponseSchema: GenMessage<RunQueriesResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 15);
+  messageDesc(file_agni_v1_webapi_query, 16);
 
 /**
  * NamedQueryResult is one query's answer, or why it has none. Exactly one of result and error is set.
@@ -917,7 +948,7 @@ export type NamedQueryResult = Message<"agni.v1.webapi.NamedQueryResult"> & {
  * Use `create(NamedQueryResultSchema)` to create a new message.
  */
 export const NamedQueryResultSchema: GenMessage<NamedQueryResult> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 16);
+  messageDesc(file_agni_v1_webapi_query, 17);
 
 /**
  * TextPosition is where in a query's text a syntax error points. A RunQuery whose query would not
@@ -963,7 +994,7 @@ export type TextPosition = Message<"agni.v1.webapi.TextPosition"> & {
  * Use `create(TextPositionSchema)` to create a new message.
  */
 export const TextPositionSchema: GenMessage<TextPosition> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 17);
+  messageDesc(file_agni_v1_webapi_query, 18);
 
 /**
  * @generated from message agni.v1.webapi.ListQuerySetsRequest
@@ -982,7 +1013,7 @@ export type ListQuerySetsRequest = Message<"agni.v1.webapi.ListQuerySetsRequest"
  * Use `create(ListQuerySetsRequestSchema)` to create a new message.
  */
 export const ListQuerySetsRequestSchema: GenMessage<ListQuerySetsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 18);
+  messageDesc(file_agni_v1_webapi_query, 19);
 
 /**
  * @generated from message agni.v1.webapi.ListQuerySetsResponse
@@ -1007,7 +1038,7 @@ export type ListQuerySetsResponse = Message<"agni.v1.webapi.ListQuerySetsRespons
  * Use `create(ListQuerySetsResponseSchema)` to create a new message.
  */
 export const ListQuerySetsResponseSchema: GenMessage<ListQuerySetsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 19);
+  messageDesc(file_agni_v1_webapi_query, 20);
 
 /**
  * NamedQuerySet is one query set a project keeps. name is its file's stem, which is what a viewer
@@ -1037,7 +1068,7 @@ export type NamedQuerySet = Message<"agni.v1.webapi.NamedQuerySet"> & {
  * Use `create(NamedQuerySetSchema)` to create a new message.
  */
 export const NamedQuerySetSchema: GenMessage<NamedQuerySet> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 20);
+  messageDesc(file_agni_v1_webapi_query, 21);
 
 /**
  * @generated from message agni.v1.webapi.ParseQuerySetRequest
@@ -1056,7 +1087,7 @@ export type ParseQuerySetRequest = Message<"agni.v1.webapi.ParseQuerySetRequest"
  * Use `create(ParseQuerySetRequestSchema)` to create a new message.
  */
 export const ParseQuerySetRequestSchema: GenMessage<ParseQuerySetRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 21);
+  messageDesc(file_agni_v1_webapi_query, 22);
 
 /**
  * @generated from message agni.v1.webapi.ParseQuerySetResponse
@@ -1073,7 +1104,7 @@ export type ParseQuerySetResponse = Message<"agni.v1.webapi.ParseQuerySetRespons
  * Use `create(ParseQuerySetResponseSchema)` to create a new message.
  */
 export const ParseQuerySetResponseSchema: GenMessage<ParseQuerySetResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_query, 22);
+  messageDesc(file_agni_v1_webapi_query, 23);
 
 /**
  * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004
