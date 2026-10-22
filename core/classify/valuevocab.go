@@ -126,17 +126,54 @@ func (l *Lexicon) StampValues(d *ir.Design) {
 			continue
 		}
 		q := &ir.Quantity{Input: text}
+		class := MostSpecific(ClassNames(c))
 		if v, unit, prefixed, ok := parseQuantityDetail(text); ok {
 			q.Value = &v
 			if unit == "" {
 				// The notation gave a number but no unit, so the class decides. Still possibly empty
 				// (a bare value on an ambiguous class), and that stays empty rather than a guess.
-				unit = vocab.UnitFor(MostSpecific(ClassNames(c)), prefixed)
+				unit = vocab.UnitFor(class, prefixed)
 			}
 			q.Unit = unit
+		} else if v, unit, ok := vocab.valueFromName(text, class); ok {
+			q.Value, q.Unit = &v, unit
 		}
 		c.Value = q
 	}
+}
+
+// valueFromName reads a value out of a library part name, `R_10k_0402` or `C_4u7_25V_0402`, which a
+// library uses as the Value and which parses to nothing whole (agni issue 1115). A token counts only
+// when it carries an SI prefix or a unit, so a package size (`0402`) is never read as ohms, and only
+// when its unit is the class's own (ohms, farads, henries), so a rating (`25V`, `22.4A`) is never read
+// as the value. A name holding two different such values says nothing reliable and reads as none, as
+// does a class with no unit of its own.
+func (v *ValueVocab) valueFromName(text string, class ComponentClass) (float64, string, bool) {
+	want := v.UnitFor(class, true)
+	if want == "" {
+		return 0, "", false
+	}
+	var found *float64
+	for _, tok := range strings.FieldsFunc(text, func(r rune) bool { return r == '_' || r == ' ' || r == '/' || r == ',' }) {
+		val, unit, prefixed, ok := parseQuantityDetail(tok)
+		if !ok || (unit == "" && !prefixed) {
+			continue
+		}
+		if unit == "" {
+			unit = v.UnitFor(class, prefixed)
+		}
+		if unit != want {
+			continue
+		}
+		if found != nil && *found != val {
+			return 0, "", false
+		}
+		found = &val
+	}
+	if found == nil {
+		return 0, "", false
+	}
+	return *found, want, true
 }
 
 // StampValues is the process-level form of (*Lexicon).StampValues, which carries the contract.

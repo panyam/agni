@@ -1,10 +1,6 @@
 package check
 
 import (
-	"strings"
-	"unicode"
-
-	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -12,27 +8,15 @@ import (
 // converter's output node through a 0 Ohm resistor is one rail with two names, and a rule asking what
 // sits on the rail asks across the link (agni issue 1015).
 
-// ZeroOhmLink reports whether ref is a fitted resistor of zero ohms. The value decides it when it
-// parsed to a number, and otherwise a token of the value text that spells zero ohms with its unit
-// does, since some libraries name a part `R_0R_22.4A_0603` and that whole string parses to nothing.
-// A bare `0` token counts only as the whole value, because inside a name it is as likely a package
-// size or a tolerance.
+// ZeroOhmLink reports whether ref is a fitted resistor whose value is zero ohms. A library that writes
+// its part name as the Value (`R_0R_22.4A_0603`) has that value read out of the name at ingestion
+// (agni issue 1115), so the name needs no reading here.
 func ZeroOhmLink(m Model, ref string) bool {
 	if m.ComponentClass(ref) != ClassResistor || !m.IsFitted(ref) {
 		return false
 	}
-	if v, ok := ComponentValueIn(m, ref, UnitOhm); ok {
-		return v == 0
-	}
-	text, _ := ComponentValueText(m, ref)
-	for _, tok := range strings.FieldsFunc(text, func(r rune) bool {
-		return !unicode.IsLetter(r) && !unicode.IsDigit(r) && r != '.'
-	}) {
-		if v, unit, ok := classify.ParseQuantity(tok); ok && v == 0 && unit == UnitOhm {
-			return true
-		}
-	}
-	return false
+	v, ok := ComponentValueIn(m, ref, UnitOhm)
+	return ok && v == 0
 }
 
 // JoinedNet is one net of a rail and the zero-ohm link that joined it, which is "" for the net the

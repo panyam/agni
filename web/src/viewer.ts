@@ -18,7 +18,7 @@ import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
 import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, subjectFromParam, subjectParam } from "./router.js";
-import { DocumentStore } from "./document.js";
+import { DocumentStore, messageOf } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
@@ -703,8 +703,8 @@ export class ViewerPresenter {
   }
 
   // loadRules fetches the rule catalog for the open design (ListRules), defaults the active ruleset
-  // to every available rule, and pushes both to the rules panel. A failure leaves an empty catalog
-  // (the panel shows "No rules.") rather than erroring the open.
+  // to every available rule, and pushes both to the rules panel. A failure leaves an empty catalog,
+  // whose reason both panels show (agni issue 1117), rather than erroring the open.
   private async loadRules(mount: string, path: string): Promise<void> {
     if (!this.doc.catalogLoading) {
       this.doc.catalogLoading = true;
@@ -723,7 +723,7 @@ export class ViewerPresenter {
     const fired: Record<string, number> = {};
     const fs = this.doc.run?.resp.findings ?? [];
     for (const name of this.doc.selectedRules) fired[name] = fs.filter((f) => f.rule === name).length;
-    this.views.rules.setState({ rules: this.doc.rules, selected: this.doc.selectedRules, fired });
+    this.views.rules.setState({ rules: this.doc.rules, selected: this.doc.selectedRules, fired, error: this.doc.catalogError });
   }
 
   // setRuleSelection adopts a new active ruleset (from the rules panel's checkboxes) and re-renders
@@ -836,8 +836,8 @@ export class ViewerPresenter {
 
   // runSelection asks CheckDesign for the selected rules the run lacks and folds the answer into it,
   // then assembles the visible list and lights up every current finding when the reader asked for
-  // that. A geometry-only file (no netlist) makes CheckDesign fail, which leaves the run as it was and
-  // those rules pending.
+  // that. A failed CheckDesign leaves the run as it was and those rules pending, with the reason on
+  // the store's runError (agni issue 1117).
   private async runSelection(signal?: AbortSignal): Promise<void> {
     await this.doc.runMissing(this.checks, () => this.checked(), signal);
     this.assembleFindings();
@@ -865,6 +865,10 @@ export class ViewerPresenter {
   // shows).
   private pushFindings(): void {
     const pending = this.doc.selectedRules.filter((n) => !this.doc.ran(n)).length;
+    // A failed run names the rules it left pending among those still selected and unanswered, so
+    // unticking one drops it from the message.
+    const failed = this.doc.runError;
+    const failedRules = failed?.rules.filter((n) => this.doc.selectedRules.includes(n) && !this.doc.ran(n)) ?? [];
     const skippedAt = new Map((this.doc.run?.resp.skipped ?? []).map((sk) => [sk.name, sk.reason]));
     const ruleSummaries: Record<string, string> = {};
     for (const r of this.doc.rules) if (r.summary) ruleSummaries[r.name] = r.summary;
@@ -877,7 +881,9 @@ export class ViewerPresenter {
       pending,
       running: this.checksRunning,
       cancelled: this.checksCancelled,
+      runError: failed && failedRules.length > 0 ? { message: failed.message, rules: failedRules } : undefined,
       catalogLoading: this.doc.catalogLoading,
+      catalogError: this.doc.catalogError,
       // The rules this design cannot run, which the catalog lists unavailable and leaves unticked
       // (agni issue 950), with a selected rule a run skipped all the same. A rule the reader unticked
       // themselves is not news, so it is left out. Named here, on the panel that opens by default,
@@ -1776,11 +1782,6 @@ function summaryLine(path: string, name: string, layout: string, format: string,
 // wording changes.
 function isStoreUnconfigured(e: unknown): boolean {
   return ConnectError.from(e).code === Code.FailedPrecondition;
-}
-
-// messageOf pulls a human-readable message off a thrown value for inline display.
-function messageOf(e: unknown): string {
-  return e instanceof Error ? e.message : String(e);
 }
 
 

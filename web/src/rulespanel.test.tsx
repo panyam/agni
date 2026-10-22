@@ -173,3 +173,15 @@ describe("rulespanel rule prose (WS9-020)", () => {
     expect(detail.querySelector(".rule-remedy")).toBeNull();
   });
 });
+
+// agni issue 1117: a catalog that did not load says why, where "No rules." would read as a design
+// with no rules at all.
+describe("a catalog that did not load", () => {
+  it("says why in place of No rules", () => {
+    const { el, panel } = mountPanel([]);
+    expect(el.querySelector(".rules-empty")?.textContent).toBe("No rules.");
+    panel.view.setState({ ...state([], []), error: "snapshot not found" });
+    expect(el.querySelector(".rules-error")?.textContent).toBe("The rule catalog did not load. snapshot not found");
+    expect(el.querySelector(".rules-empty")).toBeNull();
+  });
+});
