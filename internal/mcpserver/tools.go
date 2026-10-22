@@ -152,14 +152,15 @@ func (s *srv) check(ctx context.Context, in checkInput) (core.ToolResult, error)
 	if why == "" {
 		meta.ContentHash = s.contentHash(ctx, snap)
 	}
-	var links []map[string]string
+	var links []verdictLink
 	for _, p := range resp.GetVerdicts() {
 		v := service.VerdictFromProto(p)
 		if v.Outcome != check.Fail && v.Outcome != check.Inconclusive {
 			continue
 		}
-		if url := rpt.VerdictURL(meta, p.GetId(), v.Rule, check.SubjectParams(v.Subjects)); url != "" && len(links) < maxLinks {
-			links = append(links, map[string]string{"verdict": p.GetId(), "rule": v.Rule, "link": url})
+		subjects := check.SubjectParams(v.Subjects)
+		if url := rpt.VerdictURL(meta, p.GetId(), v.Rule, subjects); url != "" && len(links) < maxLinks {
+			links = append(links, verdictLink{Verdict: p.GetId(), Rule: v.Rule, Subjects: subjects, Link: url, Page: verdictAction(p.GetId(), v.Rule, subjects)})
 		}
 	}
 	var b strings.Builder
@@ -173,13 +174,23 @@ func (s *srv) check(ctx context.Context, in checkInput) (core.ToolResult, error)
 		writeTable(&b, t)
 	}
 	for _, l := range links {
-		fmt.Fprintf(&b, "open %s (%s) in the viewer: %s\n", l["verdict"], l["rule"], l["link"])
+		fmt.Fprintf(&b, "open %s (%s) in the viewer: %s\n", l.Verdict, l.Rule, l.Link)
 	}
 	if why != "" {
 		writeLink(&b, "", why)
 	}
 	return answer(b.String(), map[string]any{"design": u.String(), "rules": in.Rules, "links": links, "no_link": why,
 		"tables": tablesJSON(tables), "answer": protoJSON(resp)})
+}
+
+// verdictLink is one failing verdict a check answer links to. A host with no viewer open opens Link;
+// one embedding a viewer sends Page to it instead (agni issue 1155).
+type verdictLink struct {
+	Verdict  string      `json:"verdict"`
+	Rule     string      `json:"rule"`
+	Subjects []string    `json:"subjects"`
+	Link     string      `json:"link"`
+	Page     *pageAction `json:"page,omitempty"`
 }
 
 func rulesAsked(rules []string) string {
@@ -225,7 +236,7 @@ func (s *srv) trace(ctx context.Context, in traceInput) (core.ToolResult, error)
 	link := rpt.TraceURL(meta, in.From, in.To, int(in.Hops))
 	b.WriteString("\n")
 	writeLink(&b, link, why)
-	res, err := answer(b.String(), map[string]any{"design": u.String(), "from": in.From, "to": in.To, "link": link, "no_link": why, "answer": protoJSON(resp)})
+	res, err := answer(b.String(), map[string]any{"design": u.String(), "from": in.From, "to": in.To, "link": link, "page": linkAction(link), "no_link": why, "answer": protoJSON(resp)})
 	// A pin the design lacks is the question's mistake, so the agent hears it as one.
 	res.IsError = t.Outcome == check.TraceUnresolved
 	return res, err
@@ -288,7 +299,7 @@ func (s *srv) diff(ctx context.Context, in diffInput) (core.ToolResult, error) {
 	}
 	writeLink(&b, link, why)
 	return answer(b.String(), map[string]any{"design": au.String(), "against": bu.String(), "rename_approx": in.RenameApprox,
-		"link": link, "no_link": why, "tables": tablesJSON(tables), "answer": protoJSON(resp)})
+		"link": link, "page": linkAction(link), "no_link": why, "tables": tablesJSON(tables), "answer": protoJSON(resp)})
 }
 
 const designDesc = `Read a design's IR: its components, nets and pins as agni read them, narrowed by read_mask (design.nets, design.components.mpn, ...) and by nets and ref_des. Prefer query for a question; this is for reading what a part or net is.`
@@ -455,6 +466,7 @@ func (s *srv) querySet(ctx context.Context, in querySetInput) (core.ToolResult, 
 	var b strings.Builder
 	fmt.Fprintf(&b, "design: %s\nquery set: %s\n\n", u, in.Set)
 	links := map[string]string{}
+	pages := map[string]*pageAction{}
 	for i, q := range named.GetSet().GetQueries() {
 		fmt.Fprintf(&b, "%s: %s\n", q.GetName(), q.GetQuery())
 		if i < len(tables) {
@@ -462,6 +474,7 @@ func (s *srv) querySet(ctx context.Context, in querySetInput) (core.ToolResult, 
 		}
 		if url := rpt.QuerySetURL(meta, in.Set, q.GetName()); url != "" {
 			links[q.GetName()] = url
+			pages[q.GetName()] = linkAction(url)
 			writeLink(&b, url, "")
 		}
 	}
@@ -471,7 +484,7 @@ func (s *srv) querySet(ctx context.Context, in querySetInput) (core.ToolResult, 
 		}
 	}
 	writeLink(&b, "", why)
-	return answer(b.String(), map[string]any{"design": u.String(), "set": in.Set, "links": links, "no_link": why,
+	return answer(b.String(), map[string]any{"design": u.String(), "set": in.Set, "links": links, "pages": pages, "no_link": why,
 		"tables": tablesJSON(tables), "answer": protoJSON(resp)})
 }
 

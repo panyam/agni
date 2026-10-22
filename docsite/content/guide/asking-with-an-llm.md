@@ -86,6 +86,23 @@ A server started with the viewer links to itself. `agni mcp` has no viewer of it
 one only when `--server` names a running `agni serve` that mounts the same names, and otherwise each
 answer says why it carries no link.
 
+Beside each link the structured content carries `page`, the call that does the same to a viewer a
+host already has open (agni issue 1155). A host that frames the viewer, an MCP app host say, sends it
+over postMessage instead of opening a new tab. A failing verdict in a `check` answer looks like this.
+
+```json
+{
+  "verdict": "demo-rule:(net:NET_A)",
+  "rule": "demo-rule",
+  "subjects": ["net:NET_A"],
+  "link": "http://127.0.0.1:8080/designs/demo/demo-board.kicad_sch/view?verdict=demo-rule%3A%28net%3ANET_A%29&rule=demo-rule&subject=net%3ANET_A",
+  "page": { "method": "LocateVerdict", "body": { "id": "demo-rule:(net:NET_A)", "rule": "demo-rule", "subjects": ["net:NET_A"] } }
+}
+```
+
+Every other link (a trace, a query, a diff) comes with `ApplyLocation` carrying the link itself. How a
+host sends either is in [Driving an embedded viewer](../../build/embedding-the-viewer/).
+
 A question agni can't answer says so as a tool error, with what went wrong and often how to fix it:
 a relation that doesn't exist, a pin the design lacks, a question past the budget. Asking about a
 pin that isn't there is a different answer from two real pins with no route between them, and the
