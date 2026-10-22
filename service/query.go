@@ -65,7 +65,11 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 		// The smaller limit applies, so a request can narrow a query that writes its own.
 		q.Limit = n
 	}
-	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery(), BindingsFromProto(req.GetBindings()), req.GetOmitLocations())
+	bind, err := BindingsFromProto(req.GetBindings())
+	if err != nil {
+		return nil, err
+	}
+	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery(), bind, req.GetOmitLocations())
 	if err != nil {
 		if stopped(err) {
 			return nil, err
@@ -102,7 +106,10 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 	if err != nil {
 		return nil, err
 	}
-	set := QuerySetFromProto(req.GetSet())
+	set, err := QuerySetFromProto(req.GetSet())
+	if err != nil {
+		return nil, err
+	}
 	if err := set.Validate(); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
@@ -141,47 +148,79 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 	return out, nil
 }
 
-// QuerySetFromProto converts the wire form of a query set to the engine's.
-func QuerySetFromProto(p *webapi.QuerySet) query.QuerySet {
+// QuerySetFromProto converts the wire form of a query set to the engine's. A binding holding a list
+// inside a list is an ErrInvalidArgument naming its query.
+func QuerySetFromProto(p *webapi.QuerySet) (query.QuerySet, error) {
 	s := query.QuerySet{Title: p.GetTitle(), Preamble: p.GetPreamble()}
 	for _, q := range p.GetQueries() {
-		s.Queries = append(s.Queries, query.NamedQuery{Name: q.GetName(), Query: q.GetQuery(), Description: q.GetDescription(), Bind: BindingsFromProto(q.GetBindings())})
+		bind, err := BindingsFromProto(q.GetBindings())
+		if err != nil {
+			return query.QuerySet{}, fmt.Errorf("query %q: %w", q.GetName(), err)
+		}
+		s.Queries = append(s.Queries, query.NamedQuery{Name: q.GetName(), Query: q.GetQuery(), Description: q.GetDescription(), Bind: bind})
 	}
-	return s
+	return s, nil
 }
 
 // BindingsFromProto converts a request's bindings to the values the engine binds (agni issue 793). A
-// value that sets neither field binds the empty text, as `""` written in the query would.
-func BindingsFromProto(m map[string]*webapi.QueryValue) map[string]query.Value {
+// value that sets no field binds the empty text, as `""` written in the query would, and a list binds
+// the variable to each of its values (agni issue 1121). A list inside a list is an InvalidArgument.
+func BindingsFromProto(m map[string]*webapi.QueryValue) (query.Bindings, error) {
 	if len(m) == 0 {
+		return nil, nil
+	}
+	out := make(query.Bindings, len(m))
+	for k, v := range m {
+		l, ok := v.GetKind().(*webapi.QueryValue_List)
+		if !ok {
+			out[k] = []query.Value{valueFromProto(v)}
+			continue
+		}
+		vals := make([]query.Value, 0, len(l.List.GetValues()))
+		for _, e := range l.List.GetValues() {
+			if _, nested := e.GetKind().(*webapi.QueryValue_List); nested {
+				return nil, fmt.Errorf("%w: binding %s: a list holds text or numbers, not another list", ErrInvalidArgument, k)
+			}
+			vals = append(vals, valueFromProto(e))
+		}
+		out[k] = vals
+	}
+	return out, nil
+}
+
+func valueFromProto(v *webapi.QueryValue) query.Value {
+	if n, ok := v.GetKind().(*webapi.QueryValue_Number); ok {
+		return query.Number(n.Number)
+	}
+	return query.Text(v.GetText())
+}
+
+// BindingsProto converts bound values to their wire form: a value carrying a number is a number, any
+// other is text, and a variable bound to anything but exactly one value is a list.
+func BindingsProto(b query.Bindings) map[string]*webapi.QueryValue {
+	if len(b) == 0 {
 		return nil
 	}
-	out := make(map[string]query.Value, len(m))
-	for k, v := range m {
-		if n, ok := v.GetKind().(*webapi.QueryValue_Number); ok {
-			out[k] = query.Number(n.Number)
-		} else {
-			out[k] = query.Text(v.GetText())
+	out := make(map[string]*webapi.QueryValue, len(b))
+	for k, vals := range b {
+		if len(vals) == 1 {
+			out[k] = valueProto(vals[0])
+			continue
 		}
+		l := &webapi.QueryValueList{Values: make([]*webapi.QueryValue, len(vals))}
+		for i, v := range vals {
+			l.Values[i] = valueProto(v)
+		}
+		out[k] = &webapi.QueryValue{Kind: &webapi.QueryValue_List{List: l}}
 	}
 	return out
 }
 
-// BindingsProto converts bound values to their wire form: a value carrying a number is a number,
-// any other is text.
-func BindingsProto(m map[string]query.Value) map[string]*webapi.QueryValue {
-	if len(m) == 0 {
-		return nil
+func valueProto(v query.Value) *webapi.QueryValue {
+	if v.Num != nil {
+		return &webapi.QueryValue{Kind: &webapi.QueryValue_Number{Number: *v.Num}}
 	}
-	out := make(map[string]*webapi.QueryValue, len(m))
-	for k, v := range m {
-		if v.Num != nil {
-			out[k] = &webapi.QueryValue{Kind: &webapi.QueryValue_Number{Number: *v.Num}}
-		} else {
-			out[k] = &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: v.S}}
-		}
-	}
-	return out
+	return &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: v.S}}
 }
 
 // ListQuerySets answers which query sets the design's project keeps, inherited ones first (agni
@@ -300,7 +339,7 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 // answer evaluates one query over a read and assembles its response, echoing queryText as the
 // response's query. An error is the evaluator's (a malformed or unanswerable query), and the caller
 // decides what it means for the call.
-func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind map[string]query.Value, omitLocations bool) (*webapi.RunQueryResponse, error) {
+func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind query.Bindings, omitLocations bool) (*webapi.RunQueryResponse, error) {
 	// Work is measured on this read's own fact base, so it is this query's alone, and reported so a
 	// deployment can see what its queries cost before it sets a budget (agni issue 792).
 	before := query.Work(d.base)
@@ -341,7 +380,7 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 // present is the response for rows [lo, hi) of table, which q evaluated over d's base with bind,
 // echoing queryText as the response's query. RunQuery presents every row of its own evaluation, and
 // a QueryRead presents a page of an evaluation someone else ran, so both answer in one shape.
-func (d *designRead) present(ctx context.Context, q query.Query, queryText string, table *query.Table, lo, hi int, bind map[string]query.Value, omitLocations bool) *webapi.RunQueryResponse {
+func (d *designRead) present(ctx context.Context, q query.Query, queryText string, table *query.Table, lo, hi int, bind query.Bindings, omitLocations bool) *webapi.RunQueryResponse {
 	cols := q.Columns()
 	kinds, kindVars, refTerms := columnKindsIn(d.reg, q)
 	// Query and Source come from the request rather than being re-derived, so a saved response
@@ -720,7 +759,7 @@ func entryProto(reg *facts.Registry, e query.Entry) *webapi.RelationEntry {
 // answers through the same projection RunQuery does, so its rows, kinds, citations and work are a
 // RunQueryResponse built one way (agni issue 1045). source names the corpus for the response. A
 // query that does not parse is an invalid argument, carrying its position as RunQuery's does.
-func (s *QueryService) RunSpecLibQuery(ctx context.Context, fs param.FactSource, queryText, source string, bind map[string]query.Value) (*webapi.RunQueryResponse, error) {
+func (s *QueryService) RunSpecLibQuery(ctx context.Context, fs param.FactSource, queryText, source string, bind query.Bindings) (*webapi.RunQueryResponse, error) {
 	q, err := query.Parse(queryText)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidArgument, err)

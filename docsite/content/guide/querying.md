@@ -572,9 +572,16 @@ a number and a quoted one (`--bind 'a="3"'`) binds the text.
 `--bind` repeats, one per variable. Naming a variable the query does not use is an error, so a typo
 fails rather than leaving the variable free and widening the question.
 
+Naming one variable twice binds it to a list, and the query answers for every value in it, as if the
+goal were joined with a relation holding exactly those values, so
+`--bind n=I2C_SDA --bind n=I2C_SCL` asks about both nets in one answer, an aggregate counts across
+both, and the document view states the binding as `?n in ["I2C_SDA", "I2C_SCL"]`.
+
 Bindings are what a program sends rather than text it builds, so a value needs no escaping and a
 name holding a quote is asked about exactly. Over the API they are `RunQueryRequest.bindings`, and
-the Python client builds them with `agni.bindings({"ref": "U1"})`. The `--format markdown` and `html`
+the Python client builds them with `agni.bindings({"ref": "U1"})`, or `agni.bindings({"ref": ["U1", "U2"]})`
+for a list, which travels as `QueryValue.list`. A viewer link carries a list as its `bind` value
+repeated, once per value, and opens with the list as one chip. The `--format markdown` and `html`
 views print them under the query, because the query text alone no longer states the whole question.
 
 ### Ask many questions at once (query sets)
@@ -601,8 +608,8 @@ queries:
 
 The preamble holds rules only; each query brings its own goal, and each may also carry a
 `description` the rendered report shows and a `bind:` map of values for its own variables
-(`bind: {ref: U1}`), which mean what `--bind` means for one query. YAML types each value, so `3.3` is
-a number and `"3"` is text. `--format markdown` and `--format html` write the whole set
+(`bind: {ref: U1}`, or `bind: {ref: [U1, U2]}` for a list), which mean what `--bind` means for one
+query. YAML types each value, so `3.3` is a number and `"3"` is text. `--format markdown` and `--format html` write the whole set
 as one document with a section per query, and `--format json` writes the `RunQueriesResponse` wire
 message. csv is refused, because one csv file holds one table.
 

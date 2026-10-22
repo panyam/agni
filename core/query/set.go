@@ -29,12 +29,13 @@ type NamedQuery struct {
 	Query       string `yaml:"query"`
 	Description string `yaml:"description"`
 	// Bind gives this query's goal variables values (agni issue 793), as RunQueryRequest's bindings
-	// do. YAML types each value, so `3.3` binds a number and `"3"` or `GND` binds text.
-	Bind map[string]Value `yaml:"-"`
+	// do. YAML types each value, so `3.3` binds a number and `"3"` or `GND` binds text, and a list
+	// binds the variable to each of its values (agni issue 1121).
+	Bind Bindings `yaml:"-"`
 }
 
-// UnmarshalYAML reads a query's `bind:` map into typed values. A list or a map is refused, since a
-// bound variable holds one scalar as a constant in the goal does.
+// UnmarshalYAML reads a query's `bind:` map into typed values. A value is a scalar or a list of
+// scalars; a map, or a list holding anything but scalars, is refused.
 //
 // A key it does not know is refused with its line, as ParseQuerySet refuses one at the top. A custom
 // decoder does not inherit the decoder's KnownFields, so a misspelled `descripton:` used to drop the
@@ -59,18 +60,26 @@ func (q *NamedQuery) UnmarshalYAML(n *yaml.Node) error {
 	}
 	*q = NamedQuery(raw.plain)
 	for name, v := range raw.Bind {
-		if v.Kind != yaml.ScalarNode {
-			return fmt.Errorf("query %q: bind %s: want a single value", q.Name, name)
+		items := []*yaml.Node{&v}
+		if v.Kind == yaml.SequenceNode {
+			items = v.Content
+		}
+		vals := make([]Value, 0, len(items))
+		for _, it := range items {
+			if it.Kind != yaml.ScalarNode {
+				return fmt.Errorf("query %q: bind %s: want a value or a list of values", q.Name, name)
+			}
+			var f float64
+			if (it.Tag == "!!int" || it.Tag == "!!float") && it.Decode(&f) == nil {
+				vals = append(vals, Number(f))
+			} else {
+				vals = append(vals, Text(it.Value))
+			}
 		}
 		if q.Bind == nil {
-			q.Bind = map[string]Value{}
+			q.Bind = Bindings{}
 		}
-		var f float64
-		if (v.Tag == "!!int" || v.Tag == "!!float") && v.Decode(&f) == nil {
-			q.Bind[name] = Number(f)
-		} else {
-			q.Bind[name] = Text(v.Value)
-		}
+		q.Bind[name] = vals
 	}
 	return nil
 }

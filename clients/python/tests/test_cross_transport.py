@@ -149,6 +149,7 @@ CASES: List[Case] = [
     # Bound variables answer alike, text and number, quoting included (agni issue 793).
     Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"}))),
     Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3.0}))),
+    Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="component.net(?r, ?n) => ?r, ?n", bindings=bindings({"r": ["U1", "U2"]}))),
     # The TEXT "3", in a position the schema types as a number, is read as 3 on both transports
     # (panyam/jaala#65), so this answers as the case above.
     Case("QueryService/RunQuery", lambda c: c.run_query(snapshot=snap(c), query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": "3"}))),
@@ -161,6 +162,7 @@ CASES: List[Case] = [
                 queries=[
                     query_pb2.NamedQuery(name="u1", query="component.net(?r, ?n) => ?n", bindings=bindings({"r": "U1"})),
                     query_pb2.NamedQuery(name="many", query="net.pin_count(?n, ?c), ?c >= ?min => ?n", bindings=bindings({"min": 3})),
+                    query_pb2.NamedQuery(name="both", query="component.net(?r, ?n) => ?r, ?n", bindings=bindings({"r": ["U1", "U2"]})),
                 ],
             ),
         ),
@@ -310,6 +312,16 @@ def test_bindings_types_each_value():
     assert b["f"].number == 3.3
     with pytest.raises(TypeError):
         bindings({"x": True})
+
+
+def test_bindings_takes_a_list():
+    """agni issue 1121. A list binds the variable to each value, each typed as a scalar is."""
+    b = bindings({"r": ["U1", 2]})
+    assert b["r"].WhichOneof("kind") == "list"
+    vals = b["r"].list.values
+    assert [v.WhichOneof("kind") for v in vals] == ["text", "number"] and vals[0].text == "U1" and vals[1].number == 2.0
+    with pytest.raises(TypeError):
+        bindings({"r": [["U1"]]})
 
 
 def test_the_cli_refuses_a_near_rename_threshold_it_cannot_pass(cli: Client, connect: Client):

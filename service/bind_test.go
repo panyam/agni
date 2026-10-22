@@ -142,3 +142,60 @@ func TestAnUntypedBindingKeepsItsOwnType(t *testing.T) {
 		t.Error(`as text "10" < "9" held for no net, want every net`)
 	}
 }
+
+func list(vals ...*webapi.QueryValue) *webapi.QueryValue {
+	return &webapi.QueryValue{Kind: &webapi.QueryValue_List{List: &webapi.QueryValueList{Values: vals}}}
+}
+
+// A variable bound to a list answers as the union of the query asked once per value, echoes the list,
+// and matches nothing when the list is empty (agni issue 1121).
+func TestAListBindingAnswersForEachValue(t *testing.T) {
+	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
+	const q = `component.net(?r, ?n) => ?r, ?n`
+	ask := func(v *webapi.QueryValue) *webapi.RunQueryResponse {
+		t.Helper()
+		resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: q, Bindings: map[string]*webapi.QueryValue{"r": v}})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return resp
+	}
+	u1, u2 := ask(text("U1")), ask(text("U2"))
+	if len(u1.GetRows()) == 0 || len(u2.GetRows()) == 0 {
+		t.Fatal("U1 or U2 answers nothing on the fixture, so the union proves nothing")
+	}
+	both := ask(list(text("U1"), text("U2")))
+	want := map[string]bool{}
+	for _, r := range append(u1.GetRows(), u2.GetRows()...) {
+		want[strings.Join(r.GetCells(), "|")] = true
+	}
+	got := map[string]bool{}
+	for _, r := range both.GetRows() {
+		got[strings.Join(r.GetCells(), "|")] = true
+	}
+	if len(got) != len(want) || len(both.GetRows()) != len(want) {
+		t.Errorf("the list answered %d rows, want the %d of U1 and U2 together", len(both.GetRows()), len(want))
+	}
+	for k := range want {
+		if !got[k] {
+			t.Errorf("the list's answer lacks %s", k)
+		}
+	}
+	if l := both.GetBindings()["r"].GetList().GetValues(); len(l) != 2 || l[0].GetText() != "U1" || l[1].GetText() != "U2" {
+		t.Errorf("echoed %v, want the list U1, U2", both.GetBindings()["r"])
+	}
+	if n := len(ask(list()).GetRows()); n != 0 {
+		t.Errorf("an empty list answered %d rows, want none", n)
+	}
+}
+
+func TestAListInsideAListIsInvalid(t *testing.T) {
+	svc, uri := tutorialQueries()
+	snap := snapOf(t, svc.Snapshots(), uri)
+	_, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: `component.net(?r, ?n) => ?n`,
+		Bindings: map[string]*webapi.QueryValue{"r": list(list(text("U1")))}})
+	if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), "not another list") {
+		t.Errorf("a nested list: %v, want an invalid argument saying a list holds no list", err)
+	}
+}

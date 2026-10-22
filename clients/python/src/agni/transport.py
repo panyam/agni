@@ -200,22 +200,27 @@ def _definition(req: Message, snap: Lookup, accepts: Sequence[str], field: str =
 
 
 def _bind_flags(req: Message) -> List[str]:
-    # A text value is quoted so one that looks like a number still binds text, as it does over Connect.
+    # A text value is quoted so one that looks like a number still binds text, as it does over Connect,
+    # and a list is the name bound once per value, which is how --bind takes one.
     out: List[str] = []
     for name in sorted(req.bindings):
         v = req.bindings[name]
-        val = repr(v.number) if v.WhichOneof("kind") == "number" else '"' + v.text + '"'
-        out += ["--bind", f"{name}={val}"]
+        for e in v.list.values if v.WhichOneof("kind") == "list" else [v]:
+            val = repr(e.number) if e.WhichOneof("kind") == "number" else '"' + e.text + '"'
+            out += ["--bind", f"{name}={val}"]
     return out
 
 
 def _set_bindings(set_dict: dict) -> dict:
-    # A set file spells a query's bindings as a `bind:` map of plain values, where the wire carries
-    # {"text": ...} or {"number": ...} under `bindings`.
+    # A set file spells a query's bindings as a `bind:` map of plain values or lists of them, where the
+    # wire carries {"text": ...}, {"number": ...} or {"list": {"values": [...]}} under `bindings`.
+    def plain(v: dict) -> object:
+        return v.get("number", v.get("text", ""))
+
     for q in set_dict.get("queries", []):
         wire = q.pop("bindings", None)
         if wire:
-            q["bind"] = {k: v.get("number", v.get("text", "")) for k, v in wire.items()}
+            q["bind"] = {k: [plain(e) for e in v["list"].get("values", [])] if "list" in v else plain(v) for k, v in wire.items()}
     return set_dict
 
 

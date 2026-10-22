@@ -950,6 +950,39 @@ describe("bound values", () => {
     expect(chips(el)).toEqual([["?net =", "GND"]]);
     expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: "GND" }, STARTING_POINT_LIMIT, "q2");
   });
+
+  // agni issue 1121: a list arrives from a link or a set, shows as the query spells it, and can be
+  // removed but not edited as text.
+  it("shows a list binding as the query spells it, runs it, and unbinds it on remove", () => {
+    const { el, panel, onRun } = mountPanel();
+    panel.view.setQuery(PRESET.query, { net: ["I2C_SDA", "I2C_SCL"] }, { whole: true });
+    const chip = el.querySelector(".query-binding")!;
+    expect(chip.querySelector(".query-binding-list")!.textContent).toBe('?net in ["I2C_SDA", "I2C_SCL"]');
+    expect(chip.querySelector(".query-binding-value")).toBeNull();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: ["I2C_SDA", "I2C_SCL"] }, 0, "q2");
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, { net: ["I2C_SDA", "I2C_SCL"] }, 0, "q2");
+    el.querySelector<HTMLButtonElement>(".query-binding-remove")!.click();
+    expect(el.querySelector(".query-binding")).toBeNull();
+    runBtn(el).click();
+    expect(onRun).toHaveBeenLastCalledWith(PRESET.query, {}, 0, "q2");
+  });
+
+  it("spells a set's list chip with its numbers bare", () => {
+    const { el, panel } = mountPanel();
+    panel.view.openSet(
+      create(QuerySetSchema, {
+        queries: [
+          {
+            name: "Rails",
+            query: "net.voltage(?n, ?v) => ?n",
+            bindings: { v: { kind: { case: "list", value: { values: [{ kind: { case: "number", value: 1.8 } }, { kind: { case: "text", value: "3" } }] } } } },
+          },
+        ],
+      }),
+    );
+    expect(el.querySelector(".query-binding-list")!.textContent).toBe('?v in [1.8, "3"]');
+  });
 });
 
 // agni issue 896: a question about one picked entity asks for the first rows, says how many the

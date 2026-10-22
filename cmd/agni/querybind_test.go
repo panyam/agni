@@ -32,3 +32,28 @@ func TestQueryBindIsRefusedWithASet(t *testing.T) {
 		t.Errorf("err = %v, want --bind refused with a pointer to the set's own bind:", err)
 	}
 }
+
+// TestQueryBindRepeatedIsAList: one name bound twice answers for both values, and the markdown view
+// states the list (agni issue 1121).
+func TestQueryBindRepeatedIsAList(t *testing.T) {
+	const q = `component.net(?r, ?n) => ?r, ?n`
+	u1 := runCLI(t, queryCmd(), bindDesign, q, "--bind", "r=U1", "--format", "csv")
+	u2 := runCLI(t, queryCmd(), bindDesign, q, "--bind", "r=U2", "--format", "csv")
+	both := runCLI(t, queryCmd(), bindDesign, q, "--bind", "r=U1", "--bind", "r=U2", "--format", "csv")
+	rows := func(csv string) []string { return strings.Split(strings.TrimSpace(csv), "\n")[1:] }
+	if len(rows(u1)) == 0 || len(rows(u2)) == 0 {
+		t.Fatalf("U1 or U2 answers nothing, so the union proves nothing:\n%s\n%s", u1, u2)
+	}
+	if got, want := len(rows(both)), len(rows(u1))+len(rows(u2)); got != want {
+		t.Errorf("--bind r=U1 --bind r=U2 answered %d rows, want %d:\n%s", got, want, both)
+	}
+	for _, r := range append(rows(u1), rows(u2)...) {
+		if !strings.Contains(both, r) {
+			t.Errorf("the list's answer lacks %q", r)
+		}
+	}
+	md := runCLI(t, queryCmd(), bindDesign, q, "--bind", "r=U1", "--bind", "r=U2", "--format", "markdown")
+	if !strings.Contains(md, "Bound: `?r in [\"U1\", \"U2\"]`") {
+		t.Errorf("the markdown view does not state the list:\n%s", md)
+	}
+}

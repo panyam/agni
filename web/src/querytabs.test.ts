@@ -42,4 +42,13 @@ describe("query tabs", () => {
     expect(tabKey("q ", { a: "1", b: "2" })).toBe(tabKey("q", { b: "2", a: "1" }));
     expect(tabKey("q", { a: "1" })).not.toBe(tabKey("q", { a: "2" }));
   });
+
+  // agni issue 1121: a list is a different question from a value spelled like it, and from the same
+  // values in another order only by order, which the key keeps.
+  it("keys a list binding apart from a single value and from another list", () => {
+    expect(tabKey("q", { a: ["1", "2"] })).toBe(tabKey("q", { a: ["1", "2"] }));
+    expect(tabKey("q", { a: ["1", "2"] })).not.toBe(tabKey("q", { a: "1,2" }));
+    expect(tabKey("q", { a: ["1"] })).not.toBe(tabKey("q", { a: "1" }));
+    expect(tabKey("q", { a: ["1", "2"] })).not.toBe(tabKey("q", { a: ["1", "3"] }));
+  });
 });

@@ -1563,6 +1563,24 @@ describe("a query arriving by link", () => {
     expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?n), ?n = ?net => ?r", { net: "GND" }, { title: "On ground", whole: true });
   });
 
+  // agni issue 1121: a link binding a name several times opens the tab with the list.
+  it("opens a tab with a list binding when the link repeats a name", async () => {
+    const h = harness();
+    await h.presenter.restore(at({ query: "component.net(?r, ?net) => ?r", binds: ["net=I2C_SDA", "net=I2C_SCL"] }));
+    expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?net) => ?r", { net: ["I2C_SDA", "I2C_SCL"] }, { title: "", whole: true });
+  });
+
+  it("sends a list binding as a list of text values", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    await h.presenter.runQuery("component.net(?r, ?net) => ?r", { net: ["I2C_SDA", "I2C_SCL"], r: "R1" }, 0, "q1");
+    const req = h.runQuery.mock.lastCall![0] as unknown as { bindings: unknown };
+    expect(req.bindings).toEqual({
+      net: { kind: { case: "list", value: { values: [{ kind: { case: "text", value: "I2C_SDA" } }, { kind: { case: "text", value: "I2C_SCL" } }] } } },
+      r: { kind: { case: "text", value: "R1" } },
+    });
+  });
+
   it("opens the named query of a project set", async () => {
     const h = harness();
     h.listQuerySets.mockResolvedValue({

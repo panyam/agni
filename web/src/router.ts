@@ -1,3 +1,4 @@
+import type { Bindings } from "./query.js";
 import type { RenderMode } from "./viewer.js";
 
 // ViewerLocation is the URL-addressable state of the viewer: which file is open (mount+path),
@@ -65,7 +66,9 @@ export interface ViewerLocation {
   // query is a datalog question the viewer should ask on arrival, in a query tab, "" when none (agni
   // issue 634). Like `trace` it carries the QUESTION, so it needs no `hash`. title names the tab and
   // binds are its bound values as `--bind` spells them (`n=GND`, `t="3"`), so the link asks the
-  // question it was minted for rather than a wider one. Both mean nothing without `query`.
+  // question it was minted for rather than a wider one. A variable bound to a list repeats its name,
+  // one bind per value in order, and the whole list is kept back into the URL. Both mean nothing
+  // without `query`.
   query: string;
   title: string;
   binds: string[];
@@ -337,16 +340,19 @@ export function subjectParam(s: { kind: string; subject: string; pin: string }):
 
 // bindsFromLink reads a link's `bind` values, each `name=value` as `--bind` spells it, into the query
 // panel's chips. A quoted value is text with its quotes dropped, as ParseBinding reads it; a pair with
-// no name is skipped.
-export function bindsFromLink(binds: string[]): Record<string, string> {
-  const out: Record<string, string> = {};
+// no name is skipped. A name given more than once is bound to the list of its values in link order
+// (agni issue 1121), and a name given once stays a single value.
+export function bindsFromLink(binds: string[]): Bindings {
+  const seen = new Map<string, string[]>();
   for (const b of binds) {
     const at = b.indexOf("=");
     const name = (at < 0 ? "" : b.slice(0, at)).trim().replace(/^\?/, "");
     if (!name) continue;
     let value = b.slice(at + 1);
     if (value.length >= 2 && value.startsWith('"') && value.endsWith('"')) value = value.slice(1, -1);
-    out[name] = value;
+    seen.set(name, [...(seen.get(name) ?? []), value]);
   }
+  const out: Bindings = {};
+  for (const [name, values] of seen) out[name] = values.length === 1 ? values[0] : values;
   return out;
 }

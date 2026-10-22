@@ -9,12 +9,15 @@ import {
   type QueryView,
   type RelationItem,
   type SearchItem,
+  type BindValue,
+  type Bindings,
   LocateReason,
   cellKind,
   emptyResult,
   bindingsInUse,
   compareNatural,
   formatBinding,
+  numberKey,
   searchBindings,
   tabsFromSet,
   groupRelations,
@@ -143,12 +146,12 @@ function QueryPanel(props: {
   search: () => SearchItem | null;
   locateNote: () => string;
   setLocateNote: (note: string) => void;
-  prefill: () => { text: string; bindings: Record<string, string>; n: number; title?: string; whole?: boolean };
+  prefill: () => { text: string; bindings: Bindings; n: number; title?: string; whole?: boolean };
   selection: () => Selection | null;
   setSelection: (sel: Selection | null) => void;
   currentSheet: () => string;
   findings: () => FindingsState;
-  onRun: (text: string, bindings: Record<string, string>, limit: number, tab: string) => void;
+  onRun: (text: string, bindings: Bindings, limit: number, tab: string) => void;
   onSaveCSV?: (tab: string) => void;
   onInspect: (sel: Selection) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
@@ -174,22 +177,28 @@ function QueryPanel(props: {
   // click and shown as chips under the box, so the box keeps the query as the server wrote it and
   // the values stay visible and editable beside it.
   const bindings = () => front().bindings;
-  // isSetNumber reports whether a chip still holds the number its set bound, which spells bare.
-  const isSetNumber = (name: string, value: string) => {
+  // isSetNumber reports whether a chip still holds the number its set bound, which spells bare. For a
+  // list it answers per value, and only while the list is still the one the set bound.
+  const isSetNumber = (name: string, value: BindValue): boolean | boolean[] => {
     const o = front().origin;
-    return !!o && o.numbers.includes(name) && o.bindings[name] === value;
+    const bound = o?.bindings[name];
+    if (Array.isArray(value)) {
+      const same = !!o && Array.isArray(bound) && bound.length === value.length && bound.every((b, i) => b === value[i]);
+      return value.map((_, i) => same && o.numbers.includes(numberKey(name, i)));
+    }
+    return !!o && o.numbers.includes(name) && bound === value;
   };
-  const setBindings = (b: Record<string, string>) => props.setStrip(updateTab(props.strip(), front().id, { bindings: b }));
+  const setBindings = (b: Bindings) => props.setStrip(updateTab(props.strip(), front().id, { bindings: b }));
   // ask runs a query in the tab in front and remembers it there. A question about one picked entity
   // passes STARTING_POINT_LIMIT (agni issue 896); every other run asks for the whole answer (0).
-  const ask = (q: string, b: Record<string, string>, limit = 0) => {
+  const ask = (q: string, b: Bindings, limit = 0) => {
     const id = front().id;
     props.setStrip(updateTab(props.strip(), id, { lastRun: { text: q, bindings: b } }));
     send(q, b, limit, id);
   };
   // send runs a question in tab id. A tab still asking the set member it was opened from runs that
   // member through the set, as the engine composes it; any other question runs as written.
-  const send = (q: string, b: Record<string, string>, limit: number, id: string) => {
+  const send = (q: string, b: Bindings, limit: number, id: string) => {
     const o = props.strip().tabs.find((t) => t.id === id)?.origin;
     if (fromOrigin(o, q, b)) props.onRunSet({ ...o.set, queries: [o.set.queries[o.index]] }, [id]);
     else props.onRun(q, b, limit, id);
@@ -202,7 +211,7 @@ function QueryPanel(props: {
   };
   // openQuestion opens a tab holding a question and runs it there. The new tab keeps the drawing's
   // highlight as it is, since the question is about what is already selected.
-  const openQuestion = (title: string, q: string, b: Record<string, string>, limit = 0) => {
+  const openQuestion = (title: string, q: string, b: Bindings, limit = 0) => {
     const id = props.newTabId();
     props.setStrip(openTab(props.strip(), { ...blankTab(id, title), text: q, bindings: b, located: front().located }));
     resetForRun();
@@ -678,23 +687,32 @@ function QueryPanel(props: {
         />
         {/* The values a search or a click bound, one chip per variable the query still names. Each
             value can be edited, and removing one leaves its variable free, which widens the
-            question. */}
+            question. A list, which arrives only from a link or a set, shows as the query would
+            spell it and can be removed but not edited, since one text box has no spelling for
+            several values. */}
         <Show when={Object.keys(inUse()).length > 0}>
           <div class="query-bindings" aria-label="bound values">
             <For each={Object.entries(inUse())}>
               {([name, value]) => (
                 <span class="query-binding" title={formatBinding(name, value, isSetNumber(name, value))}>
-                  <span class="query-binding-name">?{name} =</span>
-                  <input
-                    class="query-binding-value"
-                    aria-label={`value of ?${name}`}
-                    size={Math.max(4, value.length)}
-                    value={value}
-                    onInput={(e) => setBindings({ ...bindings(), [name]: e.currentTarget.value })}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter") run();
-                    }}
-                  />
+                  <Show
+                    when={typeof value === "string"}
+                    fallback={<span class="query-binding-list">{formatBinding(name, value, isSetNumber(name, value))}</span>}
+                  >
+                    <>
+                      <span class="query-binding-name">?{name} =</span>
+                      <input
+                        class="query-binding-value"
+                        aria-label={`value of ?${name}`}
+                        size={Math.max(4, value.length)}
+                        value={value as string}
+                        onInput={(e) => setBindings({ ...bindings(), [name]: e.currentTarget.value })}
+                        onKeyDown={(e) => {
+                          if (e.key === "Enter") run();
+                        }}
+                      />
+                    </>
+                  </Show>
                   <button
                     type="button"
                     class="query-binding-remove"
@@ -1031,7 +1049,7 @@ export function queryPanelIsland(
   eventBus: EventBus | null,
   handlers: {
     // onRun asks one tab's question. limit is 0 for the whole answer.
-    onRun: (text: string, bindings: Record<string, string>, limit: number, tab: string) => void;
+    onRun: (text: string, bindings: Bindings, limit: number, tab: string) => void;
     // onSaveCSV saves the answer in the named tab as csv (agni issue 956). Absent, the panel offers
     // no save.
     onSaveCSV?: (tab: string) => void;
@@ -1062,7 +1080,7 @@ export function queryPanelIsland(
   const [locateNote, setLocateNote] = signalView<string>("");
   // prefill carries a query written FOR the reader. The counter makes asking the same question twice
   // open and run it again, since an effect over identical text does not fire.
-  const [prefill, setPrefill] = signalView<{ text: string; bindings: Record<string, string>; n: number; title?: string; whole?: boolean }>({ text: "", bindings: {}, n: 0 });
+  const [prefill, setPrefill] = signalView<{ text: string; bindings: Bindings; n: number; title?: string; whole?: boolean }>({ text: "", bindings: {}, n: 0 });
   let prefills = 0;
   // The served questions about a selection. A signal because the panel RENDERS one (the ask button's
   // hover shows the query and what it teaches) as well as running it.
@@ -1140,7 +1158,7 @@ export function queryPanelIsland(
       setRelations,
       setExamples,
       setLocateNote,
-      setQuery: (text: string, bindings: Record<string, string> = {}, opts: { title?: string; whole?: boolean } = {}) =>
+      setQuery: (text: string, bindings: Bindings = {}, opts: { title?: string; whole?: boolean } = {}) =>
         setPrefill({ text, bindings, n: ++prefills, ...opts }),
       setEntityQueries,
       setSearch,

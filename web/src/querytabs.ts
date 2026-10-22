@@ -6,7 +6,7 @@
 // This module is the strip's model, pure so the panel and its tests share one set of rules: what a
 // tab is called, which tab an action leaves active, and that one tab always remains.
 
-import { LocateReason } from "./query.js";
+import { type Bindings, LocateReason } from "./query.js";
 import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
 import { labelFor, type Selection } from "./selection.js";
 
@@ -26,10 +26,10 @@ export interface QueryTab {
   id: string;
   title: string;
   text: string;
-  bindings: Record<string, string>;
+  bindings: Bindings;
   // lastRun is the question the answer on screen is for, so "show all" asks the same one again
   // without its limit even after the reader has started editing the box.
-  lastRun: { text: string; bindings: Record<string, string> };
+  lastRun: { text: string; bindings: Bindings };
   located?: Located;
   // origin is the query set member a tab was opened from, with the text and bindings it opened with.
   // While the tab still asks exactly that, running it runs the member through RunQueries, so the
@@ -43,12 +43,12 @@ export interface SetOrigin {
   set: QuerySet;
   index: number;
   text: string;
-  bindings: Record<string, string>;
+  bindings: Bindings;
   numbers: string[];
 }
 
 // fromOrigin reports whether a question is still the set member a tab was opened from.
-export function fromOrigin(o: SetOrigin | undefined, text: string, bindings: Record<string, string>): o is SetOrigin {
+export function fromOrigin(o: SetOrigin | undefined, text: string, bindings: Bindings): o is SetOrigin {
   return !!o && tabKey(text, bindings) === tabKey(o.text, o.bindings);
 }
 
@@ -60,10 +60,14 @@ export interface TabStrip {
 
 // tabKey identifies a tab's question, the query text and its bindings, so a later change can tell an
 // Ask row that is already open from one that is not. Binding order does not change the question.
-export function tabKey(text: string, bindings: Record<string, string>): string {
+export function tabKey(text: string, bindings: Bindings): string {
   const b = Object.keys(bindings)
     .sort()
-    .map((k) => `${k}=${bindings[k]}`)
+    .map((k) => {
+      // A list is told apart from a value that happens to read like one.
+      const v = bindings[k];
+      return Array.isArray(v) ? `${k}\u0002${JSON.stringify(v)}` : `${k}=${v}`;
+    })
     .join("\u0000");
   return `${text.trim()}\u0001${b}`;
 }

@@ -92,7 +92,7 @@ export interface QueryView {
   // an editable query behind.
   // opts names the tab and asks for the whole answer, which a question arriving by link wants (agni
   // issue 634); without it the tab is numbered and shows a starting page of rows.
-  setQuery: (text: string, bindings?: Record<string, string>, opts?: { title?: string; whole?: boolean }) => void;
+  setQuery: (text: string, bindings?: Bindings, opts?: { title?: string; whole?: boolean }) => void;
   // setEntityQueries hands over the served questions about a selected entity, several per kind.
   setEntityQueries: (presets: EntityQueryItem[]) => void;
   // setSearch hands over the find-by-name template. Until it arrives the panel offers no search
@@ -136,8 +136,9 @@ export interface QuerySetItem {
 export interface SetTab {
   title: string;
   text: string;
-  bindings: Record<string, string>;
-  // numbers names the bindings the set gives as numbers, which a chip spells bare (formatBinding).
+  bindings: Bindings;
+  // numbers names the bindings the set gives as numbers, which a chip spells bare (formatBinding). A
+  // number inside a list is named by its position, numberKey(name, i).
   numbers: string[];
 }
 
@@ -149,18 +150,39 @@ export function tabsFromSet(set: QuerySet): SetTab[] {
     title: q.name,
     text: preamble ? `${preamble};\n${q.query.trim()}` : q.query.trim(),
     bindings: textBindings(q.bindings),
-    numbers: Object.entries(q.bindings)
-      .filter(([, v]) => v.kind.case === "number")
-      .map(([name]) => name),
+    numbers: Object.entries(q.bindings).flatMap(([name, v]) => {
+      if (v.kind.case === "number") return [name];
+      if (v.kind.case !== "list") return [];
+      return v.kind.value.values.flatMap((e, i) => (e.kind.case === "number" ? [numberKey(name, i)] : []));
+    }),
   }));
 }
 
+// BindValue is what one variable is bound to in the panel, a value or a list of values the goal
+// answers for each of (agni issue 1121). Values are held as text, as the chips show them.
+export type BindValue = string | string[];
+export type Bindings = Record<string, BindValue>;
+
+// numberKey names the i-th value of a list binding in a SetTab's numbers.
+export function numberKey(name: string, i: number): string {
+  return `${name}[${i}]`;
+}
+
+// wireBinding is how one chip's value travels in a RunQueryRequest. The panel binds text, so a list
+// travels as a list of text values.
+export function wireBinding(value: BindValue) {
+  if (Array.isArray(value)) return { kind: { case: "list" as const, value: { values: value.map((v) => ({ kind: { case: "text" as const, value: v } })) } } };
+  return { kind: { case: "text" as const, value } };
+}
+
 // textBindings spells a set's bound values as the panel's chips hold them. A number sent back as
-// text is still read as a number where the relation declares one (panyam/jaala#65).
-export function textBindings(b: { [name: string]: QueryValue }): Record<string, string> {
-  const out: Record<string, string> = {};
+// text is still read as a number where the relation declares one (panyam/jaala#65). A list keeps its
+// order, and the server refuses a list inside a list, so an element is a value or nothing.
+export function textBindings(b: { [name: string]: QueryValue }): Bindings {
+  const out: Bindings = {};
   for (const [name, v] of Object.entries(b)) {
-    if (v.kind.case === "text") out[name] = v.kind.value;
+    if (v.kind.case === "list") out[name] = v.kind.value.values.flatMap((e) => (e.kind.case === "text" ? [e.kind.value] : e.kind.case === "number" ? [String(e.kind.value)] : []));
+    else if (v.kind.case === "text") out[name] = v.kind.value;
     else if (v.kind.case === "number") out[name] = String(v.kind.value);
   }
   return out;
@@ -235,8 +257,8 @@ export function searchBindings(search: SearchItem, term: string): Record<string,
 // bindingsInUse keeps the bindings whose variable the query text still names. A reader who edits a
 // bound variable out of the query has stopped asking about it, and the server refuses a binding the
 // goal does not use.
-export function bindingsInUse(text: string, bindings: Record<string, string>): Record<string, string> {
-  const out: Record<string, string> = {};
+export function bindingsInUse(text: string, bindings: Bindings): Bindings {
+  const out: Bindings = {};
   for (const [name, value] of Object.entries(bindings)) {
     if (new RegExp(`\\?${name.replace(/[^\w]/g, "")}\\b`).test(text)) out[name] = value;
   }
@@ -249,8 +271,13 @@ export function bindingsInUse(text: string, bindings: Record<string, string>): R
 // same way; it still binds, since a binding never travels as text. A number is spelled bare. Both
 // spellings are FormatBindings' in core/query, and query.test.ts and core/query read one fixture,
 // testdata/binding_twin.json, so the chip and the CLI's document cannot drift (agni issue 1045).
-export function formatBinding(name: string, value: string, number = false): string {
-  return number ? `?${name} = ${value}` : `?${name} = "${value}"`;
+//
+// A list is spelled `?n in ["A", "B"]`, each value as a single one would be (agni issue 1121). number
+// then says which of its values are numbers, one flag per value, or one flag for all of them.
+export function formatBinding(name: string, value: BindValue, number: boolean | readonly boolean[] = false): string {
+  const spell = (v: string, i: number) => ((Array.isArray(number) ? number[i] : number) ? v : `"${v}"`);
+  if (Array.isArray(value)) return `?${name} in [${value.map(spell).join(", ")}]`;
+  return `?${name} = ${spell(value, 0)}`;
 }
 
 // groupRelations buckets the catalog by kind in RELATION_KINDS order, each bucket sorted by name.

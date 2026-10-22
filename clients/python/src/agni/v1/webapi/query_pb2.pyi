@@ -93,12 +93,20 @@ class RunQueryResponse(_message.Message):
     def __init__(self, columns: _Optional[_Iterable[str]] = ..., rows: _Optional[_Iterable[_Union[QueryRow, _Mapping]]] = ..., column_kinds: _Optional[_Iterable[str]] = ..., query: _Optional[str] = ..., source: _Optional[str] = ..., work: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., entities: _Optional[_Iterable[_Union[AnswerEntity, _Mapping]]] = ..., sources: _Optional[_Iterable[str]] = ..., total: _Optional[int] = ...) -> None: ...
 
 class QueryValue(_message.Message):
-    __slots__ = ("text", "number")
+    __slots__ = ("text", "number", "list")
     TEXT_FIELD_NUMBER: _ClassVar[int]
     NUMBER_FIELD_NUMBER: _ClassVar[int]
+    LIST_FIELD_NUMBER: _ClassVar[int]
     text: str
     number: float
-    def __init__(self, text: _Optional[str] = ..., number: _Optional[float] = ...) -> None: ...
+    list: QueryValueList
+    def __init__(self, text: _Optional[str] = ..., number: _Optional[float] = ..., list: _Optional[_Union[QueryValueList, _Mapping]] = ...) -> None: ...
+
+class QueryValueList(_message.Message):
+    __slots__ = ("values",)
+    VALUES_FIELD_NUMBER: _ClassVar[int]
+    values: _containers.RepeatedCompositeFieldContainer[QueryValue]
+    def __init__(self, values: _Optional[_Iterable[_Union[QueryValue, _Mapping]]] = ...) -> None: ...
 
 class ListRelationsRequest(_message.Message):
     __slots__ = ("snapshot", "overlay", "path")

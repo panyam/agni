@@ -2,7 +2,6 @@ package mcpserver
 
 import (
 	"fmt"
-	"slices"
 	"strings"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -58,13 +57,4 @@ func rowCount(n int) string {
 		return "1 row"
 	}
 	return fmt.Sprintf("%d rows", n)
-}
-
-func sortedKeys[V any](m map[string]V) []string {
-	keys := make([]string, 0, len(m))
-	for k := range m {
-		keys = append(keys, k)
-	}
-	slices.Sort(keys)
-	return keys
 }

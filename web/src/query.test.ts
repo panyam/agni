@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
-import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, LocateReason } from "./query.js";
+import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason } from "./query.js";
 import { resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
@@ -197,15 +197,41 @@ describe("formatBinding", () => {
   // agni issue 1045: one fixture with core/query's FormatBindings.
   const here = dirname(fileURLToPath(import.meta.url));
   const twin = JSON.parse(readFileSync(join(here, "..", "..", "core", "query", "testdata", "binding_twin.json"), "utf8")) as {
-    cases: { name: string; text?: string; number?: number; want: string }[];
+    cases: { name: string; text?: string; number?: number; list?: { text?: string; number?: number }[]; want: string }[];
   };
   it("has binding cases to check", () => expect(twin.cases.length).toBeGreaterThanOrEqual(4));
+  // agni issue 1121: a list case left unread would let the loop below pass over none of them.
+  it("has list cases to check, an empty list among them", () => {
+    const lists = twin.cases.filter((c) => c.list !== undefined);
+    expect(lists.length).toBeGreaterThanOrEqual(2);
+    expect(lists.some((c) => c.list!.length === 0)).toBe(true);
+  });
   for (const c of twin.cases) {
     it(`spells as FormatBindings does: ${c.want}`, () => {
+      if (c.list !== undefined) {
+        const values = c.list.map((e) => (e.number !== undefined ? String(e.number) : e.text!));
+        expect(formatBinding(c.name, values, c.list.map((e) => e.number !== undefined))).toBe(c.want);
+        return;
+      }
       const isNum = c.number !== undefined;
       expect(formatBinding(c.name, isNum ? String(c.number) : c.text!, isNum)).toBe(c.want);
     });
   }
+  it("spells every value of a list the same way when given one flag", () => {
+    expect(formatBinding("n", ["A", "B"])).toBe('?n in ["A", "B"]');
+    expect(formatBinding("v", ["1", "2"], true)).toBe("?v in [1, 2]");
+  });
+});
+
+// agni issue 1121: a list travels as a list of text values, and a single value as before.
+describe("wireBinding", () => {
+  it("sends a list as a list of text values in order, and a value as text", () => {
+    expect(wireBinding(["I2C_SDA", "I2C_SCL"])).toEqual({
+      kind: { case: "list", value: { values: [{ kind: { case: "text", value: "I2C_SDA" } }, { kind: { case: "text", value: "I2C_SCL" } }] } },
+    });
+    expect(wireBinding([])).toEqual({ kind: { case: "list", value: { values: [] } } });
+    expect(wireBinding("GND")).toEqual({ kind: { case: "text", value: "GND" } });
+  });
 });
 
 describe("groupRelations", () => {
@@ -263,6 +289,23 @@ describe("tabsFromSet", () => {
       { title: "Resistors", text: 'res(?r) :- component.class(?r, "resistor");\nres(?r) => ?r', bindings: {}, numbers: [] },
       { title: "Busy nets", text: 'res(?r) :- component.class(?r, "resistor");\nnet.pin_count(?n, ?c), ?c >= ?min => ?n', bindings: { min: "3", n: "GND" }, numbers: ["min"] },
     ]);
+  });
+
+  // agni issue 1121: a set can bind a variable to a list, which opens as a list chip, and a number
+  // inside it is named by its position so the chip spells it bare.
+  it("keeps a set's list binding in order, naming its numbers by position", () => {
+    const set = create(QuerySetSchema, {
+      queries: [
+        {
+          name: "Rails",
+          query: "net.voltage(?n, ?v) => ?n",
+          bindings: { v: { kind: { case: "list", value: { values: [{ kind: { case: "number", value: 1.8 } }, { kind: { case: "text", value: "3" } }] } } } },
+        },
+      ],
+    });
+    const [tab] = tabsFromSet(set);
+    expect(tab.bindings).toEqual({ v: ["1.8", "3"] });
+    expect(tab.numbers).toEqual([numberKey("v", 0)]);
   });
 
   it("holds the query alone when the set has no preamble", () => {
