@@ -1,0 +1,38 @@
+# The setup both gate jobs share (ci.yml): Go, the pnpm workspace, and the board corpus. Each job adds
+# only what its half of the gate needs, buf and Python for testall-core, Chromium for browser-test.
+name: setup
+description: Go, the pnpm workspace and the samples corpus, for a job of the gate
+runs:
+  using: composite
+  steps:
+    - uses: actions/setup-go@v7
+      with:
+        go-version-file: go.mod
+
+    - uses: pnpm/action-setup@v6
+      with:
+        # The version is the project's, not this workflow's: it comes from `packageManager` in the
+        # root package.json, the pnpm workspace's (web/, web-shared/, datasheet/web/; agni issue
+        # 744), so a developer's pnpm and CI's cannot drift apart silently.
+        package_json_file: package.json
+
+    - uses: actions/setup-node@v7
+      with:
+        node-version: 22
+        cache: pnpm
+        cache-dependency-path: pnpm-lock.yaml
+
+    # One install for the whole workspace, from its one lockfile at the root.
+    - name: Install web dependencies
+      shell: bash
+      run: pnpm install --frozen-lockfile
+
+    # The board corpus `make samples` fetches, keyed on the pin file rather than on anything about
+    # this repo. agni gets far more PRs than agni-samples gets releases, so keying on the pin means
+    # a download happens once per corpus bump instead of once per CI run. A miss still fetches and
+    # still fails loudly, so this changes how often the network is touched and not what happens when
+    # it is unreachable.
+    - uses: actions/cache@v6
+      with:
+        path: tools/samples
+        key: samples-${{ hashFiles('hack/samples.pin') }}

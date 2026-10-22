@@ -1,9 +1,8 @@
-# The repo gate: exactly `make testall` (vet + engine tests + example modules + bundle build
-# + web typecheck/vitest + the browser layout suite). Keep this in lockstep with the Makefile; if a
-# step is added there, it runs here for free via testall.
-#
-# The one thing testall needs that is not a Go or Node dependency is a Chromium, installed below.
-# That is the cost of having `make browser-test` inside the gate rather than beside it.
+# The repo gate: `make testall`, run as its two halves in parallel jobs, `make testall-core` (vet,
+# engine tests, example modules, bundle build, web typecheck and vitest, the docsite checks) and
+# `make browser-test` (the browser layout suite). Keep this in lockstep with the Makefile; a step
+# added to either half runs here for free. The split is only about wall time: the browser suite is
+# about half the gate, so overlapping the two halves roughly halves the wait (agni issue 1147).
 name: ci
 
 on:
@@ -11,15 +10,19 @@ on:
     branches: [main]
   pull_request:
 
+# A PR pushed again cancels the run for the push before it, which no one reads once a newer one is
+# queued. Runs on main are never cancelled, so every merge keeps its own record.
+concurrency:
+  group: ci-${{ github.event.pull_request.number || github.sha }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
 jobs:
   testall:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v7
-        with:
-          go-version-file: go.mod
+      - uses: ./.github/actions/setup
 
       # buf drives `make proto-check`, the generated-code freshness gate inside testall. Only buf
       # itself is installed here: both protoc plugins are pinned as `tool` directives in go.mod and
@@ -37,31 +40,23 @@ jobs:
         with:
           python-version: "3.12"
 
-      - uses: pnpm/action-setup@v6
-        with:
-          # The version is the project's, not this workflow's: it comes from `packageManager` in the
-          # root package.json, the pnpm workspace's (web/, web-shared/, datasheet/web/; agni issue
-          # 744), so a developer's pnpm and CI's cannot drift apart silently.
-          package_json_file: package.json
+      - name: make testall-core
+        run: make testall-core
 
-      - uses: actions/setup-node@v7
-        with:
-          node-version: 22
-          cache: pnpm
-          cache-dependency-path: pnpm-lock.yaml
+  browser-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
 
-      # One install for the whole workspace, from its one lockfile at the root.
-      - name: Install web dependencies
-        run: pnpm install --frozen-lockfile
+      - uses: ./.github/actions/setup
 
-      # Chromium for `make browser-test`, which is part of testall. The suite drives playwright-core
-      # directly rather than @vitest/browser, and playwright-core ships no browser of its own, so
-      # without this step every layout spec fails with "install one with ..." rather than an
-      # assertion. --with-deps pulls the shared libraries a headless Chromium needs on a bare runner.
+      # Chromium for `make browser-test`. The suite drives playwright-core directly rather than
+      # @vitest/browser, and playwright-core ships no browser of its own, so without this step every
+      # layout spec fails with "install one with ..." rather than an assertion. --with-deps pulls the
+      # shared libraries a headless Chromium needs on a bare runner.
       #
-      # Cached on the playwright-core version from the lockfile: a browser build is ~150MB and does
-      # not change between PRs, so keying on anything finer would re-download it for no reason. A
-      # cache miss still installs and still fails loudly.
+      # Cached on the lockfile, which holds the playwright-core version: a browser build is ~150MB and
+      # does not change between PRs. A cache miss still installs and still fails loudly.
       - name: Cache the Chromium build
         uses: actions/cache@v6
         with:
@@ -72,15 +67,5 @@ jobs:
         run: pnpm exec playwright-core install --with-deps chromium
         working-directory: web
 
-      # The board corpus `make samples` fetches, keyed on the pin file rather than on anything about
-      # this repo. agni gets far more PRs than agni-samples gets releases, so keying on the pin means
-      # a download happens once per corpus bump instead of once per CI run. A miss still fetches and
-      # still fails loudly, so this changes how often the network is touched and not what happens when
-      # it is unreachable.
-      - uses: actions/cache@v6
-        with:
-          path: tools/samples
-          key: samples-${{ hashFiles('hack/samples.pin') }}
-
-      - name: make testall
-        run: make testall
+      - name: make browser-test
+        run: make browser-test

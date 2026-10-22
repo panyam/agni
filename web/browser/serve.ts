@@ -12,6 +12,7 @@
 // changing anything about teardown: signalling a process GROUP by number is only safe while the
 // child is alive, and getting that wrong killed unrelated servers on the developer's machine.
 
+import { execFileSync } from "node:child_process";
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { fileURLToPath } from "node:url";
@@ -26,20 +27,32 @@ const repoRoot = resolve(here, "..", "..");
 declare module "vitest" {
   interface ProvidedContext {
     baseUrl: string;
+    // agniBin is the agni this checkout builds, built once here for the server and for every spec
+    // that runs the CLI to compare against (see setup).
+    agniBin: string;
   }
 }
 
 let server: Server | undefined;
 
 // setup starts the server and publishes its base URL for the specs. vitest calls it once per run.
+//
+// agni is built ONCE, with the developer's own environment, and that binary serves and answers every
+// spec's CLI comparison. A spec runs the CLI with HOME pointed at an empty directory so a personal
+// agni.yaml stays out of the run, and under `go run` that also pointed Go's build cache at the empty
+// directory, so each such call rebuilt agni from nothing: about 30 s each on a CI runner, and most of
+// the browser suite's six minutes (measured 5.7 s against 0.36 s for the binary, on a laptop).
 export async function setup({ provide }: { provide: (key: string, value: unknown) => void }): Promise<void> {
+  const agniBin = join(mkdtempSync(join(tmpdir(), "agni-browser-bin-")), "agni");
+  execFileSync("go", ["build", "-o", agniBin, "./cmd/agni"], { cwd: repoRoot, stdio: "inherit" });
+  provide("agniBin", agniBin);
   const port = await freePort();
   const base = `http://127.0.0.1:${port}`;
   server = await start({
     what: "agni serve",
-    command: "go",
+    command: agniBin,
     args: [
-      "run", "./cmd/agni", "serve",
+      "serve",
       "--addr", `:${port}`,
       "--mount", "kicad=readers/kicad/testdata",
       "--mount", "edif=readers/edif/testdata",

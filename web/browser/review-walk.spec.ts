@@ -14,6 +14,7 @@
 // step; the test then fails naming them.
 
 import { afterAll, beforeAll, describe, expect, inject, it } from "vitest";
+import { agniBin as builtAgni } from "./agnibin.js";
 import type { Browser, Page } from "playwright-core";
 import { execFileSync } from "node:child_process";
 import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
@@ -58,8 +59,7 @@ let scratch: string;
 let agniBin: string;
 beforeAll(async () => {
   scratch = mkdtempSync(join(tmpdir(), "agni-review-walk-"));
-  agniBin = join(scratch, "agni");
-  execFileSync("go", ["build", "-o", agniBin, "./cmd/agni"], { cwd: repoRoot, stdio: "inherit" });
+  agniBin = builtAgni();
   browser = await launch();
 }, 180_000);
 afterAll(async () => {

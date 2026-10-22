@@ -2,8 +2,9 @@
 title: Running the gate
 ---
 
-`make testall` is the full gate and CI runs exactly this command. Green means ship-ready. It also
-lies to you in three specific ways, and most of this page is about them.
+`make testall` is the full gate. CI runs it as its two halves in parallel jobs, `make testall-core`
+and `make browser-test`, which together are exactly `testall`. Green means ship-ready. It also lies
+to you in three specific ways, and most of this page is about them.
 
 ```mermaid
 flowchart LR
@@ -337,9 +338,17 @@ flowchart LR
     JP -.->|"the gap a badge strip painted<br/>over two columns through"| BP
 ```
 
-The browser suite runs inside `testall`. It needs a Chromium installed per machine (`cd web && pnpm
+The browser suite runs inside `testall`, and in CI as a job of its own beside the rest of the gate
+(agni issue 1147). It needs a Chromium installed per machine (`cd web && pnpm
 exec playwright-core install chromium`; CI installs and caches one) and starts its own server on a
-kernel-picked port, so it will not fight a dev server you already have.
+kernel-picked port, so it will not fight a dev server you already have. `make hooks` installs an
+opt-in pre-push hook that runs it before a push leaves your machine.
+
+**A spec runs the CLI through the binary `serve.ts` built, never `go run`.** A spec points `HOME` at
+an empty directory so a personal `agni.yaml` stays out of the run, and under `go run` that also
+points Go's build cache at the empty directory, so every call rebuilt agni from nothing. That was
+about 30 s per comparison test on a CI runner and most of the suite's six minutes. `agniBin()` in
+`web/browser/agnibin.ts` is the binary to use.
 
 `HEADED=1` runs the suite in a visible Chrome, and `SLOWMO=<ms>` paces each action, which is the
 quickest way to see why a layout assertion failed. One spec is a walk rather than a layout check.

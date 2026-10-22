@@ -9,6 +9,7 @@
 // carries beyond the gate's two is opened as well.
 
 import { beforeAll, afterAll, describe, expect, it } from "vitest";
+import { agniBin } from "./agnibin.js";
 import type { Browser, Page } from "playwright-core";
 import { execFileSync } from "node:child_process";
 import { existsSync, mkdtempSync, readdirSync, readFileSync, rmSync } from "node:fs";
@@ -47,9 +48,9 @@ beforeAll(async () => {
     out = mkdtempSync(join(tmpdir(), "agni-site-"));
     const home = mkdtempSync(join(tmpdir(), "agni-home-"));
     execFileSync(
-      "go",
+      agniBin(),
       [
-        "run", "./cmd/agni", "site", out, "--base", prefix,
+        "site", out, "--base", prefix,
         "--seed", "gateway=examples/tutorial-project",
         "--seed", "royalblue=tools/samples/boards/royalblue54L-feather",
       ],
@@ -234,7 +235,7 @@ describe("the static demo under /agni/demo/", () => {
   // assembles its run rule by rule in the panel's order, so the rows are compared as a set.
   it("saves a check run as csv, the rows agni check --format csv writes", async () => {
     const home = mkdtempSync(join(tmpdir(), "agni-home-"));
-    const want = execFileSync("go", ["run", "./cmd/agni", "check", "examples/tutorial-project/designs/gateway", "--format", "csv"], {
+    const want = execFileSync(agniBin(), ["check", "examples/tutorial-project/designs/gateway", "--format", "csv"], {
       cwd: repo,
       env: { ...process.env, HOME: home, XDG_CONFIG_HOME: home },
       encoding: "utf8",
