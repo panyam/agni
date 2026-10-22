@@ -50,7 +50,9 @@ const explanations: Record<string, string> = {
     "else's machine would, and reports each step without any design content.",
   "page health":
     "Finally, the page itself: no uncaught errors and no failed requests during the whole walk.",
-  done: "The walk is over. Press Next to close the browser; the step table prints in the terminal.",
+  done:
+    "The walk is over, and the page is no longer paused: explore the viewer as you like. Press Next to " +
+    "close the browser; the step table prints in the terminal.",
 };
 
 // explain is the text for one step, with {board} spelled as the walk's board.
@@ -80,13 +82,42 @@ the step does and what agni does underneath. Press <b>Next</b> there, or Enter, 
 
 // pause shows the panel for the next step and waits for Next. It removes the panel before returning,
 // so the panel never covers anything the step clicks.
+//
+// The page is FROZEN while a panel waits (agni issue 1118): a clear shield takes the clicks, and
+// scrolling and keys other than the ones that continue are swallowed, so the step runs on exactly the
+// page the walk left. A reader exploring between stops otherwise changed the selection, the zoom and
+// the scroll under the walk, and the next step clicked into a page it did not expect. The last stop,
+// "done", leaves the page open, so the viewer can be explored freely before Next closes it.
 export async function pause(page: Page, step: string, previous: string, board?: string): Promise<void> {
   const text = explain(step, board);
+  const explore = step === "done";
   process.stdout.write(`\n── ${step}\n${text}\n`);
   await page.evaluate(
-    ({ step, text, previous }) => {
-      const w = window as unknown as { __walkNext?: boolean };
+    ({ step, text, previous, explore }) => {
+      const w = window as unknown as { __walkNext?: boolean; __walkRelease?: () => void };
       w.__walkNext = false;
+      const at = { x: window.scrollX, y: window.scrollY };
+      const shield = document.createElement("div");
+      const swallow = (e: Event): void => {
+        if (!(e.target instanceof Node) || !box.contains(e.target)) {
+          e.preventDefault();
+          e.stopPropagation();
+        }
+      };
+      if (!explore) {
+        shield.id = "walk-shield";
+        shield.title = "The page is paused while the walk explains the next step. Press Next to continue.";
+        shield.style.cssText = "position:fixed;inset:0;z-index:2147483646;background:rgba(15,23,42,.06);cursor:not-allowed";
+        document.body.appendChild(shield);
+        window.addEventListener("wheel", swallow, { capture: true, passive: false });
+        window.addEventListener("touchmove", swallow, { capture: true, passive: false });
+      }
+      w.__walkRelease = () => {
+        shield.remove();
+        window.removeEventListener("wheel", swallow, true);
+        window.removeEventListener("touchmove", swallow, true);
+        window.scrollTo(at.x, at.y);
+      };
       const box = document.createElement("div");
       box.id = "walk-guide";
       // Top left, because a headed window on a laptop is often shorter than the 1000 px page, so
@@ -112,7 +143,13 @@ export async function pause(page: Page, step: string, previous: string, board?: 
       head.append(next, title);
       add("div", text, "margin-bottom:8px");
       if (previous) add("div", `Last: ${previous}`, "opacity:.75;font-size:12px");
-      add("div", "Enter, Space or \u2192 also continues.", "opacity:.6;font-size:11px;margin-top:6px");
+      add(
+        "div",
+        explore
+          ? "The page is yours now: explore the viewer, then press Next to close the browser."
+          : "The page is paused while you read. Enter, Space or \u2192 also continues.",
+        "opacity:.6;font-size:11px;margin-top:6px",
+      );
       const go = (): void => {
         w.__walkNext = true;
         window.removeEventListener("keydown", onKey, true);
@@ -121,6 +158,9 @@ export async function pause(page: Page, step: string, previous: string, board?: 
         if (e.key === "Enter" || e.key === " " || e.key === "ArrowRight") {
           e.preventDefault();
           go();
+        } else if (!explore) {
+          e.preventDefault();
+          e.stopPropagation();
         }
       };
       next.onclick = go;
@@ -128,10 +168,13 @@ export async function pause(page: Page, step: string, previous: string, board?: 
       document.body.appendChild(box);
       next.focus();
     },
-    { step, text, previous },
+    { step, text, previous, explore },
   );
   await page.waitForFunction(() => (window as unknown as { __walkNext?: boolean }).__walkNext === true, null, {
     timeout: 0,
   });
-  await page.evaluate(() => document.getElementById("walk-guide")?.remove());
+  await page.evaluate(() => {
+    document.getElementById("walk-guide")?.remove();
+    (window as unknown as { __walkRelease?: () => void }).__walkRelease?.();
+  });
 }
