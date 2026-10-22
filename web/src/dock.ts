@@ -160,11 +160,20 @@ export function adoptPanel(park: HTMLElement, name: string): IContentRenderer {
 const RAIL_FRACTION = 0.15;
 const QUERY_FRACTION = 0.2;
 const RAIL_FALLBACK_PX = 260;
-const QUERY_FALLBACK_PX = 180;
-// EAST_MIN_PX keeps the east stacks' two-tab strips readable on a small window. dockview clips a
-// strip that does not fit rather than scrolling it, so below roughly 1270px wide, 15% starts eating
-// the word "Coverage". Two tabs need ~190px and four needed ~380, which ruled out one stack of four.
-const EAST_MIN_PX = 190;
+const QUERY_FALLBACK_PX = 320;
+// QUERY_MIN_PX is the shortest the Query panel opens. Its tab strip, query box and Run row take about
+// 190px, so a fifth of a 1000px window showed no result row at all, and a reader asking a question
+// from Properties found the answer below the fold (agni issue 759). 320px shows the first five rows.
+// QUERY_MAX_FRACTION keeps the floor from taking most of a short window from the drawing.
+const QUERY_MIN_PX = 320;
+const QUERY_MAX_FRACTION = 0.45;
+// EAST_MIN_PX keeps the east stacks readable on a small window. dockview clips a tab strip that does
+// not fit rather than scrolling it, and two tabs need ~190px (four needed ~380, which ruled out one
+// stack of four). The Checks table needs more than its tabs: at 15% of a 1400px window its four
+// columns had ~210px and squeezed the message column to a few words a line (agni issue 759).
+const EAST_MIN_PX = 260;
+// CHANGES_RAIL_PX is the Changes list's width when a comparison adds it back beside the diff.
+const CHANGES_RAIL_PX = 260;
 
 // defaultLayout is the boot arrangement, and it opens EVERY panel, with four surfaces visible and
 // the rest tabbed behind them (#325). Tabs handle the crowding and keep every panel one labelled
@@ -178,7 +187,7 @@ const EAST_MIN_PX = 190;
 //   ├────────┤                                ├─────────────┤
 //   │[Details│                                │[Review] Cov.│
 //   │ Parts  ├────────────────────────────────┤             │
-//   │        │ Query                    20% h │             │
+//   │        │ Query     20% h, at least 320px │             │
 //   └────────┴────────────────────────────────┴─────────────┘
 //
 // Order matters. Each position is relative to the reference panel's GROUP, so the side rails are
@@ -224,7 +233,7 @@ export function defaultLayout(api: DockviewApi): void {
     const rail = api.width ? Math.round(api.width * RAIL_FRACTION) : RAIL_FALLBACK_PX;
     resizeGroup(api, "overview", { width: rail });
     resizeGroup(api, "checks", { width: Math.max(rail, EAST_MIN_PX) });
-    resizeGroup(api, "query", { height: api.height ? Math.round(api.height * QUERY_FRACTION) : QUERY_FALLBACK_PX });
+    resizeGroup(api, "query", { height: queryHeight(api.height) });
     // Each stack opens on its first tab. Query needs this explicitly, because dockview makes the
     // last panel added the active one and Trace is added to that stack after Query.
     api.getPanel("query")?.api.setActive();
@@ -233,6 +242,13 @@ export function defaultLayout(api: DockviewApi): void {
     api.getPanel("review")?.api.setActive();
     api.getPanel("canvas")?.api.setActive();
   });
+}
+
+// queryHeight is the Query panel's opening height for a dock that tall: a fifth of it, but never
+// less than QUERY_MIN_PX, and never more than QUERY_MAX_FRACTION of it.
+export function queryHeight(dockHeight: number): number {
+  if (!dockHeight) return QUERY_FALLBACK_PX;
+  return Math.round(Math.min(Math.max(dockHeight * QUERY_FRACTION, QUERY_MIN_PX), dockHeight * QUERY_MAX_FRACTION));
 }
 
 // whenSized runs apply once the dock has a non-zero size, or after about 30 frames if it never does
@@ -280,9 +296,10 @@ export function openDiffPanel(api: DockviewApi): void {
       title: "Changes",
       position: { direction: "right", referencePanel: "diff" },
     });
-    // Meant to keep the right column a rail, but a panel-level setSize is dropped (see
-    // resizeGroup), so this has no effect.
-    setTimeout(() => api.getPanel("changes")?.api.setSize({ width: 260 }), 0);
+    // Keeps the new column a 260px rail rather than half the centre. By the time a reader opens a
+    // comparison the grid has its size, so the group takes the width once it exists; without it
+    // Changes opened at half the canvas column (agni issue 759).
+    whenSized(api, () => resizeGroup(api, "changes", { width: CHANGES_RAIL_PX }));
   }
   api.getPanel("diff")?.api.setActive();
 }

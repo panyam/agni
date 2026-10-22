@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { VIEWER_PANELS, LAYOUT_KEY, loadLayout, saveLayout, reconcilePanels, prunePanels, adoptPanel, defaultLayout, panelsMenu, openPanel } from "./dock.js";
+import { VIEWER_PANELS, LAYOUT_KEY, loadLayout, saveLayout, reconcilePanels, prunePanels, adoptPanel, defaultLayout, panelsMenu, openPanel, queryHeight } from "./dock.js";
 
 function memStorage(initial: Record<string, string> = {}): Pick<Storage, "getItem" | "setItem" | "removeItem"> & { data: Map<string, string> } {
   const data = new Map(Object.entries(initial));
@@ -390,5 +390,16 @@ describe("adoptPanel", () => {
     expect(renderer.element).toBeInstanceOf(HTMLElement);
     expect(renderer.element.childNodes.length).toBe(0);
     document.body.replaceChildren();
+  });
+});
+
+// agni issue 759. The Query panel opens at a fifth of the dock, floored at 320px so its first result
+// rows fit under the tab strip and query box, and capped at 45% so a short window keeps its drawing.
+describe("queryHeight", () => {
+  it("gives a tall dock its fifth, a 1000px dock the floor, and a short one the cap", () => {
+    expect(queryHeight(2000)).toBe(400);
+    expect(queryHeight(1000)).toBe(320);
+    expect(queryHeight(600)).toBe(270);
+    expect(queryHeight(0)).toBe(320);
   });
 });

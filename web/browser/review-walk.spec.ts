@@ -21,7 +21,6 @@ import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, viewportFor } from "./browser.js";
-import { growQueryPanel } from "./panels.js";
 import { table, type Row } from "./exercise-report.js";
 import { act, busy, idle, intro, pause, stepByStep } from "./walkguide.js";
 
@@ -247,7 +246,6 @@ describe("the browser-review walk", () => {
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length >= n, before + queries, {
           timeout: 30_000,
         });
-        await growQueryPanel(page);
         const titles = (await page.$$eval(".query-tab-go", (bs) => bs.map((b) => b.getAttribute("title") ?? ""))).slice(before);
         const errors: string[] = [];
         for (const t of titles) {
