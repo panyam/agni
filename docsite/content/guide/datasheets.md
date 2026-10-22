@@ -61,6 +61,11 @@ extracts specs from a PDF automatically, which is a separate tool covered in
 [the datasheet layer](../../architecture/datasheet-layer/). Either way the result is the same
 small per-part files this page loads.
 
+Getting the PDFs is usually the slow part. Several vendor sites refuse a download that does not come
+from a browser: one times out, one answers 403, and two return a bot-check page instead of the file.
+Save the PDFs from a browser into the folder `DATASHEET_DIR` names, and the datasheet tooling reads
+them from there.
+
 ### Publishing a workbench draft
 
 The datasheets workbench (`agnids serve --corpus <dir>`) keeps what you transcribe as a DRAFT for one

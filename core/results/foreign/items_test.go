@@ -21,6 +21,8 @@ func TestParseItemFormMatrix(t *testing.T) {
 		{"PTH pad 2 [<no net>] of J1", itemRef{RefDes: "J1", Pin: "2"}},
 		{"Track [VCC] on F.Cu, length 10.8000 mm", itemRef{Net: "VCC"}},
 		{"Track [GND] on F.Cu, length 1.0000 mm", itemRef{Net: "GND"}},
+		{"Track (arc) [GND] on In2.Cu, length 0.4712 mm", itemRef{Net: "GND"}},
+		{"NPTH pad of J12", itemRef{RefDes: "J12"}},
 		{"Via [GND] on F.Cu - B.Cu", itemRef{Net: "GND"}},
 		{"Footprint R1", itemRef{RefDes: "R1"}},
 		{"Circle of R1 on F.Silkscreen", itemRef{RefDes: "R1"}},
