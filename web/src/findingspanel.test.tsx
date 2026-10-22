@@ -451,6 +451,39 @@ describe("saving a check report (agni issue 127)", () => {
   });
 });
 
+// agni issue 1117: a failed run says why and names the rules it left pending, and a catalog that did
+// not load says so where "No rules selected." would otherwise stand.
+describe("a failed run in the checks panel", () => {
+  it("says the run failed, why, and which rules were not run, until the next run starts", () => {
+    const { el, panel } = mountPanel({ ruleCount: 3, pending: 2, runError: { message: "[resource_exhausted] work budget exhausted", rules: ["single-pin-net", "diff-pair-naming"] } });
+    const box = el.querySelector(".checks-error");
+    expect(box?.getAttribute("role")).toBe("alert");
+    expect(box?.querySelector(".checks-error-head")?.textContent).toContain("The run failed, so 2 selected rules were not run.");
+    expect(box?.querySelector(".checks-error-message")?.textContent).toBe("[resource_exhausted] work budget exhausted");
+    expect([...el.querySelectorAll(".checks-error-rules li")].map((li) => li.textContent)).toEqual(["single-pin-net", "diff-pair-naming"]);
+    // The button still offers the rules again.
+    expect(el.querySelector(".checks-run")?.textContent?.trim()).toBe("Run checks (2)");
+    panel.view.setState(state({ ruleCount: 3, pending: 2, running: true, runError: { message: "x", rules: ["a"] } }));
+    expect(el.querySelector(".checks-error")).toBeNull();
+  });
+
+  it("says one rule in the singular", () => {
+    const { el } = mountPanel({ ruleCount: 1, pending: 1, runError: { message: "boom", rules: ["single-pin-net"] } });
+    expect(el.querySelector(".checks-error-head")?.textContent).toContain("The run failed, so 1 selected rule was not run.");
+  });
+
+  it("says nothing of a failure when the run did not fail", () => {
+    const { el } = mountPanel({ ruleCount: 3, pending: 3 });
+    expect(el.querySelector(".checks-error")).toBeNull();
+  });
+
+  it("says the catalog did not load in place of No rules selected", () => {
+    const { el } = mountPanel({ ruleCount: 0, catalogError: "snapshot not found" });
+    expect(el.querySelector(".checks-error")?.textContent).toBe("The rule catalog did not load, so no rules can run. snapshot not found");
+    expect(el.querySelector(".findings-empty")).toBeNull();
+  });
+});
+
 // agni issues 858 and 1057: a finding offers to report itself as wrong, through the link the store
 // built from a FindingFeedback, and a finding without one offers nothing.
 describe("reporting a wrong finding", () => {

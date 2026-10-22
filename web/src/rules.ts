@@ -30,6 +30,9 @@ export interface RulesState {
   // fired[name] is how many findings that rule produced this run (0 when it ran clean; absent when
   // it has not run). The panel shows it in the per-group fired/selected/available badge.
   fired: Record<string, number>;
+  // error says why the catalog did not load, so an empty one does not read as a design with no rules
+  // (agni issue 1117). Absent or "" when it loaded.
+  error?: string;
 }
 
 export interface RulesView {

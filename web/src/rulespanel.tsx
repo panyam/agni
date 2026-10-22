@@ -148,7 +148,16 @@ function RulesPanel(props: { state: () => RulesState; onSelectionChange: (names:
           available only
         </label>
       </div>
-      <Show when={rules().length > 0} fallback={<div class="rules-empty">No rules.</div>}>
+      <Show
+        when={rules().length > 0}
+        fallback={
+          props.state().error ? (
+            <div class="rules-error" role="alert">The rule catalog did not load. {props.state().error}</div>
+          ) : (
+            <div class="rules-empty">No rules.</div>
+          )
+        }
+      >
         <ul class="rule-groups">
           <For each={groups()}>
             {([value, group]) => {
