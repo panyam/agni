@@ -21,6 +21,15 @@ make run             # plain text, interactive
 make runquiet        # non-interactive defaults (CI-safe)
 ```
 
+## The mission's exercise
+
+`ask-over-mcp exercise <spec>` asks the questions a spec under `exercise/` lists, starting
+`agni serve --mcp` on a free port, and checks each reply. It must state its question, carry links
+that open in the viewer, hold the rows the CLI answers to the same request (both written through one
+csv encoder), and contain the rows the spec pins. It prints a table with one row per call.
+`make exercise-mcp-ask` at the repo root runs it over the Jetson baseboard, and
+`WALK_DESIGN=gateway` over the tutorial board, which `go test` here runs over stdio too.
+
 `AGNI_BIN` names another agni to run. The default folder is `../tutorial-project`; give the first
 step another folder, or a design file, to ask about your own.
 

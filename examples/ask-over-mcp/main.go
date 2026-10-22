@@ -6,12 +6,14 @@
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
 // `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
+// `ask-over-mcp exercise <spec.yaml>` instead runs mission #909's exercise (exercise.go).
 package main
 
 import (
 	"context"
 	_ "embed"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/panyam/demokit"
@@ -42,6 +44,13 @@ var questions = []struct {
 }
 
 func main() {
+	if len(os.Args) > 1 && os.Args[1] == "exercise" {
+		if err := exercise(os.Args[2:]); err != nil {
+			fmt.Fprintln(os.Stderr, "exercise:", err)
+			os.Exit(1)
+		}
+		return
+	}
 	folder := common.AskPath("folder", defaultFolder)
 	ctx := context.Background()
 	var s *session

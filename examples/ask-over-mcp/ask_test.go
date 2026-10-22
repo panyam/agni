@@ -69,3 +69,20 @@ func TestTheWalkthroughAnswersAsItSays(t *testing.T) {
 		}
 	}
 }
+
+// The mission's exercise passes over the tutorial gateway: every call's reply states its question,
+// says why it has no link (stdio has no viewer), holds the CLI's rows for the same request and the
+// rows the spec pins (agni issue 1121). The http run, with links opened, is make exercise-mcp-ask.
+func TestTheGatewayExercisePasses(t *testing.T) {
+	agni := agniBinary()
+	if agni == "agni" {
+		t.Fatal("no agni to run: build ../../bin/agni (make agni) or set AGNI_BIN; examples-test builds it")
+	}
+	report, err := runExercise(context.Background(), agni, "exercise/gateway.yaml", "stdio", "")
+	if err != nil {
+		t.Fatalf("%v\n%s", err, report)
+	}
+	if n := strings.Count(report, "| ok |"); n != 9 {
+		t.Errorf("%d calls passed, want the spec's 9:\n%s", n, report)
+	}
+}

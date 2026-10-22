@@ -380,7 +380,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   own projection, and `Tabulate` (C35), so a new query field reaches MCP with no change there.
   `Run.BaseFor` is what keeps the board read only for a program reading `board.*`, as `RunQuery`
   does. `TestMCPAnswersAsConnectDoes` asks every tool and its rpc the same question over one server,
-  so a new tool belongs in it. A list in `bind` is refused because agni's wire binds one value.
+  so a new tool belongs in it. **`make exercise-mcp-ask` is mission #909's exercise** (agni 1121):
+  `examples/ask-over-mcp exercise <spec>` asks a spec's questions over `serve --mcp` on a free port
+  and holds each reply's table, written through `service.WriteTableCSV`, to the CLI's csv for the
+  same request, its links to a 200, and its rows to what the spec pins. A new tool's reply has to
+  open with `design:` (or `diff:`) and carry `in the viewer: <url>` or `no viewer link: <why>`.
 - **`--remote <url>` on `query`, `check`, `trace` and `review` sends the command's request to a running
   `agni serve`** (agni 998) and renders the response exactly as the local run does, which
   `TestRemoteAnswersAsTheLocalCommandDoes` holds byte for byte. It is a different flag from `--server`,
@@ -465,7 +469,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `RunQueries` answers each query exactly as `RunQuery` would, because both call the same `answer`
   helper in `service/query.go`.
   **A value goes into a query as a BINDING, never as spliced text** (agni 793): `--bind name=value`,
-  `RunQueryRequest.bindings`, a set's `bind:`. The viewer's search and click presets bind too
+  `RunQueryRequest.bindings`, a set's `bind:`. A variable bound to a LIST (`QueryValue.list`, `--bind`
+  naming it twice, `bind: {n: [A, B]}`, repeated `bind` params in a link) answers for each value, and
+  `query.Bindings` is a variable's values everywhere in Go (agni 1121). The viewer's search and click presets bind too
   (`EntityQuery.binds`, `SearchQuery.bind`/`pattern`) and show the values as chips, so a served
   preset's text never changes. A binding the goal does not use is refused by the engine.
   **A position filled from a numeric slot is declared a NUMBER automatically** (`numericTypes` in
@@ -1078,7 +1084,7 @@ mission is blocked by each ticket it needs, and its tickets carry its `mission_<
 issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
 filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names
 each mission's next ready ticket. Each mission has an exercise in its issue body, a make target where one exists
-(`make exercise-revision-audit`, and `make exercise-public-demo` for #851, which walks the built static demo or, with `DEMO_URL`, the deployed one), and after a mission PR merges, run it and log the result as a
+(`make exercise-revision-audit`, `make exercise-mcp-ask` for #909, and `make exercise-public-demo` for #851, which walks the built static demo or, with `DEMO_URL`, the deployed one), and after a mission PR merges, run it and log the result as a
 comment on the mission issue. Against the deployed demo, wait for the `docs.yml` run and then about a
 minute more, since a walk started as Pages flips served the first seed a 180 s timeout once. Pages
 serves the design files with `max-age=600` and a fresh deploy's are uncached, so Jetson's 85 MB board

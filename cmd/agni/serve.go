@@ -372,6 +372,15 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Timing:    server.Timing{Slow: o.slowRequest, Log: budget.Log},
 	}
 	apiPaths := api.Register(mux, budgeted)
+	if o.listener == nil && o.mcp != mcpStdio {
+		ln, err := bindFreePort(addr)
+		if err != nil {
+			return err
+		}
+		if ln != nil {
+			o.listener, addr = ln, ln.Addr().String()
+		}
+	}
 	urls := serveURLs(addr, lanIPs)
 	if o.mcp != "" {
 		mcpOpts := mcpserver.Options{Version: version.Version(), Budget: budget.Enforce}
@@ -763,4 +772,15 @@ func uploadedHost(mount string, files map[string][]byte) (service.CacheableLoade
 	fsys := fshost.MemFS(files)
 	ms := []fshost.Mount{{Name: mount, FS: fsys}}
 	return fshost.New(ms...), &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: mount, FS: fsys}), Config: &fshost.ConfigResolver{Mounts: ms}}
+}
+
+// bindFreePort binds addr when it asks for port 0, the kernel's choice of a free port, so the banner,
+// the links and the MCP server name the port it got rather than 0, which a script starting a server
+// for itself reads off the first line (agni issue 1121). Any other addr is left for the serve to bind,
+// and nil is returned.
+func bindFreePort(addr string) (net.Listener, error) {
+	if _, port, err := net.SplitHostPort(addr); err != nil || port != "0" {
+		return nil, nil
+	}
+	return net.Listen("tcp", addr)
 }
