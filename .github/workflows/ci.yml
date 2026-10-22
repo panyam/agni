@@ -15,9 +15,9 @@ jobs:
   testall:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-go@v5
+      - uses: actions/setup-go@v7
         with:
           go-version-file: go.mod
 
@@ -25,25 +25,26 @@ jobs:
       # itself is installed here: both protoc plugins are pinned as `tool` directives in go.mod and
       # run via `go tool`, so they come from the module graph rather than a separate install whose
       # version could drift from the one that produced the committed output.
-      - uses: bufbuild/buf-setup-action@v1
+      - uses: bufbuild/buf-action@v1
         with:
+          setup_only: true
           version: 1.61.0
           github_token: ${{ github.token }}
 
       # `make python-test` builds its own small venv (protobuf, openpyxl, pytest) from
       # clients/python/pyproject.toml. Pinned here so the runner's default python cannot move under it.
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           # The version is the project's, not this workflow's: it comes from `packageManager` in the
           # root package.json, the pnpm workspace's (web/, web-shared/, datasheet/web/; agni issue
           # 744), so a developer's pnpm and CI's cannot drift apart silently.
           package_json_file: package.json
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v7
         with:
           node-version: 22
           cache: pnpm
@@ -62,7 +63,7 @@ jobs:
       # not change between PRs, so keying on anything finer would re-download it for no reason. A
       # cache miss still installs and still fails loudly.
       - name: Cache the Chromium build
-        uses: actions/cache@v4
+        uses: actions/cache@v6
         with:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
@@ -76,7 +77,7 @@ jobs:
       # a download happens once per corpus bump instead of once per CI run. A miss still fetches and
       # still fails loudly, so this changes how often the network is touched and not what happens when
       # it is unreachable.
-      - uses: actions/cache@v4
+      - uses: actions/cache@v6
         with:
           path: tools/samples
           key: samples-${{ hashFiles('hack/samples.pin') }}
