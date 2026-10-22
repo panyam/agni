@@ -25,15 +25,15 @@ KiCad 10.0.6 found 578 violations. Import them:
 
 Read the summary slowly, because it is the import telling you how far to trust what follows.
 
-**871 of 957 attached to an entity.** A vendor report names things in prose, so importing it means
-resolving "Track [/CSI/CAM0.CSI2_CLK+] on In2.Cu" to the net your design calls that. That works only
+**946 of 957 attached to an entity.** A vendor report names things in prose, so importing it means
+resolving "Track [/CSI/CAM0.CSI2_CLK+] on In2.Cu", or a curved one written "Track (arc) [...]", to the
+net your design calls that, and "NPTH pad of J12", an unplated hole with no pin or net, to its part. That works only
 because agni names a KiCad schematic's nets exactly as KiCad does, including the sheet path on a bus
 member drawn on a sub-sheet. There are more findings than violations because a clearance violation
 names two items, and each becomes a finding.
 
 **The rest are named, with a reason.** Ten are board outline geometry, which belongs to no component
-or net. Seventy-five are shapes the import does not recognize yet, unplated holes and arcs of track
-among them. One names a footprint, `REF**`, that is on the board and in no schematic. Nothing is
+or net. One names a footprint, `REF**`, that is on the board and in no schematic. Nothing is
 dropped quietly, which matters because a silently discarded finding is worse than one that was never
 imported.
 

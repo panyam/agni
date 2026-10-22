@@ -1,4 +1,4 @@
-#agni-run 6c7a74271573d19c
+#agni-run f0c01ef66d982977
 #agni-step
 comparing:
   ours:   agni <version> — 90 finding(s) over mount://jetson/designs/jetson
@@ -364,4 +364,4 @@ not a claim that the rules ask the same question):
   ours                         theirs                             entities
   test-point-coverage          kicad-drc/clearance                1
 
-not comparable (a finding naming no component or net): ours 0, theirs 86
+not comparable (a finding naming no component or net): ours 0, theirs 11
