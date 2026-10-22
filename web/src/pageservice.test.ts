@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
 import { ViewerLocationSchema } from "./gen/agni/v1/viewer/page_pb.js";
 import type { ViewerPageAPI } from "./pageapi.js";
-import { locationFromWire, locationToWire, pageDispatcher } from "./pageservice.js";
+import { isLinkOnly, locationFromLink, locationFromWire, locationToWire, pageDispatcher } from "./pageservice.js";
 import { emptyLocation, type ViewerLocation } from "./router.js";
 
 // full sets every field of a location to a value distinguishable from its zero, and every list to
@@ -102,5 +102,48 @@ describe("pageDispatcher", () => {
     await expect(pageDispatcher(refuse)("ShowSheet", { sheet: "s9" })).rejects.toMatchObject({ code: Code.InvalidArgument, rawMessage: 'the open design has no sheet "s9"' });
     const busy = fakeApi({ showSheet: async () => Promise.reject(new ConnectError("busy", Code.Unavailable)) });
     await expect(pageDispatcher(busy)("ShowSheet", { sheet: "s1" })).rejects.toMatchObject({ code: Code.Unavailable });
+  });
+});
+
+describe("ApplyLocation with a link", () => {
+  const link = "http://localhost:8080/designs/kicad/hier_numeric_root.kicad_sch/view?verdict=duplicate-ref-des%3A%28component%3AR2%29&rule=duplicate-ref-des&subject=component%3AR2";
+
+  it("applies the fields the link sets, read by the page's own parser", async () => {
+    const api = fakeApi();
+    await pageDispatcher(api)("ApplyLocation", { url: link });
+    expect(api.applyLocation).toHaveBeenCalledWith({
+      mount: "kicad",
+      path: "hier_numeric_root.kicad_sch",
+      verdict: "duplicate-ref-des:(component:R2)",
+      rule: "duplicate-ref-des",
+      subjects: ["component:R2"],
+    });
+  });
+
+  it("applies a switch a link turns on, and leaves one it omits alone", () => {
+    expect(locationFromLink(`${link}&sym=1&flatten=1`)).toMatchObject({ symbols: true, flatten: true });
+    expect(locationFromLink(link)).not.toHaveProperty("symbols");
+    expect(locationFromLink(link)).not.toHaveProperty("flatten");
+  });
+
+  it("reads a link on another host as the same design", () => {
+    expect(locationFromLink(link.replace("localhost", "127.0.0.1"))).toEqual(locationFromLink(link));
+  });
+
+  it("refuses a link to no design, and a request naming both a link and a location", async () => {
+    const dispatch = pageDispatcher(fakeApi());
+    await expect(dispatch("ApplyLocation", { url: "http://localhost:8080/designs/kicad/" })).rejects.toMatchObject({ code: Code.InvalidArgument });
+    await expect(dispatch("ApplyLocation", { url: "https://example.com/elsewhere" })).rejects.toMatchObject({ code: Code.InvalidArgument });
+    await expect(dispatch("ApplyLocation", { url: link, location: { sheet: "s1" } })).rejects.toMatchObject({ code: Code.InvalidArgument });
+  });
+
+  it("knows a link-only request from every other", () => {
+    expect(isLinkOnly("ApplyLocation", { url: link })).toBe(true);
+    expect(isLinkOnly("agni.v1.viewer.ViewerPageService/ApplyLocation", { url: link })).toBe(true);
+    expect(isLinkOnly("ApplyLocation", { url: link, location: {} })).toBe(false);
+    expect(isLinkOnly("ApplyLocation", { location: { sheet: "s1" } })).toBe(false);
+    expect(isLinkOnly("ApplyLocation", {})).toBe(false);
+    expect(isLinkOnly("ShowSheet", { url: link })).toBe(false);
+    expect(isLinkOnly("GetLocation", {})).toBe(false);
   });
 });

@@ -2,7 +2,7 @@ import { create, fromJson, toJson, type DescMethod, type JsonValue, type Message
 import { Code, ConnectError } from "@connectrpc/connect";
 import { ViewerLocationSchema, ViewerPageService, type ViewerLocation as WireLocation } from "./gen/agni/v1/viewer/page_pb.js";
 import type { ViewerPageAPI } from "./pageapi.js";
-import type { ViewerLocation } from "./router.js";
+import { hasFile, parseUrl, type ViewerLocation } from "./router.js";
 import type { RenderMode } from "./viewer.js";
 
 // pageservice.ts answers ViewerPageService (protos/agni/v1/viewer/page.proto) over a ViewerPageAPI,
@@ -32,7 +32,8 @@ export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
   const impl: PageImpl = {
     getLocation: async () => ({ location: here() }),
     applyLocation: async (req) => {
-      const { location, verdictResolved } = await api.applyLocation(locationFromWire(req.location));
+      if (req.url && req.location) throw new ConnectError("ApplyLocation takes a location or a url, not both", Code.InvalidArgument);
+      const { location, verdictResolved } = await api.applyLocation(req.url ? locationFromLink(req.url) : locationFromWire(req.location));
       return { location: locationToWire(location), verdictResolved };
     },
     locateVerdict: async (req) => ({ resolved: await api.locateVerdict(req.id, { rule: req.rule, subjects: req.subjects }), location: here() }),
@@ -64,6 +65,41 @@ export function pageDispatcher(api: ViewerPageAPI): PageDispatch {
     }
     return toJson(m.output, create(m.output, res));
   };
+}
+
+// isLinkOnly says whether a call is ApplyLocation carrying a url and nothing else, the one request
+// the page takes from any origin, since loading the link would do the same (agni issue 1156). A body
+// that does not parse is not one.
+export function isLinkOnly(method: string, body: JsonValue | undefined): boolean {
+  const m = findMethod(method);
+  if (m?.name !== "ApplyLocation") return false;
+  try {
+    const req = fromJson(ViewerPageService.method.applyLocation.input, body ?? {});
+    return req.url !== "" && req.location === undefined;
+  } catch {
+    return false;
+  }
+}
+
+// locationFromLink reads a viewer link as the location it addresses, keeping only what it sets, with
+// the parser the page reads its own address with. The link's host is not compared with the page's,
+// since a link minted for localhost names the same design on 127.0.0.1. A link to no design is
+// refused.
+export function locationFromLink(url: string): Partial<ViewerLocation> {
+  let u: URL;
+  try {
+    u = new URL(url, "http://link.invalid/");
+  } catch {
+    throw new ConnectError(`"${url}" is not a URL`, Code.InvalidArgument);
+  }
+  const loc = parseUrl(u.pathname, u.search);
+  if (!hasFile(loc)) throw new ConnectError(`"${url}" is not a link to a design in this viewer`, Code.InvalidArgument);
+  const out = locationFromWire(locationToWire(loc));
+  // A link can only say the two switches are on, so an absent one leaves the page's own alone rather
+  // than turning it off.
+  if (!loc.symbols) delete out.symbols;
+  if (!loc.flatten) delete out.flatten;
+  return out;
 }
 
 function findMethod(name: string): DescMethod | undefined {
