@@ -62,6 +62,8 @@ func TestRemoteAnswersAsTheLocalCommandDoes(t *testing.T) {
 		{"query text", queryCmd, "/RunQuery", []string{design, `component.mpn(?r, ?m) => ?r, ?m`}},
 		{"query json", queryCmd, "/RunQuery", []string{design, `component.mpn(?r, ?m) => ?r, ?m`, "--format", "json"}},
 		{"query markdown", queryCmd, "/RunQuery", []string{design, `component.mpn(?r, ?m) => ?r, ?m`, "--format", "markdown"}},
+		{"query witnesses", queryCmd, "/RunQuery", []string{design, `component.probed_one(?r, ?p, ?u) => ?r, ?u`, "--witnesses"}},
+		{"query witnesses json", queryCmd, "/RunQuery", []string{design, `component.probed_one(?r, ?p, ?u) => ?r, ?u`, "--witnesses", "--format", "json"}},
 		{"check text", checkCmd, "/CheckDesign", []string{design}},
 		{"check json", checkCmd, "/CheckDesign", []string{design, "--format", "json"}},
 		{"check verdicts", checkCmd, "/CheckDesign", []string{design, "--verdicts"}},

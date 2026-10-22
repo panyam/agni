@@ -328,6 +328,30 @@ func RowCites(resp *webapi.RunQueryResponse, r *webapi.QueryRow) []string {
 	return out
 }
 
+// RowWitnesses are a row's witnesses as a document renders them (agni issue 794), with each
+// citation read through the response's sources as RowCites reads a row's. Nil when the request asked
+// for none.
+func RowWitnesses(resp *webapi.RunQueryResponse, r *webapi.QueryRow) []rpt.Witness {
+	return witnessesOf(resp.GetSources(), r.GetWitnesses())
+}
+
+func witnessesOf(src []string, ws []*webapi.QueryWitness) []rpt.Witness {
+	if len(ws) == 0 {
+		return nil
+	}
+	out := make([]rpt.Witness, 0, len(ws))
+	for _, w := range ws {
+		n := rpt.Witness{Relation: w.GetRelation(), Values: w.GetValues(), Rule: w.GetRule(), Negated: w.GetNegated(), Children: witnessesOf(src, w.GetChildren())}
+		for _, i := range w.GetCiteIndex() {
+			if int(i) < len(src) {
+				n.Cites = append(n.Cites, src[i])
+			}
+		}
+		out = append(out, n)
+	}
+	return out
+}
+
 // CellLocation is where an answer cell's entity is drawn and why it cannot be located, read
 // through the response's entity table (agni issue 916). A scalar cell has neither.
 func CellLocation(resp *webapi.RunQueryResponse, r *webapi.QueryRow, i int) ([]string, checkspb.LocateReason) {
@@ -352,6 +376,16 @@ func NewSourceTable(resp *webapi.RunQueryResponse) *SourceTable {
 
 // Cite records row's citations, adding each new one to the response's sources.
 func (t *SourceTable) Cite(row *webapi.QueryRow, cites []string) {
+	row.CiteIndex = append(row.CiteIndex, t.Indexes(cites)...)
+}
+
+// Indexes are cites as indices into the response's sources, adding each new one, for anything on the
+// response that cites, a row or a witness (agni issue 794). Nil for no citations.
+func (t *SourceTable) Indexes(cites []string) []int32 {
+	if len(cites) == 0 {
+		return nil
+	}
+	out := make([]int32, 0, len(cites))
 	for _, c := range cites {
 		n, ok := t.at[c]
 		if !ok {
@@ -359,8 +393,9 @@ func (t *SourceTable) Cite(row *webapi.QueryRow, cites []string) {
 			n = num.Int32(len(t.resp.Sources) - 1)
 			t.at[c] = n
 		}
-		row.CiteIndex = append(row.CiteIndex, n)
+		out = append(out, n)
 	}
+	return out
 }
 
 // OutcomeWord is a verdict outcome as the lower-case word every surface prints. An unrecognised value

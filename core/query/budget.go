@@ -68,3 +68,12 @@ func Explain(r *ExplainReport) datalog.Option { return datalog.Explain(r) }
 // order by then solves the whole goal, since counting needs every row, though it still keeps only the
 // rows it returns.
 func Total(n *int) datalog.Option { return datalog.Total(n) }
+
+// Witness is how one fact of an answer holds: a leaf the fact base gave, with its citations, or the
+// rule that derived it with that rule's body witnesses in written order (jaala's Witness).
+type Witness = datalog.Witness
+
+// Witnesses asks an evaluation to record how each answer row was derived, in Table.Witness (agni
+// issue 794). The engine keeps a derivation only when asked, so an evaluation without it costs what
+// it always did.
+func Witnesses() datalog.Option { return datalog.Witnesses() }

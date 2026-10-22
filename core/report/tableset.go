@@ -137,6 +137,6 @@ type tableSetSectionView struct {
 	Name, Description, Error, Query string
 	Bindings                        []string
 	Header                          []string
-	Body                            [][]string
+	Body                            []bodyRow
 	Count                           string
 }
