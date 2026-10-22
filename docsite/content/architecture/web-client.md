@@ -170,3 +170,24 @@ may become a WebAssembly boundary, the expensive kind. `document.test.ts` reads 
 fails if it imports an interaction module or names interaction state, with a positive control that
 the same patterns match `viewer.ts`. A field the store gains belongs there only if it holds with no
 reader present; one that changes with a click belongs in the presenter.
+
+## The live page contract
+
+A viewer page is reached three ways: a link (`ViewerLocation` in the URL, applied once by `restore`),
+a click in a panel, and a call from a host through `ViewerPageAPI` (`web/src/pageapi.ts`, agni issue
+1150). The three land alike because they share the code that decides where to land. `sheetToOpen` in
+`viewer.ts` picks the sheet for a finding, a review finding and a verdict, and a verdict carries its
+own sheets on the wire (`Verdict.sheets`, filled by `AnnotateRunSheets` in `service/sheets.go`)
+since a passing verdict has no finding to borrow them from. `restore` and `applyLocation` both end in
+`arrive`, which asks what a location carries beyond the design. `web/src/navparity.test.ts` runs each
+path to the same finding and verdict and names the one that lands elsewhere. A new way to move the
+page goes through these, or it gets a row in that test.
+
+`ViewerPageAPI` is the TypeScript face of `ViewerPageService` (`protos/agni/v1/viewer/page.proto`),
+which the page answers itself. `pageservice.ts` dispatches a method name and a protojson body over
+it, and a transport only carries that pair: postMessage from a parent frame today (`embed.ts`, with
+the origin allowlist from `agni serve --embed-origin`), a server-held session or an MCP app host
+later. So a transport adds no behaviour, and a call behaves the same over any of them. The
+contract differs from a panel click in one way on purpose. A click on the focused finding clears it,
+and a call asks for a state, so selecting the focused finding keeps it. How a parent page uses it is
+in [Driving an embedded viewer](../build/embedding-the-viewer/).
