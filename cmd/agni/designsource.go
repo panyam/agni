@@ -130,12 +130,18 @@ func subSheetNote(root, typed string, named artifact.URI, d *webapi.Design) stri
 		return ""
 	}
 	dir := path.Dir(entry)
-	content, err := os.ReadFile(filepath.Join(root, filepath.FromSlash(entry)))
+	// Read through os.Root, so a Sheetfile reference cannot reach outside the design's mount.
+	mount, err := os.OpenRoot(root)
+	if err != nil {
+		return ""
+	}
+	defer mount.Close()
+	content, err := mount.ReadFile(filepath.FromSlash(entry))
 	if err != nil {
 		return ""
 	}
 	open := func(rel string) ([]byte, error) {
-		return os.ReadFile(filepath.Join(root, filepath.FromSlash(path.Join(dir, rel))))
+		return mount.ReadFile(filepath.FromSlash(path.Join(dir, rel)))
 	}
 	for _, f := range kicad.SheetFiles(content, open) {
 		if path.Join(dir, f) == named.Path {
