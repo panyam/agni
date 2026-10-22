@@ -291,6 +291,7 @@ describe("a selection's own checks", () => {
     terms: [],
     context: [],
     reason: "",
+    sheets: [],
   });
   const net = { level: "entity" as const, sel: { kind: "net" as const, net: "VIN" } };
 

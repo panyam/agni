@@ -186,6 +186,10 @@ export interface VerdictItem {
   context: FindingContext[];
   // reason is why a not-considered verdict could not be decided, in the rule author's words.
   reason: string;
+  // sheets are the ids of the sheets the subjects are drawn on, in the server's order (agni issue
+  // 1151), empty when the design has no resolvable geometry. Locating the verdict opens the first
+  // when the shown sheet is not among them.
+  sheets: string[];
 }
 
 // verdictSubjectLabel is a verdict's tuple as one cell, each entity as ref (or ref.pin for a pin)

@@ -308,7 +308,7 @@ describe("selecting a finding keeps the rows it already rendered", () => {
 function v(over: Partial<VerdictItem> = {}): VerdictItem {
   return {
     id: "i2c-pull-up:(net:SDA)", rule: "i2c-pull-up", outcome: "pass",
-    subjects: [{ kind: "net", subject: "SDA", pin: "" }], statement: "SDA reaches rail +3V3 through R1", terms: [], context: [], reason: "",
+    subjects: [{ kind: "net", subject: "SDA", pin: "" }], statement: "SDA reaches rail +3V3 through R1", terms: [], context: [], reason: "", sheets: [],
     ...over,
   };
 }

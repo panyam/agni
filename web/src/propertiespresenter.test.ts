@@ -130,7 +130,7 @@ describe("a selection's own checks", () => {
     p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
     return { p, last: () => states[states.length - 1] };
   }
-  const answer = (rule: string) => ({ verdicts: [{ id: `${rule}:(net:VIN)`, rule, outcome: "fail", subjects: [], statement: "s", terms: [], context: [], reason: "" }], notAsked: [] });
+  const answer = (rule: string) => ({ verdicts: [{ id: `${rule}:(net:VIN)`, rule, outcome: "fail", subjects: [], statement: "s", terms: [], context: [], reason: "", sheets: [] }], notAsked: [] });
   const checksRow = (s: PropertiesState) => s.rows.find((r) => r.label === "checks")?.value;
 
   it("asks about the selection on selecting it, saying so while it waits", async () => {
