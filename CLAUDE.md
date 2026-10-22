@@ -369,7 +369,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   taken port rather than moving. **A link names the design's declared ENTRY whatever you pointed the
   command at, and carries the revision it was read at**, which the viewer checks before it draws. Both
   report rpcs resolve `ReportLinks.design_uri` to the entry themselves (`linkMountPath`, agni 1120), so
-  a client may send the design's folder, as the viewer does.
+  a client may send the design's folder, as the viewer does. **A diff link is the older revision's
+  view with `?against=<mount>/<path>`** (`report.DiffURL`, agni 1126), which starts the viewer's Compare
+  as the picker does; `agni diff --server` prints it and the MCP `diff` tool returns it, and a
+  near-rename diff adds `rename_approx=1` so the comparison's tables pair them too.
   **A verdict link also carries `rule=`**, so the viewer resolves it by running ONE rule rather than
   the catalog (21.78s to 1.95s on a 3980-component
   board, and paid per click, because each click from a report is a fresh page load). The rule is
@@ -774,6 +777,20 @@ exercise-browser-review` runs it alone on Jetson (`WALK_DESIGN=gateway` for the 
 walks) and prints the step table for the mission log; headed, it stops
 before each step to explain it (`walkguide.ts`) until `STEP_BY_STEP=0`. A viewer change that breaks the
 walk fails it on that PR, so update the spec there rather than loosening it (agni 1118).
+**A headed run is a different page from a headless one, and four things only it showed** (agni 1124):
+a headed page takes the window's own size (`viewportFor` in `web/browser/browser.ts`), because a
+1000 px page in a shorter laptop window made Chrome pan to every click; the guided walk freezes the
+page while a panel waits and blocks clicks while a step runs, since a reader exploring between stops
+changed the page under the walk; the walk's own clicks lift that shield through `act()`, because
+`Input.setIgnoreInputEvents` drops Playwright's dispatched input as well as the reader's; and a
+query tab is opened in the page (`openTab`), since a real click on one timed out in a scrolled
+strip. Headless CI keeps 1400x1000 and never pauses.
+**The dock's boot sizes are fractions with floors** (agni 759, `web/src/dock.ts`): Query opens at a
+fifth of the height but at least 320 px and at most 45%, and the east rail at least 260 px. **A layout
+the browser saved keeps its old sizes** until the reader picks Panels → Reset layout (`resetLayout`),
+so check a dock change in a fresh profile. A spec that needs a taller Query panel drags the sash
+(`growQueryPanel` in `web/browser/panels.ts`); moving the panel's overlay instead leaves the sash
+across the result rows, where it takes their clicks.
 
 **A module that BUILDS is not a module that is tidy**, and the gate now asks both. `tidyall-check`
 runs `go mod tidy` over the root and every example module and fails on any difference (~5s, near the
