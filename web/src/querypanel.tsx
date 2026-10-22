@@ -20,7 +20,10 @@ import {
   numberKey,
   searchBindings,
   tabsFromSet,
-  groupRelations,
+  ROOT_PATH,
+  relationCrumbs,
+  tierLabel,
+  type RelationEntryItem,
   relationTemplate,
   STARTING_POINT_LIMIT,
 } from "./query.js";
@@ -141,6 +144,9 @@ function QueryPanel(props: {
   setStrip: (s: TabStrip) => void;
   newTabId: () => string;
   relations: () => RelationItem[];
+  // describe asks for one place in the relation namespace, which the picker drills through (agni
+  // issue 774). Absent, the picker shows only the syntax hint.
+  describe?: (path: string) => Promise<RelationEntryItem>;
   examples: () => ExampleItem[];
   entityQueries: () => EntityQueryItem[];
   search: () => SearchItem | null;
@@ -296,9 +302,25 @@ function QueryPanel(props: {
   // expanded holds the row indices whose provenance is open. It is view state, so it lives here
   // rather than in the pushed result.
   const [expanded, setExpanded] = createSignal<Set<number>>(new Set());
-  // detailRel is the relation whose reference doc (Detail) is open in the inspect pane, or null
-  // (WS14-005).
-  const [detailRel, setDetailRel] = createSignal<RelationItem | null>(null);
+  // The relation picker drills the namespace (agni issue 774). relPath is the place on screen, and
+  // entries keeps each place ListRelations has described, so walking back up asks nothing again.
+  const [relPath, setRelPath] = createSignal(ROOT_PATH);
+  const [entries, setEntries] = createSignal<Record<string, RelationEntryItem>>({});
+  const [relError, setRelError] = createSignal("");
+  const openRel = (path: string) => {
+    setRelPath(path);
+    setRelError("");
+    if (entries()[path] || !props.describe) return;
+    props.describe(path).then(
+      (e) => setEntries({ ...entries(), [path]: e }),
+      (err: unknown) => setRelError(err instanceof Error ? err.message : String(err)),
+    );
+  };
+  // The root is described once the catalog arrives, so the picker opens on it.
+  createEffect(() => {
+    if (props.relations().length > 0) untrack(() => !entries()[ROOT_PATH] && openRel(ROOT_PATH));
+  });
+  const relEntry = () => entries()[relPath()];
   // widths holds a per-column pixel width once the reader has dragged that column's edge. Untouched
   // columns share the table equally under .query-table's fixed layout. Auto layout sizes each column
   // to its widest cell, so one long provenance string or net name squeezes the rest to slivers.
@@ -517,7 +539,7 @@ function QueryPanel(props: {
   // insertRelation splices a relation template into the query at the caret, replacing any selection,
   // so a chip click extends the query rather than clobbering it. It restores focus with the caret
   // just after the snippet.
-  const insertRelation = (r: RelationItem) => {
+  const insertRelation = (r: { name: string; args: readonly string[] }) => {
     const snip = relationTemplate(r);
     const ta = taRef;
     const cur = text();
@@ -815,65 +837,84 @@ function QueryPanel(props: {
           </Show>
 
           <Show
-            when={props.relations().length > 0}
+            when={props.describe && props.relations().length > 0}
             fallback={
               <p class="query-relhint">Join on shared ?variables; =&gt; projects.</p>
             }
           >
             <div class="query-relations">
-              <div class="query-relations-hint">Click a relation to insert it. Join on shared ?variables; =&gt; projects.</div>
-              <For each={groupRelations(props.relations())}>
-                {(group) => (
-                  <div class="query-relgroup">
-                    <span class="query-relgroup-name">{group.label}</span>
-                    <For each={group.items}>
-                      {(r) => (
-                        <span class="query-relchip-wrap">
+              <nav class="query-relcrumbs" aria-label="Relation namespace">
+                <For each={relationCrumbs(relPath())}>
+                  {(c, i) => (
+                    <>
+                      <Show when={i() > 0}>
+                        <span class="query-relcrumb-sep">›</span>
+                      </Show>
+                      <button type="button" class="query-relcrumb" disabled={c.path === relPath()} onClick={() => openRel(c.path)}>
+                        {c.label}
+                      </button>
+                    </>
+                  )}
+                </For>
+              </nav>
+              <Show when={relError() !== ""}>
+                <div class="query-relerror">{relError()}</div>
+              </Show>
+              <Show when={relEntry()} fallback={<Show when={relError() === ""}><div class="query-relhint">Loading…</div></Show>}>
+                <Show
+                  when={relEntry()!.kind === "module"}
+                  fallback={
+                    <div class="query-relmember">
+                      <code class="query-relsignature">{relEntry()!.signature}</code>
+                      <Show when={tierLabel(relEntry()!.path, props.relations()) !== ""}>
+                        <span class="query-reltier">{tierLabel(relEntry()!.path, props.relations())}</span>
+                      </Show>
+                      <p class="query-reldoc">{relEntry()!.doc}</p>
+                      <Show when={relEntry()!.inferred.length > 0}>
+                        <p class="query-relinferred">Types inferred from its rules: {relEntry()!.inferred.join(", ")}</p>
+                      </Show>
+                      <button
+                        type="button"
+                        class="query-relinsert"
+                        onClick={() => insertRelation({ name: relEntry()!.path, args: relEntry()!.args })}
+                      >
+                        Insert {relationTemplate({ name: relEntry()!.path, args: relEntry()!.args })}
+                      </button>
+                      <Show when={relEntry()!.definition.length > 0}>
+                        <pre class="query-reldefinition">{relEntry()!.definition.join("\n")}</pre>
+                      </Show>
+                      <Show when={relEntry()!.detail !== ""}>
+                        <div
+                          class="query-reldetail-body md"
+                          innerHTML={renderMarkdown(resolveRelationImages(relEntry()!.detail))}
+                        />
+                      </Show>
+                    </div>
+                  }
+                >
+                  <div class="query-relations-hint">Choose a module to list its members, or a relation to see it and insert it. Join on shared ?variables; =&gt; projects.</div>
+                  <ul class="query-relmembers">
+                    <For each={relEntry()!.members}>
+                      {(m) => (
+                        <li class="query-relrow">
                           <button
                             type="button"
                             class="query-relchip"
-                            title={`${relationTemplate(r)} — ${r.summary}`}
-                            onClick={() => insertRelation(r)}
+                            data-kind={m.kind}
+                            title={m.kind === "module" ? `${m.path}: a module` : `${m.signature} — ${m.doc}`}
+                            onClick={() => openRel(m.path)}
                           >
-                            {r.name}
+                            {m.kind === "module" ? `${m.path} ›` : m.path}
                           </button>
-                          <Show when={r.detail !== ""}>
-                            <button
-                              type="button"
-                              class="query-relinfo"
-                              title={`Reference: ${r.name}`}
-                              aria-label={`Reference for ${r.name}`}
-                              onClick={() => setDetailRel(r)}
-                            >
-                              ?
-                            </button>
+                          <Show when={tierLabel(m.path, props.relations()) !== ""}>
+                            <span class="query-reltier">{tierLabel(m.path, props.relations())}</span>
                           </Show>
-                        </span>
+                        </li>
                       )}
                     </For>
-                  </div>
-                )}
-              </For>
-            </div>
-          </Show>
-
-          <Show when={detailRel()}>
-            <div class="query-reldetail">
-              <div class="query-reldetail-head">
-                <span class="query-reldetail-name">{detailRel()!.name}</span>
-                <button
-                  type="button"
-                  class="query-reldetail-close"
-                  aria-label="Close reference"
-                  onClick={() => setDetailRel(null)}
-                >
-                  ✕
-                </button>
-              </div>
-              <div
-                class="query-reldetail-body md"
-                innerHTML={renderMarkdown(resolveRelationImages(detailRel()!.detail))}
-              />
+                  </ul>
+                </Show>
+              </Show>
             </div>
           </Show>
         </div>
@@ -1067,6 +1108,9 @@ export function queryPanelIsland(
     // onSetFile hands over a set file the reader picked, for the host to parse and pass back through
     // view.openSet. Absent, the Sets menu offers no file.
     onSetFile?: (name: string, text: string) => void;
+    // describe asks ListRelations about one place in the namespace, under the open design's snapshot
+    // so a project's own library lists beside the shipped one. Absent, the picker shows the hint.
+    describe?: (path: string) => Promise<RelationEntryItem>;
   },
 ): { island: SolidIsland; view: QueryView } {
   // results holds each tab's answer by tab id, so an answer that arrives after the reader moved to
@@ -1120,6 +1164,7 @@ export function queryPanelIsland(
         setStrip={setStrip}
         newTabId={newTabId}
         relations={relations}
+        describe={handlers.describe}
         examples={examples}
         entityQueries={entityQueries}
         search={search}

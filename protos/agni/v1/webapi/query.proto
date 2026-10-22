@@ -285,6 +285,10 @@ message RelationEntry {
   // members are a module's direct children, each a member or a nested module, described one level
   // deep (their own members are not filled).
   repeated RelationEntry members = 9;
+  // args are a member's argument names in order, as RelationInfo.args, so a client inserting a
+  // template (`net.rail(?net)`) reads them rather than parsing the signature (agni issue 774). Empty
+  // for a module.
+  repeated string args = 10;
 }
 
 // ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog

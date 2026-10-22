@@ -404,18 +404,23 @@
     .query-example:hover { background: #e0e9f8; border-color: #b7c6e3; }
     .query-relations { margin: 6px 0 4px; }
     .query-relations-hint { color: #666; font-size: 11px; margin-bottom: 4px; }
-    .query-relgroup { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; margin-bottom: 3px; }
-    .query-relgroup-name { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; flex: 0 0 62px; }
-    .query-relchip-wrap { display: inline-flex; align-items: stretch; }
+    .query-relcrumbs { display: flex; flex-wrap: wrap; align-items: baseline; gap: 2px; margin-bottom: 4px; font-size: 11px; }
+    .query-relcrumb { border: 0; background: transparent; padding: 0 2px; cursor: pointer; color: #2b5ea8; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .query-relcrumb:disabled { color: #334; cursor: default; font-weight: 600; }
+    .query-relcrumb-sep { color: #999; }
+    .query-relmembers { list-style: none; margin: 0; padding: 0; max-height: 220px; overflow-y: auto; }
+    .query-relrow { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; padding: 1px 0; }
+    .query-reltier { color: #888; font-size: 10px; text-transform: uppercase; letter-spacing: 0.03em; }
+    .query-relmember { margin: 4px 0; border: 1px solid #d0d4da; border-radius: 6px; background: #fbfcfe; padding: 6px 8px; font-size: 12px; }
+    .query-relsignature { font-weight: 600; color: #334; margin-right: 8px; }
+    .query-reldoc { margin: 4px 0; }
+    .query-relinferred { margin: 2px 0; color: #666; font-size: 11px; }
+    .query-relinsert { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; padding: 2px 8px; border: 1px solid #b9c0ca; background: #e7ebf1; border-radius: 4px; cursor: pointer; margin: 4px 0; }
+    .query-relinsert:hover { background: #d3dae4; }
+    .query-reldefinition { margin: 4px 0; padding: 4px 6px; background: #f2f4f7; border-radius: 4px; font-size: 11px; white-space: pre-wrap; }
+    .query-relerror { color: #a33; font-size: 11px; margin: 4px 0; }
     .query-relchip { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; padding: 1px 7px; border: 1px solid #d0d4da; background: #f2f4f7; border-radius: 10px; cursor: pointer; color: #334; }
     .query-relchip:hover { background: #e2e8f0; border-color: #b9c0ca; }
-    .query-relchip-wrap:has(.query-relinfo) .query-relchip { border-radius: 10px 0 0 10px; border-right: 0; }
-    .query-relinfo { font-size: 10px; font-weight: 700; width: 16px; padding: 0; border: 1px solid #d0d4da; background: #e7ebf1; border-radius: 0 10px 10px 0; cursor: pointer; color: #556; }
-    .query-relinfo:hover { background: #d3dae4; border-color: #b9c0ca; }
-    .query-reldetail { margin: 6px 0; border: 1px solid #d0d4da; border-radius: 6px; background: #fbfcfe; }
-    .query-reldetail-head { display: flex; align-items: center; justify-content: space-between; padding: 4px 8px; border-bottom: 1px solid #e3e6eb; }
-    .query-reldetail-name { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 600; color: #334; }
-    .query-reldetail-close { border: 0; background: transparent; cursor: pointer; color: #889; font-size: 13px; padding: 0 2px; }
     .query-reldetail-body { padding: 6px 10px; font-size: 12px; overflow-x: auto; }
     .query-reldetail-body img { max-width: 100%; height: auto; }
     /* The selection bar sits under the query box: what was picked on the left, the next question as a

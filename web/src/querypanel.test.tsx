@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { queryPanelIsland } from "./querypanel.jsx";
-import { type ExampleItem, type QueryResult, type RelationItem, LocateReason, STARTING_POINT_LIMIT, emptyResult, errorResult, resultFromResponse } from "./query.js";
+import { type ExampleItem, type QueryResult, type RelationEntryItem, type RelationItem, LocateReason, STARTING_POINT_LIMIT, emptyResult, errorResult, resultFromResponse } from "./query.js";
 import { resultFromWire } from "./testwire.js";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema } from "./gen/agni/v1/webapi/query_pb.js";
@@ -19,12 +19,58 @@ function mountPanel() {
   const onLocate = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const panel = queryPanelIsland(el, null, { onRun, onLocate });
+  const describe = vi.fn(async (path: string) => {
+    const e = NAMESPACE[path];
+    if (!e) throw new Error(`no relation or module at ${path}`);
+    return e;
+  });
+  const panel = queryPanelIsland(el, null, { onRun, onLocate, describe });
   panel.island.activate();
   const push = (s: QueryResult) => panel.view.setState(s);
   const pushRelations = (rels: RelationItem[]) => panel.view.setRelations(rels);
   const pushExamples = (ex: ExampleItem[]) => panel.view.setExamples(ex);
-  return { el, panel, onRun, onLocate, push, pushRelations, pushExamples };
+  return { el, panel, onRun, onLocate, describe, push, pushRelations, pushExamples };
+}
+
+// entry is one place in a fake relation namespace, members one level deep as ListRelations sends them.
+function entry(e: Partial<RelationEntryItem> & { path: string; kind: string }): RelationEntryItem {
+  return { signature: "", doc: "", detail: "", module: "", definition: [], inferred: [], args: [], members: [], ...e };
+}
+
+const HAS_TP = entry({
+  path: "net.has_test_point",
+  kind: "derived",
+  module: "net",
+  signature: "net.has_test_point(n: net)",
+  doc: "A net a test point sits on.",
+  detail: "## net.has_test_point\n\nA probe lands here.\n",
+  definition: ['net.has_test_point(?n) :- component.net(?tp, ?n), component.class(?tp, "test_point")'],
+  inferred: ["n"],
+  args: ["n"],
+});
+const NET_RAIL = entry({ path: "net.rail", kind: "base", signature: "net.rail(net: net)", doc: "A rail.", args: ["net"] });
+
+// NAMESPACE is what the fake describe answers: the root holding entity and the net module, and net
+// holding a base, a derived and a predicate member.
+const NAMESPACE: Record<string, RelationEntryItem> = {
+  ".": entry({ path: "", kind: "module", members: [entry({ path: "entity", kind: "base" }), entry({ path: "net", kind: "module" })] }),
+  net: entry({ path: "net", kind: "module", members: [NET_RAIL, HAS_TP, entry({ path: "net.reaches", kind: "predicate" })] }),
+  "net.has_test_point": HAS_TP,
+  "net.rail": NET_RAIL,
+};
+
+// flush lets the picker's describe promises settle and the panel re-render.
+async function flush(): Promise<void> {
+  for (let i = 0; i < 5; i++) await Promise.resolve();
+}
+
+const relRows = (el: HTMLElement) =>
+  [...el.querySelectorAll(".query-relrow")].map((r) => [r.querySelector(".query-relchip")!.textContent, r.querySelector(".query-reltier")?.textContent ?? ""]);
+
+function clickRel(el: HTMLElement, label: string): void {
+  const b = [...el.querySelectorAll<HTMLButtonElement>(".query-relchip")].find((c) => c.textContent === label);
+  if (!b) throw new Error(`no relation chip ${label}`);
+  b.click();
 }
 
 // a two-row result over a component, a net, and a scalar column, with sheet badges on the entity
@@ -119,45 +165,53 @@ describe("querypanel", () => {
     expect(el.querySelector(".query-error-at")).toBeNull();
   });
 
-  it("renders relation chips grouped by kind, sorted by name within a group", () => {
-    const { el, pushRelations } = mountPanel();
-    // Before the catalog arrives, the panel shows the syntax hint, no chips.
+  it("opens on the namespace's root, its modules marked and each relation labelled with its tier", async () => {
+    const { el, pushRelations, describe } = mountPanel();
+    // Before the catalog arrives, the panel shows the syntax hint, no chips, and asks nothing.
     expect(el.querySelector(".query-relchip")).toBeNull();
-    pushRelations([
-      rel({ name: "net.max_voltage", kind: "netlist" }),
-      rel({ name: "component.net", kind: "netlist" }),
-      rel({ name: "net.reaches", kind: "predicate" }),
+    expect(describe).not.toHaveBeenCalled();
+    pushRelations([rel({ name: "entity", kind: "netlist" }), rel({ name: "net.rail", kind: "netlist" }), rel({ name: "net.reaches", kind: "predicate" })]);
+    await flush();
+    expect(describe).toHaveBeenCalledWith(".");
+    expect(relRows(el)).toEqual([
+      ["entity", "Netlist"],
+      ["net ›", ""],
     ]);
-    const groups = [...el.querySelectorAll(".query-relgroup")].map((g) => ({
-      label: g.querySelector(".query-relgroup-name")!.textContent,
-      chips: [...g.querySelectorAll(".query-relchip")].map((c) => c.textContent),
-    }));
-    // Netlist group before Predicates (kind order); chips alphabetical within the group.
-    expect(groups).toEqual([
-      { label: "Netlist", chips: ["component.net", "net.max_voltage"] },
-      { label: "Predicates", chips: ["net.reaches"] },
-    ]);
+    expect([...el.querySelectorAll(".query-relcrumb")].map((c) => c.textContent)).toEqual(["Relations"]);
   });
 
-  it("shows an info button only for a relation with a doc, and opens its Detail on click", () => {
-    const { el, pushRelations } = mountPanel();
-    pushRelations([
-      rel({ name: "net.bus_like", kind: "netlist", detail: "## net.bus_like\n\nA shared node.\n" }),
-      rel({ name: "net.rail", kind: "netlist", detail: "" }),
+  it("drills into a module, then a derived member, showing its definition and reference, and walks back without asking again", async () => {
+    const { el, pushRelations, describe } = mountPanel();
+    pushRelations([rel({ name: "net.rail", kind: "netlist" }), rel({ name: "net.has_test_point", kind: "derived" }), rel({ name: "net.reaches", kind: "predicate" })]);
+    await flush();
+    clickRel(el, "net ›");
+    await flush();
+    expect(relRows(el)).toEqual([
+      ["net.rail", "Netlist"],
+      ["net.has_test_point", "Library"],
+      ["net.reaches", "Predicates"],
     ]);
-    // The documented relation gets an info affordance; the undocumented one does not.
-    const infos = [...el.querySelectorAll(".query-relinfo")];
-    expect(infos.length).toBe(1);
-    // No detail pane until the info button is clicked.
-    expect(el.querySelector(".query-reldetail")).toBeNull();
-    (infos[0] as HTMLButtonElement).click();
-    const pane = el.querySelector(".query-reldetail");
-    expect(pane).not.toBeNull();
-    expect(pane!.querySelector(".query-reldetail-name")!.textContent).toBe("net.bus_like");
-    expect(pane!.querySelector(".query-reldetail-body")!.innerHTML).toContain("A shared node.");
-    // Closing removes the pane.
-    (pane!.querySelector(".query-reldetail-close") as HTMLButtonElement).click();
-    expect(el.querySelector(".query-reldetail")).toBeNull();
+    clickRel(el, "net.has_test_point");
+    await flush();
+    const member = el.querySelector(".query-relmember")!;
+    expect(member.querySelector(".query-relsignature")!.textContent).toBe("net.has_test_point(n: net)");
+    expect(member.querySelector(".query-reldefinition")!.textContent).toBe(HAS_TP.definition[0]);
+    expect(member.querySelector(".query-relinferred")!.textContent).toContain("n");
+    expect(member.querySelector(".query-reldetail-body")!.innerHTML).toContain("A probe lands here.");
+    expect([...el.querySelectorAll(".query-relcrumb")].map((c) => c.textContent)).toEqual(["Relations", "net", "has_test_point"]);
+    // A base member has no definition to show.
+    const crumbs = () => [...el.querySelectorAll<HTMLButtonElement>(".query-relcrumb")];
+    crumbs()[1].click();
+    await flush();
+    clickRel(el, "net.rail");
+    await flush();
+    expect(el.querySelector(".query-reldefinition")).toBeNull();
+    // Walking back to the root re-asks nothing the picker already holds.
+    const asked = describe.mock.calls.length;
+    crumbs()[0].click();
+    await flush();
+    expect(relRows(el).map((r) => r[0])).toEqual(["entity", "net ›"]);
+    expect(describe.mock.calls.length).toBe(asked);
   });
 
   it("renders component/net cells as locate buttons and scalars as plain text", () => {
@@ -320,16 +374,32 @@ describe("querypanel", () => {
     expect([...el.querySelectorAll(".query-cites li")].map((l) => l.textContent)).toEqual(["cite-B"]);
   });
 
-  it("inserts a relation template at the caret when its chip is clicked", () => {
+  it("inserts a member's template, with its argument names, at the caret", async () => {
     const { el, pushRelations } = mountPanel();
-    pushRelations([rel({ name: "component.net", args: ["ref_des", "net"] })]);
+    pushRelations([rel({ name: "net.has_test_point", kind: "derived" })]);
+    await flush();
+    clickRel(el, "net ›");
+    await flush();
+    clickRel(el, "net.has_test_point");
+    await flush();
     const ta = el.querySelector<HTMLTextAreaElement>("textarea.query-text")!;
     // Seed some text and place the caret between the two tokens.
     ta.value = "a,  => ?r";
     ta.dispatchEvent(new Event("input", { bubbles: true }));
     ta.setSelectionRange(3, 3); // after "a, "
-    el.querySelector<HTMLButtonElement>(".query-relchip")!.click();
-    expect(ta.value).toBe("a, component.net(?ref_des, ?net) => ?r");
+    const insert = el.querySelector<HTMLButtonElement>(".query-relinsert")!;
+    expect(insert.textContent).toBe("Insert net.has_test_point(?n)");
+    insert.click();
+    expect(ta.value).toBe("a, net.has_test_point(?n) => ?r");
+  });
+
+  it("says why when a place cannot be described", async () => {
+    const { el, pushRelations } = mountPanel();
+    pushRelations([rel({ name: "net.rail", kind: "netlist" })]);
+    await flush();
+    clickRel(el, "entity");
+    await flush();
+    expect(el.querySelector(".query-relerror")!.textContent).toBe("no relation or module at entity");
   });
 });
 

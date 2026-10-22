@@ -728,6 +728,14 @@ The panel runs the query on the server, over the open file, so you get the same 
 `agni query` without leaving the design. The **vocabulary** control in the top bar applies here too,
 and a query and a check in the same session then answer under the same vocabulary.
 
+**Examples & relations**, the drawer at the panel's edge, is `agni query --relations` with a mouse.
+It opens on the root of the namespace, and choosing a module (`net ›`) lists its members, each marked
+with its tier (Netlist, Board, Library and so on). Choosing a member shows its typed signature, which
+argument types the engine inferred, a library member's definition and its reference page, and an
+Insert button that puts `net.has_test_point(?n)` into the query at the cursor. The breadcrumb above
+walks back up. It lists the open design's project library beside the shipped one, as
+`--relations --design` does.
+
 Datasheet relations (`param.max`, `param.typ`) answer in the viewer when the design's project has a
 `params/` corpus or the server was started with `--params`, the same corpus `agni query` reads.
 
