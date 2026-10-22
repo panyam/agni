@@ -20,23 +20,25 @@ rule with nothing to compare against:
 
 {{ agniRun "content/tutorials/runs/06-check-params-off.yaml" }}
 
-The rule ran. It had no datasheet limits, so it decided nothing and could not even say what it would
-have looked at. A bare "no findings" reads the same here as it would on a board where the rule ran
+Both rules ran. They had no datasheet limits, so they decided nothing and could not even say what
+they would have looked at. A bare "no findings" reads the same here as it would on a board where the rule ran
 and everything was fine, and rung 9 exists to resolve that ambiguity.
 
 ## With the parameter set
 
 The project seeds one part, the NTS0102 level translator. Four of them sit between the module's 1.8 V
 I/O and the board's 3.3 V and 5 V peripherals, and one has its B side on `+5V`, which is the reason to
-check it at all. With the corpus named, as `project.yaml` names it, the same rule decides, and with `--verdicts` it says what
+check it at all. With the corpus named, as `project.yaml` names it, the same rules decide, and with `--verdicts` they say what
 each pin was compared against:
 
 {{ agniRun "content/tutorials/runs/06-check-abs-max-params.yaml" }}
 
 Every supply pin passes against the datasheet's 6.5 V absolute maximum, including the one on `+5V`.
-The four `not-considered` rows are the part's ground pins, which the board's KiCad symbol types as a
-supply input. `GND` names no voltage, so the rule declines them rather than comparing a ground against
-a ceiling.
+The answer comes from `pin-exceeds-abs-max`, which judges each pin against the row bound to it, and
+`supply-exceeds-abs-max` stays silent, because a part whose spec binds its rows to pins is left to the
+per-pin rule. The four `not-considered` rows are the part's ground pins, which the board's KiCad symbol
+types as a supply input. The spec declares only the two supplies, so a ground pin resolves to nothing
+in it and the rule declines it rather than guessing which limit applies.
 
 ## What a seeded part looks like
 
@@ -50,13 +52,21 @@ docs {
   vendor: "NXP Semiconductors"
 }
 
+pins {
+  id: "vccb"
+  name: "VCC(B)"
+  function: PIN_FUNCTION_POWER_INPUT
+  prov { doc_ref: "nts0102-rev-4" page: 5 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
+}
+
 parameters {
   name: "Supply voltage B, VCC(B)"
-  symbol: "VCC"
+  symbol: "VCC(B)"
   limit_kind: LIMIT_KIND_ABSOLUTE_MAX
   value { min: -0.5 max: 6.5 }
   unit: "V"
   condition_coverage: CONDITION_COVERAGE_UNCONDITIONAL
+  pin_refs: "vccb"
   prov { doc_ref: "nts0102-rev-4" page: 5 table_or_figure: "Table 5. Limiting values" method: "hand" confidence: 1 }
 }
 ```
@@ -72,9 +82,13 @@ seeded the corpus is.
 operating range (exceed it and behavior is no longer guaranteed). They are different questions and
 conflating them produces either false alarms or missed defects, as the next section shows.
 
-`symbol` is matched against a short list of supply spellings, `VIN`, `VDD`, `VCC` and a few more. The
-datasheet writes `VCC(A)` and `VCC(B)`, which are not on that list, so a row copied exactly would be
-skipped without a word. The file writes `VCC` and keeps the datasheet's spelling in `name`.
+`pin_refs` binds a row to the pin it is about. The NTS0102 has two supplies with one absolute maximum
+and different recommended ranges, 1.65 to 3.6 V on `VCC(A)` and 2.3 to 5.5 V on `VCC(B)`, so a row
+that named neither would leave the rules unable to say which range belongs to which pin. The pins are
+declared under the names the datasheet prints, and the board's symbol, which writes `VCC_{A}`, still
+matches, because a pin name is compared with its subscript folded. A row with no `pin_refs` is about
+the part as a whole, and its `symbol` must then be one of a short list of supply spellings (`VIN`,
+`VDD`, `VCC` and a few more) for `supply-exceeds-abs-max` to read it.
 
 `condition_coverage` is a gate rather than documentation. A limit that holds only under conditions
 nobody recorded cannot be compared automatically, and a row marked anything other than complete or

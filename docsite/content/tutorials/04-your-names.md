@@ -84,7 +84,9 @@ a trailing `n`, and the rule asks for one spelling.
 
 ## Both halves, visible
 
-Without the section:
+Both runs leave out the parameter corpus that rung 6 introduces, since a datasheet that names a part's
+supply pins also tells the engine which nets are rails, and here the point is what the conventions
+alone change. Without the section:
 
 {{ agniRun "content/tutorials/runs/04-check-conventions-off.yaml" }}
 
