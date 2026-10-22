@@ -45,6 +45,14 @@ The last step goes past what a coverage report can ask.
 > would be unsafe and return nothing rather than an error. `agni query --relations
 > component.probed_one` prints any of them with its definition.
 
+## How one row holds {#why}
+
+> A bucket names the parts and not the reason. `--witnesses` asks the engine to keep how each row was
+> derived: the walk's own `passive` rule, the library member `component.probed_one` with each of its
+> body facts filled in, and the `not net.has_test_point` that held, shown as an absence. A fact the
+> design gave cites where it came from, so the tree ends in the netlist. In the viewer, opening a row
+> of the query panel shows the same tree, each net and part in it a link to the drawing.
+
 ## The parts nobody can measure, by part number {#by-mpn}
 
 > One uncovered part is an oversight. Several of one part number is a placement habit, and that is the

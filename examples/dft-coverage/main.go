@@ -23,6 +23,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/query"
+	"github.com/panyam/agni/core/report"
 	"github.com/panyam/agni/examples/common"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	_ "github.com/panyam/agni/stdlib/lib"           // register the shipped derived relations the coverage buckets call
@@ -113,6 +114,29 @@ func main() {
 		fmt.Printf("both ends probed (measurable in circuit): %d\n", len(must(rows(d, bothQuery))))
 		fmt.Printf("one end probed  (present, not measurable): %d  %s\n", len(must(rows(d, oneQuery))), refs(must(rows(d, oneQuery))))
 		fmt.Printf("neither end     (invisible to test)      : %d  %s\n", len(must(rows(d, neitherQuery))), refs(must(rows(d, neitherQuery))))
+		return nil
+	})
+
+	demo.Bind("why").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		d, err := design.Load()
+		if err != nil {
+			return demokit.Errf("load %s: %v", design.Path(), err)
+		}
+		// Witnesses say how a row holds (agni issue 794): the walk's own passive rule, then the library
+		// member with its body facts, and the `not` that put the part in this bucket.
+		cli("agni query <design> '" + oneQuery + "' --witnesses")
+		cells, ws, err := witnessed(d, oneQuery)
+		if err != nil {
+			return demokit.Errf("%v", err)
+		}
+		if cells == nil {
+			fmt.Println("No passive has exactly one end probed, so there is no row to explain.")
+			return nil
+		}
+		fmt.Printf("%s counts as one end probed, with %s the unprobed net, because:\n\n", cells[0], cells[1])
+		for _, l := range report.WitnessLines(ws) {
+			fmt.Println("  " + l)
+		}
 		return nil
 	})
 
@@ -222,6 +246,44 @@ func rows(d *ir.Design, q string) ([][]string, error) {
 		out = append(out, vals)
 	}
 	return out, nil
+}
+
+// witnessed evaluates q with witnesses and returns its first row's cells and how that row holds, or
+// nil cells when q answers nothing.
+func witnessed(d *ir.Design, q string) ([]string, []report.Witness, error) {
+	parsed, err := query.Parse(q)
+	if err != nil {
+		return nil, nil, fmt.Errorf("parse: %w", err)
+	}
+	tab, err := query.Default.EvalTable(context.Background(), parsed, query.NewBase(check.NewModel(d)), query.Witnesses())
+	if err != nil {
+		return nil, nil, fmt.Errorf("eval: %w", err)
+	}
+	if len(tab.Rows) == 0 {
+		return nil, nil, nil
+	}
+	if tab.Witness == nil {
+		return nil, nil, fmt.Errorf("the evaluation recorded no witnesses")
+	}
+	cells := make([]string, len(tab.Rows[0]))
+	for i, v := range tab.Rows[0] {
+		cells[i] = query.Display(v)
+	}
+	return cells, reportWitnesses(tab.Witness[0]), nil
+}
+
+// reportWitnesses is the engine's witnesses as report.WitnessLines renders them, the tree `agni query
+// --witnesses` prints.
+func reportWitnesses(ws []*query.Witness) []report.Witness {
+	out := make([]report.Witness, 0, len(ws))
+	for _, w := range ws {
+		n := report.Witness{Relation: w.Relation, Rule: w.Rule, Negated: w.Negated, Cites: w.Cites, Children: reportWitnesses(w.Children)}
+		for _, v := range w.Values {
+			n.Values = append(n.Values, query.Display(v))
+		}
+		out = append(out, n)
+	}
+	return out
 }
 
 // must panics on a query failure rather than returning an empty answer, because an empty answer
