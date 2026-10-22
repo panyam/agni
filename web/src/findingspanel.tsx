@@ -293,7 +293,7 @@ function ChecksPanel(props: {
                     <Show when={sec.value !== null}>
                       <tr class="check-group">
                         <td colspan={5}>
-                          <button type="button" class="check-group-head" onClick={() => toggleGroup(sec.value!)}>
+                          <button type="button" class={`check-group-head${axis() === "rule" ? " rule" : ""}`} onClick={() => toggleGroup(sec.value!)}>
                             <span class="check-group-twist">{collapsed().has(sec.value!) ? "▸" : "▾"}</span>
                             <span class="check-group-name">{sec.value || "(none)"}</span>
                             <Show when={sec.count > 0 || sec.unresolved === 0}>

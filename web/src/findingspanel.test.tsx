@@ -570,6 +570,8 @@ describe("a rule group links to the rule's reference page", () => {
     expect(links[0].target).toBe("_blank");
     expect(links[0].closest("tr")!.querySelector(".check-group-name")!.textContent).toBe("i2c-pull-up");
     expect(links[0].closest("button")).toBeNull();
+    // The header keeps the rule's spelling, since copper-clearance is an identifier and not a title.
+    expect(el.querySelector(".check-group-head")!.classList.contains("rule")).toBe(true);
   });
 
   it("does not fold the group when the link is clicked", () => {

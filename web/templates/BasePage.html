@@ -227,6 +227,8 @@
     .check-group td { background: #f6f7f9; border-bottom: 1px solid #e3e5e8; padding: 2px 6px; }
     .check-group-head { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; font: inherit; color: #444; font-weight: 600; padding: 0; cursor: pointer; text-transform: capitalize; }
     .check-group-twist { color: #999; }
+    /* A rule's name is an identifier, so it keeps its spelling where a category or severity reads as a title. */
+    .check-group-head.rule { text-transform: none; }
     .check-group-doc, .rule-doc { margin-left: 8px; font-size: 10px; font-weight: normal; color: #2563eb; text-decoration: none; white-space: nowrap; }
     .check-group-doc:hover, .rule-doc:hover { text-decoration: underline; }
     .check-sev { width: 14px; }
