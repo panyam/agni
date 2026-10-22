@@ -248,6 +248,10 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		if a.Link != want || a.NoLink != "" || !strings.Contains(res.Content[0].Text, "open in the viewer: "+want+"\n") {
 			t.Errorf("diff link %q (no_link %q), want %q; text:\n%s", a.Link, a.NoLink, want, res.Content[0].Text)
 		}
+		// Asked to pair near-renames, the link asks the viewer to pair them too.
+		if _, ra := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1, "rename_approx": true}); ra.Link != want+"&rename_approx=1" {
+			t.Errorf("diff link with rename_approx %q, want %q", ra.Link, want+"&rename_approx=1")
+		}
 	})
 
 	t.Run("review", func(t *testing.T) {

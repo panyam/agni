@@ -1274,7 +1274,7 @@ func diffCmd() *cobra.Command {
 			}
 			// The link goes to stderr for every format, as trace's does, so stdout stays the diff a
 			// script parses and the json stays the wire message (C31, agni issue 1126).
-			if u := diffLink(cmd, srvSpec, args[0], args[1]); u != "" {
+			if u := diffLink(cmd, srvSpec, args[0], args[1], renameApprox); u != "" {
 				fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
 			}
 			return nil
@@ -1343,11 +1343,15 @@ func runDiff(cmd *cobra.Command, older, newer, format string, orderBy []string, 
 // diffLink is the link that opens older in the viewer with Compare started against newer, or "" when
 // the run asked for none or none is safe to make (agni issue 1126). Each side goes through
 // viewerLinkMeta, the rule check and trace use, so a side whose mount the server does not serve
-// withholds the link and says why on stderr.
-func diffLink(cmd *cobra.Command, spec serverSpec, older, newer string) string {
+// withholds the link and says why on stderr. Both sides ask one server, so a note that applies to the
+// server (an unreachable one leaves every link unverified) is printed once rather than once a side.
+func diffLink(cmd *cobra.Command, spec serverSpec, older, newer string, renameApprox bool) string {
 	if !spec.active() {
 		return ""
 	}
+	stderr := cmd.ErrOrStderr()
+	cmd.SetErr(&onceLines{w: stderr, seen: map[string]bool{}})
+	defer cmd.SetErr(stderr)
 	ll := &localLoader{loader: newLoader()}
 	var metas [2]rpt.Report
 	for i, arg := range []string{older, newer} {
@@ -1357,7 +1361,28 @@ func diffLink(cmd *cobra.Command, spec serverSpec, older, newer string) string {
 		}
 		metas[i] = viewerLinkMeta(cmd, cmd.Context(), ll, u, spec)
 	}
-	return rpt.DiffURL(metas[0], metas[1])
+	return rpt.DiffURL(metas[0], metas[1], renameApprox)
+}
+
+// onceLines writes each distinct line once, for notes two calls about one server would repeat.
+type onceLines struct {
+	w    io.Writer
+	seen map[string]bool
+}
+
+func (o *onceLines) Write(p []byte) (int, error) {
+	for _, line := range strings.SplitAfter(string(p), "\n") {
+		if line == "" || o.seen[line] {
+			continue
+		}
+		if strings.TrimSpace(line) != "" {
+			o.seen[line] = true
+		}
+		if _, err := io.WriteString(o.w, line); err != nil {
+			return 0, err
+		}
+	}
+	return len(p), nil
 }
 
 func emitCmd() *cobra.Command {

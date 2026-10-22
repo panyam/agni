@@ -32,6 +32,9 @@ func TestADiffLinksToTheViewersComparison(t *testing.T) {
 			if u.Path != "/designs/demo/crystal.fires.edn/view" || u.Query().Get("against") != "demo/crystal.passes.edn" {
 				t.Errorf("link %s, want the earlier revision's view against demo/crystal.passes.edn", u)
 			}
+			if u.Query().Has("rename_approx") {
+				t.Errorf("link %s asks for near-renames the diff did not pair", u)
+			}
 			if strings.Contains(stdout, "look at it") {
 				t.Errorf("the link went to stdout:\n%s", stdout)
 			}
@@ -55,5 +58,38 @@ func TestADiffWithoutAServerPrintsNoLink(t *testing.T) {
 	_, stderr := runDiffBoth(t, "mount://demo/crystal.fires.edn", "mount://demo/crystal.passes.edn")
 	if strings.Contains(stderr, "look at") || strings.Contains(stderr, "no links") {
 		t.Errorf("link talk with no --server:\n%s", stderr)
+	}
+}
+
+// A diff that paired near-renames links a comparison that pairs them too, so the reader does not
+// have to tick the option the command was already given.
+func TestADiffLinkCarriesNearRenames(t *testing.T) {
+	withMount(t)
+	_, stderr := runDiffBoth(t, "mount://demo/crystal.fires.edn", "mount://demo/crystal.passes.edn", "--rename-approx", "--server", urlBaseFlag)
+	if u := linkIn(t, stderr, "look at it: "); u.Query().Get("rename_approx") != "1" {
+		t.Errorf("link %s, want rename_approx=1", u)
+	}
+}
+
+// Both revisions ask one server, so a note about that server (an unreachable one leaves the links
+// unverified) is said once, not once per revision.
+func TestADiffSaysEachLinkNoteOnce(t *testing.T) {
+	withMount(t)
+	_, stderr := runDiffBoth(t, "mount://demo/crystal.fires.edn", "mount://demo/crystal.passes.edn", "--server", "http://127.0.0.1:1")
+	seen := map[string]bool{}
+	notes := 0
+	for _, line := range strings.Split(stderr, "\n") {
+		line = strings.TrimSpace(line)
+		if !strings.HasPrefix(line, "note:") {
+			continue
+		}
+		notes++
+		if seen[line] {
+			t.Errorf("said twice: %s\nstderr:\n%s", line, stderr)
+		}
+		seen[line] = true
+	}
+	if notes == 0 {
+		t.Fatalf("an unreachable server left no note to check:\n%s", stderr)
 	}
 }

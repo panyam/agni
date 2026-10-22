@@ -203,8 +203,12 @@ func TestDiffURL(t *testing.T) {
 	a := Report{URLBase: "http://h:8080", MountPath: "m/d/b.edn"}
 	b := Report{URLBase: "http://h:8080", MountPath: "m/d/b-rev-c.edn"}
 	want := "http://h:8080/designs/m/d/b.edn/view?against=m%2Fd%2Fb-rev-c.edn"
-	if got := DiffURL(a, b); got != want {
+	if got := DiffURL(a, b, false); got != want {
 		t.Errorf("DiffURL = %q, want %q", got, want)
+	}
+	// A diff that paired near-renames says so, so the viewer's tables pair them too.
+	if got := DiffURL(a, b, true); got != want+"&rename_approx=1" {
+		t.Errorf("DiffURL with near-renames = %q, want %q", got, want+"&rename_approx=1")
 	}
 }
 
@@ -223,7 +227,7 @@ func TestDiffURLRefusesWhatItCannotPromise(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			if got := DiffURL(c.a, c.b); got != "" {
+			if got := DiffURL(c.a, c.b, true); got != "" {
 				t.Errorf("got %q, want no link", got)
 			}
 		})

@@ -281,8 +281,9 @@ class AppRoot extends BaseComponent {
     let openFile: { mount: string; path: string } | null = null;
     // The pick callback means "compare against this", not "set side B". A link naming a design to
     // compare against (?against=, agni issue 1126) starts the same comparison through compareWith.
-    const compareWith = (target: CompareTarget): void => {
+    const compareWith = (target: CompareTarget, opts?: { nearRenames?: boolean }): void => {
       if (!openFile) return;
+      if (opts?.nearRenames) tablesPresenter.setNearRenames(true);
       if (dockApi) openDiffPanel(dockApi);
       void diffPresenter.open(openFile, target);
     };

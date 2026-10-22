@@ -199,6 +199,17 @@ describe("a comparison in the URL (agni issue 1126)", () => {
     expect(back.against).toBe("m/c.edn");
   });
 
+  // A diff that paired near-renames (agni diff --rename-approx) says so, and the link carries it only
+  // beside a design to compare against, since alone it asks nothing.
+  it("reads rename_approx beside against, and drops it alone", () => {
+    expect(parseUrl("/designs/m/b.edn/view", "?against=m%2Fc.edn&rename_approx=1").renameApprox).toBe(true);
+    expect(parseUrl("/designs/m/b.edn/view", "?against=m%2Fc.edn").renameApprox).toBe(false);
+    expect(parseUrl("/designs/m/b.edn/view", "?rename_approx=1").renameApprox).toBe(false);
+    const back = parseUrl(...splitHref(locationToUrl(loc({ mount: "m", path: "b.edn", against: "m/c.edn", renameApprox: true }))));
+    expect(back.renameApprox).toBe(true);
+    expect(locationToUrl(loc({ mount: "m", path: "b.edn", renameApprox: true }))).not.toContain("rename_approx");
+  });
+
   it("reads a value naming no file in a mount as no design", () => {
     for (const bad of ["", "m", "m/", "/c.edn"]) expect(againstTarget(bad), bad).toBeNull();
   });

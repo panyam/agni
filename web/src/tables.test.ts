@@ -84,6 +84,15 @@ describe("TablesPresenter", () => {
     expect(h.encoded[0].tables?.map((t) => t.name)).toEqual(["findings"]);
   });
 
+  // A diff link that paired near-renames ticks the option before the comparison is shown, and asks
+  // nothing until the panel shows it (agni issue 1126).
+  it("sets near-renames for the comparison without asking for its tables", async () => {
+    const h = harness();
+    h.p.setNearRenames(true);
+    expect(h.state().compare.nearRenames).toBe(true);
+    expect(h.tabulated).toHaveLength(0);
+  });
+
   it("clears a comparison's tables when the comparison closes, and keeps others", async () => {
     const h = harness();
     await h.p.show("compare");

@@ -139,7 +139,8 @@ export interface ViewSink {
   // compare starts a comparison of the open design against another, as picking it in the Compare
   // picker does, when a link arrives naming one (agni issue 1126). Optional like location, since a
   // host without the Compare chrome has no comparison to start.
-  compare?: (against: { mount: string; path: string }) => void;
+  // nearRenames carries a link's rename_approx, so the comparison's tables pair them as the diff did.
+  compare?: (against: { mount: string; path: string }, opts?: { nearRenames?: boolean }) => void;
   // overview receives the per-sheet violation tiles (WS9-025) whenever the findings or the
   // shown sheet change. Optional like query.
   overview?: OverviewView;
@@ -641,7 +642,9 @@ export class ViewerPresenter {
     // comparison its Compare picker starts. The open design itself is ignored, as the picker refuses
     // it.
     const against = againstTarget(loc.against);
-    if (against && !(against.mount === loc.mount && against.path === loc.path)) this.views.compare?.(against);
+    if (against && !(against.mount === loc.mount && against.path === loc.path)) {
+      this.views.compare?.(against, { nearRenames: loc.renameApprox });
+    }
   }
 
   // openSetMember opens one query of the design's project sets, found by the set's name and the
@@ -693,6 +696,7 @@ export class ViewerPresenter {
       set: "",
       q: "",
       against: "",
+      renameApprox: false,
     };
   }
 

@@ -425,7 +425,7 @@ describe("ViewerPresenter", () => {
       nativeAvailable: true,
       availableLayouts: ["faithful", "grid"],
     } as any);
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
@@ -443,7 +443,14 @@ describe("ViewerPresenter", () => {
     const h = harness();
     h.onCompare.mockImplementation(() => expect(h.getDesign).toHaveBeenCalled());
     await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/board.edn", against: "m/d/board-rev-c.edn" });
-    expect(h.onCompare).toHaveBeenCalledExactlyOnceWith({ mount: "m", path: "d/board-rev-c.edn" });
+    expect(h.onCompare).toHaveBeenCalledExactlyOnceWith({ mount: "m", path: "d/board-rev-c.edn" }, { nearRenames: false });
+  });
+
+  // A link from a diff that paired near-renames asks the comparison to pair them too.
+  it("asks the comparison to pair near-renames when the link says the diff did", async () => {
+    const h = harness();
+    await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/board.edn", against: "m/d/board-rev-c.edn", renameApprox: true });
+    expect(h.onCompare).toHaveBeenCalledExactlyOnceWith({ mount: "m", path: "d/board-rev-c.edn" }, { nearRenames: true });
   });
 
   // The picker refuses the open design as side B, and so does a link, and a link naming no file in a
@@ -462,7 +469,7 @@ describe("ViewerPresenter", () => {
   // about fifteen seconds, paid again on every click, because each click is a fresh page load.
   describe("a verdict link runs only the rule it names", () => {
     function linkLoc(rule: string, subjects: string[] = []) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, subjects, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, subjects, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
     }
     // The rules the run actually asked the server for, flattened across calls.
     function asked(h: ReturnType<typeof harness>): string[] {
@@ -557,7 +564,7 @@ describe("ViewerPresenter", () => {
   describe("stale verdict links", () => {
     // A location naming a verdict and the revision it was computed against.
     function linkLoc(hash: string) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "some-rule:net:VBUS", hash, rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "some-rule:net:VBUS", hash, rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
     }
     function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
       h.getDesign.mockResolvedValue({
@@ -628,7 +635,7 @@ describe("ViewerPresenter", () => {
 
   it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
     const h = harness(); // default design has only s1
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false });
     expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
   });
 

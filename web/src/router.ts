@@ -81,6 +81,9 @@ export interface ViewerLocation {
   // MCP diff answer can link to a comparison. Read on arrival and not written back, like `query`,
   // since the comparison is the reader's own from then on.
   against: string;
+  // renameApprox asks that comparison's tables to pair near-renames, as the diff behind the link did
+  // (`rename_approx=1`, from `agni diff --rename-approx` or the MCP tool's rename_approx).
+  renameApprox: boolean;
 }
 
 // base is the path the app is served under, "/" on `agni serve` and "/agni/demo/" on the static
@@ -136,7 +139,7 @@ const BROWSER_MOUNT = "local";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "", renameApprox: false };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -194,6 +197,7 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
     params.set("q", loc.q);
   }
   if (loc.against) params.set("against", loc.against);
+  if (loc.against && loc.renameApprox) params.set("rename_approx", "1");
   if (staticHost && loc.mount === BROWSER_MOUNT) {
     const all = new URLSearchParams([[DROP_PARAM, loc.path], ...params]);
     return `${designsPrefix()}${BROWSER_MOUNT}/${page}/?${all.toString()}`;
@@ -306,6 +310,7 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   loc.set = set && member ? set : "";
   loc.q = set && member ? member : "";
   loc.against = params.get("against") ?? "";
+  loc.renameApprox = loc.against !== "" && params.get("rename_approx") === "1";
   return loc;
 }
 

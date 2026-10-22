@@ -159,7 +159,7 @@ describe("a trace arriving in the URL", () => {
       binds: [],
       set: "",
       q: "",
-      against: "",
+      against: "", renameApprox: false,
     });
     expect(h.traceDesign).toHaveBeenCalledWith({
       snapshot: snapName(artifactUri("m", "proj/board.edn")),
@@ -181,7 +181,7 @@ describe("a trace arriving in the URL", () => {
       binds: [],
       set: "",
       q: "",
-      against: "",
+      against: "", renameApprox: false,
     });
     const calls = h.traceDesign.mock.calls;
     expect(calls[calls.length - 1][0].hops).toBe(2);
@@ -197,7 +197,7 @@ describe("a trace arriving in the URL", () => {
       binds: [],
       set: "",
       q: "",
-      against: "",
+      against: "", renameApprox: false,
     });
     expect(h.traceDesign).not.toHaveBeenCalled();
   });

@@ -285,11 +285,19 @@ func rowOf(v check.Verdict, meta Report) Row {
 // designs as they are now. Both sides must be linkable on ONE server, since the viewer reads the
 // second design through the mount table that serves the first, so a withheld link on either side,
 // or two different bases, yields no link.
-func DiffURL(meta, bmeta Report) string {
+//
+// renameApprox carries the near-rename pairing the diff was asked for (--rename-approx, the MCP
+// tool's rename_approx), so the viewer's comparison tables pair them too rather than leaving the
+// reader to tick the option.
+func DiffURL(meta, bmeta Report, renameApprox bool) string {
 	if meta.URLBase == "" || meta.MountPath == "" || bmeta.MountPath == "" || bmeta.URLBase != meta.URLBase {
 		return ""
 	}
-	return meta.URLBase + "/designs/" + meta.MountPath + "/view?against=" + url.QueryEscape(bmeta.MountPath)
+	u := meta.URLBase + "/designs/" + meta.MountPath + "/view?against=" + url.QueryEscape(bmeta.MountPath)
+	if renameApprox {
+		u += "&rename_approx=1"
+	}
+	return u
 }
 
 // TraceURL is the viewer link that re-asks a pin-to-pin question, "" when this run cannot promise

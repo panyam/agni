@@ -284,7 +284,7 @@ func (s *srv) diff(ctx context.Context, in diffInput) (core.ToolResult, error) {
 	if why == "" {
 		var bmeta rpt.Report
 		bmeta, why = s.linkMeta(snaps[1])
-		link = rpt.DiffURL(meta, bmeta)
+		link = rpt.DiffURL(meta, bmeta, in.RenameApprox)
 	}
 	writeLink(&b, link, why)
 	return answer(b.String(), map[string]any{"design": au.String(), "against": bu.String(), "rename_approx": in.RenameApprox,
