@@ -362,7 +362,7 @@ func TestFSStoreReadsOnlyTheSourcesADescriptorNames(t *testing.T) {
 		t.Errorf("a source naming nothing: error = %v, want the load refused naming it", err)
 	}
 	s = NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: p\nlib: [../outside]\n"})})
-	if _, err := s.Projects(context.Background()); err == nil || !strings.Contains(err.Error(), "escapes its mount") {
+	if _, err := s.Projects(context.Background()); err == nil || !strings.Contains(err.Error(), `lib "../outside" is outside mount "m"`) {
 		t.Errorf("a source leaving the mount: error = %v, want it refused", err)
 	}
 }
@@ -446,5 +446,33 @@ func TestFSStoreNamesAProjectsParentByResourceName(t *testing.T) {
 	s = NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"a/project.yaml": "name: a\nextends: ../house/project.yaml\n"})})
 	if _, err := s.Projects(ctx); err == nil || !strings.Contains(err.Error(), "names nothing") {
 		t.Errorf("extending a descriptor that is not there: error = %v, want it refused", err)
+	}
+}
+
+// A design copied out of its project, or mounted or dropped without it, names a parent that is not
+// there. The error says what to do: bring the project along, or remove extends to read the design on
+// its own.
+func TestFSStoreSaysHowToReadADesignWithoutItsProject(t *testing.T) {
+	ctx := context.Background()
+	for name, c := range map[string]struct {
+		files map[string]string
+		at    string
+		want  string
+	}{
+		"mounted alone": {
+			files: map[string]string{"design.yaml": "name: g\nextends: ../../project.yaml\nentry: g.edn\n", "g.edn": "x"},
+			at:    "g.edn",
+			want:  `extends "../../project.yaml" is outside mount "m", so it cannot be read; mount or drop the folder holding that project.yaml as well, or remove extends`,
+		},
+		"dropped alone": {
+			files: map[string]string{"drop-1/g/design.yaml": "name: g\nextends: ../../project.yaml\nentry: g.edn\n", "drop-1/g/g.edn": "x"},
+			at:    "drop-1/g/g.edn",
+			want:  `extends "../../project.yaml" names nothing (looked for mount://m/project.yaml); mount or drop the folder holding that project.yaml as well, or remove extends`,
+		},
+	} {
+		_, _, err := NewFSStore(Tree{Mount: "m", FS: mapFS(c.files)}).ResolveDesign(ctx, testURI(t, "m", c.at))
+		if err == nil || !strings.Contains(err.Error(), c.want) {
+			t.Errorf("%s: error = %v\nwant it to say %q", name, err, c.want)
+		}
 	}
 }

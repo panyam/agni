@@ -262,7 +262,20 @@ func (s *FSStore) readProject(t Tree, dir, name string, deps *[]string) (string,
 // descriptor wrote is a tier the operator asked for, and reading on without it would report as though
 // the team declared none. Each same-tree source joins deps, so removing one revalidates the descriptor.
 func (s *FSStore) attachSources(t Tree, base artifact.URI, src Sources, cfg *webapi.AnalysisConfig, deps *[]string) error {
+	// fix says what to do about a source that cannot be read, which differs for the parent: a design
+	// copied or mounted without its project reads on its own once its extends goes.
+	fix := func(field string) string {
+		if field == "extends" {
+			return "mount or drop the folder holding that project.yaml as well, or remove extends to read this descriptor on its own"
+		}
+		return "fix the path, or delete it to run without that " + field
+	}
 	resolve := func(field, ref string) (string, error) {
+		if !strings.HasPrefix(strings.TrimSpace(ref), artifact.Scheme+"://") {
+			if joined := path.Join(base.Path, CleanRel(ref)); joined == ".." || strings.HasPrefix(joined, "../") {
+				return "", fmt.Errorf("%s %q is outside mount %q, so it cannot be read; %s", field, ref, base.Mount, fix(field))
+			}
+		}
 		u, err := resolveSource(base, ref)
 		if err != nil {
 			return "", fmt.Errorf("%s %q: %w", field, ref, err)
@@ -275,7 +288,7 @@ func (s *FSStore) attachSources(t Tree, base artifact.URI, src Sources, cfg *web
 			return "", fmt.Errorf("%s %q: no mount %q is configured", field, ref, u.Mount)
 		}
 		if !exists(owner.FS, walkRoot(u.Path)) {
-			return "", fmt.Errorf("%s %q names nothing (looked for %s)", field, ref, u)
+			return "", fmt.Errorf("%s %q names nothing (looked for %s); %s", field, ref, u, fix(field))
 		}
 		return u.String(), nil
 	}
