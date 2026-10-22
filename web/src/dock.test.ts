@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from "vitest";
-import { VIEWER_PANELS, LAYOUT_KEY, loadLayout, saveLayout, reconcilePanels, prunePanels, adoptPanel, defaultLayout, panelsMenu, openPanel, queryHeight } from "./dock.js";
+import { VIEWER_PANELS, LAYOUT_KEY, loadLayout, saveLayout, reconcilePanels, prunePanels, adoptPanel, defaultLayout, panelsMenu, openPanel, queryHeight, resetLayout } from "./dock.js";
 
 function memStorage(initial: Record<string, string> = {}): Pick<Storage, "getItem" | "setItem" | "removeItem"> & { data: Map<string, string> } {
   const data = new Map(Object.entries(initial));
@@ -273,6 +273,9 @@ function dockStub(open: string[] = []) {
       const i = ids.indexOf(p.id);
       if (i >= 0) ids.splice(i, 1);
     },
+    clear: () => {
+      ids.splice(0);
+    },
   };
   return { api: api as never, ids, placed };
 }
@@ -345,6 +348,46 @@ describe("panelsMenu toggle", () => {
     expect(itemFor("Rules").textContent).not.toContain("✓");
     itemFor("Rules").click();
     expect(ids).toContain("rules");
+    document.body.replaceChildren();
+  });
+});
+
+// agni issue 759. A saved layout is restored as it was, so Reset layout is how a reader gets the
+// current default back.
+describe("resetLayout", () => {
+  function memoryStorage(saved: string | null) {
+    const m = new Map<string, string>();
+    if (saved !== null) m.set(LAYOUT_KEY, saved);
+    return { getItem: (k: string) => m.get(k) ?? null, setItem: (k: string, v: string) => void m.set(k, v), removeItem: (k: string) => void m.delete(k), m };
+  }
+
+  it("forgets the saved layout and opens every panel again", () => {
+    const { api, ids } = dockStub(["canvas", "checks"]);
+    const storage = memoryStorage('{"layout":{}}');
+    resetLayout(api, storage);
+    expect(storage.m.has(LAYOUT_KEY)).toBe(false);
+    expect(ids.slice().sort()).toEqual(VIEWER_PANELS.map((p) => p.id).sort());
+  });
+
+  it("is the Panels menu's last item, and only when the menu can reach the storage", () => {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const { api, ids } = dockStub(["canvas"]);
+    const storage = memoryStorage('{"layout":{}}');
+    panelsMenu(host, api, storage);
+    host.querySelector<HTMLButtonElement>(".panels-btn")!.click();
+    const items = Array.from(host.querySelectorAll<HTMLButtonElement>(".panels-item"));
+    expect(items[items.length - 1].textContent).toContain("Reset layout");
+    items[items.length - 1].click();
+    expect(storage.m.has(LAYOUT_KEY)).toBe(false);
+    expect(ids).toContain("rules");
+    document.body.replaceChildren();
+
+    const bare = document.createElement("div");
+    document.body.appendChild(bare);
+    panelsMenu(bare, dockStub(["canvas"]).api);
+    bare.querySelector<HTMLButtonElement>(".panels-btn")!.click();
+    expect(bare.querySelector(".panels-reset")).toBeNull();
     document.body.replaceChildren();
   });
 });

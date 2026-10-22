@@ -326,7 +326,19 @@ export function openPanel(api: DockviewApi, def: DockPanelDef): void {
 // ✓ on the open ones. Each item is a show/hide TOGGLE (WS9-042), so the menu both reopens a panel
 // the tab-× closed and hides one. Panel layout is dock chrome, not presenter state, so this is a
 // plain DOM widget rather than an island.
-export function panelsMenu(host: HTMLElement, api: DockviewApi): void {
+// resetLayout puts the dock back to the default layout and forgets the saved one. A saved layout is
+// restored as it was, so without this a reader kept whatever sizes the dock had when they first used
+// it, including ones a later default fixed (agni issue 759). Panels keep their content, since a
+// cleared panel hands its element back to the park and the new layout adopts it again.
+export function resetLayout(api: DockviewApi, storage: LayoutStorage): void {
+  storage.removeItem(LAYOUT_KEY);
+  api.clear();
+  defaultLayout(api);
+}
+
+// panelsMenu adds the Panels button: one item per registered panel, toggling it open or closed, and
+// with storage, a last item that resets the layout.
+export function panelsMenu(host: HTMLElement, api: DockviewApi, storage?: LayoutStorage): void {
   const doc = host.ownerDocument;
   const btn = doc.createElement("button");
   btn.type = "button";
@@ -349,6 +361,18 @@ export function panelsMenu(host: HTMLElement, api: DockviewApi): void {
         list.style.display = "none";
       });
       list.appendChild(item);
+    }
+    if (storage) {
+      const reset = doc.createElement("button");
+      reset.type = "button";
+      reset.className = "panels-item panels-reset";
+      reset.textContent = "  Reset layout";
+      reset.title = "Put every panel back where it starts, at its default size";
+      reset.addEventListener("click", () => {
+        resetLayout(api, storage);
+        list.style.display = "none";
+      });
+      list.appendChild(reset);
     }
   };
   btn.addEventListener("click", () => {
@@ -395,6 +419,6 @@ export function createViewerDock(container: HTMLElement, park: HTMLElement, menu
     defaultLayout(api);
   }
   api.onDidLayoutChange(() => saveLayout(storage, api.toJSON()));
-  panelsMenu(menuHost, api);
+  panelsMenu(menuHost, api, storage);
   return api;
 }

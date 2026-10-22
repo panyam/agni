@@ -673,6 +673,41 @@ describe("the default dock", () => {
     });
   }, 90_000);
 
+  it("resets a rearranged dock to the default from the Panels menu, keeping what the panels hold", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      const queryHeight = () =>
+        page.evaluate(() => {
+          const tab = Array.from(document.querySelectorAll(".tab")).find((t) => t.textContent?.trim().startsWith("Query"));
+          return Math.round(tab?.closest(".groupview")?.getBoundingClientRect().height ?? 0);
+        });
+      const hasTab = (title: string) => page.locator(".tab", { hasText: title }).count();
+      const defaultHeight = await queryHeight();
+
+      await page.fill("textarea.query-text", "component.class(?c, \"resistor\") => ?c");
+      const rules = page.locator(".tab", { hasText: "Rules" });
+      await rules.hover();
+      await rules.locator(".dv-default-tab-action").click();
+      await expect.poll(() => hasTab("Rules")).toBe(0);
+      await growQueryPanel(page);
+      expect(await queryHeight(), "the drag made the query panel taller").toBeGreaterThan(defaultHeight + 100);
+
+      await page.click(".panels-btn");
+      await page.click(".panels-reset");
+      await expect.poll(() => hasTab("Rules")).toBe(1);
+      // Within a few pixels: at boot the dock is resized once more after the layout applies (the
+      // header settles) and dockview shares that out, so boot lands a little under the 320px asked for.
+      await expect.poll(async () => Math.abs((await queryHeight()) - defaultHeight)).toBeLessThan(8);
+      expect(await page.inputValue("textarea.query-text"), "the query box keeps what was typed").toBe('component.class(?c, "resistor") => ?c');
+
+      // The default is what the browser keeps now, so a reload opens it rather than the old arrangement.
+      await page.reload({ waitUntil: "networkidle" });
+      await page.waitForSelector(".query textarea.query-text", { timeout: 30_000 });
+      await expect.poll(() => hasTab("Rules")).toBe(1);
+      await expect.poll(async () => Math.abs((await queryHeight()) - defaultHeight)).toBeLessThan(8);
+    });
+  }, 90_000);
+
   it("gives Changes its rail width when a comparison adds it back", async () => {
     await withPage(browser, async (page) => {
       await page.goto(`${base()}/designs/tut/designs/gateway/gateway.edn/view`, { waitUntil: "networkidle" });
