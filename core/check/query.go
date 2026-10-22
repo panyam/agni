@@ -45,6 +45,7 @@ type irModel struct {
 	passNets  map[string][]*ir.Net        // pass-element ref_des -> the distinct nets it touches
 	lex       *classify.Lexicon           // naming vocabulary the design was READ with (nil = process defaults)
 	internal  map[string]bool             // ref_des the design's intent declares an internal connector
+	pullUpHop map[string]int              // net name -> the pull-up reach its intent declares (pull_up_reach_hops)
 	memo      sync.Map                    // key -> *memoEntry, values derived from this model once (Memo)
 }
 
@@ -60,9 +61,10 @@ func WithLexicon(lex *classify.Lexicon) ModelOption {
 	return func(m *irModel) { m.lex = lex }
 }
 
-// WithIntent tells the model what the design's intent declares about its components, so
-// ExposedConnector answers for this product rather than for the part (agni issue 831). Omitting it, or
-// passing a nil intent, leaves every connector exposed.
+// WithIntent tells the model what the design's intent declares about its components and nets, so
+// ExposedConnector answers for this product rather than for the part (agni issue 831) and
+// PullUpReachLimit answers for this bus rather than with the default (agni issue 820). Omitting it,
+// or passing a nil intent, leaves every connector exposed and every pull-up walk at the default.
 func WithIntent(di *configpb.DesignIntent) ModelOption {
 	return func(m *irModel) {
 		for ref, c := range di.GetComponents() {
@@ -71,6 +73,15 @@ func WithIntent(di *configpb.DesignIntent) ModelOption {
 					m.internal = map[string]bool{}
 				}
 				m.internal[ref] = true
+			}
+		}
+		for net, n := range di.GetNets() {
+			// The intent loader refuses a negative reach, so only a positive one is a declaration.
+			if h := n.GetPullUpReachHops(); h > 0 {
+				if m.pullUpHop == nil {
+					m.pullUpHop = map[string]int{}
+				}
+				m.pullUpHop[net] = int(h)
 			}
 		}
 	}
@@ -514,6 +525,15 @@ func (m *irModel) HasClass(refDes string, class ComponentClass) bool {
 // ExposedConnector is a connector the intent does not declare internal; see Model.ExposedConnector.
 func (m *irModel) ExposedConnector(refDes string) bool {
 	return m.HasClass(refDes, ClassConnector) && !m.internal[refDes]
+}
+
+// PullUpReachLimit is the net's declared pull-up reach, else PullUpReachHops; see
+// Model.PullUpReachLimit.
+func (m *irModel) PullUpReachLimit(net string) int {
+	if h, ok := m.pullUpHop[net]; ok {
+		return h
+	}
+	return PullUpReachHops
 }
 
 // Classes returns a ref-des's full device_classes set (specific class plus family tags), nil for an

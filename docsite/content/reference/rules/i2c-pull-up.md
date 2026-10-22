@@ -38,11 +38,23 @@ walks from the bus across resistors, never through ground, and passes only when 
 rail. Until issue 375 it asked the membership question instead, so a bus with a series resistor and
 no pull-up at all passed at error severity.
 
-The walk is bounded at `check.PullUpReachHops` crossings. One is a pull-up sitting directly on the
-bus. Two is a bus segment separated from its pull-up by a series resistor, which is an ordinary
-topology and the reason a one-hop test would report a false positive on it. Past three the
+The walk is bounded at `check.PullUpReachHops` crossings by default. One is a pull-up sitting
+directly on the bus. Two is a bus segment separated from its pull-up by a series resistor, which is
+an ordinary topology and the reason a one-hop test would report a false positive on it. Past three the
 accumulated series resistance is comparable to the pull-up, so the node no longer returns high in
 the time the bus needs and there is nothing worth crediting.
+
+A design whose bus reaches its pull-up through a deeper series network, sized so the bus still
+returns high, declares the reach for that net in its intent (`nets: {SDA_MAIN: {pull_up_reach_hops:
+4}}`, agni issue 820). The walk then searches that far for that net alone, and a failing verdict
+states the limit in effect, so "within 4 hops" says the bus was held to its declaration rather than to
+the default.
+
+A passing verdict lists every distinct pull-up within the limit, one path per terminating resistor,
+ordered by hop count, then resistor, then rail (agni issue 821). With more than one, the statement
+names each and every path is a `path` term (`SCL -> [R6] -> ISO_B -> [R7] -> VCC_3V3`), so a bus
+with a direct pull-up and a second behind a series resistor shows both. A bus with one pull-up
+carries the same statement and context it always did.
 
 A resistor marked do-not-populate is not crossed, because an unfitted part pulls nothing (agni issue
 938). A line whose only pull-up footprint is DNP fails, which is right when the design relies on

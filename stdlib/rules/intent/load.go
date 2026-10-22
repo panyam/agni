@@ -19,7 +19,7 @@ import (
 //	  modules:      [...]   # what the board must contain: a block by class or MPN, with an optional
 //	                        # count, or a named block that must instantiate nets
 //	  nets:         {...}   # facts about named nets: nominal voltage, peak current, protection,
-//	                        # reset polarity, strap level, AC coupling
+//	                        # reset polarity, strap level, AC coupling, pull-up reach
 //	  sequences:    [...]   # power-up order
 //	  strap_groups: [...]   # several strap nets read as one number
 //	  io_map:       [...]   # which net lands on which pin
@@ -313,8 +313,17 @@ func buildNets(name string, nets map[string]*configpb.NetIntent, d *Declaration)
 			declared = true
 			d.NetProperties = append(d.NetProperties, NetProperty{Net: net, Property: PropACCoupled})
 		}
+		// A reach of zero is the default, so only a nonzero one is a declaration. A negative reach
+		// would let the walk cross nothing and fail a bus with a pull-up wired straight to its rail.
+		if h := nd.GetPullUpReachHops(); h != 0 {
+			declared = true
+			if h < 0 {
+				return fmt.Errorf("intent %q: net %q needs a positive \"pull_up_reach_hops\" (got %d); omit it to keep the default of 3", name, net, h)
+			}
+			d.PullUpReach = append(d.PullUpReach, PullUpReach{Net: net, Hops: int(h)})
+		}
 		if !declared {
-			return fmt.Errorf("intent %q: net %q declares nothing (nominal, peak, protect, reset, strap or ac_coupled)", name, net)
+			return fmt.Errorf("intent %q: net %q declares nothing (nominal, peak, protect, reset, strap, ac_coupled or pull_up_reach_hops)", name, net)
 		}
 	}
 	return nil

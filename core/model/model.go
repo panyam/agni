@@ -229,6 +229,11 @@ type Model interface {
 	// exposure rules ask this rather than HasClass(ref, ClassConnector), because whether a connector
 	// faces the field is a fact about one product, which only its declaration can state.
 	ExposedConnector(refDes string) bool
+	// PullUpReachLimit is how many series resistors the walk from a net to the rail its pull-up
+	// returns it to may cross. It is the net's declared `pull_up_reach_hops` in the design's intent,
+	// else check.PullUpReachHops (agni issue 820). Every pull-up walk asks this rather than the
+	// constant, so a declaration reaches the rule, its Spec twin and the profiles alike.
+	PullUpReachLimit(net string) int
 	// Classes returns the full device_classes set for a component (specific class plus family
 	// tags), or nil for an unknown/unclassified ref-des. The set backing component.class(ref, class).
 	Classes(refDes string) []ComponentClass

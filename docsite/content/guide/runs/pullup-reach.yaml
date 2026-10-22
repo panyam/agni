@@ -1,0 +1,7 @@
+# Design intent: a pull-up reach declared for one bus. The same .edn twice, first at the default reach
+# of 3 and then with SDA_MAIN declared to reach 4, mirroring the strap pair in learn chapter 9.
+fixture: examples/common/designs
+from_root: true
+steps:
+  - script: agni check --verdicts --rule i2c-pull-up examples/common/designs/pullup-reach.edn
+  - script: agni check --verdicts --rule i2c-pull-up examples/common/designs/pullup-reach.edn --intent-path examples/common/designs/pullup-reach.intent.yaml

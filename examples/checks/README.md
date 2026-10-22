@@ -12,6 +12,10 @@ walkthrough form of `agni check`.
 - A net that looks wrong but is intentional (an I2C net with a pull-up, or a single-pin net
   named as a no-connect) is not flagged. WS3-002 added this no-connect awareness to cut false
   positives.
+- A pull-up reach declared in a design's intent. `pullup-reach.edn` has a bus whose pull-up sits
+  four series resistors out, failing `i2c-pull-up` at the default reach of 3 and passing once
+  `pullup-reach.intent.yaml` declares `pull_up_reach_hops: 4` for that net, plus a bus with two
+  pull-ups whose pass lists both paths (agni issues 820 and 821).
 
 ## Run it
 
@@ -31,5 +35,6 @@ trip one rule.
 
 The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's
 `FromMarkdown`. `main.go` binds the `pick` and `run` steps (`check.RunDesign` + `common.FindingsLines`)
+and the `reach` step (`intent.ParseProto`, then `check.WithIntent` on the model the rule evaluates),
 and wires the renderer. The fixture and the finding printer live in
 [`../common`](../common). See [`../CONVENTIONS.md`](../CONVENTIONS.md) for the shared layout.

@@ -21,7 +21,7 @@ func fullIntent() *configpb.DesignIntent {
 			"VDD": {
 				Nominal: proto.Float64(3.3), Domain: "io", Peak: proto.Float64(0.8),
 				Protect: []string{"ovp", "discharge"}, Reset_: "low", Strap: "high",
-				MinOhms: 1000, MaxOhms: 47000, AcCoupled: true,
+				MinOhms: 1000, MaxOhms: 47000, AcCoupled: true, PullUpReachHops: 4,
 			},
 		},
 		Sequences: []*configpb.PowerSequence{{
@@ -89,6 +89,9 @@ func TestFromProtoCarriesEveryField(t *testing.T) {
 		"agni.v1.config.NetIntent.min_ohms":   func() bool { return strap.MinOhms == 1000 },
 		"agni.v1.config.NetIntent.max_ohms":   func() bool { return strap.MaxOhms == 47000 },
 		"agni.v1.config.NetIntent.ac_coupled": func() bool { return len(d.NetProperties) == 3 },
+		"agni.v1.config.NetIntent.pull_up_reach_hops": func() bool {
+			return len(d.PullUpReach) == 1 && d.PullUpReach[0] == PullUpReach{Net: "VDD", Hops: 4}
+		},
 
 		"agni.v1.config.PowerSequence.name":     func() bool { return d.Sequences[0].Name == "soc" },
 		"agni.v1.config.PowerSequence.relation": func() bool { return d.Sequences[0].Relation == SequenceEnableGated },

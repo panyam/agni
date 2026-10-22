@@ -47,7 +47,7 @@ I2C is the standard example. Two lines, both open-drain, both needing a pull-up:
 
 {{ agniRun "content/learn/runs/i2c-pullup.yaml" }}
 
-The witness is worth a second look. It says "within 3 hops" rather than "no resistor to a rail", because the rule walks outward through series elements rather than demanding a resistor wired straight to the rail. A pull-up sitting on the far side of a series element or a filter is still a pull-up, and a check that insisted on a direct connection would report a defect on a board that is fine.
+The witness is worth a second look. It says "within 3 hops" rather than "no resistor to a rail", because the rule walks outward through series elements rather than demanding a resistor wired straight to the rail. A pull-up sitting on the far side of a series element or a filter is still a pull-up, and a check that insisted on a direct connection would report a defect on a board that is fine. Three is the default and not a law. A bus whose series network is deliberately deeper can declare its own reach in the design's intent ([design intent](../../guide/design-intent/)), and the witness then names that number instead.
 
 ## Why this one is an error (EE4)
 

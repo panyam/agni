@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -157,5 +158,46 @@ func TestNoVerdictsWhenTheInterfaceIsNotInUse(t *testing.T) {
 	d.Nets[1].Name = "OTHER" // and drop the second matching signal, so InUse is false
 	if got := spiProfile().pullupRule().Eval(context.Background(), check.NewModel(d)); len(got) != 0 {
 		t.Errorf("verdicts = %+v, want none on a board this profile is not on", got)
+	}
+}
+
+// deepPullUpDesign is directPullUpDesign with the pull-up moved four series resistors out, one
+// crossing past the default reach.
+func deepPullUpDesign() *ir.Design {
+	d := directPullUpDesign("SPI_CS")
+	conn := func(r, p string) *ir.Connection { return &ir.Connection{ComponentRef: r, PinRef: p} }
+	for _, n := range d.Nets {
+		if n.Name == "+3V3" {
+			n.Connections[0] = conn("R4", "2") // R1's rail end now belongs to R4
+		}
+	}
+	for i, hop := range []string{"HOP1", "HOP2", "HOP3"} {
+		from, to := "R"+string(rune('1'+i)), "R"+string(rune('2'+i))
+		d.Nets = append(d.Nets, &ir.Net{Name: hop, Prov: &ir.Provenance{SourceFile: "t"},
+			Connections: []*ir.Connection{conn(from, "2"), conn(to, "1")}})
+		d.Components = append(d.Components, &ir.Component{RefDes: to, Prov: &ir.Provenance{SourceFile: "t"}})
+	}
+	return d
+}
+
+// A profile's missing-pullup walks with the reach the design declares for the net, as i2c-pull-up
+// does, since both decide through check.PullUpVerdict (agni issue 820).
+func TestAProfilePullUpAsksTheDeclaredReach(t *testing.T) {
+	rule := spiProfile().pullupRule()
+	outcome := func(m check.Model) (check.Outcome, string) {
+		for _, v := range rule.Eval(context.Background(), m) {
+			if check.EntityRef(v.Subjects[0]) == "SPI_CS" {
+				return v.Outcome, v.Witness.Statement
+			}
+		}
+		t.Fatal("SPI_CS produced no verdict")
+		return "", ""
+	}
+	if got, w := outcome(check.NewModel(deepPullUpDesign())); got != check.Fail || !strings.Contains(w, "within 3 hops") {
+		t.Fatalf("at the default reach: %s %q, want fail within 3 hops", got, w)
+	}
+	di := &configpb.DesignIntent{Nets: map[string]*configpb.NetIntent{"SPI_CS": {PullUpReachHops: 4}}}
+	if got, w := outcome(check.NewModel(deepPullUpDesign(), check.WithIntent(di))); got != check.Pass || !strings.Contains(w, "R1 then R2 then R3 then R4") {
+		t.Errorf("declared reach 4: %s %q, want a pass through all four", got, w)
 	}
 }

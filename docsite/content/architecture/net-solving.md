@@ -167,13 +167,27 @@ rather than a search budget.
 | `ProtectionReachHops` | 2 | every protection guard (clamp, fuse, power pin near a net) | a discharge arrives at a connector pin as a fast transient, and every series element before the clamp is impedance the surge pushes through before the clamp conducts. A TVS six resistors away protects what is downstream of itself, not the pin |
 | `SupplyPathReachHops` | 1 | supply-compatibility rules (WS3-028) | a bead or series resistor between a regulator and its load is ordinary. Voltage does not degrade along the path, so a wider radius makes every part look fed by every regulator |
 | `PowerPathReachHops` | 3 | the power-entry walk | a power entry legitimately crosses connector, fuse and bead before the regulator's input node, and asking at 2 stops short of the regulator |
-| `PullUpReachHops` | 3 | the I2C pull-up requirement | a pull-up directly on the bus is 1, behind a series isolation resistor is 2, and past 3 the series resistance is comparable to the pull-up, so the bus no longer returns high in time |
+| `PullUpReachHops` | 3, or the net's declared reach | the I2C pull-up requirement, the pull-up count rules, and a profile's `missing-pullup` | a pull-up directly on the bus is 1, behind a series isolation resistor is 2, and past 3 the series resistance is comparable to the pull-up, so the bus no longer returns high in time |
 
 The radii differ in opposite directions for opposite reasons. A protection question tolerates
 distance badly because the surge's effect grows with every element. A supply question tolerates it
 badly because voltage does NOT degrade, so distance stops meaning anything. **Widening any of them is
 the silent direction.** A wider protection radius credits distant clamps and turns an unprotected
 pin into a clean pass.
+
+The pull-up radius is the one a design can move, and only one net at a time. Some buses reach their
+pull-up through a deeper series network, such as an isolation resistor followed by a level-shifting
+network, and the designer has sized it so the bus still returns high. A design says so with
+`pull_up_reach_hops` on that net in its intent (agni issue 820, see
+[design intent](../../guide/design-intent/)). The walks read the limit through
+`Model.PullUpReachLimit`, so the rule, its `check.Spec` twin, the count rules and the profiles all ask
+at the declared radius, and a failing verdict states the limit it searched to. Every other net keeps
+the default, which is why the declaration is per net rather than a project setting.
+
+A passing pull-up verdict lists every distinct path within that radius, one per terminating resistor,
+ordered by hop count, then resistor, then rail (agni issue 821). A bus with a direct pull-up and a
+second one behind a series resistor, or with pull-ups to two rails, shows each path as a `path` term
+rendered by `model.RenderRoute`. A bus with one path reads exactly as it did before.
 
 The walk also refuses to cross INTO a net that looks like distribution rather than a series path.
 Such a net is a ground, a net marked global, or a net with more than 16 connections (`maxWalkFan`). A series node

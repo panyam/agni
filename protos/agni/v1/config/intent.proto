@@ -75,6 +75,12 @@ message NetIntent {
   double max_ohms = 8;
   // ac_coupled says the net must carry a series capacitor.
   bool ac_coupled = 9;
+  // pull_up_reach_hops is how many series resistors the pull-up walk from this net may cross before it
+  // must land on a rail, for a bus whose series network is sized for a deeper reach than the default.
+  // Zero or absent keeps the default of 3 (check.PullUpReachHops), and a negative value is a load
+  // error. It compiles to no rule. The model reads it, so every rule that walks to a pull-up
+  // (i2c-pull-up, the redundant and split-rail counts, a profile's missing-pullup) asks at this limit.
+  int32 pull_up_reach_hops = 10;
 }
 
 message PowerSequence {

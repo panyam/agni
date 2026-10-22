@@ -282,9 +282,15 @@ type NetIntent struct {
 	MinOhms float64 `protobuf:"fixed64,7,opt,name=min_ohms,json=minOhms,proto3" json:"min_ohms,omitempty"`
 	MaxOhms float64 `protobuf:"fixed64,8,opt,name=max_ohms,json=maxOhms,proto3" json:"max_ohms,omitempty"`
 	// ac_coupled says the net must carry a series capacitor.
-	AcCoupled     bool `protobuf:"varint,9,opt,name=ac_coupled,json=acCoupled,proto3" json:"ac_coupled,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	AcCoupled bool `protobuf:"varint,9,opt,name=ac_coupled,json=acCoupled,proto3" json:"ac_coupled,omitempty"`
+	// pull_up_reach_hops is how many series resistors the pull-up walk from this net may cross before it
+	// must land on a rail, for a bus whose series network is sized for a deeper reach than the default.
+	// Zero or absent keeps the default of 3 (check.PullUpReachHops), and a negative value is a load
+	// error. It compiles to no rule. The model reads it, so every rule that walks to a pull-up
+	// (i2c-pull-up, the redundant and split-rail counts, a profile's missing-pullup) asks at this limit.
+	PullUpReachHops int32 `protobuf:"varint,10,opt,name=pull_up_reach_hops,json=pullUpReachHops,proto3" json:"pull_up_reach_hops,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *NetIntent) Reset() {
@@ -378,6 +384,13 @@ func (x *NetIntent) GetAcCoupled() bool {
 		return x.AcCoupled
 	}
 	return false
+}
+
+func (x *NetIntent) GetPullUpReachHops() int32 {
+	if x != nil {
+		return x.PullUpReachHops
+	}
+	return 0
 }
 
 type PowerSequence struct {
@@ -753,7 +766,7 @@ const file_agni_v1_config_intent_proto_rawDesc = "" +
 	"\x05class\x18\x02 \x01(\tR\x05class\x12\x10\n" +
 	"\x03mpn\x18\x03 \x01(\tR\x03mpn\x12\x14\n" +
 	"\x05count\x18\x04 \x01(\x05R\x05count\x12\x12\n" +
-	"\x04nets\x18\x05 \x03(\tR\x04nets\"\x8b\x02\n" +
+	"\x04nets\x18\x05 \x03(\tR\x04nets\"\xb8\x02\n" +
 	"\tNetIntent\x12\x1d\n" +
 	"\anominal\x18\x01 \x01(\x01H\x00R\anominal\x88\x01\x01\x12\x16\n" +
 	"\x06domain\x18\x02 \x01(\tR\x06domain\x12\x17\n" +
@@ -764,7 +777,9 @@ const file_agni_v1_config_intent_proto_rawDesc = "" +
 	"\bmin_ohms\x18\a \x01(\x01R\aminOhms\x12\x19\n" +
 	"\bmax_ohms\x18\b \x01(\x01R\amaxOhms\x12\x1d\n" +
 	"\n" +
-	"ac_coupled\x18\t \x01(\bR\tacCoupledB\n" +
+	"ac_coupled\x18\t \x01(\bR\tacCoupled\x12+\n" +
+	"\x12pull_up_reach_hops\x18\n" +
+	" \x01(\x05R\x0fpullUpReachHopsB\n" +
 	"\n" +
 	"\b_nominalB\a\n" +
 	"\x05_peak\"t\n" +
