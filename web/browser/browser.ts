@@ -12,11 +12,21 @@ import { chromium, type Browser, type Page } from "playwright-core";
 
 // launch opens a browser, or explains how to get one. playwright-core ships no installer of its
 // own, so the message names the command that actually fetches a browser.
+export const headed = process.env.HEADED === "1";
+
+// headedViewport is the page size a spec asks for: fixed headless, so layout assertions measure one
+// page, and the window's own size headed. A headed page larger than its window (1000 px tall on a
+// laptop whose window is shorter) left Chrome panning the view to whatever the spec clicked, so the
+// page seemed to jump up and down under the reader.
+export function viewportFor(size: { width: number; height: number }): { width: number; height: number } | null {
+  return headed ? null : size;
+}
+
 export async function launch(): Promise<Browser> {
-  const headed = process.env.HEADED === "1";
   const slowMo = Number(process.env.SLOWMO ?? (headed ? 250 : 0)) || 0;
   try {
-    return await chromium.launch({ headless: !headed, slowMo });
+    // A headed window asks for the size the headless page uses; the OS shrinks it to fit the screen.
+    return await chromium.launch({ headless: !headed, slowMo, args: headed ? ["--window-size=1400,1000"] : [] });
   } catch (e) {
     const why = e instanceof Error ? e.message : String(e);
     throw new Error(

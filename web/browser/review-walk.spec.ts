@@ -20,10 +20,10 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { launch } from "./browser.js";
+import { launch, viewportFor } from "./browser.js";
 import { growQueryPanel } from "./panels.js";
 import { table, type Row } from "./exercise-report.js";
-import { intro, pause, stepByStep } from "./walkguide.js";
+import { act, busy, idle, intro, pause, stepByStep } from "./walkguide.js";
 
 const base = (): string => inject("baseUrl");
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -108,8 +108,8 @@ async function lit(page: Page, what: string): Promise<string> {
 }
 
 async function runChecklist(page: Page, name: string): Promise<string> {
-  await page.selectOption("select.rv-checklist", { label: name });
-  await page.click("button.rv-run");
+  await act(page, () => page.selectOption("select.rv-checklist", { label: name }));
+  await act(page, () => page.click("button.rv-run"));
   await page.waitForFunction(
     () => !document.querySelector(".rv-running") && document.querySelector(".rv-summary"),
     null,
@@ -128,7 +128,7 @@ describe("the browser-review walk", () => {
     const rows: Row[] = [];
     const out = process.env.EXERCISE_OUT;
     if (out) mkdirSync(out, { recursive: true });
-    const page = await browser.newPage({ viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
+    const page = await browser.newPage({ viewport: viewportFor({ width: 1400, height: 1000 }), acceptDownloads: true });
     const pageErrors: string[] = [];
     const failed: string[] = [];
     page.on("pageerror", (e) => pageErrors.push(String(e)));
@@ -143,6 +143,7 @@ describe("the browser-review walk", () => {
         await pause(page, name, `${last.step}: ${last.status}, ${last.detail}`, walk.about);
       }
       const t0 = Date.now();
+      await busy(page, name);
       try {
         const detail = await body();
         rows.push({ step: name, design: label, status: "ok", ms: Date.now() - t0, detail });
@@ -170,7 +171,7 @@ describe("the browser-review walk", () => {
         ]);
       }
       await step("open", async () => {
-        await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" });
+        await act(page, () => page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" }));
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
         await page.waitForFunction(() => /\(\d+\)/.test(document.querySelector(".checks-run")?.textContent ?? ""), null, {
           timeout: 60_000,
@@ -198,7 +199,7 @@ describe("the browser-review walk", () => {
       }
 
       await step("run checks", async () => {
-        await page.click(".checks-run");
+        await act(page, () => page.click(".checks-run"));
         await page.waitForFunction(() => document.querySelector(".checks-run")?.textContent?.trim() === "Run checks", null, {
           timeout: 120_000,
         });
@@ -212,16 +213,16 @@ describe("the browser-review walk", () => {
       await step("click a finding", async () => {
         const first = page.locator(".check-locate").first();
         const name = (await first.innerText()).replace(/\s+/g, " ").trim();
-        await first.click();
+        await act(page, () => first.click());
         return `${name}: ${await lit(page, "the finding")}`;
       });
 
       await step("open a query set", async () => {
         const queries = (readFileSync(auditSet, "utf8").match(/^ {2}- name:/gm) ?? []).length;
         const before = await page.locator(".query-tab-go").count();
-        await page.click(".query-sets-open");
+        await act(page, () => page.click(".query-sets-open"));
         await page.waitForSelector(".query-set-item, .query-sets-none", { timeout: 30_000 });
-        await page.setInputFiles(".query-set-input", auditSet);
+        await act(page, () => page.setInputFiles(".query-set-input", auditSet));
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length >= n, before + queries, {
           timeout: 30_000,
         });
@@ -229,7 +230,7 @@ describe("the browser-review walk", () => {
         const titles = (await page.$$eval(".query-tab-go", (bs) => bs.map((b) => b.getAttribute("title") ?? ""))).slice(before);
         const errors: string[] = [];
         for (const t of titles) {
-          await page.click(`.query-tab-go[title="${t}"]`);
+          await act(page, () => page.click(`.query-tab-go[title="${t}"]`));
           await page.waitForSelector(".query-row, .query-empty, .query-error", { timeout: 30_000 });
           if (await page.locator(".query-error").count()) errors.push(t);
         }
@@ -239,17 +240,17 @@ describe("the browser-review walk", () => {
       });
 
       await step("click a query cell", async () => {
-        await page.click(`.query-tab-go[title="Parts on nets"]`);
+        await act(page, () => page.click(`.query-tab-go[title="Parts on nets"]`));
         await page.locator(".query-row .query-locate").first().waitFor({ timeout: 30_000 });
         // A virtual symbol (#FLG01, #PWR03) is a row with nothing to draw, so the walk takes the first
         // placed part. A part drawn on another sheet is selected without the canvas moving, and its
         // cell's sheet chip is how a reader goes there, so the walk clicks that too.
         const cell = page.locator(".query-row td:nth-child(2)").filter({ has: page.locator(".query-locate") }).filter({ hasNotText: /^\s*#/ }).first();
         const name = (await cell.locator(".query-locate").innerText()).trim();
-        await cell.locator(".query-locate").click();
+        await act(page, () => cell.locator(".query-locate").click());
         if ((await settled(page)) === 0 && (await cell.locator(".sheet-badge").count()) > 0) {
           const sheet = (await cell.locator(".sheet-badge").first().innerText()).trim();
-          await cell.locator(".sheet-badge").first().click();
+          await act(page, () => cell.locator(".sheet-badge").first().click());
           return `${name}, on sheet ${sheet}: ${await lit(page, "the cell")}`;
         }
         return `${name}: ${await lit(page, "the cell")}`;
@@ -260,7 +261,7 @@ describe("the browser-review walk", () => {
         const button = page.locator(".query-ask:not([disabled])");
         await button.waitFor({ timeout: 30_000 });
         const question = (await button.innerText()).trim();
-        await button.click();
+        await act(page, () => button.click());
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length > n, tabs, { timeout: 30_000 });
         await page.waitForSelector(".query-row, .query-empty", { timeout: 30_000 });
         if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").innerText());
@@ -273,7 +274,7 @@ describe("the browser-review walk", () => {
         const saved: string[] = [];
         for (const name of checklists) {
           await runChecklist(page, name);
-          const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), page.click(".rv-save")]);
+          const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), act(page, () => page.click(".rv-save"))]);
           const viewer = readFileSync((await download.path())!, "utf8");
           const cli = agni("review", design, "--checklist", name, "--format", "html", "--server", base(), "--mount", `${walk.mount}=${project}`);
           if (out) {

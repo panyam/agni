@@ -178,3 +178,79 @@ export async function pause(page: Page, step: string, previous: string, board?: 
     (window as unknown as { __walkRelease?: () => void }).__walkRelease?.();
   });
 }
+
+// While a step runs in a headed walk the page shows a loader and takes no clicks, because a step can
+// take several seconds on Jetson and a reader clicking in that time changes the page under the walk.
+// The walk's own clicks are real input too, so nothing at the browser level can tell them from a
+// reader's (Input.setIgnoreInputEvents drops both). Instead the loader is a shield the walk lifts
+// for each of its own actions (act) and raises again after, which also restores it after a
+// navigation replaces the page. A headless run shows nothing and pays nothing.
+const headed = process.env.HEADED === "1";
+let running = "";
+
+export async function busy(page: Page, step: string): Promise<void> {
+  if (!headed) return;
+  running = step;
+  await page.evaluate(showBusy, step).catch(() => {});
+}
+
+export async function idle(page: Page): Promise<void> {
+  if (!headed) return;
+  running = "";
+  await page.evaluate(() => document.getElementById("walk-busy")?.remove()).catch(() => {});
+}
+
+// act runs one of the walk's own page actions with the loader lifted, so the click lands on the
+// viewer rather than on the shield.
+export async function act<T>(page: Page, action: () => Promise<T>): Promise<T> {
+  if (!headed || !running) return action();
+  await page
+    .evaluate(() => {
+      const b = document.getElementById("walk-busy");
+      if (b) b.style.pointerEvents = "none";
+    })
+    .catch(() => {});
+  try {
+    return await action();
+  } finally {
+    await page.evaluate(showBusy, running).catch(() => {});
+  }
+}
+
+// showBusy raises the loader, creating it when a navigation has removed it. It runs in the page.
+function showBusy(step: string): void {
+  let b = document.getElementById("walk-busy");
+  if (!b) {
+    const style = document.createElement("style");
+    style.textContent = "@keyframes walk-spin{to{transform:rotate(360deg)}}";
+    document.head.appendChild(style);
+    b = document.createElement("div");
+    b.id = "walk-busy";
+    b.style.cssText = "position:fixed;inset:0;z-index:2147483645;background:rgba(15,23,42,.04);cursor:progress";
+    const pill = document.createElement("div");
+    pill.style.cssText =
+      "position:absolute;top:12px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:10px;" +
+      "padding:8px 14px;background:#1f2937;color:#f9fafb;font:13px/1.4 system-ui,sans-serif;border-radius:999px;" +
+      "box-shadow:0 6px 24px rgba(0,0,0,.3)";
+    const spin = document.createElement("span");
+    spin.style.cssText =
+      "width:14px;height:14px;border:2px solid rgba(255,255,255,.3);border-top-color:#fff;border-radius:50%;" +
+      "animation:walk-spin .8s linear infinite";
+    const label = document.createElement("span");
+    label.id = "walk-busy-label";
+    pill.append(spin, label);
+    b.appendChild(pill);
+    document.body.appendChild(b);
+    const swallow = (e: Event): void => {
+      if (document.getElementById("walk-busy")) {
+        e.preventDefault();
+        e.stopPropagation();
+      }
+    };
+    window.addEventListener("wheel", swallow, { capture: true, passive: false });
+    window.addEventListener("keydown", swallow, true);
+  }
+  b.style.pointerEvents = "auto";
+  const label = document.getElementById("walk-busy-label");
+  if (label) label.textContent = `Running: ${step}… the page ignores clicks while the walk works.`;
+}
