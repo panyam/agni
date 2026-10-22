@@ -1,0 +1,49 @@
+
+(edif AGGREGATOR_DUP_PAGES
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &block_a "BlockA")
+      (cellType GENERIC)
+      (view (rename &v_a "schematic")
+        (viewType SCHEMATIC)
+        (interface)
+        (contents
+          (page (rename &1 "1")
+            (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+            (instance (rename &i_a "$i_a")
+              (designator (stringDisplay "R1"))
+              (transform (origin (pt 200 400))))))))
+    (cell (rename &block_b "BlockB")
+      (cellType GENERIC)
+      (view (rename &v_b "schematic")
+        (viewType SCHEMATIC)
+        (interface)
+        (contents
+          (page (rename &1 "1")
+            (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+            (instance (rename &i_b "$i_b")
+              (designator (stringDisplay "C1"))
+              (transform (origin (pt 300 500))))))))
+    (cell (rename &top "Top")
+      (cellType GENERIC)
+      (view (rename &v_top "schematic")
+        (viewType SCHEMATIC)
+        (interface)
+        (contents
+          (page (rename &1 "1")
+            (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+            (instance (rename &i_top "$i_top")
+              (designator (stringDisplay "U1"))
+              (transform (origin (pt 400 400)))))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib))
+    (contents
+      (page (rename &1 "1")
+        (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+        (instance (rename &i_root "$i_root")
+          (designator (stringDisplay "J1"))
+          (transform (origin (pt 100 100))))))))
