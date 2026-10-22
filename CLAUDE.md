@@ -971,10 +971,11 @@ ref-des are still a defect), and `floating-input` counts fitted pins, a connecto
 `architecture/rules-and-checks.md` states the policy.
 
 **A 0 Ohm link splits one rail into two nets, and a rule asking what sits on a rail asks
-`check.FirstOnRail`** (agni 1015), which crosses fitted zero-ohm links and never a ground. Values
-written as a library's part name (`R_0R_22.4A_0603` on Jetson) parse to NO number, so
-`check.ZeroOhmLink` also reads a `0R` token out of the text; every other value in such a name stays
-unread (#1115). **A connector on a net the board drives is an outlet** (agni 1016):
+`check.FirstOnRail`** (agni 1015), which crosses fitted zero-ohm links and never a ground. **A value
+written as a library's part name (`R_10k_0402`, `C_4u7_25V_0402`, every passive on Jetson) is read
+from the name at ingestion** (`ValueVocab.valueFromName`, agni 1115): one token with an SI prefix or
+a unit, in the class's own unit, so a package size (`0402`) or a rating (`25V`) never reads as the
+value, and a name with two different values reads as none. **A connector on a net the board drives is an outlet** (agni 1016):
 `check.BoardSource` finds a switch node behind an inductor plus a feedback net, or a `power_out` pin,
 and the power-entry rules mark the net not-considered. A vendor buck types every pin passive, so the
 structural half matters. A `power_out` pin does not count when the walk also reaches another
