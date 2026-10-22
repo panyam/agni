@@ -13,9 +13,18 @@ import type { FindingItem } from "./findings.js";
 // three failures and a sheet with three missing datasheets are different work.
 export interface SheetTile {
   id: string;
+  // name is the label the tile shows. A name two sheets share is replaced by the sheet's path, so
+  // KiCad's /Power/1 and /IO/1 read as Power/1 and IO/1 rather than as two sheets called 1 (agni
+  // issue 1141). A name no other sheet has is shown as the design gives it.
   name: string;
+  // parentId is the sheet this one nests under, "" for a top-level sheet.
+  parentId: string;
   count: number;
   unresolved: number;
+  // local is how many of the defects counted here are drawn on this sheet alone. The rest are on a
+  // subject drawn on several sheets, a net through the whole design, and count on each of them
+  // (agni issue 1144).
+  local: number;
 }
 
 // OverviewState is the whole panel's state. It holds the tiles in design order, the sheet currently
@@ -42,18 +51,42 @@ export interface OverviewView {
 export function sheetTiles(sheets: SheetRef[], findings: FindingItem[]): SheetTile[] {
   if (sheets.length === 1) {
     const defects = findings.filter((f) => !f.inconclusive).length;
-    return [{ id: sheets[0].id, name: sheets[0].name || sheets[0].id, count: defects, unresolved: findings.length - defects }];
+    const s = sheets[0];
+    return [{ id: s.id, name: s.name || s.id, parentId: s.parentId ?? "", count: defects, unresolved: findings.length - defects, local: defects }];
   }
   const counts = new Map<string, number>();
   const open = new Map<string, number>();
+  const local = new Map<string, number>();
   for (const f of findings) {
     const into = f.inconclusive ? open : counts;
     for (const b of f.sheets) into.set(b.id, (into.get(b.id) ?? 0) + 1);
+    if (!f.inconclusive && f.sheets.length === 1) local.set(f.sheets[0].id, (local.get(f.sheets[0].id) ?? 0) + 1);
   }
+  const labels = sheetLabels(sheets);
   return sheets.map((s) => ({
     id: s.id,
-    name: s.name || s.id,
+    name: labels.get(s.id) ?? s.id,
+    parentId: s.parentId ?? "",
     count: counts.get(s.id) ?? 0,
     unresolved: open.get(s.id) ?? 0,
+    local: local.get(s.id) ?? 0,
   }));
+}
+
+// sheetLabels is each sheet's label: its name, or its path when another sheet has the same name.
+// The path is the id without a leading "/", which for a KiCad sheet is the chain of sheet names
+// from the root.
+export function sheetLabels(sheets: SheetRef[]): Map<string, string> {
+  const named = new Map<string, number>();
+  for (const s of sheets) {
+    const n = s.name || s.id;
+    named.set(n, (named.get(n) ?? 0) + 1);
+  }
+  return new Map(
+    sheets.map((s) => {
+      const n = s.name || s.id;
+      const path = s.id.replace(/^\//, "");
+      return [s.id, (named.get(n) ?? 0) > 1 && path ? path : n];
+    }),
+  );
 }

@@ -108,10 +108,94 @@ func extractGeom(root *node, src string) *geom.SchematicGeometry {
 	// Sheets: each (page ...) holds placements, nets (wires), and annotations.
 	var pages []*node
 	collect(root, "page", &pages)
+	owners := pageOwners(root)
 	for _, p := range pages {
 		g.Sheets = append(g.Sheets, sheetOf(p, src, cellByID, libByID, viewByID, fgh))
 	}
+	qualifyRepeatedSheets(g.Sheets, pages, owners)
 	return g
+}
+
+// pageOwner is the cell view or design a page is drawn in, as an id path and a display name.
+type pageOwner struct{ id, name string }
+
+// pageOwners maps each page to the cell view (library -> cell -> view -> contents) or design
+// (design -> contents) it sits in. A page found anywhere else has no owner.
+func pageOwners(root *node) map[*node]pageOwner {
+	out := map[*node]pageOwner{}
+	display := func(n *node) (string, string) {
+		id, disp := nameParts(n.Arg(1))
+		if disp == "" {
+			disp = id
+		}
+		if id == "" {
+			id = disp
+		}
+		return id, disp
+	}
+	var libs []*node
+	collect(root, "library", &libs)
+	for _, lib := range libs {
+		for _, cell := range lib.Children("cell") {
+			cID, cName := display(cell)
+			for _, view := range cell.Children("view") {
+				vID, _ := display(view)
+				if c := view.Child("contents"); c != nil {
+					for _, p := range c.Children("page") {
+						out[p] = pageOwner{id: cID + "/" + vID, name: cName}
+					}
+				}
+			}
+		}
+	}
+	var designs []*node
+	collect(root, "design", &designs)
+	for _, d := range designs {
+		dID, dName := display(d)
+		if c := d.Child("contents"); c != nil {
+			for _, p := range c.Children("page") {
+				out[p] = pageOwner{id: dID, name: dName}
+			}
+		}
+	}
+	return out
+}
+
+// qualifyRepeatedSheets gives every sheet a unique id and tells apart sheets whose names repeat
+// (agni issue 1140). A schematic export holding many block cells often names each block's pages
+// alike, (page (rename &1 "1")) in every block, and a sheet id that repeats breaks everything keyed
+// on it: showing a sheet, a finding's sheet badges, the per-sheet counts. A repeated id or name is
+// prefixed with the owning cell view or design, and a page whose id and name are already unique is
+// left exactly as the file spells it, so a single design's pages read as before. pages[i] is the page
+// sheets[i] was read from.
+func qualifyRepeatedSheets(sheets []*geom.SheetGeometry, pages []*node, owners map[*node]pageOwner) {
+	ids := map[string]int{}
+	names := map[string]int{}
+	for _, sh := range sheets {
+		ids[sh.Id]++
+		names[sh.Name]++
+	}
+	for i, sh := range sheets {
+		o, ok := owners[pages[i]]
+		if !ok {
+			continue
+		}
+		if ids[sh.Id] > 1 {
+			sh.Id = o.id + "/" + sh.Id
+		}
+		if names[sh.Name] > 1 && o.name != "" {
+			sh.Name = o.name + " / " + sh.Name
+		}
+	}
+	// Two pages with one rename in one owner, or pages no owner claims, can still collide. Number
+	// the later ones, in file order, so an id names one sheet whatever the file did.
+	seen := map[string]int{}
+	for _, sh := range sheets {
+		seen[sh.Id]++
+		if n := seen[sh.Id]; n > 1 {
+			sh.Id = fmt.Sprintf("%s~%d", sh.Id, n)
+		}
+	}
 }
 
 // textLineRatio converts an EDIF textHeight into the GLYPH height geom.Field/Label carry.

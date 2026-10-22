@@ -327,6 +327,11 @@
     .sheet-tiles { list-style: none; margin: 0; padding: 0; }
     .sheet-tile { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; text-align: left; border: 1px solid transparent; background: none; font: inherit; color: inherit; padding: 5px 8px; border-radius: 4px; cursor: pointer; }
     .sheet-tile:hover { background: #eef; }
+    .sheet-tile-row { display: flex; align-items: center; }
+    .sheet-tile-row > .sheet-tile { flex: 1 1 auto; min-width: 0; }
+    .sheet-tile-twist { flex: 0 0 14px; width: 14px; padding: 0; border: 0; background: none; color: #999; font: inherit; font-size: 11px; cursor: pointer; }
+    .sheet-tiles-legend { margin: 8px 8px 4px; color: #777; font-size: 11px; line-height: 1.6; }
+    .sheet-tiles-legend .sheet-tile-count { display: inline-block; min-width: 0; padding: 0 5px; }
     .sheet-tile.active { background: #dbeafe; font-weight: 600; }
     .sheet-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sheet-tile-count { flex: 0 0 auto; min-width: 22px; text-align: center; border-radius: 10px; font-size: 11px; padding: 1px 6px; }

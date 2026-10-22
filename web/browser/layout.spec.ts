@@ -836,3 +836,24 @@ describe("a rule group's docs link", () => {
     });
   }, 120_000);
 });
+
+// agni issues 1141 and 1143: a KiCad design whose sub-sheets under two parents are both named "1"
+// nests in the Sheets dock, and the two read as Power/1 and IO/1 rather than as 1 and 1.
+describe("the Sheets dock on a hierarchical design", () => {
+  it("nests each sheet under its parent and tells two sheets named 1 apart", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "kicad", "hier_numeric_root.kicad_sch");
+      await page.waitForFunction(() => document.querySelectorAll(".sheet-tile-name").length === 5, null, { timeout: 30_000 });
+      const rows = await page.evaluate(() =>
+        [...document.querySelectorAll(".sheet-tile-name")].map((n) => ({ name: n.textContent, left: Math.round(n.getBoundingClientRect().left) })),
+      );
+      expect(rows.map((r) => r.name)).toEqual(["Hier numeric root", "Power", "Power/1", "IO", "IO/1"]);
+      const left = Object.fromEntries(rows.map((r) => [r.name, r.left]));
+      expect(left["Power"]).toBeGreaterThan(left["Hier numeric root"]);
+      expect(left["Power/1"]).toBeGreaterThan(left["Power"]);
+      expect(left["IO"]).toBe(left["Power"]);
+      await page.locator(".sheet-tile", { hasText: "IO/1" }).click();
+      await page.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "IO/1", null, { timeout: 30_000 });
+    });
+  }, 90_000);
+});

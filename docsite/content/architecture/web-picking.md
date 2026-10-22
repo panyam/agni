@@ -245,6 +245,28 @@ rules that never ran claims a clean sheet (agni issue 1132). On the severity axi
 finding groups under `unresolved` rather than under its severity, and it sorts after every defect,
 so the rows a reader is working through stay together.
 
+**A sheet tile counts a finding on every sheet its subject is drawn on** (agni issue 1144). A defect
+on a net that runs through twelve sheets counts on all twelve, so on a large design many tiles carry
+the same total. We kept that rather than counting each finding once, because a tile is a way to a
+sheet, and every sheet it counts on is one where opening the finding shows it. A count of findings
+drawn on one sheet alone answers "what do I fix on this page" better, but a defect on a ground net
+would then count on no tile at all, which reads as a clean design. So the tile keeps the number it
+had, and its red pill's hover splits it, as in `12 defects on this sheet, 3 drawn here alone and 9
+also on other sheets` (`SheetTile.local`). The panel's legend says the same in a line. Rolling
+counts up to parent sheets was the third option, and on Jetson a parent's total mostly repeated its
+children's.
+
+**A sheet's id is unique within a design, and a repeated name is labelled by its path.** An EDIF
+export holding many block cells often names every block's page `(rename &1 "1")`, so the reader
+prefixes a repeated page id with its owning cell view and a repeated name with the cell's name
+(`BlockA / 1`), and leaves a page whose id and name are already unique as the file spells them
+(agni issue 1140). A KiCad sheet's id is already its path from the root, so the dock shows that path
+where two sheets share a name (`Power/1`, `IO/1`) and nests each sheet under its `parent_id`, as the
+file tree does through the shared `sheetForest` (agni issue 1141).
+`readers/kicad/testdata/hier_numeric_root.kicad_sch` is the public fixture for that shape, which
+`make serve` mounts as `kicad`, so it opens at `/designs/kicad/hier_numeric_root.kicad_sch/view`
+(agni issue 1143).
+
 `severitySections` is the deliberate exception. It is the parity oracle for the server report
 (`GetCheckReport`), so it mirrors what that report emits rather than what this client believes, and a
 client that quietly disagreed with it would hide the drift the oracle exists to catch.
