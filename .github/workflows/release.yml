@@ -46,17 +46,12 @@ permissions:
   packages: write
 
 jobs:
-  image:
+  # The tag is resolved once and handed to every job, so the per-platform builds and the job that joins
+  # them cannot disagree about what they publish.
+  tag:
     runs-on: ubuntu-latest
-    strategy:
-      # One image failing must not cancel the other mid-push; each is published or not on its own.
-      fail-fast: false
-      matrix:
-        include:
-          - kind: agni
-            file: Dockerfile
-          - kind: agnids
-            file: Dockerfile.agnids
+    outputs:
+      tag: ${{ steps.rel.outputs.tag }}
     steps:
       # The tag reaches the shell through the ENVIRONMENT, never through ${{ }} interpolation into
       # the script body. A workflow_dispatch input is free text and a tag name can carry shell
@@ -82,19 +77,46 @@ jobs:
           echo "tag=$tag" >> "$GITHUB_OUTPUT"
           echo "Releasing $tag"
 
+  # agni builds both platforms in one job on an x86 runner with no emulation: every stage that
+  # compiles or installs runs on $BUILDPLATFORM (see the Dockerfile), since the bundle is JavaScript,
+  # the symbol libraries are text and the binary is CGO-free.
+  #
+  # agnids builds each platform on a runner of that architecture. Its runtime stage installs torch's
+  # architecture-specific wheels, and under QEMU on an x86 runner the arm64 half took most of a
+  # 16-minute release (v0.3.6). Standard arm64 runners are free for a public repository, like the x86
+  # ones. Each half is pushed by digest, smoke-tested on its own architecture, and joined under the
+  # version and `latest` by agnids-manifest below.
+  image:
+    needs: tag
+    runs-on: ${{ matrix.runner }}
+    strategy:
+      # One image failing must not cancel the other mid-push; each is published or not on its own.
+      fail-fast: false
+      matrix:
+        include:
+          - kind: agni
+            file: Dockerfile
+            runner: ubuntu-latest
+            platforms: linux/amd64,linux/arm64
+            arch: multi
+          - kind: agnids
+            file: Dockerfile.agnids
+            runner: ubuntu-latest
+            platforms: linux/amd64
+            arch: amd64
+          - kind: agnids
+            file: Dockerfile.agnids
+            runner: ubuntu-24.04-arm
+            platforms: linux/arm64
+            arch: arm64
+    env:
+      TAG: ${{ needs.tag.outputs.tag }}
+    steps:
       - uses: actions/checkout@v7
         with:
           # Build the tag, never whatever main happens to be. A workflow_dispatch defaults to a
           # branch, so without this an image labelled v0.1.0 could contain unreleased commits.
-          ref: ${{ steps.rel.outputs.tag }}
-
-      # QEMU for agnids alone. Every agni stage that compiles or installs runs on $BUILDPLATFORM (see
-      # the Dockerfile): the bundle is JavaScript, the symbol libraries are architecture-independent
-      # text, and the binary is CGO-free so Go cross-compiles it. agnids' runtime stage installs
-      # torch's architecture-specific wheels, so its arm64 half runs under emulation; it only
-      # unpacks wheels, and the models are fetched once natively (see Dockerfile.agnids).
-      - uses: docker/setup-qemu-action@v4
-        if: matrix.kind == 'agnids'
+          ref: ${{ needs.tag.outputs.tag }}
 
       - uses: docker/setup-buildx-action@v4
 
@@ -105,38 +127,58 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Build and push
+        if: matrix.kind == 'agni'
         uses: docker/build-push-action@v7
         with:
           context: .
           file: ${{ matrix.file }}
-          platforms: linux/amd64,linux/arm64
+          platforms: ${{ matrix.platforms }}
           push: true
           # VERSION is what the binary reports. It comes from the tag, which is the whole point of
           # this workflow: the image tag and `agni version` cannot disagree.
           build-args: |
-            VERSION=${{ steps.rel.outputs.tag }}
+            VERSION=${{ needs.tag.outputs.tag }}
           tags: |
-            ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }}:${{ steps.rel.outputs.tag }}
+            ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }}:${{ needs.tag.outputs.tag }}
             ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
           cache-from: type=gha,scope=${{ matrix.kind }}
           cache-to: type=gha,mode=max,scope=${{ matrix.kind }}
 
-      # Proves the published image runs and agrees with its own tag, on the runner's architecture.
+      # One platform, pushed with no tag, so the version tag only ever names a manifest holding both.
+      # The amd64 cache keeps the `agnids` scope the images workflow writes on a PR.
+      - name: Build and push by digest
+        id: digest
+        if: matrix.kind == 'agnids'
+        uses: docker/build-push-action@v7
+        with:
+          context: .
+          file: ${{ matrix.file }}
+          platforms: ${{ matrix.platforms }}
+          build-args: |
+            VERSION=${{ needs.tag.outputs.tag }}
+          labels: |
+            org.opencontainers.image.source=https://github.com/${{ github.repository }}
+          outputs: type=image,name=ghcr.io/${{ github.repository_owner }}/${{ matrix.kind }},push-by-digest=true,name-canonical=true,push=true
+          cache-from: type=gha,scope=${{ matrix.arch == 'amd64' && 'agnids' || 'agnids-arm64' }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.arch == 'amd64' && 'agnids' || 'agnids-arm64' }}
+
+      # Proves the published image runs and agrees with its own tag, on the runner's architecture, so
+      # agnids' arm64 half is now run before it is published under the tag rather than never.
       # A published image that reports the wrong version is the specific failure this workflow was
       # built to prevent, so it is worth one pull to confirm rather than assume. hack/image_smoke.sh
       # is the same check the `images` workflow runs on a PR, so the two cannot drift.
-      - name: Verify the published image reports the tag and works
+      - name: Verify the image reports the tag and works
         env:
-          # Via env for the same reason as above. This value is validated, but keeping one rule
+          # Via env for the same reason as the tag. This value is validated, but keeping one rule
           # ("untrusted-ish values reach the shell through env") is easier to hold than a per-site
           # judgement about which interpolations happen to be safe.
           OWNER: ${{ github.repository_owner }}
           KIND: ${{ matrix.kind }}
-          TAG: ${{ steps.rel.outputs.tag }}
+          DIGEST: ${{ steps.digest.outputs.digest }}
         run: |
-          img="ghcr.io/${OWNER}/${KIND}:${TAG}"
+          if [ -n "$DIGEST" ]; then img="ghcr.io/${OWNER}/${KIND}@${DIGEST}"; else img="ghcr.io/${OWNER}/${KIND}:${TAG}"; fi
           docker pull "$img"
           hack/image_smoke.sh "$KIND" "$img" "$TAG"
 
@@ -146,5 +188,64 @@ jobs:
         if: matrix.kind == 'agni'
         env:
           OWNER: ${{ github.repository_owner }}
-          TAG: ${{ steps.rel.outputs.tag }}
         run: hack/compose_smoke.sh "ghcr.io/${OWNER}/agni" "$TAG"
+
+      - name: Record the digest
+        if: matrix.kind == 'agnids'
+        env:
+          DIGEST: ${{ steps.digest.outputs.digest }}
+        run: |
+          mkdir -p digests
+          touch "digests/${DIGEST#sha256:}"
+
+      - name: Hand the digest to the manifest job
+        if: matrix.kind == 'agnids'
+        uses: actions/upload-artifact@v7
+        with:
+          name: digest-agnids-${{ matrix.arch }}
+          path: digests/*
+          if-no-files-found: error
+          retention-days: 1
+
+  # Joins agnids' two platform images under the version tag and `latest`, then pulls the tag back and
+  # runs it, which on this x86 runner resolves the manifest to its amd64 half.
+  agnids-manifest:
+    needs: [tag, image]
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ needs.tag.outputs.tag }}
+      OWNER: ${{ github.repository_owner }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.tag.outputs.tag }}
+
+      - uses: actions/download-artifact@v8
+        with:
+          path: digests
+          pattern: digest-agnids-*
+          merge-multiple: true
+
+      - uses: docker/setup-buildx-action@v4
+
+      - uses: docker/login-action@v4
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Tag both platforms as one image
+        working-directory: digests
+        run: |
+          [ "$(ls | wc -l)" -eq 2 ] || { echo "::error::expected two agnids digests, found $(ls | wc -l)"; exit 1; }
+          docker buildx imagetools create \
+            -t "ghcr.io/${OWNER}/agnids:${TAG}" \
+            -t "ghcr.io/${OWNER}/agnids:latest" \
+            $(printf "ghcr.io/${OWNER}/agnids@sha256:%s " *)
+          docker buildx imagetools inspect "ghcr.io/${OWNER}/agnids:${TAG}"
+
+      - name: Verify the published tag reports the version and works
+        run: |
+          img="ghcr.io/${OWNER}/agnids:${TAG}"
+          docker pull "$img"
+          hack/image_smoke.sh agnids "$img" "$TAG"

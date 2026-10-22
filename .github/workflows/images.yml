@@ -4,8 +4,9 @@
 # Before this, an image was first built by `release`, after a tag was already public, so a broken
 # Dockerfile surfaced as a failed release. It runs only when a file the images are made from
 # changes, because the agnids image installs torch and docling and takes minutes, which an
-# ordinary PR should not pay. It builds linux/amd64 alone: the arm64 half differs only in which
-# wheels the runtime stage unpacks, and release builds it.
+# ordinary PR should not pay. agni builds linux/amd64 alone, since its arm64 half is the same build
+# cross-compiled. agnids builds both, each on a runner of its own architecture, because its arm64
+# half installs different torch wheels and release now builds it natively the same way.
 name: images
 
 on:
@@ -46,15 +47,26 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ${{ matrix.runner }}
     strategy:
       fail-fast: false
       matrix:
         include:
           - kind: agni
             file: Dockerfile
+            runner: ubuntu-latest
+            platform: linux/amd64
+            scope: agni
           - kind: agnids
             file: Dockerfile.agnids
+            runner: ubuntu-latest
+            platform: linux/amd64
+            scope: agnids
+          - kind: agnids
+            file: Dockerfile.agnids
+            runner: ubuntu-24.04-arm
+            platform: linux/arm64
+            scope: agnids-arm64
     steps:
       - uses: actions/checkout@v7
 
@@ -67,14 +79,14 @@ jobs:
         with:
           context: .
           file: ${{ matrix.file }}
-          platforms: linux/amd64
+          platforms: ${{ matrix.platform }}
           load: true
           push: false
           build-args: |
             VERSION=v0.0.0-ci
           tags: agni-ci/${{ matrix.kind }}:ci
-          cache-from: type=gha,scope=${{ matrix.kind }}
-          cache-to: type=gha,mode=max,scope=${{ matrix.kind }}
+          cache-from: type=gha,scope=${{ matrix.scope }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.scope }}
 
       - name: Smoke test
         env:
