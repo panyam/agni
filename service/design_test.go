@@ -868,3 +868,18 @@ func TestListRulesSaysWhichRulesShip(t *testing.T) {
 		t.Errorf("the project's rule: listed %v, shipped %v; want listed and not shipped", ok, got)
 	}
 }
+
+// A run naming a rule the catalog lacks is refused, with the near name offered, rather than answering
+// an empty run a caller reads as clean (agni issue 1121). So is the report built from one.
+func TestCheckDesignRefusesAnUnknownRule(t *testing.T) {
+	svc := NewCheckService(fakeLoader{design: &ir.Design{}}, check.DefaultCatalog(), nil, "", nil, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
+	_, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snap, Rules: []string{"i2c-pull-up", "i2c-missing-pullup"}})
+	if !errors.Is(err, ErrInvalidArgument) || !strings.Contains(err.Error(), `"i2c-missing-pullup"`) || !strings.Contains(err.Error(), "did you mean i2c-pull-up") {
+		t.Errorf("CheckDesign: %v, want an invalid argument naming i2c-missing-pullup and offering i2c-pull-up", err)
+	}
+	_, err = svc.GetCheckReport(context.Background(), &webapi.GetCheckReportRequest{Snapshot: snap, Rules: []string{"i2c-missing-pullup"}})
+	if !errors.Is(err, ErrInvalidArgument) {
+		t.Errorf("GetCheckReport: %v, want an invalid argument", err)
+	}
+}

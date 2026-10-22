@@ -68,7 +68,7 @@ func (f *snapFixture) ingest(t *testing.T, req *webapi.IngestRequest) *webapi.Sn
 }
 
 func (f *snapFixture) checkDesign(snap string) error {
-	_, err := f.check.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snap, Rules: []string{"floating-net"}})
+	_, err := f.check.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snap, Rules: []string{"floating-input"}})
 	return err
 }
 

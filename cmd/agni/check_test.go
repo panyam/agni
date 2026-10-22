@@ -163,7 +163,7 @@ func TestCheckIntentPathDeclaresAConnectorInternal(t *testing.T) {
 		var buf bytes.Buffer
 		cmd.SetOut(&buf)
 		cmd.SetErr(&bytes.Buffer{})
-		cmd.SetArgs(append([]string{gateway, "--rule", "esd-protection", "--rule", "intent/exposure-declared"}, extra...))
+		cmd.SetArgs(append([]string{gateway, "--rule", "esd-protection"}, extra...))
 		if err := cmd.Execute(); err != nil {
 			t.Fatal(err)
 		}
@@ -178,7 +178,9 @@ func TestCheckIntentPathDeclaresAConnectorInternal(t *testing.T) {
 	if err := os.WriteFile(path, []byte("name: carrier\nintent:\n  components:\n    J1: {exposure: internal}\n    J7: {exposure: internal}\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	out := run("--intent-path", path)
+	// intent/exposure-declared exists only once a declaration names an exposure, so only this run asks
+	// for it; naming a rule the catalog lacks is refused (agni issue 1121).
+	out := run("--intent-path", path, "--rule", "intent/exposure-declared")
 	if strings.Contains(out, "CAN1_CANH") {
 		t.Errorf("J1 is declared internal, so esd-protection must not report the CAN bus:\n%s", out)
 	}
