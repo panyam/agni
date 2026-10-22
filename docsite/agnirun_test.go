@@ -545,3 +545,39 @@ func TestCopyFetchedKeepsTheProjectsOwnFiles(t *testing.T) {
 		t.Errorf("design.yaml = %q, want the project's own, not the fetched one", b)
 	}
 }
+
+// agni issue 1149: with AGNI_DOCS_RUNS=stored a capture is served as written, whatever its stamp, and
+// nothing is run or written, so a server rendering every page leaves the working tree alone.
+func TestStoredRunsAreServedAsWrittenAndNeverWritten(t *testing.T) {
+	path := spec + outputSuffix
+	orig, err := os.ReadFile(path)
+	t.Cleanup(func() {
+		if err == nil {
+			_ = os.WriteFile(path, orig, 0o644)
+		} else {
+			_ = os.Remove(path)
+		}
+	})
+	t.Setenv(runsModeEnv, "stored")
+
+	stale := []byte(stampPrefix + "stale\nSENTINEL\n")
+	if err := os.WriteFile(path, stale, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if got := AgniRun(spec); !strings.Contains(got, "SENTINEL") {
+		t.Errorf("a stale capture should be served as written:\n%s", got)
+	}
+	if after, _ := os.ReadFile(path); string(after) != string(stale) {
+		t.Errorf("the capture was rewritten:\n%s", after)
+	}
+
+	if err := os.Remove(path); err != nil {
+		t.Fatal(err)
+	}
+	if got := AgniRun(spec); !strings.Contains(got, "make tutorial-runs") {
+		t.Errorf("a missing capture should say how to generate it:\n%s", got)
+	}
+	if _, err := os.Stat(path); !os.IsNotExist(err) {
+		t.Errorf("a missing capture was generated: %v", err)
+	}
+}

@@ -40,7 +40,9 @@ cli.delete_snapshot(snap)
 A design is loaded once with `ingest`, which takes its `mount://` URI and any `board_uri`, `as_named`,
 `flatten_hierarchy` or library `overlay`, and every question then names the snapshot it returns (agni issue 1061). A
 server resolves the design's tiers and config when it ingests and holds the snapshot until it is
-deleted or evicted, so a script that asks after a long pause may get `not_found` and ingest again.
+deleted, evicted or restarted. The client keeps each snapshot's definition, so a question naming one
+the server lost is retried once after ingesting it again under the same name, and one whose files
+changed after updating it, as the viewer does (agni issue 1067).
 `CliTransport` records the definition and mints a name, since each `agni` command reads the design
 itself, and turns its `mounts` into `--mount` flags. A server has to be started with the same
 mounts:

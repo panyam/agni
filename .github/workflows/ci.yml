@@ -63,8 +63,14 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
 
+      # --with-deps runs apt-get update over every source the runner image configures, and the image's
+      # packages.microsoft.com source answered 403 for a while one evening, failing the install over a
+      # repository nothing here uses. Dropping it first leaves the Ubuntu archive, which has
+      # everything Chromium needs.
       - name: Install Chromium
-        run: pnpm exec playwright-core install --with-deps chromium
+        run: |
+          sudo rm -f /etc/apt/sources.list.d/microsoft-prod.list /etc/apt/sources.list.d/microsoft-prod.sources
+          pnpm exec playwright-core install --with-deps chromium
         working-directory: web
 
       - name: make browser-test
