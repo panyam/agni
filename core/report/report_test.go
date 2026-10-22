@@ -197,6 +197,43 @@ func TestTraceURLRefusesWhatItCannotPromise(t *testing.T) {
 	}
 }
 
+// A diff link opens the earlier revision and names the later one as what to compare against, in the
+// mount/path shape the Compare picker reports (agni issue 1126).
+func TestDiffURL(t *testing.T) {
+	a := Report{URLBase: "http://h:8080", MountPath: "m/d/b.edn"}
+	b := Report{URLBase: "http://h:8080", MountPath: "m/d/b-rev-c.edn"}
+	want := "http://h:8080/designs/m/d/b.edn/view?against=m%2Fd%2Fb-rev-c.edn"
+	if got := DiffURL(a, b, false); got != want {
+		t.Errorf("DiffURL = %q, want %q", got, want)
+	}
+	// A diff that paired near-renames says so, so the viewer's tables pair them too.
+	if got := DiffURL(a, b, true); got != want+"&rename_approx=1" {
+		t.Errorf("DiffURL with near-renames = %q, want %q", got, want+"&rename_approx=1")
+	}
+}
+
+// Either side withheld means no link, because the viewer reads the second design from the server
+// serving the first, and half a comparison is not the question the run answered.
+func TestDiffURLRefusesWhatItCannotPromise(t *testing.T) {
+	full := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
+	cases := []struct {
+		name string
+		a, b Report
+	}{
+		{"no server named", Report{MountPath: "m/b.edn"}, Report{MountPath: "m/c.edn"}},
+		{"the earlier revision withheld", Report{URLBase: "http://h:8080"}, full},
+		{"the later revision withheld", full, Report{URLBase: "http://h:8080"}},
+		{"two servers", full, Report{URLBase: "http://other:8080", MountPath: "m/c.edn"}},
+	}
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			if got := DiffURL(c.a, c.b, true); got != "" {
+				t.Errorf("got %q, want no link", got)
+			}
+		})
+	}
+}
+
 // The rule rides with the verdict so the viewer can resolve one link by running one rule instead of
 // the whole catalog. It is a hint on top of the identity, not part of it, so a link that carries no
 // rule still addresses the same verdict and every link already written into a saved report keeps

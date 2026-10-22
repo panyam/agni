@@ -6,6 +6,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httptest"
+	"net/url"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -236,12 +237,21 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 
 	t.Run("diff", func(t *testing.T) {
 		const a1, b1 = mcpGateway + "/gateway.edn", mcpGateway + "/gateway-rev-b.edn"
-		_, a := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1})
+		res, a := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1})
 		resp, err := s.api.diff.DiffDesigns(ctx, connect.NewRequest(&webapi.DiffDesignsRequest{ASnapshot: ingestConnect(t, s, a1), BSnapshot: ingestConnect(t, s, b1)}))
 		if err != nil {
 			t.Fatal(err)
 		}
 		sameTables(t, "diff", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Diff{Diff: resp.Msg}}))
+		// One link opens the earlier revision comparing against the later (agni issue 1126).
+		want := s.url + "/designs/" + a1 + "/view?against=" + url.QueryEscape(b1)
+		if a.Link != want || a.NoLink != "" || !strings.Contains(res.Content[0].Text, "open in the viewer: "+want+"\n") {
+			t.Errorf("diff link %q (no_link %q), want %q; text:\n%s", a.Link, a.NoLink, want, res.Content[0].Text)
+		}
+		// Asked to pair near-renames, the link asks the viewer to pair them too.
+		if _, ra := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1, "rename_approx": true}); ra.Link != want+"&rename_approx=1" {
+			t.Errorf("diff link with rename_approx %q, want %q", ra.Link, want+"&rename_approx=1")
+		}
 	})
 
 	t.Run("review", func(t *testing.T) {

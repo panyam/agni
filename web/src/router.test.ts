@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageFlattens, pageOf, parseUrl, setBase, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
+import { againstTarget, bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageFlattens, pageOf, parseUrl, setBase, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -183,6 +183,35 @@ describe("a trace in the URL", () => {
     for (const bad of ["0", "-2", "2.5", "lots", ""]) {
       expect(parseUrl("/designs/m/b.edn/view", `?trace=U1.3,J1.1&hops=${bad}`).traceHops).toBe(0);
     }
+  });
+});
+
+describe("a comparison in the URL (agni issue 1126)", () => {
+  // The link core/report.DiffURL writes escapes the slashes, and the router reads it back whole.
+  it("reads the design to compare against from the link agni diff --server prints", () => {
+    const loc = parseUrl("/designs/tut/designs/gateway/gateway.edn/view", "?against=tut%2Fdesigns%2Fgateway%2Fgateway-rev-c.edn");
+    expect(loc.path).toBe("designs/gateway/gateway.edn");
+    expect(againstTarget(loc.against)).toEqual({ mount: "tut", path: "designs/gateway/gateway-rev-c.edn" });
+  });
+
+  it("round-trips through build then parse", () => {
+    const back = parseUrl(...splitHref(locationToUrl(loc({ mount: "m", path: "b.edn", against: "m/c.edn" }))));
+    expect(back.against).toBe("m/c.edn");
+  });
+
+  // A diff that paired near-renames (agni diff --rename-approx) says so, and the link carries it only
+  // beside a design to compare against, since alone it asks nothing.
+  it("reads rename_approx beside against, and drops it alone", () => {
+    expect(parseUrl("/designs/m/b.edn/view", "?against=m%2Fc.edn&rename_approx=1").renameApprox).toBe(true);
+    expect(parseUrl("/designs/m/b.edn/view", "?against=m%2Fc.edn").renameApprox).toBe(false);
+    expect(parseUrl("/designs/m/b.edn/view", "?rename_approx=1").renameApprox).toBe(false);
+    const back = parseUrl(...splitHref(locationToUrl(loc({ mount: "m", path: "b.edn", against: "m/c.edn", renameApprox: true }))));
+    expect(back.renameApprox).toBe(true);
+    expect(locationToUrl(loc({ mount: "m", path: "b.edn", renameApprox: true }))).not.toContain("rename_approx");
+  });
+
+  it("reads a value naming no file in a mount as no design", () => {
+    for (const bad of ["", "m", "m/", "/c.edn"]) expect(againstTarget(bad), bad).toBeNull();
   });
 });
 

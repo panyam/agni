@@ -147,6 +147,29 @@ describe("the static demo under /agni/demo/", () => {
     });
   }
 
+  // A diff link (`?against=`, agni issue 1126) opens the same comparison on a static host, where the
+  // page's own engine holds both revisions' files and no server lists anything.
+  it("opens a comparison from a link naming the revision to compare against", async () => {
+    const want = gatewayDiffRows();
+    await withPage(browser, async (page) => {
+      const log = record(page);
+      await page.goto(base, { waitUntil: "domcontentloaded" });
+      await page.click("text=Sample Board");
+      await page.waitForSelector(DESIGN_SUMMARY, { timeout: 60_000 });
+      const view = new URL(page.url());
+      view.searchParams.set("against", "gateway/designs/gateway/gateway-rev-c.edn");
+      await page.goto(view.toString(), { waitUntil: "domcontentloaded" });
+      await expect
+        .poll(() => page.locator(".diff-file").allTextContents(), { timeout: 60_000 })
+        .toEqual(["A gateway:designs/gateway", "B gateway:designs/gateway/gateway-rev-c.edn"]);
+      expect(await page.locator(".diff-error").count()).toBe(0);
+      await expectCompareTables(page, want);
+      expect(log.api).toEqual([]);
+      expect(log.failed).toEqual([]);
+      expect(log.errors).toEqual([]);
+    });
+  }, 180_000);
+
   // The Compare picker lists the site's designs from the files `agni site` wrote, since a static host
   // has no server to list a mount and the page's engine holds only the files it was given (agni
   // issue 978).

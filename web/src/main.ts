@@ -5,7 +5,7 @@
 
 import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from "@panyam/tsappkit";
 import { CanvasComponent } from "./canvas.js";
-import { comparePickerIsland } from "./comparepicker.js";
+import { type CompareTarget, comparePickerIsland } from "./comparepicker.js";
 import { controlBarIsland } from "./controlbar.js";
 import { sheetTabsIsland } from "./sheettabs.js";
 import { findingsPanelIsland } from "./findingspanel.js";
@@ -279,12 +279,15 @@ class AppRoot extends BaseComponent {
     // Compare chrome (WS9-049 phase 3). The button opens a picker, and the picker reports a design to
     // compare against. openFile is the open design, side A of any comparison the user starts.
     let openFile: { mount: string; path: string } | null = null;
-    // The pick callback means "compare against this", not "set side B".
-    const comparePick = comparePickerIsland(pickerEl, compareTreeEl, this._eventBus, (target) => {
+    // The pick callback means "compare against this", not "set side B". A link naming a design to
+    // compare against (?against=, agni issue 1126) starts the same comparison through compareWith.
+    const compareWith = (target: CompareTarget, opts?: { nearRenames?: boolean }): void => {
       if (!openFile) return;
+      if (opts?.nearRenames) tablesPresenter.setNearRenames(true);
       if (dockApi) openDiffPanel(dockApi);
       void diffPresenter.open(openFile, target);
-    });
+    };
+    const comparePick = comparePickerIsland(pickerEl, compareTreeEl, this._eventBus, compareWith);
     const compare = compareButton(compareEl, () => comparePick.picker.open(openFile));
     // WS9-049: the visited-sheet tab strip, the only SheetsView in sheetNavs. Selecting a tab emits
     // the same showSheet intent the sheet overview does.
@@ -540,6 +543,7 @@ class AppRoot extends BaseComponent {
           }
           syncUrl(loc);
         },
+        compare: compareWith,
         overview: sheetOverview.view,
         query: query.view,
         coverage: coverage.view,

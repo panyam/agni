@@ -100,6 +100,12 @@ export class TablesPresenter {
 
   // setCompareOpen says whether a comparison is open, which offers or withdraws its sources. Closing
   // it while the panel shows one of them clears the panel, since that answer is gone.
+  // setNearRenames sets the comparison tables' near-rename pairing without asking for anything, so a
+  // diff link that paired near-renames opens tables that pair them too (agni issue 1126).
+  setNearRenames(on: boolean): void {
+    this.push({ compare: { ...this.state.compare, nearRenames: on } });
+  }
+
   setCompareOpen(open: boolean): void {
     const shown = this.state.source.startsWith("compare");
     if (!open && shown) {

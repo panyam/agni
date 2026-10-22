@@ -277,13 +277,27 @@ func rowOf(v check.Verdict, meta Report) Row {
 	return r
 }
 
-// DesignURL is the viewer link that opens the design itself, "" when this run cannot promise one. A
-// diff answer links each revision this way, since the viewer has no view of a diff (agni issue 1121).
-func DesignURL(meta Report) string {
-	if meta.URLBase == "" || meta.MountPath == "" {
+// DiffURL is the viewer link that compares two revisions, "" when this run cannot promise one (agni
+// issue 1126). It opens meta's design and starts the viewer's Compare against bmeta's, as picking
+// that design in the Compare picker does.
+//
+// Like TraceURL it carries the QUESTION, so it takes no content hash, and the viewer compares the two
+// designs as they are now. Both sides must be linkable on ONE server, since the viewer reads the
+// second design through the mount table that serves the first, so a withheld link on either side,
+// or two different bases, yields no link.
+//
+// renameApprox carries the near-rename pairing the diff was asked for (--rename-approx, the MCP
+// tool's rename_approx), so the viewer's comparison tables pair them too rather than leaving the
+// reader to tick the option.
+func DiffURL(meta, bmeta Report, renameApprox bool) string {
+	if meta.URLBase == "" || meta.MountPath == "" || bmeta.MountPath == "" || bmeta.URLBase != meta.URLBase {
 		return ""
 	}
-	return meta.URLBase + "/designs/" + meta.MountPath + "/view"
+	u := meta.URLBase + "/designs/" + meta.MountPath + "/view?against=" + url.QueryEscape(bmeta.MountPath)
+	if renameApprox {
+		u += "&rename_approx=1"
+	}
+	return u
 }
 
 // TraceURL is the viewer link that re-asks a pin-to-pin question, "" when this run cannot promise

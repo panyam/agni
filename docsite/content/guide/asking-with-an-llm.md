@@ -64,8 +64,8 @@ agni adds the rest:
   exist is refused with the closest ones it does have, rather than answered as an empty, clean run.
 - `trace` follows a signal from one pin to another through the series parts between them, and says
   where each net on the way can be probed.
-- `diff` compares two revisions, as [comparing revisions](../comparing-revisions/) describes. The
-  viewer has no view of a diff yet, so its answer links each revision instead and says so.
+- `diff` compares two revisions, as [comparing revisions](../comparing-revisions/) describes. Its
+  link opens the earlier revision with the viewer's Compare started against the later one.
 - `design` reads the IR itself, narrowed to the nets or parts asked about.
 - `checklists` and `review` list a design's review checklists and score one. Nothing is saved.
 - `query_set` runs one of the project's saved query sets.
