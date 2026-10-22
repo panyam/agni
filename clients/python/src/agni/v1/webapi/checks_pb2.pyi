@@ -156,7 +156,7 @@ class ListRulesRequest(_message.Message):
     def __init__(self, snapshot: _Optional[str] = ...) -> None: ...
 
 class RuleInfo(_message.Message):
-    __slots__ = ("name", "severity", "summary", "reads", "tags", "available", "unavailable_reason", "impact", "detail", "remedy", "shipped")
+    __slots__ = ("name", "severity", "summary", "reads", "tags", "available", "unavailable_reason", "impact", "detail", "remedy", "shipped", "doc_url")
     class TagsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -175,6 +175,7 @@ class RuleInfo(_message.Message):
     DETAIL_FIELD_NUMBER: _ClassVar[int]
     REMEDY_FIELD_NUMBER: _ClassVar[int]
     SHIPPED_FIELD_NUMBER: _ClassVar[int]
+    DOC_URL_FIELD_NUMBER: _ClassVar[int]
     name: str
     severity: str
     summary: str
@@ -186,7 +187,8 @@ class RuleInfo(_message.Message):
     detail: str
     remedy: str
     shipped: bool
-    def __init__(self, name: _Optional[str] = ..., severity: _Optional[str] = ..., summary: _Optional[str] = ..., reads: _Optional[_Iterable[str]] = ..., tags: _Optional[_Mapping[str, str]] = ..., available: _Optional[bool] = ..., unavailable_reason: _Optional[str] = ..., impact: _Optional[str] = ..., detail: _Optional[str] = ..., remedy: _Optional[str] = ..., shipped: _Optional[bool] = ...) -> None: ...
+    doc_url: str
+    def __init__(self, name: _Optional[str] = ..., severity: _Optional[str] = ..., summary: _Optional[str] = ..., reads: _Optional[_Iterable[str]] = ..., tags: _Optional[_Mapping[str, str]] = ..., available: _Optional[bool] = ..., unavailable_reason: _Optional[str] = ..., impact: _Optional[str] = ..., detail: _Optional[str] = ..., remedy: _Optional[str] = ..., shipped: _Optional[bool] = ..., doc_url: _Optional[str] = ...) -> None: ...
 
 class ListRulesResponse(_message.Message):
     __slots__ = ("rules", "engine_version")

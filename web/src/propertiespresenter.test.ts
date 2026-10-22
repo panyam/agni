@@ -216,3 +216,17 @@ describe("a selection's checks after a cancelled run", () => {
     await vi.waitFor(() => expect(states[states.length - 1].rows.find((r) => r.label === "checks")?.value).toBe("no selected rule considers it"));
   });
 });
+
+describe("sharing the inventory (agni issue 1133)", () => {
+  it("hands each design's inventory on once read, and clears it when another design opens", async () => {
+    const heard: (string[] | null)[] = [];
+    const getDesign = vi.fn(async () =>
+      create(GetDesignResponseSchema, { name: "g", design: { nets: [{ name: "SDA", connections: [{ componentRef: "U1", pinRef: "3" }] }] } }),
+    );
+    const p = new PropertiesPresenter({ setState: () => {} }, { getDesign, drawn: () => null, onInventory: (inv) => heard.push(inv ? [...inv.pinsOf.keys()] : null) });
+    p.setSheets({ mount: "m", path: "d", sheets, activeId: "s1" });
+    await vi.waitFor(() => expect(heard).toEqual([null, ["U1"]]));
+    p.setSheets({ mount: "m", path: "other", sheets, activeId: "s1" });
+    await vi.waitFor(() => expect(heard).toEqual([null, ["U1"], null, ["U1"]]));
+  });
+});

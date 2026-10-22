@@ -151,6 +151,9 @@ export interface FindingsState {
   // ruleSummaries maps a rule name to its catalog one-liner, shown as a group-header subtitle. A rule
   // absent from the map renders none.
   ruleSummaries: Record<string, string>;
+  // ruleDocs maps a rule name to the published page explaining it, linked from the rule's group
+  // header. A rule absent from the map gets no link.
+  ruleDocs?: Record<string, string>;
   // saveNote says why the last report save failed, "" when it did not (agni issue 127).
   saveNote: string;
 }

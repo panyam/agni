@@ -1818,3 +1818,18 @@ describe("a check run that fails", () => {
     expect(lastFindings(h).ruleCount).toBe(2);
   });
 });
+
+describe("a rule's reference page reaches the Checks panel", () => {
+  it("passes each linked rule's page from the catalog, and none for a rule without one", async () => {
+    const h = harness();
+    const url = "https://panyam.github.io/agni/reference/rules/single-pin-net/";
+    h.listRules.mockResolvedValueOnce({
+      rules: [
+        { name: "single-pin-net", severity: "info", summary: "", reads: [], tags: {}, available: true, unavailableReason: "", docUrl: url },
+        { name: "acme/house-rule", severity: "info", summary: "", reads: [], tags: {}, available: true, unavailableReason: "", docUrl: "" },
+      ] as never,
+    });
+    await h.presenter.openFile("m", "board.eds");
+    expect(lastFindings(h).ruleDocs).toEqual({ "single-pin-net": url });
+  });
+});

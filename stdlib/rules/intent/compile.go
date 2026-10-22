@@ -119,6 +119,9 @@ func Compile(d Declaration) []*check.Rule {
 		seenProp[np.Property] = true
 		rules = append(rules, propertyRule(np.Property, d.NetProperties))
 	}
+	for _, r := range rules {
+		r.DocPage = docPage(r.Name)
+	}
 	return rules
 }
 

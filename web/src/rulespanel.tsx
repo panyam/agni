@@ -211,6 +211,17 @@ function RulesPanel(props: { state: () => RulesState; onSelectionChange: (names:
                                 {expanded().has(r.name) ? "▾" : "▸"}
                               </button>
                             </Show>
+                            <Show when={r.docUrl}>
+                              <a
+                                class="rule-doc"
+                                href={r.docUrl}
+                                target="_blank"
+                                rel="noopener"
+                                title="this rule's page in the rule reference"
+                              >
+                                docs ↗
+                              </a>
+                            </Show>
                           </div>
                           <div class="rule-summary">{r.summary}</div>
                           <Show when={expanded().has(r.name)}>

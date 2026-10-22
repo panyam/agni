@@ -7,12 +7,13 @@ import type { EntityQueryItem } from "./query.js";
 function mount(state: PropertiesState) {
   const onFocus = vi.fn();
   const onAsk = vi.fn();
+  const onTrace = vi.fn();
   const el = document.createElement("div");
   document.body.appendChild(el);
-  const panel = propertiesPanelIsland(el, null, { onFocus, onAsk });
+  const panel = propertiesPanelIsland(el, null, { onFocus, onAsk, onTrace });
   panel.island.activate();
   panel.view.setState(state);
-  return { el, onFocus, onAsk };
+  return { el, onFocus, onAsk, onTrace };
 }
 
 const QUESTIONS: EntityQueryItem[] = [
@@ -83,5 +84,21 @@ describe("PropertiesPanel", () => {
   it("offers no Ask row where there is nothing to ask", () => {
     const { el } = mount({ ...component, ask: undefined });
     expect(el.querySelector(".pr-ask-go")).toBeNull();
+  });
+});
+
+describe("tracing from the selection (agni issue 1133)", () => {
+  it("offers a selected part or pin as either end of a trace", () => {
+    const pin = { kind: "pin" as const, ref: "U1", pin: "3" };
+    const { el, onTrace } = mount({ crumbs: [], kind: "pin", title: "U1.3", rows: [], groups: [], sel: pin });
+    el.querySelector<HTMLButtonElement>(".pr-trace-from")!.click();
+    expect(onTrace).toHaveBeenCalledWith("from", pin);
+    el.querySelector<HTMLButtonElement>(".pr-trace-to")!.click();
+    expect(onTrace).toHaveBeenLastCalledWith("to", pin);
+  });
+
+  it("offers nothing for a net, which is not an end a trace starts from", () => {
+    const { el } = mount({ crumbs: [], kind: "net", title: "SDA", rows: [], groups: [], sel: { kind: "net", net: "SDA" } });
+    expect(el.querySelector(".pr-trace")).toBeNull();
   });
 });

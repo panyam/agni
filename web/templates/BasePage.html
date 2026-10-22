@@ -227,6 +227,8 @@
     .check-group td { background: #f6f7f9; border-bottom: 1px solid #e3e5e8; padding: 2px 6px; }
     .check-group-head { display: inline-flex; align-items: center; gap: 6px; border: 0; background: none; font: inherit; color: #444; font-weight: 600; padding: 0; cursor: pointer; text-transform: capitalize; }
     .check-group-twist { color: #999; }
+    .check-group-doc, .rule-doc { margin-left: 8px; font-size: 10px; font-weight: normal; color: #2563eb; text-decoration: none; white-space: nowrap; }
+    .check-group-doc:hover, .rule-doc:hover { text-decoration: underline; }
     .check-sev { width: 14px; }
     .check-subject .check-locate { font: inherit; font-weight: 600; padding: 0; border: 0; background: none; color: #2563eb; cursor: pointer; }
     .check-subject .check-locate:hover { color: #1d4ed8; text-decoration: underline; }
@@ -519,6 +521,12 @@
     .trace-pin { flex: 1 1 0; min-width: 0; font: inherit; padding: 3px 6px; border: 1px solid #ccc; border-radius: 4px; }
     .trace-run { font: inherit; padding: 3px 10px; border: 1px solid #ccc; border-radius: 4px; background: #fff; cursor: pointer; }
     .trace-run:disabled { color: #999; cursor: default; }
+    .trace-picks { list-style: none; margin: -4px 2px 8px; padding: 2px 0; max-height: 220px; overflow-y: auto; border: 1px solid #ccc; border-radius: 4px; background: #fff; }
+    .trace-pick { display: flex; gap: 8px; align-items: baseline; padding: 2px 8px; cursor: pointer; }
+    .trace-pick[aria-selected="true"], .trace-pick:hover { background: #eef2ff; }
+    .trace-pick-value { font-weight: 600; white-space: nowrap; }
+    .trace-pick.component .trace-pick-value { color: #3730a3; }
+    .trace-pick-detail { color: #777; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .trace-empty { color: #999; padding: 8px 4px; }
     .trace-error { color: #dc2626; padding: 6px 4px; }
     .trace-headline { font-weight: 600; padding: 4px 4px 6px; }
@@ -665,6 +673,7 @@
     .pr-empty { color: #999; padding: 0 0 4px 14px; }
     .pr-ask-go { font: inherit; padding: 2px 8px; border: 1px solid #c7d2fe; border-radius: 3px; background: #eef2ff; color: #3730a3; cursor: pointer; }
     .pr-ask { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; }
+    .pr-trace { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px; padding: 4px 0; }
     .report-box { color: #a16207; }
     .report-unresolved { color: #b91c1c; }
     /* WS9-035 datasheet-params panel: one expandable row per datasheet-backed component */

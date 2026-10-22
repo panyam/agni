@@ -344,6 +344,7 @@ func stampRequirement(r *check.Rule, reqType string) *check.Rule {
 	maps.Copy(tags, r.Tags)
 	tags[TagRequirement] = reqType
 	r.Tags = tags
+	r.DocPage = docPage(reqType)
 	return r
 }
 

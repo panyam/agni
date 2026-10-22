@@ -779,3 +779,36 @@ describe("the top bar's menu buttons", () => {
     });
   });
 });
+
+// agni issue 1133: the trace pickers' list sits inside the docked Trace panel, where a dropdown
+// floating over the panel would be clipped by its edge, so the reader has to be able to see and click it.
+describe("the trace pickers", () => {
+  it("fill an end from Properties, list the part's pins where they can be clicked, and trace the pick", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      const at = await page.evaluate(() => {
+        const r = document.querySelector('#svg-view [data-kind="component"][data-ref="U1"]')!.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      });
+      await page.mouse.click(at.x, at.y);
+      await page.click(".pr-trace-from", { timeout: 30_000 });
+
+      const from = page.locator('input.trace-pin[aria-label="Start pin"]');
+      await page.waitForFunction(() => document.querySelectorAll(".trace-pick.pin").length > 0, null, { timeout: 30_000 });
+      expect(await from.inputValue()).toBe("U1.");
+      expect((await paintedAt(page, ".trace-pick.pin")).ownedByProbe).toBe(true);
+
+      const first = (await page.locator(".trace-pick.pin .trace-pick-value").first().innerText()).trim();
+      await page.locator(".trace-pick.pin").first().click();
+      expect(await from.inputValue()).toBe(first);
+
+      const to = page.locator('input.trace-pin[aria-label="End pin"]');
+      await to.fill("J1.");
+      await to.press("ArrowDown");
+      await to.press("Enter");
+      expect(await to.inputValue()).toMatch(/^J1\.\S+$/);
+      await page.click("button.trace-run");
+      await page.waitForSelector(".trace-headline", { timeout: 30_000 });
+    });
+  }, 90_000);
+});

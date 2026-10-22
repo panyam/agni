@@ -122,7 +122,8 @@ are before you open anything.
 cannot do, so you go from "net `/SFP/SFI_CONN_RX_P` has no ESD protection" to seeing where that net
 actually runs. Nothing is lit until you select one, since a sheet with a few dozen findings would
 otherwise be mostly highlight. **Highlight › Show every finding** lights the whole run at once, and the
-viewer remembers the choice.
+viewer remembers the choice. Grouped by rule, each rule's header links to its page in the
+[rule reference](../../reference/rules/), which says what the rule checks and why.
 
 **Canvas** renders faithfully when the design carries geometry and computes a layout when it does
 not, exactly as [rung 3](../03-see-it/) described. It draws in SVG. WebGL is offered only to a page
@@ -132,7 +133,7 @@ opened with `?mode=webgl`, since it lags on a large board.
 inferring it from findings that did or did not appear. Select the design first, because with no design
 chosen the panel lists the server's own catalog, and a project's tiers compose per design, so
 `jetson/`, `jetson-profiles/` and `intent/` appear only once the panel knows which design it is
-listing for.
+listing for. A rule agni documents links to its reference page, and a project's own rule has none.
 
 This is also where supersession from rung 5 is visible, as arithmetic. Selecting the design moves
 the built-in `profile/` count down by four and adds three `jetson-profiles/` rules, because the
@@ -152,7 +153,11 @@ stopped, as `agni query` prints it.
 
 **Trace** asks for two pins and follows the signal through the series parts between them, as
 `agni trace` does, then lights the route on the drawing. A pin name that matches nothing in the
-design says so, which is a different answer from two pins with no route between them.
+design says so, which is a different answer from two pins with no route between them. Each end
+lists the design's parts and pins as you type, matching letters in order, so `u13` finds both `U13`
+and `U1.3`, and a pin's datasheet name finds it too. Choosing a part lists its pins with their nets.
+Typing a full pin and pressing Enter traces it as typed. A part or pin selected in **Properties**
+offers **trace from here** and **to here**.
 
 **Tables** lays the run on screen out as rows, the findings, the verdicts and the rules that were
 skipped, and a comparison's changes while one is open. A header click sorts it the way

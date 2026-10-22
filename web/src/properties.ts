@@ -186,6 +186,8 @@ export interface PropertiesState {
   // ask is the selection the Ask rows ask about and the served questions for its kind, absent where
   // nothing is selected that a question can bind.
   ask?: { sel: Selection; questions: EntityQueryItem[] };
+  // sel is the selected entity, absent at the design and sheet levels.
+  sel?: Selection;
   // note explains a gap in what the panel can say, such as the inventory still loading.
   note?: string;
 }
@@ -398,7 +400,7 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
     : { name: "findings", refs: findingRefs(mine), empty: input.findings && checkedState(input.findings) === "complete" ? "none" : "not checked yet" };
   const extraRows: Row[] = input.checks ? checksRows(input.checks) : [];
   const questions = input.questions.filter((q) => q.kind === sel.kind);
-  const base = { kind: sel.kind, title: labelFor(sel), ask: questions.length ? { sel, questions } : undefined };
+  const base = { kind: sel.kind, title: labelFor(sel), sel, ask: questions.length ? { sel, questions } : undefined };
   const sheetsGroup: Group[] =
     input.drawnOn === undefined
       ? []

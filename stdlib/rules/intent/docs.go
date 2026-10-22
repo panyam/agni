@@ -89,6 +89,9 @@ func docKey(ruleName string) string {
 	return ruleName
 }
 
+// docPage is the docsite page that explains the rule named ruleName, one per doc key.
+func docPage(ruleName string) string { return "intent-" + docKey(ruleName) }
+
 // docSummaries is the one-line catalog caption for each intent rule KIND, shown in the docsite
 // reference index (tools/catalogdocs). It is a doc caption, distinct from the runtime Rule.Summary a
 // finding carries, because the runtime summaries for the per-kind protection and per-instance subsystem rules
@@ -164,6 +167,7 @@ func DocRules() []*check.Rule {
 			Summary:  docSummaries[k],
 			Remedy:   intentRemedy(k),
 			Detail:   intentDoc(k),
+			DocPage:  docPage(k),
 			Tags:     intentTags(),
 		})
 	}

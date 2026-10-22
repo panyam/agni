@@ -305,6 +305,19 @@ function ChecksPanel(props: {
                               </span>
                             </Show>
                           </button>
+                          {/* Beside the toggle rather than inside it, since a link inside a button is
+                              invalid markup and its click would also fold the group. */}
+                          <Show when={axis() === "rule" && props.state().ruleDocs?.[sec.value!]}>
+                            <a
+                              class="check-group-doc"
+                              href={props.state().ruleDocs![sec.value!]}
+                              target="_blank"
+                              rel="noopener"
+                              title="what this rule checks and why, in the rule reference"
+                            >
+                              docs ↗
+                            </a>
+                          </Show>
                         </td>
                       </tr>
                     </Show>

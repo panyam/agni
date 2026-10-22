@@ -1,4 +1,4 @@
-import { For, Show } from "solid-js";
+import { For, Show, createMemo, createSignal, type Accessor, type Setter } from "solid-js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import {
@@ -8,6 +8,17 @@ import {
   TraceOutcome,
   emptyTrace,
 } from "./trace.js";
+import { type TracePick, type TracePicks, emptyPicks, pickCandidates } from "./tracepick.js";
+
+type End = "from" | "to";
+
+// TraceEnds is the two endpoint fields' text, held by the island so the host can fill one ("trace
+// from here" in Properties) as well as the reader.
+interface TraceEnds {
+  text: Record<End, Accessor<string>>;
+  set: Record<End, Setter<string>>;
+  inputs: Partial<Record<End, HTMLInputElement>>;
+}
 
 // endLabel is "U1.3 (SDA)", falling back to the bare pin where the source carries no pin names.
 function endLabel(e: TraceEndItem): string {
@@ -24,38 +35,126 @@ function endLabel(e: TraceEndItem): string {
 // connectivity, or a reader would go look at the board instead of at what they typed.
 function TracePanel(props: {
   state: () => TraceState;
+  picks: () => TracePicks;
+  ends: TraceEnds;
   onTrace: (from: string, to: string) => void;
 }) {
-  let fromEl: HTMLInputElement | undefined;
-  let toEl: HTMLInputElement | undefined;
-  const run = () => props.onTrace(fromEl?.value.trim() ?? "", toEl?.value.trim() ?? "");
-  const onKey = (e: KeyboardEvent) => {
-    if (e.key === "Enter") run();
+  const ends = props.ends;
+  // run reads the fields themselves, which hold whatever the reader typed or pasted however it got
+  // there, rather than the text last seen by an input event.
+  const run = () => {
+    setOpen(null);
+    const text = (end: End) => (ends.inputs[end]?.value ?? ends.text[end]()).trim();
+    props.onTrace(text("from"), text("to"));
+  };
+  // open is the field whose picker is showing, and active the highlighted entry in it, -1 for none.
+  // One list serves both fields and sits below them at the panel's width, inside the panel's own flow,
+  // since a dropdown floating over a docked panel is clipped by the panel's edge.
+  const [open, setOpen] = createSignal<End | null>(null);
+  const [active, setActive] = createSignal(-1);
+  const candidates = createMemo(() => {
+    const end = open();
+    return end ? pickCandidates(props.picks(), ends.text[end]()) : [];
+  });
+  // choose puts a pick in its field. A component lists its pins next, and a pin ends the pick and
+  // moves on to the other field when that one is still empty.
+  const choose = (end: End, p: TracePick) => {
+    if (p.kind === "component") {
+      ends.set[end](`${p.value}.`);
+      setActive(-1);
+      ends.inputs[end]?.focus();
+      return;
+    }
+    ends.set[end](p.value);
+    setOpen(null);
+    const other: End = end === "from" ? "to" : "from";
+    if (end === "from" && ends.text[other]() === "") ends.inputs[other]?.focus();
+  };
+  // A highlighted entry takes Enter. With none highlighted Enter traces what was typed, so a pin
+  // pasted from a datasheet never has to be picked.
+  const onKey = (end: End, e: KeyboardEvent) => {
+    const n = candidates().length;
+    if (e.key === "ArrowDown") {
+      e.preventDefault();
+      setOpen(end);
+      setActive((i) => Math.min(i + 1, n - 1));
+    } else if (e.key === "ArrowUp") {
+      e.preventDefault();
+      setActive((i) => Math.max(i - 1, -1));
+    } else if (e.key === "Escape") {
+      setOpen(null);
+    } else if (e.key === "Enter") {
+      const i = active();
+      if (open() === end && i >= 0 && i < n) choose(end, candidates()[i]);
+      else run();
+    }
+  };
+  const field = (end: End, label: string, fallback: string) => {
+    const example = () => props.picks().examples[end === "from" ? 0 : 1] || fallback;
+    return (
+      <input
+        ref={(el) => (ends.inputs[end] = el)}
+        class="trace-pin"
+        type="text"
+        role="combobox"
+        aria-label={label}
+        aria-autocomplete="list"
+        aria-controls="trace-picks"
+        aria-expanded={open() === end && candidates().length > 0}
+        aria-activedescendant={open() === end && active() >= 0 ? `trace-pick-${active()}` : undefined}
+        autocomplete="off"
+        spellcheck={false}
+        placeholder={`${end}, e.g. ${example()}`}
+        value={ends.text[end]()}
+        onInput={(e) => {
+          ends.set[end](e.currentTarget.value);
+          setOpen(end);
+          setActive(-1);
+        }}
+        onFocus={() => {
+          setOpen(end);
+          setActive(-1);
+        }}
+        onBlur={() => setOpen((o) => (o === end ? null : o))}
+        onKeyDown={(e) => onKey(end, e)}
+      />
+    );
   };
   const s = () => props.state();
   return (
     <div class="trace">
       <div class="trace-ask">
-        <input
-          ref={fromEl}
-          class="trace-pin"
-          type="text"
-          placeholder="from, e.g. U1.3"
-          aria-label="Start pin"
-          onKeyDown={onKey}
-        />
-        <input
-          ref={toEl}
-          class="trace-pin"
-          type="text"
-          placeholder="to, e.g. J1.1"
-          aria-label="End pin"
-          onKeyDown={onKey}
-        />
+        {field("from", "Start pin", "U1.3")}
+        {field("to", "End pin", "J1.1")}
         <button type="button" class="trace-run" disabled={s().loading} onClick={run}>
           {s().loading ? "Tracing…" : "Trace"}
         </button>
       </div>
+      <Show when={open() && candidates().length > 0}>
+        <ul class="trace-picks" id="trace-picks" role="listbox" aria-label={open() === "from" ? "Start pin" : "End pin"}>
+          <For each={candidates()}>
+            {(p, i) => (
+              <li
+                id={`trace-pick-${i()}`}
+                role="option"
+                class={`trace-pick ${p.kind}`}
+                aria-selected={active() === i()}
+                // mousedown rather than click, and the default prevented, so the field keeps focus and
+                // its blur does not close the list before the choice lands.
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  choose(open()!, p);
+                }}
+              >
+                <span class="trace-pick-value">{p.value}</span>
+                <Show when={p.detail}>
+                  <span class="trace-pick-detail">{p.detail}</span>
+                </Show>
+              </li>
+            )}
+          </For>
+        </ul>
+      </Show>
 
       <Show when={s().error}>
         <div class="trace-error">{s().error}</div>
@@ -153,13 +252,34 @@ function TracePanel(props: {
 
 // tracePanelIsland mounts the panel and returns its command-down view. onTrace is the intent up,
 // fired when the reader names two pins, and the presenter runs the walk and highlights the answer.
-// Same island shape as coveragePanelIsland / findingsPanelIsland.
+// setPicks hands the pickers the open design's parts and pins, and setEnd fills one field from
+// outside the panel. Same island shape as coveragePanelIsland / findingsPanelIsland.
 export function tracePanelIsland(
   el: HTMLElement,
   eventBus: EventBus | null,
   handlers: { onTrace: (from: string, to: string) => void },
-): { island: SolidIsland; view: TraceView } {
+): { island: SolidIsland; view: TraceView & TracePickView } {
   const [state, setState] = signalView<TraceState>(emptyTrace());
-  const island = new SolidIsland("trace", el, () => <TracePanel state={state} onTrace={handlers.onTrace} />, eventBus);
-  return { island, view: { setState } };
+  const [picks, setPicks] = createSignal<TracePicks>(emptyPicks());
+  const [from, setFrom] = createSignal("");
+  const [to, setTo] = createSignal("");
+  const ends: TraceEnds = { text: { from, to }, set: { from: setFrom, to: setTo }, inputs: {} };
+  const island = new SolidIsland(
+    "trace",
+    el,
+    () => <TracePanel state={state} picks={picks} ends={ends} onTrace={handlers.onTrace} />,
+    eventBus,
+  );
+  const setEnd = (end: End, text: string) => {
+    ends.set[end](text);
+    ends.inputs[end]?.focus();
+  };
+  return { island, view: { setState, setPicks, setEnd } };
+}
+
+// TracePickView is the pickers' half of the panel's view: the design's parts and pins, and a way to
+// fill one endpoint from another panel.
+export interface TracePickView {
+  setPicks: (p: TracePicks) => void;
+  setEnd: (end: End, text: string) => void;
 }
