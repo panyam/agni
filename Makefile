@@ -281,7 +281,7 @@ browser-test: ui wasm
 WALK_DESIGN ?= jetson
 exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
-	mkdir -p $(EXERCISE_OUT)
+	mkdir -p $(EXERCISE_OUT) && rm -f $(EXERCISE_OUT)/headed-trace.txt
 	cd web && WALK_DESIGN=$(WALK_DESIGN) HEADED=$(HEADED) SLOWMO=$(SLOWMO) STEP_BY_STEP=$(STEP_BY_STEP) EXERCISE_OUT=$(EXERCISE_OUT) pnpm exec vitest run -c vitest.browser.config.ts browser/review-walk.spec.ts; \
 		status=$$?; cat $(EXERCISE_OUT)/browser-review.md 2>/dev/null; exit $$status
 

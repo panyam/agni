@@ -20,10 +20,10 @@ import { mkdirSync, mkdtempSync, readFileSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { launch } from "./browser.js";
+import { launch, viewportFor } from "./browser.js";
 import { growQueryPanel } from "./panels.js";
 import { table, type Row } from "./exercise-report.js";
-import { pause, stepByStep } from "./walkguide.js";
+import { act, busy, idle, intro, pause, stepByStep } from "./walkguide.js";
 
 const base = (): string => inject("baseUrl");
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -31,8 +31,18 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 // `make exercise-browser-review` defaults to Jetson, Antmicro's baseboard in examples/jetson-project,
 // whose files `make -C examples/jetson-project board` copies in from the fetched samples corpus.
 const walks = {
-  gateway: { mount: "tut", project: "examples/tutorial-project", path: "designs/gateway" },
-  jetson: { mount: "jetson", project: "examples/jetson-project", path: "designs/jetson" },
+  gateway: {
+    mount: "tut",
+    project: "examples/tutorial-project",
+    path: "designs/gateway",
+    about: "the tutorial project's Sample Board, a small synthetic gateway with two checklists and a project query set",
+  },
+  jetson: {
+    mount: "jetson",
+    project: "examples/jetson-project",
+    path: "designs/jetson",
+    about: "Antmicro's open-source baseboard for the Jetson AGX Thor module, sixteen schematic sheets and about 1,100 parts, under the Jetson review project's checklist and conventions",
+  },
 };
 const which = (process.env.WALK_DESIGN || "gateway") as keyof typeof walks;
 const walk = walks[which];
@@ -98,8 +108,8 @@ async function lit(page: Page, what: string): Promise<string> {
 }
 
 async function runChecklist(page: Page, name: string): Promise<string> {
-  await page.selectOption("select.rv-checklist", { label: name });
-  await page.click("button.rv-run");
+  await act(page, () => page.selectOption("select.rv-checklist", { label: name }));
+  await act(page, () => page.click("button.rv-run"));
   await page.waitForFunction(
     () => !document.querySelector(".rv-running") && document.querySelector(".rv-summary"),
     null,
@@ -111,6 +121,28 @@ async function runChecklist(page: Page, name: string): Promise<string> {
 
 // normalise drops the line a saved page stamps with the time it was written, the only part two saves of
 // one run differ in.
+// openTab brings a query tab to the front. Choosing a tab is not what the walk measures, and a real
+// click on one depends on nothing being painted over it: in a headed run the tab strip, scrolled to its
+// far end by the set's last tab, timed out bringing the first one back (agni issue 1118). So the walk
+// scrolls the tab into view and clicks it in the page.
+async function openTab(page: Page, title: string): Promise<void> {
+  const tab = page.locator(`.query-tab-go[title="${title}"]`);
+  await tab.waitFor({ timeout: 30_000 });
+  await tab.evaluate((el) => {
+    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    (el as HTMLElement).click();
+  });
+}
+
+// why is the line of a failed step's error worth a table cell: Playwright's first line says only that
+// a call timed out, and the reason (what intercepted the click, what was not visible) is in its log.
+function why(e: unknown): string {
+  const text = (e instanceof Error ? e.message : String(e)).replace(/\u001b\[[0-9;]*m/g, "");
+  const lines = text.split("\n").map((l) => l.trim()).filter((l) => l !== "");
+  const reason = [...lines].reverse().find((l) => /intercepts pointer events|not visible|outside of the viewport|not stable|not enabled|detached|waiting for/.test(l));
+  return reason && reason !== lines[0] ? `${lines[0]} (${reason.replace(/^-\s*/, "")})` : lines[0];
+}
+
 const normalise = (html: string): string => html.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC/g, "<time>");
 
 describe("the browser-review walk", () => {
@@ -118,7 +150,7 @@ describe("the browser-review walk", () => {
     const rows: Row[] = [];
     const out = process.env.EXERCISE_OUT;
     if (out) mkdirSync(out, { recursive: true });
-    const page = await browser.newPage({ viewport: { width: 1400, height: 1000 }, acceptDownloads: true });
+    const page = await browser.newPage({ viewport: viewportFor({ width: 1400, height: 1000 }), acceptDownloads: true });
     const pageErrors: string[] = [];
     const failed: string[] = [];
     page.on("pageerror", (e) => pageErrors.push(String(e)));
@@ -126,25 +158,41 @@ describe("the browser-review walk", () => {
       if (r.status() >= 400) failed.push(`${r.status()} ${new URL(r.url()).pathname}`);
     });
 
+    // The intro page stands in for the first stop, so "open" pauses there rather than over a blank page.
     const step = async (name: string, body: () => Promise<string>): Promise<void> => {
-      if (stepByStep) {
+      if (stepByStep && rows.length > 0) {
         const last = rows[rows.length - 1];
-        await pause(page, name, last ? `${last.step}: ${last.status}, ${last.detail}` : "");
+        await pause(page, name, `${last.step}: ${last.status}, ${last.detail}`, walk.about);
       }
       const t0 = Date.now();
+      await busy(page, name);
       try {
         const detail = await body();
         rows.push({ step: name, design: label, status: "ok", ms: Date.now() - t0, detail });
       } catch (e) {
-        const why = (e instanceof Error ? e.message : String(e)).split("\n")[0];
-        rows.push({ step: name, design: label, status: "fail", ms: Date.now() - t0, detail: why });
+        rows.push({ step: name, design: label, status: "fail", ms: Date.now() - t0, detail: why(e) });
         if (out) await page.screenshot({ path: join(out, `review-walk-${name.replace(/\W+/g, "-")}.png`) }).catch(() => {});
       }
     };
 
     try {
+      if (stepByStep) {
+        await intro(page, walk.about, [
+          "open the design",
+          "match the checklist picker against 'agni checklists'",
+          "run each checklist",
+          "run the rule catalog",
+          "click a finding into the schematic",
+          "open a netlist audit as query tabs",
+          "click a part from a query answer",
+          "ask a follow-up question",
+          "save each checklist page and compare it with the CLI's",
+          "run 'agni trial'",
+          "check the page logged no errors",
+        ]);
+      }
       await step("open", async () => {
-        await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" });
+        await act(page, () => page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" }));
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
         await page.waitForFunction(() => /\(\d+\)/.test(document.querySelector(".checks-run")?.textContent ?? ""), null, {
           timeout: 60_000,
@@ -172,7 +220,7 @@ describe("the browser-review walk", () => {
       }
 
       await step("run checks", async () => {
-        await page.click(".checks-run");
+        await act(page, () => page.click(".checks-run"));
         await page.waitForFunction(() => document.querySelector(".checks-run")?.textContent?.trim() === "Run checks", null, {
           timeout: 120_000,
         });
@@ -186,16 +234,16 @@ describe("the browser-review walk", () => {
       await step("click a finding", async () => {
         const first = page.locator(".check-locate").first();
         const name = (await first.innerText()).replace(/\s+/g, " ").trim();
-        await first.click();
+        await act(page, () => first.click());
         return `${name}: ${await lit(page, "the finding")}`;
       });
 
       await step("open a query set", async () => {
         const queries = (readFileSync(auditSet, "utf8").match(/^ {2}- name:/gm) ?? []).length;
         const before = await page.locator(".query-tab-go").count();
-        await page.click(".query-sets-open");
+        await act(page, () => page.click(".query-sets-open"));
         await page.waitForSelector(".query-set-item, .query-sets-none", { timeout: 30_000 });
-        await page.setInputFiles(".query-set-input", auditSet);
+        await act(page, () => page.setInputFiles(".query-set-input", auditSet));
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length >= n, before + queries, {
           timeout: 30_000,
         });
@@ -203,7 +251,7 @@ describe("the browser-review walk", () => {
         const titles = (await page.$$eval(".query-tab-go", (bs) => bs.map((b) => b.getAttribute("title") ?? ""))).slice(before);
         const errors: string[] = [];
         for (const t of titles) {
-          await page.click(`.query-tab-go[title="${t}"]`);
+          await act(page, () => openTab(page, t));
           await page.waitForSelector(".query-row, .query-empty, .query-error", { timeout: 30_000 });
           if (await page.locator(".query-error").count()) errors.push(t);
         }
@@ -213,17 +261,17 @@ describe("the browser-review walk", () => {
       });
 
       await step("click a query cell", async () => {
-        await page.click(`.query-tab-go[title="Parts on nets"]`);
+        await act(page, () => openTab(page, "Parts on nets"));
         await page.locator(".query-row .query-locate").first().waitFor({ timeout: 30_000 });
         // A virtual symbol (#FLG01, #PWR03) is a row with nothing to draw, so the walk takes the first
         // placed part. A part drawn on another sheet is selected without the canvas moving, and its
         // cell's sheet chip is how a reader goes there, so the walk clicks that too.
         const cell = page.locator(".query-row td:nth-child(2)").filter({ has: page.locator(".query-locate") }).filter({ hasNotText: /^\s*#/ }).first();
         const name = (await cell.locator(".query-locate").innerText()).trim();
-        await cell.locator(".query-locate").click();
+        await act(page, () => cell.locator(".query-locate").click());
         if ((await settled(page)) === 0 && (await cell.locator(".sheet-badge").count()) > 0) {
           const sheet = (await cell.locator(".sheet-badge").first().innerText()).trim();
-          await cell.locator(".sheet-badge").first().click();
+          await act(page, () => cell.locator(".sheet-badge").first().click());
           return `${name}, on sheet ${sheet}: ${await lit(page, "the cell")}`;
         }
         return `${name}: ${await lit(page, "the cell")}`;
@@ -234,7 +282,7 @@ describe("the browser-review walk", () => {
         const button = page.locator(".query-ask:not([disabled])");
         await button.waitFor({ timeout: 30_000 });
         const question = (await button.innerText()).trim();
-        await button.click();
+        await act(page, () => button.click());
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length > n, tabs, { timeout: 30_000 });
         await page.waitForSelector(".query-row, .query-empty", { timeout: 30_000 });
         if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").innerText());
@@ -247,7 +295,7 @@ describe("the browser-review walk", () => {
         const saved: string[] = [];
         for (const name of checklists) {
           await runChecklist(page, name);
-          const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), page.click(".rv-save")]);
+          const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), act(page, () => page.click(".rv-save"))]);
           const viewer = readFileSync((await download.path())!, "utf8");
           const cli = agni("review", design, "--checklist", name, "--format", "html", "--server", base(), "--mount", `${walk.mount}=${project}`);
           if (out) {

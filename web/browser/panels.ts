@@ -9,8 +9,10 @@ export async function growQueryPanel(page: Page): Promise<void> {
   await page.evaluate(() => {
     const overlay = document.querySelector(".query")?.closest<HTMLElement>(".dv-render-overlay");
     if (!overlay) throw new Error("query panel is not in a dock overlay");
-    overlay.style.top = "420px";
-    overlay.style.height = "560px";
+    // 420 and 560 on the 1000 px page the headless specs use, scaled to a shorter headed window.
+    const top = Math.round(window.innerHeight * 0.42);
+    overlay.style.top = `${top}px`;
+    overlay.style.height = `${Math.min(560, window.innerHeight - top - 20)}px`;
     window.dispatchEvent(new Event("resize"));
   });
   await page.waitForTimeout(200);
