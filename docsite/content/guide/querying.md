@@ -713,7 +713,7 @@ rails you know the board has, fix the pattern, ask again. See
 [Naming conventions](../naming-conventions/).
 
 The datasheet route is the other way to the same answer, and it needs no lexicon at all, since
-that is what the corpus was doing before it was moved aside, and [Datasheets](../datasheets/) is
+that is what the corpus was doing before it was left out, and [Datasheets](../datasheets/) is
 where it lives.
 
 Only the config's lexicon half is used here, since a query runs no rules.

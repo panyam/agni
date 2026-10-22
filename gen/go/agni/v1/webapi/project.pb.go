@@ -53,10 +53,9 @@ type Project struct {
 	// applied to every design it read: an overlay's profiles superseded the built-ins for every board
 	// on the server, and an overlay's rail lexicon changed net roles on designs that never asked.
 	//
-	// A Project populates every field EXCEPT intent, which is a design's own (see Design.config).
-	// The scopes are kept apart by which fields each descriptor sets rather than by two message shapes,
-	// because the shape genuinely is the same and two copies of it would be one more place for two
-	// layers to disagree about what config is.
+	// A Project and a Design carry the same message, as their descriptors share one schema (agni issue
+	// 1136), because the shape genuinely is the same and two copies of it would be one more place for
+	// two layers to disagree about what config is. A design's own layer goes on top of its project's.
 	Config        *AnalysisConfig `protobuf:"bytes,9,opt,name=config,proto3" json:"config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -150,9 +149,9 @@ type Design struct {
 	// a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
 	// inferred rule would turn a diff of two revisions into a diff of one against itself.
 	CompanionUris []string `protobuf:"bytes,5,rep,name=companion_uris,json=companionUris,proto3" json:"companion_uris,omitempty"`
-	// config is this design's own analysis config. A Design populates intent and its own symbol paths,
-	// since each board has its own intended architecture, where conventions, profiles and parameters
-	// describe the team and live on the Project. That asymmetry is the one the on-disk layout already had, and carrying both
+	// config is this design's own analysis config, what its descriptor declares on top of its project's:
+	// usually its intent and its symbol library, and any section a board needs apart from its team, such
+	// as its own convention or an extra checklist. Its extends names the design's project. Carrying both
 	// in one message shape is what lets a composer layer them without knowing which tier it holds.
 	Config *AnalysisConfig `protobuf:"bytes,7,opt,name=config,proto3" json:"config,omitempty"`
 	// intent_uri, which moved into config and is now config.intent.

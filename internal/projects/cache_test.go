@@ -22,7 +22,7 @@ func diskTree(t *testing.T) (*FSStore, string) {
 	t.Helper()
 	root := t.TempDir()
 	writeFile(t, root, "proj/project.yaml", "name: gw\ntitle: Gateway\nconventions:\n  name: gw\n  lexicon:\n    net:\n      rail:\n        patterns: [\"^OLD\"]\n")
-	writeFile(t, root, "proj/designs/board/design.yaml", "name: board\nentry: board.edn\n")
+	writeFile(t, root, "proj/designs/board/design.yaml", "name: board\nextends: ../../project.yaml\nentry: board.edn\n")
 	writeFile(t, root, "proj/designs/board/board.edn", "x")
 	return NewFSStore(Tree{Mount: "m", FS: os.DirFS(root)}), root
 }
@@ -87,7 +87,7 @@ func TestEditedDescriptorIsSeenImmediately(t *testing.T) {
 		t.Fatalf("designs = %+v", ds)
 	}
 
-	writeFile(t, root, "proj/designs/board/design.yaml", "name: board\nentry: fixed.edn\n")
+	writeFile(t, root, "proj/designs/board/design.yaml", "name: board\nextends: ../../project.yaml\nentry: fixed.edn\n")
 	ds, err = s.Designs(ctx, "projects/gw")
 	if err != nil {
 		t.Fatal(err)
@@ -152,7 +152,7 @@ func TestNewDesignIsSeenImmediately(t *testing.T) {
 	if ds, err := s.Designs(ctx, "projects/gw"); err != nil || len(ds) != 1 {
 		t.Fatalf("designs = %+v, %v", ds, err)
 	}
-	writeFile(t, root, "proj/designs/second/design.yaml", "name: second\nentry: b.edn\n")
+	writeFile(t, root, "proj/designs/second/design.yaml", "name: second\nextends: ../../project.yaml\nentry: b.edn\n")
 	ds, err := s.Designs(ctx, "projects/gw")
 	if err != nil {
 		t.Fatal(err)

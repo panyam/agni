@@ -103,12 +103,38 @@ func wantBoards(t *testing.T, listing *webapi.ListDesignFilesResponse, want ...s
 	}
 }
 
+// gatewayInNoProject copies the tutorial gateway's folder to a temp dir as a design in no project, its
+// descriptor without the `extends` naming the project the folder alone does not hold.
+func gatewayInNoProject(t *testing.T) string {
+	t.Helper()
+	src := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
+	dst := filepath.Join(t.TempDir(), "gateway")
+	if err := copyTree(src, dst); err != nil {
+		t.Fatal(err)
+	}
+	desc := filepath.Join(dst, "design.yaml")
+	b, err := os.ReadFile(desc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var kept []string
+	for _, line := range strings.Split(string(b), "\n") {
+		if !strings.HasPrefix(line, "extends:") {
+			kept = append(kept, line)
+		}
+	}
+	if err := os.WriteFile(desc, []byte(strings.Join(kept, "\n")), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	return dst
+}
+
 // TestSiteSeedsAFolderThatIsItselfADesign seeds the gateway's own folder, whose design.yaml declares
 // the design at the folder's root. The viewer addresses a design by its path within its mount, so the
 // folder goes one level down and its design gets a page and a listing that agree.
 func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
 	out := t.TempDir()
-	seed := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
+	seed := gatewayInNoProject(t)
 	if err := writeSite(out, fakeWebDir(t), "/", []string{"gw=" + seed}, io.Discard); err != nil {
 		t.Fatal(err)
 	}
@@ -147,7 +173,7 @@ func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
 func TestSiteWritesTheListingsTheFileTreesRead(t *testing.T) {
 	out := t.TempDir()
 	tutorial := filepath.Join("..", "..", "examples", "tutorial-project")
-	seeds := []string{"gateway=" + tutorial, "gw=" + filepath.Join(tutorial, "designs", "gateway")}
+	seeds := []string{"gateway=" + tutorial, "gw=" + gatewayInNoProject(t)}
 	if err := writeSite(out, fakeWebDir(t), "/", seeds, io.Discard); err != nil {
 		t.Fatal(err)
 	}

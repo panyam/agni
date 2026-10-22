@@ -1,6 +1,6 @@
-# What makes this folder a PROJECT: a name, and the fact that the config in this file and beside it
-# (profiles/, params/, lib/, queries/) belongs to every design under designs/ rather than to any one
-# of them.
+# What makes this file a PROJECT: a name, and config that belongs to every design extending it rather
+# than to any one of them. The config is this file's sections and the files it names below. Nothing is
+# read because of its folder's name, so a tier this file does not name is not in the run.
 #
 # The name is the project's identity, not its folder. `agni serve` addresses this project as
 # `projects/gateway` and the board below it as `projects/gateway/designs/gateway`, so renaming the
@@ -10,6 +10,13 @@
 # file, and it lives under designs/gateway/ if a design has one. This is the other scope: the team's.
 name: gateway
 title: Sample Board review project
+
+# The project's files, each a path relative to this file (or a mount:// URI), naming a file or a
+# directory of them: interface profiles, seeded datasheet parameters, derived relations, query sets.
+profiles: [profiles]
+params: [params]
+lib: [lib]
+queries: [queries]
 
 # House naming conventions, composed into every run on a design of this project. The section carries
 # two halves, wired differently.

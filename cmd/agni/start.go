@@ -191,7 +191,9 @@ func runStart(w io.Writer, designPath, dir, name, title string) error {
 		}
 	}
 	if err := writeDescriptorFile(filepath.Join(designDir, projects.DesignDescriptor), func(f io.Writer) error {
-		return projects.WriteDesign(f, designHeader(origin), designID, designID, base, companions)
+		// The design names its project, since a design is never found under one by where it sits.
+		parent := "../../" + projects.ProjectDescriptor
+		return projects.WriteDesign(f, designHeader(origin), designID, designID, base, companions, projects.Sources{Extends: parent})
 	}); err != nil {
 		return err
 	}
@@ -229,7 +231,7 @@ func writeDescriptorFile(path string, emit func(io.Writer) error) error {
 // against the project it created.
 func projectDescriptor(projectID, title string) ([]byte, error) {
 	var b bytes.Buffer
-	if err := projects.WriteProject(&b, projectHeader, projectID, title, nil); err != nil {
+	if err := projects.WriteProject(&b, projectHeader, projectID, title, projects.Sources{}); err != nil {
 		return nil, err
 	}
 	b.WriteString("\n" + indentYAML(conventionsStub(projectID), "conventions:", "  "))

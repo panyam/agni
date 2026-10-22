@@ -18,6 +18,7 @@ were building.
 ```yaml
 # designs/gateway/design.yaml
 name: gateway
+extends: ../../project.yaml
 entry: gateway.edn
 intent:
   modules:
@@ -42,9 +43,11 @@ because the project reads its descriptor and finds the section:
 
 {{ agniRun "content/guide/runs/intent-domain-mismatch.yaml" }}
 
-Intent is per-**design**, unlike naming conventions, interface profiles and seeded parameters, which
-are per-project. Each board has its own intended architecture, so the declaration lives with the
-board rather than with the team, in the one file that already says which files the board is.
+Intent is usually per-**design**, where naming conventions, interface profiles and seeded parameters
+are usually per-project. Each board has its own intended architecture, so the declaration lives with
+the board rather than with the team, in the one file that already says which files the board is. A
+project shared by a family of boards can declare it once in its `project.yaml`, and a design's own
+declaration replaces the project's.
 
 A design that belongs to no project still runs the intent its own `design.yaml` declares.
 `--intent-path` on `check` and `review` names a file in the same shape, a `name` and an `intent:`
@@ -58,9 +61,8 @@ The section's schema is the `DesignIntent` message in `protos/agni/v1/config/int
 declaration has the same shape in YAML, in JSON and on the wire, and a key the message does not have
 fails the load with the line it sits on.
 
-A separate `intent.yaml` beside the design is no longer read, and a project holding one fails to load
-with a message saying where its declarations go (agni issue 824). So does a declaration written in
-the earlier nine-form vocabulary, each refused key naming its replacement.
+Intent lives only in a descriptor's `intent:` section. A key the section does not have, including the
+forms of the earlier nine-form vocabulary, fails the load at its line.
 
 ## The seven forms
 

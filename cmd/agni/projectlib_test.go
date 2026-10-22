@@ -99,8 +99,8 @@ func projectWithLib(t *testing.T, files map[string]string) string {
 			t.Fatal(err)
 		}
 	}
-	write("project.yaml", "name: scratch\n")
-	write("designs/board/design.yaml", "name: board\nentry: board.edn\n")
+	write("project.yaml", "name: scratch\nlib: [lib]\n")
+	write("designs/board/design.yaml", "name: board\nextends: ../../project.yaml\nentry: board.edn\n")
 	write("designs/board/board.edn", string(board))
 	for name, body := range files {
 		write(filepath.Join("lib", name), body)

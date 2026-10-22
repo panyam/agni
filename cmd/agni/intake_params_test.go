@@ -22,9 +22,9 @@ func writeProjectWithParams(t *testing.T, root string) {
 			t.Fatal(err)
 		}
 	}
-	mk("project.yaml", "name: board\ntitle: Test project\n")
+	mk("project.yaml", "name: board\ntitle: Test project\nparams: [params]\n")
 	mk("params/seeded.textproto", "mpn: \"ACME-SEEDED\"\n")
-	mk("designs/board/design.yaml", "name: board\ntitle: Test board\nentry: board.edn\n")
+	mk("designs/board/design.yaml", "name: board\nextends: ../../project.yaml\ntitle: Test board\nentry: board.edn\n")
 	mk("designs/board/board.edn", mpnEDN)
 }
 

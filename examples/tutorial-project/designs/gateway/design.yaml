@@ -16,6 +16,11 @@
 # by file instead of inferred from "everything beside the entry".
 name: gateway
 title: Sample Board
+# The project this design belongs to, named rather than found above it. Its conventions, checklists,
+# profiles and parameters apply here, and anything this file declares layers on top.
+extends: ../../project.yaml
+# The board's own KiCad symbol library.
+symbols: [symbols]
 entry: gateway.edn
 companions:
   - gateway.kicad_sch
@@ -30,8 +35,8 @@ revisions:
 
 # What the board is SUPPOSED to be, declared beside what it is. The engine has no built-in opinion
 # about a board's intended architecture, so an intent-bound review item reads needs-design-intent
-# until a section like this one exists. It is per-DESIGN, unlike profiles/ and params/ which are
-# per-project: each design has its own intended architecture.
+# until a section like this one exists. It is declared per DESIGN here, since each board has its own
+# intended architecture, though a project shared by a family of boards could declare it once.
 #
 # One declaration here is deliberately WRONG. The core domain is declared at 3.3 V but its rail is
 # PMIC_IO_1V8, an actual 1.8 V rail, so the intent check has a real deviation to report. That is the

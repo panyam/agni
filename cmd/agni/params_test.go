@@ -238,9 +238,9 @@ parameters {
 }
 `
 	}
-	mk("project.yaml", "name: board\ntitle: Test project\n")
+	mk("project.yaml", "name: board\ntitle: Test project\nparams: [params]\n")
 	mk("params/seeded.textproto", spec("4.6"))
-	mk("designs/board/design.yaml", "name: board\ntitle: Test board\nentry: board.edn\n")
+	mk("designs/board/design.yaml", "name: board\nextends: ../../project.yaml\ntitle: Test board\nentry: board.edn\n")
 	mk("designs/board/board.edn", mpnEDN)
 	mk("other/seeded.textproto", spec("99.9"))
 

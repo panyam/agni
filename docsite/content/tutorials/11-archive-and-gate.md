@@ -122,9 +122,9 @@ with a floor under how many items it has to answer:
 
 {{ agniRun "content/tutorials/runs/gate-answered-holds.yaml" }}
 
-Thirteen of the fifteen items get answered, so the floor holds. Now move the parameter corpus out of
-the way, as somebody reorganising a repository eventually will, and run exactly the same two commands
-you have been gating with:
+Thirteen of the fifteen items get answered, so the floor holds. Now drop the `params` line from
+`project.yaml`, as a merge resolving a conflict in that file eventually will, and run exactly the same
+two commands you have been gating with:
 
 {{ agniRun "content/tutorials/runs/gate-corpus-moved-coverage.yaml" }}
 
@@ -140,10 +140,14 @@ to read, and `not-applicable` counts as covered. Nothing in the failure count sa
 were; this asks whether the questions were answered. A checklist quietly answering fewer of its own
 items looks identical to a clean board on every other number you have.
 
-Put `params` back before continuing:
+Moving the `params/` folder itself fails differently, and louder. A descriptor names its corpus by
+path, so a path that names nothing stops every command at load with the path in the message, and
+only a line that is gone reads as a project that never had a corpus.
+
+Put the line back before continuing:
 
 ```
-mv params-old params
+mv project.yaml.orig project.yaml
 ```
 
 A `provisional` does not trip `--fail-on-outcome fail`, because it is a failure

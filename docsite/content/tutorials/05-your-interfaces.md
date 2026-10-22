@@ -12,8 +12,8 @@ adding your own, and about the two things that surprise people when they do.
 
 ## What the built-in profiles already find
 
-This run moves the project's own `profiles/` aside first, so what you see is the built-in tier on its
-own. The first number counts the profile rules with any verdict at all:
+This run deletes the `profiles` line from the project's `project.yaml` first, so what you see is the
+built-in tier on its own. The first number counts the profile rules with any verdict at all:
 
 {{ agniRun "content/tutorials/runs/05-check-profiles-off.yaml" }}
 

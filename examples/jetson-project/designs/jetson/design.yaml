@@ -6,6 +6,7 @@
 # geometry to draw and the copper the board-tier rules check, never a second netlist.
 name: jetson-agx-thor-baseboard
 title: Jetson AGX Thor baseboard
+extends: ../../project.yaml
 entry: jetson-agx-thor-baseboard.kicad_sch
 companions:
   - jetson-agx-thor-baseboard.kicad_pcb

@@ -363,8 +363,9 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		o.Intent = true
 		o.DesignIntent = merged.GetIntent()
 	}
-	// The project's convention arrives resolved, so its lexicon and rules compose with no I/O.
-	if conv := inherited.GetConventions(); conv != nil {
+	// The convention arrives resolved, so its lexicon and rules compose with no I/O. The design's own
+	// replaces its project's, as a nearer link of an extends chain does.
+	if conv := merged.GetConventions(); conv != nil {
 		projectOv, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conv}}, baseConvention)
 		if err != nil {
 			return Overlay{}, err
@@ -400,10 +401,10 @@ const requestNamespace = "request"
 
 // mergeConfig layers b over a, field by field.
 //
-// It layers field by field because a Project sets everything but intent and a Design sets only
-// intent and its own symbols, so a whole-message replace would make a design declaring intent drop
-// its project's profiles. The convention is not merged here, because it layers by replacement along
-// an extends chain (ResolveExtends) and a design never sets one.
+// It layers field by field because a design names only what it adds to its project, so a
+// whole-message replace would make a design declaring intent drop its project's profiles. The file
+// tiers accumulate, checklists layer by name, and the convention and the intent are replaced by the
+// nearer declaration, since two naming vocabularies or two architectures cannot both be in effect.
 func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
 	out := &webapi.AnalysisConfig{
 		Conventions:    a.GetConventions(),

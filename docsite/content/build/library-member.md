@@ -116,8 +116,9 @@ calls it, and `agni query --relations house --design <design>` lists it. Four ru
   checklist calls `house.pmic_rail`. Interface profiles do not, because their queries are generated
   from the profile's own fields and never name a library member.
 
-The tier is discovered like `profiles/`, so a project declares nothing to get it, and `lib: ""` in
-`project.yaml` turns it off with the directory in place.
+A project names its library with `lib: [lib]` in `project.yaml`, a directory or single `.dl` files,
+and a design may name more of its own. Deleting the line turns the tier off with the directory in
+place, since nothing is read for its folder's name.
 
 ## Sending a library with a request
 

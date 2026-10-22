@@ -52,10 +52,9 @@ message AnalysisConfig {
   // inherited one in place.
   repeated NamedChecklist checklists = 12;
   // intent is a design's declared architecture (agni issue 824): its modules, what each named net is,
-  // power sequences, strap groups and pin map. It is per-DESIGN where the rest of this message is
-  // per-project, because each board has its own intended architecture while conventions and profiles
-  // describe the team. One message carries both because the SHAPE is the same, and which fields a
-  // Project sets and which a Design sets is what keeps the scopes apart.
+  // power sequences, strap groups and pin map. It is usually declared per DESIGN, since each board has
+  // its own intended architecture, and a project shared by a family of boards may declare it once. The
+  // nearer declaration replaces the further one, as the convention does.
   //
   // A value, so it compiles into rules with no I/O, on any host, whether a project store supplied it
   // or a request carried it.
@@ -63,6 +62,10 @@ message AnalysisConfig {
 
   // extends names another PROJECT whose config this one layers on top of, "projects/{project}", empty
   // when it inherits nothing.
+  //
+  // A descriptor names it by where that project's descriptor is, a relative path or a mount:// URI
+  // (agni issue 1136), and the project store answers with the project's resource name, so nothing
+  // above the store walks a path. A design's extends names its project the same way.
   //
   // It is a project resource name rather than a file URI because a shared config IS a project: one
   // with config and no designs. That reuses the store, the descriptor format and the id rules already
@@ -91,14 +94,14 @@ message AnalysisConfig {
   // A design's own symbol library and a team's shared one are both ordinary cases, so a Project and a
   // Design may each declare some and they accumulate rather than replace.
   repeated string symbol_path_uris = 8;
-  // library_uris are directories of the project's own derived relations (agni issue 773), one
+  // library_uris are files or directories of the project's own derived relations (agni issue 773), one
   // Datalog module per `<module.path>.dl` file, with optional pages in `docs/<member.path>.md`. A
   // query run under this config can call them beside the shipped library, so `lib/net.dl` adds
   // members to `net` and `lib/house.dl` starts a `house` module. A member colliding with a shipped
   // path, or reading a relation nothing registers, fails the read rather than answering nothing.
   // A review manifest's inline queries read them too (agni issue 779).
   repeated string library_uris = 9;
-  // query_set_uris are directories of the project's query sets (agni issue 745), one set per
+  // query_set_uris are files or directories of the project's query sets (agni issue 745), one set per
   // `<name>.yaml` file in the shape `agni query --set` reads. QueryService.ListQuerySets lists them
   // by name for a viewer to open, and nothing else reads them, so no run answers differently for
   // having them. A file that does not parse fails the listing rather than leaving a set out.

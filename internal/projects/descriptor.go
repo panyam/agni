@@ -21,6 +21,7 @@ import (
 
 	"gopkg.in/yaml.v3"
 
+	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/review"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
@@ -35,52 +36,37 @@ const (
 	DesignDescriptor  = "design.yaml"
 )
 
-// projectYAML and designYAML are the on-disk SHAPES, giving the YAML decoder field tags. They are
-// not a model of a project, since parsed values become the proto and nothing outside this file sees
-// these types.
-type projectYAML struct {
+// descriptorYAML is the on-disk SHAPE of both descriptors, giving the YAML decoder field tags. A
+// project and a design share one schema (agni issue 1136), and the file's name says which role it
+// plays: a design names the files it reads (entry, companions, revisions) and a project names none.
+// It is not a model of either, since parsed values become the proto and nothing outside this file
+// sees this type.
+type descriptorYAML struct {
 	Name  string `yaml:"name"`
 	Title string `yaml:"title"`
-	// Extends names another project whose config this one layers on top of, "projects/{project}".
+	// Extends names the project descriptor this one layers on, as a path relative to this descriptor
+	// or a mount:// URI. A design names its project and a project names shared config.
 	Extends string `yaml:"extends,omitempty"`
-	// Conventions is the team's naming vocabulary and Checklists its review checklists by name, both
-	// written inline (agni issue 828). Each is bound to its proto, config.NamingConvention and
-	// checks.ReviewManifest, so the file and the wire share one schema.
+	// Conventions, Checklists and Intent are written inline, each bound to its proto
+	// (config.NamingConvention, checks.ReviewManifest, config.DesignIntent), so the file and the wire
+	// share one schema.
 	Conventions yaml.Node `yaml:"conventions,omitempty"`
 	Checklists  yaml.Node `yaml:"checklists,omitempty"`
-	// Checklist is the key that named a checklist FILE before agni issue 828. It is decoded only so a
-	// descriptor still carrying it is refused with a message saying where the checklist goes now.
-	Checklist *string `yaml:"checklist,omitempty"`
-	// The directory tiers this project owns. Each is OPTIONAL and defaults to the conventional name
-	// beside `project.yaml` (see configNames). Declare one for a differently-named directory, or opt
-	// out with an empty value.
-	Profiles *string `yaml:"profiles,omitempty"`
-	Params   *string `yaml:"params,omitempty"`
-	Symbols  *string `yaml:"symbols,omitempty"`
-	// Lib is the project's own library of derived relations, a directory of `.dl` modules (agni
-	// issue 773).
-	Lib *string `yaml:"lib,omitempty"`
-	// Queries is the project's query sets, a directory of `<name>.yaml` files a viewer lists and
-	// opens (agni issue 745).
-	Queries *string `yaml:"queries,omitempty"`
-}
-
-type designYAML struct {
-	Name       string   `yaml:"name"`
-	Title      string   `yaml:"title"`
-	Entry      string   `yaml:"entry"`
-	Companions []string `yaml:"companions,omitempty"`
-	// Revisions are the design's other revisions, each its own entry with its own companions, so a
-	// later netlist is read with its own board (agni issue 848). The top-level entry is the current
-	// one. A file belongs to one revision at most.
-	Revisions []revisionYAML `yaml:"revisions,omitempty"`
-	// Intent is this design's declared architecture, written inline (agni issue 824). It is per-DESIGN,
-	// where conventions and profiles describe the team. Only its presence is read here; the intent
-	// package parses it, from this same file, when a run composes the design's config.
-	Intent yaml.Node `yaml:"intent,omitempty"`
-	// Symbols is this design's own symbol library, optional and defaulting to `symbols` beside the
-	// descriptor.
-	Symbols *string `yaml:"symbols,omitempty"`
+	Intent      yaml.Node `yaml:"intent,omitempty"`
+	// The file tiers, each a list of files or directories, as paths relative to this descriptor or
+	// mount:// URIs. Nothing is found by its folder's name, so a tier this list does not name is not
+	// in the run.
+	Profiles []string `yaml:"profiles,omitempty"`
+	Params   []string `yaml:"params,omitempty"`
+	Symbols  []string `yaml:"symbols,omitempty"`
+	Lib      []string `yaml:"lib,omitempty"`
+	Queries  []string `yaml:"queries,omitempty"`
+	// The design's own files, relative to its folder. The top-level entry is the current revision.
+	// Revisions are its others, each its own entry with its own companions, so a later netlist is read
+	// with its own board (agni issue 848). A file belongs to one revision at most.
+	Entry      string         `yaml:"entry,omitempty"`
+	Companions []string       `yaml:"companions,omitempty"`
+	Revisions  []revisionYAML `yaml:"revisions,omitempty"`
 	// FlattenHierarchy reads the design's netlist whole, walking into every hierarchical block
 	// (webapi.Design.flatten_hierarchy, agni issue 1102).
 	FlattenHierarchy bool `yaml:"flatten_hierarchy,omitempty"`
@@ -91,59 +77,22 @@ type revisionYAML struct {
 	Companions []string `yaml:"companions,omitempty"`
 }
 
-// The conventional directory names used when a descriptor declares none, matching the layout of
-// `examples/tutorial-project`. They belong to `project.yaml` (symbols to both descriptors). FSStore
-// composes each tier it finds. Conventions, checklists and a design's intent are not among them,
-// since each is a section of a descriptor.
-const (
-	defaultProfiles = "profiles"
-	defaultParams   = "params"
-	defaultSymbols  = "symbols"
-	defaultLib      = "lib"
-	defaultQueries  = "queries"
-)
-
-// formerIntentFile is where a design's intent lived before it moved into design.yaml, and
-// formerProjectFiles where a project's conventions and checklist lived before they moved into
-// project.yaml. A folder still holding one is refused rather than read without it (agni issues 824,
-// 828), because a read that skipped it would quietly drop a whole tier.
-const formerIntentFile = "intent.yaml"
-
-var formerProjectFiles = map[string]string{
-	"conventions.yaml": "conventions:",
-	"review.yaml":      "checklists: {review: ...}",
+// Sources is what a descriptor names outside itself, as written: the descriptor it extends and the
+// files of each tier, each a descriptor-relative path or a mount:// URI. The store resolves them,
+// since only it knows where the descriptor sits, and a source naming nothing is an error there.
+type Sources struct {
+	Extends  string
+	Profiles []string
+	Params   []string
+	Symbols  []string
+	Lib      []string
+	Queries  []string
 }
 
-// ProjectConfigNames is what a parsed project descriptor says its config is called, before anything
-// checks whether those files exist. An empty entry means the project opted OUT of that tier, which is
-// distinct from "not declared, so use the default".
-type ProjectConfigNames struct {
-	Profiles string
-	Params   string
-	Symbols  string
-	Lib      string
-	Queries  string
-}
-
-// configNames resolves a project descriptor's declarations against the defaults.
-func (y projectYAML) configNames() ProjectConfigNames {
-	pick := func(declared *string, fallback string) string {
-		if declared == nil {
-			return fallback
-		}
-		// An explicitly EMPTY declaration opts a tier out, so it skips CleanRel, which would turn ""
-		// into "." and fail validation as "empty".
-		if strings.TrimSpace(*declared) == "" {
-			return ""
-		}
-		return CleanRel(*declared)
-	}
-	return ProjectConfigNames{
-		Profiles: pick(y.Profiles, defaultProfiles),
-		Params:   pick(y.Params, defaultParams),
-		Symbols:  pick(y.Symbols, defaultSymbols),
-		Lib:      pick(y.Lib, defaultLib),
-		Queries:  pick(y.Queries, defaultQueries),
+func (y descriptorYAML) sources() Sources {
+	return Sources{
+		Extends: strings.TrimSpace(y.Extends), Profiles: y.Profiles, Params: y.Params,
+		Symbols: y.Symbols, Lib: y.Lib, Queries: y.Queries,
 	}
 }
 
@@ -153,56 +102,151 @@ func (y projectYAML) configNames() ProjectConfigNames {
 // differing only by case would collide on a case-insensitive filesystem.
 var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 
-// ParseProject reads a `project.yaml`, returning the declared id and the wire message.
+// ParseProject reads a `project.yaml`, returning the declared id, the wire message and the sources it
+// names, which the store resolves.
 //
 // The id comes back SEPARATELY rather than as `Project.name`, because a bare id is not a resource
 // name and only the store knows where the descriptor was reached.
 //
 // An unknown field is an ERROR, so a misspelled key in a hand-written descriptor fails loudly rather
-// than silently configuring nothing.
-func ParseProject(r io.Reader) (id string, p *webapi.Project, names ProjectConfigNames, err error) {
-	var y projectYAML
-	if err := decodeStrict(r, &y); err != nil {
-		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
-	}
-	if err := validID("name", y.Name); err != nil {
-		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
-	}
-	if y.Checklist != nil {
-		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: checklist names a file (%q); a project's checklists are now written inline under checklists:, by name (agni issue 828)", ProjectDescriptor, *y.Checklist)
-	}
-	cfg := &webapi.AnalysisConfig{Extends: strings.TrimSpace(y.Extends)}
-	conv, err := parseConventions(&y.Conventions)
+// than silently configuring nothing. A design's own keys are refused too, naming where they go.
+func ParseProject(r io.Reader) (id string, p *webapi.Project, src Sources, err error) {
+	y, cfg, src, err := parseDescriptor(r, ProjectDescriptor)
 	if err != nil {
-		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
+		return "", nil, Sources{}, err
 	}
-	cfg.Conventions = conv
-	if cfg.Checklists, err = parseChecklists(&y.Checklists); err != nil {
-		return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
-	}
-	names = y.configNames()
-	for field, rel := range map[string]string{"profiles": names.Profiles, "params": names.Params, "symbols": names.Symbols, "lib": names.Lib, "queries": names.Queries} {
-		if rel == "" {
-			continue
-		}
-		if err := validRel(field, rel); err != nil {
-			return "", nil, ProjectConfigNames{}, fmt.Errorf("%s: %w", ProjectDescriptor, err)
+	for key, set := range map[string]bool{"entry": y.Entry != "", "companions": len(y.Companions) > 0, "revisions": len(y.Revisions) > 0, "flatten_hierarchy": y.FlattenHierarchy} {
+		if set {
+			return "", nil, Sources{}, fmt.Errorf("%s: %s names a design's files, so it belongs in that design's %s", ProjectDescriptor, key, DesignDescriptor)
 		}
 	}
 	// Config is always non-nil, even for a project that declares nothing, so callers need no nil
 	// check and an absent tier is an empty field.
-	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name), Config: cfg}, names, nil
+	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name), Config: cfg}, src, nil
 }
 
-// parseConventions binds a project's conventions section to its proto. An absent section is nil,
-// meaning the engine's vocabulary. A scalar is the earlier form that named a file, refused with
-// where the content goes now.
+// ParseDesign reads a `design.yaml`, returning the declared id, the wire message and the sources it
+// names, with the same id-separate and strict-field posture as ParseProject.
+//
+// `entry_uri` and `companion_uris` come back holding DESIGN-FOLDER-RELATIVE NAMES, not URIs. The
+// store turns them into URIs when it locates the design, and nothing outside this package observes
+// the intermediate state.
+//
+// An entry or companion that escapes the design folder is rejected here rather than where a loader
+// would open it, so the error names the descriptor the operator has to fix.
+func ParseDesign(r io.Reader) (id string, d *webapi.Design, src Sources, err error) {
+	y, cfg, src, err := parseDescriptor(r, DesignDescriptor)
+	if err != nil {
+		return "", nil, Sources{}, err
+	}
+	fail := func(err error) (string, *webapi.Design, Sources, error) {
+		return "", nil, Sources{}, fmt.Errorf("%s: %w", DesignDescriptor, err)
+	}
+	if y.Entry == "" {
+		return fail(fmt.Errorf("entry is required (name the file analysis should read; a companion view is declared under companions instead)"))
+	}
+	if err := validRel("entry", y.Entry); err != nil {
+		return fail(err)
+	}
+	entry := CleanRel(y.Entry)
+	out := &webapi.Design{Title: orName(y.Title, y.Name), EntryUri: entry, FlattenHierarchy: y.FlattenHierarchy, Config: cfg}
+	seen := map[string]bool{entry: true}
+	for _, c := range y.Companions {
+		if err := validRel("companions", c); err != nil {
+			return fail(err)
+		}
+		clean := CleanRel(c)
+		if seen[clean] {
+			// A file that is both entry and companion would make the redirect point at itself.
+			return fail(fmt.Errorf("%q is listed twice (a file is either the entry or a companion, not both)", c))
+		}
+		seen[clean] = true
+		out.CompanionUris = append(out.CompanionUris, clean)
+	}
+	// Each revision is its own entry and views, checked against every file already declared, so no
+	// file is two revisions' at once and a board is never borrowed by a netlist it was not drawn for.
+	for i, r := range y.Revisions {
+		where := fmt.Sprintf("revisions[%d]", i)
+		if r.Entry == "" {
+			return fail(fmt.Errorf("%s: entry is required (name the revision's netlist; its views go under companions)", where))
+		}
+		rev := &webapi.DesignRevision{}
+		for j, f := range append([]string{r.Entry}, r.Companions...) {
+			field := where + ".entry"
+			if j > 0 {
+				field = where + ".companions"
+			}
+			if err := validRel(field, f); err != nil {
+				return fail(err)
+			}
+			clean := CleanRel(f)
+			if seen[clean] {
+				return fail(fmt.Errorf("%q is listed twice (a file belongs to one revision, as its entry or one of its companions)", f))
+			}
+			seen[clean] = true
+			if j == 0 {
+				rev.EntryUri = clean
+			} else {
+				rev.CompanionUris = append(rev.CompanionUris, clean)
+			}
+		}
+		out.Revisions = append(out.Revisions, rev)
+	}
+	return y.Name, out, src, nil
+}
+
+// parseDescriptor decodes either descriptor and reads the sections both may carry. The inline
+// sections are bound to their protos here, so the store hands them on as values and no reader of the
+// design opens this file again. The sources are checked for shape only, since whether one names
+// anything depends on where the descriptor sits.
+func parseDescriptor(r io.Reader, file string) (descriptorYAML, *webapi.AnalysisConfig, Sources, error) {
+	var y descriptorYAML
+	fail := func(err error) (descriptorYAML, *webapi.AnalysisConfig, Sources, error) {
+		return descriptorYAML{}, nil, Sources{}, fmt.Errorf("%s: %w", file, err)
+	}
+	if err := decodeStrict(r, &y); err != nil {
+		return fail(err)
+	}
+	if err := validID("name", y.Name); err != nil {
+		return fail(err)
+	}
+	cfg := &webapi.AnalysisConfig{}
+	var err error
+	if cfg.Conventions, err = parseConventions(&y.Conventions); err != nil {
+		return fail(err)
+	}
+	if cfg.Checklists, err = parseChecklists(&y.Checklists); err != nil {
+		return fail(err)
+	}
+	if !y.Intent.IsZero() && y.Intent.Tag != "!!null" {
+		if cfg.Intent, err = intent.DecodeSection(&y.Intent); err != nil {
+			return fail(err)
+		}
+	}
+	src := y.sources()
+	if src.Extends != "" {
+		if err := validSource("extends", src.Extends); err != nil {
+			return fail(err)
+		}
+		if path.Base(CleanRel(src.Extends)) != ProjectDescriptor {
+			return fail(fmt.Errorf("extends %q must name a %s, the descriptor this one layers on", src.Extends, ProjectDescriptor))
+		}
+	}
+	for field, refs := range map[string][]string{"profiles": src.Profiles, "params": src.Params, "symbols": src.Symbols, "lib": src.Lib, "queries": src.Queries} {
+		for _, ref := range refs {
+			if err := validSource(field, ref); err != nil {
+				return fail(err)
+			}
+		}
+	}
+	return y, cfg, src, nil
+}
+
+// parseConventions binds a descriptor's conventions section to its proto. An absent section is nil,
+// meaning the vocabulary the descriptor inherits, or the engine's.
 func parseConventions(n *yaml.Node) (*configpb.NamingConvention, error) {
-	switch {
-	case n.IsZero() || n.Tag == "!!null":
+	if n.IsZero() || n.Tag == "!!null" {
 		return nil, nil
-	case n.Kind == yaml.ScalarNode:
-		return nil, fmt.Errorf("conventions names a file (%q); a project's conventions are now written inline under conventions: (agni issue 828)", n.Value)
 	}
 	conv := &configpb.NamingConvention{}
 	if err := yamlpb.Decode(n, conv); err != nil {
@@ -211,9 +255,9 @@ func parseConventions(n *yaml.Node) (*configpb.NamingConvention, error) {
 	return conv, nil
 }
 
-// parseChecklists reads a project's checklists section, a mapping from a name to a review manifest,
-// in the order it is written, since the first is the project's default. Each manifest is validated
-// here, so a malformed checklist fails the project's load and names the checklist.
+// parseChecklists reads a descriptor's checklists section, a mapping from a name to a review
+// manifest, in the order it is written, since the first is the default. Each manifest is validated
+// here, so a malformed checklist fails the load and names the checklist.
 //
 // A manifest's YAML is the review package's authoring form, which spells an item's binding flat where
 // the proto nests it, so it is read by review.Load and converted, rather than bound to the proto.
@@ -237,7 +281,7 @@ func parseChecklists(n *yaml.Node) ([]*webapi.NamedChecklist, error) {
 		}
 		seen[name] = true
 		if v.Kind != yaml.MappingNode {
-			return nil, fmt.Errorf("line %d: checklist %q must be a checklist (name, areas), not a file name", v.Line, name)
+			return nil, fmt.Errorf("line %d: checklist %q must be a checklist (name, areas)", v.Line, name)
 		}
 		b, err := yaml.Marshal(v)
 		if err != nil {
@@ -250,96 +294,6 @@ func parseChecklists(n *yaml.Node) ([]*webapi.NamedChecklist, error) {
 		out = append(out, &webapi.NamedChecklist{Name: name, Manifest: service.ManifestProto(man)})
 	}
 	return out, nil
-}
-
-// ParseDesign reads a `design.yaml`, returning the declared id and the wire message, with the same
-// id-separate and strict-field posture as ParseProject.
-//
-// `entry_uri` and `companion_uris` come back holding DESIGN-FOLDER-RELATIVE NAMES, not URIs. The
-// store turns them into URIs when it locates the design, and nothing outside this package observes
-// the intermediate state.
-//
-// An entry or companion that escapes the design folder is rejected here rather than where a loader
-// would open it, so the error names the descriptor the operator has to fix.
-func ParseDesign(r io.Reader) (id string, d *webapi.Design, err error) {
-	var y designYAML
-	if err := decodeStrict(r, &y); err != nil {
-		return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
-	}
-	if err := validID("name", y.Name); err != nil {
-		return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
-	}
-	if y.Entry == "" {
-		return "", nil, fmt.Errorf("%s: entry is required (name the file analysis should read; a companion view is declared under companions instead)", DesignDescriptor)
-	}
-	if err := validRel("entry", y.Entry); err != nil {
-		return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
-	}
-	entry := CleanRel(y.Entry)
-	out := &webapi.Design{Title: orName(y.Title, y.Name), EntryUri: entry, FlattenHierarchy: y.FlattenHierarchy}
-	seen := map[string]bool{entry: true}
-	for _, c := range y.Companions {
-		if err := validRel("companions", c); err != nil {
-			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
-		}
-		clean := CleanRel(c)
-		if seen[clean] {
-			// A file that is both entry and companion would make the redirect point at itself.
-			return "", nil, fmt.Errorf("%s: %q is listed twice (a file is either the entry or a companion, not both)", DesignDescriptor, c)
-		}
-		seen[clean] = true
-		out.CompanionUris = append(out.CompanionUris, clean)
-	}
-	// Each revision is its own entry and views, checked against every file already declared, so no
-	// file is two revisions' at once and a board is never borrowed by a netlist it was not drawn for.
-	for i, r := range y.Revisions {
-		where := fmt.Sprintf("revisions[%d]", i)
-		if r.Entry == "" {
-			return "", nil, fmt.Errorf("%s: %s: entry is required (name the revision's netlist; its views go under companions)", DesignDescriptor, where)
-		}
-		rev := &webapi.DesignRevision{}
-		for j, f := range append([]string{r.Entry}, r.Companions...) {
-			field := where + ".entry"
-			if j > 0 {
-				field = where + ".companions"
-			}
-			if err := validRel(field, f); err != nil {
-				return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
-			}
-			clean := CleanRel(f)
-			if seen[clean] {
-				return "", nil, fmt.Errorf("%s: %q is listed twice (a file belongs to one revision, as its entry or one of its companions)", DesignDescriptor, f)
-			}
-			seen[clean] = true
-			if j == 0 {
-				rev.EntryUri = clean
-			} else {
-				rev.CompanionUris = append(rev.CompanionUris, clean)
-			}
-		}
-		out.Revisions = append(out.Revisions, rev)
-	}
-	// A design's config carries only its intent and symbols (see Design.config). Conventions,
-	// profiles and parameters describe the team and live on the Project.
-	out.Config = &webapi.AnalysisConfig{}
-	if y.Symbols == nil {
-		out.Config.SymbolPathUris = []string{defaultSymbols}
-	} else if clean := CleanRel(*y.Symbols); clean != "" {
-		if err := validRel("symbols", clean); err != nil {
-			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
-		}
-		out.Config.SymbolPathUris = []string{clean}
-	}
-	// The intent section is bound to its proto here and compiled where a run composes its config, so
-	// the store hands it on as a value and no reader of the design opens this file again.
-	if !y.Intent.IsZero() && y.Intent.Tag != "!!null" {
-		di, err := intent.DecodeSection(&y.Intent)
-		if err != nil {
-			return "", nil, fmt.Errorf("%s: %w", DesignDescriptor, err)
-		}
-		out.Config.Intent = di
-	}
-	return y.Name, out, nil
 }
 
 // CleanRel normalizes a descriptor-relative file name for comparison (forward slashes, no `./`, no
@@ -397,50 +351,67 @@ func validRel(field, rel string) error {
 	return nil
 }
 
+// validSource checks the shape of a source a descriptor names: a mount:// URI, or a path relative to
+// the descriptor. A relative path may climb with `..`, since the containment boundary is the mount and
+// artifact.URI.Join refuses a path that leaves it.
+func validSource(field, ref string) error {
+	ref = strings.TrimSpace(ref)
+	switch {
+	case ref == "":
+		return fmt.Errorf("%s names an empty path", field)
+	case strings.HasPrefix(ref, artifact.Scheme+"://"):
+		if _, err := artifact.Parse(ref); err != nil {
+			return fmt.Errorf("%s %q: %w", field, ref, err)
+		}
+		return nil
+	case strings.Contains(ref, "://"):
+		return fmt.Errorf("%s %q: a source is a path relative to the descriptor or a %s:// URI", field, ref, artifact.Scheme)
+	case path.IsAbs(CleanRel(ref)) || strings.HasPrefix(ref, "/"):
+		return fmt.Errorf("%s %q must be relative to the descriptor, not absolute", field, ref)
+	}
+	return nil
+}
+
 // WriteProject writes a `project.yaml`, the write half of ParseProject. It lives here so the
 // descriptor SHAPE has one definition, and TestDescriptorRoundTrip pins the two halves together.
 //
-// names is optional. Passing nil declares nothing, which suits a scaffolder writing the conventional
-// layout, since the defaults already name `profiles`, `params`, `symbols` and `lib`. The conventions
-// and checklists sections are a scaffolder's to append, since their content is prose an operator
-// edits rather than a value this writer could own.
+// src names the project's parent and its file tiers, as ParseProject returns them. The conventions and
+// checklists sections are a scaffolder's to append, since their content is prose an operator edits
+// rather than a value this writer could own.
 //
 // header is prose written as a YAML comment above the document, "" for none.
-func WriteProject(w io.Writer, header, id, title string, names *ProjectConfigNames) error {
-	return WriteProjectExtending(w, header, id, title, "", names)
-}
-
-// WriteProjectExtending is WriteProject plus a declared `extends`, for a scaffolder writing a project
-// that inherits shared config. An empty extends writes no key at all.
-func WriteProjectExtending(w io.Writer, header, id, title, extends string, names *ProjectConfigNames) error {
+func WriteProject(w io.Writer, header, id, title string, src Sources) error {
 	if !idPattern.MatchString(id) {
 		return fmt.Errorf("project id %q must match %s", id, idPattern)
 	}
-	y := projectYAML{Name: id, Title: title, Extends: extends}
-	if names != nil {
-		y.Profiles, y.Params = &names.Profiles, &names.Params
-		y.Symbols, y.Lib = &names.Symbols, &names.Lib
-		y.Queries = &names.Queries
-	}
+	y := descriptorYAML{Name: id, Title: title}
+	y.setSources(src)
 	return writeDescriptor(w, header, y)
 }
 
 // WriteDesign writes a `design.yaml`, the write half of ParseDesign.
 //
 // entry and companions are descriptor-relative names, cleaned on the way in on the same terms
-// ParseDesign cleans them, so a caller cannot write a descriptor its own parser would reject.
-func WriteDesign(w io.Writer, header, id, title, entry string, companions []string) error {
+// ParseDesign cleans them, so a caller cannot write a descriptor its own parser would reject. src.Extends
+// names the design's project, "" for a design in none.
+func WriteDesign(w io.Writer, header, id, title, entry string, companions []string, src Sources) error {
 	if !idPattern.MatchString(id) {
 		return fmt.Errorf("design id %q must match %s", id, idPattern)
 	}
 	if entry == "" {
 		return fmt.Errorf("design %q needs an entry", id)
 	}
-	y := designYAML{Name: id, Title: title, Entry: CleanRel(entry)}
+	y := descriptorYAML{Name: id, Title: title, Entry: CleanRel(entry)}
 	for _, c := range companions {
 		y.Companions = append(y.Companions, CleanRel(c))
 	}
+	y.setSources(src)
 	return writeDescriptor(w, header, y)
+}
+
+func (y *descriptorYAML) setSources(src Sources) {
+	y.Extends = src.Extends
+	y.Profiles, y.Params, y.Symbols, y.Lib, y.Queries = src.Profiles, src.Params, src.Symbols, src.Lib, src.Queries
 }
 
 // writeDescriptor emits the optional comment header then the marshalled document.

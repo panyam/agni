@@ -1,5 +1,5 @@
 <svg viewBox="0 0 640 396" role="img" aria-labelledby="config-composition-title" style="width:100%;height:auto;font-family:inherit">
-  <title id="config-composition-title">A vertical chain composing one analysis config. From the top: the deployment default, then a shared project reached through extends, then the project itself, then the design, which sets only its intent, then the request. Each layer overrides the one above it, so the nearest declaration wins. Notes on the right record that the ref-shaped tiers such as profiles and seeded parameters accumulate down the chain, while the naming vocabulary is replaced rather than merged. The chain produces one analysis config for the run.</title>
+  <title id="config-composition-title">A vertical chain composing one analysis config. From the top: the deployment default, then a shared project reached through extends, then the project itself, then the design, which extends the project and layers its own sections on top, then the request. Each layer overrides the one above it, so the nearest declaration wins. Notes on the right record that the ref-shaped tiers such as profiles and seeded parameters accumulate down the chain, while the naming vocabulary is replaced rather than merged. The chain produces one analysis config for the run.</title>
   <defs>
     <marker id="config-composition-arrow" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto">
       <path d="M0,0 L8,4 L0,8 z" fill="currentColor" opacity="0.5"/>
@@ -27,7 +27,7 @@
     <text x="260" y="222">designs/gateway</text>
     <text x="260" y="290">the request</text>
   </g>
-  <text x="260" y="236" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.55">which sets only its intent</text>
+  <text x="260" y="236" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.55">extends it, its own sections on top</text>
   <text x="260" y="352" text-anchor="middle" fill="var(--accent-color)" font-size="12.5" font-weight="600">one AnalysisConfig for this run</text>
   <text x="260" y="368" text-anchor="middle" fill="currentColor" font-size="10" opacity="0.6">composed root-first, so the nearest declaration wins</text>
   <g fill="currentColor" font-size="10.5" opacity="0.7">

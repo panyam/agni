@@ -1,12 +1,13 @@
 package projects
 
 import (
+	"reflect"
 	"strings"
 	"testing"
 )
 
 func TestParseDesign(t *testing.T) {
-	id, d, err := ParseDesign(strings.NewReader(`
+	id, d, _, err := ParseDesign(strings.NewReader(`
 name: gateway
 title: Sample Board
 entry: gateway.edn
@@ -43,7 +44,7 @@ companions:
 // TestParseDesignUntitledFallsBackToID pins that every consumer degrades the same way, so an
 // untitled design never renders blank.
 func TestParseDesignUntitledFallsBackToID(t *testing.T) {
-	_, d, err := ParseDesign(strings.NewReader("name: gateway\nentry: gateway.edn\n"))
+	_, d, _, err := ParseDesign(strings.NewReader("name: gateway\nentry: gateway.edn\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -57,7 +58,7 @@ func TestParseDesignReadsFlattenHierarchy(t *testing.T) {
 		"name: b\nentry: b.edn\nflatten_hierarchy: true\n": true,
 		"name: b\nentry: b.edn\n":                          false,
 	} {
-		_, d, err := ParseDesign(strings.NewReader(src))
+		_, d, _, err := ParseDesign(strings.NewReader(src))
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -91,7 +92,7 @@ func TestParseDesignRejects(t *testing.T) {
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
-			_, _, err := ParseDesign(strings.NewReader(c.yaml))
+			_, _, _, err := ParseDesign(strings.NewReader(c.yaml))
 			if err == nil {
 				t.Fatalf("want an error mentioning %q, got none", c.want)
 			}
@@ -103,7 +104,7 @@ func TestParseDesignRejects(t *testing.T) {
 }
 
 func TestParseDesignReadsRevisions(t *testing.T) {
-	_, d, err := ParseDesign(strings.NewReader("name: g\nentry: a.edn\ncompanions: [a.kicad_pcb]\nrevisions:\n  - entry: ./b.edn\n    companions: [b.kicad_pcb]\n  - entry: c.edn\n"))
+	_, d, _, err := ParseDesign(strings.NewReader("name: g\nentry: a.edn\ncompanions: [a.kicad_pcb]\nrevisions:\n  - entry: ./b.edn\n    companions: [b.kicad_pcb]\n  - entry: c.edn\n"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -130,5 +131,69 @@ func TestParseProject(t *testing.T) {
 	}
 	if _, _, _, err := ParseProject(strings.NewReader("naem: gateway\n")); err == nil {
 		t.Error("an unknown field should be rejected")
+	}
+}
+
+// One schema serves both descriptors (agni issue 1136), and the file's name says which role it plays,
+// so a key naming a design's own files is refused in a project with where it goes.
+func TestParseProjectRefusesADesignsKeys(t *testing.T) {
+	for _, doc := range []string{
+		"name: p\nentry: a.edn\n",
+		"name: p\ncompanions: [a.kicad_pcb]\n",
+		"name: p\nrevisions:\n  - entry: b.edn\n",
+		"name: p\nflatten_hierarchy: true\n",
+	} {
+		_, _, _, err := ParseProject(strings.NewReader(doc))
+		if err == nil || !strings.Contains(err.Error(), "belongs in that design's design.yaml") {
+			t.Errorf("%q: error = %v, want it refused as a design's key", doc, err)
+		}
+	}
+}
+
+// A design declares every section a project can, so a board can override its team's naming or add a
+// checklist of its own.
+func TestParseDesignReadsEverySection(t *testing.T) {
+	_, d, src, err := ParseDesign(strings.NewReader(`
+name: b
+extends: ../../project.yaml
+entry: b.edn
+conventions: {name: legacy}
+checklists:
+  extra: {name: Extra, areas: [{name: A, items: [{id: X1, title: t, note: by hand}]}]}
+intent: {modules: [{name: regs, class: regulator, count: 1}]}
+profiles: [profiles/can.yaml]
+params: [../shared/params]
+symbols: [symbols]
+lib: [mount://shared/lib]
+queries: [queries]
+`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	cfg := d.GetConfig()
+	if cfg.GetConventions().GetName() != "legacy" || len(cfg.GetChecklists()) != 1 || len(cfg.GetIntent().GetModules()) != 1 {
+		t.Errorf("config = %v, want the design's conventions, its checklist and its intent", cfg)
+	}
+	want := Sources{Extends: "../../project.yaml", Profiles: []string{"profiles/can.yaml"}, Params: []string{"../shared/params"},
+		Symbols: []string{"symbols"}, Lib: []string{"mount://shared/lib"}, Queries: []string{"queries"}}
+	if !reflect.DeepEqual(src, want) {
+		t.Errorf("sources = %+v, want %+v as written, for the store to resolve", src, want)
+	}
+}
+
+func TestParseRejectsAMalformedSource(t *testing.T) {
+	for doc, want := range map[string]string{
+		"name: p\nextends: ../house\n":                    "must name a project.yaml",
+		"name: p\nextends: ../house/design.yaml\n":        "must name a project.yaml",
+		"name: p\nprofiles: [/etc/profiles]\n":            "not absolute",
+		"name: p\nprofiles: ['']\n":                       "empty path",
+		"name: p\nparams: [https://example.com/p.yaml]\n": "a source is a path relative to the descriptor or a mount:// URI",
+		"name: p\nlib: ['mount://shared/../../etc']\n":    "escapes its mount",
+		"name: p\nprofiles: profiles\n":                   "cannot unmarshal",
+	} {
+		_, _, _, err := ParseProject(strings.NewReader(doc))
+		if err == nil || !strings.Contains(err.Error(), want) {
+			t.Errorf("%q: error = %v, want it to mention %q", doc, err, want)
+		}
 	}
 }

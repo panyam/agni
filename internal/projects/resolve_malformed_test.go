@@ -20,7 +20,7 @@ import (
 func TestResolveDesign_MalformedOwnDescriptor(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, "proj/project.yaml", "name: gw\n")
-	writeFile(t, root, "proj/designs/board/design.yaml", "name: My Board\nentry: board.edn\n") // spaces, so not an id
+	writeFile(t, root, "proj/designs/board/design.yaml", "name: My Board\nextends: ../../project.yaml\nentry: board.edn\n") // spaces, so not an id
 	writeFile(t, root, "proj/designs/board/board.edn", "x")
 	s := NewFSStore(Tree{Mount: "m", FS: os.DirFS(root)})
 
@@ -39,9 +39,9 @@ func TestResolveDesign_MalformedOwnDescriptor(t *testing.T) {
 func TestResolveDesign_MalformedSiblingIsNotOurProblem(t *testing.T) {
 	root := t.TempDir()
 	writeFile(t, root, "proj/project.yaml", "name: gw\n")
-	writeFile(t, root, "proj/designs/good/design.yaml", "name: good\nentry: good.edn\n")
+	writeFile(t, root, "proj/designs/good/design.yaml", "name: good\nextends: ../../project.yaml\nentry: good.edn\n")
 	writeFile(t, root, "proj/designs/good/good.edn", "x")
-	writeFile(t, root, "proj/designs/broken/design.yaml", "name: Not An Id\nentry: broken.edn\n")
+	writeFile(t, root, "proj/designs/broken/design.yaml", "name: Not An Id\nextends: ../../project.yaml\nentry: broken.edn\n")
 	s := NewFSStore(Tree{Mount: "m", FS: os.DirFS(root)})
 
 	d, p, err := s.ResolveDesign(context.Background(), artifact.URI{Mount: "m", Path: "proj/designs/good/good.edn"})

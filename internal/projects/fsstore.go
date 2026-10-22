@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"github.com/panyam/agni/artifact"
 	"io/fs"
-	"maps"
 	"path"
-	"slices"
 	"sort"
+	"strings"
 
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/service"
@@ -18,7 +17,7 @@ import (
 // MaxDepth bounds the downward walk that discovers descriptors under a tree, counting the tree root
 // as depth 0. A tree is whatever folder an operator handed the server, possibly a build output or a
 // home directory, so an unbounded walk would stat all of it on every listing. Four levels reaches
-// `<root>/<project>/designs/<design>/`, one deeper than a review project's layout.
+// `<root>/<team>/<project>/<design>/` with one to spare.
 const MaxDepth = 4
 
 // Tree is one named filesystem the store looks in: a mount on a server, a bounded slice of the local
@@ -91,6 +90,9 @@ func (s *FSStore) Projects(context.Context) ([]*webapi.Project, error) {
 				return nil, fmt.Errorf("duplicate project id %q, declared at %s and at %s: a project id is its resource name, so two projects cannot share one", lp.id, first, where)
 			}
 			seen[lp.id] = where
+			if err := s.nameParent(lp.msg, map[string]bool{descriptorURI(lp.msg): true}); err != nil {
+				return nil, err
+			}
 			out = append(out, lp.msg)
 		}
 	}
@@ -116,46 +118,53 @@ func (s *FSStore) Design(ctx context.Context, name string) (*webapi.Design, erro
 	return nil, fmt.Errorf("%w: no design %q", service.ErrNotFound, name)
 }
 
-// Designs returns one project's designs, ordered by resource name, with a duplicate id rejected on
-// the same reasoning as a duplicate project id.
+// Designs returns one project's designs, the descriptors that name it in `extends`, ordered by
+// resource name, with a duplicate id rejected on the same reasoning as a duplicate project id. A design
+// may sit anywhere a mount reaches, since its parent is named rather than found above it.
 func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design, error) {
 	p, err := s.Project(ctx, parent)
 	if err != nil {
 		return nil, err
 	}
-	t, ok := s.tree(uriOf(p.GetUri()).Mount)
-	if !ok {
-		return nil, fmt.Errorf("%w: mount %q is no longer configured", service.ErrNotFound, uriOf(p.GetUri()).Mount)
-	}
-	dirs, err := s.walks.find(t.FS, walkRoot(uriOf(p.GetUri()).Path), DesignDescriptor)
-	if err != nil {
-		return nil, err
-	}
 	var out []*webapi.Design
 	seen := map[string]string{}
-	for _, dir := range dirs {
-		id, d, err := s.loadDesign(t, dir)
+	for _, t := range s.trees {
+		dirs, err := s.walks.find(t, ".", DesignDescriptor)
 		if err != nil {
 			return nil, err
 		}
-		if first, dup := seen[id]; dup {
-			return nil, fmt.Errorf("duplicate design id %q in %s, declared in %q and in %q", id, parent, first, displayDir(dir))
+		for _, dir := range dirs {
+			id, d, err := s.loadDesign(t, dir)
+			if err != nil {
+				return nil, err
+			}
+			if d.GetConfig().GetExtends() != descriptorURI(p) {
+				continue
+			}
+			where := t.Mount + ":" + displayDir(dir)
+			if first, dup := seen[id]; dup {
+				return nil, fmt.Errorf("duplicate design id %q in %s, declared at %s and at %s", id, parent, first, where)
+			}
+			seen[id] = where
+			d.Name = service.DesignName(parent, id)
+			d.Config.Extends = parent
+			out = append(out, d)
 		}
-		seen[id] = displayDir(dir)
-		d.Name = service.DesignName(parent, id)
-		out = append(out, d)
 	}
 	sort.Slice(out, func(i, j int) bool { return out[i].GetName() < out[j].GetName() })
 	return out, nil
 }
 
-// ResolveDesign maps a URI to the design containing it and that design's project. It walks UP from
-// the URI's path, so the answer costs a few stats however many designs a tree holds.
+// ResolveDesign maps a URI to the design containing it and the project that design extends. It walks
+// UP from the URI's path to find the design, so the answer costs a few stats however many designs a
+// tree holds. The project is the one the design names, never one found above it.
 //
 // A miss is (nil, nil, nil), the ordinary state of a mounted folder.
 //
-// A design with no enclosing project is NOT a miss. It comes back with its declaration intact and an
-// EMPTY `name`, since a resource name needs a parent, and the CLI still honours the declaration.
+// A design that extends nothing is NOT a miss. It comes back with its declaration intact and an EMPTY
+// `name`, since a resource name needs a parent, and the CLI still honours the declaration. A design
+// that extends nothing while a project descriptor sits above it is an error, since that is the shape
+// of a forgotten `extends`, and reading it would run it on the built-in config with nothing said.
 func (s *FSStore) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
 	t, ok := s.tree(uri.Mount)
 	if !ok {
@@ -175,21 +184,26 @@ func (s *FSStore) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.De
 	if err != nil {
 		return nil, nil, err
 	}
-	projectDir, found := findAbove(t.FS, designDir, ProjectDescriptor)
-	if !found {
+	parent := d.GetConfig().GetExtends()
+	if parent == "" {
+		if projectDir, found := findAbove(t.FS, designDir, ProjectDescriptor); found {
+			return nil, nil, fmt.Errorf("%w: %s:%s extends nothing, and %s:%s sits above it; add `extends: <path to that %s>` to the design, so it reads with that project's config",
+				service.ErrInvalidArgument, t.Mount, path.Join(walkRoot(designDir), DesignDescriptor), t.Mount, path.Join(walkRoot(projectDir), ProjectDescriptor), ProjectDescriptor)
+		}
 		return d, nil, nil
 	}
-	_, p, err := s.loadProject(t, projectDir)
+	p, err := s.projectAt(parent)
 	if err != nil {
-		return nil, nil, err
+		return nil, nil, fmt.Errorf("%s: extends: %w", path.Join(walkRoot(designDir), DesignDescriptor), err)
 	}
 	d.Name = service.DesignName(p.GetName(), designID)
+	d.Config.Extends = p.GetName()
 	return d, p, nil
 }
 
 // projectsIn discovers the project descriptors in one tree.
 func (s *FSStore) projectsIn(t Tree) ([]locatedProject, error) {
-	dirs, err := s.walks.find(t.FS, ".", ProjectDescriptor)
+	dirs, err := s.walks.find(t, ".", ProjectDescriptor)
 	if err != nil {
 		return nil, err
 	}
@@ -205,24 +219,26 @@ func (s *FSStore) projectsIn(t Tree) ([]locatedProject, error) {
 }
 
 // loadProject parses one project descriptor and fills in what only the store knows: its resource
-// name, which tree it came from, and where in that tree.
+// name, which tree it came from, and where in that tree. Its `extends` comes back as the PARENT'S
+// descriptor URI, which nameParent turns into a resource name, since the cached value must not depend
+// on a file outside its own dependencies.
 func (s *FSStore) loadProject(t Tree, dir string) (string, *webapi.Project, error) {
 	name := path.Join(walkRoot(dir), ProjectDescriptor)
-	// The directory is a dependency too, so the existence probes in attachConfig are covered, since
-	// adding params/ moves the directory's mtime without changing any file read here.
-	deps := []string{walkRoot(dir), name}
-	return s.projectC.get(t.FS, t.Mount+"\x00"+name, deps, func() (string, *webapi.Project, error) {
-		return s.readProject(t, dir, name)
+	var deps []string
+	return s.projectC.get(t.FS, t.Mount+"\x00"+name, func() ([]string, string, *webapi.Project, error) {
+		id, p, err := s.readProject(t, dir, name, &deps)
+		return deps, id, p, err
 	}, cloneProject)
 }
 
-func (s *FSStore) readProject(t Tree, dir, name string) (string, *webapi.Project, error) {
+func (s *FSStore) readProject(t Tree, dir, name string, deps *[]string) (string, *webapi.Project, error) {
+	*deps = []string{name}
 	f, err := t.FS.Open(name)
 	if err != nil {
 		return "", nil, err
 	}
 	defer f.Close()
-	id, p, names, err := ParseProject(f)
+	id, p, src, err := ParseProject(f)
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
@@ -232,78 +248,172 @@ func (s *FSStore) readProject(t Tree, dir, name string) (string, *webapi.Project
 	}
 	p.Name = service.ProjectName(id)
 	p.Uri = u.String()
-	// A conventions.yaml or review.yaml beside the descriptor is the layout before agni issue 828.
-	// Reading the project without it would drop the team's vocabulary or its checklist and report as
-	// though the team declared none, so it is an error that says where the content goes now.
-	for _, f := range slices.Sorted(maps.Keys(formerProjectFiles)) {
-		if exists(t.FS, path.Join(walkRoot(dir), f)) {
-			return "", nil, fmt.Errorf("%s: %s is no longer read; move its content under %s in %s (agni issue 828)", name, f, formerProjectFiles[f], ProjectDescriptor)
-		}
-	}
-	if err := s.attachConfig(t, dir, u, names, p); err != nil {
+	if err := s.attachSources(t, u, src, p.Config, deps); err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
 	return id, p, nil
 }
 
-// attachConfig fills in the directory tiers a project owns, as URIs for what exists. Its conventions
-// and checklists are values ParseProject already read from the descriptor.
+// attachSources resolves what a descriptor names outside itself into the mount:// URIs the wire type
+// promises: its parent descriptor into config.extends, and each tier's files into that tier's field.
+// The paths are relative to the descriptor's folder, base.
 //
-// A declared name that names nothing is SILENTLY ABSENT rather than an error. The names default
-// (profiles/, params/, symbols/, lib/), so otherwise a project that declared nothing would fail for
-// lacking directories. An explicitly declared missing name deserves an error, but the descriptor
-// cannot tell the two apart yet.
-func (s *FSStore) attachConfig(t Tree, dir string, base artifact.URI, names ProjectConfigNames, p *webapi.Project) error {
-	rel := func(n string) (string, bool) {
-		if n == "" {
-			return "", false
+// A source naming nothing is an ERROR. Nothing is found by its folder's name any more, so a path the
+// descriptor wrote is a tier the operator asked for, and reading on without it would report as though
+// the team declared none. Each same-tree source joins deps, so removing one revalidates the descriptor.
+func (s *FSStore) attachSources(t Tree, base artifact.URI, src Sources, cfg *webapi.AnalysisConfig, deps *[]string) error {
+	// fix says what to do about a source that cannot be read, which differs for the parent: a design
+	// copied or mounted without its project reads on its own once its extends goes.
+	fix := func(field string) string {
+		if field == "extends" {
+			return "mount or drop the folder holding that project.yaml as well, or remove extends to read this descriptor on its own"
 		}
-		full := path.Join(walkRoot(dir), n)
-		if !exists(t.FS, full) {
-			return "", false
+		return "fix the path, or delete it to run without that " + field
+	}
+	resolve := func(field, ref string) (string, error) {
+		if !strings.HasPrefix(strings.TrimSpace(ref), artifact.Scheme+"://") {
+			if joined := path.Join(base.Path, CleanRel(ref)); joined == ".." || strings.HasPrefix(joined, "../") {
+				return "", fmt.Errorf("%s %q is outside mount %q, so it cannot be read; %s", field, ref, base.Mount, fix(field))
+			}
 		}
-		u, err := base.Join(n)
+		u, err := resolveSource(base, ref)
 		if err != nil {
-			return "", false
+			return "", fmt.Errorf("%s %q: %w", field, ref, err)
 		}
-		return u.String(), true
+		if u.Mount == t.Mount {
+			*deps = append(*deps, walkRoot(u.Path))
+		}
+		owner, ok := s.tree(u.Mount)
+		if !ok {
+			return "", fmt.Errorf("%s %q: no mount %q is configured", field, ref, u.Mount)
+		}
+		if !exists(owner.FS, walkRoot(u.Path)) {
+			return "", fmt.Errorf("%s %q names nothing (looked for %s); %s", field, ref, u, fix(field))
+		}
+		return u.String(), nil
 	}
-	if uri, ok := rel(names.Profiles); ok {
-		p.Config.ProfileUris = []string{uri}
+	if src.Extends != "" {
+		uri, err := resolve("extends", src.Extends)
+		if err != nil {
+			return err
+		}
+		cfg.Extends = uri
 	}
-	if uri, ok := rel(names.Params); ok {
-		p.Config.ParamUris = []string{uri}
-	}
-	if uri, ok := rel(names.Symbols); ok {
-		p.Config.SymbolPathUris = []string{uri}
-	}
-	if uri, ok := rel(names.Lib); ok {
-		p.Config.LibraryUris = []string{uri}
-	}
-	if uri, ok := rel(names.Queries); ok {
-		p.Config.QuerySetUris = []string{uri}
+	for _, tier := range []struct {
+		field string
+		refs  []string
+		into  *[]string
+	}{
+		{"profiles", src.Profiles, &cfg.ProfileUris},
+		{"params", src.Params, &cfg.ParamUris},
+		{"symbols", src.Symbols, &cfg.SymbolPathUris},
+		{"lib", src.Lib, &cfg.LibraryUris},
+		{"queries", src.Queries, &cfg.QuerySetUris},
+	} {
+		for _, ref := range tier.refs {
+			uri, err := resolve(tier.field, ref)
+			if err != nil {
+				return err
+			}
+			*tier.into = append(*tier.into, uri)
+		}
 	}
 	return nil
 }
 
+// resolveSource turns a descriptor's source into a URI: a mount:// URI as written, or a path joined
+// onto the descriptor's folder, which artifact refuses when it climbs out of the mount.
+func resolveSource(base artifact.URI, ref string) (artifact.URI, error) {
+	ref = strings.TrimSpace(ref)
+	if strings.HasPrefix(ref, artifact.Scheme+"://") {
+		return artifact.Parse(ref)
+	}
+	return base.Join(CleanRel(ref))
+}
+
+// projectAt loads the project whose descriptor a design or project names in `extends`, with its own
+// parent named as a resource name.
+func (s *FSStore) projectAt(descriptor string) (*webapi.Project, error) {
+	u, err := artifact.Parse(descriptor)
+	if err != nil {
+		return nil, err
+	}
+	t, ok := s.tree(u.Mount)
+	if !ok {
+		return nil, fmt.Errorf("%w: no mount %q is configured", service.ErrNotFound, u.Mount)
+	}
+	_, p, err := s.loadProject(t, path.Dir(walkRoot(u.Path)))
+	if err != nil {
+		return nil, err
+	}
+	if err := s.nameParent(p, map[string]bool{descriptor: true}); err != nil {
+		return nil, err
+	}
+	return p, nil
+}
+
+// nameParent turns a loaded project's `extends`, its parent's descriptor URI, into that parent's
+// resource name, which is what service.ResolveExtends walks the chain by. visiting guards a cycle
+// that runs through descriptors whose ids differ.
+func (s *FSStore) nameParent(p *webapi.Project, visiting map[string]bool) error {
+	parent := p.GetConfig().GetExtends()
+	if parent == "" || !strings.HasPrefix(parent, artifact.Scheme+"://") {
+		return nil
+	}
+	if visiting[parent] {
+		return fmt.Errorf("%w: extends cycle through %s", service.ErrInvalidArgument, parent)
+	}
+	u, err := artifact.Parse(parent)
+	if err != nil {
+		return err
+	}
+	t, ok := s.tree(u.Mount)
+	if !ok {
+		return fmt.Errorf("%w: %s extends %s, on no configured mount", service.ErrNotFound, p.GetName(), parent)
+	}
+	id, _, err := s.loadProject(t, path.Dir(walkRoot(u.Path)))
+	if err != nil {
+		return fmt.Errorf("%s extends %s: %w", p.GetName(), parent, err)
+	}
+	p.Config.Extends = service.ProjectName(id)
+	return nil
+}
+
+// descriptorURI is the URI of the descriptor a loaded project was read from, which is what a design
+// naming it in `extends` resolves to.
+func descriptorURI(p *webapi.Project) string {
+	u, err := artifact.Parse(p.GetUri())
+	if err != nil {
+		return ""
+	}
+	d, err := u.Join(ProjectDescriptor)
+	if err != nil {
+		return ""
+	}
+	return d.String()
+}
+
 // loadDesign parses one design descriptor and rewrites its design-folder-relative refs into the
 // mount:// URIs the wire type promises. The join happens HERE, once, because no consumer above the
-// port knows where the design folder sits. The caller sets Name, which needs the parent.
+// port knows where the design folder sits. The caller sets Name, which needs the parent, and turns
+// config.extends, its project's descriptor URI, into the project's resource name.
 func (s *FSStore) loadDesign(t Tree, dir string) (string, *webapi.Design, error) {
 	name := path.Join(walkRoot(dir), DesignDescriptor)
-	deps := []string{walkRoot(dir), name}
-	return s.designC.get(t.FS, t.Mount+"\x00"+name, deps, func() (string, *webapi.Design, error) {
-		return s.readDesign(t, dir, name)
+	var deps []string
+	return s.designC.get(t.FS, t.Mount+"\x00"+name, func() ([]string, string, *webapi.Design, error) {
+		id, d, err := s.readDesign(t, dir, name, &deps)
+		return deps, id, d, err
 	}, cloneDesign)
 }
 
-func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, error) {
+func (s *FSStore) readDesign(t Tree, dir, name string, deps *[]string) (string, *webapi.Design, error) {
+	*deps = []string{name}
 	f, err := t.FS.Open(name)
 	if err != nil {
 		return "", nil, err
 	}
 	defer f.Close()
-	id, d, err := ParseDesign(f)
+	id, d, src, err := ParseDesign(f)
 	if err != nil {
 		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
@@ -317,27 +427,8 @@ func (s *FSStore) readDesign(t Tree, dir, name string) (string, *webapi.Design, 
 	}
 	d.Uri = base.String()
 	d.EntryUri = entry.String()
-	// An intent.yaml beside the descriptor is the layout before agni issue 824. Reading the design
-	// without it would quietly drop every intent rule, which reads as a board that declares nothing,
-	// so it is an error that says where the declarations go now.
-	if exists(t.FS, path.Join(walkRoot(dir), formerIntentFile)) {
-		return "", nil, fmt.Errorf("%s: %s is no longer read; move its declarations under intent: in %s (agni issue 824)", name, formerIntentFile, DesignDescriptor)
-	}
-	// Symbols become URIs only for a directory that exists, so a design that never made one reads as
-	// having none rather than naming a missing directory.
-	if names := d.GetConfig().GetSymbolPathUris(); len(names) > 0 {
-		var resolved []string
-		for _, n := range names {
-			if !exists(t.FS, path.Join(walkRoot(dir), n)) {
-				continue
-			}
-			su, err := base.Join(n)
-			if err != nil {
-				return "", nil, err
-			}
-			resolved = append(resolved, su.String())
-		}
-		d.Config.SymbolPathUris = resolved
+	if err := s.attachSources(t, base, src, d.Config, deps); err != nil {
+		return "", nil, fmt.Errorf("%s: %w", name, err)
 	}
 	join := func(rel string) (string, error) {
 		u, err := base.Join(rel)

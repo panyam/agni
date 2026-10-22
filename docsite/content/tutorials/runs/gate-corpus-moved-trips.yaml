@@ -1,9 +1,9 @@
-# Rung 11: the same move, with the answered floor in place.
+# Rung 11: the same edit, with the answered floor in place.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: designs/jetson
 script: |
-  mv params params-old
+  sed -i.orig '/^params:/d' project.yaml
   agni review designs/jetson --min-answered 13
 capture: stderr
 match: '^error:'

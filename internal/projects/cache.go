@@ -51,9 +51,10 @@ type walkEntry struct {
 func newWalkCache() *walkCache { return &walkCache{entries: map[string]walkEntry{}} }
 
 // find returns the folders under root holding `name`, walking only when the previous answer can no
-// longer be trusted.
-func (c *walkCache) find(fsys fs.FS, root, name string) ([]string, error) {
-	key := root + "\x00" + name
+// longer be trusted. The key carries the mount, since every tree is walked from its own ".".
+func (c *walkCache) find(t Tree, root, name string) ([]string, error) {
+	fsys := t.FS
+	key := t.Mount + "\x00" + root + "\x00" + name
 	c.mu.Lock()
 	prev, ok := c.entries[key]
 	c.mu.Unlock()
@@ -140,12 +141,10 @@ func findDescriptorsStamped(fsys fs.FS, root, name string) ([]string, []dirStamp
 
 // parseCache memoizes a loaded descriptor against every file the load read.
 //
-// Against EVERY file the load read, not only the descriptor. A project's conventions and checklists
-// are sections of `project.yaml` since agni issue 828, so the descriptor covers them, but a load also
-// probes for its profiles, params, symbols and library, and for the files the earlier layout used.
-//
-// The containing DIRECTORY is a dependency too, which covers the existence probes, since adding or
-// removing `params/`, or leaving a `conventions.yaml` behind, moves the directory's mtime.
+// Against EVERY file the load read, not only the descriptor. A descriptor's conventions, checklists
+// and intent are sections of it, so the descriptor covers them, but a load also checks that each
+// profiles, params, symbols, lib and queries source it names exists, and removing one must revalidate
+// it. The parse reports those dependencies, since only reading the descriptor says what they are.
 type parseCache[T any] struct {
 	mu      sync.Mutex
 	entries map[string]parseEntry[T]
@@ -161,28 +160,35 @@ func newParseCache[T any]() *parseCache[T] {
 	return &parseCache[T]{entries: map[string]parseEntry[T]{}}
 }
 
-// get returns the parsed value cached under key, re-parsing only when a file in deps has changed.
+// get returns the parsed value cached under key, re-parsing only when a file the last parse depended
+// on has changed. parse returns the files it depended on alongside its value.
 //
-// `clone` exists because callers mutate the returned pointer (the store fills in resource names and
-// rewrites relative refs into URIs), and handing out the cached message would leak one request's
-// fill-in into the next.
-func (c *parseCache[T]) get(fsys fs.FS, key string, deps []string, parse func() (string, T, error), clone func(T) T) (string, T, error) {
-	now := stampAll(fsys, deps)
+// The clone keeps a cached message from being handed out by pointer, since the store mutates what it
+// loads (see cloneProject).
+func (c *parseCache[T]) get(fsys fs.FS, key string, parse func() ([]string, string, T, error), clone func(T) T) (string, T, error) {
 	c.mu.Lock()
 	prev, ok := c.entries[key]
 	c.mu.Unlock()
-	if ok && sameStamps(prev.deps, now) {
+	if ok && sameStamps(prev.deps, stampAll(fsys, keys(prev.deps))) {
 		return prev.id, clone(prev.value), nil
 	}
-	id, v, err := parse()
+	deps, id, v, err := parse()
 	if err != nil {
 		var zero T
 		return "", zero, err
 	}
 	c.mu.Lock()
-	c.entries[key] = parseEntry[T]{deps: now, id: id, value: clone(v)}
+	c.entries[key] = parseEntry[T]{deps: stampAll(fsys, deps), id: id, value: clone(v)}
 	c.mu.Unlock()
 	return id, v, nil
+}
+
+func keys(m map[string]fileStamp) []string {
+	out := make([]string, 0, len(m))
+	for k := range m {
+		out = append(out, k)
+	}
+	return out
 }
 
 func stampAll(fsys fs.FS, deps []string) map[string]fileStamp {

@@ -9,14 +9,14 @@ correctly and will still fail. Deciding that needs a number that exists only on 
 datasheet.
 
 A parameter set is that number, in a form a rule can compare against. `params/` holds one file per
-part worth checking. The project finds that directory by its conventional name, as it finds
-`profiles/`, so naming the design is enough for `check` and `review` to pick the corpus up, and
-neither carries a `--params` flag below.
+part worth checking. The project names that directory in its `project.yaml` (`params: [params]`), as
+it names `profiles/`, so naming the design is enough for `check` and `review` to pick the corpus up,
+and neither carries a `--params` flag below.
 
 ## Silent without it
 
-This run moves the project's `params/` aside first, so what you see is the rule with nothing to
-compare against:
+This run deletes the `params` line from the project's `project.yaml` first, so what you see is the
+rule with nothing to compare against:
 
 {{ agniRun "content/tutorials/runs/06-check-params-off.yaml" }}
 
@@ -28,7 +28,7 @@ and everything was fine, and rung 9 exists to resolve that ambiguity.
 
 The project seeds one part, the NTS0102 level translator. Four of them sit between the module's 1.8 V
 I/O and the board's 3.3 V and 5 V peripherals, and one has its B side on `+5V`, which is the reason to
-check it at all. Put the corpus back and the same rule decides, and with `--verdicts` it says what
+check it at all. With the corpus named, as `project.yaml` names it, the same rule decides, and with `--verdicts` it says what
 each pin was compared against:
 
 {{ agniRun "content/tutorials/runs/06-check-abs-max-params.yaml" }}

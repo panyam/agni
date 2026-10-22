@@ -3,6 +3,7 @@
 # canvas to draw findings on.
 name: mixer
 title: Mixer board
+extends: ../../project.yaml
 entry: mixer.edn
 companions:
   - mixer.kicad_pcb

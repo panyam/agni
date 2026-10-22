@@ -224,22 +224,26 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   camelCase JSON spelling, and an unknown key fails with its line. A new config file binds the same
   way. Go structs with yaml tags are the bug shape, because they drop an unknown key silently, which is
   how a misspelled `pull_up:` left a profile signal with no pull-up requirement and no error.
-- **A project DISCOVERS its analysis tiers, so a flag naming one is redundant and dropping the flag
-  does not turn it off.** `project.yaml` carries the team's `conventions:` and its named
-  `checklists:` as sections (agni 828), `internal/projects/descriptor.go` defaults the directories
-  `profiles`, `params`, `symbols`, `lib` and `queries`, and `FSStore` composes each one it finds.
-  `queries/` holds the project's query sets, which `QueryService.ListQuerySets` lists, the viewer's
-  Sets menu opens as tabs, and `agni query --set <name>` runs (agni 745). `lib/` is the
-  project's own derived relations, which every query surface and a review manifest's inline queries
-  read through `Overlay.Registry` (agni 773, 779). That has two consequences, and
-  each has cost a bug. Before adding a tier flag to a command, check whether the name is already
-  defaulted, because `--profile-path` naming the project's own directory double-loaded every
-  profile rule (issue 450) and `--params` naming its own is merely redundant. And to reach a tier's
-  "off" state you must MOVE THE DIRECTORY ASIDE or delete the SECTION, which is why rungs 5 and 6
-  open with `mv <tier> <tier>-off` and rung 4 with a `sed` deleting `conventions:` from its scratch
-  copy; rung 6 shipped a before/after whose two captures were byte-identical because both ran with
-  the corpus in place. A `conventions.yaml`, `review.yaml` or `intent.yaml` left in the old place is
-  a load ERROR naming where its content goes, because a read that skipped it would drop a tier.
+- **A descriptor NAMES every tier a run reads, and nothing is found by its folder's name** (agni
+  1136). `project.yaml` and `design.yaml` share one schema (`descriptorYAML` in
+  `internal/projects/descriptor.go`): `conventions:`, `checklists:` and `intent:` as sections, and
+  `profiles`, `params`, `symbols`, `lib` and `queries` as lists of paths relative to the descriptor
+  or `mount://` URIs, each a file or a directory. Only a design names its own files (`entry`,
+  `companions`, `revisions`, `flatten_hierarchy`). A design names its project with `extends:
+  ../../project.yaml`, as a project names shared config, and is never found under one by where it
+  sits; a design naming none while a `project.yaml` sits above it is a load ERROR (the forgotten
+  extends). A design's own sections layer over its project's (`mergeConfig`), so a board can carry its
+  own convention or checklist. A source that names nothing is a load ERROR rather than an absent
+  tier, so moving a tier's folder aside now fails the load; to reach a tier's "off" state DELETE ITS
+  LINE, which is why rungs 5, 6 and 11 open with `sed -i.orig '/^params:/d' project.yaml`. Rung 6
+  once shipped a before/after whose two captures were byte-identical because both ran with the corpus
+  in place. A design folder copied out of its project names a parent the copy lacks, so a test or a
+  seed that mounts the folder alone strips its `extends` line (`gatewayAlone`, `gatewayInNoProject`).
+  `--profile-path` naming a profiles directory the project already names is refused, since it would
+  load every profile rule twice (issue 450), and `--params` naming the project's own is merely
+  redundant. `queries` are the query sets `QueryService.ListQuerySets` lists, the viewer's Sets menu
+  opens and `agni query --set <name>` runs (agni 745); `lib` is the derived relations every query
+  surface and a review manifest's inline queries read through `Overlay.Registry` (agni 773, 779).
   `--checklist` takes a project checklist's NAME, or a file ending `.yaml`/`.yml`, and with neither
   the first checklist the project writes runs. **Which checklists a design has is ONE answer,
   `ReviewService.ListChecklists`** (`agni checklists <design>`), inherited ones first, read by the

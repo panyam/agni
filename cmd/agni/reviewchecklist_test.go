@@ -28,7 +28,7 @@ func checklistProject(t *testing.T, root, id string, checklists ...[2]string) st
 		t.Fatal(err)
 	}
 	write("designs/d/board.edn", string(design))
-	write("designs/d/design.yaml", "name: "+id+"-d\ntitle: D\nentry: board.edn\n")
+	write("designs/d/design.yaml", "name: "+id+"-d\ntitle: D\nextends: ../../project.yaml\nentry: board.edn\n")
 	project := "name: " + id + "\ntitle: " + id + "\n"
 	if len(checklists) > 0 {
 		project += "checklists:\n"
@@ -186,7 +186,7 @@ func TestReviewRollupAcceptsOneChecklist(t *testing.T) {
 	if err := os.WriteFile(filepath.Join(second, "board.edn"), design, 0o644); err != nil {
 		t.Fatal(err)
 	}
-	if err := os.WriteFile(filepath.Join(second, "design.yaml"), []byte("name: proj-d2\ntitle: D2\nentry: board.edn\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(second, "design.yaml"), []byte("name: proj-d2\ntitle: D2\nextends: ../../project.yaml\nentry: board.edn\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 	out, _, err := runReviewCapturing(t, first, second)

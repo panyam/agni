@@ -1,8 +1,8 @@
-# Rung 11: the parameter corpus moved aside, as a repository reorganisation eventually does.
+# Rung 11: the parameter corpus dropped from project.yaml, as a merge resolving a conflict there can.
 fixture: examples/jetson-project
 fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: designs/jetson
 script: |
-  mv params params-old
+  sed -i.orig '/^params:/d' project.yaml
   agni review designs/jetson --coverage
 match: '^\*\*.*covered'

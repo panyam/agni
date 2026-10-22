@@ -1,8 +1,8 @@
 # The same question with the project's own lexicon, which is the "after" half.
 #
-# The params corpus moves aside here too, so the pair differs in exactly one thing: the vocabulary.
+# The params corpus is left out here too, so the pair differs in exactly one thing: the vocabulary.
 # Leaving it in would make the after-state right for two reasons and prove neither.
 fixture: examples/tutorial-project
 script: |
-  mv params params-off
+  sed -i.orig '/^params:/d' project.yaml
   agni query designs/gateway/gateway.edn 'net.rail(?n) => ?n'

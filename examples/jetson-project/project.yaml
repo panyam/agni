@@ -5,6 +5,10 @@
 name: jetson
 title: Jetson AGX Thor baseboard review project
 
+# The project's interface profiles and seeded datasheet parameters, relative to this file.
+profiles: [profiles]
+params: [params]
+
 # House naming conventions, composed into every run on a design of this project. The section carries
 # two halves, wired differently.
 #

@@ -74,12 +74,14 @@ describe("dropping files on the Load page", () => {
 
   // A file picker can pick only files, so a folder arrives through a second input that carries
   // webkitdirectory, with each file's path inside the folder, as a dragged folder's are (agni 878).
+  // The project folder is picked, since the gateway's design.yaml names the project.yaml above it
+  // and a design is refused without the project it extends (agni 1136).
   it("opens a folder picked whole, with the design its design.yaml declares", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);
       await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
-      await page.setInputFiles("#drop-folder-input", gateway);
+      await page.setInputFiles("#drop-folder-input", tutorial);
 
       const dialog = page.locator("#drop-dialog");
       await expect.poll(() => dialog.evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
@@ -87,7 +89,7 @@ describe("dropping files on the Load page", () => {
       await dialog.locator(".drop-design-open").first().click();
 
       expect((await runChecks(page)).length).toBeGreaterThan(0);
-      expect(page.url()).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/gateway\//);
+      expect(page.url()).toMatch(/\/designs\/local\/drop-[a-z0-9]+\/tutorial-project\/designs\/gateway\//);
       await expect.poll(() => page.locator(DESIGN_SUMMARY).textContent(), { timeout: 30_000 }).toContain("faithful");
       expect(log.network.filter((p) => p.startsWith(apiPrefix) && !p.endsWith("/ListMounts"))).toEqual([]);
       expect(log.errors).toEqual([]);
@@ -152,7 +154,7 @@ describe("dropping files on the Load page", () => {
       const log = record(page);
       await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector("#drop-folder:not([hidden])", { timeout: 60_000 });
-      await page.setInputFiles("#drop-folder-input", gateway);
+      await page.setInputFiles("#drop-folder-input", tutorial);
       const dialog = page.locator("#drop-dialog");
       await expect.poll(() => dialog.evaluate((d) => (d as HTMLDialogElement).open), { timeout: 60_000 }).toBe(true);
       await dialog.locator(".drop-design-open").first().click();
@@ -174,7 +176,7 @@ describe("dropping files on the Load page", () => {
       // page, which says the files are gone.
       await page.goto(`${base()}/designs/local/load/?engine=wasm`, { waitUntil: "domcontentloaded" });
       const row = page.locator(".ld-drop").first();
-      await expect.poll(() => row.textContent(), { timeout: 30_000 }).toContain("gateway");
+      await expect.poll(() => row.textContent(), { timeout: 30_000 }).toContain("tutorial-project");
       await row.locator(".ld-drop-delete").click();
       // The delete is an IndexedDB transaction, which a navigation started before it commits aborts.
       await expect.poll(() => page.locator(".ld-drop").count(), { timeout: 30_000 }).toBe(0);

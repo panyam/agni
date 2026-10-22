@@ -1,4 +1,4 @@
-#agni-run 5bc152e066e04d3e
+#agni-run 7e699c062abf9f50
 r   m              typ  provenance
 U1  ACME-BUCK-3V3  3.3  datasheet "ACME-BUCK-3V3 Datasheet Rev A" page 4, "Recommended Operating Conditions" (hand, confidence 1) ; designs/gateway/gateway.edn
 U2  ACME-LDO-1V8   1.8  datasheet "ACME-LDO-1V8 (placeholder, not transcribed)" page 0, "" (mock, confidence 0.3) ; designs/gateway/gateway.edn

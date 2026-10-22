@@ -130,11 +130,22 @@ func TestProposeReportsADeclaredFolderRatherThanGuessing(t *testing.T) {
 	}
 }
 
+// The files a project names are support, and a folder it does not name is not, since nothing is read
+// for its folder's name (agni issue 1136). A design proposed under the project extends it.
 func TestProposeCountsAProjectsConfigAsSupport(t *testing.T) {
-	r := propose(t, map[string]string{"project.yaml": "name: p", "profiles/can.yaml": "", "params/a.textproto": "", "designs/g/g.edn": ""})
+	r := propose(t, map[string]string{
+		"project.yaml":      "name: p\nprofiles: [profiles/can.yaml]\nparams: [params]\n",
+		"profiles/can.yaml": "", "profiles/lin.yaml": "", "params/a.textproto": "", "designs/g/g.edn": "",
+	})
 	sort.Strings(r.Support)
-	if strings.Join(r.GetSupport(), ",") != "params/a.textproto,profiles/can.yaml,project.yaml" || len(r.GetUnread()) != 0 {
-		t.Errorf("support %v unread %v", r.GetSupport(), r.GetUnread())
+	if strings.Join(r.GetSupport(), ",") != "params/a.textproto,profiles/can.yaml,project.yaml" {
+		t.Errorf("support %v, want the project and the files it names", r.GetSupport())
+	}
+	if len(r.GetUnread()) != 1 || r.GetUnread()[0].GetPath() != "profiles/lin.yaml" {
+		t.Errorf("unread %v, want the profile the project does not name", r.GetUnread())
+	}
+	if len(r.GetDesigns()) != 1 || !strings.Contains(r.GetDesigns()[0].GetDesignYaml(), "extends: ../../project.yaml\n") {
+		t.Errorf("designs %v, want g's descriptor to extend the project above it", r.GetDesigns())
 	}
 }
 
@@ -226,5 +237,23 @@ func TestProposeARealKicadBoard(t *testing.T) {
 		if strings.HasSuffix(u.GetPath(), ".kicad_sch") {
 			t.Errorf("a sheet was left unread: %v", u)
 		}
+	}
+}
+
+// A design reads only the sources its descriptor names (agni issue 1136), so a proposal names the
+// folder holding a KiCad design's own symbol libraries, or its schematic draws without them.
+func TestProposeNamesADesignsSymbolLibraries(t *testing.T) {
+	r := propose(t, map[string]string{
+		"g/board.kicad_pro":             "{}",
+		"g/board.kicad_sch":             "(kicad_sch)",
+		"g/symbols/board.kicad_sym":     "",
+		"g/symbols/extra.kicad_sym":     "",
+		"g/fp/board.pretty/r.kicad_mod": "",
+	})
+	if len(r.GetDesigns()) != 1 {
+		t.Fatalf("designs %v", r.GetDesigns())
+	}
+	if y := r.GetDesigns()[0].GetDesignYaml(); !strings.Contains(y, "symbols:\n  - symbols\n") || strings.Contains(y, "fp") {
+		t.Errorf("design.yaml:\n%s\nwant the symbols folder named once, and no footprint folder", y)
 	}
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"io/fs"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -64,11 +65,11 @@ func TestProposedDescriptorsReadBackAsTheProposedDesign(t *testing.T) {
 // for a proposal over the rest of its folder. The entry and companions must be the ones the
 // tutorial declares, since a visitor dropping that folder should get the design the docs describe.
 func TestProposingTheTutorialGatewayRecoversItsDeclaredDesign(t *testing.T) {
-	dir := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
-	fsys := os.DirFS(dir)
+	// The whole project is mounted, since the gateway names its project by a path that climbs to it.
+	fsys := os.DirFS(filepath.Join("..", "..", "examples", "tutorial-project"))
 	var paths []string
-	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
-		if err == nil && !d.IsDir() && p != DesignDescriptor {
+	err := fs.WalkDir(fsys, "designs/gateway", func(p string, d fs.DirEntry, err error) error {
+		if err == nil && !d.IsDir() && path.Base(p) != DesignDescriptor {
 			paths = append(paths, p)
 		}
 		return err
@@ -83,7 +84,7 @@ func TestProposingTheTutorialGatewayRecoversItsDeclaredDesign(t *testing.T) {
 	got := resp.GetDesigns()[0].GetDesign()
 
 	store := NewFSStore(Tree{Mount: "m", FS: fsys})
-	declared, _, err := store.ResolveDesign(context.Background(), artifact.URI{Mount: "m", Path: "gateway.edn"})
+	declared, _, err := store.ResolveDesign(context.Background(), artifact.URI{Mount: "m", Path: "designs/gateway/gateway.edn"})
 	if err != nil || declared == nil {
 		t.Fatalf("the declared design does not resolve: %v", err)
 	}
