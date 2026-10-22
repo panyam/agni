@@ -55,6 +55,15 @@ func servedParityMux(t *testing.T, ms []mounts.Mount) http.Handler {
 // `agni serve` does by default (agni issue 1061).
 func servedMuxFor(t *testing.T, cli, ms []mounts.Mount) http.Handler {
 	t.Helper()
+	mux := http.NewServeMux()
+	servedAPIFor(t, cli, ms).Register(mux)
+	return mux
+}
+
+// servedAPIFor is the services servedMuxFor registers, for a test that serves them over another
+// transport beside Connect, as `agni serve --mcp` does.
+func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
+	t.Helper()
 	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
 	cliMountSpecs = nil
 	for _, m := range cli {
@@ -71,8 +80,7 @@ func servedMuxFor(t *testing.T, cli, ms []mounts.Mount) http.Handler {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux := http.NewServeMux()
-	server.API{
+	return server.API{
 		Workspace: service.NewWorkspaceService(osWorkspace(ms)).WithDesignFiles(resolver, osFiles(ms)),
 		Project:   service.NewProjectService(resolver.Store),
 		Design:    service.NewDesignService(loader, nil, render.DefaultStyle, resolver),
@@ -81,8 +89,7 @@ func servedMuxFor(t *testing.T, cli, ms []mounts.Mount) http.Handler {
 		Query:     service.NewQueryService(loader, nil, resolver),
 		Review:    review,
 		Snapshot:  check.Snapshots(),
-	}.Register(mux)
-	return mux
+	}
 }
 
 // memCopy reads root into memory, as the browser holds a dropped folder.
@@ -118,6 +125,7 @@ type parityClients struct {
 	ws     webapiconnect.WorkspaceServiceClient
 	table  webapiconnect.TableServiceClient
 	review webapiconnect.ReviewServiceClient
+	diff   webapiconnect.DiffServiceClient
 }
 
 func newParityClients(t *testing.T, h http.Handler) parityClients {
@@ -133,6 +141,7 @@ func newParityClients(t *testing.T, h http.Handler) parityClients {
 		query:  webapiconnect.NewQueryServiceClient(c, srv.URL),
 		ws:     webapiconnect.NewWorkspaceServiceClient(c, srv.URL),
 		table:  webapiconnect.NewTableServiceClient(c, srv.URL),
+		diff:   webapiconnect.NewDiffServiceClient(c, srv.URL),
 	}
 }
 

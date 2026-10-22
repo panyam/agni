@@ -1,15 +1,15 @@
 // TODO: rename this module to your own path, e.g. github.com/yourorg/agni-overlay.
 module github.com/panyam/agni/examples/extension-template
 
-go 1.26.4
+go 1.26.9
 
 // TODO: pin a published engine version once you copy this module OUT of the agni repo,
 // e.g. require github.com/panyam/agni v1.2.3
 require github.com/panyam/agni v0.0.0
 
 require (
-	golang.org/x/text v0.41.0 // indirect
-	google.golang.org/protobuf v1.36.11 // indirect
+	golang.org/x/text v0.42.0 // indirect
+	google.golang.org/protobuf v1.36.12 // indirect
 )
 
 // TODO: DELETE this replace when you host the overlay outside the agni repo. It only exists so

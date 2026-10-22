@@ -130,6 +130,8 @@ var aboveTheReaderTier = []string{
 	"github.com/panyam/agni/serve",
 	"github.com/panyam/agni/service",
 	"github.com/panyam/agni/internal/server",
+	"github.com/panyam/agni/internal/mcpserver",
+	"github.com/panyam/mcpkit",
 }
 
 // TestReaderTierDependsDownwardOnly is C17, and it absorbs the retired C15.

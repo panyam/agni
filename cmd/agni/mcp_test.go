@@ -1,0 +1,394 @@
+package main
+
+import (
+	"context"
+	"encoding/json"
+	"io"
+	"net/http"
+	"net/http/httptest"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"connectrpc.com/connect"
+	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/internal/mcpserver"
+	"github.com/panyam/agni/mounts"
+	"github.com/panyam/mcpkit/client"
+	"github.com/panyam/mcpkit/core"
+	"google.golang.org/protobuf/encoding/protojson"
+	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/types/known/fieldmaskpb"
+)
+
+const mcpGateway = "tut/designs/gateway"
+
+// mcpServed is `agni serve --mcp` over the tutorial project: the Connect API and the MCP endpoint on
+// one server, sharing its services, with a client for each.
+type mcpServed struct {
+	url string
+	mcp *client.Client
+	api parityClients
+}
+
+func serveMCP(t *testing.T, o mcpserver.Options) mcpServed {
+	t.Helper()
+	freshWorkspace(t)
+	root, err := filepath.Abs(parityMounts[0].dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	ms := []mounts.Mount{{Name: parityMounts[0].name, Root: root}}
+	api := servedAPIFor(t, ms, ms)
+	mux := http.NewServeMux()
+	api.Register(mux)
+	srv := httptest.NewServer(mux)
+	t.Cleanup(srv.Close)
+	url := srv.URL
+	// The server links to itself, as `serve --mcp` with the viewer does, unless the test says why not.
+	if o.NoLinks == "" {
+		o.URLBase = url
+	}
+	m, err := mcpserver.New(api, o)
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux.Handle("/mcp", mcpserver.HTTPHandler(m, "/mcp"))
+	c := client.NewClient(url+"/mcp", core.Implementation{Name: "agni-test", Version: "0"})
+	if err := c.Connect(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = c.Close() })
+	return mcpServed{url: url, mcp: c, api: newParityClients(t, mux)}
+}
+
+// mcpAnswer is a tool result's structured content, as every agni tool and query answer carries it.
+type mcpAnswer struct {
+	Link   string            `json:"link"`
+	NoLink string            `json:"no_link"`
+	Tables []json.RawMessage `json:"tables"`
+	Answer json.RawMessage   `json:"answer"`
+	Links  json.RawMessage   `json:"links"`
+}
+
+func callMCP(t *testing.T, c *client.Client, tool string, args map[string]any) (*core.ToolResult, mcpAnswer) {
+	t.Helper()
+	res, err := c.ToolCallFull(context.Background(), tool, args)
+	if err != nil {
+		t.Fatalf("%s: %v", tool, err)
+	}
+	if res.IsError {
+		t.Fatalf("%s %v: tool error: %s", tool, args, res.Content[0].Text)
+	}
+	data, err := json.Marshal(res.StructuredContent)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var a mcpAnswer
+	if err := json.Unmarshal(data, &a); err != nil {
+		t.Fatalf("%s: structured content %s: %v", tool, data, err)
+	}
+	return res, a
+}
+
+// tablesOf reads the tables in structured content.
+func tablesOf(t *testing.T, a mcpAnswer) []*webapi.Table {
+	t.Helper()
+	var out []*webapi.Table
+	for _, raw := range a.Tables {
+		tab := &webapi.Table{}
+		if err := protojson.Unmarshal(raw, tab); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, tab)
+	}
+	return out
+}
+
+func ingestConnect(t *testing.T, s mcpServed, uri string) string {
+	t.Helper()
+	snap, err := s.api.snap.Ingest(context.Background(), connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://" + uri}}))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return snap.Msg.GetName()
+}
+
+func tabulateConnect(t *testing.T, s mcpServed, req *webapi.TabulateRequest) []*webapi.Table {
+	t.Helper()
+	resp, err := s.api.table.Tabulate(context.Background(), connect.NewRequest(req))
+	if err != nil {
+		t.Fatal(err)
+	}
+	return resp.Msg.GetTables()
+}
+
+// sameTables fails unless the MCP answer's tables are the Connect answer's, and holds a row count
+// guard, since two empty answers agree about nothing.
+func sameTables(t *testing.T, name string, got, want []*webapi.Table) {
+	t.Helper()
+	rows := 0
+	for _, tab := range want {
+		rows += len(tab.GetRows())
+	}
+	if rows == 0 {
+		t.Fatalf("%s: the Connect answer has no rows, so agreeing with it proves nothing", name)
+	}
+	if len(got) != len(want) {
+		t.Fatalf("%s: %d tables over MCP, %d over Connect", name, len(got), len(want))
+	}
+	for i := range want {
+		if !proto.Equal(got[i], want[i]) {
+			t.Errorf("%s: table %q differs\nMCP:     %v\nConnect: %v", name, want[i].GetName(), got[i], want[i])
+		}
+	}
+}
+
+// The tools answer as the Connect API does: each question asked both ways over one server gives the
+// same tables, or the same wire message where the answer is not a table. This is #910's done-when.
+func TestMCPAnswersAsConnectDoes(t *testing.T) {
+	s := serveMCP(t, mcpserver.Options{})
+	ctx := context.Background()
+	snap := ingestConnect(t, s, mcpGateway)
+
+	t.Run("query", func(t *testing.T) {
+		const program = `net.rail(?net), not net.has_test_point(?net) => ?net`
+		_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program})
+		resp, err := s.api.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: program}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		sameTables(t, "query", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Query{Query: resp.Msg}}))
+		if !strings.Contains(a.Link, "/designs/tut/designs/gateway/gateway.edn/view?") || !strings.Contains(a.Link, "query=") {
+			t.Errorf("the link opens %q, want the design's entry with the query", a.Link)
+		}
+	})
+
+	t.Run("query with a binding", func(t *testing.T) {
+		const program = `pin.net(?ref, ?pin, ?net) => ?ref, ?pin`
+		_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program, "bind": map[string]any{"net": "I2C_SDA"}})
+		resp, err := s.api.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: program,
+			Bindings: map[string]*webapi.QueryValue{"net": {Kind: &webapi.QueryValue_Text{Text: "I2C_SDA"}}}}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		sameTables(t, "bound query", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Query{Query: resp.Msg}}))
+		if !strings.Contains(a.Link, "bind=net%3DI2C_SDA") {
+			t.Errorf("the link %q doesn't carry the binding", a.Link)
+		}
+	})
+
+	t.Run("check", func(t *testing.T) {
+		_, a := callMCP(t, s.mcp, "check", map[string]any{"design": mcpGateway})
+		resp, err := s.api.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snap}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		sameTables(t, "check", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Check{Check: resp.Msg}}))
+		var links []map[string]string
+		if err := json.Unmarshal(a.Links, &links); err != nil || len(links) == 0 || !strings.Contains(links[0]["link"], "verdict=") || !strings.Contains(links[0]["link"], "hash=") {
+			t.Errorf("verdict links %s", a.Links)
+		}
+	})
+
+	t.Run("trace", func(t *testing.T) {
+		_, a := callMCP(t, s.mcp, "trace", map[string]any{"design": mcpGateway, "from": "J1.1", "to": "U1.1"})
+		resp, err := s.api.design.TraceDesign(ctx, connect.NewRequest(&webapi.TraceDesignRequest{Snapshot: snap,
+			From: &webapi.TraceEndpoint{RefDes: "J1", Pin: "1"}, To: &webapi.TraceEndpoint{RefDes: "U1", Pin: "1"}}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := &webapi.TraceDesignResponse{}
+		if err := protojson.Unmarshal(a.Answer, got); err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Msg.GetTrace().GetNets()) == 0 || !proto.Equal(got, resp.Msg) {
+			t.Errorf("trace over MCP %v\nover Connect %v", got, resp.Msg)
+		}
+		if !strings.Contains(a.Link, "trace=J1.1%2CU1.1") {
+			t.Errorf("trace link %q", a.Link)
+		}
+	})
+
+	t.Run("diff", func(t *testing.T) {
+		const a1, b1 = mcpGateway + "/gateway.edn", mcpGateway + "/gateway-rev-b.edn"
+		_, a := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1})
+		resp, err := s.api.diff.DiffDesigns(ctx, connect.NewRequest(&webapi.DiffDesignsRequest{ASnapshot: ingestConnect(t, s, a1), BSnapshot: ingestConnect(t, s, b1)}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		sameTables(t, "diff", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Diff{Diff: resp.Msg}}))
+	})
+
+	t.Run("review", func(t *testing.T) {
+		_, a := callMCP(t, s.mcp, "review", map[string]any{"design": mcpGateway})
+		list, err := s.api.review.ListChecklists(ctx, connect.NewRequest(&webapi.ListChecklistsRequest{Snapshot: snap}))
+		if err != nil || len(list.Msg.GetChecklists()) == 0 {
+			t.Fatalf("checklists %v %v", list, err)
+		}
+		resp, err := s.api.review.CreateReview(ctx, connect.NewRequest(&webapi.CreateReviewRequest{Snapshot: snap, Manifest: list.Msg.GetChecklists()[0].GetManifest(), ValidateOnly: true}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		sameTables(t, "review", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Review{Review: resp.Msg}}))
+	})
+
+	t.Run("design", func(t *testing.T) {
+		_, a := callMCP(t, s.mcp, "design", map[string]any{"design": mcpGateway, "read_mask": []string{"design.nets"}, "nets": []string{"I2C_SDA"}})
+		resp, err := s.api.design.GetDesign(ctx, connect.NewRequest(&webapi.GetDesignRequest{Snapshot: snap, ReadMask: &fieldmaskpb.FieldMask{Paths: []string{"design.nets"}}, Nets: []string{"I2C_SDA"}}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := &webapi.GetDesignResponse{}
+		if err := protojson.Unmarshal(a.Answer, got); err != nil {
+			t.Fatal(err)
+		}
+		if len(resp.Msg.GetDesign().GetNets()) != 1 || !proto.Equal(got, resp.Msg) {
+			t.Errorf("design over MCP %v\nover Connect %v", got, resp.Msg)
+		}
+	})
+}
+
+// mcpTools are the tools an agent sees: jaala's query language tools, each taking a design, and
+// agni's own.
+var mcpTools = []string{"check", "checklists", "design", "designs", "diff", "explain", "look", "query", "query_set", "review", "schema", "trace", "values"}
+
+func toolNames(t *testing.T, c *client.Client) []string {
+	t.Helper()
+	defs, err := c.ListTools(context.Background())
+	if err != nil {
+		t.Fatal(err)
+	}
+	var names []string
+	for _, d := range defs {
+		names = append(names, d.Name)
+	}
+	slices.Sort(names)
+	return names
+}
+
+// Every tool is offered, jaala's take a design beside their own arguments, and an argument no tool
+// names is refused rather than ignored.
+func TestMCPOffersEveryToolAndRefusesAStrayArgument(t *testing.T) {
+	s := serveMCP(t, mcpserver.Options{})
+	if got := toolNames(t, s.mcp); !slices.Equal(got, mcpTools) {
+		t.Errorf("tools %v, want %v", got, mcpTools)
+	}
+	defs, _ := s.mcp.ListTools(context.Background())
+	for _, d := range defs {
+		schema, _ := json.Marshal(d.InputSchema)
+		if !strings.Contains(string(schema), `"design"`) && d.Name != "designs" {
+			t.Errorf("%s takes no design: %s", d.Name, schema)
+		}
+	}
+	res, err := s.mcp.ToolCallFull(context.Background(), "check", map[string]any{"design": mcpGateway, "rule": "x"})
+	if err == nil && !res.IsError {
+		t.Errorf("check with a misspelled argument answered: %v", res.Content)
+	}
+	res, err = s.mcp.ToolCallFull(context.Background(), "query", map[string]any{"design": mcpGateway, "program": `net.rail(?n) => ?n`, "desing": "x"})
+	if err == nil && !res.IsError {
+		t.Errorf("query with a misspelled argument answered: %v", res.Content)
+	}
+}
+
+// A snapshot the host dropped is ingested again on the next question, which then answers.
+func TestMCPIngestsADroppedSnapshotAgain(t *testing.T) {
+	s := serveMCP(t, mcpserver.Options{})
+	ctx := context.Background()
+	args := map[string]any{"design": mcpGateway, "program": `net.rail(?net) => ?net`}
+	_, first := callMCP(t, s.mcp, "query", args)
+	list, err := s.api.snap.ListSnapshots(ctx, connect.NewRequest(&webapi.ListSnapshotsRequest{}))
+	if err != nil || len(list.Msg.GetSnapshots()) == 0 {
+		t.Fatalf("the query held no snapshot: %v %v", list, err)
+	}
+	for _, sn := range list.Msg.GetSnapshots() {
+		if _, err := s.api.snap.DeleteSnapshot(ctx, connect.NewRequest(&webapi.DeleteSnapshotRequest{Name: sn.GetName()})); err != nil {
+			t.Fatal(err)
+		}
+	}
+	_, again := callMCP(t, s.mcp, "query", args)
+	if len(tablesOf(t, again)) == 0 || !proto.Equal(tablesOf(t, again)[0], tablesOf(t, first)[0]) {
+		t.Errorf("after the snapshot was dropped, the answer changed or failed")
+	}
+}
+
+// A server with no viewer answers without a link and says why, in the text and the structured content.
+func TestMCPSaysWhyAnAnswerHasNoLink(t *testing.T) {
+	s := serveMCP(t, mcpserver.Options{NoLinks: "this server serves the API without the viewer"})
+	res, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": `net.rail(?net) => ?net`})
+	if a.Link != "" || a.NoLink == "" || !strings.Contains(res.Content[0].Text, "no viewer link: this server serves the API without the viewer") {
+		t.Errorf("link %q, no_link %q, text:\n%s", a.Link, a.NoLink, res.Content[0].Text)
+	}
+}
+
+// Asking about a pin the design lacks is the question's mistake, so it is a tool error, while two
+// real pins with no route between them answer.
+func TestMCPTraceToAPinTheDesignLacksIsAToolError(t *testing.T) {
+	s := serveMCP(t, mcpserver.Options{})
+	res, err := s.mcp.ToolCallFull(context.Background(), "trace", map[string]any{"design": mcpGateway, "from": "J1.1", "to": "U999.1"})
+	if err != nil || !res.IsError || !strings.Contains(res.Content[0].Text, "cannot trace") {
+		t.Errorf("a trace to U999.1: %v %v", res, err)
+	}
+	callMCP(t, s.mcp, "trace", map[string]any{"design": mcpGateway, "from": "J1.1", "to": "U1.1"})
+}
+
+// jaala lets a variable range over a list, and agni's answers carry one value per variable, so a list
+// is refused with what to do instead.
+func TestMCPRefusesAListBinding(t *testing.T) {
+	s := serveMCP(t, mcpserver.Options{})
+	res, err := s.mcp.ToolCallFull(context.Background(), "query", map[string]any{"design": mcpGateway, "program": `pin.net(?r, ?p, ?net) => ?r`, "bind": map[string]any{"net": []any{"I2C_SDA", "I2C_SCL"}}})
+	if err != nil || !res.IsError || !strings.Contains(res.Content[0].Text, "one value per variable") {
+		t.Errorf("a list binding: %v %v", res, err)
+	}
+}
+
+// `agni mcp` serves the same tools over stdio as `serve --mcp` does over HTTP, and answers a query.
+func TestAgniMCPServesTheSameToolsOverStdio(t *testing.T) {
+	home := t.TempDir()
+	t.Setenv("HOME", home)
+	t.Setenv("XDG_CONFIG_HOME", filepath.Join(home, "xdg"))
+	root, err := filepath.Abs(parityMounts[0].dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Chdir(t.TempDir())
+	freshWorkspace(t)
+	inR, inW := io.Pipe()
+	outR, outW := io.Pipe()
+	ctx, cancel := context.WithCancel(context.Background())
+	done := make(chan error, 1)
+	go func() {
+		cmd := rootCmd()
+		cmd.SetArgs([]string{"mcp", "--mount", "tut=" + root})
+		cmd.SetIn(inR)
+		cmd.SetOut(outW)
+		cmd.SetErr(io.Discard)
+		done <- cmd.ExecuteContext(ctx)
+		_ = outW.Close()
+	}()
+	t.Cleanup(func() {
+		cancel()
+		_ = inW.Close()
+		select {
+		case <-done:
+		case <-time.After(10 * time.Second):
+			t.Error("agni mcp did not stop when its context ended")
+		}
+	})
+	c := client.NewClient("", core.Implementation{Name: "agni-test", Version: "0"}, client.WithIOTransport(outR, inW))
+	if err := c.Connect(ctx); err != nil {
+		t.Fatal(err)
+	}
+	if got := toolNames(t, c); !slices.Equal(got, mcpTools) {
+		t.Errorf("tools over stdio %v, want %v", got, mcpTools)
+	}
+	res, a := callMCP(t, c, "query", map[string]any{"design": mcpGateway, "program": `net.rail(?net) => ?net`})
+	if len(tablesOf(t, a)) == 0 || len(tablesOf(t, a)[0].GetRows()) == 0 {
+		t.Errorf("no rows over stdio:\n%s", res.Content[0].Text)
+	}
+	if a.Link != "" || !strings.Contains(a.NoLink, "--server") {
+		t.Errorf("without --server, link %q and no_link %q", a.Link, a.NoLink)
+	}
+}

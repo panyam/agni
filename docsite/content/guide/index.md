@@ -17,6 +17,7 @@ from first read through to a house checklist gating CI, adding one capability at
 - **[Comparing revisions](comparing-revisions/)** diffs two revisions as a schematic redline.
 - **[Beside an older comparison tool](older-comparison-tools/)** explains the rows where a semantic diff and a netlist-export spreadsheet disagree.
 - **[Querying](querying/)** searches a design as data, with every answer cited.
+- **[Asking through an LLM](asking-with-an-llm/)** points Claude Code or any MCP client at agni, so a model asks the questions and every answer comes back as cited rows.
 - **[Naming conventions](naming-conventions/)** encodes house style and checks it on every export.
 - **[Interface profiles](interface-profiles/)** declares a bus's signals and checks every design against it.
 - **[Design intent](design-intent/)** declares what a board is supposed to contain, and catches it drifting.

@@ -472,6 +472,11 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--design-cache <n>` | how many reads the server keeps between requests (a parse, a derived design, a drawing, a board or a built model, each counting once), each checked against its files on every use (default 15; 0 keeps none; see [Kept reads](../running-the-server/#kept-reads)) |
 | `--upload-max-bytes <n>` | how much of the designs clients send as files (`--remote`) the server keeps, the least recently used dropped past it; a client sends a file again when an ingest asks for it (default 1 GB; 0 takes no files) |
 | `--slow-request <duration>` | log every request that takes longer than this, such as `2s`, naming the stage that took the most, which cache tier answered each read, the slowest rules, and the query plan when evaluating was the slowest stage (0, the default, logs none; see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
+| `--mcp` | also serve the analysis over the Model Context Protocol at `/mcp` (streamable HTTP, localhost origins only), for an LLM client such as Claude Code; every answer links to this server's viewer (see [Asking through an LLM](../asking-with-an-llm/)) |
+
+### `mcp`
+
+Serve the same MCP tools as `serve --mcp` on stdin and stdout, for a client that starts the server itself. It reads the mounts as `serve` does, and takes `--params`, `--params-url`, `--profile-path`, `--conventions` and `--query-budget` as `serve` does. `--server <url>` names a running `agni serve` that mounts the same names, for each answer to link to; without it every answer says why it carries no link (see [Asking through an LLM](../asking-with-an-llm/)).
 
 ### `healthcheck`
 

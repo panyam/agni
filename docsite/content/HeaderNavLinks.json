@@ -44,6 +44,7 @@
       { "name": "Comparing revisions", "url": "guide/comparing-revisions/" },
       { "name": "Beside an older comparison tool", "url": "guide/older-comparison-tools/" },
       { "name": "Querying", "url": "guide/querying/" },
+      { "name": "Asking through an LLM", "url": "guide/asking-with-an-llm/" },
       { "name": "Naming conventions", "url": "guide/naming-conventions/" },
       { "name": "Interface profiles", "url": "guide/interface-profiles/" },
       { "name": "Design intent", "url": "guide/design-intent/" },

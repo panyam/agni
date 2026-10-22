@@ -26,10 +26,12 @@ import (
 	"github.com/panyam/agni/core/render"
 	"github.com/panyam/agni/fshost"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
+	"github.com/panyam/agni/internal/mcpserver"
 	"github.com/panyam/agni/internal/native"
 	"github.com/panyam/agni/internal/paramclient"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/internal/server"
+	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/service"
 	"github.com/panyam/agni/stdlib/relations"
@@ -69,6 +71,7 @@ func serveCmd() *cobra.Command {
 	var wasmMaxBytes int64
 	var designCache int
 	var uploadMaxBytes int64
+	var mcp bool
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -79,6 +82,10 @@ func serveCmd() *cobra.Command {
 			"anywhere and no ./web, it serves the API alone, which is what an installed binary has.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			mcpMode := ""
+			if mcp {
+				mcpMode = mcpHTTP
+			}
 			return runViewer(cmd, viewerOpts{
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
@@ -90,10 +97,12 @@ func serveCmd() *cobra.Command {
 				wasmMaxBytes:    wasmMaxBytes,
 				designCache:     designCache,
 				uploadMaxBytes:  uploadMaxBytes,
+				mcp:             mcpMode,
 			})
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
+	c.Flags().BoolVar(&mcp, "mcp", false, "also serve the analysis over the Model Context Protocol at /mcp (streamable HTTP), for an LLM client such as Claude Code: queries, checks, traces, diffs and reviews as tools, each answer with its rows, citations and a viewer link. `agni mcp` serves the same tools over stdio")
 	c.Flags().StringVar(&engine, "engine", engineServer, "which engine the viewer analyses a design on: "+engineServer+", or "+engineWasm+" to run it in the visitor's browser over the design's files (needs `make wasm`); a page's ?engine= overrides it")
 	c.Flags().Int64Var(&wasmMaxBytes, "wasm-max-bytes", defaultWasmMaxBytes, "on the wasm engine, the largest design (its ListDesignFiles total, in bytes) the page analyses in the browser; a bigger one goes to the server engine and the page says so")
 	c.Flags().StringVar(&webDir, "web-dir", "",
@@ -171,7 +180,19 @@ type viewerOpts struct {
 	// uploadMaxBytes is how much of the designs clients send as files the server keeps (agni issue
 	// 1061). 0 takes none.
 	uploadMaxBytes int64
+
+	// mcp serves the services over the Model Context Protocol as well (agni issue 910): mcpHTTP at
+	// /mcp beside the Connect API, or mcpStdio on stdin and stdout in place of the listener.
+	mcp string
+	// mcpLinks is the viewer an answer over stdio links to, a running `agni serve`; empty withholds
+	// links. Over HTTP the server links to itself.
+	mcpLinks string
 }
+
+const (
+	mcpHTTP  = "http"
+	mcpStdio = "stdio"
+)
 
 // The two engines a viewer page can analyse its design on.
 const (
@@ -339,7 +360,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	budgeted := connect.WithInterceptors(budget.Interceptor())
 	// ReviewService (WS9-047) is the served `agni review`, built with the CheckService above from
 	// one composed catalog. The wasm engine registers through the same server.API.
-	apiPaths := server.API{
+	api := server.API{
 		Workspace: service.NewWorkspaceService(osWorkspace(mounts)).WithDesignFiles(projectResolver, osFiles(mounts)),
 		Project:   service.NewProjectService(projectStore),
 		Snapshot:  checkSvc.Snapshots(),
@@ -349,7 +370,31 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		Query:     service.NewQueryService(loader, specs, projectResolver),
 		Review:    reviewSvc,
 		Timing:    server.Timing{Slow: o.slowRequest, Log: budget.Log},
-	}.Register(mux, budgeted)
+	}
+	apiPaths := api.Register(mux, budgeted)
+	urls := serveURLs(addr, lanIPs)
+	if o.mcp != "" {
+		mcpOpts := mcpserver.Options{Version: version.Version(), Budget: budget.Enforce}
+		switch {
+		case o.mcp == mcpStdio && o.mcpLinks != "":
+			mcpOpts.URLBase = o.mcpLinks
+		case o.mcp == mcpStdio:
+			mcpOpts.NoLinks = "agni mcp was started without --server naming a running agni serve to link to"
+		case assets.viewer:
+			mcpOpts.URLBase = strings.TrimSuffix(urls[0], "/")
+		default:
+			mcpOpts.NoLinks = "this server serves the API without the viewer"
+		}
+		mcpSrv, err := mcpserver.New(api, mcpOpts)
+		if err != nil {
+			return err
+		}
+		if o.mcp == mcpStdio {
+			// The command's own streams, so a test can pipe a client in.
+			return mcpSrv.RunIO(cmd.Context(), cmd.InOrStdin(), cmd.OutOrStdout())
+		}
+		mux.Handle("/mcp", mcpserver.HTTPHandler(mcpSrv, "/mcp"))
+	}
 	if assets.viewer {
 		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(dir, "static")))))
 	}
@@ -377,7 +422,6 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 
 	// A client that never finishes its headers holds a connection open, so headers get a deadline.
 	srv := &http.Server{Addr: addr, Handler: mux, ReadHeaderTimeout: 10 * time.Second}
-	urls := serveURLs(addr, lanIPs)
 	if o.banner != nil {
 		o.banner(urls, len(mounts))
 	} else {
@@ -388,6 +432,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		fmt.Fprintf(os.Stderr, "serving %s at %s with %d mount(s) (Ctrl-C to stop)\n", what, urls[0], len(mounts))
 		for _, u := range urls[1:] {
 			fmt.Fprintf(os.Stderr, "  on this network: %s (all interfaces, no auth)\n", u)
+		}
+		if o.mcp == mcpHTTP {
+			fmt.Fprintf(os.Stderr, "  MCP: %smcp (streamable HTTP; localhost origins only)\n", urls[0])
 		}
 	}
 	// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.

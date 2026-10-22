@@ -371,6 +371,16 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   rule about them alone, held apart from the run in `Document.scoped`. A TRACE link needs no
   such hint because it carries the question rather than a conclusion. Semantics and the two ways the
   halves used to disagree are in `guide/checks-and-reports.md`.
+- **`agni serve --mcp` and `agni mcp` serve the analysis over MCP** (agni 910, `internal/mcpserver`),
+  the first at `/mcp` beside the Connect API and the second over stdio, composed by the same
+  `runViewer`. The query language's tools (`query`, `explain`, `schema`, `look`, `values`) are
+  jaala's `frontends/mcp` with a `design` argument agni adds; agni registers `check`, `trace`,
+  `diff`, `design`, `checklists`, `review`, `query_set` and `designs`. jaala evaluates a query and
+  agni presents it through `QueryService.ReadQuery` and `QueryRead.Present`, which is `RunQuery`'s
+  own projection, and `Tabulate` (C35), so a new query field reaches MCP with no change there.
+  `Run.BaseFor` is what keeps the board read only for a program reading `board.*`, as `RunQuery`
+  does. `TestMCPAnswersAsConnectDoes` asks every tool and its rpc the same question over one server,
+  so a new tool belongs in it. A list in `bind` is refused because agni's wire binds one value.
 - **`--remote <url>` on `query`, `check`, `trace` and `review` sends the command's request to a running
   `agni serve`** (agni 998) and renders the response exactly as the local run does, which
   `TestRemoteAnswersAsTheLocalCommandDoes` holds byte for byte. It is a different flag from `--server`,
@@ -494,7 +504,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   recovering a fact. It is also a false-finding shape, since a run without the flag reads as "we
   detect no approximate renames", which is how one got written up as an engine gap before the flag
   was noticed.
-- The toolchain is Go 1.26.4 and `buf` 1.61. **Both protoc plugins are pinned as `tool` directives in
+- The toolchain is Go 1.26.9 and `buf` 1.61. **Both protoc plugins are pinned as `tool` directives in
   `go.mod` and invoked via `go tool`**, so their versions are data rather than something to match by
   hand. Only `buf` itself has to be on your PATH.
 - **A command that reads a design goes through `readDesign` (or a service), never a bare
@@ -585,7 +595,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   over `tools/samples/` skips `._` names (the oracle's `globCorpus`, agni 812). The old Makefile also
   wrote an EMPTY tarball under GNU tar that still passed `make verify`; it runs under `pipefail` now.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
-  Run `make proto` and `make proto-check`, and only those, under the pinned Go (`GOTOOLCHAIN=go1.26.4`) when yours is newer,
+  Run `make proto` and `make proto-check`, and only those, under the pinned Go (`GOTOOLCHAIN=go1.26.9`) when yours is newer,
   because `protoc-gen-go` formats comments with the Go that built it, and 1.27 rewrote comments in
   generated files the change never touched (agni 994).
   `make proto-check` fails the gate on any of them being stale. The Python half uses buf's REMOTE
@@ -768,7 +778,7 @@ commit-first ordering rule, and a per-clone `pnpm install`), one that makes a fi
 reporting a regression), plus what a run leaves behind and the generated-code rules. **From a worktree run
 `make -k testall`**, since a plain `make` stops at the first failure before `python-test`,
 `tutorial-runs-check` and `docsite-images-check` ever run. **Build in a worktree with the default Go,
-never `GOTOOLCHAIN=go1.26.4`.** Go 1.26.4 finds a repository only by a `.git` DIRECTORY and a linked
+never `GOTOOLCHAIN=go1.26.9`.** Go 1.26 (1.26.9 included) finds a repository only by a `.git` DIRECTORY and a linked
 worktree's `.git` is a file, so it runs no git and stamps `(devel)` (go1.27 fixed it, golang/go#58218).
 A `(devel)` wasm has an empty `StoreVersion` and keeps nothing, so `browser-test` and rung 12's capture
 fail and a timed walk reports `design=built` where it should read `design=store` (#957).
