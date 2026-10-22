@@ -233,7 +233,7 @@ describe("highlight layers", () => {
 
       // SVG mode: the overlay is a served document in the DOM, so its paint is inspectable. WebGL
       // resolves specs into buffers with nothing to read back short of pixels.
-      await page.click(".render-mode .mode-btn:nth-of-type(2)");
+      await page.click(`.render-mode .mode-btn:has-text("SVG")`);
       // Scoped to #svg-view: the diff panel builds two more SvgViews, and their overlays are empty
       // and hidden, so an unscoped selector waits forever on the wrong one.
       await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
@@ -289,7 +289,7 @@ describe("the run-wide field", () => {
   it("is off after a run, and a clicked finding is drawn", async () => {
     await withPage(browser, async (page) => {
       await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
-      await page.click(".render-mode .mode-btn:nth-of-type(2)");
+      await page.click(`.render-mode .mode-btn:has-text("SVG")`);
       await page.waitForSelector("#svg-view .highlight-overlay", { state: "attached", timeout: 30_000 });
       await page.click(".checks-run");
       await page.waitForSelector(".check-locate", { timeout: 30_000 });
@@ -758,4 +758,24 @@ describe("the default dock", () => {
       expect(width).toBeLessThan(300);
     });
   }, 90_000);
+});
+
+// agni issue 1132: on a crowded bar the menus shrank until "▾" wrapped under its label, so Panels and
+// Highlight stood a line taller than every other button.
+describe("the top bar's menu buttons", () => {
+  it("stay one line on a narrow window", async () => {
+    await withPage(browser, async (page) => {
+      await page.setViewportSize({ width: 700, height: 900 });
+      await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
+      const heights = await page.evaluate(() =>
+        [".panels-btn", ".highlight-btn", ".render-mode .mode-btn"].map((sel) => {
+          const b = document.querySelector<HTMLElement>(sel);
+          return { sel, h: b ? b.getBoundingClientRect().height : -1 };
+        }),
+      );
+      expect(heights.every((x) => x.h > 0)).toBe(true);
+      const one = heights[2].h;
+      for (const x of heights.slice(0, 2)) expect(x.h, x.sel).toBeLessThanOrEqual(one + 1);
+    });
+  });
 });

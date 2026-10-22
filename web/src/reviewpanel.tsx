@@ -1,4 +1,5 @@
 import { For, Show, createSignal } from "solid-js";
+import type { FindingItem } from "./findings.js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
 import {
@@ -55,13 +56,13 @@ function OutcomeChip(props: { outcome: string }) {
 // fired) its findings as click-to-locate rows. The findings collapse by default because a broad rule
 // can fire on hundreds of nets and an expanded list would bury the checklist itself.
 //
-// A finding locates by (kind, subject), the same path the query and coverage panels use, NOT by the
-// per-instance net id the checks panel can use. The checks panel can be precise because it holds the
-// findings it is locating; these arrive inside a stored document instead. Two nets sharing a name
-// therefore highlight together here (agni issue 144).
+// A finding locates by (kind, subject) on a sheet the server says it is drawn on, keeping a pin
+// subject's pin (agni issue 1132), NOT by the per-instance net id the checks panel can use. The
+// checks panel can be precise because it holds the findings it is locating; these arrive inside a
+// stored document instead. Two nets sharing a name therefore highlight together here (agni issue 144).
 function ReviewItemRow(props: {
   item: ReviewItemView;
-  onLocate: (kind: string, subject: string) => void;
+  onLocate: (f: FindingItem) => void;
 }) {
   const [open, setOpen] = createSignal(false);
   const findings = () => props.item.findings;
@@ -88,7 +89,7 @@ function ReviewItemRow(props: {
                     type="button"
                     class="rv-finding"
                     title={`locate ${f.kind} ${f.subject}`}
-                    onClick={() => props.onLocate(f.kind, f.subject)}
+                    onClick={() => props.onLocate(f)}
                   >
                     <span class="rv-finding-subject">{f.subject}</span>
                     <span class="rv-finding-message">{f.message}</span>
@@ -113,7 +114,7 @@ function ReviewPanel(props: {
   // onCancel stops the checklist run in flight (agni issue 918). Absent, the button stays disabled
   // while a run is under way.
   onCancel?: () => void;
-  onLocate: (kind: string, subject: string) => void;
+  onLocate: (f: FindingItem) => void;
   // onSave writes the shown run as the checklist page `agni review --format html` writes. Absent,
   // the panel offers no save.
   onSave?: () => void;
@@ -169,6 +170,9 @@ function ReviewPanel(props: {
         </Show>
         <Show when={props.state().cancelled && !props.state().running}>
           <div class="rv-cancelled" role="status">Cancelled. The checklist was not scored.</div>
+        </Show>
+        <Show when={props.state().locateNote}>
+          <div class="rv-locate-note" role="status">{props.state().locateNote}</div>
         </Show>
 
         <Show when={props.state().runs.length > 0}>
@@ -246,7 +250,7 @@ export function reviewPanelIsland(
     onSelectChecklist: (ref: string) => void;
     onCreate: () => void;
     onCancel?: () => void;
-    onLocate: (kind: string, subject: string) => void;
+    onLocate: (f: FindingItem) => void;
     onSave?: () => void;
   },
   opts: { staticHost?: boolean } = {},

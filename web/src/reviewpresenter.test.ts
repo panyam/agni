@@ -8,6 +8,8 @@ import type { ConventionState } from "./conventions.js";
 import { stubQueryView } from "./testviews.js";
 import type { OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
+import type { FindingItem } from "./findings.js";
+import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
 const BOARD = artifactUri("m", "proj/board.edn");
 // HOUSE is the overlay the convention bar's "house" vocabulary rides on, as far as a snapshot name tells.
@@ -143,7 +145,7 @@ function harness(opts: { wireReview?: boolean; wireClients?: boolean; wireConven
     undefined,
     fakeSnapshots(),
   );
-  return { presenter, onReview, onConvention, listReviews, getReviewManifest, createReview, renderReviewReport, download, listDir, getNamingConvention, checkDesign: checks.checkDesign, listRules: checks.listRules, runQuery };
+  return { presenter, client, canvas, onReview, onConvention, listReviews, getReviewManifest, createReview, renderReviewReport, download, listDir, getNamingConvention, checkDesign: checks.checkDesign, listRules: checks.listRules, runQuery };
 }
 
 function lastState(onReview: ReturnType<typeof vi.fn>): ReviewState {
@@ -531,5 +533,45 @@ describe("review presenter — cancelling", () => {
     expect(s.error).toBe("");
     await h.presenter.createReview();
     expect(lastState(h.onReview).cancelled).toBe(false);
+  });
+});
+
+// agni issue 1132: a Review finding located on whatever sheet was shown, dropped a pin subject's pin,
+// and explained an undrawn subject in the Query panel.
+describe("review presenter — locating a finding", () => {
+  const finding = (over: Partial<FindingItem>): FindingItem =>
+    ({ rule: "r", category: "", profile: "", severity: "error", kind: "pin", subject: "U1", pin: "3", netId: "", busId: "", message: "", inconclusive: false, context: [], sheets: [], locateReason: LocateReason.UNSPECIFIED, ...over }) as FindingItem;
+
+  async function twoSheets() {
+    const h = harness();
+    h.client.getDesign.mockResolvedValue({
+      name: "D", layout: "faithful", sourceFormat: "", componentCount: 0, netCount: 0,
+      sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }], nativeAvailable: false, availableLayouts: ["faithful"],
+    });
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.client.getSheet.mockClear();
+    return h;
+  }
+
+  it("opens the sheet the finding is drawn on and keeps its pin", async () => {
+    const h = await twoSheets();
+    await h.presenter.locateReviewFinding(finding({ sheets: [{ id: "s2", name: "S2" }] }));
+    expect(h.client.getSheet.mock.calls.some((c: [{ sheet?: string }]) => c[0].sheet === "s2")).toBe(true);
+    const last = h.canvas.setHighlights.mock.calls.at(-1)[0];
+    expect(JSON.stringify(last)).toContain('"pin":"3"');
+  });
+
+  it("stays on the shown sheet when the finding is drawn there", async () => {
+    const h = await twoSheets();
+    await h.presenter.locateReviewFinding(finding({ sheets: [{ id: "s1", name: "S1" }, { id: "s2", name: "S2" }] }));
+    expect(h.client.getSheet).not.toHaveBeenCalled();
+  });
+
+  it("says in the Review panel why an undrawn finding highlights nothing", async () => {
+    const h = await twoSheets();
+    await h.presenter.locateReviewFinding(finding({ kind: "net", subject: "$1N12", pin: "", locateReason: LocateReason.NO_GEOMETRY }));
+    expect(lastState(h.onReview).locateNote).toContain("drawn on no sheet");
+    await h.presenter.locateReviewFinding(finding({ sheets: [{ id: "s1", name: "S1" }] }));
+    expect(lastState(h.onReview).locateNote).toBe("");
   });
 });

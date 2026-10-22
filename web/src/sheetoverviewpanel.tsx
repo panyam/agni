@@ -24,18 +24,22 @@ function SheetOverviewPanel(props: { state: () => OverviewState; onSelect: (shee
                   fallback={<span class="sheet-tile-count norules" title="no rules selected">—</span>}
                 >
                   {/*
-                    Two counts, because an inconclusive result is not a defect (agni issue 350). The
-                    zero goes green only when nothing is unresolved either, since a sheet whose
-                    findings are all undecided is unexamined rather than clean.
+                    Two counts, because an inconclusive result is not a defect (agni issue 350). A
+                    zero draws nothing, and nothing is drawn before a run, since a green 0 there
+                    claimed clean over rules that never ran (agni issue 1132).
                   */}
-                  <span class="sheet-tile-counts">
-                    <span class={`sheet-tile-count${t.count > 0 ? " firing" : t.unresolved > 0 ? " open" : " clean"}`}>{t.count}</span>
-                    <Show when={t.unresolved > 0}>
-                      <span class="sheet-tile-count unresolved" title={`${t.unresolved} inconclusive: the rule could not decide`}>
-                        {t.unresolved}?
-                      </span>
-                    </Show>
-                  </span>
+                  <Show when={props.state().ranCount > 0}>
+                    <span class="sheet-tile-counts">
+                      <Show when={t.count > 0}>
+                        <span class="sheet-tile-count firing">{t.count}</span>
+                      </Show>
+                      <Show when={t.unresolved > 0}>
+                        <span class="sheet-tile-count unresolved" title={`${t.unresolved} inconclusive: the rule could not decide`}>
+                          {t.unresolved}?
+                        </span>
+                      </Show>
+                    </span>
+                  </Show>
                 </Show>
               </button>
             </li>
@@ -53,7 +57,7 @@ export function sheetOverviewPanelIsland(
   eventBus: EventBus | null,
   handlers: { onSelect: (sheetId: string) => void },
 ): { island: SolidIsland; view: OverviewView } {
-  const [state, setState] = signalView<OverviewState>({ tiles: [], activeId: "", ruleCount: 0 });
+  const [state, setState] = signalView<OverviewState>({ tiles: [], activeId: "", ruleCount: 0, ranCount: 0 });
   const island = new SolidIsland(
     "sheet-overview",
     el,

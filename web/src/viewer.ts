@@ -411,7 +411,7 @@ export class ViewerPresenter {
   // locateEntity focuses a query result cell's entity (WS9-038). It navigates to the given sheet (a
   // badge click), then stacks the entity as a translucent focus over any active findings highlight,
   // the same two-layer emphasis selectFinding uses. Native rendering shows the tool's own document
-  // with no overlay, so it hops to WebGL to reveal the tint. A query entity is not a finding, so
+  // with no overlay, so it hops to SVG to reveal the tint. A query entity is not a finding, so
   // the highlight is built from the bare (kind, subject) via entitySpecs.
   async locateEntity(
     kind: string,
@@ -419,10 +419,11 @@ export class ViewerPresenter {
     sheet?: string,
     reason: LocateReason = LocateReason.UNSPECIFIED,
     pin = "",
+    noteTo: "query" | "review" = "query",
   ): Promise<void> {
     if (!subject) return;
     if (sheet && sheet !== this.currentSheet) await this.showSheet(sheet);
-    if (this.mode === "native") await this.setMode("webgl");
+    if (this.mode === "native") await this.setMode("svg");
     // A picked PIN is a different target from its component, since the spec builder keys a pin
     // highlight by (ref, pin) and an empty pin would silently widen the focus to the whole part.
     // Net and component callers pass nothing.
@@ -433,7 +434,20 @@ export class ViewerPresenter {
     // only on a faithful layout, since an auto-layout draws every entity and always resolves.
     const faithful = this.currentLayout === "" || this.currentLayout === "faithful";
     const note = faithful && reason !== LocateReason.UNSPECIFIED ? reasonMessage(reason, kind, subject) : "";
-    this.views.query?.setLocateNote(note);
+    if (noteTo === "review") {
+      this.reviewState.locateNote = note;
+      this.pushReview();
+    } else {
+      this.views.query?.setLocateNote(note);
+    }
+  }
+
+  // locateReviewFinding focuses a Review finding the way a Checks click does (agni issue 1132). It
+  // opens a sheet the subject is drawn on when the shown sheet has none of them, keeps a pin
+  // subject's pin, and says in the Review panel why an undrawn subject highlights nothing.
+  async locateReviewFinding(f: FindingItem): Promise<void> {
+    const onCurrent = f.sheets.length === 0 || f.sheets.some((b) => b.id === this.currentSheet);
+    await this.locateEntity(f.kind, f.subject, onCurrent ? undefined : f.sheets[0].id, f.locateReason, f.pin, "review");
   }
 
   // locateVerdict focuses ONE verdict by its derived id and draws its proof, with the verdict's
@@ -449,7 +463,7 @@ export class ViewerPresenter {
   async locateVerdict(id: string): Promise<boolean> {
     const v = this.doc.findVerdict(id);
     if (!v) return false;
-    if (this.mode === "native") await this.setMode("webgl");
+    if (this.mode === "native") await this.setMode("svg");
     // Every entity in the tuple is the figure, so a clearance verdict lights both nets rather than
     // half of a distance.
     const focus = withFocusShape(subjectsToSpecs(v.subjects), this.highlightStyle);
@@ -495,7 +509,12 @@ export class ViewerPresenter {
   // current findings' sheet badges. Re-pushed when the sheet set, the shown sheet, or the findings
   // change.
   private pushOverview(activeId = this.currentSheet): void {
-    this.views.overview?.setState({ tiles: sheetTiles(this.doc.sheets, this.findings), activeId, ruleCount: this.doc.selectedRules.length });
+    this.views.overview?.setState({
+      tiles: sheetTiles(this.doc.sheets, this.findings),
+      activeId,
+      ruleCount: this.doc.selectedRules.length,
+      ranCount: this.doc.selectedRules.filter((n) => this.doc.ran(n)).length,
+    });
   }
 
   // boardLayers is the board layer-visibility setting, kept across sheet switches so
@@ -1405,7 +1424,7 @@ export class ViewerPresenter {
     this.syncLocation();
     const subjects = traceSubjects(state);
     if (subjects.length === 0) return;
-    if (this.mode === "native") await this.setMode("webgl");
+    if (this.mode === "native") await this.setMode("svg");
     // Go to a sheet the answer is ON, the way selectFinding does, or a cold link draws on the
     // design's first sheet, which on an 82-sheet export is a table of contents with no wires (agni
     // issue 657). traceSheet prefers the FROM endpoint's sheet (see trace.ts), and an answer drawn
@@ -1595,8 +1614,8 @@ export class ViewerPresenter {
     this.selectedSubject = toggleOff ? "" : subject;
     this.selectedNetId = toggleOff ? "" : netId;
     this.pushFindings();
-    // Native shows the tool's own golden document (no overlay); hop to WebGL to see the tint.
-    if (!toggleOff && this.mode === "native") await this.setMode("webgl");
+    // Native shows the tool's own golden document (no overlay); hop to SVG to see the tint.
+    if (!toggleOff && this.mode === "native") await this.setMode("svg");
     if (toggleOff) {
       this.views.findings.setFindingLocateNote("");
       await this.setHighlights(subjectsToSpecs(this.field())); // back to the field, or to nothing

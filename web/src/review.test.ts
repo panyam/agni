@@ -143,7 +143,7 @@ describe("reviewFromWire", () => {
               outcome: "fail",
               note: "",
               findings: [
-                { rule: "profile/can-termination-missing", severity: "error", message: "no 120R", subject: { kind: "net", ref: "CANH", pin: "", netId: "n1", busId: "" } },
+                { rule: "profile/can-termination-missing", severity: "error", message: "no 120R", subject: { kind: "net", ref: "CANH", pin: "", netId: "n1", busId: "" }, sheets: ["s2"] },
               ],
             },
             { id: "196", title: "manual", outcome: "not-automated", note: "the EE signs this off", findings: [] },
@@ -172,6 +172,8 @@ describe("reviewFromWire", () => {
     expect(item.findings[0].subject).toBe("CANH");
     expect(item.findings[0].kind).toBe("net");
     expect(item.findings[0].netId).toBe("n1");
+    // The sheets the server says it is drawn on, so a click opens one (agni issue 1132).
+    expect(item.findings[0].sheets.map((b) => b.id)).toEqual(["s2"]);
   });
 
   it("survives a document with no areas rather than throwing", () => {

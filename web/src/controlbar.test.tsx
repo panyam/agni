@@ -72,3 +72,16 @@ describe("the native mode button", () => {
     expect(b.title).toBe("native rendering is not available in this demo");
   });
 });
+
+// agni issue 1132: WebGL lags on a large design, so it is offered only to a page already in it.
+describe("the WebGL mode button", () => {
+  const labels = (el: HTMLElement) => [...el.querySelectorAll<HTMLButtonElement>(".render-mode .mode-btn")].map((b) => b.textContent);
+
+  it("is hidden in SVG mode", () => {
+    expect(labels(mount({ mode: "svg" }).el)).toEqual(["SVG", "Native"]);
+  });
+
+  it("stays for a page opened in it", () => {
+    expect(labels(mount({ mode: "webgl" }).el)).toEqual(["WebGL", "SVG", "Native"]);
+  });
+});

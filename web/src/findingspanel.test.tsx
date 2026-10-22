@@ -122,6 +122,15 @@ describe("checks panel empty states", () => {
     const clean = mountPanel({ findings: [], ruleCount: 5, pending: 0 });
     expect(clean.el.querySelector(".findings-empty")!.textContent).toBe("No findings.");
   });
+
+  // agni issue 1132: the next action leads, and the rules that could not run qualify it below.
+  it("puts Press Run checks above the rules that could not run", () => {
+    const p = mountPanel({ findings: [], ruleCount: 5, pending: 3, skipped: [{ rule: "track-width", reason: "no board" }] });
+    const press = p.el.querySelector(".findings-empty")!;
+    const skipped = p.el.querySelector(".checks-skipped")!;
+    expect(press.textContent).toContain("Press Run checks to evaluate 3 rules");
+    expect(press.compareDocumentPosition(skipped) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
 });
 
 describe("checks panel collapses repeated findings", () => {

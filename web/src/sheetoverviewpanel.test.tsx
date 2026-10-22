@@ -20,6 +20,7 @@ function state(over: Partial<OverviewState>): OverviewState {
     ],
     activeId: "s1",
     ruleCount: 2,
+    ranCount: 2,
     ...over,
   };
 }
@@ -27,13 +28,13 @@ function state(over: Partial<OverviewState>): OverviewState {
 beforeEach(() => document.body.replaceChildren());
 
 describe("sheetOverviewPanelIsland", () => {
-  it("renders a tile per sheet with firing and explicit clean badges, marking the shown sheet", () => {
+  it("renders a tile per sheet with a firing badge, nothing on a clean sheet, marking the shown sheet", () => {
     const { el, view } = mountPanel();
     view.setState(state({}));
     const tiles = [...el.querySelectorAll(".sheet-tile")];
     expect(tiles.map((t) => t.querySelector(".sheet-tile-name")?.textContent)).toEqual(["Root", "Power"]);
     expect(tiles[0].querySelector(".sheet-tile-count.firing")?.textContent).toBe("3");
-    expect(tiles[1].querySelector(".sheet-tile-count.clean")?.textContent).toBe("0");
+    expect(tiles[1].querySelector(".sheet-tile-count")).toBeNull();
     expect(tiles[0].classList.contains("active")).toBe(true);
     expect(tiles[1].classList.contains("active")).toBe(false);
   });
@@ -42,7 +43,15 @@ describe("sheetOverviewPanelIsland", () => {
     const { el, view } = mountPanel();
     view.setState(state({ ruleCount: 0 }));
     expect(el.querySelectorAll(".sheet-tile-count.norules").length).toBe(2);
-    expect(el.querySelector(".sheet-tile-count.clean")).toBeNull();
+    expect(el.querySelectorAll(".sheet-tile-count:not(.norules)").length).toBe(0);
+  });
+
+  // agni issue 1132: before Run checks every sheet badged a green 0, a clean claim over rules that never ran.
+  it("draws no count before any selected rule has run", () => {
+    const { el, view } = mountPanel();
+    view.setState(state({ ranCount: 0 }));
+    expect(el.querySelectorAll(".sheet-tile").length).toBe(2);
+    expect(el.querySelectorAll(".sheet-tile-count").length).toBe(0);
   });
 
   it("emits the sheet id on tile click and hints when no design is open", () => {
@@ -69,8 +78,7 @@ describe("sheet tiles and inconclusive results", () => {
     const { el, view } = mountPanel();
     view.setState(state({ tiles: [{ id: "s1", name: "Root", count: 0, unresolved: 4 }] }));
     const tile = el.querySelector(".sheet-tile")!;
-    expect(tile.querySelector(".sheet-tile-count.clean")).toBeNull();
-    expect(tile.querySelector(".sheet-tile-count.open")?.textContent).toBe("0");
-    expect(tile.querySelector(".sheet-tile-count.unresolved")?.textContent).toBe("4?");
+    expect(tile.querySelector(".sheet-tile-count.firing")).toBeNull();
+    expect([...tile.querySelectorAll(".sheet-tile-count")].map((b) => b.textContent)).toEqual(["4?"]);
   });
 });

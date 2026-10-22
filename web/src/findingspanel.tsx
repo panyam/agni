@@ -215,6 +215,13 @@ function ChecksPanel(props: {
         <div class="checks-locate-note" role="status">{props.locateNote()}</div>
       </Show>
 
+      {/* The next action leads, and the rules that could not run qualify it below. */}
+      <Show when={props.state().ruleCount > 0 && props.state().findings.length === 0 && !props.state().running && props.state().pending > 0}>
+        <div class="findings-empty">
+          Press Run checks to evaluate {props.state().pending} rule{props.state().pending === 1 ? "" : "s"}.
+        </div>
+      </Show>
+
       {/*
         Rules that could not run. Shown ABOVE the findings because it qualifies them (two findings
         from ten selected rules, six of which never ran, is a weaker claim than two from ten), and
@@ -254,13 +261,9 @@ function ChecksPanel(props: {
         <Show
           when={props.state().findings.length > 0}
           fallback={
-            // While a run is under way its own line says so, and "Press Run checks" would contradict it.
-            <Show when={!props.state().running}>
-              <div class="findings-empty">
-                {props.state().pending > 0
-                  ? `Press Run checks to evaluate ${props.state().pending} rule${props.state().pending === 1 ? "" : "s"}.`
-                  : "No findings."}
-              </div>
+            // A run under way says so in its own line, and pending rules say so above the skipped block.
+            <Show when={!props.state().running && props.state().pending === 0}>
+              <div class="findings-empty">No findings.</div>
             </Show>
           }
         >

@@ -12,12 +12,13 @@
     /* WS9-021 dock shell: dockview fills the page below the top bar; each panel hole fills its dockview panel */
     .dock { flex: 1 1 auto; min-height: 0; position: relative; }
     .dock-body { width: 100%; height: 100%; overflow: auto; padding: 8px; background: #fafafa; }
-    .panels-menu { position: relative; margin-left: auto; padding: 4px 6px; }
+    /* The two menus keep their size, so a crowded bar never wraps a caret under its label (agni issue 1132). */
+    .panels-menu { position: relative; flex: 0 0 auto; margin-left: auto; padding: 4px 6px; }
     .panels-list { position: absolute; right: 6px; top: 100%; z-index: 1000; min-width: 140px; background: #fff; border: 1px solid #ccc; border-radius: 4px; box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15); }
     .panels-item { display: block; width: 100%; text-align: left; border: 0; background: none; font: inherit; padding: 4px 10px; cursor: pointer; white-space: pre; }
     .panels-item:hover { background: #eef; }
     .panels-reset { border-top: 1px solid #ddd; margin-top: 2px; }
-    .highlight-menu { position: relative; padding: 4px 6px; }
+    .highlight-menu { position: relative; flex: 0 0 auto; padding: 4px 6px; }
     .highlight-panel { padding: 8px; min-width: 190px; }
     .highlight-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; margin: 4px 0; font-size: 12px; }
     .highlight-row input[type="range"] { width: 110px; }
@@ -57,7 +58,7 @@
     .sheet-tab-close:hover { background: #d8d8d8; color: #111; }
     .controls { display: flex; align-items: flex-end; gap: 4px; }
     .render-mode { display: flex; gap: 2px; padding: 4px 0 4px 6px; }
-    .mode-btn { border: 1px solid #ccc; background: #eee; padding: 3px 10px; border-radius: 4px; cursor: pointer; font: inherit; }
+    .mode-btn { border: 1px solid #ccc; background: #eee; padding: 3px 10px; border-radius: 4px; cursor: pointer; font: inherit; white-space: nowrap; }
     .mode-btn.active { background: #2563eb; color: #fff; border-color: #2563eb; }
     .layout-select { font: inherit; padding: 2px 6px; margin-left: 4px; }
     .layout-select:disabled { opacity: 0.5; }
@@ -324,12 +325,10 @@
     .sheet-tile-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
     .sheet-tile-count { flex: 0 0 auto; min-width: 22px; text-align: center; border-radius: 10px; font-size: 11px; padding: 1px 6px; }
     .sheet-tile-count.firing { background: #d21f3c; color: #fff; }
-    .sheet-tile-count.clean { background: #e6f4ea; color: #1a7e3f; border: 1px solid #bce3c8; }
     .sheet-tile-count.norules { color: #999; }
     /* The tile's two counts: defects, then the inconclusive results beside them. `open` is the zero
        that is not clean, on a sheet whose only findings are undecided. */
     .sheet-tile-counts { display: inline-flex; align-items: center; gap: 4px; flex: 0 0 auto; }
-    .sheet-tile-count.open { color: #6d28d9; border: 1px solid #ddd0f2; }
     .sheet-tile-count.unresolved { background: #f3e8ff; color: #6d28d9; border: 1px solid #ddd0f2; }
     /* WS9-006 changes panel: rows reuse the findings grid; the swatch replaces the severity dot */
     .finding.chg { grid-template-columns: auto auto 1fr; }
@@ -457,7 +456,7 @@
     .query-error { color: #b00; font-size: 12px; white-space: pre-wrap; background: #fdf0f0; border: 1px solid #e0b4b4; border-radius: 4px; padding: 6px 8px; }
     .query-error-at { margin: 6px 0 0; font-size: 12px; white-space: pre; overflow-x: auto; color: #333; background: none; }
     .query-error-caret { color: #b00; font-weight: 700; }
-    .query-locate-note { color: #7a5b00; font-size: 12px; background: #fdf7e3; border: 1px solid #e6d9a8; border-radius: 4px; padding: 6px 8px; }
+    .query-locate-note, .checks-locate-note, .rv-locate-note { color: #7a5b00; font-size: 12px; background: #fdf7e3; border: 1px solid #e6d9a8; border-radius: 4px; padding: 6px 8px; }
     .query-empty { color: #999; font-size: 12px; padding: 4px 0; }
     /* The results are the panel's own scroll region — a wide table scrolls horizontally here without
        moving the query box, and long results scroll vertically under a sticky header. */

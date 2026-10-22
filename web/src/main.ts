@@ -472,15 +472,15 @@ class AppRoot extends BaseComponent {
       onPlain: (plain) => void presenter.setPlainCatalog(plain),
     });
     // The review panel (WS9-052) shows the project's checklist verdict over the stored runs. A
-    // finding under an item locates through the same locateEntity path as every other panel.
+    // finding under an item opens the sheet it is drawn on, as a Checks finding does (agni issue 1132).
     const review = reviewPanelIsland(reviewEl, this._eventBus, {
       onSelectRun: (name) => presenter.showReview(name),
       onSelectChecklist: (ref) => presenter.setChecklist(ref),
       onCreate: () => void presenter.createReview(),
       onCancel: () => presenter.cancelReview(),
-      onLocate: (kind, subject) => {
-        void presenter.locateEntity(kind, subject);
-        const sel = selectionFromCell(kind, subject);
+      onLocate: (f) => {
+        void presenter.locateReviewFinding(f);
+        const sel = selectionFromCell(f.kind, f.subject);
         if (sel) propertiesPresenter.selectEntity(sel);
       },
       // The checklist page, written by the rpc `agni review --format html` calls (agni issue 1030).

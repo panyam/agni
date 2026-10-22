@@ -48,8 +48,14 @@ describe("coveragePanel", () => {
   });
 
   it("shows an empty message when no interface is detected", () => {
-    const { el } = mount({ interfaces: [] });
-    expect(el.querySelector(".coverage-empty")).toBeTruthy();
+    const { el } = mount({ interfaces: [], asked: true });
+    expect(el.querySelector(".coverage-empty")?.textContent).toContain("No interface profiles detected");
     expect(el.querySelector(".coverage-signal")).toBeNull();
+  });
+
+  // agni issue 1132: before a run the panel said no profile was detected, an answer nobody had asked for.
+  it("says profiles are matched by a run before one has been asked", () => {
+    const { el } = mount({ interfaces: [] });
+    expect(el.querySelector(".coverage-empty")?.textContent).toContain("when you press Run checks");
   });
 });

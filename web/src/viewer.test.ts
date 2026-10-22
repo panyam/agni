@@ -1112,7 +1112,7 @@ describe("ViewerPresenter", () => {
     ]);
   });
 
-  it("focusing a finding in Native mode hops to WebGL (no overlay for the golden document)", async () => {
+  it("focusing a finding in Native mode hops to SVG (no overlay for the golden document)", async () => {
     const h = harness();
     await h.presenter.setShowAllFindings(true); // the run-wide field is opt-in (agni issue 356)
     h.checkDesign.mockResolvedValueOnce({
@@ -1122,12 +1122,13 @@ describe("ViewerPresenter", () => {
     await h.presenter.setMode("native");
     h.highlightSheet.mockClear();
     await h.presenter.selectFinding("R1");
-    expect(lastControls(h).mode).toBe("webgl");
+    // SVG rather than WebGL, which lags on a large design (agni issue 1132).
+    expect(lastControls(h).mode).toBe("svg");
     expect(h.canvas.setHighlights).toHaveBeenLastCalledWith([
       { components: ["R1"], color: BASE_HIGHLIGHT_COLOR, alpha: BASE_HIGHLIGHT_ALPHA },
       { components: ["R1"], shape: HighlightShape.BOUNDING_RECT },
     ]);
-    expect(h.highlightSheet).not.toHaveBeenCalled(); // WebGL resolves locally, no overlay fetch
+    expect(h.highlightSheet).toHaveBeenCalled(); // SVG draws the focus as a fetched overlay
   });
 
   it("setHighlights re-fetches the SVG overlay when the sheet re-renders", async () => {

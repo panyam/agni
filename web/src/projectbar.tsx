@@ -35,7 +35,7 @@ function ProjectBar(props: { state: () => ProjectState; onPlain: (plain: boolean
             disabled={props.state().busy}
             onChange={(e) => props.onPlain(e.currentTarget.checked)}
           />
-          built-in only
+          ignore project config
         </label>
       </Show>
       {/* The companion notice says analysis reads a different file than the one picked in the tree

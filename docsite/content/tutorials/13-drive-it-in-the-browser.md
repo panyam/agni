@@ -125,7 +125,8 @@ otherwise be mostly highlight. **Highlight › Show every finding** lights the w
 viewer remembers the choice.
 
 **Canvas** renders faithfully when the design carries geometry and computes a layout when it does
-not, exactly as [rung 3](../03-see-it/) described. The WebGL and SVG toggle matters on large boards.
+not, exactly as [rung 3](../03-see-it/) described. It draws in SVG. WebGL is offered only to a page
+opened with `?mode=webgl`, since it lags on a large board.
 
 **Rules** lists the composed catalog, which is how you confirm a tier actually loaded rather than
 inferring it from findings that did or did not appear. Select the design first, because with no design
@@ -159,7 +160,7 @@ skipped, and a comparison's changes while one is open. A header click sorts it t
 
 **Coverage** shows each interface profile the design matched, with a chip per required signal, so
 the PCIe profile from rung 5 reads as signals found and signals missing. A found signal's chip
-locates its net.
+locates its net. The profiles are matched by Run checks, so the panel is empty until then.
 
 **Parts** lists every part whose MPN has a published spec, with its parameters, limits and the
 datasheet page each came from. It reads the `params/` rung 6 seeded, so a part with no spec there

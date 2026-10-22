@@ -240,8 +240,8 @@ Every surface says so the same way (agni issue 350). In the checks panel the sev
 to a violet `?`, because the severity a finding carries is the one the rule WOULD have reported and
 painting it red states the conclusion the rule declined to reach. A group badge shows the defects
 and then the unresolved count beside it, never one number over both. A sheet tile carries the same
-two numbers, and its zero only goes green when nothing is unresolved either, since a sheet whose
-findings are all undecided is unexamined rather than clean. On the severity axis an inconclusive
+two numbers, each drawn only when it is above zero, and neither before a run, since a count over
+rules that never ran claims a clean sheet (agni issue 1132). On the severity axis an inconclusive
 finding groups under `unresolved` rather than under its severity, and it sorts after every defect,
 so the rows a reader is working through stay together.
 
