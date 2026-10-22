@@ -5,6 +5,7 @@ import type { EventBus } from "@panyam/tsappkit";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import { FileKind, WorkspaceService, type DirEntry, type Mount } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { SheetRef } from "./gen/agni/v1/webapi/design_pb.js";
+import { type SheetNode as SheetTreeNode, sheetForest } from "./sheettree.js";
 import { workspaceClient } from "./api.js";
 import { hiddenNote } from "@agni/web-shared/treeprune.js";
 import type { SheetsState, SheetsView } from "./sheets.js";
@@ -39,25 +40,7 @@ interface Ctx extends TreeHandlers {
   revealTarget: Accessor<RevealTarget>;
 }
 
-interface SheetNodeData {
-  sheet: SheetRef;
-  children: SheetNodeData[];
-}
-
-// sheetForest groups a flat sheet list into a parent/child forest by parent_id. Sheets with an
-// empty (or unknown) parent are top-level roots, and there may be several (EDIF pages are all
-// top-level, while a KiCad design has one root with descendants).
-function sheetForest(sheets: SheetRef[]): SheetNodeData[] {
-  const nodes = sheets.map((s) => ({ sheet: s, children: [] as SheetNodeData[] }));
-  const byId = new Map(nodes.map((n) => [n.sheet.id, n]));
-  const roots: SheetNodeData[] = [];
-  for (const n of nodes) {
-    const parent = n.sheet.parentId ? byId.get(n.sheet.parentId) : undefined;
-    if (parent) parent.children.push(n);
-    else roots.push(n);
-  }
-  return roots;
-}
+type SheetNodeData = SheetTreeNode<SheetRef>;
 
 function SheetNode(props: { ctx: Ctx; node: SheetNodeData; depth: number }) {
   const active = (): boolean => props.ctx.sheets().activeId === props.node.sheet.id;
