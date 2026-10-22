@@ -23,7 +23,7 @@ import { fileURLToPath } from "node:url";
 import { launch } from "./browser.js";
 import { growQueryPanel } from "./panels.js";
 import { table, type Row } from "./exercise-report.js";
-import { pause, stepByStep } from "./walkguide.js";
+import { intro, pause, stepByStep } from "./walkguide.js";
 
 const base = (): string => inject("baseUrl");
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -31,8 +31,18 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
 // `make exercise-browser-review` defaults to Jetson, Antmicro's baseboard in examples/jetson-project,
 // whose files `make -C examples/jetson-project board` copies in from the fetched samples corpus.
 const walks = {
-  gateway: { mount: "tut", project: "examples/tutorial-project", path: "designs/gateway" },
-  jetson: { mount: "jetson", project: "examples/jetson-project", path: "designs/jetson" },
+  gateway: {
+    mount: "tut",
+    project: "examples/tutorial-project",
+    path: "designs/gateway",
+    about: "the tutorial project's Sample Board, a small synthetic gateway with two checklists and a project query set",
+  },
+  jetson: {
+    mount: "jetson",
+    project: "examples/jetson-project",
+    path: "designs/jetson",
+    about: "Antmicro's open-source baseboard for the Jetson AGX Thor module, sixteen schematic sheets and about 1,100 parts, under the Jetson review project's checklist and conventions",
+  },
 };
 const which = (process.env.WALK_DESIGN || "gateway") as keyof typeof walks;
 const walk = walks[which];
@@ -126,10 +136,11 @@ describe("the browser-review walk", () => {
       if (r.status() >= 400) failed.push(`${r.status()} ${new URL(r.url()).pathname}`);
     });
 
+    // The intro page stands in for the first stop, so "open" pauses there rather than over a blank page.
     const step = async (name: string, body: () => Promise<string>): Promise<void> => {
-      if (stepByStep) {
+      if (stepByStep && rows.length > 0) {
         const last = rows[rows.length - 1];
-        await pause(page, name, last ? `${last.step}: ${last.status}, ${last.detail}` : "");
+        await pause(page, name, `${last.step}: ${last.status}, ${last.detail}`, walk.about);
       }
       const t0 = Date.now();
       try {
@@ -143,6 +154,21 @@ describe("the browser-review walk", () => {
     };
 
     try {
+      if (stepByStep) {
+        await intro(page, walk.about, [
+          "open the design",
+          "match the checklist picker against 'agni checklists'",
+          "run each checklist",
+          "run the rule catalog",
+          "click a finding into the schematic",
+          "open a netlist audit as query tabs",
+          "click a part from a query answer",
+          "ask a follow-up question",
+          "save each checklist page and compare it with the CLI's",
+          "run 'agni trial'",
+          "check the page logged no errors",
+        ]);
+      }
       await step("open", async () => {
         await page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" });
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
