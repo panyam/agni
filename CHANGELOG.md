@@ -10,6 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.4] - 2026-10-22
+
+agni serves its analysis over MCP, from `agni serve --mcp` and `agni mcp` (PR 1122), and
+`make exercise-mcp-ask` checks five review questions through an MCP client against the CLI's answers
+(PR 1127).  A query variable can be bound to a list, and a rule name the catalog lacks is refused
+rather than run as nothing, both listed under Breaking with migrations.  The full write-up is
+[RELEASES/v0.3.4.md](RELEASES/v0.3.4.md).
+
 ## [0.3.3] - 2026-10-20
 
 agni moves to jaala v0.1.85, where a comparison against a constant binds its variable and a goal
