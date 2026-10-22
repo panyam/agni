@@ -277,21 +277,18 @@ func (s *srv) diff(ctx context.Context, in diffInput) (core.ToolResult, error) {
 	for _, t := range tables {
 		writeTable(&b, t)
 	}
-	// The viewer has no view of a diff, so the answer links each revision and says so.
-	var links []string
+	// One link opens the earlier revision with the viewer's Compare started against the later, so the
+	// reader lands on the same change table (agni issue 1126).
+	var link string
 	meta, why := s.linkMeta(snaps[0])
 	if why == "" {
-		bmeta, bwhy := s.linkMeta(snaps[1])
-		links, why = []string{rpt.DesignURL(meta), rpt.DesignURL(bmeta)}, bwhy
+		var bmeta rpt.Report
+		bmeta, why = s.linkMeta(snaps[1])
+		link = rpt.DiffURL(meta, bmeta)
 	}
-	if why == "" {
-		fmt.Fprintf(&b, "open %s in the viewer: %s\nopen %s in the viewer: %s\n", au, links[0], bu, links[1])
-		b.WriteString("the viewer has no view of a diff, so these open each revision\n")
-	} else {
-		writeLink(&b, "", why)
-	}
+	writeLink(&b, link, why)
 	return answer(b.String(), map[string]any{"design": au.String(), "against": bu.String(), "rename_approx": in.RenameApprox,
-		"links": links, "no_link": why, "tables": tablesJSON(tables), "answer": protoJSON(resp)})
+		"link": link, "no_link": why, "tables": tablesJSON(tables), "answer": protoJSON(resp)})
 }
 
 const designDesc = `Read a design's IR: its components, nets and pins as agni read them, narrowed by read_mask (design.nets, design.components.mpn, ...) and by nets and ref_des. Prefer query for a question; this is for reading what a part or net is.`

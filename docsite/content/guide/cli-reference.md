@@ -421,6 +421,7 @@ Structural diff between two revisions, over the IR. See
 | `--rename-approx` | also pair a net renamed AND changed slightly with its old self, as `renamed-approx` with the evidence (see [Comparing revisions](../comparing-revisions/)) |
 | `--include-equal` | also report the nets that did not change: kind `equal` in `json`, `net-equal` rows in `csv`, and a count in `text`. Off by default, since most diffs are about what changed |
 | `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=change_class,subject`. csv only, and the order the `Tabulate` rpc applies |
+| `--server <where>` | print a `look at it:` link to stderr that opens `<old>` in the viewer with Compare started against `<new>` (`?against=<mount>/<path>`), in every format, so stdout stays the diff. Takes the same values as `check --server`, and a link is printed only when both revisions can be linked there (agni issue 1126) |
 
 ### `render <file>`
 

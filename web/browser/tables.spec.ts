@@ -27,4 +27,15 @@ describe("the Tables panel under Compare", () => {
       await expectCompareTables(page, want);
     });
   });
+
+  // The link `agni diff --server` and an MCP diff answer print (agni issue 1126) opens the same
+  // comparison with no click on the Compare picker.
+  it("opens the same comparison from a link naming the revision to compare against", async () => {
+    const want = gatewayDiffRows();
+    await withPage(browser, async (page) => {
+      const against = encodeURIComponent("tut/designs/gateway/gateway-rev-c.edn");
+      await page.goto(`${base()}/designs/tut/designs/gateway/gateway.edn/view?against=${against}`, { waitUntil: "networkidle" });
+      await expectCompareTables(page, want);
+    });
+  });
 });

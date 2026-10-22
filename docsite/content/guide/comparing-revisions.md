@@ -115,6 +115,15 @@ that order, so a ref-des column puts R2 before R10. A net or a part in the table
 it on the drawing, and **Save CSV** downloads the table as the CLI would write it. The same panel
 also runs the checks over either revision and shows each run's findings and verdicts.
 
+A comparison has an address too. `agni diff <old> <new> --server <url>` prints a `look at it:` link to
+stderr, and following it opens the old revision with Compare already started against the new one,
+as if you had picked it in the Compare picker. The link is the old revision's view with
+`?against=<mount>/<path>` naming the new one, and it carries the question rather than an answer, so
+it compares the two files as they are when you open it. It is printed only when both revisions can
+be linked on that server, under the rules [Checks and reports](../checks-and-reports/) gives for any
+link, and `--server self` serves both from the same process. An MCP `diff` answer carries the same
+link (agni issue 1126).
+
 The browser-only demo cannot open a comparison yet, because its Compare picker lists no designs
 (agni issue 978).
 

@@ -1256,44 +1256,26 @@ func diffCmd() *cobra.Command {
 	var format string
 	var orderBy []string
 	var renameApprox, includeEqual bool
+	var serverVal string
+	var srvSpec serverSpec
 	c := &cobra.Command{
 		Use:   "diff <old> <new>",
 		Short: "Structural diff between two revisions of a design (over the IR)",
 		Args:  cobra.ExactArgs(2),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// json is the message DiffDesigns returns, so it goes through the service (C31, agni
-			// issues 737 and 817): the CLI is a client of the rpc rather than a second composition
-			// of it, and the sheet and placement maps the service fills are in its output too.
-			if len(orderBy) > 0 && format != "csv" {
-				return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
-			}
-			if format == "json" {
-				return diffViaService(cmd, args[0], args[1], renameApprox, includeEqual)
-			}
-			// csv is the diff table the TableService projects from the same response (agni 862).
-			if format == "csv" {
-				resp, err := diffResponse(cmd, args[0], args[1], renameApprox, includeEqual)
-				if err != nil {
-					return err
-				}
-				return writeDiffCSV(cmd.OutOrStdout(), resp, orderBy)
-			}
-			a, err := readDesign(args[0])
-			if err != nil {
+			// Before the reads, so a --server this process cannot honour refuses the run first (agni
+			// issue 637).
+			var err error
+			if srvSpec, err = resolveServer(serverVal); err != nil {
 				return err
 			}
-			b, err := readDesign(args[1])
-			if err != nil {
+			if err := runDiff(cmd, args[0], args[1], format, orderBy, renameApprox, includeEqual); err != nil {
 				return err
 			}
-			opts := diff.DefaultRenameOptions()
-			opts.Enabled = renameApprox
-			rep := diff.Designs(a, b, opts)
-			w := cmd.OutOrStdout()
-			fmt.Fprintf(w, "diff %s -> %s\n\n", args[0], args[1])
-			fmt.Fprint(w, rep.Render(diffListLimit))
-			if includeEqual {
-				fmt.Fprintf(w, "\nUnchanged nets: %d\n", len(rep.Equal))
+			// The link goes to stderr for every format, as trace's does, so stdout stays the diff a
+			// script parses and the json stays the wire message (C31, agni issue 1126).
+			if u := diffLink(cmd, srvSpec, args[0], args[1]); u != "" {
+				fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
 			}
 			return nil
 		},
@@ -1314,7 +1296,68 @@ func diffCmd() *cobra.Command {
 		"also report the nets that did not change: as kind equal in --format json, as net-equal rows in csv, and as a count in text. Off by default")
 	c.Flags().BoolVar(&renameApprox, "rename-approx", false,
 		"also pair a net that was renamed AND changed slightly, reported as renamed-approx with the evidence behind each pairing. Off by default: this ASSIGNS a best match among candidates rather than recovering a fact, so a gate reading the output should opt in")
+	serverFlag(c, &serverVal)
+	withSelfServer(c, &srvSpec)
 	return c
+}
+
+// runDiff writes the diff of older and newer to stdout in format.
+func runDiff(cmd *cobra.Command, older, newer, format string, orderBy []string, renameApprox, includeEqual bool) error {
+	// json is the message DiffDesigns returns, so it goes through the service (C31, agni
+	// issues 737 and 817): the CLI is a client of the rpc rather than a second composition
+	// of it, and the sheet and placement maps the service fills are in its output too.
+	if len(orderBy) > 0 && format != "csv" {
+		return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
+	}
+	if format == "json" {
+		return diffViaService(cmd, older, newer, renameApprox, includeEqual)
+	}
+	// csv is the diff table the TableService projects from the same response (agni 862).
+	if format == "csv" {
+		resp, err := diffResponse(cmd, older, newer, renameApprox, includeEqual)
+		if err != nil {
+			return err
+		}
+		return writeDiffCSV(cmd.OutOrStdout(), resp, orderBy)
+	}
+	a, err := readDesign(older)
+	if err != nil {
+		return err
+	}
+	b, err := readDesign(newer)
+	if err != nil {
+		return err
+	}
+	opts := diff.DefaultRenameOptions()
+	opts.Enabled = renameApprox
+	rep := diff.Designs(a, b, opts)
+	w := cmd.OutOrStdout()
+	fmt.Fprintf(w, "diff %s -> %s\n\n", older, newer)
+	fmt.Fprint(w, rep.Render(diffListLimit))
+	if includeEqual {
+		fmt.Fprintf(w, "\nUnchanged nets: %d\n", len(rep.Equal))
+	}
+	return nil
+}
+
+// diffLink is the link that opens older in the viewer with Compare started against newer, or "" when
+// the run asked for none or none is safe to make (agni issue 1126). Each side goes through
+// viewerLinkMeta, the rule check and trace use, so a side whose mount the server does not serve
+// withholds the link and says why on stderr.
+func diffLink(cmd *cobra.Command, spec serverSpec, older, newer string) string {
+	if !spec.active() {
+		return ""
+	}
+	ll := &localLoader{loader: newLoader()}
+	var metas [2]rpt.Report
+	for i, arg := range []string{older, newer} {
+		u, err := cliArgURI(arg)
+		if err != nil {
+			return ""
+		}
+		metas[i] = viewerLinkMeta(cmd, cmd.Context(), ll, u, spec)
+	}
+	return rpt.DiffURL(metas[0], metas[1])
 }
 
 func emitCmd() *cobra.Command {

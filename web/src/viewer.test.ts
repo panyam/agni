@@ -122,6 +122,7 @@ function harness() {
   const onReport = vi.fn();
   const onLocation = vi.fn();
   const onOverview = vi.fn();
+  const onCompare = vi.fn();
   const presenter = new ViewerPresenter(client, checks, canvas, render, {
     sheetNavs: [navA, navB],
     summary: onSummary,
@@ -134,13 +135,14 @@ function harness() {
     rules: { setState: onRules },
     report: onReport,
     location: onLocation,
+    compare: onCompare,
     overview: { setState: onOverview },
     query: stubQueryView(query),
     // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
   }, { runQuery, runQueries, listQuerySets } as any, undefined, undefined, undefined, snaps);
-  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview };
+  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -423,7 +425,7 @@ describe("ViewerPresenter", () => {
       nativeAvailable: true,
       availableLayouts: ["faithful", "grid"],
     } as any);
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "s2", mode: "webgl", layout: "grid", symbols: true, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" });
     // The design loaded at the URL's layout, and the render used the URL's mode + symbol source.
     expect(h.getDesign.mock.calls[0][0].layout).toBe("grid");
     const gs = h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0];
@@ -435,13 +437,32 @@ describe("ViewerPresenter", () => {
     }
   });
 
+  // A diff link names the design to compare against (agni issue 1126), and restoring it hands that
+  // design to the host's Compare once the open design has loaded, so side A is set when it starts.
+  it("starts a comparison against the design a link names, after the design opens", async () => {
+    const h = harness();
+    h.onCompare.mockImplementation(() => expect(h.getDesign).toHaveBeenCalled());
+    await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/board.edn", against: "m/d/board-rev-c.edn" });
+    expect(h.onCompare).toHaveBeenCalledExactlyOnceWith({ mount: "m", path: "d/board-rev-c.edn" });
+  });
+
+  // The picker refuses the open design as side B, and so does a link, and a link naming no file in a
+  // mount starts nothing.
+  it("starts no comparison against the open design itself or against nothing", async () => {
+    for (const against of ["m/d/board.edn", "m", "m/", "/d/board.edn", ""]) {
+      const h = harness();
+      await h.presenter.restore({ ...emptyLocation(), mount: "m", path: "d/board.edn", against });
+      expect(h.onCompare, against).not.toHaveBeenCalled();
+    }
+  });
+
   // Following a link is a question about ONE verdict, and answering it used to cost the whole
   // catalog. A cold page load has an empty cache, so restore ran every selected rule (which defaults
   // to every available rule) before it could resolve anything. On a real board that was 56 rules and
   // about fifteen seconds, paid again on every click, because each click is a fresh page load.
   describe("a verdict link runs only the rule it names", () => {
     function linkLoc(rule: string, subjects: string[] = []) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, subjects, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "single-pin-net:(net:VBUS)", hash: "", rule, subjects, trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" };
     }
     // The rules the run actually asked the server for, flattened across calls.
     function asked(h: ReturnType<typeof harness>): string[] {
@@ -536,7 +557,7 @@ describe("ViewerPresenter", () => {
   describe("stale verdict links", () => {
     // A location naming a verdict and the revision it was computed against.
     function linkLoc(hash: string) {
-      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "some-rule:net:VBUS", hash, rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
+      return { mount: "m", path: "board.eds", isDir: false as const, sheet: "", mode: "" as const, layout: "", symbols: false, flatten: false, verdict: "some-rule:net:VBUS", hash, rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" };
     }
     function servedHash(h: ReturnType<typeof harness>, contentHash?: string) {
       h.getDesign.mockResolvedValue({
@@ -607,7 +628,7 @@ describe("ViewerPresenter", () => {
 
   it("restore falls back to the first sheet when the URL names a sheet the design lacks", async () => {
     const h = harness(); // default design has only s1
-    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" });
+    await h.presenter.restore({ mount: "m", path: "board.eds", isDir: false, sheet: "ghost", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" });
     expect(h.getSheet.mock.calls[h.getSheet.mock.calls.length - 1][0].sheet).toBe("s1");
   });
 

@@ -17,7 +17,7 @@ import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
-import { type SubjectRef, type ViewerLocation, bindsFromLink, subjectFromParam, subjectParam } from "./router.js";
+import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, subjectFromParam, subjectParam } from "./router.js";
 import { DocumentStore } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
@@ -136,6 +136,10 @@ export interface ViewSink {
   // changes, so the composition root can reflect it into the browser URL (deep-linkable
   // refresh/back-forward). Optional so tests and non-routed hosts need not wire it.
   location?: (loc: ViewerLocation) => void;
+  // compare starts a comparison of the open design against another, as picking it in the Compare
+  // picker does, when a link arrives naming one (agni issue 1126). Optional like location, since a
+  // host without the Compare chrome has no comparison to start.
+  compare?: (against: { mount: string; path: string }) => void;
   // overview receives the per-sheet violation tiles (WS9-025) whenever the findings or the
   // shown sheet change. Optional like query.
   overview?: OverviewView;
@@ -633,6 +637,11 @@ export class ViewerPresenter {
     // asks it whole, as `agni query` did.
     if (loc.query) this.views.query?.setQuery(loc.query, bindsFromLink(loc.binds), { title: loc.title, whole: true });
     if (loc.set && loc.q) await this.openSetMember(loc.set, loc.q);
+    // A diff link names the design to compare against (agni issue 1126), and the host starts the
+    // comparison its Compare picker starts. The open design itself is ignored, as the picker refuses
+    // it.
+    const against = againstTarget(loc.against);
+    if (against && !(against.mount === loc.mount && against.path === loc.path)) this.views.compare?.(against);
   }
 
   // openSetMember opens one query of the design's project sets, found by the set's name and the
@@ -683,6 +692,7 @@ export class ViewerPresenter {
       binds: [],
       set: "",
       q: "",
+      against: "",
     };
   }
 

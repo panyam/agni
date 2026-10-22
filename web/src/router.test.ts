@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { describe, it, expect } from "vitest";
-import { bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageFlattens, pageOf, parseUrl, setBase, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
+import { againstTarget, bindsFromLink, dropPageUrl, keepTiming, emptyLocation, hasDir, hasFile, locationToUrl, pageFlattens, pageOf, parseUrl, setBase, withFlatten, setStaticHost, subjectFromParam, subjectParam, swapPage, type ViewerLocation } from "./router.js";
 
 function loc(over: Partial<ViewerLocation> = {}): ViewerLocation {
   return { ...emptyLocation(), ...over };
@@ -183,6 +183,24 @@ describe("a trace in the URL", () => {
     for (const bad of ["0", "-2", "2.5", "lots", ""]) {
       expect(parseUrl("/designs/m/b.edn/view", `?trace=U1.3,J1.1&hops=${bad}`).traceHops).toBe(0);
     }
+  });
+});
+
+describe("a comparison in the URL (agni issue 1126)", () => {
+  // The link core/report.DiffURL writes escapes the slashes, and the router reads it back whole.
+  it("reads the design to compare against from the link agni diff --server prints", () => {
+    const loc = parseUrl("/designs/tut/designs/gateway/gateway.edn/view", "?against=tut%2Fdesigns%2Fgateway%2Fgateway-rev-c.edn");
+    expect(loc.path).toBe("designs/gateway/gateway.edn");
+    expect(againstTarget(loc.against)).toEqual({ mount: "tut", path: "designs/gateway/gateway-rev-c.edn" });
+  });
+
+  it("round-trips through build then parse", () => {
+    const back = parseUrl(...splitHref(locationToUrl(loc({ mount: "m", path: "b.edn", against: "m/c.edn" }))));
+    expect(back.against).toBe("m/c.edn");
+  });
+
+  it("reads a value naming no file in a mount as no design", () => {
+    for (const bad of ["", "m", "m/", "/c.edn"]) expect(againstTarget(bad), bad).toBeNull();
   });
 });
 

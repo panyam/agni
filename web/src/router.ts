@@ -76,6 +76,11 @@ export interface ViewerLocation {
   // link to a long query stays short and follows the set's current text. Both or neither.
   set: string;
   q: string;
+  // against is a design to compare the open one against on arrival, as "<mount>/<path>", "" when
+  // none (agni issue 1126). It starts the Compare the picker starts, so `agni diff --server` and an
+  // MCP diff answer can link to a comparison. Read on arrival and not written back, like `query`,
+  // since the comparison is the reader's own from then on.
+  against: string;
 }
 
 // base is the path the app is served under, "/" on `agni serve` and "/agni/demo/" on the static
@@ -131,7 +136,7 @@ const BROWSER_MOUNT = "local";
 
 // emptyLocation is the "nothing open" location ("/"): no file, no folder, no view knobs.
 export function emptyLocation(): ViewerLocation {
-  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "" };
+  return { mount: "", path: "", isDir: false, sheet: "", mode: "", layout: "", symbols: false, flatten: false, verdict: "", hash: "", rule: "", subjects: [], trace: "", traceHops: 0, query: "", title: "", binds: [], set: "", q: "", against: "" };
 }
 
 // hasFile reports whether a location names a file to open (mount and path both set, and it is
@@ -188,6 +193,7 @@ export function locationToUrl(loc: ViewerLocation, page: DesignPage = VIEW_SEGME
     params.set("set", loc.set);
     params.set("q", loc.q);
   }
+  if (loc.against) params.set("against", loc.against);
   if (staticHost && loc.mount === BROWSER_MOUNT) {
     const all = new URLSearchParams([[DROP_PARAM, loc.path], ...params]);
     return `${designsPrefix()}${BROWSER_MOUNT}/${page}/?${all.toString()}`;
@@ -299,7 +305,16 @@ export function parseUrl(pathname: string, search: string): ViewerLocation {
   const member = params.get("q") ?? "";
   loc.set = set && member ? set : "";
   loc.q = set && member ? member : "";
+  loc.against = params.get("against") ?? "";
   return loc;
+}
+
+// againstTarget reads an `against` value as the design it names, the mount up to the first slash and
+// the path after it, or null for one naming no file in a mount.
+export function againstTarget(against: string): { mount: string; path: string } | null {
+  const at = against.indexOf("/");
+  if (at <= 0 || at === against.length - 1) return null;
+  return { mount: against.slice(0, at), path: against.slice(at + 1) };
 }
 
 // currentLocation reads the browser's current URL into a ViewerLocation.
