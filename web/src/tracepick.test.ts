@@ -50,6 +50,12 @@ describe("tracePicks", () => {
     expect(board.examples).toEqual(["R2.1", "U1.3"]);
   });
 
+  it("leaves out a power or flag symbol, which is not a part", () => {
+    const picks = tracePicks(inventory({ "#FLG01": [{ pin: "1", name: "", net: "VBUS" }], "#PWR03": [{ pin: "1", name: "", net: "GND" }], R1: [{ pin: "1", name: "", net: "VBUS" }] }));
+    expect(picks.components.map((c) => c.ref)).toEqual(["R1"]);
+    expect(pickCandidates(picks, "flg")).toEqual([]);
+  });
+
   it("offers nothing, and no example, before the design's inventory is read", () => {
     const empty = tracePicks(null);
     expect(pickCandidates(empty, "u")).toEqual([]);

@@ -28,10 +28,12 @@ export function emptyPicks(): TracePicks {
 }
 
 // tracePicks indexes the inventory for the pickers. Only components with a connected pin are listed,
-// since a trace starts and ends at a pin on a net.
+// since a trace starts and ends at a pin on a net. A KiCad power or flag symbol (#PWR01, #FLG01) is
+// left out, because it is a connectivity marker rather than a part, which is how the engine reads a
+// leading # (check.IsVirtualRef).
 export function tracePicks(inv: Inventory | null): TracePicks {
   if (!inv) return emptyPicks();
-  const refs = [...inv.pinsOf.keys()].sort(compareNatural);
+  const refs = [...inv.pinsOf.keys()].filter((r) => !r.startsWith("#")).sort(compareNatural);
   const components = refs.map((ref) => {
     const n = inv.pinsOf.get(ref)!.length;
     const value = inv.components.get(ref)?.value?.input ?? "";
