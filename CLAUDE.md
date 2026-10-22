@@ -187,7 +187,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   is a choice and a broken one is a mistake, so a NAMED dir that is wrong, or a `./web` without its
   bundle, still fails. `open` and `--server self` always need the viewer. The datasheets workbench is
   NOT served by `agni` at all since agni 744; it is `agnids serve` (`make dsserve`), and
-  `agni serve --datasheets-url <url>` is what makes the landing page link to it.
+  `agni serve --datasheets-url <url>` is what makes the landing page link to it. A script starting a
+  server for itself passes `--addr 127.0.0.1:0` and `--web-dir`, and reads the URL off the banner,
+  which names the port the kernel chose (agni 1121); started outside the repo root with no
+  `--web-dir`, it serves the API alone and every MCP answer says it has no link.
 - **A release is tried on a machine whose boards we never see through `deploy/compose.yaml`**
   (agni 1057), which `make compose-release V=...` pins and the release attaches. Its `trial` service
   runs `agni trial`, whose `feedback.Report` has no field for design content, and names a rule only
@@ -337,6 +340,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   carries the QUESTION, so it needs no content hash. Three outcomes stay apart: a route, no route
   within the radius, and an endpoint naming nothing the design has, which exits non-zero because a pin
   spelled wrong and two pins genuinely unconnected are opposite problems.
+- **A rule NAME the catalog lacks is refused** (agni 1121, `check.Catalog.CheckNames`), by `--rule`,
+  `CheckDesign` and `GetCheckReport` alike, with the nearest names offered and a superseded rule named
+  as superseded. Before, it ran nothing and answered an empty run that read as clean, and two tests
+  had passed that way for months naming rules that never existed. A rule that only exists under some
+  config (`intent/exposure-declared` needs a declared exposure) is named only on the run that has it.
 - **A check run is SAVED through `CheckService.RenderCheckReport`, from the run the caller holds**
   (agni 127). `check --results-out` (the `CheckResults` document) and `check --verdicts --format html`
   write through it, and so do the viewer's Save report and Save JSON, which send the panel's run
