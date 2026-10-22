@@ -121,6 +121,28 @@ async function runChecklist(page: Page, name: string): Promise<string> {
 
 // normalise drops the line a saved page stamps with the time it was written, the only part two saves of
 // one run differ in.
+// openTab brings a query tab to the front. Choosing a tab is not what the walk measures, and a real
+// click on one depends on nothing being painted over it: in a headed run the tab strip, scrolled to its
+// far end by the set's last tab, timed out bringing the first one back (agni issue 1118). So the walk
+// scrolls the tab into view and clicks it in the page.
+async function openTab(page: Page, title: string): Promise<void> {
+  const tab = page.locator(`.query-tab-go[title="${title}"]`);
+  await tab.waitFor({ timeout: 30_000 });
+  await tab.evaluate((el) => {
+    el.scrollIntoView({ block: "nearest", inline: "nearest" });
+    (el as HTMLElement).click();
+  });
+}
+
+// why is the line of a failed step's error worth a table cell: Playwright's first line says only that
+// a call timed out, and the reason (what intercepted the click, what was not visible) is in its log.
+function why(e: unknown): string {
+  const text = (e instanceof Error ? e.message : String(e)).replace(/\u001b\[[0-9;]*m/g, "");
+  const lines = text.split("\n").map((l) => l.trim()).filter((l) => l !== "");
+  const reason = [...lines].reverse().find((l) => /intercepts pointer events|not visible|outside of the viewport|not stable|not enabled|detached|waiting for/.test(l));
+  return reason && reason !== lines[0] ? `${lines[0]} (${reason.replace(/^-\s*/, "")})` : lines[0];
+}
+
 const normalise = (html: string): string => html.replace(/\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2} UTC/g, "<time>");
 
 describe("the browser-review walk", () => {
@@ -148,8 +170,7 @@ describe("the browser-review walk", () => {
         const detail = await body();
         rows.push({ step: name, design: label, status: "ok", ms: Date.now() - t0, detail });
       } catch (e) {
-        const why = (e instanceof Error ? e.message : String(e)).split("\n")[0];
-        rows.push({ step: name, design: label, status: "fail", ms: Date.now() - t0, detail: why });
+        rows.push({ step: name, design: label, status: "fail", ms: Date.now() - t0, detail: why(e) });
         if (out) await page.screenshot({ path: join(out, `review-walk-${name.replace(/\W+/g, "-")}.png`) }).catch(() => {});
       }
     };
@@ -230,7 +251,7 @@ describe("the browser-review walk", () => {
         const titles = (await page.$$eval(".query-tab-go", (bs) => bs.map((b) => b.getAttribute("title") ?? ""))).slice(before);
         const errors: string[] = [];
         for (const t of titles) {
-          await act(page, () => page.click(`.query-tab-go[title="${t}"]`));
+          await act(page, () => openTab(page, t));
           await page.waitForSelector(".query-row, .query-empty, .query-error", { timeout: 30_000 });
           if (await page.locator(".query-error").count()) errors.push(t);
         }
@@ -240,7 +261,7 @@ describe("the browser-review walk", () => {
       });
 
       await step("click a query cell", async () => {
-        await act(page, () => page.click(`.query-tab-go[title="Parts on nets"]`));
+        await act(page, () => openTab(page, "Parts on nets"));
         await page.locator(".query-row .query-locate").first().waitFor({ timeout: 30_000 });
         // A virtual symbol (#FLG01, #PWR03) is a row with nothing to draw, so the walk takes the first
         // placed part. A part drawn on another sheet is selected without the canvas moving, and its
