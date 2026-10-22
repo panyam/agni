@@ -122,10 +122,11 @@ as if you had picked it in the Compare picker. The link is the old revision's vi
 it compares the two files as they are when you open it. It is printed only when both revisions can
 be linked on that server, under the rules [Checks and reports](../checks-and-reports/) gives for any
 link, and `--server self` serves both from the same process. An MCP `diff` answer carries the same
-link (agni issue 1126).
+link (agni issue 1126). A diff that paired near-renames (`--rename-approx`) adds `rename_approx=1`, and
+the comparison's tables open with near-renames ticked, so they show what the command showed.
 
-The browser-only demo cannot open a comparison yet, because its Compare picker lists no designs
-(agni issue 978).
+The browser-only demo opens a comparison too, from its Compare picker (agni issue 978) or from an
+`?against=` link, with the engine in the page holding both revisions' files.
 
 ## Where to go next
 
