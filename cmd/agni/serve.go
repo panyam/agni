@@ -69,6 +69,7 @@ func serveCmd() *cobra.Command {
 	var slowRequest time.Duration
 	var engine string
 	var wasmMaxBytes int64
+	var embedOrigins []string
 	var designCache int
 	var uploadMaxBytes int64
 	var mcp bool
@@ -82,6 +83,9 @@ func serveCmd() *cobra.Command {
 			"anywhere and no ./web, it serves the API alone, which is what an installed binary has.",
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := checkEmbedOrigins(embedOrigins); err != nil {
+				return err
+			}
 			mcpMode := ""
 			if mcp {
 				mcpMode = mcpHTTP
@@ -95,6 +99,7 @@ func serveCmd() *cobra.Command {
 				slowRequest:     slowRequest,
 				engine:          engine,
 				wasmMaxBytes:    wasmMaxBytes,
+				embedOrigins:    embedOrigins,
 				designCache:     designCache,
 				uploadMaxBytes:  uploadMaxBytes,
 				mcp:             mcpMode,
@@ -105,6 +110,7 @@ func serveCmd() *cobra.Command {
 	c.Flags().BoolVar(&mcp, "mcp", false, "also serve the analysis over the Model Context Protocol at /mcp (streamable HTTP), for an LLM client such as Claude Code: queries, checks, traces, diffs and reviews as tools, each answer with its rows, citations and a viewer link. `agni mcp` serves the same tools over stdio")
 	c.Flags().StringVar(&engine, "engine", engineServer, "which engine the viewer analyses a design on: "+engineServer+", or "+engineWasm+" to run it in the visitor's browser over the design's files (needs `make wasm`); a page's ?engine= overrides it")
 	c.Flags().Int64Var(&wasmMaxBytes, "wasm-max-bytes", defaultWasmMaxBytes, "on the wasm engine, the largest design (its ListDesignFiles total, in bytes) the page analyses in the browser; a bigger one goes to the server engine and the page says so")
+	c.Flags().StringArrayVar(&embedOrigins, "embed-origin", nil, "an origin (scheme://host[:port]) whose pages may drive an embedded viewer over postMessage (ViewerPageService, agni issue 1152); repeatable. The viewer's own origin always may")
 	c.Flags().StringVar(&webDir, "web-dir", "",
 		"directory holding the viewer's OWN assets (templates/ and the built static/*.js), not a folder "+
 			"of designs to browse: mount those with --mount name=path. Defaults to "+defaultWebDir+
@@ -174,6 +180,9 @@ type viewerOpts struct {
 
 	// wasmMaxBytes is the largest design the page analyses in the browser (agni issue 852).
 	wasmMaxBytes int64
+	// embedOrigins are the origins besides the viewer's own whose pages may drive it over
+	// postMessage (--embed-origin, agni issue 1152).
+	embedOrigins []string
 	// designCache is how many reads (a parse, a derived design, a drawing, a board, a built model) the server keeps
 	// between requests (agni issue 895). 0 keeps none.
 	designCache int
@@ -426,7 +435,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		mux.Handle("/", apiOnlyHandler(apiPaths))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
 	default:
-		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes}), mux)
+		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins}), mux)
 	}
 
 	// A client that never finishes its headers holds a connection open, so headers get a deadline.

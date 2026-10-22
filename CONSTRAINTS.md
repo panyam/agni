@@ -240,12 +240,14 @@ exercises that API from outside the engine and gives every feature a legible ent
 preserve the shippable-engine goal (the engine `go.mod` stays lean, C1).
 **Verify:** each capability has an `examples/<name>/` with a `walkthrough.md` and its own
 `go.mod`; examples read fixtures from `examples/common/designs/` only (synthetic and
-redistributable, never a real board, C5). Four directories owe no `walkthrough.md` and are not
+redistributable, never a real board, C5). Five directories owe no `walkthrough.md` and are not
 exceptions to the rule so much as not capabilities. `examples/common` is the shared harness the
 walkthroughs run on, `examples/tutorial-project` is the fixture the docsite tutorial runs on, and
 `examples/extension` and `examples/extension-template` demonstrate the extension POINTS (C18) rather
 than an engine capability, so each of those two carries a `README.md` and a test instead of a
-narrated run.
+narrated run. `examples/embed-viewer` is a parent web page for the viewer's postMessage protocol (agni
+issue 1152), a browser capability with no engine call to narrate, so it carries a `README.md` and its
+test is `web/browser/embed.spec.ts`.
 
 ## C11: Server-rendered shell, framework islands at the leaves
 **Rule:** Web pages are server-rendered (goapplib + templar) and routing is server-owned:

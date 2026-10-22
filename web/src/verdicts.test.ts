@@ -9,6 +9,7 @@ function verdict(over: Partial<VerdictItem> = {}): VerdictItem {
     outcome: "pass",
     subjects: [{ kind: "net", subject: "SDA", pin: "", netId: "82ddd812ce0e" }],
     statement: "SDA reaches rail +3V3 through R1",
+    sheets: [],
     terms: [],
     context: [
       { kind: "component", subject: "R1", pin: "", role: "pull-up" },

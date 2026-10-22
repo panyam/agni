@@ -67,6 +67,14 @@ extend the engine from outside, with their own format reader and rules, rather t
 walkthroughs. `extension` is the worked example and `extension-template` is the bare scaffold to
 copy. The docsite page `docsite/content/build/extending.md` walks through both.
 
+## `embed-viewer/`, also off the ladder
+
+[`embed-viewer/`](embed-viewer/) is a parent page that frames the viewer and drives it over
+postMessage (`ViewerPageService`, agni issue 1152). It is plain HTML with no build step and no Go,
+since the capability is the browser protocol rather than an engine call, and its test is
+`web/browser/embed.spec.ts`, which serves it from a second origin. The docsite page
+`docsite/content/build/embedding-the-viewer.md` walks through the protocol.
+
 ## Run one
 
 ```bash

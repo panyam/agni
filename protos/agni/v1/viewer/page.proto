@@ -1,0 +1,143 @@
+syntax = "proto3";
+
+package agni.v1.viewer;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/viewer";
+
+// This file: ViewerPageService, the contract a LIVE viewer page answers (agni issues 1150, 1152).
+//
+// Every other service in agni is answered by a server or the browser engine. This one is answered by
+// the open viewer page itself, so a host can move it without reloading it: open a sheet, focus a
+// verdict, apply a link's location to the page already showing the design. A link (ViewerLocation
+// in the URL) is the cold form of the same question, and ApplyLocation is its hot form, so a link
+// and a call land the same way.
+//
+// The service is transport-neutral. The page dispatches a method name and a protojson body
+// (web/src/pageservice.ts), and each transport only carries that pair: postMessage from a parent
+// page today (web/src/embed.ts, the `agni-viewer/v1` envelope), and a server-held session or an
+// MCP app host later (agni issues 1154, 1155). No server implements it.
+//
+// Every response carries the page's location after the call, so a caller learns where the page
+// landed (which sheet a verdict opened) without asking again.
+service ViewerPageService {
+  // GetLocation returns where the page is now. It changes nothing.
+  rpc GetLocation(GetLocationRequest) returns (GetLocationResponse);
+  // ApplyLocation moves the open page to a location, as following a link to it would. A location
+  // naming a different design (or a different flatten) opens it, which is the cold path; one naming
+  // the open design, or no design, applies to the page as it stands.
+  rpc ApplyLocation(ApplyLocationRequest) returns (ApplyLocationResponse);
+  // LocateVerdict focuses one verdict and draws its proof on a sheet it is drawn on.
+  rpc LocateVerdict(LocateVerdictRequest) returns (LocateVerdictResponse);
+  // SelectFinding focuses one finding of the last run, as clicking its row does.
+  rpc SelectFinding(SelectFindingRequest) returns (SelectFindingResponse);
+  // LocateEntity highlights a net, part or pin, as clicking a query result cell does.
+  rpc LocateEntity(LocateEntityRequest) returns (LocateEntityResponse);
+  // ShowSheet opens one sheet of the open design.
+  rpc ShowSheet(ShowSheetRequest) returns (ShowSheetResponse);
+}
+
+// ViewerLocation is the page's URL-addressable state, the wire twin of router.ts's ViewerLocation,
+// field for field except `isDir`, since a viewer page only ever addresses a design. The field
+// comments there are the reference; the URL spelling of each is in router.ts's locationToUrl.
+//
+// As a REQUEST, an empty string, an empty list and an unset optional mean "leave it as it is", so a
+// caller sends only what it wants changed. As a RESPONSE every field is filled.
+message ViewerLocation {
+  string mount = 1;
+  string path = 2;
+  string sheet = 3;
+  // mode is "svg", "webgl" or "native".
+  string mode = 4;
+  string layout = 5;
+  optional bool symbols = 6;
+  optional bool flatten = 7;
+  // verdict is a verdict id ("<rule>:(<kind>:<ref>,...)"), with hash, rule and subjects as the
+  // link's hints, which mean nothing without it.
+  string verdict = 8;
+  string hash = 9;
+  string rule = 10;
+  repeated string subjects = 11;
+  // trace is "<from>,<to>", two pins, and trace_hops its radius (0 for the server default).
+  string trace = 12;
+  int32 trace_hops = 13;
+  // query, title and binds ask a query in a new tab; set and q open a member of a project set.
+  string query = 14;
+  string title = 15;
+  repeated string binds = 16;
+  string set = 17;
+  string q = 18;
+  // against starts a comparison with "<mount>/<path>", pairing near-renames when rename_approx is
+  // set.
+  string against = 19;
+  bool rename_approx = 20;
+}
+
+message GetLocationRequest {}
+
+message GetLocationResponse {
+  ViewerLocation location = 1;
+}
+
+message ApplyLocationRequest {
+  ViewerLocation location = 1;
+}
+
+message ApplyLocationResponse {
+  ViewerLocation location = 1;
+  // verdict_resolved says whether the location's verdict was found and drawn. False when it named
+  // none, so a caller that sent one reads false as "a stale or mistyped id".
+  bool verdict_resolved = 2;
+}
+
+message LocateVerdictRequest {
+  // id is the verdict's derived id, as `agni check --verdicts` prints it.
+  string id = 1;
+  // rule and subjects are the same hints a link carries (ViewerLocation.rule, .subjects). When the
+  // page has not answered the verdict yet they let it ask that one rule about those subjects alone,
+  // as a cold link does; without them a verdict the page has not answered stays unresolved.
+  string rule = 2;
+  repeated string subjects = 3;
+}
+
+message LocateVerdictResponse {
+  // resolved is false for an id the page could not find, and then the page is left as it was.
+  bool resolved = 1;
+  ViewerLocation location = 2;
+}
+
+message SelectFindingRequest {
+  // subject is the finding's subject ref (a net name, a ref-des), and net_id the per-instance net id
+  // when two nets share the name.
+  string subject = 1;
+  string net_id = 2;
+  // sheet opens that sheet; empty opens the first one the finding is drawn on when the shown sheet
+  // has none of them.
+  string sheet = 3;
+}
+
+message SelectFindingResponse {
+  // selected is false when the last run has no such finding, and then the page is left as it was.
+  // Selecting the finding already focused is not a toggle, unlike a second click on its row.
+  bool selected = 1;
+  ViewerLocation location = 2;
+}
+
+message LocateEntityRequest {
+  // kind is "net", "component" or "pin"; pin is set only for a pin.
+  string kind = 1;
+  string subject = 2;
+  string pin = 3;
+  string sheet = 4;
+}
+
+message LocateEntityResponse {
+  ViewerLocation location = 1;
+}
+
+message ShowSheetRequest {
+  string sheet = 1;
+}
+
+message ShowSheetResponse {
+  ViewerLocation location = 1;
+}

@@ -285,6 +285,14 @@ message Verdict {
   // subject, which `subject` already names, so a consumer draws subject-as-figure over
   // context-as-ground.
   repeated ContextSubject context = 7;
+  // sheets are the sheet ids (SheetRef.id) where the verdict's subjects are drawn, filled
+  // server-side as Finding.sheets is: each subject's sheets in tuple order, then design order,
+  // without repeats. A viewer opens one of them before drawing the proof, so a verdict on another
+  // sheet is shown where it is rather than highlighted off-screen (agni issue 1151). Empty when the
+  // design has no resolvable geometry, as for a finding.
+  //
+  // A PASSING verdict has no finding to borrow sheets from, which is why the verdict carries its own.
+  repeated string sheets = 8;
 }
 
 message CheckReport {

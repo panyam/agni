@@ -42,6 +42,7 @@ const servedFields: Record<string, string> = {
   "{{ .Base }}": "/",
   "{{ .Host }}": "",
   "{{ .Build }}": "",
+  "{{ .EmbedOrigins }}": "",
 };
 
 function pageBody(): string {

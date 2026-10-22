@@ -804,7 +804,15 @@ type Verdict struct {
 	// THIS IS THE HIGHLIGHTABLE HALF, and the division from witness.terms is exactly that. Excludes the
 	// subject, which `subject` already names, so a consumer draws subject-as-figure over
 	// context-as-ground.
-	Context       []*ContextSubject `protobuf:"bytes,7,rep,name=context,proto3" json:"context,omitempty"`
+	Context []*ContextSubject `protobuf:"bytes,7,rep,name=context,proto3" json:"context,omitempty"`
+	// sheets are the sheet ids (SheetRef.id) where the verdict's subjects are drawn, filled
+	// server-side as Finding.sheets is: each subject's sheets in tuple order, then design order,
+	// without repeats. A viewer opens one of them before drawing the proof, so a verdict on another
+	// sheet is shown where it is rather than highlighted off-screen (agni issue 1151). Empty when the
+	// design has no resolvable geometry, as for a finding.
+	//
+	// A PASSING verdict has no finding to borrow sheets from, which is why the verdict carries its own.
+	Sheets        []string `protobuf:"bytes,8,rep,name=sheets,proto3" json:"sheets,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -884,6 +892,13 @@ func (x *Verdict) GetReason() string {
 func (x *Verdict) GetContext() []*ContextSubject {
 	if x != nil {
 		return x.Context
+	}
+	return nil
+}
+
+func (x *Verdict) GetSheets() []string {
+	if x != nil {
+		return x.Sheets
 	}
 	return nil
 }
@@ -2578,7 +2593,7 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\aWitness\x12\x1c\n" +
 	"\tstatement\x18\x01 \x01(\tR\tstatement\x121\n" +
 	"\x05terms\x18\x02 \x03(\v2\x1b.agni.v1.checks.WitnessTermR\x05terms\x12?\n" +
-	"\tdatasheet\x18\x03 \x03(\v2!.agni.v1.checks.DatasheetCitationR\tdatasheet\"\x9a\x02\n" +
+	"\tdatasheet\x18\x03 \x03(\v2!.agni.v1.checks.DatasheetCitationR\tdatasheet\"\xb2\x02\n" +
 	"\aVerdict\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x12\n" +
 	"\x04rule\x18\x02 \x01(\tR\x04rule\x121\n" +
@@ -2586,7 +2601,8 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\bsubjects\x18\x04 \x03(\v2\x17.agni.v1.checks.SubjectR\bsubjects\x121\n" +
 	"\awitness\x18\x05 \x01(\v2\x17.agni.v1.checks.WitnessR\awitness\x12\x16\n" +
 	"\x06reason\x18\x06 \x01(\tR\x06reason\x128\n" +
-	"\acontext\x18\a \x03(\v2\x1e.agni.v1.checks.ContextSubjectR\acontext\"\xfe\x02\n" +
+	"\acontext\x18\a \x03(\v2\x1e.agni.v1.checks.ContextSubjectR\acontext\x12\x16\n" +
+	"\x06sheets\x18\b \x03(\tR\x06sheets\"\xfe\x02\n" +
 	"\vCheckReport\x12\x16\n" +
 	"\x06source\x18\x01 \x01(\tR\x06source\x12\x1b\n" +
 	"\trules_run\x18\x02 \x01(\x05R\brulesRun\x12G\n" +

@@ -21,6 +21,9 @@ type serveApp struct {
 	// wasmMaxBytes is the largest design file set the page analyses in the browser (--wasm-max-bytes,
 	// agni issue 852). A bigger design goes to the server engine.
 	wasmMaxBytes int64
+	// embedOrigins are the origins besides the page's own whose pages may drive the viewer over
+	// postMessage (--embed-origin, agni issue 1152).
+	embedOrigins []string
 	// base is the path the pages are served under, "/" for `agni serve` and the static demo's prefix
 	// for `agni site` (agni issue 856).
 	base string
@@ -55,6 +58,9 @@ type ViewerPage struct {
 	// and the viewer checks it, since another build may read a file differently and keeps a store of
 	// its own (agni issue 1072).
 	Build string
+	// EmbedOrigins are the origins, space-separated, whose pages may drive this viewer over
+	// postMessage besides its own (agni issue 1152). Empty allows only the page's own origin.
+	EmbedOrigins string
 }
 
 // Load populates the page before render. The shell is static and per-file data arrives over
@@ -80,6 +86,7 @@ func (p *ViewerPage) fill(a *serveApp) {
 		p.Host = "static"
 	}
 	p.Build = version.Version()
+	p.EmbedOrigins = strings.Join(a.embedOrigins, " ")
 }
 
 // LoadPage reads a design into the engine's store before the viewer opens it, and is where files are

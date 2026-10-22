@@ -17,7 +17,7 @@ import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
 import type { CanvasComponent } from "./canvas.js";
 import type { SheetsView } from "./sheets.js";
 import type { ControlsView } from "./controls.js";
-import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, subjectFromParam, subjectParam } from "./router.js";
+import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, emptyLocation, subjectFromParam, subjectParam } from "./router.js";
 import { DocumentStore, messageOf } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
@@ -55,6 +55,14 @@ type WorkspaceClient = Client<typeof WorkspaceService>;
 // verification backend, or the format's native tool (the golden reference). It maps to a
 // GetSheet SheetFormat.
 export type RenderMode = "webgl" | "svg" | "native";
+
+// sheetToOpen is the sheet to open before focusing something drawn on `drawnOn`: none when the
+// shown sheet is one of them or nothing says where it is drawn, else the first. A finding, a review
+// finding and a verdict all choose this way, so the three land alike (agni issue 1151).
+function sheetToOpen(drawnOn: string[], current: string): string {
+  if (drawnOn.length === 0 || drawnOn.includes(current)) return "";
+  return drawnOn[0];
+}
 
 function formatFor(mode: RenderMode): SheetFormat {
   switch (mode) {
@@ -446,8 +454,8 @@ export class ViewerPresenter {
   // opens a sheet the subject is drawn on when the shown sheet has none of them, keeps a pin
   // subject's pin, and says in the Review panel why an undrawn subject highlights nothing.
   async locateReviewFinding(f: FindingItem): Promise<void> {
-    const onCurrent = f.sheets.length === 0 || f.sheets.some((b) => b.id === this.currentSheet);
-    await this.locateEntity(f.kind, f.subject, onCurrent ? undefined : f.sheets[0].id, f.locateReason, f.pin, "review");
+    const sheet = sheetToOpen(f.sheets.map((b) => b.id), this.currentSheet);
+    await this.locateEntity(f.kind, f.subject, sheet || undefined, f.locateReason, f.pin, "review");
   }
 
   // locateVerdict focuses ONE verdict by its derived id and draws its proof, with the verdict's
@@ -460,9 +468,14 @@ export class ViewerPresenter {
   //
   // Returns whether the id resolved, so the caller can say so. A verdict whose rule has not run yet
   // is absent, the same "not computed" state the findings list models.
+  //
+  // It opens a sheet the verdict is drawn on when the shown sheet has none of its subjects, the same
+  // choice selectFinding makes, so a link, a click and a page call land alike (agni issue 1151).
   async locateVerdict(id: string): Promise<boolean> {
     const v = this.doc.findVerdict(id);
     if (!v) return false;
+    const sheet = sheetToOpen(v.sheets, this.currentSheet);
+    if (sheet) await this.showSheet(sheet);
     if (this.mode === "native") await this.setMode("svg");
     // Every entity in the tuple is the figure, so a clearance verdict lights both nets rather than
     // half of a distance.
@@ -654,10 +667,16 @@ export class ViewerPresenter {
     // is on screen before the highlight it warns about.
     this.linkHash = loc.hash;
     this.views.staleLinkNote(staleLinkNote(this.linkHash, this.doc.designContentHash));
-    if (loc.verdict) {
-      await this.runChecksForLink(loc.rule, loc.subjects, loc.verdict);
-      await this.locateVerdict(loc.verdict);
-    }
+    await this.arrive(loc);
+  }
+
+  // arrive asks what a location carries beyond the design and its view: a verdict, a trace, a query,
+  // a set member, a comparison. restore calls it after opening the design and applyLocation on the
+  // design already open, so a cold link and a hot call ask alike. It answers whether the location's
+  // verdict resolved, false when it named none.
+  private async arrive(loc: ViewerLocation): Promise<boolean> {
+    let resolved = false;
+    if (loc.verdict) resolved = await this.resolveVerdict(loc.verdict, loc.rule, loc.subjects);
     // A trace link needs no run first, because it carries the QUESTION rather than a derived id, so
     // the viewer just asks it.
     if (loc.trace) {
@@ -672,9 +691,82 @@ export class ViewerPresenter {
     // comparison its Compare picker starts. The open design itself is ignored, as the picker refuses
     // it.
     const against = againstTarget(loc.against);
-    if (against && !(against.mount === loc.mount && against.path === loc.path)) {
+    if (against && !(against.mount === this.doc.mount && against.path === this.doc.path)) {
       this.views.compare?.(against, { nearRenames: loc.renameApprox });
     }
+    return resolved;
+  }
+
+  // resolveVerdict draws a verdict, running what it needs first when the page has not answered it:
+  // the one rule and subjects a link names, or the catalog when it names no rule, as a cold link
+  // does (runChecksForLink). A verdict already answered is drawn with no run.
+  //
+  // With no hints and no answer it runs nothing and answers false, since a page call that names a
+  // bare unknown id is more likely mistyped than unanswered, and running the whole catalog to find
+  // out costs a reader seconds.
+  async resolveVerdict(id: string, rule = "", subjects: string[] = [], runIfMissing = true): Promise<boolean> {
+    if (!this.doc.findVerdict(id) && runIfMissing) await this.runChecksForLink(rule, subjects, id);
+    return this.locateVerdict(id);
+  }
+
+  // applyLocation moves the page to a location without reloading it, the hot form of following a
+  // link (ViewerPageService.ApplyLocation). A location naming another design, or another flatten,
+  // opens it through restore. One naming the open design or none applies to the page as it stands,
+  // where an empty field leaves its part alone, so a caller sends only what it wants changed.
+  //
+  // It answers whether the location's verdict resolved, false when it named none.
+  async applyLocation(loc: Partial<ViewerLocation>): Promise<boolean> {
+    const mount = loc.mount || this.doc.mount;
+    const path = loc.path || this.doc.path;
+    if (!mount || !path) throw new Error("no design is open and the location names none");
+    const flatten = loc.flatten ?? this.flattened;
+    if (mount !== this.doc.mount || path !== this.doc.path || flatten !== this.flattened) {
+      await this.restore({
+        ...emptyLocation(),
+        ...loc,
+        mount,
+        path,
+        isDir: false,
+        symbols: loc.symbols ?? this.faithfulSymbols,
+        flatten,
+        subjects: loc.subjects ?? [],
+        binds: loc.binds ?? [],
+      });
+      return loc.verdict ? this.focusedVerdict === loc.verdict : false;
+    }
+    if (loc.mode && loc.mode !== this.mode) await this.setMode(loc.mode);
+    if (loc.layout && loc.layout !== this.currentLayout) await this.setLayout(loc.layout);
+    if (loc.symbols !== undefined && loc.symbols !== this.faithfulSymbols) await this.setSymbols(loc.symbols);
+    if (loc.sheet && loc.sheet !== this.currentSheet) {
+      if (!this.doc.sheets.some((s) => s.id === loc.sheet)) throw new Error(`the open design has no sheet "${loc.sheet}"`);
+      await this.showSheet(loc.sheet);
+    }
+    if (loc.hash) {
+      this.linkHash = loc.hash;
+      this.views.staleLinkNote(staleLinkNote(this.linkHash, this.doc.designContentHash));
+    }
+    return this.arrive({ ...emptyLocation(), ...loc, mount, path, subjects: loc.subjects ?? [], binds: loc.binds ?? [] });
+  }
+
+  // location is where the page is now, as its URL spells it.
+  location(): ViewerLocation {
+    return this.currentLoc();
+  }
+
+  // hasSheet says whether the open design has a sheet with this id.
+  hasSheet(id: string): boolean {
+    return this.doc.sheets.some((s) => s.id === id);
+  }
+
+  // hasFinding says whether the last run, or the expectation sidecar, has a finding about this
+  // subject (and net instance, when given), the set selectFinding can focus.
+  hasFinding(subject: string, netId = ""): boolean {
+    return this.findFinding(subject, netId) !== undefined;
+  }
+
+  // focusedFinding is the subject and net instance of the focused finding, empty when none.
+  focusedFinding(): { subject: string; netId: string } {
+    return { subject: this.selectedSubject, netId: this.selectedNetId };
   }
 
   // openSetMember opens one query of the design's project sets, found by the set's name and the
@@ -1635,8 +1727,7 @@ export class ViewerPresenter {
     const faithful = this.currentLayout === "" || this.currentLayout === "faithful";
     const note = focused && faithful && focused.locateReason !== LocateReason.UNSPECIFIED ? reasonMessage(focused.locateReason, focused.kind, subject) : "";
     this.views.findings.setFindingLocateNote(note);
-    const onCurrent = focused?.sheets.some((b) => b.id === this.currentSheet) ?? true;
-    const target = sheet ?? (focused && focused.sheets.length > 0 && !onCurrent ? focused.sheets[0].id : "");
+    const target = sheet ?? sheetToOpen(focused?.sheets.map((b) => b.id) ?? [], this.currentSheet);
     if (target && target !== this.currentSheet) await this.showSheet(target);
     // Focus stacks two layers (WS9-017). The other findings keep their outline, and the focused
     // subject frames on top, a component/pin as a translucent bounding rect and a net as a

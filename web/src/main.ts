@@ -50,6 +50,9 @@ import { hierarchyStrip } from "./hierarchy.js";
 import { selectionFromCell, type Selection } from "./selection.js";
 import { propertiesPanelIsland } from "./propertiespanel.js";
 import { PropertiesPresenter } from "./propertiespresenter.js";
+import { embedOrigins, listenForHosts } from "./embed.js";
+import { pageApi, type ViewerPageAPI } from "./pageapi.js";
+import { pageDispatcher } from "./pageservice.js";
 import { verdictItem } from "./document.js";
 import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 
@@ -713,6 +716,13 @@ void admitted()
     };
     window.addEventListener("popstate", () => void applyUrl());
     await applyUrl();
+    // The live page contract (agni issues 1150, 1152). A parent page at an allowed origin drives the
+    // viewer through it over postMessage, and listening starts once the URL's design is open, so a
+    // host's first request never races the restore; the page announces itself to its parent then.
+    const page: ViewerPageAPI = pageApi(presenter);
+    listenForHosts(window, pageDispatcher(page), embedOrigins(document.querySelector<HTMLElement>(".app")?.dataset.embedOrigins));
+    // ?devpage exposes the contract to the console for trying it by hand. Nothing in the app reads it.
+    if (new URLSearchParams(window.location.search).has("devpage")) (globalThis as { __agniViewerPage?: ViewerPageAPI }).__agniViewerPage = page;
   })
   .catch((err) => {
     console.error(err);

@@ -255,6 +255,7 @@ export function verdictItem(v: CheckDesignResponse["verdicts"][number]): Verdict
     terms: (v.witness?.terms ?? []).map((t) => ({ label: t.label, value: t.value })),
     context: contextFromWire(v.context),
     reason: v.reason ?? "",
+    sheets: v.sheets ?? [],
   };
 }
 

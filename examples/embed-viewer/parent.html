@@ -1,0 +1,92 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Embedded viewer</title>
+<style>
+  body { margin: 0; font: 14px system-ui, sans-serif; display: grid; grid-template-columns: 320px 1fr; height: 100vh; }
+  aside { padding: 12px; border-right: 1px solid #ccc; overflow: auto; }
+  iframe { width: 100%; height: 100%; border: 0; }
+  label { display: block; margin-top: 10px; font-weight: 600; }
+  input, textarea { width: 100%; box-sizing: border-box; font: 12px ui-monospace, monospace; }
+  button { margin-top: 4px; }
+  pre { white-space: pre-wrap; font-size: 11px; background: #f4f4f4; padding: 6px; }
+</style>
+</head>
+<body>
+<!--
+  A parent page driving an agni viewer it frames, over postMessage (ViewerPageService, agni issue
+  1152). Open it as parent.html?viewer=<the viewer's design URL>, served from an origin the viewer's
+  server was started with `--embed-origin <that origin>`, or from the viewer's own origin.
+
+  The whole protocol is the envelope below. A request is
+    { agni: "agni-viewer/v1", id, method, body }
+  where method names an rpc of protos/agni/v1/viewer/page.proto and body is its request in
+  protojson. The viewer answers with the same id, { ok: true, body } or { ok: false, error }.
+-->
+<aside>
+  <div id="status">waiting for the viewer…</div>
+  <label>Sheet id</label>
+  <input id="sheet" placeholder="a sheet id from Get location" />
+  <button id="show-sheet">Show sheet</button>
+  <label>Verdict id</label>
+  <input id="verdict" placeholder="demo-pull-up:(net:SDA)" />
+  <label>Rule (a hint, so the viewer runs one rule)</label>
+  <input id="rule" placeholder="demo-pull-up" />
+  <button id="locate-verdict">Locate verdict</button>
+  <label>Location (ApplyLocation)</label>
+  <textarea id="location" rows="4">{ "verdict": "", "rule": "", "subjects": [] }</textarea>
+  <button id="apply">Apply location</button>
+  <button id="get">Get location</button>
+  <label>Last reply</label>
+  <pre id="reply"></pre>
+</aside>
+<iframe id="viewer" title="agni viewer"></iframe>
+<script>
+  const ENVELOPE = "agni-viewer/v1";
+  const viewerUrl = new URLSearchParams(location.search).get("viewer") || "";
+  const viewerOrigin = viewerUrl ? new URL(viewerUrl, location.href).origin : "";
+  const frame = document.getElementById("viewer");
+  const pending = new Map();
+  let nextId = 0;
+  let ready;
+  const readyPromise = new Promise((r) => (ready = r));
+
+  window.addEventListener("message", (ev) => {
+    if (ev.source !== frame.contentWindow || ev.origin !== viewerOrigin || ev.data?.agni !== ENVELOPE) return;
+    if (ev.data.ready) {
+      document.getElementById("status").textContent = `viewer ready at ${viewerOrigin}`;
+      ready();
+      return;
+    }
+    const done = pending.get(ev.data.id);
+    if (!done) return;
+    pending.delete(ev.data.id);
+    done(ev.data);
+  });
+
+  // agniCall sends one request and resolves with the viewer's reply. The browser test drives the
+  // page through it.
+  window.agniCall = async (method, body = {}) => {
+    await readyPromise;
+    const id = ++nextId;
+    const reply = await new Promise((resolve) => {
+      pending.set(id, resolve);
+      frame.contentWindow.postMessage({ agni: ENVELOPE, id, method, body }, viewerOrigin);
+    });
+    document.getElementById("reply").textContent = JSON.stringify(reply, null, 2);
+    return reply;
+  };
+
+  const val = (id) => document.getElementById(id).value.trim();
+  document.getElementById("show-sheet").onclick = () => agniCall("ShowSheet", { sheet: val("sheet") });
+  document.getElementById("locate-verdict").onclick = () => agniCall("LocateVerdict", { id: val("verdict"), rule: val("rule") });
+  document.getElementById("apply").onclick = () => agniCall("ApplyLocation", { location: JSON.parse(val("location")) });
+  document.getElementById("get").onclick = () => agniCall("GetLocation", {});
+
+  if (viewerUrl) frame.src = viewerUrl;
+  else document.getElementById("status").textContent = "open this page as parent.html?viewer=<a viewer design URL>";
+</script>
+</body>
+</html>

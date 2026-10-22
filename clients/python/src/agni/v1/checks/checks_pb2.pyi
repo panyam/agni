@@ -127,7 +127,7 @@ class Witness(_message.Message):
     def __init__(self, statement: _Optional[str] = ..., terms: _Optional[_Iterable[_Union[WitnessTerm, _Mapping]]] = ..., datasheet: _Optional[_Iterable[_Union[DatasheetCitation, _Mapping]]] = ...) -> None: ...
 
 class Verdict(_message.Message):
-    __slots__ = ("id", "rule", "outcome", "subjects", "witness", "reason", "context")
+    __slots__ = ("id", "rule", "outcome", "subjects", "witness", "reason", "context", "sheets")
     ID_FIELD_NUMBER: _ClassVar[int]
     RULE_FIELD_NUMBER: _ClassVar[int]
     OUTCOME_FIELD_NUMBER: _ClassVar[int]
@@ -135,6 +135,7 @@ class Verdict(_message.Message):
     WITNESS_FIELD_NUMBER: _ClassVar[int]
     REASON_FIELD_NUMBER: _ClassVar[int]
     CONTEXT_FIELD_NUMBER: _ClassVar[int]
+    SHEETS_FIELD_NUMBER: _ClassVar[int]
     id: str
     rule: str
     outcome: Outcome
@@ -142,7 +143,8 @@ class Verdict(_message.Message):
     witness: Witness
     reason: str
     context: _containers.RepeatedCompositeFieldContainer[ContextSubject]
-    def __init__(self, id: _Optional[str] = ..., rule: _Optional[str] = ..., outcome: _Optional[_Union[Outcome, str]] = ..., subjects: _Optional[_Iterable[_Union[Subject, _Mapping]]] = ..., witness: _Optional[_Union[Witness, _Mapping]] = ..., reason: _Optional[str] = ..., context: _Optional[_Iterable[_Union[ContextSubject, _Mapping]]] = ...) -> None: ...
+    sheets: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, id: _Optional[str] = ..., rule: _Optional[str] = ..., outcome: _Optional[_Union[Outcome, str]] = ..., subjects: _Optional[_Iterable[_Union[Subject, _Mapping]]] = ..., witness: _Optional[_Union[Witness, _Mapping]] = ..., reason: _Optional[str] = ..., context: _Optional[_Iterable[_Union[ContextSubject, _Mapping]]] = ..., sheets: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class CheckReport(_message.Message):
     __slots__ = ("source", "rules_run", "sections")

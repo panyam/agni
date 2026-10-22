@@ -149,7 +149,40 @@ func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m L
 	if g == nil && (m == nil || len(m.Nets()) == 0) {
 		return
 	}
+	indexSheets(g, m).annotateFindings(findings, m)
+}
+
+// AnnotateRunSheets fills a check run's findings and its verdicts from one walk of the geometry. A
+// verdict gets the sheets its subjects are drawn on, so a viewer opens one before drawing the proof,
+// and a passing verdict, which has no finding to borrow them from, gets them too (agni issue 1151).
+func AnnotateRunSheets(resp *webapi.CheckDesignResponse, g *geom.SchematicGeometry, m LocateSource) {
+	if g == nil && (m == nil || len(m.Nets()) == 0) {
+		return
+	}
 	ix := indexSheets(g, m)
+	ix.annotateFindings(resp.GetFindings(), m)
+	for _, v := range resp.GetVerdicts() {
+		v.Sheets = ix.sheetsForAll(v.GetSubjects())
+	}
+}
+
+// sheetsForAll is the sheets a tuple of subjects is drawn on: each subject's in tuple order, without
+// repeats, so a clearance verdict between two nets lists the first net's sheets first.
+func (ix sheetIndex) sheetsForAll(subjects []*checkspb.Subject) []string {
+	var out []string
+	seen := map[string]bool{}
+	for _, s := range subjects {
+		for _, id := range ix.sheetsFor(s) {
+			if !seen[id] {
+				seen[id] = true
+				out = append(out, id)
+			}
+		}
+	}
+	return out
+}
+
+func (ix sheetIndex) annotateFindings(findings []*checkspb.Finding, m LocateSource) {
 	for _, f := range findings {
 		f.Sheets = ix.sheetsFor(f.GetSubject())
 		if len(f.Sheets) > 0 {

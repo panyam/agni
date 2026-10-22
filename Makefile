@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -275,6 +275,13 @@ browser-test: ui wasm samples-oracle
 hooks:
 	ln -sf ../../hack/pre-push.sh "$$(git rev-parse --git-common-dir)/hooks/pre-push"
 	@echo "installed $$(git rev-parse --git-common-dir)/hooks/pre-push"
+
+# The viewer page API mission's exercise (agni issues 1150, 1152): a parent page on a second origin
+# frames the viewer and drives it over postMessage, through examples/embed-viewer/parent.html. It is
+# web/browser/embed.spec.ts run on its own; the same spec runs in browser-test on every push.
+# HEADED=1 shows it in a visible Chrome.
+exercise-viewer-page: ui
+	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm exec vitest run -c vitest.browser.config.ts browser/embed.spec.ts
 
 # The browser-review walk, mission #845's exercise (agni issue 1118): the gated spec
 # web/browser/review-walk.spec.ts run on its own, printing one row per step and writing them as
