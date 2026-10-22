@@ -812,3 +812,27 @@ describe("the trace pickers", () => {
     });
   }, 90_000);
 });
+
+// agni issue 1133: a rule group's docs link sits on the header's line, beside the count, where jsdom
+// can say it exists and cannot say where it lands. The first version wrapped under the name, and the
+// next was pushed to the row's far end by the toggle growing into the line.
+describe("a rule group's docs link", () => {
+  it("sits beside the group's count, on the same line", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await page.click(".checks-run:not([disabled])", { timeout: 30_000 });
+      await page.waitForSelector("tr.check-row", { timeout: 60_000 });
+      await page.selectOption(".checks-groupby select", "rule");
+      const at = await page.evaluate(() => {
+        const row = [...document.querySelectorAll("tr.check-group")].find((r) => r.querySelector(".check-group-doc"));
+        if (!row) throw new Error("no rule group carries a docs link");
+        const badge = row.querySelector(".finding-group-badge, .finding-group-unresolved")!.getBoundingClientRect();
+        const link = row.querySelector(".check-group-doc")!.getBoundingClientRect();
+        return { gap: link.left - badge.right, dy: Math.abs(link.top + link.height / 2 - (badge.top + badge.height / 2)) };
+      });
+      expect(at.dy).toBeLessThan(4);
+      expect(at.gap).toBeGreaterThanOrEqual(0);
+      expect(at.gap).toBeLessThan(24);
+    });
+  }, 120_000);
+});
