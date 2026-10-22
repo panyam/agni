@@ -28,7 +28,7 @@ import { hierarchyNote } from "./hierarchy.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
-import { type Bindings, type QueryResult, type QueryView, LocateReason, emptyResult, errorResult, reasonMessage, resultFromResponse, wireBinding } from "./query.js";
+import { type Bindings, type QueryResult, type QueryView, type RelationEntryItem, LocateReason, emptyResult, errorResult, reasonMessage, relationEntryItem, resultFromResponse, wireBinding } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
@@ -297,6 +297,17 @@ export class ViewerPresenter {
   // rule-running question names. With no convention chosen it is the drawn one.
   private checked(): Promise<string> {
     return this.snaps.of(artifactUri(this.doc.mount, this.doc.path), this.overlay());
+  }
+
+  // describeRelation answers the relation picker's question about one place in the namespace (agni
+  // issue 774), under the open design's snapshot so the design's project library lists beside the
+  // shipped one. With no design open it asks about the shipped vocabulary alone.
+  async describeRelation(path: string): Promise<RelationEntryItem> {
+    if (!this.query) throw new Error("this page has no query service");
+    const snapshot = this.doc.mount && this.doc.path ? await this.checked() : "";
+    const resp = await this.query.listRelations({ snapshot, path });
+    if (!resp.entry) throw new Error(`no relation or module at ${path}`);
+    return relationEntryItem(resp.entry);
   }
 
   // runQuery evaluates an ad-hoc datalog query over the open design (WS9-036) and pushes the result

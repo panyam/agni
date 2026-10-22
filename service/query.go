@@ -747,6 +747,7 @@ func entryProto(reg *facts.Registry, e query.Entry) *webapi.RelationEntry {
 	out.Signature = e.Signature()
 	out.Detail = reg.Doc(e.Path)
 	for _, a := range e.Args {
+		out.Args = append(out.Args, a.Name)
 		if a.Inferred {
 			out.Inferred = append(out.Inferred, a.Name)
 		}

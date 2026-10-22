@@ -708,6 +708,36 @@ describe("the default dock", () => {
     });
   }, 90_000);
 
+  // agni issue 774. The relation picker drills the namespace inside the drawer, which sits off-screen
+  // until opened, so only a browser shows that the definition a reader drills to is on screen.
+  it("drills the relation picker to a library member's definition, on screen", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway/gateway.edn");
+      await page.click(".query-drawer-handle");
+      const chip = (label: string) => page.locator(".query-drawer .query-relchip", { hasText: label }).first();
+      await chip("component ›").click({ timeout: 30_000 });
+      await chip("component.probed_both").click({ timeout: 30_000 });
+      const definition = page.locator(".query-drawer .query-reldefinition");
+      await definition.waitFor({ timeout: 30_000 });
+      expect(await definition.textContent(), "the clauses as the module writes them").toContain("probed_both(?r");
+      const box = await definition.boundingBox();
+      const view = page.viewportSize()!;
+      expect(box, "the definition has a box").not.toBeNull();
+      expect(box!.x).toBeGreaterThanOrEqual(0);
+      expect(box!.x + box!.width).toBeLessThanOrEqual(view.width + 1);
+      expect(box!.y + box!.height).toBeGreaterThan(0);
+      expect(box!.y).toBeLessThan(view.height);
+      const painted = await definition.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        const hit = document.elementFromPoint(r.left + Math.min(20, r.width / 2), r.top + Math.min(8, r.height / 2));
+        return !!hit && (el === hit || el.contains(hit));
+      });
+      expect(painted, "the definition is what is painted where it sits").toBe(true);
+      await page.click(".query-drawer .query-relinsert");
+      expect(await page.inputValue("textarea.query-text")).toContain("component.probed_both(?");
+    });
+  }, 90_000);
+
   it("gives Changes its rail width when a comparison adds it back", async () => {
     await withPage(browser, async (page) => {
       await page.goto(`${base()}/designs/tut/designs/gateway/gateway.edn/view`, { waitUntil: "networkidle" });

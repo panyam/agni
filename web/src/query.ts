@@ -1,7 +1,7 @@
 // query.ts is the framework-neutral state for the datalog query panel (WS9-036). The presenter
 // pushes a QueryResult and the panel renders it. The shape lives here rather than in the .tsx, as in
 // rules.ts and findings.ts, so the presenter and tests build state without touching Solid.
-import { type QuerySet, type QueryValue, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import { type QuerySet, type QueryValue, type RelationEntry, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 import type { FindingsState, SheetBadge } from "./findings.js";
 import type { Selection } from "./selection.js";
@@ -61,6 +61,61 @@ export interface RelationItem {
   summary: string;
   kind: string;
   detail: string;
+}
+
+// RelationEntryItem is one place in the relation namespace as ListRelations describes it for a path
+// (agni issue 774): a module with its members one level deep, or a member with its signature, doc,
+// the argument names a template inserts, which argument types the engine inferred, and a derived
+// member's definition. The picker drills through these rather than a flat list.
+export interface RelationEntryItem {
+  path: string;
+  // kind is "module", "base", "predicate" or "derived".
+  kind: string;
+  signature: string;
+  doc: string;
+  detail: string;
+  module: string;
+  definition: string[];
+  inferred: string[];
+  args: string[];
+  members: RelationEntryItem[];
+}
+
+// relationEntryItem converts ListRelations' answer for a path to the picker's item, members one level
+// deep as the server sends them.
+export function relationEntryItem(e: RelationEntry): RelationEntryItem {
+  return {
+    path: e.path,
+    kind: e.entryKind,
+    signature: e.signature,
+    doc: e.doc,
+    detail: e.detail,
+    module: e.module,
+    definition: [...e.definition],
+    inferred: [...e.inferred],
+    args: [...e.args],
+    members: e.members.map(relationEntryItem),
+  };
+}
+
+// ROOT_PATH is the path the picker opens on, the namespace's root as ListRelations spells it.
+export const ROOT_PATH = ".";
+
+// relationCrumbs splits a path into the breadcrumb the picker draws, root first: "net.has_test_point"
+// is the root, "net", then "net.has_test_point".
+export function relationCrumbs(path: string): { label: string; path: string }[] {
+  const out = [{ label: "Relations", path: ROOT_PATH }];
+  if (path === ROOT_PATH || path === "") return out;
+  const parts = path.split(".");
+  for (let i = 0; i < parts.length; i++) out.push({ label: parts[i], path: parts.slice(0, i + 1).join(".") });
+  return out;
+}
+
+// tierLabel is the picker's label for a relation's tier (Netlist, Board, ...), read off the flat
+// catalog by name, or "" for a module or a relation the catalog does not list.
+export function tierLabel(path: string, relations: readonly RelationItem[]): string {
+  const r = relations.find((x) => x.name === path);
+  return r ? (RELATION_KINDS.find((k) => k.key === r.kind)?.label ?? "") : "";
 }
 
 // ExampleItem is one starter query (WS14-002), holding a plain-language label, the datalog query a
@@ -213,7 +268,7 @@ export const RELATION_KINDS: readonly { key: string; label: string }[] = [
 
 // relationTemplate renders a relation as an insertable snippet: name(?arg1, ?arg2). A zero-arg
 // relation (none today) inserts name().
-export function relationTemplate(r: RelationItem): string {
+export function relationTemplate(r: { name: string; args: readonly string[] }): string {
   return `${r.name}(${r.args.map((a) => "?" + a).join(", ")})`;
 }
 
@@ -278,30 +333,6 @@ export function formatBinding(name: string, value: BindValue, number: boolean | 
   const spell = (v: string, i: number) => ((Array.isArray(number) ? number[i] : number) ? v : `"${v}"`);
   if (Array.isArray(value)) return `?${name} in [${value.map(spell).join(", ")}]`;
   return `?${name} = ${spell(value, 0)}`;
-}
-
-// groupRelations buckets the catalog by kind in RELATION_KINDS order, each bucket sorted by name.
-// Kinds not in RELATION_KINDS are appended in first-seen order so an overlay's novel kind still
-// shows. Empty buckets are dropped.
-export function groupRelations(rels: RelationItem[]): { key: string; label: string; items: RelationItem[] }[] {
-  const byKind = new Map<string, RelationItem[]>();
-  for (const r of rels) {
-    const list = byKind.get(r.kind) ?? [];
-    list.push(r);
-    byKind.set(r.kind, list);
-  }
-  const order = [...RELATION_KINDS];
-  for (const k of byKind.keys()) {
-    if (!order.some((o) => o.key === k)) order.push({ key: k, label: k });
-  }
-  const out: { key: string; label: string; items: RelationItem[] }[] = [];
-  for (const { key, label } of order) {
-    const items = byKind.get(key);
-    if (items && items.length > 0) {
-      out.push({ key, label, items: [...items].sort((a, b) => a.name.localeCompare(b.name)) });
-    }
-  }
-  return out;
 }
 
 // emptyResult is the initial state (nothing run yet) and the reset the panel shows while a query

@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
-import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, groupRelations, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason } from "./query.js";
+import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, relationCrumbs, tierLabel, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason } from "./query.js";
 import { resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
@@ -234,16 +234,23 @@ describe("wireBinding", () => {
   });
 });
 
-describe("groupRelations", () => {
-  it("groups the shipped library's derived members under Library, after the base tiers and before the predicates", () => {
+describe("the relation picker's labels", () => {
+  it("labels a shipped library member Library and a predicate Predicates, and a module nothing", () => {
     const item = (name: string, kind: string) => ({ name, kind, args: [], summary: "", detail: "" });
-    const groups = groupRelations([
-      item("str.contains", "predicate"),
-      item("net.has_test_point", "derived"),
-      item("component.net", "netlist"),
+    const catalog = [item("str.contains", "predicate"), item("net.has_test_point", "derived"), item("component.net", "netlist")];
+    expect(tierLabel("net.has_test_point", catalog)).toBe("Library");
+    expect(tierLabel("str.contains", catalog)).toBe("Predicates");
+    expect(tierLabel("component.net", catalog)).toBe("Netlist");
+    expect(tierLabel("net", catalog)).toBe("");
+  });
+
+  it("breadcrumbs a path from the root down", () => {
+    expect(relationCrumbs(".")).toEqual([{ label: "Relations", path: "." }]);
+    expect(relationCrumbs("net.has_test_point")).toEqual([
+      { label: "Relations", path: "." },
+      { label: "net", path: "net" },
+      { label: "has_test_point", path: "net.has_test_point" },
     ]);
-    expect(groups.map((g) => g.label)).toEqual(["Netlist", "Library", "Predicates"]);
-    expect(groups[1].items.map((r) => r.name)).toEqual(["net.has_test_point"]);
   });
 });
 

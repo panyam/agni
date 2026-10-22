@@ -826,7 +826,11 @@ type RelationEntry struct {
 	Inferred []string `protobuf:"bytes,8,rep,name=inferred,proto3" json:"inferred,omitempty"`
 	// members are a module's direct children, each a member or a nested module, described one level
 	// deep (their own members are not filled).
-	Members       []*RelationEntry `protobuf:"bytes,9,rep,name=members,proto3" json:"members,omitempty"`
+	Members []*RelationEntry `protobuf:"bytes,9,rep,name=members,proto3" json:"members,omitempty"`
+	// args are a member's argument names in order, as RelationInfo.args, so a client inserting a
+	// template (`net.rail(?net)`) reads them rather than parsing the signature (agni issue 774). Empty
+	// for a module.
+	Args          []string `protobuf:"bytes,10,rep,name=args,proto3" json:"args,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -920,6 +924,13 @@ func (x *RelationEntry) GetInferred() []string {
 func (x *RelationEntry) GetMembers() []*RelationEntry {
 	if x != nil {
 		return x.Members
+	}
+	return nil
+}
+
+func (x *RelationEntry) GetArgs() []string {
+	if x != nil {
+		return x.Args
 	}
 	return nil
 }
@@ -2004,7 +2015,7 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\tsignature\x18\x06 \x01(\tR\tsignature\x12\x1e\n" +
 	"\n" +
 	"definition\x18\a \x03(\tR\n" +
-	"definition\"\x97\x02\n" +
+	"definition\"\xab\x02\n" +
 	"\rRelationEntry\x12\x12\n" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x1d\n" +
 	"\n" +
@@ -2017,7 +2028,9 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"definition\x18\a \x03(\tR\n" +
 	"definition\x12\x1a\n" +
 	"\binferred\x18\b \x03(\tR\binferred\x127\n" +
-	"\amembers\x18\t \x03(\v2\x1d.agni.v1.webapi.RelationEntryR\amembers\"T\n" +
+	"\amembers\x18\t \x03(\v2\x1d.agni.v1.webapi.RelationEntryR\amembers\x12\x12\n" +
+	"\x04args\x18\n" +
+	" \x03(\tR\x04args\"T\n" +
 	"\fExampleQuery\x12\x14\n" +
 	"\x05label\x18\x01 \x01(\tR\x05label\x12\x14\n" +
 	"\x05query\x18\x02 \x01(\tR\x05query\x12\x18\n" +

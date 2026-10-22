@@ -357,6 +357,7 @@ class AppRoot extends BaseComponent {
       },
       onClose: (tab) => presenter.forgetQueryTab(tab),
       onRunSet: (set, tabs) => void presenter.runQuerySet(set, tabs),
+      describe: (path) => presenter.describeRelation(path),
       // A set file from disk is parsed by the engine, which checks it as `agni query --set` does, so
       // the browser holds no YAML parser of its own (C22).
       onSetFile: (name, text) =>

@@ -94,6 +94,10 @@ function harness() {
       { name: req.set.queries[1].name, error: "unknown relation" },
     ],
   }));
+  // listRelations describes one place in the namespace, as the relation picker asks (agni issue 774).
+  const listRelations = vi.fn(async (req: { snapshot: string; path: string }) => ({
+    entry: { path: req.path, entryKind: "module", signature: "", doc: "", detail: "", module: "", definition: [], inferred: [], args: [], members: [] },
+  }));
   const listQuerySets = vi.fn(async (_req: { snapshot: string }) => ({
     project: "projects/p",
     querySets: [{ name: "power", source: "mount://m/queries/power.yaml", set: { title: "Power", queries: [] } }],
@@ -141,8 +145,8 @@ function harness() {
     // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
-  }, { runQuery, runQueries, listQuerySets } as any, undefined, undefined, undefined, snaps);
-  return { presenter, runQuery, runQueries, listQuerySets, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare };
+  }, { runQuery, runQueries, listQuerySets, listRelations } as any, undefined, undefined, undefined, snaps);
+  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -1607,6 +1611,20 @@ describe("a query arriving by link", () => {
       net: { kind: { case: "list", value: { values: [{ kind: { case: "text", value: "I2C_SDA" } }, { kind: { case: "text", value: "I2C_SCL" } }] } } },
       r: { kind: { case: "text", value: "R1" } },
     });
+  });
+
+  // The picker asks under the open design's snapshot, which is how a project's own library lists
+  // beside the shipped one (agni issue 774), and under none before a design is open.
+  it("describes a place in the relation namespace under the open design's snapshot", async () => {
+    const h = harness();
+    await h.presenter.describeRelation(".");
+    expect(h.listRelations.mock.lastCall![0]).toEqual({ snapshot: "", path: "." });
+    await h.presenter.openFile("m", "board.edn", "");
+    const e = await h.presenter.describeRelation("net");
+    const req = h.listRelations.mock.lastCall![0];
+    expect(req.path).toBe("net");
+    expect(req.snapshot).not.toBe("");
+    expect(e).toMatchObject({ path: "net", kind: "module", members: [] });
   });
 
   it("opens the named query of a project set", async () => {

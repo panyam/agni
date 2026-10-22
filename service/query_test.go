@@ -667,6 +667,41 @@ func TestListRelationsDescribesAPath(t *testing.T) {
 	}
 }
 
+// A drilled-into member names its arguments as the flat catalog does, so a client inserts the same
+// template from either answer without parsing a signature (agni issue 774). A module has none.
+func TestARelationEntryCarriesTheCatalogsArgs(t *testing.T) {
+	svc := NewQueryService(fakeLoader{}, nil, nil)
+	flat, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
+	if err != nil {
+		t.Fatal(err)
+	}
+	catalog := map[string][]string{}
+	for _, r := range flat.GetRelations() {
+		catalog[r.GetName()] = r.GetArgs()
+	}
+	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{Path: "net"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(resp.GetEntry().GetArgs()) != 0 {
+		t.Errorf("the net module carries args %v, want none", resp.GetEntry().GetArgs())
+	}
+	compared := 0
+	for _, m := range resp.GetEntry().GetMembers() {
+		want, ok := catalog[m.GetPath()]
+		if !ok || m.GetEntryKind() == "module" {
+			continue
+		}
+		compared++
+		if !slices.Equal(m.GetArgs(), want) {
+			t.Errorf("%s args %v, the catalog says %v", m.GetPath(), m.GetArgs(), want)
+		}
+	}
+	if compared < 5 {
+		t.Fatalf("compared %d of net's members, so the check proves little", compared)
+	}
+}
+
 func TestListRelationsIncludesExamples(t *testing.T) {
 	svc := NewQueryService(fakeLoader{}, nil, nil)
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})

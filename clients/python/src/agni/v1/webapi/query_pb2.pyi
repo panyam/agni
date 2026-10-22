@@ -137,7 +137,7 @@ class RelationInfo(_message.Message):
     def __init__(self, name: _Optional[str] = ..., args: _Optional[_Iterable[str]] = ..., summary: _Optional[str] = ..., kind: _Optional[str] = ..., detail: _Optional[str] = ..., signature: _Optional[str] = ..., definition: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class RelationEntry(_message.Message):
-    __slots__ = ("path", "entry_kind", "signature", "doc", "detail", "module", "definition", "inferred", "members")
+    __slots__ = ("path", "entry_kind", "signature", "doc", "detail", "module", "definition", "inferred", "members", "args")
     PATH_FIELD_NUMBER: _ClassVar[int]
     ENTRY_KIND_FIELD_NUMBER: _ClassVar[int]
     SIGNATURE_FIELD_NUMBER: _ClassVar[int]
@@ -147,6 +147,7 @@ class RelationEntry(_message.Message):
     DEFINITION_FIELD_NUMBER: _ClassVar[int]
     INFERRED_FIELD_NUMBER: _ClassVar[int]
     MEMBERS_FIELD_NUMBER: _ClassVar[int]
+    ARGS_FIELD_NUMBER: _ClassVar[int]
     path: str
     entry_kind: str
     signature: str
@@ -156,7 +157,8 @@ class RelationEntry(_message.Message):
     definition: _containers.RepeatedScalarFieldContainer[str]
     inferred: _containers.RepeatedScalarFieldContainer[str]
     members: _containers.RepeatedCompositeFieldContainer[RelationEntry]
-    def __init__(self, path: _Optional[str] = ..., entry_kind: _Optional[str] = ..., signature: _Optional[str] = ..., doc: _Optional[str] = ..., detail: _Optional[str] = ..., module: _Optional[str] = ..., definition: _Optional[_Iterable[str]] = ..., inferred: _Optional[_Iterable[str]] = ..., members: _Optional[_Iterable[_Union[RelationEntry, _Mapping]]] = ...) -> None: ...
+    args: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, path: _Optional[str] = ..., entry_kind: _Optional[str] = ..., signature: _Optional[str] = ..., doc: _Optional[str] = ..., detail: _Optional[str] = ..., module: _Optional[str] = ..., definition: _Optional[_Iterable[str]] = ..., inferred: _Optional[_Iterable[str]] = ..., members: _Optional[_Iterable[_Union[RelationEntry, _Mapping]]] = ..., args: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ExampleQuery(_message.Message):
     __slots__ = ("label", "query", "teaches")
