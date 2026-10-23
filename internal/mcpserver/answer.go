@@ -34,17 +34,19 @@ type answering struct {
 
 // shown is one page of an answer as agni presents it.
 type shown struct {
-	Design   string                   `json:"design"`
-	Query    string                   `json:"query"`
-	Bindings map[string][]string      `json:"bindings,omitempty"`
-	Link     string                   `json:"link,omitempty"`
-	NoLink   string                   `json:"no_link,omitempty"`
-	Answer   any                      `json:"answer"`
-	Tables   any                      `json:"tables"`
-	bind     query.Bindings           // the values bound, for the text
-	tables   []*webapi.Table          // the projected tables, for the text
-	resp     *webapi.RunQueryResponse // the answer, for the text's counts
-	page     mcp.Answer               // where the page sits in the whole answer
+	Design   string              `json:"design"`
+	Query    string              `json:"query"`
+	Bindings map[string][]string `json:"bindings,omitempty"`
+	Link     string              `json:"link,omitempty"`
+	NoLink   string              `json:"no_link,omitempty"`
+	// Action applies Link to a viewer a host already has open (agni issue 1155).
+	Action *pageAction              `json:"page,omitempty"`
+	Answer any                      `json:"answer"`
+	Tables any                      `json:"tables"`
+	bind   query.Bindings           // the values bound, for the text
+	tables []*webapi.Table          // the projected tables, for the text
+	resp   *webapi.RunQueryResponse // the answer, for the text's counts
+	page   mcp.Answer               // where the page sits in the whole answer
 }
 
 // baseFor reads the design for q, with the board only when q reads it, and keeps the read.
@@ -101,6 +103,7 @@ func (a *answering) presentOnce(page mcp.Answer) (*shown, error) {
 	meta, why := a.s.linkMeta(a.snap)
 	sh.NoLink = why
 	sh.Link = rpt.QueryURL(meta, page.Program, "", query.BindArgs(bind))
+	sh.Action = linkAction(sh.Link)
 	return sh, nil
 }
 

@@ -187,7 +187,9 @@ page goes through these, or it gets a row in that test.
 which the page answers itself. `pageservice.ts` dispatches a method name and a protojson body over
 it, and a transport only carries that pair: postMessage from a parent frame today (`embed.ts`, with
 the origin allowlist from `agni serve --embed-origin`), a server-held session or an MCP app host
-later. So a transport adds no behaviour, and a call behaves the same over any of them. The
+later. So a transport adds no behaviour, and a call behaves the same over any of them. The one request taken from any origin is `ApplyLocation` carrying only a `url`
+(`isLinkOnly`), which a saved report sends, and its reply carries no location. Where the three
+layers meet is in [Questions, links and the live page](../viewer-control/). The
 contract differs from a panel click in one way on purpose. A click on the focused finding clears it,
 and a call asks for a state, so selecting the focused finding keeps it. How a parent page uses it is
-in [Driving an embedded viewer](../build/embedding-the-viewer/).
+in [Driving an embedded viewer](../../build/embedding-the-viewer/).

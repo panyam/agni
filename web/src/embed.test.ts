@@ -43,7 +43,7 @@ function pair(parentOrigin: string) {
   const parentHandle = {
     postMessage: (msg: unknown, target: string) => {
       posted.push({ to: target, msg });
-      if (target === parentOrigin) queueMicrotask(() => parent.deliver(msg, { origin: VIEWER, win: viewerHandle }));
+      if (target === parentOrigin || target === "*") queueMicrotask(() => parent.deliver(msg, { origin: VIEWER, win: viewerHandle }));
     },
   };
   viewer.parent = parentHandle;
@@ -95,6 +95,41 @@ describe("listenForHosts", () => {
     const got = new Promise((r) => p.parent.addEventListener("message", (ev) => r(ev.data)));
     p.viewerHandle.postMessage({ agni: ENVELOPE, id: 7, method: "ShowSheet", body: { sheet: "s-a" } }, VIEWER);
     expect(await got).toMatchObject({ id: 7, ok: false, error: { code: "permission_denied" } });
+    expect(dispatch).not.toHaveBeenCalled();
+  });
+
+  // A report opened from disk has an opaque origin and is named by no server, and loading the link in
+  // the viewer's window would do what this does, so the page takes it and answers only ok.
+  const LINK = "http://127.0.0.1:8080/designs/kicad/hier_numeric_root.kicad_sch/view?sheet=%2FIO";
+  for (const origin of ["null", PORTAL]) {
+    it(`takes a link-only ApplyLocation from ${origin}, and answers without the location`, async () => {
+      const p = pair(origin);
+      const dispatch = vi.fn<PageDispatch>(async () => ({ location: { mount: "kicad", sheet: "/IO" }, verdictResolved: false }));
+      listenForHosts(p.viewer, dispatch, []);
+      const got = new Promise((r) => p.parent.addEventListener("message", (ev) => !(ev.data as { ready?: boolean }).ready && r(ev.data)));
+      // The fake parent posts to whatever origin is named; a real opaque page posts with "*".
+      p.viewer.deliver({ agni: ENVELOPE, id: 3, method: "ApplyLocation", body: { url: LINK } }, { origin, win: p.parentHandle });
+      expect(await got).toEqual({ agni: ENVELOPE, id: 3, ok: true, body: {} });
+      expect(dispatch).toHaveBeenCalledWith("ApplyLocation", { url: LINK });
+    });
+  }
+
+  it("refuses anything else from an origin it was not told about, a link with a location included", async () => {
+    const p = pair(PORTAL);
+    const dispatch = vi.fn<PageDispatch>(async () => ({}));
+    listenForHosts(p.viewer, dispatch, []);
+    const replies: unknown[] = [];
+    p.parent.addEventListener("message", (ev) => !(ev.data as { ready?: boolean }).ready && replies.push(ev.data));
+    for (const [id, method, body] of [
+      [4, "ApplyLocation", { url: LINK, location: { sheet: "/IO" } }],
+      [5, "ApplyLocation", { location: { sheet: "/IO" } }],
+      [6, "GetLocation", {}],
+    ] as const) {
+      p.viewer.deliver({ agni: ENVELOPE, id, method, body }, { origin: PORTAL, win: p.parentHandle });
+    }
+    await new Promise((r) => setTimeout(r, 0));
+    expect(replies).toHaveLength(3);
+    for (const r of replies) expect(r).toMatchObject({ ok: false, error: { code: "permission_denied" } });
     expect(dispatch).not.toHaveBeenCalled();
   });
 

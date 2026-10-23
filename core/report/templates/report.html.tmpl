@@ -72,7 +72,7 @@
         <tr>
           <td class="o {{outcomeClass .Outcome}}">{{outcomeLabel .Outcome}}</td>
           <td class="subject">
-            {{if .URL}}<a href="{{.URL}}">{{subjectOf .}}</a>{{else}}{{subjectOf .}}{{end}}
+            {{if .URL}}<a href="{{.URL}}" target="{{viewerTarget}}">{{subjectOf .}}</a>{{else}}{{subjectOf .}}{{end}}
           </td>
           <td>
             {{.Detail}}
@@ -90,5 +90,6 @@
 {{end}}
 
 </div>
+{{if .HasLinks}}<script>{{viewerScript}}</script>{{end}}
 </body>
 </html>

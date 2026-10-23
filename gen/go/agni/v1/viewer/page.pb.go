@@ -311,8 +311,16 @@ func (x *GetLocationResponse) GetLocation() *ViewerLocation {
 }
 
 type ApplyLocationRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Location      *ViewerLocation        `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Location *ViewerLocation        `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
+	// url is a viewer link instead of a location, as the server mints one (`agni check --server`, an
+	// MCP answer's `link`, a report row), and the page reads it with the same parser it reads its own
+	// address with. Only the fields the link sets are applied. Exactly one of location and url.
+	//
+	// A request carrying only a url is taken from a page at ANY origin, and its reply carries no
+	// location (agni issue 1156). Any page holding the viewer's window can already navigate it to the
+	// same link, so this grants nothing that loading the link would not, except keeping the page.
+	Url           string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -352,6 +360,13 @@ func (x *ApplyLocationRequest) GetLocation() *ViewerLocation {
 		return x.Location
 	}
 	return nil
+}
+
+func (x *ApplyLocationRequest) GetUrl() string {
+	if x != nil {
+		return x.Url
+	}
+	return ""
 }
 
 type ApplyLocationResponse struct {
@@ -878,9 +893,10 @@ const file_agni_v1_viewer_page_proto_rawDesc = "" +
 	"\b_flatten\"\x14\n" +
 	"\x12GetLocationRequest\"Q\n" +
 	"\x13GetLocationResponse\x12:\n" +
-	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\"R\n" +
+	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\"d\n" +
 	"\x14ApplyLocationRequest\x12:\n" +
-	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\"~\n" +
+	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12\x10\n" +
+	"\x03url\x18\x02 \x01(\tR\x03url\"~\n" +
 	"\x15ApplyLocationResponse\x12:\n" +
 	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation\x12)\n" +
 	"\x10verdict_resolved\x18\x02 \x01(\bR\x0fverdictResolved\"V\n" +
