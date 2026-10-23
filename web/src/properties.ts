@@ -529,12 +529,15 @@ function areaView(input: PropertiesInput, sel: Selection, findingsGroup: Group):
     const ref: Ref = { label: name, detail: `${held} of ${pins.size} pin${pins.size === 1 ? "" : "s"} inside`, target: { kind: "net", net: name } };
     (pins.size > 0 && held === pins.size ? internal : boundary).push(ref);
   }
-  const classOf = (r: string) => inv?.components.get(r)?.deviceClasses[0]?.class ?? "";
+  // A part counts under each of its classes, as the area's "by class" question counts it, so a
+  // regulator that is also an ic is in both and the panel and the answer agree.
+  const classesOf = (r: string) => (inv?.components.get(r)?.deviceClasses ?? []).map((t) => t.class);
   const byClass = new Map<string, number>();
-  for (const r of refs) byClass.set(classOf(r) || "unclassified", (byClass.get(classOf(r) || "unclassified") ?? 0) + 1);
+  for (const r of refs) for (const c of classesOf(r).length ? classesOf(r) : ["unclassified"]) byClass.set(c, (byClass.get(c) ?? 0) + 1);
   const classes = [...byClass].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([c, n]) => `${n} ${c}`).join(", ");
   const rows: Row[] = [
-    { label: "parts", value: classes ? `${refs.length}: ${classes}` : String(refs.length) },
+    { label: "parts", value: String(refs.length) },
+    ...(refs.length ? [{ label: "classes", value: classes }] : []),
     { label: "nets", value: `${boundary.length} boundary, ${internal.length} internal` },
   ];
   if (input.datasheet) {
@@ -547,7 +550,7 @@ function areaView(input: PropertiesInput, sel: Selection, findingsGroup: Group):
   return {
     rows,
     groups: [
-      { name: "components", refs: refs.map((r) => ({ label: r, detail: classOf(r), target: { kind: "component", ref: r } })), empty: "none" },
+      { name: "components", refs: refs.map((r) => ({ label: r, detail: classesOf(r).join(", "), target: { kind: "component", ref: r } })), empty: "none" },
       {
         name: "pins",
         refs: (sel.pins ?? []).map((key) => {

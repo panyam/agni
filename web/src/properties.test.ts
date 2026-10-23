@@ -367,7 +367,8 @@ describe("an area", () => {
     ]);
     expect(group(s, "internal nets")?.refs.map((r) => r.label)).toEqual(["3V3"]);
     expect(group(s, "components")?.refs.map((r) => r.label)).toEqual(["TP1", "U1"]);
-    expect(row(s, "parts")).toBe("2: 1 regulator, 1 test_point");
+    expect(row(s, "parts")).toBe("2");
+    expect(row(s, "classes")).toBe("1 regulator, 1 test_point");
     expect(row(s, "nets")).toBe("2 boundary, 1 internal");
   });
 
