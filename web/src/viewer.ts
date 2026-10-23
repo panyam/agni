@@ -484,6 +484,16 @@ export class ViewerPresenter {
     }
   }
 
+  // locateArea lights every member of an area at once (agni issue 904): its parts, its loose pins and
+  // the nets with a wire inside it. The area lives on the sheet on screen, so nothing is opened.
+  async locateArea(area: Selection): Promise<void> {
+    const subjects = areaSubjects(area);
+    if (subjects.length === 0) return;
+    if (this.mode === "native") await this.setMode("svg");
+    const focus = withFocusShape(subjectsToSpecs(subjects), this.highlightStyle);
+    await this.setHighlights(focusStack(this.field(), subjects, focus));
+  }
+
   // locateReviewFinding focuses a Review finding the way a Checks click does (agni issue 1132). It
   // opens a sheet the subject is drawn on when the shown sheet has none of them, keeps a pin
   // subject's pin, and says in the Review panel why an undrawn subject highlights nothing.
@@ -1950,3 +1960,15 @@ function isStoreUnconfigured(e: unknown): boolean {
 
 
 
+
+// areaSubjects is an area's members as highlight subjects, a part per ref, a pin per loose pin and a
+// net per wire.
+export function areaSubjects(area: Selection): { kind: string; subject: string; pin: string }[] {
+  const out = (area.refs ?? []).map((ref) => ({ kind: "component", subject: ref, pin: "" }));
+  for (const key of area.pins ?? []) {
+    const dot = key.lastIndexOf(".");
+    out.push({ kind: "pin", subject: key.slice(0, dot), pin: key.slice(dot + 1) });
+  }
+  for (const net of area.wires ?? []) out.push({ kind: "net", subject: net, pin: "" });
+  return out;
+}

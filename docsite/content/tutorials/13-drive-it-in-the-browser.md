@@ -143,7 +143,9 @@ CLI says the same thing in its `supersedes` note.
 **Properties** follows the selection. Click something on the canvas and it shows what that thing is,
 what it connects to, and for a part whether the corpus holds its datasheet spec. Its **ask**
 row offers questions about the selection, and each opens in the Query panel with the query visible
-before it runs.
+before it runs. Shift-drag a rectangle to select a block of the sheet as one area, and Shift-click to
+add or remove a part. Properties then lists the nets crossing the area's edge, which are the block's
+interface, and its Ask rows ask about every part at once.
 
 **Query** is the [querying guide](../../guide/querying/) with a drawing attached. Each question gets
 a tab of its own, so an answer stays put while you ask the next one, and clicking a cell locates its

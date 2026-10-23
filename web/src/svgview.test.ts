@@ -171,6 +171,51 @@ describe("a click on the drawing", () => {
   });
 });
 
+// agni issue 904: Shift turns a drag into an area and a click into a toggle.
+describe("a Shift gesture on the drawing", () => {
+  function setup() {
+    const host = document.createElement("div");
+    document.body.appendChild(host);
+    const view = new SvgView(host);
+    const areas: unknown[] = [];
+    const toggles: unknown[] = [];
+    const picks: unknown[] = [];
+    view.onArea = (r) => areas.push(r);
+    view.onToggle = (sel) => toggles.push(sel);
+    view.onPick = (sel) => picks.push(sel);
+    return { host, areas, toggles, picks };
+  }
+  function shiftGesture(host: HTMLElement, hit: Element | null, moveBy: number): void {
+    const real = document.elementFromPoint;
+    document.elementFromPoint = (() => hit) as typeof document.elementFromPoint;
+    try {
+      host.dispatchEvent(new MouseEvent("mousedown", { clientX: 10, clientY: 10, shiftKey: true, bubbles: true }));
+      if (moveBy) window.dispatchEvent(new MouseEvent("mousemove", { clientX: 10 + moveBy, clientY: 10 + moveBy, shiftKey: true, bubbles: true }));
+      window.dispatchEvent(new MouseEvent("mouseup", { clientX: 10 + moveBy, clientY: 10 + moveBy, shiftKey: true, bubbles: true }));
+    } finally {
+      document.elementFromPoint = real;
+    }
+  }
+
+  it("draws an area rather than panning, and leaves no band behind", () => {
+    const { host, areas, picks } = setup();
+    shiftGesture(host, null, 40);
+    expect(areas).toEqual([{ left: 10, top: 10, right: 50, bottom: 50 }]);
+    expect(picks).toEqual([]);
+    expect(host.querySelector(".area-band")).toBeNull();
+  });
+
+  it("toggles the entity under a Shift-click instead of picking it", () => {
+    const { host, toggles, picks } = setup();
+    const el = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+    el.setAttribute("data-kind", "component");
+    el.setAttribute("data-ref", "U1");
+    shiftGesture(host, el, 0);
+    expect(toggles).toEqual([{ kind: "component", ref: "U1" }]);
+    expect(picks).toEqual([]);
+  });
+});
+
 describe("drawnOnSheet", () => {
   it("lists each component and net the drawing keys, once", () => {
     const host = document.createElement("div");

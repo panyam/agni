@@ -6,6 +6,7 @@ import { ConversionReportSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import type { FindingItem, FindingsState, VerdictItem } from "./findings.js";
 import { type PropertiesInput, type ServedFacts, inventoryFromDesign, propertiesFor, reportLines } from "./properties.js";
 import type { EntityQueryItem } from "./query.js";
+import type { Selection } from "./selection.js";
 
 // A barrel jack J1 feeding a regulator U1, with a test point on the output, which is enough to
 // reach every level and every group the panel renders.
@@ -348,5 +349,49 @@ describe("the selected entity", () => {
     const sel = { kind: "component" as const, ref: "U1" };
     expect(propertiesFor(input({ focus: { level: "entity", sel } })).sel).toEqual(sel);
     expect(propertiesFor(input({})).sel).toBeUndefined();
+  });
+});
+
+// agni issue 904: an area of U1 and TP1. 3V3 runs U1 to TP1 and is wholly inside; VIN and GND reach
+// J1, which is not, so they are the block's interface.
+describe("an area", () => {
+  const area: Selection = { kind: "area", refs: ["U1", "TP1"], pins: [], wires: [], nets: ["3V3", "GND", "VIN"] };
+
+  it("splits its nets into boundary and internal, and counts its parts by class", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: area, sheetId: "s1" } }));
+    expect(s.kind).toBe("area");
+    expect(s.title).toBe("Area (2)");
+    expect(group(s, "boundary nets")?.refs.map((r) => [r.label, r.detail])).toEqual([
+      ["GND", "1 of 2 pins inside"],
+      ["VIN", "1 of 2 pins inside"],
+    ]);
+    expect(group(s, "internal nets")?.refs.map((r) => r.label)).toEqual(["3V3"]);
+    expect(group(s, "components")?.refs.map((r) => r.label)).toEqual(["TP1", "U1"]);
+    expect(row(s, "parts")).toBe("2");
+    expect(row(s, "classes")).toBe("1 regulator, 1 test_point");
+    expect(row(s, "nets")).toBe("2 boundary, 1 internal");
+  });
+
+  it("reads Design › Sheet › Area, and a member reached from it keeps the area as its parent", () => {
+    const s = propertiesFor(input({ focus: { level: "entity", sel: area, sheetId: "s1" } }));
+    expect(s.crumbs.map((c) => c.label)).toEqual(["gateway", "Power", "Area (2)"]);
+    expect(s.within).toEqual(area);
+    const member = propertiesFor(input({ focus: { level: "entity", sel: { kind: "component", ref: "U1" }, sheetId: "s1", within: area } }));
+    expect(member.crumbs.map((c) => c.label)).toEqual(["gateway", "Power", "Area (2)", "U1"]);
+    expect(member.crumbs[2].focus).toEqual({ level: "entity", sel: area, sheetId: "s1" });
+  });
+
+  it("lists the findings on its members and none on a part outside it", () => {
+    const s = propertiesFor(
+      input({ focus: { level: "entity", sel: area }, findings: ran([finding({ kind: "component", subject: "U1", rule: "on-u1" }), finding({ kind: "component", subject: "J1", rule: "on-j1" })]) }),
+    );
+    expect(group(s, "findings")?.refs.map((r) => r.label)).toEqual(["on-u1"]);
+  });
+
+  it("asks the area's own questions, with the whole set to bind", () => {
+    const q: EntityQueryItem = { kind: "area", label: "What does this block connect to?", query: "q", teaches: "", binds: ["ref"] };
+    const s = propertiesFor(input({ focus: { level: "entity", sel: area }, questions: [...QUESTIONS, q] }));
+    expect(s.ask?.questions).toEqual([q]);
+    expect(s.ask?.sel).toEqual(area);
   });
 });

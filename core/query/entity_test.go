@@ -29,6 +29,7 @@ func TestEntityQueriesBindWhatTheSelectionCarries(t *testing.T) {
 		"component": {"ref": true},
 		"net":       {"net": true},
 		"bus":       {"bus": true},
+		"area":      {"ref": true, "net": true},
 	}
 	for _, e := range EntityQueries() {
 		if len(e.Binds) == 0 {
@@ -52,6 +53,11 @@ func TestEntityQueriesBindWhatTheSelectionCarries(t *testing.T) {
 			vals[v] = Text("x")
 		}
 		// Every bound variable must be an input: a projected one would answer the value it was given.
+		// An area binds a SET, so projecting a bound variable says which of its values answered, which
+		// is the question "which of its nets have no test point" asks (agni issue 904).
+		if e.Kind == "area" {
+			continue
+		}
 		for _, c := range q.Columns() {
 			if _, ok := vals[string(c)]; ok {
 				t.Errorf("preset for %q projects ?%s, which it binds", e.Kind, c)
@@ -75,7 +81,7 @@ func TestEntityQueriesCoverEveryPickableKind(t *testing.T) {
 	}
 	// A bus has one, since the bus relation records the construct a reader saw and nothing about
 	// its members.
-	want := map[string]int{"pin": 2, "component": 2, "net": 2, "bus": 1}
+	want := map[string]int{"pin": 2, "component": 2, "net": 2, "bus": 1, "area": 2}
 	for kind, n := range want {
 		if have[kind] < n {
 			t.Errorf("kind %q has %d question(s), want at least %d", kind, have[kind], n)

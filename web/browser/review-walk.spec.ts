@@ -287,6 +287,54 @@ describe("the browser-review walk", () => {
         return `"${question}" opened its own tab with ${await page.locator(".query-row").count()} rows`;
       });
 
+      // agni issue 904: a block of the sheet on screen, selected with a Shift-drag and asked about as one
+      // set. The block is the largest part drawn wholly on screen that covers at most a fortieth of the
+      // view, an IC rather than a board-wide connector, and what sits within three quarters of its size.
+      await step("select an area", async () => {
+        const box = await page.evaluate(() => {
+          const parts = new Map<string, DOMRect>();
+          for (const el of document.querySelectorAll('#svg-view [data-kind="component"][data-ref]')) {
+            const ref = el.getAttribute("data-ref") ?? "";
+            const r = el.getBoundingClientRect();
+            const had = parts.get(ref);
+            parts.set(ref, had ? new DOMRect(Math.min(had.left, r.left), Math.min(had.top, r.top), Math.max(had.right, r.right) - Math.min(had.left, r.left), Math.max(had.bottom, r.bottom) - Math.min(had.top, r.top)) : r);
+          }
+          const view = document.querySelector("#svg-view")!.getBoundingClientRect();
+          const cap = (view.width * view.height) / 40;
+          const onScreen = [...parts.values()].filter(
+            (r) => r.left >= view.left && r.right <= view.right && r.top >= view.top && r.bottom <= view.bottom && r.width > 0 && r.width * r.height <= cap,
+          );
+          const big = onScreen.sort((a, b) => b.width * b.height - a.width * a.height)[0];
+          if (!big) return null;
+          const pad = (Math.max(big.width, big.height) * 3) / 4;
+          return { l: Math.max(view.left + 2, big.left - pad), t: Math.max(view.top + 2, big.top - pad), r: Math.min(view.right - 2, big.right + pad), b: Math.min(view.bottom - 2, big.bottom + pad) };
+        });
+        if (!box) throw new Error("no part is drawn wholly on screen to select an area around");
+        await act(page, async () => {
+          await page.keyboard.down("Shift");
+          await page.mouse.move(box.l, box.t);
+          await page.mouse.down();
+          await page.mouse.move(box.r, box.b, { steps: 8 });
+          await page.mouse.up();
+          await page.keyboard.up("Shift");
+        });
+        await page.waitForFunction(() => document.querySelector('[data-component="properties"] .pr-kind')?.textContent === "area", null, { timeout: 30_000 });
+        const counts = await page.$$eval('[data-component="properties"] details[data-group]', (ds) =>
+          Object.fromEntries(ds.map((d) => [d.getAttribute("data-group"), d.querySelectorAll(".pr-ref").length])),
+        );
+        const tabs = await page.locator(".query-tab-go").count();
+        await act(page, () => page.click('.pr-ask-go:has-text("What does this block connect to?")'));
+        await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length > n, tabs, { timeout: 30_000 });
+        await page.waitForSelector(".query-row, .query-empty", { timeout: 30_000 });
+        if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").innerText());
+        // The question binds the area's parts, so it answers the nets they reach out of the block; the
+        // panel also counts a net only a loose pin or a wire brings in. An Ask row starts at the first
+        // 50 rows, as every asked question does.
+        const rows = await page.locator(".query-row").count();
+        if (rows === 0 && counts.components > 0) throw new Error("the area's parts reach no net outside it, which a block with parts always does");
+        return `${counts.components} parts, ${counts.pins} loose pins: ${counts["boundary nets"]} boundary nets, ${counts["internal nets"]} internal; asked once, ${rows} rows${rows === 50 ? " (the first 50)" : ""}`;
+      });
+
       await step("save the report", async () => {
         // Every checklist, since a page whose items carry no finding has no link to compare, and the
         // links are where the viewer and the CLI once disagreed (agni issue 1120).

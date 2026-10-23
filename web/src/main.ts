@@ -26,6 +26,7 @@ import { partsPanelIsland } from "./partspanel.js";
 import { ViewerPresenter, type RenderView, type SavedFile } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
 import { SvgView, drawnOnSheet } from "./svgview.js";
+import { type Members, areaSelection, emptyMembers, membersIn, membersOf, size, toggle } from "./area.js";
 import { compareButton } from "./compare.js";
 import { designListing, loadedKey, onStaticHost, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
 import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
@@ -448,7 +449,34 @@ class AppRoot extends BaseComponent {
       onInventory: (inv) => trace.view.setPicks(tracePicks(inv)),
     });
     const locateSelection = (sel: Selection) =>
-      void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
+      sel.kind === "area"
+        ? void presenter.locateArea(sel)
+        : void presenter.locateEntity(sel.kind, sel.ref ?? sel.net ?? sel.busId ?? "", undefined, undefined, sel.pin);
+    // An area is selected by Shift-dragging over the drawing or Shift-clicking entities in and out of
+    // it (agni issue 904). It is a Selection like any other from here on, so Properties describes it,
+    // the drawing lights its members and its Ask rows bind the whole set.
+    const selectArea = (members: Members) => {
+      if (size(members) === 0) {
+        propertiesPresenter.selectSheet();
+        void presenter.clearHighlights();
+        return;
+      }
+      const sel = areaSelection(members, (ref) => propertiesPresenter.pinNets(ref));
+      locateSelection(sel);
+      propertiesPresenter.selectEntity(sel);
+      if (dockApi) dockApi.getPanel("properties")?.api.setActive();
+    };
+    svgView.onArea = (r) => {
+      const svg = svgEl.querySelector("svg");
+      if (svg) selectArea(membersIn(svg, r));
+    };
+    svgView.onToggle = (picked) => {
+      const f = propertiesPresenter.currentFocus();
+      // Shift-clicking starts from the area on show, or from the one entity selected, so Shift-clicking
+      // a second part makes an area of the two.
+      const base = f.level !== "entity" ? emptyMembers() : f.sel.kind === "area" ? membersOf(f.sel) : toggle(emptyMembers(), f.sel);
+      selectArea(toggle(base, picked));
+    };
     svgView.onPick = (sel) => {
       locateSelection(sel);
       propertiesPresenter.selectEntity(sel);

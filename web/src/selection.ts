@@ -10,10 +10,14 @@
 // own way and still agree on what one means. The cross-renderer contract is on
 // docsite/content/architecture/web-picking.md#picking-from-the-drawing.
 
-export type SelectionKind = "pin" | "component" | "bus" | "net";
+export type SelectionKind = "pin" | "component" | "bus" | "net" | "area";
 
 // Selection names one entity. ref is set for a component or pin, net/netId for a net, busId for a
 // bus; pin is the designator within ref. The optional fields mirror the finding subject exactly.
+//
+// An area (agni issue 904) is a set of them selected together on one sheet, with refs its whole
+// parts, pins its loose pins as "REF.PIN", wires the nets with a wire inside it, and nets every net
+// it touches (area.ts). A click never yields one; a drag or a Shift-click does.
 export interface Selection {
   kind: SelectionKind;
   ref?: string;
@@ -21,6 +25,10 @@ export interface Selection {
   net?: string;
   netId?: string;
   busId?: string;
+  refs?: string[];
+  pins?: string[];
+  wires?: string[];
+  nets?: string[];
 }
 
 // PRIORITY ranks overlapping candidates, most specific first. A click inside a symbol that lands on
@@ -107,9 +115,13 @@ export function pickAt(doc: Document, clientX: number, clientY: number): Selecti
 //
 // A value is bound as itself, so a designator carrying a quote is asked about exactly. Splicing it
 // into a string literal, which has no escape sequence, could only strip it.
-export function entityBindings(binds: readonly string[], sel: Selection): Record<string, string> {
-  const field: Record<string, string | undefined> = { ref: sel.ref, pin: sel.pin, net: sel.net, bus: sel.busId };
-  const out: Record<string, string> = {};
+//
+// An area binds each variable to the whole set, ref to its parts and net to its nets, so a question is
+// asked once over all of them (agni issue 904).
+export function entityBindings(binds: readonly string[], sel: Selection): Record<string, string | string[]> {
+  const field: Record<string, string | string[] | undefined> =
+    sel.kind === "area" ? { ref: sel.refs ?? [], net: sel.nets ?? [] } : { ref: sel.ref, pin: sel.pin, net: sel.net, bus: sel.busId };
+  const out: Record<string, string | string[]> = {};
   for (const v of binds) out[v] = field[v] ?? "";
   return out;
 }
@@ -125,6 +137,8 @@ export function labelFor(sel: Selection): string {
       return sel.net ?? sel.netId ?? "";
     case "bus":
       return sel.busId ?? "";
+    case "area":
+      return `Area (${(sel.refs?.length ?? 0) + (sel.pins?.length ?? 0) + (sel.wires?.length ?? 0)})`;
   }
 }
 
@@ -176,5 +190,9 @@ export function sameSelection(a: Selection | null, b: Selection | null): boolean
       return a.netId && b.netId ? a.netId === b.netId : a.net === b.net;
     case "bus":
       return a.busId === b.busId;
+    case "area": {
+      const same = (x: string[] = [], y: string[] = []) => x.length === y.length && x.every((v, i) => v === y[i]);
+      return same(a.refs, b.refs) && same(a.pins, b.pins) && same(a.wires, b.wires);
+    }
   }
 }
