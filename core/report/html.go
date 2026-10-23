@@ -38,6 +38,9 @@ const ViewerTarget = "agni-viewer"
 //
 // COLLAPSING IS <details>, NOT SCRIPT. The report has to survive being emailed, committed, opened
 // from a file:// path and read with scripts disabled, and a section that cannot expand hides its rows.
+// So it never DEPENDS on a script. A report that links into a viewer carries one script, which only
+// moves a viewer already open rather than loading it again (viewerlink.js, agni issue 1156); with
+// scripts off its links still open in that viewer's window. A report with no links carries none.
 //
 // Self-contained, with no external CSS or fonts, so it renders with no network.
 func HTML(w io.Writer, r Report) error {

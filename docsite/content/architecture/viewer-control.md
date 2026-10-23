@@ -59,7 +59,9 @@ server can name, and every link in it targets the window named `agni-viewer`, so
 scripts off loads the link in that window anyway. The page therefore takes `ApplyLocation` carrying a
 link and nothing else from any origin, since that grants what loading the link grants, and its reply
 says only whether it worked. Every other call, and every reply carrying the page's location, stays
-with the origins the server named.
+with the origins the server named. A report never depends on its script, and one with no links
+carries none, since a report has to read the same emailed, committed or opened with scripts off
+(`core/report/html.go`).
 
 A page call lands as a click and a link do. `sheetToOpen` in `viewer.ts` picks the sheet for a
 finding, a review finding and a verdict, a verdict carries the sheets it is drawn on

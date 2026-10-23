@@ -92,6 +92,20 @@ type Row struct {
 	URL      string   // empty when the caller supplied no base
 }
 
+// HasLinks says whether any row links into the viewer. Only such a report carries the script that
+// moves an open viewer (viewerlink.js), so a report written with no viewer to link to stays free of
+// script entirely (agni issue 1156).
+func (r Report) HasLinks() bool {
+	for _, rule := range r.Rules {
+		for _, row := range rule.Rows {
+			if row.URL != "" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
 // SubjectLabel is a row's subject tuple as one string, joined the way both renderers spell it, so a
 // relation-shaped rule names every entity. It lives on Row so the HTML template and the CLI share one
 // spelling (agni issue 380).

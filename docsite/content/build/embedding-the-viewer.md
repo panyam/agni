@@ -98,7 +98,8 @@ one viewer tab rather than gaining one per click. With scripts on, the report's 
 that window first, and when it already shows a viewer it sends `ApplyLocation` with the link instead
 of loading it, so the viewer keeps the reader's place. A viewer that does not answer within two
 seconds, or answers that it could not, gets the link loaded as before. The script makes no request
-of its own, which keeps a report safe to open from mail.
+of its own, and only a report that links into a viewer (one written with `--server`) carries it, so
+a report written with no viewer to link to is still a plain page with no script at all.
 
 `examples/embed-viewer/two-pane.html` puts a report beside the viewer it links into, in a frame named
 `agni-viewer`, and `web/browser/embed.spec.ts` checks that a click there moves the viewer without

@@ -59,3 +59,56 @@ func TestViewerScriptMakesNoRequest(t *testing.T) {
 		}
 	}
 }
+
+// A report with nothing to link to carries no script at all, so one written with no viewer stays
+// exactly the plain document it was before (agni issue 1156).
+func TestUnlinkedReportsCarryNoScript(t *testing.T) {
+	var verdictPage, checklistPage bytes.Buffer
+	r := Build([]check.Verdict{verdict("converted", "NET_ZQ7", check.Pass)}, nil, rules(), Report{})
+	if err := HTML(&verdictPage, r); err != nil {
+		t.Fatal(err)
+	}
+	label := r.Rules[0].Rows[0].SubjectLabel()
+	c := Checklist{Design: "d", Name: "n", Areas: []ChecklistArea{{Name: "a", Items: []ChecklistItem{{ID: "1", Title: "t", Outcome: "fail", Evidence: []ChecklistEvidence{{Rule: "r", Subject: "NET_ZQ7"}}}}}}}
+	if err := ChecklistHTML(&checklistPage, c); err != nil {
+		t.Fatal(err)
+	}
+	for name, page := range map[string]string{"verdict report": verdictPage.String(), "checklist": checklistPage.String()} {
+		if !strings.Contains(page, label) {
+			t.Errorf("%s: the row is missing, so the absence below proves nothing", name)
+		}
+		if strings.Contains(page, "<script") {
+			t.Errorf("%s: carries a script with no link for it to act on", name)
+		}
+	}
+}
+
+// A linked report never depends on its script: with the script removed, as a reader with scripts off
+// or a mail filter would have it, every row, link and section is still there.
+func TestLinkedReportReadsTheSameWithoutItsScript(t *testing.T) {
+	vs := []check.Verdict{verdict("converted", "NET_ZQ7", check.Pass), verdict("converted", "NET_ZQ8", check.Fail)}
+	var page bytes.Buffer
+	if err := HTML(&page, Build(vs, nil, rules(), Report{URLBase: "http://h:1", MountPath: "m/d"})); err != nil {
+		t.Fatal(err)
+	}
+	full := page.String()
+	script := "<script>" + viewerLinkJS + "</script>"
+	if strings.Count(full, script) != 1 {
+		t.Fatalf("the linked report does not carry the script verbatim once")
+	}
+	stripped := strings.Replace(full, script, "", 1)
+	if strings.Contains(stripped, "<script") {
+		t.Error("removing the viewer script left another script behind")
+	}
+	if a, b := strings.Count(full, "<details"), strings.Count(stripped, "<details"); a == 0 || a != b {
+		t.Errorf("sections: %d with the script, %d without", a, b)
+	}
+	if a, b := strings.Count(full, `target="`+ViewerTarget+`"`), strings.Count(stripped, `target="`+ViewerTarget+`"`); a != 2 || a != b {
+		t.Errorf("viewer links: %d with the script, %d without, want 2 in both", a, b)
+	}
+	for _, subject := range []string{">NET_ZQ7<", ">NET_ZQ8<"} {
+		if !strings.Contains(stripped, subject) {
+			t.Errorf("row %s is missing without the script", subject)
+		}
+	}
+}
