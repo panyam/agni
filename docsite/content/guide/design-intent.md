@@ -72,7 +72,7 @@ net, a component), and the other four describe relationships between several net
 | Form | Declares | Fails when |
 |---|---|---|
 | `modules` | a functional block the board must contain, by class or MPN with an optional count, or by the nets it must instantiate | a declared module is absent, the count is short, or a declared net is missing |
-| `nets` | what each named net is, keyed by name (its voltage and domain, its peak draw, the protection it carries, its reset polarity, strap level or AC coupling) | the design contradicts any fact declared for it |
+| `nets` | what each named net is, keyed by name (its voltage and domain, its peak draw, the protection it carries, its reset polarity, strap level, AC coupling or pull-up reach) | the design contradicts any fact declared for it |
 | `sequences` | the power-up order of groups of rails | the gating chain is absent, or runs the other way round |
 | `strap_groups` | several strap nets read together as one binary number, and the value it encodes | the group does not encode the declared value, or two devices collide |
 | `io_map` | which net lands on which pin of which device, and optionally what sits at the far end | the net is on a different pin, the declared net is absent, or the far end is wrong |
@@ -95,6 +95,31 @@ A rail with a `nominal` and no `domain` is named by its voltage (`3.3V`), and ra
 must share a voltage. `protect` takes `ovp` (a TVS or zener clamping the rail) and `discharge` (a
 bleeder to ground). A resistance band belongs to a strap, so `min_ohms` without `strap` is a load
 error.
+
+`pull_up_reach_hops` is the one net fact that compiles to no rule of its own. It changes how far the
+pull-up walk searches from that net (agni issue 820). `i2c-pull-up` and the rules beside it look for
+a rail within three series resistors of a bus, because past three the series resistance is usually
+comparable to the pull-up and the bus no longer returns high in time. Some buses reach their pull-up
+through a deeper network on purpose, such as a series isolation resistor followed by a
+level-shifting stage, and the designer has sized it so the bus still works. Declaring the reach on
+that net is how the design says so.
+
+```yaml
+intent:
+  nets:
+    SDA_MAIN: {pull_up_reach_hops: 4}
+```
+
+{{ agniRun "content/guide/runs/pullup-reach.yaml" }}
+
+The first run is the default, so `SDA_MAIN` fails within 3 hops. The second declares a reach of 4 for
+`SDA_MAIN` alone and it passes through all four resistors, while `SCL_MAIN` keeps the default. A
+failing verdict always states the limit it searched to, so a declared net that still fails says
+"within 4 hops". The reach is per net because the default is an electrical judgement, and moving it
+for the whole design would pass buses nobody has sized. Zero or an absent value keeps the default,
+and a negative one fails the load. Nothing checks that a declared net exists yet, so check the
+spelling against the netlist. `SCL_MAIN` also shows a passing verdict with two pull-ups, one direct and
+one behind a series resistor, which names both paths.
 
 A `components` entry says whether a connector faces the outside of the product. The exposure rules
 (`esd-protection`, `esd-clamp-not-tvs`, `input-protection` and `reverse-blocking-absent`) treat every

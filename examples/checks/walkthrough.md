@@ -50,6 +50,12 @@ These rules are deliberately conservative to stay quiet on real designs, so a bi
 
 Run the checks on duplicate-refdes.kicad_sch to see duplicate-ref-des, which fires because two symbols both labelled U1 (unit 1) are a genuine duplicate. Notice where this one is decided. The IR keys components by ref-des and folds a multi-unit part into one component with sections, so by the time the netlist exists a duplicate is indistinguishable from a legitimate multi-gate part. Only the reader, mid-parse, can tell them apart (in KiCad, the same unit claimed twice), so it records the collision as an input diagnostic and this rule just reports it. It is a "rule" in the catalog like any other, but its implementation site is the reader, not the analysis engine (see docsite/content/architecture/ingestion-and-ir.md).
 
+## A pull-up further out {#reach}
+
+> pullup-reach.edn has two I2C lines. SDA_MAIN reaches its pull-up through four series resistors, and SCL_MAIN has two pull-ups, one direct and one behind a series resistor. At the default reach of 3, SDA_MAIN fails and the witness names the limit. pullup-reach.intent.yaml declares pull_up_reach_hops 4 for SDA_MAIN alone, which is the designer saying that bus's series network is sized for the deeper reach, and the same board then passes. SCL_MAIN keeps the default either way, and its pass lists both paths.
+
+i2c-pull-up looks for a rail within three series resistors, because past three the series resistance is usually comparable to the pull-up and the bus no longer returns high in time. That is a default rather than a law. A design states a different reach for one net in its intent, and the model built with that intent (check.WithIntent) answers every pull-up walk from that net at the declared reach. The CLI form is agni check --verdicts --rule i2c-pull-up pullup-reach.edn --intent-path pullup-reach.intent.yaml.
+
 ## Same thing from the CLI
 
 This walkthrough is the narrated form of one command:

@@ -1,0 +1,14 @@
+#agni-run 44a8a909fcb4f945
+i2c-pull-up  1 fail, 1 pass
+    fail  SDA_MAIN  no rail is reachable from SDA_MAIN through a resistor within 3 hops
+    pass  SCL_MAIN  SCL_MAIN reaches rail VCC_3V3 through R5, and rail VCC_3V3 through R6 then
+                    R7
+
+2 verdicts across 1 rule(s), 1 pass, 1 fail
+#agni-step
+i2c-pull-up  2 pass
+    pass  SCL_MAIN  SCL_MAIN reaches rail VCC_3V3 through R5, and rail VCC_3V3 through R6 then
+                    R7
+    pass  SDA_MAIN  SDA_MAIN reaches rail VCC_3V3 through R1 then R2 then R3 then R4
+
+2 verdicts across 1 rule(s), 2 pass

@@ -58,7 +58,7 @@ class IntentModule(_message.Message):
     def __init__(self, name: _Optional[str] = ..., mpn: _Optional[str] = ..., count: _Optional[int] = ..., nets: _Optional[_Iterable[str]] = ..., **kwargs) -> None: ...
 
 class NetIntent(_message.Message):
-    __slots__ = ("nominal", "domain", "peak", "protect", "reset", "strap", "min_ohms", "max_ohms", "ac_coupled")
+    __slots__ = ("nominal", "domain", "peak", "protect", "reset", "strap", "min_ohms", "max_ohms", "ac_coupled", "pull_up_reach_hops")
     NOMINAL_FIELD_NUMBER: _ClassVar[int]
     DOMAIN_FIELD_NUMBER: _ClassVar[int]
     PEAK_FIELD_NUMBER: _ClassVar[int]
@@ -68,6 +68,7 @@ class NetIntent(_message.Message):
     MIN_OHMS_FIELD_NUMBER: _ClassVar[int]
     MAX_OHMS_FIELD_NUMBER: _ClassVar[int]
     AC_COUPLED_FIELD_NUMBER: _ClassVar[int]
+    PULL_UP_REACH_HOPS_FIELD_NUMBER: _ClassVar[int]
     nominal: float
     domain: str
     peak: float
@@ -77,7 +78,8 @@ class NetIntent(_message.Message):
     min_ohms: float
     max_ohms: float
     ac_coupled: bool
-    def __init__(self, nominal: _Optional[float] = ..., domain: _Optional[str] = ..., peak: _Optional[float] = ..., protect: _Optional[_Iterable[str]] = ..., reset: _Optional[str] = ..., strap: _Optional[str] = ..., min_ohms: _Optional[float] = ..., max_ohms: _Optional[float] = ..., ac_coupled: _Optional[bool] = ...) -> None: ...
+    pull_up_reach_hops: int
+    def __init__(self, nominal: _Optional[float] = ..., domain: _Optional[str] = ..., peak: _Optional[float] = ..., protect: _Optional[_Iterable[str]] = ..., reset: _Optional[str] = ..., strap: _Optional[str] = ..., min_ohms: _Optional[float] = ..., max_ohms: _Optional[float] = ..., ac_coupled: _Optional[bool] = ..., pull_up_reach_hops: _Optional[int] = ...) -> None: ...
 
 class PowerSequence(_message.Message):
     __slots__ = ("name", "relation", "order")

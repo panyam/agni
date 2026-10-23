@@ -74,6 +74,21 @@ type Declaration struct {
 	// vocabularies out of) and lets a bound item PASS against a number nobody declared. Absent, the
 	// margin rule is not compiled, so a bound item reads needs-design-intent.
 	MarginFactor float64
+	// PullUpReach is the pull-up reach each named net declares, sorted by net name (agni issue 820).
+	// It compiles to no rule. The model reads the same declaration (see check.WithIntent), so the
+	// pull-up walk from that net asks at the declared reach rather than check.PullUpReachHops.
+	PullUpReach []PullUpReach
+}
+
+// PullUpReach is one net's declared pull-up reach, the number of series resistors the walk from it
+// may cross to reach the rail its pull-up returns it to. It is the designer saying the bus's series
+// network (an isolation resistor, a level-shifting network) is sized for that reach, which the default
+// of 3 assumes it is not.
+type PullUpReach struct {
+	// Net is the exact net name the reach is declared on.
+	Net string
+	// Hops is the declared reach, always positive (Load refuses anything else).
+	Hops int
 }
 
 // StrapGroup is several strap nets read together as one binary number, such as a device's address or

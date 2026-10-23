@@ -459,15 +459,20 @@ func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 // does not count it, and esd-clamp-not-tvs (WS3-078) reports it separately for the review to weigh.
 func ZenerReachable(m Model, n *ir.Net) bool { return ReachableOfClass(m, n, ClassZener) != "" }
 
-// PullUpReachHops bounds the walk from an I2C bus to the rail its pull-up returns it to. Like the
-// hop constants in reach.go it is ELECTRICAL, not a search budget. A pull-up behind a series
-// isolation resistor is an ordinary two hops, and past three the series resistance is comparable to
-// the pull-up, so the bus no longer returns high in time. Widening it passes buses that are
-// electrically unheld. See docsite/content/architecture/net-solving.md#how-far-a-walk-crosses-series-parts.
+// PullUpReachHops is the DEFAULT bound on the walk from an I2C bus to the rail its pull-up returns it
+// to. Like the hop constants in reach.go it is ELECTRICAL, not a search budget. A pull-up behind a
+// series isolation resistor is an ordinary two hops, and past three the series resistance is
+// comparable to the pull-up, so the bus no longer returns high in time. Widening it for every design
+// passes buses that are electrically unheld.
+//
+// A design may declare a different reach for one net (`pull_up_reach_hops` in its intent, agni issue
+// 820), which is the designer saying that bus's series network is sized for it. The walks read the
+// limit through Model.PullUpReachLimit, never this constant. See
+// docsite/content/architecture/net-solving.md#how-far-a-walk-crosses-series-parts.
 const PullUpReachHops = 3
 
 // PullUpReachesRail reports whether a rail is reachable from n by crossing RESISTORS only, within
-// PullUpReachHops, without passing through ground.
+// the net's pull-up reach (Model.PullUpReachLimit), without passing through ground.
 //
 // Not Reach, because Reach drops a bus-like net (more than maxWalkFan connections) outright, and a
 // supply rail on a real board is one. This walk keeps the rail as a legal DESTINATION and never
@@ -499,6 +504,7 @@ func PullUpPathToRail(m Model, n *ir.Net) []PullUpHop {
 		return nil
 	}
 	resistorNets := resistorNetIndex(m)
+	limit := m.PullUpReachLimit(n.Name)
 
 	type step struct {
 		net   *ir.Net
@@ -519,7 +525,7 @@ func PullUpPathToRail(m Model, n *ir.Net) []PullUpHop {
 	for len(queue) > 0 {
 		cur := queue[0]
 		queue = queue[1:]
-		if cur.depth >= PullUpReachHops {
+		if cur.depth >= limit {
 			continue
 		}
 		for _, c := range cur.net.Connections {
@@ -579,6 +585,7 @@ func AllPullUpPathsToRail(m Model, n *ir.Net) []PullUpTermination {
 		return nil
 	}
 	resistorNets := resistorNetIndex(m)
+	limit := m.PullUpReachLimit(n.Name)
 
 	type step struct {
 		net   *ir.Net
@@ -599,7 +606,7 @@ func AllPullUpPathsToRail(m Model, n *ir.Net) []PullUpTermination {
 	for len(queue) > 0 {
 		cur := queue[0]
 		queue = queue[1:]
-		if cur.depth >= PullUpReachHops {
+		if cur.depth >= limit {
 			continue
 		}
 		for _, c := range cur.net.Connections {
@@ -640,42 +647,80 @@ func AllPullUpPathsToRail(m Model, n *ir.Net) []PullUpTermination {
 // PullUpVerdict decides one I2C net and returns the outcome with its witness from a single call, as
 // CompareToBound does for a limit, so a Pass always carries the path that justifies it.
 //
-// A FAIL carries a witness too, stating the hop limit, since a bus whose pull-up sits four hops away
-// is a different situation from one with no pull-up at all.
+// A FAIL carries a witness too, stating the hop limit in effect for the net (its declared reach, else
+// PullUpReachHops), since a bus whose pull-up sits four hops away is a different situation from one
+// with no pull-up at all.
+//
+// A PASS carries every distinct path to a rail within that limit (agni issue 821), one per
+// terminating resistor as AllPullUpPathsToRail finds them, ordered by hop count, then resistor, then
+// rail so the evidence reads the same on every run. A net with one path carries exactly what it did
+// before more than one was listed.
 func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 	if n == nil {
 		return Fail, nil, nil
 	}
-	path := PullUpPathToRail(m, n)
-	if path == nil {
+	paths := AllPullUpPathsToRail(m, n)
+	if len(paths) == 0 {
 		// No resistor or rail was found and the searched-from net is the subject, so the proof is
 		// the bound searched to and the context is empty.
+		limit := m.PullUpReachLimit(n.Name)
 		return Fail, &Witness{
 			Statement: fmt.Sprintf("no rail is reachable from %s through a resistor within %d hops",
-				n.Name, PullUpReachHops),
-			Terms: []WitnessTerm{{Label: "hop limit", Value: fmt.Sprintf("%d", PullUpReachHops)}},
+				n.Name, limit),
+			Terms: []WitnessTerm{{Label: "hop limit", Value: fmt.Sprintf("%d", limit)}},
 		}, nil
 	}
-	// The path goes in as ordered CONTEXT rather than terms, since every hop is an entity a reader
-	// can be sent to and carries the Kind a highlight joins on. The subject net is excluded as it is
-	// already the verdict's subject. Roles repeat on a multi-hop path, so this is a list, not a map.
-	// The witness carries NO terms, since every term would duplicate an entity already in Context.
-	ctx := make([]ContextSubject, 0, len(path)*2)
-	res := make([]string, 0, len(path))
-	for i, h := range path {
-		role := "segment"
-		if i == len(path)-1 {
-			role = "rail"
+	sort.SliceStable(paths, func(i, j int) bool {
+		a, b := paths[i], paths[j]
+		if len(a.Path) != len(b.Path) {
+			return len(a.Path) < len(b.Path)
 		}
-		ctx = append(ctx,
-			ContextSubject{Entity: Entity{Kind: KindComponent, Ref: h.Resistor}, Role: "pull-up"},
-			ContextSubject{Entity: Entity{Kind: KindNet, Ref: h.Net}, Role: role})
-		res = append(res, h.Resistor)
+		if a.Resistor != b.Resistor {
+			return a.Resistor < b.Resistor
+		}
+		return a.Rail < b.Rail
+	})
+	// The hops go in as CONTEXT rather than terms, since every hop is an entity a reader can be sent
+	// to and carries the Kind a highlight joins on. The subject net is excluded as it is already the
+	// verdict's subject. Roles repeat on a multi-hop path, so this is a list, not a map. Paths can
+	// share a segment or a rail, so an entity already listed is not listed again, which keeps the
+	// context a flat set of things to light up.
+	var ctx []ContextSubject
+	listed := map[Entity]bool{}
+	add := func(e Entity, role string) {
+		if !listed[e] {
+			listed[e] = true
+			ctx = append(ctx, ContextSubject{Entity: e, Role: role})
+		}
 	}
-	return Pass, &Witness{
-		Statement: fmt.Sprintf("%s reaches rail %s through %s",
-			n.Name, path[len(path)-1].Net, strings.Join(res, " then ")),
-	}, ctx
+	clauses := make([]string, 0, len(paths))
+	for _, p := range paths {
+		res := make([]string, 0, len(p.Path))
+		for i, h := range p.Path {
+			role := "segment"
+			if i == len(p.Path)-1 {
+				role = "rail"
+			}
+			add(Entity{Kind: KindComponent, Ref: h.Resistor}, "pull-up")
+			add(Entity{Kind: KindNet, Ref: h.Net}, role)
+			res = append(res, h.Resistor)
+		}
+		clauses = append(clauses, fmt.Sprintf("rail %s through %s", p.Rail, strings.Join(res, " then ")))
+	}
+	w := &Witness{Statement: fmt.Sprintf("%s reaches %s", n.Name, strings.Join(clauses, ", and "))}
+	// One path is fully stated by its context, so it carries NO terms, since a term would duplicate an
+	// entity already there. Several paths need the grouping the flat context loses, so each becomes a
+	// term rendered by the one route renderer.
+	if len(paths) > 1 {
+		for _, p := range paths {
+			hops := make([]RouteHop, len(p.Path))
+			for i, h := range p.Path {
+				hops[i] = RouteHop{Through: h.Resistor, To: h.Net}
+			}
+			w.Terms = append(w.Terms, WitnessTerm{Label: "path", Value: RenderRoute(n.Name, hops)})
+		}
+	}
+	return Pass, w, ctx
 }
 
 // resistorNetIndex maps a resistor's ref-des to the distinct nets it touches.
