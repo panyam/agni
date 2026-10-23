@@ -149,6 +149,21 @@ describe("the store keeps why a request failed", () => {
     expect(doc.runError).toBeNull();
   });
 
+  it("merges scoped verdicts into the panel list without folding them into the run", async () => {
+    const doc = await opened();
+    doc.keepScoped([
+      {
+        id: "a:(net:N1)",
+        rule: "a",
+        outcome: 2,
+        subjects: [{ kind: "net", ref: "N1", pin: "", netId: "", busId: "" }],
+        witness: { statement: "bad" },
+      },
+    ] as never);
+    expect(doc.verdictList()).toEqual([]);
+    expect(doc.panelVerdictList().map((v) => v.id)).toEqual(["a:(net:N1)"]);
+  });
+
   it("keeps why the catalog did not load, and clears it when one does", async () => {
     const doc = new DocumentStore();
     await doc.loadCatalog({ listRules: vi.fn().mockRejectedValueOnce(new Error("snapshot not found")) } as never, async () => "snapshots/t");

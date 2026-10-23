@@ -513,6 +513,7 @@ describe("ViewerPresenter", () => {
       expect(h.checkDesign).toHaveBeenCalledOnce();
       expect(h.checkDesign.mock.calls[0][0]).toMatchObject({ rules: ["single-pin-net"], subjects: [{ kind: "net", ref: "VBUS", pin: "" }] });
       expect(h.presenter.verdictList()).toEqual([]); // the run holds no rule, so the panel shows it pending
+      expect(lastFindings(h).verdicts).toHaveLength(1); // scoped row still appears for the link
       expect(lastFindings(h).pending).toBe(2);
       // The address the focused verdict writes back names its subjects too.
       expect(h.onLocation).toHaveBeenLastCalledWith(expect.objectContaining({ verdict: "single-pin-net:(net:VBUS)", rule: "single-pin-net", subjects: ["net:VBUS"] }));

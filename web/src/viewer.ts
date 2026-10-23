@@ -21,6 +21,7 @@ import { type SubjectRef, type ViewerLocation, againstTarget, bindsFromLink, emp
 import { DocumentStore, messageOf } from "./document.js";
 import { type FindingItem, type FindingsState, type FindingsView, type SheetBadge, type VerdictItem, subjectsToSpecs, findingSpec, entitySpecs, focusStack, selectionFromFinding, contextFromWire, outcomeWord, verdictProofStack } from "./findings.js";
 import { sheetTiles, type OverviewView } from "./sheetoverview.js";
+import { sheetIdForNet } from "./netsheetguess.js";
 import { reconcile, expectationSpecs, expectationCaption, type RuleExpectationItem, type ExpectationRow, type ExpectationCaption } from "./expectations.js";
 import { undrawnNote, type UndrawnNote } from "./undrawn.js";
 import { staleLinkNote, type StaleLinkNote } from "./stalelink.js";
@@ -518,16 +519,21 @@ export class ViewerPresenter {
   async locateVerdict(id: string): Promise<boolean> {
     const v = this.doc.findVerdict(id);
     if (!v) return false;
-    const sheet = sheetToOpen(v.sheets, this.currentSheet);
-    if (sheet) await this.showSheet(sheet);
+    const finding = this.findingForVerdict(v);
+    if (finding) {
+      await this.navigateToFindingItem(finding);
+    } else {
+      let sh = sheetToOpen(v.sheets, this.currentSheet);
+      const sub = v.subjects[0];
+      if (!sh && sub?.kind === "net") sh = sheetIdForNet(sub.subject, this.sheetHints());
+      if (sh) await this.showSheet(sh);
+    }
     if (this.mode === "native") await this.setMode("svg");
     // Every entity in the tuple is the figure, so a clearance verdict lights both nets rather than
-    // half of a distance.
+    // half of a distance. Proof stack replaces the finding tint when both exist.
     const focus = withFocusShape(subjectsToSpecs(v.subjects), this.highlightStyle);
     await this.setHighlights(verdictProofStack(v, focus));
     this.focusedVerdict = v.id;
-    // Pushed so the panel learns which verdict is focused, since setHighlights above cleared the
-    // field and pushed nothing.
     this.pushFindings();
     this.syncLocation();
     return true;
@@ -540,7 +546,46 @@ export class ViewerPresenter {
     return this.doc.verdictList();
   }
 
+  private findingForVerdict(v: VerdictItem): FindingItem | undefined {
+    const sub = v.subjects[0];
+    if (!sub) return undefined;
+    const match = (f: FindingItem) =>
+      f.rule === v.rule && f.subject === sub.subject && (sub.kind === "pin" ? f.pin === sub.pin : f.kind === sub.kind);
+    return this.doc.scopedFindings.find(match) ?? this.findings.find(match);
+  }
 
+  private sheetHints() {
+    return this.doc.sheets.map((s) => ({ id: s.id, name: s.name }));
+  }
+
+  // resolveSheetForFinding is the sheet a Violations click or a verdict locate should open:
+  // wire badges first, then the same net/channel heuristics when EDIF carries no sheets.
+  private resolveSheetForFinding(f: FindingItem, explicit?: string): string {
+    if (explicit) return explicit;
+    if (f.sheets.length > 0) return sheetToOpen(f.sheets.map((b) => b.id), this.currentSheet);
+    if (f.kind === "net") return sheetIdForNet(f.subject, this.sheetHints());
+    if (f.kind === "component") {
+      const low = f.subject.toLowerCase();
+      const hit = this.doc.sheets.find((s) => (s.name || s.id).toLowerCase().includes(low));
+      return hit?.id ?? "";
+    }
+    return "";
+  }
+
+  // navigateToFindingItem is what a Violations .check-locate click does (without toggle-off).
+  private async navigateToFindingItem(f: FindingItem, explicitSheet?: string): Promise<void> {
+    if (this.mode === "native") await this.setMode("svg");
+    const faithful = this.currentLayout === "" || this.currentLayout === "faithful";
+    const note =
+      faithful && f.locateReason !== LocateReason.UNSPECIFIED ? reasonMessage(f.locateReason, f.kind, f.subject) : "";
+    this.views.findings.setFindingLocateNote(note);
+    const target = this.resolveSheetForFinding(f, explicitSheet);
+    if (target && target !== this.currentSheet) await this.showSheet(target);
+    this.selectedSubject = f.subject;
+    this.selectedNetId = f.netId ?? "";
+    this.pushFindings();
+    await this.reapplyFocus(f.subject, f.netId ?? "");
+  }
 
   // refreshReport fetches how the current auto-layout maps each component (device class,
   // glyph/box/provided/unresolved) under the active symbol source, and pushes it to the panel.
@@ -702,7 +747,12 @@ export class ViewerPresenter {
     this.currentLayout = loc.layout; // empty -> server picks the effective layout, as on a fresh open
     this.faithfulSymbols = loc.symbols;
     this.flattened = loc.flatten;
-    await this.openFile(loc.mount, loc.path, loc.sheet, true);
+    const sameFile = loc.mount === this.doc.mount && loc.path === this.doc.path && !loc.isDir;
+    if (!sameFile) {
+      await this.openFile(loc.mount, loc.path, loc.sheet, true);
+    } else if (loc.sheet && loc.sheet !== this.currentSheet) {
+      await this.showSheet(loc.sheet);
+    }
     // A verdict id in the link RUNS THE CHECKS before resolving it, a deliberate exception to
     // checks being on-demand (WS9). A cold load has an empty verdict cache, so without this a
     // pasted link lands on "Press Run checks" and resolves nothing
@@ -947,6 +997,7 @@ export class ViewerPresenter {
   async checkScoped(rules: string[], subjects: SubjectRef[]): Promise<CheckDesignResponse> {
     const resp = await this.checks.checkDesign({ snapshot: await this.checked(), rules, subjects });
     this.doc.keepScoped(resp.verdicts ?? []);
+    this.doc.keepScopedFindings((resp.findings ?? []).map((f) => this.doc.findingItem(f)));
     return resp;
   }
 
@@ -1048,7 +1099,7 @@ export class ViewerPresenter {
     }
     const state: FindingsState = {
       findings: this.findings,
-      verdicts: this.verdictList(),
+      verdicts: this.doc.panelVerdictList(),
       focusedVerdict: this.focusedVerdict,
       selected: this.selectedSubject,
       ruleCount: this.doc.selectedRules.length,
@@ -1762,22 +1813,16 @@ export class ViewerPresenter {
       await this.setHighlights(subjectsToSpecs(this.field())); // back to the field, or to nothing
       return null;
     }
-    // A subject may be clicked from the expectations panel (a full-run finding) even when its rule
-    // is deselected in the checks panel, so fall back to the full-run findings for the spec.
     const focused = this.findFinding(subject, netId);
-    // A bus finding whose bus has no drawn wire (WS7-042c) highlights nothing; surface the
-    // server-authoritative reason instead of silently doing nothing, gated on a faithful layout
-    // (an auto-layout draws every entity, so the reason does not apply). Mirrors locateEntity.
-    const faithful = this.currentLayout === "" || this.currentLayout === "faithful";
-    const note = focused && faithful && focused.locateReason !== LocateReason.UNSPECIFIED ? reasonMessage(focused.locateReason, focused.kind, subject) : "";
-    this.views.findings.setFindingLocateNote(note);
-    const target = sheet ?? sheetToOpen(focused?.sheets.map((b) => b.id) ?? [], this.currentSheet);
-    if (target && target !== this.currentSheet) await this.showSheet(target);
-    // Focus stacks two layers (WS9-017). The other findings keep their outline, and the focused
-    // subject frames on top, a component/pin as a translucent bounding rect and a net as a
-    // translucent PATH highlighter along its wire (WS9-040). focusStack drops the focused NET from
-    // the base layer so the opaque underlay does not show through its highlighter.
-    await this.reapplyFocus(subject, netId);
+    if (focused) {
+      await this.navigateToFindingItem(focused, sheet);
+    } else if (sheet && sheet !== this.currentSheet) {
+      // Badge on a subject whose rule is not in the active findings list (WS9-024).
+      await this.showSheet(sheet);
+      await this.reapplyFocus(subject, netId);
+    } else {
+      await this.reapplyFocus(subject, netId);
+    }
     return focused ? selectionFromFinding(focused) : null;
   }
 

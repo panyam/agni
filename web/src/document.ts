@@ -82,6 +82,9 @@ export class DocumentStore {
   // holds whole rules, because a rule answered for one net is not that rule's answer for the design,
   // and folding it in would show the checks panel a subset as the whole. Dropped with the run.
   scoped: CheckDesignResponse["verdicts"] = [];
+  // scopedFindings holds findings from scoped runs (a verdict link, Properties), for sheet badges
+  // and locate; kept apart from the run's findings for the same reason as scoped verdicts.
+  scopedFindings: FindingItem[] = [];
 
   // keepScoped adds a scoped answer's verdicts, each id once, the newest answer winning.
   keepScoped(vs: CheckDesignResponse["verdicts"]): void {
@@ -89,11 +92,18 @@ export class DocumentStore {
     this.scoped = [...this.scoped.filter((v) => !ids.has(v.id)), ...vs];
   }
 
+  keepScopedFindings(fs: FindingItem[]): void {
+    const key = (f: FindingItem) => `${f.rule}\0${f.kind}\0${f.subject}\0${f.netId}`;
+    const drop = new Set(fs.map(key));
+    this.scopedFindings = [...this.scopedFindings.filter((f) => !drop.has(key(f))), ...fs];
+  }
+
   // dropRun forgets every answer about the design: the whole run and the scoped ones.
   dropRun(): void {
     this.run = null;
     this.runError = null;
     this.scoped = [];
+    this.scopedFindings = [];
   }
 
   // findVerdict looks one up across every rule's cached considered set, then the scoped answers.
@@ -166,6 +176,16 @@ export class DocumentStore {
   verdictList(): VerdictItem[] {
     const vs = this.run?.resp.verdicts ?? [];
     return this.selectedRules.flatMap((name) => vs.filter((v) => v.rule === name).map(verdictItem));
+  }
+
+  // panelVerdictList is what the Checks panel shows: the run's considered set plus scoped answers
+  // for selected rules, so a report link that resolved via checkScoped still has a row to select.
+  panelVerdictList(): VerdictItem[] {
+    const base = this.verdictList();
+    const seen = new Set(base.map((v) => v.id));
+    // Scoped answers are explicit (a link or a selection), not a partial catalog run.
+    const extras = this.scoped.map(verdictItem).filter((v) => !seen.has(v.id));
+    return [...base, ...extras];
   }
 
   // runMissing asks CheckDesign for the selected rules the run lacks and folds the answer into it.

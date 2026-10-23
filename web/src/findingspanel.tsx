@@ -483,7 +483,19 @@ function VerdictTable(props: {
             >
               <td class="verdict-outcome">{v.outcome}</td>
               <td class="verdict-rule">{v.rule}</td>
-              <td class="verdict-subject">{verdictSubjectLabel(v)}</td>
+              <td class="verdict-subject">
+                <button
+                  type="button"
+                  class="check-locate"
+                  title={`locate ${verdictSubjectLabel(v)}`}
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    props.onSelectVerdict(v.id);
+                  }}
+                >
+                  {verdictSubjectLabel(v)}
+                </button>
+              </td>
               <td class="verdict-proof">{v.statement || v.reason}</td>
             </tr>
           )}
