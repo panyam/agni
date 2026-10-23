@@ -129,7 +129,7 @@ func EntityQueries() []EntityQuery {
 			Teaches: "negation over a library member: not net.has_test_point keeps the nets nothing probes",
 		},
 		{
-			Kind:    "area",
+			Kind:  "area",
 			Label: "What parts are in it, by class?",
 			// ?part is what the aggregates reduce, filtered to the area, since an area of one part binds
 			// ?ref as a constant and a constant cannot be counted.
