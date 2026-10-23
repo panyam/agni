@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.8] - 2026-10-22
+
+Shift-drag selects an area of a sheet and asks about everything in it (PR 1171). Another page, a
+saved report or an MCP answer moves an open viewer without reloading it (PRs 1158, 1168). Query rows
+show how they were derived (PR 1164), and a design declares a pull-up reach per net (PR 1163).  The
+full write-up is [RELEASES/v0.3.8.md](RELEASES/v0.3.8.md).
+
 ## [0.3.7] - 2026-10-22
 
 Every page of a hierarchical EDIF export gets its own sheet id and name, and the viewer's Sheets dock
