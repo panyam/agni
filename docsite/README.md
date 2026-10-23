@@ -25,7 +25,7 @@ having only that half is what let a page ship reachable from the sidebar and abs
 **The header check exempts a section that has no top-level dropdown of its own**, which today means
 `learn/` and `build/`. It is derived from the file rather than a list in the test, so a section is
 required to be complete only when its own top-level entry carries `children`. `learn/` lists two of
-its fifteen pages on purpose, since twelve chapters would swamp the menu. Give it a top-level
+its fifteen pages on purpose, since thirteen chapters would swamp the menu. Give it a top-level
 dropdown and every chapter becomes required with no edit to the test. The gap that buys is a section
 itemised only as a group heading inside another dropdown, `build/` being the live case, whose seven pages
 are all listed today while nothing would notice an eighth going missing. The index check has no

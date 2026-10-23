@@ -1,0 +1,11 @@
+#agni-run e43b6c90da3a7ca6
+r   provenance
+R1  probe-coverage.edn ; probe-coverage.edn:FB ; probe-coverage.edn:VOUT
+
+1 result(s)
+#agni-step
+u      count(r)  list(r)           provenance
+GND    3         ["C1","C2","J1"]  probe-coverage.edn ; probe-coverage.edn:FB ; probe-coverage.edn:GND ; probe-coverage.edn:VIN
+SENSE  1         ["R2"]            probe-coverage.edn ; probe-coverage.edn:SENSE ; probe-coverage.edn:VOUT
+
+2 result(s)

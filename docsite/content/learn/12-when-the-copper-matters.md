@@ -91,10 +91,12 @@ That is where everything before this chapter stops, and it is why the tool has a
 
 ## The end of the course
 
-Twelve chapters, and the shape they make is worth stating once.
+Twelve chapters climb the ladder, and the shape they make is worth stating once.
 
 You started able to name components. You can now look at an unfamiliar board, say what most of its parts are for, predict how each would fail and what the bench would see, check a part against its datasheet and cite the row, read its power tree and say what has to come up first, and know which questions the copper answers that the schematic cannot.
 
 More usefully, you can tell **what a report did not look at**. That has been the through-line since chapter 5's pass on a broken net, through the `not-considered` verdicts, to [chapter 10's](../10-interfaces-and-what-they-require/#what-a-satisfied-requirement-says-ee6) satisfied requirement, which used to produce no output at all. A tool that tells you what it checked is worth more than one that tells you it found nothing, and knowing the difference is most of what separates using a checker from trusting one.
 
 Where to go next depends on what you want. The [tutorials](../../tutorials/) take one board from a first read to a checklist gating CI, which is the tool-shaped version of this course. The [rules catalog](../../reference/rules/) now reads as a list of things you understand rather than a glossary. And [building a check rule](../../build/check-rule/) is the other side of it, where the reasoning in these chapters gets written down as something a machine runs.
+
+[Chapter 13](../13-design-for-test/) comes after the climb. It treats the built board as something a test engineer has to measure, and it reads best once the rest of the course is familiar.

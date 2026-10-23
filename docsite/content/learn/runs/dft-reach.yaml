@@ -1,0 +1,7 @@
+# Chapter 13's opening. GND counts no test point, and the second step shows a connector pin sitting on
+# it anyway, which is the access net.has_test_point cannot see.
+fixture: examples/common/designs
+from_root: true
+steps:
+  - script: agni query examples/common/designs/probe-coverage.edn 'net.test_point_count(?n, ?c) => ?n, ?c order by ?c, ?n'
+  - script: agni query examples/common/designs/probe-coverage.edn 'component.net(?r, "GND") => ?r'

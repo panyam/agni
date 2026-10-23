@@ -23,7 +23,7 @@ Now ask what is actually on it:
 
 {{ agniRun "content/learn/runs/board-classes.yaml" }}
 
-Twenty-two rows covering **nineteen parts**, and only nine distinct kinds: capacitor, resistor, diode, tvs, connector, test point, ic, regulator, clock. A real board has hundreds of parts and roughly the same vocabulary, plus inductors, ferrites, transistors and a fuse. The part count grows; the number of kinds barely moves.
+Twenty-two rows covering **nineteen parts**, and only nine distinct kinds: capacitor, resistor, diode, tvs, connector, [test point](../13-design-for-test/), ic, regulator, clock. A real board has hundreds of parts and roughly the same vocabulary, plus inductors, ferrites, transistors and a fuse. The part count grows; the number of kinds barely moves.
 
 Three details in that output are worth noticing now.
 
