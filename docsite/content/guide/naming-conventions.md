@@ -184,7 +184,7 @@ lexicon:
 A board that plugs into another one has connectors facing nothing a user touches, and those are not a
 class. Whether a connector is the module socket or the cable entry depends on the product rather than
 the part, so it is declared per design in the `components` section of its
-[design intent](design-intent.md), which the exposure rules read. A lexicon naming the
+[design intent](../design-intent/), which the exposure rules read. A lexicon naming the
 `internal_connector` class it replaced fails to load and says where the declaration goes.
 
 A prefix is the leading run of letters of a ref-des, so `TH` matches `TH12` and a part whose

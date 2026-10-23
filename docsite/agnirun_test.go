@@ -14,6 +14,7 @@ const spec = "content/tutorials/runs/coverage-rollup.yaml"
 // TestAgniRunCapturesAndCaches is the prototype's acceptance test. It runs, it commits the capture,
 // and a second call reuses it rather than re-running the engine.
 func TestAgniRunCapturesAndCaches(t *testing.T) {
+	keepCapture(t, spec+outputSuffix)
 	_ = os.Remove(spec + outputSuffix)
 	first := AgniRun(spec)
 	if !strings.Contains(first, "14 of 15 covered") {
@@ -44,6 +45,23 @@ func TestAgniRunCapturesAndCaches(t *testing.T) {
 	if got := AgniRun(spec); strings.Contains(got, "SENTINEL") {
 		t.Error("a stale stamp must regenerate rather than serve the old capture")
 	}
+}
+
+// keepCapture puts a tracked capture back as it was when the test ends, passing or failing. The
+// tests below delete and corrupt it to prove the cache, and a run that fails part way (the oracle
+// samples not fetched, say) used to leave it deleted, a change nobody made on purpose that the next
+// `git add` of the directory stages (agni issue 1167).
+func keepCapture(t *testing.T, path string) {
+	t.Helper()
+	orig, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatalf("the capture %s should be checked in: %v", path, err)
+	}
+	t.Cleanup(func() {
+		if err := os.WriteFile(path, orig, 0o644); err != nil {
+			t.Errorf("could not restore %s: %v", path, err)
+		}
+	})
 }
 
 // TestAgniRunIsolatesTheFixture guards a hazard that bit by hand. Rung 11 walks a reader through

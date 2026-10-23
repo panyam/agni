@@ -31,6 +31,17 @@ itemised only as a group heading inside another dropdown, `build/` being the liv
 are all listed today while nothing would notice an eighth going missing. The index check has no
 exemption, so such a page is still caught there.
 
+## Links between pages
+
+Write a link to another page as its URL relative to this one, the way the rest of the site does:
+`../evidence/` within a section and `../../build/extending/` across one, since `content/x/y.md` is
+served at `x/y/`. A bare `](evidence.md)` is left as written and 404s. `TestBuiltSiteLinksResolve`
+(`links_test.go`) builds the site and fails on any link into it that names no page or file,
+naming the page it is on (agni issue 1169). It checks the BUILT pages rather than the markdown,
+because the builder rewrites some links and the nav templates make others, and it skips `demo/`
+(deployed beside the site by `docs.yml`) and `pagefind/` (written after the build). Fragments are
+not checked.
+
 ## Raw HTML and anchors
 
 **A blank line inside raw HTML SPLITS it, and the render breaks silently.** Content pages may embed

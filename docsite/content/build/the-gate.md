@@ -122,7 +122,7 @@ C24 wants "the raw unit is never COMPARED outside `core/param`", but no sweep ca
 from a display, so the two display sites are listed in the test and a new one is a deliberate
 addition. That addition is where a reviewer sees it.
 
-Red-check every one of them, per [evidence](evidence.md): break the thing it guards, watch it fail,
+Red-check every one of them, per [evidence](../evidence/): break the thing it guards, watch it fail,
 put it back.
 
 ## Generated captures are checked by REGENERATING them
