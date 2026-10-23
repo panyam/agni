@@ -43,6 +43,10 @@ const explanations: Record<string, string> = {
   ask:
     "Ask follows up on the selected part with a canned question, which opens as a new query tab. Its " +
     "cells click into the drawing the same way.",
+  "select an area":
+    "Shift-drag a rectangle around a block of the sheet, the largest part and what sits beside it. " +
+    "Properties describes the parts, pins and wires inside as one area, with the nets that cross its " +
+    "edge as its interface, and its Ask row binds every member at once (agni issue 904).",
   "save the report":
     "Run each checklist and save its report. The viewer asks ReviewService.RenderReviewReport for " +
     "the page, the same rpc 'agni review --format html' calls, so each saved file must match the CLI's " +

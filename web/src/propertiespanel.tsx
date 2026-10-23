@@ -39,7 +39,16 @@ function datasheetLine(d: Datasheet): string {
   }
 }
 
-function RefList(props: { refs: Ref[]; empty?: string; onFocus: (f: Focus) => void; onVerdict?: (id: string) => void; sheetId?: string }) {
+function RefList(props: {
+  refs: Ref[];
+  empty?: string;
+  onFocus: (f: Focus) => void;
+  onVerdict?: (id: string) => void;
+  sheetId?: string;
+  // within is the area the panel shows or sits inside, so a reference followed from it keeps the
+  // area as its parent (agni issue 904).
+  within?: Selection;
+}) {
   return (
     <Show when={props.refs.length > 0} fallback={<div class="pr-empty">{props.empty ?? "none"}</div>}>
       <ul class="pr-refs">
@@ -74,7 +83,7 @@ function RefList(props: { refs: Ref[]; empty?: string; onFocus: (f: Focus) => vo
                 }
               >
                 {(t) => (
-                  <button type="button" class="pr-ref-go" onClick={() => props.onFocus({ level: "entity", sel: t(), sheetId: props.sheetId })}>
+                  <button type="button" class="pr-ref-go" onClick={() => props.onFocus({ level: "entity", sel: t(), sheetId: props.sheetId, within: props.within })}>
                     {r.label}
                   </button>
                 )}
@@ -159,7 +168,7 @@ function PropertiesPanel(props: { state: () => PropertiesState; handlers: Proper
             <summary>
               {g.name} <span class="pr-count">({g.refs.length})</span>
             </summary>
-            <RefList refs={g.refs} empty={g.empty} onFocus={props.handlers.onFocus} onVerdict={props.handlers.onVerdict} sheetId={sheetId()} />
+            <RefList refs={g.refs} empty={g.empty} onFocus={props.handlers.onFocus} onVerdict={props.handlers.onVerdict} sheetId={sheetId()} within={s().within} />
           </details>
         )}
       </For>

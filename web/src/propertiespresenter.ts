@@ -175,6 +175,12 @@ export class PropertiesPresenter {
     return this.focus;
   }
 
+  // pinNets is a part's pins and the nets they land on, from the inventory this panel read, so an area
+  // can name every net it touches (agni issue 904). Empty until the inventory arrives.
+  pinNets(ref: string): { pin: string; net: string }[] {
+    return this.inventory?.pinsOf.get(ref) ?? [];
+  }
+
   // activeSheetId is the sheet on screen, as the sheet channel last said.
   activeSheetId(): string {
     return this.activeSheet;

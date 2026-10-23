@@ -875,3 +875,52 @@ describe("the Sheets dock on a hierarchical design", () => {
     });
   }, 90_000);
 });
+
+// agni issue 904: Shift-drag a rectangle over the gateway's U1 and U2, a regulator and the part on its
+// output, and Properties describes the two as an area whose interface is the six nets they share with
+// the rest of the board. Its Ask row answers for both at once, and Shift-clicking C1 adds it.
+describe("an area of a sheet", () => {
+  it("is selected with a Shift-drag, states its interface, asks once for the set, and grows with a Shift-click", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await page.waitForSelector('#svg-view [data-kind="component"][data-ref="U2"]', { timeout: 30_000 });
+      const box = await page.evaluate(() => {
+        let l = 1e9, t = 1e9, r = -1e9, b = -1e9;
+        for (const el of document.querySelectorAll('#svg-view [data-kind="component"][data-ref="U1"], #svg-view [data-kind="component"][data-ref="U2"]')) {
+          const x = el.getBoundingClientRect();
+          l = Math.min(l, x.left); t = Math.min(t, x.top); r = Math.max(r, x.right); b = Math.max(b, x.bottom);
+        }
+        return { l: l - 8, t: t - 8, r: r + 8, b: b + 8 };
+      });
+      await page.keyboard.down("Shift");
+      await page.mouse.move(box.l, box.t);
+      await page.mouse.down();
+      await page.mouse.move(box.r, box.b, { steps: 8 });
+      await page.mouse.up();
+      await page.keyboard.up("Shift");
+
+      const props = '[data-component="properties"]';
+      await page.waitForFunction((p) => document.querySelector(`${p} .pr-kind`)?.textContent === "area", props, { timeout: 30_000 });
+      const group = (name: string) =>
+        page.$$eval(`${props} details[data-group="${name}"] .pr-ref-go, ${props} details[data-group="${name}"] .pr-ref-label`, (els) => els.map((e) => e.textContent));
+      expect(await group("components")).toEqual(["U1", "U2"]);
+      expect(await group("boundary nets")).toEqual(["GND", "PMIC_CORE_3V3", "PMIC_EN", "PMIC_IO_1V8", "PMIC_MAIN_12V0", "PMIC_PG"]);
+      expect(await page.$$eval(`${props} .pr-crumb, ${props} .pr-crumb-current`, (els) => els.map((e) => e.textContent)).then((c) => c[c.length - 1])).toMatch(/^Area \(\d+\)$/);
+      expect(await page.locator(".area-band").count()).toBe(0);
+
+      await page.click('.pr-ask-go:has-text("What does this block connect to?")');
+      await page.waitForFunction(() => /^Area \(\d+\): What does this block connect to\?$/.test(document.querySelector(".query-tab.on .query-tab-go")?.textContent ?? ""), null, { timeout: 30_000 });
+      await page.waitForFunction(() => document.querySelectorAll(".query-row").length === 6, null, { timeout: 30_000 });
+
+      const c1 = await page.evaluate(() => {
+        const r = document.querySelector('#svg-view [data-kind="component"][data-ref="C1"]')!.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      });
+      await page.keyboard.down("Shift");
+      await page.mouse.click(c1.x, c1.y);
+      await page.keyboard.up("Shift");
+      await page.waitForFunction((p) => document.querySelectorAll(`${p} details[data-group="components"] .pr-ref-go`).length === 3, props, { timeout: 30_000 });
+      expect(await group("components")).toEqual(["C1", "U1", "U2"]);
+    });
+  }, 120_000);
+});

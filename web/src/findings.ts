@@ -502,8 +502,23 @@ export function findingsFor(findings: FindingItem[], selections: (Selection | nu
   if (wanted.length === 0) return [];
   return findings.filter((f) => {
     const sel = selectionFromFinding(f);
-    return sel !== null && wanted.some((w) => sameSelection(sel, w));
+    return sel !== null && wanted.some((w) => (w.kind === "area" ? inArea(sel, w) : sameSelection(sel, w)));
   });
+}
+
+// inArea reports whether a finding's subject is a member of an area (agni issue 904): one of its parts,
+// a pin of one of its parts or one of its loose pins, or a net drawn inside it.
+function inArea(sel: Selection, area: Selection): boolean {
+  switch (sel.kind) {
+    case "component":
+      return (area.refs ?? []).includes(sel.ref ?? "");
+    case "pin":
+      return (area.refs ?? []).includes(sel.ref ?? "") || (area.pins ?? []).includes(`${sel.ref}.${sel.pin}`);
+    case "net":
+      return (area.wires ?? []).includes(sel.net ?? "");
+    default:
+      return false;
+  }
 }
 
 // SeverityTally counts a projection by severity, because "3 findings" and "3 errors" are different

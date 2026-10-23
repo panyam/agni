@@ -24,7 +24,9 @@ import { labelFor, type Selection } from "./selection.js";
 export type Focus =
   | { level: "design" }
   | { level: "sheet"; sheetId: string }
-  | { level: "entity"; sel: Selection; sheetId?: string };
+  | { level: "entity"; sel: Selection; sheetId?: string; within?: Selection };
+// within is the area (agni issue 904) an entity was reached from, so its breadcrumb steps back out to
+// that area rather than to the sheet. An area itself is an entity focus whose selection is the area.
 
 // PIN_SEP joins a component and a pin designator into one map key. A designator can contain any
 // printable character, and NUL is the one no reader writes.
@@ -188,6 +190,8 @@ export interface PropertiesState {
   ask?: { sel: Selection; questions: EntityQueryItem[] };
   // sel is the selected entity, absent at the design and sheet levels.
   sel?: Selection;
+  // within is the area the selection sits in, so a reference followed from the panel stays inside it.
+  within?: Selection;
   // note explains a gap in what the panel can say, such as the inventory still loading.
   note?: string;
 }
@@ -231,7 +235,8 @@ export function propertiesFor(input: PropertiesInput): PropertiesState {
   const f = input.focus;
   if (f.level === "design") return { crumbs, ...designView(input) };
   if (f.level === "sheet") return { crumbs, ...sheetView(input, f.sheetId) };
-  return { crumbs, ...entityView(input, f.sel) };
+  const within = f.sel.kind === "area" ? f.sel : f.within;
+  return { crumbs, ...entityView(input, f.sel), within };
 }
 
 function sheetName(input: PropertiesInput, id: string | undefined): string {
@@ -244,8 +249,9 @@ function crumbsFor(input: PropertiesInput): Crumb[] {
   const sheetId = f.level === "sheet" ? f.sheetId : f.level === "entity" ? f.sheetId : undefined;
   if (sheetId) out.push({ label: sheetName(input, sheetId), focus: { level: "sheet", sheetId } });
   if (f.level !== "entity") return out;
+  if (f.within) out.push({ label: labelFor(f.within), focus: { level: "entity", sel: f.within, sheetId } });
   if (f.sel.kind === "pin") {
-    out.push({ label: f.sel.ref ?? "", focus: { level: "entity", sel: { kind: "component", ref: f.sel.ref }, sheetId } });
+    out.push({ label: f.sel.ref ?? "", focus: { level: "entity", sel: { kind: "component", ref: f.sel.ref }, sheetId, within: f.within } });
     out.push({ label: `pin ${f.sel.pin}`, focus: f });
   } else {
     out.push({ label: labelFor(f.sel), focus: f });
@@ -414,6 +420,8 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
   const inv = input.inventory;
   const loading = inv ? undefined : "Reading the design…";
   switch (sel.kind) {
+    case "area":
+      return { ...base, ...areaView(input, sel, findingsGroup) };
     case "component": {
       const c = inv?.components.get(sel.ref ?? "");
       const pins = inv?.pinsOf.get(sel.ref ?? "") ?? [];
@@ -499,6 +507,65 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
       };
     }
   }
+}
+
+// areaView is an area of a sheet (agni issue 904): its parts by class, its loose pins, the nets it
+// touches split into boundary and internal, its findings and its datasheet coverage.
+//
+// A net is never a member, since it may continue off the sheet. It is internal when every one of its
+// pins is in the area, through a member part or a member pin, and boundary otherwise, which is the
+// block's interface. A net wired through the area with none of its pins inside is boundary too.
+function areaView(input: PropertiesInput, sel: Selection, findingsGroup: Group): Pick<PropertiesState, "rows" | "groups" | "note" | "datasheet"> {
+  const inv = input.inventory;
+  const refs = [...(sel.refs ?? [])].sort(byDesignator);
+  const inside = new Set<string>(sel.pins ?? []);
+  for (const r of refs) for (const p of inv?.pinsOf.get(r) ?? []) inside.add(`${r}.${p.pin}`);
+  const boundary: Ref[] = [];
+  const internal: Ref[] = [];
+  for (const name of [...(sel.nets ?? [])].sort(byDesignator)) {
+    const conns = inv?.nets.get(name)?.connections ?? [];
+    const pins = new Set(conns.map((c) => `${c.componentRef}.${c.pinRef}`));
+    const held = [...pins].filter((p) => inside.has(p)).length;
+    const ref: Ref = { label: name, detail: `${held} of ${pins.size} pin${pins.size === 1 ? "" : "s"} inside`, target: { kind: "net", net: name } };
+    (pins.size > 0 && held === pins.size ? internal : boundary).push(ref);
+  }
+  const classOf = (r: string) => inv?.components.get(r)?.deviceClasses[0]?.class ?? "";
+  const byClass = new Map<string, number>();
+  for (const r of refs) byClass.set(classOf(r) || "unclassified", (byClass.get(classOf(r) || "unclassified") ?? 0) + 1);
+  const classes = [...byClass].sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0])).map(([c, n]) => `${n} ${c}`).join(", ");
+  const rows: Row[] = [
+    { label: "parts", value: classes ? `${refs.length}: ${classes}` : String(refs.length) },
+    { label: "nets", value: `${boundary.length} boundary, ${internal.length} internal` },
+  ];
+  if (input.datasheet) {
+    const seeded = refs.filter((r) => input.datasheet?.parts.some((p) => p.refDes === r && p.spec)).length;
+    rows.push({ label: "datasheets", value: input.datasheet.corpusConnected ? `${seeded} of ${refs.length} parts have a spec` : "no corpus connected" });
+  }
+  // An auto-layout drawing placed every part itself, so what sits near what on it says nothing about
+  // the design, and an area drawn on one is a set the reader chose rather than a block of the board.
+  const computed = reportLines(input.report) !== null;
+  return {
+    rows,
+    groups: [
+      { name: "components", refs: refs.map((r) => ({ label: r, detail: classOf(r), target: { kind: "component", ref: r } })), empty: "none" },
+      {
+        name: "pins",
+        refs: (sel.pins ?? []).map((key) => {
+          const dot = key.lastIndexOf(".");
+          return { label: key, target: { kind: "pin", ref: key.slice(0, dot), pin: key.slice(dot + 1) } };
+        }),
+        empty: "none outside the parts above",
+      },
+      { name: "boundary nets", refs: boundary, empty: "none" },
+      { name: "internal nets", refs: internal, empty: "none" },
+      findingsGroup,
+    ],
+    note: !inv
+      ? "Reading the design…"
+      : computed
+        ? "This drawing was laid out by agni rather than drawn by the designer, so the parts near each other here are not a block of the design."
+        : undefined,
+  };
 }
 
 // pinRef is a component's pin as a reference: the designator, its functional name when the part

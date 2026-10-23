@@ -1154,6 +1154,16 @@ describe("query tabs", () => {
     expect(box(el).value).toBe("net.rail(?n) => ?n");
   });
 
+  // agni issue 904: an area's question binds every member at once, so it is asked once.
+  it("binds an area's question to the whole set, in a tab named for the area", () => {
+    const { el, panel, onRun } = mountPanel();
+    const q = { kind: "area", label: "What does this block connect to?", query: "pin.net(?ref, ?pin, ?net) => ?net", teaches: "t", binds: ["ref"] };
+    panel.view.setEntityQueries([...PRESETS, q]);
+    panel.view.askAbout({ kind: "area", refs: ["C1", "U1"], pins: ["R9.2"], wires: [], nets: ["GND", "VIN"] }, q);
+    expect(front(el)).toBe("Area (3): What does this block connect to?");
+    expect(onRun).toHaveBeenLastCalledWith(q.query, { ref: ["C1", "U1"] }, STARTING_POINT_LIMIT, "q2");
+  });
+
   it("asks the kind's first question when none is named", () => {
     const { el, panel } = mountPanel();
     panel.view.setEntityQueries(PRESETS);

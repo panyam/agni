@@ -762,6 +762,9 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")
 	values := map[string]string{"ref": "U1", "pin": "2", "net": "PMIC_CORE_3V3", "bus": "DATA"}
 	for _, e := range resp.GetEntityQueries() {
+		if e.GetKind() == "area" {
+			continue // bound to sets, which TestAreaQuestionsAnswerForTheWholeSet asks
+		}
 		if len(e.GetBinds()) == 0 {
 			t.Errorf("preset for %q binds nothing, so every click asks the same question", e.GetKind())
 		}
@@ -1062,5 +1065,53 @@ func TestACancelledQueryStopsAsCancelled(t *testing.T) {
 	}
 	if _, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: "net.reaches(?a, ?b) => ?a, ?b"}); err != nil {
 		t.Errorf("the same query with a live context failed, so the cancelled run proves nothing: %v", err)
+	}
+}
+
+// agni issue 904: an area's questions bind every member at once and answer in one evaluation. On the
+// gateway U1 with its two capacitors reaches five nets, each with pins outside the three, which is
+// the block's interface.
+func TestAreaQuestionsAnswerForTheWholeSet(t *testing.T) {
+	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project")}, nil, nil)
+	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")
+	list := func(vals ...string) *webapi.QueryValue {
+		l := &webapi.QueryValueList{}
+		for _, v := range vals {
+			l.Values = append(l.Values, &webapi.QueryValue{Kind: &webapi.QueryValue_Text{Text: v}})
+		}
+		return &webapi.QueryValue{Kind: &webapi.QueryValue_List{List: l}}
+	}
+	values := map[string]*webapi.QueryValue{"ref": list("U1", "C1", "C2"), "net": list("PMIC_EN", "PMIC_CORE_3V3")}
+	answers := map[string]string{}
+	n := 0
+	for _, e := range query.EntityQueries() {
+		if e.Kind != "area" {
+			continue
+		}
+		n++
+		bind := map[string]*webapi.QueryValue{}
+		for _, v := range e.Binds {
+			bind[v] = values[v]
+		}
+		got, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: e.Query, Bindings: bind})
+		if err != nil {
+			t.Fatalf("%q: %v\n  query: %s", e.Label, err, e.Query)
+		}
+		if len(got.GetRows()) == 0 {
+			t.Errorf("%q answered no rows over U1, C1 and C2", e.Label)
+		}
+		answers[e.Label] = rowCells(got)
+	}
+	if n < 2 {
+		t.Fatalf("%d area questions served, want at least 2", n)
+	}
+	boundary := answers["What does this block connect to?"]
+	for _, net := range []string{"GND", "PMIC_CORE_3V3", "PMIC_EN", "PMIC_MAIN_12V0", "PMIC_PG"} {
+		if !strings.Contains(boundary, net) {
+			t.Errorf("the boundary answer lacks %s: %s", net, boundary)
+		}
+	}
+	if !strings.Contains(answers["What parts are in it, by class?"], `["C1","C2"]`) {
+		t.Errorf("the class answer should list both capacitors together: %s", answers["What parts are in it, by class?"])
 	}
 }

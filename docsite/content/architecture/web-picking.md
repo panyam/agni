@@ -84,6 +84,37 @@ with no spec for this MPN, and the spec itself each read differently, because an
 an absent answer must not look alike. `GetComponentParamsResponse.corpus_connected` is what tells the
 first from the third.
 
+### Selecting an area
+
+**A Shift-drag selects every part, pin and wire lying wholly inside a rectangle on the sheet on screen,
+and a Shift-click adds an entity or takes it out** (agni issue 904). A plain drag still pans and a
+plain click still picks one entity. The set is read off the rendered document's entity keys
+(`membersIn` in `web/src/area.ts`), measured with each element's client rectangle, so forming it asks
+the server nothing. A part drawn as several shapes is inside only when every shape is, and a pin of
+a part that is not wholly inside is a member on its own. A wire is identified by its net, since the
+renderer keys a wire with nothing finer.
+
+**An area is a `Selection` of kind `area`**, carrying its parts (`refs`), its loose pins (`pins`), the
+nets with a wire inside it (`wires`) and every net it touches (`nets`). So it goes wherever a
+selection goes: Properties describes it, the drawing lights its members, the selection bar names it,
+and the breadcrumb reads `Design › Sheet › Area (N)`. A member followed from the area keeps the area
+as its parent crumb (`Focus.within`), so the Area crumb steps back out.
+
+**A net is classified, never contained**, because it may continue off the sheet. It is internal when
+every one of its pins is in the area, through a member part or a member pin, and on the boundary
+otherwise. The boundary nets are the block's interface. A net only wired through the area, with none
+of its pins inside, is boundary too.
+
+**An area's Ask rows bind the whole set at once**, `?ref` to its parts and `?net` to its nets, so a
+question is evaluated once and an aggregate reduces across the area. The questions live in
+`core/query/entity.go` under kind `area`, like every other kind's. Two engine behaviours shaped them.
+A variable bound to a single value is substituted as a constant, so a question never aggregates a
+bound variable (the class question counts a `?part` filtered to `?ref`). And a bound variable is
+projected only for a set, where naming which value answered is the question.
+
+On a drawing agni laid out itself, nearness says nothing about the design, so Properties says so when
+an area is selected on one.
+
 ### Walking from an answer to the next question
 
 A result cell is the second way a reader names an entity. The server types each answer column with

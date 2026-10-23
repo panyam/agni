@@ -5,6 +5,7 @@
 // only calls setSvg / show / hide.
 import { wheelZoomFactor, zoomAbout, panBy } from "@agni/web-shared/panzoom.js";
 import { pickAt, type Selection } from "./selection.js";
+import { rectOf, type ClientRect } from "./area.js";
 
 // CLICK_SLOP_PX is how far the cursor may travel between press and release and still count as a
 // click rather than a pan.
@@ -40,6 +41,14 @@ export class SvgView {
   // onPickEmpty fires when a click lands on nothing keyed (the paper, a label, the frame), which
   // names the sheet itself rather than an entity on it (agni issue 902).
   onPickEmpty: (() => void) | null = null;
+  // onArea fires when the reader Shift-drags a rectangle over the drawing, with the rectangle in client
+  // coordinates, and onToggle when they Shift-click an entity, to add it to the area or take it out
+  // (agni issue 904). A plain drag still pans and a plain click still picks.
+  onArea: ((r: ClientRect) => void) | null = null;
+  onToggle: ((sel: Selection) => void) | null = null;
+  // band is the rectangle drawn while a Shift-drag is under way, in the host's own space so it does not
+  // pan or zoom with the drawing.
+  private band: HTMLDivElement | null = null;
 
   constructor(private readonly host: HTMLElement) {
     this.layer = document.createElement("div");
@@ -205,8 +214,13 @@ export class SvgView {
     let downX = 0;
     let downY = 0;
     let moved = false;
+    // selecting is a press with Shift held, which draws an area rather than panning (agni issue 904).
+    let selecting = false;
     this.host.addEventListener("mousedown", (e) => {
       dragging = true;
+      selecting = e.shiftKey && (this.onArea !== null || this.onToggle !== null);
+      // A Shift-drag would otherwise select the page's text under the cursor.
+      if (selecting) e.preventDefault();
       lastX = e.clientX;
       lastY = e.clientY;
       downX = e.clientX;
@@ -216,6 +230,16 @@ export class SvgView {
     window.addEventListener("mouseup", (e) => {
       const wasDragging = dragging;
       dragging = false;
+      if (wasDragging && selecting) {
+        selecting = false;
+        this.clearBand();
+        if (moved) this.onArea?.(rectOf(downX, downY, e.clientX, e.clientY));
+        else {
+          const sel = pickAt(this.host.ownerDocument, e.clientX, e.clientY);
+          if (sel) this.onToggle?.(sel);
+        }
+        return;
+      }
       if (!wasDragging || moved || !this.onPick) return;
       const sel = pickAt(this.host.ownerDocument, e.clientX, e.clientY);
       if (sel) this.onPick(sel);
@@ -224,6 +248,10 @@ export class SvgView {
     window.addEventListener("mousemove", (e) => {
       if (!dragging) return;
       if (Math.abs(e.clientX - downX) > CLICK_SLOP_PX || Math.abs(e.clientY - downY) > CLICK_SLOP_PX) moved = true;
+      if (selecting) {
+        if (moved) this.drawBand(rectOf(downX, downY, e.clientX, e.clientY));
+        return;
+      }
       this.commitUserView(panBy(this.getView(), e.clientX - lastX, e.clientY - lastY));
       lastX = e.clientX;
       lastY = e.clientY;
@@ -239,6 +267,26 @@ export class SvgView {
       },
       { passive: false },
     );
+  }
+
+  // drawBand shows the rectangle a Shift-drag spans, positioned in the host's space.
+  private drawBand(r: ClientRect): void {
+    if (!this.band) {
+      this.band = document.createElement("div");
+      this.band.className = "area-band";
+      this.host.appendChild(this.band);
+    }
+    const h = this.host.getBoundingClientRect();
+    const s = this.band.style;
+    s.left = `${r.left - h.left}px`;
+    s.top = `${r.top - h.top}px`;
+    s.width = `${r.right - r.left}px`;
+    s.height = `${r.bottom - r.top}px`;
+  }
+
+  private clearBand(): void {
+    this.band?.remove();
+    this.band = null;
   }
 
   // commitUserView applies a view from a USER gesture, so it notifies onViewChange. setView does

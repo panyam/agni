@@ -19,7 +19,7 @@ package query
 // Binds is explicit rather than every field a selection carries, because one preset's input is
 // another's output. The pin preset answers ?net and the net preset is asked about one.
 type EntityQuery struct {
-	Kind    string // "pin" | "component" | "net" | "bus", matching a picked selection's kind
+	Kind    string // "pin" | "component" | "net" | "bus" | "area", matching a picked selection's kind
 	Label   string // the question as the Ask row words it, unique within its kind
 	Query   string
 	Binds   []string
@@ -107,6 +107,35 @@ func EntityQueries() []EntityQuery {
 			Query:   `bus(?bus, ?construct) => ?construct`,
 			Binds:   []string{"bus"},
 			Teaches: "a bus is recorded as the construct the reader saw (bus_alias, edif_array), not yet as its member nets",
+		},
+		// An AREA is a set of parts, pins and wires selected together on one sheet (agni issue 904).
+		// Its questions bind ?ref to every member part and ?net to every net in the area at once, so a
+		// question is asked once and an aggregate reduces across the whole set.
+		{
+			Kind: "area",
+			// A boundary net is one the area's parts reach but do not hold every pin of, which is the
+			// block's interface. Each binding is one member pin on the net, so count(?pin) is how many
+			// of the net's pins are inside.
+			Label:   "What does this block connect to?",
+			Query:   `pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?pins) => ?net, ?pins, count(?pin) having count(?pin) < ?pins`,
+			Binds:   []string{"ref"},
+			Teaches: "a set binding and having: ?ref holds every part in the area, and having keeps the nets whose pins are not all inside",
+		},
+		{
+			Kind:    "area",
+			Label:   "Which of its nets have no test point?",
+			Query:   `net.pin_count(?net, ?pins), not net.has_test_point(?net) => ?net, ?pins`,
+			Binds:   []string{"net"},
+			Teaches: "negation over a library member: not net.has_test_point keeps the nets nothing probes",
+		},
+		{
+			Kind:    "area",
+			Label: "What parts are in it, by class?",
+			// ?part is what the aggregates reduce, filtered to the area, since an area of one part binds
+			// ?ref as a constant and a constant cannot be counted.
+			Query:   `component.class(?part, ?class), ?part = ?ref => ?class, count(?part), list(?part)`,
+			Binds:   []string{"ref"},
+			Teaches: "aggregation across a bound set: count and list reduce over every part the area holds",
 		},
 	}
 }
