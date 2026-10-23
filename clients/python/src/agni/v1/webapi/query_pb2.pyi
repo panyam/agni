@@ -9,7 +9,7 @@ from typing import ClassVar as _ClassVar, Optional as _Optional, Union as _Union
 DESCRIPTOR: _descriptor.FileDescriptor
 
 class RunQueryRequest(_message.Message):
-    __slots__ = ("snapshot", "query", "work_budget", "bindings", "omit_locations", "limit")
+    __slots__ = ("snapshot", "query", "work_budget", "bindings", "omit_locations", "limit", "witnesses")
     class BindingsEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -23,29 +23,51 @@ class RunQueryRequest(_message.Message):
     BINDINGS_FIELD_NUMBER: _ClassVar[int]
     OMIT_LOCATIONS_FIELD_NUMBER: _ClassVar[int]
     LIMIT_FIELD_NUMBER: _ClassVar[int]
+    WITNESSES_FIELD_NUMBER: _ClassVar[int]
     snapshot: str
     query: str
     work_budget: int
     bindings: _containers.MessageMap[str, QueryValue]
     omit_locations: bool
     limit: int
-    def __init__(self, snapshot: _Optional[str] = ..., query: _Optional[str] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., omit_locations: _Optional[bool] = ..., limit: _Optional[int] = ...) -> None: ...
+    witnesses: bool
+    def __init__(self, snapshot: _Optional[str] = ..., query: _Optional[str] = ..., work_budget: _Optional[int] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ..., omit_locations: _Optional[bool] = ..., limit: _Optional[int] = ..., witnesses: _Optional[bool] = ...) -> None: ...
 
 class QueryRow(_message.Message):
-    __slots__ = ("cells", "cell_kinds", "cell_refs", "cell_entity", "cite_index", "cell_why")
+    __slots__ = ("cells", "cell_kinds", "cell_refs", "cell_entity", "cite_index", "cell_why", "witnesses")
     CELLS_FIELD_NUMBER: _ClassVar[int]
     CELL_KINDS_FIELD_NUMBER: _ClassVar[int]
     CELL_REFS_FIELD_NUMBER: _ClassVar[int]
     CELL_ENTITY_FIELD_NUMBER: _ClassVar[int]
     CITE_INDEX_FIELD_NUMBER: _ClassVar[int]
     CELL_WHY_FIELD_NUMBER: _ClassVar[int]
+    WITNESSES_FIELD_NUMBER: _ClassVar[int]
     cells: _containers.RepeatedScalarFieldContainer[str]
     cell_kinds: _containers.RepeatedScalarFieldContainer[str]
     cell_refs: _containers.RepeatedScalarFieldContainer[str]
     cell_entity: _containers.RepeatedScalarFieldContainer[int]
     cite_index: _containers.RepeatedScalarFieldContainer[int]
     cell_why: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cell_kinds: _Optional[_Iterable[str]] = ..., cell_refs: _Optional[_Iterable[str]] = ..., cell_entity: _Optional[_Iterable[int]] = ..., cite_index: _Optional[_Iterable[int]] = ..., cell_why: _Optional[_Iterable[str]] = ...) -> None: ...
+    witnesses: _containers.RepeatedCompositeFieldContainer[QueryWitness]
+    def __init__(self, cells: _Optional[_Iterable[str]] = ..., cell_kinds: _Optional[_Iterable[str]] = ..., cell_refs: _Optional[_Iterable[str]] = ..., cell_entity: _Optional[_Iterable[int]] = ..., cite_index: _Optional[_Iterable[int]] = ..., cell_why: _Optional[_Iterable[str]] = ..., witnesses: _Optional[_Iterable[_Union[QueryWitness, _Mapping]]] = ...) -> None: ...
+
+class QueryWitness(_message.Message):
+    __slots__ = ("relation", "values", "value_entity", "rule", "negated", "cite_index", "children")
+    RELATION_FIELD_NUMBER: _ClassVar[int]
+    VALUES_FIELD_NUMBER: _ClassVar[int]
+    VALUE_ENTITY_FIELD_NUMBER: _ClassVar[int]
+    RULE_FIELD_NUMBER: _ClassVar[int]
+    NEGATED_FIELD_NUMBER: _ClassVar[int]
+    CITE_INDEX_FIELD_NUMBER: _ClassVar[int]
+    CHILDREN_FIELD_NUMBER: _ClassVar[int]
+    relation: str
+    values: _containers.RepeatedScalarFieldContainer[str]
+    value_entity: _containers.RepeatedScalarFieldContainer[int]
+    rule: str
+    negated: bool
+    cite_index: _containers.RepeatedScalarFieldContainer[int]
+    children: _containers.RepeatedCompositeFieldContainer[QueryWitness]
+    def __init__(self, relation: _Optional[str] = ..., values: _Optional[_Iterable[str]] = ..., value_entity: _Optional[_Iterable[int]] = ..., rule: _Optional[str] = ..., negated: _Optional[bool] = ..., cite_index: _Optional[_Iterable[int]] = ..., children: _Optional[_Iterable[_Union[QueryWitness, _Mapping]]] = ...) -> None: ...
 
 class AnswerEntity(_message.Message):
     __slots__ = ("kind", "ref", "pin", "sheet_ids", "reason")
@@ -240,16 +262,18 @@ class NamedQuery(_message.Message):
     def __init__(self, name: _Optional[str] = ..., query: _Optional[str] = ..., description: _Optional[str] = ..., bindings: _Optional[_Mapping[str, QueryValue]] = ...) -> None: ...
 
 class RunQueriesRequest(_message.Message):
-    __slots__ = ("snapshot", "set", "work_budget", "omit_locations")
+    __slots__ = ("snapshot", "set", "work_budget", "omit_locations", "witnesses")
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     SET_FIELD_NUMBER: _ClassVar[int]
     WORK_BUDGET_FIELD_NUMBER: _ClassVar[int]
     OMIT_LOCATIONS_FIELD_NUMBER: _ClassVar[int]
+    WITNESSES_FIELD_NUMBER: _ClassVar[int]
     snapshot: str
     set: QuerySet
     work_budget: int
     omit_locations: bool
-    def __init__(self, snapshot: _Optional[str] = ..., set: _Optional[_Union[QuerySet, _Mapping]] = ..., work_budget: _Optional[int] = ..., omit_locations: _Optional[bool] = ...) -> None: ...
+    witnesses: bool
+    def __init__(self, snapshot: _Optional[str] = ..., set: _Optional[_Union[QuerySet, _Mapping]] = ..., work_budget: _Optional[int] = ..., omit_locations: _Optional[bool] = ..., witnesses: _Optional[bool] = ...) -> None: ...
 
 class RunQueriesResponse(_message.Message):
     __slots__ = ("title", "preamble", "source", "results")

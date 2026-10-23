@@ -386,6 +386,15 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		r, err := c.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snapOn(c), Query: query}))
 		return msgOf(r, err)
 	})
+	// The viewer asks for witnesses when a row is expanded (agni issue 794), so both hosts derive and
+	// locate them alike.
+	witnessed := ask("RunQuery witnesses", func(c parityClients) (proto.Message, error) {
+		r, err := c.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snapOn(c), Query: query, Witnesses: true}))
+		return msgOf(r, err)
+	}).(*webapi.RunQueryResponse)
+	if rows := witnessed.GetRows(); len(rows) == 0 || len(rows[0].GetWitnesses()) == 0 {
+		t.Fatal("RunQuery witnesses: no witnessed row, so two answers without witnesses would compare equal")
+	}
 	// A project's query sets are read off its queries/ directory by whichever host serves the page
 	// (agni issue 745). A fixture carrying project config keeps sets, so both listing none is a failure.
 	sets := ask("ListQuerySets", func(c parityClients) (proto.Message, error) {

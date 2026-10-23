@@ -1555,6 +1555,52 @@ describe("query sets", () => {
   });
 });
 
+// agni issue 794: opening a row asks the tab's question again with witnesses, and only then.
+describe("explaining a query tab", () => {
+  it("asks the tab's last question again with witnesses, and lands the witnessed answer in that tab", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    await h.presenter.runQuery("component.net(?r, ?net) => ?r", { net: "GND" }, 50, "q1");
+    const first = h.runQuery.mock.lastCall![0] as unknown as { witnesses?: boolean };
+    expect(first.witnesses ?? false).toBe(false);
+    await h.presenter.explainQuery("q1");
+    expect(h.runQuery).toHaveBeenCalledTimes(2);
+    const again = h.runQuery.mock.lastCall![0] as unknown as { query: string; limit: number; witnesses: boolean; bindings: Record<string, unknown> };
+    expect(again).toMatchObject({ query: "component.net(?r, ?net) => ?r", limit: 50, witnesses: true });
+    expect(Object.keys(again.bindings)).toEqual(["net"]);
+    const last = h.query.setState.mock.lastCall!;
+    expect(last[1]).toBe("q1");
+    expect(last[0].witnessed).toBe(true);
+    expect(last[0].loading).toBe(false);
+  });
+
+  it("asks a set's tab through the set, with witnesses", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    const set = { title: "T", preamble: "p(?x) :- q(?x);", queries: [{ name: "a", query: "first(?x) => ?x" }, { name: "b", query: "bad(?x) => ?x" }] } as never;
+    await h.presenter.runQuerySet(set, ["q2", "q3"]);
+    h.runQueries.mockResolvedValueOnce({ results: [{ name: "a", result: { columns: ["q"], columnKinds: [""], rows: [{ cells: ["x"] }], total: 0 } }] } as never);
+    await h.presenter.explainQuery("q2");
+    const req = h.runQueries.mock.lastCall![0] as unknown as { witnesses: boolean; set: { preamble: string; queries: { name: string }[] } };
+    expect(req.witnesses).toBe(true);
+    expect(req.set.preamble).toBe("p(?x) :- q(?x);");
+    expect(req.set.queries.map((q) => q.name)).toEqual(["a"]);
+    const last = h.query.setState.mock.lastCall!;
+    expect(last[1]).toBe("q2");
+    expect(last[0].witnessed).toBe(true);
+  });
+
+  it("asks nothing for a tab that has asked nothing, or one closed", async () => {
+    const h = harness();
+    await h.presenter.openFile("m", "board.edn", "");
+    await h.presenter.explainQuery("q9");
+    await h.presenter.runQuery("first(?x) => ?x", {}, 0, "q1");
+    h.presenter.forgetQueryTab("q1");
+    await h.presenter.explainQuery("q1");
+    expect(h.runQuery).toHaveBeenCalledTimes(1);
+  });
+});
+
 // A query that would not parse says where (jaala v0.1.62's ParseError), and the panel shows the line
 // it stopped on with a caret under the place.
 describe("a query that would not parse", () => {

@@ -555,6 +555,31 @@ The members exist only inside that project. `agni query --relations house --desi
 them with their definitions, and [Adding a library member](../../build/library-member/#a-projects-own-library)
 covers the rules a project library follows.
 
+### See how a row was derived (witnesses)
+
+A row's provenance names the facts it rests on, and for a query over library members that is not the
+whole reason. `PMIC_MAIN_12V0` answers the query above because `house.pmic_rail` holds for it and
+`house.pmic_probe_point` does not, and neither is a fact the design states. `--witnesses` asks the
+engine to keep how each row was derived and prints it under the row:
+
+{{ agniRun "content/guide/runs/query-witnesses.yaml" }}
+
+Each line is one fact, and the lines under it are what proved it. A fact a member derived names the
+member's rule after `via`, with each of its body facts filled in, in the order the rule is written. A
+fact the design gave ends in its citation. A `not` that held reads `not ... (absent)`, because it
+proves that something is missing and so has nothing to cite. A predicate such as `str.prefix` gets a
+line, and a comparison such as `?a < ?b` does not, since the rule beside it already states it.
+
+Witnesses cost nothing unless asked for. The engine keeps a derivation per derived fact only on a
+witnessed query, and a query without the flag runs exactly as it did, at the same `work`. An aggregate
+row has none, because a count merges many derivations into one number.
+
+`text` and `html` print the tree under its row, `markdown` after the table under each row's number,
+and `json` as each row's `witnesses`, whose citations index the answer's `sources` as a row's do.
+`csv` refuses the flag, since a csv's first row has to be its header and every other row a row of the
+table. `--set` asks every query in the set for witnesses. Over the API it is
+`RunQueryRequest.witnesses` (and `RunQueriesRequest.witnesses`).
+
 ### Ask the same question about different things (bindings)
 
 A script that asks about one part, then another, should not build a new query string each time. Write
@@ -722,7 +747,11 @@ Only the config's lexicon half is used here, since a query runs no rules.
 
 The viewer has a **Query** panel that runs the same queries against the design you have open. Type a
 query, press Run (or ⌘/Ctrl+Enter), and the results appear as a table. Each row has a small toggle
-that expands its provenance, so the citations stay out of your way until you want them.
+that expands how the row holds, so the citations stay out of your way until you want them. The first
+row you open asks the question again with [witnesses](#see-how-a-row-was-derived-witnesses), and the
+row then shows the tree of rules and facts behind it, each net and part in it a link to the drawing as
+a result cell is, and a `not` that held marked **absent**. A query nobody opens a row of never pays for
+them.
 
 The panel runs the query on the server, over the open file, so you get the same answers as
 `agni query` without leaving the design. The **vocabulary** control in the top bar applies here too,

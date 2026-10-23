@@ -509,6 +509,17 @@
     .query-cite-row td { background: #f6f7f9; border-bottom: 1px solid #e3e5e8; }
     .query-cites { list-style: none; margin: 0; padding: 0; }
     .query-cites li { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #555; }
+    /* A row's witness tree (agni issue 794): one fact per line, its body facts a level in. */
+    .query-witnesses { list-style: none; margin: 0; padding: 0 0 0 14px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 11px; color: #333; }
+    .query-cite-row td > .query-witnesses { padding-left: 0; }
+    .query-witness { margin: 2px 0; }
+    .query-witness-rel { color: #555; }
+    .query-witness.negated > .query-witness-fact { color: #7a5b00; }
+    .query-witness-not { font-weight: 600; }
+    .query-witness-absent { margin-left: 6px; padding: 0 4px; border: 1px dashed #c9b26a; border-radius: 3px; background: #fdf7e3; color: #7a5b00; font-size: 10px; }
+    .query-witness-rule { display: block; color: #888; font-size: 10px; white-space: pre-wrap; }
+    .query-witness-cites { display: block; color: #888; font-size: 10px; }
+    .query-witness-note { color: #888; font-size: 11px; font-style: italic; }
     .query-count { color: #999; font-size: 11px; margin-top: 6px; }
     /* Slide-in helper drawer (examples + relations + reference). It overlays the panel from the left
        and is translated off-screen when closed; a left-edge handle opens it, clicking the textarea or

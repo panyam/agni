@@ -75,3 +75,5 @@
   /* The query-view page (TableHTML): the question above its answer. */
   pre.q { background: var(--panel); border: 1px solid var(--line); border-radius: 4px;
           padding: 10px 12px; font-size: 12px; overflow-x: auto; margin: 0 0 20px 0; }
+  /* A row's witness tree, under the row it explains (agni issue 794). */
+  tr.how pre { margin: 0 0 0 16px; font-size: 12px; color: var(--muted); white-space: pre; overflow-x: auto; }

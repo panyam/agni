@@ -26,6 +26,8 @@ import {
   type RelationEntryItem,
   relationTemplate,
   STARTING_POINT_LIMIT,
+  type WitnessItem,
+  type WitnessValue,
 } from "./query.js";
 import {
   type CheckedState,
@@ -138,6 +140,75 @@ function FindingsCount(props: {
 // back for that tab, reporting "no file open" as the result's error. Provenance expands per row so
 // many-citation rows do not widen the table. The relation catalog (WS9-037) renders as click-to-insert
 // chips grouped by kind.
+// WitnessTree draws how a row holds (agni issue 794): each fact on a line, the rule that derived a
+// derived fact under it, a leaf's citations, and each body fact one level in, in the rule's written
+// order. A value naming an entity is a locate button, as a cell naming it is. A negated leaf is a
+// `not` that held, an absence, and says so.
+function WitnessTree(props: {
+  items: WitnessItem[];
+  pick: (v: WitnessValue, sheet?: string) => void;
+  isCurrent: (v: WitnessValue) => boolean;
+  isCurrentSheet: (v: WitnessValue, sheet: string) => boolean;
+}) {
+  return (
+    <ul class="query-witnesses">
+      <For each={props.items}>
+        {(w) => (
+          <li class="query-witness" classList={{ negated: w.negated }}>
+            <span class="query-witness-fact">
+              <Show when={w.negated}>
+                <span class="query-witness-not">not </span>
+              </Show>
+              <span class="query-witness-rel">{w.relation}</span>(
+              <For each={w.values}>
+                {(v, vi) => (
+                  <>
+                    {vi() > 0 ? ", " : ""}
+                    {v.kind === "" || v.text === "" ? (
+                      <span class="query-witness-value">{v.text === "" ? "_" : v.text}</span>
+                    ) : (
+                      <span class="query-witness-value">
+                        <button
+                          type="button"
+                          class={`query-locate${props.isCurrent(v) ? " on" : ""}`}
+                          title={v.kind === "pin" ? `locate pin ${v.ref}.${v.text}` : `locate ${v.kind} ${v.text}`}
+                          onClick={() => props.pick(v)}
+                        >
+                          {v.text}
+                        </button>
+                        <SheetBadges
+                          items={v.sheets}
+                          label={(b) => b.name}
+                          title={(b) => `show sheet ${b.name}`}
+                          onSelect={(b) => props.pick(v, b.id)}
+                          active={(b) => props.isCurrentSheet(v, b.id)}
+                        />
+                      </span>
+                    )}
+                  </>
+                )}
+              </For>
+              )
+              <Show when={w.negated}>
+                <span class="query-witness-absent" title="a `not` that held: the design has no such fact">absent</span>
+              </Show>
+            </span>
+            <Show when={w.rule !== ""}>
+              <code class="query-witness-rule" title="the rule that derived this fact">{w.rule}</code>
+            </Show>
+            <Show when={w.cites.length > 0}>
+              <span class="query-witness-cites">{w.cites.join(" ; ")}</span>
+            </Show>
+            <Show when={w.children.length > 0}>
+              <WitnessTree items={w.children} pick={props.pick} isCurrent={props.isCurrent} isCurrentSheet={props.isCurrentSheet} />
+            </Show>
+          </li>
+        )}
+      </For>
+    </ul>
+  );
+}
+
 function QueryPanel(props: {
   results: () => Record<string, QueryResult>;
   strip: () => TabStrip;
@@ -158,6 +229,9 @@ function QueryPanel(props: {
   currentSheet: () => string;
   findings: () => FindingsState;
   onRun: (text: string, bindings: Bindings, limit: number, tab: string) => void;
+  // onExplain asks the tab's last question again with witnesses (agni issue 794), when a row is first
+  // opened. Absent, an opened row shows its citations alone.
+  onExplain?: (tab: string) => void;
   onSaveCSV?: (tab: string) => void;
   onInspect: (sel: Selection) => void;
   onLocate: (kind: string, subject: string, sheet: string | undefined, reason: LocateReason, pin?: string) => void;
@@ -373,11 +447,14 @@ function QueryPanel(props: {
   const [sortCol, setSortCol] = createSignal(-1);
   const [sortDir, setSortDir] = createSignal<"asc" | "desc">("asc");
   let taRef: HTMLTextAreaElement | undefined;
+  // Opening a row on an answer asked without witnesses asks again with them, once, so a query costs
+  // what it always did until a reader wants to know how a row holds (agni issue 794).
   const toggleCites = (i: number) => {
     const next = new Set<number>(expanded());
     if (next.has(i)) next.delete(i);
     else next.add(i);
     setExpanded(next);
+    if (next.has(i) && !state().witnessed && props.onExplain) props.onExplain(front().id);
   };
   // resetForRun clears the per-result view state (expanded provenance, sort) and closes the drawer.
   const resetForRun = () => {
@@ -983,11 +1060,11 @@ function QueryPanel(props: {
                     <>
                       <tr class="query-row">
                         <td class="query-cite-col">
-                          <Show when={row.cites.length > 0}>
+                          <Show when={row.cites.length > 0 || row.witnesses.length > 0 || props.onExplain}>
                             <button
                               type="button"
                               class={`query-cite-toggle${expanded().has(i) ? " open" : ""}`}
-                              title="provenance: the facts that produced this row"
+                              title="how this row holds: the facts and rules behind it"
                               onClick={() => toggleCites(i)}
                             >
                               {expanded().has(i) ? "▾" : "▸"}
@@ -1036,9 +1113,29 @@ function QueryPanel(props: {
                         <tr class="query-cite-row">
                           <td />
                           <td colspan={state().columns.length}>
-                            <ul class="query-cites">
-                              <For each={row.cites}>{(c) => <li>{c}</li>}</For>
-                            </ul>
+                            <Show
+                              when={row.witnesses.length > 0}
+                              fallback={
+                                <>
+                                  <ul class="query-cites">
+                                    <For each={row.cites}>{(c) => <li>{c}</li>}</For>
+                                  </ul>
+                                  <Show when={!state().witnessed && props.onExplain}>
+                                    <div class="query-witness-note" role="status">Working out how this row holds…</div>
+                                  </Show>
+                                  <Show when={state().witnessed}>
+                                    <div class="query-witness-note">An aggregate row merges many derivations, so it has no single one to show.</div>
+                                  </Show>
+                                </>
+                              }
+                            >
+                              <WitnessTree
+                                items={row.witnesses}
+                                pick={(v, sheet) => pickCell(v.kind, v.text, sheet, v.reason, v.ref)}
+                                isCurrent={(v) => isCurrent(v.kind, v.text)}
+                                isCurrentSheet={(v, sheet) => isCurrentSheet(v.kind, v.text, sheet)}
+                              />
+                            </Show>
                           </td>
                         </tr>
                       </Show>
@@ -1091,6 +1188,9 @@ export function queryPanelIsland(
   handlers: {
     // onRun asks one tab's question. limit is 0 for the whole answer.
     onRun: (text: string, bindings: Bindings, limit: number, tab: string) => void;
+    // onExplain asks one tab's last question again with witnesses, answered through view.setState
+    // for that tab (agni issue 794). Absent, an opened row shows its citations alone.
+    onExplain?: (tab: string) => void;
     // onSaveCSV saves the answer in the named tab as csv (agni issue 956). Absent, the panel offers
     // no save.
     onSaveCSV?: (tab: string) => void;
@@ -1176,6 +1276,7 @@ export function queryPanelIsland(
         currentSheet={currentSheet}
         findings={findings}
         onRun={handlers.onRun}
+        onExplain={handlers.onExplain}
         onSaveCSV={handlers.onSaveCSV}
         onLocate={onLocate}
         onInspect={onInspect}

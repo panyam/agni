@@ -53,7 +53,12 @@ type RunQueryRequest struct {
 	// writes its own `limit`, the smaller of the two applies.
 	// Zero leaves the query's own limit, if any, as it is. RunQueryResponse.total says how many rows
 	// the limit left out.
-	Limit         int32 `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
+	Limit int32 `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
+	// witnesses asks for how each row was derived (agni issue 794): QueryRow.witnesses then holds, per
+	// goal literal, the fact or rule that proved it. Off by default, because the engine keeps a
+	// derivation per derived tuple only when asked, and a query that wants answers alone pays nothing.
+	// An aggregate row has none, since a group merges many derivations.
+	Witnesses     bool `protobuf:"varint,11,opt,name=witnesses,proto3" json:"witnesses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -130,6 +135,13 @@ func (x *RunQueryRequest) GetLimit() int32 {
 	return 0
 }
 
+func (x *RunQueryRequest) GetWitnesses() bool {
+	if x != nil {
+		return x.Witnesses
+	}
+	return false
+}
+
 // QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns. Its provenance
 // (the citations of the base facts that produced it) and each entity cell's location are kept once
 // on the response and pointed to from here (agni issue 916), so a value shared by many rows is sent
@@ -172,7 +184,11 @@ type QueryRow struct {
 	CiteIndex []int32 `protobuf:"varint,8,rep,packed,name=cite_index,json=citeIndex,proto3" json:"cite_index,omitempty"`
 	// cell_why aligns with cells and says why an aggregate cell is absent, such as a sum over numbers in
 	// different units; "" for every other cell. Empty when no cell in the row has a reason.
-	CellWhy       []string `protobuf:"bytes,9,rep,name=cell_why,json=cellWhy,proto3" json:"cell_why,omitempty"`
+	CellWhy []string `protobuf:"bytes,9,rep,name=cell_why,json=cellWhy,proto3" json:"cell_why,omitempty"`
+	// witnesses say how the row holds, one per literal of the goal that proves something, in the order
+	// the goal is written (agni issue 794). Filled only when the request asked for witnesses, and empty
+	// for an aggregate row.
+	Witnesses     []*QueryWitness `protobuf:"bytes,10,rep,name=witnesses,proto3" json:"witnesses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -249,6 +265,121 @@ func (x *QueryRow) GetCellWhy() []string {
 	return nil
 }
 
+func (x *QueryRow) GetWitnesses() []*QueryWitness {
+	if x != nil {
+		return x.Witnesses
+	}
+	return nil
+}
+
+// QueryWitness is how one fact behind an answer row holds (agni issue 794). A leaf is a fact the
+// design's relations gave, with its citations. A derived node names the rule that derived it and
+// holds that rule's body witnesses as children, in the order the rule is written, so a row over a
+// library member reads as the member's definition with each body fact filled in. A `not` that held
+// is a negated leaf, which proves an absence and so has no citations and no children.
+type QueryWitness struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// relation is the relation proved, as the query or library names it.
+	Relation string `protobuf:"bytes,1,opt,name=relation,proto3" json:"relation,omitempty"`
+	// values are the proved tuple's values, spelled as cells are. On a negated leaf, an argument the
+	// negation left unbound is "".
+	Values []string `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty"`
+	// value_entity aligns with values as QueryRow.cell_entity aligns with cells: 1 + the index in
+	// RunQueryResponse.entities of the entity a value names, typed from the relation's signature, and 0
+	// for a scalar. Empty when no value names an entity.
+	ValueEntity []int32 `protobuf:"varint,3,rep,packed,name=value_entity,json=valueEntity,proto3" json:"value_entity,omitempty"`
+	// rule is the rule that derived a derived node, as written. Empty on a leaf.
+	Rule string `protobuf:"bytes,4,opt,name=rule,proto3" json:"rule,omitempty"`
+	// negated marks a `not` literal that held.
+	Negated bool `protobuf:"varint,5,opt,name=negated,proto3" json:"negated,omitempty"`
+	// cite_index is a leaf's citations as indices into RunQueryResponse.sources, the table the rows'
+	// own citations point into, so a source is sent once however many witnesses cite it.
+	CiteIndex []int32 `protobuf:"varint,6,rep,packed,name=cite_index,json=citeIndex,proto3" json:"cite_index,omitempty"`
+	// children are a derived node's body witnesses, in the rule's written order.
+	Children      []*QueryWitness `protobuf:"bytes,7,rep,name=children,proto3" json:"children,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *QueryWitness) Reset() {
+	*x = QueryWitness{}
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *QueryWitness) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*QueryWitness) ProtoMessage() {}
+
+func (x *QueryWitness) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use QueryWitness.ProtoReflect.Descriptor instead.
+func (*QueryWitness) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *QueryWitness) GetRelation() string {
+	if x != nil {
+		return x.Relation
+	}
+	return ""
+}
+
+func (x *QueryWitness) GetValues() []string {
+	if x != nil {
+		return x.Values
+	}
+	return nil
+}
+
+func (x *QueryWitness) GetValueEntity() []int32 {
+	if x != nil {
+		return x.ValueEntity
+	}
+	return nil
+}
+
+func (x *QueryWitness) GetRule() string {
+	if x != nil {
+		return x.Rule
+	}
+	return ""
+}
+
+func (x *QueryWitness) GetNegated() bool {
+	if x != nil {
+		return x.Negated
+	}
+	return false
+}
+
+func (x *QueryWitness) GetCiteIndex() []int32 {
+	if x != nil {
+		return x.CiteIndex
+	}
+	return nil
+}
+
+func (x *QueryWitness) GetChildren() []*QueryWitness {
+	if x != nil {
+		return x.Children
+	}
+	return nil
+}
+
 // AnswerEntity is one entity an answer's cells name, with where it is drawn, kept once on the
 // response however many rows name it (agni issue 916). kind is net, component or pin; ref is the
 // net or ref_des, and for a pin the component; pin is the pin's name, empty otherwise.
@@ -267,7 +398,7 @@ type AnswerEntity struct {
 
 func (x *AnswerEntity) Reset() {
 	*x = AnswerEntity{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -279,7 +410,7 @@ func (x *AnswerEntity) String() string {
 func (*AnswerEntity) ProtoMessage() {}
 
 func (x *AnswerEntity) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[2]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -292,7 +423,7 @@ func (x *AnswerEntity) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AnswerEntity.ProtoReflect.Descriptor instead.
 func (*AnswerEntity) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *AnswerEntity) GetKind() string {
@@ -380,7 +511,7 @@ type RunQueryResponse struct {
 
 func (x *RunQueryResponse) Reset() {
 	*x = RunQueryResponse{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -392,7 +523,7 @@ func (x *RunQueryResponse) String() string {
 func (*RunQueryResponse) ProtoMessage() {}
 
 func (x *RunQueryResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[3]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -405,7 +536,7 @@ func (x *RunQueryResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunQueryResponse.ProtoReflect.Descriptor instead.
 func (*RunQueryResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *RunQueryResponse) GetColumns() []string {
@@ -503,7 +634,7 @@ type QueryValue struct {
 
 func (x *QueryValue) Reset() {
 	*x = QueryValue{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -515,7 +646,7 @@ func (x *QueryValue) String() string {
 func (*QueryValue) ProtoMessage() {}
 
 func (x *QueryValue) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[4]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -528,7 +659,7 @@ func (x *QueryValue) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryValue.ProtoReflect.Descriptor instead.
 func (*QueryValue) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *QueryValue) GetKind() isQueryValue_Kind {
@@ -597,7 +728,7 @@ type QueryValueList struct {
 
 func (x *QueryValueList) Reset() {
 	*x = QueryValueList{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -609,7 +740,7 @@ func (x *QueryValueList) String() string {
 func (*QueryValueList) ProtoMessage() {}
 
 func (x *QueryValueList) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[5]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -622,7 +753,7 @@ func (x *QueryValueList) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QueryValueList.ProtoReflect.Descriptor instead.
 func (*QueryValueList) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *QueryValueList) GetValues() []*QueryValue {
@@ -652,7 +783,7 @@ type ListRelationsRequest struct {
 
 func (x *ListRelationsRequest) Reset() {
 	*x = ListRelationsRequest{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -664,7 +795,7 @@ func (x *ListRelationsRequest) String() string {
 func (*ListRelationsRequest) ProtoMessage() {}
 
 func (x *ListRelationsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[6]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -677,7 +808,7 @@ func (x *ListRelationsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRelationsRequest.ProtoReflect.Descriptor instead.
 func (*ListRelationsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *ListRelationsRequest) GetSnapshot() string {
@@ -727,7 +858,7 @@ type RelationInfo struct {
 
 func (x *RelationInfo) Reset() {
 	*x = RelationInfo{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -739,7 +870,7 @@ func (x *RelationInfo) String() string {
 func (*RelationInfo) ProtoMessage() {}
 
 func (x *RelationInfo) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[7]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -752,7 +883,7 @@ func (x *RelationInfo) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RelationInfo.ProtoReflect.Descriptor instead.
 func (*RelationInfo) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *RelationInfo) GetName() string {
@@ -837,7 +968,7 @@ type RelationEntry struct {
 
 func (x *RelationEntry) Reset() {
 	*x = RelationEntry{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -849,7 +980,7 @@ func (x *RelationEntry) String() string {
 func (*RelationEntry) ProtoMessage() {}
 
 func (x *RelationEntry) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[8]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -862,7 +993,7 @@ func (x *RelationEntry) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RelationEntry.ProtoReflect.Descriptor instead.
 func (*RelationEntry) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *RelationEntry) GetPath() string {
@@ -949,7 +1080,7 @@ type ExampleQuery struct {
 
 func (x *ExampleQuery) Reset() {
 	*x = ExampleQuery{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -961,7 +1092,7 @@ func (x *ExampleQuery) String() string {
 func (*ExampleQuery) ProtoMessage() {}
 
 func (x *ExampleQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[9]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -974,7 +1105,7 @@ func (x *ExampleQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ExampleQuery.ProtoReflect.Descriptor instead.
 func (*ExampleQuery) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{9}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *ExampleQuery) GetLabel() string {
@@ -1028,7 +1159,7 @@ type EntityQuery struct {
 
 func (x *EntityQuery) Reset() {
 	*x = EntityQuery{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1040,7 +1171,7 @@ func (x *EntityQuery) String() string {
 func (*EntityQuery) ProtoMessage() {}
 
 func (x *EntityQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[10]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1053,7 +1184,7 @@ func (x *EntityQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EntityQuery.ProtoReflect.Descriptor instead.
 func (*EntityQuery) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{10}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *EntityQuery) GetKind() string {
@@ -1114,7 +1245,7 @@ type SearchQuery struct {
 
 func (x *SearchQuery) Reset() {
 	*x = SearchQuery{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1126,7 +1257,7 @@ func (x *SearchQuery) String() string {
 func (*SearchQuery) ProtoMessage() {}
 
 func (x *SearchQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[11]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1139,7 +1270,7 @@ func (x *SearchQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchQuery.ProtoReflect.Descriptor instead.
 func (*SearchQuery) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{11}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SearchQuery) GetQuery() string {
@@ -1191,7 +1322,7 @@ type ListRelationsResponse struct {
 
 func (x *ListRelationsResponse) Reset() {
 	*x = ListRelationsResponse{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1203,7 +1334,7 @@ func (x *ListRelationsResponse) String() string {
 func (*ListRelationsResponse) ProtoMessage() {}
 
 func (x *ListRelationsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[12]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1216,7 +1347,7 @@ func (x *ListRelationsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRelationsResponse.ProtoReflect.Descriptor instead.
 func (*ListRelationsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{12}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *ListRelationsResponse) GetRelations() []*RelationInfo {
@@ -1270,7 +1401,7 @@ type QuerySet struct {
 
 func (x *QuerySet) Reset() {
 	*x = QuerySet{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1282,7 +1413,7 @@ func (x *QuerySet) String() string {
 func (*QuerySet) ProtoMessage() {}
 
 func (x *QuerySet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[13]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1295,7 +1426,7 @@ func (x *QuerySet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use QuerySet.ProtoReflect.Descriptor instead.
 func (*QuerySet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{13}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *QuerySet) GetTitle() string {
@@ -1336,7 +1467,7 @@ type NamedQuery struct {
 
 func (x *NamedQuery) Reset() {
 	*x = NamedQuery{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1348,7 +1479,7 @@ func (x *NamedQuery) String() string {
 func (*NamedQuery) ProtoMessage() {}
 
 func (x *NamedQuery) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[14]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1361,7 +1492,7 @@ func (x *NamedQuery) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamedQuery.ProtoReflect.Descriptor instead.
 func (*NamedQuery) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{14}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *NamedQuery) GetName() string {
@@ -1404,13 +1535,15 @@ type RunQueriesRequest struct {
 	WorkBudget int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	// omit_locations is RunQueryRequest's, for every query in the set.
 	OmitLocations bool `protobuf:"varint,7,opt,name=omit_locations,json=omitLocations,proto3" json:"omit_locations,omitempty"`
+	// witnesses is RunQueryRequest's, for every query in the set.
+	Witnesses     bool `protobuf:"varint,9,opt,name=witnesses,proto3" json:"witnesses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *RunQueriesRequest) Reset() {
 	*x = RunQueriesRequest{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1422,7 +1555,7 @@ func (x *RunQueriesRequest) String() string {
 func (*RunQueriesRequest) ProtoMessage() {}
 
 func (x *RunQueriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[15]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1435,7 +1568,7 @@ func (x *RunQueriesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunQueriesRequest.ProtoReflect.Descriptor instead.
 func (*RunQueriesRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{15}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *RunQueriesRequest) GetSnapshot() string {
@@ -1466,6 +1599,13 @@ func (x *RunQueriesRequest) GetOmitLocations() bool {
 	return false
 }
 
+func (x *RunQueriesRequest) GetWitnesses() bool {
+	if x != nil {
+		return x.Witnesses
+	}
+	return false
+}
+
 type RunQueriesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// title and preamble echo the request, so a saved response states the questions it answers.
@@ -1481,7 +1621,7 @@ type RunQueriesResponse struct {
 
 func (x *RunQueriesResponse) Reset() {
 	*x = RunQueriesResponse{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[16]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1493,7 +1633,7 @@ func (x *RunQueriesResponse) String() string {
 func (*RunQueriesResponse) ProtoMessage() {}
 
 func (x *RunQueriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[16]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1506,7 +1646,7 @@ func (x *RunQueriesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunQueriesResponse.ProtoReflect.Descriptor instead.
 func (*RunQueriesResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{16}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *RunQueriesResponse) GetTitle() string {
@@ -1556,7 +1696,7 @@ type NamedQueryResult struct {
 
 func (x *NamedQueryResult) Reset() {
 	*x = NamedQueryResult{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[17]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1568,7 +1708,7 @@ func (x *NamedQueryResult) String() string {
 func (*NamedQueryResult) ProtoMessage() {}
 
 func (x *NamedQueryResult) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[17]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1581,7 +1721,7 @@ func (x *NamedQueryResult) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamedQueryResult.ProtoReflect.Descriptor instead.
 func (*NamedQueryResult) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{17}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *NamedQueryResult) GetName() string {
@@ -1640,7 +1780,7 @@ type TextPosition struct {
 
 func (x *TextPosition) Reset() {
 	*x = TextPosition{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[18]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1652,7 +1792,7 @@ func (x *TextPosition) String() string {
 func (*TextPosition) ProtoMessage() {}
 
 func (x *TextPosition) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[18]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1665,7 +1805,7 @@ func (x *TextPosition) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TextPosition.ProtoReflect.Descriptor instead.
 func (*TextPosition) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *TextPosition) GetOffset() int32 {
@@ -1706,7 +1846,7 @@ type ListQuerySetsRequest struct {
 
 func (x *ListQuerySetsRequest) Reset() {
 	*x = ListQuerySetsRequest{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[19]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1718,7 +1858,7 @@ func (x *ListQuerySetsRequest) String() string {
 func (*ListQuerySetsRequest) ProtoMessage() {}
 
 func (x *ListQuerySetsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[19]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1731,7 +1871,7 @@ func (x *ListQuerySetsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListQuerySetsRequest.ProtoReflect.Descriptor instead.
 func (*ListQuerySetsRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{19}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *ListQuerySetsRequest) GetSnapshot() string {
@@ -1753,7 +1893,7 @@ type ListQuerySetsResponse struct {
 
 func (x *ListQuerySetsResponse) Reset() {
 	*x = ListQuerySetsResponse{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[20]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1765,7 +1905,7 @@ func (x *ListQuerySetsResponse) String() string {
 func (*ListQuerySetsResponse) ProtoMessage() {}
 
 func (x *ListQuerySetsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[20]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1778,7 +1918,7 @@ func (x *ListQuerySetsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListQuerySetsResponse.ProtoReflect.Descriptor instead.
 func (*ListQuerySetsResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{20}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *ListQuerySetsResponse) GetProject() string {
@@ -1808,7 +1948,7 @@ type NamedQuerySet struct {
 
 func (x *NamedQuerySet) Reset() {
 	*x = NamedQuerySet{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[21]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1820,7 +1960,7 @@ func (x *NamedQuerySet) String() string {
 func (*NamedQuerySet) ProtoMessage() {}
 
 func (x *NamedQuerySet) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[21]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1833,7 +1973,7 @@ func (x *NamedQuerySet) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamedQuerySet.ProtoReflect.Descriptor instead.
 func (*NamedQuerySet) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{21}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *NamedQuerySet) GetName() string {
@@ -1867,7 +2007,7 @@ type ParseQuerySetRequest struct {
 
 func (x *ParseQuerySetRequest) Reset() {
 	*x = ParseQuerySetRequest{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[22]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1879,7 +2019,7 @@ func (x *ParseQuerySetRequest) String() string {
 func (*ParseQuerySetRequest) ProtoMessage() {}
 
 func (x *ParseQuerySetRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[22]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1892,7 +2032,7 @@ func (x *ParseQuerySetRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParseQuerySetRequest.ProtoReflect.Descriptor instead.
 func (*ParseQuerySetRequest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{22}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *ParseQuerySetRequest) GetText() string {
@@ -1911,7 +2051,7 @@ type ParseQuerySetResponse struct {
 
 func (x *ParseQuerySetResponse) Reset() {
 	*x = ParseQuerySetResponse{}
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[23]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1923,7 +2063,7 @@ func (x *ParseQuerySetResponse) String() string {
 func (*ParseQuerySetResponse) ProtoMessage() {}
 
 func (x *ParseQuerySetResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_webapi_query_proto_msgTypes[23]
+	mi := &file_agni_v1_webapi_query_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1936,7 +2076,7 @@ func (x *ParseQuerySetResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ParseQuerySetResponse.ProtoReflect.Descriptor instead.
 func (*ParseQuerySetResponse) Descriptor() ([]byte, []int) {
-	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{23}
+	return file_agni_v1_webapi_query_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *ParseQuerySetResponse) GetSet() *QuerySet {
@@ -1950,7 +2090,7 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x80\x03\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x9e\x03\n" +
 	"\x0fRunQueryRequest\x12\x1a\n" +
 	"\bsnapshot\x18\n" +
 	" \x01(\tR\bsnapshot\x12\x14\n" +
@@ -1959,10 +2099,11 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"workBudget\x12I\n" +
 	"\bbindings\x18\a \x03(\v2-.agni.v1.webapi.RunQueryRequest.BindingsEntryR\bbindings\x12%\n" +
 	"\x0eomit_locations\x18\b \x01(\bR\romitLocations\x12\x14\n" +
-	"\x05limit\x18\t \x01(\x05R\x05limit\x1aW\n" +
+	"\x05limit\x18\t \x01(\x05R\x05limit\x12\x1c\n" +
+	"\twitnesses\x18\v \x01(\bR\twitnesses\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\aoverlayR\tboard_uriR\x03uriR\bas_named\"\xeb\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01J\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\aoverlayR\tboard_uriR\x03uriR\bas_named\"\xa7\x02\n" +
 	"\bQueryRow\x12\x14\n" +
 	"\x05cells\x18\x01 \x03(\tR\x05cells\x12\x1d\n" +
 	"\n" +
@@ -1972,7 +2113,18 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"cellEntity\x12\x1d\n" +
 	"\n" +
 	"cite_index\x18\b \x03(\x05R\tciteIndex\x12\x19\n" +
-	"\bcell_why\x18\t \x03(\tR\acellWhyJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x05citesR\vcell_sheetsR\fcell_reasons\"\x99\x01\n" +
+	"\bcell_why\x18\t \x03(\tR\acellWhy\x12:\n" +
+	"\twitnesses\x18\n" +
+	" \x03(\v2\x1c.agni.v1.webapi.QueryWitnessR\twitnessesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05R\x05citesR\vcell_sheetsR\fcell_reasons\"\xec\x01\n" +
+	"\fQueryWitness\x12\x1a\n" +
+	"\brelation\x18\x01 \x01(\tR\brelation\x12\x16\n" +
+	"\x06values\x18\x02 \x03(\tR\x06values\x12!\n" +
+	"\fvalue_entity\x18\x03 \x03(\x05R\vvalueEntity\x12\x12\n" +
+	"\x04rule\x18\x04 \x01(\tR\x04rule\x12\x18\n" +
+	"\anegated\x18\x05 \x01(\bR\anegated\x12\x1d\n" +
+	"\n" +
+	"cite_index\x18\x06 \x03(\x05R\tciteIndex\x128\n" +
+	"\bchildren\x18\a \x03(\v2\x1c.agni.v1.webapi.QueryWitnessR\bchildren\"\x99\x01\n" +
 	"\fAnswerEntity\x12\x12\n" +
 	"\x04kind\x18\x01 \x01(\tR\x04kind\x12\x10\n" +
 	"\x03ref\x18\x02 \x01(\tR\x03ref\x12\x10\n" +
@@ -2064,13 +2216,14 @@ const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\bbindings\x18\x04 \x03(\v2(.agni.v1.webapi.NamedQuery.BindingsEntryR\bbindings\x1aW\n" +
 	"\rBindingsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xde\x01\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.webapi.QueryValueR\x05value:\x028\x01\"\xfc\x01\n" +
 	"\x11RunQueriesRequest\x12\x1a\n" +
 	"\bsnapshot\x18\b \x01(\tR\bsnapshot\x12*\n" +
 	"\x03set\x18\x01 \x01(\v2\x18.agni.v1.webapi.QuerySetR\x03set\x12\x1f\n" +
 	"\vwork_budget\x18\x06 \x01(\x03R\n" +
 	"workBudget\x12%\n" +
-	"\x0eomit_locations\x18\a \x01(\bR\romitLocationsJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\x03uriR\aoverlayR\tboard_uriR\bas_named\"\x9a\x01\n" +
+	"\x0eomit_locations\x18\a \x01(\bR\romitLocations\x12\x1c\n" +
+	"\twitnesses\x18\t \x01(\bR\twitnessesJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\x03uriR\aoverlayR\tboard_uriR\bas_named\"\x9a\x01\n" +
 	"\x12RunQueriesResponse\x12\x14\n" +
 	"\x05title\x18\x01 \x01(\tR\x05title\x12\x1a\n" +
 	"\bpreamble\x18\x02 \x01(\tR\bpreamble\x12\x16\n" +
@@ -2122,80 +2275,83 @@ func file_agni_v1_webapi_query_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_query_proto_rawDescData
 }
 
-var file_agni_v1_webapi_query_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_agni_v1_webapi_query_proto_msgTypes = make([]protoimpl.MessageInfo, 28)
 var file_agni_v1_webapi_query_proto_goTypes = []any{
 	(*RunQueryRequest)(nil),       // 0: agni.v1.webapi.RunQueryRequest
 	(*QueryRow)(nil),              // 1: agni.v1.webapi.QueryRow
-	(*AnswerEntity)(nil),          // 2: agni.v1.webapi.AnswerEntity
-	(*RunQueryResponse)(nil),      // 3: agni.v1.webapi.RunQueryResponse
-	(*QueryValue)(nil),            // 4: agni.v1.webapi.QueryValue
-	(*QueryValueList)(nil),        // 5: agni.v1.webapi.QueryValueList
-	(*ListRelationsRequest)(nil),  // 6: agni.v1.webapi.ListRelationsRequest
-	(*RelationInfo)(nil),          // 7: agni.v1.webapi.RelationInfo
-	(*RelationEntry)(nil),         // 8: agni.v1.webapi.RelationEntry
-	(*ExampleQuery)(nil),          // 9: agni.v1.webapi.ExampleQuery
-	(*EntityQuery)(nil),           // 10: agni.v1.webapi.EntityQuery
-	(*SearchQuery)(nil),           // 11: agni.v1.webapi.SearchQuery
-	(*ListRelationsResponse)(nil), // 12: agni.v1.webapi.ListRelationsResponse
-	(*QuerySet)(nil),              // 13: agni.v1.webapi.QuerySet
-	(*NamedQuery)(nil),            // 14: agni.v1.webapi.NamedQuery
-	(*RunQueriesRequest)(nil),     // 15: agni.v1.webapi.RunQueriesRequest
-	(*RunQueriesResponse)(nil),    // 16: agni.v1.webapi.RunQueriesResponse
-	(*NamedQueryResult)(nil),      // 17: agni.v1.webapi.NamedQueryResult
-	(*TextPosition)(nil),          // 18: agni.v1.webapi.TextPosition
-	(*ListQuerySetsRequest)(nil),  // 19: agni.v1.webapi.ListQuerySetsRequest
-	(*ListQuerySetsResponse)(nil), // 20: agni.v1.webapi.ListQuerySetsResponse
-	(*NamedQuerySet)(nil),         // 21: agni.v1.webapi.NamedQuerySet
-	(*ParseQuerySetRequest)(nil),  // 22: agni.v1.webapi.ParseQuerySetRequest
-	(*ParseQuerySetResponse)(nil), // 23: agni.v1.webapi.ParseQuerySetResponse
-	nil,                           // 24: agni.v1.webapi.RunQueryRequest.BindingsEntry
-	nil,                           // 25: agni.v1.webapi.RunQueryResponse.BindingsEntry
-	nil,                           // 26: agni.v1.webapi.NamedQuery.BindingsEntry
-	(checks.LocateReason)(0),      // 27: agni.v1.checks.LocateReason
-	(*OverlayConfig)(nil),         // 28: agni.v1.webapi.OverlayConfig
+	(*QueryWitness)(nil),          // 2: agni.v1.webapi.QueryWitness
+	(*AnswerEntity)(nil),          // 3: agni.v1.webapi.AnswerEntity
+	(*RunQueryResponse)(nil),      // 4: agni.v1.webapi.RunQueryResponse
+	(*QueryValue)(nil),            // 5: agni.v1.webapi.QueryValue
+	(*QueryValueList)(nil),        // 6: agni.v1.webapi.QueryValueList
+	(*ListRelationsRequest)(nil),  // 7: agni.v1.webapi.ListRelationsRequest
+	(*RelationInfo)(nil),          // 8: agni.v1.webapi.RelationInfo
+	(*RelationEntry)(nil),         // 9: agni.v1.webapi.RelationEntry
+	(*ExampleQuery)(nil),          // 10: agni.v1.webapi.ExampleQuery
+	(*EntityQuery)(nil),           // 11: agni.v1.webapi.EntityQuery
+	(*SearchQuery)(nil),           // 12: agni.v1.webapi.SearchQuery
+	(*ListRelationsResponse)(nil), // 13: agni.v1.webapi.ListRelationsResponse
+	(*QuerySet)(nil),              // 14: agni.v1.webapi.QuerySet
+	(*NamedQuery)(nil),            // 15: agni.v1.webapi.NamedQuery
+	(*RunQueriesRequest)(nil),     // 16: agni.v1.webapi.RunQueriesRequest
+	(*RunQueriesResponse)(nil),    // 17: agni.v1.webapi.RunQueriesResponse
+	(*NamedQueryResult)(nil),      // 18: agni.v1.webapi.NamedQueryResult
+	(*TextPosition)(nil),          // 19: agni.v1.webapi.TextPosition
+	(*ListQuerySetsRequest)(nil),  // 20: agni.v1.webapi.ListQuerySetsRequest
+	(*ListQuerySetsResponse)(nil), // 21: agni.v1.webapi.ListQuerySetsResponse
+	(*NamedQuerySet)(nil),         // 22: agni.v1.webapi.NamedQuerySet
+	(*ParseQuerySetRequest)(nil),  // 23: agni.v1.webapi.ParseQuerySetRequest
+	(*ParseQuerySetResponse)(nil), // 24: agni.v1.webapi.ParseQuerySetResponse
+	nil,                           // 25: agni.v1.webapi.RunQueryRequest.BindingsEntry
+	nil,                           // 26: agni.v1.webapi.RunQueryResponse.BindingsEntry
+	nil,                           // 27: agni.v1.webapi.NamedQuery.BindingsEntry
+	(checks.LocateReason)(0),      // 28: agni.v1.checks.LocateReason
+	(*OverlayConfig)(nil),         // 29: agni.v1.webapi.OverlayConfig
 }
 var file_agni_v1_webapi_query_proto_depIdxs = []int32{
-	24, // 0: agni.v1.webapi.RunQueryRequest.bindings:type_name -> agni.v1.webapi.RunQueryRequest.BindingsEntry
-	27, // 1: agni.v1.webapi.AnswerEntity.reason:type_name -> agni.v1.checks.LocateReason
-	1,  // 2: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
-	25, // 3: agni.v1.webapi.RunQueryResponse.bindings:type_name -> agni.v1.webapi.RunQueryResponse.BindingsEntry
-	2,  // 4: agni.v1.webapi.RunQueryResponse.entities:type_name -> agni.v1.webapi.AnswerEntity
-	5,  // 5: agni.v1.webapi.QueryValue.list:type_name -> agni.v1.webapi.QueryValueList
-	4,  // 6: agni.v1.webapi.QueryValueList.values:type_name -> agni.v1.webapi.QueryValue
-	28, // 7: agni.v1.webapi.ListRelationsRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
-	8,  // 8: agni.v1.webapi.RelationEntry.members:type_name -> agni.v1.webapi.RelationEntry
-	7,  // 9: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
-	9,  // 10: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
-	10, // 11: agni.v1.webapi.ListRelationsResponse.entity_queries:type_name -> agni.v1.webapi.EntityQuery
-	11, // 12: agni.v1.webapi.ListRelationsResponse.search_query:type_name -> agni.v1.webapi.SearchQuery
-	8,  // 13: agni.v1.webapi.ListRelationsResponse.entry:type_name -> agni.v1.webapi.RelationEntry
-	14, // 14: agni.v1.webapi.QuerySet.queries:type_name -> agni.v1.webapi.NamedQuery
-	26, // 15: agni.v1.webapi.NamedQuery.bindings:type_name -> agni.v1.webapi.NamedQuery.BindingsEntry
-	13, // 16: agni.v1.webapi.RunQueriesRequest.set:type_name -> agni.v1.webapi.QuerySet
-	17, // 17: agni.v1.webapi.RunQueriesResponse.results:type_name -> agni.v1.webapi.NamedQueryResult
-	3,  // 18: agni.v1.webapi.NamedQueryResult.result:type_name -> agni.v1.webapi.RunQueryResponse
-	18, // 19: agni.v1.webapi.NamedQueryResult.error_at:type_name -> agni.v1.webapi.TextPosition
-	21, // 20: agni.v1.webapi.ListQuerySetsResponse.query_sets:type_name -> agni.v1.webapi.NamedQuerySet
-	13, // 21: agni.v1.webapi.NamedQuerySet.set:type_name -> agni.v1.webapi.QuerySet
-	13, // 22: agni.v1.webapi.ParseQuerySetResponse.set:type_name -> agni.v1.webapi.QuerySet
-	4,  // 23: agni.v1.webapi.RunQueryRequest.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
-	4,  // 24: agni.v1.webapi.RunQueryResponse.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
-	4,  // 25: agni.v1.webapi.NamedQuery.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
-	0,  // 26: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
-	15, // 27: agni.v1.webapi.QueryService.RunQueries:input_type -> agni.v1.webapi.RunQueriesRequest
-	6,  // 28: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
-	19, // 29: agni.v1.webapi.QueryService.ListQuerySets:input_type -> agni.v1.webapi.ListQuerySetsRequest
-	22, // 30: agni.v1.webapi.QueryService.ParseQuerySet:input_type -> agni.v1.webapi.ParseQuerySetRequest
-	3,  // 31: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
-	16, // 32: agni.v1.webapi.QueryService.RunQueries:output_type -> agni.v1.webapi.RunQueriesResponse
-	12, // 33: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
-	20, // 34: agni.v1.webapi.QueryService.ListQuerySets:output_type -> agni.v1.webapi.ListQuerySetsResponse
-	23, // 35: agni.v1.webapi.QueryService.ParseQuerySet:output_type -> agni.v1.webapi.ParseQuerySetResponse
-	31, // [31:36] is the sub-list for method output_type
-	26, // [26:31] is the sub-list for method input_type
-	26, // [26:26] is the sub-list for extension type_name
-	26, // [26:26] is the sub-list for extension extendee
-	0,  // [0:26] is the sub-list for field type_name
+	25, // 0: agni.v1.webapi.RunQueryRequest.bindings:type_name -> agni.v1.webapi.RunQueryRequest.BindingsEntry
+	2,  // 1: agni.v1.webapi.QueryRow.witnesses:type_name -> agni.v1.webapi.QueryWitness
+	2,  // 2: agni.v1.webapi.QueryWitness.children:type_name -> agni.v1.webapi.QueryWitness
+	28, // 3: agni.v1.webapi.AnswerEntity.reason:type_name -> agni.v1.checks.LocateReason
+	1,  // 4: agni.v1.webapi.RunQueryResponse.rows:type_name -> agni.v1.webapi.QueryRow
+	26, // 5: agni.v1.webapi.RunQueryResponse.bindings:type_name -> agni.v1.webapi.RunQueryResponse.BindingsEntry
+	3,  // 6: agni.v1.webapi.RunQueryResponse.entities:type_name -> agni.v1.webapi.AnswerEntity
+	6,  // 7: agni.v1.webapi.QueryValue.list:type_name -> agni.v1.webapi.QueryValueList
+	5,  // 8: agni.v1.webapi.QueryValueList.values:type_name -> agni.v1.webapi.QueryValue
+	29, // 9: agni.v1.webapi.ListRelationsRequest.overlay:type_name -> agni.v1.webapi.OverlayConfig
+	9,  // 10: agni.v1.webapi.RelationEntry.members:type_name -> agni.v1.webapi.RelationEntry
+	8,  // 11: agni.v1.webapi.ListRelationsResponse.relations:type_name -> agni.v1.webapi.RelationInfo
+	10, // 12: agni.v1.webapi.ListRelationsResponse.examples:type_name -> agni.v1.webapi.ExampleQuery
+	11, // 13: agni.v1.webapi.ListRelationsResponse.entity_queries:type_name -> agni.v1.webapi.EntityQuery
+	12, // 14: agni.v1.webapi.ListRelationsResponse.search_query:type_name -> agni.v1.webapi.SearchQuery
+	9,  // 15: agni.v1.webapi.ListRelationsResponse.entry:type_name -> agni.v1.webapi.RelationEntry
+	15, // 16: agni.v1.webapi.QuerySet.queries:type_name -> agni.v1.webapi.NamedQuery
+	27, // 17: agni.v1.webapi.NamedQuery.bindings:type_name -> agni.v1.webapi.NamedQuery.BindingsEntry
+	14, // 18: agni.v1.webapi.RunQueriesRequest.set:type_name -> agni.v1.webapi.QuerySet
+	18, // 19: agni.v1.webapi.RunQueriesResponse.results:type_name -> agni.v1.webapi.NamedQueryResult
+	4,  // 20: agni.v1.webapi.NamedQueryResult.result:type_name -> agni.v1.webapi.RunQueryResponse
+	19, // 21: agni.v1.webapi.NamedQueryResult.error_at:type_name -> agni.v1.webapi.TextPosition
+	22, // 22: agni.v1.webapi.ListQuerySetsResponse.query_sets:type_name -> agni.v1.webapi.NamedQuerySet
+	14, // 23: agni.v1.webapi.NamedQuerySet.set:type_name -> agni.v1.webapi.QuerySet
+	14, // 24: agni.v1.webapi.ParseQuerySetResponse.set:type_name -> agni.v1.webapi.QuerySet
+	5,  // 25: agni.v1.webapi.RunQueryRequest.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
+	5,  // 26: agni.v1.webapi.RunQueryResponse.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
+	5,  // 27: agni.v1.webapi.NamedQuery.BindingsEntry.value:type_name -> agni.v1.webapi.QueryValue
+	0,  // 28: agni.v1.webapi.QueryService.RunQuery:input_type -> agni.v1.webapi.RunQueryRequest
+	16, // 29: agni.v1.webapi.QueryService.RunQueries:input_type -> agni.v1.webapi.RunQueriesRequest
+	7,  // 30: agni.v1.webapi.QueryService.ListRelations:input_type -> agni.v1.webapi.ListRelationsRequest
+	20, // 31: agni.v1.webapi.QueryService.ListQuerySets:input_type -> agni.v1.webapi.ListQuerySetsRequest
+	23, // 32: agni.v1.webapi.QueryService.ParseQuerySet:input_type -> agni.v1.webapi.ParseQuerySetRequest
+	4,  // 33: agni.v1.webapi.QueryService.RunQuery:output_type -> agni.v1.webapi.RunQueryResponse
+	17, // 34: agni.v1.webapi.QueryService.RunQueries:output_type -> agni.v1.webapi.RunQueriesResponse
+	13, // 35: agni.v1.webapi.QueryService.ListRelations:output_type -> agni.v1.webapi.ListRelationsResponse
+	21, // 36: agni.v1.webapi.QueryService.ListQuerySets:output_type -> agni.v1.webapi.ListQuerySetsResponse
+	24, // 37: agni.v1.webapi.QueryService.ParseQuerySet:output_type -> agni.v1.webapi.ParseQuerySetResponse
+	33, // [33:38] is the sub-list for method output_type
+	28, // [28:33] is the sub-list for method input_type
+	28, // [28:28] is the sub-list for extension type_name
+	28, // [28:28] is the sub-list for extension extendee
+	0,  // [0:28] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_query_proto_init() }
@@ -2204,7 +2360,7 @@ func file_agni_v1_webapi_query_proto_init() {
 		return
 	}
 	file_agni_v1_webapi_checks_proto_init()
-	file_agni_v1_webapi_query_proto_msgTypes[4].OneofWrappers = []any{
+	file_agni_v1_webapi_query_proto_msgTypes[5].OneofWrappers = []any{
 		(*QueryValue_Text)(nil),
 		(*QueryValue_Number)(nil),
 		(*QueryValue_List)(nil),
@@ -2215,7 +2371,7 @@ func file_agni_v1_webapi_query_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_query_proto_rawDesc), len(file_agni_v1_webapi_query_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   27,
+			NumMessages:   28,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

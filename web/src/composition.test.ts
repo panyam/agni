@@ -107,6 +107,8 @@ const REPLIES: Record<string, unknown> = {
     // test below fail for the right reason.
     entityQueries: [{ kind: "net", label: "What pins are on it?", query: "component.net(?ref, ?net) => ?ref", teaches: "join", binds: ["net"] }],
   },
+  // One row, so the query panel has a row to open (agni issue 794).
+  RunQuery: { columns: ["ref"], columnKinds: ["component"], rows: [{ cells: ["R1"] }] },
 };
 
 const called: string[] = [];
@@ -355,6 +357,22 @@ describe("clicking the drawing selects what was clicked, and Ask asks about it",
       document.elementFromPoint = realElementFromPoint;
       wire.remove();
     }
+  });
+});
+
+// Opening a query row asks the question again with witnesses (agni issue 794). The panel's onExplain
+// is optional, so main.ts leaving it unwired would leave every row showing citations alone, with
+// every unit test green.
+describe("opening a query row asks how it holds", () => {
+  it("runs the tab's question again when a row is opened", async () => {
+    const toggle = await vi.waitFor(() => {
+      const b = document.querySelector<HTMLButtonElement>('[data-component="query"] .query-cite-toggle');
+      expect(b, "the query panel shows no row to open").not.toBeNull();
+      return b!;
+    }, 5000);
+    const before = called.filter((m) => m === "RunQuery").length;
+    toggle.click();
+    await vi.waitFor(() => expect(called.filter((m) => m === "RunQuery").length).toBeGreaterThan(before), 5000);
   });
 });
 

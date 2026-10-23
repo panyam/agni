@@ -167,6 +167,29 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		}
 	})
 
+	// jaala's query tool records witnesses, and agni presents them as RunQuery does when asked for
+	// them (agni issue 794), so an agent reads how each row was derived in the wire's own shape.
+	t.Run("query witnesses", func(t *testing.T) {
+		const program = `net.rail(?net), not net.has_test_point(?net) => ?net`
+		_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program})
+		got := &webapi.RunQueryResponse{}
+		if err := protojson.Unmarshal(a.Answer, got); err != nil {
+			t.Fatal(err)
+		}
+		resp, err := s.api.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: program, Witnesses: true}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := resp.Msg
+		want.Work = 0 // what RunQuery's own evaluation cost, which the MCP answer did not run
+		if len(want.GetRows()) == 0 || len(want.GetRows()[0].GetWitnesses()) != 2 {
+			t.Fatalf("Connect answered %d rows without the two witnesses each, so the comparison proves nothing", len(want.GetRows()))
+		}
+		if !proto.Equal(got, want) {
+			t.Errorf("the MCP answer differs from RunQuery with witnesses\nMCP:     %v\nConnect: %v", got, want)
+		}
+	})
+
 	t.Run("query with a binding", func(t *testing.T) {
 		const program = `pin.net(?ref, ?pin, ?net) => ?ref, ?pin`
 		_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program, "bind": map[string]any{"net": "I2C_SDA"}})

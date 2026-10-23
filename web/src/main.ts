@@ -352,6 +352,7 @@ class AppRoot extends BaseComponent {
     // it over the open design and pushes results back through query.view.
     const query = queryPanelIsland(queryEl, this._eventBus, {
       onRun: (text, bindings, limit, tab) => void presenter.runQuery(text, bindings, limit, tab),
+      onExplain: (tab) => void presenter.explainQuery(tab),
       onSaveCSV: (tab) => void presenter.saveQueryCSV((a, s, n) => tablesPresenter.saveAnswer(a, s, n), tab),
       // A tab coming forward shows what it last located, so the drawing matches the answer in front.
       // One that located nothing releases what the tab before it had located.

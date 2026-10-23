@@ -43,8 +43,9 @@ func (r *QueryRead) Vocabulary() *ns.Vocabulary { return r.d.reg.Vocabulary() }
 
 // Present is the response for rows [lo, hi) of table, which q evaluated over Base with bind, echoing
 // queryText. It is RunQuery's own projection, so a row's cells, kinds, entities and citations are what
-// RunQuery gives for the same query. Work is left zero, since the evaluation was not RunQuery's, and
-// Total is the table's length when the rows are a page of it.
+// RunQuery gives for the same query, and when the evaluation recorded witnesses each row carries them
+// as RunQuery's do when asked (agni issue 794). Work is left zero, since the evaluation was not
+// RunQuery's, and Total is the table's length when the rows are a page of it.
 func (r *QueryRead) Present(ctx context.Context, q query.Query, queryText string, table *query.Table, lo, hi int, bind query.Bindings) (*webapi.RunQueryResponse, error) {
 	// Answering under the snapshot's context records the geometry the cells are located on, as
 	// RunQuery's reads are.
