@@ -55,6 +55,21 @@ type ChecklistEvidence struct {
 	URL     string // empty when no link could be promised
 }
 
+// HasLinks says whether any evidence links into the viewer, as Report.HasLinks does for the verdict
+// report.
+func (c Checklist) HasLinks() bool {
+	for _, area := range c.Areas {
+		for _, item := range area.Items {
+			for _, e := range item.Evidence {
+				if e.URL != "" {
+					return true
+				}
+			}
+		}
+	}
+	return false
+}
+
 // Failed reports whether this item is worth opening on arrival. Everything that is not a plain pass
 // qualifies, including an item nobody answered.
 func (i ChecklistItem) Failed() bool { return i.Outcome != "pass" }

@@ -3,6 +3,7 @@ package kicad
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -33,5 +34,19 @@ func TestNumericSubSheetsKeepDistinctPaths(t *testing.T) {
 		if got[i] != want[i] {
 			t.Errorf("sheet %d is %v, want %v", i, got[i], want[i])
 		}
+	}
+}
+
+// agni issue 1023: the sub-sheets a hierarchy references, nested ones included, so a read of one of
+// them can say it is part of a larger design.
+func TestSheetFilesListsEverySubSheet(t *testing.T) {
+	open := func(rel string) ([]byte, error) { return os.ReadFile(filepath.Join("testdata", rel)) }
+	got := SheetFiles(readFixture(t, "hier_numeric_root.kicad_sch"), open)
+	want := []string{"hier_numeric_power.kicad_sch", "hier_numeric_power_1.kicad_sch", "hier_numeric_io.kicad_sch", "hier_numeric_io_1.kicad_sch"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("SheetFiles = %v, want %v", got, want)
+	}
+	if leaf := SheetFiles(readFixture(t, "hier_numeric_io_1.kicad_sch"), open); len(leaf) != 0 {
+		t.Errorf("a sheet with no sub-sheets lists %v", leaf)
 	}
 }

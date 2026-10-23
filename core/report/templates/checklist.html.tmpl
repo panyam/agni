@@ -61,7 +61,7 @@
               {{range .Evidence}}
               <li>
                 <span class="r">{{.Rule}}</span>
-                {{if .URL}}<a href="{{.URL}}">{{.Subject}}</a>{{else}}<span class="subject">{{.Subject}}</span>{{end}}
+                {{if .URL}}<a href="{{.URL}}" target="{{viewerTarget}}">{{.Subject}}</a>{{else}}<span class="subject">{{.Subject}}</span>{{end}}
                 {{.Message}}
               </li>
               {{end}}
@@ -78,5 +78,6 @@
 {{end}}
 
 </div>
+{{if .HasLinks}}<script>{{viewerScript}}</script>{{end}}
 </body>
 </html>

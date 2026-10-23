@@ -28,6 +28,5 @@ test-point convention is not wrong, it just has a different one.
 For a software reader, a test point is a metrics endpoint, and the rule reads as "critical paths must
 emit telemetry".
 
-The course does not teach it yet. `test point` appears once in
-[chapter 1](../../../learn/01-what-a-board-is-made-of/), inside a list of the part kinds a board
-contains, and is never explained.
+[Chapter 13](../../../learn/13-design-for-test/) of the course teaches it in full, along with the
+other ways a probe reaches a net and why in-circuit test needs a test point on both ends of a part.

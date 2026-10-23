@@ -1,7 +1,7 @@
 // query.ts is the framework-neutral state for the datalog query panel (WS9-036). The presenter
 // pushes a QueryResult and the panel renders it. The shape lives here rather than in the .tsx, as in
 // rules.ts and findings.ts, so the presenter and tests build state without touching Solid.
-import { type QuerySet, type QueryValue, type RelationEntry, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
+import { type QuerySet, type QueryValue, type QueryWitness, type RelationEntry, type RunQueryResponse } from "./gen/agni/v1/webapi/query_pb.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 import type { FindingsState, SheetBadge } from "./findings.js";
 import type { Selection } from "./selection.js";
@@ -24,6 +24,32 @@ export interface QueryRowItem {
   // cellRefs aligns with cells and carries the other half of a cell's identity, which today means a
   // pin cell's component. "" everywhere else.
   cellRefs: string[];
+  // witnesses say how the row holds (agni issue 794), one per literal of the goal, and are empty
+  // until the answer was asked for them (QueryResult.witnessed).
+  witnesses: WitnessItem[];
+}
+
+// WitnessItem is one fact behind a row: a leaf with its citations, or a derived fact with the rule
+// that derived it and that rule's body facts as children, in the rule's written order. A negated
+// leaf is a `not` that held, an absence, with neither citations nor children.
+export interface WitnessItem {
+  relation: string;
+  rule: string;
+  negated: boolean;
+  cites: string[];
+  values: WitnessValue[];
+  children: WitnessItem[];
+}
+
+// WitnessValue is one value of a witness, typed as a cell is: kind is "" for a scalar, and an entity
+// value carries what a cell click needs to locate it (its pin's component in ref, its sheets, and
+// why it cannot be drawn).
+export interface WitnessValue {
+  text: string;
+  kind: string;
+  ref: string;
+  sheets: SheetBadge[];
+  reason: LocateReason;
 }
 
 // QueryResult is the panel's whole state. `ran` distinguishes "not run yet" (blank panel) from
@@ -45,6 +71,9 @@ export interface QueryResult {
   // the place, as the engine drew it (TextPosition.caret), shown under the error. Absent for every
   // other error.
   errorAt?: string;
+  // witnessed says the answer was asked for witnesses (agni issue 794), so a row with none has none
+  // to show, rather than none fetched yet.
+  witnessed?: boolean;
 }
 
 // STARTING_POINT_LIMIT caps the rows a question about one picked entity asks for (agni issue 896), so
@@ -344,10 +373,11 @@ export function emptyResult(loading = false): QueryResult {
 // resultFromResponse projects a RunQueryResponse into panel state. The injected resolver turns
 // each navigable cell's sheet ids into display badges (the presenter's sheetBadges, which
 // suppresses badges on a single-sheet design and maps id->name). The default yields no badges, so
-// tests need not pass one.
+// tests need not pass one. witnessed says the request asked for witnesses.
 export function resultFromResponse(
   resp: RunQueryResponse,
   resolveSheets: (ids: string[]) => SheetBadge[] = () => [],
+  witnessed = false,
 ): QueryResult {
   return {
     columns: resp.columns,
@@ -366,12 +396,32 @@ export function resultFromResponse(
         cellReasons: r.cells.map((_, i) => entity(i)?.reason ?? LocateReason.UNSPECIFIED),
         cellKinds: r.cells.map((_, i) => r.cellKinds?.[i] ?? ""),
         cellRefs: r.cells.map((_, i) => r.cellRefs?.[i] ?? ""),
+        witnesses: (r.witnesses ?? []).map((w) => witnessItem(resp, w, resolveSheets)),
       };
     }),
     error: "",
     loading: false,
     ran: true,
     total: resp.total > resp.rows.length ? resp.total : 0,
+    witnessed,
+  };
+}
+
+// witnessItem reads one witness off the wire, its values through the response's entities as a cell
+// is read and its citations through the response's sources as a row's are (agni issue 916).
+function witnessItem(resp: RunQueryResponse, w: QueryWitness, resolveSheets: (ids: string[]) => SheetBadge[]): WitnessItem {
+  return {
+    relation: w.relation,
+    rule: w.rule,
+    negated: w.negated,
+    cites: (w.citeIndex ?? []).map((i) => resp.sources?.[i] ?? ""),
+    values: w.values.map((text, i) => {
+      const n = w.valueEntity?.[i] ?? 0;
+      const e = n > 0 ? resp.entities?.[n - 1] : undefined;
+      if (!e) return { text, kind: "", ref: "", sheets: [], reason: LocateReason.UNSPECIFIED };
+      return { text, kind: e.kind, ref: e.kind === "pin" ? e.ref : "", sheets: resolveSheets(e.sheetIds ?? []), reason: e.reason };
+    }),
+    children: (w.children ?? []).map((c) => witnessItem(resp, c, resolveSheets)),
   };
 }
 

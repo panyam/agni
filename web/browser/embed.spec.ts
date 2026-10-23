@@ -8,6 +8,9 @@
 
 import { afterAll, beforeAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Frame, Page } from "playwright-core";
+import { execFileSync } from "node:child_process";
+import { copyFileSync, mkdtempSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, withPage } from "./browser.js";
@@ -90,6 +93,63 @@ describe("a parent page on another origin", () => {
       const bad = await call(page, "ShowSheet", { sheet: "no-such-sheet" });
       expect(bad).toMatchObject({ ok: false, error: { code: "invalid_argument" } });
       expect(await activeTile(viewerFrame)).toBe("Hier numeric root");
+    });
+  }, 120_000);
+});
+
+// A saved check report beside a viewer it links into (agni issue 1156). The report is written by this
+// checkout's agni from a fixture and served from an origin no server named, so the only request the
+// viewer takes from it is ApplyLocation with the link alone.
+describe("a check report beside the viewer", () => {
+  let site: StaticServer;
+  let viewerBase: string;
+  const design = "hier_numeric_root.kicad_sch";
+
+  beforeAll(async () => {
+    viewerBase = inject("baseUrl");
+    const dir = mkdtempSync(join(tmpdir(), "agni-report-pane-"));
+    const home = mkdtempSync(join(tmpdir(), "agni-report-home-"));
+    execFileSync(
+      inject("agniBin"),
+      ["check", `readers/kicad/testdata/${design}`, "--mount", "kicad=readers/kicad/testdata", "--server", viewerBase, "--verdicts", "--format", "html", "-o", join(dir, "report.html")],
+      { cwd: repoRoot, env: { ...process.env, HOME: home, XDG_CONFIG_HOME: home }, stdio: "ignore" },
+    );
+    copyFileSync(join(repoRoot, "examples", "embed-viewer", "two-pane.html"), join(dir, "two-pane.html"));
+    site = await serveStatic(dir, "/");
+  }, 120_000);
+
+  afterAll(() => site?.close());
+
+  // A link about a net drawn on the IO sheet alone, so landing there is the viewer moving.
+  const ioLink = 'a[target="agni-viewer"][href*="R2-Pad1"]';
+
+  it("moves the viewer beside it without reloading it", async () => {
+    await withPage(browser, async (page) => {
+      const viewerUrl = `${viewerBase}/designs/kicad/${design}/view`;
+      await page.goto(`${site.base}two-pane.html?viewer=${encodeURIComponent(viewerUrl)}&report=report.html`);
+      const viewer = page.frameLocator("#viewer");
+      await viewer.locator(".sheet-tile-name").nth(4).waitFor({ timeout: 60_000 });
+      const viewerFrame = page.frames().find((f) => f.name() === "agni-viewer");
+      if (!viewerFrame) throw new Error("the viewer frame never loaded");
+      await viewerFrame.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "Hier numeric root", null, { timeout: 30_000 });
+      // A mark the page keeps only while it is not reloaded.
+      await viewerFrame.evaluate(() => ((window as unknown as { kept: number }).kept = 1));
+
+      await page.frameLocator("#report").locator(ioLink).first().click();
+      await viewerFrame.waitForFunction(() => document.querySelector(".sheet-tile.active .sheet-tile-name")?.textContent === "IO", null, { timeout: 30_000 });
+      expect(await viewerFrame.evaluate(() => (window as unknown as { kept?: number }).kept), "the viewer reloaded rather than moving").toBe(1);
+    });
+  }, 120_000);
+
+  it("opens the link in one named viewer tab when no viewer is open", async () => {
+    await withPage(browser, async (page) => {
+      await page.goto(`${site.base}report.html`);
+      const opened = page.context().waitForEvent("page");
+      await page.locator(ioLink).first().click();
+      const tab = await opened;
+      await tab.waitForURL(/\/designs\/kicad\/hier_numeric_root\.kicad_sch\/(view|load)/, { timeout: 30_000 });
+      expect(page.url(), "the report itself navigated away").toBe(`${site.base}report.html`);
+      await tab.close();
     });
   }, 120_000);
 });

@@ -52,7 +52,9 @@ Each page teaches a model, names the rules that encode it, and then has you run 
 - **[11. Crystals and oscillators](11-crystals-and-oscillators/)** (EE3 → EE5) shows that a crystal produces nothing on its own, that two capacitors decide what frequency it runs at, and that adding more of them is a defect.
 - **[12. When the copper matters](12-when-the-copper-matters/)** (EE7) treats the board as a physical object, on which two nets can pass every connectivity rule in the catalog while the board is defective.
 
-All twelve chapters are written. Read them in order the first time, and after that they stand alone.
+- **[13. Design for test](13-design-for-test/)** (EE3 → EE4) comes after the climb rather than on it. It asks whether a built board can be shown to match its design, why in-circuit test needs both ends of a part, and what a coverage figure leaves out.
+
+All thirteen chapters are written. Read the first twelve in order the first time, and after that they stand alone.
 
 ## The other direction
 

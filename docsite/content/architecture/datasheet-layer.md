@@ -241,7 +241,11 @@ The design side reaches a terminal as `Connection{component_ref, pin_ref}` to th
 side offers the same two channels.
 
 A name comes off the same pin function table on both sides, so it survives repackaging. Its weakness
-is that it is not unique, and the number repairs that. Where no package is identified,
+is that it is not unique, and the number repairs that. The two sides spell a subscript differently,
+so names compare on `ident.PinName`, which folds a split (`V CCA`, `VCC_A`), KiCad's markup
+(`VCC_{A}`) and a pin table's parentheses (`VCC(A)`) to one key, and leaves KiCad's overbar alone,
+since `~{RESET}` is a different, active-low pin. A part with several supplies binds each supply row
+to its pin, and the per-pin rules then judge each supply against its own range (agni issue 1160). Where no package is identified,
 `param.ResolvePin` still uses the number if every declared package agrees (`VCCA` is number 1 in both
 the TSSOP and the UQFN) and refuses only where packages genuinely disagree.
 

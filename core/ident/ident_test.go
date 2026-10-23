@@ -200,6 +200,13 @@ func TestPinNameFoldsTheSubscriptAndKeepsTheBank(t *testing.T) {
 		{"\uff56\uff44\uff44", "VDD"}, // fullwidth vdd lifted out of a PDF
 		{"IO0_1", "IO01"},
 		{"IO1", "IO1"},
+		// agni issue 1160: a subscript as KiCad markup or a pin table's parentheses.
+		{"VCC_{A}", "VCCA"},
+		{"VCC(A)", "VCCA"},
+		{"VCC(B)", "VCCB"},
+		{"V^{+}", "V+"},
+		{"~{RESET}", "~{RESET}"},
+		{"PB3(SWO_TRACE)", "PB3(SWOTRACE)"},
 	} {
 		if got := PinName(c[0]); got != c[1] {
 			t.Errorf("PinName(%q) = %q, want %q", c[0], got, c[1])

@@ -24,8 +24,9 @@
     <tr>{{range .Header}}<th>{{.}}</th>{{end}}</tr>
   </thead>
   <tbody>
-    {{range .Body}}<tr>{{range .}}<td class="subject">{{.}}</td>{{end}}</tr>
-    {{end}}
+    {{range .Body}}<tr>{{range .Cells}}<td class="subject">{{.}}</td>{{end}}</tr>
+    {{if .How}}<tr class="how"><td colspan="{{.Span}}"><pre>{{.How}}</pre></td></tr>
+    {{end}}{{end}}
   </tbody>
 </table>
 {{else}}

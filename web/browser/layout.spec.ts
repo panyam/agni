@@ -117,6 +117,24 @@ describe("query results table", () => {
     });
   }, 90_000);
 
+  // agni issue 794. Opening a row asks the server again with witnesses and draws the tree under the
+  // row. The panel and the presenter each have unit tests; this is the hop between them through
+  // main.ts and a real engine, and the tree is asserted painted where it sits rather than present.
+  it("opens a row onto how it holds, with the absence and the values painted where they are", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway/gateway.edn");
+      await growQueryPanel(page);
+      await runQuery(page, "component.probed_one(?r, ?p, ?u) => ?r, ?u");
+      await page.locator(".query-row .query-cite-toggle").first().click();
+      await page.waitForSelector(".query-cite-row .query-witness.negated", { timeout: 30_000 });
+      for (const sel of [".query-cite-row .query-witness.negated .query-witness-absent", ".query-cite-row .query-witnesses .query-locate"]) {
+        await page.locator(sel).first().scrollIntoViewIfNeeded();
+        const hit = await paintedAt(page, sel);
+        expect(hit.ownedByProbe, `${sel} is covered by ${hit.painted}`).toBe(true);
+      }
+    });
+  }, 90_000);
+
   // agni issue 341. The mark tells a reader which of a net's sheets they are looking at. A mark
   // nobody can see is worse than no mark, because the unmarked strip reads as being somewhere else,
   // so what matters is not that the class is applied but that the chip is painted.

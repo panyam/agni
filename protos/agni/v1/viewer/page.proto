@@ -80,6 +80,14 @@ message GetLocationResponse {
 
 message ApplyLocationRequest {
   ViewerLocation location = 1;
+  // url is a viewer link instead of a location, as the server mints one (`agni check --server`, an
+  // MCP answer's `link`, a report row), and the page reads it with the same parser it reads its own
+  // address with. Only the fields the link sets are applied. Exactly one of location and url.
+  //
+  // A request carrying only a url is taken from a page at ANY origin, and its reply carries no
+  // location (agni issue 1156). Any page holding the viewer's window can already navigate it to the
+  // same link, so this grants nothing that loading the link would not, except keeping the page.
+  string url = 2;
 }
 
 message ApplyLocationResponse {

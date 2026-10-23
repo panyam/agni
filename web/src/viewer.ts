@@ -332,6 +332,12 @@ export class ViewerPresenter {
   // answers holds each tab's answer as the engine sent it, so Save CSV tabulates the answer the
   // reader is looking at rather than running the query again (agni issues 898 and 956).
   private answers = new Map<string, RunQueryResponse>();
+  // asked holds each tab's last question as it was sent, so a row opened later can ask the same
+  // question again with witnesses (agni issue 794): a query, or the one-query set a set's tab ran.
+  private asked = new Map<string, { query: string; bindings: Record<string, ReturnType<typeof wireBinding>>; limit: number } | { set: QuerySet }>();
+  // explaining holds the tabs whose witnessed answer is on its way, so opening a second row while the
+  // first is pending asks nothing more.
+  private explaining = new Set<string>();
 
   async runQuery(text: string, bindings: Bindings = {}, limit = 0, tab = ""): Promise<void> {
     if (!this.views.query || !this.query) return;
@@ -346,6 +352,7 @@ export class ViewerPresenter {
       // screen were computed under, and a Query panel answering under the server's would contradict
       // it (WS3-113).
       const wire = Object.fromEntries(Object.entries(bindings).map(([k, value]) => [k, wireBinding(value)]));
+      this.asked.set(tab, { query: text, bindings: wire, limit });
       const resp = await this.query.runQuery({ snapshot: await this.checked(), query: text, bindings: wire, limit });
       this.answers.set(tab, resp);
       push(resultFromResponse(resp, (ids) => this.doc.sheetBadges(ids)));
@@ -388,6 +395,7 @@ export class ViewerPresenter {
       resp.results.forEach((r, i) => {
         const tab = tabs[i];
         if (!tab) return;
+        this.asked.set(tab, { set: { ...set, queries: [set.queries[i]] } });
         if (r.result) {
           this.answers.set(tab, r.result);
           push(resultFromResponse(r.result, (ids) => this.doc.sheetBadges(ids)), tab);
@@ -404,9 +412,35 @@ export class ViewerPresenter {
     }
   }
 
+  // explainQuery asks a tab's last question again with witnesses (agni issue 794), when the reader
+  // opens a row to see how it holds, and replaces the tab's answer with the witnessed one. The rows
+  // are the same rows in the same order, so a row the reader opened stays open on its own tree. A
+  // failure leaves the answer on screen as it was, with its citations.
+  async explainQuery(tab: string): Promise<void> {
+    const asked = this.asked.get(tab);
+    if (!this.views.query || !this.query || !asked || this.explaining.has(tab)) return;
+    this.explaining.add(tab);
+    try {
+      const snapshot = await this.checked();
+      const resp =
+        "set" in asked
+          ? (await this.query.runQueries({ snapshot, set: asked.set, witnesses: true })).results[0]?.result
+          : await this.query.runQuery({ snapshot, query: asked.query, bindings: asked.bindings, limit: asked.limit, witnesses: true });
+      // A tab asked something else meanwhile, or closed, keeps the answer it has.
+      if (!resp || this.asked.get(tab) !== asked) return;
+      this.answers.set(tab, resp);
+      this.views.query.setState(resultFromResponse(resp, (ids) => this.doc.sheetBadges(ids), true), tab);
+    } catch {
+      // The rows and their citations stay as they were.
+    } finally {
+      this.explaining.delete(tab);
+    }
+  }
+
   // forgetQueryTab drops a closed tab's answer.
   forgetQueryTab(tab: string): void {
     this.answers.delete(tab);
+    this.asked.delete(tab);
   }
 
   // releaseFocus puts the drawing back to the findings alone, for a query tab coming forward that

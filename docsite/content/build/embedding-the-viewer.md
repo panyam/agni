@@ -22,6 +22,11 @@ exactly, scheme and host and an optional port with no path, because the viewer c
 sender's origin as a string, so `serve` refuses `https://portal.example/` rather than starting a
 viewer that ignores its parent.
 
+One request needs no allowing. `ApplyLocation` carrying a `url` and nothing else is taken from any
+page, a report opened from disk included, because loading that link in the viewer's window does the
+same thing and any page holding the window can already do that. Its reply says only whether it
+worked, with no location, so a page that was not allowed learns nothing about the design.
+
 ## The envelope
 
 The protocol is one message shape each way. A request names an rpc of `ViewerPageService` and carries
@@ -54,7 +59,9 @@ landed without asking again.
 - `GetLocation` reads where the page is and changes nothing.
 - `ApplyLocation` moves the page to a location as following a link to it would. A location naming
   another design opens it. One naming the open design, or none, applies to the page as it stands,
-  and an empty field leaves its part alone, so a caller sends only what it wants changed.
+  and an empty field leaves its part alone, so a caller sends only what it wants changed. It takes
+  a `url` instead of a location too, any link the server minted, and applies the fields that link
+  sets.
 - `LocateVerdict` focuses one verdict and draws its proof, opening a sheet it is drawn on. With a
   `rule` hint a verdict the page has not answered yet is asked first, one rule about the given
   subjects, as a link carrying the same hints is.
@@ -82,6 +89,21 @@ const transport = createConnectTransport({ baseUrl: "https://viewer.invalid", fe
 const page = createClient(ViewerPageService, transport);
 const { location } = await page.showSheet({ sheet: "s-power" });
 ```
+
+## From a saved report
+
+Every link in a check or checklist report (`--format html`) opens in the window named `agni-viewer`.
+With scripts off, clicking one loads it in that window, so a reader working through a report keeps
+one viewer tab rather than gaining one per click. With scripts on, the report's own script looks for
+that window first, and when it already shows a viewer it sends `ApplyLocation` with the link instead
+of loading it, so the viewer keeps the reader's place. A viewer that does not answer within two
+seconds, or answers that it could not, gets the link loaded as before. The script makes no request
+of its own, and only a report that links into a viewer (one written with `--server`) carries it, so
+a report written with no viewer to link to is still a plain page with no script at all.
+
+`examples/embed-viewer/two-pane.html` puts a report beside the viewer it links into, in a frame named
+`agni-viewer`, and `web/browser/embed.spec.ts` checks that a click there moves the viewer without
+reloading it.
 
 ## Other transports
 

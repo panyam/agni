@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { queryPanelIsland } from "./querypanel.jsx";
 import { type ExampleItem, type QueryResult, type RelationEntryItem, type RelationItem, LocateReason, STARTING_POINT_LIMIT, emptyResult, errorResult, resultFromResponse } from "./query.js";
-import { resultFromWire } from "./testwire.js";
+import { probedOneAnswer, resultFromWire } from "./testwire.js";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema } from "./gen/agni/v1/webapi/query_pb.js";
 
@@ -1065,8 +1065,8 @@ describe("a limited answer", () => {
     columns: ["ref", "pin"],
     columnKinds: ["", ""],
     rows: [
-      { cells: ["U1", "1"], cites: [], cellSheets: [[], []], cellReasons: [0, 0], cellKinds: ["", ""], cellRefs: ["", ""] },
-      { cells: ["U2", "4"], cites: [], cellSheets: [[], []], cellReasons: [0, 0], cellKinds: ["", ""], cellRefs: ["", ""] },
+      { cells: ["U1", "1"], cites: [], cellSheets: [[], []], cellReasons: [0, 0], cellKinds: ["", ""], cellRefs: ["", ""], witnesses: [] },
+      { cells: ["U2", "4"], cites: [], cellSheets: [[], []], cellReasons: [0, 0], cellKinds: ["", ""], cellRefs: ["", ""], witnesses: [] },
     ],
     total,
   });
@@ -1102,7 +1102,7 @@ describe("saving an answer as csv", () => {
     ran: true,
     columns: ["ref"],
     columnKinds: [""],
-    rows: [{ cells: ["U1"], cites: [], cellSheets: [[]], cellReasons: [0], cellKinds: [""], cellRefs: [""] }],
+    rows: [{ cells: ["U1"], cites: [], cellSheets: [[]], cellReasons: [0], cellKinds: [""], cellRefs: [""], witnesses: [] }],
   });
 
   it("offers Save CSV beside the count and asks the host to save", () => {
@@ -1138,7 +1138,7 @@ describe("query tabs", () => {
     ran: true,
     columns: ["ref"],
     columnKinds: [""],
-    rows: [{ cells: [cell], cites: [], cellSheets: [[]], cellReasons: [0], cellKinds: [""], cellRefs: [""] }],
+    rows: [{ cells: [cell], cites: [], cellSheets: [[]], cellReasons: [0], cellKinds: [""], cellRefs: [""], witnesses: [] }],
   });
 
   it("opens an asked question in a tab named for it, and leaves the typed query in its own tab", () => {
@@ -1315,5 +1315,88 @@ describe("opening a query set", () => {
     Object.defineProperty(input, "files", { value: [file] });
     input.dispatchEvent(new Event("change", { bubbles: true }));
     await vi.waitFor(() => expect(onSetFile).toHaveBeenCalledWith("audit.yaml", "queries: []\n"));
+  });
+});
+
+// agni issue 794: a row opens onto how it holds.
+describe("querypanel witnesses", () => {
+  function mountWithExplain() {
+    const onRun = vi.fn();
+    const onLocate = vi.fn();
+    const onExplain = vi.fn();
+    const el = document.createElement("div");
+    document.body.appendChild(el);
+    const panel = queryPanelIsland(el, null, { onRun, onLocate, onExplain });
+    panel.island.activate();
+    return { el, panel, onLocate, onExplain };
+  }
+
+  it("asks for witnesses once, when a row of an answer asked without them is first opened", () => {
+    const { el, panel, onExplain } = mountWithExplain();
+    panel.view.setState(resultFromWire({ columns: ["r"], rows: [{ cells: ["R1"], cites: ["x.edn"] }, { cells: ["R2"], cites: ["x.edn"] }] } as never));
+    const toggles = () => [...el.querySelectorAll<HTMLButtonElement>(".query-cite-toggle")];
+    toggles()[0].click();
+    expect(onExplain).toHaveBeenCalledTimes(1);
+    expect(onExplain).toHaveBeenCalledWith("q1");
+    // The citations show while the witnessed answer is on its way.
+    expect([...el.querySelectorAll(".query-cites li")].map((l) => l.textContent)).toEqual(["x.edn"]);
+    expect(el.querySelector(".query-witness-note")!.textContent).toContain("Working out");
+    // Closing a row asks nothing.
+    toggles()[0].click();
+    expect(onExplain).toHaveBeenCalledTimes(1);
+    // A witnessed answer asks nothing more.
+    panel.view.setState(resultFromResponse(probedOneAnswer(), undefined, true));
+    toggles()[0].click();
+    expect(onExplain).toHaveBeenCalledTimes(1);
+  });
+
+  it("draws the tree under an opened row, the rule under a derived fact and a negated leaf as an absence", () => {
+    const { el, panel } = mountWithExplain();
+    panel.view.setState(resultFromWire({ columns: ["r", "u"], rows: [{ cells: ["R1", "SENSE"], cites: ["x.edn"] }] } as never));
+    el.querySelector<HTMLButtonElement>(".query-cite-toggle")!.click();
+    // The witnessed answer arrives for the same rows, and the row the reader opened stays open on it.
+    panel.view.setState(resultFromResponse(probedOneAnswer(), undefined, true));
+    const facts = [...el.querySelectorAll(".query-witness-fact")].map((f) => f.textContent!.replace(/\s+/g, ""));
+    expect(facts).toEqual([
+      "component.probed_one(R1,VBUS,SENSE)",
+      "component.two_terminal(R1,SENSE,VBUS)",
+      "net.has_test_point(VBUS)",
+      "component.net(TP1,VBUS)",
+      "pin.net(U1,3,SENSE)",
+      "notnet.has_test_point(SENSE)absent",
+    ]);
+    const top = el.querySelector(".query-witness")!;
+    expect(top.querySelector(":scope > .query-witness-rule")!.textContent).toContain(":- component.two_terminal");
+    // Body facts sit one level under the fact they prove.
+    expect(top.querySelectorAll(":scope > .query-witnesses > .query-witness")).toHaveLength(3);
+    const negated = el.querySelector(".query-witness.negated")!;
+    expect(negated.querySelector(".query-witness-cites")).toBeNull();
+    expect(negated.querySelector(".query-locate")!.textContent).toBe("SENSE");
+    expect([...el.querySelectorAll(".query-witness-cites")].map((c) => c.textContent)).toEqual(["x.edn", "x.edn:VBUS", "x.edn:VBUS"]);
+    // The tree replaces the flat citation list.
+    expect(el.querySelector(".query-cites")).toBeNull();
+  });
+
+  it("locates a witness value as it locates a cell naming it, a pin through its component", () => {
+    const { el, panel, onLocate } = mountWithExplain();
+    panel.view.setState(resultFromResponse(probedOneAnswer(), (ids) => ids.map((id) => ({ id, name: id })), true));
+    el.querySelector<HTMLButtonElement>(".query-cite-toggle")!.click();
+    const value = (text: string) =>
+      [...el.querySelectorAll<HTMLButtonElement>(".query-witnesses .query-locate")].find((b) => b.textContent === text)!;
+    value("TP1").click();
+    expect(onLocate).toHaveBeenLastCalledWith("component", "TP1", undefined, LocateReason.UNSPECIFIED);
+    value("3").click();
+    expect(onLocate).toHaveBeenLastCalledWith("pin", "U1", undefined, LocateReason.UNSPECIFIED, "3");
+    // A value's sheet badge locates on that sheet, as a cell's does.
+    const vbus = value("VBUS").parentElement!;
+    [...vbus.querySelectorAll<HTMLElement>(".sheet-badge")].find((b) => b.textContent === "s2")!.click();
+    expect(onLocate).toHaveBeenLastCalledWith("net", "VBUS", "s2", LocateReason.UNSPECIFIED);
+  });
+
+  it("says an aggregate row has no single derivation once the answer is witnessed", () => {
+    const { el, panel } = mountWithExplain();
+    panel.view.setState({ ...resultFromWire({ columns: ["n"], rows: [{ cells: ["3"], cites: ["x.edn"] }] } as never), witnessed: true });
+    el.querySelector<HTMLButtonElement>(".query-cite-toggle")!.click();
+    expect(el.querySelector(".query-witness-note")!.textContent).toContain("aggregate row");
   });
 });

@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/internal/refdes"
 )
 
@@ -120,6 +121,16 @@ func extractPCB(root *node, src string) *ir.Design {
 				net = &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: src}}
 				netByName[name] = net
 				d.Nets = append(d.Nets, net)
+			}
+			// KiCad copies a schematic pin's no-connect FLAG onto its pad as a "+no_connect" suffix on
+			// the pin type, so a design read from its board alone marks the net as the schematic read
+			// does, the designer's statement that it is left open on purpose (agni issue 1023). A bare
+			// "no_connect" is the pin's electrical type, an NC pin on the part, and is not the flag.
+			if pt := pad.Child("pintype"); pt != nil && strings.HasSuffix(atomOf(pt.Arg(1)), "+no_connect") {
+				if net.Attributes == nil {
+					net.Attributes = map[string]string{}
+				}
+				net.Attributes[netgraph.AttrNoConnect] = "true"
 			}
 			pin := atomOf(pad.Arg(1))
 			key := ref + "." + pin

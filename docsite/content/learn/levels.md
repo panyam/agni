@@ -50,6 +50,7 @@ Every part has a job, and there are about twenty recurring ones. Most of `connec
 - [Most parts do not care](../06-parts-that-care-which-way-round/#most-parts-do-not-care-ee3), which parts have an orientation at all
 - [Here is one, wired backwards](../06-parts-that-care-which-way-round/#here-is-one-wired-backwards-ee3), an LED with its anode on ground
 - [What the tool has to know](../06-parts-that-care-which-way-round/#what-the-tool-has-to-know-ee3), the two facts a polarity check needs
+- [A pad whose only job is to be touched](../13-design-for-test/#a-pad-whose-only-job-is-to-be-touched-ee3), a test point, and the other ways a probe reaches a net
 
 ## Failure modes (EE4)
 
@@ -61,6 +62,11 @@ A defect has a symptom, not just a state. Some faults never appear at power-on, 
 - [Why this one is an error](../04-pull-ups-and-undefined-states/#why-this-one-is-an-error-ee4), and why the other is not
 - [The same fault on a rail](../05-who-drives-this-net/#the-same-fault-on-a-rail-ee4), plus why a passing rule proves nothing
 - [The same wiring, on a different part, is correct](../06-parts-that-care-which-way-round/#the-same-wiring-on-a-different-part-is-correct-ee4), why a topology is not a verdict
+- [Bring-up and production probe differently](../13-design-for-test/#bring-up-and-production-probe-differently-ee4), a scope clip, a bed of nails and a flying probe
+- [A part is measured between its two nodes](../13-design-for-test/#a-part-is-measured-between-its-two-nodes-ee4), why in-circuit test needs both ends
+- [What the measurement cannot see](../13-design-for-test/#what-the-measurement-cannot-see-ee4), parts in parallel, and a small capacitor beside a large one
+- [Ground and the rails first](../13-design-for-test/#ground-and-the-rails-first-ee4), and what several unprobed parts of one part number mean
+- [Coverage is a number, and a number leaves things out](../13-design-for-test/#coverage-is-a-number-and-a-number-leaves-things-out-ee4), what a coverage figure does not say
 
 ## Numbers (EE5)
 

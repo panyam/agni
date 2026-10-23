@@ -61,10 +61,12 @@ class GetLocationResponse(_message.Message):
     def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ...) -> None: ...
 
 class ApplyLocationRequest(_message.Message):
-    __slots__ = ("location",)
+    __slots__ = ("location", "url")
     LOCATION_FIELD_NUMBER: _ClassVar[int]
+    URL_FIELD_NUMBER: _ClassVar[int]
     location: ViewerLocation
-    def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ...) -> None: ...
+    url: str
+    def __init__(self, location: _Optional[_Union[ViewerLocation, _Mapping]] = ..., url: _Optional[str] = ...) -> None: ...
 
 class ApplyLocationResponse(_message.Message):
     __slots__ = ("location", "verdict_resolved")

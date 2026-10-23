@@ -44,6 +44,7 @@ func queryCmd() *cobra.Command {
 	var remoteURL string
 	var serverVal string
 	var srvSpec serverSpec
+	var witnesses bool
 	c := &cobra.Command{
 		Use:   "query <file> <query> | query <file> --set <queries.yaml> | query --relations [path]",
 		Short: "Search the design fact base with a datalog query",
@@ -72,6 +73,11 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			}
 			if showExamples {
 				return nil
+			}
+			// A csv's first row has to be the header and every row a row of the table, so a tree has
+			// nowhere to go (agni issue 794).
+			if witnesses && format == "csv" {
+				return fmt.Errorf("--witnesses prints a tree under each row, and a csv holds the table alone. Use --format json, text, markdown or html")
 			}
 			if showRelations {
 				if format != "text" && format != "json" {
@@ -146,7 +152,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				}
 				// The service answers the corpus as it answers a design, through one projection (agni
 				// issue 1045), so the CLI builds no response of its own.
-				resp, err := service.NewQueryService(nil, nil, nil).RunSpecLibQuery(cmd.Context(), specs, args[0], filepath.Base(paramsDir), bind)
+				resp, err := service.NewQueryService(nil, nil, nil).RunSpecLibQuery(cmd.Context(), specs, args[0], filepath.Base(paramsDir), bind, witnesses)
 				if err != nil {
 					return withCaret(rpcFailed(err))
 				}
@@ -212,13 +218,14 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				if queryLimit != 0 {
 					return fmt.Errorf("--limit caps one query's answer; a set's queries write their own limit")
 				}
-				return runQuerySet(cmd, svc, setPath, snap, format, title, budget, queryLinker(cmd, srvSpec, args[0]))
+				return runQuerySet(cmd, svc, setPath, snap, format, title, budget, witnesses, queryLinker(cmd, srvSpec, args[0]))
 			}
 			resp, err := svc.RunQuery(cmd.Context(), &webapi.RunQueryRequest{
 				Snapshot: snap, Query: args[1],
 				OmitLocations: queryOmitLocations,
 				Bindings:      service.BindingsProto(bind),
 				Limit:         queryLimit,
+				Witnesses:     witnesses,
 				// The context carries the budget in this process; a server reads it off the request.
 				WorkBudget: budget,
 			})
@@ -244,6 +251,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	c.Flags().StringVar(&format, "format", "text", "output format: text (the aligned terminal table), csv (spreadsheet-safe, header row, table only), json (rows with their citations kept apart), markdown or html (a VIEW: the question above its answer, ready to hand to someone). markdown and html carry the query; csv deliberately does not, because its first row has to be the header")
 	outFileFlag(c, &outPath)
 	c.Flags().Int32Var(&queryLimit, "limit", 0, "answer only the first N rows and say how many were left out (agni issue 896); where the query writes its own limit, the smaller applies. Not taken with --set")
+	c.Flags().BoolVar(&witnesses, "witnesses", false, "say how each row was derived: under each row, the fact or rule behind every clause of the query, a library member's own rule with its body facts filled in, and a `not` that held as an absence (agni issue 794). text and html print the tree under its row, markdown after the table, json in each row's witnesses; csv refuses it. Off by default, since recording derivations costs the evaluation memory")
 	c.Flags().BoolVar(&queryOmitLocations, "omit-locations", false, "leave out where each answer cell is drawn (its sheets and locate reason) and skip loading the drawing; for a script that draws nothing, this is most of a large json answer's size")
 	c.Flags().StringVar(&setPath, "set", "", "a query set (a .yaml file, - for stdin, or the name of a set in the design's project queries/ directory): named queries sharing a preamble of rules, all answered over ONE read of the design. Takes the design alone, no query argument. Every query's answer is written, and the command exits non-zero if any could not be answered")
 	c.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so a net or part column puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
@@ -431,7 +439,7 @@ func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rp
 // path is a set file, - for stdin, or the name of a set the design's project keeps in its queries/
 // directory (agni issue 745), which ListQuerySets answers as it does for the viewer. Only a name
 // ending .yaml or .yml is read as a file, the rule --checklist follows.
-func runQuerySet(cmd *cobra.Command, svc queryAPI, path, snap, format, title string, budget int64, link linker) error {
+func runQuerySet(cmd *cobra.Command, svc queryAPI, path, snap, format, title string, budget int64, witnesses bool, link linker) error {
 	named := path
 	set, path, err := readQuerySet(cmd, svc, path, snap)
 	if err != nil {
@@ -442,7 +450,7 @@ func runQuerySet(cmd *cobra.Command, svc queryAPI, path, snap, format, title str
 	}
 	resp, err := svc.RunQueries(cmd.Context(), &webapi.RunQueriesRequest{
 		Set: service.QuerySetProto(set), Snapshot: snap, WorkBudget: budget,
-		OmitLocations: queryOmitLocations,
+		OmitLocations: queryOmitLocations, Witnesses: witnesses,
 	})
 	if err != nil {
 		return rpcFailed(err)
@@ -572,7 +580,7 @@ func tableFromProto(resp *webapi.RunQueryResponse, title, queryText, source stri
 	t := rpt.Table{Title: title, Query: queryText, Source: source, Columns: resp.GetColumns(),
 		Bindings: formatBindings(resp.GetBindings()), Total: int(resp.GetTotal())}
 	for _, r := range resp.GetRows() {
-		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: service.RowCites(resp, r), Why: r.GetCellWhy()})
+		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: service.RowCites(resp, r), Why: r.GetCellWhy(), Witnesses: service.RowWitnesses(resp, r)})
 	}
 	return t
 }

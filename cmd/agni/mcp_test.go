@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"connectrpc.com/connect"
+	viewerpb "github.com/panyam/agni/gen/go/agni/v1/viewer"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/mcpserver"
 	"github.com/panyam/agni/mounts"
@@ -72,6 +73,29 @@ type mcpAnswer struct {
 	Tables []json.RawMessage `json:"tables"`
 	Answer json.RawMessage   `json:"answer"`
 	Links  json.RawMessage   `json:"links"`
+	Page   json.RawMessage   `json:"page"`
+}
+
+// pageCall is an answer's page action (agni issue 1155): the ViewerPageService method and the
+// request a host embedding the viewer sends it instead of opening the link.
+type pageCall struct {
+	Method string          `json:"method"`
+	Body   json.RawMessage `json:"body"`
+}
+
+// appliesLink fails unless raw is ApplyLocation carrying exactly link, so the action and the link an
+// answer carries move a viewer to one place.
+func appliesLink(t *testing.T, name string, raw json.RawMessage, link string) {
+	t.Helper()
+	var p pageCall
+	req := &viewerpb.ApplyLocationRequest{}
+	if err := json.Unmarshal(raw, &p); err != nil || p.Method != "ApplyLocation" || protojson.Unmarshal(p.Body, req) != nil {
+		t.Errorf("%s: page action %s, want ApplyLocation", name, raw)
+		return
+	}
+	if link == "" || req.GetUrl() != link || req.GetLocation() != nil {
+		t.Errorf("%s: page action applies %q, want the answer's link %q alone", name, req.GetUrl(), link)
+	}
 }
 
 func callMCP(t *testing.T, c *client.Client, tool string, args map[string]any) (*core.ToolResult, mcpAnswer) {
@@ -165,6 +189,30 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		if !strings.Contains(a.Link, "/designs/tut/designs/gateway/gateway.edn/view?") || !strings.Contains(a.Link, "query=") {
 			t.Errorf("the link opens %q, want the design's entry with the query", a.Link)
 		}
+		appliesLink(t, "query", a.Page, a.Link)
+	})
+
+	// jaala's query tool records witnesses, and agni presents them as RunQuery does when asked for
+	// them (agni issue 794), so an agent reads how each row was derived in the wire's own shape.
+	t.Run("query witnesses", func(t *testing.T) {
+		const program = `net.rail(?net), not net.has_test_point(?net) => ?net`
+		_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program})
+		got := &webapi.RunQueryResponse{}
+		if err := protojson.Unmarshal(a.Answer, got); err != nil {
+			t.Fatal(err)
+		}
+		resp, err := s.api.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: program, Witnesses: true}))
+		if err != nil {
+			t.Fatal(err)
+		}
+		want := resp.Msg
+		want.Work = 0 // what RunQuery's own evaluation cost, which the MCP answer did not run
+		if len(want.GetRows()) == 0 || len(want.GetRows()[0].GetWitnesses()) != 2 {
+			t.Fatalf("Connect answered %d rows without the two witnesses each, so the comparison proves nothing", len(want.GetRows()))
+		}
+		if !proto.Equal(got, want) {
+			t.Errorf("the MCP answer differs from RunQuery with witnesses\nMCP:     %v\nConnect: %v", got, want)
+		}
 	})
 
 	t.Run("query with a binding", func(t *testing.T) {
@@ -210,9 +258,32 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 			t.Fatal(err)
 		}
 		sameTables(t, "check", tablesOf(t, a), tabulateConnect(t, s, &webapi.TabulateRequest{Answer: &webapi.TabulateRequest_Check{Check: resp.Msg}}))
-		var links []map[string]string
-		if err := json.Unmarshal(a.Links, &links); err != nil || len(links) == 0 || !strings.Contains(links[0]["link"], "verdict=") || !strings.Contains(links[0]["link"], "hash=") {
+		var links []struct {
+			Verdict  string   `json:"verdict"`
+			Rule     string   `json:"rule"`
+			Subjects []string `json:"subjects"`
+			Link     string   `json:"link"`
+			Page     pageCall `json:"page"`
+		}
+		if err := json.Unmarshal(a.Links, &links); err != nil || len(links) == 0 || !strings.Contains(links[0].Link, "verdict=") || !strings.Contains(links[0].Link, "hash=") {
 			t.Errorf("verdict links %s", a.Links)
+		}
+		// Each link carries the LocateVerdict a host embedding the viewer sends instead, naming the
+		// verdict, rule and subjects the link itself carries (agni issue 1155).
+		for _, l := range links {
+			req := &viewerpb.LocateVerdictRequest{}
+			if l.Page.Method != "LocateVerdict" || protojson.Unmarshal(l.Page.Body, req) != nil {
+				t.Errorf("%s: page action %+v, want LocateVerdict", l.Verdict, l.Page)
+				continue
+			}
+			if req.GetId() != l.Verdict || req.GetRule() != l.Rule || len(l.Subjects) == 0 || !slices.Equal(req.GetSubjects(), l.Subjects) {
+				t.Errorf("%s: page action asks %v, want the link's verdict %q, rule %q and subjects %v", l.Verdict, req, l.Verdict, l.Rule, l.Subjects)
+			}
+			for _, sub := range l.Subjects {
+				if !strings.Contains(l.Link, "subject="+url.QueryEscape(sub)) {
+					t.Errorf("%s: subject %q is not in its link %s", l.Verdict, sub, l.Link)
+				}
+			}
 		}
 	})
 
@@ -233,6 +304,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		if !strings.Contains(a.Link, "trace=J1.1%2CU1.1") {
 			t.Errorf("trace link %q", a.Link)
 		}
+		appliesLink(t, "trace", a.Page, a.Link)
 	})
 
 	t.Run("diff", func(t *testing.T) {
@@ -248,6 +320,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		if a.Link != want || a.NoLink != "" || !strings.Contains(res.Content[0].Text, "open in the viewer: "+want+"\n") {
 			t.Errorf("diff link %q (no_link %q), want %q; text:\n%s", a.Link, a.NoLink, want, res.Content[0].Text)
 		}
+		appliesLink(t, "diff", a.Page, a.Link)
 		// Asked to pair near-renames, the link asks the viewer to pair them too.
 		if _, ra := callMCP(t, s.mcp, "diff", map[string]any{"design": a1, "against": b1, "rename_approx": true}); ra.Link != want+"&rename_approx=1" {
 			t.Errorf("diff link with rename_approx %q, want %q", ra.Link, want+"&rename_approx=1")

@@ -1,9 +1,9 @@
-#agni-run 63dc50969b7428a1
-supply-exceeds-abs-max  4 not-considered, 8 pass
-    not-considered  U31.2  rail "GND" does not name a nominal voltage
-    not-considered  U48.2  rail "GND" does not name a nominal voltage
-    not-considered  U49.2  rail "GND" does not name a nominal voltage
-    not-considered  U51.2  rail "GND" does not name a nominal voltage
+#agni-run b758bf16866c5ddc
+pin-exceeds-abs-max  4 not-considered, 8 pass
+    not-considered  U31.2  pin could not be resolved to a datasheet terminal
+    not-considered  U48.2  pin could not be resolved to a datasheet terminal
+    not-considered  U49.2  pin could not be resolved to a datasheet terminal
+    not-considered  U51.2  pin could not be resolved to a datasheet terminal
     pass            U31.3  3.3 V is within the absolute maximum of 6.5 V
     pass            U31.7  3.3 V is within the absolute maximum of 6.5 V
     pass            U48.3  1.8 V is within the absolute maximum of 6.5 V

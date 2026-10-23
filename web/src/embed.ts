@@ -1,6 +1,6 @@
 import type { JsonValue } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import type { PageDispatch } from "./pageservice.js";
+import { isLinkOnly, type PageDispatch } from "./pageservice.js";
 
 // embed.ts is the postMessage transport for ViewerPageService (agni issue 1152): a parent page that
 // frames the viewer drives it without reloading it. A request is
@@ -69,6 +69,11 @@ export interface HostWindow {
 // listenForHosts answers PageRequests posted to `win` from an allowed origin, and announces itself to
 // the parent frame. A request from any other origin is answered permission_denied, so a host that is
 // not allowed learns why rather than waiting. It returns a function that stops listening.
+//
+// One request is taken from any origin, an opaque one included: ApplyLocation carrying only a url
+// (isLinkOnly), which a report opened from disk sends (agni issue 1156). Loading that link in the
+// viewer's window does the same, and any page holding the window can do that already. Its reply
+// says only whether it worked, so the page tells such a sender nothing about the design.
 export function listenForHosts(win: HostWindow, dispatch: PageDispatch, allowed: readonly string[]): () => void {
   const self = win.location.origin;
   let queue: Promise<unknown> = Promise.resolve();
@@ -76,14 +81,17 @@ export function listenForHosts(win: HostWindow, dispatch: PageDispatch, allowed:
     const req = parseRequest(ev.data);
     const source = ev.source as { postMessage(msg: unknown, targetOrigin: string): void } | null;
     if (!req || !source) return;
-    const reply = (r: PageReply) => source.postMessage(r, ev.origin);
-    if (!originAllowed(ev.origin, self, allowed)) {
+    // An opaque origin cannot be named as a target, so its reply goes to "*", and carries no body.
+    const reply = (r: PageReply) => source.postMessage(r, ev.origin === "null" ? "*" : ev.origin);
+    const trusted = originAllowed(ev.origin, self, allowed);
+    if (!trusted && !isLinkOnly(req.method, req.body)) {
       reply({ agni: ENVELOPE, id: req.id, ok: false, error: { code: "permission_denied", message: `this viewer does not take requests from ${ev.origin}; start it with --embed-origin ${ev.origin}` } });
       return;
     }
     queue = queue.then(async () => {
       try {
-        reply({ agni: ENVELOPE, id: req.id, ok: true, body: await dispatch(req.method, req.body) });
+        const body = await dispatch(req.method, req.body);
+        reply({ agni: ENVELOPE, id: req.id, ok: true, body: trusted ? body : {} });
       } catch (e) {
         const err = ConnectError.from(e);
         reply({ agni: ENVELOPE, id: req.id, ok: false, error: { code: codeName(err.code), message: err.rawMessage } });

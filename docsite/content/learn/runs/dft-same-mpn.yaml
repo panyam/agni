@@ -1,0 +1,5 @@
+# Chapter 13's placement-habit paragraph. The two parts with neither node probed share a part number.
+fixture: examples/common/designs
+from_root: true
+script: |
+  agni query examples/common/designs/probe-coverage.edn 'component.two_terminal(?r, ?a, ?b), not net.has_test_point(?a), not net.has_test_point(?b), component.mpn(?r, ?m) => ?m, list(?r)'

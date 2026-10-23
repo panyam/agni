@@ -15,6 +15,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mounts"
+	"github.com/panyam/agni/readers/kicad"
 	"github.com/panyam/agni/service"
 )
 
@@ -105,8 +106,10 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	// around it lives here.
 	res := service.ResolveSources(d, uri.String(), isDir, r.asNamed)
 	if !res.FromDeclaration {
-		// An undeclared sibling, or --as-named on a companion, reads exactly what was named, so
-		// there is no note. plain already holds the ref in all three tiers.
+		// An undeclared sibling, or --as-named on a companion, reads exactly what was named. plain
+		// already holds the ref in all three tiers. A sibling that is one sheet of the design's
+		// hierarchy is still read as named, and says so (agni issue 1023).
+		plain.Note = subSheetNote(root, named, uri, d)
 		return plain, nil
 	}
 	// Compare REFS, not the path string the user typed. A ref never matches a typed path, and the
@@ -114,6 +117,46 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	note := resolutionNote(named, uri.String(), d, res.DesignSources, res.NamedIsTheDesign, res.NamedIsTheEntry)
 
 	return designSource{DesignSources: res.DesignSources, Note: note}, nil
+}
+
+// subSheetNote is the stderr line for naming one sheet of a design's KiCad hierarchy rather than the
+// design, empty when the named file is not a sub-sheet of the design's entry. Reading a sub-sheet
+// alone checks that sheet as though it were the whole design: on Jetson, one sheet of fifteen gave
+// 383 findings and a review scoring rules that judged nothing (agni issue 1023). It stays a note
+// rather than a redirect, because an undeclared sibling is read as named on purpose.
+func subSheetNote(root, typed string, named artifact.URI, d *webapi.Design) string {
+	entry := uriPath(d.GetEntryUri())
+	if !strings.EqualFold(path.Ext(named.Path), ".kicad_sch") || !strings.EqualFold(path.Ext(entry), ".kicad_sch") || entry == named.Path {
+		return ""
+	}
+	dir := path.Dir(entry)
+	// Read through os.Root, so a Sheetfile reference cannot reach outside the design's mount.
+	mount, err := os.OpenRoot(root)
+	if err != nil {
+		return ""
+	}
+	defer mount.Close()
+	content, err := mount.ReadFile(filepath.FromSlash(entry))
+	if err != nil {
+		return ""
+	}
+	open := func(rel string) ([]byte, error) {
+		return mount.ReadFile(filepath.FromSlash(path.Join(dir, rel)))
+	}
+	for _, f := range kicad.SheetFiles(content, open) {
+		if path.Join(dir, f) == named.Path {
+			// The design's folder as the user would type it, from the path they typed, since its path
+			// within the mount is empty when the CLI mounted the folder itself.
+			rel, err := filepath.Rel(filepath.FromSlash(path.Dir(named.Path)), filepath.FromSlash(dir))
+			if err != nil {
+				rel = "."
+			}
+			design := filepath.Clean(filepath.Join(filepath.Dir(typed), rel))
+			return fmt.Sprintf("note: %s is a sub-sheet of %s, whose entry is %s, so this reads one sheet as a whole design. Name %s to read the design.\n",
+				path.Base(named.Path), design, path.Base(entry), design)
+		}
+	}
+	return ""
 }
 
 // resolutionNote is the stderr line naming every artifact that was read but not asked for.

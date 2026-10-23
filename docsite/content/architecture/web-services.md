@@ -117,6 +117,14 @@ A few contract details bite if missed.
   without another call. GetReviewManifest is the bridge for a checklist FILE, such as a YAML sibling
   of a design that belongs to no project, held by a client with a URI and no filesystem. The server
   reads and validates the checklist once, and the client sends back the value it got. The CLI skips it, because reading the file the user named is its own job.
+- **A row can say how it was derived.** `RunQueryRequest.witnesses` (and `RunQueriesRequest`'s)
+  asks the engine to record, for each row, the fact or rule that proved each literal of the goal:
+  `QueryRow.witnesses`, a tree of `QueryWitness` whose derived nodes carry the rule as written and
+  whose children follow the rule's written order. A witness reuses the answer's tables rather than
+  carrying copies, so its `value_entity` points into `entities` as `cell_entity` does and its
+  `cite_index` into `sources` as a row's does. It is off by default because recording a derivation
+  per derived fact costs the evaluation memory, and the query panel asks for it only when a reader
+  opens a row (agni issue 794).
 - **A query that does not parse says where.** RunQuery then fails with `invalid_argument` carrying
   a `TextPosition` error detail (byte `offset`, `line` and `column` from 1, the column counted in
   characters), which the query panel turns into a caret under the place. RunQueries answers the rest

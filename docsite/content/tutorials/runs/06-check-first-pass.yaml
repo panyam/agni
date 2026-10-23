@@ -4,4 +4,4 @@ fetched: tools/samples/boards/jetson-agx-thor-baseboard
 fetched_into: designs/jetson
 script: |
   cp drafts/nts0102gt.first-pass.textproto params/nts0102gt.textproto
-  agni check designs/jetson --rule supply-exceeds-abs-max
+  agni check designs/jetson --rule supply-exceeds-abs-max --rule pin-exceeds-abs-max

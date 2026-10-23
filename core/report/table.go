@@ -1,6 +1,7 @@
 package report
 
 import (
+	"bytes"
 	"fmt"
 	"io"
 	"strings"
@@ -54,6 +55,10 @@ type TableRow struct {
 	// Why aligns with Cells and says why an empty cell is absent, such as a sum over numbers in
 	// different units. A renderer prints the reason in the cell, so an absent answer is never a blank.
 	Why []string
+	// Witnesses say how the row holds, when the query asked for them (agni issue 794). text and html
+	// print the tree under the row, markdown in a section after the table, and csv never, since a
+	// csv holds the table alone.
+	Witnesses []Witness
 }
 
 // ProvenanceColumn is the name of the trailing column every renderer appends. Exported so a caller
@@ -83,7 +88,10 @@ func TableText(w io.Writer, t Table) error {
 		_, err := fmt.Fprintln(w, "no results")
 		return err
 	}
-	tw := tabwriter.NewWriter(w, 0, 2, 2, ' ', 0)
+	// The rows align through a buffer, so a row's witness tree can go under it without a line that
+	// holds no cells breaking the alignment of the rows after it.
+	var aligned bytes.Buffer
+	tw := tabwriter.NewWriter(&aligned, 0, 2, 2, ' ', 0)
 	fmt.Fprintln(tw, strings.Join(t.header(), "\t"))
 	for _, r := range t.Rows {
 		fmt.Fprintln(tw, strings.Join(r.cells(), "\t"))
@@ -91,8 +99,42 @@ func TableText(w io.Writer, t Table) error {
 	if err := tw.Flush(); err != nil {
 		return err
 	}
-	_, err := fmt.Fprintf(w, "\n%s\n", t.Count())
-	return err
+	bw := &errWriter{w: w}
+	lines := strings.SplitAfter(aligned.String(), "\n")
+	// A cell holding a newline spans two lines, so a tree goes under its row only when every row is
+	// one line, and otherwise after the table, numbered by row.
+	if !t.witnessed() || len(lines) != len(t.Rows)+2 {
+		bw.printf("%s", aligned.String())
+		lines = nil
+		for i, r := range t.Rows {
+			if len(r.Witnesses) > 0 {
+				bw.printf("\nrow %d:\n", i+1)
+			}
+			for _, l := range WitnessLines(r.Witnesses) {
+				bw.printf("%s%s\n", witnessIndent+witnessIndent, l)
+			}
+		}
+	}
+	for i := range lines {
+		bw.printf("%s", lines[i])
+		if i >= 1 && i <= len(t.Rows) {
+			for _, l := range WitnessLines(t.Rows[i-1].Witnesses) {
+				bw.printf("%s%s\n", witnessIndent+witnessIndent, l)
+			}
+		}
+	}
+	bw.printf("\n%s\n", t.Count())
+	return bw.err
+}
+
+// witnessed reports whether any row carries witnesses.
+func (t Table) witnessed() bool {
+	for _, r := range t.Rows {
+		if len(r.Witnesses) > 0 {
+			return true
+		}
+	}
+	return false
 }
 
 // TableCSV writes the rows as csv, header first, with every cell sanitized against spreadsheet
@@ -138,6 +180,17 @@ func TableMarkdown(w io.Writer, t Table) error {
 		bw.printf("| %s |\n", strings.Join(mdEscapeAll(r.cells()), " | "))
 	}
 	bw.printf("\n%s\n", t.Count())
+	// A markdown table has no row that spans it, so the trees follow the table, one per row, under
+	// the row's cells.
+	if t.witnessed() {
+		bw.printf("\n**How each row holds**\n")
+		for i, r := range t.Rows {
+			if len(r.Witnesses) == 0 {
+				continue
+			}
+			bw.printf("\nRow %d, %s:\n\n```\n%s\n```\n", i+1, mdEscape(strings.Join(r.Cells, ", ")), strings.Join(WitnessLines(r.Witnesses), "\n"))
+		}
+	}
 	return bw.err
 }
 
@@ -174,13 +227,21 @@ func TableHTML(w io.Writer, t Table) error {
 type tableView struct {
 	Table
 	Header []string
-	Body   [][]string
+	Body   []bodyRow
 }
 
-func (t Table) bodyRows() [][]string {
-	out := make([][]string, 0, len(t.Rows))
+// bodyRow is one emitted row and, when it has witnesses, their tree as text, spanning the row.
+type bodyRow struct {
+	Cells []string
+	How   string
+	Span  int
+}
+
+func (t Table) bodyRows() []bodyRow {
+	out := make([]bodyRow, 0, len(t.Rows))
 	for _, r := range t.Rows {
-		out = append(out, r.cells())
+		c := r.cells()
+		out = append(out, bodyRow{Cells: c, How: strings.Join(WitnessLines(r.Witnesses), "\n"), Span: len(c)})
 	}
 	return out
 }

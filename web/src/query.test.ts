@@ -5,7 +5,7 @@ import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
 import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, relationCrumbs, tierLabel, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason } from "./query.js";
-import { resultFromWire } from "./testwire.js";
+import { probedOneAnswer, resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
   // agni issue 896: total survives only when the limit actually left rows out.
@@ -340,4 +340,39 @@ describe("compareNatural, twinned with service via natural_twin.json", () => {
       expect([...want].reverse().sort(compareNatural)).toEqual(want);
     });
   }
+});
+
+// agni issue 794: a witnessed answer's trees read their values through the response's entities and
+// their citations through its sources, as cells and rows do.
+describe("resultFromResponse witnesses", () => {
+  it("reads each witness's values, citations, rule, negation and children", () => {
+    const r = resultFromResponse(probedOneAnswer(), (ids) => ids.map((id) => ({ id, name: `sheet ${id}` })), true);
+    expect(r.witnessed).toBe(true);
+    const top = r.rows[0].witnesses;
+    expect(top).toHaveLength(1);
+    expect(top[0].relation).toBe("component.probed_one");
+    expect(top[0].rule).toContain("not net.has_test_point(?unprobed)");
+    expect(top[0].values.map((v) => [v.text, v.kind, v.sheets.map((b) => b.name).join()])).toEqual([
+      ["R1", "component", "sheet s1"],
+      ["VBUS", "net", "sheet s2"],
+      ["SENSE", "net", "sheet s1"],
+    ]);
+    expect(top[0].children.map((c) => `${c.negated ? "not " : ""}${c.relation}`)).toEqual([
+      "component.two_terminal",
+      "net.has_test_point",
+      "not net.has_test_point",
+    ]);
+    const tp = top[0].children[1].children;
+    expect(tp[0].cites).toEqual(["x.edn:VBUS"]);
+    expect(tp[0].values.map((v) => v.kind)).toEqual(["component", "net"]);
+    // A pin value carries its component, which a cell carries in cellRefs.
+    expect(tp[1].values[1]).toMatchObject({ text: "3", kind: "pin", ref: "U1" });
+    expect(top[0].children[2].cites).toEqual([]);
+  });
+
+  it("leaves rows with no witnesses, and the answer unwitnessed, when none were asked for", () => {
+    const r = resultFromResponse(create(RunQueryResponseSchema, { columns: ["r"], rows: [{ cells: ["R1"] }] }));
+    expect(r.witnessed).toBe(false);
+    expect(r.rows[0].witnesses).toEqual([]);
+  });
 });

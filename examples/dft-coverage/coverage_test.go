@@ -38,3 +38,28 @@ func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
 		}
 	}
 }
+
+// TestTheWhyStepExplainsARowThroughTheLibrary pins what the witness step prints for the fixture's first
+// one-end row: the walk's own passive rule, then the library member with its body facts, ending in the
+// `not` that held on the unprobed net (agni issue 794).
+func TestTheWhyStepExplainsARowThroughTheLibrary(t *testing.T) {
+	d, err := common.Load("../common/designs/probe-coverage.edn")
+	if err != nil {
+		t.Fatalf("load fixture: %v", err)
+	}
+	cells, ws, err := witnessed(d, oneQuery)
+	if err != nil || len(cells) != 2 {
+		t.Fatalf("witnessed = %v, %v", cells, err)
+	}
+	if len(ws) != 2 || ws[0].Relation != "passive" || ws[1].Relation != "component.probed_one" {
+		t.Fatalf("witnesses %+v, want passive then component.probed_one", ws)
+	}
+	member := ws[1]
+	last := member.Children[len(member.Children)-1]
+	if !last.Negated || last.Relation != "net.has_test_point" || last.Values[0] != cells[1] {
+		t.Errorf("the member's last body fact is %+v, want not net.has_test_point(%s)", last, cells[1])
+	}
+	if !strings.Contains(member.Rule, ":-") {
+		t.Errorf("the member's rule %q is not its written definition", member.Rule)
+	}
+}

@@ -1,0 +1,18 @@
+#agni-run 56c938cdf8c2c86b
+n      c  provenance
+GND    0  probe-coverage.edn:GND
+SENSE  0  probe-coverage.edn:SENSE
+STRAP  0  probe-coverage.edn:STRAP
+FB     1  probe-coverage.edn ; probe-coverage.edn:FB
+VIN    1  probe-coverage.edn ; probe-coverage.edn:VIN
+VOUT   1  probe-coverage.edn ; probe-coverage.edn:VOUT
+
+6 result(s)
+#agni-step
+r   provenance
+C1  probe-coverage.edn:GND
+C2  probe-coverage.edn:GND
+J1  probe-coverage.edn:GND
+R4  probe-coverage.edn:GND
+
+4 result(s)

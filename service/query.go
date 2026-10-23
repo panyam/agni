@@ -69,7 +69,7 @@ func (s *QueryService) RunQuery(ctx context.Context, req *webapi.RunQueryRequest
 	if err != nil {
 		return nil, err
 	}
-	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery(), bind, req.GetOmitLocations())
+	resp, err := s.answer(query.NarrowBudget(ctx, req.GetWorkBudget()), d, q, req.GetQuery(), bind, req.GetOmitLocations(), req.GetWitnesses())
 	if err != nil {
 		if stopped(err) {
 			return nil, err
@@ -135,7 +135,7 @@ func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesReq
 			res.ErrorAt = TextPositionOf(err)
 			continue
 		}
-		resp, err := s.answer(ctx, d, q, nq.Query, nq.Bind, req.GetOmitLocations())
+		resp, err := s.answer(ctx, d, q, nq.Query, nq.Bind, req.GetOmitLocations(), req.GetWitnesses())
 		if err != nil {
 			if stopped(err) {
 				return nil, err
@@ -337,15 +337,19 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 }
 
 // answer evaluates one query over a read and assembles its response, echoing queryText as the
-// response's query. An error is the evaluator's (a malformed or unanswerable query), and the caller
-// decides what it means for the call.
-func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind query.Bindings, omitLocations bool) (*webapi.RunQueryResponse, error) {
+// response's query. With witnesses each row carries how it was derived (agni issue 794); without,
+// the evaluation is the one it always was. An error is the evaluator's (a malformed or unanswerable
+// query), and the caller decides what it means for the call.
+func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind query.Bindings, omitLocations, witnesses bool) (*webapi.RunQueryResponse, error) {
 	// Work is measured on this read's own fact base, so it is this query's alone, and reported so a
 	// deployment can see what its queries cost before it sets a budget (agni issue 792).
 	before := query.Work(d.base)
 	opts := query.EvalOptions(ctx)
 	if len(bind) > 0 {
 		opts = append(opts, query.Bind(bind))
+	}
+	if witnesses {
+		opts = append(opts, query.Witnesses())
 	}
 	// A timed request that asked for plans gets this evaluation's (agni issue 914), recorded even when
 	// the evaluation stops at its budget, since that is when the plan is most wanted.
@@ -407,7 +411,9 @@ func (d *designRead) present(ctx context.Context, q query.Query, queryText strin
 	// A navigable cell missing from drawnComps/drawnNets gets a locate reason (WS9-039). A caller
 	// that draws nothing asks for no locations, which skips the drawing and most of the response's
 	// bytes (omit_locations).
-	locate := navigable && !omitLocations
+	// A witness names entities too (agni issue 794), so a witnessed answer is located even when its
+	// columns are all scalars.
+	locate := (navigable || table.Witness != nil) && !omitLocations
 	var drawnComps, drawnNets map[string]bool
 	if locate {
 		ix, drawnComps, drawnNets = d.geometry(ctx, d.loader)
@@ -438,6 +444,10 @@ func (d *designRead) present(ctx context.Context, q query.Query, queryText strin
 		colAt[c] = i
 	}
 	sources := NewSourceTable(resp)
+	var witnesses *witnessPresenter
+	if table.Witness != nil {
+		witnesses = newWitnessPresenter(d.reg, q, entity, sources, d.u.Path)
+	}
 	for ri := lo; ri < hi; ri++ {
 		values := table.Rows[ri]
 		bound := func(v query.Var) query.Value {
@@ -460,6 +470,9 @@ func (d *designRead) present(ctx context.Context, q query.Query, queryText strin
 			}
 		}
 		sources.Cite(row, portableCites(table.Cites[ri], d.u.Path))
+		if witnesses != nil {
+			row.Witnesses = witnesses.nodes(table.Witness[ri])
+		}
 		if navigable {
 			for i := range cols {
 				// A polymorphic column takes its kind from THIS row's binding of the kind variable
@@ -759,8 +772,9 @@ func entryProto(reg *facts.Registry, e query.Entry) *webapi.RelationEntry {
 // the param.* and part.* relations range over every spec in fs rather than one design's parts. It
 // answers through the same projection RunQuery does, so its rows, kinds, citations and work are a
 // RunQueryResponse built one way (agni issue 1045). source names the corpus for the response. A
-// query that does not parse is an invalid argument, carrying its position as RunQuery's does.
-func (s *QueryService) RunSpecLibQuery(ctx context.Context, fs param.FactSource, queryText, source string, bind query.Bindings) (*webapi.RunQueryResponse, error) {
+// query that does not parse is an invalid argument, carrying its position as RunQuery's does. With
+// witnesses each row carries how it was derived, as RunQueryRequest.witnesses asks.
+func (s *QueryService) RunSpecLibQuery(ctx context.Context, fs param.FactSource, queryText, source string, bind query.Bindings, witnesses bool) (*webapi.RunQueryResponse, error) {
 	q, err := query.Parse(queryText)
 	if err != nil {
 		return nil, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
@@ -768,7 +782,7 @@ func (s *QueryService) RunSpecLibQuery(ctx context.Context, fs param.FactSource,
 	reg := facts.DefaultRegistry()
 	d := &designRead{source: source, base: query.NewSpecLibBaseFrom(reg, fs), reg: reg}
 	// A corpus is drawn nowhere, so nothing is located.
-	return s.answer(ctx, d, q, queryText, bind, true)
+	return s.answer(ctx, d, q, queryText, bind, true, witnesses)
 }
 
 // TextPositionOf is where in its query's text err points, when err is a query that would not parse,
