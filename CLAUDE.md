@@ -489,6 +489,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `query.Bindings` is a variable's values everywhere in Go (agni 1121). The viewer's search and click presets bind too
   (`EntityQuery.binds`, `SearchQuery.bind`/`pattern`) and show the values as chips, so a served
   preset's text never changes. A binding the goal does not use is refused by the engine.
+  A list holding ONE value is substituted as a constant, so it cannot be aggregated; a question
+  counting a bound variable counts a copy of it instead (`?part = ?ref`, the area questions in
+  `core/query/entity.go`, agni 904).
   **A position filled from a numeric slot is declared a NUMBER automatically** (`numericTypes` in
   `core/facts`, from the relation's `FieldNum`/`FieldMin` layout), and since jaala v0.1.15 the engine
   reads a constant or bound value there as a number: `"3"` against a count is 3 and `"abc"` is
@@ -1112,7 +1115,7 @@ until the count is listed there on purpose (agni 727).
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
 and the command that exercises it. Several may be active at once, one per worktree, and #845
-`mission_browser_review` is. #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo`
+`mission_browser_review` (every ticket closed) and #1157 (`make exercise-viewer-page`) are. #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo`
 (2026-10-20) and #909 `mission_ask` (2026-10-22) have closed, and their exercises live on as the
 example #843 built, `make exercise-public-demo` and `make exercise-mcp-ask`. A
 mission is blocked by each ticket it needs, and its tickets carry its `mission_<slug>` label. **A new
