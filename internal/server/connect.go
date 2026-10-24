@@ -522,3 +522,21 @@ func (a *Snapshot) UploadBlobs(ctx context.Context, req *connect.Request[webapi.
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// ViewerRoom adapts service.ViewerRoomService to the generated Connect handler interface. `agni
+// serve` registers it only under --viewer-rooms (agni issue 1154), so it is not part of API.
+type ViewerRoom struct {
+	webapiconnect.UnimplementedViewerRoomServiceHandler
+	svc *service.ViewerRoomService
+}
+
+// NewViewerRoom wraps svc for Connect.
+func NewViewerRoom(svc *service.ViewerRoomService) *ViewerRoom { return &ViewerRoom{svc: svc} }
+
+func (a *ViewerRoom) JoinViewerRoom(ctx context.Context, req *connect.Request[webapi.JoinViewerRoomRequest]) (*connect.Response[webapi.JoinViewerRoomResponse], error) {
+	resp, err := a.svc.JoinViewerRoom(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}

@@ -30,6 +30,14 @@ const solidAlias = {
   "solid-js/store": require.resolve("solid-js/store/dist/store.js"),
 };
 
+// @panyam/servicekit-client's "browser" field names a script that defines a global and exports
+// nothing, and esbuild prefers that field for a browser bundle, so the room client's
+// `new GRPCWSClient()` met undefined and no tab could join its design's room (agni issue 1154). The
+// alias points it at the package's ES module, resolved from the room client that imports it, since
+// pnpm keeps it out of this package's own node_modules.
+const roomsResolve = createRequire(createRequire(require.resolve("@panyam/mcpkit-rooms")).resolve("@panyam/massrelay"));
+const roomsAlias = { "@panyam/servicekit-client": roomsResolve.resolve("@panyam/servicekit-client/dist/index.mjs") };
+
 // The Solid app bundles, one per page. Each must contain exactly one reactive core (asserted below).
 const appBundles = [
   { entry: "src/main.ts", outfile: "static/app.js" },
@@ -42,7 +50,7 @@ const solidBuild = (b) => ({
   bundle: true,
   format: "esm",
   outfile: b.outfile,
-  alias: solidAlias,
+  alias: { ...solidAlias, ...roomsAlias },
   plugins: [solidPlugin()],
   logLevel: "info",
 });

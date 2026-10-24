@@ -232,6 +232,9 @@ importers:
       '@connectrpc/connect-web':
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
+      '@panyam/mcpkit-rooms':
+        specifier: 0.8.7
+        version: 0.8.7
       '@panyam/tsappkit':
         specifier: ^0.7.6
         version: 0.7.6
@@ -767,6 +770,19 @@ packages:
     cpu: [x64]
     os: [linux]
     libc: [glibc]
+
+  '@panyam/massrelay@0.2.5':
+    resolution: {integrity: sha512-cag+jNHxgBUINxmKpKS/QluEyFomB/o9BqCr+KyOO7W4jFFEj8IQ8zXjahKw82y6RLCHdPP/UDI+re518D5Pyw==}
+    peerDependencies:
+      '@bufbuild/protobuf': ^2.0.0
+      '@panyam/servicekit-client': ^0.0.7 || ^0.1.9
+
+  '@panyam/mcpkit-rooms@0.8.7':
+    resolution: {integrity: sha512-AvpvVsxwoErAbNhjc3tgMrp2FR8K5P7ANM/35lVwgJ9HkPPAMTA3ReQ7qLKiLzK3+k8mse3r7FjgChwasquG+w==}
+
+  '@panyam/servicekit-client@0.1.11':
+    resolution: {integrity: sha512-WEsPCEY2uiAcDe6zP0MN88ftl5w7pqFPrVTLnMSuZQQzQ7rCTV3oH89LISBI0/vcR3w1X0Xfw5zrzwhxZ23uhA==}
+    engines: {node: '>=16.0.0'}
 
   '@panyam/tsappkit-solid@0.7.5':
     resolution: {integrity: sha512-pLMWJdwWyRZBKsljpNVEzhkOZZFWAIAqdARl1/GoZ0MHSoZ8uANQNt9kXRsLQTjm1SWo8nEBBiFivcfUUnh7VA==}
@@ -1835,6 +1851,19 @@ snapshots:
 
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
+
+  '@panyam/massrelay@0.2.5(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.1.11)':
+    dependencies:
+      '@bufbuild/protobuf': 2.12.1
+      '@panyam/servicekit-client': 0.1.11
+
+  '@panyam/mcpkit-rooms@0.8.7':
+    dependencies:
+      '@bufbuild/protobuf': 2.12.1
+      '@panyam/massrelay': 0.2.5(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.1.11)
+      '@panyam/servicekit-client': 0.1.11
+
+  '@panyam/servicekit-client@0.1.11': {}
 
   '@panyam/tsappkit-solid@0.7.5(@panyam/tsappkit@0.7.6)(solid-js@1.9.14)':
     dependencies:

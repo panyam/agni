@@ -55,7 +55,8 @@ const (
 
 // ViewerPageServiceClient is a client for the agni.v1.viewer.ViewerPageService service.
 type ViewerPageServiceClient interface {
-	// GetLocation returns where the page is now. It changes nothing.
+	// GetLocation returns where the page is now. It changes nothing, which NO_SIDE_EFFECTS records so
+	// an agent holding only read access may call it (agni issue 1154).
 	GetLocation(context.Context, *connect.Request[viewer.GetLocationRequest]) (*connect.Response[viewer.GetLocationResponse], error)
 	// ApplyLocation moves the open page to a location, as following a link to it would. A location
 	// naming a different design (or a different flatten) opens it, which is the cold path; one naming
@@ -86,6 +87,7 @@ func NewViewerPageServiceClient(httpClient connect.HTTPClient, baseURL string, o
 			httpClient,
 			baseURL+ViewerPageServiceGetLocationProcedure,
 			connect.WithSchema(viewerPageServiceMethods.ByName("GetLocation")),
+			connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 			connect.WithClientOptions(opts...),
 		),
 		applyLocation: connect.NewClient[viewer.ApplyLocationRequest, viewer.ApplyLocationResponse](
@@ -163,7 +165,8 @@ func (c *viewerPageServiceClient) ShowSheet(ctx context.Context, req *connect.Re
 
 // ViewerPageServiceHandler is an implementation of the agni.v1.viewer.ViewerPageService service.
 type ViewerPageServiceHandler interface {
-	// GetLocation returns where the page is now. It changes nothing.
+	// GetLocation returns where the page is now. It changes nothing, which NO_SIDE_EFFECTS records so
+	// an agent holding only read access may call it (agni issue 1154).
 	GetLocation(context.Context, *connect.Request[viewer.GetLocationRequest]) (*connect.Response[viewer.GetLocationResponse], error)
 	// ApplyLocation moves the open page to a location, as following a link to it would. A location
 	// naming a different design (or a different flatten) opens it, which is the cold path; one naming
@@ -190,6 +193,7 @@ func NewViewerPageServiceHandler(svc ViewerPageServiceHandler, opts ...connect.H
 		ViewerPageServiceGetLocationProcedure,
 		svc.GetLocation,
 		connect.WithSchema(viewerPageServiceMethods.ByName("GetLocation")),
+		connect.WithIdempotency(connect.IdempotencyNoSideEffects),
 		connect.WithHandlerOptions(opts...),
 	)
 	viewerPageServiceApplyLocationHandler := connect.NewUnaryHandler(

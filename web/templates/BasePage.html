@@ -40,6 +40,9 @@
        strip keeps the bar's free width, and bottom-padded to sit on the tabs' baseline. */
     .vw-crumb { flex: 0 0 auto; padding: 0 0 5px 8px; color: #999; font-size: 12px; white-space: nowrap; }
     .drop-open { flex: 0 0 auto; margin: 0 0 5px 8px; font-size: 12px; }
+    /* agni issue 1154: the per-tab switch that lets agents drive this tab, shown under --viewer-rooms. */
+    .agents-switch { flex: 0 0 auto; margin: 0 0 5px 8px; font-size: 12px; white-space: nowrap; }
+    .agents-switch[hidden] { display: none; }
     .drop-dialog { max-width: 720px; width: 90vw; max-height: 85vh; overflow: auto; }
     .drop-design { border-top: 1px solid #ddd; padding: 8px 0; }
     .drop-design-note { color: #8a5a00; font-size: 12px; margin: 4px 0; }

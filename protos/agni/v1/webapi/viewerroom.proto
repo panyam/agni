@@ -1,0 +1,41 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "google/protobuf/timestamp.proto";
+
+// This file: ViewerRoomService, how an open viewer page joins its design's room so an agent can
+// drive it (agni issue 1154).
+//
+// `agni serve --mcp --viewer-rooms` embeds a relay at /relay/ and mcpkit's room bridge beside /mcp.
+// A viewer page joins the room of the design it shows and offers ViewerPageService's methods there
+// as tools (viewer_show_sheet, viewer_locate_verdict, ...), and the bridge serves them to agents,
+// each call naming its design. This service is the one step the page needs from the server first:
+// the room's name, resolved as every other surface resolves the design (C32), and a token the relay
+// admits it with. Without --viewer-rooms the service is not served.
+service ViewerRoomService {
+  // JoinViewerRoom names the room for a design and mints a relay token scoped to it. It stores
+  // nothing; each call mints a fresh token.
+  rpc JoinViewerRoom(JoinViewerRoomRequest) returns (JoinViewerRoomResponse);
+}
+
+message JoinViewerRoomRequest {
+  // design is the design the page shows, as mount/path: its folder, entry file or a declared
+  // companion. All three name one room.
+  string design = 1;
+}
+
+message JoinViewerRoomResponse {
+  // room is "design:<mount>/<entry>", the design's declared entry whatever the request named, so
+  // tabs opened on the folder and on the entry share one room, and an agent naming either reaches
+  // them.
+  string room = 1;
+  // relay_url is where the relay is served, relative to the server ("/relay/").
+  string relay_url = 2;
+  // token is the relay token the page joins with, admitting it to `room` alone.
+  string token = 3;
+  // expire_time is when the token stops admitting a new join. A page already in the room stays.
+  google.protobuf.Timestamp expire_time = 4;
+}

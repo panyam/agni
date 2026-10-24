@@ -14,14 +14,17 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/viewer";
 //
 // The service is transport-neutral. The page dispatches a method name and a protojson body
 // (web/src/pageservice.ts), and each transport only carries that pair: postMessage from a parent
-// page today (web/src/embed.ts, the `agni-viewer/v1` envelope), and a server-held session or an
-// MCP app host later (agni issues 1154, 1155). No server implements it.
+// page today (web/src/embed.ts, the `agni-viewer/v1` envelope), and a design's relay room, where
+// each method is an agent's tool (web/src/viewerroom.ts, agni issue 1154). No server implements it.
 //
 // Every response carries the page's location after the call, so a caller learns where the page
 // landed (which sheet a verdict opened) without asking again.
 service ViewerPageService {
-  // GetLocation returns where the page is now. It changes nothing.
-  rpc GetLocation(GetLocationRequest) returns (GetLocationResponse);
+  // GetLocation returns where the page is now. It changes nothing, which NO_SIDE_EFFECTS records so
+  // an agent holding only read access may call it (agni issue 1154).
+  rpc GetLocation(GetLocationRequest) returns (GetLocationResponse) {
+    option idempotency_level = NO_SIDE_EFFECTS;
+  }
   // ApplyLocation moves the open page to a location, as following a link to it would. A location
   // naming a different design (or a different flatten) opens it, which is the cold path; one naming
   // the open design, or no design, applies to the page as it stands.

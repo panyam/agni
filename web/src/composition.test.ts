@@ -43,6 +43,7 @@ const servedFields: Record<string, string> = {
   "{{ .Host }}": "",
   "{{ .Build }}": "",
   "{{ .EmbedOrigins }}": "",
+  "{{ .ViewerRooms }}": "",
 };
 
 function pageBody(): string {

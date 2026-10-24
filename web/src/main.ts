@@ -54,6 +54,10 @@ import { PropertiesPresenter } from "./propertiespresenter.js";
 import { embedOrigins, listenForHosts } from "./embed.js";
 import { pageApi, type ViewerPageAPI } from "./pageapi.js";
 import { pageDispatcher } from "./pageservice.js";
+import { ViewerRoomTab } from "./viewerroom.js";
+import { ViewerRoomService } from "./gen/agni/v1/webapi/viewerroom_pb.js";
+import { createClient } from "@connectrpc/connect";
+import { createConnectTransport } from "@connectrpc/connect-web";
 import { verdictItem } from "./document.js";
 import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 
@@ -61,6 +65,10 @@ import { baseName, noteOpen } from "@agni/web-shared/recents.js";
 // The presenter's location callback still fires then, and must not push a history entry for it.
 // Module-level because both the presenter callback and the restore driver below read it.
 let restoring = false;
+
+// roomTab is this tab's place in its design's relay room under --viewer-rooms (agni issue 1154),
+// moved by syncUrl when the page opens another design. Undefined on every other server.
+let roomTab: ViewerRoomTab | undefined;
 
 // isTextEntry reports whether an event landed in somewhere the reader is typing, so a page-level key
 // binding can decline it. The query box and the review notes both take free text, and Escape inside
@@ -77,6 +85,7 @@ function isTextEntry(target: EventTarget | null): boolean {
 // back stack and a refresh or back/forward replay does not.
 function syncUrl(loc: ViewerLocation): void {
   document.title = hasFile(loc) ? `${loc.path || loc.mount} — Agni` : "Agni viewer";
+  void roomTab?.follow(loc);
   if (restoring) return;
   const url = withEngineParams(locationToUrl(loc));
   if (url !== window.location.pathname + window.location.search) window.history.pushState(null, "", url);
@@ -749,7 +758,17 @@ void admitted()
     // viewer through it over postMessage, and listening starts once the URL's design is open, so a
     // host's first request never races the restore; the page announces itself to its parent then.
     const page: ViewerPageAPI = pageApi(presenter);
-    listenForHosts(window, pageDispatcher(page), embedOrigins(document.querySelector<HTMLElement>(".app")?.dataset.embedOrigins));
+    const dispatch = pageDispatcher(page);
+    const shell = document.querySelector<HTMLElement>(".app")?.dataset;
+    listenForHosts(window, dispatch, embedOrigins(shell?.embedOrigins));
+    // Under --viewer-rooms the tab also joins its design's room, where an agent reaches the same
+    // dispatcher (agni issue 1154). The server answers ViewerRoomService whichever engine the page
+    // runs, so it is asked directly rather than through the engine's transport.
+    if (shell?.viewerRooms === "on") {
+      const client = createClient(ViewerRoomService, createConnectTransport({ baseUrl: new URL(appBase(), window.location.href).href }));
+      roomTab = new ViewerRoomTab({ client, dispatch, host: document.getElementById("agents-switch") });
+      void roomTab.follow(page.location());
+    }
     // ?devpage exposes the contract to the console for trying it by hand. Nothing in the app reads it.
     if (new URLSearchParams(window.location.search).has("devpage")) (globalThis as { __agniViewerPage?: ViewerPageAPI }).__agniViewerPage = page;
   })
