@@ -233,8 +233,8 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/mcpkit-rooms':
-        specifier: 0.8.9
-        version: 0.8.9
+        specifier: 0.8.10
+        version: 0.8.10
       '@panyam/tsappkit':
         specifier: ^0.7.6
         version: 0.7.6
@@ -771,17 +771,17 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@panyam/massrelay@0.3.1':
-    resolution: {integrity: sha512-phPYeZN2Wt+AbKQoortEkVquUXuQS4QN7aoWrhFCbSc6FP9jXQ5fpTCxkBxSkasyfYEW3pZd9CvR7Aecz923Dg==}
+  '@panyam/massrelay@0.3.2':
+    resolution: {integrity: sha512-K2DFZfbj2zk4K1+ISkH8LvFjpvwSKUNC6DaafWgACwcpzN+lFr1liqLyiOesS7OoiBbVegGImKKUvrIjKUjDNA==}
     peerDependencies:
       '@bufbuild/protobuf': ^2.0.0
-      '@panyam/servicekit-client': ^0.0.7 || ^0.1.9
+      '@panyam/servicekit-client': ^0.0.7 || ^0.1.9 || ^0.2.0
 
-  '@panyam/mcpkit-rooms@0.8.9':
-    resolution: {integrity: sha512-MwjJHOgdcYWwoE4Zy0wZfKxY+aGlRqcXHDGoEL0CejsIzgADwgH9P17opmI/TeAWfta6Xr4sKeOcl/1CpqleNg==}
+  '@panyam/mcpkit-rooms@0.8.10':
+    resolution: {integrity: sha512-ykZflAp6CsAONA4gSvK3lqNdIiGXCPlgvo/zUN51hAT1MiTKgpe26tB8Dt3xqRyj7bjyD/jaX8zA0PmDbYrZYg==}
 
-  '@panyam/servicekit-client@0.1.12':
-    resolution: {integrity: sha512-bZ7P5Ti6A7GcBmpUMG8AalnHcMZOCj3DIEGmW/SmqVX1BU0A0zpuRvmoVh6avI2TBctfUxHe7Oc3Xq3NxfNy0A==}
+  '@panyam/servicekit-client@0.2.0':
+    resolution: {integrity: sha512-yoa/UgU/tTIHnQo43FxHwxy+ZWeInEt3xjmStCdDroCh4EXZFcC7vvg5pRpbKhnFlm8KJeI/jhEGOqOHBPwX3w==}
     engines: {node: '>=16.0.0'}
 
   '@panyam/tsappkit-solid@0.7.5':
@@ -1852,18 +1852,18 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@panyam/massrelay@0.3.1(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.1.12)':
+  '@panyam/massrelay@0.3.2(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)':
     dependencies:
       '@bufbuild/protobuf': 2.12.1
-      '@panyam/servicekit-client': 0.1.12
+      '@panyam/servicekit-client': 0.2.0
 
-  '@panyam/mcpkit-rooms@0.8.9':
+  '@panyam/mcpkit-rooms@0.8.10':
     dependencies:
       '@bufbuild/protobuf': 2.12.1
-      '@panyam/massrelay': 0.3.1(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.1.12)
-      '@panyam/servicekit-client': 0.1.12
+      '@panyam/massrelay': 0.3.2(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)
+      '@panyam/servicekit-client': 0.2.0
 
-  '@panyam/servicekit-client@0.1.12': {}
+  '@panyam/servicekit-client@0.2.0': {}
 
   '@panyam/tsappkit-solid@0.7.5(@panyam/tsappkit@0.7.6)(solid-js@1.9.14)':
     dependencies:
