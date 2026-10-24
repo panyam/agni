@@ -29,6 +29,8 @@ type serveApp struct {
 	base string
 	// static marks pages written as plain files for a host with no agni server behind it.
 	static bool
+	// viewerRooms says the server lets agents drive its viewer tabs (--viewer-rooms, agni issue 1154).
+	viewerRooms bool
 	// siteSeeds are the example boards the static demo's landing page lists.
 	siteSeeds []siteSeed
 }
@@ -61,6 +63,10 @@ type ViewerPage struct {
 	// EmbedOrigins are the origins, space-separated, whose pages may drive this viewer over
 	// postMessage besides its own (agni issue 1152). Empty allows only the page's own origin.
 	EmbedOrigins string
+	// ViewerRooms is "on" when the server lets agents drive its viewer tabs (--viewer-rooms, agni
+	// issue 1154), so the page asks ViewerRoomService for its room and offers its tools there. Empty
+	// on every other server and on a static page.
+	ViewerRooms string
 }
 
 // Load populates the page before render. The shell is static and per-file data arrives over
@@ -87,6 +93,9 @@ func (p *ViewerPage) fill(a *serveApp) {
 	}
 	p.Build = version.Version()
 	p.EmbedOrigins = strings.Join(a.embedOrigins, " ")
+	if a.viewerRooms {
+		p.ViewerRooms = "on"
+	}
 }
 
 // LoadPage reads a design into the engine's store before the viewer opens it, and is where files are

@@ -1,0 +1,365 @@
+{
+  "tools": [
+    {
+      "name": "viewer_get_location",
+      "readOnly": true,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "viewer_apply_location",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          },
+          "location": {
+            "properties": {
+              "against": {
+                "type": "string"
+              },
+              "binds": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "flatten": {
+                "type": "boolean"
+              },
+              "hash": {
+                "type": "string"
+              },
+              "layout": {
+                "type": "string"
+              },
+              "mode": {
+                "type": "string"
+              },
+              "mount": {
+                "type": "string"
+              },
+              "path": {
+                "type": "string"
+              },
+              "q": {
+                "type": "string"
+              },
+              "query": {
+                "type": "string"
+              },
+              "renameApprox": {
+                "type": "boolean"
+              },
+              "rule": {
+                "type": "string"
+              },
+              "set": {
+                "type": "string"
+              },
+              "sheet": {
+                "type": "string"
+              },
+              "subjects": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "symbols": {
+                "type": "boolean"
+              },
+              "title": {
+                "type": "string"
+              },
+              "trace": {
+                "type": "string"
+              },
+              "traceHops": {
+                "type": "integer"
+              },
+              "verdict": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "url": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "viewer_locate_verdict",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "rule": {
+            "type": "string"
+          },
+          "subjects": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "viewer_select_finding",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          },
+          "netId": {
+            "type": "string"
+          },
+          "sheet": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "viewer_locate_entity",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "pin": {
+            "type": "string"
+          },
+          "sheet": {
+            "type": "string"
+          },
+          "subject": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    },
+    {
+      "name": "viewer_show_sheet",
+      "readOnly": false,
+      "inputSchema": {
+        "properties": {
+          "design": {
+            "type": "string"
+          },
+          "sheet": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "design"
+        ],
+        "type": "object"
+      }
+    }
+  ],
+  "messages": {
+    "google.protobuf.BytesValue": {
+      "contentEncoding": "base64",
+      "type": "string"
+    },
+    "google.protobuf.Field": {
+      "properties": {
+        "cardinality": {
+          "enum": [
+            "CARDINALITY_UNKNOWN",
+            "CARDINALITY_OPTIONAL",
+            "CARDINALITY_REQUIRED",
+            "CARDINALITY_REPEATED"
+          ],
+          "type": "string"
+        },
+        "defaultValue": {
+          "type": "string"
+        },
+        "jsonName": {
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "TYPE_UNKNOWN",
+            "TYPE_DOUBLE",
+            "TYPE_FLOAT",
+            "TYPE_INT64",
+            "TYPE_UINT64",
+            "TYPE_INT32",
+            "TYPE_FIXED64",
+            "TYPE_FIXED32",
+            "TYPE_BOOL",
+            "TYPE_STRING",
+            "TYPE_GROUP",
+            "TYPE_MESSAGE",
+            "TYPE_BYTES",
+            "TYPE_UINT32",
+            "TYPE_ENUM",
+            "TYPE_SFIXED32",
+            "TYPE_SFIXED64",
+            "TYPE_SINT32",
+            "TYPE_SINT64"
+          ],
+          "type": "string"
+        },
+        "name": {
+          "type": "string"
+        },
+        "number": {
+          "type": "integer"
+        },
+        "oneofIndex": {
+          "type": "integer"
+        },
+        "options": {
+          "items": {
+            "properties": {
+              "name": {
+                "type": "string"
+              },
+              "value": {
+                "type": "object"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "packed": {
+          "type": "boolean"
+        },
+        "typeUrl": {
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "google.protobuf.Int64Value": {
+      "type": "string"
+    },
+    "google.protobuf.SourceCodeInfo": {
+      "properties": {
+        "location": {
+          "items": {
+            "properties": {
+              "leadingComments": {
+                "type": "string"
+              },
+              "leadingDetachedComments": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              },
+              "path": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "span": {
+                "items": {
+                  "type": "integer"
+                },
+                "type": "array"
+              },
+              "trailingComments": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        }
+      },
+      "type": "object"
+    },
+    "google.protobuf.Struct": {
+      "type": "object"
+    },
+    "google.protobuf.UninterpretedOption": {
+      "properties": {
+        "aggregateValue": {
+          "type": "string"
+        },
+        "doubleValue": {
+          "type": "number"
+        },
+        "identifierValue": {
+          "type": "string"
+        },
+        "name": {
+          "items": {
+            "properties": {
+              "isExtension": {
+                "type": "boolean"
+              },
+              "namePart": {
+                "type": "string"
+              }
+            },
+            "type": "object"
+          },
+          "type": "array"
+        },
+        "negativeIntValue": {
+          "type": "string"
+        },
+        "positiveIntValue": {
+          "type": "string"
+        },
+        "stringValue": {
+          "contentEncoding": "base64",
+          "type": "string"
+        }
+      },
+      "type": "object"
+    },
+    "google.protobuf.Value": {}
+  }
+}

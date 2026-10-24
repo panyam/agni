@@ -73,6 +73,7 @@ func serveCmd() *cobra.Command {
 	var designCache int
 	var uploadMaxBytes int64
 	var mcp bool
+	var viewerRooms bool
 	c := &cobra.Command{
 		Use:   "serve",
 		Short: "Serve the web viewer (static assets + Connect API) over HTTP for local development",
@@ -90,6 +91,9 @@ func serveCmd() *cobra.Command {
 			if mcp {
 				mcpMode = mcpHTTP
 			}
+			if viewerRooms && !mcp {
+				return fmt.Errorf("--viewer-rooms needs --mcp, since agents reach the viewer's tabs through /mcp")
+			}
 			return runViewer(cmd, viewerOpts{
 				addr: addr, webDir: webDir, mountRoot: mountRoot, nativeTools: nativeTools,
 				datasheetsURL: datasheetsURL, theme: theme, paramsDir: paramsDir, paramsURL: paramsURL,
@@ -103,11 +107,13 @@ func serveCmd() *cobra.Command {
 				designCache:     designCache,
 				uploadMaxBytes:  uploadMaxBytes,
 				mcp:             mcpMode,
+				viewerRooms:     viewerRooms,
 			})
 		},
 	}
 	c.Flags().StringVar(&addr, "addr", ":8080", "address to listen on")
 	c.Flags().BoolVar(&mcp, "mcp", false, "also serve the analysis over the Model Context Protocol at /mcp (streamable HTTP), for an LLM client such as Claude Code: queries, checks, traces, diffs and reviews as tools, each answer with its rows, citations and a viewer link. `agni mcp` serves the same tools over stdio")
+	c.Flags().BoolVar(&viewerRooms, "viewer-rooms", false, "with --mcp, let an agent drive the viewer tabs open on this server (agni issue 1154): each tab offers viewer_show_sheet, viewer_locate_verdict and the rest of ViewerPageService as tools, through a relay served at /relay/, and takes calls only once its reader turns on \"Let agents drive this tab\". Off by default")
 	c.Flags().StringVar(&engine, "engine", engineServer, "which engine the viewer analyses a design on: "+engineServer+", or "+engineWasm+" to run it in the visitor's browser over the design's files (needs `make wasm`); a page's ?engine= overrides it")
 	c.Flags().Int64Var(&wasmMaxBytes, "wasm-max-bytes", defaultWasmMaxBytes, "on the wasm engine, the largest design (its ListDesignFiles total, in bytes) the page analyses in the browser; a bigger one goes to the server engine and the page says so")
 	c.Flags().StringArrayVar(&embedOrigins, "embed-origin", nil, "an origin (scheme://host[:port]) whose pages may drive an embedded viewer over postMessage (ViewerPageService, agni issue 1152); repeatable. The viewer's own origin always may")
@@ -196,6 +202,10 @@ type viewerOpts struct {
 	// mcpLinks is the viewer an answer over stdio links to, a running `agni serve`; empty withholds
 	// links. Over HTTP the server links to itself.
 	mcpLinks string
+	// viewerRooms serves a relay at /relay/ and the room bridge's tools on /mcp, so an agent can drive
+	// the viewer tabs open on this server (--viewer-rooms, agni issue 1154). It needs mcpHTTP and the
+	// viewer.
+	viewerRooms bool
 }
 
 const (
@@ -411,6 +421,16 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 			// The command's own streams, so a test can pipe a client in.
 			return mcpSrv.RunIO(cmd.Context(), cmd.InOrStdin(), cmd.OutOrStdout())
 		}
+		if o.viewerRooms {
+			if !assets.viewer {
+				return fmt.Errorf("--viewer-rooms needs the viewer, and this server serves the API without it")
+			}
+			vr, err := serveViewerRooms(mux, mcpSrv, projectResolver, urls, connect.WithInterceptors(api.Timing.Interceptor()))
+			if err != nil {
+				return err
+			}
+			defer vr.Close()
+		}
 		mux.Handle("/mcp", mcpserver.HTTPHandler(mcpSrv, "/mcp"))
 	}
 	if assets.viewer {
@@ -435,7 +455,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		mux.Handle("/", apiOnlyHandler(apiPaths))
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
 	default:
-		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins}), mux)
+		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms}), mux)
 	}
 
 	// A client that never finishes its headers holds a connection open, so headers get a deadline.
@@ -453,6 +473,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 		if o.mcp == mcpHTTP {
 			fmt.Fprintf(os.Stderr, "  MCP: %smcp (streamable HTTP; localhost origins only)\n", urls[0])
+		}
+		if o.viewerRooms {
+			fmt.Fprintf(os.Stderr, "  viewer rooms: %srelay/ (an agent drives a tab once its reader turns on \"Let agents drive this tab\")\n", urls[0])
 		}
 	}
 	// servicekit drains in-flight requests on SIGINT/SIGTERM instead of dropping them.
