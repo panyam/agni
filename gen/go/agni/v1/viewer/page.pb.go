@@ -924,9 +924,9 @@ const file_agni_v1_viewer_page_proto_rawDesc = "" +
 	"\x10ShowSheetRequest\x12\x14\n" +
 	"\x05sheet\x18\x01 \x01(\tR\x05sheet\"O\n" +
 	"\x11ShowSheetResponse\x12:\n" +
-	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation2\xb2\x04\n" +
-	"\x11ViewerPageService\x12V\n" +
-	"\vGetLocation\x12\".agni.v1.viewer.GetLocationRequest\x1a#.agni.v1.viewer.GetLocationResponse\x12\\\n" +
+	"\blocation\x18\x01 \x01(\v2\x1e.agni.v1.viewer.ViewerLocationR\blocation2\xb7\x04\n" +
+	"\x11ViewerPageService\x12[\n" +
+	"\vGetLocation\x12\".agni.v1.viewer.GetLocationRequest\x1a#.agni.v1.viewer.GetLocationResponse\"\x03\x90\x02\x01\x12\\\n" +
 	"\rApplyLocation\x12$.agni.v1.viewer.ApplyLocationRequest\x1a%.agni.v1.viewer.ApplyLocationResponse\x12\\\n" +
 	"\rLocateVerdict\x12$.agni.v1.viewer.LocateVerdictRequest\x1a%.agni.v1.viewer.LocateVerdictResponse\x12\\\n" +
 	"\rSelectFinding\x12$.agni.v1.viewer.SelectFindingRequest\x1a%.agni.v1.viewer.SelectFindingResponse\x12Y\n" +
