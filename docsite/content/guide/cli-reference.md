@@ -475,6 +475,7 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--upload-max-bytes <n>` | how much of the designs clients send as files (`--remote`) the server keeps, the least recently used dropped past it; a client sends a file again when an ingest asks for it (default 1 GB; 0 takes no files) |
 | `--slow-request <duration>` | log every request that takes longer than this, such as `2s`, naming the stage that took the most, which cache tier answered each read, the slowest rules, and the query plan when evaluating was the slowest stage (0, the default, logs none; see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 | `--mcp` | also serve the analysis over the Model Context Protocol at `/mcp` (streamable HTTP, localhost origins only), for an LLM client such as Claude Code; every answer links to this server's viewer (see [Asking through an LLM](../asking-with-an-llm/)) |
+| `--viewer-rooms` | with `--mcp`, let an agent move the viewer tabs open on this server: each tab offers `viewer_show_sheet`, `viewer_locate_verdict` and the rest of the page's methods as tools through a relay at `/relay/`, and takes calls only once its reader turns on "Let agents drive this tab" (see [Moving a viewer tab you have open](../asking-with-an-llm/#moving-a-viewer-tab-you-have-open)) |
 
 ### `mcp`
 
