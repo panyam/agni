@@ -52,7 +52,7 @@ one brought it.
 |---|---|---|
 | postMessage, `embed.ts` | a parent page framing the viewer | the viewer's own origin, and each `agni serve --embed-origin` |
 | postMessage, `core/report/viewerlink.js` | a saved check or checklist report | any origin, for `ApplyLocation {url}` alone |
-| a server-held session | an MCP client, through the server | not built yet, agni issue 1154 |
+| a design's relay room, `viewerroom.ts` | an agent on `/mcp`, through the room bridge | a tab whose reader turned on "Let agents drive this tab", under `agni serve --mcp --viewer-rooms` (agni issue 1154) |
 
 The report's case is narrower on purpose. A report opened from disk has an opaque origin that no
 server can name, and every link in it targets the window named `agni-viewer`, so clicking it with
@@ -69,17 +69,53 @@ finding, a review finding and a verdict, a verdict carries the sheets it is draw
 and names the one that lands elsewhere. [Working in the web client](../web-client/) has the
 presenter side of this.
 
+## An agent moving an open tab
+
+MCP lets a client call a server and nothing else, so an agent cannot call a page. Under
+`agni serve --mcp --viewer-rooms` something both sides connect to stands between them (agni issue
+1154). The server embeds a massrelay relay at `/relay/` and mcpkit's room bridge beside `/mcp`
+(`internal/viewerrooms`). Each tab joins the room of the design it shows, `design:<mount>/<entry>`,
+and offers every `ViewerPageService` method there as a tool. The bridge serves those tools to agents
+as `viewer_get_location`, `viewer_show_sheet`, `viewer_locate_verdict` and the rest, and sends each
+call to one tab, where `pageservice.ts` answers it as it answers postMessage.
+
+A tab learns its room and a relay token from `ViewerRoomService.JoinViewerRoom`. The room is resolved
+the way a report's links are (`linkMountPath`, C32), so a tab opened on a design's folder and one
+opened on its entry share a room, and an agent naming the design either way reaches both. The token
+admits its holder to that one room and is signed with a key the server makes at start, so a restart
+turns away a page that has not joined yet. When the page opens another design in place, `syncUrl`
+moves the tab to that design's room.
+
+Every call names its design, which the bridge maps to the room (`rooms.WithRoomOf`), so an agent
+switches between designs from one question to the next without attaching to anything. Within a room
+a call goes to the tab named by `page` (`list_pages` lists them), else to the tab of that design the
+reader looked at last, and it only ever reaches a tab whose reader turned on "Let agents drive this
+tab". That switch is per tab, off by default, and kept in the tab's session storage, so a reload
+keeps it and a new tab starts with it off.
+
+The bridge declares the six tools up front (`rooms.WithPageTools`), so `tools/list` answers the same
+for every caller and the bridge serves the stateless 2026-07-28 MCP wire as well as the session one.
+It also refuses a tab's tool whose schema differs from the declaration by a byte. The declaration is
+built in Go from the service's descriptor (`internal/viewerrooms/tools.go`) and the tab builds its
+own from protobuf-es descriptors (`web/src/toolschema.ts`), so both walks are held to one fixture,
+`internal/viewerrooms/testdata/viewer_tools.json`, following the mapping mcpkit#1609 sets out for
+proto services as tools. `GetLocation` is marked `NO_SIDE_EFFECTS` in the proto, and that is where
+both walks read its read-only hint.
+
 ## What is not here yet
 
-An MCP client cannot move an open tab today. It gets a link and a `page` call, and a host that frames
-the viewer can send the call over postMessage, but the server itself has no way to reach a tab. agni
-issue 1154 is that design: a page that attaches to `agni serve` over a Connect stream, one MCP tool per
-page method, and a flag that has to be passed before any of it is on, since it lets a client move a
-reader's tabs.
+The server has no identity provider, so every relay token and every MCP session acts for one local
+subject, and the switch is the only agreement there is. Several people on one server, each with an
+agent, needs OAuth on `/mcp` and a relay token per user, with mcpkit's pairing codes for an agent
+driving someone else's tab. Until massrelay#42 lands the browser client cannot tell the bridge from
+another peer, so any page holding a token for a room could call the other tabs in it directly; with
+one local reader that is the reader's own tabs. A tab asking an agent something (an Ask panel) is
+the other direction, which the bridge carries as page events and nothing here uses yet.
 
 ## Running it
 
 `make exercise-mcp-ask` asks every question tool over MCP and holds each reply's link to a working
-page. `make exercise-viewer-page` drives a framed viewer from a parent on another origin, and the same
-spec moves a viewer from a saved report beside it. [Driving an embedded viewer](../../build/embedding-the-viewer/)
+page. `make exercise-viewer-page` drives a framed viewer from a parent on another origin, moves a
+viewer from a saved report beside it, and has an agent on each MCP wire drive tabs on two designs
+under `--viewer-rooms`, where a tab that kept agents out stays where its reader left it. [Driving an embedded viewer](../../build/embedding-the-viewer/)
 is the guide for a page that wants to do either.

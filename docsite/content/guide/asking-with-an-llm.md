@@ -108,6 +108,21 @@ a relation that doesn't exist, a pin the design lacks, a question past the budge
 pin that isn't there is a different answer from two real pins with no route between them, and the
 two stay apart here as they do in `agni trace`.
 
+## Moving a viewer tab you have open
+
+Every answer links to the viewer, and following a link opens a new tab. Started as
+`agni serve --mcp --viewer-rooms`, the server also lets the model move a tab you already have open.
+Each viewer tab shows a "Let agents drive this tab" switch beside the sheet tabs. Turn it on in the
+tabs you want driven, and the model can call `viewer_show_sheet`, `viewer_locate_verdict`,
+`viewer_select_finding`, `viewer_locate_entity`, `viewer_apply_location` and `viewer_get_location`
+on them.
+
+Each call names the design, as every other tool does, so with tabs open on several designs the model
+moves the one you are asking about. With two tabs on one design it moves the one you looked at last,
+or one it names from `list_pages`. A tab with the switch off is never moved, and the switch is off in
+every new tab. [Questions, links and the live page](../../architecture/viewer-control/#an-agent-moving-an-open-tab)
+has how it works.
+
 ## What it doesn't do
 
 agni hosts no model, so the client brings its own, and nothing about a design leaves the machine

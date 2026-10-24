@@ -276,12 +276,13 @@ hooks:
 	ln -sf ../../hack/pre-push.sh "$$(git rev-parse --git-common-dir)/hooks/pre-push"
 	@echo "installed $$(git rev-parse --git-common-dir)/hooks/pre-push"
 
-# The viewer page API mission's exercise (agni issues 1150, 1152): a parent page on a second origin
-# frames the viewer and drives it over postMessage, through examples/embed-viewer/parent.html. It is
-# web/browser/embed.spec.ts run on its own; the same spec runs in browser-test on every push.
-# HEADED=1 shows it in a visible Chrome.
+# The viewer page API mission's exercise (agni issues 1150, 1152, 1154): a parent page on a second
+# origin frames the viewer and drives it over postMessage, through examples/embed-viewer/parent.html,
+# and an agent on each MCP wire drives tabs on two designs under `serve --mcp --viewer-rooms`. It is
+# web/browser/embed.spec.ts and viewerroom.spec.ts run on their own; both run in browser-test on
+# every push. HEADED=1 shows them in a visible Chrome.
 exercise-viewer-page: ui
-	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm exec vitest run -c vitest.browser.config.ts browser/embed.spec.ts
+	cd web && HEADED=$(HEADED) SLOWMO=$(SLOWMO) pnpm exec vitest run -c vitest.browser.config.ts browser/embed.spec.ts browser/viewerroom.spec.ts
 
 # The browser-review walk, mission #845's exercise (agni issue 1118): the gated spec
 # web/browser/review-walk.spec.ts run on its own, printing one row per step and writing them as
