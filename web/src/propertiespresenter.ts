@@ -46,6 +46,9 @@ export interface PropertiesSources {
   // onInventory hears each design's inventory once it is read, and null when a new design clears it,
   // so another panel (the trace pickers, agni issue 1133) reads the same index rather than asking again.
   onInventory?: (inv: Inventory | null) => void;
+  // onSelect hears every focus the panel takes, so a viewer room can tell agents what the reader
+  // selected (agni issue 1173).
+  onSelect?: (focus: Focus) => void;
 }
 
 // subjectOf is the subject a selection's checks are asked about, or null for a bus, which no scope
@@ -151,6 +154,7 @@ export class PropertiesPresenter {
   select(focus: Focus): void {
     this.focus = focus;
     this.push();
+    this.src.onSelect?.(focus);
     if (focus.level === "entity") {
       void this.locate(focus.sel);
       void this.check(focus.sel);

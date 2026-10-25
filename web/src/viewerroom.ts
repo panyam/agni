@@ -1,9 +1,10 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { JsonValue } from "@bufbuild/protobuf";
-import { joinToolRoom, type JoinToolRoomOptions, type ToolRoom } from "@panyam/mcpkit-rooms";
+import { EVENT_ASK, joinToolRoom, type JoinToolRoomOptions, type ToolRoom } from "@panyam/mcpkit-rooms";
 import { ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
 import type { JoinViewerRoomRequest, JoinViewerRoomResponse } from "./gen/agni/v1/webapi/viewerroom_pb.js";
 import type { PageDispatch } from "./pageservice.js";
+import type { Focus } from "./properties.js";
 import type { ViewerLocation } from "./router.js";
 import { readOnly, toolName, toolSchema } from "./toolschema.js";
 
@@ -13,6 +14,11 @@ import { readOnly, toolName, toolSchema } from "./toolschema.js";
 // postMessage uses (pageservice.ts). The server's room bridge serves those tools to agents over
 // /mcp, each call naming a design, and sends a call to a tab only once its reader turns on "Let
 // agents drive this tab". The switch is per tab and off by default, and survives a reload of the tab.
+//
+// The other direction goes through the same agreement (agni issue 1173). With the switch on, the tab
+// tells the room what the reader selected, and the Ask box beside the switch sends the reader's
+// question with the tab's location and selection. The bridge passes both to the agents the tab agreed
+// to, which hear them through next_request or the room's events resource.
 
 // RoomClient is the one ViewerRoomService call the tab makes, which the server answers.
 export interface RoomClient {
@@ -42,6 +48,9 @@ export class ViewerRoomTab {
   // queue runs joins and leaves one at a time, in the order the page moved.
   private queue: Promise<void> = Promise.resolve();
   private readonly checkbox: HTMLInputElement | undefined;
+  private readonly askForm: HTMLFormElement | undefined;
+  // focus is what the reader last selected, which an ask carries.
+  private focus: Focus | undefined;
   private readonly join: (opts: JoinToolRoomOptions) => Promise<ToolRoom>;
   private readonly storage: Pick<Storage, "getItem" | "setItem"> | undefined;
   private readonly win: Pick<Window, "addEventListener" | "location">;
@@ -53,6 +62,7 @@ export class ViewerRoomTab {
     this.win = deps.win ?? window;
     this.doc = deps.doc ?? document;
     this.checkbox = this.renderSwitch();
+    this.askForm = this.renderAsk();
     // The bridge sends a call naming no tab to the one its reader looked at last.
     this.win.addEventListener("focus", () => this.room?.focus());
     this.doc.addEventListener("visibilitychange", () => {
@@ -63,6 +73,33 @@ export class ViewerRoomTab {
   // agentsAllowed is the switch as the reader left it.
   agentsAllowed(): boolean {
     return this.storage?.getItem(AGENTS_KEY) === "1";
+  }
+
+  // ask sends the reader's question to the agents the tab agreed to, with the tab's location and
+  // selection. It is false when nothing was sent: the tab is in no room, or its reader keeps agents out.
+  async ask(text: string): Promise<boolean> {
+    const room = this.room;
+    if (!room || !this.agentsAllowed() || !text.trim()) return false;
+    let location: unknown = null;
+    try {
+      location = await this.deps.dispatch("GetLocation", {});
+    } catch {
+      // An ask still goes without a location, which the agent can read with viewer_get_location.
+    }
+    room.emit(EVENT_ASK, { text: text.trim(), location, selection: this.focus ?? null });
+    return true;
+  }
+
+  // select records what the reader selected and, while agents may drive the tab, tells them.
+  select(focus: Focus): void {
+    this.focus = focus;
+    if (!this.room || !this.agentsAllowed()) return;
+    try {
+      this.room.selectionChanged(focus);
+    } catch (e) {
+      // An area over the event size limit is not worth an error on the page.
+      console.warn(`agni: the selection was not sent to agents: ${e instanceof Error ? e.message : String(e)}`);
+    }
   }
 
   // follow puts the tab in the room of the design loc shows, leaving the room it was in. A location
@@ -139,15 +176,45 @@ export class ViewerRoomTab {
     box.addEventListener("change", () => {
       this.storage?.setItem(AGENTS_KEY, box.checked ? "1" : "0");
       this.room?.setAgentsAllowed(box.checked);
+      if (this.askForm) this.askForm.hidden = !box.checked;
     });
     label.append(box, " Let agents drive this tab");
     host.append(label);
     return box;
   }
 
+  // renderAsk is the Ask box beside the switch, shown only while agents may drive the tab, since an
+  // agent the tab has not agreed to hears nothing it sends.
+  private renderAsk(): HTMLFormElement | undefined {
+    const host = this.deps.host;
+    if (!host) return undefined;
+    const form = this.doc.createElement("form");
+    form.className = "agents-ask";
+    form.hidden = !this.agentsAllowed();
+    const input = this.doc.createElement("input");
+    input.type = "text";
+    input.placeholder = "Ask your agent about this tab";
+    input.title = "Sent with this tab's sheet and selection to the agents this tab lets in. An agent hears it by calling next_request.";
+    const send = this.doc.createElement("button");
+    send.type = "submit";
+    send.textContent = "Ask";
+    form.append(input, send);
+    form.addEventListener("submit", (ev) => {
+      ev.preventDefault();
+      const text = input.value;
+      if (!text.trim()) return;
+      void this.ask(text).then((sent) => {
+        if (sent) input.value = "";
+      });
+    });
+    host.append(form);
+    return form;
+  }
+
   private showSwitch(on: boolean): void {
     if (this.deps.host) this.deps.host.hidden = !on;
     if (this.checkbox) this.checkbox.checked = this.agentsAllowed();
+    if (this.askForm) this.askForm.hidden = !this.agentsAllowed();
   }
 }
 

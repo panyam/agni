@@ -456,6 +456,8 @@ class AppRoot extends BaseComponent {
       checkKey: () => presenter.checkKey(),
       // The trace pickers list the parts and pins Properties has already read.
       onInventory: (inv) => trace.view.setPicks(tracePicks(inv)),
+      // Under --viewer-rooms the tab tells the agents it lets in what the reader selected.
+      onSelect: (focus) => roomTab?.select(focus),
     });
     const locateSelection = (sel: Selection) =>
       sel.kind === "area"
