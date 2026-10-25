@@ -286,17 +286,19 @@ exercise-viewer-page: ui
 
 # The browser-review walk, mission #845's exercise (agni issue 1118): the gated spec
 # web/browser/review-walk.spec.ts run on its own, printing one row per step and writing them as
-# markdown for the mission log. The same walk runs in browser-test on every push. HEADED=1 shows it
-# in a visible Chrome and stops before each step to explain what it does and what the product does,
-# until you press Next; STEP_BY_STEP=0 plays it straight through. SLOWMO=<ms> paces each action (250
-# by default when headed). A headless run never stops.
+# markdown for the mission log. The same walk runs in browser-test on every push. It runs HEADED by
+# default, in a visible Chrome that stops before each step to explain what it does and what the
+# product does, until you press Next; STEP_BY_STEP=0 plays it straight through, and HEADED=0 runs it
+# headless, which never stops (an agent or a script logging the mission passes that). SLOWMO=<ms>
+# paces each action (250 by default when headed).
 # WALK_DESIGN picks the board: jetson (the default, Antmicro's baseboard in examples/jetson-project, copied
 # in from the samples corpus) or gateway (the tutorial project's small synthetic board the gate walks).
 #   make exercise-browser-review
-#   make exercise-browser-review HEADED=1
-#   make exercise-browser-review HEADED=1 STEP_BY_STEP=0
+#   make exercise-browser-review STEP_BY_STEP=0
+#   make exercise-browser-review HEADED=0
 #   make exercise-browser-review WALK_DESIGN=gateway
 WALK_DESIGN ?= jetson
+exercise-browser-review: HEADED ?= 1
 exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board)
 	mkdir -p $(EXERCISE_OUT) && rm -f $(EXERCISE_OUT)/headed-trace.txt

@@ -785,8 +785,9 @@ browser/<spec>`) **uses whatever `web/static/agni.wasm` and `bin/agni` are on di
 browser-test` rebuilds both, so run `make wasm agni` after a Go change first; a stale wasm read a
 fixed proposal as still broken (agni 1136). **Mission #845's walk is `web/browser/review-walk.spec.ts`**, in the gate, and `make
 exercise-browser-review` runs it alone on Jetson (`WALK_DESIGN=gateway` for the small board the gate
-walks) and prints the step table for the mission log; headed, it stops
-before each step to explain it (`walkguide.ts`) until `STEP_BY_STEP=0`. A viewer change that breaks the
+walks) and prints the step table for the mission log. It runs HEADED by default and stops
+before each step to explain it (`walkguide.ts`) until `STEP_BY_STEP=0`, so an agent logging the
+mission passes `HEADED=0` or the run waits on a Next nobody presses. A viewer change that breaks the
 walk fails it on that PR, so update the spec there rather than loosening it (agni 1118).
 **A headed run is a different page from a headless one, and four things only it showed** (agni 1124):
 a headed page takes the window's own size (`viewportFor` in `web/browser/browser.ts`), because a
