@@ -18,6 +18,9 @@ allowBuilds:
   esbuild: true
 # Our own packages, published the day agni moved onto them (agni issue 863), so they are too new for
 # the release-age guard. Drop each entry once its version is past the guard's age.
+# To bump one, list both versions first ('@panyam/x@0.8.11 || 0.8.12'), install, then drop the old
+# one: swapping it in one step fails with ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION, since the lockfile
+# still names the old version while pnpm resolves the new one.
 minimumReleaseAgeExclude:
   - '@panyam/tsappkit-solid@0.7.3 || 0.7.4 || 0.7.5'
   - '@panyam/tsappkit@0.7.3 || 0.7.4 || 0.7.6'

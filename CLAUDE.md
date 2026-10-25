@@ -22,6 +22,7 @@ expensive to rediscover.
 | Ingestion, the IR, a new format reader | `architecture/ingestion-and-ir.md`, `build/format-reader.md` |
 | Geometry, rendering, the web viewer | `architecture/geometry-and-rendering.md`, `architecture/web-app.md` |
 | The web wire contract, the viewer's interaction model, changing a panel | `architecture/web-services.md`, `architecture/web-picking.md`, `architecture/web-client.md` |
+| Moving an open viewer from a parent page, a saved report or an agent (`--viewer-rooms`) | `architecture/viewer-control.md`, `build/embedding-the-viewer.md` |
 | Net solving, hierarchy, net identity | `architecture/net-solving.md` |
 | A check rule, datalog, interface profiles | `architecture/rules-and-checks.md`, `build/check-rule.md` |
 | A declared pin map, or comparing an identifier across two documents | `guide/design-intent.md` (the seven forms), `core/ident`'s package comment |
@@ -1115,9 +1116,11 @@ until the count is listed there on purpose (agni 727).
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
 and the command that exercises it. Several may be active at once, one per worktree, and #845
-`mission_browser_review` (every ticket closed) and #1157 (`make exercise-viewer-page`) are. #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo`
-(2026-10-20) and #909 `mission_ask` (2026-10-22) have closed, and their exercises live on as the
-example #843 built, `make exercise-public-demo` and `make exercise-mcp-ask`. A
+`mission_browser_review` (every ticket closed) is. #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo`
+(2026-10-20), #909 `mission_ask` (2026-10-22) and #1157 `mission_viewer_page_api` (2026-10-25) have
+closed, and their exercises live on as the example #843 built, `make exercise-public-demo`, `make
+exercise-mcp-ask` and `make exercise-viewer-page`. #1176 `mission_shared_viewer_rooms` (several people
+on one server) is open and not active, since its one ticket, #1173, waits on a multi-user deployment. A
 mission is blocked by each ticket it needs, and its tickets carry its `mission_<slug>` label. **A new
 issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
 filed.** A P1 states which P1 it displaces, since the cap is five per mission. NEXTSTEPS.md names
