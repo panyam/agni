@@ -171,6 +171,33 @@ describe.each(["session", "stateless"] as const)("an agent on the %s wire", (wir
     await expect.poll(async () => (await agent.call("viewer_get_location", { design: DESIGN_A })).isError, { timeout: 10_000 }).toBe(true);
     await tabs.A2.locator("#agents-switch input[type=checkbox]").check();
   }, 120_000);
+
+  // The Ask box (agni issue 1173): a question typed into a tab whose switch is on reaches an agent
+  // waiting in next_request, named by the design as every other tool is, with the tab's location.
+  it("hears a question the reader types into a tab that lets agents in", async () => {
+    const agent = new Agent(`${server.base}/mcp`, wire);
+    await agent.connect();
+    // The bridge joins design A's room on the first call naming it, and a tab's events reach it only
+    // once it has.
+    expect((await agent.call("list_pages", { design: DESIGN_A })).isError).toBeFalsy();
+    expect(await tabs.A1.locator("form.agents-ask").isVisible(), "A1 keeps agents out, so it shows no Ask box").toBe(false);
+
+    const waiting = agent.call("next_request", { design: DESIGN_A, wait_seconds: 20 });
+    await new Promise((r) => setTimeout(r, 500));
+    const form = tabs.A2.locator("form.agents-ask");
+    await form.locator("input[type=text]").fill("why is this sheet so busy?");
+    await form.locator("button[type=submit]").click();
+    const heard = (await waiting) as CallResult & {
+      structuredContent?: { event?: { name: string; resource: string; data: { text: string; location: { location?: { mount: string; path: string } } } } };
+    };
+    expect(heard.isError, text(heard)).toBeFalsy();
+    const ev = heard.structuredContent?.event;
+    expect(ev?.name).toBe("room.ask");
+    expect(ev?.resource).toBe(`design:${DESIGN_A}`);
+    expect(ev?.data.text).toBe("why is this sheet so busy?");
+    expect(ev?.data.location.location).toMatchObject({ mount: "kicad", path: "hier_numeric_root.kicad_sch" });
+    expect(await form.locator("input[type=text]").inputValue(), "the box clears once the question is sent").toBe("");
+  }, 120_000);
 });
 
 // intrude opens a page on the server's own origin, as any page holding a token for the room could

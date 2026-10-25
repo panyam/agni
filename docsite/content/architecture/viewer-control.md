@@ -108,6 +108,20 @@ own from protobuf-es descriptors (`web/src/toolschema.ts`), so both walks are he
 proto services as tools. `GetLocation` is marked `NO_SIDE_EFFECTS` in the proto, and that is where
 both walks read its read-only hint.
 
+## A tab asking an agent
+
+The same room carries the other direction (agni issue 1173). With its switch on, a tab tells the
+room what the reader selected (`page.selection_changed`, from the Properties panel's focus), and the
+Ask box beside the switch sends the reader's question as `room.ask`, its data carrying the text, the
+tab's `GetLocation` answer and the selection. These are page events, which the bridge buffers per
+room (`rooms.WithEventFallbacks`) and hands only to agents the tab agreed to. An agent waits for the
+next one with `next_request`, on either wire, or subscribes to `rooms://events/{room}` on the session
+wire.
+
+`WithRoomOf` declares `design` as its room argument, so `next_request`, `list_pages`, `attach` and
+`pair` take the design the way the page tools do, resolved through the same `ViewerRoomService.Room`
+(mcpkit#1633). Before that they took only the resolved room name, which no answer told the agent.
+
 ## What is not here yet
 
 The server has no identity provider, so every relay token and every MCP session acts for one local

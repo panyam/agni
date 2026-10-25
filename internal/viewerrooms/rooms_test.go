@@ -287,3 +287,63 @@ func TestATabTrustingTheBridgesAnswersNoOtherPeer(t *testing.T) {
 		}
 	}
 }
+
+// TestAnAgentHearsAReadersQuestionByNamingTheDesign is the Ask box's receive side (agni issue 1173):
+// an agent calls next_request naming the design as every other tool does, and hears a question from
+// a tab that agreed to it, never from one whose switch is off.
+func TestAnAgentHearsAReadersQuestionByNamingTheDesign(t *testing.T) {
+	eachWire(t, func(t *testing.T, wire string) {
+		st := newStack(t)
+		rec := &calls{}
+		off := st.tab(t, "A1", "m/a", rec)
+		on := st.tab(t, "A2", "m/a.sch", rec)
+		on.SetAgentsAllowed(true)
+		a := st.agent(t, wire)
+
+		// list_pages takes the design too, and lists both tabs with only A2 agreed.
+		ok, out := call(t, a, "list_pages", map[string]any{"design": "m/a"})
+		if !ok {
+			t.Fatalf("list_pages by design: %s", out)
+		}
+		var pages []struct {
+			Page    string `json:"page"`
+			Allowed bool   `json:"allowed"`
+		}
+		if err := json.Unmarshal([]byte(out), &pages); err != nil || len(pages) != 2 {
+			t.Fatalf("list_pages answered %s (%v)", out, err)
+		}
+		for _, p := range pages {
+			if p.Allowed != (p.Page == string(on.ID())) {
+				t.Errorf("page %s allowed=%v", p.Page, p.Allowed)
+			}
+		}
+
+		heard := func(ask func()) string {
+			t.Helper()
+			got := make(chan string, 1)
+			go func() {
+				res, err := a.ToolCallFull(t.Context(), "next_request", map[string]any{"design": "m/a.sch", "wait_seconds": 2})
+				if err != nil {
+					got <- "error: " + err.Error()
+					return
+				}
+				b, _ := json.Marshal(res.StructuredContent)
+				got <- string(b)
+			}()
+			time.Sleep(300 * time.Millisecond)
+			ask()
+			out := <-got
+			if strings.HasPrefix(out, "error: ") {
+				t.Fatalf("next_request by design: %s", out)
+			}
+			return out
+		}
+		if out := heard(func() { _ = off.Ask("from the tab that kept agents out") }); strings.Contains(out, "kept agents out") || !strings.Contains(out, `"event":null`) {
+			t.Fatalf("an ask from a tab with its switch off reached the agent: %s", out)
+		}
+		out = heard(func() { _ = on.Ask("why is SDA flagged?") })
+		if !strings.Contains(out, "why is SDA flagged?") || !strings.Contains(out, `"resource":"design:m/a.sch"`) || !strings.Contains(out, string(on.ID())) {
+			t.Fatalf("the agent did not hear A2's question: %s", out)
+		}
+	})
+}

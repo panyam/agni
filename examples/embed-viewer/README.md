@@ -54,8 +54,12 @@ Then walk it in this order:
 5. Ask it to run the checks and show you a net with a copper clearance error. It calls `check`, which
    names `CAN1_CANL` among others, then `viewer_locate_entity` with `kind: net` and that net as
    `subject`, and the tab lights the net.
-6. Untick the switch and ask again. The call comes back refused, saying no tab has agreed, and the
-   tab does not move.
+6. Tell the agent to wait for your question in the viewer. It calls `next_request` with
+   `design: tut/designs/gateway`. Click a net in the second tab, type "what else is on this net?" into
+   the Ask box beside the switch, and press Ask. The agent hears the question with the tab's sheet and
+   the selected net, so it can answer with a `query` on that net without asking which one you mean.
+7. Untick the switch and ask the agent to move the tab again. The call comes back refused, saying no
+   tab has agreed, and the tab does not move. The Ask box disappears with the switch.
 
 A tab answers the server's room bridge alone, so another page holding a relay token for the same room
 cannot call it directly. `web/browser/viewerroom.spec.ts` runs this walk with real tabs on both MCP

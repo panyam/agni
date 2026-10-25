@@ -123,6 +123,12 @@ or one it names from `list_pages`. A tab with the switch off is never moved, and
 every new tab. [Questions, links and the live page](../../architecture/viewer-control/#an-agent-moving-an-open-tab)
 has how it works.
 
+The other direction works too. With the switch on, a tab shows an Ask box beside it, and what you
+type there goes to the model along with the sheet you are on and what you have selected. The model
+hears it by calling `next_request` with the design, which waits up to two minutes for the next
+question or selection from a tab that let it in. So "wait for my question in the viewer" is a
+reasonable thing to tell it. A tab with its switch off sends nothing, whatever you type.
+
 ## What it doesn't do
 
 agni hosts no model, so the client brings its own, and nothing about a design leaves the machine
