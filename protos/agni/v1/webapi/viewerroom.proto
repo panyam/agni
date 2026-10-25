@@ -38,4 +38,8 @@ message JoinViewerRoomResponse {
   string token = 3;
   // expire_time is when the token stops admitting a new join. A page already in the room stays.
   google.protobuf.Timestamp expire_time = 4;
+  // bridge_subjects are the relay subjects the server's room bridges join as. The page answers only
+  // peers the relay admitted under one of them, so a page holding a token for the room cannot call
+  // the other tabs in it directly, past the bridge's agreement check (agni issue 1173).
+  repeated string bridge_subjects = 5;
 }

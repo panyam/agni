@@ -16,6 +16,8 @@ import (
 type RoomTokens interface {
 	// Mint returns a token admitting its holder to room alone, and when it stops admitting a join.
 	Mint(room string) (token string, expires time.Time, err error)
+	// Bridges are the relay subjects the host's room bridges join as, which a page answers alone.
+	Bridges() []string
 }
 
 // ViewerRoomService is what an open viewer page asks before it offers its tools to agents through
@@ -51,7 +53,8 @@ func (s *ViewerRoomService) Room(ctx context.Context, design string) (string, er
 	return "design:" + p, nil
 }
 
-// JoinViewerRoom names the design's room and mints a token for it. It stores nothing.
+// JoinViewerRoom names the design's room, mints a token for it, and names the bridges the page
+// should answer. It stores nothing.
 func (s *ViewerRoomService) JoinViewerRoom(ctx context.Context, req *webapi.JoinViewerRoomRequest) (*webapi.JoinViewerRoomResponse, error) {
 	room, err := s.Room(ctx, req.GetDesign())
 	if err != nil {
@@ -61,5 +64,5 @@ func (s *ViewerRoomService) JoinViewerRoom(ctx context.Context, req *webapi.Join
 	if err != nil {
 		return nil, err
 	}
-	return &webapi.JoinViewerRoomResponse{Room: room, RelayUrl: s.relayURL, Token: token, ExpireTime: timestamppb.New(expires)}, nil
+	return &webapi.JoinViewerRoomResponse{Room: room, RelayUrl: s.relayURL, Token: token, ExpireTime: timestamppb.New(expires), BridgeSubjects: s.tokens.Bridges()}, nil
 }

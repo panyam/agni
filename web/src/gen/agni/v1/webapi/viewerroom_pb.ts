@@ -12,7 +12,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/viewerroom.proto.
  */
 export const file_agni_v1_webapi_viewerroom: GenFile = /*@__PURE__*/
-  fileDesc("Ch9hZ25pL3YxL3dlYmFwaS92aWV3ZXJyb29tLnByb3RvEg5hZ25pLnYxLndlYmFwaSInChVKb2luVmlld2VyUm9vbVJlcXVlc3QSDgoGZGVzaWduGAEgASgJInkKFkpvaW5WaWV3ZXJSb29tUmVzcG9uc2USDAoEcm9vbRgBIAEoCRIRCglyZWxheV91cmwYAiABKAkSDQoFdG9rZW4YAyABKAkSLwoLZXhwaXJlX3RpbWUYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wMnQKEVZpZXdlclJvb21TZXJ2aWNlEl8KDkpvaW5WaWV3ZXJSb29tEiUuYWduaS52MS53ZWJhcGkuSm9pblZpZXdlclJvb21SZXF1ZXN0GiYuYWduaS52MS53ZWJhcGkuSm9pblZpZXdlclJvb21SZXNwb25zZUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z", [file_google_protobuf_timestamp]);
+  fileDesc("Ch9hZ25pL3YxL3dlYmFwaS92aWV3ZXJyb29tLnByb3RvEg5hZ25pLnYxLndlYmFwaSInChVKb2luVmlld2VyUm9vbVJlcXVlc3QSDgoGZGVzaWduGAEgASgJIpIBChZKb2luVmlld2VyUm9vbVJlc3BvbnNlEgwKBHJvb20YASABKAkSEQoJcmVsYXlfdXJsGAIgASgJEg0KBXRva2VuGAMgASgJEi8KC2V4cGlyZV90aW1lGAQgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIXCg9icmlkZ2Vfc3ViamVjdHMYBSADKAkydAoRVmlld2VyUm9vbVNlcnZpY2USXwoOSm9pblZpZXdlclJvb20SJS5hZ25pLnYxLndlYmFwaS5Kb2luVmlld2VyUm9vbVJlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5Kb2luVmlld2VyUm9vbVJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_google_protobuf_timestamp]);
 
 /**
  * @generated from message agni.v1.webapi.JoinViewerRoomRequest
@@ -67,6 +67,15 @@ export type JoinViewerRoomResponse = Message<"agni.v1.webapi.JoinViewerRoomRespo
    * @generated from field: google.protobuf.Timestamp expire_time = 4;
    */
   expireTime?: Timestamp | undefined;
+
+  /**
+   * bridge_subjects are the relay subjects the server's room bridges join as. The page answers only
+   * peers the relay admitted under one of them, so a page holding a token for the room cannot call
+   * the other tabs in it directly, past the bridge's agreement check (agni issue 1173).
+   *
+   * @generated from field: repeated string bridge_subjects = 5;
+   */
+  bridgeSubjects: string[];
 };
 
 /**

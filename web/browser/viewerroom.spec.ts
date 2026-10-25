@@ -10,6 +10,7 @@ import { afterAll, beforeAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import { wsUrl } from "@panyam/mcpkit-rooms";
 import { launch } from "./browser.js";
 import { freePort, start, type Server } from "./childserver.js";
 
@@ -169,5 +170,79 @@ describe.each(["session", "stateless"] as const)("an agent on the %s wire", (wir
     await tabs.A2.locator("#agents-switch input[type=checkbox]").uncheck();
     await expect.poll(async () => (await agent.call("viewer_get_location", { design: DESIGN_A })).isError, { timeout: 10_000 }).toBe(true);
     await tabs.A2.locator("#agents-switch input[type=checkbox]").check();
+  }, 120_000);
+});
+
+// intrude opens a page on the server's own origin, as any page holding a token for the room could
+// be, joins the room on the relay with that token and calls the tab directly, past the bridge. It
+// speaks servicekit's JSON envelope over a bare WebSocket and returns every reply the tab sent it
+// within waitMs.
+async function intrude(relay: string, room: string, token: string, to: string, calls: unknown[], waitMs: number): Promise<unknown[]> {
+  const page = await browser.newPage();
+  try {
+    await page.goto(`${server.base}/`);
+    return await page.evaluate(
+      async ({ url, room, to, calls, waitMs }) => {
+        const ws = new WebSocket(url);
+        const replies: unknown[] = [];
+        const send = (data: unknown) => ws.send(JSON.stringify({ type: "data", data }));
+        await new Promise<void>((resolve, reject) => {
+          ws.onerror = () => reject(new Error("the relay refused the socket"));
+          ws.onmessage = (ev) => {
+            const msg = JSON.parse(String(ev.data));
+            if (msg.type === "ping") ws.send(JSON.stringify({ type: "pong", pingId: msg.pingId }));
+            const d = msg.type === "data" ? msg.data : undefined;
+            if (d?.roomJoined) resolve();
+            if (d?.appMessage?.kind === "mcp/1") replies.push(JSON.parse(atob(d.appMessage.payload)));
+          };
+          ws.onopen = () => send({ join: { sessionId: room, username: "intruder", clientType: "browser", protocolVersion: 2 } });
+        });
+        for (const c of calls) send({ appMessage: { kind: "mcp/1", payload: btoa(JSON.stringify(c)), toClientIds: [to] } });
+        await new Promise((r) => setTimeout(r, waitMs));
+        ws.close();
+        return replies;
+      },
+      { url: wsUrl(relay, room, token), room, to, calls, waitMs },
+    );
+  } finally {
+    await page.close();
+  }
+}
+
+// The tab answers the server's bridge alone (trustBridges, agni issue 1173): a peer holding a token
+// JoinViewerRoom minted for the tab's own room gets no answer when it calls the tab directly, even
+// with the tab's switch on, and the tab stays where it was.
+describe("a peer in the room that is not the bridge", () => {
+  it("gets no answer from a tab, whose switch is on", async () => {
+    const tab = await openTab(DESIGN_A, true);
+    try {
+      const join = (await (
+        await fetch(`${server.base}/agni.v1.webapi.ViewerRoomService/JoinViewerRoom`, {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ design: DESIGN_A }),
+        })
+      ).json()) as { room: string; token: string; relayUrl: string };
+      const agent = new Agent(`${server.base}/mcp`, "session");
+      await agent.connect();
+      const listed = await agent.call("list_pages", { resource: join.room });
+      const pages = JSON.parse(text(listed)) as { page: string; allowed: boolean }[];
+      const id = pages.find((p) => p.allowed)?.page ?? "";
+      expect(id, `no agreed tab in ${text(listed)}`).not.toBe("");
+
+      const before = await activeTile(tab);
+      const replies = (await intrude(new URL(join.relayUrl, server.base).href, join.room, join.token, id, [
+        { jsonrpc: "2.0", id: 1, method: "tools/list" },
+        { jsonrpc: "2.0", id: 2, method: "tools/call", params: { name: "viewer_show_sheet", arguments: { design: DESIGN_A, sheet: "board" } } },
+      ], 3000)) as { id?: number }[];
+      expect(replies.filter((m) => m.id === 1 || m.id === 2), "the tab answered a peer that is not the bridge").toEqual([]);
+      expect(await activeTile(tab)).toBe(before);
+
+      // The positive control: the bridge still reaches the same tab.
+      const ok = await agent.call("viewer_get_location", { design: DESIGN_A, page: id });
+      expect(ok.isError, text(ok)).toBeFalsy();
+    } finally {
+      await tab.close();
+    }
   }, 120_000);
 });

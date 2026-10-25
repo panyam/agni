@@ -3,6 +3,7 @@ package service
 import (
 	"context"
 	"errors"
+	"slices"
 	"testing"
 	"time"
 
@@ -15,6 +16,8 @@ type fixedTokens struct{}
 func (fixedTokens) Mint(room string) (string, time.Time, error) {
 	return "token-for-" + room, time.Unix(1_800_000_000, 0), nil
 }
+
+func (fixedTokens) Bridges() []string { return []string{"the-bridge"} }
 
 // TestEveryNameOfADesignJoinsOneRoom is C32 for the viewer's rooms (agni issue 1154): a tab opened on
 // the design's folder and one opened on its entry are in one room, and an agent naming the design any
@@ -36,7 +39,8 @@ func TestEveryNameOfADesignJoinsOneRoom(t *testing.T) {
 			if resp.GetRoom() != want[tc.name] {
 				t.Errorf("room %q, want %q", resp.GetRoom(), want[tc.name])
 			}
-			if resp.GetToken() != "token-for-"+want[tc.name] || resp.GetRelayUrl() != "/relay/" || resp.GetExpireTime().GetSeconds() != 1_800_000_000 {
+			if resp.GetToken() != "token-for-"+want[tc.name] || resp.GetRelayUrl() != "/relay/" || resp.GetExpireTime().GetSeconds() != 1_800_000_000 ||
+				!slices.Equal(resp.GetBridgeSubjects(), []string{"the-bridge"}) {
 				t.Errorf("response %v", resp)
 			}
 			// An agent may also pass the design as a mount:// URI.

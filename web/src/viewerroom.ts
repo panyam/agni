@@ -93,6 +93,9 @@ export class ViewerRoomTab {
         room: res.room,
         token: res.token,
         username: "agni viewer",
+        // Answer the server's bridges alone, so a page holding a token for this room cannot call the
+        // tab directly, past the bridge's check of the switch (agni issue 1173).
+        trustBridges: res.bridgeSubjects,
       });
       if (design !== this.design) {
         room.leave();

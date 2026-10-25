@@ -41,7 +41,7 @@ function harness(opts: { stored?: string; joinFails?: boolean; dispatch?: PageDi
     joinViewerRoom: async (req) => {
       asked.push(req.design ?? "");
       if (opts.joinFails) throw new ConnectError("no such mount", Code.InvalidArgument);
-      return { room: `design:${req.design}.sch`, relayUrl: "/relay/", token: `tok-${req.design}` } as JoinViewerRoomResponse;
+      return { room: `design:${req.design}.sch`, relayUrl: "/relay/", token: `tok-${req.design}`, bridgeSubjects: ["agni-bridge"] } as JoinViewerRoomResponse;
     },
   };
   const store = new Map<string, string>(opts.stored ? [[AGENTS_KEY, opts.stored]] : []);
@@ -74,6 +74,9 @@ describe("ViewerRoomTab", () => {
     expect(h.rooms).toHaveLength(1);
     const r = h.rooms[0];
     expect(r.opts).toMatchObject({ relay: "http://127.0.0.1:8080/relay/", room: "design:m/a.sch", token: "tok-m/a" });
+    // The tab answers the server's bridges alone, so another page holding a token for the room cannot
+    // call it directly (agni issue 1173).
+    expect(r.opts.trustBridges).toEqual(["agni-bridge"]);
     expect([...r.tools.keys()].sort()).toEqual([
       "viewer_apply_location", "viewer_get_location", "viewer_locate_entity", "viewer_locate_verdict", "viewer_select_finding", "viewer_show_sheet",
     ]);

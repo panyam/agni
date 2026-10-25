@@ -79,9 +79,13 @@ type JoinViewerRoomResponse struct {
 	// token is the relay token the page joins with, admitting it to `room` alone.
 	Token string `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty"`
 	// expire_time is when the token stops admitting a new join. A page already in the room stays.
-	ExpireTime    *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	ExpireTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
+	// bridge_subjects are the relay subjects the server's room bridges join as. The page answers only
+	// peers the relay admitted under one of them, so a page holding a token for the room cannot call
+	// the other tabs in it directly, past the bridge's agreement check (agni issue 1173).
+	BridgeSubjects []string `protobuf:"bytes,5,rep,name=bridge_subjects,json=bridgeSubjects,proto3" json:"bridge_subjects,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *JoinViewerRoomResponse) Reset() {
@@ -142,19 +146,27 @@ func (x *JoinViewerRoomResponse) GetExpireTime() *timestamppb.Timestamp {
 	return nil
 }
 
+func (x *JoinViewerRoomResponse) GetBridgeSubjects() []string {
+	if x != nil {
+		return x.BridgeSubjects
+	}
+	return nil
+}
+
 var File_agni_v1_webapi_viewerroom_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_viewerroom_proto_rawDesc = "" +
 	"\n" +
 	"\x1fagni/v1/webapi/viewerroom.proto\x12\x0eagni.v1.webapi\x1a\x1fgoogle/protobuf/timestamp.proto\"/\n" +
 	"\x15JoinViewerRoomRequest\x12\x16\n" +
-	"\x06design\x18\x01 \x01(\tR\x06design\"\x9c\x01\n" +
+	"\x06design\x18\x01 \x01(\tR\x06design\"\xc5\x01\n" +
 	"\x16JoinViewerRoomResponse\x12\x12\n" +
 	"\x04room\x18\x01 \x01(\tR\x04room\x12\x1b\n" +
 	"\trelay_url\x18\x02 \x01(\tR\brelayUrl\x12\x14\n" +
 	"\x05token\x18\x03 \x01(\tR\x05token\x12;\n" +
 	"\vexpire_time\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"expireTime2t\n" +
+	"expireTime\x12'\n" +
+	"\x0fbridge_subjects\x18\x05 \x03(\tR\x0ebridgeSubjects2t\n" +
 	"\x11ViewerRoomService\x12_\n" +
 	"\x0eJoinViewerRoom\x12%.agni.v1.webapi.JoinViewerRoomRequest\x1a&.agni.v1.webapi.JoinViewerRoomResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 

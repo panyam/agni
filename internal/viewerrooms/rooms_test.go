@@ -71,7 +71,7 @@ func (c *calls) all() []string {
 
 // tab joins design's room with a token minted for it, as a viewer page does, and offers every
 // declared tool, each recording the tab's name and the sheet it was asked for.
-func (st *stack) tab(t *testing.T, name, design string, rec *calls) *rooms.Page {
+func (st *stack) tab(t *testing.T, name, design string, rec *calls, opts ...rooms.PageOption) *rooms.Page {
 	t.Helper()
 	room, err := roomOf(t.Context(), design)
 	if err != nil {
@@ -81,7 +81,7 @@ func (st *stack) tab(t *testing.T, name, design string, rec *calls) *rooms.Page 
 	if err != nil {
 		t.Fatal(err)
 	}
-	p, err := rooms.JoinPage(t.Context(), massrelay.Dial(st.url+"/relay", tok), room)
+	p, err := rooms.JoinPage(t.Context(), massrelay.Dial(st.url+"/relay", tok), room, opts...)
 	if err != nil {
 		t.Fatalf("tab %s joining %s: %v", name, room, err)
 	}
@@ -238,4 +238,52 @@ func TestATokenAdmitsItsOwnRoomAlone(t *testing.T) {
 		t.Fatalf("the positive control: a token joining its own room: %v", err)
 	}
 	p.Leave()
+}
+
+// TestATabTrustingTheBridgesAnswersNoOtherPeer (agni issue 1173): a tab that answers only the
+// subjects Bridges names still takes the agent's calls through the bridge, and a peer holding a
+// genuine token for the same room gets no answer when it calls the tab directly.
+func TestATabTrustingTheBridgesAnswersNoOtherPeer(t *testing.T) {
+	st := newStack(t)
+	rec := &calls{}
+	tab := st.tab(t, "A1", "m/a", rec, rooms.TrustBridges(st.rooms.Bridges()...))
+	tab.SetAgentsAllowed(true)
+
+	if ok, out := call(t, st.agent(t, "stateless"), "viewer_show_sheet", map[string]any{"design": "m/a", "sheet": "power"}); !ok {
+		t.Fatalf("the bridge's call to a tab trusting Bridges() failed: %s", out)
+	}
+	if got := rec.all(); !slices.Equal(got, []string{"A1:m/a:power"}) {
+		t.Fatalf("tab ran %v", got)
+	}
+
+	tok, _, err := st.rooms.Mint("design:m/a.sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	intruder, err := massrelay.Dial(st.url+"/relay", tok).Join(t.Context(), "design:m/a.sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer intruder.Leave()
+	msg := `{"jsonrpc":"2.0","id":7,"method":"tools/call","params":{"name":"viewer_show_sheet","arguments":{"design":"m/a","sheet":"forged"}}}`
+	if err := intruder.Send(t.Context(), tab.ID(), rooms.MessageKind, json.RawMessage(msg)); err != nil {
+		t.Fatal(err)
+	}
+	deadline := time.After(2 * time.Second)
+	for {
+		select {
+		case ev := <-intruder.Events():
+			var reply struct {
+				ID *int `json:"id"`
+			}
+			if ev.Type == rooms.MessageReceived && json.Unmarshal(ev.Payload, &reply) == nil && reply.ID != nil && *reply.ID == 7 {
+				t.Fatalf("the tab answered a peer that is not a bridge: %s", ev.Payload)
+			}
+		case <-deadline:
+			if got := rec.all(); len(got) != 1 {
+				t.Fatalf("the intruder's call ran: %v", got)
+			}
+			return
+		}
+	}
 }

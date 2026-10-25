@@ -147,5 +147,10 @@ func (r *Rooms) Mint(room string) (string, time.Time, error) {
 	return tok, exp, nil
 }
 
+// Bridges are the relay subjects the bridge joins as. A page that answers only these
+// (trustBridges) cannot be called by another page holding a token for its room, since every token
+// Mint signs is for LocalSubject.
+func (r *Rooms) Bridges() []string { return []string{bridgeSubject} }
+
 // Close leaves every room the bridge joined.
 func (r *Rooms) Close() { r.bridge.Close() }
