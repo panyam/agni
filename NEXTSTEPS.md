@@ -31,6 +31,11 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
   mission. `make exercise-public-demo` remains.
 - **Possible next mission**: moving a house netlist audit off its spreadsheet. #820, #821 and #1093 are
   its tickets, and `guide/older-comparison-tools.md` its first page. Not yet a mission.
+- **Possible next mission**: a new user learns to review a design by doing it, guided in the viewer.
+  The tour itself is `Tour` in tsappkit (panyam/goapplib#128), driven by app events, so agni's share
+  is the viewer emitting its events (checks run, finding selected, query cell selected, area
+  selected, report saved) and the review tour written as steps. Its exercise would be the
+  browser-review walk taking the tour headless. Not yet a mission.
 - This run: #1175 merged (a tab answers only the room bridge, and an agent hears its Ask box),
   #1157 closed, and #1173 moved to the new mission #1176.
 

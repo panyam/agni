@@ -6,7 +6,7 @@
 //
 // HEADED=1 shows the browser instead of running it headless, and SLOWMO=<ms> pauses that long before
 // each action (250 by default when headed), so `make browser-test HEADED=1` or `make
-// exercise-browser-review HEADED=1` can be watched (agni issue 1118).
+// exercise-browser-review` (headed unless HEADED=0) can be watched (agni issue 1118).
 
 import { chromium, type Browser, type Page } from "playwright-core";
 
