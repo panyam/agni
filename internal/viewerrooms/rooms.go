@@ -109,13 +109,18 @@ func New(o Options) (*Rooms, error) {
 	opts := []rooms.Option{
 		rooms.WithLocalSubject(LocalSubject),
 		rooms.WithPageTools(ToolDecls()),
+		// The bridge's own tools (list_pages, attach, pair, next_request) take design too, so an agent
+		// names a room the same way for every tool (agni issue 1173, mcpkit#1633).
 		rooms.WithRoomOf(func(args map[string]any) (string, error) {
 			design, _ := args["design"].(string)
 			if design == "" {
 				return "", errors.New("name the design the tab shows, as mount/path (the designs tool lists them)")
 			}
 			return o.RoomOf(context.Background(), design)
-		}),
+		}, rooms.RoomArgs{"design": {"type": "string", "description": "The design the tab shows, as mount/path (tut/designs/gateway)."}}),
+		// A reader's question from a tab's Ask box, and what the reader selected, reach an agent through
+		// next_request or the room's events resource, from the tabs that agreed to it.
+		rooms.WithEventFallbacks(0),
 	}
 	if o.CallTimeout > 0 {
 		opts = append(opts, rooms.WithCallTimeout(o.CallTimeout))
@@ -146,6 +151,11 @@ func (r *Rooms) Mint(room string) (string, time.Time, error) {
 	}
 	return tok, exp, nil
 }
+
+// Bridges are the relay subjects the bridge joins as. A page that answers only these
+// (trustBridges) cannot be called by another page holding a token for its room, since every token
+// Mint signs is for LocalSubject.
+func (r *Rooms) Bridges() []string { return []string{bridgeSubject} }
 
 // Close leaves every room the bridge joined.
 func (r *Rooms) Close() { r.bridge.Close() }

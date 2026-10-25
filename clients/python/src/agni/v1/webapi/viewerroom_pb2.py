@@ -25,7 +25,7 @@ _sym_db = _symbol_database.Default()
 from google.protobuf import timestamp_pb2 as google_dot_protobuf_dot_timestamp__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1f\x61gni/v1/webapi/viewerroom.proto\x12\x0e\x61gni.v1.webapi\x1a\x1fgoogle/protobuf/timestamp.proto\"/\n\x15JoinViewerRoomRequest\x12\x16\n\x06\x64\x65sign\x18\x01 \x01(\tR\x06\x64\x65sign\"\x9c\x01\n\x16JoinViewerRoomResponse\x12\x12\n\x04room\x18\x01 \x01(\tR\x04room\x12\x1b\n\trelay_url\x18\x02 \x01(\tR\x08relayUrl\x12\x14\n\x05token\x18\x03 \x01(\tR\x05token\x12;\n\x0b\x65xpire_time\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\nexpireTime2t\n\x11ViewerRoomService\x12_\n\x0eJoinViewerRoom\x12%.agni.v1.webapi.JoinViewerRoomRequest\x1a&.agni.v1.webapi.JoinViewerRoomResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1f\x61gni/v1/webapi/viewerroom.proto\x12\x0e\x61gni.v1.webapi\x1a\x1fgoogle/protobuf/timestamp.proto\"/\n\x15JoinViewerRoomRequest\x12\x16\n\x06\x64\x65sign\x18\x01 \x01(\tR\x06\x64\x65sign\"\xc5\x01\n\x16JoinViewerRoomResponse\x12\x12\n\x04room\x18\x01 \x01(\tR\x04room\x12\x1b\n\trelay_url\x18\x02 \x01(\tR\x08relayUrl\x12\x14\n\x05token\x18\x03 \x01(\tR\x05token\x12;\n\x0b\x65xpire_time\x18\x04 \x01(\x0b\x32\x1a.google.protobuf.TimestampR\nexpireTime\x12\'\n\x0f\x62ridge_subjects\x18\x05 \x03(\tR\x0e\x62ridgeSubjects2t\n\x11ViewerRoomService\x12_\n\x0eJoinViewerRoom\x12%.agni.v1.webapi.JoinViewerRoomRequest\x1a&.agni.v1.webapi.JoinViewerRoomResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -36,7 +36,7 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['_JOINVIEWERROOMREQUEST']._serialized_start=84
   _globals['_JOINVIEWERROOMREQUEST']._serialized_end=131
   _globals['_JOINVIEWERROOMRESPONSE']._serialized_start=134
-  _globals['_JOINVIEWERROOMRESPONSE']._serialized_end=290
-  _globals['_VIEWERROOMSERVICE']._serialized_start=292
-  _globals['_VIEWERROOMSERVICE']._serialized_end=408
+  _globals['_JOINVIEWERROOMRESPONSE']._serialized_end=331
+  _globals['_VIEWERROOMSERVICE']._serialized_start=333
+  _globals['_VIEWERROOMSERVICE']._serialized_end=449
 # @@protoc_insertion_point(module_scope)

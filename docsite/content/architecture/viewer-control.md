@@ -93,6 +93,12 @@ reader looked at last, and it only ever reaches a tab whose reader turned on "Le
 tab". That switch is per tab, off by default, and kept in the tab's session storage, so a reload
 keeps it and a new tab starts with it off.
 
+A tab answers the bridge alone. `JoinViewerRoom` names the relay subject the bridge joins as, and the
+tab passes it to the rooms client's `trustBridges`, so a message from any other peer in the room goes
+unanswered (agni issue 1173). Every token the server signs is for the local subject, so no page can
+join as the bridge, and a page holding a genuine token for the room still cannot call a tab directly,
+past the bridge's check of the switch.
+
 The bridge declares the six tools up front (`rooms.WithPageTools`), so `tools/list` answers the same
 for every caller and the bridge serves the stateless 2026-07-28 MCP wire as well as the session one.
 It also refuses a tab's tool whose schema differs from the declaration by a byte. The declaration is
@@ -102,15 +108,26 @@ own from protobuf-es descriptors (`web/src/toolschema.ts`), so both walks are he
 proto services as tools. `GetLocation` is marked `NO_SIDE_EFFECTS` in the proto, and that is where
 both walks read its read-only hint.
 
+## A tab asking an agent
+
+The same room carries the other direction (agni issue 1173). With its switch on, a tab tells the
+room what the reader selected (`page.selection_changed`, from the Properties panel's focus), and the
+Ask box beside the switch sends the reader's question as `room.ask`, its data carrying the text, the
+tab's `GetLocation` answer and the selection. These are page events, which the bridge buffers per
+room (`rooms.WithEventFallbacks`) and hands only to agents the tab agreed to. An agent waits for the
+next one with `next_request`, on either wire, or subscribes to `rooms://events/{room}` on the session
+wire.
+
+`WithRoomOf` declares `design` as its room argument, so `next_request`, `list_pages`, `attach` and
+`pair` take the design the way the page tools do, resolved through the same `ViewerRoomService.Room`
+(mcpkit#1633). Before that they took only the resolved room name, which no answer told the agent.
+
 ## What is not here yet
 
 The server has no identity provider, so every relay token and every MCP session acts for one local
 subject, and the switch is the only agreement there is. Several people on one server, each with an
 agent, needs OAuth on `/mcp` and a relay token per user, with mcpkit's pairing codes for an agent
-driving someone else's tab. Until massrelay#42 lands the browser client cannot tell the bridge from
-another peer, so any page holding a token for a room could call the other tabs in it directly; with
-one local reader that is the reader's own tabs. A tab asking an agent something (an Ask panel) is
-the other direction, which the bridge carries as page events and nothing here uses yet.
+driving someone else's tab.
 
 ## Running it
 

@@ -29,6 +29,11 @@ The browser engine has a size limit, 128 MB of design files by default. A page s
 `agni serve --engine wasm` sends a design over `--wasm-max-bytes` to the server and says so in its
 top bar. The demo has no server behind it, so it is for designs under that size.
 
+Having an agent move the tabs you have open needs a server, so the demo cannot show it.
+`agni serve --mcp --viewer-rooms` on your own machine does, and
+[Moving a viewer tab you have open](../guide/asking-with-an-llm/#moving-a-viewer-tab-you-have-open)
+covers it. `examples/embed-viewer/README.md` has the walk to show it to someone, step by step.
+
 ## Why it runs in the browser
 
 The project does not host a server for its demos. The docs are static files on GitHub Pages, so the

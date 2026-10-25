@@ -15,6 +15,7 @@ class FakeRoom {
   allowed: boolean[] = [];
   focused = 0;
   left = false;
+  emits: { name: string; data: unknown }[] = [];
   constructor(readonly opts: JoinToolRoomOptions) {}
   registerTool(t: PageTool) {
     this.tools.set(t.name, t);
@@ -32,6 +33,15 @@ class FakeRoom {
   leave() {
     this.left = true;
   }
+  emit(name: string, data?: unknown) {
+    this.emits.push({ name, data });
+  }
+  ask(text: string) {
+    this.emit("room.ask", { text });
+  }
+  selectionChanged(selection: unknown) {
+    this.emit("page.selection_changed", { selection });
+  }
 }
 
 function harness(opts: { stored?: string; joinFails?: boolean; dispatch?: PageDispatch } = {}) {
@@ -41,7 +51,7 @@ function harness(opts: { stored?: string; joinFails?: boolean; dispatch?: PageDi
     joinViewerRoom: async (req) => {
       asked.push(req.design ?? "");
       if (opts.joinFails) throw new ConnectError("no such mount", Code.InvalidArgument);
-      return { room: `design:${req.design}.sch`, relayUrl: "/relay/", token: `tok-${req.design}` } as JoinViewerRoomResponse;
+      return { room: `design:${req.design}.sch`, relayUrl: "/relay/", token: `tok-${req.design}`, bridgeSubjects: ["agni-bridge"] } as JoinViewerRoomResponse;
     },
   };
   const store = new Map<string, string>(opts.stored ? [[AGENTS_KEY, opts.stored]] : []);
@@ -74,6 +84,9 @@ describe("ViewerRoomTab", () => {
     expect(h.rooms).toHaveLength(1);
     const r = h.rooms[0];
     expect(r.opts).toMatchObject({ relay: "http://127.0.0.1:8080/relay/", room: "design:m/a.sch", token: "tok-m/a" });
+    // The tab answers the server's bridges alone, so another page holding a token for the room cannot
+    // call it directly (agni issue 1173).
+    expect(r.opts.trustBridges).toEqual(["agni-bridge"]);
     expect([...r.tools.keys()].sort()).toEqual([
       "viewer_apply_location", "viewer_get_location", "viewer_locate_entity", "viewer_locate_verdict", "viewer_select_finding", "viewer_show_sheet",
     ]);
@@ -145,5 +158,57 @@ describe("ViewerRoomTab", () => {
     expect(h.host.hidden).toBe(true);
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("no such mount"));
     warn.mockRestore();
+  });
+
+  // The Ask box (agni issue 1173): the reader's question goes to the agents the tab agreed to, with
+  // where the tab is and what is selected, so the agent can answer without asking back.
+  it("sends the reader's question with the tab's location and selection, only once the switch is on", async () => {
+    const h = harness();
+    await h.tab.follow({ mount: "m", path: "a" });
+    const form = h.host.querySelector<HTMLFormElement>("form.agents-ask")!;
+    expect(form, "the tab renders an ask box").toBeTruthy();
+    expect(form.hidden, "the ask box hides while agents are kept out").toBe(true);
+    expect(await h.tab.ask("why is SDA flagged?")).toBe(false);
+    expect(h.rooms[0].emits).toEqual([]);
+
+    const box = h.host.querySelector<HTMLInputElement>("input[type=checkbox]")!;
+    box.checked = true;
+    box.dispatchEvent(new Event("change"));
+    expect(form.hidden).toBe(false);
+    const focus = { level: "entity", sel: { kind: "net", net: "SDA" }, sheetId: "s1" } as const;
+    h.tab.select(focus);
+    h.rooms[0].emits.length = 0;
+    expect(await h.tab.ask("why is SDA flagged?")).toBe(true);
+    expect(h.dispatch).toHaveBeenCalledWith("GetLocation", {});
+    expect(h.rooms[0].emits).toEqual([
+      { name: "room.ask", data: { text: "why is SDA flagged?", location: { method: "GetLocation", body: {} }, selection: focus } },
+    ]);
+  });
+
+  it("asks from the box and clears it, and sends nothing blank", async () => {
+    const h = harness({ stored: "1" });
+    await h.tab.follow({ mount: "m", path: "a" });
+    const form = h.host.querySelector<HTMLFormElement>("form.agents-ask")!;
+    const input = form.querySelector<HTMLInputElement>("input[type=text]")!;
+    input.value = "   ";
+    form.dispatchEvent(new Event("submit", { cancelable: true }));
+    await Promise.resolve();
+    expect(h.rooms[0].emits.filter((e) => e.name === "room.ask")).toEqual([]);
+    input.value = "what drives RESET?";
+    form.dispatchEvent(new Event("submit", { cancelable: true }));
+    await vi.waitFor(() => expect(h.rooms[0].emits.filter((e) => e.name === "room.ask")).toHaveLength(1));
+    expect(input.value).toBe("");
+  });
+
+  it("tells agents what the reader selected, only while the switch is on", async () => {
+    const h = harness();
+    await h.tab.follow({ mount: "m", path: "a" });
+    h.tab.select({ level: "entity", sel: { kind: "component", ref: "U7" } });
+    expect(h.rooms[0].emits).toEqual([]);
+    const box = h.host.querySelector<HTMLInputElement>("input[type=checkbox]")!;
+    box.checked = true;
+    box.dispatchEvent(new Event("change"));
+    h.tab.select({ level: "sheet", sheetId: "s2" });
+    expect(h.rooms[0].emits).toEqual([{ name: "page.selection_changed", data: { selection: { level: "sheet", sheetId: "s2" } } }]);
   });
 });
