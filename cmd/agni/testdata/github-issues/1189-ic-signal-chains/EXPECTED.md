@@ -23,5 +23,5 @@ same rows.
 
 ```bash
 agni check cmd/agni/testdata/github-issues/1189-ic-signal-chains --format html -o /tmp/out.html
-agni trace cmd/agni/testdata/github-issues/1189-ic-signal-chains --from U2.1 --to U3.1   # trace takes designators, not pin names
+agni trace cmd/agni/testdata/github-issues/1189-ic-signal-chains --from U2.MDIO --to U3.MDIO   # or by designator, --from U2.1 --to U3.1
 ```

@@ -56,3 +56,26 @@ func TestPinMapTableJoinsEachRowToItsOwnVerdicts(t *testing.T) {
 		t.Error("a run carrying no map must give no table")
 	}
 }
+
+// A pin in a verdict's context is named with its pin, as the subjects column names one, so a csv of
+// an IO-map run says which pin a row declared (agni issue 1193).
+func TestTheContextColumnNamesAPinWithItsPin(t *testing.T) {
+	v := pinVerdict(ioMapPinRule, checkspb.Outcome_OUTCOME_PASS, "U1", "3", nil)
+	v.Context = []*checkspb.ContextSubject{
+		{Role: "declared net", Subject: netSubject("BLE_RX")},
+		{Role: "declared pin", Subject: &checkspb.Subject{Kind: "pin", Ref: "U1", Pin: "PTB3"}},
+	}
+	tb := VerdictsTable([]*checkspb.Verdict{v}, nil)
+	col := -1
+	for i, c := range tb.GetColumns() {
+		if c.GetName() == "context" {
+			col = i
+		}
+	}
+	if col < 0 || len(tb.GetRows()) != 1 {
+		t.Fatalf("no context column or no row: %v", tb)
+	}
+	if got := tb.GetRows()[0].GetCells()[col]; got != "declared net=BLE_RX|declared pin=U1.PTB3" {
+		t.Errorf("context = %q", got)
+	}
+}

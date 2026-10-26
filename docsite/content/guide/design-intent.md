@@ -164,7 +164,8 @@ io_map:
 Write the pin either way. A map is authored in the vocabulary a datasheet and a firmware header use,
 and a netlist answers in package designators, so both are resolved: `PTE7`, `PTE07`, `pte7` and a
 name carrying a zero-width space pasted out of a spreadsheet all reach the same pin. A match that
-needed any of that says so in the verdict, so a note always means something was inferred.
+needed any of that says so in the verdict, so a note always means something was inferred. `agni
+trace` resolves a pin through the same lookup, so a pin a map names is a pin a trace can start from.
 
 It compiles to as many as five rules rather than one. Three of them ask whether the design kept the
 promises the map made, one inverts the question to ask which nets the map never mentioned, and the

@@ -3,7 +3,6 @@ package intent
 import (
 	"context"
 	"fmt"
-	"sort"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -313,49 +312,19 @@ func (p pinMatch) note() string {
 	return " (" + string(p.via.Match) + " pin-name match: " + p.via.Note + ")"
 }
 
-// resolvePin finds the design pin a map row names, by package designator or by the part type's
-// functional name, both compared through core/ident. The designator wins when both match, since it
-// is the netlist's own key.
-//
-// The four non-matches stay apart because each sends a reader somewhere different: a device the
-// design lacks, a device the read gave no pins for, a pin no reading of the name finds, and a name
-// that finds SEVERAL pins.
+// resolvePin finds the design pin a map row names through check.LookupPin, the lookup trace shares,
+// and turns each kind of non-match into the verdict this rule gives it.
 func resolvePin(m check.Model, refDes, declared string) pinMatch {
 	out := pinMatch{declared: declared}
-	if !m.HasComponent(refDes) {
+	l := check.LookupPin(m, refDes, declared)
+	switch l.Kind {
+	case check.PinNoComponent:
 		out.outcome = check.NotConsidered
 		out.reason = fmt.Sprintf("the design carries no component %s, so there is no pin to look up", refDes)
-		return out
-	}
-	var pins []string
-	for _, p := range m.Pins() {
-		if p.Component.GetRefDes() == refDes {
-			pins = append(pins, p.Designator)
-		}
-	}
-	if len(pins) == 0 {
+	case check.PinNoPinList:
 		out.outcome = check.NotConsidered
 		out.reason = fmt.Sprintf("the read supplied no pin list for %s, so a declared pin cannot be resolved on it", refDes)
-		return out
-	}
-	sort.Strings(pins)
-	type hit struct {
-		designator string
-		via        ident.Result
-	}
-	var hits []hit
-	for _, des := range pins {
-		byDes := ident.Compare(declared, des)
-		byName := ident.Result{Match: ident.None}
-		if name := m.PinName(refDes, des); name != "" && name != "~" {
-			byName = ident.Compare(declared, name)
-		}
-		if best := stronger(byDes, byName); best.Match != ident.None {
-			hits = append(hits, hit{des, best})
-		}
-	}
-	switch len(hits) {
-	case 0:
+	case check.PinUnknown:
 		out.outcome = check.Fail
 		out.reason = fmt.Sprintf("%s declares no pin %q, by designator or by name", refDes, declared)
 		out.finding = &check.Finding{
@@ -363,49 +332,23 @@ func resolvePin(m check.Model, refDes, declared string) pinMatch {
 			Message: fmt.Sprintf("the IO map names pin %q on %s, which declares no such pin by designator or by name", declared, refDes),
 			Prov:    check.ComponentProv(m, refDes),
 		}
-		return out
-	case 1:
-		out.outcome, out.designator, out.via = check.Pass, hits[0].designator, hits[0].via
-		return out
-	}
-	// Several pins answer to the name. A part may declare one name on several pins (four GND pins is
-	// ordinary), so the comparison cannot decide which pin the map meant. That is inconclusive and not
-	// a fail, since the row may be correct.
-	var named []string
-	for _, h := range hits {
-		named = append(named, h.designator)
-	}
-	out.outcome = check.Inconclusive
-	out.reason = fmt.Sprintf("%q matches %d pins on %s (%s), so which one the map means cannot be decided",
-		declared, len(hits), refDes, strings.Join(named, ", "))
-	out.finding = &check.Finding{
-		Subject:      check.ComponentEntity(refDes),
-		Message:      fmt.Sprintf("the IO map names pin %q on %s, which has %d pins of that name (%s); name the package designator to make the row decidable", declared, refDes, len(hits), strings.Join(named, ", ")),
-		Inconclusive: true,
-		Prov:         check.ComponentProv(m, refDes),
+	case check.PinFound:
+		out.outcome, out.designator, out.via = check.Pass, l.Designator, l.Via
+	case check.PinAmbiguous:
+		// A part may declare one name on several pins (four GND pins is ordinary), so the
+		// comparison cannot decide which pin the map meant. That is inconclusive and not a fail,
+		// since the row may be correct.
+		out.outcome = check.Inconclusive
+		out.reason = fmt.Sprintf("%q matches %d pins on %s (%s), so which one the map means cannot be decided",
+			declared, len(l.Candidates), refDes, strings.Join(l.Candidates, ", "))
+		out.finding = &check.Finding{
+			Subject:      check.ComponentEntity(refDes),
+			Message:      fmt.Sprintf("the IO map names pin %q on %s, which has %d pins of that name (%s); name the package designator to make the row decidable", declared, refDes, len(l.Candidates), strings.Join(l.Candidates, ", ")),
+			Inconclusive: true,
+			Prov:         check.ComponentProv(m, refDes),
+		}
 	}
 	return out
-}
-
-// stronger picks the more confident of two readings of one pin, so a designator hit is never
-// downgraded by a weaker name hit on the same pin.
-func stronger(a, b ident.Result) ident.Result {
-	if rank(a.Match) >= rank(b.Match) {
-		return a
-	}
-	return b
-}
-
-func rank(m ident.Match) int {
-	switch m {
-	case ident.Exact:
-		return 3
-	case ident.Normalized:
-		return 2
-	case ident.Fuzzy:
-		return 1
-	}
-	return 0
 }
 
 // sameName compares two names of the same THING (a net against a net), where a fuzzy reading is

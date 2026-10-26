@@ -382,13 +382,16 @@ net without breaking the path. A capacitor is a DC block and is never crossed. A
 be where a route ENDS and is never passed through, so a trace onto a supply reports the supply and
 stops there.
 
-Both endpoints are pins, named `<ref-des>.<pin>`. An endpoint that names nothing the design has is an
-error and exits non-zero, because a pin spelled wrong in a declaration is not the same answer as two
-pins that are not connected.
+Both endpoints are pins, named `<ref-des>.<pin>`, where the pin is its package designator (`U2.1`) or
+the functional name the part type gives it (`U2.MDIO`), the two spellings an IO map accepts (agni
+issue 1193). A name several pins carry (`U2.GND`) is refused with their designators, and so is one a
+pin matches only after dropping tokens, since a route from a guessed pin is about the wrong node. An
+endpoint that names nothing the design has is an error and exits non-zero, because a pin spelled
+wrong in a declaration is not the same answer as two pins that are not connected.
 
 | flag | what it does |
 |---|---|
-| `--from <ref.pin>` | the pin to start at, e.g. `U7.3` |
+| `--from <ref.pin>` | the pin to start at, e.g. `U7.3` or `U7.SDA` |
 | `--to <ref.pin>` | the pin to end at |
 | `--hops <n>` | how many series crossings to search through (default 6). Unlike the protection radii this is a search budget rather than an electrical claim, and every answer states the value it rests on, so a no-route can be re-asked wider |
 | `--format <fmt>` | `text` (default), or `json`, which emits the same `Trace` message the `TraceDesign` rpc returns, in protojson, so a script reading the CLI and a client reading the API parse one shape |

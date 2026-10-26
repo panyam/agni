@@ -291,3 +291,20 @@ func TestTraceCLIStaysQuietWithoutAUrlBase(t *testing.T) {
 		}
 	}
 }
+
+// `trace` names a pin the way an IO map does, so #1189's chain traces from U2.MDIO exactly as from
+// U2.1 (agni issue 1193).
+func TestTraceTakesAPinByItsFunctionalName(t *testing.T) {
+	design := "testdata/github-issues/1189-ic-signal-chains"
+	byName, err := runTrace(t, design, "--from", "U2.MDIO", "--to", "U3.MDIO")
+	if err != nil {
+		t.Fatalf("trace by name: %v\n%s", err, byName)
+	}
+	byNum, err := runTrace(t, design, "--from", "U2.1", "--to", "U3.1")
+	if err != nil {
+		t.Fatalf("trace by designator: %v\n%s", err, byNum)
+	}
+	if byName != byNum || !strings.Contains(byName, "U2.1 (MDIO) --> R1 --> U3.1 (MDIO)") {
+		t.Errorf("the two spellings answer differently:\n%s\n---\n%s", byName, byNum)
+	}
+}

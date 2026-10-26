@@ -132,6 +132,7 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 	for _, l := range libs {
 		d.Libraries = append(d.Libraries, libraryOf(l, src, h.blocks))
 	}
+	cellPins := cellPortDesignators(libs)
 	// One physical component is often several EDIF instances, such as the sections of a
 	// multi-gate IC, connector banks, or a relay's coil and contacts. Group instances by
 	// ref_des into one Component with N sections (WS1-001). Designator-less instances are
@@ -148,6 +149,7 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 	var order []string
 	for _, lf := range h.leaves {
 		refDes, sec, id, pinMap := instanceOf(lf.node, src)
+		pinMap = withCellDesignators(pinMap, cellPins, sec)
 		// Inside a block an instance id repeats across placements and across cells, so its locator is
 		// the occurrence path, which is what an emitter anchors a net's instanceRef on.
 		sec.Prov.NativeId = occurrence(lf.path, id)
@@ -357,6 +359,70 @@ func anyDesignator(insts []*node) bool {
 		}
 	}
 	return false
+}
+
+// cellPortDesignators indexes every cell's ports by the designator its interface declares, keyed
+// by library and cell id as an instance's cellRef names them (agni issue 1193). A port whose
+// interface states `(port MDIO (designator "1"))` is pin 1, and a net naming the port MDIO must
+// land on pin 1, or the part type declares pin 1 and the net connects to a pin MDIO it does not
+// have.
+func cellPortDesignators(libs []*node) map[string]map[string][]string {
+	out := map[string]map[string][]string{}
+	for _, l := range libs {
+		lib := strings.TrimPrefix(parseName(l.Arg(1)).ID, "&")
+		for _, c := range l.Children("cell") {
+			var ports []*node
+			collect(c, "port", &ports)
+			for _, p := range ports {
+				dg := p.Child("designator")
+				if dg == nil {
+					continue
+				}
+				des := stringDisplayText(dg)
+				port := portName(p.Arg(1))
+				// A designator naming the port itself (a writer spells pin 1 `(port &1 (designator
+				// "&1"))`) remaps nothing, and adding it would fan one connection out to two pins.
+				if des == "" || port == "" || strings.TrimPrefix(des, "&") == port {
+					continue
+				}
+				key := lib + "\x00" + strings.TrimPrefix(parseName(c.Arg(1)).ID, "&")
+				if out[key] == nil {
+					out[key] = map[string][]string{}
+				}
+				out[key][port] = append(out[key][port], des)
+			}
+		}
+	}
+	return out
+}
+
+// withCellDesignators adds the cell's own port designators to an instance's portInstance table
+// for every port the table does not map, so the instance's table wins and the cell's interface
+// fills the rest. A cellRef naming no library is looked up in every library and used only when
+// one library has that cell.
+func withCellDesignators(pinMap map[string][]string, cellPins map[string]map[string][]string, sec *ir.ComponentSection) map[string][]string {
+	ports := cellPins[sec.GetLibraryRef()+"\x00"+sec.GetPartRef()]
+	if sec.GetLibraryRef() == "" {
+		var found []map[string][]string
+		for k, v := range cellPins {
+			if strings.HasSuffix(k, "\x00"+sec.GetPartRef()) {
+				found = append(found, v)
+			}
+		}
+		if len(found) == 1 {
+			ports = found[0]
+		}
+	}
+	for port, des := range ports {
+		if _, ok := pinMap[port]; ok {
+			continue
+		}
+		if pinMap == nil {
+			pinMap = map[string][]string{}
+		}
+		pinMap[port] = des
+	}
+	return pinMap
 }
 
 // instanceOf converts an EDIF (instance ...) node into one ComponentSection. It returns

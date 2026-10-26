@@ -345,7 +345,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 - **`agni trace <design> --from U7.3 --to U12.4` follows a signal through the series parts between
   them** and prints the route, the nets, and the probe points on each. `--render <file.svg>` draws it,
   on the design's own schematic where it has one and on an auto-layout where it does not, saying which.
-  `--server` mints a link that re-asks the question in the viewer, and unlike a verdict link it
+  An endpoint's pin is a designator or the part type's functional name, resolved by
+  `check.LookupPin`, the lookup the IO-map rules use (agni 1193); an ambiguous or loose-only name is
+  refused with its candidates. `--server` mints a link that re-asks the question in the viewer, and unlike a verdict link it
   carries the QUESTION, so it needs no content hash. Three outcomes stay apart: a route, no route
   within the radius, and an endpoint naming nothing the design has, which exits non-zero because a pin
   spelled wrong and two pins genuinely unconnected are opposite problems.
@@ -460,7 +462,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   designs with no error. `readers/edif/sexpr.go` respells each list's head from `keywords`, and
   `TestEveryLookedUpKeywordIsCanonicalized` fails when a new lookup's keyword is missing from that
   table. Altium also writes no `(designator ...)` and names each instance by its ref-des, so a file
-  in which NO instance carries a designator takes the instance's name as its ref-des.
+  in which NO instance carries a designator takes the instance's name as its ref-des. **A `portRef`
+  maps to a pin number through the instance's `portInstance` first and the cell port's own
+  `(designator ...)` second** (agni 1193); before, a cell-only designator left every connection on a
+  pin named after the port, which the part type did not have.
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945), which is how an 80 MB
   board holds under 4 times its size, so never assign a parsed node's `Atom`; put a new node in its
   parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out of the

@@ -423,7 +423,7 @@ func OutcomeWord(o checkspb.Outcome) string {
 func contextCell(ctx []*checkspb.ContextSubject) string {
 	parts := make([]string, 0, len(ctx))
 	for _, cs := range ctx {
-		parts = append(parts, cs.GetRole()+"="+cs.GetSubject().GetRef())
+		parts = append(parts, cs.GetRole()+"="+subjectRef(cs.GetSubject()))
 	}
 	return strings.Join(parts, rpt.MultiValueSep)
 }
@@ -440,13 +440,19 @@ func termsCell(ts []*checkspb.WitnessTerm) string {
 func subjectsCell(ss []*checkspb.Subject) string {
 	parts := make([]string, 0, len(ss))
 	for _, s := range ss {
-		ref := s.GetRef()
-		if s.GetPin() != "" {
-			ref += "." + s.GetPin()
-		}
-		parts = append(parts, s.GetKind()+":"+ref)
+		parts = append(parts, s.GetKind()+":"+subjectRef(s))
 	}
 	return strings.Join(parts, "|")
+}
+
+// subjectRef is a subject's name as a cell spells it: a pin is its ref-des and pin joined with a
+// dot, as check.EntityRef does, and anything else is its ref. The context column dropped the pin
+// until agni issue 1193, so `declared pin=U1` named the part where the verdict named U1.PTB3.
+func subjectRef(s *checkspb.Subject) string {
+	if s.GetPin() != "" {
+		return s.GetRef() + "." + s.GetPin()
+	}
+	return s.GetRef()
 }
 
 // TableService answers Tabulate. It holds nothing, so the zero value serves.

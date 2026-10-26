@@ -69,7 +69,7 @@ func ioMapFunctionVerdicts(m check.Model, d Declaration) []check.Verdict {
 		best := ident.Result{Match: ident.None}
 		for _, alt := range specPin.GetAlternates() {
 			listed = append(listed, alt.GetName())
-			if r := ident.Compare(a.Function, alt.GetName()); rank(r.Match) > rank(best.Match) {
+			if r := ident.Compare(a.Function, alt.GetName()); check.MatchRank(r.Match) > check.MatchRank(best.Match) {
 				best = r
 			}
 		}
