@@ -70,6 +70,7 @@ var docKeys = []string{
 	RuleIOMapFarEnd,                     // io-map-far-end
 	RuleIOMapCoverage,                   // io-map-coverage
 	RuleExposureDeclared,                // exposure-declared
+	RulePullUpReachDeclared,             // pull-up-reach-declared
 }
 
 // docKey maps a Rule.Name to its doc key. It is identity for the fixed-name rules (module-missing,
@@ -118,6 +119,7 @@ var docSummaries = map[string]string{
 	RuleIOMapFarEnd:                     "A net does not reach the far-end device pin the design intent's IO map declares.",
 	RuleIOMapCoverage:                   "How much of the netlist the design intent's IO map declares at all.",
 	RuleExposureDeclared:                "A component the design intent gives an exposure is absent from the design or is not a connector.",
+	RulePullUpReachDeclared:             "A net the design intent gives a pull-up reach is absent from the design.",
 }
 
 // docRemedies is what to DO about each intent rule KIND, in the imperative (check.Rule.Remedy).
@@ -146,6 +148,7 @@ var docRemedies = map[string]string{
 	RuleIOMapNetAbsent:                  "Add the missing net, or amend the IO map. Check for a misspelling first: a net present under a slightly different name is a different fix from one that was never drawn.",
 	RuleIOMapCoverage:                   "Declare the nets the map does not cover, or accept the coverage and read the other IO-map results as being about the covered fraction alone. There is nothing to fix in the design here.",
 	RuleExposureDeclared:                "Correct the ref-des in the declaration, or remove the entry. A declaration naming no connector on the board leaves every connector checked as external, which is the opposite of what it was written to say.",
+	RulePullUpReachDeclared:             "Correct the net name in the declaration to the design's exact spelling, or remove the entry. A reach declared on a net the design lacks leaves the bus it meant to name held to the default of 3.",
 	RuleIOMapFarEnd:                     "Route the net to the declared device pin, or amend the far end the map declares. The reported route shows what the net actually goes through, so start by reading where it diverges.",
 }
 

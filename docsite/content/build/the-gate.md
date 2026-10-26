@@ -295,6 +295,15 @@ demo=demo`, which is how you tell a leaked one from a development server worth k
 process, so **reproduce a suspected regression against unmodified `main` before reporting it**,
 which is what turned this one from a bug report into a `pkill`.
 
+**`proto-check` fails under a newer Go on a branch that touches no proto.** It regenerates with
+`protoc-gen-go` through `go tool`, which runs under whatever Go is on the machine, and Go 1.27 formats
+the generated comments differently from the 1.26.9 the committed files were made with. A local
+`make -k testall` then reports `gen/go/agni/v1/param/param.pb.go` and `webapi/query.pb.go` stale while
+CI, which runs the pinned Go, passes. `GOTOOLCHAIN=go1.26.9 make proto-check` passing with no diff
+settles it. Run only that target under the pin, because Go 1.26 cannot read a linked worktree's
+`.git` file, so anything else built under it in a worktree is stamped `(devel)` and the browser
+cache and rung 12's capture fail (#957).
+
 **A gate that greps the tree sees a nested checkout too.** An agent that finishes inside this repo
 can leave a git worktree under `.claude/worktrees/`, a second full copy of the source, and
 `ir_model_check.sh` then found every reader's producer twice and failed. It skips that directory

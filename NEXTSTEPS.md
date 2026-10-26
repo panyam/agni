@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-25, at `cabe7274`.
+Last pruned 2026-10-25, at `1c432281`.
 
 ## At a glance
 
@@ -22,13 +22,14 @@ exercise run on the mission issue.
 - **#1176 `mission_shared_viewer_rooms`** (several people on one server, each driving their own tabs),
   0 of 1 and not active. Its ticket #1173 is `waiting` until someone runs agni serve for more than one
   person, and the mission has no exercise yet; its first PR writes one.
-- **Candidate**: moving a house netlist audit off its spreadsheet. #820, #821 and #1093 are its
-  tickets, and `guide/older-comparison-tools.md` its first page.
+- **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket (#820,
+  #821 and their follow-up #1165 have closed), and `guide/older-comparison-tools.md` its first page.
 - **Candidate**: more tours of the viewer. The review tour exists (`web/src/reviewtour.ts`, #1179), so
   a mission here would be another workflow toured the same way (a revision compare, a trace), each
   starting with the viewer events it advances on. Nobody has yet taken the headed tour by hand.
-- This run: #845 closed at its done-when (exercise 12 of 12 at `cabe7274`, logged); #1177 and #1179
-  merged (the exercise runs headed and is the viewer's review tour); #1180 filed from its last friction.
+- This run: #1182 merged and closed #1165 (`intent/pull-up-reach-declared`, paths on the pull-up count
+  rules, natural order in `core/ident`); #1181 merged. The 1093 reproducer still names its rail
+  `RAIL_3V3`, which the default vocabulary does not read, so fix that with #1093.
 
 ## Open, ranked
 

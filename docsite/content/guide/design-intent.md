@@ -96,8 +96,7 @@ must share a voltage. `protect` takes `ovp` (a TVS or zener clamping the rail) a
 bleeder to ground). A resistance band belongs to a strap, so `min_ohms` without `strap` is a load
 error.
 
-`pull_up_reach_hops` is the one net fact that compiles to no rule of its own. It changes how far the
-pull-up walk searches from that net (agni issue 820). `i2c-pull-up` and the rules beside it look for
+`pull_up_reach_hops` changes how far the pull-up walk searches from that net (agni issue 820). `i2c-pull-up` and the rules beside it look for
 a rail within three series resistors of a bus, because past three the series resistance is usually
 comparable to the pull-up and the bus no longer returns high in time. Some buses reach their pull-up
 through a deeper network on purpose, such as a series isolation resistor followed by a
@@ -117,8 +116,9 @@ The first run is the default, so `SDA_MAIN` fails within 3 hops. The second decl
 failing verdict always states the limit it searched to, so a declared net that still fails says
 "within 4 hops". The reach is per net because the default is an electrical judgement, and moving it
 for the whole design would pass buses nobody has sized. Zero or an absent value keeps the default,
-and a negative one fails the load. Nothing checks that a declared net exists yet, so check the
-spelling against the netlist. `SCL_MAIN` also shows a passing verdict with two pull-ups, one direct and
+and a negative one fails the load. The reach is looked up by the net's exact name, so
+`intent/pull-up-reach-declared` fails a declaration naming a net the design lacks, which is how a
+misspelled name gets reported rather than ignored (agni issue 1165). `SCL_MAIN` also shows a passing verdict with two pull-ups, one direct and
 one behind a series resistor, which names both paths.
 
 A `components` entry says whether a connector faces the outside of the product. The exposure rules

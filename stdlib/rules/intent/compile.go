@@ -35,6 +35,10 @@ const (
 	// design has (agni issue 831). Without it a misspelled ref-des would change nothing and read as a
 	// declaration that took effect.
 	RuleExposureDeclared = "exposure-declared"
+	// RulePullUpReachDeclared confirms each net a declaration gives a pull-up reach is a net the design
+	// has (agni issue 1165). The reach is keyed by the exact net name, so without it a misspelled name
+	// would change nothing and read as a declaration that took effect.
+	RulePullUpReachDeclared = "pull-up-reach-declared"
 	// SourceName is the namespace Source uses; the composed catalog names are SourceName + "/" + the
 	// bare rule name.
 	SourceName = "intent"
@@ -80,6 +84,9 @@ func Compile(d Declaration) []*check.Rule {
 	}
 	if len(d.Exposures) > 0 {
 		rules = append(rules, exposureDeclaredRule(d))
+	}
+	if len(d.PullUpReach) > 0 {
+		rules = append(rules, pullUpReachDeclaredRule(d))
 	}
 	for _, s := range d.Subsystems {
 		rules = append(rules, subsystemRule(s))

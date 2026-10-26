@@ -337,7 +337,7 @@ describe("the browser-review walk", () => {
         const button = page.locator(".query-ask:not([disabled])");
         await button.waitFor({ timeout: 30_000 });
         const question = (await button.innerText()).trim();
-        await tourAct(page, "ask", () => button.click());
+        await tourAct(page, "ask", () => button.click(), { holes: 2 });
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length > n, tabs, { timeout: 30_000 });
         await page.waitForSelector(".query-row, .query-empty", { timeout: 30_000 });
         if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").innerText());

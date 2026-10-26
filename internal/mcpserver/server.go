@@ -16,6 +16,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"os"
 	"strings"
 	"time"
 
@@ -28,6 +29,7 @@ import (
 	"github.com/panyam/jaala/ns"
 	"github.com/panyam/mcpkit/core"
 	mcpkit "github.com/panyam/mcpkit/server"
+	"github.com/panyam/mcpkit/server/stateless"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
 )
@@ -72,6 +74,7 @@ func New(api server.API, o Options) (*mcpkit.Server, error) {
 		Vocabulary: func(ctx context.Context) (*ns.Vocabulary, error) { return api.Query.Vocabulary(ctx, "") },
 		MaxWork:    o.Budget,
 		Timeout:    o.Timeout,
+		Server:     []mcpkit.Option{mcpkit.WithListTTLMs(listTTLMs)},
 	}, mcp.Extension[designArg]{Prepare: s.prepare})
 	if err != nil {
 		return nil, err
@@ -84,12 +87,33 @@ func New(api server.API, o Options) (*mcpkit.Server, error) {
 // HTTPHandler is srv served over streamable HTTP at prefix, the path it is mounted at on a mux. Only
 // a localhost Origin is accepted, so a page on another site can't drive a local server (DNS
 // rebinding); origins adds others.
+//
+// It accepts both MCP wires on one URL (Wire), so each host speaks the one it prefers: the stateless
+// 2026-07-28 wire, or the session wire a host that never asked for it gets.
 func HTTPHandler(srv *mcpkit.Server, prefix string, origins ...string) http.Handler {
-	opts := []mcpkit.TransportOption{mcpkit.WithStreamableHTTP(true), mcpkit.WithSSE(false), mcpkit.WithPrefix(prefix)}
+	opts := []mcpkit.TransportOption{
+		mcpkit.WithStreamableHTTP(true), mcpkit.WithSSE(false), mcpkit.WithPrefix(prefix),
+		mcpkit.WithStatelessMode(Wire()),
+	}
 	if len(origins) > 0 {
 		opts = append(opts, mcpkit.WithAllowedOrigins(origins...))
 	}
 	return srv.Handler(opts...)
+}
+
+// listTTLMs is how long a client may keep the tool, resource and prompt lists before asking again:
+// an hour, since agni's tools are fixed for a server's life and nothing announces a change (agni
+// issue 1172). It saves every stateless client a tools/list per conversation.
+const listTTLMs = 60 * 60 * 1000
+
+// Wire is the MCP wires agni's HTTP endpoint accepts: both (stateless.ModeDual), set here rather
+// than left to mcpkit's default so a change of that default can't drop the wire a host speaks (agni
+// issue 1172). MCPKIT_STATELESS_MODE still overrides it, to force one wire while debugging a host.
+func Wire() stateless.Mode {
+	if m, ok := stateless.ParseMode(os.Getenv(stateless.ModeEnvVar)); ok {
+		return m
+	}
+	return stateless.ModeDual
 }
 
 const about = `Electronic designs (schematics, netlists and boards) that agni reads: their parts, pins, nets and what connects them. Every board fact in an answer is a row agni returned, with the file and place it was read from.`

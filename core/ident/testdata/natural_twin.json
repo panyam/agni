@@ -1,0 +1,12 @@
+{
+  "_comment": "Names in the order ident.CompareNatural puts them, read by core/ident's TestNaturalOrderTwin and the web tier's query.test.ts (compareNatural, which the query panel sorts an entity column by), so a column sorted in the panel reads in the order Tabulate and every csv give it (agni issue 1045). Each list is already in order; both tests sort a reversed copy and compare.",
+  "lists": [
+    ["R1", "R2", "R10", "R100"],
+    ["U10.3", "U10.12", "U11.1"],
+    ["C1", "c2", "C10"],
+    ["R01", "R1", "R2"],
+    ["1V8", "3V3", "12V0", "VBUS"],
+    ["GND", "GND_1", "GND_2", "GND_10"],
+    ["J1", "J1A", "J2"]
+  ]
+}

@@ -39,6 +39,14 @@ The HTTP endpoint accepts requests from a localhost origin only, so a page on an
 drive a server running on your machine. `--query-budget` caps the work of every question a client
 asks, as it does for the viewer's.
 
+The HTTP endpoint speaks both MCP wires on one URL, and a client uses whichever it prefers: the
+stateless 2026-07-28 wire, where every request stands alone, or the older session wire that starts
+with `initialize`. Every tool answers the same rows and links on both. Nothing the server keeps
+depends on a session, since a design's snapshot is kept per server and per design. agni sets this
+itself rather than taking its MCP library's default, and `MCPKIT_STATELESS_MODE=legacy` or
+`=stateless` forces one wire, for debugging a client. `agni mcp` on stdio speaks the session wire
+alone for now (panyam/mcpkit#1637).
+
 ## What the model can call
 
 The query language's tools come from [jaala](https://panyam.github.io/jaala/guide/mcp-server/), the
@@ -145,4 +153,5 @@ revisions, and a trace from a pin to a connector) through an MCP client, as the 
 make. Each reply has to state its question, carry links that open in the viewer, hold the same rows
 the CLI answers to the same request, and contain the rows the design is known to have. The questions
 live in `examples/ask-over-mcp/exercise/`, one file per board, and `WALK_DESIGN=gateway` runs the
-tutorial board instead of the Jetson baseboard.
+tutorial board instead of the Jetson baseboard. It asks everything twice, once on the stateless
+wire and once on the session wire, and writes a report for each.

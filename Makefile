@@ -311,13 +311,16 @@ exercise-browser-review: ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 # port. Each reply must state its question, carry links that open in the viewer, hold the rows the CLI
 # answers to the same request, and contain what examples/ask-over-mcp/exercise/<design>.yaml pins. It
 # prints one row per call and writes them as markdown to $(EXERCISE_OUT)/mcp-ask.md for the mission
-# log. WALK_DESIGN picks the board as exercise-browser-review does: jetson (the default) or gateway.
+# log. It asks twice, on the stateless wire and then on the session wire (mcp-ask-session.md), since
+# the server accepts both and a host speaks whichever it prefers (agni issue 1172). WALK_DESIGN picks
+# the board as exercise-browser-review does: jetson (the default) or gateway.
 #   make exercise-mcp-ask
 #   make exercise-mcp-ask WALK_DESIGN=gateway
 exercise-mcp-ask: agni ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	$(if $(filter jetson,$(WALK_DESIGN)),$(MAKE) -C examples/jetson-project board rev-b)
 	mkdir -p $(EXERCISE_OUT)
-	cd examples/ask-over-mcp && AGNI_BIN=$(CURDIR)/bin/agni $(GO) run . exercise --out $(EXERCISE_OUT)/mcp-ask.md exercise/$(WALK_DESIGN).yaml
+	cd examples/ask-over-mcp && AGNI_BIN=$(CURDIR)/bin/agni $(GO) run . exercise --wire stateless --out $(EXERCISE_OUT)/mcp-ask.md exercise/$(WALK_DESIGN).yaml
+	cd examples/ask-over-mcp && AGNI_BIN=$(CURDIR)/bin/agni $(GO) run . exercise --wire session --out $(EXERCISE_OUT)/mcp-ask-session.md exercise/$(WALK_DESIGN).yaml
 
 # WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
 # build of the same commit parsed into the browser's cache (wasmengine.StoreVersion, agni issue 911).

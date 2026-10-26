@@ -396,7 +396,15 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   own projection, and `Tabulate` (C35), so a new query field reaches MCP with no change there.
   `Run.BaseFor` is what keeps the board read only for a program reading `board.*`, as `RunQuery`
   does. `TestMCPAnswersAsConnectDoes` asks every tool and its rpc the same question over one server,
-  so a new tool belongs in it. **`make exercise-mcp-ask` is mission #909's exercise** (agni 1121):
+  so a new tool belongs in it. **The HTTP endpoint accepts both MCP wires** (`mcpserver.Wire`, pinned
+  to mcpkit's `ModeDual` so a default change can't drop one, `MCPKIT_STATELESS_MODE` overriding it),
+  and the MCP tests run on both through `eachWire` (agni 1172). agni's own clients speak `adaptive`,
+  the stateless wire when offered and a session otherwise. Three cases mcpkit gets wrong are held by
+  `mcpkitGap` until panyam/mcpkit#1637 lands, each failing when fixed: the stateless `tools/call`
+  skips the input-schema check (a misspelled argument is answered), stdio serves sessions alone, and
+  an adaptive client can't fall back from a session-only server. The lists carry an hour's `ttlMs`
+  (`listTTLMs`, through jaala's `Options.Server`). **`make exercise-mcp-ask` is mission #909's
+  exercise** (agni 1121):
   `examples/ask-over-mcp exercise <spec>` asks a spec's questions over `serve --mcp` on a free port
   and holds each reply's table, written through `service.WriteTableCSV`, to the CLI's csv for the
   same request, its links to a 200, and its rows to what the spec pins. A new tool's reply has to
@@ -678,7 +686,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   sent, a TWIN fixture both test suites read holds the two to one answer (agni 1045):
   `core/review/testdata/tally_twin.json`, `core/results/testdata/severity_twin.json`,
   `core/query/testdata/binding_twin.json`, `core/facts/testdata/kind_order.json`,
-  `service/testdata/natural_twin.json`, `core/check/testdata/subject_param_twin.json`. A new client copy of engine logic gets one, or better, comes
+  `core/ident/testdata/natural_twin.json`, `core/check/testdata/subject_param_twin.json`. A new client copy of engine logic gets one, or better, comes
   off the wire (a parse error's caret is `TextPosition.caret`, drawn by the engine).
 - **Every question about a design names a snapshot, and only `Ingest` names files** (agni 1061,
   `service/snapshot.go`, "The services" in `architecture/web-services.md`). Ingest resolves the
@@ -826,9 +834,10 @@ because a bump that touched the root alone left every nested module stale and fa
 `browser-test` in parallel jobs (agni 1147). Read
 `docsite/content/build/the-gate.md` before trusting a run, since the gate has three ways to be
 misread (a wrapper reporting its own status rather than make's, which turns red green, a
-commit-first ordering rule, and a per-clone `pnpm install`), one that makes a fine tree read RED (a stray
+commit-first ordering rule, and a per-clone `pnpm install`), two that make a fine tree read RED (a stray
 `agni serve` on :8080 fails three verdict-link tests, so reproduce against unmodified `main` before
-reporting a regression), plus what a run leaves behind and the generated-code rules. **From a worktree run
+reporting a regression, and `proto-check` under a local Go 1.27 reports untouched `.pb.go` files stale,
+so rerun that one target with `GOTOOLCHAIN=go1.26.9`), plus what a run leaves behind and the generated-code rules. **From a worktree run
 `make -k testall`**, since a plain `make` stops at the first failure before `python-test`,
 `tutorial-runs-check` and `docsite-images-check` ever run. **Build in a worktree with the default Go,
 never `GOTOOLCHAIN=go1.26.9`.** Go 1.26 (1.26.9 included) finds a repository only by a `.git` DIRECTORY and a linked
