@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-26, at `368e68b1`.
+Last pruned 2026-10-26, at `77c73ff7`.
 
 ## At a glance
 
@@ -18,10 +18,11 @@ script) prints one mission's queue, and the order lives in GitHub labels and blo
 than here. Log each exercise run on the mission issue.
 
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
-  datasheet), exercised by `make exercise-pin-functions` (`PIN_DESIGN=` for another design). #1188 and
-  #1189 closed with the pin map table, and #667 checks a declared function against the datasheet's
-  pin-mux table. Next ready: #1193 (a pin name resolving in EDIF port designators and in `trace`), then
-  #1190 (one HTML file carrying the checks and the query sets).
+  datasheet), 6 of 6 tickets closed, exercise last run at `77c73ff7` (works on the fixtures). It waits
+  on a team's clean-room run on their own board: the three commands in `guide/trying-agni.md`'s
+  "Signing off a pin map in a clean room", with the `agni trial` report sent back. Their findings
+  become its next tickets. Open choice from #1198: whether `service.ShippedRules` should name the
+  fixed `intent/io-map-*` rules, which the trial now counts under project rules.
 - **#1176 `mission_shared_viewer_rooms`** (several people on one server, each driving their own tabs),
   0 of 1 and not active. #1187 pushed a tab's Ask to a Claude Code session as a turn, so #1173 now holds
   only the multi-user half (OAuth on `/mcp`, a relay token per user, the pairing UI) and is `waiting`
@@ -32,9 +33,10 @@ than here. Log each exercise run on the mission issue.
 - **Candidate**: more tours of the viewer. The review tour exists (`web/src/reviewtour.ts`, #1179), so
   a mission here would be another workflow toured the same way (a revision compare, a trace), each
   starting with the viewer events it advances on. Nobody has yet taken the headed tour by hand.
-- This run: #1185 (review witnesses), #1187 (rooms events, mcpkit v0.8.13, which also closed the
-  three stateless-wire gaps of mcpkit#1637) and #1191 (mcpkit v0.8.14) merged. The 1093 reproducer
-  still names its rail `RAIL_3V3`, which the default vocabulary does not read, so fix that with #1093.
+- This run: #1192, #1195, #1197, #1199 and #1198 merged (the pin map table, alternate functions
+  from the datasheet, pin names in EDIF and `trace`, query sets in the check report, and the trial's
+  pin map counts). The 1093 reproducer still names its rail `RAIL_3V3`, which the default vocabulary
+  does not read, so fix that with #1093.
 
 ## Open, ranked
 

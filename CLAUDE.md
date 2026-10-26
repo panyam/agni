@@ -196,7 +196,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   (agni 1057), which `make compose-release V=...` pins and the release attaches. Its `trial` service
   runs `agni trial`, whose `feedback.Report` has no field for design content, and names a rule only
   through `feedback.Shipped` against `service.ShippedRules()`, since a project's rule namespace can
-  name the customer. `hack/compose_smoke.sh` runs the bundle in the `images` and `release` workflows.
+  name the customer. A design's pin map is counted (`feedback.PinMapTally`, agni 1196), and why a
+  declared function went unchecked travels as a KIND that `intent.FunctionReasonOf` reads off the
+  rule's fixed phrases, since the sentence names parts; a new not-considered path in
+  `io-map-function` builds its reason from a new phrase or reads as `other`. `hack/compose_smoke.sh` runs the bundle in the `images` and `release` workflows.
   Pipe `compose run` output only with `-T`, or it arrives empty.
 - **There are two images, published by one release tag**: `Dockerfile` (`ghcr.io/panyam/agni`, the
   engine, viewer and symbol libraries) and `Dockerfile.agnids` (`ghcr.io/panyam/agnids`, the
@@ -761,7 +764,9 @@ on BOTH sides; `\s` does NOT match U+200B, which is the defence that looks right
 **A pin name is compared loosely and a NET name is not**, because a vendor table is inconsistent with
 itself while a net name is the design's own identifier. `ident.PinName` is the loose key, folding underscores AFTER the
 index rewrite so `IO0_1` never meets a different `IO1`, and `ident.PinNumber` keeps a designator's
-zeros (agni 702). **A caller comparing many against many
+zeros (agni 702). **A fuzzy match needs BOTH ends to agree** (`tokenSubsequence`): `GMAC0_TXD2`
+meets `GMAC0_MII_RGMII_TXD2` loosely, while `TXD` never meets `UART0_TXD`, and a single token is
+never fuzzy. A test of a loose match has to use an anchored pair or it tests nothing. **A caller comparing many against many
 builds a map keyed on `Canonical` rather than nesting `Compare`**, since two hundred rows against
 sixteen hundred nets is 320,000 comparisons however fast one is.
 
@@ -1150,7 +1155,8 @@ until the count is listed there on purpose (agni 727).
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
 and the command that exercises it. Several may be active at once, one per worktree. #1194
 `mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is active,
-and `make exercise-pin-functions` is its exercise.
+with all six tickets closed, and `make exercise-pin-functions` is its exercise. It closes on a team's
+real-board run in a clean room (`guide/trying-agni.md`), which sends back only `agni trial`'s report.
 #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo` (2026-10-20), #909
 `mission_ask` (2026-10-22), #1157 `mission_viewer_page_api` and #845 `mission_browser_review` (both
 2026-10-25) have closed, and their exercises live on as the example #843 built, `make
