@@ -42,6 +42,7 @@ import { type Selection, entityBindings, labelFor, sameSelection, selectionFromC
 import { SheetBadges } from "./sheetbadges.jsx";
 import type { QuerySet } from "./gen/agni/v1/webapi/query_pb.js";
 import { type Located, type TabStrip, activeTab, askTitle, blankTab, closeTab, fromOrigin, openTab, updateTab } from "./querytabs.js";
+import { type EmitViewerEvent, viewerEmitter } from "./viewerevents.js";
 
 // resolveRelationImages rewrites a relation Detail's relative image refs (images/<rel>.svg) to the
 // server's /relation-docs/ route BEFORE markdown rendering. renderMarkdown prepends the /rule-docs/
@@ -243,6 +244,8 @@ function QueryPanel(props: {
   onRunSet: (set: QuerySet, tabs: string[]) => void;
   // onSetFile hands over a set file the reader picked, for the host to parse and open.
   onSetFile?: (name: string, text: string) => void;
+  // emit reports a set opened and a question asked (viewerevents.ts), for a guided tour.
+  emit?: EmitViewerEvent;
   registerOpenSet?: (open: (set: QuerySet) => void) => void;
   // registerAsk hands the island the panel's askAbout, so a question asked from elsewhere (the
   // Properties panel's Ask rows) opens its tab exactly as the panel's own ask button does.
@@ -336,6 +339,7 @@ function QueryPanel(props: {
     props.setLocateNote("");
     props.onActivate(ids[0], undefined, previous);
     props.onRunSet(set, ids);
+    props.emit?.("queryset.opened", { title: set.title, queries: ids.length });
   };
   props.registerOpenSet?.(openSet);
   // setsOpen shows the Sets menu: the project's sets, and a set file from disk.
@@ -497,7 +501,9 @@ function QueryPanel(props: {
   const askAbout = (sel: Selection, question?: EntityQueryItem) => {
     const q = question ?? presetFor(sel.kind);
     if (!q) return;
-    openQuestion(askTitle(sel, q.label), q.query, entityBindings(q.binds, sel), STARTING_POINT_LIMIT);
+    const title = askTitle(sel, q.label);
+    openQuestion(title, q.query, entityBindings(q.binds, sel), STARTING_POINT_LIMIT);
+    props.emit?.("query.asked", { title });
   };
   props.registerAsk?.(askAbout);
   // pickCell is a click on a result cell or one of its sheet badges. It locates the entity AND
@@ -1292,6 +1298,7 @@ export function queryPanelIsland(
         onRunSet={handlers.onRunSet ?? (() => {})}
         onSetFile={handlers.onSetFile}
         registerOpenSet={(open) => (openSetHook = open)}
+        emit={viewerEmitter(eventBus)}
       />
     ),
     eventBus,

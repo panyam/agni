@@ -193,3 +193,20 @@ layers meet is in [Questions, links and the live page](../viewer-control/). The
 contract differs from a panel click in one way on purpose. A click on the focused finding clears it,
 and a call asks for a state, so selecting the focused finding keeps it. How a parent page uses it is
 in [Driving an embedded viewer](../../build/embedding-the-viewer/).
+
+## App events and the review tour
+
+What a reader did reaches the page's `EventBus` as a named event once the viewer has done it
+(`web/src/viewerevents.ts`), such as a checklist or the checks having run, a finding or a query cell
+located, a set opened, a question asked, an area selected or a report saved. The presenter emits
+through its `events` port and the query panel and `main.ts` through `viewerEmitter`. `ViewerEvents`
+types every payload, and `viewerEventNames` must list every event or the file fails to compile.
+
+The review tour (`web/src/reviewtour.ts`, `?tour=review`) is tsappkit's `Tour` over those events
+(panyam/goapplib#128). Each step dims the page, leaves the controls it needs reachable, and advances
+on the viewer's event for the action, never on a click it infers. An action the viewer reports no
+event for cannot be a step, so a new step starts with a new event here. `reviewtour.test.ts` fails
+on a step whose event nothing emits. `?tourpace=host` holds each step until a driver releases it
+through the handle the page leaves (`__agniTour`), which is how the browser-review walk takes the
+tour: headed, the reader does each step while the walk checks it, and otherwise the walk acts
+through the holes, so a hole that misses its control fails the walk in the gate.

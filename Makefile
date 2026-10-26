@@ -287,10 +287,11 @@ exercise-viewer-page: ui
 # The browser-review walk, mission #845's exercise (agni issue 1118): the gated spec
 # web/browser/review-walk.spec.ts run on its own, printing one row per step and writing them as
 # markdown for the mission log. The same walk runs in browser-test on every push. It runs HEADED by
-# default, in a visible Chrome that stops before each step to explain what it does and what the
-# product does, until you press Next; STEP_BY_STEP=0 plays it straight through, and HEADED=0 runs it
-# headless, which never stops (an agent or a script logging the mission passes that). SLOWMO=<ms>
-# paces each action (250 by default when headed).
+# default, in a visible Chrome where you take the viewer's review tour yourself, each step dimming the
+# page around what it needs while the walk checks the result, and the walk's own steps stop to explain
+# what they check until you press Next. STEP_BY_STEP=0 has the walk take the tour itself, straight
+# through, and HEADED=0 runs it headless, which never stops (an agent or a script logging the mission
+# passes that). SLOWMO=<ms> paces each action (250 by default when headed).
 # WALK_DESIGN picks the board: jetson (the default, Antmicro's baseboard in examples/jetson-project, copied
 # in from the samples corpus) or gateway (the tutorial project's small synthetic board the gate walks).
 #   make exercise-browser-review

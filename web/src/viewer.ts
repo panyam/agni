@@ -35,6 +35,7 @@ import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTracePara
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
 import { create } from "@bufbuild/protobuf";
 import { type ConventionBarView } from "./conventions.js";
+import type { EmitViewerEvent } from "./viewerevents.js";
 import {
   type ChecklistOption,
   type ReviewState,
@@ -179,6 +180,9 @@ export interface ViewSink {
   // saveReport no-ops when the host offers no download.
   download?: (file: SavedFile) => void;
   linkBase?: string;
+  // events reports what a reader did once the viewer has done it (viewerevents.ts), which a guided
+  // tour advances on. Optional; a host with no tour has nothing listening.
+  events?: EmitViewerEvent;
 }
 
 // SavedFile is one file the presenter asks the host to save.
@@ -1046,6 +1050,7 @@ export class ViewerPresenter {
       this.checksCancelled = abort.signal.aborted;
       this.checksRunning = false;
       this.pushFindings(); // running=false + refreshed pending count
+      this.views.events?.("checks.ran", { findings: this.findings.length, cancelled: abort.signal.aborted });
     }
   }
 
@@ -1185,6 +1190,7 @@ export class ViewerPresenter {
       const resp = await this.reviews.renderReviewReport({ review, links: this.reportLinks() });
       this.views.download({ filename: resp.filename, contentType: resp.contentType, content: resp.content });
       this.reviewState.saveNote = "";
+      this.views.events?.("report.saved", { checklist: this.checklistLabel() });
     } catch (err) {
       this.reviewState.saveNote = `Could not save the report: ${err instanceof Error ? err.message : String(err)}`;
     }
@@ -1551,7 +1557,17 @@ export class ViewerPresenter {
       this.reviewAbort = null;
       this.reviewState.running = false;
       this.pushReview();
+      this.views.events?.("checklist.ran", {
+        checklist: this.checklistLabel(),
+        ok: !this.reviewState.error && !this.reviewState.cancelled,
+      });
     }
+  }
+
+  // checklistLabel is the picker's name for the chosen checklist, which is what a reader sees.
+  private checklistLabel(): string {
+    const ref = this.reviewState.checklist;
+    return this.checklistChoices.find((c) => c.ref === ref)?.label ?? ref;
   }
 
   // cancelReview stops the checklist run in flight, which shares the jobs lane with a check run
@@ -1816,6 +1832,7 @@ export class ViewerPresenter {
     const focused = this.findFinding(subject, netId);
     if (focused) {
       await this.navigateToFindingItem(focused, sheet);
+      this.views.events?.("finding.selected", { rule: focused.rule, subject });
     } else if (sheet && sheet !== this.currentSheet) {
       // Badge on a subject whose rule is not in the active findings list (WS9-024).
       await this.showSheet(sheet);
