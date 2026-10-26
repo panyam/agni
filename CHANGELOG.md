@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.11] - 2026-10-26
+
+A design intent's IO map is laid out one row per declared pin, beside the netlist and the functions
+the part's datasheet lists for it (PRs 1192, 1195). The check report can carry the project's query
+sets (PR 1199), and `agni trial` counts the pin map for a clean-room run (PR 1198). `trace` takes a
+pin's functional name, and EDIF ports numbered only on their cell now connect (PR 1197). A
+TypeScript or Python client imports `OverlayConfig` from `config` rather than `checks`.  The full
+write-up is [RELEASES/v0.3.11.md](RELEASES/v0.3.11.md).
+
 ## [0.3.10] - 2026-10-26
 
 A reader's question from a viewer tab reaches a Claude Code session as a turn of its own, through
