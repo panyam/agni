@@ -1,22 +1,23 @@
-# panyam/agni #1091 / #1092 — enumerate all pull-up paths
+# panyam/agni #1091 / #1092: enumerate all pull-up paths
 
 Fixture: `parallel_scl_pullups.edn`
 
-Net `SCL_MAIN` has **two** parallel resistors `R_A` and `R_B` to the same rail `RAIL_3V3`.
+Net `SCL_MAIN` has **two** parallel resistors `R_A` and `R_B` to the same rail `VCC_3V3`.
 
-## Expected evidence (legacy audit columns)
+## Expected evidence
 
-Check evidence or tabulated output lists **both** paths:
+`i2c-pull-up` passes `SCL_MAIN` and lists **both** paths as `path` terms (agni issue 821):
 
-1. `SCL_MAIN` → `R_A` → `RAIL_3V3`
-2. `SCL_MAIN` → `R_B` → `RAIL_3V3`
+1. `SCL_MAIN -> [R_A] -> VCC_3V3`
+2. `SCL_MAIN -> [R_B] -> VCC_3V3`
 
-Parallel pull-up count = 2.
-
-## Current behavior
-
-Pull-up rules usually emit **one** shortest witness path (either `R_A` or `R_B`).
+`i2c-redundant-pull-up` fails `SCL_MAIN` with `pull-ups=2` and the same two `path` terms (agni issue
+1165), since two resistors in parallel to one rail are one smaller pull-up.
 
 ## Verify
 
-Run pull-up / redundant-pull-up checks; inspect JSON/HTML evidence paths.
+```bash
+agni check --verdicts --format csv --rule i2c-pull-up --rule i2c-redundant-pull-up parallel_scl_pullups.edn
+```
+
+`TestGitHubIssueReproducers` in `cmd/agni` runs it and holds it to this file.

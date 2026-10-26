@@ -75,8 +75,9 @@ type Declaration struct {
 	// margin rule is not compiled, so a bound item reads needs-design-intent.
 	MarginFactor float64
 	// PullUpReach is the pull-up reach each named net declares, sorted by net name (agni issue 820).
-	// It compiles to no rule. The model reads the same declaration (see check.WithIntent), so the
-	// pull-up walk from that net asks at the declared reach rather than check.PullUpReachHops.
+	// The model reads the same declaration (see check.WithIntent), so the pull-up walk from that net
+	// asks at the declared reach rather than check.PullUpReachHops, and the one rule compiled from it,
+	// intent/pull-up-reach-declared, only confirms that each declaration names a net the design has.
 	PullUpReach []PullUpReach
 }
 

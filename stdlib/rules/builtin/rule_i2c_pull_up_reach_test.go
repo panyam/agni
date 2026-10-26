@@ -197,3 +197,74 @@ func TestPullUpPassListsPathsToEachRail(t *testing.T) {
 		})
 	}
 }
+
+// The count rules carry i2c-pull-up's evidence (agni issue 1165). A bus pulled up twice, once
+// directly and once behind a series resistor, lists both as paths under each rule, and the hop in
+// between is context a reader can be sent to.
+func TestCountRulesListEveryPath(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		eval  func(context.Context, check.Model) []check.Verdict
+		rail2 string
+	}{
+		{"redundant", i2cRedundantPullUpVerdicts, "+3V3"},
+		{"split rail", i2cPullUpSplitRailVerdicts, "+1V8"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			nets := []*ir.Net{
+				tnet("SCL", "U1.1", "R2.1", "R3.1"),
+				tnet("SCL_ISO", "R2.2", "R1.1"),
+				tnet("+3V3", "R3.2"),
+				tnet(tc.rail2, "R1.2"),
+			}
+			if tc.rail2 == "+3V3" {
+				nets = []*ir.Net{nets[0], nets[1], tnet("+3V3", "R3.2", "R1.2")}
+			}
+			m := check.NewModel(&ir.Design{Components: comps("U1", "R1", "R2", "R3"), Nets: nets})
+			v := verdictForNet(t, tc.eval(context.Background(), m), "SCL")
+			if v.Outcome != check.Fail {
+				t.Fatalf("two pull-ups, want fail, got %s", v.Outcome)
+			}
+			want := []check.WitnessTerm{
+				{Label: "pull-ups", Value: "2"},
+				{Label: "path", Value: "SCL -> [R3] -> +3V3"},
+				{Label: "path", Value: "SCL -> [R2] -> SCL_ISO -> [R1] -> " + tc.rail2},
+			}
+			if len(v.Witness.Terms) != len(want) {
+				t.Fatalf("terms = %+v, want %+v", v.Witness.Terms, want)
+			}
+			for i, w := range want {
+				if v.Witness.Terms[i] != w {
+					t.Errorf("term %d = %+v, want %+v", i, v.Witness.Terms[i], w)
+				}
+			}
+			seg := check.ContextSubject{Entity: check.Entity{Kind: check.KindNet, Ref: "SCL_ISO"}, Role: "segment"}
+			found := false
+			for _, c := range v.Context {
+				found = found || c == seg
+			}
+			if !found {
+				t.Errorf("context = %+v, want the series hop SCL_ISO as a segment", v.Context)
+			}
+		})
+	}
+}
+
+// Paths order the way every table orders a name column, so R2 lists before R10 rather than after it
+// (agni issue 1165).
+func TestPullUpPathsOrderNaturally(t *testing.T) {
+	refs := []string{"U1", "R2", "R10"}
+	nets := []*ir.Net{
+		tnet("SDA", "U1.1", "R10.1", "R2.1"),
+		tnet("+3V3", "R2.2", "R10.2"),
+	}
+	v := verdictForNet(t, pullUpVerdicts(t, refs, nets...), "SDA")
+	if got, want := v.Witness.Statement, "SDA reaches rail +3V3 through R2, and rail +3V3 through R10"; got != want {
+		t.Errorf("i2c-pull-up statement = %q, want %q", got, want)
+	}
+	m := check.NewModel(&ir.Design{Components: comps(refs...), Nets: nets})
+	c := verdictForNet(t, i2cRedundantPullUpVerdicts(context.Background(), m), "SDA")
+	if got, want := c.Witness.Statement, "SDA is pulled to +3V3 by R2, R10"; got != want {
+		t.Errorf("i2c-redundant-pull-up statement = %q, want %q", got, want)
+	}
+}

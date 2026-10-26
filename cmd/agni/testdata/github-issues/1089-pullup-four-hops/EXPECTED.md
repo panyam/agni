@@ -1,21 +1,35 @@
-# panyam/agni #1089 / #1090 — pull-up reach hop limit
+# panyam/agni #1089 / #1090: pull-up reach hop limit
 
-Fixture: `four_hop_sda.edn`
+Fixture: `four_hop_sda.edn`, with `intent.yaml` beside it.
 
-Signal `SDA_MAIN` reaches rail `RAIL_3V3` through **four** series resistors `R1`→`R2`→`R3`→`R4` (no parallel shortcut).
+Signal `SDA_MAIN` reaches rail `VCC_3V3` through **four** series resistors `R1`→`R2`→`R3`→`R4` (no
+parallel shortcut). `VCC_3V3` is a name the default rail vocabulary recognises, so the hop count is
+the only thing the verdict turns on.
 
-## Expected (with hop limit ≥ 4)
+## At the default reach
 
-Built-in I2C/MDIO pull-up reach (or project config `pull_up_reach_hops: 4`) should **pass**: `SDA_MAIN` has a pull-up path to a 3V3-class rail.
+`i2c-pull-up` fails `SDA_MAIN`, and the witness states the limit it searched to:
 
-## Current behavior (default hop limit 3)
+```
+no rail is reachable from SDA_MAIN through a resistor within 3 hops
+```
 
-Rule typically **fails** pull-up reach at three hops even though a valid fourth resistor completes the path.
+## With the declared reach
+
+`intent.yaml` declares `SDA_MAIN: {pull_up_reach_hops: 4}` (agni issue 820). `i2c-pull-up` passes
+`SDA_MAIN` through all four resistors:
+
+```
+SDA_MAIN reaches rail VCC_3V3 through R1 then R2 then R3 then R4
+```
+
+and `intent/pull-up-reach-declared` passes, since the design carries a net named `SDA_MAIN`.
 
 ## Verify
 
-Ingest with team/checksmith preset, run `CheckDesign`, inspect pull-up / I2C rules on `SDA_MAIN`.
+```bash
+agni check --verdicts --rule i2c-pull-up four_hop_sda.edn
+agni check --verdicts --rule i2c-pull-up four_hop_sda.edn --intent-path intent.yaml
+```
 
-## Priority
-
-P2 unless a production board fails only for depth-4 topology.
+`TestGitHubIssueReproducers` in `cmd/agni` runs both and holds them to this file.

@@ -3,10 +3,11 @@ package builtin
 import (
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/ident"
 )
 
 // i2cRedundantPullUp flags an I2C net pulled to ONE rail by more than one resistor. See Detail.
@@ -119,26 +120,27 @@ func pullUpCountVerdicts(ctx context.Context, m check.Model, rule string, fires 
 
 // pullUpCountWitness proves the count with the parts it counted, on a pass as much as on a failure.
 // "SDA is pulled to +3V3 by R7" is what makes a passing bus checkable, and it is the same
-// proof-on-pass discipline PullUpVerdict applies to the absence question.
+// proof-on-pass discipline PullUpVerdict applies to the absence question. The context and the path
+// terms are PullUpVerdict's own (check.PullUpEvidence), so a bus pulled up behind a series resistor
+// names every hop here too, and several pull-ups each get a `path` (agni issue 1165).
 func pullUpCountWitness(net string, terms []check.PullUpTermination, rails []string) (*check.Witness, []check.ContextSubject) {
-	var refs []string
-	ctx := make([]check.ContextSubject, 0, len(terms)*2)
+	check.SortPullUpTerminations(terms)
+	refs := make([]string, 0, len(terms))
 	for _, e := range terms {
 		refs = append(refs, e.Resistor)
-		ctx = append(ctx,
-			check.ContextSubject{Entity: check.Entity{Kind: check.KindComponent, Ref: e.Resistor}, Role: "pull-up"},
-			check.ContextSubject{Entity: check.Entity{Kind: check.KindNet, Ref: e.Rail}, Role: "rail"})
 	}
+	ctx, paths := check.PullUpEvidence(net, terms)
 	w := &check.Witness{
 		Statement: fmt.Sprintf("%s is pulled to %s by %s", net,
 			strings.Join(rails, " and "), strings.Join(refs, ", ")),
-		Terms: []check.WitnessTerm{{Label: "pull-ups", Value: fmt.Sprintf("%d", len(terms))}},
+		Terms: append([]check.WitnessTerm{{Label: "pull-ups", Value: fmt.Sprintf("%d", len(terms))}}, paths...),
 	}
 	return w, ctx
 }
 
 // distinctRails is the sorted set of rails the terminations landed on. Sorted so a message and a
-// witness read the same way on every run, which a committed capture depends on.
+// witness read the same way on every run, which a committed capture depends on, and naturally so
+// +1V8 lists before +12V as it does in every table.
 func distinctRails(terms []check.PullUpTermination) []string {
 	seen := map[string]bool{}
 	var out []string
@@ -148,6 +150,6 @@ func distinctRails(terms []check.PullUpTermination) []string {
 			out = append(out, e.Rail)
 		}
 	}
-	sort.Strings(out)
+	slices.SortFunc(out, ident.CompareNatural)
 	return out
 }

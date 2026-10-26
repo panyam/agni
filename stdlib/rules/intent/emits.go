@@ -24,8 +24,8 @@ func Emits(ruleName string) bool {
 		RuleLoadSwitchTripBelowBudget,
 		// The IO-map rules (agni issue 517).
 		RuleIOMapPin, RuleIOMapNetAbsent, RuleIOMapFarEnd, RuleIOMapCoverage,
-		// Connector exposure (agni issue 831).
-		RuleExposureDeclared:
+		// Connector exposure (agni issue 831) and pull-up reach (agni issue 1165).
+		RuleExposureDeclared, RulePullUpReachDeclared:
 		return true
 	}
 	return strings.HasPrefix(name, "subsystem-") || strings.HasPrefix(name, "protection-") ||

@@ -3,22 +3,12 @@ package service
 import (
 	"context"
 	"errors"
-	"sort"
 	"strings"
 	"testing"
 
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
-
-func TestCompareNaturalReadsDigitsAsNumbers(t *testing.T) {
-	got := []string{"R10", "r2", "C1", "R1", "U10.12", "U10.3", "R01", ""}
-	sort.SliceStable(got, func(i, j int) bool { return compareNatural(got[i], got[j]) < 0 })
-	want := "|C1|R01|R1|r2|R10|U10.3|U10.12"
-	if strings.Join(got, "|") != want {
-		t.Errorf("natural order = %q, want %q", strings.Join(got, "|"), want)
-	}
-}
 
 func table(cols []*webapi.TableColumn, rows ...[]string) *webapi.Table {
 	t := &webapi.Table{Name: "t", Columns: cols}

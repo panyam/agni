@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/classify"
+	"github.com/panyam/agni/core/ident"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/internal/netgraph"
@@ -652,9 +653,9 @@ func AllPullUpPathsToRail(m Model, n *ir.Net) []PullUpTermination {
 // with no pull-up at all.
 //
 // A PASS carries every distinct path to a rail within that limit (agni issue 821), one per
-// terminating resistor as AllPullUpPathsToRail finds them, ordered by hop count, then resistor, then
-// rail so the evidence reads the same on every run. A net with one path carries exactly what it did
-// before more than one was listed.
+// terminating resistor as AllPullUpPathsToRail finds them, in SortPullUpTerminations' order, with the
+// proof PullUpEvidence builds. A net with one path carries exactly what it did before more than one
+// was listed.
 func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 	if n == nil {
 		return Fail, nil, nil
@@ -670,21 +671,49 @@ func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 			Terms: []WitnessTerm{{Label: "hop limit", Value: fmt.Sprintf("%d", limit)}},
 		}, nil
 	}
+	SortPullUpTerminations(paths)
+	clauses := make([]string, 0, len(paths))
+	for _, p := range paths {
+		res := make([]string, 0, len(p.Path))
+		for _, h := range p.Path {
+			res = append(res, h.Resistor)
+		}
+		clauses = append(clauses, fmt.Sprintf("rail %s through %s", p.Rail, strings.Join(res, " then ")))
+	}
+	w := &Witness{Statement: fmt.Sprintf("%s reaches %s", n.Name, strings.Join(clauses, ", and "))}
+	ctx, terms := PullUpEvidence(n.Name, paths)
+	w.Terms = terms
+	return Pass, w, ctx
+}
+
+// SortPullUpTerminations orders paths by hop count, then resistor, then rail, so evidence reads the
+// same on every run. Names compare naturally (ident.CompareNatural), so R2 lists before R10 as it
+// does in every table (agni issue 1165).
+func SortPullUpTerminations(paths []PullUpTermination) {
 	sort.SliceStable(paths, func(i, j int) bool {
 		a, b := paths[i], paths[j]
 		if len(a.Path) != len(b.Path) {
 			return len(a.Path) < len(b.Path)
 		}
-		if a.Resistor != b.Resistor {
-			return a.Resistor < b.Resistor
+		if c := ident.CompareNatural(a.Resistor, b.Resistor); c != 0 {
+			return c < 0
 		}
-		return a.Rail < b.Rail
+		return ident.CompareNatural(a.Rail, b.Rail) < 0
 	})
-	// The hops go in as CONTEXT rather than terms, since every hop is an entity a reader can be sent
-	// to and carries the Kind a highlight joins on. The subject net is excluded as it is already the
-	// verdict's subject. Roles repeat on a multi-hop path, so this is a list, not a map. Paths can
-	// share a segment or a rail, so an entity already listed is not listed again, which keeps the
-	// context a flat set of things to light up.
+}
+
+// PullUpEvidence is the proof every pull-up rule attaches for the paths it found from net, in the
+// order given, so i2c-pull-up and the two count rules show a bus the same way (agni issues 821, 1165).
+//
+// The hops go in as CONTEXT, since every hop is an entity a reader can be sent to and carries the Kind
+// a highlight joins on. The subject net is left out as it is already the verdict's subject. Paths can
+// share a segment or a rail, so an entity already listed is not listed again, which keeps the context
+// a flat set of things to light up.
+//
+// One path is fully stated by its context, so it returns NO terms, since a term would duplicate an
+// entity already there. Several paths need the grouping the flat context loses, so each becomes a
+// `path` term rendered by RenderRoute.
+func PullUpEvidence(net string, paths []PullUpTermination) ([]ContextSubject, []WitnessTerm) {
 	var ctx []ContextSubject
 	listed := map[Entity]bool{}
 	add := func(e Entity, role string) {
@@ -693,9 +722,7 @@ func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 			ctx = append(ctx, ContextSubject{Entity: e, Role: role})
 		}
 	}
-	clauses := make([]string, 0, len(paths))
 	for _, p := range paths {
-		res := make([]string, 0, len(p.Path))
 		for i, h := range p.Path {
 			role := "segment"
 			if i == len(p.Path)-1 {
@@ -703,24 +730,20 @@ func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 			}
 			add(Entity{Kind: KindComponent, Ref: h.Resistor}, "pull-up")
 			add(Entity{Kind: KindNet, Ref: h.Net}, role)
-			res = append(res, h.Resistor)
-		}
-		clauses = append(clauses, fmt.Sprintf("rail %s through %s", p.Rail, strings.Join(res, " then ")))
-	}
-	w := &Witness{Statement: fmt.Sprintf("%s reaches %s", n.Name, strings.Join(clauses, ", and "))}
-	// One path is fully stated by its context, so it carries NO terms, since a term would duplicate an
-	// entity already there. Several paths need the grouping the flat context loses, so each becomes a
-	// term rendered by the one route renderer.
-	if len(paths) > 1 {
-		for _, p := range paths {
-			hops := make([]RouteHop, len(p.Path))
-			for i, h := range p.Path {
-				hops[i] = RouteHop{Through: h.Resistor, To: h.Net}
-			}
-			w.Terms = append(w.Terms, WitnessTerm{Label: "path", Value: RenderRoute(n.Name, hops)})
 		}
 	}
-	return Pass, w, ctx
+	if len(paths) < 2 {
+		return ctx, nil
+	}
+	terms := make([]WitnessTerm, 0, len(paths))
+	for _, p := range paths {
+		hops := make([]RouteHop, len(p.Path))
+		for i, h := range p.Path {
+			hops[i] = RouteHop{Through: h.Resistor, To: h.Net}
+		}
+		terms = append(terms, WitnessTerm{Label: "path", Value: RenderRoute(net, hops)})
+	}
+	return ctx, terms
 }
 
 // resistorNetIndex maps a resistor's ref-des to the distinct nets it touches.

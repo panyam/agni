@@ -1,0 +1,5 @@
+# SDA_MAIN's series network is four resistors deep and sized for it, one past the default reach of 3.
+name: issue 1089
+intent:
+  nets:
+    SDA_MAIN: {pull_up_reach_hops: 4}

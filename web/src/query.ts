@@ -471,10 +471,10 @@ export function reasonMessage(reason: LocateReason, kind: string, subject: strin
 }
 
 // compareNatural orders two names with their digit runs read as numbers, so R2 < R10 and U10.3 <
-// U10.12, text runs case-insensitively, and the plain strings breaking a tie. It is service's
-// compareNatural, the order Tabulate and every csv give a name column, and query.test.ts and service
-// read one fixture, testdata/natural_twin.json, so the panel's sort cannot disagree with them (agni
-// issue 1045).
+// U10.12, text runs case-insensitively, and the plain strings breaking a tie. It is the engine's
+// ident.CompareNatural, the order Tabulate and every csv give a name column, and query.test.ts and
+// core/ident read one fixture, core/ident/testdata/natural_twin.json, so the panel's sort cannot
+// disagree with them (agni issue 1045).
 export function compareNatural(x: string, y: string): number {
   const isDigit = (c: string) => c >= "0" && c <= "9";
   const run = (s: string, digits: boolean) => {

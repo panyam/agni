@@ -79,3 +79,48 @@ func TestCheckNegativePullUpReachRejected(t *testing.T) {
 		t.Errorf("error should name the field: %v", err)
 	}
 }
+
+// TestGitHubIssueReproducers holds the 1089 and 1091 reproducers to their EXPECTED.md, so the
+// documented behaviour cannot drift from what the fixtures do (agni issue 1165). Both name their
+// rail VCC_3V3, which the default vocabulary recognises, so each verdict turns on the pull-up walk
+// rather than on the rail going unrecognised.
+func TestGitHubIssueReproducers(t *testing.T) {
+	const dir = "testdata/github-issues/"
+	run := func(args ...string) string {
+		t.Helper()
+		cmd := checkCmd()
+		var buf bytes.Buffer
+		cmd.SetOut(&buf)
+		cmd.SetErr(&buf)
+		cmd.SetArgs(append([]string{"--verdicts"}, args...))
+		if err := cmd.Execute(); err != nil {
+			t.Fatalf("%v: %v\n%s", args, err, buf.String())
+		}
+		return buf.String()
+	}
+	contains := func(out string, want ...string) {
+		t.Helper()
+		for _, w := range want {
+			if !strings.Contains(out, w) {
+				t.Errorf("want %q in:\n%s", w, out)
+			}
+		}
+	}
+
+	edn := dir + "1089-pullup-four-hops/four_hop_sda.edn"
+	contains(run("--rule", "i2c-pull-up", edn),
+		"fail  SDA_MAIN  no rail is reachable from SDA_MAIN through a resistor within 3 hops")
+	contains(run("--rule", "i2c-pull-up", "--rule", "intent/pull-up-reach-declared", edn,
+		"--intent-path", dir+"1089-pullup-four-hops/intent.yaml"),
+		"pass  SDA_MAIN  SDA_MAIN reaches rail VCC_3V3 through R1 then R2 then R3 then R4",
+		"pass  SDA_MAIN  SDA_MAIN is a net the design carries, declared a pull-up reach of 4")
+
+	out := run("--format", "csv", "--rule", "i2c-pull-up", "--rule", "i2c-redundant-pull-up",
+		dir+"1091-pullup-parallel-paths/parallel_scl_pullups.edn")
+	const paths = "path=SCL_MAIN -> [R_A] -> VCC_3V3|path=SCL_MAIN -> [R_B] -> VCC_3V3"
+	contains(out,
+		"i2c-pull-up,pass,net:SCL_MAIN",
+		"i2c-redundant-pull-up,fail,net:SCL_MAIN",
+		","+paths+",",
+		",pull-ups=2|"+paths+",")
+}
