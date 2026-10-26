@@ -9,35 +9,26 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-25, at `3b79a527`.
+Last pruned 2026-10-25, at `cabe7274`.
 
 ## At a glance
 
-One mission is active. `MISSION=mission_<slug> queue.sh`
-(the retriage skill's script) prints one mission's queue, and the order lives in GitHub labels and
-blocked-by links rather than here. Log each exercise run on the mission issue.
+No mission is active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
+mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
+exercise run on the mission issue.
 
-- **#845 `mission_browser_review`**, 28 of 28. `make exercise-browser-review` last passed at
-  `b553cf49`, and two PRs (#1174, #1175) have merged since without it running again,
-  though `browser-test` runs the same walk on gateway. It closes when the user agrees.
-- **#1157 `mission_viewer_page_api`** closed on 2026-10-25 at its done-when (`make
-  exercise-viewer-page`, 8 of 8 at `3b79a527`). The exercise stays as the regression walk.
+- **Choose the next mission with `retriage`.** The candidates are below; until one is chosen the
+  queue offers only off-mission work.
 - **#1176 `mission_shared_viewer_rooms`** (several people on one server, each driving their own tabs),
   0 of 1 and not active. Its ticket #1173 is `waiting` until someone runs agni serve for more than one
   person, and the mission has no exercise yet; its first PR writes one.
-- **#909 `mission_ask`** closed on 2026-10-22 at its done-when (Jetson 7 of 7, gateway 9 of 9 at
-  `c88fb204`). `make exercise-mcp-ask` remains, and no ticket is left on it.
-- **#851 `mission_public_demo`** closed on 2026-10-20. #855, #923 and #949 stay `waiting`, off any
-  mission. `make exercise-public-demo` remains.
-- **Possible next mission**: moving a house netlist audit off its spreadsheet. #820, #821 and #1093 are
-  its tickets, and `guide/older-comparison-tools.md` its first page. Not yet a mission.
-- **Possible next mission**: a new user learns to review a design by doing it, guided in the viewer.
-  The tour itself is `Tour` in tsappkit (panyam/goapplib#128), driven by app events, so agni's share
-  is the viewer emitting its events (checks run, finding selected, query cell selected, area
-  selected, report saved) and the review tour written as steps. Its exercise would be the
-  browser-review walk taking the tour headless. Not yet a mission.
-- This run: #1175 merged (a tab answers only the room bridge, and an agent hears its Ask box),
-  #1157 closed, and #1173 moved to the new mission #1176.
+- **Candidate**: moving a house netlist audit off its spreadsheet. #820, #821 and #1093 are its
+  tickets, and `guide/older-comparison-tools.md` its first page.
+- **Candidate**: more tours of the viewer. The review tour exists (`web/src/reviewtour.ts`, #1179), so
+  a mission here would be another workflow toured the same way (a revision compare, a trace), each
+  starting with the viewer events it advances on. Nobody has yet taken the headed tour by hand.
+- This run: #845 closed at its done-when (exercise 12 of 12 at `cabe7274`, logged); #1177 and #1179
+  merged (the exercise runs headed and is the viewer's review tour); #1180 filed from its last friction.
 
 ## Open, ranked
 
@@ -48,6 +39,8 @@ blocked-by links rather than here. Log each exercise run on the mission issue.
 2. **Jetson's load**, off any mission: #1061's edit-session half. Measure with the exercise's
    `--timing`, `make wasm-bench` and `make wasm-layers` (pass `BOARD` and `DESIGN`, since a shell's own
    `DESIGN` overrides the Makefile's), and read CLAUDE.md on the bench's two misleading rows first.
+3. **#1180**, a Shift-drag that starts under the canvas control bar selects nothing, which the review
+   tour's select-a-block step now sends every reader into.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`, after #1061), #370 then #373, #380,
 #456, #374, #716, #739 (read a Datalog-derived relation from Go) and #742 (embed the viewer group,

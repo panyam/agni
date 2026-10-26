@@ -789,7 +789,14 @@ walks) and prints the step table for the mission log. It takes the viewer's revi
 (`web/src/reviewtour.ts`, `?tour=review&tourpace=host`, tsappkit's `Tour` over the events in
 `viewerevents.ts`). HEADED by default the reader does each tour step, `STEP_BY_STEP=0` has the walk
 do them, and an agent logging the mission passes `HEADED=0` or the run waits on a reader. Headless
-the walk acts through the tour's holes, so a tour step whose hole or event broke fails the gate. A viewer change that breaks the
+the walk acts through the tour's holes, so a tour step whose hole or event broke fails the gate.
+**A Playwright click scrolls its target into view first, so it passes over a tour step a person
+cannot take**: the finding and ask-about-the-block steps once showed the whole page dimmed with no
+hole, since their controls sat below their panel's fold and the dimmed page takes no wheel. Each step
+now scrolls its control into view (`reveals` in `reviewtour.ts`) and the walk fails a released step
+with no hole. Look at a capture of each step (`page.screenshot` after the release) before trusting
+a tour change, as #1179 did. A `:has()` locator over a large answer is re-resolved on every action
+and cost Jetson's query-cell step 9 s, so find a row by index. A viewer change that breaks the
 walk fails it on that PR, so update the spec there rather than loosening it (agni 1118).
 **A headed run is a different page from a headless one, and four things only it showed** (agni 1124):
 a headed page takes the window's own size (`viewportFor` in `web/browser/browser.ts`), because a
@@ -1118,11 +1125,12 @@ until the count is listed there on purpose (agni 727).
 ## Issues and missions
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
-and the command that exercises it. Several may be active at once, one per worktree, and #845
-`mission_browser_review` (every ticket closed) is. #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo`
-(2026-10-20), #909 `mission_ask` (2026-10-22) and #1157 `mission_viewer_page_api` (2026-10-25) have
-closed, and their exercises live on as the example #843 built, `make exercise-public-demo`, `make
-exercise-mcp-ask` and `make exercise-viewer-page`. #1176 `mission_shared_viewer_rooms` (several people
+and the command that exercises it. Several may be active at once, one per worktree, and none is now.
+#843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo` (2026-10-20), #909
+`mission_ask` (2026-10-22), #1157 `mission_viewer_page_api` and #845 `mission_browser_review` (both
+2026-10-25) have closed, and their exercises live on as the example #843 built, `make
+exercise-public-demo`, `make exercise-mcp-ask`, `make exercise-viewer-page` and `make
+exercise-browser-review`. #1176 `mission_shared_viewer_rooms` (several people
 on one server) is open and not active, since its one ticket, #1173, waits on a multi-user deployment. A
 mission is blocked by each ticket it needs, and its tickets carry its `mission_<slug>` label. **A new
 issue gets a priority (`P0`-`P3`) and either a mission link or `waiting` with its trigger when it is
@@ -1167,7 +1175,7 @@ all exit 0.**
   enough, because the generated file has to be COMMITTED or the gate stays red on a tree that is
   correct. The same is true of `tutorial-runs`.
 
-Four more that cost a session time:
+Five more that cost a session time:
 
 - **A new test file can replace an existing one of the same name.** `service/boardtier_test.go`
   was written over in agni 987 and the gate stayed green, because the test it held was simply gone.
@@ -1178,6 +1186,10 @@ Four more that cost a session time:
   file aside before breaking it.
 - **`go test -cpuprofile` leaves `<pkg>.test`, a 30 MB binary, in the working directory**, untracked and
   not ignored. Delete it before staging, and never `git add -A`.
+- **A baseline run of `main`'s web code relinks `node_modules`.** Stashing a branch's `web/` and
+  lockfile to time `main` on the same clock works, but its `make ui` runs `pnpm install` against
+  `main`'s lockfile, so after `git stash pop` the old package versions are linked and `tsc` reports
+  exports missing. Run `pnpm install` at the root before reading anything else.
 - **Time two tools on the same clock.** A timer started inside Python, after the interpreter and the
   client library load, is not comparable with another tool's launch-to-exit time. Compare launch to
   exit on an idle machine (check `/proc/loadavg`; a shared box running other sessions' fuzz tests made
