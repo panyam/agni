@@ -129,11 +129,7 @@ func netVerdict(verdicts []*checkspb.Verdict, net string) *checkspb.Verdict {
 func contextRef(v *checkspb.Verdict, role string) string {
 	for _, c := range v.GetContext() {
 		if c.GetRole() == role {
-			s := c.GetSubject()
-			if s.GetPin() != "" {
-				return s.GetRef() + "." + s.GetPin()
-			}
-			return s.GetRef()
+			return subjectRef(c.GetSubject())
 		}
 	}
 	return ""

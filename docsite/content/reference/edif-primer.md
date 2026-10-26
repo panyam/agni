@@ -90,6 +90,9 @@ occur there.
   GRAPHIC).
 - The **interface** lists the external pins (`port`), each with a `direction` and a pin
   `designator` (pin number). The interface's `designator "J?"` is the ref-des prefix.
+- A net's `portRef` names the PORT, so the reader maps it to a pin number through the instance's
+  `portInstance` table first and the port's own interface `designator` second, and keeps the port
+  name only when neither states one (agni issue 1193).
 
 ### Instances (placed components)
 

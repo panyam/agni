@@ -3,6 +3,9 @@ package check
 import (
 	"fmt"
 	"sort"
+	"strings"
+
+	"github.com/panyam/agni/core/ident"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -136,7 +139,7 @@ func TracePins(m Model, from, to Endpoint, hops int) Trace {
 	// pins are the same electrical node.
 	if fromNet.Name == toNet.Name {
 		t.Outcome = TraceRouted
-		t.Nets = []TraceNet{traceNet(m, fromNet, nil, []Endpoint{from, to})}
+		t.Nets = []TraceNet{traceNet(m, fromNet, nil, []Endpoint{t.From.Endpoint, t.To.Endpoint})}
 		return t
 	}
 
@@ -161,7 +164,7 @@ func TracePins(m Model, from, to Endpoint, hops int) Trace {
 		onRoute[nets[i].Name] = append(onRoute[nets[i].Name], s.Through)
 		onRoute[nets[i+1].Name] = append(onRoute[nets[i+1].Name], s.Through)
 	}
-	ends := []Endpoint{from, to}
+	ends := []Endpoint{t.From.Endpoint, t.To.Endpoint}
 	for _, n := range nets {
 		t.Nets = append(t.Nets, traceNet(m, n, onRoute[n.Name], ends))
 	}
@@ -184,6 +187,16 @@ func resolveEndpoint(m Model, e Endpoint) (*ir.Net, TraceEnd, string) {
 	if !m.HasComponent(e.RefDes) {
 		return nil, end, fmt.Sprintf("no component %s in this design", e.RefDes)
 	}
+	// A pin the design does not spell this way may be its functional name (`U2.MDIO` for U2.1),
+	// which an IO map accepts, so trace accepts it through the same lookup (agni issue 1193).
+	if !m.PinDeclared(e.RefDes, e.Pin) && netOfPin(m, e) == nil {
+		resolved, why := resolveSpelling(m, e)
+		if why != "" {
+			return nil, end, why
+		}
+		e = resolved
+		end.Endpoint = e
+	}
 	// "~" is KiCad's spelling of "this pin has no name", and it reaches the IR verbatim. Reporting
 	// it would print `TP2.1 (~)`, so it is read as absent here, the same reading classifyPinRole
 	// already takes of it.
@@ -204,6 +217,27 @@ func resolveEndpoint(m Model, e Endpoint) (*ir.Net, TraceEnd, string) {
 	}
 	end.Net = n.Name
 	return n, end, ""
+}
+
+// resolveSpelling resolves an endpoint whose pin is not a designator of the part through
+// LookupPin. It accepts an exact or normalized match and refuses a loose one, since a trace has no
+// place to say a match was inferred and a route from a guessed pin is an answer about the wrong
+// node. A spelling no pin answers to returns the endpoint unchanged, for resolveEndpoint to report
+// as the wrong pin it is.
+func resolveSpelling(m Model, e Endpoint) (Endpoint, string) {
+	l := LookupPin(m, e.RefDes, e.Pin)
+	switch l.Kind {
+	case PinFound:
+		if l.Via.Match == ident.Fuzzy {
+			return e, fmt.Sprintf("%s matches %s.%s only loosely (%s); name the pin by its designator or its exact name",
+				e.String(), e.RefDes, l.Designator, l.Via.Note)
+		}
+		return Endpoint{RefDes: e.RefDes, Pin: l.Designator}, ""
+	case PinAmbiguous:
+		return e, fmt.Sprintf("%s names %d pins of %s (%s), so which one is meant cannot be decided; name the pin by its designator",
+			e.String(), len(l.Candidates), e.RefDes, strings.Join(l.Candidates, ", "))
+	}
+	return e, ""
 }
 
 // netOfPin finds the net carrying this exact (ref-des, pin) connection.
