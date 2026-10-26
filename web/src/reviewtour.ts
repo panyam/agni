@@ -56,26 +56,29 @@ const panels: Record<string, string> = {
   "save-report": "review",
 };
 
-// reveals names, for a step whose control can sit below its panel's fold, the element to scroll into
-// view when the step goes live. The dimmed page takes no wheel, so a control off screen leaves the
+// reveals names, for a step whose controls can sit below their panel's fold, the elements to scroll
+// into view when the step goes live. The dimmed page takes no wheel, so a control off screen leaves the
 // reader no way to reach it.
 const askConnect = () => {
   const asks = every(".pr-ask-go");
   return asks.find((b) => /connect to/.test(b.textContent ?? "")) ?? asks[0] ?? null;
 };
-const reveals: Record<string, () => HTMLElement | null> = {
-  "run-checklist": () => one("button.rv-run"),
-  "click-finding": () => one(".check-locate"),
-  "click-cell": () => one(".query-row"),
-  "ask-area": askConnect,
-  "save-report": () => one(".rv-save"),
+const reveals: Record<string, () => (HTMLElement | null)[]> = {
+  "run-checklist": () => [one("button.rv-run")],
+  "click-finding": () => [one(".check-locate")],
+  "click-cell": () => [one(".query-row")],
+  ask: () => [one(".query-ask:not([disabled])"), one(".pr-ask-go")],
+  "ask-area": () => [askConnect()],
+  "save-report": () => [one(".rv-save")],
 };
 
 // reveal brings a step's panel forward and its control into view, a frame later so a panel the dock
 // just activated has laid out.
 function reveal(host: ReviewTourHost, step: string): void {
   host.show(panels[step] ?? "");
-  requestAnimationFrame(() => reveals[step]?.()?.scrollIntoView({ block: "nearest", inline: "nearest" }));
+  requestAnimationFrame(() => {
+    for (const el of reveals[step]?.() ?? []) el?.scrollIntoView({ block: "nearest", inline: "nearest" });
+  });
 }
 
 export function reviewTourSteps(host: ReviewTourHost): TourStep<ViewerEvents>[] {
@@ -127,16 +130,21 @@ export function reviewTourSteps(host: ReviewTourHost): TourStep<ViewerEvents>[] 
       title: "Click into an answer",
       text:
         "Click a part in the answer. A query answer carries the entity behind each cell, so the click " +
-        "lights it on the drawing, and a part drawn on another sheet offers a chip that goes there.",
+        "lights it on the drawing, and a part drawn on another sheet offers a chip that goes there. " +
+        "Clicking a net instead leaves the tour, and the viewer carries on as usual.",
       target: () => visible(every(".query-results")),
-      advanceOn: { event: "cell.located" },
+      advanceOn: { event: "cell.located", where: (d) => d.kind === "component" },
+      offPath: { event: "cell.located" },
+      onOffPath: "end",
       doItForMe: click(".query-row .query-locate"),
     },
     {
       id: "ask",
       title: "Ask a follow-up",
-      text: "Ask follows up on the part you picked with a served question, which opens in a tab of its own.",
-      target: () => visible(every(".query-ask:not([disabled])")),
+      text:
+        "Ask follows up on the part you picked with a served question, from the Query panel's Ask button " +
+        "or one of the Ask rows in Properties. Either opens the question in a tab of its own.",
+      target: () => visible(every(".query-ask:not([disabled]), .pr-ask-go")),
       advanceOn: { event: "query.asked" },
       doItForMe: click(".query-ask:not([disabled])"),
     },

@@ -19,7 +19,7 @@
     "@connectrpc/connect-web": "^2.0.0",
     "@panyam/mcpkit-rooms": "0.8.12",
     "@panyam/tsappkit": "^0.7.7",
-    "@panyam/tsappkit-solid": "^0.7.5",
+    "@panyam/tsappkit-solid": "^0.7.7",
     "dockview-core": "^1.17.2",
     "marked": "^18.0.6",
     "solid-js": "^1.9.14"

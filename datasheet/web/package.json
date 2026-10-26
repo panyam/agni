@@ -16,7 +16,7 @@
     "@connectrpc/connect": "^2.0.0",
     "@connectrpc/connect-web": "^2.0.0",
     "@panyam/tsappkit": "^0.7.7",
-    "@panyam/tsappkit-solid": "^0.7.5",
+    "@panyam/tsappkit-solid": "^0.7.7",
     "pdfjs-dist": "^6.2.108",
     "solid-js": "^1.9.14"
   },
