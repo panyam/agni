@@ -51,7 +51,9 @@ Datalog engine underneath agni, and each takes a `design` beside its own argumen
 - `query` runs a question and answers its rows. A value the user gave goes in `bind`, by its
   variable's name, rather than being pasted into the question, so a net named with a quote in it
   can't change what is asked. A list there asks about each value at once, so "which of these three
-  nets has no pull-up" is one call.
+  nets has no pull-up" is one call. Under its table the text says how each row holds, the
+  [witness tree](../querying/#see-how-a-row-was-derived-witnesses) cut at eight lines a row, and the
+  structured content carries every tree whole.
 - `explain` says where a question's work went and, when it answers nothing, which part matched
   nothing.
 
