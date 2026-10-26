@@ -551,6 +551,13 @@ class AppRoot extends BaseComponent {
         const sel = selectionFromCell(f.kind, f.subject);
         if (sel) propertiesPresenter.selectEntity(sel);
       },
+      // A finding of an inline-query item opens onto how it holds (agni issue 1166).
+      onExplain: (item, index) => void presenter.explainReviewFinding(item, index),
+      onLocateValue: (v, sheet) => {
+        void presenter.locateReviewValue(v, sheet);
+        const sel = selectionFromCell(v.kind, v.text, v.ref);
+        if (sel) propertiesPresenter.selectEntity(sel);
+      },
       // The checklist page, written by the rpc `agni review --format html` calls (agni issue 1030).
       onSave: () => void presenter.saveReviewReport(),
     }, { staticHost: onStaticHost });

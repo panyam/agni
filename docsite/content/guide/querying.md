@@ -580,6 +580,14 @@ and `json` as each row's `witnesses`, whose citations index the answer's `source
 table. `--set` asks every query in the set for witnesses. Over the API it is
 `RunQueryRequest.witnesses` (and `RunQueriesRequest.witnesses`).
 
+A checklist item written as an inline query opens the same way in the viewer's Review panel. The
+arrow beside one of its findings asks the item's query again with the finding's subject bound and
+witnesses on, and draws the tree under the finding. The query comes from the checklist the run
+scored, which the run keeps, so an older run asks its own question and not whatever the checklist
+file says today. A run older than the open design can name a finding that no longer holds, and the
+panel says so rather than drawing nothing. A finding from a rule, a tag or a profile has no arrow yet
+(agni issue 1183).
+
 ### Ask the same question about different things (bindings)
 
 A script that asks about one part, then another, should not build a new query string each time. Write
