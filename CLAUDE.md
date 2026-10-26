@@ -402,8 +402,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the stateless wire when offered and a session otherwise. Three cases mcpkit gets wrong are held by
   `mcpkitGap` until panyam/mcpkit#1637 lands, each failing when fixed: the stateless `tools/call`
   skips the input-schema check (a misspelled argument is answered), stdio serves sessions alone, and
-  an adaptive client can't fall back from a session-only server. A `tools/list` TTL waits on
-  panyam/jaala#474. **`make exercise-mcp-ask` is mission #909's exercise** (agni 1121):
+  an adaptive client can't fall back from a session-only server. The lists carry an hour's `ttlMs`
+  (`listTTLMs`, through jaala's `Options.Server`). **`make exercise-mcp-ask` is mission #909's
+  exercise** (agni 1121):
   `examples/ask-over-mcp exercise <spec>` asks a spec's questions over `serve --mcp` on a free port
   and holds each reply's table, written through `service.WriteTableCSV`, to the CLI's csv for the
   same request, its links to a 200, and its rows to what the spec pins. A new tool's reply has to

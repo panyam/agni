@@ -6,8 +6,8 @@ require (
 	connectrpc.com/connect v1.20.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
 	github.com/panyam/goapplib v0.7.7
-	github.com/panyam/jaala/frontends/mcp v0.1.87
-	github.com/panyam/jaala/frontends/nl v0.1.87
+	github.com/panyam/jaala/frontends/mcp v0.1.88
+	github.com/panyam/jaala/frontends/nl v0.1.88
 	github.com/panyam/massrelay v0.3.2
 	github.com/panyam/mcpkit v0.8.12
 	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.12
@@ -36,7 +36,7 @@ require (
 	github.com/invopop/jsonschema v0.14.0 // indirect
 	github.com/kr/text v0.2.0 // indirect
 	github.com/munnerz/goautoneg v0.0.0-20191010083416-a7dc8b61c822 // indirect
-	github.com/panyam/jaala/frontends/cypher v0.1.87 // indirect
+	github.com/panyam/jaala/frontends/cypher v0.1.88 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/prometheus/client_golang v1.24.1 // indirect
 	github.com/prometheus/client_model v0.6.3 // indirect
@@ -68,7 +68,7 @@ require (
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
 	github.com/panyam/gocurrent v0.1.2 // indirect
 	github.com/panyam/goutils v0.1.14
-	github.com/panyam/jaala v0.1.87
+	github.com/panyam/jaala v0.1.88
 	github.com/panyam/templar v0.1.2 // indirect
 	golang.org/x/sys v0.49.0 // indirect
 	golang.org/x/time v0.16.0 // indirect

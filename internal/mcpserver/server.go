@@ -74,6 +74,7 @@ func New(api server.API, o Options) (*mcpkit.Server, error) {
 		Vocabulary: func(ctx context.Context) (*ns.Vocabulary, error) { return api.Query.Vocabulary(ctx, "") },
 		MaxWork:    o.Budget,
 		Timeout:    o.Timeout,
+		Server:     []mcpkit.Option{mcpkit.WithListTTLMs(listTTLMs)},
 	}, mcp.Extension[designArg]{Prepare: s.prepare})
 	if err != nil {
 		return nil, err
@@ -99,6 +100,11 @@ func HTTPHandler(srv *mcpkit.Server, prefix string, origins ...string) http.Hand
 	}
 	return srv.Handler(opts...)
 }
+
+// listTTLMs is how long a client may keep the tool, resource and prompt lists before asking again:
+// an hour, since agni's tools are fixed for a server's life and nothing announces a change (agni
+// issue 1172). It saves every stateless client a tools/list per conversation.
+const listTTLMs = 60 * 60 * 1000
 
 // Wire is the MCP wires agni's HTTP endpoint accepts: both (stateless.ModeDual), set here rather
 // than left to mcpkit's default so a change of that default can't drop the wire a host speaks (agni

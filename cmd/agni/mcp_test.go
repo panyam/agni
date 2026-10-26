@@ -611,6 +611,25 @@ func TestMCPAcceptsBothWiresWhateverMcpkitDefaults(t *testing.T) {
 	})
 }
 
+// A client may keep agni's tool list for an hour, since the tools are fixed for a server's life
+// (SEP-2549's ttlMs), which saves a stateless client a tools/list per conversation.
+func TestMCPToolListIsCachedForAnHour(t *testing.T) {
+	eachWire(t, func(t *testing.T, wire string) {
+		s := serveMCP(t, mcpserver.Options{}, wire)
+		page, err := s.mcp.ListToolsPage(context.Background(), "")
+		if err != nil {
+			t.Fatal(err)
+		}
+		got := -1
+		if page.TTLMs != nil {
+			got = *page.TTLMs
+		}
+		if got != 60*60*1000 {
+			t.Errorf("tools/list on the %s wire carries ttlMs %d, want an hour", wire, got)
+		}
+	})
+}
+
 // A check naming a rule that doesn't exist is the question's mistake, so the agent hears it as one with
 // the rule it probably meant, rather than reading an empty run as a clean design (agni issue 1121).
 func TestMCPCheckOfAnUnknownRuleIsAToolError(t *testing.T) {
