@@ -628,9 +628,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   over `tools/samples/` skips `._` names (the oracle's `globCorpus`, agni 812). The old Makefile also
   wrote an EMPTY tarball under GNU tar that still passed `make verify`; it runs under `pipefail` now.
 - **After ANY proto change run `make proto` (Go), `make proto-web` (TS) AND `make proto-py` (Python).**
-  Run `make proto` and `make proto-check`, and only those, under the pinned Go (`GOTOOLCHAIN=go1.26.9`) when yours is newer,
-  because `protoc-gen-go` formats comments with the Go that built it, and 1.27 rewrote comments in
-  generated files the change never touched (agni 994).
+  `make proto` and `make proto-check` set `GOTOOLCHAIN` to the Go `go.mod` names for their Go
+  generation themselves, because `protoc-gen-go` formats comments with the Go running it, and 1.27
+  rewrote comments in generated files the change never touched (agni 994). A `buf generate` typed by
+  hand gets no such pin.
   `make proto-check` fails the gate on any of them being stale. The Python half uses buf's REMOTE
   plugins pinned by version, so it needs network, and `pyproject.toml`'s `protobuf>=` floor moves with
   the plugin version. **The protos are TWO buf modules in one workspace** (the root `buf.yaml`): the
@@ -834,10 +835,9 @@ because a bump that touched the root alone left every nested module stale and fa
 `browser-test` in parallel jobs (agni 1147). Read
 `docsite/content/build/the-gate.md` before trusting a run, since the gate has three ways to be
 misread (a wrapper reporting its own status rather than make's, which turns red green, a
-commit-first ordering rule, and a per-clone `pnpm install`), two that make a fine tree read RED (a stray
+commit-first ordering rule, and a per-clone `pnpm install`), one that makes a fine tree read RED (a stray
 `agni serve` on :8080 fails three verdict-link tests, so reproduce against unmodified `main` before
-reporting a regression, and `proto-check` under a local Go 1.27 reports untouched `.pb.go` files stale,
-so rerun that one target with `GOTOOLCHAIN=go1.26.9`), plus what a run leaves behind and the generated-code rules. **From a worktree run
+reporting a regression), plus what a run leaves behind and the generated-code rules. **From a worktree run
 `make -k testall`**, since a plain `make` stops at the first failure before `python-test`,
 `tutorial-runs-check` and `docsite-images-check` ever run. **Build in a worktree with the default Go,
 never `GOTOOLCHAIN=go1.26.9`.** Go 1.26 (1.26.9 included) finds a repository only by a `.git` DIRECTORY and a linked

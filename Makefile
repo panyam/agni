@@ -8,9 +8,13 @@ all: proto build
 # engine's protos/, generated from inside protos/ into gen/go, and the datasheet producer's
 # datasheet/protos (agni issue 744), generated into datasheet/gen/go from the repo ROOT so its
 # `go tool` plugins resolve against the root go.mod that pins them (see datasheet/buf.gen.yaml).
+#
+# Both Go generations run under the Go go.mod names, as gosec does, because protoc-gen-go formats
+# comments with the Go running it and 1.27 rewrote comments in files no proto change touched (agni
+# 994). Under a newer local Go, proto-check then failed a branch CI passed.
 proto:
-	cd protos && buf generate
-	buf generate datasheet/protos --template datasheet/buf.gen.yaml
+	cd protos && GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate
+	GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate datasheet/protos --template datasheet/buf.gen.yaml
 
 # Regenerate the TypeScript half. Separate command, separate config, and the half people forget:
 # additive proto changes leave stale TS building green, so the drift only surfaces on the next
@@ -50,8 +54,8 @@ proto-check:
 	@tmp=$$(mktemp -d); \
 	trap 'rm -rf "$$tmp"' EXIT; \
 	mkdir -p "$$tmp/protos" "$$tmp/root" "$$tmp/web" "$$tmp/dsweb" "$$tmp/py"; \
-	(cd protos && buf generate -o "$$tmp/protos") || exit 1; \
-	buf generate datasheet/protos --template datasheet/buf.gen.yaml -o "$$tmp/root" || exit 1; \
+	(cd protos && GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate -o "$$tmp/protos") || exit 1; \
+	GOTOOLCHAIN=go$(GO_MOD_VERSION) buf generate datasheet/protos --template datasheet/buf.gen.yaml -o "$$tmp/root" || exit 1; \
 	(cd web && buf generate ../protos --template buf.gen.web.yaml -o "$$tmp/web") || exit 1; \
 	(cd datasheet/web && buf generate ../.. --template buf.gen.web.yaml -o "$$tmp/dsweb") || exit 1; \
 	(cd clients/python && buf generate ../../protos --template buf.gen.py.yaml -o "$$tmp/py") || exit 1; \
