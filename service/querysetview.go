@@ -44,8 +44,8 @@ func QuerySetTable(resp *webapi.RunQueriesResponse, failed func(i int) rpt.Table
 	return ts
 }
 
-// FormatBindings renders a query's bindings as `name=value` strings for a document to show, or the
-// reason they could not be read.
+// FormatBindings spells an answer's echoed bindings as a document states them beside its query, or
+// gives the reason they could not be read.
 func FormatBindings(m map[string]*webapi.QueryValue) []string {
 	b, err := BindingsFromProto(m)
 	if err != nil {

@@ -602,9 +602,6 @@ func parseBindings(args []string) (query.Bindings, error) {
 	return b, nil
 }
 
-// formatBindings spells an answer's echoed bindings as a document states them beside its query.
-func formatBindings(m map[string]*webapi.QueryValue) []string { return service.FormatBindings(m) }
-
 // withCaret adds the line a query that would not parse stopped on, with a caret under the place, as
 // the engine drew it, read off the error in this process or off the detail a --remote server
 // attached. Any other error is returned as it is.
