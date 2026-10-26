@@ -10,6 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.10] - 2026-10-26
+
+A reader's question from a viewer tab reaches a Claude Code session as a turn of its own, through
+SEP-3415 room events and mcpkit's `rooms-channel` (PR 1187). A Review finding opens onto the facts
+that make it hold, and the MCP `query` text carries them (PR 1185). The stateless MCP wire now
+behaves as the session wire does (PRs 1181, 1187).  The full write-up is
+[RELEASES/v0.3.10.md](RELEASES/v0.3.10.md).
+
 ## [0.3.9] - 2026-10-25
 
 An agent drives the viewer tabs a reader has open, and a reader asks it questions from the tab, under
