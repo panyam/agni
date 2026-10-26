@@ -42,7 +42,7 @@ require (
 	github.com/panyam/demokit/notebook v0.0.28 // indirect
 	github.com/panyam/gocurrent v0.1.2 // indirect
 	github.com/panyam/goutils v0.1.14 // indirect
-	github.com/panyam/jaala v0.1.87 // indirect
+	github.com/panyam/jaala v0.1.88 // indirect
 	github.com/panyam/servicekit v0.2.2 // indirect
 	github.com/pb33f/ordered-map/v2 v2.3.1 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
