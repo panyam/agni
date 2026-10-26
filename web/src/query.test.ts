@@ -331,9 +331,9 @@ describe("RELATION_KINDS, twinned with facts.KindOrder via kind_order.json", () 
   });
 });
 
-describe("compareNatural, twinned with service via natural_twin.json", () => {
+describe("compareNatural, twinned with core/ident via natural_twin.json", () => {
   const here = dirname(fileURLToPath(import.meta.url));
-  const twin = JSON.parse(readFileSync(join(here, "..", "..", "service", "testdata", "natural_twin.json"), "utf8")) as { lists: string[][] };
+  const twin = JSON.parse(readFileSync(join(here, "..", "..", "core", "ident", "testdata", "natural_twin.json"), "utf8")) as { lists: string[][] };
   it("has lists to check", () => expect(twin.lists.length).toBeGreaterThanOrEqual(5));
   for (const want of twin.lists) {
     it(`orders ${want.join(" < ")}`, () => {

@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/ident"
 	"github.com/panyam/agni/core/num"
 	rpt "github.com/panyam/agni/core/report"
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
@@ -614,7 +615,7 @@ func cellAt(cells []string, i int) string {
 func compareCells(x, y string, typ webapi.ColumnType) int {
 	switch typ {
 	case webapi.ColumnType_COLUMN_TYPE_NAME:
-		return compareNatural(x, y)
+		return ident.CompareNatural(x, y)
 	case webapi.ColumnType_COLUMN_TYPE_NUMBER:
 		a, errA := strconv.ParseFloat(x, 64)
 		b, errB := strconv.ParseFloat(y, 64)
@@ -634,70 +635,4 @@ func compareCells(x, y string, typ webapi.ColumnType) int {
 		}
 	}
 	return strings.Compare(x, y)
-}
-
-// compareNatural compares two names with their digit runs read as numbers, so R2 < R10 and
-// U10.3 < U10.12. Text runs compare case-insensitively, and the plain strings break a tie, so R01
-// and R1 still order the same way every time.
-func compareNatural(x, y string) int {
-	a, b := x, y
-	for a != "" && b != "" {
-		da, db := isDigit(a[0]), isDigit(b[0])
-		switch {
-		case da && db:
-			ra, rb := digitRun(a), digitRun(b)
-			na, nb := strings.TrimLeft(ra, "0"), strings.TrimLeft(rb, "0")
-			if len(na) != len(nb) {
-				return cmpInt(len(na), len(nb))
-			}
-			if c := strings.Compare(na, nb); c != 0 {
-				return c
-			}
-			a, b = a[len(ra):], b[len(rb):]
-		case da != db:
-			// A digit sorts before a letter, as it does in plain text.
-			if da {
-				return -1
-			}
-			return 1
-		default:
-			ta, tb := textRun(a), textRun(b)
-			if c := strings.Compare(strings.ToLower(ta), strings.ToLower(tb)); c != 0 {
-				return c
-			}
-			a, b = a[len(ta):], b[len(tb):]
-		}
-	}
-	if a != b {
-		return cmpInt(len(a), len(b))
-	}
-	return strings.Compare(x, y)
-}
-
-func isDigit(c byte) bool { return c >= '0' && c <= '9' }
-
-func digitRun(s string) string {
-	i := 0
-	for i < len(s) && isDigit(s[i]) {
-		i++
-	}
-	return s[:i]
-}
-
-func textRun(s string) string {
-	i := 0
-	for i < len(s) && !isDigit(s[i]) {
-		i++
-	}
-	return s[:i]
-}
-
-func cmpInt(a, b int) int {
-	switch {
-	case a < b:
-		return -1
-	case a > b:
-		return 1
-	}
-	return 0
 }

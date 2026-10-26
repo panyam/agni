@@ -1,6 +1,6 @@
 # Synthetic reproducers for panyam/agni #1085–#1098
 
-Minimal netlists for issues filed from the Checksmith → agni migration work. Names are deliberately generic (no customer boards). Each subfolder has an `EXPECTED.md` with **current** vs **desired** behavior and commands to verify.
+Minimal netlists for issues #1085 to #1098. Names are deliberately generic (no customer boards). Each subfolder has an `EXPECTED.md` with **current** vs **desired** behavior and commands to verify.
 
 | Issue | Topic | Fixture |
 |------:|-------|---------|

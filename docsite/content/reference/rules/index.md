@@ -99,6 +99,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [intent/property-strap](intent-property-strap/) | intent | warning | A boot/config strap net is biased to the OPPOSITE level from the one the design intent declares it should latch. |
 | [intent/protection-discharge](intent-protection-discharge/) | intent | warning | A rail the design intent declares needs a discharge path has no bleeder resistor. |
 | [intent/protection-ovp](intent-protection-ovp/) | intent | warning | A rail the design intent declares needs OV protection has no TVS/zener clamp. |
+| [intent/pull-up-reach-declared](intent-pull-up-reach-declared/) | intent | warning | A net the design intent gives a pull-up reach is absent from the design. |
 | [intent/rail-current-capacity](intent-rail-current-capacity/) | intent | warning | The part supplying a rail is rated below the peak current the design intent declares for that rail. |
 | [intent/rail-current-margin](intent-rail-current-margin/) | intent | warning | A rail's supply meets its declared peak current budget but not the declared margin factor over it. |
 | [intent/sequence](intent-sequence/) | intent | warning | A declared power-up order is not enforced by the design's power-good/enable chain, or the chain runs the other way round. |

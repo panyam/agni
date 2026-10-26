@@ -678,7 +678,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   sent, a TWIN fixture both test suites read holds the two to one answer (agni 1045):
   `core/review/testdata/tally_twin.json`, `core/results/testdata/severity_twin.json`,
   `core/query/testdata/binding_twin.json`, `core/facts/testdata/kind_order.json`,
-  `service/testdata/natural_twin.json`, `core/check/testdata/subject_param_twin.json`. A new client copy of engine logic gets one, or better, comes
+  `core/ident/testdata/natural_twin.json`, `core/check/testdata/subject_param_twin.json`. A new client copy of engine logic gets one, or better, comes
   off the wire (a parse error's caret is `TextPosition.caret`, drawn by the engine).
 - **Every question about a design names a snapshot, and only `Ingest` names files** (agni 1061,
   `service/snapshot.go`, "The services" in `architecture/web-services.md`). Ingest resolves the
