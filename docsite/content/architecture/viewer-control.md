@@ -118,6 +118,16 @@ room (`rooms.WithEventFallbacks`) and hands only to agents the tab agreed to. An
 next one with `next_request`, on either wire, or subscribes to `rooms://events/{room}` on the session
 wire.
 
+`viewerrooms.Rooms.Register` also serves them as SEP-3415 events through mcpkit's `roomsevents`, as
+`room.ask`, `page.selection_changed` and `page.event`, each taking the room as its `resource`
+argument. A session may subscribe only while it is attached to that room and
+hears only the tabs that agreed to it, the same rule as `next_request`. Attachment lasts as long as
+an MCP session, so the events need the session wire, and with no identity provider they act for the
+local subject (`events.Config.UnsafeAnonymousPrincipal`). This is what lets `rooms-channel` put a
+reader's question in front of a Claude Code session as a turn. `TestARoomsChannelHearsATabsQuestion`
+runs that front end over a pipe against agni's `/mcp`. It attaches by `resource`, because the front
+end watches the room named in `attach`'s arguments and a design names none (mcpkit#1640).
+
 `WithRoomOf` declares `design` as its room argument, so `next_request`, `list_pages`, `attach` and
 `pair` take the design the way the page tools do, resolved through the same `ViewerRoomService.Room`
 (mcpkit#1633). Before that they took only the resolved room name, which no answer told the agent.

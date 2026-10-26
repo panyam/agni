@@ -15,6 +15,12 @@
 // stateless MCP wire as well as the session one. A tab's tools are checked against the declaration
 // byte for byte, which is why web/src/toolschema.ts builds the same schemas and both are held to
 // testdata/viewer_tools.json.
+//
+// What a reader does on a tab reaches an agent three ways, all under the same agreement: polling
+// next_request, reading rooms://events/{room}, and the SEP-3415 events mcpkit's roomsevents serves
+// (room.ask, page.selection_changed, page.event). An event is pushed to a session attached to the
+// room, so it needs the session wire, and rooms-channel turns each one into a message in a Claude
+// Code session (agni issue 1173).
 package viewerrooms
 
 import (
@@ -29,8 +35,10 @@ import (
 	"github.com/panyam/massrelay/services"
 	relaymw "github.com/panyam/massrelay/web/middleware"
 	relayserver "github.com/panyam/massrelay/web/server"
+	"github.com/panyam/mcpkit/experimental/ext/events"
 	"github.com/panyam/mcpkit/experimental/ext/rooms"
 	"github.com/panyam/mcpkit/experimental/ext/rooms/massrelay"
+	"github.com/panyam/mcpkit/experimental/integrations/roomsevents"
 	mcpkit "github.com/panyam/mcpkit/server"
 	"github.com/panyam/oneauth/keys"
 	mw "github.com/panyam/servicekit/middleware"
@@ -69,6 +77,7 @@ type Options struct {
 type Rooms struct {
 	relay  *relayserver.RelayApp
 	bridge *rooms.Bridge
+	events *roomsevents.Events
 	key    []byte
 	ttl    time.Duration
 }
@@ -79,7 +88,7 @@ func New(o Options) (*Rooms, error) {
 	if o.RoomOf == nil {
 		return nil, errors.New("viewerrooms: Options.RoomOf is required")
 	}
-	r := &Rooms{key: make([]byte, 32), ttl: o.TokenTTL}
+	r := &Rooms{key: make([]byte, 32), ttl: o.TokenTTL, events: roomsevents.New()}
 	if r.ttl <= 0 {
 		r.ttl = DefaultTokenTTL
 	}
@@ -121,6 +130,7 @@ func New(o Options) (*Rooms, error) {
 		// A reader's question from a tab's Ask box, and what the reader selected, reach an agent through
 		// next_request or the room's events resource, from the tabs that agreed to it.
 		rooms.WithEventFallbacks(0),
+		rooms.WithPageEvents(r.events.Publish),
 	}
 	if o.CallTimeout > 0 {
 		opts = append(opts, rooms.WithCallTimeout(o.CallTimeout))
@@ -134,8 +144,13 @@ func New(o Options) (*Rooms, error) {
 func (r *Rooms) Relay() http.Handler { return r.relay }
 
 // Register adds the bridge's tools (attach, list_pages, pair and the declared viewer_* tools) to an
-// MCP server.
-func (r *Rooms) Register(srv *mcpkit.Server) { r.bridge.Register(srv) }
+// MCP server, and the room events an attached session subscribes to. The events act for
+// LocalSubject on a call with no authenticated caller, as the bridge's tools do, since events/stream
+// refuses one otherwise.
+func (r *Rooms) Register(srv *mcpkit.Server) {
+	r.bridge.Register(srv)
+	r.events.Register(srv, r.bridge, events.Config{UnsafeAnonymousPrincipal: LocalSubject})
+}
 
 // Mint is a relay token for the local subject admitting its holder to room alone, which
 // service.ViewerRoomService hands a page.

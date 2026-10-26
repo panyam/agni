@@ -139,6 +139,31 @@ hears it by calling `next_request` with the design, which waits up to two minute
 question or selection from a tab that let it in. So "wait for my question in the viewer" is a
 reasonable thing to tell it. A tab with its switch off sends nothing, whatever you type.
 
+In Claude Code a question can arrive as a turn of its own, so the model needn't sit waiting.
+mcpkit's `rooms-channel` is a channel server that Claude Code starts beside the session, and it
+pushes each question from a tab into the conversation as a message. Install it and register it
+next to agni in `.mcp.json`:
+
+```bash
+go install github.com/panyam/mcpkit/experimental/integrations/roomsevents/cmd/rooms-channel@latest
+```
+
+```json
+{
+  "mcpServers": {
+    "rooms": { "command": "rooms-channel", "args": ["-bridge", "http://localhost:8080/mcp"] }
+  }
+}
+```
+
+Channels are a Claude Code research preview, so start the session with
+`claude --dangerously-load-development-channels server:rooms`, interactively. Then ask the model to
+attach to the design you have open. For now it has to attach with `resource` set to the room, such
+as `design:tut/designs/gateway/gateway.edn`, which a first `attach` with the design answers, because
+`rooms-channel` listens only to a room named that way (mcpkit issue 1640). From then on each question
+you type in a tab that let agents in shows up in the session, fenced as text from the page, and the
+model answers through the tab's tools.
+
 ## What it doesn't do
 
 agni hosts no model, so the client brings its own, and nothing about a design leaves the machine

@@ -71,10 +71,16 @@ github.com/panyam/massrelay v0.3.2 h1:lTVkhV/O4i3yhtKYevq84MRHrrKeSBIU0blYMBkDq2
 github.com/panyam/massrelay v0.3.2/go.mod h1:nwt+FDUQELd6FDYWIfhhtiGe/KYA+ITRTPd/DJ6D9rk=
 github.com/panyam/mcpkit v0.8.12 h1:pdZY7HAE8BwQhXSgELn3zdM60bcIDZ8DcgKx0zjfHhM=
 github.com/panyam/mcpkit v0.8.12/go.mod h1:GYpx01kgsz3tf83/b5q15pVbtQ3j9yWMhepRINfYa5w=
+github.com/panyam/mcpkit/experimental/ext/events v0.8.12 h1:sOVqll4MsU05wX4O8LhbYLefBYv97Of9vfcbbGOvgDQ=
+github.com/panyam/mcpkit/experimental/ext/events v0.8.12/go.mod h1:5anHJIg6bHH4ovH2HEY77PWy+zfwXWRR8oA0fsgf/z4=
+github.com/panyam/mcpkit/experimental/ext/events/clients/go v0.8.12 h1:ASAEeYEbkdjC2tRLZ90m87mHRDInLAsRaQiw3PdJxks=
+github.com/panyam/mcpkit/experimental/ext/events/clients/go v0.8.12/go.mod h1:rtLk2mWXs21BO8JI0VEYfZPslZfLh9q4paHlDrrmZhg=
 github.com/panyam/mcpkit/experimental/ext/rooms v0.8.12 h1:DgT5ZQw/rAVUyf32RMGPOkVVXyeozm0UlTslfzLSIcQ=
 github.com/panyam/mcpkit/experimental/ext/rooms v0.8.12/go.mod h1:AA09kUkWv579m16T0b59LapX00kb8/kiVzqE2GBu9OU=
 github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.12 h1:RmM3dvtiF1CrbRRaAELIDPZLa/ia/E6+LRFloWttefY=
 github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.12/go.mod h1:CMT1qyAfkaF6h0UCQ9tttxISJ38TxBUxzftEhcSwHmg=
+github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.12 h1:07Vjta4PQ3ywn16w9cNgN4wBLATxzL9xME4UuGb46mo=
+github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.12/go.mod h1:6kCM/zjf5QWFghiLLcriwNKhgy9NjOL07SoYSl+zRJA=
 github.com/panyam/oneauth v0.3.0 h1:nD1coHdYtkr1tfPnUXGo4zO5vWaKBLC9nIWtKPi3L28=
 github.com/panyam/oneauth v0.3.0/go.mod h1:kuj4u+oxzZIvHbyoNNIzpUlSq+22261X1CePLBG+fwQ=
 github.com/panyam/servicekit v0.2.2 h1:ra5MCDoDvAmCaeB7Qe8SToAo8pB0W4i+ciUjAmd6GJ0=
