@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, expect, it, vi } from "vitest";
 import { Code, ConnectError } from "@connectrpc/connect";
-import type { JoinToolRoomOptions, PageTool, ToolRoom } from "@panyam/mcpkit-rooms";
+import type { JoinToolRoomOptions, PageTool, ToolRefusal, ToolRoom } from "@panyam/mcpkit-rooms";
 import { ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
 import type { JoinViewerRoomResponse } from "./gen/agni/v1/webapi/viewerroom_pb.js";
 import type { PageDispatch } from "./pageservice.js";
@@ -16,6 +16,7 @@ class FakeRoom {
   focused = 0;
   left = false;
   emits: { name: string; data: unknown }[] = [];
+  refuse: ((r: ToolRefusal) => void) | undefined;
   constructor(readonly opts: JoinToolRoomOptions) {}
   registerTool(t: PageTool) {
     this.tools.set(t.name, t);
@@ -32,6 +33,9 @@ class FakeRoom {
   }
   leave() {
     this.left = true;
+  }
+  onToolRefused(fn: (r: ToolRefusal) => void) {
+    this.refuse = fn;
   }
   emit(name: string, data?: unknown) {
     this.emits.push({ name, data });
@@ -183,6 +187,23 @@ describe("ViewerRoomTab", () => {
     expect(h.rooms[0].emits).toEqual([
       { name: "room.ask", data: { text: "why is SDA flagged?", location: { method: "GetLocation", body: {} }, selection: focus } },
     ]);
+  });
+
+  it("names a tool the bridge refused beside the switch, until the tab moves rooms", async () => {
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => {});
+    const h = harness({ stored: "1" });
+    await h.tab.follow({ mount: "m", path: "a" });
+    const note = h.host.querySelector<HTMLElement>(".agents-refused")!;
+    expect(note.hidden).toBe(true);
+    h.rooms[0].refuse!({ name: "viewer_show_sheet", reason: "schema differs from the declaration" });
+    expect(note.hidden).toBe(false);
+    expect(note.textContent).toBe("Agents cannot call viewer_show_sheet on this tab");
+    expect(note.title).toBe("viewer_show_sheet: schema differs from the declaration");
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("viewer_show_sheet"));
+    await h.tab.follow({ mount: "m", path: "b" });
+    expect(note.hidden).toBe(true);
+    expect(note.textContent).toBe("");
+    warn.mockRestore();
   });
 
   it("asks from the box and clears it, and sends nothing blank", async () => {

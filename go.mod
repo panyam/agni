@@ -8,10 +8,13 @@ require (
 	github.com/panyam/goapplib v0.7.7
 	github.com/panyam/jaala/frontends/mcp v0.1.88
 	github.com/panyam/jaala/frontends/nl v0.1.88
-	github.com/panyam/massrelay v0.3.2
-	github.com/panyam/mcpkit v0.8.12
-	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.12
-	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.12
+	github.com/panyam/massrelay v0.3.3
+	github.com/panyam/mcpkit v0.8.13
+	github.com/panyam/mcpkit/experimental/ext/events v0.8.13
+	github.com/panyam/mcpkit/experimental/ext/events/clients/go v0.8.13
+	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.13
+	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.13
+	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.13
 	github.com/panyam/oneauth v0.3.0
 	github.com/panyam/servicekit v0.2.2
 	github.com/spf13/cobra v1.10.2
@@ -44,6 +47,7 @@ require (
 	github.com/prometheus/otlptranslator v1.0.0 // indirect
 	github.com/prometheus/procfs v0.22.0 // indirect
 	github.com/santhosh-tekuri/jsonschema/v6 v6.0.3 // indirect
+	github.com/stretchr/testify v1.12.1 // indirect
 	github.com/yosida95/uritemplate/v3 v3.0.2 // indirect
 	go.opentelemetry.io/auto/sdk v1.2.1 // indirect
 	go.opentelemetry.io/otel v1.47.0 // indirect
@@ -55,6 +59,7 @@ require (
 	go.opentelemetry.io/otel/sdk/metric v1.47.0 // indirect
 	go.opentelemetry.io/otel/trace v1.47.0 // indirect
 	go.opentelemetry.io/proto/otlp v1.11.0 // indirect
+	go.yaml.in/yaml/v3 v3.0.5 // indirect
 	go.yaml.in/yaml/v4 v4.0.0-rc.6 // indirect
 	golang.org/x/crypto v0.58.0 // indirect
 	golang.org/x/net v0.61.0 // indirect

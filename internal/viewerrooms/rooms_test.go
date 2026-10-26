@@ -13,8 +13,11 @@ import (
 
 	"github.com/panyam/mcpkit/client"
 	"github.com/panyam/mcpkit/core"
+	"github.com/panyam/mcpkit/experimental/ext/events"
+	eventsclient "github.com/panyam/mcpkit/experimental/ext/events/clients/go"
 	"github.com/panyam/mcpkit/experimental/ext/rooms"
 	"github.com/panyam/mcpkit/experimental/ext/rooms/massrelay"
+	"github.com/panyam/mcpkit/experimental/integrations/roomsevents"
 	mcpkit "github.com/panyam/mcpkit/server"
 )
 
@@ -346,4 +349,60 @@ func TestAnAgentHearsAReadersQuestionByNamingTheDesign(t *testing.T) {
 			t.Fatalf("the agent did not hear A2's question: %s", out)
 		}
 	})
+}
+
+// TestAnAgentHearsAReadersQuestionAsAnEvent is the Ask box as a turn (agni issue 1173): an agent on
+// the session wire attaches by naming the design, subscribes to room.ask for the room attach
+// answers, and is pushed a question from a tab that agreed to it, never one from a tab whose switch
+// is off. This is what rooms-channel turns into a message in a Claude Code session.
+func TestAnAgentHearsAReadersQuestionAsAnEvent(t *testing.T) {
+	st := newStack(t)
+	rec := &calls{}
+	off := st.tab(t, "A1", "m/a", rec)
+	on := st.tab(t, "A2", "m/a.sch", rec)
+	on.SetAgentsAllowed(true)
+	a := st.agent(t, "session")
+
+	res, err := a.ToolCallFull(t.Context(), "attach", map[string]any{"design": "m/a"})
+	if err != nil || res.IsError {
+		t.Fatalf("attach by design: %v %v", err, res)
+	}
+	var attached struct {
+		Resource string `json:"resource"`
+	}
+	b, _ := json.Marshal(res.StructuredContent)
+	if err := json.Unmarshal(b, &attached); err != nil || attached.Resource != "design:m/a.sch" {
+		t.Fatalf("attach answered %s", b)
+	}
+
+	asks := make(chan events.Event, 4)
+	stream, err := eventsclient.Stream(t.Context(), a, eventsclient.StreamOptions{
+		EventName: roomsevents.EventAsk,
+		Arguments: map[string]any{"resource": attached.Resource},
+		OnEvent:   func(ev events.Event) { asks <- ev },
+	})
+	if err != nil {
+		t.Fatalf("subscribing to %s in %s: %v", roomsevents.EventAsk, attached.Resource, err)
+	}
+	t.Cleanup(stream.Stop)
+
+	_ = off.Ask("from the tab that kept agents out")
+	_ = on.Ask("why is SDA flagged?")
+	select {
+	case ev := <-asks:
+		var got roomsevents.AskPayload
+		if err := json.Unmarshal(ev.Data, &got); err != nil {
+			t.Fatalf("the event's data %s: %v", ev.Data, err)
+		}
+		if got.Text != "why is SDA flagged?" || got.Page != string(on.ID()) || got.User != LocalSubject || got.Resource != attached.Resource {
+			t.Fatalf("the agent heard %+v", got)
+		}
+	case <-time.After(3 * time.Second):
+		t.Fatal("no room.ask event arrived for A2's question")
+	}
+	select {
+	case ev := <-asks:
+		t.Fatalf("a second event arrived, from the tab with its switch off: %s", ev.Data)
+	case <-time.After(300 * time.Millisecond):
+	}
 }

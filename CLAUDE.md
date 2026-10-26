@@ -399,10 +399,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   so a new tool belongs in it. **The HTTP endpoint accepts both MCP wires** (`mcpserver.Wire`, pinned
   to mcpkit's `ModeDual` so a default change can't drop one, `MCPKIT_STATELESS_MODE` overriding it),
   and the MCP tests run on both through `eachWire` (agni 1172). agni's own clients speak `adaptive`,
-  the stateless wire when offered and a session otherwise. Three cases mcpkit gets wrong are held by
-  `mcpkitGap` until panyam/mcpkit#1637 lands, each failing when fixed: the stateless `tools/call`
-  skips the input-schema check (a misspelled argument is answered), stdio serves sessions alone, and
-  an adaptive client can't fall back from a session-only server. The lists carry an hour's `ttlMs`
+  the stateless wire when offered and a session otherwise, and `agni mcp` on stdio serves both, since
+  mcpkit v0.8.13 (panyam/mcpkit#1637). The lists carry an hour's `ttlMs`
   (`listTTLMs`, through jaala's `Options.Server`). **`make exercise-mcp-ask` is mission #909's
   exercise** (agni 1121):
   `examples/ask-over-mcp exercise <spec>` asks a spec's questions over `serve --mcp` on a free port

@@ -54,16 +54,6 @@ func eachWire(t *testing.T, fn func(t *testing.T, wire string)) {
 	}
 }
 
-// mcpkitGap checks a case panyam/mcpkit#1637 says mcpkit gets wrong on one wire. It asserts the
-// case as mcpkit answers it today, so the mcpkit release that fixes it fails here, and the case then
-// moves back to the check the other wire gets.
-func mcpkitGap(t *testing.T, what string, stillWrong bool) {
-	t.Helper()
-	if !stillWrong {
-		t.Errorf("panyam/mcpkit#1637 looks fixed (%s): drop this exception and check it as on the session wire", what)
-	}
-}
-
 func serveMCP(t *testing.T, o mcpserver.Options, wire string) mcpServed {
 	t.Helper()
 	url, mux := serveMCPEndpoint(t, o)
@@ -473,11 +463,7 @@ func TestMCPOffersEveryToolAndRefusesAStrayArgument(t *testing.T) {
 			{"query", map[string]any{"design": mcpGateway, "program": `net.rail(?n) => ?n`, "desing": "x"}},
 		} {
 			res, err := s.mcp.ToolCallFull(context.Background(), call.tool, call.args)
-			answered := err == nil && !res.IsError
-			if wire == "stateless" {
-				// The stateless wire skips the input-schema check (mcpkit#1637, 1).
-				mcpkitGap(t, call.tool+" with a misspelled argument", answered)
-			} else if answered {
+			if err == nil && !res.IsError {
 				t.Errorf("%s with a misspelled argument answered: %v", call.tool, res.Content)
 			}
 		}
@@ -570,13 +556,6 @@ func TestAgniMCPServesTheSameToolsOverStdio(t *testing.T) {
 		if err := c.Connect(ctx); err != nil {
 			t.Fatal(err)
 		}
-		if wire == "stateless" {
-			// mcpkit's stdio transport serves sessions alone, so a stateless client's first call is
-			// refused (mcpkit#1637, 2).
-			_, err := c.ListTools(ctx)
-			mcpkitGap(t, "a stateless client over stdio", err != nil && strings.Contains(err.Error(), "server not initialized"))
-			return
-		}
 		if c.UsingStatelessWire() != (wire == "stateless") {
 			t.Fatalf("a %s client over stdio is on the stateless wire: %v", wire, c.UsingStatelessWire())
 		}
@@ -599,15 +578,6 @@ func TestMCPAdaptiveClientPrefersTheStatelessWire(t *testing.T) {
 	for _, env := range []string{"", "legacy"} {
 		t.Run("server="+cmp.Or(env, "dual"), func(t *testing.T) {
 			t.Setenv(stateless.ModeEnvVar, env)
-			if env == "legacy" {
-				// A session-only server answers the adaptive probe with a 400 rather than -32601, so the
-				// client never falls back (mcpkit#1637, 3).
-				url, _ := serveMCPEndpoint(t, mcpserver.Options{})
-				c := client.NewClient(url+"/mcp", core.Implementation{Name: "agni-test", Version: "0"}, client.WithClientMode(client.ClientModeAdaptive))
-				err := c.Connect(context.Background())
-				mcpkitGap(t, "an adaptive client against a session-only server", err != nil && strings.Contains(err.Error(), "missing Mcp-Session-Id"))
-				return
-			}
 			s := serveMCP(t, mcpserver.Options{}, "adaptive")
 			_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": `net.rail(?net) => ?net`})
 			if len(tablesOf(t, a)) == 0 || len(tablesOf(t, a)[0].GetRows()) == 0 {

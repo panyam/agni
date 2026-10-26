@@ -44,8 +44,7 @@ stateless 2026-07-28 wire, where every request stands alone, or the older sessio
 with `initialize`. Every tool answers the same rows and links on both. Nothing the server keeps
 depends on a session, since a design's snapshot is kept per server and per design. agni sets this
 itself rather than taking its MCP library's default, and `MCPKIT_STATELESS_MODE=legacy` or
-`=stateless` forces one wire, for debugging a client. `agni mcp` on stdio speaks the session wire
-alone for now (panyam/mcpkit#1637).
+`=stateless` forces one wire, for debugging a client. `agni mcp` on stdio speaks both too.
 
 ## What the model can call
 
@@ -138,6 +137,28 @@ type there goes to the model along with the sheet you are on and what you have s
 hears it by calling `next_request` with the design, which waits up to two minutes for the next
 question or selection from a tab that let it in. So "wait for my question in the viewer" is a
 reasonable thing to tell it. A tab with its switch off sends nothing, whatever you type.
+
+In Claude Code a question can arrive as a turn of its own, so the model needn't sit waiting.
+mcpkit's `rooms-channel` is a channel server that Claude Code starts beside the session, and it
+pushes each question from a tab into the conversation as a message. Install it and register it
+next to agni in `.mcp.json`:
+
+```bash
+go install github.com/panyam/mcpkit/experimental/integrations/roomsevents/cmd/rooms-channel@latest
+```
+
+```json
+{
+  "mcpServers": {
+    "rooms": { "command": "rooms-channel", "args": ["-bridge", "http://localhost:8080/mcp"] }
+  }
+}
+```
+
+Channels are a Claude Code research preview, so start the session with
+`claude --dangerously-load-development-channels server:rooms`, interactively. Then ask the model to
+attach to the design you have open. From then on each question you type in a tab that let agents in shows up in the session, fenced as text from the page, and the
+model answers through the tab's tools.
 
 ## What it doesn't do
 
