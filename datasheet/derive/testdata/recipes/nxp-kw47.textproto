@@ -1,0 +1,15 @@
+# Recipe for the NXP KW47 family data sheet (Rev. 4). Its "Package pinout" table is one row
+# per pin with every mux slot in one cell ("ALT0 - ADC0_B13 ALT1 - PTB3 ..."), and a second
+# column of low-power alternate functions labelled by their supply domain ("VDD SYS -
+# WUU0_P14"). The one numbering column names the part and the body together, so the package
+# is declared here.
+name: "nxp-kw47"
+doc_title_pattern: "^KW4[57]"
+mux_tables {
+  title_pattern: "(?i)package pinout"
+  layout: MUX_LAYOUT_CELL_LIST
+  name_column: "Pin Name"
+  number_columns { header: "KW47 48QFN" package: "48qfn" }
+  function_columns { header: "Pinmux Assignment" label_pattern: "\\bALT\\d+\\b" }
+  function_columns { header: "Alternate Functions" label_pattern: "VDD SYS" }
+}

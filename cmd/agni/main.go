@@ -473,6 +473,7 @@ func checkCmd() *cobra.Command {
 	var srvSpec serverSpec
 	var remoteURL string
 	var subjectArgs []string
+	var tableName string
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -510,6 +511,9 @@ func checkCmd() *cobra.Command {
 			}
 			if len(orderBy) > 0 && format != "csv" {
 				return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
+			}
+			if tableName != "" && (format != "csv" || !verdicts) {
+				return fmt.Errorf("--table picks one of a verdict run's csv tables, so it needs --verdicts --format csv")
 			}
 			subjects, err := parseSubjects(subjectArgs)
 			if err != nil {
@@ -736,6 +740,16 @@ func checkCmd() *cobra.Command {
 					meta.Generated = time.Now().UTC().Format("2006-01-02 15:04:05 UTC")
 					switch format {
 					case "csv":
+						if tableName != "" {
+							tb, err := checkTable(resp, tableName)
+							if err != nil {
+								return err
+							}
+							if err := writeTableCSV(cmd.OutOrStdout(), tb, orderBy); err != nil {
+								return err
+							}
+							break
+						}
 						if err := writeVerdictCSV(cmd.OutOrStdout(), resp.GetVerdicts(), meta, orderBy...); err != nil {
 							return err
 						}
@@ -794,6 +808,7 @@ func checkCmd() *cobra.Command {
 	outFileFlag(cmd, &outPath)
 	cmd.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so subject puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
+	cmd.Flags().StringVar(&tableName, "table", "", "with --verdicts --format csv, write this one of the run's tables instead of the verdicts: pin_map (a design's IO map one row per declared pin, beside the netlist and the datasheet), verdicts_by_rule, skipped. They are the tables Tabulate serves for the run")
 	cmd.Flags().StringArrayVar(&subjectArgs, "subject", nil, "answer for this net, component or pin alone, spelled net:NAME, component:REF or pin:REF.PIN (repeatable). Each rule reports what a full run reports with it as a subject, and a component covers its own pins. A rule that concludes about the design as a whole is not run and is listed as skipped. text, json and csv only")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
 	cmd.Flags().StringVar(&paramsDir, "params", "", "directory of seeded PartSpec textprotos (the datasheet parameter corpus, WS10); enables datasheet-backed rules")

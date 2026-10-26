@@ -91,6 +91,65 @@ func (PinColumnAxis) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{0}
 }
 
+// MuxLayout is how a pin-mux table lays one pin's functions out. Each member is the
+// layout of a real vendor table, named in its comment, and it is declared by the recipe
+// because the two cannot be told apart from cell text alone.
+type MuxLayout int32
+
+const (
+	MuxLayout_MUX_LAYOUT_UNSPECIFIED MuxLayout = 0
+	// One row per pin, its functions listed inside one cell, each after a label that the
+	// column's label_pattern matches. NXP's "Package pinout" table: "ALT0 - ADC0_B13
+	// ALT1 - PTB3 ALT2 - LPSPI1_SOUT".
+	MuxLayout_MUX_LAYOUT_CELL_LIST MuxLayout = 1
+	// One row per function, several rows to a pin. TI's "Pin Attributes" table: pin 1 is
+	// the rows P1.2, UCB0SIMO, UCB0SDA, TB0TRG, OA0-, A2 and Veref-. The pin is named by its
+	// first row, which is the GPIO, and where each pin begins is read from the rule's
+	// pin_start_column.
+	MuxLayout_MUX_LAYOUT_ROW_PER_FUNCTION MuxLayout = 2
+)
+
+// Enum value maps for MuxLayout.
+var (
+	MuxLayout_name = map[int32]string{
+		0: "MUX_LAYOUT_UNSPECIFIED",
+		1: "MUX_LAYOUT_CELL_LIST",
+		2: "MUX_LAYOUT_ROW_PER_FUNCTION",
+	}
+	MuxLayout_value = map[string]int32{
+		"MUX_LAYOUT_UNSPECIFIED":      0,
+		"MUX_LAYOUT_CELL_LIST":        1,
+		"MUX_LAYOUT_ROW_PER_FUNCTION": 2,
+	}
+)
+
+func (x MuxLayout) Enum() *MuxLayout {
+	p := new(MuxLayout)
+	*p = x
+	return p
+}
+
+func (x MuxLayout) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (MuxLayout) Descriptor() protoreflect.EnumDescriptor {
+	return file_agni_v1_derive_derive_proto_enumTypes[1].Descriptor()
+}
+
+func (MuxLayout) Type() protoreflect.EnumType {
+	return &file_agni_v1_derive_derive_proto_enumTypes[1]
+}
+
+func (x MuxLayout) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use MuxLayout.Descriptor instead.
+func (MuxLayout) EnumDescriptor() ([]byte, []int) {
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{1}
+}
+
 // Recipe is one doc-family's extraction rules: how to classify this family's tables
 // into limit kinds. It matches by document title (the vendor doc-number line the
 // producer read), never by content hash: a recipe covers a family of documents and
@@ -108,7 +167,11 @@ type Recipe struct {
 	// because TableRule.limit_kind is required and validated non-zero; making it
 	// optional to accommodate pins would weaken a live invariant, and "every
 	// TableRule yields parameters" is worth keeping true.
-	PinTables     []*PinTableRule   `protobuf:"bytes,4,rep,name=pin_tables,json=pinTables,proto3" json:"pin_tables,omitempty"`
+	PinTables []*PinTableRule `protobuf:"bytes,4,rep,name=pin_tables,json=pinTables,proto3" json:"pin_tables,omitempty"`
+	// Pin-mux (alternate-function) tables, which add PinAlternates to the spec's pins
+	// (agni issue 667). A third list because the table is a third shape: it answers which
+	// peripheral a pin can be, where a pin table answers what kind of pin it is.
+	MuxTables     []*MuxTableRule   `protobuf:"bytes,5,rep,name=mux_tables,json=muxTables,proto3" json:"mux_tables,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -168,6 +231,13 @@ func (x *Recipe) GetTables() []*TableRule {
 func (x *Recipe) GetPinTables() []*PinTableRule {
 	if x != nil {
 		return x.PinTables
+	}
+	return nil
+}
+
+func (x *Recipe) GetMuxTables() []*MuxTableRule {
+	if x != nil {
+		return x.MuxTables
 	}
 	return nil
 }
@@ -293,6 +363,218 @@ func (x *PinTableRule) GetColumnAxis() PinColumnAxis {
 	return PinColumnAxis_PIN_COLUMN_AXIS_UNSPECIFIED
 }
 
+// MuxTableRule classifies a pin-mux table and says where its pins, numbers and
+// functions are. Every column is named by its header text, compared case-insensitively
+// with whitespace collapsed and trailing footnote markers ("(1) (2)") removed, because
+// these tables have no shared header vocabulary to infer from.
+type MuxTableRule struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// RE2 pattern over the table's title after title attachment.
+	TitlePattern string    `protobuf:"bytes,1,opt,name=title_pattern,json=titlePattern,proto3" json:"title_pattern,omitempty"`
+	Layout       MuxLayout `protobuf:"varint,2,opt,name=layout,proto3,enum=agni.v1.derive.MuxLayout" json:"layout,omitempty"`
+	// The column naming each pin. Required by CELL_LIST; ROW_PER_FUNCTION names a pin by
+	// its first function and leaves this empty.
+	NameColumn      string               `protobuf:"bytes,3,opt,name=name_column,json=nameColumn,proto3" json:"name_column,omitempty"`
+	NumberColumns   []*MuxNumberColumn   `protobuf:"bytes,4,rep,name=number_columns,json=numberColumns,proto3" json:"number_columns,omitempty"`
+	FunctionColumns []*MuxFunctionColumn `protobuf:"bytes,5,rep,name=function_columns,json=functionColumns,proto3" json:"function_columns,omitempty"`
+	// ROW_PER_FUNCTION only, and required there. A column filled once per pin, on the pin's
+	// first row, and "-" or empty on the rest. TI's reset-state column is one.
+	//
+	// Neither the designator spans nor the designator cells mark a pin's rows reliably. A
+	// producer places an unspanned designator at the vertical middle of its merged cell, so
+	// a pin's numbers can sit on its fifth row, and it can stretch a span over the next pin
+	// (on the MSP430FR2355's page 20, RHA pin 24 spans P2.0 and P1.7). A designator belongs
+	// to the pin whose rows it STARTS in.
+	PinStartColumn string `protobuf:"bytes,6,opt,name=pin_start_column,json=pinStartColumn,proto3" json:"pin_start_column,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
+}
+
+func (x *MuxTableRule) Reset() {
+	*x = MuxTableRule{}
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MuxTableRule) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MuxTableRule) ProtoMessage() {}
+
+func (x *MuxTableRule) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MuxTableRule.ProtoReflect.Descriptor instead.
+func (*MuxTableRule) Descriptor() ([]byte, []int) {
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *MuxTableRule) GetTitlePattern() string {
+	if x != nil {
+		return x.TitlePattern
+	}
+	return ""
+}
+
+func (x *MuxTableRule) GetLayout() MuxLayout {
+	if x != nil {
+		return x.Layout
+	}
+	return MuxLayout_MUX_LAYOUT_UNSPECIFIED
+}
+
+func (x *MuxTableRule) GetNameColumn() string {
+	if x != nil {
+		return x.NameColumn
+	}
+	return ""
+}
+
+func (x *MuxTableRule) GetNumberColumns() []*MuxNumberColumn {
+	if x != nil {
+		return x.NumberColumns
+	}
+	return nil
+}
+
+func (x *MuxTableRule) GetFunctionColumns() []*MuxFunctionColumn {
+	if x != nil {
+		return x.FunctionColumns
+	}
+	return nil
+}
+
+func (x *MuxTableRule) GetPinStartColumn() string {
+	if x != nil {
+		return x.PinStartColumn
+	}
+	return ""
+}
+
+// MuxNumberColumn is one column of designators and the package they number. The
+// package is declared rather than read off the header, since a header like "KW47 48QFN"
+// names the part as well as the body.
+type MuxNumberColumn struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Header string                 `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
+	// Package id the column's designators belong to. Empty takes the header, lowercased.
+	Package       string `protobuf:"bytes,2,opt,name=package,proto3" json:"package,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MuxNumberColumn) Reset() {
+	*x = MuxNumberColumn{}
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[4]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MuxNumberColumn) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MuxNumberColumn) ProtoMessage() {}
+
+func (x *MuxNumberColumn) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[4]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MuxNumberColumn.ProtoReflect.Descriptor instead.
+func (*MuxNumberColumn) Descriptor() ([]byte, []int) {
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{4}
+}
+
+func (x *MuxNumberColumn) GetHeader() string {
+	if x != nil {
+		return x.Header
+	}
+	return ""
+}
+
+func (x *MuxNumberColumn) GetPackage() string {
+	if x != nil {
+		return x.Package
+	}
+	return ""
+}
+
+// MuxFunctionColumn is one column of functions.
+type MuxFunctionColumn struct {
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Header string                 `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
+	// RE2 pattern matching the label printed before each function in a CELL_LIST cell
+	// ("ALT\\d+"). The cell splits at each match, and the text after the label's " - " up
+	// to the next label is one function. Empty means the whole cell is one function, which
+	// is what ROW_PER_FUNCTION reads.
+	LabelPattern  string `protobuf:"bytes,2,opt,name=label_pattern,json=labelPattern,proto3" json:"label_pattern,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *MuxFunctionColumn) Reset() {
+	*x = MuxFunctionColumn{}
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[5]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *MuxFunctionColumn) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*MuxFunctionColumn) ProtoMessage() {}
+
+func (x *MuxFunctionColumn) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[5]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use MuxFunctionColumn.ProtoReflect.Descriptor instead.
+func (*MuxFunctionColumn) Descriptor() ([]byte, []int) {
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{5}
+}
+
+func (x *MuxFunctionColumn) GetHeader() string {
+	if x != nil {
+		return x.Header
+	}
+	return ""
+}
+
+func (x *MuxFunctionColumn) GetLabelPattern() string {
+	if x != nil {
+		return x.LabelPattern
+	}
+	return ""
+}
+
 // Patch is one pinned human correction to one cell of one table of one exact
 // document: the layer applied LAST in a derivation, so a verified fix can never be
 // regressed by a re-run. Keys are content hashes, so a new document revision or a
@@ -324,7 +606,7 @@ type Patch struct {
 
 func (x *Patch) Reset() {
 	*x = Patch{}
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[3]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -336,7 +618,7 @@ func (x *Patch) String() string {
 func (*Patch) ProtoMessage() {}
 
 func (x *Patch) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[3]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -349,7 +631,7 @@ func (x *Patch) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Patch.ProtoReflect.Descriptor instead.
 func (*Patch) Descriptor() ([]byte, []int) {
-	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *Patch) GetName() string {
@@ -445,7 +727,7 @@ type RunManifest struct {
 
 func (x *RunManifest) Reset() {
 	*x = RunManifest{}
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[4]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -457,7 +739,7 @@ func (x *RunManifest) String() string {
 func (*RunManifest) ProtoMessage() {}
 
 func (x *RunManifest) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[4]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -470,7 +752,7 @@ func (x *RunManifest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use RunManifest.ProtoReflect.Descriptor instead.
 func (*RunManifest) Descriptor() ([]byte, []int) {
-	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *RunManifest) GetDocContentHash() string {
@@ -581,7 +863,7 @@ type Gap struct {
 
 func (x *Gap) Reset() {
 	*x = Gap{}
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[5]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -593,7 +875,7 @@ func (x *Gap) String() string {
 func (*Gap) ProtoMessage() {}
 
 func (x *Gap) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_derive_derive_proto_msgTypes[5]
+	mi := &file_agni_v1_derive_derive_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -606,7 +888,7 @@ func (x *Gap) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Gap.ProtoReflect.Descriptor instead.
 func (*Gap) Descriptor() ([]byte, []int) {
-	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *Gap) GetKind() string {
@@ -634,13 +916,15 @@ var File_agni_v1_derive_derive_proto protoreflect.FileDescriptor
 
 const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/derive/derive.proto\x12\x0eagni.v1.derive\"\xbf\x02\n" +
+	"\x1bagni/v1/derive/derive.proto\x12\x0eagni.v1.derive\"\xfc\x02\n" +
 	"\x06Recipe\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12*\n" +
 	"\x11doc_title_pattern\x18\x02 \x01(\tR\x0fdocTitlePattern\x121\n" +
 	"\x06tables\x18\x03 \x03(\v2\x19.agni.v1.derive.TableRuleR\x06tables\x12;\n" +
 	"\n" +
-	"pin_tables\x18\x04 \x03(\v2\x1c.agni.v1.derive.PinTableRuleR\tpinTables\x12F\n" +
+	"pin_tables\x18\x04 \x03(\v2\x1c.agni.v1.derive.PinTableRuleR\tpinTables\x12;\n" +
+	"\n" +
+	"mux_tables\x18\x05 \x03(\v2\x1c.agni.v1.derive.MuxTableRuleR\tmuxTables\x12F\n" +
 	"\n" +
 	"attributes\x18\x0e \x03(\v2&.agni.v1.derive.Recipe.AttributesEntryR\n" +
 	"attributes\x1a=\n" +
@@ -654,7 +938,21 @@ const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\fPinTableRule\x12#\n" +
 	"\rtitle_pattern\x18\x01 \x01(\tR\ftitlePattern\x12>\n" +
 	"\vcolumn_axis\x18\x02 \x01(\x0e2\x1d.agni.v1.derive.PinColumnAxisR\n" +
-	"columnAxis\"\xd7\x01\n" +
+	"columnAxis\"\xc7\x02\n" +
+	"\fMuxTableRule\x12#\n" +
+	"\rtitle_pattern\x18\x01 \x01(\tR\ftitlePattern\x121\n" +
+	"\x06layout\x18\x02 \x01(\x0e2\x19.agni.v1.derive.MuxLayoutR\x06layout\x12\x1f\n" +
+	"\vname_column\x18\x03 \x01(\tR\n" +
+	"nameColumn\x12F\n" +
+	"\x0enumber_columns\x18\x04 \x03(\v2\x1f.agni.v1.derive.MuxNumberColumnR\rnumberColumns\x12L\n" +
+	"\x10function_columns\x18\x05 \x03(\v2!.agni.v1.derive.MuxFunctionColumnR\x0ffunctionColumns\x12(\n" +
+	"\x10pin_start_column\x18\x06 \x01(\tR\x0epinStartColumn\"C\n" +
+	"\x0fMuxNumberColumn\x12\x16\n" +
+	"\x06header\x18\x01 \x01(\tR\x06header\x12\x18\n" +
+	"\apackage\x18\x02 \x01(\tR\apackage\"P\n" +
+	"\x11MuxFunctionColumn\x12\x16\n" +
+	"\x06header\x18\x01 \x01(\tR\x06header\x12#\n" +
+	"\rlabel_pattern\x18\x02 \x01(\tR\flabelPattern\"\xd7\x01\n" +
 	"\x05Patch\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12(\n" +
 	"\x10doc_content_hash\x18\x02 \x01(\tR\x0edocContentHash\x12,\n" +
@@ -686,7 +984,11 @@ const file_agni_v1_derive_derive_proto_rawDesc = "" +
 	"\rPinColumnAxis\x12\x1f\n" +
 	"\x1bPIN_COLUMN_AXIS_UNSPECIFIED\x10\x00\x12\x1b\n" +
 	"\x17PIN_COLUMN_AXIS_PACKAGE\x10\x01\x12\x1b\n" +
-	"\x17PIN_COLUMN_AXIS_VARIANT\x10\x02B8Z6github.com/panyam/agni/datasheet/gen/go/agni/v1/deriveb\x06proto3"
+	"\x17PIN_COLUMN_AXIS_VARIANT\x10\x02*b\n" +
+	"\tMuxLayout\x12\x1a\n" +
+	"\x16MUX_LAYOUT_UNSPECIFIED\x10\x00\x12\x18\n" +
+	"\x14MUX_LAYOUT_CELL_LIST\x10\x01\x12\x1f\n" +
+	"\x1bMUX_LAYOUT_ROW_PER_FUNCTION\x10\x02B8Z6github.com/panyam/agni/datasheet/gen/go/agni/v1/deriveb\x06proto3"
 
 var (
 	file_agni_v1_derive_derive_proto_rawDescOnce sync.Once
@@ -700,29 +1002,37 @@ func file_agni_v1_derive_derive_proto_rawDescGZIP() []byte {
 	return file_agni_v1_derive_derive_proto_rawDescData
 }
 
-var file_agni_v1_derive_derive_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_derive_derive_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_agni_v1_derive_derive_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_agni_v1_derive_derive_proto_msgTypes = make([]protoimpl.MessageInfo, 10)
 var file_agni_v1_derive_derive_proto_goTypes = []any{
-	(PinColumnAxis)(0),   // 0: agni.v1.derive.PinColumnAxis
-	(*Recipe)(nil),       // 1: agni.v1.derive.Recipe
-	(*TableRule)(nil),    // 2: agni.v1.derive.TableRule
-	(*PinTableRule)(nil), // 3: agni.v1.derive.PinTableRule
-	(*Patch)(nil),        // 4: agni.v1.derive.Patch
-	(*RunManifest)(nil),  // 5: agni.v1.derive.RunManifest
-	(*Gap)(nil),          // 6: agni.v1.derive.Gap
-	nil,                  // 7: agni.v1.derive.Recipe.AttributesEntry
+	(PinColumnAxis)(0),        // 0: agni.v1.derive.PinColumnAxis
+	(MuxLayout)(0),            // 1: agni.v1.derive.MuxLayout
+	(*Recipe)(nil),            // 2: agni.v1.derive.Recipe
+	(*TableRule)(nil),         // 3: agni.v1.derive.TableRule
+	(*PinTableRule)(nil),      // 4: agni.v1.derive.PinTableRule
+	(*MuxTableRule)(nil),      // 5: agni.v1.derive.MuxTableRule
+	(*MuxNumberColumn)(nil),   // 6: agni.v1.derive.MuxNumberColumn
+	(*MuxFunctionColumn)(nil), // 7: agni.v1.derive.MuxFunctionColumn
+	(*Patch)(nil),             // 8: agni.v1.derive.Patch
+	(*RunManifest)(nil),       // 9: agni.v1.derive.RunManifest
+	(*Gap)(nil),               // 10: agni.v1.derive.Gap
+	nil,                       // 11: agni.v1.derive.Recipe.AttributesEntry
 }
 var file_agni_v1_derive_derive_proto_depIdxs = []int32{
-	2, // 0: agni.v1.derive.Recipe.tables:type_name -> agni.v1.derive.TableRule
-	3, // 1: agni.v1.derive.Recipe.pin_tables:type_name -> agni.v1.derive.PinTableRule
-	7, // 2: agni.v1.derive.Recipe.attributes:type_name -> agni.v1.derive.Recipe.AttributesEntry
-	0, // 3: agni.v1.derive.PinTableRule.column_axis:type_name -> agni.v1.derive.PinColumnAxis
-	6, // 4: agni.v1.derive.RunManifest.gaps:type_name -> agni.v1.derive.Gap
-	5, // [5:5] is the sub-list for method output_type
-	5, // [5:5] is the sub-list for method input_type
-	5, // [5:5] is the sub-list for extension type_name
-	5, // [5:5] is the sub-list for extension extendee
-	0, // [0:5] is the sub-list for field type_name
+	3,  // 0: agni.v1.derive.Recipe.tables:type_name -> agni.v1.derive.TableRule
+	4,  // 1: agni.v1.derive.Recipe.pin_tables:type_name -> agni.v1.derive.PinTableRule
+	5,  // 2: agni.v1.derive.Recipe.mux_tables:type_name -> agni.v1.derive.MuxTableRule
+	11, // 3: agni.v1.derive.Recipe.attributes:type_name -> agni.v1.derive.Recipe.AttributesEntry
+	0,  // 4: agni.v1.derive.PinTableRule.column_axis:type_name -> agni.v1.derive.PinColumnAxis
+	1,  // 5: agni.v1.derive.MuxTableRule.layout:type_name -> agni.v1.derive.MuxLayout
+	6,  // 6: agni.v1.derive.MuxTableRule.number_columns:type_name -> agni.v1.derive.MuxNumberColumn
+	7,  // 7: agni.v1.derive.MuxTableRule.function_columns:type_name -> agni.v1.derive.MuxFunctionColumn
+	10, // 8: agni.v1.derive.RunManifest.gaps:type_name -> agni.v1.derive.Gap
+	9,  // [9:9] is the sub-list for method output_type
+	9,  // [9:9] is the sub-list for method input_type
+	9,  // [9:9] is the sub-list for extension type_name
+	9,  // [9:9] is the sub-list for extension extendee
+	0,  // [0:9] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_derive_derive_proto_init() }
@@ -735,8 +1045,8 @@ func file_agni_v1_derive_derive_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_derive_derive_proto_rawDesc), len(file_agni_v1_derive_derive_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   7,
+			NumEnums:      2,
+			NumMessages:   10,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

@@ -10,19 +10,20 @@ import (
 )
 
 // The pin map is a design intent's IO map laid out one row per declared pin, each row joined to what
-// the three per-row IO-map rules concluded about it (agni issues 1188, 1189). The rules stay three,
-// because a reviewer acts on each answer differently; this is the reading a reviewer signing off the
-// map wants, the declaration beside the netlist.
+// the four per-row IO-map rules concluded about it (agni issues 1188, 1189, 667). The rules stay
+// apart, because a reviewer acts on each answer differently; this is the reading a reviewer signing
+// off the map wants, the declaration beside the netlist and the datasheet.
 
 var (
 	ioMapPinRule    = intent.SourceName + "/" + intent.RuleIOMapPin
 	ioMapNetRule    = intent.SourceName + "/" + intent.RuleIOMapNetAbsent
 	ioMapFarEndRule = intent.SourceName + "/" + intent.RuleIOMapFarEnd
 	ioMapCoverRule  = intent.SourceName + "/" + intent.RuleIOMapCoverage
+	ioMapFuncRule   = intent.SourceName + "/" + intent.RuleIOMapFunction
 )
 
 // PinMapColumns is the pin_map table's header. pin is the map's spelling; wired_net is the net the
-// resolved pin sits on, empty when the pin resolved to no net or did not resolve. The three _check
+// resolved pin sits on, empty when the pin resolved to no net or did not resolve. The four _check
 // columns are each rule's outcome, and outcome is the row's: fail when any rule failed, then
 // inconclusive, then pass, and not-considered when no rule could judge the row.
 var PinMapColumns = []webapi.TableColumn{
@@ -36,6 +37,7 @@ var PinMapColumns = []webapi.TableColumn{
 	{Name: "pin_check"},
 	{Name: "net_check"},
 	{Name: "far_end_check"},
+	{Name: "function_check"},
 	{Name: "outcome"},
 }
 
@@ -44,7 +46,7 @@ var PinMapColumns = []webapi.TableColumn{
 func ranIOMap(rules []*check.Rule) bool {
 	for _, r := range rules {
 		switch r.Name {
-		case ioMapPinRule, ioMapNetRule, ioMapFarEndRule, ioMapCoverRule:
+		case ioMapPinRule, ioMapNetRule, ioMapFarEndRule, ioMapCoverRule, ioMapFuncRule:
 			return true
 		}
 	}
@@ -61,6 +63,7 @@ func PinMapTable(ioMap []*configpb.PinAssignment, verdicts []*checkspb.Verdict) 
 	for _, a := range ioMap {
 		pinV := rowVerdict(verdicts, ioMapPinRule, a)
 		farV := rowVerdict(verdicts, ioMapFarEndRule, a)
+		fnV := rowVerdict(verdicts, ioMapFuncRule, a)
 		netV := netVerdict(verdicts, a.GetNet())
 		wired := contextRef(pinV, intent.RoleOnThePin)
 		var farEnd string
@@ -84,7 +87,8 @@ func PinMapTable(ioMap []*configpb.PinAssignment, verdicts []*checkspb.Verdict) 
 			outcomeCell(pinV),
 			outcomeCell(netV),
 			outcomeCell(farV),
-			rowOutcome(pinV, netV, farV),
+			outcomeCell(fnV),
+			rowOutcome(pinV, netV, farV, fnV),
 		}})
 	}
 	return t
@@ -181,7 +185,7 @@ func PinMapSections(t *webapi.Table) []rpt.PinMap {
 		out[i].Rows = append(out[i].Rows, rpt.PinMapRow{
 			Pin: c[1], Function: c[2], Net: c[3], WiredNet: c[4], FarEnd: c[5], Route: c[6],
 			PinCheck: check.Outcome(c[7]), NetCheck: check.Outcome(c[8]), FarEndCheck: check.Outcome(c[9]),
-			Outcome: check.Outcome(c[10]),
+			FunctionCheck: check.Outcome(c[10]), Outcome: check.Outcome(c[11]),
 		})
 	}
 	return out

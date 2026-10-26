@@ -75,7 +75,7 @@ net, a component), and the other four describe relationships between several net
 | `nets` | what each named net is, keyed by name (its voltage and domain, its peak draw, the protection it carries, its reset polarity, strap level, AC coupling or pull-up reach) | the design contradicts any fact declared for it |
 | `sequences` | the power-up order of groups of rails | the gating chain is absent, or runs the other way round |
 | `strap_groups` | several strap nets read together as one binary number, and the value it encodes | the group does not encode the declared value, or two devices collide |
-| `io_map` | which net lands on which pin of which device, and optionally what sits at the far end | the net is on a different pin, the declared net is absent, or the far end is wrong |
+| `io_map` | which net lands on which pin of which device, and optionally the function selected there and what sits at the far end | the net is on a different pin, the declared net is absent, the far end is wrong, or the datasheet lists no such function on that pin |
 | `margin_factor` | the headroom every supply must have over its rails' declared peaks | a supply is rated below peak times the factor |
 | `components` | what each named component is, keyed by ref-des (a connector's exposure) | a declared component is absent, or is not a connector |
 
@@ -157,6 +157,7 @@ io_map:
   - net: MCU_NRST
     device: U3
     pin: PTC11                     # the datasheet's name works as well as the designator
+    function: GPIO                 # optional, checked against the part's datasheet
     to: {device: U1, pin: '5'}     # optional far end
 ```
 
@@ -165,8 +166,9 @@ and a netlist answers in package designators, so both are resolved: `PTE7`, `PTE
 name carrying a zero-width space pasted out of a spreadsheet all reach the same pin. A match that
 needed any of that says so in the verdict, so a note always means something was inferred.
 
-It compiles to four rules rather than one. Three of them ask whether the design kept the promises the
-map made, and the fourth inverts the question to ask which nets the map never mentioned. That number
+It compiles to as many as five rules rather than one. Three of them ask whether the design kept the
+promises the map made, one inverts the question to ask which nets the map never mentioned, and the
+fifth, compiled when a row declares a `function`, asks whether the part can be set to it. That number
 is usually the important one. A design with sixteen hundred nets and a map declaring two hundred has
 two hundred checked and fourteen hundred unexamined, which is not the same as clean, and nothing else
 in a run tells those apart. Nets it does not name report as `not-considered` rather than as failures,
@@ -178,9 +180,15 @@ usually a real disconnection, where a net the netlist has and the map does not d
 incomplete map). The far-end columns are the sparse ones. In the one real map we measured, roughly a
 third of rows declared a far end, so `io-map-far-end` gives EVERY row a verdict and a row with no far
 end reads `not-considered`. A rule that reported only the rows carrying one would show a clean result
-over a third of the map and say nothing about the rest. `function` is accepted and NOT yet
-evaluated, since deciding whether a function is legal on a pin needs the part's alternate-function table; every verdict on a row carrying one says so
-outright.
+over a third of the map and say nothing about the rest.
+
+A row's `function` is checked by `io-map-function` against the functions the part's datasheet lists
+for that pin, read from the vendor's pin-mux table into the corpus (see
+[the datasheet layer](../architecture/datasheet-layer.md#pin-mux-tables)). SDA mapped onto the pin
+that offers SCL fails, and the failure lists what the pin can be. A part with no datasheet entry, or
+whose entry has no pin-mux table, reads `not-considered` with that reason, so a function column
+filled in never reads as checked when it was not. A run with no datasheet corpus at all skips the
+rule, as it skips every rule that needs one.
 
 ### Reading the map one pin at a time
 
@@ -189,7 +197,7 @@ defect and does not suit one signing off the map itself, who reads it a pin at a
 checks a map also lays it out that way. `agni check --format html` opens with a section per device
 ("Pins on U1"), and each declared pin is one row. A row shows the declared function, the declared
 net, the net the netlist puts on that pin, the far end and the route to it, and what each of the
-three per-row rules concluded.
+four per-row rules concluded.
 
 | outcome | pin | function | declared net | netlist net | far end | route |
 |---|---|---|---|---|---|---|
@@ -201,9 +209,9 @@ while its pin and its net both pass. A row no rule could judge reads `not consid
 is the one `agni trace` prints, net to net through each series part.
 
 The same rows are the `pin_map` table the Tabulate rpc returns for a check run, the one a workbook
-or a csv of the run carries.
+of the run carries, and `--table` writes it as csv.
 
-    agni check --verdicts --format json design/ | jq '{check: .}' | agni tabulate -
+    agni check --verdicts --format csv --table pin_map design/
 
 A spreadsheet already kept as ball, function and expected net maps straight onto a row. The ball
 is `pin`, the function is `function`, the expected net is `net`, and the MCU is each row's
@@ -224,7 +232,7 @@ separately gets its own rule (WS3-058), and the naming follows what the sign-off
 | `modules` with nets, `sequences`, `strap_groups` | one per declared entry, named from a slug of it (`subsystem-<name>`, `sequence-<name>`, `strap-group-<name>`) | each entry is its own checklist item |
 | `modules` without nets | fixed names (`module-missing`, `module-count`) | the review item is the mechanism rather than any one entry |
 | `nets` | one per FACT (`voltage-domain-mismatch`, `protection-<kind>`, `property-<kind>`, `rail-current-capacity`, `rail-current-margin`, `load-switch-trip-below-budget`) | a reviewer signs off "every rail has its OVP clamp", not each rail |
-| `io_map` | four fixed names, whatever the map's length | the exception, since nobody signs off "net 137 is on the right pin" as its own item |
+| `io_map` | five fixed names, whatever the map's length | the exception, since nobody signs off "net 137 is on the right pin" as its own item |
 
 `strap_groups` also compiles one `strap-address-collision` rule across all groups, because a
 collision is between two groups and belongs to neither. It compiles only when two groups share a bus,

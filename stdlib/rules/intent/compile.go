@@ -20,7 +20,7 @@ const (
 	// switch's current limit against the rail's declared draw. It reads the same declared peaks as the
 	// two rules above, but judges a different part (the switch rather than the supply), so it is its own rule.
 	RuleLoadSwitchTripBelowBudget = "load-switch-trip-below-budget"
-	// The three IO-map rules (agni issue 517). Fixed names rather than one per declared row, because a
+	// The three IO-map rules that check the netlist (agni issue 517). Fixed names rather than one per declared row, because a
 	// real map is hundreds of rows and a reviewer signs off "the netlist matches the IO map", not each
 	// row (docsite/content/guide/design-intent.md#one-rule-per-declared-thing). Three names because each
 	// answer is acted on differently, and the last two are opposite defects that get confused when they
@@ -28,6 +28,9 @@ const (
 	RuleIOMapPin       = "io-map-pin-mismatch"
 	RuleIOMapNetAbsent = "io-map-net-absent"
 	RuleIOMapFarEnd    = "io-map-far-end"
+	// RuleIOMapFunction checks a row's declared function against the alternate functions the part's
+	// datasheet lists for the pin (agni issue 667).
+	RuleIOMapFunction = "io-map-function"
 	// The context roles a per-row IO-map verdict carries, which with the subject's device are the map
 	// row's key (agni issue 1188). RoleOnThePin is the net the resolved pin actually sits on, and
 	// RoleDeclaredPin appears only when the map spells the pin differently from the design.
@@ -88,6 +91,11 @@ func Compile(d Declaration) []*check.Rule {
 		// as unexamined rather than clean.
 		rules = append(rules, ioMapFarEndRule(d))
 		rules = append(rules, ioMapCoverageRule(d))
+		// Compiled only when a row declares a function, since on a map with no function column it
+		// could only report every row not-considered.
+		if anyRowDeclaresFunction(d) {
+			rules = append(rules, ioMapFunctionRule(d))
+		}
 	}
 	if len(d.Exposures) > 0 {
 		rules = append(rules, exposureDeclaredRule(d))
@@ -144,6 +152,17 @@ func Compile(d Declaration) []*check.Rule {
 func anyModuleHasCount(d Declaration) bool {
 	for _, mod := range d.Modules {
 		if mod.Count > 0 {
+			return true
+		}
+	}
+	return false
+}
+
+// anyRowDeclaresFunction reports whether any IO-map row selects a function, which is when
+// io-map-function has something to compare.
+func anyRowDeclaresFunction(d Declaration) bool {
+	for _, a := range d.IOMap {
+		if a.Function != "" {
 			return true
 		}
 	}

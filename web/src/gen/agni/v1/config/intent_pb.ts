@@ -378,7 +378,8 @@ export type PinAssignment = Message<"agni.v1.config.PinAssignment"> & {
   pin: string;
 
   /**
-   * function is carried and not yet evaluated (agni issue 667).
+   * function is the peripheral function selected on the pin, which io-map-function checks against
+   * the alternate functions the part's datasheet lists (agni issue 667).
    *
    * @generated from field: string function = 4;
    */

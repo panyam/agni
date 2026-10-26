@@ -13,12 +13,15 @@ Last pruned 2026-10-26, at `368e68b1`.
 
 ## At a glance
 
-No mission is active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
-mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
-exercise run on the mission issue.
+#1194 `mission_pin_functions` is active. `MISSION=mission_<slug> queue.sh` (the retriage skill's
+script) prints one mission's queue, and the order lives in GitHub labels and blocked-by links rather
+than here. Log each exercise run on the mission issue.
 
-- **Choose the next mission with `retriage`.** The candidates are below; until one is chosen the
-  queue offers only off-mission work.
+- **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
+  datasheet), exercised by `make exercise-pin-functions` (`PIN_DESIGN=` for another design). #1188 and
+  #1189 closed with the pin map table, and #667 checks a declared function against the datasheet's
+  pin-mux table. Next ready: #1193 (a pin name resolving in EDIF port designators and in `trace`), then
+  #1190 (one HTML file carrying the checks and the query sets).
 - **#1176 `mission_shared_viewer_rooms`** (several people on one server, each driving their own tabs),
   0 of 1 and not active. #1187 pushed a tab's Ask to a Claude Code session as a turn, so #1173 now holds
   only the multi-user half (OAuth on `/mcp`, a relay token per user, the pairing UI) and is `waiting`
@@ -60,8 +63,8 @@ anonymous-pull check that release owes.
 issue 541 half-settled, the `Witness.Statement` row that asks for a ticket, and the `agni version`
 row whose trigger is "never".
 
-Four items are gated, #677 (only the "declare a NEW class" half, gated on the class registry), #667,
-#681 and #523.
+Three items are gated, #677 (only the "declare a NEW class" half, gated on the class registry), #681
+and #523.
 
 ## Worth knowing before the next change
 

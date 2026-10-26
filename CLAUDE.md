@@ -733,7 +733,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
 
 ## Engine gotchas
 
-**A declared pin map is an intent form, and it compiles to FOUR rules.** `io_map` in a design's
+**A declared pin map is an intent form, and it compiles to up to FIVE rules.** `io_map` in a design's
 `intent:` section says which net lands on which pin of which device. Three rules ask whether the design
 kept that promise (`io-map-pin-mismatch`, `io-map-net-absent`, `io-map-far-end`) and the fourth,
 `io-map-coverage`, inverts the question by taking the NETLIST as its considered set, so it reports
@@ -741,9 +741,11 @@ how much of the design the map never mentioned. That number usually matters most
 declaring two hundred of sixteen hundred nets leaves fourteen hundred UNEXAMINED, which is not
 clean. An undeclared net is `not-considered` and never a fail, and rails stay in the denominator
 with their reason saying so, because excusing them is the tool deciding which absences are
-acceptable. `function` is carried and NOTHING READS IT (issue 667, which is the ALTERNATE-function
-table; issue 188 is the pin function table and is done); every verdict on a row declaring one says
-so outright.
+acceptable. The fifth, `io-map-function`, compiles when a row declares a `function` and checks it
+against `Pin.alternates`, the functions the part's pin-mux table lists (agni 667, a third recipe table
+kind, `MuxTableRule`, beside the parameter and pin-function tables). It needs the datasheet tier, so a
+run with no corpus SKIPS it and the pin map's `function_check` column reads empty rather than
+not-considered. `check --verdicts --format csv --table pin_map` writes the map one row per pin.
 
 **Comparing an identifier across two documents goes through `core/ident`, never `==`.** A pin map is
 authored in the datasheet's vocabulary and a netlist answers in package designators, and both carry
@@ -1141,7 +1143,9 @@ until the count is listed there on purpose (agni 727).
 ## Issues and missions
 
 Work is aimed at MISSIONS, issues labelled `mission` that state something a person does with agni
-and the command that exercises it. Several may be active at once, one per worktree, and none is now.
+and the command that exercises it. Several may be active at once, one per worktree. #1194
+`mission_pin_functions` (sign off a board's pin map against the netlist and the datasheet) is active,
+and `make exercise-pin-functions` is its exercise.
 #843 `mission_revision_audit` (2026-10-04), #851 `mission_public_demo` (2026-10-20), #909
 `mission_ask` (2026-10-22), #1157 `mission_viewer_page_api` and #845 `mission_browser_review` (both
 2026-10-25) have closed, and their exercises live on as the example #843 built, `make

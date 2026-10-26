@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -325,6 +325,17 @@ exercise-mcp-ask: agni ui $(if $(filter jetson,$(WALK_DESIGN)),samples-oracle)
 	mkdir -p $(EXERCISE_OUT)
 	cd examples/ask-over-mcp && AGNI_BIN=$(CURDIR)/bin/agni $(GO) run . exercise --wire stateless --out $(EXERCISE_OUT)/mcp-ask.md exercise/$(WALK_DESIGN).yaml
 	cd examples/ask-over-mcp && AGNI_BIN=$(CURDIR)/bin/agni $(GO) run . exercise --wire session --out $(EXERCISE_OUT)/mcp-ask-session.md exercise/$(WALK_DESIGN).yaml
+
+# The pin-map sign-off mission's exercise (#1194, agni issue 667): a design's IO map laid out one row
+# per declared pin, beside the net the netlist puts there and the functions the part's datasheet lists
+# for the pin, as the pin_map table and the HTML report's "Pins on" sections. PIN_DESIGN names any
+# design whose design.yaml declares an io_map; the default is the repo's fixture, where PTB5 fails
+# because the map puts SDA on the pin that offers SCL.
+PIN_DESIGN ?= cmd/agni/testdata/pin-functions
+exercise-pin-functions: agni
+	mkdir -p $(EXERCISE_OUT)
+	bin/agni check --format html -o $(EXERCISE_OUT)/pin-functions.html $(PIN_DESIGN)
+	bin/agni check --verdicts --format csv --table pin_map $(PIN_DESIGN)
 
 # WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
 # build of the same commit parsed into the browser's cache (wasmengine.StoreVersion, agni issue 911).

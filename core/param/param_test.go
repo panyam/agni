@@ -310,6 +310,9 @@ func TestValidateRejectsPinBinding(t *testing.T) {
 		{"pin provenance nobody stands behind", func(s *parampb.PartSpec) {
 			s.Pins[0].Prov.Confidence = 0
 		}, "confidence"},
+		{"an alternate function with no name", func(s *parampb.PartSpec) {
+			s.Pins[0].Alternates = []*parampb.PinAlternate{{Name: "GPIO"}, {Name: " "}}
+		}, "alternates[1]"},
 	}
 	for _, tc := range cases {
 		spec := readFixture(t, "txb0104.textproto")

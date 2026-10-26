@@ -34,14 +34,15 @@ func TestPinMapTableJoinsEachRowToItsOwnVerdicts(t *testing.T) {
 		pinVerdict(ioMapPinRule, fail, "U1", "3", map[string]*checkspb.Subject{
 			"declared net": netSubject("B"), "declared pin": {Kind: "pin", Ref: "U1", Pin: "PTA0"}, "on the pin": netSubject("A")}),
 		pinVerdict(ioMapPinRule, pass, "U1", "7", map[string]*checkspb.Subject{"declared net": netSubject("C"), "on the pin": netSubject("C")}),
+		pinVerdict(ioMapFuncRule, fail, "U1", "7", map[string]*checkspb.Subject{"declared net": netSubject("C")}),
 		{Rule: ioMapNetRule, Outcome: pass, Subjects: []*checkspb.Subject{netSubject("A")}},
 		{Rule: ioMapNetRule, Outcome: pass, Subjects: []*checkspb.Subject{netSubject("B")}},
 	}
 	tb := PinMapTable(ioMap, verdicts)
 	want := []string{
-		"U1,PTA0,,A,A,,,pass,pass,,pass",
-		"U1,PTA0,,B,A,,,fail,pass,,fail",
-		"U1,7,SPI_CLK,C,C,,,pass,,,pass",
+		"U1,PTA0,,A,A,,,pass,pass,,,pass",
+		"U1,PTA0,,B,A,,,fail,pass,,,fail",
+		"U1,7,SPI_CLK,C,C,,,pass,,,fail,fail",
 	}
 	if len(tb.GetRows()) != len(want) {
 		t.Fatalf("%d rows, want %d", len(tb.GetRows()), len(want))

@@ -89,6 +89,7 @@ The EE rule catalog. Each rule links to its full reference: what it means, why i
 | [intent/exposure-declared](intent-exposure-declared/) | intent | warning | A component the design intent gives an exposure is absent from the design or is not a connector. |
 | [intent/io-map-coverage](intent-io-map-coverage/) | intent | warning | How much of the netlist the design intent's IO map declares at all. |
 | [intent/io-map-far-end](intent-io-map-far-end/) | intent | warning | A net does not reach the far-end device pin the design intent's IO map declares. |
+| [intent/io-map-function](intent-io-map-function/) | intent | warning | A function the design intent's IO map selects is not one the part's datasheet lists for that pin. |
 | [intent/io-map-net-absent](intent-io-map-net-absent/) | intent | warning | The design intent's IO map declares a net the netlist does not have. |
 | [intent/io-map-pin-mismatch](intent-io-map-pin-mismatch/) | intent | warning | A net is not on the pin the design intent's IO map assigns it to. |
 | [intent/load-switch-trip-below-budget](intent-load-switch-trip-below-budget/) | intent | warning | A load switch's current limit is set below the peak current the design intent declares for the rail it feeds. |

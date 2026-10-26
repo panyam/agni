@@ -87,7 +87,7 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 
 	// matchRecipes reads the doc-IR title, which is the RIGHT use of it, because a recipe
 	// selects documents by the part they describe and not by revision.
-	rules, pinRules, err := matchRecipes(work.Title, recipes, manifest)
+	rules, pinRules, muxRules, err := matchRecipes(work.Title, recipes, manifest)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -97,6 +97,7 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 	}
 	_ = applied
 
+	mux := &muxState{}
 	for _, pg := range work.Pages {
 		for _, t := range pg.Tables {
 			kind := parampb.LimitKind_LIMIT_KIND_UNSPECIFIED
@@ -121,6 +122,21 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 			}
 			if pinTable {
 				continue
+			}
+			// A pin-mux table is offered last, after neither a parameter nor a pin-function rule
+			// claimed it, so a recipe that names the same title for both reads it as the pin table.
+			if kind == parampb.LimitKind_LIMIT_KIND_UNSPECIFIED {
+				matched := false
+				for _, title := range candidates {
+					if r, ok := classifyMux(title, muxRules); ok {
+						t.Title, matched = title, true
+						extractMuxTable(spec, manifest, mux, pg, t, r)
+						break
+					}
+				}
+				if matched {
+					continue
+				}
 			}
 			if kind == parampb.LimitKind_LIMIT_KIND_UNSPECIFIED {
 				near := ""
@@ -228,16 +244,17 @@ type compiledRule struct {
 	kind parampb.LimitKind
 }
 
-func matchRecipes(title string, recipes []*derivepb.Recipe, manifest *derivepb.RunManifest) ([]compiledRule, []compiledPinRule, error) {
+func matchRecipes(title string, recipes []*derivepb.Recipe, manifest *derivepb.RunManifest) ([]compiledRule, []compiledPinRule, []compiledMuxRule, error) {
 	var rules []compiledRule
 	var pinRules []compiledPinRule
+	var muxRules []compiledMuxRule
 	for _, r := range recipes {
 		if r.DocTitlePattern == "" {
 			continue
 		}
 		docRe, err := regexp.Compile(r.DocTitlePattern)
 		if err != nil {
-			return nil, nil, fmt.Errorf("derive: recipe %s: doc_title_pattern: %w", r.Name, err)
+			return nil, nil, nil, fmt.Errorf("derive: recipe %s: doc_title_pattern: %w", r.Name, err)
 		}
 		if !docRe.MatchString(title) {
 			continue
@@ -246,28 +263,35 @@ func matchRecipes(title string, recipes []*derivepb.Recipe, manifest *derivepb.R
 		for _, tr := range r.Tables {
 			re, err := regexp.Compile(tr.TitlePattern)
 			if err != nil {
-				return nil, nil, fmt.Errorf("derive: recipe %s: title_pattern %q: %w", r.Name, tr.TitlePattern, err)
+				return nil, nil, nil, fmt.Errorf("derive: recipe %s: title_pattern %q: %w", r.Name, tr.TitlePattern, err)
 			}
 			kind, ok := parampb.LimitKind_value[tr.LimitKind]
 			if !ok || kind == 0 {
-				return nil, nil, fmt.Errorf("derive: recipe %s: unknown limit_kind %q", r.Name, tr.LimitKind)
+				return nil, nil, nil, fmt.Errorf("derive: recipe %s: unknown limit_kind %q", r.Name, tr.LimitKind)
 			}
 			rules = append(rules, compiledRule{re, parampb.LimitKind(kind)})
 		}
 		for _, pr := range r.PinTables {
 			re, err := regexp.Compile(pr.TitlePattern)
 			if err != nil {
-				return nil, nil, fmt.Errorf("derive: recipe %s: pin title_pattern %q: %w", r.Name, pr.TitlePattern, err)
+				return nil, nil, nil, fmt.Errorf("derive: recipe %s: pin title_pattern %q: %w", r.Name, pr.TitlePattern, err)
 			}
 			pinRules = append(pinRules, compiledPinRule{re, pr.ColumnAxis})
 		}
+		for _, mr := range r.MuxTables {
+			c, err := compileMuxRule(mr)
+			if err != nil {
+				return nil, nil, nil, fmt.Errorf("derive: recipe %s: %w", r.Name, err)
+			}
+			muxRules = append(muxRules, c)
+		}
 	}
-	if len(rules) == 0 && len(pinRules) == 0 {
+	if len(rules) == 0 && len(pinRules) == 0 && len(muxRules) == 0 {
 		manifest.Gaps = append(manifest.Gaps, &derivepb.Gap{
 			Kind: "no-recipe", Detail: fmt.Sprintf("no recipe matched document title %q", title),
 		})
 	}
-	return rules, pinRules, nil
+	return rules, pinRules, muxRules, nil
 }
 
 // classifyPin reports whether a title names a pin function table, and what the recipe

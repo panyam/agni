@@ -613,7 +613,8 @@ type PinAssignment struct {
 	Device string                 `protobuf:"bytes,2,opt,name=device,proto3" json:"device,omitempty"`
 	// pin is the package designator or the datasheet's functional name. Both resolve.
 	Pin string `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
-	// function is carried and not yet evaluated (agni issue 667).
+	// function is the peripheral function selected on the pin, which io-map-function checks against
+	// the alternate functions the part's datasheet lists (agni issue 667).
 	Function string `protobuf:"bytes,4,opt,name=function,proto3" json:"function,omitempty"`
 	// to is the optional far end, which needs both a device and a pin.
 	To            *PinEndpoint `protobuf:"bytes,5,opt,name=to,proto3" json:"to,omitempty"`

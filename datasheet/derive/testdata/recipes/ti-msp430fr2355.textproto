@@ -1,0 +1,15 @@
+# Recipe for the TI MSP430FR2355 family data sheet (SLASEC4D). Its "Pin Attributes" table is
+# one row per signal, several rows to a pin, numbered in four packages. The reset-state column
+# is filled once per pin on its first row, which is where each pin begins.
+name: "ti-msp430fr2355"
+doc_title_pattern: "^MSP430FR2[13]5[35]"
+mux_tables {
+  title_pattern: "(?i)pin attributes"
+  layout: MUX_LAYOUT_ROW_PER_FUNCTION
+  number_columns { header: "PT" }
+  number_columns { header: "RHA" }
+  number_columns { header: "DBT" }
+  number_columns { header: "RSM" }
+  function_columns { header: "SIGNAL NAME" }
+  pin_start_column: "RESET STATE AFTER BOR"
+}

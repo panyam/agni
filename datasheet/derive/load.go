@@ -16,7 +16,8 @@ import (
 
 // LoadRecipes walks fsys for *.textproto Recipes and validates each: a name, a
 // compilable doc_title_pattern, and table rules whose patterns compile and whose
-// limit_kind names resolve to agni.v1.param.LimitKind values. All-or-nothing, like
+// limit_kind names resolve to agni.v1.param.LimitKind values, and mux-table rules
+// that name a layout and at least one function column. All-or-nothing, like
 // param.LoadSet, so a broken recipe fails the load rather than shrinking the corpus.
 func LoadRecipes(fsys fs.FS) ([]*derivepb.Recipe, error) {
 	var out []*derivepb.Recipe
@@ -37,6 +38,11 @@ func LoadRecipes(fsys fs.FS) ([]*derivepb.Recipe, error) {
 			}
 			if kind, ok := parampb.LimitKind_value[tr.LimitKind]; !ok || kind == 0 {
 				return fmt.Errorf("%s: unknown limit_kind %q", path, tr.LimitKind)
+			}
+		}
+		for _, mr := range r.MuxTables {
+			if _, err := compileMuxRule(mr); err != nil {
+				return fmt.Errorf("%s: %w", path, err)
 			}
 		}
 		out = append(out, r)

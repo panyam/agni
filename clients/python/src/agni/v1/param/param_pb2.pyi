@@ -123,7 +123,7 @@ class PinNumber(_message.Message):
     def __init__(self, package_ref: _Optional[str] = ..., number: _Optional[str] = ...) -> None: ...
 
 class Pin(_message.Message):
-    __slots__ = ("id", "name", "function", "description", "numbers", "attributes", "prov")
+    __slots__ = ("id", "name", "function", "description", "numbers", "alternates", "attributes", "prov")
     class AttributesEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -136,6 +136,7 @@ class Pin(_message.Message):
     FUNCTION_FIELD_NUMBER: _ClassVar[int]
     DESCRIPTION_FIELD_NUMBER: _ClassVar[int]
     NUMBERS_FIELD_NUMBER: _ClassVar[int]
+    ALTERNATES_FIELD_NUMBER: _ClassVar[int]
     ATTRIBUTES_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     id: str
@@ -143,9 +144,16 @@ class Pin(_message.Message):
     function: PinFunction
     description: str
     numbers: _containers.RepeatedCompositeFieldContainer[PinNumber]
+    alternates: _containers.RepeatedCompositeFieldContainer[PinAlternate]
     attributes: _containers.ScalarMap[str, str]
     prov: ParamProvenance
-    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., function: _Optional[_Union[PinFunction, str]] = ..., description: _Optional[str] = ..., numbers: _Optional[_Iterable[_Union[PinNumber, _Mapping]]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., prov: _Optional[_Union[ParamProvenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, id: _Optional[str] = ..., name: _Optional[str] = ..., function: _Optional[_Union[PinFunction, str]] = ..., description: _Optional[str] = ..., numbers: _Optional[_Iterable[_Union[PinNumber, _Mapping]]] = ..., alternates: _Optional[_Iterable[_Union[PinAlternate, _Mapping]]] = ..., attributes: _Optional[_Mapping[str, str]] = ..., prov: _Optional[_Union[ParamProvenance, _Mapping]] = ...) -> None: ...
+
+class PinAlternate(_message.Message):
+    __slots__ = ("name",)
+    NAME_FIELD_NUMBER: _ClassVar[int]
+    name: str
+    def __init__(self, name: _Optional[str] = ...) -> None: ...
 
 class PinRelation(_message.Message):
     __slots__ = ("subject_pin_ref", "reference_pin_ref", "kind", "difference", "unit", "modality", "conditions", "raw", "attributes", "prov")

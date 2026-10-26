@@ -148,6 +148,10 @@ message Pin {
   // function table but no package pinout, which is a real and usable state: the NAME
   // channel still resolves.
   repeated PinNumber numbers = 5;
+  // Every function the part's pin-mux table says this pin can be switched to, the plain GPIO
+  // included, in the document's order (agni issue 667). Empty when no alternate-function
+  // table was read, which a consumer reads as "unknown" and never as "no functions".
+  repeated PinAlternate alternates = 6;
 
   map<string, string> attributes = 14;
 
@@ -155,6 +159,21 @@ message Pin {
   // is an extracted claim like any other, and an extracted claim nobody can verify against
   // a page is a liability.
   ParamProvenance prov = 16;
+}
+
+// PinAlternate is one function a pin can be muxed to, as the pin-mux table prints it
+// ("LPUART1_RX", or "ADC0_A10/CMP0_IN0" where one slot names two signals). A consumer
+// comparing against it splits and canonicalizes through core/ident; the text stays as
+// printed so it can be checked against the page.
+//
+// It holds a name and no selector, although both vendors read so far print one. NXP prints
+// a mux slot per function ("ALT3 - LPUART1_RX"), and TI selects a function with PxSEL bits,
+// sometimes together with the pin's direction (SMCLK on P1.0 is P1SEL 10 with P1DIR 1). The
+// two forms do not share a shape, and a legality check compares names only. The selector
+// is left out until a consumer needs it and a shape fits both forms; it is a message rather
+// than a string so adding one later breaks nothing.
+message PinAlternate {
+  string name = 1;
 }
 
 // PinRelationKind is what a relation asserts. One member today, deliberately: the

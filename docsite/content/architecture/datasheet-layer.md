@@ -375,7 +375,7 @@ flowchart LR
 |---|---|
 | **1. Classification by candidate titles** | Real producers emit datasheet tables untitled, and often fold the section band into the table as a merged header cell. Classification tries candidates in order: the producer-attached title, then embedded band cells, then heading-like blocks above the table (nearest first, with a small overlap tolerance because real detected boxes touch). The first candidate a recipe rule matches becomes the title and limit kind. Unmatched tables land in the gap list rather than being silently skipped |
 | **2. Header-row detection and tokenization** | The column-header row is found by recognized names (Symbol, Parameter, Test Conditions, Min, Typ, Max, Units, Ratings), scanning past band rows. TI-shaped tables with an unlabeled row-label column fall back to column 0, leaving symbol empty rather than guessing. Value cells tokenize by shape, conditions parse two structured forms, and everything else is kept raw-only, which the comparison semantics above then correctly exclude |
-| **3. Pin function tables** | A separate path yielding terminals rather than values, and the one stage needing the recipe to declare something the document does not say. Below |
+| **3. Pin function and pin-mux tables** | A separate path yielding terminals rather than values, and the one stage needing the recipe to declare something the document does not say. Below |
 | **4. Patches, applied last** | One pinned human correction to one cell of one exact document, keyed by document content hash plus pre-patch table hash, so a new revision or a re-detection stops it matching. Empty text clears a cell and a patch at an empty position inserts, so a producer cell-placement error (the real LM1117 case, where docling put the abs-max 20 under MIN) is corrected by a clear-plus-insert pair. Applying patches last means a verified fix cannot regress |
 | **5. Validation and emission** | The emitted PartSpec must pass `param.Validate`, and every parameter carries provenance with `method: "derive/v0"` and confidence 0.9, where only human verification earns 1.0 |
 
@@ -414,6 +414,55 @@ Not internally connected."), and every such row is gapped whichever way it went.
 otherwise taken at face value, because real tables leave it blank on supply and ground rows and
 inferring `POWER_INPUT` from a name like `VCCA` would be this stage inventing a classification the
 document declined to make.
+
+</details>
+
+### Pin-mux tables
+
+A microcontroller's datasheet also says which peripheral functions each pin can be switched to, and
+`Pin.alternates` holds them (agni issue 667). They come from a third table kind, `MuxTableRule`,
+because the table answers a different question from the pin function table. That one says what kind
+of pin a terminal is, and this one says what it can carry. `intent/io-map-function` reads it to check
+a design's declared pin map.
+
+Two vendors' tables were read before the shape was settled, per the field-discipline rule:
+
+| | NXP KW47, Table 58 "Package pinout" | TI MSP430FR2355, Table 4-1 "Pin Attributes" |
+|---|---|---|
+| Layout | one row per pin, every mux slot in one cell (`ALT0 - ADC0_B13 ALT1 - PTB3 ...`) | one row per function, several rows to a pin, numbered in four packages |
+| Selector | the slot, `ALTn` | `PxSEL` bits, sometimes with the pin's direction, in separate port tables |
+
+Both list functions per pin, and neither switches a whole bank at once, so a function belongs to the
+pin. A package variant renumbers the pin and leaves its functions alone, which the existing
+`PinNumber` already covers. **The selector is left out of the contract.** Both vendors print one, in
+forms that share no shape, and a legality check compares names only, so `PinAlternate` holds a name and
+waits for a consumer that needs the selector.
+
+The recipe names every column, because these tables share no header vocabulary to infer from, and
+declares the layout (`MUX_LAYOUT_CELL_LIST` or `MUX_LAYOUT_ROW_PER_FUNCTION`). A mux row joins the pin
+a pin function table already emitted when they share a designator in a package, and creates the pin
+otherwise. Each name is kept as printed, footnote markers aside, so `ADC0_A10/CMP0_IN0` stays one slot
+and a comparison splits it through `core/ident`.
+
+<details>
+<summary>What real pin-mux output does, and the gap each case leaves</summary>
+
+| What arrives | What derivation does |
+|---|---|
+| A pin broken over a page, its last slots in a row with no name and no designator | The row continues the previous table's last pin |
+| A function named after its own label (`LPTMR0_ALT3`) | The recipe's label pattern carries word boundaries (`\bALT\d+\b`) |
+| A designator placed at the vertical middle of its merged cell, or a span stretched over the next pin | In the row-per-function layout a pin begins on the row where the recipe's `pin_start_column` is filled (TI's reset-state column), and a designator belongs to the pin whose rows it starts in. Neither spans nor designators mark a pin's rows reliably |
+| `N/A` as a reset state, and two dashes merged into `- -` | `N/A` starts a pin, and a cell of dashes alone does not |
+| A header the producer folded other text into (`Pinmux Assignment ALT5 - TPM1_CH2 ...`) | The column is not found, and the table is gapped as `unparsed-mux-table` rather than read with a guessed column |
+| Two pins' signals in one cell, so one pin collects two designators in a package | Gapped as `mux-pin-boundary` |
+| A row whose function cells yield nothing | Gapped as `unyielded-alternates`, so a pin with no alternates reads as unread |
+
+Two cases need a patch rather than a rule, and the run's gap list is where they show. On the
+MSP430FR2355's page 18 the producer put `OFF` against XOUT and left P2.5's reset cell empty, so P2.5's
+functions are read onto a pin named XOUT. On its page 19 the PT and RHA headers arrive as one cell, and
+the table is gapped. Over the two full documents, 44 of the KW47's 49 terminals (48 pins and the
+exposed pad) and 29 of the MSP430FR2355's 48 come out, most of the rest sitting in one gapped table
+each.
 
 </details>
 
