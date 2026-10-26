@@ -214,6 +214,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   and the viewer's from `protos/` alone. The workbench has its OWN `BasePage.html`, holding only the
   thirteen rules it uses of the viewer's 50KB of styles, so `datasheet/web` deploys on its own; a
   computed-style comparison of all 86 workbench elements, before and after, was identical.
+  **mcpkit bumps in lock-step**: its six Go modules in the root `go.mod`, `examples/ask-over-mcp`,
+  and `@panyam/mcpkit-rooms` in `web/package.json`. pnpm adds the new version to
+  `minimumReleaseAgeExclude` in `pnpm-workspace.yaml`, which is committed with it, and npm can lag
+  mcpkit's publish job by a few minutes, so a 404 right after a tag is not a failed release.
 - **An unknown key in `agni.yaml` is a hard ERROR, and the file is shared by every lane, every
   released binary and the container image.** So a new key goes in only after every reader on the
   machine understands it. The obvious probe is a trap, because `agni <cmd> --help` short-circuits
@@ -400,7 +404,12 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   to mcpkit's `ModeDual` so a default change can't drop one, `MCPKIT_STATELESS_MODE` overriding it),
   and the MCP tests run on both through `eachWire` (agni 1172). agni's own clients speak `adaptive`,
   the stateless wire when offered and a session otherwise, and `agni mcp` on stdio serves both, since
-  mcpkit v0.8.13 (panyam/mcpkit#1637). The lists carry an hour's `ttlMs`
+  mcpkit v0.8.13 (panyam/mcpkit#1637). **`--viewer-rooms` also serves a tab's page events as
+  SEP-3415 events** through mcpkit's `roomsevents` (agni 1187), so `rooms-channel` puts a reader's
+  Ask in front of a Claude Code session as a turn; they need the session wire, and
+  `TestARoomsChannelHearsATabsQuestion` runs that front end over a pipe. massrelay's Go dialer sends
+  no `Origin` and the relay refuses one without, so a Go test joining as a tab sets it
+  (`viewerRoomsServer`). The lists carry an hour's `ttlMs`
   (`listTTLMs`, through jaala's `Options.Server`). **`make exercise-mcp-ask` is mission #909's
   exercise** (agni 1121):
   `examples/ask-over-mcp exercise <spec>` asks a spec's questions over `serve --mcp` on a free port
