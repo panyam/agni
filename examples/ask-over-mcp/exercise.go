@@ -74,13 +74,20 @@ func exercise(args []string) error {
 	transport := fs.String("transport", "http", "http starts `agni serve --mcp` and checks each link opens; stdio starts `agni mcp`")
 	out := fs.String("out", "", "also write the report as markdown to this file")
 	webDir := fs.String("web-dir", filepath.Join("..", "..", "web"), "the built viewer `agni serve` links to over http (make ui)")
+	wire := fs.String("wire", "", "the MCP wire to speak: adaptive (the stateless wire when the server offers it, else a session; the default over http), stateless, or session (the default over stdio)")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
 	if fs.NArg() != 1 {
-		return fmt.Errorf("usage: ask-over-mcp exercise [--transport http|stdio] [--out report.md] <spec.yaml>")
+		return fmt.Errorf("usage: ask-over-mcp exercise [--transport http|stdio] [--wire adaptive|stateless|session] [--out report.md] <spec.yaml>")
 	}
-	report, err := runExercise(context.Background(), agniBinary(), fs.Arg(0), *transport, *webDir)
+	if *wire == "" {
+		*wire = "adaptive"
+		if *transport == "stdio" {
+			*wire = "session"
+		}
+	}
+	report, err := runExercise(context.Background(), agniBinary(), fs.Arg(0), *transport, *wire, *webDir)
 	if *out != "" && report != "" {
 		if werr := os.WriteFile(*out, []byte(report), 0o600); werr != nil && err == nil {
 			err = werr
@@ -90,9 +97,26 @@ func exercise(args []string) error {
 	return err
 }
 
+// wires are the MCP wires the exercise speaks, by the name --wire takes. "session" is the initialize
+// handshake, "stateless" the 2026-07-28 wire, and "adaptive" the stateless wire when the server
+// offers it and a session otherwise, which is what agni's own clients prefer (agni issue 1172).
+var wires = map[string]client.ClientMode{
+	"adaptive":  client.ClientModeAdaptive,
+	"stateless": client.ClientModeStateless,
+	"session":   client.ClientModeLegacyOnly,
+}
+
 // runExercise asks every question of specPath and returns the report, with an error naming how many
 // calls failed when any did.
-func runExercise(ctx context.Context, agni, specPath, transport, webDir string) (string, error) {
+func runExercise(ctx context.Context, agni, specPath, transport, wire, webDir string) (string, error) {
+	mode, ok := wires[wire]
+	if !ok {
+		return "", fmt.Errorf("no wire %q: use adaptive, stateless or session", wire)
+	}
+	// mcpkit's stdio transport serves sessions alone (panyam/mcpkit#1637).
+	if transport == "stdio" && mode != client.ClientModeLegacyOnly {
+		return "", fmt.Errorf("stdio serves the session wire alone until panyam/mcpkit#1637: pass --wire session")
+	}
 	b, err := os.ReadFile(specPath) // #nosec G304 -- the spec is the caller's argument
 	if err != nil {
 		return "", err
@@ -114,7 +138,7 @@ func runExercise(ctx context.Context, agni, specPath, transport, webDir string) 
 		"{design}":   "mount://" + mountName + "/" + strings.Trim(sp.Design, "/"),
 		"{revision}": "mount://" + mountName + "/" + strings.Trim(sp.Revision, "/"),
 	}
-	c, stop, err := startServer(ctx, agni, root, transport, webDir)
+	c, stop, err := startServer(ctx, agni, root, transport, mode, webDir)
 	if err != nil {
 		return "", err
 	}
@@ -126,15 +150,22 @@ func runExercise(ctx context.Context, agni, specPath, transport, webDir string) 
 			outs = append(outs, ask(ctx, c, agni, root, transport, vars, q.Ask, cl))
 		}
 	}
-	return render(sp, transport, outs)
+	landed := "session"
+	if c.UsingStatelessWire() {
+		landed = "stateless"
+	}
+	if wire == "stateless" && landed != "stateless" {
+		return "", fmt.Errorf("asked for the stateless wire and the client landed on a session")
+	}
+	return render(sp, transport+", "+landed+" wire", outs)
 }
 
 // startServer starts agni's MCP server over root and connects a client to it.
-func startServer(ctx context.Context, agni, root, transport, webDir string) (*client.Client, func(), error) {
+func startServer(ctx context.Context, agni, root, transport string, mode client.ClientMode, webDir string) (*client.Client, func(), error) {
 	impl := core.Implementation{Name: "ask-over-mcp-exercise", Version: "0"}
 	mount := mountName + "=" + root
 	if transport == "stdio" {
-		c := client.NewClient("", impl, client.WithCommandTransport(agni, []string{"mcp", "--mount", mount}))
+		c := client.NewClient("", impl, client.WithCommandTransport(agni, []string{"mcp", "--mount", mount}), client.WithClientMode(mode))
 		if err := c.Connect(ctx); err != nil {
 			return nil, nil, err
 		}
@@ -158,7 +189,7 @@ func startServer(ctx context.Context, agni, root, transport, webDir string) (*cl
 		stop()
 		return nil, nil, err
 	}
-	c := client.NewClient(url, impl)
+	c := client.NewClient(url, impl, client.WithClientMode(mode))
 	if err := c.Connect(ctx); err != nil {
 		stop()
 		return nil, nil, err

@@ -184,8 +184,8 @@ importers:
         specifier: ^0.7.7
         version: 0.7.7
       '@panyam/tsappkit-solid':
-        specifier: ^0.7.5
-        version: 0.7.5(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)
+        specifier: ^0.7.7
+        version: 0.7.7(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)
       pdfjs-dist:
         specifier: ^6.2.108
         version: 6.2.108
@@ -239,8 +239,8 @@ importers:
         specifier: ^0.7.7
         version: 0.7.7
       '@panyam/tsappkit-solid':
-        specifier: ^0.7.5
-        version: 0.7.5(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)
+        specifier: ^0.7.7
+        version: 0.7.7(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)
       dockview-core:
         specifier: ^1.17.2
         version: 1.17.2
@@ -784,8 +784,8 @@ packages:
     resolution: {integrity: sha512-yoa/UgU/tTIHnQo43FxHwxy+ZWeInEt3xjmStCdDroCh4EXZFcC7vvg5pRpbKhnFlm8KJeI/jhEGOqOHBPwX3w==}
     engines: {node: '>=16.0.0'}
 
-  '@panyam/tsappkit-solid@0.7.5':
-    resolution: {integrity: sha512-pLMWJdwWyRZBKsljpNVEzhkOZZFWAIAqdARl1/GoZ0MHSoZ8uANQNt9kXRsLQTjm1SWo8nEBBiFivcfUUnh7VA==}
+  '@panyam/tsappkit-solid@0.7.7':
+    resolution: {integrity: sha512-NZyVpLu9D30xd1lvju6iYT1PjhxAqzoojZfwll6NPL92shmEjknEKkj97pln3wf1aMVZ8Gq3Tsf8PmhRI2unKQ==}
     peerDependencies:
       '@panyam/tsappkit': '>=0.0.5 <1.0.0'
       solid-js: ^1.9.0
@@ -1865,7 +1865,7 @@ snapshots:
 
   '@panyam/servicekit-client@0.2.0': {}
 
-  '@panyam/tsappkit-solid@0.7.5(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)':
+  '@panyam/tsappkit-solid@0.7.7(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)':
     dependencies:
       '@panyam/tsappkit': 0.7.7
       solid-js: 1.9.14

@@ -282,7 +282,15 @@ const tourState = (page: Page): Promise<TourState | null> =>
 // action, which reaches the controls only through the holes, as a reader would. Both end when the
 // viewer reports the step done and the tour moves on. A tour the reader left (Esc) makes the walk
 // carry on alone, so a reader can stop taking part without stopping the walk.
-export async function tourAct(page: Page, step: string, action: () => Promise<unknown>, timeout = 180_000): Promise<void> {
+//
+// holes is how many separate regions the released step must show, for a step that offers its control
+// in more than one place.
+export async function tourAct(
+  page: Page,
+  step: string,
+  action: () => Promise<unknown>,
+  { timeout = 180_000, holes = 1 }: { timeout?: number; holes?: number } = {},
+): Promise<void> {
   await page.waitForFunction(() => (globalThis as { __agniTour?: unknown }).__agniTour !== undefined, null, { timeout: 30_000 });
   const at = (await tourState(page))!;
   if (at.ended) {
@@ -295,11 +303,12 @@ export async function tourAct(page: Page, step: string, action: () => Promise<un
   // no wheel. The walk's own clicks scroll their target into view first, so without this a step whose
   // control sat below its panel's fold passed here and left a reader in front of a page with no way in.
   await page
-    .waitForFunction(() => Number(document.querySelector<HTMLElement>(".tsappkit-tour")?.dataset.tourHoles ?? "0") > 0, null, {
+    .waitForFunction((n) => Number(document.querySelector<HTMLElement>(".tsappkit-tour")?.dataset.tourHoles ?? "0") >= n, holes, {
       timeout: 5_000,
     })
-    .catch(() => {
-      throw new Error(`the tour's "${step}" step shows no hole: its controls are off screen or not drawn`);
+    .catch(async () => {
+      const shown = await page.evaluate(() => document.querySelector<HTMLElement>(".tsappkit-tour")?.dataset.tourHoles ?? "0");
+      throw new Error(`the tour's "${step}" step shows ${shown} hole(s) where it offers ${holes}: its controls are off screen or not drawn`);
     });
   const moved = (wait: number) =>
     page.waitForFunction(

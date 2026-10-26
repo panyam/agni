@@ -22,7 +22,7 @@ allowBuilds:
 # one: swapping it in one step fails with ERR_PNPM_MINIMUM_RELEASE_AGE_VIOLATION, since the lockfile
 # still names the old version while pnpm resolves the new one.
 minimumReleaseAgeExclude:
-  - '@panyam/tsappkit-solid@0.7.3 || 0.7.4 || 0.7.5'
+  - '@panyam/tsappkit-solid@0.7.3 || 0.7.4 || 0.7.5 || 0.7.7'
   - '@panyam/tsappkit@0.7.3 || 0.7.4 || 0.7.6 || 0.7.7'
   - '@panyam/massrelay@0.3.2'
   - '@panyam/mcpkit-rooms@0.8.12'

@@ -396,7 +396,14 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   own projection, and `Tabulate` (C35), so a new query field reaches MCP with no change there.
   `Run.BaseFor` is what keeps the board read only for a program reading `board.*`, as `RunQuery`
   does. `TestMCPAnswersAsConnectDoes` asks every tool and its rpc the same question over one server,
-  so a new tool belongs in it. **`make exercise-mcp-ask` is mission #909's exercise** (agni 1121):
+  so a new tool belongs in it. **The HTTP endpoint accepts both MCP wires** (`mcpserver.Wire`, pinned
+  to mcpkit's `ModeDual` so a default change can't drop one, `MCPKIT_STATELESS_MODE` overriding it),
+  and the MCP tests run on both through `eachWire` (agni 1172). agni's own clients speak `adaptive`,
+  the stateless wire when offered and a session otherwise. Three cases mcpkit gets wrong are held by
+  `mcpkitGap` until panyam/mcpkit#1637 lands, each failing when fixed: the stateless `tools/call`
+  skips the input-schema check (a misspelled argument is answered), stdio serves sessions alone, and
+  an adaptive client can't fall back from a session-only server. A `tools/list` TTL waits on
+  panyam/jaala#474. **`make exercise-mcp-ask` is mission #909's exercise** (agni 1121):
   `examples/ask-over-mcp exercise <spec>` asks a spec's questions over `serve --mcp` on a free port
   and holds each reply's table, written through `service.WriteTableCSV`, to the CLI's csv for the
   same request, its links to a 200, and its rows to what the spec pins. A new tool's reply has to

@@ -66,6 +66,25 @@ describe("visible", () => {
   });
 });
 
+describe("the ask step", () => {
+  it("offers the Query panel's Ask button and Properties' Ask rows as separate regions", () => {
+    const query = document.createElement("button");
+    query.className = "query-ask";
+    const rows = [0, 1].map(() => {
+      const b = document.createElement("button");
+      b.className = "pr-ask-go";
+      return b;
+    });
+    document.body.append(query, ...rows);
+    box(query, 900, 860, 150, 24);
+    box(rows[0], 10, 900, 180, 30);
+    box(rows[1], 10, 932, 180, 30);
+    const ask = reviewTourSteps(host).find((s) => s.id === "ask")!;
+    const rects = [...(ask.target!() as Iterable<{ x: number }>)];
+    expect(rects.map((r) => r.x).sort((a, b) => a - b)).toEqual([10, 10, 900]);
+  });
+});
+
 describe("startReviewTour, paced by its driver", () => {
   const start = (): { bus: EventBus; handle: TourHandle } => {
     const bus = new EventBus();
@@ -100,6 +119,33 @@ describe("startReviewTour, paced by its driver", () => {
     expect(first).toBeGreaterThan(0);
     document.body.dispatchEvent(new Event("pointerdown", { bubbles: true }));
     expect(handle.pressed["run-checklist"]).toBe(first);
+  });
+
+  // The steps before the answer, finished in order, so a test can start at click-cell.
+  const toClickCell = (bus: EventBus): void => {
+    const emit = viewerEmitter(bus);
+    emit("checklist.ran", { checklist: "bring-up", ok: true });
+    emit("checks.ran", { findings: 3, cancelled: false });
+    emit("finding.selected", { rule: "r", subject: "SDA" });
+    emit("queryset.opened", { title: "Netlist audit", queries: 9 });
+  };
+
+  it("advances past the answer on a part", () => {
+    const { bus, handle } = start();
+    toClickCell(bus);
+    expect(handle.step).toBe("click-cell");
+    viewerEmitter(bus)("cell.located", { kind: "component", subject: "U3" });
+    expect(handle.step).toBe("ask");
+    expect(handle.ended).toBe("");
+  });
+
+  it("ends the tour when the reader clicks a net where the step asks for a part", () => {
+    const { bus, handle } = start();
+    toClickCell(bus);
+    viewerEmitter(bus)("cell.located", { kind: "net", subject: "GND" });
+    expect(handle.ended).toBe("offPath");
+    expect(handle.step, "the tour stopped on the step the reader left").toBe("click-cell");
+    expect(root(), "the overlay is gone, so the viewer carries on as usual").toBeNull();
   });
 
   it("ends when the reader presses Esc", () => {

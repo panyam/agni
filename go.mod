@@ -5,7 +5,7 @@ go 1.26.9
 require (
 	connectrpc.com/connect v1.20.0
 	github.com/golang-jwt/jwt/v5 v5.3.1
-	github.com/panyam/goapplib v0.7.6
+	github.com/panyam/goapplib v0.7.7
 	github.com/panyam/jaala/frontends/mcp v0.1.87
 	github.com/panyam/jaala/frontends/nl v0.1.87
 	github.com/panyam/massrelay v0.3.2
