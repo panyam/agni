@@ -226,6 +226,11 @@ Rules with something to act on come first and open expanded, and rules that clea
 a one-line summary you can expand to check their working. The ordering exists because a board
 with three problems and two thousand passes has to show you the three problems.
 
+**A design that declares an IO map gets a section per device ahead of the rules**, one row per
+declared pin with its function, the net the netlist puts there, the route to its far end and each
+IO-map rule's outcome. [Design intent](../design-intent/#reading-the-map-one-pin-at-a-time) shows
+the layout.
+
 **A rule that reports violations without stating what it examined is labelled as such**, and its rows
 are captioned "absence here is not evidence of correctness". Presenting a failure list beside a
 considered set as though they were the same kind of answer would claim coverage the rule never

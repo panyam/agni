@@ -28,6 +28,13 @@ const (
 	RuleIOMapPin       = "io-map-pin-mismatch"
 	RuleIOMapNetAbsent = "io-map-net-absent"
 	RuleIOMapFarEnd    = "io-map-far-end"
+	// The context roles a per-row IO-map verdict carries, which with the subject's device are the map
+	// row's key (agni issue 1188). RoleOnThePin is the net the resolved pin actually sits on, and
+	// RoleDeclaredPin appears only when the map spells the pin differently from the design.
+	RoleDeclaredNet    = "declared net"
+	RoleDeclaredPin    = "declared pin"
+	RoleOnThePin       = "on the pin"
+	RoleDeclaredFarEnd = "declared far end"
 	// RuleIOMapCoverage reports the parts of the design the map never mentions. Its considered set is
 	// the NETLIST, not the declaration; see ioMapCoverageRule.
 	RuleIOMapCoverage = "io-map-coverage"

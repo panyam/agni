@@ -1,9 +1,0 @@
-# Illustrative IO assignment for U1 (not read by agni today).
-mcu: U1
-pins:
-  - ball: PTA0
-    assigned_function: GPIO_LED
-    expected_net: LED_NET
-  - ball: PTA1
-    assigned_function: UART_TX
-    expected_net: UART_TX_NET

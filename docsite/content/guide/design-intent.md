@@ -182,6 +182,33 @@ over a third of the map and say nothing about the rest. `function` is accepted a
 evaluated, since deciding whether a function is legal on a pin needs the part's alternate-function table; every verdict on a row carrying one says so
 outright.
 
+### Reading the map one pin at a time
+
+The four rules each list their own verdicts, which suits a reviewer working through one kind of
+defect and does not suit one signing off the map itself, who reads it a pin at a time. So a run that
+checks a map also lays it out that way. `agni check --format html` opens with a section per device
+("Pins on U1"), and each declared pin is one row. A row shows the declared function, the declared
+net, the net the netlist puts on that pin, the far end and the route to it, and what each of the
+three per-row rules concluded.
+
+| outcome | pin | function | declared net | netlist net | far end | route |
+|---|---|---|---|---|---|---|
+| pass | MDIO | MDIO | MDIO_NET | MDIO_NET | U3.MDIO | MDIO_NET -> [R1] -> MDIO_OUT |
+| fail | RST | RESET | RST_N | RST_N | U3.RST | |
+
+A row's outcome is the worst any rule reached on it, so the reset row fails on its far end alone
+while its pin and its net both pass. A row no rule could judge reads `not considered`. The route
+is the one `agni trace` prints, net to net through each series part.
+
+The same rows are the `pin_map` table the Tabulate rpc returns for a check run, the one a workbook
+or a csv of the run carries.
+
+    agni check --verdicts --format json design/ | jq '{check: .}' | agni tabulate -
+
+A spreadsheet already kept as ball, function and expected net maps straight onto a row. The ball
+is `pin`, the function is `function`, the expected net is `net`, and the MCU is each row's
+`device`. A partner pin, when the sheet names one, is `to`.
+
 A `peak` joins two tiers. The declaration supplies the demand, which no design
 artifact carries, and a seeded {{ explainable "absolute-maximum-rating" "datasheet parameter" }}
 supplies the regulator's capacity. Both halves have to be present or the rule stays quiet rather than

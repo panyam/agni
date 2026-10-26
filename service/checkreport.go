@@ -119,7 +119,9 @@ func VerdictReport(run *webapi.CheckDesignResponse, rules []*check.Rule, meta re
 	for _, v := range run.GetVerdicts() {
 		verdicts = append(verdicts, VerdictFromProto(v))
 	}
-	return report.Build(verdicts, FindingsFromProto(run.GetFindings()), rules, meta)
+	r := report.Build(verdicts, FindingsFromProto(run.GetFindings()), rules, meta)
+	r.PinMaps = PinMapSections(PinMapTable(run.GetIoMap(), run.GetVerdicts()))
+	return r
 }
 
 // SkippedRuleDocs carries a run's skipped rules into a document's form.

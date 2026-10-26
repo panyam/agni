@@ -42,6 +42,31 @@
 </div>
 {{end}}
 
+{{range .PinMaps}}
+<section class="pin-map">
+<h2>Pins on {{.Device}}</h2>
+<div class="tablewrap">
+<table>
+  <thead><tr><th>outcome</th><th>pin</th><th>function</th><th>declared net</th><th>netlist net</th><th>far end</th><th>route</th><th>checks</th></tr></thead>
+  <tbody>
+  {{range .Rows}}
+    <tr>
+      <td class="o {{outcomeClass .Outcome}}">{{outcomeLabel .Outcome}}</td>
+      <td class="subject">{{.Pin}}</td>
+      <td>{{.Function}}</td>
+      <td>{{.Net}}</td>
+      <td>{{if .WiredNet}}{{.WiredNet}}{{else}}(none){{end}}</td>
+      <td>{{.FarEnd}}</td>
+      <td>{{.Route}}</td>
+      <td class="terms">pin {{checkWord .PinCheck}} · net {{checkWord .NetCheck}} · far end {{checkWord .FarEndCheck}}</td>
+    </tr>
+  {{end}}
+  </tbody>
+</table>
+</div>
+</section>
+{{end}}
+
 {{range .Rules}}
 <details {{if .Failed}}open{{end}}>
   <summary>

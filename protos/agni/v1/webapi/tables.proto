@@ -115,7 +115,8 @@ message TabulateRequest {
   // answer is what to project. The caller sends back the message an analysis rpc returned.
   oneof answer {
     // check gives the "findings" table and, when verdicts are present, the "verdicts" table and the
-    // "verdicts_by_rule" count of each outcome per rule.
+    // "verdicts_by_rule" count of each outcome per rule, and "pin_map" when the run carries an IO map
+    // (one row per declared pin joined to its IO-map verdicts, agni issue 1188).
     CheckDesignResponse check = 1;
     RunQueryResponse query = 2;
     RunQueriesResponse query_set = 3;

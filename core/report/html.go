@@ -98,6 +98,14 @@ func funcs() template.FuncMap {
 			}
 			return string(o)
 		},
+		// checkWord is one IO-map rule's outcome inside a pin-map row, where "not run" says the run
+		// left that rule out rather than reading as a blank.
+		"checkWord": func(o check.Outcome) string {
+			if o == "" {
+				return "not run"
+			}
+			return string(o)
+		},
 		"count":     func(m map[check.Outcome]int, o check.Outcome) int { return m[o] },
 		"pass":      func() check.Outcome { return check.Pass },
 		"fail":      func() check.Outcome { return check.Fail },

@@ -149,6 +149,58 @@ func TestIOMapPinFailsOnAPinTheDeviceDoesNotHave(t *testing.T) {
 	}
 }
 
+// A failed lookup is decided, so the contract wants it as a witness and keeps the reason for subjects
+// a rule could not judge.
+func TestAFailedPinLookupIsStatedAsTheWitness(t *testing.T) {
+	for _, rule := range []string{RuleIOMapPin, RuleIOMapFarEnd} {
+		row := "  - {net: ADC_BATT_SENSE, device: U101, pin: PTZ99, to: {device: U7000, pin: '9'}}"
+		v := onlyVerdict(t, ioMapDecl(t, row), rule)
+		if v.Outcome != check.Fail {
+			t.Fatalf("%s: outcome = %s, want fail", rule, v.Outcome)
+		}
+		if v.Witness == nil || !strings.Contains(v.Witness.Statement, "PTZ99") || v.Reason != "" {
+			t.Errorf("%s: a failed lookup belongs in the witness with no reason, got witness %+v reason %q", rule, v.Witness, v.Reason)
+		}
+	}
+}
+
+// Every per-row verdict names the map row it answers, so a table laid out one row per declared pin
+// can join each rule's verdict back to its row without the model (agni issue 1188).
+func TestEveryPerRowVerdictNamesItsMapRow(t *testing.T) {
+	decl := ioMapDecl(t, `  - {net: ADC_BATT_SENSE, device: U101, pin: PTC11}
+  - {net: NOPE, device: U101, pin: '42'}
+  - {net: PMIC_PG, device: U101, pin: PTE7, to: {device: U7000, pin: PG}}`)
+	m := check.NewModel(ioMapDesign())
+	type want struct{ subject, declaredNet, declaredPin, onThePin string }
+	wants := []want{
+		{"U101.41", "ADC_BATT_SENSE", "U101.PTC11", "ADC_BATT_SENSE"},
+		{"U101.42", "NOPE", "", "PMIC_PG"},
+		{"U101.42", "PMIC_PG", "U101.PTE7", "PMIC_PG"},
+	}
+	for _, rule := range []string{RuleIOMapPin, RuleIOMapFarEnd} {
+		vs := verdictsFor(t, decl, m, rule)
+		if len(vs) != len(wants) {
+			t.Fatalf("%s gave %d verdicts, want one per row (%d)", rule, len(vs), len(wants))
+		}
+		for i, w := range wants {
+			v := vs[i]
+			roles := map[string]string{}
+			for _, c := range v.Context {
+				roles[c.Role] = check.EntityRef(c.Entity)
+			}
+			if got := check.EntityRef(v.Subjects[0]); got != w.subject {
+				t.Errorf("%s row %d: subject %s, want %s", rule, i, got, w.subject)
+			}
+			if roles[RoleDeclaredNet] != w.declaredNet || roles[RoleDeclaredPin] != w.declaredPin {
+				t.Errorf("%s row %d: context %v, want declared net %q and declared pin %q", rule, i, roles, w.declaredNet, w.declaredPin)
+			}
+			if rule == RuleIOMapPin && roles[RoleOnThePin] != w.onThePin {
+				t.Errorf("row %d: on the pin %q, want %q", i, roles[RoleOnThePin], w.onThePin)
+			}
+		}
+	}
+}
+
 // The missing-net case is answered next door. Reporting it here as well would put one defect under
 // two review items, and reading this silence as "the pin is fine" would be wrong.
 func TestIOMapPinDeclinesTheMissingNetCase(t *testing.T) {

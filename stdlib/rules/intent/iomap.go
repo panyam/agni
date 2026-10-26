@@ -87,7 +87,15 @@ func ioMapFarEndRule(d Declaration) *check.Rule {
 func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 	out := make([]check.Verdict, 0, len(d.IOMap))
 	for _, a := range d.IOMap {
-		v := check.Verdict{Subjects: []check.Entity{check.PinEntity(a.Device, a.Pin)}}
+		res := resolvePin(m, a.Device, a.Pin)
+		actual := ""
+		if res.outcome == check.Pass {
+			actual = m.PinNetName(a.Device, res.designator)
+		}
+		v := check.Verdict{Subjects: []check.Entity{res.subject(a.Device)}, Context: rowContext(a, res)}
+		if actual != "" {
+			v.Context = append(v.Context, check.Ctx(check.NetNameEntity(actual), RoleOnThePin))
+		}
 		// io-map-net-absent owns the missing-net case. Reporting it here too would put one defect
 		// under two review items (railBudgetMarginRule splits the same way).
 		if netNamed(m, a.Net) == nil {
@@ -96,15 +104,11 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 			out = append(out, notEvaluatedFunction(v, a))
 			continue
 		}
-		res := resolvePin(m, a.Device, a.Pin)
 		if res.outcome != check.Pass {
-			v.Outcome, v.Reason, v.Finding = res.outcome, res.reason, res.finding
+			res.decide(&v)
 			out = append(out, notEvaluatedFunction(v, a))
 			continue
 		}
-		v.Subjects = []check.Entity{check.PinEntity(a.Device, res.designator)}
-		v.Context = []check.ContextSubject{check.Ctx(check.NetNameEntity(a.Net), "declared net")}
-		actual := m.PinNetName(a.Device, res.designator)
 		terms := []check.WitnessTerm{
 			{Label: "declared", Value: a.Net},
 			{Label: "on the pin", Value: orNone(actual)},
@@ -138,6 +142,18 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 	return out
 }
 
+// rowContext names the map row a per-row verdict answers: the declared net, and the declared pin
+// when the design spells it differently from the subject. With the subject's device that is the
+// row's key, so a consumer laying the map out one row per pin joins each rule's verdict back to its
+// row without a model (agni issue 1188).
+func rowContext(a IOAssignment, res pinMatch) []check.ContextSubject {
+	ctx := []check.ContextSubject{check.Ctx(check.NetNameEntity(a.Net), RoleDeclaredNet)}
+	if res.outcome == check.Pass && res.designator != a.Pin {
+		ctx = append(ctx, check.Ctx(check.PinEntity(a.Device, a.Pin), RoleDeclaredPin))
+	}
+	return ctx
+}
+
 // ioMapNetAbsentVerdicts reports each declared net the netlist lacks, which is usually a real
 // disconnection. The reverse, a net the netlist has and the map omits, is an incomplete map and
 // belongs to io-map-coverage.
@@ -157,7 +173,7 @@ func ioMapNetAbsentVerdicts(m check.Model, d Declaration) []check.Verdict {
 			if alt := nearestNet(m, a.Net); alt != "" {
 				// A net differing only by spelling is a misspelling, not an absent net.
 				v.Outcome = check.Inconclusive
-				v.Reason = fmt.Sprintf("no net is named %q, and the design has %q, which differs from it only by spelling", a.Net, alt)
+				v.Witness = &check.Witness{Statement: fmt.Sprintf("no net is named %q, and the design has %q, which differs from it only by spelling", a.Net, alt)}
 				v.Finding = &check.Finding{
 					Subject:      check.NetNameEntity(alt),
 					Message:      fmt.Sprintf("the IO map declares net %q and the design has %q; one of the two documents is misspelling the other", a.Net, alt),
@@ -194,24 +210,24 @@ func ioMapNetAbsentVerdicts(m check.Model, d Declaration) []check.Verdict {
 func ioMapFarEndVerdicts(m check.Model, d Declaration) []check.Verdict {
 	out := make([]check.Verdict, 0, len(d.IOMap))
 	for _, a := range d.IOMap {
-		v := check.Verdict{Subjects: []check.Entity{check.PinEntity(a.Device, a.Pin)}}
+		near := resolvePin(m, a.Device, a.Pin)
+		v := check.Verdict{Subjects: []check.Entity{near.subject(a.Device)}, Context: rowContext(a, near)}
 		if a.To == nil {
 			v.Outcome, v.Reason = check.NotConsidered, "this row declares no far end, so there is nothing to follow the net to"
 			out = append(out, v)
 			continue
 		}
-		v.Context = []check.ContextSubject{check.Ctx(check.PinEntity(a.To.Device, a.To.Pin), "declared far end")}
-		near, far := resolvePin(m, a.Device, a.Pin), resolvePin(m, a.To.Device, a.To.Pin)
+		v.Context = append(v.Context, check.Ctx(check.PinEntity(a.To.Device, a.To.Pin), RoleDeclaredFarEnd))
+		far := resolvePin(m, a.To.Device, a.To.Pin)
 		if near.outcome != check.Pass || far.outcome != check.Pass {
 			bad := near
 			if near.outcome == check.Pass {
 				bad = far
 			}
-			v.Outcome, v.Reason, v.Finding = bad.outcome, bad.reason, bad.finding
+			bad.decide(&v)
 			out = append(out, v)
 			continue
 		}
-		v.Subjects = []check.Entity{check.PinEntity(a.Device, near.designator)}
 		t := check.TracePins(m, check.Endpoint{RefDes: a.Device, Pin: near.designator},
 			check.Endpoint{RefDes: a.To.Device, Pin: far.designator}, 0)
 		switch t.Outcome {
@@ -264,6 +280,27 @@ func (p pinMatch) label() string {
 }
 
 func (p pinMatch) endpoint(refDes string) string { return refDes + "." + p.label() }
+
+// subject is the pin a per-row verdict is about: the design's designator once the lookup landed, and
+// the map's own spelling when it did not, since then there is no design pin to name.
+func (p pinMatch) subject(refDes string) check.Entity {
+	if p.outcome == check.Pass {
+		return check.PinEntity(refDes, p.designator)
+	}
+	return check.PinEntity(refDes, p.declared)
+}
+
+// decide gives a verdict the outcome of a lookup that did not land. A failed or undecided lookup is
+// stated as the witness and an unconsidered one as the reason, since the contract keeps the reason
+// for the subjects a rule could not judge.
+func (p pinMatch) decide(v *check.Verdict) {
+	v.Outcome, v.Finding = p.outcome, p.finding
+	if p.outcome == check.NotConsidered {
+		v.Reason = p.reason
+		return
+	}
+	v.Witness = &check.Witness{Statement: p.reason}
+}
 
 // note says what was assumed to match the map's spelling to the design's, and is empty when the two
 // agreed outright. An inferred match always announces itself so a reader can check it.

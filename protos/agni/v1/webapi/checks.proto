@@ -5,6 +5,7 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/checks/checks.proto";
+import "agni/v1/config/intent.proto";
 import "agni/v1/config/naming.proto";
 import "agni/v1/ir/ir.proto";
 import "agni/v1/webapi/config.proto";
@@ -181,6 +182,13 @@ message CheckDesignResponse {
   // RenderCheckReport writes from the run the caller holds and reads no design (C19). A report saved
   // from this run states it in its header.
   repeated agni.v1.ir.UnexpandedHierarchy unexpanded_hierarchy = 4;
+  // io_map is the design intent's IO map this run checked, in declared order, set when the run
+  // included an IO-map rule and the design declares a map (agni issue 1188). The verdicts answer
+  // each rule separately, and a reader signing off a pin map wants one row per declared pin with
+  // the declared function, which no verdict carries on a row a rule could not judge. So the run
+  // carries the rows themselves, and Tabulate's "pin_map" table and the HTML report lay them out
+  // joined to their verdicts without reading the design again.
+  repeated agni.v1.config.PinAssignment io_map = 5;
 }
 
 // SkippedRule is one selected rule that could not evaluate, and the reason.

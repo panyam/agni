@@ -231,6 +231,9 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		// reading the design again (agni issue 717).
 		UnexpandedHierarchy: m.UnexpandedHierarchy(),
 	}
+	if ranIOMap(runnable) {
+		resp.IoMap = ov.DesignIntent.GetIoMap()
+	}
 	g := BuildGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...)
 	endLocate := timing.Begin(ctx, "locate")
 	AnnotateRunSheets(resp, g, m)

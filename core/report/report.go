@@ -37,7 +37,23 @@ type Report struct {
 	// count on the page covers the top level alone. Empty for a flat design (agni issue 717).
 	HierarchyNote string
 	Totals        Totals
-	Rules         []RuleReport
+	// PinMaps are the design intent's IO map, one section per device, each row a declared pin beside
+	// what the netlist has there (agni issues 1188, 1189). Empty when the run checked no map.
+	PinMaps []PinMap
+	Rules   []RuleReport
+}
+
+// PinMap is one device's declared pins, in the map's order.
+type PinMap struct {
+	Device string
+	Rows   []PinMapRow
+}
+
+// PinMapRow is one declared pin: what the map says, what the netlist has, and each IO-map rule's
+// outcome on it. An empty check outcome means the run did not include that rule.
+type PinMapRow struct {
+	Pin, Function, Net, WiredNet, FarEnd, Route string
+	PinCheck, NetCheck, FarEndCheck, Outcome    check.Outcome
 }
 
 // Totals are the run's headline numbers.
