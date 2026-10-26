@@ -184,7 +184,7 @@ over a third of the map and say nothing about the rest.
 
 A row's `function` is checked by `io-map-function` against the functions the part's datasheet lists
 for that pin, read from the vendor's pin-mux table into the corpus (see
-[the datasheet layer](../architecture/datasheet-layer.md#pin-mux-tables)). SDA mapped onto the pin
+[the datasheet layer](../../architecture/datasheet-layer/#pin-mux-tables)). SDA mapped onto the pin
 that offers SCL fails, and the failure lists what the pin can be. A part with no datasheet entry, or
 whose entry has no pin-mux table, reads `not-considered` with that reason, so a function column
 filled in never reads as checked when it was not. A run with no datasheet corpus at all skips the
