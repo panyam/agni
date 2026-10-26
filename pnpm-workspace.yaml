@@ -25,7 +25,7 @@ minimumReleaseAgeExclude:
   - '@panyam/tsappkit-solid@0.7.3 || 0.7.4 || 0.7.5 || 0.7.7'
   - '@panyam/tsappkit@0.7.3 || 0.7.4 || 0.7.6 || 0.7.7'
   - '@panyam/massrelay@0.3.2 || 0.3.3'
-  - '@panyam/mcpkit-rooms@0.8.12 || 0.8.13'
+  - '@panyam/mcpkit-rooms@0.8.12 || 0.8.13 || 0.8.14'
   - '@panyam/servicekit-client@0.2.0'
 onlyBuiltDependencies:
   - esbuild
