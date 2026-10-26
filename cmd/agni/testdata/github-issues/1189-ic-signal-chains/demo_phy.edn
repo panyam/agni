@@ -1,0 +1,13 @@
+(edif ISSUE1189
+  (edifVersion 2 0 0)
+  (design ISSUE1189 (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U2 (viewRef V (cellRef PHY)) (designator "U2"))
+          (instance U3 (viewRef V (cellRef PHY)) (designator "U3"))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (net MDIO_NET (joined (portRef MDIO (instanceRef U2)) (portRef 1 (instanceRef R1))))
+          (net MDIO_OUT (joined (portRef 2 (instanceRef R1)) (portRef MDIO (instanceRef U3))))
+          (net RST_N (joined (portRef RST (instanceRef U2)))))))))

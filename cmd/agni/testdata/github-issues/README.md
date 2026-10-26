@@ -18,6 +18,9 @@ Minimal netlists for issues #1085 to #1098. Names are deliberately generic (no c
 | [#1096](https://github.com/panyam/agni/issues/1096) | Query ratios (minimal) | same as #1095 |
 | [#1097](https://github.com/panyam/agni/issues/1097) | Docs: legacy export vs semantic diff | `1097-legacy-export-quirks/` |
 | [#1098](https://github.com/panyam/agni/issues/1098) | Docs (minimal) | same as #1097 |
+| [#1188](https://github.com/panyam/agni/issues/1188) | MCU IO map / per-pin report | `1188-mcu-io-map/` |
+| [#1189](https://github.com/panyam/agni/issues/1189) | IC signal connectivity chains | `1189-ic-signal-chains/` |
+| [#1190](https://github.com/panyam/agni/issues/1190) | Combined check + query HTML | `1190-combined-html/` |
 
 Issue map (filed batch):
 
@@ -30,6 +33,9 @@ Issue map (filed batch):
 | 1093–1094 | Tabulate interface coverage |
 | 1095–1096 | Query count ratios |
 | 1097–1098 | Docs: legacy export quirks |
+| 1188 | MCU IO map / per-pin HTML |
+| 1189 | Per-signal chain HTML |
+| 1190 | Combined check + query HTML |
 
 Older references (#718, #835, #820, #821) are the same themes as #1085–#1092.
 

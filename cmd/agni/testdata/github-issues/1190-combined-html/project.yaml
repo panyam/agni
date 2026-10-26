@@ -1,0 +1,5 @@
+name: issue1190-demo
+title: Combined check + query HTML repro
+queries: [queries/demo.yaml]
+conventions:
+  name: issue1190-demo

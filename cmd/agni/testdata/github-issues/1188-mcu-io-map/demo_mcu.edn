@@ -1,0 +1,11 @@
+(edif ISSUE1188
+  (edifVersion 2 0 0)
+  (design ISSUE1188 (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+          (net LED_NET (joined (portRef 3 (instanceRef U1)) (portRef 1 (instanceRef R1))))
+          (net GND (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef R1)))))))))
