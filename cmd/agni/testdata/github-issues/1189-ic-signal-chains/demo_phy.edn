@@ -2,12 +2,26 @@
   (edifVersion 2 0 0)
   (design ISSUE1189 (cellRef TOP (libraryRef LIB)))
   (library LIB
+    (cell PHY
+      (view V (viewType NETLIST)
+        (interface
+          (port MDIO (designator "1"))
+          (port RST (designator "2")))))
+    (cell RES
+      (view V (viewType NETLIST)
+        (interface
+          (port A (designator "1"))
+          (port B (designator "2")))))
     (cell TOP
       (view V (viewType NETLIST) (interface)
         (contents
-          (instance U2 (viewRef V (cellRef PHY)) (designator "U2"))
-          (instance U3 (viewRef V (cellRef PHY)) (designator "U3"))
-          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
-          (net MDIO_NET (joined (portRef MDIO (instanceRef U2)) (portRef 1 (instanceRef R1))))
-          (net MDIO_OUT (joined (portRef 2 (instanceRef R1)) (portRef MDIO (instanceRef U3))))
-          (net RST_N (joined (portRef RST (instanceRef U2)))))))))
+          (instance U2 (viewRef V (cellRef PHY)) (designator "U2")
+            (portInstance MDIO (designator "1")) (portInstance RST (designator "2")))
+          (instance U3 (viewRef V (cellRef PHY)) (designator "U3")
+            (portInstance MDIO (designator "1")) (portInstance RST (designator "2")))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1")
+            (portInstance A (designator "1")) (portInstance B (designator "2")))
+          (net MDIO_NET (joined (portRef MDIO (instanceRef U2)) (portRef A (instanceRef R1))))
+          (net MDIO_OUT (joined (portRef B (instanceRef R1)) (portRef MDIO (instanceRef U3))))
+          (net RST_N (joined (portRef RST (instanceRef U2))))
+          (net RST_U3 (joined (portRef RST (instanceRef U3)))))))))

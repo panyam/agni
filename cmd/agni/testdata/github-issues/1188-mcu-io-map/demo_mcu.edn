@@ -2,10 +2,23 @@
   (edifVersion 2 0 0)
   (design ISSUE1188 (cellRef TOP (libraryRef LIB)))
   (library LIB
+    (cell MCU
+      (view V (viewType NETLIST)
+        (interface
+          (port GND (designator "2"))
+          (port PTA0 (designator "3"))
+          (port PTA1 (designator "4")))))
+    (cell RES
+      (view V (viewType NETLIST)
+        (interface
+          (port A (designator "1"))
+          (port B (designator "2")))))
     (cell TOP
       (view V (viewType NETLIST) (interface)
         (contents
-          (instance U1 (viewRef V (cellRef MCU)) (designator "U1"))
-          (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
-          (net LED_NET (joined (portRef 3 (instanceRef U1)) (portRef 1 (instanceRef R1))))
-          (net GND (joined (portRef 2 (instanceRef U1)) (portRef 2 (instanceRef R1)))))))))
+          (instance U1 (viewRef V (cellRef MCU)) (designator "U1")
+            (portInstance GND (designator "2")) (portInstance PTA0 (designator "3")) (portInstance PTA1 (designator "4")))
+          (instance R1 (viewRef V (cellRef RES)) (designator "R1")
+            (portInstance A (designator "1")) (portInstance B (designator "2")))
+          (net LED_NET (joined (portRef PTA0 (instanceRef U1)) (portRef A (instanceRef R1))))
+          (net GND (joined (portRef GND (instanceRef U1)) (portRef B (instanceRef R1)))))))))

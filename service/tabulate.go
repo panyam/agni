@@ -461,6 +461,11 @@ func (TableService) Tabulate(_ context.Context, req *webapi.TabulateRequest) (*w
 		tables = append(tables, FindingsTable(a.Check.GetFindings()))
 		if vs := a.Check.GetVerdicts(); len(vs) > 0 {
 			tables = append(tables, VerdictsTable(vs, nil), VerdictCountsTable(vs))
+			// The pin map reads the verdicts, so a run without them gives no table rather than one
+			// whose every row reads as unjudged.
+			if pm := PinMapTable(a.Check.GetIoMap(), vs); pm != nil {
+				tables = append(tables, pm)
+			}
 		}
 		tables = append(tables, SkippedTable(a.Check.GetSkipped()))
 	case *webapi.TabulateRequest_Diff:

@@ -215,7 +215,8 @@ export type TabulateRequest = Message<"agni.v1.webapi.TabulateRequest"> & {
   answer: {
     /**
      * check gives the "findings" table and, when verdicts are present, the "verdicts" table and the
-     * "verdicts_by_rule" count of each outcome per rule.
+     * "verdicts_by_rule" count of each outcome per rule, and "pin_map" when the run carries an IO map
+     * (one row per declared pin joined to its IO-map verdicts, agni issue 1188).
      *
      * @generated from field: agni.v1.webapi.CheckDesignResponse check = 1;
      */

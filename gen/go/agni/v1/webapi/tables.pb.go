@@ -626,7 +626,8 @@ type isTabulateRequest_Answer interface {
 
 type TabulateRequest_Check struct {
 	// check gives the "findings" table and, when verdicts are present, the "verdicts" table and the
-	// "verdicts_by_rule" count of each outcome per rule.
+	// "verdicts_by_rule" count of each outcome per rule, and "pin_map" when the run carries an IO map
+	// (one row per declared pin joined to its IO-map verdicts, agni issue 1188).
 	Check *CheckDesignResponse `protobuf:"bytes,1,opt,name=check,proto3,oneof"`
 }
 

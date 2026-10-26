@@ -275,8 +275,15 @@ type CheckDesignResponse struct {
 	// RenderCheckReport writes from the run the caller holds and reads no design (C19). A report saved
 	// from this run states it in its header.
 	UnexpandedHierarchy []*ir.UnexpandedHierarchy `protobuf:"bytes,4,rep,name=unexpanded_hierarchy,json=unexpandedHierarchy,proto3" json:"unexpanded_hierarchy,omitempty"`
-	unknownFields       protoimpl.UnknownFields
-	sizeCache           protoimpl.SizeCache
+	// io_map is the design intent's IO map this run checked, in declared order, set when the run
+	// included an IO-map rule and the design declares a map (agni issue 1188). The verdicts answer
+	// each rule separately, and a reader signing off a pin map wants one row per declared pin with
+	// the declared function, which no verdict carries on a row a rule could not judge. So the run
+	// carries the rows themselves, and Tabulate's "pin_map" table and the HTML report lay them out
+	// joined to their verdicts without reading the design again.
+	IoMap         []*config.PinAssignment `protobuf:"bytes,5,rep,name=io_map,json=ioMap,proto3" json:"io_map,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CheckDesignResponse) Reset() {
@@ -333,6 +340,13 @@ func (x *CheckDesignResponse) GetVerdicts() []*checks.Verdict {
 func (x *CheckDesignResponse) GetUnexpandedHierarchy() []*ir.UnexpandedHierarchy {
 	if x != nil {
 		return x.UnexpandedHierarchy
+	}
+	return nil
+}
+
+func (x *CheckDesignResponse) GetIoMap() []*config.PinAssignment {
+	if x != nil {
+		return x.IoMap
 	}
 	return nil
 }
@@ -1611,7 +1625,7 @@ var File_agni_v1_webapi_checks_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\n" +
-	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/naming.proto\x1a\x13agni/v1/ir/ir.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\xd7\x01\n" +
+	"\x1bagni/v1/webapi/checks.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/config/intent.proto\x1a\x1bagni/v1/config/naming.proto\x1a\x13agni/v1/ir/ir.proto\x1a\x1bagni/v1/webapi/config.proto\x1a\x19agni/v1/param/param.proto\"\xd7\x01\n" +
 	"\x12CheckDesignRequest\x12\x1a\n" +
 	"\bsnapshot\x18\a \x01(\tR\bsnapshot\x12\x14\n" +
 	"\x05rules\x18\x01 \x03(\tR\x05rules\x12\x1f\n" +
@@ -1620,12 +1634,13 @@ const file_agni_v1_webapi_checks_proto_rawDesc = "" +
 	"\bsubjects\x18\b \x03(\v2\x17.agni.v1.checks.SubjectR\bsubjectsJ\x04\b\x02\x10\x03J\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x05\x10\x06R\aoverlayR\x03uriR\tboard_uriR\bas_named\"z\n" +
 	"\rOverlayConfig\x126\n" +
 	"\x06config\x18\x04 \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12%\n" +
-	"\x0eignore_project\x18\x03 \x01(\bR\rignoreProjectJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03\"\x8a\x02\n" +
+	"\x0eignore_project\x18\x03 \x01(\bR\rignoreProjectJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03\"\xc0\x02\n" +
 	"\x13CheckDesignResponse\x123\n" +
 	"\bfindings\x18\x01 \x03(\v2\x17.agni.v1.checks.FindingR\bfindings\x125\n" +
 	"\askipped\x18\x02 \x03(\v2\x1b.agni.v1.webapi.SkippedRuleR\askipped\x123\n" +
 	"\bverdicts\x18\x03 \x03(\v2\x17.agni.v1.checks.VerdictR\bverdicts\x12R\n" +
-	"\x14unexpanded_hierarchy\x18\x04 \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\"Z\n" +
+	"\x14unexpanded_hierarchy\x18\x04 \x03(\v2\x1f.agni.v1.ir.UnexpandedHierarchyR\x13unexpandedHierarchy\x124\n" +
+	"\x06io_map\x18\x05 \x03(\v2\x1d.agni.v1.config.PinAssignmentR\x05ioMap\"Z\n" +
 	"\vSkippedRule\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
 	"\x06reason\x18\x02 \x01(\tR\x06reason\x12\x1f\n" +
@@ -1777,9 +1792,10 @@ var file_agni_v1_webapi_checks_proto_goTypes = []any{
 	(*checks.Finding)(nil),               // 28: agni.v1.checks.Finding
 	(*checks.Verdict)(nil),               // 29: agni.v1.checks.Verdict
 	(*ir.UnexpandedHierarchy)(nil),       // 30: agni.v1.ir.UnexpandedHierarchy
-	(*checks.CheckReport)(nil),           // 31: agni.v1.checks.CheckReport
-	(*config.NamingConvention)(nil),      // 32: agni.v1.config.NamingConvention
-	(*param.PartSpec)(nil),               // 33: agni.v1.param.PartSpec
+	(*config.PinAssignment)(nil),         // 31: agni.v1.config.PinAssignment
+	(*checks.CheckReport)(nil),           // 32: agni.v1.checks.CheckReport
+	(*config.NamingConvention)(nil),      // 33: agni.v1.config.NamingConvention
+	(*param.PartSpec)(nil),               // 34: agni.v1.param.PartSpec
 }
 var file_agni_v1_webapi_checks_proto_depIdxs = []int32{
 	26, // 0: agni.v1.webapi.CheckDesignRequest.subjects:type_name -> agni.v1.checks.Subject
@@ -1788,39 +1804,40 @@ var file_agni_v1_webapi_checks_proto_depIdxs = []int32{
 	4,  // 3: agni.v1.webapi.CheckDesignResponse.skipped:type_name -> agni.v1.webapi.SkippedRule
 	29, // 4: agni.v1.webapi.CheckDesignResponse.verdicts:type_name -> agni.v1.checks.Verdict
 	30, // 5: agni.v1.webapi.CheckDesignResponse.unexpanded_hierarchy:type_name -> agni.v1.ir.UnexpandedHierarchy
-	31, // 6: agni.v1.webapi.GetCheckReportResponse.report:type_name -> agni.v1.checks.CheckReport
-	3,  // 7: agni.v1.webapi.RenderCheckReportRequest.run:type_name -> agni.v1.webapi.CheckDesignResponse
-	0,  // 8: agni.v1.webapi.RenderCheckReportRequest.format:type_name -> agni.v1.webapi.CheckReportFormat
-	7,  // 9: agni.v1.webapi.RenderCheckReportRequest.links:type_name -> agni.v1.webapi.ReportLinks
-	32, // 10: agni.v1.webapi.GetNamingConventionResponse.convention:type_name -> agni.v1.config.NamingConvention
-	13, // 11: agni.v1.webapi.GetExpectationsResponse.expectations:type_name -> agni.v1.webapi.RuleExpectation
-	25, // 12: agni.v1.webapi.RuleInfo.tags:type_name -> agni.v1.webapi.RuleInfo.TagsEntry
-	16, // 13: agni.v1.webapi.ListRulesResponse.rules:type_name -> agni.v1.webapi.RuleInfo
-	19, // 14: agni.v1.webapi.InterfaceCoverage.signals:type_name -> agni.v1.webapi.SignalCoverage
-	20, // 15: agni.v1.webapi.GetInterfaceCoverageResponse.interfaces:type_name -> agni.v1.webapi.InterfaceCoverage
-	33, // 16: agni.v1.webapi.ComponentParams.spec:type_name -> agni.v1.param.PartSpec
-	23, // 17: agni.v1.webapi.GetComponentParamsResponse.components:type_name -> agni.v1.webapi.ComponentParams
-	15, // 18: agni.v1.webapi.CheckService.ListRules:input_type -> agni.v1.webapi.ListRulesRequest
-	1,  // 19: agni.v1.webapi.CheckService.CheckDesign:input_type -> agni.v1.webapi.CheckDesignRequest
-	12, // 20: agni.v1.webapi.CheckService.GetExpectations:input_type -> agni.v1.webapi.GetExpectationsRequest
-	5,  // 21: agni.v1.webapi.CheckService.GetCheckReport:input_type -> agni.v1.webapi.GetCheckReportRequest
-	8,  // 22: agni.v1.webapi.CheckService.RenderCheckReport:input_type -> agni.v1.webapi.RenderCheckReportRequest
-	18, // 23: agni.v1.webapi.CheckService.GetInterfaceCoverage:input_type -> agni.v1.webapi.GetInterfaceCoverageRequest
-	22, // 24: agni.v1.webapi.CheckService.GetComponentParams:input_type -> agni.v1.webapi.GetComponentParamsRequest
-	10, // 25: agni.v1.webapi.CheckService.GetNamingConvention:input_type -> agni.v1.webapi.GetNamingConventionRequest
-	17, // 26: agni.v1.webapi.CheckService.ListRules:output_type -> agni.v1.webapi.ListRulesResponse
-	3,  // 27: agni.v1.webapi.CheckService.CheckDesign:output_type -> agni.v1.webapi.CheckDesignResponse
-	14, // 28: agni.v1.webapi.CheckService.GetExpectations:output_type -> agni.v1.webapi.GetExpectationsResponse
-	6,  // 29: agni.v1.webapi.CheckService.GetCheckReport:output_type -> agni.v1.webapi.GetCheckReportResponse
-	9,  // 30: agni.v1.webapi.CheckService.RenderCheckReport:output_type -> agni.v1.webapi.RenderCheckReportResponse
-	21, // 31: agni.v1.webapi.CheckService.GetInterfaceCoverage:output_type -> agni.v1.webapi.GetInterfaceCoverageResponse
-	24, // 32: agni.v1.webapi.CheckService.GetComponentParams:output_type -> agni.v1.webapi.GetComponentParamsResponse
-	11, // 33: agni.v1.webapi.CheckService.GetNamingConvention:output_type -> agni.v1.webapi.GetNamingConventionResponse
-	26, // [26:34] is the sub-list for method output_type
-	18, // [18:26] is the sub-list for method input_type
-	18, // [18:18] is the sub-list for extension type_name
-	18, // [18:18] is the sub-list for extension extendee
-	0,  // [0:18] is the sub-list for field type_name
+	31, // 6: agni.v1.webapi.CheckDesignResponse.io_map:type_name -> agni.v1.config.PinAssignment
+	32, // 7: agni.v1.webapi.GetCheckReportResponse.report:type_name -> agni.v1.checks.CheckReport
+	3,  // 8: agni.v1.webapi.RenderCheckReportRequest.run:type_name -> agni.v1.webapi.CheckDesignResponse
+	0,  // 9: agni.v1.webapi.RenderCheckReportRequest.format:type_name -> agni.v1.webapi.CheckReportFormat
+	7,  // 10: agni.v1.webapi.RenderCheckReportRequest.links:type_name -> agni.v1.webapi.ReportLinks
+	33, // 11: agni.v1.webapi.GetNamingConventionResponse.convention:type_name -> agni.v1.config.NamingConvention
+	13, // 12: agni.v1.webapi.GetExpectationsResponse.expectations:type_name -> agni.v1.webapi.RuleExpectation
+	25, // 13: agni.v1.webapi.RuleInfo.tags:type_name -> agni.v1.webapi.RuleInfo.TagsEntry
+	16, // 14: agni.v1.webapi.ListRulesResponse.rules:type_name -> agni.v1.webapi.RuleInfo
+	19, // 15: agni.v1.webapi.InterfaceCoverage.signals:type_name -> agni.v1.webapi.SignalCoverage
+	20, // 16: agni.v1.webapi.GetInterfaceCoverageResponse.interfaces:type_name -> agni.v1.webapi.InterfaceCoverage
+	34, // 17: agni.v1.webapi.ComponentParams.spec:type_name -> agni.v1.param.PartSpec
+	23, // 18: agni.v1.webapi.GetComponentParamsResponse.components:type_name -> agni.v1.webapi.ComponentParams
+	15, // 19: agni.v1.webapi.CheckService.ListRules:input_type -> agni.v1.webapi.ListRulesRequest
+	1,  // 20: agni.v1.webapi.CheckService.CheckDesign:input_type -> agni.v1.webapi.CheckDesignRequest
+	12, // 21: agni.v1.webapi.CheckService.GetExpectations:input_type -> agni.v1.webapi.GetExpectationsRequest
+	5,  // 22: agni.v1.webapi.CheckService.GetCheckReport:input_type -> agni.v1.webapi.GetCheckReportRequest
+	8,  // 23: agni.v1.webapi.CheckService.RenderCheckReport:input_type -> agni.v1.webapi.RenderCheckReportRequest
+	18, // 24: agni.v1.webapi.CheckService.GetInterfaceCoverage:input_type -> agni.v1.webapi.GetInterfaceCoverageRequest
+	22, // 25: agni.v1.webapi.CheckService.GetComponentParams:input_type -> agni.v1.webapi.GetComponentParamsRequest
+	10, // 26: agni.v1.webapi.CheckService.GetNamingConvention:input_type -> agni.v1.webapi.GetNamingConventionRequest
+	17, // 27: agni.v1.webapi.CheckService.ListRules:output_type -> agni.v1.webapi.ListRulesResponse
+	3,  // 28: agni.v1.webapi.CheckService.CheckDesign:output_type -> agni.v1.webapi.CheckDesignResponse
+	14, // 29: agni.v1.webapi.CheckService.GetExpectations:output_type -> agni.v1.webapi.GetExpectationsResponse
+	6,  // 30: agni.v1.webapi.CheckService.GetCheckReport:output_type -> agni.v1.webapi.GetCheckReportResponse
+	9,  // 31: agni.v1.webapi.CheckService.RenderCheckReport:output_type -> agni.v1.webapi.RenderCheckReportResponse
+	21, // 32: agni.v1.webapi.CheckService.GetInterfaceCoverage:output_type -> agni.v1.webapi.GetInterfaceCoverageResponse
+	24, // 33: agni.v1.webapi.CheckService.GetComponentParams:output_type -> agni.v1.webapi.GetComponentParamsResponse
+	11, // 34: agni.v1.webapi.CheckService.GetNamingConvention:output_type -> agni.v1.webapi.GetNamingConventionResponse
+	27, // [27:35] is the sub-list for method output_type
+	19, // [19:27] is the sub-list for method input_type
+	19, // [19:19] is the sub-list for extension type_name
+	19, // [19:19] is the sub-list for extension extendee
+	0,  // [0:19] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_checks_proto_init() }
