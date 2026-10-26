@@ -320,10 +320,10 @@ func resolvePin(m check.Model, refDes, declared string) pinMatch {
 	switch l.Kind {
 	case check.PinNoComponent:
 		out.outcome = check.NotConsidered
-		out.reason = fmt.Sprintf("the design carries no component %s, so there is no pin to look up", refDes)
+		out.reason = fmt.Sprintf("the design "+phraseNoComponent+" %s, so there is no pin to look up", refDes)
 	case check.PinNoPinList:
 		out.outcome = check.NotConsidered
-		out.reason = fmt.Sprintf("the read supplied no pin list for %s, so a declared pin cannot be resolved on it", refDes)
+		out.reason = fmt.Sprintf("the read "+phraseNoPinList+" for %s, so a declared pin cannot be resolved on it", refDes)
 	case check.PinUnknown:
 		out.outcome = check.Fail
 		out.reason = fmt.Sprintf("%s declares no pin %q, by designator or by name", refDes, declared)

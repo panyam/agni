@@ -3,6 +3,7 @@ package main
 import (
 	"bytes"
 	"context"
+	"fmt"
 	"net/url"
 	"path/filepath"
 	"regexp"
@@ -150,4 +151,84 @@ func flattenedStats(t *testing.T, path string) feedback.Shape {
 		return n
 	}
 	return feedback.Shape{Components: count("components"), Nets: count("nets")}
+}
+
+// A trial on a design with an IO map reports the map as counts (agni issue 1196), exact on the
+// pin-functions fixture, and carries none of the map's nets, parts, pins, functions or part numbers.
+func TestATrialCountsThePinMapAndKeepsNoneOfIt(t *testing.T) {
+	freshWorkspace(t)
+	uri, err := cliArgURI("testdata/pin-functions")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := runTrial(context.Background(), uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+	pm := rep.PinMap
+	if pm == nil {
+		t.Fatal("no pin map tally for a design that declares an IO map")
+	}
+	want := feedback.PinMapTally{
+		Rows: 4, WithFunction: 4, WithFarEnd: 2,
+		Pin:               feedback.OutcomeCounts{Pass: 4},
+		Net:               feedback.OutcomeCounts{Pass: 4},
+		FarEnd:            feedback.OutcomeCounts{Pass: 2, NotConsidered: 2},
+		Function:          feedback.OutcomeCounts{Pass: 2, Fail: 1, NotConsidered: 1},
+		FunctionUnchecked: map[feedback.FunctionReason]int{feedback.FunctionNoPartNumber: 1},
+	}
+	if got, w := fmt.Sprintf("%+v", *pm), fmt.Sprintf("%+v", want); got != w {
+		t.Errorf("pin map tally:\n got %s\nwant %s", got, w)
+	}
+	var js bytes.Buffer
+	if err := writeTrial(&js, "json", rep); err != nil {
+		t.Fatal(err)
+	}
+	for _, name := range []string{
+		"BLE_RX", "SENSOR_SDA", "SENSOR_SCL", "GND", "U1", "U2", "KW47", "PTB3", "PTB4", "PTB5", "SDA",
+		"LPUART1_RX", "LPI2C1_SDA", "I2C_SDA", "pin-functions", "demo_ble.edn",
+	} {
+		re := regexp.MustCompile(`(^|[^A-Za-z0-9_])` + regexp.QuoteMeta(name) + `($|[^A-Za-z0-9_])`)
+		for where, text := range map[string]string{"markdown": rep.Markdown(), "json": js.String()} {
+			if re.MatchString(text) {
+				t.Errorf("the %s carries %q", where, name)
+			}
+		}
+	}
+}
+
+// A run with no datasheet corpus skips the function check, and the report says so rather than
+// counting every row as unchecked for some other reason.
+func TestATrialWithNoCorpusSaysNoFunctionWasChecked(t *testing.T) {
+	freshWorkspace(t)
+	uri, err := cliArgURI("testdata/github-issues/1188-mcu-io-map")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := runTrial(context.Background(), uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.PinMap == nil || rep.PinMap.Rows != 2 || rep.PinMap.Function.NotRun != 2 {
+		t.Fatalf("want 2 rows with the function check not run, got %+v", rep.PinMap)
+	}
+	if !strings.Contains(rep.Markdown(), "No function was checked, because the run had no datasheet corpus.") {
+		t.Errorf("the markdown does not say the function check did not run:\n%s", rep.Markdown())
+	}
+}
+
+// A design with no IO map reports no pin map at all, rather than a map of zero rows.
+func TestATrialWithNoIOMapReportsNoPinMap(t *testing.T) {
+	freshWorkspace(t)
+	uri, err := cliArgURI("testdata/conformance/showcase.passes.kicad_sch")
+	if err != nil {
+		t.Fatal(err)
+	}
+	rep, err := runTrial(context.Background(), uri)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if rep.PinMap != nil || strings.Contains(rep.Markdown(), "Pin map") {
+		t.Errorf("a design with no IO map reported one: %+v", rep.PinMap)
+	}
 }

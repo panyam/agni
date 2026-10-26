@@ -18,6 +18,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"github.com/panyam/agni/internal/version"
 	"github.com/panyam/agni/service"
+	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
 // feedbackRepo is where a trial's prefilled issue goes.
@@ -143,6 +144,7 @@ func runTrial(ctx context.Context, uri string) (feedback.Report, error) {
 			return "", err
 		}
 		tallyRules(&rep, run, catalog, shipped)
+		rep.PinMap = tallyPinMap(run)
 		return feedback.StatusOK, nil
 	})
 
@@ -283,6 +285,88 @@ func tallyRules(rep *feedback.Report, run *webapi.CheckDesignResponse, catalog *
 			rep.Rules = append(rep.Rules, *t)
 		}
 	}
+}
+
+// tallyPinMap counts the run's pin map, the table `check --table pin_map` writes, without keeping a
+// cell of it, and counts why each function check compared nothing by kind alone (agni issue 1196).
+// Nil when the design declares no IO map.
+func tallyPinMap(run *webapi.CheckDesignResponse) *feedback.PinMapTally {
+	tb := service.PinMapTable(run.GetIoMap(), run.GetVerdicts())
+	if tb == nil {
+		return nil
+	}
+	col := map[string]int{}
+	for i, c := range tb.GetColumns() {
+		col[c.GetName()] = i
+	}
+	t := &feedback.PinMapTally{}
+	count := func(n *feedback.OutcomeCounts, cell string) {
+		switch cell {
+		case "pass":
+			n.Pass++
+		case "fail":
+			n.Fail++
+		case "inconclusive":
+			n.Inconclusive++
+		case "":
+			n.NotRun++
+		default:
+			n.NotConsidered++
+		}
+	}
+	for _, r := range tb.GetRows() {
+		c := r.GetCells()
+		t.Rows++
+		if c[col["function"]] != "" {
+			t.WithFunction++
+		}
+		if c[col["far_end"]] != "" {
+			t.WithFarEnd++
+		}
+		count(&t.Pin, c[col["pin_check"]])
+		count(&t.Net, c[col["net_check"]])
+		count(&t.FarEnd, c[col["far_end_check"]])
+		count(&t.Function, c[col["function_check"]])
+	}
+	pinRule := intent.SourceName + "/" + intent.RuleIOMapPin
+	fnRule := intent.SourceName + "/" + intent.RuleIOMapFunction
+	for _, v := range run.GetVerdicts() {
+		if v.GetRule() != pinRule && v.GetRule() != fnRule {
+			continue
+		}
+		if intent.InferredMatch(v.GetWitness().GetStatement()) {
+			t.Inferred++
+		}
+		if v.GetRule() == fnRule && service.OutcomeWord(v.GetOutcome()) == "not-considered" {
+			if t.FunctionUnchecked == nil {
+				t.FunctionUnchecked = map[feedback.FunctionReason]int{}
+			}
+			t.FunctionUnchecked[functionReason(intent.FunctionReasonOf(v.GetReason()))]++
+		}
+	}
+	return t
+}
+
+// functionReason carries the intent rule's reason kind into the report's own vocabulary, so the
+// report's type holds only words feedback declares.
+func functionReason(k intent.FunctionReason) feedback.FunctionReason {
+	switch k {
+	case intent.FunctionReasonNotDeclared:
+		return feedback.FunctionNotDeclared
+	case intent.FunctionReasonPinUnresolved:
+		return feedback.FunctionPinUnresolved
+	case intent.FunctionReasonNoPartNumber:
+		return feedback.FunctionNoPartNumber
+	case intent.FunctionReasonNoDatasheet:
+		return feedback.FunctionNoDatasheet
+	case intent.FunctionReasonNoDatasheetPins:
+		return feedback.FunctionNoDatasheetPins
+	case intent.FunctionReasonSpecPinUnknown:
+		return feedback.FunctionSpecPinUnknown
+	case intent.FunctionReasonNoPinMux:
+		return feedback.FunctionNoPinMux
+	}
+	return feedback.FunctionOther
 }
 
 // platform names the OS and architecture, and whether the process runs in a container, which the

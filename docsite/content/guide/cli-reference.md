@@ -295,7 +295,9 @@ for one. A rule a project wrote is counted without its name. It prints a link th
 as a GitHub issue to read before submitting. The compose bundle runs it as its `trial` service; see
 [Trying agni on your own boards](../trying-agni/). On a hierarchical netlist pass
 `--flatten-hierarchy`, or the report counts the top cell alone and says how many blocks it did not
-read. A flattened report says so on its design line.
+read. A flattened report says so on its design line. A design declaring an IO map also gets its pin
+map counted, per check and per reason a declared function went unchecked, with no row's pin, net or
+function kept (agni issue 1196).
 
 | flag | what it does |
 |---|---|
