@@ -155,10 +155,10 @@ go install github.com/panyam/mcpkit/experimental/integrations/roomsevents/cmd/ro
 }
 ```
 
-Channels are a Claude Code research preview, so start the session with
+Channels are still a Claude Code research preview, at least for now, so start the session with
 `claude --dangerously-load-development-channels server:rooms`, interactively. Then ask the model to
-attach to the design you have open. From then on each question you type in a tab that let agents in shows up in the session, fenced as text from the page, and the
-model answers through the tab's tools.
+attach to the design you have open. From then on each question you type in a tab that let agents in
+shows up in the session, fenced as text from the page, and the model answers through the tab's tools.
 
 ## What it doesn't do
 

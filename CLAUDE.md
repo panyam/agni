@@ -411,7 +411,7 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   the stateless wire when offered and a session otherwise, and `agni mcp` on stdio serves both, since
   mcpkit v0.8.13 (panyam/mcpkit#1637). **`--viewer-rooms` also serves a tab's page events as
   SEP-3415 events** through mcpkit's `roomsevents` (agni 1187), so `rooms-channel` puts a reader's
-  Ask in front of a Claude Code session as a turn; they need the session wire, and
+  Ask in front of a Claude Code session as a turn; the events need the session wire, and
   `TestARoomsChannelHearsATabsQuestion` runs that front end over a pipe. massrelay's Go dialer sends
   no `Origin` and the relay refuses one without, so a Go test joining as a tab sets it
   (`viewerRoomsServer`). The lists carry an hour's `ttlMs`
