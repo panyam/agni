@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { Code, ConnectError } from "@connectrpc/connect";
-import { OverlayConfigSchema } from "./gen/agni/v1/webapi/checks_pb.js";
+import { OverlayConfigSchema } from "./gen/agni/v1/webapi/config_pb.js";
 import { SnapshotUnavailableSchema, SnapshotUnavailable_Reason, type Snapshot } from "./gen/agni/v1/webapi/snapshot_pb.js";
 import { SnapshotRegistry, recoveringInterceptor } from "./snapshots.js";
 

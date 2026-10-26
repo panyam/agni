@@ -3,6 +3,7 @@ from agni.v1.config import intent_pb2 as _intent_pb2
 from agni.v1.config import naming_pb2 as _naming_pb2
 from agni.v1.ir import ir_pb2 as _ir_pb2
 from agni.v1.webapi import config_pb2 as _config_pb2
+from agni.v1.webapi import query_pb2 as _query_pb2
 from agni.v1.param import param_pb2 as _param_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf.internal import enum_type_wrapper as _enum_type_wrapper
@@ -33,14 +34,6 @@ class CheckDesignRequest(_message.Message):
     work_budget: int
     subjects: _containers.RepeatedCompositeFieldContainer[_checks_pb2.Subject]
     def __init__(self, snapshot: _Optional[str] = ..., rules: _Optional[_Iterable[str]] = ..., work_budget: _Optional[int] = ..., subjects: _Optional[_Iterable[_Union[_checks_pb2.Subject, _Mapping]]] = ...) -> None: ...
-
-class OverlayConfig(_message.Message):
-    __slots__ = ("config", "ignore_project")
-    CONFIG_FIELD_NUMBER: _ClassVar[int]
-    IGNORE_PROJECT_FIELD_NUMBER: _ClassVar[int]
-    config: _config_pb2.AnalysisConfig
-    ignore_project: bool
-    def __init__(self, config: _Optional[_Union[_config_pb2.AnalysisConfig, _Mapping]] = ..., ignore_project: _Optional[bool] = ...) -> None: ...
 
 class CheckDesignResponse(_message.Message):
     __slots__ = ("findings", "skipped", "verdicts", "unexpanded_hierarchy", "io_map")
@@ -91,18 +84,20 @@ class ReportLinks(_message.Message):
     def __init__(self, url_base: _Optional[str] = ..., design_uri: _Optional[str] = ..., withheld: _Optional[str] = ...) -> None: ...
 
 class RenderCheckReportRequest(_message.Message):
-    __slots__ = ("snapshot", "rules", "run", "format", "links")
+    __slots__ = ("snapshot", "rules", "run", "format", "links", "query_sets")
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
     RULES_FIELD_NUMBER: _ClassVar[int]
     RUN_FIELD_NUMBER: _ClassVar[int]
     FORMAT_FIELD_NUMBER: _ClassVar[int]
     LINKS_FIELD_NUMBER: _ClassVar[int]
+    QUERY_SETS_FIELD_NUMBER: _ClassVar[int]
     snapshot: str
     rules: _containers.RepeatedScalarFieldContainer[str]
     run: CheckDesignResponse
     format: CheckReportFormat
     links: ReportLinks
-    def __init__(self, snapshot: _Optional[str] = ..., rules: _Optional[_Iterable[str]] = ..., run: _Optional[_Union[CheckDesignResponse, _Mapping]] = ..., format: _Optional[_Union[CheckReportFormat, str]] = ..., links: _Optional[_Union[ReportLinks, _Mapping]] = ...) -> None: ...
+    query_sets: _containers.RepeatedCompositeFieldContainer[_query_pb2.RunQueriesResponse]
+    def __init__(self, snapshot: _Optional[str] = ..., rules: _Optional[_Iterable[str]] = ..., run: _Optional[_Union[CheckDesignResponse, _Mapping]] = ..., format: _Optional[_Union[CheckReportFormat, str]] = ..., links: _Optional[_Union[ReportLinks, _Mapping]] = ..., query_sets: _Optional[_Iterable[_Union[_query_pb2.RunQueriesResponse, _Mapping]]] = ...) -> None: ...
 
 class RenderCheckReportResponse(_message.Message):
     __slots__ = ("content", "content_type", "filename")

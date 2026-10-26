@@ -40,6 +40,9 @@ type Report struct {
 	// PinMaps are the design intent's IO map, one section per device, each row a declared pin beside
 	// what the netlist has there (agni issues 1188, 1189). Empty when the run checked no map.
 	PinMaps []PinMap
+	// QuerySets are the answers to the design project's query sets, when the caller ran them, one
+	// Queries section each after the rules (agni issue 1190). Empty leaves the page as it was.
+	QuerySets []TableSet
 	Rules   []RuleReport
 }
 

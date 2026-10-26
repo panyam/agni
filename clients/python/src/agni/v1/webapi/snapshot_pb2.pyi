@@ -1,4 +1,4 @@
-from agni.v1.webapi import checks_pb2 as _checks_pb2
+from agni.v1.webapi import config_pb2 as _config_pb2
 from google.protobuf import empty_pb2 as _empty_pb2
 from google.protobuf import field_mask_pb2 as _field_mask_pb2
 from google.protobuf.internal import containers as _containers
@@ -30,13 +30,13 @@ class Snapshot(_message.Message):
     board_uri: str
     geometry_uri: str
     as_named: bool
-    overlay: _checks_pb2.OverlayConfig
+    overlay: _config_pb2.OverlayConfig
     tiers: SnapshotTiers
     consistency: SnapshotConsistency
     project: str
     files: _containers.RepeatedCompositeFieldContainer[SnapshotFile]
     flatten_hierarchy: bool
-    def __init__(self, name: _Optional[str] = ..., revision_id: _Optional[str] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., geometry_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., overlay: _Optional[_Union[_checks_pb2.OverlayConfig, _Mapping]] = ..., tiers: _Optional[_Union[SnapshotTiers, _Mapping]] = ..., consistency: _Optional[_Union[SnapshotConsistency, _Mapping]] = ..., project: _Optional[str] = ..., files: _Optional[_Iterable[_Union[SnapshotFile, _Mapping]]] = ..., flatten_hierarchy: _Optional[bool] = ...) -> None: ...
+    def __init__(self, name: _Optional[str] = ..., revision_id: _Optional[str] = ..., uri: _Optional[str] = ..., board_uri: _Optional[str] = ..., geometry_uri: _Optional[str] = ..., as_named: _Optional[bool] = ..., overlay: _Optional[_Union[_config_pb2.OverlayConfig, _Mapping]] = ..., tiers: _Optional[_Union[SnapshotTiers, _Mapping]] = ..., consistency: _Optional[_Union[SnapshotConsistency, _Mapping]] = ..., project: _Optional[str] = ..., files: _Optional[_Iterable[_Union[SnapshotFile, _Mapping]]] = ..., flatten_hierarchy: _Optional[bool] = ...) -> None: ...
 
 class SnapshotFile(_message.Message):
     __slots__ = ("path", "sha256", "size")

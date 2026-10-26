@@ -142,3 +142,43 @@ message LibraryModule {
   // "request:<path>".
   string source = 4;
 }
+
+// OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
+// catalog does not carry, and vocabulary the engine cannot guess (WS3-102). It exists so a surface does
+// not hand-wire each input separately — that hand-wiring is why --conventions reached `agni check` but
+// never `agni review`, leaving any review item bound to a naming rule reading not-automated forever
+// with no error to explain it.
+//
+// It carries VALUES, not file paths. Where the config came from is the caller's business: `agni check`
+// reads a YAML file the user named, a web client may build one from a form, and a future deployment may
+// resolve one from a shared registry by id. None of that belongs in the API contract, and a service that
+// took a path would have to own file I/O to do its job.
+//
+// The config it carries is an AnalysisConfig, the same message a Project declares, so a tier added
+// there is a tier a request can carry without a second edit here (agni issue 224). Whether a given
+// host can RESOLVE the ref-shaped fields of a request-supplied config is a property of that
+// deployment, not of this schema.
+message OverlayConfig {
+  // config is what this request wants the design checked against, layered over whatever the design's
+  // project declares.
+  AnalysisConfig config = 4;
+  // ignore_project runs the design against the BUILT-IN catalog only, as though it belonged to no
+  // project: no project conventions, profiles, parameters, or intent.
+  //
+  // It exists because per-design config (agni issue 173) made "whose rules produced this finding" a
+  // real question a reviewer will ask, and a findings list cannot answer it. Toggling this and
+  // re-running answers it by subtraction: what remains is the engine's opinion, and what disappeared
+  // was the project's. Without it the only way to see the built-in catalog would be to move the
+  // design out of its project, which nobody is going to do to answer a question.
+  //
+  // It does NOT disable a convention the request itself carries. Those are different acts: one says
+  // "ignore what my project declares", the other says "use this instead", and a caller doing both
+  // means both.
+  bool ignore_project = 3;
+  // Fields 1 and 2 were `conventions` (now AnalysisConfig.conventions) and a reserved
+  // `conventions_id`. Both are retired rather than reused: nothing persists an OverlayConfig — the
+  // stored results document carries its own RunConfig — so there is no reader of an old wire form to
+  // keep compatible, and a number reused for a different meaning is a trap for anyone reading a
+  // capture.
+  reserved 1, 2;
+}

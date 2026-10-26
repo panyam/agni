@@ -9,7 +9,7 @@ from google.protobuf.message import Message
 
 from agni import services
 from agni.errors import AgniError
-from agni.v1.webapi import checks_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, workspace_pb2
+from agni.v1.webapi import checks_pb2, config_pb2, design_pb2, diff_pb2, query_pb2, review_pb2, snapshot_pb2, tables_pb2, workspace_pb2
 
 
 class Transport(Protocol):
@@ -116,7 +116,7 @@ class Client:
         geometry_uri: str = "",
         as_named: bool = False,
         flatten_hierarchy: bool = False,
-        overlay: Optional[Union[checks_pb2.OverlayConfig, Mapping[str, Any]]] = None,
+        overlay: Optional[Union[config_pb2.OverlayConfig, Mapping[str, Any]]] = None,
         read_board: bool = False,
         snapshot_id: str = "",
     ) -> str:

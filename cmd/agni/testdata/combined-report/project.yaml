@@ -1,0 +1,5 @@
+# A project with one query set, for the check report that carries the checks and the project's
+# queries in one HTML file (agni issue 1190). Generic names only.
+name: audit-demo
+title: Audit demo
+queries: [queries]

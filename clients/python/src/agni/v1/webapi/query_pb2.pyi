@@ -1,5 +1,5 @@
 from agni.v1.checks import checks_pb2 as _checks_pb2
-from agni.v1.webapi import checks_pb2 as _checks_pb2_1
+from agni.v1.webapi import config_pb2 as _config_pb2
 from google.protobuf.internal import containers as _containers
 from google.protobuf import descriptor as _descriptor
 from google.protobuf import message as _message
@@ -136,9 +136,9 @@ class ListRelationsRequest(_message.Message):
     OVERLAY_FIELD_NUMBER: _ClassVar[int]
     PATH_FIELD_NUMBER: _ClassVar[int]
     snapshot: str
-    overlay: _checks_pb2_1.OverlayConfig
+    overlay: _config_pb2.OverlayConfig
     path: str
-    def __init__(self, snapshot: _Optional[str] = ..., overlay: _Optional[_Union[_checks_pb2_1.OverlayConfig, _Mapping]] = ..., path: _Optional[str] = ...) -> None: ...
+    def __init__(self, snapshot: _Optional[str] = ..., overlay: _Optional[_Union[_config_pb2.OverlayConfig, _Mapping]] = ..., path: _Optional[str] = ...) -> None: ...
 
 class RelationInfo(_message.Message):
     __slots__ = ("name", "args", "summary", "kind", "detail", "signature", "definition")

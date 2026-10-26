@@ -546,19 +546,9 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 		_, err = fmt.Fprintln(w, string(b))
 		return err
 	}
-	ts := rpt.TableSet{Title: resp.GetTitle(), Source: resp.GetSource(), Preamble: resp.GetPreamble()}
-	for i, r := range resp.GetResults() {
-		sec := rpt.TableSection{Name: r.GetName(), Description: r.GetDescription(), Error: r.GetError()}
-		if at := r.GetErrorAt(); at != nil {
-			sec.Error += fmt.Sprintf(" (line %d, column %d of the query)", at.GetLine(), at.GetColumn())
-		}
-		if r.GetResult() != nil {
-			sec.Table = tableFromProto(r.GetResult(), "", r.GetResult().GetQuery(), "")
-		} else {
-			sec.Table = rpt.Table{Query: set.Queries[i].Query, Bindings: query.FormatBindings(set.Queries[i].Bind)}
-		}
-		ts.Sections = append(ts.Sections, sec)
-	}
+	ts := service.QuerySetTable(resp, func(i int) rpt.Table {
+		return rpt.Table{Query: set.Queries[i].Query, Bindings: query.FormatBindings(set.Queries[i].Bind)}
+	})
 	switch format {
 	case "markdown":
 		return rpt.TableSetMarkdown(w, ts)
@@ -570,19 +560,9 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 }
 
 // tableFromProto builds the view from a RunQueryResponse, the shape the QueryService returns and
-// the web panel renders. Per-cell sheet badges and locate reasons are panel navigation and mean
-// nothing in a file, so they stop here.
-//
-// SOURCE IS THE DESIGN'S URI, NEVER THE HOST PATH. A view gets committed and pasted into tickets,
-// so a host path publishes the machine that ran it. agni issue 501 fixed that leak in
-// provenance.source_file, and a new output format has to keep the rule itself.
+// the web panel renders, through service.QueryResultTable.
 func tableFromProto(resp *webapi.RunQueryResponse, title, queryText, source string) rpt.Table {
-	t := rpt.Table{Title: title, Query: queryText, Source: source, Columns: resp.GetColumns(),
-		Bindings: formatBindings(resp.GetBindings()), Total: int(resp.GetTotal())}
-	for _, r := range resp.GetRows() {
-		t.Rows = append(t.Rows, rpt.TableRow{Cells: r.GetCells(), Cites: service.RowCites(resp, r), Why: r.GetCellWhy(), Witnesses: service.RowWitnesses(resp, r)})
-	}
-	return t
+	return service.QueryResultTable(resp, title, queryText, source)
 }
 
 // addLibraries reads each --lib directory and adds its modules and pages to cfg as values, so the CLI
@@ -620,15 +600,6 @@ func parseBindings(args []string) (query.Bindings, error) {
 		return nil, fmt.Errorf("--bind: %w", err)
 	}
 	return b, nil
-}
-
-// formatBindings spells an answer's echoed bindings as a document states them beside its query.
-func formatBindings(m map[string]*webapi.QueryValue) []string {
-	b, err := service.BindingsFromProto(m)
-	if err != nil {
-		return []string{err.Error()}
-	}
-	return query.FormatBindings(b)
 }
 
 // withCaret adds the line a query that would not parse stopped on, with a caret under the place, as

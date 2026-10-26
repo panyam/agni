@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { ViewerPresenter } from "./viewer.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
-import type { OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
+import type { OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 import { NO_PROJECT_LABEL, PLAIN_LABEL, projectLabel, type ProjectState } from "./project.js";
 

@@ -113,7 +113,14 @@
   </div>
 </details>
 {{end}}
-
+{{range .QuerySets}}{{with setview .}}
+<section class="query-set">
+<h2>Queries: {{.Title}}</h2>
+{{if .Preamble}}<p class="note">Shared rules:</p>
+<pre class="q">{{.Preamble}}</pre>{{end}}
+{{template "querysections" .Sections}}
+</section>
+{{end}}{{end}}
 </div>
 {{if .HasLinks}}<script>{{viewerScript}}</script>{{end}}
 </body>

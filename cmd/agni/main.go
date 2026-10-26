@@ -474,6 +474,7 @@ func checkCmd() *cobra.Command {
 	var remoteURL string
 	var subjectArgs []string
 	var tableName string
+	var querySets bool
 	cmd := &cobra.Command{
 		Use:   "check <file>",
 		Short: "Run structural rule checks over one design",
@@ -511,6 +512,9 @@ func checkCmd() *cobra.Command {
 			}
 			if len(orderBy) > 0 && format != "csv" {
 				return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
+			}
+			if querySets && format != "html" {
+				return fmt.Errorf("--query-sets adds the project's query sets to the HTML report, so it needs --format html")
 			}
 			if tableName != "" && (format != "csv" || !verdicts) {
 				return fmt.Errorf("--table picks one of a verdict run's csv tables, so it needs --verdicts --format csv")
@@ -622,6 +626,7 @@ func checkCmd() *cobra.Command {
 			// are still resolved here, against the catalog this design's project composes.
 			var svc checkAPI
 			var snaps snapshotAPI
+			var queries queryAPI
 			addr := cliArgURI
 			if remoteURL != "" {
 				if err := refuseLocalOnly(cmd, "params", "profile-path"); err != nil {
@@ -631,7 +636,7 @@ func checkCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				svc, snaps, addr = r.check(), r.snapshots(), r.uri
+				svc, snaps, queries, addr = r.check(), r.snapshots(), r.query(), r.uri
 			} else {
 				var specs param.ParamProvider
 				if paramsDir != "" {
@@ -644,6 +649,7 @@ func checkCmd() *cobra.Command {
 				local := service.NewCheckService(ll, catalog, specs, "", nil, cliProjects()).
 					WithEnv(service.ReviewEnv{ProducerVersion: version.Version(), Profiles: profilePath != "", Intent: intentPath != ""})
 				svc, snaps = local, local.Snapshots()
+				queries = service.NewQueryService(ll, nil, cliProjects())
 			}
 			ctx := cmd.Context()
 			// Addressed once, since every request below names the same two artifacts.
@@ -761,8 +767,14 @@ func checkCmd() *cobra.Command {
 						// resolveAgainst, NOT catalog, because the report has to read the catalog the RUN
 						// used. `catalog` lacks the project's rules and the --conventions rules, which would
 						// then render under a bare name with no summary, impact or remedy (agni issue 411).
+						var answered []*webapi.RunQueriesResponse
+						if querySets {
+							if answered, err = answerQuerySets(ctx, cmd.ErrOrStderr(), queries, snap); err != nil {
+								return rpcFailed(err)
+							}
+						}
 						rendered, err := svc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{
-							Snapshot: snap, Rules: names, Run: resp,
+							Snapshot: snap, Rules: names, Run: resp, QuerySets: answered,
 							Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML,
 							Links:  &webapi.ReportLinks{UrlBase: meta.URLBase, DesignUri: linkURI(meta.MountPath), Withheld: meta.LinksWithheld},
 						})
@@ -808,6 +820,7 @@ func checkCmd() *cobra.Command {
 	outFileFlag(cmd, &outPath)
 	cmd.Flags().StringSliceVar(&orderBy, "order-by", nil, "order the csv rows by these columns, comma-separated, a leading - for descending: --order-by=rule,-subject. A column sorts by its type, so subject puts R2 before R10. csv only, since it orders the projected table the TableService serves (agni issue 862)")
 	cmd.Flags().BoolVar(&verdicts, "verdicts", false, "report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. Only rules that state one contribute; a rule absent from the output is declining to say, not reporting that it considered nothing. Honours --format text|csv|json|html, and --format html turns it on by itself. The default output states how much was considered without it")
+	cmd.Flags().BoolVar(&querySets, "query-sets", false, "with --format html, answer every query set the design's project keeps and add each as a Queries section after the rules, so one file carries the checks and the queries (agni issue 1190)")
 	cmd.Flags().StringVar(&tableName, "table", "", "with --verdicts --format csv, write this one of the run's tables instead of the verdicts: pin_map (a design's IO map one row per declared pin, beside the netlist and the datasheet), verdicts_by_rule, skipped. They are the tables Tabulate serves for the run")
 	cmd.Flags().StringArrayVar(&subjectArgs, "subject", nil, "answer for this net, component or pin alone, spelled net:NAME, component:REF or pin:REF.PIN (repeatable). Each rule reports what a full run reports with it as a subject, and a component covers its own pins. A rule that concludes about the design as a whole is not run and is listed as skipped. text, json and csv only")
 	cmd.Flags().StringVar(&failOn, "fail-on", "", "exit non-zero when findings at or above this severity exist: error | warning | info")
@@ -1493,4 +1506,31 @@ func linkURI(mountPath string) string {
 		return ""
 	}
 	return "mount://" + mountPath
+}
+
+// answerQuerySets asks every query set the snapshot's project keeps, over the snapshot the run read,
+// for the check report to carry. A project keeping none is said on stderr and adds nothing, since the
+// checks alone are still the report the user asked for.
+func answerQuerySets(ctx context.Context, stderr io.Writer, queries queryAPI, snap string) ([]*webapi.RunQueriesResponse, error) {
+	sets, err := queries.ListQuerySets(ctx, &webapi.ListQuerySetsRequest{Snapshot: snap})
+	if err != nil {
+		return nil, err
+	}
+	if len(sets.GetQuerySets()) == 0 {
+		fmt.Fprintln(stderr, "note: --query-sets: the design's project keeps no query sets, so the report carries the checks alone")
+		return nil, nil
+	}
+	var out []*webapi.RunQueriesResponse
+	for _, s := range sets.GetQuerySets() {
+		resp, err := queries.RunQueries(ctx, &webapi.RunQueriesRequest{Snapshot: snap, Set: s.GetSet(), OmitLocations: true})
+		if err != nil {
+			return nil, err
+		}
+		// A set file need not title itself, and its name is what the project calls it.
+		if resp.GetTitle() == "" {
+			resp.Title = s.GetName()
+		}
+		out = append(out, resp)
+	}
+	return out, nil
 }

@@ -54,7 +54,7 @@ func HTML(w io.Writer, r Report) error {
 // parse builds one page template by name. Both pages go through it so they share one func map, and
 // with it the stylesheet.
 func parse(name string) (*template.Template, error) {
-	return template.New(name).Funcs(funcs()).ParseFS(tmplFS, "templates/"+name)
+	return template.New(name).Funcs(funcs()).ParseFS(tmplFS, "templates/"+name, "templates/querysections.html.tmpl")
 }
 
 func funcs() template.FuncMap {
@@ -65,6 +65,9 @@ func funcs() template.FuncMap {
 		// viewerScript is the embedded script that moves an open viewer, ours and never input.
 		"viewerScript": func() template.JS { return template.JS(viewerLinkJS) }, // #nosec G203 -- the embedded viewerlink.js, not input
 		"viewerTarget": func() string { return ViewerTarget },
+		// setview lays a query set out for the shared querysections template, which the query-set page
+		// and the check report's Queries sections both render (agni issue 1190).
+		"setview": setView,
 		// outcomeClass maps an outcome to its CSS class, keeping the vocabulary in one place.
 		"outcomeClass": func(o check.Outcome) string {
 			switch o {

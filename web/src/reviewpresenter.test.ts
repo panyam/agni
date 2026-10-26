@@ -6,7 +6,7 @@ import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { type ReviewState, findingKey } from "./review.js";
 import type { ConventionState } from "./conventions.js";
 import { stubQueryView } from "./testviews.js";
-import type { OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
+import type { OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 import type { FindingItem } from "./findings.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";

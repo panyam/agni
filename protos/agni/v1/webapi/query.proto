@@ -5,7 +5,7 @@ package agni.v1.webapi;
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
 import "agni/v1/checks/checks.proto";
-import "agni/v1/webapi/checks.proto";
+import "agni/v1/webapi/config.proto";
 
 // This file: QueryService, the ad-hoc datalog query surface (WS3-029) over a loaded design's fact
 // base — the web front-end to the same `query` engine `agni query` runs. Search is its own concern

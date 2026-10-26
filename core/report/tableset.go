@@ -111,6 +111,14 @@ func TableSetHTML(w io.Writer, s TableSet) error {
 	if err != nil {
 		return err
 	}
+	if err := tm.Execute(w, setView(s)); err != nil {
+		return fmt.Errorf("render query set: %w", err)
+	}
+	return nil
+}
+
+// setView is the template's view of a set.
+func setView(s TableSet) tableSetView {
 	v := tableSetView{Title: s.title(), Source: s.Source, Preamble: s.Preamble}
 	for _, sec := range s.Sections {
 		t := sec.body()
@@ -120,10 +128,7 @@ func TableSetHTML(w io.Writer, s TableSet) error {
 			Count: t.Count(),
 		})
 	}
-	if err := tm.Execute(w, v); err != nil {
-		return fmt.Errorf("render query set: %w", err)
-	}
-	return nil
+	return v
 }
 
 // tableSetView is the template's view, with every section's emitted header and rows precomputed so

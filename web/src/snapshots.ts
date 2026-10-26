@@ -9,7 +9,7 @@
 // updating it, and asked once more.
 import { Code, ConnectError, type Interceptor } from "@connectrpc/connect";
 import { toJsonString, type MessageInitShape } from "@bufbuild/protobuf";
-import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
+import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
 import {
   IngestRequestSchema,
   SnapshotUnavailableSchema,

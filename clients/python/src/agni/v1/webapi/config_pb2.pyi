@@ -61,3 +61,11 @@ class LibraryModule(_message.Message):
     text: str
     source: str
     def __init__(self, path: _Optional[str] = ..., language: _Optional[str] = ..., text: _Optional[str] = ..., source: _Optional[str] = ...) -> None: ...
+
+class OverlayConfig(_message.Message):
+    __slots__ = ("config", "ignore_project")
+    CONFIG_FIELD_NUMBER: _ClassVar[int]
+    IGNORE_PROJECT_FIELD_NUMBER: _ClassVar[int]
+    config: AnalysisConfig
+    ignore_project: bool
+    def __init__(self, config: _Optional[_Union[AnalysisConfig, _Mapping]] = ..., ignore_project: _Optional[bool] = ...) -> None: ...
