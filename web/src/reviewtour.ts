@@ -56,13 +56,35 @@ const panels: Record<string, string> = {
   "save-report": "review",
 };
 
+// reveals names, for a step whose control can sit below its panel's fold, the element to scroll into
+// view when the step goes live. The dimmed page takes no wheel, so a control off screen leaves the
+// reader no way to reach it.
+const askConnect = () => {
+  const asks = every(".pr-ask-go");
+  return asks.find((b) => /connect to/.test(b.textContent ?? "")) ?? asks[0] ?? null;
+};
+const reveals: Record<string, () => HTMLElement | null> = {
+  "run-checklist": () => one("button.rv-run"),
+  "click-finding": () => one(".check-locate"),
+  "click-cell": () => one(".query-row"),
+  "ask-area": askConnect,
+  "save-report": () => one(".rv-save"),
+};
+
+// reveal brings a step's panel forward and its control into view, a frame later so a panel the dock
+// just activated has laid out.
+function reveal(host: ReviewTourHost, step: string): void {
+  host.show(panels[step] ?? "");
+  requestAnimationFrame(() => reveals[step]?.()?.scrollIntoView({ block: "nearest", inline: "nearest" }));
+}
+
 export function reviewTourSteps(host: ReviewTourHost): TourStep<ViewerEvents>[] {
   return [
     {
       id: "run-checklist",
       title: "Run a checklist",
       text:
-        "Pick one of the project's checklists in the Review panel and press Run. Each item is a question " +
+        "Pick one of the project's checklists in the Review panel and press Run review. Each item is a question " +
         "bound to a rule, a query or a manual check, and the engine scores it: pass, fail, provisional, or " +
         "not automated.",
       target: () => visible(every("select.rv-checklist, button.rv-run")),
@@ -133,21 +155,17 @@ export function reviewTourSteps(host: ReviewTourHost): TourStep<ViewerEvents>[] 
       title: "Ask about the block",
       text: "Ask what the block connects to. The question binds every part in the area at once.",
       target: () => {
-        const asks = every(".pr-ask-go");
-        const connect = asks.filter((b) => /connect to/.test(b.textContent ?? ""));
-        return visible(connect.length ? connect : asks);
+        const ask = askConnect();
+        return ask ? visible([ask]) : null;
       },
       advanceOn: { event: "query.asked" },
-      doItForMe: () => {
-        const asks = every(".pr-ask-go");
-        (asks.find((b) => /connect to/.test(b.textContent ?? "")) ?? asks[0])?.click();
-      },
+      doItForMe: () => askConnect()?.click(),
     },
     {
       id: "save-report",
       title: "Save the checklist page",
       text:
-        "Save the checklist's page. The viewer asks the engine for the page `agni review --format html` " +
+        "Save the checklist's page. The viewer asks the engine for the page 'agni review --format html' " +
         "writes, links back to this viewer included.",
       target: () => visible(every(".rv-save")),
       advanceOn: { event: "report.saved" },
@@ -186,7 +204,7 @@ export function startReviewTour(bus: TourEventSource, host: ReviewTourHost, pace
       handle.step = step.id;
       handle.index = index;
       if (pace === "host") root()!.style.visibility = "hidden";
-      else host.show(panels[step.id] ?? "");
+      else reveal(host, step.id);
     },
     onEnd: (reason) => {
       handle.ended = reason;
@@ -196,7 +214,7 @@ export function startReviewTour(bus: TourEventSource, host: ReviewTourHost, pace
   handle.release = () => {
     const r = root();
     if (r) r.style.visibility = "";
-    if (handle.step) host.show(panels[handle.step] ?? "");
+    if (handle.step) reveal(host, handle.step);
   };
   const pressed = () => {
     if (handle.step && shown()) handle.pressed[handle.step] ??= Date.now();

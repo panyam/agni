@@ -291,6 +291,16 @@ export async function tourAct(page: Page, step: string, action: () => Promise<un
   }
   if (at.step !== step) throw new Error(`the tour is on its "${at.step}" step where the walk expected "${step}"`);
   await page.evaluate(() => (globalThis as { __agniTour?: { release(): void } }).__agniTour?.release());
+  // A released step must cut a hole the reader can reach without scrolling, since the dimmed page takes
+  // no wheel. The walk's own clicks scroll their target into view first, so without this a step whose
+  // control sat below its panel's fold passed here and left a reader in front of a page with no way in.
+  await page
+    .waitForFunction(() => Number(document.querySelector<HTMLElement>(".tsappkit-tour")?.dataset.tourHoles ?? "0") > 0, null, {
+      timeout: 5_000,
+    })
+    .catch(() => {
+      throw new Error(`the tour's "${step}" step shows no hole: its controls are off screen or not drawn`);
+    });
   const moved = (wait: number) =>
     page.waitForFunction(
       (i) => {
