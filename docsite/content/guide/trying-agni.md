@@ -43,6 +43,28 @@ board's net names, reference designators, part numbers, its file or folder names
 rules your project wrote; those are counted, and the report's type has no field that could hold
 them.
 
+A board whose `design.yaml` declares an `io_map` also gets its pin map counted. The report says how
+many rows the map has, how many each check (pin, net, far end, function) passed, failed or could not
+judge, why a declared function went unchecked (no part number, no datasheet entry, no pin-mux table
+for the pin, and so on) and how many matches had to be inferred. A pin, a net and a function are all
+your board's words, so none of them is kept, only how many.
+
+### Signing off a pin map in a clean room
+
+A team checking its own board's pin map runs three commands where the board lives, and only the last
+one's output leaves the room:
+
+```bash
+agni check --format html -o pins.html designs/<board>                        # read it yourself
+agni check --verdicts --format csv --table pin_map designs/<board> > pins.csv # a row per declared pin
+agni trial designs/<board>                                                    # the report you send
+```
+
+The first two carry the board's names and stay with the team. Judge each row by eye: is the net the
+one the map declares, does the far end land where it should, and is a failed function really one the
+part cannot put on that pin. Then send the trial report with what you found in your own words. The
+pin map's rows are described in [Design intent](../design-intent/#reading-the-map-one-pin-at-a-time).
+
 ## What to look at in the viewer
 
 The trial times the engine. These are the things only a person can judge, in the order a review

@@ -72,6 +72,9 @@ type Report struct {
 	ProjectRules ProjectRules `json:"project_rules"`
 	Review       ReviewTally  `json:"review"`
 	Queries      QueryTally   `json:"queries"`
+	// PinMap is the design intent's IO map checked against the netlist and the datasheet, as counts,
+	// and nil when the design declares no map (agni issue 1196).
+	PinMap *PinMapTally `json:"pin_map,omitempty"`
 }
 
 // Shape is the design as counts. The format is the reader's name for it (kicad, edif), from the
@@ -128,6 +131,52 @@ type QueryTally struct {
 	Answered int `json:"answered"`
 	Failed   int `json:"failed"`
 }
+
+// PinMapTally is a declared pin map's rows and what each check concluded about them, counted. A row
+// names a net, a part and a pin, and a function names a peripheral, so none of them is kept; a team
+// running agni on a board we never see sends this back to say how its map fared.
+type PinMapTally struct {
+	Rows         int `json:"rows"`
+	WithFunction int `json:"with_function"`
+	WithFarEnd   int `json:"with_far_end"`
+	// One per check the pin map lays out, in the order its columns run.
+	Pin      OutcomeCounts `json:"pin"`
+	Net      OutcomeCounts `json:"net"`
+	FarEnd   OutcomeCounts `json:"far_end"`
+	Function OutcomeCounts `json:"function"`
+	// FunctionUnchecked counts the function checks that compared nothing, by why. The reason itself
+	// names parts, so only its kind is kept.
+	FunctionUnchecked map[FunctionReason]int `json:"function_unchecked,omitempty"`
+	// Inferred counts the pin and function matches that needed normalizing or dropping tokens, which
+	// a verdict notes and a reviewer should look at.
+	Inferred int `json:"inferred_matches"`
+}
+
+// OutcomeCounts is one check's outcomes over the map's rows. NotRun counts rows the run held no
+// verdict for, which is every row when the check's rule did not run (the function check needs a
+// datasheet corpus).
+type OutcomeCounts struct {
+	Pass          int `json:"pass"`
+	Fail          int `json:"fail"`
+	Inconclusive  int `json:"inconclusive"`
+	NotConsidered int `json:"not_considered"`
+	NotRun        int `json:"not_run"`
+}
+
+// FunctionReason is why a function check compared nothing, from a fixed list.
+type FunctionReason string
+
+// The reasons a function check reports a row not considered.
+const (
+	FunctionNotDeclared     FunctionReason = "no function declared"
+	FunctionPinUnresolved   FunctionReason = "the design pin did not resolve"
+	FunctionNoPartNumber    FunctionReason = "no part number"
+	FunctionNoDatasheet     FunctionReason = "no datasheet entry"
+	FunctionNoDatasheetPins FunctionReason = "datasheet entry has no pins"
+	FunctionSpecPinUnknown  FunctionReason = "pin not in the datasheet entry"
+	FunctionNoPinMux        FunctionReason = "no pin-mux table for the pin"
+	FunctionOther           FunctionReason = "other"
+)
 
 // ShippedRule is the name of a rule agni ships. It has an unexported field so that only Shipped can
 // make one, from a name the caller's list of shipped rules holds.
@@ -199,6 +248,32 @@ func (r Report) Markdown() string {
 	fmt.Fprintf(&b, "\nProject rules: %d reported %d findings.\n", r.ProjectRules.Rules, r.ProjectRules.Findings)
 	fmt.Fprintf(&b, "Checklists: %d, %d of %d items answered, %d pass, %d fail.\n", r.Review.Checklists, r.Review.Answered, r.Review.Items, r.Review.Pass, r.Review.Fail)
 	fmt.Fprintf(&b, "Query sets: %d, %d of %d queries answered, %d failed.\n", r.Queries.Sets, r.Queries.Answered, r.Queries.Queries, r.Queries.Failed)
+	if pm := r.PinMap; pm != nil {
+		fmt.Fprintf(&b, "\nPin map: %d rows, %d declaring a function, %d a far end.\n\n", pm.Rows, pm.WithFunction, pm.WithFarEnd)
+		b.WriteString("| check | pass | fail | inconclusive | not considered | not run |\n|---|---|---|---|---|---|\n")
+		for _, c := range []struct {
+			name string
+			n    OutcomeCounts
+		}{{"pin", pm.Pin}, {"net", pm.Net}, {"far end", pm.FarEnd}, {"function", pm.Function}} {
+			fmt.Fprintf(&b, "| %s | %d | %d | %d | %d | %d |\n", c.name, c.n.Pass, c.n.Fail, c.n.Inconclusive, c.n.NotConsidered, c.n.NotRun)
+		}
+		if pm.Function.NotRun == pm.Rows && pm.Rows > 0 {
+			b.WriteString("\nNo function was checked, because the run had no datasheet corpus.\n")
+		}
+		if len(pm.FunctionUnchecked) > 0 {
+			reasons := make([]string, 0, len(pm.FunctionUnchecked))
+			for k := range pm.FunctionUnchecked {
+				reasons = append(reasons, string(k))
+			}
+			sort.Strings(reasons)
+			parts := make([]string, 0, len(reasons))
+			for _, k := range reasons {
+				parts = append(parts, fmt.Sprintf("%s %d", k, pm.FunctionUnchecked[FunctionReason(k)]))
+			}
+			fmt.Fprintf(&b, "\nFunctions not compared: %s.\n", strings.Join(parts, ", "))
+		}
+		fmt.Fprintf(&b, "Matches that were inferred: %d.\n", pm.Inferred)
+	}
 	return b.String()
 }
 

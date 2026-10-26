@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/panyam/agni/core/check"
@@ -42,7 +43,7 @@ func ioMapFunctionVerdicts(m check.Model, d Declaration) []check.Verdict {
 		res := resolvePin(m, a.Device, a.Pin)
 		v := check.Verdict{Subjects: []check.Entity{res.subject(a.Device)}, Context: rowContext(a, res)}
 		if a.Function == "" {
-			v.Outcome, v.Reason = check.NotConsidered, "this row declares no function"
+			v.Outcome, v.Reason = check.NotConsidered, "this row "+phraseNoFunction
 			out = append(out, v)
 			continue
 		}
@@ -60,7 +61,7 @@ func ioMapFunctionVerdicts(m check.Model, d Declaration) []check.Verdict {
 		}
 		if len(specPin.GetAlternates()) == 0 {
 			v.Outcome, v.Reason = check.NotConsidered, fmt.Sprintf(
-				"the datasheet entry for %s lists no alternate functions for pin %s, so no pin-mux table was read for it",
+				"the datasheet entry for %s "+phraseNoAlternates+" for pin %s, so no pin-mux table was read for it",
 				a.Device, specPin.GetName())
 			out = append(out, v)
 			continue
@@ -114,9 +115,9 @@ func specPinFor(m check.Model, spec *parampb.PartSpec, refDes, designator string
 	if spec == nil {
 		mpn := m.ComponentMPN(refDes)
 		if mpn == "" {
-			return nil, fmt.Sprintf("%s has no part number, so no datasheet entry can be joined to it", refDes)
+			return nil, fmt.Sprintf("%s "+phraseNoPartNumber+", so no datasheet entry can be joined to it", refDes)
 		}
-		return nil, fmt.Sprintf("the datasheet corpus has no entry for %s's part %s", refDes, mpn)
+		return nil, fmt.Sprintf("the datasheet corpus "+phraseNoEntry+" %s's part %s", refDes, mpn)
 	}
 	pkg := ""
 	if p := param.PackageForMPN(spec, m.ComponentMPN(refDes)); p != nil {
@@ -127,9 +128,9 @@ func specPinFor(m check.Model, spec *parampb.PartSpec, refDes, designator string
 	case err == nil:
 		return pin, ""
 	case errors.Is(err, param.ErrNoPinData):
-		return nil, fmt.Sprintf("the datasheet entry for %s's part %s declares no pins", refDes, spec.GetMpn())
+		return nil, fmt.Sprintf("the datasheet entry for %s's part %s "+phraseNoPins, refDes, spec.GetMpn())
 	default:
-		return nil, fmt.Sprintf("%s pin %s does not resolve to one pin of the datasheet entry for %s: %v",
+		return nil, fmt.Sprintf("%s pin %s "+phraseSpecPinUnresolved+" of the datasheet entry for %s: %v",
 			refDes, designator, spec.GetMpn(), err)
 	}
 }
@@ -145,3 +146,64 @@ func functionNote(r ident.Result) string {
 	}
 	return " (" + string(r.Match) + " match: " + r.Note + ")"
 }
+
+// The phrases io-map-function's not-considered reasons are built from, one per step that can stop
+// it. FunctionReasonOf reads a reason back to its kind through these same constants, so a reworded
+// reason keeps its kind, and a report sent from a board we never see can count why without carrying
+// the sentence, which names parts (agni issue 1196).
+const (
+	phraseNoFunction        = "declares no function"
+	phraseNoComponent       = "carries no component"
+	phraseNoPinList         = "supplied no pin list"
+	phraseNoPartNumber      = "has no part number"
+	phraseNoEntry           = "has no entry for"
+	phraseNoPins            = "declares no pins"
+	phraseSpecPinUnresolved = "does not resolve to one pin"
+	phraseNoAlternates      = "lists no alternate functions"
+)
+
+// FunctionReason is the step that stopped io-map-function on a row it reports not-considered.
+type FunctionReason string
+
+// The steps, in the order the rule takes them.
+const (
+	FunctionReasonNotDeclared     FunctionReason = "not-declared"
+	FunctionReasonPinUnresolved   FunctionReason = "pin-unresolved"
+	FunctionReasonNoPartNumber    FunctionReason = "no-part-number"
+	FunctionReasonNoDatasheet     FunctionReason = "no-datasheet"
+	FunctionReasonNoDatasheetPins FunctionReason = "no-datasheet-pins"
+	FunctionReasonSpecPinUnknown  FunctionReason = "spec-pin-unresolved"
+	FunctionReasonNoPinMux        FunctionReason = "no-pin-mux"
+	FunctionReasonOther           FunctionReason = "other"
+)
+
+// FunctionReasonOf names the step a not-considered io-map-function reason came from, and
+// FunctionReasonOther for text this rule did not write.
+func FunctionReasonOf(reason string) FunctionReason {
+	for _, c := range []struct {
+		phrase string
+		kind   FunctionReason
+	}{
+		{phraseNoFunction, FunctionReasonNotDeclared},
+		{phraseNoComponent, FunctionReasonPinUnresolved},
+		{phraseNoPinList, FunctionReasonPinUnresolved},
+		{phraseNoPartNumber, FunctionReasonNoPartNumber},
+		{phraseNoEntry, FunctionReasonNoDatasheet},
+		{phraseNoPins, FunctionReasonNoDatasheetPins},
+		{phraseSpecPinUnresolved, FunctionReasonSpecPinUnknown},
+		{phraseNoAlternates, FunctionReasonNoPinMux},
+	} {
+		if strings.Contains(reason, c.phrase) {
+			return c.kind
+		}
+	}
+	return FunctionReasonOther
+}
+
+// inferredMatch is the note an IO-map witness carries when a pin name or a function matched only
+// after normalizing or dropping tokens (pinMatch.note, functionNote).
+var inferredMatch = regexp.MustCompile(`\((normalized|fuzzy) (pin-name )?match`)
+
+// InferredMatch reports whether an IO-map witness statement says a match was inferred, so a report
+// can count those without keeping the statement.
+func InferredMatch(statement string) bool { return inferredMatch.MatchString(statement) }
