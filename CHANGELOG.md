@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.9] - 2026-10-25
+
+An agent drives the viewer tabs a reader has open, and a reader asks it questions from the tab, under
+`agni serve --mcp --viewer-rooms` (PRs 1174, 1175). `?tour=review` starts a guided review tour of the
+viewer that the reader takes themselves, and `make exercise-browser-review` runs as that tour (PRs
+1177, 1179).  The full write-up is [RELEASES/v0.3.9.md](RELEASES/v0.3.9.md).
+
 ## [0.3.8] - 2026-10-22
 
 Shift-drag selects an area of a sheet and asks about everything in it (PR 1171). Another page, a
