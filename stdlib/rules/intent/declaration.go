@@ -314,10 +314,9 @@ type IOAssignment struct {
 	Device string
 	// Pin is the pin, spelled as a package designator or as the part type's functional name.
 	Pin string
-	// Function is the peripheral function selected on this pin ("ADC0_S17"), and NOTHING READS IT
-	// YET. Checking it needs the part's alternate-function table, agni issue 667 (issue 188, the pin
-	// FUNCTION table, is done). It is carried so a map is authored once, and every verdict on a row
-	// declaring one states that the function was not evaluated, so it never reads as a pass.
+	// Function is the peripheral function selected on this pin ("ADC0_S17"). io-map-function checks
+	// it against the alternate functions the part's datasheet lists for the pin (agni issue 667), and
+	// reports the row not-considered when the part has no such table in the corpus.
 	Function string
 	// To is the far end this net is declared to reach, or nil when the row does not say. Real maps
 	// fill it sparsely (about a third of rows in the one we measured), so the far-end rule reports its

@@ -119,7 +119,8 @@ message PinAssignment {
   string device = 2;
   // pin is the package designator or the datasheet's functional name. Both resolve.
   string pin = 3;
-  // function is carried and not yet evaluated (agni issue 667).
+  // function is the peripheral function selected on the pin, which io-map-function checks against
+  // the alternate functions the part's datasheet lists (agni issue 667).
   string function = 4;
   // to is the optional far end, which needs both a device and a pin.
   PinEndpoint to = 5;

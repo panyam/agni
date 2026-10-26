@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/derive/derive.proto.
  */
 export const file_agni_v1_derive_derive: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2Rlcml2ZS9kZXJpdmUucHJvdG8SDmFnbmkudjEuZGVyaXZlIv0BCgZSZWNpcGUSDAoEbmFtZRgBIAEoCRIZChFkb2NfdGl0bGVfcGF0dGVybhgCIAEoCRIpCgZ0YWJsZXMYAyADKAsyGS5hZ25pLnYxLmRlcml2ZS5UYWJsZVJ1bGUSMAoKcGluX3RhYmxlcxgEIAMoCzIcLmFnbmkudjEuZGVyaXZlLlBpblRhYmxlUnVsZRI6CgphdHRyaWJ1dGVzGA4gAygLMiYuYWduaS52MS5kZXJpdmUuUmVjaXBlLkF0dHJpYnV0ZXNFbnRyeRoxCg9BdHRyaWJ1dGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASI2CglUYWJsZVJ1bGUSFQoNdGl0bGVfcGF0dGVybhgBIAEoCRISCgpsaW1pdF9raW5kGAIgASgJIlkKDFBpblRhYmxlUnVsZRIVCg10aXRsZV9wYXR0ZXJuGAEgASgJEjIKC2NvbHVtbl9heGlzGAIgASgOMh0uYWduaS52MS5kZXJpdmUuUGluQ29sdW1uQXhpcyKRAQoFUGF0Y2gSDAoEbmFtZRgBIAEoCRIYChBkb2NfY29udGVudF9oYXNoGAIgASgJEhoKEnRhYmxlX2NvbnRlbnRfaGFzaBgDIAEoCRILCgNyb3cYBCABKAUSCwoDY29sGAUgASgFEgwKBHRleHQYBiABKAkSDAoEbm90ZRgHIAEoCRIOCgZhdXRob3IYCCABKAkixgIKC1J1bk1hbmlmZXN0EhgKEGRvY19jb250ZW50X2hhc2gYASABKAkSFAoMZG9jX3Byb2R1Y2VyGAIgASgJEhYKDmRlcml2ZV92ZXJzaW9uGAMgASgJEgsKA21wbhgEIAEoCRIUCgxtYW51ZmFjdHVyZXIYBSABKAkSDwoHcmVjaXBlcxgGIAMoCRIXCg9wYXRjaGVzX2FwcGxpZWQYByADKAkSGgoScGFyYW1ldGVyc19lbWl0dGVkGAggASgFEhQKDHBpbnNfZW1pdHRlZBgMIAEoBRIYChBwYWNrYWdlc19lbWl0dGVkGA0gASgFEhcKD2Vuc2VtYmxlX2FncmVlZBgJIAEoBRIaChJlbnNlbWJsZV9kaXNhZ3JlZWQYCiABKAUSIQoEZ2FwcxgLIAMoCzITLmFnbmkudjEuZGVyaXZlLkdhcCIzCgNHYXASDAoEa2luZBgBIAEoCRIOCgZyZWdpb24YAiABKAkSDgoGZGV0YWlsGAMgASgJKmoKDVBpbkNvbHVtbkF4aXMSHwobUElOX0NPTFVNTl9BWElTX1VOU1BFQ0lGSUVEEAASGwoXUElOX0NPTFVNTl9BWElTX1BBQ0tBR0UQARIbChdQSU5fQ09MVU1OX0FYSVNfVkFSSUFOVBACQjhaNmdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZGF0YXNoZWV0L2dlbi9nby9hZ25pL3YxL2Rlcml2ZWIGcHJvdG8z");
+  fileDesc("ChthZ25pL3YxL2Rlcml2ZS9kZXJpdmUucHJvdG8SDmFnbmkudjEuZGVyaXZlIq8CCgZSZWNpcGUSDAoEbmFtZRgBIAEoCRIZChFkb2NfdGl0bGVfcGF0dGVybhgCIAEoCRIpCgZ0YWJsZXMYAyADKAsyGS5hZ25pLnYxLmRlcml2ZS5UYWJsZVJ1bGUSMAoKcGluX3RhYmxlcxgEIAMoCzIcLmFnbmkudjEuZGVyaXZlLlBpblRhYmxlUnVsZRIwCgptdXhfdGFibGVzGAUgAygLMhwuYWduaS52MS5kZXJpdmUuTXV4VGFibGVSdWxlEjoKCmF0dHJpYnV0ZXMYDiADKAsyJi5hZ25pLnYxLmRlcml2ZS5SZWNpcGUuQXR0cmlidXRlc0VudHJ5GjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIjYKCVRhYmxlUnVsZRIVCg10aXRsZV9wYXR0ZXJuGAEgASgJEhIKCmxpbWl0X2tpbmQYAiABKAkiWQoMUGluVGFibGVSdWxlEhUKDXRpdGxlX3BhdHRlcm4YASABKAkSMgoLY29sdW1uX2F4aXMYAiABKA4yHS5hZ25pLnYxLmRlcml2ZS5QaW5Db2x1bW5BeGlzIvUBCgxNdXhUYWJsZVJ1bGUSFQoNdGl0bGVfcGF0dGVybhgBIAEoCRIpCgZsYXlvdXQYAiABKA4yGS5hZ25pLnYxLmRlcml2ZS5NdXhMYXlvdXQSEwoLbmFtZV9jb2x1bW4YAyABKAkSNwoObnVtYmVyX2NvbHVtbnMYBCADKAsyHy5hZ25pLnYxLmRlcml2ZS5NdXhOdW1iZXJDb2x1bW4SOwoQZnVuY3Rpb25fY29sdW1ucxgFIAMoCzIhLmFnbmkudjEuZGVyaXZlLk11eEZ1bmN0aW9uQ29sdW1uEhgKEHBpbl9zdGFydF9jb2x1bW4YBiABKAkiMgoPTXV4TnVtYmVyQ29sdW1uEg4KBmhlYWRlchgBIAEoCRIPCgdwYWNrYWdlGAIgASgJIjoKEU11eEZ1bmN0aW9uQ29sdW1uEg4KBmhlYWRlchgBIAEoCRIVCg1sYWJlbF9wYXR0ZXJuGAIgASgJIpEBCgVQYXRjaBIMCgRuYW1lGAEgASgJEhgKEGRvY19jb250ZW50X2hhc2gYAiABKAkSGgoSdGFibGVfY29udGVudF9oYXNoGAMgASgJEgsKA3JvdxgEIAEoBRILCgNjb2wYBSABKAUSDAoEdGV4dBgGIAEoCRIMCgRub3RlGAcgASgJEg4KBmF1dGhvchgIIAEoCSLGAgoLUnVuTWFuaWZlc3QSGAoQZG9jX2NvbnRlbnRfaGFzaBgBIAEoCRIUCgxkb2NfcHJvZHVjZXIYAiABKAkSFgoOZGVyaXZlX3ZlcnNpb24YAyABKAkSCwoDbXBuGAQgASgJEhQKDG1hbnVmYWN0dXJlchgFIAEoCRIPCgdyZWNpcGVzGAYgAygJEhcKD3BhdGNoZXNfYXBwbGllZBgHIAMoCRIaChJwYXJhbWV0ZXJzX2VtaXR0ZWQYCCABKAUSFAoMcGluc19lbWl0dGVkGAwgASgFEhgKEHBhY2thZ2VzX2VtaXR0ZWQYDSABKAUSFwoPZW5zZW1ibGVfYWdyZWVkGAkgASgFEhoKEmVuc2VtYmxlX2Rpc2FncmVlZBgKIAEoBRIhCgRnYXBzGAsgAygLMhMuYWduaS52MS5kZXJpdmUuR2FwIjMKA0dhcBIMCgRraW5kGAEgASgJEg4KBnJlZ2lvbhgCIAEoCRIOCgZkZXRhaWwYAyABKAkqagoNUGluQ29sdW1uQXhpcxIfChtQSU5fQ09MVU1OX0FYSVNfVU5TUEVDSUZJRUQQABIbChdQSU5fQ09MVU1OX0FYSVNfUEFDS0FHRRABEhsKF1BJTl9DT0xVTU5fQVhJU19WQVJJQU5UEAIqYgoJTXV4TGF5b3V0EhoKFk1VWF9MQVlPVVRfVU5TUEVDSUZJRUQQABIYChRNVVhfTEFZT1VUX0NFTExfTElTVBABEh8KG01VWF9MQVlPVVRfUk9XX1BFUl9GVU5DVElPThACQjhaNmdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZGF0YXNoZWV0L2dlbi9nby9hZ25pL3YxL2Rlcml2ZWIGcHJvdG8z");
 
 /**
  * Recipe is one doc-family's extraction rules: how to classify this family's tables
@@ -51,6 +51,15 @@ export type Recipe = Message<"agni.v1.derive.Recipe"> & {
    * @generated from field: repeated agni.v1.derive.PinTableRule pin_tables = 4;
    */
   pinTables: PinTableRule[];
+
+  /**
+   * Pin-mux (alternate-function) tables, which add PinAlternates to the spec's pins
+   * (agni issue 667). A third list because the table is a third shape: it answers which
+   * peripheral a pin can be, where a pin table answers what kind of pin it is.
+   *
+   * @generated from field: repeated agni.v1.derive.MuxTableRule mux_tables = 5;
+   */
+  muxTables: MuxTableRule[];
 
   /**
    * @generated from field: map<string, string> attributes = 14;
@@ -125,6 +134,124 @@ export const PinTableRuleSchema: GenMessage<PinTableRule> = /*@__PURE__*/
   messageDesc(file_agni_v1_derive_derive, 2);
 
 /**
+ * MuxTableRule classifies a pin-mux table and says where its pins, numbers and
+ * functions are. Every column is named by its header text, compared case-insensitively
+ * with whitespace collapsed and trailing footnote markers ("(1) (2)") removed, because
+ * these tables have no shared header vocabulary to infer from.
+ *
+ * @generated from message agni.v1.derive.MuxTableRule
+ */
+export type MuxTableRule = Message<"agni.v1.derive.MuxTableRule"> & {
+  /**
+   * RE2 pattern over the table's title after title attachment.
+   *
+   * @generated from field: string title_pattern = 1;
+   */
+  titlePattern: string;
+
+  /**
+   * @generated from field: agni.v1.derive.MuxLayout layout = 2;
+   */
+  layout: MuxLayout;
+
+  /**
+   * The column naming each pin. Required by CELL_LIST; ROW_PER_FUNCTION names a pin by
+   * its first function and leaves this empty.
+   *
+   * @generated from field: string name_column = 3;
+   */
+  nameColumn: string;
+
+  /**
+   * @generated from field: repeated agni.v1.derive.MuxNumberColumn number_columns = 4;
+   */
+  numberColumns: MuxNumberColumn[];
+
+  /**
+   * @generated from field: repeated agni.v1.derive.MuxFunctionColumn function_columns = 5;
+   */
+  functionColumns: MuxFunctionColumn[];
+
+  /**
+   * ROW_PER_FUNCTION only, and required there. A column filled once per pin, on the pin's
+   * first row, and "-" or empty on the rest. TI's reset-state column is one.
+   *
+   * Neither the designator spans nor the designator cells mark a pin's rows reliably. A
+   * producer places an unspanned designator at the vertical middle of its merged cell, so
+   * a pin's numbers can sit on its fifth row, and it can stretch a span over the next pin
+   * (on the MSP430FR2355's page 20, RHA pin 24 spans P2.0 and P1.7). A designator belongs
+   * to the pin whose rows it STARTS in.
+   *
+   * @generated from field: string pin_start_column = 6;
+   */
+  pinStartColumn: string;
+};
+
+/**
+ * Describes the message agni.v1.derive.MuxTableRule.
+ * Use `create(MuxTableRuleSchema)` to create a new message.
+ */
+export const MuxTableRuleSchema: GenMessage<MuxTableRule> = /*@__PURE__*/
+  messageDesc(file_agni_v1_derive_derive, 3);
+
+/**
+ * MuxNumberColumn is one column of designators and the package they number. The
+ * package is declared rather than read off the header, since a header like "KW47 48QFN"
+ * names the part as well as the body.
+ *
+ * @generated from message agni.v1.derive.MuxNumberColumn
+ */
+export type MuxNumberColumn = Message<"agni.v1.derive.MuxNumberColumn"> & {
+  /**
+   * @generated from field: string header = 1;
+   */
+  header: string;
+
+  /**
+   * Package id the column's designators belong to. Empty takes the header, lowercased.
+   *
+   * @generated from field: string package = 2;
+   */
+  package: string;
+};
+
+/**
+ * Describes the message agni.v1.derive.MuxNumberColumn.
+ * Use `create(MuxNumberColumnSchema)` to create a new message.
+ */
+export const MuxNumberColumnSchema: GenMessage<MuxNumberColumn> = /*@__PURE__*/
+  messageDesc(file_agni_v1_derive_derive, 4);
+
+/**
+ * MuxFunctionColumn is one column of functions.
+ *
+ * @generated from message agni.v1.derive.MuxFunctionColumn
+ */
+export type MuxFunctionColumn = Message<"agni.v1.derive.MuxFunctionColumn"> & {
+  /**
+   * @generated from field: string header = 1;
+   */
+  header: string;
+
+  /**
+   * RE2 pattern matching the label printed before each function in a CELL_LIST cell
+   * ("ALT\\d+"). The cell splits at each match, and the text after the label's " - " up
+   * to the next label is one function. Empty means the whole cell is one function, which
+   * is what ROW_PER_FUNCTION reads.
+   *
+   * @generated from field: string label_pattern = 2;
+   */
+  labelPattern: string;
+};
+
+/**
+ * Describes the message agni.v1.derive.MuxFunctionColumn.
+ * Use `create(MuxFunctionColumnSchema)` to create a new message.
+ */
+export const MuxFunctionColumnSchema: GenMessage<MuxFunctionColumn> = /*@__PURE__*/
+  messageDesc(file_agni_v1_derive_derive, 5);
+
+/**
  * Patch is one pinned human correction to one cell of one table of one exact
  * document: the layer applied LAST in a derivation, so a verified fix can never be
  * regressed by a re-run. Keys are content hashes, so a new document revision or a
@@ -196,7 +323,7 @@ export type Patch = Message<"agni.v1.derive.Patch"> & {
  * Use `create(PatchSchema)` to create a new message.
  */
 export const PatchSchema: GenMessage<Patch> = /*@__PURE__*/
-  messageDesc(file_agni_v1_derive_derive, 3);
+  messageDesc(file_agni_v1_derive_derive, 6);
 
 /**
  * RunManifest is the lockfile of one derivation run: enough to reproduce the
@@ -298,7 +425,7 @@ export type RunManifest = Message<"agni.v1.derive.RunManifest"> & {
  * Use `create(RunManifestSchema)` to create a new message.
  */
 export const RunManifestSchema: GenMessage<RunManifest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_derive_derive, 4);
+  messageDesc(file_agni_v1_derive_derive, 7);
 
 /**
  * Gap is one thing the run saw and did not extract, with enough locator to act on
@@ -333,7 +460,7 @@ export type Gap = Message<"agni.v1.derive.Gap"> & {
  * Use `create(GapSchema)` to create a new message.
  */
 export const GapSchema: GenMessage<Gap> = /*@__PURE__*/
-  messageDesc(file_agni_v1_derive_derive, 5);
+  messageDesc(file_agni_v1_derive_derive, 8);
 
 /**
  * PinColumnAxis says what the SUB-COLUMNS under a pin table's banded "PIN" header
@@ -384,4 +511,43 @@ export enum PinColumnAxis {
  */
 export const PinColumnAxisSchema: GenEnum<PinColumnAxis> = /*@__PURE__*/
   enumDesc(file_agni_v1_derive_derive, 0);
+
+/**
+ * MuxLayout is how a pin-mux table lays one pin's functions out. Each member is the
+ * layout of a real vendor table, named in its comment, and it is declared by the recipe
+ * because the two cannot be told apart from cell text alone.
+ *
+ * @generated from enum agni.v1.derive.MuxLayout
+ */
+export enum MuxLayout {
+  /**
+   * @generated from enum value: MUX_LAYOUT_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * One row per pin, its functions listed inside one cell, each after a label that the
+   * column's label_pattern matches. NXP's "Package pinout" table: "ALT0 - ADC0_B13
+   * ALT1 - PTB3 ALT2 - LPSPI1_SOUT".
+   *
+   * @generated from enum value: MUX_LAYOUT_CELL_LIST = 1;
+   */
+  CELL_LIST = 1,
+
+  /**
+   * One row per function, several rows to a pin. TI's "Pin Attributes" table: pin 1 is
+   * the rows P1.2, UCB0SIMO, UCB0SDA, TB0TRG, OA0-, A2 and Veref-. The pin is named by its
+   * first row, which is the GPIO, and where each pin begins is read from the rule's
+   * pin_start_column.
+   *
+   * @generated from enum value: MUX_LAYOUT_ROW_PER_FUNCTION = 2;
+   */
+  ROW_PER_FUNCTION = 2,
+}
+
+/**
+ * Describes the enum agni.v1.derive.MuxLayout.
+ */
+export const MuxLayoutSchema: GenEnum<MuxLayout> = /*@__PURE__*/
+  enumDesc(file_agni_v1_derive_derive, 1);
 

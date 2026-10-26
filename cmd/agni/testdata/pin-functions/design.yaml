@@ -1,0 +1,12 @@
+# A wireless MCU's pin map, checked against the functions its datasheet lists per pin (agni issue
+# 667). PTB5 is the row a reviewer is after: the map puts the sensor's SDA there, and the part
+# offers SCL on that pin and SDA on its neighbour. U2 has no datasheet entry, so its row says so.
+name: pin-functions
+entry: demo_ble.edn
+params: [params]
+intent:
+  io_map:
+    - {device: U1, pin: PTB3, function: LPUART1_RX, net: BLE_RX}
+    - {device: U1, pin: PTB4, function: LPI2C1_SDA, net: SENSOR_SDA, to: {device: U2, pin: SDA}}
+    - {device: U1, pin: PTB5, function: LPI2C1_SDA, net: SENSOR_SCL, to: {device: U2, pin: SCL}}
+    - {device: U2, pin: SDA, function: I2C_SDA, net: SENSOR_SDA}

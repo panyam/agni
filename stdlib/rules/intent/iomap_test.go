@@ -285,18 +285,6 @@ func TestIOMapFarEndReportsRowsWithNoFarEnd(t *testing.T) {
 	}
 }
 
-// The field is carried so a map is authored once, and its presence must never read as verification.
-func TestDeclaredFunctionIsReportedAsNotEvaluated(t *testing.T) {
-	v := onlyVerdict(t, ioMapDecl(t,
-		"  - {net: ADC_BATT_SENSE, device: U101, pin: '41', function: ADC0_S17}"), RuleIOMapPin)
-	if v.Outcome != check.Pass {
-		t.Fatalf("outcome = %s", v.Outcome)
-	}
-	if v.Witness == nil || !strings.Contains(v.Witness.Statement, "NOT evaluated") {
-		t.Errorf("a declared function passed silently, so filling the column in reads as verified: %+v", v.Witness)
-	}
-}
-
 func TestIOMapLoadRejectsIncompleteRows(t *testing.T) {
 	for _, c := range []struct{ name, rows, want string }{
 		{"no net", "  - {device: U101, pin: '41'}", `"net"`},

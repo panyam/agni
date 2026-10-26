@@ -1,0 +1,29 @@
+(edif PINFUNCTIONS
+  (edifVersion 2 0 0)
+  (design PINFUNCTIONS (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell KW47
+      (view V (viewType NETLIST)
+        (interface
+          (port PTB3 (designator "1"))
+          (port PTB4 (designator "2"))
+          (port PTB5 (designator "3"))
+          (port VSS (designator "49")))))
+    (cell SENSOR
+      (view V (viewType NETLIST)
+        (interface
+          (port SDA (designator "1"))
+          (port SCL (designator "2"))
+          (port GND (designator "3")))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance U1 (viewRef V (cellRef KW47)) (designator "U1") (property MPN (string "KW47"))
+            (portInstance PTB3 (designator "1")) (portInstance PTB4 (designator "2"))
+            (portInstance PTB5 (designator "3")) (portInstance VSS (designator "49")))
+          (instance U2 (viewRef V (cellRef SENSOR)) (designator "U2")
+            (portInstance SDA (designator "1")) (portInstance SCL (designator "2")) (portInstance GND (designator "3")))
+          (net BLE_RX (joined (portRef PTB3 (instanceRef U1))))
+          (net SENSOR_SDA (joined (portRef PTB4 (instanceRef U1)) (portRef SDA (instanceRef U2))))
+          (net SENSOR_SCL (joined (portRef PTB5 (instanceRef U1)) (portRef SCL (instanceRef U2))))
+          (net GND (joined (portRef VSS (instanceRef U1)) (portRef GND (instanceRef U2)))))))))

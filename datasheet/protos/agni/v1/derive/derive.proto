@@ -33,6 +33,10 @@ message Recipe {
   // optional to accommodate pins would weaken a live invariant, and "every
   // TableRule yields parameters" is worth keeping true.
   repeated PinTableRule pin_tables = 4;
+  // Pin-mux (alternate-function) tables, which add PinAlternates to the spec's pins
+  // (agni issue 667). A third list because the table is a third shape: it answers which
+  // peripheral a pin can be, where a pin table answers what kind of pin it is.
+  repeated MuxTableRule mux_tables = 5;
   map<string, string> attributes = 14;
 }
 
@@ -81,6 +85,65 @@ message PinTableRule {
   // RE2 pattern over the table's title after title attachment.
   string title_pattern = 1;
   PinColumnAxis column_axis = 2;
+}
+
+// MuxLayout is how a pin-mux table lays one pin's functions out. Each member is the
+// layout of a real vendor table, named in its comment, and it is declared by the recipe
+// because the two cannot be told apart from cell text alone.
+enum MuxLayout {
+  MUX_LAYOUT_UNSPECIFIED = 0;
+  // One row per pin, its functions listed inside one cell, each after a label that the
+  // column's label_pattern matches. NXP's "Package pinout" table: "ALT0 - ADC0_B13
+  // ALT1 - PTB3 ALT2 - LPSPI1_SOUT".
+  MUX_LAYOUT_CELL_LIST = 1;
+  // One row per function, several rows to a pin. TI's "Pin Attributes" table: pin 1 is
+  // the rows P1.2, UCB0SIMO, UCB0SDA, TB0TRG, OA0-, A2 and Veref-. The pin is named by its
+  // first row, which is the GPIO, and where each pin begins is read from the rule's
+  // pin_start_column.
+  MUX_LAYOUT_ROW_PER_FUNCTION = 2;
+}
+
+// MuxTableRule classifies a pin-mux table and says where its pins, numbers and
+// functions are. Every column is named by its header text, compared case-insensitively
+// with whitespace collapsed and trailing footnote markers ("(1) (2)") removed, because
+// these tables have no shared header vocabulary to infer from.
+message MuxTableRule {
+  // RE2 pattern over the table's title after title attachment.
+  string title_pattern = 1;
+  MuxLayout layout = 2;
+  // The column naming each pin. Required by CELL_LIST; ROW_PER_FUNCTION names a pin by
+  // its first function and leaves this empty.
+  string name_column = 3;
+  repeated MuxNumberColumn number_columns = 4;
+  repeated MuxFunctionColumn function_columns = 5;
+  // ROW_PER_FUNCTION only, and required there. A column filled once per pin, on the pin's
+  // first row, and "-" or empty on the rest. TI's reset-state column is one.
+  //
+  // Neither the designator spans nor the designator cells mark a pin's rows reliably. A
+  // producer places an unspanned designator at the vertical middle of its merged cell, so
+  // a pin's numbers can sit on its fifth row, and it can stretch a span over the next pin
+  // (on the MSP430FR2355's page 20, RHA pin 24 spans P2.0 and P1.7). A designator belongs
+  // to the pin whose rows it STARTS in.
+  string pin_start_column = 6;
+}
+
+// MuxNumberColumn is one column of designators and the package they number. The
+// package is declared rather than read off the header, since a header like "KW47 48QFN"
+// names the part as well as the body.
+message MuxNumberColumn {
+  string header = 1;
+  // Package id the column's designators belong to. Empty takes the header, lowercased.
+  string package = 2;
+}
+
+// MuxFunctionColumn is one column of functions.
+message MuxFunctionColumn {
+  string header = 1;
+  // RE2 pattern matching the label printed before each function in a CELL_LIST cell
+  // ("ALT\\d+"). The cell splits at each match, and the text after the label's " - " up
+  // to the next label is one function. Empty means the whole cell is one function, which
+  // is what ROW_PER_FUNCTION reads.
+  string label_pattern = 2;
 }
 
 // Patch is one pinned human correction to one cell of one table of one exact

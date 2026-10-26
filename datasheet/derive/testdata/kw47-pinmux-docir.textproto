@@ -1,0 +1,185 @@
+# Raw-shaped doc-IR of the NXP KW47's pin-mux table, Table 58 "KW47 Package pinout", from the KW47
+# Product Family data sheet, Rev. 4 (18 December 2025), pages 58, 59, 60 and 65. The tables are the
+# docling output for those pages, unedited; the pages' other tables and text are left out.
+#
+# It is a FIXTURE, not a corpus entry. The PDF and the full doc-IR stay outside this repo.
+#
+# One row per pin, every mux slot in one cell ("ALT0 - ADC0_B13 ALT1 - PTB3 ..."), and a second
+# column of low-power functions labelled by supply domain ("VDD SYS - WUU0_P14"). The awkward
+# cases it carries, all real:
+#
+#   - A PIN BROKEN OVER A PAGE. PTA1's slots end on page 59 at ALT2 and continue at the top of
+#     page 60 in a row with no name and no designator.
+#   - A FUNCTION NAME CONTAINING ITS OWN LABEL. PTD2's "LPTMR0_ALT3" is one function, which a
+#     label pattern without word boundaries splits in two.
+#   - ONE SLOT NAMING TWO SIGNALS, wrapped after the slash ("WUU0_P2/ RF_XTAL_OUT_ENABLE").
+#   - A FOLDED HEADER. On page 65 the producer joined the previous pin's last three slots onto
+#     the "Pinmux Assignment" header cell, so the column cannot be found and the table is gapped.
+content_hash: "sha256:fixture-kw47-pinmux"
+source_format: "pdf"
+title: "KW47"
+producer: "docling/2.142.1"
+page_count: 65
+pages: {
+  number: 58
+  width: 612
+  height: 792
+  tables: {
+    id: "p58.t3"
+    title: "Table 58. KW47 Package pinout"
+    bbox { x: 52.61 y: 570.27 width: 506.31 height: 135.13 }
+    rows: 2
+    cols: 5
+    cells { text: "Pin Name" is_header: true }
+    cells { col: 1 text: "KW47 48QFN" is_header: true }
+    cells { col: 2 text: "Pinmux Assignment" is_header: true }
+    cells { col: 3 text: "Pad Settings" is_header: true }
+    cells { col: 4 text: "Alternate Functions" is_header: true }
+    cells { row: 1 text: "PTB3" }
+    cells { row: 1 col: 1 text: "1" }
+    cells { row: 1 col: 2 text: "ALT0 - ADC0_B13 ALT1 - PTB3 ALT2 - LPSPI1_SOUT ALT3 - LPUART1_RX ALT5 - TPM1_CH3 ALT9 - FLEXIO0_D29" }
+    cells { row: 1 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 50 MHZ Default - ADC0_B13" }
+    cells { row: 1 col: 4 text: "VDD SYS - WUU0_P14" }
+    confidence: 1
+    content_hash: "sha256:d9e9464f21431b2be7f3ac51d5288276b912dd35e72dcf0637ef6f2ee248d00b"
+  }
+}
+pages: {
+  number: 59
+  width: 612
+  height: 792
+  tables: {
+    id: "p59.t1"
+    title: "Table 58. KW47 Package pinout...continued"
+    bbox { x: 52.09 y: 90.35 width: 507.33 height: 622.93 }
+    rows: 9
+    cols: 5
+    cells { text: "Pin Name" is_header: true }
+    cells { col: 1 text: "KW47 48QFN" is_header: true }
+    cells { col: 2 text: "Pinmux Assignment" is_header: true }
+    cells { col: 3 text: "Pad Settings" is_header: true }
+    cells { col: 4 text: "Alternate Functions" is_header: true }
+    cells { row: 1 text: "PTB4" }
+    cells { row: 1 col: 1 text: "2" }
+    cells { row: 1 col: 2 text: "ALT1 - PTB4 ALT2 - LPSPI1_PCS3 ALT3 - LPUART1_CTS_b ALT4 - LPI2C1_SDA ALT5 - I3C0_SDA ALT6 - TRGMUX0_IN0 ALT9 - FLEXIO0_D30" }
+    cells { row: 1 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 50 MHZ + I3C + RXF Default - DISABLED" }
+    cells { row: 1 col: 4 text: "VDD SYS - WUU0_P15" }
+    cells { row: 2 text: "PTB5" }
+    cells { row: 2 col: 1 text: "3" }
+    cells { row: 2 col: 2 text: "ALT1 - PTB5 ALT2 - LPSPI1_PCS2 ALT3 - LPUART1_RTS_b ALT4 - LPI2C1_SCL ALT5 - I3C0_SCL ALT6 - TRGMUX0_OUT0 ALT9 - FLEXIO0_D31" }
+    cells { row: 2 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 50 MHZ + RXF Default - DISABLED" }
+    cells { row: 2 col: 4 text: "-" }
+    cells { row: 3 text: "VDD_IO_ABC" }
+    cells { row: 3 col: 1 text: "4" }
+    cells { row: 3 col: 2 text: "ALT0 - VDD_IO_ABC" }
+    cells { row: 3 col: 3 text: "IO Supply - VDD_IO_ABC Default - VDD_IO_ABC" }
+    cells { row: 3 col: 4 text: "-" }
+    cells { row: 4 text: "SWITCH_WAKEU P_B" }
+    cells { row: 4 col: 1 text: "5" }
+    cells { row: 4 col: 2 text: "ALT0 - SWITCH_WAKEUP_B" }
+    cells { row: 4 col: 3 text: "IO Supply - VDD_SWI Default - SWITCH_WAKEUP_B" }
+    cells { row: 4 col: 4 text: "-" }
+    cells { row: 5 text: "VDD_SWITCH" }
+    cells { row: 5 col: 1 text: "6" }
+    cells { row: 5 col: 2 text: "ALT0 - VDD_SWITCH" }
+    cells { row: 5 col: 3 text: "IO Supply - VDD_SWI Default - VDD_SWITCH" }
+    cells { row: 5 col: 4 text: "-" }
+    cells { row: 6 text: "VOUT_SWITCH" }
+    cells { row: 6 col: 1 text: "7" }
+    cells { row: 6 col: 2 text: "ALT0 - VOUT_SWITCH" }
+    cells { row: 6 col: 3 text: "IO Supply - VDD_SWI Default - VOUT_SWITCH" }
+    cells { row: 6 col: 4 text: "-" }
+    cells { row: 7 text: "PTA0" }
+    cells { row: 7 col: 1 text: "8" }
+    cells { row: 7 col: 2 text: "ALT1 - PTA0 ALT2 - CMP0_OUT ALT3 - LPUART0_CTS_b ALT4 - RF_GPO_11 ALT5 - TPM0_CH4 ALT6 - FLEXIO0_D0 ALT7 - SWD_DIO" }
+    cells { row: 7 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 25 MHZ Default - SWD_DIO" }
+    cells { row: 7 col: 4 text: "VDD SYS - WUU0_P0" }
+    cells { row: 8 text: "PTA1" }
+    cells { row: 8 col: 1 text: "9" }
+    cells { row: 8 col: 2 text: "ALT1 - PTA1 ALT2 - CMP1_OUT" }
+    cells { row: 8 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 25 MHZ" }
+    cells { row: 8 col: 4 text: "-" }
+    confidence: 1
+    content_hash: "sha256:4c34b04e567669e0b5006f072fcea6820b84c694b29d378667dc21a6bbdea4a7"
+  }
+}
+pages: {
+  number: 60
+  width: 612
+  height: 792
+  tables: {
+    id: "p60.t1"
+    title: "Table 58. KW47 Package pinout...continued"
+    bbox { x: 51.61 y: 90.18 width: 508 height: 623.1 }
+    rows: 5
+    cols: 5
+    cells { text: "Pin Name" is_header: true }
+    cells { col: 1 text: "KW47 48QFN" is_header: true }
+    cells { col: 2 text: "Pinmux Assignment" is_header: true }
+    cells { col: 3 text: "Pad Settings" is_header: true }
+    cells { col: 4 text: "Alternate Functions" is_header: true }
+    cells { row: 1 col: 2 text: "ALT3 - LPUART0_RTS_b ALT4 - RF_GPO_10 ALT5 - TPM0_CH5 ALT6 - FLEXIO0_D1 ALT7 - SWD_CLK" }
+    cells { row: 1 col: 3 text: "Default - SWD_CLK" }
+    cells { row: 2 text: "PTA4" }
+    cells { row: 2 col: 1 text: "10" }
+    cells { row: 2 col: 2 text: "ALT0 - ADC0_A10/CMP0_IN0 ALT1 - PTA4 ALT3 - RF_GPO_9 ALT4 - TPM0_CLKIN ALT5 - TRACE_SWO ALT6 - FLEXIO0_D4 ALT7 - BOOT_CONFIG" }
+    cells { row: 2 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 25 MHZ Default - BOOT_CONFIG" }
+    cells { row: 2 col: 4 text: "VDD SYS - WUU0_P2/ RF_XTAL_OUT_ENABLE" }
+    cells { row: 3 text: "PTA16" }
+    cells { row: 3 col: 1 text: "11" }
+    cells { row: 3 col: 2 text: "ALT0 - ADC0_A12 ALT1 - PTA16 ALT2 - LPSPI0_PCS0 ALT3 - EWM0_OUT_b ALT4 - LPI2C0_SCLS ALT5 - TPM0_CH4 ALT6 - LPUART0_RX ALT7 - RF_GPO_8 ALT9 - FLEXIO0_D5" }
+    cells { row: 3 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 25 MHZ Default - ADC0_A12" }
+    cells { row: 3 col: 4 text: "VDD SYS - WUU0_P19/ RF_NOT_ALLOWED" }
+    cells { row: 4 text: "PTA17" }
+    cells { row: 4 col: 1 text: "12" }
+    cells { row: 4 col: 2 text: "ALT0 - ADC0_A13 ALT1 - PTA17 ALT2 - LPSPI0_SIN ALT3 - EWM0_IN ALT4 - LPI2C0_SDAS ALT5 - TPM0_CH5 ALT6 - LPUART0_TX ALT7 - RF_GPO_7 ALT8 - RF_GPO_8 ALT9 - FLEXIO0_D6" }
+    cells { row: 4 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 25 MHZ Default - ADC0_A13" }
+    cells { row: 4 col: 4 text: "VDD SYS - WUU0_P3/ RF_NOT_ALLOWED" }
+    confidence: 1
+    content_hash: "sha256:8adb959dd2d6c12c4a8778a730764397c81ca1344a30fb1a68b159516762a6df"
+  }
+}
+pages: {
+  number: 65
+  width: 612
+  height: 792
+  tables: {
+    id: "p65.t1"
+    title: "Table 58. KW47 Package pinout...continued"
+    bbox { x: 51.85 y: 90.24 width: 507.62 height: 614.78 }
+    rows: 6
+    cols: 5
+    cells { text: "Pin Name" is_header: true }
+    cells { col: 1 text: "KW47 48QFN" is_header: true }
+    cells { col: 2 text: "Pinmux Assignment ALT5 - TPM1_CH2 ALT7 - I3C0_PUR ALT9 - FLEXIO0_D18" is_header: true }
+    cells { col: 3 text: "Pad Settings" is_header: true }
+    cells { col: 4 text: "Alternate Functions" is_header: true }
+    cells { row: 1 col: 2 text: "ALT11 - CAN1_RX [1] ALT1 - PTC3 ALT2 - LPSPI1_SCK ALT3 - LPUART1_TX ALT4 - LPI2C1_SDAS ALT5 - TPM1_CH3 ALT9 - FLEXIO0_D19 ALT11 - CAN1_TX [1]" }
+    cells { row: 1 text: "PTC3" }
+    cells { row: 1 col: 1 text: "40" }
+    cells { row: 1 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 25 MHZ Default - DISABLED" }
+    cells { row: 1 col: 4 text: "-" }
+    cells { row: 2 text: "VDD_CORE" }
+    cells { row: 2 col: 1 text: "41" }
+    cells { row: 2 col: 2 text: "ALT0 - VDD_CORE" }
+    cells { row: 2 col: 3 text: "IO Supply - VDD_IO_ABC Default - VDD_CORE" }
+    cells { row: 2 col: 4 text: "-" }
+    cells { row: 3 text: "PTC4" }
+    cells { row: 3 col: 1 text: "42" }
+    cells { row: 3 col: 2 text: "ALT1 - PTC4 ALT2 - LPSPI1_SIN ALT3 - CAN0_TX [1] ALT4 - LPI2C1_SCL ALT6 - TPM2_CH0 ALT9 - FLEXIO0_D20" }
+    cells { row: 3 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - I2CFP Default - DISABLED" }
+    cells { row: 3 col: 4 text: "VDD SYS - WUU0_P10" }
+    cells { row: 4 text: "PTC5" }
+    cells { row: 4 col: 1 text: "43" }
+    cells { row: 4 col: 2 text: "ALT1 - PTC5 ALT2 - LPSPI1_PCS0 ALT3 - CAN0_RX [1] ALT4 - LPI2C1_SDA ALT5 - TPM1_CH4 ALT6 - TPM2_CH1 ALT9 - FLEXIO0_D21" }
+    cells { row: 4 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - I2CFP Default - DISABLED" }
+    cells { row: 4 col: 4 text: "VDD SYS - WUU0_P22" }
+    cells { row: 5 text: "PTC6" }
+    cells { row: 5 col: 1 text: "44" }
+    cells { row: 5 col: 2 text: "ALT0 - ADC0_A8 ALT1 - PTC6 ALT2 - LPSPI1_PCS1 ALT5 - TPM1_CH5" }
+    cells { row: 5 col: 3 text: "IO Supply - VDD_IO_ABC Pad type - 25 MHZ Default - ADC0_A8" }
+    cells { row: 5 col: 4 text: "VDD SYS - WUU0_P11" }
+    confidence: 1
+    content_hash: "sha256:c877bb06b19a4df721e70c6fc6548ac9a81796b08e714d96653ce89048b35610"
+  }
+}

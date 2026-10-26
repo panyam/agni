@@ -52,8 +52,9 @@ type PinMap struct {
 // PinMapRow is one declared pin: what the map says, what the netlist has, and each IO-map rule's
 // outcome on it. An empty check outcome means the run did not include that rule.
 type PinMapRow struct {
-	Pin, Function, Net, WiredNet, FarEnd, Route string
-	PinCheck, NetCheck, FarEndCheck, Outcome    check.Outcome
+	Pin, Function, Net, WiredNet, FarEnd, Route    string
+	PinCheck, NetCheck, FarEndCheck, FunctionCheck check.Outcome
+	Outcome                                        check.Outcome
 }
 
 // Totals are the run's headline numbers.

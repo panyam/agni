@@ -19,7 +19,9 @@ import (
 // THREE rules here over one declaration, because a reviewer acts differently on each answer. A net on
 // the wrong pin is a schematic edit, a declared net the netlist lacks is usually a real
 // disconnection, and a wrong far end is a routing question. The last two are often confused, so they
-// never share a verdict. The fourth rule, io-map-coverage, is in iomapcoverage.go.
+// never share a verdict. The fourth rule, io-map-coverage, is in iomapcoverage.go, and the fifth,
+// io-map-function, which checks a row's declared function against the datasheet, in
+// iomapfunction.go.
 //
 // Every comparison goes through core/ident, never string equality. A map uses the datasheet's
 // vocabulary and the netlist answers in package designators, and both carry zero-padded indices,
@@ -101,12 +103,12 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 		if netNamed(m, a.Net) == nil {
 			v.Outcome, v.Reason = check.NotConsidered, fmt.Sprintf(
 				"the design carries no net named %q, which %s reports rather than this rule", a.Net, RuleIOMapNetAbsent)
-			out = append(out, notEvaluatedFunction(v, a))
+			out = append(out, v)
 			continue
 		}
 		if res.outcome != check.Pass {
 			res.decide(&v)
-			out = append(out, notEvaluatedFunction(v, a))
+			out = append(out, v)
 			continue
 		}
 		terms := []check.WitnessTerm{
@@ -122,7 +124,7 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 					a.Device, res.label(), actual, res.note()),
 				Terms: terms,
 			}
-			out = append(out, notEvaluatedFunction(v, a))
+			out = append(out, v)
 			continue
 		}
 		v.Outcome = check.Fail
@@ -137,7 +139,7 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 				a.Net, a.Device, res.label(), orNone(actual)),
 			Prov: check.ComponentProv(m, a.Device),
 		}
-		out = append(out, notEvaluatedFunction(v, a))
+		out = append(out, v)
 	}
 	return out
 }
@@ -428,25 +430,6 @@ func nearestNet(m check.Model, declared string) string {
 		}
 	}
 	return ""
-}
-
-// notEvaluatedFunction stamps a row that declares a `function` with the fact that nothing read it.
-// The field is carried so a map is authored once (see IOAssignment.Function), and an author who
-// fills a column in assumes it is checked, so every verdict on such a row says it was not.
-func notEvaluatedFunction(v check.Verdict, a IOAssignment) check.Verdict {
-	if a.Function == "" {
-		return v
-	}
-	note := fmt.Sprintf("the declared function %q was NOT evaluated: deciding whether a function is legal on a pin needs the part's alternate-function table, which the contract has no shape for (agni issue 667)", a.Function)
-	switch {
-	case v.Witness != nil:
-		v.Witness.Statement += ". " + note
-	case v.Reason != "":
-		v.Reason += ". " + note
-	default:
-		v.Reason = note
-	}
-	return v
 }
 
 // routeText renders a trace through check.RenderRoute, the one route renderer, so the IO-map

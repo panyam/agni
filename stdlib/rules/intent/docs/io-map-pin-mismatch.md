@@ -77,19 +77,16 @@ io_map:
   - net: ADC_BATT_SENSE
     device: U101
     pin: PTC11
-    function: ADC0_S17             # carried, NOT yet evaluated
+    function: ADC0_S17             # checked by intent/io-map-function
     to: {device: U7000, pin: PG}   # optional far end
 ```
 
 `net`, `device` and `pin` are required. A row missing any of them states nothing checkable.
 
-**`function` is carried and nothing reads it.** Deciding whether a selected function is legal on a
-pin means reading the part's alternate-function table, a pad-by-mode grid that the datasheet contract
-has no shape for. That is agni issue 667, and it is a different artifact from the pin FUNCTION table
-(one row per pin, name and number and I/O type), which is issue 188 and is done.
-
-Every verdict on a row that declares one says outright that it was not evaluated, so filling the
-column in can never read as having it verified.
+**`function` is checked by its own rule.** Whether a selected function is legal on a pin is
+`intent/io-map-function`, which reads the part's alternate-function table from the datasheet corpus.
+This rule says nothing about it, because a net on the wrong pin and a function the pin cannot carry
+are fixed in different places.
 
 ### Fixing a finding
 

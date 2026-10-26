@@ -69,6 +69,7 @@ var docKeys = []string{
 	RuleIOMapNetAbsent,                  // io-map-net-absent
 	RuleIOMapFarEnd,                     // io-map-far-end
 	RuleIOMapCoverage,                   // io-map-coverage
+	RuleIOMapFunction,                   // io-map-function
 	RuleExposureDeclared,                // exposure-declared
 	RulePullUpReachDeclared,             // pull-up-reach-declared
 }
@@ -118,6 +119,7 @@ var docSummaries = map[string]string{
 	RuleIOMapNetAbsent:                  "The design intent's IO map declares a net the netlist does not have.",
 	RuleIOMapFarEnd:                     "A net does not reach the far-end device pin the design intent's IO map declares.",
 	RuleIOMapCoverage:                   "How much of the netlist the design intent's IO map declares at all.",
+	RuleIOMapFunction:                   "A function the design intent's IO map selects is not one the part's datasheet lists for that pin.",
 	RuleExposureDeclared:                "A component the design intent gives an exposure is absent from the design or is not a connector.",
 	RulePullUpReachDeclared:             "A net the design intent gives a pull-up reach is absent from the design.",
 }
@@ -149,6 +151,7 @@ var docRemedies = map[string]string{
 	RuleIOMapCoverage:                   "Declare the nets the map does not cover, or accept the coverage and read the other IO-map results as being about the covered fraction alone. There is nothing to fix in the design here.",
 	RuleExposureDeclared:                "Correct the ref-des in the declaration, or remove the entry. A declaration naming no connector on the board leaves every connector checked as external, which is the opposite of what it was written to say.",
 	RulePullUpReachDeclared:             "Correct the net name in the declaration to the design's exact spelling, or remove the entry. A reach declared on a net the design lacks leaves the bus it meant to name held to the default of 3.",
+	RuleIOMapFunction:                   "Move the function to a pin the datasheet lists it on, or choose a function this pin offers. Read the listed functions in the result before editing the map, since a function the part has under another instance number (LPUART0 against LPUART1) is usually the intended one.",
 	RuleIOMapFarEnd:                     "Route the net to the declared device pin, or amend the far end the map declares. The reported route shows what the net actually goes through, so start by reading where it diverges.",
 }
 

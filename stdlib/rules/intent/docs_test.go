@@ -31,10 +31,10 @@ func kitchenSink() Declaration {
 		// key unemitted and fail the one-to-one check below).
 		RailBudgets:  []RailBudget{{Rail: "3V3", Peak: 0.8}},
 		MarginFactor: 1.2,
-		// One IO-map row emits all THREE io-map rules, far-end included. That rule is compiled
-		// whenever a map is declared rather than only when a row fills its far end, because its
-		// verdicts are what report the denominator.
-		IOMap:       []IOAssignment{{Net: "SYS_RESET_N", Device: "U1", Pin: "PTC11"}},
+		// One IO-map row emits every io-map rule, far-end included. That rule is compiled whenever a
+		// map is declared rather than only when a row fills its far end, because its verdicts are what
+		// report the denominator. The row declares a function, which io-map-function needs.
+		IOMap:       []IOAssignment{{Net: "SYS_RESET_N", Device: "U1", Pin: "PTC11", Function: "GPIO"}},
 		Exposures:   []Exposure{{Ref: "J1", Exposure: ExposureInternal}},
 		PullUpReach: []PullUpReach{{Net: "SDA", Hops: 4}},
 		// One sequence with an adjacent good -> enable pair. Without the pair it would compile to no

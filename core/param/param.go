@@ -131,6 +131,11 @@ func completenessProblems(spec *parampb.PartSpec) []error {
 		case p.Prov.Confidence <= 0 || p.Prov.Confidence > 1:
 			errs = append(errs, fmt.Errorf("%s: prov.confidence %v outside (0, 1]", id, p.Prov.Confidence))
 		}
+		for j, alt := range p.Alternates {
+			if strings.TrimSpace(alt.GetName()) == "" {
+				errs = append(errs, fmt.Errorf("%s: alternates[%d] has no name", id, j))
+			}
+		}
 	}
 	for i, p := range spec.Parameters {
 		id := p.Symbol
