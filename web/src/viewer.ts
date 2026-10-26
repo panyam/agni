@@ -29,7 +29,7 @@ import { hierarchyNote } from "./hierarchy.js";
 import { type RuleItem, type RulesView, defaultSelection } from "./rules.js";
 import type { Selection } from "./selection.js";
 import { withFocusShape, type FocusStyle, type HighlightSpec } from "./highlights.js";
-import { type Bindings, type QueryResult, type QueryView, type RelationEntryItem, LocateReason, emptyResult, errorResult, reasonMessage, relationEntryItem, resultFromResponse, wireBinding } from "./query.js";
+import { type Bindings, type QueryResult, type QueryView, type RelationEntryItem, type WitnessItem, type WitnessValue, LocateReason, emptyResult, errorResult, reasonMessage, relationEntryItem, resultFromResponse, wireBinding } from "./query.js";
 import { type CoverageView, coverageFromResponse, emptyCoverage } from "./coverage.js";
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
@@ -43,8 +43,14 @@ import {
   checklistOptions,
   projectChecklistOptions,
   emptyReview,
+  findingKey,
   reviewFromWire,
+  selectedRun,
 } from "./review.js";
+
+// NO_LONGER_HOLDS is what a review finding's derivation says when the open design gives its subject
+// no row (agni issue 1166).
+const NO_LONGER_HOLDS = "This finding no longer holds on the design as it is open now, so there is no derivation to show.";
 
 type DesignClient = Client<typeof DesignService>;
 type CheckClient = Client<typeof CheckService>;
@@ -505,6 +511,45 @@ export class ViewerPresenter {
   async locateReviewFinding(f: FindingItem): Promise<void> {
     const sheet = sheetToOpen(f.sheets.map((b) => b.id), this.currentSheet);
     await this.locateEntity(f.kind, f.subject, sheet || undefined, f.locateReason, f.pin, "review");
+  }
+
+  // explainReviewFinding works out how one finding of an inline-query checklist item holds (agni
+  // issue 1166), by asking the item's own query, read off the run's checklist snapshot, with the
+  // finding's subject bound and witnesses on. That is the binding a scoped rule run makes, so the rows
+  // are the rule's own rows for that subject. A finding is asked once; a failure is shown and asked
+  // again the next time it opens. A stored run can predate the open design's revision, so a subject
+  // with no row says the finding no longer holds rather than showing nothing.
+  async explainReviewFinding(item: string, index: number): Promise<void> {
+    const run = selectedRun(this.reviewState);
+    const it = run?.areas.flatMap((a) => a.items).find((i) => i.id === item);
+    const f = it?.findings[index];
+    if (!this.views.review || !this.query || !run || !it?.query || !f?.subject) return;
+    const key = findingKey(run.name, item, index);
+    const had = this.reviewState.explained?.[key];
+    if (had && (had.loading || had.rows.length > 0 || had.note === NO_LONGER_HOLDS)) return;
+    const put = (ex: { loading: boolean; rows: { cells: string[]; witnesses: WitnessItem[] }[]; note: string }) => {
+      this.reviewState.explained = { ...this.reviewState.explained, [key]: ex };
+      this.pushReview();
+    };
+    put({ loading: true, rows: [], note: "" });
+    try {
+      const resp = await this.query.runQuery({
+        snapshot: await this.checked(),
+        query: it.query.match,
+        bindings: { [it.query.subject.replace(/^\?/, "")]: wireBinding(f.subject) },
+        witnesses: true,
+      });
+      const rows = resultFromResponse(resp, (ids) => this.doc.sheetBadges(ids), true).rows.map((r) => ({ cells: r.cells, witnesses: r.witnesses }));
+      put({ loading: false, rows, note: rows.length === 0 ? NO_LONGER_HOLDS : "" });
+    } catch (e) {
+      put({ loading: false, rows: [], note: `Could not work out how this finding holds: ${messageOf(e)}` });
+    }
+  }
+
+  // locateReviewValue locates one value of a finding's derivation, as a query panel's tree does.
+  async locateReviewValue(v: WitnessValue, sheet?: string): Promise<void> {
+    if (v.kind === "pin") await this.locateEntity(v.kind, v.ref, sheet, v.reason, v.text, "review");
+    else await this.locateEntity(v.kind, v.text, sheet, v.reason, "", "review");
   }
 
   // locateVerdict focuses ONE verdict by its derived id and draws its proof, with the verdict's

@@ -643,6 +643,32 @@ describe("Review", () => {
       expect(text).toContain(counts!);
     });
   }, 120_000);
+
+  // agni issue 1166. A finding of an inline-query item opens onto how it holds, asked of the engine
+  // with the project's own library, which only a served design carries.
+  it("opens a query item's finding onto how it holds", async () => {
+    await withPage(browser, async (page) => {
+      await openViewer(page, "tut", "designs/gateway");
+      await page.waitForSelector("select.rv-checklist option[value]", { state: "attached", timeout: 30_000 });
+      await page.selectOption("select.rv-checklist", { label: "house" });
+      await page.click("button.rv-run");
+      await page.waitForSelector(".rv-summary", { timeout: 60_000 });
+      const item = page.locator(".rv-item", { has: page.locator(".rv-item-id", { hasText: "P6" }) });
+      await item.locator(".rv-findings-toggle").click();
+      expect(await item.locator(".rv-finding-subject").first().innerText()).toBe("PMIC_MAIN_12V0");
+      await item.locator(".rv-finding-how").first().click();
+      await item.locator(".rv-finding-derivation .query-witness").first().waitFor({ timeout: 30_000 });
+      const facts = await item.locator(".rv-finding-derivation .query-witness-fact").allInnerTexts();
+      expect(facts.map((f) => f.replace(/\s+/g, " ").trim())).toEqual([
+        // A net value carries the badge of the sheet it is drawn on, as a result cell does.
+        "house.pmic_rail(PMIC_MAIN_12V0Sample Board)",
+        "net.rail(PMIC_MAIN_12V0Sample Board)",
+        "str.prefix(PMIC_MAIN_12V0, PMIC_)",
+        "not house.pmic_probe_point(PMIC_MAIN_12V0Sample Board)absent",
+      ]);
+      expect((await paintedAt(page, ".rv-finding-derivation .query-witness-rel")).ownedByProbe).toBe(true);
+    });
+  }, 120_000);
 });
 
 // agni issue 759. The boot layout's sizes, which only a browser can measure. The Query panel opened at

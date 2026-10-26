@@ -3,7 +3,7 @@ import { artifactUri } from "@agni/web-shared/uri.js";
 import { ConnectError, Code } from "@connectrpc/connect";
 import { ViewerPresenter, type RenderView } from "./viewer.js";
 import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
-import type { ReviewState } from "./review.js";
+import { type ReviewState, findingKey } from "./review.js";
 import type { ConventionState } from "./conventions.js";
 import { stubQueryView } from "./testviews.js";
 import type { OverlayConfig } from "./gen/agni/v1/webapi/checks_pb.js";
@@ -573,5 +573,100 @@ describe("review presenter — locating a finding", () => {
     expect(lastState(h.onReview).locateNote).toContain("drawn on no sheet");
     await h.presenter.locateReviewFinding(finding({ sheets: [{ id: "s1", name: "S1" }] }));
     expect(lastState(h.onReview).locateNote).toBe("");
+  });
+});
+
+// agni issue 1166: an inline-query item's finding opens onto how it holds, by asking the item's own
+// query again with the finding's subject bound and witnesses on.
+describe("review presenter — explaining a finding", () => {
+  const MATCH = "house.pmic_rail(?n), not house.pmic_probe_point(?n) => ?n";
+
+  function queried() {
+    const d = doc("reviews/r9", "2026-10-25T09:00:00Z", []);
+    d.results.areas[0].items = [{
+      id: "H5", title: "every PMIC rail has a test point", outcome: "fail", note: "",
+      findings: [{ rule: "review/H5", severity: "warning", message: "PMIC rail PMIC_MAIN_12V0 has no test point", subject: { kind: "net", ref: "PMIC_MAIN_12V0" } }],
+    }] as never;
+    (d.results as Record<string, unknown>).manifestSnapshot = {
+      name: "Sample Board review",
+      areas: [{ name: "Power", items: [{ id: "H5", title: "", binding: { query: { match: MATCH, subject: "n", kind: "net", message: "" } } }] }],
+    };
+    return d;
+  }
+
+  const witnessed = {
+    columns: ["n"], columnKinds: ["net"], sources: ["board.edn:PMIC_MAIN_12V0"], entities: [{ kind: "net", ref: "PMIC_MAIN_12V0", sheetIds: ["s1"] }],
+    rows: [{
+      cells: ["PMIC_MAIN_12V0"], cellEntity: [1],
+      witnesses: [
+        { relation: "house.pmic_rail", values: ["PMIC_MAIN_12V0"], valueEntity: [1], rule: "house.pmic_rail(?n: net) :- net.rail(?n)", children: [
+          { relation: "net.rail", values: ["PMIC_MAIN_12V0"], valueEntity: [1], citeIndex: [0] },
+        ] },
+        { relation: "house.pmic_probe_point", values: ["PMIC_MAIN_12V0"], negated: true },
+      ],
+    }],
+  };
+
+  async function opened() {
+    const h = harness();
+    h.listReviews.mockResolvedValue({ reviews: [queried()] } as never);
+    await h.presenter.openFile("m", "proj/board.edn");
+    return h;
+  }
+
+  it("asks the item's query about the finding's subject with witnesses, and shows the tree", async () => {
+    const h = await opened();
+    h.runQuery.mockResolvedValueOnce(witnessed as never);
+    await h.presenter.explainReviewFinding("H5", 0);
+    expect(h.runQuery).toHaveBeenCalledWith(expect.objectContaining({
+      query: MATCH,
+      bindings: { n: { kind: { case: "text", value: "PMIC_MAIN_12V0" } } },
+      witnesses: true,
+    }));
+    const ex = lastState(h.onReview).explained?.[findingKey("reviews/r9", "H5", 0)];
+    expect(ex?.loading).toBe(false);
+    expect(ex?.rows).toHaveLength(1);
+    expect(ex?.rows[0].witnesses.map((w) => w.relation)).toEqual(["house.pmic_rail", "house.pmic_probe_point"]);
+    expect(ex?.rows[0].witnesses[0].children[0].cites).toEqual(["board.edn:PMIC_MAIN_12V0"]);
+    expect(ex?.rows[0].witnesses[1].negated).toBe(true);
+  });
+
+  it("asks once per finding", async () => {
+    const h = await opened();
+    h.runQuery.mockResolvedValueOnce(witnessed as never);
+    await h.presenter.explainReviewFinding("H5", 0);
+    await h.presenter.explainReviewFinding("H5", 0);
+    expect(h.runQuery).toHaveBeenCalledTimes(1);
+  });
+
+  // A stored run can predate a change to the design, so its finding may no longer hold.
+  it("says so when the finding no longer holds on the open design", async () => {
+    const h = await opened();
+    h.runQuery.mockResolvedValueOnce({ columns: ["n"], columnKinds: [], rows: [] } as never);
+    await h.presenter.explainReviewFinding("H5", 0);
+    const ex = lastState(h.onReview).explained?.[findingKey("reviews/r9", "H5", 0)];
+    expect(ex?.rows).toEqual([]);
+    expect(ex?.note).toContain("no longer holds");
+  });
+
+  it("says why when the query fails, and asks again next time", async () => {
+    const h = await opened();
+    h.runQuery.mockRejectedValueOnce(new ConnectError("work budget exhausted", Code.ResourceExhausted));
+    await h.presenter.explainReviewFinding("H5", 0);
+    expect(lastState(h.onReview).explained?.[findingKey("reviews/r9", "H5", 0)]?.note).toContain("work budget exhausted");
+    h.runQuery.mockResolvedValueOnce(witnessed as never);
+    await h.presenter.explainReviewFinding("H5", 0);
+    expect(lastState(h.onReview).explained?.[findingKey("reviews/r9", "H5", 0)]?.rows).toHaveLength(1);
+  });
+
+  it("asks nothing for an item scored by a rule", async () => {
+    const h = harness();
+    const d = queried();
+    (d.results as Record<string, unknown>).manifestSnapshot = { name: "x", areas: [{ name: "Power", items: [{ id: "H5", binding: { rule: "bulk-cap" } }] }] };
+    h.listReviews.mockResolvedValue({ reviews: [d] } as never);
+    await h.presenter.openFile("m", "proj/board.edn");
+    h.runQuery.mockClear();
+    await h.presenter.explainReviewFinding("H5", 0);
+    expect(h.runQuery).not.toHaveBeenCalled();
   });
 });

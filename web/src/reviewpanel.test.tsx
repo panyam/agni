@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi } from "vitest";
 import { reviewPanelIsland } from "./reviewpanel.jsx";
-import { type ReviewState, type ReviewRunView, emptyReview, outcomeClass, OUTCOME_PASS } from "./review.js";
+import { type ReviewState, type ReviewRunView, emptyReview, findingKey, outcomeClass, OUTCOME_PASS } from "./review.js";
 
 function mount(state: Partial<ReviewState>, staticHost = false) {
   const handlers = {
@@ -9,6 +9,8 @@ function mount(state: Partial<ReviewState>, staticHost = false) {
     onSelectChecklist: vi.fn(),
     onCreate: vi.fn(),
     onLocate: vi.fn(),
+    onExplain: vi.fn(),
+    onLocateValue: vi.fn(),
   };
   const el = document.createElement("div");
   document.body.appendChild(el);
@@ -249,5 +251,67 @@ describe("cancelling from the review panel", () => {
     panel.view.setState({ ...emptyReview(), checklist: "c", checklists: [{ ref: "c", label: "C" }], cancelled: true } as ReviewState);
     expect(el.querySelector(".rv-cancelled")?.textContent).toContain("Cancelled");
     expect(el.querySelector(".rv-run")?.textContent?.trim()).toBe("Run review");
+  });
+});
+
+// agni issue 1166: an inline-query item's finding opens onto how it holds.
+describe("reviewPanel explaining a finding", () => {
+  function queried(): ReviewRunView {
+    const r = run();
+    r.areas[0].items[1].query = { match: "net.rail(?n) => ?n", subject: "n" };
+    return r;
+  }
+
+  it("offers how a query item's finding holds, and asks when opened", () => {
+    const { el, handlers } = mount({ ...withRun, runs: [queried()] });
+    (el.querySelector(".rv-findings-toggle") as HTMLButtonElement).click();
+    const how = el.querySelector(".rv-finding-how") as HTMLButtonElement;
+    expect(how).not.toBeNull();
+    how.click();
+    expect(handlers.onExplain).toHaveBeenCalledWith("P2", 0);
+  });
+
+  it("offers nothing to open for a finding a rule produced", () => {
+    const { el } = mount(withRun);
+    (el.querySelector(".rv-findings-toggle") as HTMLButtonElement).click();
+    expect(el.querySelector(".rv-finding-how")).toBeNull();
+  });
+
+  it("draws the tree once it arrives, with each value locating", () => {
+    const r = queried();
+    const { el, handlers, setState } = mount({ ...withRun, runs: [r] });
+    (el.querySelector(".rv-findings-toggle") as HTMLButtonElement).click();
+    (el.querySelector(".rv-finding-how") as HTMLButtonElement).click();
+    const value = { text: "VIN", kind: "net", ref: "", sheets: [], reason: 0 };
+    setState({
+      ...emptyReview(), ...withRun, runs: [r],
+      explained: {
+        [findingKey("reviews/r1", "P2", 0)]: {
+          loading: false, note: "",
+          rows: [{ cells: ["VIN"], witnesses: [
+            { relation: "net.rail", rule: "", negated: false, cites: ["board.edn:VIN"], values: [value], children: [] },
+            { relation: "net.has_blocker", rule: "", negated: true, cites: [], values: [value], children: [] },
+          ] }],
+        },
+      },
+    });
+    const facts = Array.from(el.querySelectorAll(".query-witness")).map((w) => w.textContent);
+    expect(facts).toHaveLength(2);
+    expect(facts[0]).toContain("net.rail(VIN)");
+    expect(facts[1]).toContain("absent");
+    (el.querySelector(".query-witness .query-locate") as HTMLButtonElement).click();
+    expect(handlers.onLocateValue).toHaveBeenCalledWith(expect.objectContaining({ kind: "net", text: "VIN" }), undefined);
+  });
+
+  it("says why there is nothing to show", () => {
+    const r = queried();
+    const { el, setState } = mount({ ...withRun, runs: [r] });
+    (el.querySelector(".rv-findings-toggle") as HTMLButtonElement).click();
+    (el.querySelector(".rv-finding-how") as HTMLButtonElement).click();
+    setState({
+      ...emptyReview(), ...withRun, runs: [r],
+      explained: { [findingKey("reviews/r1", "P2", 0)]: { loading: false, note: "This finding no longer holds.", rows: [] } },
+    });
+    expect(el.querySelector(".rv-finding-note")?.textContent).toBe("This finding no longer holds.");
   });
 });

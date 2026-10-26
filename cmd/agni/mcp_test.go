@@ -268,6 +268,28 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 			}
 		})
 
+		// The text an agent reads carries each row's derivation too, capped as jaala's own text caps it
+		// (agni issue 1166), so a question over a library member answers why without the JSON.
+		t.Run("query witnesses in the text", func(t *testing.T) {
+			const program = `component.probed_one(?r, ?p, ?u) => ?r, ?u`
+			res, _ := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program})
+			text := res.Content[0].Text
+			for _, want := range []string{
+				"how each row holds:\nrow 1: C1, GND\n",
+				"  component.probed_one(C1, PMIC_CORE_3V3, GND)  via component.probed_one(?r, ?probed, ?unprobed) :- ",
+				"    component.two_terminal(C1, GND, PMIC_CORE_3V3)  via ",
+				"      component.net_count(C1, 2)  [designs/gateway/gateway.edn]\n",
+				"  … 1 more fact\n",
+			} {
+				if !strings.Contains(text, want) {
+					t.Errorf("the text lacks %q:\n%s", want, text)
+				}
+			}
+			if strings.Contains(text, "not net.has_test_point(GND)") {
+				t.Errorf("the text wrote row 1's ninth fact past the cap of eight:\n%s", text)
+			}
+		})
+
 		t.Run("query with a binding", func(t *testing.T) {
 			const program = `pin.net(?ref, ?pin, ?net) => ?ref, ?pin`
 			_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program, "bind": map[string]any{"net": "I2C_SDA"}})

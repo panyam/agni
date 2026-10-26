@@ -123,6 +123,7 @@ func (a *answering) format(page mcp.Answer) string {
 	for _, t := range sh.tables {
 		writeTable(&b, t)
 	}
+	writeWitnesses(&b, sh.resp, page.Offset)
 	total := page.Table.Len()
 	switch {
 	case total == 0:

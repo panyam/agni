@@ -6,6 +6,7 @@ import type { CheckResults, ReviewManifest } from "./gen/agni/v1/checks/checks_p
 import type { Review } from "./gen/agni/v1/webapi/review_pb.js";
 import { contextFromWire, type FindingItem } from "./findings.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
+import type { WitnessItem } from "./query.js";
 
 // OUTCOMES is the review vocabulary, in the order a report reads: the two decided verdicts, then the
 // ways a question went unanswered, then the ones awaiting data.
@@ -84,6 +85,31 @@ export interface ReviewItemView {
   outcome: string;
   note: string;
   findings: FindingItem[];
+  // query is the inline query the item was scored with, read off the run's own checklist snapshot,
+  // so a finding can be asked again with witnesses (agni issue 1166). Absent for an item bound to a
+  // rule, a tag, a profile or a presence check.
+  query?: ItemQuery;
+}
+
+// ItemQuery is a manifest item's inline query: its text and the variable naming each finding's
+// subject.
+export interface ItemQuery {
+  match: string;
+  subject: string;
+}
+
+// FindingExplain is how one review finding holds, asked when the reader opens it (agni issue 1166).
+// rows holds one entry per answer row for the finding's subject, usually one, each with its cells
+// and its witness tree. note says why there is nothing to show.
+export interface FindingExplain {
+  loading: boolean;
+  rows: { cells: string[]; witnesses: WitnessItem[] }[];
+  note: string;
+}
+
+// findingKey names one finding of one item of one run, the key ReviewState.explained is held under.
+export function findingKey(run: string, item: string, index: number): string {
+  return `${run}\u0000${item}\u0000${index}`;
 }
 
 export interface ReviewAreaView {
@@ -149,6 +175,9 @@ export interface ReviewState {
   // locateNote says why the last finding clicked highlights nothing, "" when it was drawn (agni
   // issue 1132). Optional, so a state built before it read as no note.
   locateNote?: string;
+  // explained holds each opened finding's derivation by findingKey (agni issue 1166). Absent means
+  // none was opened.
+  explained?: Record<string, FindingExplain>;
 }
 
 export interface ReviewView {
@@ -179,6 +208,7 @@ export function areaTally(area: ReviewAreaView): Tally {
 // months later carries everything this needs.
 export function reviewFromWire(rv: Review): ReviewRunView {
   const doc: CheckResults | undefined = rv.results;
+  const queries = itemQueries(doc?.manifestSnapshot);
   return {
     name: rv.name,
     design: doc?.design?.source ?? "",
@@ -193,6 +223,7 @@ export function reviewFromWire(rv: Review): ReviewRunView {
         title: i.title,
         outcome: i.outcome,
         note: i.note,
+        query: queries.get(i.id),
         findings: (i.findings ?? []).map((f) => ({
           rule: f.rule,
           category: "",
@@ -213,6 +244,19 @@ export function reviewFromWire(rv: Review): ReviewRunView {
       })),
     })),
   };
+}
+
+// itemQueries indexes a checklist's inline queries by item id. It reads the snapshot the run scored
+// rather than the checklist file, which may have changed since.
+function itemQueries(m: ReviewManifest | undefined): Map<string, ItemQuery> {
+  const out = new Map<string, ItemQuery>();
+  for (const a of m?.areas ?? []) {
+    for (const it of a.items ?? []) {
+      const q = it.binding?.query;
+      if (q?.match && q.subject) out.set(it.id, { match: q.match, subject: q.subject });
+    }
+  }
+  return out;
 }
 
 // checklistOptions picks the manifests out of a directory listing by extension only. Deciding

@@ -2,7 +2,10 @@ import { For, Show, createSignal } from "solid-js";
 import type { FindingItem } from "./findings.js";
 import { SolidIsland, signalView } from "@panyam/tsappkit-solid";
 import type { EventBus } from "@panyam/tsappkit";
+import type { WitnessValue } from "./query.js";
+import { WitnessTree } from "./witnesstree.jsx";
 import {
+  type FindingExplain,
   type ReviewState,
   type ReviewView,
   type ReviewRunView,
@@ -11,6 +14,7 @@ import {
   areaTally,
   covered,
   emptyReview,
+  findingKey,
   outcomeClass,
   runTally,
   selectedRun,
@@ -60,12 +64,31 @@ function OutcomeChip(props: { outcome: string }) {
 // subject's pin (agni issue 1132), NOT by the per-instance net id the checks panel can use. The
 // checks panel can be precise because it holds the findings it is locating; these arrive inside a
 // stored document instead. Two nets sharing a name therefore highlight together here (agni issue 144).
+//
+// A finding of an inline-query item also opens onto how it holds (agni issue 1166), asked only when
+// a reader opens it, as a query row is.
 function ReviewItemRow(props: {
+  run: string;
   item: ReviewItemView;
+  explained: () => Record<string, FindingExplain> | undefined;
   onLocate: (f: FindingItem) => void;
+  onExplain?: (item: string, index: number) => void;
+  onLocateValue?: (v: WitnessValue, sheet?: string) => void;
 }) {
   const [open, setOpen] = createSignal(false);
+  const [shown, setShown] = createSignal<ReadonlySet<number>>(new Set());
   const findings = () => props.item.findings;
+  const explains = () => props.item.query !== undefined && props.onExplain !== undefined;
+  const toggleHow = (i: number) => {
+    const next = new Set(shown());
+    if (next.has(i)) next.delete(i);
+    else {
+      next.add(i);
+      props.onExplain?.(props.item.id, i);
+    }
+    setShown(next);
+  };
+  const explained = (i: number) => props.explained()?.[findingKey(props.run, props.item.id, i)];
   return (
     <li class="rv-item">
       <div class="rv-item-head">
@@ -83,17 +106,64 @@ function ReviewItemRow(props: {
         <Show when={open()}>
           <ul class="rv-findings">
             <For each={findings()}>
-              {(f) => (
+              {(f, i) => (
                 <li>
-                  <button
-                    type="button"
-                    class="rv-finding"
-                    title={`locate ${f.kind} ${f.subject}`}
-                    onClick={() => props.onLocate(f)}
-                  >
-                    <span class="rv-finding-subject">{f.subject}</span>
-                    <span class="rv-finding-message">{f.message}</span>
-                  </button>
+                  <div class="rv-finding-row">
+                    <Show when={explains()}>
+                      <button
+                        type="button"
+                        class="rv-finding-how"
+                        aria-expanded={shown().has(i())}
+                        title="show how this finding holds"
+                        onClick={() => toggleHow(i())}
+                      >
+                        {shown().has(i()) ? "▾" : "▸"}
+                      </button>
+                    </Show>
+                    <button
+                      type="button"
+                      class="rv-finding"
+                      title={`locate ${f.kind} ${f.subject}`}
+                      onClick={() => props.onLocate(f)}
+                    >
+                      <span class="rv-finding-subject">{f.subject}</span>
+                      <span class="rv-finding-message">{f.message}</span>
+                    </button>
+                  </div>
+                  <Show when={shown().has(i())}>
+                    <div class="rv-finding-derivation">
+                      <Show
+                        when={explained(i())}
+                        fallback={<div class="rv-finding-note" role="status">Working out how this finding holds…</div>}
+                      >
+                        {(ex) => (
+                          <>
+                            <Show when={ex().loading}>
+                              <div class="rv-finding-note" role="status">Working out how this finding holds…</div>
+                            </Show>
+                            <Show when={ex().note}>
+                              <div class="rv-finding-note">{ex().note}</div>
+                            </Show>
+                            <For each={ex().rows}>
+                              {(row) => (
+                                <>
+                                  <Show when={ex().rows.length > 1}>
+                                    <div class="rv-finding-row-cells">{row.cells.join(", ")}</div>
+                                  </Show>
+                                  <WitnessTree
+                                    items={row.witnesses}
+                                    pick={(v, sheet) => props.onLocateValue?.(v, sheet)}
+                                    isCurrent={() => false}
+                                    isCurrentSheet={() => false}
+                                  />
+                                </>
+                              )}
+                            </For>
+                          </>
+                        )}
+                      </Show>
+                    </div>
+                  </Show>
                 </li>
               )}
             </For>
@@ -115,6 +185,10 @@ function ReviewPanel(props: {
   // while a run is under way.
   onCancel?: () => void;
   onLocate: (f: FindingItem) => void;
+  // onExplain asks how one finding of an inline-query item holds (agni issue 1166), and
+  // onLocateValue locates a value of the tree it answers. Absent, no finding offers to open.
+  onExplain?: (item: string, index: number) => void;
+  onLocateValue?: (v: WitnessValue, sheet?: string) => void;
   // onSave writes the shown run as the checklist page `agni review --format html` writes. Absent,
   // the panel offers no save.
   onSave?: () => void;
@@ -226,7 +300,16 @@ function ReviewPanel(props: {
                     </div>
                     <ul class="rv-items">
                       <For each={area.items}>
-                        {(item) => <ReviewItemRow item={item} onLocate={props.onLocate} />}
+                        {(item) => (
+                          <ReviewItemRow
+                            run={r().name}
+                            item={item}
+                            explained={() => props.state().explained}
+                            onLocate={props.onLocate}
+                            onExplain={props.onExplain}
+                            onLocateValue={props.onLocateValue}
+                          />
+                        )}
                       </For>
                     </ul>
                   </div>
@@ -251,6 +334,8 @@ export function reviewPanelIsland(
     onCreate: () => void;
     onCancel?: () => void;
     onLocate: (f: FindingItem) => void;
+    onExplain?: (item: string, index: number) => void;
+    onLocateValue?: (v: WitnessValue, sheet?: string) => void;
     onSave?: () => void;
   },
   opts: { staticHost?: boolean } = {},
@@ -267,6 +352,8 @@ export function reviewPanelIsland(
         onCreate={handlers.onCreate}
         onCancel={handlers.onCancel}
         onLocate={handlers.onLocate}
+        onExplain={handlers.onExplain}
+        onLocateValue={handlers.onLocateValue}
         onSave={handlers.onSave}
         staticHost={opts.staticHost ?? false}
       />
