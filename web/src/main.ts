@@ -23,6 +23,8 @@ import { reviewPanelIsland } from "./reviewpanel.js";
 import { conventionBarIsland } from "./conventionbar.js";
 import { projectBarIsland } from "./projectbar.js";
 import { partsPanelIsland } from "./partspanel.js";
+import { type ReviewTourHost, startReviewTour } from "./reviewtour.js";
+import { viewerEmitter } from "./viewerevents.js";
 import { ViewerPresenter, type RenderView, type SavedFile } from "./viewer.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView } from "./diffpresenter.js";
 import { SvgView, drawnOnSheet } from "./svgview.js";
@@ -95,9 +97,12 @@ class AppRoot extends BaseComponent {
   // presenter is exposed so the boot code can drive a deep-link restore once the islands are
   // initialized. performLocalInit creates it.
   presenter: ViewerPresenter | null = null;
+  // tourHost is what a guided tour needs of the page beyond its DOM, for `?tour=` at boot.
+  tourHost: ReviewTourHost | null = null;
 
   override performLocalInit(): LCMComponent[] {
     const children: LCMComponent[] = [];
+    const emit = viewerEmitter(this._eventBus);
 
     const canvasEl = document.getElementById("view");
     const pickerEl = document.getElementById("compare-picker");
@@ -383,7 +388,7 @@ class AppRoot extends BaseComponent {
           })
           .catch((e: unknown) => query.view.setLocateNote(`${name}: ${e instanceof Error ? e.message : String(e)}`)),
       onLocate: (kind, subject, sheet, reason, pin) => {
-        void presenter.locateEntity(kind, subject, sheet, reason, pin ?? "");
+        void presenter.locateEntity(kind, subject, sheet, reason, pin ?? "").then(() => emit("cell.located", { kind, subject }));
         // A located cell is also selected, so Properties follows the walk through an answer. A pin
         // arrives as its component and designator, the other cells name themselves.
         const sel = kind === "pin" ? (pin ? { kind: "pin" as const, ref: subject, pin } : null) : selectionFromCell(kind, subject);
@@ -476,10 +481,20 @@ class AppRoot extends BaseComponent {
       locateSelection(sel);
       propertiesPresenter.selectEntity(sel);
       if (dockApi) dockApi.getPanel("properties")?.api.setActive();
+      emit("area.selected", { components: members.refs.length });
     };
     svgView.onArea = (r) => {
       const svg = svgEl.querySelector("svg");
       if (svg) selectArea(membersIn(svg, r));
+    };
+    // A tour's Show me on the area step selects the middle of the view, since a Shift-drag is not
+    // something a click can make.
+    this.tourHost = {
+      show: (panel) => dockApi?.getPanel(panel)?.api.setActive(),
+      selectArea: () => {
+        const v = svgEl.getBoundingClientRect();
+        svgView.onArea?.({ left: v.left + v.width / 4, top: v.top + v.height / 4, right: v.right - v.width / 4, bottom: v.bottom - v.height / 4 });
+      },
     };
     svgView.onToggle = (picked) => {
       const f = propertiesPresenter.currentFocus();
@@ -605,6 +620,7 @@ class AppRoot extends BaseComponent {
         review: review.view,
         conventionBar: conventionBar.view,
         projectBar: projectBar.view,
+        events: emit,
         parts: {
           setState: (st) => {
             parts.view.setState(st);
@@ -772,7 +788,14 @@ void admitted()
       void roomTab.follow(page.location());
     }
     // ?devpage exposes the contract to the console for trying it by hand. Nothing in the app reads it.
-    if (new URLSearchParams(window.location.search).has("devpage")) (globalThis as { __agniViewerPage?: ViewerPageAPI }).__agniViewerPage = page;
+    const params = new URLSearchParams(window.location.search);
+    if (params.has("devpage")) (globalThis as { __agniViewerPage?: ViewerPageAPI }).__agniViewerPage = page;
+    // ?tour=review starts the review tour once the design is open. ?tourpace=host shows each step only
+    // when a driver releases it, through the handle left on the page (reviewtour.ts).
+    if (params.get("tour") === "review" && booted.root.tourHost) {
+      const handle = startReviewTour(bus, booted.root.tourHost, params.get("tourpace") === "host" ? "host" : "self");
+      (globalThis as { __agniTour?: unknown }).__agniTour = handle;
+    }
   })
   .catch((err) => {
     console.error(err);

@@ -355,9 +355,12 @@ quickest way to see why a layout assertion failed. One spec is a walk rather tha
 `review-walk.spec.ts` goes through mission #845's review from checklist to saved report, asserting
 structure rather than today's counts. The gate walks the tutorial project's small gateway board, and
 `make exercise-browser-review` runs the same spec on Jetson (`WALK_DESIGN=gateway` for the small one)
-and writes the step table the mission log quotes. It runs headed by default and stops before each step to
-say what the step does and what the product does underneath, until `STEP_BY_STEP=0`. `HEADED=0` runs it
-headless and straight through, which is how a script or an agent logging the mission runs it.
+and writes the step table the mission log quotes. The walk takes the viewer's review tour
+(`web/src/reviewtour.ts`). Headed, the default, you do each tour step yourself while the walk checks the
+result, and the walk's own steps stop to say what they check. `STEP_BY_STEP=0` has the walk take the
+tour itself, and `HEADED=0` runs it headless and straight through, which is how a script or an agent
+logging the mission runs it. Headless the walk still acts through the tour's holes, so in the gate a
+step whose hole misses its control, or whose action the viewer reports no event for, fails the walk.
 
 **A Chromium that is present can still be the wrong one, and the message blames the wrong thing.**
 Playwright pins a browser BUILD per release, so `playwright-core` 1.62.1 wants chromium 1234 and a

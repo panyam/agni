@@ -4,8 +4,9 @@
 //
 // It runs in the gate with the rest of the suite, so a viewer change that breaks the walk fails on its
 // own PR. `make exercise-browser-review` runs this file alone and writes its steps as a markdown table
-// for the mission log (EXERCISE_OUT, which the target prints), and HEADED=1 shows it in a visible
-// browser, stopping before each step to explain it until STEP_BY_STEP=0 (walkguide.ts).
+// for the mission log (EXERCISE_OUT, which the target prints), headed unless HEADED=0. The walk takes
+// the viewer's review tour (web/src/reviewtour.ts): headed, the reader does each tour step while the
+// walk checks the result, and otherwise the walk does them through the tour's holes (walkguide.ts).
 //
 // Every assertion is about structure (the picker matches the CLI, a click lights some of the drawing
 // and not all of it, a set opens one tab per query, the saved page matches the CLI's), never about
@@ -23,7 +24,7 @@ import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { launch, viewportFor } from "./browser.js";
 import { table, type Row } from "./exercise-report.js";
-import { act, busy, idle, intro, pause, stepByStep } from "./walkguide.js";
+import { act, busy, intro, lastEvent, pause, pressedAt, stepByStep, tourAct } from "./walkguide.js";
 
 const base = (): string => inject("baseUrl");
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), "..", "..");
@@ -109,6 +110,11 @@ async function lit(page: Page, what: string): Promise<string> {
 async function runChecklist(page: Page, name: string): Promise<string> {
   await act(page, () => page.selectOption("select.rv-checklist", { label: name }));
   await act(page, () => page.click("button.rv-run"));
+  return checklistRan(page);
+}
+
+// checklistRan waits for the checklist run in flight to finish and describes it.
+async function checklistRan(page: Page): Promise<string> {
   await page.waitForFunction(
     () => !document.querySelector(".rv-running") && document.querySelector(".rv-summary"),
     null,
@@ -158,18 +164,31 @@ describe("the browser-review walk", () => {
     });
 
     // The intro page stands in for the first stop, so "open" pauses there rather than over a blank page.
-    const step = async (name: string, body: () => Promise<string>): Promise<void> => {
-      if (stepByStep && rows.length > 0) {
+    // A step that is one of the tour's (tour) stops with the tour's own panel instead of the walk's, and
+    // is timed from the reader's first press, so the table measures the viewer rather than the reader.
+    // Its body may rename its row, since the reader chooses which checklist the first run is.
+    const step = async (
+      name: string,
+      body: () => Promise<string | { step: string; detail: string }>,
+      opts: { tour?: string } = {},
+    ): Promise<void> => {
+      if (stepByStep && rows.length > 0 && !opts.tour) {
         const last = rows[rows.length - 1];
         await pause(page, name, `${last.step}: ${last.status}, ${last.detail}`, walk.about);
       }
-      const t0 = Date.now();
+      if (opts.tour) process.stdout.write(`\n── ${name}\n`);
+      let t0 = Date.now();
+      const since = async () => {
+        const pressed = opts.tour ? await pressedAt(page, opts.tour).catch(() => undefined) : undefined;
+        return Date.now() - (pressed && pressed > t0 ? pressed : t0);
+      };
       await busy(page, name);
       try {
-        const detail = await body();
-        rows.push({ step: name, design: label, status: "ok", ms: Date.now() - t0, detail });
+        const done = await body();
+        const [stepName, detail] = typeof done === "string" ? [name, done] : [done.step, done.detail];
+        rows.push({ step: stepName, design: label, status: "ok", ms: await since(), detail });
       } catch (e) {
-        rows.push({ step: name, design: label, status: "fail", ms: Date.now() - t0, detail: why(e) });
+        rows.push({ step: name, design: label, status: "fail", ms: await since(), detail: why(e) });
         if (out) await page.screenshot({ path: join(out, `review-walk-${name.replace(/\W+/g, "-")}.png`) }).catch(() => {});
       }
     };
@@ -179,19 +198,20 @@ describe("the browser-review walk", () => {
         await intro(page, walk.about, [
           "open the design",
           "match the checklist picker against 'agni checklists'",
-          "run each checklist",
-          "run the rule catalog",
-          "click a finding into the schematic",
-          "open a netlist audit as query tabs",
-          "click a part from a query answer",
-          "ask a follow-up question",
-          "save each checklist page and compare it with the CLI's",
+          "you: run a checklist, then the walk runs the rest",
+          "you: run the rule catalog",
+          "you: click a finding into the schematic",
+          "you: open a query set (the walk opens the netlist audit if you chose another)",
+          "you: click a part from a query answer",
+          "you: ask a follow-up question",
+          "you: select a block and ask what it connects to",
+          "you: save a checklist page, compared with the CLI's",
           "run 'agni trial'",
           "check the page logged no errors",
         ]);
       }
       await step("open", async () => {
-        await act(page, () => page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view`, { waitUntil: "networkidle" }));
+        await act(page, () => page.goto(`${base()}/designs/${walk.mount}/${walk.path}/view?tour=review&tourpace=host`, { waitUntil: "networkidle" }));
         await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
         await page.waitForFunction(() => /\(\d+\)/.test(document.querySelector(".checks-run")?.textContent ?? ""), null, {
           timeout: 60_000,
@@ -214,12 +234,26 @@ describe("the browser-review walk", () => {
         return `${picker.join(", ")}, as \`agni checklists\` lists`;
       });
 
-      for (const name of checklists) {
+      // The first checklist run is the tour's, so the reader picks which; the walk runs the others.
+      let ran = "";
+      await step(
+        "run checklist",
+        async () => {
+          await tourAct(page, "run-checklist", async () => {
+            await page.selectOption("select.rv-checklist", { label: checklists[0] });
+            await page.click("button.rv-run");
+          });
+          ran = (await lastEvent<{ checklist: string }>(page, "checklist.ran"))?.checklist ?? checklists[0];
+          return { step: `run checklist ${ran}`, detail: await checklistRan(page) };
+        },
+        { tour: "run-checklist" },
+      );
+      for (const name of checklists.filter((n) => n !== ran)) {
         await step(`run checklist ${name}`, () => runChecklist(page, name));
       }
 
       await step("run checks", async () => {
-        await act(page, () => page.click(".checks-run"));
+        await tourAct(page, "run-checks", () => page.click(".checks-run"));
         await page.waitForFunction(() => document.querySelector(".checks-run")?.textContent?.trim() === "Run checks", null, {
           timeout: 120_000,
         });
@@ -228,21 +262,32 @@ describe("the browser-review walk", () => {
         const after = await settled(page);
         if (after !== 0) throw new Error(`a run with nothing clicked lit ${after} elements`);
         return `${findings} findings, nothing lit`;
-      });
+      }, { tour: "run-checks" });
 
       await step("click a finding", async () => {
-        const first = page.locator(".check-locate").first();
-        const name = (await first.innerText()).replace(/\s+/g, " ").trim();
-        await act(page, () => first.click());
-        return `${name}: ${await lit(page, "the finding")}`;
-      });
+        await tourAct(page, "click-finding", () => page.locator(".check-locate").first().click());
+        const f = await lastEvent<{ rule: string; subject: string }>(page, "finding.selected");
+        return `${f ? `${f.rule} ${f.subject}` : "a finding"}: ${await lit(page, "the finding")}`;
+      }, { tour: "click-finding" });
 
+      // The tour lets the reader open any set, the project's or a file (whose chooser the walk fills
+      // with the netlist audit). The rest of the walk reads the audit's tabs, so a reader who chose
+      // another set is followed by the walk opening the audit itself.
+      page.on("filechooser", (chooser) => void chooser.setFiles(auditSet));
       await step("open a query set", async () => {
         const queries = (readFileSync(auditSet, "utf8").match(/^ {2}- name:/gm) ?? []).length;
-        const before = await page.locator(".query-tab-go").count();
-        await act(page, () => page.click(".query-sets-open"));
-        await page.waitForSelector(".query-set-item, .query-sets-none", { timeout: 30_000 });
-        await act(page, () => page.setInputFiles(".query-set-input", auditSet));
+        const tabCount = () => page.locator(".query-tab-go").count();
+        let before = await tabCount();
+        await tourAct(page, "open-set", async () => {
+          await page.click(".query-sets-open");
+          await page.waitForSelector(".query-set-item, .query-sets-none", { timeout: 30_000 });
+          await page.setInputFiles(".query-set-input", auditSet);
+        });
+        const opened = await lastEvent<{ title: string; queries: number }>(page, "queryset.opened");
+        if (opened && opened.title !== "Netlist audit") {
+          before = await tabCount();
+          await act(page, () => page.setInputFiles(".query-set-input", auditSet));
+        }
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length >= n, before + queries, {
           timeout: 30_000,
         });
@@ -255,8 +300,9 @@ describe("the browser-review walk", () => {
         }
         expect(titles.length, "the set should open one tab per query").toBe(queries);
         expect(errors, "no tab of the set should answer an error").toEqual([]);
-        return `${titles.length} tabs, none in error`;
-      });
+        const chose = opened && opened.title !== "Netlist audit" ? `you opened ${opened.title}, then the audit: ` : "";
+        return `${chose}${titles.length} tabs, none in error`;
+      }, { tour: "open-set" });
 
       await step("click a query cell", async () => {
         await act(page, () => openTab(page, "Parts on nets"));
@@ -264,28 +310,39 @@ describe("the browser-review walk", () => {
         // A virtual symbol (#FLG01, #PWR03) is a row with nothing to draw, so the walk takes the first
         // placed part. A part drawn on another sheet is selected without the canvas moving, and its
         // cell's sheet chip is how a reader goes there, so the walk clicks that too.
-        const cell = page.locator(".query-row td:nth-child(2)").filter({ has: page.locator(".query-locate") }).filter({ hasNotText: /^\s*#/ }).first();
-        const name = (await cell.locator(".query-locate").innerText()).trim();
-        await act(page, () => cell.locator(".query-locate").click());
+        const first = page.locator(".query-row td:nth-child(2)").filter({ has: page.locator(".query-locate") }).filter({ hasNotText: /^\s*#/ }).first();
+        const mine = (await first.locator(".query-locate").innerText()).trim();
+        await tourAct(page, "click-cell", () => first.locator(".query-locate").click());
+        // The reader may have clicked any cell, so the walk follows the one the viewer located. It looks
+        // the cell up by index over plain cells, since a :has() locator over Jetson's answer is
+        // re-resolved on every action and cost the step seconds.
+        const name = (await lastEvent<{ subject: string }>(page, "cell.located"))?.subject ?? mine;
+        if (name.startsWith("#")) return `${name}: a virtual symbol, with nothing to draw`;
+        let cell = first;
+        if (name !== mine) {
+          const at = await page.$$eval(".query-row td", (tds, n) => tds.findIndex((td) => td.querySelector(".query-locate")?.textContent?.trim() === n), name);
+          if (at < 0) throw new Error(`no answer cell names ${name}, which the viewer located`);
+          cell = page.locator(".query-row td").nth(at);
+        }
         if ((await settled(page)) === 0 && (await cell.locator(".sheet-badge").count()) > 0) {
           const sheet = (await cell.locator(".sheet-badge").first().innerText()).trim();
           await act(page, () => cell.locator(".sheet-badge").first().click());
           return `${name}, on sheet ${sheet}: ${await lit(page, "the cell")}`;
         }
         return `${name}: ${await lit(page, "the cell")}`;
-      });
+      }, { tour: "click-cell" });
 
       await step("ask", async () => {
         const tabs = await page.locator(".query-tab-go").count();
         const button = page.locator(".query-ask:not([disabled])");
         await button.waitFor({ timeout: 30_000 });
         const question = (await button.innerText()).trim();
-        await act(page, () => button.click());
+        await tourAct(page, "ask", () => button.click());
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length > n, tabs, { timeout: 30_000 });
         await page.waitForSelector(".query-row, .query-empty", { timeout: 30_000 });
         if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").innerText());
         return `"${question}" opened its own tab with ${await page.locator(".query-row").count()} rows`;
-      });
+      }, { tour: "ask" });
 
       // agni issue 904: a block of the sheet on screen, selected with a Shift-drag and asked about as one
       // set. The block is the largest part drawn wholly on screen that covers at most a fortieth of the
@@ -309,8 +366,9 @@ describe("the browser-review walk", () => {
           const pad = (Math.max(big.width, big.height) * 3) / 4;
           return { l: Math.max(view.left + 2, big.left - pad), t: Math.max(view.top + 2, big.top - pad), r: Math.min(view.right - 2, big.right + pad), b: Math.min(view.bottom - 2, big.bottom + pad) };
         });
-        if (!box) throw new Error("no part is drawn wholly on screen to select an area around");
-        await act(page, async () => {
+        if (!box && !stepByStep) throw new Error("no part is drawn wholly on screen to select an area around");
+        await tourAct(page, "select-area", async () => {
+          if (!box) throw new Error("no part is drawn wholly on screen to select an area around");
           await page.keyboard.down("Shift");
           await page.mouse.move(box.l, box.t);
           await page.mouse.down();
@@ -323,7 +381,7 @@ describe("the browser-review walk", () => {
           Object.fromEntries(ds.map((d) => [d.getAttribute("data-group"), d.querySelectorAll(".pr-ref").length])),
         );
         const tabs = await page.locator(".query-tab-go").count();
-        await act(page, () => page.click('.pr-ask-go:has-text("What does this block connect to?")'));
+        await tourAct(page, "ask-area", () => page.click('.pr-ask-go:has-text("What does this block connect to?")'));
         await page.waitForFunction((n) => document.querySelectorAll(".query-tab-go").length > n, tabs, { timeout: 30_000 });
         await page.waitForSelector(".query-row, .query-empty", { timeout: 30_000 });
         if (await page.locator(".query-error").count()) throw new Error(await page.locator(".query-error").innerText());
@@ -333,15 +391,20 @@ describe("the browser-review walk", () => {
         const rows = await page.locator(".query-row").count();
         if (rows === 0 && counts.components > 0) throw new Error("the area's parts reach no net outside it, which a block with parts always does");
         return `${counts.components} parts, ${counts.pins} loose pins: ${counts["boundary nets"]} boundary nets, ${counts["internal nets"]} internal; asked once, ${rows} rows${rows === 50 ? " (the first 50)" : ""}`;
-      });
+      }, { tour: "select-area" });
 
       await step("save the report", async () => {
         // Every checklist, since a page whose items carry no finding has no link to compare, and the
         // links are where the viewer and the CLI once disagreed (agni issue 1120).
+        // The first save is the tour's last step and the reader's; the walk saves the others.
         const saved: string[] = [];
-        for (const name of checklists) {
+        for (const [i, name] of checklists.entries()) {
           await runChecklist(page, name);
-          const [download] = await Promise.all([page.waitForEvent("download", { timeout: 30_000 }), act(page, () => page.click(".rv-save"))]);
+          const save = () => page.click(".rv-save");
+          const [download] = await Promise.all([
+            page.waitForEvent("download", { timeout: i === 0 && stepByStep ? 0 : 30_000 }),
+            i === 0 ? tourAct(page, "save-report", save) : act(page, save),
+          ]);
           const viewer = readFileSync((await download.path())!, "utf8");
           const cli = agni("review", design, "--checklist", name, "--format", "html", "--server", base(), "--mount", `${walk.mount}=${project}`);
           if (out) {

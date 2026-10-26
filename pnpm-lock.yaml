@@ -181,11 +181,11 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/tsappkit':
-        specifier: ^0.7.6
-        version: 0.7.6
+        specifier: ^0.7.7
+        version: 0.7.7
       '@panyam/tsappkit-solid':
         specifier: ^0.7.5
-        version: 0.7.5(@panyam/tsappkit@0.7.6)(solid-js@1.9.14)
+        version: 0.7.5(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)
       pdfjs-dist:
         specifier: ^6.2.108
         version: 6.2.108
@@ -236,11 +236,11 @@ importers:
         specifier: 0.8.12
         version: 0.8.12
       '@panyam/tsappkit':
-        specifier: ^0.7.6
-        version: 0.7.6
+        specifier: ^0.7.7
+        version: 0.7.7
       '@panyam/tsappkit-solid':
         specifier: ^0.7.5
-        version: 0.7.5(@panyam/tsappkit@0.7.6)(solid-js@1.9.14)
+        version: 0.7.5(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)
       dockview-core:
         specifier: ^1.17.2
         version: 1.17.2
@@ -790,8 +790,8 @@ packages:
       '@panyam/tsappkit': '>=0.0.5 <1.0.0'
       solid-js: ^1.9.0
 
-  '@panyam/tsappkit@0.7.6':
-    resolution: {integrity: sha512-moI0sy1L/Ox9gK9elEePbfzUdbn+EegwAvR1jD8qqrOY3izhzxvloVvulvQGwqDSGpFrA2oFNGk7zpAYFAi7qA==}
+  '@panyam/tsappkit@0.7.7':
+    resolution: {integrity: sha512-RGEGE8IEdOW9YaojkXEWv3XcprPHOeMPgn3AaOIEQi13jawJFBw/cklc1UnTa9dBMtt2u3vhGobg12e+5sV85g==}
     peerDependencies:
       ace-builds: ^1.0.0
     peerDependenciesMeta:
@@ -1865,12 +1865,12 @@ snapshots:
 
   '@panyam/servicekit-client@0.2.0': {}
 
-  '@panyam/tsappkit-solid@0.7.5(@panyam/tsappkit@0.7.6)(solid-js@1.9.14)':
+  '@panyam/tsappkit-solid@0.7.5(@panyam/tsappkit@0.7.7)(solid-js@1.9.14)':
     dependencies:
-      '@panyam/tsappkit': 0.7.6
+      '@panyam/tsappkit': 0.7.7
       solid-js: 1.9.14
 
-  '@panyam/tsappkit@0.7.6': {}
+  '@panyam/tsappkit@0.7.7': {}
 
   '@rollup/rollup-android-arm-eabi@4.62.4':
     optional: true

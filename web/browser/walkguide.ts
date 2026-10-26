@@ -1,10 +1,14 @@
-// The guided mode of the browser-review walk (agni issue 1118). With the browser headed, the walk stops
-// before each step and shows a panel saying what the step does and what the product is doing, with
-// the previous step's result, until the reader presses Next. The same text goes to the terminal.
+// The guided mode of the browser-review walk (agni issue 1118). The walk opens the viewer with its
+// review tour running (web/src/reviewtour.ts, `?tour=review&tourpace=host`), and each step a reader
+// takes in the viewer is a tour step. With the browser headed the READER does those steps: the walk
+// releases one, the page dims around the controls it needs, and the walk waits for the viewer to
+// report the step done. The steps the walk does on its own (open the design, compare with the CLI,
+// run `agni trial`) stop with a panel saying what they check, until the reader presses Next.
 //
-// STEP_BY_STEP=0 turns it off for a headed run that should play straight through. A headless run
-// never stops, whatever STEP_BY_STEP says, since nobody is there to press Next and CI would wait
-// forever.
+// STEP_BY_STEP=0 turns the reader's part off for a headed run that should play straight through, and
+// a headless run never stops, whatever STEP_BY_STEP says, since nobody is there to press Next and CI
+// would wait forever. Either way the walk still takes the tour, acting through its holes as a reader
+// would, so a step whose hole misses its control, or whose action reports no event, fails the walk.
 
 import { appendFileSync } from "node:fs";
 import { join } from "node:path";
@@ -23,34 +27,10 @@ const explanations: Record<string, string> = {
     "The Review panel's picker lists the checklists the project declares, including ones inherited " +
     "through 'extends'. It asks ReviewService.ListChecklists, the same rpc 'agni checklists' asks, so " +
     "the two must list the same names.",
-  "run checklist":
-    "Run one checklist. Each item is a question bound to a rule, a query or a manual check, and the " +
-    "engine scores it: pass, fail, provisional (a fail resting on datasheet values below the " +
-    "confidence floor) or not automated. Coverage is how many items the engine could answer.",
-  "run checks":
-    "Run every rule in the catalog over the design. The findings list fills, and nothing is lit on the " +
-    "drawing yet, because the run-wide field stays off until you choose something to look at.",
-  "click a finding":
-    "Click the first finding. The viewer locates its subjects (nets, parts, pins) on the sheet and " +
-    "lights them. It should light a few elements, never the whole board.",
-  "open a query set":
-    "Open examples/netlist-audit/audit.yaml as a query set: a netlist audit workbook's tables as " +
-    "Datalog queries, each opening in its own tab over the one design read. No tab should answer an " +
-    "error.",
-  "click a query cell":
-    "Click a part in the 'Parts on nets' table. A query answer carries the entity behind each cell, so " +
-    "the click lights that part on the drawing.",
-  ask:
-    "Ask follows up on the selected part with a canned question, which opens as a new query tab. Its " +
-    "cells click into the drawing the same way.",
-  "select an area":
-    "Shift-drag a rectangle around a block of the sheet, the largest part and what sits beside it. " +
-    "Properties describes the parts, pins and wires inside as one area, with the nets that cross its " +
-    "edge as its interface, and its Ask row binds every member at once (agni issue 904).",
   "save the report":
-    "Run each checklist and save its report. The viewer asks ReviewService.RenderReviewReport for " +
-    "the page, the same rpc 'agni review --format html' calls, so each saved file must match the CLI's " +
-    "byte for byte apart from the time it was written, links included.",
+    "Next the walk runs each checklist again and you save its page. The viewer asks " +
+    "ReviewService.RenderReviewReport for it, the same rpc 'agni review --format html' calls, so each " +
+    "saved file must match the CLI's byte for byte apart from the time it was written, links included.",
   "agni trial":
     "Outside the browser, 'agni trial' walks the same design the way a release trial on someone " +
     "else's machine would, and reports each step without any design content.",
@@ -76,12 +56,14 @@ export async function intro(page: Page, board: string, steps: readonly string[])
 <main style="max-width:720px;margin:48px 48px 48px 500px;padding:0 24px">
 <h1 style="font-size:24px;margin:0 0 8px">The browser-review walk</h1>
 <p style="margin:0 0 16px;color:#374151">A reviewer's path through agni's viewer, on ${board}.</p>
-<p>The walk opens the design, runs its project's checklists and the full rule catalog, clicks a finding and a
-query answer into the schematic, asks a follow-up question, and saves the checklist page, checking each
-against the command line as it goes. It stops before every step with a panel in the top left saying what
-the step does and what agni does underneath. Press <b>Next</b> there, or Enter, to run it.</p>
+<p>The walk opens the design and then hands you the viewer's review tour: run a checklist and the full rule
+catalog, click a finding and a query answer into the schematic, ask a follow-up question, select a block
+and save the checklist page. At each of those the page dims around what the step needs, and you do it;
+<b>Show me</b> does it for you, and Esc leaves the tour, after which the walk finishes the steps itself.
+Behind you it checks each result against the command line. The steps it does alone stop with a panel in
+the top left saying what they check; press <b>Next</b> there, or Enter.</p>
 <ol style="padding-left:20px;color:#374151">${steps.map((s) => `<li>${s}</li>`).join("")}</ol>
-<p style="color:#6b7280;font-size:13px">STEP_BY_STEP=0 plays the walk straight through; the step table prints in the terminal when it ends.</p>
+<p style="color:#6b7280;font-size:13px">STEP_BY_STEP=0 plays the walk straight through, the walk taking the tour itself; the step table prints in the terminal when it ends.</p>
 </main></body></html>`);
   await pause(page, "open", "", board);
 }
@@ -281,4 +263,79 @@ function showBusy(step: string): void {
   b.style.pointerEvents = "auto";
   const label = document.getElementById("walk-busy-label");
   if (label) label.textContent = `Running: ${step}… the page ignores clicks while the walk works.`;
+}
+
+// The tour's handle on the page (TourHandle in web/src/reviewtour.ts), as the walk reads it.
+interface TourState {
+  step: string;
+  index: number;
+  ended: string;
+}
+const tourState = (page: Page): Promise<TourState | null> =>
+  page.evaluate(() => {
+    const t = (globalThis as { __agniTour?: TourState }).__agniTour;
+    return t ? { step: t.step, index: t.index, ended: t.ended } : null;
+  });
+
+// tourAct takes one of the tour's steps. It releases the step, so the page dims around the step's
+// controls, and then either waits for the reader to do it (stepByStep) or runs the walk's own
+// action, which reaches the controls only through the holes, as a reader would. Both end when the
+// viewer reports the step done and the tour moves on. A tour the reader left (Esc) makes the walk
+// carry on alone, so a reader can stop taking part without stopping the walk.
+export async function tourAct(page: Page, step: string, action: () => Promise<unknown>, timeout = 180_000): Promise<void> {
+  await page.waitForFunction(() => (globalThis as { __agniTour?: unknown }).__agniTour !== undefined, null, { timeout: 30_000 });
+  const at = (await tourState(page))!;
+  if (at.ended) {
+    await act(page, action);
+    return;
+  }
+  if (at.step !== step) throw new Error(`the tour is on its "${at.step}" step where the walk expected "${step}"`);
+  await page.evaluate(() => (globalThis as { __agniTour?: { release(): void } }).__agniTour?.release());
+  const moved = (wait: number) =>
+    page.waitForFunction(
+      (i) => {
+        const t = (globalThis as { __agniTour?: TourState }).__agniTour!;
+        return t.index !== i || t.ended !== "";
+      },
+      at.index,
+      { timeout: wait },
+    );
+  if (!stepByStep) {
+    await act(page, action);
+    await moved(timeout).catch(() => {
+      throw new Error(`the tour did not move past "${step}": the viewer reported no event that finishes it`);
+    });
+    return;
+  }
+  process.stdout.write(`   your turn: do what the tour's panel says, or press Show me\n`);
+  await page.evaluate(() => {
+    const b = document.getElementById("walk-busy");
+    if (b) b.style.display = "none";
+  });
+  await moved(0);
+  await page.evaluate(() => {
+    const b = document.getElementById("walk-busy");
+    if (b) b.style.display = "";
+  });
+  const after = (await tourState(page))!;
+  if (after.index === at.index && after.ended !== "" && after.ended !== "done") {
+    process.stdout.write("   you left the tour, so the walk does the rest itself\n");
+    await act(page, action);
+  }
+}
+
+// pressedAt is when the reader first pressed in the page during a tour step, so the walk times a step
+// from the reader's action rather than from when it offered the step. Undefined when the walk did it.
+export async function pressedAt(page: Page, step: string): Promise<number | undefined> {
+  if (!stepByStep) return undefined;
+  return page.evaluate((s) => (globalThis as { __agniTour?: { pressed: Record<string, number> } }).__agniTour?.pressed[s], step);
+}
+
+// lastEvent is the payload of the viewer's latest event of a type since the tour started, which says
+// what the reader chose: which checklist, finding or cell.
+export async function lastEvent<T>(page: Page, type: string): Promise<T | undefined> {
+  return page.evaluate((t) => {
+    const events = (globalThis as { __agniTour?: { events: { type: string; data: unknown }[] } }).__agniTour?.events ?? [];
+    return [...events].reverse().find((e) => e.type === t)?.data as T | undefined;
+  }, type);
 }
