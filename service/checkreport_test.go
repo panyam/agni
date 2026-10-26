@@ -115,3 +115,41 @@ func TestRenderCheckReportRefusesAnIncompleteRequest(t *testing.T) {
 		}
 	}
 }
+
+// The HTML page carries the query sets the caller answered and sent, one Queries section each after
+// the rules, so one file holds the checks and the queries (agni issue 1190). A request sending none
+// renders the page with no Queries section at all.
+func TestRenderCheckReportCarriesTheQuerySetsItIsSent(t *testing.T) {
+	svc, run, snap := reportRun(t)
+	render := func(sets ...*webapi.RunQueriesResponse) string {
+		t.Helper()
+		resp, err := svc.RenderCheckReport(context.Background(), &webapi.RenderCheckReportRequest{
+			Snapshot: snap, Rules: []string{"i2c-pull-up"}, Run: run, QuerySets: sets,
+			Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_HTML,
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+		return string(resp.GetContent())
+	}
+	set := &webapi.RunQueriesResponse{Title: "Audit demo", Results: []*webapi.NamedQueryResult{
+		{Name: "Pins", Result: &webapi.RunQueryResponse{
+			Query: "pin.net(?p, ?n, ?net) => ?p, ?net", Columns: []string{"p", "net"}, Total: 2,
+			Rows: []*webapi.QueryRow{{Cells: []string{"U1", "SDA"}}, {Cells: []string{"U2", "SDA"}}},
+		}},
+		{Name: "Broken", Error: "unknown relation"},
+	}}
+	page := render(set)
+	rules, queries := strings.Index(page, "i2c-pull-up"), strings.Index(page, `<section class="query-set">`)
+	if rules < 0 || queries < rules {
+		t.Fatalf("the page wants the rules and then a Queries section, rules at %d and queries at %d", rules, queries)
+	}
+	for _, want := range []string{"Queries: Audit demo", "<h2>Pins</h2>", "<td class=\"subject\">U2</td>", "Could not answer: unknown relation"} {
+		if !strings.Contains(page[queries:], want) {
+			t.Errorf("the Queries section lacks %q", want)
+		}
+	}
+	if bare := render(); strings.Contains(bare, "query-set") || strings.Contains(bare, "Queries:") {
+		t.Error("a request sending no query sets renders a Queries section")
+	}
+}

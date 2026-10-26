@@ -12,8 +12,9 @@ import type { NamingConvention } from "../config/naming_pb";
 import { file_agni_v1_config_naming } from "../config/naming_pb";
 import type { UnexpandedHierarchy } from "../ir/ir_pb";
 import { file_agni_v1_ir_ir } from "../ir/ir_pb";
-import type { AnalysisConfig } from "./config_pb";
 import { file_agni_v1_webapi_config } from "./config_pb";
+import type { RunQueriesResponse } from "./query_pb";
+import { file_agni_v1_webapi_query } from "./query_pb";
 import type { PartSpec } from "../param/param_pb";
 import { file_agni_v1_param_param } from "../param/param_pb";
 import type { Message } from "@bufbuild/protobuf";
@@ -22,7 +23,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/checks.proto.
  */
 export const file_agni_v1_webapi_checks: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jaGVja3MucHJvdG8SDmFnbmkudjEud2ViYXBpIrABChJDaGVja0Rlc2lnblJlcXVlc3QSEAoIc25hcHNob3QYByABKAkSDQoFcnVsZXMYASADKAkSEwoLd29ya19idWRnZXQYBiABKAMSKQoIc3ViamVjdHMYCCADKAsyFy5hZ25pLnYxLmNoZWNrcy5TdWJqZWN0SgQIAhADSgQIAxAESgQIBBAFSgQIBRAGUgdvdmVybGF5UgN1cmlSCWJvYXJkX3VyaVIIYXNfbmFtZWQiYwoNT3ZlcmxheUNvbmZpZxIuCgZjb25maWcYBCABKAsyHi5hZ25pLnYxLndlYmFwaS5BbmFseXNpc0NvbmZpZxIWCg5pZ25vcmVfcHJvamVjdBgDIAEoCEoECAEQAkoECAIQAyKHAgoTQ2hlY2tEZXNpZ25SZXNwb25zZRIpCghmaW5kaW5ncxgBIAMoCzIXLmFnbmkudjEuY2hlY2tzLkZpbmRpbmcSLAoHc2tpcHBlZBgCIAMoCzIbLmFnbmkudjEud2ViYXBpLlNraXBwZWRSdWxlEikKCHZlcmRpY3RzGAMgAygLMhcuYWduaS52MS5jaGVja3MuVmVyZGljdBI9ChR1bmV4cGFuZGVkX2hpZXJhcmNoeRgEIAMoCzIfLmFnbmkudjEuaXIuVW5leHBhbmRlZEhpZXJhcmNoeRItCgZpb19tYXAYBSADKAsyHS5hZ25pLnYxLmNvbmZpZy5QaW5Bc3NpZ25tZW50IkAKC1NraXBwZWRSdWxlEgwKBG5hbWUYASABKAkSDgoGcmVhc29uGAIgASgJEhMKC2Rlc2lnbl93aWRlGAMgASgIInMKFUdldENoZWNrUmVwb3J0UmVxdWVzdBIQCghzbmFwc2hvdBgGIAEoCRINCgVydWxlcxgBIAMoCUoECAIQA0oECAMQBEoECAQQBUoECAUQBlIHb3ZlcmxheVIDdXJpUglib2FyZF91cmlSCGFzX25hbWVkIkUKFkdldENoZWNrUmVwb3J0UmVzcG9uc2USKwoGcmVwb3J0GAEgASgLMhsuYWduaS52MS5jaGVja3MuQ2hlY2tSZXBvcnQiRQoLUmVwb3J0TGlua3MSEAoIdXJsX2Jhc2UYASABKAkSEgoKZGVzaWduX3VyaRgCIAEoCRIQCgh3aXRoaGVsZBgDIAEoCSKHAgoYUmVuZGVyQ2hlY2tSZXBvcnRSZXF1ZXN0EhAKCHNuYXBzaG90GAkgASgJEg0KBXJ1bGVzGAMgAygJEjAKA3J1bhgEIAEoCzIjLmFnbmkudjEud2ViYXBpLkNoZWNrRGVzaWduUmVzcG9uc2USMQoGZm9ybWF0GAUgASgOMiEuYWduaS52MS53ZWJhcGkuQ2hlY2tSZXBvcnRGb3JtYXQSKgoFbGlua3MYBiABKAsyGy5hZ25pLnYxLndlYmFwaS5SZXBvcnRMaW5rc0oECAEQAkoECAIQA0oECAcQCEoECAgQCVIDdXJpUgdvdmVybGF5Uglib2FyZF91cmlSCGFzX25hbWVkIlQKGVJlbmRlckNoZWNrUmVwb3J0UmVzcG9uc2USDwoHY29udGVudBgBIAEoDBIUCgxjb250ZW50X3R5cGUYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkiKQoaR2V0TmFtaW5nQ29udmVudGlvblJlcXVlc3QSCwoDdXJpGAEgASgJIlMKG0dldE5hbWluZ0NvbnZlbnRpb25SZXNwb25zZRI0Cgpjb252ZW50aW9uGAEgASgLMiAuYWduaS52MS5jb25maWcuTmFtaW5nQ29udmVudGlvbiI1ChZHZXRFeHBlY3RhdGlvbnNSZXF1ZXN0EhAKCHNuYXBzaG90GAIgASgJSgQIARACUgN1cmkiTwoPUnVsZUV4cGVjdGF0aW9uEgwKBHJ1bGUYASABKAkSEAoIc3ViamVjdHMYAiADKAkSDwoHcGVuZGluZxgDIAEoCBILCgN3aHkYBCABKAkiZQoXR2V0RXhwZWN0YXRpb25zUmVzcG9uc2USNQoMZXhwZWN0YXRpb25zGAEgAygLMh8uYWduaS52MS53ZWJhcGkuUnVsZUV4cGVjdGF0aW9uEhMKC2hhc19zaWRlY2FyGAIgASgIIj4KEExpc3RSdWxlc1JlcXVlc3QSEAoIc25hcHNob3QYAyABKAlKBAgBEAJKBAgCEANSB292ZXJsYXlSA3VyaSKqAgoIUnVsZUluZm8SDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRIPCgdzdW1tYXJ5GAMgASgJEg0KBXJlYWRzGAQgAygJEjAKBHRhZ3MYBSADKAsyIi5hZ25pLnYxLndlYmFwaS5SdWxlSW5mby5UYWdzRW50cnkSEQoJYXZhaWxhYmxlGAYgASgIEhoKEnVuYXZhaWxhYmxlX3JlYXNvbhgHIAEoCRIOCgZpbXBhY3QYCCABKAkSDgoGZGV0YWlsGAkgASgJEg4KBnJlbWVkeRgKIAEoCRIPCgdzaGlwcGVkGAsgASgIEg8KB2RvY191cmwYDCABKAkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiVAoRTGlzdFJ1bGVzUmVzcG9uc2USJwoFcnVsZXMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5SdWxlSW5mbxIWCg5lbmdpbmVfdmVyc2lvbhgCIAEoCSJZChtHZXRJbnRlcmZhY2VDb3ZlcmFnZVJlcXVlc3QSEAoIc25hcHNob3QYBCABKAlKBAgBEAJKBAgCEANKBAgDEARSA3VyaVIHb3ZlcmxheVIIYXNfbmFtZWQiOgoOU2lnbmFsQ292ZXJhZ2USDAoEbmFtZRgBIAEoCRILCgNuZXQYAiABKAkSDQoFc3RhdGUYAyABKAkiaQoRSW50ZXJmYWNlQ292ZXJhZ2USDwoHcHJvZmlsZRgBIAEoCRISCgphbmNob3JfbmV0GAIgASgJEi8KB3NpZ25hbHMYAyADKAsyHi5hZ25pLnYxLndlYmFwaS5TaWduYWxDb3ZlcmFnZSJVChxHZXRJbnRlcmZhY2VDb3ZlcmFnZVJlc3BvbnNlEjUKCmludGVyZmFjZXMYASADKAsyIS5hZ25pLnYxLndlYmFwaS5JbnRlcmZhY2VDb3ZlcmFnZSI4ChlHZXRDb21wb25lbnRQYXJhbXNSZXF1ZXN0EhAKCHNuYXBzaG90GAIgASgJSgQIARACUgN1cmkiZgoPQ29tcG9uZW50UGFyYW1zEg8KB3JlZl9kZXMYASABKAkSCwoDbXBuGAIgASgJEiUKBHNwZWMYAyABKAsyFy5hZ25pLnYxLnBhcmFtLlBhcnRTcGVjEg4KBmNvcnB1cxgEIAEoCSJrChpHZXRDb21wb25lbnRQYXJhbXNSZXNwb25zZRIzCgpjb21wb25lbnRzGAEgAygLMh8uYWduaS52MS53ZWJhcGkuQ29tcG9uZW50UGFyYW1zEhgKEGNvcnB1c19jb25uZWN0ZWQYAiABKAgqfAoRQ2hlY2tSZXBvcnRGb3JtYXQSIwofQ0hFQ0tfUkVQT1JUX0ZPUk1BVF9VTlNQRUNJRklFRBAAEiQKIENIRUNLX1JFUE9SVF9GT1JNQVRfUkVTVUxUU19KU09OEAESHAoYQ0hFQ0tfUkVQT1JUX0ZPUk1BVF9IVE1MEAIytwYKDENoZWNrU2VydmljZRJQCglMaXN0UnVsZXMSIC5hZ25pLnYxLndlYmFwaS5MaXN0UnVsZXNSZXF1ZXN0GiEuYWduaS52MS53ZWJhcGkuTGlzdFJ1bGVzUmVzcG9uc2USVgoLQ2hlY2tEZXNpZ24SIi5hZ25pLnYxLndlYmFwaS5DaGVja0Rlc2lnblJlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5DaGVja0Rlc2lnblJlc3BvbnNlEmIKD0dldEV4cGVjdGF0aW9ucxImLmFnbmkudjEud2ViYXBpLkdldEV4cGVjdGF0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5HZXRFeHBlY3RhdGlvbnNSZXNwb25zZRJfCg5HZXRDaGVja1JlcG9ydBIlLmFnbmkudjEud2ViYXBpLkdldENoZWNrUmVwb3J0UmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkdldENoZWNrUmVwb3J0UmVzcG9uc2USaAoRUmVuZGVyQ2hlY2tSZXBvcnQSKC5hZ25pLnYxLndlYmFwaS5SZW5kZXJDaGVja1JlcG9ydFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5SZW5kZXJDaGVja1JlcG9ydFJlc3BvbnNlEnEKFEdldEludGVyZmFjZUNvdmVyYWdlEisuYWduaS52MS53ZWJhcGkuR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXF1ZXN0GiwuYWduaS52MS53ZWJhcGkuR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXNwb25zZRJrChJHZXRDb21wb25lbnRQYXJhbXMSKS5hZ25pLnYxLndlYmFwaS5HZXRDb21wb25lbnRQYXJhbXNSZXF1ZXN0GiouYWduaS52MS53ZWJhcGkuR2V0Q29tcG9uZW50UGFyYW1zUmVzcG9uc2USbgoTR2V0TmFtaW5nQ29udmVudGlvbhIqLmFnbmkudjEud2ViYXBpLkdldE5hbWluZ0NvbnZlbnRpb25SZXF1ZXN0GisuYWduaS52MS53ZWJhcGkuR2V0TmFtaW5nQ29udmVudGlvblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_config_intent, file_agni_v1_config_naming, file_agni_v1_ir_ir, file_agni_v1_webapi_config, file_agni_v1_param_param]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jaGVja3MucHJvdG8SDmFnbmkudjEud2ViYXBpIrABChJDaGVja0Rlc2lnblJlcXVlc3QSEAoIc25hcHNob3QYByABKAkSDQoFcnVsZXMYASADKAkSEwoLd29ya19idWRnZXQYBiABKAMSKQoIc3ViamVjdHMYCCADKAsyFy5hZ25pLnYxLmNoZWNrcy5TdWJqZWN0SgQIAhADSgQIAxAESgQIBBAFSgQIBRAGUgdvdmVybGF5UgN1cmlSCWJvYXJkX3VyaVIIYXNfbmFtZWQihwIKE0NoZWNrRGVzaWduUmVzcG9uc2USKQoIZmluZGluZ3MYASADKAsyFy5hZ25pLnYxLmNoZWNrcy5GaW5kaW5nEiwKB3NraXBwZWQYAiADKAsyGy5hZ25pLnYxLndlYmFwaS5Ta2lwcGVkUnVsZRIpCgh2ZXJkaWN0cxgDIAMoCzIXLmFnbmkudjEuY2hlY2tzLlZlcmRpY3QSPQoUdW5leHBhbmRlZF9oaWVyYXJjaHkYBCADKAsyHy5hZ25pLnYxLmlyLlVuZXhwYW5kZWRIaWVyYXJjaHkSLQoGaW9fbWFwGAUgAygLMh0uYWduaS52MS5jb25maWcuUGluQXNzaWdubWVudCJACgtTa2lwcGVkUnVsZRIMCgRuYW1lGAEgASgJEg4KBnJlYXNvbhgCIAEoCRITCgtkZXNpZ25fd2lkZRgDIAEoCCJzChVHZXRDaGVja1JlcG9ydFJlcXVlc3QSEAoIc25hcHNob3QYBiABKAkSDQoFcnVsZXMYASADKAlKBAgCEANKBAgDEARKBAgEEAVKBAgFEAZSB292ZXJsYXlSA3VyaVIJYm9hcmRfdXJpUghhc19uYW1lZCJFChZHZXRDaGVja1JlcG9ydFJlc3BvbnNlEisKBnJlcG9ydBgBIAEoCzIbLmFnbmkudjEuY2hlY2tzLkNoZWNrUmVwb3J0IkUKC1JlcG9ydExpbmtzEhAKCHVybF9iYXNlGAEgASgJEhIKCmRlc2lnbl91cmkYAiABKAkSEAoId2l0aGhlbGQYAyABKAkivwIKGFJlbmRlckNoZWNrUmVwb3J0UmVxdWVzdBIQCghzbmFwc2hvdBgJIAEoCRINCgVydWxlcxgDIAMoCRIwCgNydW4YBCABKAsyIy5hZ25pLnYxLndlYmFwaS5DaGVja0Rlc2lnblJlc3BvbnNlEjEKBmZvcm1hdBgFIAEoDjIhLmFnbmkudjEud2ViYXBpLkNoZWNrUmVwb3J0Rm9ybWF0EioKBWxpbmtzGAYgASgLMhsuYWduaS52MS53ZWJhcGkuUmVwb3J0TGlua3MSNgoKcXVlcnlfc2V0cxgKIAMoCzIiLmFnbmkudjEud2ViYXBpLlJ1blF1ZXJpZXNSZXNwb25zZUoECAEQAkoECAIQA0oECAcQCEoECAgQCVIDdXJpUgdvdmVybGF5Uglib2FyZF91cmlSCGFzX25hbWVkIlQKGVJlbmRlckNoZWNrUmVwb3J0UmVzcG9uc2USDwoHY29udGVudBgBIAEoDBIUCgxjb250ZW50X3R5cGUYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkiKQoaR2V0TmFtaW5nQ29udmVudGlvblJlcXVlc3QSCwoDdXJpGAEgASgJIlMKG0dldE5hbWluZ0NvbnZlbnRpb25SZXNwb25zZRI0Cgpjb252ZW50aW9uGAEgASgLMiAuYWduaS52MS5jb25maWcuTmFtaW5nQ29udmVudGlvbiI1ChZHZXRFeHBlY3RhdGlvbnNSZXF1ZXN0EhAKCHNuYXBzaG90GAIgASgJSgQIARACUgN1cmkiTwoPUnVsZUV4cGVjdGF0aW9uEgwKBHJ1bGUYASABKAkSEAoIc3ViamVjdHMYAiADKAkSDwoHcGVuZGluZxgDIAEoCBILCgN3aHkYBCABKAkiZQoXR2V0RXhwZWN0YXRpb25zUmVzcG9uc2USNQoMZXhwZWN0YXRpb25zGAEgAygLMh8uYWduaS52MS53ZWJhcGkuUnVsZUV4cGVjdGF0aW9uEhMKC2hhc19zaWRlY2FyGAIgASgIIj4KEExpc3RSdWxlc1JlcXVlc3QSEAoIc25hcHNob3QYAyABKAlKBAgBEAJKBAgCEANSB292ZXJsYXlSA3VyaSKqAgoIUnVsZUluZm8SDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRIPCgdzdW1tYXJ5GAMgASgJEg0KBXJlYWRzGAQgAygJEjAKBHRhZ3MYBSADKAsyIi5hZ25pLnYxLndlYmFwaS5SdWxlSW5mby5UYWdzRW50cnkSEQoJYXZhaWxhYmxlGAYgASgIEhoKEnVuYXZhaWxhYmxlX3JlYXNvbhgHIAEoCRIOCgZpbXBhY3QYCCABKAkSDgoGZGV0YWlsGAkgASgJEg4KBnJlbWVkeRgKIAEoCRIPCgdzaGlwcGVkGAsgASgIEg8KB2RvY191cmwYDCABKAkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiVAoRTGlzdFJ1bGVzUmVzcG9uc2USJwoFcnVsZXMYASADKAsyGC5hZ25pLnYxLndlYmFwaS5SdWxlSW5mbxIWCg5lbmdpbmVfdmVyc2lvbhgCIAEoCSJZChtHZXRJbnRlcmZhY2VDb3ZlcmFnZVJlcXVlc3QSEAoIc25hcHNob3QYBCABKAlKBAgBEAJKBAgCEANKBAgDEARSA3VyaVIHb3ZlcmxheVIIYXNfbmFtZWQiOgoOU2lnbmFsQ292ZXJhZ2USDAoEbmFtZRgBIAEoCRILCgNuZXQYAiABKAkSDQoFc3RhdGUYAyABKAkiaQoRSW50ZXJmYWNlQ292ZXJhZ2USDwoHcHJvZmlsZRgBIAEoCRISCgphbmNob3JfbmV0GAIgASgJEi8KB3NpZ25hbHMYAyADKAsyHi5hZ25pLnYxLndlYmFwaS5TaWduYWxDb3ZlcmFnZSJVChxHZXRJbnRlcmZhY2VDb3ZlcmFnZVJlc3BvbnNlEjUKCmludGVyZmFjZXMYASADKAsyIS5hZ25pLnYxLndlYmFwaS5JbnRlcmZhY2VDb3ZlcmFnZSI4ChlHZXRDb21wb25lbnRQYXJhbXNSZXF1ZXN0EhAKCHNuYXBzaG90GAIgASgJSgQIARACUgN1cmkiZgoPQ29tcG9uZW50UGFyYW1zEg8KB3JlZl9kZXMYASABKAkSCwoDbXBuGAIgASgJEiUKBHNwZWMYAyABKAsyFy5hZ25pLnYxLnBhcmFtLlBhcnRTcGVjEg4KBmNvcnB1cxgEIAEoCSJrChpHZXRDb21wb25lbnRQYXJhbXNSZXNwb25zZRIzCgpjb21wb25lbnRzGAEgAygLMh8uYWduaS52MS53ZWJhcGkuQ29tcG9uZW50UGFyYW1zEhgKEGNvcnB1c19jb25uZWN0ZWQYAiABKAgqfAoRQ2hlY2tSZXBvcnRGb3JtYXQSIwofQ0hFQ0tfUkVQT1JUX0ZPUk1BVF9VTlNQRUNJRklFRBAAEiQKIENIRUNLX1JFUE9SVF9GT1JNQVRfUkVTVUxUU19KU09OEAESHAoYQ0hFQ0tfUkVQT1JUX0ZPUk1BVF9IVE1MEAIytwYKDENoZWNrU2VydmljZRJQCglMaXN0UnVsZXMSIC5hZ25pLnYxLndlYmFwaS5MaXN0UnVsZXNSZXF1ZXN0GiEuYWduaS52MS53ZWJhcGkuTGlzdFJ1bGVzUmVzcG9uc2USVgoLQ2hlY2tEZXNpZ24SIi5hZ25pLnYxLndlYmFwaS5DaGVja0Rlc2lnblJlcXVlc3QaIy5hZ25pLnYxLndlYmFwaS5DaGVja0Rlc2lnblJlc3BvbnNlEmIKD0dldEV4cGVjdGF0aW9ucxImLmFnbmkudjEud2ViYXBpLkdldEV4cGVjdGF0aW9uc1JlcXVlc3QaJy5hZ25pLnYxLndlYmFwaS5HZXRFeHBlY3RhdGlvbnNSZXNwb25zZRJfCg5HZXRDaGVja1JlcG9ydBIlLmFnbmkudjEud2ViYXBpLkdldENoZWNrUmVwb3J0UmVxdWVzdBomLmFnbmkudjEud2ViYXBpLkdldENoZWNrUmVwb3J0UmVzcG9uc2USaAoRUmVuZGVyQ2hlY2tSZXBvcnQSKC5hZ25pLnYxLndlYmFwaS5SZW5kZXJDaGVja1JlcG9ydFJlcXVlc3QaKS5hZ25pLnYxLndlYmFwaS5SZW5kZXJDaGVja1JlcG9ydFJlc3BvbnNlEnEKFEdldEludGVyZmFjZUNvdmVyYWdlEisuYWduaS52MS53ZWJhcGkuR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXF1ZXN0GiwuYWduaS52MS53ZWJhcGkuR2V0SW50ZXJmYWNlQ292ZXJhZ2VSZXNwb25zZRJrChJHZXRDb21wb25lbnRQYXJhbXMSKS5hZ25pLnYxLndlYmFwaS5HZXRDb21wb25lbnRQYXJhbXNSZXF1ZXN0GiouYWduaS52MS53ZWJhcGkuR2V0Q29tcG9uZW50UGFyYW1zUmVzcG9uc2USbgoTR2V0TmFtaW5nQ29udmVudGlvbhIqLmFnbmkudjEud2ViYXBpLkdldE5hbWluZ0NvbnZlbnRpb25SZXF1ZXN0GisuYWduaS52MS53ZWJhcGkuR2V0TmFtaW5nQ29udmVudGlvblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_config_intent, file_agni_v1_config_naming, file_agni_v1_ir_ir, file_agni_v1_webapi_config, file_agni_v1_webapi_query, file_agni_v1_param_param]);
 
 /**
  * @generated from message agni.v1.webapi.CheckDesignRequest
@@ -72,60 +73,6 @@ export type CheckDesignRequest = Message<"agni.v1.webapi.CheckDesignRequest"> & 
  */
 export const CheckDesignRequestSchema: GenMessage<CheckDesignRequest> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_checks, 0);
-
-/**
- * OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
- * catalog does not carry, and vocabulary the engine cannot guess (WS3-102). It exists so a surface does
- * not hand-wire each input separately — that hand-wiring is why --conventions reached `agni check` but
- * never `agni review`, leaving any review item bound to a naming rule reading not-automated forever
- * with no error to explain it.
- *
- * It carries VALUES, not file paths. Where the config came from is the caller's business: `agni check`
- * reads a YAML file the user named, a web client may build one from a form, and a future deployment may
- * resolve one from a shared registry by id. None of that belongs in the API contract, and a service that
- * took a path would have to own file I/O to do its job.
- *
- * The config it carries is an AnalysisConfig, the same message a Project declares, so a tier added
- * there is a tier a request can carry without a second edit here (agni issue 224). Whether a given
- * host can RESOLVE the ref-shaped fields of a request-supplied config is a property of that
- * deployment, not of this schema.
- *
- * @generated from message agni.v1.webapi.OverlayConfig
- */
-export type OverlayConfig = Message<"agni.v1.webapi.OverlayConfig"> & {
-  /**
-   * config is what this request wants the design checked against, layered over whatever the design's
-   * project declares.
-   *
-   * @generated from field: agni.v1.webapi.AnalysisConfig config = 4;
-   */
-  config?: AnalysisConfig | undefined;
-
-  /**
-   * ignore_project runs the design against the BUILT-IN catalog only, as though it belonged to no
-   * project: no project conventions, profiles, parameters, or intent.
-   *
-   * It exists because per-design config (agni issue 173) made "whose rules produced this finding" a
-   * real question a reviewer will ask, and a findings list cannot answer it. Toggling this and
-   * re-running answers it by subtraction: what remains is the engine's opinion, and what disappeared
-   * was the project's. Without it the only way to see the built-in catalog would be to move the
-   * design out of its project, which nobody is going to do to answer a question.
-   *
-   * It does NOT disable a convention the request itself carries. Those are different acts: one says
-   * "ignore what my project declares", the other says "use this instead", and a caller doing both
-   * means both.
-   *
-   * @generated from field: bool ignore_project = 3;
-   */
-  ignoreProject: boolean;
-};
-
-/**
- * Describes the message agni.v1.webapi.OverlayConfig.
- * Use `create(OverlayConfigSchema)` to create a new message.
- */
-export const OverlayConfigSchema: GenMessage<OverlayConfig> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 1);
 
 /**
  * @generated from message agni.v1.webapi.CheckDesignResponse
@@ -200,7 +147,7 @@ export type CheckDesignResponse = Message<"agni.v1.webapi.CheckDesignResponse"> 
  * Use `create(CheckDesignResponseSchema)` to create a new message.
  */
 export const CheckDesignResponseSchema: GenMessage<CheckDesignResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 2);
+  messageDesc(file_agni_v1_webapi_checks, 1);
 
 /**
  * SkippedRule is one selected rule that could not evaluate, and the reason.
@@ -240,7 +187,7 @@ export type SkippedRule = Message<"agni.v1.webapi.SkippedRule"> & {
  * Use `create(SkippedRuleSchema)` to create a new message.
  */
 export const SkippedRuleSchema: GenMessage<SkippedRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 3);
+  messageDesc(file_agni_v1_webapi_checks, 2);
 
 /**
  * @generated from message agni.v1.webapi.GetCheckReportRequest
@@ -266,7 +213,7 @@ export type GetCheckReportRequest = Message<"agni.v1.webapi.GetCheckReportReques
  * Use `create(GetCheckReportRequestSchema)` to create a new message.
  */
 export const GetCheckReportRequestSchema: GenMessage<GetCheckReportRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 4);
+  messageDesc(file_agni_v1_webapi_checks, 3);
 
 /**
  * @generated from message agni.v1.webapi.GetCheckReportResponse
@@ -283,7 +230,7 @@ export type GetCheckReportResponse = Message<"agni.v1.webapi.GetCheckReportRespo
  * Use `create(GetCheckReportResponseSchema)` to create a new message.
  */
 export const GetCheckReportResponseSchema: GenMessage<GetCheckReportResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 5);
+  messageDesc(file_agni_v1_webapi_checks, 4);
 
 /**
  * ReportLinks says whether the HTML report's rows link back into a viewer, and where. Only the caller
@@ -322,7 +269,7 @@ export type ReportLinks = Message<"agni.v1.webapi.ReportLinks"> & {
  * Use `create(ReportLinksSchema)` to create a new message.
  */
 export const ReportLinksSchema: GenMessage<ReportLinks> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 6);
+  messageDesc(file_agni_v1_webapi_checks, 5);
 
 /**
  * @generated from message agni.v1.webapi.RenderCheckReportRequest
@@ -360,6 +307,16 @@ export type RenderCheckReportRequest = Message<"agni.v1.webapi.RenderCheckReport
    * @generated from field: agni.v1.webapi.ReportLinks links = 6;
    */
   links?: ReportLinks | undefined;
+
+  /**
+   * query_sets are the design project's query sets the caller answered, each the RunQueries answer
+   * it holds, rendered as Queries sections after the rules so one HTML file carries the checks and
+   * the queries (agni issue 1190). Values the caller ran, never re-run here. HTML only; empty leaves
+   * the page as it was.
+   *
+   * @generated from field: repeated agni.v1.webapi.RunQueriesResponse query_sets = 10;
+   */
+  querySets: RunQueriesResponse[];
 };
 
 /**
@@ -367,7 +324,7 @@ export type RenderCheckReportRequest = Message<"agni.v1.webapi.RenderCheckReport
  * Use `create(RenderCheckReportRequestSchema)` to create a new message.
  */
 export const RenderCheckReportRequestSchema: GenMessage<RenderCheckReportRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 7);
+  messageDesc(file_agni_v1_webapi_checks, 6);
 
 /**
  * @generated from message agni.v1.webapi.RenderCheckReportResponse
@@ -398,7 +355,7 @@ export type RenderCheckReportResponse = Message<"agni.v1.webapi.RenderCheckRepor
  * Use `create(RenderCheckReportResponseSchema)` to create a new message.
  */
 export const RenderCheckReportResponseSchema: GenMessage<RenderCheckReportResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 8);
+  messageDesc(file_agni_v1_webapi_checks, 7);
 
 /**
  * @generated from message agni.v1.webapi.GetNamingConventionRequest
@@ -417,7 +374,7 @@ export type GetNamingConventionRequest = Message<"agni.v1.webapi.GetNamingConven
  * Use `create(GetNamingConventionRequestSchema)` to create a new message.
  */
 export const GetNamingConventionRequestSchema: GenMessage<GetNamingConventionRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 9);
+  messageDesc(file_agni_v1_webapi_checks, 8);
 
 /**
  * @generated from message agni.v1.webapi.GetNamingConventionResponse
@@ -434,7 +391,7 @@ export type GetNamingConventionResponse = Message<"agni.v1.webapi.GetNamingConve
  * Use `create(GetNamingConventionResponseSchema)` to create a new message.
  */
 export const GetNamingConventionResponseSchema: GenMessage<GetNamingConventionResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 10);
+  messageDesc(file_agni_v1_webapi_checks, 9);
 
 /**
  * @generated from message agni.v1.webapi.GetExpectationsRequest
@@ -453,7 +410,7 @@ export type GetExpectationsRequest = Message<"agni.v1.webapi.GetExpectationsRequ
  * Use `create(GetExpectationsRequestSchema)` to create a new message.
  */
 export const GetExpectationsRequestSchema: GenMessage<GetExpectationsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 11);
+  messageDesc(file_agni_v1_webapi_checks, 10);
 
 /**
  * RuleExpectation is one expected-findings entry from a design's sidecar: a rule that should fire
@@ -492,7 +449,7 @@ export type RuleExpectation = Message<"agni.v1.webapi.RuleExpectation"> & {
  * Use `create(RuleExpectationSchema)` to create a new message.
  */
 export const RuleExpectationSchema: GenMessage<RuleExpectation> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 12);
+  messageDesc(file_agni_v1_webapi_checks, 11);
 
 /**
  * @generated from message agni.v1.webapi.GetExpectationsResponse
@@ -520,7 +477,7 @@ export type GetExpectationsResponse = Message<"agni.v1.webapi.GetExpectationsRes
  * Use `create(GetExpectationsResponseSchema)` to create a new message.
  */
 export const GetExpectationsResponseSchema: GenMessage<GetExpectationsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 13);
+  messageDesc(file_agni_v1_webapi_checks, 12);
 
 /**
  * ListRulesRequest names the design whose catalog and availability are reported.
@@ -541,7 +498,7 @@ export type ListRulesRequest = Message<"agni.v1.webapi.ListRulesRequest"> & {
  * Use `create(ListRulesRequestSchema)` to create a new message.
  */
 export const ListRulesRequestSchema: GenMessage<ListRulesRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 14);
+  messageDesc(file_agni_v1_webapi_checks, 13);
 
 /**
  * RuleInfo is the catalog entry for one rule: its identity, its prose (one-line summary, impact,
@@ -643,7 +600,7 @@ export type RuleInfo = Message<"agni.v1.webapi.RuleInfo"> & {
  * Use `create(RuleInfoSchema)` to create a new message.
  */
 export const RuleInfoSchema: GenMessage<RuleInfo> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 15);
+  messageDesc(file_agni_v1_webapi_checks, 14);
 
 /**
  * @generated from message agni.v1.webapi.ListRulesResponse
@@ -668,7 +625,7 @@ export type ListRulesResponse = Message<"agni.v1.webapi.ListRulesResponse"> & {
  * Use `create(ListRulesResponseSchema)` to create a new message.
  */
 export const ListRulesResponseSchema: GenMessage<ListRulesResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 16);
+  messageDesc(file_agni_v1_webapi_checks, 15);
 
 /**
  * @generated from message agni.v1.webapi.GetInterfaceCoverageRequest
@@ -687,7 +644,7 @@ export type GetInterfaceCoverageRequest = Message<"agni.v1.webapi.GetInterfaceCo
  * Use `create(GetInterfaceCoverageRequestSchema)` to create a new message.
  */
 export const GetInterfaceCoverageRequestSchema: GenMessage<GetInterfaceCoverageRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 17);
+  messageDesc(file_agni_v1_webapi_checks, 16);
 
 /**
  * SignalCoverage is one required interface signal's state (WS9-041). net is the matched net name,
@@ -724,7 +681,7 @@ export type SignalCoverage = Message<"agni.v1.webapi.SignalCoverage"> & {
  * Use `create(SignalCoverageSchema)` to create a new message.
  */
 export const SignalCoverageSchema: GenMessage<SignalCoverage> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 18);
+  messageDesc(file_agni_v1_webapi_checks, 17);
 
 /**
  * InterfaceCoverage is one DETECTED interface profile's coverage matrix. profile is the interface
@@ -755,7 +712,7 @@ export type InterfaceCoverage = Message<"agni.v1.webapi.InterfaceCoverage"> & {
  * Use `create(InterfaceCoverageSchema)` to create a new message.
  */
 export const InterfaceCoverageSchema: GenMessage<InterfaceCoverage> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 19);
+  messageDesc(file_agni_v1_webapi_checks, 18);
 
 /**
  * @generated from message agni.v1.webapi.GetInterfaceCoverageResponse
@@ -772,7 +729,7 @@ export type GetInterfaceCoverageResponse = Message<"agni.v1.webapi.GetInterfaceC
  * Use `create(GetInterfaceCoverageResponseSchema)` to create a new message.
  */
 export const GetInterfaceCoverageResponseSchema: GenMessage<GetInterfaceCoverageResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 20);
+  messageDesc(file_agni_v1_webapi_checks, 19);
 
 /**
  * @generated from message agni.v1.webapi.GetComponentParamsRequest
@@ -791,7 +748,7 @@ export type GetComponentParamsRequest = Message<"agni.v1.webapi.GetComponentPara
  * Use `create(GetComponentParamsRequestSchema)` to create a new message.
  */
 export const GetComponentParamsRequestSchema: GenMessage<GetComponentParamsRequest> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 21);
+  messageDesc(file_agni_v1_webapi_checks, 20);
 
 /**
  * ComponentParams is one design component joined to its datasheet spec: the ref_des the viewer
@@ -829,7 +786,7 @@ export type ComponentParams = Message<"agni.v1.webapi.ComponentParams"> & {
  * Use `create(ComponentParamsSchema)` to create a new message.
  */
 export const ComponentParamsSchema: GenMessage<ComponentParams> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 22);
+  messageDesc(file_agni_v1_webapi_checks, 21);
 
 /**
  * @generated from message agni.v1.webapi.GetComponentParamsResponse
@@ -855,7 +812,7 @@ export type GetComponentParamsResponse = Message<"agni.v1.webapi.GetComponentPar
  * Use `create(GetComponentParamsResponseSchema)` to create a new message.
  */
 export const GetComponentParamsResponseSchema: GenMessage<GetComponentParamsResponse> = /*@__PURE__*/
-  messageDesc(file_agni_v1_webapi_checks, 23);
+  messageDesc(file_agni_v1_webapi_checks, 22);
 
 /**
  * CheckReportFormat names the file RenderCheckReport writes.

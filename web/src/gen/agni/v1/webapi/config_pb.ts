@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/config.proto.
  */
 export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIp0ECg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFAoMcHJvZmlsZV91cmlzGAMgAygJEhIKCnBhcmFtX3VyaXMYBCADKAkSMgoKY2hlY2tsaXN0cxgMIAMoCzIeLmFnbmkudjEud2ViYXBpLk5hbWVkQ2hlY2tsaXN0EiwKBmludGVudBgNIAEoCzIcLmFnbmkudjEuY29uZmlnLkRlc2lnbkludGVudBIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJEhYKDnF1ZXJ5X3NldF91cmlzGA4gAygJEjYKD2xpYnJhcnlfbW9kdWxlcxgKIAMoCzIdLmFnbmkudjEud2ViYXBpLkxpYnJhcnlNb2R1bGUSRQoMbGlicmFyeV9kb2NzGAsgAygLMi8uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcuTGlicmFyeURvY3NFbnRyeRoyChBMaWJyYXJ5RG9jc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFKBAgCEANKBAgFEAZKBAgGEAdSD2NvbnZlbnRpb25zX3VyaVINY2hlY2tsaXN0X3VyaVIKaW50ZW50X3VyaSJQCg5OYW1lZENoZWNrbGlzdBIMCgRuYW1lGAEgASgJEjAKCG1hbmlmZXN0GAIgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiTQoNTGlicmFyeU1vZHVsZRIMCgRwYXRoGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEgwKBHRleHQYAyABKAkSDgoGc291cmNlGAQgASgJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_checks_checks, file_agni_v1_config_intent, file_agni_v1_config_naming]);
+  fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIp0ECg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFAoMcHJvZmlsZV91cmlzGAMgAygJEhIKCnBhcmFtX3VyaXMYBCADKAkSMgoKY2hlY2tsaXN0cxgMIAMoCzIeLmFnbmkudjEud2ViYXBpLk5hbWVkQ2hlY2tsaXN0EiwKBmludGVudBgNIAEoCzIcLmFnbmkudjEuY29uZmlnLkRlc2lnbkludGVudBIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJEhYKDnF1ZXJ5X3NldF91cmlzGA4gAygJEjYKD2xpYnJhcnlfbW9kdWxlcxgKIAMoCzIdLmFnbmkudjEud2ViYXBpLkxpYnJhcnlNb2R1bGUSRQoMbGlicmFyeV9kb2NzGAsgAygLMi8uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcuTGlicmFyeURvY3NFbnRyeRoyChBMaWJyYXJ5RG9jc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFKBAgCEANKBAgFEAZKBAgGEAdSD2NvbnZlbnRpb25zX3VyaVINY2hlY2tsaXN0X3VyaVIKaW50ZW50X3VyaSJQCg5OYW1lZENoZWNrbGlzdBIMCgRuYW1lGAEgASgJEjAKCG1hbmlmZXN0GAIgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiTQoNTGlicmFyeU1vZHVsZRIMCgRwYXRoGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEgwKBHRleHQYAyABKAkSDgoGc291cmNlGAQgASgJImMKDU92ZXJsYXlDb25maWcSLgoGY29uZmlnGAQgASgLMh4uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcSFgoOaWdub3JlX3Byb2plY3QYAyABKAhKBAgBEAJKBAgCEANCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_config_intent, file_agni_v1_config_naming]);
 
 /**
  * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
@@ -260,4 +260,58 @@ export type LibraryModule = Message<"agni.v1.webapi.LibraryModule"> & {
  */
 export const LibraryModuleSchema: GenMessage<LibraryModule> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_config, 2);
+
+/**
+ * OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
+ * catalog does not carry, and vocabulary the engine cannot guess (WS3-102). It exists so a surface does
+ * not hand-wire each input separately — that hand-wiring is why --conventions reached `agni check` but
+ * never `agni review`, leaving any review item bound to a naming rule reading not-automated forever
+ * with no error to explain it.
+ *
+ * It carries VALUES, not file paths. Where the config came from is the caller's business: `agni check`
+ * reads a YAML file the user named, a web client may build one from a form, and a future deployment may
+ * resolve one from a shared registry by id. None of that belongs in the API contract, and a service that
+ * took a path would have to own file I/O to do its job.
+ *
+ * The config it carries is an AnalysisConfig, the same message a Project declares, so a tier added
+ * there is a tier a request can carry without a second edit here (agni issue 224). Whether a given
+ * host can RESOLVE the ref-shaped fields of a request-supplied config is a property of that
+ * deployment, not of this schema.
+ *
+ * @generated from message agni.v1.webapi.OverlayConfig
+ */
+export type OverlayConfig = Message<"agni.v1.webapi.OverlayConfig"> & {
+  /**
+   * config is what this request wants the design checked against, layered over whatever the design's
+   * project declares.
+   *
+   * @generated from field: agni.v1.webapi.AnalysisConfig config = 4;
+   */
+  config?: AnalysisConfig | undefined;
+
+  /**
+   * ignore_project runs the design against the BUILT-IN catalog only, as though it belonged to no
+   * project: no project conventions, profiles, parameters, or intent.
+   *
+   * It exists because per-design config (agni issue 173) made "whose rules produced this finding" a
+   * real question a reviewer will ask, and a findings list cannot answer it. Toggling this and
+   * re-running answers it by subtraction: what remains is the engine's opinion, and what disappeared
+   * was the project's. Without it the only way to see the built-in catalog would be to move the
+   * design out of its project, which nobody is going to do to answer a question.
+   *
+   * It does NOT disable a convention the request itself carries. Those are different acts: one says
+   * "ignore what my project declares", the other says "use this instead", and a caller doing both
+   * means both.
+   *
+   * @generated from field: bool ignore_project = 3;
+   */
+  ignoreProject: boolean;
+};
+
+/**
+ * Describes the message agni.v1.webapi.OverlayConfig.
+ * Use `create(OverlayConfigSchema)` to create a new message.
+ */
+export const OverlayConfigSchema: GenMessage<OverlayConfig> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_config, 3);
 

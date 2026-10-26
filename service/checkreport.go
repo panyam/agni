@@ -25,7 +25,8 @@ func (s *CheckService) WithEnv(env ReviewEnv) *CheckService {
 
 // RenderCheckReport writes a run the caller already holds as a file to keep (agni issue 127). It runs
 // no rules. The JSON form is the CheckResults document `agni check --results-out` writes, and the
-// HTML form is the page `agni check --verdicts --format html` writes, and both CLI paths call this,
+// HTML form is the page `agni check --verdicts --format html` writes, with a Queries section per
+// query set the caller answered and sent (agni issue 1190), and both CLI paths call this,
 // so a report saved from the viewer and one the CLI wrote differ only in their timestamps.
 //
 // The request's snapshot and rules have to be the ones the run used. They decide the catalog the
@@ -102,7 +103,11 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 		var buf bytes.Buffer
 		// The composed catalog, not the selection, so a rule an overlay added carries its prose like a
 		// built-in does (agni issue 411).
-		if err := report.HTML(&buf, VerdictReport(run, cat.Rules(), meta)); err != nil {
+		page := VerdictReport(run, cat.Rules(), meta)
+		for _, qs := range req.GetQuerySets() {
+			page.QuerySets = append(page.QuerySets, QuerySetTable(qs, nil))
+		}
+		if err := report.HTML(&buf, page); err != nil {
 			return nil, err
 		}
 		return &webapi.RenderCheckReportResponse{Content: buf.Bytes(), ContentType: "text/html; charset=utf-8", Filename: name + ".agni-check.html"}, nil

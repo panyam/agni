@@ -231,6 +231,15 @@ declared pin with its function, the net the netlist puts there, the route to its
 IO-map rule's outcome. [Design intent](../design-intent/#reading-the-map-one-pin-at-a-time) shows
 the layout.
 
+**`--query-sets` adds the project's query sets after the rules**, a Queries section per set the
+design's project keeps under `queries/`, each answered over the same read the checks used. A review
+often wants the checks beside its own tables (a pin list, a ratio sheet), and this puts both in the
+one file attached to it rather than two exports merged by hand (agni issue 1190). The sections
+render as `agni query --set <name> --format html` renders them, and a project keeping no sets gets
+the checks alone with a note on stderr.
+
+    agni check --format html --query-sets designs/demo-board -o combined.html
+
 **A rule that reports violations without stating what it examined is labelled as such**, and its rows
 are captioned "absence here is not evidence of correctness". Presenting a failure list beside a
 considered set as though they were the same kind of answer would claim coverage the rule never

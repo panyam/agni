@@ -2090,7 +2090,7 @@ var File_agni_v1_webapi_query_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_query_proto_rawDesc = "" +
 	"\n" +
-	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/checks.proto\"\x9e\x03\n" +
+	"\x1aagni/v1/webapi/query.proto\x12\x0eagni.v1.webapi\x1a\x1bagni/v1/checks/checks.proto\x1a\x1bagni/v1/webapi/config.proto\"\x9e\x03\n" +
 	"\x0fRunQueryRequest\x12\x1a\n" +
 	"\bsnapshot\x18\n" +
 	" \x01(\tR\bsnapshot\x12\x14\n" +
@@ -2359,7 +2359,7 @@ func file_agni_v1_webapi_query_proto_init() {
 	if File_agni_v1_webapi_query_proto != nil {
 		return
 	}
-	file_agni_v1_webapi_checks_proto_init()
+	file_agni_v1_webapi_config_proto_init()
 	file_agni_v1_webapi_query_proto_msgTypes[5].OneofWrappers = []any{
 		(*QueryValue_Text)(nil),
 		(*QueryValue_Number)(nil),

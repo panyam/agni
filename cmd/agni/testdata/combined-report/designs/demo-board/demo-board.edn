@@ -1,0 +1,13 @@
+(edif DEMOBOARD
+  (edifVersion 2 0 0)
+  (design DEMOBOARD (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell RES (view V (viewType NETLIST)
+      (interface (port A (designator "1")) (port B (designator "2")))))
+    (cell TOP (view V (viewType NETLIST) (interface)
+      (contents
+        (instance R1 (viewRef V (cellRef RES)) (designator "R1"))
+        (instance R2 (viewRef V (cellRef RES)) (designator "R2"))
+        (net SIG (joined (portRef B (instanceRef R1)) (portRef A (instanceRef R2))))
+        (net IN (joined (portRef A (instanceRef R1))))
+        (net OUT (joined (portRef B (instanceRef R2)))))))))

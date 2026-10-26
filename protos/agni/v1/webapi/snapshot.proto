@@ -4,7 +4,7 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
-import "agni/v1/webapi/checks.proto";
+import "agni/v1/webapi/config.proto";
 import "google/protobuf/empty.proto";
 import "google/protobuf/field_mask.proto";
 

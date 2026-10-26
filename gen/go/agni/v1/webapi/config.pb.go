@@ -370,6 +370,87 @@ func (x *LibraryModule) GetSource() string {
 	return ""
 }
 
+// OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
+// catalog does not carry, and vocabulary the engine cannot guess (WS3-102). It exists so a surface does
+// not hand-wire each input separately — that hand-wiring is why --conventions reached `agni check` but
+// never `agni review`, leaving any review item bound to a naming rule reading not-automated forever
+// with no error to explain it.
+//
+// It carries VALUES, not file paths. Where the config came from is the caller's business: `agni check`
+// reads a YAML file the user named, a web client may build one from a form, and a future deployment may
+// resolve one from a shared registry by id. None of that belongs in the API contract, and a service that
+// took a path would have to own file I/O to do its job.
+//
+// The config it carries is an AnalysisConfig, the same message a Project declares, so a tier added
+// there is a tier a request can carry without a second edit here (agni issue 224). Whether a given
+// host can RESOLVE the ref-shaped fields of a request-supplied config is a property of that
+// deployment, not of this schema.
+type OverlayConfig struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// config is what this request wants the design checked against, layered over whatever the design's
+	// project declares.
+	Config *AnalysisConfig `protobuf:"bytes,4,opt,name=config,proto3" json:"config,omitempty"`
+	// ignore_project runs the design against the BUILT-IN catalog only, as though it belonged to no
+	// project: no project conventions, profiles, parameters, or intent.
+	//
+	// It exists because per-design config (agni issue 173) made "whose rules produced this finding" a
+	// real question a reviewer will ask, and a findings list cannot answer it. Toggling this and
+	// re-running answers it by subtraction: what remains is the engine's opinion, and what disappeared
+	// was the project's. Without it the only way to see the built-in catalog would be to move the
+	// design out of its project, which nobody is going to do to answer a question.
+	//
+	// It does NOT disable a convention the request itself carries. Those are different acts: one says
+	// "ignore what my project declares", the other says "use this instead", and a caller doing both
+	// means both.
+	IgnoreProject bool `protobuf:"varint,3,opt,name=ignore_project,json=ignoreProject,proto3" json:"ignore_project,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OverlayConfig) Reset() {
+	*x = OverlayConfig{}
+	mi := &file_agni_v1_webapi_config_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OverlayConfig) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OverlayConfig) ProtoMessage() {}
+
+func (x *OverlayConfig) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_config_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OverlayConfig.ProtoReflect.Descriptor instead.
+func (*OverlayConfig) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_config_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *OverlayConfig) GetConfig() *AnalysisConfig {
+	if x != nil {
+		return x.Config
+	}
+	return nil
+}
+
+func (x *OverlayConfig) GetIgnoreProject() bool {
+	if x != nil {
+		return x.IgnoreProject
+	}
+	return false
+}
+
 var File_agni_v1_webapi_config_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_config_proto_rawDesc = "" +
@@ -402,7 +483,10 @@ const file_agni_v1_webapi_config_proto_rawDesc = "" +
 	"\x04path\x18\x01 \x01(\tR\x04path\x12\x1a\n" +
 	"\blanguage\x18\x02 \x01(\tR\blanguage\x12\x12\n" +
 	"\x04text\x18\x03 \x01(\tR\x04text\x12\x16\n" +
-	"\x06source\x18\x04 \x01(\tR\x06sourceB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x06source\x18\x04 \x01(\tR\x06source\"z\n" +
+	"\rOverlayConfig\x126\n" +
+	"\x06config\x18\x04 \x01(\v2\x1e.agni.v1.webapi.AnalysisConfigR\x06config\x12%\n" +
+	"\x0eignore_project\x18\x03 \x01(\bR\rignoreProjectJ\x04\b\x01\x10\x02J\x04\b\x02\x10\x03B.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_config_proto_rawDescOnce sync.Once
@@ -416,28 +500,30 @@ func file_agni_v1_webapi_config_proto_rawDescGZIP() []byte {
 	return file_agni_v1_webapi_config_proto_rawDescData
 }
 
-var file_agni_v1_webapi_config_proto_msgTypes = make([]protoimpl.MessageInfo, 4)
+var file_agni_v1_webapi_config_proto_msgTypes = make([]protoimpl.MessageInfo, 5)
 var file_agni_v1_webapi_config_proto_goTypes = []any{
 	(*AnalysisConfig)(nil),          // 0: agni.v1.webapi.AnalysisConfig
 	(*NamedChecklist)(nil),          // 1: agni.v1.webapi.NamedChecklist
 	(*LibraryModule)(nil),           // 2: agni.v1.webapi.LibraryModule
-	nil,                             // 3: agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
-	(*config.NamingConvention)(nil), // 4: agni.v1.config.NamingConvention
-	(*config.DesignIntent)(nil),     // 5: agni.v1.config.DesignIntent
-	(*checks.ReviewManifest)(nil),   // 6: agni.v1.checks.ReviewManifest
+	(*OverlayConfig)(nil),           // 3: agni.v1.webapi.OverlayConfig
+	nil,                             // 4: agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
+	(*config.NamingConvention)(nil), // 5: agni.v1.config.NamingConvention
+	(*config.DesignIntent)(nil),     // 6: agni.v1.config.DesignIntent
+	(*checks.ReviewManifest)(nil),   // 7: agni.v1.checks.ReviewManifest
 }
 var file_agni_v1_webapi_config_proto_depIdxs = []int32{
-	4, // 0: agni.v1.webapi.AnalysisConfig.conventions:type_name -> agni.v1.config.NamingConvention
+	5, // 0: agni.v1.webapi.AnalysisConfig.conventions:type_name -> agni.v1.config.NamingConvention
 	1, // 1: agni.v1.webapi.AnalysisConfig.checklists:type_name -> agni.v1.webapi.NamedChecklist
-	5, // 2: agni.v1.webapi.AnalysisConfig.intent:type_name -> agni.v1.config.DesignIntent
+	6, // 2: agni.v1.webapi.AnalysisConfig.intent:type_name -> agni.v1.config.DesignIntent
 	2, // 3: agni.v1.webapi.AnalysisConfig.library_modules:type_name -> agni.v1.webapi.LibraryModule
-	3, // 4: agni.v1.webapi.AnalysisConfig.library_docs:type_name -> agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
-	6, // 5: agni.v1.webapi.NamedChecklist.manifest:type_name -> agni.v1.checks.ReviewManifest
-	6, // [6:6] is the sub-list for method output_type
-	6, // [6:6] is the sub-list for method input_type
-	6, // [6:6] is the sub-list for extension type_name
-	6, // [6:6] is the sub-list for extension extendee
-	0, // [0:6] is the sub-list for field type_name
+	4, // 4: agni.v1.webapi.AnalysisConfig.library_docs:type_name -> agni.v1.webapi.AnalysisConfig.LibraryDocsEntry
+	7, // 5: agni.v1.webapi.NamedChecklist.manifest:type_name -> agni.v1.checks.ReviewManifest
+	0, // 6: agni.v1.webapi.OverlayConfig.config:type_name -> agni.v1.webapi.AnalysisConfig
+	7, // [7:7] is the sub-list for method output_type
+	7, // [7:7] is the sub-list for method input_type
+	7, // [7:7] is the sub-list for extension type_name
+	7, // [7:7] is the sub-list for extension extendee
+	0, // [0:7] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_config_proto_init() }
@@ -451,7 +537,7 @@ func file_agni_v1_webapi_config_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_config_proto_rawDesc), len(file_agni_v1_webapi_config_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   4,
+			NumMessages:   5,
 			NumExtensions: 0,
 			NumServices:   0,
 		},
