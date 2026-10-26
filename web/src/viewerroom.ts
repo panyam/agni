@@ -1,6 +1,6 @@
 import { Code, ConnectError } from "@connectrpc/connect";
 import type { JsonValue } from "@bufbuild/protobuf";
-import { EVENT_ASK, joinToolRoom, type JoinToolRoomOptions, type ToolRoom } from "@panyam/mcpkit-rooms";
+import { EVENT_ASK, joinToolRoom, type JoinToolRoomOptions, type ToolRefusal, type ToolRoom } from "@panyam/mcpkit-rooms";
 import { ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
 import type { JoinViewerRoomRequest, JoinViewerRoomResponse } from "./gen/agni/v1/webapi/viewerroom_pb.js";
 import type { PageDispatch } from "./pageservice.js";
@@ -49,6 +49,9 @@ export class ViewerRoomTab {
   private queue: Promise<void> = Promise.resolve();
   private readonly checkbox: HTMLInputElement | undefined;
   private readonly askForm: HTMLFormElement | undefined;
+  // refusedNote names the tools a bridge refused to offer agents, hidden while it refused none.
+  private readonly refusedNote: HTMLElement | undefined;
+  private refused = new Map<string, string>();
   // focus is what the reader last selected, which an ask carries.
   private focus: Focus | undefined;
   private readonly join: (opts: JoinToolRoomOptions) => Promise<ToolRoom>;
@@ -63,6 +66,7 @@ export class ViewerRoomTab {
     this.doc = deps.doc ?? document;
     this.checkbox = this.renderSwitch();
     this.askForm = this.renderAsk();
+    this.refusedNote = this.renderRefused();
     // The bridge sends a call naming no tab to the one its reader looked at last.
     this.win.addEventListener("focus", () => this.room?.focus());
     this.doc.addEventListener("visibilitychange", () => {
@@ -121,6 +125,8 @@ export class ViewerRoomTab {
   private async moveTo(design: string): Promise<void> {
     this.room?.leave();
     this.room = undefined;
+    this.refused.clear();
+    this.showRefused();
     this.showSwitch(false);
     if (!design || design !== this.design) return;
     try {
@@ -138,6 +144,9 @@ export class ViewerRoomTab {
         room.leave();
         return;
       }
+      // A bridge refuses a tool whose schema differs from the one it declares, which is a page and a
+      // server from different builds; the twin fixture keeps it from shipping (agni issue 1173).
+      room.onToolRefused((r) => this.toolRefused(r));
       for (const m of ViewerPageService.methods) {
         room.registerTool({
           name: toolName(m),
@@ -194,7 +203,7 @@ export class ViewerRoomTab {
     const input = this.doc.createElement("input");
     input.type = "text";
     input.placeholder = "Ask your agent about this tab";
-    input.title = "Sent with this tab's sheet and selection to the agents this tab lets in. An agent hears it by calling next_request.";
+    input.title = "Sent with this tab's sheet and selection to the agents this tab lets in. An agent hears it as an event, or by calling next_request.";
     const send = this.doc.createElement("button");
     send.type = "submit";
     send.textContent = "Ask";
@@ -209,6 +218,32 @@ export class ViewerRoomTab {
     });
     host.append(form);
     return form;
+  }
+
+  // renderRefused is the note beside the switch naming the tools agents cannot call on this tab.
+  private renderRefused(): HTMLElement | undefined {
+    const host = this.deps.host;
+    if (!host) return undefined;
+    const note = this.doc.createElement("span");
+    note.className = "agents-refused";
+    note.hidden = true;
+    host.append(note);
+    return note;
+  }
+
+  private toolRefused(r: ToolRefusal): void {
+    console.warn(`agni: the server will not offer agents ${r.name}: ${r.reason}`);
+    this.refused.set(r.name, r.reason);
+    this.showRefused();
+  }
+
+  private showRefused(): void {
+    const note = this.refusedNote;
+    if (!note) return;
+    const names = [...this.refused.keys()].sort();
+    note.hidden = names.length === 0;
+    note.textContent = names.length ? `Agents cannot call ${names.join(", ")} on this tab` : "";
+    note.title = [...this.refused].map(([n, why]) => `${n}: ${why}`).join("\n");
   }
 
   private showSwitch(on: boolean): void {

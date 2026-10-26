@@ -119,10 +119,21 @@ func TestViewerRoomsNeedsMCP(t *testing.T) {
 // TestARoomsChannelHearsATabsQuestion runs mcpkit's rooms-channel front end against agni's /mcp as
 // Claude Code starts it, over a pipe (agni issue 1173): it attaches to the room a tab joined, the
 // tab's reader asks, and the pipe carries one notifications/claude/channel holding the question.
-//
-// It attaches with resource rather than design, because rooms-channel watches the room named in
-// attach's arguments and a design names none (panyam/mcpkit#1640).
+// An agent attaches by design, which names no room, so rooms-channel has to watch the room attach
+// answers with (panyam/mcpkit#1640).
 func TestARoomsChannelHearsATabsQuestion(t *testing.T) {
+	for _, tc := range []struct {
+		name   string
+		attach func(room string) map[string]any
+	}{
+		{"by design", func(string) map[string]any { return map[string]any{"design": mcpGateway} }},
+		{"by resource", func(room string) map[string]any { return map[string]any{"resource": room} }},
+	} {
+		t.Run(tc.name, func(t *testing.T) { roomsChannelHearsATabsQuestion(t, tc.attach) })
+	}
+}
+
+func roomsChannelHearsATabsQuestion(t *testing.T, attachArgs func(room string) map[string]any) {
 	srv := viewerRoomsServer(t)
 	joined, err := webapiconnect.NewViewerRoomServiceClient(http.DefaultClient, srv.URL).
 		JoinViewerRoom(t.Context(), connect.NewRequest(&webapi.JoinViewerRoomRequest{Design: mcpGateway}))
@@ -140,8 +151,8 @@ func TestARoomsChannelHearsATabsQuestion(t *testing.T) {
 	h.request(1, "initialize", map[string]any{"protocolVersion": "2025-11-25", "capabilities": map[string]any{},
 		"clientInfo": map[string]any{"name": "claude-code", "version": "2"}})
 	h.send(map[string]any{"jsonrpc": "2.0", "method": "notifications/initialized"})
-	if res := h.request(2, "tools/call", map[string]any{"name": "attach", "arguments": map[string]any{"resource": room}}); string(res["isError"]) == "true" {
-		t.Fatalf("attach to %s: %s", room, res["content"])
+	if res := h.request(2, "tools/call", map[string]any{"name": "attach", "arguments": attachArgs(room)}); string(res["isError"]) == "true" {
+		t.Fatalf("attach %v: %s", attachArgs(room), res["content"])
 	}
 
 	tab, err := rooms.JoinPage(t.Context(), massrelay.Dial(srv.URL+strings.TrimSuffix(joined.Msg.GetRelayUrl(), "/"), joined.Msg.GetToken()), room)

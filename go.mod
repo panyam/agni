@@ -8,13 +8,13 @@ require (
 	github.com/panyam/goapplib v0.7.7
 	github.com/panyam/jaala/frontends/mcp v0.1.88
 	github.com/panyam/jaala/frontends/nl v0.1.88
-	github.com/panyam/massrelay v0.3.2
-	github.com/panyam/mcpkit v0.8.12
-	github.com/panyam/mcpkit/experimental/ext/events v0.8.12
-	github.com/panyam/mcpkit/experimental/ext/events/clients/go v0.8.12
-	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.12
-	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.12
-	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.12
+	github.com/panyam/massrelay v0.3.3
+	github.com/panyam/mcpkit v0.8.13
+	github.com/panyam/mcpkit/experimental/ext/events v0.8.13
+	github.com/panyam/mcpkit/experimental/ext/events/clients/go v0.8.13
+	github.com/panyam/mcpkit/experimental/ext/rooms v0.8.13
+	github.com/panyam/mcpkit/experimental/ext/rooms/massrelay v0.8.13
+	github.com/panyam/mcpkit/experimental/integrations/roomsevents v0.8.13
 	github.com/panyam/oneauth v0.3.0
 	github.com/panyam/servicekit v0.2.2
 	github.com/spf13/cobra v1.10.2

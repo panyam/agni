@@ -78,7 +78,7 @@ func TestTheGatewayExercisePasses(t *testing.T) {
 	if agni == "agni" {
 		t.Fatal("no agni to run: build ../../bin/agni (make agni) or set AGNI_BIN; examples-test builds it")
 	}
-	report, err := runExercise(context.Background(), agni, "exercise/gateway.yaml", "stdio", "session", "")
+	report, err := runExercise(context.Background(), agni, "exercise/gateway.yaml", "stdio", "adaptive", "")
 	if err != nil {
 		t.Fatalf("%v\n%s", err, report)
 	}

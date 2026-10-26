@@ -44,8 +44,7 @@ stateless 2026-07-28 wire, where every request stands alone, or the older sessio
 with `initialize`. Every tool answers the same rows and links on both. Nothing the server keeps
 depends on a session, since a design's snapshot is kept per server and per design. agni sets this
 itself rather than taking its MCP library's default, and `MCPKIT_STATELESS_MODE=legacy` or
-`=stateless` forces one wire, for debugging a client. `agni mcp` on stdio speaks the session wire
-alone for now (panyam/mcpkit#1637).
+`=stateless` forces one wire, for debugging a client. `agni mcp` on stdio speaks both too.
 
 ## What the model can call
 
@@ -158,10 +157,7 @@ go install github.com/panyam/mcpkit/experimental/integrations/roomsevents/cmd/ro
 
 Channels are a Claude Code research preview, so start the session with
 `claude --dangerously-load-development-channels server:rooms`, interactively. Then ask the model to
-attach to the design you have open. For now it has to attach with `resource` set to the room, such
-as `design:tut/designs/gateway/gateway.edn`, which a first `attach` with the design answers, because
-`rooms-channel` listens only to a room named that way (mcpkit issue 1640). From then on each question
-you type in a tab that let agents in shows up in the session, fenced as text from the page, and the
+attach to the design you have open. From then on each question you type in a tab that let agents in shows up in the session, fenced as text from the page, and the
 model answers through the tab's tools.
 
 ## What it doesn't do

@@ -233,8 +233,8 @@ importers:
         specifier: ^2.0.0
         version: 2.1.2(@bufbuild/protobuf@2.12.1)(@connectrpc/connect@2.1.2(@bufbuild/protobuf@2.12.1))
       '@panyam/mcpkit-rooms':
-        specifier: 0.8.12
-        version: 0.8.12
+        specifier: 0.8.13
+        version: 0.8.13
       '@panyam/tsappkit':
         specifier: ^0.7.7
         version: 0.7.7
@@ -771,14 +771,14 @@ packages:
     os: [linux]
     libc: [glibc]
 
-  '@panyam/massrelay@0.3.2':
-    resolution: {integrity: sha512-K2DFZfbj2zk4K1+ISkH8LvFjpvwSKUNC6DaafWgACwcpzN+lFr1liqLyiOesS7OoiBbVegGImKKUvrIjKUjDNA==}
+  '@panyam/massrelay@0.3.3':
+    resolution: {integrity: sha512-N+FUXNHIJKbDHx+vAul/BPbH6C3kxxOJyLly58NDcopG+atTd8TtwU9I83fHT3cjRcZ3mrBzHWvbYuiW+ZFOFQ==}
     peerDependencies:
       '@bufbuild/protobuf': ^2.0.0
       '@panyam/servicekit-client': ^0.0.7 || ^0.1.9 || ^0.2.0
 
-  '@panyam/mcpkit-rooms@0.8.12':
-    resolution: {integrity: sha512-/HQYeKTQUF5mma11BCWkldpPh+k6yKRb1+54wTZdBnzeykC7AE9eQSHH/6yTyNEchg6GPtmaSqILmQzZiWP6Vg==}
+  '@panyam/mcpkit-rooms@0.8.13':
+    resolution: {integrity: sha512-f0zVe3AK1+feszw/bUgO/Z4AjJxY+DgazxPKdRVGWn7EfHoGNryebEOgQornE5kiQunacQ4+Pd9yPGD8YziPBw==}
 
   '@panyam/servicekit-client@0.2.0':
     resolution: {integrity: sha512-yoa/UgU/tTIHnQo43FxHwxy+ZWeInEt3xjmStCdDroCh4EXZFcC7vvg5pRpbKhnFlm8KJeI/jhEGOqOHBPwX3w==}
@@ -1852,15 +1852,15 @@ snapshots:
   '@napi-rs/lzma-linux-x64-gnu@1.5.1':
     optional: true
 
-  '@panyam/massrelay@0.3.2(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)':
+  '@panyam/massrelay@0.3.3(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)':
     dependencies:
       '@bufbuild/protobuf': 2.12.1
       '@panyam/servicekit-client': 0.2.0
 
-  '@panyam/mcpkit-rooms@0.8.12':
+  '@panyam/mcpkit-rooms@0.8.13':
     dependencies:
       '@bufbuild/protobuf': 2.12.1
-      '@panyam/massrelay': 0.3.2(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)
+      '@panyam/massrelay': 0.3.3(@bufbuild/protobuf@2.12.1)(@panyam/servicekit-client@0.2.0)
       '@panyam/servicekit-client': 0.2.0
 
   '@panyam/servicekit-client@0.2.0': {}

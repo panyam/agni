@@ -74,7 +74,7 @@ func exercise(args []string) error {
 	transport := fs.String("transport", "http", "http starts `agni serve --mcp` and checks each link opens; stdio starts `agni mcp`")
 	out := fs.String("out", "", "also write the report as markdown to this file")
 	webDir := fs.String("web-dir", filepath.Join("..", "..", "web"), "the built viewer `agni serve` links to over http (make ui)")
-	wire := fs.String("wire", "", "the MCP wire to speak: adaptive (the stateless wire when the server offers it, else a session; the default over http), stateless, or session (the default over stdio)")
+	wire := fs.String("wire", "", "the MCP wire to speak: adaptive (the stateless wire when the server offers it, else a session; the default), stateless, or session")
 	if err := fs.Parse(args); err != nil {
 		return err
 	}
@@ -83,9 +83,6 @@ func exercise(args []string) error {
 	}
 	if *wire == "" {
 		*wire = "adaptive"
-		if *transport == "stdio" {
-			*wire = "session"
-		}
 	}
 	report, err := runExercise(context.Background(), agniBinary(), fs.Arg(0), *transport, *wire, *webDir)
 	if *out != "" && report != "" {
@@ -112,10 +109,6 @@ func runExercise(ctx context.Context, agni, specPath, transport, wire, webDir st
 	mode, ok := wires[wire]
 	if !ok {
 		return "", fmt.Errorf("no wire %q: use adaptive, stateless or session", wire)
-	}
-	// mcpkit's stdio transport serves sessions alone (panyam/mcpkit#1637).
-	if transport == "stdio" && mode != client.ClientModeLegacyOnly {
-		return "", fmt.Errorf("stdio serves the session wire alone until panyam/mcpkit#1637: pass --wire session")
 	}
 	b, err := os.ReadFile(specPath) // #nosec G304 -- the spec is the caller's argument
 	if err != nil {

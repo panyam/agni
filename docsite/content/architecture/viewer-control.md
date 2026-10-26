@@ -106,7 +106,9 @@ built in Go from the service's descriptor (`internal/viewerrooms/tools.go`) and 
 own from protobuf-es descriptors (`web/src/toolschema.ts`), so both walks are held to one fixture,
 `internal/viewerrooms/testdata/viewer_tools.json`, following the mapping mcpkit#1609 sets out for
 proto services as tools. `GetLocation` is marked `NO_SIDE_EFFECTS` in the proto, and that is where
-both walks read its read-only hint.
+both walks read its read-only hint. A tab whose tool is refused anyway, which takes a page and a
+server from different builds, hears `notifications/rooms/tool_refused` and names the tool beside its
+switch (`onToolRefused`, since mcpkit v0.8.13).
 
 ## A tab asking an agent
 
@@ -125,8 +127,9 @@ hears only the tabs that agreed to it, the same rule as `next_request`. Attachme
 an MCP session, so the events need the session wire, and with no identity provider they act for the
 local subject (`events.Config.UnsafeAnonymousPrincipal`). This is what lets `rooms-channel` put a
 reader's question in front of a Claude Code session as a turn. `TestARoomsChannelHearsATabsQuestion`
-runs that front end over a pipe against agni's `/mcp`. It attaches by `resource`, because the front
-end watches the room named in `attach`'s arguments and a design names none (mcpkit#1640).
+runs that front end over a pipe against agni's `/mcp`, attaching by `design` as an agent does and by
+`resource`. A design names no room, so the front end watches the one `attach` answers with, which it
+does since mcpkit v0.8.13 (mcpkit#1640).
 
 `WithRoomOf` declares `design` as its room argument, so `next_request`, `list_pages`, `attach` and
 `pair` take the design the way the page tools do, resolved through the same `ViewerRoomService.Room`
