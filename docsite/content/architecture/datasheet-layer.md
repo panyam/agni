@@ -466,6 +466,29 @@ each.
 
 </details>
 
+Three records describe a microcontroller's pins, and they live in two places because they answer to
+different authorities:
+
+| Record | Says | Owned by | Lives in |
+|---|---|---|---|
+| Pin allocation | which net and function this board puts on each pin | the board's designers, per design | the design's intent, `io_map` ([design intent](../../guide/design-intent/)) |
+| Pin mux | which functions each pin of the part can carry | the silicon, per MPN | the PartSpec, `Pin.alternates` |
+| Parameters | the part's limits and ratings, bound to pins by id | the silicon, per MPN | the PartSpec, `Parameter` |
+
+The mux table is a fact about the part and never about a board, so it is never written into intent,
+and an allocation is never written into a spec. `io-map-function` is the one place the two meet.
+
+A mux table that arrives as its own file, rather than through derivation, is merged into the
+published spec by `agnids merge-mux` (agni issue 1200). The file is a PartSpec in YAML holding only
+pins, bound through `internal/yamlpb`, so the mux table has no message of its own. It joins pins the
+way derivation joins a mux row (`param.MergePinMux`), adds to a joined pin's alternates unless told to
+replace them, and the merged spec goes through the same
+validate, write and index step as a published draft. The merge happens before the corpus sees the
+file, so `LoadSet`, the corpus index and `PartSpecService` still read one file per MPN and none of
+them joins two. A joined pin keeps the provenance of the table that defined it, since a `PinAlternate`
+carries none, so the mux reference is cited only on the pins it added. Usage is in
+[the datasheets guide](../../guide/datasheets/#merging-a-pin-mux-table).
+
 Stage 5's gate constrains what may be added to it. `param.Validate` is
 `Problems` joined, and `Problems` includes the COMPLETENESS half, so a derived spec must be complete
 rather than merely well-formed. Any new completeness check therefore fails every `derive` run the

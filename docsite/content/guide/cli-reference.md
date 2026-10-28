@@ -611,8 +611,9 @@ set that wrote its answers before exiting non-zero writes no error document afte
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`
 (reader-health smoke over many files) and `census`. Datasheet derivation is `agnids derive`, and
-publishing a workbench draft is [`agnids publish`](../datasheets/#publishing-a-workbench-draft), both in
-the datasheets service, a separate binary built from the `datasheet/` module. `validate` is
+publishing a workbench draft is [`agnids publish`](../datasheets/#publishing-a-workbench-draft), and
+merging a pin-mux table into a published spec is
+[`agnids merge-mux`](../datasheets/#merging-a-pin-mux-table), all in the datasheets service, a separate binary built from the `datasheet/` module. `validate` is
 worth knowing as a user, because pointed at a folder of exports it reports which of them this tool can
 actually read. The rest sit closer to the engine and are covered in the developer docs.
 

@@ -32,6 +32,7 @@ var docFlagExceptions = map[string]string{
 	"--dangerously-load-development-channels": "claude, Claude Code's flag for loading a channel server such as rooms-channel (agni issue 1173)",
 	"--pdf2doc":    "agnids, the datasheet service built from the datasheet module (agni issue 744)",
 	"--corpus":     "agnids, the datasheet service, a separate binary: it names the published corpus `agnids serve` answers PartSpecService from (agni issue 749)",
+	"--replace":    "agnids merge-mux, the datasheet service's merge of a pin-mux table, replacing a pin's alternates rather than adding to them (agni issue 1200)",
 	"--no":         "a line-wrapped flag of another tool, not a flag in itself",
 	"--profile":    "docker compose and podman compose, which start a service a profile names (guide/trying-agni.md)",
 	"--rm":         "docker compose run and podman compose run",

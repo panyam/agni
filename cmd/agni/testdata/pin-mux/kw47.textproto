@@ -1,0 +1,37 @@
+# The KW47's published spec as a pin function table leaves it: three pins with their designators and
+# no alternates, so io-map-function has nothing to check a declared function against. Facts from the
+# KW47 Product Family data sheet, Rev. 4 (18 December 2025), Table 58 "KW47 Package pinout", pages 58
+# and 59. The document stays outside this repo.
+mpn: "KW47"
+manufacturer: "NXP"
+device_class: "mcu"
+
+docs {
+  id: "kw47-rev4"
+  title: "KW47 Product Family data sheet Rev. 4"
+  vendor: "NXP"
+  locator: "not in this repo"
+}
+
+packages { id: "48qfn" name: "48QFN" }
+
+pins {
+  id: "ptb3"
+  name: "PTB3"
+  numbers { package_ref: "48qfn" number: "1" }
+  prov { doc_ref: "kw47-rev4" page: 58 table_or_figure: "Table 58. KW47 Package pinout" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "ptb4"
+  name: "PTB4"
+  numbers { package_ref: "48qfn" number: "2" }
+  prov { doc_ref: "kw47-rev4" page: 59 table_or_figure: "Table 58. KW47 Package pinout" method: "hand" confidence: 1 }
+}
+
+pins {
+  id: "ptb5"
+  name: "PTB5"
+  numbers { package_ref: "48qfn" number: "3" }
+  prov { doc_ref: "kw47-rev4" page: 59 table_or_figure: "Table 58. KW47 Package pinout" method: "hand" confidence: 1 }
+}

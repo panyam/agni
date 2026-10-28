@@ -1,15 +1,18 @@
 package corpus
 
 import (
+	"bytes"
 	"fmt"
 	"io/fs"
 	"regexp"
 	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/core/param"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/internal/yamlpb"
 )
 
 // Promotion turns a workbench DRAFT into a seeded corpus file (agni issues 747, 749).
@@ -74,12 +77,8 @@ func Promote(draft []byte, corpus fs.FS, prev *Index) (*Promoted, error) {
 
 // PromoteSpec is Promote for a draft already parsed, as a store holding drafts as messages has it.
 func PromoteSpec(spec *parampb.PartSpec, corpus fs.FS, prev *Index) (*Promoted, error) {
-	if probs := param.Problems(spec); len(probs) > 0 {
-		what := "the draft (it names no mpn)"
-		if spec.GetMpn() != "" {
-			what = fmt.Sprintf("the draft for %q", spec.GetMpn())
-		}
-		return nil, &PromoteError{Reason: what + " is not ready for the corpus:", Problems: probs}
+	if err := ready(spec, "the draft"); err != nil {
+		return nil, err
 	}
 	ix, err := Build(corpus)
 	if err != nil {
@@ -90,6 +89,84 @@ func PromoteSpec(spec *parampb.PartSpec, corpus fs.FS, prev *Index) (*Promoted, 
 	if seeded && prevEntry.File != file {
 		return nil, &PromoteError{Reason: fmt.Sprintf("the corpus already seeds %q in %s; promoting would add %s, and one MPN in two files fails every load. Edit or remove %s first", spec.GetMpn(), prevEntry.File, file, prevEntry.File)}
 	}
+	return promoted(spec, file, seeded, ix, prev)
+}
+
+// LoadPinMux reads a pin-mux reference from YAML, a PartSpec holding only pins and the docs and
+// packages they name (agni issue 1200). A host usually writes one from the spreadsheet its team keeps,
+// so the format is the contract: keys are PartSpec's proto field names and nothing else, an unknown
+// key fails with its line, and param.CheckPinMux's refusals apply.
+func LoadPinMux(b []byte) (*parampb.PartSpec, error) {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return nil, fmt.Errorf("pin mux: invalid YAML: %w", err)
+	}
+	mux := &parampb.PartSpec{}
+	if err := yamlpb.Decode(&doc, mux); err != nil {
+		return nil, fmt.Errorf("pin mux: %w", err)
+	}
+	if err := param.CheckPinMux(mux); err != nil {
+		return nil, err
+	}
+	return mux, nil
+}
+
+// MergeMux merges a pin-mux reference (LoadPinMux's YAML) into the spec the corpus publishes for its
+// MPN and returns what to write, as Promote does. The merged spec replaces the file that already seeds
+// the MPN, whatever it is named, so a corpus keeps one file per MPN; an MPN the corpus does not seed
+// yet gets SpecFileName's file, and the reference must then be a complete spec on its own. The merge
+// rules, and what opts changes, are param.MergePinMux's.
+//
+// It refuses, with a *PromoteError, a reference that does not load, a merge MergePinMux refuses, a
+// corpus that does not load as it stands, and a merged spec Validate rejects (every problem listed).
+func MergeMux(mux []byte, opts param.PinMuxMerge, corpus fs.FS, prev *Index) (*Promoted, error) {
+	ref, err := LoadPinMux(mux)
+	if err != nil {
+		return nil, &PromoteError{Reason: err.Error()}
+	}
+	ix, err := Build(corpus)
+	if err != nil {
+		return nil, &PromoteError{Reason: fmt.Sprintf("the corpus does not load as it stands, so nothing is merged into it: %v", err)}
+	}
+	var base *parampb.PartSpec
+	file := SpecFileName(ref.Mpn)
+	entry, seeded := ix.Lookup(ref.Mpn)
+	if seeded {
+		file = entry.File
+		data, err := fs.ReadFile(corpus, file)
+		if err != nil {
+			return nil, err
+		}
+		if base, err = param.Load(bytes.NewReader(data)); err != nil {
+			return nil, fmt.Errorf("%s: %w", file, err)
+		}
+	}
+	spec, err := param.MergePinMux(base, ref, opts)
+	if err != nil {
+		return nil, &PromoteError{Reason: err.Error()}
+	}
+	if err := ready(spec, "the merged spec"); err != nil {
+		return nil, err
+	}
+	return promoted(spec, file, seeded, ix, prev)
+}
+
+// ready refuses a spec Validate would reject, listing every problem.
+func ready(spec *parampb.PartSpec, what string) error {
+	probs := param.Problems(spec)
+	if len(probs) == 0 {
+		return nil
+	}
+	if spec.GetMpn() == "" {
+		what += " (it names no mpn)"
+	} else {
+		what += fmt.Sprintf(" for %q", spec.GetMpn())
+	}
+	return &PromoteError{Reason: what + " is not ready for the corpus:", Problems: probs}
+}
+
+// promoted renders a validated spec for file and records it in ix.
+func promoted(spec *parampb.PartSpec, file string, seeded bool, ix, prev *Index) (*Promoted, error) {
 	text, err := param.MarshalSpecText(spec)
 	if err != nil {
 		return nil, err
