@@ -50,7 +50,8 @@ From a green `main`:
    `.github/workflows/release.yml`, which builds the image for amd64 and arm64, pushes it to GHCR as
    both `:vX.Y.Z` and `:latest`, then verifies the published image reports the tag and can actually run
    a check.  A dispatch re-run takes the tag as an input so it can never publish an image built from an
-   untagged `main`.
+   untagged `main`.  The same run builds the Python client with the tag's version, installs the
+   wheel into a fresh venv to check it (`make python-dist`), and publishes it to PyPI as `agni-eda`.
 
 6. **Publish the GitHub Release.**
 
@@ -89,6 +90,24 @@ workflow's verify step authenticates as the workflow, so it proves the image run
 but says nothing about whether a stranger can pull it.  Only an anonymous pull from a
 logged-out client tests that.
 
+## PyPI
+
+The Python client publishes as `agni-eda`, because PyPI's `agni` is an unrelated project.  The
+`pypi` job uses trusted publishing, so no token is stored in the repository or its secrets.  PyPI
+accepts the workflow's OIDC identity because the `agni-eda` project names it as a publisher, which
+is a one-time setup on pypi.org under the owner's account:
+
+- Publisher: GitHub, owner `panyam`, repository `agni`, workflow `release.yml`, environment `pypi`.
+  Before the first upload this is a pending publisher, added under "Your account" then
+  "Publishing", and the first upload creates the project.
+- GitHub creates the `pypi` environment the first time the job runs, with no protection rules.
+  Adding a required reviewer to it would hold every release at `waiting`, as the Pages environment
+  once did.
+
+The pyproject.toml in the tree says `0.0.0`.  `make python-dist V=vX.Y.Z` stamps the tag into the
+copy it builds, so the tag stays the version's one source.  A version PyPI has accepted cannot be
+uploaded again, even after deleting it, so a broken client release is fixed by the next tag.
+
 ## Checklist
 
 - [ ] `git merge --ff-only origin/main` clean, working tree clean
@@ -103,4 +122,6 @@ logged-out client tests that.
       first release after agni 744 is the first to publish `agnids`, so its visibility is untested
       until then (see GHCR visibility above)
 - [ ] GitHub Release published from the notes file
+- [ ] `pip install agni-eda==X.Y.Z` in a fresh venv, then `python -c "import agni"` from outside
+  the checkout
 - [ ] `go list -m github.com/panyam/agni@vX.Y.Z` resolves

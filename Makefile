@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -231,6 +231,36 @@ python-venv: $(PY_VENV)/.installed
 python-test: agni python-venv
 	cd $(PY_CLIENT) && AGNI_BIN=$(CURDIR)/bin/agni PYTHONDONTWRITEBYTECODE=1 .venv/bin/pytest -q
 
+# The Python client as PyPI publishes it, `agni-eda`: an sdist and a wheel with V's version stamped in,
+# written to PY_DIST, then installed into a fresh venv outside the checkout and checked
+# (hack/python_dist_smoke.sh). The release workflow runs this before it publishes. The build works on
+# a copy, since the tree's pyproject.toml carries a placeholder version and the licence lives at the
+# repo root, outside the package directory setuptools reads.
+#   make python-dist V=v0.3.12
+PY_DIST ?= dist/python
+
+python-dist:
+	@$(check_semver)
+	@set -e; tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	rsync -a --exclude .venv --exclude __pycache__ --exclude .pytest_cache --exclude '*.egg-info' \
+		$(PY_CLIENT)/ "$$tmp/src/"; \
+	cp LICENSE "$$tmp/src/LICENSE"; \
+	ver=$$(echo "$(V)" | sed 's/^v//'); \
+	case "$$ver" in *-*) echo "python-dist publishes release tags only, not $(V)"; exit 1;; esac; \
+	sed -i.orig "s/^version = \"0.0.0\"$$/version = \"$$ver\"/" "$$tmp/src/pyproject.toml"; \
+	grep -q "^version = \"$$ver\"$$" "$$tmp/src/pyproject.toml" || { echo "pyproject.toml was not stamped with $$ver"; exit 1; }; \
+	rm "$$tmp/src/pyproject.toml.orig"; \
+	python3 -m venv "$$tmp/build-venv"; \
+	PIP_DISABLE_PIP_VERSION_CHECK=1 "$$tmp/build-venv/bin/pip" install -q build; \
+	rm -rf "$(PY_DIST)"; mkdir -p "$(PY_DIST)"; out=$$(cd "$(PY_DIST)" && pwd); \
+	"$$tmp/build-venv/bin/python" -m build -q --outdir "$$out" "$$tmp/src"; \
+	hack/python_dist_smoke.sh $(PY_DIST) "$$ver"
+
+# The gate's run of python-dist, so a packaging break shows on the PR rather than on the release.
+python-dist-check:
+	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	$(MAKE) --no-print-directory python-dist V=v0.0.1 PY_DIST="$$tmp/dist"
+
 # The revision-audit mission's exercise (agni issue 843): two revisions of the tutorial gateway into one
 # workbook plus a markdown summary of every tab, the example agni issue 823 finished.
 # It runs the checkout's binary and the client's venv, so neither a stale agni on PATH nor a python3
@@ -457,7 +487,7 @@ testall: testall-core browser-test
 
 # testall-core is the gate without the browser suite. CI runs the two as parallel jobs, so the gate
 # takes as long as the longer half rather than both (agni issue 1147); `make testall` still runs both.
-testall-core: vet lint seccheck secrets ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
+testall-core: vet lint seccheck secrets ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test python-dist-check catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own

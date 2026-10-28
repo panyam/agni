@@ -18,9 +18,25 @@ The package is `agni`, and its only runtime dependency is `protobuf`. The messag
 `agni.v1` are generated from the same protos as the Go engine and the web viewer. `make proto-py`
 regenerates them and `make proto-check` fails the gate when they are stale.
 
+Every release after v0.3.11 publishes it to PyPI as `agni-eda`, since PyPI's `agni` is an unrelated
+project. The import is still `agni`. Install the version that matches the `agni` binary or server
+you talk to, because both are built from one tag's protos.
+
 ```sh
+pip install 'agni-eda[xlsx]==X.Y.Z'
+```
+
+Between releases, pip installs a commit or a branch straight from GitHub, and in a checkout an
+editable install follows the tree.
+
+```sh
+pip install 'agni-eda[xlsx] @ git+https://github.com/panyam/agni@main#subdirectory=clients/python'
 pip install -e 'clients/python[xlsx]'
 ```
+
+The client does not carry the engine. `ConnectTransport` needs a running `agni serve`, which the
+`ghcr.io/panyam/agni` image provides, and `CliTransport` needs an `agni` binary, from `go install
+github.com/panyam/agni/cmd/agni@vX.Y.Z` or `make install` in a checkout.
 
 A `Client` wraps a transport, and each method takes and returns the rpc's own messages:
 

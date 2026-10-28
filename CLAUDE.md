@@ -667,6 +667,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   never elides a fail or an inconclusive. One sample board went from 1977 lines to 799 with all 150
   actionable rows intact. A long list is a worse read, but a hidden failure is a wrong answer. csv and
   html are untouched, because a spreadsheet and a scrollable page have no reason to fold anything.
+- **The Python client publishes to PyPI as `agni-eda`** (the import stays `agni`, since PyPI's `agni`
+  is someone else's), from the release workflow's `pypi` job by trusted publishing. The tree's
+  `pyproject.toml` says `0.0.0` and `make python-dist V=...` stamps the tag into a copy, so a version
+  is still recorded nowhere but the tag. The gate's `python-dist-check` builds and installs the wheel
+  outside the checkout, so a packaging break shows on the PR. RELEASING.md has the one-time PyPI setup.
 - **The Python client is installed only in `clients/python/.venv`** (`make python-venv`), so a bare
   `python3 examples/…` fails with `No module named 'agni'`. Its CLI transport runs whatever `agni` is
   on PATH unless given `--agni` (or `AGNI_BIN`), which is the stale-binary trap above. A make target

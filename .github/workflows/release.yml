@@ -1,6 +1,7 @@
 # Publishes the two container images to GHCR when a release tag is pushed: ghcr.io/panyam/agni (the
 # engine and viewer, Dockerfile) and ghcr.io/panyam/agnids (the datasheet service, Dockerfile.agnids,
-# agni issue 744). Both carry the tag's version, from one build-arg.
+# agni issue 744). Both carry the tag's version, from one build-arg. The same tag publishes the Python
+# client to PyPI as agni-eda (the python-dist and pypi jobs at the end).
 #
 # The tag is the single source of the version. `make tag-push V=v0.1.0` publishes the tag, which is
 # the Go module release, and this workflow then builds the image from that same tag and stamps the
@@ -249,3 +250,50 @@ jobs:
           img="ghcr.io/${OWNER}/agnids:${TAG}"
           docker pull "$img"
           hack/image_smoke.sh agnids "$img" "$TAG"
+
+  # The Python client, published to PyPI as agni-eda (the name agni is an unrelated project there).
+  # The build job stamps the tag's version into the package, installs the wheel into a fresh venv and
+  # checks it (make python-dist, hack/python_dist_smoke.sh), and hands the files to the publish job.
+  python-dist:
+    needs: tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      TAG: ${{ needs.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.tag.outputs.tag }}
+
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+
+      - name: Build and check the sdist and wheel
+        run: make python-dist V="$TAG"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: python-dist
+          path: dist/python/
+
+  # Publishing uses PyPI's trusted publishing, so no token is stored anywhere: PyPI accepts this
+  # workflow's OIDC identity for agni-eda because the project names this repository, release.yml and
+  # the pypi environment as its publisher (RELEASING.md, "PyPI"). It is the only job given id-token,
+  # and it runs nothing from the checkout.
+  pypi:
+    needs: python-dist
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/agni-eda/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          name: python-dist
+          path: dist/
+
+      - uses: pypa/gh-action-pypi-publish@release/v1
