@@ -4,8 +4,12 @@ A typed Python client for agni. It calls the `agni` CLI or a running `agni serve
 wire contract's own message classes, generated from `protos/agni/v1`.
 
 ```sh
-pip install -e 'clients/python[xlsx]'
+pip install 'agni-eda[xlsx]'           # a release, from PyPI
+pip install -e 'clients/python[xlsx]'  # a checkout
 ```
+
+The distribution is `agni-eda` because PyPI's `agni` is an unrelated project, and the import is
+`agni`. Match its version to the `agni` binary or server it talks to.
 
 ```python
 from agni import Client, CliTransport, ConnectTransport
@@ -38,3 +42,6 @@ CLI covers, where the two differ today, and writing tables to xlsx.
   exercise-revision-audit` runs it with the checkout's binary (agni issue 843).
 - `make proto-py` regenerates `src/agni/v1`. Never edit it by hand; `make proto-check` fails on drift.
 - `make python-test` runs the suite against a built binary and a real server.
+- `make python-dist V=vX.Y.Z` builds the sdist and wheel a release publishes into `dist/python` and
+  installs the wheel into a fresh venv to check it. The release workflow runs it, and the gate runs
+  `python-dist-check`.
