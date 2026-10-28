@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.12] - 2026-10-27
+
+A pin-mux table kept as its own file merges into the part's published spec with `agnids merge-mux`,
+so the pin map's function checks can read it (PR 1201). The Python client is published to PyPI as
+`agni-eda` with each release (PR 1204).  The full write-up is
+[RELEASES/v0.3.12.md](RELEASES/v0.3.12.md).
+
 ## [0.3.11] - 2026-10-26
 
 A design intent's IO map is laid out one row per declared pin, beside the netlist and the functions
