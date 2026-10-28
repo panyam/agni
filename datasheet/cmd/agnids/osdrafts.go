@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"slices"
@@ -139,17 +140,24 @@ func (s *osDraftStore) Publish(ctx context.Context, mpn string) (*dsservice.Publ
 	return &dsservice.Published{Replaced: p.Replaces, Generation: p.Index.Generation}, nil
 }
 
-// publishSpec writes a validated spec into the corpus at dir and records it in the index, the one
-// sequence both PublishDraft and `agnids publish` use. corpus.PromoteSpec decides; this writes the
-// spec, re-loads the corpus and restores what was there if it no longer loads, so a publication
-// cannot leave a corpus that fails every check, and only then writes the index.
+// publishSpec writes a validated spec into the corpus at dir and records it in the index, the
+// sequence both PublishDraft and `agnids publish` use. corpus.PromoteSpec decides.
 func publishSpec(dir string, spec *parampb.PartSpec) (*corpus.Promoted, error) {
+	return writePromoted(dir, func(fsys fs.FS, prev *corpus.Index) (*corpus.Promoted, error) {
+		return corpus.PromoteSpec(spec, fsys, prev)
+	})
+}
+
+// writePromoted asks decide what to write into the corpus at dir, writes the spec, re-loads the corpus
+// and restores what was there if it no longer loads, so a publication cannot leave a corpus that
+// fails every check, and only then writes the index.
+func writePromoted(dir string, decide func(fs.FS, *corpus.Index) (*corpus.Promoted, error)) (*corpus.Promoted, error) {
 	fsys := os.DirFS(dir)
 	prev, err := readIndex(fsys)
 	if err != nil {
 		return nil, err
 	}
-	p, err := corpus.PromoteSpec(spec, fsys, prev)
+	p, err := decide(fsys, prev)
 	if err != nil {
 		return nil, err
 	}

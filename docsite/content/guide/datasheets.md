@@ -96,6 +96,45 @@ agnids index params/
 agnids index params/ --check
 ```
 
+### Merging a pin-mux table
+
+A microcontroller's pin-mux table often already exists as a file of its own, transcribed from the
+reference manual by the team allocating its pins. `agnids merge-mux` merges one into the spec the
+corpus publishes for that part, so the corpus keeps one file per MPN and nobody has to merge the
+table into the spec by hand.
+
+The table is written as a part spec in YAML holding only pins, with the same field names a published
+spec uses. A pin lists every function its mux table gives it under `alternates`, and names its
+designators when the table prints them:
+
+```yaml
+mpn: KW47
+pins:
+  - name: PTB3
+    numbers: [{package_ref: 48qfn, number: "1"}]
+    alternates: [{name: PTB3}, {name: LPUART1_RX}, {name: TPM1_CH3}]
+  - name: PTB5
+    alternates: [{name: PTB5}, {name: LPI2C1_SCL}, {name: I3C0_SCL}]
+```
+
+```
+agnids merge-mux kw47.pin_mux.yaml --corpus params/
+```
+
+Each pin in the table joins the published pin it describes by `id`, else by a designator the two
+share in a package, else by name. A joined pin takes the table's alternates in place of its own, so
+merging a revised table again drops any function the revision dropped. Its name, provenance and id
+stay as published, because the spec's parameters point at the id. A table pin that joins nothing is
+added, and then needs its own `prov` and the `docs` entry it cites, as any published pin does.
+
+The merge is refused when it cannot tell which pin a row means, as with a name such as `NC` that the
+part prints on several pins, so give that row the published pin's `id`. It is also refused when the
+table names a different part, or reuses a document or package id for something else. The merged spec
+is validated before anything is written, exactly as `agnids publish` validates a draft, and replaces
+the file that already seeds the part. A part the corpus does not seed yet is published from the
+table alone. A table carrying parameters is refused, because a part's limits belong in its published
+spec and a merge should not be able to override them.
+
 ### Serving a shared corpus
 
 A project's own `params/` is read straight from disk, which suits the few dozen parts a project

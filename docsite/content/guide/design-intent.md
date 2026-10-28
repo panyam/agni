@@ -191,6 +191,11 @@ whose entry has no pin-mux table, reads `not-considered` with that reason, so a 
 filled in never reads as checked when it was not. A run with no datasheet corpus at all skips the
 rule, as it skips every rule that needs one.
 
+The map and the mux table are different records. The map is this board's allocation and lives here,
+and the mux table is what the part can do and lives in its datasheet spec. A mux table kept as a
+file of its own, as one transcribed from a reference manual usually is, goes into the corpus through
+[`agnids merge-mux`](../datasheets/#merging-a-pin-mux-table) rather than into the map.
+
 ### Reading the map one pin at a time
 
 The four rules each list their own verdicts, which suits a reviewer working through one kind of

@@ -63,6 +63,52 @@ an MPN again replaces its earlier published spec.
 	return c
 }
 
+// mergeMuxCmd merges a pin-mux reference kept as its own file into the spec the corpus publishes for
+// its MPN (agni issue 1200), so a team holding a mux table publishes one file per MPN rather than
+// hand-merging the table into the spec.
+func mergeMuxCmd() *cobra.Command {
+	var dir string
+	c := &cobra.Command{
+		Use:   "merge-mux <mux.yaml>",
+		Short: "Merge a pin-mux table into the published spec for its MPN",
+		Long: `Merge a pin-mux reference, a PartSpec in YAML holding only pins and their alternates, into the
+spec a corpus publishes for the same MPN, and record it in the index (` + corpus.IndexFile + `).
+
+Each reference pin joins the published pin it describes by id, else by a designator they share in a
+package, else by name. A joined pin takes the reference's alternates in place of its own, so merging a
+revised table again drops what the revision dropped; its name, prov and id stay as published. A
+reference pin that joins nothing is added, and needs a prov. The merged spec replaces the file that
+already seeds the MPN, and must pass param.Validate like any publication. An MPN the corpus does not
+seed yet is published from the reference alone.
+
+  agnids merge-mux kw47.pin_mux.yaml --corpus params/`,
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			if err := requireDir("--corpus", dir); err != nil {
+				return err
+			}
+			mux, err := os.ReadFile(args[0]) // #nosec G304 -- the reference file the user named
+			if err != nil {
+				return err
+			}
+			p, err := writePromoted(dir, func(fsys fs.FS, prev *corpus.Index) (*corpus.Promoted, error) {
+				return corpus.MergeMux(mux, fsys, prev)
+			})
+			if err != nil {
+				return err
+			}
+			verb := "published"
+			if p.Replaces {
+				verb = "merged into"
+			}
+			fmt.Fprintf(cmd.OutOrStdout(), "%s %s for %s; index generation %d\n", verb, p.File, p.Spec.GetMpn(), p.Index.Generation)
+			return nil
+		},
+	}
+	c.Flags().StringVar(&dir, "corpus", "", "the corpus directory holding the published specs (required)")
+	return c
+}
+
 // requireDir reports a flag that is unset or does not name a directory.
 func requireDir(flag, dir string) error {
 	if dir == "" {

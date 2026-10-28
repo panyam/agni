@@ -133,3 +133,108 @@ func TestIndexCheckCatchesAHandEdit(t *testing.T) {
 		t.Errorf("--check after a rebuild: %v", err)
 	}
 }
+
+const pinMuxFixture = "../../../cmd/agni/testdata/pin-mux"
+
+// muxCorpus is a corpus publishing the KW47 spec whose pins list no alternates, indexed, and the
+// pin-mux reference that supplies them.
+func muxCorpus(t *testing.T) (dir, mux string) {
+	t.Helper()
+	dir = filepath.Join(t.TempDir(), "params")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	b, err := os.ReadFile(filepath.Join(pinMuxFixture, "kw47.textproto"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "kw47.textproto"), b, 0o644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := runAgnids(t, "index", dir); err != nil {
+		t.Fatal(err)
+	}
+	return dir, filepath.Join(pinMuxFixture, "kw47.pin_mux.yaml")
+}
+
+// Merging a mux table rewrites the file that already seeds the MPN, whatever it is named, so the corpus
+// still holds one file per MPN, and the index records the new content.
+func TestMergeMuxRewritesThePublishedSpec(t *testing.T) {
+	dir, mux := muxCorpus(t)
+	out, err := runAgnids(t, "merge-mux", mux, "--corpus", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "merged into kw47.textproto for KW47; index generation 2") {
+		t.Errorf("output: %q", out)
+	}
+	files, _ := filepath.Glob(filepath.Join(dir, "*.textproto"))
+	if len(files) != 1 {
+		t.Fatalf("the corpus must still hold one spec file, got %v", files)
+	}
+	set, err := param.LoadSet(os.DirFS(dir))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range set.Lookup("KW47").GetPins() {
+		if len(p.Alternates) == 0 {
+			t.Errorf("%s has no alternates after the merge", p.Id)
+		}
+	}
+	if _, err := runAgnids(t, "index", dir, "--check"); err != nil {
+		t.Errorf("the index must match the merged file: %v", err)
+	}
+}
+
+// An MPN the corpus does not seed is published from the reference alone, under SpecFileName.
+func TestMergeMuxPublishesAnUnseededPart(t *testing.T) {
+	dir := filepath.Join(t.TempDir(), "params")
+	if err := os.MkdirAll(dir, 0o755); err != nil {
+		t.Fatal(err)
+	}
+	mux := filepath.Join(t.TempDir(), "kw47.pin_mux.yaml")
+	if err := os.WriteFile(mux, []byte(`
+mpn: KW47
+docs: [{id: rm, title: KW47 Reference Manual Rev. 2}]
+pins:
+  - {id: ptb3, name: PTB3, alternates: [{name: PTB3}], prov: {doc_ref: rm, page: 58, method: hand, confidence: 1}}
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	out, err := runAgnids(t, "merge-mux", mux, "--corpus", dir)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(out, "published KW47.textproto for KW47") {
+		t.Errorf("output: %q", out)
+	}
+	if set, err := param.LoadSet(os.DirFS(dir)); err != nil || set.Lookup("KW47") == nil {
+		t.Errorf("the reference must be seeded: %v", err)
+	}
+}
+
+// A merge whose result Validate rejects writes nothing and lists the problem.
+func TestMergeMuxRefusesAnInvalidResultAndWritesNothing(t *testing.T) {
+	dir, _ := muxCorpus(t)
+	before, err := os.ReadFile(filepath.Join(dir, "kw47.textproto"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	ix, err := os.ReadFile(filepath.Join(dir, corpus.IndexFile))
+	if err != nil {
+		t.Fatal(err)
+	}
+	mux := filepath.Join(t.TempDir(), "bad.pin_mux.yaml")
+	if err := os.WriteFile(mux, []byte("mpn: KW47\npins: [{id: ptd0, name: PTD0, alternates: [{name: PTD0}]}]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	_, err = runAgnids(t, "merge-mux", mux, "--corpus", dir)
+	if err == nil || !strings.Contains(err.Error(), "ptd0: no prov") {
+		t.Fatalf("want the missing prov named, got %v", err)
+	}
+	after, _ := os.ReadFile(filepath.Join(dir, "kw47.textproto"))
+	ixAfter, _ := os.ReadFile(filepath.Join(dir, corpus.IndexFile))
+	if !bytes.Equal(before, after) || !bytes.Equal(ix, ixAfter) {
+		t.Errorf("a refused merge changed the corpus")
+	}
+}
