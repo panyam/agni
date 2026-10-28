@@ -6,7 +6,11 @@ import (
 	"strings"
 	"testing"
 
+	"gopkg.in/yaml.v3"
+
 	"github.com/panyam/agni/core/param"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/internal/yamlpb"
 )
 
 const pinMuxFixture = "testdata/pin-mux"
@@ -51,11 +55,15 @@ func TestAMergedPinMuxReachesIOMapFunction(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mux, err := param.LoadPinMux(muxText)
-	if err != nil {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(muxText, &doc); err != nil {
 		t.Fatal(err)
 	}
-	merged, err := param.MergePinMux(base, mux)
+	mux := &parampb.PartSpec{}
+	if err := yamlpb.Decode(&doc, mux); err != nil {
+		t.Fatal(err)
+	}
+	merged, err := param.MergePinMux(base, mux, param.PinMuxMerge{})
 	if err != nil {
 		t.Fatal(err)
 	}

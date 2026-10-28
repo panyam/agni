@@ -10,6 +10,7 @@ import (
 
 	"github.com/spf13/cobra"
 
+	"github.com/panyam/agni/core/param"
 	"github.com/panyam/agni/datasheet/corpus"
 	"github.com/panyam/agni/datasheet/dsservice"
 )
@@ -68,6 +69,7 @@ an MPN again replaces its earlier published spec.
 // hand-merging the table into the spec.
 func mergeMuxCmd() *cobra.Command {
 	var dir string
+	var replace bool
 	c := &cobra.Command{
 		Use:   "merge-mux <mux.yaml>",
 		Short: "Merge a pin-mux table into the published spec for its MPN",
@@ -75,13 +77,16 @@ func mergeMuxCmd() *cobra.Command {
 spec a corpus publishes for the same MPN, and record it in the index (` + corpus.IndexFile + `).
 
 Each reference pin joins the published pin it describes by id, else by a designator they share in a
-package, else by name. A joined pin takes the reference's alternates in place of its own, so merging a
-revised table again drops what the revision dropped; its name, prov and id stay as published. A
-reference pin that joins nothing is added, and needs a prov. The merged spec replaces the file that
-already seeds the MPN, and must pass param.Validate like any publication. An MPN the corpus does not
-seed yet is published from the reference alone.
+package, else by name. A joined pin adds the reference's alternates to its own, skipping any name it
+already lists, so two partial tables for one part both land and merging a table twice changes
+nothing. With --replace it takes the reference's alternates in place of its own, which is how a
+revised table removes a function the revision removed. A joined pin's name, prov and id stay as
+published. A reference pin that joins nothing is added, and needs a prov. The merged spec replaces
+the file that already seeds the MPN, and must pass param.Validate like any publication. An MPN the
+corpus does not seed yet is published from the reference alone.
 
-  agnids merge-mux kw47.pin_mux.yaml --corpus params/`,
+  agnids merge-mux kw47.pin_mux.yaml --corpus params/
+  agnids merge-mux kw47-rev-b.pin_mux.yaml --corpus params/ --replace`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			if err := requireDir("--corpus", dir); err != nil {
@@ -92,7 +97,7 @@ seed yet is published from the reference alone.
 				return err
 			}
 			p, err := writePromoted(dir, func(fsys fs.FS, prev *corpus.Index) (*corpus.Promoted, error) {
-				return corpus.MergeMux(mux, fsys, prev)
+				return corpus.MergeMux(mux, param.PinMuxMerge{Replace: replace}, fsys, prev)
 			})
 			if err != nil {
 				return err
@@ -106,6 +111,7 @@ seed yet is published from the reference alone.
 		},
 	}
 	c.Flags().StringVar(&dir, "corpus", "", "the corpus directory holding the published specs (required)")
+	c.Flags().BoolVar(&replace, "replace", false, "replace a joined pin's alternates rather than adding to them, for a revised table")
 	return c
 }
 

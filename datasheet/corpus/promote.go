@@ -8,9 +8,11 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/encoding/protojson"
+	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/core/param"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/internal/yamlpb"
 )
 
 // Promotion turns a workbench DRAFT into a seeded corpus file (agni issues 747, 749).
@@ -90,16 +92,35 @@ func PromoteSpec(spec *parampb.PartSpec, corpus fs.FS, prev *Index) (*Promoted, 
 	return promoted(spec, file, seeded, ix, prev)
 }
 
-// MergeMux merges a pin-mux reference (param.LoadPinMux's YAML) into the spec the corpus publishes for
-// its MPN and returns what to write, as Promote does (agni issue 1200). The merged spec replaces the
-// file that already seeds the MPN, whatever it is named, so a corpus keeps one file per MPN; an MPN the
-// corpus does not seed yet gets SpecFileName's file, and the reference must then be a complete spec on
-// its own. The merge rules are param.MergePinMux's.
+// LoadPinMux reads a pin-mux reference from YAML, a PartSpec holding only pins and the docs and
+// packages they name (agni issue 1200). A host usually writes one from the spreadsheet its team keeps,
+// so the format is the contract: keys are PartSpec's proto field names and nothing else, an unknown
+// key fails with its line, and param.CheckPinMux's refusals apply.
+func LoadPinMux(b []byte) (*parampb.PartSpec, error) {
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return nil, fmt.Errorf("pin mux: invalid YAML: %w", err)
+	}
+	mux := &parampb.PartSpec{}
+	if err := yamlpb.Decode(&doc, mux); err != nil {
+		return nil, fmt.Errorf("pin mux: %w", err)
+	}
+	if err := param.CheckPinMux(mux); err != nil {
+		return nil, err
+	}
+	return mux, nil
+}
+
+// MergeMux merges a pin-mux reference (LoadPinMux's YAML) into the spec the corpus publishes for its
+// MPN and returns what to write, as Promote does. The merged spec replaces the file that already seeds
+// the MPN, whatever it is named, so a corpus keeps one file per MPN; an MPN the corpus does not seed
+// yet gets SpecFileName's file, and the reference must then be a complete spec on its own. The merge
+// rules, and what opts changes, are param.MergePinMux's.
 //
-// It refuses, with a *PromoteError, a reference that does not parse, a merge MergePinMux refuses, a
+// It refuses, with a *PromoteError, a reference that does not load, a merge MergePinMux refuses, a
 // corpus that does not load as it stands, and a merged spec Validate rejects (every problem listed).
-func MergeMux(mux []byte, corpus fs.FS, prev *Index) (*Promoted, error) {
-	ref, err := param.LoadPinMux(mux)
+func MergeMux(mux []byte, opts param.PinMuxMerge, corpus fs.FS, prev *Index) (*Promoted, error) {
+	ref, err := LoadPinMux(mux)
 	if err != nil {
 		return nil, &PromoteError{Reason: err.Error()}
 	}
@@ -120,7 +141,7 @@ func MergeMux(mux []byte, corpus fs.FS, prev *Index) (*Promoted, error) {
 			return nil, fmt.Errorf("%s: %w", file, err)
 		}
 	}
-	spec, err := param.MergePinMux(base, ref)
+	spec, err := param.MergePinMux(base, ref, opts)
 	if err != nil {
 		return nil, &PromoteError{Reason: err.Error()}
 	}

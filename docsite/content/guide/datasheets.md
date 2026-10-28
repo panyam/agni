@@ -104,8 +104,11 @@ corpus publishes for that part, so the corpus keeps one file per MPN and nobody 
 table into the spec by hand.
 
 The table is written as a part spec in YAML holding only pins, with the same field names a published
-spec uses. A pin lists every function its mux table gives it under `alternates`, and names its
-designators when the table prints them:
+spec uses. Agni reads no spreadsheet itself, so a team usually generates this file from the one it
+keeps, and the format below is the contract that converter writes to. A key that is not a field name
+fails with its line, so a converter's mistake surfaces on the first merge. A pin lists every
+function its mux table gives it under `alternates`, and names its designators when the table prints
+them:
 
 ```yaml
 mpn: KW47
@@ -122,9 +125,18 @@ agnids merge-mux kw47.pin_mux.yaml --corpus params/
 ```
 
 Each pin in the table joins the published pin it describes by `id`, else by a designator the two
-share in a package, else by name. A joined pin takes the table's alternates in place of its own, so
-merging a revised table again drops any function the revision dropped. Its name, provenance and id
-stay as published, because the spec's parameters point at the id. A table pin that joins nothing is
+share in a package, else by name. A joined pin adds the table's alternates to the ones it already
+lists, skipping a name it has, so a part whose functions are split across two tables can be merged
+from each in turn, and merging the same table twice changes nothing. Adding never removes anything,
+though, so when a revised table drops a function, merge the revision with `--replace`, which takes
+the table's alternates in place of the pin's own:
+
+```
+agnids merge-mux kw47-rev-b.pin_mux.yaml --corpus params/ --replace
+```
+
+A joined pin's name, provenance and id stay as published, because the spec's parameters point at the
+id. A table pin that joins nothing is
 added, and then needs its own `prov` and the `docs` entry it cites, as any published pin does.
 
 The merge is refused when it cannot tell which pin a row means, as with a name such as `NC` that the

@@ -186,6 +186,48 @@ func TestMergeMuxRewritesThePublishedSpec(t *testing.T) {
 	}
 }
 
+// A second table adds to what the first merged, and --replace takes a revision's alternates instead.
+func TestMergeMuxJoinsUnlessToldToReplace(t *testing.T) {
+	dir, mux := muxCorpus(t)
+	if _, err := runAgnids(t, "merge-mux", mux, "--corpus", dir); err != nil {
+		t.Fatal(err)
+	}
+	revised := filepath.Join(t.TempDir(), "kw47-rev-b.pin_mux.yaml")
+	if err := os.WriteFile(revised, []byte("mpn: KW47\npins: [{name: PTB3, numbers: [{package_ref: 48qfn, number: '1'}], alternates: [{name: PTB3}, {name: NEW_IN_REV_B}]}]\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	ptb3 := func() []string {
+		t.Helper()
+		set, err := param.LoadSet(os.DirFS(dir))
+		if err != nil {
+			t.Fatal(err)
+		}
+		for _, p := range set.Lookup("KW47").GetPins() {
+			if p.Id == "ptb3" {
+				var out []string
+				for _, a := range p.Alternates {
+					out = append(out, a.Name)
+				}
+				return out
+			}
+		}
+		t.Fatal("no ptb3")
+		return nil
+	}
+	if _, err := runAgnids(t, "merge-mux", revised, "--corpus", dir); err != nil {
+		t.Fatal(err)
+	}
+	if got := ptb3(); len(got) != 8 || got[0] != "ADC0_B13" || got[7] != "NEW_IN_REV_B" {
+		t.Errorf("a second table joins the first, PTB3 once: %v", got)
+	}
+	if _, err := runAgnids(t, "merge-mux", revised, "--corpus", dir, "--replace"); err != nil {
+		t.Fatal(err)
+	}
+	if got := strings.Join(ptb3(), ","); got != "PTB3,NEW_IN_REV_B" {
+		t.Errorf("--replace takes the revision's alternates alone, got %s", got)
+	}
+}
+
 // An MPN the corpus does not seed is published from the reference alone, under SpecFileName.
 func TestMergeMuxPublishesAnUnseededPart(t *testing.T) {
 	dir := filepath.Join(t.TempDir(), "params")

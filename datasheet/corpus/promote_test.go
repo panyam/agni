@@ -133,3 +133,23 @@ func TestSpecFileNameKeepsAnMPNToOneFile(t *testing.T) {
 		}
 	}
 }
+
+// A pin-mux reference is a file a host writes from its own spreadsheet, so its format refuses what
+// yamlpb refuses everywhere else, with the line, and what param.CheckPinMux refuses.
+func TestLoadPinMuxRefusals(t *testing.T) {
+	for _, tc := range []struct {
+		name, y, want string
+	}{
+		{"an unknown key, with its line", "mpn: KW47\npins:\n  - id: ptb3\n    function_name: PTB3\n", "line 4"},
+		{"the camelCase spelling", "mpn: KW47\npins:\n  - id: ptb3\n    numbers: [{packageRef: x, number: '1'}]\n    alternates: [{name: PTB3}]\n", "packageRef"},
+		{"not YAML", "mpn: [KW47\n", "invalid YAML"},
+		{"a pin with no alternates", "mpn: KW47\npins: [{id: ptb3}]\n", `pin "ptb3" lists no alternates`},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			_, err := LoadPinMux([]byte(tc.y))
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Errorf("want an error containing %q, got %v", tc.want, err)
+			}
+		})
+	}
+}

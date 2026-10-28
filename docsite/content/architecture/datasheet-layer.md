@@ -481,7 +481,8 @@ and an allocation is never written into a spec. `io-map-function` is the one pla
 A mux table that arrives as its own file, rather than through derivation, is merged into the
 published spec by `agnids merge-mux` (agni issue 1200). The file is a PartSpec in YAML holding only
 pins, bound through `internal/yamlpb`, so the mux table has no message of its own. It joins pins the
-way derivation joins a mux row (`param.MergePinMux`), and the merged spec goes through the same
+way derivation joins a mux row (`param.MergePinMux`), adds to a joined pin's alternates unless told to
+replace them, and the merged spec goes through the same
 validate, write and index step as a published draft. The merge happens before the corpus sees the
 file, so `LoadSet`, the corpus index and `PartSpecService` still read one file per MPN and none of
 them joins two. A joined pin keeps the provenance of the table that defined it, since a `PinAlternate`

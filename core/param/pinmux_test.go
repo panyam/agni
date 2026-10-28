@@ -7,8 +7,10 @@ import (
 
 	"google.golang.org/protobuf/encoding/prototext"
 	"google.golang.org/protobuf/proto"
+	"gopkg.in/yaml.v3"
 
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
+	"github.com/panyam/agni/internal/yamlpb"
 )
 
 // A published spec as a pin function table leaves it: three pins with designators, one with stale
@@ -41,10 +43,16 @@ func muxBaseSpec(t *testing.T) *parampb.PartSpec {
 	return spec
 }
 
+// mustLoadPinMux reads a reference from YAML as the datasheet service does, without CheckPinMux, so a
+// test can hand MergePinMux a reference it must refuse.
 func mustLoadPinMux(t *testing.T, y string) *parampb.PartSpec {
 	t.Helper()
-	mux, err := LoadPinMux([]byte(y))
-	if err != nil {
+	var doc yaml.Node
+	if err := yaml.Unmarshal([]byte(y), &doc); err != nil {
+		t.Fatal(err)
+	}
+	mux := &parampb.PartSpec{}
+	if err := yamlpb.Decode(&doc, mux); err != nil {
 		t.Fatal(err)
 	}
 	return mux
@@ -82,7 +90,7 @@ pins:
   - name: ptc_1
     alternates: [{name: PTC1}, {name: TPM0_CH1}]
 `)
-	got, err := MergePinMux(base, mux)
+	got, err := MergePinMux(base, mux, PinMuxMerge{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -91,7 +99,7 @@ pins:
 	}
 	for id, want := range map[string][]string{
 		"ptb3": {"PTB3", "LPUART1_RX"},
-		"ptb4": {"PTB4", "LPI2C1_SDA"},
+		"ptb4": {"OLD_FN", "PTB4", "LPI2C1_SDA"},
 		"ptc1": {"PTC1", "TPM0_CH1"},
 	} {
 		if got := altNames(pinByID(got, id)); !slices.Equal(got, want) {
@@ -126,7 +134,7 @@ pins:
     alternates: [{name: PTD0}, {name: LPSPI0_SCK}]
     prov: {doc_ref: rm, page: 101, method: hand, confidence: 1}
 `)
-	got, err := MergePinMux(muxBaseSpec(t), mux)
+	got, err := MergePinMux(muxBaseSpec(t), mux, PinMuxMerge{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -144,7 +152,7 @@ mpn: KW47
 pins:
   - {id: ptd0, name: PTD0, alternates: [{name: PTD0}]}
 `)
-	got, err := MergePinMux(muxBaseSpec(t), mux)
+	got, err := MergePinMux(muxBaseSpec(t), mux, PinMuxMerge{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -153,32 +161,48 @@ pins:
 	}
 }
 
-func TestMergePinMuxTwiceReplacesRatherThanAccumulates(t *testing.T) {
+func TestMergePinMuxJoinsAlternatesUnlessToldToReplace(t *testing.T) {
 	first := mustLoadPinMux(t, `
 mpn: KW47
-pins: [{id: ptb3, alternates: [{name: PTB3}, {name: DROPPED_IN_REV_B}]}]
+pins: [{id: ptb4, alternates: [{name: PTB4}, {name: DROPPED_IN_REV_B}]}]
 `)
 	revised := mustLoadPinMux(t, `
 mpn: KW47
-pins: [{id: ptb3, alternates: [{name: PTB3}, {name: LPUART1_RX}]}]
+pins: [{id: ptb4, alternates: [{name: PTB4}, {name: LPI2C1_SDA}]}]
 `)
-	once, err := MergePinMux(muxBaseSpec(t), first)
+	once, err := MergePinMux(muxBaseSpec(t), first, PinMuxMerge{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	twice, err := MergePinMux(once, revised)
+	if got := altNames(pinByID(once, "ptb4")); !slices.Equal(got, []string{"OLD_FN", "PTB4", "DROPPED_IN_REV_B"}) {
+		t.Errorf("a join keeps the published alternates first and adds the new ones in order, got %v", got)
+	}
+	joined, err := MergePinMux(once, revised, PinMuxMerge{})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if got := altNames(pinByID(twice, "ptb3")); !slices.Equal(got, []string{"PTB3", "LPUART1_RX"}) {
-		t.Errorf("a revised table must replace the pin's alternates, got %v", got)
+	if got := altNames(pinByID(joined, "ptb4")); !slices.Equal(got, []string{"OLD_FN", "PTB4", "DROPPED_IN_REV_B", "LPI2C1_SDA"}) {
+		t.Errorf("a second table joins without repeating a name, got %v", got)
 	}
-	again, err := MergePinMux(twice, revised)
+	replaced, err := MergePinMux(once, revised, PinMuxMerge{Replace: true})
 	if err != nil {
 		t.Fatal(err)
 	}
-	if !proto.Equal(again, twice) {
-		t.Errorf("merging the same table again must change nothing")
+	if got := altNames(pinByID(replaced, "ptb4")); !slices.Equal(got, []string{"PTB4", "LPI2C1_SDA"}) {
+		t.Errorf("Replace takes the revision's alternates in place of the published ones, got %v", got)
+	}
+	for _, opts := range []PinMuxMerge{{}, {Replace: true}} {
+		prev, err := MergePinMux(once, revised, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		again, err := MergePinMux(prev, revised, opts)
+		if err != nil {
+			t.Fatal(err)
+		}
+		if !proto.Equal(again, prev) {
+			t.Errorf("Replace=%v: merging the same table again must change nothing", opts.Replace)
+		}
 	}
 }
 
@@ -189,7 +213,7 @@ docs: [{id: rm, title: KW47 Reference Manual Rev. 2}]
 pins:
   - {id: ptb3, name: PTB3, alternates: [{name: PTB3}], prov: {doc_ref: rm, page: 58, method: hand, confidence: 1}}
 `)
-	got, err := MergePinMux(nil, mux)
+	got, err := MergePinMux(nil, mux, PinMuxMerge{})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -222,7 +246,7 @@ pins:
   - {name: x, numbers: [{package_ref: 48qfn, number: "1"}], alternates: [{name: PTB3}]}`, `both describe published pin "ptb3"`},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := MergePinMux(muxBaseSpec(t), mustLoadPinMux(t, tc.mux))
+			_, err := MergePinMux(muxBaseSpec(t), mustLoadPinMux(t, tc.mux), PinMuxMerge{})
 			if err == nil || !strings.Contains(err.Error(), tc.want) {
 				t.Errorf("want an error containing %q, got %v", tc.want, err)
 			}
@@ -230,21 +254,21 @@ pins:
 	}
 }
 
-func TestLoadPinMuxRefusals(t *testing.T) {
+func TestMergePinMuxRefusesAnUnmergeableReference(t *testing.T) {
 	for _, tc := range []struct {
 		name, y, want string
 	}{
-		{"an unknown key, with its line", "mpn: KW47\npins:\n  - id: ptb3\n    function_name: PTB3\n", "line 4"},
-		{"the camelCase spelling", "mpn: KW47\npins:\n  - id: ptb3\n    packageRef: x\n    alternates: [{name: PTB3}]\n", "packageRef"},
 		{"no mpn", "pins: [{id: ptb3, alternates: [{name: PTB3}]}]\n", "no mpn"},
 		{"no pins", "mpn: KW47\n", "lists no pins"},
 		{"a pin with no alternates", "mpn: KW47\npins: [{id: ptb3}]\n", `pin "ptb3" lists no alternates`},
 		{"limits", "mpn: KW47\nparameters: [{name: VDD}]\npins: [{id: ptb3, alternates: [{name: PTB3}]}]\n", "parameters or relations"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
-			_, err := LoadPinMux([]byte(tc.y))
-			if err == nil || !strings.Contains(err.Error(), tc.want) {
-				t.Errorf("want an error containing %q, got %v", tc.want, err)
+			for _, base := range []*parampb.PartSpec{nil, muxBaseSpec(t)} {
+				_, err := MergePinMux(base, mustLoadPinMux(t, tc.y), PinMuxMerge{})
+				if err == nil || !strings.Contains(err.Error(), tc.want) {
+					t.Errorf("base %v: want an error containing %q, got %v", base != nil, tc.want, err)
+				}
 			}
 		})
 	}

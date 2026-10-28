@@ -5,58 +5,47 @@ import (
 	"strings"
 
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/core/ident"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/internal/yamlpb"
 )
 
-// A pin-mux reference is a part's mux table kept as a file of its own, the shape a board team already
-// holds when the table came out of a reference manual rather than a datasheet agni derived (agni issue
-// 1200). It is a PartSpec written in YAML holding only pins, the docs they cite and the packages their
-// numbers name, so the mux table has no schema beside the one the corpus reads:
-//
-//	mpn: KW47
-//	docs: [{id: kw47-rm, title: KW47 Reference Manual Rev. 2}]
-//	packages: [{id: 48qfn, name: 48QFN}]
-//	pins:
-//	  - id: ptb3
-//	    name: PTB3
-//	    numbers: [{package_ref: 48qfn, number: "1"}]
-//	    alternates: [{name: PTB3}, {name: LPUART1_RX}]
-//	    prov: {doc_ref: kw47-rm, page: 58, method: hand, confidence: 1}
-//
-// It is merged into the MPN's published spec before the corpus sees it, so a corpus keeps one file per
-// MPN and nothing that reads a corpus has to join two.
+// A pin-mux reference is a part's mux table kept as a file of its own, which a board team usually
+// produces from a spreadsheet transcribed out of the reference manual (agni issue 1200). It is a
+// PartSpec holding only pins, the docs they cite and the packages their numbers name, so the mux table
+// has no schema beside the one the corpus reads. The datasheet service reads one from YAML and merges
+// it into the MPN's published spec before the corpus sees it, so a corpus keeps one file per MPN and
+// nothing that reads a corpus has to join two.
 
-// LoadPinMux parses a pin-mux reference from YAML. Keys are PartSpec's proto field names, and an
-// unknown key fails with its line. A reference carrying parameters or relations is refused, because
-// those belong to the published spec and a merge that took them would let a mux file override limits.
-func LoadPinMux(b []byte) (*parampb.PartSpec, error) {
-	var doc yaml.Node
-	if err := yaml.Unmarshal(b, &doc); err != nil {
-		return nil, fmt.Errorf("pin mux: invalid YAML: %w", err)
-	}
-	mux := &parampb.PartSpec{}
-	if err := yamlpb.Decode(&doc, mux); err != nil {
-		return nil, fmt.Errorf("pin mux: %w", err)
-	}
+// CheckPinMux refuses a reference that cannot be merged: one naming no MPN or no pins, one carrying
+// parameters or relations, since limits belong in the published spec and a merge that took them would
+// let a mux file override them, and a pin listing no alternates.
+func CheckPinMux(mux *parampb.PartSpec) error {
 	if mux.Mpn == "" {
-		return nil, fmt.Errorf("pin mux: no mpn, so it names no part to merge into")
+		return fmt.Errorf("pin mux: no mpn, so it names no part to merge into")
 	}
 	if len(mux.Parameters) > 0 || len(mux.Relations) > 0 {
-		return nil, fmt.Errorf("pin mux for %q carries parameters or relations; a mux reference holds pins, and limits belong in the published spec", mux.Mpn)
+		return fmt.Errorf("pin mux for %q carries parameters or relations; a mux reference holds pins, and limits belong in the published spec", mux.Mpn)
 	}
 	if len(mux.Pins) == 0 {
-		return nil, fmt.Errorf("pin mux for %q lists no pins", mux.Mpn)
+		return fmt.Errorf("pin mux for %q lists no pins", mux.Mpn)
 	}
 	for i, p := range mux.Pins {
 		if len(p.Alternates) == 0 {
-			return nil, fmt.Errorf("pin mux for %q: %s lists no alternates, which would erase the functions a merge is meant to supply", mux.Mpn, pinLabel(p, i))
+			return fmt.Errorf("pin mux for %q: %s lists no alternates, which would leave the pin with nothing to check against", mux.Mpn, pinLabel(p, i))
 		}
 	}
-	return mux, nil
+	return nil
+}
+
+// PinMuxMerge says what a merge does with the alternates a matched pin already lists.
+type PinMuxMerge struct {
+	// Replace drops a matched pin's alternates and takes the reference's in their place, for a
+	// revised table that should remove what the revision removed. Without it the two lists are joined,
+	// the published ones first and then the reference's new ones in its order, an exact repeat of a
+	// name dropped, so two partial tables for one part both land and merging a table twice changes
+	// nothing.
+	Replace bool
 }
 
 // MergePinMux returns base with mux's pins merged in, leaving both arguments unchanged. A nil base
@@ -64,16 +53,19 @@ func LoadPinMux(b []byte) (*parampb.PartSpec, error) {
 //
 // Each reference pin finds the base pin it describes the way derive joins a mux row to a pin table:
 // by id, else by a designator they share in a package, else, for a reference pin with no designators,
-// by its name compared through ident.PinName. A matched pin takes the reference's alternates in place
-// of its own, so merging a revised table drops functions the revision dropped, and gains any
-// designator it lacked; its name, function, prov and id stay as published, since parameters point at
-// the id. A reference pin matching nothing is added after the base's pins. Docs and packages join by
-// id.
+// by its name compared through ident.PinName. A matched pin gains the reference's alternates, joined
+// with its own or in their place as opts says, and any designator it lacked; its name, function, prov
+// and id stay as published, since parameters point at the id. A reference pin matching nothing is
+// added after the base's pins. Docs and packages join by id.
 //
-// It refuses an MPN that differs from base's, a doc or package whose id the base already uses for
-// different content, a reference pin matching several base pins (a repeated name such as NC), and two
-// reference pins matching one base pin. The result is not validated here; publishing does that.
-func MergePinMux(base, mux *parampb.PartSpec) (*parampb.PartSpec, error) {
+// It refuses a reference CheckPinMux refuses, an MPN that differs from base's, a doc or package whose
+// id the base already uses for different content, a reference pin matching several base pins (a
+// repeated name such as NC), and two reference pins matching one base pin. The result is not
+// validated here; publishing does that.
+func MergePinMux(base, mux *parampb.PartSpec, opts PinMuxMerge) (*parampb.PartSpec, error) {
+	if err := CheckPinMux(mux); err != nil {
+		return nil, err
+	}
 	if base == nil {
 		return proto.Clone(mux).(*parampb.PartSpec), nil
 	}
@@ -106,9 +98,18 @@ func MergePinMux(base, mux *parampb.PartSpec) (*parampb.PartSpec, error) {
 			return nil, fmt.Errorf("pin mux: %s and %s both describe published pin %q", prev, pinLabel(m, i), target.Id)
 		}
 		claimed[target] = pinLabel(m, i)
-		target.Alternates = nil
+		if opts.Replace {
+			target.Alternates = nil
+		}
+		have := map[string]bool{}
+		for _, a := range target.Alternates {
+			have[a.Name] = true
+		}
 		for _, a := range m.Alternates {
-			target.Alternates = append(target.Alternates, proto.Clone(a).(*parampb.PinAlternate))
+			if !have[a.Name] {
+				have[a.Name] = true
+				target.Alternates = append(target.Alternates, proto.Clone(a).(*parampb.PinAlternate))
+			}
 		}
 		for _, n := range m.Numbers {
 			if !hasNumber(target, n) {
