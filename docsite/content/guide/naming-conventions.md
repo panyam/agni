@@ -116,7 +116,9 @@ by asking a different question.
 The `rules` block above checks names against your policy. The `lexicon` block is the other half and
 tells the engine what a name *means*, so the built-in rules reason about your board in your words.
 
-A net can carry several roles at once, and six of them are configurable:
+A net can carry several roles at once, and six of them are configurable. A seventh net vocabulary
+names the I2C bus lines the pull-up rules judge, and the pin vocabularies name supply pins, transistor
+terminals and a package's exposed pad:
 
 ```yaml
 lexicon:
@@ -127,17 +129,36 @@ lexicon:
     switching: { patterns: ["_HSD$"] }
     control:   { patterns: ["_SHDN$"] }
     gate_drive: { patterns: ["_VBOOST$"] }
+    i2c:       { exclude: ["^DDC_"] }        # SDA/SCL by default, I2S lines excluded
+    infer_rail_from_supply_pins: false       # on unless a convention turns it off
   pin:
     supply: { patterns: ["^PWR_"] }
     gate:   { patterns: ["^DRV$"] }
     source: { patterns: ["^SRC_"] }
     drain:  { patterns: ["^DRN_"] }
+    exposed_pad: { patterns: ["^GND_PAD$"] }
 ```
 
 Patterns are RE2, matched case-insensitively against the **leaf** of a hierarchical name, so
 `/DCDC/12V_SW` is tested as `12V_SW`. They are ADDED to the built-in set unless you say
 `replace: true`, which makes yours the whole vocabulary. `replace: true` with no patterns is how you
-turn a built-in role off entirely.
+turn a built-in role off entirely. `exclude` takes a name back out even when a pattern matches it,
+since RE2 cannot say "SDA, but not `I2S0_RX_SDA`" in one pattern. Exclusions are added and replaced
+the same way patterns are.
+
+Every role a net carries records why. A role from a pattern names the pattern, and `agni query` shows
+it on the net, so a rail you did not expect can be traced to the line that made it one.
+
+### Rails inferred from the pins they feed
+
+A rail named after its consumer, such as `LPC_VCC` or `FAN_VDD`, does not start with a supply word,
+so the `rail` patterns miss it. With `infer_rail_from_supply_pins` on, which is the default, a net is
+also a rail when a later token of its name matches the `supply` pin vocabulary AND the net feeds a
+`power_in` pin of a fitted part that is not a connector. The role's reason names that pin. Both halves
+are needed. `EN_VCC` feeds no supply pin and stays a signal, a USB receptacle's own VBUS pin marks
+where a cable delivers power rather than a load, and a supply pin left unwired on its own stub is no
+rail at all. Voltage-named rails such as `CSIA_3V3` are not inferred, which is why
+`rail-not-classified` still reports them and the section below is still how you declare them.
 
 ### The four roles that mean "named after a rail, but not a rail"
 
@@ -167,18 +188,19 @@ A part's class comes from two signals: its ref-des prefix (`R`, `TP`, `RT`) and 
 part name and attributes (`ferrite`, `tvs`, `crystal`). The `class` block extends both, keyed by the
 class it teaches.
 
-A third signal is built in and not extended here. A part whose part number belongs to a common ESD or
-TVS family (`TPD4E05U06`, `PESD5Z5.0F`, `ESDA25P35`, `USBLC6`, `SMAJ`, and their neighbours) is a `tvs`
-whether it sits under a diode, an IC or an unknown symbol, because an ESD array is often drawn as a
-`U` part and a TVS diode often carries nothing but its part number. The bare words `tvs` and `esd`
-only refine a diode, since an IC whose description mentions ESD protection is still an IC.
+A third signal is the part-number family. A part whose part number belongs to a common ESD or TVS
+family (`TPD4E05U06`, `PESD5Z5.0F`, `ESDA25P35`, `USBLC6`, `VBUS54CV`, `SMAJ`, and their neighbours)
+is a `tvs` whether it sits under a diode, an IC or an unknown symbol, because an ESD array is often
+drawn as a `U` part and a TVS diode often carries nothing but its part number. The bare words `tvs`
+and `esd` only refine a diode, since an IC whose description mentions ESD protection is still an IC.
+`families` adds to the built-in list, and `replace: true` replaces it along with the patterns.
 
 ```yaml
 lexicon:
   class:
     thermistor: { prefixes: ["TH"] }         # your house writes TH12, not RT12
     zener:      { prefixes: ["Z"] }
-    tvs:        { patterns: ["^acmeesd"] }   # a house part-number family the built-in list lacks
+    tvs:        { families: ["^acmeesd"] }   # a house part-number family the built-in list lacks
 ```
 
 A board that plugs into another one has connectors facing nothing a user touches, and those are not a

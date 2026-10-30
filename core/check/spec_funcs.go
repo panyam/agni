@@ -90,6 +90,22 @@ func registerBuiltinSpecFuncs() {
 			return m.IsPowerRailName(args[0].(string))
 		},
 	})
+	RegisterSpecFunc("rail_net", &SpecFunc{
+		// The net's stamped rail role less the four named-after-a-rail roles (Model.IsRailNet), so an
+		// inferred rail counts where a name test would miss it (agni 1243).
+		Reads:      []string{"net.names"},
+		Primitives: []string{"pattern"},
+		Fn: func(m Model, ents map[string]any, _ []any) any {
+			return m.IsRailNet(ents["net"].(*ir.Net))
+		},
+	})
+	RegisterSpecFunc("i2c_name", &SpecFunc{
+		Reads:      []string{"net.names"},
+		Primitives: []string{"pattern"},
+		Fn: func(m Model, _ map[string]any, args []any) any {
+			return m.IsI2CName(args[0].(string))
+		},
+	})
 	RegisterSpecFunc("feedback_name", &SpecFunc{
 		Reads:      []string{"net.names"},
 		Primitives: []string{"pattern"},

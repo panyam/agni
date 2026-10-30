@@ -1,8 +1,6 @@
 package builtin
 
 import (
-	"regexp"
-
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/netgraph"
@@ -11,9 +9,6 @@ import (
 // Vendor symbols type pins power_in that take no supply, and the supply rules read the type (agni
 // issue 935). The two shapes here are recognised by structure, never by the symbol alone, so a pin
 // that really is a supply input still fails.
-
-// exposedPadName matches the names vendors give a package's exposed thermal pad.
-var exposedPadName = regexp.MustCompile(`(?i)^(ep|epad|exp|pad|exposed_?pad|thermal_?pad)$`)
 
 // floatingExposedPad reports why a net is a lone exposed pad rather than a supply, and "" when it is
 // not one. KiCad names an unwired pin's net `unconnected-(U29-PadEP)`, and many parts' datasheets let
@@ -33,7 +28,7 @@ func floatingExposedPad(m check.Model, n *ir.Net) string {
 	if only == nil || check.ConnDir(m, only) != ir.PinDirection_PIN_DIRECTION_POWER_IN {
 		return ""
 	}
-	if !exposedPadName.MatchString(m.PinName(only.GetComponentRef(), only.GetPinRef())) {
+	if !m.IsExposedPadName(m.PinName(only.GetComponentRef(), only.GetPinRef())) {
 		return ""
 	}
 	return "the net is " + only.GetComponentRef() + "'s exposed pad, left unconnected, so it is not a supply rail"

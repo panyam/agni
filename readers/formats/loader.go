@@ -243,14 +243,15 @@ func DeriveDesign(d *ir.Design, lex *classify.Lexicon, deviceClassFor func(mpn s
 	// Device classes (WS3-071), against the read's lexicon (WS3-106), so the vocabulary arrives with
 	// the read and there is no install-before-read ordering to get wrong.
 	lex.Stamp(d)
+	// POWER_IN on supply pins a reader left under-typed (WS3-072 PR2); see Lexicon.StampPowerInPins.
+	// BEFORE the roles, since a rail inferred from the supply pins it feeds reads the filled types.
+	lex.StampPowerInPins(d)
 	// Each net's role SET from the same lexicon (WS3-072); see Lexicon.StampNetRoles.
 	lex.StampNetRoles(d)
 	// Component values into comparable Quantities (WS3-118). AFTER Stamp, because the bare-number
 	// unit is keyed on the device class, so a bare "100" means ohms only once the component is known
 	// to be a resistor.
 	lex.StampValues(d)
-	// POWER_IN on supply pins a reader left under-typed (WS3-072 PR2); see Lexicon.StampPowerInPins.
-	lex.StampPowerInPins(d)
 	// The classes only a DATASHEET can establish (agni issue 710, C9's evidence-tier variant). LAST
 	// of the class passes, for the two orderings in ReadDesign's comment. A read with no corpus skips
 	// it and is unchanged by it.

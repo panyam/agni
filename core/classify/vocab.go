@@ -22,6 +22,20 @@ import (
 type ClassVocab struct {
 	patterns map[ComponentClass][]*regexp.Regexp
 	prefixes map[string]ComponentClass
+	// families are part-number families that decide a class even on a part read as an IC.
+	families map[ComponentClass][]*regexp.Regexp
+}
+
+// builtinFamilies are the part-number families that are ESD or transient-voltage suppressors whatever
+// their ref-des says. Vendors sell TVS arrays as ICs (TI's TPD4E05U06 and TPD2E2U06, Nexperia's PESD
+// and PRTR, ST's ESDA and USBLC, Semtech's RClamp, Vishay's VBUS54) and label them U, so neither the
+// ref-des prefix nor a "tvs" word reaches them (agni 934, 1257). A family matches at the START of a
+// token of the part's text, which includes its MPN property.
+//
+// Only a family match promotes an IC. The bare words "tvs" and "esd" keep refining a diode alone,
+// because an IC's free-text description mentioning "ESD protection" says nothing about what it is.
+var builtinFamilies = map[ComponentClass][]string{
+	ClassTVS: {`^tpd\d+e`, `^pesd`, `^esda`, `^esd\d`, `^usblc`, `^rclamp`, `^prtr`, `^sp05`, `^sm712`, `^smaj`, `^smbj`, `^smcj`, `^p6ke`, `^ptvs`, `^vbus54`},
 }
 
 // DefaultClassVocab is the built-in classification lexicon, the tokenClasses map inverted to class ->
@@ -31,7 +45,10 @@ func DefaultClassVocab() *ClassVocab {
 	for tok, cl := range tokenClasses {
 		byClass[cl] = append(byClass[cl], "^"+regexp.QuoteMeta(tok)+"$")
 	}
-	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}, prefixes: map[string]ComponentClass{}}
+	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}, prefixes: map[string]ComponentClass{}, families: map[ComponentClass][]*regexp.Regexp{}}
+	for cl, fams := range builtinFamilies {
+		v.families[cl] = compileClassPatterns(fams)
+	}
 	for p, cl := range prefixClasses {
 		v.prefixes[p] = cl
 	}
@@ -48,6 +65,24 @@ func compileClassPatterns(pats []string) []*regexp.Regexp {
 		out[i] = regexp.MustCompile("(?i)" + p)
 	}
 	return out
+}
+
+// FamilyClass returns the class whose part-number family matches one of the tokens, or "" when none
+// does. Classes are tried in name order, so the answer does not depend on map order.
+func (v *ClassVocab) FamilyClass(tokens []string) ComponentClass {
+	classes := make([]ComponentClass, 0, len(v.families))
+	for cl := range v.families {
+		classes = append(classes, cl)
+	}
+	sort.Slice(classes, func(i, j int) bool { return classes[i] < classes[j] })
+	for _, cl := range classes {
+		for _, tok := range tokens {
+			if matchesAny(tok, v.families[cl]) {
+				return cl
+			}
+		}
+	}
+	return ""
 }
 
 // HintsFor returns the set of classes whose patterns match any of the tokens (the classification hint set).
@@ -186,9 +221,12 @@ func ActiveClassVocab() *ClassVocab { return activeClassVocab }
 // refused a class name the engine does not know (ParseComponentClass).
 func BuildClassVocab(overrides map[ComponentClass]*configpb.ClassVocab) (*ClassVocab, error) {
 	def := DefaultClassVocab()
-	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}, prefixes: def.prefixes}
+	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}, prefixes: def.prefixes, families: map[ComponentClass][]*regexp.Regexp{}}
 	for cl, pats := range def.patterns {
 		v.patterns[cl] = append([]*regexp.Regexp{}, pats...)
+	}
+	for cl, fams := range def.families {
+		v.families[cl] = append([]*regexp.Regexp{}, fams...)
 	}
 	// Sorted so which of two colliding classes an error names does not depend on map order.
 	classes := make([]ComponentClass, 0, len(overrides))
@@ -211,6 +249,18 @@ func BuildClassVocab(overrides map[ComponentClass]*configpb.ClassVocab) (*ClassV
 			base = append(base, re)
 		}
 		v.patterns[cl] = base
+		var fams []*regexp.Regexp
+		if !o.GetReplace() {
+			fams = v.families[cl]
+		}
+		for _, p := range o.GetFamilies() {
+			re, err := regexp.Compile("(?i)" + p)
+			if err != nil {
+				return nil, fmt.Errorf("class %q family %q: %w", cl, p, err)
+			}
+			fams = append(fams, re)
+		}
+		v.families[cl] = fams
 		for _, raw := range o.GetPrefixes() {
 			p := strings.ToUpper(raw)
 			if !isLetters(p) {

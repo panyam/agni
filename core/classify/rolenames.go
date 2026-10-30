@@ -5,6 +5,8 @@ import (
 	"regexp"
 	"strings"
 
+	"google.golang.org/protobuf/proto"
+
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -85,13 +87,38 @@ type RoleVocab struct {
 
 	// The compiled form, derived from the patterns above at construction and never written again, so
 	// it cannot go stale against them. Replace a vocabulary by building a new one, never by reaching in.
-	rail, ground, feedback, switching, control, gateDrive, supplyPin []*regexp.Regexp
+	rail, ground, feedback, switching, control, gateDrive, i2c, supplyPin, exposedPad vocab
 	// Transistor TERMINAL pin names (WS3-117), each its own vocabulary because a house can spell them
 	// independently. Consumed ONLY where the component's class is a transistor (see classifyPinRole),
 	// because bare "S" and "D" mean something on almost every part and an ungated match would mis-role
 	// most of a design. A wrong role is worse than a missing one, since a topology rule then walks a
 	// path that does not exist.
-	gate, source, drain []*regexp.Regexp
+	gate, source, drain vocab
+	// inferRail is NetNameVocab.infer_rail_from_supply_pins, resolved (absent reads as on).
+	inferRail bool
+}
+
+// vocab is one compiled vocabulary: a name is in it when a pattern matches and no exclusion does.
+// Each pattern keeps the text it was written as, so a role can say which pattern gave it.
+type vocab struct {
+	pats, excl []*regexp.Regexp
+	src        []string
+}
+
+// match returns the pattern a name's hierarchy leaf matched, or "" when the name is not in v.
+func (v vocab) match(name string) string {
+	name = roleLeaf(name)
+	for _, x := range v.excl {
+		if x.MatchString(name) {
+			return ""
+		}
+	}
+	for i, p := range v.pats {
+		if p.MatchString(name) {
+			return v.src[i]
+		}
+	}
+	return ""
 }
 
 // defaultLexicon is the built-in naming policy, in the SAME schema a project's conventions section
@@ -103,7 +130,8 @@ func defaultLexicon() *configpb.NamingLexicon {
 	return &configpb.NamingLexicon{
 		Net: &configpb.NetNameVocab{
 			// rail: a "+" prefix, the supply-name prefixes, or a "12V"/"3V3"/"5V0" digits-then-V form.
-			Rail: vp(`^\+`, `^(VCC|VDD|VEE|VBUS|VIN|VOUT|VBAT|VSUP|PWR)`, `^[0-9]+V`),
+			// PWR must end its token, so PWR_3V3 is a rail and PWRGOOD or PWRCTL_POL is not (agni 1245).
+			Rail: vp(`^\+`, `^(VCC|VDD|VEE|VBUS|VIN|VOUT|VBAT|VSUP)`, `^PWR([^A-Z]|$)`, `^[0-9]+V`),
 			// ground: GND or EARTH anywhere, or a VSS prefix.
 			Ground: vp(`GND`, `EARTH`, `^VSS`),
 			// feedback: a regulator sense node named with an _FB / feedback / sense suffix.
@@ -118,6 +146,13 @@ func defaultLexicon() *configpb.NamingLexicon {
 			// gateDrive: the gate driver's own supply, named after the converter rather than its
 			// voltage ("12V_VDRV" commonly sits at 5V).
 			GateDrive: vp(`_VDRV$`, `_VDRIVE$`, `_VGATE$`),
+			// i2c: SDA or SCL as a whole token, so SPI_SCLK and MISCL are not, and an I2S data line
+			// named after its SDA pin (I2S0_RX_SDA) is excluded (agni 1255).
+			I2C: &configpb.VocabPatterns{
+				Patterns: []string{`(^|[^A-Z])(SDA|SCL)([^A-Z]|$)`},
+				Exclude:  []string{`(^|[^A-Z])I2S`},
+			},
+			InferRailFromSupplyPins: proto.Bool(true),
 		},
 		Pin: &configpb.PinNameVocab{
 			// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
@@ -128,6 +163,8 @@ func defaultLexicon() *configpb.NamingLexicon {
 			Gate:   vp(`^G$`, `^GATE$`),
 			Source: vp(`^S$`, `^SOURCE$`, `^SRC$`),
 			Drain:  vp(`^D$`, `^DRAIN$`, `^DRN$`),
+			// exposedPad: a package's exposed thermal pad, whole-name anchored (agni 935).
+			ExposedPad: vp(`^(EP|EPAD|EXP|PAD|EXPOSED_?PAD|THERMAL_?PAD)$`),
 		},
 	}
 }
@@ -149,31 +186,27 @@ func roleLeaf(name string) string {
 	return name
 }
 
-func anyRoleMatch(name string, pats []*regexp.Regexp) bool {
-	name = roleLeaf(name)
-	for _, p := range pats {
-		if p.MatchString(name) {
-			return true
-		}
-	}
-	return false
-}
-
 // IsRail through IsGateDrive classify a NET name against the vocabulary. IsSupplyPin classifies a
 // component's PIN name as a power-supply input, a stricter vocabulary (see the type doc).
-func (v *RoleVocab) IsRail(name string) bool      { return anyRoleMatch(name, v.rail) }
-func (v *RoleVocab) IsGround(name string) bool    { return anyRoleMatch(name, v.ground) }
-func (v *RoleVocab) IsFeedback(name string) bool  { return anyRoleMatch(name, v.feedback) }
-func (v *RoleVocab) IsSwitching(name string) bool { return anyRoleMatch(name, v.switching) }
-func (v *RoleVocab) IsControl(name string) bool   { return anyRoleMatch(name, v.control) }
-func (v *RoleVocab) IsGateDrive(name string) bool { return anyRoleMatch(name, v.gateDrive) }
-func (v *RoleVocab) IsSupplyPin(name string) bool { return anyRoleMatch(name, v.supplyPin) }
+func (v *RoleVocab) IsRail(name string) bool      { return v.rail.match(name) != "" }
+func (v *RoleVocab) IsGround(name string) bool    { return v.ground.match(name) != "" }
+func (v *RoleVocab) IsFeedback(name string) bool  { return v.feedback.match(name) != "" }
+func (v *RoleVocab) IsSwitching(name string) bool { return v.switching.match(name) != "" }
+func (v *RoleVocab) IsControl(name string) bool   { return v.control.match(name) != "" }
+func (v *RoleVocab) IsGateDrive(name string) bool { return v.gateDrive.match(name) != "" }
+func (v *RoleVocab) IsSupplyPin(name string) bool { return v.supplyPin.match(name) != "" }
+
+// IsI2C classifies a NET name as an I2C bus line, and IsExposedPad a PIN name as a package's exposed
+// pad. InfersRails reports whether a supply-fed net may be read as a rail by a later name token.
+func (v *RoleVocab) IsI2C(name string) bool        { return v.i2c.match(name) != "" }
+func (v *RoleVocab) IsExposedPad(name string) bool { return v.exposedPad.match(name) != "" }
+func (v *RoleVocab) InfersRails() bool             { return v.inferRail }
 
 // IsGate / IsSource / IsDrain classify a TRANSISTOR's pin name. The caller must apply the class gate,
 // because these vocabularies are short and collide on any other part (see the type doc).
-func (v *RoleVocab) IsGate(name string) bool   { return anyRoleMatch(name, v.gate) }
-func (v *RoleVocab) IsSource(name string) bool { return anyRoleMatch(name, v.source) }
-func (v *RoleVocab) IsDrain(name string) bool  { return anyRoleMatch(name, v.drain) }
+func (v *RoleVocab) IsGate(name string) bool   { return v.gate.match(name) != "" }
+func (v *RoleVocab) IsSource(name string) bool { return v.source.match(name) != "" }
+func (v *RoleVocab) IsDrain(name string) bool  { return v.drain.match(name) != "" }
 
 // activeRoleVocab is the process-level lexicon, set once at startup and read by check's Is*Name
 // helpers and by StampNetRoles. A read carrying its own conventions uses a Lexicon instead; see
@@ -205,7 +238,7 @@ func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
 	for _, d := range []struct {
 		name string
 		src  *configpb.VocabPatterns
-		dst  *[]*regexp.Regexp
+		dst  *vocab
 	}{
 		{"rail", net.GetRail(), &v.rail},
 		{"ground", net.GetGround(), &v.ground},
@@ -213,17 +246,20 @@ func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
 		{"switching", net.GetSwitching(), &v.switching},
 		{"control", net.GetControl(), &v.control},
 		{"gate_drive", net.GetGateDrive(), &v.gateDrive},
+		{"i2c", net.GetI2C(), &v.i2c},
 		{"supply_pin", pin.GetSupply(), &v.supplyPin},
+		{"exposed_pad", pin.GetExposedPad(), &v.exposedPad},
 		{"gate", pin.GetGate(), &v.gate},
 		{"source", pin.GetSource(), &v.source},
 		{"drain", pin.GetDrain(), &v.drain},
 	} {
-		out, err := compilePatterns(d.src)
+		out, err := compileVocab(d.src)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", d.name, err)
 		}
 		*d.dst = out
 	}
+	v.inferRail = net.GetInferRailFromSupplyPins()
 	return v, nil
 }
 
@@ -244,13 +280,20 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 			Switching: mergeVocab(bn.GetSwitching(), on.GetSwitching()),
 			Control:   mergeVocab(bn.GetControl(), on.GetControl()),
 			GateDrive: mergeVocab(bn.GetGateDrive(), on.GetGateDrive()),
+			I2C:       mergeVocab(bn.GetI2C(), on.GetI2C()),
+			// A project that says nothing keeps the built-in setting; one that says false turns it off.
+			InferRailFromSupplyPins: bn.InferRailFromSupplyPins,
 		},
 		Pin: &configpb.PinNameVocab{
-			Supply: mergeVocab(bp.GetSupply(), op.GetSupply()),
-			Gate:   mergeVocab(bp.GetGate(), op.GetGate()),
-			Source: mergeVocab(bp.GetSource(), op.GetSource()),
-			Drain:  mergeVocab(bp.GetDrain(), op.GetDrain()),
+			Supply:     mergeVocab(bp.GetSupply(), op.GetSupply()),
+			Gate:       mergeVocab(bp.GetGate(), op.GetGate()),
+			Source:     mergeVocab(bp.GetSource(), op.GetSource()),
+			Drain:      mergeVocab(bp.GetDrain(), op.GetDrain()),
+			ExposedPad: mergeVocab(bp.GetExposedPad(), op.GetExposedPad()),
 		},
+	}
+	if on != nil && on.InferRailFromSupplyPins != nil {
+		out.Net.InferRailFromSupplyPins = on.InferRailFromSupplyPins
 	}
 	// The class block is a project's alone; there is no built-in set to merge it against.
 	if cls := over.GetClass(); len(cls) > 0 {
@@ -263,18 +306,32 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 // set, in which case they become the whole set. Replace with no patterns yields an empty vocabulary,
 // which is how a project turns a built-in role off.
 func mergeVocab(base, over *configpb.VocabPatterns) *configpb.VocabPatterns {
-	if over == nil || (len(over.GetPatterns()) == 0 && !over.GetReplace()) {
+	if over == nil || (len(over.GetPatterns()) == 0 && len(over.GetExclude()) == 0 && !over.GetReplace()) {
 		return base
 	}
 	if over.GetReplace() {
-		return &configpb.VocabPatterns{Patterns: over.GetPatterns(), Replace: true}
+		return &configpb.VocabPatterns{Patterns: over.GetPatterns(), Exclude: over.GetExclude(), Replace: true}
 	}
-	return &configpb.VocabPatterns{Patterns: append(append([]string{}, base.GetPatterns()...), over.GetPatterns()...)}
+	return &configpb.VocabPatterns{
+		Patterns: append(append([]string{}, base.GetPatterns()...), over.GetPatterns()...),
+		Exclude:  append(append([]string{}, base.GetExclude()...), over.GetExclude()...),
+	}
 }
 
-// compilePatterns compiles one vocabulary, case-insensitively.
-func compilePatterns(v *configpb.VocabPatterns) ([]*regexp.Regexp, error) {
-	pats := v.GetPatterns()
+// compileVocab compiles one vocabulary's patterns and exclusions, case-insensitively.
+func compileVocab(v *configpb.VocabPatterns) (vocab, error) {
+	pats, err := compilePatterns(v.GetPatterns())
+	if err != nil {
+		return vocab{}, err
+	}
+	excl, err := compilePatterns(v.GetExclude())
+	if err != nil {
+		return vocab{}, fmt.Errorf("exclude: %w", err)
+	}
+	return vocab{pats: pats, excl: excl, src: v.GetPatterns()}, nil
+}
+
+func compilePatterns(pats []string) ([]*regexp.Regexp, error) {
 	if len(pats) == 0 {
 		return nil, nil
 	}
@@ -340,7 +397,11 @@ func ConventionRoles(roles ...ir.Role) []*ir.NetRole {
 // already present. Every evidence tier merges through it: the ingestion pass (names and format
 // declarations) and the params tier (a datasheet's pin functions). A declared ground whose name also
 // spells "GND" stays declared, and running a pass twice merges rather than duplicating.
-func AddNetRole(n *ir.Net, role ir.Role, src ir.RoleSource) {
+func AddNetRole(n *ir.Net, role ir.Role, src ir.RoleSource) { addNetRoleWhy(n, role, src, "") }
+
+// addNetRoleWhy is AddNetRole with the reason the role carries, which travels with the stronger
+// evidence: a role upgraded to a stronger source takes that source's reason.
+func addNetRoleWhy(n *ir.Net, role ir.Role, src ir.RoleSource, why string) {
 	if role == ir.Role_ROLE_UNSPECIFIED {
 		return
 	}
@@ -348,11 +409,12 @@ func AddNetRole(n *ir.Net, role ir.Role, src ir.RoleSource) {
 		if r.GetRoleKind() == role {
 			if src > r.GetSource() {
 				r.Source = src
+				r.Reason = why
 			}
 			return
 		}
 	}
-	n.Roles = append(n.Roles, &ir.NetRole{RoleKind: role, Source: src})
+	n.Roles = append(n.Roles, &ir.NetRole{RoleKind: role, Source: src, Reason: why})
 }
 
 // rolesFor is the per-net projection StampNetRoles applies. It emits the role the SOURCE declared
@@ -362,30 +424,26 @@ func AddNetRole(n *ir.Net, role ir.Role, src ir.RoleSource) {
 // says GROUND does not thereby say "and nothing else".
 func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {
 	stub := &ir.Net{}
-	add := func(role ir.Role, src ir.RoleSource) { AddNetRole(stub, role, src) }
 	// A token outside the enum is a reader bug. It is dropped because StampNetRoles has no error
 	// channel, and AttrDeclaredRole's contract is a valid token or nothing.
 	if declared, ok := ParseRole(n.GetAttributes()[AttrDeclaredRole]); ok {
-		add(declared, ir.RoleSource_ROLE_SOURCE_DECLARED)
+		AddNetRole(stub, declared, ir.RoleSource_ROLE_SOURCE_DECLARED)
 	}
 	name := n.GetName()
-	if v.IsRail(name) {
-		add(ir.Role_ROLE_RAIL, ir.RoleSource_ROLE_SOURCE_CONVENTION)
-	}
-	if v.IsGround(name) {
-		add(ir.Role_ROLE_GROUND, ir.RoleSource_ROLE_SOURCE_CONVENTION)
-	}
-	if v.IsFeedback(name) {
-		add(ir.Role_ROLE_FEEDBACK, ir.RoleSource_ROLE_SOURCE_CONVENTION)
-	}
-	if v.IsSwitching(name) {
-		add(ir.Role_ROLE_SWITCHING, ir.RoleSource_ROLE_SOURCE_CONVENTION)
-	}
-	if v.IsControl(name) {
-		add(ir.Role_ROLE_CONTROL, ir.RoleSource_ROLE_SOURCE_CONVENTION)
-	}
-	if v.IsGateDrive(name) {
-		add(ir.Role_ROLE_GATE_DRIVE, ir.RoleSource_ROLE_SOURCE_CONVENTION)
+	for _, c := range []struct {
+		role ir.Role
+		v    vocab
+	}{
+		{ir.Role_ROLE_RAIL, v.rail},
+		{ir.Role_ROLE_GROUND, v.ground},
+		{ir.Role_ROLE_FEEDBACK, v.feedback},
+		{ir.Role_ROLE_SWITCHING, v.switching},
+		{ir.Role_ROLE_CONTROL, v.control},
+		{ir.Role_ROLE_GATE_DRIVE, v.gateDrive},
+	} {
+		if pat := c.v.match(name); pat != "" {
+			addNetRoleWhy(stub, c.role, ir.RoleSource_ROLE_SOURCE_CONVENTION, "the name matches the "+RoleToken(c.role)+" pattern "+pat)
+		}
 	}
 	return stub.Roles
 }

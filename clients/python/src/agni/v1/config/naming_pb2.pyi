@@ -33,50 +33,60 @@ class NamingLexicon(_message.Message):
     def __init__(self, net: _Optional[_Union[NetNameVocab, _Mapping]] = ..., pin: _Optional[_Union[PinNameVocab, _Mapping]] = ..., **kwargs) -> None: ...
 
 class NetNameVocab(_message.Message):
-    __slots__ = ("rail", "ground", "feedback", "switching", "control", "gate_drive")
+    __slots__ = ("rail", "ground", "feedback", "switching", "control", "gate_drive", "i2c", "infer_rail_from_supply_pins")
     RAIL_FIELD_NUMBER: _ClassVar[int]
     GROUND_FIELD_NUMBER: _ClassVar[int]
     FEEDBACK_FIELD_NUMBER: _ClassVar[int]
     SWITCHING_FIELD_NUMBER: _ClassVar[int]
     CONTROL_FIELD_NUMBER: _ClassVar[int]
     GATE_DRIVE_FIELD_NUMBER: _ClassVar[int]
+    I2C_FIELD_NUMBER: _ClassVar[int]
+    INFER_RAIL_FROM_SUPPLY_PINS_FIELD_NUMBER: _ClassVar[int]
     rail: VocabPatterns
     ground: VocabPatterns
     feedback: VocabPatterns
     switching: VocabPatterns
     control: VocabPatterns
     gate_drive: VocabPatterns
-    def __init__(self, rail: _Optional[_Union[VocabPatterns, _Mapping]] = ..., ground: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., control: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate_drive: _Optional[_Union[VocabPatterns, _Mapping]] = ...) -> None: ...
+    i2c: VocabPatterns
+    infer_rail_from_supply_pins: bool
+    def __init__(self, rail: _Optional[_Union[VocabPatterns, _Mapping]] = ..., ground: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., control: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate_drive: _Optional[_Union[VocabPatterns, _Mapping]] = ..., i2c: _Optional[_Union[VocabPatterns, _Mapping]] = ..., infer_rail_from_supply_pins: _Optional[bool] = ...) -> None: ...
 
 class PinNameVocab(_message.Message):
-    __slots__ = ("supply", "gate", "source", "drain")
+    __slots__ = ("supply", "gate", "source", "drain", "exposed_pad")
     SUPPLY_FIELD_NUMBER: _ClassVar[int]
     GATE_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     DRAIN_FIELD_NUMBER: _ClassVar[int]
+    EXPOSED_PAD_FIELD_NUMBER: _ClassVar[int]
     supply: VocabPatterns
     gate: VocabPatterns
     source: VocabPatterns
     drain: VocabPatterns
-    def __init__(self, supply: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate: _Optional[_Union[VocabPatterns, _Mapping]] = ..., source: _Optional[_Union[VocabPatterns, _Mapping]] = ..., drain: _Optional[_Union[VocabPatterns, _Mapping]] = ...) -> None: ...
+    exposed_pad: VocabPatterns
+    def __init__(self, supply: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate: _Optional[_Union[VocabPatterns, _Mapping]] = ..., source: _Optional[_Union[VocabPatterns, _Mapping]] = ..., drain: _Optional[_Union[VocabPatterns, _Mapping]] = ..., exposed_pad: _Optional[_Union[VocabPatterns, _Mapping]] = ...) -> None: ...
 
 class VocabPatterns(_message.Message):
-    __slots__ = ("patterns", "replace")
+    __slots__ = ("patterns", "replace", "exclude")
     PATTERNS_FIELD_NUMBER: _ClassVar[int]
     REPLACE_FIELD_NUMBER: _ClassVar[int]
+    EXCLUDE_FIELD_NUMBER: _ClassVar[int]
     patterns: _containers.RepeatedScalarFieldContainer[str]
     replace: bool
-    def __init__(self, patterns: _Optional[_Iterable[str]] = ..., replace: _Optional[bool] = ...) -> None: ...
+    exclude: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, patterns: _Optional[_Iterable[str]] = ..., replace: _Optional[bool] = ..., exclude: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ClassVocab(_message.Message):
-    __slots__ = ("patterns", "replace", "prefixes")
+    __slots__ = ("patterns", "replace", "prefixes", "families")
     PATTERNS_FIELD_NUMBER: _ClassVar[int]
     REPLACE_FIELD_NUMBER: _ClassVar[int]
     PREFIXES_FIELD_NUMBER: _ClassVar[int]
+    FAMILIES_FIELD_NUMBER: _ClassVar[int]
     patterns: _containers.RepeatedScalarFieldContainer[str]
     replace: bool
     prefixes: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, patterns: _Optional[_Iterable[str]] = ..., replace: _Optional[bool] = ..., prefixes: _Optional[_Iterable[str]] = ...) -> None: ...
+    families: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, patterns: _Optional[_Iterable[str]] = ..., replace: _Optional[bool] = ..., prefixes: _Optional[_Iterable[str]] = ..., families: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class NamingRule(_message.Message):
     __slots__ = ("name", "severity", "why", "allow", "exempt", "match_full")

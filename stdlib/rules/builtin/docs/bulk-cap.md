@@ -21,8 +21,10 @@ under real load patterns.
 
 ### Scope note
 
-Rail identity is the global / power_driven net facts (power symbols and
-power flags), not pin directions, so a rail feeding only passives is still covered;
+Rail identity is a power symbol on the net, a power flag, or a global net that also reads as a
+rail, not pin directions, so a rail feeding only passives is still covered. A global label alone is
+not enough, because many boards draw signals with global labels, and on three public boards those
+signals were most of this rule's findings (agni issue 1252);
 decoupling-present quantifies over power-input pins instead, and the two deliberately
 overlap on a rail that has power pins and no caps. Ground nets (by role, or by name where no
 role was stamped) are excluded
@@ -42,8 +44,8 @@ names the link beside the capacitor.
 
 select rails by fact, require a capacitor member.
 
-    select N in nets where (global(N) or power_driven(N)) and not ground_name(N)
-      and not rail_capacitor(N)
+    select N in nets where (power_symbol(N) or power_driven(N) or (global(N) and rail(N)))
+      and not ground_name(N) and not rail_capacitor(N)
 
 Reads: component.class, net.attributes (global, power_driven, external), net.names (the
-ground-name skip), on_net. Tier R.
+ground-name skip), on_net, pin.electrical_type (a power symbol's virtual pin). Tier R.

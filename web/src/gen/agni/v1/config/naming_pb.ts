@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/config/naming.proto.
  */
 export const file_agni_v1_config_naming: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6AEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBIrACCgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAQgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjb250cm9sGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIxCgpnYXRlX2RyaXZlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyLHAQoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMiMgoNVm9jYWJQYXR0ZXJucxIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIIkEKCkNsYXNzVm9jYWISEAoIcGF0dGVybnMYASADKAkSDwoHcmVwbGFjZRgCIAEoCBIQCghwcmVmaXhlcxgDIAMoCSJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY29uZmlnYgZwcm90bzM");
+  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6AEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBIqYDCgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAQgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjb250cm9sGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIxCgpnYXRlX2RyaXZlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIqCgNpMmMYByABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEigKG2luZmVyX3JhaWxfZnJvbV9zdXBwbHlfcGlucxgIIAEoCEgAiAEBQh4KHF9pbmZlcl9yYWlsX2Zyb21fc3VwcGx5X3BpbnMi+wEKDFBpbk5hbWVWb2NhYhItCgZzdXBwbHkYASABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEisKBGdhdGUYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi0KBnNvdXJjZRgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLAoFZHJhaW4YBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjIKC2V4cG9zZWRfcGFkGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyJDCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSDwoHZXhjbHVkZRgEIAMoCSJTCgpDbGFzc1ZvY2FiEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSEAoIcHJlZml4ZXMYAyADKAkSEAoIZmFtaWxpZXMYBSADKAkibAoKTmFtaW5nUnVsZRIMCgRuYW1lGAEgASgJEhAKCHNldmVyaXR5GAIgASgJEgsKA3doeRgDIAEoCRINCgVhbGxvdxgEIAMoCRIOCgZleGVtcHQYBSADKAkSEgoKbWF0Y2hfZnVsbBgGIAEoCEIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2NvbmZpZ2IGcHJvdG8z");
 
 /**
  * This file: an operator's naming policy, as the ONE schema both the engine and the wire use.
@@ -139,6 +139,25 @@ export type NetNameVocab = Message<"agni.v1.config.NetNameVocab"> & {
    * @generated from field: agni.v1.config.VocabPatterns gate_drive = 6;
    */
   gateDrive?: VocabPatterns | undefined;
+
+  /**
+   * i2c names an I2C bus line (SDA or SCL), the nets the I2C pull-up rules judge. It is a vocabulary
+   * rather than a rule's own pattern so a house that spells its bus differently, or a part whose I2S
+   * data pin is named SDA, is fixed in config (agni issues 1255, 1265).
+   *
+   * @generated from field: agni.v1.config.VocabPatterns i2c = 7;
+   */
+  i2c?: VocabPatterns | undefined;
+
+  /**
+   * infer_rail_from_supply_pins makes a net a rail when a LATER token of its name is a supply-pin word
+   * (LPC_VCC, FAN_VDD) and the net feeds a fitted part's power_in pin that is not a connector's own. A
+   * name alone stays a signal (EN_VCC feeds no supply pin), and the inferred role records the pin that
+   * justified it. Absent means on; a project or a request sets false to turn it off (agni issue 1243).
+   *
+   * @generated from field: optional bool infer_rail_from_supply_pins = 8;
+   */
+  inferRailFromSupplyPins?: boolean | undefined;
 };
 
 /**
@@ -181,6 +200,14 @@ export type PinNameVocab = Message<"agni.v1.config.PinNameVocab"> & {
    * @generated from field: agni.v1.config.VocabPatterns drain = 4;
    */
   drain?: VocabPatterns | undefined;
+
+  /**
+   * exposed_pad names a package's exposed thermal pad, which datasheets often let float, so a lone
+   * power_in pad on its own net is not read as an undriven rail (agni issue 935).
+   *
+   * @generated from field: agni.v1.config.VocabPatterns exposed_pad = 5;
+   */
+  exposedPad?: VocabPatterns | undefined;
 };
 
 /**
@@ -208,6 +235,15 @@ export type VocabPatterns = Message<"agni.v1.config.VocabPatterns"> & {
    * @generated from field: bool replace = 2;
    */
   replace: boolean;
+
+  /**
+   * exclude takes a name OUT of the vocabulary even when a pattern matches it, since RE2 has no
+   * lookaround to say "SDA, but not I2S0_RX_SDA" in one pattern. Merged and replaced as patterns are.
+   * Field 3 is skipped because ClassVocab's prefixes holds it and the two share numbers.
+   *
+   * @generated from field: repeated string exclude = 4;
+   */
+  exclude: string[];
 };
 
 /**
@@ -245,6 +281,15 @@ export type ClassVocab = Message<"agni.v1.config.ClassVocab"> & {
    * @generated from field: repeated string prefixes = 3;
    */
   prefixes: string[];
+
+  /**
+   * families are part-number families (RE2, matched at the start of a part's text token) that decide
+   * this class even on a part whose ref-des reads as an IC, as a suppressor array labelled U does.
+   * ADDED to the built-in families unless replace is set. Only the tvs class ships any (agni 1257).
+   *
+   * @generated from field: repeated string families = 5;
+   */
+  families: string[];
 };
 
 /**

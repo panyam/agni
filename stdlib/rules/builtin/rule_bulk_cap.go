@@ -13,8 +13,8 @@ var bulkCap = &check.Rule{
 	Summary:    "A named power rail carries no capacitor at all (no bulk reservoir).",
 	Impact:     "A rail with zero capacitance has no charge reservoir: every load transient sags the rail, and the regulator's feedback loop may oscillate. Boards usually survive the lab and fail under real load patterns.",
 	Remedy:     "Add a bulk reservoir capacitor where the rail enters, sized from the load step the rail has to absorb and from the regulator's own stability requirement.",
-	Primitives: []string{"select", "exists", "traverse", "pattern"},
-	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net"},
+	Primitives: []string{"select", "exists", "traverse", "pattern", "pin-role"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
 		check.KeyTier:         "R",
@@ -27,8 +27,9 @@ var bulkCap = &check.Rule{
 }
 
 // bulkCapVerdicts decides every NAMED power rail, and that set is the considered set. A net counts
-// as named when the design declares it global or drives it with a power flag, so an ordinary signal
-// net yields no verdict. Neither does a ground, which is the return path rather than the reservoir.
+// as named when it carries a power symbol or a power flag, or is global and reads as a rail, so an
+// ordinary signal net yields no verdict, even one drawn with a global label (agni 1252). Neither does
+// a ground, which is the return path rather than the reservoir.
 //
 // decoupling-present asks the same question about rails that reach a supply PIN, where this one asks
 // about rails the design NAMES, so a rail can be a subject of one and not the other (#400). A pass
@@ -37,7 +38,8 @@ var bulkCap = &check.Rule{
 func bulkCapVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
-		named := n.Attributes[netgraph.AttrGlobal] == "true" || n.Attributes[netgraph.AttrPowerDriven] == "true"
+		named := powerSymbolNet(m, n) || n.Attributes[netgraph.AttrPowerDriven] == "true" ||
+			(n.Attributes[netgraph.AttrGlobal] == "true" && m.IsRailNet(n))
 		if !named || m.IsGroundNet(n) {
 			continue
 		}
@@ -71,7 +73,11 @@ func bulkCapVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 var bulkCapSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
-		check.Or{Xs: []check.Expr{check.IsTrue{T: check.Fact{Name: "net.attr.global"}}, check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}}}},
+		check.Or{Xs: []check.Expr{
+			check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.IsTrue{T: check.Fact{Name: "conn.virtual"}}, check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}}}},
+			check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}},
+			check.And{Xs: []check.Expr{check.IsTrue{T: check.Fact{Name: "net.attr.global"}}, check.IsTrue{T: check.Call{Fn: "rail_net"}}}},
+		}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.unpopulated"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},

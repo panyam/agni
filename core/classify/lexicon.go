@@ -89,6 +89,7 @@ func (l *Lexicon) StampNetRoles(d *ir.Design) {
 	for _, n := range d.GetNets() {
 		n.Roles = rolesFor(v, n)
 	}
+	inferRails(d, v)
 }
 
 // StampPowerInPins promotes under-typed supply pins to POWER_IN using this lexicon's supply-pin names.

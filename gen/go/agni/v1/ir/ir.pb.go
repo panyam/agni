@@ -2332,9 +2332,13 @@ func (x *ComponentSection) GetProv() *Provenance {
 // net may disagree in strength -- ground by declaration and rail by naming -- and both are kept,
 // because collapsing them is what made "how do we know" unanswerable.
 type NetRole struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	RoleKind      Role                   `protobuf:"varint,3,opt,name=role_kind,json=roleKind,proto3,enum=agni.v1.ir.Role" json:"role_kind,omitempty"`
-	Source        RoleSource             `protobuf:"varint,2,opt,name=source,proto3,enum=agni.v1.ir.RoleSource" json:"source,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	RoleKind Role                   `protobuf:"varint,3,opt,name=role_kind,json=roleKind,proto3,enum=agni.v1.ir.Role" json:"role_kind,omitempty"`
+	Source   RoleSource             `protobuf:"varint,2,opt,name=source,proto3,enum=agni.v1.ir.RoleSource" json:"source,omitempty"`
+	// reason says what established the role, for a reader asking why: the vocabulary pattern a name
+	// matched, or for a rail inferred from its supply pins, the pin that justified it (agni 1265).
+	// Empty for a role a source format declared.
+	Reason        string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2381,6 +2385,13 @@ func (x *NetRole) GetSource() RoleSource {
 		return x.Source
 	}
 	return RoleSource_ROLE_SOURCE_UNSPECIFIED
+}
+
+func (x *NetRole) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
 }
 
 type Net struct {
@@ -3262,10 +3273,11 @@ const file_agni_v1_ir_ir_proto_rawDesc = "" +
 	"\x04prov\x18\x10 \x01(\v2\x16.agni.v1.ir.ProvenanceR\x04prov\x1a=\n" +
 	"\x0fAttributesEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"t\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\x8c\x01\n" +
 	"\aNetRole\x12-\n" +
 	"\trole_kind\x18\x03 \x01(\x0e2\x10.agni.v1.ir.RoleR\broleKind\x12.\n" +
-	"\x06source\x18\x02 \x01(\x0e2\x16.agni.v1.ir.RoleSourceR\x06sourceJ\x04\b\x01\x10\x02R\x04role\"\xe1\x02\n" +
+	"\x06source\x18\x02 \x01(\x0e2\x16.agni.v1.ir.RoleSourceR\x06source\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reasonJ\x04\b\x01\x10\x02R\x04role\"\xe1\x02\n" +
 	"\x03Net\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1f\n" +
 	"\vnet_classes\x18\x02 \x03(\tR\n" +
