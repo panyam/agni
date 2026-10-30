@@ -7,7 +7,7 @@ import (
 
 // THE BOUNDARY that keeps a link a promise rather than a guess (agni issue 392).
 //
-// A bare file path is minted a mount name locally, from the enclosing project or as "local", and that
+// A bare file path is minted a mount name locally, from the enclosing project or as "files", and that
 // name means nothing on a server the operator did not start with it. --url-base says where the viewer
 // is; it does not say that this design is on it. Both are needed, and neither implies the other.
 func TestHTMLReportOnlyLinksAMountTheOperatorNamed(t *testing.T) {

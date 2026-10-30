@@ -171,8 +171,8 @@ func TestWorkspaceDeclaredSeparatesNamedFromMinted(t *testing.T) {
 	if !ws.Declared("demo") {
 		t.Error("demo was passed as --mount and must read as declared")
 	}
-	if ws.Declared("local") {
-		t.Error("local is the name mint invents; it must never read as declared")
+	if ws.Declared(mintedMountName) {
+		t.Error("files is the name mint invents; it must never read as declared")
 	}
 	if ws.Declared("never-named") {
 		t.Error("an unknown name is not declared")

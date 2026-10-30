@@ -133,6 +133,14 @@ func (w *cliWorkspace) inDeclared(abs string) (artifact.URI, bool) {
 	return u, true
 }
 
+// mintedMountName names the mount minted for a path with no project above it.
+const mintedMountName = "files"
+
+// browserMount is the viewer's own mount for files dropped on a page (BROWSER_MOUNT in
+// web/src/wasm/drop.ts), so a minted mount never takes it: the Load page would read the design as a
+// drop and ask for the browser engine.
+const browserMount = "local"
+
 // mint creates a mount for a path that no declared mount covers, rooted at the enclosing project
 // when one resolves and at the file's own directory otherwise, then addresses the path through it.
 //
@@ -149,7 +157,7 @@ func (w *cliWorkspace) mint(abs string) (artifact.URI, error) {
 		if fi, err := os.Stat(abs); err == nil && fi.IsDir() {
 			root = abs
 		}
-		name = "local"
+		name = mintedMountName
 	}
 	w.mu.Lock()
 	name = w.uniqueNameLocked(name, root)
@@ -177,7 +185,7 @@ func (w *cliWorkspace) uniqueNameLocked(want, root string) string {
 	}
 	name := want
 	for n := 2; ; n++ {
-		taken := false
+		taken := name == browserMount
 		for _, m := range all {
 			if m.Name == name {
 				taken = true
