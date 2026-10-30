@@ -1,4 +1,4 @@
-#agni-run 44a8a909fcb4f945
+#agni-run 47b67144696edd0a
 i2c-pull-up  1 fail, 1 pass
     fail  SDA_MAIN  no rail is reachable from SDA_MAIN through a resistor within 3 hops
     pass  SCL_MAIN  SCL_MAIN reaches rail VCC_3V3 through R5, and rail VCC_3V3 through R6 then
