@@ -95,10 +95,11 @@ func (l *Lexicon) StampNetRoles(d *ir.Design) {
 // See the package-level StampPowerInPins.
 func (l *Lexicon) StampPowerInPins(d *ir.Design) {
 	v := l.role()
+	typesPowerIn := formatTypesPowerIn(d.GetSourceFormat())
 	for _, lib := range d.GetLibraries() {
 		for _, pt := range lib.GetParts() {
 			for _, pin := range pt.GetPins() {
-				if underspecifiedInputDir(pin.GetDirection()) && v.IsSupplyPin(pin.GetName()) {
+				if underspecifiedInputDir(pin.GetDirection(), typesPowerIn) && v.IsSupplyPin(pin.GetName()) {
 					pin.Direction = ir.PinDirection_PIN_DIRECTION_POWER_IN
 				}
 			}

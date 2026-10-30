@@ -95,11 +95,6 @@ findings:
       subjects:
         - net:/USB Debug, PD/FTDI_3V3
   reverse-blocking-absent:
-    - class: needs-intent
-      why: 'These two ports are dual-role: VBUS reaches the TPS65988 PD controller (and on the debug port its LDO), which blocks reverse flow with its own internal power-path FETs. A netlist cannot show that; a datasheet device class marking the TPS65988 as a power-path controller would let the rule credit it.'
-      subjects:
-        - net:/USB DP Alt mode/USBC1_VBUS
-        - net:/USB Debug, PD/USBC0_VBUS
     - class: design-choice
       why: VCC_IN from the keyed Mini-Fit J2 reaches VCC through the LTC4412 ideal-diode controller U6 driving Q2 and Q39, which blocks backfeed from VCC's other sources. The 20 V buck U65 and U6's own IN pin sit on the connector side by design, and polarity rests on the keyed connector.
       subjects:

@@ -28,10 +28,11 @@ func TestPowerInStampFlipsConnectivityRule(t *testing.T) {
 		t.Fatalf("pre-stamp (INPUT pin): want silent, got %v", fs)
 	}
 
-	// After the stamp, the VDD pin is POWER_IN with no driver on its net. The design's format types
-	// power outputs (default), so the rule fires.
+	// After the stamp, the VDD pin is POWER_IN with no driver on its net. xschem has no power-input
+	// type, so the stamp fills it, and the rule does not gate xschem off, so it fires. A KiCad INPUT
+	// is the author's choice and is never stamped (agni issue 1241).
 	d := mk()
-	d.SourceFormat = "kicad-sch"
+	d.SourceFormat = "xschem"
 	classify.StampPowerInPins(d)
 	if fs := check.RunBackground(check.NewModel(d), []*check.Rule{powerInputNotDriven}); len(fs) != 1 {
 		t.Fatalf("post-stamp (POWER_IN pin): want 1 finding, got %v", fs)

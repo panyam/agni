@@ -116,6 +116,28 @@ func TestADividerTapIntoASensePinIsNotASupply(t *testing.T) {
 	}
 }
 
+// TestADividerTapIntoAnInoutSensePinIsOutsideTestPoints holds the divider-tap exemption for a sense
+// pin the symbol types bidirectional, as Jetson's USB hub does. It read as power_in only while ingestion
+// promoted it by name, and test-point-coverage judged the tap as a rail once that stopped (agni 1241).
+func TestADividerTapIntoAnInoutSensePinIsOutsideTestPoints(t *testing.T) {
+	d := pinDesign(map[string][]supplyPin{
+		"U2": {{"OUT", "1", pwrOut}, {"GND", "2", pass}},
+		"U1": {{"VBUS_MON_UP", "80", ir.PinDirection_PIN_DIRECTION_INOUT}},
+		"R1": twoPin(), "R2": twoPin(),
+		"TP1": {{"1", "1", pass}},
+	}, map[string][]string{
+		"VBUS":        {"U2.1", "R1.1", "TP1.1"},
+		"VBUS_MON_UP": {"R1.2", "R2.1", "U1.80"},
+		"GND":         {"R2.2", "U2.2"},
+	})
+	if got := verdictOn(t, testPointCoverage, d, "VBUS_MON_UP"); got != "" {
+		t.Errorf("test-point-coverage on a divider tap into a bidirectional pin = %q, want it outside the rule's scope", got)
+	}
+	if got := verdictOn(t, testPointCoverage, d, "VBUS"); got == "" {
+		t.Error("test-point-coverage gave the VBUS rail no verdict, so the check above could pass over a rule that judges nothing")
+	}
+}
+
 func TestAConnectorsOwnPinIsNotALoad(t *testing.T) {
 	// A source port: a load switch drives VBUS out to the cable, and the receptacle's symbol types
 	// its VBUS pin power_in. Nothing on the board draws from VBUS, so there is no power path.
