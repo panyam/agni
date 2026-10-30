@@ -109,8 +109,9 @@ func extractGeom(root *node, src string) *geom.SchematicGeometry {
 	var pages []*node
 	collect(root, "page", &pages)
 	owners := pageOwners(root)
+	backRef := backAnnotatedRefDes(root)
 	for _, p := range pages {
-		g.Sheets = append(g.Sheets, sheetOf(p, src, cellByID, libByID, viewByID, fgh))
+		g.Sheets = append(g.Sheets, sheetOf(p, src, cellByID, libByID, viewByID, backRef, fgh))
 	}
 	qualifyRepeatedSheets(g.Sheets, pages, owners)
 	return g
@@ -493,7 +494,7 @@ func circleShape(k *node, group string) *geom.Shape {
 // sheetOf builds a SheetGeometry from a (page ...) node. cellByID/libByID/viewByID
 // normalize each placement's cell, library, and view references to display names (see
 // placementOf).
-func sheetOf(p *node, src string, cellByID, libByID, viewByID map[string]string, fgh map[string]int64) *geom.SheetGeometry {
+func sheetOf(p *node, src string, cellByID, libByID, viewByID, backRef map[string]string, fgh map[string]int64) *geom.SheetGeometry {
 	id, disp := nameParts(p.Arg(1))
 	sh := &geom.SheetGeometry{
 		Id:   id,
@@ -518,9 +519,13 @@ func sheetOf(p *node, src string, cellByID, libByID, viewByID map[string]string,
 			}
 			continue
 		}
-		pl := placementOf(in, src, cellByID, libByID, viewByID)
-		if f := refDesField(in, pl.RefDes, placementOrigin(pl), fgh); f != nil {
-			pl.Fields = append(pl.Fields, f)
+		pl := placementOf(in, src, cellByID, libByID, viewByID, backRef)
+		// A ref-des known only from back-annotation keys the placement and draws nothing, since the
+		// page gives it no position and the tool that wrote the page printed no label there.
+		if in.Child("designator") != nil {
+			if f := refDesField(in, pl.RefDes, placementOrigin(pl), fgh); f != nil {
+				pl.Fields = append(pl.Fields, f)
+			}
 		}
 		if f := cellNameField(in, pl.CellRef, fgh); f != nil {
 			pl.Fields = append(pl.Fields, f)
@@ -560,12 +565,16 @@ func sheetOf(p *node, src string, cellByID, libByID, viewByID map[string]string,
 
 // placementOf builds a SymbolPlacement from an (instance ...) node on a sheet. Its
 // cell, library and view references are normalized to display names, so a placement resolves to
-// its SymbolDef whichever form the source used (see the maps in extractGeom).
-func placementOf(in *node, src string, cellByID, libByID, viewByID map[string]string) *geom.SymbolPlacement {
+// its SymbolDef whichever form the source used (see the maps in extractGeom). Its ref-des is the
+// back-annotated one when backRef names the instance, as the netlist read's is (backannotate.go).
+func placementOf(in *node, src string, cellByID, libByID, viewByID, backRef map[string]string) *geom.SymbolPlacement {
 	id, _ := nameParts(in.Arg(1))
 	pl := &geom.SymbolPlacement{
 		RefDes: refDesOf(in),
 		Prov:   &geom.Provenance{SourceFile: src, SourceId: id},
+	}
+	if des, ok := backRef[id]; ok {
+		pl.RefDes = des
 	}
 	if v := in.Child("viewRef"); v != nil {
 		// The viewRef names the view (bank) this instance uses.

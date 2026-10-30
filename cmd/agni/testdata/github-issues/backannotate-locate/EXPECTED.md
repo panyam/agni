@@ -2,7 +2,7 @@
 
 Sanitized reproducer for viewer/query locate when the **netlist ref-des** and the **on-sheet label** diverge, or when the logical ref appears only in `(viewMap (instanceBackAnnotate …))`.
 
-Link this folder to the GitHub issue once filed (title: *Schematic locate: join placements via instanceBackAnnotate when inline designator disagrees with netlist*).
+Filed as [#1228](https://github.com/panyam/agni/issues/1228). `TestBackAnnotatedPartsLocateOnTheirSheet` in `service/` reads this folder.
 
 ## Fixtures
 
@@ -17,7 +17,7 @@ Reader-only slices (same scenarios, single file each):
 - `readers/edif/testdata/backannotate-inline-mismatch.eds` — inline `R4`, back-annotate `R1001`
 - `readers/edif/testdata/backannotate-only.eds` — no inline ref-des, back-annotate `U101`
 
-## Current behavior
+## Behavior before #1228
 
 1. **`entity(?name, ?kind)`** with `^R1001$` or `^U101$` finds the component in the **netlist** tier.
 2. Query/viewer **locate** uses schematic **placements** keyed by inline `(designator …)` on the page instance only.
@@ -25,7 +25,7 @@ Reader-only slices (same scenarios, single file each):
 4. **`U101`**: page instance has **no** component designator; back-annotate holds `U101` → same `NO_GEOMETRY` symptom.
 5. Net **`I2C_SCL`** may still get sheet badges from wire geometry and/or netlist sheet attributes (component locate stays geometry-only).
 
-## Desired behavior
+## Behavior since #1228
 
 After applying `instanceBackAnnotate` (prefer over conflicting inline text when joining to netlist identity):
 
@@ -38,7 +38,7 @@ After applying `instanceBackAnnotate` (prefer over conflicting inline text when 
 From repo root (`main/`):
 
 ```bash
-# Reader: placement ref today (inline wins)
+# Reader: placement ref-des comes from instanceBackAnnotate
 go test ./readers/edif/ -run BackAnnotate -v
 
 # Netlist + companion (project descriptor)

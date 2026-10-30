@@ -21,7 +21,7 @@ Minimal netlists for issues #1085 to #1098. Names are deliberately generic (no c
 | [#1188](https://github.com/panyam/agni/issues/1188) | MCU IO map / per-pin report | `1188-mcu-io-map/` (a `design.yaml` io_map) |
 | [#1189](https://github.com/panyam/agni/issues/1189) | IC signal connectivity chains | `1189-ic-signal-chains/` |
 | [#1190](https://github.com/panyam/agni/issues/1190) | Combined check + query HTML | `1190-combined-html/` |
-| *(TBD)* | Schematic locate / `instanceBackAnnotate` | `backannotate-locate/` |
+| [#1228](https://github.com/panyam/agni/issues/1228) | Schematic locate / `instanceBackAnnotate` | `backannotate-locate/` |
 
 Issue map (filed batch):
 

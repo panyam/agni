@@ -217,8 +217,18 @@ deliberate drops are known, since fidelity is lossy-bounded to a render subset.
 | **Display metadata** | `display`, `figureGroupOverride`, `visible`, `justify`, `orientation`, `textHeight`, `keywordDisplay`, `propertyDisplay` | Controls where each attribute label prints. We can render a subset (net names, ref-des, values) later, not needed for a first faithful render. |
 | **Style palette** | `technology`, `figureGroup`, `color`, `pathWidth`, `borderPattern`, `gridMap` | Drawing style. We can carry `figure_group` as a style hint and resolve colors in the renderer, and the full palette is optional. |
 | **Header / status** | `status`, `written`, `timestamp`, `author`, `program`, `keywordMap` | Provenance only. |
-| **Back-annotation** | `viewMap`, `instanceBackAnnotate`, `portBackAnnotate` | Data pushed back from other tools (print order, sheet totals, pin types). Not render geometry. |
+| **Back-annotation** | `viewMap`, `instanceBackAnnotate`, `portBackAnnotate` | Data pushed back from other tools (print order, sheet totals, pin types). Not render geometry, with one exception below. |
 | **Opaque extras** | `userData` | Vendor-specific flags (e.g. `visibleName`). Keep opaque if at all. |
+
+The exception is the designator an `instanceBackAnnotate` gives a top-level instance. An export can
+renumber parts after layout and push the new ref-des there while the page instance keeps its old
+inline `(designator "R4")`, or carries none, and the netlist names the part `R1001`. Both readers
+take the back-annotated designator over the inline one (agni issue 1228), so a placement is keyed
+by the ref-des every rule and query uses and a `.eds` read as a netlist agrees with its own
+geometry. Its label is drawn where the inline designator placed it, and a ref-des known only from
+back-annotation is keyed without a label, since the page gives it no position. An instance inside a
+block (a nested `instanceRef`) and an id annotated with two different designators keep the inline
+one.
 
 Connectivity in the `.eds` is present and consistent with the `.edn`, so in
 principle the schematic alone could feed both the IR and the geometry. We keep the split

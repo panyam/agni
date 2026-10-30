@@ -38,11 +38,11 @@ var keywords = []string{
 	"annotate", "arc", "array", "boolean", "boundingBox", "cell", "cellRef", "cellType", "circle",
 	"commentGraphics", "connectLocation", "contents", "curve", "design", "designator", "direction",
 	"display", "dot", "e", "edifVersion", "false", "figure", "figureGroup", "figureGroupOverride",
-	"instance", "instanceRef", "integer", "interface", "justify", "keywordDisplay", "library",
+	"instance", "instanceBackAnnotate", "instanceRef", "integer", "interface", "justify", "keywordDisplay", "library",
 	"libraryRef", "member", "name", "net", "openShape", "orientation", "origin", "page", "pageSize",
 	"path", "pointList", "port", "portImplementation", "portInstance", "portRef", "property", "pt",
 	"rectangle", "rename", "scale", "scaleX", "scaleY", "string", "stringDisplay", "symbol",
-	"textHeight", "transform", "true", "unit", "view", "viewRef", "visible",
+	"textHeight", "transform", "true", "unit", "view", "viewMap", "viewRef", "visible",
 }
 
 // canonical maps a keyword's lower-case form to the reader's spelling of it.
