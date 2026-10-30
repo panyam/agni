@@ -35,7 +35,7 @@ itself your consent. The tool still has to be registered for the format and inst
 | gEDA / Lepton (`.sch`) | `lepton-cli` (render), `lepton-schematic` (GUI) | Linux, on macOS via Docker | yes | yes (X11) |
 | EDIF (`.edn`, `.edf`, `.edif`, `.eds`) | none open | | no | no |
 | IPC-2581 (`.xml`, `.cvg`) | none free on macOS | web visualizer (below) | no | no |
-| ODB++ (directory / `.tgz`) | none free on macOS | web visualizer / VM | no | no |
+| ODB++ (directory / `.tgz` / `.zip`) | none to view it; `kicad-cli` writes it | web visualizer / VM | no | no |
 
 </div>
 
@@ -101,7 +101,14 @@ established without one.
    same placement data. This is how the placement geometry was pinned.
 2. Where a KiCad equivalent exists, `kicad-cli pcb drc` gives a numeric
    oracle. The board DRC counts were cross-checked this way.
-3. For a visual sanity pass, a browser IPC-2581/ODB++ viewer (Eurocircuits PCB
+3. ODB++ has an oracle of its own in KiCad 9 and later, which writes a job from any board
+   (`kicad-cli pcb export odb`). The same board read from its `.kicad_pcb` and from the job has to
+   agree, which `TestODBReadsAsItsKiCadSource` holds for every fixture (`make odb-fixtures`
+   regenerates them), and `AGNI_ODB_PAIRS=board.kicad_pcb=job_dir` adds a board of your own. On the
+   Jetson sample every pin's net, every straight track and every via agreed to the micron, and the
+   two places they did not were the KiCad reader's (agni issues 1260 and 1261). It cannot show how
+   another producer's dialect differs, which only a job from that producer can.
+4. For a visual sanity pass, a browser IPC-2581/ODB++ viewer (Eurocircuits PCB
    Visualizer, or the BoardUI parser run locally) renders the same file.
-4. For pixel truth, run the Siemens ODB++ Viewer or an IPC-2581 viewer in a VM on
+5. For pixel truth, run the Siemens ODB++ Viewer or an IPC-2581 viewer in a VM on
    Linux or Windows.

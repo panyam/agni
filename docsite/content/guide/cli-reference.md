@@ -645,6 +645,14 @@ geometry (`.eds`), KiCad (`.kicad_sch`/`.kicad_pcb`/`.kicad_pro`), IPC-2581 (`.x
 netlists (`.tel`, netlist only, no geometry), and `.sch` (xschem / gEDA / legacy KiCad, sniffed by
 header).
 
+An ODB++ job is a directory rather than a file, so it is named by its folder, or by a `.tgz` or
+`.zip` of it, and the folder's `matrix/matrix` file is what enters it (`agni check board-odb/`,
+`agni check board-odb.tgz`). It reads as a netlist and as a board, as IPC-2581 does, so
+`agni diff schematic.edn board-odb/` checks a layout against the schematic it was drawn from. ODB++
+allows no spaces in a name, so a net the schematic calls `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`
+and the diff reports it renamed. Members a producer compressed (`features.Z`, `.gz`) are read as
+well.
+
 A schematic that references external symbols resolves them by one of three routes, in the order they
 are searched: its own `sym-lib-table` for a KiCad project, the `symbols` libraries its design and project
 descriptors name, and any `--symbol-path` directory. A design
