@@ -28,11 +28,12 @@ import (
 // baseline lists the reference nets we get wrong BY NAME, so a fix shrinks it, a regression grows it,
 // and a change that swaps one defect for another of equal size is still caught.
 //
-// What the corpus does NOT cover is worth stating, since two boards is not a survey. Neither of them
-// crosses a sheet boundary with a bus VECTOR, so this test does not move when the agni issue 561 fix
-// is reverted. TestBusVectorCrossesSheetBoundary is that guard, on a fixture with kicad-cli's own
-// answer beside it. The boards that would cover it (kit-dev-coldfire, video) ship with no licence, so
-// they cannot be redistributed; run the sweep against a local KiCad demos directory for those.
+// The corpus spans KiCad 6 to 9 file formats (agni issue 1233, where every pre-KiCad-8 board read
+// empty and so passed this test by having nothing to disagree with). Six boards is still not a
+// survey. Cynthion is the only one that crosses a sheet boundary with a bus VECTOR, and nobody has
+// checked whether this test moves when the agni issue 561 fix is reverted, so
+// TestBusVectorCrossesSheetBoundary stays the guard, on a fixture with kicad-cli's own answer beside
+// it.
 // Breaking the scalar sheet-pin join moves jetson by 27 lines, which is what red-checked this file.
 func TestOracleCorpus(t *testing.T) {
 	if os.Getenv("AGNI_ORACLE") == "" {
@@ -260,11 +261,13 @@ const baselineHeader = `# Where our KiCad read still disagrees with KiCad, board
 #
 # Known families still open, as of the agni issue 561 fix:
 #   - group buses (` + "`CAM0{CSI}`" + ` with bus_alias members), which cross a sheet boundary the same way a
-#     vector does and are not yet followed. Most of the jetson lines.
+#     vector does and are not yet followed. Most of the jetson lines, and probably all of cynthion's.
 #   - sliced bus prefixes, where a parent cuts PP_OUT[0..31] into PP_OUT[0..7], PP_OUT[8..15], ...
 #     and hands each to one instance of a child sheet. KiCad maps those by bit position.
 #   - a pin-number swap on some symbols, which is why boards whose net COUNTS match exactly can
 #     still disagree about which pins are on which net.
+#   - a scalar name split where it crosses a sheet boundary (hackrf-one's !VAA_ENABLE,
+#     mnt-reform-motherboard30's LPC lines), agni issue 1234.
 `
 
 var _ = ir.Design{}

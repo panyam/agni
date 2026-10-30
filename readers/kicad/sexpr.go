@@ -15,9 +15,13 @@ import (
 type node = sexpr.Node
 
 // parse reads one top-level s-expression from r in the KiCad string dialect (backslash escapes,
-// literal newlines kept).
+// literal newlines kept), with older KiCad spellings respelled (upgrade).
 func parse(r io.Reader) (*node, error) {
-	return sexpr.Parse(r, sexpr.KiCadStrings)
+	root, err := sexpr.Parse(r, sexpr.KiCadStrings)
+	if err == nil {
+		upgrade(root)
+	}
+	return root, err
 }
 
 // boardSkips are the board subtrees no reader of a .kicad_pcb reads. A zone's fill is the copper
@@ -43,7 +47,11 @@ var footprintGraphicSkips = func() []sexpr.SkipWhen {
 
 // parseBoard parses a .kicad_pcb, leaving out boardSkips and footprintGraphicSkips.
 func parseBoard(r io.Reader) (*node, error) {
-	return sexpr.ParseWith(r, sexpr.KiCadStrings, sexpr.Skips{Heads: boardSkips, When: footprintGraphicSkips})
+	root, err := sexpr.ParseWith(r, sexpr.KiCadStrings, sexpr.Skips{Heads: boardSkips, When: footprintGraphicSkips})
+	if err == nil {
+		upgrade(root)
+	}
+	return root, err
 }
 
 // atomOf returns the text of an atom node, or "" for a list or nil.

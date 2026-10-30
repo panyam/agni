@@ -10,11 +10,52 @@
 #
 # Known families still open, as of the agni issue 561 fix:
 #   - group buses (`CAM0{CSI}` with bus_alias members), which cross a sheet boundary the same way a
-#     vector does and are not yet followed. Most of the jetson lines.
+#     vector does and are not yet followed. Most of the jetson lines, and probably all of cynthion's.
 #   - sliced bus prefixes, where a parent cuts PP_OUT[0..31] into PP_OUT[0..7], PP_OUT[8..15], ...
 #     and hands each to one instance of a child sheet. KiCad maps those by bit position.
 #   - a pin-number swap on some symbols, which is why boards whose net COUNTS match exactly can
 #     still disagree about which pins are on which net.
+#   - a scalar name split where it crosses a sheet boundary (hackrf-one's !VAA_ENABLE,
+#     mnt-reform-motherboard30's LPC lines), agni issue 1234.
+
+## cynthion
+we SPLIT reference net "/AUX Port/AUX_PHY.DATA0" (pins [IC1.F16 RN9.1]) -> [/AUX Port/AUX PHY/PHY.DATA0 /FPGA Banks 2 and 3/AUX_PHY.DATA0]
+we SPLIT reference net "/AUX Port/AUX_PHY.DATA1" (pins [IC1.G15 RN9.2]) -> [/AUX Port/AUX PHY/PHY.DATA1 /FPGA Banks 2 and 3/AUX_PHY.DATA1]
+we SPLIT reference net "/AUX Port/AUX_PHY.DATA2" (pins [IC1.G16 RN9.3]) -> [/AUX Port/AUX PHY/PHY.DATA2 /FPGA Banks 2 and 3/AUX_PHY.DATA2]
+we SPLIT reference net "/AUX Port/AUX_PHY.DATA3" (pins [IC1.H15 RN9.4]) -> [/AUX Port/AUX PHY/PHY.DATA3 /FPGA Banks 2 and 3/AUX_PHY.DATA3]
+we SPLIT reference net "/AUX Port/AUX_PHY.DATA4" (pins [IC1.J15 RN10.1]) -> [/AUX Port/AUX PHY/PHY.DATA4 /FPGA Banks 2 and 3/AUX_PHY.DATA4]
+we SPLIT reference net "/AUX Port/AUX_PHY.DATA5" (pins [IC1.J16 RN10.2]) -> [/AUX Port/AUX PHY/PHY.DATA5 /FPGA Banks 2 and 3/AUX_PHY.DATA5]
+we SPLIT reference net "/AUX Port/AUX_PHY.DATA6" (pins [IC1.K15 RN10.3]) -> [/AUX Port/AUX PHY/PHY.DATA6 /FPGA Banks 2 and 3/AUX_PHY.DATA6]
+we SPLIT reference net "/AUX Port/AUX_PHY.DATA7" (pins [IC1.K16 RN10.4]) -> [/AUX Port/AUX PHY/PHY.DATA7 /FPGA Banks 2 and 3/AUX_PHY.DATA7]
+we SPLIT reference net "/CONTROL Port/CONTROL_PHY.DATA0" (pins [IC1.N16 RN6.1]) -> [/CONTROL Port/CONTROL PHY/PHY.DATA0 /FPGA Banks 2 and 3/CONTROL_PHY.DATA0]
+we SPLIT reference net "/CONTROL Port/CONTROL_PHY.DATA1" (pins [IC1.N14 RN6.2]) -> [/CONTROL Port/CONTROL PHY/PHY.DATA1 /FPGA Banks 2 and 3/CONTROL_PHY.DATA1]
+we SPLIT reference net "/CONTROL Port/CONTROL_PHY.DATA2" (pins [IC1.P16 RN6.3]) -> [/CONTROL Port/CONTROL PHY/PHY.DATA2 /FPGA Banks 2 and 3/CONTROL_PHY.DATA2]
+we SPLIT reference net "/CONTROL Port/CONTROL_PHY.DATA3" (pins [IC1.P15 RN6.4]) -> [/CONTROL Port/CONTROL PHY/PHY.DATA3 /FPGA Banks 2 and 3/CONTROL_PHY.DATA3]
+we SPLIT reference net "/CONTROL Port/CONTROL_PHY.DATA4" (pins [IC1.R16 RN7.1]) -> [/CONTROL Port/CONTROL PHY/PHY.DATA4 /FPGA Banks 2 and 3/CONTROL_PHY.DATA4]
+we SPLIT reference net "/CONTROL Port/CONTROL_PHY.DATA5" (pins [IC1.R15 RN7.2]) -> [/CONTROL Port/CONTROL PHY/PHY.DATA5 /FPGA Banks 2 and 3/CONTROL_PHY.DATA5]
+we SPLIT reference net "/CONTROL Port/CONTROL_PHY.DATA6" (pins [IC1.T15 RN7.3]) -> [/CONTROL Port/CONTROL PHY/PHY.DATA6 /FPGA Banks 2 and 3/CONTROL_PHY.DATA6]
+we SPLIT reference net "/CONTROL Port/CONTROL_PHY.DATA7" (pins [IC1.P14 RN7.4]) -> [/CONTROL Port/CONTROL PHY/PHY.DATA7 /FPGA Banks 2 and 3/CONTROL_PHY.DATA7]
+we SPLIT reference net "/FPGA Banks 6 and 7/RAM.DQ0" (pins [IC1.F2 U10.D3]) -> [/FPGA Banks 6 and 7/RAM.DQ0 /RAM/RAM.DQ0]
+we SPLIT reference net "/FPGA Banks 6 and 7/RAM.DQ1" (pins [IC1.B1 U10.D2]) -> [/FPGA Banks 6 and 7/RAM.DQ1 /RAM/RAM.DQ1]
+we SPLIT reference net "/FPGA Banks 6 and 7/RAM.DQ2" (pins [IC1.C2 U10.C4]) -> [/FPGA Banks 6 and 7/RAM.DQ2 /RAM/RAM.DQ2]
+we SPLIT reference net "/FPGA Banks 6 and 7/RAM.DQ3" (pins [IC1.E1 U10.D4]) -> [/FPGA Banks 6 and 7/RAM.DQ3 /RAM/RAM.DQ3]
+we SPLIT reference net "/FPGA Banks 6 and 7/RAM.DQ4" (pins [IC1.E3 U10.D5]) -> [/FPGA Banks 6 and 7/RAM.DQ4 /RAM/RAM.DQ4]
+we SPLIT reference net "/FPGA Banks 6 and 7/RAM.DQ5" (pins [IC1.E2 U10.E3]) -> [/FPGA Banks 6 and 7/RAM.DQ5 /RAM/RAM.DQ5]
+we SPLIT reference net "/FPGA Banks 6 and 7/RAM.DQ6" (pins [IC1.F3 U10.E2]) -> [/FPGA Banks 6 and 7/RAM.DQ6 /RAM/RAM.DQ6]
+we SPLIT reference net "/FPGA Banks 6 and 7/RAM.DQ7" (pins [IC1.G4 U10.E1]) -> [/FPGA Banks 6 and 7/RAM.DQ7 /RAM/RAM.DQ7]
+we SPLIT reference net "/FPGA Banks 6 and 7/TARGET_PHY.DATA0" (pins [IC1.R2 RN12.1]) -> [/FPGA Banks 6 and 7/TARGET_PHY.DATA0 /TARGET Port/TARGET PHY/PHY.DATA0]
+we SPLIT reference net "/FPGA Banks 6 and 7/TARGET_PHY.DATA1" (pins [IC1.R1 RN12.2]) -> [/FPGA Banks 6 and 7/TARGET_PHY.DATA1 /TARGET Port/TARGET PHY/PHY.DATA1]
+we SPLIT reference net "/FPGA Banks 6 and 7/TARGET_PHY.DATA2" (pins [IC1.P2 RN12.3]) -> [/FPGA Banks 6 and 7/TARGET_PHY.DATA2 /TARGET Port/TARGET PHY/PHY.DATA2]
+we SPLIT reference net "/FPGA Banks 6 and 7/TARGET_PHY.DATA3" (pins [IC1.P1 RN12.4]) -> [/FPGA Banks 6 and 7/TARGET_PHY.DATA3 /TARGET Port/TARGET PHY/PHY.DATA3]
+we SPLIT reference net "/FPGA Banks 6 and 7/TARGET_PHY.DATA4" (pins [IC1.N3 RN13.1]) -> [/FPGA Banks 6 and 7/TARGET_PHY.DATA4 /TARGET Port/TARGET PHY/PHY.DATA4]
+we SPLIT reference net "/FPGA Banks 6 and 7/TARGET_PHY.DATA5" (pins [IC1.N1 RN13.2]) -> [/FPGA Banks 6 and 7/TARGET_PHY.DATA5 /TARGET Port/TARGET PHY/PHY.DATA5]
+we SPLIT reference net "/FPGA Banks 6 and 7/TARGET_PHY.DATA6" (pins [IC1.M2 RN13.3]) -> [/FPGA Banks 6 and 7/TARGET_PHY.DATA6 /TARGET Port/TARGET PHY/PHY.DATA6]
+we SPLIT reference net "/FPGA Banks 6 and 7/TARGET_PHY.DATA7" (pins [IC1.M1 RN13.4]) -> [/FPGA Banks 6 and 7/TARGET_PHY.DATA7 /TARGET Port/TARGET PHY/PHY.DATA7]
+
+## glasgow-revC3
+
+## hackrf-one
+we SPLIT reference net "!VAA_ENABLE" (pins [P5.5 Q3.1 R11.2 U23.37]) -> [!VAA_ENABLE /mcu/usb/power/!VAA_ENABLE]
 
 ## jetson-agx-thor-baseboard
 we MERGE into one net "unconnected-(U11-GL-Pad10)" (pins [U11.10 U11.11 U11.28]) -> [unconnected-(U11-GL-Pad10) unconnected-(U11-GL-Pad10)_1 unconnected-(U11-GL-Pad10)_2]
@@ -27,6 +68,10 @@ we MERGE into one net "unconnected-(U36-Pad5)" (pins [U36.5 U36.6]) -> [unconnec
 we MERGE into one net "unconnected-(U65-GL-Pad10)" (pins [U65.10 U65.11 U65.28]) -> [unconnected-(U65-GL-Pad10) unconnected-(U65-GL-Pad10)_1 unconnected-(U65-GL-Pad10)_2]
 we MERGE into one net "unconnected-(U75-GL-Pad10)" (pins [U75.10 U75.11 U75.28]) -> [unconnected-(U75-GL-Pad10) unconnected-(U75-GL-Pad10)_1 unconnected-(U75-GL-Pad10)_2]
 we MERGE into one net "unconnected-(U8-GL-Pad10)" (pins [U8.10 U8.11 U8.28]) -> [unconnected-(U8-GL-Pad10) unconnected-(U8-GL-Pad10)_1 unconnected-(U8-GL-Pad10)_2]
+
+## mnt-reform-motherboard30
+we SPLIT reference net "LPC_RXDa" (pins [J22.12 SW4.6 U18.46]) -> [/Reform 2 Power/Reform 2 LPC/LPC_RXDa LPC_RXDa]
+we SPLIT reference net "LPC_TXDa" (pins [J22.11 SW4.5 U18.47]) -> [/Reform 2 Power/Reform 2 LPC/LPC_TXDa LPC_TXDa]
 
 ## royalblue54L-feather
 board does not read: sexpr: "("
