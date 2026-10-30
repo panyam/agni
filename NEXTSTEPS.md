@@ -9,14 +9,16 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-30, at `7279744d`.
+Last pruned 2026-10-30, at `41da7767`.
 
 ## At a glance
 
-#1194 `mission_pin_functions` is active. `MISSION=mission_<slug> queue.sh` (the retriage skill's
-script) prints one mission's queue, and the order lives in GitHub labels and blocked-by links rather
-than here. Log each exercise run on the mission issue.
+Two missions are active. `MISSION=mission_<slug> queue.sh` (the retriage skill's script) prints one
+mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
+exercise run on the mission issue.
 
+- **#1264** (see, explain and change how agni reads your board's names), 6 of 9 tickets closed, worked
+  from another session. Its next ready ticket is #1266 (`agni lexicon`), which unblocks #1267.
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
   datasheet), 7 of 7 tickets closed, exercise last run at `77c73ff7` (works on the fixtures). It waits
   on a team's clean-room run on their own board: the three commands in `guide/trying-agni.md`'s
@@ -24,20 +26,18 @@ than here. Log each exercise run on the mission issue.
   become its next tickets. Open choice from #1198: whether `service.ShippedRules` should name the
   fixed `intent/io-map-*` rules, which the trial now counts under project rules.
 - **#1176 `mission_shared_viewer_rooms`** (several people on one server, each driving their own tabs),
-  0 of 1 and not active. #1187 pushed a tab's Ask to a Claude Code session as a turn, so #1173 now holds
-  only the multi-user half (OAuth on `/mcp`, a relay token per user, the pairing UI) and is `waiting`
-  until someone runs agni serve for more than one person. The mission has no exercise yet; its first
-  PR writes one.
-- **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket (#820,
-  #821 and their follow-up #1165 have closed), and `guide/older-comparison-tools.md` its first page.
-- **Candidate**: more tours of the viewer. The review tour exists (`web/src/reviewtour.ts`, #1179), so
-  a mission here would be another workflow toured the same way (a revision compare, a trace), each
-  starting with the viewer events it advances on. Nobody has yet taken the headed tour by hand.
-- This run: #1229 and #1232 merged, off-mission, closing #1228 (EDIF back-annotation keys a part in
-  both reads) and #1230 (EDIF net findings locate, and an unreadable schematic says so). Both are
-  verified on synthetic fixtures only, so the next real EDIF export with renumbered parts is the
-  check, and the block-instance case waits on #154. The 1093 reproducer still names its rail
-  `RAIL_3V3`, which the default vocabulary does not read, so fix that with #1093.
+  0 of 1 and not active. #1173 holds the multi-user half and is `waiting` until someone runs agni
+  serve for more than one person. The mission has no exercise yet; its first PR writes one.
+- **Candidate**: moving a house netlist audit off its spreadsheet. #1093 is its open ticket, and
+  `guide/older-comparison-tools.md` its first page. Its reproducer still names its rail `RAIL_3V3`,
+  which the default vocabulary does not read.
+- **Candidate**: more tours of the viewer, another workflow toured the way `web/src/reviewtour.ts`
+  tours a review, each starting with the viewer events it advances on.
+- This run, off-mission: ODB++ is read (#1262), and #1271 fixed what reading boards both ways found
+  (KiCad placement, arcs and slots; Altium's dialect; labels; a report link reloading a slow viewer),
+  with samples `v0.1.4` carrying foxBMS's Altium jobs and kicad-cli exports of every board. Waiting on
+  a team's real ODB++ export, which is the check no corpus here gives; #1272 holds the one unchecked
+  angle (KiCad footprint text).
 
 ## Open, ranked
 

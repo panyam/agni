@@ -59,7 +59,10 @@ server can name, and every link in it targets the window named `agni-viewer`, so
 scripts off loads the link in that window anyway. The page therefore takes `ApplyLocation` carrying a
 link and nothing else from any origin, since that grants what loading the link grants, and its reply
 says only whether it worked. Every other call, and every reply carrying the page's location, stays
-with the origins the server named. A report never depends on its script, and one with no links
+with the origins the server named. The report loads the link itself when no viewer speaks within 2
+seconds, and a page posts an accepted note on an envelope of its own (`agni-viewer/v1/accepted`) the
+moment it takes a request, so a verdict link whose rule takes longer to resolve is waited for rather
+than loaded over. A report never depends on its script, and one with no links
 carries none, since a report has to read the same emailed, committed or opened with scripts off
 (`core/report/html.go`).
 

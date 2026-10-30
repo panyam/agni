@@ -624,6 +624,11 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   3980 components and 1617 nets off the `.edn` against 5219 and 4572 off the `.eds`, so nets inflate
   by 183%. A design that ships only a `.eds` can be rendered and queried, and its counts must never be
   compared against a design read from a netlist.
+- **A saved report's link waits 2 s for an open viewer to speak, then loads the link** (agni 1156).
+  The viewer posts `agni-viewer/v1/accepted` the moment it takes a request and the report then waits
+  for the answer, since resolving a verdict link runs its rule (#1271, where a slow CI runner reloaded
+  the viewer). Any new note from the page goes on its OWN envelope: a report saved earlier reads a
+  reply on `agni-viewer/v1` with no `ok` as a refusal and reloads.
 - **A KiCad footprint's angle carries over unchanged, and a back footprint's items are un-mirrored**
   (agni 1261, `placementAngle`/`footprintLocal` in `readers/kicad/pcb_geom.go`). KiCad's angle is
   counter-clockwise as drawn and the Y flip keeps the picture; negating it put pad 1 where pad 2 is.
@@ -670,6 +675,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   an empty set. The gate takes `samples-oracle`, the 19MB both-views corpus, because the cross-view
   tests read a board file and a test whose fixture is absent skips rather than fails. One stamp PER
   ARTIFACT, so `make samples` and `make samples-oracle` compose instead of deleting each other's work.
+  Since v0.1.4 there are four: the gate fetches `tutorial-board`, `oracle-corpus` and `odb-altium`
+  (foxBMS's Altium-written ODB++ jobs), and `make odb-oracle` adds `odb-kicad`. A pin bump needs the
+  release to exist first, or every CI job fails at the fetch, so a samples PR merges and is tagged
+  before the agni PR that pins it goes green. A new tarball leaves the old ones byte-identical, which
+  `make dist` in agni-samples proves by reproducing their checksums. `kicad-cli` writes a `.kicad_prl`
+  beside any board it exports, so an export run over `tools/samples` or a fixture folder leaves one
+  there (both export scripts remove it).
   Since v0.1.2 the oracle corpus carries a `design.yaml` per real design (entry, board companion,
   internal connectors) and the tutorial tarball does not, because a declared companion missing from
   a tarball fails every read and that tarball leaves the boards out.

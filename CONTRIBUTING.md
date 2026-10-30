@@ -344,4 +344,7 @@ circuit, the hardware primer, prerequisite knowledge, then the reviewer's guide.
   move captures out of the tree before staging and stage by explicit path. That is the stray-file
   trap above, narrowed to one file type. To embed the pair, commit the images to `pr-assets/`,
   reference them as `.../raw/<full-SHA>/pr-assets/x.png` pinned to the commit rather than the
-  branch, then `git rm` them in a follow-up commit so they never reach `main`.
+  branch, then `git rm` them in a follow-up commit so they never reach `main`. Do it before the PR
+  merges, so the image commit is in `main`'s history. Added after the merge, it lives only on the
+  PR's branch (GitHub deletes a merged branch, so pushing recreates it), and that branch then has to
+  stay or the image eventually stops resolving.
