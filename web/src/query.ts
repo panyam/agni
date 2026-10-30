@@ -175,8 +175,10 @@ export interface QueryView {
   // to (agni issue 793). It opens a tab holding the query and its binding chips and runs it, leaving
   // an editable query behind.
   // opts names the tab and asks for the whole answer, which a question arriving by link wants (agni
-  // issue 634); without it the tab is numbered and shows a starting page of rows.
-  setQuery: (text: string, bindings?: Bindings, opts?: { title?: string; whole?: boolean }) => void;
+  // issue 634); without it the tab is numbered and shows a starting page of rows. arrived marks a
+  // question a link carried, whose answer then locates its one row or says where the answer is
+  // (agni issue 1236, linkTarget).
+  setQuery: (text: string, bindings?: Bindings, opts?: QueryOpts) => void;
   // setEntityQueries hands over the served questions about a selected entity, several per kind.
   setEntityQueries: (presets: EntityQueryItem[]) => void;
   // setSearch hands over the find-by-name template. Until it arrives the panel offers no search
@@ -308,6 +310,50 @@ export function relationTemplate(r: { name: string; args: readonly string[] }): 
 // An ordinary query carries no cellKinds and falls through to the column.
 export function cellKind(result: QueryResult, row: QueryRowItem, i: number): string {
   return row.cellKinds[i] || result.columnKinds[i] || "";
+}
+
+// QueryOpts says how a question handed to the panel opens (QueryView.setQuery).
+export interface QueryOpts {
+  title?: string;
+  whole?: boolean;
+  arrived?: boolean;
+}
+
+// LinkTarget is the cell a query link's answer locates on arrival, in the arguments a click on it
+// passes: subject is the cell, ref a pin cell's component, sheet the first sheet it is drawn on.
+export interface LinkTarget {
+  kind: string;
+  subject: string;
+  ref: string;
+  sheet?: string;
+  reason: LocateReason;
+}
+
+// linkTarget is what a query link locates when it arrives (agni issue 1236): the first entity cell
+// of an answer holding exactly one row, on the first sheet it is drawn on, since a link lands on the
+// design's first sheet and the entity may be drawn nowhere on it. An answer of several rows locates
+// nothing, because the page cannot know which row the link meant, and the reader is told the answer
+// is in the Query panel instead.
+export function linkTarget(result: QueryResult): LinkTarget | null {
+  if (result.loading || result.error || result.rows.length !== 1) return null;
+  const row = result.rows[0];
+  for (let i = 0; i < row.cells.length; i++) {
+    const ref = row.cellRefs[i] ?? "";
+    const kind = cellKind(result, row, i);
+    if (kind === "" || (kind === "pin" && ref === "")) continue;
+    return { kind, subject: row.cells[i], ref, sheet: row.cellSheets[i]?.[0]?.id, reason: row.cellReasons[i] ?? LocateReason.UNSPECIFIED };
+  }
+  return null;
+}
+
+// linkNote is what the Query panel says once a query link's answer lands and locates nothing, so a
+// reader looking at the drawing learns where the answer went.
+export function linkNote(result: QueryResult): string {
+  if (result.error) return "";
+  const rows = result.total || result.rows.length;
+  if (rows === 0) return "This link asked the query above, and it matched nothing on this design.";
+  const n = rows === 1 ? "1 row" : `${rows} rows`;
+  return `This link asked the query above, and its answer is the ${n} below. Click a cell to find it on the drawing.`;
 }
 
 // SearchItem is the served find-by-name query (agni issue 338) and the concept it leaves behind. A

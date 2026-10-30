@@ -26,6 +26,9 @@ import {
   type RelationEntryItem,
   relationTemplate,
   STARTING_POINT_LIMIT,
+  type QueryOpts,
+  linkNote,
+  linkTarget,
 } from "./query.js";
 import {
   type CheckedState,
@@ -154,7 +157,7 @@ function QueryPanel(props: {
   search: () => SearchItem | null;
   locateNote: () => string;
   setLocateNote: (note: string) => void;
-  prefill: () => { text: string; bindings: Bindings; n: number; title?: string; whole?: boolean };
+  prefill: () => { text: string; bindings: Bindings; n: number } & QueryOpts;
   selection: () => Selection | null;
   setSelection: (sel: Selection | null) => void;
   currentSheet: () => string;
@@ -363,7 +366,32 @@ function QueryPanel(props: {
   createEffect(() => {
     const p = props.prefill();
     if (!p.n) return;
-    untrack(() => openQuestion(p.title || `Query ${++blanks}`, p.text, p.bindings, p.whole ? 0 : STARTING_POINT_LIMIT));
+    untrack(() => {
+      openQuestion(p.title || `Query ${++blanks}`, p.text, p.bindings, p.whole ? 0 : STARTING_POINT_LIMIT);
+      if (p.arrived) arrival = front().id;
+    });
+  });
+
+  // arrival is the tab a link's question opened, until its answer lands (agni issue 1236). A link
+  // opens on the design's first sheet with nothing drawn, so the answer then locates its one row as
+  // a click on it would, or, holding several, says they are here rather than on the drawing. A
+  // reader who moved to another tab meanwhile is left where they are.
+  let arrival = "";
+  let resultsRef: HTMLDivElement | undefined;
+  createEffect(() => {
+    // Read before the test of arrival, so the effect follows every answer from its first run.
+    const all = props.results();
+    const r = arrival ? all[arrival] : undefined;
+    if (!r || r.loading || !r.ran) return;
+    const id = arrival;
+    arrival = "";
+    untrack(() => {
+      if (front().id !== id) return;
+      const t = linkTarget(r);
+      if (t) pickCell(t.kind, t.subject, t.sheet, t.reason, t.ref);
+      else props.setLocateNote(linkNote(r));
+      queueMicrotask(() => resultsRef?.scrollIntoView?.({ block: "nearest" }));
+    });
   });
 
   // drawerOpen controls the slide-in helper drawer (examples, relations, reference), which keeps
@@ -954,7 +982,7 @@ function QueryPanel(props: {
           when={state().rows.length > 0}
           fallback={<div class="query-empty">No results.</div>}
         >
-          <div class="query-results">
+          <div class="query-results" ref={resultsRef}>
             <table class="query-table">
               {/* A colgroup carries the widths, so a drag sets ONE number rather than restyling every
                   cell in the column, and the fixed layout below honours it. */}
@@ -1160,7 +1188,7 @@ export function queryPanelIsland(
   const [locateNote, setLocateNote] = signalView<string>("");
   // prefill carries a query written FOR the reader. The counter makes asking the same question twice
   // open and run it again, since an effect over identical text does not fire.
-  const [prefill, setPrefill] = signalView<{ text: string; bindings: Bindings; n: number; title?: string; whole?: boolean }>({ text: "", bindings: {}, n: 0 });
+  const [prefill, setPrefill] = signalView<{ text: string; bindings: Bindings; n: number } & QueryOpts>({ text: "", bindings: {}, n: 0 });
   let prefills = 0;
   // The served questions about a selection. A signal because the panel RENDERS one (the ask button's
   // hover shows the query and what it teaches) as well as running it.
@@ -1241,7 +1269,7 @@ export function queryPanelIsland(
       setRelations,
       setExamples,
       setLocateNote,
-      setQuery: (text: string, bindings: Bindings = {}, opts: { title?: string; whole?: boolean } = {}) =>
+      setQuery: (text: string, bindings: Bindings = {}, opts: QueryOpts = {}) =>
         setPrefill({ text, bindings, n: ++prefills, ...opts }),
       setEntityQueries,
       setSearch,

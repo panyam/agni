@@ -157,6 +157,10 @@ export interface ViewSink {
   // host without the Compare chrome has no comparison to start.
   // nearRenames carries a link's rename_approx, so the comparison's tables pair them as the diff did.
   compare?: (against: { mount: string; path: string }, opts?: { nearRenames?: boolean }) => void;
+  // showPanel brings a panel's tab forward, for a link whose answer lands there rather than on the
+  // drawing (agni issue 1236). A saved layout can leave a query link's answer behind the Trace tab.
+  // Optional like compare, since a host without a dock shows every panel it has.
+  showPanel?: (panel: "query" | "trace") => void;
   // overview receives the per-sheet violation tiles (WS9-025) whenever the findings or the
   // shown sheet change. Optional like query.
   overview?: OverviewView;
@@ -824,12 +828,20 @@ export class ViewerPresenter {
     // the viewer just asks it.
     if (loc.trace) {
       const [from, to] = splitTraceParam(loc.trace);
+      this.views.showPanel?.("trace");
       await this.runTrace(from, to, loc.traceHops);
     }
     // A query link carries the question too (agni issue 634): the panel opens a tab holding it and
-    // asks it whole, as `agni query` did.
-    if (loc.query) this.views.query?.setQuery(loc.query, bindsFromLink(loc.binds), { title: loc.title, whole: true });
-    if (loc.set && loc.q) await this.openSetMember(loc.set, loc.q);
+    // asks it whole, as `agni query` did, and comes forward, since the answer lands there rather
+    // than on the drawing (agni issue 1236).
+    if (loc.query) {
+      this.views.showPanel?.("query");
+      this.views.query?.setQuery(loc.query, bindsFromLink(loc.binds), { title: loc.title, whole: true, arrived: true });
+    }
+    if (loc.set && loc.q) {
+      this.views.showPanel?.("query");
+      await this.openSetMember(loc.set, loc.q);
+    }
     // A diff link names the design to compare against (agni issue 1126), and the host starts the
     // comparison its Compare picker starts. The open design itself is ignored, as the picker refuses
     // it.

@@ -620,6 +620,7 @@ class AppRoot extends BaseComponent {
           syncUrl(loc);
         },
         compare: compareWith,
+        showPanel: (panel) => dockApi?.getPanel(panel)?.api.setActive(),
         overview: sheetOverview.view,
         query: query.view,
         coverage: coverage.view,
