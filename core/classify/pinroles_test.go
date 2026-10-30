@@ -79,3 +79,38 @@ func TestStampPowerInPinsIdempotent(t *testing.T) {
 		t.Errorf("re-stamp dir = %v, want POWER_IN", got)
 	}
 }
+
+// TestStampPowerInPinsKeepsAConfidentInput checks that a format with a power-input type keeps a pin it
+// typed INPUT or INOUT, and still fills an UNSPECIFIED one, while a format without one is promoted as
+// before (agni issue 1241).
+func TestStampPowerInPinsKeepsAConfidentInput(t *testing.T) {
+	const (
+		IN     = ir.PinDirection_PIN_DIRECTION_INPUT
+		INOUT  = ir.PinDirection_PIN_DIRECTION_INOUT
+		UNSPEC = ir.PinDirection_PIN_DIRECTION_UNSPECIFIED
+		POWER  = ir.PinDirection_PIN_DIRECTION_POWER_IN
+	)
+	cases := []struct {
+		format string
+		in     ir.PinDirection
+		want   ir.PinDirection
+	}{
+		{"kicad-sch", IN, IN},
+		{"kicad", INOUT, INOUT},
+		{"kicad-sch", UNSPEC, POWER},
+		{"geda", IN, IN},
+		{"telesis", IN, IN},
+		{"edif-2.0.0", IN, POWER},
+		{"ipc-2581", INOUT, POWER},
+		{"xschem", IN, POWER},
+	}
+	for _, c := range cases {
+		d := &ir.Design{SourceFormat: c.format, Libraries: []*ir.PartLibrary{{Parts: []*ir.PartType{{
+			Name: "P", Pins: []*ir.Pin{{Name: "VBUS", Designator: "1", Direction: c.in}},
+		}}}}}
+		StampPowerInPins(d)
+		if got := d.Libraries[0].Parts[0].Pins[0].Direction; got != c.want {
+			t.Errorf("%s: VBUS %v -> %v, want %v", c.format, c.in, got, c.want)
+		}
+	}
+}

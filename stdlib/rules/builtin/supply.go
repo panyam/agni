@@ -41,7 +41,8 @@ func floatingExposedPad(m check.Model, n *ir.Net) string {
 
 // dividerTap reports why a net is the midpoint of a resistive divider feeding a sense input rather
 // than a supply, and "" when it is not one. A USB hub's VBUS-sense pin sits between a resistor to VBUS
-// and one to ground, and its symbol types the pin power_in. A divider needs BOTH legs, so a supply fed
+// and one to ground, and a symbol types such a pin power_in, input or bidirectional (Jetson's hub
+// draws it bidirectional, agni issue 1241). A divider needs BOTH legs, so a supply fed
 // through a single series resistor or a 0 Ohm link, which still wants its decoupling, is not one.
 //
 // A divider tap still reads as a rail to Model.IsRailNet when its name matches the rail vocabulary
@@ -56,7 +57,7 @@ func dividerTap(m check.Model, n *ir.Net) string {
 		if check.IsVirtualRef(ref) {
 			continue
 		}
-		if check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN {
+		if senseDir(check.ConnDir(m, c)) {
 			sense = true
 			continue
 		}
@@ -80,7 +81,16 @@ func dividerTap(m check.Model, n *ir.Net) string {
 	if !sense || up == "" || down == "" {
 		return ""
 	}
-	return "the net is a divider tap, fed through " + up + " and returned through " + down + " to ground, so its power-input pin senses a voltage rather than drawing a supply"
+	return "the net is a divider tap, fed through " + up + " and returned through " + down + " to ground, so its input pin senses a voltage rather than drawing a supply"
+}
+
+// senseDir reports whether a pin typed d can be the input a divider tap feeds.
+func senseDir(d ir.PinDirection) bool {
+	switch d {
+	case ir.PinDirection_PIN_DIRECTION_POWER_IN, ir.PinDirection_PIN_DIRECTION_INPUT, ir.PinDirection_PIN_DIRECTION_INOUT:
+		return true
+	}
+	return false
 }
 
 // notASupply is the reason a net carrying a power-input pin is not a supply rail, or "".
