@@ -96,6 +96,12 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	d := resp.GetDesign()
 	if d == nil {
 		if isDir {
+			// An ODB++ job is a directory, entered by its matrix file (agni issue 1250).
+			if fi, statErr := os.Stat(filepath.Join(root, filepath.FromSlash(uri.Path), "matrix", "matrix")); statErr == nil && !fi.IsDir() {
+				entry := uri
+				entry.Path = path.Join(uri.Path, "matrix", "matrix")
+				return designSource{DesignSources: service.DesignSources{NetlistURI: entry.String(), BoardURI: entry.String(), GeometryURI: entry.String()}}, nil
+			}
 			// A reader handed a directory would report an unsupported extension, so name what is missing.
 			return designSource{}, fmt.Errorf("%s is a directory that declares no design: name a design file, or add a %s declaring which file is this design's entry", named, projects.DesignDescriptor)
 		}

@@ -85,6 +85,7 @@ func ProposeFromFiles(mount string, files []string, read func(string) ([]byte, e
 	p.kicadDirs = map[string]*webapi.ProposedDesign{}
 	p.edif()
 	p.kicad()
+	p.odbJobs()
 	p.loose()
 	p.libraries()
 	p.leftovers()
@@ -397,11 +398,41 @@ func (p *proposer) edif() {
 	}
 }
 
+// odbJobs makes a design of each ODB++ job, a directory entered by its matrix/matrix file, which
+// takes every file under the job (agni issue 1250). The design sits beside the job, named for it.
+func (p *proposer) odbJobs() {
+	for _, f := range p.files {
+		if !p.free(f) || formats.DesignRoot(f) == "" {
+			continue
+		}
+		job := formats.DesignRoot(f)
+		if job == "." {
+			job = ""
+		}
+		var files []string
+		for _, g := range p.files {
+			if p.free(g) && under(job, g) {
+				p.claim(g)
+				files = append(files, g)
+			}
+		}
+		name := "odb-job"
+		if job != "" {
+			name = designID(path.Base(job))
+		}
+		p.addIn(dirOf(job), name, f, nil, nil, files, "")
+	}
+}
+
 // loose makes a design of each remaining file a reader opens, other than a board, which needs a
-// schematic or netlist to belong to.
+// schematic or netlist to belong to. An archive is a design only when it holds an ODB++ job, since
+// .zip and .tgz are registered for that alone and most archives are something else.
 func (p *proposer) loose() {
 	for _, f := range p.files {
 		if !p.free(f) || ext(f) == ".kicad_pcb" || formats.ByExt(f) == nil {
+			continue
+		}
+		if formats.IsArchive(f) && !p.archiveJob(f) {
 			continue
 		}
 		p.claim(f)
@@ -501,19 +532,23 @@ func (p *proposer) leftovers() {
 
 // add records one proposal and its descriptor.
 func (p *proposer) add(entry string, companions []string, revisions []*webapi.DesignRevision, files []string, note string) *webapi.ProposedDesign {
-	d := &webapi.Design{Name: designID(stemOf(entry)), Uri: p.uri(dirOf(entry)), EntryUri: p.uri(entry), Revisions: revisions}
+	return p.addIn(dirOf(entry), designID(stemOf(entry)), entry, companions, revisions, files, note)
+}
+
+// addIn is add for a design whose folder and name are not the entry's own, an ODB++ job's.
+func (p *proposer) addIn(folder, name, entry string, companions []string, revisions []*webapi.DesignRevision, files []string, note string) *webapi.ProposedDesign {
+	d := &webapi.Design{Name: name, Uri: p.uri(folder), EntryUri: p.uri(entry), Revisions: revisions}
 	for _, c := range companions {
 		d.CompanionUris = append(d.CompanionUris, p.uri(c))
 	}
 	sort.Strings(files)
-	pd := &webapi.ProposedDesign{Folder: dirOf(entry), Design: d, Files: files, Note: note, DesignYaml: p.descriptor(entry, companions, revisions)}
+	pd := &webapi.ProposedDesign{Folder: folder, Design: d, Files: files, Note: note, DesignYaml: p.descriptor(folder, name, entry, companions, revisions)}
 	p.resp.Designs = append(p.resp.Designs, pd)
 	return pd
 }
 
 // descriptor writes the design.yaml that declares a proposal, paths relative to its folder.
-func (p *proposer) descriptor(entry string, companions []string, revisions []*webapi.DesignRevision) string {
-	dir := dirOf(entry)
+func (p *proposer) descriptor(dir, name, entry string, companions []string, revisions []*webapi.DesignRevision) string {
 	rel := func(f string) string {
 		if dir == "" {
 			return f
@@ -527,7 +562,7 @@ func (p *proposer) descriptor(entry string, companions []string, revisions []*we
 		return u
 	}
 	var b strings.Builder
-	fmt.Fprintf(&b, "name: %s\n", yamlScalar(designID(stemOf(entry))))
+	fmt.Fprintf(&b, "name: %s\n", yamlScalar(name))
 	if parent := p.extendsFor(dir); parent != "" {
 		fmt.Fprintf(&b, "extends: %s\n", yamlScalar(parent))
 	}
@@ -603,4 +638,13 @@ func (p *proposer) noteSharedFolders() {
 		}
 		first[d.GetFolder()] = true
 	}
+}
+
+// archiveJob reports whether an archive among the files holds an ODB++ job.
+func (p *proposer) archiveJob(f string) bool {
+	if p.read == nil {
+		return false
+	}
+	b, err := p.read(f)
+	return err == nil && formats.IsODBArchive(b)
 }
