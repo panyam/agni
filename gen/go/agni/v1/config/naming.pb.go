@@ -179,11 +179,20 @@ type NetNameVocab struct {
 	// differ in what they are: the first two are the regulator's power plumbing and must never be
 	// probed, a control input is an ordinary signal that a test point is welcome on, and a gate drive
 	// is a real supply sitting at a voltage its name does not state.
-	Switching     *VocabPatterns `protobuf:"bytes,4,opt,name=switching,proto3" json:"switching,omitempty"`
-	Control       *VocabPatterns `protobuf:"bytes,5,opt,name=control,proto3" json:"control,omitempty"`
-	GateDrive     *VocabPatterns `protobuf:"bytes,6,opt,name=gate_drive,json=gateDrive,proto3" json:"gate_drive,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Switching *VocabPatterns `protobuf:"bytes,4,opt,name=switching,proto3" json:"switching,omitempty"`
+	Control   *VocabPatterns `protobuf:"bytes,5,opt,name=control,proto3" json:"control,omitempty"`
+	GateDrive *VocabPatterns `protobuf:"bytes,6,opt,name=gate_drive,json=gateDrive,proto3" json:"gate_drive,omitempty"`
+	// i2c names an I2C bus line (SDA or SCL), the nets the I2C pull-up rules judge. It is a vocabulary
+	// rather than a rule's own pattern so a house that spells its bus differently, or a part whose I2S
+	// data pin is named SDA, is fixed in config (agni issues 1255, 1265).
+	I2C *VocabPatterns `protobuf:"bytes,7,opt,name=i2c,proto3" json:"i2c,omitempty"`
+	// infer_rail_from_supply_pins makes a net a rail when a LATER token of its name is a supply-pin word
+	// (LPC_VCC, FAN_VDD) and the net feeds a fitted part's power_in pin that is not a connector's own. A
+	// name alone stays a signal (EN_VCC feeds no supply pin), and the inferred role records the pin that
+	// justified it. Absent means on; a project or a request sets false to turn it off (agni issue 1243).
+	InferRailFromSupplyPins *bool `protobuf:"varint,8,opt,name=infer_rail_from_supply_pins,json=inferRailFromSupplyPins,proto3,oneof" json:"infer_rail_from_supply_pins,omitempty"`
+	unknownFields           protoimpl.UnknownFields
+	sizeCache               protoimpl.SizeCache
 }
 
 func (x *NetNameVocab) Reset() {
@@ -258,17 +267,34 @@ func (x *NetNameVocab) GetGateDrive() *VocabPatterns {
 	return nil
 }
 
+func (x *NetNameVocab) GetI2C() *VocabPatterns {
+	if x != nil {
+		return x.I2C
+	}
+	return nil
+}
+
+func (x *NetNameVocab) GetInferRailFromSupplyPins() bool {
+	if x != nil && x.InferRailFromSupplyPins != nil {
+		return *x.InferRailFromSupplyPins
+	}
+	return false
+}
+
 // PinNameVocab is the vocabulary for a component's PIN names.
 //
 // The three transistor terminals are applied only to parts the class lexicon reads as a transistor,
 // so a house spelling here cannot leak onto an MCU's pins. They are deliberately short and would
 // collide badly if applied to any part: an unanchored "S" matches SDA, SCLK and SENSE.
 type PinNameVocab struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Supply        *VocabPatterns         `protobuf:"bytes,1,opt,name=supply,proto3" json:"supply,omitempty"` // a component's power-supply INPUT pin names (WS3-072)
-	Gate          *VocabPatterns         `protobuf:"bytes,2,opt,name=gate,proto3" json:"gate,omitempty"`     // transistor TERMINAL pin names (WS3-117)
-	Source        *VocabPatterns         `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
-	Drain         *VocabPatterns         `protobuf:"bytes,4,opt,name=drain,proto3" json:"drain,omitempty"`
+	state  protoimpl.MessageState `protogen:"open.v1"`
+	Supply *VocabPatterns         `protobuf:"bytes,1,opt,name=supply,proto3" json:"supply,omitempty"` // a component's power-supply INPUT pin names (WS3-072)
+	Gate   *VocabPatterns         `protobuf:"bytes,2,opt,name=gate,proto3" json:"gate,omitempty"`     // transistor TERMINAL pin names (WS3-117)
+	Source *VocabPatterns         `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
+	Drain  *VocabPatterns         `protobuf:"bytes,4,opt,name=drain,proto3" json:"drain,omitempty"`
+	// exposed_pad names a package's exposed thermal pad, which datasheets often let float, so a lone
+	// power_in pad on its own net is not read as an undriven rail (agni issue 935).
+	ExposedPad    *VocabPatterns `protobuf:"bytes,5,opt,name=exposed_pad,json=exposedPad,proto3" json:"exposed_pad,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -331,14 +357,25 @@ func (x *PinNameVocab) GetDrain() *VocabPatterns {
 	return nil
 }
 
+func (x *PinNameVocab) GetExposedPad() *VocabPatterns {
+	if x != nil {
+		return x.ExposedPad
+	}
+	return nil
+}
+
 // VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
 // leaf. They are MERGED onto the built-in set unless replace is set, in which case they become the
 // whole set. A project normally teaches the engine additional names rather than discarding what it
 // already knows.
 type VocabPatterns struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Patterns      []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
-	Replace       bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Patterns []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
+	Replace  bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
+	// exclude takes a name OUT of the vocabulary even when a pattern matches it, since RE2 has no
+	// lookaround to say "SDA, but not I2S0_RX_SDA" in one pattern. Merged and replaced as patterns are.
+	// Field 3 is skipped because ClassVocab's prefixes holds it and the two share numbers.
+	Exclude       []string `protobuf:"bytes,4,rep,name=exclude,proto3" json:"exclude,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -387,6 +424,13 @@ func (x *VocabPatterns) GetReplace() bool {
 	return false
 }
 
+func (x *VocabPatterns) GetExclude() []string {
+	if x != nil {
+		return x.Exclude
+	}
+	return nil
+}
+
 // ClassVocab is one component class's override. patterns and replace mean what they mean on
 // VocabPatterns, matched against a part's text TOKENS, and field numbers are shared with it so a
 // block written before prefixes existed reads the same.
@@ -397,10 +441,14 @@ func (x *VocabPatterns) GetReplace() bool {
 // re-points F. replace does not touch them. A prefix holding anything but letters, or one listed under
 // two classes, is a load error: the first could never match and the second has no defensible answer.
 type ClassVocab struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Patterns      []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
-	Replace       bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
-	Prefixes      []string               `protobuf:"bytes,3,rep,name=prefixes,proto3" json:"prefixes,omitempty"`
+	state    protoimpl.MessageState `protogen:"open.v1"`
+	Patterns []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
+	Replace  bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
+	Prefixes []string               `protobuf:"bytes,3,rep,name=prefixes,proto3" json:"prefixes,omitempty"`
+	// families are part-number families (RE2, matched at the start of a part's text token) that decide
+	// this class even on a part whose ref-des reads as an IC, as a suppressor array labelled U does.
+	// ADDED to the built-in families unless replace is set. Only the tvs class ships any (agni 1257).
+	Families      []string `protobuf:"bytes,5,rep,name=families,proto3" json:"families,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -452,6 +500,13 @@ func (x *ClassVocab) GetReplace() bool {
 func (x *ClassVocab) GetPrefixes() []string {
 	if x != nil {
 		return x.Prefixes
+	}
+	return nil
+}
+
+func (x *ClassVocab) GetFamilies() []string {
+	if x != nil {
+		return x.Families
 	}
 	return nil
 }
@@ -560,7 +615,7 @@ const file_agni_v1_config_naming_proto_rawDesc = "" +
 	"\n" +
 	"ClassEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
-	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.config.ClassVocabR\x05value:\x028\x01\"\xe7\x02\n" +
+	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.config.ClassVocabR\x05value:\x028\x01\"\xfb\x03\n" +
 	"\fNetNameVocab\x121\n" +
 	"\x04rail\x18\x01 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x04rail\x125\n" +
 	"\x06ground\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x06ground\x129\n" +
@@ -568,20 +623,27 @@ const file_agni_v1_config_naming_proto_rawDesc = "" +
 	"\tswitching\x18\x04 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\tswitching\x127\n" +
 	"\acontrol\x18\x05 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\acontrol\x12<\n" +
 	"\n" +
-	"gate_drive\x18\x06 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\tgateDrive\"\xe4\x01\n" +
+	"gate_drive\x18\x06 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\tgateDrive\x12/\n" +
+	"\x03i2c\x18\a \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x03i2c\x12A\n" +
+	"\x1binfer_rail_from_supply_pins\x18\b \x01(\bH\x00R\x17inferRailFromSupplyPins\x88\x01\x01B\x1e\n" +
+	"\x1c_infer_rail_from_supply_pins\"\xa4\x02\n" +
 	"\fPinNameVocab\x125\n" +
 	"\x06supply\x18\x01 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x06supply\x121\n" +
 	"\x04gate\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x04gate\x125\n" +
 	"\x06source\x18\x03 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x06source\x123\n" +
-	"\x05drain\x18\x04 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x05drain\"E\n" +
+	"\x05drain\x18\x04 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x05drain\x12>\n" +
+	"\vexposed_pad\x18\x05 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\n" +
+	"exposedPad\"_\n" +
 	"\rVocabPatterns\x12\x1a\n" +
 	"\bpatterns\x18\x01 \x03(\tR\bpatterns\x12\x18\n" +
-	"\areplace\x18\x02 \x01(\bR\areplace\"^\n" +
+	"\areplace\x18\x02 \x01(\bR\areplace\x12\x18\n" +
+	"\aexclude\x18\x04 \x03(\tR\aexclude\"z\n" +
 	"\n" +
 	"ClassVocab\x12\x1a\n" +
 	"\bpatterns\x18\x01 \x03(\tR\bpatterns\x12\x18\n" +
 	"\areplace\x18\x02 \x01(\bR\areplace\x12\x1a\n" +
-	"\bprefixes\x18\x03 \x03(\tR\bprefixes\"\x9b\x01\n" +
+	"\bprefixes\x18\x03 \x03(\tR\bprefixes\x12\x1a\n" +
+	"\bfamilies\x18\x05 \x03(\tR\bfamilies\"\x9b\x01\n" +
 	"\n" +
 	"NamingRule\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n" +
@@ -627,16 +689,18 @@ var file_agni_v1_config_naming_proto_depIdxs = []int32{
 	4,  // 8: agni.v1.config.NetNameVocab.switching:type_name -> agni.v1.config.VocabPatterns
 	4,  // 9: agni.v1.config.NetNameVocab.control:type_name -> agni.v1.config.VocabPatterns
 	4,  // 10: agni.v1.config.NetNameVocab.gate_drive:type_name -> agni.v1.config.VocabPatterns
-	4,  // 11: agni.v1.config.PinNameVocab.supply:type_name -> agni.v1.config.VocabPatterns
-	4,  // 12: agni.v1.config.PinNameVocab.gate:type_name -> agni.v1.config.VocabPatterns
-	4,  // 13: agni.v1.config.PinNameVocab.source:type_name -> agni.v1.config.VocabPatterns
-	4,  // 14: agni.v1.config.PinNameVocab.drain:type_name -> agni.v1.config.VocabPatterns
-	5,  // 15: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.ClassVocab
-	16, // [16:16] is the sub-list for method output_type
-	16, // [16:16] is the sub-list for method input_type
-	16, // [16:16] is the sub-list for extension type_name
-	16, // [16:16] is the sub-list for extension extendee
-	0,  // [0:16] is the sub-list for field type_name
+	4,  // 11: agni.v1.config.NetNameVocab.i2c:type_name -> agni.v1.config.VocabPatterns
+	4,  // 12: agni.v1.config.PinNameVocab.supply:type_name -> agni.v1.config.VocabPatterns
+	4,  // 13: agni.v1.config.PinNameVocab.gate:type_name -> agni.v1.config.VocabPatterns
+	4,  // 14: agni.v1.config.PinNameVocab.source:type_name -> agni.v1.config.VocabPatterns
+	4,  // 15: agni.v1.config.PinNameVocab.drain:type_name -> agni.v1.config.VocabPatterns
+	4,  // 16: agni.v1.config.PinNameVocab.exposed_pad:type_name -> agni.v1.config.VocabPatterns
+	5,  // 17: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.ClassVocab
+	18, // [18:18] is the sub-list for method output_type
+	18, // [18:18] is the sub-list for method input_type
+	18, // [18:18] is the sub-list for extension type_name
+	18, // [18:18] is the sub-list for extension extendee
+	0,  // [0:18] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_config_naming_proto_init() }
@@ -644,6 +708,7 @@ func file_agni_v1_config_naming_proto_init() {
 	if File_agni_v1_config_naming_proto != nil {
 		return
 	}
+	file_agni_v1_config_naming_proto_msgTypes[2].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{

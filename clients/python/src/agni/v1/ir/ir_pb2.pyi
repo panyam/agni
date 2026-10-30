@@ -433,12 +433,14 @@ class ComponentSection(_message.Message):
     def __init__(self, index: _Optional[int] = ..., part_ref: _Optional[str] = ..., library_ref: _Optional[str] = ..., attributes: _Optional[_Mapping[str, str]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
 
 class NetRole(_message.Message):
-    __slots__ = ("role_kind", "source")
+    __slots__ = ("role_kind", "source", "reason")
     ROLE_KIND_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
+    REASON_FIELD_NUMBER: _ClassVar[int]
     role_kind: Role
     source: RoleSource
-    def __init__(self, role_kind: _Optional[_Union[Role, str]] = ..., source: _Optional[_Union[RoleSource, str]] = ...) -> None: ...
+    reason: str
+    def __init__(self, role_kind: _Optional[_Union[Role, str]] = ..., source: _Optional[_Union[RoleSource, str]] = ..., reason: _Optional[str] = ...) -> None: ...
 
 class Net(_message.Message):
     __slots__ = ("name", "net_classes", "connections", "id", "roles", "attributes", "prov")

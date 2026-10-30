@@ -56,6 +56,15 @@ message NetNameVocab {
   VocabPatterns switching = 4;
   VocabPatterns control = 5;
   VocabPatterns gate_drive = 6;
+  // i2c names an I2C bus line (SDA or SCL), the nets the I2C pull-up rules judge. It is a vocabulary
+  // rather than a rule's own pattern so a house that spells its bus differently, or a part whose I2S
+  // data pin is named SDA, is fixed in config (agni issues 1255, 1265).
+  VocabPatterns i2c = 7;
+  // infer_rail_from_supply_pins makes a net a rail when a LATER token of its name is a supply-pin word
+  // (LPC_VCC, FAN_VDD) and the net feeds a fitted part's power_in pin that is not a connector's own. A
+  // name alone stays a signal (EN_VCC feeds no supply pin), and the inferred role records the pin that
+  // justified it. Absent means on; a project or a request sets false to turn it off (agni issue 1243).
+  optional bool infer_rail_from_supply_pins = 8;
 }
 
 // PinNameVocab is the vocabulary for a component's PIN names.
@@ -68,6 +77,9 @@ message PinNameVocab {
   VocabPatterns gate = 2;   // transistor TERMINAL pin names (WS3-117)
   VocabPatterns source = 3;
   VocabPatterns drain = 4;
+  // exposed_pad names a package's exposed thermal pad, which datasheets often let float, so a lone
+  // power_in pad on its own net is not read as an undriven rail (agni issue 935).
+  VocabPatterns exposed_pad = 5;
 }
 
 // VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
@@ -77,6 +89,10 @@ message PinNameVocab {
 message VocabPatterns {
   repeated string patterns = 1;
   bool replace = 2;
+  // exclude takes a name OUT of the vocabulary even when a pattern matches it, since RE2 has no
+  // lookaround to say "SDA, but not I2S0_RX_SDA" in one pattern. Merged and replaced as patterns are.
+  // Field 3 is skipped because ClassVocab's prefixes holds it and the two share numbers.
+  repeated string exclude = 4;
 }
 
 // ClassVocab is one component class's override. patterns and replace mean what they mean on
@@ -92,6 +108,10 @@ message ClassVocab {
   repeated string patterns = 1;
   bool replace = 2;
   repeated string prefixes = 3;
+  // families are part-number families (RE2, matched at the start of a part's text token) that decide
+  // this class even on a part whose ref-des reads as an IC, as a suppressor array labelled U does.
+  // ADDED to the built-in families unless replace is set. Only the tvs class ships any (agni 1257).
+  repeated string families = 5;
 }
 
 // NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching

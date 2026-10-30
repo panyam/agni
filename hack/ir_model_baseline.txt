@@ -3,6 +3,7 @@ core/check:RunDesign
 core/classify:PartIndex
 core/classify:Stamp
 core/classify:StampNetRoles
+core/classify:inferRails
 core/classify:StampPowerInPins
 core/classify:StampValues
 core/classify:StampMPN

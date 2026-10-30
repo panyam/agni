@@ -64,9 +64,11 @@ recording as such.
 The walk crosses resistors only and never crosses ground, because a resistor to ground is a
 pull-DOWN, and counting it would pass the bus this rule exists to catch.
 
-The SDA/SCL name match is at a **token boundary**, not a substring (WS3-037): `SDA`, `SCL`,
-`I2C_SCL`, and `SCL0` match; `SPI_SCLK` (an SPI clock), `SCLK`, and `MCLK` do NOT, because `SCL`
-abutting another letter is a different signal. Generalizing this presence check to an
+Which nets are I2C is the lexicon's `i2c` vocabulary, which a project extends or replaces in its
+conventions (agni issue 1265). The built-in match is at a **token boundary**, not a substring
+(WS3-037): `SDA`, `SCL`, `I2C_SCL`, and `SCL0` match; `SPI_SCLK` (an SPI clock), `SCLK`, and `MCLK`
+do NOT, because `SCL` abutting another letter is a different signal. A name carrying an `I2S` token
+is excluded, since an I2S data line is often named after its `SDA` pin (agni issue 1255). Generalizing this presence check to an
 arbitrary profile-declared signal set (CS, reset, boot straps) is the remaining WS3-037 work.
 
 ### Query structure

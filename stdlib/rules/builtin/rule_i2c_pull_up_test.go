@@ -3,21 +3,24 @@ package builtin
 import (
 	"testing"
 
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
 // TestIsI2CBoundary (WS3-037) checks that SDA/SCL match at a token boundary, not as a substring. The
 // case that matters is SPI_SCLK, an SPI clock and not an I2C net, which the old strings.Contains match
-// wrongly caught.
+// wrongly caught. An I2S data line named after its SDA pin is not I2C either (agni 1255).
 func TestIsI2CBoundary(t *testing.T) {
 	cases := map[string]bool{
 		"SDA": true, "SCL": true, "I2C_SCL": true, "SCL0": true, "SDA_1": true, "SENSOR_SDA": true,
 		"sda":      true, // case-folded
 		"SPI_SCLK": false, "SCLK": false, "MCLK": false, "MISCL": false, "OSCL": false, "SCLK0": false,
+		"I2S0_RX_SDA": false, "i2s_sda": false, "/audio/I2C1_SDA": true,
 	}
+	v := classify.DefaultRoleVocab()
 	for name, want := range cases {
-		if got := isI2C(name); got != want {
-			t.Errorf("isI2C(%q) = %v, want %v", name, got, want)
+		if got := v.IsI2C(name); got != want {
+			t.Errorf("IsI2C(%q) = %v, want %v", name, got, want)
 		}
 	}
 }

@@ -235,6 +235,10 @@ func (m *irModel) IsFeedbackName(name string) bool  { return m.lexicon().RoleVoc
 func (m *irModel) IsSwitchingName(name string) bool { return m.lexicon().RoleVocab().IsSwitching(name) }
 func (m *irModel) IsControlName(name string) bool   { return m.lexicon().RoleVocab().IsControl(name) }
 func (m *irModel) IsGateDriveName(name string) bool { return m.lexicon().RoleVocab().IsGateDrive(name) }
+func (m *irModel) IsI2CName(name string) bool       { return m.lexicon().RoleVocab().IsI2C(name) }
+func (m *irModel) IsExposedPadName(name string) bool {
+	return m.lexicon().RoleVocab().IsExposedPad(name)
+}
 
 // IsGroundNet reports whether a net carries the ground role, read from the stamped role set when the
 // net has one (authoritative, filled at ingestion) and else from this model's lexicon over the name.

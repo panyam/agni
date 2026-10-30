@@ -144,6 +144,10 @@ type Model interface {
 	IsSwitchingName(name string) bool
 	IsControlName(name string) bool
 	IsGateDriveName(name string) bool
+	// IsI2CName reads a NET name as an I2C bus line and IsExposedPadName a PIN name as a package's
+	// exposed pad, each from the lexicon's own vocabulary rather than a rule's pattern (agni 1265).
+	IsI2CName(name string) bool
+	IsExposedPadName(name string) bool
 	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName). More than
 	// one means the design states the same name for electrically distinct nets. Connect-by-name
 	// formats cannot produce that (the solver merges them) and explicit-net-list formats (EDIF) can,

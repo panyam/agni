@@ -97,7 +97,7 @@ func i2cPullUpSplitRailVerdicts(ctx context.Context, m check.Model) []check.Verd
 func pullUpCountVerdicts(ctx context.Context, m check.Model, rule string, fires func(rails []string) bool, message func(string, []check.PullUpTermination) string) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
-		if !isI2C(n.Name) {
+		if !m.IsI2CName(n.Name) {
 			continue
 		}
 		terms := check.AllPullUpPathsToRail(m, n)

@@ -2,8 +2,6 @@ package builtin
 
 import (
 	"context"
-	"regexp"
-	"strings"
 
 	"github.com/panyam/agni/core/check"
 )
@@ -39,7 +37,7 @@ var i2cPullUp = &check.Rule{
 func i2cPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
-		if !isI2C(n.Name) {
+		if !m.IsI2CName(n.Name) {
 			continue
 		}
 		outcome, w, ctx := check.PullUpVerdict(m, n)
@@ -53,25 +51,13 @@ func i2cPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return out
 }
 
-// i2cNamePattern matches SDA/SCL at a TOKEN boundary rather than as a substring, so each side must be
-// a non-letter (start/end, a separator, or a channel digit). RE2 has no lookaround, hence the
-// explicit character classes. SPI_SCLK does not match because the trailing K is a letter (WS3-037).
-// Case is folded before matching, so [^A-Z] is any non-letter.
-var i2cNamePattern = regexp.MustCompile(`(^|[^A-Z])(SDA|SCL)([^A-Z]|$)`)
-
-// isI2C matches the SDA/SCL naming convention at a token boundary. Matches SDA, SCL, I2C_SCL, SCL0,
-// SDA_1; NOT SPI_SCLK, SCLK, MCLK, or MISCL (SDA/SCL abutting another letter).
-func isI2C(name string) bool {
-	return i2cNamePattern.MatchString(strings.ToUpper(name))
-}
-
 // i2cPullUpSpec is the rule's declarative twin (WS3-003). The walk goes through the
 // pullup_reaches_rail FFI, whose registration in core/check/spec_funcs.go says why the spec language
 // cannot express it (agni issue 374).
 var i2cPullUpSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
-		check.Match{T: check.Fact{Name: "net.names"}, Pattern: "(?i)(^|[^A-Z])(SDA|SCL)([^A-Z]|$)"},
+		check.IsTrue{T: check.Call{Fn: "i2c_name", Args: []check.Term{check.Fact{Name: "net.names"}}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "pullup_reaches_rail"}}},
 	}},
 	Message: "I2C net has no pull-up resistor to a rail",
