@@ -53,6 +53,10 @@ say nothing. `AnnotateSheets` set a reason for buses alone, so every undrawn NET
 asserting the opposite of the truth and clicking such a finding did nothing and explained nothing,
 while the same net reached through a query result cell explained itself perfectly (agni issue 366). A
 zero value that asserts a positive claim needs every producer to set it, or it lies by omission.
+`NO_GEOMETRY` makes a narrower claim of the same kind, that the schematic was read and leaves the
+entity out. When the schematic failed to read, every subject reads `SCHEMATIC_UNREADABLE` instead,
+because a broken companion once made a whole design look drawn on no sheet with nothing saying the
+file had failed (agni issue 1230).
 
 **A test fixture that is a PLAIN OBJECT LITERAL standing in for a proto message is invisible to
 `pnpm run typecheck`.** Nesting `Project`'s config fields under `config` left

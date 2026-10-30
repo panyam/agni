@@ -172,3 +172,31 @@ func TestAnnotateTraceSheetsFillsANoRoute(t *testing.T) {
 		t.Errorf("an undrawn endpoint got sheets %v, want none", got)
 	}
 }
+
+// A net finding names its net by id, and only KiCad's geometry stamps an id on a wire, so an EDIF
+// finding on a drawn net used to read as drawn nowhere while a query cell on the same net located
+// (agni issue 1230). Geometry that stamps no wire ids resolves the net by name.
+func TestANetFindingLocatesOnGeometryWithoutWireIDs(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "P1", Wires: []*geom.WireGeometry{{Net: "SCL"}}},
+		{Id: "P2", Wires: []*geom.WireGeometry{{Net: "SCL"}}},
+	}}
+	f := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "SCL", NetId: "6188ff3d154d"}}
+	AnnotateSheets([]*checkspb.Finding{f}, g, nil)
+	if got := f.GetSheets(); len(got) != 2 || got[0] != "P1" || got[1] != "P2" {
+		t.Errorf("sheets = %v, want [P1 P2]", got)
+	}
+}
+
+// Where wires do carry ids, a net whose id is drawn nowhere stays drawn nowhere, rather than taking
+// the sheets of another net sharing its name (WS9).
+func TestANetFindingDoesNotBorrowASameNamedNetsSheets(t *testing.T) {
+	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
+		{Id: "A", Wires: []*geom.WireGeometry{{Net: "GND", NetId: "x"}}},
+	}}
+	f := &checkspb.Finding{Subject: &checkspb.Subject{Kind: check.KindNet, Ref: "GND", NetId: "y"}}
+	AnnotateSheets([]*checkspb.Finding{f}, g, nil)
+	if got := f.GetSheets(); len(got) != 0 {
+		t.Errorf("sheets = %v, want none, since net y is not drawn", got)
+	}
+}

@@ -37,12 +37,21 @@ type GeometryLoader interface {
 // misses a project's declared symbol library, so findings land on sheets missing the components they
 // name.
 func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI, opts ...ReadOption) *geom.SchematicGeometry {
+	g, _ := locateGeometry(ctx, loader, uri, opts...)
+	return g
+}
+
+// locateGeometry is BuildGeometry that also says whether the schematic failed to read. A netlist-only
+// file draws an auto-layout rather than failing, so a read error means the file that should draw the
+// design could not, and a locate answer says that rather than calling every entity drawn nowhere
+// (agni issue 1230).
+func locateGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI, opts ...ReadOption) (g *geom.SchematicGeometry, unreadable bool) {
 	defer timing.Begin(ctx, "read.geometry")()
 	g, err := loader.Geometry(ctx, uri, layoutForFile(uri.Path, ""), false, opts...)
 	if err != nil {
-		return nil
+		return nil, true
 	}
-	return g
+	return g, false
 }
 
 // BuildModel constructs the FULL check Model for a design (netlist, board tier, params tier), so every

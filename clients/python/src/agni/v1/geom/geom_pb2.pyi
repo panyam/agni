@@ -306,20 +306,32 @@ class KeyValue(_message.Message):
     def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
 
 class SchematicGeometry(_message.Message):
-    __slots__ = ("design_ref", "unit_nm", "symbols", "sheets", "undrawn", "prov")
+    __slots__ = ("design_ref", "unit_nm", "symbols", "sheets", "undrawn", "back_annotated", "prov")
     DESIGN_REF_FIELD_NUMBER: _ClassVar[int]
     UNIT_NM_FIELD_NUMBER: _ClassVar[int]
     SYMBOLS_FIELD_NUMBER: _ClassVar[int]
     SHEETS_FIELD_NUMBER: _ClassVar[int]
     UNDRAWN_FIELD_NUMBER: _ClassVar[int]
+    BACK_ANNOTATED_FIELD_NUMBER: _ClassVar[int]
     PROV_FIELD_NUMBER: _ClassVar[int]
     design_ref: str
     unit_nm: int
     symbols: _containers.RepeatedCompositeFieldContainer[SymbolDef]
     sheets: _containers.RepeatedCompositeFieldContainer[SheetGeometry]
     undrawn: _containers.RepeatedCompositeFieldContainer[UndrawnPlacement]
+    back_annotated: _containers.RepeatedCompositeFieldContainer[BackAnnotatedPlacement]
     prov: Provenance
-    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., symbols: _Optional[_Iterable[_Union[SymbolDef, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[SheetGeometry, _Mapping]]] = ..., undrawn: _Optional[_Iterable[_Union[UndrawnPlacement, _Mapping]]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+    def __init__(self, design_ref: _Optional[str] = ..., unit_nm: _Optional[int] = ..., symbols: _Optional[_Iterable[_Union[SymbolDef, _Mapping]]] = ..., sheets: _Optional[_Iterable[_Union[SheetGeometry, _Mapping]]] = ..., undrawn: _Optional[_Iterable[_Union[UndrawnPlacement, _Mapping]]] = ..., back_annotated: _Optional[_Iterable[_Union[BackAnnotatedPlacement, _Mapping]]] = ..., prov: _Optional[_Union[Provenance, _Mapping]] = ...) -> None: ...
+
+class BackAnnotatedPlacement(_message.Message):
+    __slots__ = ("ref_des", "drawn_ref_des", "sheet_id")
+    REF_DES_FIELD_NUMBER: _ClassVar[int]
+    DRAWN_REF_DES_FIELD_NUMBER: _ClassVar[int]
+    SHEET_ID_FIELD_NUMBER: _ClassVar[int]
+    ref_des: str
+    drawn_ref_des: str
+    sheet_id: str
+    def __init__(self, ref_des: _Optional[str] = ..., drawn_ref_des: _Optional[str] = ..., sheet_id: _Optional[str] = ...) -> None: ...
 
 class UndrawnPlacement(_message.Message):
     __slots__ = ("ref_des", "cell_ref", "library_ref", "sheet_id")

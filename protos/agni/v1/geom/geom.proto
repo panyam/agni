@@ -318,7 +318,22 @@ message SchematicGeometry {
   // Empty means every placement resolved, which is the normal case. A geometry with no placements at
   // all is also empty here: absence of drawing is not the same as failure to draw.
   repeated UndrawnPlacement undrawn = 5;
+  // back_annotated are the placements named by the designator the design back-annotates rather than
+  // the one drawn on their page (agni issues 1228, 1230). An export can renumber parts after layout
+  // and record the new designator apart from the page, and every read keys the part by the new one,
+  // so this is how a reader audits which labels the drawing replaced. Empty when the file
+  // back-annotates nothing, or nothing it back-annotates differs from the page.
+  repeated BackAnnotatedPlacement back_annotated = 6;
   Provenance prov = 16;
+}
+
+// BackAnnotatedPlacement is one placement whose page designator back-annotation replaced. ref_des is
+// the designator every read uses, drawn_ref_des the one the page carries (empty when it carries
+// none), and sheet_id the sheet it is drawn on.
+message BackAnnotatedPlacement {
+  string ref_des = 1;
+  string drawn_ref_des = 2;
+  string sheet_id = 3;
 }
 
 // UndrawnPlacement is one placement no symbol resolved for, with enough identity to act on it.

@@ -16,6 +16,7 @@ class LocateReason(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     LOCATE_REASON_NOT_IN_DESIGN: _ClassVar[LocateReason]
     LOCATE_REASON_NO_GEOMETRY: _ClassVar[LocateReason]
     LOCATE_REASON_BUS_NOT_DRAWN: _ClassVar[LocateReason]
+    LOCATE_REASON_SCHEMATIC_UNREADABLE: _ClassVar[LocateReason]
 
 class Outcome(int, metaclass=_enum_type_wrapper.EnumTypeWrapper):
     __slots__ = ()
@@ -31,6 +32,7 @@ LOCATE_REASON_POWER_RAIL_NO_WIRE: LocateReason
 LOCATE_REASON_NOT_IN_DESIGN: LocateReason
 LOCATE_REASON_NO_GEOMETRY: LocateReason
 LOCATE_REASON_BUS_NOT_DRAWN: LocateReason
+LOCATE_REASON_SCHEMATIC_UNREADABLE: LocateReason
 OUTCOME_UNSPECIFIED: Outcome
 OUTCOME_PASS: Outcome
 OUTCOME_FAIL: Outcome

@@ -172,7 +172,8 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	// Each finding names the sheets its subject is drawn on, as CheckDesign's do, so the Review panel
 	// opens the right sheet on a click and says why when there is none (agni issue 1132).
 	if gl, ok := loader.(GeometryLoader); ok {
-		AnnotateSheets(reviewFindings(areas), BuildGeometry(ctx, gl, snap.Geometry, ov.ReadOptions()...), m)
+		g, unreadable := locateGeometry(ctx, gl, snap.Geometry, ov.ReadOptions()...)
+		annotateSheets(reviewFindings(areas), g, m, unreadable)
 	}
 	// The hash is provenance, not a precondition, so an unreadable source records no hash. It is taken
 	// from the NETLIST tier the run scored, not the request's URI, because a design folder does not hash.

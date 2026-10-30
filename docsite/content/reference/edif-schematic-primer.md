@@ -228,7 +228,9 @@ by the ref-des every rule and query uses and a `.eds` read as a netlist agrees w
 geometry. Its label is drawn where the inline designator placed it, and a ref-des known only from
 back-annotation is keyed without a label, since the page gives it no position. An instance inside a
 block (a nested `instanceRef`) and an id annotated with two different designators keep the inline
-one.
+one. The geometry lists every placement back-annotation relabelled (`SchematicGeometry.back_annotated`,
+agni issue 1230), and `render` and every command reading the schematic print it on stderr, so an
+export's renumbering can be checked against the drawing.
 
 Connectivity in the `.eds` is present and consistent with the `.edn`, so in
 principle the schematic alone could feed both the IR and the geometry. We keep the split

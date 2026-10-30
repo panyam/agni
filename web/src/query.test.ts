@@ -80,7 +80,17 @@ describe("reasonMessage (WS7-042c bus)", () => {
     expect(msg).toContain("DATA[7:0]");
     expect(msg).toContain("no drawn wire");
   });
-})
+});
+
+// A schematic that failed to read is a broken input, so the panel says that rather than calling the
+// part drawn nowhere (agni issue 1230).
+describe("reasonMessage (unreadable schematic)", () => {
+  it("says the schematic could not be read", () => {
+    const msg = reasonMessage(LocateReason.SCHEMATIC_UNREADABLE, "component", "R1001");
+    expect(msg).toContain("R1001");
+    expect(msg).toContain("could not be read");
+  });
+});
 
 // A search result is the one answer set whose rows are not all the same shape, so its cells carry
 // their own kinds (agni issue 338). resultFromResponse must keep them aligned with cells, including

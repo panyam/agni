@@ -86,6 +86,9 @@ enum LocateReason {
   LOCATE_REASON_NO_GEOMETRY = 4;      // undrawn in the faithful view for no more specific reason
   LOCATE_REASON_BUS_NOT_DRAWN = 5;    // a bus with no drawn wire (a bus_alias, an EDIF array, a
                                       // hierarchical bus port with no wire on the shown sheet) — WS7-042c
+  LOCATE_REASON_SCHEMATIC_UNREADABLE = 6; // the design's schematic could not be read, so nothing is
+                                          // located on a sheet, rather than this entity being drawn
+                                          // nowhere (agni issue 1230)
 }
 
 // DatasheetCitation is where a datasheet-backed value came from, so a consumer shows the source (and
