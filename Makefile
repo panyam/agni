@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks dist testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -275,7 +275,7 @@ dist:
 	@# COPYFILE_DISABLE keeps macOS tar from adding a ._name shadow beside every file, which the
 	@# viewer's template loader would read as a template.
 	@set -e; export COPYFILE_DISABLE=1; rm -rf "$(DIST_DIR)"; mkdir -p "$(DIST_DIR)"; out=$$(cd "$(DIST_DIR)" && pwd); \
-	(cd web && tar -czf "$$out/agni-web-$(V).tar.gz" templates static/*.js static/*.css); \
+	(cd web && tar --no-xattrs -czf "$$out/agni-web-$(V).tar.gz" templates static/*.js static/*.css); \
 	for p in $(DIST_PLATFORMS); do \
 		os=$${p%/*}; arch=$${p#*/}; name=agni_$(V)_$${os}_$${arch}; \
 		echo "building $$name"; \
@@ -284,11 +284,17 @@ dist:
 			-ldflags "-s -w -X github.com/panyam/agni/internal/version.stamped=$(V)" \
 			-o "$$out/$$name/agni" ./cmd/agni; \
 		cp LICENSE README.md "$$out/$$name/"; \
-		tar -C "$$out" -czf "$$out/$$name.tar.gz" "$$name"; \
+		tar --no-xattrs -C "$$out" -czf "$$out/$$name.tar.gz" "$$name"; \
 		rm -rf "$$out/$$name"; \
 	done; \
 	cd "$$out" && shasum -a 256 *.tar.gz > checksums.txt
 	hack/dist_smoke.sh $(DIST_DIR) $(V)
+
+# The gate's run of dist for this machine's platform alone, so a packaging or smoke break shows on the
+# PR rather than on the release, as v0.3.13's did.
+dist-check:
+	@tmp=$$(mktemp -d); trap 'rm -rf "$$tmp"' EXIT; \
+	$(MAKE) --no-print-directory dist V=v0.0.1 DIST_DIR="$$tmp/dist" DIST_PLATFORMS="$$($(GO) env GOOS)/$$($(GO) env GOARCH)"
 
 # The revision-audit mission's exercise (agni issue 843): two revisions of the tutorial gateway into one
 # workbook plus a markdown summary of every tab, the example agni issue 823 finished.
@@ -516,7 +522,7 @@ testall: testall-core browser-test
 
 # testall-core is the gate without the browser suite. CI runs the two as parallel jobs, so the gate
 # takes as long as the longer half rather than both (agni issue 1147); `make testall` still runs both.
-testall-core: vet lint seccheck secrets ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test python-dist-check catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
+testall-core: vet lint seccheck secrets ir-model-check fixture-copies-check proto-check tidyall-check samples-oracle ui test wasm-test datasheet-test examples-test web-test python-test python-dist-check dist-check catalog-docs-check docsite-test tutorial-runs-check docsite-images-check
 
 # Web viewer dev server. Builds the browser bundle, then serves it plus the Connect API with
 # the in-repo fixture folders mounted (browse them in the left sidebar). Append your own

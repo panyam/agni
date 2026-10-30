@@ -190,7 +190,8 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   release tag (`make agni`, `@main`) has neither, so `serve` runs the API alone (agni 735) and `open`
   refuses. An absent dir is a choice and a broken one is a mistake, so a NAMED dir that is wrong, or
   a `./web` without its bundle, still fails and never reaches for the bundle. `make dist V=...`
-  builds the release tarballs and `hack/dist_smoke.sh` runs one from an empty directory; macOS tar
+  builds the release tarballs and `hack/dist_smoke.sh` runs one from an empty directory, and the
+  gate's `dist-check` runs both for the host platform, since v0.3.13's job failed where a Mac passed; macOS tar
   needs `COPYFILE_DISABLE=1` or every file gets a `._` shadow the template loader reads. A loose
   file's minted mount is `files`, never `local`, the browser's drop mount, which the Load page
   refuses on the server engine. The datasheets workbench is

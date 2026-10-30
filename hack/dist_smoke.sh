@@ -28,7 +28,9 @@ for f in "$dist"/*.tar.gz; do
     echo "dist_smoke: $(basename "$f") carries macOS ._ shadow files"; exit 1
   fi
 done
-tar -tzf "$dist/agni-web-$tag.tar.gz" | grep -qx "templates/ViewerPage.html" \
+# grep -q would exit at the first match and close the pipe, which GNU tar reports as a write error and
+# pipefail turns into a failure, so grep reads the whole listing.
+tar -tzf "$dist/agni-web-$tag.tar.gz" | grep -x "templates/ViewerPage.html" >/dev/null \
   || { echo "dist_smoke: agni-web-$tag.tar.gz has no templates/ViewerPage.html"; exit 1; }
 
 tmp=$(mktemp -d)
