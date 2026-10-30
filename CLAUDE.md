@@ -183,10 +183,17 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   directory`, and since agni 637 it fails BEFORE writing the artifact rather than after. The four keys
   are `mounts`, `symbol_paths`, `web_dir`, `native_tools`, and `web_dir` must name a BUILT bundle,
   because `checkWebAssets` stats the viewer's templates and `static/*.js` before the listener opens.
-- **`agni serve` with NOTHING naming a web dir and no `./web` serves the API alone** (agni 735),
-  which is what a `go install` binary has, since the built JS is not in the Go module. An absent dir
-  is a choice and a broken one is a mistake, so a NAMED dir that is wrong, or a `./web` without its
-  bundle, still fails. `open` and `--server self` always need the viewer. The datasheets workbench is
+- **With NOTHING naming a web dir and no `./web`, an installed binary finds its own viewer**
+  (`internal/webbundle`, WS16-003). A release binary embeds it (`-tags embedweb`, package `web`) and
+  writes it under the user cache once; a `go install` binary, whose module carries no built JS,
+  downloads `agni-web-<tag>.tar.gz` from its release against `checksums.txt`. A build that is not a
+  release tag (`make agni`, `@main`) has neither, so `serve` runs the API alone (agni 735) and `open`
+  refuses. An absent dir is a choice and a broken one is a mistake, so a NAMED dir that is wrong, or
+  a `./web` without its bundle, still fails and never reaches for the bundle. `make dist V=...`
+  builds the release tarballs and `hack/dist_smoke.sh` runs one from an empty directory; macOS tar
+  needs `COPYFILE_DISABLE=1` or every file gets a `._` shadow the template loader reads. A loose
+  file's minted mount is `files`, never `local`, the browser's drop mount, which the Load page
+  refuses on the server engine. The datasheets workbench is
   NOT served by `agni` at all since agni 744; it is `agnids serve` (`make dsserve`), and
   `agni serve --datasheets-url <url>` is what makes the landing page link to it. A script starting a
   server for itself passes `--addr 127.0.0.1:0` and `--web-dir`, and reads the URL off the banner,

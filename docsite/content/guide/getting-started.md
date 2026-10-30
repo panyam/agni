@@ -23,6 +23,20 @@ is only reproducible if you can say which build produced it, and `@latest` moves
 between runs. Releases are plain git tags, so
 [the tag list](https://github.com/panyam/agni/tags) is the version list.
 
+A build installed this way carries no browser viewer, since the viewer's built JavaScript is not part
+of the Go module. The first time `agni open` or `agni serve` needs it, agni downloads the bundle its
+own release attached, checks it against that release's `checksums.txt`, and keeps it in your user
+cache directory, so later runs work offline.
+
+Without Go, download the tarball for your platform from
+[the latest release](https://github.com/panyam/agni/releases/latest). Each one holds an `agni`
+binary that carries the viewer, for macOS and Linux on arm64 and amd64, and `checksums.txt` beside
+them verifies the download. Or run the container image, which needs nothing but Docker:
+
+```
+docker run --rm -v "$PWD":/work -w /work ghcr.io/panyam/agni check <board>.kicad_sch
+```
+
 Or build from a clone, which also gives you the sample designs used below:
 
 ```

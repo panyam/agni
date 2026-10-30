@@ -1,7 +1,8 @@
 # Publishes the two container images to GHCR when a release tag is pushed: ghcr.io/panyam/agni (the
 # engine and viewer, Dockerfile) and ghcr.io/panyam/agnids (the datasheet service, Dockerfile.agnids,
 # agni issue 744). Both carry the tag's version, from one build-arg. The same tag publishes the Python
-# client to PyPI as agni-eda (the python-dist and pypi jobs at the end).
+# client to PyPI as agni-eda (the python-dist and pypi jobs at the end), and attaches the CLI's
+# release binaries to the tag's GitHub Release (the binaries job).
 #
 # The tag is the single source of the version. `make tag-push V=v0.1.0` publishes the tag, which is
 # the Go module release, and this workflow then builds the image from that same tag and stamps the
@@ -254,6 +255,33 @@ jobs:
   # The Python client, published to PyPI as agni-eda (the name agni is an unrelated project there).
   # The build job stamps the tag's version into the package, installs the wheel into a fresh venv and
   # checks it (make python-dist, hack/python_dist_smoke.sh), and hands the files to the publish job.
+  # The release's binaries (WS16-003): one tarball per platform holding an agni that embeds the
+  # viewer, the viewer alone for a `go install` binary to download (internal/webbundle), and
+  # checksums.txt over them. `make dist` builds and smoke-tests them; hack/release_attach.sh then
+  # attaches them to the tag's GitHub Release, creating it as a draft when this job gets there before
+  # the release is published by hand (RELEASING.md, step 6). It is the one job that writes contents.
+  binaries:
+    needs: tag
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    env:
+      TAG: ${{ needs.tag.outputs.tag }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ needs.tag.outputs.tag }}
+
+      - uses: ./.github/actions/setup
+
+      - name: Build and smoke-test the release binaries
+        run: make dist V="$TAG"
+
+      - name: Attach them to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: hack/release_attach.sh "$TAG" dist/release/*
+
   python-dist:
     needs: tag
     runs-on: ubuntu-latest

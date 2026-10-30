@@ -335,7 +335,8 @@ authoritative-looking answer at exit 0.
 </details>
 
 **A minted mount is real for ONE PROCESS, which is why a link built from one is refused unless that
-process serves it.** The name comes from the enclosing project or is invented as `local`, and either way no other `agni` has it, so a
+process serves it.** The name comes from the enclosing project or is invented as `files`, never
+`local`, which is the browser's mount for dropped files. Either way no other `agni` has it, so a
 second process resolving `mount://gateway/...` reports that the mount was not declared and says to pass
 `--mount`. That is the distinction `linkTarget` tests before emitting a verdict URL, since a link
 built from a name only this run knows resolves on nobody's server. It is also why `agni open` prints

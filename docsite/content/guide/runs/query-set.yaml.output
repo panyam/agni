@@ -1,6 +1,6 @@
 #agni-run b4d31a3793a40d23
 Test point audit
-mount://local/netlist-audit.tel
+mount://files/netlist-audit.tel
 
 == Net count ==
 count(net)  provenance
