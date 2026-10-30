@@ -11,6 +11,7 @@ import (
 
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/readers/formats"
 )
 
 // FileReader reads one file inside a mount. It is the port ListDesignFiles sizes and hashes files
@@ -67,6 +68,9 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 	designDir := u.Path
 	if !isDir {
 		designDir = parentPath(u.Path)
+		if root := formats.DesignRoot(u.Path); root != "" {
+			designDir = root
+		}
 	}
 	if s.projects != nil && s.projects.Store != nil {
 		design, project, err := s.projects.Store.ResolveDesign(ctx, u)

@@ -496,6 +496,17 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   to read answers `LOCATE_REASON_SCHEMATIC_UNREADABLE` rather than `NO_GEOMETRY`, and the CLI warns
   once, because a companion one `)` short once read as every part drawn nowhere with only `render`
   saying why.
+- **An ODB++ job is a DIRECTORY, entered by its `matrix/matrix` file** (agni 1250, `readers/odb`). The
+  registry keys that path as `.odb++` (`lowerExt`), `.tgz` and `.zip` read the whole job from one
+  archive, and the CLI and the proposer turn a job folder into its matrix entry. A host gathering a
+  design's files asks `formats.DesignRoot`, or it fetches `matrix/` alone. A pin's net comes from its
+  toeprint record and a copper feature's from eda/data's `FID` list, never from geometry. The fixtures
+  are `kicad-cli pcb export odb` output (`make odb-fixtures`, KiCad 9+), and
+  `TestODBReadsAsItsKiCadSource` holds each to the board it came from; `AGNI_ODB_PAIRS` adds a real
+  board locally. **ODB++ forbids spaces in a name**, so `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`
+  and a schematic-against-layout diff reports it renamed. KiCad's exporter also leaves out a
+  footprint marked `exclude_from_pos_files`, and nets copper by what touches, so a planted short
+  moves a track onto the other net (demo-board).
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945), which is how an 80 MB
   board holds under 4 times its size, so never assign a parsed node's `Atom`; put a new node in its
   parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out of the

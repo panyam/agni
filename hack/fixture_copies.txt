@@ -159,3 +159,14 @@ docsite/static/images/querying/reach-walk.svg
 # a change to one that misses the other turns the gate red.
 datasheet/web/vitest.config.ts
 web/vitest.config.ts
+
+# ---------------------------------------------------------------------------------------------
+# The gateway's schematic netlist, beside its ODB++ layouts (agni issue 1250).
+#
+# The odb-verification example checks a layout against the schematic it was drawn from, and the
+# examples read their fixtures from common/designs (examples/CONVENTIONS.md section 5). The layouts
+# are kicad-cli exports of the tutorial board (hack/odb_fixtures.sh), so the netlist they are held
+# to has to be that board's. A tutorial change to it that misses the copy turns the gate red rather
+# than leaving the example comparing against a schematic the layout was never drawn from.
+examples/common/designs/odb/gateway.edn
+examples/tutorial-project/designs/gateway/gateway.edn

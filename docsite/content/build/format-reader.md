@@ -176,6 +176,20 @@ Any diagnostic that depends on the referenced files has to account for a failed 
 unresolved symbol drops that symbol's pins, so wire ends meant to land on it read as dangling.
 Gate any such check on full resolution rather than reporting the phantom findings.
 
+## A format that is a directory
+
+ODB++ is the one format whose design is a directory tree rather than a file (agni issue 1250). Its
+reader (`readers/odb`) takes an `fs.FS` rooted at the job instead of an `io.Reader`, which keeps it
+as runtime-agnostic as a single-file reader. The registry adapter builds that `fs.FS` over the
+`Loader`, so every file the job opens is still reached through `l.Open` and recorded for the cache,
+and an archive (`.tgz`, `.zip`) is unpacked in memory into the same shape.
+
+The registry is keyed by extension and a directory has none, so a job is entered by one file inside
+it, `matrix/matrix`, which `lowerExt` files under a key of its own. Two hosts then need the job's
+real extent rather than the entry's folder, and `formats.DesignRoot` answers it for both:
+`ListDesignFiles`, which gathers the files a browser engine fetches, and the proposer, which turns a
+dropped folder into designs. A second directory format would answer through the same function.
+
 ## What the Loader does after your reader returns
 
 `Loader.ReadDesign` picks the reader by extension, runs it, and then applies a few format-neutral

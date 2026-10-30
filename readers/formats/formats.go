@@ -123,7 +123,9 @@ func HasBoard(name string) bool {
 func NetlistExts() []string {
 	var exts []string
 	for ext, f := range byExt {
-		if f.Design != nil {
+		// An ODB++ job's key names a matrix file inside a folder, not an extension anyone types,
+		// so the list offers the job's archives instead.
+		if f.Design != nil && ext != odbJobExt {
 			exts = append(exts, ext)
 		}
 	}
@@ -132,6 +134,9 @@ func NetlistExts() []string {
 }
 
 func lowerExt(name string) string {
+	if k := odbKey(name); k != "" {
+		return k
+	}
 	return strings.ToLower(filepath.Ext(name))
 }
 

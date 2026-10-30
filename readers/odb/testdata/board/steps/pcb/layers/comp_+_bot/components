@@ -1,0 +1,18 @@
+UNITS=MM
+
+#
+#Feature attribute names
+#
+@0 .comp_mount_type
+
+#
+#Feature attribute text strings
+#
+# CMP 0
+CMP 1 20.0 -15.0 0 M J1 Connector_PinHeader_J_1x02 ;0=0
+PRP Datasheet ''
+PRP Description ''
+PRP Value 'CONN'
+TOP 0 20.0 -15.0 0.0 M 2 1 1
+TOP 1 20.0 -17.540 0.0 M 0 0 2
+#

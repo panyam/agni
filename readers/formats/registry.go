@@ -114,6 +114,7 @@ func init() {
 	Register(&Format{Ext: ".tel", Name: "telesis", Design: readTelesis})
 	Register(&Format{Ext: ".xml", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
 	Register(&Format{Ext: ".cvg", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
+	registerODB()
 }
 
 // readKicadProject merges the sibling .kicad_sch and .kicad_pcb that share the .kicad_pro's
