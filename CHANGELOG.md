@@ -10,6 +10,14 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.15] - 2026-10-30
+
+EDIF designs locate on their schematic. A part an export renumbered through `instanceBackAnnotate`
+is keyed by its new designator in both reads (PR 1229), EDIF net findings carry the sheets their net
+is drawn on (PR 1232), and a schematic that fails to read answers the new
+`LOCATE_REASON_SCHEMATIC_UNREADABLE` with a CLI warning rather than calling every part undrawn
+(PR 1232).  The full write-up is [RELEASES/v0.3.15.md](RELEASES/v0.3.15.md).
+
 ## [0.3.14] - 2026-10-30
 
 The first release with prebuilt binaries attached, since v0.3.13's release job failed on a
