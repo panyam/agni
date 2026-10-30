@@ -32,9 +32,15 @@ MANIFEST="hack/fixture_copies.txt"
 # catalog-docs-check regenerates it and fails on a difference (CONSTRAINTS C27). Declaring those
 # eighty-odd files here would be a second, weaker check on a generated artifact.
 #
+# An ODB++ job under readers/odb/testdata or examples/common/designs/odb is a kicad-cli export that
+# hack/odb_fixtures.sh writes (agni issue 1250). Every job carries the same boilerplate files (the
+# stroke font, an empty layer's attribute list, the info file once its timestamps are fixed), and
+# the script regenerates them from their KiCad sources, so the sameness is the exporter's and no
+# one keeps two of them in step by hand.
+#
 # A go.sum is a lockfile, never a fixture. A nested module's (an example, the datasheet module) is
 # identical to the root's whenever their dependency graphs coincide, which is what a lockfile is for.
-EXCLUDE='^(docsite/static/images/catalog/|gen/|site/|web/src/gen/|datasheet/gen/|datasheet/web/src/gen/|node_modules/|\.git/)|(^|/)go\.sum$'
+EXCLUDE='^(docsite/static/images/catalog/|readers/odb/testdata/|examples/common/designs/odb/[^/]+-layout/|gen/|site/|web/src/gen/|datasheet/gen/|datasheet/web/src/gen/|node_modules/|\.git/)|(^|/)go\.sum$'
 
 # Cross-directory duplicates in the tree, as `hash<TAB>path` sorted by hash. Files under 40 bytes are
 # skipped: `{}` and a bare newline collide across the tree and say nothing.

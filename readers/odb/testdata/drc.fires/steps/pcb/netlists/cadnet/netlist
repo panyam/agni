@@ -1,0 +1,16 @@
+H optimize n staggered n
+$1 THIN
+$2 CLOSE_A
+$3 CLOSE_B
+$4 SMALLHOLE
+$5 THINRING
+#
+#Netlist points
+#
+1 0 50.0 -50.0 T 1.0 1.0 e c
+2 0 52.0 -50.0 T 1.0 1.0 e c
+3 0 54.0 -50.0 T 1.0 1.0 e c
+4 0.10 20.0 -20.0 B e c staggered 0 0 0 v
+4 0 56.0 -50.0 T 1.0 1.0 e c
+5 0.40 22.0 -20.0 B e c staggered 0 0 0 v
+5 0 58.0 -50.0 T 1.0 1.0 e c

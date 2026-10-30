@@ -1,0 +1,21 @@
+UNITS=MM
+
+#
+#Feature attribute names
+#
+@0 .comp_mount_type
+
+#
+#Feature attribute text strings
+#
+# CMP 0
+CMP 0 50.0 -50.0 0 N J1 test_HDR ;0=0
+PRP Datasheet ''
+PRP Description ''
+PRP Value ''
+TOP 0 50.0 -50.0 0.0 N 4 0 1
+TOP 1 52.0 -50.0 0.0 N 1 0 2
+TOP 2 54.0 -50.0 0.0 N 2 0 3
+TOP 3 56.0 -50.0 0.0 N 3 0 4
+TOP 4 58.0 -50.0 0.0 N 5 0 5
+#

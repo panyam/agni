@@ -132,6 +132,9 @@ func NetlistExts() []string {
 }
 
 func lowerExt(name string) string {
+	if k := odbKey(name); k != "" {
+		return k
+	}
 	return strings.ToLower(filepath.Ext(name))
 }
 
