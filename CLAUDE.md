@@ -484,6 +484,18 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   maps to a pin number through the instance's `portInstance` first and the cell port's own
   `(designator ...)` second** (agni 1193); before, a cell-only designator left every connection on a
   pin named after the port, which the part type did not have.
+- **An EDIF part is keyed by the designator `instanceBackAnnotate` gives it, in BOTH reads** (agni
+  1228, `readers/edif/backannotate.go`). An export can renumber parts after layout, so the page draws
+  `R4` while the netlist and the design's `viewMap` say `R1001`. A `.eds` is read as a netlist and as
+  geometry, so taking it in one read alone moves the mismatch rather than fixing it. Only a top-level
+  instance is mapped, since a block's page is drawn once however often it is placed (#154), and
+  `SchematicGeometry.back_annotated` lists every placement relabelled.
+- **A net finding keys on the net's id, and only KiCad's geometry stamps one on a wire**, so on any
+  other format a net subject locates by its name (`sheetsFor`, agni 1230). Until then every EDIF net
+  finding read as drawn on no sheet while a query cell on the same net located. A schematic that fails
+  to read answers `LOCATE_REASON_SCHEMATIC_UNREADABLE` rather than `NO_GEOMETRY`, and the CLI warns
+  once, because a companion one `)` short once read as every part drawn nowhere with only `render`
+  saying why.
 - **`internal/sexpr` shares every identical atom between nodes** (agni 945), which is how an 80 MB
   board holds under 4 times its size, so never assign a parsed node's `Atom`; put a new node in its
   parent's `Kids` instead (EDIF's `canonicalize` does). `ParseSkipping` leaves named lists out of the
