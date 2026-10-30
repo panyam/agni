@@ -74,3 +74,21 @@ func TestParseEndpointRejectsAPinWithoutADot(t *testing.T) {
 		t.Error("want an error naming the <ref-des>.<pin> form")
 	}
 }
+
+// Step 6 says U1's SDA reaches the other device on the bus and not J1's supply pin behind the
+// pull-up, and that the supply and ground pins are not walked.
+func TestThePartnersStepNamesTheBusPeerAndNotTheRail(t *testing.T) {
+	d, err := common.Load(defaultDesign)
+	if err != nil {
+		t.Fatalf("load: %v", err)
+	}
+	got := partnerLines(partnersDevice, check.PartnersOf(check.NewModel(d), partnersDevice, check.DefaultTraceHops))
+	for _, want := range []string{"U1.3 on SDA: reaches U2.3\n", "U1.1 on VCC: a supply rail, not walked", "U1.2 on GND: ground, not walked"} {
+		if !strings.Contains(got, want) {
+			t.Errorf("partners step lacks %q:\n%s", want, got)
+		}
+	}
+	if strings.Contains(got, "J1.1") {
+		t.Errorf("J1's supply pin is listed as a partner:\n%s", got)
+	}
+}

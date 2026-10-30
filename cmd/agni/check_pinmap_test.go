@@ -23,7 +23,13 @@ const (
 // the rows are the ones a csv or a workbook of the same run carries.
 func pinMapRows(t *testing.T, design string, rules ...string) [][]string {
 	t.Helper()
-	args := []string{"--verdicts", "--format", "json"}
+	return pinMapRowsWith(t, design, nil, rules...)
+}
+
+// pinMapRowsWith is pinMapRows with flags of the caller's ahead of the rules, such as --intent-path.
+func pinMapRowsWith(t *testing.T, design string, flags []string, rules ...string) [][]string {
+	t.Helper()
+	args := append([]string{"--verdicts", "--format", "json"}, flags...)
 	for _, r := range rules {
 		args = append(args, "--rule", r)
 	}

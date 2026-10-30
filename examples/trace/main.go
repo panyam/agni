@@ -42,6 +42,10 @@ const (
 // user-supplied pair could accidentally be connected.
 var unreachable = [2]check.Endpoint{{RefDes: "U1", Pin: "3"}, {RefDes: "U1", Pin: "2"}}
 
+// partnersDevice is the part whose every pin the partners step walks from at once.
+const partnersDevice = "U1"
+
+
 func main() {
 	design := common.AskPath("design", defaultDesign)
 	// from / to carry the picks to the later steps, defaulted to the same values the markdown
@@ -119,6 +123,15 @@ func main() {
 		t := check.TracePins(check.NewModel(d), unreachable[0], unreachable[1], check.DefaultTraceHops)
 		fmt.Printf("%s to %s\n", unreachable[0], unreachable[1])
 		fmt.Print(traceLines(t))
+		return nil
+	})
+
+	demo.Bind("partners").Run(func(ctx demokit.StepContext) *demokit.StepResult {
+		d, err := design.Load()
+		if err != nil {
+			return demokit.Errf("load %s: %v", design.Path(), err)
+		}
+		fmt.Print(partnerLines(partnersDevice, check.PartnersOf(check.NewModel(d), partnersDevice, check.DefaultTraceHops)))
 		return nil
 	})
 
@@ -234,3 +247,32 @@ const (
 	routeColor = "#2563eb"
 	crossColor = "#e11d48"
 )
+
+// partnerLines prints each pin of a device with its net and the device pins its net reaches, or why
+// it was not walked, which is what `agni pinmap` writes as a draft io_map.
+func partnerLines(device string, pins []check.PinPartners) string {
+	var b strings.Builder
+	for _, p := range pins {
+		fmt.Fprintf(&b, "%s.%s on %s: ", device, p.Pin, orNone(p.Net))
+		switch {
+		case p.Reason != "":
+			fmt.Fprintf(&b, "%s, not walked\n", p.Reason)
+		case len(p.Partners) == 0:
+			b.WriteString("reaches no other device pin\n")
+		default:
+			ends := make([]string, len(p.Partners))
+			for i, e := range p.Partners {
+				ends[i] = e.String()
+			}
+			fmt.Fprintf(&b, "reaches %s\n", strings.Join(ends, ", "))
+		}
+	}
+	return b.String()
+}
+
+func orNone(net string) string {
+	if net == "" {
+		return "no net"
+	}
+	return net
+}
