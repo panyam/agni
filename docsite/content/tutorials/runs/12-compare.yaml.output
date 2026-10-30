@@ -1,12 +1,12 @@
-#agni-run f0c01ef66d982977
+#agni-run 189c6bdce8d13907
 #agni-step
 comparing:
-  ours:   agni <version> — 90 finding(s) over mount://jetson/designs/jetson
+  ours:   agni <version> — 88 finding(s) over mount://jetson/designs/jetson
   theirs: kicad-cli pcb drc 10.0.6 — 957 finding(s) over designs/jetson   [no coverage axis: its silence is not a pass]
 
 entities flagged:
   both         1
-  ours only    87
+  ours only    85
   theirs only  259
 
 ours only:
@@ -76,7 +76,6 @@ ours only:
   net /USB DP Alt mode/USBC1_DPEQ0
   net /USB DP Alt mode/USBC1_EQ0
   net /USB DP Alt mode/USBC1_SSEQ0
-  net /USB DP Alt mode/USBC1_VBUS
   net /USB Debug, PD/DEBUG_SCL
   net /USB Debug, PD/DEBUG_SDA
   net /USB Debug, PD/FTDI_3V3
@@ -86,7 +85,6 @@ ours only:
   net /USB Debug, PD/PDC_I2C3_SDA
   net /USB Debug, PD/PDC_LDO_1V8
   net /USB Debug, PD/PDC_LDO_3V3
-  net /USB Debug, PD/USBC0_VBUS
   net FLASH_PWR
   net Net-(D1-C)
   net Net-(J12-RS0)

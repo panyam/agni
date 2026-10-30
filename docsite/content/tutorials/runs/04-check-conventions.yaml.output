@@ -1,4 +1,4 @@
-#agni-run 7f579c2ca03f41cc
+#agni-run 1ac2e52be199516c
 findings by rule:
   bulk-cap               1
   decoupling-present     1
@@ -7,9 +7,9 @@ findings by rule:
   i2c-pull-up            28
   i2c-redundant-pull-up  4
   jetson/active-low-overbar 2
-  reverse-blocking-absent 3
+  reverse-blocking-absent 1
   single-pin-net         2
   test-point-coverage    36
 
-90 finding(s) total
-25609 subject(s) considered by 39 rule(s), 614 not considered (--verdicts for the detail)
+88 finding(s) total
+25603 subject(s) considered by 39 rule(s), 615 not considered (--verdicts for the detail)

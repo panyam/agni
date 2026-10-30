@@ -1,4 +1,4 @@
-#agni-run 14813370b9a8ae1c
+#agni-run bde2d7428e44a877
 # Review: Jetson baseboard design review
 
 Design: `designs/jetson`
@@ -13,7 +13,7 @@ Design: `designs/jetson`
 |---|-------|---------|--------|
 | P1 | every rail carries a bulk capacitor | fail | bulk-cap: Net-(D1-C) (power rail has no bulk capacitor) |
 | P2 | every rail carries decoupling | fail | decoupling-present: Net-(D1-C) (power rail has no decoupling capacitor) |
-| P3 | the input is protected against reverse polarity | fail | reverse-blocking-absent: /USB DP Alt mode/USBC1_VBUS (connector feeds a power input with no reverse-blocking element in the path); reverse-blocking-absent: /USB Debug, PD/USBC0_VBUS (connector feeds a power input with no reverse-blocking element in the path); reverse-blocking-absent: VCC_IN (connector feeds a power input with no reverse-blocking element in the path) |
+| P3 | the input is protected against reverse polarity | fail | reverse-blocking-absent: VCC_IN (connector feeds a power input with no reverse-blocking element in the path) |
 | P4 | no part is operated above its absolute-maximum supply voltage | pass |  |
 | P5 | every rail is probeable during bring-up | fail | test-point-coverage: /CSI/CSIA_3V3 (rail carries no test point; bring-up and factory test cannot probe it); test-point-coverage: /CSI/CSIA_5V (rail carries no test point; bring-up and factory test cannot probe it); test-point-coverage: /CSI/CSIA_I2C_VCC (rail carries no test point; bring-up and factory test cannot probe it); (+33 more) |
 
