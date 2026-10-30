@@ -132,7 +132,7 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	// Rotation negates for the Y-down screen like a pad, and anchor and font-size follow the
 	// authored justify and height.
 	c.Group(svg.A("class", "labels"))
-	for _, t := range b.GetTexts() {
+	for _, t := range boardLabels(b) {
 		if t.GetAt() == nil {
 			continue
 		}
@@ -151,6 +151,49 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 
 	return c.String()
 }
+
+// boardLabels is the text a board view draws: the board's own, or, for a board that draws no
+// designator at all (no reference text and no silkscreen), each placement's designator centred above
+// its pads. An ODB++ job carries only what its silkscreen draws, and KiCad's export of a board with
+// no silkscreen carries nothing, so its parts would otherwise go unlabelled where the same board read
+// from its .kicad_pcb is labelled (agni issue 1263). A board whose silkscreen draws its designators
+// already gets none added, which is the Altium case.
+func boardLabels(b *geom.BoardGeometry) []*geom.BoardText {
+	if len(b.GetTexts()) > 0 {
+		return b.GetTexts()
+	}
+	for _, gr := range b.GetGraphics() {
+		if strings.HasSuffix(gr.GetLayer(), ".SilkS") {
+			return nil
+		}
+	}
+	var out []*geom.BoardText
+	for _, pl := range b.GetPlacements() {
+		if pl.GetRefDes() == "" || pl.GetAt() == nil {
+			continue
+		}
+		x, top := pl.GetAt().X, pl.GetAt().Y
+		if len(pl.GetPads()) > 0 {
+			minX, maxX := int64(math.MaxInt64), int64(math.MinInt64)
+			top = math.MinInt64
+			for _, pad := range pl.GetPads() {
+				wx, wy := padWorld(pl, pad)
+				half := max(pad.GetSize().GetX(), pad.GetSize().GetY()) / 2
+				minX, maxX = min(minX, wx), max(maxX, wx)
+				top = max(top, wy+half)
+			}
+			x = (minX + maxX) / 2
+		}
+		out = append(out, &geom.BoardText{
+			Text: pl.GetRefDes(), At: &geom.Point{X: x, Y: top + boardDesignatorGap},
+			RefDes: pl.GetRefDes(), Kind: "reference",
+		})
+	}
+	return out
+}
+
+// boardDesignatorGap is how far above its pads a placement's own designator sits, 1 mm.
+const boardDesignatorGap = 1_000_000
 
 // boardTextLine flattens a board text's authored string to one line (newlines, escaped or
 // literal, become spaces) for the single-line label backends.

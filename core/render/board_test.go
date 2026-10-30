@@ -3,12 +3,14 @@ package render
 import (
 	"os"
 	"path/filepath"
+	"slices"
 	"strconv"
 	"strings"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/readers/kicad"
+	"google.golang.org/protobuf/proto"
 )
 
 // boardFixtureGeometry loads the hand-authored board fixture through the real reader, so
@@ -240,4 +242,38 @@ func TestPackBoard(t *testing.T) {
 			t.Errorf("packed board labels missing %q; got %v", want, labelText)
 		}
 	}
+}
+
+// TestBoardDesignatorsWhenTheBoardDrawsNone labels each part of a board that carries no text and no
+// silkscreen, which is what KiCad's ODB++ export of a board without silkscreen is, and adds nothing
+// to one whose silkscreen draws its own (agni issue 1263).
+func TestBoardDesignatorsWhenTheBoardDrawsNone(t *testing.T) {
+	bare := &geom.BoardGeometry{UnitNm: 1, Placements: []*geom.ComponentPlacement{
+		{RefDes: "R7", At: &geom.Point{X: 5_000_000, Y: 5_000_000}, Layer: "F.Cu", Pads: []*geom.Pad{
+			{Number: "1", At: &geom.Point{X: -1_000_000}, Size: &geom.Point{X: 600_000, Y: 700_000}, Shape: "rect", Layers: []string{"F.Cu"}},
+			{Number: "2", At: &geom.Point{X: 1_000_000}, Size: &geom.Point{X: 600_000, Y: 700_000}, Shape: "rect", Layers: []string{"F.Cu"}},
+		}},
+	}}
+	if svg := BoardSVG(bare); !strings.Contains(svg, ">R7</text>") {
+		t.Errorf("a board with no text drew no designator for R7:\n%s", svg)
+	}
+	if labels := packedLabelTexts(t, bare); !slices.Contains(labels, "R7") {
+		t.Errorf("the packed board's labels = %v, want R7", labels)
+	}
+
+	silked := proto.Clone(bare).(*geom.BoardGeometry)
+	silked.Graphics = []*geom.BoardGraphic{{Layer: "F.SilkS", Shape: &geom.Shape{Kind: geom.Shape_KIND_POLYLINE,
+		Points: []*geom.Point{{X: 0, Y: 0}, {X: 1_000_000, Y: 0}}}}}
+	if svg := BoardSVG(silked); strings.Contains(svg, ">R7</text>") {
+		t.Errorf("a board whose silkscreen draws its own designators got another for R7")
+	}
+}
+
+func packedLabelTexts(t *testing.T, b *geom.BoardGeometry) []string {
+	t.Helper()
+	var out []string
+	for _, l := range PackBoard(b).GetLabels() {
+		out = append(out, l.GetText())
+	}
+	return out
 }
