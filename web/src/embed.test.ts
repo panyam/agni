@@ -2,7 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { Code, ConnectError, createClient } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { ViewerPageService } from "./gen/agni/v1/viewer/page_pb.js";
-import { codeName, ENVELOPE, embedOrigins, listenForHosts, originAllowed, parseRequest, type HostWindow } from "./embed.js";
+import { ACCEPTED, codeName, ENVELOPE, embedOrigins, listenForHosts, originAllowed, parseRequest, type HostWindow } from "./embed.js";
 import { frameFetch } from "./embedclient.js";
 import type { ViewerPageAPI } from "./pageapi.js";
 import { pageDispatcher, type PageDispatch } from "./pageservice.js";
@@ -106,10 +106,19 @@ describe("listenForHosts", () => {
       const p = pair(origin);
       const dispatch = vi.fn<PageDispatch>(async () => ({ location: { mount: "kicad", sheet: "/IO" }, verdictResolved: false }));
       listenForHosts(p.viewer, dispatch, []);
-      const got = new Promise((r) => p.parent.addEventListener("message", (ev) => !(ev.data as { ready?: boolean }).ready && r(ev.data)));
+      const seen: unknown[] = [];
+      const got = new Promise((r) =>
+        p.parent.addEventListener("message", (ev) => {
+          if ((ev.data as { ready?: boolean }).ready) return;
+          seen.push(ev.data);
+          if ((ev.data as { agni?: string }).agni === ENVELOPE) r(ev.data);
+        }),
+      );
       // The fake parent posts to whatever origin is named; a real opaque page posts with "*".
       p.viewer.deliver({ agni: ENVELOPE, id: 3, method: "ApplyLocation", body: { url: LINK } }, { origin, win: p.parentHandle });
       expect(await got).toEqual({ agni: ENVELOPE, id: 3, ok: true, body: {} });
+      // Taken before it was answered, so a report waiting on it knows a viewer is working.
+      expect(seen[0]).toEqual({ agni: ACCEPTED, id: 3 });
       expect(dispatch).toHaveBeenCalledWith("ApplyLocation", { url: LINK });
     });
   }
@@ -158,6 +167,7 @@ describe("listenForHosts", () => {
     const both = new Promise<void>((r) =>
       p.parent.addEventListener("message", (ev) => {
         if ((ev.data as { ready?: boolean }).ready) return; // the page announcing itself, not a reply
+        if ((ev.data as { agni?: string }).agni === ACCEPTED) return; // a request taken, not yet answered
         replies.push(ev.data);
         if (replies.length === 2) r();
       }),
