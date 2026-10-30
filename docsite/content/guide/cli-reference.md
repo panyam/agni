@@ -406,6 +406,27 @@ wrong in a declaration is not the same answer as two pins that are not connected
 | `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 | `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 
+### `pinmap <file>`
+
+Draft a pin map for one device from the netlist (agni issue 1238). It lists every pin of `--device`
+with the net it sits on, and walks from each signal pin through series parts, as `trace` does, to the
+pins of other ICs and connectors it reaches. A pin reaching exactly one gets it as the row's far end,
+and one reaching several lists them in a comment. A pin on ground or a supply rail is not walked,
+since every part reaches it. The output is an intent file whose `io_map` `check --intent-path` reads,
+so the run lays the map out a pin at a time (see
+[Reading the map one pin at a time](../design-intent/#reading-the-map-one-pin-at-a-time)).
+
+The draft agrees with the netlist it was read from, so a check against it passes by construction.
+Review each row against the datasheet or the interface before relying on it, then check later
+revisions against the reviewed map.
+
+| flag | what it does |
+|---|---|
+| `--device <ref>` | the part whose pins to map (required) |
+| `--pin <pin>` | map only this pin, by designator or functional name; repeat it for several |
+| `--hops <n>` | how many series parts a far-end walk may cross (default 6), as for `trace` |
+| `-o, --out <file>` | write the draft to this file, `-` for stdout (the default) |
+
 ### `tabulate <request.json|->`
 
 Project an answer into the tables every csv and workbook of it carries. The input is a

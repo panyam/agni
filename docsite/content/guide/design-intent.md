@@ -223,6 +223,35 @@ A spreadsheet already kept as ball, function and expected net maps straight onto
 is `pin`, the function is `function`, the expected net is `net`, and the MCU is each row's
 `device`. A partner pin, when the sheet names one, is `to`.
 
+### Drafting a map from the netlist
+
+A board with a module connector has hundreds of pins to declare, and writing each row by hand is
+where a map goes wrong first. `agni pinmap` drafts one for a device from the netlist:
+
+    agni pinmap designs/jetson --device J1 -o j1-pins.yaml
+
+Each pin on a net becomes a row. The far end is filled in when a walk from the pin, crossing series
+parts as `agni trace` does, reaches exactly one pin on another IC or connector. On the Jetson AGX Thor
+baseboard, 170 of the module connector's pins reach exactly one, seven reach several and say which
+in a comment, and the rest sit on ground or a supply and are not walked. The CAN line is one of the
+170:
+
+```yaml
+- {device: J1, pin: G38, net: /Expansion connector/CAN0.DOUT, to: {device: J18, pin: H08}}  # FSI_GPIO07
+```
+
+That is the route `agni trace designs/jetson --from J1.G38 --to J18.H08` prints, and the row passes
+when the draft is checked:
+
+    agni check designs/jetson --intent-path j1-pins.yaml --verdicts --format csv --table pin_map
+
+The draft was read off the same netlist, so every row passes by construction, and that run proves
+nothing yet about the board. Its use is the inventory. Review each row against the module's pinout
+and the interface it implements, correct or delete what is wrong, and then the map checks this board
+and every later revision against something a person signed off. `--intent-path` replaces the
+design's own intent for the run, so a design that declares other intent carries the reviewed rows
+into its `design.yaml` instead.
+
 A `peak` joins two tiers. The declaration supplies the demand, which no design
 artifact carries, and a seeded {{ explainable "absolute-maximum-rating" "datasheet parameter" }}
 supplies the regulator's capacity. Both halves have to be present or the rule stays quiet rather than
