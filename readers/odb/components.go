@@ -97,16 +97,6 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 	return out, nil
 }
 
-// prop is a component property's value, matched without regard to case, "" when it is absent.
-func (c *component) prop(name string) string {
-	for _, p := range c.props {
-		if strings.EqualFold(p[0], name) {
-			return p[1]
-		}
-	}
-	return ""
-}
-
 // componentLayers lists the matrix's component layers, front first, and says which side each is.
 // A COMPONENT layer above the first copper layer is the top, below the last the bottom; a job
 // whose matrix leaves that unclear falls back to the name (comp_+_top / comp_+_bot).

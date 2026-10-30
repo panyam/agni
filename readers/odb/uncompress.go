@@ -92,7 +92,7 @@ func uncompress(b []byte) ([]byte, error) {
 				return nil, errors.New("compress(1): bad first code")
 			}
 			old = code
-			finChar = byte(code)
+			finChar = suffix[code]
 			out = append(out, finChar)
 			continue
 		}

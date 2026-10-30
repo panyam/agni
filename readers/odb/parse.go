@@ -56,17 +56,6 @@ func parseJob(fsys fs.FS) (*parsedJob, error) {
 	return p, nil
 }
 
-// side returns the components of the side a TOP subnet names (T or B).
-func (p *parsedJob) side(letter string) []component {
-	want := letter != "B"
-	for i, top := range p.sideTop {
-		if top == want {
-			return p.sides[i]
-		}
-	}
-	return nil
-}
-
 // allComponents lists every component, front side first.
 func (p *parsedJob) allComponents() []*component {
 	var out []*component

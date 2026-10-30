@@ -6,6 +6,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/panyam/agni/core/num"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
@@ -68,7 +69,7 @@ func (p *parsedJob) toBoard(src string) (*geom.BoardGeometry, error) {
 		if l.isCopper() {
 			kind = "signal"
 		}
-		b.g.Layers = append(b.g.Layers, &geom.BoardLayer{Number: int32(l.row), Name: b.names[strings.ToUpper(l.name)], Kind: kind})
+		b.g.Layers = append(b.g.Layers, &geom.BoardLayer{Number: num.Int32(l.row), Name: b.names[strings.ToUpper(l.name)], Kind: kind})
 	}
 	if err := b.outline(); err != nil {
 		return nil, err

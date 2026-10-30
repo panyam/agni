@@ -253,7 +253,7 @@ func parseFeature(w []string, u units) (feature, error) {
 			i++
 		}
 		if len(w) < i+4 {
-			return f, fmt.Errorf("T record ends before its text")
+			return f, fmt.Errorf("a T record ends before its text")
 		}
 		if h, herr := atof(w[i+1]); herr == nil {
 			f.textH = int64(math.Round(h * u.coord))
