@@ -104,10 +104,11 @@ established without one.
 3. ODB++ has an oracle of its own in KiCad 9 and later, which writes a job from any board
    (`kicad-cli pcb export odb`). The same board read from its `.kicad_pcb` and from the job has to
    agree, which `TestODBReadsAsItsKiCadSource` holds for every fixture (`make odb-fixtures`
-   regenerates them), and `AGNI_ODB_PAIRS=board.kicad_pcb=job_dir` adds a board of your own. On the
-   Jetson sample every pin's net, every straight track and every via agreed to the micron, and the
-   two places they did not were the KiCad reader's (agni issues 1260 and 1261). It cannot show how
-   another producer's dialect differs, which only a job from that producer can.
+   regenerates them) and `make odb-oracle` for every samples board, against a baseline of what the
+   exporter itself changes. `AGNI_ODB_PAIRS=board.kicad_pcb=job_dir` adds a board of your own. The
+   cross-check is how three KiCad board reader faults were found (agni issues 1260 and 1261). It
+   cannot show how another producer's dialect differs, which only a job from that producer can, so
+   the gate also reads foxBMS's Altium-written jobs and holds each to itself.
 4. For a visual sanity pass, a browser IPC-2581/ODB++ viewer (Eurocircuits PCB
    Visualizer, or the BoardUI parser run locally) renders the same file.
 5. For pixel truth, run the Siemens ODB++ Viewer or an IPC-2581 viewer in a VM on
