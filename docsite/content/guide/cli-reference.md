@@ -427,6 +427,33 @@ revisions against the reviewed map.
 | `--hops <n>` | how many series parts a far-end walk may cross (default 6), as for `trace` |
 | `-o, --out <file>` | write the draft to this file, `-` for stdout (the default) |
 
+### `lexicon <design>`
+
+Show the naming vocabulary a design is read with (agni issue 1266). Every pattern, exclusion, ref-des
+prefix and part-number family is listed under its vocabulary (`net.rail`, `pin.supply`, `class.tvs`)
+with where it came from: `built-in`, or the convention that won, from the server's `--conventions`,
+the project, the design's own `design.yaml`, or the request. A built-in a convention switched off with
+`replace: true` is still listed, marked `replaced`.
+
+`--net <name>` explains one net instead. It prints the net's roles, each with its source and reason,
+then every net-name pattern its name matches with where that pattern came from. A matching `exclude`
+is listed too, since that is what kept a name out of a vocabulary. A name no net carries exactly is
+looked up by its hierarchy leaf, so `SCL` finds `/SCL` when only one net ends that way.
+
+`--try <conventions.yaml>` reads the design again with that file in place of the convention it uses,
+rules and lexicon both, runs the checks under both reads, and lists the nets whose roles change and
+the findings that appear or disappear. A file stating no `lexicon:` reads names with the built-ins
+alone. Each role is written with its evidence, as `rail (convention)`, so a rail that a datasheet
+also backs does not change when its name pattern goes.
+
+| flag | what it does |
+|---|---|
+| `--net <name>` | explain this net's roles |
+| `--try <file>` | compare a candidate conventions file against the one in use |
+| `--format text\|json\|yaml` | `json` is the wire message; `yaml` writes the effective lexicon as a conventions file, every list stated whole with `replace: true`, so a project carrying it reads the design exactly as this run did |
+| `--remote <url>` | ask a running `agni serve` |
+| `-o, --out <file>` | write to this file, `-` for stdout (the default) |
+
 ### `tabulate <request.json|->`
 
 Project an answer into the tables every csv and workbook of it carries. The input is a

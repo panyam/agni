@@ -1,0 +1,7 @@
+# agni lexicon over the lexicon-demo fixture, whose design.yaml adds one rail pattern: why its sensor
+# supply is a rail, and what reading it with the built-ins alone would change.
+fixture: examples/common/designs
+from_root: true
+steps:
+  - script: agni lexicon examples/common/designs/lexicon-demo --net SENSOR_3V3
+  - script: agni lexicon examples/common/designs/lexicon-demo --try examples/common/designs/lexicon-demo/builtins-only.yaml

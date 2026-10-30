@@ -1,0 +1,3 @@
+# A candidate for agni lexicon --try. It keeps the convention's name and states no lexicon, so the
+# design's names are read with the built-in vocabularies alone.
+name: sensor-house

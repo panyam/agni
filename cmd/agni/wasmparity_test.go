@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"io/fs"
 	"net/http"
 	"net/http/httptest"
@@ -126,6 +127,7 @@ type parityClients struct {
 	table  webapiconnect.TableServiceClient
 	review webapiconnect.ReviewServiceClient
 	diff   webapiconnect.DiffServiceClient
+	lex    webapiconnect.LexiconServiceClient
 }
 
 func newParityClients(t *testing.T, h http.Handler) parityClients {
@@ -142,6 +144,7 @@ func newParityClients(t *testing.T, h http.Handler) parityClients {
 		ws:     webapiconnect.NewWorkspaceServiceClient(c, srv.URL),
 		table:  webapiconnect.NewTableServiceClient(c, srv.URL),
 		diff:   webapiconnect.NewDiffServiceClient(c, srv.URL),
+		lex:    webapiconnect.NewLexiconServiceClient(c, srv.URL),
 	}
 }
 
@@ -261,6 +264,28 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	if len(scoped.(*webapi.CheckDesignResponse).GetVerdicts()) == 0 {
 		t.Fatalf("CheckDesign about %s:%s: no verdicts, so two empty answers would compare equal", subject.GetKind(), subject.GetRef())
 	}
+	// How the design's names were read is the same question on either host (agni issue 1266).
+	lx := ask("GetLexicon", func(c parityClients) (proto.Message, error) {
+		r, err := c.lex.GetLexicon(ctx, connect.NewRequest(&webapi.GetLexiconRequest{Snapshot: snapOn(c)}))
+		return msgOf(r, err)
+	})
+	if len(lx.(*webapi.GetLexiconResponse).GetEntries()) == 0 {
+		t.Fatal("GetLexicon: no entries, so two empty lexicons would compare equal")
+	}
+	for _, v := range whole.Msg.GetVerdicts() {
+		if s := v.GetSubjects()[0]; s.GetKind() == "net" {
+			ask("ExplainNet "+s.GetRef(), func(c parityClients) (proto.Message, error) {
+				r, err := c.lex.ExplainNet(ctx, connect.NewRequest(&webapi.ExplainNetRequest{Snapshot: snapOn(c), Net: s.GetRef()}))
+				return msgOf(r, err)
+			})
+			break
+		}
+	}
+	ask("CompareLexicons", func(c parityClients) (proto.Message, error) {
+		r, err := c.lex.CompareLexicons(ctx, connect.NewRequest(&webapi.CompareLexiconsRequest{Snapshot: snapOn(c),
+			Conventions: &configpb.NamingConvention{Name: "parity", Lexicon: &configpb.NamingLexicon{Net: &configpb.NetNameVocab{Control: &configpb.VocabPatterns{Replace: true}}}}}))
+		return msgOf(r, err)
+	})
 	if ruleFrom != "" {
 		if len(sections) == 0 {
 			t.Fatal("GetCheckReport: no findings, so two empty reports would compare equal")

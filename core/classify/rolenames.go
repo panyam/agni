@@ -399,8 +399,12 @@ func ConventionRoles(roles ...ir.Role) []*ir.NetRole {
 // spells "GND" stays declared, and running a pass twice merges rather than duplicating.
 func AddNetRole(n *ir.Net, role ir.Role, src ir.RoleSource) { addNetRoleWhy(n, role, src, "") }
 
-// addNetRoleWhy is AddNetRole with the reason the role carries, which travels with the stronger
+// AddNetRoleWhy is AddNetRole with the reason the role carries, which travels with the stronger
 // evidence: a role upgraded to a stronger source takes that source's reason.
+func AddNetRoleWhy(n *ir.Net, role ir.Role, src ir.RoleSource, why string) {
+	addNetRoleWhy(n, role, src, why)
+}
+
 func addNetRoleWhy(n *ir.Net, role ir.Role, src ir.RoleSource, why string) {
 	if role == ir.Role_ROLE_UNSPECIFIED {
 		return

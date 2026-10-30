@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb odb-fixtures exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb odb-fixtures exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -411,6 +411,18 @@ exercise-pin-functions: agni
 	mkdir -p $(EXERCISE_OUT)
 	bin/agni check --format html -o $(EXERCISE_OUT)/pin-functions.html $(PIN_DESIGN)
 	bin/agni check --verdicts --format csv --table pin_map $(PIN_DESIGN)
+
+# Mission #1264's exercise, steps 1 to 3, over the MNT Reform motherboard 3.0 from the oracle corpus
+# (agni issue 1266): the effective vocabulary with each pattern's source, why LPC_VCC is a rail, and
+# what a rail pattern for USBH_3V3 would change. Step 4 is the viewer's Lexicon panel (#1267).
+NAMING_DESIGN ?= tools/samples/boards/mnt-reform-motherboard30
+exercise-naming: agni samples-oracle
+	mkdir -p $(EXERCISE_OUT)
+	bin/agni lexicon $(NAMING_DESIGN) -o $(EXERCISE_OUT)/naming-1-lexicon.txt
+	bin/agni lexicon $(NAMING_DESIGN) --net LPC_VCC | tee $(EXERCISE_OUT)/naming-2-net.txt
+	grep -q "rail (convention): the name's token VCC is a supply word" $(EXERCISE_OUT)/naming-2-net.txt
+	bin/agni lexicon $(NAMING_DESIGN) --try hack/exercise-naming-usbh.yaml | tee $(EXERCISE_OUT)/naming-3-try.txt
+	grep -q "USBH_3V3" $(EXERCISE_OUT)/naming-3-try.txt
 
 # WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
 # build of the same commit parsed into the browser's cache (wasmengine.StoreVersion, agni issue 911).

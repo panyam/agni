@@ -2336,8 +2336,8 @@ type NetRole struct {
 	RoleKind Role                   `protobuf:"varint,3,opt,name=role_kind,json=roleKind,proto3,enum=agni.v1.ir.Role" json:"role_kind,omitempty"`
 	Source   RoleSource             `protobuf:"varint,2,opt,name=source,proto3,enum=agni.v1.ir.RoleSource" json:"source,omitempty"`
 	// reason says what established the role, for a reader asking why: the vocabulary pattern a name
-	// matched, or for a rail inferred from its supply pins, the pin that justified it (agni 1265).
-	// Empty for a role a source format declared.
+	// matched, or for a rail inferred from its supply pins or read from a datasheet, the pin that
+	// justified it (agni 1265, 1266). Empty for a role a source format declared.
 	Reason        string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

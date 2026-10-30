@@ -44,6 +44,9 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 	add(webapiconnect.NewSnapshotServiceHandler(NewSnapshot(a.Snapshot), timed))
 	add(webapiconnect.NewDesignServiceHandler(NewDesign(a.Design), timed))
 	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...))
+	// The lexicon questions run the check service's catalog over its loader, so they are built from
+	// it rather than listed as a field a host could fill with a different one (agni issue 1266).
+	add(webapiconnect.NewLexiconServiceHandler(NewLexicon(service.NewLexiconService(a.Check)), queried...))
 	add(webapiconnect.NewDiffServiceHandler(NewDiff(a.Diff), timed))
 	add(webapiconnect.NewTableServiceHandler(NewTable(), timed))
 	add(webapiconnect.NewQueryServiceHandler(NewQuery(a.Query), queried...))

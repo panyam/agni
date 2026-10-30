@@ -1,0 +1,109 @@
+syntax = "proto3";
+
+package agni.v1.webapi;
+
+option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
+
+import "agni/v1/config/naming.proto";
+import "agni/v1/ir/ir.proto";
+import "agni/v1/webapi/tables.proto";
+
+// This file: LexiconService, which says how a design's names were read (agni issue 1266).
+//
+// A run reads net, pin and part names through one naming lexicon: the built-in vocabularies, with the
+// one convention that wins laid over them (a request's, else the design's, else its project's, else
+// the server's --conventions default). These rpcs show that lexicon, explain one net's roles against
+// it, and say what a different convention would change.
+
+// LexiconService answers questions about the naming lexicon a snapshot was read with.
+service LexiconService {
+  // GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from.
+  rpc GetLexicon(GetLexiconRequest) returns (GetLexiconResponse);
+  // ExplainNet returns one net's roles with their reasons, and every pattern of the effective lexicon
+  // its name matches, exclusions included, so a name that missed a vocabulary shows what stopped it.
+  // A name the design does not carry is NOT_FOUND.
+  rpc ExplainNet(ExplainNetRequest) returns (ExplainNetResponse);
+  // CompareLexicons reads the snapshot again with a candidate convention in place of the one it was
+  // read with, runs the rule catalog over both, and returns the nets whose roles change and the
+  // findings that appear or disappear.
+  rpc CompareLexicons(CompareLexiconsRequest) returns (CompareLexiconsResponse);
+}
+
+// LexiconSource says where a lexicon entry came from.
+enum LexiconSource {
+  LEXICON_SOURCE_UNSPECIFIED = 0;
+  // Built into the engine (classify's defaultLexicon and class tables).
+  LEXICON_SOURCE_BUILTIN = 1;
+  // The server's startup convention, `agni serve --conventions`.
+  LEXICON_SOURCE_SERVER = 2;
+  // The design's project, or a project it extends.
+  LEXICON_SOURCE_PROJECT = 3;
+  // The design's own design.yaml.
+  LEXICON_SOURCE_DESIGN = 4;
+  // The request, which is where the CLI's --conventions file travels.
+  LEXICON_SOURCE_REQUEST = 5;
+}
+
+// LexiconEntry is one pattern, exclusion, prefix, family or switch of the effective lexicon.
+message LexiconEntry {
+  // vocabulary names the list the entry sits in, as the conventions YAML spells its path: "net.rail",
+  // "net.i2c", "pin.supply", "class.tvs".
+  string vocabulary = 1;
+  // kind is "pattern", "exclude", "prefix", "family" or "switch".
+  string kind = 2;
+  // value is the pattern as written, a ref-des prefix, or for a switch its name and setting
+  // ("infer_rail_from_supply_pins=true").
+  string value = 3;
+  LexiconSource source = 4;
+  // convention is the name of the convention a non-built-in entry came from.
+  string convention = 5;
+  // replaced is set on a built-in entry a convention's `replace: true` took out, which the run no
+  // longer matches. It is listed so switching a built-in off can be seen.
+  bool replaced = 6;
+}
+
+message GetLexiconRequest {
+  // snapshot names the design and the config it was read with, "snapshots/{snapshot}".
+  string snapshot = 1;
+}
+
+message GetLexiconResponse {
+  // entries are in vocabulary order (net, then pin, then class), each list's built-in entries first.
+  repeated LexiconEntry entries = 1;
+  // effective is the whole lexicon as a convention would state it, every list written out with
+  // `replace: true`, so a file carrying it reads the design exactly as this run did.
+  agni.v1.config.NamingLexicon effective = 2;
+}
+
+message ExplainNetRequest {
+  string snapshot = 1;
+  // net is the net's name as the design carries it. A name matching no net exactly is matched on its
+  // hierarchy leaf when exactly one net has that leaf, so a KiCad root net can be asked as SCL for /SCL.
+  string net = 2;
+}
+
+message ExplainNetResponse {
+  // net is the design's own name for the net asked about.
+  string net = 1;
+  // roles are the net's roles as the read stamped them, each with its source and reason.
+  repeated agni.v1.ir.NetRole roles = 2;
+  // matches are the net-name entries of the effective lexicon the name's hierarchy leaf matches, in
+  // GetLexicon's order. A matching `exclude` is what kept the name out of its vocabulary.
+  repeated LexiconEntry matches = 3;
+}
+
+message CompareLexiconsRequest {
+  string snapshot = 1;
+  // conventions is the candidate. It replaces the convention the snapshot was read with, rules and
+  // lexicon both, as a request's own convention does. A candidate stating no lexicon reads names with
+  // the built-in vocabularies alone.
+  agni.v1.config.NamingConvention conventions = 2;
+}
+
+message CompareLexiconsResponse {
+  // tables are "role_changes" (net, roles_before, roles_after), one row per net whose roles or their
+  // evidence differ, each role written with its source as "rail (convention)",
+  // and "finding_changes" (change, rule, subject_kind, subject, message), one row per finding present
+  // under one lexicon and not the other, change being "appeared" or "gone".
+  repeated Table tables = 1;
+}

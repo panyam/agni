@@ -1,6 +1,7 @@
 package check
 
 import (
+	"fmt"
 	"regexp"
 	"slices"
 	"sort"
@@ -86,7 +87,8 @@ func (m *irModel) enrichRolesFromParams() {
 			if role == ir.Role_ROLE_UNSPECIFIED {
 				continue
 			}
-			classify.AddNetRole(n, role, ir.RoleSource_ROLE_SOURCE_DATASHEET)
+			classify.AddNetRoleWhy(n, role, ir.RoleSource_ROLE_SOURCE_DATASHEET,
+				fmt.Sprintf("the datasheet lists %s pin %s as a power pin", c.GetComponentRef(), c.GetPinRef()))
 		}
 	}
 }

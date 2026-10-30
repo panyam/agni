@@ -32,6 +32,7 @@ first six end to end in one tour.
 | 14 | [whole-enchilada/](whole-enchilada/) | The capstone: rungs 2 to 6 end to end in one tour (convergence, checks, diff, emit, and both renderers). | ready |
 | 15 | [ask-over-mcp/](ask-over-mcp/) | Ask a design questions the way an LLM client does: start `agni mcp`, connect an MCP client, and make the calls a model makes, reading back the question, the rows with their provenance, and the link (or why there is none). | ready |
 | 16 | [odb-verification/](odb-verification/) | Check a layout handed off as ODB++ against the schematic it was drawn from: read the job's netlist and board, run the checks (copper included), and diff the layout against the schematic netlist. The walkthrough form of `agni check <job>` and `agni diff <schematic> <job>`. | ready |
+| 17 | [lexicon/](lexicon/) | How a design's names are read: every pattern of the naming vocabulary with where it came from, why one net has its roles, and what a different convention would change (`LexiconService`). The walkthrough form of `agni lexicon`. | ready |
 
 A first read should start with `whole-enchilada` for the tour, then use rungs 1-13 to go deep
 on each step.

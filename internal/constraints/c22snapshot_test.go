@@ -24,6 +24,7 @@ func TestC22AnalysisRequestsNameASnapshot(t *testing.T) {
 		webapi.File_agni_v1_webapi_query_proto.Services().ByName("QueryService"),
 		webapi.File_agni_v1_webapi_review_proto.Services().ByName("ReviewService"),
 		webapi.File_agni_v1_webapi_diff_proto.Services().ByName("DiffService"),
+		webapi.File_agni_v1_webapi_lexicon_proto.Services().ByName("LexiconService"),
 	}
 	exempt := map[string]bool{
 		"GetNamingConvention": true, "GetReviewManifest": true, "ParseQuerySet": true,

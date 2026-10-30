@@ -1172,8 +1172,8 @@ export type NetRole = Message<"agni.v1.ir.NetRole"> & {
 
   /**
    * reason says what established the role, for a reader asking why: the vocabulary pattern a name
-   * matched, or for a rail inferred from its supply pins, the pin that justified it (agni 1265).
-   * Empty for a role a source format declared.
+   * matched, or for a rail inferred from its supply pins or read from a datasheet, the pin that
+   * justified it (agni 1265, 1266). Empty for a role a source format declared.
    *
    * @generated from field: string reason = 4;
    */
