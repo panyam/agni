@@ -146,8 +146,10 @@ turn a built-in role off entirely. `exclude` takes a name back out even when a p
 since RE2 cannot say "SDA, but not `I2S0_RX_SDA`" in one pattern. Exclusions are added and replaced
 the same way patterns are.
 
-Every role a net carries records why. A role from a pattern names the pattern, and `agni query` shows
-it on the net, so a rail you did not expect can be traced to the line that made it one.
+Every role a net carries records why. A role from a pattern names the pattern, and an inferred rail
+names the supply pin it feeds, so a rail you did not expect can be traced to the line that made it
+one. The reason travels with the net's roles in the design's IR, so
+`agni stats <design> --format json --mask design.nets` prints it.
 
 ### Rails inferred from the pins they feed
 
