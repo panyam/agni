@@ -48,7 +48,7 @@ func TestDeclaredPullUpReachIsTheLimitTheWalkUses(t *testing.T) {
 	if v.Outcome != check.Pass {
 		t.Fatalf("declared reach 4 covers four crossings, want pass, got %s (%v)", v.Outcome, v.Witness)
 	}
-	if got, want := v.Witness.Statement, "SDA_MAIN reaches rail +3V3 through R1 then R2 then R3 then R4"; got != want {
+	if got, want := v.Witness.Statement, "SDA_MAIN reaches rail +3V3 along SDA_MAIN -> [R1] -> HOP1 -> [R2] -> HOP2 -> [R3] -> HOP3 -> [R4] -> +3V3"; got != want {
 		t.Errorf("witness = %q, want %q", got, want)
 	}
 	// SCL_MAIN declares nothing, so it keeps the default and its direct pull-up still passes.
@@ -117,7 +117,7 @@ func TestPullUpPassListsEveryPath(t *testing.T) {
 	if v.Outcome != check.Pass {
 		t.Fatalf("want pass, got %s", v.Outcome)
 	}
-	if got, want := v.Witness.Statement, "SCL reaches rail +3V3 through R3, and rail +3V3 through R2 then R1"; got != want {
+	if got, want := v.Witness.Statement, "SCL reaches rail +3V3 through R3, and rail +3V3 along SCL -> [R2] -> SCL_ISO -> [R1] -> +3V3"; got != want {
 		t.Errorf("statement = %q, want %q", got, want)
 	}
 	wantTerms := []check.WitnessTerm{

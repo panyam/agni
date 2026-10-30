@@ -656,6 +656,10 @@ func AllPullUpPathsToRail(m Model, n *ir.Net) []PullUpTermination {
 // terminating resistor as AllPullUpPathsToRail finds them, in SortPullUpTerminations' order, with the
 // proof PullUpEvidence builds. A net with one path carries exactly what it did before more than one
 // was listed.
+//
+// The statement names a one-hop path by its resistor and spells a longer one as RenderRoute does,
+// with every net it crosses, so the reason column of an exported verdict table reads as the route
+// on its own (agni issue 1240).
 func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 	if n == nil {
 		return Fail, nil, nil
@@ -674,11 +678,11 @@ func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 	SortPullUpTerminations(paths)
 	clauses := make([]string, 0, len(paths))
 	for _, p := range paths {
-		res := make([]string, 0, len(p.Path))
-		for _, h := range p.Path {
-			res = append(res, h.Resistor)
+		if len(p.Path) == 1 {
+			clauses = append(clauses, fmt.Sprintf("rail %s through %s", p.Rail, p.Path[0].Resistor))
+			continue
 		}
-		clauses = append(clauses, fmt.Sprintf("rail %s through %s", p.Rail, strings.Join(res, " then ")))
+		clauses = append(clauses, fmt.Sprintf("rail %s along %s", p.Rail, RenderRoute(n.Name, pullUpRouteHops(p))))
 	}
 	w := &Witness{Statement: fmt.Sprintf("%s reaches %s", n.Name, strings.Join(clauses, ", and "))}
 	ctx, terms := PullUpEvidence(n.Name, paths)
@@ -737,11 +741,7 @@ func PullUpEvidence(net string, paths []PullUpTermination) ([]ContextSubject, []
 	}
 	terms := make([]WitnessTerm, 0, len(paths))
 	for _, p := range paths {
-		hops := make([]RouteHop, len(p.Path))
-		for i, h := range p.Path {
-			hops[i] = RouteHop{Through: h.Resistor, To: h.Net}
-		}
-		terms = append(terms, WitnessTerm{Label: "path", Value: RenderRoute(net, hops)})
+		terms = append(terms, WitnessTerm{Label: "path", Value: RenderRoute(net, pullUpRouteHops(p))})
 	}
 	return ctx, terms
 }
@@ -775,4 +775,12 @@ func slicesContainsNet(ns []*ir.Net, name string) bool {
 		}
 	}
 	return false
+}
+
+func pullUpRouteHops(p PullUpTermination) []RouteHop {
+	hops := make([]RouteHop, len(p.Path))
+	for i, h := range p.Path {
+		hops[i] = RouteHop{Through: h.Resistor, To: h.Net}
+	}
+	return hops
 }

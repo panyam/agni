@@ -197,7 +197,7 @@ func TestAProfilePullUpAsksTheDeclaredReach(t *testing.T) {
 		t.Fatalf("at the default reach: %s %q, want fail within 3 hops", got, w)
 	}
 	di := &configpb.DesignIntent{Nets: map[string]*configpb.NetIntent{"SPI_CS": {PullUpReachHops: 4}}}
-	if got, w := outcome(check.NewModel(deepPullUpDesign(), check.WithIntent(di))); got != check.Pass || !strings.Contains(w, "R1 then R2 then R3 then R4") {
+	if got, w := outcome(check.NewModel(deepPullUpDesign(), check.WithIntent(di))); got != check.Pass || !strings.Contains(w, "[R1] -> HOP1 -> [R2] -> HOP2 -> [R3] -> HOP3 -> [R4] -> +3V3") {
 		t.Errorf("declared reach 4: %s %q, want a pass through all four", got, w)
 	}
 }

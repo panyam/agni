@@ -24,7 +24,7 @@ func runPullUpCheck(t *testing.T, args ...string) (string, error) {
 // asked: --intent-path, and the design's own descriptor.
 func TestCheckDeclaredPullUpReachCLI(t *testing.T) {
 	const fail = "no rail is reachable from SDA_MAIN through a resistor within 3 hops"
-	const pass = "SDA_MAIN reaches rail VCC_3V3 through R1 then R2 then R3 then R4"
+	const pass = "SDA_MAIN reaches rail VCC_3V3 along SDA_MAIN -> [R1] -> SER_A -> [R2] ->\n                    SER_B -> [R3] -> SER_C -> [R4] -> VCC_3V3"
 
 	out, err := runPullUpCheck(t, "../../examples/common/designs/pullup-reach.edn")
 	if err != nil {
@@ -112,7 +112,8 @@ func TestGitHubIssueReproducers(t *testing.T) {
 		"fail  SDA_MAIN  no rail is reachable from SDA_MAIN through a resistor within 3 hops")
 	contains(run("--rule", "i2c-pull-up", "--rule", "intent/pull-up-reach-declared", edn,
 		"--intent-path", dir+"1089-pullup-four-hops/intent.yaml"),
-		"pass  SDA_MAIN  SDA_MAIN reaches rail VCC_3V3 through R1 then R2 then R3 then R4",
+		"pass  SDA_MAIN  SDA_MAIN reaches rail VCC_3V3 along SDA_MAIN -> [R1] -> NET_HOP1 -> [R2] ->\n"+
+			"                    NET_HOP2 -> [R3] -> NET_HOP3 -> [R4] -> VCC_3V3",
 		"pass  SDA_MAIN  SDA_MAIN is a net the design carries, declared a pull-up reach of 4")
 
 	out := run("--format", "csv", "--rule", "i2c-pull-up", "--rule", "i2c-redundant-pull-up",
