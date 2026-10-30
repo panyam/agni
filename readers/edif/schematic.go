@@ -114,7 +114,30 @@ func extractGeom(root *node, src string) *geom.SchematicGeometry {
 		g.Sheets = append(g.Sheets, sheetOf(p, src, cellByID, libByID, viewByID, backRef, fgh))
 	}
 	qualifyRepeatedSheets(g.Sheets, pages, owners)
+	g.BackAnnotated = backAnnotatedPlacements(pages, g.Sheets, backRef)
 	return g
+}
+
+// backAnnotatedPlacements lists the placements whose page designator back-annotation replaced, so a
+// reader can audit what the drawing relabelled (agni issue 1230). pages and sheets are parallel, one
+// sheet per page, and the sheet ids are final, so an entry names the sheet a viewer opens.
+func backAnnotatedPlacements(pages []*node, sheets []*geom.SheetGeometry, backRef map[string]string) []*geom.BackAnnotatedPlacement {
+	if len(backRef) == 0 {
+		return nil
+	}
+	var out []*geom.BackAnnotatedPlacement
+	for i, p := range pages {
+		var insts []*node
+		collect(p, "instance", &insts)
+		for _, in := range insts {
+			id, _ := nameParts(in.Arg(1))
+			des, ok := backRef[id]
+			if drawn := refDesOf(in); ok && des != drawn {
+				out = append(out, &geom.BackAnnotatedPlacement{RefDes: des, DrawnRefDes: drawn, SheetId: sheets[i].GetId()})
+			}
+		}
+	}
+	return out
 }
 
 // pageOwner is the cell view or design a page is drawn in, as an id path and a display name.

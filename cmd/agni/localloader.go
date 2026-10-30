@@ -17,6 +17,7 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/internal/expect"
+	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/readers/formats"
 	"github.com/panyam/agni/service"
@@ -103,12 +104,22 @@ func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardG
 	return l.loader.BoardGeometry(localOf(src.BoardURI))
 }
 
+// Geometry reads the sheet tier and says, once per file, when a schematic companion the descriptor
+// declares cannot be read, and which placements its back-annotation relabelled. The services treat
+// a failed geometry read as no sheets and go on, so without the warning a broken companion reads as
+// every part drawn on no sheet (agni issue 1230).
 func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithful bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
 		return nil, err
 	}
-	return readerFor(l.loader, opts...).ResolveGeometry(localOf(src.GeometryURI), layout, nil, symbolsFor(faithful))
+	g, err := readerFor(l.loader, opts...).ResolveGeometry(localOf(src.GeometryURI), layout, nil, symbolsFor(faithful))
+	if err != nil && src.GeometryURI != src.NetlistURI {
+		l.note("companion:"+src.GeometryURI, fmt.Sprintf("warning: %s, the schematic %s declares, could not be read (%v), so nothing in this run is located on a sheet.\n",
+			filepath.Base(localOf(src.GeometryURI)), projects.DesignDescriptor, err))
+	}
+	l.note("backannotated:"+src.GeometryURI, backAnnotatedNote(filepath.Base(localOf(src.GeometryURI)), g))
+	return g, err
 }
 
 func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful bool, opts ...service.ReadOption) (*graph.ConversionReport, error) {

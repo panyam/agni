@@ -38,6 +38,21 @@ type sheetIndex struct {
 	comps map[string][]string // ref_des -> sheet ids, in sheet order
 	nets  map[string][]string // net KEY -> sheet ids, in sheet order (a spanning net lists each)
 	buses map[string][]string // bus name -> sheet ids where a KIND_BUS wire of that name is drawn (WS7-042c)
+	// wireIDs says the geometry stamps a net id on its wires. Only then does a net subject's id have
+	// anything to match, so without them a net resolves by its name (agni issue 1230).
+	wireIDs bool
+	// unreadable says the schematic failed to read, so an entity it would have drawn reads as
+	// SCHEMATIC_UNREADABLE rather than NO_GEOMETRY (agni issue 1230).
+	unreadable bool
+}
+
+// undrawn is r, unless the schematic could not be read, in which case "drawn nowhere" is not
+// something the run knows.
+func (ix sheetIndex) undrawn(r checkspb.LocateReason) checkspb.LocateReason {
+	if ix.unreadable && r == checkspb.LocateReason_LOCATE_REASON_NO_GEOMETRY {
+		return checkspb.LocateReason_LOCATE_REASON_SCHEMATIC_UNREADABLE
+	}
+	return r
 }
 
 // netKey is the per-instance join key for a net: its deterministic id (ir.Net.id) when present,
@@ -91,6 +106,7 @@ func indexSheets(g *geom.SchematicGeometry, m NetSource) sheetIndex {
 			appendOnce(ix.nets, w.GetNet(), sh.GetId())
 			if w.GetNetId() != "" {
 				appendOnce(ix.nets, w.GetNetId(), sh.GetId())
+				ix.wireIDs = true
 			}
 		}
 	}
@@ -115,7 +131,13 @@ func indexSheets(g *geom.SchematicGeometry, m NetSource) sheetIndex {
 func (ix sheetIndex) sheetsFor(s *checkspb.Subject) []string {
 	switch s.GetKind() {
 	case check.KindNet:
-		return ix.nets[netKey(s.GetNetId(), s.GetRef())]
+		if got, ok := ix.nets[netKey(s.GetNetId(), s.GetRef())]; ok || ix.wireIDs {
+			return got
+		}
+		// The geometry names its wires' nets and gives them no id (every format but KiCad), so the
+		// name is the only key the two sides share. Two nets sharing a name then share their sheets,
+		// which is what the geometry can say.
+		return ix.nets[s.GetRef()]
 	case check.KindBus:
 		return ix.buses[s.GetRef()]
 	}
@@ -146,20 +168,32 @@ func locateReasonProto(code string) checkspb.LocateReason {
 // is a no-op and findings keep empty sheets, which the viewer handles. A net-only channel (design
 // set, geometry nil) still annotates net subjects.
 func AnnotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m LocateSource) {
-	if g == nil && (m == nil || len(m.Nets()) == 0) {
+	annotateSheets(findings, g, m, false)
+}
+
+// annotateSheets is AnnotateSheets for a run that knows whether its schematic failed to read.
+func annotateSheets(findings []*checkspb.Finding, g *geom.SchematicGeometry, m LocateSource, unreadable bool) {
+	if !unreadable && g == nil && (m == nil || len(m.Nets()) == 0) {
 		return
 	}
-	indexSheets(g, m).annotateFindings(findings, m)
+	ix := indexSheets(g, m)
+	ix.unreadable = unreadable
+	ix.annotateFindings(findings, m)
 }
 
 // AnnotateRunSheets fills a check run's findings and its verdicts from one walk of the geometry. A
 // verdict gets the sheets its subjects are drawn on, so a viewer opens one before drawing the proof,
 // and a passing verdict, which has no finding to borrow them from, gets them too (agni issue 1151).
 func AnnotateRunSheets(resp *webapi.CheckDesignResponse, g *geom.SchematicGeometry, m LocateSource) {
-	if g == nil && (m == nil || len(m.Nets()) == 0) {
+	annotateRunSheets(resp, g, m, false)
+}
+
+func annotateRunSheets(resp *webapi.CheckDesignResponse, g *geom.SchematicGeometry, m LocateSource, unreadable bool) {
+	if !unreadable && g == nil && (m == nil || len(m.Nets()) == 0) {
 		return
 	}
 	ix := indexSheets(g, m)
+	ix.unreadable = unreadable
 	ix.annotateFindings(resp.GetFindings(), m)
 	for _, v := range resp.GetVerdicts() {
 		v.Sheets = ix.sheetsForAll(v.GetSubjects())
@@ -201,7 +235,7 @@ func (ix sheetIndex) annotateFindings(findings []*checkspb.Finding, m LocateSour
 		if m == nil {
 			continue
 		}
-		f.LocateReason = locateReasonProto(check.LocateReason(m, f.GetSubject().GetKind(), f.GetSubject().GetRef()))
+		f.LocateReason = ix.undrawn(locateReasonProto(check.LocateReason(m, f.GetSubject().GetKind(), f.GetSubject().GetRef())))
 	}
 }
 

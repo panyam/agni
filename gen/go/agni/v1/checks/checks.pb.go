@@ -36,6 +36,8 @@ const (
 	LocateReason_LOCATE_REASON_NOT_IN_DESIGN      LocateReason = 3 // the ref/net is not in the loaded netlist
 	LocateReason_LOCATE_REASON_NO_GEOMETRY        LocateReason = 4 // undrawn in the faithful view for no more specific reason
 	LocateReason_LOCATE_REASON_BUS_NOT_DRAWN      LocateReason = 5 // a bus with no drawn wire (a bus_alias, an EDIF array, a
+	// hierarchical bus port with no wire on the shown sheet) — WS7-042c
+	LocateReason_LOCATE_REASON_SCHEMATIC_UNREADABLE LocateReason = 6 // the design's schematic could not be read, so nothing is
 )
 
 // Enum value maps for LocateReason.
@@ -47,14 +49,16 @@ var (
 		3: "LOCATE_REASON_NOT_IN_DESIGN",
 		4: "LOCATE_REASON_NO_GEOMETRY",
 		5: "LOCATE_REASON_BUS_NOT_DRAWN",
+		6: "LOCATE_REASON_SCHEMATIC_UNREADABLE",
 	}
 	LocateReason_value = map[string]int32{
-		"LOCATE_REASON_UNSPECIFIED":        0,
-		"LOCATE_REASON_VIRTUAL_SYMBOL":     1,
-		"LOCATE_REASON_POWER_RAIL_NO_WIRE": 2,
-		"LOCATE_REASON_NOT_IN_DESIGN":      3,
-		"LOCATE_REASON_NO_GEOMETRY":        4,
-		"LOCATE_REASON_BUS_NOT_DRAWN":      5,
+		"LOCATE_REASON_UNSPECIFIED":          0,
+		"LOCATE_REASON_VIRTUAL_SYMBOL":       1,
+		"LOCATE_REASON_POWER_RAIL_NO_WIRE":   2,
+		"LOCATE_REASON_NOT_IN_DESIGN":        3,
+		"LOCATE_REASON_NO_GEOMETRY":          4,
+		"LOCATE_REASON_BUS_NOT_DRAWN":        5,
+		"LOCATE_REASON_SCHEMATIC_UNREADABLE": 6,
 	}
 )
 
@@ -2718,14 +2722,15 @@ const file_agni_v1_checks_checks_proto_rawDesc = "" +
 	"\x04tags\x18\x04 \x03(\v2$.agni.v1.checks.RuleRecord.TagsEntryR\x04tags\x1a7\n" +
 	"\tTagsEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xd6\x01\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01*\xfe\x01\n" +
 	"\fLocateReason\x12\x1d\n" +
 	"\x19LOCATE_REASON_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cLOCATE_REASON_VIRTUAL_SYMBOL\x10\x01\x12$\n" +
 	" LOCATE_REASON_POWER_RAIL_NO_WIRE\x10\x02\x12\x1f\n" +
 	"\x1bLOCATE_REASON_NOT_IN_DESIGN\x10\x03\x12\x1d\n" +
 	"\x19LOCATE_REASON_NO_GEOMETRY\x10\x04\x12\x1f\n" +
-	"\x1bLOCATE_REASON_BUS_NOT_DRAWN\x10\x05*\x92\x01\n" +
+	"\x1bLOCATE_REASON_BUS_NOT_DRAWN\x10\x05\x12&\n" +
+	"\"LOCATE_REASON_SCHEMATIC_UNREADABLE\x10\x06*\x92\x01\n" +
 	"\aOutcome\x12\x17\n" +
 	"\x13OUTCOME_UNSPECIFIED\x10\x00\x12\x10\n" +
 	"\fOUTCOME_PASS\x10\x01\x12\x10\n" +

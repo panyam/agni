@@ -234,9 +234,9 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	if ranIOMap(runnable) {
 		resp.IoMap = ov.DesignIntent.GetIoMap()
 	}
-	g := BuildGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...)
+	g, unreadable := locateGeometry(ctx, LoaderOr(snap, s.loader), gu, ov.ReadOptions()...)
 	endLocate := timing.Begin(ctx, "locate")
-	AnnotateRunSheets(resp, g, m)
+	annotateRunSheets(resp, g, m, unreadable)
 	endLocate()
 	return resp, nil
 }

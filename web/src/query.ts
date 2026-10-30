@@ -465,6 +465,8 @@ export function reasonMessage(reason: LocateReason, kind: string, subject: strin
       return `${subject} is a bus with no drawn wire on this schematic (a bus alias or a port whose members aren't modeled), so there's nothing to highlight.`;
     case LocateReason.NO_GEOMETRY:
       return `${subject} is in the design but drawn on no sheet, so there's nothing to highlight.`;
+    case LocateReason.SCHEMATIC_UNREADABLE:
+      return `The design's schematic could not be read, so ${subject} can't be located on a sheet.`;
     default:
       return `Couldn't locate ${kind || "entity"} ${subject} on this view.`;
   }

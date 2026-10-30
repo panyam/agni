@@ -815,3 +815,37 @@ func TestBackAnnotatedRefDesSkipsConflictsAndPaths(t *testing.T) {
 		}
 	}
 }
+
+// The geometry lists each placement back-annotation relabelled, so an export's renumbering can be
+// audited (agni issue 1230). A file whose back-annotation agrees with its page lists nothing, and a
+// file with none is the control.
+func TestReadSchematicListsBackAnnotatedPlacements(t *testing.T) {
+	for _, tc := range []struct {
+		file string
+		want []string // ref_des, drawn_ref_des, sheet_id
+	}{
+		{"backannotate-inline-mismatch.eds", []string{"R1001", "R4", "P1"}},
+		{"backannotate-only.eds", []string{"U101", "", "P1"}},
+		{"schematic-netlist.eds", nil},
+	} {
+		t.Run(tc.file, func(t *testing.T) {
+			g, err := ReadSchematic(bytes.NewReader(readFixture(t, tc.file)), tc.file)
+			if err != nil {
+				t.Fatal(err)
+			}
+			ba := g.GetBackAnnotated()
+			if tc.want == nil {
+				if len(ba) != 0 {
+					t.Errorf("back_annotated = %v, want none", ba)
+				}
+				return
+			}
+			if len(ba) != 1 {
+				t.Fatalf("back_annotated = %v, want one", ba)
+			}
+			if got := []string{ba[0].GetRefDes(), ba[0].GetDrawnRefDes(), ba[0].GetSheetId()}; strings.Join(got, "|") != strings.Join(tc.want, "|") {
+				t.Errorf("back_annotated = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

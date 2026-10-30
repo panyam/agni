@@ -327,8 +327,9 @@ func boardTierFor(reg *facts.Registry, qs ...query.Query) BoardTier {
 func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, map[string]bool, map[string]bool) {
 	if !d.geomLoaded {
 		d.geomLoaded = true
-		g := BuildGeometry(ctx, loader, d.gu, d.ov.ReadOptions()...)
+		g, unreadable := locateGeometry(ctx, loader, d.gu, d.ov.ReadOptions()...)
 		d.ix = indexSheets(g, d.model)
+		d.ix.unreadable = unreadable
 		if g != nil {
 			d.drawnComps, d.drawnNets = drawnEntities(g)
 		}
@@ -430,7 +431,7 @@ func (d *designRead) present(ctx context.Context, q query.Query, queryText strin
 		e := &webapi.AnswerEntity{Kind: kind, Ref: ref, Pin: pin}
 		if locate {
 			e.SheetIds = ix.sheetsFor(&checkspb.Subject{Kind: kind, Ref: ref, Pin: pin})
-			e.Reason = cellReason(d.model, kind, ref, drawnComps, drawnNets, len(e.SheetIds) > 0)
+			e.Reason = ix.undrawn(cellReason(d.model, kind, ref, drawnComps, drawnNets, len(e.SheetIds) > 0))
 		}
 		resp.Entities = append(resp.Entities, e)
 		n := num.Int32(len(resp.Entities))

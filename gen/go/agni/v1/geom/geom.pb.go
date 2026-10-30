@@ -1724,8 +1724,14 @@ type SchematicGeometry struct {
 	//
 	// Empty means every placement resolved, which is the normal case. A geometry with no placements at
 	// all is also empty here: absence of drawing is not the same as failure to draw.
-	Undrawn       []*UndrawnPlacement `protobuf:"bytes,5,rep,name=undrawn,proto3" json:"undrawn,omitempty"`
-	Prov          *Provenance         `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
+	Undrawn []*UndrawnPlacement `protobuf:"bytes,5,rep,name=undrawn,proto3" json:"undrawn,omitempty"`
+	// back_annotated are the placements named by the designator the design back-annotates rather than
+	// the one drawn on their page (agni issues 1228, 1230). An export can renumber parts after layout
+	// and record the new designator apart from the page, and every read keys the part by the new one,
+	// so this is how a reader audits which labels the drawing replaced. Empty when the file
+	// back-annotates nothing, or nothing it back-annotates differs from the page.
+	BackAnnotated []*BackAnnotatedPlacement `protobuf:"bytes,6,rep,name=back_annotated,json=backAnnotated,proto3" json:"back_annotated,omitempty"`
+	Prov          *Provenance               `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1795,11 +1801,81 @@ func (x *SchematicGeometry) GetUndrawn() []*UndrawnPlacement {
 	return nil
 }
 
+func (x *SchematicGeometry) GetBackAnnotated() []*BackAnnotatedPlacement {
+	if x != nil {
+		return x.BackAnnotated
+	}
+	return nil
+}
+
 func (x *SchematicGeometry) GetProv() *Provenance {
 	if x != nil {
 		return x.Prov
 	}
 	return nil
+}
+
+// BackAnnotatedPlacement is one placement whose page designator back-annotation replaced. ref_des is
+// the designator every read uses, drawn_ref_des the one the page carries (empty when it carries
+// none), and sheet_id the sheet it is drawn on.
+type BackAnnotatedPlacement struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
+	DrawnRefDes   string                 `protobuf:"bytes,2,opt,name=drawn_ref_des,json=drawnRefDes,proto3" json:"drawn_ref_des,omitempty"`
+	SheetId       string                 `protobuf:"bytes,3,opt,name=sheet_id,json=sheetId,proto3" json:"sheet_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BackAnnotatedPlacement) Reset() {
+	*x = BackAnnotatedPlacement{}
+	mi := &file_agni_v1_geom_geom_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BackAnnotatedPlacement) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BackAnnotatedPlacement) ProtoMessage() {}
+
+func (x *BackAnnotatedPlacement) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_geom_geom_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BackAnnotatedPlacement.ProtoReflect.Descriptor instead.
+func (*BackAnnotatedPlacement) Descriptor() ([]byte, []int) {
+	return file_agni_v1_geom_geom_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *BackAnnotatedPlacement) GetRefDes() string {
+	if x != nil {
+		return x.RefDes
+	}
+	return ""
+}
+
+func (x *BackAnnotatedPlacement) GetDrawnRefDes() string {
+	if x != nil {
+		return x.DrawnRefDes
+	}
+	return ""
+}
+
+func (x *BackAnnotatedPlacement) GetSheetId() string {
+	if x != nil {
+		return x.SheetId
+	}
+	return ""
 }
 
 // UndrawnPlacement is one placement no symbol resolved for, with enough identity to act on it.
@@ -1825,7 +1901,7 @@ type UndrawnPlacement struct {
 
 func (x *UndrawnPlacement) Reset() {
 	*x = UndrawnPlacement{}
-	mi := &file_agni_v1_geom_geom_proto_msgTypes[18]
+	mi := &file_agni_v1_geom_geom_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1837,7 +1913,7 @@ func (x *UndrawnPlacement) String() string {
 func (*UndrawnPlacement) ProtoMessage() {}
 
 func (x *UndrawnPlacement) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_geom_geom_proto_msgTypes[18]
+	mi := &file_agni_v1_geom_geom_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1850,7 +1926,7 @@ func (x *UndrawnPlacement) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UndrawnPlacement.ProtoReflect.Descriptor instead.
 func (*UndrawnPlacement) Descriptor() ([]byte, []int) {
-	return file_agni_v1_geom_geom_proto_rawDescGZIP(), []int{18}
+	return file_agni_v1_geom_geom_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *UndrawnPlacement) GetRefDes() string {
@@ -2031,15 +2107,20 @@ const file_agni_v1_geom_geom_proto_rawDesc = "" +
 	"\fextra_fields\x18\x06 \x03(\v2\x16.agni.v1.geom.KeyValueR\vextraFields\"2\n" +
 	"\bKeyValue\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value\"\x9b\x02\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value\"\xe8\x02\n" +
 	"\x11SchematicGeometry\x12\x1d\n" +
 	"\n" +
 	"design_ref\x18\x01 \x01(\tR\tdesignRef\x12\x17\n" +
 	"\aunit_nm\x18\x02 \x01(\x03R\x06unitNm\x121\n" +
 	"\asymbols\x18\x03 \x03(\v2\x17.agni.v1.geom.SymbolDefR\asymbols\x123\n" +
 	"\x06sheets\x18\x04 \x03(\v2\x1b.agni.v1.geom.SheetGeometryR\x06sheets\x128\n" +
-	"\aundrawn\x18\x05 \x03(\v2\x1e.agni.v1.geom.UndrawnPlacementR\aundrawn\x12,\n" +
-	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"\x82\x01\n" +
+	"\aundrawn\x18\x05 \x03(\v2\x1e.agni.v1.geom.UndrawnPlacementR\aundrawn\x12K\n" +
+	"\x0eback_annotated\x18\x06 \x03(\v2$.agni.v1.geom.BackAnnotatedPlacementR\rbackAnnotated\x12,\n" +
+	"\x04prov\x18\x10 \x01(\v2\x18.agni.v1.geom.ProvenanceR\x04prov\"p\n" +
+	"\x16BackAnnotatedPlacement\x12\x17\n" +
+	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\"\n" +
+	"\rdrawn_ref_des\x18\x02 \x01(\tR\vdrawnRefDes\x12\x19\n" +
+	"\bsheet_id\x18\x03 \x01(\tR\asheetId\"\x82\x01\n" +
 	"\x10UndrawnPlacement\x12\x17\n" +
 	"\aref_des\x18\x01 \x01(\tR\x06refDes\x12\x19\n" +
 	"\bcell_ref\x18\x02 \x01(\tR\acellRef\x12\x1f\n" +
@@ -2060,31 +2141,32 @@ func file_agni_v1_geom_geom_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_geom_geom_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_agni_v1_geom_geom_proto_msgTypes = make([]protoimpl.MessageInfo, 19)
+var file_agni_v1_geom_geom_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_agni_v1_geom_geom_proto_goTypes = []any{
-	(Shape_Kind)(0),           // 0: agni.v1.geom.Shape.Kind
-	(Shape_Fill)(0),           // 1: agni.v1.geom.Shape.Fill
-	(Asset_Kind)(0),           // 2: agni.v1.geom.Asset.Kind
-	(WireGeometry_Kind)(0),    // 3: agni.v1.geom.WireGeometry.Kind
-	(*Provenance)(nil),        // 4: agni.v1.geom.Provenance
-	(*Point)(nil),             // 5: agni.v1.geom.Point
-	(*BBox)(nil),              // 6: agni.v1.geom.BBox
-	(*Transform)(nil),         // 7: agni.v1.geom.Transform
-	(*Shape)(nil),             // 8: agni.v1.geom.Shape
-	(*PinPoint)(nil),          // 9: agni.v1.geom.PinPoint
-	(*Asset)(nil),             // 10: agni.v1.geom.Asset
-	(*Image)(nil),             // 11: agni.v1.geom.Image
-	(*SymbolDef)(nil),         // 12: agni.v1.geom.SymbolDef
-	(*Field)(nil),             // 13: agni.v1.geom.Field
-	(*SymbolPlacement)(nil),   // 14: agni.v1.geom.SymbolPlacement
-	(*Polyline)(nil),          // 15: agni.v1.geom.Polyline
-	(*WireGeometry)(nil),      // 16: agni.v1.geom.WireGeometry
-	(*Label)(nil),             // 17: agni.v1.geom.Label
-	(*SheetGeometry)(nil),     // 18: agni.v1.geom.SheetGeometry
-	(*TitleBlock)(nil),        // 19: agni.v1.geom.TitleBlock
-	(*KeyValue)(nil),          // 20: agni.v1.geom.KeyValue
-	(*SchematicGeometry)(nil), // 21: agni.v1.geom.SchematicGeometry
-	(*UndrawnPlacement)(nil),  // 22: agni.v1.geom.UndrawnPlacement
+	(Shape_Kind)(0),                // 0: agni.v1.geom.Shape.Kind
+	(Shape_Fill)(0),                // 1: agni.v1.geom.Shape.Fill
+	(Asset_Kind)(0),                // 2: agni.v1.geom.Asset.Kind
+	(WireGeometry_Kind)(0),         // 3: agni.v1.geom.WireGeometry.Kind
+	(*Provenance)(nil),             // 4: agni.v1.geom.Provenance
+	(*Point)(nil),                  // 5: agni.v1.geom.Point
+	(*BBox)(nil),                   // 6: agni.v1.geom.BBox
+	(*Transform)(nil),              // 7: agni.v1.geom.Transform
+	(*Shape)(nil),                  // 8: agni.v1.geom.Shape
+	(*PinPoint)(nil),               // 9: agni.v1.geom.PinPoint
+	(*Asset)(nil),                  // 10: agni.v1.geom.Asset
+	(*Image)(nil),                  // 11: agni.v1.geom.Image
+	(*SymbolDef)(nil),              // 12: agni.v1.geom.SymbolDef
+	(*Field)(nil),                  // 13: agni.v1.geom.Field
+	(*SymbolPlacement)(nil),        // 14: agni.v1.geom.SymbolPlacement
+	(*Polyline)(nil),               // 15: agni.v1.geom.Polyline
+	(*WireGeometry)(nil),           // 16: agni.v1.geom.WireGeometry
+	(*Label)(nil),                  // 17: agni.v1.geom.Label
+	(*SheetGeometry)(nil),          // 18: agni.v1.geom.SheetGeometry
+	(*TitleBlock)(nil),             // 19: agni.v1.geom.TitleBlock
+	(*KeyValue)(nil),               // 20: agni.v1.geom.KeyValue
+	(*SchematicGeometry)(nil),      // 21: agni.v1.geom.SchematicGeometry
+	(*BackAnnotatedPlacement)(nil), // 22: agni.v1.geom.BackAnnotatedPlacement
+	(*UndrawnPlacement)(nil),       // 23: agni.v1.geom.UndrawnPlacement
 }
 var file_agni_v1_geom_geom_proto_depIdxs = []int32{
 	5,  // 0: agni.v1.geom.BBox.min:type_name -> agni.v1.geom.Point
@@ -2127,13 +2209,14 @@ var file_agni_v1_geom_geom_proto_depIdxs = []int32{
 	20, // 37: agni.v1.geom.TitleBlock.extra_fields:type_name -> agni.v1.geom.KeyValue
 	12, // 38: agni.v1.geom.SchematicGeometry.symbols:type_name -> agni.v1.geom.SymbolDef
 	18, // 39: agni.v1.geom.SchematicGeometry.sheets:type_name -> agni.v1.geom.SheetGeometry
-	22, // 40: agni.v1.geom.SchematicGeometry.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
-	4,  // 41: agni.v1.geom.SchematicGeometry.prov:type_name -> agni.v1.geom.Provenance
-	42, // [42:42] is the sub-list for method output_type
-	42, // [42:42] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	23, // 40: agni.v1.geom.SchematicGeometry.undrawn:type_name -> agni.v1.geom.UndrawnPlacement
+	22, // 41: agni.v1.geom.SchematicGeometry.back_annotated:type_name -> agni.v1.geom.BackAnnotatedPlacement
+	4,  // 42: agni.v1.geom.SchematicGeometry.prov:type_name -> agni.v1.geom.Provenance
+	43, // [43:43] is the sub-list for method output_type
+	43, // [43:43] is the sub-list for method input_type
+	43, // [43:43] is the sub-list for extension type_name
+	43, // [43:43] is the sub-list for extension extendee
+	0,  // [0:43] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_geom_geom_proto_init() }
@@ -2147,7 +2230,7 @@ func file_agni_v1_geom_geom_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_geom_geom_proto_rawDesc), len(file_agni_v1_geom_geom_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   19,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

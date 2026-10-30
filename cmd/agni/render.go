@@ -165,6 +165,7 @@ func renderCmd() *cobra.Command {
 			// still draws every ref des, every wire and the title block, with only the component
 			// bodies missing, so nothing on the page says the drawing is short (agni issue 354).
 			noteUndrawn(cmd.ErrOrStderr(), g)
+			fmt.Fprint(cmd.ErrOrStderr(), backAnnotatedNote(filepath.Base(file), g))
 			if stats {
 				return writeGeometryStats(os.Stdout, g)
 			}
