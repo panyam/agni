@@ -127,6 +127,7 @@ function harness() {
   const onLocation = vi.fn();
   const onOverview = vi.fn();
   const onCompare = vi.fn();
+  const onShowPanel = vi.fn();
   const presenter = new ViewerPresenter(client, checks, canvas, render, {
     sheetNavs: [navA, navB],
     summary: onSummary,
@@ -140,13 +141,14 @@ function harness() {
     report: onReport,
     location: onLocation,
     compare: onCompare,
+    showPanel: onShowPanel,
     overview: { setState: onOverview },
     query: stubQueryView(query),
     // Wired so setConvention runs instead of early-returning. No existing test drives it, so the
     // port being present changes nothing else.
     conventionBar: { setState: vi.fn() },
   }, { runQuery, runQueries, listQuerySets, listRelations } as any, undefined, undefined, undefined, snaps);
-  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare };
+  return { presenter, runQuery, runQueries, listQuerySets, listRelations, onUndrawnNote, onStaleLinkNote, onHierarchyNote, getDesign, getSheet, checkDesign, readBoard, listRules, getLayoutReport, highlightSheet, getExpectations, canvas, query, navA, navB, render, onControls, onSummary, onFindings, onExpectCaption, onRules, onReport, onLocation, onOverview, onCompare, onShowPanel };
 }
 
 // openAndCheck opens a file and then runs the on-demand checks, the two-step the app does when the
@@ -1640,14 +1642,32 @@ describe("a query arriving by link", () => {
   it("opens a tab with the question, its bindings and title, and asks it whole", async () => {
     const h = harness();
     await h.presenter.restore(at({ query: "component.net(?r, ?n), ?n = ?net => ?r", title: "On ground", binds: ["net=GND"] }));
-    expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?n), ?n = ?net => ?r", { net: "GND" }, { title: "On ground", whole: true });
+    expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?n), ?n = ?net => ?r", { net: "GND" }, { title: "On ground", whole: true, arrived: true });
+  });
+
+  // agni issue 1236: the answer lands in the Query panel, which a saved layout can leave behind
+  // another tab, so the link brings it forward. A trace link does the same for Trace.
+  it("brings the panel its answer lands in forward", async () => {
+    const h = harness();
+    await h.presenter.restore(at({ query: "net.rail(?n) => ?n" }));
+    expect(h.onShowPanel).toHaveBeenCalledWith("query");
+    const t = harness();
+    await t.presenter.restore(at({ trace: "U1.1,U2.3" }));
+    expect(t.onShowPanel).toHaveBeenCalledWith("trace");
+    expect(t.onShowPanel).not.toHaveBeenCalledWith("query");
+  });
+
+  it("brings no panel forward for a link asking nothing", async () => {
+    const h = harness();
+    await h.presenter.restore(at({}));
+    expect(h.onShowPanel).not.toHaveBeenCalled();
   });
 
   // agni issue 1121: a link binding a name several times opens the tab with the list.
   it("opens a tab with a list binding when the link repeats a name", async () => {
     const h = harness();
     await h.presenter.restore(at({ query: "component.net(?r, ?net) => ?r", binds: ["net=I2C_SDA", "net=I2C_SCL"] }));
-    expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?net) => ?r", { net: ["I2C_SDA", "I2C_SCL"] }, { title: "", whole: true });
+    expect(h.query.setQuery).toHaveBeenCalledWith("component.net(?r, ?net) => ?r", { net: ["I2C_SDA", "I2C_SCL"] }, { title: "", whole: true, arrived: true });
   });
 
   it("sends a list binding as a list of text values", async () => {
@@ -1683,6 +1703,7 @@ describe("a query arriving by link", () => {
     } as never);
     await h.presenter.restore(at({ set: "power", q: "Rails" }));
     expect(h.query.openSet).toHaveBeenCalledWith({ title: "Power", queries: [{ name: "Rails", query: "net.rail(?n) => ?n" }] });
+    expect(h.onShowPanel).toHaveBeenCalledWith("query");
   });
 
   it("says so when the project keeps no such query", async () => {

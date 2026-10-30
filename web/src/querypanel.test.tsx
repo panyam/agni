@@ -1239,6 +1239,39 @@ describe("a question handed over with a title", () => {
     expect([...el.querySelectorAll(".query-tab-go")].map((t) => t.getAttribute("title"))).toContain("On ground");
   });
 
+  // agni issue 1236. A link lands on the design's first sheet with nothing drawn, so its answer
+  // locates a lone row the way a click does, on the sheet the entity is drawn on, or says it is here.
+  const answerFor = (rows: string[][]) =>
+    resultFromWire({ columns: ["n"], columnKinds: ["net"], rows: rows.map((cells) => ({ cells, cites: [], cellSheets: [{ sheetIds: ["s2"] }] })) } as never, (ids) =>
+      ids.map((id) => ({ id, name: id })),
+    );
+  it("locates a link's one-row answer on its sheet, and says where a longer answer is", () => {
+    const { el, panel, onRun, onLocate } = mountPanel();
+    panel.view.setQuery("net.rail(?n) => ?n", {}, { whole: true, arrived: true });
+    const tab = onRun.mock.lastCall![3] as string;
+    panel.view.setState(emptyResult(true), tab);
+    expect(onLocate).not.toHaveBeenCalled();
+    panel.view.setState(answerFor([["VBUS"]]), tab);
+    expect(onLocate).toHaveBeenCalledWith("net", "VBUS", "s2", LocateReason.UNSPECIFIED);
+
+    panel.view.setQuery("net.rail(?n) => ?n", {}, { whole: true, arrived: true });
+    const second = onRun.mock.lastCall![3] as string;
+    panel.view.setState(answerFor([["VBUS"], ["GND"]]), second);
+    expect(onLocate).toHaveBeenCalledTimes(1);
+    expect(el.querySelector(".query-locate-note")?.textContent).toContain("the 2 rows below");
+  });
+
+  it("locates nothing for a question that did not arrive by link, or for a later run of the link's tab", () => {
+    const { panel, onRun, onLocate } = mountPanel();
+    panel.view.setQuery("net.rail(?n) => ?n", {}, { whole: true });
+    panel.view.setState(answerFor([["VBUS"]]), onRun.mock.lastCall![3] as string);
+    panel.view.setQuery("net.rail(?n) => ?n", {}, { whole: true, arrived: true });
+    const tab = onRun.mock.lastCall![3] as string;
+    panel.view.setState(answerFor([["VBUS"]]), tab);
+    panel.view.setState(answerFor([["GND"]]), tab);
+    expect(onLocate).toHaveBeenCalledTimes(1);
+  });
+
   it("still numbers the tab and asks for a starting page without them", () => {
     const { panel, onRun } = mountPanel();
     panel.view.setQuery("component.net(?r, ?n) => ?r");

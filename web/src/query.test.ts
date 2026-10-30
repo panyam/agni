@@ -4,7 +4,7 @@ import { fileURLToPath } from "node:url";
 import { describe, it, expect } from "vitest";
 import { create } from "@bufbuild/protobuf";
 import { QuerySetSchema, RunQueryResponseSchema } from "./gen/agni/v1/webapi/query_pb.js";
-import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, relationCrumbs, tierLabel, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason } from "./query.js";
+import { RELATION_KINDS, bindingsInUse, compareNatural, cellKind, drawnSheets, tabsFromSet, formatBinding, relationCrumbs, tierLabel, searchBindings, resultFromResponse, reasonMessage, searchPattern, wireBinding, numberKey, LocateReason, linkTarget, linkNote, type QueryResult, type QueryRowItem } from "./query.js";
 import { probedOneAnswer, resultFromWire } from "./testwire.js";
 
 describe("resultFromResponse", () => {
@@ -384,5 +384,56 @@ describe("resultFromResponse witnesses", () => {
     const r = resultFromResponse(create(RunQueryResponseSchema, { columns: ["r"], rows: [{ cells: ["R1"] }] }));
     expect(r.witnessed).toBe(false);
     expect(r.rows[0].witnesses).toEqual([]);
+  });
+});
+
+// agni issue 1236: a query link's answer locates its one row on arrival, and otherwise says where
+// the answer is.
+describe("what a query link's answer does on arrival", () => {
+  const row = (cells: string[], over: Partial<QueryRowItem> = {}): QueryRowItem => ({
+    cells,
+    cites: [],
+    cellSheets: cells.map(() => []),
+    cellReasons: cells.map(() => LocateReason.UNSPECIFIED),
+    cellKinds: cells.map(() => ""),
+    cellRefs: cells.map(() => ""),
+    witnesses: [],
+    ...over,
+  });
+  const answer = (columnKinds: string[], rows: QueryRowItem[], over: Partial<QueryResult> = {}): QueryResult => ({
+    columns: columnKinds.map((_, i) => `c${i}`),
+    columnKinds,
+    rows,
+    error: "",
+    loading: false,
+    ran: true,
+    total: 0,
+    ...over,
+  });
+
+  it("locates the first entity cell of a one-row answer, on the first sheet it is drawn on", () => {
+    const r = answer(["", "net"], [row(["3.3", "VBUS"], { cellSheets: [[], [{ id: "s3", name: "Power" }, { id: "s1", name: "Top" }]] })]);
+    expect(linkTarget(r)).toEqual({ kind: "net", subject: "VBUS", ref: "", sheet: "s3", reason: LocateReason.UNSPECIFIED });
+  });
+
+  it("locates a pin through its component, and skips a pin cell whose component did not resolve", () => {
+    const pin = answer(["pin"], [row(["5"], { cellRefs: ["U7"] })]);
+    expect(linkTarget(pin)).toMatchObject({ kind: "pin", subject: "5", ref: "U7", sheet: undefined });
+    const loose = answer(["pin", "component"], [row(["5", "U7"])]);
+    expect(linkTarget(loose)).toMatchObject({ kind: "component", subject: "U7" });
+  });
+
+  it("locates nothing for several rows, no rows, an error or an answer of scalars", () => {
+    expect(linkTarget(answer(["net"], [row(["A"]), row(["B"])]))).toBeNull();
+    expect(linkTarget(answer(["net"], []))).toBeNull();
+    expect(linkTarget(answer(["net"], [row(["A"])], { error: "boom" }))).toBeNull();
+    expect(linkTarget(answer([""], [row(["3.3"])]))).toBeNull();
+  });
+
+  it("says how many rows the answer holds, counting what a limit left out", () => {
+    expect(linkNote(answer(["net"], [row(["A"]), row(["B"])]))).toContain("the 2 rows below");
+    expect(linkNote(answer(["net"], [row(["A"])], { total: 40 }))).toContain("the 40 rows below");
+    expect(linkNote(answer(["net"], []))).toContain("matched nothing");
+    expect(linkNote(answer(["net"], [], { error: "boom" }))).toBe("");
   });
 });

@@ -830,6 +830,12 @@ rather than an answer, so following it re-asks the question of the design as it 
 link short however long the query is. A set read from a file is on no server, so its links carry
 each query's text with the preamble in front.
 
+The link opens the design on its first sheet and brings the Query panel forward with the answer in
+a tab of its own. An answer of one row is drawn as a click on its first part, net or pin would draw
+it, on the sheet that entity is drawn on. A longer answer draws nothing until you click a cell,
+because the link cannot say which row it meant, and a line above the table says the answer is there.
+A trace link brings the Trace panel forward the same way.
+
 Two of these behaviours are deliberate:
 
 - **`csv` carries no preamble.** No title, no query, no count, because its first row has to be the

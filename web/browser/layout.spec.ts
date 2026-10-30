@@ -676,6 +676,59 @@ describe("Review", () => {
 // so the #845 walk and these specs enlarged it by hand before they could click one. The Checks
 // table's headers wrapped a letter per line in the east rail. And Changes, re-added beside the diff
 // after a reader closed it, never took its rail width, because a panel-level setSize is dropped.
+// agni issue 1236. A query link opened the design on its first sheet with nothing drawn, and its
+// answer sat in the Query panel, behind whichever tab the reader's saved layout had in front. jsdom
+// has no dock, so only a browser shows which tab a reader is looking at.
+describe("a query link", () => {
+  const linkTo = (query: string, binds: string[] = []) => {
+    const params = new URLSearchParams({ query });
+    for (const b of binds) params.append("bind", b);
+    return `${base()}/designs/kicad/hier_bus_root.kicad_sch/view?${params}`;
+  };
+  // inFront reports whether a dock tab is the one its group shows.
+  const inFront = (page: Page, title: string) =>
+    page.evaluate((t) => {
+      const tab = Array.from(document.querySelectorAll(".tab")).find((e) => e.textContent?.trim() === t);
+      return !!tab?.classList.contains("active-tab");
+    }, title);
+  // traceInFront leaves the reader's saved layout with Trace in front of Query, as a reader who last
+  // traced a pin has it. The reload is the positive control: without it the test could pass on a
+  // layout that never kept the choice.
+  const traceInFront = async (page: Page) => {
+    await openViewer(page, "kicad", "hier_bus_root.kicad_sch");
+    await page.locator(".tab", { hasText: "Trace" }).click();
+    await page.reload({ waitUntil: "networkidle" });
+    await page.waitForSelector(".query textarea.query-text", { state: "attached", timeout: 30_000 });
+    await expect.poll(() => inFront(page, "Trace"), { timeout: 10_000 }).toBe(true);
+  };
+
+  it("brings Query forward and draws a one-row answer on the sheet it is on", async () => {
+    await withPage(browser, async (page) => {
+      await traceInFront(page);
+      await page.goto(linkTo("component.class(?r, ?c) => ?r", ["r=R101"]), { waitUntil: "networkidle" });
+      await page.waitForSelector(".query-row", { timeout: 30_000 });
+      await expect.poll(() => inFront(page, "Query"), { timeout: 10_000 }).toBe(true);
+      // R101 is drawn on the sub-sheet alone, so the located cell's badge being the current one says
+      // the drawing moved off the root sheet the link opened on.
+      await expect.poll(() => page.locator(".query-locate.on").allInnerTexts(), { timeout: 30_000 }).toEqual(["R101"]);
+      await expect.poll(() => page.locator(".query-row .sheet-badge.on").count(), { timeout: 30_000 }).toBe(1);
+    });
+  }, 90_000);
+
+  it("says a longer answer is in the Query panel, and locates none of it", async () => {
+    await withPage(browser, async (page) => {
+      await traceInFront(page);
+      await page.goto(linkTo("component.class(?r, ?c) => ?r"), { waitUntil: "networkidle" });
+      await page.waitForSelector(".query-row", { timeout: 30_000 });
+      await expect.poll(() => inFront(page, "Query"), { timeout: 10_000 }).toBe(true);
+      expect(await page.locator(".query-row").count()).toBe(4);
+      await expect.poll(() => page.locator(".query-locate-note").innerText(), { timeout: 10_000 }).toContain("the 4 rows below");
+      expect(await page.locator(".query-locate.on").count()).toBe(0);
+      expect((await paintedAt(page, ".query-locate-note")).ownedByProbe, "the note is on screen, not behind another panel").toBe(true);
+    });
+  }, 90_000);
+});
+
 describe("the default dock", () => {
   it("opens the query panel tall enough to show an answer's first rows", async () => {
     await withPage(browser, async (page) => {
