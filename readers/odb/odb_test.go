@@ -68,7 +68,7 @@ func TestReadsAnInchJob(t *testing.T) {
 		t.Errorf("design = %q from %q, want inchjob from odb++", d.GetName(), d.GetSourceFormat())
 	}
 	got := netPins(d)
-	want := map[string]string{"VIN": "U1.1 R1.1", "GND": "U1.2 R1.2"}
+	want := map[string]string{"VIN": "U1.1 R1.1", "GND": "U1.2 U2.1 R1.2"}
 	if len(got) != len(want) {
 		t.Errorf("nets = %v, want %v", got, want)
 	}
@@ -89,7 +89,7 @@ func TestReadsAnInchJob(t *testing.T) {
 	for _, l := range g.GetLayers() {
 		names = append(names, l.GetName())
 	}
-	if got, want := strings.Join(names, " "), "F.SilkS F.Cu In1.Cu B.Cu DRILL"; got != want {
+	if got, want := strings.Join(names, " "), "F.SilkS F.Cu In1.Cu B.Cu DRILL NPTH"; got != want {
 		t.Errorf("layers = %q, want %q", got, want)
 	}
 
@@ -111,6 +111,23 @@ func TestReadsAnInchJob(t *testing.T) {
 	r1 := placement(t, g, "R1")
 	if !r1.GetMirror() || r1.GetLayer() != "B.Cu" || r1.GetPads()[0].GetAt().GetX() != -30*mil || r1.GetPads()[0].GetLayers()[0] != "B.Cu" {
 		t.Errorf("R1 = mirror %v layer %s pad1 %v, want a mirrored back part with pad 1 at (-30mil, 0)", r1.GetMirror(), r1.GetLayer(), r1.GetPads()[0])
+	}
+
+	// U2's lands are the ones eda/data does not hand over whole: a surface, a hole on a drill layer
+	// it never names, and a pad drawn by the job's own symbol.
+	u2 := placement(t, g, "U2")
+	byNum := map[string]*geom.Pad{}
+	for _, p := range u2.GetPads() {
+		byNum[p.GetNumber()] = p
+	}
+	if p := byNum["1"]; p == nil || p.GetShape() != "custom" || p.GetSize().GetX() != 60*mil || p.GetSize().GetY() != 60*mil || p.GetNet() != "GND" {
+		t.Errorf("U2.1 = %v, want a 60x60mil custom land on GND (a surface, its pin named U2-1)", p)
+	}
+	if p := byNum["2"]; p == nil || p.GetShape() != "circle" || p.GetDrill() != 40*mil || p.GetSize().GetX() != 40*mil || p.GetLayers()[0] != "*.Cu" {
+		t.Errorf("U2.2 = %v, want a 40mil hole found on the NPTH layer by position", p)
+	}
+	if p := byNum["3"]; p == nil || p.GetShape() != "custom" || p.GetSize().GetX() != 50*mil || p.GetSize().GetY() != 10*mil {
+		t.Errorf("U2.3 = %v, want a 50x10mil custom pad from symbols/mypad", p)
 	}
 
 	var vin *geom.NetCopper

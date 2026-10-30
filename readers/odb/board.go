@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"io/fs"
 	"math"
+	"path"
+	"slices"
 	"strings"
 
 	"github.com/panyam/agni/core/num"
@@ -17,8 +19,9 @@ import (
 // feature eda/data ties to its toeprint, its drill from the drill layer), routed copper (lines, and
 // arcs approximated as polylines) grouped by the net eda/data assigns each feature, vias (a drill
 // hit and its copper lands), copper surfaces on a net as zones (each island's outline, holes
-// dropped), and silkscreen and fabrication lines and text. Negative features, user symbols' own
-// geometry and barcodes are not carried. Coordinates are integer nanometres (unit_nm=1).
+// dropped), and silkscreen and fabrication lines and text. A pad drawn by a user symbol or as a
+// surface is carried as its extent with the shape "custom", not its outline. Negative features and
+// barcodes are not carried. Coordinates are integer nanometres (unit_nm=1).
 //
 // Layers are renamed into the contract's KiCad-style vocabulary (the first copper layer F.Cu, the
 // last B.Cu, inner ones In1.Cu up, and the silkscreen, mask and paste on each side F./B.SilkS,
@@ -45,6 +48,9 @@ type boardBuilder struct {
 	byUpper  map[string]matrixLayer
 	features map[string]*featuresFile // upper-cased matrix name -> parsed features
 	featNet  map[string]map[int]netRef
+	drills   map[[2]int64]int64          // drill hits by micron position, built by drillAt
+	pads     map[string]map[[2]int64]int // copper pads by layer and micron position, built by padAt
+	users    map[string]symbolShape
 	g        *geom.BoardGeometry
 }
 
@@ -55,7 +61,7 @@ func (p *parsedJob) toBoard(src string) (*geom.BoardGeometry, error) {
 		byUpper:  map[string]matrixLayer{},
 		features: map[string]*featuresFile{},
 		featNet:  map[string]map[int]netRef{},
-		g:        &geom.BoardGeometry{DesignRef: p.jobName(), UnitNm: 1, Prov: &geom.Provenance{SourceFile: src}},
+		g:        &geom.BoardGeometry{DesignRef: p.jobName(src), UnitNm: 1, Prov: &geom.Provenance{SourceFile: src}},
 	}
 	for _, l := range p.matrix.layers {
 		b.byUpper[strings.ToUpper(l.name)] = l
@@ -138,11 +144,63 @@ func (b *boardBuilder) layerFeatures(upper string) (*featuresFile, error) {
 	return ff, nil
 }
 
+// symbol is what a feature's symbol says about its copper. A name the standard set does not know is
+// a user symbol, drawn by the job under symbols/<name>/, and takes the extent of what it draws.
 func (b *boardBuilder) symbol(ff *featuresFile, i int) symbolShape {
 	if i < 0 || i >= len(ff.symbols) {
 		return symbolShape{}
 	}
-	return parseSymbol(ff.symbols[i])
+	s := parseSymbol(ff.symbols[i])
+	if s.w == 0 && s.h == 0 && s.shape == ff.symbols[i].name {
+		return b.userSymbol(ff.symbols[i].name)
+	}
+	return s
+}
+
+// userSymbol reads a job's own symbol and sizes it by the box around everything it draws, a line's
+// or arc's stroke and a pad's symbol included. A symbol the job does not define keeps its name and
+// no size.
+func (b *boardBuilder) userSymbol(name string) symbolShape {
+	if s, ok := b.users[name]; ok {
+		return s
+	}
+	if b.users == nil {
+		b.users = map[string]symbolShape{}
+	}
+	out := symbolShape{shape: name}
+	if raw, err := b.p.readOptional(path.Join("symbols", strings.ToLower(name), "features")); err == nil && raw != nil {
+		if ff, err := parseFeatures(raw); err == nil {
+			var pts []pt
+			for i := range ff.features {
+				f := &ff.features[i]
+				half := int64(0)
+				if f.sym >= 0 && f.sym < len(ff.symbols) {
+					if s := parseSymbol(ff.symbols[f.sym]); s.w > 0 || s.h > 0 {
+						half = max(s.w, s.h) / 2
+					}
+				}
+				switch f.kind {
+				case featLine, featArc:
+					for _, p := range []pt{f.a, f.b} {
+						pts = append(pts, pt{p.x - half, p.y - half}, pt{p.x + half, p.y + half})
+					}
+				case featPad:
+					pts = append(pts, pt{f.a.x - half, f.a.y - half}, pt{f.a.x + half, f.a.y + half})
+				case featSurface:
+					for _, isl := range f.islands {
+						for _, c := range isl {
+							pts = append(pts, c.pts...)
+						}
+					}
+				}
+			}
+			if w, h := extent(pts); w > 0 || h > 0 {
+				out = symbolShape{w: w, h: h, shape: "custom"}
+			}
+		}
+	}
+	b.users[name] = out
+	return out
 }
 
 func (b *boardBuilder) outline() error {
@@ -211,13 +269,19 @@ func (b *boardBuilder) placements() error {
 			for ti, t := range c.pins {
 				pad := &geom.Pad{Number: t.name, At: localOffset(c.at, t.at, rot, c.back), Net: b.p.eda.netName(t.net)}
 				through := pkg != nil && t.num >= 0 && t.num < len(pkg.pins) && pkg.pins[t.num].typ == "T"
-				if err := b.padShape(pad, pads[letter][[2]int{ci, ti}], sideLayer, &through); err != nil {
+				others, err := b.padShape(pad, pads[letter][[2]int{ci, ti}], sideLayer, t.at, &through)
+				if err != nil {
 					return err
 				}
-				if through {
+				switch {
+				case through:
 					pad.Layers = []string{"*.Cu"}
-				} else {
+				case pad.Shape != "":
 					pad.Layers = []string{sideLayer}
+				default:
+					// No copper and no hole: a toeprint whose only features are a paste or mask
+					// opening, which is where it is drawn.
+					pad.Layers = others
 				}
 				pl.Pads = append(pl.Pads, pad)
 			}
@@ -228,10 +292,12 @@ func (b *boardBuilder) placements() error {
 }
 
 // padShape fills a pad's shape, size, rotation and drill from the features eda/data ties to its
-// toeprint, preferring the land on the component's own side. A drill hit makes the pad
-// through-hole whatever the package said.
-func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, through *bool) error {
-	var best *feature
+// toeprint, preferring the land on the component's own side. A land drawn as a surface (KiCad's
+// custom pads) takes its outline's extent. A drill hit makes the pad through-hole whatever the
+// package said, and one eda/data does not tie to the pin (a non-plated hole, on a drill layer of its
+// own) is found by the pin's position, for a through-hole or copperless pad.
+func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, at pt, through *bool) (others []string, err error) {
+	var best, surface *feature
 	var bestFF *featuresFile
 	for _, f := range fids {
 		upper := b.edaLayer(f.layer)
@@ -241,30 +307,226 @@ func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, thr
 		}
 		ff, err := b.layerFeatures(upper)
 		if err != nil {
-			return err
+			return nil, err
 		}
 		if f.feat < 0 || f.feat >= len(ff.features) {
 			continue
 		}
 		feat := &ff.features[f.feat]
+		if !ml.isCopper() && ml.typ != "DRILL" && f.typ != 'H' && !slices.Contains(others, b.names[upper]) {
+			others = append(others, b.names[upper])
+		}
 		switch {
 		case ml.typ == "DRILL" || f.typ == 'H':
-			pad.Drill = b.symbol(ff, feat.sym).width()
+			pad.Drill = b.symbol(ff, feat.sym).hole()
 			*through = true
 		case ml.isCopper() && feat.kind == featPad:
 			if best == nil || b.names[upper] == sideLayer {
 				best, bestFF = feat, ff
 			}
+		case ml.isCopper() && feat.kind == featSurface:
+			if surface == nil || b.names[upper] == sideLayer {
+				surface = feat
+			}
 		}
 	}
-	if best == nil {
-		return nil
+	bare := best == nil && surface == nil
+	if bare && len(fids) == 0 {
+		// A toeprint eda/data names nothing for, which Altium writes when several pins share a name
+		// (every SH pin of a shield pointing at the first): the land at the pin's position. One that
+		// names only paste or mask features is a stencil or mask opening and takes no copper, or a
+		// paste window over a thermal pad would take the pad's.
+		f, ff, err := b.padAt(sideLayer, at)
+		if err != nil {
+			return nil, err
+		}
+		best, bestFF = f, ff
+		if best == nil {
+			// A custom land eda/data ties to no pin (KiCad's mounting pads on no net, whose
+			// subnets name only their paste openings): the smallest copper surface on no net
+			// around the pin.
+			if surface, err = b.surfaceAround(sideLayer, at); err != nil {
+				return nil, err
+			}
+		}
 	}
-	s := b.symbol(bestFF, best.sym)
-	pad.Shape = s.shape
-	pad.Size = &geom.Point{X: s.w, Y: s.h}
-	pad.RotationDeg = normDeg(-best.rot)
-	return nil
+	// Only a pad the package calls through-hole, or one with no copper at all (a non-plated hole),
+	// takes a drill by position; an SMD land under a via-in-pad would otherwise take the via's.
+	if pad.Drill == 0 && (*through || (bare && best == nil)) {
+		d, err := b.drillAt(at)
+		if err != nil {
+			return nil, err
+		}
+		if d > 0 {
+			pad.Drill, *through = d, true
+		}
+	}
+	switch {
+	case best != nil:
+		s := b.symbol(bestFF, best.sym)
+		pad.Shape = s.shape
+		pad.Size = &geom.Point{X: s.w, Y: s.h}
+		pad.RotationDeg = normDeg(-best.rot)
+	case surface != nil:
+		w, h := islandsExtent(surface.islands)
+		pad.Shape = "custom"
+		pad.Size = &geom.Point{X: w, Y: h}
+	case pad.Drill > 0:
+		// A hole with no copper, which is what a non-plated hole is.
+		pad.Shape = "circle"
+		pad.Size = &geom.Point{X: pad.Drill, Y: pad.Drill}
+	}
+	return others, nil
+}
+
+// drillAt is the size of the drill hit on any drill layer at p, to the micron, 0 when there is none.
+// The index is built the first time it is asked for.
+func (b *boardBuilder) drillAt(p pt) (int64, error) {
+	if b.drills == nil {
+		b.drills = map[[2]int64]int64{}
+		for _, l := range b.p.matrix.layers {
+			if l.typ != "DRILL" {
+				continue
+			}
+			ff, err := b.layerFeatures(strings.ToUpper(l.name))
+			if err != nil {
+				return 0, err
+			}
+			for i := range ff.features {
+				f := &ff.features[i]
+				if f.kind == featPad {
+					b.drills[micron(f.a)] = b.symbol(ff, f.sym).hole()
+				}
+			}
+		}
+	}
+	k := micron(p)
+	for dx := int64(-1); dx <= 1; dx++ {
+		for dy := int64(-1); dy <= 1; dy++ {
+			if d, ok := b.drills[[2]int64{k[0] + dx, k[1] + dy}]; ok {
+				return d, nil
+			}
+		}
+	}
+	return 0, nil
+}
+
+// padAt is the copper pad feature at p on the copper layer the contract names layer, to the micron,
+// nil when there is none. Each layer's index is built the first time it is asked for.
+func (b *boardBuilder) padAt(layer string, p pt) (*feature, *featuresFile, error) {
+	var upper string
+	for u, n := range b.names {
+		if n == layer && b.byUpper[u].isCopper() {
+			upper = u
+		}
+	}
+	if upper == "" {
+		return nil, nil, nil
+	}
+	ff, err := b.layerFeatures(upper)
+	if err != nil {
+		return nil, nil, err
+	}
+	if b.pads == nil {
+		b.pads = map[string]map[[2]int64]int{}
+	}
+	idx := b.pads[upper]
+	if idx == nil {
+		idx = map[[2]int64]int{}
+		for i := range ff.features {
+			if f := &ff.features[i]; f.kind == featPad && f.positive {
+				idx[micron(f.a)] = i
+			}
+		}
+		b.pads[upper] = idx
+	}
+	k := micron(p)
+	for dx := int64(-1); dx <= 1; dx++ {
+		for dy := int64(-1); dy <= 1; dy++ {
+			if i, ok := idx[[2]int64{k[0] + dx, k[1] + dy}]; ok {
+				return &ff.features[i], ff, nil
+			}
+		}
+	}
+	return nil, nil, nil
+}
+
+// surfaceAround is the smallest positive surface on the named copper layer whose outline's box holds
+// p and that eda/data puts on no net, nil when there is none. A surface on a net is a pour or a
+// route, never a part's land, which is what keeps a ground pour under a pad from being taken for it.
+func (b *boardBuilder) surfaceAround(layer string, p pt) (*feature, error) {
+	var upper string
+	for u, n := range b.names {
+		if n == layer && b.byUpper[u].isCopper() {
+			upper = u
+		}
+	}
+	if upper == "" {
+		return nil, nil
+	}
+	ff, err := b.layerFeatures(upper)
+	if err != nil {
+		return nil, err
+	}
+	var best *feature
+	var bestArea float64
+	for i := range ff.features {
+		f := &ff.features[i]
+		if f.kind != featSurface || !f.positive {
+			continue
+		}
+		if ref, ok := b.featNet[upper][i]; ok && ref.net != "" {
+			continue
+		}
+		var pts []pt
+		for _, isl := range f.islands {
+			for _, c := range isl {
+				pts = append(pts, c.pts...)
+			}
+		}
+		if len(pts) == 0 {
+			continue
+		}
+		minX, maxX, minY, maxY := pts[0].x, pts[0].x, pts[0].y, pts[0].y
+		for _, q := range pts[1:] {
+			minX, maxX = min(minX, q.x), max(maxX, q.x)
+			minY, maxY = min(minY, q.y), max(maxY, q.y)
+		}
+		if p.x < minX || p.x > maxX || p.y < minY || p.y > maxY {
+			continue
+		}
+		if area := float64(maxX-minX) * float64(maxY-minY); best == nil || area < bestArea {
+			best, bestArea = f, area
+		}
+	}
+	return best, nil
+}
+
+func micron(p pt) [2]int64 {
+	return [2]int64{int64(math.Round(float64(p.x) / 1000)), int64(math.Round(float64(p.y) / 1000))}
+}
+
+// islandsExtent is the width and height of the box around a surface's outlines.
+func islandsExtent(islands [][]contour) (int64, int64) {
+	var pts []pt
+	for _, isl := range islands {
+		for _, c := range isl {
+			pts = append(pts, c.pts...)
+		}
+	}
+	return extent(pts)
+}
+
+func extent(pts []pt) (int64, int64) {
+	if len(pts) == 0 {
+		return 0, 0
+	}
+	minX, maxX, minY, maxY := pts[0].x, pts[0].x, pts[0].y, pts[0].y
+	for _, p := range pts[1:] {
+		minX, maxX = min(minX, p.x), max(maxX, p.x)
+		minY, maxY = min(minY, p.y), max(maxY, p.y)
+	}
+	return maxX - minX, maxY - minY
 }
 
 // copper groups each copper layer's lines and arcs by net, and builds the vias and zones.
