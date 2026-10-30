@@ -102,6 +102,14 @@ report has no findings-only form. The CSV carries a `verdict_id` per row
 
 That is one rule out of the table, which runs to about 150 rows on this board.
 
+Narrowed to one rule, the same table is a bus sign-off sheet.
+`agni check <design> --rule i2c-pull-up --verdicts --format csv` (or `--format html`) gives one row
+per I2C net the rule considered, passing and failing alike. A pull-up one resistor away reads
+`SDA reaches rail VCC_3V3 through R1`. One behind a series part names every net on the way, as
+`SCL reaches rail VCC_3V3 along SCL -> [R2] -> BUF_NET -> [R3] -> VCC_3V3`, in the same
+route spelling `agni trace` prints. A failing row states the hop limit it searched to, since a
+pull-up four hops out is a different problem from no pull-up at all.
+
 Paste an id into a running viewer as `?verdict=<id>` and it opens on that verdict with the proof
 drawn, with the subject in focus and the resistor and rail behind it.
 
