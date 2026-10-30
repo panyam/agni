@@ -49,7 +49,8 @@
         "roles": [
           {
             "roleKind": "ROLE_CONTROL",
-            "source": "ROLE_SOURCE_CONVENTION"
+            "source": "ROLE_SOURCE_CONVENTION",
+            "reason": "the name matches the control pattern _EN$"
           }
         ],
         "attributes": {},
