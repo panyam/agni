@@ -49,14 +49,29 @@ so your design is never uploaded.
 
 ## Try it in 60 seconds
 
-No private data needed. The `demo/` folder holds two shareable KiCad boards: a clean one and
-the same board with deliberate design issues.
+With nothing installed, the [public demo](https://panyam.github.io/agni/demo/) checks a seed
+board or a file you drop on it, in your browser.
+
+To run the CLI, install it one of three ways:
 
 ```
-git clone https://github.com/panyam/agni
-cd agni
-make agni
-./bin/agni check demo/showcase.fires.kicad_pro
+go install github.com/panyam/agni/cmd/agni@latest
+```
+
+or download the tarball for your platform from the
+[latest release](https://github.com/panyam/agni/releases/latest) and put `agni` on your PATH, or
+run the container image with no install at all:
+
+```
+docker run --rm -v "$PWD":/work -w /work ghcr.io/panyam/agni check <board>.kicad_sch
+```
+
+Then check the demo board, which has deliberate design issues:
+
+```
+curl -sLO https://raw.githubusercontent.com/panyam/agni/main/demo/showcase.fires.kicad_pro
+curl -sLO https://raw.githubusercontent.com/panyam/agni/main/demo/showcase.fires.kicad_sch
+agni check showcase.fires.kicad_pro
 ```
 
 ```
@@ -66,25 +81,23 @@ findings by rule:
   esd-protection         2
   i2c-pull-up            1
   input-protection       1
+  reverse-blocking-absent 1
   test-point-coverage    2
 
-  [error]   i2c-pull-up: SCL (I2C net has no pull-up resistor to a rail)
+first 11:
+  [warning] bulk-cap: +3V3 (power rail has no bulk capacitor)
+  ...
+  [error] i2c-pull-up: /SCL (I2C net has no pull-up resistor to a rail)
   [warning] input-protection: VBUS (connector feeds a power input with no fuse or TVS in the path)
-  [info]    esd-protection: USB_D+ (externally-exposed signal net has no ESD protection)
   ...
 ```
 
-Then open the browser viewer on the same boards:
+`agni open showcase.fires.kicad_sch` serves the board in the browser viewer and prints its URL. Press
+Run checks and click a finding to locate its net on the schematic. A release binary carries the
+viewer, and a `go install` build downloads it from its release the first time it needs it.
 
-```
-make demo
-```
-
-Load `showcase.fires.kicad_pro` in the left tree, press Run checks, and click a finding to
-locate its net on the schematic. See [demo/README.md](demo/README.md).
-
-With nothing to build, the [public demo](https://panyam.github.io/agni/demo/) does the same in
-the browser, over seed boards or files you drop on it.
+From a checkout, `make agni` builds the same binary into `bin/`, and `make demo` opens both demo
+boards, the clean one and the one with issues. See [demo/README.md](demo/README.md).
 
 To run a release over your own boards, each
 [GitHub release](https://github.com/panyam/agni/releases) attaches a compose bundle pinned to it,

@@ -1,6 +1,7 @@
 package main
 
 import (
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"path/filepath"
@@ -101,8 +102,8 @@ func TestOpenStillRequiresTheViewer(t *testing.T) {
 	case <-time.After(10 * time.Second):
 		t.Fatal("open started serving with no viewer assets instead of refusing")
 	}
-	if err == nil || !strings.Contains(err.Error(), "is not a directory") {
-		t.Fatalf("open should refuse with no viewer assets, got %v", err)
+	if err == nil || !strings.Contains(err.Error(), "is not a directory") || !strings.Contains(err.Error(), "releases") {
+		t.Fatalf("open should refuse with no viewer assets and say where a build with one comes from, got %v", err)
 	}
 }
 
@@ -123,5 +124,68 @@ func TestAPIOnlyRootSaysWhatIsServed(t *testing.T) {
 				t.Errorf("GET %s does not mention %q:\n%s", tc.path, want, body)
 			}
 		}
+	}
+}
+
+// stubBundle stands in for the viewer an installed binary carries or downloads, and counts the calls.
+func stubBundle(t *testing.T, dir string, err error) *int {
+	t.Helper()
+	calls := new(int)
+	prev := viewerBundle
+	viewerBundle = func() (string, string, error) {
+		*calls++
+		return dir, "embedded", err
+	}
+	t.Cleanup(func() { viewerBundle = prev })
+	return calls
+}
+
+// An installed binary outside a checkout serves the viewer it carries rather than the API alone.
+func TestServeWithNothingNamedTakesTheInstalledViewer(t *testing.T) {
+	clearNamedWebDir(t)
+	bundle := t.TempDir()
+	stubBundle(t, bundle, nil)
+	t.Chdir(t.TempDir())
+	got, err := resolveServeAssets("", noEnv)
+	if err != nil || !got.viewer || got.dir != bundle || got.source != "embedded" {
+		t.Fatalf("resolveServeAssets = %+v, %v, want the bundle at %q", got, err, bundle)
+	}
+	dir, source, err := resolveWebAssets("", noEnv)
+	if err != nil || dir != bundle || source != "embedded" {
+		t.Errorf("resolveWebAssets = %q, %q, %v, want the bundle", dir, source, err)
+	}
+}
+
+// A failed download leaves serve on the API alone, saying why, where open refuses with the same reason.
+func TestAFailedBundleSaysWhy(t *testing.T) {
+	clearNamedWebDir(t)
+	stubBundle(t, "", errors.New("downloading the viewer: 503 Service Unavailable"))
+	t.Chdir(t.TempDir())
+	got, err := resolveServeAssets("", noEnv)
+	if err != nil || got.viewer || !strings.Contains(got.why, "503") {
+		t.Errorf("resolveServeAssets = %+v, %v, want API-only naming the 503", got, err)
+	}
+	if _, _, err := resolveWebAssets("", noEnv); err == nil || !strings.Contains(err.Error(), "503") {
+		t.Errorf("open's refusal should name the failed download, got %v", err)
+	}
+}
+
+// Naming a web dir, or a checkout's ./web, never reaches for the installed viewer.
+func TestANamedOrCheckoutWebDirNeverTakesTheBundle(t *testing.T) {
+	clearNamedWebDir(t)
+	calls := stubBundle(t, t.TempDir(), nil)
+	root := t.TempDir()
+	web := filepath.Join(root, defaultWebDir)
+	for _, f := range []string{"templates/ViewerPage.html", "templates/BrowsePage.html", "static/app.js", "static/browse.js"} {
+		touch(t, filepath.Join(web, f))
+	}
+	t.Chdir(root)
+	if _, err := resolveServeAssets("", noEnv); err != nil {
+		t.Fatal(err)
+	}
+	resolveServeAssets(filepath.Join(root, "typo"), noEnv)
+	resolveWebAssets(filepath.Join(root, "typo"), noEnv)
+	if *calls != 0 {
+		t.Errorf("the installed viewer was consulted %d times with a web dir present or named", *calls)
 	}
 }

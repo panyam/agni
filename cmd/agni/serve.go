@@ -453,7 +453,7 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	switch {
 	case !assets.viewer:
 		mux.Handle("/", apiOnlyHandler(apiPaths))
-		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer.\n", defaultWebDir, envWebDir)
+		fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and there is no ./%s here, so this serves the API without the viewer. Point --web-dir, web_dir in an agni.yaml, or %s at a built web/ directory for the viewer. %s.\n", defaultWebDir, envWebDir, assets.why)
 	default:
 		registerPages(newPageApp(dir, &serveApp{mounts: mounts, datasheetsURL: strings.TrimSuffix(o.datasheetsURL, "/"), engine: o.engine, wasmMaxBytes: o.wasmMaxBytes, embedOrigins: o.embedOrigins, viewerRooms: o.viewerRooms}), mux)
 	}
@@ -646,6 +646,8 @@ type webAssets struct {
 	source string // where dir came from, as resolveWebDir reports it
 	// viewer is false only for API-only serving, when nothing named a web dir and the default is absent.
 	viewer bool
+	// why says, for API-only serving, why no bundle stood in for the absent default.
+	why string
 }
 
 // resolveWebAssets resolves --web-dir through its fallback chain and requires the VIEWER to be
@@ -656,7 +658,15 @@ type webAssets struct {
 // fails while its artifact is still unwritten, as a taken port does (agni issue 637).
 func resolveWebAssets(flag string, getenv func(string) string) (dir, source string, err error) {
 	dir, source = resolveWebDir(flag, getenv)
-	if fi, serr := os.Stat(dir); serr != nil || !fi.IsDir() {
+	fi, serr := os.Stat(dir)
+	if flag == "" && source == "" && errors.Is(serr, fs.ErrNotExist) {
+		bdir, how, berr := viewerBundle()
+		if berr == nil {
+			return bdir, how, nil
+		}
+		return dir, source, fmt.Errorf("--web-dir %q is not a directory. Set it with --web-dir, or web_dir in an agni.yaml, or %s. A checkout has one at ./%s. %s", dir, envWebDir, defaultWebDir, noViewerHint(berr))
+	}
+	if serr != nil || !fi.IsDir() {
 		return dir, source, fmt.Errorf("--web-dir %q is not a directory. Set it with --web-dir, or web_dir in an agni.yaml, or %s. A checkout has one at ./%s", dir, envWebDir, defaultWebDir)
 	}
 	if err := checkWebAssets(dir); err != nil {
@@ -667,16 +677,20 @@ func resolveWebAssets(flag string, getenv func(string) string) (dir, source stri
 
 // resolveServeAssets is `serve`'s version of resolveWebAssets, which also admits no viewer at all.
 // When NOTHING named a web dir (no flag, no agni.yaml, no environment) and the default ./web does not
-// exist, serve runs the API alone, as an installed binary outside a checkout must. Every other
-// failure still fails, because a wrong named directory is a typo and a ./web without its bundle is a
-// checkout that forgot `make ui` (agni issue 735).
+// exist, serve takes the viewer an installed binary carries or downloads, and runs the API alone
+// when there is none. Every other failure still fails, because a wrong named directory is a typo and
+// a ./web without its bundle is a checkout that forgot `make ui` (agni issue 735).
 //
 // `open` and `--server self` call resolveWebAssets instead, since for them no viewer is an error.
 func resolveServeAssets(flag string, getenv func(string) string) (webAssets, error) {
 	dir, source := resolveWebDir(flag, getenv)
 	if flag == "" && source == "" {
 		if _, err := os.Stat(dir); errors.Is(err, fs.ErrNotExist) {
-			return webAssets{dir: dir}, nil
+			bdir, how, err := viewerBundle()
+			if err != nil {
+				return webAssets{dir: dir, why: noViewerHint(err)}, nil
+			}
+			return webAssets{dir: bdir, source: how, viewer: true}, nil
 		}
 	}
 	dir, source, err := resolveWebAssets(flag, getenv)

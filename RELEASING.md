@@ -50,22 +50,30 @@ From a green `main`:
    `.github/workflows/release.yml`, which builds the image for amd64 and arm64, pushes it to GHCR as
    both `:vX.Y.Z` and `:latest`, then verifies the published image reports the tag and can actually run
    a check.  A dispatch re-run takes the tag as an input so it can never publish an image built from an
-   untagged `main`.  The same run builds the Python client with the tag's version, installs the
+   untagged `main`.  The same run builds the CLI's release binaries (`make dist`) and attaches them
+   to the tag's GitHub Release.  It also builds the Python client with the tag's version, installs the
    wheel into a fresh venv to check it (`make python-dist`), and publishes it to PyPI as `agni-eda`.
 
 6. **Publish the GitHub Release.**
 
    ```
    make compose-release V=vX.Y.Z
-   GH_TOKEN="$GH_PERSONAL_TOKEN" gh release create vX.Y.Z \
-     --title vX.Y.Z --notes-file RELEASES/vX.Y.Z.md dist/compose.yaml dist/env.example
+   GH_TOKEN="$GH_PERSONAL_TOKEN" hack/release_attach.sh vX.Y.Z dist/compose.yaml dist/env.example
+   GH_TOKEN="$GH_PERSONAL_TOKEN" gh release edit vX.Y.Z \
+     --title vX.Y.Z --notes-file RELEASES/vX.Y.Z.md --draft=false
    ```
 
    The two files are the compose bundle a customer downloads to try the release on their own
    boards (agni issue 1057), `deploy/compose.yaml` with the release's version as its default. The
    release workflow has already brought it up over the published image (`hack/compose_smoke.sh`).
 
-   Add `--prerelease` for a `-bN` tag.
+   The workflow's `binaries` job attaches the CLI's tarballs, the viewer bundle and `checksums.txt`
+   (`make dist`, WS16-003) through the same script, which creates the release as a draft when it
+   gets there first. So this step attaches and edits rather than creating, and works in either order.
+   Publish only once the job has attached them: a `go install` binary downloads its viewer from the
+   published release, and `agni open` on one fails until the bundle is there.
+
+   Add `--prerelease` to the edit for a `-bN` tag.
 
 7. **Verify resolution** from a scratch module:
 
