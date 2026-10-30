@@ -36,7 +36,7 @@ func fakeWebDir(t *testing.T) string {
 func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 	out := t.TempDir()
 	seed := filepath.Join("..", "..", "examples", "tutorial-project")
-	if err := writeSite(out, fakeWebDir(t), "/agni/demo", []string{"gateway=" + seed}, io.Discard); err != nil {
+	if err := writeSite(out, fakeWebDir(t), "/agni/demo", "https://example.org/card.png", []string{"gateway=" + seed}, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	read := func(p string) string {
@@ -48,6 +48,12 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 		return string(b)
 	}
 	landing := read("index.html")
+	// The landing page is what a shared demo link shows, so it carries a link card.
+	for _, want := range []string{`<meta name="description"`, `property="og:title"`, `property="og:image" content="https://example.org/card.png"`, `name="twitter:card" content="summary_large_image"`} {
+		if !strings.Contains(landing, want) {
+			t.Errorf("landing page lacks %s", want)
+		}
+	}
 	// Each seed and the drop page open through the Load page (agni issue 1072).
 	for _, want := range []string{`href="/agni/demo/designs/gateway/designs/gateway/load/"`, "Sample Board", `href="/agni/demo/designs/local/load/"`} {
 		if !strings.Contains(landing, want) {
@@ -135,7 +141,7 @@ func gatewayInNoProject(t *testing.T) string {
 func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
 	out := t.TempDir()
 	seed := gatewayInNoProject(t)
-	if err := writeSite(out, fakeWebDir(t), "/", []string{"gw=" + seed}, io.Discard); err != nil {
+	if err := writeSite(out, fakeWebDir(t), "/", "", []string{"gw=" + seed}, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	for _, page := range []string{"view", "load"} {
@@ -174,7 +180,7 @@ func TestSiteWritesTheListingsTheFileTreesRead(t *testing.T) {
 	out := t.TempDir()
 	tutorial := filepath.Join("..", "..", "examples", "tutorial-project")
 	seeds := []string{"gateway=" + tutorial, "gw=" + gatewayInNoProject(t)}
-	if err := writeSite(out, fakeWebDir(t), "/", seeds, io.Discard); err != nil {
+	if err := writeSite(out, fakeWebDir(t), "/", "", seeds, io.Discard); err != nil {
 		t.Fatal(err)
 	}
 	b, err := os.ReadFile(filepath.Join(out, "mounts.json"))
@@ -229,7 +235,7 @@ func TestSiteWritesTheListingsTheFileTreesRead(t *testing.T) {
 func TestSiteRefusesWithoutABuiltEngine(t *testing.T) {
 	web := fakeWebDir(t)
 	os.Remove(filepath.Join(web, "static", "agni.wasm"))
-	err := writeSite(t.TempDir(), web, "/", []string{"g=" + filepath.Join("..", "..", "examples", "tutorial-project")}, io.Discard)
+	err := writeSite(t.TempDir(), web, "/", "", []string{"g=" + filepath.Join("..", "..", "examples", "tutorial-project")}, io.Discard)
 	if err == nil || !strings.Contains(err.Error(), "make ui wasm") {
 		t.Errorf("err %v, want a refusal naming make ui wasm", err)
 	}

@@ -1,14 +1,15 @@
 ---
 title: "Agni"
-description: "An EDA tooling engine that reads schematics and boards from many formats into one neutral IR, then checks, diffs, queries, and renders them."
+description: "Check KiCad and EDIF schematics and boards for design mistakes, in the CLI or in your browser, with every finding located on the schematic."
 hideTitle: true
 ---
 
 <div class="home-hero">
 <h1>Agni</h1>
-<p class="hero-subtitle">A project for learning hardware design by building tooling for it. Agni reads schematics and boards from several EDA formats into one representation, then lets you check, diff, query, and render them.</p>
+<p class="hero-subtitle">Agni checks schematics and boards for design mistakes, such as a bus with no pull-up, a rail with no decoupling, or a connector with no ESD protection, and locates every finding on the schematic. It reads KiCad, EDIF, IPC-2581, xschem and gEDA designs into one representation, then checks, diffs, queries, and renders them.</p>
 <div class="hero-actions">
-<a href="{{.Site.PathPrefix}}/guide/getting-started/" class="btn btn-primary">Get started</a>
+<a href="{{.Site.PathPrefix}}/demo/" class="btn btn-primary">Try it in your browser</a>
+<a href="{{.Site.PathPrefix}}/guide/getting-started/" class="btn btn-secondary">Get started</a>
 <a href="{{.Site.PathPrefix}}/overview/" class="btn btn-secondary">What is Agni</a>
 <a href="https://github.com/panyam/agni" class="btn btn-outline">GitHub</a>
 </div>

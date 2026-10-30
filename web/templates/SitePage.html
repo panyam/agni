@@ -1,6 +1,12 @@
 {{# include "./BasePage.html" #}}
 
 {{ define "HeadExtra" }}
+<meta name="description" content="{{ .Description }}">
+<meta property="og:type" content="website">
+<meta property="og:title" content="{{ .Title }}">
+<meta property="og:description" content="{{ .Description }}">
+{{ if .SocialImage }}<meta property="og:image" content="{{ .SocialImage }}">
+<meta name="twitter:card" content="summary_large_image">{{ else }}<meta name="twitter:card" content="summary">{{ end }}
 <style>
   .st-app { max-width: 860px; margin: 0 auto; padding: 40px 20px 60px; }
   .st-app h1 { font-size: 20px; margin: 0 0 4px; color: #222; }

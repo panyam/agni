@@ -421,7 +421,7 @@ seed-triage: samples-oracle
 
 demo-site: ui wasm samples-oracle
 	rm -rf $(DEMO_OUT)
-	$(GO) run ./cmd/agni site $(DEMO_OUT) --base $(DEMO_BASE) $(DEMO_SEEDS)
+	$(GO) run ./cmd/agni site $(DEMO_OUT) --base $(DEMO_BASE) $(if $(DEMO_SOCIAL_IMAGE),--social-image $(DEMO_SOCIAL_IMAGE)) $(DEMO_SEEDS)
 
 # The public demo walk, mission #851's exercise (agni issue 878): builds the static demo, serves it
 # under DEMO_BASE, and walks it in Chromium, printing one row per step and writing them as markdown
@@ -440,7 +440,7 @@ exercise-public-demo: $(if $(DEMO_URL),,demo-site)
 #   python3 -m http.server -d /tmp/agni-docs 8000   then /agni/ and /agni/demo/
 docs-site:
 	$(MAKE) -C docsite build
-	$(MAKE) demo-site DEMO_OUT=docsite/dist/demo/
+	$(MAKE) demo-site DEMO_OUT=docsite/dist/demo/ DEMO_SOCIAL_IMAGE=https://panyam.github.io/agni/static/images/social-preview.png
 	cd web && AGNI_SITE_DIR=$(CURDIR)/docsite/dist/demo pnpm exec vitest run -c vitest.site.config.ts
 
 # Publish the docs site. Pages serves only the docs.yml workflow's artifact, so a deploy is that
