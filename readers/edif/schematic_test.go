@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
@@ -691,9 +692,8 @@ func TestSchematicNetAnchors(t *testing.T) {
 	}
 }
 
-// TestReadSchematic_BackAnnotateInlineMismatch documents today: inline page designator wins over
-// instanceBackAnnotate. Desired: RefDes R1001 so netlist entity locate joins geometry (see
-// cmd/agni/testdata/github-issues/backannotate-locate/EXPECTED.md).
+// The back-annotated ref-des wins over the page's inline one, and the drawn label shows it where the
+// inline one was placed (agni issue 1228).
 func TestReadSchematic_BackAnnotateInlineMismatch(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "backannotate-inline-mismatch.eds")), "backannotate-inline-mismatch.eds")
 	if err != nil {
@@ -702,13 +702,22 @@ func TestReadSchematic_BackAnnotateInlineMismatch(t *testing.T) {
 	if len(g.Sheets) != 1 || len(g.Sheets[0].Placements) != 1 {
 		t.Fatalf("sheets/placements = %d/%d, want 1/1", len(g.Sheets), len(g.Sheets[0].Placements))
 	}
-	if got := g.Sheets[0].Placements[0].GetRefDes(); got != "R4" {
-		t.Errorf("RefDes = %q, want R4 (current inline-only behavior)", got)
+	pl := g.Sheets[0].Placements[0]
+	if got := pl.GetRefDes(); got != "R1001" {
+		t.Errorf("RefDes = %q, want the back-annotated R1001 over the inline R4", got)
+	}
+	var refs []string
+	for _, f := range pl.GetFields() {
+		if f.GetName() == "Reference" {
+			refs = append(refs, f.GetValue())
+		}
+	}
+	if len(refs) != 1 || refs[0] != "R1001" {
+		t.Errorf("Reference fields = %v, want one reading R1001", refs)
 	}
 }
 
-// TestReadSchematic_BackAnnotateOnly documents today: no inline designator yields empty RefDes even
-// when viewMap names the instance U101.
+// A ref-des only the viewMap names keys the placement, and draws no label, since the page places none.
 func TestReadSchematic_BackAnnotateOnly(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "backannotate-only.eds")), "backannotate-only.eds")
 	if err != nil {
@@ -717,7 +726,92 @@ func TestReadSchematic_BackAnnotateOnly(t *testing.T) {
 	if len(g.Sheets) != 1 || len(g.Sheets[0].Placements) != 1 {
 		t.Fatalf("sheets/placements = %d/%d, want 1/1", len(g.Sheets), len(g.Sheets[0].Placements))
 	}
-	if got := g.Sheets[0].Placements[0].GetRefDes(); got != "" {
-		t.Errorf("RefDes = %q, want empty (back-annotate not applied yet)", got)
+	pl := g.Sheets[0].Placements[0]
+	if got := pl.GetRefDes(); got != "U101" {
+		t.Errorf("RefDes = %q, want the back-annotated U101", got)
+	}
+	if a := pl.GetNetAnchor(); a != "" {
+		t.Errorf("NetAnchor = %q, want none for a placement with a ref-des", a)
+	}
+	for _, f := range pl.GetFields() {
+		if f.GetName() == "Reference" {
+			t.Errorf("drew a Reference field %q the page never placed", f.GetValue())
+		}
+	}
+}
+
+// A .eds is read as a netlist and as geometry, and both reads must key a part by the same ref-des, or
+// a design shipping only the .eds would lose locate the way #1228's split export did.
+func TestBackAnnotatedEdsNetlistAndGeometryAgree(t *testing.T) {
+	for _, tc := range []struct{ file, want string }{
+		{"backannotate-inline-mismatch.eds", "R1001"},
+		{"backannotate-only.eds", "U101"},
+	} {
+		t.Run(tc.file, func(t *testing.T) {
+			b := readFixture(t, tc.file)
+			d, err := Read(bytes.NewReader(b), tc.file)
+			if err != nil {
+				t.Fatalf("Read: %v", err)
+			}
+			g, err := ReadSchematic(bytes.NewReader(b), tc.file)
+			if err != nil {
+				t.Fatalf("ReadSchematic: %v", err)
+			}
+			var comps, placed []string
+			for _, c := range d.GetComponents() {
+				comps = append(comps, c.GetRefDes())
+			}
+			for _, sh := range g.GetSheets() {
+				for _, pl := range sh.GetPlacements() {
+					placed = append(placed, pl.GetRefDes())
+				}
+			}
+			if len(comps) != 1 || comps[0] != tc.want || len(placed) != 1 || placed[0] != tc.want {
+				t.Errorf("netlist ref-des %v, placements %v, want both [%s]", comps, placed, tc.want)
+			}
+		})
+	}
+}
+
+// EDIF keywords are case-insensitive, so a back-annotation spelled (ViewMap (InstanceBackAnnotate
+// is read too (agni issue 941).
+func TestBackAnnotateKeywordsCaseFolded(t *testing.T) {
+	src := strings.NewReplacer("(viewMap", "(ViewMap", "(instanceBackAnnotate", "(InstanceBackAnnotate").
+		Replace(string(readFixture(t, "backannotate-inline-mismatch.eds")))
+	if !strings.Contains(src, "(InstanceBackAnnotate") {
+		t.Fatal("the fixture no longer spells instanceBackAnnotate, so this test respells nothing")
+	}
+	g, err := ReadSchematic(strings.NewReader(src), "upper.eds")
+	if err != nil {
+		t.Fatalf("ReadSchematic: %v", err)
+	}
+	if got := g.Sheets[0].Placements[0].GetRefDes(); got != "R1001" {
+		t.Errorf("RefDes = %q, want R1001 from the respelled back-annotation", got)
+	}
+}
+
+// An id annotated twice with different designators maps to neither, and an instance inside a block
+// (a nested instanceRef) is left to the inline designator.
+func TestBackAnnotatedRefDesSkipsConflictsAndPaths(t *testing.T) {
+	root, err := parse(strings.NewReader(`(edif X (edifVersion 2 0 0) (design D (cellRef Top)
+	  (viewMap
+	    (instanceBackAnnotate (instanceRef &a (viewRef v)) (designator "R1"))
+	    (instanceBackAnnotate (instanceRef &b (viewRef v)) (designator "R2"))
+	    (instanceBackAnnotate (instanceRef &b (viewRef v)) (designator "R3"))
+	    (instanceBackAnnotate (instanceRef &c (instanceRef &blk (viewRef v))) (designator "R4"))
+	    (instanceBackAnnotate (instanceRef &d (viewRef v)) (designator "R5"))
+	    (instanceBackAnnotate (instanceRef &d (viewRef v)) (designator "R5")))))`))
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := backAnnotatedRefDes(root)
+	want := map[string]string{"&a": "R1", "&d": "R5"}
+	if len(got) != len(want) {
+		t.Fatalf("backAnnotatedRefDes = %v, want %v", got, want)
+	}
+	for id, des := range want {
+		if got[id] != des {
+			t.Errorf("%s -> %q, want %q", id, got[id], des)
+		}
 	}
 }

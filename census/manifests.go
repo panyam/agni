@@ -117,8 +117,8 @@ func kicadSch() Manifest {
 		"bus_entry": co("bus-entry tap detected + flagged unmodeled (WS1-034 P1); member expansion P2"),
 		"bus_alias": co("bus-alias detected + flagged unmodeled (WS1-034 P1); member expansion P2"),
 		"members":   dl("bus-alias member list unread until expansion", "WS1-034"),
-		"dnp":    co("DNP fabrication flag -> component attributes"),
-		"in_bom": co("BOM-scope flag -> component attributes"), "on_board": co("assembly-scope flag -> component attributes"),
+		"dnp":       co("DNP fabrication flag -> component attributes"),
+		"in_bom":    co("BOM-scope flag -> component attributes"), "on_board": co("assembly-scope flag -> component attributes"),
 		"netclass": co("net_class populated from .kicad_pro net_settings; local netclass_flag directive still unread"),
 		"image":    co("embedded raster image"), "global_label": co("global label -> net"),
 		"text_box":       dc("note-box frame dropped (text drawn)", ""),
@@ -175,8 +175,10 @@ func edifManifest() Manifest {
 	fill(m, dd("EDIF syntactic value primitive (number/boolean/self-ref/short atom)"),
 		"e", "a", "an", "this", "true", "false", "boolean")
 	fill(m, dd("EDIF back-annotation / keyword-map / view-map / grid / authorship metadata"),
-		"globalPortRef", "gridMap", "instanceBackAnnotate", "portBackAnnotate", "keywordLevel", "keywordMap",
-		"owner", "userData", "version", "viewMap")
+		"globalPortRef", "gridMap", "portBackAnnotate", "keywordLevel", "keywordMap",
+		"owner", "userData", "version")
+	m["viewMap"] = co("back-annotation container (agni issue 1228)")
+	m["instanceBackAnnotate"] = co("back-annotated designator -> instance ref-des (agni issue 1228)")
 	return Manifest{Format: "edif", Kind: KindEDIF, Entries: m}
 }
 

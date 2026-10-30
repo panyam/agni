@@ -141,7 +141,8 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 	for i, lf := range h.leaves {
 		insts[i] = lf.node
 	}
-	namedByInstance := !anyDesignator(insts)
+	backRef := backAnnotatedRefDes(root)
+	namedByInstance := !anyDesignator(insts) && len(backRef) == 0
 	shared := h.namesInSeveralBlocks()
 	refByID := make(map[string]string, len(insts))
 	pinsByID := make(map[string]map[string][]string, len(insts))
@@ -149,6 +150,9 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 	var order []string
 	for _, lf := range h.leaves {
 		refDes, sec, id, pinMap := instanceOf(lf.node, src)
+		if des, ok := backRef[id]; ok && lf.path == "" {
+			refDes = des
+		}
 		pinMap = withCellDesignators(pinMap, cellPins, sec)
 		// Inside a block an instance id repeats across placements and across cells, so its locator is
 		// the occurrence path, which is what an emitter anchors a net's instanceRef on.

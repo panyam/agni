@@ -51,7 +51,7 @@
           (designator (stringDisplay "R4")))
         (net (rename &n_scl "I2C_SCL")
           (joined (portRef &1 (instanceRef &i_pull)))
-          (figure NET (path (pointList (pt 100 400) (pt 500 400)))))
+          (figure NET (path (pointList (pt 100 400) (pt 500 400))))))
       (page (rename P2 "MCU sheet")
         (pageSize (rectangle (pt 0 0) (pt 1000 800)))
         (instance (rename &i_mcu "$i_mcu")
