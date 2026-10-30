@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb odb-fixtures exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -304,6 +304,16 @@ EXERCISE_OUT ?= /tmp/agni-exercise
 
 exercise-revision-audit: agni python-venv
 	$(PY_VENV)/bin/python $(PY_CLIENT)/examples/revision_audit.py --agni $(CURDIR)/bin/agni -o $(EXERCISE_OUT)/revision-audit.xlsx
+
+# Checking a layout handed off as ODB++ against its schematic (agni issue 1250): the odb-verification
+# example over the gateway's rev B layout, non-interactively. AGNI_EXAMPLE_DESIGN is cleared, since it
+# would replace both the schematic and the layout with one personal board.
+exercise-odb:
+	cd examples/odb-verification && AGNI_EXAMPLE_DESIGN= $(GO) run . --non-interactive
+
+# Regenerates the ODB++ fixtures from the synthetic KiCad boards with kicad-cli (KiCad 9 or later).
+odb-fixtures:
+	hack/odb_fixtures.sh
 
 # Web unit tests: TypeScript typecheck + the vitest suite, in each of the three workspace packages
 # (the viewer, the datasheets workbench, and what they share). No browser, no server.

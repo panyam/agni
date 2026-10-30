@@ -11,8 +11,10 @@ import (
 	"errors"
 	"fmt"
 	"io/fs"
+	"os"
 	"path/filepath"
 
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/readers/formats"
 )
@@ -43,5 +45,21 @@ func Load(arg string) (*ir.Design, error) {
 // ir.Component.mpn (classify.StampMPN) and rewrite provenance paths, and a read that skips them
 // parses and counts correctly while answering every datasheet-tier question with nothing.
 func ReadDesign(path string) (*ir.Design, error) {
-	return (&formats.Loader{}).ReadDesign(path)
+	return (&formats.Loader{}).ReadDesign(entryOf(path))
+}
+
+// ReadBoard reads the copper, pads, outline and layers a board file or an ODB++ job carries, through
+// formats.Loader.
+func ReadBoard(path string) (*geom.BoardGeometry, error) {
+	return (&formats.Loader{}).BoardGeometry(entryOf(path))
+}
+
+// entryOf is the file that enters a design named by path. An ODB++ job is a directory entered by
+// its matrix file, so a directory holding matrix/matrix is read through that, as the CLI reads it.
+func entryOf(path string) string {
+	m := filepath.Join(path, "matrix", "matrix")
+	if fi, err := os.Stat(m); err == nil && !fi.IsDir() {
+		return m
+	}
+	return path
 }
