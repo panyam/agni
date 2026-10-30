@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-26, at `77c73ff7`.
+Last pruned 2026-10-30, at `aad4b224`.
 
 ## At a glance
 
@@ -18,7 +18,7 @@ script) prints one mission's queue, and the order lives in GitHub labels and blo
 than here. Log each exercise run on the mission issue.
 
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
-  datasheet), 6 of 6 tickets closed, exercise last run at `77c73ff7` (works on the fixtures). It waits
+  datasheet), 7 of 7 tickets closed, exercise last run at `77c73ff7` (works on the fixtures). It waits
   on a team's clean-room run on their own board: the three commands in `guide/trying-agni.md`'s
   "Signing off a pin map in a clean room", with the `agni trial` report sent back. Their findings
   become its next tickets. Open choice from #1198: whether `service.ShippedRules` should name the
@@ -33,10 +33,12 @@ than here. Log each exercise run on the mission issue.
 - **Candidate**: more tours of the viewer. The review tour exists (`web/src/reviewtour.ts`, #1179), so
   a mission here would be another workflow toured the same way (a revision compare, a trace), each
   starting with the viewer events it advances on. Nobody has yet taken the headed tour by hand.
-- This run: #1192, #1195, #1197, #1199 and #1198 merged (the pin map table, alternate functions
-  from the datasheet, pin names in EDIF and `trace`, query sets in the check report, and the trial's
-  pin map counts). The 1093 reproducer still names its rail `RAIL_3V3`, which the default vocabulary
-  does not read, so fix that with #1093.
+- This run: #1205 merged (the README and docsite home lead with what agni catches, and shared links
+  carry a card through `agni site --social-image`); #1225 filed (`render --highlight` misses KiCad's
+  `/`-scoped net names, P3 `waiting`). A one-step install is the next piece of public launch prep,
+  and #742 (embed the viewer in release binaries) is what it needs, since a `brew install`ed
+  `agni open` otherwise has no viewer to serve. The 1093 reproducer still names its rail `RAIL_3V3`,
+  which the default vocabulary does not read, so fix that with #1093.
 
 ## Open, ranked
 

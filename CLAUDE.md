@@ -285,6 +285,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   time, so a run stuck at `waiting` on the `github-pages` environment (no reviewer exists to approve
   it) holds every later deploy at `pending`; cancel the stuck run with `gh run cancel <id>`, since a
   later deploy carries its commit.
+- **A shared link carries a card** (agni 1205). Every docsite page sets `og:*` and `twitter:card` from
+  `SiteMetadata.json`'s `siteURL` and `socialImage`, and the demo landing page takes
+  `agni site --social-image <url>`, because a card image needs an absolute URL and the site does not
+  know its host; `make docs-site` passes the docsite's `static/images/social-preview.png`, which is
+  drawn from the synthetic showcase fixture. A `make -C docsite build` that fails in `components` with
+  `@esbuild/darwin-arm64 could not be found` is that clone's `docsite/node_modules`, not the change;
+  `AGNI_DOCS_ENV=production go run . -build` inside `docsite/` builds the pages alone.
 - `make -C docsite images` re-renders every engine-drawn image the docs embed, and
   `docsite-images-check` in `testall` fails when one is stale (agni issue 453). Never `--layout
   force` there, since it alone differs between arm64 and amd64 (agni 472). `tutorial-runs-check`
@@ -584,6 +591,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   3980 components and 1617 nets off the `.edn` against 5219 and 4572 off the `.eds`, so nets inflate
   by 183%. A design that ships only a `.eds` can be rendered and queried, and its counts must never be
   compared against a design read from a netlist.
+- **KiCad names a local label by its sheet path**, so a root-sheet net is `/SCL`, and every finding,
+  query answer and link names it that way. `render --highlight net=SCL` matches nothing and still
+  reports a highlight (#1225), so spell a hand-typed subject as `check` prints it.
 - **KiCad's placement and bus rules are pinned against `kicad-cli`, and three of them are not what you
   would guess.** A symbol is rotated and THEN mirrored, where the shared transform composes mirror
   first, so a mirrored placement at 90 or 270 swapped its two pins onto each other's nets until agni
