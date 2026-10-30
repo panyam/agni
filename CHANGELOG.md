@@ -10,6 +10,15 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.13] - 2026-10-30
+
+Each release attaches a prebuilt `agni` for macOS and Linux on arm64 and amd64 that carries the
+browser viewer, and a `go install` build downloads the viewer from its release on first use, so
+`agni open` works outside a checkout (PR 1226). `agni open` on a board with no project above it
+reaches the viewer again, its minted mount now named `files` rather than `local` (PR 1226). The
+README and docsite home lead with what agni catches, and shared links show a card (PR 1205).  The
+full write-up is [RELEASES/v0.3.13.md](RELEASES/v0.3.13.md).
+
 ## [0.3.12] - 2026-10-27
 
 A pin-mux table kept as its own file merges into the part's published spec with `agnids merge-mux`,
