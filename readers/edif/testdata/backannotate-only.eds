@@ -1,0 +1,36 @@
+
+(edif BACKANNOT_ONLY
+  (edifVersion 2 0 0)
+  (edifLevel 0)
+  (library Lib1
+    (technology
+      (numberDefinition
+        (scale 1 (e 1 -8) (unit DISTANCE))))
+    (cell (rename &c1 "MCU")
+      (cellType GENERIC)
+      (view (rename &v1 "sym")
+        (viewType SCHEMATIC)
+        (interface
+          (port (rename &1 "SCL") (direction INPUT) (designator "SCL")))
+        (symbol
+          (boundingBox (rectangle (pt 0 -200) (pt 400 0)))
+          (figure BOX (rectangle (pt 0 -200) (pt 400 0)))
+          (portImplementation
+            (name &1)
+            (connectLocation (figure GRAPHICS (dot (pt 400 -100))))
+            (figure PIN (path (pointList (pt 350 -100) (pt 400 -100)))))))))
+  (design TopDesign
+    (cellRef Top (libraryRef Lib1))
+    (viewMap
+      (instanceBackAnnotate
+        (instanceRef &i_mcu (viewRef v1))
+        (designator "U101")))
+    (contents
+      (page (rename P1 "MCU sheet")
+        (pageSize (rectangle (pt 0 0) (pt 1000 800)))
+        (instance (rename &i_mcu "$i_mcu")
+          (viewRef v1 (cellRef MCU (libraryRef Lib1)))
+          (transform (origin (pt 200 300))))
+        (net (rename &n_scl "I2C_SCL")
+          (joined (portRef &1 (instanceRef &i_mcu)))
+          (figure NET (path (pointList (pt 400 300) (pt 600 300)))))))))

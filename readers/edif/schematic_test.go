@@ -690,3 +690,34 @@ func TestSchematicNetAnchors(t *testing.T) {
 			part.GetNetAnchor(), part.GetRefDes())
 	}
 }
+
+// TestReadSchematic_BackAnnotateInlineMismatch documents today: inline page designator wins over
+// instanceBackAnnotate. Desired: RefDes R1001 so netlist entity locate joins geometry (see
+// cmd/agni/testdata/github-issues/backannotate-locate/EXPECTED.md).
+func TestReadSchematic_BackAnnotateInlineMismatch(t *testing.T) {
+	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "backannotate-inline-mismatch.eds")), "backannotate-inline-mismatch.eds")
+	if err != nil {
+		t.Fatalf("ReadSchematic: %v", err)
+	}
+	if len(g.Sheets) != 1 || len(g.Sheets[0].Placements) != 1 {
+		t.Fatalf("sheets/placements = %d/%d, want 1/1", len(g.Sheets), len(g.Sheets[0].Placements))
+	}
+	if got := g.Sheets[0].Placements[0].GetRefDes(); got != "R4" {
+		t.Errorf("RefDes = %q, want R4 (current inline-only behavior)", got)
+	}
+}
+
+// TestReadSchematic_BackAnnotateOnly documents today: no inline designator yields empty RefDes even
+// when viewMap names the instance U101.
+func TestReadSchematic_BackAnnotateOnly(t *testing.T) {
+	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "backannotate-only.eds")), "backannotate-only.eds")
+	if err != nil {
+		t.Fatalf("ReadSchematic: %v", err)
+	}
+	if len(g.Sheets) != 1 || len(g.Sheets[0].Placements) != 1 {
+		t.Fatalf("sheets/placements = %d/%d, want 1/1", len(g.Sheets), len(g.Sheets[0].Placements))
+	}
+	if got := g.Sheets[0].Placements[0].GetRefDes(); got != "" {
+		t.Errorf("RefDes = %q, want empty (back-annotate not applied yet)", got)
+	}
+}
