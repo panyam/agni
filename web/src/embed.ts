@@ -21,6 +21,14 @@ import { isLinkOnly, type PageDispatch } from "./pageservice.js";
 
 export const ENVELOPE = "agni-viewer/v1";
 
+// ACCEPTED marks the note a page posts the moment it takes a request, before the request is answered.
+// A report link waits a short while for a viewer to speak and loads the link if none does, and an
+// answer can take longer than that wait, since resolving a verdict link runs its rule (agni issue
+// 1271's CI, where a slow runner reloaded the viewer). The note tells the sender someone is working.
+// It is its own envelope so a sender that predates it, a report saved earlier, ignores it rather than
+// reading a reply with no ok in it as a refusal.
+export const ACCEPTED = "agni-viewer/v1/accepted";
+
 // PageRequest is one call from a host.
 export interface PageRequest {
   agni: typeof ENVELOPE;
@@ -88,6 +96,7 @@ export function listenForHosts(win: HostWindow, dispatch: PageDispatch, allowed:
       reply({ agni: ENVELOPE, id: req.id, ok: false, error: { code: "permission_denied", message: `this viewer does not take requests from ${ev.origin}; start it with --embed-origin ${ev.origin}` } });
       return;
     }
+    source.postMessage({ agni: ACCEPTED, id: req.id }, ev.origin === "null" ? "*" : ev.origin);
     queue = queue.then(async () => {
       try {
         const body = await dispatch(req.method, req.body);

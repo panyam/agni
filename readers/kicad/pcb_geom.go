@@ -98,9 +98,11 @@ func boardGraphics(root *node) []*geom.BoardGraphic {
 			continue
 		}
 		origin := pcbPoint(fp.Child("at"))
-		rot := -rotOf(fp.Child("at"))
 		back := atomOf(fp.Child("layer").Arg(1)) == "B.Cu"
-		place := func(p *geom.Point) *geom.Point { return geomath.ComposePlacement(origin, rot, back, p) }
+		rot := placementAngle(fp.Child("at"), back)
+		place := func(p *geom.Point) *geom.Point {
+			return geomath.ComposePlacement(origin, rot, back, footprintLocal(p, back))
+		}
 		for _, base := range graphicHeads {
 			for _, n := range fp.Children("fp_" + base) {
 				if !footprintLayerDrawn(atomOf(n.Child("layer").Arg(1))) {
@@ -290,7 +292,7 @@ func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom
 	height, justify, mirror := effectsOf(n)
 	return &geom.BoardText{
 		Text:        text,
-		At:          geomath.ComposePlacement(pcbPoint(fpAt), -rotOf(fpAt), back, pcbPoint(local)),
+		At:          geomath.ComposePlacement(pcbPoint(fpAt), placementAngle(fpAt, back), back, footprintLocal(pcbPoint(local), back)),
 		RotationDeg: keepUpright(-(rotOf(fpAt) + rotOf(local))),
 		Height:      height,
 		Layer:       atomOf(n.Child("layer").Arg(1)),
@@ -376,6 +378,44 @@ func isHidden(n *node) bool {
 // nanometer frame.
 func pcbPoint(n *node) *geom.Point {
 	return &geom.Point{X: mmToNm(atomOf(n.Arg(1))), Y: -mmToNm(atomOf(n.Arg(2)))}
+}
+
+// drillOf reads a pad's (drill d) or slotted (drill oval w h) hole as the one diameter the contract
+// carries, a slot's narrow width, which is the bit that cuts it. The slotted form read its "oval"
+// keyword as the size, so every slot came through undrilled.
+func drillOf(dr *node) int64 {
+	if atomOf(dr.Arg(1)) != "oval" {
+		return mmToNm(atomOf(dr.Arg(1)))
+	}
+	w, h := mmToNm(atomOf(dr.Arg(2))), mmToNm(atomOf(dr.Arg(3)))
+	if h > 0 && h < w {
+		return h
+	}
+	return w
+}
+
+// placementAngle is a footprint's angle in the contract's frame. KiCad's angle is counter-clockwise
+// as the board is drawn, and flipping Y to reach the canonical Y-up frame keeps the picture, so a
+// front footprint's angle carries over unchanged. A back footprint is the contract's mirror after
+// rotation, and mirroring turns an angle round, so its angle is negated. Until agni issue 1261 every
+// angle was negated, which put pad 1 of a front part at 90 or 270 degrees where pad 2 is; KiCad's own
+// position and ODB++ exports are the evidence (TestODBReadsAsItsKiCadSource).
+func placementAngle(at *node, back bool) float64 {
+	if back {
+		return -rotOf(at)
+	}
+	return rotOf(at)
+}
+
+// footprintLocal turns a point KiCad stores inside a footprint into the contract's footprint-local
+// offset. KiCad stores a flipped footprint's items already mirrored, where the contract wants the
+// footprint's own unflipped frame and mirrors it once, at composition, so a back footprint's x is
+// negated here. A pad then reads the same offset whichever side its part is on.
+func footprintLocal(p *geom.Point, back bool) *geom.Point {
+	if back && p != nil {
+		return &geom.Point{X: -p.X, Y: p.Y}
+	}
+	return p
 }
 
 // rotOf reads the optional third argument of an (at x y rot) node, verbatim degrees.
@@ -484,22 +524,21 @@ func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
 	}
 	at := fp.Child("at")
 	layer := atomOf(fp.Child("layer").Arg(1))
-	// KiCad is Y-down and pcbPoint Y-flips coordinates; a CCW rotation there is CW in the
-	// canonical Y-up frame, so the reader negates it as part of that same frame conversion
-	// (WS1-030). A footprint on B.Cu is mirrored across X; the renderer applies the flag.
+	// See placementAngle and footprintLocal for how KiCad's frame maps onto the contract's.
+	back := layer == "B.Cu"
 	p := &geom.ComponentPlacement{
 		RefDes:      ref,
 		At:          pcbPoint(at),
-		RotationDeg: -rotOf(at),
+		RotationDeg: placementAngle(at, back),
 		Layer:       layer,
-		Mirror:      layer == "B.Cu",
+		Mirror:      back,
 		Prov:        &geom.Provenance{SourceFile: src, SourceId: uuidOf(fp)},
 	}
 	for _, pad := range fp.Children("pad") {
 		pat := pad.Child("at")
 		g := &geom.Pad{
 			Number:      atomOf(pad.Arg(1)),
-			At:          pcbPoint(pat),
+			At:          footprintLocal(pcbPoint(pat), back),
 			RotationDeg: rotOf(pat),
 			Shape:       atomOf(pad.Arg(3)),
 		}
@@ -507,7 +546,7 @@ func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
 			g.Size = &geom.Point{X: mmToNm(atomOf(sz.Arg(1))), Y: mmToNm(atomOf(sz.Arg(2)))}
 		}
 		if dr := pad.Child("drill"); dr != nil {
-			g.Drill = mmToNm(atomOf(dr.Arg(1)))
+			g.Drill = drillOf(dr)
 		}
 		if ls := pad.Child("layers"); ls != nil {
 			for i := 1; ls.Arg(i) != nil; i++ {
@@ -550,6 +589,21 @@ func netCopper(root *node, netName map[string]string) []*geom.NetCopper {
 			Width: mmToNm(atomOf(s.Child("width").Arg(1))),
 			Layer: atomOf(s.Child("layer").Arg(1)),
 		})
+	}
+	// An arc track is a curved run of copper, written as start, mid and end. The contract carries
+	// straight runs only (C6), so it becomes the same polyline an outline arc does. Until agni issue
+	// 1260 arcs were skipped, and the copper rules never saw a curved trace.
+	for _, a := range root.Children("arc") {
+		nc := get(a)
+		if nc == nil {
+			continue
+		}
+		width := mmToNm(atomOf(a.Child("width").Arg(1)))
+		layer := atomOf(a.Child("layer").Arg(1))
+		pts := arcPolyline(pcbPoint(a.Child("start")), pcbPoint(a.Child("mid")), pcbPoint(a.Child("end"))).GetPoints()
+		for i := 1; i < len(pts); i++ {
+			nc.Segments = append(nc.Segments, &geom.TrackSegment{A: pts[i-1], B: pts[i], Width: width, Layer: layer})
+		}
 	}
 	for _, v := range root.Children("via") {
 		nc := get(v)

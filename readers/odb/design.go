@@ -29,7 +29,7 @@ func (p *parsedJob) toDesign(src string) *ir.Design {
 	d := &ir.Design{
 		IrVersion:    "0",
 		SourceFormat: "odb++",
-		Name:         p.jobName(),
+		Name:         p.jobName(src),
 		Attributes:   map[string]string{},
 		Prov:         prov(),
 	}

@@ -32,9 +32,10 @@ func TestBoardGeometryPlacements(t *testing.T) {
 	}
 
 	r1 := byRef["R1"]
-	// (at 10 10 90): mm -> nm, Y flipped; rotation negated into the canonical Y-up frame
-	// (WS1-030), F.Cu so not mirrored.
-	if r1.At.X != 10_000_000 || r1.At.Y != -10_000_000 || r1.RotationDeg != -90 || r1.Layer != "F.Cu" || r1.Mirror {
+	// (at 10 10 90): mm -> nm, Y flipped. KiCad's angle is counter-clockwise as drawn, and the Y
+	// flip keeps the picture, so it carries over unchanged (agni issue 1261: kicad-cli's position
+	// export says 90 for R1, and its ODB++ export puts pad 1 at (10,-11)mm). F.Cu so not mirrored.
+	if r1.At.X != 10_000_000 || r1.At.Y != -10_000_000 || r1.RotationDeg != 90 || r1.Layer != "F.Cu" || r1.Mirror {
 		t.Errorf("R1 placement = %+v", r1)
 	}
 	if len(r1.Pads) != 2 {
@@ -72,16 +73,17 @@ func TestBoardGeometryText(t *testing.T) {
 		byKind[tx.Kind+"|"+tx.Text] = tx
 	}
 	// R1 (footprint at 10,10 rot 90): its ref-des and value are composed to board
-	// coordinates. Reference local (0,-2) -> pcbPoint (0,+2mm), rotated by the footprint's
-	// Y-up angle (-90) about the origin, then translated: x = 10mm + 2mm, y = -10mm.
+	// coordinates. Reference local (0,-2) sits above the part in KiCad's Y-down frame, and KiCad
+	// turns it 90 degrees counter-clockwise to the left (x' = x cos + y sin = -2): x = 10mm - 2mm,
+	// y = -10mm (agni issue 1261).
 	ref := byKind["reference|R1"]
 	if ref == nil || ref.RefDes != "R1" || ref.Mirror {
 		t.Fatalf("R1 reference text = %+v", ref)
 	}
 	// The footprint is at 90 deg; -(90) folds to +90 under keep_upright so the ref-des reads
 	// bottom-to-top rather than upside down.
-	if ref.At.X != 12_000_000 || ref.At.Y != -10_000_000 || ref.RotationDeg != 90 {
-		t.Errorf("R1 reference placement = %+v (want 12mm,-10mm, rot 90 keep-upright)", ref)
+	if ref.At.X != 8_000_000 || ref.At.Y != -10_000_000 || ref.RotationDeg != 90 {
+		t.Errorf("R1 reference placement = %+v (want 8mm,-10mm, rot 90 keep-upright)", ref)
 	}
 	if v := byKind["value|10k"]; v == nil || v.RefDes != "R1" {
 		t.Errorf("R1 value text = %+v, want kind=value text=10k ref=R1", v)
@@ -135,17 +137,18 @@ func TestBoardGeometryGraphics(t *testing.T) {
 		}
 	}
 	// R1 fp_line: local (-1.5,-0.7)-(1.5,-0.7) rotated by the footprint's 90 deg -> a vertical
-	// segment at x = 10mm + 0.7mm, spanning the rotated endpoints. Composed the same way pads
+	// segment at x = 10mm - 0.7mm (KiCad's x' = y = -0.7), spanning the rotated endpoints. Composed the same way pads
 	// and text are, so it lands on the part; layer and width are carried verbatim.
 	if line == nil || line.Layer != "F.SilkS" || line.Width != 120_000 || len(line.Shape.Points) != 2 {
 		t.Fatalf("R1 fp_line = %+v", line)
 	}
-	// Composed with the 90 deg footprint the segment is vertical at x = 10.7mm; allow a 2nm
-	// tolerance for the shared composer's truncation (same int64 truncation padWorld uses).
+	// Composed with the 90 deg footprint the segment is vertical at x = 9.3mm, from KiCad's y 11.5
+	// to 8.5; allow a 2nm tolerance for the shared composer's truncation (same int64 truncation
+	// padWorld uses).
 	near := func(got, want int64) bool { d := got - want; return d >= -2 && d <= 2 }
-	if !near(line.Shape.Points[0].X, 10_700_000) || line.Shape.Points[0].Y != -8_500_000 ||
-		!near(line.Shape.Points[1].X, 10_700_000) || line.Shape.Points[1].Y != -11_500_000 {
-		t.Errorf("R1 fp_line points = %+v, want vertical at x=10.7mm (composed with the 90 deg footprint)", line.Shape.Points)
+	if !near(line.Shape.Points[0].X, 9_300_000) || line.Shape.Points[0].Y != -11_500_000 ||
+		!near(line.Shape.Points[1].X, 9_300_000) || line.Shape.Points[1].Y != -8_500_000 {
+		t.Errorf("R1 fp_line points = %+v, want vertical at x=9.3mm (composed with the 90 deg footprint)", line.Shape.Points)
 	}
 	// R1 fp_circle: center composed to the footprint origin; radius is rotation-invariant.
 	if circle == nil || circle.Shape.Radius != 500_000 || circle.Shape.Points[0].X != 10_000_000 || circle.Shape.Points[0].Y != -10_000_000 {
@@ -338,5 +341,30 @@ func TestFootprintUserLayerArtIsNotDrawn(t *testing.T) {
 	}
 	if strings.Join(got, " ") != "F.SilkS B.SilkS F.Fab B.Fab F.CrtYd B.CrtYd" {
 		t.Fatalf("drawn footprint graphics on %q, want the six silkscreen, fab and courtyard layers alone", got)
+	}
+}
+
+// TestBoardGeometryArcTrackAndSlot reads a curved trace as copper and a slotted hole as its narrow
+// width. Both read as nothing until agni issues 1260 and 1268's cross-check: an (arc ...) track was
+// never read, and (drill oval w h) parsed its "oval" keyword as the size.
+func TestBoardGeometryArcTrackAndSlot(t *testing.T) {
+	g, err := ReadBoardGeometry(bytes.NewReader(readFixture(t, "board_arc_slot.kicad_pcb")), "board_arc_slot.kicad_pcb")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(g.GetNets()) != 1 || g.GetNets()[0].GetNet() != "SHLD" {
+		t.Fatalf("nets = %v, want the arc's copper on SHLD", g.GetNets())
+	}
+	segs := g.GetNets()[0].GetSegments()
+	if len(segs) != 16 || segs[0].GetWidth() != 200_000 || segs[0].GetLayer() != "F.Cu" {
+		t.Fatalf("arc segments = %d (first %v), want 16 pieces 0.2mm wide on F.Cu", len(segs), segs[0])
+	}
+	first, last := segs[0].GetA(), segs[len(segs)-1].GetB()
+	if first.GetX() != 10_000_000 || first.GetY() != -10_000_000 || last.GetX() != 14_000_000 || last.GetY() != -10_000_000 {
+		t.Errorf("arc runs %v to %v, want (10,-10)mm to (14,-10)mm", first, last)
+	}
+	pads := g.GetPlacements()[0].GetPads()
+	if len(pads) != 1 || pads[0].GetDrill() != 600_000 {
+		t.Errorf("J1.S1 drill = %v, want the slot's 0.6mm width", pads)
 	}
 }

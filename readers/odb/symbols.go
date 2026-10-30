@@ -65,6 +65,14 @@ func parseSymbol(ref symbolRef) symbolShape {
 	return symbolShape{shape: ref.name}
 }
 
+// hole is a drill symbol's diameter, a slot's narrow width, the bit that cuts it.
+func (s symbolShape) hole() int64 {
+	if s.w > 0 && s.h > 0 && s.h < s.w {
+		return s.h
+	}
+	return s.w
+}
+
 // width is a line symbol's stroke width: a round or square symbol's size.
 func (s symbolShape) width() int64 {
 	if s.w > s.h {

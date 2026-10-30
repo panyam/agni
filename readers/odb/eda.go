@@ -57,6 +57,9 @@ func parseEDA(b []byte) (*eda, error) {
 	var net *edaNet
 	var sn *subnet
 	var pkg *edaPkg
+	// inGroup is set inside a feature group (FGR), whose FIDs gather features for a purpose of the
+	// producer's (Altium's text groups) rather than for a net, so they are skipped.
+	inGroup := false
 	err := lines(b, func(n int, line string) error {
 		w, _ := fields(line)
 		if len(w) == 0 {
@@ -72,6 +75,10 @@ func parseEDA(b []byte) (*eda, error) {
 			}
 			e.nets = append(e.nets, edaNet{name: name})
 			net, sn, pkg = &e.nets[len(e.nets)-1], nil, nil
+			inGroup = false
+		case "FGR":
+			net, sn, pkg = nil, nil, nil
+			inGroup = true
 		case "SNT":
 			if net == nil || len(w) < 2 {
 				return fmt.Errorf("line %d: SNT outside a net", n)
@@ -93,6 +100,9 @@ func parseEDA(b []byte) (*eda, error) {
 			net.subnets = append(net.subnets, s)
 			sn = &net.subnets[len(net.subnets)-1]
 		case "FID":
+			if sn == nil && inGroup {
+				return nil
+			}
 			if sn == nil || len(w) < 4 {
 				return fmt.Errorf("line %d: FID outside a subnet", n)
 			}
@@ -111,6 +121,7 @@ func parseEDA(b []byte) (*eda, error) {
 			}
 			e.pkgs = append(e.pkgs, edaPkg{name: w[1]})
 			pkg, net, sn = &e.pkgs[len(e.pkgs)-1], nil, nil
+			inGroup = false
 		case "PIN":
 			if pkg == nil || len(w) < 5 {
 				return fmt.Errorf("line %d: PIN outside a package", n)

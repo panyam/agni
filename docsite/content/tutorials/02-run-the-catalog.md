@@ -118,14 +118,14 @@ Look at the last line of that first run again. Every run ends with it, whether o
 anything:
 
 ```
-24120 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)
+24124 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)
 ```
 
 This is the half a findings list cannot give you. A run that finds nothing and a run whose rules all
 examined the wrong thing produce an identical list of findings, namely none, so the findings alone
 can never tell you which one you are holding.
 
-Read the three numbers separately. **24120 considered** is how many subjects were actually judged.
+Read the three numbers separately. **24124 considered** is how many subjects were actually judged.
 **35 rules** is how many were willing to say what they looked at, which is not the same as how many
 ran, because most of the catalog has no subject in scope on any given board, and a rule with nothing
 to say is not a gap. **615 not considered** is the one worth reading closely, and it gets its own
