@@ -33,6 +33,8 @@ type serveApp struct {
 	viewerRooms bool
 	// siteSeeds are the example boards the static demo's landing page lists.
 	siteSeeds []siteSeed
+	// socialImage is the absolute image URL the static demo's landing page names for its link card.
+	socialImage string
 }
 
 // ViewerPage is the server-rendered work page of the web viewer. Its template

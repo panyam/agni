@@ -28,7 +28,7 @@ import (
 // page, the built viewer and wasm engine, and each seed's files with a listing of them. Nothing in
 // it needs an agni server; every page runs the engine in the visitor's browser.
 func siteCmd() *cobra.Command {
-	var base, webDir string
+	var base, webDir, socialImage string
 	var seeds []string
 	c := &cobra.Command{
 		Use:   "site <outdir>",
@@ -42,11 +42,12 @@ func siteCmd() *cobra.Command {
 			if len(seeds) == 0 {
 				return fmt.Errorf("name at least one --seed name=folder")
 			}
-			return writeSite(args[0], webDir, base, seeds, cmd.ErrOrStderr())
+			return writeSite(args[0], webDir, base, socialImage, seeds, cmd.ErrOrStderr())
 		},
 	}
 	c.Flags().StringVar(&base, "base", "/", "the path the site is served under, such as /agni/demo/; every asset and link goes through it")
 	c.Flags().StringVar(&webDir, "web-dir", defaultWebDir, "the viewer's own assets (templates/ and the built static/)")
+	c.Flags().StringVar(&socialImage, "social-image", "", "an absolute image URL for the landing page's link card (og:image), since a card needs the host the site is served from")
 	c.Flags().StringArrayVar(&seeds, "seed", nil, "an example board, as name=folder (repeatable); the folder becomes mount <name>")
 	return c
 }
@@ -58,20 +59,24 @@ type siteSeed struct {
 
 // SitePage is the static demo's landing page. goapplib maps it to SitePage.html by name.
 type SitePage struct {
-	Title string
-	Base  string
-	Seeds []siteSeed
+	Title       string
+	Description string
+	SocialImage string
+	Base        string
+	Seeds       []siteSeed
 }
 
 // Load fills the page from the site being written.
 func (p *SitePage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
 	p.Title = "Agni: open a design in your browser"
+	p.Description = "Check a KiCad or EDIF design for mistakes in your browser, with every finding located on the schematic. Nothing is installed and the design is never uploaded."
+	p.SocialImage = app.Context.socialImage
 	p.Base = app.Context.basePath()
 	p.Seeds = app.Context.siteSeeds
 	return nil, false
 }
 
-func writeSite(out, webDir, base string, seeds []string, notes interface{ Write([]byte) (int, error) }) error {
+func writeSite(out, webDir, base, socialImage string, seeds []string, notes interface{ Write([]byte) (int, error) }) error {
 	if _, err := os.Stat(filepath.Join(webDir, "templates", "ViewerPage.html")); err != nil {
 		return fmt.Errorf("--web-dir %q has no templates/ViewerPage.html", webDir)
 	}
@@ -87,7 +92,7 @@ func writeSite(out, webDir, base string, seeds []string, notes interface{ Write(
 		return err
 	}
 
-	sa := &serveApp{engine: engineWasm, base: base, static: true}
+	sa := &serveApp{engine: engineWasm, base: base, static: true, socialImage: socialImage}
 	var pages []string // design addresses, relative to the base
 	mounts := &webapi.ListMountsResponse{}
 	for _, spec := range seeds {

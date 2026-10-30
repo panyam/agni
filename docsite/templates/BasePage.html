@@ -11,6 +11,14 @@
     <meta name="description" content="{{ if .FrontMatter.description }}{{ .FrontMatter.description }}{{ else }}{{ (json "SiteMetadata.json" "siteDescription") }}{{ end }}">
     <title>{{ if .FrontMatter.title }}{{ .FrontMatter.title }} - {{ end }}{{ (json "SiteMetadata.json" "siteName") }}</title>
 
+    <!-- Link cards (Open Graph, X), so a shared page shows its title, summary and image. -->
+    <meta property="og:type" content="website">
+    <meta property="og:site_name" content="{{ (json "SiteMetadata.json" "siteName") }}">
+    <meta property="og:title" content="{{ if .FrontMatter.title }}{{ .FrontMatter.title }}{{ else }}{{ (json "SiteMetadata.json" "siteName") }}{{ end }}">
+    <meta property="og:description" content="{{ if .FrontMatter.description }}{{ .FrontMatter.description }}{{ else }}{{ (json "SiteMetadata.json" "siteDescription") }}{{ end }}">
+    <meta property="og:image" content="{{ (json "SiteMetadata.json" "siteURL") }}{{.Site.PathPrefix}}{{ (json "SiteMetadata.json" "socialImage") }}">
+    <meta name="twitter:card" content="summary_large_image">
+
     <!-- Theme initialization (runs early to prevent a flash) -->
     <script>
         (function() {

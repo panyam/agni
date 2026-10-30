@@ -1,6 +1,8 @@
 {
   "siteName": "Agni",
-  "siteDescription": "A project for learning hardware design by building tooling for it: read schematics and boards from several EDA formats into one representation, then check, diff, query, and render them.",
+  "siteDescription": "Check KiCad and EDIF schematics and boards for design mistakes, in the CLI or in your browser. One engine reads several EDA formats into one representation, then checks, diffs, queries, and renders them.",
+  "siteURL": "https://panyam.github.io",
+  "socialImage": "/static/images/social-preview.png",
   "version": "0.1.0",
   "author": "Sriram Panyam",
   "repository": "https://github.com/panyam/agni",

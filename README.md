@@ -6,39 +6,43 @@
 [![License: Apache 2.0](https://img.shields.io/badge/license-Apache%202.0-blue.svg)](LICENSE)
 [![Go 1.26](https://img.shields.io/badge/go-1.26-00ADD8?logo=go&logoColor=white)](go.mod)
 
-Agni is an engine for electronic design files. It reads schematics and PCBs from several
-formats into one neutral, protobuf-defined IR, then checks, diffs, renders, and queries
-them. The front-end normalizes formats the way a compiler normalizes languages into one AST,
-so every analysis downstream is written once and works on all of them.
+Agni checks schematics and boards for design mistakes, such as an I2C bus with no pull-up, a power
+rail with no decoupling, a USB connector with no ESD protection, or a track narrower than the
+board's own rules. It reads KiCad, EDIF, IPC-2581, xschem and gEDA designs, and every finding names the net or
+part it fired on and locates it on the schematic.
+
+**[Open the demo in your browser](https://panyam.github.io/agni/demo/)** and drop a KiCad or EDIF
+design on the page, or open one of the example boards. The engine runs in the page as WebAssembly,
+so your design is never uploaded.
 
 ![The agni viewer: a schematic renders, structural checks run, and each finding locates on the canvas](docsite/static/images/demo-viewer.gif)
 
 ## What does it do
 
-- **Reads many formats into one IR.** EDIF netlists and schematics, KiCad schematics and
-  boards, IPC-2581, xschem, and gEDA all parse into the same `ir.Design`. Adding a reader is
-  one entry in `readers/formats/registry.go`.
 - **Runs ERC/DRC-like structural checks.** They catch missing I2C pull-ups, unprotected
   exposed signals, power rails without decoupling, and boards that fail track-width rules. Findings come out in
   plain language and cite the net or component they fire on.
-- **Diffs revisions over the IR.** It compares two revisions structurally (components, nets,
-  connectivity), not as a text diff of the source files, so it survives reformatting and
-  rename churn.
-- **Renders to SVG or a WebGL canvas**, drawing either the faithful schematic and board
-  geometry or an auto-laid-out netlist graph.
 - **Runs a browser viewer.** `agni open <design>` serves one board and prints its URL; `agni serve` opens a
   tree of them. Either renders the design, runs the checks, and locates each finding on the canvas.
 - **Runs in the browser with nothing installed.** The engine also compiles to WebAssembly, so the
   [public demo](https://panyam.github.io/agni/demo/) opens a KiCad or EDIF design you drop on the
   page, checks it, queries it and saves a report, without sending the design anywhere.
-- **Answers datalog queries.** `agni query` asks arbitrary questions of the design fact base,
-  the same fact base the rules are built on. The engine is
-  [jaala](https://github.com/panyam/jaala).
 - **Walks a review checklist and traces signals.** `agni review` scores a design against a team's
   checklist and saves the page, and `agni trace --from U7.3 --to U12.4` follows a signal through
   the series parts between two pins.
 - **Checks against datasheets.** It joins a design against extracted datasheet limits and
   checks, for example, that a rail stays inside a part's recommended operating range.
+- **Diffs revisions over the IR.** It compares two revisions structurally (components, nets,
+  connectivity), not as a text diff of the source files, so it survives reformatting and
+  rename churn.
+- **Renders to SVG or a WebGL canvas**, drawing either the faithful schematic and board
+  geometry or an auto-laid-out netlist graph.
+- **Answers datalog queries.** `agni query` asks arbitrary questions of the design fact base,
+  the same fact base the rules are built on. The engine is
+  [jaala](https://github.com/panyam/jaala).
+- **Reads many formats into one IR.** EDIF netlists and schematics, KiCad schematics and
+  boards, IPC-2581, xschem, and gEDA all parse into the same `ir.Design`. Adding a reader is
+  one entry in `readers/formats/registry.go`.
 - **Serves the same answers to other tools.** The services the CLI calls are Connect rpcs that
   `agni serve` exposes, `--remote` sends `query`, `check`, `trace` and `review` to a running server,
   and [`clients/python`](clients/python) is a typed Python client over the CLI or a server.
@@ -93,7 +97,8 @@ docker compose run --rm trial /designs/<board>  # a trial report that holds noth
 
 ## How it works
 
-The protobuf IR (`protos/`, generated into `gen/`) is the one contract in the middle. Readers
+Agni normalizes design formats the way a compiler normalizes languages into one AST, so every
+analysis downstream is written once and works on all of them. The protobuf IR (`protos/`, generated into `gen/`) is the one contract in the middle. Readers
 (`readers/edif/`, `readers/kicad/`, `readers/ipc2581/`, and the xschem/gEDA readers) are the only code that knows a
 file format; they produce `ir.Design`. Everything else (`check/`, `diff/`, `render/`, the
 query engine, the web service) consumes the IR and never looks at a source file.
