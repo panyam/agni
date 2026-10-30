@@ -10,6 +10,13 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.3.14] - 2026-10-30
+
+The first release with prebuilt binaries attached, since v0.3.13's release job failed on a
+smoke-script bug after building them (PR 1231). The gate now builds and smoke-tests the host
+platform's tarball on every pull request.  The full write-up is
+[RELEASES/v0.3.14.md](RELEASES/v0.3.14.md).
+
 ## [0.3.13] - 2026-10-30
 
 Each release attaches a prebuilt `agni` for macOS and Linux on arm64 and amd64 that carries the
