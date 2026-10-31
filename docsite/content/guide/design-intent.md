@@ -94,7 +94,8 @@ intent:
 A rail with a `nominal` and no `domain` is named by its voltage (`3.3V`), and rails sharing a domain
 must share a voltage. `protect` takes `ovp` (a TVS or zener clamping the rail) and `discharge` (a
 bleeder to ground). A resistance band belongs to a strap, so `min_ohms` without `strap` is a load
-error.
+error. A band whose resistor has no readable resistance, or a divider's two resistors, reports
+inconclusive with the band unchecked.
 
 `pull_up_reach_hops` changes how far the pull-up walk searches from that net (agni issue 820). `i2c-pull-up` and the rules beside it look for
 a rail within three series resistors of a bus, because past three the series resistance is usually

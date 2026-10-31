@@ -309,17 +309,25 @@ func TestStrapValueInsideBandIsSilent(t *testing.T) {
 	}
 }
 
-// TestStrapValueUnreadableIsSilent is the case the ticket calls out by name. UNREADABLE IS NOT
-// ACCEPTABLE, but it is also not a defect. A resistor whose value the parser could not read, or
-// which carries none at all, is skipped rather than guessed, which is the params-tier posture.
-// Firing here would report a defect on no evidence.
-func TestStrapValueUnreadableIsSilent(t *testing.T) {
-	// No value stamped at all (a design read before the value pass, or a part with no value field).
-	none := propFindings(t, propDesign("BOOT_MODE0", "+3V3", ""),
-		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
-	if len(none) != 0 {
-		t.Errorf("a strap resistor with no value must be silent, not flagged: %+v", none)
+// bandInconclusive asserts one inconclusive finding naming each of wants.
+func bandInconclusive(t *testing.T, fs []check.Finding, wants ...string) {
+	t.Helper()
+	if len(fs) != 1 || !fs[0].Inconclusive {
+		t.Fatalf("want one inconclusive finding, got %+v", fs)
 	}
+	for _, want := range append(wants, "not checked") {
+		if !strings.Contains(fs[0].Message, want) {
+			t.Errorf("finding should say %q: %s", want, fs[0].Message)
+		}
+	}
+}
+
+// TestStrapValueUnreadableIsInconclusive reverses the silence WS3-119 chose (agni issue 1281). A value
+// that does not read is no defect, and it is no pass either, because the band was never compared.
+func TestStrapValueUnreadableIsInconclusive(t *testing.T) {
+	band := NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000}
+	// No value stamped at all (a design read before the value pass, or a part with no value field).
+	bandInconclusive(t, propFindings(t, propDesign("BOOT_MODE0", "+3V3", ""), band), "R1", "no value", "1k to 100k")
 	// Present but unparsed, where the source text survived and the number did not.
 	d := propDesign("BOOT_MODE0", "+3V3", "")
 	for _, c := range d.Components {
@@ -327,20 +335,57 @@ func TestStrapValueUnreadableIsSilent(t *testing.T) {
 			c.Value = &ir.Quantity{Input: "DNP"} // no Value, no Unit
 		}
 	}
-	unparsed := propFindings(t, d, NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
-	if len(unparsed) != 0 {
-		t.Errorf("a strap resistor whose value did not parse must be silent: %+v", unparsed)
+	bandInconclusive(t, propFindings(t, d, band), "R1", `"DNP"`)
+}
+
+// TestStrapValueWrongUnitIsInconclusive exists because a stamped value in the wrong unit is not a
+// resistance. Comparing a farad count against an ohm band would be the unlike-units coercion
+// ComponentValueIn exists to refuse, and passing it would claim a comparison nobody made.
+func TestStrapValueWrongUnitIsInconclusive(t *testing.T) {
+	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100n", 1e-7, "F"),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	bandInconclusive(t, fs, "R1", `"100n"`)
+}
+
+// TestStrapWrongWayWinsOverAnUnreadableValue pins the order. The direction is a real contradiction,
+// and an inconclusive there would hide a strap the board latches the wrong way.
+func TestStrapWrongWayWinsOverAnUnreadableValue(t *testing.T) {
+	fs := propFindings(t, propDesign("BOOT_MODE0", "GND", ""),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+	if len(fs) != 1 || fs[0].Inconclusive || !strings.Contains(fs[0].Message, "biased LOW") {
+		t.Errorf("a wrong-way strap must stay a fail: %+v", fs)
 	}
 }
 
-// TestStrapValueWrongUnitIsSilent exists because a stamped value in the wrong unit is not a
-// resistance. Comparing a farad count against an ohm band would be the unlike-units coercion
-// ComponentValueIn exists to refuse.
-func TestStrapValueWrongUnitIsSilent(t *testing.T) {
-	fs := propFindings(t, strapDesign("BOOT_MODE0", "+3V3", "100n", 1e-7, "F"),
-		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
+// TestStrapBandOneSidedStatesItsBound keeps a one-sided band from reading as a range.
+func TestStrapBandOneSidedStatesItsBound(t *testing.T) {
+	min := NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000}
+	bandInconclusive(t, propFindings(t, propDesign("BOOT_MODE0", "+3V3", ""), min), "at least 1k")
+	max := NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MaxOhms: 47000}
+	bandInconclusive(t, propFindings(t, propDesign("BOOT_MODE0", "+3V3", ""), max), "at most 47k")
+}
+
+// TestStrapUnreadableWithoutABandStaysSilent scopes the inconclusive to a declared band, since a
+// strap declaring a direction alone makes no promise about its value.
+func TestStrapUnreadableWithoutABandStaysSilent(t *testing.T) {
+	fs := propFindings(t, propDesign("BOOT_MODE0", "+3V3", ""),
+		NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"})
 	if len(fs) != 0 {
-		t.Errorf("a value in farads must not be compared against an ohm band: %+v", fs)
+		t.Errorf("no declared band means nothing went unchecked: %+v", fs)
+	}
+}
+
+// TestStrapThroughAResistorArrayIsJudged covers one array reaching rails through two far nets. It is
+// one part with one value, so it gets the band check rather than reading as two resistors.
+func TestStrapThroughAResistorArrayIsJudged(t *testing.T) {
+	d := strapDesign("BOOT_MODE0", "+3V3", "100R", 100, check.UnitOhm)
+	d.Nets = append(d.Nets, &ir.Net{
+		Name: "+1V8", Prov: &ir.Provenance{SourceFile: "t"},
+		Connections: []*ir.Connection{{ComponentRef: "R1", PinRef: "3"}},
+	})
+	fs := propFindings(t, d, NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000})
+	if len(fs) != 1 || fs[0].Inconclusive || !strings.Contains(fs[0].Message, "below the declared minimum") {
+		t.Errorf("an array's value must be held to the band: %+v", fs)
 	}
 }
 
@@ -388,11 +433,10 @@ func TestStrapValueNoResistorIsSilent(t *testing.T) {
 	}
 }
 
-// TestStrapValueDividerIsSilent exists because a divider's two resistors set the level together, so
-// neither is "the" strap pull. Judging one of them would name an arbitrary part and could flag a
-// correct divider, so the value half declines, as the direction half does by reporting neither
-// rail.
-func TestStrapValueDividerIsSilent(t *testing.T) {
+// TestStrapValueDividerIsInconclusive exists because a divider's two resistors set the level together,
+// so neither is "the" strap pull. Judging one of them would name an arbitrary part and could flag a
+// correct divider, and passing would claim a band nobody compared, so the finding names both.
+func TestStrapValueDividerIsInconclusive(t *testing.T) {
 	d := propDesign("BOOT_MODE0", "+3V3", "")
 	// A second resistor to ground makes it a divider.
 	d.Components = append(d.Components, &ir.Component{RefDes: "R2", Prov: &ir.Provenance{SourceFile: "t"}})
@@ -408,7 +452,5 @@ func TestStrapValueDividerIsSilent(t *testing.T) {
 		}
 	}
 	fs := propFindings(t, d, NetProperty{Net: "BOOT_MODE0", Property: PropStrap, Value: "high", MinOhms: 1000, MaxOhms: 100000})
-	if len(fs) != 0 {
-		t.Errorf("a divider has no single strap resistor to judge; want silence, got %+v", fs)
-	}
+	bandInconclusive(t, fs, "R1, R2", "together")
 }

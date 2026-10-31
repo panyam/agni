@@ -229,7 +229,8 @@ type NetProperty struct {
 	Value string
 	// MinOhms / MaxOhms bound the acceptable resistance of a STRAP's pull resistor, in ohms. Both
 	// optional and independent: declare one to bound that side only, neither to check direction alone.
-	// Ignored by every other property kind.
+	// A band the resistor's value cannot be compared to reports inconclusive (agni issue 1281). Ignored
+	// by every other property kind.
 	//
 	// DECLARED, NOT BUILT IN. A strap resistor must be strong enough to hold against leakage and weak
 	// enough not to fight an active driver, and both ends depend on the part. A CMOS input with

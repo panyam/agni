@@ -43,14 +43,10 @@ exercise run on the mission issue.
 
 ## Open, ranked
 
-1. **Decide the strap band's unreadable value.** A declared band whose resistor's value does not read
-   (`DNP`, a typo) passes with "the design does not contradict it", because
-   `TestStrapValueUnreadableIsSilent` chose silence over a finding; inconclusive is the alternative.
-   #1115 fixed the Jetson case by reading library names. File it once decided.
-2. **Jetson's load**, off any mission: #1061's edit-session half. Measure with the exercise's
+1. **Jetson's load**, off any mission: #1061's edit-session half. Measure with the exercise's
    `--timing`, `make wasm-bench` and `make wasm-layers` (pass `BOARD` and `DESIGN`, since a shell's own
    `DESIGN` overrides the Makefile's), and read CLAUDE.md on the bench's two misleading rows first.
-3. **#1180**, a Shift-drag that starts under the canvas control bar selects nothing, which the review
+2. **#1180**, a Shift-drag that starts under the canvas control bar selects nothing, which the review
    tour's select-a-block step now sends every reader into.
 
 Later work is #1007 (a fact store per tier, `waiting`), #1027 (edit sessions, `waiting`, after #1061), #370 then #373, #380,

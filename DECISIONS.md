@@ -2072,3 +2072,19 @@ names (`check.ToolNetNamePattern`).
 
 **Reopen if** a KiCad version changes its naming, which the fixture oracle will show as soon as it is
 regenerated with that version.
+
+## A strap band that could not be compared is inconclusive
+
+**Question.** WS3-119 left a declared band silent when the resistor's value did not read, reasoning
+that firing would report a defect on no evidence. That silence reached a reader as a pass with "the
+design does not contradict it", the same result as a resistor read and found in band.
+
+**Answer. Inconclusive, naming the resistor** (agni issue 1281). The evidence argument rules out a
+fail and rules out a pass equally, since a pass is also a claim. It covers a missing value, a value
+that does not read as a resistance, and several resistors biasing the net. A wrong-way strap still
+fails first. A net with no strap resistor stays silent, because leaving the resistor off is the
+datasheet's default-state case and an inconclusive there would flag most correct boards, whether or
+not a band was declared.
+
+**Reopen if** a board shows a declared band over an absent strap is usually a mistake rather than
+the default state.
