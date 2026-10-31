@@ -49,7 +49,7 @@ message BoardGeometry {
 message BoardText {
   string text = 1;          // the string as authored; may contain newlines
   Point at = 2;             // board-frame anchor, Y-up (footprint text is pre-composed)
-  double rotation_deg = 3;  // CCW degrees in the Y-up frame, placement-composed
+  double rotation_deg = 3;  // CCW degrees as drawn, in the Y-up frame
   int64 height = 4;         // glyph height in source units (unit_nm), from the font size
   string layer = 5;         // source layer verbatim ("F.SilkS", "F.Fab", "B.SilkS", ...)
   bool mirror = 6;          // back-side / mirrored text (KiCad's justify mirror)
