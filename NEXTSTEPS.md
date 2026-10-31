@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-30, at `bdf3293e`.
+Last pruned 2026-10-31, at `014819c5`.
 
 ## At a glance
 
@@ -17,14 +17,12 @@ Two missions are active. `MISSION=mission_<slug> queue.sh` (the retriage skill's
 mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
 exercise run on the mission issue.
 
-- **#1264** (see, explain and change how agni reads your board's names), 8 of 9 tickets closed,
-  exercise last run at `bdf3293e` (works on the MNT Reform motherboard). Its one open ticket is #1257,
-  and only that ticket's second half remains: a protector's own supply pin counts as the load it
-  protects, so both rules still fire on HackRF One's `Net-(J1-VBUS)` and `/mcu/usb/power/VBUS`
-  (reproduced at `bdf3293e`). That half is not a vocabulary change, so the mission could close without
-  it if an audit confirms every name heuristic a built-in rule reads is in the lexicon.
+- **#1264** (see, explain and change how agni reads your board's names), 9 of 9 tickets closed,
+  exercise last run at `014819c5` (works on the MNT Reform motherboard). Nothing is ready. It closes
+  once an audit confirms every name heuristic a built-in rule reads is in the lexicon and the
+  exercise's output is right by eye; a heuristic the audit finds outside it becomes a ticket here.
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
-  datasheet), 7 of 7 tickets closed, exercise last run at `aba62b48` (works on the fixtures), 16 PRs
+  datasheet), 7 of 7 tickets closed, exercise last run at `aba62b48` (works on the fixtures), 20 PRs
   merged since, so re-run `make exercise-pin-functions` before a team starts. It waits
   on a team's clean-room run on their own board: the three commands in `guide/trying-agni.md`'s
   "Signing off a pin map in a clean room", with the `agni trial` report sent back. Their findings

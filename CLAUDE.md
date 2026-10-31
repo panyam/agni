@@ -600,7 +600,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   six commands no service mediates (stats, diff, emit, render, intake, profilediag), and net roles are
   resolved once at ingestion, so a read that skips it silently uses the built-in naming vocabulary and
   none of the project's declared symbol libraries. All six bypassed it until agni issue 228, which is
-  why it is one function rather than six.
+  why it is one function rather than six. `stats`, `diff` and `render` take `--conventions` for a
+  convention not yet in the project (agni 1275). `withConventions` sets `readOverlay` for one command,
+  and `designOverlay` and `ingest` read it, so a new command with that flag calls `withConventions`.
 - **A design's tiers come from `service.SourcesFor`, and naming the ENTRY is naming the design.** A
   descriptor's `companions` supply the tiers the entry cannot: a schematic export for sheets, a board
   for copper. `NetlistURI` always stays on the entry, and only the other tiers move. All three
@@ -1114,8 +1116,14 @@ value, and a name with two different values reads as none. **A connector on a ne
 and the power-entry rules mark the net not-considered. A vendor buck types every pin passive, so the
 structural half matters. A `power_out` pin does not count when the walk also reaches another
 power-converting part's input, which keeps a dual-role USB-C port judged. A boost converter's input
-also reaches its switch node, and the feedback requirement keeps it judged. The rule pages carry the
-shapes.
+also reaches its switch node, and the feedback requirement keeps it judged. Two shapes count too
+(agni 1253): one part's switch pin behind the inductor with its feedback pin on the walk, read from
+PIN names, since a fixed-output buck ties FB to its output; and a regulator fed from a net the parts
+it sources do not drive, which is a cascade rather than a port (`independentDriver`). The walk crosses
+a `net_tie` as it does a 0 Ohm link, so a net tie no longer splits a rail. The rule pages carry the
+shapes. **A connector or a clamp is never the load**: `decoupling-present` skips a connector's own
+`power_in` pin and `hasPowerInput` skips a TVS's, so a USB clamp's supply pin does not read as a load
+reached through passives alone (agni 1254, 1257).
 
 **A rail-named net is not always a rail.** A regulator's pins are named for the supply they produce,
 so `12V_FB`, `12V_SW`, `12V_MODE1` and `12V_VDRV` all match the rail vocabulary and none carries 12V.
