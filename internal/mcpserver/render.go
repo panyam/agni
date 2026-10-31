@@ -88,6 +88,17 @@ func writeLink(b *strings.Builder, link, why string) {
 	}
 }
 
+// writeQueryLink writes a query's link, or why there is none. A query link asks again rather than
+// pointing at an answer, so it lands in the Query panel and draws only a one-row answer (agni issue
+// 1239), and the label says so where a model would otherwise promise the reader a drawing.
+func writeQueryLink(b *strings.Builder, link, why string) {
+	if link == "" {
+		writeLink(b, link, why)
+		return
+	}
+	fmt.Fprintf(b, "re-run in the Query panel, in the viewer: %s\n", link)
+}
+
 // moreFacts is n facts left out, in words: "1 more fact", "3 more facts".
 func moreFacts(n int) string {
 	if n == 1 {

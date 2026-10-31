@@ -133,7 +133,7 @@ func (a *answering) format(page mcp.Answer) string {
 	default:
 		fmt.Fprintf(&b, "%s\n", rowCount(total))
 	}
-	writeLink(&b, sh.Link, sh.NoLink)
+	writeQueryLink(&b, sh.Link, sh.NoLink)
 	return b.String()
 }
 
