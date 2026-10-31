@@ -95,6 +95,13 @@ A server started with the viewer links to itself. `agni mcp` has no viewer of it
 one only when `--server` names a running `agni serve` that mounts the same names, and otherwise each
 answer says why it carries no link.
 
+The links differ in what they promise, and the reply's label says which one it is. A `check` link
+names a verdict, so it runs that rule on arrival and lands on the finding. A `query` link carries the
+question rather than an answer, so it runs again in the Query panel. A one-row answer is drawn, and a
+longer one draws nothing until you click a cell, because the link cannot say which row it meant. That
+reply labels its link `re-run in the Query panel` so a model doesn't promise you a drawing.
+[Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) has the detail.
+
 Beside each link the structured content carries `page`, the call that does the same to a viewer a
 host already has open (agni issue 1155). A host that frames the viewer, an MCP app host say, sends it
 over postMessage instead of opening a new tab. A failing verdict in a `check` answer looks like this.

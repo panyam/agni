@@ -223,7 +223,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 
 		t.Run("query", func(t *testing.T) {
 			const program = `net.rail(?net), not net.has_test_point(?net) => ?net`
-			_, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program})
+			res, a := callMCP(t, s.mcp, "query", map[string]any{"design": mcpGateway, "program": program})
 			resp, err := s.api.query.RunQuery(ctx, connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: program}))
 			if err != nil {
 				t.Fatal(err)
@@ -233,6 +233,18 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 				t.Errorf("the link opens %q, want the design's entry with the query", a.Link)
 			}
 			appliesLink(t, "query", a.Page, a.Link)
+			// A query link re-asks in the Query panel and a verdict link lands on a finding (agni
+			// issue 1239), so a reader told it opens the answer must not expect a drawing.
+			if !strings.Contains(res.Content[0].Text, "re-run in the Query panel, in the viewer: "+a.Link+"\n") {
+				t.Errorf("the query reply doesn't label its link as a re-run:\n%s", res.Content[0].Text)
+			}
+		})
+
+		t.Run("query set", func(t *testing.T) {
+			res, _ := callMCP(t, s.mcp, "query_set", map[string]any{"design": mcpGateway, "set": "power-review"})
+			if !strings.Contains(res.Content[0].Text, "re-run in the Query panel, in the viewer: ") {
+				t.Errorf("the set's reply doesn't label its links as re-runs:\n%s", res.Content[0].Text)
+			}
 		})
 
 		// jaala's query tool records witnesses, and agni presents them as RunQuery does when asked for
@@ -317,7 +329,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 		})
 
 		t.Run("check", func(t *testing.T) {
-			_, a := callMCP(t, s.mcp, "check", map[string]any{"design": mcpGateway})
+			res, a := callMCP(t, s.mcp, "check", map[string]any{"design": mcpGateway})
 			resp, err := s.api.check.CheckDesign(ctx, connect.NewRequest(&webapi.CheckDesignRequest{Snapshot: snap}))
 			if err != nil {
 				t.Fatal(err)
@@ -330,8 +342,11 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 				Link     string   `json:"link"`
 				Page     pageCall `json:"page"`
 			}
-			if err := json.Unmarshal(a.Links, &links); err != nil || len(links) == 0 || !strings.Contains(links[0].Link, "verdict=") || !strings.Contains(links[0].Link, "hash=") {
+			if err := json.Unmarshal(a.Links, &links); err != nil || len(links) == 0 || !strings.Contains(links[0].Link, "verdict=") || !strings.Contains(links[0].Link, "hash=") || !strings.Contains(links[0].Link, "rule=") {
 				t.Errorf("verdict links %s", a.Links)
+			}
+			if strings.Contains(res.Content[0].Text, "re-run in the Query panel") {
+				t.Errorf("a verdict link lands on its finding, and the reply calls it a re-run:\n%s", res.Content[0].Text)
 			}
 			// Each link carries the LocateVerdict a host embedding the viewer sends instead, naming the
 			// verdict, rule and subjects the link itself carries (agni issue 1155).

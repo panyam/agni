@@ -475,7 +475,7 @@ func (s *srv) querySet(ctx context.Context, in querySetInput) (core.ToolResult, 
 		if url := rpt.QuerySetURL(meta, in.Set, q.GetName()); url != "" {
 			links[q.GetName()] = url
 			pages[q.GetName()] = linkAction(url)
-			writeLink(&b, url, "")
+			writeQueryLink(&b, url, "")
 		}
 	}
 	for _, r := range resp.GetResults() {
