@@ -267,6 +267,11 @@ describe("the prepare lane", () => {
 });
 
 describe("laneFor", () => {
+  it("sends a lexicon comparison to the jobs lane, since it runs the catalog twice", () => {
+    expect(laneFor(new URL("http://h/agni.v1.webapi.LexiconService/CompareLexicons"))).toBe("jobs");
+    expect(laneFor(new URL("http://h/agni.v1.webapi.LexiconService/GetLexicon"))).toBe("serve");
+  });
+
   it("routes the requests that run rules or compare designs to the jobs lane, under any prefix", () => {
     const at = (p: string) => laneFor(new URL(`http://h${p}`));
     expect(at("/agni.v1.webapi.CheckService/CheckDesign")).toBe("jobs");

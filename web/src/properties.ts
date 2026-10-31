@@ -447,7 +447,7 @@ function entityView(input: PropertiesInput, sel: Selection): Omit<PropertiesStat
       const testPoints = comps.filter((r) => inv?.testPoints.has(r));
       return {
         ...base,
-        rows: [...(n ? netRows(n) : []), ...extraRows],
+        rows: [...(n ? netRowsFor(n) : []), ...extraRows],
         groups: [
           ...sheetsGroup,
           {
@@ -603,10 +603,13 @@ export function classSourceLabel(s: ClassSource): string {
   }
 }
 
-function netRows(n: Net): Row[] {
+export function netRowsFor(n: Net): Row[] {
   const rows: Row[] = [];
   const roles = n.roles.map((r) => roleLabel(r.roleKind)).filter(Boolean);
   rows.push({ label: "roles", value: roles.length ? roles.join(", ") : "none" });
+  for (const r of n.roles) {
+    if (r.reason && roleLabel(r.roleKind)) rows.push({ label: `why ${roleLabel(r.roleKind)}`, value: r.reason });
+  }
   if (n.netClasses.length) rows.push({ label: "net classes", value: n.netClasses.join(", ") });
   rows.push({ label: "pins", value: String(n.connections.length) });
   return rows;

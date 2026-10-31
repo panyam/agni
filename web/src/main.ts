@@ -21,6 +21,8 @@ import { tablesPanelIsland } from "./tablespanel.js";
 import { TablesPresenter, type TablesSourceKey } from "./tables.js";
 import { reviewPanelIsland } from "./reviewpanel.js";
 import { conventionBarIsland } from "./conventionbar.js";
+import { lexiconPanelIsland } from "./lexiconpanel.js";
+import { LexiconPresenter } from "./lexicon.js";
 import { projectBarIsland } from "./projectbar.js";
 import { partsPanelIsland } from "./partspanel.js";
 import { type ReviewTourHost, startReviewTour } from "./reviewtour.js";
@@ -31,7 +33,7 @@ import { SvgView, drawnOnSheet } from "./svgview.js";
 import { type Members, areaSelection, emptyMembers, membersIn, membersOf, size, toggle } from "./area.js";
 import { compareButton } from "./compare.js";
 import { designListing, loadedKey, onStaticHost, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
-import { designClient, checksClient, diffClient, queryClient, reviewClient, workspaceClient,
+import { designClient, checksClient, lexiconClient, diffClient, queryClient, reviewClient, workspaceClient,
   projectClient, tableClient, snapshots,
 } from "./api.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
@@ -128,6 +130,7 @@ class AppRoot extends BaseComponent {
     const projectEl = document.getElementById("project-bar");
     const partsEl = document.getElementById("parts-panel");
     const propertiesEl = document.getElementById("properties-panel");
+    const lexiconEl = document.getElementById("lexicon-panel");
     const sheetTabsEl = document.getElementById("sheet-tabs");
     if (!canvasEl || !pickerEl || !compareTreeEl || !svgEl || !controlsEl || !findingsEl || !rulesEl || !sheetTabsEl)
       return children;
@@ -435,7 +438,7 @@ class AppRoot extends BaseComponent {
     // on. Before the catalog arrives there is no template, and the panel lists no sheets.
     let findByName: { query: string; bind: string } | null = null;
     const propertiesPresenter = new PropertiesPresenter(properties.view, {
-      getDesign: async (uri, readMask) => designClient().getDesign({ snapshot: await snapshots().of(uri), readMask: { paths: readMask } }),
+      getDesign: async (uri, readMask) => designClient().getDesign({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), readMask: { paths: readMask } }),
       drawn: () => drawnOnSheet(svgEl),
       drawnOn: async (uri, sel) => {
         if (!findByName) return [];
@@ -534,6 +537,28 @@ class AppRoot extends BaseComponent {
     const conventionBar = conventionBarIsland(conventionEl, this._eventBus, {
       onSelect: (ref) => void presenter.setConvention(ref),
     }, { staticHost: onStaticHost });
+    // The Lexicon panel (agni issue 1267) edits a draft of the convention and asks the engine about it.
+    // A row of its comparison selects what it names, as a query cell does.
+    const lexicon = lexiconPanelIsland(lexiconEl as HTMLElement, this._eventBus, {
+      onAdd: (vocabulary, kind, value) => void lexiconPresenter.add(vocabulary, kind, value),
+      onRemove: (row) => void lexiconPresenter.remove(row),
+      onOff: (vocabulary, off) => void lexiconPresenter.switchOff(vocabulary, off),
+      onInfer: (on) => void lexiconPresenter.infer(on),
+      onRename: (name) => void lexiconPresenter.rename(name),
+      onTry: () => void lexiconPresenter.tryDraft(),
+      onSave: () => void lexiconPresenter.save(),
+      onApply: () => void lexiconPresenter.apply(),
+      onLocate: (kind, subject) => {
+        void presenter.locateEntity(kind, subject);
+        const sel = selectionFromCell(kind, subject);
+        if (sel) propertiesPresenter.selectEntity(sel);
+      },
+    });
+    const lexiconPresenter = new LexiconPresenter(lexiconClient(), lexicon.view, {
+      snapshot: () => presenter.checkedSnapshot(),
+      download: saveFile,
+      apply: (convention) => presenter.applyConvention(convention),
+    });
     // The project bar (agni issue 175) names the project whose config produced what is on screen, and
     // offers an opt-out that re-runs the design under the built-in catalog so the difference shows.
     const projectBar = projectBarIsland(projectEl, this._eventBus, {
@@ -627,6 +652,12 @@ class AppRoot extends BaseComponent {
         trace: trace.view,
         review: review.view,
         conventionBar: conventionBar.view,
+        vocabulary: {
+          changed: () => {
+            lexiconPresenter.reload();
+            propertiesPresenter.reloadInventory();
+          },
+        },
         projectBar: projectBar.view,
         events: emit,
         parts: {
@@ -676,6 +707,7 @@ class AppRoot extends BaseComponent {
       tables.island,
       review.island,
       conventionBar.island,
+      lexicon.island,
       projectBar.island,
       parts.island,
       properties.island,

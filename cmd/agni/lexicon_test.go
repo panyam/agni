@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 	"google.golang.org/protobuf/encoding/protojson"
 )
@@ -51,6 +52,13 @@ func TestLexiconExplainsANet(t *testing.T) {
 	out = runCLI(t, lexiconCmd(), lexiconGateway, "--net", "PMIC_MAIN_12V0")
 	if !regexp.MustCompile(`(?m)^  rail \(datasheet\): the datasheet lists \S+ pin \S+ as a power pin$`).MatchString(out) {
 		t.Errorf("want the datasheet role with its pin:\n%s", out)
+	}
+
+	// A role with no pattern behind it says so, rather than reading as a net with no vocabulary.
+	var w bytes.Buffer
+	writeExplainNet(&w, &webapi.ExplainNetResponse{Net: "N", Roles: []*ir.NetRole{{RoleKind: ir.Role_ROLE_RAIL}}})
+	if !strings.Contains(w.String(), "no net-name pattern matches it, so these roles come from the evidence above") {
+		t.Errorf("a role with no matching pattern:\n%s", w.String())
 	}
 
 	cmd := lexiconCmd()

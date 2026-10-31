@@ -22,6 +22,10 @@ export interface ConventionBarView {
   setState: (s: ConventionState) => void;
 }
 
+// EDITED_REF is the bar's active ref for a convention the Lexicon panel applied, which is a value with
+// no file behind it.
+export const EDITED_REF = "lexicon:edited";
+
 export function emptyConvention(): ConventionState {
   return { choices: [], active: "", name: "", busy: false, error: "" };
 }

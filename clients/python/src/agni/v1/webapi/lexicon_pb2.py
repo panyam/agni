@@ -27,7 +27,7 @@ from agni.v1.ir import ir_pb2 as agni_dot_v1_dot_ir_dot_ir__pb2
 from agni.v1.webapi import tables_pb2 as agni_dot_v1_dot_webapi_dot_tables__pb2
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1c\x61gni/v1/webapi/lexicon.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/config/naming.proto\x1a\x13\x61gni/v1/ir/ir.proto\x1a\x1b\x61gni/v1/webapi/tables.proto\"\xcb\x01\n\x0cLexiconEntry\x12\x1e\n\nvocabulary\x18\x01 \x01(\tR\nvocabulary\x12\x12\n\x04kind\x18\x02 \x01(\tR\x04kind\x12\x14\n\x05value\x18\x03 \x01(\tR\x05value\x12\x35\n\x06source\x18\x04 \x01(\x0e\x32\x1d.agni.v1.webapi.LexiconSourceR\x06source\x12\x1e\n\nconvention\x18\x05 \x01(\tR\nconvention\x12\x1a\n\x08replaced\x18\x06 \x01(\x08R\x08replaced\"/\n\x11GetLexiconRequest\x12\x1a\n\x08snapshot\x18\x01 \x01(\tR\x08snapshot\"\x89\x01\n\x12GetLexiconResponse\x12\x36\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x1c.agni.v1.webapi.LexiconEntryR\x07\x65ntries\x12;\n\teffective\x18\x02 \x01(\x0b\x32\x1d.agni.v1.config.NamingLexiconR\teffective\"A\n\x11\x45xplainNetRequest\x12\x1a\n\x08snapshot\x18\x01 \x01(\tR\x08snapshot\x12\x10\n\x03net\x18\x02 \x01(\tR\x03net\"\x89\x01\n\x12\x45xplainNetResponse\x12\x10\n\x03net\x18\x01 \x01(\tR\x03net\x12)\n\x05roles\x18\x02 \x03(\x0b\x32\x13.agni.v1.ir.NetRoleR\x05roles\x12\x36\n\x07matches\x18\x03 \x03(\x0b\x32\x1c.agni.v1.webapi.LexiconEntryR\x07matches\"x\n\x16\x43ompareLexiconsRequest\x12\x1a\n\x08snapshot\x18\x01 \x01(\tR\x08snapshot\x12\x42\n\x0b\x63onventions\x18\x02 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\x0b\x63onventions\"H\n\x17\x43ompareLexiconsResponse\x12-\n\x06tables\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.TableR\x06tables*\xb9\x01\n\rLexiconSource\x12\x1e\n\x1aLEXICON_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n\x16LEXICON_SOURCE_BUILTIN\x10\x01\x12\x19\n\x15LEXICON_SOURCE_SERVER\x10\x02\x12\x1a\n\x16LEXICON_SOURCE_PROJECT\x10\x03\x12\x19\n\x15LEXICON_SOURCE_DESIGN\x10\x04\x12\x1a\n\x16LEXICON_SOURCE_REQUEST\x10\x05\x32\x9e\x02\n\x0eLexiconService\x12S\n\nGetLexicon\x12!.agni.v1.webapi.GetLexiconRequest\x1a\".agni.v1.webapi.GetLexiconResponse\x12S\n\nExplainNet\x12!.agni.v1.webapi.ExplainNetRequest\x1a\".agni.v1.webapi.ExplainNetResponse\x12\x62\n\x0f\x43ompareLexicons\x12&.agni.v1.webapi.CompareLexiconsRequest\x1a\'.agni.v1.webapi.CompareLexiconsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1c\x61gni/v1/webapi/lexicon.proto\x12\x0e\x61gni.v1.webapi\x1a\x1b\x61gni/v1/config/naming.proto\x1a\x13\x61gni/v1/ir/ir.proto\x1a\x1b\x61gni/v1/webapi/tables.proto\"\xcb\x01\n\x0cLexiconEntry\x12\x1e\n\nvocabulary\x18\x01 \x01(\tR\nvocabulary\x12\x12\n\x04kind\x18\x02 \x01(\tR\x04kind\x12\x14\n\x05value\x18\x03 \x01(\tR\x05value\x12\x35\n\x06source\x18\x04 \x01(\x0e\x32\x1d.agni.v1.webapi.LexiconSourceR\x06source\x12\x1e\n\nconvention\x18\x05 \x01(\tR\nconvention\x12\x1a\n\x08replaced\x18\x06 \x01(\x08R\x08replaced\"o\n\x11GetLexiconRequest\x12\x1a\n\x08snapshot\x18\x01 \x01(\tR\x08snapshot\x12>\n\tcandidate\x18\x02 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\tcandidate\"\xcb\x01\n\x12GetLexiconResponse\x12\x36\n\x07\x65ntries\x18\x01 \x03(\x0b\x32\x1c.agni.v1.webapi.LexiconEntryR\x07\x65ntries\x12;\n\teffective\x18\x02 \x01(\x0b\x32\x1d.agni.v1.config.NamingLexiconR\teffective\x12@\n\nconvention\x18\x03 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\nconvention\"A\n\x11\x45xplainNetRequest\x12\x1a\n\x08snapshot\x18\x01 \x01(\tR\x08snapshot\x12\x10\n\x03net\x18\x02 \x01(\tR\x03net\"\x89\x01\n\x12\x45xplainNetResponse\x12\x10\n\x03net\x18\x01 \x01(\tR\x03net\x12)\n\x05roles\x18\x02 \x03(\x0b\x32\x13.agni.v1.ir.NetRoleR\x05roles\x12\x36\n\x07matches\x18\x03 \x03(\x0b\x32\x1c.agni.v1.webapi.LexiconEntryR\x07matches\"x\n\x16\x43ompareLexiconsRequest\x12\x1a\n\x08snapshot\x18\x01 \x01(\tR\x08snapshot\x12\x42\n\x0b\x63onventions\x18\x02 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\x0b\x63onventions\"H\n\x17\x43ompareLexiconsResponse\x12-\n\x06tables\x18\x01 \x03(\x0b\x32\x15.agni.v1.webapi.TableR\x06tables\"]\n\x17RenderConventionRequest\x12\x42\n\x0b\x63onventions\x18\x01 \x01(\x0b\x32 .agni.v1.config.NamingConventionR\x0b\x63onventions\"s\n\x18RenderConventionResponse\x12\x18\n\x07\x63ontent\x18\x01 \x01(\x0cR\x07\x63ontent\x12!\n\x0c\x63ontent_type\x18\x02 \x01(\tR\x0b\x63ontentType\x12\x1a\n\x08\x66ilename\x18\x03 \x01(\tR\x08\x66ilename*\xb9\x01\n\rLexiconSource\x12\x1e\n\x1aLEXICON_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n\x16LEXICON_SOURCE_BUILTIN\x10\x01\x12\x19\n\x15LEXICON_SOURCE_SERVER\x10\x02\x12\x1a\n\x16LEXICON_SOURCE_PROJECT\x10\x03\x12\x19\n\x15LEXICON_SOURCE_DESIGN\x10\x04\x12\x1a\n\x16LEXICON_SOURCE_REQUEST\x10\x05\x32\x85\x03\n\x0eLexiconService\x12S\n\nGetLexicon\x12!.agni.v1.webapi.GetLexiconRequest\x1a\".agni.v1.webapi.GetLexiconResponse\x12S\n\nExplainNet\x12!.agni.v1.webapi.ExplainNetRequest\x1a\".agni.v1.webapi.ExplainNetResponse\x12\x62\n\x0f\x43ompareLexicons\x12&.agni.v1.webapi.CompareLexiconsRequest\x1a\'.agni.v1.webapi.CompareLexiconsResponse\x12\x65\n\x10RenderConvention\x12\'.agni.v1.webapi.RenderConventionRequest\x1a(.agni.v1.webapi.RenderConventionResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -35,22 +35,26 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'agni.v1.webapi.lexicon_pb2'
 if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._loaded_options = None
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/webapi'
-  _globals['_LEXICONSOURCE']._serialized_start=926
-  _globals['_LEXICONSOURCE']._serialized_end=1111
+  _globals['_LEXICONSOURCE']._serialized_start=1268
+  _globals['_LEXICONSOURCE']._serialized_end=1453
   _globals['_LEXICONENTRY']._serialized_start=128
   _globals['_LEXICONENTRY']._serialized_end=331
   _globals['_GETLEXICONREQUEST']._serialized_start=333
-  _globals['_GETLEXICONREQUEST']._serialized_end=380
-  _globals['_GETLEXICONRESPONSE']._serialized_start=383
-  _globals['_GETLEXICONRESPONSE']._serialized_end=520
-  _globals['_EXPLAINNETREQUEST']._serialized_start=522
-  _globals['_EXPLAINNETREQUEST']._serialized_end=587
-  _globals['_EXPLAINNETRESPONSE']._serialized_start=590
-  _globals['_EXPLAINNETRESPONSE']._serialized_end=727
-  _globals['_COMPARELEXICONSREQUEST']._serialized_start=729
-  _globals['_COMPARELEXICONSREQUEST']._serialized_end=849
-  _globals['_COMPARELEXICONSRESPONSE']._serialized_start=851
-  _globals['_COMPARELEXICONSRESPONSE']._serialized_end=923
-  _globals['_LEXICONSERVICE']._serialized_start=1114
-  _globals['_LEXICONSERVICE']._serialized_end=1400
+  _globals['_GETLEXICONREQUEST']._serialized_end=444
+  _globals['_GETLEXICONRESPONSE']._serialized_start=447
+  _globals['_GETLEXICONRESPONSE']._serialized_end=650
+  _globals['_EXPLAINNETREQUEST']._serialized_start=652
+  _globals['_EXPLAINNETREQUEST']._serialized_end=717
+  _globals['_EXPLAINNETRESPONSE']._serialized_start=720
+  _globals['_EXPLAINNETRESPONSE']._serialized_end=857
+  _globals['_COMPARELEXICONSREQUEST']._serialized_start=859
+  _globals['_COMPARELEXICONSREQUEST']._serialized_end=979
+  _globals['_COMPARELEXICONSRESPONSE']._serialized_start=981
+  _globals['_COMPARELEXICONSRESPONSE']._serialized_end=1053
+  _globals['_RENDERCONVENTIONREQUEST']._serialized_start=1055
+  _globals['_RENDERCONVENTIONREQUEST']._serialized_end=1148
+  _globals['_RENDERCONVENTIONRESPONSE']._serialized_start=1150
+  _globals['_RENDERCONVENTIONRESPONSE']._serialized_end=1265
+  _globals['_LEXICONSERVICE']._serialized_start=1456
+  _globals['_LEXICONSERVICE']._serialized_end=1845
 # @@protoc_insertion_point(module_scope)

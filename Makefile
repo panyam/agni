@@ -424,13 +424,14 @@ exercise-pin-functions: agni
 # (agni issue 1266): the effective vocabulary with each pattern's source, why LPC_VCC is a rail, and
 # what a rail pattern for USBH_3V3 would change. Step 4 is the viewer's Lexicon panel (#1267).
 NAMING_DESIGN ?= tools/samples/boards/mnt-reform-motherboard30
-exercise-naming: agni samples-oracle
+exercise-naming: agni ui samples-oracle
 	mkdir -p $(EXERCISE_OUT)
 	bin/agni lexicon $(NAMING_DESIGN) -o $(EXERCISE_OUT)/naming-1-lexicon.txt
 	bin/agni lexicon $(NAMING_DESIGN) --net LPC_VCC | tee $(EXERCISE_OUT)/naming-2-net.txt
 	grep -q "rail (convention): the name's token VCC is a supply word" $(EXERCISE_OUT)/naming-2-net.txt
 	bin/agni lexicon $(NAMING_DESIGN) --try hack/exercise-naming-usbh.yaml | tee $(EXERCISE_OUT)/naming-3-try.txt
 	grep -q "USBH_3V3" $(EXERCISE_OUT)/naming-3-try.txt
+	cd web && HEADED=0 pnpm exec vitest run -c vitest.browser.config.ts browser/lexicon-walk.spec.ts
 
 # WASM_BUILD_ID names the uncommitted changes, so a dirty build does not restore what another dirty
 # build of the same commit parsed into the browser's cache (wasmengine.StoreVersion, agni issue 911).

@@ -34,7 +34,7 @@ import { type CoverageView, coverageFromResponse, emptyCoverage } from "./covera
 import { type TraceView, errorTrace, loadingTrace, parseEndpoint, splitTraceParam, traceFromResponse, traceSubjects , traceSheet} from "./trace.js";
 import { type PartsView, partsFromResponse, emptyParts } from "./parts.js";
 import { create } from "@bufbuild/protobuf";
-import { type ConventionBarView } from "./conventions.js";
+import { EDITED_REF, type ConventionBarView } from "./conventions.js";
 import type { EmitViewerEvent } from "./viewerevents.js";
 import {
   type ChecklistOption,
@@ -182,6 +182,9 @@ export interface ViewSink {
   // Optional like the panels; setConvention no-ops when it is absent, so a host that offers no
   // convention picker always uses the server's default.
   conventionBar?: ConventionBarView;
+  // vocabulary hears that the open design is read under a different vocabulary: a design opened or a
+  // convention changed. The Lexicon panel lists it again and Properties reads its inventory again.
+  vocabulary?: { changed: () => void };
   // projectBar states which project the open design resolved to and whether the built-in catalog is
   // in effect (agni issue 175). Optional like the rest; a host without it never says.
   projectBar?: ProjectBarView;
@@ -776,6 +779,7 @@ export class ViewerPresenter {
       this.conventionChoices = choices.conventions;
       this.checklistChoices = choices.checklists;
       this.pushConvention();
+      this.views.vocabulary?.changed();
       await this.refreshReviews(); // stored review runs for this design, so a reviewed board opens on its latest verdict
     } catch (e) {
       this.views.summary(`error: ${String(e)}`);
@@ -1371,6 +1375,7 @@ export class ViewerPresenter {
     // The rule LIST is recomposed too, or the panel would list one catalog's rules beside the
     // other's findings.
     await this.loadRules(this.doc.mount, this.doc.path);
+    this.views.vocabulary?.changed();
     await this.runChecks();
   }
 
@@ -1404,6 +1409,21 @@ export class ViewerPresenter {
     }
   }
 
+  // applyConvention puts a convention the Lexicon panel edited in effect, as setConvention does for a
+  // file. The value is already compiled, since the panel's last edit was listed through GetLexicon.
+  async applyConvention(convention: NamingConvention): Promise<void> {
+    this.doc.convention = convention;
+    this.doc.conventionRef = EDITED_REF;
+    await this.reloadForConvention();
+    this.pushConvention();
+  }
+
+  // checkedSnapshot is the open design's snapshot under the convention the page shows, "" with no
+  // design open.
+  async checkedSnapshot(): Promise<string> {
+    return this.doc.mount && this.doc.path ? this.checked() : "";
+  }
+
   // reloadForConvention re-reads the rule CATALOG and drops the held run after the vocabulary
   // changes. The catalog reload, dropping the run, and the
   // query-result reset must happen together, since a request convention changes which rules EXIST
@@ -1421,6 +1441,8 @@ export class ViewerPresenter {
     this.views.query?.clearAnswers();
     if (this.doc.mount && this.doc.path) await this.loadRules(this.doc.mount, this.doc.path);
     this.assembleFindings();
+    await this.refreshParts(); // a part's class in the join comes from the read this convention names
+    this.views.vocabulary?.changed();
   }
 
   // pushConvention reports which vocabulary is in effect (WS9-128). Nothing in a findings list
@@ -1729,7 +1751,7 @@ export class ViewerPresenter {
       return;
     }
     try {
-      const resp = await this.checks.getComponentParams({ snapshot: await this.drawn() });
+      const resp = await this.checks.getComponentParams({ snapshot: await this.checked() });
       this.views.parts.setState(partsFromResponse(resp));
     } catch {
       this.views.parts.setState(emptyParts());
@@ -1757,7 +1779,7 @@ export class ViewerPresenter {
     this.doc.hasSidecar = false;
     if (this.doc.mount && this.doc.path) {
       try {
-        const exp = await this.checks.getExpectations({ snapshot: await this.drawn() }, { signal });
+        const exp = await this.checks.getExpectations({ snapshot: await this.checked() }, { signal });
         this.doc.hasSidecar = exp.hasSidecar;
         this.doc.expectations = exp.expectations.map((e) => ({ rule: e.rule, subjects: e.subjects, pending: e.pending, why: e.why }));
         if (this.doc.hasSidecar) {

@@ -58,9 +58,10 @@ dropped files already reach it through its `local` mount.
 | Design | HighlightSheet | resolve highlight spec layers against one sheet: PACKED yields primitive-index groups, SVG a transparent same-frame overlay document |
 | Design | GetLayoutReport | how an auto-layout drew each component (glyph, box, provided symbol, or unresolved) |
 | Design | TraceDesign | walk from one pin to another through the series parts between them and return the route, the same answer `agni trace` prints |
-| Lexicon | GetLexicon | the effective naming lexicon of a snapshot's read, every pattern, exclusion, prefix, family and switch with where it came from, and the whole lexicon stated as a convention, the same answer `agni lexicon` prints |
+| Lexicon | GetLexicon | the effective naming lexicon of a snapshot's read, every pattern, exclusion, prefix, family and switch with where it came from, and the whole lexicon stated as a convention, the same answer `agni lexicon` prints. A request's `candidate` lists that convention instead, so an editor never merges one itself, and `convention` is the convention as written, rules included, which is what an editor has to start from |
 | Lexicon | ExplainNet | one net's stamped roles with their reasons, and every net-name pattern its name matches, exclusions included |
 | Lexicon | CompareLexicons | read a snapshot again with a candidate convention in its own's place, run the catalog over both, and return the `role_changes` and `finding_changes` tables; the Lexicon service is built from the host's CheckService, so the two run one catalog over one loader |
+| Lexicon | RenderConvention | a convention, sent as a value, written as the YAML file a project carries, which `naming.Parse` reads back to the same message. The Lexicon panel saves through it, since the page holds no YAML writer |
 | Check | ListRules | the rule catalog with tags and per-design availability, which is true exactly for the rules a whole CheckDesign of the snapshot runs; it reads the netlist and never the board |
 | Check | CheckDesign | run a rule subset and return findings, where each subject joins the packed primitive keys for highlighting |
 | Check | GetExpectations | the design's expectation sidecar as its own resource, reconciled against findings client-side |

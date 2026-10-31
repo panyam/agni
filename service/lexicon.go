@@ -1,6 +1,7 @@
 package service
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"regexp"
@@ -15,7 +16,9 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"gopkg.in/yaml.v3"
 )
 
 // LexiconService answers how a snapshot's names were read (agni issue 1266). It is built from the
@@ -62,10 +65,68 @@ func (s *LexiconService) GetLexicon(ctx context.Context, req *webapi.GetLexiconR
 		return nil, err
 	}
 	conv, src := conventionOf(snap)
+	if cand := req.GetCandidate(); cand != nil {
+		if _, err := naming.BuildLexicon(cand); err != nil {
+			return nil, fmt.Errorf("%w: %w", ErrInvalidArgument, err)
+		}
+		conv, src = cand, webapi.LexiconSource_LEXICON_SOURCE_REQUEST
+	}
 	return &webapi.GetLexiconResponse{
-		Entries:   lexiconEntries(conv, src),
-		Effective: classify.EffectiveLexicon(conv.GetLexicon()),
+		Entries:    lexiconEntries(conv, src),
+		Effective:  classify.EffectiveLexicon(conv.GetLexicon()),
+		Convention: conv,
 	}, nil
+}
+
+// RenderConvention writes a convention as a conventions file.
+func (s *LexiconService) RenderConvention(_ context.Context, req *webapi.RenderConventionRequest) (*webapi.RenderConventionResponse, error) {
+	conv := req.GetConventions()
+	if conv == nil {
+		return nil, fmt.Errorf("%w: RenderConvention needs a convention", ErrInvalidArgument)
+	}
+	b, err := ConventionYAML(conv)
+	if err != nil {
+		return nil, err
+	}
+	name := conv.GetName()
+	if name == "" {
+		name = "conventions"
+	}
+	return &webapi.RenderConventionResponse{Content: b, ContentType: "application/yaml", Filename: name + ".yaml"}, nil
+}
+
+// ConventionYAML writes conv with field names as the YAML binding reads them, in the order the schema
+// declares them, so naming.Parse reads it back to the same message.
+func ConventionYAML(conv *configpb.NamingConvention) ([]byte, error) {
+	b, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(conv)
+	if err != nil {
+		return nil, err
+	}
+	// JSON is YAML, and a yaml.Node keeps the keys in the order protojson wrote them.
+	var doc yaml.Node
+	if err := yaml.Unmarshal(b, &doc); err != nil {
+		return nil, err
+	}
+	plainStyle(&doc)
+	var out bytes.Buffer
+	enc := yaml.NewEncoder(&out)
+	enc.SetIndent(2)
+	if err := enc.Encode(&doc); err != nil {
+		return nil, err
+	}
+	if err := enc.Close(); err != nil {
+		return nil, err
+	}
+	return out.Bytes(), nil
+}
+
+// plainStyle clears the JSON spelling off a node tree, so the file reads as a person writes one. The
+// encoder quotes a string again where plain YAML would read it as something else.
+func plainStyle(n *yaml.Node) {
+	n.Style &^= yaml.FlowStyle | yaml.DoubleQuotedStyle | yaml.SingleQuotedStyle
+	for _, c := range n.Content {
+		plainStyle(c)
+	}
 }
 
 // ExplainNet returns one net's stamped roles and the net-name entries its name matches.

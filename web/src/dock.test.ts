@@ -105,6 +105,7 @@ describe("panel registry", () => {
       "checks",
       "coverage",
       "diff",
+      "lexicon",
       "overview",
       "parts",
       "properties",

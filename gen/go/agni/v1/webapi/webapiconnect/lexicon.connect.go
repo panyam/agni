@@ -42,11 +42,17 @@ const (
 	// LexiconServiceCompareLexiconsProcedure is the fully-qualified name of the LexiconService's
 	// CompareLexicons RPC.
 	LexiconServiceCompareLexiconsProcedure = "/agni.v1.webapi.LexiconService/CompareLexicons"
+	// LexiconServiceRenderConventionProcedure is the fully-qualified name of the LexiconService's
+	// RenderConvention RPC.
+	LexiconServiceRenderConventionProcedure = "/agni.v1.webapi.LexiconService/RenderConvention"
 )
 
 // LexiconServiceClient is a client for the agni.v1.webapi.LexiconService service.
 type LexiconServiceClient interface {
-	// GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from.
+	// GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from, or
+	// of a candidate convention laid over the built-ins, so a client editing one lists what it would
+	// read with and never merges a convention itself. A pattern that will not compile is
+	// INVALID_ARGUMENT.
 	GetLexicon(context.Context, *connect.Request[webapi.GetLexiconRequest]) (*connect.Response[webapi.GetLexiconResponse], error)
 	// ExplainNet returns one net's roles with their reasons, and every pattern of the effective lexicon
 	// its name matches, exclusions included, so a name that missed a vocabulary shows what stopped it.
@@ -56,6 +62,9 @@ type LexiconServiceClient interface {
 	// read with, runs the rule catalog over both, and returns the nets whose roles change and the
 	// findings that appear or disappear.
 	CompareLexicons(context.Context, *connect.Request[webapi.CompareLexiconsRequest]) (*connect.Response[webapi.CompareLexiconsResponse], error)
+	// RenderConvention writes a convention as the YAML file a project carries, which naming.Parse reads
+	// back to the same message. It asks nothing about a design, so it names no snapshot.
+	RenderConvention(context.Context, *connect.Request[webapi.RenderConventionRequest]) (*connect.Response[webapi.RenderConventionResponse], error)
 }
 
 // NewLexiconServiceClient constructs a client for the agni.v1.webapi.LexiconService service. By
@@ -87,14 +96,21 @@ func NewLexiconServiceClient(httpClient connect.HTTPClient, baseURL string, opts
 			connect.WithSchema(lexiconServiceMethods.ByName("CompareLexicons")),
 			connect.WithClientOptions(opts...),
 		),
+		renderConvention: connect.NewClient[webapi.RenderConventionRequest, webapi.RenderConventionResponse](
+			httpClient,
+			baseURL+LexiconServiceRenderConventionProcedure,
+			connect.WithSchema(lexiconServiceMethods.ByName("RenderConvention")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // lexiconServiceClient implements LexiconServiceClient.
 type lexiconServiceClient struct {
-	getLexicon      *connect.Client[webapi.GetLexiconRequest, webapi.GetLexiconResponse]
-	explainNet      *connect.Client[webapi.ExplainNetRequest, webapi.ExplainNetResponse]
-	compareLexicons *connect.Client[webapi.CompareLexiconsRequest, webapi.CompareLexiconsResponse]
+	getLexicon       *connect.Client[webapi.GetLexiconRequest, webapi.GetLexiconResponse]
+	explainNet       *connect.Client[webapi.ExplainNetRequest, webapi.ExplainNetResponse]
+	compareLexicons  *connect.Client[webapi.CompareLexiconsRequest, webapi.CompareLexiconsResponse]
+	renderConvention *connect.Client[webapi.RenderConventionRequest, webapi.RenderConventionResponse]
 }
 
 // GetLexicon calls agni.v1.webapi.LexiconService.GetLexicon.
@@ -112,9 +128,17 @@ func (c *lexiconServiceClient) CompareLexicons(ctx context.Context, req *connect
 	return c.compareLexicons.CallUnary(ctx, req)
 }
 
+// RenderConvention calls agni.v1.webapi.LexiconService.RenderConvention.
+func (c *lexiconServiceClient) RenderConvention(ctx context.Context, req *connect.Request[webapi.RenderConventionRequest]) (*connect.Response[webapi.RenderConventionResponse], error) {
+	return c.renderConvention.CallUnary(ctx, req)
+}
+
 // LexiconServiceHandler is an implementation of the agni.v1.webapi.LexiconService service.
 type LexiconServiceHandler interface {
-	// GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from.
+	// GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from, or
+	// of a candidate convention laid over the built-ins, so a client editing one lists what it would
+	// read with and never merges a convention itself. A pattern that will not compile is
+	// INVALID_ARGUMENT.
 	GetLexicon(context.Context, *connect.Request[webapi.GetLexiconRequest]) (*connect.Response[webapi.GetLexiconResponse], error)
 	// ExplainNet returns one net's roles with their reasons, and every pattern of the effective lexicon
 	// its name matches, exclusions included, so a name that missed a vocabulary shows what stopped it.
@@ -124,6 +148,9 @@ type LexiconServiceHandler interface {
 	// read with, runs the rule catalog over both, and returns the nets whose roles change and the
 	// findings that appear or disappear.
 	CompareLexicons(context.Context, *connect.Request[webapi.CompareLexiconsRequest]) (*connect.Response[webapi.CompareLexiconsResponse], error)
+	// RenderConvention writes a convention as the YAML file a project carries, which naming.Parse reads
+	// back to the same message. It asks nothing about a design, so it names no snapshot.
+	RenderConvention(context.Context, *connect.Request[webapi.RenderConventionRequest]) (*connect.Response[webapi.RenderConventionResponse], error)
 }
 
 // NewLexiconServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -151,6 +178,12 @@ func NewLexiconServiceHandler(svc LexiconServiceHandler, opts ...connect.Handler
 		connect.WithSchema(lexiconServiceMethods.ByName("CompareLexicons")),
 		connect.WithHandlerOptions(opts...),
 	)
+	lexiconServiceRenderConventionHandler := connect.NewUnaryHandler(
+		LexiconServiceRenderConventionProcedure,
+		svc.RenderConvention,
+		connect.WithSchema(lexiconServiceMethods.ByName("RenderConvention")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/agni.v1.webapi.LexiconService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case LexiconServiceGetLexiconProcedure:
@@ -159,6 +192,8 @@ func NewLexiconServiceHandler(svc LexiconServiceHandler, opts ...connect.Handler
 			lexiconServiceExplainNetHandler.ServeHTTP(w, r)
 		case LexiconServiceCompareLexiconsProcedure:
 			lexiconServiceCompareLexiconsHandler.ServeHTTP(w, r)
+		case LexiconServiceRenderConventionProcedure:
+			lexiconServiceRenderConventionHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -178,4 +213,8 @@ func (UnimplementedLexiconServiceHandler) ExplainNet(context.Context, *connect.R
 
 func (UnimplementedLexiconServiceHandler) CompareLexicons(context.Context, *connect.Request[webapi.CompareLexiconsRequest]) (*connect.Response[webapi.CompareLexiconsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.LexiconService.CompareLexicons is not implemented"))
+}
+
+func (UnimplementedLexiconServiceHandler) RenderConvention(context.Context, *connect.Request[webapi.RenderConventionRequest]) (*connect.Response[webapi.RenderConventionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("agni.v1.webapi.LexiconService.RenderConvention is not implemented"))
 }

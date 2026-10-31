@@ -265,6 +265,28 @@
     .check-inst td { background: #fafbfc; }
     .check-inst-label { color: #999; font-size: 10px; margin-right: 6px; }
     .check-inst-id { margin-left: 6px; color: #aaa; font-size: 10px; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+    .lex-bar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; margin-bottom: 6px; font-size: 12px; }
+    .lex-bar input { font: inherit; padding: 2px 4px; flex: 1 1 90px; min-width: 70px; }
+    .lex-bar button, .lex-add button { font: inherit; font-size: 12px; padding: 2px 8px; border: 1px solid #ccc; background: #eee; border-radius: 4px; cursor: pointer; }
+    .lex-bar button:disabled { cursor: default; opacity: 0.55; }
+    .lex-note { color: #666; font-size: 12px; margin: 4px 0; }
+    .lex-group { border-top: 1px solid #eee; padding: 3px 0; font-size: 12px; }
+    .lex-group > summary { cursor: pointer; font-family: ui-monospace, Menlo, monospace; }
+    .lex-off { color: #b45309; }
+    .lex-off-switch { display: block; padding: 2px 0 2px 12px; color: #666; }
+    .lex-switch { display: block; }
+    .lex-filter { display: block; width: 100%; box-sizing: border-box; font: inherit; font-size: 12px; padding: 2px 4px; margin: 4px 0; }
+    .lex-row { display: flex; align-items: baseline; gap: 6px; padding: 1px 0 1px 12px; }
+    .lex-kind { color: #888; flex: 0 0 48px; }
+    .lex-value { font-family: ui-monospace, Menlo, monospace; flex: 1 1 auto; overflow-wrap: anywhere; }
+    .lex-source { color: #666; }
+    .lex-row-replaced .lex-value { text-decoration: line-through; color: #999; }
+    .lex-row-edited .lex-source { color: #b45309; font-weight: 600; }
+    .lex-remove { border: none; background: none; color: #b00; cursor: pointer; padding: 0 4px; }
+    .lex-add { display: flex; gap: 4px; padding: 3px 0 3px 12px; }
+    .lex-add input { font: inherit; font-family: ui-monospace, Menlo, monospace; flex: 1 1 auto; min-width: 60px; padding: 1px 4px; }
+    .lex-add select { font: inherit; font-size: 12px; }
+    .lex-result-title { font-weight: 600; font-size: 12px; margin: 8px 0 2px; }
     .rules-title { margin-top: 14px; }
     .rules-empty { color: #999; font-size: 12px; }
     .rules-bundles { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; margin-bottom: 6px; font-size: 12px; color: #555; }

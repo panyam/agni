@@ -66,6 +66,8 @@ export async function setup({ provide }: { provide: (key: string, value: unknown
       // issue 1118). Its board is copied in by `make -C examples/jetson-project board`; without the
       // copy the mount holds only descriptors and no spec opens it.
       "--mount", "jetson=examples/jetson-project",
+      // The fetched boards, for the naming walk on the MNT Reform motherboard (agni issue 1267).
+      "--mount", "boards=tools/samples/boards",
       // A store, so the Review panel can run a checklist and save it (agni issue 1030). Fresh per run,
       // so no spec sees another run's reviews.
       "--review-store", mkdtempSync(join(tmpdir(), "agni-browser-reviews-")),

@@ -42,18 +42,22 @@ class LexiconEntry(_message.Message):
     def __init__(self, vocabulary: _Optional[str] = ..., kind: _Optional[str] = ..., value: _Optional[str] = ..., source: _Optional[_Union[LexiconSource, str]] = ..., convention: _Optional[str] = ..., replaced: _Optional[bool] = ...) -> None: ...
 
 class GetLexiconRequest(_message.Message):
-    __slots__ = ("snapshot",)
+    __slots__ = ("snapshot", "candidate")
     SNAPSHOT_FIELD_NUMBER: _ClassVar[int]
+    CANDIDATE_FIELD_NUMBER: _ClassVar[int]
     snapshot: str
-    def __init__(self, snapshot: _Optional[str] = ...) -> None: ...
+    candidate: _naming_pb2.NamingConvention
+    def __init__(self, snapshot: _Optional[str] = ..., candidate: _Optional[_Union[_naming_pb2.NamingConvention, _Mapping]] = ...) -> None: ...
 
 class GetLexiconResponse(_message.Message):
-    __slots__ = ("entries", "effective")
+    __slots__ = ("entries", "effective", "convention")
     ENTRIES_FIELD_NUMBER: _ClassVar[int]
     EFFECTIVE_FIELD_NUMBER: _ClassVar[int]
+    CONVENTION_FIELD_NUMBER: _ClassVar[int]
     entries: _containers.RepeatedCompositeFieldContainer[LexiconEntry]
     effective: _naming_pb2.NamingLexicon
-    def __init__(self, entries: _Optional[_Iterable[_Union[LexiconEntry, _Mapping]]] = ..., effective: _Optional[_Union[_naming_pb2.NamingLexicon, _Mapping]] = ...) -> None: ...
+    convention: _naming_pb2.NamingConvention
+    def __init__(self, entries: _Optional[_Iterable[_Union[LexiconEntry, _Mapping]]] = ..., effective: _Optional[_Union[_naming_pb2.NamingLexicon, _Mapping]] = ..., convention: _Optional[_Union[_naming_pb2.NamingConvention, _Mapping]] = ...) -> None: ...
 
 class ExplainNetRequest(_message.Message):
     __slots__ = ("snapshot", "net")
@@ -86,3 +90,19 @@ class CompareLexiconsResponse(_message.Message):
     TABLES_FIELD_NUMBER: _ClassVar[int]
     tables: _containers.RepeatedCompositeFieldContainer[_tables_pb2.Table]
     def __init__(self, tables: _Optional[_Iterable[_Union[_tables_pb2.Table, _Mapping]]] = ...) -> None: ...
+
+class RenderConventionRequest(_message.Message):
+    __slots__ = ("conventions",)
+    CONVENTIONS_FIELD_NUMBER: _ClassVar[int]
+    conventions: _naming_pb2.NamingConvention
+    def __init__(self, conventions: _Optional[_Union[_naming_pb2.NamingConvention, _Mapping]] = ...) -> None: ...
+
+class RenderConventionResponse(_message.Message):
+    __slots__ = ("content", "content_type", "filename")
+    CONTENT_FIELD_NUMBER: _ClassVar[int]
+    CONTENT_TYPE_FIELD_NUMBER: _ClassVar[int]
+    FILENAME_FIELD_NUMBER: _ClassVar[int]
+    content: bytes
+    content_type: str
+    filename: str
+    def __init__(self, content: _Optional[bytes] = ..., content_type: _Optional[str] = ..., filename: _Optional[str] = ...) -> None: ...
