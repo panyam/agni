@@ -1,0 +1,32 @@
+(kicad_pcb
+	(version 20240108)
+	(generator "pcbnew")
+	(layers
+		(0 "F.Cu" signal)
+		(2 "B.Cu" signal)
+		(44 "Edge.Cuts" user)
+	)
+	(net 0 "")
+	(net 1 "CURVED")
+	(net 2 "STRAIGHT")
+	(footprint "TestPoint:TP"
+		(layer "F.Cu")
+		(at 10 10)
+		(property "Reference" "TP1"
+			(at 0 -2 0)
+			(layer "F.SilkS"))
+		(pad "1" smd rect
+			(at 0 0)
+			(size 1 1)
+			(layers "F.Cu")
+			(net 1 "CURVED"))
+		(pad "2" smd rect
+			(at 0 10)
+			(size 1 1)
+			(layers "F.Cu")
+			(net 2 "STRAIGHT"))
+	)
+	(segment (start 10 10) (end 12 10) (width 0.25) (layer "F.Cu") (net 1) (uuid "s1"))
+	(arc (start 12 10) (mid 14 12) (end 16 10) (width 0.05) (layer "F.Cu") (net 1) (uuid "a1"))
+	(segment (start 10 20) (end 20 20) (width 0.25) (layer "F.Cu") (net 2) (uuid "s2"))
+)

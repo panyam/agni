@@ -21,8 +21,9 @@ import (
 //
 // Fidelity: lossy-bounded (render/DRC subset, CONSTRAINTS C6). Silkscreen/legend text and
 // silk/fab body graphics (the footprint ref-des and value, free gr_text, and the fp_*/gr_*
-// outlines) ARE carried (WS7); arc tracks, zone fill polygons, teardrops, and 3D references
-// are not; outline and silk arcs are approximated as polylines. Coordinates are emitted in
+// outlines) ARE carried (WS7); zone fill polygons, teardrops, and 3D references are not; outline,
+// silk and arc-track arcs are approximated as polylines, so a chorded track's path is slightly
+// shorter than the arc, which a future length rule has to allow for. Coordinates are emitted in
 // nanometers (unit_nm=1), Y-flipped to the geom contract's Y-up frame; rotations stay
 // verbatim (see the proto contract). The caller owns file I/O (C1).
 func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, error) {
