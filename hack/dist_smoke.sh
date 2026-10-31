@@ -47,7 +47,9 @@ mkdir -p "$tmp/work" "$HOME"
 cp "$repo"/demo/showcase.fires.kicad_pro "$repo"/demo/showcase.fires.kicad_sch "$tmp/work/"
 cd "$tmp/work"
 
-got=$("$agni" version | head -1)
+# sed reads the whole output. head would close the pipe at its first line, and agni still writing the
+# next one dies of SIGPIPE, which pipefail turns into exit 141 on a slow enough run.
+got=$("$agni" version | sed -n 1p)
 [ "$got" = "agni $tag" ] || { echo "dist_smoke: version says '$got', want 'agni $tag'"; exit 1; }
 
 "$agni" check showcase.fires.kicad_sch > check.txt 2>&1 || true
