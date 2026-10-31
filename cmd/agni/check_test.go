@@ -40,6 +40,24 @@ func TestCheckStrapBandCLI(t *testing.T) {
 	}
 }
 
+// TestCheckStrapUnreadableValueIsInconclusive reads the value through the real ingestion path, where
+// the unit test stamps a Quantity by hand. A declared band over "10kk" must say it went unchecked.
+func TestCheckStrapUnreadableValueIsInconclusive(t *testing.T) {
+	cmd := checkCmd()
+	var buf bytes.Buffer
+	cmd.SetOut(&buf)
+	cmd.SetArgs([]string{"testdata/intent/strap-unreadable.edn", "--intent-path", "testdata/intent/strap-band.yaml", "--verdicts"})
+	if err := cmd.Execute(); err != nil {
+		t.Fatal(err)
+	}
+	out := buf.String()
+	for _, want := range []string{"inconclusive", "BOOT_MODE0", "R1", `"10kk"`} {
+		if !strings.Contains(out, want) {
+			t.Errorf("output is missing %q:\n%s", want, out)
+		}
+	}
+}
+
 // TestCheckStrapImpossibleBandRejected checks that a band nothing can satisfy fails the LOAD rather
 // than producing a rule that runs and can never pass. Before this, the field was unknown to the
 // loader and silently dropped, so a declaration that looked enforced was not.

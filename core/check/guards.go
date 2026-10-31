@@ -3,6 +3,7 @@ package check
 import (
 	"fmt"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 
@@ -276,13 +277,14 @@ func ExternalSignalNet(m Model, n *ir.Net) bool {
 }
 
 // NetBiasResistors returns the sorted ref-designators of the resistors that bias n toward a rail or
-// ground, with the same direction NetBias reports. Use it when a caller has to say something ABOUT
+// ground, each once, with the same direction NetBias reports. A resistor array can reach a rail through
+// more than one far net and is still one part. Use it when a caller has to say something ABOUT
 // the resistor (its value) rather than only about the net. On a divider the refs are still returned
 // while the direction is neither, since both resistors are real and only the net's LEVEL is ambiguous.
 func NetBiasResistors(m Model, n *ir.Net) (refs []string, up, down bool) {
 	up, down = netBias(m, n, &refs)
 	sort.Strings(refs)
-	return refs, up, down
+	return slices.Compact(refs), up, down
 }
 
 // NetBias reports which way a net is held by a bias resistor, toward a rail (up), toward ground

@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+	"strings"
 
 	"github.com/panyam/agni/core/check"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -43,19 +44,24 @@ func propertyVerdicts(m check.Model, ps []NetProperty, kind string) []check.Verd
 			continue // another kind's declaration, not a subject of this rule
 		}
 		v := check.Verdict{Subjects: []check.Entity{check.NetNameEntity(p.Net)}}
-		if msg, undecidable := propertyUndecidable(m, p); undecidable {
+		msg, undecidable := propertyUndecidable(m, p)
+		bad := false
+		if !undecidable {
+			msg, bad = propertyViolation(m, p)
+		}
+		if !undecidable && !bad {
+			msg, undecidable = strapBandUnjudged(m, p)
+		}
+		switch {
+		case undecidable:
 			v.Outcome = check.Inconclusive
 			v.Witness = &check.Witness{Statement: msg}
 			v.Finding = &check.Finding{Subject: check.NetNameEntity(p.Net), Message: msg, Inconclusive: true}
-			out = append(out, v)
-			continue
-		}
-		msg, bad := propertyViolation(m, p)
-		if bad {
+		case bad:
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{Statement: msg}
 			v.Finding = &check.Finding{Subject: check.NetNameEntity(p.Net), Message: msg}
-		} else {
+		default:
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
 				Statement: fmt.Sprintf("net %q carries the declared %s property and the design does not contradict it", p.Net, kind),
@@ -126,16 +132,9 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 	return "", false
 }
 
-// strapValueViolation checks a strap's pull resistor against the band the DECLARATION states, and is
-// silent unless it can decide (WS3-119).
-//
-// Four ways it declines to answer:
-//   - no band declared, so there is nothing to check against;
-//   - no biasing resistor identified, which the direction half already reports on;
-//   - more than one, because a divider's two resistors set a level together and neither is "the"
-//     strap pull, so reporting one of them would name an arbitrary part;
-//   - a value that does not parse as a resistance, which the params tier also skips rather than
-//     guesses.
+// strapValueViolation checks a strap's pull resistor against the band the DECLARATION states, and
+// reports only a value it read and found outside the band (WS3-119). A band it cannot compare is
+// strapBandUnjudged's to report.
 //
 // The finding quotes the SOURCE TEXT ("10k"), not the parsed 10000, so a reviewer reads the value
 // they will see on the schematic.
@@ -168,6 +167,54 @@ func strapValueViolation(m check.Model, p NetProperty, refs []string) (string, b
 	return "", false
 }
 
+// strapBandUnjudged reports a declared band that was not compared, and why (agni issue 1281). It runs
+// after the violation checks because a wrong-way strap is a defect whatever its value reads as.
+//
+// Unreadable is neither a defect nor a pass, since nothing shows the band held and nothing shows it
+// broke. Three shapes land here: a resistor with no value, a value that does not read as a resistance,
+// and several resistors biasing the net, because a divider's two resistors set a level together and
+// neither is "the" strap pull. A net with no strap resistor is not one of them. Its band has nothing
+// to bound, and leaving the resistor off is the datasheet's default-state case.
+func strapBandUnjudged(m check.Model, p NetProperty) (string, bool) {
+	if p.Property != PropStrap || (p.MinOhms <= 0 && p.MaxOhms <= 0) {
+		return "", false
+	}
+	n := netNamed(m, p.Net)
+	if n == nil {
+		return "", false
+	}
+	refs, _, _ := check.NetBiasResistors(m, n)
+	band := bandText(p)
+	switch len(refs) {
+	case 0:
+		return "", false
+	case 1:
+		ref := refs[0]
+		if _, ok := check.ComponentValueIn(m, ref, check.UnitOhm); ok {
+			return "", false
+		}
+		if text, _ := check.ComponentValueText(m, ref); text != "" {
+			return fmt.Sprintf("net %q declares a strap band of %s, but %s reads %q, which is not a resistance, "+
+				"so the band was not checked", p.Net, band, ref, text), true
+		}
+		return fmt.Sprintf("net %q declares a strap band of %s, but %s carries no value, so the band was not checked",
+			p.Net, band, ref), true
+	}
+	return fmt.Sprintf("net %q declares a strap band of %s, but %s bias it together, so no one resistor can be "+
+		"held to the band and it was not checked", p.Net, band, strings.Join(refs, ", ")), true
+}
+
+// bandText renders a declared band, one-sided or not.
+func bandText(p NetProperty) string {
+	switch {
+	case p.MinOhms > 0 && p.MaxOhms > 0:
+		return ohmsText(p.MinOhms) + " to " + ohmsText(p.MaxOhms)
+	case p.MinOhms > 0:
+		return "at least " + ohmsText(p.MinOhms)
+	}
+	return "at most " + ohmsText(p.MaxOhms)
+}
+
 // ohmsText renders a declared bound the way an engineer writes it (4700 -> "4.7k").
 func ohmsText(ohms float64) string {
 	switch {
@@ -190,10 +237,11 @@ func trimNum(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
 // supervisor with an internal pull carries none. No seeding, declaration or fact tier will ever
 // supply it, which is why this is not reported as needs-data.
 //
-// ac-coupled and strap have no undecidable case. A series capacitor is decidable by looking, so absent
-// means the declaration is unmet. A strap with no bias is the DEFAULT-state case a datasheet tells
-// you to leave unfitted, so silence there is a correct pass rather than an unanswered question, and
-// emitting inconclusive for it would flag most correct boards.
+// ac-coupled and a strap's direction have no undecidable case. A series capacitor is decidable by
+// looking, so absent means the declaration is unmet. A strap with no bias is the DEFAULT-state case a
+// datasheet tells you to leave unfitted, so silence there is a correct pass rather than an unanswered
+// question, and emitting inconclusive for it would flag most correct boards. A strap's declared band
+// can be undecidable, which strapBandUnjudged reports once the direction has had its say.
 func propertyUndecidable(m check.Model, p NetProperty) (string, bool) {
 	if p.Property != PropResetPolarity {
 		return "", false

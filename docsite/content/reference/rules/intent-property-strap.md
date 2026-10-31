@@ -65,9 +65,9 @@ net (pull-down, latches low). The far end may reach its rail through further pas
 
 A net with **both**, a divider, reports neither. Some parts use a divider for a tri-level strap, and
 the level it selects depends on the ratio of the two resistances rather than on either one, so the
-rule declines to guess rather than reporting a direction it does not know. The value check declines
-there for the same reason, since neither resistor is "the" strap pull, so judging one would name an
-arbitrary part.
+rule declines to guess rather than reporting a direction it does not know. A declared band over a
+divider reports inconclusive and names both resistors, since neither is "the" strap pull, so judging
+one would name an arbitrary part.
 
 ### Declaring it
 
@@ -91,13 +91,16 @@ Both are rejected at load on a property kind that has no resistance to bound, an
 its `max_ohms` is rejected too, because a band nothing can satisfy would compile to a check that can
 never pass, which is a declaration error rather than a design finding.
 
-The value check runs only when a bound is declared AND the pull resistor's value reads as a
-resistance. A resistor with no value, an unparseable one, or one stamped in another unit is skipped.
-Unreadable is not the same as acceptable, and firing on a number the engine could not read would
-report a defect on no evidence.
+A declared band over a resistor with no value, a value that does not parse, or a value in another
+unit reports **inconclusive** and names the resistor. Firing on a number the engine could not read
+would report a defect on no evidence, and passing would claim a comparison nobody made, so the
+finding says the band was not checked. A wrong-way strap still fails, whatever its value reads as.
+With no strap resistor on the net, a declared band has nothing to bound and the rule stays silent,
+for the default-state reason above. An unfitted resistor counts as absent.
 
 ### Fixing a finding
 
-Either the strap resistor goes to the wrong net, or the declared configuration is wrong. Check the
+An inconclusive finding asks for a readable value on the named resistor, or a look at the divider by
+hand. Otherwise, either the strap resistor goes to the wrong net, or the declared configuration is wrong. Check the
 part's datasheet strap table before moving the resistor. If the declaration is wrong,
 moving the resistor creates the bug the rule was reporting.
