@@ -3,6 +3,7 @@ package odb
 import (
 	"fmt"
 	"io/fs"
+	"path"
 	"strings"
 )
 
@@ -67,7 +68,30 @@ func (p *parsedJob) allComponents() []*component {
 	return out
 }
 
-// jobName is the job's name as misc/info states it.
-func (p *parsedJob) jobName() string {
-	return p.info["JOB_NAME"]
+// jobName is the job's name as misc/info states it, or, for a job with no misc/info (Altium writes
+// none), the name of the folder or archive it came in: `boards/master-odb/matrix/matrix` and
+// `master.odb.zip` are both "master".
+func (p *parsedJob) jobName(src string) string {
+	if n := p.info["JOB_NAME"]; n != "" {
+		return n
+	}
+	src = strings.ReplaceAll(src, "\\", "/")
+	if IsMatrixPath(src) {
+		src = JobDir(src)
+	}
+	name := path.Base(src)
+	low := strings.ToLower(name)
+	for _, ext := range []string{".tar.gz", ".tgz", ".zip", ".tar"} {
+		if strings.HasSuffix(low, ext) {
+			name, low = name[:len(name)-len(ext)], low[:len(low)-len(ext)]
+			break
+		}
+	}
+	if strings.HasSuffix(low, ".odb") {
+		name = name[:len(name)-len(".odb")]
+	}
+	if name == "." || name == "/" {
+		return ""
+	}
+	return name
 }

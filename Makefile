@@ -1,6 +1,6 @@
 GO ?= go
 
-.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb odb-fixtures exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
+.PHONY: hooks dist dist-check testall-core lint vulncheck seccheck secrets audit compose-release compose-smoke all proto proto-web proto-py proto-check python-venv python-test python-dist python-dist-check exercise-revision-audit exercise-odb odb-fixtures exercise-public-demo exercise-browser-review exercise-mcp-ask exercise-pin-functions exercise-naming exercise-viewer-page agnids dsserve datasheet-test tidy tidyall tidyall-check build agni install vet ir-model-check fixture-copies-check samples samples-oracle oracle odb-oracle test web-test browser-test web-install testall wasm wasm-test wasm-bench wasm-layers seed-triage demo-site docs-site docs-deploy examples-test docsite-test catalog-docs catalog-docs-check tutorial-runs tutorial-runs-check docsite-images-check serve demo ghserve ghbuild ui natimage natup natdown natlogs natrender natopen image dsimage dockserve dockstop tag tag-push tutorial-runs setup datasheet-models pdf2doc pdf2doc-all datasheets-status
 
 all: proto build
 
@@ -200,14 +200,22 @@ samples:
 # than `samples` alone, because a test whose corpus is absent skips, and a skipped test is a test that
 # proves nothing (agni issue 591). 19MB against tutorial-board's 3MB, fetched once per pin bump.
 samples-oracle:
-	./hack/fetch_samples.sh tutorial-board oracle-corpus
+	./hack/fetch_samples.sh tutorial-board oracle-corpus odb-altium
 
 # The KiCad reader cross-check against real boards: read a design's schematic our way, read the same
 # design's .kicad_pcb for the netlist KiCad itself resolved, and require the two to agree on which
 # pins share a net. NOT in the gate, because it needs the 19MB both-views corpus; a separate suite
 # like browser-test. AGNI_ORACLE_UPDATE=1 rewrites the baseline instead of asserting it.
-oracle: samples-oracle
+oracle: samples-oracle odb-oracle
 	AGNI_ORACLE=1 $(GO) test ./readers/kicad/ -run TestOracleCorpus -count=1 -v
+
+# The ODB++ reader cross-check against real boards (agni issue 1268): each samples board read from its
+# .kicad_pcb and from kicad-cli's ODB++ export of it, held to readers/formats/testdata/odb_oracle.baseline,
+# the exporter's known differences. Its own target so it runs alone or beside the KiCad one, and out
+# of the gate for the 15 MB export corpus. AGNI_ODB_ORACLE_UPDATE=1 rewrites the baseline.
+odb-oracle: samples-oracle
+	./hack/fetch_samples.sh odb-kicad
+	AGNI_ODB_ORACLE=1 $(GO) test ./readers/formats/ -run TestODBOracleCorpus -count=1 -v
 
 # Engine (Go) tests. The example modules have their own go.mod; see examples-test.
 test:

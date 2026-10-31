@@ -9,8 +9,8 @@
 <g class="copper-front" data-layer="F.Cu">
 <line x1="590.0" y1="540.0" x2="640.0" y2="540.0" stroke="#c83434" stroke-width="25.0" stroke-linecap="round"/>
 <line x1="490.0" y1="540.0" x2="790.0" y2="640.0" stroke="#c83434" stroke-width="12.5" stroke-linecap="round"/>
-<rect x="510.0" y="455.0" width="60.0" height="70.0" fill="#c83434" rx="15.0"/>
-<rect x="510.0" y="555.0" width="60.0" height="70.0" fill="#c83434" transform="rotate(-90.0 540.0 590.0)" rx="15.0"/>
+<rect x="510.0" y="555.0" width="60.0" height="70.0" fill="#c83434" rx="15.0"/>
+<rect x="510.0" y="455.0" width="60.0" height="70.0" fill="#c83434" transform="rotate(-90.0 540.0 490.0)" rx="15.0"/>
 </g>
 <g class="through">
 <circle cx="790.0" cy="640.0" r="20.0" fill="#9aa0a6"/>
@@ -26,7 +26,7 @@
 </g>
 <g class="silk">
 <g data-layer="F.SilkS">
-<polyline fill="none" stroke="#7a7f88" stroke-width="6.0" points="575.0,465.0 575.0,615.0"/>
+<polyline fill="none" stroke="#7a7f88" stroke-width="6.0" points="505.0,615.0 505.0,465.0"/>
 </g>
 <g data-layer="F.SilkS">
 <circle fill="none" stroke="#7a7f88" stroke-width="5.0" cx="540.0" cy="540.0" r="25.0"/>
@@ -36,8 +36,8 @@
 </g>
 </g>
 <g class="labels">
-<text x="640.0" y="540.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central" transform="rotate(-90.0 640.0 540.0)">R1</text>
-<text x="440.0" y="540.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central" transform="rotate(-90.0 440.0 540.0)">10k</text>
+<text x="440.0" y="540.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central" transform="rotate(-90.0 440.0 540.0)">R1</text>
+<text x="640.0" y="540.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central" transform="rotate(-90.0 640.0 540.0)">10k</text>
 <text x="1040.0" y="690.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central">J1</text>
 <text x="1040.0" y="890.0" fill="#1560bd" font-size="50.0" text-anchor="middle" dominant-baseline="central">CONN</text>
 <text x="790.0" y="190.0" fill="#1560bd" font-size="100.0" text-anchor="middle" dominant-baseline="central">Demo Board</text>

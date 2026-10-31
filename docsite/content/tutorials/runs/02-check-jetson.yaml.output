@@ -1,4 +1,4 @@
-#agni-run ed9253870e4c981f
+#agni-run a59b1008e385b0f7
 findings by rule:
   bulk-cap               1
   decoupling-present     1
@@ -64,4 +64,4 @@ first 50:
   [warning] rail-not-classified: /USB Debug, PD/FTDI_3V3 (net "/USB Debug, PD/FTDI_3V3" declares 3.3V in its name and feeds 4 supply pin(s) (e.g. U31 pin 3), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in the project's conventions lexicon)
 
 80 finding(s) total
-24120 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)
+24124 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)

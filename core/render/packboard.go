@@ -112,7 +112,7 @@ func PackBoard(b *geom.BoardGeometry, opts ...Option) *geom.PackedSheet {
 	// Silkscreen and legend labels arrive in board coordinates from the reader, so they only
 	// rebase to the vertex origin here. The overlay draws the glyphs.
 	var labels []*geom.PackedLabel
-	for _, t := range b.GetTexts() {
+	for _, t := range boardLabels(b) {
 		if t.GetAt() == nil {
 			continue
 		}

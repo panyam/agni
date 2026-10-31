@@ -1,3 +1,3 @@
-#agni-run 5f7e5cde851f1584
+#agni-run f990f68f3b405118
 note: reading jetson-agx-thor-baseboard.kicad_sch (the entry design.yaml declares), with board geometry from jetson-agx-thor-baseboard.kicad_pcb.
 wrote power.svg (sheet "Power", 137 placements, 241 wires)

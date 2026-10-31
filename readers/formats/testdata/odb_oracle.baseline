@@ -1,0 +1,55 @@
+# Known differences between each samples board read from its .kicad_pcb and from kicad-cli's ODB++
+# export of it (TestODBOracleCorpus, make odb-oracle). Each is the exporter's doing, not a reader's:
+#   parts kicad only      a footprint marked exclude_from_pos_files, which the exporter leaves out
+#   parts odb++ only      a designator the exporter renamed because two footprints share it (_10, ...)
+#   pads odb++ only       a non-plated hole the KiCad file lists on mask alone, which ODB++ drills
+#   error: kicad read     a board the KiCad reader cannot read yet (the Feather, agni issue 681)
+# Regenerate with AGNI_ODB_ORACLE_UPDATE=1 make odb-oracle, and read the diff.
+cynthion	pads: odb++ only: J5.? net= circle 700000x700000 drill=700000 side=F.Cu (122750,-107199)um
+cynthion	pads: odb++ only: J5.? net= circle 700000x700000 drill=700000 side=F.Cu (131850,-107199)um
+glasgow-revC3	parts: kicad only: NONO_HANA=MECHOKKU
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: kicad only: TESTPOINT-30MIL-MASKONLY=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_10=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_11=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_12=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_13=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_14=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_15=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_16=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_1=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_2=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_3=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_4=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_5=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_6=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_7=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_8=VAL**
+hackrf-one	parts: odb++ only: TESTPOINT-30MIL-MASKONLY_9=VAL**
+jetson-agx-thor-baseboard	pads: odb++ only: J13.? net= circle 1100000x1100000 drill=1100000 side=B.Cu (118959,-94500)um
+jetson-agx-thor-baseboard	pads: odb++ only: J13.? net= circle 1600000x1600000 drill=1600000 side=B.Cu (118959,-114497)um
+jetson-agx-thor-baseboard	parts: kicad only: A1=Mech_M2_2280_H2.5mm
+jetson-agx-thor-baseboard	parts: kicad only: A2=Mech_M2_2242_H2.5mm
+jetson-agx-thor-baseboard	parts: kicad only: A3=Jetson-Thor-AGX-T5000
+mnt-reform-motherboard30	parts: kicad only: H10=LOGO_REFORM
+mnt-reform-motherboard30	parts: kicad only: H11=LABEL_MPCIE1
+mnt-reform-motherboard30	parts: kicad only: H12=LABEL_MPCIE2
+mnt-reform-motherboard30	parts: kicad only: H13=LABEL_CPU
+mnt-reform-motherboard30	parts: kicad only: H14=BADGE
+mnt-reform-motherboard30	parts: kicad only: H15=NOTOUCH
+mnt-reform-motherboard30	parts: kicad only: H9=OSHWA_DE17
+royalblue54L-feather	error: kicad read: sexpr: "(" at line 628 is outside the top-level expression, which an unbalanced ')' closed early; the rest of the input is unread

@@ -1,4 +1,4 @@
-#agni-run 0acc7fc13ff303b3
+#agni-run e43a5922bd278d7b
 findings by rule:
   bulk-cap               1
   decoupling-present     1
@@ -14,4 +14,4 @@ findings by rule:
   test-point-coverage    36
 
 530 finding(s) total
-26062 subject(s) considered by 41 rule(s), 1041 not considered (--verdicts for the detail)
+26066 subject(s) considered by 41 rule(s), 1041 not considered (--verdicts for the detail)

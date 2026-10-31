@@ -502,8 +502,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   design's files asks `formats.DesignRoot`, or it fetches `matrix/` alone. A pin's net comes from its
   toeprint record and a copper feature's from eda/data's `FID` list, never from geometry. The fixtures
   are `kicad-cli pcb export odb` output (`make odb-fixtures`, KiCad 9+), and
-  `TestODBReadsAsItsKiCadSource` holds each to the board it came from; `AGNI_ODB_PAIRS` adds a real
-  board locally. **ODB++ forbids spaces in a name**, so `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`
+  `TestODBReadsAsItsKiCadSource` holds each to the board it came from, pad positions included;
+  `make odb-oracle` does the same for the six samples boards against `odb_oracle.baseline`, and the
+  gate reads foxBMS's Altium-written jobs (`odb-altium`), whose pins are named `J500-1` and whose
+  `FGR` groups are not nets. **ODB++ forbids spaces in a name**, so `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`
   and a schematic-against-layout diff reports it renamed. KiCad's exporter also leaves out a
   footprint marked `exclude_from_pos_files`, and nets copper by what touches, so a planted short
   moves a track onto the other net (demo-board).
@@ -622,6 +624,18 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   3980 components and 1617 nets off the `.edn` against 5219 and 4572 off the `.eds`, so nets inflate
   by 183%. A design that ships only a `.eds` can be rendered and queried, and its counts must never be
   compared against a design read from a netlist.
+- **A saved report's link waits 2 s for an open viewer to speak, then loads the link** (agni 1156).
+  The viewer posts `agni-viewer/v1/accepted` the moment it takes a request and the report then waits
+  for the answer, since resolving a verdict link runs its rule (#1271, where a slow CI runner reloaded
+  the viewer). Any new note from the page goes on its OWN envelope: a report saved earlier reads a
+  reply on `agni-viewer/v1` with no `ok` as a refusal and reloads.
+- **A KiCad footprint's angle carries over unchanged, and a back footprint's items are un-mirrored**
+  (agni 1261, `placementAngle`/`footprintLocal` in `readers/kicad/pcb_geom.go`). KiCad's angle is
+  counter-clockwise as drawn and the Y flip keeps the picture; negating it put pad 1 where pad 2 is.
+  KiCad stores a flipped footprint's items already mirrored, so the reader negates their x and the
+  angle, and the contract's composer mirrors once. Nothing in a rule reads a pad's position, which
+  is how it shipped; only the board view and `TestODBReadsAsItsKiCadSource` (pad positions against
+  kicad-cli's own export) see it.
 - **KiCad names a local label by its sheet path**, so a root-sheet net is `/SCL`, and every finding,
   query answer and link names it that way. `render --highlight net=SCL` matches nothing and still
   reports a highlight (#1225), so spell a hand-typed subject as `check` prints it.
@@ -661,6 +675,13 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   an empty set. The gate takes `samples-oracle`, the 19MB both-views corpus, because the cross-view
   tests read a board file and a test whose fixture is absent skips rather than fails. One stamp PER
   ARTIFACT, so `make samples` and `make samples-oracle` compose instead of deleting each other's work.
+  Since v0.1.4 there are four: the gate fetches `tutorial-board`, `oracle-corpus` and `odb-altium`
+  (foxBMS's Altium-written ODB++ jobs), and `make odb-oracle` adds `odb-kicad`. A pin bump needs the
+  release to exist first, or every CI job fails at the fetch, so a samples PR merges and is tagged
+  before the agni PR that pins it goes green. A new tarball leaves the old ones byte-identical, which
+  `make dist` in agni-samples proves by reproducing their checksums. `kicad-cli` writes a `.kicad_prl`
+  beside any board it exports, so an export run over `tools/samples` or a fixture folder leaves one
+  there (both export scripts remove it).
   Since v0.1.2 the oracle corpus carries a `design.yaml` per real design (entry, board companion,
   internal connectors) and the tutorial tarball does not, because a declared companion missing from
   a tarball fails every read and that tarball leaves the boards out.

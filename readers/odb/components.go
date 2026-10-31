@@ -86,7 +86,9 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 			if t.net, err = atoi(w[6]); err != nil {
 				return fmt.Errorf("line %d: %w", n, err)
 			}
-			t.name = w[8]
+			// Altium names a toeprint for its part as well as its pin (J500-1 for pin 1 of J500), where
+			// the netlist and the schematic it is checked against name the pin alone.
+			t.name = strings.TrimPrefix(w[8], cur.ref+"-")
 			cur.pins = append(cur.pins, t)
 		}
 		return nil
