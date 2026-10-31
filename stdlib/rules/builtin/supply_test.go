@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -195,5 +196,52 @@ func TestAGateOnTheConnectorNetIsNotInThePowerPath(t *testing.T) {
 	}, map[string][]string{"VBUS": {"J1.A4", "Q1.3"}, "VSYS": {"Q1.2", "U2.1"}, "EN": {"Q1.1"}})
 	if got := verdictOn(t, reverseBlockingAbsent, series, "VBUS"); got != string(check.Inconclusive) {
 		t.Errorf("reverse-blocking-absent with a series FET = %q, want inconclusive", got)
+	}
+}
+
+// A receptacle's symbol types VBUS power_in, and a net feeding only that pin is an outlet with no
+// load to decouple (agni issue 1254). The IC beside it is the positive control.
+func TestAConnectorsOwnPinIsNotADecouplingSubject(t *testing.T) {
+	for _, tc := range []struct {
+		name  string
+		conns []string
+		want  string
+	}{
+		{"only the connector", []string{"J3.1", "R2.1"}, ""},
+		{"an IC beside it", []string{"J3.1", "R2.1", "U1.1"}, string(check.Fail)},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := pinDesign(map[string][]supplyPin{
+				"J3": {{"VBUS", "1", pwrIn}}, "R2": twoPin(), "U1": {{"VDD", "1", pwrIn}},
+			}, map[string][]string{"TARGET_VBUS": tc.conns})
+			classify.Stamp(d)
+			if got := verdictOn(t, decouplingPresent, d, "TARGET_VBUS"); got != tc.want {
+				t.Errorf("decoupling-present = %q, want %q", got, tc.want)
+			}
+			specFires := len(decouplingPresentSpec.Eval(context.Background(), check.NewModel(d))) > 0
+			if specFires != (tc.want != "") {
+				t.Errorf("the spec twin fires = %v, want %v", specFires, tc.want != "")
+			}
+		})
+	}
+}
+
+// A clamp array biased from the rail it guards is the protector and not the load: input-protection
+// credits it and reverse-blocking-absent does not stop at its supply pin (agni issue 1257).
+func TestAClampsOwnSupplyPinIsNotALoad(t *testing.T) {
+	d := pinDesign(map[string][]supplyPin{
+		"J1": twoPin(), "U15": {{"VDD", "5", pwrIn}}, "FB1": twoPin(),
+	}, map[string][]string{"J1_VBUS": {"J1.1", "FB1.1"}, "VBUS": {"FB1.2", "U15.5"}})
+	for _, c := range d.Components {
+		if c.RefDes == "U15" {
+			c.Attributes = map[string]string{"Value": "LXES1TBCC2-004"}
+		}
+	}
+	classify.Stamp(d)
+	if got := verdictOn(t, inputProtection, d, "J1_VBUS"); got != string(check.Pass) {
+		t.Errorf("input-protection on J1_VBUS = %q, want pass", got)
+	}
+	if got := verdictOn(t, reverseBlockingAbsent, d, "J1_VBUS"); got != "" {
+		t.Errorf("reverse-blocking-absent on J1_VBUS = %q, want no verdict since no load remains", got)
 	}
 }

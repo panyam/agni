@@ -28,6 +28,7 @@ const (
 	ClassLED        = string(model.ClassLED)
 	ClassTVS        = string(model.ClassTVS)
 	ClassFuse       = string(model.ClassFuse)
+	ClassNetTie     = string(model.ClassNetTie)
 	ClassConnector  = string(model.ClassConnector)
 	ClassTestPoint  = string(model.ClassTestPoint)
 	ClassCrystal    = string(model.ClassCrystal)
@@ -171,6 +172,7 @@ func DefaultRegistry() *Registry {
 			ClassLED:        ledSymbol(),
 			ClassTVS:        tvsSymbol(),
 			ClassFuse:       fuseSymbol(),
+			ClassNetTie:     netTieSymbol(),
 			ClassConnector:  connectorSymbol(),
 			ClassTestPoint:  testPointSymbol(),
 			ClassCrystal:    crystalSymbol(),
@@ -393,6 +395,13 @@ func glyph(class string, shapes []*geom.Shape, pins []*geom.PinPoint) *geom.Symb
 func resistorSymbol() *geom.SymbolDef {
 	return glyph(ClassResistor, []*geom.Shape{
 		poly(-terminalX, 0, -20, 0, -15, 10, -5, -10, 5, 10, 15, -10, 20, 0, terminalX, 0),
+	}, []*geom.PinPoint{pin("1", -terminalX, 0), pin("2", terminalX, 0)})
+}
+
+// netTieSymbol is a straight line between its terminals, since a net tie is a short.
+func netTieSymbol() *geom.SymbolDef {
+	return glyph(ClassNetTie, []*geom.Shape{
+		poly(-terminalX, 0, terminalX, 0),
 	}, []*geom.PinPoint{pin("1", -terminalX, 0), pin("2", terminalX, 0)})
 }
 

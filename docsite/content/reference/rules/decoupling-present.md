@@ -71,6 +71,10 @@ whose legs run to a supply and to ground beside a power_in pin, is a measurement
 VBUS-detect input), not a supply. A supply fed through a single series resistor or a 0 Ohm link
 still wants its decoupling, so a divider needs both legs.
 
+A **connector's own pin** does not make a net a subject. A receptacle's symbol types VBUS power_in, and
+a net whose only supply pin is on a connector is where power leaves the board, so it has no load to
+decouple here (agni issue 1254).
+
 Both are proxies for a question this rule cannot ask yet. "The switching node of a buck converter"
 is a topology question, an inductor between a switch node and an output with the capacitor beyond
 it, which is the topology pattern work in agni issue 374. Expect these class checks to be replaced

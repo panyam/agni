@@ -2,11 +2,11 @@ name: SPI_NOR
 host: {attr: interface, value: SPI_NOR}
 signals:
   - {name: CS,   suffix: _CS,   pullup: true, anchor: true}
-  - {name: SCLK, suffix: _SCLK}
-  - {name: IO0,  suffix: _IO0}
-  - {name: IO1,  suffix: _IO1}
-  - {name: IO2,  suffix: _IO2}
-  - {name: IO3,  suffix: _IO3}
+  - {name: SCLK, regex: '_(SCLK|SCK)$'}
+  - {name: IO0,  regex: '_(IO0|SIO0|COPI|MOSI|DI)$'}
+  - {name: IO1,  regex: '_(IO1|SIO1|CIPO|MISO|DO)$'}
+  - {name: IO2,  regex: '_(IO2|SIO2)$'}
+  - {name: IO3,  regex: '_(IO3|SIO3)$'}
 requirements:
   - {type: signal-missing}
   - {type: host-incomplete}

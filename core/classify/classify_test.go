@@ -114,6 +114,17 @@ func equal(a, b []string) bool {
 // identical downstream. Found reconciling per-part coverage against a second tool on a real board,
 // where the whole residual in one direction was 15 thermistors, present in the netlist and invisible
 // (agni issue 627).
+// A net tie's value names a rail, so its ref-des prefix is what identifies it (agni issue 1253), and
+// a clamp array sold as an IC is identified by its part family (agni issue 1257).
+func TestClassifyNetTieAndClampFamily(t *testing.T) {
+	if got := Classify(&ir.Component{RefDes: "NT2"}, &ir.PartType{Name: "NetTie_2"}); got != ClassNetTie {
+		t.Errorf("NT2 = %s, want net_tie", got)
+	}
+	if got := Classify(&ir.Component{RefDes: "U15", Attributes: map[string]string{"Value": "TVS"}}, &ir.PartType{Name: "LXES1TBCC2-004"}); got != ClassTVS {
+		t.Errorf("U15 = %s, want tvs", got)
+	}
+}
+
 func TestClassifyThermistor(t *testing.T) {
 	for _, tc := range []struct {
 		name string

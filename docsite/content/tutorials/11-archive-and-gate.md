@@ -88,8 +88,8 @@ error-severity finding cannot merge. On this board that is the twenty-eight `i2c
 
 ## The gate reads severity, not verdict
 
-Rev B fitted two of the missing pull-ups and fixed the naming, and its review went from 8 failures to
-7. Run the gate on it:
+Rev B fitted two of the missing pull-ups and fixed the naming, and its review went from 7 failures to
+6. Run the gate on it:
 
 {{ agniRun "content/tutorials/runs/11-gate-rev-b.yaml" }}
 

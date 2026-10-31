@@ -1,7 +1,7 @@
 #agni-run 2c7aea2221190b67
 #agni-step
 comparing:
-  ours:   agni <version> — 88 finding(s) over mount://jetson/designs/jetson
+  ours:   agni <version> — 87 finding(s) over mount://jetson/designs/jetson
   theirs: kicad-cli pcb drc 10.0.6 — 957 finding(s) over designs/jetson   [no coverage axis: its silence is not a pass]
 
 entities flagged:

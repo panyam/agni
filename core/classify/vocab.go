@@ -28,14 +28,14 @@ type ClassVocab struct {
 
 // builtinFamilies are the part-number families that are ESD or transient-voltage suppressors whatever
 // their ref-des says. Vendors sell TVS arrays as ICs (TI's TPD4E05U06 and TPD2E2U06, Nexperia's PESD
-// and PRTR, ST's ESDA and USBLC, Semtech's RClamp, Vishay's VBUS54) and label them U, so neither the
+// and PRTR, ST's ESDA and USBLC, Semtech's RClamp, Vishay's VBUS54, Murata's LXES) and label them U, so neither the
 // ref-des prefix nor a "tvs" word reaches them (agni 934, 1257). A family matches at the START of a
 // token of the part's text, which includes its MPN property.
 //
 // Only a family match promotes an IC. The bare words "tvs" and "esd" keep refining a diode alone,
 // because an IC's free-text description mentioning "ESD protection" says nothing about what it is.
 var builtinFamilies = map[ComponentClass][]string{
-	ClassTVS: {`^tpd\d+e`, `^pesd`, `^esda`, `^esd\d`, `^usblc`, `^rclamp`, `^prtr`, `^sp05`, `^sm712`, `^smaj`, `^smbj`, `^smcj`, `^p6ke`, `^ptvs`, `^vbus54`},
+	ClassTVS: {`^tpd\d+e`, `^pesd`, `^esda`, `^esd\d`, `^usblc`, `^rclamp`, `^prtr`, `^sp05`, `^sm712`, `^smaj`, `^smbj`, `^smcj`, `^p6ke`, `^ptvs`, `^vbus54`, `^lxes`},
 }
 
 // DefaultClassVocab is the built-in classification lexicon, the tokenClasses map inverted to class ->

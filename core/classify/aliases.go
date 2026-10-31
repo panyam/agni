@@ -23,6 +23,7 @@ const (
 	ClassTVS                  = model.ClassTVS
 	ClassZener                = model.ClassZener
 	ClassFuse                 = model.ClassFuse
+	ClassNetTie               = model.ClassNetTie
 	ClassConnector            = model.ClassConnector
 	ClassTestConnector        = model.ClassTestConnector
 	ClassTestPoint            = model.ClassTestPoint

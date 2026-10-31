@@ -3,13 +3,13 @@
 
 Design: `designs/jetson`
 
-**14 of 15 covered**, **13 answered** — 5 pass, 8 fail, 1 n/a; 1 not-automated
+**14 of 15 covered**, **13 answered** — 6 pass, 7 fail, 1 n/a; 1 not-automated
 
 | Area | Covered | Pass | Fail | Provisional | Needs-intent | Needs-data | Inconclusive | Computed-n/a | N/A | Not-automated |
 |------|---------|------|------|-------------|--------------|------------|--------------|--------------|-----|---------------|
-| Power | 5/5 | 1 | 4 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
+| Power | 5/5 | 2 | 3 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Interfaces | 4/4 | 1 | 2 | 0 | 0 | 0 | 0 | 0 | 1 | 0 |
 | House style | 2/3 | 0 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 1 |
 | Board | 1/1 | 1 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
 | Architecture | 2/2 | 2 | 0 | 0 | 0 | 0 | 0 | 0 | 0 | 0 |
-| **Total** | 14/15 | 5 | 8 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
+| **Total** | 14/15 | 6 | 7 | 0 | 0 | 0 | 0 | 0 | 1 | 1 |
