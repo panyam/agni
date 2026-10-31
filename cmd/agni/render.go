@@ -78,7 +78,7 @@ func renderSource(path string) (string, string) {
 // companion), while auto-layout needs an IR, which a bare .eds does not carry. The errors say which
 // to use.
 func renderCmd() *cobra.Command {
-	var layout, format, sheetSel, out, classFile, symbols, reportFormat string
+	var layout, format, sheetSel, out, classFile, symbols, reportFormat, conventions string
 	var compare, stats, pinDots, report bool
 	var classFlags, highlightFlags []string
 	cmd := &cobra.Command{
@@ -94,6 +94,11 @@ func renderCmd() *cobra.Command {
 			// The path as NAMED stays the analysis source, because readDesign resolves it itself and
 			// a design's entry is what analysis reads. `file` is what gets DRAWN, which is a
 			// different question and the one the descriptor's geometry companion answers.
+			reset, err := withConventions(conventions)
+			if err != nil {
+				return err
+			}
+			defer reset()
 			named := args[0]
 			file, note := renderSource(named)
 			if note != "" {
@@ -190,6 +195,7 @@ func renderCmd() *cobra.Command {
 	cmd.Flags().StringVar(&layout, "layout", faithfulLayout,
 		"position source: faithful | "+strings.Join(layoutNames(), " | "))
 	cmd.Flags().StringVar(&format, "format", "svg", "output format: svg | pack (png: not yet)")
+	conventionsFlag(cmd, &conventions)
 	cmd.Flags().StringVar(&sheetSel, "sheet", "0", "sheet to render: index, id, or name")
 	cmd.Flags().BoolVar(&compare, "compare", false, "print a layout-quality table across all auto-layouts, then exit")
 	cmd.Flags().BoolVar(&stats, "stats", false, "print geometry counts instead of rendering")

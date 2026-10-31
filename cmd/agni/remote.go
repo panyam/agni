@@ -125,6 +125,10 @@ func ingest(ctx context.Context, api snapshotAPI, def *webapi.Snapshot) (string,
 		def = proto.Clone(def).(*webapi.Snapshot)
 		def.FlattenHierarchy = true
 	}
+	if readOverlay != nil && def.GetOverlay() == nil {
+		def = proto.Clone(def).(*webapi.Snapshot)
+		def.Overlay = readOverlay
+	}
 	snap, err := api.Ingest(ctx, &webapi.IngestRequest{Snapshot: def})
 	if err != nil {
 		return "", func() {}, err

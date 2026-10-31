@@ -13,10 +13,12 @@ import (
 	"github.com/panyam/agni/artifact"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
+	"github.com/panyam/agni/core/check/naming"
 	"github.com/panyam/agni/internal/projects"
 	"github.com/panyam/agni/mounts"
 	"github.com/panyam/agni/readers/kicad"
 	"github.com/panyam/agni/service"
+	"github.com/spf13/cobra"
 )
 
 // readAsNamed is the --as-named flag's binding, set once at startup and never mutated per run, like
@@ -271,4 +273,29 @@ func noteNoBoard(w io.Writer, named string, skipped []*webapi.SkippedRule) {
 	fmt.Fprintf(w, "note: no board was read for %s, so %d board-tier rule(s) did not run: %s. "+
 		"If this revision has a board, declare it under its entry's revision in design.yaml (or pass --board-path).\n",
 		path.Base(named), len(rules), strings.Join(rules, ", "))
+}
+
+// readOverlay carries the --conventions of a command no service mediates (stats, diff, render) to
+// its reads, in the three places they compose config: designOverlay, renderLoader through it, and
+// ingest. It is set for one command by withConventions and nil otherwise, so a command that sends its
+// own overlay on a request is unaffected.
+var readOverlay *webapi.OverlayConfig
+
+// withConventions reads a --conventions file for the running command and returns what clears it.
+// An empty path changes nothing. The convention rides as a value, as it does on check (C22).
+func withConventions(path string) (func(), error) {
+	if path == "" {
+		return func() {}, nil
+	}
+	cfg, err := naming.Load(path)
+	if err != nil {
+		return nil, err
+	}
+	readOverlay = &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: cfg}}
+	return func() { readOverlay = nil }, nil
+}
+
+// conventionsFlag declares --conventions on a command that reads a design through readDesign.
+func conventionsFlag(cmd *cobra.Command, path *string) {
+	cmd.Flags().StringVar(path, "conventions", "", "read the design under this naming-convention config (YAML) as check does, for a convention not yet in the project")
 }

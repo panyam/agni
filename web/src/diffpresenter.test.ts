@@ -3,6 +3,8 @@ import { artifactUri, uriPath } from "@agni/web-shared/uri.js";
 import { DiffPresenter, type DiffRenderView, type DiffSideView, type DiffState } from "./diffpresenter.js";
 import { DIFF_COLORS } from "./diff.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
+import { create } from "@bufbuild/protobuf";
+import { OverlayConfigSchema, type OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
 
 // snapPath is the design path a fake snapshot name carries.
 function snapPath(snapshot: string): string {
@@ -11,7 +13,7 @@ function snapPath(snapshot: string): string {
 
 // Fakes mirror the viewer.test.ts harness, with plain stubs behind the typed clients, a
 // recording view per side, and the onState pushes captured for assertion.
-function harness(over: { diffDesigns?: ReturnType<typeof vi.fn> } = {}) {
+function harness(over: { diffDesigns?: ReturnType<typeof vi.fn>; overlay?: OverlayConfig } = {}) {
   const diffDesigns =
     over.diffDesigns ??
     vi.fn(async (_req: object) => ({
@@ -70,6 +72,7 @@ function harness(over: { diffDesigns?: ReturnType<typeof vi.fn> } = {}) {
     view,
     (s) => states.push(s),
     fakeSnapshots(),
+    () => over.overlay,
   );
   const A = { mount: "m", path: "a.edn" };
   const B = { mount: "m", path: "b.edn" };
@@ -147,6 +150,20 @@ describe("DiffPresenter.open", () => {
     expect(h.highlightSheet).not.toHaveBeenCalled();
     expect(h.a.overlay).toHaveBeenCalledWith("");
     expect(last(h.states).legend).toEqual([]);
+  });
+});
+
+describe("DiffPresenter under an applied convention", () => {
+  it("asks the diff under the page's convention and draws each sheet under none", async () => {
+    const overlay = create(OverlayConfigSchema, { config: { conventions: { name: "draft" } } });
+    const h = harness({ overlay });
+    await h.presenter.open(h.A, h.B);
+    expect(h.diffDesigns).toHaveBeenCalledWith({
+      aSnapshot: snapName(artifactUri("m", "a.edn"), overlay),
+      bSnapshot: snapName(artifactUri("m", "b.edn"), overlay),
+    });
+    expect(h.getSheet.mock.calls.length).toBeGreaterThan(0);
+    expect(h.getSheet.mock.calls.some(([r]) => r.snapshot.includes("@draft"))).toBe(false);
   });
 });
 

@@ -253,7 +253,7 @@ class AppRoot extends BaseComponent {
       diffPanel.view.setState(s);
       diffChanges.view.setState(s);
       tablesPresenter.setCompareOpen(s.active && s.error === "");
-    });
+    }, snapshots(), () => presenter.overlayConfig());
 
     // The Tables panel (agni issues 898 and 956) shows an answer the page already holds as Tabulate's
     // tables and saves them as csv through Encode. Its answers come from the presenters that hold
@@ -283,8 +283,8 @@ class AppRoot extends BaseComponent {
           const stem = `${sideLabel(pair.a).replace(/\.[^.]+$/, "")}-vs-${sideLabel(pair.b).replace(/\.[^.]+$/, "")}`;
           if (source === "compare") {
             const resp = await diffClient().diffDesigns({
-              aSnapshot: await snapshots().of(artifactUri(pair.a.mount, pair.a.path)),
-              bSnapshot: await snapshots().of(artifactUri(pair.b.mount, pair.b.path)),
+              aSnapshot: await snapshots().of(artifactUri(pair.a.mount, pair.a.path), presenter.overlayConfig()),
+              bSnapshot: await snapshots().of(artifactUri(pair.b.mount, pair.b.path), presenter.overlayConfig()),
               nearRenames: opts.nearRenames ? {} : undefined,
               includeEqual: opts.equal,
             });
@@ -557,7 +557,11 @@ class AppRoot extends BaseComponent {
     const lexiconPresenter = new LexiconPresenter(lexiconClient(), lexicon.view, {
       snapshot: () => presenter.checkedSnapshot(),
       download: saveFile,
-      apply: (convention) => presenter.applyConvention(convention),
+      apply: async (convention) => {
+        await presenter.applyConvention(convention);
+        const pair = diffPresenter.sides();
+        if (pair) await diffPresenter.open(pair.a, pair.b); // a comparison open now reads under it too
+      },
     });
     // The project bar (agni issue 175) names the project whose config produced what is on screen, and
     // offers an opt-out that re-runs the design under the built-in catalog so the difference shows.

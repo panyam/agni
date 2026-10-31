@@ -487,6 +487,7 @@ Draw a design's schematic or board view.
 |---|---|
 | `--layout <name>` | `faithful` (default, the design's own geometry) or an auto-layout (`force`, `grid`, `layered`, `orthogonal`, `stress`) computed from the netlist |
 | `--format <fmt>` | `svg` (default) or `pack` (for the WebGL viewer) |
+| `--conventions <file>` | read the design under a naming convention not yet in its project, as `check` does. `stats` and `diff` take it too, and `diff` reads both sides under it |
 | `-o <file>` | output path |
 
 ### `open <design>`

@@ -296,7 +296,11 @@ func designOverlay(ctx context.Context, path string) (service.Overlay, error) {
 	if err != nil {
 		return service.Overlay{}, err
 	}
-	ov, err := cliProjects().Overlay(ctx, u, &webapi.OverlayConfig{}, "")
+	cfg := readOverlay
+	if cfg == nil {
+		cfg = &webapi.OverlayConfig{}
+	}
+	ov, err := cliProjects().Overlay(ctx, u, cfg, "")
 	if err != nil {
 		return service.Overlay{}, err
 	}
@@ -357,13 +361,18 @@ func readModelWithParams(path, paramsDir string) (check.Model, error) {
 }
 
 func statsCmd() *cobra.Command {
-	var format string
+	var format, conventions string
 	var maskPaths, nets, refs []string
 	c := &cobra.Command{
 		Use:   "stats <file>",
 		Short: "Print component/section/net counts for one design",
 		Args:  cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
+			reset, err := withConventions(conventions)
+			if err != nil {
+				return err
+			}
+			defer reset()
 			switch format {
 			case "json":
 				return statsJSON(cmd, args[0], maskPaths, nets, refs)
@@ -427,6 +436,7 @@ func statsCmd() *cobra.Command {
 		},
 	}
 	c.Flags().StringVar(&format, "format", "text", "text (the summary above) or json (the GetDesignResponse the GetDesign rpc returns)")
+	conventionsFlag(c, &conventions)
 	c.Flags().StringSliceVar(&maskPaths, "mask", nil, "with --format json, the read_mask: which fields to carry, over GetDesignResponse. `design` is the whole IR, `design.nets` or `design.components.mpn` parts of it, `*` everything. Repeatable or comma-separated; unset is the summary alone")
 	c.Flags().StringArrayVar(&nets, "net", nil, "with --format json and a mask selecting design, keep only this net in design.nets (repeatable)")
 	c.Flags().StringArrayVar(&refs, "ref", nil, "with --format json and a mask selecting design, keep only this component in design.components (repeatable)")
@@ -1284,7 +1294,7 @@ func diffCmd() *cobra.Command {
 	var format string
 	var orderBy []string
 	var renameApprox, includeEqual bool
-	var serverVal string
+	var serverVal, conventions string
 	var srvSpec serverSpec
 	c := &cobra.Command{
 		Use:   "diff <old> <new>",
@@ -1297,6 +1307,11 @@ func diffCmd() *cobra.Command {
 			if srvSpec, err = resolveServer(serverVal); err != nil {
 				return err
 			}
+			reset, err := withConventions(conventions)
+			if err != nil {
+				return err
+			}
+			defer reset()
 			if err := runDiff(cmd, args[0], args[1], format, orderBy, renameApprox, includeEqual); err != nil {
 				return err
 			}
@@ -1324,6 +1339,7 @@ func diffCmd() *cobra.Command {
 		"also report the nets that did not change: as kind equal in --format json, as net-equal rows in csv, and as a count in text. Off by default")
 	c.Flags().BoolVar(&renameApprox, "rename-approx", false,
 		"also pair a net that was renamed AND changed slightly, reported as renamed-approx with the evidence behind each pairing. Off by default: this ASSIGNS a best match among candidates rather than recovering a fact, so a gate reading the output should opt in")
+	conventionsFlag(c, &conventions)
 	serverFlag(c, &serverVal)
 	withSelfServer(c, &srvSpec)
 	return c
