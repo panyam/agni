@@ -73,6 +73,11 @@ func TestRemoteAnswersAsTheLocalCommandDoes(t *testing.T) {
 		{"trace json", traceCmd, "/TraceDesign", []string{design, "--from", "J1.1", "--to", "U1.1", "--format", "json"}},
 		{"review markdown", reviewCmd, "/CreateReview", []string{design}},
 		{"review json", reviewCmd, "/CreateReview", []string{design, "--format", "json"}},
+		{"lexicon text", lexiconCmd, "/GetLexicon", []string{design}},
+		{"lexicon yaml", lexiconCmd, "/GetLexicon", []string{design, "--format", "yaml"}},
+		{"lexicon net", lexiconCmd, "/ExplainNet", []string{design, "--net", "PMIC_EN"}},
+		{"lexicon try", lexiconCmd, "/CompareLexicons", []string{design, "--try", "testdata/lexicon/no-control.yaml"}},
+		{"lexicon try json", lexiconCmd, "/CompareLexicons", []string{design, "--try", "testdata/lexicon/no-control.yaml", "--format", "json"}},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {

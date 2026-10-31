@@ -1,4 +1,4 @@
-#agni-run e01bbf83f8a53bfc
+#agni-run 28bbcf755d5a9dd5
 test-point-coverage  1 fail, 2 pass
     fail  GND   rail carries no test point; bring-up and factory test cannot probe it
     pass  VIN   passes because TP1.1 is component.class == "test_point"

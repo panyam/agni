@@ -230,8 +230,27 @@ as a house `esd_array` refining `diode`, because that opens a vocabulary the eng
 DECISIONS.md records what would change that. The class names are the ones `component.class`
 answers with, listed in the [relation catalog](../../reference/relations/).
 
+## See how your names were read
+
+`agni lexicon <design>` lists the vocabulary a run reads names with, every pattern under its
+vocabulary with where it came from: built in, or the one convention that won, from the server, the
+project, the design or the request. A built-in a `replace: true` switched off stays in the list,
+marked, so you can see it went.
+
+`--net` says why one net has its roles, and `--try` reads the design again with a different
+conventions file and says what moves. The design below runs its sensor from its own regulator, whose
+output is `SENSOR_3V3`, and its `design.yaml` adds the rail pattern that name needs. Tried without it,
+the sensor supply stops being a rail, and the I2C pull-ups that go to it stop counting:
+
+{{ agniRun "content/guide/runs/lexicon.yaml" }}
+
+Once the changes are the ones you meant, carry the file in the project's `conventions:` section.
+`agni lexicon <design> --format yaml` writes the whole effective vocabulary as a conventions file,
+every list stated in full, which is a starting point when you would rather edit the complete list
+than add to it.
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/) shows that conventions findings read like any
   other, and that `--fail-on` can gate on them.
-- [CLI reference](../cli-reference/) documents the `--conventions` flag.
+- [CLI reference](../cli-reference/) documents the `--conventions` flag and `agni lexicon`.

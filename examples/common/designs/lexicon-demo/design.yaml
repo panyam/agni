@@ -1,0 +1,14 @@
+# A design whose sensor runs from its own regulator, named function-first as SENSOR_3V3. The built-in
+# rail vocabulary is start-anchored on VCC, VDD, +3V3 and the like, so it does not read that name as a
+# rail, and the I2C pull-ups that go to it would read as going nowhere. The convention below teaches
+# the read this design's spelling. examples/lexicon shows where each pattern came from and what
+# taking this one away would change.
+name: lexicon-demo
+title: Sensor on a function-first rail
+entry: lexicon-demo.edn
+conventions:
+  name: sensor-house
+  lexicon:
+    net:
+      rail:
+        patterns: ["_[0-9]+V[0-9]$"]

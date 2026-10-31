@@ -1,0 +1,8 @@
+# A candidate for agni lexicon --try on the tutorial gateway that keeps the project's house rule and
+# states no lexicon, so the design is read with the built-in vocabularies alone.
+name: gateway
+rules:
+  - name: signal-net-naming
+    severity: warning
+    why: "house style names a clock net CLK_*, so XTAL_IN / XTAL_OUT are off-convention"
+    allow: ["^(PMIC|CAN[0-9]+|I2C|MCU|CLK|GND)"]

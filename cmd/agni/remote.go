@@ -341,3 +341,23 @@ func (r remoteReview) CreateReview(ctx context.Context, req *webapi.CreateReview
 func (r remoteReview) RenderReviewReport(ctx context.Context, req *webapi.RenderReviewReportRequest) (*webapi.RenderReviewReportResponse, error) {
 	return unary(ctx, r.c.RenderReviewReport, req)
 }
+
+type remoteLexicon struct {
+	c webapiconnect.LexiconServiceClient
+}
+
+func (r *remoteServer) lexicon() lexiconAPI {
+	return remoteLexicon{webapiconnect.NewLexiconServiceClient(r.http, r.url)}
+}
+
+func (r remoteLexicon) GetLexicon(ctx context.Context, req *webapi.GetLexiconRequest) (*webapi.GetLexiconResponse, error) {
+	return unary(ctx, r.c.GetLexicon, req)
+}
+
+func (r remoteLexicon) ExplainNet(ctx context.Context, req *webapi.ExplainNetRequest) (*webapi.ExplainNetResponse, error) {
+	return unary(ctx, r.c.ExplainNet, req)
+}
+
+func (r remoteLexicon) CompareLexicons(ctx context.Context, req *webapi.CompareLexiconsRequest) (*webapi.CompareLexiconsResponse, error) {
+	return unary(ctx, r.c.CompareLexicons, req)
+}

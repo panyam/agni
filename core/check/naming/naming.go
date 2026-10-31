@@ -110,8 +110,16 @@ func ApplyLexicon(cfg *configpb.NamingConvention) error {
 	if lex.Class != nil {
 		check.SetActiveClassVocab(lex.Class)
 	}
+	activeConvention = cfg
 	return nil
 }
+
+// activeConvention is the convention ApplyLexicon installed, nil while the built-ins are in effect.
+var activeConvention *configpb.NamingConvention
+
+// ActiveConvention returns the convention ApplyLexicon installed as the process-level vocabulary, nil
+// when none was, so a reader of a run's lexicon can attribute its patterns to the server's default.
+func ActiveConvention() *configpb.NamingConvention { return activeConvention }
 
 // Source compiles the config into a named RuleSource. Every regex is validated here (an
 // error, not the bind-time panic Spec.Rule reserves for programmer mistakes) because

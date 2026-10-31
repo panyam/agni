@@ -57,6 +57,11 @@ type Overlay struct {
 	// because every read and every cache key already goes through ReadOptions and Identity. Set it
 	// with WithFlattenHierarchy, which folds it into the identity.
 	FlattenHierarchy bool
+	// Convention is the convention whose lexicon this overlay's Lexicon was built from, nil when the
+	// read uses the built-ins or the server's startup default, and ConventionSource says which tier it
+	// came from. They let a reader of the lexicon tell a built-in pattern from a project's (agni 1266).
+	Convention       *configpb.NamingConvention
+	ConventionSource webapi.LexiconSource
 	// conventionName is the source name of the convention THIS overlay carries, from a project or the
 	// deployment default. A request-supplied convention replaces it by name (WS3-124).
 	conventionName string
@@ -373,6 +378,14 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		o.Lexicon = projectOv.Lexicon
 		o.Sources = append(o.Sources, projectOv.Sources...)
 		o.conventionName = conv.GetName()
+		if o.Lexicon != nil {
+			o.Convention, o.ConventionSource = conv, webapi.LexiconSource_LEXICON_SOURCE_PROJECT
+			// The design's own convention replaces its project's in mergeConfig, so a convention on the
+			// design's descriptor is the design's.
+			if d.GetConfig().GetConventions() != nil {
+				o.ConventionSource = webapi.LexiconSource_LEXICON_SOURCE_DESIGN
+			}
+		}
 	}
 	o.baseConvention = baseConvention
 	return overlayWithRequest(ctx, resolver, req, o, baseConvention, id)
@@ -508,6 +521,7 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	out := base
 	if reqOv.Lexicon != nil {
 		out.Lexicon = reqOv.Lexicon
+		out.Convention, out.ConventionSource = reqCfg.GetConventions(), webapi.LexiconSource_LEXICON_SOURCE_REQUEST
 	}
 	// Replacement is by source NAME. Keeping both would run two vocabularies at once, and when they
 	// are the same file (--conventions naming the one the project already declares) it would be a

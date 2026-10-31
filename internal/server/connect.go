@@ -540,3 +540,36 @@ func (a *ViewerRoom) JoinViewerRoom(ctx context.Context, req *connect.Request[we
 	}
 	return connect.NewResponse(resp), nil
 }
+
+// Lexicon adapts service.LexiconService to the generated Connect handler interface.
+type Lexicon struct {
+	webapiconnect.UnimplementedLexiconServiceHandler
+	svc *service.LexiconService
+}
+
+// NewLexicon wraps svc for Connect.
+func NewLexicon(svc *service.LexiconService) *Lexicon { return &Lexicon{svc: svc} }
+
+func (a *Lexicon) GetLexicon(ctx context.Context, req *connect.Request[webapi.GetLexiconRequest]) (*connect.Response[webapi.GetLexiconResponse], error) {
+	resp, err := a.svc.GetLexicon(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Lexicon) ExplainNet(ctx context.Context, req *connect.Request[webapi.ExplainNetRequest]) (*connect.Response[webapi.ExplainNetResponse], error) {
+	resp, err := a.svc.ExplainNet(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
+func (a *Lexicon) CompareLexicons(ctx context.Context, req *connect.Request[webapi.CompareLexiconsRequest]) (*connect.Response[webapi.CompareLexiconsResponse], error) {
+	resp, err := a.svc.CompareLexicons(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
