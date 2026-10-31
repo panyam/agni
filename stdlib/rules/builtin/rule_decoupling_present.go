@@ -64,10 +64,11 @@ func notARail(m check.Model, n *ir.Net) string {
 }
 
 // decouplingPresentVerdicts decides every net that feeds a supply pin AND is a plausible supply rail,
-// and that set is the considered set. Four kinds of net get no verdict, because none is a subject of
+// and that set is the considered set. Five kinds of net get no verdict, because none is a subject of
 // a decoupling rule:
 //
-//   - A net with no power-input pin on it decouples nothing, so it is not a rail.
+//   - A net with no power-input pin on it decouples nothing, so it is not a rail. A connector's own
+//     pin does not count, so a net feeding only a receptacle is an outlet (agni issue 1254).
 //   - A GROUND net is the reference the decoupling is measured against. A pass on it would claim
 //     ground is adequately decoupled, which this rule cannot support.
 //   - A net driving a transistor's GATE is a control node (agni issue 382).
@@ -84,9 +85,10 @@ func notARail(m check.Model, n *ir.Net) string {
 func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
-		// A supply pin on a part marked do-not-populate draws nothing on the assembled board (agni 961).
+		// A supply pin on a part marked do-not-populate draws nothing on the assembled board (agni 961),
+		// and a connector's own pin is where power leaves the board rather than a load on it (agni 1254).
 		hasPowerIn := check.Exists(n.Connections, func(c *ir.Connection) bool {
-			return !check.IsVirtualRef(c.ComponentRef) && m.IsFitted(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+			return !check.IsVirtualRef(c.ComponentRef) && m.IsFitted(c.ComponentRef) && !m.HasClass(c.ComponentRef, check.ClassConnector) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 		})
 		if !hasPowerIn || m.IsGroundNet(n) {
 			continue // not a rail feeding a supply pin, or the reference the decoupling returns to
@@ -134,7 +136,7 @@ var decouplingPresentSpec = &check.Spec{
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
-		check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "component.dnp"}}}}}},
+		check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "component.dnp"}}}, check.Cmp{L: check.Fact{Name: "component.class"}, Op: "!=", R: check.Lit{V: "connector"}}}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.rail_capacitor"}}},
 	}},
 	Message: "power rail has no decoupling capacitor",

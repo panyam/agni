@@ -10,7 +10,7 @@ import (
 // (polarity) and everything active.
 func passClass(c ComponentClass) bool {
 	switch c {
-	case ClassResistor, ClassInductor, ClassFerrite, ClassFuse:
+	case ClassResistor, ClassInductor, ClassFerrite, ClassFuse, ClassNetTie:
 		return true
 	}
 	return false

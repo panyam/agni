@@ -10,7 +10,7 @@ TAG in the part's class set, not a single most-specific class, so a part with a 
 more than once: a TVS diode answers both `component.class(D1, "tvs")` and `component.class(D1,
 "diode")`, an LED answers both `led` and `diode`, a ferrite bead answers both `ferrite` and
 `inductor`, and a thermistor answers both `thermistor` and `resistor`. The `class` string is the
-canonical lowercase name (`resistor`, `capacitor`, `crystal`, ...). An unclassified component
+canonical lowercase name (`resistor`, `capacitor`, `crystal`, `net_tie`, ...). An unclassified component
 produces no row (no class is guessed).
 
 ### For hardware engineers

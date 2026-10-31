@@ -1,6 +1,7 @@
 package profiles
 
 import (
+	"fmt"
 	"context"
 	"strings"
 	"testing"
@@ -218,8 +219,8 @@ func TestInUseAgreesWithRulesForGlobAndRegex(t *testing.T) {
 	}
 }
 
-// TestSuffixOnlyProfilesUnchanged covers the built-ins. Every built-in is suffix-only, so routing
-// the previously suffix-only rules through the matcher must leave them byte-identical.
+// TestSuffixOnlyProfilesUnchanged covers the built-ins. A built-in's suffix signals went through the
+// matcher unchanged, and SPI_NOR's regex signals have to fire the same rules.
 // spinorBroken's three findings are the ones TestCoverageBroken pins.
 func TestSuffixOnlyProfilesUnchanged(t *testing.T) {
 	m := check.NewModel(spinorBroken())
@@ -231,6 +232,36 @@ func TestSuffixOnlyProfilesUnchanged(t *testing.T) {
 		if names[want] == 0 {
 			t.Errorf("suffix-only SPI_NOR should still fire %s, got %v", want, names)
 		}
+	}
+}
+
+// A flash wired on its SPI names rather than IO0 to IO3 reports no missing signal (agni issue 1256).
+// The third spelling is the control, since SPI_DATA2 names no line the profile knows.
+func TestSPINORReadsEveryDataLineSpelling(t *testing.T) {
+	for _, tc := range []struct {
+		names   [5]string
+		missing int
+	}{
+		{[5]string{"SPI_SCK", "SPI_COPI", "SPI_CIPO", "SPI_SIO2", "SPI_SIO3"}, 0},
+		{[5]string{"SPI_SCLK", "SPI_MOSI", "SPI_MISO", "SPI_IO2", "SPI_IO3"}, 0},
+		{[5]string{"SPI_SCLK", "SPI_DI", "SPI_DO", "SPI_DATA2", "SPI_IO3"}, 1},
+	} {
+		t.Run(tc.names[1], func(t *testing.T) {
+			d := &ir.Design{Components: comps("U1", "U2", "R1"), Nets: []*ir.Net{net("SPI_CS", "U1.1", "U2.1", "R1.1"), net("+3V3", "R1.2", "U2.7")}}
+			for i, n := range tc.names {
+				a, b := fmt.Sprintf("U1.%d", i+2), fmt.Sprintf("U2.%d", i+2)
+				d.Nets = append(d.Nets, net(n, a, b))
+			}
+			got := 0
+			for _, f := range check.RunBackground(check.NewModel(d), Compile(SPINOR)) {
+				if f.Rule == "spi_nor-signal-missing" {
+					got++
+				}
+			}
+			if got != tc.missing {
+				t.Errorf("signal-missing findings = %d, want %d", got, tc.missing)
+			}
+		})
 	}
 }
 

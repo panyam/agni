@@ -24,6 +24,7 @@ var prefixClasses = map[string]ComponentClass{
 	"TVS":  ClassTVS,
 	"F":    ClassFuse,
 	"FU":   ClassFuse,
+	"NT":   ClassNetTie,
 	"J":    ClassConnector,
 	"P":    ClassConnector,
 	"CN":   ClassConnector,

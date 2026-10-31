@@ -41,12 +41,15 @@ const (
 	// for every topological question and not for anything temperature-related, the same split
 	// ClassFerrite makes against ClassInductor. Without it a thermistor emits no component.class row
 	// and drops out of every class-scoped rule; on one real board that was 15 parts (agni issue 627).
-	ClassThermistor       ComponentClass = "thermistor"
-	ClassDiode            ComponentClass = "diode"
-	ClassLED              ComponentClass = "led"
-	ClassTVS              ComponentClass = "tvs"
-	ClassZener            ComponentClass = "zener"
-	ClassFuse             ComponentClass = "fuse"
+	ClassThermistor ComponentClass = "thermistor"
+	ClassDiode      ComponentClass = "diode"
+	ClassLED        ComponentClass = "led"
+	ClassTVS        ComponentClass = "tvs"
+	ClassZener      ComponentClass = "zener"
+	ClassFuse       ComponentClass = "fuse"
+	// ClassNetTie is a deliberate short between two nets, a copper bridge or a shorted header, so one
+	// rail keeps two names in the netlist and the series walk crosses it as it crosses a resistor.
+	ClassNetTie           ComponentClass = "net_tie"
 	ClassConnector        ComponentClass = "connector"
 	ClassTestConnector    ComponentClass = "test_connector"
 	ClassTestPoint        ComponentClass = "test_point"
@@ -73,7 +76,7 @@ const (
 func ComponentClasses() []ComponentClass {
 	return []ComponentClass{
 		ClassResistor, ClassCapacitor, ClassInductor, ClassFerrite, ClassThermistor,
-		ClassDiode, ClassLED, ClassTVS, ClassZener, ClassFuse,
+		ClassDiode, ClassLED, ClassTVS, ClassZener, ClassFuse, ClassNetTie,
 		ClassConnector, ClassTestConnector, ClassTestPoint,
 		ClassClock, ClassOscillator, ClassCrystal, ClassCeramicResonator,
 		ClassIC, ClassTransistor, ClassIdealDiodeController,

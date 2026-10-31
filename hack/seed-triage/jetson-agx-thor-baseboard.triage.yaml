@@ -9,11 +9,6 @@ findings:
       why: N$54 is the module's PMIC backup-battery input through D1 and R6, which the module decouples on its own side.
       subjects:
         - net:Net-(D1-C)
-  decoupling-present:
-    - class: design-choice
-      why: N$54 is the module's PMIC backup-battery input (J1 D37, PMIC_BBATT) through D1 and R6, which the module decouples on its own side.
-      subjects:
-        - net:Net-(D1-C)
   floating-input:
     - class: design-choice
       why: Each is an equalization strap of U33, a TUSB1046 redriver, with a 1 kOhm pull-up and a 1 kOhm pull-down both marked do-not-populate, so on the assembled board the pin is left open. Its EQ and SSEQ pins are four-level strap inputs, where open selects one of the levels, so leaving both straps off is a setting. Not checked against the TUSB1046 datasheet.

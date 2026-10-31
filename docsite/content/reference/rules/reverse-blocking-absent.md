@@ -88,6 +88,8 @@ reports its path as unblocked rather than guessing which way the part faces.
 - No connector on the net, since the rule is about what enters the board.
 - No power input reachable from it. A connector's own pins are not loads, although a receptacle's
   symbol types VBUS power_in, so a source port driven by a load switch reaches none (agni issue 935).
+  A clamp array's own supply pin is not a load either, since the part guards the rail it is biased
+  from (agni issue 1257).
 - A transistor touching the path only through its gate, such as a FET sensing VBUS for presence
   detection, is not in the path and makes nothing inconclusive.
 - A transistor on the path that a seeded datasheet identifies as an ideal-diode / ORing controller
@@ -96,9 +98,14 @@ reports its path as unblocked rather than guessing which way the part faces.
 - A net the board drives itself is not-considered, since its connector is an outlet rather than a
   way power arrives (agni issue 1016). A converter's output counts, read as a switch node behind an
   inductor plus a feedback net within the walk, and so does a power-output pin on a part other than a
-  connector. A power-output pin does not count when the walk also finds the input of another part
-  that has a power output, which is a dual-role USB-C port: a load switch sources VBUS and a PD
-  controller's power path sinks it, so power can still arrive and the rule still judges the net. A
+  connector. A fixed-output buck names neither net, so one part's switch pin behind the inductor and
+  its feedback pin on the walk count as well. The walk crosses a fitted net tie, since a net tie is
+  a short (agni issue 1253). A power-output pin does not count when the walk also finds the input of
+  another part that has a power output, which is a dual-role USB-C port: a load switch sources VBUS
+  and a PD controller's power path sinks it, so power can still arrive and the rule still judges the
+  net. It counts again when the driver's own input is wired to a net those parts do not feed, which
+  is a cascade of regulators. A dual-role port whose sink reaches the driver only through a further
+  converter reads as that cascade, and a design with that shape loses this rule on the net. A
   boost converter's input reaches its switch node through the inductor too, and stays judged because
   its feedback divider sits on the output side.
 

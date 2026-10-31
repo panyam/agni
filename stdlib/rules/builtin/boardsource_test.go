@@ -63,3 +63,63 @@ func TestAConnectorOnARailTheBoardDrivesIsAnOutlet(t *testing.T) {
 		})
 	}
 }
+
+// Two shapes of a rail the board drives that BoardSource missed (agni issue 1253). A cascade of
+// regulators is not a dual-role port, and a fixed-output buck tied in through a net tie names its
+// converter only in its pin names.
+func TestARegulatorCascadeIsBoardDriven(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		nets map[string][]string
+		want check.Outcome
+	}{
+		{"the upstream regulator is fed from elsewhere", map[string][]string{
+			"5V": {"U2.4"}, "3V3": {"U2.3", "U3.1"}, "LDO_OUT": {"U3.2"},
+		}, check.NotConsidered},
+		{"the sink feeds the driver back, as a dual-role port does", map[string][]string{
+			"3V3": {"U2.3", "U3.1"}, "LDO_OUT": {"U3.2", "U2.4"},
+		}, check.Fail},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := railFromConnector(tc.nets)
+			for _, r := range []*check.Rule{reverseBlockingAbsent, inputProtection} {
+				if got := verdictOn(t, r, d, "3V3"); got != string(tc.want) {
+					t.Errorf("%s on 3V3 = %q, want %q", r.Name, got, tc.want)
+				}
+			}
+		})
+	}
+}
+
+func TestAFixedBuckBehindANetTieIsBoardDriven(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		fb   string
+		want check.Outcome
+	}{
+		{"its feedback pin sits on the output", "REG_OUT", check.NotConsidered},
+		{"another part's feedback pin is not this converter's", "", check.Fail},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			nets := map[string][]string{
+				"3V3": {"J1.1", "U1.1", "NT1.1"}, "GND": {"U1.2", "J1.2"},
+				"REG_OUT": {"NT1.2", "L1.2"}, "Net-(U2-SW1)": {"L1.1", "U2.1"},
+			}
+			if tc.fb != "" {
+				nets[tc.fb] = append(nets[tc.fb], "U2.2")
+			} else {
+				nets["REG_OUT"] = append(nets["REG_OUT"], "U3.1")
+			}
+			d := pinDesign(map[string][]supplyPin{
+				"J1": twoPin(), "U1": {{"VDD", "1", pwrIn}, {"GND", "2", pwrIn}},
+				"U2": {{"SW1", "1", pass}, {"FB1", "2", pass}}, "U3": {{"FB", "1", pass}},
+				"L1": twoPin(), "NT1": twoPin(),
+			}, nets)
+			classify.Stamp(d)
+			classify.StampNetRoles(d)
+			if got := verdictOn(t, inputProtection, d, "3V3"); got != string(tc.want) {
+				t.Errorf("input-protection on 3V3 = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}

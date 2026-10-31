@@ -206,12 +206,14 @@ const (
 // hasPowerInput reports whether a net carries a real power-input pin, meaning a load. Virtual power
 // symbols are excluded, and so is a connector's own pin: a USB-C receptacle's symbol types VBUS
 // power_in, but the connector is where power enters or leaves the board, and counting it made every
-// source port's VBUS read as a load reached through passives alone (agni issue 935).
+// source port's VBUS read as a load reached through passives alone (agni issue 935). A clamp's own
+// supply pin is excluded too, since a clamp array biased from the rail it guards is no load on that
+// rail (agni issue 1257).
 func hasPowerInput(m check.Model, n *ir.Net) bool {
 	return check.Exists(n.GetConnections(), func(c *ir.Connection) bool {
 		ref := c.GetComponentRef()
 		// A load marked do-not-populate draws nothing on the assembled board (agni issue 961).
-		return !check.IsVirtualRef(ref) && m.IsFitted(ref) && !m.HasClass(ref, check.ClassConnector) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
+		return !check.IsVirtualRef(ref) && m.IsFitted(ref) && !m.HasClass(ref, check.ClassConnector) && !m.HasClass(ref, check.ClassTVS) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 	})
 }
 
