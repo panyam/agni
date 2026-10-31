@@ -9,7 +9,7 @@ durable, put it in `CLAUDE.md`, `DECISIONS.md`, `OUT_OF_SCOPE.md` or the issue r
 is public, so nothing naming a customer, their boards or tools, or a private path belongs in this
 file. That material stays in gitignored `HANDOFF*.md` notes.
 
-Last pruned 2026-10-30, at `41da7767`.
+Last pruned 2026-10-30, at `bdf3293e`.
 
 ## At a glance
 
@@ -17,10 +17,15 @@ Two missions are active. `MISSION=mission_<slug> queue.sh` (the retriage skill's
 mission's queue, and the order lives in GitHub labels and blocked-by links rather than here. Log each
 exercise run on the mission issue.
 
-- **#1264** (see, explain and change how agni reads your board's names), 6 of 9 tickets closed, worked
-  from another session. Its next ready ticket is #1266 (`agni lexicon`), which unblocks #1267.
+- **#1264** (see, explain and change how agni reads your board's names), 8 of 9 tickets closed,
+  exercise last run at `bdf3293e` (works on the MNT Reform motherboard). Its one open ticket is #1257,
+  and only that ticket's second half remains: a protector's own supply pin counts as the load it
+  protects, so both rules still fire on HackRF One's `Net-(J1-VBUS)` and `/mcu/usb/power/VBUS`
+  (reproduced at `bdf3293e`). That half is not a vocabulary change, so the mission could close without
+  it if an audit confirms every name heuristic a built-in rule reads is in the lexicon.
 - **#1194 `mission_pin_functions`** (sign off a board's pin map against the netlist and the
-  datasheet), 7 of 7 tickets closed, exercise last run at `77c73ff7` (works on the fixtures). It waits
+  datasheet), 7 of 7 tickets closed, exercise last run at `aba62b48` (works on the fixtures), 16 PRs
+  merged since, so re-run `make exercise-pin-functions` before a team starts. It waits
   on a team's clean-room run on their own board: the three commands in `guide/trying-agni.md`'s
   "Signing off a pin map in a clean room", with the `agni trial` report sent back. Their findings
   become its next tickets. Open choice from #1198: whether `service.ShippedRules` should name the
@@ -36,8 +41,7 @@ exercise run on the mission issue.
 - This run, off-mission: ODB++ is read (#1262), and #1271 fixed what reading boards both ways found
   (KiCad placement, arcs and slots; Altium's dialect; labels; a report link reloading a slow viewer),
   with samples `v0.1.4` carrying foxBMS's Altium jobs and kicad-cli exports of every board. Waiting on
-  a team's real ODB++ export, which is the check no corpus here gives; #1272 holds the one unchecked
-  angle (KiCad footprint text).
+  a team's real ODB++ export, which is the check no corpus here gives.
 
 ## Open, ranked
 
