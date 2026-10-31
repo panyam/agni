@@ -16,7 +16,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/webapi/lexicon.proto.
  */
 export const file_agni_v1_webapi_lexicon: GenFile = /*@__PURE__*/
-  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9sZXhpY29uLnByb3RvEg5hZ25pLnYxLndlYmFwaSKUAQoMTGV4aWNvbkVudHJ5EhIKCnZvY2FidWxhcnkYASABKAkSDAoEa2luZBgCIAEoCRINCgV2YWx1ZRgDIAEoCRItCgZzb3VyY2UYBCABKA4yHS5hZ25pLnYxLndlYmFwaS5MZXhpY29uU291cmNlEhIKCmNvbnZlbnRpb24YBSABKAkSEAoIcmVwbGFjZWQYBiABKAgiJQoRR2V0TGV4aWNvblJlcXVlc3QSEAoIc25hcHNob3QYASABKAkidQoSR2V0TGV4aWNvblJlc3BvbnNlEi0KB2VudHJpZXMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5MZXhpY29uRW50cnkSMAoJZWZmZWN0aXZlGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbiIyChFFeHBsYWluTmV0UmVxdWVzdBIQCghzbmFwc2hvdBgBIAEoCRILCgNuZXQYAiABKAkidAoSRXhwbGFpbk5ldFJlc3BvbnNlEgsKA25ldBgBIAEoCRIiCgVyb2xlcxgCIAMoCzITLmFnbmkudjEuaXIuTmV0Um9sZRItCgdtYXRjaGVzGAMgAygLMhwuYWduaS52MS53ZWJhcGkuTGV4aWNvbkVudHJ5ImEKFkNvbXBhcmVMZXhpY29uc1JlcXVlc3QSEAoIc25hcHNob3QYASABKAkSNQoLY29udmVudGlvbnMYAiABKAsyIC5hZ25pLnYxLmNvbmZpZy5OYW1pbmdDb252ZW50aW9uIkAKF0NvbXBhcmVMZXhpY29uc1Jlc3BvbnNlEiUKBnRhYmxlcxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLlRhYmxlKrkBCg1MZXhpY29uU291cmNlEh4KGkxFWElDT05fU09VUkNFX1VOU1BFQ0lGSUVEEAASGgoWTEVYSUNPTl9TT1VSQ0VfQlVJTFRJThABEhkKFUxFWElDT05fU09VUkNFX1NFUlZFUhACEhoKFkxFWElDT05fU09VUkNFX1BST0pFQ1QQAxIZChVMRVhJQ09OX1NPVVJDRV9ERVNJR04QBBIaChZMRVhJQ09OX1NPVVJDRV9SRVFVRVNUEAUyngIKDkxleGljb25TZXJ2aWNlElMKCkdldExleGljb24SIS5hZ25pLnYxLndlYmFwaS5HZXRMZXhpY29uUmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkdldExleGljb25SZXNwb25zZRJTCgpFeHBsYWluTmV0EiEuYWduaS52MS53ZWJhcGkuRXhwbGFpbk5ldFJlcXVlc3QaIi5hZ25pLnYxLndlYmFwaS5FeHBsYWluTmV0UmVzcG9uc2USYgoPQ29tcGFyZUxleGljb25zEiYuYWduaS52MS53ZWJhcGkuQ29tcGFyZUxleGljb25zUmVxdWVzdBonLmFnbmkudjEud2ViYXBpLkNvbXBhcmVMZXhpY29uc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_config_naming, file_agni_v1_ir_ir, file_agni_v1_webapi_tables]);
+  fileDesc("ChxhZ25pL3YxL3dlYmFwaS9sZXhpY29uLnByb3RvEg5hZ25pLnYxLndlYmFwaSKUAQoMTGV4aWNvbkVudHJ5EhIKCnZvY2FidWxhcnkYASABKAkSDAoEa2luZBgCIAEoCRINCgV2YWx1ZRgDIAEoCRItCgZzb3VyY2UYBCABKA4yHS5hZ25pLnYxLndlYmFwaS5MZXhpY29uU291cmNlEhIKCmNvbnZlbnRpb24YBSABKAkSEAoIcmVwbGFjZWQYBiABKAgiWgoRR2V0TGV4aWNvblJlcXVlc3QSEAoIc25hcHNob3QYASABKAkSMwoJY2FuZGlkYXRlGAIgASgLMiAuYWduaS52MS5jb25maWcuTmFtaW5nQ29udmVudGlvbiKrAQoSR2V0TGV4aWNvblJlc3BvbnNlEi0KB2VudHJpZXMYASADKAsyHC5hZ25pLnYxLndlYmFwaS5MZXhpY29uRW50cnkSMAoJZWZmZWN0aXZlGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhI0Cgpjb252ZW50aW9uGAMgASgLMiAuYWduaS52MS5jb25maWcuTmFtaW5nQ29udmVudGlvbiIyChFFeHBsYWluTmV0UmVxdWVzdBIQCghzbmFwc2hvdBgBIAEoCRILCgNuZXQYAiABKAkidAoSRXhwbGFpbk5ldFJlc3BvbnNlEgsKA25ldBgBIAEoCRIiCgVyb2xlcxgCIAMoCzITLmFnbmkudjEuaXIuTmV0Um9sZRItCgdtYXRjaGVzGAMgAygLMhwuYWduaS52MS53ZWJhcGkuTGV4aWNvbkVudHJ5ImEKFkNvbXBhcmVMZXhpY29uc1JlcXVlc3QSEAoIc25hcHNob3QYASABKAkSNQoLY29udmVudGlvbnMYAiABKAsyIC5hZ25pLnYxLmNvbmZpZy5OYW1pbmdDb252ZW50aW9uIkAKF0NvbXBhcmVMZXhpY29uc1Jlc3BvbnNlEiUKBnRhYmxlcxgBIAMoCzIVLmFnbmkudjEud2ViYXBpLlRhYmxlIlAKF1JlbmRlckNvbnZlbnRpb25SZXF1ZXN0EjUKC2NvbnZlbnRpb25zGAEgASgLMiAuYWduaS52MS5jb25maWcuTmFtaW5nQ29udmVudGlvbiJTChhSZW5kZXJDb252ZW50aW9uUmVzcG9uc2USDwoHY29udGVudBgBIAEoDBIUCgxjb250ZW50X3R5cGUYAiABKAkSEAoIZmlsZW5hbWUYAyABKAkquQEKDUxleGljb25Tb3VyY2USHgoaTEVYSUNPTl9TT1VSQ0VfVU5TUEVDSUZJRUQQABIaChZMRVhJQ09OX1NPVVJDRV9CVUlMVElOEAESGQoVTEVYSUNPTl9TT1VSQ0VfU0VSVkVSEAISGgoWTEVYSUNPTl9TT1VSQ0VfUFJPSkVDVBADEhkKFUxFWElDT05fU09VUkNFX0RFU0lHThAEEhoKFkxFWElDT05fU09VUkNFX1JFUVVFU1QQBTKFAwoOTGV4aWNvblNlcnZpY2USUwoKR2V0TGV4aWNvbhIhLmFnbmkudjEud2ViYXBpLkdldExleGljb25SZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuR2V0TGV4aWNvblJlc3BvbnNlElMKCkV4cGxhaW5OZXQSIS5hZ25pLnYxLndlYmFwaS5FeHBsYWluTmV0UmVxdWVzdBoiLmFnbmkudjEud2ViYXBpLkV4cGxhaW5OZXRSZXNwb25zZRJiCg9Db21wYXJlTGV4aWNvbnMSJi5hZ25pLnYxLndlYmFwaS5Db21wYXJlTGV4aWNvbnNSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuQ29tcGFyZUxleGljb25zUmVzcG9uc2USZQoQUmVuZGVyQ29udmVudGlvbhInLmFnbmkudjEud2ViYXBpLlJlbmRlckNvbnZlbnRpb25SZXF1ZXN0GiguYWduaS52MS53ZWJhcGkuUmVuZGVyQ29udmVudGlvblJlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_config_naming, file_agni_v1_ir_ir, file_agni_v1_webapi_tables]);
 
 /**
  * LexiconEntry is one pattern, exclusion, prefix, family or switch of the effective lexicon.
@@ -85,6 +85,14 @@ export type GetLexiconRequest = Message<"agni.v1.webapi.GetLexiconRequest"> & {
    * @generated from field: string snapshot = 1;
    */
   snapshot: string;
+
+  /**
+   * candidate lists this convention in place of the snapshot's, its entries' source being REQUEST.
+   * It reads nothing of the design.
+   *
+   * @generated from field: agni.v1.config.NamingConvention candidate = 2;
+   */
+  candidate?: NamingConvention | undefined;
 };
 
 /**
@@ -112,6 +120,16 @@ export type GetLexiconResponse = Message<"agni.v1.webapi.GetLexiconResponse"> & 
    * @generated from field: agni.v1.config.NamingLexicon effective = 2;
    */
   effective?: NamingLexicon | undefined;
+
+  /**
+   * convention is the convention as written, rules included: the candidate when one was sent, else
+   * the one the snapshot was read with. Absent when the design reads the built-ins alone. It is what
+   * an editor starts from, because CompareLexicons replaces rules as well as the lexicon, so a
+   * candidate built from `effective` would stop the convention's rules running.
+   *
+   * @generated from field: agni.v1.config.NamingConvention convention = 3;
+   */
+  convention?: NamingConvention | undefined;
 };
 
 /**
@@ -229,6 +247,54 @@ export const CompareLexiconsResponseSchema: GenMessage<CompareLexiconsResponse> 
   messageDesc(file_agni_v1_webapi_lexicon, 6);
 
 /**
+ * @generated from message agni.v1.webapi.RenderConventionRequest
+ */
+export type RenderConventionRequest = Message<"agni.v1.webapi.RenderConventionRequest"> & {
+  /**
+   * @generated from field: agni.v1.config.NamingConvention conventions = 1;
+   */
+  conventions?: NamingConvention | undefined;
+};
+
+/**
+ * Describes the message agni.v1.webapi.RenderConventionRequest.
+ * Use `create(RenderConventionRequestSchema)` to create a new message.
+ */
+export const RenderConventionRequestSchema: GenMessage<RenderConventionRequest> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_lexicon, 7);
+
+/**
+ * @generated from message agni.v1.webapi.RenderConventionResponse
+ */
+export type RenderConventionResponse = Message<"agni.v1.webapi.RenderConventionResponse"> & {
+  /**
+   * @generated from field: bytes content = 1;
+   */
+  content: Uint8Array;
+
+  /**
+   * content_type is "application/yaml".
+   *
+   * @generated from field: string content_type = 2;
+   */
+  contentType: string;
+
+  /**
+   * filename is a name to save under, from the convention's name, such as "house.yaml".
+   *
+   * @generated from field: string filename = 3;
+   */
+  filename: string;
+};
+
+/**
+ * Describes the message agni.v1.webapi.RenderConventionResponse.
+ * Use `create(RenderConventionResponseSchema)` to create a new message.
+ */
+export const RenderConventionResponseSchema: GenMessage<RenderConventionResponse> = /*@__PURE__*/
+  messageDesc(file_agni_v1_webapi_lexicon, 8);
+
+/**
  * LexiconSource says where a lexicon entry came from.
  *
  * @generated from enum agni.v1.webapi.LexiconSource
@@ -288,7 +354,10 @@ export const LexiconSourceSchema: GenEnum<LexiconSource> = /*@__PURE__*/
  */
 export const LexiconService: GenService<{
   /**
-   * GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from.
+   * GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from, or
+   * of a candidate convention laid over the built-ins, so a client editing one lists what it would
+   * read with and never merges a convention itself. A pattern that will not compile is
+   * INVALID_ARGUMENT.
    *
    * @generated from rpc agni.v1.webapi.LexiconService.GetLexicon
    */
@@ -320,6 +389,17 @@ export const LexiconService: GenService<{
     methodKind: "unary";
     input: typeof CompareLexiconsRequestSchema;
     output: typeof CompareLexiconsResponseSchema;
+  },
+  /**
+   * RenderConvention writes a convention as the YAML file a project carries, which naming.Parse reads
+   * back to the same message. It asks nothing about a design, so it names no snapshot.
+   *
+   * @generated from rpc agni.v1.webapi.LexiconService.RenderConvention
+   */
+  renderConvention: {
+    methodKind: "unary";
+    input: typeof RenderConventionRequestSchema;
+    output: typeof RenderConventionResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_agni_v1_webapi_lexicon, 0);

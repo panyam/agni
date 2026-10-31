@@ -183,7 +183,10 @@ func (x *LexiconEntry) GetReplaced() bool {
 type GetLexiconRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// snapshot names the design and the config it was read with, "snapshots/{snapshot}".
-	Snapshot      string `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	Snapshot string `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
+	// candidate lists this convention in place of the snapshot's, its entries' source being REQUEST.
+	// It reads nothing of the design.
+	Candidate     *config.NamingConvention `protobuf:"bytes,2,opt,name=candidate,proto3" json:"candidate,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -225,13 +228,25 @@ func (x *GetLexiconRequest) GetSnapshot() string {
 	return ""
 }
 
+func (x *GetLexiconRequest) GetCandidate() *config.NamingConvention {
+	if x != nil {
+		return x.Candidate
+	}
+	return nil
+}
+
 type GetLexiconResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// entries are in vocabulary order (net, then pin, then class), each list's built-in entries first.
 	Entries []*LexiconEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
 	// effective is the whole lexicon as a convention would state it, every list written out with
 	// `replace: true`, so a file carrying it reads the design exactly as this run did.
-	Effective     *config.NamingLexicon `protobuf:"bytes,2,opt,name=effective,proto3" json:"effective,omitempty"`
+	Effective *config.NamingLexicon `protobuf:"bytes,2,opt,name=effective,proto3" json:"effective,omitempty"`
+	// convention is the convention as written, rules included: the candidate when one was sent, else
+	// the one the snapshot was read with. Absent when the design reads the built-ins alone. It is what
+	// an editor starts from, because CompareLexicons replaces rules as well as the lexicon, so a
+	// candidate built from `effective` would stop the convention's rules running.
+	Convention    *config.NamingConvention `protobuf:"bytes,3,opt,name=convention,proto3" json:"convention,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -276,6 +291,13 @@ func (x *GetLexiconResponse) GetEntries() []*LexiconEntry {
 func (x *GetLexiconResponse) GetEffective() *config.NamingLexicon {
 	if x != nil {
 		return x.Effective
+	}
+	return nil
+}
+
+func (x *GetLexiconResponse) GetConvention() *config.NamingConvention {
+	if x != nil {
+		return x.Convention
 	}
 	return nil
 }
@@ -501,6 +523,112 @@ func (x *CompareLexiconsResponse) GetTables() []*Table {
 	return nil
 }
 
+type RenderConventionRequest struct {
+	state         protoimpl.MessageState   `protogen:"open.v1"`
+	Conventions   *config.NamingConvention `protobuf:"bytes,1,opt,name=conventions,proto3" json:"conventions,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenderConventionRequest) Reset() {
+	*x = RenderConventionRequest{}
+	mi := &file_agni_v1_webapi_lexicon_proto_msgTypes[7]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenderConventionRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenderConventionRequest) ProtoMessage() {}
+
+func (x *RenderConventionRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_lexicon_proto_msgTypes[7]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenderConventionRequest.ProtoReflect.Descriptor instead.
+func (*RenderConventionRequest) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_lexicon_proto_rawDescGZIP(), []int{7}
+}
+
+func (x *RenderConventionRequest) GetConventions() *config.NamingConvention {
+	if x != nil {
+		return x.Conventions
+	}
+	return nil
+}
+
+type RenderConventionResponse struct {
+	state   protoimpl.MessageState `protogen:"open.v1"`
+	Content []byte                 `protobuf:"bytes,1,opt,name=content,proto3" json:"content,omitempty"`
+	// content_type is "application/yaml".
+	ContentType string `protobuf:"bytes,2,opt,name=content_type,json=contentType,proto3" json:"content_type,omitempty"`
+	// filename is a name to save under, from the convention's name, such as "house.yaml".
+	Filename      string `protobuf:"bytes,3,opt,name=filename,proto3" json:"filename,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *RenderConventionResponse) Reset() {
+	*x = RenderConventionResponse{}
+	mi := &file_agni_v1_webapi_lexicon_proto_msgTypes[8]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *RenderConventionResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*RenderConventionResponse) ProtoMessage() {}
+
+func (x *RenderConventionResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_webapi_lexicon_proto_msgTypes[8]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use RenderConventionResponse.ProtoReflect.Descriptor instead.
+func (*RenderConventionResponse) Descriptor() ([]byte, []int) {
+	return file_agni_v1_webapi_lexicon_proto_rawDescGZIP(), []int{8}
+}
+
+func (x *RenderConventionResponse) GetContent() []byte {
+	if x != nil {
+		return x.Content
+	}
+	return nil
+}
+
+func (x *RenderConventionResponse) GetContentType() string {
+	if x != nil {
+		return x.ContentType
+	}
+	return ""
+}
+
+func (x *RenderConventionResponse) GetFilename() string {
+	if x != nil {
+		return x.Filename
+	}
+	return ""
+}
+
 var File_agni_v1_webapi_lexicon_proto protoreflect.FileDescriptor
 
 const file_agni_v1_webapi_lexicon_proto_rawDesc = "" +
@@ -516,12 +644,16 @@ const file_agni_v1_webapi_lexicon_proto_rawDesc = "" +
 	"\n" +
 	"convention\x18\x05 \x01(\tR\n" +
 	"convention\x12\x1a\n" +
-	"\breplaced\x18\x06 \x01(\bR\breplaced\"/\n" +
+	"\breplaced\x18\x06 \x01(\bR\breplaced\"o\n" +
 	"\x11GetLexiconRequest\x12\x1a\n" +
-	"\bsnapshot\x18\x01 \x01(\tR\bsnapshot\"\x89\x01\n" +
+	"\bsnapshot\x18\x01 \x01(\tR\bsnapshot\x12>\n" +
+	"\tcandidate\x18\x02 \x01(\v2 .agni.v1.config.NamingConventionR\tcandidate\"\xcb\x01\n" +
 	"\x12GetLexiconResponse\x126\n" +
 	"\aentries\x18\x01 \x03(\v2\x1c.agni.v1.webapi.LexiconEntryR\aentries\x12;\n" +
-	"\teffective\x18\x02 \x01(\v2\x1d.agni.v1.config.NamingLexiconR\teffective\"A\n" +
+	"\teffective\x18\x02 \x01(\v2\x1d.agni.v1.config.NamingLexiconR\teffective\x12@\n" +
+	"\n" +
+	"convention\x18\x03 \x01(\v2 .agni.v1.config.NamingConventionR\n" +
+	"convention\"A\n" +
 	"\x11ExplainNetRequest\x12\x1a\n" +
 	"\bsnapshot\x18\x01 \x01(\tR\bsnapshot\x12\x10\n" +
 	"\x03net\x18\x02 \x01(\tR\x03net\"\x89\x01\n" +
@@ -533,20 +665,27 @@ const file_agni_v1_webapi_lexicon_proto_rawDesc = "" +
 	"\bsnapshot\x18\x01 \x01(\tR\bsnapshot\x12B\n" +
 	"\vconventions\x18\x02 \x01(\v2 .agni.v1.config.NamingConventionR\vconventions\"H\n" +
 	"\x17CompareLexiconsResponse\x12-\n" +
-	"\x06tables\x18\x01 \x03(\v2\x15.agni.v1.webapi.TableR\x06tables*\xb9\x01\n" +
+	"\x06tables\x18\x01 \x03(\v2\x15.agni.v1.webapi.TableR\x06tables\"]\n" +
+	"\x17RenderConventionRequest\x12B\n" +
+	"\vconventions\x18\x01 \x01(\v2 .agni.v1.config.NamingConventionR\vconventions\"s\n" +
+	"\x18RenderConventionResponse\x12\x18\n" +
+	"\acontent\x18\x01 \x01(\fR\acontent\x12!\n" +
+	"\fcontent_type\x18\x02 \x01(\tR\vcontentType\x12\x1a\n" +
+	"\bfilename\x18\x03 \x01(\tR\bfilename*\xb9\x01\n" +
 	"\rLexiconSource\x12\x1e\n" +
 	"\x1aLEXICON_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16LEXICON_SOURCE_BUILTIN\x10\x01\x12\x19\n" +
 	"\x15LEXICON_SOURCE_SERVER\x10\x02\x12\x1a\n" +
 	"\x16LEXICON_SOURCE_PROJECT\x10\x03\x12\x19\n" +
 	"\x15LEXICON_SOURCE_DESIGN\x10\x04\x12\x1a\n" +
-	"\x16LEXICON_SOURCE_REQUEST\x10\x052\x9e\x02\n" +
+	"\x16LEXICON_SOURCE_REQUEST\x10\x052\x85\x03\n" +
 	"\x0eLexiconService\x12S\n" +
 	"\n" +
 	"GetLexicon\x12!.agni.v1.webapi.GetLexiconRequest\x1a\".agni.v1.webapi.GetLexiconResponse\x12S\n" +
 	"\n" +
 	"ExplainNet\x12!.agni.v1.webapi.ExplainNetRequest\x1a\".agni.v1.webapi.ExplainNetResponse\x12b\n" +
-	"\x0fCompareLexicons\x12&.agni.v1.webapi.CompareLexiconsRequest\x1a'.agni.v1.webapi.CompareLexiconsResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
+	"\x0fCompareLexicons\x12&.agni.v1.webapi.CompareLexiconsRequest\x1a'.agni.v1.webapi.CompareLexiconsResponse\x12e\n" +
+	"\x10RenderConvention\x12'.agni.v1.webapi.RenderConventionRequest\x1a(.agni.v1.webapi.RenderConventionResponseB.Z,github.com/panyam/agni/gen/go/agni/v1/webapib\x06proto3"
 
 var (
 	file_agni_v1_webapi_lexicon_proto_rawDescOnce sync.Once
@@ -561,40 +700,47 @@ func file_agni_v1_webapi_lexicon_proto_rawDescGZIP() []byte {
 }
 
 var file_agni_v1_webapi_lexicon_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_agni_v1_webapi_lexicon_proto_msgTypes = make([]protoimpl.MessageInfo, 7)
+var file_agni_v1_webapi_lexicon_proto_msgTypes = make([]protoimpl.MessageInfo, 9)
 var file_agni_v1_webapi_lexicon_proto_goTypes = []any{
-	(LexiconSource)(0),              // 0: agni.v1.webapi.LexiconSource
-	(*LexiconEntry)(nil),            // 1: agni.v1.webapi.LexiconEntry
-	(*GetLexiconRequest)(nil),       // 2: agni.v1.webapi.GetLexiconRequest
-	(*GetLexiconResponse)(nil),      // 3: agni.v1.webapi.GetLexiconResponse
-	(*ExplainNetRequest)(nil),       // 4: agni.v1.webapi.ExplainNetRequest
-	(*ExplainNetResponse)(nil),      // 5: agni.v1.webapi.ExplainNetResponse
-	(*CompareLexiconsRequest)(nil),  // 6: agni.v1.webapi.CompareLexiconsRequest
-	(*CompareLexiconsResponse)(nil), // 7: agni.v1.webapi.CompareLexiconsResponse
-	(*config.NamingLexicon)(nil),    // 8: agni.v1.config.NamingLexicon
-	(*ir.NetRole)(nil),              // 9: agni.v1.ir.NetRole
-	(*config.NamingConvention)(nil), // 10: agni.v1.config.NamingConvention
-	(*Table)(nil),                   // 11: agni.v1.webapi.Table
+	(LexiconSource)(0),               // 0: agni.v1.webapi.LexiconSource
+	(*LexiconEntry)(nil),             // 1: agni.v1.webapi.LexiconEntry
+	(*GetLexiconRequest)(nil),        // 2: agni.v1.webapi.GetLexiconRequest
+	(*GetLexiconResponse)(nil),       // 3: agni.v1.webapi.GetLexiconResponse
+	(*ExplainNetRequest)(nil),        // 4: agni.v1.webapi.ExplainNetRequest
+	(*ExplainNetResponse)(nil),       // 5: agni.v1.webapi.ExplainNetResponse
+	(*CompareLexiconsRequest)(nil),   // 6: agni.v1.webapi.CompareLexiconsRequest
+	(*CompareLexiconsResponse)(nil),  // 7: agni.v1.webapi.CompareLexiconsResponse
+	(*RenderConventionRequest)(nil),  // 8: agni.v1.webapi.RenderConventionRequest
+	(*RenderConventionResponse)(nil), // 9: agni.v1.webapi.RenderConventionResponse
+	(*config.NamingConvention)(nil),  // 10: agni.v1.config.NamingConvention
+	(*config.NamingLexicon)(nil),     // 11: agni.v1.config.NamingLexicon
+	(*ir.NetRole)(nil),               // 12: agni.v1.ir.NetRole
+	(*Table)(nil),                    // 13: agni.v1.webapi.Table
 }
 var file_agni_v1_webapi_lexicon_proto_depIdxs = []int32{
 	0,  // 0: agni.v1.webapi.LexiconEntry.source:type_name -> agni.v1.webapi.LexiconSource
-	1,  // 1: agni.v1.webapi.GetLexiconResponse.entries:type_name -> agni.v1.webapi.LexiconEntry
-	8,  // 2: agni.v1.webapi.GetLexiconResponse.effective:type_name -> agni.v1.config.NamingLexicon
-	9,  // 3: agni.v1.webapi.ExplainNetResponse.roles:type_name -> agni.v1.ir.NetRole
-	1,  // 4: agni.v1.webapi.ExplainNetResponse.matches:type_name -> agni.v1.webapi.LexiconEntry
-	10, // 5: agni.v1.webapi.CompareLexiconsRequest.conventions:type_name -> agni.v1.config.NamingConvention
-	11, // 6: agni.v1.webapi.CompareLexiconsResponse.tables:type_name -> agni.v1.webapi.Table
-	2,  // 7: agni.v1.webapi.LexiconService.GetLexicon:input_type -> agni.v1.webapi.GetLexiconRequest
-	4,  // 8: agni.v1.webapi.LexiconService.ExplainNet:input_type -> agni.v1.webapi.ExplainNetRequest
-	6,  // 9: agni.v1.webapi.LexiconService.CompareLexicons:input_type -> agni.v1.webapi.CompareLexiconsRequest
-	3,  // 10: agni.v1.webapi.LexiconService.GetLexicon:output_type -> agni.v1.webapi.GetLexiconResponse
-	5,  // 11: agni.v1.webapi.LexiconService.ExplainNet:output_type -> agni.v1.webapi.ExplainNetResponse
-	7,  // 12: agni.v1.webapi.LexiconService.CompareLexicons:output_type -> agni.v1.webapi.CompareLexiconsResponse
-	10, // [10:13] is the sub-list for method output_type
-	7,  // [7:10] is the sub-list for method input_type
-	7,  // [7:7] is the sub-list for extension type_name
-	7,  // [7:7] is the sub-list for extension extendee
-	0,  // [0:7] is the sub-list for field type_name
+	10, // 1: agni.v1.webapi.GetLexiconRequest.candidate:type_name -> agni.v1.config.NamingConvention
+	1,  // 2: agni.v1.webapi.GetLexiconResponse.entries:type_name -> agni.v1.webapi.LexiconEntry
+	11, // 3: agni.v1.webapi.GetLexiconResponse.effective:type_name -> agni.v1.config.NamingLexicon
+	10, // 4: agni.v1.webapi.GetLexiconResponse.convention:type_name -> agni.v1.config.NamingConvention
+	12, // 5: agni.v1.webapi.ExplainNetResponse.roles:type_name -> agni.v1.ir.NetRole
+	1,  // 6: agni.v1.webapi.ExplainNetResponse.matches:type_name -> agni.v1.webapi.LexiconEntry
+	10, // 7: agni.v1.webapi.CompareLexiconsRequest.conventions:type_name -> agni.v1.config.NamingConvention
+	13, // 8: agni.v1.webapi.CompareLexiconsResponse.tables:type_name -> agni.v1.webapi.Table
+	10, // 9: agni.v1.webapi.RenderConventionRequest.conventions:type_name -> agni.v1.config.NamingConvention
+	2,  // 10: agni.v1.webapi.LexiconService.GetLexicon:input_type -> agni.v1.webapi.GetLexiconRequest
+	4,  // 11: agni.v1.webapi.LexiconService.ExplainNet:input_type -> agni.v1.webapi.ExplainNetRequest
+	6,  // 12: agni.v1.webapi.LexiconService.CompareLexicons:input_type -> agni.v1.webapi.CompareLexiconsRequest
+	8,  // 13: agni.v1.webapi.LexiconService.RenderConvention:input_type -> agni.v1.webapi.RenderConventionRequest
+	3,  // 14: agni.v1.webapi.LexiconService.GetLexicon:output_type -> agni.v1.webapi.GetLexiconResponse
+	5,  // 15: agni.v1.webapi.LexiconService.ExplainNet:output_type -> agni.v1.webapi.ExplainNetResponse
+	7,  // 16: agni.v1.webapi.LexiconService.CompareLexicons:output_type -> agni.v1.webapi.CompareLexiconsResponse
+	9,  // 17: agni.v1.webapi.LexiconService.RenderConvention:output_type -> agni.v1.webapi.RenderConventionResponse
+	14, // [14:18] is the sub-list for method output_type
+	10, // [10:14] is the sub-list for method input_type
+	10, // [10:10] is the sub-list for extension type_name
+	10, // [10:10] is the sub-list for extension extendee
+	0,  // [0:10] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_webapi_lexicon_proto_init() }
@@ -609,7 +755,7 @@ func file_agni_v1_webapi_lexicon_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_webapi_lexicon_proto_rawDesc), len(file_agni_v1_webapi_lexicon_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   7,
+			NumMessages:   9,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

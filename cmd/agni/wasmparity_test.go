@@ -286,6 +286,16 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 			Conventions: &configpb.NamingConvention{Name: "parity", Lexicon: &configpb.NamingLexicon{Net: &configpb.NetNameVocab{Control: &configpb.VocabPatterns{Replace: true}}}}}))
 		return msgOf(r, err)
 	})
+	ask("GetLexicon candidate", func(c parityClients) (proto.Message, error) {
+		r, err := c.lex.GetLexicon(ctx, connect.NewRequest(&webapi.GetLexiconRequest{Snapshot: snapOn(c),
+			Candidate: &configpb.NamingConvention{Name: "parity", Lexicon: &configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{"^PARITY$"}}}}}}))
+		return msgOf(r, err)
+	})
+	ask("RenderConvention", func(c parityClients) (proto.Message, error) {
+		r, err := c.lex.RenderConvention(ctx, connect.NewRequest(&webapi.RenderConventionRequest{
+			Conventions: &configpb.NamingConvention{Name: "parity", Lexicon: &configpb.NamingLexicon{Net: &configpb.NetNameVocab{Rail: &configpb.VocabPatterns{Patterns: []string{"^PARITY$"}}}}}}))
+		return msgOf(r, err)
+	})
 	if ruleFrom != "" {
 		if len(sections) == 0 {
 			t.Fatal("GetCheckReport: no findings, so two empty reports would compare equal")

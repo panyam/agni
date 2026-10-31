@@ -17,7 +17,10 @@ import "agni/v1/webapi/tables.proto";
 
 // LexiconService answers questions about the naming lexicon a snapshot was read with.
 service LexiconService {
-  // GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from.
+  // GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from, or
+  // of a candidate convention laid over the built-ins, so a client editing one lists what it would
+  // read with and never merges a convention itself. A pattern that will not compile is
+  // INVALID_ARGUMENT.
   rpc GetLexicon(GetLexiconRequest) returns (GetLexiconResponse);
   // ExplainNet returns one net's roles with their reasons, and every pattern of the effective lexicon
   // its name matches, exclusions included, so a name that missed a vocabulary shows what stopped it.
@@ -27,6 +30,9 @@ service LexiconService {
   // read with, runs the rule catalog over both, and returns the nets whose roles change and the
   // findings that appear or disappear.
   rpc CompareLexicons(CompareLexiconsRequest) returns (CompareLexiconsResponse);
+  // RenderConvention writes a convention as the YAML file a project carries, which naming.Parse reads
+  // back to the same message. It asks nothing about a design, so it names no snapshot.
+  rpc RenderConvention(RenderConventionRequest) returns (RenderConventionResponse);
 }
 
 // LexiconSource says where a lexicon entry came from.
@@ -65,6 +71,9 @@ message LexiconEntry {
 message GetLexiconRequest {
   // snapshot names the design and the config it was read with, "snapshots/{snapshot}".
   string snapshot = 1;
+  // candidate lists this convention in place of the snapshot's, its entries' source being REQUEST.
+  // It reads nothing of the design.
+  agni.v1.config.NamingConvention candidate = 2;
 }
 
 message GetLexiconResponse {
@@ -73,6 +82,11 @@ message GetLexiconResponse {
   // effective is the whole lexicon as a convention would state it, every list written out with
   // `replace: true`, so a file carrying it reads the design exactly as this run did.
   agni.v1.config.NamingLexicon effective = 2;
+  // convention is the convention as written, rules included: the candidate when one was sent, else
+  // the one the snapshot was read with. Absent when the design reads the built-ins alone. It is what
+  // an editor starts from, because CompareLexicons replaces rules as well as the lexicon, so a
+  // candidate built from `effective` would stop the convention's rules running.
+  agni.v1.config.NamingConvention convention = 3;
 }
 
 message ExplainNetRequest {
@@ -106,4 +120,16 @@ message CompareLexiconsResponse {
   // and "finding_changes" (change, rule, subject_kind, subject, message), one row per finding present
   // under one lexicon and not the other, change being "appeared" or "gone".
   repeated Table tables = 1;
+}
+
+message RenderConventionRequest {
+  agni.v1.config.NamingConvention conventions = 1;
+}
+
+message RenderConventionResponse {
+  bytes content = 1;
+  // content_type is "application/yaml".
+  string content_type = 2;
+  // filename is a name to save under, from the convention's name, such as "house.yaml".
+  string filename = 3;
 }

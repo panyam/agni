@@ -28,7 +28,7 @@ func TestC22AnalysisRequestsNameASnapshot(t *testing.T) {
 	}
 	exempt := map[string]bool{
 		"GetNamingConvention": true, "GetReviewManifest": true, "ParseQuerySet": true,
-		"GetReview": true, "ListReviews": true, "DeleteReview": true, "RenderReviewReport": true,
+		"GetReview": true, "ListReviews": true, "DeleteReview": true, "RenderReviewReport": true, "RenderConvention": true,
 	}
 	// ListRelations keeps an overlay for the vocabulary asked about before any design is read, and
 	// refuses one beside a snapshot.

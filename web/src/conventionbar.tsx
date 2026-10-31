@@ -4,6 +4,7 @@ import type { EventBus } from "@panyam/tsappkit";
 import {
   type ConventionState,
   type ConventionBarView,
+  EDITED_REF,
   activeLabel,
   conventionError,
   emptyConvention,
@@ -32,6 +33,9 @@ function ConventionBar(props: { state: () => ConventionState; onSelect: (ref: st
       >
         <option value="">{defaultLabel(props.staticHost)}</option>
         <For each={props.state().choices}>{(c) => <option value={c.ref}>{c.label}</option>}</For>
+        <Show when={props.state().active === EDITED_REF}>
+          <option value={EDITED_REF}>edited in Lexicon</option>
+        </Show>
       </select>
       <span class="convbar-active">{activeLabel(props.state(), props.staticHost)}</span>
       <Show when={props.state().error}>

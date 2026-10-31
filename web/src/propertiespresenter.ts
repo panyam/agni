@@ -118,6 +118,13 @@ export class PropertiesPresenter {
     this.push();
   }
 
+  // reloadInventory reads the inventory again after the vocabulary changed, since a net's roles and a
+  // part's classes are stamped by the read that convention names.
+  reloadInventory(): void {
+    this.checked = null;
+    void this.loadInventory();
+  }
+
   setSummary(text: string): void {
     this.summary = text;
     this.push();

@@ -17,7 +17,6 @@ import (
 	"github.com/spf13/cobra"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
-	"gopkg.in/yaml.v3"
 )
 
 // lexiconAPI is what `agni lexicon` asks, in process or of a --remote server.
@@ -194,7 +193,11 @@ func writeExplainNet(w io.Writer, r *webapi.ExplainNetResponse) {
 	}
 	fmt.Fprintln(w)
 	if len(r.GetMatches()) == 0 {
-		fmt.Fprintln(w, "its name matches no net-name pattern")
+		if len(r.GetRoles()) > 0 {
+			fmt.Fprintln(w, "no net-name pattern matches it, so these roles come from the evidence above")
+		} else {
+			fmt.Fprintln(w, "no net-name pattern matches it")
+		}
 		return
 	}
 	fmt.Fprintln(w, "its name matches")
@@ -239,31 +242,13 @@ func writeLexiconChanges(w io.Writer, r *webapi.CompareLexiconsResponse) {
 	}
 }
 
-// lexiconYAML writes lx as a conventions file, field names as the YAML binding reads them, in the
-// order the schema declares them, so naming.Parse reads it back to the same lexicon.
+// lexiconYAML writes lx as a conventions file naming.Parse reads back to the same lexicon.
 func lexiconYAML(name string, lx *configpb.NamingLexicon) ([]byte, error) {
-	b, err := protojson.MarshalOptions{UseProtoNames: true}.Marshal(&configpb.NamingConvention{Name: name, Lexicon: lx})
+	body, err := service.ConventionYAML(&configpb.NamingConvention{Name: name, Lexicon: lx})
 	if err != nil {
 		return nil, err
 	}
-	// JSON is YAML, and a yaml.Node keeps the keys in the order protojson wrote them.
-	var doc yaml.Node
-	if err := yaml.Unmarshal(b, &doc); err != nil {
-		return nil, err
-	}
-	blockStyle(&doc)
 	header := "# The effective naming lexicon, every list stated whole with replace: true, so a design read\n" +
 		"# with this file as its conventions is read exactly as this one was. Written by agni lexicon.\n"
-	body, err := yaml.Marshal(&doc)
-	if err != nil {
-		return nil, err
-	}
 	return append([]byte(header), body...), nil
-}
-
-func blockStyle(n *yaml.Node) {
-	n.Style &^= yaml.FlowStyle
-	for _, c := range n.Content {
-		blockStyle(c)
-	}
 }

@@ -201,6 +201,24 @@ describe("the static demo under /agni/demo/", () => {
 
   // A report saved from the viewer is written by the engine in the page, in the forms agni check writes,
   // and nothing leaves for a server to do it (agni issue 127).
+  // The Lexicon panel answers from the engine in the page, so the demo has it (agni issue 1267).
+  it("tries a vocabulary edit with nothing to call but files", async () => {
+    await withPage(browser, async (page) => {
+      const log = record(page);
+      await page.goto(base, { waitUntil: "domcontentloaded" });
+      await page.click("text=Sample Board");
+      await page.locator(".dv-default-tab-content", { hasText: /^Lexicon$/ }).first().click({ timeout: 120_000 });
+      await page.locator('.lex-group[data-vocabulary="net.control"] summary').click({ timeout: 120_000 });
+      await page.locator('.lex-group[data-vocabulary="net.control"] .lex-off-switch input').check();
+      await page.locator('.lex-group[data-vocabulary="net.control"] .lex-row-replaced').first().waitFor({ state: "attached" });
+      await page.click(".lex-try");
+      await page.waitForSelector('.lex-result[data-table="finding_changes"]', { timeout: 120_000 });
+      expect(await page.locator('.lex-result[data-table="role_changes"] .lex-change').count()).toBeGreaterThan(0);
+      expect(log.api).toEqual([]);
+      expect(log.errors).toEqual([]);
+    });
+  }, 300_000);
+
   it("saves a check run as the report page and the results document", async () => {
     await withPage(browser, async (page) => {
       const log = record(page);

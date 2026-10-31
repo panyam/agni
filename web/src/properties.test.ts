@@ -1,10 +1,10 @@
 import { describe, it, expect } from "vitest";
 import { clone, create } from "@bufbuild/protobuf";
-import { ClassSource, DesignSchema, InputDiagnosticsSchema, Role } from "./gen/agni/v1/ir/ir_pb.js";
+import { ClassSource, DesignSchema, InputDiagnosticsSchema, NetSchema, Role } from "./gen/agni/v1/ir/ir_pb.js";
 import { PartSpecSchema } from "./gen/agni/v1/param/param_pb.js";
 import { ConversionReportSchema } from "./gen/agni/v1/webapi/design_pb.js";
 import type { FindingItem, FindingsState, VerdictItem } from "./findings.js";
-import { type PropertiesInput, type ServedFacts, inventoryFromDesign, propertiesFor, reportLines } from "./properties.js";
+import { type PropertiesInput, type ServedFacts, inventoryFromDesign, propertiesFor, reportLines, netRowsFor } from "./properties.js";
 import type { EntityQueryItem } from "./query.js";
 import type { Selection } from "./selection.js";
 
@@ -393,5 +393,16 @@ describe("an area", () => {
     const s = propertiesFor(input({ focus: { level: "entity", sel: area }, questions: [...QUESTIONS, q] }));
     expect(s.ask?.questions).toEqual([q]);
     expect(s.ask?.sel).toEqual(area);
+  });
+});
+
+describe("a net's roles", () => {
+  it("lists the reason for each role that carries one", () => {
+    const rows = netRowsFor(create(NetSchema, { name: "LPC_VCC", roles: [{ roleKind: Role.RAIL, reason: "the net feeds U18 pin 44 (VDD), a supply input" }, { roleKind: Role.GROUND }] }));
+    expect(rows).toEqual([
+      { label: "roles", value: "rail, ground" },
+      { label: "why rail", value: "the net feeds U18 pin 44 (VDD), a supply input" },
+      { label: "pins", value: "0" },
+    ]);
   });
 });

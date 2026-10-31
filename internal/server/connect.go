@@ -566,6 +566,14 @@ func (a *Lexicon) ExplainNet(ctx context.Context, req *connect.Request[webapi.Ex
 	return connect.NewResponse(resp), nil
 }
 
+func (a *Lexicon) RenderConvention(ctx context.Context, req *connect.Request[webapi.RenderConventionRequest]) (*connect.Response[webapi.RenderConventionResponse], error) {
+	resp, err := a.svc.RenderConvention(ctx, req.Msg)
+	if err != nil {
+		return nil, toConnectErr(err)
+	}
+	return connect.NewResponse(resp), nil
+}
+
 func (a *Lexicon) CompareLexicons(ctx context.Context, req *connect.Request[webapi.CompareLexiconsRequest]) (*connect.Response[webapi.CompareLexiconsResponse], error) {
 	resp, err := a.svc.CompareLexicons(ctx, req.Msg)
 	if err != nil {

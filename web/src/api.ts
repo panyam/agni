@@ -1,6 +1,7 @@
 // Connect clients for the WS9 web API. The service contracts are generated from proto
 // (CONSTRAINTS C2), and this module only wires a browser transport onto them. The view layer
 // calls these clients instead of hand-rolling fetch/JSON.
+import { LexiconService } from "./gen/agni/v1/webapi/lexicon_pb.js";
 import { createClient, type Client, type Interceptor } from "@connectrpc/connect";
 import { createConnectTransport } from "@connectrpc/connect-web";
 import { WorkspaceService } from "./gen/agni/v1/webapi/workspace_pb.js";
@@ -114,6 +115,11 @@ export function designClient(baseUrl?: string): Client<typeof DesignService> {
 // severity report, and expectation sidecars; WS9-026).
 export function checksClient(baseUrl?: string): Client<typeof CheckService> {
   return createClient(CheckService, newTransport(baseUrl));
+}
+
+// lexiconClient returns a typed client for LexiconService (agni issues 1266, 1267).
+export function lexiconClient(baseUrl?: string): Client<typeof LexiconService> {
+  return createClient(LexiconService, newTransport(baseUrl));
 }
 
 // diffClient returns a typed client for DiffService (the semantic diff between two designs

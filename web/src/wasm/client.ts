@@ -33,6 +33,7 @@ export const JOB_RPCS: ReadonlySet<string> = new Set([
   "agni.v1.webapi.CheckService/GetInterfaceCoverage",
   "agni.v1.webapi.ReviewService/CreateReview",
   "agni.v1.webapi.DiffService/DiffDesigns",
+  "agni.v1.webapi.LexiconService/CompareLexicons",
 ]);
 
 // INGEST is the procedure that loads a design into a worker (agni issue 1061). One that reads the

@@ -31,6 +31,8 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   { id: "properties", title: "Properties", defaultOpen: true },
   // Rules is a static reference catalog, tabbed in the east stack beside the findings it explains.
   { id: "rules", title: "Rules", defaultOpen: true },
+  // Lexicon lists the naming vocabulary the run reads with, and edits and tries it (agni issue 1267).
+  { id: "lexicon", title: "Lexicon", defaultOpen: true },
   // Checks is the findings table (WS9), server-sourced and grouped and sorted on the client, with
   // the on-demand Run button. Its severity grouping covers what a separate Report panel did.
   { id: "checks", title: "Checks", defaultOpen: true },
@@ -207,6 +209,7 @@ export function defaultLayout(api: DockviewApi): void {
   // Two stacks of two fit, with what the engine found above what a person asked for.
   api.addPanel({ id: "checks", component: "checks", title: "Checks", position: { direction: "right", referencePanel: "canvas" } });
   api.addPanel({ id: "rules", component: "rules", title: "Rules", position: { direction: "within", referencePanel: "checks" } });
+  api.addPanel({ id: "lexicon", component: "lexicon", title: "Lexicon", position: { direction: "within", referencePanel: "checks" } });
   api.addPanel({ id: "review", component: "review", title: "Review", position: { direction: "below", referencePanel: "checks" } });
   api.addPanel({ id: "coverage", component: "coverage", title: "Coverage", position: { direction: "within", referencePanel: "review" } });
 

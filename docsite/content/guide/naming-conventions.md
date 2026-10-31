@@ -111,6 +111,20 @@ rule stopped running (the same caution as above).
 Switching discards the findings already on screen rather than keeping them, since they were computed
 by asking a different question.
 
+The **Lexicon** panel, tabbed beside Rules, lists every vocabulary the run reads names with and where
+each entry came from. It edits a draft of the convention as written, so its rules stay with it. Add an
+entry, take one out, turn a vocabulary off or switch the rail inference, and the list updates. Taking
+a single built-in out writes that vocabulary with `replace: true` and its other entries stated, which
+is the only way a convention can drop one. A built-in ref-des prefix cannot be taken out, since
+`replace` leaves the prefix table alone.
+
+**Try** shows the nets whose roles would change and the findings that would appear or disappear, the
+same rows `agni lexicon --try` prints, and a row selects its net or part. A draft changes nothing on
+the page until **Apply**, which puts it in the vocabulary bar for the rest of the session. **Save
+YAML** writes the file, and only the file in your project reaches other people and other commands.
+It works in the browser engine too, so the public demo has it. Net Properties shows why each role
+is there.
+
 ## Teach it your vocabulary
 
 The `rules` block above checks names against your policy. The `lexicon` block is the other half and
@@ -245,6 +259,9 @@ the sensor supply stops being a rail, and the I2C pull-ups that go to it stop co
 {{ agniRun "content/guide/runs/lexicon.yaml" }}
 
 Once the changes are the ones you meant, carry the file in the project's `conventions:` section.
+A project's or design's convention reaches every command that reads the design. A `--conventions`
+file reaches the commands that take that flag, which are `check`, `review`, `query` and `lexicon`.
+
 `agni lexicon <design> --format yaml` writes the whole effective vocabulary as a conventions file,
 every list stated in full, which is a starting point when you would rather edit the complete list
 than add to it.
