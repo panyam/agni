@@ -174,5 +174,5 @@ parallel without conflicting.
 
 ## Next
 
-[Read the verdicts](../09-read-the-verdicts/), which is about why "8 fail" is a much better number
+[Read the verdicts](../09-read-the-verdicts/), which is about why "7 fail" is a much better number
 than it looks.

@@ -1,4 +1,4 @@
 #agni-run 375ad7b694c20897
   [warning] jetson/active-low-overbar: /USB Debug, PD/PDC_I2C1_IRQn (net name matches no allowed naming pattern)
   [warning] jetson/active-low-overbar: /USB Debug, PD/PDC_I2C2_IRQn (net name matches no allowed naming pattern)
-88 finding(s) total
+87 finding(s) total

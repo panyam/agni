@@ -1,7 +1,6 @@
 #agni-run e43a5922bd278d7b
 findings by rule:
   bulk-cap               1
-  decoupling-present     1
   esd-protection         394
   floating-input         3
   i2c-pull-up            28
@@ -13,5 +12,5 @@ findings by rule:
   single-pin-net         2
   test-point-coverage    36
 
-530 finding(s) total
-26066 subject(s) considered by 41 rule(s), 1041 not considered (--verdicts for the detail)
+529 finding(s) total
+26059 subject(s) considered by 41 rule(s), 1041 not considered (--verdicts for the detail)

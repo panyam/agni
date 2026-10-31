@@ -49,9 +49,9 @@ absent bus, which is fine and will never improve. House style sits at 2 of 3 bec
 manual item, which is also fine. Neither is a gap worth working on. A column filling up with
 `needs-data` is, because seeding a few parts converts it directly into coverage.
 
-## Eight failures is a good sign
+## Seven failures is a good sign
 
-This board reports 8 fail out of 15. That looks alarming and it is the healthiest state on offer,
+This board reports 7 fail out of 15. That looks alarming and it is the healthiest state on offer,
 because every one of them names its subjects and its reason, and each is now a conversation a
 reviewer can finish. Rung 2's I2C errors are among them, and so are the test points on nets nobody
 named, which no shipped rule would ever have raised.

@@ -118,14 +118,14 @@ Look at the last line of that first run again. Every run ends with it, whether o
 anything:
 
 ```
-24124 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)
+24117 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)
 ```
 
 This is the half a findings list cannot give you. A run that finds nothing and a run whose rules all
 examined the wrong thing produce an identical list of findings, namely none, so the findings alone
 can never tell you which one you are holding.
 
-Read the three numbers separately. **24124 considered** is how many subjects were actually judged.
+Read the three numbers separately. **24117 considered** is how many subjects were actually judged.
 **35 rules** is how many were willing to say what they looked at, which is not the same as how many
 ran, because most of the catalog has no subject in scope on any given board, and a rule with nothing
 to say is not a gap. **615 not considered** is the one worth reading closely, and it gets its own
@@ -151,10 +151,9 @@ Now the pass is checkable. It names C10 on `+3V3` and C241 on `VCC`, so you can 
 and confirm that those capacitors really are on those rails. Delete one next revision and this output
 changes, where the findings-only view would print the same nothing before and after.
 
-The one fail is `Net-(D1-C)`, a net KiCad named after a pin on it, diode D1's cathode, because nobody
-labelled it. It is the module's
-backup-battery input, fed through D1 and R6, and the module decouples it on its own side of the
-connector. That is the same lesson as the I2C finding, met from the other direction.
+Every row passes here, so the fail column reads nothing. A net whose only supply pin is on a connector
+would have no row at all, because the rule leaves it out rather than passing it, and the count of rows
+is what tells the two apart.
 
 Across the whole catalog that is a much larger table than the findings list, which is why the summary
 is the default and the rows are a flag:

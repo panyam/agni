@@ -1,7 +1,6 @@
 #agni-run a59b1008e385b0f7
 findings by rule:
   bulk-cap               1
-  decoupling-present     1
   esd-protection         10
   floating-input         3
   i2c-pull-up            30
@@ -13,7 +12,6 @@ findings by rule:
 
 first 50:
   [warning] bulk-cap: Net-(D1-C) (power rail has no bulk capacitor)
-  [warning] decoupling-present: Net-(D1-C) (power rail has no decoupling capacitor)
   [info] esd-protection: /SFP/SFI_CONN_RX_N (externally-exposed signal net has no ESD protection)
   [info] esd-protection: /SFP/SFI_CONN_RX_P (externally-exposed signal net has no ESD protection)
   [info] esd-protection: /SFP/SFI_CONN_TX_N (externally-exposed signal net has no ESD protection)
@@ -62,6 +60,7 @@ first 50:
   [warning] i2c-redundant-pull-up: /USB Debug, PD/DEBUG_SCL (I2C net has 2 pull-up resistors to +3V3)
   [warning] i2c-redundant-pull-up: /USB Debug, PD/DEBUG_SDA (I2C net has 2 pull-up resistors to +3V3)
   [warning] rail-not-classified: /USB Debug, PD/FTDI_3V3 (net "/USB Debug, PD/FTDI_3V3" declares 3.3V in its name and feeds 4 supply pin(s) (e.g. U31 pin 3), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in the project's conventions lexicon)
+  [warning] reverse-blocking-absent: VCC_IN (connector feeds a power input with no reverse-blocking element in the path)
 
-80 finding(s) total
-24124 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)
+79 finding(s) total
+24117 subject(s) considered by 35 rule(s), 615 not considered (--verdicts for the detail)

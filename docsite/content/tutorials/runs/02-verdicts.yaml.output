@@ -1,22 +1,14 @@
 #agni-run bb9fdd5fc0e1b2c6
-decoupling-present  1 fail, 16 pass
-    fail  Net-(D1-C)                     no capacitor sits on the rail, which feeds at least one
-                                         power-input pin
+decoupling-present  10 pass
     pass  +20V                           capacitor C263 sits on the rail
     pass  +3V3                           capacitor C10 sits on the rail
     pass  +3V3_AON                       capacitor C197 sits on the rail
     pass  +5V                            capacitor C104 sits on the rail
     pass  +5V_AON                        capacitor C223 sits on the rail
-    pass  +5V_SOM                        capacitor C12 sits on the rail
     pass  /Expansion connector/+3V3_AUX  capacitor C5 sits on the rail
-    pass  /USB DP Alt mode/USBC1_VBUS    capacitor C153 sits on the rail
     pass  /USB Debug, PD/FTDI_3V3        capacitor C133 sits on the rail
-    pass  /USB Debug, PD/USBC0_VBUS      capacitor C123 sits on the rail
-    pass  /USB Hub/USBC3_VBUS            capacitor C78 sits on the rail
-    pass  /USB Hub/USBC4_VBUS            capacitor C105 sits on the rail
     pass  FLASH_PWR                      capacitor C111 sits on the rail
-    pass  SYS_VIN_HV                     capacitor C26 sits on the rail
     pass  VCC                            capacitor C241 sits on the rail
     pass  VCC_IN                         capacitor C269 sits on the rail
 
-17 verdicts across 1 rule(s), 16 pass, 1 fail
+10 verdicts across 1 rule(s), 10 pass
