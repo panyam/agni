@@ -7,6 +7,7 @@
 // file, sheet and highlight state while a diff is open.
 
 import { snapshots } from "./api.js";
+import type { OverlayConfig } from "./gen/agni/v1/webapi/config_pb.js";
 import type { SnapshotSource } from "./snapshots.js";
 import type { Client } from "@connectrpc/connect";
 import { artifactUri } from "@agni/web-shared/uri.js";
@@ -145,8 +146,12 @@ export class DiffPresenter {
     private readonly view: DiffRenderView,
     private readonly onState: (s: DiffState) => void,
     // snaps names each side's snapshot (agni issue 1061), the page's registry unless a test hands one
-    // in. A comparison draws, so each side is its snapshot under no overlay, the one the viewer draws.
+    // in. A comparison draws, so each side's sheets come from its snapshot under no overlay, the one
+    // the viewer draws.
     private readonly snaps: SnapshotSource = snapshots(),
+    // overlay is the convention the page's vocabulary bar shows. The diff itself is asked under it, so
+    // Compare reads a design as the rest of the page does (agni issue 1275).
+    private readonly overlay: () => OverlayConfig | undefined = () => undefined,
   ) {}
 
   private snap(r: DiffFileRef): Promise<string> {
@@ -183,7 +188,8 @@ export class DiffPresenter {
     this.bRef = b;
     this.view.setBusy(true);
     try {
-      const [sa, sb] = await Promise.all([this.snap(a), this.snap(b)]);
+      const cfg = this.overlay();
+      const [sa, sb] = await Promise.all([this.snaps.of(artifactUri(a.mount, a.path), cfg), this.snaps.of(artifactUri(b.mount, b.path), cfg)]);
       const [resp, da, db] = await Promise.all([
         this.diff.diffDesigns({ aSnapshot: sa, bSnapshot: sb }),
         this.designs.getDesign({ snapshot: sa, layout: "" }),

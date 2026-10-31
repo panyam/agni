@@ -120,8 +120,10 @@ is the only way a convention can drop one. A built-in ref-des prefix cannot be t
 
 **Try** shows the nets whose roles would change and the findings that would appear or disappear, the
 same rows `agni lexicon --try` prints, and a row selects its net or part. A draft changes nothing on
-the page until **Apply**, which puts it in the vocabulary bar for the rest of the session. **Save
-YAML** writes the file, and only the file in your project reaches other people and other commands.
+the page until **Apply**, which puts it in the vocabulary bar for the rest of the session and reads a
+comparison under it as well. **Save YAML** writes the file, and only the file in your project reaches
+other people and other commands. Until then `--conventions` names it on `check`, `review`, `query`,
+`stats`, `diff` and `render`.
 It works in the browser engine too, so the public demo has it. Net Properties shows why each role
 is there.
 
