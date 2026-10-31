@@ -80,10 +80,10 @@ func TestBoardGeometryText(t *testing.T) {
 	if ref == nil || ref.RefDes != "R1" || ref.Mirror {
 		t.Fatalf("R1 reference text = %+v", ref)
 	}
-	// The footprint is at 90 deg; -(90) folds to +90 under keep_upright so the ref-des reads
-	// bottom-to-top rather than upside down.
-	if ref.At.X != 8_000_000 || ref.At.Y != -10_000_000 || ref.RotationDeg != 90 {
-		t.Errorf("R1 reference placement = %+v (want 8mm,-10mm, rot 90 keep-upright)", ref)
+	// KiCad saves a footprint text's angle as drawn, so local angle 0 stays horizontal on a footprint
+	// at 90 degrees (agni issue 1272).
+	if ref.At.X != 8_000_000 || ref.At.Y != -10_000_000 || ref.RotationDeg != 0 {
+		t.Errorf("R1 reference placement = %+v (want 8mm,-10mm, rot 0)", ref)
 	}
 	if v := byKind["value|10k"]; v == nil || v.RefDes != "R1" {
 		t.Errorf("R1 value text = %+v, want kind=value text=10k ref=R1", v)
@@ -366,5 +366,51 @@ func TestBoardGeometryArcTrackAndSlot(t *testing.T) {
 	pads := g.GetPlacements()[0].GetPads()
 	if len(pads) != 1 || pads[0].GetDrill() != 600_000 {
 		t.Errorf("J1.S1 drill = %v, want the slot's 0.6mm width", pads)
+	}
+}
+
+// Each want is the angle KiCad 10's PCB_TEXT::GetDrawRotation gives the same fixture, so these are
+// KiCad's answers rather than ours. KiCad reports an unlocked text's angle in [0, 360), which is why
+// the comparison is modulo a full turn. ODB++ cannot check this, since KiCad's export strokes text.
+func TestBoardTextAnglesMatchKiCad(t *testing.T) {
+	cases := []struct {
+		fixture string
+		want    map[string]float64
+	}{
+		{"text_angles.kicad_pcb", map[string]float64{
+			"FLAT":     0,   // footprint at 90, text at 0: the file's angle is already absolute
+			"ALONG":    90,  // footprint at 90, text at 90
+			"SLANT":    45,  // an angle a half-turn fold cannot hide the sign of
+			"OVER":     -45, // 135 folds by a half turn to stay readable
+			"FREE":     180, // unlocked, so it is not folded
+			"LOCKED":   0,   // the same angle as FREE, locked
+			"BACK":     30,  // a flipped footprint's text reads the same way
+			"BACKFREE": 225,
+			"GR90":     90, // free text is never folded
+			"GR200":    200,
+		}},
+		{"text_angles_legacy.kicad_pcb", map[string]float64{
+			"LEGACY":     270, // (at x y -90 unlocked), the spelling before (unlocked yes)
+			"LEGACYLOCK": 90,
+		}},
+	}
+	for _, c := range cases {
+		g, err := ReadBoardGeometry(bytes.NewReader(readFixture(t, c.fixture)), c.fixture)
+		if err != nil {
+			t.Fatalf("ReadBoardGeometry(%s): %v", c.fixture, err)
+		}
+		if len(g.Texts) != len(c.want) {
+			t.Errorf("%s: %d texts, want %d", c.fixture, len(g.Texts), len(c.want))
+		}
+		for _, tx := range g.Texts {
+			want, ok := c.want[tx.Text]
+			if !ok {
+				t.Errorf("%s: unexpected text %q", c.fixture, tx.Text)
+				continue
+			}
+			if d := math.Mod(tx.RotationDeg-want, 360); d != 0 {
+				t.Errorf("%s: %s rotation = %g, KiCad draws %g", c.fixture, tx.Text, tx.RotationDeg, want)
+			}
+		}
 	}
 }

@@ -281,19 +281,23 @@ func boardTexts(root *node) []*geom.BoardText {
 // footprintText composes one footprint-owned text (a Reference or Value property) into a
 // board-frame BoardText. Its position is the footprint-local offset rotated by the footprint
 // orientation and mirrored on the back via geomath.ComposePlacement, the SAME composer
-// padWorld uses, so text lands on its part. Glyph rotation is the footprint orientation plus the text's own
-// local angle, carried in the Y-up frame (a Y-down source negates). Returns nil for empty or
-// hidden text, or a text with no local (at).
+// padWorld uses, so text lands on its part. Glyph rotation is the angle in the text's (at), which
+// KiCad saves as drawn rather than relative to its footprint, so the footprint's own angle does not
+// enter it (agni issue 1272). Returns nil for empty or hidden text, or a text with no local (at).
 func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom.BoardText {
 	local := n.Child("at")
 	if text == "" || local == nil || isHidden(n) {
 		return nil
 	}
 	height, justify, mirror := effectsOf(n)
+	angle := rotOf(local)
+	if !isUnlocked(n, local) {
+		angle = keepUpright(angle)
+	}
 	return &geom.BoardText{
 		Text:        text,
 		At:          geomath.ComposePlacement(pcbPoint(fpAt), placementAngle(fpAt, back), back, footprintLocal(pcbPoint(local), back)),
-		RotationDeg: keepUpright(-(rotOf(fpAt) + rotOf(local))),
+		RotationDeg: angle,
 		Height:      height,
 		Layer:       atomOf(n.Child("layer").Arg(1)),
 		Mirror:      back || mirror,
@@ -304,7 +308,9 @@ func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom
 }
 
 // freeText converts a top-level gr_text (authored in absolute board coordinates) into a
-// BoardText. Returns nil for empty or hidden text.
+// BoardText. KiCad's angle is counter-clockwise as drawn, and flipping Y keeps the picture, so it
+// carries over unchanged, as a footprint's does in placementAngle. Returns nil for empty or hidden
+// text.
 func freeText(n *node) *geom.BoardText {
 	text := atomOf(n.Arg(1))
 	if text == "" || isHidden(n) {
@@ -315,7 +321,7 @@ func freeText(n *node) *geom.BoardText {
 	return &geom.BoardText{
 		Text:        text,
 		At:          pcbPoint(at),
-		RotationDeg: -rotOf(at),
+		RotationDeg: rotOf(at),
 		Height:      height,
 		Layer:       atomOf(n.Child("layer").Arg(1)),
 		Mirror:      mirror,
@@ -352,8 +358,8 @@ func effectsOf(n *node) (height int64, justify string, mirror bool) {
 
 // keepUpright folds a footprint text's glyph angle into (-90, 90] by half turns, so text on
 // a rotated (e.g. 180°) footprint never renders upside down, matching KiCad's default
-// keep_upright behavior for silkscreen fields. Free gr_text is exempt and stays as authored,
-// since a mirrored back-side title is intentional.
+// keep_upright behavior for silkscreen fields. Unlocked text and free gr_text are exempt and stay
+// as authored, since a mirrored back-side title is intentional.
 func keepUpright(deg float64) float64 {
 	for deg > 90 {
 		deg -= 180
@@ -372,6 +378,15 @@ func isHidden(n *node) bool {
 		return false
 	}
 	return h.Arg(1) == nil || atomOf(h.Arg(1)) == "yes"
+}
+
+// isUnlocked reports whether a footprint text opts out of keepUpright, by the (unlocked yes) child
+// of KiCad 8 and later or the older bare word in its (at x y angle unlocked).
+func isUnlocked(n, at *node) bool {
+	if u := n.Child("unlocked"); u != nil {
+		return u.Arg(1) == nil || atomOf(u.Arg(1)) == "yes"
+	}
+	return atomOf(at.Arg(4)) == "unlocked"
 }
 
 // pcbPoint reads an (xy ...) / (at ...) / (start ...) style node's x,y into the Y-up

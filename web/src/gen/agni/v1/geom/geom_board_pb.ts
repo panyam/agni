@@ -127,7 +127,7 @@ export type BoardText = Message<"agni.v1.geom.BoardText"> & {
   at?: Point | undefined;
 
   /**
-   * CCW degrees in the Y-up frame, placement-composed
+   * CCW degrees as drawn, in the Y-up frame
    *
    * @generated from field: double rotation_deg = 3;
    */

@@ -1,0 +1,84 @@
+(kicad_pcb
+	(version 20241229)
+	(generator "pcbnew")
+	(generator_version "9.0")
+	(general
+		(thickness 1.6))
+	(paper "A4")
+	(layers
+		(0 "F.Cu" signal)
+		(2 "B.Cu" signal)
+		(5 "F.SilkS" user "F.Silkscreen")
+		(7 "B.SilkS" user "B.Silkscreen")
+		(1 "F.Mask" user)
+		(3 "B.Mask" user)
+		(25 "Edge.Cuts" user))
+	(net 0 "")
+	(footprint "T:Square"
+		(layer "F.Cu")
+		(uuid "11111111-0000-0000-0000-000000000001")
+		(at 10 10 90)
+		(property "Reference" "FLAT"
+			(at 0 -2 0)
+			(layer "F.SilkS")
+			(uuid "11111111-0000-0000-0000-000000000002")
+			(effects (font (size 1 1) (thickness 0.15))))
+		(property "Value" "ALONG"
+			(at 0 2 90)
+			(layer "F.SilkS")
+			(uuid "11111111-0000-0000-0000-000000000003")
+			(effects (font (size 1 1) (thickness 0.15)))))
+	(footprint "T:Square"
+		(layer "F.Cu")
+		(uuid "11111111-0000-0000-0000-000000000004")
+		(at 20 10 30)
+		(property "Reference" "SLANT"
+			(at 0 -2 45)
+			(layer "F.SilkS")
+			(uuid "11111111-0000-0000-0000-000000000005")
+			(effects (font (size 1 1) (thickness 0.15))))
+		(property "Value" "OVER"
+			(at 0 2 135)
+			(layer "F.SilkS")
+			(uuid "11111111-0000-0000-0000-000000000006")
+			(effects (font (size 1 1) (thickness 0.15)))))
+	(footprint "T:Square"
+		(layer "F.Cu")
+		(uuid "11111111-0000-0000-0000-000000000007")
+		(at 30 10 180)
+		(property "Reference" "FREE"
+			(at 0 -2 180)
+			(unlocked yes)
+			(layer "F.SilkS")
+			(uuid "11111111-0000-0000-0000-000000000008")
+			(effects (font (size 1 1) (thickness 0.15))))
+		(property "Value" "LOCKED"
+			(at 0 2 180)
+			(layer "F.SilkS")
+			(uuid "11111111-0000-0000-0000-000000000009")
+			(effects (font (size 1 1) (thickness 0.15)))))
+	(footprint "T:Square"
+		(layer "B.Cu")
+		(uuid "11111111-0000-0000-0000-00000000000a")
+		(at 40 10 90)
+		(property "Reference" "BACK"
+			(at 0 -2 30)
+			(layer "B.SilkS")
+			(uuid "11111111-0000-0000-0000-00000000000b")
+			(effects (font (size 1 1) (thickness 0.15)) (justify mirror)))
+		(property "Value" "BACKFREE"
+			(at 0 2 -135)
+			(unlocked yes)
+			(layer "B.SilkS")
+			(uuid "11111111-0000-0000-0000-00000000000c")
+			(effects (font (size 1 1) (thickness 0.15)) (justify mirror))))
+	(gr_text "GR90"
+		(at 10 20 90)
+		(layer "F.SilkS")
+		(uuid "11111111-0000-0000-0000-00000000000d")
+		(effects (font (size 1 1) (thickness 0.15))))
+	(gr_text "GR200"
+		(at 20 20 200)
+		(layer "F.SilkS")
+		(uuid "11111111-0000-0000-0000-00000000000e")
+		(effects (font (size 1 1) (thickness 0.15)))))

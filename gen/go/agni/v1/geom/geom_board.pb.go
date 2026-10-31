@@ -153,7 +153,7 @@ type BoardText struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`                                    // the string as authored; may contain newlines
 	At            *Point                 `protobuf:"bytes,2,opt,name=at,proto3" json:"at,omitempty"`                                        // board-frame anchor, Y-up (footprint text is pre-composed)
-	RotationDeg   float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // CCW degrees in the Y-up frame, placement-composed
+	RotationDeg   float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // CCW degrees as drawn, in the Y-up frame
 	Height        int64                  `protobuf:"varint,4,opt,name=height,proto3" json:"height,omitempty"`                               // glyph height in source units (unit_nm), from the font size
 	Layer         string                 `protobuf:"bytes,5,opt,name=layer,proto3" json:"layer,omitempty"`                                  // source layer verbatim ("F.SilkS", "F.Fab", "B.SilkS", ...)
 	Mirror        bool                   `protobuf:"varint,6,opt,name=mirror,proto3" json:"mirror,omitempty"`                               // back-side / mirrored text (KiCad's justify mirror)
