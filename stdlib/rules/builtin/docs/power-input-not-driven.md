@@ -36,6 +36,11 @@ A lone exposed pad and a divider tap into a sense pin are not considered either.
 vendor symbol types power_in, and neither draws a supply, as decoupling-present's page describes (agni
 issue 935).
 
+A supply pin the schematic marks no-connect, alone on its net, is not considered either (agni issue
+1244). Some datasheets allow a supply pin to be left open when its feature is unused, such as an FPGA's
+VPP pin when its one-time memory is never programmed. A flagged pin that is also wired to another part
+is still judged.
+
 Concretely, the rule is gated OFF on a source format that does not type power OUTPUTS. EDIF's port
 grammar carries only INPUT/OUTPUT/INOUT and IPC-2581 is a board format with no pin electrical types
 (the `design.types_power_out` fact). There a rail's driver reads as a plain input, so "no power source"

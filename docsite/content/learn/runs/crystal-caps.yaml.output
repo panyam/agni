@@ -1,4 +1,4 @@
-#agni-run 96d75ac21f9fef42
+#agni-run bf9f5baa26b01d34
 crystal-load-caps  1 fail, 1 pass
     fail  Y1.2  no capacitor sits on terminal net XTAL_OUT
     pass  Y1.1  capacitor C1 sits on terminal net XTAL_IN

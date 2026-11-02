@@ -1,0 +1,14 @@
+# agni issue 1244: U1's SDA and VPP pins sit under a no-connect X, so the design says they are unused
+# and no rule demands a pull-up, a driver or a capacitor of them. Before the fix they failed
+# i2c-pull-up, power-input-not-driven and decoupling-present. VDD is the control, an identical
+# supply pin left bare without the X, which still fails both supply rules.
+fires:
+  power-input-not-driven:
+    subjects: ["/VDD"]
+    why: "VDD is a power-input pin nothing drives and nothing marks no-connect"
+  decoupling-present:
+    subjects: ["/VDD"]
+    why: "the same unflagged supply pin has no capacitor"
+  single-pin-net:
+    subjects: ["/VDD"]
+    why: "incidental: the control pin is alone on its label"
