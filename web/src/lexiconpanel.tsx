@@ -24,7 +24,8 @@ interface Group {
 
 function kindsOf(vocabulary: string): string[] {
   if (vocabulary === "net.diff_pair") return ["pair"];
-  return vocabulary.startsWith("class.") ? ["pattern", "family", "prefix"] : ["pattern", "exclude"];
+  if (vocabulary.startsWith("value_unit.")) return ["unit"];
+  return vocabulary.startsWith("class.") ? ["pattern", "family", "prefix", "exclude_prefix"] : ["pattern", "exclude"];
 }
 
 // groupRows folds the listing into its vocabularies. A vocabulary is off when something was replaced
@@ -38,7 +39,7 @@ function groupRows(rows: LexiconRow[]): Group[] {
     g.rows.push(r);
   }
   for (const g of groups.values()) {
-    const judged = g.rows.filter((r) => r.kind !== "prefix");
+    const judged = g.rows.filter((r) => r.kind !== "prefix" && r.kind !== "exclude_prefix" && r.kind !== "unit");
     g.off = judged.some((r) => r.replaced) && !judged.some((r) => !r.replaced);
   }
   return [...groups.values()];
@@ -58,7 +59,7 @@ function AddEntry(props: { vocabulary: string; onAdd: LexiconHandlers["onAdd"] }
         <For each={kindsOf(props.vocabulary)}>{(k) => <option value={k}>{k}</option>}</For>
       </select>
       <input
-        placeholder={props.vocabulary === "net.diff_pair" ? "_PLUS=_MINUS" : "RE2 pattern"}
+        placeholder={props.vocabulary === "net.diff_pair" ? "_PLUS=_MINUS" : props.vocabulary.startsWith("value_unit.") ? "F, H or ohm" : "RE2 pattern"}
         aria-label={`add to ${props.vocabulary}`}
         value={text()}
         onInput={(e) => setText(e.currentTarget.value)}
@@ -166,9 +167,11 @@ function LexiconPanel(props: { state: () => LexiconState; on: LexiconHandlers })
                 <span class="lex-off"> (off)</span>
               </Show>
             </summary>
-            <label class="lex-off-switch">
-              <input type="checkbox" checked={groupOf(name)?.off ?? false} onChange={(e) => props.on.onOff(name, e.currentTarget.checked)} /> turn this vocabulary off
-            </label>
+            <Show when={!name.startsWith("value_unit.")}>
+              <label class="lex-off-switch">
+                <input type="checkbox" checked={groupOf(name)?.off ?? false} onChange={(e) => props.on.onOff(name, e.currentTarget.checked)} /> turn this vocabulary off
+              </label>
+            </Show>
             <For each={groupOf(name)?.rows ?? []}>
               {(r) => (
                 <div class={`lex-row${r.replaced ? " lex-row-replaced" : ""}${r.edited ? " lex-row-edited" : ""}`}>

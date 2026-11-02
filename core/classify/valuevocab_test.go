@@ -82,7 +82,11 @@ func TestStampValuesPrefixedValueTakesTheClassDimension(t *testing.T) {
 // TestStampValuesDeclaredConventionFillsTheGap checks that a house that spells bare capacitor
 // values in microfarads says so through the vocabulary, and the parser is untouched.
 func TestStampValuesDeclaredConventionFillsTheGap(t *testing.T) {
-	lex := &Lexicon{Value: BuildValueVocab(map[string]string{"capacitor": "F"})}
+	vv, err := BuildValueVocab(map[string]string{"capacitor": "F"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	lex := &Lexicon{Value: vv}
 	d := &ir.Design{Components: []*ir.Component{compWithValue("C1", "100", string(ClassCapacitor))}}
 	lex.StampValues(d)
 	if u := d.Components[0].GetValue().GetUnit(); u != "F" {

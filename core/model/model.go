@@ -157,6 +157,13 @@ type Model interface {
 	// NoConnectMarked reports whether a net carries a designer's no-connect, the reader's flag or a name
 	// in this model's no_connect vocabulary. A tool's stub name is neither.
 	NoConnectMarked(n *ir.Net) bool
+	// NominalVoltage reads the voltage a net NAME states (3V3 -> 3.3) under this model's voltage
+	// vocabulary, and ok=false when it states none or two that disagree ("12V_TO_5V"). It reads any
+	// name, so a caller asking about a rail checks the net is one first (agni issue 194).
+	NominalVoltage(name string) (volts float64, ok bool)
+	// RailMaxVoltage is the net.max_voltage fact: a max_voltage attribute when the net carries one,
+	// otherwise NominalVoltage of its name.
+	RailMaxVoltage(n *ir.Net) (volts float64, ok bool)
 	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName). More than
 	// one means the design states the same name for electrically distinct nets. Connect-by-name
 	// formats cannot produce that (the solver merges them) and explicit-net-list formats (EDIF) can,

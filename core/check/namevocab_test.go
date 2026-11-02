@@ -50,6 +50,16 @@ func TestAModelReadsItsOwnNameVocabularies(t *testing.T) {
 			t.Error("the convention did not pair CLK_PLUS")
 		}
 	})
+	t.Run("voltage", func(t *testing.T) {
+		house := &configpb.NamingLexicon{Net: &configpb.NetNameVocab{Voltage: &configpb.VocabPatterns{Patterns: []string{`^(\d+)P(\d+)$`}}}}
+		rail := &ir.Net{Name: "VDD_3P3"}
+		if _, ok := NewModel(&ir.Design{}).RailMaxVoltage(rail); ok {
+			t.Error("VDD_3P3 states a voltage with no convention")
+		}
+		if got, ok := NewModel(&ir.Design{}, lexiconOf(t, house)).RailMaxVoltage(rail); !ok || got != 3.3 {
+			t.Errorf("VDD_3P3 under the convention = %v, %v, want 3.3", got, ok)
+		}
+	})
 	t.Run("polarity", func(t *testing.T) {
 		cathode := &configpb.NamingLexicon{Pin: &configpb.PinNameVocab{Cathode: &configpb.VocabPatterns{Patterns: []string{`^NEG$`}}}}
 		base := NewModel(&ir.Design{}).(*irModel)

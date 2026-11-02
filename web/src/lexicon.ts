@@ -130,7 +130,11 @@ function suffixOf(value: string): DiffSuffix {
   return create(DiffSuffixSchema, { positive, negative: negative.join("=") });
 }
 
-const LIST_OF: Record<string, string> = { pattern: "patterns", exclude: "exclude", prefix: "prefixes", family: "families" };
+// A value_unit vocabulary is one class's entry in the lexicon's value_unit map, so it holds one unit
+// and a convention's unit replaces the built-in rather than adding to it.
+const VALUE_UNIT = "value_unit.";
+
+const LIST_OF: Record<string, string> = { pattern: "patterns", exclude: "exclude", prefix: "prefixes", exclude_prefix: "excludePrefixes", family: "families" };
 
 function listOf(v: VocabPatterns | ClassVocab, kind: string): string[] {
   const lists = v as unknown as Record<string, string[] | undefined>;
@@ -142,6 +146,11 @@ function listOf(v: VocabPatterns | ClassVocab, kind: string): string[] {
 // addEntry returns the draft with value added to a vocabulary's list of kind.
 export function addEntry(conv: NamingConvention, vocabulary: string, kind: string, value: string): NamingConvention {
   const next = clone(NamingConventionSchema, conv);
+  if (vocabulary.startsWith(VALUE_UNIT)) {
+    next.lexicon ??= create(NamingLexiconSchema);
+    next.lexicon.valueUnit[vocabulary.slice(VALUE_UNIT.length)] = value;
+    return next;
+  }
   if (vocabulary === DIFF_PAIR) {
     const pairs = diffPairs(next).pairs;
     if (!pairs.some((p) => `${p.positive}=${p.negative}` === value)) pairs.push(suffixOf(value));
@@ -152,18 +161,27 @@ export function addEntry(conv: NamingConvention, vocabulary: string, kind: strin
   return next;
 }
 
-// canRemove says whether a row can be taken out. A built-in prefix cannot, since `replace` applies to
-// patterns and families and leaves the prefix table alone; a house claims a prefix under another class
-// instead. A switch is toggled rather than removed.
+// canRemove says whether a row can be taken out. A built-in unit cannot, since a class always has one
+// and a convention replaces it by naming another. A switch is toggled rather than removed.
 export function canRemove(r: LexiconRow): boolean {
-  return !r.replaced && r.kind !== "switch" && !(r.builtin && r.kind === "prefix");
+  return !r.replaced && r.kind !== "switch" && !(r.builtin && r.kind === "unit");
 }
 
 // removeEntry returns the draft without one row. A convention's own entry leaves its list. A built-in
 // has no list to leave, so the vocabulary becomes `replace: true` with every other live entry written
-// out, which is the one way a convention can drop a single built-in.
+// out, which is the one way a convention can drop a single built-in. A built-in prefix is the
+// exception, since `replace` leaves the prefix table alone, so it goes under exclude_prefixes.
 export function removeEntry(conv: NamingConvention, rows: LexiconRow[], row: LexiconRow): NamingConvention {
   const next = clone(NamingConventionSchema, conv);
+  if (row.vocabulary.startsWith(VALUE_UNIT)) {
+    if (next.lexicon) delete next.lexicon.valueUnit[row.vocabulary.slice(VALUE_UNIT.length)];
+    return next;
+  }
+  if (row.builtin && row.kind === "prefix") {
+    const list = listOf(vocabOf(next, row.vocabulary, true)!, "exclude_prefix");
+    if (!list.includes(row.value)) list.push(row.value);
+    return next;
+  }
   if (row.vocabulary === DIFF_PAIR) {
     const v = diffPairs(next);
     if (row.builtin) {
@@ -197,6 +215,11 @@ export function removeEntry(conv: NamingConvention, rows: LexiconRow[], row: Lex
 export function setOff(conv: NamingConvention, vocabulary: string, off: boolean): NamingConvention {
   const next = clone(NamingConventionSchema, conv);
   const [space, name] = vocabulary.split(".");
+  // A class's bare-number unit has no off; dropping the draft's unit restores the built-in.
+  if (vocabulary.startsWith(VALUE_UNIT)) {
+    if (!off && next.lexicon) delete next.lexicon.valueUnit[name];
+    return next;
+  }
   if (!off) {
     if (space === "class") {
       if (next.lexicon) delete next.lexicon.class[name];

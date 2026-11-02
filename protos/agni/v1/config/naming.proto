@@ -39,6 +39,12 @@ message NamingLexicon {
   // this matches a PART, not a net or a pin. The key must name a class the engine ships; an unknown
   // one is a load error, because a class the resolver has no place for would classify nothing.
   map<string, ClassVocab> class = 3;
+  // Component-class name -> the unit a BARE number on that class means, a base unit ("F", "ohm") or a
+  // prefixed one ("pF", "uH") that scales the bare number, so "capacitor": "pF" reads a bare 100 as
+  // 100 pF. Only resistor ships a default (ohm), since a bare capacitor value meant farads, microfarads
+  // or picofarads depending on the era and tool. A class named here replaces its default. The key must
+  // name a class the engine ships and the value a unit it reads, or the load fails.
+  map<string, string> value_unit = 4;
 }
 
 // NetNameVocab is the vocabulary for NET names, the roles resolved once at ingestion and read
@@ -70,6 +76,11 @@ message NetNameVocab {
   VocabPatterns no_connect = 9;
   // diff_pair spells a differential pair's two members.
   DiffPairVocab diff_pair = 10;
+  // voltage reads a nominal voltage off a net's name, one TOKEN at a time (the name split on anything
+  // but letters, digits, "." and "+"), so P3V3_EN reads its 3V3 token. Each pattern needs a capture
+  // group: the first holds the whole volts and the first later group to match holds the fraction, so
+  // ^(\d+)V(\d+)$ reads 3V3 as 3.3. A name whose tokens state two different voltages reads as none.
+  VocabPatterns voltage = 11;
 }
 
 // DiffPairVocab lists the suffix pairs that name a differential pair. It is not a VocabPatterns
@@ -141,6 +152,10 @@ message ClassVocab {
   // this class even on a part whose ref-des reads as an IC, as a suppressor array labelled U does.
   // ADDED to the built-in families unless replace is set. Only the tvs class ships any (agni 1257).
   repeated string families = 5;
+  // exclude_prefixes takes a BUILT-IN prefix of this class out of the table, so a house whose D is a
+  // display rather than a diode can say so. Naming a prefix the built-ins give another class is a load
+  // error, since moving it is what prefixes is for.
+  repeated string exclude_prefixes = 6;
 }
 
 // NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching

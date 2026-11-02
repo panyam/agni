@@ -51,7 +51,7 @@ func eachRailCandidate(ctx context.Context, m check.Model, yield func(railCandid
 		if m.IsGroundNet(n) {
 			continue
 		}
-		volts, ok := check.NominalVoltageFromName(n.GetName())
+		volts, ok := m.NominalVoltage(n.GetName())
 		if !ok {
 			continue // the first channel is absent, since the name says nothing about a voltage
 		}

@@ -16,8 +16,9 @@ type LexiconEntry struct {
 	// Vocabulary is the list the entry sits in, spelled as the conventions YAML spells its path
 	// ("net.rail", "pin.supply", "class.tvs").
 	Vocabulary string
-	// Kind is "pattern", "exclude", "prefix", "family", "pair" or "switch". A pair's Value is its two
-	// suffixes joined by "=" (see DiffPairEntry).
+	// Kind is "pattern", "exclude", "prefix", "exclude_prefix", "family", "pair", "unit" or "switch". A
+	// pair's Value is its two suffixes joined by "=" (see DiffPairEntry), and a unit's is the unit a
+	// bare number on the class means, under the vocabulary "value_unit.<class>".
 	Kind  string
 	Value string
 	// FromConvention is set on an entry the convention added, and clear on a built-in one.
@@ -56,6 +57,10 @@ func BuiltinLexicon() *configpb.NamingLexicon {
 		sort.Strings(v.Patterns)
 		sort.Strings(v.Prefixes)
 	}
+	lx.ValueUnit = map[string]string{}
+	for cl, u := range DefaultValueVocab().bareUnit {
+		lx.ValueUnit[string(cl)] = u
+	}
 	return lx
 }
 
@@ -76,6 +81,7 @@ func roleVocabs(base, over *configpb.NamingLexicon) []namedVocab {
 		{"net.gate_drive", bn.GetGateDrive(), on.GetGateDrive()},
 		{"net.i2c", bn.GetI2C(), on.GetI2C()},
 		{"net.no_connect", bn.GetNoConnect(), on.GetNoConnect()},
+		{"net.voltage", bn.GetVoltage(), on.GetVoltage()},
 		{"pin.supply", bp.GetSupply(), op.GetSupply()},
 		{"pin.gate", bp.GetGate(), op.GetGate()},
 		{"pin.source", bp.GetSource(), op.GetSource()},
@@ -105,7 +111,7 @@ func EffectiveEntries(over *configpb.NamingLexicon) []LexiconEntry {
 	}
 	for i, nv := range roleVocabs(base, over) {
 		// The suffix pairs and the rail-inference switch close the net vocabularies.
-		if i == 8 {
+		if i == 9 {
 			add("net.diff_pair", "pair", diffPairEntries(base.GetNet().GetDiffPair()), false, over.GetNet().GetDiffPair().GetReplace())
 			add("net.diff_pair", "pair", diffPairEntries(over.GetNet().GetDiffPair()), true, false)
 			addSwitch(&out, base, over)
@@ -116,10 +122,14 @@ func EffectiveEntries(over *configpb.NamingLexicon) []LexiconEntry {
 		add(nv.path, "pattern", nv.over.GetPatterns(), true, false)
 		add(nv.path, "exclude", nv.over.GetExclude(), true, false)
 	}
-	// A convention's prefix wins over the built-in table, whichever class it names.
+	// A convention's prefix wins over the built-in table, whichever class it names, and one it
+	// excludes is gone.
 	claimed := map[string]bool{}
 	for _, o := range over.GetClass() {
 		for _, p := range o.GetPrefixes() {
+			claimed[strings.ToUpper(p)] = true
+		}
+		for _, p := range o.GetExcludePrefixes() {
 			claimed[strings.ToUpper(p)] = true
 		}
 	}
@@ -134,6 +144,17 @@ func EffectiveEntries(over *configpb.NamingLexicon) []LexiconEntry {
 		add(path, "pattern", o.GetPatterns(), true, false)
 		add(path, "family", o.GetFamilies(), true, false)
 		add(path, "prefix", o.GetPrefixes(), true, false)
+		add(path, "exclude_prefix", o.GetExcludePrefixes(), true, false)
+	}
+	for _, name := range unitClasses(base, over) {
+		path := "value_unit." + name
+		_, overridden := over.GetValueUnit()[name]
+		if u, ok := base.GetValueUnit()[name]; ok {
+			add(path, "unit", []string{u}, false, overridden)
+		}
+		if overridden {
+			add(path, "unit", []string{over.GetValueUnit()[name]}, true, false)
+		}
 	}
 	return out
 }
@@ -166,6 +187,21 @@ func addSwitch(out *[]LexiconEntry, base, over *configpb.NamingLexicon) {
 	})
 }
 
+func unitClasses(base, over *configpb.NamingLexicon) []string {
+	seen := map[string]bool{}
+	var names []string
+	for _, m := range []map[string]string{base.GetValueUnit(), over.GetValueUnit()} {
+		for n := range m {
+			if !seen[n] {
+				seen[n] = true
+				names = append(names, n)
+			}
+		}
+	}
+	sort.Strings(names)
+	return names
+}
+
 func classNames(base, over *configpb.NamingLexicon) []string {
 	seen := map[string]bool{}
 	var names []string
@@ -193,6 +229,7 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 		lists[nv.path] = &configpb.VocabPatterns{Replace: true}
 	}
 	out.Net.DiffPair = &configpb.DiffPairVocab{Replace: true}
+	out.ValueUnit = map[string]string{}
 	classes := map[string]*configpb.ClassVocab{}
 	for _, name := range classNames(BuiltinLexicon(), over) {
 		classes[name] = &configpb.ClassVocab{Replace: true}
@@ -204,6 +241,10 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 		if e.Kind == "switch" {
 			on := e.Value == "infer_rail_from_supply_pins=true"
 			out.Net.InferRailFromSupplyPins = &on
+			continue
+		}
+		if e.Kind == "unit" {
+			out.ValueUnit[strings.TrimPrefix(e.Vocabulary, "value_unit.")] = e.Value
 			continue
 		}
 		if e.Kind == "pair" {
@@ -219,6 +260,8 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 				c.Families = append(c.Families, e.Value)
 			case "prefix":
 				c.Prefixes = append(c.Prefixes, e.Value)
+			case "exclude_prefix":
+				c.ExcludePrefixes = append(c.ExcludePrefixes, e.Value)
 			}
 			continue
 		}
@@ -232,7 +275,7 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	n, p := out.Net, out.Pin
 	n.Rail, n.Ground, n.Feedback = lists["net.rail"], lists["net.ground"], lists["net.feedback"]
 	n.Switching, n.Control, n.GateDrive, n.I2C = lists["net.switching"], lists["net.control"], lists["net.gate_drive"], lists["net.i2c"]
-	n.NoConnect = lists["net.no_connect"]
+	n.NoConnect, n.Voltage = lists["net.no_connect"], lists["net.voltage"]
 	p.Supply, p.Gate, p.Source, p.Drain, p.ExposedPad = lists["pin.supply"], lists["pin.gate"], lists["pin.source"], lists["pin.drain"], lists["pin.exposed_pad"]
 	p.Anode, p.Cathode, p.Feedback, p.Switching = lists["pin.anode"], lists["pin.cathode"], lists["pin.feedback"], lists["pin.switching"]
 	out.Class = classes

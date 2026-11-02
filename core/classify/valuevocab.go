@@ -1,6 +1,8 @@
 package classify
 
 import (
+	"fmt"
+	"math"
 	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
@@ -12,8 +14,8 @@ import (
 // SI prefixes. No specification says what unit a BARE number carries, because that depends on the
 // component's class and on house habit. A bare "100" on a resistor is 100 Ω by universal convention;
 // on a capacitor it could be farads, microfarads or picofarads depending on the era and the tool that
-// wrote it. So it is a naming convention, declared through --conventions like the rail and ground
-// patterns in RoleVocab.
+// wrote it. So it is a naming convention, declared under the lexicon's value_unit like the rail and
+// ground patterns in RoleVocab.
 //
 // The DEFAULT covers resistors only. Guessing a bare capacitor or inductor unit would put a number
 // three or six orders of magnitude out into a field that reads as authoritative. An unset class
@@ -26,6 +28,9 @@ type ValueVocab struct {
 	// bareUnit is the narrower, uncertain case of a value with NO multiplier prefix either, where the
 	// magnitude is unstated and historic conventions disagree.
 	bareUnit map[ComponentClass]string
+	// bareExp is the power of ten a bare number on a class is in, so a house declaring pF has a bare
+	// capacitor "100" read as 100 pF. Absent is 0.
+	bareExp map[ComponentClass]int
 }
 
 // DefaultValueVocab returns the built-in bare-number conventions. A resistor's bare value is ohms and
@@ -40,27 +45,33 @@ func DefaultValueVocab() *ValueVocab {
 		},
 		// Only the resistor (see the ValueVocab doc).
 		bareUnit: map[ComponentClass]string{ClassResistor: UnitOhm},
+		bareExp:  map[ComponentClass]int{},
 	}
 }
 
-// BuildValueVocab returns a vocabulary from declared conventions, a map of device-class name to the SI
-// BASE unit a bare number on that class means ("ohm"/"farad"/"henry" are accepted alongside the
-// symbols). An empty or nil config yields the defaults. A class the config names replaces the default
-// for that class; classes it does not name keep theirs.
-func BuildValueVocab(bareUnits map[string]string) *ValueVocab {
+// BuildValueVocab returns a vocabulary from a convention's value_unit block, a map of device-class name
+// to the unit a bare number on that class means: an SI base unit ("F", "ohm", "henry") or one with a
+// multiplier prefix ("pF", "uH", "kohm"), which scales the bare number. An empty or nil config yields the defaults. A class the config names replaces the
+// default for that class; classes it does not name keep theirs. A class the engine does not ship, or a
+// unit it cannot read, is an error, since config is operator input and a skipped line reads as applied.
+func BuildValueVocab(bareUnits map[string]string) (*ValueVocab, error) {
 	v := DefaultValueVocab()
 	for cls, unit := range bareUnits {
-		u := canonicalUnit(unit)
-		if u == "" {
-			continue // an unreadable unit is skipped, never guessed, as in the params tier
+		key, ok := ParseComponentClass(strings.ToLower(strings.TrimSpace(cls)))
+		if !ok {
+			return nil, fmt.Errorf("value_unit: unknown component class %q", cls)
 		}
+		u, exp := scaledUnit(unit)
+		if u == "" {
+			return nil, fmt.Errorf("value_unit %q: unit %q is not one the engine reads", cls, unit)
+		}
+		v.bareExp[key] = exp
 		// A declared convention settles the ambiguous bare case AND confirms the dimension, since a
 		// house saying "a bare capacitor value is in farads" has told us both.
-		key := ComponentClass(strings.ToLower(strings.TrimSpace(cls)))
 		v.bareUnit[key] = u
 		v.dimension[key] = u
 	}
-	return v
+	return v, nil
 }
 
 // canonicalUnit maps a declared unit spelling to its canonical SI base symbol, or "" when it names no
@@ -73,6 +84,39 @@ func canonicalUnit(s string) string {
 		return u
 	}
 	return ""
+}
+
+// scaledUnit reads a declared unit as its base unit and the power of ten its prefix carries, and ""
+// when it is neither a unit nor a prefixed one.
+func scaledUnit(s string) (string, int) {
+	s = strings.TrimSpace(s)
+	if u := canonicalUnit(s); u != "" {
+		return u, 0
+	}
+	if rest, ok := strings.CutPrefix(s, "µ"); ok {
+		if u := canonicalUnit(rest); u != "" {
+			return u, -6
+		}
+	}
+	if len(s) > 1 {
+		if exp, ok := siPrefixes[s[0]]; ok && exp != 0 {
+			if u := canonicalUnit(s[1:]); u != "" {
+				return u, exp
+			}
+		}
+	}
+	return "", 0
+}
+
+// bareScale applies the power of ten a bare number on class is declared in.
+func (v *ValueVocab) bareScale(class ComponentClass, value float64) float64 {
+	switch exp := v.bareExp[class]; {
+	case exp > 0:
+		return value * math.Pow10(exp)
+	case exp < 0:
+		return value / math.Pow10(-exp)
+	}
+	return value
 }
 
 // UnitFor returns the unit a value on this component class is measured in when the notation stated
@@ -133,6 +177,9 @@ func (l *Lexicon) StampValues(d *ir.Design) {
 				// The notation gave a number but no unit, so the class decides. Still possibly empty
 				// (a bare value on an ambiguous class), and that stays empty rather than a guess.
 				unit = vocab.UnitFor(class, prefixed)
+				if !prefixed {
+					v = vocab.bareScale(class, v)
+				}
 			}
 			q.Unit = unit
 		} else if v, unit, ok := vocab.valueFromName(text, class); ok {

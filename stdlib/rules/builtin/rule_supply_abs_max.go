@@ -132,7 +132,7 @@ func aliasSupplyVerdicts(
 				out = append(out, v)
 				continue
 			}
-			nominal, ok := check.NominalVoltageFromName(ev.net)
+			nominal, ok := m.NominalVoltage(ev.net)
 			if !ok {
 				v.Outcome = check.NotConsidered
 				v.Reason = fmt.Sprintf("rail %q does not name a nominal voltage", ev.net)

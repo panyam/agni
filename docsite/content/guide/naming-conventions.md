@@ -151,6 +151,7 @@ lexicon:
     diff_pair:
       pairs:
         - { positive: "_PLUS", negative: "_MINUS" }  # _P/_N, _DP/_DN and +/- by default
+    voltage:   { patterns: ["^(\\d+)P(\\d+)$"] }  # reads VDD_3P3 as 3.3V
     infer_rail_from_supply_pins: false       # on unless a convention turns it off
   pin:
     supply: { patterns: ["^PWR_"] }
@@ -170,6 +171,13 @@ Patterns are RE2, matched case-insensitively against the **leaf** of a hierarchi
 turn a built-in role off entirely. `exclude` takes a name back out even when a pattern matches it,
 since RE2 cannot say "SDA, but not `I2S0_RX_SDA`" in one pattern. Exclusions are added and replaced
 the same way patterns are.
+
+`voltage` reads the voltage a net's name states, which `rail-not-classified`, the absolute-maximum
+rules, `cap-voltage` and `net.nominal_voltage` all use. It works a token at a time, with the name
+split on anything but letters, digits, `.` and `+`, so `VDD_3P3_EN` is read as `VDD`, `3P3` and `EN`.
+Each pattern needs a capture group. The first group holds the whole volts and the first later group
+that matched holds the fraction, so the built-in `^\+?(\d+)V(\d+)?$` reads `3V3` as 3.3 and `12V`
+as 12. A name whose tokens state two different voltages, such as `12V_TO_5V`, reads as none.
 
 Every role a net carries records why. A role from a pattern names the pattern, and an inferred rail
 names the supply pin it feeds, so a rail you did not expect can be traced to the line that made it
@@ -250,7 +258,10 @@ the part, so it is declared per design in the `components` section of its
 A prefix is the leading run of letters of a ref-des, so `TH` matches `TH12` and a part whose
 library symbol declares `TH?`. Prefixes are matched case-insensitively and are ADDED to the built-in
 table, and a prefix you list wins over a built-in one, so a house that writes `F` for its ferrites
-re-points `F` away from fuse. `replace: true` applies to `patterns` only and leaves prefixes alone.
+re-points `F` away from fuse. `replace: true` applies to `patterns` only and leaves prefixes alone,
+so taking a built-in prefix out is what `exclude_prefixes` is for. A house whose `D` parts are
+displays rather than diodes writes `diode: { exclude_prefixes: ["D"] }`, and a `D7` is then classed
+by its part name alone.
 
 The family tag follows the class, so a `TH12` answers both `component.class(TH12, "thermistor")`
 and `component.class(TH12, "resistor")`, exactly as an `RT12` does.
@@ -259,7 +270,24 @@ Three things fail at load rather than reading as a convention that matched nothi
 
 - a class the engine does not ship (`unknown component class "esd_array"`),
 - a prefix holding anything but letters (`T1` can never match, because `T1` is a ref-des),
-- one prefix listed under two classes.
+- one prefix listed under two classes,
+- an excluded prefix that is not one of that class's built-in prefixes.
+
+### Values written as a bare number
+
+A value with no unit and no multiplier, such as a capacitor marked `100`, has no unit any standard
+agrees on. Only a resistor's bare number is read, as ohms. `value_unit` says what a bare number means
+on another class, and replaces the built-in for the class it names:
+
+```yaml
+lexicon:
+  value_unit:
+    capacitor: pF        # a bare 100 on a capacitor is 100 pF
+    inductor: uH
+```
+
+The unit may carry a multiplier prefix, which scales only a bare number, so a capacitor marked `10u`
+is still 10 µF. A unit the engine cannot read, or a class it does not ship, fails the load.
 
 The class must be one the engine already has. A project cannot yet declare a class of its own, such
 as a house `esd_array` refining `diode`, because that opens a vocabulary the engine keeps closed, and

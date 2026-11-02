@@ -256,7 +256,7 @@ func sortFacts(out []facts.Row) {
 func netMaxVoltageFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
-		if v, ok := check.RailMaxVoltage(n, n.Name); ok {
+		if v, ok := m.RailMaxVoltage(n); ok {
 			vv := v
 			out = append(out, facts.Row{Relation: RelNetMaxVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cites: cite(irCite(n.Prov))})
 		}
@@ -267,11 +267,11 @@ func netMaxVoltageFacts(m check.Model) []facts.Row {
 // netNominalVoltageFacts emits the name-derived nominal of each RAIL (3V3 -> 3.3). It reads only
 // the NAME, never the max_voltage attribute, and a name with no parseable nominal yields no row.
 //
-// THE RAIL GATE IS THE POINT (agni issue 194). NominalVoltageFromName token-scans the whole name,
+// THE RAIL GATE IS THE POINT (agni issue 194). NominalVoltage token-scans the whole name,
 // so without the gate a signal net like `U3_12_U7_4_3V3` projected 3.3 as a rail nominal. That
 // level goes to net.signal_level instead.
 //
-// The gate is on the RELATION, not on check.NominalVoltageFromName, which is a pure string
+// The gate is on the RELATION, not on Model.NominalVoltage, which is a pure string
 // function. A Go rule holding a net must gate for itself (Model.IsRailNet), as rule_pin_tracking
 // does.
 func netNominalVoltageFacts(m check.Model) []facts.Row {
@@ -280,7 +280,7 @@ func netNominalVoltageFacts(m check.Model) []facts.Row {
 		if !m.IsRailNet(n) || m.IsRegulatorInternalNet(n) {
 			continue
 		}
-		if v, ok := check.NominalVoltageFromName(n.Name); ok {
+		if v, ok := m.NominalVoltage(n.Name); ok {
 			vv := v
 			out = append(out, facts.Row{Relation: RelNetNominalVoltage, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cites: cite(irCite(n.Prov))})
 		}
@@ -302,7 +302,7 @@ func netSignalLevelFacts(m check.Model) []facts.Row {
 		if m.IsRailNet(n) || m.IsRegulatorInternalNet(n) {
 			continue
 		}
-		if v, ok := check.NominalVoltageFromName(n.Name); ok {
+		if v, ok := m.NominalVoltage(n.Name); ok {
 			vv := v
 			out = append(out, facts.Row{Relation: RelNetSignalLevel, Subject: n.Name, Value: fmt.Sprintf("%gV", v), Num: &vv, BaseUnit: unitVolt, Cites: cite(irCite(n.Prov))})
 		}
