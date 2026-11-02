@@ -221,9 +221,19 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	// child half of a parent sheet-pin port, so on the walk it takes the SAME qualified name the
 	// parent's port anchor emits and is not External. On a single-sheet read (empty prefix) it keeps
 	// its bare name and is marked External, because the binding parent, if any, was not read.
+	//
+	// A local label sharing its text with a global label or a power symbol on the SAME sheet instance
+	// joins that design-wide net as well, as KiCad 10 does, which also warns about the pair
+	// (same_local_global_label). A local label on a sheet carrying no such name stays sheet-scoped
+	// (agni issue 1234).
+	wide := designWideNames(root, sc)
 	for _, l := range root.Children("label") {
 		if at := sheetPt(l.Child("at")); at != nil {
-			anchors = append(anchors, sc.localAnchors(gp(at), netName(atomOf(l.Arg(1))), rankLocal, false)...)
+			name := netName(atomOf(l.Arg(1)))
+			anchors = append(anchors, sc.localAnchors(gp(at), name, rankLocal, false)...)
+			if wide[name] {
+				anchors = append(anchors, netgraph.Anchor{At: gp(at), Label: name, Rank: rankGlobal})
+			}
 			onWire = append(onWire, gp(at))
 			if _, seen := joins[gp(at)]; !seen {
 				joins[gp(at)] = tapJoin{kind: "label", label: sc.local(netName(atomOf(l.Arg(1))))}
@@ -674,6 +684,23 @@ func (idx schPinIndex) forUnit(libID string, unit int) []pinPos {
 	out := append([]pinPos(nil), byUnit[0]...)
 	if unit != 0 {
 		out = append(out, byUnit[unit]...)
+	}
+	return out
+}
+
+// designWideNames is the set of design-wide net names drawn on one sheet instance, the text of its
+// global labels and the values of its power symbols, a power flag excluded since it names nothing.
+func designWideNames(root *node, sc sheetScope) map[string]bool {
+	out := map[string]bool{}
+	for _, l := range root.Children("global_label") {
+		out[netName(atomOf(l.Arg(1)))] = true
+	}
+	for _, ps := range root.Children("symbol") {
+		if ref := symbolRefAt(ps, sc.instPath); ref != "" && ref[0] == '#' {
+			if name := netName(propValue(ps, "Value")); name != "PWR_FLAG" {
+				out[name] = true
+			}
+		}
 	}
 	return out
 }
