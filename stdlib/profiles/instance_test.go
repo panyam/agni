@@ -208,6 +208,7 @@ func TestAnInstanceKeyIsValidated(t *testing.T) {
 		{"an unknown instance", Profile{Name: "x", Instance: "per_port", Signals: []Signal{anchor, clk}}, "unknown instance"},
 		{"a regex anchor", Profile{Name: "x", Instance: InstanceAnchorStem, Signals: []Signal{{Name: "CMD", Regex: "_CMD$", Anchor: true}, clk}}, "must declare a suffix"},
 		{"an exclude needing a pull-up", Profile{Name: "x", Instance: InstanceAnchorStem, Signals: []Signal{anchor, clk}, Excludes: []Signal{{Name: "CD", Suffix: "_CD", PullUp: true}}}, "cannot be an anchor or need a pull-up"},
+		{"a requirement not judged per bus", Profile{Name: "x", Instance: InstanceAnchorStem, Signals: []Signal{anchor, clk}, Requirements: []Requirement{{Type: "esd"}}}, "not yet judged one bus at a time"},
 		{"an exclude with no matcher", Profile{Name: "x", Instance: InstanceAnchorStem, Signals: []Signal{anchor, clk}, Excludes: []Signal{{Name: "CD"}}}, "declares no matcher"},
 	} {
 		if err := Validate(tc.p); err == nil || !strings.Contains(err.Error(), tc.want) {
