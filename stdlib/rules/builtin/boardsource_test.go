@@ -6,6 +6,7 @@ import (
 
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/classify"
+	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -119,6 +120,52 @@ func TestAFixedBuckBehindANetTieIsBoardDriven(t *testing.T) {
 			classify.StampNetRoles(d)
 			if got := verdictOn(t, inputProtection, d, "3V3"); got != string(tc.want) {
 				t.Errorf("input-protection on 3V3 = %q, want %q", got, tc.want)
+			}
+		})
+	}
+}
+
+// A project's feedback vocabulary decides which pin names BoardSource reads, in both directions, with
+// the process-level vocabulary left at its defaults (agni issue 1284).
+func TestBoardSourceReadsTheModelsVocabulary(t *testing.T) {
+	houseOnly := &configpb.VocabPatterns{Patterns: []string{`_FDBK$`}, Replace: true}
+	added := &configpb.VocabPatterns{Patterns: []string{`_FDBK$`}}
+	for _, tc := range []struct {
+		name     string
+		pin      string
+		feedback *configpb.VocabPatterns
+		want     bool
+	}{
+		{"a built-in pin name with no convention", "FB", nil, true},
+		{"a house pin name with no convention", "FDBK", nil, false},
+		{"a house pin name the convention adds", "FDBK", added, true},
+		{"a built-in pin name the convention replaces", "FB", houseOnly, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			d := pinDesign(map[string][]supplyPin{
+				"J1": twoPin(), "U1": {{"VDD", "1", pwrIn}, {"GND", "2", pwrIn}},
+				"U2": {{"SW", "1", pass}, {tc.pin, "2", pass}}, "L1": twoPin(),
+			}, map[string][]string{
+				"3V3": {"J1.1", "U1.1", "L1.2", "U2.2"}, "NODE": {"L1.1", "U2.1"}, "GND": {"U1.2", "J1.2"},
+			})
+			classify.Stamp(d)
+			classify.StampNetRoles(d)
+			rv, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Feedback: tc.feedback}})
+			if err != nil {
+				t.Fatalf("BuildRoleVocab: %v", err)
+			}
+			m := check.NewModel(d, check.WithLexicon(&classify.Lexicon{Role: rv}))
+			var rail *ir.Net
+			for _, n := range d.Nets {
+				if n.Name == "3V3" {
+					rail = n
+				}
+			}
+			if rail == nil {
+				t.Fatal("the fixture has no 3V3 net")
+			}
+			if got := check.BoardSource(m, rail); (got != "") != tc.want {
+				t.Errorf("BoardSource = %q, want board driven = %v", got, tc.want)
 			}
 		})
 	}

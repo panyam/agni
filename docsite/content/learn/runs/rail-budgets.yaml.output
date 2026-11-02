@@ -1,4 +1,4 @@
-#agni-run 4cdd4f5c40fae8d6
+#agni-run 9171da03596ecd1d
 intent/rail-current-capacity  1 fail, 1 pass
     fail            3V3  U1 supplies "3V3" rated at IOUT 0.5A, below the 0.8A the declaration
                          asks for

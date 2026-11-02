@@ -1,0 +1,18 @@
+(edif HOUSEFB
+  (edifVersion 2 0 0)
+  (design HOUSEFB (cellRef TOP (libraryRef LIB)))
+  (library LIB
+    (cell CONN (view V (viewType NETLIST) (interface (port (rename P1 "1") (direction INOUT)) (port (rename P2 "2") (direction INOUT)))))
+    (cell LOAD (view V (viewType NETLIST) (interface (port VDD (designator "1") (direction INPUT)) (port GND (designator "2") (direction INPUT)))))
+    (cell BUCK (view V (viewType NETLIST) (interface (port SW (designator "1")) (port FDBK (designator "2")))))
+    (cell IND (view V (viewType NETLIST) (interface (port (rename P1 "1")) (port (rename P2 "2")))))
+    (cell TOP
+      (view V (viewType NETLIST) (interface)
+        (contents
+          (instance J1 (viewRef V (cellRef CONN)) (designator "J1"))
+          (instance U1 (viewRef V (cellRef LOAD)) (designator "U1"))
+          (instance U2 (viewRef V (cellRef BUCK)) (designator "U2"))
+          (instance L1 (viewRef V (cellRef IND)) (designator "L1"))
+          (net 3V3 (joined (portRef P1 (instanceRef J1)) (portRef VDD (instanceRef U1)) (portRef P2 (instanceRef L1)) (portRef FDBK (instanceRef U2))))
+          (net NODE (joined (portRef P1 (instanceRef L1)) (portRef SW (instanceRef U2))))
+          (net GND (joined (portRef P2 (instanceRef J1)) (portRef GND (instanceRef U1))))))))) 

@@ -197,6 +197,11 @@ excluded because they are not rails, so a rule quantifying over rails would be n
 subject. If your house convention spells a switched output `3V3_SW` rather than a switch node, narrow
 the `switching` vocabulary with `replace` and the rest keeps working.
 
+The `feedback` and `switching` vocabularies also read a part's pin names, spelled with a leading
+underscore, so `SW1` is checked as `_SW` and `FB2` as `_FB`. That is how a connector on a buck's
+output reads as an outlet when no net is named for the converter. A house that calls the pin `FDBK`
+adds `_FDBK$` to `feedback`.
+
 These are the same six vocabularies the engine ships with defaults for, in the same schema. There is
 no separate list of built-ins to consult.
 

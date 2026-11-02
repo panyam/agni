@@ -3,7 +3,6 @@ package check
 import (
 	"strings"
 
-	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
@@ -129,7 +128,7 @@ func BoardSource(m Model, n *ir.Net) string {
 			case ir.PinDirection_PIN_DIRECTION_POWER_IN:
 				sinks = append(sinks, ref)
 			}
-			if classify.ActiveRoleVocab().IsFeedback(pinTerm(m, c)) {
+			if m.IsFeedbackName(pinTerm(m, c)) {
 				if _, ok := fbPin[ref]; !ok {
 					fbPin[ref] = rn.GetName()
 				}
@@ -149,7 +148,7 @@ func BoardSource(m Model, n *ir.Net) string {
 				continue
 			}
 			for _, c := range rn.Connections {
-				if onFb, ok := fbPin[c.ComponentRef]; ok && classify.ActiveRoleVocab().IsSwitching(pinTerm(m, c)) {
+				if onFb, ok := fbPin[c.ComponentRef]; ok && m.IsSwitchingName(pinTerm(m, c)) {
 					sw, coil, fb = rn.GetName(), step.Through, onFb
 				}
 			}
