@@ -70,6 +70,15 @@ type Profile struct {
 	// uniformly, so a new interface or a new requirement type like CAN's termination is a declaration
 	// rather than engine code.
 	Requirements []Requirement
+
+	// Instance is how the naming convention tells one bus of this interface from another, "" for one
+	// interface across the whole design or InstanceAnchorStem for a bus per anchor net (instance.go).
+	Instance string
+
+	// Excludes are signals whose net on a bus says the bus is some other interface, so nothing on it is
+	// required or judged. They need an Instance, and they never appear in Signals, so a loop over the
+	// required signals cannot pick one up.
+	Excludes []Signal
 }
 
 // Requirement is one declared check in a Profile, a registered compiler Type (signal-missing,
@@ -318,6 +327,9 @@ func Compile(p Profile) []*check.Rule {
 	if err := validateAnchorDeclared(p); err != nil {
 		panic("profiles: " + err.Error())
 	}
+	if err := validateInstance(p); err != nil {
+		panic("profiles: " + err.Error())
+	}
 	// Params that cannot produce the check their type promises (WS3-047). A Go literal never passes
 	// Load, so this repeats Load's check rather than replacing it.
 	if err := ValidateRequirements(p); err != nil {
@@ -405,16 +417,13 @@ func (p Profile) signalMissingRule() *check.Rule {
 		// bypasses validation gets no rule rather than a panic.
 		return nil
 	}
+	if p.Instance != "" {
+		return p.busSignalMissingRule()
+	}
 	rules := p.presenceRules()
 	// On a design that DECLARES a host, the host path covers it, so the convention path stands down
 	// rather than reporting a signal twice (net + component).
-	var guard []query.Literal
-	if p.HasHost() {
-		rules = append(rules, p.hostRules()...)
-		rules = append(rules,
-			query.Def(query.Rel("any_host", query.Str("y")), query.Pos(query.Rel("host", query.V("ref")))))
-		guard = []query.Literal{query.Neg(query.Rel("any_host", query.Str("y")))}
-	}
+	rules, guard := p.hostGuard(rules)
 	n := 0
 	for _, s := range p.Signals {
 		if s.Anchor {
@@ -442,6 +451,51 @@ func (p Profile) signalMissingRule() *check.Rule {
 	if n == 0 {
 		return nil
 	}
+	return p.signalMissingFrom(rules)
+}
+
+// hostGuard adds the host relations to rules and returns the literal that stands the convention path
+// down on a design that DECLARES a host, since the host path covers it there and a signal would
+// otherwise be reported twice (net + component). A profile with no host binding gets no guard.
+func (p Profile) hostGuard(rules []query.Rule) ([]query.Rule, []query.Literal) {
+	if !p.HasHost() {
+		return rules, nil
+	}
+	rules = append(rules, p.hostRules()...)
+	rules = append(rules,
+		query.Def(query.Rel("any_host", query.Str("y")), query.Pos(query.Rel("host", query.V("ref")))))
+	return rules, []query.Literal{query.Neg(query.Rel("any_host", query.Str("y")))}
+}
+
+// busSignalMissingRule is the convention completeness check for an instance-keyed profile: on each bus
+// in use, every required signal the bus lacks, reported at the bus's anchor net. A signal another bus
+// carries does not count, which is the difference from signalMissingRule.
+func (p Profile) busSignalMissingRule() *check.Rule {
+	rules, guard := p.hostGuard(p.busRules())
+	n := 0
+	for _, s := range p.Signals {
+		if s.Anchor {
+			continue
+		}
+		n++
+		scope := append([]query.Literal{
+			query.Pos(query.Rel("anchor_bus", query.V("a"), query.V("s"))),
+			query.Pos(query.Rel("in_use", query.V("s"))),
+		}, guard...)
+		body := append(append([]query.Literal{}, scope...), query.Neg(query.Rel("has_signal", query.V("s"), query.Str(s.Name))))
+		rules = append(rules,
+			query.Def(query.Rel("missing", query.V("a"), query.Str(s.Name)), body...),
+			query.Def(query.Rel("sig_scope", query.V("a"), query.Str(s.Name)), scope...))
+	}
+	if n == 0 {
+		return nil
+	}
+	return p.signalMissingFrom(rules)
+}
+
+// signalMissingFrom wraps a program deriving missing(a, sig) and its considered set sig_scope(a, sig)
+// as the signal-missing rule, whichever presence relations derived them.
+func (p Profile) signalMissingFrom(rules []query.Rule) *check.Rule {
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("missing", query.V("a"), query.V("sig")))},
 		query.V("a"), query.V("sig"))
@@ -582,6 +636,11 @@ func (p Profile) pullupVerdicts(pullups []Signal) func(context.Context, check.Mo
 		if len(nets) == 0 || !InUse(m, p) {
 			return nil
 		}
+		if p.Instance != "" {
+			// Only a net on a bus in use is this interface's line to judge.
+			onBus := p.busNets(m, pullups)
+			nets = slices.DeleteFunc(nets, func(n *ir.Net) bool { return !onBus[n.GetName()] })
+		}
 		var out []check.Verdict
 		for _, n := range nets {
 			outcome, w, ctx := check.PullUpVerdict(m, n)
@@ -614,23 +673,38 @@ func anySignalMatches(net string, signals []Signal) bool {
 // danglingRule fires when a signal net exists by name but carries fewer than two connections (present
 // in the netlist but not actually wired through to both ends of the bus).
 func (p Profile) danglingRule() *check.Rule {
-	rules := p.presenceRules()
-	for _, s := range p.Signals {
-		body := append(wiredNet(query.V("n")), netMatch(query.V("n"), s)...)
-		rules = append(rules, query.Def(query.Rel("sig_net", query.V("n")), body...))
-	}
-	rules = append(rules, query.Def(query.Rel("dangling", query.V("n")),
-		query.Pos(query.Rel("sig_net", query.V("n"))),
-		query.Pos(query.Rel("in_use", query.V("iu"))),
-		query.Pos(query.Rel("net.pin_count", query.V("n"), query.V("c"))),
-		query.Cmp(query.V("c"), "<", query.Num(2))),
-		// The considered set is every signal net of this profile on a bus in use, whatever its pin
-		// count. It cannot be derived from the goal, because `dangling` ends in a comparison rather
-		// than a negated literal, so "the body minus its negation" is the body itself and would claim
-		// the rule considered only the nets it faulted.
-		query.Def(query.Rel("dangling_scope", query.V("n")),
+	var rules []query.Rule
+	if p.Instance != "" {
+		// A signal net counts only on a bus in use, so another bus's net that happens to share a
+		// suffix is never this interface's dangling line.
+		rules = append(p.busRules(), query.Def(query.Rel("bus_net", query.V("n")),
+			query.Pos(query.Rel("on_bus", query.V("s"), query.V("sig"), query.V("n"))),
+			query.Pos(query.Rel("in_use", query.V("s")))))
+		rules = append(rules,
+			query.Def(query.Rel("dangling", query.V("n")),
+				query.Pos(query.Rel("bus_net", query.V("n"))),
+				query.Pos(query.Rel("net.pin_count", query.V("n"), query.V("c"))),
+				query.Cmp(query.V("c"), "<", query.Num(2))),
+			query.Def(query.Rel("dangling_scope", query.V("n")), query.Pos(query.Rel("bus_net", query.V("n")))))
+	} else {
+		rules = p.presenceRules()
+		for _, s := range p.Signals {
+			body := append(wiredNet(query.V("n")), netMatch(query.V("n"), s)...)
+			rules = append(rules, query.Def(query.Rel("sig_net", query.V("n")), body...))
+		}
+		rules = append(rules, query.Def(query.Rel("dangling", query.V("n")),
 			query.Pos(query.Rel("sig_net", query.V("n"))),
-			query.Pos(query.Rel("in_use", query.V("iu")))))
+			query.Pos(query.Rel("in_use", query.V("iu"))),
+			query.Pos(query.Rel("net.pin_count", query.V("n"), query.V("c"))),
+			query.Cmp(query.V("c"), "<", query.Num(2))),
+			// The considered set is every signal net of this profile on a bus in use, whatever its pin
+			// count. It cannot be derived from the goal, because `dangling` ends in a comparison rather
+			// than a negated literal, so "the body minus its negation" is the body itself and would claim
+			// the rule considered only the nets it faulted.
+			query.Def(query.Rel("dangling_scope", query.V("n")),
+				query.Pos(query.Rel("sig_net", query.V("n"))),
+				query.Pos(query.Rel("in_use", query.V("iu")))))
+	}
 	q := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("dangling", query.V("n")))}, query.V("n"))
 	danglingDomain := query.Build(rules,

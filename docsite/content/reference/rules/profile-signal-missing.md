@@ -15,6 +15,12 @@ but a required signal net is absent. Signals are matched by net name, usually by
 profile may also match by prefix, glob or regex. On a design that declares a host, `host-incomplete`
 reports instead and this rule stands down.
 
+A profile with an `instance` key, as the shipped eMMC one has, asks this of each bus on its own. A
+bus is the nets named from one anchor net's stem, so `SD2_CMD`'s bus is `SD2_CLK`, `SD2_DATA0` and so
+on, and a signal another bus carries does not count. A bus carrying one of the profile's `excludes`
+lines is a different interface and is not checked, which is how a removable SD card's slot, with its
+card detect line, stays out of the eMMC check.
+
 ### Why engineers want it
 
 The most common bus-wiring slip is a forgotten line, with five of six SPI-NOR signals wired and one

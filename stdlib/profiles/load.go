@@ -101,7 +101,7 @@ func Validate(p Profile) error {
 	if err := validateAnchorDeclared(p); err != nil {
 		return fmt.Errorf("profile: %w", err)
 	}
-	return nil
+	return validateInstance(p)
 }
 
 // Load reads a YAML profile from r, parses+structurally-validates it (Parse), and additionally

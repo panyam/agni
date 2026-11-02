@@ -16,7 +16,13 @@ import (
 // profile (PCIe signals prefixed `PCIE_`) must NOT read in-use just because foreign nets share a bare
 // suffix (`LIN_TX`, `CAN_RX`). A lone matching signal is not evidence (a real corpus has many `_CS`
 // nets), hence the two-distinct-signal floor.
+//
+// For an instance-keyed profile it asks whether some bus is in use, its anchor and one more signal on
+// one stem and no exclude signal, as the generated in_use does.
 func InUse(m check.Model, p Profile) bool {
+	if p.Instance != "" {
+		return len(p.busesInUse(m)) > 0
+	}
 	distinct := 0
 	for _, s := range p.Signals {
 		for _, n := range m.Nets() {
@@ -43,10 +49,21 @@ func InUse(m check.Model, p Profile) bool {
 //
 // A profile that declares NO anchor generates no convention completeness rule at all (signalMissingRule
 // returns nil), so there is nothing for a missing anchor to block and it counts as vacuously anchored.
+//
+// For an instance-keyed profile an anchor on a bus an exclude signal rules out does not count, since
+// that bus is a different interface.
 func Anchored(m check.Model, p Profile) bool {
 	a := p.anchorSignal()
 	if a == nil {
 		return true
+	}
+	if p.Instance != "" {
+		for _, b := range p.buses(m) {
+			if !b.excluded {
+				return true
+			}
+		}
+		return false
 	}
 	for _, n := range m.Nets() {
 		if netMatchesSignal(n.GetName(), *a) {
@@ -66,7 +83,26 @@ func Anchored(m check.Model, p Profile) bool {
 // A glob or regex signal has no suffix to drop, so there is no looser reading of it than the matcher
 // itself and it falls back to netMatchesSignal. Without that fallback its empty suffix would match
 // every net and report every design as "named".
+//
+// For an instance-keyed profile it asks the same of one bus at a time, prefixes dropped, and skips a
+// bus an exclude signal rules out, so an SD slot does not read as an eMMC whose host went unannotated.
 func Named(m check.Model, p Profile) bool {
+	if p.Instance != "" {
+		loose := p
+		loose.Signals = make([]Signal, len(p.Signals))
+		for i, s := range p.Signals {
+			if s.Suffix != "" {
+				s.Prefix = ""
+			}
+			loose.Signals[i] = s
+		}
+		for _, b := range loose.buses(m) {
+			if b.inUse() {
+				return true
+			}
+		}
+		return false
+	}
 	found := 0
 	for _, s := range p.Signals {
 		if anyNetLooselyMatches(m, s) {

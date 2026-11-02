@@ -361,16 +361,20 @@ class DatalogAggregate(_message.Message):
     def __init__(self, func: _Optional[str] = ..., var: _Optional[str] = ..., distinct: _Optional[bool] = ...) -> None: ...
 
 class ProfileDef(_message.Message):
-    __slots__ = ("name", "signals", "requirements", "host")
+    __slots__ = ("name", "signals", "requirements", "host", "instance", "excludes")
     NAME_FIELD_NUMBER: _ClassVar[int]
     SIGNALS_FIELD_NUMBER: _ClassVar[int]
     REQUIREMENTS_FIELD_NUMBER: _ClassVar[int]
     HOST_FIELD_NUMBER: _ClassVar[int]
+    INSTANCE_FIELD_NUMBER: _ClassVar[int]
+    EXCLUDES_FIELD_NUMBER: _ClassVar[int]
     name: str
     signals: _containers.RepeatedCompositeFieldContainer[ProfileSignal]
     requirements: _containers.RepeatedCompositeFieldContainer[ProfileRequirement]
     host: ProfileHost
-    def __init__(self, name: _Optional[str] = ..., signals: _Optional[_Iterable[_Union[ProfileSignal, _Mapping]]] = ..., requirements: _Optional[_Iterable[_Union[ProfileRequirement, _Mapping]]] = ..., host: _Optional[_Union[ProfileHost, _Mapping]] = ...) -> None: ...
+    instance: str
+    excludes: _containers.RepeatedCompositeFieldContainer[ProfileSignal]
+    def __init__(self, name: _Optional[str] = ..., signals: _Optional[_Iterable[_Union[ProfileSignal, _Mapping]]] = ..., requirements: _Optional[_Iterable[_Union[ProfileRequirement, _Mapping]]] = ..., host: _Optional[_Union[ProfileHost, _Mapping]] = ..., instance: _Optional[str] = ..., excludes: _Optional[_Iterable[_Union[ProfileSignal, _Mapping]]] = ...) -> None: ...
 
 class ProfileHost(_message.Message):
     __slots__ = ("attr", "value")

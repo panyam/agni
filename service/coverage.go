@@ -51,16 +51,15 @@ func (s *CheckService) GetInterfaceCoverage(ctx context.Context, req *webapi.Get
 	for _, name := range names {
 		for _, p := range index[name] {
 			start := time.Now()
-			cov := profiles.Coverage(ctx, p, m, base)
+			covs := profiles.Coverages(ctx, p, m, base)
 			timing.Ruled(ctx, "coverage/"+p.Name, time.Since(start))
-			if cov == nil {
-				continue
+			for _, cov := range covs {
+				ic := &webapi.InterfaceCoverage{Profile: cov.Profile, AnchorNet: cov.Anchor}
+				for _, sig := range cov.Signals {
+					ic.Signals = append(ic.Signals, &webapi.SignalCoverage{Name: sig.Name, Net: sig.Net, State: sig.State})
+				}
+				resp.Interfaces = append(resp.Interfaces, ic)
 			}
-			ic := &webapi.InterfaceCoverage{Profile: cov.Profile, AnchorNet: cov.Anchor}
-			for _, sig := range cov.Signals {
-				ic.Signals = append(ic.Signals, &webapi.SignalCoverage{Name: sig.Name, Net: sig.Net, State: sig.State})
-			}
-			resp.Interfaces = append(resp.Interfaces, ic)
 		}
 	}
 	return resp, nil

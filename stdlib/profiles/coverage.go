@@ -43,9 +43,38 @@ type InterfaceCoverage struct {
 // fewer than two signals present. Pass the one the model keeps (service.BuildModelCached), since
 // projecting a base costs about 50ms on a large board and a caller walks every profile (agni issue
 // 985). A nil base builds one from the default registry on each call.
+//
+// It is the first of Coverages, which is the one to call for an instance-keyed profile, since such a
+// profile can have several buses on one design.
 func Coverage(ctx context.Context, p Profile, m check.Model, base func() *query.Base) *InterfaceCoverage {
+	if all := Coverages(ctx, p, m, base); len(all) > 0 {
+		return all[0]
+	}
+	return nil
+}
+
+// Coverages is Coverage for every bus of the interface on the design, one matrix per bus in use with
+// that bus's anchor net, in net order (agni issue 1246). A profile with no instance key has at most
+// one. An instance-keyed profile with no bus in use but a declared host gets the design-wide matrix,
+// since the host path judges the host's own nets whatever their names.
+func Coverages(ctx context.Context, p Profile, m check.Model, base func() *query.Base) []*InterfaceCoverage {
 	if base == nil {
 		base = func() *query.Base { return query.NewBase(m) }
+	}
+	if p.Instance != "" {
+		var out []*InterfaceCoverage
+		for _, b := range p.busesInUse(m) {
+			nets := make([]*ir.Net, len(p.Signals))
+			for i, s := range p.Signals {
+				if on := b.signals[s.Name]; len(on) > 0 {
+					nets[i] = on[0]
+				}
+			}
+			out = append(out, coverageOf(m, p, b.anchor.GetName(), nets))
+		}
+		if len(out) > 0 || !hostDeclares(ctx, base, p) {
+			return out
+		}
 	}
 	nets := make([]*ir.Net, len(p.Signals))
 	present := 0
@@ -63,6 +92,11 @@ func Coverage(ctx context.Context, p Profile, m check.Model, base func() *query.
 	if present < 2 && !hostDeclares(ctx, base, p) {
 		return nil
 	}
+	return []*InterfaceCoverage{coverageOf(m, p, anchor, nets)}
+}
+
+// coverageOf states each of p's signals given the net matched for it, nil when it has none.
+func coverageOf(m check.Model, p Profile, anchor string, nets []*ir.Net) *InterfaceCoverage {
 	cov := &InterfaceCoverage{Profile: p.Name, Anchor: anchor}
 	for i, s := range p.Signals {
 		sc := SignalCoverage{Name: s.Name}
