@@ -74,6 +74,10 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 		case n.Attributes[netgraph.AttrExternal] == "true":
 			v.Outcome = check.NotConsidered
 			v.Reason = "the net continues onto a sheet this read did not open, so its feed may exist outside it"
+		case check.DeliberatelyOpen(m, n):
+			// An unused supply pin under a no-connect X, which a datasheet allows for some pins (agni 1244).
+			v.Outcome = check.NotConsidered
+			v.Reason = check.DeliberatelyOpenReason
 		case n.Attributes[netgraph.AttrPowerDriven] == "true":
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
@@ -134,6 +138,7 @@ var powerInputNotDrivenSpec = &check.Spec{
 		check.IsTrue{T: check.Fact{Name: "design.types_power_out"}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.power_driven"}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
+		check.Not{X: check.IsTrue{T: check.Call{Fn: "deliberately_open"}}},
 		check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}},
 		check.Or{Xs: []check.Expr{
 			check.And{Xs: []check.Expr{

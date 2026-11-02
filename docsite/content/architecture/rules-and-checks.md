@@ -298,6 +298,18 @@ so an input whose only pull is unfitted is alone on its net and fails. A connect
 whether or not it is fitted, since a board shipped with its header loose marks the header DNP and its
 pads are still the board's interface.
 
+### Pins marked no-connect
+
+A pin the schematic marks no-connect (KiCad's X on a pin) is the designer saying the pin is unused,
+and the KiCad reader keeps the mark as the net's `no_connect` attribute. A rule that would demand
+something of a net, a pull-up, a driver or a capacitor, asks `check.DeliberatelyOpen` first and
+reports a net whose only pin is marked as not considered (agni issue 1244). The pin's own name still
+reaches the net through KiCad's stub name, so an unused `SDA` pin used to read as an I2C bus with no
+pull-up. A marked pin that is also wired to another part is a design error rather than a statement,
+so `DeliberatelyOpen` holds only for a net of one connection, and the rule still judges a wired one.
+`single-pin-net` reads the wider `check.IntentionallyUnconnected`, since a stub is the very thing it
+asks about.
+
 ## The evaluation model
 
 Rules evaluate over the neutral IR, producing findings tied to provenance so each violation

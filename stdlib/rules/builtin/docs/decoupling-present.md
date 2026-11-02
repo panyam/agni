@@ -26,7 +26,9 @@ check value, count-per-pin, or placement distance, since proximity is a board-ti
 value/impedance version is a datasheet-joined rule (Tier X). Ground-named nets (GND/VSS/...) are
 skipped even though their pins are power_in too, because decoupling is a supply-rail concept and the
 same capacitor already sits on the ground side. Cross-sheet rails are skipped (the cap may live on a
-sheet we did not read). Capacitor identity is the shared component.class fact.
+sheet we did not read). Capacitor identity is the shared component.class fact. A supply pin the
+schematic marks no-connect, alone on its net, is not considered, since an unused supply pin draws
+nothing to decouple (agni issue 1244).
 
 A capacitor across a fitted zero-ohm link counts as on the rail, because the link joins two names
 for one rail (agni issue 1015). A converter's output node and the rail it feeds are often split by a

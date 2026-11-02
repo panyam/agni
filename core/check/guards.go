@@ -128,6 +128,18 @@ func IntentionallyUnconnected(m Model, n *ir.Net) bool {
 	})
 }
 
+// DeliberatelyOpen reports whether a net is one pin the design marks as left unconnected on purpose,
+// such as a KiCad pin under a no-connect X. A rule that would demand something of the net (a pull-up,
+// a driver, a capacitor) has nothing to judge there, since the designer already said the pin is
+// unused (agni issue 1244). A flagged pin that is also wired to another pin is a design error rather
+// than a statement, so a net of two or more connections is never deliberately open.
+func DeliberatelyOpen(m Model, n *ir.Net) bool {
+	return len(n.Connections) == 1 && IntentionallyUnconnected(m, n)
+}
+
+// DeliberatelyOpenReason is the reason a rule gives a net DeliberatelyOpen holds for.
+const DeliberatelyOpenReason = "the design marks the net's only pin as deliberately unconnected, so there is nothing on it to judge"
+
 // ToolNetNamePattern matches the names a tool gives a net no designer named: an EDIF or synthetic
 // "N$1", "$N1", and KiCad's "Net-(R1-Pad2)" and "unconnected-(J1A-MID0-PadK40)". A KiCad name is
 // built from a pin's own name, so a rule that reads meaning from a net's name must skip these, or the

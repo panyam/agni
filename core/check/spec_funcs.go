@@ -20,6 +20,14 @@ func registerBuiltinSpecFuncs() {
 			return IntentionallyUnconnected(m, ents["net"].(*ir.Net))
 		},
 	})
+	RegisterSpecFunc("deliberately_open", &SpecFunc{
+		// A one-pin net the design marks no-connect (see DeliberatelyOpen).
+		Reads:      []string{"net.names", "pin.no_connect"},
+		Primitives: []string{"traverse", "exists", "pin-role"},
+		Fn: func(m Model, ents map[string]any, _ []any) any {
+			return DeliberatelyOpen(m, ents["net"].(*ir.Net))
+		},
+	})
 	RegisterSpecFunc("unprotected_power_reach", &SpecFunc{
 		// The WS3-011 reach walk behind input-protection. True when, from the in-scope
 		// connector net, SOME series-reachable net carries a real power-input pin with

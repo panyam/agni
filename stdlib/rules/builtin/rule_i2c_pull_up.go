@@ -29,8 +29,9 @@ var i2cPullUp = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// i2cPullUpVerdicts returns one verdict per I2C net, and that list IS this rule's considered set.
-// No step can drop a subject, so nothing here is NotConsidered.
+// i2cPullUpVerdicts returns one verdict per I2C net, and that list IS this rule's considered set. A
+// pin the design marks no-connect is NotConsidered, since an unused bus pin needs no pull-up (agni
+// issue 1244).
 //
 // A pass carries its PATH as the witness ("SCL reaches rail +3V3 through R7"), and the same hops are
 // the entities the viewer highlights.
@@ -38,6 +39,10 @@ func i2cPullUpVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
 		if !m.IsI2CName(n.Name) {
+			continue
+		}
+		if check.DeliberatelyOpen(m, n) {
+			out = append(out, check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindNet, Ref: n.Name, NetID: n.GetId()}}, Rule: "i2c-pull-up", Outcome: check.NotConsidered, Reason: check.DeliberatelyOpenReason})
 			continue
 		}
 		outcome, w, ctx := check.PullUpVerdict(m, n)
@@ -58,6 +63,7 @@ var i2cPullUpSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
 		check.IsTrue{T: check.Call{Fn: "i2c_name", Args: []check.Term{check.Fact{Name: "net.names"}}}},
+		check.Not{X: check.IsTrue{T: check.Call{Fn: "deliberately_open"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "pullup_reaches_rail"}}},
 	}},
 	Message: "I2C net has no pull-up resistor to a rail",

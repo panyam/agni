@@ -77,7 +77,8 @@ func notARail(m check.Model, n *ir.Net) string {
 //     (notASupply, agni issue 935).
 //
 // An EXTERNAL net is NotConsidered instead. It is a rail that feeds supply pins, and its capacitor may
-// be drawn on a sheet this read did not open.
+// be drawn on a sheet this read did not open. So is a supply pin the design marks no-connect, which
+// draws nothing (agni issue 1244).
 //
 // A pass NAMES the capacitor in the witness and in Context, so a reviewer can go and see where it
 // sits, and deleting that capacitor changes the witness or flips the verdict. A capacitor across a
@@ -103,6 +104,9 @@ func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdi
 		case n.Attributes[netgraph.AttrExternal] == "true":
 			v.Outcome = check.NotConsidered
 			v.Reason = "the rail continues onto a sheet this read did not open, so its decoupling may be drawn outside it"
+		case check.DeliberatelyOpen(m, n):
+			v.Outcome = check.NotConsidered
+			v.Reason = check.DeliberatelyOpenReason
 		case decap != "":
 			v.Outcome = check.Pass
 			v.Witness, v.Context = railCapacitorWitness(decap, at, "decoupling capacitor")
@@ -135,6 +139,7 @@ var decouplingPresentSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.attr.external"}}},
+		check.Not{X: check.IsTrue{T: check.Call{Fn: "deliberately_open"}}},
 		check.Not{X: check.IsTrue{T: check.Call{Fn: "ground_name", Args: []check.Term{check.Fact{Name: "net.names"}}}}},
 		check.ExistsIn{Over: "net.connections", Where: check.And{Xs: []check.Expr{check.Cmp{L: check.Fact{Name: "pin.electrical_type"}, Op: "==", R: check.Lit{V: "power_in"}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "conn.virtual"}}}, check.Not{X: check.IsTrue{T: check.Fact{Name: "component.dnp"}}}, check.Cmp{L: check.Fact{Name: "component.class"}, Op: "!=", R: check.Lit{V: "connector"}}}}},
 		check.Not{X: check.IsTrue{T: check.Fact{Name: "net.rail_capacitor"}}},

@@ -61,6 +61,11 @@ A resistor marked do-not-populate is not crossed, because an unfitted part pulls
 pull-ups the netlist does not show (inside a level translator, on a plugged-in module) and is worth
 recording as such.
 
+A bus pin the schematic marks no-connect, alone on its net, is not considered (agni issue 1244). A
+part's SMBus or I2C pins are often unused, and KiCad names the stub after the pin
+(`unconnected-(U15-SDA/SMBDAT-Pad37)`), so the name reads as a bus while the designer has said
+nothing is attached. A flagged pin that is also wired to another part is still judged.
+
 The walk crosses resistors only and never crosses ground, because a resistor to ground is a
 pull-DOWN, and counting it would pass the bus this rule exists to catch.
 
