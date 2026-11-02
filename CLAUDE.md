@@ -745,6 +745,10 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   `python-test` and `exercise-revision-audit` do. `clients/python/examples/revision_audit.summary.md`
   is a golden the client's tests regenerate and compare (also under `make examples-test`);
   `AGNI_UPDATE_GOLDEN=1` rewrites it, and its diff is the review.
+- **agni's agent skills live in `plugins/agni/skills/<name>/SKILL.md` and nowhere else** (agni 1292).
+  The repo root's `.claude-plugin/` and `.cursor-plugin/` marketplaces and `gh skill install` all
+  find that folder, so a new skill is one file and reaches Claude Code, Cursor and Copilot without
+  a checkout. `plugins/README.md` has the rules and `plugins/plugins_test.go` holds them.
 - **When you build a feature, ship an example** (CONSTRAINTS C10; how-to in `examples/CONVENTIONS.md`,
   and `examples/tutorial-project/README.md` for the fixture the docsite tutorial runs on).
 - **`AGNI_EXAMPLE_DESIGN` points every example at a board this repo cannot carry.** Each example asks
