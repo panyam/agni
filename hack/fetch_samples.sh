@@ -3,6 +3,7 @@
 #
 # Usage: hack/fetch_samples.sh <artifact> [<artifact> ...]
 #   artifacts: tutorial-board (schematics, one board) | oracle-corpus (both views, every board)
+#              | odb-altium (Altium-written ODB++ jobs) | odb-kicad (kicad-cli's ODB++ export of each board)
 #
 # EVERY failure path here exits non-zero. That is the whole design. A test that reads a board which
 # quietly failed to download does not fail, it passes over an empty set, and
@@ -77,9 +78,10 @@ for file in "${files[@]}"; do
   tar -xzf "$tmp/$file" -C "$staged" || { echo "fetch_samples: extract failed: $file" >&2; exit 1; }
 done
 
-# A tarball that extracts to nothing is the silent-skip failure wearing a green hat.
-if [ -z "$(find "$staged" -name '*.kicad_sch' -print -quit)" ]; then
-  echo "fetch_samples: extracted no schematics from ${files[*]}" >&2
+# A tarball that extracts to nothing is the silent-skip failure wearing a green hat. An ODB++ job
+# carries no schematic, so a job folder's matrix file or a packed job counts as the design fetched.
+if [ -z "$(find "$staged" \( -name '*.kicad_sch' -o -path '*/matrix/matrix' -o -name '*.tgz' -o -name '*.zip' \) -print -quit)" ]; then
+  echo "fetch_samples: extracted no schematics or ODB++ jobs from ${files[*]}" >&2
   exit 1
 fi
 
