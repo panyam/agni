@@ -31,6 +31,15 @@ net reports not-considered. A net the board drives itself also reports not-consi
 outlet the board powers rather than a power entry (agni issue 1016). reverse-blocking-absent asks
 the same question through `check.BoardSource`, and its page lists the shapes that count.
 
+A current-limiting power switch also counts when it is the entry's only load, an eFuse or a USB power
+switch wired between the connector and the board, since its current limit is the overcurrent
+protection a fuse would give (agni issue 1248). Glasgow feeds its 5 V through a TPD3S014 that way.
+Only the part's datasheet can say so, through a `device_class` that names a current-limiting switch,
+because a regulator limits its current too and is no protection against its own failure. The pass
+names the switch and cites the current limit its datasheet prints. A switch beside a regulator on
+the same net excuses nothing, since the regulator is still fed straight from the connector. Without
+the datasheet the entry still fails, and the verdict names the IC it could not read.
+
 ### Query structure
 
 select connector nets whose reach finds an unprotected power input.

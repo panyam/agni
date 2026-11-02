@@ -55,6 +55,7 @@ var glyphAliases = map[string]string{
 	string(model.ClassOscillator):           ClassCrystal,
 	string(model.ClassCeramicResonator):     ClassCrystal,
 	string(model.ClassIdealDiodeController): ClassIC,
+	string(model.ClassCurrentLimitSwitch):   ClassIC,
 }
 
 // ClassRule maps a component to a device class when it matches. A rule matches when every one

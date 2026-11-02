@@ -30,6 +30,10 @@ so the profile route proved a pass with the net's own name while the built-in pr
 route (agni issue 516). Calling the same function makes the two reports identical rather than
 merely similar.
 
+So the same datasheet credit applies here too: a pin whose part's datasheet binds an internal pull-up
+to it passes, citing the row (agni issue 1298). The MNT Reform's SD lines are pulled up inside its
+TXS0108E level translator this way.
+
 ### For software readers
 
 A pull-up works like a default value, and without it the line has no defined idle state, the

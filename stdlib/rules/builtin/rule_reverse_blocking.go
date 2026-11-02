@@ -21,7 +21,10 @@ var reverseBlockingAbsent = &check.Rule{
 	Impact:     "Reverse polarity from a miswired connector, or backfeed from a parallel source into a switched-off rail, reaches the board unopposed. ISO 16750-2 makes reverse voltage a qualification requirement on a vehicle, and a fuse does not help: it opens on magnitude, not direction.",
 	Remedy:     "Add a directional element between the connector and the load: a series FET where the voltage drop matters, a diode where it does not, or a bridge where the input polarity is genuinely unknown.",
 	Primitives: []string{"select", "traverse", "reach", "pin-role"},
-	Reads:      []string{"component.class", "net.attributes", "on_net", "pin.electrical_type", "pin.role"},
+	Reads:      []string{"component.class", "component.device_class", "net.attributes", "on_net", "param.max", "pin.electrical_type", "pin.role"},
+	// A current-limiting switch that blocks reverse current is credited from its datasheet, which a
+	// run without a corpus does not have, so the rule still judges every entry then (agni issue 1248).
+	OptionalReads: []string{"component.device_class", "param.max"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
 		check.KeyTier:         "R",
@@ -52,7 +55,7 @@ func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		if !hasConn {
 			continue
 		}
-		outcome, ref := classifyPowerPath(m, n)
+		outcome, ref, credit := classifyPowerPath(m, n)
 		if outcome == pathNoLoad {
 			continue // no power input downstream, so there is no power path to block
 		}
@@ -71,11 +74,20 @@ func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict
 				Statement: fmt.Sprintf("%s stands between the connector and the power input it feeds, and passes current one way", ref),
 				Terms:     []check.WitnessTerm{{Label: "blocking element", Value: ref}},
 			}
+			if credit != nil {
+				v.Witness = credit
+			}
 			v.Context = compContext(ref, "reverse-blocking element")
 		case pathUnblocked:
 			v.Outcome = check.Fail
 			v.Witness = &check.Witness{
 				Statement: "the connector reaches a power input through passives alone, so nothing in the path passes current one way",
+			}
+			if ref != "" {
+				// The load is an IC this run has no datasheet for, and it may be a switch that blocks
+				// reverse current itself (agni issue 1248).
+				v.Witness.Statement += fmt.Sprintf(", and %s's datasheet was not read, so whether it blocks reverse current is unverified", ref)
+				v.Witness.Terms = []check.WitnessTerm{{Label: "unverified part", Value: ref}}
 			}
 			v.Finding = &check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: n.GetName()}, Prov: n.GetProv(), Message: "connector feeds a power input with no reverse-blocking element in the path"}
 		case pathUnclassifiable:
@@ -110,13 +122,21 @@ func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict
 // or a transistor. So a power input reachable through the walk means NOTHING directional stands
 // between the connector and the load. A directional part stops the walk, and the rule then has to
 // inspect what stopped it, because a backwards diode stops the walk exactly as a correct one does.
-func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
+//
+// The one load that is its own blocking element is a current-limiting switch whose datasheet states a
+// reverse current, so a load the walk reaches through passives passes when that is all the entry
+// feeds, with the datasheet witness (agni issue 1248). An unblocked path returns, as its ref, an IC on
+// the entry the run has no datasheet for, "" when there is none.
+func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string, *check.Witness) {
 	r := m.Reach(n, check.PowerPathReachHops)
 	inReach := map[string]bool{}
 	for _, rn := range r.Nets {
 		inReach[rn.GetName()] = true
 		if hasPowerInput(m, rn) {
-			return pathUnblocked, "" // reached a load through passives alone, so nothing directional is in the way
+			if sw, w := check.ReverseBlockingCredit(m, rn); sw != "" {
+				return pathProtected, sw, w
+			}
+			return pathUnblocked, check.UnreadIC(m, rn, ""), nil // reached a load through passives alone, so nothing directional is in the way
 		}
 	}
 	// Nothing reachable, so something stopped the walk.
@@ -137,7 +157,7 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 				continue
 			}
 			if m.HasClass(ref, check.ClassIdealDiodeController) {
-				return pathProtected, ref
+				return pathProtected, ref, nil
 			}
 			// A transistor touching the path only through its GATE draws no current from it, as a FET
 			// whose gate senses VBUS for presence detection does on a source port (agni issue 935).
@@ -149,7 +169,7 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 	if transistor != "" {
 		// Structure cannot tell an ideal diode from an ordinary switch. Silence here would read as
 		// a pass to a bound review item (agni issue 74).
-		return pathUnclassifiable, transistor
+		return pathUnclassifiable, transistor, nil
 	}
 	// blocker is the directional part the walk stopped at. Without one the path is pathNoLoad, not
 	// pathProtected, since a pass needs a blocking part between connector and load (agni issue 391).
@@ -178,11 +198,11 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string) {
 	}
 	switch {
 	case unblocked:
-		return pathUnblocked, ""
+		return pathUnblocked, "", nil
 	case blocker != "":
-		return pathProtected, blocker
+		return pathProtected, blocker, nil
 	}
-	return pathNoLoad, ""
+	return pathNoLoad, "", nil
 }
 
 // pathVerdict is what the walk concluded about one connector-fed net. "Verified protected" and

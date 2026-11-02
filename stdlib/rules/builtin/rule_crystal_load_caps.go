@@ -160,7 +160,7 @@ func crystalLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict
 				// capacitance itself, as many RTCs and low-power MCUs do, so the absence is unverified
 				// rather than settled (agni issue 1247). The witness says so; the finding's message and
 				// context stay the datalog twin's, which reads no datasheet.
-				unread := check.UnreadOscillator(m, t.net, ref)
+				unread := check.UnreadIC(m, t.net, ref)
 				if unread != "" {
 					v.Witness.Statement += ", and " + unread + "'s datasheet was not read, so whether it integrates the load capacitance is unverified"
 					v.Witness.Terms = []check.WitnessTerm{{Label: "unverified oscillator part", Value: unread}}

@@ -31,8 +31,9 @@ func registerBuiltinSpecFuncs() {
 	RegisterSpecFunc("unprotected_power_reach", &SpecFunc{
 		// The WS3-011 reach walk behind input-protection. True when, from the in-scope
 		// connector net, SOME series-reachable net carries a real power-input pin with
-		// neither a fuse crossed on its path nor a TVS on a path net.
-		Reads:      []string{"component.class", "on_net", "pin.electrical_type"},
+		// neither a fuse crossed on its path nor a TVS on a path net, and is not a current-limiting
+		// switch its datasheet names (agni issue 1248).
+		Reads:      []string{"component.class", "component.device_class", "on_net", "param.max", "pin.electrical_type"},
 		Primitives: []string{"exists", "pin-role", "reach", "traverse"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {
 			return UnprotectedPowerReach(m, ents["net"].(*ir.Net))
@@ -85,7 +86,7 @@ func registerBuiltinSpecFuncs() {
 		// reach a net's connections but not a connection's component's OTHER nets, so the
 		// second hop has nowhere to come from. See agni issue 374 for the surface that would
 		// make this expressible.
-		Reads:      []string{"component.class", "net.names", "on_net"},
+		Reads:      []string{"component.class", "net.names", "on_net", "param.pin", "param.pin_range"},
 		Primitives: []string{"exists", "reach", "traverse"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {
 			return PullUpReachesRail(m, ents["net"].(*ir.Net))

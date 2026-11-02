@@ -602,7 +602,8 @@ func (p Profile) pullupRule() *check.Rule {
 		Detail:   ruleDoc("missing-pullup"),
 		// Hand-declared to match what the datalog form derived and what i2c-pull-up declares for the
 		// same walk.
-		Reads:               []string{"net.names", "on_net", "component.class"},
+		Reads:               []string{"net.names", "on_net", "component.class", "param.pin", "param.pin_range"},
+		OptionalReads:       []string{"param.pin", "param.pin_range"},
 		Primitives:          []string{"select", "pattern", "traverse", "exists", "reach"},
 		Eval:                p.pullupVerdicts(pullups),
 		StatesConsideredSet: true,
