@@ -18,7 +18,10 @@ var crystalLoadCaps = &check.Rule{
 	Impact:     "A quartz crystal oscillates at its rated frequency only with the specified load capacitance on each terminal. Omit a load cap and the oscillator either will not start, starts intermittently over temperature, or runs off-frequency, which corrupts every timed peripheral downstream (UART baud, USB, CAN bit timing). The failure is analog and load-dependent, so it routinely passes bring-up and fails in the field.",
 	Remedy:     "Fit a load capacitor from each oscillator terminal to ground, sized from the crystal's specified load capacitance and the stray capacitance of the layout rather than copied from another design.",
 	Primitives: []string{"select", "exists", "traverse", "pattern"},
-	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "param.pin", "param.pin_range"},
+	// The datasheet credit for integrated load capacitance is optional: without a corpus the rule
+	// still judges every terminal, and a failure names the IC it could not read (agni issue 1247).
+	OptionalReads: []string{"param.pin", "param.pin_range"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
 		check.KeyTier:         "R",
@@ -127,6 +130,10 @@ func crystalLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindPin, Ref: ref, Pin: t.pin}}}
 			v.Context = []check.ContextSubject{{Entity: check.Entity{Kind: check.KindNet, Ref: name, NetID: t.net.Id}, Role: "terminal"}}
 			loadCap := firstOnNet(m, t.net, check.ClassCapacitor)
+			integrated, integratedW := "", (*check.Witness)(nil)
+			if loadCap == "" {
+				integrated, integratedW = check.IntegratedLoadCapCredit(m, t.net, ref)
+			}
 			switch {
 			case t.net.Attributes[netgraph.AttrExternal] == "true":
 				// An unresolved external net may carry the cap on an unread sheet, so the rule has not
@@ -140,10 +147,23 @@ func crystalLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict
 					Terms:     []check.WitnessTerm{{Label: "load capacitor", Value: loadCap}},
 				}
 				v.Context = append(v.Context, check.ContextSubject{Entity: check.Entity{Kind: check.KindComponent, Ref: loadCap}, Role: "load capacitor"})
+			case integrated != "":
+				v.Outcome = check.Pass
+				v.Witness = integratedW
+				v.Context = append(v.Context, check.ContextSubject{Entity: check.Entity{Kind: check.KindComponent, Ref: integrated}, Role: "oscillator with integrated load capacitance"})
 			default:
 				v.Outcome = check.Fail
 				v.Witness = &check.Witness{
 					Statement: "no capacitor sits on terminal net " + name,
+				}
+				// An IC on the terminal whose datasheet this run did not read may carry the load
+				// capacitance itself, as many RTCs and low-power MCUs do, so the absence is unverified
+				// rather than settled (agni issue 1247). The witness says so; the finding's message and
+				// context stay the datalog twin's, which reads no datasheet.
+				unread := check.UnreadOscillator(m, t.net, ref)
+				if unread != "" {
+					v.Witness.Statement += ", and " + unread + "'s datasheet was not read, so whether it integrates the load capacitance is unverified"
+					v.Witness.Terms = []check.WitnessTerm{{Label: "unverified oscillator part", Value: unread}}
 				}
 				v.Finding = &check.Finding{
 					Subject: check.Entity{Kind: check.KindComponent, Ref: ref},

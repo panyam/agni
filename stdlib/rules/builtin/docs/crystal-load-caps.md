@@ -37,6 +37,22 @@ matching the decoupling-present / bulk-cap external-skip convention. The load-ca
 (does `2*(C_L - C_stray)` match the crystal's spec) is a datasheet-joined refinement
 (WS10) and out of scope here, because this rule checks PRESENCE and not value.
 
+### When the oscillator carries its own load capacitance
+
+Many RTCs and low-power MCUs build the load capacitors into their oscillator pins, often
+selectable in a register, so the crystal sits straight across two pins with nothing else on
+the board. The MNT Reform motherboard's PCF8523T and the RoyalBlue54L Feather's nRF54L15 are
+both wired this way. When the part on a terminal net has a datasheet in the run that binds an
+integrated load capacitance to that PIN (a row printed `CL(itg)`, `C_INT`, or named
+"integrated" or "internal load capacitance"), the terminal passes, and the pass names the part,
+the value and the datasheet row (agni issue 1247). A row stated for the whole part credits
+nothing, because an MCU often integrates capacitors on one oscillator and not the other.
+
+Without that datasheet the terminal still fails, since the rule cannot tell an RTC that
+integrates its capacitors from one that does not. The verdict then says which IC on the net it
+could not read, so a reader knows the finding may be a design choice that `--params` would
+settle. The datalog twin reads no datasheet, so it keeps reporting the terminal either way.
+
 ### For software readers
 
 Think of the crystal as a component with a hard runtime dependency that the type system
