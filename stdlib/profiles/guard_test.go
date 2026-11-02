@@ -22,7 +22,7 @@ func TestBuiltinsCompileAsInjective(t *testing.T) {
 		name string
 		p    Profile
 	}{
-		{"SPI_NOR", SPINOR}, {"eMMC", EMMC}, {"CAN", CAN}, {"LIN", LIN},
+		{"SPI_NOR", SPINOR}, {"eMMC", EMMC}, {"SD", SD}, {"CAN", CAN}, {"LIN", LIN},
 		{"A2B", A2B}, {"PCIe", PCIE}, {"SGMII", SGMII},
 	} {
 		t.Run(c.name, func(t *testing.T) {

@@ -509,7 +509,7 @@ func (p Profile) signalMissingFrom(rules []query.Rule) *check.Rule {
 		Query:   mustBeInjective(domain),
 		Witness: fmt.Sprintf("%s interface (anchored at net {a}) carries required signal {sig}", p.Name),
 	}
-	return query.MustRuleFromQuery(fq)
+	return compileQuery(fq)
 }
 
 // hostIncompleteRule (host path, WS3-042) anchors completeness on a component that DECLARES the
@@ -550,7 +550,7 @@ func (p Profile) hostIncompleteRule() *check.Rule {
 		Query:   mustBeInjective(domain),
 		Witness: fmt.Sprintf("%s host {h} is wired to required signal {sig}", p.Name),
 	}
-	return query.MustRuleFromQuery(fq)
+	return compileQuery(fq)
 }
 
 func (p Profile) missingFindingQuery(nameSuffix string, q query.Query, kind, subjectVar, msg string) query.FindingQuery {
@@ -709,7 +709,7 @@ func (p Profile) danglingRule() *check.Rule {
 		[]query.Literal{query.Pos(query.Rel("dangling", query.V("n")))}, query.V("n"))
 	danglingDomain := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("dangling_scope", query.V("n")))}, query.V("n"))
-	return query.MustRuleFromQuery(query.FindingQuery{
+	return compileQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-signal-dangling",
 			Severity: "warning",
@@ -729,6 +729,19 @@ func (p Profile) danglingRule() *check.Rule {
 		},
 	})
 }
+
+// compileQuery is query.MustRuleFromQuery for every query a requirement compiler generates, with the
+// one difference that a test can watch the queries go by (onCompile), which is how
+// TestBuiltinProgramsAreUnchanged holds each built-in profile to the programs it compiled to before.
+func compileQuery(fq query.FindingQuery) *check.Rule {
+	if onCompile != nil {
+		onCompile(fq)
+	}
+	return query.MustRuleFromQuery(fq)
+}
+
+// onCompile is nil outside a test.
+var onCompile func(query.FindingQuery)
 
 // mustBeInjective guards every query a requirement compiler generates: no derived rule may be
 // non-injective (WS3-127).

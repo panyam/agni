@@ -8,7 +8,7 @@ A {{ explainable "bus" }} has a fixed structure. CAN is a CANH/CANL {{ explainab
 TXD and RXD. I2C is SCL and SDA, both pulled up.
 
 An interface profile writes that structure down as YAML, and the engine compiles it into check rules.
-Agni ships profiles for SPI-NOR, eMMC, CAN, LIN, A2B, PCIe, SGMII and MDIO. Your own interfaces, and your
+Agni ships profiles for SPI-NOR, eMMC, SD, CAN, LIN, A2B, PCIe, SGMII and MDIO. Your own interfaces, and your
 own reading of a standard one, go in a directory you hand to `--profile-path`. No Go.
 
 ## Write a profile
@@ -237,8 +237,15 @@ excludes:
 ```
 
 A bus carrying an excluded signal is not in use, so nothing on it is required or judged, and a review
-item bound to the profile reads it as absent. An `instance` key needs an anchor declared by `suffix`,
-since the stem comes from taking that suffix off.
+item bound to the profile reads it as absent. The shipped SD profile is the mirror image. It excludes
+an eighth data line and a reset, which say a bus is an eMMC, so the two profiles split one naming
+convention between them and each judges its own bus. An `instance` key needs an anchor declared by
+`suffix`, since the stem comes from taking that suffix off.
+
+Every requirement runs per bus under an instance key. `termination` asks each bus's own high net to
+reach that bus's low net, so one bus's terminator no longer clears another, and `esd` judges an
+exposed line only when it is on a bus in use. A review item bound to the profile still reads every
+bus in use together, as DECISIONS.md records.
 
 ## Re-bind a built-in instead of re-writing it
 

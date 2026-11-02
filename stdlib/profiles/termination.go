@@ -55,6 +55,9 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 	// the bus is in use, and nothing terminates it. The per-signal presence rules (which define
 	// in_use) are generated from the profile's signal list, so they are appended as AST rather than
 	// inlined into this text.
+	if p.Instance != "" {
+		return busTerminationRule(p, high, low)
+	}
 	tq := query.MustParse(fmt.Sprintf(
 		`terminated(?h) :- component.net(?r, ?h), str.suffix(?h, %q), net.reaches(?h, ?l), str.suffix(?l, %q);
 		 any_term("x") :- terminated(?h);
@@ -72,7 +75,30 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 		`term_scope(?h) :- component.net(?r, ?h), str.suffix(?h, %q), in_use(?iu);
 		 term_scope(?h) => ?h`, high))
 	dq.Rules = append(append([]query.Rule{}, tq.Rules...), dq.Rules...)
-	return query.MustRuleFromQuery(query.FindingQuery{
+	return terminationFrom(p, high, low, tq, dq)
+}
+
+// busTerminationRule is the termination check for an instance-keyed profile, judged one bus at a time:
+// a bus in use whose stem's high net reaches no stem's low net through a passive. Each bus answers for
+// itself, so a terminator on one bus no longer clears another, which is the design-wide any_term limit
+// the profile without an instance key keeps (agni issue 162).
+func busTerminationRule(p Profile, high, low string) *check.Rule {
+	tq := query.MustParse(fmt.Sprintf(
+		`terminated(?s) :- anchor_bus(?a, ?s), str.concat(?s, %q, ?h), str.concat(?s, %q, ?l), net.reaches(?h, ?l);
+		 bus_high(?h) :- anchor_bus(?a, ?s), in_use(?s), str.concat(?s, %q, ?h), component.net(?r, ?h);
+		 unterminated(?h) :- anchor_bus(?a, ?s), in_use(?s), str.concat(?s, %q, ?h), component.net(?r, ?h), not terminated(?s);
+		 unterminated(?h) => ?h`, high, low, high, high))
+	tq.Rules = append(p.busRules(), tq.Rules...)
+	dq := query.MustParse(`term_scope(?h) :- bus_high(?h);
+		 term_scope(?h) => ?h`)
+	dq.Rules = append(append([]query.Rule{}, tq.Rules...), dq.Rules...)
+	return terminationFrom(p, high, low, tq, dq)
+}
+
+// terminationFrom wraps a program deriving unterminated(h) and its considered set term_scope(h) as the
+// termination rule, whichever presence relations derived them.
+func terminationFrom(p Profile, high, low string, tq, dq query.Query) *check.Rule {
+	return compileQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-termination-missing",
 			Severity: "warning",

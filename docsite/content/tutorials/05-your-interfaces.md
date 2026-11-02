@@ -7,7 +7,7 @@ A bus like PCIe is the same set of requirements on every board that has one. An 
 declares that set once: which signals make up the bus, how they are named here, and what has to be
 true of them. Then any board can be checked against it.
 
-The engine ships profiles for CAN, LIN, eMMC, PCIe, SGMII, SPI-NOR, MDIO and A2B. This rung is about
+The engine ships profiles for CAN, LIN, eMMC, SD, PCIe, SGMII, SPI-NOR, MDIO and A2B. This rung is about
 adding your own, and about the two things that surprise people when they do.
 
 ## What the built-in profiles already find

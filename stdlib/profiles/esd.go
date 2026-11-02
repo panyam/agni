@@ -26,19 +26,31 @@ import (
 // radius (check.ProtectionReachHops, interpolated rather than written as a literal so the two cannot
 // drift).
 func esdRule(p Profile, _ Requirement) *check.Rule {
-	rules := p.presenceRules()
-	signals := 0
-	for _, s := range p.Signals {
-		body := append([]query.Literal{query.Pos(query.Rel("net.connector_signal", query.V("n")))},
-			netMatch(query.V("n"), s)...)
-		if len(body) == 1 {
-			continue // a signal with no matcher would select every exposed net
+	var rules []query.Rule
+	// inUse is the gate unprotected and esd_scope carry. An instance-keyed profile folds it into
+	// needs_esd instead, since a net counts only on a bus in use, so its gate is empty.
+	inUse := []query.Literal{query.Pos(query.Rel("in_use", query.V("iu")))}
+	if p.Instance != "" {
+		rules = append(p.busRules(), query.Def(query.Rel("needs_esd", query.V("n")),
+			query.Pos(query.Rel("on_bus", query.V("s"), query.V("sig"), query.V("n"))),
+			query.Pos(query.Rel("in_use", query.V("s"))),
+			query.Pos(query.Rel("net.connector_signal", query.V("n")))))
+		inUse = nil
+	} else {
+		rules = p.presenceRules()
+		signals := 0
+		for _, s := range p.Signals {
+			body := append([]query.Literal{query.Pos(query.Rel("net.connector_signal", query.V("n")))},
+				netMatch(query.V("n"), s)...)
+			if len(body) == 1 {
+				continue // a signal with no matcher would select every exposed net
+			}
+			signals++
+			rules = append(rules, query.Def(query.Rel("needs_esd", query.V("n")), body...))
 		}
-		signals++
-		rules = append(rules, query.Def(query.Rel("needs_esd", query.V("n")), body...))
-	}
-	if signals == 0 {
-		return nil
+		if signals == 0 {
+			return nil
+		}
 	}
 
 	// Three ways a net counts as protected, spelled as three rules sharing the esd_ok head. A discrete
@@ -70,10 +82,9 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		query.Pos(query.Rel("component.esd_rated", query.V("u"))),
 		query.Neg(query.Rel("component.dnp", query.V("u")))))
 
+	unprotected := append([]query.Literal{query.Pos(query.Rel("needs_esd", query.V("n")))}, inUse...)
 	rules = append(rules, query.Def(query.Rel("unprotected", query.V("n")),
-		query.Pos(query.Rel("needs_esd", query.V("n"))),
-		query.Pos(query.Rel("in_use", query.V("iu"))),
-		query.Neg(query.Rel("esd_ok", query.V("n")))))
+		append(unprotected, query.Neg(query.Rel("esd_ok", query.V("n"))))...))
 
 	// esd_scope is the considered set, every net this requirement APPLIED to, protected or not. It is
 	// `unprotected` without the negated clause, so it holds the nets the profile selected as exposed on
@@ -84,8 +95,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	// ends in a comparison instead of a negation, and a derivation that handles four of the six
 	// requirement shapes would report the failures as the coverage on the other two.
 	rules = append(rules, query.Def(query.Rel("esd_scope", query.V("n")),
-		query.Pos(query.Rel("needs_esd", query.V("n"))),
-		query.Pos(query.Rel("in_use", query.V("iu")))))
+		append([]query.Literal{query.Pos(query.Rel("needs_esd", query.V("n")))}, inUse...)...))
 
 	// esd_by names the clamp for a passing net. esd_ok binds the clamping part but projects only the
 	// net, so this head carries the part a reviewer wants named on a pass (agni issue 662).
@@ -117,7 +127,7 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	evidence := query.Build(rules,
 		[]query.Literal{query.Pos(query.Rel("esd_by", query.V("n"), query.V("clamp")))},
 		query.V("n"), query.V("clamp"))
-	return query.MustRuleFromQuery(query.FindingQuery{
+	return compileQuery(query.FindingQuery{
 		Rule: check.Rule{
 			Name:     p.lname() + "-esd-missing",
 			Severity: "warning",

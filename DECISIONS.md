@@ -2088,3 +2088,21 @@ not a band was declared.
 
 **Reopen if** a board shows a declared band over an absent strap is usually a mistake rather than
 the default state.
+
+## A profile's bus is keyed on its anchor's stem, and a review item binds the whole interface
+
+**Question.** Agni issue 1210 asked for an instance key "derived from the match", with a regex
+capture group (`^(ETH_P\d+)_`) as the natural form, and for a decision on whether a review item can
+bind to one instance.
+
+**Answer. The anchor's stem, and the whole interface** (agni issues 1246, 1294). `instance:
+anchor_stem` takes the anchor net's name less its suffix, so `ETH_P1_TX_P` anchors bus `ETH_P1` and
+the capture group is never written. It covers every multi-bus design seen so far, including the
+issue's own example, and a capture group would have meant a second pattern syntax in every profile
+for no case the stem misses. A review item bound to a profile keeps reading every bus in use, since
+`Nets`, `Components` and the presence gate answer for the interface on the board. A checklist asks
+"is the SD slot wired" of a board rather than of one slot, and a design with two slots that a
+checklist wants judged apart can bind each by host, which already scopes per component.
+
+**Reopen if** a board names one bus with two stems (`EMMC_CMD` beside `SD1_CLK`), which reads as two
+incomplete buses, or a checklist needs one bus of several and has no host to bind it by.
