@@ -65,7 +65,7 @@ describe("draft edits", () => {
 
   it("keeps a class's prefixes when its patterns go off, since replace leaves them", () => {
     const d = conv();
-    d.lexicon = { $typeName: "agni.v1.config.NamingLexicon", class: { tvs: create(ClassVocabSchema, { prefixes: ["TV"], patterns: ["x"] }) } };
+    d.lexicon = { $typeName: "agni.v1.config.NamingLexicon", class: { tvs: create(ClassVocabSchema, { prefixes: ["TV"], patterns: ["x"] }) }, valueUnit: {} };
     const v = setOff(d, "class.tvs", true).lexicon?.class.tvs;
     expect(v?.prefixes).toEqual(["TV"]);
     expect(v?.patterns).toEqual([]);
@@ -76,9 +76,25 @@ describe("draft edits", () => {
     expect(conv().lexicon?.net?.inferRailFromSupplyPins).toBeUndefined();
   });
 
-  it("offers no removal of a built-in prefix, a replaced entry or a switch", () => {
-    const rows = rowsOf([entry("class.tvs", "prefix", "D"), entry("net.rail", "pattern", "x", LexiconSource.BUILTIN, true), entry("net", "switch", "a=true"), entry("net.rail", "pattern", "y")], []);
+  it("offers no removal of a built-in unit, a replaced entry or a switch", () => {
+    const rows = rowsOf([entry("value_unit.resistor", "unit", "Ω"), entry("net.rail", "pattern", "x", LexiconSource.BUILTIN, true), entry("net", "switch", "a=true"), entry("net.rail", "pattern", "y")], []);
     expect(rows.map(canRemove)).toEqual([false, false, false, true]);
+  });
+
+  it("removes a built-in prefix by excluding it, and leaves the class's patterns alone", () => {
+    const rows = rowsOf([entry("class.diode", "prefix", "D"), entry("class.diode", "pattern", "^DIODE$")], []);
+    expect(canRemove(rows[0])).toBe(true);
+    const d = removeEntry(conv(), rows, rows[0]);
+    expect(d.lexicon?.class.diode.excludePrefixes).toEqual(["D"]);
+    expect(d.lexicon?.class.diode.replace).toBe(false);
+  });
+
+  it("sets and drops a class's bare-number unit", () => {
+    const d = addEntry(conv(), "value_unit.capacitor", "unit", "F");
+    expect(d.lexicon?.valueUnit).toEqual({ capacitor: "F" });
+    const rows = rowsOf([entry("value_unit.capacitor", "unit", "F", LexiconSource.REQUEST)], []);
+    expect(removeEntry(d, rows, rows[0]).lexicon?.valueUnit).toEqual({});
+    expect(setOff(d, "value_unit.capacitor", true).lexicon?.valueUnit).toEqual({ capacitor: "F" });
   });
 });
 

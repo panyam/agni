@@ -273,6 +273,18 @@ func BuildClassVocab(overrides map[ComponentClass]*configpb.ClassVocab) (*ClassV
 			v.prefixes[p] = cl
 		}
 	}
+	for _, cl := range classes {
+		for _, raw := range overrides[cl].GetExcludePrefixes() {
+			p := strings.ToUpper(raw)
+			if other, ok := claimed[p]; ok {
+				return nil, fmt.Errorf("class %q excludes prefix %q, which the convention gives class %q", cl, raw, other)
+			}
+			if owner, ok := prefixClasses[p]; !ok || owner != cl {
+				return nil, fmt.Errorf("class %q excludes prefix %q, which is not one of its built-in prefixes", cl, raw)
+			}
+			delete(v.prefixes, p)
+		}
+	}
 	return v, nil
 }
 

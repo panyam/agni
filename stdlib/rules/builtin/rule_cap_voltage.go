@@ -90,7 +90,7 @@ func capVoltageDetail(m check.Model, c *ir.Component) string {
 		if !onNet {
 			continue
 		}
-		if v, ok := check.RailMaxVoltage(n, n.Name); ok && (!found || v > worstV) {
+		if v, ok := m.RailMaxVoltage(n); ok && (!found || v > worstV) {
 			worstNet, worstV, found = n.Name, v, true
 		}
 	}

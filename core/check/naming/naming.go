@@ -22,6 +22,7 @@ import (
 	"gopkg.in/yaml.v3"
 
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	"github.com/panyam/agni/internal/yamlpb"
 )
@@ -91,6 +92,13 @@ func BuildLexicon(cfg *configpb.NamingConvention) (*check.Lexicon, error) {
 			return nil, fmt.Errorf("naming config %q lexicon class: %w", cfg.GetName(), err)
 		}
 		lex.Class = cv
+	}
+	if units := lx.GetValueUnit(); len(units) > 0 {
+		vv, err := classify.BuildValueVocab(units)
+		if err != nil {
+			return nil, fmt.Errorf("naming config %q lexicon: %w", cfg.GetName(), err)
+		}
+		lex.Value = vv
 	}
 	return lex, nil
 }

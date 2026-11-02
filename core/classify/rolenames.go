@@ -3,6 +3,7 @@ package classify
 import (
 	"fmt"
 	"regexp"
+	"strconv"
 	"strings"
 
 	"google.golang.org/protobuf/proto"
@@ -97,6 +98,8 @@ type RoleVocab struct {
 	// anode and cathode are the diode family's terminals, under the same gate. feedbackPin and
 	// switchingPin read a regulator's own pins, and noConnect a net its designer left open.
 	anode, cathode, feedbackPin, switchingPin, noConnect vocab
+	// voltage reads a net name's tokens as a nominal voltage, through each pattern's capture groups.
+	voltage vocab
 	// inferRail is NetNameVocab.infer_rail_from_supply_pins, resolved (absent reads as on).
 	inferRail bool
 }
@@ -165,6 +168,9 @@ func defaultLexicon() *configpb.NamingLexicon {
 			DiffPair: &configpb.DiffPairVocab{Pairs: []*configpb.DiffSuffix{
 				{Positive: "_DP", Negative: "_DN"}, {Positive: "_P", Negative: "_N"}, {Positive: "+", Negative: "-"},
 			}},
+			// voltage: "5V", "+5V", "3V3", "12V0", "3.3V", each a whole token, so an embedded digit run
+			// ("USB5V", "EVENT5") never reads.
+			Voltage: vp(`^\+?(\d+)V(\d+)?$`, `^\+?(\d+)\.(\d+)V$`),
 		},
 		Pin: &configpb.PinNameVocab{
 			// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
@@ -256,6 +262,54 @@ func (v *RoleVocab) DiffNegative(name string) (string, bool) {
 	return name[:cut] + casedLike(best.GetNegative(), name[cut:]), true
 }
 
+// NominalVoltage reads a rail's nominal voltage off its net name (3V3 -> 3.3), the only voltage
+// evidence a directionless netlist carries. Each token is matched whole against the voltage
+// vocabulary. ok is false when no token reads or two disagree ("12V_TO_5V"), and every voltage rule
+// relies on that refusal.
+func (v *RoleVocab) NominalVoltage(name string) (volts float64, ok bool) {
+	found := false
+	for _, tok := range strings.FieldsFunc(strings.ToUpper(name), func(r rune) bool {
+		return !(r >= '0' && r <= '9' || r >= 'A' && r <= 'Z' || r == '.' || r == '+')
+	}) {
+		got, read := v.voltage.volts(tok)
+		if !read {
+			continue
+		}
+		if found && got != volts {
+			return 0, false
+		}
+		volts, found = got, true
+	}
+	return volts, found
+}
+
+// volts reads one token through the first pattern that matches it, the whole volts from its first
+// group and the fraction from the first later group that matched.
+func (v vocab) volts(tok string) (float64, bool) {
+	for _, x := range v.excl {
+		if x.MatchString(tok) {
+			return 0, false
+		}
+	}
+	for _, p := range v.pats {
+		m := p.FindStringSubmatch(tok)
+		if m == nil {
+			continue
+		}
+		num := m[1]
+		for _, frac := range m[2:] {
+			if frac != "" {
+				num += "." + frac
+				break
+			}
+		}
+		if f, err := strconv.ParseFloat(num, 64); err == nil {
+			return f, true
+		}
+	}
+	return 0, false
+}
+
 // casedLike spells suffix in the case of like, letter by letter.
 func casedLike(suffix, like string) string {
 	out := []byte(suffix)
@@ -319,12 +373,18 @@ func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
 		{"cathode", pin.GetCathode(), &v.cathode},
 		{"feedback_pin", pin.GetFeedback(), &v.feedbackPin},
 		{"switching_pin", pin.GetSwitching(), &v.switchingPin},
+		{"voltage", net.GetVoltage(), &v.voltage},
 	} {
 		out, err := compileVocab(d.src)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", d.name, err)
 		}
 		*d.dst = out
+	}
+	for i, re := range v.voltage.pats {
+		if re.NumSubexp() == 0 {
+			return nil, fmt.Errorf("voltage: pattern %q has no capture group, so it cannot say how many volts", v.voltage.src[i])
+		}
 	}
 	for _, p := range net.GetDiffPair().GetPairs() {
 		if p.GetPositive() == "" || p.GetNegative() == "" {
@@ -355,6 +415,7 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 			I2C:       mergeVocab(bn.GetI2C(), on.GetI2C()),
 			NoConnect: mergeVocab(bn.GetNoConnect(), on.GetNoConnect()),
 			DiffPair:  mergeDiffPairs(bn.GetDiffPair(), on.GetDiffPair()),
+			Voltage:   mergeVocab(bn.GetVoltage(), on.GetVoltage()),
 			// A project that says nothing keeps the built-in setting; one that says false turns it off.
 			InferRailFromSupplyPins: bn.InferRailFromSupplyPins,
 		},

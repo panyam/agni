@@ -107,7 +107,7 @@ func eachSupplyPin(m check.Model, kind parampb.LimitKind, kindName string, yield
 				yield(ev)
 				continue
 			}
-			volts, ok := check.NominalVoltageFromName(net)
+			volts, ok := m.NominalVoltage(net)
 			if !ok {
 				ev.drop = fmt.Sprintf("rail %q does not name a nominal voltage", net)
 				yield(ev)

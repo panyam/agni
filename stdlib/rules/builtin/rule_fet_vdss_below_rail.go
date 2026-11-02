@@ -186,7 +186,7 @@ func railVolts(m check.Model, n *ir.Net) (float64, railEvidence, bool) {
 	if found {
 		return best, ev, true
 	}
-	if v, ok := check.RailMaxVoltage(n, n.Name); ok {
+	if v, ok := m.RailMaxVoltage(n); ok {
 		return v, railEvidence{how: "from the net name"}, true
 	}
 	return 0, railEvidence{}, false

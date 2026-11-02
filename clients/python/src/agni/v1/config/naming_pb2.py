@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/config/naming.proto\x12\x0e\x61gni.v1.config\"\x91\x01\n\x10NamingConvention\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x37\n\x07lexicon\x18\x02 \x01(\x0b\x32\x1d.agni.v1.config.NamingLexiconR\x07lexicon\x12\x30\n\x05rules\x18\x03 \x03(\x0b\x32\x1a.agni.v1.config.NamingRuleR\x05rules\"\x85\x02\n\rNamingLexicon\x12.\n\x03net\x18\x01 \x01(\x0b\x32\x1c.agni.v1.config.NetNameVocabR\x03net\x12.\n\x03pin\x18\x02 \x01(\x0b\x32\x1c.agni.v1.config.PinNameVocabR\x03pin\x12>\n\x05\x63lass\x18\x03 \x03(\x0b\x32(.agni.v1.config.NamingLexicon.ClassEntryR\x05\x63lass\x1aT\n\nClassEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x30\n\x05value\x18\x02 \x01(\x0b\x32\x1a.agni.v1.config.ClassVocabR\x05value:\x02\x38\x01\"\xf5\x04\n\x0cNetNameVocab\x12\x31\n\x04rail\x18\x01 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x04rail\x12\x35\n\x06ground\x18\x02 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x06ground\x12\x39\n\x08\x66\x65\x65\x64\x62\x61\x63k\x18\x03 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x08\x66\x65\x65\x64\x62\x61\x63k\x12;\n\tswitching\x18\x04 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\tswitching\x12\x37\n\x07\x63ontrol\x18\x05 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x07\x63ontrol\x12<\n\ngate_drive\x18\x06 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\tgateDrive\x12/\n\x03i2c\x18\x07 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x03i2c\x12\x41\n\x1binfer_rail_from_supply_pins\x18\x08 \x01(\x08H\x00R\x17inferRailFromSupplyPins\x88\x01\x01\x12<\n\nno_connect\x18\t \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\tnoConnect\x12:\n\tdiff_pair\x18\n \x01(\x0b\x32\x1d.agni.v1.config.DiffPairVocabR\x08\x64iffPairB\x1e\n\x1c_infer_rail_from_supply_pins\"[\n\rDiffPairVocab\x12\x30\n\x05pairs\x18\x01 \x03(\x0b\x32\x1a.agni.v1.config.DiffSuffixR\x05pairs\x12\x18\n\x07replace\x18\x02 \x01(\x08R\x07replace\"D\n\nDiffSuffix\x12\x1a\n\x08positive\x18\x01 \x01(\tR\x08positive\x12\x1a\n\x08negative\x18\x02 \x01(\tR\x08negative\"\x8a\x04\n\x0cPinNameVocab\x12\x35\n\x06supply\x18\x01 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x06supply\x12\x31\n\x04gate\x18\x02 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x04gate\x12\x35\n\x06source\x18\x03 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x06source\x12\x33\n\x05\x64rain\x18\x04 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x05\x64rain\x12>\n\x0b\x65xposed_pad\x18\x05 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\nexposedPad\x12\x33\n\x05\x61node\x18\x06 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x05\x61node\x12\x37\n\x07\x63\x61thode\x18\x07 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x07\x63\x61thode\x12\x39\n\x08\x66\x65\x65\x64\x62\x61\x63k\x18\x08 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x08\x66\x65\x65\x64\x62\x61\x63k\x12;\n\tswitching\x18\t \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\tswitching\"_\n\rVocabPatterns\x12\x1a\n\x08patterns\x18\x01 \x03(\tR\x08patterns\x12\x18\n\x07replace\x18\x02 \x01(\x08R\x07replace\x12\x18\n\x07\x65xclude\x18\x04 \x03(\tR\x07\x65xclude\"z\n\nClassVocab\x12\x1a\n\x08patterns\x18\x01 \x03(\tR\x08patterns\x12\x18\n\x07replace\x18\x02 \x01(\x08R\x07replace\x12\x1a\n\x08prefixes\x18\x03 \x03(\tR\x08prefixes\x12\x1a\n\x08\x66\x61milies\x18\x05 \x03(\tR\x08\x66\x61milies\"\x9b\x01\n\nNamingRule\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n\x08severity\x18\x02 \x01(\tR\x08severity\x12\x10\n\x03why\x18\x03 \x01(\tR\x03why\x12\x14\n\x05\x61llow\x18\x04 \x03(\tR\x05\x61llow\x12\x16\n\x06\x65xempt\x18\x05 \x03(\tR\x06\x65xempt\x12\x1d\n\nmatch_full\x18\x06 \x01(\x08R\tmatchFullB.Z,github.com/panyam/agni/gen/go/agni/v1/configb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x1b\x61gni/v1/config/naming.proto\x12\x0e\x61gni.v1.config\"\x91\x01\n\x10NamingConvention\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x37\n\x07lexicon\x18\x02 \x01(\x0b\x32\x1d.agni.v1.config.NamingLexiconR\x07lexicon\x12\x30\n\x05rules\x18\x03 \x03(\x0b\x32\x1a.agni.v1.config.NamingRuleR\x05rules\"\x90\x03\n\rNamingLexicon\x12.\n\x03net\x18\x01 \x01(\x0b\x32\x1c.agni.v1.config.NetNameVocabR\x03net\x12.\n\x03pin\x18\x02 \x01(\x0b\x32\x1c.agni.v1.config.PinNameVocabR\x03pin\x12>\n\x05\x63lass\x18\x03 \x03(\x0b\x32(.agni.v1.config.NamingLexicon.ClassEntryR\x05\x63lass\x12K\n\nvalue_unit\x18\x04 \x03(\x0b\x32,.agni.v1.config.NamingLexicon.ValueUnitEntryR\tvalueUnit\x1aT\n\nClassEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x30\n\x05value\x18\x02 \x01(\x0b\x32\x1a.agni.v1.config.ClassVocabR\x05value:\x02\x38\x01\x1a<\n\x0eValueUnitEntry\x12\x10\n\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n\x05value\x18\x02 \x01(\tR\x05value:\x02\x38\x01\"\xae\x05\n\x0cNetNameVocab\x12\x31\n\x04rail\x18\x01 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x04rail\x12\x35\n\x06ground\x18\x02 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x06ground\x12\x39\n\x08\x66\x65\x65\x64\x62\x61\x63k\x18\x03 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x08\x66\x65\x65\x64\x62\x61\x63k\x12;\n\tswitching\x18\x04 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\tswitching\x12\x37\n\x07\x63ontrol\x18\x05 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x07\x63ontrol\x12<\n\ngate_drive\x18\x06 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\tgateDrive\x12/\n\x03i2c\x18\x07 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x03i2c\x12\x41\n\x1binfer_rail_from_supply_pins\x18\x08 \x01(\x08H\x00R\x17inferRailFromSupplyPins\x88\x01\x01\x12<\n\nno_connect\x18\t \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\tnoConnect\x12:\n\tdiff_pair\x18\n \x01(\x0b\x32\x1d.agni.v1.config.DiffPairVocabR\x08\x64iffPair\x12\x37\n\x07voltage\x18\x0b \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x07voltageB\x1e\n\x1c_infer_rail_from_supply_pins\"[\n\rDiffPairVocab\x12\x30\n\x05pairs\x18\x01 \x03(\x0b\x32\x1a.agni.v1.config.DiffSuffixR\x05pairs\x12\x18\n\x07replace\x18\x02 \x01(\x08R\x07replace\"D\n\nDiffSuffix\x12\x1a\n\x08positive\x18\x01 \x01(\tR\x08positive\x12\x1a\n\x08negative\x18\x02 \x01(\tR\x08negative\"\x8a\x04\n\x0cPinNameVocab\x12\x35\n\x06supply\x18\x01 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x06supply\x12\x31\n\x04gate\x18\x02 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x04gate\x12\x35\n\x06source\x18\x03 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x06source\x12\x33\n\x05\x64rain\x18\x04 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x05\x64rain\x12>\n\x0b\x65xposed_pad\x18\x05 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\nexposedPad\x12\x33\n\x05\x61node\x18\x06 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x05\x61node\x12\x37\n\x07\x63\x61thode\x18\x07 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x07\x63\x61thode\x12\x39\n\x08\x66\x65\x65\x64\x62\x61\x63k\x18\x08 \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\x08\x66\x65\x65\x64\x62\x61\x63k\x12;\n\tswitching\x18\t \x01(\x0b\x32\x1d.agni.v1.config.VocabPatternsR\tswitching\"_\n\rVocabPatterns\x12\x1a\n\x08patterns\x18\x01 \x03(\tR\x08patterns\x12\x18\n\x07replace\x18\x02 \x01(\x08R\x07replace\x12\x18\n\x07\x65xclude\x18\x04 \x03(\tR\x07\x65xclude\"\xa5\x01\n\nClassVocab\x12\x1a\n\x08patterns\x18\x01 \x03(\tR\x08patterns\x12\x18\n\x07replace\x18\x02 \x01(\x08R\x07replace\x12\x1a\n\x08prefixes\x18\x03 \x03(\tR\x08prefixes\x12\x1a\n\x08\x66\x61milies\x18\x05 \x03(\tR\x08\x66\x61milies\x12)\n\x10\x65xclude_prefixes\x18\x06 \x03(\tR\x0f\x65xcludePrefixes\"\x9b\x01\n\nNamingRule\x12\x12\n\x04name\x18\x01 \x01(\tR\x04name\x12\x1a\n\x08severity\x18\x02 \x01(\tR\x08severity\x12\x10\n\x03why\x18\x03 \x01(\tR\x03why\x12\x14\n\x05\x61llow\x18\x04 \x03(\tR\x05\x61llow\x12\x16\n\x06\x65xempt\x18\x05 \x03(\tR\x06\x65xempt\x12\x1d\n\nmatch_full\x18\x06 \x01(\x08R\tmatchFullB.Z,github.com/panyam/agni/gen/go/agni/v1/configb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -34,24 +34,28 @@ if not _descriptor._USE_C_DESCRIPTORS:
   _globals['DESCRIPTOR']._serialized_options = b'Z,github.com/panyam/agni/gen/go/agni/v1/config'
   _globals['_NAMINGLEXICON_CLASSENTRY']._loaded_options = None
   _globals['_NAMINGLEXICON_CLASSENTRY']._serialized_options = b'8\001'
+  _globals['_NAMINGLEXICON_VALUEUNITENTRY']._loaded_options = None
+  _globals['_NAMINGLEXICON_VALUEUNITENTRY']._serialized_options = b'8\001'
   _globals['_NAMINGCONVENTION']._serialized_start=48
   _globals['_NAMINGCONVENTION']._serialized_end=193
   _globals['_NAMINGLEXICON']._serialized_start=196
-  _globals['_NAMINGLEXICON']._serialized_end=457
-  _globals['_NAMINGLEXICON_CLASSENTRY']._serialized_start=373
-  _globals['_NAMINGLEXICON_CLASSENTRY']._serialized_end=457
-  _globals['_NETNAMEVOCAB']._serialized_start=460
-  _globals['_NETNAMEVOCAB']._serialized_end=1089
-  _globals['_DIFFPAIRVOCAB']._serialized_start=1091
-  _globals['_DIFFPAIRVOCAB']._serialized_end=1182
-  _globals['_DIFFSUFFIX']._serialized_start=1184
-  _globals['_DIFFSUFFIX']._serialized_end=1252
-  _globals['_PINNAMEVOCAB']._serialized_start=1255
-  _globals['_PINNAMEVOCAB']._serialized_end=1777
-  _globals['_VOCABPATTERNS']._serialized_start=1779
-  _globals['_VOCABPATTERNS']._serialized_end=1874
-  _globals['_CLASSVOCAB']._serialized_start=1876
-  _globals['_CLASSVOCAB']._serialized_end=1998
-  _globals['_NAMINGRULE']._serialized_start=2001
-  _globals['_NAMINGRULE']._serialized_end=2156
+  _globals['_NAMINGLEXICON']._serialized_end=596
+  _globals['_NAMINGLEXICON_CLASSENTRY']._serialized_start=450
+  _globals['_NAMINGLEXICON_CLASSENTRY']._serialized_end=534
+  _globals['_NAMINGLEXICON_VALUEUNITENTRY']._serialized_start=536
+  _globals['_NAMINGLEXICON_VALUEUNITENTRY']._serialized_end=596
+  _globals['_NETNAMEVOCAB']._serialized_start=599
+  _globals['_NETNAMEVOCAB']._serialized_end=1285
+  _globals['_DIFFPAIRVOCAB']._serialized_start=1287
+  _globals['_DIFFPAIRVOCAB']._serialized_end=1378
+  _globals['_DIFFSUFFIX']._serialized_start=1380
+  _globals['_DIFFSUFFIX']._serialized_end=1448
+  _globals['_PINNAMEVOCAB']._serialized_start=1451
+  _globals['_PINNAMEVOCAB']._serialized_end=1973
+  _globals['_VOCABPATTERNS']._serialized_start=1975
+  _globals['_VOCABPATTERNS']._serialized_end=2070
+  _globals['_CLASSVOCAB']._serialized_start=2073
+  _globals['_CLASSVOCAB']._serialized_end=2238
+  _globals['_NAMINGRULE']._serialized_start=2241
+  _globals['_NAMINGRULE']._serialized_end=2396
 # @@protoc_insertion_point(module_scope)

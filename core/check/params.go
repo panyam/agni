@@ -2,7 +2,6 @@ package check
 
 import (
 	"fmt"
-	"regexp"
 	"slices"
 	"sort"
 	"strconv"
@@ -673,55 +672,20 @@ func CapRatedVoltageLimits(spec *parampb.PartSpec) []*parampb.Parameter {
 }
 
 // RailMaxVoltage is the "net.max_voltage" fact, the rail voltage a net declares. A max_voltage
-// attribute wins when present, otherwise the name-derived nominal (nominalVoltageFromName) is the only
-// evidence a netlist carries. ok is false when neither yields a number, and consumers skip rather than
-// guess.
-func RailMaxVoltage(n *ir.Net, name string) (volts float64, ok bool) {
+// attribute wins when present, otherwise the voltage its name states under this model's lexicon
+// (NominalVoltage) is the only evidence a netlist carries. ok is false when neither yields a number,
+// and consumers skip rather than guess.
+func (m *irModel) RailMaxVoltage(n *ir.Net) (volts float64, ok bool) {
 	if v := n.Attributes["max_voltage"]; v != "" {
 		if f, err := strconv.ParseFloat(v, 64); err == nil {
 			return f, true
 		}
 	}
-	return nominalVoltageFromName(name)
+	return m.NominalVoltage(n.GetName())
 }
 
-// voltageToken matches one rail-name token as a nominal voltage: "5V", "+5V", "3V3",
-// "12V0", "3.3V". Anchored to the whole token so an embedded digit run ("USB5V",
-// "EVENT5") never parses.
-var voltageToken = regexp.MustCompile(`^\+?(\d+)(?:V(\d+)?|\.(\d+)V)$`)
-
-// NominalVoltageFromName derives a rail's nominal voltage from its net name (3V3 -> 3.3), the only
-// voltage evidence a directionless netlist carries. ok is false when the name carries no parseable
-// voltage token or two tokens disagree ("12V_TO_5V"), and every voltage rule relies on that refusal.
-// It is exported so an out-of-package rule (the design-intent voltage-domain check) reads the same
-// name->volts logic the net.nominal_voltage fact projects (C20).
-func NominalVoltageFromName(name string) (volts float64, ok bool) {
-	return nominalVoltageFromName(name)
-}
-
-// nominalVoltageFromName splits the name into tokens and matches each in full. See
-// NominalVoltageFromName for the contract.
-func nominalVoltageFromName(name string) (volts float64, ok bool) {
-	found := false
-	for _, tok := range strings.FieldsFunc(strings.ToUpper(name), func(r rune) bool {
-		return !(r >= '0' && r <= '9' || r >= 'A' && r <= 'Z' || r == '.' || r == '+')
-	}) {
-		m := voltageToken.FindStringSubmatch(tok)
-		if m == nil {
-			continue
-		}
-		num := m[1]
-		if frac := m[2] + m[3]; frac != "" { // only one group can match
-			num += "." + frac
-		}
-		v, err := strconv.ParseFloat(num, 64)
-		if err != nil {
-			continue
-		}
-		if found && v != volts {
-			return 0, false
-		}
-		volts, found = v, true
-	}
-	return volts, found
+// NominalVoltage reads a rail's nominal voltage off a net name under this model's voltage vocabulary
+// (classify.RoleVocab.NominalVoltage has the contract).
+func (m *irModel) NominalVoltage(name string) (volts float64, ok bool) {
+	return m.lexicon().RoleVocab().NominalVoltage(name)
 }

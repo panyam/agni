@@ -12,7 +12,7 @@ import (
 // present but its NAME declares a different nominal than the domain does (KindNet finding on the rail,
 // with provenance). A rail whose name carries no parseable voltage token (e.g. "VDD_CORE") gets no
 // finding, because the name-derived nominal is the only voltage evidence a netlist carries and the rule
-// refuses to guess (check.NominalVoltageFromName).
+// refuses to guess (Model.NominalVoltage).
 func voltageDomainRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:                RuleVoltageDomain,
@@ -50,7 +50,7 @@ func voltageDomainVerdicts(m check.Model, d Declaration) []check.Verdict {
 			}
 			v := check.Verdict{Subjects: []check.Entity{check.NetEntity(n)}}
 			declared := check.WitnessTerm{Label: "declared", Value: fmt.Sprintf("%gV", dom.Nominal)}
-			nominal, ok := check.NominalVoltageFromName(n.GetName())
+			nominal, ok := m.NominalVoltage(n.GetName())
 			switch {
 			case !ok:
 				v.Outcome = check.NotConsidered

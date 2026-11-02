@@ -17,7 +17,7 @@ import (
 // part it feeds. Both numbers are vendor values, so the finding cites both documents.
 //
 // WHY THIS IS NOT supply-exceeds-abs-max AGAIN. That rule asks the same question but takes the rail
-// voltage from the NET NAME (check.NominalVoltageFromName, so "+5V" means 5V). That is a naming
+// voltage from the NET NAME (Model.NominalVoltage, so "+5V" means 5V). That is a naming
 // convention, and it is silent on a net named VOUT_A or 5V_SW, wrong on a net whose name outlived a
 // design change, and unavailable on a rail nobody named for its voltage. Reading the number off the
 // regulator's own datasheet replaces a convention with evidence.

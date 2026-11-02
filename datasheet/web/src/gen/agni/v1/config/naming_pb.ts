@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/config/naming.proto.
  */
 export const file_agni_v1_config_naming: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6AEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBIosECgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAQgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjb250cm9sGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIxCgpnYXRlX2RyaXZlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIqCgNpMmMYByABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEigKG2luZmVyX3JhaWxfZnJvbV9zdXBwbHlfcGlucxgIIAEoCEgAiAEBEjEKCm5vX2Nvbm5lY3QYCSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjAKCWRpZmZfcGFpchgKIAEoCzIdLmFnbmkudjEuY29uZmlnLkRpZmZQYWlyVm9jYWJCHgocX2luZmVyX3JhaWxfZnJvbV9zdXBwbHlfcGlucyJLCg1EaWZmUGFpclZvY2FiEikKBXBhaXJzGAEgAygLMhouYWduaS52MS5jb25maWcuRGlmZlN1ZmZpeBIPCgdyZXBsYWNlGAIgASgIIjAKCkRpZmZTdWZmaXgSEAoIcG9zaXRpdmUYASABKAkSEAoIbmVnYXRpdmUYAiABKAkivAMKDFBpbk5hbWVWb2NhYhItCgZzdXBwbHkYASABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEisKBGdhdGUYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi0KBnNvdXJjZRgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLAoFZHJhaW4YBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjIKC2V4cG9zZWRfcGFkGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVhbm9kZRgGIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLgoHY2F0aG9kZRgHIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLwoIZmVlZGJhY2sYCCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjAKCXN3aXRjaGluZxgJIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMiQwoNVm9jYWJQYXR0ZXJucxIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIEg8KB2V4Y2x1ZGUYBCADKAkiUwoKQ2xhc3NWb2NhYhIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIEhAKCHByZWZpeGVzGAMgAygJEhAKCGZhbWlsaWVzGAUgAygJImwKCk5hbWluZ1J1bGUSDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRILCgN3aHkYAyABKAkSDQoFYWxsb3cYBCADKAkSDgoGZXhlbXB0GAUgAygJEhIKCm1hdGNoX2Z1bGwYBiABKAhCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9jb25maWdiBnByb3RvMw");
+  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi3AIKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRJACgp2YWx1ZV91bml0GAQgAygLMiwuYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbi5WYWx1ZVVuaXRFbnRyeRpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBGjAKDlZhbHVlVW5pdEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiuwQKDE5ldE5hbWVWb2NhYhIrCgRyYWlsGAEgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxItCgZncm91bmQYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi8KCGZlZWRiYWNrGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIwCglzd2l0Y2hpbmcYBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi4KB2NvbnRyb2wYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjEKCmdhdGVfZHJpdmUYBiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEioKA2kyYxgHIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKAobaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zGAggASgISACIAQESMQoKbm9fY29ubmVjdBgJIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJZGlmZl9wYWlyGAogASgLMh0uYWduaS52MS5jb25maWcuRGlmZlBhaXJWb2NhYhIuCgd2b2x0YWdlGAsgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJuc0IeChxfaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zIksKDURpZmZQYWlyVm9jYWISKQoFcGFpcnMYASADKAsyGi5hZ25pLnYxLmNvbmZpZy5EaWZmU3VmZml4Eg8KB3JlcGxhY2UYAiABKAgiMAoKRGlmZlN1ZmZpeBIQCghwb3NpdGl2ZRgBIAEoCRIQCghuZWdhdGl2ZRgCIAEoCSK8AwoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMgoLZXhwb3NlZF9wYWQYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEiwKBWFub2RlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjYXRob2RlGAcgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgIIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAkgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyJDCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSDwoHZXhjbHVkZRgEIAMoCSJtCgpDbGFzc1ZvY2FiEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSEAoIcHJlZml4ZXMYAyADKAkSEAoIZmFtaWxpZXMYBSADKAkSGAoQZXhjbHVkZV9wcmVmaXhlcxgGIAMoCSJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY29uZmlnYgZwcm90bzM");
 
 /**
  * This file: an operator's naming policy, as the ONE schema both the engine and the wire use.
@@ -87,6 +87,17 @@ export type NamingLexicon = Message<"agni.v1.config.NamingLexicon"> & {
    * @generated from field: map<string, agni.v1.config.ClassVocab> class = 3;
    */
   class: { [key: string]: ClassVocab };
+
+  /**
+   * Component-class name -> the unit a BARE number on that class means, a base unit ("F", "ohm") or a
+   * prefixed one ("pF", "uH") that scales the bare number, so "capacitor": "pF" reads a bare 100 as
+   * 100 pF. Only resistor ships a default (ohm), since a bare capacitor value meant farads, microfarads
+   * or picofarads depending on the era and tool. A class named here replaces its default. The key must
+   * name a class the engine ships and the value a unit it reads, or the load fails.
+   *
+   * @generated from field: map<string, string> value_unit = 4;
+   */
+  valueUnit: { [key: string]: string };
 };
 
 /**
@@ -173,6 +184,16 @@ export type NetNameVocab = Message<"agni.v1.config.NetNameVocab"> & {
    * @generated from field: agni.v1.config.DiffPairVocab diff_pair = 10;
    */
   diffPair?: DiffPairVocab | undefined;
+
+  /**
+   * voltage reads a nominal voltage off a net's name, one TOKEN at a time (the name split on anything
+   * but letters, digits, "." and "+"), so P3V3_EN reads its 3V3 token. Each pattern needs a capture
+   * group: the first holds the whole volts and the first later group to match holds the fraction, so
+   * ^(\d+)V(\d+)$ reads 3V3 as 3.3. A name whose tokens state two different voltages reads as none.
+   *
+   * @generated from field: agni.v1.config.VocabPatterns voltage = 11;
+   */
+  voltage?: VocabPatterns | undefined;
 };
 
 /**
@@ -383,6 +404,15 @@ export type ClassVocab = Message<"agni.v1.config.ClassVocab"> & {
    * @generated from field: repeated string families = 5;
    */
   families: string[];
+
+  /**
+   * exclude_prefixes takes a BUILT-IN prefix of this class out of the table, so a house whose D is a
+   * display rather than a diode can say so. Naming a prefix the built-ins give another class is a load
+   * error, since moving it is what prefixes is for.
+   *
+   * @generated from field: repeated string exclude_prefixes = 6;
+   */
+  excludePrefixes: string[];
 };
 
 /**

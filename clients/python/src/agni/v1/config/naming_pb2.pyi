@@ -17,7 +17,7 @@ class NamingConvention(_message.Message):
     def __init__(self, name: _Optional[str] = ..., lexicon: _Optional[_Union[NamingLexicon, _Mapping]] = ..., rules: _Optional[_Iterable[_Union[NamingRule, _Mapping]]] = ...) -> None: ...
 
 class NamingLexicon(_message.Message):
-    __slots__ = ("net", "pin")
+    __slots__ = ("net", "pin", "value_unit")
     class ClassEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -25,15 +25,24 @@ class NamingLexicon(_message.Message):
         key: str
         value: ClassVocab
         def __init__(self, key: _Optional[str] = ..., value: _Optional[_Union[ClassVocab, _Mapping]] = ...) -> None: ...
+    class ValueUnitEntry(_message.Message):
+        __slots__ = ("key", "value")
+        KEY_FIELD_NUMBER: _ClassVar[int]
+        VALUE_FIELD_NUMBER: _ClassVar[int]
+        key: str
+        value: str
+        def __init__(self, key: _Optional[str] = ..., value: _Optional[str] = ...) -> None: ...
     NET_FIELD_NUMBER: _ClassVar[int]
     PIN_FIELD_NUMBER: _ClassVar[int]
     CLASS_FIELD_NUMBER: _ClassVar[int]
+    VALUE_UNIT_FIELD_NUMBER: _ClassVar[int]
     net: NetNameVocab
     pin: PinNameVocab
-    def __init__(self, net: _Optional[_Union[NetNameVocab, _Mapping]] = ..., pin: _Optional[_Union[PinNameVocab, _Mapping]] = ..., **kwargs) -> None: ...
+    value_unit: _containers.ScalarMap[str, str]
+    def __init__(self, net: _Optional[_Union[NetNameVocab, _Mapping]] = ..., pin: _Optional[_Union[PinNameVocab, _Mapping]] = ..., value_unit: _Optional[_Mapping[str, str]] = ..., **kwargs) -> None: ...
 
 class NetNameVocab(_message.Message):
-    __slots__ = ("rail", "ground", "feedback", "switching", "control", "gate_drive", "i2c", "infer_rail_from_supply_pins", "no_connect", "diff_pair")
+    __slots__ = ("rail", "ground", "feedback", "switching", "control", "gate_drive", "i2c", "infer_rail_from_supply_pins", "no_connect", "diff_pair", "voltage")
     RAIL_FIELD_NUMBER: _ClassVar[int]
     GROUND_FIELD_NUMBER: _ClassVar[int]
     FEEDBACK_FIELD_NUMBER: _ClassVar[int]
@@ -44,6 +53,7 @@ class NetNameVocab(_message.Message):
     INFER_RAIL_FROM_SUPPLY_PINS_FIELD_NUMBER: _ClassVar[int]
     NO_CONNECT_FIELD_NUMBER: _ClassVar[int]
     DIFF_PAIR_FIELD_NUMBER: _ClassVar[int]
+    VOLTAGE_FIELD_NUMBER: _ClassVar[int]
     rail: VocabPatterns
     ground: VocabPatterns
     feedback: VocabPatterns
@@ -54,7 +64,8 @@ class NetNameVocab(_message.Message):
     infer_rail_from_supply_pins: bool
     no_connect: VocabPatterns
     diff_pair: DiffPairVocab
-    def __init__(self, rail: _Optional[_Union[VocabPatterns, _Mapping]] = ..., ground: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., control: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate_drive: _Optional[_Union[VocabPatterns, _Mapping]] = ..., i2c: _Optional[_Union[VocabPatterns, _Mapping]] = ..., infer_rail_from_supply_pins: _Optional[bool] = ..., no_connect: _Optional[_Union[VocabPatterns, _Mapping]] = ..., diff_pair: _Optional[_Union[DiffPairVocab, _Mapping]] = ...) -> None: ...
+    voltage: VocabPatterns
+    def __init__(self, rail: _Optional[_Union[VocabPatterns, _Mapping]] = ..., ground: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., control: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate_drive: _Optional[_Union[VocabPatterns, _Mapping]] = ..., i2c: _Optional[_Union[VocabPatterns, _Mapping]] = ..., infer_rail_from_supply_pins: _Optional[bool] = ..., no_connect: _Optional[_Union[VocabPatterns, _Mapping]] = ..., diff_pair: _Optional[_Union[DiffPairVocab, _Mapping]] = ..., voltage: _Optional[_Union[VocabPatterns, _Mapping]] = ...) -> None: ...
 
 class DiffPairVocab(_message.Message):
     __slots__ = ("pairs", "replace")
@@ -105,16 +116,18 @@ class VocabPatterns(_message.Message):
     def __init__(self, patterns: _Optional[_Iterable[str]] = ..., replace: _Optional[bool] = ..., exclude: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class ClassVocab(_message.Message):
-    __slots__ = ("patterns", "replace", "prefixes", "families")
+    __slots__ = ("patterns", "replace", "prefixes", "families", "exclude_prefixes")
     PATTERNS_FIELD_NUMBER: _ClassVar[int]
     REPLACE_FIELD_NUMBER: _ClassVar[int]
     PREFIXES_FIELD_NUMBER: _ClassVar[int]
     FAMILIES_FIELD_NUMBER: _ClassVar[int]
+    EXCLUDE_PREFIXES_FIELD_NUMBER: _ClassVar[int]
     patterns: _containers.RepeatedScalarFieldContainer[str]
     replace: bool
     prefixes: _containers.RepeatedScalarFieldContainer[str]
     families: _containers.RepeatedScalarFieldContainer[str]
-    def __init__(self, patterns: _Optional[_Iterable[str]] = ..., replace: _Optional[bool] = ..., prefixes: _Optional[_Iterable[str]] = ..., families: _Optional[_Iterable[str]] = ...) -> None: ...
+    exclude_prefixes: _containers.RepeatedScalarFieldContainer[str]
+    def __init__(self, patterns: _Optional[_Iterable[str]] = ..., replace: _Optional[bool] = ..., prefixes: _Optional[_Iterable[str]] = ..., families: _Optional[_Iterable[str]] = ..., exclude_prefixes: _Optional[_Iterable[str]] = ...) -> None: ...
 
 class NamingRule(_message.Message):
     __slots__ = ("name", "severity", "why", "allow", "exempt", "match_full")

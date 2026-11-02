@@ -22,7 +22,7 @@ import (
 // team fail CI on the required rule and only report the other.
 //
 // THE TWO EVIDENCE TIERS, AND WHY CONNECTIVITY GOES FIRST. Every other voltage rule in the catalog
-// reads a rail's volts off its NAME (check.NominalVoltageFromName), a convention that is silent on a
+// reads a rail's volts off its NAME (Model.NominalVoltage), a convention that is silent on a
 // rail nobody named for its voltage and wrong on a name that outlived a design change. A relation
 // bounds the DIFFERENCE between two terminals, and connectivity settles that difference outright in
 // one case. Two pins on ONE net are one node, so the difference is exactly zero with no name
@@ -112,6 +112,8 @@ type pinTracking struct {
 	refDes    string
 	subjNet   *ir.Net
 	refNet    *ir.Net
+	// subjVolts and refVolts are what each rail's name states, read once by eachPinTracking.
+	subjVolts, refVolts float64
 	// bound is the relation's difference reduced to VOLTS, so the comparison and the message never
 	// depend on which prefix the vendor printed. Never the relation's own field.
 	bound *parampb.RangeValue
@@ -193,14 +195,15 @@ func eachPinTracking(m check.Model, wantModality func(parampb.Modality) bool, yi
 			if !m.IsRailNet(subjNet) || !m.IsRailNet(refNet) {
 				continue
 			}
-			sv, ok := check.NominalVoltageFromName(subjNet.GetName())
+			sv, ok := m.NominalVoltage(subjNet.GetName())
 			if !ok {
 				continue
 			}
-			rv, ok := check.NominalVoltageFromName(refNet.GetName())
+			rv, ok := m.NominalVoltage(refNet.GetName())
 			if !ok {
 				continue
 			}
+			pt.subjVolts, pt.refVolts = sv, rv
 			pt.diff = roundVolts(sv - rv)
 			yield(pt)
 		}
@@ -247,8 +250,7 @@ func evidenceText(pt pinTracking) string {
 	if pt.shared {
 		return fmt.Sprintf("both terminals are tied to net %q, so the difference is 0V", pt.subjNet.GetName())
 	}
-	sv, _ := check.NominalVoltageFromName(pt.subjNet.GetName())
-	rv, _ := check.NominalVoltageFromName(pt.refNet.GetName())
+	sv, rv := pt.subjVolts, pt.refVolts
 	return fmt.Sprintf("pin %s (%s) sits on rail %q at %gV and pin %s (%s) on rail %q at %gV, a difference of %gV",
 		pt.subjDes, pt.subjPin.GetName(), pt.subjNet.GetName(), sv,
 		pt.refDes, pt.refPin.GetName(), pt.refNet.GetName(), rv, pt.diff)
