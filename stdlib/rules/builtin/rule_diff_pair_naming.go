@@ -44,7 +44,7 @@ func diffPairNamingVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
-		neg, ok := check.ExpectedDiffNegative(n.Name)
+		neg, ok := m.DiffNegative(n.Name)
 		if !ok {
 			continue // not a differential-positive name, so not this rule's subject
 		}

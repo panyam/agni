@@ -93,10 +93,10 @@ type LexiconEntry struct {
 	// vocabulary names the list the entry sits in, as the conventions YAML spells its path: "net.rail",
 	// "net.i2c", "pin.supply", "class.tvs".
 	Vocabulary string `protobuf:"bytes,1,opt,name=vocabulary,proto3" json:"vocabulary,omitempty"`
-	// kind is "pattern", "exclude", "prefix", "family" or "switch".
+	// kind is "pattern", "exclude", "prefix", "family", "pair" or "switch".
 	Kind string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	// value is the pattern as written, a ref-des prefix, or for a switch its name and setting
-	// ("infer_rail_from_supply_pins=true").
+	// value is the pattern as written, a ref-des prefix, a suffix pair as positive=negative ("_P=_N"), or
+	// for a switch its name and setting ("infer_rail_from_supply_pins=true").
 	Value  string        `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 	Source LexiconSource `protobuf:"varint,4,opt,name=source,proto3,enum=agni.v1.webapi.LexiconSource" json:"source,omitempty"`
 	// convention is the name of the convention a non-built-in entry came from.

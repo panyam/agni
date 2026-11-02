@@ -16,7 +16,8 @@ type LexiconEntry struct {
 	// Vocabulary is the list the entry sits in, spelled as the conventions YAML spells its path
 	// ("net.rail", "pin.supply", "class.tvs").
 	Vocabulary string
-	// Kind is "pattern", "exclude", "prefix", "family" or "switch".
+	// Kind is "pattern", "exclude", "prefix", "family", "pair" or "switch". A pair's Value is its two
+	// suffixes joined by "=" (see DiffPairEntry).
 	Kind  string
 	Value string
 	// FromConvention is set on an entry the convention added, and clear on a built-in one.
@@ -74,11 +75,16 @@ func roleVocabs(base, over *configpb.NamingLexicon) []namedVocab {
 		{"net.control", bn.GetControl(), on.GetControl()},
 		{"net.gate_drive", bn.GetGateDrive(), on.GetGateDrive()},
 		{"net.i2c", bn.GetI2C(), on.GetI2C()},
+		{"net.no_connect", bn.GetNoConnect(), on.GetNoConnect()},
 		{"pin.supply", bp.GetSupply(), op.GetSupply()},
 		{"pin.gate", bp.GetGate(), op.GetGate()},
 		{"pin.source", bp.GetSource(), op.GetSource()},
 		{"pin.drain", bp.GetDrain(), op.GetDrain()},
 		{"pin.exposed_pad", bp.GetExposedPad(), op.GetExposedPad()},
+		{"pin.anode", bp.GetAnode(), op.GetAnode()},
+		{"pin.cathode", bp.GetCathode(), op.GetCathode()},
+		{"pin.feedback", bp.GetFeedback(), op.GetFeedback()},
+		{"pin.switching", bp.GetSwitching(), op.GetSwitching()},
 	}
 }
 
@@ -98,8 +104,10 @@ func EffectiveEntries(over *configpb.NamingLexicon) []LexiconEntry {
 		}
 	}
 	for i, nv := range roleVocabs(base, over) {
-		// The rail-inference switch sits after the net vocabularies, where the YAML puts it.
-		if i == 7 {
+		// The suffix pairs and the rail-inference switch close the net vocabularies.
+		if i == 8 {
+			add("net.diff_pair", "pair", diffPairEntries(base.GetNet().GetDiffPair()), false, over.GetNet().GetDiffPair().GetReplace())
+			add("net.diff_pair", "pair", diffPairEntries(over.GetNet().GetDiffPair()), true, false)
 			addSwitch(&out, base, over)
 		}
 		replaced := nv.over.GetReplace()
@@ -126,6 +134,23 @@ func EffectiveEntries(over *configpb.NamingLexicon) []LexiconEntry {
 		add(path, "pattern", o.GetPatterns(), true, false)
 		add(path, "family", o.GetFamilies(), true, false)
 		add(path, "prefix", o.GetPrefixes(), true, false)
+	}
+	return out
+}
+
+// DiffPairEntry spells a suffix pair as a LexiconEntry's value. ParseDiffPairEntry reads it back.
+func DiffPairEntry(p *configpb.DiffSuffix) string { return p.GetPositive() + "=" + p.GetNegative() }
+
+// ParseDiffPairEntry reads a value DiffPairEntry wrote.
+func ParseDiffPairEntry(s string) *configpb.DiffSuffix {
+	pos, neg, _ := strings.Cut(s, "=")
+	return &configpb.DiffSuffix{Positive: pos, Negative: neg}
+}
+
+func diffPairEntries(v *configpb.DiffPairVocab) []string {
+	out := make([]string, 0, len(v.GetPairs()))
+	for _, p := range v.GetPairs() {
+		out = append(out, DiffPairEntry(p))
 	}
 	return out
 }
@@ -167,6 +192,7 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	for _, nv := range roleVocabs(nil, nil) {
 		lists[nv.path] = &configpb.VocabPatterns{Replace: true}
 	}
+	out.Net.DiffPair = &configpb.DiffPairVocab{Replace: true}
 	classes := map[string]*configpb.ClassVocab{}
 	for _, name := range classNames(BuiltinLexicon(), over) {
 		classes[name] = &configpb.ClassVocab{Replace: true}
@@ -178,6 +204,10 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 		if e.Kind == "switch" {
 			on := e.Value == "infer_rail_from_supply_pins=true"
 			out.Net.InferRailFromSupplyPins = &on
+			continue
+		}
+		if e.Kind == "pair" {
+			out.Net.DiffPair.Pairs = append(out.Net.DiffPair.Pairs, ParseDiffPairEntry(e.Value))
 			continue
 		}
 		if len(e.Vocabulary) > 6 && e.Vocabulary[:6] == "class." {
@@ -202,7 +232,9 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	n, p := out.Net, out.Pin
 	n.Rail, n.Ground, n.Feedback = lists["net.rail"], lists["net.ground"], lists["net.feedback"]
 	n.Switching, n.Control, n.GateDrive, n.I2C = lists["net.switching"], lists["net.control"], lists["net.gate_drive"], lists["net.i2c"]
+	n.NoConnect = lists["net.no_connect"]
 	p.Supply, p.Gate, p.Source, p.Drain, p.ExposedPad = lists["pin.supply"], lists["pin.gate"], lists["pin.source"], lists["pin.drain"], lists["pin.exposed_pad"]
+	p.Anode, p.Cathode, p.Feedback, p.Switching = lists["pin.anode"], lists["pin.cathode"], lists["pin.feedback"], lists["pin.switching"]
 	out.Class = classes
 	return out
 }

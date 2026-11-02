@@ -7,12 +7,16 @@
 import { clone, create } from "@bufbuild/protobuf";
 import {
   ClassVocabSchema,
+  DiffPairVocabSchema,
+  DiffSuffixSchema,
   NamingConventionSchema,
   NamingLexiconSchema,
   NetNameVocabSchema,
   PinNameVocabSchema,
   VocabPatternsSchema,
   type ClassVocab,
+  type DiffPairVocab,
+  type DiffSuffix,
   type NamingConvention,
   type NamingLexicon,
   type VocabPatterns,
@@ -109,6 +113,23 @@ function vocabOf(conv: NamingConvention, path: string, make: boolean): (VocabPat
   return group[field];
 }
 
+// A diff_pair vocabulary lists suffix pairs rather than patterns. An entry's value spells one as
+// "_P=_N", the form LexiconService lists it in.
+const DIFF_PAIR = "net.diff_pair";
+
+function diffPairs(conv: NamingConvention): DiffPairVocab {
+  conv.lexicon ??= create(NamingLexiconSchema);
+  conv.lexicon.net ??= create(NetNameVocabSchema);
+  conv.lexicon.net.diffPair ??= create(DiffPairVocabSchema);
+  return conv.lexicon.net.diffPair;
+}
+
+function suffixOf(value: string): DiffSuffix {
+  // A value with no "=" leaves negative empty, which the engine refuses with its own message.
+  const [positive, ...negative] = value.split("=");
+  return create(DiffSuffixSchema, { positive, negative: negative.join("=") });
+}
+
 const LIST_OF: Record<string, string> = { pattern: "patterns", exclude: "exclude", prefix: "prefixes", family: "families" };
 
 function listOf(v: VocabPatterns | ClassVocab, kind: string): string[] {
@@ -121,6 +142,11 @@ function listOf(v: VocabPatterns | ClassVocab, kind: string): string[] {
 // addEntry returns the draft with value added to a vocabulary's list of kind.
 export function addEntry(conv: NamingConvention, vocabulary: string, kind: string, value: string): NamingConvention {
   const next = clone(NamingConventionSchema, conv);
+  if (vocabulary === DIFF_PAIR) {
+    const pairs = diffPairs(next).pairs;
+    if (!pairs.some((p) => `${p.positive}=${p.negative}` === value)) pairs.push(suffixOf(value));
+    return next;
+  }
   const list = listOf(vocabOf(next, vocabulary, true)!, kind);
   if (!list.includes(value)) list.push(value);
   return next;
@@ -138,6 +164,16 @@ export function canRemove(r: LexiconRow): boolean {
 // out, which is the one way a convention can drop a single built-in.
 export function removeEntry(conv: NamingConvention, rows: LexiconRow[], row: LexiconRow): NamingConvention {
   const next = clone(NamingConventionSchema, conv);
+  if (row.vocabulary === DIFF_PAIR) {
+    const v = diffPairs(next);
+    if (row.builtin) {
+      v.replace = true;
+      v.pairs = rows.filter((r) => r.vocabulary === DIFF_PAIR && !r.replaced && r.key !== row.key).map((r) => suffixOf(r.value));
+    } else {
+      v.pairs = v.pairs.filter((p) => `${p.positive}=${p.negative}` !== row.value);
+    }
+    return next;
+  }
   const v = vocabOf(next, row.vocabulary, true)!;
   if (!row.builtin) {
     const list = listOf(v, row.kind);
@@ -168,6 +204,12 @@ export function setOff(conv: NamingConvention, vocabulary: string, off: boolean)
       const group = (space === "net" ? next.lexicon?.net : next.lexicon?.pin) as unknown as Record<string, unknown> | undefined;
       if (group) group[name.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase())] = undefined;
     }
+    return next;
+  }
+  if (vocabulary === DIFF_PAIR) {
+    const v = diffPairs(next);
+    v.replace = true;
+    v.pairs = [];
     return next;
   }
   const v = vocabOf(next, vocabulary, true)!;

@@ -95,8 +95,9 @@ func formatTypesPowerOut(sourceFormat string) bool {
 }
 
 // classifyPinRole derives a pin's role from its declared name, gated by device class for
-// the polarity roles. Matching is exact-token rather than substring, because pin names are
-// short vocabulary words and "CLKA" must not read as an anode.
+// the polarity roles, with each vocabulary read from the naming lexicon so a house declares its own
+// spelling in --conventions. The built-ins are whole-name anchored, because pin names are short
+// vocabulary words and "CLKA" must not read as an anode.
 func classifyPinRole(m *irModel, name string, class ComponentClass) PinRole {
 	u := strings.ToUpper(strings.TrimSpace(name))
 	if u == "" || u == "~" {
@@ -104,10 +105,10 @@ func classifyPinRole(m *irModel, name string, class ComponentClass) PinRole {
 	}
 	switch class {
 	case ClassDiode, ClassLED, ClassTVS, ClassZener:
-		switch u {
-		case "A", "AN", "ANODE", "+":
+		switch {
+		case m.lexicon().RoleVocab().IsAnode(u):
 			return RoleAnode
-		case "K", "KATHODE", "CATHODE", "CAT", "-":
+		case m.lexicon().RoleVocab().IsCathode(u):
 			return RoleCathode
 		}
 	case ClassTransistor:
@@ -115,10 +116,6 @@ func classifyPinRole(m *irModel, name string, class ComponentClass) PinRole {
 		// diode family, since these are the shortest pin names on a board. Ungated, a bare "S" or
 		// "D" would mis-role a pin on nearly every part, and a WRONG role is worse than a missing
 		// one, because a topology rule would walk a path that does not exist and report on it (WS3-117).
-		//
-		// Unlike the polarity tokens above, these read from the naming lexicon rather than literals,
-		// so a house that calls its gate "DRV" declares that in --conventions instead of patching the
-		// engine. The polarity literals predate the lexicon and are left alone here.
 		switch {
 		case m.lexicon().RoleVocab().IsGate(u):
 			return RoleGate

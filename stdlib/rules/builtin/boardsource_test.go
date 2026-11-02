@@ -125,32 +125,36 @@ func TestAFixedBuckBehindANetTieIsBoardDriven(t *testing.T) {
 	}
 }
 
-// A project's feedback vocabulary decides which pin names BoardSource reads, in both directions, with
-// the process-level vocabulary left at its defaults (agni issue 1284).
+// A project's pin vocabularies decide which pin names BoardSource reads, in both directions, with the
+// process-level vocabulary left at its defaults (agni issues 1284, 1285).
 func TestBoardSourceReadsTheModelsVocabulary(t *testing.T) {
-	houseOnly := &configpb.VocabPatterns{Patterns: []string{`_FDBK$`}, Replace: true}
-	added := &configpb.VocabPatterns{Patterns: []string{`_FDBK$`}}
+	houseOnly := &configpb.VocabPatterns{Patterns: []string{`^FDBK$`}, Replace: true}
+	added := &configpb.VocabPatterns{Patterns: []string{`^FDBK$`}}
+	addedSwitch := &configpb.VocabPatterns{Patterns: []string{`^HSD$`}}
 	for _, tc := range []struct {
-		name     string
-		pin      string
-		feedback *configpb.VocabPatterns
-		want     bool
+		name      string
+		fb, sw    string
+		feedback  *configpb.VocabPatterns
+		switching *configpb.VocabPatterns
+		want      bool
 	}{
-		{"a built-in pin name with no convention", "FB", nil, true},
-		{"a house pin name with no convention", "FDBK", nil, false},
-		{"a house pin name the convention adds", "FDBK", added, true},
-		{"a built-in pin name the convention replaces", "FB", houseOnly, false},
+		{"a built-in pin name with no convention", "FB", "SW", nil, nil, true},
+		{"a house pin name with no convention", "FDBK", "SW", nil, nil, false},
+		{"a house pin name the convention adds", "FDBK", "SW", added, nil, true},
+		{"a built-in pin name the convention replaces", "FB", "SW", houseOnly, nil, false},
+		{"a house switch pin with no convention", "FB", "HSD", nil, nil, false},
+		{"a house switch pin the convention adds", "FB", "HSD", nil, addedSwitch, true},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			d := pinDesign(map[string][]supplyPin{
 				"J1": twoPin(), "U1": {{"VDD", "1", pwrIn}, {"GND", "2", pwrIn}},
-				"U2": {{"SW", "1", pass}, {tc.pin, "2", pass}}, "L1": twoPin(),
+				"U2": {{tc.sw, "1", pass}, {tc.fb, "2", pass}}, "L1": twoPin(),
 			}, map[string][]string{
 				"3V3": {"J1.1", "U1.1", "L1.2", "U2.2"}, "NODE": {"L1.1", "U2.1"}, "GND": {"U1.2", "J1.2"},
 			})
 			classify.Stamp(d)
 			classify.StampNetRoles(d)
-			rv, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{Feedback: tc.feedback}})
+			rv, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Pin: &configpb.PinNameVocab{Feedback: tc.feedback, Switching: tc.switching}})
 			if err != nil {
 				t.Fatalf("BuildRoleVocab: %v", err)
 			}

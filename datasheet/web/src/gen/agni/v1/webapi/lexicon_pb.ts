@@ -33,15 +33,15 @@ export type LexiconEntry = Message<"agni.v1.webapi.LexiconEntry"> & {
   vocabulary: string;
 
   /**
-   * kind is "pattern", "exclude", "prefix", "family" or "switch".
+   * kind is "pattern", "exclude", "prefix", "family", "pair" or "switch".
    *
    * @generated from field: string kind = 2;
    */
   kind: string;
 
   /**
-   * value is the pattern as written, a ref-des prefix, or for a switch its name and setting
-   * ("infer_rail_from_supply_pins=true").
+   * value is the pattern as written, a ref-des prefix, a suffix pair as positive=negative ("_P=_N"), or
+   * for a switch its name and setting ("infer_rail_from_supply_pins=true").
    *
    * @generated from field: string value = 3;
    */

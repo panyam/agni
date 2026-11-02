@@ -55,10 +55,10 @@ message LexiconEntry {
   // vocabulary names the list the entry sits in, as the conventions YAML spells its path: "net.rail",
   // "net.i2c", "pin.supply", "class.tvs".
   string vocabulary = 1;
-  // kind is "pattern", "exclude", "prefix", "family" or "switch".
+  // kind is "pattern", "exclude", "prefix", "family", "pair" or "switch".
   string kind = 2;
-  // value is the pattern as written, a ref-des prefix, or for a switch its name and setting
-  // ("infer_rail_from_supply_pins=true").
+  // value is the pattern as written, a ref-des prefix, a suffix pair as positive=negative ("_P=_N"), or
+  // for a switch its name and setting ("infer_rail_from_supply_pins=true").
   string value = 3;
   LexiconSource source = 4;
   // convention is the name of the convention a non-built-in entry came from.

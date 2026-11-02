@@ -41,6 +41,21 @@ describe("draft edits", () => {
     expect(v?.replace).toBe(false);
   });
 
+  it("adds, removes and switches off a suffix pair", () => {
+    const added = addEntry(create(NamingConventionSchema), "net.diff_pair", "pair", "_PLUS=_MINUS");
+    expect(added.lexicon?.net?.diffPair?.pairs.map((p) => [p.positive, p.negative])).toEqual([["_PLUS", "_MINUS"]]);
+
+    const listed = [entry("net.diff_pair", "pair", "_DP=_DN"), entry("net.diff_pair", "pair", "_P=_N")];
+    const builtin = rowsOf(listed, listed);
+    const removed = removeEntry(create(NamingConventionSchema), builtin, builtin[0]);
+    expect(removed.lexicon?.net?.diffPair?.replace).toBe(true);
+    expect(removed.lexicon?.net?.diffPair?.pairs.map((p) => p.positive)).toEqual(["_P"]);
+
+    const off = setOff(added, "net.diff_pair", true);
+    expect(off.lexicon?.net?.diffPair).toMatchObject({ replace: true, pairs: [] });
+    expect(setOff(off, "net.diff_pair", false).lexicon?.net?.diffPair).toBeUndefined();
+  });
+
   it("switches a vocabulary off and back on", () => {
     const off = setOff(addEntry(conv(), "net.control", "pattern", "x"), "net.control", true);
     expect(off.lexicon?.net?.control?.replace).toBe(true);
