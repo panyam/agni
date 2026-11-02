@@ -259,15 +259,10 @@ const baselineHeader = `# Where our KiCad read still disagrees with KiCad, board
 # Regenerate with:  AGNI_ORACLE_UPDATE=1 make oracle
 # Never hand-edit: the whole point is that KiCad chose these, not us.
 #
-# Known families still open, as of the agni issue 561 fix:
-#   - group buses (` + "`CAM0{CSI}`" + ` with bus_alias members), which cross a sheet boundary the same way a
-#     vector does and are not yet followed. Most of the jetson lines, and probably all of cynthion's.
-#   - sliced bus prefixes, where a parent cuts PP_OUT[0..31] into PP_OUT[0..7], PP_OUT[8..15], ...
-#     and hands each to one instance of a child sheet. KiCad maps those by bit position.
-#   - a pin-number swap on some symbols, which is why boards whose net COUNTS match exactly can
-#     still disagree about which pins are on which net.
-#   - a scalar name split where it crosses a sheet boundary (hackrf-one's !VAA_ENABLE,
-#     mnt-reform-motherboard30's LPC lines), agni issue 1234.
+# Known families still open, as of the agni issue 1234 fix:
+#   - stubs that share a name, where several no-connect pins of one part carry the same pin name
+#     (jetson's GL and DRAIN pins). We give them one unconnected-(...) net and KiCad keeps one per
+#     pin, numbering the repeats _1, _2.
 `
 
 var _ = ir.Design{}

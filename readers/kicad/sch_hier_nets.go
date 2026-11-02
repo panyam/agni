@@ -106,8 +106,10 @@ var kicadBusVectorRe = regexp.MustCompile(`^(.*)\[(\d+)\.\.(\d+)\]$`)
 //
 // The braces either name a `bus_alias`, as the jetson baseboard writes `I2C7{I2C}`, or list the members
 // inline, separated by spaces or commas, as the RoyalBlue54L Feather writes `ANALOG{A[0..5]}`,
-// `DIG{D5 D6 D[9..13]}` and `SWD_TRG{~{RESET}, SWDIO, SWDCLK}`. A listed member may be a vector,
-// which expands, and may carry formatting braces of its own (agni issue 936). The group is the LAST
+// `DIG{D5 D6 D[9..13]}` and `SWD_TRG{~{RESET}, SWDIO, SWDCLK}`. A member, listed or an alias's, may
+// be a vector, which expands, so Cynthion's `ULPI` alias carries `DATA0` to `DATA7` across a sheet
+// pin rather than one member named `DATA[0..7]` (agni issue 1234). A listed member may also carry
+// formatting braces of its own (agni issue 936). The group is the LAST
 // top-level brace pair, so a prefix may carry a subscript, as in `I2C_{SYS}{I2C}`, 33 of the jetson
 // baseboard's 224 group-bus occurrences.
 //
@@ -123,10 +125,11 @@ func groupBus(name string, aliases map[string][]string) (prefix string, members 
 	if strings.ContainsAny(prefix[len(prefix)-1:], "_^~") {
 		return "", nil, false
 	}
-	if members, ok := aliases[inner]; ok && len(members) > 0 {
-		return prefix, members, true
+	listed := splitGroupMembers(inner)
+	if am, ok := aliases[inner]; ok && len(am) > 0 {
+		listed = am
 	}
-	for _, m := range splitGroupMembers(inner) {
+	for _, m := range listed {
 		if v := busMembersAscending(m); v != nil {
 			members = append(members, v...)
 		} else {
