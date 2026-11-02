@@ -238,7 +238,9 @@ from "this format never delivers one".
 
 If your format spells the key in some new way, add the spelling to `classify.MPNAliases` rather than
 normalizing it in your reader. The vocabulary is data, in one place, shared with the readers that
-need it to find the fact in their own grammar.
+need it to find the fact in their own grammar, and a project extends it with the lexicon's
+`attribute.mpn` without touching either. Keep a format's other fields where the attribute keys can
+reach them, on the component section if classification should not read them as part text.
 
 ## Reconcile against the IR, not against your format
 

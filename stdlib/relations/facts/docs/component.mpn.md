@@ -32,13 +32,15 @@ component where `Model.ComponentMPN(ref)` is non-empty. `ComponentMPN` returns t
 part number when a BOM covers the ref-des, else the component's `mpn` field, else "".
 It never parses the free-text Value field, so the identity is only ever what the design
 declared. The shared ingestion pass `classify.StampMPN` fills that field from the component's
-part-number attributes (`classify.MPNAliases`, which covers OrCAD/Allegro's `Manufacturer_PN`)
+part-number attributes (the lexicon's `attribute.mpn` keys, whose built-ins cover OrCAD/Allegro's
+`Manufacturer_PN` and KiCad's `Part Number`)
 and then from its part type,
 so this one relation reads uniformly across formats.
 
 One row per component with a resolved part number. It needs no `--params`: every model joins the part
 numbers the design carries (agni issue 748). An empty result means the design names no part numbers,
-or names them under an attribute `classify.MPNAliases` does not know.
+or names them under an attribute the `attribute.mpn` keys do not list, which a project's conventions
+can add.
 
 ### Datalog
 

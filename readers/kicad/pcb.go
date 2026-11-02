@@ -86,6 +86,7 @@ func extractPCB(root *node, src string) *ir.Design {
 				props[key] = v
 			}
 		}
+		sectionProps(fp, props)
 		// A placed footprint is one physical section (a board has no multi-unit split). Emit it
 		// so section-aware consumers (diff's per-section part_ref, check's pin walk) see the same
 		// structure they get from EDIF/schematic readers; the "part" is the footprint.
@@ -170,6 +171,21 @@ func propValue(n *node, key string) string {
 		}
 	}
 	return ""
+}
+
+// sectionProps adds every property of a symbol or footprint that is not the reference and not one
+// partIdentityProps already carries to a section's attributes, so a house field ("Part Number", "DNP")
+// reaches the lexicon's attribute keys. A field KiCad leaves empty is skipped, as propValue does.
+func sectionProps(n *node, into map[string]string) {
+	for _, p := range n.Children("property") {
+		key, v := atomOf(p.Arg(1)), atomOf(p.Arg(2))
+		if key == "" || key == "Reference" || v == "" {
+			continue
+		}
+		if _, ok := into[key]; !ok {
+			into[key] = v
+		}
+	}
 }
 
 // propNode returns the (property "key" ...) child node, or nil. Unlike propValue it exposes

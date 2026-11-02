@@ -75,3 +75,14 @@ func TestAModelReadsItsOwnNameVocabularies(t *testing.T) {
 		}
 	})
 }
+
+func TestAModelReadsItsOwnDoNotPopulateKeys(t *testing.T) {
+	d := &ir.Design{Components: []*ir.Component{{RefDes: "R1", Attributes: map[string]string{"DNF": "yes"}}}}
+	if !NewModel(d).IsFitted("R1") {
+		t.Fatal("R1 reads unfitted with no convention")
+	}
+	house := &configpb.NamingLexicon{Attribute: &configpb.AttributeVocab{Dnp: &configpb.AttributeKeys{Keys: []string{"DNF"}}}}
+	if NewModel(d, lexiconOf(t, house)).IsFitted("R1") {
+		t.Error("the convention's DNF key did not mark R1 unfitted")
+	}
+}

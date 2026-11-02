@@ -2,15 +2,17 @@ package classify
 
 import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 
-// MPNAliases are the attribute keys a source spells a manufacturer part number with, in preference
-// order. Sources disagree on separator and case, and this list covers that variance.
+// MPNAliases are the built-in attribute keys a source spells a manufacturer part number with, in
+// preference order, and the default of the lexicon's attribute.mpn. A project adds its own there.
 //
 // Exported because a reader needs the same spellings to find the fact in its own grammar (EDIF scans
-// cell `property` nodes by name), while deciding where the fact lands is this pass's job.
+// cell `property` nodes by name), while deciding where the fact lands is this pass's job. A reader
+// reads no configuration, so a project's own keys never reach that scan.
 //
 // These are read-only. Nothing writes a canonical MPN attribute; the answer is the typed
-// ir.Component.mpn field, and these are the raw keys it is derived FROM.
-var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn"}
+// ir.Component.mpn field, and these are the raw keys it is derived FROM. KiCad's "Part Number" field
+// is here since public boards (HackRF One, Cynthion) carry their part numbers in it (agni 1285).
+var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn", "Part Number"}
 
 // StampMPN fills ir.Component.mpn once at ingestion, for every format. It is a
 // DERIVED-NORMALIZATION pass under C9: no reader populates the field, and a design built without the
@@ -31,33 +33,28 @@ var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn"}
 // It resolves the part through PartIndex/FirstPart, the same resolution Stamp and check.NewModel use,
 // so a component's class and its part number cannot disagree about which part type it has.
 //
-// Idempotent, since a component that already has one is skipped.
-func StampMPN(d *ir.Design) {
+// Idempotent, since a component that already has one is skipped. The keys come from the read's
+// lexicon (attribute.mpn), which is why the pass runs in DeriveDesign rather than with the parse.
+func (l *Lexicon) StampMPN(d *ir.Design) {
+	v := l.role()
 	index := PartIndex(d)
 	for _, c := range d.GetComponents() {
 		if c.GetMpn() != "" {
 			continue
 		}
-		if v := mpnFrom(c.GetAttributes()); v != "" {
-			c.Mpn = v
+		if m := componentAttr(c, v.attrs.mpn); m != "" {
+			c.Mpn = m
 			continue
 		}
 		if p := FirstPart(index, c); p != nil {
-			if v := p.GetMpn(); v != "" {
-				c.Mpn = v
-			} else if v := mpnFrom(p.GetAttributes()); v != "" {
-				c.Mpn = v
+			if m := p.GetMpn(); m != "" {
+				c.Mpn = m
+			} else if m := attrValue(p.GetAttributes(), v.attrs.mpn); m != "" {
+				c.Mpn = m
 			}
 		}
 	}
 }
 
-// mpnFrom returns the first alias present in an attribute map, or "".
-func mpnFrom(attrs map[string]string) string {
-	for _, a := range MPNAliases {
-		if v := attrs[a]; v != "" {
-			return v
-		}
-	}
-	return ""
-}
+// StampMPN is the process-level form of (*Lexicon).StampMPN.
+func StampMPN(d *ir.Design) { ActiveLexicon().StampMPN(d) }

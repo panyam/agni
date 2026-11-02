@@ -17,7 +17,7 @@ class NamingConvention(_message.Message):
     def __init__(self, name: _Optional[str] = ..., lexicon: _Optional[_Union[NamingLexicon, _Mapping]] = ..., rules: _Optional[_Iterable[_Union[NamingRule, _Mapping]]] = ...) -> None: ...
 
 class NamingLexicon(_message.Message):
-    __slots__ = ("net", "pin", "value_unit")
+    __slots__ = ("net", "pin", "value_unit", "attribute")
     class ClassEntry(_message.Message):
         __slots__ = ("key", "value")
         KEY_FIELD_NUMBER: _ClassVar[int]
@@ -36,10 +36,32 @@ class NamingLexicon(_message.Message):
     PIN_FIELD_NUMBER: _ClassVar[int]
     CLASS_FIELD_NUMBER: _ClassVar[int]
     VALUE_UNIT_FIELD_NUMBER: _ClassVar[int]
+    ATTRIBUTE_FIELD_NUMBER: _ClassVar[int]
     net: NetNameVocab
     pin: PinNameVocab
     value_unit: _containers.ScalarMap[str, str]
-    def __init__(self, net: _Optional[_Union[NetNameVocab, _Mapping]] = ..., pin: _Optional[_Union[PinNameVocab, _Mapping]] = ..., value_unit: _Optional[_Mapping[str, str]] = ..., **kwargs) -> None: ...
+    attribute: AttributeVocab
+    def __init__(self, net: _Optional[_Union[NetNameVocab, _Mapping]] = ..., pin: _Optional[_Union[PinNameVocab, _Mapping]] = ..., value_unit: _Optional[_Mapping[str, str]] = ..., attribute: _Optional[_Union[AttributeVocab, _Mapping]] = ..., **kwargs) -> None: ...
+
+class AttributeVocab(_message.Message):
+    __slots__ = ("mpn", "value", "dnp", "dnp_values")
+    MPN_FIELD_NUMBER: _ClassVar[int]
+    VALUE_FIELD_NUMBER: _ClassVar[int]
+    DNP_FIELD_NUMBER: _ClassVar[int]
+    DNP_VALUES_FIELD_NUMBER: _ClassVar[int]
+    mpn: AttributeKeys
+    value: AttributeKeys
+    dnp: AttributeKeys
+    dnp_values: AttributeKeys
+    def __init__(self, mpn: _Optional[_Union[AttributeKeys, _Mapping]] = ..., value: _Optional[_Union[AttributeKeys, _Mapping]] = ..., dnp: _Optional[_Union[AttributeKeys, _Mapping]] = ..., dnp_values: _Optional[_Union[AttributeKeys, _Mapping]] = ...) -> None: ...
+
+class AttributeKeys(_message.Message):
+    __slots__ = ("keys", "replace")
+    KEYS_FIELD_NUMBER: _ClassVar[int]
+    REPLACE_FIELD_NUMBER: _ClassVar[int]
+    keys: _containers.RepeatedScalarFieldContainer[str]
+    replace: bool
+    def __init__(self, keys: _Optional[_Iterable[str]] = ..., replace: _Optional[bool] = ...) -> None: ...
 
 class NetNameVocab(_message.Message):
     __slots__ = ("rail", "ground", "feedback", "switching", "control", "gate_drive", "i2c", "infer_rail_from_supply_pins", "no_connect", "diff_pair", "voltage")

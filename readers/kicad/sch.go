@@ -12,8 +12,9 @@ import (
 
 // partIdentityProps are the KiCad properties both readers carry into a component's attributes:
 // Value, the part-identity pair (MPN, Manufacturer, the WS10-003 join key when no BomLine exists),
-// and Footprint/Datasheet (footprint-consistency rules plus the WS10 datasheet join, WS1-037). Other
-// user properties are deliberately not swept until a consumer earns them (C9).
+// and Footprint/Datasheet (footprint-consistency rules plus the WS10 datasheet join, WS1-037). Every
+// other property rides the SECTION alone (sectionProps), where the lexicon's attribute keys read it
+// and classification, which tokenizes every component attribute, does not (agni issue 1285).
 //
 // It is one list shared by both readers because per-reader copies drift. A board read that
 // carried Value alone left component.mpn empty, so the datasheet tier reported clean over a
@@ -279,6 +280,7 @@ func (a *compAccum) collect(root *node, src, instPath string) {
 				}
 			}
 		}
+		sectionProps(ps, sec.Attributes)
 		// dnp/in_bom/on_board are symbol-instance TOKENS ((dnp yes)), not properties. They are
 		// the populated-vs-not fabrication flags a check or a diff needs (WS1-037). A DNP part
 		// counts as unpopulated; in_bom/on_board scope it out of BOM/assembly. Faithful to

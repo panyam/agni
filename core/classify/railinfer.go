@@ -38,7 +38,7 @@ func inferRails(d *ir.Design, v *RoleVocab) {
 		if word == "" {
 			continue
 		}
-		pin := firstSupplyLoad(index, comps, n)
+		pin := firstSupplyLoad(v, index, comps, n)
 		if pin == "" {
 			continue
 		}
@@ -61,11 +61,11 @@ func laterSupplyToken(v *RoleVocab, name string) string {
 
 // firstSupplyLoad names the first power_in pin on n, in ref-des then pin order, that belongs to a
 // fitted part other than a connector, as "U18 pin 1 (VDD)". "" when there is none.
-func firstSupplyLoad(index map[string]*ir.PartType, comps map[string]*ir.Component, n *ir.Net) string {
+func firstSupplyLoad(v *RoleVocab, index map[string]*ir.PartType, comps map[string]*ir.Component, n *ir.Net) string {
 	var loads []string
 	for _, conn := range n.GetConnections() {
 		c := comps[conn.GetComponentRef()]
-		if c == nil || unfitted(c) || isConnector(c) {
+		if c == nil || v.IsUnfitted(c) || isConnector(c) {
 			continue
 		}
 		p := pinOf(index, c, conn.GetPinRef())
@@ -114,18 +114,6 @@ func isConnector(c *ir.Component) bool {
 	return false
 }
 
-// unfitted reports a do-not-populate part the way check.Model reads one, the `dnp` attribute.
-func unfitted(c *ir.Component) bool {
-	for k, val := range c.GetAttributes() {
-		if strings.EqualFold(k, "dnp") {
-			switch strings.ToLower(strings.TrimSpace(val)) {
-			case "yes", "true", "1":
-				return true
-			}
-		}
-	}
-	return false
-}
 
 // physicalPins counts n's connections to real parts, leaving out a power symbol's virtual pin.
 func physicalPins(n *ir.Net) int {

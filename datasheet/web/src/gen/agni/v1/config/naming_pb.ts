@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/config/naming.proto.
  */
 export const file_agni_v1_config_naming: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi3AIKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRJACgp2YWx1ZV91bml0GAQgAygLMiwuYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbi5WYWx1ZVVuaXRFbnRyeRpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBGjAKDlZhbHVlVW5pdEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiuwQKDE5ldE5hbWVWb2NhYhIrCgRyYWlsGAEgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxItCgZncm91bmQYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi8KCGZlZWRiYWNrGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIwCglzd2l0Y2hpbmcYBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi4KB2NvbnRyb2wYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjEKCmdhdGVfZHJpdmUYBiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEioKA2kyYxgHIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKAobaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zGAggASgISACIAQESMQoKbm9fY29ubmVjdBgJIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJZGlmZl9wYWlyGAogASgLMh0uYWduaS52MS5jb25maWcuRGlmZlBhaXJWb2NhYhIuCgd2b2x0YWdlGAsgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJuc0IeChxfaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zIksKDURpZmZQYWlyVm9jYWISKQoFcGFpcnMYASADKAsyGi5hZ25pLnYxLmNvbmZpZy5EaWZmU3VmZml4Eg8KB3JlcGxhY2UYAiABKAgiMAoKRGlmZlN1ZmZpeBIQCghwb3NpdGl2ZRgBIAEoCRIQCghuZWdhdGl2ZRgCIAEoCSK8AwoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMgoLZXhwb3NlZF9wYWQYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEiwKBWFub2RlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjYXRob2RlGAcgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgIIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAkgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyJDCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSDwoHZXhjbHVkZRgEIAMoCSJtCgpDbGFzc1ZvY2FiEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSEAoIcHJlZml4ZXMYAyADKAkSEAoIZmFtaWxpZXMYBSADKAkSGAoQZXhjbHVkZV9wcmVmaXhlcxgGIAMoCSJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY29uZmlnYgZwcm90bzM");
+  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUijwMKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRJACgp2YWx1ZV91bml0GAQgAygLMiwuYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbi5WYWx1ZVVuaXRFbnRyeRIxCglhdHRyaWJ1dGUYBSABKAsyHi5hZ25pLnYxLmNvbmZpZy5BdHRyaWJ1dGVWb2NhYhpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBGjAKDlZhbHVlVW5pdEVudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiyQEKDkF0dHJpYnV0ZVZvY2FiEioKA21wbhgBIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMSLAoFdmFsdWUYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5BdHRyaWJ1dGVLZXlzEioKA2RucBgDIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMSMQoKZG5wX3ZhbHVlcxgEIAEoCzIdLmFnbmkudjEuY29uZmlnLkF0dHJpYnV0ZUtleXMiLgoNQXR0cmlidXRlS2V5cxIMCgRrZXlzGAEgAygJEg8KB3JlcGxhY2UYAiABKAgiuwQKDE5ldE5hbWVWb2NhYhIrCgRyYWlsGAEgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxItCgZncm91bmQYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi8KCGZlZWRiYWNrGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIwCglzd2l0Y2hpbmcYBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi4KB2NvbnRyb2wYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjEKCmdhdGVfZHJpdmUYBiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEioKA2kyYxgHIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKAobaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zGAggASgISACIAQESMQoKbm9fY29ubmVjdBgJIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJZGlmZl9wYWlyGAogASgLMh0uYWduaS52MS5jb25maWcuRGlmZlBhaXJWb2NhYhIuCgd2b2x0YWdlGAsgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJuc0IeChxfaW5mZXJfcmFpbF9mcm9tX3N1cHBseV9waW5zIksKDURpZmZQYWlyVm9jYWISKQoFcGFpcnMYASADKAsyGi5hZ25pLnYxLmNvbmZpZy5EaWZmU3VmZml4Eg8KB3JlcGxhY2UYAiABKAgiMAoKRGlmZlN1ZmZpeBIQCghwb3NpdGl2ZRgBIAEoCRIQCghuZWdhdGl2ZRgCIAEoCSK8AwoMUGluTmFtZVZvY2FiEi0KBnN1cHBseRgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSKwoEZ2F0ZRgCIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGc291cmNlGAMgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVkcmFpbhgEIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMgoLZXhwb3NlZF9wYWQYBSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEiwKBWFub2RlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjYXRob2RlGAcgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgIIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAkgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyJDCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSDwoHZXhjbHVkZRgEIAMoCSJtCgpDbGFzc1ZvY2FiEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSEAoIcHJlZml4ZXMYAyADKAkSEAoIZmFtaWxpZXMYBSADKAkSGAoQZXhjbHVkZV9wcmVmaXhlcxgGIAMoCSJsCgpOYW1pbmdSdWxlEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSCwoDd2h5GAMgASgJEg0KBWFsbG93GAQgAygJEg4KBmV4ZW1wdBgFIAMoCRISCgptYXRjaF9mdWxsGAYgASgIQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY29uZmlnYgZwcm90bzM");
 
 /**
  * This file: an operator's naming policy, as the ONE schema both the engine and the wire use.
@@ -98,6 +98,14 @@ export type NamingLexicon = Message<"agni.v1.config.NamingLexicon"> & {
    * @generated from field: map<string, string> value_unit = 4;
    */
   valueUnit: { [key: string]: string };
+
+  /**
+   * attribute names the component attributes a part number, a value and a do-not-populate flag are
+   * read from, so a house property such as "Part Number" or "DNF" reaches the rules.
+   *
+   * @generated from field: agni.v1.config.AttributeVocab attribute = 5;
+   */
+  attribute?: AttributeVocab | undefined;
 };
 
 /**
@@ -106,6 +114,70 @@ export type NamingLexicon = Message<"agni.v1.config.NamingLexicon"> & {
  */
 export const NamingLexiconSchema: GenMessage<NamingLexicon> = /*@__PURE__*/
   messageDesc(file_agni_v1_config_naming, 1);
+
+/**
+ * AttributeVocab lists the attribute KEYS each fact is read from, matched without regard to case and
+ * tried in order, so the first key a component carries with a non-empty value answers. dnp_values are
+ * the values of a dnp key that mean the part is not fitted, compared the same way. Each list is ADDED
+ * to the built-ins, after them, unless replace is set.
+ *
+ * A part number on an EDIF cell (rather than its placed instance) is read by the reader with the
+ * built-in keys alone, since the reader reads no configuration.
+ *
+ * @generated from message agni.v1.config.AttributeVocab
+ */
+export type AttributeVocab = Message<"agni.v1.config.AttributeVocab"> & {
+  /**
+   * @generated from field: agni.v1.config.AttributeKeys mpn = 1;
+   */
+  mpn?: AttributeKeys | undefined;
+
+  /**
+   * @generated from field: agni.v1.config.AttributeKeys value = 2;
+   */
+  value?: AttributeKeys | undefined;
+
+  /**
+   * @generated from field: agni.v1.config.AttributeKeys dnp = 3;
+   */
+  dnp?: AttributeKeys | undefined;
+
+  /**
+   * @generated from field: agni.v1.config.AttributeKeys dnp_values = 4;
+   */
+  dnpValues?: AttributeKeys | undefined;
+};
+
+/**
+ * Describes the message agni.v1.config.AttributeVocab.
+ * Use `create(AttributeVocabSchema)` to create a new message.
+ */
+export const AttributeVocabSchema: GenMessage<AttributeVocab> = /*@__PURE__*/
+  messageDesc(file_agni_v1_config_naming, 2);
+
+/**
+ * AttributeKeys is one list of AttributeVocab, literal strings rather than patterns.
+ *
+ * @generated from message agni.v1.config.AttributeKeys
+ */
+export type AttributeKeys = Message<"agni.v1.config.AttributeKeys"> & {
+  /**
+   * @generated from field: repeated string keys = 1;
+   */
+  keys: string[];
+
+  /**
+   * @generated from field: bool replace = 2;
+   */
+  replace: boolean;
+};
+
+/**
+ * Describes the message agni.v1.config.AttributeKeys.
+ * Use `create(AttributeKeysSchema)` to create a new message.
+ */
+export const AttributeKeysSchema: GenMessage<AttributeKeys> = /*@__PURE__*/
+  messageDesc(file_agni_v1_config_naming, 3);
 
 /**
  * NetNameVocab is the vocabulary for NET names, the roles resolved once at ingestion and read
@@ -201,7 +273,7 @@ export type NetNameVocab = Message<"agni.v1.config.NetNameVocab"> & {
  * Use `create(NetNameVocabSchema)` to create a new message.
  */
 export const NetNameVocabSchema: GenMessage<NetNameVocab> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 2);
+  messageDesc(file_agni_v1_config_naming, 4);
 
 /**
  * DiffPairVocab lists the suffix pairs that name a differential pair. It is not a VocabPatterns
@@ -227,7 +299,7 @@ export type DiffPairVocab = Message<"agni.v1.config.DiffPairVocab"> & {
  * Use `create(DiffPairVocabSchema)` to create a new message.
  */
 export const DiffPairVocabSchema: GenMessage<DiffPairVocab> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 3);
+  messageDesc(file_agni_v1_config_naming, 5);
 
 /**
  * DiffSuffix is one suffix pair, matched at the end of the whole net name without regard to case. The
@@ -252,7 +324,7 @@ export type DiffSuffix = Message<"agni.v1.config.DiffSuffix"> & {
  * Use `create(DiffSuffixSchema)` to create a new message.
  */
 export const DiffSuffixSchema: GenMessage<DiffSuffix> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 4);
+  messageDesc(file_agni_v1_config_naming, 6);
 
 /**
  * PinNameVocab is the vocabulary for a component's PIN names.
@@ -329,7 +401,7 @@ export type PinNameVocab = Message<"agni.v1.config.PinNameVocab"> & {
  * Use `create(PinNameVocabSchema)` to create a new message.
  */
 export const PinNameVocabSchema: GenMessage<PinNameVocab> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 5);
+  messageDesc(file_agni_v1_config_naming, 7);
 
 /**
  * VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
@@ -365,7 +437,7 @@ export type VocabPatterns = Message<"agni.v1.config.VocabPatterns"> & {
  * Use `create(VocabPatternsSchema)` to create a new message.
  */
 export const VocabPatternsSchema: GenMessage<VocabPatterns> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 6);
+  messageDesc(file_agni_v1_config_naming, 8);
 
 /**
  * ClassVocab is one component class's override. patterns and replace mean what they mean on
@@ -420,7 +492,7 @@ export type ClassVocab = Message<"agni.v1.config.ClassVocab"> & {
  * Use `create(ClassVocabSchema)` to create a new message.
  */
 export const ClassVocabSchema: GenMessage<ClassVocab> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 7);
+  messageDesc(file_agni_v1_config_naming, 9);
 
 /**
  * NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
@@ -471,5 +543,5 @@ export type NamingRule = Message<"agni.v1.config.NamingRule"> & {
  * Use `create(NamingRuleSchema)` to create a new message.
  */
 export const NamingRuleSchema: GenMessage<NamingRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 8);
+  messageDesc(file_agni_v1_config_naming, 10);
 
