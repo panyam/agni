@@ -2444,7 +2444,18 @@ type ProfileDef struct {
 	// It replaced three flat fields (agni issue 827) when this message became the schema for the
 	// authoring file as well as the wire, because the file has always nested them under host:. A
 	// reader of an older encoding sees no host, so a deck written before the change must be rewritten.
-	Host          *ProfileHost `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
+	Host *ProfileHost `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
+	// instance says how the naming convention tells one bus from another on a board that carries
+	// several, or one bus from a different interface that shares its suffixes. Empty treats every
+	// matching net on the design as one interface. "anchor_stem" makes each net the anchor signal
+	// matches its own bus, keyed on the anchor's name less its suffix (SD2_CMD is bus SD2), and a
+	// signal belongs to that bus only when its net is named from the same stem (agni issue 1246).
+	Instance string `protobuf:"bytes,8,opt,name=instance,proto3" json:"instance,omitempty"`
+	// excludes are signals whose presence on a bus says it is a different interface, such as the card
+	// detect line of a removable SD card on a bus the eMMC profile would otherwise read. A bus carrying
+	// one is not in use, so nothing on it is required or judged. They need an instance key, since such
+	// a line rules out only the bus it belongs to, and they take no pullup or anchor.
+	Excludes      []*ProfileSignal `protobuf:"bytes,9,rep,name=excludes,proto3" json:"excludes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2503,6 +2514,20 @@ func (x *ProfileDef) GetRequirements() []*ProfileRequirement {
 func (x *ProfileDef) GetHost() *ProfileHost {
 	if x != nil {
 		return x.Host
+	}
+	return nil
+}
+
+func (x *ProfileDef) GetInstance() string {
+	if x != nil {
+		return x.Instance
+	}
+	return ""
+}
+
+func (x *ProfileDef) GetExcludes() []*ProfileSignal {
+	if x != nil {
+		return x.Excludes
 	}
 	return nil
 }
@@ -2949,13 +2974,15 @@ const file_agni_v1_checks_ruledef_proto_rawDesc = "" +
 	"\x10DatalogAggregate\x12\x12\n" +
 	"\x04func\x18\x01 \x01(\tR\x04func\x12\x10\n" +
 	"\x03var\x18\x02 \x01(\tR\x03var\x12\x1a\n" +
-	"\bdistinct\x18\x03 \x01(\bR\bdistinct\"\x8e\x02\n" +
+	"\bdistinct\x18\x03 \x01(\bR\bdistinct\"\xe5\x02\n" +
 	"\n" +
 	"ProfileDef\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
 	"\asignals\x18\x02 \x03(\v2\x1d.agni.v1.checks.ProfileSignalR\asignals\x12F\n" +
 	"\frequirements\x18\x05 \x03(\v2\".agni.v1.checks.ProfileRequirementR\frequirements\x12/\n" +
-	"\x04host\x18\a \x01(\v2\x1b.agni.v1.checks.ProfileHostR\x04hostJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x06\x10\aR\rhost_attr_keyR\rhost_attr_valR\n" +
+	"\x04host\x18\a \x01(\v2\x1b.agni.v1.checks.ProfileHostR\x04host\x12\x1a\n" +
+	"\binstance\x18\b \x01(\tR\binstance\x129\n" +
+	"\bexcludes\x18\t \x03(\v2\x1d.agni.v1.checks.ProfileSignalR\bexcludesJ\x04\b\x03\x10\x04J\x04\b\x04\x10\x05J\x04\b\x06\x10\aR\rhost_attr_keyR\rhost_attr_valR\n" +
 	"host_class\"M\n" +
 	"\vProfileHost\x12\x12\n" +
 	"\x04attr\x18\x01 \x01(\tR\x04attr\x12\x14\n" +
@@ -3097,14 +3124,15 @@ var file_agni_v1_checks_ruledef_proto_depIdxs = []int32{
 	33, // 57: agni.v1.checks.ProfileDef.signals:type_name -> agni.v1.checks.ProfileSignal
 	34, // 58: agni.v1.checks.ProfileDef.requirements:type_name -> agni.v1.checks.ProfileRequirement
 	31, // 59: agni.v1.checks.ProfileDef.host:type_name -> agni.v1.checks.ProfileHost
-	37, // 60: agni.v1.checks.ProfileNamingMap.suffixes:type_name -> agni.v1.checks.ProfileNamingMap.SuffixesEntry
-	38, // 61: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
-	5,  // 62: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
-	63, // [63:63] is the sub-list for method output_type
-	63, // [63:63] is the sub-list for method input_type
-	63, // [63:63] is the sub-list for extension type_name
-	63, // [63:63] is the sub-list for extension extendee
-	0,  // [0:63] is the sub-list for field type_name
+	33, // 60: agni.v1.checks.ProfileDef.excludes:type_name -> agni.v1.checks.ProfileSignal
+	37, // 61: agni.v1.checks.ProfileNamingMap.suffixes:type_name -> agni.v1.checks.ProfileNamingMap.SuffixesEntry
+	38, // 62: agni.v1.checks.ProfileRequirement.params:type_name -> agni.v1.checks.ProfileRequirement.ParamsEntry
+	5,  // 63: agni.v1.checks.SpecBody.LetEntry.value:type_name -> agni.v1.checks.SpecTerm
+	64, // [64:64] is the sub-list for method output_type
+	64, // [64:64] is the sub-list for method input_type
+	64, // [64:64] is the sub-list for extension type_name
+	64, // [64:64] is the sub-list for extension extendee
+	0,  // [0:64] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_checks_ruledef_proto_init() }

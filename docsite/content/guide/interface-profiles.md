@@ -71,6 +71,8 @@ The requirements decide how many rules there are. The signals decide what each o
 | `signals` | the interface's roles, each with a `name` (the role, e.g. `SCL`) and one matcher. |
 | `requirements` | the checks this profile declares, each naming a registered type. |
 | `host` | optional. Binds the interface to the component that declares it. |
+| `instance` | optional. `anchor_stem` judges each bus of the interface on its own, as described in [One bus at a time](#one-bus-at-a-time). |
+| `excludes` | optional, and only with `instance`. Signals whose net on a bus says that bus is some other interface. |
 
 `host` takes `{attr: <key>, value: <val>}` to match a component attribute the design carries
 (`interface=CAN`), or `{class: <device-class>}` to match what a part's datasheet says it is.
@@ -202,6 +204,41 @@ flowchart TB
     C -->|no| E["pull-up and dangling<br/>rules evaluate, but no<br/>completeness finding"]
     C -->|yes| F["those, plus missing<br/>signals reported<br/>against the anchor net"]
 ```
+
+## One bus at a time
+
+Without an `instance` key a profile treats every matching net on the design as one interface. That
+is fine for a bus a board carries once. It goes wrong when a board carries two buses that share
+suffixes, because each lends the other its signals. An SD card slot next to an eMMC is the usual
+case on a SoC board, and an unused M.2 SMBus clock ending `_CLK` used to read as the eMMC's clock.
+
+`instance: anchor_stem` makes each net the anchor matches its own bus. The bus is named by the
+anchor's net name less the anchor's suffix, so `SD2_CMD` founds bus `SD2`. A signal belongs to the
+bus when its net is named from that stem. For a `suffix` signal that means exactly the stem and the
+suffix (`SD2_CLK`). For a `glob` or `regex` signal it means the net matches and starts with the stem
+and the anchor suffix's first character, so bus `SD` never takes `SD2_DATA0`. The in-use gate,
+completeness, pull-up and dangling checks and the coverage panel then run per bus, and a missing
+signal is reported against that bus's anchor.
+
+`excludes` lists signals whose presence on a bus says it is a different interface. The shipped eMMC
+profile excludes a card detect line, because a removable SD card shares eMMC's `CMD`, `CLK` and `DAT`
+names but has four data lines and no reset, and judging it as an eMMC reports a list of signals it was
+never going to have:
+
+```yaml
+# stdlib/profiles/builtins/emmc.yaml
+instance: anchor_stem
+signals:
+  - {name: CMD,  suffix: _CMD, pullup: true, anchor: true}
+  - {name: DAT0, regex: '_DATA?0$'}
+  # ...
+excludes:
+  - {name: CD, regex: '_(CD|CD_B|CD_N|CDn|nCD|DET)$'}
+```
+
+A bus carrying an excluded signal is not in use, so nothing on it is required or judged, and a review
+item bound to the profile reads it as absent. An `instance` key needs an anchor declared by `suffix`,
+since the stem comes from taking that suffix off.
 
 ## Re-bind a built-in instead of re-writing it
 

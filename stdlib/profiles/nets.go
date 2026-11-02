@@ -45,6 +45,16 @@ func scope(m check.Model, p Profile) (nets, comps map[string]bool) {
 			return nets, comps
 		}
 	}
+	if p.Instance != "" {
+		// The nets of the buses in use, so a net another interface shares a suffix with stays out.
+		onBus := p.busNets(m, p.Signals)
+		for _, n := range m.Nets() {
+			if onBus[n.GetName()] {
+				collect(n, nets, comps)
+			}
+		}
+		return nets, comps
+	}
 	for _, n := range m.Nets() {
 		if matchesAnySignal(p, n.GetName()) {
 			collect(n, nets, comps)

@@ -403,6 +403,17 @@ message ProfileDef {
   // authoring file as well as the wire, because the file has always nested them under host:. A
   // reader of an older encoding sees no host, so a deck written before the change must be rewritten.
   ProfileHost host = 7;
+  // instance says how the naming convention tells one bus from another on a board that carries
+  // several, or one bus from a different interface that shares its suffixes. Empty treats every
+  // matching net on the design as one interface. "anchor_stem" makes each net the anchor signal
+  // matches its own bus, keyed on the anchor's name less its suffix (SD2_CMD is bus SD2), and a
+  // signal belongs to that bus only when its net is named from the same stem (agni issue 1246).
+  string instance = 8;
+  // excludes are signals whose presence on a bus says it is a different interface, such as the card
+  // detect line of a removable SD card on a bus the eMMC profile would otherwise read. A bus carrying
+  // one is not in use, so nothing on it is required or judged. They need an instance key, since such
+  // a line rules out only the bus it belongs to, and they take no pullup or anchor.
+  repeated ProfileSignal excludes = 9;
 
   reserved 3, 4, 6;
   reserved "host_attr_key", "host_attr_val", "host_class";

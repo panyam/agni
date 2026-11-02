@@ -28,6 +28,8 @@ func fullProfile() Profile {
 			Type:   "termination",
 			Params: map[string]string{"a": "_P", "b": "_N"},
 		}},
+		Instance: InstanceAnchorStem,
+		Excludes: []Signal{{Name: "DET", Prefix: "ACME_", Suffix: "_DET", Glob: "ACME_*_DET", Regex: "_DET$"}},
 	}
 }
 
