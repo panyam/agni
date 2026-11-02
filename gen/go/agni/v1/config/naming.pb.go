@@ -116,7 +116,10 @@ type NamingLexicon struct {
 	// 100 pF. Only resistor ships a default (ohm), since a bare capacitor value meant farads, microfarads
 	// or picofarads depending on the era and tool. A class named here replaces its default. The key must
 	// name a class the engine ships and the value a unit it reads, or the load fails.
-	ValueUnit     map[string]string `protobuf:"bytes,4,rep,name=value_unit,json=valueUnit,proto3" json:"value_unit,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	ValueUnit map[string]string `protobuf:"bytes,4,rep,name=value_unit,json=valueUnit,proto3" json:"value_unit,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
+	// attribute names the component attributes a part number, a value and a do-not-populate flag are
+	// read from, so a house property such as "Part Number" or "DNF" reaches the rules.
+	Attribute     *AttributeVocab `protobuf:"bytes,5,opt,name=attribute,proto3" json:"attribute,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -179,6 +182,141 @@ func (x *NamingLexicon) GetValueUnit() map[string]string {
 	return nil
 }
 
+func (x *NamingLexicon) GetAttribute() *AttributeVocab {
+	if x != nil {
+		return x.Attribute
+	}
+	return nil
+}
+
+// AttributeVocab lists the attribute KEYS each fact is read from, matched without regard to case and
+// tried in order, so the first key a component carries with a non-empty value answers. dnp_values are
+// the values of a dnp key that mean the part is not fitted, compared the same way. Each list is ADDED
+// to the built-ins, after them, unless replace is set.
+//
+// A part number on an EDIF cell (rather than its placed instance) is read by the reader with the
+// built-in keys alone, since the reader reads no configuration.
+type AttributeVocab struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Mpn           *AttributeKeys         `protobuf:"bytes,1,opt,name=mpn,proto3" json:"mpn,omitempty"`
+	Value         *AttributeKeys         `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	Dnp           *AttributeKeys         `protobuf:"bytes,3,opt,name=dnp,proto3" json:"dnp,omitempty"`
+	DnpValues     *AttributeKeys         `protobuf:"bytes,4,opt,name=dnp_values,json=dnpValues,proto3" json:"dnp_values,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AttributeVocab) Reset() {
+	*x = AttributeVocab{}
+	mi := &file_agni_v1_config_naming_proto_msgTypes[2]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AttributeVocab) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AttributeVocab) ProtoMessage() {}
+
+func (x *AttributeVocab) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_config_naming_proto_msgTypes[2]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AttributeVocab.ProtoReflect.Descriptor instead.
+func (*AttributeVocab) Descriptor() ([]byte, []int) {
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{2}
+}
+
+func (x *AttributeVocab) GetMpn() *AttributeKeys {
+	if x != nil {
+		return x.Mpn
+	}
+	return nil
+}
+
+func (x *AttributeVocab) GetValue() *AttributeKeys {
+	if x != nil {
+		return x.Value
+	}
+	return nil
+}
+
+func (x *AttributeVocab) GetDnp() *AttributeKeys {
+	if x != nil {
+		return x.Dnp
+	}
+	return nil
+}
+
+func (x *AttributeVocab) GetDnpValues() *AttributeKeys {
+	if x != nil {
+		return x.DnpValues
+	}
+	return nil
+}
+
+// AttributeKeys is one list of AttributeVocab, literal strings rather than patterns.
+type AttributeKeys struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	Keys          []string               `protobuf:"bytes,1,rep,name=keys,proto3" json:"keys,omitempty"`
+	Replace       bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AttributeKeys) Reset() {
+	*x = AttributeKeys{}
+	mi := &file_agni_v1_config_naming_proto_msgTypes[3]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AttributeKeys) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AttributeKeys) ProtoMessage() {}
+
+func (x *AttributeKeys) ProtoReflect() protoreflect.Message {
+	mi := &file_agni_v1_config_naming_proto_msgTypes[3]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AttributeKeys.ProtoReflect.Descriptor instead.
+func (*AttributeKeys) Descriptor() ([]byte, []int) {
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{3}
+}
+
+func (x *AttributeKeys) GetKeys() []string {
+	if x != nil {
+		return x.Keys
+	}
+	return nil
+}
+
+func (x *AttributeKeys) GetReplace() bool {
+	if x != nil {
+		return x.Replace
+	}
+	return false
+}
+
 // NetNameVocab is the vocabulary for NET names, the roles resolved once at ingestion and read
 // afterwards as a normalized net.role fact (C20).
 type NetNameVocab struct {
@@ -220,7 +358,7 @@ type NetNameVocab struct {
 
 func (x *NetNameVocab) Reset() {
 	*x = NetNameVocab{}
-	mi := &file_agni_v1_config_naming_proto_msgTypes[2]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -232,7 +370,7 @@ func (x *NetNameVocab) String() string {
 func (*NetNameVocab) ProtoMessage() {}
 
 func (x *NetNameVocab) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_naming_proto_msgTypes[2]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -245,7 +383,7 @@ func (x *NetNameVocab) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NetNameVocab.ProtoReflect.Descriptor instead.
 func (*NetNameVocab) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{2}
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *NetNameVocab) GetRail() *VocabPatterns {
@@ -338,7 +476,7 @@ type DiffPairVocab struct {
 
 func (x *DiffPairVocab) Reset() {
 	*x = DiffPairVocab{}
-	mi := &file_agni_v1_config_naming_proto_msgTypes[3]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -350,7 +488,7 @@ func (x *DiffPairVocab) String() string {
 func (*DiffPairVocab) ProtoMessage() {}
 
 func (x *DiffPairVocab) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_naming_proto_msgTypes[3]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -363,7 +501,7 @@ func (x *DiffPairVocab) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiffPairVocab.ProtoReflect.Descriptor instead.
 func (*DiffPairVocab) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{3}
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *DiffPairVocab) GetPairs() []*DiffSuffix {
@@ -392,7 +530,7 @@ type DiffSuffix struct {
 
 func (x *DiffSuffix) Reset() {
 	*x = DiffSuffix{}
-	mi := &file_agni_v1_config_naming_proto_msgTypes[4]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -404,7 +542,7 @@ func (x *DiffSuffix) String() string {
 func (*DiffSuffix) ProtoMessage() {}
 
 func (x *DiffSuffix) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_naming_proto_msgTypes[4]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -417,7 +555,7 @@ func (x *DiffSuffix) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DiffSuffix.ProtoReflect.Descriptor instead.
 func (*DiffSuffix) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{4}
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *DiffSuffix) GetPositive() string {
@@ -463,7 +601,7 @@ type PinNameVocab struct {
 
 func (x *PinNameVocab) Reset() {
 	*x = PinNameVocab{}
-	mi := &file_agni_v1_config_naming_proto_msgTypes[5]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -475,7 +613,7 @@ func (x *PinNameVocab) String() string {
 func (*PinNameVocab) ProtoMessage() {}
 
 func (x *PinNameVocab) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_naming_proto_msgTypes[5]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -488,7 +626,7 @@ func (x *PinNameVocab) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PinNameVocab.ProtoReflect.Descriptor instead.
 func (*PinNameVocab) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{5}
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *PinNameVocab) GetSupply() *VocabPatterns {
@@ -572,7 +710,7 @@ type VocabPatterns struct {
 
 func (x *VocabPatterns) Reset() {
 	*x = VocabPatterns{}
-	mi := &file_agni_v1_config_naming_proto_msgTypes[6]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -584,7 +722,7 @@ func (x *VocabPatterns) String() string {
 func (*VocabPatterns) ProtoMessage() {}
 
 func (x *VocabPatterns) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_naming_proto_msgTypes[6]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -597,7 +735,7 @@ func (x *VocabPatterns) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use VocabPatterns.ProtoReflect.Descriptor instead.
 func (*VocabPatterns) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{6}
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *VocabPatterns) GetPatterns() []string {
@@ -649,7 +787,7 @@ type ClassVocab struct {
 
 func (x *ClassVocab) Reset() {
 	*x = ClassVocab{}
-	mi := &file_agni_v1_config_naming_proto_msgTypes[7]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -661,7 +799,7 @@ func (x *ClassVocab) String() string {
 func (*ClassVocab) ProtoMessage() {}
 
 func (x *ClassVocab) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_naming_proto_msgTypes[7]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -674,7 +812,7 @@ func (x *ClassVocab) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ClassVocab.ProtoReflect.Descriptor instead.
 func (*ClassVocab) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{7}
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *ClassVocab) GetPatterns() []string {
@@ -730,7 +868,7 @@ type NamingRule struct {
 
 func (x *NamingRule) Reset() {
 	*x = NamingRule{}
-	mi := &file_agni_v1_config_naming_proto_msgTypes[8]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -742,7 +880,7 @@ func (x *NamingRule) String() string {
 func (*NamingRule) ProtoMessage() {}
 
 func (x *NamingRule) ProtoReflect() protoreflect.Message {
-	mi := &file_agni_v1_config_naming_proto_msgTypes[8]
+	mi := &file_agni_v1_config_naming_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -755,7 +893,7 @@ func (x *NamingRule) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use NamingRule.ProtoReflect.Descriptor instead.
 func (*NamingRule) Descriptor() ([]byte, []int) {
-	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{8}
+	return file_agni_v1_config_naming_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *NamingRule) GetName() string {
@@ -808,20 +946,30 @@ const file_agni_v1_config_naming_proto_rawDesc = "" +
 	"\x10NamingConvention\x12\x12\n" +
 	"\x04name\x18\x01 \x01(\tR\x04name\x127\n" +
 	"\alexicon\x18\x02 \x01(\v2\x1d.agni.v1.config.NamingLexiconR\alexicon\x120\n" +
-	"\x05rules\x18\x03 \x03(\v2\x1a.agni.v1.config.NamingRuleR\x05rules\"\x90\x03\n" +
+	"\x05rules\x18\x03 \x03(\v2\x1a.agni.v1.config.NamingRuleR\x05rules\"\xce\x03\n" +
 	"\rNamingLexicon\x12.\n" +
 	"\x03net\x18\x01 \x01(\v2\x1c.agni.v1.config.NetNameVocabR\x03net\x12.\n" +
 	"\x03pin\x18\x02 \x01(\v2\x1c.agni.v1.config.PinNameVocabR\x03pin\x12>\n" +
 	"\x05class\x18\x03 \x03(\v2(.agni.v1.config.NamingLexicon.ClassEntryR\x05class\x12K\n" +
 	"\n" +
-	"value_unit\x18\x04 \x03(\v2,.agni.v1.config.NamingLexicon.ValueUnitEntryR\tvalueUnit\x1aT\n" +
+	"value_unit\x18\x04 \x03(\v2,.agni.v1.config.NamingLexicon.ValueUnitEntryR\tvalueUnit\x12<\n" +
+	"\tattribute\x18\x05 \x01(\v2\x1e.agni.v1.config.AttributeVocabR\tattribute\x1aT\n" +
 	"\n" +
 	"ClassEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x120\n" +
 	"\x05value\x18\x02 \x01(\v2\x1a.agni.v1.config.ClassVocabR\x05value:\x028\x01\x1a<\n" +
 	"\x0eValueUnitEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xae\x05\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xe5\x01\n" +
+	"\x0eAttributeVocab\x12/\n" +
+	"\x03mpn\x18\x01 \x01(\v2\x1d.agni.v1.config.AttributeKeysR\x03mpn\x123\n" +
+	"\x05value\x18\x02 \x01(\v2\x1d.agni.v1.config.AttributeKeysR\x05value\x12/\n" +
+	"\x03dnp\x18\x03 \x01(\v2\x1d.agni.v1.config.AttributeKeysR\x03dnp\x12<\n" +
+	"\n" +
+	"dnp_values\x18\x04 \x01(\v2\x1d.agni.v1.config.AttributeKeysR\tdnpValues\"=\n" +
+	"\rAttributeKeys\x12\x12\n" +
+	"\x04keys\x18\x01 \x03(\tR\x04keys\x12\x18\n" +
+	"\areplace\x18\x02 \x01(\bR\areplace\"\xae\x05\n" +
 	"\fNetNameVocab\x121\n" +
 	"\x04rail\x18\x01 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x04rail\x125\n" +
 	"\x06ground\x18\x02 \x01(\v2\x1d.agni.v1.config.VocabPatternsR\x06ground\x129\n" +
@@ -889,53 +1037,60 @@ func file_agni_v1_config_naming_proto_rawDescGZIP() []byte {
 	return file_agni_v1_config_naming_proto_rawDescData
 }
 
-var file_agni_v1_config_naming_proto_msgTypes = make([]protoimpl.MessageInfo, 11)
+var file_agni_v1_config_naming_proto_msgTypes = make([]protoimpl.MessageInfo, 13)
 var file_agni_v1_config_naming_proto_goTypes = []any{
 	(*NamingConvention)(nil), // 0: agni.v1.config.NamingConvention
 	(*NamingLexicon)(nil),    // 1: agni.v1.config.NamingLexicon
-	(*NetNameVocab)(nil),     // 2: agni.v1.config.NetNameVocab
-	(*DiffPairVocab)(nil),    // 3: agni.v1.config.DiffPairVocab
-	(*DiffSuffix)(nil),       // 4: agni.v1.config.DiffSuffix
-	(*PinNameVocab)(nil),     // 5: agni.v1.config.PinNameVocab
-	(*VocabPatterns)(nil),    // 6: agni.v1.config.VocabPatterns
-	(*ClassVocab)(nil),       // 7: agni.v1.config.ClassVocab
-	(*NamingRule)(nil),       // 8: agni.v1.config.NamingRule
-	nil,                      // 9: agni.v1.config.NamingLexicon.ClassEntry
-	nil,                      // 10: agni.v1.config.NamingLexicon.ValueUnitEntry
+	(*AttributeVocab)(nil),   // 2: agni.v1.config.AttributeVocab
+	(*AttributeKeys)(nil),    // 3: agni.v1.config.AttributeKeys
+	(*NetNameVocab)(nil),     // 4: agni.v1.config.NetNameVocab
+	(*DiffPairVocab)(nil),    // 5: agni.v1.config.DiffPairVocab
+	(*DiffSuffix)(nil),       // 6: agni.v1.config.DiffSuffix
+	(*PinNameVocab)(nil),     // 7: agni.v1.config.PinNameVocab
+	(*VocabPatterns)(nil),    // 8: agni.v1.config.VocabPatterns
+	(*ClassVocab)(nil),       // 9: agni.v1.config.ClassVocab
+	(*NamingRule)(nil),       // 10: agni.v1.config.NamingRule
+	nil,                      // 11: agni.v1.config.NamingLexicon.ClassEntry
+	nil,                      // 12: agni.v1.config.NamingLexicon.ValueUnitEntry
 }
 var file_agni_v1_config_naming_proto_depIdxs = []int32{
 	1,  // 0: agni.v1.config.NamingConvention.lexicon:type_name -> agni.v1.config.NamingLexicon
-	8,  // 1: agni.v1.config.NamingConvention.rules:type_name -> agni.v1.config.NamingRule
-	2,  // 2: agni.v1.config.NamingLexicon.net:type_name -> agni.v1.config.NetNameVocab
-	5,  // 3: agni.v1.config.NamingLexicon.pin:type_name -> agni.v1.config.PinNameVocab
-	9,  // 4: agni.v1.config.NamingLexicon.class:type_name -> agni.v1.config.NamingLexicon.ClassEntry
-	10, // 5: agni.v1.config.NamingLexicon.value_unit:type_name -> agni.v1.config.NamingLexicon.ValueUnitEntry
-	6,  // 6: agni.v1.config.NetNameVocab.rail:type_name -> agni.v1.config.VocabPatterns
-	6,  // 7: agni.v1.config.NetNameVocab.ground:type_name -> agni.v1.config.VocabPatterns
-	6,  // 8: agni.v1.config.NetNameVocab.feedback:type_name -> agni.v1.config.VocabPatterns
-	6,  // 9: agni.v1.config.NetNameVocab.switching:type_name -> agni.v1.config.VocabPatterns
-	6,  // 10: agni.v1.config.NetNameVocab.control:type_name -> agni.v1.config.VocabPatterns
-	6,  // 11: agni.v1.config.NetNameVocab.gate_drive:type_name -> agni.v1.config.VocabPatterns
-	6,  // 12: agni.v1.config.NetNameVocab.i2c:type_name -> agni.v1.config.VocabPatterns
-	6,  // 13: agni.v1.config.NetNameVocab.no_connect:type_name -> agni.v1.config.VocabPatterns
-	3,  // 14: agni.v1.config.NetNameVocab.diff_pair:type_name -> agni.v1.config.DiffPairVocab
-	6,  // 15: agni.v1.config.NetNameVocab.voltage:type_name -> agni.v1.config.VocabPatterns
-	4,  // 16: agni.v1.config.DiffPairVocab.pairs:type_name -> agni.v1.config.DiffSuffix
-	6,  // 17: agni.v1.config.PinNameVocab.supply:type_name -> agni.v1.config.VocabPatterns
-	6,  // 18: agni.v1.config.PinNameVocab.gate:type_name -> agni.v1.config.VocabPatterns
-	6,  // 19: agni.v1.config.PinNameVocab.source:type_name -> agni.v1.config.VocabPatterns
-	6,  // 20: agni.v1.config.PinNameVocab.drain:type_name -> agni.v1.config.VocabPatterns
-	6,  // 21: agni.v1.config.PinNameVocab.exposed_pad:type_name -> agni.v1.config.VocabPatterns
-	6,  // 22: agni.v1.config.PinNameVocab.anode:type_name -> agni.v1.config.VocabPatterns
-	6,  // 23: agni.v1.config.PinNameVocab.cathode:type_name -> agni.v1.config.VocabPatterns
-	6,  // 24: agni.v1.config.PinNameVocab.feedback:type_name -> agni.v1.config.VocabPatterns
-	6,  // 25: agni.v1.config.PinNameVocab.switching:type_name -> agni.v1.config.VocabPatterns
-	7,  // 26: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.ClassVocab
-	27, // [27:27] is the sub-list for method output_type
-	27, // [27:27] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	10, // 1: agni.v1.config.NamingConvention.rules:type_name -> agni.v1.config.NamingRule
+	4,  // 2: agni.v1.config.NamingLexicon.net:type_name -> agni.v1.config.NetNameVocab
+	7,  // 3: agni.v1.config.NamingLexicon.pin:type_name -> agni.v1.config.PinNameVocab
+	11, // 4: agni.v1.config.NamingLexicon.class:type_name -> agni.v1.config.NamingLexicon.ClassEntry
+	12, // 5: agni.v1.config.NamingLexicon.value_unit:type_name -> agni.v1.config.NamingLexicon.ValueUnitEntry
+	2,  // 6: agni.v1.config.NamingLexicon.attribute:type_name -> agni.v1.config.AttributeVocab
+	3,  // 7: agni.v1.config.AttributeVocab.mpn:type_name -> agni.v1.config.AttributeKeys
+	3,  // 8: agni.v1.config.AttributeVocab.value:type_name -> agni.v1.config.AttributeKeys
+	3,  // 9: agni.v1.config.AttributeVocab.dnp:type_name -> agni.v1.config.AttributeKeys
+	3,  // 10: agni.v1.config.AttributeVocab.dnp_values:type_name -> agni.v1.config.AttributeKeys
+	8,  // 11: agni.v1.config.NetNameVocab.rail:type_name -> agni.v1.config.VocabPatterns
+	8,  // 12: agni.v1.config.NetNameVocab.ground:type_name -> agni.v1.config.VocabPatterns
+	8,  // 13: agni.v1.config.NetNameVocab.feedback:type_name -> agni.v1.config.VocabPatterns
+	8,  // 14: agni.v1.config.NetNameVocab.switching:type_name -> agni.v1.config.VocabPatterns
+	8,  // 15: agni.v1.config.NetNameVocab.control:type_name -> agni.v1.config.VocabPatterns
+	8,  // 16: agni.v1.config.NetNameVocab.gate_drive:type_name -> agni.v1.config.VocabPatterns
+	8,  // 17: agni.v1.config.NetNameVocab.i2c:type_name -> agni.v1.config.VocabPatterns
+	8,  // 18: agni.v1.config.NetNameVocab.no_connect:type_name -> agni.v1.config.VocabPatterns
+	5,  // 19: agni.v1.config.NetNameVocab.diff_pair:type_name -> agni.v1.config.DiffPairVocab
+	8,  // 20: agni.v1.config.NetNameVocab.voltage:type_name -> agni.v1.config.VocabPatterns
+	6,  // 21: agni.v1.config.DiffPairVocab.pairs:type_name -> agni.v1.config.DiffSuffix
+	8,  // 22: agni.v1.config.PinNameVocab.supply:type_name -> agni.v1.config.VocabPatterns
+	8,  // 23: agni.v1.config.PinNameVocab.gate:type_name -> agni.v1.config.VocabPatterns
+	8,  // 24: agni.v1.config.PinNameVocab.source:type_name -> agni.v1.config.VocabPatterns
+	8,  // 25: agni.v1.config.PinNameVocab.drain:type_name -> agni.v1.config.VocabPatterns
+	8,  // 26: agni.v1.config.PinNameVocab.exposed_pad:type_name -> agni.v1.config.VocabPatterns
+	8,  // 27: agni.v1.config.PinNameVocab.anode:type_name -> agni.v1.config.VocabPatterns
+	8,  // 28: agni.v1.config.PinNameVocab.cathode:type_name -> agni.v1.config.VocabPatterns
+	8,  // 29: agni.v1.config.PinNameVocab.feedback:type_name -> agni.v1.config.VocabPatterns
+	8,  // 30: agni.v1.config.PinNameVocab.switching:type_name -> agni.v1.config.VocabPatterns
+	9,  // 31: agni.v1.config.NamingLexicon.ClassEntry.value:type_name -> agni.v1.config.ClassVocab
+	32, // [32:32] is the sub-list for method output_type
+	32, // [32:32] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_agni_v1_config_naming_proto_init() }
@@ -943,14 +1098,14 @@ func file_agni_v1_config_naming_proto_init() {
 	if File_agni_v1_config_naming_proto != nil {
 		return
 	}
-	file_agni_v1_config_naming_proto_msgTypes[2].OneofWrappers = []any{}
+	file_agni_v1_config_naming_proto_msgTypes[4].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_agni_v1_config_naming_proto_rawDesc), len(file_agni_v1_config_naming_proto_rawDesc)),
 			NumEnums:      0,
-			NumMessages:   11,
+			NumMessages:   13,
 			NumExtensions: 0,
 			NumServices:   0,
 		},

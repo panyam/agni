@@ -6,6 +6,8 @@
 // nothing itself.
 import { clone, create } from "@bufbuild/protobuf";
 import {
+  AttributeKeysSchema,
+  AttributeVocabSchema,
   ClassVocabSchema,
   DiffPairVocabSchema,
   DiffSuffixSchema,
@@ -14,6 +16,7 @@ import {
   NetNameVocabSchema,
   PinNameVocabSchema,
   VocabPatternsSchema,
+  type AttributeKeys,
   type ClassVocab,
   type DiffPairVocab,
   type DiffSuffix,
@@ -104,11 +107,17 @@ function vocabOf(conv: NamingConvention, path: string, make: boolean): (VocabPat
     if (make) lx.class[name] ??= create(ClassVocabSchema);
     return lx.class[name];
   }
+  const field = name.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
+  if (space === "attribute") {
+    if (make) lx.attribute ??= create(AttributeVocabSchema);
+    const keys = lx.attribute as unknown as Record<string, AttributeKeys | undefined> | undefined;
+    if (make && keys) keys[field] ??= create(AttributeKeysSchema);
+    return keys?.[field] as unknown as VocabPatterns | undefined;
+  }
   if (make && space === "net") lx.net ??= create(NetNameVocabSchema);
   if (make && space === "pin") lx.pin ??= create(PinNameVocabSchema);
   const group = (space === "net" ? lx.net : lx.pin) as unknown as Record<string, VocabPatterns | undefined> | undefined;
   if (!group) return undefined;
-  const field = name.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase());
   if (make) group[field] ??= create(VocabPatternsSchema);
   return group[field];
 }
@@ -134,7 +143,13 @@ function suffixOf(value: string): DiffSuffix {
 // and a convention's unit replaces the built-in rather than adding to it.
 const VALUE_UNIT = "value_unit.";
 
-const LIST_OF: Record<string, string> = { pattern: "patterns", exclude: "exclude", prefix: "prefixes", exclude_prefix: "excludePrefixes", family: "families" };
+const LIST_OF: Record<string, string> = { pattern: "patterns", exclude: "exclude", prefix: "prefixes", exclude_prefix: "excludePrefixes", family: "families", key: "keys" };
+
+// kindsIn is the kinds a vocabulary's live entries are written back under when a built-in is removed.
+function kindsIn(vocabulary: string): string[] {
+  if (vocabulary.startsWith("attribute.")) return ["key"];
+  return vocabulary.startsWith("class.") ? ["pattern", "family"] : ["pattern", "exclude"];
+}
 
 function listOf(v: VocabPatterns | ClassVocab, kind: string): string[] {
   const lists = v as unknown as Record<string, string[] | undefined>;
@@ -200,8 +215,7 @@ export function removeEntry(conv: NamingConvention, rows: LexiconRow[], row: Lex
     return next;
   }
   v.replace = true;
-  const kinds = row.vocabulary.startsWith("class.") ? ["pattern", "family"] : ["pattern", "exclude"];
-  for (const kind of kinds) {
+  for (const kind of kindsIn(row.vocabulary)) {
     const live = rows.filter((r) => r.vocabulary === row.vocabulary && r.kind === kind && !r.replaced && r.key !== row.key);
     const list = listOf(v, kind);
     list.length = 0;
@@ -224,7 +238,7 @@ export function setOff(conv: NamingConvention, vocabulary: string, off: boolean)
     if (space === "class") {
       if (next.lexicon) delete next.lexicon.class[name];
     } else {
-      const group = (space === "net" ? next.lexicon?.net : next.lexicon?.pin) as unknown as Record<string, unknown> | undefined;
+      const group = (space === "net" ? next.lexicon?.net : space === "pin" ? next.lexicon?.pin : next.lexicon?.attribute) as unknown as Record<string, unknown> | undefined;
       if (group) group[name.replace(/_([a-z0-9])/g, (_, c: string) => c.toUpperCase())] = undefined;
     }
     return next;
@@ -237,7 +251,7 @@ export function setOff(conv: NamingConvention, vocabulary: string, off: boolean)
   }
   const v = vocabOf(next, vocabulary, true)!;
   v.replace = true;
-  for (const kind of space === "class" ? ["pattern", "family"] : ["pattern", "exclude"]) listOf(v, kind).length = 0;
+  for (const kind of kindsIn(vocabulary)) listOf(v, kind).length = 0;
   return next;
 }
 

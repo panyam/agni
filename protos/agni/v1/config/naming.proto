@@ -45,6 +45,29 @@ message NamingLexicon {
   // or picofarads depending on the era and tool. A class named here replaces its default. The key must
   // name a class the engine ships and the value a unit it reads, or the load fails.
   map<string, string> value_unit = 4;
+  // attribute names the component attributes a part number, a value and a do-not-populate flag are
+  // read from, so a house property such as "Part Number" or "DNF" reaches the rules.
+  AttributeVocab attribute = 5;
+}
+
+// AttributeVocab lists the attribute KEYS each fact is read from, matched without regard to case and
+// tried in order, so the first key a component carries with a non-empty value answers. dnp_values are
+// the values of a dnp key that mean the part is not fitted, compared the same way. Each list is ADDED
+// to the built-ins, after them, unless replace is set.
+//
+// A part number on an EDIF cell (rather than its placed instance) is read by the reader with the
+// built-in keys alone, since the reader reads no configuration.
+message AttributeVocab {
+  AttributeKeys mpn = 1;
+  AttributeKeys value = 2;
+  AttributeKeys dnp = 3;
+  AttributeKeys dnp_values = 4;
+}
+
+// AttributeKeys is one list of AttributeVocab, literal strings rather than patterns.
+message AttributeKeys {
+  repeated string keys = 1;
+  bool replace = 2;
 }
 
 // NetNameVocab is the vocabulary for NET names, the roles resolved once at ingestion and read

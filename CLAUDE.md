@@ -667,7 +667,9 @@ it that way. Adding a free-text field to `Skeleton` would quietly dissolve the g
   EDIF reader, so EDIF resolved part numbers and no other format did. Telesis records it on the PART
   TYPE while every consumer read the COMPONENT, so `component.mpn` came back empty for every
   component of every `.tel` design, silently disabling the whole datasheet tier on that format
-  (agni issue 519). A new spelling goes in `classify.MPNAliases`, never in a reader.
+  (agni issue 519). A new spelling goes in `classify.MPNAliases`, never in a reader, and a project's
+  own goes in its lexicon's `attribute.mpn` (agni 1285). The pass runs in `DeriveDesign`, since it reads
+  configuration, and KiCad keeps a symbol's other fields on the SECTION so classification never reads them.
 - **Some boards are FETCHED, not committed.** `make samples` pulls a pinned tarball from
   `panyam/agni-samples` into gitignored `tools/samples/`, and `testall` depends on it. Those designs
   are other people's, under their own licences, which is what keeps this repo uniformly Apache-2.0.

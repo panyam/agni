@@ -100,6 +100,8 @@ type RoleVocab struct {
 	anode, cathode, feedbackPin, switchingPin, noConnect vocab
 	// voltage reads a net name's tokens as a nominal voltage, through each pattern's capture groups.
 	voltage vocab
+	// attrs are the attribute keys a part number, a value and a do-not-populate flag are read from.
+	attrs attrVocab
 	// inferRail is NetNameVocab.infer_rail_from_supply_pins, resolved (absent reads as on).
 	inferRail bool
 }
@@ -171,6 +173,14 @@ func defaultLexicon() *configpb.NamingLexicon {
 			// voltage: "5V", "+5V", "3V3", "12V0", "3.3V", each a whole token, so an embedded digit run
 			// ("USB5V", "EVENT5") never reads.
 			Voltage: vp(`^\+?(\d+)V(\d+)?$`, `^\+?(\d+)\.(\d+)V$`),
+		},
+		// Attribute keys, each list matched without regard to case. The values a do-not-populate key
+		// carries include KiCad's yes and a house field's own DNP or y (HackRF One, MNT Reform).
+		Attribute: &configpb.AttributeVocab{
+			Mpn:       &configpb.AttributeKeys{Keys: append([]string{}, MPNAliases...)},
+			Value:     &configpb.AttributeKeys{Keys: append([]string{}, valueAttrKeys...)},
+			Dnp:       &configpb.AttributeKeys{Keys: []string{"dnp"}},
+			DnpValues: &configpb.AttributeKeys{Keys: []string{"yes", "true", "1", "y", "dnp"}},
 		},
 		Pin: &configpb.PinNameVocab{
 			// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
@@ -392,6 +402,7 @@ func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
 		}
 	}
 	v.inferRail = net.GetInferRailFromSupplyPins()
+	v.attrs = buildAttrVocab(merged.GetAttribute())
 	return v, nil
 }
 
@@ -434,6 +445,7 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	if on != nil && on.InferRailFromSupplyPins != nil {
 		out.Net.InferRailFromSupplyPins = on.InferRailFromSupplyPins
 	}
+	out.Attribute = mergeAttributes(base.GetAttribute(), over.GetAttribute())
 	// The class block is a project's alone; there is no built-in set to merge it against.
 	if cls := over.GetClass(); len(cls) > 0 {
 		out.Class = cls

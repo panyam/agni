@@ -120,7 +120,7 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	// the file says about them.
 	undeclared := map[string]*ir.Component{}
 	for _, c := range d.Components {
-		if dnpMarked(c) {
+		if m.lexicon().RoleVocab().IsUnfitted(c) {
 			if m.unfitted == nil {
 				m.unfitted = map[string]bool{}
 			}
@@ -445,20 +445,6 @@ func (m *irModel) IsPinlessPart(refDes string) bool { return m.pinless[refDes] }
 // IsFitted reports whether a component is assembled onto the board (see model.Model).
 func (m *irModel) IsFitted(refDes string) bool { return !m.unfitted[refDes] }
 
-// dnpMarked reports whether a component carries a do-not-populate flag, KiCad's `dnp` property set to
-// yes (the KiCad reader records it as the `dnp` attribute). The key is matched without regard to case
-// so another format recording the same flag joins without a change here.
-func dnpMarked(c *ir.Component) bool {
-	for k, v := range c.GetAttributes() {
-		if strings.EqualFold(k, "dnp") {
-			switch strings.ToLower(strings.TrimSpace(v)) {
-			case "yes", "true", "1":
-				return true
-			}
-		}
-	}
-	return false
-}
 
 func (m *irModel) PinNetName(refDes, pin string) string { return m.pinNet[refDes+"\x00"+pin] }
 

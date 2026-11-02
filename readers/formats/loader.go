@@ -207,7 +207,7 @@ func (l *Loader) ReadDesign(path string) (*ir.Design, error) {
 }
 
 // ParseDesign is the half of ReadDesign that reads no configuration: the reader, the locator
-// renaming, the per-instance net ids and the part numbers. Its result depends on the files alone (and
+// renaming and the per-instance net ids. Its result depends on the files alone (and
 // on SymbolPaths, which decide which files are read), so a host can keep it across projects and
 // conventions and derive it again for each (agni issue 1061). A caller that wants a usable design
 // calls ReadDesign, or DeriveDesign on what this returns.
@@ -227,19 +227,19 @@ func (l *Loader) ParseDesign(path string) (*ir.Design, error) {
 	// The format-neutral per-instance net id (WS9). A no-op for netgraph-based readers, which set it
 	// already; a direct-IR reader like EDIF gets it from its connections.
 	netgraph.StampNetIDs(d)
-	// Fill ir.Component.mpn from the component's own attributes or its part type (agni issue 519).
-	// Not a lexicon pass, since a part number is an identifier the source states and not a name this
-	// engine interprets, and no lexicon pass reads it.
-	classify.StampMPN(d)
 	return d, nil
 }
 
 // DeriveDesign runs the passes of ReadDesign that read configuration over a parsed design, in place:
-// device classes, net roles, values and power pins from lex (nil means the process defaults), then
+// part numbers, device classes, net roles, values and power pins from lex (nil means the process defaults), then
 // the classes a datasheet establishes from deviceClassFor (nil means no corpus). It expects a design
 // straight from ParseDesign, since Stamp replaces the class set and a second derive over its own
 // output is not a supported input.
 func DeriveDesign(d *ir.Design, lex *classify.Lexicon, deviceClassFor func(mpn string) string) {
+	// Fill ir.Component.mpn from the component's own attributes or its part type (agni issue 519),
+	// under the lexicon's attribute.mpn keys (agni 1285), before the datasheet class pass that joins
+	// on it.
+	lex.StampMPN(d)
 	// Device classes (WS3-071), against the read's lexicon (WS3-106), so the vocabulary arrives with
 	// the read and there is no install-before-read ordering to get wrong.
 	lex.Stamp(d)

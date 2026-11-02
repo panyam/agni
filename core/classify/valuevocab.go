@@ -132,27 +132,13 @@ func (v *ValueVocab) UnitFor(class ComponentClass, prefixed bool) string {
 	return v.bareUnit[class]
 }
 
-// valueAttrKeys are the attribute names a component's value arrives under. KiCad, IPC-2581 and gEDA all
-// normalize to "Value" at ingestion; xschem writes lowercase "value"; EDIF aggregates section properties
-// with the SOURCE spelling and normalizes only MPN, so its value key is whatever the exporting tool
-// wrote.
-//
-// The match is case-insensitive, so Value/VALUE/value need one entry. The remaining aliases are the
-// spellings seen in this repo's readers. No wider EDIF aliases are guessed, because the public corpus
-// is FPGA netlists with no board parts and a wrong alias would read values from the wrong property.
+// valueAttrKeys are the built-in attribute.value keys. KiCad, IPC-2581 and gEDA all normalize to
+// "Value" at ingestion; xschem writes lowercase "value"; EDIF aggregates section properties with the
+// SOURCE spelling and normalizes only MPN, so its value key is whatever the exporting tool wrote. No
+// wider EDIF aliases are guessed, because the public corpus is FPGA netlists with no board parts and a
+// wrong alias would read values from the wrong property.
 var valueAttrKeys = []string{"value", "val", "partvalue", "component_value"}
 
-// valueTextOf returns the value text a component carries, or "" when it carries none. Checked in valueAttrKeys order so an explicit "Value" wins a looser alias.
-func valueTextOf(c *ir.Component) string {
-	for _, want := range valueAttrKeys {
-		for k, v := range c.GetAttributes() {
-			if strings.ToLower(k) == want && strings.TrimSpace(v) != "" {
-				return v
-			}
-		}
-	}
-	return ""
-}
 
 // StampValues fills each component's value Quantity from whatever attribute its format spelled the
 // value in (WS3-118), so a rule reads a NUMBER rather than re-parsing text per format. It is idempotent,
@@ -164,7 +150,7 @@ func valueTextOf(c *ir.Component) string {
 func (l *Lexicon) StampValues(d *ir.Design) {
 	vocab := l.value()
 	for _, c := range d.GetComponents() {
-		text := valueTextOf(c)
+		text := l.role().ValueText(c)
 		if text == "" {
 			c.Value = nil
 			continue

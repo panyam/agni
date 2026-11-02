@@ -289,6 +289,31 @@ lexicon:
 The unit may carry a multiplier prefix, which scales only a bare number, so a capacitor marked `10u`
 is still 10 µF. A unit the engine cannot read, or a class it does not ship, fails the load.
 
+### Part numbers, values and do-not-populate
+
+A part's number, its value and whether it is fitted are read from its attributes, and `attribute`
+names the keys:
+
+```yaml
+lexicon:
+  attribute:
+    mpn:        { keys: ["Manufacturer_No"] }   # MPN, Manufacturer_PN, Part Number and others by default
+    value:      { keys: ["Wert"] }              # Value and three aliases by default
+    dnp:        { keys: ["DNF"] }               # dnp by default
+    dnp_values: { keys: ["fit-no"] }            # yes, true, 1, y and DNP by default
+```
+
+Keys match without regard to case and are tried in order, so the first key a part carries with a
+non-empty value answers. Each list is added to the built-ins, after them, unless you say
+`replace: true`. A part is not fitted when any of its `dnp` keys holds one of the `dnp_values`, so
+KiCad's own flag set to `no` does not hide a house `DNP` field that says `DNP`.
+
+A KiCad symbol's own fields (`Part Number`, `DNP`, a `Description`) are read off the symbol
+instance, while the component keeps only Value, MPN, Manufacturer, Footprint and Datasheet. That is
+deliberate. A part's class is read from every component attribute, and a description such as "card
+edge connector" would otherwise turn an M.2 socket into a test connector. An EDIF part number stated
+on the library cell rather than the placed instance is read with the built-in keys only.
+
 The class must be one the engine already has. A project cannot yet declare a class of its own, such
 as a house `esd_array` refining `diode`, because that opens a vocabulary the engine keeps closed, and
 DECISIONS.md records what would change that. The class names are the ones `component.class`

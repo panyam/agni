@@ -89,6 +89,17 @@ describe("draft edits", () => {
     expect(d.lexicon?.class.diode.replace).toBe(false);
   });
 
+  it("adds an attribute key, and removes a built-in one by writing the list out", () => {
+    const d = addEntry(conv(), "attribute.dnp", "key", "DNF");
+    expect(d.lexicon?.attribute?.dnp?.keys).toEqual(["DNF"]);
+    const rows = rowsOf([entry("attribute.mpn", "key", "MPN"), entry("attribute.mpn", "key", "Part Number")], []);
+    const removed = removeEntry(conv(), rows, rows[1]);
+    expect(removed.lexicon?.attribute?.mpn).toMatchObject({ replace: true, keys: ["MPN"] });
+    const off = setOff(d, "attribute.dnp", true);
+    expect(off.lexicon?.attribute?.dnp).toMatchObject({ replace: true, keys: [] });
+    expect(setOff(off, "attribute.dnp", false).lexicon?.attribute?.dnp).toBeUndefined();
+  });
+
   it("sets and drops a class's bare-number unit", () => {
     const d = addEntry(conv(), "value_unit.capacitor", "unit", "F");
     expect(d.lexicon?.valueUnit).toEqual({ capacitor: "F" });

@@ -16,7 +16,8 @@ type LexiconEntry struct {
 	// Vocabulary is the list the entry sits in, spelled as the conventions YAML spells its path
 	// ("net.rail", "pin.supply", "class.tvs").
 	Vocabulary string
-	// Kind is "pattern", "exclude", "prefix", "exclude_prefix", "family", "pair", "unit" or "switch". A
+	// Kind is "pattern", "exclude", "prefix", "exclude_prefix", "family", "pair", "unit", "key" or
+	// "switch", "key" being one attribute key or do-not-populate value under "attribute.<list>". A
 	// pair's Value is its two suffixes joined by "=" (see DiffPairEntry), and a unit's is the unit a
 	// bare number on the class means, under the vocabulary "value_unit.<class>".
 	Kind  string
@@ -122,6 +123,10 @@ func EffectiveEntries(over *configpb.NamingLexicon) []LexiconEntry {
 		add(nv.path, "pattern", nv.over.GetPatterns(), true, false)
 		add(nv.path, "exclude", nv.over.GetExclude(), true, false)
 	}
+	for _, ak := range attributeLists(base, over) {
+		add(ak.path, "key", ak.base.GetKeys(), false, ak.over.GetReplace())
+		add(ak.path, "key", ak.over.GetKeys(), true, false)
+	}
 	// A convention's prefix wins over the built-in table, whichever class it names, and one it
 	// excludes is gone.
 	claimed := map[string]bool{}
@@ -187,6 +192,22 @@ func addSwitch(out *[]LexiconEntry, base, over *configpb.NamingLexicon) {
 	})
 }
 
+// attributeList pairs an attribute list's YAML path with its built-in and convention values.
+type attributeList struct {
+	path       string
+	base, over *configpb.AttributeKeys
+}
+
+func attributeLists(base, over *configpb.NamingLexicon) []attributeList {
+	ba, oa := base.GetAttribute(), over.GetAttribute()
+	return []attributeList{
+		{"attribute.mpn", ba.GetMpn(), oa.GetMpn()},
+		{"attribute.value", ba.GetValue(), oa.GetValue()},
+		{"attribute.dnp", ba.GetDnp(), oa.GetDnp()},
+		{"attribute.dnp_values", ba.GetDnpValues(), oa.GetDnpValues()},
+	}
+}
+
 func unitClasses(base, over *configpb.NamingLexicon) []string {
 	seen := map[string]bool{}
 	var names []string
@@ -230,6 +251,13 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	}
 	out.Net.DiffPair = &configpb.DiffPairVocab{Replace: true}
 	out.ValueUnit = map[string]string{}
+	keys := map[string]*configpb.AttributeKeys{}
+	for _, ak := range attributeLists(nil, nil) {
+		keys[ak.path] = &configpb.AttributeKeys{Replace: true}
+	}
+	out.Attribute = &configpb.AttributeVocab{
+		Mpn: keys["attribute.mpn"], Value: keys["attribute.value"], Dnp: keys["attribute.dnp"], DnpValues: keys["attribute.dnp_values"],
+	}
 	classes := map[string]*configpb.ClassVocab{}
 	for _, name := range classNames(BuiltinLexicon(), over) {
 		classes[name] = &configpb.ClassVocab{Replace: true}
@@ -241,6 +269,10 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 		if e.Kind == "switch" {
 			on := e.Value == "infer_rail_from_supply_pins=true"
 			out.Net.InferRailFromSupplyPins = &on
+			continue
+		}
+		if e.Kind == "key" {
+			keys[e.Vocabulary].Keys = append(keys[e.Vocabulary].Keys, e.Value)
 			continue
 		}
 		if e.Kind == "unit" {
