@@ -15,7 +15,7 @@ var decouplingPresent = &check.Rule{
 	Impact:     "Chips draw current in sharp transients; without a local capacitor the rail sags and bounces at the pin. The board often works on the bench and then fails intermittently in the field (resets, corrupted logic, EMC failures), which is why decoupling review is a fixture of every design checklist.",
 	Remedy:     "Add a decoupling capacitor from the rail to ground at each supply pin, and place it at the pin in layout. A capacitor drawn on the rail but placed across the board does not decouple it.",
 	Primitives: []string{"select", "traverse", "exists", "pin-role", "pattern"},
-	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type"},
+	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
 		check.KeyTier:         "R",
