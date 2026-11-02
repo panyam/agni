@@ -208,7 +208,6 @@ func TestAnInstanceKeyIsValidated(t *testing.T) {
 		{"an unknown instance", Profile{Name: "x", Instance: "per_port", Signals: []Signal{anchor, clk}}, "unknown instance"},
 		{"a regex anchor", Profile{Name: "x", Instance: InstanceAnchorStem, Signals: []Signal{{Name: "CMD", Regex: "_CMD$", Anchor: true}, clk}}, "must declare a suffix"},
 		{"an exclude needing a pull-up", Profile{Name: "x", Instance: InstanceAnchorStem, Signals: []Signal{anchor, clk}, Excludes: []Signal{{Name: "CD", Suffix: "_CD", PullUp: true}}}, "cannot be an anchor or need a pull-up"},
-		{"a requirement not judged per bus", Profile{Name: "x", Instance: InstanceAnchorStem, Signals: []Signal{anchor, clk}, Requirements: []Requirement{{Type: "esd"}}}, "not yet judged one bus at a time"},
 		{"an exclude with no matcher", Profile{Name: "x", Instance: InstanceAnchorStem, Signals: []Signal{anchor, clk}, Excludes: []Signal{{Name: "CD"}}}, "declares no matcher"},
 	} {
 		if err := Validate(tc.p); err == nil || !strings.Contains(err.Error(), tc.want) {
@@ -235,5 +234,69 @@ requirements:
 	}
 	if p.Instance != InstanceAnchorStem || len(p.Excludes) != 1 || p.Excludes[0].Suffix != "_CD" || len(p.Signals) != 2 {
 		t.Errorf("parsed %+v", p)
+	}
+}
+
+// canPerBus is the shipped CAN profile judged one bus at a time.
+func canPerBus() Profile {
+	p := CAN
+	p.Instance = InstanceAnchorStem
+	return p
+}
+
+// twoCANBuses carries two CAN buses, CAN0 bridged by its terminator R1 and CAN1 with none.
+func twoCANBuses() *ir.Design {
+	return &ir.Design{
+		Components: comps("U1", "U2", "U3", "R1"),
+		Nets: []*ir.Net{
+			net("CAN0_CANH", "U1.1", "U2.1", "R1.1"),
+			net("CAN0_CANL", "U1.2", "U2.2", "R1.2"),
+			net("CAN0_TXD", "U1.3", "U2.3"),
+			net("CAN0_RXD", "U1.4", "U2.4"),
+			net("CAN1_CANH", "U1.5", "U3.1"),
+			net("CAN1_CANL", "U1.6", "U3.2"),
+			net("CAN1_TXD", "U1.7", "U3.3"),
+			net("CAN1_RXD", "U1.8", "U3.4"),
+		},
+	}
+}
+
+// One bus's terminator no longer clears another bus, the design-wide limit agni issue 162 names.
+func TestTerminationIsJudgedPerBus(t *testing.T) {
+	rule := func(p Profile) []string {
+		var got []string
+		for _, f := range check.RunBackground(check.NewModel(twoCANBuses()), Compile(p)) {
+			if f.Rule == "can-termination-missing" {
+				got = append(got, check.EntityRef(f.Subject))
+			}
+		}
+		return got
+	}
+	if got := rule(CAN); len(got) != 0 {
+		t.Fatalf("control: the design-wide CAN profile clears both buses with one terminator, got %v", got)
+	}
+	if got := rule(canPerBus()); len(got) != 1 || got[0] != "CAN1_CANH" {
+		t.Errorf("per bus: want CAN1's high net reported unterminated, got %v", got)
+	}
+}
+
+// A connector-facing net matching a signal but on no bus in use is not this interface's line, so a
+// per-bus ESD requirement leaves it alone where the design-wide one reports it.
+func TestESDIsJudgedPerBus(t *testing.T) {
+	d := canExposed()
+	d.Components = append(d.Components, comps("J9")...)
+	d.Nets = append(d.Nets, net("DBG_CANL", "U1.9", "J9.1"))
+	reported := func(p Profile) map[string]bool {
+		got := map[string]bool{}
+		for _, f := range esdRule(p, Requirement{Type: "esd"}).Findings(context.Background(), check.NewModel(d)) {
+			got[check.EntityRef(f.Subject)] = true
+		}
+		return got
+	}
+	if got := reported(CAN); !got["DBG_CANL"] || !got["BUS_CANL"] {
+		t.Fatalf("control: the design-wide profile reports both unclamped lines, got %v", got)
+	}
+	if got := reported(canPerBus()); got["DBG_CANL"] || !got["BUS_CANL"] || got["BUS_CANH"] {
+		t.Errorf("per bus: want BUS_CANL alone, got %v", got)
 	}
 }

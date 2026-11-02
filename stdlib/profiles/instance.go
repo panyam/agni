@@ -27,9 +27,8 @@ import (
 const InstanceAnchorStem = "anchor_stem"
 
 // validateInstance rejects an instance key the compiler cannot build: an unknown key, an anchor_stem
-// profile whose anchor has no suffix to take off or that declares a requirement not yet judged per
-// bus, and exclude signals with no instance to exclude, or that claim the anchor or a pull-up, neither
-// of which means anything for a line that rules a bus out.
+// profile whose anchor has no suffix to take off, and exclude signals with no instance to exclude, or
+// that claim the anchor or a pull-up, neither of which means anything for a line that rules a bus out.
 func validateInstance(p Profile) error {
 	switch p.Instance {
 	case "":
@@ -40,13 +39,6 @@ func validateInstance(p Profile) error {
 		a := p.anchorSignal()
 		if a == nil || a.Suffix == "" || a.Glob != "" || a.Regex != "" {
 			return fmt.Errorf("profile %q: instance %s takes the bus's stem off the anchor's name, so the anchor must declare a suffix", p.Name, InstanceAnchorStem)
-		}
-		// These two compile from the design-wide presence relations, so on an instance-keyed profile
-		// they would judge every bus as one, which is the over-match an instance key exists to stop.
-		for _, r := range p.Requirements {
-			if r.Type == "termination" || r.Type == "esd" {
-				return fmt.Errorf("profile %q: requirement %q is not yet judged one bus at a time, so it cannot be declared with an instance key", p.Name, r.Type)
-			}
 		}
 	default:
 		return fmt.Errorf("profile %q: unknown instance %q (known: %s)", p.Name, p.Instance, InstanceAnchorStem)

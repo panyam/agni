@@ -78,6 +78,7 @@ func TestBuiltinsCompileToExpectedRules(t *testing.T) {
 		// on-board interfaces do not, because no eMMC or SPI-NOR line ever leaves the board.
 		{"SPI_NOR", SPINOR, 4},
 		{"eMMC", EMMC, 4},
+		{"SD", SD, 4},
 		{"CAN", CAN, 5},
 		{"LIN", LIN, 5},
 		{"A2B", A2B, 4},
