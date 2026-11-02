@@ -10,6 +10,16 @@ GitHub Release body carries.
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-11-02
+
+How agni reads a board's names is now one lexicon a person can see and change. `agni lexicon` and a
+viewer panel list it, explain why a net has its roles, and dry-run a convention with `--try` (PR
+1269, 1273, 1276, 1287, 1288, 1289). The release also adds an ODB++ reader (PR 1262, 1271), reads
+KiCad 6 and 7 files (PR 1235), and drafts a pin map with `agni pinmap` (PR 1259). It fixes KiCad
+board placement, arcs and text (PR 1271, 1274, 1280). Five exported `core/check` and
+`core/classify` functions moved onto the model, which is why this is a minor release. The full
+write-up, with each migration, is [RELEASES/v0.4.0.md](RELEASES/v0.4.0.md).
+
 ## [0.3.15] - 2026-10-30
 
 EDIF designs locate on their schematic. A part an export renumbered through `instanceBackAnnotate`
