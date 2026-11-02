@@ -569,7 +569,7 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 		// even when the child fails to open, so a partial read still names the parent net.
 		for _, p := range sub.Children("pin") {
 			if at := sheetPt(p.Child("at")); at != nil {
-				w.in.anchors = append(w.in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + netName(atomOf(p.Arg(1))), Rank: rankSheetPin + sc.depth()})
+				w.in.anchors = append(w.in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + netName(atomOf(p.Arg(1))), Rank: rankSheetPin + sc.depth(), Sheet: sc.prefix})
 			}
 		}
 		if file == "" || ancestors[file] {
@@ -630,7 +630,7 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 			childID := path.Join(id, propValue(sub, "Sheetname"))
 			for _, p := range sub.Children("pin") {
 				if at := sheetPt(p.Child("at")); at != nil {
-					in.anchors = append(in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + netName(atomOf(p.Arg(1))), Rank: rankSheetPin + sc.depth()})
+					in.anchors = append(in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + netName(atomOf(p.Arg(1))), Rank: rankSheetPin + sc.depth(), Sheet: sc.prefix})
 				}
 			}
 			if file == "" || ancestors[file] {

@@ -332,10 +332,13 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	}
 
 	for _, w := range wires {
-		in.wires = append(in.wires, netgraph.Wire{A: sc.at(w.A), B: sc.at(w.B), Label: w.Label, Id: w.Id})
+		in.wires = append(in.wires, netgraph.Wire{A: sc.at(w.A), B: sc.at(w.B), Label: w.Label, Id: w.Id, Sheet: sc.prefix})
 	}
+	// Every wire and anchor names its sheet instance, so the solver can tell two labels one wire
+	// joins on this sheet from two that only a parent sheet straps together (agni issue 1249).
 	for _, a := range anchors {
 		a.At = sc.at(a.At)
+		a.Sheet = sc.prefix
 		in.anchors = append(in.anchors, a)
 	}
 	for _, p := range pins {

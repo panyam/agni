@@ -30,6 +30,9 @@ type Wire struct {
 	A, B  Point
 	Label string
 	Id    string
+	// Sheet is the sheet instance the wire is drawn on, set by a reader that solves several sheets
+	// at once (the KiCad hierarchy walk) and empty otherwise. See Net.SheetGroups.
+	Sheet string
 }
 
 // Anchor names the net passing through a grid point, such as a power/ground tap or a port/label
@@ -48,6 +51,8 @@ type Anchor struct {
 	// instance-qualified local name (1) over a synthetic hier-join label (2), which exists only
 	// to union a parent sheet pin with its child hierarchical label.
 	Rank int
+	// Sheet is the sheet instance the anchor sits on, as for Wire.Sheet.
+	Sheet string
 }
 
 // Pin is one component pin placed at a grid point. Comp is the component ref_des and Pin is
@@ -108,6 +113,13 @@ type Net struct {
 	// unlabelled one-pin net "unconnected-(...)", flagged or not (agni issue 1019).
 	NoConnect bool
 	Aliases   []Alias
+	// SheetGroups splits Aliases by where the names met: each group is the names that share one
+	// sheet's wiring, joined by a wire or by one name drawn twice on that sheet, before any other
+	// sheet joined them, with the sheet it is on. It is set only when the net's names fall into two
+	// groups or more, which needs a caller that sets Sheet, so two hierarchical labels a parent
+	// sheet straps together are told apart from two labels on one wire (agni issue 1249). Nil means
+	// every alias met in one place, which is what a caller that sets no Sheet always gets.
+	SheetGroups []SheetGroup
 }
 
 // NetRef identifies the net a wire or point resolved to by its display Name and the deterministic
@@ -157,6 +169,14 @@ func hashPairs(pairs [][2]string) string {
 type Alias struct {
 	Name string
 	Rank int
+}
+
+// SheetGroup is the names of one net that met on one sheet's wiring (Net.SheetGroups). A name can
+// sit in a group on a sheet other than its own: a parent sheet's pin carries its child's
+// hierarchical name, so two child ports the parent wires together meet on the parent.
+type SheetGroup struct {
+	Sheet string
+	Names []string
 }
 
 // Dangle is a wire endpoint that terminates on nothing (no pin, anchor/label, junction, or other
@@ -321,6 +341,8 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 		}
 	}
 
+	groups := sheetGroups(uf, wires, anchors)
+
 	var nets []Net
 	rootName := map[int]string{} // root -> final net name (incl. N$), for the wire->net map
 	rootID := map[int]string{}   // root -> deterministic net id, for the wire/point->net-instance join
@@ -358,7 +380,7 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 		id := netID(sorted)
 		rootName[r] = nm
 		rootID[r] = id
-		nets = append(nets, Net{Name: nm, ID: id, Conns: sorted, Driven: driven[r], External: external[r], NoConnect: flagged[r], Aliases: aliases[r]})
+		nets = append(nets, Net{Name: nm, ID: id, Conns: sorted, Driven: driven[r], External: external[r], NoConnect: flagged[r], Aliases: aliases[r], SheetGroups: groups[r]})
 	}
 
 	// Only formats with native wire ids (KiCad uuids) populate wireNets. Formats whose wires
@@ -469,6 +491,70 @@ func dedupSort(cs []Conn) []Conn {
 type unionFind struct {
 	id     map[Point]int
 	parent []int
+}
+
+// sheetGroups groups each net's names by where they met, for Net.SheetGroups. It unions the same
+// points the solve does, wires and one name drawn twice, except that a name joins only within one
+// sheet, so the groups of one net are the pieces it was in before other sheets joined them. It
+// returns, per root of uf, the sorted name groups of a net whose names fall into two groups or more.
+func sheetGroups(uf *unionFind, wires []Wire, anchors []Anchor) map[int][]SheetGroup {
+	local := newUnionFind()
+	for _, w := range wires {
+		local.union(w.A, w.B)
+	}
+	type sheetLabel struct{ sheet, label string }
+	first := map[sheetLabel]Point{}
+	join := func(sheet, label string, at Point) {
+		local.add(at)
+		if label == "" {
+			return
+		}
+		k := sheetLabel{sheet, label}
+		if p, ok := first[k]; ok {
+			local.union(p, at)
+		} else {
+			first[k] = at
+		}
+	}
+	for _, w := range wires {
+		join(w.Sheet, w.Label, w.A)
+	}
+	for _, a := range anchors {
+		join(a.Sheet, a.Label, a.At)
+	}
+	names := map[int]map[int]map[string]bool{} // net root -> sheet-local root -> names
+	sheetOf := map[int]string{}                // sheet-local root -> its sheet
+	for k, at := range first {
+		r := uf.find(uf.id[at])
+		lr := local.find(local.id[at])
+		if names[r] == nil {
+			names[r] = map[int]map[string]bool{}
+		}
+		if names[r][lr] == nil {
+			names[r][lr] = map[string]bool{}
+		}
+		names[r][lr][k.label] = true
+		sheetOf[lr] = k.sheet
+	}
+	out := map[int][]SheetGroup{}
+	for r, byLocal := range names {
+		if len(byLocal) < 2 {
+			continue
+		}
+		var gs []SheetGroup
+		for lr, set := range byLocal {
+			g := SheetGroup{Sheet: sheetOf[lr]}
+			for n := range set {
+				g.Names = append(g.Names, n)
+			}
+			sort.Strings(g.Names)
+			gs = append(gs, g)
+		}
+		key := func(g SheetGroup) string { return g.Sheet + "\x00" + strings.Join(g.Names, "\x00") }
+		sort.Slice(gs, func(i, j int) bool { return key(gs[i]) < key(gs[j]) })
+		out[r] = gs
+	}
+	return out
 }
 
 func newUnionFind() *unionFind { return &unionFind{id: map[Point]int{}} }
