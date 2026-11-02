@@ -157,6 +157,16 @@ var deviceClassAliases = map[string]ComponentClass{
 	"powermux":                  ClassIdealDiodeController,
 	"powerpathcontroller":       ClassIdealDiodeController,
 	"reversepolaritycontroller": ClassIdealDiodeController,
+	// Current-limiting power switches, for the power-entry checks (agni issue 1248). A plain load
+	// switch is left out on purpose, since many have no current limit at all.
+	"currentlimitswitch":        ClassCurrentLimitSwitch,
+	"currentlimitedswitch":      ClassCurrentLimitSwitch,
+	"currentlimitedloadswitch":  ClassCurrentLimitSwitch,
+	"currentlimitedpowerswitch": ClassCurrentLimitSwitch,
+	"electronicfuse":            ClassEfuse,
+	"usbpowerswitch":            ClassCurrentLimitSwitch,
+	"usbcurrentlimitswitch":     ClassCurrentLimitSwitch,
+	"powerdistributionswitch":   ClassCurrentLimitSwitch,
 }
 
 // NormalizeDeviceClass maps a datasheet device_class string to a canonical ComponentClass (WS10-015).

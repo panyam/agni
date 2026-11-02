@@ -18,7 +18,10 @@ var inputProtection = &check.Rule{
 	Impact:     "An unprotected power input passes every upstream fault into the board: a shorted load takes out the cable or supply instead of a fuse, and a hot-plug transient or miswired adapter reaches the regulator unclamped. A classic review finding with real field consequences.",
 	Remedy:     "Put a fuse and a clamp in the path between the connector and the rail: a fuse for the sustained fault, a TVS for the transient.",
 	Primitives: []string{"select", "traverse", "exists", "pin-role", "pattern", "reach"},
-	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type"},
+	Reads:      []string{"component.class", "component.device_class", "component.dnp", "net.attributes", "net.names", "on_net", "param.max", "pin.electrical_type"},
+	// A current-limiting switch is credited from its datasheet, which a run without a corpus does not
+	// have, so the rule still judges every entry then (agni issue 1248).
+	OptionalReads: []string{"component.device_class", "param.max"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
 		check.KeyTier:         "R",
@@ -77,6 +80,11 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 					{Label: "unprotected entry", Value: report.Unprotected},
 				},
 			}
+			if report.Unread != "" {
+				// The entry's IC may be a current-limiting switch, which only its datasheet says.
+				v.Witness.Statement += fmt.Sprintf(", and %s's datasheet was not read, so whether it limits its current is unverified", report.Unread)
+				v.Witness.Terms = append(v.Witness.Terms, check.WitnessTerm{Label: "unverified part", Value: report.Unread})
+			}
 			f := check.NetFinding("connector feeds a power input with no fuse or TVS in the path")(n)
 			v.Finding = &f
 		default:
@@ -89,6 +97,12 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 				},
 			}
 			v.Context = compContext(report.Protector, "fuse or clamp on the path")
+			if w := report.ProtectorWitness; w != nil {
+				v.Witness.Statement = w.Statement + fmt.Sprintf(", and it guards all %d power entries the connector reaches", report.Loads)
+				v.Witness.Terms = append(v.Witness.Terms, w.Terms...)
+				v.Witness.Datasheet = w.Datasheet
+				v.Context = compContext(report.Protector, "current-limiting switch")
+			}
 		}
 		out = append(out, v)
 	}

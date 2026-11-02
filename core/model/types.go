@@ -66,7 +66,13 @@ const (
 	// crystal / ceramic_resonator split, reached through deviceClassAliases from a seeded
 	// device_class rather than from a refdes prefix or a name keyword.
 	ClassIdealDiodeController ComponentClass = "ideal_diode_controller"
-	ClassUnknown              ComponentClass = "unknown"
+	// ClassCurrentLimitSwitch is a power switch that limits its own current: an eFuse, a USB power
+	// switch, a current-limited load switch. Placed between a connector and the board it is the
+	// board's overcurrent protection, and some also block reverse current (agni issue 1248). A
+	// regulator limits its current too and is not one, so like ClassIdealDiodeController it comes
+	// only from a seeded datasheet's device_class, never from a ref-des or a name keyword.
+	ClassCurrentLimitSwitch ComponentClass = "current_limit_switch"
+	ClassUnknown            ComponentClass = "unknown"
 )
 
 // ComponentClasses is every class in the vocabulary above except ClassUnknown, in declaration order.
@@ -79,7 +85,7 @@ func ComponentClasses() []ComponentClass {
 		ClassDiode, ClassLED, ClassTVS, ClassZener, ClassFuse, ClassNetTie,
 		ClassConnector, ClassTestConnector, ClassTestPoint,
 		ClassClock, ClassOscillator, ClassCrystal, ClassCeramicResonator,
-		ClassIC, ClassTransistor, ClassIdealDiodeController,
+		ClassIC, ClassTransistor, ClassIdealDiodeController, ClassCurrentLimitSwitch,
 	}
 }
 

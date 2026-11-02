@@ -69,6 +69,13 @@ nothing is attached. A flagged pin that is also wired to another part is still j
 The walk crosses resistors only and never crosses ground, because a resistor to ground is a
 pull-DOWN, and counting it would pass the bus this rule exists to catch.
 
+A part whose datasheet binds an internal pull-up to the pin it has on the net also pulls the line
+up, a level translator's ports being the common case (agni issue 1298). The row has to be bound to
+that pin, since a part-wide statement would credit pins it does not cover, and the pass names the
+part, the resistance and the row. A failure does not name a part it could not read, because almost
+every bus has a microcontroller with no datasheet in the run, and its weak internal pull-up is not
+the pull-up a bus needs.
+
 Which nets are I2C is the lexicon's `i2c` vocabulary, which a project extends or replaces in its
 conventions (agni issue 1265). The built-in match is at a **token boundary**, not a substring
 (WS3-037): `SDA`, `SCL`, `I2C_SCL`, and `SCL0` match; `SPI_SCLK` (an SPI clock), `SCLK`, and `MCLK`

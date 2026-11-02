@@ -94,6 +94,12 @@ reports its path as unblocked rather than guessing which way the part faces.
   detection, is not in the path and makes nothing inconclusive.
 - A transistor on the path that a seeded datasheet identifies as an ideal-diode / ORing controller
   (above). An UNIDENTIFIED transistor gives an inconclusive finding instead.
+- A current-limiting power switch that is the entry's only load, when its datasheet names it one and
+  specifies a reverse current, which a switch states only when it blocks one (agni issue 1248).
+  The pass cites that row and says the switch stops backfeed but not a reversed supply, since such a
+  switch is rated to a few hundred millivolts below ground at its input. On a USB-C port, where VBUS
+  cannot be plugged in backwards, backfeed is the half that matters. Without the datasheet the entry
+  still fails, and the verdict names the IC it could not read.
 - Ground and read-gap (external) nets, excluded up front.
 - A net the board drives itself is not-considered, since its connector is an outlet rather than a
   way power arrives (agni issue 1016). A converter's output counts, read as a switch node behind an

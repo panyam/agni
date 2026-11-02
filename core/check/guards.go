@@ -384,6 +384,12 @@ type PowerPathReport struct {
 	// Protector names the first fuse or TVS credited on a protected path, "" when there is none to
 	// credit. It is the pass's evidence, the part a reviewer should go and look at.
 	Protector string
+	// ProtectorWitness is the datasheet evidence when Protector is a current-limiting switch rather
+	// than a fuse or TVS (CurrentLimitCredit), nil otherwise.
+	ProtectorWitness *Witness
+	// Unread names an IC at the Unprotected entry the run has no datasheet for, which may be a
+	// current-limiting switch (UnreadIC), "" when there is none.
+	Unread string
 }
 
 // PowerPathProtection walks the connector net's series neighborhood (WS3-011) and reports, per
@@ -428,11 +434,18 @@ func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 				}
 			}
 		}
+		// A current-limiting switch that is the entry's only load is its overcurrent protection,
+		// which only its datasheet can say (agni issue 1248).
+		var credit *Witness
+		if protector == "" {
+			protector, credit = CurrentLimitCredit(m, target)
+		}
 		switch {
 		case protector == "" && out.Unprotected == "":
 			out.Unprotected = target.Name
+			out.Unread = UnreadIC(m, target, "")
 		case protector != "" && out.Protector == "":
-			out.Protector = protector
+			out.Protector, out.ProtectorWitness = protector, credit
 		}
 	}
 	return out
@@ -467,8 +480,16 @@ const PullUpReachHops = 3
 // ground is a plane that would make everything reachable.
 //
 // It is the boolean projection of PullUpPathToRail, where the walk lives.
+//
+// A pin whose part's datasheet binds an internal pull-up to it counts as pulled up too
+// (IntegratedPullUpCredit, agni issue 1298), which PullUpVerdict passes on the same evidence, so the
+// spec twins and the coverage panel agree with the rules.
 func PullUpReachesRail(m Model, n *ir.Net) bool {
-	return PullUpPathToRail(m, n) != nil
+	if PullUpPathToRail(m, n) != nil {
+		return true
+	}
+	ref, _ := IntegratedPullUpCredit(m, n)
+	return ref != ""
 }
 
 // PullUpHop is one leg of the walk from an I2C net to a rail, the resistor crossed and the net it
@@ -649,9 +670,17 @@ func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 	}
 	paths := AllPullUpPathsToRail(m, n)
 	if len(paths) == 0 {
+		// A part whose datasheet binds an internal pull-up to its pin on n pulls n up with nothing on
+		// the board, as a level translator's ports do (agni issue 1298).
+		if ref, w := IntegratedPullUpCredit(m, n); ref != "" {
+			return Pass, w, []ContextSubject{{Entity: Entity{Kind: KindComponent, Ref: ref}, Role: "integrated pull-up"}}
+		}
 		// No resistor or rail was found and the searched-from net is the subject, so the proof is
 		// the bound searched to and the context is empty.
 		limit := m.PullUpReachLimit(n.Name)
+		// Unlike a crystal terminal, a failure names no unread part. Nearly every bus has a
+		// microcontroller with no datasheet in the run, and its weak internal pull-up is not the
+		// pull-up a bus needs, so the note would sit on almost every finding and mislead.
 		return Fail, &Witness{
 			Statement: fmt.Sprintf("no rail is reachable from %s through a resistor within %d hops",
 				n.Name, limit),

@@ -34,5 +34,6 @@ const (
 	ClassIC                   = model.ClassIC
 	ClassTransistor           = model.ClassTransistor
 	ClassIdealDiodeController = model.ClassIdealDiodeController
+	ClassCurrentLimitSwitch   = model.ClassCurrentLimitSwitch
 	ClassUnknown              = model.ClassUnknown
 )

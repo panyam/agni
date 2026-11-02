@@ -33,7 +33,7 @@ const (
 // rather than terminate it, so a trace reports them as stubs and they are never a partner.
 func partnerClass(c ComponentClass) bool {
 	switch c {
-	case ClassIC, ClassConnector, ClassIdealDiodeController, ClassClock, ClassOscillator:
+	case ClassIC, ClassConnector, ClassIdealDiodeController, ClassCurrentLimitSwitch, ClassClock, ClassOscillator:
 		return true
 	}
 	return false

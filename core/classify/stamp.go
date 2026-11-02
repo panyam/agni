@@ -166,7 +166,15 @@ var classFamily = map[ComponentClass]ComponentClass{
 	ClassOscillator:       ClassClock,
 	ClassCrystal:          ClassClock,
 	ClassCeramicResonator: ClassClock,
+	// An eFuse is a current-limiting switch (agni issue 1248). It keeps its own tag, since a datasheet
+	// has said "efuse" since WS10-013 and a query may ask for it by that name.
+	ClassEfuse: ClassCurrentLimitSwitch,
 }
+
+// ClassEfuse is the eFuse tag a datasheet's device_class gives a part. It is not in the component
+// class vocabulary, which a project's config extends, because a project has no keyword that could
+// recognise one; it exists here so an eFuse also carries ClassCurrentLimitSwitch.
+const ClassEfuse ComponentClass = "efuse"
 
 // ClassesOf expands a single derived class into its device_classes SET: the specific class plus its
 // family tag, so a consumer does membership (tvs in classes, any diode-family in classes) rather than
