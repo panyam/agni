@@ -341,6 +341,11 @@ file reaches the commands that take that flag, which are `check`, `review`, `que
 every list stated in full, which is a starting point when you would rather edit the complete list
 than add to it.
 
+The `verify-lexicon` agent skill walks these commands with you on your own board, comparing what agni
+read against your BOM and the nets you know, and ends with a summary that names none of the board's
+parts or nets. [Asking through an LLM](../asking-with-an-llm/#skills-for-your-coding-agent) says how
+to install it in Claude Code, Cursor or Copilot.
+
 ## Where to go next
 
 - [Checks and reports](../checks-and-reports/) shows that conventions findings read like any

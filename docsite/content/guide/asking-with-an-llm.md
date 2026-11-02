@@ -167,6 +167,33 @@ Channels are still a Claude Code research preview, at least for now, so start th
 attach to the design you have open. From then on each question you type in a tab that let agents in
 shows up in the session, fenced as text from the page, and the model answers through the tab's tools.
 
+## Skills for your coding agent
+
+agni also ships agent skills, written instructions a coding agent follows to walk you through a
+task with the `agni` CLI. `verify-lexicon` is the first, and it checks that agni reads your board's
+names the way you meant them (see [naming conventions](../naming-conventions/)). A skill needs
+`agni` on your PATH and nothing else, so you install it without a checkout of this repository.
+
+In Claude Code, add this repository as a plugin marketplace and install the `agni` plugin. That
+brings every skill agni ships, and later ones arrive when the plugin updates.
+
+```
+claude plugin marketplace add panyam/agni
+claude plugin install agni@agni
+```
+
+For Cursor, GitHub Copilot or any other agent, the GitHub CLI (2.90 or later) installs one skill
+from the latest release into the folder that agent reads. Name `github-copilot` or `claude-code`
+in place of `cursor` for those agents, and leave out the user scope to install into the current
+project instead.
+
+```
+gh skill install panyam/agni verify-lexicon --agent cursor --scope user
+```
+
+A Cursor team can also import this repository as a team marketplace, from **Customize**, **From
+GitHub Repository**, which installs the same `agni` plugin.
+
 ## What it doesn't do
 
 agni hosts no model, so the client brings its own, and nothing about a design leaves the machine

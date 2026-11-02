@@ -170,3 +170,10 @@ web/vitest.config.ts
 # than leaving the example comparing against a schematic the layout was never drawn from.
 examples/common/designs/odb/gateway.edn
 examples/tutorial-project/designs/gateway/gateway.edn
+
+# The agni plugin's manifest, once per tool. Claude Code reads .claude-plugin/plugin.json and Cursor
+# reads .cursor-plugin/plugin.json, and the two formats happen to agree on every field the plugin
+# sets. Keeping them identical is what lets one plugin folder serve both, so a change to one that
+# misses the other turns the gate red rather than leaving the tools describing two plugins.
+plugins/agni/.claude-plugin/plugin.json
+plugins/agni/.cursor-plugin/plugin.json
