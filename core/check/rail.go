@@ -1,7 +1,6 @@
 package check
 
 import (
-	"strings"
 
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
@@ -128,7 +127,7 @@ func BoardSource(m Model, n *ir.Net) string {
 			case ir.PinDirection_PIN_DIRECTION_POWER_IN:
 				sinks = append(sinks, ref)
 			}
-			if m.IsFeedbackName(pinTerm(m, c)) {
+			if m.IsFeedbackPinName(m.PinName(c.ComponentRef, c.PinRef)) {
 				if _, ok := fbPin[ref]; !ok {
 					fbPin[ref] = rn.GetName()
 				}
@@ -148,7 +147,7 @@ func BoardSource(m Model, n *ir.Net) string {
 				continue
 			}
 			for _, c := range rn.Connections {
-				if onFb, ok := fbPin[c.ComponentRef]; ok && m.IsSwitchingName(pinTerm(m, c)) {
+				if onFb, ok := fbPin[c.ComponentRef]; ok && m.IsSwitchingPinName(m.PinName(c.ComponentRef, c.PinRef)) {
 					sw, coil, fb = rn.GetName(), step.Through, onFb
 				}
 			}
@@ -161,16 +160,6 @@ func BoardSource(m Model, n *ir.Net) string {
 		return out
 	}
 	return independentDriver(m, drivers, sinks)
-}
-
-// pinTerm spells a connection's pin name as a net vocabulary reads it, so a part's SW1 pin reads as
-// the _SW suffix and FB2 as _FB.
-func pinTerm(m Model, c *ir.Connection) string {
-	name := strings.TrimRight(strings.ToUpper(m.PinName(c.ComponentRef, c.PinRef)), "0123456789")
-	if name == "" {
-		return ""
-	}
-	return "_" + name
 }
 
 // independentDriver names the first of drivers fed from a net none of sinks has a power output on,

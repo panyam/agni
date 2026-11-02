@@ -46,7 +46,7 @@ var duplicateNetName = matrixlessSpecRule(func() *check.Rule {
 		Primitives: []string{"count", "pair"},
 		Fn: func(m check.Model, ents map[string]any, _ []any) any {
 			n := ents["net"].(*ir.Net)
-			if n.Name == "" || isSyntheticNetName(n.Name) {
+			if n.Name == "" || check.IsToolNetName(n.Name) {
 				return 1
 			}
 			return m.NetNameCount(n.Name)
@@ -174,12 +174,3 @@ var powerTapConflict = matrixlessSpecRule(func() *check.Rule {
 // matrixlessSpecRule runs build so a standalone spec-only rule registers its FFIs before
 // Spec.Rule validates its Call targets. See rule_led_polarity.go for why.
 func matrixlessSpecRule(build func() *check.Rule) *check.Rule { return build() }
-
-// isSyntheticNetName reports a reader-invented per-net stub name: netgraph's N$<n>, the
-// no-connect marker vocabulary, and KiCad's own synthesized pad stubs. These names are
-// manufactured per net and carry no authored identity, so naming rules skip them.
-func isSyntheticNetName(name string) bool {
-	return strings.HasPrefix(name, "N$") ||
-		strings.HasPrefix(name, "unconnected-(") ||
-		strings.HasPrefix(name, "Net-(")
-}

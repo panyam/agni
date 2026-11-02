@@ -1,6 +1,6 @@
-# A house calling a regulator's feedback pin FDBK. pinTerm spells a pin as _<name>.
+# A house calling a regulator's feedback pin FDBK.
 name: house-feedback-pin
 lexicon:
-  net:
+  pin:
     feedback:
-      patterns: ["_FDBK$"]
+      patterns: ["^FDBK[0-9]*$"]

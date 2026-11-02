@@ -10,7 +10,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file agni/v1/config/naming.proto.
  */
 export const file_agni_v1_config_naming: GenFile = /*@__PURE__*/
-  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6AEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBIqYDCgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAQgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjb250cm9sGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIxCgpnYXRlX2RyaXZlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIqCgNpMmMYByABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEigKG2luZmVyX3JhaWxfZnJvbV9zdXBwbHlfcGlucxgIIAEoCEgAiAEBQh4KHF9pbmZlcl9yYWlsX2Zyb21fc3VwcGx5X3BpbnMi+wEKDFBpbk5hbWVWb2NhYhItCgZzdXBwbHkYASABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEisKBGdhdGUYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi0KBnNvdXJjZRgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLAoFZHJhaW4YBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjIKC2V4cG9zZWRfcGFkGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucyJDCg1Wb2NhYlBhdHRlcm5zEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSDwoHZXhjbHVkZRgEIAMoCSJTCgpDbGFzc1ZvY2FiEhAKCHBhdHRlcm5zGAEgAygJEg8KB3JlcGxhY2UYAiABKAgSEAoIcHJlZml4ZXMYAyADKAkSEAoIZmFtaWxpZXMYBSADKAkibAoKTmFtaW5nUnVsZRIMCgRuYW1lGAEgASgJEhAKCHNldmVyaXR5GAIgASgJEgsKA3doeRgDIAEoCRINCgVhbGxvdxgEIAMoCRIOCgZleGVtcHQYBSADKAkSEgoKbWF0Y2hfZnVsbBgGIAEoCEIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL2NvbmZpZ2IGcHJvdG8z");
+  fileDesc("ChthZ25pL3YxL2NvbmZpZy9uYW1pbmcucHJvdG8SDmFnbmkudjEuY29uZmlnInsKEE5hbWluZ0NvbnZlbnRpb24SDAoEbmFtZRgBIAEoCRIuCgdsZXhpY29uGAIgASgLMh0uYWduaS52MS5jb25maWcuTmFtaW5nTGV4aWNvbhIpCgVydWxlcxgDIAMoCzIaLmFnbmkudjEuY29uZmlnLk5hbWluZ1J1bGUi6AEKDU5hbWluZ0xleGljb24SKQoDbmV0GAEgASgLMhwuYWduaS52MS5jb25maWcuTmV0TmFtZVZvY2FiEikKA3BpbhgCIAEoCzIcLmFnbmkudjEuY29uZmlnLlBpbk5hbWVWb2NhYhI3CgVjbGFzcxgDIAMoCzIoLmFnbmkudjEuY29uZmlnLk5hbWluZ0xleGljb24uQ2xhc3NFbnRyeRpICgpDbGFzc0VudHJ5EgsKA2tleRgBIAEoCRIpCgV2YWx1ZRgCIAEoCzIaLmFnbmkudjEuY29uZmlnLkNsYXNzVm9jYWI6AjgBIosECgxOZXROYW1lVm9jYWISKwoEcmFpbBgBIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLQoGZ3JvdW5kGAIgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIvCghmZWVkYmFjaxgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSMAoJc3dpdGNoaW5nGAQgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIuCgdjb250cm9sGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIxCgpnYXRlX2RyaXZlGAYgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIqCgNpMmMYByABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEigKG2luZmVyX3JhaWxfZnJvbV9zdXBwbHlfcGlucxgIIAEoCEgAiAEBEjEKCm5vX2Nvbm5lY3QYCSABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjAKCWRpZmZfcGFpchgKIAEoCzIdLmFnbmkudjEuY29uZmlnLkRpZmZQYWlyVm9jYWJCHgocX2luZmVyX3JhaWxfZnJvbV9zdXBwbHlfcGlucyJLCg1EaWZmUGFpclZvY2FiEikKBXBhaXJzGAEgAygLMhouYWduaS52MS5jb25maWcuRGlmZlN1ZmZpeBIPCgdyZXBsYWNlGAIgASgIIjAKCkRpZmZTdWZmaXgSEAoIcG9zaXRpdmUYASABKAkSEAoIbmVnYXRpdmUYAiABKAkivAMKDFBpbk5hbWVWb2NhYhItCgZzdXBwbHkYASABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEisKBGdhdGUYAiABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEi0KBnNvdXJjZRgDIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLAoFZHJhaW4YBCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjIKC2V4cG9zZWRfcGFkGAUgASgLMh0uYWduaS52MS5jb25maWcuVm9jYWJQYXR0ZXJucxIsCgVhbm9kZRgGIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLgoHY2F0aG9kZRgHIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMSLwoIZmVlZGJhY2sYCCABKAsyHS5hZ25pLnYxLmNvbmZpZy5Wb2NhYlBhdHRlcm5zEjAKCXN3aXRjaGluZxgJIAEoCzIdLmFnbmkudjEuY29uZmlnLlZvY2FiUGF0dGVybnMiQwoNVm9jYWJQYXR0ZXJucxIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIEg8KB2V4Y2x1ZGUYBCADKAkiUwoKQ2xhc3NWb2NhYhIQCghwYXR0ZXJucxgBIAMoCRIPCgdyZXBsYWNlGAIgASgIEhAKCHByZWZpeGVzGAMgAygJEhAKCGZhbWlsaWVzGAUgAygJImwKCk5hbWluZ1J1bGUSDAoEbmFtZRgBIAEoCRIQCghzZXZlcml0eRgCIAEoCRILCgN3aHkYAyABKAkSDQoFYWxsb3cYBCADKAkSDgoGZXhlbXB0GAUgAygJEhIKCm1hdGNoX2Z1bGwYBiABKAhCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS9jb25maWdiBnByb3RvMw");
 
 /**
  * This file: an operator's naming policy, as the ONE schema both the engine and the wire use.
@@ -158,6 +158,21 @@ export type NetNameVocab = Message<"agni.v1.config.NetNameVocab"> & {
    * @generated from field: optional bool infer_rail_from_supply_pins = 8;
    */
   inferRailFromSupplyPins?: boolean | undefined;
+
+  /**
+   * no_connect names a net its designer marked as deliberately unconnected. One match also tells the
+   * run that the design marks no-connects at all, so an open pin elsewhere reads as an omission.
+   *
+   * @generated from field: agni.v1.config.VocabPatterns no_connect = 9;
+   */
+  noConnect?: VocabPatterns | undefined;
+
+  /**
+   * diff_pair spells a differential pair's two members.
+   *
+   * @generated from field: agni.v1.config.DiffPairVocab diff_pair = 10;
+   */
+  diffPair?: DiffPairVocab | undefined;
 };
 
 /**
@@ -166,6 +181,57 @@ export type NetNameVocab = Message<"agni.v1.config.NetNameVocab"> & {
  */
 export const NetNameVocabSchema: GenMessage<NetNameVocab> = /*@__PURE__*/
   messageDesc(file_agni_v1_config_naming, 2);
+
+/**
+ * DiffPairVocab lists the suffix pairs that name a differential pair. It is not a VocabPatterns
+ * because a rule needs the complement of a name, and a pattern can only say a name matches. A
+ * convention's pairs are ADDED to the built-ins unless replace is set, as on VocabPatterns.
+ *
+ * @generated from message agni.v1.config.DiffPairVocab
+ */
+export type DiffPairVocab = Message<"agni.v1.config.DiffPairVocab"> & {
+  /**
+   * @generated from field: repeated agni.v1.config.DiffSuffix pairs = 1;
+   */
+  pairs: DiffSuffix[];
+
+  /**
+   * @generated from field: bool replace = 2;
+   */
+  replace: boolean;
+};
+
+/**
+ * Describes the message agni.v1.config.DiffPairVocab.
+ * Use `create(DiffPairVocabSchema)` to create a new message.
+ */
+export const DiffPairVocabSchema: GenMessage<DiffPairVocab> = /*@__PURE__*/
+  messageDesc(file_agni_v1_config_naming, 3);
+
+/**
+ * DiffSuffix is one suffix pair, matched at the end of the whole net name without regard to case. The
+ * longest positive suffix that matches wins, and the complement keeps the name's casing.
+ *
+ * @generated from message agni.v1.config.DiffSuffix
+ */
+export type DiffSuffix = Message<"agni.v1.config.DiffSuffix"> & {
+  /**
+   * @generated from field: string positive = 1;
+   */
+  positive: string;
+
+  /**
+   * @generated from field: string negative = 2;
+   */
+  negative: string;
+};
+
+/**
+ * Describes the message agni.v1.config.DiffSuffix.
+ * Use `create(DiffSuffixSchema)` to create a new message.
+ */
+export const DiffSuffixSchema: GenMessage<DiffSuffix> = /*@__PURE__*/
+  messageDesc(file_agni_v1_config_naming, 4);
 
 /**
  * PinNameVocab is the vocabulary for a component's PIN names.
@@ -208,6 +274,33 @@ export type PinNameVocab = Message<"agni.v1.config.PinNameVocab"> & {
    * @generated from field: agni.v1.config.VocabPatterns exposed_pad = 5;
    */
   exposedPad?: VocabPatterns | undefined;
+
+  /**
+   * anode and cathode are applied only to the diode family, and match the WHOLE pin name rather than
+   * its leaf, so a pin named A/K stays unread instead of reading as a cathode.
+   *
+   * @generated from field: agni.v1.config.VocabPatterns anode = 6;
+   */
+  anode?: VocabPatterns | undefined;
+
+  /**
+   * @generated from field: agni.v1.config.VocabPatterns cathode = 7;
+   */
+  cathode?: VocabPatterns | undefined;
+
+  /**
+   * feedback and switching name a regulator's own pins, which is how a connector on a converter's
+   * output reads as an outlet when no net is named for the converter. They are separate from the net
+   * vocabularies of the same names because a pin name carries no rail prefix to end in _FB.
+   *
+   * @generated from field: agni.v1.config.VocabPatterns feedback = 8;
+   */
+  feedback?: VocabPatterns | undefined;
+
+  /**
+   * @generated from field: agni.v1.config.VocabPatterns switching = 9;
+   */
+  switching?: VocabPatterns | undefined;
 };
 
 /**
@@ -215,7 +308,7 @@ export type PinNameVocab = Message<"agni.v1.config.PinNameVocab"> & {
  * Use `create(PinNameVocabSchema)` to create a new message.
  */
 export const PinNameVocabSchema: GenMessage<PinNameVocab> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 3);
+  messageDesc(file_agni_v1_config_naming, 5);
 
 /**
  * VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
@@ -251,7 +344,7 @@ export type VocabPatterns = Message<"agni.v1.config.VocabPatterns"> & {
  * Use `create(VocabPatternsSchema)` to create a new message.
  */
 export const VocabPatternsSchema: GenMessage<VocabPatterns> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 4);
+  messageDesc(file_agni_v1_config_naming, 6);
 
 /**
  * ClassVocab is one component class's override. patterns and replace mean what they mean on
@@ -297,7 +390,7 @@ export type ClassVocab = Message<"agni.v1.config.ClassVocab"> & {
  * Use `create(ClassVocabSchema)` to create a new message.
  */
 export const ClassVocabSchema: GenMessage<ClassVocab> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 5);
+  messageDesc(file_agni_v1_config_naming, 7);
 
 /**
  * NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
@@ -348,5 +441,5 @@ export type NamingRule = Message<"agni.v1.config.NamingRule"> & {
  * Use `create(NamingRuleSchema)` to create a new message.
  */
 export const NamingRuleSchema: GenMessage<NamingRule> = /*@__PURE__*/
-  messageDesc(file_agni_v1_config_naming, 6);
+  messageDesc(file_agni_v1_config_naming, 8);
 

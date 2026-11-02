@@ -94,6 +94,9 @@ type RoleVocab struct {
 	// most of a design. A wrong role is worse than a missing one, since a topology rule then walks a
 	// path that does not exist.
 	gate, source, drain vocab
+	// anode and cathode are the diode family's terminals, under the same gate. feedbackPin and
+	// switchingPin read a regulator's own pins, and noConnect a net its designer left open.
+	anode, cathode, feedbackPin, switchingPin, noConnect vocab
 	// inferRail is NetNameVocab.infer_rail_from_supply_pins, resolved (absent reads as on).
 	inferRail bool
 }
@@ -106,8 +109,10 @@ type vocab struct {
 }
 
 // match returns the pattern a name's hierarchy leaf matched, or "" when the name is not in v.
-func (v vocab) match(name string) string {
-	name = roleLeaf(name)
+func (v vocab) match(name string) string { return v.matchWhole(roleLeaf(name)) }
+
+// matchWhole is match over the name as written, for a vocabulary a hierarchy separator means nothing to.
+func (v vocab) matchWhole(name string) string {
 	for _, x := range v.excl {
 		if x.MatchString(name) {
 			return ""
@@ -153,6 +158,13 @@ func defaultLexicon() *configpb.NamingLexicon {
 				Exclude:  []string{`(^|[^A-Z])I2S`},
 			},
 			InferRailFromSupplyPins: proto.Bool(true),
+			// noConnect: a designer's own no-connect spelling. A tool's stub name is not one, so KiCad's
+			// "unconnected-(...)" stays out (agni 1019).
+			NoConnect: vp(`^no_connect`, `^nc_`),
+			// diffPair: _DP is listed so a USB D+ spelled that way keeps its D.
+			DiffPair: &configpb.DiffPairVocab{Pairs: []*configpb.DiffSuffix{
+				{Positive: "_DP", Negative: "_DN"}, {Positive: "_P", Negative: "_N"}, {Positive: "+", Negative: "-"},
+			}},
 		},
 		Pin: &configpb.PinNameVocab{
 			// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
@@ -165,6 +177,12 @@ func defaultLexicon() *configpb.NamingLexicon {
 			Drain:  vp(`^D$`, `^DRAIN$`, `^DRN$`),
 			// exposedPad: a package's exposed thermal pad, whole-name anchored (agni 935).
 			ExposedPad: vp(`^(EP|EPAD|EXP|PAD|EXPOSED_?PAD|THERMAL_?PAD)$`),
+			// Diode polarity, whole-name anchored, because CLKA must not read as an anode.
+			Anode:   vp(`^(A|AN|ANODE|\+)$`),
+			Cathode: vp(`^(K|KATHODE|CATHODE|CAT|-)$`),
+			// A regulator's own pins, with an optional prefix and bank number (SW1, FB2, BUCK1_FB).
+			Feedback:  vp(`(^|_)(FB|VFB|FEEDBACK|VSENSE|SENSE|SNS)[0-9]*$`),
+			Switching: vp(`(^|_)(SW|BOOT|PHASE|LX)[0-9]*$`),
 		},
 	}
 }
@@ -207,6 +225,50 @@ func (v *RoleVocab) InfersRails() bool             { return v.inferRail }
 func (v *RoleVocab) IsGate(name string) bool   { return v.gate.match(name) != "" }
 func (v *RoleVocab) IsSource(name string) bool { return v.source.match(name) != "" }
 func (v *RoleVocab) IsDrain(name string) bool  { return v.drain.match(name) != "" }
+
+// IsAnode and IsCathode classify a diode-family pin name, whole, and the caller applies the class gate.
+func (v *RoleVocab) IsAnode(name string) bool   { return v.anode.matchWhole(name) != "" }
+func (v *RoleVocab) IsCathode(name string) bool { return v.cathode.matchWhole(name) != "" }
+
+// IsFeedbackPin and IsSwitchingPin classify a part's PIN name as a regulator's feedback or switch pin.
+func (v *RoleVocab) IsFeedbackPin(name string) bool  { return v.feedbackPin.match(name) != "" }
+func (v *RoleVocab) IsSwitchingPin(name string) bool { return v.switchingPin.match(name) != "" }
+
+// IsNoConnect reports whether a net's name says its designer left it unconnected on purpose.
+func (v *RoleVocab) IsNoConnect(name string) bool { return v.noConnect.match(name) != "" }
+
+// DiffNegative returns the complementary net name for a differential pair's positive member, and
+// ok=false when the name is not one. The longest matching positive suffix wins, and each letter of the
+// complement's suffix takes the case of the letter it replaces, so usb_p reads usb_n and USB_dP reads
+// USB_dN. A negative suffix longer than the positive takes the last letter's case for the rest.
+func (v *RoleVocab) DiffNegative(name string) (string, bool) {
+	var best *configpb.DiffSuffix
+	up := strings.ToUpper(name)
+	for _, p := range v.GetNet().GetDiffPair().GetPairs() {
+		if strings.HasSuffix(up, strings.ToUpper(p.GetPositive())) && len(p.GetPositive()) > len(best.GetPositive()) {
+			best = p
+		}
+	}
+	if best == nil {
+		return "", false
+	}
+	cut := len(name) - len(best.GetPositive())
+	return name[:cut] + casedLike(best.GetNegative(), name[cut:]), true
+}
+
+// casedLike spells suffix in the case of like, letter by letter.
+func casedLike(suffix, like string) string {
+	out := []byte(suffix)
+	for i := range out {
+		j := min(i, len(like)-1)
+		if c := like[j]; c >= 'a' && c <= 'z' {
+			out[i] = strings.ToLower(string(out[i]))[0]
+		} else if c >= 'A' && c <= 'Z' {
+			out[i] = strings.ToUpper(string(out[i]))[0]
+		}
+	}
+	return string(out)
+}
 
 // activeRoleVocab is the process-level lexicon, set once at startup and read by check's Is*Name
 // helpers and by StampNetRoles. A read carrying its own conventions uses a Lexicon instead; see
@@ -252,12 +314,22 @@ func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
 		{"gate", pin.GetGate(), &v.gate},
 		{"source", pin.GetSource(), &v.source},
 		{"drain", pin.GetDrain(), &v.drain},
+		{"no_connect", net.GetNoConnect(), &v.noConnect},
+		{"anode", pin.GetAnode(), &v.anode},
+		{"cathode", pin.GetCathode(), &v.cathode},
+		{"feedback_pin", pin.GetFeedback(), &v.feedbackPin},
+		{"switching_pin", pin.GetSwitching(), &v.switchingPin},
 	} {
 		out, err := compileVocab(d.src)
 		if err != nil {
 			return nil, fmt.Errorf("%s: %w", d.name, err)
 		}
 		*d.dst = out
+	}
+	for _, p := range net.GetDiffPair().GetPairs() {
+		if p.GetPositive() == "" || p.GetNegative() == "" {
+			return nil, fmt.Errorf("diff_pair: a pair needs both a positive and a negative suffix, got %q and %q", p.GetPositive(), p.GetNegative())
+		}
 	}
 	v.inferRail = net.GetInferRailFromSupplyPins()
 	return v, nil
@@ -281,6 +353,8 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 			Control:   mergeVocab(bn.GetControl(), on.GetControl()),
 			GateDrive: mergeVocab(bn.GetGateDrive(), on.GetGateDrive()),
 			I2C:       mergeVocab(bn.GetI2C(), on.GetI2C()),
+			NoConnect: mergeVocab(bn.GetNoConnect(), on.GetNoConnect()),
+			DiffPair:  mergeDiffPairs(bn.GetDiffPair(), on.GetDiffPair()),
 			// A project that says nothing keeps the built-in setting; one that says false turns it off.
 			InferRailFromSupplyPins: bn.InferRailFromSupplyPins,
 		},
@@ -290,6 +364,10 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 			Source:     mergeVocab(bp.GetSource(), op.GetSource()),
 			Drain:      mergeVocab(bp.GetDrain(), op.GetDrain()),
 			ExposedPad: mergeVocab(bp.GetExposedPad(), op.GetExposedPad()),
+			Anode:      mergeVocab(bp.GetAnode(), op.GetAnode()),
+			Cathode:    mergeVocab(bp.GetCathode(), op.GetCathode()),
+			Feedback:   mergeVocab(bp.GetFeedback(), op.GetFeedback()),
+			Switching:  mergeVocab(bp.GetSwitching(), op.GetSwitching()),
 		},
 	}
 	if on != nil && on.InferRailFromSupplyPins != nil {
@@ -316,6 +394,17 @@ func mergeVocab(base, over *configpb.VocabPatterns) *configpb.VocabPatterns {
 		Patterns: append(append([]string{}, base.GetPatterns()...), over.GetPatterns()...),
 		Exclude:  append(append([]string{}, base.GetExclude()...), over.GetExclude()...),
 	}
+}
+
+// mergeDiffPairs is mergeVocab for the suffix pairs.
+func mergeDiffPairs(base, over *configpb.DiffPairVocab) *configpb.DiffPairVocab {
+	if over == nil {
+		return base
+	}
+	if over.GetReplace() {
+		return over
+	}
+	return &configpb.DiffPairVocab{Pairs: append(append([]*configpb.DiffSuffix{}, base.GetPairs()...), over.GetPairs()...)}
 }
 
 // compileVocab compiles one vocabulary's patterns and exclusions, case-insensitively.

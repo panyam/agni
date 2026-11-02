@@ -12,6 +12,7 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/netgraph"
 	"github.com/panyam/agni/internal/refdes"
 )
 
@@ -177,7 +178,7 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 		if len(n.NetClasses) > 0 {
 			m.netClass = true
 		}
-		if NoConnectMarked(n) {
+		if m.NoConnectMarked(n) {
 			m.ncChannel = true // the same evidence IntentionallyUnconnected reads
 		}
 		for _, c := range n.Connections {
@@ -229,6 +230,24 @@ func (m *irModel) lexicon() *classify.Lexicon {
 // IsPowerRailName and the five name predicates beside it project this model's naming lexicon over a
 // bare name. The package-level helpers of the same names read the process globals, so prefer these
 // wherever a Model is in hand (WS3-106).
+func (m *irModel) DiffNegative(name string) (string, bool) {
+	return m.lexicon().RoleVocab().DiffNegative(name)
+}
+
+// NoConnectMarked reads the reader's flag first, since a format that states a no-connect needs no
+// vocabulary to say so.
+func (m *irModel) NoConnectMarked(n *ir.Net) bool {
+	return n.Attributes[netgraph.AttrNoConnect] == "true" || m.lexicon().RoleVocab().IsNoConnect(n.Name)
+}
+
+func (m *irModel) IsFeedbackPinName(name string) bool {
+	return m.lexicon().RoleVocab().IsFeedbackPin(name)
+}
+
+func (m *irModel) IsSwitchingPinName(name string) bool {
+	return m.lexicon().RoleVocab().IsSwitchingPin(name)
+}
+
 func (m *irModel) IsPowerRailName(name string) bool { return m.lexicon().RoleVocab().IsRail(name) }
 func (m *irModel) IsGroundName(name string) bool    { return m.lexicon().RoleVocab().IsGround(name) }
 func (m *irModel) IsFeedbackName(name string) bool  { return m.lexicon().RoleVocab().IsFeedback(name) }

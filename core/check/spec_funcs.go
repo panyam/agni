@@ -139,8 +139,8 @@ func registerBuiltinSpecFuncs() {
 		// name is not a positive member (so a Cmp against "" is the ok-check).
 		Reads:      []string{"net.names"},
 		Primitives: []string{"pattern"},
-		Fn: func(_ Model, _ map[string]any, args []any) any {
-			neg, ok := ExpectedDiffNegative(args[0].(string))
+		Fn: func(m Model, _ map[string]any, args []any) any {
+			neg, ok := m.DiffNegative(args[0].(string))
 			if !ok {
 				return ""
 			}

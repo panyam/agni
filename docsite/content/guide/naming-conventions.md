@@ -132,9 +132,10 @@ is there.
 The `rules` block above checks names against your policy. The `lexicon` block is the other half and
 tells the engine what a name *means*, so the built-in rules reason about your board in your words.
 
-A net can carry several roles at once, and six of them are configurable. A seventh net vocabulary
-names the I2C bus lines the pull-up rules judge, and the pin vocabularies name supply pins, transistor
-terminals and a package's exposed pad:
+A net can carry several roles at once, and six of them are configurable. Three more net vocabularies
+name the I2C bus lines the pull-up rules judge, a net its designer left open on purpose, and the two
+halves of a differential pair. The pin vocabularies name supply pins, transistor terminals, a package's
+exposed pad, a diode's anode and cathode, and a regulator's feedback and switch pins:
 
 ```yaml
 lexicon:
@@ -146,6 +147,10 @@ lexicon:
     control:   { patterns: ["_SHDN$"] }
     gate_drive: { patterns: ["_VBOOST$"] }
     i2c:       { exclude: ["^DDC_"] }        # SDA/SCL by default, I2S lines excluded
+    no_connect: { patterns: ["^OPEN_"] }     # NC_ and no_connect by default
+    diff_pair:
+      pairs:
+        - { positive: "_PLUS", negative: "_MINUS" }  # _P/_N, _DP/_DN and +/- by default
     infer_rail_from_supply_pins: false       # on unless a convention turns it off
   pin:
     supply: { patterns: ["^PWR_"] }
@@ -153,6 +158,10 @@ lexicon:
     source: { patterns: ["^SRC_"] }
     drain:  { patterns: ["^DRN_"] }
     exposed_pad: { patterns: ["^GND_PAD$"] }
+    anode:     { patterns: ["^POS$"] }
+    cathode:   { patterns: ["^NEG$"] }
+    feedback:  { patterns: ["^FDBK[0-9]*$"] }
+    switching: { patterns: ["^HSD[0-9]*$"] }
 ```
 
 Patterns are RE2, matched case-insensitively against the **leaf** of a hierarchical name, so
@@ -197,10 +206,16 @@ excluded because they are not rails, so a rule quantifying over rails would be n
 subject. If your house convention spells a switched output `3V3_SW` rather than a switch node, narrow
 the `switching` vocabulary with `replace` and the rest keeps working.
 
-The `feedback` and `switching` vocabularies also read a part's pin names, spelled with a leading
-underscore, so `SW1` is checked as `_SW` and `FB2` as `_FB`. That is how a connector on a buck's
-output reads as an outlet when no net is named for the converter. A house that calls the pin `FDBK`
-adds `_FDBK$` to `feedback`.
+The `pin.feedback` and `pin.switching` vocabularies read a regulator's own pins, so a connector on a
+buck's output reads as an outlet when no net is named for the converter. A house that calls the pin
+`FDBK` adds `^FDBK[0-9]*$` to `pin.feedback`. The net vocabularies of the same names read nets only,
+because a pin name carries no rail prefix for a pattern like `_FB$` to end on.
+
+`pin.anode` and `pin.cathode` apply to the diode family alone, and they match the whole pin name rather
+than its leaf, so a pin named `A/K` stays unread. A `diff_pair` entry names a suffix pair rather than a
+pattern, because a rule has to work out the complement of a name. Its suffixes match at the end of the
+whole net name without regard to case, the longest positive suffix wins, and the complement keeps the
+name's casing, so `usb_p` expects `usb_n`.
 
 These are the same six vocabularies the engine ships with defaults for, in the same schema. There is
 no separate list of built-ins to consult.

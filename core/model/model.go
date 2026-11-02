@@ -148,6 +148,15 @@ type Model interface {
 	// exposed pad, each from the lexicon's own vocabulary rather than a rule's pattern (agni 1265).
 	IsI2CName(name string) bool
 	IsExposedPadName(name string) bool
+	// IsFeedbackPinName and IsSwitchingPinName read a PIN name as a regulator's feedback or switch pin.
+	IsFeedbackPinName(name string) bool
+	IsSwitchingPinName(name string) bool
+	// DiffNegative is the complementary net name for a differential pair's positive member, under this
+	// model's lexicon, and ok=false when the name is not a positive member.
+	DiffNegative(name string) (string, bool)
+	// NoConnectMarked reports whether a net carries a designer's no-connect, the reader's flag or a name
+	// in this model's no_connect vocabulary. A tool's stub name is neither.
+	NoConnectMarked(n *ir.Net) bool
 	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName). More than
 	// one means the design states the same name for electrically distinct nets. Connect-by-name
 	// formats cannot produce that (the solver merges them) and explicit-net-list formats (EDIF) can,

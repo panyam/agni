@@ -23,6 +23,7 @@ interface Group {
 }
 
 function kindsOf(vocabulary: string): string[] {
+  if (vocabulary === "net.diff_pair") return ["pair"];
   return vocabulary.startsWith("class.") ? ["pattern", "family", "prefix"] : ["pattern", "exclude"];
 }
 
@@ -57,7 +58,7 @@ function AddEntry(props: { vocabulary: string; onAdd: LexiconHandlers["onAdd"] }
         <For each={kindsOf(props.vocabulary)}>{(k) => <option value={k}>{k}</option>}</For>
       </select>
       <input
-        placeholder="RE2 pattern"
+        placeholder={props.vocabulary === "net.diff_pair" ? "_PLUS=_MINUS" : "RE2 pattern"}
         aria-label={`add to ${props.vocabulary}`}
         value={text()}
         onInput={(e) => setText(e.currentTarget.value)}

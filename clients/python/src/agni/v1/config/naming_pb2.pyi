@@ -33,7 +33,7 @@ class NamingLexicon(_message.Message):
     def __init__(self, net: _Optional[_Union[NetNameVocab, _Mapping]] = ..., pin: _Optional[_Union[PinNameVocab, _Mapping]] = ..., **kwargs) -> None: ...
 
 class NetNameVocab(_message.Message):
-    __slots__ = ("rail", "ground", "feedback", "switching", "control", "gate_drive", "i2c", "infer_rail_from_supply_pins")
+    __slots__ = ("rail", "ground", "feedback", "switching", "control", "gate_drive", "i2c", "infer_rail_from_supply_pins", "no_connect", "diff_pair")
     RAIL_FIELD_NUMBER: _ClassVar[int]
     GROUND_FIELD_NUMBER: _ClassVar[int]
     FEEDBACK_FIELD_NUMBER: _ClassVar[int]
@@ -42,6 +42,8 @@ class NetNameVocab(_message.Message):
     GATE_DRIVE_FIELD_NUMBER: _ClassVar[int]
     I2C_FIELD_NUMBER: _ClassVar[int]
     INFER_RAIL_FROM_SUPPLY_PINS_FIELD_NUMBER: _ClassVar[int]
+    NO_CONNECT_FIELD_NUMBER: _ClassVar[int]
+    DIFF_PAIR_FIELD_NUMBER: _ClassVar[int]
     rail: VocabPatterns
     ground: VocabPatterns
     feedback: VocabPatterns
@@ -50,21 +52,47 @@ class NetNameVocab(_message.Message):
     gate_drive: VocabPatterns
     i2c: VocabPatterns
     infer_rail_from_supply_pins: bool
-    def __init__(self, rail: _Optional[_Union[VocabPatterns, _Mapping]] = ..., ground: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., control: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate_drive: _Optional[_Union[VocabPatterns, _Mapping]] = ..., i2c: _Optional[_Union[VocabPatterns, _Mapping]] = ..., infer_rail_from_supply_pins: _Optional[bool] = ...) -> None: ...
+    no_connect: VocabPatterns
+    diff_pair: DiffPairVocab
+    def __init__(self, rail: _Optional[_Union[VocabPatterns, _Mapping]] = ..., ground: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ..., control: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate_drive: _Optional[_Union[VocabPatterns, _Mapping]] = ..., i2c: _Optional[_Union[VocabPatterns, _Mapping]] = ..., infer_rail_from_supply_pins: _Optional[bool] = ..., no_connect: _Optional[_Union[VocabPatterns, _Mapping]] = ..., diff_pair: _Optional[_Union[DiffPairVocab, _Mapping]] = ...) -> None: ...
+
+class DiffPairVocab(_message.Message):
+    __slots__ = ("pairs", "replace")
+    PAIRS_FIELD_NUMBER: _ClassVar[int]
+    REPLACE_FIELD_NUMBER: _ClassVar[int]
+    pairs: _containers.RepeatedCompositeFieldContainer[DiffSuffix]
+    replace: bool
+    def __init__(self, pairs: _Optional[_Iterable[_Union[DiffSuffix, _Mapping]]] = ..., replace: _Optional[bool] = ...) -> None: ...
+
+class DiffSuffix(_message.Message):
+    __slots__ = ("positive", "negative")
+    POSITIVE_FIELD_NUMBER: _ClassVar[int]
+    NEGATIVE_FIELD_NUMBER: _ClassVar[int]
+    positive: str
+    negative: str
+    def __init__(self, positive: _Optional[str] = ..., negative: _Optional[str] = ...) -> None: ...
 
 class PinNameVocab(_message.Message):
-    __slots__ = ("supply", "gate", "source", "drain", "exposed_pad")
+    __slots__ = ("supply", "gate", "source", "drain", "exposed_pad", "anode", "cathode", "feedback", "switching")
     SUPPLY_FIELD_NUMBER: _ClassVar[int]
     GATE_FIELD_NUMBER: _ClassVar[int]
     SOURCE_FIELD_NUMBER: _ClassVar[int]
     DRAIN_FIELD_NUMBER: _ClassVar[int]
     EXPOSED_PAD_FIELD_NUMBER: _ClassVar[int]
+    ANODE_FIELD_NUMBER: _ClassVar[int]
+    CATHODE_FIELD_NUMBER: _ClassVar[int]
+    FEEDBACK_FIELD_NUMBER: _ClassVar[int]
+    SWITCHING_FIELD_NUMBER: _ClassVar[int]
     supply: VocabPatterns
     gate: VocabPatterns
     source: VocabPatterns
     drain: VocabPatterns
     exposed_pad: VocabPatterns
-    def __init__(self, supply: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate: _Optional[_Union[VocabPatterns, _Mapping]] = ..., source: _Optional[_Union[VocabPatterns, _Mapping]] = ..., drain: _Optional[_Union[VocabPatterns, _Mapping]] = ..., exposed_pad: _Optional[_Union[VocabPatterns, _Mapping]] = ...) -> None: ...
+    anode: VocabPatterns
+    cathode: VocabPatterns
+    feedback: VocabPatterns
+    switching: VocabPatterns
+    def __init__(self, supply: _Optional[_Union[VocabPatterns, _Mapping]] = ..., gate: _Optional[_Union[VocabPatterns, _Mapping]] = ..., source: _Optional[_Union[VocabPatterns, _Mapping]] = ..., drain: _Optional[_Union[VocabPatterns, _Mapping]] = ..., exposed_pad: _Optional[_Union[VocabPatterns, _Mapping]] = ..., anode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., cathode: _Optional[_Union[VocabPatterns, _Mapping]] = ..., feedback: _Optional[_Union[VocabPatterns, _Mapping]] = ..., switching: _Optional[_Union[VocabPatterns, _Mapping]] = ...) -> None: ...
 
 class VocabPatterns(_message.Message):
     __slots__ = ("patterns", "replace", "exclude")

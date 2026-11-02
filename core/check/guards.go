@@ -66,32 +66,11 @@ func documentRef(spec *parampb.PartSpec, docRef string) string {
 // or +.
 func DiffConventionPresent(m Model) bool {
 	for _, n := range m.Nets() {
-		if neg, ok := ExpectedDiffNegative(n.Name); ok && m.HasNetName(neg) {
+		if neg, ok := m.DiffNegative(n.Name); ok && m.HasNetName(neg) {
 			return true
 		}
 	}
 	return false
-}
-
-// ExpectedDiffNegative returns the complementary negative net name for a differential-pair
-// positive member, and ok=false when the name is not a positive member. The suffix families are
-// "_P"/"_N", "_DP"/"_DN", and trailing "+"/"-". Matching is case-insensitive, and the returned name
-// keeps the source casing.
-func ExpectedDiffNegative(name string) (string, bool) {
-	up := strings.ToUpper(name)
-	switch {
-	case strings.HasSuffix(up, "_DP"), strings.HasSuffix(up, "_P"):
-		// Both end in P; flip only the trailing P/p to N/n, preserving case.
-		last := name[len(name)-1]
-		flip := "N"
-		if last == 'p' {
-			flip = "n"
-		}
-		return name[:len(name)-1] + flip, true
-	case strings.HasSuffix(name, "+"):
-		return name[:len(name)-1] + "-", true
-	}
-	return "", false
 }
 
 // ICESDRated reports whether a component on the net or within its 2-hop series reach declares a
@@ -141,7 +120,7 @@ func ICESDCredit(m Model, n *ir.Net) (string, *Witness) {
 // or the designer named it as a no-connect. A tool's own stub name is not evidence, because KiCad
 // names every unlabelled one-pin net "unconnected-(...)", flagged or not (agni issue 1019).
 func IntentionallyUnconnected(m Model, n *ir.Net) bool {
-	if NoConnectMarked(n) {
+	if m.NoConnectMarked(n) {
 		return true
 	}
 	return Exists(n.Connections, func(c *ir.Connection) bool {
@@ -159,16 +138,6 @@ var toolNetName = regexp.MustCompile(ToolNetNamePattern)
 
 // IsToolNetName reports whether a net's name is one a tool made up rather than one a designer gave it.
 func IsToolNetName(name string) bool { return toolNetName.MatchString(name) }
-
-// NoConnectMarked reports whether a net carries a designer's no-connect: the reader's flag attribute,
-// or a name the designer chose to say so (NC_..., no_connect...).
-func NoConnectMarked(n *ir.Net) bool {
-	if n.Attributes[netgraph.AttrNoConnect] == "true" {
-		return true
-	}
-	name := strings.ToLower(n.Name)
-	return strings.HasPrefix(name, "no_connect") || strings.HasPrefix(name, "nc_")
-}
 
 // IsGroundName matches the ground-rail naming conventions (GND and variants, VSS, EARTH). Ground pins
 // read as power_in while decoupling is asserted on the supply side, so matching by name keeps the rule
