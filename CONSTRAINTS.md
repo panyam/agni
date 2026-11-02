@@ -492,7 +492,8 @@ vocabulary (the second is an alias of the first, in `core/check/aliases.go`). Re
 violations in one call: the convention matching runs in the hot path, and the vocabulary arrives as
 ambient state rather than travelling with the run (C22). Read the fact off the model instead, through
 `m.IsGroundNet`, `m.IsRailNet` or `check.NetHasRole`, which trust `ir.Net.roles` and fall back to
-THIS model's lexicon for an IR that skipped the loader.
+THIS model's lexicon for an IR that skipped the loader. `TestC20CheckHelpersAskTheModel` holds
+`core/check` itself to the same rule, past an allowlist of the package-level fallbacks.
 **Note:** this Verify still read "becomes checkable once those land" long after they had, and in
 that window `stdlib/rules/intent/protections.go` matched ground net names itself in `groundRefs`. A
 deferred Verify is not a Verify, and nothing re-reads the sentence that defers it.

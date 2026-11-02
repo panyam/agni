@@ -135,6 +135,49 @@ func TestC20CheckPathReadsStampedFacts(t *testing.T) {
 	}
 }
 
+// C20 again, for core/check itself, where a helper taking a Model has the same reason to ask it.
+// BoardSource read the process-wide vocabulary until agni 1284, so a project's convention never
+// reached it. The files listed hold the package-level fallbacks a Model is not in hand for, and each
+// has to still match, or the sweep could be matching nothing.
+func TestC20CheckHelpersAskTheModel(t *testing.T) {
+	root := repoRoot(t)
+	allowed := map[string]bool{
+		"core/check/aliases.go":   false,
+		"core/check/guards.go":    false,
+		"core/check/query.go":     false,
+		"core/check/rolenames.go": false,
+	}
+	entries, err := filepath.Glob(filepath.Join(root, "core/check/*.go"))
+	if err != nil {
+		t.Fatalf("glob core/check: %v", err)
+	}
+	for _, f := range entries {
+		if strings.HasSuffix(f, "_test.go") {
+			continue
+		}
+		b, err := os.ReadFile(f)
+		if err != nil {
+			t.Fatalf("read %s: %v", f, err)
+		}
+		if !strings.Contains(string(b), "classify.Active") {
+			continue
+		}
+		rel, _ := filepath.Rel(root, f)
+		rel = filepath.ToSlash(rel)
+		if _, ok := allowed[rel]; !ok {
+			t.Errorf("%s reads classify.Active* (C20/C22): a helper with a Model in hand asks it "+
+				"(m.IsFeedbackName, m.IsRailNet), so a project's convention reaches the answer", rel)
+			continue
+		}
+		allowed[rel] = true
+	}
+	for rel, seen := range allowed {
+		if !seen {
+			t.Errorf("%s no longer reads classify.Active*, so take it off this allowlist", rel)
+		}
+	}
+}
+
 // C12: render style is injectable data, so the render layer carries no bare colour or font literal.
 //
 // The sweep is narrower than the constraint's prose in two ways, both deliberate. Test files are
