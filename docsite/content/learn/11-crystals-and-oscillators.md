@@ -43,6 +43,8 @@ Getting the value wrong does not stop the clock. It shifts it, by a small percen
 
 Some parts are **ceramic resonators with the load capacitors built in**. Cheaper, less accurate, and physically one three-terminal part where a crystal plus two caps is three parts. They present their specified load internally, so they need nothing external.
 
+The capacitors can also live at the other end, inside the **chip that drives the crystal**. Many real-time clocks and low-power MCUs build them into their oscillator pins, often selectable in a register, so a 32.768 kHz crystal sits straight across two pins with nothing else on the board. Only the chip's datasheet says so, which is why `crystal-load-caps` passes such a terminal when that datasheet is in the run and binds the capacitance to that pin, and otherwise reports it while naming the chip it could not read.
+
 Fit external caps to one anyway and the load roughly doubles. The oscillator now sees far more capacitance than either part was specified for, so it starts slowly, starts off-frequency, or over temperature and part spread does not start at all.
 
 The rule's own `Impact` describes how that arrives: *"The board usually oscillates on the bench and drifts or drops out in the field, and every timed peripheral clocked from it (UART baud, CAN bit timing) goes with it. It is a silent BOM/layout carry-over from a crystal design, invisible until the load is measured."*

@@ -1,0 +1,4 @@
+# Y1 has no load capacitor on either terminal, and the RTC it drives (DEMO-RTC, seeded in params/)
+# integrates its load capacitance on both oscillator pins, so crystal-load-caps must NOT fire. The
+# crystal.fires fixture is the same shape with no datasheet behind the IC.
+fires: {}
