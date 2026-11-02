@@ -1,7 +1,6 @@
 package check
 
 import (
-
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
