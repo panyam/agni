@@ -83,23 +83,48 @@ var labelAliasConflict = matrixlessSpecRule(func() *check.Rule {
 		// names in the SAME scope mean two different labels on one wire.
 		Reads:      []string{"net.attributes"},
 		Primitives: []string{"pattern", "select"},
+		//
+		// Two names rival only where they MET on their own sheet's wiring (agni issue 1249). A
+		// reused sheet's two hierarchical labels on separate wires share a scope, and the parent
+		// that straps both to GND meets them on the PARENT's wiring, through its sheet pins, which
+		// carry the child's names. netgraph.AttrSheetGroups records where each group met, and a net
+		// without it met in one place, so its aliases are one group on every sheet.
 		Fn: func(m check.Model, ents map[string]any, _ []any) any {
-			byScope := map[string]map[string]bool{}
-			for _, a := range netAliases(ents["net"].(*ir.Net)) {
-				if a.Rank == 0 {
-					continue
+			n := ents["net"].(*ir.Net)
+			rank := map[string]int{}
+			for _, a := range netAliases(n) {
+				rank[a.Name] = a.Rank
+			}
+			groups := netgraph.ParseSheetGroups(n.GetAttributes()[netgraph.AttrSheetGroups])
+			anySheet := groups == nil
+			if anySheet {
+				all := make([]string, 0, len(rank))
+				for name := range rank {
+					all = append(all, name)
 				}
-				scope, _ := check.ScopeOf(a.Name)
-				if byScope[scope] == nil {
-					byScope[scope] = map[string]bool{}
-				}
-				byScope[scope][a.Name] = true
+				groups = []netgraph.SheetGroup{{Names: all}}
 			}
 			clash := map[string]bool{}
-			for _, names := range byScope {
-				if len(names) >= 2 {
-					for n := range names {
-						clash[n] = true
+			for _, g := range groups {
+				byScope := map[string]map[string]bool{}
+				for _, name := range g.Names {
+					if r, ok := rank[name]; !ok || r == 0 {
+						continue
+					}
+					scope, _ := check.ScopeOf(name)
+					if !anySheet && scope != g.Sheet {
+						continue // a child's name met on its parent, through a sheet pin
+					}
+					if byScope[scope] == nil {
+						byScope[scope] = map[string]bool{}
+					}
+					byScope[scope][name] = true
+				}
+				for _, names := range byScope {
+					if len(names) >= 2 {
+						for name := range names {
+							clash[name] = true
+						}
 					}
 				}
 			}

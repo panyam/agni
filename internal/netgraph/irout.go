@@ -38,6 +38,12 @@ const (
 	// multi-sheet read populates it, from the hierarchy walk's sheet bands. Parse with
 	// ParseSheets.
 	AttrSheets = "sheets"
+	// AttrSheetGroups splits a net's aliases by where they met (Net.SheetGroups), groups joined by
+	// the RS byte, each the group's sheet followed by its names, joined by the US byte. It is
+	// stamped only on a net whose names fall into two groups or more, so its absence means every
+	// alias met in one place, which is what a reader solving one sheet always produces. Parse with
+	// ParseSheetGroups.
+	AttrSheetGroups = "sheet_groups"
 )
 
 // aliasSep separates AttrAliases entries; aliasRankSep splits rank from name (first cut
@@ -61,6 +67,31 @@ func ParseSheets(v string) []string {
 // nothing). The hierarchy reader uses it so it writes the encoding ParseSheets reads.
 func EncodeSheets(ids []string) string {
 	return strings.Join(ids, sheetSep)
+}
+
+// groupSep separates AttrSheetGroups groups; the names inside one group use aliasSep.
+const groupSep = "\x1e"
+
+// ParseSheetGroups decodes an AttrSheetGroups value into its groups. Empty or absent decodes to
+// nil, meaning the net's aliases all met in one place.
+func ParseSheetGroups(v string) []SheetGroup {
+	if v == "" {
+		return nil
+	}
+	var out []SheetGroup
+	for _, g := range strings.Split(v, groupSep) {
+		parts := strings.Split(g, aliasSep)
+		out = append(out, SheetGroup{Sheet: parts[0], Names: parts[1:]})
+	}
+	return out
+}
+
+func encodeSheetGroups(gs []SheetGroup) string {
+	parts := make([]string, len(gs))
+	for i, g := range gs {
+		parts[i] = strings.Join(append([]string{g.Sheet}, g.Names...), aliasSep)
+	}
+	return strings.Join(parts, groupSep)
 }
 
 // ParseAliases decodes an AttrAliases value back into the solver's alias list. Empty or
@@ -118,7 +149,7 @@ func IRNets(nets []Net, src string) []*ir.Net {
 	var out []*ir.Net
 	for _, n := range nets {
 		net := &ir.Net{Name: n.Name, Id: n.ID, Prov: &ir.Provenance{SourceFile: src}}
-		if n.Driven || n.External || n.NoConnect || len(n.Aliases) > 1 {
+		if n.Driven || n.External || n.NoConnect || len(n.Aliases) > 1 || len(n.SheetGroups) > 1 {
 			net.Attributes = map[string]string{}
 			if n.Driven {
 				net.Attributes[AttrPowerDriven] = "true"
@@ -131,6 +162,9 @@ func IRNets(nets []Net, src string) []*ir.Net {
 			}
 			if len(n.Aliases) > 1 {
 				net.Attributes[AttrAliases] = encodeAliases(n.Aliases)
+			}
+			if len(n.SheetGroups) > 1 {
+				net.Attributes[AttrSheetGroups] = encodeSheetGroups(n.SheetGroups)
 			}
 		}
 		for _, c := range n.Conns {

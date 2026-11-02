@@ -26,11 +26,23 @@ hierarchy net legitimately carries one qualified name per sheet it crosses (/amp
 root is not a conflict), and a design-wide rail name plus a local nickname is normal (the rival-rail
 case is power-tap-conflict). Semantics cross-checked against kicad-cli sch erc.
 
+Two names also have to meet on their OWN sheet's wiring. A reused sheet often brings out two
+hierarchical labels on separate wires, an address strap or a mode pin, and the parent sheet
+configures one instance by wiring both pins to GND. That makes the two names one net without any
+sheet drawing them together, and it is how a reused sheet is meant to be set up, so it is not
+reported (agni issue 1249). On a hierarchical KiCad read the solver records where each group of
+names met (`sheet_groups` on the net), and the rule compares only the names that met on the sheet
+they belong to. A read of one sheet, or a format that solves no hierarchy, records nothing, and all
+of a net's names count as having met.
+
 ### Query structure
 
 select nets whose alias list clashes within a scope.
 
     select N in nets
-      where exists scope : count(distinct name : (scope, name) in aliases(N), scoped(name)) >= 2
+      where exists group G in sheet_groups(N), scope = sheet(G) :
+        count(distinct name in G : scoped(name), scope(name) = scope) >= 2
+
+With no sheet_groups, the net's aliases are one group, and every scope is compared.
 
 Reads: net.attributes. Tier R.
