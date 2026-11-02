@@ -23,11 +23,13 @@ i2c-pull-up  1 fail, 1 pass
 
 input-protection  1 fail
     fail            VBUS  the connector reaches power input VBUS with no fuse crossed and no
-                          clamp on the path
+                          clamp on the path, and U1's datasheet was not read, so whether it
+                          limits its current is unverified
 
 reverse-blocking-absent  1 fail
     fail            VBUS  the connector reaches a power input through passives alone, so nothing
-                          in the path passes current one way
+                          in the path passes current one way, and U1's datasheet was not read,
+                          so whether it blocks reverse current is unverified
 
 test-point-coverage  2 fail, 1 pass
     fail            GND   rail carries no test point; bring-up and factory test cannot probe it
