@@ -98,7 +98,11 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			}
 			v.Context = compContext(report.Protector, "fuse or clamp on the path")
 			if w := report.ProtectorWitness; w != nil {
-				v.Witness.Statement = w.Statement + fmt.Sprintf(", and it guards all %d power entries the connector reaches", report.Loads)
+				entries := "the power entry the connector reaches"
+				if report.Loads > 1 {
+					entries = fmt.Sprintf("all %d power entries the connector reaches", report.Loads)
+				}
+				v.Witness.Statement = w.Statement + ", and it guards " + entries
 				v.Witness.Terms = append(v.Witness.Terms, w.Terms...)
 				v.Witness.Datasheet = w.Datasheet
 				v.Context = compContext(report.Protector, "current-limiting switch")
