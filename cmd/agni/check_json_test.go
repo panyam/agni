@@ -75,6 +75,40 @@ func TestCheckJSONEmpty(t *testing.T) {
 	}
 }
 
+// A feedback pin name declared in a --conventions file reaches BoardSource, so a connector on the
+// buck's output reads as an outlet (agni issue 1284). The run without it is the positive control.
+func TestConventionsReachBoardSource(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		args []string
+		want int
+	}{
+		{"no convention", nil, 2},
+		{"a convention naming the pin", []string{"--conventions", "testdata/conventions/house-feedback-pin.yaml"}, 0},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cmd := checkCmd()
+			var out bytes.Buffer
+			cmd.SetOut(&out)
+			args := []string{"--format", "json", "--rule", "input-protection", "--rule", "reverse-blocking-absent"}
+			cmd.SetArgs(append(append(args, tc.args...), "testdata/conventions/house-feedback-pin.edn"))
+			// Findings exit non-zero, so the count below is what this test reads.
+			_ = cmd.Execute()
+			var got struct {
+				Findings []struct {
+					Rule string `json:"rule"`
+				} `json:"findings"`
+			}
+			if err := json.Unmarshal(out.Bytes(), &got); err != nil {
+				t.Fatalf("invalid JSON: %v\n%s", err, out.String())
+			}
+			if len(got.Findings) != tc.want {
+				t.Errorf("%d findings, want %d: %+v", len(got.Findings), tc.want, got.Findings)
+			}
+		})
+	}
+}
+
 // TestCheckConventionsFlag checks that --conventions composes an operator naming config into the
 // catalog for one run; its rules appear under the config's namespace and fire like any
 // built-in.
