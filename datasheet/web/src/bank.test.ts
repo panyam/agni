@@ -391,7 +391,7 @@ describe("verification on hand transcription", () => {
     expect(spec.docs[0].contentHash).toBe("sha256:relQ");
   });
 
-  // The panel builds the record, but SavePartSpec ships the spec as protojson. A verification that
+  // The panel builds the record, but SaveDraft ships the spec as protojson. A verification that
   // did not survive that trip would be built correctly and persisted nowhere.
   it("a verification survives the protojson round trip the save uses", () => {
     const spec = emptySpec("ti/LM1117/LM1117.pdf", "SNOS412Q - REVISED JANUARY 2023", "sha256:relQ");
