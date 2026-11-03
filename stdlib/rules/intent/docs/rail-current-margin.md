@@ -6,8 +6,8 @@ A rail's supply must be rated for its declared peak budget multiplied by the dec
 A factor of 1.2 asks for 20% headroom over the budget.
 
 The rule fires only in the band between the two thresholds, where the supply clears the peak but
-falls short of peak x factor. Below the peak it stays silent, because that is
-`intent/rail-current-capacity`'s finding and one defect should not be reported under two review
+falls short of peak x factor. Below the peak it reports nothing. That shortfall is
+`intent/rail-current-capacity`'s finding, and one defect should not be reported under two review
 items.
 
 ### For hardware engineers
@@ -16,8 +16,8 @@ A current budget is an estimate. It is assembled early, from parts that are not 
 temperatures nobody has measured, and it does not capture inrush, a load added late in the schedule,
 or a part drawing more than its typical figure because it is running hot.
 
-Headroom is what absorbs that. Sizing a supply to exactly the budget means the first thing the budget
-missed turns into a droop, and by then the board is built.
+Headroom absorbs that. If a supply is sized to exactly the budget, the first thing the budget missed
+turns into a droop, and by then the board is built.
 
 ### Read this before binding a review item to it
 
@@ -29,16 +29,16 @@ instead of in rule literals.
 
 **It has no default.** With no `margin_factor` declared this rule is not compiled at all, so a
 review item bound to it reads `needs-design-intent` and names the missing input. That is deliberate,
-because a default would let an item read PASS against a policy number nobody on the project ever
-stated.
+because a default would let an item read PASS against a policy number that nobody on the project
+ever stated.
 
-It shares two limits with `intent/rail-current-capacity`, which states them in full. The rule is
-silent on a rail no seeded part supplies, and the needs-data gate that covers the unseeded case is
-design-wide rather than per-rail.
+It shares two limits with `intent/rail-current-capacity`, which states them in full. The rule says
+nothing about a rail that no seeded part supplies, and the needs-data gate that covers the unseeded
+case is design-wide rather than per-rail.
 
 Thermal derating is a separate question and is not modelled here. A regulator's usable output falls
-with ambient temperature and with how much voltage it is dropping, so a part rated 1A on its front page
-may not deliver 1A in the enclosure this board ships in. This rule compares against the datasheet
+with ambient temperature and with how much voltage it is dropping. So a part rated 1A on its front
+page may not deliver 1A inside this board's enclosure. This rule compares against the datasheet
 number as stated.
 
 ### Declaring it

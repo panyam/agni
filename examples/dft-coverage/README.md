@@ -22,18 +22,18 @@ and negation:
 | 7 | what a coverage report cannot say | `check.RunVerdicts` |
 
 In step 4, measuring a two-terminal part needs BOTH ends reachable, so one end covered measures
-nothing. The three buckets (both ends, one end, neither) come from the shipped library, whose
-members each have a reference page, starting with
+nothing. The three buckets are both ends, one end and neither. They come from the shipped library,
+and each library member has a reference page, starting with
 [component.probed_both](https://panyam.github.io/agni/reference/relations/component.probed_both/).
-The walk defines only what it counts as a passive, a resistor or a capacitor, which is narrower than
-the library's two-terminal parts.
+The walk defines only what it counts as a passive. A passive is a resistor or a capacitor, a
+narrower set than the library's two-terminal parts.
 
-Step 5 asks why one part landed in its bucket. With witnesses the engine keeps how each row was
-derived, so the answer to "why is C1 one end probed" is the library member's rule with its facts
-filled in, ending in a `not` that held on GND (agni issue 794).
+Step 5 asks why one part ended up in its bucket. With witnesses the engine keeps how each row was
+derived. So asking "why is C1 one end probed" returns the library member's rule with its facts filled
+in. The rule ends in a `not` that held on GND (agni issue 794).
 
-Step 6 is where the answer stops being a list. One uncovered part is an oversight; several of one part
-number is a placement habit, which is a different thing to fix.
+In step 6 the answer stops being a list. One uncovered part is an oversight. Several uncovered parts
+of one part number are a placement habit, and a placement habit is a different thing to fix.
 
 Step 7 leaves coverage behind. A findings list names what is wrong. A verdict names what was ASKED,
 including the subjects a rule could not decide and why, in the rule author's words. "No findings" and
@@ -57,10 +57,10 @@ lives in the sidecar. See [../CONVENTIONS.md](../CONVENTIONS.md).
 
 Two details matter if you copy this example.
 
-**`component.mpn` needs no datasheet corpus.** Every model joins the part numbers the design carries
-(a BOM line, else the component's own MPN), so `check.NewModel(d)` is enough for step 6. Only the
-datasheet relations need specs, through `check.WithParamProvider`. Before agni issue 748 this took a
-separate constructor, and building the model the other way silently emptied the relation.
+**`component.mpn` needs no datasheet corpus.** The design carries part numbers on a BOM line, or else
+on the component's own MPN, and every model joins them. So `check.NewModel(d)` is enough for step 6.
+Only the datasheet relations need specs, through `check.WithParamProvider`. Before agni issue 748
+this took a separate constructor, and building the model the other way silently emptied the relation.
 
 **The rule catalog is a blank import.** `check.BuiltinRules()` returns nothing without
 `_ "github.com/panyam/agni/stdlib/rules/builtin"`, and it fails silently, so step 7 read "0 pass, 0 fail,
@@ -74,4 +74,5 @@ neither. The two with neither share a part number, so the grouping in step 6 has
 GND deliberately carries no test point.
 
 Point it at your own board by typing a path at the first step, or by setting
-`AGNI_EXAMPLE_DESIGN` to change the default, which `make runquiet` and `make record` pick up too.
+`AGNI_EXAMPLE_DESIGN` to change the default. `make runquiet` and `make record` pick up that variable
+too.

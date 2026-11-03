@@ -9,8 +9,9 @@ Anything leaving the board through a connector is exposed. A cable is an antenna
 touching the connector is a static discharge of a few kilovolts arriving at a pin rated for a few
 volts.
 
-Protection is whatever is placed at the connector to absorb that before it reaches anything expensive, such as
-a TVS diode or diode array for the discharge, a common-mode choke or ferrite for the interference.
+Protection is any part placed at the connector to absorb that before it reaches anything expensive.
+A TVS diode or diode array absorbs the discharge, and a common-mode choke or ferrite absorbs the
+interference.
 
 ```mermaid
 flowchart TB
@@ -24,7 +25,7 @@ The ordering is the point. Protection has to sit between the connector and the p
 board that has the right parts in the wrong order has no protection at all, and nothing in the netlist
 distinguishes the two.
 
-That is why it is declared in a profile rather than inferred, the same as
+So a profile declares protection rather than the engine inferring it, the same as
 [termination](../termination/).
 
 The course teaches it in [chapter 10](../../../learn/10-interfaces-and-what-they-require/), which

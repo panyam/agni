@@ -2,8 +2,8 @@
 
 ### What it means
 
-A via whose copper ring, (pad diameter minus drill) / 2, is below the minimum annular width the
-board declares, or, when it declares none, below 0.075mm, the loosest mainstream floor (the corpus
+A via's copper ring, (pad diameter minus drill) / 2, is below the board's declared minimum annular
+width. When the board declares none, the limit is 0.075mm, the loosest mainstream floor (the corpus
 JLCPCB rules).
 
 ![a via with a thin copper ring is flagged; an adequate ring is fine](images/annular-width.svg)
@@ -20,7 +20,7 @@ Intermittent or open via connections that pass visual inspection.
 
 ### Scope note
 
-Same floor-default posture as track-width. A board that declares its own minimum is held to that instead, because the declaration is the designer saying which process the board is routed for. Today that is a KiCad project's `board.design_settings.rules`, read whichever of the project's files names the design, and every finding names which of the two it was measured against (agni issue 933).
+Same floor-default posture as track-width. A board that declares its own minimum is held to that instead, because the declaration is the designer saying which process the board is routed for. Today the only such declaration is a KiCad project's `board.design_settings.rules`, read whichever of the project's files names the design. Every finding names which of the two limits it was measured against (agni issue 933).
 
 ### Query structure
 

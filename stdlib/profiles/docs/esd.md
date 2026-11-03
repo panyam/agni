@@ -2,27 +2,28 @@
 
 ### What it checks
 
-It checks, for each of the interface's signal nets that leaves the board through a connector,
-whether anything clamps it. A net is reported when it is connector-facing and no TVS, no Zener, and
-no ESD-rated IC sits within two series crossings of it.
+Some of the interface's signal nets leave the board through a connector. For each of those, it
+checks whether anything clamps it. A net is reported when it is connector-facing and no TVS, no
+Zener, and no ESD-rated IC sits within two series crossings of it.
 
-The check is silent on an interface the design does not carry, and silent on an interface whose lines
-are all on-board. In both cases silence is the correct answer, and it is not a pass.
+If the design does not carry the interface, the check is silent. It is also silent when all of the
+interface's lines are on-board. In both cases silence is the correct answer, and it is not a pass.
 
 ### For hardware engineers
 
 Any line that leaves the board is an ESD path into whatever drives it. Touching a connector shell
 can discharge kilovolts, and an unclamped bus pin takes that energy directly. The damage is often
-not a clean failure, since the part degrades and the symptom is a port that works for months and
-then does not, which is expensive to find in the field.
+not a clean failure. The part degrades, and the symptom is a port that works for months and then
+does not. That symptom is expensive to find in the field.
 
 A TVS is the intended answer. It sits beside the line rather than in it, idle at normal voltage, and
 conducts hard when the line spikes so the surge goes to ground instead of into the transceiver.
 
-Distance matters and is why the check has a radius. Every series element between the connector and
-the clamp is impedance the surge pushes through before the clamp conducts, so the pin's voltage
-spikes first. A TVS several parts downstream is protecting what is behind it, not the pin. The check
-looks two series crossings out, the same radius the design-wide `esd-protection` rule uses.
+Distance matters, so the check has a radius. The surge has to push through every series element
+between the connector and the clamp before the clamp conducts. Each element is impedance, so the
+pin's voltage spikes first. A TVS several parts downstream is protecting what is behind it, not the
+pin. The check looks two series crossings out, the same radius the design-wide `esd-protection` rule
+uses.
 
 ### The design decides the scope, not the protocol
 
@@ -31,9 +32,9 @@ fixed list of lines. On CAN, `_CANH` and `_CANL` leave the board
 while `_TXD` and `_RXD` run to the MCU and never do, so a check applied to every declared signal would
 report two lines that were never exposed.
 
-Because the scope is read from the board, declaring this requirement on a profile is safe even when
-that bus is usually on-board, because with no connector on the net the requirement selects nothing
-and says nothing.
+The scope is read from the board. So declaring this requirement on a profile is safe even when that
+bus is usually on-board. With no connector on the net, the requirement selects nothing and says
+nothing.
 
 ### Why a Zener counts here
 

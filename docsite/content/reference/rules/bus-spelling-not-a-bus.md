@@ -9,22 +9,22 @@ Respell the label in the format's own bus syntax (in KiCad, `DATA[0..7]` rather 
 
 ### What it means
 
-A label whose name carries an index range, which is how a schematic names a bus, in a spelling
-the source format reads as one ordinary net instead. KiCad writes a bus as `DATA[0..7]` and only
+A label's name carries an index range, the way a schematic names a bus, but in a spelling that
+the source format reads as one ordinary net. KiCad writes a bus as `DATA[0..7]` and only
 that. A KiCad label written `DATA[7:0]`, the spelling xschem and gEDA use, is a plain scalar net
 whose name happens to contain brackets and a colon.
 
 ### Why engineers want it
 
-Whoever typed `DATA[7:0]` meant eight signals. KiCad makes one net of it, so wherever that label
-joins wires, the signals the author meant to keep apart are joined instead, and the drawing looks
-the same either way. Nothing else in the read can reveal it, because a single net with a strange
+Whoever typed `DATA[7:0]` meant eight signals. KiCad makes one net of it. Wherever that label
+joins wires, it joins signals that the author meant to keep apart, and the drawing looks the same
+either way. Nothing else in the read can reveal it, because a single net with a strange
 name is a perfectly valid design.
 
 ### Impact
 
-Signals the author believed were separate share a net, or member taps that were meant to land on a
-bus land on nothing that carries them. Warning severity, because it is a defect in the design as
+Signals that the author believed were separate share a net. Or member taps meant for a bus connect
+to nothing that carries them. Warning severity, because it is a defect in the design as
 the tool reads it, not a gap in the read.
 
 ### Scope
@@ -34,7 +34,7 @@ not-applicable on other formats. xschem and gEDA read the colon spelling as a bu
 there is correct.
 
 A label in KiCad's own bus syntax is a pass, so a sheet whose every bus is spelled correctly says
-so. Whether that bus's members resolve into nets is `bus-not-modeled`'s question, not this one. A
+so. `bus-not-modeled` asks whether that bus's members resolve into nets, and this rule does not. A
 name used on several sheets is one verdict, since respelling it is one change.
 
 ### Query structure

@@ -13,23 +13,23 @@ between them, and reports the rows where it does not arrive.
 
 ### For hardware engineers
 
-A net can be on the right pin at one end and land on the wrong part at the other, and no per-net
-check can see it. `intent/io-map-pin-mismatch` confirms the MCU end; this confirms the other end is
-the device the architecture says it drives.
+A net can be on the right pin at one end and reach the wrong part at the other, and no per-net
+check can see it. `intent/io-map-pin-mismatch` confirms the MCU end. The architecture says which
+device the net drives, and this rule confirms that the other end is that device.
 
 The walk crosses series pass elements (resistors, inductors, ferrite beads, fuses), because a
 resistor in the middle of a signal splits the net without breaking the connection. It never crosses a
 capacitor, which is a DC block, and it never continues through a rail or a plane, which touches
 almost everything and would join everything to everything.
 
-A pass reports the ROUTE it walked, not just the verdict:
+A pass reports the ROUTE it walked as well as the verdict:
 
 ```
 PMIC_PG -> [R3] -> MCU_NRST
 ```
 
-so a reviewer can see the series resistor and decide whether that path is the intended one, without
-opening the schematic. A failure says where each end actually sits.
+A reviewer can then see the series resistor and decide whether that path is the intended one,
+without opening the schematic. A failure says where each end actually sits.
 
 ### Coverage is most of the value here
 
@@ -37,26 +37,27 @@ The far-end columns of a real map are filled sparsely. In the one we measured, t
 its pin number and its pin name were filled on roughly 45%, 35% and 6% of rows.
 
 **Every row gets a verdict, including the rows declaring no far end**, which report as
-`not-considered` with that reason. A rule that reported only the rows carrying a far end would show a
-clean result whose denominator was the empty ones, and a green answer would mean no more than that
-the columns were blank.
+`not-considered` with that reason. Imagine a rule that reported only the rows carrying a far end.
+The rows with a blank far end would drop out unreported, so its result would read clean, and a
+green answer would mean no more than that the columns were blank.
 
 ### The three outcomes, kept apart
 
-A path question has three answers and collapsing any two of them is a defect in the tool:
+A path question has three answers, and collapsing any two of them is a defect in the tool.
 
 - **A route was found.** The verdict carries the route.
 - **No route exists within the radius.** That is a real answer about the design, and it says these
   two pins do not join.
 - **The question could not be asked.** An endpoint resolved to a pin that sits on no net, so nothing
-  was walked. This reports as `not-considered` and never as a no-route, because a pin spelled wrong
-  in a declaration and two pins genuinely unconnected send a reader to opposite places.
+  was walked. This reports as `not-considered` and never as a no-route. Compare a pin spelled wrong
+  in a declaration with two pins that are genuinely unconnected. The two send a reader to opposite
+  places.
 
 ### Declaring it
 
 `to` takes a device and a pin, and both are required. A `to` naming a device and no pin is rejected
-when the declaration loads, rather than reaching the rule as half a question it would have to invent
-a reading of.
+when the declaration loads. Otherwise it would reach the rule as half a question, and the rule would
+have to invent a reading of it.
 
 The far-end pin is resolved the same way the near pin is, so it may be a package designator or the
 part type's functional name.
@@ -65,4 +66,4 @@ part type's functional name.
 
 Read the route before editing anything. A net that arrives at the wrong device usually diverges at a
 recognisable point, and the reported path shows where. Then either route it to the declared pin or
-amend the far end the map declares, depending on which document is current.
+amend the map's declared far end, depending on which document is current.

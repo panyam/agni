@@ -9,8 +9,8 @@ Swap the LED's anode and cathode connections so the anode faces the supply side 
 
 ### What it means
 
-An LED whose anode pin lands on a ground-named net while its cathode
-lands on a power-rail-named net. Current would have to flow from ground to the rail; the
+An LED's anode pin is on a ground-named net and its cathode
+is on a power-rail-named net. Current would have to flow from ground to the rail; the
 LED never conducts.
 
 ### Why engineers want it
@@ -29,9 +29,10 @@ hand-flippable.
 ### Pin roles are derived, not stated
 
 No format carries polarity as data (KiCad LED pins are electrically passive; "A"/"K" are pin names),
-so the anode/cathode roles come from the name convention gated by device class, via pin.role, the
-same projection posture as component.class. An LED whose pins carry no recognizable names yields
-RoleUnknown, so the rule raises no finding (it never guesses), though the LED still records a pass.
+so the anode/cathode roles come from the name convention, gated by device class, through pin.role.
+component.class takes the same projection posture. If an LED's pins carry no recognizable names, they
+yield RoleUnknown. The rule then raises no finding, because it never guesses, though the LED still
+records a pass.
 
 ### LED-only, on purpose
 
@@ -41,7 +42,7 @@ corpus row, not here.
 
 ### Query structure
 
-select LEDs whose role-resolved pins land on opposing rails.
+select LEDs whose role-resolved pins sit on opposing rails.
 
     select C in components where class(C) == led
       and ground_name(net_of(anode(C))) and rail_name(net_of(cathode(C)))

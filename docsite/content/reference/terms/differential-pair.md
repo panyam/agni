@@ -21,7 +21,7 @@ flowchart TB
 
 The two halves are conventionally named as a pair, `X_P` and `X_N`, or for CAN `_CANH` and `_CANL`.
 A pair with only one half wired is not a pair at all, and the layout tool will route the survivor as
-an ordinary signal, which is what [`diff-pair-naming`](../../rules/diff-pair-naming/) exists to catch.
+an ordinary signal. [`diff-pair-naming`](../../rules/diff-pair-naming/) exists to catch that.
 
 A pair almost always needs [termination](../termination/) at each end, for a reason that has nothing
 to do with noise.

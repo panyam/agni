@@ -19,15 +19,15 @@ intent:
 
 Exposure is a fact about one product rather than about the part. The same board-to-board connector
 is the module socket on one carrier and the cable entry on another, and its part number and footprint
-rarely say which. So the declaration has to come from the people who know the enclosure. A
-declaration that names the wrong ref-des changes nothing at all, and without this rule it would read
+rarely say which. So the declaration has to come from the people who know the enclosure. If a
+declaration names the wrong ref-des, it changes nothing at all. Without this rule it would still read
 as a declaration that took effect.
 
 ### Impact
 
-A misspelled or stale declaration leaves the connector it meant to name checked as external. The
-exposure rules then keep reporting it, or, if the ref-des now names a different connector, stop
-reporting one that does face the field.
+A declaration can be misspelled or stale. Then the connector it meant to name is still checked as
+external. The exposure rules then keep reporting it, or, if the ref-des now names a different
+connector, stop reporting one that does face the field.
 
 ### Scope note
 

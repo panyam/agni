@@ -38,9 +38,9 @@ Agni -->> You: []problem (empty = healthy)
 
 ## Validate the drawing tier {#geometry}
 
-> Formats that carry a faithful schematic (EDIF .eds here) also get geometry invariants:
-> sheets, symbols, placements, and wires exist, and at least 99% of placements resolve to
-> a symbol definition. The resolution join is the same one the renderers draw by, so a
+> Some formats carry a faithful schematic, EDIF .eds here, and they also get geometry
+> invariants: sheets, symbols, placements, and wires exist, and at least 99% of placements
+> resolve to a symbol definition. The renderers draw by the same resolution join, so a
 > broken cell/library normalization shows up here before anyone squints at a blank canvas.
 
 ## What failure looks like {#failure}

@@ -10,7 +10,7 @@ actors:
 
 ## A name is read before any rule runs
 
-Most rules never look at a net's name. They ask whether a net is a rail, a ground, an I2C line, and the answer was settled once, when the design was read, by matching each name against a vocabulary of patterns. So a rail spelled in a way the vocabulary does not know is not a rail to any rule, and the rules that depend on rails go quiet or go wrong about it without saying why.
+Most rules never look at a net's name. They ask whether a net is a rail, a ground, an I2C line, and the answer was settled once, when the design was read, by matching each name against a vocabulary of patterns. Suppose a rail is spelled in a way the vocabulary does not know. Then it is not a rail to any rule, and the rules that depend on rails go quiet or go wrong about it without saying why.
 
 The vocabulary is built-in patterns with at most one convention laid over them. The convention can come from the server's `--conventions`, the design's project, the design's own `design.yaml`, or the request, and the nearest one wins.
 
@@ -20,7 +20,7 @@ The vocabulary is built-in patterns with at most one convention laid over them. 
 
 ## The vocabulary, and where each pattern came from {#lexicon}
 
-> GetLexicon lists every pattern, exclusion, ref-des prefix and part-number family the read used. Each one is either built in or from the convention, and a built-in pattern a convention switched off with `replace: true` stays in the list, marked, so you can see it went. Here the design's convention adds one rail pattern to the built-in ones.
+> GetLexicon lists every pattern, exclusion, ref-des prefix and part-number family the read used. Each one is either built in or from the convention. When a convention switches a built-in pattern off with `replace: true`, the pattern is still in the list, marked, so you can see it went. Here the design's convention adds one rail pattern to the built-in ones.
 
 ```mermaid
 You ->> Agni: GetLexicon(snapshot)
@@ -29,7 +29,7 @@ Agni -->> You: entries, each with its source
 
 ## Why a net has its roles {#net}
 
-> ExplainNet gives the roles the read stamped on one net, each with its reason, and every pattern the name matches, with where that pattern came from. SENSOR_3V3 is a rail because of the design's pattern and no other.
+> ExplainNet takes one net and lists the roles the read stamped on it, each with its reason. It also lists every pattern the name matches, with where that pattern came from. SENSOR_3V3 is a rail because of the design's pattern and no other.
 
 ```inputs
 - name: net

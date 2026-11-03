@@ -2,9 +2,9 @@
 
 ### What it means
 
-A routed copper segment narrower than the minimum track width the board declares, or, when it
-declares none, than 0.127mm (5mil), the minimum trace width of the loosest mainstream fabrication
-capability (the corpus JLCPCB rule set).
+A routed copper segment is narrower than the board's declared minimum track width. When the board
+declares none, the floor is 0.127mm (5mil). That is the minimum trace width of the loosest
+mainstream fabrication capability, the corpus JLCPCB rule set.
 
 ![a trace narrower than the fab floor is flagged; an adequate width is fine](images/track-width.svg)
 
@@ -22,11 +22,15 @@ and fails under current.
 ### Scope note
 
 The 0.127mm default is deliberately the loosest published floor, so the rule fires on defects
-rather than on deliberate tight routing under a capable fab's own rules. A board that declares its own minimum is held to that instead, because the declaration is the designer saying which process the board is routed for. Today that is a KiCad project's `board.design_settings.rules`, read whichever of the project's files names the design, and every finding names which of the two it was measured against (agni issue 933). An HDI board
-routed at 0.1mm and declaring 0.0969mm is therefore checked against 0.0969mm, and
-`netclass-track-width` separately checks the width each of the project's net classes declares. `check.Available` gates
-the rule behind the board-geometry tier (a netlist-only design reports not-applicable, not
-a silent pass).
+rather than on deliberate tight routing under a capable fab's own rules. A board that declares its
+own minimum is held to that instead, because the declaration is the designer saying which process
+the board is routed for. Today the declaration comes from a KiCad project's
+`board.design_settings.rules`, read whichever of the project's files names the design. Every
+finding names which of the two floors it was measured against (agni issue 933). So an HDI board
+routed at 0.1mm and declaring 0.0969mm is checked against 0.0969mm. `netclass-track-width`
+separately checks the width that each of the project's net classes declares. `check.Available`
+gates the rule behind the board-geometry tier, so a netlist-only design reports not-applicable
+rather than a silent pass.
 
 ### Query structure
 

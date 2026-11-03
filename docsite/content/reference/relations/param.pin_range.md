@@ -5,9 +5,9 @@ description: "a datasheet limit bound to ONE pin, both bounds in the SI base uni
 
 ### What it is
 
-`param.pin_range(mpn, pin, symbol, kind, min, max)` is `param.range` with a pin column, emitting one row
-per (parameter, bound pin) pair, so a limit the datasheet states for a specific terminal is queryable
-against that terminal rather than against the part as a whole.
+`param.pin_range(mpn, pin, symbol, kind, min, max)` is `param.range` with a pin column. It emits one
+row per (parameter, bound pin) pair. When a datasheet states a limit for a specific terminal, a query
+can then ask about that terminal rather than about the part as a whole.
 
 `kind` is the same token `param.range` uses (`absolute_max`, `recommended_operating`,
 `characteristic`, `unspecified`), and both bounds are in the parameter's SI base unit whatever the
@@ -18,12 +18,12 @@ A parameter bound to several pins emits **one row per pin**. A part may state a
 single output range for a whole port of four terminals, and a query asking about one of them has to
 find it without knowing it was written as a group.
 
-**Part-wide rows are deliberately absent.** A parameter with no pin binding is a fact about the die
-(a junction-temperature rating, a storage range), and emitting it against every pin would read as
-each terminal carrying that limit itself, re-creating in a new place the collapse this relation
-exists to undo. Those rows are on `param.range`, which is where a query that wants them should look.
-A part with no pin bindings therefore answers nothing here, and a spec seeded before pin binding
-answers nothing at all.
+**Part-wide rows are deliberately absent.** A parameter with no pin binding is a fact about the
+die, such as a junction-temperature rating or a storage range. Emitting it against every pin would
+read as each terminal carrying that limit itself. That would re-create the collapse this relation
+exists to undo, in a new place. Those rows are on `param.range`, and a query that wants them should
+look there. A part with no pin bindings therefore answers nothing here, and a spec seeded before pin
+binding answers nothing at all.
 
 ### For hardware engineers
 
@@ -33,9 +33,8 @@ world and a 5 V world with a separate supply pin for each and genuinely differen
 `param.range`, that part has one blurred "supply" answer. Asked through `param.pin_range`, it has
 two correct ones.
 
-This is what makes "does this connection meet what this pin actually requires" answerable. The limit
-you compare a rail against is the limit of the terminal the rail lands on, not an average over the
-part.
+With the pin column, "does this connection meet what this pin actually requires" has an answer. You
+compare a rail against the limit of the terminal it connects to, not an average over the part.
 
 The usual cautions still apply and are not weakened by the pin column. A row whose conditions survive
 only as free text is not machine-comparable, and it is surfaced beside its citation rather than
@@ -46,15 +45,15 @@ bounds absent, because an unmeasurable value must not become orderable.
 
 `param.range` is keyed by `(mpn, symbol)`; this is keyed by `(mpn, pin, symbol)`. It is a
 denormalized fact table, not a view to be reconstructed by joining `param.range` to a binding
-relation, because two parameters can share a symbol and bind to different pins (a part stating one
-ESD rating for its A-port terminals and a different one for its B port publishes both under
-`V(ESD)`), so a join on symbol alone would cross-product them onto the wrong terminals.
+relation. Two parameters can share a symbol and bind to different pins. A part stating one ESD
+rating for its A-port terminals and a different one for its B port publishes both under `V(ESD)`.
+A join on symbol alone would cross-product them onto the wrong terminals.
 
-This was the first six-column relation in the fact base and the reason `facts.Row` grew a
-`Qualifier` slot, because `mpn`, `pin` and `symbol` consume Subject, Object and Value and leave the
-limit kind nowhere to go. The conditions slot was not reused for it, because every param relation
-carries test conditions there as unbound metadata and spending it would strip the trust context from
-exactly the rows most likely to be compared against.
+This was the first six-column relation in the fact base. `facts.Row` grew a `Qualifier` slot for
+it, because `mpn`, `pin` and `symbol` consume Subject, Object and Value and leave the limit kind
+nowhere to go. The conditions slot was not reused for the kind. Every param relation carries test
+conditions there as unbound metadata. Spending that slot would strip the trust context from exactly
+the rows a query is most likely to compare.
 
 ### Go projector
 
@@ -80,7 +79,7 @@ param.pin(?mpn, ?pin, ?name, ?fn) => ?mpn, ?name, ?fn, ?min, ?max
 ```
 
 Find the parts that state more than one distinct supply window across
-their terminals, which `param.range` reports as a single blurred answer.
+their terminals. `param.range` reports each of them as a single blurred answer.
 
 ```
 param.pin_range(?mpn, ?a, ?s1, "recommended_operating", ?min1, ?max1),

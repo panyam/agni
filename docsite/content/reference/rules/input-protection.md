@@ -14,7 +14,7 @@ have a protection device on the way, a fuse crossed or a TVS on the path.
 
 ### Why engineers want it
 
-The power entry is the one net every external fault arrives on.
+Every external fault arrives on one net, the power entry.
 Review checklists ask for a fuse (overcurrent) and a clamp (transient) between the jack and
 the first regulator; forgetting them is invisible until the wrong charger shows up.
 
@@ -31,21 +31,23 @@ Since WS3-011 the rule walks from each connector net, following series pass elem
 (R/L/ferrite/fuse, the reach primitive, 3 hops) to find a power-input pin, and the path is protected
 if a FUSE was crossed to get there or a fuse or TVS hangs on any walked net up to it. Before the
 walk, a series element split the net and the rule saw nothing, so a fuse-protected board passed by
-accident, and an unprotected connector-bead-regulator path passed too (the false negative this
-upgrade closes). Fuse OR TVS satisfies the rule; a per-design "which protections are required"
+accident, and an unprotected connector-bead-regulator path passed too. This upgrade closes that
+false negative. Fuse OR TVS satisfies the rule; a per-design "which protections are required"
 policy is rule configuration (WS3-006). Ground-named nets are skipped, and an unresolved external
-net reports not-considered. A net the board drives itself also reports not-considered, because its connector is an
-outlet the board powers rather than a power entry (agni issue 1016). reverse-blocking-absent asks
+net reports not-considered. If the board drives a net itself, that net also reports
+not-considered. Its connector is then an outlet, powered by the board, rather than a power entry
+(agni issue 1016). reverse-blocking-absent asks
 the same question through `check.BoardSource`, and its page lists the shapes that count.
 
-A current-limiting power switch also counts when it is the entry's only load, an eFuse or a USB power
-switch wired between the connector and the board, since its current limit is the overcurrent
-protection a fuse would give (agni issue 1248). Glasgow feeds its 5 V through a TPD3S014 that way.
-Only the part's datasheet can say so, through a `device_class` that names a current-limiting switch,
-because a regulator limits its current too and is no protection against its own failure. The pass
-names the switch and cites the current limit its datasheet prints. A switch beside a regulator on
-the same net excuses nothing, since the regulator is still fed straight from the connector. Without
-the datasheet the entry still fails, and the verdict names the IC it could not read.
+A current-limiting power switch also counts when it is the entry's only load. An eFuse or a USB
+power switch wired between the connector and the board is one. Its current limit gives the
+overcurrent protection a fuse would give (agni issue 1248). Glasgow feeds its 5 V through a TPD3S014
+that way. Only the part's datasheet can say so, through a `device_class` that names a
+current-limiting switch, because a regulator limits its current too and is no protection against its
+own failure. The pass names the switch and cites the current limit printed in its datasheet. A
+switch beside a regulator on the same net excuses nothing, since the regulator is still fed straight
+from the connector. Without the datasheet the entry still fails, and the verdict names the IC it
+could not read.
 
 ### Query structure
 
@@ -61,7 +63,7 @@ pin.electrical_type, reach. Tier R.
 ### For software readers
 
 A schematic is a graph whose components are nodes with named pins and whose nets are hyperedges
-joining pins that are wired together. The concepts this rule leans on:
+joining pins that are wired together. The rule uses these concepts:
 
 - A **series ("pass") element** is a two-terminal part wired INLINE, like middleware in a
   request pipeline. Because a net is "everything directly touching", an inline part SPLITS

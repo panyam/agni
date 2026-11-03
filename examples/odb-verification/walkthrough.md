@@ -10,13 +10,13 @@ actors:
 
 ## Why a layout gets checked twice
 
-A board leaves the design team as a schematic and comes back from layout as ODB++, the job a fabricator builds from. The two can disagree, because a layout is edited after the schematic is signed off: a part added during routing, a net renamed to suit the layout tool, a pin moved to ease a route.
+A board leaves the design team as a schematic and comes back from layout as ODB++, the job a fabricator builds from. The two can disagree, because a layout is edited after the schematic is signed off. A part may be added during routing, a net renamed to suit the layout tool, or a pin moved to ease a route.
 
-We check the layout in two ways here. The first runs the rules over the layout itself, its copper included. The second compares the layout's connectivity with the schematic netlist, which is the question a layout review is mostly there to answer.
+We check the layout in two ways here. The first runs the rules over the layout itself, its copper included. The second compares the layout's connectivity with the schematic netlist. A layout review is mostly there to answer that question.
 
 ## The schematic {#schematic}
 
-> The netlist the design was signed off as. The default is the tutorial gateway's EDIF netlist, ../common/designs/odb/gateway.edn. Any netlist agni reads works here, a KiCad schematic or a Telesis netlist included.
+> The design was signed off as this netlist. The default is the tutorial gateway's EDIF netlist, ../common/designs/odb/gateway.edn. Any netlist agni reads works here, a KiCad schematic or a Telesis netlist included.
 
 ## The layout {#layout}
 
@@ -36,11 +36,11 @@ Agni -->> You: *geom.BoardGeometry (layers, copper, pads, outline)
 
 ## Check the layout {#check}
 
-> The netlist rules run as they would on any netlist. The board-tier rules (copper clearance, track width) run because the job carries copper. The gateway's board has traces deliberately routed too close and one too thin, and those are the copper findings below. The I2C pull-ups rev B added still fail here, because read on its own the job has no naming conventions and PMIC_CORE_3V3 does not read as a rail. Inside the tutorial project, whose conventions declare it, both pass.
+> The netlist rules run as they would on any netlist. The board-tier rules (copper clearance, track width) run because the job carries copper. The gateway's board has traces deliberately routed too close and one too thin, and those are the copper findings below. Rev B added I2C pull-ups, and they still fail here. Read on its own, the job has no naming conventions, so PMIC_CORE_3V3 does not read as a rail. The tutorial project's conventions declare it, so inside the project both pass.
 
 ## Compare it with the schematic {#compare}
 
-> diff matches parts by designator and nets by the pins on them, so a net the layout renamed reads as a rename rather than as one deleted and one added. Rev B's layout adds two I2C pull-ups the schematic never had, and renames the crystal nets.
+> diff matches parts by designator and nets by the pins on them, so when the layout renames a net, diff reports a rename rather than one net deleted and one added. Rev B's layout adds two I2C pull-ups the schematic never had, and renames the crystal nets.
 
 ## Same thing from the CLI
 
@@ -49,4 +49,4 @@ This walkthrough is the narrated form of two commands:
     agni check gateway-rev-b-layout
     agni diff gateway.edn gateway-rev-b-layout
 
-One thing to expect on a real board is that ODB++ allows no spaces in a name. A net the schematic calls `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`, so diff reports it as a rename.
+Expect one more difference on a real board. ODB++ allows no spaces in a name, so the schematic's `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`, and diff reports it as a rename.

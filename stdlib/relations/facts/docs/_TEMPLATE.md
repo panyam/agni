@@ -11,7 +11,7 @@ WS14-005 per-relation fact doc template. Copy this file to facts/docs/<relation>
 Adding a relation takes more edits than this file; the relation row of the wiring table in
 CLAUDE.md lists them (columnkinds.golden, dimensionlessNumericRelations).
 Files whose name starts with "_" (like this one) are skipped by the harness.
-The one-line Summary stays in stdlib/relations/register.go; this file is the richer Detail.
+The one-line Summary lives in stdlib/relations/register.go; this file is the richer Detail.
 -->
 
 ### What it is
@@ -32,8 +32,9 @@ are 1:1 or 1:many with an entity, and any "absent means X" semantics.
 
 ### Go projector
 
-Name the projector func in stdlib/relations/facts.go and the Model read it materializes (the member
-method it calls), so a reader can trace the fact back to its source. Note the row cardinality and
+Name the projector func in stdlib/relations/facts.go and the member method it calls. That method is
+the Model read the projector materializes, and naming it lets a reader trace the fact back to its
+source. Note the row cardinality and
 what an empty result means.
 
 ### Datalog

@@ -9,8 +9,8 @@ Connect the supply pin to the rail that feeds it, and check that the rail itself
 
 ### What it means
 
-A net that has a power-input pin (a VCC/VDD/rail-consuming pin) but no power source and no power
-flag asserting the rail is fed elsewhere.
+A net has a power-input pin (a VCC/VDD/rail-consuming pin) but no power source. No power flag on
+the net asserts that the rail is fed elsewhere either.
 
 What counts as a source depends on the net, as it does in KiCad's ERC. A net carrying a power
 symbol (GND, +3V3) is a named supply, and only a power-output pin feeds it, so a logic output or a
@@ -34,26 +34,27 @@ capture errors and only shows up at first power-on.
 
 ### Scope note
 
-The rule needs the power-in / power-out split (a reader that collapses both to a generic
-power pin cannot distinguish source from sink, so the rule reports its nets not-considered). A power
-flag on the net, recorded by the reader, counts as driven. A net that continues onto a sheet the read
-did not open is not judged, since its feed may be there.
+The rule needs the power-in / power-out split (a reader that collapses both to a generic power pin
+cannot distinguish source from sink, so the rule reports its nets not-considered). The reader
+records a power flag on the net, and the flag counts as driven. If a net continues onto another
+sheet and the read did not open that sheet, the rule does not judge the net, since its feed may be
+there.
 
-A lone exposed pad and a divider tap into a sense pin are not considered either. Both carry a pin a
-vendor symbol types power_in, and neither draws a supply, as decoupling-present's page describes (agni
+A lone exposed pad and a divider tap into a sense pin are not considered either. In both, a vendor
+symbol types a pin power_in, and neither draws a supply, as decoupling-present's page describes (agni
 issue 935).
 
-A supply pin the schematic marks no-connect, alone on its net, is not considered either (agni issue
-1244). Some datasheets allow a supply pin to be left open when its feature is unused, such as an FPGA's
-VPP pin when its one-time memory is never programmed. A flagged pin that is also wired to another part
-is still judged.
+If the schematic marks a supply pin no-connect and the pin is alone on its net, the rule does not
+consider it either (agni issue 1244). Some datasheets allow a supply pin to be left open when its
+feature is unused, such as an FPGA's VPP pin when its one-time memory is never programmed. A flagged
+pin that is also wired to another part is still judged.
 
 Concretely, the rule is gated OFF on a source format that does not type power OUTPUTS. EDIF's port
 grammar carries only INPUT/OUTPUT/INOUT and IPC-2581 is a board format with no pin electrical types
 (the `design.types_power_out` fact). There a rail's driver reads as a plain input, so "no power source"
 would false-fire on every switched or derived rail. The power-INPUT side is stamped on EDIF
 (WS3-072), which is enough for the power-in-only rules (decoupling-present, input-protection). This
-rule stays gated until the reader stamps power outputs on those formats.
+rule is gated until the reader stamps power outputs on those formats.
 
 ### Query structure
 

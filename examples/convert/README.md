@@ -8,8 +8,8 @@ IPC-2581 into itself.
 
 The walkthrough picks one of three bundled synthetic designs (one per reader), reads it into
 the IR, emits IPC-2581, and reads the emitted document straight back. The re-read stats match
-the input's, which is the semantic round-trip (geometry lives in a separate sidecar, WS1-006, and
-this round-trip covers the IR only).
+the input's, and that match is the semantic round-trip. Geometry lives in a separate sidecar
+(WS1-006), so this round-trip covers the IR only.
 
 This is the narrated form of `agni emit <in> [out]`.
 

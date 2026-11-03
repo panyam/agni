@@ -5,27 +5,27 @@ description: "the net may extend onto an unread sheet (read-gap marker)"
 
 ### What it is
 
-`net.external(net)` yields one row per net the read flagged as possibly continuing onto something it
-did not cover, meaning a net joined by a name-based mechanism (a global label, a power symbol) whose other
-ends may live in files or sheets the read never opened. It is a read-gap marker, not a topology
-fact.
+`net.external(net)` yields one row for each net that the read flagged as possibly continuing past
+what it covered. Such a net is joined by a name-based mechanism (a global label, a power symbol),
+and its other ends may live in files or sheets that the read never opened. It is a read-gap marker,
+not a topology fact.
 
-A net that spans ten sheets of a fully-read design
+Take a net that spans ten sheets of a fully-read design. It
 carries no `net.external` marking, because "which sheets does this net touch" is derivable topology.
 `net.external` marks only nets where the read itself may be incomplete.
 
 ### For hardware engineers
 
 A row here means what the tool sees on this net is not proof of what the board has on it. There may
-be more pins, more sources, more loads on a sheet the read did not reach. So a rule that would fire
-on incomplete connectivity (a decoupling-cap-missing or crystal-load check) suppresses itself on an
-external net rather than report a violation it cannot stand behind. During a review you query it to
-see where the read is admitting a gap.
+be more pins, more sources, more loads on a sheet the read did not reach. Some rules would fire on
+incomplete connectivity, such as a decoupling-cap-missing or crystal-load check. Such a rule
+suppresses itself on an external net rather than report a violation it cannot stand behind. During a
+review you query it to see where the read is admitting a gap.
 
 ### For software engineers
 
 Absence of a connection on an external net is not
-evidence of no connection; the read simply may not have covered the far end, the way a partial index
+evidence of no connection. The read may not have covered the far end, just as a partial index
 cannot prove a symbol is unreferenced. Rules use it as a negative guard, firing only where the read is
 known-complete. The relation is a projection over `Nets()` filtered on the `external` net attribute
 (`netgraph.AttrExternal`), so rows are 1:1 with flagged nets, and an empty result means the read is
@@ -34,9 +34,10 @@ complete and the guard is a no-op.
 ### Go projector
 
 `netExternalFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and emits a row for each net
-whose `Attributes[netgraph.AttrExternal]` is `"true"`. The attribute is stamped by the netgraph
-solver (`internal/netgraph/irout.go`) on a by-name net whose other ends may sit in unread files, and
-cleared once a complete read resolves it (it becomes `global` instead). One row per external net;
+whose `Attributes[netgraph.AttrExternal]` is `"true"`. The netgraph solver
+(`internal/netgraph/irout.go`) stamps the attribute on a by-name net whose other ends may sit in
+unread files. It clears the attribute once a complete read resolves the net, and the net becomes
+`global` instead. One row per external net;
 empty when the read is complete.
 
 ### Datalog

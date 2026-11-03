@@ -2,40 +2,41 @@
 
 ### What it is
 
-`reader.ref_des_collision(ref_des)` yields one row per reference designator that more than one distinct
-part claimed. A designator names exactly one physical part (`R1` is one resistor on the board), so a
-designator shared by two placements is malformed input, a reader gap or a duplicate in the source,
-not a design a person drew. The relation is keyed by `ref_des` so a query joins the collision to the
-components and nets it tangles.
+`reader.ref_des_collision(ref_des)` yields one row per reference designator that more than one
+distinct part claimed. A designator names exactly one physical part (`R1` is one resistor on the
+board), so when two placements share a designator the input is malformed. Either the reader has a gap
+or the source holds a duplicate, and a person did not draw the design that way. The relation is keyed
+by `ref_des` so a query joins the collision to the components and nets it tangles.
 
-This is the query-relation face of the `duplicate-ref-des` integrity rule, which fires a finding
-where the relation lets you interrogate the same condition ad hoc.
+The `duplicate-ref-des` integrity rule fires a finding on the same condition. This relation is the
+rule's query face, and it lets you interrogate the condition ad hoc.
 
 ### For hardware engineers
 
 You should almost never see this. A reference designator is the one label that lets a person point
 at a single part across the schematic, the layout, and the BOM. Two parts both called `R1` cannot be
 told apart, so a row means the tool's *read* of the file collapsed two placements that should have
-stayed separate, or the source itself repeated a designator. It is not the legitimate multi-unit
-case, where a dual op-amp drawn as `U1A` and `U1B` stays one component with two sections and does not
-collide. Treat a row as "fix the read (or the source)," not "fix the board."
+been kept separate, or the source itself repeated a designator. A row never comes from the legitimate
+multi-unit case. A dual op-amp drawn as `U1A` and `U1B` is still one component with two sections, and
+it does not collide. Treat a row as "fix the read (or the source)," not "fix the board."
 
 ### For software engineers
 
 A reference designator is the instance's variable name (see
 [the analogy guide](../../../../docsite/content/reference/analogy.md)), so the designator set
 should behave like a symbol table with unique keys. This relation reports the keys that got a second
-binding, the same duplicate-declaration break a linter flags when one identifier is defined twice in
-one scope. Rows are 1:1 with colliding designators (one row per shared name, regardless of how many
+binding. A linter flags the same break as a duplicate declaration when one identifier is defined twice
+in one scope. Rows are 1:1 with colliding designators (one row per shared name, regardless of how many
 placements claimed it). An empty result means every designator resolved to a single part, the normal
 state.
 
 ### Go projector
 
-`refDesCollisionFacts` in `stdlib/relations/facts.go` iterates `Model.RefDesCollisions()` (the reader-emitted
-`ir.RefDesCollision` list off `InputDiagnostics`, where each reader decides duplicate-versus-legitimate
-by its own format's rule) and emits one `reader.ref_des_collision(ref_des)` row per collided designator. Every
-colliding instance is cited (agni issue 546). One row per shared designator; empty when the read is clean.
+`refDesCollisionFacts` in `stdlib/relations/facts.go` iterates `Model.RefDesCollisions()` and emits
+one `reader.ref_des_collision(ref_des)` row per collided designator. `Model.RefDesCollisions()`
+returns the reader-emitted `ir.RefDesCollision` list off `InputDiagnostics`, and each reader decides
+duplicate-versus-legitimate by its own format's rule. Every colliding instance is cited (agni issue
+546). One row per shared designator; empty when the read is clean.
 
 ### Datalog
 

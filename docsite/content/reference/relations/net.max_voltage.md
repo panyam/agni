@@ -13,12 +13,12 @@ row, so the relation is a partial map over nets, not a value for every net.
 
 ### For hardware engineers
 
-These are the supply rails whose working voltage the netlist actually knows. Most signal nets carry
+The netlist actually knows the working voltage of these supply rails. Most signal nets carry
 no voltage claim, so they are simply absent here. During a review you query it to see which rails
 the tool can reason about numerically, and to feed a comparison against a part's ratings, such as a
-join against a datasheet absolute maximum. A rail you expected to appear but does not has a name the
-extractor could not read as a voltage (or two disagreeing tokens like `12V_TO_5V`, which it refuses
-to guess between).
+join against a datasheet absolute maximum. Suppose a rail you expected does not appear. Then the
+extractor could not read its name as a voltage, or the name holds two disagreeing tokens like
+`12V_TO_5V`, and the extractor refuses to guess between them.
 
 ### For software engineers
 

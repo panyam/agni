@@ -9,12 +9,13 @@ description: "a role the net carries, derived from its name by the lexicon (rail
 `switching`, `control` or `gate_drive`. A net can hold several at once, so a net that is both a rail
 by name and a switch node by suffix produces two rows.
 
-It is the net-side twin of `component.class`. Roles are derived by the engine from the naming lexicon
-at ingestion, not read from the design file; the attributes a file declares are `net.attr`.
+It is the net-side twin of `component.class`. The engine derives roles from the naming lexicon at
+ingestion, and does not read them from the design file. `net.attr` holds the attributes a file
+declares.
 
 ### For hardware engineers
 
-A role is what the engine thinks a net IS, worked out from what it is called. `12V_OUT` reads as a
+A role is the engine's reading of what a net IS, worked out from its name. `12V_OUT` reads as a
 rail. `12V_SW` reads as a rail by its prefix and a switch node by its suffix, and the second reading
 decides how rules treat it, because a switch node is not a 12V supply.
 
@@ -27,11 +28,11 @@ Four of the six roles exist to say "this is named after a rail and is not one":
 | `control` | `20V_EN`, `12V_MODE1` | a logic input, at the sequencer's level |
 | `gate_drive` | `12V_VDRV` | the driver's own supply, not the converter's output |
 
-The first two must never be probed. The last two are ordinary signals a test point is welcome on, and
-are excluded from rail rules only because they are not rails.
+The first two must never be probed. The last two are ordinary signals, and a test point is welcome
+on them. They are excluded from rail rules only because they are not rails.
 
-The patterns behind each role are lexicon config a project extends in the `conventions:` section of
-its `project.yaml`.
+The patterns behind each role are lexicon config. A project extends them in the `conventions:`
+section of its `project.yaml`.
 
 ### For software engineers
 
@@ -42,9 +43,9 @@ name matched that vocabulary.
 ### Go projector
 
 `netRoleFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and, for each token in
-`classify.AllNetRoles()`, emits a row where `Model.HasAnyRole` holds. Going through `HasAnyRole` rather
-than reading `ir.Net.roles` directly means a net that skipped the ingestion stamp still answers, via
-the same name fallback every other role relation uses.
+`classify.AllNetRoles()`, emits a row where `Model.HasAnyRole` holds. It goes through `HasAnyRole`
+rather than reading `ir.Net.roles` directly. So a net that skipped the ingestion stamp still answers,
+via the same name fallback every other role relation uses.
 
 ### Datalog
 
@@ -63,6 +64,7 @@ net.role(?n, ?r), ?r != "rail", ?r != "ground" => ?n, ?r
 ### Not the same as `net.rail`
 
 `net.rail(?n)` is `Model.IsPowerRail`, which holds for a net that is asserted-driven OR global OR a ground
-OR carries the rail role. So `net.rail(?n)` is a CONCLUSION and `net.role(?n, "rail")` is what the lexicon
-STAMPED, and the two are different sets on any real board. `net.feedback(?n)` and `net.switching(?n)` are
-exact shorthands for their `net.role` rows and may be used interchangeably with them.
+OR carries the rail role. So `net.rail(?n)` is a CONCLUSION, and `net.role(?n, "rail")` records
+what the lexicon STAMPED. The two are different sets on any real board. `net.feedback(?n)` and
+`net.switching(?n)` are exact shorthands for their `net.role` rows and may be used interchangeably
+with them.

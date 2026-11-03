@@ -5,15 +5,15 @@ description: "a pin the read placed on more than one net; one row per net (reade
 
 ### What it is
 
-`reader.pin_net_conflict(ref_des, pin, net)` yields one row per net that a single `(ref_des, pin)` was
-placed on when the read put that pin on more than one net. Because a pin belongs to exactly one
-net by definition (a net is the equivalence class of joined pins), any pin that appears in two
-nets is malformed input, a reader bug or a corrupt export, not a design a person drew. The
-multi-row shape (one row per claiming net) lets a query name every net the conflicted pin touches
-and join to those nets.
+Sometimes a read puts a single `(ref_des, pin)` on more than one net. Then
+`reader.pin_net_conflict(ref_des, pin, net)` yields one row per net the pin was placed on. Because a
+pin belongs to exactly one net by definition (a net is the equivalence class of joined pins), any
+pin that appears in two nets is malformed input, a reader bug or a corrupt export, not a design a
+person drew. There is one row per claiming net, so a query can name every net that the conflicted
+pin touches and join to those nets.
 
-This is the query-relation face of the `pin-net-conflict` integrity rule, which fires a
-finding where the relation lets you interrogate the same condition ad hoc.
+The `pin-net-conflict` integrity rule fires a finding on the same condition. This relation is the
+rule's query-relation face, and it lets you interrogate the condition ad hoc.
 
 ### For hardware engineers
 
@@ -26,8 +26,8 @@ board."
 ### For software engineers
 
 A net is an **equivalence class** over pins, so membership should be a function mapping each pin to
-one net. This relation reports the keys where that function became one-to-many, the invariant
-break behind every per-pin answer downstream (`pin.net`, diff keys, viewer highlights). Rows are
+one net. This relation reports the keys where that function became one-to-many. Every per-pin answer
+downstream relies on that invariant, and `pin.net`, diff keys and viewer highlights all do. Rows are
 1:many with the offending pin (one per claiming net); an empty result means the read is clean and
 every pin resolved to a single net.
 

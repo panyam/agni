@@ -10,7 +10,7 @@ actors:
 
 ## A report finding, seen on the real design
 
-A review report says "duplicate-ref-des on U1" but a reader still has to hunt for U1 on the schematic. This example closes that gap offline by running the rule catalog over a design, mapping each finding's subject to a highlight, and baking the highlights into one rendered SVG. It is the static, no-server twin of the web viewer's click-to-locate, over the same HighlightSpec vocabulary the server projects as a live overlay.
+A review report says "duplicate-ref-des on U1" but a reader still has to hunt for U1 on the schematic. This example closes that gap offline by running the rule catalog over a design, mapping each finding's subject to a highlight, and baking the highlights into one rendered SVG. It is the static, no-server twin of the web viewer's click-to-locate. Both use the HighlightSpec vocabulary, and the server projects it as a live overlay.
 
 Findings are computed on the netlist and located on the geometry by name (a net) or ref-des (a component), never merged as a second component source (CONSTRAINTS C21). So the picture is the design's own drawing with the flagged parts framed in place.
 
@@ -30,7 +30,7 @@ Agni -->> You: []check.Finding (subject + severity)
 
 ## Bake the findings into the render {#render}
 
-> Each finding's subject becomes one geom.HighlightSpec: a net draws as a PATH marker along its wire, a component as a translucent bounding box, one box per matched placement, and a pin as an outline, all colored by severity. render.SheetSVGHighlighted draws the base sheet and composites those highlights onto ONE canvas, the same projection the server serves as a separate overlay, so the CLI static picture and the live viewer are one code path. It writes render.svg. Because U1 is duplicated, both offending symbols are framed.
+> Each finding's subject becomes one geom.HighlightSpec: a net draws as a PATH marker along its wire, a component as a translucent bounding box, one box per matched placement, and a pin as an outline, all colored by severity. render.SheetSVGHighlighted draws the base sheet and composites those highlights onto ONE canvas. The server serves the same projection as a separate overlay, so the CLI's static picture and the live viewer are one code path. It writes render.svg. Because U1 is duplicated, both offending symbols are framed.
 
 ```mermaid
 sequenceDiagram

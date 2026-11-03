@@ -13,19 +13,19 @@ nets both carry a test point (`net.has_test_point`).
 These are the parts in-circuit test can measure. A fixture reaches a part's two nodes through test
 points, drives a stimulus across them, and checks the value it reads against the part's nominal, so
 a wrong value, a missing part, or a part fitted backwards shows up before the board is powered.
-Coverage is usually reported as the share of parts that can be measured, which is this relation
-counted against `component.two_terminal`.
+Coverage is usually reported as the share of parts that can be measured. That share is this
+relation counted against `component.two_terminal`.
 
 A part listed here is reachable rather than guaranteed to measure cleanly. Parts in parallel are
-measured together, and a large capacitance on either node can swamp a small one. Those are judged
-by the test engineer from the schematic.
+measured together, and a large capacitance on either node can swamp a small one. The test engineer
+judges those from the schematic.
 
 ### For software engineers
 
 It is `component.two_terminal` filtered by `net.has_test_point` on both of its nets, so the answer
-is a set of parts. Its complement within two-terminal parts splits in two: `component.probed_one`
-for parts with one probed net, and the parts where neither net is probed, which no member names and
-a query finds by negating both.
+is a set of parts. Its complement within two-terminal parts splits in two. `component.probed_one`
+holds the parts with one probed net. In the rest, neither net is probed. No library member names
+those parts, and a query finds them by negating both.
 
 ### Datalog
 

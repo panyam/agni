@@ -10,35 +10,36 @@ joined to a part in the design, keyed by manufacturer part number (`mpn`) and th
 datasheet symbol (e.g. `VDD`, `VIN`). Unlike the thin `param.max(mpn, symbol, max)`, each row carries
 BOTH bounds, the lower `min` and the upper `max`, and the `kind` token that says which limit table
 the row came from: `absolute_max`, `recommended_operating`, or `characteristic` (`unspecified` when
-the source did not label it). A bound the datasheet did not state is ABSENT, which means the argument still binds
-to a value marked absent, so a max-only row still appears in a listing and the relation never shortens
-its own answer. What an absent bound cannot do is take part in an ORDERING comparison, and
-`absent(?min)` selects exactly those rows. This text used to say the argument "binds to nothing",
+the source did not label it). Suppose the datasheet did not state a bound. That bound is ABSENT. The
+argument still binds, to a value marked absent, so a max-only row still appears in a listing and the
+relation never shortens its own answer. An absent bound cannot take part in an ORDERING comparison,
+and `absent(?min)` selects exactly those rows. This text used to say the argument "binds to nothing",
 which was never true. It bound to the empty string, and an ordering comparison then answered by
 string order, where `""` precedes every number.
 
 BOTH bounds are in the parameter's SI base unit whatever the vendor printed, so a range test means the
-same thing across vendors; join `param.unit` for the printed spelling, and note that a parameter whose
-unit has no known scale appears here with both bounds absent (agni issue 165). Every row carries a
-citation back to the datasheet page and table.
+same thing across vendors. Join `param.unit` for the printed spelling. A parameter appears here with
+both bounds absent when its unit has no known scale (agni issue 165). Every row carries a citation
+back to the datasheet page and table.
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
-`--params <dir>` pointing at a seeded `PartSpec` corpus, so it is skip-not-false-pass by construction, because with
-no corpus loaded the relation yields zero rows and every rule that reads it reports not-applicable
-rather than a false pass.
+`--params <dir>` pointing at a seeded `PartSpec` corpus. With no corpus loaded the relation yields
+zero rows, and every rule that reads it reports not-applicable rather than a false pass. So it is
+skip-not-false-pass by construction.
 
 ![One symbol VDD carries two rows, a recommended-operating window and a higher absolute-maximum; a +5V rail is over the recommended window even while under the absolute maximum, and param.range tells the two rows apart by kind]({{.Site.PathPrefix}}/static/images/catalog/relations/param.range.svg)
 
 ### For hardware engineers
 
 A row is one line off a part's limits table, with the table it came from named. A part often
-prints `VDD` twice, in two rows `param.max` cannot tell apart, once as an absolute-maximum
-(exceed it and you may destroy the part) and a recommended-operating window (run outside it and the
-guaranteed specs no longer hold). `param.max(mpn, "VDD", max)` collapses both into indistinguishable
-rows; `param.range` keeps them apart by `kind` and gives you both ends of the recommended window, so
-you can ask "is this rail inside the recommended range" (a two-sided question) rather than only "is it
-under the absolute ceiling". As with `param.max`, values are presented rather than silently coerced, so a row whose
-conditions survive only as free text is not machine-comparable and is shown beside its citation.
+prints `VDD` twice, once as an absolute-maximum (exceed it and you may destroy the part) and once as
+a recommended-operating window (run outside it and the guaranteed specs no longer hold). `param.max`
+cannot tell those two rows apart, since `param.max(mpn, "VDD", max)` collapses both into
+indistinguishable rows. `param.range` keeps them apart by `kind` and gives you both ends of the
+recommended window. So you can ask "is this rail inside the recommended range" (a two-sided
+question) rather than only "is it under the absolute ceiling". As with `param.max`, values are
+presented rather than silently coerced. Some rows keep their conditions only as free text. Such a
+row is not machine-comparable, and it is shown beside its citation.
 
 ### For software engineers
 
@@ -49,7 +50,7 @@ you gain the ability to filter by `kind` and to bound-check against `min` as wel
 range rule joins `component.mpn` to `param.range(?m, ?s,
 "recommended_operating", ?min, ?max)`, brings in the design's rail voltage via `net.nominal_voltage`,
 and flags `?v > ?max` or `?v < ?min`. The thin `param.max` relation is kept for back-compat and simple
-max search; `param.range` is the superset a limit-kind-aware rule reads.
+max search. A limit-kind-aware rule reads `param.range`, the superset.
 
 ### Go projector
 
@@ -69,8 +70,8 @@ and bounds:
 param.range(?mpn, ?sym, "recommended_operating", ?min, ?max) => ?mpn, ?sym, ?min, ?max
 ```
 
-Cross to the design and flag a rail sitting above a part's recommended maximum, a
-kind-discriminated join the thin `param.max` relation could not express:
+Cross to the design and flag a rail sitting above a part's recommended maximum. This join
+discriminates by kind, and the thin `param.max` relation could not express it:
 
 ```
 component.mpn(?ref, ?mpn), param.range(?mpn, ?sym, "recommended_operating", ?min, ?max),

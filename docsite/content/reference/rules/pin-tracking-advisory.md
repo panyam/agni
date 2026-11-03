@@ -9,16 +9,16 @@ Restore the recommended ordering between the two terminals where the design allo
 
 ### What it means
 
-A component joined to a seeded datasheet spec has two pins whose difference breaks a tracking bound
-the datasheet **recommends** between them, stated with a verb like "should" or a phrase like "for
-best operation".
+A component joined to a seeded datasheet spec has two pins, and the datasheet **recommends** a
+tracking bound between them. The datasheet states the bound with a verb like "should" or a phrase
+like "for best operation", and the difference between the two pins breaks it.
 
 ### Why engineers want it
 
-The vendor is telling you how the part works best, not where it breaks. A level shifter whose enable
-"should be at least 1 V higher than the reference for best translator operation" will still function
-below that, with degraded translation margin. That is worth a reviewer's attention and is not worth
-failing a build over, so it is a separate rule from `pin-tracking-violated` rather
+The vendor is telling you how the part works best, not where it breaks. Take a level shifter whose
+enable "should be at least 1 V higher than the reference for best translator operation". It will
+still function below that, with degraded translation margin. That is worth a reviewer's attention
+and is not worth failing a build over, so it is a separate rule from `pin-tracking-violated` rather
 than the same rule at the same severity.
 
 Keeping the two apart lets a team gate CI on datasheet **requirements** while still seeing
@@ -31,8 +31,8 @@ The bound is a signed value on `subject - reference`; the two evidence tiers are
 connectivity settling the shared-net case exactly and the rail-gated name tier as the fallback; and
 the same inputs are skipped rather than guessed. See that rule's page for the detail.
 
-The one difference is that a relation with **no recorded modality** is handled by
-`pin-tracking-violated`, not here, so it is reported once rather than by both rules.
+One thing differs. `pin-tracking-violated` handles a relation with **no recorded modality**, and
+this rule does not, so it is reported once rather than by both rules.
 
 ### Query structure
 

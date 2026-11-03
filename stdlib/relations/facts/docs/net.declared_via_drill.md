@@ -2,12 +2,13 @@
 
 ### What it is
 
-`net.declared_via_drill(net, mm)` yields the via drill a net SHOULD be routed at according to the
-project's own net-class declarations, held in metres and shown in mm, one row per net the project actually
-constrained. It is the resolved answer, taken after the cascade across the net's classes has run.
+`net.declared_via_drill(net, mm)` yields the via drill that the project's own net-class declarations
+set for a net, held in metres and shown in mm. The net SHOULD be routed at that drill. There is one
+row per net the project actually constrained. It is the resolved answer, taken after the cascade
+across the net's classes has run.
 
 Pair it with `board.via_drill(net, mm)`, the ACTUAL routed value in the same units. A comparison of the
-two uses no number the engine invented.
+two uses no number that the engine invented.
 
 ### For hardware engineers
 
@@ -23,11 +24,11 @@ enforce. Ask it when you want to know what a net was supposed to be, not what it
 
 **Join THIS, not `netclass.via_drill`.** Membership is 1:many (WS1-050), so joining
 `net.netclass(?net, ?class)` to the per-class relation fans out over every class the net belongs to,
-and a comparison then fires against classes that lost the cascade. A net legitimately routed to its
-winning class's value produces a confident, wrong finding.
+and a comparison then fires against classes that lost the cascade. So a net can be routed correctly
+to its winning class's value and still produce a confident, wrong finding.
 
-Rows are 1:1 with constrained nets. A net whose classes state this quantity nowhere yields no row, so
-a rule joining it selects only nets the project genuinely constrained, and `not
+Rows are 1:1 with constrained nets. If none of a net's classes states this quantity, the net yields
+no row. A rule joining it then selects only nets that the project genuinely constrained, and `not
 net.declared_via_drill(?n, ?_)` reads as unconstrained.
 
 ### Go projector
@@ -39,9 +40,9 @@ states the field, independently per field. The citation records WHICH class supp
 
 ### Absence is not a pass
 
-Only a KiCad project read populates this, and only when the project declares class definitions. A
-rule comparing declared against actual finds nothing to compare on every other source and reports
-clean, which a review cannot tell from a genuine pass. Such a rule gates on `check.CapNetClassDefs`,
+Only a KiCad project read populates this, and only when the project declares class definitions. On
+every other source, a rule comparing declared against actual finds nothing to compare and reports
+clean. A review cannot tell that from a genuine pass. Such a rule gates on `check.CapNetClassDefs`,
 queryable as `design.has_netclass_defs` (and on the board tier for the actual side), so an absent
 declaration reads not-applicable.
 

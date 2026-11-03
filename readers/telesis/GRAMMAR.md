@@ -1,9 +1,9 @@
 # Telesis netlist grammar (ingested subset)
 
-What the `telesis` package parses out of a flat Telesis netlist (`.tel`), the format the
-Mentor/Siemens schematic flow emits, and how each construct maps to the neutral IR
-(`agni.v1.ir`). This is the subset we read, not the full format, and it was learned from real
-exports rather than from a specification. Same posture as the KiCad, xschem and gEDA grammars.
+The Mentor/Siemens schematic flow emits a flat Telesis netlist (`.tel`). This page lists what the
+`telesis` package parses out of one, and how each construct maps to the neutral IR (`agni.v1.ir`).
+It covers the subset we read, not the full format, and we learned it from real exports rather than
+from a specification. The KiCad, xschem and gEDA grammars take the same approach.
 
 The format carries connectivity and properties and no geometry at all, so this is a Design-only
 reader. Layout arrives as a separate companion (CONSTRAINTS C21).
@@ -25,7 +25,7 @@ $END                                               stops the read
 `$PACKAGES`, `$A_PROPERTIES` and `$NETS` are read. `$END` stops the read, and anything after it
 is ignored. Any other section that holds content is skipped whole and its marker is recorded in
 the design attribute `telesis.unparsed_sections`, comma-separated in file order. `$PINS` is the
-case in hand, since nothing is known about its body. A section that is present and empty records
+current example, since nothing is known about its body. A section that is present and empty records
 nothing.
 
 The sniff (`IsTelesis`) wants a line-initial `$NETS` or `$PACKAGES`. A file with neither
@@ -65,7 +65,7 @@ continuation in progress.
   never contains a dot. The pin half is permissive on purpose, since `U1.14`, the BGA form `U7.L1`
   and the connector-shell form `J1.A` are all legal.
 - **A property section is an inverted index.** Each entry is (name, value) with many targets, so
-  every component sharing a value rides on one entry. The IR is component-major, so reading
+  all the components that share a value appear on one entry. The IR is component-major, so reading
   properties is a transpose and most of the reader's work.
 
 ## 4. IR mapping
@@ -109,8 +109,9 @@ every instance's pins onto the part type's pin list, sorted naturally (`2` befor
 ## 5. Encoding
 
 The format declares no encoding. A file that is valid UTF-8 is read as UTF-8, and anything else is
-read as latin-1, which real exports carry and which cannot fail. `testdata/latin1.tel` covers it.
+read as latin-1. Real exports carry latin-1, and decoding it cannot fail. `testdata/latin1.tel`
+covers it.
 
-Fidelity is lossy-bounded (CONSTRAINTS C6). The file's ordering and its grouping are dropped,
-because a property is stored on each component it named and the inverted-index entry it arrived
-on is not recoverable. There is no geometry to lose.
+Fidelity is lossy-bounded (CONSTRAINTS C6). The file's ordering and its grouping are dropped.
+Each property is stored on every component its entry named, and the reader cannot recover the
+inverted-index entry itself. There is no geometry to lose.

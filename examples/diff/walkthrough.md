@@ -16,15 +16,15 @@ Matching uses semantic keys, the net name and the (ref_des, pin) connection set.
 
 ## Pick the old revision {#old}
 
-> A path to the earlier revision, relative to this folder. Default: ../common/designs/rev-a.edn.
+> A path to the earlier revision, relative to this folder. The default is ../common/designs/rev-a.edn.
 
 ## Pick the new revision {#new}
 
-> A path to the later revision. Default: ../common/designs/rev-b.edn. The bundled pair carries a rename, a hard rewire, a new net and a deleted net.
+> A path to the later revision. The default is ../common/designs/rev-b.edn. The bundled pair carries a rename, a hard rewire, a new net and a deleted net.
 
 ## Run the diff {#run}
 
-> diff.Designs(a, b) matches nets by name first, then rename-detects the leftovers by identical connection signature. Only changes are reported; unchanged nets stay quiet.
+> diff.Designs(a, b) matches nets by name first, then rename-detects the leftovers by identical connection signature. Only changes are reported, so an unchanged net prints nothing.
 
 ```mermaid
 sequenceDiagram

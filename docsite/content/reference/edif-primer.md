@@ -20,7 +20,7 @@ relative to that (see [Ingestion and IR](../../architecture/ingestion-and-ir/)).
 The reference files here are exported by Siemens/Mentor xDX Designer, `edifVersion 2 0 0`,
 `edifLevel 0`. Two views:
 
-- The `.edn` netlist (10MB) carries connectivity, and is what the netlist reader parses.
+- The `.edn` netlist (10MB) carries connectivity, and the netlist reader parses it.
 - The `.eds` schematic (62MB) adds geometry and graphics, and feeds the geometry sidecar.
 
 ### Versions
@@ -31,12 +31,12 @@ rejects a non-2.x file rather than silently mis-parsing it.
 <details>
 <summary>Why 2.0.0, and what a later version would cost</summary>
 
-2.0.0 is what tools actually export. 3.0.0 (1993) and 4.0.0 (1996) added features but saw poor
+Tools actually export 2.0.0. 3.0.0 (1993) and 4.0.0 (1996) added features but saw poor
 adoption and are rare in the wild.
 
 The design split keeps the option open cheaply. The S-expression parser (`sexpr.go`) is
 version-agnostic, while the extractor (`reader.go`) is keyed to the 2.0.0 netlist schema.
-Supporting 3.0.0 or 4.0.0 later is an additive extractor over the same parser and IR, not a
+Supporting 3.0.0 or 4.0.0 later means adding an extractor over the same parser and IR, not a
 rewrite.
 
 </details>
@@ -48,10 +48,11 @@ rewrite.
 - **Atoms** are keywords (`net`, `instance`), identifiers, integers, and `"quoted strings"`.
 - **Identifiers** must start with a letter or `&` and contain letters/digits/underscore, up to
   255 chars. They cannot start with a digit or contain spaces or dashes.
-- **A rename carries a name EDIF cannot spell.** To carry a name that is not a valid identifier (e.g. `2525913-1`,
-  `Sync Exclude`, `$17I12086`), EDIF writes `(rename &validid "Display")`. The `&validid` is the
-  machine identifier used in all cross-references, and the quoted string is the human name. This
-  is why `&25259130551` and `&04417I12086` appear everywhere.
+- **A rename pairs an invalid name with a valid identifier.** Some names are not valid
+  identifiers (e.g. `2525913-1`, `Sync Exclude`, `$17I12086`). For each one EDIF writes
+  `(rename &validid "Display")`. The `&validid` is the machine identifier used in all
+  cross-references, and the quoted string is the human name. So `&25259130551` and `&04417I12086`
+  appear everywhere.
 - **Escapes** write non-ASCII in strings as `%int%`, and comments as `(comment "...")`.
 
 ## Document structure
@@ -127,8 +128,8 @@ occur there.
   then read its `(designator ...)`.
 
 Resolving one connection therefore takes two hops through the file. A `portRef` names its instance
-by internal `&id`, that instance names its part type by `cellRef` and `libraryRef`, and the ref-des
-the IR stores comes from the instance's own `designator`.
+by internal `&id`, that instance names its part type by `cellRef` and `libraryRef`, and the IR
+takes the ref-des from the instance's own `designator`.
 
 {{ includeFile "figures/edif-cross-reference.svg" }}
 
@@ -138,7 +139,7 @@ the IR stores comes from the instance's own `designator`.
 |---|---|
 | **`designator` is overloaded** | Component ref-des (in instance), pin number (in port/portInstance) and ref-des PREFIX (in cell interface) all use `designator`. |
 | **Cross-references use the `&` internal id, not the display name** | `instanceRef`/`portRef`/`viewRef`/`cellRef`/`libraryRef` all reference the machine id. Human names come from the paired `(rename ...)`. |
-| **A multi-section component repeats its ref-des across instances** | One physical component is often several `(instance ...)` nodes sharing a ref-des, each a section or bank of pins, as with connector J1906 split into A/B/C banks, multi-gate ICs, or relays with coil plus contacts. Sections may share a cell (homogeneous) or use different cells (heterogeneous). Group by ref-des to reason about a physical part, which is why a naive "duplicate ref-des" check is wrong. |
+| **A multi-section component repeats its ref-des across instances** | One physical component is often several `(instance ...)` nodes sharing a ref-des, each a section or bank of pins, as with connector J1906 split into A/B/C banks, multi-gate ICs, or relays with coil plus contacts. Sections may share a cell (homogeneous) or use different cells (heterogeneous). Group by ref-des to reason about a physical part. A naive "duplicate ref-des" check flags every such part, so it is wrong. |
 | **NETLIST vs SCHEMATIC views** | The `.edn` carries connectivity only. Geometry (symbol shapes, coordinates, routing) lives in the `.eds` SCHEMATIC view, out of scope for the netlist reader. See the [schematic primer](../edif-schematic-primer/). |
 | **`edifLevel 0`** | Static, with no parameters and no expressions, so simpler to parse. |
 
@@ -146,7 +147,7 @@ the IR stores comes from the instance's own `designator`.
 
 See `readers/edif/reader.go` and `protos/agni/v1/ir/ir.proto`.
 
-The EDIF form comes first, the IR shape it becomes follows the arrow.
+Each EDIF form comes first, and its IR shape follows the arrow.
 
 - `(library NAME (cell ...))`
   → `Library{ name, cells }`
@@ -167,7 +168,7 @@ metadata.
 
 ## Reading a real file
 
-Point these at your own `.edn` export (real design data stays outside the repo). Useful greps:
+Point these at your own `.edn` export (keep real design data outside the repo). Useful greps:
 
 - `grep -c '(instance ' file` counts instances.
 - `grep -c '(joined' file` counts nets, since each `joined` is one net's connectivity.

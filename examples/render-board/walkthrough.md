@@ -15,8 +15,8 @@ A `.kicad_pcb` carries two stories, the netlist (which pads join which nets, as 
 lands, routed tracks, vias, zones). Agni reads the physical story into the board geometry
 sidecar (a peer of the schematic sidecar), and the render layer draws it: copper per layer,
 back to front, with the front side on top. This walkthrough reads a bundled board and
-renders it, then highlights one net's routed copper with the same net-to-copper join the
-web viewer uses to locate findings on the board.
+renders it, then highlights one net's routed copper. The web viewer uses the same
+net-to-copper join to locate findings on the board.
 
 KiCad and IPC-2581 both produce the board sidecar, and this example reads the KiCad one.
 
@@ -42,5 +42,5 @@ KiCad and IPC-2581 both produce the board sidecar, and this example reads the Ki
 
 > A highlight spec that names a net matches its routed segments and vias plus every pad
 > connected to it; the overlay is framed exactly like the base document, so stacking the
-> two lines everything up. In the web viewer this is how a clicked DRC finding lights up
-> on the board.
+> two lines everything up. The web viewer lights up a clicked DRC finding on the board the
+> same way.

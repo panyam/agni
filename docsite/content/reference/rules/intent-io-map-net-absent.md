@@ -11,9 +11,9 @@ Add the missing net, or amend the IO map. Check for a misspelling first: a net p
 
 The IO map declares a net and the netlist does not have it.
 
-One verdict per declared NET rather than per row, since a map naming one net on several rows is
-ordinary and repeating an absence per row would inflate the number a reader uses to judge how bad the
-disagreement is.
+The rule gives one verdict per declared NET rather than per row. It is ordinary for a map to name
+one net on several rows. Repeating an absence per row would inflate the count, and a reader uses
+that count to judge how bad the disagreement is.
 
 ### For hardware engineers
 
@@ -24,34 +24,34 @@ This and an incomplete map are opposite defects, and they get confused constantl
 - **A net the netlist has and the map does not declare** is usually an incomplete map. The design is
   fine and the document is behind.
 
-This rule reports the first. The second is a coverage question, which `intent/io-map-coverage`
-reports, because the interesting number there is not a failure count but how much of the netlist the
-map covers at all, and a design with sixteen
-hundred nets and a map declaring two hundred has two hundred checked and fourteen hundred
-UNEXAMINED, which is not the same as clean.
+This rule reports the first. The second is a coverage question, and `intent/io-map-coverage`
+reports it. There the interesting number is how much of the netlist the map covers at all, rather
+than a failure count. Imagine a design with sixteen hundred nets and a map declaring two hundred.
+Two hundred nets are checked and fourteen hundred are UNEXAMINED, and that is not the same as
+clean.
 
 ### A misspelling is not a disconnection
 
 When no net carries the declared name but one differs from it only by spelling, the verdict is
 `inconclusive` and names the net it found, rather than failing.
 
-Sending a
-reviewer to look for a missing net that is present, under a name differing by an invisible character
-pasted out of a spreadsheet, costs more than the finding is worth. We measured a shipped checker of
-this kind against a large production board and every warning it produced was a comparison artifact of
-exactly this family.
+Imagine a net that is present, under a name that differs by one invisible character pasted out of a
+spreadsheet. Sending a reviewer to look for it as missing costs more than the finding is worth. We
+measured a shipped checker of this kind against a large production board. Every warning it produced
+was a comparison artifact of exactly this family.
 
-Spelling here means what the shared identifier comparison forgives, which is case, invisible
-characters, and zero-padded and bracketed indices. It does not mean a fuzzy match, since dropping a
+The shared identifier comparison forgives case, invisible characters, and zero-padded and bracketed
+indices, and spelling here means those differences. It does not mean a fuzzy match, since dropping a
 token from a net name names a different net.
 
 ### Declaring it
 
-The same `io_map` section `intent/io-map-pin-mismatch` reads. This rule uses the `net` field alone.
+Declare the same `io_map` section that `intent/io-map-pin-mismatch` reads. This rule uses the `net`
+field alone.
 
 ### Fixing a finding
 
-Check for a misspelling before drawing anything. A net present under a slightly different name is a
-one-character fix in whichever document is wrong; a net that was never drawn is a schematic edit.
-Reading the finding tells you which, because a suspected misspelling reports as inconclusive and
-names its candidate.
+Check for a misspelling before drawing anything. If a net is present under a slightly different
+name, the fix is one character in whichever document is wrong. If a net was never drawn, the fix is
+a schematic edit. The finding tells you which, because a suspected misspelling reports as
+inconclusive and names its candidate.
