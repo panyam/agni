@@ -1,8 +1,8 @@
 // Package edif parses EDIF 2.0.0 netlists into the agni IR.
 //
-// S-expression parsing is the shared internal/sexpr package (one parser for KiCad + EDIF,
-// parameterized on the string dialect); EDIF uses the no-escape, drop-CR/LF mode that rejoins a
-// column-wrapped token (WS1-026). node is a local alias so reader.go's many `*node` signatures and
+// S-expression parsing uses the shared internal/sexpr package. One parser serves KiCad and EDIF,
+// parameterized on the string dialect. EDIF uses the no-escape, drop-CR/LF mode, which rejoins a
+// column-wrapped token (WS1-026). node is a local alias, so reader.go's many `*node` signatures and
 // the `atom` accessor read unchanged.
 package edif
 
@@ -16,8 +16,8 @@ import (
 // node is the shared s-expression node; the reader walks it via Head/Arg/Child/Children.
 type node = sexpr.Node
 
-// parse reads a full EDIF document in the EDIF string dialect (no escapes; CR/LF dropped), with
-// every keyword the reader looks up spelled the way it looks it up.
+// parse reads a full EDIF document in the EDIF string dialect (no escapes; CR/LF dropped). It then
+// respells every keyword the reader looks up to the reader's own spelling.
 func parse(r io.Reader) (*node, error) {
 	root, err := sexpr.Parse(r, sexpr.EDIFStrings)
 	if err != nil {
@@ -32,7 +32,7 @@ func collect(n *node, head string, out *[]*node) {
 	sexpr.Collect(n, head, out)
 }
 
-// keywords is every EDIF keyword the reader looks a list up by, in the spelling it uses.
+// keywords lists every EDIF keyword the reader uses to look a list up, in the reader's spelling.
 // TestEveryLookedUpKeywordIsCanonicalized holds this list to the reader's source.
 var keywords = []string{
 	"annotate", "arc", "array", "boolean", "boundingBox", "cell", "cellRef", "cellType", "circle",
@@ -60,9 +60,9 @@ var canonical = func() map[string]string {
 // with a keyword, so only heads change and names and strings keep their case. A keyword the reader
 // never looks up keeps its spelling, since nothing asks for it.
 //
-// A respelled head is a new node in the list rather than an edit of the old one, because sexpr shares
-// one node among every atom spelled the same, and the same word may be a name elsewhere in the file,
-// as in `(Net Net ...)` (agni issue 945).
+// canonicalize puts a new node in the list for a respelled head and never edits the old one. sexpr
+// shares one node among every atom spelled the same, and the same word may be a name elsewhere in
+// the file, as in `(Net Net ...)` (agni issue 945).
 func canonicalize(root *node) {
 	respelled := map[string]*node{}
 	var walk func(n *node)

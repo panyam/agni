@@ -3,14 +3,14 @@
 // xschem shares the .sch extension with gEDA and legacy KiCad; the CLI disambiguates by
 // sniffing the header (an xschem file opens with "v {xschem ..."). See IsXschem.
 //
-// Fidelity: lossy-bounded. Read extracts the placed components (grouped by their xschem
-// instance name, which is the reference designator) and the named nets. xschem wires carry
-// their net name inline (N ... {lab=Name}) and net-label symbols (lab_pin/ipin/opin/gnd/vdd)
-// name a net at a point, so net *names* come straight from the file. Pin-level membership
-// (which Net each component pin joins) needs the referenced .sym pin geometry, so
-// ReadWithSymbols resolves symbols through a caller-supplied opener and returns a fully
-// connected netlist, while plain Read (no opener) returns the nets by name only. sourceFile is
-// provenance only (CONSTRAINTS C1).
+// Fidelity: lossy-bounded. Read extracts the placed components and the named nets. It groups
+// components by their xschem instance name, which is the reference designator. An xschem wire
+// holds its net name inline (N ... {lab=Name}), and a net-label symbol
+// (lab_pin/ipin/opin/gnd/vdd) names a net at a point, so net *names* come straight from the
+// file. Pin-level membership says which Net each component pin joins, and it needs the
+// referenced .sym pin geometry. So ReadWithSymbols resolves symbols through a caller-supplied
+// opener and returns a fully connected netlist. Plain Read has no opener and returns the nets
+// by name only. sourceFile is provenance only (CONSTRAINTS C1).
 package xschem
 
 import (
@@ -38,8 +38,8 @@ const xschemNativeIDKind = "xschem-name"
 
 // labelSymbols are the pseudo-symbols (power taps and port/label markers) that name a net at a
 // point rather than being physical components. Their lab= attribute is a net name, anchored
-// at the symbol origin (these symbols connect at (0,0) by convention, so no .sym is needed to
-// place the anchor). Keyed by the symbol basename without the .sym suffix.
+// at the symbol origin. These symbols connect at (0,0) by convention, so placing the anchor
+// needs no .sym. Keyed by the symbol basename without the .sym suffix.
 var labelSymbols = map[string]bool{
 	"gnd": true, "vdd": true, "vss": true,
 	"lab_pin": true, "lab_wire": true,
@@ -47,12 +47,12 @@ var labelSymbols = map[string]bool{
 }
 
 // externalLabelSymbols are the label symbols whose net leaves this read's scope, so their
-// anchor is marked External (WS1-021). That covers the supply taps gnd/vdd/vss (a global rail
-// whose supply may lie off the read, as with KiCad power symbols) and the hierarchy ports
-// ipin/opin/iopin (the net continues into a parent or child sheet). External keeps the
-// power/absence rules from false-firing on rails and ports whose full membership the
-// single-sheet read cannot see. Plain net labels (lab_pin/lab_wire) are sheet-local and
-// stay unmarked.
+// anchor is marked External (WS1-021). The set covers the supply taps gnd/vdd/vss and the
+// hierarchy ports ipin/opin/iopin. A supply tap names a global rail, and its supply may lie off
+// the read, as with KiCad power symbols. A hierarchy port's net continues into a parent or
+// child sheet. In both cases the single-sheet read cannot see the full membership, and
+// External keeps the power/absence rules from false-firing there. Plain net labels
+// (lab_pin/lab_wire) are sheet-local and are not marked.
 var externalLabelSymbols = map[string]bool{
 	"gnd": true, "vdd": true, "vss": true,
 	"ipin": true, "opin": true, "iopin": true,
@@ -67,11 +67,11 @@ var annotationSymbols = map[string]bool{
 	"noconn": true, "arrow": true, "text": true,
 }
 
-// geomRenderAnnotation is the subset of annotationSymbols the GEOMETRY reader draws (WS7-037),
-// namely the title block and the visible SPICE-code blocks, which carry real on-sheet content.
-// The rest (spice_probe hooks on every net, launcher, use, arrow, noconn, netlist_*) stay
-// skipped in geometry too, since drawing them is visual noise. The netlist reader still skips
-// every annotationSymbol.
+// geomRenderAnnotation lists the annotationSymbols that the GEOMETRY reader draws (WS7-037).
+// These are the title block and the visible SPICE-code blocks, and each has real on-sheet
+// content. The geometry reader skips the rest too (spice_probe hooks on every net, launcher,
+// use, arrow, noconn, netlist_*), since drawing them is visual noise. The netlist reader still
+// skips every annotationSymbol.
 var geomRenderAnnotation = map[string]bool{
 	"title": true, "code": true, "code_shown": true,
 }
@@ -79,7 +79,7 @@ var geomRenderAnnotation = map[string]bool{
 // SymbolOpener resolves a symbol reference from a component's C line (e.g. "res.sym" or
 // "devices/res.sym") to the raw bytes of that .sym file, and returns an error when the symbol
 // cannot be found. ReadWithSymbols treats an unresolved symbol as "component present, pins
-// unknown" and carries on. The caller owns the search path and file I/O (CONSTRAINTS C1).
+// unknown" and continues. The caller owns the search path and file I/O (CONSTRAINTS C1).
 type SymbolOpener func(symref string) ([]byte, error)
 
 // IsXschem reports whether the first bytes look like an xschem file, which opens with "v {xschem".
@@ -121,8 +121,8 @@ func read(r io.Reader, sourceFile string, open SymbolOpener) (*ir.Design, error)
 }
 
 // extract turns the parsed object stream into a Design holding the part-type library, the
-// components, and the nets. Wires and label anchors are collected during the walk, and component
-// placements are resolved to pins afterward (when an opener is supplied) and handed to netgraph.
+// components, and the nets. The walk collects wires and label anchors. Afterward, when an
+// opener is supplied, component placements are resolved to pins and handed to netgraph.
 func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 	d := &ir.Design{
 		IrVersion:    "0",
@@ -202,16 +202,16 @@ func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 		nets, dangles, _ := netgraph.Build(wires, anchors, pins, nil)
 		d.Nets = append(d.Nets, netgraph.IRNets(nets, src)...)
 		// Dangling endpoints are trustworthy only when every placement resolved. A symbol
-		// that fails to load drops its pins, so a wire end meant to land on one reads as a
-		// phantom dangle (WS1-013), and one unresolved placement suppresses the whole
-		// design's dangles. geomDangles maps grid points back to the native geometry frame,
-		// and location is the subject because these formats have no per-wire id. The
-		// unresolved symbols are recorded either way (WS1-052), since they are the only
-		// explanation for the suppressed dangles.
+		// that fails to load drops its pins. A wire end drawn to one of those pins then reads
+		// as a phantom dangle (WS1-013), so one unresolved placement suppresses the whole
+		// design's dangles. geomDangles maps grid points back to the native geometry frame.
+		// These formats have no per-wire id, so the location is the subject. The unresolved
+		// symbols are recorded either way (WS1-052), since nothing else explains the
+		// suppressed dangles.
 		d.InputDiagnostics = &ir.InputDiagnostics{
 			UnresolvedSymbols: irUnresolved(unresolved, src),
-			// The references that DID load, declared only on this branch (agni issue 418),
-			// because the no-opener path examines no symbol. See
+			// Record the references that DID load (agni issue 418). Only this branch declares
+			// them, because the no-opener path examines no symbol. See
 			// docsite/content/architecture/ingestion-and-ir.md#input-diagnostics.
 			ResolvedSymbols: irResolved(resolved),
 			Supplied:        []string{"resolved_symbols"},
@@ -230,12 +230,12 @@ func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 	}
 	// xschem keeps placeholder-designated components and reports them
 	// (docsite/content/architecture/ingestion-and-ir.md#placeholder-designators). xschem assigns
-	// instance names on placement, so a `?` here is one somebody typed, and a shared "R?" silently
-	// breaks the uniqueness xschemNativeIDKind assumes.
+	// instance names on placement, so somebody typed any `?` found here. xschemNativeIDKind
+	// assumes instance names are unique, and a shared "R?" silently breaks that.
 	if un := refdes.Unannotated(d.Components); len(un) > 0 {
 		ensureDiag(d).UnannotatedComponents = un
 	}
-	// A repeated instance name is a duplicate designator AND a break of the uniqueness
+	// A repeated instance name is a duplicate designator. It also breaks the uniqueness that
 	// xschemNativeIDKind relies on. xschem has no gate or slot construct, so no legitimate grouping
 	// looks like one. Declared in `supplied` even when empty (agni issue 309).
 	diag := ensureDiag(d)
@@ -244,9 +244,9 @@ func extract(objs []object, src string, open SymbolOpener) *ir.Design {
 	return d
 }
 
-// ensureDiag returns d's InputDiagnostics, building it on first use. Every signal recorded after
-// the symbol-resolution branch attaches through it, because the no-opener path leaves the field
-// nil and a fresh struct per signal would drop what was recorded before it.
+// ensureDiag returns d's InputDiagnostics, building it on first use. The no-opener path leaves
+// the field nil. A fresh struct per signal would drop what was recorded before it, so every
+// signal recorded after the symbol-resolution branch attaches through ensureDiag.
 func ensureDiag(d *ir.Design) *ir.InputDiagnostics {
 	if d.InputDiagnostics == nil {
 		d.InputDiagnostics = &ir.InputDiagnostics{}
@@ -259,7 +259,7 @@ func ensureDiag(d *ir.Design) *ir.InputDiagnostics {
 // match.
 var busLabelRe = regexp.MustCompile(`\[\d+:\d+\]`)
 
-// dialect carries the xschem library name, provenance id kind, and section attributes for the
+// dialect holds the xschem library name, provenance id kind, and section attributes for the
 // shared component emission in internal/symread.
 var dialect = symread.Dialect{
 	Lib:          "xschem",
@@ -304,9 +304,9 @@ func irResolved(rs []symread.Resolved) []*ir.ResolvedSymbol {
 	return out
 }
 
-// irUnresolved turns the resolver's unresolved references into IR diagnostics, stamping the
-// construct kind and source file the resolver does not know. Returns nil for an empty set so a
-// clean read carries no empty slice.
+// irUnresolved turns the resolver's unresolved references into IR diagnostics. It stamps the
+// construct kind and source file, since the resolver does not know them. Returns nil for an
+// empty set, so a clean read has no empty slice.
 func irUnresolved(us []symread.Unresolved, src string) []*ir.UnresolvedSymbol {
 	var out []*ir.UnresolvedSymbol
 	for _, u := range us {

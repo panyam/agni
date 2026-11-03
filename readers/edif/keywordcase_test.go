@@ -13,10 +13,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// valueKeywords are the EDIF keywords the reader reads as a value rather than a list head: a port
-// direction, a unit, an orientation and a justification. Each is respelled only as the first
-// argument of the list that holds it (valueHeads), since the same word elsewhere is a name, such as a
-// port called OUTPUT.
+// valueKeywords are the EDIF keywords the reader reads as a value rather than a list head. They
+// cover a port direction, a unit, an orientation and a justification. Each is respelled only as the
+// first argument of the list that holds it (valueHeads). The same word elsewhere is a name, such as
+// a port called OUTPUT.
 var valueKeywords = map[string]bool{
 	"INPUT": true, "OUTPUT": true, "INOUT": true, "DISTANCE": true,
 	"R0": true, "R90": true, "R180": true, "R270": true, "MX": true, "MY": true, "MXR90": true, "MYR90": true,
@@ -26,8 +26,8 @@ var valueKeywords = map[string]bool{
 
 var valueHeads = map[string]bool{"direction": true, "unit": true, "orientation": true, "justify": true}
 
-// respell rewrites every keyword in an EDIF document with spell, meaning the word opening each list
-// and each value keyword, and leaves names, numbers and strings as written. EDIF strings hold no
+// respell rewrites every keyword in an EDIF document with spell. A keyword is the word opening each
+// list, or a value keyword. Names, numbers and strings keep their spelling. EDIF strings hold no
 // escaped quote, so a quote always toggles.
 func respell(src []byte, spell func(string) string) []byte {
 	var out bytes.Buffer
@@ -69,9 +69,9 @@ func respell(src []byte, spell func(string) string) []byte {
 }
 
 // TestKeywordCaseNeverChangesARead holds the reader to EDIF's rule that keywords are
-// case-insensitive (agni issue 941). Every committed fixture is read as written and again with its
-// keywords in upper case, lower case and a mixed case, and each read must equal the original, the
-// netlist for every fixture and the drawing for every schematic export.
+// case-insensitive (agni issue 941). Every committed fixture is read as written. It is read again
+// with its keywords in upper case, lower case and a mixed case. Each read must equal the original.
+// The test compares the netlist for every fixture and the drawing for every schematic export.
 func TestKeywordCaseNeverChangesARead(t *testing.T) {
 	files, err := filepath.Glob("testdata/*.ed[ns]")
 	if err != nil || len(files) < 20 {
@@ -141,8 +141,8 @@ func TestKeywordCaseNeverChangesARead(t *testing.T) {
 	}
 }
 
-// TestAltiumCasedNetlistReads reads a netlist in the casing Altium's EDIF For PCB export writes,
-// which capitalizes Instance, InstanceRef, LibraryRef, Net, Joined, PortRef, Property and String.
+// TestAltiumCasedNetlistReads reads a netlist in the casing of Altium's EDIF For PCB export. That
+// export capitalizes Instance, InstanceRef, LibraryRef, Net, Joined, PortRef, Property and String.
 func TestAltiumCasedNetlistReads(t *testing.T) {
 	d := readEDN(t, "altium-case.edn")
 	refs := map[string]bool{}
@@ -174,8 +174,8 @@ func TestAltiumCasedNetlistReads(t *testing.T) {
 
 // TestKeywordNamedIdentifiersKeepTheirCase covers a net and an instance named like keywords, `Net`
 // and `Instance`, in a file that also writes those keywords in Altium's case. The parser shares one
-// node among every atom spelled the same (agni issue 945), so respelling a head in place would
-// respell the names with it, and the net would read as `net` and the part as `instance`.
+// node among every atom spelled the same (agni issue 945). Respelling a head in place would then
+// respell the names with it. The net would read as `net` and the part as `instance`.
 func TestKeywordNamedIdentifiersKeepTheirCase(t *testing.T) {
 	src := string(readFixture(t, "altium-case.edn"))
 	for old, repl := range map[string]string{

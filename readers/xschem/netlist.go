@@ -20,9 +20,9 @@ func quant(x, y float64) netgraph.Point {
 }
 
 // pinDir maps an xschem pin `dir` attribute onto the neutral pin-direction vocabulary
-// (WS1-021). xschem's dir is in/out/inout only, with no power-pin concept, so
-// power-input-not-driven stays N/A on xschem while floating-input and output-output-conflict
-// become reachable. Unmapped values stay UNSPECIFIED.
+// (WS1-021). xschem's dir is in/out/inout only, with no power-pin concept. So
+// power-input-not-driven is still N/A on xschem, while floating-input and
+// output-output-conflict become reachable. Unmapped values map to UNSPECIFIED.
 func pinDir(dir string) ir.PinDirection {
 	switch dir {
 	case "in":
@@ -97,8 +97,8 @@ func loadPins(open SymbolOpener) func(string) ([]symread.Pin, bool) {
 // transform places a symbol-local point onto the schematic grid for an xschem instance with
 // origin (xoff,yoff), rotation rot (0-3, in 90-degree CCW steps) and flip (0/1, mirror about
 // the y-axis). xschem applies the flip first, then the rotation, then the translation. Verified
-// against a real schematic, where res.sym pin (0,-30) under "150 -460 rot=3 flip=1" lands at
-// (120,-460), on the wire it is drawn to.
+// against a real schematic. There res.sym pin (0,-30) under "150 -460 rot=3 flip=1" maps to
+// (120,-460), on the wire drawn to it.
 func transform(px, py, xoff, yoff float64, rot, flip int) (float64, float64) {
 	if flip == 1 {
 		px = -px

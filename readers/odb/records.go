@@ -28,9 +28,9 @@ func lines(b []byte, each func(n int, line string) error) error {
 	return sc.Err()
 }
 
-// fields splits a record into whitespace-separated words, keeping a single-quoted string whole
-// (with its quotes removed), since a property value or a text record's string can hold spaces.
-// The attribute tail after `;` is returned apart, unsplit.
+// fields splits a record into whitespace-separated words. It keeps a single-quoted string whole and
+// removes its quotes, since a property value or a text record's string can hold spaces. It returns
+// the attribute tail after `;` separately, unsplit.
 func fields(line string) (words []string, attrs string) {
 	var cur strings.Builder
 	inQuote, have := false, false
@@ -175,9 +175,9 @@ func (l matrixLayer) isCopper() bool {
 	return false
 }
 
-// units is a file's length unit: the factor from a coordinate to nanometres, and from a symbol
-// dimension to nanometres. ODB++ writes coordinates in millimetres or inches and symbol sizes in
-// microns or mils to match.
+// units is a file's length unit. It holds the factor from a coordinate to nanometres, and the factor
+// from a symbol dimension to nanometres. ODB++ writes coordinates in millimetres or inches, and
+// symbol sizes in microns or mils to match.
 type units struct {
 	coord, symbol float64
 }
@@ -187,8 +187,8 @@ var (
 	unitsInch = units{coord: 25.4e6, symbol: 25.4e3}
 )
 
-// unitsOf reads a file's `UNITS=` line (or the older `U MM` / `U INCH` record), defaulting to
-// inches, the spec's default when a file states none.
+// unitsOf reads a file's `UNITS=` line, or the older `U MM` / `U INCH` record. When a file states
+// none, it defaults to inches, as the spec does.
 func unitsOf(b []byte) units {
 	u := unitsInch
 	_ = lines(b, func(_ int, line string) error {

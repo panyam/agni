@@ -58,8 +58,8 @@ func TestBoardReadsIgnoreZoneFills(t *testing.T) {
 			t.Errorf("the inline board parses %d fills in full, want 1", len(all))
 		}
 	}
-	// Positive control: the boards compared carry fills, so the equality is not over trees that never
-	// held any.
+	// As a positive control, check that the boards compared have fills, so the equality is not over
+	// trees that never held any.
 	if fills < 100 {
 		t.Fatalf("only %d zone fills across the boards compared, so skipping them was barely exercised", fills)
 	}

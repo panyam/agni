@@ -10,11 +10,11 @@ import (
 // coordinates are mils (1/1000 inch) and a point is 1/72 inch, so one point is 1000/72 mils.
 const gedaPointsToMil = 1000.0 / 72.0
 
-// attrBlockFields reads a gEDA "{ ... }" attribute block, returning both the key/value map (as
-// readAttrBlock does) and, for the geometry reader, one geom.Field per attribute placed at the
-// attribute text's own coordinates. Unlike readAttrBlock this keeps each T object's position,
-// size, angle, alignment, and visibility, so ref-des/value text is drawn where gschem drew it
-// rather than stamped at the symbol origin. Returns the index just past the block.
+// attrBlockFields reads a gEDA "{ ... }" attribute block. It returns the key/value map, as
+// readAttrBlock does. For the geometry reader it also returns one geom.Field per attribute,
+// placed at the attribute text's own coordinates. Unlike readAttrBlock it keeps each T object's
+// position, size, angle, alignment, and visibility. So ref-des/value text is drawn where gschem
+// drew it rather than stamped at the symbol origin. Returns the index just past the block.
 //
 // A gEDA attribute is a text object:
 //

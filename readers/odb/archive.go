@@ -15,14 +15,14 @@ import (
 	"time"
 )
 
-// maxArchiveBytes bounds what an archive may expand to. A job is text and a large board's runs to
-// a few hundred megabytes, so a gigabyte leaves room while refusing a decompression bomb (C1's
+// maxArchiveBytes bounds what an archive may expand to. A job is text, and a large board's job runs
+// to a few hundred megabytes. So a gigabyte leaves room and still refuses a decompression bomb (C1's
 // input-is-hostile rule).
 const maxArchiveBytes = 1 << 30
 
 // FromArchive presents a .tgz, .tar or .zip holding an ODB++ job as the job's own file system,
-// rooted at the directory that holds matrix/matrix. The format is sniffed from the bytes rather
-// than the name, since producers name these files loosely.
+// rooted at the directory that holds matrix/matrix. It sniffs the format from the bytes rather than
+// the name, since producers name these files loosely.
 func FromArchive(b []byte) (fs.FS, error) {
 	var files map[string][]byte
 	var err error
@@ -53,8 +53,8 @@ func FromArchive(b []byte) (fs.FS, error) {
 	return fs.Sub(mfs, root)
 }
 
-// IsArchiveJob reports whether b is an archive holding an ODB++ job, reading no more than it
-// must. It is what a registry adapter sniffs before claiming a .zip or .tgz for this reader.
+// IsArchiveJob reports whether b is an archive holding an ODB++ job, reading no more than it must.
+// A registry adapter calls it to sniff a .zip or .tgz before claiming it for this reader.
 func IsArchiveJob(b []byte) bool {
 	_, err := FromArchive(b)
 	return err == nil
@@ -142,8 +142,8 @@ func unzip(b []byte) (map[string][]byte, error) {
 	return files, nil
 }
 
-// cleanMember turns an archive member's name into an fs.ValidPath, refusing one that climbs out of
-// the archive and skipping macOS's AppleDouble shadows, which sort ahead of the files they shadow.
+// cleanMember turns an archive member's name into an fs.ValidPath. It refuses a name that climbs out
+// of the archive. It skips macOS's AppleDouble shadows, which sort ahead of the files they shadow.
 func cleanMember(name string) (string, bool) {
 	name = strings.TrimPrefix(path.Clean("/"+strings.ReplaceAll(name, "\\", "/")), "/")
 	if name == "" || !fs.ValidPath(name) {
@@ -157,8 +157,8 @@ func cleanMember(name string) (string, bool) {
 	return name, true
 }
 
-// memFS is a read-only file system over an archive's members, with the directories their paths
-// imply.
+// memFS is a read-only file system over an archive's members. It also has the directories that the
+// members' paths imply.
 type memFS struct {
 	files map[string][]byte
 	dirs  map[string][]string // dir -> sorted child names

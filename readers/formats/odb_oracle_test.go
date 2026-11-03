@@ -9,14 +9,14 @@ import (
 )
 
 // odbOracleBaseline holds the known differences between each sample board read from its .kicad_pcb
-// and from kicad-cli's ODB++ export of it, one `<board>\t<difference>` per line. Every line is the
-// exporter's doing rather than a reader's, and the file says which kind each is.
+// and from kicad-cli's ODB++ export of it, one `<board>\t<difference>` per line. The exporter causes
+// every line, not a reader, and the file says which kind each is.
 const odbOracleBaseline = "testdata/odb_oracle.baseline"
 
-// TestODBOracleCorpus reads each board in the samples corpus both ways (the odb-kicad artifact
-// beside oracle-corpus) and holds the differences to the committed baseline, as TestOracleCorpus
-// does for the KiCad reader's two views. A difference the baseline lacks is a regression in either
-// reader, and one the baseline has that no longer appears is a fix to record. It needs the 15 MB
+// TestODBOracleCorpus reads each board in the samples corpus both ways, using the odb-kicad artifact
+// beside oracle-corpus. It holds the differences to the committed baseline, as TestOracleCorpus does
+// for the KiCad reader's two views. If the baseline lacks a difference, one of the readers
+// regressed. If a baseline line no longer appears, a fix needs recording. The test needs the 15 MB
 // export corpus, so it runs in `make odb-oracle` rather than the gate. AGNI_ODB_ORACLE_UPDATE=1
 // rewrites the baseline.
 func TestODBOracleCorpus(t *testing.T) {

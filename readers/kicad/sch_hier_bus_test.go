@@ -19,7 +19,7 @@ func pinNet(d *ir.Design, ref, pin string) string {
 	return ""
 }
 
-// TestHierBusMembersDoNotCross pins what `DATA[1:0]` means to KiCad, which is nothing in
+// TestHierBusMembersDoNotCross pins KiCad's reading of `DATA[1:0]`. To KiCad it means nothing in
 // particular. KiCad's vector-bus syntax is `PREFIX[first..last]`, so a label spelled with a colon is
 // an ordinary scalar net name and the sheet pin carrying it is a scalar port. `DATA0` and `DATA1`
 // are then unrelated local labels, kicad-cli keeps `/DATA0` (R1) and `/sub/DATA0` (R101) apart, and

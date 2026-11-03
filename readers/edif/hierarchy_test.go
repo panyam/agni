@@ -21,9 +21,9 @@ func readFlat(t *testing.T, name string) *ir.Design {
 	return d
 }
 
-// partition maps every "REF.PIN" to the net it lands on. It is what a hierarchy walk has to get
-// right, because a pin joined to the wrong side of a block's port moves between nets while every
-// count stays the same.
+// partition maps every "REF.PIN" to the net it connects to. A hierarchy walk has to get this map
+// right. A pin joined to the wrong side of a block's port moves between nets, and every count is
+// still the same.
 func partition(d *ir.Design) map[string]string {
 	out := map[string]string{}
 	for _, n := range d.GetNets() {
@@ -42,9 +42,9 @@ func refs(d *ir.Design) []string {
 	return out
 }
 
-// TestHierarchicalEDIFFlattens reads hier_blocks.edn, whose top cell places a connector, one gate of
+// TestHierarchicalEDIFFlattens reads hier_blocks.edn. Its top cell places a connector, one gate of
 // U5, the block LED_DRV once (A1) and the block RC twice (B1, B2). LED_DRV and RC each hold a local
-// net named MID, so all three are qualified, and LED_DRV's SENSE is unique and keeps its name.
+// net named MID, so all three MIDs are qualified. LED_DRV's SENSE is unique and keeps its name.
 func TestHierarchicalEDIFFlattens(t *testing.T) {
 	d := readFlat(t, "hier_blocks.edn")
 
@@ -110,8 +110,8 @@ func TestUnflattenedReadIsTheTopCell(t *testing.T) {
 	}
 }
 
-// TestCellPlacedTwiceYieldsTwoSets guards the failure #718 names, two placements read as one merged
-// set, which gives a design that looks smaller and cleaner than it is.
+// TestCellPlacedTwiceYieldsTwoSets guards against the failure #718 names. Two placements read as
+// one merged set, and the design then looks smaller and cleaner than it is.
 func TestCellPlacedTwiceYieldsTwoSets(t *testing.T) {
 	d := readFlat(t, "hier_blocks.edn")
 	p := partition(d)
@@ -190,8 +190,8 @@ func TestFlatEDIFReadsIdenticallyFlattened(t *testing.T) {
 	}
 }
 
-// TestFlattenedDesignWritesAndReadsBack holds the writer to a flattened read, whose ref-des and
-// block-local net names carry "/", so the emitted netlist re-reads to the same partition.
+// TestFlattenedDesignWritesAndReadsBack holds the writer to a flattened read. That read's ref-des
+// and block-local net names contain "/". The emitted netlist must re-read to the same partition.
 func TestFlattenedDesignWritesAndReadsBack(t *testing.T) {
 	d := readFlat(t, "hier_blocks.edn")
 	var b bytes.Buffer
@@ -214,9 +214,9 @@ func TestFlattenedDesignWritesAndReadsBack(t *testing.T) {
 }
 
 // TestInstanceNamedPartsInSeveralBlocksStayApart covers agni issue 1105. hier_noref.edn carries no
-// designators, so each part is named by its instance name, and R1 sits in the top cell and in two
-// different blocks. The top cell keeps its R1, each block's R1 takes its path, and SHEET_A's R2,
-// which nothing else uses, keeps its name.
+// designators, so each part is named by its instance name. R1 sits in the top cell and in two
+// different blocks. The top cell keeps its R1, and each block's R1 takes its path. Nothing else uses
+// SHEET_A's R2, so R2 keeps its name.
 func TestInstanceNamedPartsInSeveralBlocksStayApart(t *testing.T) {
 	d := readFlat(t, "hier_noref.edn")
 	if got := strings.Join(refs(d), " "); got != "R1 SA/R1 R2 SB/R1" {

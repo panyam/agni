@@ -1,17 +1,19 @@
 // Package telesis reads the flat Telesis netlist (`.tel`) that the Mentor/Siemens schematic flow
-// emits into the neutral IR. The format carries connectivity and properties and no geometry, so
+// emits into the neutral IR. The format holds connectivity and properties and no geometry, so
 // this is a Design-only reader (CONSTRAINTS C21).
 //
-// Fidelity: lossy-bounded (CONSTRAINTS C6). Read extracts the components and their part types (with
-// the manufacturer part number the `$PACKAGES` head carries), the nets and their pin membership, and
-// both property blocks transposed onto the components and pins they name. It drops the file's own
-// ordering and grouping, because a property is stored on each component it named and the
-// inverted-index entry it arrived on is not recoverable. There is no geometry to lose.
+// Fidelity: lossy-bounded (CONSTRAINTS C6). Read extracts the components and their part types. A
+// part type takes its manufacturer part number from the `$PACKAGES` head. Read also extracts the
+// nets and their pin membership. It transposes both property blocks onto the components and pins
+// they name. It drops the file's own ordering and grouping. A property is stored on each component
+// it named, so the inverted-index entry it arrived on is not recoverable. There is no geometry to
+// lose.
 //
 // The sections, the entry grammar and the IR mapping are in GRAMMAR.md beside this file. Three
-// rules there produce a design that parses cleanly and is wrong when missed: only a `!` entry is a
-// package (addEntry), a property target is routed by its SHAPE and not its block (pinTargetRe), and
-// a property section is an inverted index that has to be transposed (addProperty).
+// rules there matter most, because missing one gives a design that parses cleanly and is wrong.
+// Only a `!` entry is a package (addEntry). A property target is routed by its SHAPE and not its
+// block (pinTargetRe). A property section is an inverted index that has to be transposed
+// (addProperty).
 package telesis
 
 import (
@@ -46,28 +48,29 @@ const generatedNamePrefix = "$"
 // GeneratedNameAttr is set to "true" on a net whose name the exporter generated.
 const GeneratedNameAttr = "generated_name"
 
-// PinTypeProperty is the property name carrying pin direction, the ONLY place this format states
-// it. Skip the property sections and every pin reads PIN_DIRECTION_UNSPECIFIED, which silently
-// disables every direction-dependent rule.
+// PinTypeProperty is the property name for pin direction. This format states direction ONLY
+// there. If the reader skips the property sections, every pin reads PIN_DIRECTION_UNSPECIFIED,
+// and every direction-dependent rule is silently disabled.
 const PinTypeProperty = "Pin Type"
 
-// PinLabelProperty carries the pin's printed label.
+// PinLabelProperty is the property name for the pin's printed label.
 const PinLabelProperty = "PinLabel"
 
-// UnparsedSectionsAttr names the design attribute listing sections that carried content this reader
-// did not consume, comma-separated and in file order. Absent when everything was consumed.
+// UnparsedSectionsAttr names a design attribute. The attribute lists each section that had content
+// this reader did not consume, comma-separated and in file order. Absent when everything was
+// consumed.
 const UnparsedSectionsAttr = "telesis.unparsed_sections"
 
 // pinTargetRe matches a pin-scoped target, REFDES.PIN. The DOT is the discriminator, since a
 // ref-des never contains one. The pin half is permissive on purpose (U1.14, BGA U7.L1, connector
-// shell J1.A), because narrowing it to digits would route a letter pin into COMPONENT scope as an
+// shell J1.A). Narrowing it to digits would route a letter pin into COMPONENT scope, as an
 // attribute on a component that does not exist.
 var pinTargetRe = regexp.MustCompile(`^([A-Za-z][A-Za-z0-9_]*)\.([A-Za-z0-9_]+)$`)
 
 // splitEntryLine parses one entry line into its quoted head fields and its target run. The five
-// head shapes it accepts are listed in GRAMMAR.md section 2. It is a scanner rather than a regex
-// because a line a pattern fails to match is skipped, and a skipped line also breaks the
-// continuation chain, so the entry's whole target run vanishes with it.
+// head shapes it accepts are listed in GRAMMAR.md section 2. It is a scanner rather than a regex.
+// If a pattern failed to match a line, the line would be skipped. A skipped line also breaks the
+// continuation chain, so the entry's whole target run would vanish with it.
 //
 // Quoting is respected while scanning for `;` and `!`. Returns ok=false for a line that opens no
 // entry, which the caller treats as a continuation or as content to skip.
@@ -128,8 +131,8 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 }
 
 // decodeText turns the file's bytes into a string. Valid UTF-8 is taken as is and anything else is
-// read as latin-1, which real exports carry and which cannot fail. Without it Go substitutes U+FFFD
-// for each invalid byte and corrupts the identifier it sat in.
+// read as latin-1. Real exports contain latin-1, and decoding it cannot fail. Without decodeText,
+// Go substitutes U+FFFD for each invalid byte and corrupts the identifier it sat in.
 func decodeText(b []byte) string {
 	if utf8.Valid(b) {
 		return string(b)
@@ -179,12 +182,12 @@ type builder struct {
 	// dupRefs records a ref-des declared under more than one package entry.
 	dupRefs []string
 
-	// unnamedParts records part types identified by MPN because the entry carried no part name.
+	// unnamedParts records part types identified by MPN because the entry had no part name.
 	unnamedParts map[string]bool
 	// partExtra holds a package entry's positional fields beyond the MPN.
 	partExtra map[string][]string
-	// partPackage holds the package name of a part type keyed apart from it, because the package
-	// was already declared with a different MPN (see addPackage).
+	// partPackage holds the package name of a part type whose key differs from that name. The key
+	// differs because the package was already declared with a different MPN (see addPackage).
 	partPackage map[string]string
 
 	compAttrs map[string]map[string]string
@@ -195,7 +198,7 @@ type builder struct {
 	nets     []*ir.Net
 	netNames map[string]bool
 
-	// unparsed records sections that carried content this reader did not consume, in file order.
+	// unparsed records sections that had content this reader did not consume, in file order.
 	// See noteUnparsed.
 	unparsed     []string
 	unparsedSeen map[string]bool
@@ -330,7 +333,7 @@ func (b *builder) addEntry(section string, e entry) {
 	}
 }
 
-// noteUnparsed records a section that carried content this reader did not consume.
+// noteUnparsed records a section that had content this reader did not consume.
 //
 // $PINS is the case in hand. It is EMPTY in every real export examined, so its body grammar is
 // unknown and the reader skips it. Without this record, an export that populates it would parse
@@ -349,9 +352,9 @@ func (b *builder) noteUnparsed(section string) {
 // An entry with no part name is identified by its MPN, which keeps two unnamed parts with
 // different MPNs distinct. The substitution is recorded as name_from_mpn on the part type.
 //
-// Two entries may share a package (footprint) name with different MPNs, parts that share a
-// footprint. Each keeps its own MPN: the first takes the package name, and a later one is keyed
-// "<package>:<mpn>" with the package recorded as its `package` attribute (agni issue 835). Keying by
+// Two entries may share a package (footprint) name with different MPNs, as parts that share a
+// footprint do. Each keeps its own MPN (agni issue 835). The first takes the package name. A later
+// one is keyed "<package>:<mpn>", and the package is recorded as its `package` attribute. Keying by
 // the package alone gave every part of the later entry the first entry's MPN, with no warning.
 func (b *builder) addPackage(e entry) {
 	part, named := e.head, true
@@ -481,9 +484,9 @@ func (b *builder) design() *ir.Design {
 
 // partType builds one part type, folding every instance's pin facts onto the shared pin list.
 //
-// Pin facts arrive per INSTANCE (`U1.14 'Pin Type' 'IN'`) while the IR hangs pins off the shared
-// part type. Where two instances disagree the first wins, and the disagreement is recorded on the
-// pin (see applyPinAttrs) so a library inconsistency stays findable.
+// Pin facts arrive per INSTANCE (`U1.14 'Pin Type' 'IN'`), while the IR hangs pins off the shared
+// part type. Where two instances disagree the first wins. The disagreement is recorded on the pin
+// (see applyPinAttrs), so a library inconsistency can still be found.
 func (b *builder) partType(part string) *ir.PartType {
 	pt := &ir.PartType{
 		Name: part,
@@ -606,9 +609,10 @@ func pinDirection(v string) ir.PinDirection {
 
 // diagnostics declares what this reader looked for, whether or not it found anything.
 //
-// This format can only answer ref_des_collisions, so that is the one it supplies. The others are
-// properties of a drawing it does not carry. Why `supplied` is declared even when the list is empty
-// is in docsite/content/architecture/ingestion-and-ir.md#input-diagnostics (agni issue 309).
+// This format can only answer ref_des_collisions, so it supplies that one. The others are
+// properties of a drawing, and this format has no drawing. `supplied` is declared even when the
+// list is empty. docsite/content/architecture/ingestion-and-ir.md#input-diagnostics says why
+// (agni issue 309).
 func (b *builder) diagnostics() *ir.InputDiagnostics {
 	diag := &ir.InputDiagnostics{Supplied: []string{"ref_des_collisions"}}
 	for _, ref := range b.dupRefs {

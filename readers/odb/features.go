@@ -21,8 +21,8 @@ const (
 	featSurface featKind = 'S'
 )
 
-// feature is one record of a features file. Its index in the file is the id eda/data's FID
-// records name it by, so every kind is kept, the ones nothing draws included.
+// feature is one record of a features file. eda/data's FID records name a feature by its index in
+// the file. So every kind is kept, including the ones nothing draws.
 type feature struct {
 	kind     featKind
 	a, b     pt // a line's or arc's ends; a pad's or text's position is a
@@ -43,8 +43,9 @@ type contour struct {
 	pts  []pt
 }
 
-// symbolRef is one entry of a features file's symbol table: the symbol's name and the nanometres
-// one of its dimensions is, which a `$n name M` entry can set apart from the file's own units.
+// symbolRef is one entry of a features file's symbol table. It holds the symbol's name and how many
+// nanometres one of its dimensions is. A `$n name M` entry can set that apart from the file's own
+// units.
 type symbolRef struct {
 	name string
 	nm   float64
@@ -56,12 +57,12 @@ type featuresFile struct {
 	features []feature
 }
 
-// arcSegments is how many straight pieces an arc becomes, the count the IPC-2581 and KiCad outline
-// readers use, since the geom contract carries no arc primitive for copper (C6).
+// arcSegments is how many straight pieces an arc becomes. The geom contract has no arc primitive for
+// copper (C6). The IPC-2581 and KiCad outline readers use the same count.
 const arcSegments = 16
 
-// parseFeatures reads a features file. A record this reader does not draw (a barcode) still takes
-// its index, so the ids eda/data uses keep pointing at the right feature.
+// parseFeatures reads a features file. A record this reader does not draw, such as a barcode, still
+// takes its index. So the ids eda/data uses still point at the right feature.
 func parseFeatures(b []byte) (*featuresFile, error) {
 	u := unitsOf(b)
 	ff := &featuresFile{}

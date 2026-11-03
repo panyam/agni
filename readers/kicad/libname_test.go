@@ -7,8 +7,8 @@ import (
 
 // KiCad files a placed symbol's definition under lib_name, not lib_id, when the embedded copy
 // differs from the library's, so lib_id "power:GND" can sit beside a lib_symbols entry named
-// "GND_3". Keyed on lib_id alone, every such placement resolved nothing: its pins and its net
-// anchor were lost from the netlist and the drawing alike.
+// "GND_3". When the reader keyed on lib_id alone, every such placement resolved nothing. Its pins
+// and its net anchor were lost from the netlist and from the drawing.
 func TestPlacedSymbolResolvesThroughLibName(t *testing.T) {
 	data := readFixture(t, "libname.kicad_sch")
 	d, err := ReadSchematic(bytes.NewReader(data), "libname.kicad_sch")

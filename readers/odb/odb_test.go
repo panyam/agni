@@ -58,9 +58,9 @@ func placement(t *testing.T, g *geom.BoardGeometry, ref string) *geom.ComponentP
 	return nil
 }
 
-// TestReadsAnInchJob reads the hand-written job in inches, which carries the grammar KiCad's export
-// never writes: an inner plane, a legacy orient code, a quoted property with a space, a plane with a
-// hole, and silkscreen text.
+// TestReadsAnInchJob reads the hand-written job in inches. The job uses grammar that KiCad's export
+// never writes. It has an inner plane, a legacy orient code, a quoted property with a space, a plane
+// with a hole, and silkscreen text.
 func TestReadsAnInchJob(t *testing.T) {
 	d, g := readJob(t, os.DirFS("testdata/inch-job"))
 
@@ -113,8 +113,8 @@ func TestReadsAnInchJob(t *testing.T) {
 		t.Errorf("R1 = mirror %v layer %s pad1 %v, want a mirrored back part with pad 1 at (-30mil, 0)", r1.GetMirror(), r1.GetLayer(), r1.GetPads()[0])
 	}
 
-	// U2's lands are the ones eda/data does not hand over whole: a surface, a hole on a drill layer
-	// it never names, and a pad drawn by the job's own symbol.
+	// eda/data does not hand over U2's lands whole. One is a surface, one is a hole on a drill layer
+	// eda/data never names, and one is a pad drawn by the job's own symbol.
 	u2 := placement(t, g, "U2")
 	byNum := map[string]*geom.Pad{}
 	for _, p := range u2.GetPads() {
@@ -164,7 +164,8 @@ func TestReadsAnInchJob(t *testing.T) {
 	}
 }
 
-// archive builds a tar.gz or zip of a directory, the job one level down as producers wrap it.
+// archive builds a tar.gz or zip of a directory. It puts the job one level down, as producers wrap
+// it.
 func archive(t *testing.T, dir, kind string) []byte {
 	t.Helper()
 	var buf bytes.Buffer
@@ -219,8 +220,8 @@ func archive(t *testing.T, dir, kind string) []byte {
 	return buf.Bytes()
 }
 
-// TestArchivesReadAsTheirDirectory holds a .tgz and a .zip of a job to the job's directory read,
-// whichever folder the archive wraps it in.
+// TestArchivesReadAsTheirDirectory holds a .tgz and a .zip of a job to a read of the job's
+// directory, whichever folder the archive wraps it in.
 func TestArchivesReadAsTheirDirectory(t *testing.T) {
 	wantD, wantG := readJob(t, os.DirFS(gatewayJob))
 	if len(wantD.GetNets()) == 0 {
@@ -257,9 +258,9 @@ func TestCompressedMembersReadAsPlain(t *testing.T) {
 	}
 }
 
-// TestUncompressMatchesCompress decodes one input compress(1) wrote at three maximum code widths. At
-// 9 bits the table fills every few hundred codes, so the clears and the group padding after each run
-// many times, and at 16 the width grows through every step.
+// TestUncompressMatchesCompress decodes one input that compress(1) wrote at three maximum code
+// widths. At 9 bits the table fills every few hundred codes. So the decoder runs many clears and the
+// group padding after each. At 16 bits the width grows through every step.
 func TestUncompressMatchesCompress(t *testing.T) {
 	const want = "5e1512f3f06181b66a4905c77eeb96069c016cbae2d7fdbbb58cca59a988eeb5"
 	for _, bits := range []string{"9", "12", "16"} {
@@ -344,8 +345,8 @@ func TestArchiveRefusesEscapingMembers(t *testing.T) {
 	}
 }
 
-// TestFindRootPrefersTheShallowestJob picks the job an archive holds at its top over one nested
-// inside it (a job carrying a copy of another in its user/ folder).
+// TestFindRootPrefersTheShallowestJob prefers the job at an archive's top level over one nested
+// inside it. Here the top job holds a copy of another job in its user/ folder.
 func TestFindRootPrefersTheShallowestJob(t *testing.T) {
 	fsys := fstest.MapFS{
 		"outer/matrix/matrix":                {Data: []byte("STEP {\nNAME=PCB\n}\n")},

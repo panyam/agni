@@ -24,16 +24,16 @@ func parse(r io.Reader) (*node, error) {
 	return root, err
 }
 
-// boardSkips are the board subtrees no reader of a .kicad_pcb reads. A zone's fill is the copper
-// KiCad last computed for it, and the board reads keep only the zone's authored outline, so its fill
-// points, about a fifth of a large board's atoms, are left out at parse (agni issue 946). The census
-// parses without skipping, and classifies filled_polygon as a known drop.
+// boardSkips lists the board subtrees that no reader of a .kicad_pcb reads. A zone's fill is the
+// copper KiCad last computed for it. The board reads keep only the zone's authored outline, so the
+// parse leaves out the fill points, about a fifth of a large board's atoms (agni issue 946). The
+// census parses without skipping, and classifies filled_polygon as a known drop.
 var boardSkips = []string{"filled_polygon"}
 
-// footprintGraphicSkips leave out a footprint graphic on a layer footprintLayerDrawn refuses, which
-// boardGraphics drops anyway. Deciding it while parsing keeps those lines from being built at all:
-// on the Jetson seed they are most of an 85 MB board, and building them set a browser worker's peak
-// memory for the visit (agni issue 1005). boardGraphics still filters, so the two cannot disagree.
+// footprintGraphicSkips leaves out a footprint graphic on a layer that footprintLayerDrawn refuses.
+// boardGraphics drops such a graphic anyway. Deciding it while parsing means those lines are never
+// built. On the Jetson seed they are most of an 85 MB board, and building them set a browser worker's
+// peak memory for the visit (agni issue 1005). boardGraphics still filters, so the two cannot disagree.
 var footprintGraphicSkips = func() []sexpr.SkipWhen {
 	var out []sexpr.SkipWhen
 	for _, base := range graphicHeads {

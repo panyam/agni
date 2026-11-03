@@ -11,8 +11,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestOracleCorpus is the reader cross-check against real boards, and the oracle is free, because every
-// KiCad project carries both the schematic and the .kicad_pcb, and the board file holds the netlist
+// TestOracleCorpus cross-checks the reader against real boards, and the oracle costs nothing. Every
+// KiCad project has both the schematic and the .kicad_pcb, and the board file holds the netlist that
 // KiCad itself resolved. So we read a design our way, read KiCad's answer for the same design, and
 // compare which pins share a net.
 //
@@ -20,7 +20,7 @@ import (
 // need the BOTH-VIEWS tarball, which is 19MB against tutorial-board's 3MB and not in the
 // gate's default fetch, so this runs as its own target. `make oracle` fetches the corpus and then
 // runs this test. `make browser-test` was the other suite outside the gate for a comparable
-// reason, until PR 629 moved it inside. This one stays out because a browser is a fixed one-time
+// reason, until PR 629 moved it inside. This one is still out because a browser is a fixed one-time
 // install, where the corpus is 19MB fetched per cache miss.
 //
 // It asserts against a COMMITTED BASELINE of the disagreements rather than demanding zero, because
@@ -31,10 +31,10 @@ import (
 // The corpus spans KiCad 6 to 9 file formats (agni issue 1233, where every pre-KiCad-8 board read
 // empty and so passed this test by having nothing to disagree with). Six boards is still not a
 // survey. Cynthion is the only one that crosses a sheet boundary with a bus VECTOR, and nobody has
-// checked whether this test moves when the agni issue 561 fix is reverted, so
-// TestBusVectorCrossesSheetBoundary stays the guard, on a fixture with kicad-cli's own answer beside
-// it.
-// Breaking the scalar sheet-pin join moves jetson by 27 lines, which is what red-checked this file.
+// checked whether this test moves when the agni issue 561 fix is reverted. So
+// TestBusVectorCrossesSheetBoundary is still the guard, on a fixture with kicad-cli's own answer
+// beside it.
+// Breaking the scalar sheet-pin join moves jetson by 27 lines, and that red-checked this file.
 func TestOracleCorpus(t *testing.T) {
 	if os.Getenv("AGNI_ORACLE") == "" {
 		t.Skip("not the default suite: run `make oracle`, which fetches the both-views corpus first")
@@ -109,8 +109,8 @@ func boardRoot(dir string) (root, pcb string) {
 // have nothing to do with each other.
 const baselinePath = "oracle_corpus.baseline"
 
-// crossCheckBoard reads one board both ways and returns its disagreement lines, sorted. A board
-// whose two halves cannot both be read reports that as its single line, so the corpus records it
+// crossCheckBoard reads one board both ways and returns its disagreement lines, sorted. If a board's
+// two halves cannot both be read, it reports that as its single line, so the corpus records it
 // rather than passing by silently skipping.
 func crossCheckBoard(t *testing.T, dir string) []string {
 	t.Helper()
@@ -144,8 +144,8 @@ func crossCheckBoard(t *testing.T, dir string) []string {
 	return out
 }
 
-// errKind reduces a read error to its stable prefix. The message carries a line number, which is
-// part of what makes the error useful and is the wrong thing to freeze into a baseline.
+// errKind reduces a read error to its stable prefix. The message has a line number. That number
+// makes the error useful, but it is the wrong thing to freeze into a baseline.
 func errKind(err error) string {
 	s := err.Error()
 	if i := strings.Index(s, " at line "); i >= 0 {
@@ -156,8 +156,8 @@ func errKind(err error) string {
 
 func fileExists(p string) bool { st, err := os.Stat(p); return err == nil && !st.IsDir() }
 
-// readBaseline parses the committed expectations: "## <board>" sections of one disagreement per
-// line, '#' comments elsewhere.
+// readBaseline parses the committed expectations. They are "## <board>" sections of one
+// disagreement per line, with '#' comments elsewhere.
 func readBaseline(t *testing.T) map[string][]string {
 	t.Helper()
 	raw, err := os.ReadFile(baselinePath)

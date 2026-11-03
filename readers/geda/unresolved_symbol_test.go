@@ -42,8 +42,9 @@ func TestUnresolvedSymbolReported(t *testing.T) {
 	}
 }
 
-// TestUnresolvedSymbolSuppressesDanglesAndSaysWhy checks that dangles stay suppressed (WS1-013) AND
-// that the cause is now recorded. The suppression alone was the invisible failure this ticket closes.
+// TestUnresolvedSymbolSuppressesDanglesAndSaysWhy checks that dangles are still suppressed
+// (WS1-013) AND that the cause is now recorded. This ticket closes an invisible failure, where
+// the suppression happened alone.
 func TestUnresolvedSymbolSuppressesDanglesAndSaysWhy(t *testing.T) {
 	failing := func(string) ([]byte, error) { return nil, fmt.Errorf("missing") }
 	d, err := ReadWithSymbols(bytes.NewReader(readGedaSch(t, "dangle.sch")), "dangle.sch", failing)
@@ -59,8 +60,8 @@ func TestUnresolvedSymbolSuppressesDanglesAndSaysWhy(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolReportsNothing covers the clean case. divider.sch's symbols live beside it, so
-// a real opener yields a clean read. Guards against an unconditional flag.
+// TestResolvedSymbolReportsNothing covers the clean case. divider.sch's symbols sit beside it, so
+// a real opener yields a clean read. It guards against an unconditional flag.
 func TestResolvedSymbolReportsNothing(t *testing.T) {
 	open := func(symref string) ([]byte, error) { return os.ReadFile("testdata/" + symref) }
 	d, err := ReadWithSymbols(bytes.NewReader(readGedaSch(t, "divider.sch")), "divider.sch", open)
@@ -77,8 +78,8 @@ func TestResolvedSymbolReportsNothing(t *testing.T) {
 // resolution holds only a failure list and can therefore report only failures, so a design where
 // everything loaded looks exactly like one the reader never opened a symbol for.
 //
-// The COUNT is what makes it evidence. A stale library answering with an empty stub resolves as
-// successfully as the real symbol and costs the netlist the same pins.
+// The COUNT makes it evidence. Imagine a stale library answering with an empty stub. The stub
+// resolves as successfully as the real symbol, and the netlist loses the same pins.
 func TestResolvedSymbolsRecorded(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readGedaSch(t, "divider.sch")), "divider.sch", func(symref string) ([]byte, error) { return os.ReadFile("testdata/" + symref) })
 	if err != nil {
@@ -102,10 +103,10 @@ func TestResolvedSymbolsRecorded(t *testing.T) {
 	}
 }
 
-// TestResolvedSymbolsAbsentWithoutOpener is the negative half. Reading with no opener is a caller
-// asking for a symbol-free read, and declaring the diagnostic there would turn "we did
-// not look" into "we looked and found nothing missing", which is the coverage claim the
-// considered-set idea exists to withhold.
+// TestResolvedSymbolsAbsentWithoutOpener is the negative half. A caller reading with no opener
+// asks for a symbol-free read. Declaring the diagnostic there would turn "we did not look" into
+// "we looked and found nothing missing". The considered-set idea exists to withhold that
+// coverage claim.
 func TestResolvedSymbolsAbsentWithoutOpener(t *testing.T) {
 	d, err := Read(bytes.NewReader(readGedaSch(t, "divider.sch")), "divider.sch")
 	if err != nil {

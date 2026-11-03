@@ -8,9 +8,9 @@ import (
 	"github.com/panyam/agni/internal/sexpr"
 )
 
-// A footprint graphic on a layer no reader draws is left out at parse, and one on a drawn layer is
-// kept (agni issue 1005). TestBoardReadsIgnoreZoneFills holds the board reads to the same answer with
-// and without the skip; this holds the skip to actually dropping lines.
+// The parse leaves out a footprint graphic on a layer that no reader draws, and keeps one on a drawn
+// layer (agni issue 1005). TestBoardReadsIgnoreZoneFills checks that the board reads give the same
+// answer with and without the skip. This test checks that the skip actually drops lines.
 func TestBoardParseDropsUndrawnFootprintGraphics(t *testing.T) {
 	const p = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"
 	b, err := os.ReadFile(p)

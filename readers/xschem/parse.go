@@ -23,10 +23,10 @@ import (
 //	L/B/A/P layer ... {props}       drawing primitives (lines/boxes/arcs/polys); in a .sym
 //	                                a B box with {name=.. pinnumber=..} is a pin.
 //
-// The parser is lossless at the object level. It keeps every field verbatim so
-// both the structural extractor and the geometric netlister can read what they need without
-// re-scanning. Interpretation (which object is a component, which brace is a symref) lives in
-// read.go, not here.
+// The parser is lossless at the object level. It keeps every field verbatim, so the structural
+// extractor and the geometric netlister can each read what they need without re-scanning.
+// read.go does the interpretation, deciding which object is a component and which brace is a
+// symref.
 
 // token is one field of an object, either a brace block (its inner text, braces stripped) or
 // a bare word.
@@ -81,9 +81,9 @@ func parse(r io.Reader) ([]object, error) {
 }
 
 // logicalLines splits input on newlines that sit at brace depth zero. A newline inside a
-// "{...}" block is kept, so a component whose {props} span several physical lines stays one
-// logical line. Backslash escapes and double-quoted strings are honoured so an escaped or
-// quoted brace does not shift the depth.
+// "{...}" block is kept. A component's {props} may span several physical lines, and the
+// component is still one logical line. Backslash escapes and double-quoted strings are honoured
+// so an escaped or quoted brace does not shift the depth.
 func logicalLines(r io.Reader) ([]string, error) {
 	br := bufio.NewReader(r)
 	var lines []string
@@ -131,8 +131,8 @@ func logicalLines(r io.Reader) ([]string, error) {
 
 // tokenize splits one logical line's fields into brace blocks and bare words. A "{...}"
 // becomes a single brace token holding the inner text; runs of non-space become word tokens.
-// Quotes are not stripped here (a bare word may legitimately contain a quoted value that the
-// prop parser handles later).
+// Quotes are not stripped here. A bare word may legitimately contain a quoted value, and the
+// prop parser handles it later.
 func tokenize(s string) []token {
 	var toks []token
 	i, n := 0, len(s)

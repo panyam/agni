@@ -12,30 +12,31 @@ import (
 // places, so the design is the whole schematic rather than its top sheet (agni issue 718). Without it
 // only the top cell is read and the blocks are listed in InputDiagnostics.unexpanded_hierarchy.
 //
-// Three rules decide identity, each written in docsite/content/architecture/ingestion-and-ir.md:
+// These rules decide identity, and docsite/content/architecture/ingestion-and-ir.md writes out each.
 //
-//   - A net crossing a block's port is ONE net with its parent's, named by its shallowest piece. A net
-//     inside a block that reaches no port keeps its name when no other net in the design carries it
-//     and its block is placed once. Otherwise it is qualified by the block's instance path,
-//     "/A1/MID", because sheets reuse local and generated names and joining them by name would merge
-//     two nets.
-//   - A part keeps the designator the file states, and parts sharing one are sections of one
+//   - A net crossing a block's port is ONE net with its parent's, named by its shallowest piece.
+//     Suppose a net inside a block reaches no port. It keeps its name when no other net in the
+//     design has that name and its block is placed once. Otherwise it is qualified by the block's
+//     instance path, "/A1/MID". Sheets reuse local and generated names, and joining them by name
+//     would merge two nets.
+//   - A part keeps the designator the file gives it. Parts sharing a designator are sections of one
 //     component wherever they sit, since a multi-gate part split across sheets is one part.
-//   - A part reached through a block the design places more than once is qualified by its instance
-//     path, "B2/R1", so two placements are two sets of parts rather than one merged set.
-//   - A file with no designators names each part by its instance name, which is unique within its
-//     cell only. A name used in more than one cell instance is qualified by its block's path in every
-//     block it appears in ("A1/R1"), the top cell keeping its own, so two cells' R1 are two parts. A
-//     multi-gate part split across sheets then reads as two, which shows, where a wrong merge would
-//     hide a part.
+//   - Suppose the design places a block more than once. A part reached through that block is
+//     qualified by its instance path, "B2/R1", so two placements are two sets of parts rather than
+//     one merged set.
+//   - A file with no designators names each part by its instance name. That name is unique within
+//     its cell only. A name used in more than one cell instance is qualified by its block's path in
+//     every block it appears in ("A1/R1"). The top cell keeps its own name, so two cells' R1 are two
+//     parts. A multi-gate part split across sheets then reads as two. That error shows, where a
+//     wrong merge would hide a part.
 
-// leaf is one placed part, reached through path, the block instance names above it joined by "/",
+// leaf is one placed part. Its path holds the block instance names above it joined by "/", and is
 // empty in the top cell.
 type leaf struct {
 	node *node
 	path string
 	// repeated is set when a block on the path is placed more than once in the design, so the part's
-	// ref-des must carry its path to stay distinct.
+	// ref-des must include its path to remain distinct.
 	repeated bool
 }
 
@@ -47,17 +48,18 @@ type netPiece struct {
 	repeated bool
 }
 
-// hierarchy is what a read extracts from: the parts, the nets as groups of pieces that are one
-// electrical net with the naming piece first, and the block instances a portRef can name.
+// hierarchy holds what a read extracts from. It has the parts, the nets and the block instances.
+// Each net is a group of pieces that form one electrical net, with the naming piece first. A
+// portRef can name a block instance.
 type hierarchy struct {
 	leaves []leaf
 	nets   [][]netPiece
-	// blockPaths maps a block instance, keyed as instKey keys it, to the path of its contents. A
-	// portRef naming one is a port of that block rather than a pin.
+	// blockPaths maps a block instance, keyed by instKey, to the path of its contents. A portRef
+	// naming one is a port of that block rather than a pin.
 	blockPaths map[string]string
 	// blocks are the cells walked into, which are sheets rather than part types.
 	blocks map[*node]bool
-	// cycles are the blocks a walk refused to enter because they contain themselves.
+	// cycles are the blocks that contain themselves. The walk refused to enter them.
 	cycles []*node
 	// flattened is set by the walk, so a read that descended reports only its cycles as unexpanded.
 	flattened bool
@@ -99,8 +101,8 @@ type cellIndex struct {
 	block map[*node]bool
 }
 
-// cellKeys are the spellings a reference may name an entity by, the identifier and the display,
-// each without the & escape (see instanceOf).
+// cellKeys returns the spellings that can name an entity in a reference. They are the identifier
+// and the display, each without the & escape (see instanceOf).
 func cellKeys(n *node) []string {
 	nm := parseName(n.Arg(1))
 	keys := []string{strings.TrimPrefix(nm.ID, "&")}
@@ -137,9 +139,10 @@ func indexCells(root *node) *cellIndex {
 	return ix
 }
 
-// resolve returns the cell an instance places, looking in the library its cellRef names or, with
-// none named, the library of the cell holding the instance, as EDIF scopes it. A name no library
-// declares under that scope resolves only when exactly one cell anywhere carries it.
+// resolve returns the cell that an instance places. It looks in the library named by the
+// instance's cellRef. With none named, it looks in the library of the cell holding the instance, as
+// EDIF scopes it. Suppose no library in that scope declares the name. It then resolves only when
+// exactly one cell anywhere has it.
 func (ix *cellIndex) resolve(in, holder *node) *node {
 	v := in.Child("viewRef")
 	if v == nil {
@@ -253,7 +256,7 @@ func (h *hierarchy) joinAcrossPorts() {
 	tie := func(key string, i int) {
 		if j, ok := owner[key]; ok {
 			if a, b := find(i), find(j); a != b {
-				// The lower index stays the root, so a group is ordered by its first piece.
+				// The lower index remains the root, so a group is ordered by its first piece.
 				if a > b {
 					a, b = b, a
 				}
@@ -309,9 +312,9 @@ func (h *hierarchy) joinAcrossPorts() {
 	h.nets = out
 }
 
-// netNames names each net group: its naming piece's own name, qualified by the piece's block path
-// unless the piece is in the top cell, or its name is carried by no other group and its block is
-// placed once.
+// netNames names each net group after its naming piece. It qualifies that name by the piece's
+// block path. The name is left bare when the piece is in the top cell. It is also left bare when no
+// other group has that name and the piece's block is placed once.
 func (h *hierarchy) netNames() []string {
 	seen := map[string]int{}
 	for _, g := range h.nets {
@@ -328,8 +331,9 @@ func (h *hierarchy) netNames() []string {
 	return out
 }
 
-// namesInSeveralBlocks is every instance name the walk met in more than one cell instance, which a
-// file naming its parts by instance name (no designators) cannot tell apart by name alone.
+// namesInSeveralBlocks returns every instance name the walk met in more than one cell instance. A
+// file with no designators names its parts by instance name, and it cannot tell these apart by name
+// alone.
 func (h *hierarchy) namesInSeveralBlocks() map[string]bool {
 	at := map[string]string{}
 	out := map[string]bool{}

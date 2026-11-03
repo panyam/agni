@@ -42,7 +42,7 @@ func TestRead(t *testing.T) {
 	if s := r1.Sections[0]; s.PartRef != "R0603" {
 		t.Errorf("R1 section part_ref = %q, want R0603 (package)", s.PartRef)
 	}
-	// NonstandardAttribute VALUE lands on the conventional "Value" key (WS1-031).
+	// NonstandardAttribute VALUE maps to the conventional "Value" key (WS1-031).
 	if r1.Attributes["Value"] != "10K" {
 		t.Errorf("R1 Value = %q, want 10K (from NonstandardAttribute)", r1.Attributes["Value"])
 	}
@@ -170,12 +170,13 @@ func TestDeclaredNetRole(t *testing.T) {
 
 // TestSkippedRefDes (agni issue 311) checks that IPC-2581, as a board format, declines an unannotated
 // component the way the KiCad board reader does rather than recording it as a diagnostic. Only a
-// reader that KEEPS the part owes that, and a REF** on a fabrication artifact is usually a fiducial
-// or a mechanical part rather than something anybody is going to buy.
+// reader that KEEPS the part owes the diagnostic. A REF** on a fabrication artifact is usually a
+// fiducial or a mechanical part rather than something anybody is going to buy.
 //
-// The designator-less component is in the same test because it is the same guard. The geometry pass
-// already dropped those, so the netlist used to carry components the board had no placement for.
-// The last assertion is the one that matters, that the two tiers agree on the component set.
+// The designator-less component is in the same test because the same guard handles it. The
+// geometry pass already dropped those, so the netlist used to hold components with no placement on
+// the board. The last assertion matters most. It checks that the two tiers agree on the component
+// set.
 func TestSkippedRefDes(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
 	if err != nil {
@@ -196,9 +197,9 @@ func TestSkippedRefDes(t *testing.T) {
 		}
 	}
 	// A connection to a skipped component would claim a pin on a part that is not in the design.
-	// Asserted against the component set rather than against skipRefDes, because a test that
-	// reaches for the production predicate to decide what counts as a failure cannot fail when that
-	// predicate is what broke.
+	// Asserted against the component set rather than against skipRefDes. Imagine the test used the
+	// production predicate to decide what counts as a failure. Then a broken predicate would break
+	// the test's own judgement too, and the test could not fail.
 	for _, n := range d.Nets {
 		for _, c := range n.Connections {
 			if !refs[c.ComponentRef] {
@@ -241,8 +242,8 @@ func TestRefDesCollisions(t *testing.T) {
 	}
 }
 
-// The clean read is the assertion that would have caught the original bug. An empty list has to
-// come with the declaration, or it is indistinguishable from a reader that never looked.
+// The clean read would have caught the original bug. An empty list has to come with the
+// declaration, or it is indistinguishable from a reader that never looked.
 func TestRefDesCollisionsDeclaredOnCleanRead(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
 	if err != nil {

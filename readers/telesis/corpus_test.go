@@ -21,16 +21,16 @@ const CorpusEnv = "AGNI_TELESIS_CORPUS"
 // grammar produces a fixture that encodes the misreading and a parser that agrees with it, and both
 // halves pass. Real files are the only thing that breaks the circle.
 //
-// They cannot be committed. A netlist carries net names, reference designators and part numbers off
+// They cannot be committed. A netlist holds net names, reference designators and part numbers off
 // a real design, so no export, and no fragment of one, belongs in this repository (see the root
-// CLAUDE.md). Hence the split: synthetic fixtures in testdata/ that CI runs, and this, which only
-// someone holding real exports can run.
+// CLAUDE.md). So the tests split in two. CI runs the synthetic fixtures in testdata/. Only someone
+// holding real exports can run this one.
 //
 // The assertions are STRUCTURAL rather than value-based. Nothing here names a net, a
 // designator or a part, so a failure message cannot leak design content into a terminal, a log or a
-// CI artifact. What it checks is that the reader's model of the format survives contact with files
-// it was not written against: sections resolve, the two property scopes separate, directions
-// resolve for a real fraction of pins, and nothing lands in the bucket that means "I did not
+// CI artifact. The test checks that the reader's model of the format survives contact with files
+// it was not written against. Sections resolve, and the two property scopes separate. Directions
+// resolve for a real fraction of pins. Nothing ends up in the bucket that means "I did not
 // understand this".
 func TestCorpus(t *testing.T) {
 	dir := os.Getenv(CorpusEnv)
@@ -46,8 +46,8 @@ func TestCorpus(t *testing.T) {
 	}
 
 	for _, path := range matches {
-		// The file NAME can carry a project or board name, so the subtest is numbered rather than
-		// named after it, for the same reason the assertions below are structural.
+		// The file NAME can contain a project or board name, so the subtest is numbered rather than
+		// named after it. The assertions below are structural for the same reason.
 		t.Run(anonymize(path), func(t *testing.T) {
 			f, err := os.Open(path)
 			if err != nil {
@@ -86,8 +86,8 @@ func TestCorpus(t *testing.T) {
 
 			// Component attributes must attach to real components, and none may be a pin fact.
 			// A `Pin Type` on a component means the target-shape routing let a pin target through
-			// as component-scoped, which is the failure this reader's shape discrimination exists
-			// to prevent.
+			// as component-scoped. This reader's shape discrimination exists to prevent that
+			// failure.
 			var pinFactsOnComponents int
 			for _, c := range d.Components {
 				if _, bad := c.GetAttributes()[PinTypeProperty]; bad {
@@ -127,8 +127,8 @@ func TestCorpus(t *testing.T) {
 			}
 
 			// Not a failure, because a section this reader does not consume does not make what it DID
-			// read wrong. But it is the first thing anyone running this against a new exporter
-			// needs to know, and on the exports this reader was built against it stays empty.
+			// read wrong. But anyone running this against a new exporter needs to know it first. On
+			// the exports this reader was built against, the list is empty.
 			if u := d.GetAttributes()[UnparsedSectionsAttr]; u != "" {
 				t.Logf("sections carrying content this reader did not consume: %s", u)
 			}
@@ -146,8 +146,8 @@ func countParts(d *ir.Design) int {
 	return n
 }
 
-// anonymize reduces a corpus path to a subtest name that cannot carry a project or board name,
-// since a subtest name is printed on every run and ends up in CI logs.
+// anonymize reduces a corpus path to a subtest name that cannot contain a project or board name.
+// A subtest name is printed on every run and ends up in CI logs.
 func anonymize(path string) string {
 	base := filepath.Base(path)
 	return strings.Repeat("x", len(strings.TrimSuffix(base, ".tel"))) + ".tel"

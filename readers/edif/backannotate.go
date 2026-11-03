@@ -1,11 +1,11 @@
 package edif
 
-// backAnnotatedRefDes maps an instance id to the designator the design's
-// (viewMap (instanceBackAnnotate (instanceRef ID ...) (designator "R1001"))) gives it (agni issue
-// 1228). An export can renumber parts after layout and push the new ref-des here while the page
-// instance keeps its old inline (designator "R4"), or carries none at all, so both the netlist read
-// and the schematic geometry read take the back-annotated one. Taking it in one of the two reads
-// alone would key a .eds's placements and its components differently.
+// backAnnotatedRefDes maps an instance id to its back-annotated designator (agni issue 1228). The
+// design gives it as (viewMap (instanceBackAnnotate (instanceRef ID ...) (designator "R1001"))).
+// An export can renumber parts after layout and write the new ref-des there. The page instance then
+// keeps its old inline (designator "R4"), or has none at all. So both the netlist read and the
+// schematic geometry read take the back-annotated designator. If only one of the two reads took it,
+// a .eds's placements and its components would key differently.
 //
 // Only a top-level instance is mapped. An instanceRef nesting another instanceRef names an instance
 // inside a block, and neither read keys a placement by that path. An id annotated with two different

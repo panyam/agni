@@ -17,7 +17,7 @@ func TestReadSchematicGeometry(t *testing.T) {
 	}
 	sheet := g.Sheets[0]
 
-	// The resistor symbol carries its drawing line and two pins as a loaded symbol asset.
+	// The resistor symbol holds its drawing line and two pins as a loaded symbol asset.
 	res := symbolDef(g, "resistor")
 	if res == nil {
 		t.Fatal("no resistor SymbolDef")
@@ -138,8 +138,8 @@ func TestAnnotationSymbols(t *testing.T) {
 }
 
 // TestReadBusGeometry asserts the geometry reader draws a gEDA `U` bus object (WS7-042) as a
-// KIND_BUS wire named by its inline netname (the join key a bus-not-modeled finding highlights it
-// on), and does not leave it as an undistinguished plain-net wire.
+// KIND_BUS wire named by its inline netname, and does not leave it as an undistinguished
+// plain-net wire. A bus-not-modeled finding joins on that netname to highlight the wire.
 func TestReadBusGeometry(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "bus.sch")), "bus.sch", testOpener(t))
 	if err != nil {
@@ -169,9 +169,10 @@ func TestReadBusGeometry(t *testing.T) {
 	}
 }
 
-// A gEDA power/ground symbol names the net at its pin rather than being a part (read.go keeps it out
-// of Components). The geometry used to carry its refdes, which joins to nothing, so a viewer could
-// select it and then ask about a component that does not exist; it carries the net it names instead.
+// A gEDA power/ground symbol names the net at its pin rather than being a part, so read.go keeps it
+// out of Components. The geometry used to hold its refdes, which joins to nothing. A viewer could
+// select it and then ask about a component that does not exist. Now the geometry holds the net
+// the symbol names.
 func TestPowerSymbolCarriesItsNetAnchor(t *testing.T) {
 	d, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
 	if err != nil {

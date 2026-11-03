@@ -22,7 +22,7 @@ const kicadNativeIDKind = "kicad-uuid"
 // connectivity (from pad net assignments). The logical structure (part types, pins, and
 // multi-unit sections) lives in the .kicad_sch schematic and is a separate reader; a PCB
 // component therefore has no ComponentSections. sourceFile is recorded in provenance only;
-// the caller owns file I/O so the core stays runtime-agnostic (CONSTRAINTS C1).
+// the caller owns file I/O so the core is runtime-agnostic (CONSTRAINTS C1).
 func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	root, err := parseBoard(r)
 	if err != nil {
@@ -65,10 +65,10 @@ func extractPCB(root *node, src string) *ir.Design {
 	for _, fp := range root.Children("footprint") {
 		ref := propValue(fp, "Reference")
 		// A placeholder reference ("REF**", "C?1845") is annotation state, not an identity, so
-		// keying it merges distinct parts' pads onto one component (WS1-024). Placeholder
-		// footprints are skipped like Reference-less graphics by BOTH this reader and the
-		// board-geometry one, so the two artifacts keep agreeing on the component set. The
-		// predicate is internal/refdes's rather than this reader's; see its package comment.
+		// keying it merges distinct parts' pads onto one component (WS1-024). BOTH this reader
+		// and the board-geometry one skip placeholder footprints, as they skip Reference-less
+		// graphics, so the two artifacts agree on the component set. The predicate is
+		// internal/refdes's rather than this reader's; see its package comment.
 		if ref == "" || refdes.IsPlaceholder(ref) {
 			continue
 		}
@@ -92,8 +92,8 @@ func extractPCB(root *node, src string) *ir.Design {
 		// structure they get from EDIF/schematic readers; the "part" is the footprint.
 		comp.Sections = []*ir.ComponentSection{{
 			Index: 0,
-			// The same properties ride the SECTION as well as the component. A placed footprint is one
-			// section, so the two carry the same values, and consumers read different halves. The
+			// The same properties go on the SECTION as well as the component. A placed footprint is one
+			// section, so the two hold the same values, and consumers read different halves. The
 			// datasheet join reads the component, and the EDIF writer emits a section's attributes as
 			// the instance's properties (agni issue 584).
 			Attributes: props,
@@ -124,9 +124,10 @@ func extractPCB(root *node, src string) *ir.Design {
 				d.Nets = append(d.Nets, net)
 			}
 			// KiCad copies a schematic pin's no-connect FLAG onto its pad as a "+no_connect" suffix on
-			// the pin type, so a design read from its board alone marks the net as the schematic read
-			// does, the designer's statement that it is left open on purpose (agni issue 1023). A bare
-			// "no_connect" is the pin's electrical type, an NC pin on the part, and is not the flag.
+			// the pin type. So a read of the board alone marks the net as the schematic read does.
+			// The flag is the designer's statement that the pin is left open on purpose (agni issue
+			// 1023). A bare "no_connect" is the pin's electrical type, an NC pin on the part, and is
+			// not the flag.
 			if pt := pad.Child("pintype"); pt != nil && strings.HasSuffix(atomOf(pt.Arg(1)), "+no_connect") {
 				if net.Attributes == nil {
 					net.Attributes = map[string]string{}
@@ -173,9 +174,10 @@ func propValue(n *node, key string) string {
 	return ""
 }
 
-// sectionProps adds every property of a symbol or footprint that is not the reference and not one
-// partIdentityProps already carries to a section's attributes, so a house field ("Part Number", "DNP")
-// reaches the lexicon's attribute keys. A field KiCad leaves empty is skipped, as propValue does.
+// sectionProps copies the properties of a symbol or footprint into a section's attributes, so a house
+// field ("Part Number", "DNP") reaches the lexicon's attribute keys. It skips the reference and any key
+// the attributes already hold, such as a partIdentityProps value. It also skips a field KiCad leaves
+// empty, as propValue does.
 func sectionProps(n *node, into map[string]string) {
 	for _, p := range n.Children("property") {
 		key, v := atomOf(p.Arg(1)), atomOf(p.Arg(2))

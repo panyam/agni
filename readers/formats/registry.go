@@ -20,21 +20,21 @@ import (
 )
 
 func init() {
-	// EDIF netlists appear under several extensions. Our fixtures use .edn, and real exports (and
-	// the whole EDIF corpus) use .edf/.edif. All three share one netlist reader, and the schematic
-	// export .eds registers separately below. Extension matching is case-insensitive (lowerExt), so
-	// .EDF resolves here too.
+	// EDIF netlists appear under several extensions. Our fixtures use .edn, and real exports and the
+	// whole EDIF corpus use .edf/.edif. All three share one netlist reader. The schematic export .eds
+	// registers separately below. Extension matching is case-insensitive (lowerExt), so .EDF
+	// resolves here too.
 	for _, ext := range []string{".edn", ".edf", ".edif"} {
 		Register(&Format{Ext: ext, Name: "edif", Design: readEDIF})
 	}
 	Register(&Format{
 		Ext:  ".eds",
 		Name: "edif-schematic",
-		// An EDIF SCHEMATIC export carries netlist connectivity too (nets joining portRefs), in
-		// the grammar the netlist reader parses, so a .eds is dual-capability (netlist + faithful
-		// geometry) like a .kicad_sch, and wiring the netlist reader makes it queryable, checkable
-		// and diffable. Its netlist counts drawn instances and per-sheet segments, so its counts
-		// are not comparable with an .edn read.
+		// An EDIF SCHEMATIC export has netlist connectivity too, as nets joining portRefs. It is
+		// in the grammar the netlist reader parses. So a .eds is dual-capability like a .kicad_sch,
+		// with a netlist and faithful geometry. Wiring the netlist reader makes it queryable,
+		// checkable and diffable. Its netlist counts drawn instances and per-sheet segments, so its
+		// counts are not comparable with an .edn read.
 		Design: readEDIF,
 		Geometry: func(l *Loader, path string) (*geom.SchematicGeometry, error) {
 			f, err := l.Open(path)
@@ -53,11 +53,11 @@ func init() {
 			if err != nil {
 				return nil, err
 			}
-			// Walk the sheet tree (WS1-018), matching the geometry entry below, so the viewer's
-			// sheets and the rules' nets come from the same hierarchy. A complete walk resolves the
-			// external markings (WS1-017) only when the schematic's own .kicad_pro sits beside it,
-			// since that makes it the project's root; without one it may be another design's
-			// sub-sheet (agni issue 1013).
+			// Walk the sheet tree (WS1-018), matching the geometry entry below. The viewer's sheets
+			// and the rules' nets then come from the same hierarchy. A complete walk resolves the
+			// external markings (WS1-017) only when the schematic's own .kicad_pro sits beside it.
+			// That project makes the schematic the project's root. Without one, the schematic may
+			// be another design's sub-sheet (agni issue 1013).
 			d, complete, err := kicad.ReadSchematicHierarchyNetsWithSymbols(path, content, l.sheetOpener(path), l.kicadSymOpener(path))
 			if err != nil {
 				return nil, err
@@ -108,8 +108,8 @@ func init() {
 		Design:   readSchDesign,
 		Geometry: readSchGeometry,
 	})
-	// The flat Telesis netlist the Mentor/Siemens flow emits. The format carries connectivity and
-	// properties and no geometry at all, so Geometry and Board stay nil and the design renders
+	// The flat Telesis netlist the Mentor/Siemens flow emits. The format holds connectivity and
+	// properties and no geometry at all. So Geometry and Board are nil, and the design renders
 	// through auto-layout like any other netlist-only source.
 	Register(&Format{Ext: ".tel", Name: "telesis", Design: readTelesis})
 	Register(&Format{Ext: ".xml", Name: "ipc2581", Design: readIPC2581, Board: readIPC2581Board})
@@ -117,9 +117,9 @@ func init() {
 	registerODB()
 }
 
-// readKicadProject merges the sibling .kicad_sch and .kicad_pcb that share the .kicad_pro's
-// stem into one IR (schematic structure + board connectivity). Either sibling may be
-// absent; the merge degrades to whichever exists.
+// readKicadProject merges the sibling .kicad_sch and .kicad_pcb that share the .kicad_pro's stem
+// into one IR, with the schematic's structure and the board's connectivity. Either sibling may be
+// absent, and the merge then uses whichever exists.
 func readKicadProject(l *Loader, proPath string) (*ir.Design, error) {
 	stem := strings.TrimSuffix(proPath, filepath.Ext(proPath))
 	var schR, pcbR io.Reader
@@ -142,23 +142,23 @@ func readKicadProject(l *Loader, proPath string) (*ir.Design, error) {
 	return d, nil
 }
 
-// kicadProjectOf is the .kicad_pro a schematic or board belongs to: the one sharing its stem. A
-// sub-sheet has a stem of its own and so no project, which is right, because it is one sheet of a
-// larger design rather than the design.
+// kicadProjectOf returns the .kicad_pro a schematic or board belongs to, the one sharing its stem.
+// A sub-sheet has a stem of its own and so no project. That is correct. A sub-sheet is one sheet of
+// a larger design, not the design.
 func kicadProjectOf(path string) string {
 	return strings.TrimSuffix(path, filepath.Ext(path)) + ".kicad_pro"
 }
 
-// annotateFromProject applies what only the .kicad_pro declares, whichever of the project's files the
-// read began from (agni issue 933). The schematic and the board carry neither of these, so reading
-// either without its project dropped them, and a design named by its schematic checked its copper
-// against fixed floors and none of its own rules.
+// annotateFromProject applies what only the .kicad_pro declares. It does so whichever of the
+// project's files the read began from (agni issue 933). Neither the schematic nor the board holds
+// these settings. Reading either without its project used to drop them. A design named by its
+// schematic then checked its copper against fixed floors and none of its own rules.
 //
-// Net-class membership and per-class routing constraints come from net_settings (WS1-037, WS3-111),
-// and the board-wide minimums from board.design_settings.rules. Each pass decodes the whole file, so
-// each gets its own reader over one buffer. An fs.File is not required to be an io.Seeker (WS1-049),
-// and independent readers also make the passes order-independent. A project that is absent or
-// unreadable leaves the design as read, and the result says whether one was found.
+// Net-class membership and per-class routing constraints come from net_settings (WS1-037, WS3-111).
+// The board-wide minimums come from board.design_settings.rules. Each pass decodes the whole file,
+// so each gets its own reader over one buffer. An fs.File need not be an io.Seeker (WS1-049), and
+// independent readers also make the passes order-independent. If the project is absent or
+// unreadable, the design is left as read, and the result says whether a project was found.
 func annotateFromProject(l *Loader, d *ir.Design, proPath string) bool {
 	data, err := l.ReadFile(proPath)
 	if err != nil {
@@ -188,9 +188,9 @@ func readKicadProjectGeometry(l *Loader, proPath string) (*geom.SchematicGeometr
 	return g, nil
 }
 
-// readKicadHierarchy reads a .kicad_sch and its hierarchical sub-sheets into geometry. It
-// reads the root here and hands the kicad package an opener that resolves each child's
-// Sheetfile against the root's directory, so the reader owns no file I/O (C1).
+// readKicadHierarchy reads a .kicad_sch and its hierarchical sub-sheets into geometry. It reads the
+// root here and hands the kicad package an opener. The opener resolves each child's Sheetfile
+// against the root's directory, so the reader owns no file I/O (C1).
 func readKicadHierarchy(l *Loader, schPath string) (*geom.SchematicGeometry, error) {
 	content, err := l.ReadFile(schPath)
 	if err != nil {
@@ -240,8 +240,8 @@ func readSchGeometry(l *Loader, path string) (*geom.SchematicGeometry, error) {
 	}
 }
 
-// readEDIF reads an EDIF netlist into the IR. Shared by the .edn/.edf/.edif extensions, which
-// are all the same format under different conventional suffixes.
+// readEDIF reads an EDIF netlist into the IR. The .edn/.edf/.edif extensions share it. They are all
+// the same format under different conventional suffixes.
 func readEDIF(l *Loader, path string) (*ir.Design, error) {
 	f, err := l.Open(path)
 	if err != nil {

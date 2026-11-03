@@ -24,8 +24,9 @@ const housePropsSch = `(kicad_sch
 		(property "Notes" "" (at 47 59 0))))
 `
 
-// A house property rides the section, where the lexicon's attribute keys read it, and stays off the
-// component, whose every attribute value classification tokenizes (agni issue 1285).
+// A house property goes on the section, and the lexicon's attribute keys read it there. It is kept
+// off the component, because classification tokenizes every attribute value on a component (agni
+// issue 1285).
 func TestAHousePropertyRidesTheSection(t *testing.T) {
 	d, err := ReadSchematic(strings.NewReader(housePropsSch), "house.kicad_sch")
 	if err != nil {

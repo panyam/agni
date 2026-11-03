@@ -39,8 +39,8 @@ func ReadSchematicHierarchyNets(rootName string, rootContent []byte, open func(r
 }
 
 // ReadSchematicHierarchyNetsWithSymbols is the walk plus external symbol-library resolution
-// (WS1-016). openSym fetches .kicad_sym bytes by library nickname for lib_id references no sheet
-// embeds. One cache serves the whole walk, and a nil openSym resolves nothing.
+// (WS1-016). openSym fetches .kicad_sym bytes by library nickname for lib_id references that no
+// sheet embeds. One cache serves the whole walk, and a nil openSym resolves nothing.
 func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, open, openSym func(string) ([]byte, error)) (*ir.Design, bool, error) {
 	d := &ir.Design{
 		IrVersion:    "0",
@@ -95,27 +95,28 @@ func ReadSchematicHierarchyNetsWithSymbols(rootName string, rootContent []byte, 
 }
 
 // kicadBusVectorRe matches KiCad's vector-bus spelling `PREFIX[first..last]` (two dots) and ONLY it.
-// netgraph.IsBusName also accepts xschem and gEDA's `[hi:lo]`, which suits the shared bus-not-modeled
-// diagnostic, but KiCad reads `DATA[1:0]` as a scalar label and its netlist export keeps `/DATA0` and
+// netgraph.IsBusName also accepts xschem and gEDA's `[hi:lo]`. That suits the shared bus-not-modeled
+// diagnostic. But KiCad reads `DATA[1:0]` as a scalar label, and its netlist export keeps `/DATA0` and
 // `/sub/DATA0` apart, so promoting members off one would invent a connection.
 // TestHierBusMembersDoNotCross is the control.
 var kicadBusVectorRe = regexp.MustCompile(`^(.*)\[(\d+)\.\.(\d+)\]$`)
 
-// groupBus splits a group bus label, KiCad's `PREFIX{...}` spelling, into the prefix its members are
-// named under (`PREFIX.MEMBER`) and its members, reporting false for anything that is not one.
+// groupBus splits a group bus label, KiCad's `PREFIX{...}` spelling, into its prefix and its members.
+// The members are named under the prefix (`PREFIX.MEMBER`). It reports false for anything that is
+// not a group bus.
 //
 // The braces either name a `bus_alias`, as the jetson baseboard writes `I2C7{I2C}`, or list the members
 // inline, separated by spaces or commas, as the RoyalBlue54L Feather writes `ANALOG{A[0..5]}`,
-// `DIG{D5 D6 D[9..13]}` and `SWD_TRG{~{RESET}, SWDIO, SWDCLK}`. A member, listed or an alias's, may
-// be a vector, which expands, so Cynthion's `ULPI` alias carries `DATA0` to `DATA7` across a sheet
-// pin rather than one member named `DATA[0..7]` (agni issue 1234). A listed member may also carry
-// formatting braces of its own (agni issue 936). The group is the LAST
-// top-level brace pair, so a prefix may carry a subscript, as in `I2C_{SYS}{I2C}`, 33 of the jetson
-// baseboard's 224 group-bus occurrences.
+// `DIG{D5 D6 D[9..13]}` and `SWD_TRG{~{RESET}, SWDIO, SWDCLK}`. A member may be a vector, whether
+// it is listed or comes from an alias, and a vector member expands. So Cynthion's `ULPI` alias takes
+// `DATA0` to `DATA7` across a sheet pin, not one member named `DATA[0..7]` (agni issue 1234). A
+// listed member may also have formatting braces of its own (agni issue 936). The group is the LAST
+// top-level brace pair, so a prefix may have a subscript, as in `I2C_{SYS}{I2C}`. That shape covers
+// 33 of the jetson baseboard's 224 group-bus occurrences.
 //
 // A brace pair right after `_`, `^` or `~` is KiCad's subscript, superscript or overbar, so `V_{OUT}`
 // and `SWD_TRG.~{RESET}` are scalar labels. Reading one as a group would promote a member across a
-// sheet boundary and join nets the design keeps apart.
+// sheet boundary and join nets that the design keeps apart.
 func groupBus(name string, aliases map[string][]string) (prefix string, members []string, ok bool) {
 	open := lastBraceGroup(name)
 	if open <= 0 {
@@ -187,10 +188,10 @@ func splitGroupMembers(inner string) []string {
 	return out
 }
 
-// busMembersAscending expands a KiCad vector bus into its members by ASCENDING index, the order two
-// buses pair up in, and returns nil for anything that is not one. kicad-cli joins bit 0 of a child's
-// `B[0..1]` to `A0` of a parent's `A[3..0]`, not to `A3`. netgraph.ExpandBusName keeps the WRITTEN
-// direction so a diagram reads its bits as drawn, so this cannot reuse it.
+// busMembersAscending expands a KiCad vector bus into its members by ASCENDING index, the order in
+// which two buses pair up, and returns nil for anything that is not one. kicad-cli joins bit 0 of a
+// child's `B[0..1]` to `A0` of a parent's `A[3..0]`, not to `A3`. netgraph.ExpandBusName keeps the
+// WRITTEN direction, so that a diagram reads its bits as drawn. This function cannot reuse it.
 func busMembersAscending(name string) []string {
 	m := kicadBusVectorRe.FindStringSubmatch(name)
 	if m == nil {
@@ -208,14 +209,14 @@ func busMembersAscending(name string) []string {
 	return out
 }
 
-// sheetBusNames maps each bus sheet pin on a sheet to the name of the bus BRANCH it sits on, the
-// nearest bus label along the `(bus ...)` segments.
+// sheetBusNames maps each bus sheet pin on a sheet to the name of the bus BRANCH under it. That name
+// is the nearest bus label along the `(bus ...)` segments.
 //
-// Nearest rather than one name per connected bus, because a trunk's labelled branches carry different
-// members. `vme-wren` cuts PP_OUT[0..31] into four eight-wide slices for four instances of one driver
-// sheet, and naming the cluster would map every instance's bit 0 onto the same parent member. Buses
-// wired together share members by NAME, while a bus crossing a sheet pin maps BY BIT POSITION, so the
-// branch's own label is the one that decides. See
+// It takes the nearest label rather than one name per connected bus, because a trunk's labelled
+// branches have different members. `vme-wren` cuts PP_OUT[0..31] into four eight-wide slices for
+// four instances of one driver sheet, and naming the cluster would map every instance's bit 0 onto
+// the same parent member. Buses wired together share members by NAME, while a bus crossing a sheet
+// pin maps BY BIT POSITION, so the branch's own label decides. See
 // docsite/content/architecture/net-solving.md#buses-cross-by-a-different-rule.
 //
 // labelled reports, per pin, whether its branch's name is a bus LABEL drawn on this sheet rather than
@@ -271,7 +272,7 @@ func sheetBusNames(root *node, aliases map[string][]string) (names map[netgraph.
 		} else if _, onIt := adj[pin]; onIt {
 			// Nothing labels the branch, so the pins on it name it. A GROUP bus joining sibling sheets
 			// takes one name for the whole bus, so members of the same name meet even when the two
-			// sheets spell the group differently: kicad-cli joins the Feather's `I2C{SCL, SDA}` and
+			// sheets spell the group differently. kicad-cli joins the Feather's `I2C{SCL, SDA}` and
 			// `I2C_54{SCL, SDA}` across one bare bus wire (agni issue 936). Anything else keeps its own
 			// name and its members cross as spelled.
 			out[pin] = pinName
@@ -283,8 +284,8 @@ func sheetBusNames(root *node, aliases map[string][]string) (names map[netgraph.
 	return out, labelled
 }
 
-// groupBusNameOf is the name an unlabelled bus carries: the first, in sorted order, of the group-bus
-// pins it connects, which is every pin reachable from start along the bus.
+// groupBusNameOf returns the name of an unlabelled bus. The bus connects every group-bus pin that is
+// reachable from start along it, and the name is the first of those pins in sorted order.
 func groupBusNameOf(start netgraph.Point, adj map[netgraph.Point][]netgraph.Point, pinAt map[netgraph.Point]string, aliases map[string][]string) string {
 	best := pinAt[start]
 	seen := map[netgraph.Point]bool{start: true}
@@ -309,9 +310,9 @@ func groupBusNameOf(start netgraph.Point, adj map[netgraph.Point][]netgraph.Poin
 	return best
 }
 
-// isBusLabel reports whether a label names a bus this walk acts on, in either of KiCad's two
-// spellings. Everything else stays a scalar label, since a label wrongly read as a bus promotes member
-// names across a sheet boundary and joins nets the design keeps apart.
+// isBusLabel reports whether a label names a bus that this walk acts on, in either of KiCad's two
+// spellings. Everything else is a scalar label. A label wrongly read as a bus would promote member
+// names across a sheet boundary and join nets that the design keeps apart.
 func isBusLabel(name string, aliases map[string][]string) bool {
 	if busMembersAscending(name) != nil {
 		return true
@@ -352,11 +353,11 @@ func nearestBusLabel(start netgraph.Point, adj map[netgraph.Point][]netgraph.Poi
 	return "", false
 }
 
-// reusedSheetFiles names the sub-sheet files this sheet instantiates more than once. Every instance's
-// bus pin is spelled identically, so promoting by the pin's own members would merge the instances,
-// and nearestBusLabel cannot resolve the branch on a bus that forks four ways (`vme-wren` places one
-// driver sheet four times off slices of PP_OUT[0..31]). A reused sheet promotes nothing and its nets
-// stay split.
+// reusedSheetFiles names the sub-sheet files that this sheet instantiates more than once. Every
+// instance's bus pin is spelled identically, so promoting by the pin's own members would merge the
+// instances, and nearestBusLabel cannot resolve the branch on a bus that forks four ways (`vme-wren`
+// places one driver sheet four times off slices of PP_OUT[0..31]). A reused sheet promotes nothing,
+// and its nets are left split.
 func reusedSheetFiles(root *node) map[string]bool {
 	n := map[string]int{}
 	for _, sh := range root.Children("sheet") {
@@ -371,24 +372,26 @@ func reusedSheetFiles(root *node) map[string]bool {
 	return out
 }
 
-// busPinPromotions returns the name overrides a child sheet inherits through sub's BUS sheet pins, or
-// nil for a reused sheet. A bus's members are tapped off elsewhere on each sheet rather than at the
-// pin, so each member of a crossing bus resolves, inside the child, to the name it lands on in the
-// PARENT (agni issue 561).
+// busPinPromotions returns the name overrides that a child sheet inherits through sub's BUS sheet
+// pins, or nil for a reused sheet. A bus's members are tapped off elsewhere on each sheet rather than
+// at the pin. So inside the child, each member of a crossing bus resolves to its name in the PARENT
+// (agni issue 561).
 //
-// Vectors pair BY BIT POSITION, not member name, so a rename carries across. kicad-cli joins a child's
-// `PP_OUT0` to the parent's `PP_OUT2` when the parent's bus at that pin is `PP_OUT[2..3]`, and pairs
-// off only as far as the shorter bus. Only members are promoted, never the bus name, because the
-// parent's anchor for the pin is the child-qualified `/<sheet>/AN[0..7]` and promoting it would break
-// that join. Promotion composes through nesting, since a member this sheet itself inherited joins
-// the name it inherited. See docsite/content/architecture/net-solving.md#buses-cross-by-a-different-rule.
+// Vectors pair BY BIT POSITION, not member name, so a renamed member still pairs. kicad-cli joins a
+// child's `PP_OUT0` to the parent's `PP_OUT2` when the parent's bus at that pin is `PP_OUT[2..3]`,
+// and pairs off only as far as the shorter bus. Only members are promoted, never the bus name,
+// because the parent's anchor for the pin is the child-qualified `/<sheet>/AN[0..7]` and promoting
+// it would break that join. Promotion composes through nesting, since a member that this sheet
+// itself inherited joins the inherited name. See
+// docsite/content/architecture/net-solving.md#buses-cross-by-a-different-rule.
 func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string, busLabelled map[netgraph.Point]bool, aliases map[string][]string, reused bool) map[string]promotion {
 	if reused {
 		return nil
 	}
 	out := map[string]promotion{}
 	// A child member must promote to exactly one parent name. The rules below never produce two, so a
-	// collision means an assumption here is wrong, and the member stays unpromoted rather than picking.
+	// collision means an assumption here is wrong, and the member is left unpromoted rather than
+	// picking one.
 	conflict := map[string]bool{}
 	set := func(from string, to promotion) {
 		if prev, ok := out[from]; ok && prev.name != to.name {
@@ -397,8 +400,9 @@ func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string,
 		}
 		out[from] = to
 	}
-	// parentName is the name a child member joins: the parent's own join when the parent inherited
-	// the member through a bus pin too, so promotion composes through nesting, else its qualified name.
+	// parentName returns the name that a child member joins. If the parent inherited the member
+	// through a bus pin too, that is the parent's own join, so promotion composes through nesting.
+	// Otherwise it is the member's qualified name.
 	parentName := func(member string, labelled bool) promotion {
 		if p, ok := sc.join(member); ok {
 			return p
@@ -415,7 +419,7 @@ func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string,
 			continue
 		}
 		pinName, busName, labelled := unescapeName(atomOf(p.Arg(1))), busAt[gp(at)], busLabelled[gp(at)]
-		// A VECTOR pairs by bit position, so a rename across the boundary carries.
+		// A VECTOR pairs by bit position, so a member renamed across the boundary still pairs.
 		if mine, theirs := busMembersAscending(pinName), busMembersAscending(busName); mine != nil && theirs != nil {
 			for j := 0; j < len(mine) && j < len(theirs); j++ {
 				set(mine[j], parentName(theirs[j], labelled))
@@ -426,7 +430,7 @@ func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string,
 		// members XX/YY against a child pin `B0{BETA}` of members PP/QQ joins NOTHING, so pairing by
 		// position would short two unrelated signals while moving the net count the right way.
 		// Members come from the parent's bus, re-prefixed with the child's, so a child alias
-		// declaring other members yields names no net carries and the entries never apply.
+		// declaring other members yields names that no net has, and the entries never apply.
 		childPrefix, _, okChild := groupBus(pinName, aliases)
 		parentPrefix, members, okParent := groupBus(busName, aliases)
 		if !okChild || !okParent {
@@ -447,8 +451,8 @@ func busPinPromotions(sub *node, sc sheetScope, busAt map[netgraph.Point]string,
 
 // projectBusAliases unions the bus_alias declarations of every sheet in the tree, because an alias
 // resolves PROJECT-WIDE though it is written into one sheet file. Nine of the fourteen jetson sheets
-// that USE a group bus declare no alias, kicad-cli crosses the boundary unchanged with the alias only
-// in the CHILD, and resolving per file recognized 12 of that board's 251 split members.
+// that USE a group bus declare no alias. kicad-cli crosses the boundary unchanged with the alias only
+// in the CHILD. Resolving per file recognized 12 of that board's 251 split members.
 //
 // The first declaration of a name wins, in traversal order. A missing or unreadable sub-sheet is
 // skipped here and reported by the walk.
@@ -489,11 +493,11 @@ func projectBusAliases(rootContent []byte, open func(string) ([]byte, error)) ma
 	return out
 }
 
-// hierNetWalker carries the hierarchical netlist walk's accumulator state. One walk call runs per
+// hierNetWalker holds the hierarchical netlist walk's accumulator state. One walk call runs per
 // sheet instance.
 type hierNetWalker struct {
 	// aliases is the PROJECT-wide bus_alias table, collected before the walk because a sheet may use
-	// an alias another sheet declares.
+	// an alias that another sheet declares.
 	aliases  map[string][]string
 	d        *ir.Design
 	libs     *libAccum
@@ -564,9 +568,10 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 	for _, sub := range root.Children("sheet") {
 		file := propValue(sub, "Sheetfile")
 		childID := path.Join(id, propValue(sub, "Sheetname"))
-		// Each sheet pin gets the parent half of its port, an anchor carrying the CHILD-qualified
-		// name the child's hierarchical_label emits, so label-union joins the two sheets. Emitted
-		// even when the child fails to open, so a partial read still names the parent net.
+		// Each sheet pin gets the parent half of its port. That half is an anchor with the
+		// CHILD-qualified name that the child's hierarchical_label emits, so label-union joins the
+		// two sheets. Emitted even when the child fails to open, so a partial read still names the
+		// parent net.
 		for _, p := range sub.Children("pin") {
 			if at := sheetPt(p.Child("at")); at != nil {
 				w.in.anchors = append(w.in.anchors, netgraph.Anchor{At: sc.at(gp(at)), Label: childID + "/" + netName(atomOf(p.Arg(1))), Rank: rankSheetPin + sc.depth(), Sheet: sc.prefix})
@@ -594,9 +599,9 @@ func (w *hierNetWalker) walk(content []byte, src, id, instPath string, ancestors
 
 // hierWireNets runs the same combined solve as ReadSchematicHierarchyNets and returns each wire's
 // uuid -> solved net name (WS1-022). The geometry reader uses it so its wire net names are
-// byte-identical to the netlist read's (same N$ numbering, same per-instance qualification), which a
-// finding's net -> wire -> sheet join needs. It repeats the walk's traversal but collects only solver
-// inputs. A nil open reads the root sheet alone.
+// byte-identical to the netlist read's (same N$ numbering, same per-instance qualification). A
+// finding's net -> wire -> sheet join needs that match. It repeats the walk's traversal but collects
+// only solver inputs. A nil open reads the root sheet alone.
 func hierWireNets(rootName string, rootContent []byte, open, openSym func(string) ([]byte, error)) map[string]netgraph.NetRef {
 	syms := newSymLibCache(openSym)
 	aliases := projectBusAliases(rootContent, open)
@@ -656,17 +661,17 @@ func hierWireNets(rootName string, rootContent []byte, open, openSym func(string
 	return wireNets
 }
 
-// stampNetSheets attributes each net the sheet instances it touches (WS9-028), so a net finding gets
-// a sheet badge like a component one. Membership comes from pointNets and each point's X band (the
-// instStep offset hierDangles decodes), so a wireless single-pin net on a sub-sheet is placed too. Ids
-// come out in sheet order. A single-sheet read gets no attribute, since the badge layer hides badges
-// below two sheets.
+// stampNetSheets records on each net the sheet instances that the net touches (WS9-028), so a net
+// finding gets a sheet badge like a component one. Membership comes from pointNets and each point's X
+// band (the instStep offset that hierDangles decodes), so a wireless single-pin net on a sub-sheet is
+// placed too. Ids come out in sheet order. A single-sheet read gets no attribute, since the badge
+// layer hides badges below two sheets.
 func stampNetSheets(nets []*ir.Net, pointNets map[netgraph.Point]netgraph.NetRef, sheets []*ir.Sheet) {
 	if len(sheets) <= 1 {
 		return
 	}
 	// Key by the per-instance net id, NOT the name (WS9), or two distinct nets sharing a name both get
-	// the union of their sheets and a design-global finding lands on every sheet. A pinless net has
+	// the union of their sheets and a design-global finding shows up on every sheet. A pinless net has
 	// no id and keys by name.
 	sheetKey := func(r netgraph.NetRef) string {
 		if r.ID != "" {

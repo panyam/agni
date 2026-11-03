@@ -119,7 +119,7 @@ func symbolsOf(root *node, src string) []*geom.SymbolDef {
 	return out
 }
 
-// solveWireNets runs the net solver over one sheet (the same collectSheetNets + Build the
+// solveWireNets runs the net solver over one sheet (the same collectSheetNets + Build that the
 // netlist reader uses) and returns each wire's uuid -> solved net (name + deterministic
 // per-instance id, WS1-022 / WS9). KiCad wires carry no inline net name, and running the SAME
 // Build as the netlist read makes a wire's id match its ir.Net's id by construction. sc.prefix
@@ -149,7 +149,7 @@ func sheetOf(root *node, src string, wireNetOf func(uuid string) netgraph.NetRef
 		}
 	}
 	// Bus trunks and entries (WS7-042) are drawn as wires tagged with a Kind so the renderers
-	// style them apart. The trunk carries its range-label name in Net (busWire, busLabelFor); an
+	// style them apart. The trunk holds its range-label name in Net (busWire, busLabelFor); an
 	// entry stub has no label of its own and is drawn unnamed. A bus_alias is a declaration and
 	// is not drawn.
 	for _, b := range root.Children("bus") {
@@ -179,9 +179,9 @@ func sheetOf(root *node, src string, wireNetOf func(uuid string) netgraph.NetRef
 }
 
 // busWire builds a bus trunk or entry WireGeometry (WS7-042). name is the bus's range-label
-// name ("" for an unlabeled entry stub), carried in Net because a bus-not-modeled finding's
+// name ("" for an unlabeled entry stub), stored in Net because a bus-not-modeled finding's
 // subject is that name and the viewer highlights the drawn bus by it (WS7-042b,
-// docsite/content/architecture/geometry-and-rendering.md). NetId stays empty since a bus's
+// docsite/content/architecture/geometry-and-rendering.md). NetId is left empty since a bus's
 // member nets are unmodeled. The KiCad uuid goes on Prov.SourceId, as kicadImage does.
 func busWire(kind geom.WireGeometry_Kind, pts []*geom.Point, uuid, name, src string) *geom.WireGeometry {
 	return &geom.WireGeometry{
@@ -194,9 +194,9 @@ func busWire(kind geom.WireGeometry_Kind, pts []*geom.Point, uuid, name, src str
 
 // busLabelFor returns the name of the range-bus label (e.g. "DATA[0..7]") placed on this bus
 // polyline, or "" if none (WS1-034, WS7-042b). It uses the same name normalization and predicate
-// as the netlist detector (collectBuses) so the finding subject and the geometry name match
-// exactly, so a `[hi:lo]` label, which KiCad reads as a plain scalar, names no bus here either
-// (agni issue 605, docsite/content/architecture/net-solving.md).
+// as the netlist detector (collectBuses), so the finding subject and the geometry name match
+// exactly. KiCad reads a `[hi:lo]` label as a plain scalar, so such a label names no bus here
+// either (agni issue 605, docsite/content/architecture/net-solving.md).
 func busLabelFor(root *node, pts []*geom.Point) string {
 	for _, tag := range []string{"label", "global_label"} {
 		for _, l := range root.Children(tag) {
@@ -240,7 +240,7 @@ func pointOnPolyline(p *geom.Point, pts []*geom.Point) bool {
 // busEntryPoints synthesizes a bus_entry's drawn segment. KiCad writes it as an (at x y) origin
 // plus a (size dx dy) delta, so the stub runs from (x,y) to (x+dx, y+dy) in Y-down mm; the origin
 // converts to the geom frame via sheetPt (Y negated) and the delta subtracts dy, matching the
-// same corner+delta convention appendSubSheet uses for a sub-sheet box.
+// same corner+delta convention that appendSubSheet uses for a sub-sheet box.
 func busEntryPoints(e *node) []*geom.Point {
 	at, size := e.Child("at"), e.Child("size")
 	if at == nil || size == nil {
@@ -344,8 +344,8 @@ func kicadImage(n *node, src string) *geom.Image {
 
 // ReadSchematicHierarchy reads a KiCad design's full sheet tree into one geom.SheetGeometry
 // per sheet instance, with parent_id set to its containing sheet. It is the geometry twin of
-// ReadSchematicHierarchyNets: the same traversal, opener contract (open takes a relative
-// Sheetfile path), cycle guard, and hierarchical sheet ids ("/", "/<Sheetname>", ...). A child
+// ReadSchematicHierarchyNets. It shares the traversal, the opener contract (open takes a relative
+// Sheetfile path), the cycle guard, and the hierarchical sheet ids ("/", "/<Sheetname>", ...). A child
 // that fails to open is skipped and the rest of the tree still renders. Symbols from every file
 // are merged, deduped by (cell_ref, view_ref).
 func ReadSchematicHierarchy(rootName string, rootContent []byte, open func(relPath string) ([]byte, error)) (*geom.SchematicGeometry, error) {
@@ -361,7 +361,7 @@ func ReadSchematicHierarchyWithSymbols(rootName string, rootContent []byte, open
 		symByKey: map[string]bool{},
 		syms:     newSymLibCache(openSym),
 		// One combined net solve for the whole tree (WS1-022), so every sheet's wires get the
-		// names the netlist read produces. A per-sheet solve would mis-number N$ stubs and
+		// names that the netlist read produces. A per-sheet solve would mis-number N$ stubs and
 		// mis-qualify some names.
 		wireNets: hierWireNets(rootName, rootContent, open, openSym),
 		open:     open,
@@ -372,7 +372,7 @@ func ReadSchematicHierarchyWithSymbols(rootName string, rootContent []byte, open
 	return w.g, nil
 }
 
-// hierGeomWalker carries the accumulator state for the hierarchical geometry walk. One walk
+// hierGeomWalker holds the accumulator state for the hierarchical geometry walk. One walk
 // call runs per sheet instance.
 type hierGeomWalker struct {
 	g        *geom.SchematicGeometry
@@ -444,7 +444,7 @@ func (w *hierGeomWalker) walk(content []byte, src, id, name, parentID string, an
 
 // symbolDefsOfAs is symbolDefsOf with the cell_ref overridden. An EXTERNAL library file
 // names its symbols bare ("R"), but placements reference them qualified ("Device:R"), so
-// resolved defs must key under the qualified id the placements use (WS1-016).
+// resolved defs must be keyed under the qualified id that the placements use (WS1-016).
 func symbolDefsOfAs(libSym *node, libID, src string) []*geom.SymbolDef {
 	defs := symbolDefsOf(libSym, src)
 	for _, sd := range defs {
@@ -458,8 +458,8 @@ func symbolDefsOfAs(libSym *node, libID, src string) []*geom.SymbolDef {
 
 // symbolDefsOf turns one lib_symbols entry ("lib:Name") into one SymbolDef per unit. A KiCad
 // lib symbol nests sub-symbols named "Name_<unit>_<bodyStyle>"; unit 0 is graphics common to
-// every unit. Each emitted SymbolDef (view_ref = the unit number) carries unit 0 plus that
-// unit's graphics, so a placement's (unit N) selects the right bank via view_ref (WS1-007).
+// every unit. Each emitted SymbolDef holds unit 0 plus that unit's graphics, and its view_ref
+// is the unit number. So a placement's (unit N) selects the right bank via view_ref (WS1-007).
 func symbolDefsOf(libSym *node, src string) []*geom.SymbolDef {
 	libID := atomOf(libSym.Arg(1))
 	showNum := !hideFlag(libSym.Child("pin_numbers"))
@@ -566,8 +566,8 @@ func kicadShapes(n *node, conv func(*node) *geom.Point) []*geom.Shape {
 }
 
 // kicadFill maps a graphic's (fill (type ...)) onto the geom fill style. background/outline
-// map to their named fills; an explicit (type color) yields FILL_COLOR + #rrggbb, except a
-// fully transparent color (alpha 0, as KiCad's default) which is treated as unfilled.
+// map to their named fills. An explicit (type color) yields FILL_COLOR + #rrggbb. A fully
+// transparent color (alpha 0, KiCad's default) is treated as unfilled.
 func kicadFill(n *node) (geom.Shape_Fill, string) {
 	f := n.Child("fill")
 	if f == nil {
@@ -634,7 +634,7 @@ func sheetShapes(root *node) []*geom.Shape {
 // kicadPin reads a pin's connect point. KiCad's (pin ... (at x y ang) (number "N")) places
 // the connection at (at); the pin number joins to ir.Pin.designator via port_ref. port_ref is
 // always set (it is a join key); the pin-number label is placed only when showNum is true
-// (the lib symbol does not hide pin numbers), so passives/power that hide numbers stay clean.
+// (the lib symbol does not hide pin numbers), so passives/power that hide numbers draw without them.
 func kicadPin(pn *node, showNum bool) *geom.PinPoint {
 	at := pn.Child("at")
 	if at == nil {
@@ -741,9 +741,9 @@ func hideFlag(n *node) bool {
 // the full lib_id and view_ref is the unit, so it joins to the per-unit SymbolDef.
 //
 // A #-prefixed reference (#PWR, #FLG) is a virtual power/flag symbol, drawn like a part but
-// not one, so it gets no ref_des. It carries the net it names in net_anchor instead (the
-// value sch_nets.go turns into a rank-0 anchor), which keeps the glyph clickable. A PWR_FLAG
-// names nothing and gets no anchor, as on the netlist side. Contract:
+// not one, so it gets no ref_des. It records the net it names in net_anchor instead, so the
+// glyph is still clickable. sch_nets.go turns the same value into a rank-0 anchor. A PWR_FLAG
+// names nothing and gets no anchor, as on the netlist side. The contract is in
 // docsite/content/architecture/geometry-and-rendering.md#symbols-that-name-a-net.
 func placementOf(ps *node, src string) *geom.SymbolPlacement {
 	ref := symbolRef(ps)
@@ -812,7 +812,7 @@ func labelsOf(root *node) []*geom.Label {
 	return out
 }
 
-// kicadJustify maps a node's (effects (justify ...)) onto the canonical geom convention:
+// kicadJustify maps a node's (effects (justify ...)) onto the canonical geom convention,
 // "<h> <v>" with h in {left,right} and v in {top,bottom}, each omitted when centered (so
 // "" means centered both ways). KiCad's tokens (left/right/top/bottom) are already the
 // canonical spellings.
@@ -880,7 +880,7 @@ func titleBlockOf(root *node) *geom.TitleBlock {
 }
 
 // paperSize maps the (paper ...) setting to a sheet bounding box. Named sizes resolve to their
-// mm dimensions; a "User" paper carries explicit width/height. The box is Y-up (Y flipped),
+// mm dimensions; a "User" paper has explicit width/height. The box is Y-up (Y flipped),
 // so it spans x in [0, w] and y in [-h, 0].
 func paperSize(root *node) *geom.BBox {
 	p := root.Child("paper")
@@ -902,7 +902,7 @@ func paperSize(root *node) *geom.BBox {
 }
 
 // paperMM returns the width and height in mm for a named KiCad paper size, or (0,0) if the
-// name is not a standard size (e.g. "User", which carries explicit dimensions).
+// name is not a standard size (e.g. "User", which has explicit dimensions).
 func paperMM(name string) (float64, float64) {
 	switch name {
 	case "A0":
@@ -975,7 +975,7 @@ func sheetPt(n *node) *geom.Point {
 // Converting KiCad's Y-down frame to the geom Y-up frame is a reflection, which inverts
 // rotation direction, so the geom angle is -kicad (mod 360). Origin translation and mirror
 // axes are unaffected by this (mirror conjugated by the Y-flip is itself), so only rotation
-// flips. Without this, rotated symbols land mirrored about their origin and overlap.
+// flips. Without this, rotated symbols end up mirrored about their origin and overlap.
 func geomRotation(deg float64) int32 {
 	r := math.Mod(360-deg, 360)
 	if r < 0 {

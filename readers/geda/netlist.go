@@ -10,8 +10,8 @@ import (
 	"github.com/panyam/agni/internal/symread"
 )
 
-// gEDA coordinates are integers on a fine grid, so no scaling is needed; quant just rounds to
-// int64. (A shared grid keeps this parallel to the xschem reader, which scales half-integers.)
+// gEDA coordinates are integers on a fine grid, so no scaling is needed and quant just rounds to
+// int64. The shared grid keeps this parallel to the xschem reader, which scales half-integers.
 func quant(x, y float64) netgraph.Point {
 	return netgraph.Point{X: round(x), Y: round(y)}
 }
@@ -40,8 +40,8 @@ func atoiInt(s string) int {
 }
 
 // loadPins adapts the gEDA symbol pipeline (open, line split, pin extraction) to the
-// shared resolver; memoization lives in symread.ResolvePins. The bool reports whether the
-// symbol RESOLVED (opened), which the dangling-endpoint gate needs (WS1-013), because a
+// shared resolver. symread.ResolvePins does the memoization. The bool reports whether the
+// symbol RESOLVED (opened). The dangling-endpoint gate needs that signal (WS1-013), because a
 // failed open drops the symbol's pins and would fabricate dangles.
 func loadPins(open SymbolOpener) func(string) ([]symread.Pin, bool) {
 	return func(symref string) ([]symread.Pin, bool) {
@@ -58,11 +58,11 @@ func loadPins(open SymbolOpener) func(string) ([]symread.Pin, bool) {
 }
 
 // pinDir maps a gEDA pintype onto the neutral pin-direction vocabulary (WS1-021). gEDA's
-// `pwr` marks a power/ground pin, which on a placed part is a supply INPUT (the chip draws
-// power); gEDA does not distinguish power_in from power_out, so a rare power-output pin
-// typed `pwr` is miscategorized, tolerated because the rail's power symbol marks the net
-// External (so power-input-not-driven does not false-fire on it). `tri`, `oc` and `oe` keep their
-// own values (agni issue 1082). Unmapped types stay UNSPECIFIED.
+// `pwr` marks a power/ground pin. On a placed part that pin is a supply INPUT, since the chip
+// draws power. gEDA does not distinguish power_in from power_out, so a rare power-output pin
+// typed `pwr` is miscategorized. We tolerate that because the rail's power symbol marks the net
+// External, so power-input-not-driven does not false-fire on it. `tri`, `oc` and `oe` keep their
+// own values (agni issue 1082). Unmapped types map to UNSPECIFIED.
 func pinDir(pintype string) ir.PinDirection {
 	switch pintype {
 	case "in":
@@ -86,10 +86,10 @@ func pinDir(pintype string) ir.PinDirection {
 }
 
 // resolveSlots fills each placement's SlotPins from its symbol's slotdef table, keyed by the
-// instance slot= (default "1" when absent). Only placements of a slotted symbol (one that
-// carries a slotdef) get a mapping; for an unslotted symbol SlotPins stays nil and the drawn
-// pin numbers stand. The symbol is opened once per distinct reference (memoized here), separate
-// from the pin-geometry open in ResolvePins. slots aligns index-for-index with placements.
+// instance slot= (default "1" when absent). A slotted symbol has a slotdef, and only its
+// placements get a mapping. For an unslotted symbol SlotPins is nil and the drawn pin numbers
+// stand. The symbol is opened once per distinct reference and memoized here, separately from
+// the pin-geometry open in ResolvePins. slots aligns index-for-index with placements.
 func resolveSlots(placements []symread.Placement, slots []string, open SymbolOpener) {
 	cache := map[string]map[string][]string{}
 	table := func(symref string) map[string][]string {
@@ -121,7 +121,7 @@ func resolveSlots(placements []symread.Placement, slots []string, open SymbolOpe
 // resolveAnchors places each power/ground tap by resolving its symbol pin, transforming it to
 // the schematic grid, and naming the net. The instance net= wins, else the symbol's own net=
 // attribute, else the conventional name for the symbol basename. A tap whose symbol fails to
-// open is skipped (it cannot be located without its pin geometry).
+// open is skipped, since it cannot be located without its pin geometry.
 func resolveAnchors(powers []powerTap, open SymbolOpener) []netgraph.Anchor {
 	cache := map[string][]symbolPin{}
 	netCache := map[string]string{}
@@ -149,11 +149,11 @@ func resolveAnchors(powers []powerTap, open SymbolOpener) []netgraph.Anchor {
 		// A power symbol has a single connection pin.
 		ax, ay := transform(pins[0].x, pins[0].y, pt.x, pt.y, pt.angle, pt.mirror)
 		// A power/ground supply symbol asserts the net is a global rail fed from a supply
-		// (WS1-021), so it is marked External, matching KiCad's power-symbol semantics (a rail
-		// name whose full membership/source may lie off the read). External keeps
-		// power-input-not-driven quiet on a tapped rail without the bulk-cap noise a
-		// power_driven mark would add on sim-oriented designs. gEDA has no separate
-		// PWR_FLAG-style driver directive, so the supply symbol carries this alone.
+		// (WS1-021), so it is marked External. That matches KiCad's power-symbol semantics,
+		// where the rail's full membership or source may lie off the read. External keeps
+		// power-input-not-driven quiet on a tapped rail. A power_driven mark would do that too,
+		// but it would add bulk-cap noise on sim-oriented designs. gEDA has no separate
+		// PWR_FLAG-style driver directive, so the supply symbol alone asserts this.
 		out = append(out, netgraph.Anchor{At: quant(ax, ay), Label: name, External: true})
 	}
 	return out

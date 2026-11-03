@@ -60,7 +60,7 @@ func TestExternalSymbolResolution(t *testing.T) {
 }
 
 // TestExternalSymbolGeometry checks that the same resolution feeds faithful artwork. Resolved defs
-// key under the QUALIFIED lib_id placements reference, not the library's bare name.
+// are keyed under the QUALIFIED lib_id that placements reference, not under the library's bare name.
 func TestExternalSymbolGeometry(t *testing.T) {
 	g, err := ReadSchematicGeometryWithSymbols(bytes.NewReader(readFixture(t, "extlib.kicad_sch")), "extlib.kicad_sch", extOpen(t))
 	if err != nil {
@@ -90,13 +90,13 @@ func TestEmbeddedBeatsExternal(t *testing.T) {
 // library externally must yield the SAME design as embedding the same symbols in
 // lib_symbols (the well-tested v6 path). kicad-cli cannot serve as the oracle here, because in
 // headless runs it ignores the project sym-lib-table entirely and exports an empty
-// netlist, so the embedded read is the ground truth the external path is held to.
+// netlist. So the embedded read is the ground truth, and the test holds the external path to it.
 func TestExternalMatchesEmbedded(t *testing.T) {
 	sch := string(readFixture(t, "extlib.kicad_sch"))
 	lib := string(readFixture(t, "ext.kicad_sym"))
 
-	// Build the embedded variant: splice the library's symbols into lib_symbols under
-	// the qualified ids the placements use, with extends flattened the way KiCad saves
+	// Build the embedded variant. Splice the library's symbols into lib_symbols under
+	// the qualified ids that the placements use, and flatten extends the way KiCad saves
 	// derived symbols into schematics (self-contained).
 	var body strings.Builder
 	for _, name := range []string{"R", "R_Derived"} {

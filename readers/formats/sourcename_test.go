@@ -8,15 +8,15 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestRelocateSourcesReachesEveryLocator is the point of walking by reflection rather than by hand.
-// Each case is a SHAPE the walk has to descend through, not a message that matters in itself: a
-// locator directly on the root, one under a repeated field two levels down, one under a repeated
-// field of Provenance itself, and one in the geometry sidecar, whose Provenance is a different proto
-// type carrying the same field.
+// TestRelocateSourcesReachesEveryLocator shows why the walk uses reflection rather than a hand-written
+// visitor. Each case is a SHAPE the walk has to descend through, not a message that matters in
+// itself. One locator sits directly on the root. One sits under a repeated field two levels down.
+// One sits under a repeated field of Provenance itself. The last is in the geometry sidecar, whose
+// Provenance is a different proto type with the same field.
 //
-// A hand-written visitor covers whichever of these its author remembered. What makes that expensive
-// is the failure direction. A message added later still walks, still writes, and quietly keeps the
-// host path, so the output looks exactly like a correct one.
+// A hand-written visitor covers whichever of these its author remembered. The failure direction
+// makes that expensive. A message added later still walks, still writes, and quietly keeps the host
+// path, so the output looks exactly like a correct one.
 func TestRelocateSourcesReachesEveryLocator(t *testing.T) {
 	const abs = "/home/someone/work/board.edn"
 	rel := func(string) string { return "designs/d/board.edn" }
@@ -50,9 +50,9 @@ func TestRelocateSourcesReachesEveryLocator(t *testing.T) {
 	})
 }
 
-// TestRelocateSourcesWithoutAName pins the identity case, since a loader reading through an fs.FS
-// already holds unrooted paths and sets no name function. Passing nil has to leave the tree alone
-// rather than blank a locator, which is the shape a nil-tolerant hook usually gets wrong.
+// TestRelocateSourcesWithoutAName pins the identity case. A loader reading through an fs.FS already
+// holds unrooted paths and sets no name function. Passing nil has to leave the tree alone rather than
+// blank a locator. A nil-tolerant hook usually gets that wrong.
 func TestRelocateSourcesWithoutAName(t *testing.T) {
 	d := &ir.Design{Prov: &ir.Provenance{SourceFile: "designs/d/board.edn"}}
 	relocateSources(d, nil)
