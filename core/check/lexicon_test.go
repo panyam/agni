@@ -40,10 +40,10 @@ func TestModelNameProjectionsUseItsLexicon(t *testing.T) {
 	}
 }
 
-// TestIsGroundNetPrefersStampedRole pins the trust rule the net-taking predicates rely on. The role
-// set stamped at ingestion wins, and this model's lexicon is consulted only for a net that carries
-// none (an IR built without the loader). This is why converting a rule from a bare name match to
-// IsGroundNet is behavior-preserving.
+// TestIsGroundNetPrefersStampedRole pins a trust rule, and the net-taking predicates rely on it. The
+// role set stamped at ingestion wins. This model's lexicon is consulted only for a net that has none
+// (an IR built without the loader). So converting a rule from a bare name match to IsGroundNet
+// preserves behavior.
 func TestIsGroundNetPrefersStampedRole(t *testing.T) {
 	stamped := &ir.Net{Name: "AGND_ANALOG", Roles: classify.ConventionRoles(ir.Role_ROLE_GROUND)}
 	unstamped := &ir.Net{Name: "GND"}

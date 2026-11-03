@@ -7,11 +7,11 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestSizeAwareNoOverlap covers WS7-032. Mixing one large (faithful) symbol with small glyph nodes
-// must not overlap any two nodes, and small nodes in a big-symbol-free row stay one pitch apart
-// where the old uniform scale spread EVERY node by the largest symbol's extent. The
-// second assertion is the regression's green. On the pre-WS7-032 uniform scale R1..R2 were ~62x
-// pitch apart.
+// TestSizeAwareNoOverlap covers WS7-032. The design mixes one large (faithful) symbol with
+// small glyph nodes. No two nodes may overlap. Small nodes in a row with no big symbol must
+// still be one pitch apart. The old uniform scale spread EVERY node by the largest symbol's
+// extent, and the second assertion fails under it. On the pre-WS7-032 uniform scale R1..R2
+// were ~62x pitch apart.
 func TestSizeAwareNoOverlap(t *testing.T) {
 	// Six components on a 3-wide grid. R1..R5 draw the resistor glyph (no faithful symbol -> the
 	// registry fallback), U1 draws the 5000-unit faithful symbol.
@@ -48,8 +48,8 @@ func TestSizeAwareNoOverlap(t *testing.T) {
 		}
 	}
 
-	// R1 and R2 share the big-symbol-free top row and adjacent small columns, so they stay one
-	// pitch apart, so the layout is not uniformly inflated by U1.
+	// R1 and R2 share the top row, which holds no big symbol, and they sit in adjacent small
+	// columns. They must be one pitch apart, which shows U1 did not inflate the whole layout.
 	if dx := origin["R2"].X - origin["R1"].X; dx != pitch {
 		t.Errorf("small nodes spaced %d apart, want the tight pitch %d (not scaled by the big symbol)", dx, pitch)
 	}

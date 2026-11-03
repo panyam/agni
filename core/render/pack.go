@@ -37,8 +37,9 @@ const (
 )
 
 // busWidthNm is the world-space (nanometer) width of a bus trunk/entry on the WebGL canvas. GL
-// draws it as true-width quads, so unlike the SVG bus (a fixed-pixel line) it scales with zoom;
-// 0.3mm reads clearly thicker than a hairline wire at a fitted schematic. Well above minStrokeNm.
+// draws it as true-width quads, so it scales with zoom. The SVG bus is a fixed-pixel line and
+// does not. 0.3mm reads clearly thicker than a hairline wire at a fitted schematic, and it is well
+// above minStrokeNm.
 const busWidthNm = 300_000
 
 // schematicGroupColors is the packed-sheet palette indexed by group constant. A plain sheet
@@ -70,10 +71,11 @@ const primRecordBytes = 12
 // the GPU line pipeline draws segments, not analytic circles.
 const circleSegments = 24
 
-// PackSheet projects one tier-1 sheet into the tier-2 PackedSheet columnar form: rebased
-// int32 vertices (sheet-relative to the min corner, so GLSL ES's 32-bit attributes are
-// exact), a fixed-width primitives table, and PrimitiveKeys back to ref_des/net for
-// picking. This is a derived projection of the sidecar, computed on demand, not stored.
+// PackSheet projects one tier-1 sheet into the tier-2 PackedSheet columnar form. That form
+// holds rebased int32 vertices, a fixed-width primitives table, and PrimitiveKeys back to
+// ref_des/net for picking. The vertices are relative to the sheet's min corner, so GLSL ES's
+// 32-bit attributes are exact. This is a derived projection of the sidecar, computed on demand,
+// not stored.
 func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Option) *geom.PackedSheet {
 	style := resolveStyle(opts)
 	syms := indexSymbols(g)
@@ -149,7 +151,8 @@ func PackSheet(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Opt
 	}
 
 	// Sheet-level raster images, rebased to the same origin as the vertices/labels; the overlay
-	// draws them. Only sheet.Images, matching the SVG backend (which draws no SymbolDef images).
+	// draws them. Only sheet.Images are packed, since the SVG backend draws no SymbolDef images
+	// either.
 	var images []*geom.PackedImage
 	for _, im := range sheet.Images {
 		if im.GetBbox() == nil || len(im.GetData()) == 0 {

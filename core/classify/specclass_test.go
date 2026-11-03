@@ -7,8 +7,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// tagged reads a component's class tags back as "class:source" pairs, which is what these tests
-// assert on, because the membership alone was never the half that went missing.
+// tagged reads a component's class tags back as "class:source" pairs. These tests assert on the
+// pairs, because the membership alone was never the half that went missing.
 func tagged(c *ir.Component) []string {
 	out := []string{}
 	for _, t := range c.GetDeviceClasses() {
@@ -36,9 +36,9 @@ func eq(a, b []string) bool {
 	return true
 }
 
-// specDesign is a design already stamped by the convention tier, which is what the Loader hands the
-// datasheet pass. Y1 reaches the clock FAMILY from its prefix and no further, which is the state the
-// keyword path is documented as unable to improve on.
+// specDesign is a design already stamped by the convention tier, as the Loader hands it to the
+// datasheet pass. Y1 reaches the clock FAMILY from its prefix and no further. The keyword path is
+// documented as unable to improve on that state.
 func specDesign() *ir.Design {
 	return &ir.Design{Components: []*ir.Component{
 		{RefDes: "Y1", Mpn: "ACME-XTAL", DeviceClasses: TagsOf(ClassClock, ir.ClassSource_CLASS_SOURCE_CONVENTION)},
@@ -48,8 +48,8 @@ func specDesign() *ir.Design {
 }
 
 // TestStampClassesFromSpecsAddsWhatOnlyADatasheetKnows is the pass doing its job. A seeded
-// device_class resolves a subtype the keyword path refuses to guess, and it lands in the IR
-// carrying the evidence, beside rather than instead of what the convention tier established.
+// device_class resolves a subtype the keyword path refuses to guess. The pass writes it to the IR
+// with its evidence, beside rather than instead of what the convention tier established.
 func TestStampClassesFromSpecsAddsWhatOnlyADatasheetKnows(t *testing.T) {
 	d := specDesign()
 	StampClassesFromSpecs(d, func(mpn string) string {
@@ -70,16 +70,15 @@ func TestStampClassesFromSpecsAddsWhatOnlyADatasheetKnows(t *testing.T) {
 			t.Errorf("%s tags = %v, want %v", c.RefDes, got, want[c.RefDes])
 		}
 	}
-	// The SET keeps the order the tiers wrote it in, so the datasheet's answer arrives last. Which of
-	// them is the headline class is BySpecificity's question and not the set's, which is why nothing
-	// reads position 0 of this slice directly.
+	// The SET keeps the tiers' write order, so the datasheet's answer arrives last. BySpecificity
+	// picks the headline class, not the set, so nothing reads position 0 of this slice directly.
 	if got := MostSpecific(ClassNames(d.Components[0])); got != ClassCrystal {
 		t.Errorf("Y1 most-specific = %q, want %q", got, ClassCrystal)
 	}
 }
 
-// TestStampClassesFromSpecsIsAdditiveAndIdempotent pins both halves of the contract two callers
-// depend on. The Loader runs this pass, and check.Model runs it again over the same design when it
+// TestStampClassesFromSpecsIsAdditiveAndIdempotent pins both halves of the contract. Two callers
+// depend on it. The Loader runs this pass, and check.Model runs it again over the same design when it
 // is given a corpus of its own.
 func TestStampClassesFromSpecsIsAdditiveAndIdempotent(t *testing.T) {
 	lookup := func(string) string { return "crystal" }
@@ -114,8 +113,8 @@ func TestStampClassesFromSpecsWithoutACorpusChangesNothing(t *testing.T) {
 }
 
 // TestAddClassTagRecordsTheStrongerSource covers the additive-only rule where two tiers establish the
-// SAME class. Membership never changes; the recorded evidence moves to the stronger one and never
-// back, which is what keeps "how do we know this" answerable after any number of tiers have run.
+// SAME class. Membership never changes. The recorded evidence moves to the stronger one and never
+// back, so "how do we know this" is still answerable after any number of tiers have run.
 func TestAddClassTagRecordsTheStrongerSource(t *testing.T) {
 	up := &ir.Component{RefDes: "Y1"}
 	AddClassTag(up, "crystal", ir.ClassSource_CLASS_SOURCE_CONVENTION)
@@ -153,7 +152,7 @@ func TestUnrecognisedVendorClassSortsBehindTheKeywordClass(t *testing.T) {
 	}
 }
 
-// TestBySpecificityAgreesWithMostSpecific is the ordering invariant agni issue 710 turns on. The
+// TestBySpecificityAgreesWithMostSpecific checks the ordering invariant behind agni issue 710. The
 // drawing takes the head of this list and check.Model takes MostSpecific, so the two are one answer
 // only while these agree, for every class the engine ships.
 func TestBySpecificityAgreesWithMostSpecific(t *testing.T) {

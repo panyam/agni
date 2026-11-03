@@ -17,8 +17,9 @@ func entryOf(es []LexiconEntry, vocab, kind, value string) (LexiconEntry, bool) 
 	return LexiconEntry{}, false
 }
 
-// Each entry of the effective lexicon says whether it is the engine's or the convention's, and a
-// built-in a convention switched off stays listed, marked, so a reader can see it went.
+// Each entry of the effective lexicon says whether it is the engine's or the convention's. When a
+// convention switches a built-in off, the built-in is still listed and marked, so a reader can see it
+// went.
 func TestEffectiveEntriesSayWhereEachCameFrom(t *testing.T) {
 	over := &configpb.NamingLexicon{
 		Net: &configpb.NetNameVocab{

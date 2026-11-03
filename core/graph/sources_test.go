@@ -64,7 +64,7 @@ func TestFaithfulLayoutScalesToAvoidOverlap(t *testing.T) {
 }
 
 // TestGlyphSpacingUnchanged is the regression guard. Synthetic glyphs are <= the reference node,
-// so their layout is unscaled (scale 1) and positions stay on the base pitch grid, byte-identical
+// so their layout is unscaled (scale 1). Positions are still on the base pitch grid, byte-identical
 // to before the symbol-source change.
 func TestGlyphSpacingUnchanged(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "R2"}}}

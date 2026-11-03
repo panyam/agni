@@ -10,9 +10,9 @@ import (
 )
 
 // supplyDesign builds a one-part design, U1 (part LDO, pin 1 = VDD power_in), with its
-// VDD pin on the given net, joined to a spec via the given identity channel. It is a shared
-// fixture for the Available param-tier gate here and (a copy) the datasheet rule tests in
-// stdlib/rules/builtin.
+// VDD pin on the given net, joined to a spec via the given identity channel. The Available
+// param-tier gate tests here share it, and the datasheet rule tests in stdlib/rules/builtin use a
+// copy.
 func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 	d := &ir.Design{
 		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{
@@ -45,23 +45,23 @@ func supplyDesign(netName string, viaBomLine bool, mpn string) *ir.Design {
 //
 // core/classify parses a component's value TEXT off a design and normalizes it to an SI base unit;
 // core/param converts a seeded parameter's printed unit to the same base. They are deliberately
-// SEPARATE tables, because IEC 60062's RKM code reads M as mega and is case-insensitive on k and u,
-// which is correct for a schematic value field and inverts three orders of magnitude on a printed unit
-// symbol. The datasheet tier also imports nothing from core (C17), so there is no import to hold them
-// together.
+// SEPARATE tables, because IEC 60062's RKM code reads M as mega and is case-insensitive on k and u.
+// That is correct for a schematic value field, and it inverts three orders of magnitude on a
+// printed unit symbol. The datasheet tier also imports nothing from core (C17), so there is no
+// import to hold them together.
 //
-// What they must agree on is the CANONICAL SPELLING they each normalize to. A rule comparing a
-// design-side resistance against a datasheet-side one compares two unit strings, so a divergence
-// here would make every such comparison silently find nothing. That is the failure this file
-// guards. This test lives in core/check because it is the one package that imports both layers.
+// They must agree on the CANONICAL SPELLING that each normalizes to. A rule comparing a design-side
+// resistance against a datasheet-side one compares two unit strings, so a divergence here would make
+// every such comparison silently find nothing. This file guards that failure. This test lives in
+// core/check because only that package imports both layers.
 func TestUnitVocabulariesAgree(t *testing.T) {
 	if param.UnitOhm != classify.UnitOhm {
 		t.Errorf("ohm symbol diverged: core/param has %q (%U), core/classify has %q (%U)",
 			param.UnitOhm, []rune(param.UnitOhm), classify.UnitOhm, []rune(classify.UnitOhm))
 	}
-	// Every base unit classify normalizes a design value to must survive a round trip through the
-	// parameter layer unchanged, or a datasheet row in that unit could never be compared against a
-	// component carrying it.
+	// classify normalizes a design value to a base unit. Each such unit must survive a round trip
+	// through the parameter layer unchanged. Otherwise a datasheet row in that unit could never be
+	// compared against a component carrying it.
 	for _, unit := range []string{classify.UnitOhm, "F", "H", "A", "V"} {
 		base, exp, ok := param.BaseUnit(unit)
 		if !ok || base != unit || exp != 0 {
@@ -71,8 +71,9 @@ func TestUnitVocabulariesAgree(t *testing.T) {
 	}
 }
 
-// SeedsAnySymbol answers "does ANY part seed this", which decides the verdict and cannot act on it.
-// UnseededSymbols keeps what that walk discards, at the unit a datasheet author works in, the PART.
+// SeedsAnySymbol answers "does ANY part seed this". That answer decides the verdict, and nobody can
+// act on it. UnseededSymbols keeps what that walk discards, per PART, the unit a datasheet author
+// works in.
 func TestUnseededSymbols(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", Mpn: "ACME-1"},
@@ -160,9 +161,9 @@ func railSpec(mpn string) *parampb.PartSpec {
 	}
 }
 
-// houseNamedRailDesign uses a function-first naming convention the built-in start-anchored
-// vocabulary (VCC / VDD / +3V3) matches none of. That case made a real board show 13 rails instead
-// of 91 until its project declared a lexicon.
+// houseNamedRailDesign uses a function-first naming convention. The built-in start-anchored
+// vocabulary (VCC / VDD / +3V3) matches none of its names. That case made a real board show 13
+// rails instead of 91 until its project declared a lexicon.
 func houseNamedRailDesign(mpn string) *ir.Design {
 	return &ir.Design{
 		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{Name: "IC", Pins: []*ir.Pin{
@@ -190,7 +191,7 @@ func netNamed(m Model, name string) *ir.Net {
 	return nil
 }
 
-// The tier exists because a datasheet classifies rails a naming convention cannot reach. None of
+// The tier exists because a datasheet classifies rails that a naming convention cannot reach. None of
 // these names matches the built-in vocabulary, so without the params tier the design has no rails
 // and no ground at all.
 func TestDatasheetEvidenceClassifiesRailsANameCannotReach(t *testing.T) {
@@ -223,8 +224,8 @@ func TestDatasheetEvidenceRecordsItsSource(t *testing.T) {
 	}
 }
 
-// Degrade-safe (C9): with no params tier the design classifies EXACTLY as it did before this pass
-// existed. This is the property that makes admitting an evidence tier safe.
+// Degrade-safe (C9). With no params tier the design classifies EXACTLY as it did before this pass
+// existed. That property makes admitting an evidence tier safe.
 func TestDatasheetEvidenceAbsentChangesNothing(t *testing.T) {
 	m := NewModel(houseNamedRailDesign("ACME-IC"))
 	for _, name := range []string{"PMIC_CORE_3V3", "SYS_RETURN", "SENSOR_ALERT"} {
@@ -234,7 +235,7 @@ func TestDatasheetEvidenceAbsentChangesNothing(t *testing.T) {
 	}
 }
 
-// Additive only: a role the NAME established keeps its stronger-or-equal source and is never
+// Additive only. A role that the NAME established keeps its stronger-or-equal source and is never
 // downgraded, and a datasheet can only ever add. Here the name already says rail.
 func TestDatasheetEvidenceOnlyAdds(t *testing.T) {
 	mpn := "ACME-IC"
@@ -256,7 +257,7 @@ func TestDatasheetEvidenceOnlyAdds(t *testing.T) {
 	}
 }
 
-// Idempotence: two models over one design must not duplicate roles, since the pass mutates the IR.
+// Idempotence. Two models over one design must not duplicate roles, since the pass mutates the IR.
 func TestDatasheetEvidenceIsIdempotent(t *testing.T) {
 	mpn := "ACME-IC"
 	d := houseNamedRailDesign(mpn)

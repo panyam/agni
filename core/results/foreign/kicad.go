@@ -4,7 +4,7 @@
 // file, and a results file describes a design it does not contain, so it could never answer
 // ReadDesign. The Loader produces a model; this produces evidence ABOUT one.
 //
-// The imported document stays visibly WEAKER than a native run. A vendor report is a flat violation
+// The imported document is kept visibly WEAKER than a native run. A vendor report is a flat violation
 // list with no not-applicable, no needs-data, no coverage axis and no per-item traceability, and
 // manufacturing that structure would turn "this tool said nothing about X" into "X is fine". So
 // meta.coverage_axis is false, and the import reports its own residue. See
@@ -35,7 +35,7 @@ const (
 // RulePrefixDRC and RulePrefixERC namespace a foreign checker's rule names. A vendor's `type` string
 // is carried VERBATIM behind a prefix rather than translated into one of ours, because mapping
 // `copper_edge_clearance` onto a rule of ours would assert an equivalence nobody verified. The prefix
-// keeps a foreign finding visibly foreign in any report it lands in.
+// keeps a foreign finding visibly foreign in any report that shows it.
 const (
 	RulePrefixDRC = "kicad-drc/"
 	RulePrefixERC = "kicad-erc/"
@@ -72,8 +72,8 @@ type kicadViolation struct {
 // ReadKiCad reads a kicad-cli DRC or ERC JSON report into a results document, choosing between them
 // from the report's own `$schema`. now is passed in so a caller can produce a byte-stable document.
 //
-// The findings it returns carry no subject, because attaching them to entities needs a model, which
-// this does not have and should not need. Call Join for that.
+// The findings it returns have no subject. Attaching them to entities needs a model, and ReadKiCad has
+// none and should not need one. Call Join for that.
 func ReadKiCad(r io.Reader, now time.Time) (*checkspb.CheckResults, error) {
 	var rep kicadReport
 	if err := json.NewDecoder(r).Decode(&rep); err != nil {

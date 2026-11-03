@@ -10,10 +10,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestNetCountReplacesTheSelfJoin is agni issue 727's acceptance. "Capacitors on exactly two nets"
-// used to need three copies of component.net and a negation; component.net_count says it in one
-// clause, and the two must name the same parts. C1 is two-terminal, C2 has both pins on one net, C3
-// spans three.
+// TestNetCountReplacesTheSelfJoin is the acceptance test for agni issue 727. "Capacitors on exactly
+// two nets" used to need three copies of component.net and a negation. component.net_count says it
+// in one clause, and the two must name the same parts. C1 is two-terminal, C2 has both pins on one
+// net, and C3 spans three.
 func TestNetCountReplacesTheSelfJoin(t *testing.T) {
 	prov := &ir.Provenance{SourceFile: "d"}
 	comp := func(ref string) *ir.Component {

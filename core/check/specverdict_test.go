@@ -55,8 +55,8 @@ func TestScopeExcludesRatherThanPasses(t *testing.T) {
 }
 
 // Splitting a conjunction cannot change which subjects FAIL: old Where is exactly Scope AND Where.
-// This is what makes the split a relabelling rather than a behaviour change, and it is the property
-// the conformance fixtures check end to end.
+// So the split is a relabelling rather than a behaviour change. The conformance fixtures check this
+// property end to end.
 func TestScopeAndWhereProjectToTheSameFindings(t *testing.T) {
 	m := NewModel(scopeDesign())
 	merged := &Spec{
@@ -80,7 +80,7 @@ func TestScopeAndWhereProjectToTheSameFindings(t *testing.T) {
 }
 
 // A pass must name the clause that decided it. A witness reading the same on every passing subject
-// in the catalog would track no fact, which build/evidence.md calls decoration.
+// in the catalog would track no fact. build/evidence.md calls that decoration.
 func TestSpecPassWitnessNamesTheDecidingClause(t *testing.T) {
 	s := &Spec{
 		Over: "nets",
@@ -99,8 +99,8 @@ func TestSpecPassWitnessNamesTheDecidingClause(t *testing.T) {
 			okWitness = v.Witness.Statement
 		}
 	}
-	// The FIRST false conjunct is the one that refutes the condition, and it is the pin count here,
-	// not the name pattern.
+	// The FIRST false conjunct refutes the condition. Here it is the pin count, not the name
+	// pattern.
 	if !strings.Contains(okWitness, "net.pin_count") {
 		t.Errorf("witness must name the clause that decided the pass, got %q", okWitness)
 	}

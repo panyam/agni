@@ -12,14 +12,14 @@ import (
 // construction on netlist-only designs. Catalog-level gating is Available's "board."
 // read-prefix rule.
 
-// WithBoard attaches the board-geometry tier. A nil bg is the same as omitting the option: the model
+// WithBoard attaches the board-geometry tier. A nil bg is the same as omitting the option. The model
 // reports HasBoard false and every board rule is not-applicable.
 func WithBoard(bg *geom.BoardGeometry) ModelOption {
 	return func(m *irModel) { m.board = bg }
 }
 
-// attachBoard builds the board tier from the geometry WithBoard staged. It runs after the netlist
-// half of the model is built.
+// attachBoard builds the board tier from the geometry that WithBoard staged. It runs after the
+// netlist half of the model is built.
 func (m *irModel) attachBoard() {
 	bg := m.board
 	if bg == nil {

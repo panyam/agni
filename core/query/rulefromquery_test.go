@@ -11,8 +11,8 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// pinDesign: U1 (part MCU) has a power pin "1" (VDD) alone on net STUB (one connection) and a
-// signal pin "2" (IO) on net SHARED with R1 (two connections).
+// pinDesign has U1 (part MCU) with a power pin "1" (VDD) alone on net STUB (one connection). U1
+// also has a signal pin "2" (IO) on net SHARED with R1 (two connections).
 func pinDesign() *ir.Design {
 	mcu := &ir.PartType{Name: "MCU", Pins: []*ir.Pin{
 		{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
@@ -58,7 +58,7 @@ func TestPinRelationsQuery(t *testing.T) {
 	}
 }
 
-// TestEsdRatedQuery (WS3-076): the IC-ESD credit expressed as datalog. component.esd_rated joins
+// TestEsdRatedQuery (WS3-076) expresses the IC-ESD credit as datalog. component.esd_rated joins
 // with component.net to name the signals a rated transceiver protects. The relation is empty
 // without --params, so the query is authored against a params-seeded Base.
 func TestEsdRatedQuery(t *testing.T) {
@@ -98,9 +98,10 @@ func TestEsdRatedQuery(t *testing.T) {
 	}
 }
 
-// TestDiagnosticRelationsQuery (WS3-081): the entity-keyed reader diagnostics are queryable and join.
-// A ref-des collision on U1, and U1 pin 1 claimed by two nets (a pin-net conflict) -> both relations
-// answer, and reader.pin_net_conflict returns one row per net the conflicted pin touches.
+// TestDiagnosticRelationsQuery (WS3-081) checks that the entity-keyed reader diagnostics are
+// queryable and join. The fixture has a ref-des collision on U1, and U2 pin 1 claimed by two nets
+// (a pin-net conflict). Both relations answer, and reader.pin_net_conflict returns one row per net
+// the conflicted pin touches.
 func TestDiagnosticRelationsQuery(t *testing.T) {
 	d := &ir.Design{
 		InputDiagnostics: &ir.InputDiagnostics{RefDesCollisions: []*ir.RefDesCollision{
@@ -141,10 +142,11 @@ func TestDiagnosticRelationsQuery(t *testing.T) {
 	}
 }
 
-// param.prov exposes a datasheet value's citation as a query relation, and a component-subject
-// datalog rule that declares ParamSymbol carries the FULL citation (doc/page/section/method/
-// confidence) onto its findings via check.DatasheetProvFor, the datalog analogue of the built-in
-// datasheet rules' dual provenance (WS10-010). Both need a params-seeded Model.
+// param.prov exposes a datasheet value's citation as a query relation. A component-subject datalog
+// rule can declare ParamSymbol, and it then attaches the FULL citation
+// (doc/page/section/method/confidence) to its findings via check.DatasheetProvFor. That is the
+// datalog analogue of the built-in datasheet rules' dual provenance (WS10-010). Both need a
+// params-seeded Model.
 func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	iout := 1.0
 	spec := &parampb.PartSpec{
@@ -177,14 +179,14 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	if b[Var("doc")].S != "LMR60410-Q1 Buck (SNAS870B Rev. B)" || b[Var("section")].S != "6.3 Recommended Operating Conditions" {
 		t.Fatalf("citation columns wrong: %+v", b)
 	}
-	// The page binds as a STRING. It is a document locator rather than a quantity, and a number in a
-	// numeric slot carries no BaseUnit, which made it unify with a voltage (agni issue 545).
+	// The page binds as a STRING. It is a document locator rather than a quantity. A number in a
+	// numeric slot has no BaseUnit, and that made it unify with a voltage (agni issue 545).
 	if b[Var("page")].S != "5" || b[Var("page")].Num != nil {
 		t.Fatalf("page should bind as the string \"5\" with no number: %+v", b[Var("page")])
 	}
 
-	// (2) a datalog rule with ParamSymbol attaches the full citation, INCLUDING confidence, the field
-	// the report leans on to flag a value that should be verified before it is trusted.
+	// (2) a datalog rule with ParamSymbol attaches the full citation, INCLUDING confidence. The
+	// report uses confidence to flag a value that should be verified before it is trusted.
 	rule := MustRuleFromQuery(FindingQuery{
 		Rule:        check.Rule{Name: "iout-check", Severity: "warning"},
 		Query:       MustParse(`component.mpn(?r, ?m), param.max(?m, "IOUT", ?v), ?v < 6 => ?r`),
@@ -219,7 +221,7 @@ func TestParamProvRelationAndFindingAttach(t *testing.T) {
 	}
 }
 
-// RuleFromQuery turns a datalog goal into a check.Rule whose every answer row is a Finding, with
+// RuleFromQuery turns a datalog goal into a check.Rule. Every answer row becomes a Finding, with
 // the subject's provenance resolved and the message template filled from the row.
 func TestMustRuleFromQuery(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
@@ -249,11 +251,11 @@ func TestMustRuleFromQuery(t *testing.T) {
 
 // TestRuleFromQueryCarriesContext is the authoring half of agni issue 349.
 //
-// The fix is a FIELD rather than a convention because the entity the message names is
-// already bound in the answer row and was simply thrown away when the Finding was built. Nothing
-// downstream could recover it without parsing prose. Declaring the variable is all it takes.
+// The fix is a FIELD rather than a convention. The message names an entity, and that entity is
+// already bound in the answer row. Building the Finding simply threw it away. Nothing downstream
+// could recover it without parsing prose. Declaring the variable is all it takes.
 //
-// This is the power-pin-mistyped shape, a component subject with a message naming both a pin
+// This test uses the power-pin-mistyped shape, a component subject with a message naming both a pin
 // and a net.
 func TestRuleFromQueryCarriesContext(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
@@ -277,17 +279,18 @@ func TestRuleFromQueryCarriesContext(t *testing.T) {
 	if c.Role != "net" || c.Kind != check.KindNet {
 		t.Errorf("context = (kind %q, role %q), want (net, net)", c.Kind, c.Role)
 	}
-	// The entity the SENTENCE names, resolved from the same row that produced the message. If these
-	// ever disagree, the chip sends the reader somewhere the message did not mention, which is the
-	// original bug wearing a different hat.
+	// The SENTENCE names this entity, resolved from the same row that produced the message. If the
+	// two ever disagree, the chip sends the reader somewhere the message did not mention. That
+	// would be the original bug in another form.
 	if !strings.Contains(fs[0].Message, c.Ref) {
 		t.Errorf("context entity %q is not named in the message %q", c.Ref, fs[0].Message)
 	}
 }
 
-// TestRuleFromQueryContextKeepsAuthorOrder: entries come out in the order the rule DECLARED them,
-// which is the order the message names them, so a panel's chips read like the sentence above them.
-// A map-based implementation would pass every other assertion here and fail this one at random.
+// TestRuleFromQueryContextKeepsAuthorOrder checks that entries come out in the order the rule
+// DECLARED them. That is also the order in which the message names them, so a panel's chips read
+// like the sentence above them. A map-based implementation would pass every other assertion here
+// and fail this one at random.
 func TestRuleFromQueryContextKeepsAuthorOrder(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "ordered", Severity: "info"},
@@ -310,8 +313,9 @@ func TestRuleFromQueryContextKeepsAuthorOrder(t *testing.T) {
 	}
 }
 
-// TestRuleFromQueryNoContextVarsIsClean: declaring none carries none. The common case, and it must
-// stay nil rather than an empty slice so a wire encoder omits the field entirely.
+// TestRuleFromQueryNoContextVarsIsClean checks that a rule declaring no context vars gets no
+// context. That is the common case. The context must be nil rather than an empty slice, so a wire
+// encoder omits the field entirely.
 func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "plain", Severity: "info"},
@@ -327,9 +331,9 @@ func TestRuleFromQueryNoContextVarsIsClean(t *testing.T) {
 }
 
 // TestRuleFromQueryWithoutDomainStatesNothing is the negative control for the whole considered-set
-// mechanism (agni issue 424). Leaving Domain unset must keep the failures-only shape, because that
-// is the case every query rule this bridge has ever compiled is still in. An author who declares
-// nothing gets a rule that CLAIMS nothing, and RunVerdicts filters it out rather than counting its
+// mechanism (agni issue 424). Leaving Domain unset must keep the failures-only shape. Every query
+// rule compiled through this bridge so far still leaves Domain unset. If an author declares
+// nothing, the rule CLAIMS nothing. RunVerdicts then filters it out rather than counting its
 // failures as its coverage.
 func TestRuleFromQueryWithoutDomainStatesNothing(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
@@ -350,10 +354,10 @@ func TestRuleFromQueryWithoutDomainStatesNothing(t *testing.T) {
 	}
 }
 
-// TestRuleFromQueryDomainReportsPasses: with a Domain declared, the subjects the finding goal passed
-// over come back as Pass verdicts carrying a witness, and the rule says so.
+// TestRuleFromQueryDomainReportsPasses declares a Domain. The subjects the finding goal passed over
+// come back as Pass verdicts with a witness, and the rule says so.
 //
-// pinDesign has two pins. Pin U1.1 sits alone on STUB and fails; pin U1.2 shares SHARED with R1 and
+// pinDesign has two pins. Pin U1.1 sits alone on STUB and fails. Pin U1.2 shares SHARED with R1 and
 // is the pass. R1.1 is on SHARED too, so the domain is three pins wide.
 func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
@@ -383,8 +387,8 @@ func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
 	if len(fail) != 1 || len(pass) != 2 {
 		t.Fatalf("want 1 fail and 2 pass, got %d and %d", len(fail), len(pass))
 	}
-	// The failing subject must NOT also appear as a pass. A domain that enumerates everything and a
-	// finding goal that selects the bad ones only agree if the difference is taken by subject, and a
+	// The failing subject must NOT also appear as a pass. The domain enumerates everything, and the
+	// finding goal selects the bad ones. They agree only if the difference is taken by subject. A
 	// key built from the wrong field would pass every other assertion here.
 	if check.VerdictID(fail[0]) == check.VerdictID(pass[0]) {
 		t.Fatal("the failing subject was also reported as a pass")
@@ -397,19 +401,19 @@ func TestRuleFromQueryDomainReportsPasses(t *testing.T) {
 			t.Errorf("witness template not filled from the domain row: %q", v.Witness.Statement)
 		}
 	}
-	// The findings contract is unchanged by declaring a domain: still one violation, and the passes
-	// do not leak into it.
+	// Declaring a domain leaves the findings contract unchanged. There is still one violation, and
+	// the passes do not leak into it.
 	if fs := rule.Findings(context.Background(), check.NewModel(pinDesign())); len(fs) != 1 {
 		t.Fatalf("want 1 finding, got %d: %+v", len(fs), fs)
 	}
 }
 
-// TestRuleFromQueryTupleVarsSeparateVerdictIDs: a rule reporting one row per (subject, second
-// element) needs that element in the verdict tuple, or every row about one subject answers to one
-// id and a reader following a link gets whichever was written last.
+// TestRuleFromQueryTupleVarsSeparateVerdictIDs covers a rule reporting one row per (subject, second
+// element). The rule needs that element in the verdict tuple. Otherwise every row about one subject
+// answers to one id, and a reader following a link gets whichever was written last.
 //
-// This is the host-incomplete shape reduced to the pin fixture, with two verdicts about U1,
-// distinguished only by the net each concerns.
+// This is the host-incomplete shape reduced to the pin fixture. It has two verdicts about U1, told
+// apart only by the net each concerns.
 func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "comp-pin", Severity: "info"},
@@ -445,13 +449,14 @@ func TestRuleFromQueryTupleVarsSeparateVerdictIDs(t *testing.T) {
 	}
 }
 
-// TestRuleFromQueryDomainFailuresCarryAWitness pins the half that a rendered report caught and no
-// unit test would have.
+// TestRuleFromQueryDomainFailuresCarryAWitness pins one half of the contract. A rendered report
+// caught a bug in that half, and no unit test would have.
 //
-// Verdict.Witness is REQUIRED on Fail as well as Pass, and the WIRE form of a Verdict deliberately
-// carries no Finding, because a defect travels once in the findings array. So a failing verdict whose
-// only sentence lived on its Finding rendered as a blank line in every consumer that reads verdicts
-// back from the service, visible in the docsite capture and invisible in-process.
+// Verdict.Witness is REQUIRED on Fail as well as Pass. The WIRE form of a Verdict deliberately
+// holds no Finding, because a defect travels once, in the findings array. Some failing verdicts had
+// their only sentence on their Finding. Every consumer that reads verdicts back from the service
+// rendered such a verdict as a blank line. The docsite capture showed it, and an in-process test
+// did not.
 func TestRuleFromQueryDomainFailuresCarryAWitness(t *testing.T) {
 	rule := MustRuleFromQuery(FindingQuery{
 		Rule:       check.Rule{Name: "pin-on-stub-net", Severity: "warning"},

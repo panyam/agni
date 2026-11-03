@@ -22,7 +22,7 @@ type Comparison struct {
 	// that run's findings names it.
 	Both, OursOnly, TheirsOnly []string
 	// CoOccurring is every (our rule, their rule) pair seen on a shared entity, most frequent first.
-	// An observation about these two documents, not a claim that the rules mean the same thing.
+	// It is an observation about these two documents, not a claim that the rules mean the same thing.
 	CoOccurring []RulePair
 	// NotComparable counts findings on each side that named no entity, so a reader can tell a genuine
 	// disagreement from evidence the comparison could not use.
@@ -46,8 +46,8 @@ type RulePair struct {
 	Entities     int
 }
 
-// Compare computes the split. Either document may be a native run or an import; the argument order is
-// only what the report calls each side.
+// Compare computes the split. Either document may be a native run or an import. The argument order
+// only decides what the report calls each side.
 func Compare(ours, theirs *checkspb.CheckResults) Comparison {
 	c := Comparison{Ours: summarize(ours), Theirs: summarize(theirs)}
 	oursBy, oursSkipped := entityRules(ours)

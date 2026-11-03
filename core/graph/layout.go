@@ -183,8 +183,8 @@ func assemble(d *ir.Design, pl Placement, source SymbolSource) *geom.SchematicGe
 		if len(pins) >= 3 {
 			junctions = append(junctions, &geom.Shape{Kind: geom.Shape_KIND_DOT, Points: []*geom.Point{hub}})
 		}
-		// A connection dot at each attach point shows where a wire ends, which a center-attach body
-		// would otherwise hide mid-symbol.
+		// A connection dot at each attach point shows where a wire ends. Without it, a center-attach
+		// body would hide the wire's end mid-symbol.
 		for _, p := range pins {
 			k := [2]int64{p.X, p.Y}
 			if !dotted[k] {

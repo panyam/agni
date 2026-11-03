@@ -8,11 +8,12 @@ import (
 	"github.com/panyam/agni/core/svg"
 )
 
-// The highlight layer projects a renderer-agnostic selection (geom.HighlightSpec, "these
-// components, nets, and pins, in this color/alpha") into a drawable overlay, decoupled from the
-// base sheet render. HighlightPacked joins a PackedSheet by primitive index so a GPU renderer
-// redraws just those primitives, and HighlightSVG emits a transparent SVG document in SheetSVG's
-// exact frame. Both resolve the same spec semantics, so what lights up is backend-independent.
+// The highlight layer projects a renderer-agnostic selection into a drawable overlay, decoupled
+// from the base sheet render. The selection is a geom.HighlightSpec, "these components, nets, and
+// pins, in this color/alpha". HighlightPacked joins a PackedSheet by primitive index so a GPU
+// renderer redraws just those primitives, and HighlightSVG emits a transparent SVG document in
+// SheetSVG's exact frame. Both resolve the same spec semantics, so the same elements light up on
+// either backend.
 
 // highlightAlpha normalizes a spec alpha: values outside (0, 1) mean fully opaque (proto3
 // cannot distinguish unset from 0, and an invisible highlight is never what a caller means).
@@ -25,7 +26,7 @@ func highlightAlpha(a float32) float64 {
 
 // highlightPathAlpha normalizes a PATH-style alpha (WS9-040): unset/out-of-range means
 // translucent (0.4), not opaque, so the focus highlighter marks a net's path like a marker
-// pen and the wire underneath stays visible. An explicit in-range alpha is honored.
+// pen and the wire underneath remains visible. An explicit in-range alpha is honored.
 func highlightPathAlpha(a float32) float64 {
 	if a <= 0 || a >= 1 {
 		return 0.4
@@ -81,15 +82,15 @@ func (m specMatcher) matchWire(net, netID string) bool {
 	return net != "" && m.nets[net]
 }
 
-// matchBus reports whether a bus (trunk or entry) with the given name falls in the spec. A bus
-// carries no net, so its NAME (the range-label identity on WireGeometry.Net / PrimitiveKey.bus_id) is
-// its only join key (WS7-042b).
+// matchBus reports whether a bus (trunk or entry) with the given name falls in the spec. A bus has
+// no net, so its NAME is its only join key (WS7-042b). The name is the range-label identity on
+// WireGeometry.Net / PrimitiveKey.bus_id.
 func (m specMatcher) matchBus(busID string) bool {
 	return busID != "" && m.busIDs[busID]
 }
 
 // isBusKind reports whether a wire geometry kind is a bus trunk or entry, so bus matching gates on
-// the construct kind rather than the name field a net wire also fills.
+// the construct kind. It cannot gate on the name field, because a net wire fills that field too.
 func isBusKind(k geom.WireGeometry_Kind) bool {
 	return k == geom.WireGeometry_KIND_BUS || k == geom.WireGeometry_KIND_BUS_ENTRY
 }
@@ -110,11 +111,11 @@ func (m specMatcher) matchKey(k *geom.PrimitiveKey) bool {
 	return k.GetPin() != "" && m.pins[[2]string{k.GetRefDes(), k.GetPin()}]
 }
 
-// HighlightPacked resolves highlight specs against one packed sheet and returns, per spec
-// (same order), the indices of the primitives it selects plus the spec's style. The caller
-// redraws those primitives above the base geometry; no vertices are duplicated, the group
-// joins PackedSheet.vertices/primitives by index. An element matched by several specs
-// belongs to each matching group; paint order (later spec wins) is the renderer's job.
+// HighlightPacked resolves highlight specs against one packed sheet. For each spec, in the same
+// order, it returns the indices of the primitives the spec selects plus the spec's style. The
+// caller redraws those primitives above the base geometry. No vertices are duplicated, because the
+// group joins PackedSheet.vertices/primitives by index. An element matched by several specs
+// belongs to each matching group. The renderer owns paint order, where a later spec wins.
 func HighlightPacked(sheet *geom.PackedSheet, specs []*geom.HighlightSpec) *geom.PackedHighlight {
 	out := &geom.PackedHighlight{}
 	for _, spec := range specs {
@@ -138,18 +139,19 @@ const highlightStrokePx = strokePx * 3
 // focused net's translucent path reads as a marker stroke.
 const pathStrokePx = highlightStrokePx * 2
 
-// highlightEntity is one matched entity resolved to world coordinates. That is a component (its
-// placed symbol shapes plus its pin connect points), a net or bus (every polyline of its wires,
-// sheet-wide), or a single listed pin. Strategies draw entities, never raw sheet elements, so a
-// bounding rect frames one component or one net rather than the union of everything matched.
+// highlightEntity is one matched entity resolved to world coordinates. An entity is a component
+// with its placed symbol shapes and its pin connect points, a net or bus with every polyline of
+// its wires sheet-wide, or a single listed pin. Strategies draw entities, never raw sheet
+// elements, so a bounding rect frames one component or one net rather than the union of
+// everything matched.
 type highlightEntity struct {
 	shapes    []*geom.Shape
 	polylines []*geom.Polyline
 	pins      []*geom.Point
 }
 
-// highlightStrategy is HighlightSVG's shape dispatch, how one matched entity draws into the
-// overlay. outlineStrategy re-strokes the entity's own geometry (WS9-016, the default), and the
+// highlightStrategy is HighlightSVG's shape dispatch. It decides how one matched entity draws into
+// the overlay. outlineStrategy re-strokes the entity's own geometry (WS9-016, the default), and the
 // bounding strategies frame its bounds with a translucent fill.
 type highlightStrategy interface {
 	// normAlpha normalizes the spec's raw alpha for this strategy. Outline treats
@@ -169,8 +171,8 @@ func collectEntities(syms map[string]*geom.SymbolDef, sheet *geom.SheetGeometry,
 	byNet := map[string]*highlightEntity{}
 	for _, w := range sheet.Wires {
 		// A bus (WS7-042b) joins by its NAME, and its segments group into one entity so an OUTLINE
-		// re-stroke recolors the whole bus. Gated on the bus kind so a net wire sharing the name
-		// never enters this branch.
+		// re-stroke recolors the whole bus. The branch gates on the bus kind, so a net wire with
+		// the same name never enters it.
 		if isBusKind(w.GetKind()) && m.matchBus(w.GetNet()) {
 			key := "bus:" + w.GetNet()
 			e := byNet[key]
@@ -280,7 +282,7 @@ func strokeEntity(c *svg.Canvas, e *highlightEntity, fr sheetFrame, color string
 // transparent SVG overlay with the exact size, viewBox, and world->pixel mapping of SheetSVG
 // (both use frameSheet), so it stacks or composites onto the base document. Specs paint in
 // order, so a later spec wins where selections overlap. Each spec's shape picks the strategy
-// its entities draw with (outline when unset).
+// that draws its entities (outline when unset).
 func HighlightSVG(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs []*geom.HighlightSpec) string {
 	syms := indexSymbols(g)
 	fr := frameSheet(sheet, syms)
@@ -291,7 +293,7 @@ func HighlightSVG(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs []
 
 // drawHighlights paints the highlight specs onto an already-framed canvas. HighlightSVG returns it
 // as a transparent overlay and SheetSVGHighlighted bakes it over the base render, and both use
-// frameSheet, so an entity lands on the same pixels either way.
+// frameSheet, so an entity draws on the same pixels either way.
 func drawHighlights(c *svg.Canvas, syms map[string]*geom.SymbolDef, sheet *geom.SheetGeometry, fr sheetFrame, specs []*geom.HighlightSpec) {
 	for _, spec := range specs {
 		m := matcherFor(spec)
@@ -304,10 +306,11 @@ func drawHighlights(c *svg.Canvas, syms map[string]*geom.SymbolDef, sheet *geom.
 	}
 }
 
-// HasHighlights reports whether any spec matches at least one entity drawn on this sheet, so a
-// caller rendering per-sheet (a review report annotating only the sheets its findings land on) can
-// skip a sheet no finding touches instead of writing an unannotated copy. It reuses
-// collectEntities, so "would highlight" agrees with what SheetSVGHighlighted draws.
+// HasHighlights reports whether any spec matches at least one entity drawn on this sheet. A caller
+// rendering per sheet can then skip a sheet that no finding touches, instead of writing an
+// unannotated copy. A review report does this, and annotates only the sheets that show its
+// findings. HasHighlights reuses collectEntities, so "would highlight" agrees with what
+// SheetSVGHighlighted draws.
 func HasHighlights(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs []*geom.HighlightSpec) bool {
 	syms := indexSymbols(g)
 	for _, spec := range specs {
@@ -318,11 +321,12 @@ func HasHighlights(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs [
 	return false
 }
 
-// SheetSVGHighlighted renders one sheet and BAKES the highlight specs into a single SVG document,
-// so a static render (a report image, a shared file) carries its annotations with no separate
-// overlay. It is the base render (drawSheetContent) plus the same projection (drawHighlights) the
-// HighlightSheet rpc serves as an overlay, on one canvas since both share frameSheet. Highlights
-// draw LAST, above the schematic, so the marked entity reads through the translucent shapes.
+// SheetSVGHighlighted renders one sheet and BAKES the highlight specs into a single SVG document.
+// A static render, such as a report image or a shared file, then holds its annotations with no
+// separate overlay. SheetSVGHighlighted runs the base render (drawSheetContent) and then
+// drawHighlights, the projection the HighlightSheet rpc serves as an overlay. Both share
+// frameSheet, so they draw on one canvas. Highlights draw LAST, above the schematic, so the marked
+// entity reads through the translucent shapes.
 func SheetSVGHighlighted(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, specs []*geom.HighlightSpec, opts ...Option) string {
 	style := resolveStyle(opts)
 	syms := indexSymbols(g)
@@ -456,7 +460,7 @@ func (boundingCircleStrategy) entity(c *svg.Canvas, e *highlightEntity, fr sheet
 }
 
 // writeHighlightShape re-strokes one placed shape in the highlight style, outline only (a DOT
-// fills) so the element underneath stays readable, at the given width in the spec color/alpha.
+// fills) so the element underneath remains readable, at the given width in the spec color/alpha.
 func writeHighlightShape(c *svg.Canvas, s *geom.Shape, fr sheetFrame, color string, alpha, width float64) {
 	stroke := []svg.Attr{
 		svg.A("fill", "none"), svg.A("stroke", color),

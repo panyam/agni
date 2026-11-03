@@ -47,8 +47,8 @@ func findParams(spec *parampb.PartSpec, symbol string, kind parampb.LimitKind) [
 	return out
 }
 
-// The LM1117 fixture must carry all three limit kinds for the input voltage story:
-// abs-max 20 V, recommended-operating 15 V, and the dropout characteristic rows with
+// The LM1117 fixture must carry all three limit kinds for the input voltage story. They
+// are abs-max 20 V, recommended-operating 15 V, and the dropout characteristic rows with
 // their output-current and temperature conditions. Values from SNOS412Q (Jan 2023).
 func TestLM1117Encoding(t *testing.T) {
 	spec := readFixture(t, "lm1117.textproto")
@@ -75,7 +75,7 @@ func TestLM1117Encoding(t *testing.T) {
 	}
 
 	// Two dropout rows: typ 1.2 at TJ=25C and max 1.3 over 0..125C, both at
-	// IOUT = 800 mA. Distinct condition sets stay distinct rows.
+	// IOUT = 800 mA. Distinct condition sets give distinct rows.
 	drop := findParams(spec, "VIN - VOUT", parampb.LimitKind_LIMIT_KIND_CHARACTERISTIC)
 	var sawTyp, sawMax bool
 	for _, p := range drop {
@@ -267,9 +267,10 @@ func TestValidateRejects(t *testing.T) {
 	}
 }
 
-// Pin binding is only worth having if an incoherent one is caught at load. A parameter
-// naming a pin the spec never declares, or a pin numbered into a package that does not
-// exist, would otherwise sit in a corpus until a rule silently resolved nothing.
+// Pin binding is only worth having if an incoherent one is caught at load. Say a
+// parameter names a pin that the spec never declares, or a pin is numbered into a
+// package that does not exist. Uncaught, either sits in a corpus until a rule silently
+// resolves nothing.
 func TestValidateRejectsPinBinding(t *testing.T) {
 	cases := []struct {
 		name string
@@ -340,11 +341,12 @@ func TestValidateAcceptsPinlessSpecs(t *testing.T) {
 
 func f64(v float64) *float64 { return &v }
 
-// ValidatePins and Validate ask different questions, and the workbench depends on the difference.
-// A spec being transcribed has no MPN and half-filled parameters, which Validate rightly rejects and
-// which must not block a save. Nothing ValidatePins checks can be a not-yet-filled-in state.
+// structuralProblems and Validate ask different questions, and the workbench depends on the
+// difference. A spec being transcribed has no MPN and half-filled parameters. Validate rightly
+// rejects it, and that must not block a save. No check in structuralProblems can fail on a
+// not-yet-filled-in state.
 func TestStructuralCheckAcceptsWorkInProgressButNotIncoherence(t *testing.T) {
-	// The shape bank.ts emptySpec() produces, plus one hand-added pin, with no mpn and no parameters.
+	// bank.ts emptySpec() produces this shape, plus one hand-added pin, with no mpn and no parameters.
 	wip := &parampb.PartSpec{
 		Docs:     []*parampb.SourceDoc{{Id: "ds", Title: "Some datasheet"}},
 		Packages: []*parampb.Package{{Id: "pw", Name: "PW"}},
@@ -403,9 +405,9 @@ func TestStructuralCheckSilentWithoutPinData(t *testing.T) {
 	}
 }
 
-// A relation naming a pin the spec never declares, or naming one pin twice, is incoherent at any
-// stage of authoring, since there is no editing state in which "VCCA tracks a pin that does not
-// exist" is a step toward a finished document. Same argument as the pin-binding checks above.
+// A relation can name a pin that the spec never declares, or name one pin twice. Either is
+// incoherent at any stage of authoring. No editing state makes "VCCA tracks a pin that does not
+// exist" a step toward a finished document. The pin-binding checks above follow the same argument.
 func TestStructuralCheckRejectsIncoherentRelations(t *testing.T) {
 	cases := []struct {
 		name string
@@ -429,9 +431,9 @@ func TestStructuralCheckRejectsIncoherentRelations(t *testing.T) {
 	}
 }
 
-// The bound is the part an author fills in last, so an unfinished relation must not read as a
-// broken one. This is the same split the workbench depends on everywhere else, where a save records
-// and judging is separate.
+// An author fills in the bound last, so an unfinished relation must not read as a broken one. The
+// workbench depends on the same split everywhere else, where a save records and judging is
+// separate.
 func TestUnboundedRelationIsIncompleteNotIncoherent(t *testing.T) {
 	spec := relationWIP()
 	spec.Relations = []*parampb.PinRelation{{
@@ -491,9 +493,9 @@ func TestRelationCompletenessMirrorsParameterRules(t *testing.T) {
 	}
 }
 
-// The non-zero offset is the case a comparison operator could not have expressed, and it is why the
-// bound is a RangeValue over the difference. Held as an in-memory spec rather than a fixture file,
-// because the corpus-vs-fixture line means a fixture carries only the rows its tests need.
+// A comparison operator could not have expressed the non-zero offset, so the bound is a RangeValue
+// over the difference. The test builds an in-memory spec rather than reading a fixture file, because
+// by the corpus-vs-fixture line a fixture holds only the rows its tests need.
 func TestNonZeroAndSymmetricBoundsRoundTrip(t *testing.T) {
 	spec := relationWIP()
 	spec.Mpn = "SOME-PART"
@@ -524,8 +526,8 @@ func TestNonZeroAndSymmetricBoundsRoundTrip(t *testing.T) {
 	}
 }
 
-// Degrade-safety (C9) for relations keeps the promise packages and pins made. A spec seeded before
-// they existed validates exactly as it did, and the relation checks stay silent.
+// Relations keep the degrade-safety (C9) promise that packages and pins made. A spec seeded before
+// relations existed validates exactly as it did, and the relation checks report nothing.
 func TestValidateAcceptsRelationlessSpecs(t *testing.T) {
 	for _, name := range []string{"lm1117.textproto", "bss138.textproto", "txb0104.textproto"} {
 		spec := readFixture(t, name)
@@ -537,7 +539,7 @@ func TestValidateAcceptsRelationlessSpecs(t *testing.T) {
 	}
 }
 
-// The shape the workbench produces mid-transcription, with two pins to relate.
+// The workbench produces this shape mid-transcription, with two pins to relate.
 func relationWIP() *parampb.PartSpec {
 	prov := func() *parampb.ParamProvenance {
 		return &parampb.ParamProvenance{DocRef: "ds", Page: 1, Method: "hand", Confidence: 1}

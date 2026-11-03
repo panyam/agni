@@ -29,12 +29,12 @@ func numDesign() *ir.Design {
 }
 
 // The index buckets by value, and valueEq is NOT transitive. {S:"10.0",Num:10} equals
-// {S:"10",Num:10} numerically, which equals {S:"10",Num:nil} by string, while the first and last are
-// unequal. A keying scheme that canonicalised numbers would merge all three and change what the
-// query means; one that keyed on the string alone would lose the numeric match.
+// {S:"10",Num:10} numerically, which equals {S:"10",Num:nil} by string, while the first and last
+// are unequal. If the keys canonicalised numbers, all three would merge and change what the query
+// means. If they keyed on the string alone, the numeric match would be lost.
 //
-// The assertion is equivalence with the unindexed evaluator rather than a hand-written expectation,
-// because the property that matters is "indexing changed nothing", not any particular row set.
+// The assertion is equivalence with the unindexed evaluator rather than a hand-written expectation.
+// The property that matters is "indexing changed nothing", not any particular row set.
 func TestIndexedResultsMatchUnindexed(t *testing.T) {
 	m := check.NewModel(numDesign())
 	for _, text := range []string{
@@ -65,15 +65,15 @@ func TestIndexedResultsMatchUnindexed(t *testing.T) {
 	}
 }
 
-// newUnindexedBase is the equivalence oracle, the same fact base with no index cache, which sends
-// every probe down the original full-scan path. Comparing against it is what makes "indexing changed
-// nothing" an assertion rather than a hope.
+// newUnindexedBase is the equivalence oracle. It builds the same fact base with no index cache, so
+// every probe goes down the original full-scan path. Comparing against it turns "indexing changed
+// nothing" into an assertion rather than a hope.
 func newUnindexedBase(m check.Model) *Base {
 	return NewBase(m).Unindexed()
 }
 
-// rowValueKey renders a row by VALUE. Value carries *float64, so printing the struct compares pointer
-// addresses, which differ between two evaluations of the same query and say nothing.
+// rowValueKey renders a row by VALUE. Value holds a *float64, so printing the struct compares
+// pointer addresses, which differ between two evaluations of the same query and say nothing.
 func rowValueKey(r Row) string {
 	keys := make([]string, 0, len(r.Bind))
 	for k := range r.Bind {
@@ -92,19 +92,19 @@ func rowValueKey(r Row) string {
 	return out
 }
 
-// The case the keying design exists for, and the one the string-only fixture above cannot reach.
+// The keying design exists for this case, and the string-only fixture above cannot reach it.
 //
 // A fact's numeric field canonicalises its string (fieldValue sets S: ftoa(*f.Num)), so a param
 // value of 20 is filed under "20". The parser keeps a constant's LITERAL text, so writing 20.0 in a
-// query produces {S:"20.0", Num:20}. valueEq calls those equal (both numeric); a bucket keyed on the
-// string alone would not, and the row would vanish with no error anywhere.
+// query produces {S:"20.0", Num:20}. valueEq calls those equal, since both are numeric. A bucket
+// keyed on the string alone would not, and the row would vanish with no error anywhere.
 //
-// Asserting both spellings return the same row shows the second key in valueKeys is needed
-// rather than defensive decoration.
+// The test asserts that both spellings return the same row. That shows the second key in valueKeys
+// is needed, not defensive decoration.
 func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 	// param facts project per PLACED part, so the design needs enough seeded components to push the
-	// relation past datalog.IndexMinTuples. Below it the probe takes the full-scan path and the test proves
-	// nothing about the index. Only REG-24 carries VIN 20.
+	// relation past datalog.IndexMinTuples. Below it the probe takes the full-scan path, and the
+	// test proves nothing about the index. Only REG-24 has VIN 20.
 	d := &ir.Design{}
 	specs := param.ParamSet{"REG-24": regSpec("REG-24", 20)}
 	d.Components = append(d.Components, &ir.Component{
@@ -127,10 +127,10 @@ func TestNumericConstantMatchesCanonicalFact(t *testing.T) {
 	}
 }
 
-// A derived tuple that is valsEqual to one already stored must still deduplicate once the dedup set
-// is a hash bucket. The three spellings of ten are the case that would slip through a keying scheme
-// where insert and probe disagree, and a duplicate here is not cosmetic, because the fixpoint's "did
-// anything change" flag drives termination.
+// Suppose a derived tuple is valsEqual to one already stored. It must still deduplicate once the
+// dedup set is a hash bucket. The three spellings of ten would slip through if insert and probe
+// keyed them differently. A duplicate here is not cosmetic, because the fixpoint's "did anything
+// change" flag drives termination.
 func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 	m := check.NewModel(numDesign())
 	rows := runQuery(t, m, `onten(?r) :- component.net(?r,"10"); onten(?r) :- component.net(?r,"10"); onten(?x) => ?x`)
@@ -144,10 +144,10 @@ func TestDerivedDedupUnaffectedByNumericSpelling(t *testing.T) {
 	}
 }
 
-// One Base serving several rule-bearing queries in turn is a real pattern (the profile coverage pass
-// does it), and both index caches have to behave under it. The EDB index is shared
-// because facts are immutable, while a derived relation belongs to one query and its index must not
-// outlive it. A stale IDB index would hold positions into a previous query's tuple slice.
+// One Base can serve several rule-bearing queries in turn, and the profile coverage pass does this.
+// Both index caches have to behave under it. The EDB index is shared because facts are immutable. A
+// derived relation belongs to one query, and its index must not outlive that query. A stale IDB
+// index would hold positions into a previous query's tuple slice.
 func TestBaseReuseAcrossRuleBearingQueries(t *testing.T) {
 	b := NewBase(check.NewModel(benchDesign(50)))
 	first := evalOn(t, b, `d(?a,?n) :- component.net(?a,?n); d(?x,?y) => ?x`)
@@ -172,12 +172,12 @@ func evalOn(t *testing.T, b *Base, text string) []Row {
 }
 
 // Work counts candidate comparisons, so a shape that is linear in the fact base must not grow
-// quadratically in it. Asserting the RATIO rather than a duration is what makes this a complexity
+// quadratically in it. The test asserts the RATIO rather than a duration, so it is a complexity
 // test. It is deterministic, identical on every machine, and it fails the moment a scan returns.
 //
-// The evaluator's own doc comment asserts this property in prose ("naïve join is sufficient
-// because one design's fact base is small"), and with nothing enforcing it a
-// two-atom join came to take 15.7 seconds on a real board.
+// The evaluator's own doc comment asserts this property in prose ("naïve join is sufficient because
+// one design's fact base is small"). Nothing enforced it, and a two-atom join came to take 15.7
+// seconds on a real board.
 func TestWorkScalesSubQuadratically(t *testing.T) {
 	shapes := []struct {
 		name string
@@ -186,10 +186,10 @@ func TestWorkScalesSubQuadratically(t *testing.T) {
 		{"one-atom", `component.net(?a,?n) => ?a`},
 		{"two-atom-shared", `component.net(?a,?n), component.net(?c,?n), ?a != ?c => ?a`},
 		{"three-atom-chain", `component.net(?a,?n), component.net(?c,?n), component.net(?e,?n) => ?a`},
-		// A cycle in the join graph: a-n, c-n, c-m, a-m closes back on itself. Binary-join plans are
-		// provably suboptimal on cyclic conjunctive queries, which is the case worst-case-optimal
-		// joins exist for. Indexing does not make that go away, so this shape is here to SHOW where
-		// the ceiling is rather than to claim it is gone.
+		// A cycle in the join graph: a-n, c-n, c-m, a-m closes back on itself. Binary-join plans
+		// are provably suboptimal on cyclic conjunctive queries, and worst-case-optimal joins exist
+		// for that case. Indexing does not remove the problem. This shape is here to SHOW where the
+		// ceiling is, not to claim it is gone.
 		{"triangle-cyclic", `component.net(?a,?n), component.net(?c,?n), component.net(?c,?m), component.net(?a,?m), ?n != ?m => ?a`},
 		{"negation", `component.net(?a,?n), not component.class(?a,"resistor") => ?a`},
 		{"aggregation", `component.net(?a,?n) => ?n, count(?a)`},

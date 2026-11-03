@@ -1,7 +1,7 @@
-// Package facts is the fact/relation layer. It holds the tuple a relation projects a check.Model
-// into, and the registry those relations install themselves in. It depends on no query engine (C29), so a
-// relation is authored once and every engine that answers questions over the design reads the same
-// rows.
+// Package facts is the fact/relation layer. A relation projects a check.Model into tuples, and this
+// package holds the tuple type and the registry where the relations install themselves. It depends
+// on no query engine (C29). So a relation is authored once, and every engine that answers questions
+// over the design reads the same rows.
 //
 // A RELATION is data derived from the Model and lives here. A PREDICATE, a join strategy and a query
 // language are an engine's own business (core/query holds the datalog one). An extension contributing
@@ -22,22 +22,22 @@ package facts
 // slot, the lower bound of a two-sided range relation (param.range) where Num is the upper bound, and
 // nil for every one-number relation. Conditions holds a param's test conditions ("" otherwise).
 //
-// Qualifier is the SECOND STRING slot, standing to Value as Min stands to Num, for a relation that
-// must discriminate rows on a dimension Value is already spent on. param.pin_range carries the symbol
-// in Value and the limit kind here, so an absolute maximum and a recommended range never collapse onto
-// one row. Empty for every relation that does not need it.
+// Qualifier is the SECOND STRING slot, standing to Value as Min stands to Num. A relation uses it
+// when it must discriminate rows on a second dimension and Value already holds the first.
+// param.pin_range puts the symbol in Value and the limit kind here, so an absolute maximum and a
+// recommended range never collapse onto one row. Empty for every relation that does not need it.
 //
-// BaseUnit is the SI BASE symbol Num and Min are expressed in ("V", "A", "Ω"), or "" when the
+// BaseUnit is the SI BASE symbol of Num and Min ("V", "A", "Ω"), or "" when the
 // relation is dimensionless or non-numeric. Both numeric slots share it. It must never be a prefixed
 // spelling; see query.Value.BaseUnit.
 //
 // Cites are the rendered provenance of the fact, an IR source or a datasheet doc/page/table. NEVER
 // EMPTY for a well-formed fact, since a fact you cannot cite is not verifiable
-// (TestEveryFactCitesSomething holds it). A slice because a fact can rest on several sites. A ref-des
-// collision IS several placements sharing one designator, and a part stating both an air-discharge
-// and a contact-discharge ESD rating earns its credit from either (agni issue 546). Cites is not a
-// bindable slot, since nothing in the relation schema names it and query.fieldValue never returns it,
-// so it grew without changing the tuple's ARITY.
+// (TestEveryFactCitesSomething holds it). It is a slice because a fact can cite several sites. A
+// ref-des collision IS several placements sharing one designator. A part stating both an
+// air-discharge and a contact-discharge ESD rating gets its credit from either (agni issue 546).
+// Cites is not a bindable slot, since nothing in the relation schema names it and query.fieldValue
+// never returns it. So adding it did not change the tuple's ARITY.
 type Row struct {
 	Relation   string
 	Subject    string

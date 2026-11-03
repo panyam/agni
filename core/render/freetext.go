@@ -8,17 +8,17 @@ import (
 )
 
 // freeTextFit returns the font-size shrink factor (0 < f <= 1) for the multi-line free-text
-// columns of a documentation page, such as an OrCAD table-of-contents sheet with several
-// fixed-origin columns of stacked text inside a sized worksheet. One factor covers the whole page,
-// the minimum any column needs for its widest line to fit the gap to the next column (or the frame
-// margin) and its stack to clear the title block, so the columns stay one size as the source draws
-// them. Shrinking the font also shortens the stack, so the fit holds in rsvg PNG exports too, which
-// ignore textLength condensing (WS7-038).
+// columns of a documentation page. An OrCAD table-of-contents sheet is one such page, with several
+// fixed-origin columns of stacked text inside a sized worksheet. One factor covers the whole page.
+// It is the minimum any column needs, so that its widest line fits the gap to the next column (or
+// the frame margin) and its stack clears the title block. The columns then keep one size, as the
+// source draws them. Shrinking the font also shortens the stack, so the fit holds in rsvg PNG
+// exports too, which ignore textLength condensing (WS7-038).
 //
-// The fit applies ONLY to a documentation page (no component placements). A schematic sheet's
-// multi-line annotation notes are not document columns, and squeezing them shrinks legible text to a
-// blob (WS7-041; on an 82-sheet design the fit engaged on 18 schematic notes, some down to 0.3x, and
-// only the TOC benefits).
+// The fit applies ONLY to a documentation page, one with no component placements. A schematic
+// sheet's multi-line annotation notes are not document columns, and squeezing them shrinks legible
+// text to a blob (WS7-041). On an 82-sheet design the fit engaged on 18 schematic notes, some down
+// to 0.3x, and only the TOC benefits.
 //
 // The result maps each multi-line free-text label to the shared factor. It is nil when every column
 // fits, for single-line text, on a schematic sheet, or on a sheet with no page. The SVG renderer and
@@ -89,9 +89,9 @@ func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom
 		}
 		multiline = append(multiline, a.l)
 
-		// Horizontal: budget to the nearest column origin on the right whose vertical span
-		// overlaps this one, else the inner frame's right edge. Leave one glyph of gutter so the
-		// text does not butt against the neighbor.
+		// The horizontal budget runs to the nearest column origin on the right whose vertical span
+		// overlaps this one, or else to the inner frame's right edge. Leave one glyph of gutter so
+		// the text does not butt against the neighbor.
 		budget := float64(fl.r - a.x)
 		for j, b := range cols {
 			if j == i || b.x <= a.x {
@@ -109,8 +109,8 @@ func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom
 			global = math.Min(global, avail/a.width)
 		}
 
-		// Vertical: if the column sits over the title block and its stack drops below the
-		// title-block top, shrink so it clears. availV is the room from the origin down to that top.
+		// If the column sits over the title block and its stack drops below the title-block top,
+		// shrink it so it clears. availV is the room from the origin down to that top.
 		reachesTB := float64(a.x)+a.width > float64(tbx)
 		if reachesTB && a.bot < tbTop {
 			availV := float64(a.top - tbTop)

@@ -6,9 +6,9 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// gutter is the minimum gap between adjacent node bounding boxes. It is sized so the widest
-// synthetic glyph (2*terminalX = 80) plus gutter still fits one pitch, which keeps an all-glyph
-// layout exactly on the base grid.
+// gutter is the minimum gap between adjacent node bounding boxes. The widest synthetic glyph
+// (2*terminalX = 80) plus gutter still fits one pitch, so an all-glyph layout sits exactly on the
+// base grid.
 const gutter = pitch / 5
 
 // compactBySize re-spaces a grid-aligned placement so each node gets a cell sized to its own symbol
@@ -55,7 +55,7 @@ func compactBySize(pos map[string]*geom.Point, sizes map[string]nodeSize, refs [
 	for ref, p := range pos {
 		out[ref] = &geom.Point{X: centerX[p.X], Y: centerY[p.Y]}
 	}
-	// Anchor the sorted-first ref at the origin so the layout stays stable for diffing.
+	// Anchor the sorted-first ref at the origin so the layout is the same across runs, for diffing.
 	if len(refs) > 0 {
 		if a := out[refs[0]]; a != nil {
 			ax, ay := a.X, a.Y

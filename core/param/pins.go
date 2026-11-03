@@ -9,8 +9,8 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Pin resolution is the spec-side half of the design-pin-to-datasheet-pin join, and the one
-// place the precedence stated on Parameter.pin_refs is implemented.
+// Pin resolution is the spec-side half of the design-pin-to-datasheet-pin join. It is the one
+// place that implements the precedence stated on Parameter.pin_refs.
 //
 // THE NAME LEADS AND THE NUMBER ONLY BREAKS TIES. A pin NUMBER is a fact about a PACKAGE and
 // a datasheet parameter is a fact about the DIE, so a number-first join reports about the
@@ -30,9 +30,9 @@ var (
 	// ErrPinUnknown means the spec has pins but neither channel matched this terminal.
 	ErrPinUnknown = errors.New("param: no pin matches")
 
-	// ErrPinAmbiguous means the evidence narrows to several pins and nothing separates them:
-	// a name printed on more than one terminal with no identified package to break the tie,
-	// or a number that means different pins in different packages. Callers skip and never
+	// ErrPinAmbiguous means the evidence narrows to several pins and nothing separates them.
+	// Either a name is printed on more than one terminal with no identified package to break
+	// the tie, or a number means different pins in different packages. Callers skip and never
 	// pick one.
 	ErrPinAmbiguous = errors.New("param: pin reference is ambiguous")
 
@@ -42,12 +42,13 @@ var (
 	ErrPinConflict = errors.New("param: pin name and number disagree")
 )
 
-// ResolvePin maps one design terminal onto a pin of this spec, given the terminal's name and
-// package-relative designator (both off the ir.Pin reached through the component's PartType)
-// and the package the design places, when identified (PackageForMPN derives it from an
-// orderable MPN).
+// ResolvePin maps one design terminal onto a pin of this spec. It takes the terminal's name
+// and package-relative designator, both read off the ir.Pin reached through the component's
+// PartType. It also takes the package the design places, when that is identified, and
+// PackageForMPN derives it from an orderable MPN.
 //
-// Any argument may be empty, and each empty one removes a channel. The precedence:
+// Any argument may be empty, and each empty one removes a channel. The table gives the
+// precedence.
 //
 //	name matches one pin                  -> that pin (the number is not consulted)
 //	name matches several                  -> the number breaks the tie, inside a known package
@@ -60,7 +61,7 @@ var (
 // declared package and resolves when they all agree (VCCA is number 1 in both the TSSOP and
 // the UQFN), refusing only where the packages disagree.
 //
-// A refusal always returns a nil pin. Skip-not-false-pass, since a rule that resolves the
+// A refusal always returns a nil pin. This is skip-not-false-pass. A rule that resolves the
 // wrong terminal evaluates cleanly and reports about the wrong thing.
 //
 // A multi-SECTION component (a relay's coil and contacts) spreads its pins across several
@@ -74,7 +75,7 @@ func ResolvePin(spec *parampb.PartSpec, name, designator, packageRef string) (*p
 	byName := PinsByName(spec, name)
 	byNumber := PinsByNumber(spec, packageRef, designator)
 
-	// The number channel speaks only when it lands on exactly one pin. Several hits means
+	// The number channel answers only when it matches exactly one pin. Several hits mean
 	// the packages disagree about this number.
 	var numbered *parampb.Pin
 	if len(byNumber) == 1 {
@@ -111,13 +112,13 @@ func ResolvePin(spec *parampb.PartSpec, name, designator, packageRef string) (*p
 
 // PinsByName returns every pin printed under a name, in declaration order. SEVERAL HITS IS
 // THE NORMAL CASE for a part that prints one name across terminals (a large IC's VDD pins,
-// the TXB0104's two NC pins), and collapsing it to the first match is the bug pin binding
-// exists to prevent. An empty name matches nothing.
+// the TXB0104's two NC pins). Pin binding exists to prevent collapsing it to the first
+// match. An empty name matches nothing.
 //
 // Names compare on ident.PinName, so "V CCA" from a document producer and "VCC_A" from a
 // symbol library both reach "VCCA", and a name pasted out of a PDF with a zero-width space or
-// a zero-padded index still matches (agni issue 702). Nothing fuzzier, since a near-miss name
-// is a different pin.
+// a zero-padded index still matches (agni issue 702). The match is no fuzzier than that, since
+// a near-miss name is a different pin.
 func PinsByName(spec *parampb.PartSpec, name string) []*parampb.Pin {
 	key := ident.PinName(name)
 	if key == "" {
@@ -242,7 +243,7 @@ func PackageForMPN(spec *parampb.PartSpec, mpn string) *parampb.Package {
 
 // hasPackageSuffix reports whether an upper-cased MPN ends in a package code, allowing one
 // trailing packaging-format letter after it ("PWR" is "PW" on tape and reel). Any longer tail
-// is treated as a different part number, because guessing at it is how a near-miss MPN becomes
+// is treated as a different part number, because a guess at it would turn a near-miss MPN into
 // the wrong package.
 func hasPackageSuffix(mpn, suffix string) bool {
 	if strings.HasSuffix(mpn, suffix) {
@@ -260,7 +261,7 @@ func hasPackageSuffix(mpn, suffix string) bool {
 
 // normalizePinNumber reduces a designator to its comparison key, ident.PinNumber. Ball
 // designators are alphanumeric ("B2"), so numeric parsing is not an option, and leading zeros
-// are kept, so "01" and "1" stay different keys.
+// are kept, so "01" and "1" are different keys.
 func normalizePinNumber(s string) string {
 	return ident.PinNumber(s)
 }

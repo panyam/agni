@@ -26,8 +26,8 @@ func TestAudience(t *testing.T) {
 			t.Errorf("%s: Audience(%q) = %v, want %v", tc.name, tc.in, got, tc.want)
 		}
 	}
-	// Unset means "not annotated", not "no one", so it is nil, distinct from an empty result the caller
-	// could mistake for a deny. A nil spec and a spec with no attributes both yield nil.
+	// Unset means "not annotated", not "no one", so it is nil. A caller could mistake an empty result
+	// for a deny. A nil spec and a spec with no attributes both yield nil.
 	if got := Audience(nil); got != nil {
 		t.Errorf("nil spec: want nil, got %v", got)
 	}

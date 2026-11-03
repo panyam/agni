@@ -19,9 +19,9 @@ func TestEntityQueriesParse(t *testing.T) {
 	}
 }
 
-// The client binds each variable a preset names from the field of the same name on the selection,
-// so a preset binding one the selection does not carry would ask with that variable free, and one
-// its goal does not use would be refused by the engine (agni issue 793).
+// A preset names variables, and the client binds each one from the selection field of the same
+// name. If a preset binds a variable missing from the selection, it asks with that variable free.
+// If its goal does not use a bound variable, the engine refuses the binding (agni issue 793).
 func TestEntityQueriesBindWhatTheSelectionCarries(t *testing.T) {
 	// Which variables each kind may bind, given what a selection of that kind carries.
 	allowed := map[string]map[string]bool{
@@ -52,9 +52,10 @@ func TestEntityQueriesBindWhatTheSelectionCarries(t *testing.T) {
 			}
 			vals[v] = Text("x")
 		}
-		// Every bound variable must be an input: a projected one would answer the value it was given.
-		// An area binds a SET, so projecting a bound variable says which of its values answered, which
-		// is the question "which of its nets have no test point" asks (agni issue 904).
+		// Every bound variable must be an input, since a projected one would answer the value it
+		// was given. An area is the exception. It binds a SET, so projecting a bound variable says
+		// which of its values answered. The question "which of its nets have no test point" asks
+		// exactly that (agni issue 904).
 		if e.Kind == "area" {
 			continue
 		}
@@ -67,8 +68,8 @@ func TestEntityQueriesBindWhatTheSelectionCarries(t *testing.T) {
 }
 
 // Every kind a viewer can pick needs a question, or the Ask rows for it are empty. A kind's
-// questions are told apart by their labels, which name the query tab each one opens, so two alike
-// would open two tabs nobody can tell apart.
+// questions are told apart by their labels. Each label names the query tab its question opens, so
+// two alike labels would open two tabs nobody can tell apart.
 func TestEntityQueriesCoverEveryPickableKind(t *testing.T) {
 	have := map[string]int{}
 	labels := map[string]bool{}
@@ -79,8 +80,8 @@ func TestEntityQueriesCoverEveryPickableKind(t *testing.T) {
 		}
 		labels[e.Kind+"\x00"+e.Label] = true
 	}
-	// A bus has one, since the bus relation records the construct a reader saw and nothing about
-	// its members.
+	// A bus has one question. The bus relation records the construct as a reader saw it, and
+	// nothing about its members.
 	want := map[string]int{"pin": 2, "component": 2, "net": 2, "bus": 1, "area": 2}
 	for kind, n := range want {
 		if have[kind] < n {

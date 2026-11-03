@@ -9,9 +9,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// walkChain is a design shaped to make an unbound walk expensive: n nets in a chain, each pair joined
-// by a resistor so every net reaches every other, two IO nets at one end that the query is really
-// about, and a TVS on the far end.
+// walkChain is a design shaped to make an unbound walk expensive. It has n nets in a chain, with
+// each pair joined by a resistor so every net reaches every other. Two IO nets sit at one end, and
+// the query is really about them. A TVS sits on the far end.
 func walkChain(n int) *ir.Design {
 	p := &ir.Provenance{SourceFile: "chain"}
 	d := &ir.Design{}
@@ -41,16 +41,16 @@ func walkChain(n int) *ir.Design {
 	return d
 }
 
-// TestTheDefaultEvaluatorPlansAnUnboundWalk is the WS3-114 regression guard, now that the engine plans
-// rule bodies rather than an engine lint refusing one shape. A shipped rule opened with an unbound
-// walk, `esd_ok(?n) :- net.reaches(?n, ...), needs_esd(?n), ...`, which walked from every net on the
-// board before its guard applied and took `agni check` from 13s to not finishing. Under query.Default
-// the written order no longer decides where the walk starts, so the walk-first body must cost about
-// what the guard-first body costs.
+// TestTheDefaultEvaluatorPlansAnUnboundWalk is the WS3-114 regression guard. An engine lint used to
+// refuse one shape, and now the engine plans rule bodies instead. A shipped rule opened with an
+// unbound walk, `esd_ok(?n) :- net.reaches(?n, ...), needs_esd(?n), ...`. It walked from every net
+// on the board before its guard applied, and `agni check` went from 13s to not finishing. Under
+// query.Default the written order no longer decides where the walk starts. So the walk-first body
+// must cost about as much as the guard-first body.
 //
-// Naive runs bodies as written, and is the positive control: on the same design the walk-first body
-// must cost far more there, or the work measure could not see the hazard at all. net.route walks the
-// same way and is held to the same property.
+// Naive runs bodies as written, and it is the positive control. On the same design the walk-first
+// body must cost far more under Naive, or the work measure could not see the hazard at all.
+// net.route walks the same way and is held to the same property.
 func TestTheDefaultEvaluatorPlansAnUnboundWalk(t *testing.T) {
 	m := check.NewModel(walkChain(60))
 	const io = `io(?n) :- entity(?n, "net"), str.prefix(?n, "IO"); `

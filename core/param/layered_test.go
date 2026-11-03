@@ -39,8 +39,8 @@ func TestLayeredProjectWinsPerMPN(t *testing.T) {
 	if c := l.CorpusOf(sharedBuck); c != CorpusShared {
 		t.Errorf("CorpusOf(shared BUCK) = %q", c)
 	}
-	// The shared LDO is shadowed, so no Lookup hands it to a model, but asked about directly it still
-	// belongs to the shared corpus: attribution is by the object, never by the MPN.
+	// The shared LDO is shadowed, so no Lookup hands it to a model. Asked about directly, it still
+	// belongs to the shared corpus, because attribution goes by the object, never by the MPN.
 	if c := l.CorpusOf(sharedLDO); c != CorpusShared {
 		t.Errorf("CorpusOf(the shared corpus's own LDO) = %q, want shared", c)
 	}

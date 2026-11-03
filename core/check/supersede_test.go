@@ -112,8 +112,8 @@ func TestSupersededRuleLeavesTheNameIndex(t *testing.T) {
 }
 
 // A declaration that matches nothing records nothing. Without this the catalog accumulates an empty
-// supersession, and the surfaces that report one print "supersedes 0 rule(s):" on a run where no rule
-// was replaced.
+// supersession, and every surface that reports one prints "supersedes 0 rule(s):" on a run where no
+// rule was replaced.
 func TestDeclarationMatchingNothingRecordsNothing(t *testing.T) {
 	c, err := NewCatalog(
 		NewSource("profile", []*Rule{tagged("can-missing", map[string]string{"profile": "CAN"})}),
@@ -131,8 +131,8 @@ func TestDeclarationMatchingNothingRecordsNothing(t *testing.T) {
 	}
 }
 
-// The exemption that makes supersession safe. An overlay profile and the built-in it replaces tag
-// their rules identically, so a declaration matching on tags alone would delete the REPLACEMENT too
+// This exemption makes supersession safe. An overlay profile replaces a built-in, and the two tag
+// their rules identically. So a declaration matching on tags alone would delete the REPLACEMENT too
 // and leave the interface with no rules. That failure is invisible in a report, because the
 // findings simply stop, which reads as a clean pass.
 func TestSupersedingSourceNeverDropsItsOwnRules(t *testing.T) {
@@ -151,8 +151,9 @@ func TestSupersedingSourceNeverDropsItsOwnRules(t *testing.T) {
 	}
 }
 
-// Supersession applies through With too, which is the path serve and review extend a base catalog by.
-// The record carries across, so a surface that only ever sees the extended catalog can still report it.
+// Supersession applies through With too, and serve and review extend a base catalog through With.
+// The record is copied across, so a surface that only ever sees the extended catalog can still report
+// it.
 func TestSupersedingSourceThroughWith(t *testing.T) {
 	base, err := NewCatalog(NewSource("profile", []*Rule{
 		tagged("spi-missing", map[string]string{"profile": "SPI"}),
@@ -177,8 +178,8 @@ func TestSupersedingSourceThroughWith(t *testing.T) {
 	}
 }
 
-// A source declaring no supersession is an ordinary augmenting source. This is the invariant that
-// keeps every existing overlay behaving exactly as it did.
+// A source declaring no supersession is an ordinary augmenting source. This invariant keeps every
+// existing overlay behaving exactly as it did.
 func TestSourceWithoutDeclarationStillAugments(t *testing.T) {
 	c, err := NewCatalog(
 		NewSource("profile", []*Rule{tagged("spi-missing", map[string]string{"profile": "SPI"})}),

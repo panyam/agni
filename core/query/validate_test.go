@@ -9,9 +9,9 @@ import (
 	"github.com/panyam/agni/core/facts"
 )
 
-// A rule built from a broken query used to compile without complaint and then report a clean pass,
-// because RuleFromQuery returned no error and its Eval swallowed the failure into nil findings
-// (agni issue 540). These pin the construction half: every one of these queries is wrong on its own
+// A rule built from a broken query used to compile without complaint and then report a clean pass.
+// RuleFromQuery returned no error, and its Eval swallowed the failure into nil findings (agni issue
+// 540). These tests pin the construction half. Every one of these queries is wrong on its own
 // terms, before any design is read.
 func TestRuleFromQueryRejectsABrokenQuery(t *testing.T) {
 	for _, tc := range []struct {
@@ -23,9 +23,9 @@ func TestRuleFromQueryRejectsABrokenQuery(t *testing.T) {
 			wants: "unknown relation",
 		},
 		{
-			// The atom that is wrong is NOT the driver. An empty fact base stops solving after the
-			// first atom yields nothing, so a validator built by evaluating against one would never
-			// look here.
+			// The wrong atom is NOT the driver. An empty fact base stops solving after the first
+			// atom yields nothing. So a validator built by evaluating against one would never look
+			// here.
 			name:  "wrong arity on a later atom",
 			query: `component.net(?r, ?n), net.rail(?n, ?extra) => ?r`,
 			wants: "takes 1 args",
@@ -100,8 +100,8 @@ func TestRuleFromQueryAcceptsAValidQuery(t *testing.T) {
 	}
 }
 
-// TestValidateNeedsNoDesign: validation reads the query and the relation vocabulary, never a design.
-// That is what lets a rule be checked where it is BUILT rather than where it first runs.
+// TestValidateNeedsNoDesign checks that validation reads the query and the relation vocabulary,
+// never a design. So a rule can be checked where it is BUILT rather than where it first runs.
 func TestValidateNeedsNoDesign(t *testing.T) {
 	if err := Validate(MustParse(`component.net(?r, ?n), net.rail(?n) => ?r`), facts.DefaultRegistry()); err != nil {
 		t.Errorf("valid query rejected with no design: %v", err)
@@ -112,7 +112,7 @@ func TestValidateNeedsNoDesign(t *testing.T) {
 }
 
 // looseFilterQuery tests a variable no relation binds. Validation refuses it since jaala v0.1.53
-// (panyam/jaala#215), where before it reached the evaluator and failed there.
+// (panyam/jaala#215). Before that, it reached the evaluator and failed there.
 const looseFilterQuery = `component.net(?r, ?n), str.contains(?loose, "x") => ?r`
 
 func TestLooseFilterIsRefusedAtValidation(t *testing.T) {
@@ -125,10 +125,10 @@ func TestLooseFilterIsRefusedAtValidation(t *testing.T) {
 	}
 }
 
-// TestEvalFailureIsInconclusiveNotClean: a rule whose query cannot be evaluated reports that it could
-// not decide. It used to return no findings, which every consumer reads as a design with no defects.
-// The query is valid and the evaluation fails by running out of its work budget, the failure no
-// validation can foresee (agni issue 540).
+// TestEvalFailureIsInconclusiveNotClean checks a rule whose query cannot be evaluated. The rule
+// reports that it could not decide. It used to return no findings, which every consumer reads as a
+// design with no defects. The query is valid, and the evaluation fails by running out of its work
+// budget. No validation can foresee that failure (agni issue 540).
 func TestEvalFailureIsInconclusiveNotClean(t *testing.T) {
 	q, err := Parse(`component.net(?r, ?n) => ?r`)
 	if err != nil {
@@ -160,9 +160,9 @@ func TestEvalFailureIsInconclusiveNotClean(t *testing.T) {
 	}
 }
 
-// TestValueDomainRejectsAConstantOutsideIt: agni 696. A misspelled value used to return no rows, which
-// reads as a fact about the design rather than a typo, and is the unsafe-negation shape of agni 522 one
-// layer in.
+// TestValueDomainRejectsAConstantOutsideIt covers agni 696. A misspelled value used to return no
+// rows. Empty rows read as a fact about the design rather than a typo. This is the unsafe-negation
+// shape of agni 522, one layer in.
 func TestValueDomainRejectsAConstantOutsideIt(t *testing.T) {
 	q, err := Parse(`net.role(?n, "swiching") => ?n`)
 	if err != nil {

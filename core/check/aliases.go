@@ -29,9 +29,9 @@ type (
 	// the ingestion pass without importing check. These aliases keep the historical check.* names for
 	// the --conventions loader (check/naming) and external overlays.
 	ClassVocab = classify.ClassVocab
-	// VocabPatterns is the GENERATED config type, re-exported rather than mirrored. The Go mirror it
-	// replaced, and the RoleVocabConfig beside it, existed only to be copied field by field out of this
-	// same message, and that copy lost a vocabulary twice (WS3-117, agni 680).
+	// VocabPatterns is the GENERATED config type, re-exported rather than mirrored. It replaced a Go
+	// mirror. That mirror and the RoleVocabConfig beside it existed only to be copied field by field out
+	// of this same message, and that copy lost a vocabulary twice (WS3-117, agni 680).
 	VocabPatterns = configpb.VocabPatterns
 
 	// The naming (role) lexicon moved to classify in WS3-072 for the same reason (the net.role stamp
@@ -44,8 +44,8 @@ type (
 )
 
 // The classification-lexicon functions, re-exported from classify. SetActiveClassVocab/ActiveClassVocab
-// address the same process-global vocab the ingestion pass reads, so a --conventions class override set
-// through check.SetActiveClassVocab takes effect at ReadDesign time.
+// address the same process-global vocab the ingestion pass reads. So when check.SetActiveClassVocab
+// sets a --conventions class override, it takes effect at ReadDesign time.
 var (
 	DefaultClassVocab   = classify.DefaultClassVocab
 	BuildClassVocab     = classify.BuildClassVocab
@@ -54,8 +54,8 @@ var (
 	ParseComponentClass = classify.ParseComponentClass
 
 	// The role-lexicon functions, re-exported from classify (WS3-072). SetActiveRoleVocab/ActiveRoleVocab
-	// address the same process-global the net.role stamp reads, so a --conventions role override set
-	// through check.SetActiveRoleVocab takes effect at ReadDesign time (StampNetRoles).
+	// address the same process-global the net.role stamp reads. So when check.SetActiveRoleVocab
+	// sets a --conventions role override, it takes effect at ReadDesign time (StampNetRoles).
 	DefaultRoleVocab   = classify.DefaultRoleVocab
 	BuildRoleVocab     = classify.BuildRoleVocab
 	SetActiveRoleVocab = classify.SetActiveRoleVocab

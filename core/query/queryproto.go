@@ -11,12 +11,12 @@ import (
 )
 
 // This file is the datalog half of the rule-definition contract (WS3-103). The wire form maps the
-// Query AST rather than carrying query TEXT, because text would make every consumer carry a parser and
-// would let a document round-trip through a spelling this build cannot parse while looking intact.
+// Query AST rather than holding query TEXT. With text, every consumer would need a parser. A
+// document could also round-trip through a spelling this build cannot parse and still look intact.
 //
-// Encoding cannot fail. Decoding checks that every relation an atom names is a catalog relation, a
-// built-in, or defined by the program's own rules, because a program naming a relation that does not
-// exist yields nothing, which looks the same as a clean design.
+// Encoding cannot fail. Decoding checks that each relation named in an atom is a catalog relation,
+// a built-in, or defined by the program's own rules. A program naming a relation that does not
+// exist yields nothing, and that looks the same as a clean design.
 
 // QueryProto encodes a datalog program as its wire form.
 func QueryProto(q Query) *checkspb.DatalogQuery {
@@ -45,10 +45,10 @@ func QueryProto(q Query) *checkspb.DatalogQuery {
 	return out
 }
 
-// QueryFromProto decodes a datalog program and rejects one that names a relation this build does not
-// know, suggesting the closest catalog name when the miss looks like a typo. The check is static (no
-// design is loaded), so it catches an author's mistake at read time rather than presenting an empty
-// answer as a clean result.
+// QueryFromProto decodes a datalog program. It rejects a program that names a relation unknown to
+// this build, and suggests the closest catalog name when the miss looks like a typo. The check is
+// static, with no design loaded. So it catches an author's mistake at read time rather than
+// presenting an empty answer as a clean result.
 func QueryFromProto(p *checkspb.DatalogQuery) (Query, error) {
 	q := Query{}
 	for _, pr := range p.GetRules() {
@@ -98,12 +98,14 @@ func QueryFromProto(p *checkspb.DatalogQuery) (Query, error) {
 	return q, nil
 }
 
-// ValidateRelations reports the first relation the program names that is neither a catalog relation
-// (a fact relation or a computed built-in) nor defined by one of the program's own rules. It is the static half of the checks the evaluator makes, hoisted so a definition read
-// from a document fails when it is READ rather than running to a silent empty answer.
+// ValidateRelations reports the first relation named in the program that is neither a catalog
+// relation nor defined by one of the program's own rules. A catalog relation is a fact relation or
+// a computed built-in. The evaluator makes the same checks, and this function runs their static
+// half early. So a definition read from a document fails when it is READ, rather than running to a
+// silent empty answer.
 //
-// It cannot see relations a not-yet-imported source registers, so it is applied where a program
-// arrives from outside (decoding a definition), not to programs this build constructs.
+// It cannot see relations registered by a source not yet imported. So it applies where a program
+// arrives from outside (decoding a definition), and not to programs this build constructs.
 func ValidateRelations(q Query) error { return ValidateRelationsFrom(facts.DefaultRegistry(), q) }
 
 // ValidateRelationsFrom is ValidateRelations over an explicit relation vocabulary.
@@ -225,9 +227,9 @@ func bodyFromProto(p *checkspb.DatalogBody) (Body, error) {
 	return b, nil
 }
 
-// compareProto and compareFromProto carry a two-term comparison, shared by a body literal and a
-// having filter. The two differ only in WHEN they apply, so a having needs no message of its own; an
-// aggregate on the left is what tells them apart on the wire.
+// compareProto and compareFromProto encode and decode a two-term comparison. A body literal and a
+// having filter share it. The two differ only in WHEN they apply, so a having needs no message of
+// its own. On the wire, an aggregate on the left tells them apart.
 func compareProto(c Compare) *checkspb.DatalogCompare {
 	return &checkspb.DatalogCompare{Left: qtermProto(c.Left), Op: c.Op, Right: qtermProto(c.Right)}
 }

@@ -7,14 +7,14 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// classed builds an ir.Component carrying normalized device classes, which is how the near-match
-// pass decides an endpoint is insignificant.
+// classed builds an ir.Component with normalized device classes. The near-match pass reads those
+// classes to decide that an endpoint is insignificant.
 func classed(refDes string, classes ...string) *ir.Component {
 	return &ir.Component{RefDes: refDes, DeviceClasses: classify.Tags(classes...)}
 }
 
-// probes is the component set the near-rename tests share: three device parts and two test points,
-// so a fixture can add or drop a probe without changing any significant endpoint.
+// probes returns the shared component set for the near-rename tests. It holds three device parts and
+// two test points, so a fixture can add or drop a probe without changing any significant endpoint.
 func probes() []*ir.Component {
 	return []*ir.Component{
 		classed("U1", "ic"), classed("U2", "ic"), classed("C5", "capacitor"),
@@ -68,9 +68,9 @@ func TestNearRenameRecoversARenameThatAlsoGainedAProbe(t *testing.T) {
 	if len(got[0].Removed) != 0 {
 		t.Errorf("Removed = %v, want none", got[0].Removed)
 	}
-	// The probe makes this the interesting case. It moved the all-endpoint coverage off 1.0
-	// while leaving every device endpoint in place, which is the asymmetry the significant thresholds
-	// exist to see through.
+	// The probe makes this the interesting case. It moved the all-endpoint coverage off 1.0 and
+	// left every device endpoint in place. The significant thresholds exist to see through that
+	// asymmetry.
 	ev := got[0].Approx
 	if ev == nil {
 		t.Fatal("an approximate rename must carry its evidence")
@@ -86,7 +86,7 @@ func TestNearRenameRecoversARenameThatAlsoGainedAProbe(t *testing.T) {
 	}
 }
 
-// The negative control, and the one that matters more than the positive. A pass that pairs
+// This is the negative control, and it matters more than the positive one. A pass that pairs
 // everything scores perfectly on "did it find the rename" and is useless.
 func TestNearRenameDoesNotPairUnrelatedNets(t *testing.T) {
 	a := &ir.Design{Components: probes(), Nets: []*ir.Net{
@@ -116,7 +116,7 @@ func TestNearRenameDoesNotPairUnrelatedNets(t *testing.T) {
 	}
 }
 
-// The passes must stay ordered, because an unchanged rename is a FACT about the two revisions and
+// The passes must keep their order, because an unchanged rename is a FACT about the two revisions and
 // must never be downgraded to the pass that guesses.
 func TestExactRenameStillWinsWhenNearMatchIsEnabled(t *testing.T) {
 	a := &ir.Design{Components: probes(), Nets: []*ir.Net{net("OLD", "old", "U1.1", "U2.1", "C5.1")}}
@@ -139,10 +139,10 @@ func TestExactRenameStillWinsWhenNearMatchIsEnabled(t *testing.T) {
 // A large net that happens to contain all of a small one is not its rename. Without the new-coverage
 // guard the old net's coverage is a perfect 1.0 and the pairing looks excellent.
 func TestNearRenameRejectsASupersetSwallowingASmallNet(t *testing.T) {
-	// Sized so ONLY the new-coverage guard can reject it. Two significant endpoints gain two more,
-	// which is exactly MaxAddedSignificantFloor, so the growth guard passes and every old endpoint
-	// survives, so old coverage is a perfect 1.0. What disqualifies it is that the old endpoints make
-	// up half of the new net, under the 0.60 significant floor.
+	// Sized so ONLY the new-coverage guard can reject it. Two significant endpoints gain two more.
+	// That is exactly MaxAddedSignificantFloor, so the growth guard passes. Every old endpoint
+	// survives, so old coverage is a perfect 1.0. The old endpoints make up only half of the new net,
+	// under the 0.60 significant floor, and that disqualifies it.
 	a := &ir.Design{Components: probes(), Nets: []*ir.Net{net("SMALL", "old", "U1.1", "U1.2")}}
 	b := &ir.Design{Components: probes(), Nets: []*ir.Net{
 		net("BIG", "new", "U1.1", "U1.2", "U2.1", "C5.1"),
@@ -153,8 +153,8 @@ func TestNearRenameRejectsASupersetSwallowingASmallNet(t *testing.T) {
 		t.Fatalf("a superset must not read as a rename, got %+v", got)
 	}
 
-	// Positive control for the same fixture: relax only the new-coverage floors and it pairs, which
-	// is what proves the rejection above came from those and not from another threshold.
+	// Positive control for the same fixture. Relax only the new-coverage floors and it pairs. That
+	// proves the rejection above came from those floors and not from another threshold.
 	loose := opts
 	loose.MinNewCoverage, loose.MinNewCoverageSignificant = 0.0, 0.0
 	if got := approxChanges(Designs(a, b, loose)); len(got) != 1 {
@@ -187,8 +187,8 @@ func TestNearRenameReadsSignificanceFromDeviceClassNotRefDesSpelling(t *testing.
 		t.Errorf("significant coverages = %v / %v, want 1.0 / 1.0: no device endpoint moved",
 			ev.OldCoverageSignificant, ev.NewCoverageSignificant)
 	}
-	// All-endpoint coverage still sees the probes, which is what makes the significant pair the
-	// threshold doing the work.
+	// All-endpoint coverage still sees the probes. So the significant pair is the threshold doing
+	// the work.
 	if ev.OldCoverage != 1.0 || ev.NewEndpoints != 5 {
 		t.Errorf("old coverage %v over %d new endpoints", ev.OldCoverage, ev.NewEndpoints)
 	}
@@ -199,8 +199,8 @@ func TestNearRenameReadsSignificanceFromDeviceClassNotRefDesSpelling(t *testing.
 //
 // MinNewCoverage counts ALL endpoints, probes included, so a small net that gains enough probes
 // falls under it however insignificant those probes are. Three probes on a two-endpoint net gives
-// 2/5 and pairs; a fourth gives 2/6 and does not. The significant thresholds insulate the pass from
-// probe churn and this one does not, which is a real limit of the defaults rather than a bug in the
+// 2/5 and pairs. A fourth gives 2/6 and does not. The significant thresholds insulate the pass from
+// probe churn, and this one does not. That is a real limit of the defaults, not a bug in the
 // implementation. The reference numbers behave the same way, and moving MinNewCoverage without a
 // precision run would trade a known behaviour for an unknown one.
 func TestProbeChurnCanStillSinkAPairingThroughTheAllEndpointFloor(t *testing.T) {
@@ -342,8 +342,8 @@ func TestRequiredOverlapTracksTheThreshold(t *testing.T) {
 
 // The growth guard in isolation. Six significant endpoints all survive, so both old coverages are
 // 1.0, and the four gained endpoints leave the new coverages at exactly 0.60, on the floor rather
-// than under it. The only threshold left to reject it is how much a net may GROW and still read as
-// itself. Four were added against an allowance of max(2, 6/2) = 3.
+// than under it. Only the growth guard is left to reject it. That guard limits how much a net may
+// GROW and still read as itself. Four were added against an allowance of max(2, 6/2) = 3.
 func TestNearRenameRejectsANetThatGrewPastItsAllowance(t *testing.T) {
 	comps := []*ir.Component{
 		classed("U1", "ic"), classed("U2", "ic"), classed("U3", "ic"),
@@ -360,8 +360,8 @@ func TestNearRenameRejectsANetThatGrewPastItsAllowance(t *testing.T) {
 	if got := approxChanges(Designs(a, b, opts)); len(got) != 0 {
 		t.Fatalf("a net that grew past its allowance is not itself renamed, got %+v", got)
 	}
-	// Positive control: raise ONLY the growth allowance and the same pairing is accepted, which is
-	// what proves the rejection came from that guard and not from a coverage floor.
+	// Positive control. Raise ONLY the growth allowance and the same pairing is accepted. That
+	// proves the rejection came from that guard and not from a coverage floor.
 	loose := opts
 	loose.MaxAddedSignificantFloor = 4
 	if got := approxChanges(Designs(a, b, loose)); len(got) != 1 {

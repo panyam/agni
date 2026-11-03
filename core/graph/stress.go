@@ -14,13 +14,13 @@ import (
 // convergence-threshold wobble. 128 is far past visual convergence for corpus-sized sheets.
 const stressIterations = 128
 
-// stressPlace is the stress-majorization layout (WS7-009): positions are chosen so drawn
+// stressPlace is the stress-majorization layout (WS7-009). It chooses positions so drawn
 // distance matches graph-theoretic distance (BFS hops over shared nets), by minimizing
-// stress(X) = sum w_ij (||xi-xj|| - pitch*d_ij)^2 with w_ij = d_ij^-2. Each connected
-// component is solved independently (d_ij is undefined across components) from the layered
-// placement as a deterministic init, majorized a fixed number of sweeps, then snapped to
-// free pitch cells so compactBySize's grid-alignment assumption keeps holding. Components
-// pack left to right in sorted-first-ref order.
+// stress(X) = sum w_ij (||xi-xj|| - pitch*d_ij)^2 with w_ij = d_ij^-2. d_ij is undefined
+// across components, so each connected component is solved independently. Each one starts
+// from the layered placement as a deterministic init, is majorized a fixed number of sweeps,
+// and is then snapped to free pitch cells so compactBySize's grid-alignment assumption still
+// holds. Components pack left to right in sorted-first-ref order.
 func stressPlace(d *ir.Design) Placement {
 	adj := adjacency(d)
 	init := layeredPlace(d).Positions
@@ -181,8 +181,8 @@ func stressComponent(refs []string, adj map[string]map[string]bool, init map[str
 
 // snapToGrid maps continuous positions onto free pitch cells: each ref (sorted order) takes
 // the cell nearest its position, spiraling outward deterministically when the cell is taken.
-// Grid alignment is what lets compactBySize treat distinct X as columns and distinct Y as
-// rows, the same contract grid and layered satisfy.
+// Grid alignment lets compactBySize treat distinct X as columns and distinct Y as rows. The
+// grid and layered strategies satisfy the same contract.
 func snapToGrid(refs []string, placed map[string][2]float64) map[string]*geom.Point {
 	taken := map[[2]int64]bool{}
 	out := make(map[string]*geom.Point, len(refs))
@@ -283,8 +283,8 @@ func StressOf(d *ir.Design, positions map[string]*geom.Point) float64 {
 
 // PositionsByRef extracts a geometry's placement origins keyed by ref_des, across all
 // sheets. Placements with no ref_des (power/flag virtuals) are skipped, so an auto-layout
-// and faithful geometry join on the real components. It is the position form StressOf and
-// GroundTruthResidual compare.
+// and faithful geometry join on the real components. StressOf and GroundTruthResidual compare
+// positions in this form.
 func PositionsByRef(g *geom.SchematicGeometry) map[string]*geom.Point {
 	pos := map[string]*geom.Point{}
 	for _, sh := range g.GetSheets() {

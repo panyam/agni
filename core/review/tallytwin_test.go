@@ -28,14 +28,14 @@ type tallyTwin struct {
 	} `json:"cases"`
 }
 
-// TestTallyTwinFixture checks Report.Tally() against the fixture the web tier's review.test.ts reads
-// too (WS9-052). The tally is DERIVED on both surfaces rather than sent on the wire, which keeps a
-// redundant field off the contract but means the two implementations can disagree.
+// TestTallyTwinFixture checks Report.Tally() against a fixture, and the web tier's review.test.ts
+// reads the same fixture (WS9-052). Both surfaces DERIVE the tally rather than send it on the wire.
+// That keeps a redundant field off the contract, but the two implementations can then disagree.
 //
 // A disagreement would not be cosmetic. `covered` is what a team reads as "how much of our checklist
 // is actually mechanised", and not-automated is the one outcome it excludes. A client that counted
-// not-automated as covered would report a checklist as answered when nobody had answered it, which is
-// the failure the outcome vocabulary exists to prevent.
+// not-automated as covered would report a checklist as answered when nobody had answered it. The
+// outcome vocabulary exists to prevent that failure.
 //
 // Checking both sides against ONE file makes that structural rather than a promise. The
 // numbers here were authored once, so neither implementation can be "corrected" to match itself.

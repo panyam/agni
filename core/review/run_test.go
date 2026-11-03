@@ -17,8 +17,8 @@ import (
 )
 
 // A profile item whose interface is absent reads not-applicable, not a silent pass (WS3-051). The
-// binding resolves to the real CAN rules; a stub PresenceFunc supplies the absent/present verdict the
-// CLI derives from profiles.Present.
+// binding resolves to the real CAN rules. The CLI derives the absent/present verdict from
+// profiles.Present, and a stub PresenceFunc supplies it here.
 func TestProfileAbsentNotApplicable(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "x", Title: "CAN bus", Binding: Binding{Profile: "CAN"}},
@@ -37,10 +37,10 @@ func TestProfileAbsentNotApplicable(t *testing.T) {
 	}
 }
 
-// A profile item whose interface is host-bound but declared on no component (and whose convention
-// is not in use) reads not-automated, NOT a hollow pass, because the intended host check could not
-// evaluate (WS3-090). The gate returns before running the rules, so a rule-bearing profile is
-// unaffected.
+// Take a profile item whose interface is host-bound. No component declares the host, and its
+// convention is not in use. The item reads not-automated, NOT a hollow pass, because the intended
+// host check could not evaluate (WS3-090). The gate returns before running the rules, so a
+// rule-bearing profile is unaffected.
 func TestHostUnsatisfiedNotAutomated(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "x", Title: "LIN bus", Binding: Binding{Profile: "CAN"}},
@@ -55,11 +55,12 @@ func TestHostUnsatisfiedNotAutomated(t *testing.T) {
 	}
 }
 
-// An item bound to an interface with NO shipped rule (a presence-only declaration, meaning a
-// profile with signals but no requirements, so it compiles to zero rules) reads not-applicable when
-// the interface is KNOWN and absent, not not-automated (WS3-068). "WiFiBT" has no built-in profile,
-// so the binding resolves to zero catalog rules; the stub PresenceFunc supplies the known/absent
-// verdict the CLI derives from the loaded presence-only profile.
+// Take an item bound to an interface with NO shipped rule. The interface is a presence-only
+// declaration, meaning a profile with signals but no requirements, so it compiles to zero rules.
+// When the interface is KNOWN and absent, the item reads not-applicable, not not-automated
+// (WS3-068). "WiFiBT" has no built-in profile, so the binding resolves to zero catalog rules. The CLI
+// derives the known/absent verdict from the loaded presence-only profile, and the stub PresenceFunc
+// supplies it here.
 func TestAbsentInterfaceWithoutRulesNotApplicable(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "x", Title: "Wi-Fi present?", Binding: Binding{Profile: "WiFiBT"}},
@@ -97,10 +98,10 @@ func oneDesign() *ir.Design {
 	}
 }
 
-// TestDatasheetQueryNeedsData (WS3-097): an inline datasheet query (param_symbol set) that matches
-// nothing reads needs-data, not pass, when NO component on the design has that symbol seeded,
-// because the query could not evaluate. The same query with the symbol seeded reads pass (it ran,
-// clean), and a real firing keeps reading fail. This is the "deleting a seed makes the review
+// TestDatasheetQueryNeedsData covers WS3-097. Take an inline datasheet query, with param_symbol
+// set, that matches nothing. When NO component on the design has that symbol seeded, the query could
+// not evaluate, so it reads needs-data, not pass. With the symbol seeded, the same query ran clean
+// and reads pass. A real firing still reads fail. This is the "deleting a seed makes the review
 // greener" proof, since the only variable across the pass/needs-data pair is whether the symbol is
 // seeded.
 func TestDatasheetQueryNeedsData(t *testing.T) {
@@ -140,10 +141,10 @@ func TestDatasheetQueryNeedsData(t *testing.T) {
 	}
 }
 
-// TestIntentPrebindNamespaceSafety (WS3-098 part 1): a pre-bound NOT-YET-SHIPPED intent rule name reads
-// not-automated, while a real-but-undeclared intent rule still reads needs-design-intent. Both resolve
-// to zero catalog rules (DefaultCatalog carries no intent source without --intent-path); IntentRuleKnown
-// is what tells them apart. A nil predicate keeps the old prefix-only behavior.
+// TestIntentPrebindNamespaceSafety covers WS3-098 part 1. A pre-bound NOT-YET-SHIPPED intent rule
+// name reads not-automated, while a real-but-undeclared intent rule still reads needs-design-intent.
+// Both resolve to zero catalog rules, since DefaultCatalog has no intent source without
+// --intent-path. IntentRuleKnown tells them apart. A nil predicate keeps the old prefix-only behavior.
 func TestIntentPrebindNamespaceSafety(t *testing.T) {
 	man := func(rule string) Manifest {
 		return Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
@@ -168,10 +169,11 @@ func TestIntentPrebindNamespaceSafety(t *testing.T) {
 	}
 }
 
-// TestCapabilityGatedNotApplicable (WS3-096): a rule whose required source-format capability the
-// design lacks reads not-applicable with a reason, not a silent pass; the SAME rule on a format that
-// supplies the capability evaluates live (here, fires). power-input-not-driven needs design.types_power_out
-// (EDIF/IPC carry no power_out) and unconnected-pin needs the no-connect channel (EDIF has none).
+// TestCapabilityGatedNotApplicable covers WS3-096. Each rule here needs a source-format capability.
+// When the design lacks it, the rule reads not-applicable with a reason, not a silent pass. The SAME
+// rule on a format that supplies the capability evaluates live, and here it fires.
+// power-input-not-driven needs design.types_power_out, and EDIF/IPC record no power_out.
+// unconnected-pin needs the no-connect channel, and EDIF has none.
 func TestCapabilityGatedNotApplicable(t *testing.T) {
 	item := func(rule string) Manifest {
 		return Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
@@ -222,10 +224,10 @@ func powerInDesign(format string) *ir.Design {
 	}
 }
 
-// unwiredPinDesign is a one-part design whose single INPUT pin lands on no net. When channel is set, a
-// no-connect-marker net enables the design's no-connect channel (as a KiCad export would), so
-// unconnected-pin evaluates and fires; without it (an EDIF netlist) the channel is absent and the rule
-// is capability-gated.
+// unwiredPinDesign is a one-part design whose single INPUT pin is on no net. When channel is set, a
+// no-connect-marker net enables the design's no-connect channel, as a KiCad export would. Then
+// unconnected-pin evaluates and fires. Without the marker net, as in an EDIF netlist, the channel is
+// absent and the rule is capability-gated.
 func unwiredPinDesign(format string, channel bool) *ir.Design {
 	d := &ir.Design{
 		SourceFormat: format,
@@ -257,9 +259,10 @@ func debugDesign() *ir.Design {
 	return d
 }
 
-// TestPresentBinding (WS3-075): a present: binding reads pass when a component of the class exists and
-// fail (one design-level finding) when none does, the "a debug connector must be on the board"
-// primitive. It is never not-applicable, because the component-class tier is always available.
+// TestPresentBinding covers WS3-075, the "a debug connector must be on the board" primitive. A
+// present: binding reads pass when a component of the class exists. It reads fail, with one
+// design-level finding, when none does. It is never not-applicable, because the component-class tier
+// is always available.
 func TestPresentBinding(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "debug", Title: "debug interface available", Binding: Binding{Present: &PresentBinding{Class: "test_connector"}}},
@@ -285,9 +288,9 @@ func TestPresentBinding(t *testing.T) {
 // TestPresentBindingHasClass (WS10-016) pins that present: matches via HasClass, not the
 // most-specific keyword class. A family tag (an LED is a diode) and a datasheet-enriched class (a
 // smart high-side switch keyword-classes `ic` but its datasheet declares `efuse`, WS10-013) both
-// satisfy the item. The `ic`+`efuse` set is what the datasheet class pass produces. ComponentClass
-// stays `ic` (never promoted), so a ComponentClass== test would miss it and the datasheet-seeded
-// efuse would be invisible.
+// satisfy the item. The datasheet class pass produces the `ic`+`efuse` set. ComponentClass is still
+// `ic` (never promoted), so a ComponentClass== test would miss it and the datasheet-seeded efuse
+// would be invisible.
 func TestPresentBindingHasClass(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{
@@ -317,9 +320,10 @@ func TestPresentBindingHasClass(t *testing.T) {
 	}
 }
 
-// TestRunOutcomes exercises all four outcomes with core rules (no profile registration needed): a
-// firing rule -> fail; an inline query with no match -> pass; a board rule on a netlist -> not
-// applicable; an item with no binding and one naming a rule that has not shipped -> not automated.
+// TestRunOutcomes exercises all four outcomes with core rules, so it needs no profile registration.
+// A firing rule reads fail. An inline query with no match reads pass. A board rule on a netlist reads
+// not applicable. An item with no binding reads not automated, and so does an item naming a rule that
+// has not shipped.
 func TestRunOutcomes(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "fail", Title: "single pin", Binding: Binding{Rule: "single-pin-net"}},
@@ -368,8 +372,8 @@ func TestReportRendersNote(t *testing.T) {
 	}
 }
 
-// The coverage rollup summarizes a run per area: automated = the items whose binding resolved (pass +
-// fail + n/a), not-automated the rest.
+// The coverage rollup summarizes a run per area. Automated counts the items whose binding resolved
+// (pass + fail + n/a), and not-automated counts the rest.
 func TestCoverageRollup(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "fail", Title: "single pin", Binding: Binding{Rule: "single-pin-net"}},
@@ -417,11 +421,11 @@ func TestReportCapsFindings(t *testing.T) {
 	}
 }
 
-// A scoped binding (WS3-058) keeps only the bound rule's findings on the named interface's nets, and
-// reads not-applicable when EVERY named interface is absent. single-pin-net fires on SIG_A and SIG_B;
-// IFACE owns SIG_A, IFACE2 owns SIG_B. Scoping to one interface leaves its net; scoping to a span of
-// interfaces unions their nets; scoping to a span where any interface is present still runs; scoping to
-// a span where all are absent reads not-applicable rather than a whole-design fail.
+// A scoped binding (WS3-058) keeps only the bound rule's findings on the named interface's nets. It
+// reads not-applicable when EVERY named interface is absent. single-pin-net fires on SIG_A and SIG_B.
+// IFACE owns SIG_A, and IFACE2 owns SIG_B. Scoping to one interface leaves its net. Scoping to a span
+// of interfaces unions their nets. Scoping to a span where any interface is present still runs.
+// Scoping to a span where all are absent reads not-applicable rather than a whole-design fail.
 func TestScopedBindingFiltersAndPresence(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
@@ -477,8 +481,8 @@ func TestScopedBindingFiltersAndPresence(t *testing.T) {
 	}
 }
 
-// A COMPONENT-subject rule can be scoped per interface (WS3-083): duplicate-ref-des fires on U1 and U2;
-// the interface owns U1 only, so a component-scoped binding keeps U1's finding and drops U2's, where a
+// A COMPONENT-subject rule can be scoped per interface (WS3-083). duplicate-ref-des fires on U1 and
+// U2. The interface owns U1 only, so a component-scoped binding keeps U1's finding and drops U2's. A
 // net-only scope (nil CompScope) would drop BOTH and hollow-pass. An absent interface is still
 // not-applicable via presence, before any filtering.
 func TestComponentScopedBinding(t *testing.T) {
@@ -490,8 +494,8 @@ func TestComponentScopedBinding(t *testing.T) {
 			{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
 			{RefDes: "U2", Prov: &ir.Provenance{SourceFile: "t"}},
 		},
-		// Supplied is what a real reader records alongside the result; without it duplicate-ref-des
-		// gates to not-applicable, which is the point of agni issue 309.
+		// A real reader records Supplied alongside the result. Without it duplicate-ref-des gates to
+		// not-applicable. That gate is the point of agni issue 309.
 		InputDiagnostics: &ir.InputDiagnostics{
 			RefDesCollisions: []*ir.RefDesCollision{collision("U1"), collision("U2")},
 			Supplied:         []string{"ref_des_collisions"},
@@ -549,8 +553,8 @@ func reqRule(profile, requirement string, subjects ...string) *check.Rule {
 	}
 }
 
-// TestProfileRequirementSelector (WS3-115): an item may bind ONE requirement of a profile, so adding a
-// requirement to that profile cannot re-score the items already bound to it.
+// TestProfileRequirementSelector covers WS3-115. An item may bind ONE requirement of a profile, so
+// adding a requirement to that profile cannot re-score the items already bound to it.
 //
 // The oracle is the pair of clean requirements. Under union semantics they share the profile's whole
 // compiled set, so the moment a THIRD requirement finds a real defect all three items fail and two of
@@ -594,7 +598,7 @@ func TestProfileRequirementSelector(t *testing.T) {
 	if got := items["union"]; got.Outcome != Fail || len(got.Findings) != 2 {
 		t.Errorf("unselected binding: want fail with the esd findings (union semantics), got %s findings=%+v", got.Outcome, got.Findings)
 	}
-	// Selected: answered by its own requirement only. These are the two the union poisons.
+	// Selected: answered by its own requirement only. The union poisons these two.
 	for _, id := range []string{"term", "dangle"} {
 		if got := items[id]; got.Outcome != Pass {
 			t.Errorf("item %q selects a clean requirement: want pass, got %s findings=%+v", id, got.Outcome, got.Findings)
@@ -666,10 +670,10 @@ func TestLoadValidation(t *testing.T) {
 	}
 }
 
-// TestValidateRejectsMalformedValues holds a manifest that never saw YAML to the same rules Load
-// applies (WS9-050). Every case here is built as a struct, which is the path a manifest takes when it
-// arrives as a request value. No parser ran, so Load's checks would never have fired. Without this,
-// the wire path would accept an item with two selectors and resolve one of them arbitrarily.
+// TestValidateRejectsMalformedValues applies Load's rules to a manifest that never saw YAML
+// (WS9-050). Every case here is built as a struct. A manifest arrives that way when it comes as a
+// request value. No parser ran, so Load's checks would never have fired. Without this test, the wire
+// path would accept an item with two selectors and resolve one of them arbitrarily.
 func TestValidateRejectsMalformedValues(t *testing.T) {
 	area := func(items ...Item) []Area { return []Area{{Name: "A", Items: items}} }
 	cases := map[string]Manifest{
@@ -692,8 +696,8 @@ func TestValidateRejectsMalformedValues(t *testing.T) {
 	}
 }
 
-// TestValidateAcceptsValidValue is the other half, that a well-formed struct passes, including the
-// narrower fields (scope, requirement) that compose with a selector rather than counting as one.
+// TestValidateAcceptsValidValue is the other half. A well-formed struct passes. That includes the
+// narrower fields (scope, requirement), which compose with a selector rather than counting as one.
 func TestValidateAcceptsValidValue(t *testing.T) {
 	m := Manifest{Name: "t", Areas: []Area{{Name: "CAN", Items: []Item{
 		{ID: "1", Title: "termination", Binding: Binding{Rule: "r", Scope: ScopeBinding{Profiles: []string{"CAN"}}}},
@@ -731,12 +735,12 @@ areas:
 	}
 }
 
-// TestConventionUnmatchedRunsButDoesNotPass (WS3-099): an interface whose signal convention is in
-// use but whose completeness anchor is absent reads not-automated on zero findings, never pass.
-// Unlike the host-unsatisfied verdict this is NOT a run gate, because a profile's secondary rules
-// (signal-dangling, missing-pullup) gate on in_use alone, so they DO evaluate without the anchor
-// and a real finding must still read fail. That is the WS3-097 discipline, where not-automated
-// replaces a would-be pass, never a fail.
+// TestConventionUnmatchedRunsButDoesNotPass covers WS3-099. Take an interface whose signal
+// convention is in use and whose completeness anchor is absent. On zero findings it reads
+// not-automated, never pass. Unlike the host-unsatisfied verdict, this is NOT a run gate. A
+// profile's secondary rules (signal-dangling, missing-pullup) gate on in_use alone. So they DO
+// evaluate without the anchor, and a real finding must still read fail. That is the WS3-097
+// discipline, where not-automated replaces a would-be pass, never a fail.
 func TestConventionUnmatchedRunsButDoesNotPass(t *testing.T) {
 	unmatched := func(string) (Presence, bool) { return IfaceConventionUnmatched, true }
 	// A clean design: the bound rule finds nothing, so the only verdict available is not-automated.
@@ -759,7 +763,7 @@ func TestConventionUnmatchedRunsButDoesNotPass(t *testing.T) {
 	if !strings.Contains(got.Note, "anchor") {
 		t.Errorf("want a note naming the missing anchor, got %q", got.Note)
 	}
-	// oneDesign's SIG net has a single connection, so single-pin-net fires. The verdict must stay fail,
+	// oneDesign's SIG net has a single connection, so single-pin-net fires. The verdict must be fail,
 	// since gating this case at the top (the host-unsatisfied shape) would have swallowed it.
 	if got := run(oneDesign()); got.Outcome != Fail {
 		t.Errorf("unanchored interface with a real finding: want fail, got %s", got.Outcome)
@@ -767,10 +771,10 @@ func TestConventionUnmatchedRunsButDoesNotPass(t *testing.T) {
 }
 
 // TestRuleBoundDatasheetItemNeedsData (WS3-095) closes the rule-side half of the WS3-097 hole.
-// Before it, only an INLINE QUERY declared the datasheet symbol it joined on, so a RULE-bound
-// datasheet item run WITH --params but with the relevant part unseeded ran a rule that could join
-// nothing, found nothing, and scored a PASS. check.Available does not catch it, because it gates on
-// the params TIER, which is present.
+// Before it, only an INLINE QUERY declared the datasheet symbol it joined on. Imagine a RULE-bound
+// datasheet item run WITH --params, with the relevant part unseeded. Its rule could join nothing,
+// found nothing, and scored a PASS. check.Available does not catch it, because it gates on the params
+// TIER, which is present.
 //
 // The rule declares its symbols (Rule.ParamSymbols) and the runner reads them, so the item reads
 // needs-data instead. The design, the catalog and the binding are identical across the three cases and

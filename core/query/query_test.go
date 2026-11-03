@@ -17,7 +17,7 @@ import (
 	"github.com/panyam/jaala/ns"
 )
 
-// boardGeom is a two-net board: SIG routed thin (0.08mm), PWR wide (0.5mm).
+// boardGeom is a two-net board, with SIG routed thin (0.08mm) and PWR wide (0.5mm).
 func boardGeom() *geom.BoardGeometry {
 	return &geom.BoardGeometry{UnitNm: 1, Nets: []*geom.NetCopper{
 		{Net: "SIG", Segments: []*geom.TrackSegment{{Width: 80000, Layer: "F.Cu"}}},
@@ -25,8 +25,8 @@ func boardGeom() *geom.BoardGeometry {
 	}}
 }
 
-// TestBoardQuery (WS1-041): a board relation is queryable through the same engine with no evaluator
-// change. The query asks for nets routed thinner than 0.1mm.
+// TestBoardQuery (WS1-041) checks that a board relation is queryable through the same engine with
+// no evaluator change. The query asks for nets routed thinner than 0.1mm.
 func TestBoardQuery(t *testing.T) {
 	rows := runQuery(t, check.NewModel(&ir.Design{}, check.WithBoard(boardGeom())), `board.track_width(?net,?w), ?w < 0.1mm => ?net, ?w`)
 	if len(rows) != 1 || rows[0].Bind["net"].S != "SIG" {
@@ -38,8 +38,9 @@ func TestBoardQuery(t *testing.T) {
 	}
 }
 
-// A length is published in metres, so a BARE number compared with one is metres: 0.1 is a 100 mm
-// track, and both nets are thinner than that (agni issue 1035). A threshold over a length writes its unit, as TestBoardQuery's does.
+// A length is published in metres, so a BARE number compared with one is read as metres. So 0.1
+// means a 100 mm track, and both nets are thinner than that (agni issue 1035). A threshold over a
+// length writes its unit, as TestBoardQuery's does.
 func TestABareThresholdOverALengthIsMetres(t *testing.T) {
 	rows := runQuery(t, check.NewModel(&ir.Design{}, check.WithBoard(boardGeom())), `board.track_width(?net,?w), ?w < 0.1 => ?net`)
 	if len(rows) != 2 {
@@ -51,10 +52,10 @@ func TestABareThresholdOverALengthIsMetres(t *testing.T) {
 	}
 }
 
-// TestCrossTierJoin (WS1-041): one query joins BOARD ⋈ NETLIST ⋈ DATASHEET (a thin-routed net, the
-// part on it, and its datasheet identity), and the answer cites the board and the schematic. This
-// is the case tier-generality exists for, since the query spans copper, connectivity, and
-// datasheets at once.
+// TestCrossTierJoin (WS1-041) runs one query that joins BOARD ⋈ NETLIST ⋈ DATASHEET. It finds a
+// thin-routed net, the part on it, and the part's datasheet identity, and the answer cites the
+// board and the schematic. Tier-generality exists for this case, since the query spans copper,
+// connectivity, and datasheets at once.
 func TestCrossTierJoin(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Mpn: "REG-24", Prov: &ir.Provenance{SourceFile: "x"}}},
@@ -73,8 +74,8 @@ func TestCrossTierJoin(t *testing.T) {
 
 func f64(x float64) *float64 { return &x }
 
-// regSpec is a seeded part with one absolute-maximum VIN row, the datasheet side of the showcase
-// join, cited to a page.
+// regSpec is a seeded part with one absolute-maximum VIN row, cited to a page. It is the datasheet
+// side of the showcase join.
 func regSpec(mpn string, vinMax float64) *parampb.PartSpec {
 	return &parampb.PartSpec{
 		Mpn: mpn, Manufacturer: "Acme",
@@ -126,9 +127,9 @@ func runQueryOn(t *testing.T, reg *facts.Registry, m check.Model, text string) [
 	return rows
 }
 
-// TestShowcaseJoin (WS3-029): the flagship datasheet query (a part whose abs-max VIN is below the
-// rail it sits on) joins param.max ⋈ component.mpn ⋈ component.net ⋈ net.max_voltage and the answer
-// carries provenance.
+// TestShowcaseJoin (WS3-029) runs the flagship datasheet query. It asks for a part whose abs-max
+// VIN is below the rail it sits on. The query joins param.max ⋈ component.mpn ⋈ component.net ⋈
+// net.max_voltage, and the answer carries provenance.
 func TestShowcaseJoin(t *testing.T) {
 	m := check.NewModel(regDesign("+24V"), check.WithParamProvider(param.ParamSet{"REG-24": regSpec("REG-24", 20)}))
 	rows := runQuery(t, m,
@@ -153,8 +154,8 @@ func TestShowcaseJoin(t *testing.T) {
 	}
 }
 
-// TestShowcasePasses (WS3-029): the same query is silent when the rail is within the abs-max. The
-// comparison prunes, so no answer is an answer.
+// TestShowcasePasses (WS3-029) checks that the same query is silent when the rail is within the
+// abs-max. The comparison prunes, so no answer is an answer.
 func TestShowcasePasses(t *testing.T) {
 	m := check.NewModel(regDesign("+12V"), check.WithParamProvider(param.ParamSet{"REG-24": regSpec("REG-24", 20)}))
 	rows := runQuery(t, m,
@@ -164,10 +165,10 @@ func TestShowcasePasses(t *testing.T) {
 	}
 }
 
-// vddSpec is REG-24 with TWO rows on the ONE symbol VDD: a recommended-operating window (3.0..3.6)
-// and an absolute-maximum ceiling (4.6). The thin param.max(mpn,symbol,max) relation cannot tell them
-// apart, since both surface as param.max(REG-24,"VDD",...), and param.range separates them by its kind
-// argument.
+// vddSpec is REG-24 with TWO rows on the ONE symbol VDD. One is a recommended-operating window
+// (3.0..3.6), and the other is an absolute-maximum ceiling (4.6). The thin
+// param.max(mpn,symbol,max) relation cannot tell them apart, since both surface as
+// param.max(REG-24,"VDD",...). param.range separates them by its kind argument.
 func vddSpec(mpn string) *parampb.PartSpec {
 	return &parampb.PartSpec{
 		Mpn: mpn, Manufacturer: "Acme",
@@ -189,12 +190,12 @@ func vddSpec(mpn string) *parampb.PartSpec {
 	}
 }
 
-// TestParamRangeTwoSidedJoin (WS3-082) demonstrates that a two-sided, limit-kind-discriminated
-// range check IS authorable in datalog with param.range + net.nominal_voltage, the join the thin
-// param.max(mpn,symbol,max) relation could not express (no lower bound, no way to tell an absolute-max
-// row from a recommended-operating one on the same symbol). This is the ticket's "demonstrated
-// datalog program" proof that the enriched vocabulary is sufficient for the datasheet-range rule
-// family.
+// TestParamRangeTwoSidedJoin (WS3-082) shows that datalog can express a two-sided range check that
+// discriminates by limit kind, using param.range + net.nominal_voltage. The thin
+// param.max(mpn,symbol,max) relation could not express that join. It has no lower bound, and no way
+// to tell an absolute-max row from a recommended-operating one on the same symbol. This test is the
+// ticket's "demonstrated datalog program". It proves the enriched vocabulary is sufficient for the
+// datasheet-range rule family.
 func TestParamRangeTwoSidedJoin(t *testing.T) {
 	m := check.NewModel(regDesign("+5V"), check.WithParamProvider(param.ParamSet{"REG-24": vddSpec("REG-24")}))
 
@@ -213,23 +214,24 @@ func TestParamRangeTwoSidedJoin(t *testing.T) {
 		t.Errorf("v/max = %v/%v, want 5/3.6", r.Bind["v"], r.Bind["max"])
 	}
 
-	// Under the recommended MINIMUM, the side the thin param relation carries no bound for. A +2V5
-	// rail on the same part is below the 3.0 floor.
+	// Under the recommended MINIMUM. The thin param relation has no bound on this side. A +2V5 rail
+	// on the same part is below the 3.0 floor.
 	under := runQuery(t, check.NewModel(regDesign("+2V5"), check.WithParamProvider(param.ParamSet{"REG-24": vddSpec("REG-24")})),
 		`component.mpn(?ref,?mpn), param.range(?mpn,?sym,"recommended_operating",?min,?max), component.net(?ref,?net), net.nominal_voltage(?net,?v), ?v < ?min => ?ref, ?v, ?min`)
 	if len(under) != 1 || under[0].Bind["min"].Num == nil || *under[0].Bind["min"].Num != 3.0 {
 		t.Fatalf("recommended under-min: rows = %v, want one with min 3.0", under)
 	}
 
-	// Kind discrimination: filtering the SAME symbol by kind picks the abs-max ceiling (4.6), which
-	// param.max(mpn,"VDD",max) could never separate from the recommended 3.6.
+	// Kind discrimination. Filtering the SAME symbol by kind picks the abs-max ceiling (4.6).
+	// param.max(mpn,"VDD",max) could never separate that ceiling from the recommended 3.6.
 	abs := runQuery(t, m, `param.range("REG-24","VDD","absolute_max",?min,?max) => ?max`)
 	if len(abs) != 1 || abs[0].Bind["max"].Num == nil || *abs[0].Bind["max"].Num != 4.6 {
 		t.Fatalf("abs-max row: rows = %v, want one with max 4.6", abs)
 	}
 }
 
-// TestSingleRelation (WS3-029): a one-atom query is a plain select-project over the fact base.
+// TestSingleRelation (WS3-029) checks that a one-atom query is a plain select-project over the fact
+// base.
 func TestSingleRelation(t *testing.T) {
 	m := check.NewModel(regDesign("+24V"), check.WithParamProvider(param.ParamSet{"REG-24": regSpec("REG-24", 20)}))
 	rows := runQuery(t, m, `component.mpn(?ref,?mpn) => ?ref, ?mpn`)
@@ -249,8 +251,9 @@ func reachDesign() *ir.Design {
 	}
 }
 
-// TestReachesRecursion (WS3-029): the built-in reaches relation (bridged to check.Model.Reach)
-// makes recursion real. reaches from A crosses the series resistor to B (reflexive, so A too).
+// TestReachesRecursion (WS3-029) checks that the built-in reaches relation makes recursion real.
+// The relation is bridged to check.Model.Reach. reaches from A crosses the series resistor to B,
+// and it is reflexive, so A too.
 func TestReachesRecursion(t *testing.T) {
 	rows := runQuery(t, check.NewModel(reachDesign()), `net.reaches("A",?n) => ?n`)
 	got := map[string]bool{}
@@ -263,8 +266,8 @@ func TestReachesRecursion(t *testing.T) {
 }
 
 // reachChainDesign is a straight series chain N0 -R1- N1 -R2- N2 -R3- N3, so every net sits at a
-// known, distinct distance from N0. The graded distance matters because a fixture where everything is
-// one hop away cannot tell a radius filter from a no-op.
+// known, distinct distance from N0. If everything were one hop away, the fixture could not tell a
+// radius filter from a no-op, so the graded distance matters.
 func reachChainDesign() *ir.Design {
 	d := &ir.Design{}
 	for i := 1; i <= 3; i++ {
@@ -288,8 +291,9 @@ func reachChainDesign() *ir.Design {
 	return d
 }
 
-// TestReachesBindsDistance (WS3-112): the optional third argument binds the number of series
-// crossings, reflexive at 0, so a rule states its own radius instead of inheriting the engine's.
+// TestReachesBindsDistance (WS3-112) checks that the optional third argument binds the number of
+// series crossings, reflexive at 0. So a rule states its own radius instead of inheriting the
+// engine's.
 func TestReachesBindsDistance(t *testing.T) {
 	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.reaches("N0", ?n, ?h) => ?n, ?h`)
 	got := map[string]string{}
@@ -304,9 +308,9 @@ func TestReachesBindsDistance(t *testing.T) {
 	}
 }
 
-// TestReachesRadiusFilter (WS3-112) is the test that would have caught composing a 2-hop protection
-// predicate out of the 100-hop reaches built-in. A clamp three series elements away must NOT satisfy
-// a "within two hops" question, and reporting that it does is a false PASS on a real defect.
+// TestReachesRadiusFilter (WS3-112) would have caught a 2-hop protection predicate composed out of
+// the 100-hop reaches built-in. A clamp three series elements away must NOT satisfy a "within two
+// hops" question. Reporting that it does is a false PASS on a real defect.
 func TestReachesRadiusFilter(t *testing.T) {
 	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.reaches("N0", ?n, ?h), ?h <= 2 => ?n`)
 	got := map[string]bool{}
@@ -321,9 +325,9 @@ func TestReachesRadiusFilter(t *testing.T) {
 	}
 }
 
-// TestReachesConstantHopsIsExact (WS3-112) pins the semantics the doc and catalog warn about. A bare
-// constant in the third slot binds by equality, so it means EXACTLY that many hops. A reader who
-// writes it expecting "within" gets a silently narrower answer, which is why the radius idiom is a
+// TestReachesConstantHopsIsExact (WS3-112) pins a semantics that the doc and catalog warn about. A
+// bare constant in the third slot binds by equality, so it means EXACTLY that many hops. A reader
+// who writes it expecting "within" gets a silently narrower answer. So the radius idiom is a
 // comparison.
 func TestReachesConstantHopsIsExact(t *testing.T) {
 	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.reaches("N0", ?n, 2) => ?n`)
@@ -336,10 +340,10 @@ func TestReachesConstantHopsIsExact(t *testing.T) {
 	}
 }
 
-// TestReachesArityBothPathsAgree (WS3-112): the optional argument is admitted by the POSITIVE path
-// and the NEGATION path through one predicate. A divergence here would accept net.reaches(?a,?b,?h) while
-// rejecting `not net.reaches(?a,?b,?h)`, and negation is validated up front so it would fail the whole
-// query rather than degrade.
+// TestReachesArityBothPathsAgree (WS3-112) checks that the POSITIVE path and the NEGATION path
+// admit the optional argument through one predicate. If they diverged, the engine would accept
+// net.reaches(?a,?b,?h) while rejecting `not net.reaches(?a,?b,?h)`. Negation is validated up
+// front, so the whole query would fail rather than degrade.
 func TestReachesArityBothPathsAgree(t *testing.T) {
 	m := check.NewModel(reachChainDesign())
 	rows := runQuery(t, m, `component.net(?r, ?n), not net.reaches("N0", ?n, ?h) => ?n`)
@@ -372,9 +376,9 @@ func twoPartDesign() (*ir.Design, param.ParamSet) {
 	return d, param.ParamSet{"REG-24": regSpec("REG-24", 20)}
 }
 
-// TestNegation (WS3-029 fast-follow): `not param.max(?m,"VIN",?v)` keeps the mpns with NO VIN param.
-// The negated ?v appears only under negation, so it is an existential wildcard ("no VIN param for
-// any value"); ?m is bound by the positive literal and must match.
+// TestNegation (WS3-029 fast-follow) checks that `not param.max(?m,"VIN",?v)` keeps the mpns with
+// NO VIN param. ?v appears only under negation, so it is an existential wildcard ("no VIN param for
+// any value"). The positive literal binds ?m, and ?m must match.
 func TestNegation(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModel(d, check.WithParamProvider(set))
@@ -387,7 +391,8 @@ func TestNegation(t *testing.T) {
 	}
 }
 
-// TestAggregationCount (WS3-029 fast-follow): count(?ref) grouped by ?net gives parts-per-net.
+// TestAggregationCount (WS3-029 fast-follow) checks that count(?ref) grouped by ?net gives
+// parts-per-net.
 func TestAggregationCount(t *testing.T) {
 	// Both U1 and U2 sit on SHARED, plus their own rails.
 	d := &ir.Design{
@@ -407,14 +412,13 @@ func TestAggregationCount(t *testing.T) {
 	}
 }
 
-// TestAggregationMax (WS3-029 fast-follow): max over a numeric column reduces per group.
+// TestAggregationMax (WS3-029 fast-follow) checks that max over a numeric column reduces per group.
 //
-// Both rows are VOLTS. The fixture used to pair a 20 V row with an 800 mA one and assert
-// 800, which made the assertion depend on 800 being the larger PRINTED number across two different
-// units. That is not a comparison with a meaning, and since agni issue 165 reduced the query
-// surface's numbers to SI base units it is not even the larger number (800 mA is 0.8 A). The
-// property under test is that max() reduces per group, so the fixture states two quantities that
-// can actually be ordered.
+// Both rows are VOLTS. The fixture used to pair a 20 V row with an 800 mA one and assert 800. That
+// assertion depended on 800 being the larger PRINTED number across two different units. Such a
+// comparison has no meaning. Since agni issue 165 reduced the query surface's numbers to SI base
+// units, 800 is not even the larger number (800 mA is 0.8 A). The property under test is that max()
+// reduces per group, so the fixture states two quantities that can actually be ordered.
 func TestAggregationMax(t *testing.T) {
 	spec := regSpec("REG-24", 20)
 	// add a second numeric param so max has something to choose
@@ -430,8 +434,8 @@ func TestAggregationMax(t *testing.T) {
 	}
 }
 
-// TestStringPredicates (WS3-029 fast-follow): contains/prefix/suffix filter a bound string. Both
-// positive and negated forms work, so a search box can ask "MPN contains LM" or "not".
+// TestStringPredicates (WS3-029 fast-follow) checks that contains/prefix/suffix filter a bound
+// string. Both positive and negated forms work, so a search box can ask "MPN contains LM" or "not".
 func TestStringPredicates(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U1", Mpn: "LM1117", Prov: &ir.Provenance{SourceFile: "d"}},
@@ -452,8 +456,8 @@ func TestStringPredicates(t *testing.T) {
 	one(`component.mpn(?r,?m), not str.contains(?m,"LM") => ?r`, "U2") // negated string predicate
 }
 
-// TestStringPredicateUnbound (WS3-029 fast-follow): a string predicate whose value is not bound by
-// a relation errors clearly (it filters, it cannot enumerate every string).
+// TestStringPredicateUnbound (WS3-029 fast-follow) checks a string predicate whose value no
+// relation binds. It errors clearly, because it filters and cannot enumerate every string.
 func TestStringPredicateUnbound(t *testing.T) {
 	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, `str.contains(?x,"LM") => ?x`), NewBase(check.NewModel(&ir.Design{}))); err == nil {
 		t.Error("contains on an unbound variable succeeded; want an error")
@@ -470,8 +474,8 @@ func mustParse(t *testing.T, s string) Query {
 }
 
 // chainDesign wires U1-U2 on net N1 and U2-U3 on net N2. U1 and U3 share no net, so they are linked
-// only transitively (through U2). It is the fixture for recursion, since a transitive closure
-// reaches U3 from U1 where a single join cannot.
+// only transitively (through U2). The recursion tests use it, since a transitive closure reaches U3
+// from U1 and a single join cannot.
 func chainDesign() *ir.Design {
 	return &ir.Design{
 		Components: []*ir.Component{
@@ -486,8 +490,9 @@ func chainDesign() *ir.Design {
 	}
 }
 
-// TestUserRuleView (WS3-029 fast-follow): a non-recursive user rule is a named view. `sharesnet`
-// derives the pairs of distinct components on a common net, and the goal queries that IDB relation.
+// TestUserRuleView (WS3-029 fast-follow) checks that a non-recursive user rule is a named view.
+// `sharesnet` derives the pairs of distinct components on a common net, and the goal queries that
+// IDB relation.
 func TestUserRuleView(t *testing.T) {
 	rows := runQuery(t, check.NewModel(chainDesign()),
 		`sharesnet(?a,?b) :- component.net(?a,?n), component.net(?b,?n), ?a != ?b; sharesnet("U1",?x) => ?x`)
@@ -500,9 +505,9 @@ func TestUserRuleView(t *testing.T) {
 	}
 }
 
-// TestUserRuleRecursion (WS3-029 fast-follow): the flagship, a user-defined transitive closure.
-// `connected` is its own body atom, so it runs to fixpoint and reaches U3 from U1 through U2, which
-// no single join can. The derived answer still carries the base nets' provenance.
+// TestUserRuleRecursion (WS3-029 fast-follow) is the flagship, a user-defined transitive closure.
+// `connected` is its own body atom, so it runs to fixpoint and reaches U3 from U1 through U2. No
+// single join can do that. The derived answer still carries the base nets' provenance.
 func TestUserRuleRecursion(t *testing.T) {
 	q := `link(?a,?b) :- component.net(?a,?n), component.net(?b,?n), ?a != ?b;
 	      connected(?a,?b) :- link(?a,?b);
@@ -521,10 +526,10 @@ func TestUserRuleRecursion(t *testing.T) {
 	}
 }
 
-// TestStratifiedNegationInRule (WS3-029 fast-follow): a rule may negate another IDB relation, and
-// stratification derives that relation fully first. `linked` collects components that share a net
-// with someone; `isolated` is a component that is NOT linked. U_LONE sits on its own net, so it is
-// the only isolated part.
+// TestStratifiedNegationInRule (WS3-029 fast-follow) checks that a rule may negate another IDB
+// relation, and stratification derives that relation fully first. `linked` collects components that
+// share a net with someone, and `isolated` is a component that is NOT linked. U_LONE sits on its
+// own net, so it is the only isolated part.
 func TestStratifiedNegationInRule(t *testing.T) {
 	d := chainDesign()
 	d.Components = append(d.Components, &ir.Component{RefDes: "U_LONE", Prov: &ir.Provenance{SourceFile: "c"}})
@@ -538,9 +543,9 @@ func TestStratifiedNegationInRule(t *testing.T) {
 	}
 }
 
-// TestUnstratifiable (WS3-029 fast-follow): recursion through negation is rejected. `p` needs `not q`
-// and `q` needs `not p` in the same cycle, which has no stratification, so the evaluator must say so
-// rather than loop or give an order-dependent answer.
+// TestUnstratifiable (WS3-029 fast-follow) checks that recursion through negation is rejected. `p`
+// needs `not q` and `q` needs `not p` in the same cycle. That cycle has no stratification, so the
+// evaluator must say so rather than loop or give an order-dependent answer.
 func TestUnstratifiable(t *testing.T) {
 	q := `p(?r) :- component.net(?r,?n), not q(?r);
 	      q(?r) :- component.net(?r,?n), not p(?r);
@@ -550,8 +555,8 @@ func TestUnstratifiable(t *testing.T) {
 	}
 }
 
-// TestRuleErrors (WS3-029 fast-follow): a malformed rule program is rejected with a clear error, not
-// a silent empty answer.
+// TestRuleErrors (WS3-029 fast-follow) checks that a malformed rule program is rejected with a
+// clear error, not a silent empty answer.
 func TestRuleErrors(t *testing.T) {
 	m := check.NewModel(chainDesign())
 	cases := map[string]string{
@@ -575,8 +580,9 @@ func TestRuleErrors(t *testing.T) {
 	}
 }
 
-// TestRulesDoNotLeakAcrossQueries (WS3-029 fast-follow): rules materialize onto a per-query copy, so
-// a Base reused for a second query that defines no rules sees none of the first query's IDB.
+// TestRulesDoNotLeakAcrossQueries (WS3-029 fast-follow) checks that rules materialize onto a
+// per-query copy. A Base reused for a second query that defines no rules sees none of the first
+// query's IDB.
 func TestRulesDoNotLeakAcrossQueries(t *testing.T) {
 	b := NewBase(check.NewModel(chainDesign()))
 	if _, err := (Naive{}).Eval(context.Background(), mustParse(t, `v(?a) :- component.net(?a,?n); v(?a) => ?a`), b); err != nil {
@@ -591,9 +597,10 @@ func TestRulesDoNotLeakAcrossQueries(t *testing.T) {
 // oddLen is an overlay's filter predicate, odd_len(?s), true when the string's length is odd.
 var oddLen = ns.Filter(1, func(args []Value) (bool, error) { return len(args[0].S)%2 == 1, nil })
 
-// TestRegisteredPredicateFiltersAndNegates (predicate-interface): an overlay's filter predicate,
-// registered at a path in the fact layer's vocabulary, is a first-class query citizen. It filters in
-// the goal and `not` ranges over it, both derived from the one boolean so they can never disagree.
+// TestRegisteredPredicateFiltersAndNegates (predicate-interface) registers an overlay's filter
+// predicate at a path in the fact layer's vocabulary. The predicate is then a first-class query
+// citizen. It filters in the goal, and `not` ranges over it. Both derive from the one boolean, so
+// they can never disagree.
 //
 // The test composes its own registry, so it never writes to the process default and has nothing to
 // restore.
@@ -614,8 +621,8 @@ func TestRegisteredPredicateFiltersAndNegates(t *testing.T) {
 	}
 }
 
-// TestPredicateRegistrationRejects (predicate-interface): a misregistration fails composition, which
-// facts.RegisterPredicate turns into a panic at load.
+// TestPredicateRegistrationRejects (predicate-interface) checks that a misregistration fails
+// composition. facts.RegisterPredicate turns that failure into a panic at load.
 func TestPredicateRegistrationRejects(t *testing.T) {
 	ok := func([]Value) (bool, error) { return true, nil }
 	cases := map[string]struct {
@@ -639,8 +646,9 @@ func TestPredicateRegistrationRejects(t *testing.T) {
 	}
 }
 
-// TestNegatedReaches (predicate-interface): negation now ranges over reaches too (negation as
-// failure over the same extendAtom the positive solve uses). A negated reaches used to error.
+// TestNegatedReaches (predicate-interface) checks that negation now ranges over reaches too. It is
+// negation as failure over extendAtom, which the positive solve also uses. A negated reaches used
+// to error.
 func TestNegatedReaches(t *testing.T) {
 	m := check.NewModel(reachDesign()) // A reaches B through the series resistor
 	// A does reach B, so `not net.reaches("A","B")` drops every row.
@@ -653,12 +661,12 @@ func TestNegatedReaches(t *testing.T) {
 	}
 }
 
-// TestRegisterRelation (WS3-029 fast-follow): the extension hook. An out-of-engine relation registered
-// with RegisterRelation is a first-class query citizen. The goal joins it against a built-in
-// relation, a rule reads it, and negation ranges over it, all with no evaluator change.
+// TestRegisterRelation (WS3-029 fast-follow) covers the extension hook. An out-of-engine relation
+// registered with RegisterRelation is a first-class query citizen. The goal joins it against a
+// built-in relation, a rule reads it, and negation ranges over it, all with no evaluator change.
 func TestRegisterRelation(t *testing.T) {
-	// An overlay "house.approved(ref)" relation: U1 is approved, U2 is not. Composed onto the process
-	// vocabulary rather than added to it, so the test owns what it queries.
+	// An overlay "house.approved(ref)" relation, where U1 is approved and U2 is not. It is composed
+	// onto the process vocabulary rather than added to it, so the test owns what it queries.
 	reg := facts.RegistryWith(facts.WithRelation("house.approved", []facts.Field{facts.FieldSubject}, func(m check.Model) []facts.Row {
 		var out []facts.Row
 		for _, c := range m.Components() {
@@ -695,10 +703,10 @@ func TestRegisterRelation(t *testing.T) {
 	}
 }
 
-// TestRegisterRelationRejects (WS3-029 fast-follow): a misregistration fails loudly when the
-// vocabulary composes, not silently at query time. The two collision cases are here rather than in
-// core/facts because they need the REAL built-in catalog and the REAL reserved predicate names, which
-// only exist once this package and stdlib/relations are both linked in.
+// TestRegisterRelationRejects (WS3-029 fast-follow) checks that a misregistration fails loudly when
+// the vocabulary composes, not silently at query time. The two collision cases need the REAL
+// built-in catalog and the REAL reserved predicate names. Those exist only once this package and
+// stdlib/relations are both linked in, so the cases are here rather than in core/facts.
 func TestRegisterRelationRejects(t *testing.T) {
 	nilProj := func(check.Model) []facts.Row { return nil }
 	cases := map[string]facts.Option{
@@ -726,7 +734,8 @@ func containsCite(cites []string, want string) bool {
 	return false
 }
 
-// TestEvalErrors (WS3-029): the evaluator rejects bad queries clearly rather than guessing.
+// TestEvalErrors (WS3-029) checks that the evaluator rejects bad queries clearly rather than
+// guessing.
 func TestEvalErrors(t *testing.T) {
 	m := check.NewModel(regDesign("+24V"))
 	cases := map[string]string{
@@ -750,9 +759,10 @@ func TestEvalErrors(t *testing.T) {
 	}
 }
 
-// TestComponentClassRelation (WS3-071): component.class returns one row per class tag, so a TVS
-// answers both its specific tag and its diode family tag, so a datalog rule joins on the family tag to
-// ask membership. The design carries a stamped device_classes set (as a loader-read design would).
+// TestComponentClassRelation (WS3-071) checks that component.class returns one row per class tag.
+// So a TVS answers both its specific tag and its diode family tag, and a datalog rule joins on the
+// family tag to ask membership. The design has a stamped device_classes set, as a loader-read
+// design would.
 func TestComponentClassRelation(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "D1", DeviceClasses: classify.Tags("tvs", "diode")},
@@ -771,9 +781,9 @@ func TestComponentClassRelation(t *testing.T) {
 	}
 }
 
-// TestBusRelation (WS1-034): the bus(label, kind) relation exposes reader-detected unmodeled buses
-// for ad-hoc search. A projection lists them, a bound kind filters. An anonymous bus wire has an
-// empty label.
+// TestBusRelation (WS1-034) checks that the bus(label, kind) relation exposes reader-detected
+// unmodeled buses for ad-hoc search. A projection lists them, and a bound kind filters them. An
+// anonymous bus wire has an empty label.
 func TestBusRelation(t *testing.T) {
 	d := &ir.Design{InputDiagnostics: &ir.InputDiagnostics{UnmodeledBuses: []*ir.BusNotModeled{
 		{Kind: "bus_alias", Label: "DATA"},
@@ -791,13 +801,14 @@ func TestBusRelation(t *testing.T) {
 	}
 }
 
-// TestUnanchoredNegationErrors is agni issue 522's first half. A negated atom sharing no variable
-// with the rest of the query has nothing to range over per row, so it collapses to a design-wide
-// constant and filters every row away or none. Before this it returned "no results", which reads as
-// a reassuring fact about the design rather than as a malformed question.
+// TestUnanchoredNegationErrors covers the first half of agni issue 522. Imagine a negated atom that
+// shares no variable with the rest of the query. It has nothing to range over per row, so it
+// collapses to a design-wide constant. It then filters every row away, or none. Before this it
+// returned "no results", which reads as a reassuring fact about the design rather than as a
+// malformed question.
 //
-// The shape here is the natural spelling of "nets with no test point", so the
-// author gets a confident empty answer to the most ordinary question a review asks.
+// The shape here is the natural spelling of "nets with no test point". So the author gets a
+// confident empty answer to the most ordinary question a review asks.
 func TestUnanchoredNegationErrors(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModel(d, check.WithParamProvider(set))
@@ -812,14 +823,15 @@ func TestUnanchoredNegationErrors(t *testing.T) {
 	}
 }
 
-// TestAnchoredNegationWithFreeValueStillWorks is the guard on the guard. Classic datalog safety says
-// every variable in a negated literal must occur positively, and applying that rule here would break
-// the shape this language documents and people rely on: `not param.max(?m,"VIN",?v)` leaves ?v free ON
-// PURPOSE and means "no VIN param for any value". It is well defined because ?m anchors it.
+// TestAnchoredNegationWithFreeValueStillWorks is the guard on the guard. Classic datalog safety
+// says every variable in a negated literal must occur positively. Applying that rule here would
+// break a shape that this language documents and people rely on. `not param.max(?m,"VIN",?v)`
+// leaves ?v free ON PURPOSE and means "no VIN param for any value". It is well defined because ?m
+// anchors it.
 //
-// So the rule implemented is ANCHORING, not full safety, and this test is what stops someone
-// "fixing" it into the stricter form later. TestNegation above covers the same shape's results; this
-// one exists to state the rule.
+// So the rule implemented is ANCHORING, not full safety. This test stops someone "fixing" it into
+// the stricter form later. TestNegation above covers the same shape's results, and this one exists
+// to state the rule.
 func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModel(d, check.WithParamProvider(set))
@@ -828,8 +840,8 @@ func TestAnchoredNegationWithFreeValueStillWorks(t *testing.T) {
 	}
 }
 
-// TestGroundNegationNeedsNoAnchor. A negated atom with no variables at all is a constant filter, and
-// a legitimate one, so the anchoring rule must not reach it.
+// TestGroundNegationNeedsNoAnchor covers a negated atom with no variables at all. It is a constant
+// filter, and a legitimate one, so the anchoring rule must not reach it.
 func TestGroundNegationNeedsNoAnchor(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModel(d, check.WithParamProvider(set))
@@ -838,9 +850,9 @@ func TestGroundNegationNeedsNoAnchor(t *testing.T) {
 	}
 }
 
-// TestUnanchoredNegationErrorsInARuleBody. A rule body runs through the same solver as a goal, so it
-// gets the same guard. Without this, a query authored over the wire (which arrives as rules) keeps
-// the silent behaviour the goal path just lost.
+// TestUnanchoredNegationErrorsInARuleBody covers rule bodies. A rule body runs through the same
+// solver as a goal, so it gets the same guard. A query authored over the wire arrives as rules.
+// Without this guard, it would keep the silent behaviour the goal path just lost.
 func TestUnanchoredNegationErrorsInARuleBody(t *testing.T) {
 	d, set := twoPartDesign()
 	m := check.NewModel(d, check.WithParamProvider(set))
@@ -857,8 +869,9 @@ func TestUnanchoredNegationErrorsInARuleBody(t *testing.T) {
 	}
 }
 
-// aggFixture is a design shaped like the group-filter question: three nets whose test-point coverage
-// differs, and one net carrying a second capacitor so a flat goal produces more bindings than values.
+// aggFixture is a design shaped like the group-filter question. It has three nets whose test-point
+// coverage differs. One net has a second capacitor, so a flat goal produces more bindings than
+// values.
 //
 //	TPONLY   TP1                       -> 1 test point,  no capacitor
 //	BOTH     TP2, TP3, C1              -> 2 test points, 1 capacitor  (2 bindings, 2 values)
@@ -906,8 +919,8 @@ func aggRows(t *testing.T, q string) map[string]string {
 	return got
 }
 
-// TestHavingFiltersGroups: a having filters after the reduce, which a goal comparison
-// cannot do, because before grouping there is no count to compare.
+// TestHavingFiltersGroups checks that a having filters after the reduce. A goal comparison cannot
+// do that, because before grouping there is no count to compare.
 func TestHavingFiltersGroups(t *testing.T) {
 	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net) => ?net, count(?tp) having count(?tp) > 1`)
 	if len(got) != 1 || got["BOTH"] != "count(tp)=2" {
@@ -915,8 +928,9 @@ func TestHavingFiltersGroups(t *testing.T) {
 	}
 }
 
-// TestHavingWithoutSelectingTheAggregate: an aggregate may be filtered on without being projected, so
-// the answer is the subjects rather than the tally. Its column must not reach the output.
+// TestHavingWithoutSelectingTheAggregate checks that an aggregate may be filtered on without being
+// projected. The answer is then the subjects rather than the tally. The aggregate's column must not
+// reach the output.
 func TestHavingWithoutSelectingTheAggregate(t *testing.T) {
 	q := `component.class(?tp,"test_point"), component.net(?tp,?net) => ?net having count(?tp) = 1`
 	rows := runQuery(t, check.NewModel(aggFixture()), q)
@@ -940,9 +954,9 @@ func TestHavingWithoutSelectingTheAggregate(t *testing.T) {
 	}
 }
 
-// TestHavingComparedAgainstAGroupKey: the right side may be a selected variable, not only a
-// constant. "Nets whose every pin is a test point" is that question. Only TPONLY qualifies, where
-// BOTH and DOUBLE each carry three pins and fewer test points.
+// TestHavingComparedAgainstAGroupKey checks that the right side may be a selected variable, not
+// only a constant. "Nets whose every pin is a test point" asks that. Only TPONLY qualifies. BOTH
+// and DOUBLE each have three pins and fewer test points.
 func TestHavingComparedAgainstAGroupKey(t *testing.T) {
 	rows := runQuery(t, check.NewModel(aggFixture()),
 		`component.class(?tp,"test_point"), component.net(?tp,?net), net.pin_count(?net,?pc) => ?net, ?pc having count(?tp) = ?pc`)
@@ -951,8 +965,9 @@ func TestHavingComparedAgainstAGroupKey(t *testing.T) {
 	}
 }
 
-// TestHavingRejectsANonGroupKeyOnTheRight: caught at validation, so the query fails on the query
-// rather than on whichever design happens to produce the first group.
+// TestHavingRejectsANonGroupKeyOnTheRight checks that validation catches a non-group key on the
+// right. So the query fails on the query itself, rather than on whichever design happens to produce
+// the first group.
 func TestHavingRejectsANonGroupKeyOnTheRight(t *testing.T) {
 	q, perr := Parse(`component.class(?tp,"test_point"), component.net(?tp,?net) => ?net having count(?tp) = ?tp`)
 	if perr != nil {
@@ -964,8 +979,9 @@ func TestHavingRejectsANonGroupKeyOnTheRight(t *testing.T) {
 	}
 }
 
-// TestDistinctReducesValuesNotBindings is the trap this feature exists to make spellable. DOUBLE
-// carries one test point and two capacitors, so the flat goal yields two bindings for one value.
+// TestDistinctReducesValuesNotBindings covers a known trap, and distinct exists so a query can
+// avoid it. DOUBLE has one test point and two capacitors, so the flat goal yields two bindings for
+// one value.
 func TestDistinctReducesValuesNotBindings(t *testing.T) {
 	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net),
 		component.class(?c,"capacitor"), component.net(?c,?net) => ?net, count(?tp), count(distinct ?tp)`)
@@ -977,8 +993,9 @@ func TestDistinctReducesValuesNotBindings(t *testing.T) {
 	}
 }
 
-// TestListNamesTheGroupMembers: list is a list value of the members sorted, in its JSON text, and is binding-wise until asked
-// otherwise, the same rule count follows, so the two columns describe the same set.
+// TestListNamesTheGroupMembers checks that list answers a list value of the members, sorted, in its
+// JSON text. list is binding-wise until asked otherwise, the same rule count follows. So the two
+// columns describe the same set.
 func TestListNamesTheGroupMembers(t *testing.T) {
 	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net),
 		component.class(?c,"capacitor"), component.net(?c,?net) => ?net, list(?tp), list(distinct ?tp)`)
@@ -990,8 +1007,8 @@ func TestListNamesTheGroupMembers(t *testing.T) {
 	}
 }
 
-// TestSumDistinctReducesDistinctValues: distinct is uniform across the aggregates, not a count
-// special case. Two bindings carrying the same number contribute once.
+// TestSumDistinctReducesDistinctValues checks that distinct is uniform across the aggregates, not a
+// count special case. Two bindings with the same number contribute once.
 func TestSumDistinctReducesDistinctValues(t *testing.T) {
 	got := aggRows(t, `component.class(?tp,"test_point"), component.net(?tp,?net),
 		net.pin_count(?net,?pc) => ?net, sum(?pc), sum(distinct ?pc)`)

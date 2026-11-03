@@ -60,7 +60,7 @@ func TestViewerScriptMakesNoRequest(t *testing.T) {
 	}
 }
 
-// A report with nothing to link to carries no script at all, so one written with no viewer stays
+// A report with nothing to link to carries no script at all. A report written with no viewer is still
 // exactly the plain document it was before (agni issue 1156).
 func TestUnlinkedReportsCarryNoScript(t *testing.T) {
 	var verdictPage, checklistPage bytes.Buffer
@@ -83,8 +83,8 @@ func TestUnlinkedReportsCarryNoScript(t *testing.T) {
 	}
 }
 
-// A linked report never depends on its script: with the script removed, as a reader with scripts off
-// or a mail filter would have it, every row, link and section is still there.
+// A linked report never depends on its script. A reader with scripts off or a mail filter removes the
+// script, and every row, link and section is still there.
 func TestLinkedReportReadsTheSameWithoutItsScript(t *testing.T) {
 	vs := []check.Verdict{verdict("converted", "NET_ZQ7", check.Pass), verdict("converted", "NET_ZQ8", check.Fail)}
 	var page bytes.Buffer

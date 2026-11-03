@@ -11,11 +11,11 @@ import (
 // answers for that net or part without running each rule over the whole board (agni issue 897).
 //
 // It travels on the run's context (WithSubjectScope), as the work budget does, because it narrows one
-// request and changes no rule's meaning. A run under a scope keeps the findings and verdicts the
-// scope covers, whatever the rule did, so a rule that ignores the scope is slower and never wrong.
-// A rule that declares ScopeSubjects reads it (ScopedNets, ScopedComponents, ScopedPins) and
-// evaluates only those subjects, and TestScopedRunMatchesFilteredFullRun holds that to the answer a
-// whole run filtered to the same subjects gives.
+// request and changes no rule's meaning. A run under a scope keeps the findings and verdicts that
+// the scope covers, whatever the rule did, so a rule that ignores the scope is slower and never
+// wrong. A rule that declares ScopeSubjects reads it (ScopedNets, ScopedComponents, ScopedPins) and
+// evaluates only those subjects. TestScopedRunMatchesFilteredFullRun holds that rule to a whole
+// run's answer filtered to the same subjects.
 type Scope struct {
 	nets  []Entity
 	comps map[string]bool
@@ -77,8 +77,9 @@ func (s *Scope) Covers(e Entity) bool {
 
 // coversAny reports whether a result about these subjects belongs in a scoped answer. One covered
 // element is enough, so copper-clearance's (net A, net B) answers for either net. A result naming no
-// net, component or pin at all is about the RUN rather than a subject (the unresolved-symbol gate's
-// inconclusive, a query that failed to evaluate), and it stays, since it holds for every subject.
+// net, component or pin at all is about the RUN rather than a subject. Examples are the
+// unresolved-symbol gate's inconclusive and a query that failed to evaluate. Such a result is kept,
+// since it holds for every subject.
 func (s *Scope) coversAny(es []Entity) bool {
 	scopable := false
 	for _, e := range es {
@@ -94,9 +95,9 @@ func (s *Scope) coversAny(es []Entity) bool {
 }
 
 // Results narrows one run's findings and verdicts to the scope, keeping each list's order, for a
-// caller holding a whole run (the service's kept results). A verdict stays when a subject is covered,
-// and a finding stays when its own subject is covered or it was projected from a verdict that stays,
-// which is the answer a scoped run gives. A nil scope keeps everything.
+// caller holding a whole run (the service's kept results). A verdict is kept when a subject is
+// covered. A finding is kept when its own subject is covered or it was projected from a kept verdict.
+// A scoped run gives the same answer. A nil scope keeps everything.
 func (s *Scope) Results(fs []Finding, vs []Verdict) ([]Finding, []Verdict) {
 	if s == nil {
 		return fs, vs
@@ -139,8 +140,8 @@ func (s *Scope) NetNames() []string {
 	return out
 }
 
-// RefDes returns the reference designators the scope reaches, its components and the parts its pins
-// sit on, for a rule that binds them into a query.
+// RefDes returns the reference designators the scope reaches, for a rule that binds them into a
+// query. They are the scope's components and the parts its pins belong to.
 func (s *Scope) RefDes() []string {
 	seen := map[string]bool{}
 	var out []string
@@ -228,8 +229,8 @@ const (
 	// ScopeFiltered rules evaluate the whole design and the run keeps what the scope covers. It is
 	// the default, and always correct for a rule whose results name the subjects they are about.
 	ScopeFiltered Scoping = iota
-	// ScopeSubjects rules read the scope and evaluate only its subjects, which is where a scoped run
-	// saves time. Declaring it promises the answer a filtered whole run gives.
+	// ScopeSubjects rules read the scope and evaluate only its subjects, and a scoped run saves time
+	// there. Declaring it promises the same answer as a filtered whole run.
 	ScopeSubjects
 	// ScopeDesignWide rules conclude about something other than a net, part or pin (a symbol file, a
 	// drawn bus, a wire end), so no subset of nets or parts has an answer of its own. A scoped run

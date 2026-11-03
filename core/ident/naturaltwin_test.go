@@ -9,8 +9,8 @@ import (
 	"testing"
 )
 
-// TestNaturalOrderTwin holds CompareNatural to testdata/natural_twin.json, which the query panel's
-// own sort is tested against too (agni issue 1045).
+// TestNaturalOrderTwin holds CompareNatural to testdata/natural_twin.json. The query panel's own sort
+// is tested against the same file (agni issue 1045).
 func TestNaturalOrderTwin(t *testing.T) {
 	b, err := os.ReadFile("testdata/natural_twin.json")
 	if err != nil {

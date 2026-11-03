@@ -40,8 +40,8 @@ func Load(path string) (*configpb.NamingConvention, error) {
 //
 // The generated message is the one schema and YAML is how an operator writes it (C26). internal/yamlpb
 // binds it field by field, so an unknown key fails with its line instead of silently configuring
-// nothing, and a scalar takes its field's type, so `name: 2024` is the convention named "2024". It is
-// the same binding a project's `conventions:` section goes through, so a standalone --conventions file
+// nothing, and a scalar takes its field's type, so `name: 2024` is the convention named "2024". A
+// project's `conventions:` section goes through the same binding, so a standalone --conventions file
 // and that section accept exactly the same documents (agni issue 827).
 func Parse(b []byte) (*configpb.NamingConvention, error) {
 	var doc yaml.Node
@@ -104,8 +104,8 @@ func BuildLexicon(cfg *configpb.NamingConvention) (*check.Lexicon, error) {
 }
 
 // ApplyLexicon installs the config's naming-lexicon overrides as the PROCESS-level vocabulary
-// (WS3-069). A nil Lexicon is a no-op (defaults stay). Call it once at startup, before any design is
-// read. It is idempotent for a given config.
+// (WS3-069). A nil Lexicon is a no-op (the defaults remain). Call it once at startup, before any
+// design is read. It is idempotent for a given config.
 //
 // Prefer BuildLexicon where the vocabulary can travel with the read, because a process-wide install
 // cannot be scoped to one request.
@@ -129,9 +129,9 @@ var activeConvention *configpb.NamingConvention
 // when none was, so a reader of a run's lexicon can attribute its patterns to the server's default.
 func ActiveConvention() *configpb.NamingConvention { return activeConvention }
 
-// Source compiles the config into a named RuleSource. Every regex is validated here (an
-// error, not the bind-time panic Spec.Rule reserves for programmer mistakes) because
-// config is operator input.
+// Source compiles the config into a named RuleSource. Every regex is validated here, and a
+// bad one is an error rather than a panic, because config is operator input. Spec.Rule
+// keeps its bind-time panic for programmer mistakes.
 func Source(cfg *configpb.NamingConvention) (check.RuleSource, error) {
 	if cfg.GetName() == "" {
 		return nil, fmt.Errorf("naming config: name is required (it is the catalog namespace)")

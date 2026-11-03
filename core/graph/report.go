@@ -88,7 +88,7 @@ func (c ComponentReport) Label() string {
 
 // ConversionReport is how an auto-layout mapped each component to a drawn node: its device class,
 // the symbol it drew, and whether that was a glyph, the box (unmapped class), a provided symbol,
-// or an unresolved fallback. It is the visibility behind "why is this a box" (WS7-029).
+// or an unresolved fallback. It answers "why is this a box" (WS7-029).
 type ConversionReport struct {
 	Components []ComponentReport `json:"components"`
 }

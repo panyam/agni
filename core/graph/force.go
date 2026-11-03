@@ -22,7 +22,7 @@ const (
 // star through a virtual hub node (the WS7-003 hyperedge model), so a wide net does not become a
 // clique, and hubs are dropped before output. As in stressPlace, init is the layered placement,
 // connected components solve independently and pack left to right, and positions snap to free pitch
-// cells, which keeps compactBySize's grid-alignment contract.
+// cells. The snap keeps compactBySize's grid-alignment contract.
 func forcePlace(d *ir.Design) Placement {
 	adj := adjacency(d)
 	init := layeredPlace(d).Positions

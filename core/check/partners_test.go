@@ -16,9 +16,9 @@ func partnersByPin(t *testing.T, m Model, ref string) map[string]PinPartners {
 	return got
 }
 
-// agni issue 1238. SDA crosses R5 to the EEPROM, and on the far side R6 pulls up to VCC, which
-// carries U10's supply pin. The partner is the EEPROM's pin alone: a test point and a capacitor sit
-// on the signal rather than end it, and a load on the rail is not on the signal at all.
+// agni issue 1238. SDA crosses R5 to the EEPROM, and on the far side R6 pulls up to VCC. U10's
+// supply pin is on VCC. The partner is the EEPROM's pin alone. A test point and a capacitor sit on
+// the signal rather than end it, and a load on the rail is not on the signal at all.
 func TestPartnersOfFollowsTheSignalAndStopsAtTheRail(t *testing.T) {
 	got := partnersByPin(t, traceModel(), "U7")
 	if len(got) != 2 {
@@ -36,8 +36,8 @@ func TestPartnersOfFollowsTheSignalAndStopsAtTheRail(t *testing.T) {
 	}
 }
 
-// A signal reaching two devices names both, since which one the map should declare is a choice the
-// netlist cannot make. Ground and a rail are not walked, and say so.
+// A signal reaching two devices names both, since the netlist cannot choose which one the map
+// should declare. Ground and a rail are not walked, and say so.
 func TestPartnersOfListsEveryDeviceAndSkipsSupplies(t *testing.T) {
 	comps := []*ir.Component{}
 	for _, ref := range []string{"U1", "U2", "J1", "R1", "C1"} {

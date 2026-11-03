@@ -14,13 +14,13 @@ import (
 // naming a relation that resolves to nothing fails on decode and never reaches the comparison. The
 // program therefore defines its own relation (big_net) and otherwise names catalog ones.
 //
-// Aggregate.Distinct and Query.Having (agni issue 613) are here for the same reason, and so are the
-// body aggregate, the head types and paging, which the wire form dropped without an error until it
-// carried them. TestQueryProtoKnowsEveryEngineField is what notices the next field.
+// Aggregate.Distinct and Query.Having (agni issue 613) are here for the same reason. So are the
+// body aggregate, the head types and paging. The wire form dropped each of those without an error
+// until it learned to encode them. TestQueryProtoKnowsEveryEngineField notices the next new field.
 //
-// Value is the field set most worth covering. It carries four independent things (a string, an
-// optional number, an absent marker, and a base unit), and absent in particular exists because an
-// unstated field binding to the empty string made ordering comparisons silently pass.
+// Value is the field set most worth covering. It holds four independent things, a string, an
+// optional number, an absent marker, and a base unit. The absent marker exists because an unstated
+// field used to bind to the empty string, and ordering comparisons then passed silently.
 func fullQuery() Query {
 	num := 3.3
 	two := 2.0
@@ -37,7 +37,8 @@ func fullQuery() Query {
 					Op:    ">",
 					Right: Term{Const: &Value{Num: &num, BaseUnit: "V"}},
 				}},
-				// An absent constant, the variant that exists because "" compared as a number lied.
+				// An absent constant. This variant exists because "" compared as a number gave
+				// wrong answers.
 				{Compare: &Compare{
 					Left:  Term{Var: "v"},
 					Op:    "!=",
@@ -88,10 +89,10 @@ func fullQuery() Query {
 // TestQueryProtoRoundTrip is the field-drift guard for the datalog half of the rule-definition
 // contract (WS3-103), per C26. Nothing called QueryProto from a test before this.
 //
-// Going Query -> proto -> Query under deep equality means a conversion that forgets a field cannot
-// pass. Asserting on the proto would not, because a field the conversion never writes is absent
-// from both sides of that comparison, so the two agree about nothing being there. This is the guard
-// whose absence let Profile.HostClass ship broken in the profiles half of the same contract.
+// The test goes Query -> proto -> Query under deep equality, so a conversion that forgets a field
+// cannot pass. Asserting on the proto would not catch it. If the conversion never writes a field,
+// the field is absent from both sides of that comparison, and the two agree that nothing is there.
+// The profiles half of the same contract lacked this guard, and Profile.HostClass shipped broken.
 func TestQueryProtoRoundTrip(t *testing.T) {
 	want := fullQuery()
 	got, err := QueryFromProto(QueryProto(want))
@@ -103,10 +104,10 @@ func TestQueryProtoRoundTrip(t *testing.T) {
 	}
 }
 
-// TestQueryProtoKnowsEveryEngineField fails when the engine adds a field to its query IR that this
-// ledger, and so the wire form, has not been taught. The round trip cannot notice one, since fullQuery
-// leaves an unknown field zero on both sides. Adding a name here means carrying it in QueryProto and
-// filling it in fullQuery.
+// TestQueryProtoKnowsEveryEngineField fails when the engine adds a field to its query IR and this
+// ledger lacks it. The wire form then does not carry the field either. The round trip cannot notice
+// such a field, since fullQuery leaves an unknown field zero on both sides. Adding a name here
+// means carrying it in QueryProto and filling it in fullQuery.
 func TestQueryProtoKnowsEveryEngineField(t *testing.T) {
 	carried := map[reflect.Type][]string{
 		reflect.TypeFor[Query]():         {"Rules", "Goal", "Select", "Having", "OrderBy", "After", "Limit", "Offset"},

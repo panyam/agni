@@ -31,8 +31,9 @@ func reachIntent(net string, hops int32) *configpb.DesignIntent {
 	return &configpb.DesignIntent{Nets: map[string]*configpb.NetIntent{net: {PullUpReachHops: hops}}}
 }
 
-// Every walk to a pull-up reads the limit off the model, so a declaration reaches the boolean the
-// Spec twin and the coverage panel ask, the single path, and the full enumeration alike (agni 820).
+// Every walk to a pull-up reads the limit off the model, so a declaration reaches every walk alike
+// (agni 820). That covers the boolean that the Spec twin and the coverage panel ask, the single
+// path, and the full enumeration.
 func TestEveryPullUpWalkAsksTheDeclaredReach(t *testing.T) {
 	d, sda := fourHopDesign()
 	spec := specFuncs["pullup_reaches_rail"].Fn

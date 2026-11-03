@@ -21,7 +21,7 @@ type ComponentChange struct {
 	New    string
 }
 
-// NetChangeKind classifies a net change, following the ground-truth taxonomy engineers use
+// NetChangeKind classifies a net change. It follows the taxonomy that engineers use as ground truth
 // (New / Deleted / rename / connectivity vs attribute-only). Equal nets are not changes, so they are
 // kept apart in Report.Equal and reported only when a caller asks (agni issue 818).
 type NetChangeKind string
@@ -30,10 +30,10 @@ const (
 	NetNew     NetChangeKind = "new"     // present only in the new design
 	NetDeleted NetChangeKind = "deleted" // present only in the old design
 	NetRenamed NetChangeKind = "renamed" // same connectivity, different name
-	// NetRenamedApprox is a net the near-match pass believes was renamed while ALSO changing, which
-	// the exact pass cannot recover because its signature no longer matches. It is a distinct kind
-	// because it is the engine's best assignment among candidates rather than a fact, so a consumer
-	// that must not act on a guess can filter on it. Approx carries the evidence.
+	// NetRenamedApprox marks a net that the near-match pass believes was renamed and ALSO changed.
+	// The exact pass cannot recover such a net, because its signature no longer matches. The pairing
+	// is the engine's best assignment among candidates, not a fact, so it gets a distinct kind. A
+	// consumer that must not act on a guess can filter on it. Approx holds the evidence.
 	NetRenamedApprox NetChangeKind = "renamed-approx"
 	NetHard          NetChangeKind = "hard" // connectivity (pin membership) changed
 	NetSoft          NetChangeKind = "soft" // attribute-only change; connectivity identical
@@ -42,10 +42,10 @@ const (
 	NetEqual NetChangeKind = "equal"
 )
 
-// NetChange is one classified net-level change. Name is the net's name in the design where
-// it exists (the new name for a rename); OldName is set only for renames. Added/Removed hold
-// the "refdes.pin" connection deltas for a Hard change. OldProv/NewProv locate the net in
-// each revision's source (nil on the side where the net does not exist).
+// NetChange is one classified net-level change. Name is the net's name in the design where it
+// exists, so a rename gives the new name. OldName is set only for renames. Added/Removed hold the
+// "refdes.pin" connection deltas for a Hard change. OldProv/NewProv locate the net in each
+// revision's source. Each is nil on the side where the net does not exist.
 type NetChange struct {
 	Kind    NetChangeKind
 	Name    string
@@ -58,10 +58,9 @@ type NetChange struct {
 	Approx *RenameEvidence
 }
 
-// RenameEvidence is why the near-match pass paired one deleted net with one added net, so a reader
-// can DISAGREE with the pairing. It is set only on NetRenamedApprox. The significant figures are
-// the ones insensitive to probe churn; see
-// docsite/content/architecture/semantic-diff.md#near-matches-off-by-default.
+// RenameEvidence records why the near-match pass paired one deleted net with one added net, so a
+// reader can DISAGREE with the pairing. It is set only on NetRenamedApprox. The significant figures
+// ignore probe churn. See docsite/content/architecture/semantic-diff.md#near-matches-off-by-default.
 type RenameEvidence struct {
 	OldCoverage            float64 // fraction of the old net's endpoints that survived
 	OldCoverageSignificant float64 // the same, ignoring insignificant endpoint classes
@@ -80,9 +79,9 @@ type Report struct {
 	ComponentsRemoved []string
 	ComponentsChanged []ComponentChange
 	Nets              []NetChange
-	// Equal holds the nets that did not change, as NetEqual entries sorted by name, so a revision
-	// report listing every net under its outcome need not rebuild them by subtracting the changes
-	// (agni issue 818). Render and the wire leave them out unless asked.
+	// Equal holds the nets that did not change, as NetEqual entries sorted by name. A revision report
+	// lists every net under its outcome, and with Equal it need not rebuild the unchanged nets by
+	// subtracting the changes (agni issue 818). Render and the wire leave them out unless asked.
 	Equal []NetChange
 }
 
@@ -130,17 +129,16 @@ func diffComponents(a, b *ir.Design, r *Report) {
 	})
 }
 
-// componentFieldChanges returns the per-field changes (part references, value, and the
-// fabrication/footprint attributes captured in WS1-037) for a component present in both
-// designs. Because one ref_des may have several sections, the part reference is compared as
-// the SET of "library/part" over all sections, so section ordering causes no false diff
-// (WS2-001). dnp is compared because a DNP part is not fabricated, so flipping it changes the
-// built board.
+// componentFieldChanges returns the per-field changes for a component present in both designs.
+// The fields are the part references, the value, and the fabrication/footprint attributes captured
+// in WS1-037. One ref_des may have several sections, so the part reference is compared as the SET
+// of "library/part" over all sections. Section ordering then causes no false diff (WS2-001). dnp is
+// compared because a DNP part is not fabricated, so flipping it changes the built board.
 //
-// A field is compared only when both designs record it, because a view that does not record a
-// field says nothing about it: a KiCad board carries no dnp and no symbol Footprint. The part
+// A field is compared only when both designs record it. A view that does not record a field says
+// nothing about it. A KiCad board, for example, records no dnp and no symbol Footprint. The part
 // references are compared only between two reads of one format, since a schematic names a symbol
-// library and a board a footprint library (agni issue 1019).
+// library and a board names a footprint library (agni issue 1019).
 func componentFieldChanges(ref string, a, b *ir.Component, sameFormat bool) []ComponentChange {
 	var out []ComponentChange
 	add := func(field, o, n string) {
@@ -173,9 +171,9 @@ func partSet(c *ir.Component) string {
 	return strings.Join(refs, ", ")
 }
 
-// netInfo is a net indexed for diffing: its connection set, a canonical signature of that
-// set (for rename matching), a canonical key of its non-connectivity attributes (for Soft
-// vs Hard), and its provenance.
+// netInfo is a net indexed for diffing. It holds the net's connection set and a canonical
+// signature of that set, for rename matching. It also holds a canonical key of the net's
+// non-connectivity attributes, for Soft vs Hard, and the net's provenance.
 type netInfo struct {
 	conns   map[string]bool
 	sig     string
@@ -192,9 +190,10 @@ var readScopeAttrs = map[string]bool{
 	netgraph.AttrSheets:   true,
 }
 
-// metaEqual compares the non-connectivity facts of one net on both sides: its net classes, and each
-// attribute both sides record that is not read scope. An attribute one side does not record says
-// nothing, as a component field does not (componentFieldChanges).
+// metaEqual compares the non-connectivity facts of one net on both sides. It compares the net
+// classes. It also compares each attribute that both sides record, except the read-scope ones. If
+// one side does not record an attribute, that side says nothing about it, as with a component field
+// (componentFieldChanges).
 func metaEqual(a, b *netInfo) bool {
 	if a.classes != b.classes {
 		return false
@@ -215,9 +214,9 @@ func sameFormat(a, b *ir.Design) bool {
 	return a.GetSourceFormat() == b.GetSourceFormat()
 }
 
-// diffNets classifies every net change. Nets are matched by name first (Equal / Soft /
-// Hard); the leftover deleted and added names are then paired by identical connection
-// signature into renames, and whatever remains is New or Deleted.
+// diffNets classifies every net change. Nets are matched by name first (Equal / Soft / Hard).
+// Then the leftover deleted and added names are paired into renames by identical connection
+// signature. Whatever remains is New or Deleted.
 func diffNets(a, b *ir.Design, r *Report, ro RenameOptions) {
 	an := indexNets(a)
 	bn := indexNets(b)
@@ -255,9 +254,10 @@ func diffNets(a, b *ir.Design, r *Report, ro RenameOptions) {
 		}
 	}
 
-	// Rename detection: a deleted net and an added net whose connection signature is
-	// identical AND unique on each side are the same net renamed. Requiring uniqueness (and
-	// a non-empty signature) avoids mis-pairing unrelated nets that happen to share conns.
+	// Rename detection. Take a deleted net and an added net with an identical connection
+	// signature. If that signature is also unique on each side, the two are the same net
+	// renamed. Requiring uniqueness and a non-empty signature avoids mis-pairing unrelated nets
+	// that happen to share conns.
 	delBySig := uniqueBySig(deleted, an)
 	addBySig := uniqueBySig(added, bn)
 	renamedDel, renamedAdd := map[string]bool{}, map[string]bool{}
@@ -324,7 +324,7 @@ func uniqueBySig(names []string, idx map[string]*netInfo) map[string]string {
 }
 
 // indexComponents maps ref_des -> component for one design. Components are grouped by ref_des
-// in the IR, so one entry carries every section.
+// in the IR, so one entry holds every section.
 func indexComponents(d *ir.Design) map[string]*ir.Component {
 	m := make(map[string]*ir.Component, len(d.Components))
 	for _, c := range d.Components {

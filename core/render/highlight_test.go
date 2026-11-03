@@ -10,8 +10,8 @@ import (
 )
 
 // highlightFixture is a two-component, two-net sheet: R1 (rect + pins 1,2) at (300,400),
-// U1 (rect + pin 1) at (600,400), NET1 and NET2 wires. Primitive order (PackSheet packs
-// wires, then free shapes, then placements): 0 NET1 wire, 1 NET2 wire, 2 R1 rect,
+// U1 (rect + pin 1) at (600,400), NET1 and NET2 wires. PackSheet packs wires, then free
+// shapes, then placements, so the primitive order is 0 NET1 wire, 1 NET2 wire, 2 R1 rect,
 // 3 R1 pin1, 4 R1 pin2, 5 U1 rect, 6 U1 pin1.
 func highlightFixture() *geom.SchematicGeometry {
 	return &geom.SchematicGeometry{
@@ -47,7 +47,7 @@ func highlightFixture() *geom.SchematicGeometry {
 }
 
 // TestHighlightPacked resolves component/net/pin specs to primitive index groups against
-// the packed keys: a component matches its symbol graphics and all its pins, a net its
+// the packed keys. A component matches its symbol graphics and all its pins, a net its
 // wire polylines, and a pin just that pin's primitive. Groups come back in spec order with
 // the spec's style.
 func TestHighlightPacked(t *testing.T) {
@@ -77,8 +77,8 @@ func TestHighlightPacked(t *testing.T) {
 	}
 }
 
-// TestHighlightPackedNoMatch: a spec matching nothing still yields its (empty) group, so
-// groups stay aligned with the input specs.
+// TestHighlightPackedNoMatch checks that a spec matching nothing still yields its (empty) group,
+// so groups remain aligned with the input specs.
 func TestHighlightPackedNoMatch(t *testing.T) {
 	g := highlightFixture()
 	ps := PackSheet(g, g.Sheets[0])
@@ -88,11 +88,11 @@ func TestHighlightPackedNoMatch(t *testing.T) {
 	}
 }
 
-// TestHighlightSVG checks the SVG overlay projection: the document has the exact frame
-// (width/height/viewBox) of SheetSVG for the same sheet so the layers composite, it is
-// transparent (no background rect), and it draws the matched net wire, the matched
+// TestHighlightSVG checks the SVG overlay projection. The document has the exact frame
+// (width/height/viewBox) of SheetSVG for the same sheet, so the layers composite. It is
+// transparent, with no background rect. It draws the matched net wire, the matched
 // component's outline and pin dots, and the individually matched pin, in the spec's
-// color/alpha, while unmatched elements stay out.
+// color/alpha. Unmatched elements are left out.
 func TestHighlightSVG(t *testing.T) {
 	g := highlightFixture()
 	specs := []*geom.HighlightSpec{
@@ -144,11 +144,11 @@ func TestHighlightSVG(t *testing.T) {
 	}
 }
 
-// TestSheetSVGHighlighted proves the baked single-document render composites exactly. It carries
+// TestSheetSVGHighlighted proves the baked single-document render composites exactly. It holds
 // the base sheet content (page rect + wires) AND the highlight overlay (the marked net's re-stroke,
 // the matched pin dots) in one SVG, with nothing lost or doubled. For every element kind the two
-// layers contribute, the baked count equals base + overlay. That is the one-code-path guarantee the
-// CLI static render relies on (same projection the server serves as a separate overlay).
+// layers contribute, the baked count equals base + overlay. The CLI static render relies on this
+// one-code-path guarantee, since it uses the projection the server serves as a separate overlay.
 func TestSheetSVGHighlighted(t *testing.T) {
 	g := highlightFixture()
 	specs := []*geom.HighlightSpec{
@@ -181,8 +181,9 @@ func TestSheetSVGHighlighted(t *testing.T) {
 	}
 }
 
-// TestHasHighlights: a spec that matches an entity on the sheet reports true, one that matches
-// nothing reports false, so a per-sheet report renderer skips sheets its findings do not touch.
+// TestHasHighlights checks that a spec matching an entity on the sheet reports true and one
+// matching nothing reports false. A per-sheet report renderer uses that to skip sheets that none
+// of its findings touch.
 func TestHasHighlights(t *testing.T) {
 	g := highlightFixture()
 	sheet := g.Sheets[0]
@@ -250,9 +251,9 @@ func firstPolylineWidth(t *testing.T, doc string) float64 {
 	return w
 }
 
-// TestHighlightSVGPathStyle: a PATH-shape net (WS9-040) re-strokes its wire like OUTLINE but
-// wider and translucent by default, so a focused net reads as a highlighter marker along its
-// path rather than an opaque bar.
+// TestHighlightSVGPathStyle checks that a PATH-shape net (WS9-040) re-strokes its wire like
+// OUTLINE, but wider and translucent by default. A focused net then reads as a highlighter marker
+// along its path rather than an opaque bar.
 func TestHighlightSVGPathStyle(t *testing.T) {
 	g := highlightFixture()
 	outline := HighlightSVG(g, g.Sheets[0], []*geom.HighlightSpec{{Nets: []string{"NET1"}}})
@@ -277,8 +278,8 @@ func TestHighlightSVGPathStyle(t *testing.T) {
 	}
 }
 
-// TestHighlightSVGStrokeScale: stroke_scale multiplies the PATH marker width (WS9-044); 0/unset
-// behaves as 1.
+// TestHighlightSVGStrokeScale checks that stroke_scale multiplies the PATH marker width
+// (WS9-044), and that 0/unset behaves as 1.
 func TestHighlightSVGStrokeScale(t *testing.T) {
 	g := highlightFixture()
 	pathSpec := func(scale float32) []*geom.HighlightSpec {
@@ -291,8 +292,8 @@ func TestHighlightSVGStrokeScale(t *testing.T) {
 	}
 }
 
-// TestPackSheetPinKeys: pin primitives carry the pin designator so pin-granularity
-// highlight targeting can join them; symbol and wire primitives don't.
+// TestPackSheetPinKeys checks that pin primitives carry the pin designator, so pin-granularity
+// highlight targeting can join them. Symbol and wire primitives don't carry one.
 func TestPackSheetPinKeys(t *testing.T) {
 	g := highlightFixture()
 	ps := PackSheet(g, g.Sheets[0])
@@ -308,8 +309,8 @@ func TestPackSheetPinKeys(t *testing.T) {
 	}
 }
 
-// TestHighlightPackedEchoesShape: the packed group carries the spec's shape so an index-only
-// consumer knows what to draw.
+// TestHighlightPackedEchoesShape checks that the packed group carries the spec's shape, so an
+// index-only consumer knows what to draw.
 func TestHighlightPackedEchoesShape(t *testing.T) {
 	g := highlightFixture()
 	ps := PackSheet(g, g.Sheets[0])
@@ -325,11 +326,11 @@ func TestHighlightPackedEchoesShape(t *testing.T) {
 	}
 }
 
-// TestHighlightEntityFraming pins the twinned world-space framing numbers (the same
-// constants are asserted in web/src/highlights.test.ts, so the Go SVG projection and the
-// TS WebGL overlay frame entities identically): R1 = its rect + both pin points, padded by
-// max(8, 10% of the larger side); NET1 = its wire, zero height so the floor pad applies in
-// Y; a lone pin = a zero-area point framed by the floor pad.
+// TestHighlightEntityFraming pins the twinned world-space framing numbers.
+// web/src/highlights.test.ts asserts the same constants, so the Go SVG projection and the TS
+// WebGL overlay frame entities identically. R1 is its rect plus both pin points, padded by
+// max(8, 10% of the larger side). NET1 is its wire, with zero height, so the floor pad applies
+// in Y. A lone pin is a zero-area point framed by the floor pad.
 func TestHighlightEntityFraming(t *testing.T) {
 	g := highlightFixture()
 	syms := indexSymbols(g)
@@ -371,10 +372,10 @@ func TestHighlightEntityFraming(t *testing.T) {
 	}
 }
 
-// TestHighlightSVGBoundingShapes: a BOUNDING_RECT spec emits one translucent filled <rect>
-// per matched entity (component and net, never one box over the union) and none of the
-// outline re-strokes; BOUNDING_CIRCLE likewise emits per-entity filled circles. Unset alpha
-// on a bounding shape defaults to 0.3, not opaque.
+// TestHighlightSVGBoundingShapes checks that a BOUNDING_RECT spec emits one translucent filled
+// <rect> per matched entity and none of the outline re-strokes. The component and the net each
+// get their own rect, never one box over the union. BOUNDING_CIRCLE likewise emits per-entity
+// filled circles. Unset alpha on a bounding shape defaults to 0.3, not opaque.
 func TestHighlightSVGBoundingShapes(t *testing.T) {
 	g := highlightFixture()
 	rect := HighlightSVG(g, g.Sheets[0], []*geom.HighlightSpec{{
@@ -423,10 +424,11 @@ func equalU32(a, b []uint32) bool {
 // The viewer stacks two layers: the field of findings underneath and the focused subject on top. It
 // used to send both with no color, so both took DefaultHighlightColor and the reader had one hue at
 // two alphas to tell "what I clicked" from "everything else". The client now stamps the base layer
-// with its own color, and the fix rests on the server honoring that rather than flattening it.
+// with its own color, and the fix works only if the server honors that color rather than
+// flattening it.
 //
-// The SVG overlay is the path where that could silently not happen: the WebGL renderer resolves specs
-// on the client, but SVG mode round-trips them here and paints from what arrives.
+// The WebGL renderer resolves specs on the client. SVG mode round-trips them here and paints from
+// what arrives, so the SVG overlay could silently lose the color.
 func TestHighlightSVGPaintsLayersInTheirOwnColors(t *testing.T) {
 	g := highlightFixture()
 	const baseColor = "#6b7f99" // the client's BASE_HIGHLIGHT_COLOR
@@ -440,8 +442,8 @@ func TestHighlightSVGPaintsLayersInTheirOwnColors(t *testing.T) {
 	if !strings.Contains(overlay, DefaultHighlightColor) {
 		t.Errorf("the focus layer names no color and must fall back to %s:\n%s", DefaultHighlightColor, overlay)
 	}
-	// The change, stated as the property rather than as two separate presence checks, is that
-	// whatever the two colors are, they must not be the same one.
+	// This states the change as a property rather than as two separate presence checks. Whatever
+	// the two colors are, they must not be the same one.
 	if baseColor == DefaultHighlightColor {
 		t.Fatal("the base and focus colors are identical, so the layers cannot be told apart")
 	}

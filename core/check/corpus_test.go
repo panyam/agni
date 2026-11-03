@@ -10,8 +10,8 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Every datasheet citation names the corpus its spec came from, on findings and verdicts alike, so a
-// verdict resting on a limit transcribed outside the project says so (agni issue 749). The text
+// Every datasheet citation names the corpus its spec came from, on findings and verdicts alike. So a
+// verdict says so when its limit was transcribed outside the project (agni issue 749). The text
 // rendering marks only the shared case.
 func TestCitationsNameTheirCorpus(t *testing.T) {
 	spec := func(mpn string) *parampb.PartSpec {

@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// attrVocab is the compiled attribute vocabulary, the keys each fact is read from in preference order
-// and the values that mark a part not fitted. See configpb.AttributeVocab.
+// attrVocab is the compiled attribute vocabulary. For each fact it lists the keys to read, in
+// preference order, and it lists the values that mark a part not fitted. See configpb.AttributeVocab.
 type attrVocab struct {
 	mpn, value, dnp, dnpValues []string
 }
@@ -37,9 +37,9 @@ func componentAttr(c *ir.Component, keys []string) string {
 	return ""
 }
 
-// attrValue returns the non-empty value of the first of keys an attribute map carries, comparing keys
-// without regard to case, or "". Two attributes differing only in case are tried in sorted order, so
-// the answer never depends on map order.
+// attrValue tries keys in order and returns the first non-empty value attrs holds under one, or "".
+// It compares keys without regard to case. Two attributes differing only in case are tried in sorted
+// order, so the answer never depends on map order.
 func attrValue(attrs map[string]string, keys []string) string {
 	if len(attrs) == 0 {
 		return ""
@@ -59,9 +59,9 @@ func attrValue(attrs map[string]string, keys []string) string {
 	return ""
 }
 
-// IsUnfitted reports whether a component carries a do-not-populate flag: an attribute.dnp key whose
-// value is one of attribute.dnp_values. Every key is tried, so KiCad's own dnp flag set to "no" does
-// not hide a house DNP field saying the part is not fitted. A section's attributes count too.
+// IsUnfitted reports whether a component has a do-not-populate flag. The flag is an attribute.dnp key
+// whose value is one of attribute.dnp_values. Every key is tried, so KiCad's own dnp flag set to "no"
+// does not hide a house DNP field saying the part is not fitted. A section's attributes count too.
 func (v *RoleVocab) IsUnfitted(c *ir.Component) bool {
 	if v.unfittedBy(c.GetAttributes()) {
 		return true
@@ -83,8 +83,7 @@ func (v *RoleVocab) unfittedBy(attrs map[string]string) bool {
 	return false
 }
 
-// ValueText returns the value text a component carries under attribute.value, or "" when it carries
-// none.
+// ValueText returns the text of the component's attribute.value field, or "" when it has none.
 func (v *RoleVocab) ValueText(c *ir.Component) string {
 	return componentAttr(c, v.attrs.value)
 }

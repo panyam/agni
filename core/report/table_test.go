@@ -21,8 +21,8 @@ func sampleTable() Table {
 	}
 }
 
-// TestTableTextIsUnchanged pins the terminal format, which existed before the other four and is what
-// anyone already piping `agni query` is parsing. Adding formats was not allowed to move it.
+// TestTableTextIsUnchanged pins the terminal format. It existed before the other four, and anyone
+// already piping `agni query` parses it. Adding formats was not allowed to move it.
 func TestTableTextIsUnchanged(t *testing.T) {
 	var b bytes.Buffer
 	if err := TableText(&b, sampleTable()); err != nil {
@@ -62,8 +62,8 @@ func TestTableCSVKeepsHeaderWhenEmpty(t *testing.T) {
 }
 
 // TestTableCSVCarriesNoPreamble guards the one asymmetry between csv and the document formats. In csv
-// the first row has to be the header, so the title and query that markdown and html carry must not
-// appear here.
+// the first row has to be the header. Markdown and html carry the title and the query, and csv must
+// not.
 func TestTableCSVCarriesNoPreamble(t *testing.T) {
 	var b bytes.Buffer
 	if err := TableCSV(&b, sampleTable()); err != nil {
@@ -183,8 +183,8 @@ func TestTableHTMLEscapesDesignData(t *testing.T) {
 	}
 }
 
-// TestTableHTMLIsSelfContained. The page has to survive being emailed and opened from a file:// path,
-// which is the same promise the check report and the checklist make.
+// TestTableHTMLIsSelfContained. The page has to survive being emailed and opened from a file:// path.
+// The check report and the checklist make the same promise.
 func TestTableHTMLIsSelfContained(t *testing.T) {
 	var b bytes.Buffer
 	if err := TableHTML(&b, sampleTable()); err != nil {
@@ -260,8 +260,8 @@ func TestAnAbsentCellPrintsWhyAndCSVStaysRaw(t *testing.T) {
 	}
 }
 
-// TestALimitedTableSaysHowManyRowsItLeftOut covers agni issue 896: a page of an answer is never
-// printed as though it were the whole answer, and csv stays the bare table.
+// TestALimitedTableSaysHowManyRowsItLeftOut covers agni issue 896. A page of an answer is never
+// printed as though it were the whole answer, and csv is still the bare table.
 func TestALimitedTableSaysHowManyRowsItLeftOut(t *testing.T) {
 	tab := Table{Query: "q", Columns: []string{"ref"}, Rows: []TableRow{{Cells: []string{"U1"}}, {Cells: []string{"U2"}}}, Total: 1229}
 	for name, render := range map[string]func(io.Writer, Table) error{"text": TableText, "markdown": TableMarkdown, "html": TableHTML} {

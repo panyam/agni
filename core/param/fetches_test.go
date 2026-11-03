@@ -16,9 +16,10 @@ func (noFetch) BatchGet(context.Context, []string) ([]*parampb.PartSpec, uint64,
 
 func (noFetch) Generation(context.Context) (uint64, error) { return 0, nil }
 
-// TestFetchesLooksInsideLayered: Layered always implements Prefetch, so a cache that asked "is this
-// a Prefetcher" refused to keep any model whose corpus was a local set behind a Layered, which is
-// every project with params/ and every server started with --params (agni issue 895).
+// TestFetchesLooksInsideLayered guards a cache bug. Layered always implements Prefetch, so a cache
+// that asked "is this a Prefetcher" refused to keep any model whose corpus was a local set behind a
+// Layered. Every project with params/ and every server started with --params has such a corpus (agni
+// issue 895).
 func TestFetchesLooksInsideLayered(t *testing.T) {
 	remote := NewRemote(noFetch{}, time.Minute)
 	for _, c := range []struct {

@@ -25,7 +25,7 @@ func projReport() Report {
 	}}}}
 }
 
-// An entity-first UI rests on this property. Grouping by subject partitions the findings, so the
+// An entity-first UI depends on this property. Grouping by subject partitions the findings, so the
 // union over every subject is the whole report with nothing duplicated and nothing lost.
 func TestProjectionPartitionsFindings(t *testing.T) {
 	r := projReport()
@@ -59,8 +59,8 @@ func TestForSubjectScopesToThatEntity(t *testing.T) {
 	}
 }
 
-// A subject with no pin asks about the whole component, which is what lets a caller inspect a part
-// without first enumerating its terminals.
+// A subject with no pin asks about the whole component. So a caller can inspect a part without first
+// enumerating its terminals.
 func TestPinlessSubjectMatchesEveryPin(t *testing.T) {
 	all := ForSubject(projReport(), Subject{Kind: check.KindPin, Subject: "U1"})
 	if len(all.Items) != 1 || len(all.Items[0].Findings) != 2 {
@@ -72,8 +72,8 @@ func TestPinlessSubjectMatchesEveryPin(t *testing.T) {
 	}
 }
 
-// An entity nothing examined is an answer, not an absence. Omitting it would let a caller read
-// "no view" as "nothing wrong", which is the confusion the outcome vocabulary exists to prevent.
+// If nothing examined an entity, that is an answer, not an absence. Omitting the entity would let a
+// caller read "no view" as "nothing wrong". The outcome vocabulary exists to prevent that confusion.
 func TestUnexaminedEntityStillYieldsAView(t *testing.T) {
 	v := ForSubject(projReport(), Subject{Kind: check.KindNet, Subject: "NOWHERE"})
 	if len(v.Items) != 0 {
@@ -99,8 +99,8 @@ func TestBlockedItemsReachEveryView(t *testing.T) {
 	}
 }
 
-// SubjectsOf reports what the RUN examined, never what the design contains. That gap is why an
-// entity panel cannot stand in for a review pass.
+// SubjectsOf reports what the RUN examined, never what the design contains. Because of that gap, an
+// entity panel cannot replace a review pass.
 func TestSubjectsOfEnumeratesAttentionNotTheDesign(t *testing.T) {
 	got := SubjectsOf(projReport())
 	if len(got) != 4 {

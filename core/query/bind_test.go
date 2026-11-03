@@ -74,8 +74,8 @@ func TestASetQueryReadsItsBindings(t *testing.T) {
 	}
 }
 
-// A list under bind: binds its variable to each value, in order, each typed as a scalar is (agni
-// issue 1121).
+// A list under bind: binds its variable to each value, in order, and each value is typed as a
+// scalar would be (agni issue 1121).
 func TestASetQueryBindsAList(t *testing.T) {
 	s, err := ParseQuerySet([]byte("queries:\n  - name: a\n    query: x(?n)\n    bind: {n: [I2C_SDA, 3, \"4\"]}\n"))
 	if err != nil {
@@ -87,8 +87,8 @@ func TestASetQueryBindsAList(t *testing.T) {
 	}
 }
 
-// --bind given one name twice binds a list, and BindArgs spells it back the same way, so a viewer link
-// carries the list and reads back as it was asked.
+// --bind given one name twice binds a list, and BindArgs spells it back the same way. So a viewer
+// link holds the list and reads back as it was asked.
 func TestRepeatedBindingsAreAList(t *testing.T) {
 	b, err := ParseBindings([]string{"n=I2C_SDA", "v=3", "n=I2C_SCL"})
 	if err != nil {
@@ -107,8 +107,8 @@ func TestRepeatedBindingsAreAList(t *testing.T) {
 	}
 }
 
-// TestBindingTwin holds FormatBindings to testdata/binding_twin.json, which the viewer's chips are
-// tested against too (agni issue 1045).
+// TestBindingTwin holds FormatBindings to testdata/binding_twin.json. The viewer's chips are tested
+// against the same file (agni issue 1045).
 func TestBindingTwin(t *testing.T) {
 	b, err := os.ReadFile("testdata/binding_twin.json")
 	if err != nil {

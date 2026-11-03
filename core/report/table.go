@@ -8,8 +8,8 @@ import (
 	"text/tabwriter"
 )
 
-// Table is one query answer, ready to render in any format: the projected columns, the rows, and
-// the question that produced them.
+// Table is one query answer, ready to render in any format. It holds the projected columns, the rows,
+// and the question that produced them.
 //
 // It is the query result's report shape, as Report is a check run's and Checklist a review's, so one
 // value renders as text, csv, markdown or html. It lives here rather than in cmd/ so the renderers
@@ -140,8 +140,8 @@ func (t Table) witnessed() bool {
 // TableCSV writes the rows as csv, header first, with every cell sanitized against spreadsheet
 // formula execution (see SanitizeCell).
 //
-// It emits THE TABLE AND NOTHING ELSE: no title, no query, no count, because whatever binds to a
-// csv expects the header as its first row. A commented preamble is not portable across readers.
+// It emits THE TABLE AND NOTHING ELSE, with no title, no query and no count, because whatever binds to
+// a csv expects the header as its first row. A commented preamble is not portable across readers.
 //
 // An empty result still writes the header, so it reads as a query that matched nothing rather than
 // a run that failed.
@@ -213,7 +213,8 @@ func mdEscapeAll(in []string) []string {
 }
 
 // TableHTML writes the view as one self-contained page on the stylesheet the check report and the
-// checklist share. html/template for the reason stated on HTML.
+// checklist share. It uses html/template, as HTML does, because cells come from design files the
+// engine did not author.
 func TableHTML(w io.Writer, t Table) error {
 	tm, err := parse("table.html.tmpl")
 	if err != nil {

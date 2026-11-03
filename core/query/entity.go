@@ -1,23 +1,25 @@
 package query
 
-// Entity presets: the questions a viewer offers about a thing the reader selected in the drawing.
+// When the reader selects a thing in the drawing, the viewer offers these entity presets as
+// questions about it.
 //
-// These live in Go rather than in the browser because every one names relations (pin.net,
-// component.net, net.pin_count) defined in Go, and a client-side template would break at runtime
-// when a relation is renamed with no test going red. Here they share the examples' two guards, the
-// parse check in this package and the evaluate-against-a-real-design check at the RPC layer.
+// These live in Go rather than in the browser. Every one names relations defined in Go (pin.net,
+// component.net, net.pin_count). If a relation were renamed, a client-side template would break at
+// runtime with no test going red. Here the presets share the examples' two guards. This package
+// checks that each one parses, and the RPC layer evaluates each one against a real design.
 //
 // A kind has several questions, and the viewer lists them as the Properties panel's Ask rows (agni
-// issue 902). Each opens its own query tab, so the reader edits the answer's query rather than a
-// box someone else's click overwrites, which is how they learn the query language.
+// issue 902). Each opens its own query tab. So the reader edits the answer's query, and another
+// click never overwrites it. Editing that query is how the reader learns the query language.
 
-// EntityQuery is one question about one entity kind. The caller BINDS the variables Binds names
-// from the selection (agni issue 793) rather than splicing values into the text, so the query is
-// the same for every selection and a designator holding a quote is asked about exactly. Each name
-// is also the selection field that fills it: ref, pin, net, or bus.
+// EntityQuery is one question about one entity kind. Binds names its variables, and the caller
+// BINDS them from the selection (agni issue 793) rather than splicing values into the text. So the
+// query is the same for every selection, and a designator holding a quote is asked about exactly.
+// Each name is also the selection field that fills it, one of ref, pin, net, or bus.
 //
-// Binds is explicit rather than every field a selection carries, because one preset's input is
-// another's output. The pin preset answers ?net and the net preset is asked about one.
+// Binds lists its names explicitly rather than taking every field a selection carries, because one
+// preset's input is another's output. The pin preset answers ?net and the net preset is asked about
+// one.
 type EntityQuery struct {
 	Kind    string // "pin" | "component" | "net" | "bus" | "area", matching a picked selection's kind
 	Label   string // the question as the Ask row words it, unique within its kind
@@ -27,15 +29,16 @@ type EntityQuery struct {
 }
 
 // EntityQueries returns the questions for every entity kind a viewer can select, grouped by kind.
-// The first question of a kind is its default, the one a viewer asks when it offers only one.
+// The first question of a kind is its default. A viewer that offers only one question asks that
+// one.
 func EntityQueries() []EntityQuery {
 	return []EntityQuery{
 		{
 			Kind:  "pin",
 			Label: "What is it wired to?",
-			// The pin question is "is this wired correctly", which starts with what the pin is attached
-			// to, what the pin is FOR, and how many other things share that net. A power pin on a net with a fan-out of
-			// one is the shape of a real defect.
+			// The pin question asks "is this wired correctly". The answer starts with what the pin
+			// is attached to, what the pin is FOR, and how many other things share that net. A
+			// power pin on a net with a fan-out of one looks like a real defect.
 			Query:   `pin.net(?ref, ?pin, ?net), pin.role(?ref, ?pin, ?role), net.pin_count(?net, ?fanout) => ?net, ?role, ?fanout`,
 			Binds:   []string{"ref", "pin"},
 			Teaches: "join: one pin's net, its role, and that net's fan-out come from three relations sharing ?net",
@@ -100,8 +103,9 @@ func EntityQueries() []EntityQuery {
 			Teaches: "a generator: net.route walks through resistors and ferrites from a bound net and names the path it took",
 		},
 		{
-			// bus records the construct a reader saw, not its members, so this is the one question
-			// about a bus the relations can answer. Its members are on the IR, which Properties reads.
+			// bus records the construct as a reader saw it, not its members. So the relations can
+			// answer only this one question about a bus. The members are on the IR, and Properties
+			// reads them there.
 			Kind:    "bus",
 			Label:   "What construct is it drawn as?",
 			Query:   `bus(?bus, ?construct) => ?construct`,
@@ -113,9 +117,9 @@ func EntityQueries() []EntityQuery {
 		// question is asked once and an aggregate reduces across the whole set.
 		{
 			Kind: "area",
-			// A boundary net is one the area's parts reach but do not hold every pin of, which is the
-			// block's interface. Each binding is one member pin on the net, so count(?pin) is how many
-			// of the net's pins are inside.
+			// A boundary net connects to the area's parts, and some of its pins sit outside the
+			// area. These nets form the block's interface. Each binding is one member pin on the
+			// net, so count(?pin) is how many of the net's pins are inside.
 			Label:   "What does this block connect to?",
 			Query:   `pin.net(?ref, ?pin, ?net), net.pin_count(?net, ?pins) => ?net, ?pins, count(?pin) having count(?pin) < ?pins`,
 			Binds:   []string{"ref"},
@@ -131,8 +135,8 @@ func EntityQueries() []EntityQuery {
 		{
 			Kind:  "area",
 			Label: "What parts are in it, by class?",
-			// ?part is what the aggregates reduce, filtered to the area, since an area of one part binds
-			// ?ref as a constant and a constant cannot be counted.
+			// The aggregates reduce ?part, filtered to the area. An area of one part binds ?ref as
+			// a constant, and a constant cannot be counted.
 			Query:   `component.class(?part, ?class), ?part = ?ref => ?class, count(?part), list(?part)`,
 			Binds:   []string{"ref"},
 			Teaches: "aggregation across a bound set: count and list reduce over every part the area holds",

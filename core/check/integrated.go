@@ -9,12 +9,13 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// This file credits what a part's datasheet says it carries inside, the load capacitance an RTC's
-// oscillator pins integrate, the pull-ups a level translator's ports integrate, the current limit and
-// reverse blocking of a USB power switch (agni issues 1247, 1248, 1298). Each is a fact about the part
-// that the board never shows, so a rule that only reads the board fails a correct design. Each credit
-// cites the datasheet row it relied on, and a rule failing without one names the part it could not
-// read (UnreadIC), so a reader knows the finding may be one --params would settle.
+// This file credits what a part carries inside, as its datasheet states it. An RTC's oscillator
+// pins integrate load capacitance, a level translator's ports integrate pull-ups, and a USB power
+// switch integrates a current limit and reverse blocking (agni issues 1247, 1248, 1298). Each is a
+// fact about the part that the board never shows, so a rule that only reads the board fails a
+// correct design. Each credit cites the datasheet row it relied on. A rule that fails without one
+// names the part it could not read (UnreadIC), so a reader knows that --params might settle the
+// finding.
 
 // rowMatch names a kind of datasheet row by its printed symbol, reduced through alnumUpper, or by its
 // printed name, in one base unit.
@@ -82,8 +83,8 @@ func pinRows(m Model, ref, pinRef string) (*parampb.PartSpec, *parampb.Pin, []*p
 	return spec, pin, param.PinParameters(spec, pin.GetId())
 }
 
-// pinCredit is the first fitted part on net n, other than skip, whose datasheet binds a row matching
-// rm to the pin it has on n, with that pin and the row.
+// pinCredit returns the first fitted part on net n, other than skip, whose datasheet binds a row
+// matching rm to the part's pin on n. It also returns that pin and the row.
 func pinCredit(m Model, n *ir.Net, skip string, rm rowMatch) (ref string, pin *parampb.Pin, spec *parampb.PartSpec, base, raw *parampb.Parameter) {
 	for _, c := range n.GetConnections() {
 		ref := c.GetComponentRef()
@@ -118,10 +119,10 @@ func cite(w *Witness, spec *parampb.PartSpec, raw *parampb.Parameter) *Witness {
 }
 
 // IntegratedLoadCapCredit returns the part on net n, other than skip (the crystal), whose datasheet
-// binds an integrated load capacitance to the pin it has on n, with a witness stating the value and
+// binds an integrated load capacitance to the part's pin on n, with a witness stating the value and
 // citing the row. A crystal terminal on such a pin needs no capacitor on the board, since the
-// oscillator carries its own (agni issue 1247). Returns "" and nil when nothing qualifies, which is
-// every design read without --params.
+// oscillator has its own (agni issue 1247). Returns "" and nil when nothing qualifies, as on every
+// design read without --params.
 func IntegratedLoadCapCredit(m Model, n *ir.Net, skip string) (string, *Witness) {
 	ref, pin, spec, q, raw := pinCredit(m, n, skip, integratedLoadCap)
 	if ref == "" || rowValue(q) <= 0 {
@@ -138,7 +139,7 @@ func IntegratedLoadCapCredit(m Model, n *ir.Net, skip string) (string, *Witness)
 }
 
 // IntegratedPullUpCredit returns the part on net n whose datasheet binds an internal pull-up to the
-// pin it has on n, with a witness stating the value and citing the row, as a level translator's ports
+// part's pin on n, with a witness stating the value and citing the row, as a level translator's ports
 // or an SD host's command line do (agni issue 1298). The pull-up walk credits it as a pull-up to the
 // part's own supply, which the board does not draw. Returns "" and nil without a datasheet.
 func IntegratedPullUpCredit(m Model, n *ir.Net) (string, *Witness) {
@@ -156,8 +157,9 @@ func IntegratedPullUpCredit(m Model, n *ir.Net) (string, *Witness) {
 	}, spec, raw)
 }
 
-// switchLoad returns the current-limiting switch that is the only power load on target, the net a
-// power-entry walk reached from a connector, or "" when target feeds anything else. A switch on the
+// switchLoad returns the current-limiting switch that is the only power load on target, or "" when
+// target feeds anything else. target is the net that a power-entry walk reached from a connector. A
+// switch on the
 // net does not excuse a regulator beside it, so every fitted power-input pin there must belong to one
 // switch.
 func switchLoad(m Model, target *ir.Net) string {
@@ -175,11 +177,11 @@ func switchLoad(m Model, target *ir.Net) string {
 	return sw
 }
 
-// CurrentLimitCredit returns the current-limiting switch that is the only power load on target, with a
-// witness. It is the board's overcurrent protection on that entry, the job input-protection asks a
-// fuse to do (agni issue 1248). The part's class comes from its datasheet (ClassCurrentLimitSwitch),
-// since a regulator limits its current too and is no protection against its own failure, and the
-// witness cites the datasheet's current limit when it states one.
+// CurrentLimitCredit returns the current-limiting switch that is the only power load on target,
+// with a witness. That switch is the board's overcurrent protection on that entry. input-protection
+// otherwise asks a fuse for that job (agni issue 1248). The part's class comes from its datasheet
+// (ClassCurrentLimitSwitch), since a regulator limits its current too and is no protection against
+// its own failure, and the witness cites the datasheet's current limit when it states one.
 func CurrentLimitCredit(m Model, target *ir.Net) (string, *Witness) {
 	sw := switchLoad(m, target)
 	if sw == "" {
@@ -199,10 +201,10 @@ func CurrentLimitCredit(m Model, target *ir.Net) (string, *Witness) {
 	return sw, w
 }
 
-// ReverseBlockingCredit returns the current-limiting switch that is the only power load on target
-// when its datasheet specifies a reverse current, which a switch states only when it blocks one,
-// with a witness citing the row. It answers backfeed and not reverse polarity, and the witness says
-// so (agni issue 1248).
+// ReverseBlockingCredit returns the current-limiting switch that is the only power load on target,
+// with a witness citing the row. The switch's datasheet must specify a reverse current, and a
+// switch states one only when it blocks reverse current. It answers backfeed and not reverse
+// polarity, and the witness says so (agni issue 1248).
 func ReverseBlockingCredit(m Model, target *ir.Net) (string, *Witness) {
 	sw := switchLoad(m, target)
 	if sw == "" {
@@ -224,8 +226,8 @@ func ReverseBlockingCredit(m Model, target *ir.Net) (string, *Witness) {
 }
 
 // UnreadIC returns the first fitted IC on net n, other than skip, that the run has no datasheet for.
-// It may carry inside it what a rule looked for on the board, so a rule reporting the absence says it
-// is unverified rather than settled. "" when every IC on the net was read, or none is there.
+// The IC may integrate the thing a rule looked for on the board, so a rule reporting the absence says
+// it is unverified rather than settled. "" when every IC on the net was read, or none is there.
 func UnreadIC(m Model, n *ir.Net, skip string) string {
 	for _, c := range n.GetConnections() {
 		ref := c.GetComponentRef()

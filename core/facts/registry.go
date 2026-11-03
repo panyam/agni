@@ -23,14 +23,14 @@ import (
 // composing, so a relation and a predicate clash whichever registered first and init order never
 // matters.
 //
-// Registration stays global because it is the extension hook (C18). A private extension blank-imports
-// a package whose init calls RegisterRelation, so the engine is composed BY the extension rather than
-// coupled to one. It is a startup default never mutated per run, the carve-out C22 makes for ambient
-// state.
+// Registration is still global because it is the extension hook (C18). A private extension
+// blank-imports a package whose init calls RegisterRelation, so the engine is composed BY the
+// extension rather than coupled to one. The buffer is a startup default that no run mutates, so it
+// fits the carve-out C22 makes for ambient state.
 
 // Projector derives a relation's rows from a Model. It runs once per fact base, and an empty result is
 // correct when the Model lacks the tier the relation needs (never fabricated). A projector DERIVES
-// from the Model and never consults a second authoritative store (C8), so the fact base stays a view
+// from the Model and never consults a second authoritative store (C8), so the fact base is a view
 // rather than a copy.
 type Projector func(check.Model) []Row
 
@@ -38,7 +38,7 @@ type Projector func(check.Model) []Row
 // library-wide analogue of Projector, so a corpus can be searched without loading a board.
 type SpecLibProjector func([]*parampb.PartSpec) []Row
 
-// BuiltinFacts is the bulk payload a standard relation catalog installs. Schema is each relation's
+// BuiltinFacts is the bulk payload that a standard relation catalog installs. Schema is each relation's
 // positional field layout; Catalog is the human-facing picker metadata; Model and SpecLib are the
 // design-scoped and library-wide projectors; Doc resolves a relation's reference markdown ("" when it
 // has none).
@@ -54,8 +54,8 @@ type BuiltinFacts struct {
 	Doc     func(name string) string
 }
 
-// Relation is one extension-supplied relation as a value: the name a query writes, its positional
-// layout over Row, and the projector that derives its rows.
+// Relation is one extension-supplied relation as a value. It holds the name that a query writes, its
+// positional layout over Row, and the projector that derives its rows.
 type Relation struct {
 	Name    string
 	Fields  []Field
@@ -141,12 +141,12 @@ func WithModule(path, lang, text string) Option {
 	return WithModules(ns.Module{Path: path, Language: lang, Text: text})
 }
 
-// WithModules adds several modules as one option, for a library whose modules read each other. A
-// module's Origin, the file it was read from, is what an error about it names.
+// WithModules adds several modules as one option, for a library whose modules read each other. An
+// error about a module names the module's Origin, the file it was read from.
 // Composition checks what every module reads against the whole vocabulary, so modules that refer
-// across one another must arrive together; added one option at a time, the first would be checked
-// before the member it reads exists. Each module's Members field is ignored, since the language
-// reports them.
+// across one another must arrive together. If they were added one option at a time, the first would
+// be checked before the member it reads exists. Each module's Members field is ignored, since the
+// language reports them.
 func WithModules(ms ...ns.Module) Option {
 	return func(bd *builder) {
 		for _, m := range ms {
@@ -155,10 +155,10 @@ func WithModules(ms ...ns.Module) Option {
 	}
 }
 
-// WithDocs supplies reference markdown for names the relation catalog does not document, keyed by
-// path: a library's derived relations, which Registry.Doc then serves the way it serves a relation's
-// doc. Composition refuses a doc for a path nothing defines, and two docs for one path, so a renamed
-// member cannot leave its page behind.
+// WithDocs supplies reference markdown, keyed by path, for names the relation catalog does not
+// document. These are a library's derived relations, and Registry.Doc serves their docs the way it
+// serves a relation's. Composition refuses a doc for a path nothing defines, and two docs for one
+// path, so a renamed member cannot leave its page behind.
 func WithDocs(docs map[string]string) Option {
 	return func(bd *builder) {
 		if bd.docs == nil {
@@ -207,11 +207,11 @@ func NewRegistry(opts ...Option) (*Registry, error) {
 	return r, nil
 }
 
-// compose builds the vocabulary: languages first, so modules can be read; then every relation in
-// catalog order, typed from its catalog entry; the standard predicates; the registered predicates;
-// then the modules. The vocabulary applies the namespace tree's rules as each name arrives (one
-// definer per path; a segment is a module or a member), so a clash is reported whichever side
-// registered first.
+// compose builds the vocabulary. Languages go in first, so modules can be read. Then every relation
+// goes in, in catalog order, typed from its catalog entry. Then come the standard predicates, the
+// registered predicates, and last the modules. The vocabulary applies the namespace tree's rules as
+// each name arrives (one definer per path; a segment is a module or a member), so a clash is
+// reported whichever side registered first.
 func (r *Registry) compose(b *builder) (*ns.Vocabulary, []error) {
 	var errs []error
 	v, err := ns.NewVocabulary(noCatalog{})
@@ -278,10 +278,10 @@ func (r *Registry) compose(b *builder) (*ns.Vocabulary, []error) {
 	return v, errs
 }
 
-// withOrigin names the file a module error is about. The vocabulary reports a failure one module is
-// responsible for as an *ns.ModuleError carrying the module's origin, with a message that names only
-// the module's path, which several modules can share; the origin is what tells a reader which file
-// to fix.
+// withOrigin names the file a module error is about. When one module causes a failure, the
+// vocabulary reports it as an *ns.ModuleError holding the module's origin. The message names only
+// the module's path, and several modules can share a path. The origin tells a reader which file to
+// fix.
 func withOrigin(err error) error {
 	var me *ns.ModuleError
 	if errors.As(err, &me) && me.Origin != "" {
@@ -290,9 +290,9 @@ func withOrigin(err error) error {
 	return err
 }
 
-// noCatalog is the Source an empty vocabulary starts from. It serves nothing and exists to say, in an
-// unknown-name error, which import installs the relations, because a binary missing that import
-// otherwise reads as a query that named something the design lacks (C29).
+// noCatalog is the Source an empty vocabulary starts from. It serves nothing. It exists so that an
+// unknown-name error says which import installs the relations. Without it, a binary missing that
+// import reads as a query that named something the design lacks (C29).
 type noCatalog struct{}
 
 func (noCatalog) Schema(string) (ns.Schema, bool) { return ns.Schema{}, false }
@@ -415,8 +415,8 @@ func (r *Registry) InfoOf(rel string) (RelationInfo, bool) {
 	return RelationInfo{}, false
 }
 
-// Schema returns every relation's layout as a copy. It exists for the drift guard asserting the
-// catalog covers the schema, which needs the whole set to catch a relation that is queryable but
+// Schema returns every relation's layout as a copy. The drift guard uses it to assert the catalog
+// covers the schema. The guard needs the whole set to catch a relation that is queryable but
 // undiscoverable.
 func (r *Registry) Schema() map[string][]Field {
 	out := make(map[string][]Field, len(r.schema))
@@ -426,9 +426,9 @@ func (r *Registry) Schema() map[string][]Field {
 	return out
 }
 
-// Installed reports whether this registry carries any relation at all. It separates "this design has
-// no such facts" from "no relations were ever installed", which an empty fact base flattens into the
-// same result, and the second reads as a clean pass on a design nobody checked.
+// Installed reports whether this registry holds any relation at all. An empty fact base gives the
+// same result for "this design has no such facts" and "no relations were ever installed". Installed
+// tells the two apart. Otherwise the second reads as a clean pass on a design nobody checked.
 func (r *Registry) Installed() bool { return len(r.schema) > 0 }
 
 // Rows projects the whole fact base for a design, the built-in relations first and then each
@@ -544,8 +544,8 @@ func addOption(o Option) {
 // silently at query time. check.DefaultCatalog has the same contract.
 //
 // The composed registry is cached until something new registers. The registration buffer only grows
-// and a Registry is never changed once built, so the cache cannot go stale unnoticed, and every caller
-// shares one vocabulary, which an engine checks once rather than per query.
+// and a Registry is never changed once built, so the cache cannot go stale unnoticed. Every caller
+// shares one vocabulary, and an engine checks it once rather than per query.
 func DefaultRegistry() *Registry {
 	regMu.Lock()
 	if defaultCache.r != nil && defaultCache.n == len(registered) {

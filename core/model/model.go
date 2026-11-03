@@ -1,9 +1,10 @@
-// Package model is the design read-surface CONTRACT: the Model interface a rule or query evaluates
-// against, plus the value types that interface exposes. It imports only the generated IR/geom/param
-// protos, never the check implementation, its rules, or the param logic package, so a consumer (an
-// auto-layout, a diff, an overlay) can depend on the contract without pulling the analysis engine
-// into its build. The default implementation is check.NewModel, and check re-exports these names as
-// aliases, so check.Model / check.ComponentClass and this package's names are the same types.
+// Package model is the design read-surface CONTRACT. It holds the Model interface that rules and
+// queries evaluate against, and the value types that interface exposes. It imports only the
+// generated IR/geom/param protos, never the check implementation, its rules, or the param logic
+// package. So a consumer such as an auto-layout, a diff or an overlay can depend on the contract
+// without pulling the analysis engine into its build. The default implementation is check.NewModel,
+// and check re-exports these names as aliases, so check.Model / check.ComponentClass and this
+// package's names are the same types.
 package model
 
 import (
@@ -11,37 +12,38 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Model is the query interface a rule evaluates against: the entity sets it selects over and the
-// derived facts it reads. A Run depends only on this interface, so an alternate implementation (lazy,
-// cached, columnar) can be substituted without touching any rule.
+// Model is the query interface that rules evaluate against. It exposes the entity sets a rule
+// selects over and the derived facts a rule reads. A Run depends only on this interface, so an
+// alternate implementation (lazy, cached, columnar) can be substituted without touching any rule.
 //
 // The generic combinators (Select/Exists/Count in package check) are not methods because Go generics
 // cannot be interface methods. They operate on the slices the interface returns.
 type Model interface {
-	// select: the entity sets a rule quantifies over.
+	// Nets and Components are the entity sets a rule quantifies over (select).
 	Nets() []*ir.Net
 	Components() []*ir.Component
 	// SourceFormat is the reader label of the design's source (e.g. "kicad-pcb", "edif-2.0.0"),
 	// "" when unknown. The catalog-availability gate (check.Available) reads it, so a board.* rule is
 	// only available for a board-carrying format.
 	SourceFormat() string
-	// HasParams reports whether a datasheet parameter tier is attached (a ParamProvider was
-	// supplied through check.WithParamProvider), whether or not any specific part is seeded. A datasheet rule
-	// is applicable exactly when this is true.
+	// HasParams reports whether a datasheet parameter tier is attached, meaning a ParamProvider was
+	// supplied through check.WithParamProvider. It does not ask whether any specific part is seeded.
+	// A datasheet rule is applicable exactly when this is true.
 	HasParams() bool
-	// HasBoard reports whether a board-geometry tier is attached (a non-nil BoardGeometry was
-	// supplied through check.WithBoard), independent of the design's source
-	// format. That is what makes a geometric rule applicable under `agni review --board-path`,
-	// where the netlist SourceFormat is not a board format. A board file with no routed copper
-	// still reports true (checked, clean).
+	// HasBoard reports whether a board-geometry tier is attached, meaning a non-nil BoardGeometry was
+	// supplied through check.WithBoard. It does not depend on the design's source format. Under
+	// `agni review --board-path` the netlist SourceFormat is not a board format, and HasBoard still
+	// makes a geometric rule applicable there. A board file with no routed copper still reports true
+	// (checked, clean).
 	HasBoard() bool
 	// SuppliesDiagnostic reports whether the reader COMPUTED a diagnostic, named by its
 	// InputDiagnostics field name ("ref_des_collisions"). It separates "looked and found none" from
-	// "never looked", which every list below flattens into the same empty slice. A rule whose subject
-	// is one of these diagnostics gates on it (check.Available), so a format whose reader cannot
-	// detect the construct reports not-applicable rather than passing.
+	// "never looked", which every list below flattens into the same empty slice. A rule about one of
+	// these diagnostics gates on it (check.Available). On a format whose reader cannot detect the
+	// construct, the rule then reports not-applicable rather than passing.
 	SuppliesDiagnostic(name string) bool
-	// reader-emitted input diagnostics (docsite/content/architecture/rules-and-checks.md#where-a-rule-runs):
+	// DanglingEndpoints, NoJunctionEndpoints and RefDesCollisions are reader-emitted input
+	// diagnostics (docsite/content/architecture/rules-and-checks.md#where-a-rule-runs). They report
 	// wire endpoints on nothing, and ref-des collisions. Empty for sources that carry none; a thin
 	// rule reports each.
 	DanglingEndpoints() []*ir.DanglingEndpoint
@@ -65,12 +67,12 @@ type Model interface {
 	// pin count each supplied. It is the other half of UnresolvedSymbols, so a rule over symbol
 	// resolution can state what it examined rather than only what failed (agni issue 418).
 	//
-	// Empty is ambiguous, and SuppliesDiagnostic("resolved_symbols") separates the cases: a reader
-	// that declares the diagnostic and returns nothing placed no symbol, while one that does not
+	// Empty is ambiguous, and SuppliesDiagnostic("resolved_symbols") separates the cases. A reader
+	// that declares the diagnostic and returns nothing placed no symbol. A reader that does not
 	// declare it never looked. Skipping that check reads "we read without symbols" as "we checked and
 	// everything was fine".
 	ResolvedSymbols() []*ir.ResolvedSymbol
-	// JoinedTaps are the wire-end-on-wire-body taps something DOES join, with the construct that
+	// JoinedTaps are the wire-end-on-wire-body taps that something DOES join, with the construct that
 	// joined them (agni issue 420). It is the other half of NoJunctionEndpoints, and the two
 	// partition the taps, so no tap is on both lists.
 	//
@@ -79,64 +81,65 @@ type Model interface {
 	JoinedTaps() []*ir.JoinedTap
 	// UnannotatedComponents are the placeholder designators the source has not assigned yet ("R?",
 	// "C?"), one entry per placeholder with every placement wearing it. Unlike UnresolvedSymbols
-	// nothing was LOST in the read, since the parts and their pins are all present. What is absent is
-	// an identity, so a consumer must not key on these designators (see internal/refdes).
+	// nothing was LOST in the read, since the parts and their pins are all present. Only an identity is
+	// absent, so a consumer must not key on these designators (see internal/refdes).
 	UnannotatedComponents() []*ir.UnannotatedComponent
 	// UnexpandedHierarchy are the hierarchical blocks whose contents the read left out, each with its
 	// instance count (agni issue 707). Non-empty means every count and every rule covers the top level
 	// alone. No rule reads it, since being hierarchical is not a defect; a run carries it on its
 	// response so a report can say what the read covered (agni issue 717).
 	UnexpandedHierarchy() []*ir.UnexpandedHierarchy
-	// traverse / pin-role: a pin's electrical direction, or the unspecified zero value when the
-	// source carries no part-type pin data (so direction-based rules do not fire).
+	// PinDir is a pin's electrical direction (traverse / pin-role), or the unspecified zero value when
+	// the source carries no part-type pin data (so direction-based rules do not fire).
 	PinDir(refDes, pin string) ir.PinDirection
 	// PinDeclared reports whether the component's part type declares this pin at all, even with an
 	// explicitly unspecified electrical type. False for pins known only from net connections (a
 	// board footprint's pads, a partially-read hierarchy), where the unspecified PinDir means "the
-	// read never saw the symbol" rather than "the author declared nothing". A rule keying on
-	// declared-but-untyped pins (unspecified-pin-with-driver) must not read a read gap as an
-	// authoring gap.
+	// read never saw the symbol" rather than "the author declared nothing". A rule such as
+	// unspecified-pin-with-driver keys on declared-but-untyped pins, so it must not read a read gap as
+	// an authoring gap.
 	PinDeclared(refDes, pin string) bool
-	// traverse / param-join: the pin's NAME as its part type declares it ("VCCA", "GND"), or "" when
-	// the source carries no part-type pin data. Unlike the designator, which changes when the same
-	// die ships in a different package, the name is die-relative, so a datasheet join leads with it;
-	// see param.ResolvePin for the precedence.
+	// PinName is the pin's NAME as its part type declares it ("VCCA", "GND"), or "" when the source
+	// carries no part-type pin data (traverse / param-join). The designator changes when the same die
+	// ships in a different package. The name is die-relative, so a datasheet join leads with it; see
+	// param.ResolvePin for the precedence.
 	PinName(refDes, pin string) string
 	// IsPinlessPart reports whether a component resolves to a part type that declares no pins, as a
-	// mounting hole, a logo or a module's assembly symbol does (agni issue 937). False for a component
-	// whose part type the read does not carry, since its pins are then unknown rather than absent.
+	// mounting hole, a logo or a module's assembly symbol does (agni issue 937). False when the read
+	// does not carry the component's part type, since its pins are then unknown rather than absent.
 	IsPinlessPart(refDes string) bool
 	// IsFitted reports whether a component is assembled onto the board, false for a part the design
-	// marks do-not-populate. A DNP part stays in the netlist, since its footprint and nets are real, but
-	// a rule crediting a part with doing something electrical (a resistor pulling a line up) asks this
-	// first, because an unfitted part does nothing (agni issue 938).
+	// marks do-not-populate. A DNP part is still in the netlist, since its footprint and nets are real.
+	// An unfitted part does nothing, so a rule asks this before it credits a part with doing something
+	// electrical, such as a resistor pulling a line up (agni issue 938).
 	IsFitted(refDes string) bool
-	// on_net: whether a ref_des appears on at least one net (section-aware).
+	// IsConnected reports whether a ref_des appears on at least one net (on_net, section-aware).
 	IsConnected(refDes string) bool
-	// membership: whether a ref_des is known to the design at all, either a listed component or a
-	// connection ref (a netlist read may carry connections without a component list). Unlike
-	// IsConnected, it is true for a listed-but-unconnected part.
+	// HasComponent reports whether a ref_des is known to the design at all (membership). The ref_des
+	// can be a listed component or a connection ref, since a netlist read may carry connections
+	// without a component list. Unlike IsConnected, it is true for a listed-but-unconnected part.
 	HasComponent(refDes string) bool
-	// pair: whether a net with the given name exists (case-insensitive).
+	// HasNetName reports whether a net with the given name exists (pair, case-insensitive).
 	HasNetName(name string) bool
-	// whether a net is a power/ground rail: asserted-driven or global, or a ground/power-rail
-	// name. Such rails are distributed by power-symbol taps, not drawn wires (WS9-039). Unknown
-	// net -> false.
+	// IsPowerRail reports whether a net is a power/ground rail. A rail is asserted-driven or global,
+	// or has a ground/power-rail name. Such rails are distributed by power-symbol taps, not drawn
+	// wires (WS9-039). Unknown net -> false.
 	IsPowerRail(name string) bool
-	// role: whether a net carries the ground / rail naming role, reading the STAMPED role fact
-	// (ir.Net.roles, filled at ingestion) and falling back to this model's naming lexicon only for a
-	// net that skipped the loader (WS3-106). They take the net rather than its name because names
-	// are not unique (see NetNameCount), so a by-name lookup can answer about a different net.
-	// IsRailNet is NARROWER than IsPowerRail, which also answers true for a driven-or-global net and
-	// for grounds, and it excludes IsRegulatorInternalNet. A rule asking "is this a rail" wants
-	// IsRailNet.
+	// IsGroundNet, IsRailNet, IsRegulatorInternalNet and HasAnyRole ask whether a net carries a
+	// naming role such as ground or rail (role). They read the STAMPED role fact, ir.Net.roles, which
+	// ingestion fills. They fall back to this model's naming lexicon only for a net that skipped the
+	// loader (WS3-106). They take the net rather than its name because names are not unique (see
+	// NetNameCount), so a by-name lookup can answer about a different net.
+	// IsRailNet is NARROWER than IsPowerRail. IsPowerRail also answers true for a driven-or-global net
+	// and for grounds, and IsRailNet excludes IsRegulatorInternalNet. A rule asking "is this a rail"
+	// wants IsRailNet.
 	IsGroundNet(n *ir.Net) bool
 	IsRailNet(n *ir.Net) bool
 	IsRegulatorInternalNet(n *ir.Net) bool
 	HasAnyRole(n *ir.Net, roles ...ir.Role) bool
-	// naming lexicon: does a bare NAME match a role vocabulary, for the callers that hold no net to
-	// read a stamped role from (the spec-language name FFIs over a literal, and pin-name role
-	// derivation). Reads the lexicon this model's design was READ with (WS3-106), so a project's
+	// These ask whether a bare NAME matches a role vocabulary (naming lexicon). Some callers hold no
+	// net to read a stamped role from, such as the spec-language name FFIs over a literal and pin-name
+	// role derivation. Each uses the lexicon the design was READ with (WS3-106), so a project's
 	// conventions reach a name match without a package global.
 	IsPowerRailName(name string) bool
 	IsGroundName(name string) bool
@@ -161,81 +164,83 @@ type Model interface {
 	// vocabulary, and ok=false when it states none or two that disagree ("12V_TO_5V"). It reads any
 	// name, so a caller asking about a rail checks the net is one first (agni issue 194).
 	NominalVoltage(name string) (volts float64, ok bool)
-	// RailMaxVoltage is the net.max_voltage fact: a max_voltage attribute when the net carries one,
-	// otherwise NominalVoltage of its name.
+	// RailMaxVoltage is the net.max_voltage fact. It is the net's max_voltage attribute when the net
+	// carries one, otherwise NominalVoltage of its name.
 	RailMaxVoltage(n *ir.Net) (volts float64, ok bool)
-	// pair: how many nets carry EXACTLY this name (case-sensitive, unlike HasNetName). More than
-	// one means the design states the same name for electrically distinct nets. Connect-by-name
-	// formats cannot produce that (the solver merges them) and explicit-net-list formats (EDIF) can,
-	// so it is either an authoring slip or a reader gap (duplicate-net-name reads this).
+	// NetNameCount is how many nets carry EXACTLY this name (pair, case-sensitive unlike HasNetName).
+	// More than one means the design states the same name for electrically distinct nets. A
+	// connect-by-name format cannot produce that, because the solver merges them. An explicit-net-list
+	// format such as EDIF can, so a count above one is either an authoring slip or a reader gap. The
+	// duplicate-net-name rule reads this.
 	NetNameCount(name string) int
-	// pins: every part-type pin of every placed component (empty for sources that
-	// carry no part-type pin data, so pin-level rules do not fire), and per-pin net
-	// membership. PinConnected is the per-pin analogue of IsConnected: whether this
-	// specific (ref_des, designator) appears in any net's connections.
+	// Pins returns every part-type pin of every placed component (pins). It is empty for sources that
+	// carry no part-type pin data, so pin-level rules do not fire. PinConnected gives per-pin net
+	// membership, as the per-pin analogue of IsConnected. It reports whether this specific
+	// (ref_des, designator) appears in any net's connections.
 	Pins() []PinInst
 	PinConnected(refDes, pin string) bool
-	// pin-role (WS1-009): the pin's semantic role, DERIVED from its declared name within
-	// the component's device-class context (anode/cathode only for the diode family;
-	// power/ground rail names on any class). It is a projection like component.class, never an
-	// IR field, because no source format states polarity as data. RoleUnknown when the name
-	// carries no recognized convention; rules skip, never guess.
+	// PinRole is the pin's semantic role (pin-role, WS1-009). It is DERIVED from the pin's declared
+	// name within the component's device-class context. Anode and cathode apply only to the diode
+	// family, and power/ground rail names apply on any class. It is a projection like
+	// component.class, never an IR field, because no source format states polarity as data.
+	// RoleUnknown when the name carries no recognized convention; rules skip, never guess.
 	PinRole(refDes, pin string) PinRole
 	// PinNetName is the name of the net this pin appears on ("" when unconnected). A pin belongs to
 	// one net by definition, so a pin in several nets' connection lists is malformed input, and
 	// PinNetName then reports the first net in design order. That pick is safe because the conflict
 	// surfaces through PinNetConflicts and the pin-net-conflict rule.
 	PinNetName(refDes, pin string) string
-	// PinNetConflicts are the malformed-input diagnostics PinNetName's contract relies on: every
-	// pin that appears in more than one net's connections, with the full net list. Collected once
-	// at model build from the normalized IR, not a reader InputDiagnostic, since no reader-only
-	// information is involved.
+	// PinNetConflicts lists every pin that appears in more than one net's connections, with the full
+	// net list. PinNetName's contract relies on these malformed-input diagnostics. The model collects
+	// them once at build from the normalized IR. They are not a reader InputDiagnostic, since no
+	// reader-only information is involved.
 	PinNetConflicts() []PinNetConflict
-	// no-connect channel: whether the source can express "intentionally unconnected" at
-	// all, meaning any NO_CONNECT-typed pin, any no-connect-flagged net, or a designer's NC_ /
-	// no_connect net name. Where the channel is absent (a bare EDIF netlist), an unwired pin
-	// carries no NC flag because none
-	// exists, not because the designer missed it, so per-pin absence rules must not fire.
+	// HasNoConnectChannel reports whether the source can express "intentionally unconnected" at all
+	// (the no-connect channel). The channel is any NO_CONNECT-typed pin, any no-connect-flagged net,
+	// or a designer's NC_ / no_connect net name. Where the channel is absent (a bare EDIF netlist), an
+	// unwired pin carries no NC flag because none exists, not because the designer missed it. So
+	// per-pin absence rules must not fire there.
 	HasNoConnectChannel() bool
-	// power-output typing channel (WS3-072 PR2): whether the source format classifies
-	// power-OUTPUT pins at all. EDIF's port grammar carries only INPUT/OUTPUT/INOUT (no
-	// power_out) and IPC-2581 is a board format with no pin electrical types, so on those a
-	// power rail's driver reads as a plain input. A rule that infers "unpowered" from the
-	// ABSENCE of a typed driver (power-input-not-driven) must not fire where this is false,
-	// because the source is under-typed rather than undriven.
+	// FormatTypesPowerOut reports whether the source format classifies power-OUTPUT pins at all (the
+	// power-output typing channel, WS3-072 PR2). EDIF's port grammar has only INPUT/OUTPUT/INOUT (no
+	// power_out), and IPC-2581 is a board format with no pin electrical types. On those a power
+	// rail's driver reads as a plain input. A rule such as power-input-not-driven infers "unpowered"
+	// from the ABSENCE of a typed driver. It must not fire where this is false, because the source is
+	// under-typed rather than undriven.
 	FormatTypesPowerOut() bool
-	// net-class channel (WS3-105): whether the design carries any tool-assigned net-class
-	// membership at all. Only a KiCad project supplies it (net_settings in the .kicad_pro);
-	// an EDIF or IPC-2581 read, a bare .kicad_sch, and a project that declares no classes all
-	// leave every net_class empty. A rule SCOPED by net class would evaluate over nothing there and
+	// HasNetClasses reports whether the design carries any tool-assigned net-class membership at all
+	// (the net-class channel, WS3-105). Only a KiCad project supplies it (net_settings in the
+	// .kicad_pro). An EDIF or IPC-2581 read, a bare .kicad_sch, and a project that declares no classes
+	// all leave every net_class empty. A rule SCOPED by net class would evaluate over nothing there and
 	// read as a pass, so such a rule declares CapNetClass and reads not-applicable instead.
 	HasNetClasses() bool
-	// net-class DEFINITIONS (WS3-111): the per-class routing constraints the project declares
-	// (clearance, track width, via sizes), as ir.Constraint nodes of kind "netclass". Separate
-	// from HasNetClasses because membership and definitions are two independent blocks of
-	// net_settings, so a project can assign nets to a class it never defines, or define classes
-	// it assigns nothing to.
+	// NetClassDefs returns the per-class routing constraints the project declares (net-class
+	// DEFINITIONS, WS3-111), such as clearance, track width and via sizes. Each is an ir.Constraint
+	// node of kind "netclass". It is separate from HasNetClasses because membership and definitions
+	// are two independent blocks of net_settings. A project can assign nets to a class it never
+	// defines, or define classes it assigns nothing to.
 	NetClassDefs() []*ir.Constraint
-	// reach (WS3-011): the bounded series-walk neighborhood of a net, meaning nets reachable by
-	// crossing two-net pass elements (R/L/ferrite/fuse) with rails excluded. A series element splits
-	// the net, so "a fuse sits between connector and regulator" is invisible to any per-net
-	// quantifier.
+	// Reach returns the bounded series-walk neighborhood of a net (reach, WS3-011). These are the nets
+	// reachable by crossing two-net pass elements (R/L/ferrite/fuse), with rails excluded. A series
+	// element splits the net, so a per-net quantifier cannot see "a fuse sits between connector and
+	// regulator".
 	Reach(start *ir.Net, hops int) Reach
-	// ReachToTerminus is the same walk with one admission rule changed: a bus-like net is a legal
-	// DESTINATION and still an illegal transit node. A question whose answer is "we landed on a
-	// rail" (a pull-up's terminus, a trace to a pin that sits on one) cannot be asked of Reach,
-	// which drops such a net from the result set entirely.
+	// ReachToTerminus is the same walk with one admission rule changed. A bus-like net is a legal
+	// DESTINATION and still an illegal transit node. Some questions end on a rail, such as a pull-up's
+	// terminus or a trace to a pin that sits on one. Reach cannot answer them, because it drops such a
+	// net from the result set entirely.
 	ReachToTerminus(start *ir.Net, hops int) Reach
 	Between(from, to *ir.Net, class ComponentClass, hops int) bool
-	// board tier (WS3-008): each net's routed copper from the board-geometry sidecar.
+	// BoardNets returns each net's routed copper from the board-geometry sidecar (board tier, WS3-008).
 	// Empty when the model was built without a board; see check.WithBoard.
 	BoardNets() []BoardNet
-	// board_rules (agni issue 933): the copper minimums the design declares, today from a KiCad
-	// project's board.design_settings.rules. The zero value when it declares none, so a rule can fall
-	// back to a fabrication floor of its own.
+	// BoardRules returns the copper minimums the design declares (board_rules, agni issue 933). Today
+	// they come from a KiCad project's board.design_settings.rules. It returns the zero value when the
+	// design declares none, so a rule can fall back to a fabrication floor of its own.
 	BoardRules() BoardRules
-	// component.class: the MOST-SPECIFIC device class from the normalized device_classes set
-	// (WS3-071), stamped once at ingestion by the classify pass and refined by part-type data.
+	// ComponentClass returns the MOST-SPECIFIC device class from the normalized device_classes set
+	// (component.class, WS3-071). The classify pass stamps that set once at ingestion, and part-type
+	// data refines it.
 	// ClassUnknown when the design carries no usable signal, so class-quantified rules skip
 	// rather than misfire.
 	ComponentClass(refDes string) ComponentClass
@@ -245,22 +250,23 @@ type Model interface {
 	// or class is false.
 	HasClass(refDes string, class ComponentClass) bool
 	// ExposedConnector reports whether a component is a connector that faces the outside of the
-	// product: a connector the design's intent does not declare internal (agni issue 831). The
-	// exposure rules ask this rather than HasClass(ref, ClassConnector), because whether a connector
-	// faces the field is a fact about one product, which only its declaration can state.
+	// product, meaning the design's intent does not declare it internal (agni issue 831). The exposure
+	// rules ask this rather than HasClass(ref, ClassConnector). Whether a connector faces the field is
+	// a fact about one product, and only that product's declaration can state it.
 	ExposedConnector(refDes string) bool
-	// PullUpReachLimit is how many series resistors the walk from a net to the rail its pull-up
-	// returns it to may cross. It is the net's declared `pull_up_reach_hops` in the design's intent,
-	// else check.PullUpReachHops (agni issue 820). Every pull-up walk asks this rather than the
+	// PullUpReachLimit is how many series resistors a pull-up walk may cross. The walk starts at a net
+	// and ends at the rail the net's pull-up ties it to. The limit is the net's declared
+	// `pull_up_reach_hops` in the design's intent, else check.PullUpReachHops (agni issue 820). Every pull-up walk asks this rather than the
 	// constant, so a declaration reaches the rule, its Spec twin and the profiles alike.
 	PullUpReachLimit(net string) int
 	// Classes returns the full device_classes set for a component (specific class plus family
-	// tags), or nil for an unknown/unclassified ref-des. The set backing component.class(ref, class).
+	// tags), or nil for an unknown/unclassified ref-des. This set backs component.class(ref, class).
 	Classes(refDes string) []ComponentClass
-	// params tier (WS10-003): the design-side part identity (BomLine mpn, else the component's mpn
-	// field, else "") and the seeded datasheet spec joined to it. The MPN is joined on every model;
-	// the spec is nil when the model has no provider (check.WithParamProvider) or the part is
-	// unseeded, so datasheet-backed rules skip rather than false-pass; see params.go.
+	// ComponentMPN and PartSpec are the params tier (WS10-003). ComponentMPN is the design-side part
+	// identity, taken from the BomLine mpn, else the component's mpn field, else "". PartSpec is the
+	// seeded datasheet spec joined to that MPN. The MPN is joined on every model. The spec is nil when
+	// the model has no provider (check.WithParamProvider) or the part is unseeded, so datasheet-backed
+	// rules skip rather than false-pass; see params.go.
 	ComponentMPN(refDes string) string
 	PartSpec(refDes string) *parampb.PartSpec
 }

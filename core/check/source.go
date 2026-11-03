@@ -11,7 +11,7 @@ type RuleSource interface {
 }
 
 // SupersedingSource is an OPTIONAL capability a RuleSource may also implement, for a source that
-// REPLACES rules another source contributed instead of running alongside them. Composition
+// REPLACES rules from another source instead of running alongside them. Composition
 // type-asserts for it, because widening RuleSource would break every out-of-module suite.
 //
 // Each returned Facets selects superseded rules with Filter's vocabulary. Names supersedes
@@ -45,8 +45,8 @@ type supersedingSource struct {
 
 func (s supersedingSource) Supersedes() []Facets { return s.supersedes }
 
-// Builtins is the built-in rule set as a RuleSource, and the only anonymous source. It reads the
-// set RegisterBuiltins installed at call time. Without stdlib/rules/builtin imported the set is
+// Builtins is the built-in rule set as a RuleSource, and the only anonymous source. At call time it
+// reads the set that RegisterBuiltins installed. Without stdlib/rules/builtin imported the set is
 // empty and the engine runs only the sources that ARE registered.
 var Builtins RuleSource = builtins{}
 
@@ -99,10 +99,10 @@ func (s fixedSource) Rules() []*Rule { return s.rules }
 // set is NOT here, since Builtins is composed first on its own.
 var registeredSources []RuleSource
 
-// RegisterSource adds a rule source to the process-global registry, so a suite living in another
-// module is picked up by the CLI and serve (both compose DefaultCatalog / CatalogWith) with no
-// re-wiring. It is the rule-side twin of formats.Register (WS12-004). Call it from an init or the
-// composing binary's main, and the rules appear in ListRules and CheckDesign as "<source>/<rule>".
+// RegisterSource adds a rule source to the process-global registry, so the CLI and serve pick up a
+// suite from another module with no re-wiring. Both compose DefaultCatalog / CatalogWith. It is the
+// rule-side twin of formats.Register (WS12-004). Call it from an init or the composing binary's
+// main, and the rules appear in ListRules and CheckDesign as "<source>/<rule>".
 //
 // RegisterSource panics on a nil source, an anonymous source, a name outside [a-z0-9-]+, or a
 // duplicate source name, as image.RegisterFormat and sql.Register do. The deeper checks (no "/" in a

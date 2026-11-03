@@ -7,9 +7,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// prefixClasses is the built-in ref-des prefix table, the one DefaultClassVocab starts from and a
-// project's conventions add to. "X" is absent because it means crystal in some house styles and
-// terminal block in others, so it stays UNKNOWN unless part data or a project's prefixes resolve it.
+// prefixClasses is the built-in ref-des prefix table. DefaultClassVocab starts from it, and a
+// project's conventions add to it. "X" is absent because it means crystal in some house styles and
+// terminal block in others. So an X part is UNKNOWN unless part data or a project's prefixes resolve
+// it.
 var prefixClasses = map[string]ComponentClass{
 	"R":    ClassResistor,
 	"RN":   ClassResistor,
@@ -38,8 +39,8 @@ var prefixClasses = map[string]ComponentClass{
 	"Q":    ClassTransistor,
 }
 
-// tokenClasses maps a word appearing in part-type text (name, kind, Value attribute) to a
-// class. Matching is on whole tokens, not substrings, so "shielded" does not read as an LED.
+// tokenClasses maps a word in part-type text (name, kind, attribute values) to a class.
+// Matching is on whole tokens, not substrings, so "shielded" does not read as an LED.
 var tokenClasses = map[string]ComponentClass{
 	"resistor":   ClassResistor,
 	"capacitor":  ClassCapacitor,
@@ -67,12 +68,13 @@ var tokenClasses = map[string]ComponentClass{
 	"programming": ClassTestConnector,
 	"programmer":  ClassTestConnector,
 	"testpoint":   ClassTestPoint,
-	// Clock sources (WS10-015). ALL clock tokens, "oscillator" included, mark CLOCK-FAMILY candidacy
-	// and never a subtype. On real EDIF a whole vendor library is named "Oscillator" (its DXDB_LIBNAME
-	// rides every crystal AND resonator in it) and the per-part "Oscillator Type?" label is swapped in
-	// the field, so a token could only mis-subtype, and a wrong "oscillator" tag would HIDE a real
-	// missing-load-cap finding on a crystal. The subtype comes from STRUCTURE (hasSupplyPin) or a
-	// seeded datasheet device_class. "ceramic" is absent because it collides with ceramic capacitors.
+	// Clock sources (WS10-015). Every clock token, "oscillator" included, marks a part as a
+	// CLOCK-FAMILY candidate and never as a subtype. On real EDIF a whole vendor library is named
+	// "Oscillator", and every crystal AND resonator in it has that DXDB_LIBNAME. The per-part
+	// "Oscillator Type?" label is also swapped in the field. So a token could only mis-subtype, and a
+	// wrong "oscillator" tag would HIDE a real missing-load-cap finding on a crystal. The subtype comes
+	// from STRUCTURE (hasSupplyPin) or a seeded datasheet device_class. "ceramic" is absent because it
+	// collides with ceramic capacitors.
 	"crystal":    ClassClock,
 	"xtal":       ClassClock,
 	"resonator":  ClassClock,
@@ -80,17 +82,18 @@ var tokenClasses = map[string]ComponentClass{
 }
 
 // Classify derives the component.class fact. The ref-des prefix convention gives the base
-// class, and part-type data (the part's designator_prefix, then whole-token hints in its
-// name/kind and the component's Value attribute) overrides or refines it. A token hint may
-// refine a base class only within the same device family (diode -> led/tvs, inductor ->
-// ferrite), so a resistor named "PULLUP_LED_EN" stays a resistor; with no base class the
-// token decides outright. It is the pure, single-class derivation Stamp and check.Model share.
+// class, and part-type data then overrides or refines it. The part's designator_prefix comes
+// first, then whole-token hints in its name/kind and in the component's attribute values. A
+// token hint may refine a base class only within the same device family (diode -> led/tvs,
+// inductor -> ferrite), so a resistor named "PULLUP_LED_EN" is still a resistor. With no base
+// class the token decides outright. Stamp and check.Model share this pure, single-class
+// derivation.
 func Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 	return ActiveLexicon().Classify(c, pt)
 }
 
-// Classify is the per-read form, the same derivation against THIS lexicon's vocabularies rather than
-// the process globals (WS3-106).
+// Classify is the per-read form. It runs the same derivation against THIS lexicon's vocabularies
+// rather than the process globals (WS3-106).
 func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 	prefix := refDesPrefix(c.GetRefDes())
 	// A declared prefix can arrive in placeholder form ("C?", "REF**", as the Mentor EDIF corpus
@@ -114,10 +117,10 @@ func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 		}
 	}
 
-	// Clock family (WS10-015), scoped to clock candidates so the supply-pin signal never promotes an
-	// arbitrary powered IC such as an MCU. A supply pin marks an ACTIVE oscillator. Without one the part
-	// stays at the family, since tokens are family-only (see tokenClasses), and its subtype comes from a
-	// seeded datasheet device_class (StampClassesFromSpecs).
+	// Clock family (WS10-015). Only clock candidates reach this check, so the supply-pin signal never
+	// promotes an arbitrary powered IC such as an MCU. A supply pin marks an ACTIVE oscillator. Without
+	// one the part keeps the family class, since tokens are family-only (see tokenClasses). Its subtype
+	// then comes from a seeded datasheet device_class (StampClassesFromSpecs).
 	if base == ClassClock || hints[ClassClock] {
 		if l.hasSupplyPin(pt) {
 			return ClassOscillator
@@ -153,11 +156,11 @@ func (l *Lexicon) Classify(c *ir.Component, pt *ir.PartType) ComponentClass {
 	return base
 }
 
-// hasSupplyPin reports whether a part type declares a power-supply pin by NAME (Vcc/Vdd/Vin/...), the
-// structural mark of an ACTIVE clock oscillator, since a passive crystal or ceramic resonator has only
-// signal terminals. It reads NAMES through the supply-pin lexicon and NOT the POWER_IN direction
-// (WS10-015), because Stamp runs BEFORE StampPowerInPins and EDIF under-types a supply pin as INPUT.
-// A part type with no declared pins yields false.
+// hasSupplyPin reports whether a part type declares a power-supply pin by NAME (Vcc/Vdd/Vin/...).
+// A supply pin is the structural mark of an ACTIVE clock oscillator, since a passive crystal or
+// ceramic resonator has only signal terminals. The check reads NAMES through the supply-pin lexicon
+// and NOT the POWER_IN direction (WS10-015). Stamp runs BEFORE StampPowerInPins, and EDIF under-types
+// a supply pin as INPUT. A part type with no declared pins yields false.
 func (l *Lexicon) hasSupplyPin(pt *ir.PartType) bool {
 	for _, p := range pt.GetPins() {
 		if l.role().IsSupplyPin(p.GetName()) {
@@ -229,8 +232,8 @@ func classTokens(pt *ir.PartType, c *ir.Component) []string {
 	return toks
 }
 
-// refDesPrefix is the leading run of letters of a ref-des, uppercased, with a leading '#'
-// (KiCad power symbols, "#PWR01") skipped: "R12" -> "R", "RN3" -> "RN".
+// refDesPrefix returns the leading run of letters of a ref-des, uppercased. It skips a leading '#',
+// which KiCad power symbols have ("#PWR01"). "R12" gives "R" and "RN3" gives "RN".
 func refDesPrefix(ref string) string {
 	ref = strings.TrimPrefix(ref, "#")
 	i := 0

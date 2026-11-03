@@ -32,7 +32,7 @@ const ViewerTarget = "agni-viewer"
 
 // HTML writes the report as one self-contained page.
 //
-// html/template rather than string building, because every subject, message and witness came out of
+// It uses html/template rather than string building. Every subject, message and witness came out of
 // a design file the engine did not author, and a net name holding an angle bracket or a quote would
 // otherwise corrupt or inject into the page. html/template escapes per context (text, attribute, URL).
 //

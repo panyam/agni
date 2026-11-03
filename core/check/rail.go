@@ -4,13 +4,13 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// A zero-ohm link is a net boundary in the netlist and not in the circuit. A rail joined to its
-// converter's output node through a 0 Ohm resistor is one rail with two names, and a rule asking what
-// sits on the rail asks across the link (agni issue 1015).
+// A zero-ohm link is a net boundary in the netlist and not in the circuit. Imagine a rail joined to
+// its converter's output node through a 0 Ohm resistor. It is one rail with two names, so a rule
+// asking what sits on the rail asks across the link (agni issue 1015).
 
-// ZeroOhmLink reports whether ref is a fitted resistor whose value is zero ohms. A library that writes
-// its part name as the Value (`R_0R_22.4A_0603`) has that value read out of the name at ingestion
-// (agni issue 1115), so the name needs no reading here.
+// ZeroOhmLink reports whether ref is a fitted resistor whose value is zero ohms. Some libraries write
+// the part name as the Value (`R_0R_22.4A_0603`). Ingestion reads the value out of that name (agni
+// issue 1115), so the name needs no reading here.
 func ZeroOhmLink(m Model, ref string) bool {
 	if m.ComponentClass(ref) != ClassResistor || !m.IsFitted(ref) {
 		return false
@@ -19,8 +19,8 @@ func ZeroOhmLink(m Model, ref string) bool {
 	return ok && v == 0
 }
 
-// JoinedNet is one net of a rail and the zero-ohm link that joined it, which is "" for the net the
-// question started from.
+// JoinedNet is one net of a rail and the zero-ohm link that joined it. The link is "" for the net
+// the question started from.
 type JoinedNet struct {
 	Net *ir.Net
 	Via string
@@ -74,8 +74,8 @@ func hasZeroOhmLink(m Model, n *ir.Net) bool {
 }
 
 // FirstOnRail names the first fitted part of the class on n or on a net joined to it through
-// zero-ohm links, with the joined net it sits on (whose Via is "" when that is n itself). The ref is
-// "" when the rail carries none.
+// zero-ohm links. It also returns the joined net under that part, whose Via is "" when the net is n
+// itself. The ref is "" when the rail has no such part.
 func FirstOnRail(m Model, n *ir.Net, class ComponentClass) (string, JoinedNet) {
 	for _, j := range JoinedRail(m, n) {
 		for _, c := range j.Net.Connections {
@@ -92,19 +92,20 @@ func FirstOnRail(m Model, n *ir.Net, class ComponentClass) (string, JoinedNet) {
 // leave the net out (agni issue 1016). Jetson's +3V3 feeds an SFP cage and an M.2 socket from the
 // board's own 3.3 V buck through a 0 Ohm link.
 //
-// A converter's output counts outright, read from structure because a vendor symbol often types
-// every pin passive: a switching net reached through an inductor and a feedback net, together, within
-// the power-entry walk's radius. A boost converter's INPUT reaches its switch node through the
-// inductor as well, and asking for the feedback divider too keeps that input a supply entry, since a
-// boost's divider sits on its output side. A net named for neither still counts when one part's
-// switch pin sits behind the inductor and its feedback pin on the walk, read from the pin names through
-// the same vocabularies (agni issue 1253). That is how a fixed-output buck wires its FB to the output.
+// A converter's output counts outright. It is read from structure, because a vendor symbol often
+// types every pin passive. The walk has to reach a switching net through an inductor and also a
+// feedback net, both within the power-entry walk's radius. A boost converter's INPUT reaches its
+// switch node through the inductor as well. Asking for the feedback divider too keeps that input a
+// supply entry, since a boost's divider sits on its output side. A net with neither name still counts
+// when one part's switch pin sits behind the inductor and the same part's feedback pin is on the
+// walk. Those are read from the pin names through the same vocabularies (agni issue 1253). A
+// fixed-output buck wires its FB to the output this way.
 //
 // A power-output pin on a fitted part other than a connector counts when nothing on the walk is the
-// input of another part with a power output. A dual-role USB-C port is the shape that rule keeps: a
+// input of another part with a power output. That rule keeps a dual-role USB-C port judged. There a
 // load switch sources VBUS and a PD controller's power path sinks it, so power can still arrive
-// through the connector and the entry rules still judge it. It also counts when the driver's own
-// input comes from somewhere those parts do not feed, which is a cascade of regulators rather than a
+// through the connector and the entry rules still judge it. The pin also counts when the driver's own
+// input comes from a net those parts do not feed. That shape is a cascade of regulators rather than a
 // port (independentDriver, agni issue 1253).
 func BoardSource(m Model, n *ir.Net) string {
 	r := m.Reach(n, PowerPathReachHops)
@@ -161,8 +162,9 @@ func BoardSource(m Model, n *ir.Net) string {
 	return independentDriver(m, drivers, sinks)
 }
 
-// independentDriver names the first of drivers fed from a net none of sinks has a power output on,
-// and "" when there is none. A driver with no wired input proves nothing, so it does not count.
+// independentDriver names the first of drivers fed from a net where none of sinks has a power
+// output, and "" when there is none. A driver with no wired input proves nothing, so it does not
+// count.
 func independentDriver(m Model, drivers, sinks []string) string {
 	sink, driver := map[string]bool{}, map[string]bool{}
 	for _, r := range sinks {
@@ -198,8 +200,8 @@ func independentDriver(m Model, drivers, sinks []string) string {
 	return ""
 }
 
-// anyPowerSource reports whether any of refs has a power-output pin anywhere in the design, which
-// makes its power input on a net a path power can take onward rather than a load.
+// anyPowerSource reports whether any of refs has a power-output pin anywhere in the design. If one
+// does, its power input on a net is a path onward for power rather than a load.
 func anyPowerSource(m Model, refs []string) bool {
 	if len(refs) == 0 {
 		return false

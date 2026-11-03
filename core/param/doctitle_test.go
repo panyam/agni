@@ -12,8 +12,8 @@ func specWithDocTitle(mpn, title string) *parampb.PartSpec {
 	return &parampb.PartSpec{Mpn: mpn, Docs: []*parampb.SourceDoc{{Id: "ds", Title: title}}}
 }
 
-// A title that repeats the MPN is not a missing answer, it is a wrong one. It reads like a citation,
-// and it is the same string before and after a reissue, so nobody re-checks it (agni issue 290).
+// A title can repeat the MPN. That is a wrong answer rather than a missing one. It reads like a
+// citation and does not change when the document is reissued, so nobody re-checks it (agni issue 290).
 func TestDocTitleRepeatingThePartIsFlagged(t *testing.T) {
 	for _, title := range []string{"LM1117", "lm1117", "  LM1117  "} {
 		spec := specWithDocTitle("LM1117", title)
@@ -27,9 +27,10 @@ func TestDocTitleRepeatingThePartIsFlagged(t *testing.T) {
 	}
 }
 
-// Absent is the accurate state a first-pass derivation is in, and derive treats any Validate failure
-// as its own bug, so reporting it here would make every derived spec fail. The refusal is carried by
-// the run manifest's gap list instead, and the citation says "revision unrecorded" at the point of use.
+// A first-pass derivation cannot state the title yet, so absent is its accurate state. derive treats
+// any Validate failure as its own bug, so reporting an absent title here would make every derived spec
+// fail. The run manifest's gap list records the refusal instead, and the citation says "revision
+// unrecorded" at the point of use.
 func TestAbsentDocTitleIsNotAProblem(t *testing.T) {
 	spec := specWithDocTitle("LM1117", "")
 	if got := errors.Join(completenessProblems(spec)...); got != nil && strings.Contains(got.Error(), "the part, not the document") {

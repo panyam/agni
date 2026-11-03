@@ -4,7 +4,7 @@
 // docsite/content/architecture/geometry-and-rendering.md#auto-layout-node-drawing.
 //
 // The output is an ordinary geom.SchematicGeometry, so it feeds the same render backends as a real
-// schematic sheet (SheetSVG, PackSheet) and nothing downstream is graph-specific. Layout stays in the
+// schematic sheet (SheetSVG, PackSheet) and nothing downstream is graph-specific. Layout lives in the
 // Go core rather than a backend, so every surface reuses it (CONSTRAINTS C1).
 //
 // A Strategy places nodes (see layout.go) and a shared assembler turns those positions into drawable

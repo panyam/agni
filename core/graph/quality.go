@@ -81,7 +81,7 @@ func properCross(s, t segment) bool {
 }
 
 // orient returns the sign of the cross product (b-a)x(c-a): >0 left turn, <0 right, 0
-// collinear. Coordinates are grid-scale, so the products stay well within int64.
+// collinear. Coordinates are grid-scale, so the products fit well within int64.
 func orient(ax, ay, bx, by, cx, cy int64) int64 {
 	return (bx-ax)*(cy-ay) - (by-ay)*(cx-ax)
 }

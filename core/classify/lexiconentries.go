@@ -10,21 +10,21 @@ import (
 )
 
 // LexiconEntry is one pattern, exclusion, ref-des prefix, part-number family or switch of an
-// effective lexicon, with whether it came from the built-ins or from the convention laid over them
-// (agni issue 1266).
+// effective lexicon. It records whether the entry came from the built-ins or from the convention
+// laid over them (agni issue 1266).
 type LexiconEntry struct {
-	// Vocabulary is the list the entry sits in, spelled as the conventions YAML spells its path
-	// ("net.rail", "pin.supply", "class.tvs").
+	// Vocabulary names the entry's list by its path in the conventions YAML ("net.rail",
+	// "pin.supply", "class.tvs").
 	Vocabulary string
 	// Kind is "pattern", "exclude", "prefix", "exclude_prefix", "family", "pair", "unit", "key" or
-	// "switch", "key" being one attribute key or do-not-populate value under "attribute.<list>". A
-	// pair's Value is its two suffixes joined by "=" (see DiffPairEntry), and a unit's is the unit a
-	// bare number on the class means, under the vocabulary "value_unit.<class>".
+	// "switch". A "key" entry is one attribute key or do-not-populate value under "attribute.<list>".
+	// A pair's Value is its two suffixes joined by "=" (see DiffPairEntry). A unit's Value is the unit
+	// of a bare number on the class, under the vocabulary "value_unit.<class>".
 	Kind  string
 	Value string
 	// FromConvention is set on an entry the convention added, and clear on a built-in one.
 	FromConvention bool
-	// Replaced is set on a built-in entry the convention's `replace: true` took out.
+	// Replaced is set on a built-in entry that the convention's `replace: true` took out.
 	Replaced bool
 }
 
@@ -95,10 +95,11 @@ func roleVocabs(base, over *configpb.NamingLexicon) []namedVocab {
 	}
 }
 
-// EffectiveEntries lists the lexicon a read with convention lexicon over uses, entry by entry, under
-// the merge BuildRoleVocab and BuildClassVocab apply: a list's convention entries add to its built-in
-// ones, and `replace: true` takes the built-in ones out (listed with Replaced) except a class's ref-des
-// prefixes, which a replace keeps. A built-in prefix the convention lists under any class is Replaced,
+// EffectiveEntries lays the convention lexicon over on the built-ins and lists the result entry by
+// entry. It applies the same merge as BuildRoleVocab and BuildClassVocab. A list's convention entries
+// add to its built-in ones. `replace: true` takes the built-in ones out, and they are listed with
+// Replaced. A class's ref-des prefixes are the exception, since a replace keeps them. When the
+// convention lists or excludes a built-in prefix under any class, the built-in entry is Replaced,
 // since the convention's wins. A nil over lists the built-ins alone.
 //
 // The order is net, pin, then class by name, each list's built-in entries before the convention's.
@@ -111,7 +112,7 @@ func EffectiveEntries(over *configpb.NamingLexicon) []LexiconEntry {
 		}
 	}
 	for i, nv := range roleVocabs(base, over) {
-		// The suffix pairs and the rail-inference switch close the net vocabularies.
+		// The suffix pairs and the rail-inference switch come after the last net vocabulary.
 		if i == 9 {
 			add("net.diff_pair", "pair", diffPairEntries(base.GetNet().GetDiffPair()), false, over.GetNet().GetDiffPair().GetReplace())
 			add("net.diff_pair", "pair", diffPairEntries(over.GetNet().GetDiffPair()), true, false)
@@ -238,13 +239,13 @@ func classNames(base, over *configpb.NamingLexicon) []string {
 	return names
 }
 
-// EffectiveLexicon states the lexicon a read with convention lexicon over uses as one convention
-// lexicon, every list written out whole with `replace: true`, so a convention carrying it reads a
-// design exactly as the merge does. The rail-inference switch is always stated.
+// EffectiveLexicon merges the convention lexicon over with the built-ins and writes the result as one
+// convention lexicon. Every list is written out whole with `replace: true`, so a convention holding it
+// reads a design exactly as the merge does. The rail-inference switch is always stated.
 func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	out := &configpb.NamingLexicon{Net: &configpb.NetNameVocab{}, Pin: &configpb.PinNameVocab{}, Class: map[string]*configpb.ClassVocab{}}
-	// Every list starts stated and empty, since a list left out of a convention keeps its built-ins,
-	// which would undo a replace that emptied it.
+	// Every list starts stated and empty. A list left out of a convention keeps its built-ins, and
+	// that would undo a replace that emptied it.
 	lists := map[string]*configpb.VocabPatterns{}
 	for _, nv := range roleVocabs(nil, nil) {
 		lists[nv.path] = &configpb.VocabPatterns{Replace: true}
@@ -314,6 +315,6 @@ func EffectiveLexicon(over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	return out
 }
 
-// RoleLeaf is the part of a net name the net vocabularies match: the last segment of a hierarchical
-// name, so /Power/VCC matches as VCC.
+// RoleLeaf returns the part of a net name that the net vocabularies match. That part is the last
+// segment of a hierarchical name, so /Power/VCC matches as VCC.
 func RoleLeaf(name string) string { return roleLeaf(name) }

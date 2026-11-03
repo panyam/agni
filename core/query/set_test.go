@@ -33,8 +33,8 @@ func TestParseQuerySetReadsEveryField(t *testing.T) {
 	}
 }
 
-// The preamble's rules reach every query, so a query naming a relation only the preamble defines
-// answers over the design rather than failing as unknown.
+// The preamble's rules reach every query. A query may name a relation defined only in the preamble,
+// and it answers over the design rather than failing as unknown.
 func TestCompiledQueryCarriesThePreamble(t *testing.T) {
 	s, err := ParseQuerySet([]byte(auditYAML))
 	if err != nil {

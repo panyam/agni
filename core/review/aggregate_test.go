@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// twoDesignAgg builds an Aggregate of the same one-area manifest run on two designs: item "1" is
-// automated (pass on d1, fail on d2), item "2" is not-automated (design-independent).
+// twoDesignAgg builds an Aggregate of the same one-area manifest run on two designs. Item "1" is
+// automated, and it passes on d1 and fails on d2. Item "2" is not-automated on both designs.
 func twoDesignAgg() Aggregate {
 	rep := func(design string, o1 Outcome) Report {
 		return Report{Manifest: "M", Design: design, Areas: []AreaResult{{

@@ -70,9 +70,9 @@ func TestOrthogonalRoutesConnect(t *testing.T) {
 	}
 }
 
-// TestConnectionDots asserts every wire attach point (each polyline's pin end) carries a dot shape,
-// so a reader can see where a wire actually starts and ends; the hub junction dot for wide
-// nets stays. Applies to every auto-layout route style.
+// TestConnectionDots asserts every wire attach point (each polyline's pin end) has a dot shape, so a
+// reader can see where a wire actually starts and ends. Wide nets still get the hub junction dot.
+// Applies to every auto-layout route style.
 func TestConnectionDots(t *testing.T) {
 	for _, layout := range []string{"grid", "orthogonal"} {
 		g, err := LayoutWith(chain(3), layout) // two 2-pin nets, previously dotless
@@ -124,8 +124,8 @@ func TestOrthogonalDeterministic(t *testing.T) {
 // spokes) are zero. The metric is the ticket's other deliverable.
 func TestBendsCounted(t *testing.T) {
 	d := &ir.Design{Name: "bend"}
-	// Two components joined by one net are not guaranteed to land on different rows and columns,
-	// so use three in a triangle of nets to force at least one true L.
+	// Two components joined by one net may share a row or a column. Three components in a triangle
+	// of nets force at least one true L.
 	for i := 1; i <= 3; i++ {
 		d.Components = append(d.Components, &ir.Component{RefDes: ref(i)})
 	}

@@ -28,8 +28,9 @@ func TestTierOf(t *testing.T) {
 }
 
 // An OPTIONAL read still declares its tier. Available treats optional reads as non-gating, which is
-// a different question from whether the author declared the rule touches the tier at all, and
-// conflating the two made the audit report esd-protection for reading a param tier its Reads names.
+// a different question from whether the author declared the rule touches the tier at all.
+// Conflating the two made the audit report esd-protection for reading a param tier, though its
+// Reads names that tier.
 func TestDeclaredTiersIncludesOptionalReads(t *testing.T) {
 	r := &Rule{
 		Reads:         []string{"net.names", "param.esd_rating"},
@@ -40,12 +41,12 @@ func TestDeclaredTiersIncludesOptionalReads(t *testing.T) {
 	}
 }
 
-// TestRecordingModelNotesEveryGatedAccessor is what keeps the audit from going blind.
+// TestRecordingModelNotesEveryGatedAccessor keeps the audit from going blind.
 //
 // The audit reports green both when every rule declares accurately and when the recorder silently
 // stopped noticing. Dropping one note() call from RecordingModel passes the whole audit suite,
 // because a rule reading that accessor then looks like a rule that never touched it. So the
-// recorder's own completeness is pinned here, accessor by accessor, rather than resting on the
+// recorder's own completeness is pinned here, accessor by accessor, rather than trusting the
 // audit that depends on it.
 func TestRecordingModelNotesEveryGatedAccessor(t *testing.T) {
 	for name, tc := range map[string]struct {

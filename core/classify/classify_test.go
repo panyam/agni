@@ -6,7 +6,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestClassifyPlaceholderPrefix covers a part's declared designator_prefix, which arrives as
+// TestClassifyPlaceholderPrefix covers a part's declared designator_prefix. The prefix arrives as
 // printed, and capture tools print the annotation-placeholder form ("C?", "REF**"). The tail is
 // trimmed before the table lookup. Without it every part-typed component on the Mentor EDIF corpus
 // classified unknown.
@@ -23,8 +23,7 @@ func TestClassifyPlaceholderPrefix(t *testing.T) {
 
 // TestStampFillsDeviceClasses is the left-shift proof. Stamp classifies every component once over
 // the read IR and writes the device_classes set, resolving part-type sections through the shared
-// index. A component the classifier cannot place (unknown) carries no tag, so the set stays
-// accurate.
+// index. A component the classifier cannot place (unknown) gets no tag, so the set is accurate.
 func TestStampFillsDeviceClasses(t *testing.T) {
 	d := &ir.Design{
 		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{
@@ -77,9 +76,9 @@ func TestClassesOf(t *testing.T) {
 	}
 }
 
-// TestMostSpecific checks that the specific class wins over its family tag so the Model's single
-// component.class stays stable as the set widens; a non-token-hint class (ic) still resolves; an
-// empty set is unknown.
+// TestMostSpecific checks that the specific class wins over its family tag, so the Model's single
+// component.class keeps its answer as the set widens. A non-token-hint class (ic) still resolves,
+// and an empty set is unknown.
 func TestMostSpecific(t *testing.T) {
 	cases := []struct {
 		in   []string
@@ -114,7 +113,7 @@ func equal(a, b []string) bool {
 // identical downstream. Found reconciling per-part coverage against a second tool on a real board,
 // where the whole residual in one direction was 15 thermistors, present in the netlist and invisible
 // (agni issue 627).
-// A net tie's value names a rail, so its ref-des prefix is what identifies it (agni issue 1253), and
+// A net tie's value names a rail, so its ref-des prefix identifies it (agni issue 1253), and
 // a clamp array sold as an IC is identified by its part family (agni issue 1257).
 func TestClassifyNetTieAndClampFamily(t *testing.T) {
 	if got := Classify(&ir.Component{RefDes: "NT2"}, &ir.PartType{Name: "NetTie_2"}); got != ClassNetTie {
@@ -145,7 +144,7 @@ func TestClassifyThermistor(t *testing.T) {
 	}
 }
 
-// The family tag is what makes the fix reach the analyses that motivated it. A thermistor is a
+// With the family tag, the fix reaches the analyses that motivated it. A thermistor is a
 // two-terminal resistor for every topological question, so test-point coverage and divider topology
 // must see it without each learning a new class name.
 func TestThermistorCarriesTheResistorFamily(t *testing.T) {
@@ -161,7 +160,7 @@ func TestThermistorCarriesTheResistorFamily(t *testing.T) {
 	}
 }
 
-// THE CONTROL, and the direction that is easy to get backwards. A family points from the specific to
+// THE CONTROL. The direction is easy to get backwards. A family points from the specific to
 // the general, so a thermistor is a resistor and a plain resistor is NOT a thermistor. Declaring the
 // family the other way round would pass every other test here while tagging 1110 resistors on a real
 // board as temperature sensors.
@@ -195,8 +194,8 @@ func TestNoInternalConnectorClass(t *testing.T) {
 }
 
 // A suppressor's part number decides it, whichever symbol it sits under (agni issue 934). On the
-// Jetson baseboard the TPD4E05U06 arrays are U parts and the PESD5Z5.0F and ESDA25P35 diodes carry only
-// their part number, so esd-protection saw no TVS on 59 lines that each touch one.
+// Jetson baseboard the TPD4E05U06 arrays are U parts, and the PESD5Z5.0F and ESDA25P35 diodes have
+// only their part number. So esd-protection saw no TVS on 59 lines that each touch one.
 func TestClassifyTVSFamilies(t *testing.T) {
 	mpn := func(ref, part string) *ir.Component {
 		return &ir.Component{RefDes: ref, Attributes: map[string]string{"MPN": part}}
@@ -212,7 +211,7 @@ func TestClassifyTVSFamilies(t *testing.T) {
 		{"a VBUS clamp", mpn("D7", "ESDA25P35-1U1M"), ClassTVS},
 		{"a power TVS on a supply input", mpn("D2", "PTVS26VS1UR,115"), ClassTVS},
 		{"a family named in the Value", &ir.Component{RefDes: "U3", Attributes: map[string]string{"Value": "TPD3E001DRLR"}}, ClassTVS},
-		// The bare word stays a diode-only refinement, since an IC's description mentioning ESD
+		// The bare word is still a diode-only refinement, since an IC's description mentioning ESD
 		// protection does not make it a suppressor.
 		{"an IC whose description mentions ESD", &ir.Component{RefDes: "U21", Attributes: map[string]string{"Description": "USB 3.2 hub with ESD protection"}}, ClassIC},
 		// A family prefix only moves a part within the families a suppressor can sit under.

@@ -9,8 +9,9 @@ import (
 )
 
 // TestRunStopsWhenItsContextIsDone covers agni issue 795 in the runner. The first rule cancels the
-// run, as a caller going away mid-check would; Run must not evaluate the second rule, and must return
-// the cancellation rather than the findings so far, which would read as a run that found nothing more.
+// run, as a caller going away mid-check would. Run must not evaluate the second rule. It must return
+// the cancellation rather than the findings so far, since those would read as a run that found
+// nothing more.
 func TestRunStopsWhenItsContextIsDone(t *testing.T) {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()

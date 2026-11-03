@@ -12,10 +12,11 @@ import (
 
 // --- provisional: a fail on unratified datasheet data ---
 
-// supplyModel builds a one-part design (U1, VDD power-in pin on a +5V rail) joined to a seeded spec
-// whose VDD abs-max is 4.6 V, so supply-exceeds-abs-max fires; method/confidence drive the data-trust.
-// tweak runs against the built spec before the model is constructed, for the cases that need a
-// document revision or a verification record rather than just a method and a confidence.
+// supplyModel builds a one-part design and joins it to a seeded spec. U1 has a VDD power-in pin on a
+// +5V rail. The spec gives VDD an abs-max of 4.6 V, so supply-exceeds-abs-max fires. method and
+// confidence drive the data-trust outcome. tweak runs against the built spec before the model is
+// constructed. Some cases need a document revision or a verification record, not just a method and a
+// confidence, and tweak sets those.
 func supplyModel(method string, confidence float64, tweak ...func(*parampb.PartSpec)) check.Model {
 	f := func(v float64) *float64 { return &v }
 	d := &ir.Design{
@@ -49,15 +50,15 @@ func supplyModel(method string, confidence float64, tweak ...func(*parampb.PartS
 
 // --- provisional: a fail on a verification the document has outrun ---
 
-// A human verification is pinned to the revision it was performed against, so when the vendor ships a
-// new one the confirmation stops being evidence about the document in hand. The value itself is
-// unchanged and its confidence is 1.0, so every signal that
-// existed before the verification record reports a stale value as the most trustworthy data in the
-// system, because a person really did check it once.
+// A human verification is pinned to the revision it was performed against. When the vendor ships a
+// new revision, the confirmation stops being evidence about the document in hand. The value itself is
+// unchanged, and its confidence is 1.0, because a person really did check it once. So every signal
+// that predates the verification record reports a stale value as the most trustworthy data in the
+// system.
 //
-// This is the case the ratified floor could not see on its own. param.MarkVerified raises confidence
-// to 1.0 and nothing lowers it afterwards, so a floor test alone rates a superseded verification as a
-// hard Fail forever.
+// The ratified floor could not see this case on its own. param.MarkVerified raises confidence to 1.0
+// and nothing lowers it afterwards, so a floor test alone rates a superseded verification as a hard
+// Fail forever.
 func TestStaleVerificationIsNotRatified(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
@@ -67,8 +68,8 @@ func TestStaleVerificationIsNotRatified(t *testing.T) {
 	}
 
 	// Verified against the revision the corpus holds, so a trustworthy fail. checkedRev is verified
-	// against first, then the corpus is moved to specHash. That is the same sequence a re-seed
-	// produces, and the only one that leaves a verification pinned to a revision nobody holds.
+	// against first, then the corpus is moved to specHash. A re-seed produces the same sequence. No
+	// other sequence leaves a verification pinned to a revision nobody holds.
 	verifiedAgainst := func(specHash, checkedHash string) func(*parampb.PartSpec) {
 		return func(s *parampb.PartSpec) {
 			param.MarkVerified(s.Parameters[0], "sri",
@@ -94,9 +95,9 @@ func TestStaleVerificationIsNotRatified(t *testing.T) {
 	}
 }
 
-// The converse, and the reason the fix is additive. A value nobody ever verified is judged exactly as
-// it was before verification records existed. If this regressed, every hand-seeded fixture in the
-// corpus would drop to Provisional at once.
+// This is the converse, and it shows why the fix is additive. If nobody ever verified a value, it is
+// judged exactly as it was before verification records existed. If this regressed, every hand-seeded
+// fixture in the corpus would drop to Provisional at once.
 func TestUnverifiedDataIsJudgedOnConfidenceAsBefore(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
@@ -111,9 +112,10 @@ func TestUnverifiedDataIsJudgedOnConfidenceAsBefore(t *testing.T) {
 	}
 }
 
-// TestProvisionalFromMockData checks that an item whose datasheet rule fires is Provisional when
-// the seed is mock or below the confidence floor (a HITL ratification item, not a trustworthy
-// fail), and a real Fail once the value is ratified (method "hand", high confidence).
+// TestProvisionalFromMockData checks an item whose datasheet rule fires. The item is Provisional when
+// the seed is mock or below the confidence floor. That makes it a HITL ratification item, not a
+// trustworthy fail. Once the value is ratified (method "hand", high confidence), the item is a real
+// Fail.
 func TestProvisionalFromMockData(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "abs-max", Title: "supply within abs max", Binding: Binding{Rule: "supply-exceeds-abs-max"}},
@@ -134,9 +136,9 @@ func TestProvisionalFromMockData(t *testing.T) {
 
 // --- computed-n/a: a device-class-gated item whose class is absent ---
 
-// TestComputedNAByDeviceClass checks that an item that applies_to_class a class no component
-// carries resolves to computed-n/a (the mechanism determined it does not apply); with a matching
-// part it runs normally.
+// TestComputedNAByDeviceClass checks an item whose applies_to_class names a class that no component
+// carries. The item resolves to computed-n/a, because the mechanism determined it does not apply.
+// With a matching part it runs normally.
 func TestComputedNAByDeviceClass(t *testing.T) {
 	item := Item{ID: "clk", Title: "crystal load caps", Binding: Binding{
 		Rule: "crystal-load-caps", AppliesToClass: []string{"crystal", "ceramic_resonator"},
@@ -166,8 +168,8 @@ func TestComputedNAByDeviceClass(t *testing.T) {
 
 // --- needs-design-intent: an intent-bound item with no declaration ---
 
-// TestNeedsDesignIntent checks that an item bound to an intent/ rule with no --intent-path
-// declaration (so the rule is absent from the catalog) reads needs-design-intent, not the
+// TestNeedsDesignIntent checks an item bound to an intent/ rule when no --intent-path declaration
+// was supplied. The rule is then absent from the catalog. The item reads needs-design-intent, not the
 // misleading not-automated.
 func TestNeedsDesignIntent(t *testing.T) {
 	man := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
@@ -177,7 +179,8 @@ func TestNeedsDesignIntent(t *testing.T) {
 	if r.Outcome != NeedsDesignIntent {
 		t.Errorf("intent-bound item, no declaration: want needs-design-intent, got %s", r.Outcome)
 	}
-	// A non-intent unshipped rule stays not-automated (the distinction is real, not a blanket relabel).
+	// A non-intent unshipped rule is still not-automated. The distinction is real, not a blanket
+	// relabel.
 	man2 := Manifest{Name: "t", Areas: []Area{{Name: "A", Items: []Item{
 		{ID: "x", Title: "some future check", Binding: Binding{Rule: "not-a-real-rule"}},
 	}}}}
@@ -201,14 +204,15 @@ func TestTallyCountsDataTrustStates(t *testing.T) {
 	}
 }
 
-// TestMultiCitationRatifiedOnlyIfEveryCitationIs pins the semantics WS3-028 forced when
-// Finding.DatasheetProv became a slice. A finding is unratified if ANY of its citations fails the
-// floor, because the conclusion rests on every value it joined and is only as trustworthy as the
-// weakest one.
+// TestMultiCitationRatifiedOnlyIfEveryCitationIs pins how a finding with several citations is
+// ratified. Finding.DatasheetProv became a slice in WS3-028, which needed this rule. A finding is
+// unratified if ANY of its citations fails the floor. The conclusion depends on every value it
+// joined, so it is only as trustworthy as the weakest one.
 //
-// The mixed case is the one that matters. A connection-aware finding whose abs-max was hand-read but
-// whose output voltage came from a low-confidence extraction is exactly half-evidenced; rating it a
-// hard Fail on the strength of the good citation alone is the false-fail this axis exists to prevent.
+// The mixed case matters most. Imagine a connection-aware finding with a hand-read abs-max and an
+// output voltage from a low-confidence extraction. It is exactly half-evidenced. Rating it a hard
+// Fail on the strength of the good citation alone is a false-fail, and this axis exists to prevent
+// it.
 //
 // Note this quantifier is deliberately the OPPOSITE of allUnratified's. Across findings one
 // trustworthy finding is enough to make an item a real Fail, because they are independent claims.

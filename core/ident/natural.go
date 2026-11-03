@@ -9,9 +9,8 @@ import (
 // U10.3 < U10.12. Text runs compare case-insensitively, and the plain strings break a tie, so R01
 // and R1 still order the same way every time.
 //
-// It is the order a reader expects a list of ref-des, pins or nets in, and it lives here rather than
-// in service so core/check can order evidence the way Tabulate orders a name column (agni issue
-// 1165). The query panel sorts with its own copy, held to this one by testdata/natural_twin.json.
+// A reader expects a list of ref-des, pins or nets in this order. It lives here rather than in
+// service so core/check can order evidence the way Tabulate orders a name column (agni issue 1165). The query panel sorts with its own copy, held to this one by testdata/natural_twin.json.
 func CompareNatural(x, y string) int {
 	a, b := x, y
 	for a != "" && b != "" {
