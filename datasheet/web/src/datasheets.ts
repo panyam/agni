@@ -1,7 +1,7 @@
 // Entry point for the extraction workbench (the /datasheets page, WS13-006). A tree selection loads
-// a datasheet into the region viewer, and the open datasheet lives in the URL
-// (/datasheets/files/<mount>/<path>) so a refresh or shared link reopens it. The page shapes are in
-// docsite/content/architecture/web-app.md#the-pages.
+// a datasheet into the region viewer. The URL holds the open datasheet
+// (/datasheets/files/<mount>/<path>), so a refresh or a shared link reopens it. The page shapes are
+// in docsite/content/architecture/web-app.md#the-pages.
 
 import { BaseComponent, EventBus, LifecycleController, type LCMComponent } from "@panyam/tsappkit";
 import { dsTreeIsland, type DsTreeView } from "./dstree.js";
@@ -29,7 +29,7 @@ class DatasheetsRoot extends BaseComponent {
   // view/tree are exposed so the boot code can reach the islands once they init.
   view: RegionView | null = null;
   tree: DsTreeView | null = null;
-  // open is what a deep-link restore must drive. Calling view.load + tree.setState directly skips
+  // A deep-link restore must go through open. Calling view.load + tree.setState directly skips
   // whatever open adds, such as recording the datasheet as recent (#318).
   open: ((mount: string, path: string) => void) | null = null;
 

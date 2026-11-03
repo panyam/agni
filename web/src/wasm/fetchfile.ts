@@ -35,8 +35,8 @@ export interface FetchDone {
 export const STALL_MS = 30_000;
 export const ATTEMPTS = 3;
 
-// StalledError is the error fetchFile throws when every attempt stalled, naming the file, so whatever
-// reports the failure can say which file never arrived.
+// StalledError is what fetchFile throws when every attempt stalled. It names the file, so a caller
+// reporting the failure can say which file never arrived.
 export class StalledError extends Error {
   constructor(
     readonly url: string,

@@ -3,12 +3,12 @@
 // The tutorial gateway is opened at its own `/designs/tut/...` URL twice: once on the server engine,
 // once with `?engine=wasm`, where the page loads agni.wasm into a Web Worker, brings the design's
 // files over from the server, and routes every analysis client to the worker. Both runs must find
-// the same thing. On wasm, the request log is the direct check that the analysis happened in the
-// page: the only API calls reaching the network are WorkspaceService's, which list the design's
-// files, and the bytes come from /raw/.
+// the same thing. On wasm, the request log checks directly that the analysis happened in the page.
+// The only API calls reaching the network are WorkspaceService's, which list the design's files, and
+// the bytes come from /raw/.
 //
-// What the engine answers is held to the server's, rule by rule, by TestWasmEngineAnswersAsTheServerDoes
-// in Go. This asserts the page drives it.
+// TestWasmEngineAnswersAsTheServerDoes in Go holds the engine's answers to the server's, rule by
+// rule. This spec asserts that the page drives the engine.
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser, Page } from "playwright-core";
@@ -39,7 +39,7 @@ async function openAndCheck(page: Page, query: string): Promise<{ rows: string[]
   await page.goto(`${base()}${gateway}${query}`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".query textarea.query-text", { timeout: 60_000 });
   await expect.poll(() => page.locator("#readout").textContent(), { timeout: 60_000 }).not.toBe("no sheet loaded");
-  // Run stays disabled until the rule catalog arrives, and a click waits for it to enable (agni 868).
+  // Run is disabled until the rule catalog arrives, and a click waits for it to enable (agni 868).
   await page.click(".checks-run", { timeout: 60_000 });
   await page.waitForSelector(".check-locate", { timeout: 60_000 });
   const rows = await page.locator(".check-locate").allTextContents();
@@ -119,7 +119,7 @@ describe("one design under both engines", () => {
 });
 
 // agni issue 1072: the viewer opens only a design the Load page read, so a link straight to /view is
-// read on /load first and lands where it pointed, and once read a reload opens it directly.
+// read on /load first and then opens where it pointed. Once read, a reload opens it directly.
 describe("a link to a design this browser has not read", () => {
   it("goes through the Load page, lands on the address it named, and a reload skips the Load page", async () => {
     await withPage(browser, async (page) => {
@@ -128,7 +128,7 @@ describe("a link to a design this browser has not read", () => {
         if (f === page.mainFrame()) pages.push(new URL(f.url()).pathname);
       });
       // A trace link carries its question in the address, which the viewer keeps as its own state, so
-      // landing where it pointed shows as the same question in the final address.
+      // arriving where it pointed shows as the same question in the final address.
       await page.goto(`${base()}${gateway}?engine=wasm&trace=R1.1%2CR1.2`, { waitUntil: "domcontentloaded" });
       await page.waitForSelector(".checks-run", { timeout: 60_000 });
       await expect.poll(() => new URL(page.url()).searchParams.get("trace"), { timeout: 60_000 }).toBe("R1.1,R1.2");
@@ -209,7 +209,7 @@ describe("cancelling Run checks", () => {
   });
 
   // On the browser engine the run is on the jobs lane, and the jobs worker fetches the design's files
-  // before it answers, which is where the run is held.
+  // before it answers. The test holds the run at that fetch.
   it("stops a run on the browser engine, and the next run answers", async () => {
     await withPage(browser, async (page) => {
       const errors: string[] = [];

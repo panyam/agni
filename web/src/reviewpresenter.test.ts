@@ -12,7 +12,7 @@ import type { FindingItem } from "./findings.js";
 import { LocateReason } from "./gen/agni/v1/checks/checks_pb.js";
 
 const BOARD = artifactUri("m", "proj/board.edn");
-// HOUSE is the overlay the convention bar's "house" vocabulary rides on, as far as a snapshot name tells.
+// HOUSE is the overlay for the convention bar's "house" vocabulary, as far as a snapshot name tells.
 const HOUSE = { ignoreProject: false, config: { conventions: { name: "house" } } } as unknown as OverlayConfig;
 
 // doc builds a run document as the server returns it, a Review resource wrapping a CheckResults.
@@ -168,7 +168,7 @@ describe("review presenter — loading", () => {
     expect(s.storeConfigured).toBe(true);
   });
 
-  // The filter is what makes the panel show THIS board's history rather than every board's. Getting
+  // The filter makes the panel show THIS board's history rather than every board's. Getting
   // it wrong would show another design's verdicts under this one's name.
   it("filters the listing to the open design", async () => {
     const h = harness();
@@ -207,7 +207,7 @@ describe("review presenter — loading", () => {
   });
 
   // Switching designs must not leave the previous board's verdicts on screen. They would look like
-  // this design's, which is the worst possible way to be wrong in a review panel.
+  // this design's. A review panel cannot be wrong in a worse way.
   it("clears the previous design's runs on switch", async () => {
     const h = harness();
     await h.presenter.openFile("m", "proj/board.edn");
@@ -228,7 +228,7 @@ describe("review presenter — loading", () => {
 
   // A regression. The panel was wired but the CLIENT was not, and the load path asserted the client
   // was present. Opening a design then threw a TypeError that surfaced as "Cannot read properties of
-  // undefined" in the panel's error banner, which tells a user nothing about what is actually wrong.
+  // undefined" in the panel's error banner. That message tells a user nothing about what is wrong.
   // A host that wires a view without its client should degrade to an inert panel, not a crash.
   it("stays inert when the panel is wired but the client is not", async () => {
     const h = harness({ wireClients: false });
@@ -246,8 +246,8 @@ describe("review presenter — creating", () => {
     await h.presenter.createReview();
     expect(h.getReviewManifest).toHaveBeenCalledWith({ uri: artifactUri("m", "proj/review.yaml") });
     expect(h.createReview).toHaveBeenCalledWith({
-      // No project client in this harness, so the run stores unparented, which is the right answer
-      // for a design that resolves to none.
+      // No project client in this harness, so the run stores unparented. That is correct for a
+      // design that resolves to no project.
       parent: "",
       snapshot: snapName(BOARD),
       manifest: { name: "Sample Board review", areas: [] },
@@ -390,8 +390,8 @@ describe("naming convention", () => {
   });
 
   // A failed resolve must leave the PREVIOUS vocabulary in effect and say so. Half-applying it would
-  // put the indicator and the findings into different worlds, which is the exact confusion the
-  // indicator exists to prevent.
+  // put the indicator and the findings into different worlds. The indicator exists to prevent
+  // exactly that confusion.
   it("keeps the previous vocabulary when a resolve fails", async () => {
     const h = convHarness();
     await h.presenter.openFile("m", "proj/board.edn");
@@ -441,8 +441,8 @@ describe("naming convention", () => {
   });
 
   // The Query panel must answer under the SAME vocabulary the bar names. Before this, the bar could
-  // say "acme" while query answered under the server's default, the over-claim the bar exists
-  // to prevent, and the one surface whose entire purpose is asking what the engine believes.
+  // say "acme" while query answered under the server's default. The bar exists to prevent that
+  // over-claim. And the Query panel's entire purpose is asking what the engine believes.
   it("carries the vocabulary on an ad-hoc query", async () => {
     const h = convHarness();
     await h.presenter.openFile("m", "proj/board.edn");
@@ -475,8 +475,8 @@ describe("naming convention", () => {
   });
 });
 
-// agni issue 1030: Save report writes the run shown, as the server returned it, through the rpc
-// `agni review --format html` calls, so nothing is scored again and the two pages match.
+// agni issue 1030: Save report writes the run shown, as the server returned it. It goes through the
+// same rpc as `agni review --format html`, so nothing is scored again and the two pages match.
 describe("saving a checklist run", () => {
   it("sends the selected run itself, with links into this viewer, and downloads the page", async () => {
     const h = harness();

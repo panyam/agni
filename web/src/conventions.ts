@@ -9,8 +9,8 @@ export interface ConventionState {
   choices: ChecklistOption[];
   // active is the ref currently applied, "" when the server's default is in effect.
   active: string;
-  // name is the resolved convention's own `name:`, which is also the namespace its rules appear
-  // under, so a finding from `acme/signal-net-naming` is readable. "" when none is applied.
+  // name is the resolved convention's own `name:`. Its rules appear under that namespace, so a
+  // finding from `acme/signal-net-naming` is readable. "" when none is applied.
   name: string;
   // busy is true while a convention is being resolved.
   busy: boolean;
@@ -22,8 +22,8 @@ export interface ConventionBarView {
   setState: (s: ConventionState) => void;
 }
 
-// EDITED_REF is the bar's active ref for a convention the Lexicon panel applied, which is a value with
-// no file behind it.
+// EDITED_REF is the bar's active ref when the Lexicon panel applied a convention. That convention is
+// a value with no file behind it.
 export const EDITED_REF = "lexicon:edited";
 
 export function emptyConvention(): ConventionState {
@@ -57,13 +57,13 @@ export function activeLabel(s: ConventionState, staticHost = false): string {
 
 // conventionError summarizes a resolve failure for the bar, keeping the server's own message (#171).
 // The picker offers every YAML beside the design, so choosing a design-intent or project descriptor
-// is an EXPECTED path, and the server's answer ("field modules not found in type naming.Config", with
-// the line) is the only clue which files are the right kind.
+// is an EXPECTED path. The server answers with a message and its line, such as "field modules not
+// found in type naming.Config". That answer is the only clue to which files are the right kind.
 //
-// Three shapes get flattened. Connect prefixes "[invalid_argument] " and the server's text then
-// begins "invalid argument: " because it wraps a sentinel, and both name the status rather than the
-// problem. A YAML unmarshal error's first line is only a header ("unmarshal errors:"), so the first
-// detail line under it is appended. The full text stays on the title.
+// Three shapes get flattened. Connect prefixes "[invalid_argument] ". The server's text then begins
+// "invalid argument: ", because it wraps a sentinel. Both name the status rather than the problem. A
+// YAML unmarshal error's first line is only a header ("unmarshal errors:"), so the first detail line
+// under it is appended. The title keeps the full text.
 export function conventionError(raw: string): string {
   const msg = raw
     .replace(/^\[[a-z_]+\]\s*/i, "")

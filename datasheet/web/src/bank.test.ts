@@ -97,7 +97,7 @@ describe("bank", () => {
     const mine = uiToSet("d", "me", { userRegions: [{ id: "u1", kind: "user", label: "mine", bbox: bb(0, 0, 1, 1), page: 1 }], types: {} });
     const theirs = uiToSet("d", "bob", { userRegions: [{ id: "u1", kind: "user", label: "bobbox", bbox: bb(0, 0, 1, 1), page: 2 }], types: { "p1.t1": "table" } });
     const others = otherUserRegions([mine, theirs], "me");
-    expect(others).toHaveLength(1); // only bob's drawn box: not mine, not bob's doc-IR type tag
+    expect(others).toHaveLength(1); // only bob's drawn box, not mine and not bob's doc-IR type tag
     expect(others[0].id).toBe("bob:u1"); // namespaced so it can't collide with my own u1
     expect(others[0].label).toContain("bob");
     expect(others[0].page).toBe(2);
@@ -118,7 +118,7 @@ describe("bank", () => {
     expect(L.text).toBe(true);
     expect(L.others).toBe(false);
     expect(L.table).toBe(true);
-    // an older/partial persisted value must not read a missing key as false:
+    // an older/partial persisted value must not read a missing key as false.
     localStorage.setItem("agni.ds.layers", JSON.stringify({ text: true }));
     const L2 = loadLayers();
     expect(L2.text).toBe(true);
@@ -142,7 +142,7 @@ describe("bank", () => {
     const p = newParameter(fields(), region, 4, spec.docs[0].id);
     expect(spec.docs[0].id).toBe("LM1117");
     expect(spec.docs[0].locator).toBe("ti/LM1117/LM1117.pdf");
-    expect(p.prov?.docRef).toBe(spec.docs[0].id); // the foreign key param.Validate enforces
+    expect(p.prov?.docRef).toBe(spec.docs[0].id); // param.Validate enforces this foreign key
   });
 
   it("a text-only condition is captured but stays non-comparable (coverage COMPLETE, no eq)", () => {
@@ -250,12 +250,12 @@ describe("bank pin authoring", () => {
     expect(p.pinRefs).toEqual(["vccb"]);
   });
 
-  // The editor's own guard, mirroring the structural half of param.Validate so the author sees a
-  // problem before saving rather than as a rejected write.
+  // The editor has its own guard. It mirrors the structural half of param.Validate, so the author
+  // sees a problem before saving rather than as a rejected write.
   
-  // The two-NC-pins case, which is the real TXB0104 shape. A part prints one name on several
-  // terminals, and those terminals need distinct ids. Deriving the id from the name alone walks the
-  // author into a duplicate that blocks the save, on exactly the part this contract exists for.
+  // This is the two-NC-pins case, the real TXB0104 shape. A part prints one name on several
+  // terminals, and those terminals need distinct ids. Deriving the id from the name alone would
+  // give the author a duplicate that blocks the save. This contract exists for exactly that part.
   it("derivePinId suffixes rather than colliding when a name repeats", () => {
     expect(derivePinId("VCCA", [])).toBe("vcca");
     expect(derivePinId("NC", ["nc"])).toBe("nc2");
@@ -288,8 +288,8 @@ describe("bank relation authoring", () => {
     ...over,
   });
 
-  // Same argument as newPin, since param.Validate requires provenance on a relation, so authoring
-  // one has to stamp the region it was read in or the draft can never be seeded.
+  // The argument is the same as for newPin. param.Validate requires provenance on a relation, so
+  // authoring one has to stamp the region it was read in, or the draft can never be seeded.
   it("newRelation stamps region provenance and the only admitted kind", () => {
     const r = newRelation(relFields(), region, 4, "LM1117");
     expect(r.subjectPinRef).toBe("vcca");
@@ -354,11 +354,11 @@ describe("verification on hand transcription", () => {
     expect(p.verification?.docContentHash).toBe("sha256:relQ");
     expect(p.verification?.docRevision).toBe("SNOS412Q - REVISED JANUARY 2023");
     expect(p.verification?.at).toBe("2026-08-14");
-    expect(p.prov?.confidence).toBe(1); // the older signal stays in step
+    expect(p.prov?.confidence).toBe(1); // the older signal is kept in step
   });
 
-  // A confirmation nothing can invalidate is the failure the record exists to prevent, so it is not
-  // written at all. The value still saves, unverified.
+  // The record exists to prevent a confirmation that nothing can invalidate, so such a confirmation
+  // is not written at all. The value still saves, unverified.
   it("refuses to verify against a document whose revision is not recorded", () => {
     const spec = emptySpec("x/y.pdf", "y", "");
     expect(handVerification(spec.docs[0], "alice", "2026-08-14")).toBeUndefined();
@@ -374,8 +374,9 @@ describe("verification on hand transcription", () => {
     expect(handVerification(spec.docs[0], "", "2026-08-14")).toBeUndefined();
   });
 
-  // A spec saved before the workbench recorded revisions would otherwise take a verification that
-  // reads "unknown" forever, which the review layer distrusts while a reader sees a human's name.
+  // Imagine a spec saved before the workbench recorded revisions. Without this it would take a
+  // verification that reads "unknown" forever. The review layer distrusts that verification, while
+  // a reader sees a human's name on it.
   it("backfills the revision onto a spec that predates recording one", () => {
     const spec = emptySpec("x/y.pdf", "y", "");
     expect(adoptDocRevision(spec, "sha256:new")).toBe(true);
@@ -383,7 +384,7 @@ describe("verification on hand transcription", () => {
   });
 
   // A disagreement is a real re-seed. Adopting it would silently re-validate every verification
-  // pinned to the old revision, which is the decay the mechanism exists to expose.
+  // pinned to the old revision. The mechanism exists to expose that decay.
   it("never overwrites a recorded revision that disagrees", () => {
     const spec = emptySpec("x/y.pdf", "y", "sha256:relQ");
     expect(adoptDocRevision(spec, "sha256:relR")).toBe(false);

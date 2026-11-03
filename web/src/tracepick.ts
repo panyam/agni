@@ -1,36 +1,36 @@
 import type { Inventory } from "./properties.js";
 import { compareNatural } from "./query.js";
 
-// TracePick is one entry a trace endpoint's picker offers. value is what choosing it puts in the field:
-// a bare ref-des for a component, which then lists that component's pins, or "U7.3" for a pin, which
-// is an endpoint. detail is the grey text beside it.
+// TracePick is one entry in a trace endpoint's picker. Choosing it puts value in the field. A
+// component's value is a bare ref-des, and choosing it then lists that component's pins. A pin's
+// value is "U7.3", and it is an endpoint. detail is the grey text beside it.
 export interface TracePick {
   value: string;
   kind: "component" | "pin";
   detail: string;
 }
 
-// TracePicks is the open design's parts and pins as the pickers read them, built once per design from
-// the inventory Properties already holds, so picking asks the engine nothing. examples are two real
-// pins for the fields' placeholders, empty strings when the design has none.
+// TracePicks holds the open design's parts and pins for the pickers. Properties already holds an
+// inventory, and TracePicks is built from it once per design, so picking asks the engine nothing.
+// examples are two real pins for the fields' placeholders, empty strings when the design has none.
 export interface TracePicks {
   components: { ref: string; detail: string }[];
   pins: Map<string, { pin: string; name: string; net: string }[]>;
   examples: [string, string];
 }
 
-// PICK_LIMIT caps the entries a picker lists, since a large board has tens of thousands of pins and a
-// reader narrows by typing rather than by scrolling.
+// PICK_LIMIT caps how many entries a picker lists, since a large board has tens of thousands of
+// pins and a reader narrows by typing rather than by scrolling.
 export const PICK_LIMIT = 50;
 
 export function emptyPicks(): TracePicks {
   return { components: [], pins: new Map(), examples: ["", ""] };
 }
 
-// tracePicks indexes the inventory for the pickers. Only components with a connected pin are listed,
-// since a trace starts and ends at a pin on a net. A KiCad power or flag symbol (#PWR01, #FLG01) is
-// left out, because it is a connectivity marker rather than a part, which is how the engine reads a
-// leading # (check.IsVirtualRef).
+// tracePicks indexes the inventory for the pickers. Only components with a connected pin are
+// listed, since a trace starts and ends at a pin on a net. A KiCad power or flag symbol (#PWR01,
+// #FLG01) is left out, because it is a connectivity marker rather than a part. The engine reads a
+// leading # the same way (check.IsVirtualRef).
 export function tracePicks(inv: Inventory | null): TracePicks {
   if (!inv) return emptyPicks();
   const refs = [...inv.pinsOf.keys()].filter((r) => !r.startsWith("#")).sort(compareNatural);
@@ -59,11 +59,11 @@ export function matchRank(typed: string, text: string): number {
   return i === t.length ? 2 : -1;
 }
 
-// pickCandidates is what a picker lists for the text typed so far, best match first and at most
+// pickCandidates lists a picker's entries for the text typed so far, best match first and at most
 // PICK_LIMIT. Text naming a component and a dot ("U7." or "u7.sd") lists that component's pins,
 // matched on designator and function name. Other text matches components by ref-des and pins by
-// "ref.pin" or by function name, so "SDA" finds the pins a datasheet calls SDA. Empty text lists the
-// components, which is where a reader who does not know a name starts.
+// "ref.pin" or by function name, so "SDA" finds every pin whose datasheet name is SDA. Empty text
+// lists the components. A reader who does not know a name starts there.
 export function pickCandidates(picks: TracePicks, typed: string): TracePick[] {
   const t = typed.trim();
   const pinPick = (ref: string, p: { pin: string; name: string; net: string }): TracePick => ({

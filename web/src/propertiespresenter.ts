@@ -1,10 +1,10 @@
 // PropertiesPresenter keeps what the Properties panel describes and pushes it (agni issue 902).
 //
 // It is its own presenter rather than more state on ViewerPresenter, which already holds too much
-// (agni issue 390). It listens on the channels the viewer presenter already fans out (sheets, the
-// summary line, the conversion report, findings, the datasheet join) and makes two reads of its own:
-// the design's IR under INVENTORY_PATHS once per open design, and where a selected part or net is
-// drawn, once per selection.
+// (agni issue 390). It listens on channels the viewer presenter already fans out, which are sheets,
+// the summary line, the conversion report, findings and the datasheet join. It also makes two reads
+// of its own. It reads the design's IR under INVENTORY_PATHS once per open design, and it reads
+// where a selected part or net is drawn, once per selection.
 
 import type { MessageInitShape } from "@bufbuild/protobuf";
 import type { ConversionReport, GetDesignRequestSchema, GetDesignResponse } from "./gen/agni/v1/webapi/design_pb.js";
@@ -26,15 +26,16 @@ import type { SubjectRef } from "./router.js";
 import { artifactUri } from "@agni/web-shared/uri.js";
 
 export interface PropertiesSources {
-  // getDesign is DesignService.GetDesign of the design uri names, on whichever engine serves the page,
-  // asking for readMask's paths. The source names the snapshot (agni issue 1061).
+  // getDesign calls DesignService.GetDesign for the design that uri names, on whichever engine
+  // serves the page, and asks for readMask's paths. The source names the snapshot (agni issue
+  // 1061).
   getDesign: (uri: string, readMask: string[]) => Promise<GetDesignResponse>;
   // drawn reads what the sheet on screen draws, or null when no drawing is on screen.
   drawn: () => { refs: string[]; nets: string[] } | null;
   // drawnOn asks the engine which sheets draw a component or a net. Absent, the panel lists none.
   drawnOn?: (uri: string, sel: Selection) => Promise<string[]>;
-  // ask runs a query on the engine serving the page and returns its rows' cells, which is how the
-  // inventory gets the pin names and test points the engine decides (SERVED_QUERIES). Absent, or
+  // ask runs a query on the engine serving the page and returns its rows' cells. The inventory gets
+  // its pin names and test points this way, as the engine decides them (SERVED_QUERIES). Absent, or
   // failing, the panel shows no pin names and no test points rather than guessing them.
   ask?: (uri: string, query: string) => Promise<string[][]>;
   // check asks the selected rules about one net, part or pin alone (agni issue 897), null when no rule
@@ -51,8 +52,8 @@ export interface PropertiesSources {
   onSelect?: (focus: Focus) => void;
 }
 
-// subjectOf is the subject a selection's checks are asked about, or null for a bus, which no scope
-// covers.
+// subjectOf returns the subject to ask a selection's checks about. It returns null for a bus, since
+// no scope covers one.
 export function subjectOf(sel: Selection): SubjectRef | null {
   switch (sel.kind) {
     case "net":
@@ -77,16 +78,17 @@ export class PropertiesPresenter {
   private findings: FindingsState | null = null;
   private datasheet: DatasheetJoin | null = null;
   private inventory: Inventory | null = null;
-  // inventoryKey is the design the inventory (or its fetch in flight) belongs to, so a slow answer
-  // for a design the reader has since left never lands on the new one.
+  // inventoryKey names the design that owns the inventory or the fetch in flight. A slow answer can
+  // arrive after the reader has left its design, and the key keeps it off the new one.
   private inventoryKey = "";
   private focus: Focus = { level: "design" };
   private questions: EntityQueryItem[] = [];
   // located is where the selected entity is drawn, for the selection it was asked for, so an answer
   // that arrives after the reader moved on is dropped rather than shown against the new selection.
   private located: { sel: Selection; sheets: string[] } | null = null;
-  // checked is the selection's own check answer, for the selection and the rules it was asked about,
-  // so an answer for a selection the reader left, or under rules since changed, is never shown.
+  // checked is the selection's own check answer, kept with the selection and the rules it was asked
+  // about. An answer is never shown once the reader has left its selection or the rules have
+  // changed.
   private checked: { sel: Selection; key: string; value: SelectionChecks } | null = null;
 
   constructor(
@@ -95,8 +97,8 @@ export class PropertiesPresenter {
   ) {}
 
   // setSheets is the sheet channel. A new design resets the selection to the design and starts its
-  // inventory read. A sheet focus follows the sheet on screen, since it names the sheet being looked
-  // at; an entity focus stays put, since it names a thing rather than a place.
+  // inventory read. A sheet focus follows the sheet on screen, since it names the sheet being
+  // looked at. An entity focus does not move, since it names a thing rather than a place.
   setSheets(s: { mount: string; path: string; sheets: { id: string; name: string }[]; activeId: string }): void {
     const changed = s.mount !== this.mount || s.path !== this.path;
     this.mount = s.mount;
@@ -118,8 +120,8 @@ export class PropertiesPresenter {
     this.push();
   }
 
-  // reloadInventory reads the inventory again after the vocabulary changed, since a net's roles and a
-  // part's classes are stamped by the read that convention names.
+  // reloadInventory reads the inventory again after the vocabulary changed. The read stamps a net's
+  // roles and a part's classes under the convention it names.
   reloadInventory(): void {
     this.checked = null;
     void this.loadInventory();
@@ -139,10 +141,10 @@ export class PropertiesPresenter {
     const runEnded = (this.findings?.running ?? false) && !state.running;
     this.findings = state;
     this.push();
-    // The rule selection or the vocabulary may have changed with it, which the answer was asked under.
-    // A failed answer is asked again when a run ends, since a cancelled run ends the worker a
-    // selection's check was queued on (agni issue 918); a design that cannot be checked at all fails
-    // once per run rather than on every push.
+    // The answer was asked under a rule selection and a vocabulary, and either may have changed
+    // with this push. A failed answer is asked again when a run ends. A selection's check is queued
+    // on a worker, and a cancelled run ends that worker (agni issue 918). A design that cannot be
+    // checked at all fails once per run rather than on every push.
     const failedByRun = runEnded && this.checked?.value.state === "failed";
     if (this.focus.level === "entity" && this.checked && (this.checked.key !== this.checkKey() || failedByRun)) void this.check(this.focus.sel);
   }
@@ -152,7 +154,7 @@ export class PropertiesPresenter {
     this.push();
   }
 
-  // setQuestions takes the served questions about a selection, which the Ask rows list.
+  // setQuestions takes the served questions about a selection, for the Ask rows to list.
   setQuestions(questions: EntityQueryItem[]): void {
     this.questions = questions;
     this.push();
@@ -186,8 +188,8 @@ export class PropertiesPresenter {
     return this.focus;
   }
 
-  // pinNets is a part's pins and the nets they land on, from the inventory this panel read, so an area
-  // can name every net it touches (agni issue 904). Empty until the inventory arrives.
+  // pinNets lists a part's pins and the nets they connect to, from this panel's inventory, so an
+  // area can name every net it touches (agni issue 904). Empty until the inventory arrives.
   pinNets(ref: string): { pin: string; net: string }[] {
     return this.inventory?.pinsOf.get(ref) ?? [];
   }
@@ -243,15 +245,15 @@ export class PropertiesPresenter {
     this.push();
   }
 
-  // checks is the selection's check answer for the panel: undefined where nothing asks, so the panel
-  // falls back to the run's findings.
+  // checks returns the selection's check answer for the panel. It is undefined where nothing asks,
+  // and the panel then falls back to the run's findings.
   private checks(): SelectionChecks | undefined {
     if (this.focus.level !== "entity" || !this.checked) return undefined;
     return sameSelection(this.checked.sel, this.focus.sel) ? this.checked.value : undefined;
   }
 
-  // drawnOn is what the panel says about where the selection is drawn: nothing without an engine to
-  // ask, null while the answer is on its way.
+  // drawnOn says where the selection is drawn, for the panel. It is undefined without an engine to
+  // ask, and null while the answer is on its way.
   private drawnOn(): string[] | null | undefined {
     if (!this.src.drawnOn) return undefined;
     if (this.focus.level !== "entity") return null;

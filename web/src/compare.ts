@@ -2,7 +2,7 @@
 // mode, so there is no hidden state to echo, cancel with Escape, or leak when the open design
 // changes (WS9-049 phase 3).
 //
-// Like the panels menu, this is shell chrome rather than presenter state, so it stays a plain DOM
+// Like the panels menu, this is shell chrome rather than presenter state, so it is a plain DOM
 // widget.
 
 export interface CompareControl {

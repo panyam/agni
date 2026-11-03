@@ -2,10 +2,11 @@
 
 import type { Page } from "playwright-core";
 
-// growQueryPanel enlarges the docked query panel by dragging the sash above it, as a reader would, to
-// 42% of the window's height. Moving the panel's overlay instead (the first version of this helper)
-// left the real boundary, and the sash dockview draws on it, where the layout put it, so once the
-// panel opened taller the sash sat across the result rows and took their clicks (agni issue 759).
+// growQueryPanel enlarges the docked query panel to 42% of the window's height. It drags the sash
+// above the panel, as a reader would. The first version of this helper moved the panel's overlay
+// instead. That left the real boundary where the layout put it, and dockview draws the sash on that
+// boundary. So once the panel opened taller, the sash sat across the result rows and took their
+// clicks (agni issue 759).
 export async function growQueryPanel(page: Page): Promise<void> {
   const sash = await page.evaluate(() => {
     const tab = Array.from(document.querySelectorAll(".tab")).find((t) => t.textContent?.trim().startsWith("Query"));

@@ -1,7 +1,7 @@
 // dock.ts is the dockable panel shell (WS9-021). dockview-core drives the viewer layout, and each
 // Solid island mounts once at boot in a server-rendered hole that the dock adopts. The holes live in
-// a hidden "park" container; createComponent moves a hole into its dockview panel and dispose parks
-// it again, so an island survives its panel being closed and reopened and C11's shell + islands
+// a hidden "park" container. createComponent moves a hole into its dockview panel and dispose parks
+// it again. So an island survives its panel being closed and reopened, and C11's shell + islands
 // split is untouched. The reference implementation (lilbattle's GameViewerPage) clones hidden
 // templates lazily instead. That would break this app's boot, where AppRoot resolves every hole by
 // id up front and the presenter wires all island callbacks at construction.
@@ -11,14 +11,14 @@ import "dockview-core/dist/styles/dockview.css";
 export interface DockPanelDef {
   id: string;
   title: string;
-  // defaultOpen marks a panel the boot layout places (defaultLayout). Every panel sets it, since
-  // the layout tabs panels rather than hiding them in a menu (#325). It also gates the reconcile, so
-  // a panel added in a later release opens for existing users only if it sets this, and a menu-only
-  // panel would omit it.
+  // defaultOpen marks a panel that the boot layout places (defaultLayout). Every panel sets it,
+  // since the layout tabs panels rather than hiding them in a menu (#325). It also gates the
+  // reconcile, so a panel added in a later release opens for existing users only if it sets this,
+  // and a menu-only panel would omit it.
   defaultOpen?: boolean;
 }
 
-// VIEWER_PANELS is the registry the dock is built from. Panel ids double as dockview component
+// VIEWER_PANELS is the registry that the dock is built from. Panel ids double as dockview component
 // names and as the data-dock-panel key of the server-rendered hole.
 export const VIEWER_PANELS: readonly DockPanelDef[] = [
   // Files was retired in WS9-049. prunePanels drops it from a saved layout that still names it.
@@ -31,7 +31,8 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   { id: "properties", title: "Properties", defaultOpen: true },
   // Rules is a static reference catalog, tabbed in the east stack beside the findings it explains.
   { id: "rules", title: "Rules", defaultOpen: true },
-  // Lexicon lists the naming vocabulary the run reads with, and edits and tries it (agni issue 1267).
+  // Lexicon lists the naming vocabulary that the run reads with, and edits and tries it (agni issue
+  // 1267).
   { id: "lexicon", title: "Lexicon", defaultOpen: true },
   // Checks is the findings table (WS9), server-sourced and grouped and sorted on the client, with
   // the on-demand Run button. Its severity grouping covers what a separate Report panel did.
@@ -44,8 +45,8 @@ export const VIEWER_PANELS: readonly DockPanelDef[] = [
   // The trace panel (agni issue 600) follows one pin to another and lights the route on the
   // canvas. It tabs with Query (see defaultLayout).
   { id: "trace", title: "Trace", defaultOpen: true },
-  // The Tables panel (agni issues 898 and 956) shows an answer as the tables Tabulate projects and
-  // saves them as csv. It tabs with Query and Trace, the other answers in the bottom strip.
+  // The Tables panel (agni issues 898 and 956) shows an answer as the tables that Tabulate projects,
+  // and saves them as csv. It tabs with Query and Trace, the other answers in the bottom strip.
   { id: "tables", title: "Tables", defaultOpen: true },
   // The datasheet-params panel (WS9-035), a per-component parameter tree tabbed with Properties since
   // both answer "what is this thing I selected". Populated only when serve was started with --params.
@@ -86,7 +87,7 @@ export interface LoadedLayout {
   savedPanels: string[];
 }
 
-// loadLayout returns the saved layout, or null when there is none or it does not parse; the
+// loadLayout returns the saved layout, or null when there is none or it does not parse. The
 // caller falls back to the default layout in both cases. It reads both the versioned wrapper and
 // the bare dockview JSON that predates it.
 export function loadLayout(storage: LayoutStorage): LoadedLayout | null {
@@ -115,11 +116,11 @@ export function saveLayout(storage: LayoutStorage, layout: unknown): void {
   }
 }
 
-// reconcilePanels runs after a saved layout is restored. A defaultOpen panel that is not open and
-// NOT in the registry the layout was saved under was added by a later release, so it opens at
-// openPanel's position. Panels the user closed stay closed, since they were in the saved registry.
-// A new panel without defaultOpen stays closed too and appears only in the Panels menu (WS9-042),
-// so a new feature does not re-crowd an existing user's layout.
+// reconcilePanels runs after a saved layout is restored. Take a defaultOpen panel that is not open.
+// If the registry saved with the layout does NOT have it either, a later release added it, so it
+// opens at openPanel's position. Panels the user closed remain closed, since they were in the saved
+// registry. A new panel without defaultOpen is closed too and appears only in the Panels menu
+// (WS9-042), so a new feature does not re-crowd an existing user's layout.
 export function reconcilePanels(api: DockviewApi, savedPanels: string[]): void {
   for (const def of VIEWER_PANELS) {
     if (!def.defaultOpen || api.getPanel(def.id) || savedPanels.includes(def.id)) continue;
@@ -127,8 +128,8 @@ export function reconcilePanels(api: DockviewApi, savedPanels: string[]): void {
   }
 }
 
-// prunePanels closes panels a restored layout names that the registry no longer has. It is the
-// counterpart to reconcilePanels, which only ever ADDS. Without it a removed panel restores as an
+// prunePanels closes each panel that a restored layout names and the registry no longer has. It is
+// the counterpart to reconcilePanels, which only ever ADDS. Without it a removed panel restores as an
 // empty tab, because adoptPanel falls back to a blank element when the hole is gone. The user's
 // arrangement of the surviving panels is untouched.
 export function prunePanels(api: DockviewApi): void {
@@ -157,8 +158,8 @@ export function adoptPanel(park: HTMLElement, name: string): IContentRenderer {
 }
 
 // RAIL_FRACTION and QUERY_FRACTION size the boot layout, two 15% side rails around a centre column
-// whose bottom fifth is the query panel. Fractions rather than pixels, so the rails' tab labels stay
-// readable on a laptop without becoming a canyon on a desktop.
+// whose bottom fifth is the query panel. Fractions rather than pixels, so the rails' tab labels are
+// readable on a laptop and the rails do not become a canyon on a desktop.
 const RAIL_FRACTION = 0.15;
 const QUERY_FRACTION = 0.2;
 const RAIL_FALLBACK_PX = 260;
@@ -227,11 +228,11 @@ export function defaultLayout(api: DockviewApi): void {
   api.addPanel({ id: "diff", component: "diff", title: "Diff", position: { direction: "within", referencePanel: "canvas" } });
   api.addPanel({ id: "changes", component: "changes", title: "Changes", position: { direction: "within", referencePanel: "canvas" } });
 
-  // Sizes and active tabs only stick once dockview has laid the grid out, so this waits for the grid
-  // to HAVE a size rather than guessing a delay. dockview measures itself from a ResizeObserver on
-  // its container, which has not fired by the end of the current task. Sizing on setTimeout(0)
-  // divides up a 0x0 grid and is dropped, which is why the earlier layout's pixel widths never
-  // applied and why a 250ms sleep "fixed" it.
+  // Sizes and active tabs take effect only once dockview has laid the grid out, so this waits for
+  // the grid to HAVE a size rather than guessing a delay. dockview measures itself from a
+  // ResizeObserver on its container, which has not fired by the end of the current task. Sizing on
+  // setTimeout(0) divides up a 0x0 grid, and dockview drops it. So the earlier layout's pixel widths
+  // never applied, and a 250ms sleep "fixed" it.
   whenSized(api, () => {
     const rail = api.width ? Math.round(api.width * RAIL_FRACTION) : RAIL_FALLBACK_PX;
     resizeGroup(api, "overview", { width: rail });
@@ -267,7 +268,7 @@ function whenSized(api: DockviewApi, apply: () => void, framesLeft = 30): void {
   else setTimeout(next, 16);
 }
 
-// resizeGroup sizes the GROUP a panel sits in, the only thing dockview will resize.
+// resizeGroup sizes the GROUP that holds a panel. A group is the only thing dockview will resize.
 //
 // `panel.api.setSize()` looks like it does this and does nothing. It fires onDidSizeChange, and the
 // listener for that event is installed by the GRIDVIEW panel (the group), not by the dockview panel
@@ -300,7 +301,7 @@ export function openDiffPanel(api: DockviewApi): void {
       position: { direction: "right", referencePanel: "diff" },
     });
     // Keeps the new column a 260px rail rather than half the centre. By the time a reader opens a
-    // comparison the grid has its size, so the group takes the width once it exists; without it
+    // comparison the grid has its size, so the group takes the width once it exists. Without it,
     // Changes opened at half the canvas column (agni issue 759).
     whenSized(api, () => resizeGroup(api, "changes", { width: CHANGES_RAIL_PX }));
   }
@@ -325,10 +326,6 @@ export function openPanel(api: DockviewApi, def: DockPanelDef): void {
   });
 }
 
-// panelsMenu renders the "Panels" dropdown in the top bar, one entry per registered panel with a
-// ✓ on the open ones. Each item is a show/hide TOGGLE (WS9-042), so the menu both reopens a panel
-// the tab-× closed and hides one. Panel layout is dock chrome, not presenter state, so this is a
-// plain DOM widget rather than an island.
 // resetLayout puts the dock back to the default layout and forgets the saved one. A saved layout is
 // restored as it was, so without this a reader kept whatever sizes the dock had when they first used
 // it, including ones a later default fixed (agni issue 759). Panels keep their content, since a
@@ -339,8 +336,10 @@ export function resetLayout(api: DockviewApi, storage: LayoutStorage): void {
   defaultLayout(api);
 }
 
-// panelsMenu adds the Panels button: one item per registered panel, toggling it open or closed, and
-// with storage, a last item that resets the layout.
+// panelsMenu adds the Panels button. It has one item per registered panel, and each item toggles its
+// panel open or closed (WS9-042), and a ✓ marks the open ones. So the menu both reopens a panel the
+// tab-× closed and hides one. With storage, a last item resets the layout. Panel layout is dock
+// chrome, not presenter state, so this is a plain DOM widget rather than an island.
 export function panelsMenu(host: HTMLElement, api: DockviewApi, storage?: LayoutStorage): void {
   const doc = host.ownerDocument;
   const btn = doc.createElement("button");

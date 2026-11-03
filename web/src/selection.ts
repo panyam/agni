@@ -31,8 +31,8 @@ export interface Selection {
   nets?: string[];
 }
 
-// PRIORITY ranks overlapping candidates, most specific first. A click inside a symbol that lands on
-// a pin means the pin, the entity with the least area. Topmost-wins would give the symbol body every
+// PRIORITY ranks overlapping candidates, most specific first. A click inside a symbol that hits a
+// pin means the pin, the entity with the least area. Topmost-wins would give the symbol body every
 // time, since it is drawn over its own pins.
 const PRIORITY: SelectionKind[] = ["pin", "component", "bus", "net"];
 
@@ -78,7 +78,7 @@ export function bestOf(candidates: (Selection | null)[]): Selection | null {
 // PROBES are the offsets sampled around a click in CSS pixels, the exact point first and then a
 // ring that gives small targets some tolerance. The ring does not rescue a bare wire, since every
 // probe faces the same sub-pixel stroke; the served render's invisible wide wire companion does
-// (core/render/svg.go, WithPickTargets). The ring stays small, 5px at cursor scale, so a click
+// (core/render/svg.go, WithPickTargets). The ring is small, 5px at cursor scale, so a click
 // BETWEEN two close wires still misses rather than guessing.
 const PROBE_R = 5;
 const PROBES: [number, number][] = [
@@ -94,8 +94,8 @@ const PROBES: [number, number][] = [
 ];
 
 // pickAt resolves a viewport point to an entity by asking the document what is under it, at the
-// point and around it. Client coordinates, because that is what elementFromPoint takes and what a
-// pointer event carries, so no camera maths is needed here.
+// point and around it. It takes client coordinates, because elementFromPoint takes them and a
+// pointer event carries them, so no camera maths is needed here.
 export function pickAt(doc: Document, clientX: number, clientY: number): Selection | null {
   const seen: (Selection | null)[] = [];
   for (const [dx, dy] of PROBES) {
@@ -104,14 +104,14 @@ export function pickAt(doc: Document, clientX: number, clientY: number): Selecti
   return bestOf(seen);
 }
 
-// entityBindings gives a preset the SERVER wrote (query.EntityQueries) the values of what was
-// clicked. The preset names the variables to bind (binds), each also the selection field that fills
-// it, and the query text stays as written (agni issue 793).
+// The SERVER writes the presets (query.EntityQueries), and entityBindings gives one the values of
+// what was clicked. The preset names the variables to bind (binds). Each variable also names the
+// selection field that fills it. The query text is kept as written (agni issue 793).
 //
 // The templates name relations defined in Go, so they live beside them, where each preset gets a
-// parse check and an evaluate-against-a-real-design check. A client copy would be the one caller
-// nothing checks, so renaming a relation would turn the server's tests red while every click in the
-// viewer produced a query that errors. This file only turns what was clicked into values.
+// parse check and an evaluate-against-a-real-design check. Nothing would check a client copy.
+// Renaming a relation would turn the server's tests red, while every click in the viewer produced a
+// query that errors. This file only turns what was clicked into values.
 //
 // A value is bound as itself, so a designator carrying a quote is asked about exactly. Splicing it
 // into a string literal, which has no escape sequence, could only strip it.
@@ -145,7 +145,7 @@ export function labelFor(sel: Selection): string {
 // selectionFromCell reads a query result cell, the second way a reader names an entity. The panel
 // knows a cell's kind because the server typed the column (webapi RunQueryResponse.column_kinds,
 // derived from the relation catalog's arg labels), and those kind strings are check.KindComponent /
-// check.KindNet, the same vocabulary a picked element carries.
+// check.KindNet, the same vocabulary as a picked element's.
 //
 // A scalar cell, or an entity kind with no selection shape yet, yields null. The cell still locates
 // but names nothing to ask about.
@@ -155,8 +155,8 @@ export function labelFor(sel: Selection): string {
 // names the entity by itself.
 //
 // A search can return a bus (agni issue 338), since entity() enumerates buses and a bus with no
-// drawn wire is the sort of thing a reviewer looks for by name. Its subject IS its label, the key a
-// drawn bus element carries in data-bus, so both entry points converge on one value.
+// drawn wire is the sort of thing a reviewer looks for by name. Its subject IS its label. A drawn
+// bus element has the same key in data-bus, so both entry points converge on one value.
 export function selectionFromCell(kind: string, subject: string, ref = ""): Selection | null {
   if (!subject) return null;
   switch (kind) {
@@ -174,11 +174,11 @@ export function selectionFromCell(kind: string, subject: string, ref = ""): Sele
   }
 }
 
-// sameSelection reports whether two picks name the same thing, which is how a surface marks the one
-// it is currently showing. It tests identity rather than deep equality, because the canvas pushes a
-// net with both its name and its id while a result cell carries only the name, and those are the
-// same net. Ids are compared only when BOTH carry one, since two nets can share a display name
-// across sheets.
+// sameSelection reports whether two picks name the same thing. A surface uses it to mark the pick
+// it is showing now. It tests identity rather than deep equality, because the canvas pushes a net
+// with both its name and its id while a result cell carries only the name, and those are the same
+// net. Ids are compared only when BOTH carry one, since two nets can share a display name across
+// sheets.
 export function sameSelection(a: Selection | null, b: Selection | null): boolean {
   if (!a || !b || a.kind !== b.kind) return false;
   switch (a.kind) {

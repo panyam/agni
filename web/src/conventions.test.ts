@@ -25,9 +25,9 @@ describe("activeLabel", () => {
     expect(activeLabel(state({ active: "proj/house.yaml", name: "house" }))).toBe("house");
   });
 
-  // The name is also the namespace its rules appear under, so a finding reading `acme/...` is only
-  // interpretable if the bar says `acme`. Falling back to the ref keeps it interpretable when the
-  // resolve has not landed yet.
+  // The name is also the namespace for its rules, so a finding reading `acme/...` is only
+  // interpretable if the bar says `acme`. Falling back to the ref keeps it interpretable before the
+  // resolve has returned.
   it("falls back to the ref when the name is not known yet", () => {
     expect(activeLabel(state({ active: "proj/house.yaml" }))).toBe("proj/house.yaml");
   });
@@ -38,8 +38,8 @@ describe("activeLabel", () => {
 });
 
 describe("isOverridden", () => {
-  // This drives the bar's styling, which matters because a request convention REPLACES the
-  // server's, so rules can stop running, and a rule that stops running produces no findings. In a
+  // This drives the bar's styling. The styling matters because a request convention REPLACES the
+  // server's. Rules can then stop running, and a rule that stops running produces no findings. In a
   // findings list that is indistinguishable from a design that got fixed.
   it("is false under the server's convention and true under a request's", () => {
     expect(isOverridden(state())).toBe(false);
@@ -54,16 +54,16 @@ describe("isOverridden", () => {
 });
 
 describe("conventionError", () => {
-  // These are what the CLIENT sees, not what the server sends, and the difference is the bug this
-  // nearly shipped with. Connect formats a ConnectError's message as "[code] " + the server's text,
+  // These are what the CLIENT sees, not what the server sends. This nearly shipped with a bug in that
+  // difference. Connect formats a ConnectError's message as "[code] " + the server's text,
   // and the server's text already begins "invalid argument: ", so TWO status prefixes stack before
   // the message says anything. A fixture written from the wire response alone would miss the first
   // one and the stripping would silently not fire in the browser.
   //
-  // EXPECT_YAML is reachable from a stock checkout, because the conformance fixtures ship .expect.yaml
-  // siblings, so every entry the picker offers beside one of those designs is a file that cannot
-  // resolve. INTENT_YAML is the shape an overlay hits, where a design-intent file sits beside the
-  // design it describes.
+  // EXPECT_YAML is reachable from a stock checkout. The conformance fixtures ship .expect.yaml
+  // siblings, and the picker offers each one beside its design as an entry that cannot resolve.
+  // INTENT_YAML is the shape an overlay hits, where a design-intent file sits beside the design it
+  // describes.
   const EXPECT_YAML =
     "[invalid_argument] invalid argument: naming config: yaml: unmarshal errors:\n" +
     "  line 1: field fires not found in type naming.Config";
@@ -94,8 +94,8 @@ describe("conventionError", () => {
 
   // Both status prefixes name the code rather than the problem, and the reader can see something
   // failed from the chip being on screen at all. The test asserts on BOTH, because stripping only the
-  // server's half left "[invalid_argument] " in front of every message in the real UI, which is what
-  // the browser capture caught and the wire-only fixture did not.
+  // server's half left "[invalid_argument] " in front of every message in the real UI. The browser
+  // capture caught that, and the wire-only fixture did not.
   it("drops both status prefixes, Connect's and the server's", () => {
     const got = conventionError(EXPECT_YAML);
     expect(got.startsWith("naming config")).toBe(true);

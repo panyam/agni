@@ -66,7 +66,7 @@ export function resultFromWire(f: unknown, resolveSheets?: (ids: string[]) => Sh
 // witnesses (agni issue 794): one row, R1 with SENSE unprobed, witnessed by the library member's rule
 // with its body facts, the test point's net fact cited, and the `not` that held as a negated leaf.
 // R1 and SENSE are entities 1 and 2, VBUS 3, TP1 4, U1's pin 3 entity 5 and U1 6. The pin.net leaf
-// under the test point is there to carry a pin value, not because the member reads it.
+// under the test point holds a pin value. The member does not read it.
 export function probedOneAnswer(): RunQueryResponse {
   return create(RunQueryResponseSchema, {
     columns: ["r", "u"],

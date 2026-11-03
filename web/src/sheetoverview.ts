@@ -8,29 +8,30 @@ import type { FindingItem } from "./findings.js";
 // SheetTile is one row of the overview, a sheet and how many current findings live on it. A zero
 // count draws no badge, so only a sheet with something on it carries a number (agni issue 1132).
 //
-// `count` is DEFECTS and `unresolved` is the inconclusive results the rule could not decide, kept
-// apart because the tile's count reads as "problems on this sheet" (agni issue 350). A sheet with
+// `count` holds DEFECTS. `unresolved` holds the inconclusive results, where the rule could not
+// decide. The two are kept apart because the tile's count reads as "problems on this sheet" (agni
+// issue 350). A sheet with
 // three failures and a sheet with three missing datasheets are different work.
 export interface SheetTile {
   id: string;
-  // name is the label the tile shows. A name two sheets share is replaced by the sheet's path, so
+  // name is the label the tile shows. When two sheets share a name, each shows its path instead, so
   // KiCad's /Power/1 and /IO/1 read as Power/1 and IO/1 rather than as two sheets called 1 (agni
-  // issue 1141). A name no other sheet has is shown as the design gives it.
+  // issue 1141). When no other sheet has the name, it is shown as the design gives it.
   name: string;
   // parentId is the sheet this one nests under, "" for a top-level sheet.
   parentId: string;
   count: number;
   unresolved: number;
-  // local is how many of the defects counted here are drawn on this sheet alone. The rest are on a
-  // subject drawn on several sheets, a net through the whole design, and count on each of them
-  // (agni issue 1144).
+  // local counts the defects here whose subject is drawn on this sheet alone. The rest are on a
+  // subject drawn on several sheets, such as a net through the whole design, and they count on each
+  // of those sheets (agni issue 1144).
   local: number;
 }
 
-// OverviewState is the whole panel's state. It holds the tiles in design order, the sheet currently
-// shown, the active-rule count so the panel can tell "no rules selected" from "all clean", like
-// the findings panel, and how many of those rules have run, since a count before any run is a
-// claim about nothing.
+// OverviewState is the whole panel's state. It holds the tiles in design order and the sheet
+// currently shown. It holds the active-rule count, so the panel can tell "no rules selected" from
+// "all clean", as the findings panel does. It also holds how many of those rules have run, since a
+// count before any run is a claim about nothing.
 export interface OverviewState {
   tiles: SheetTile[];
   activeId: string;
@@ -44,10 +45,10 @@ export interface OverviewView {
 }
 
 // sheetTiles aggregates the current findings onto the design's sheets. Multi-sheet designs join
-// through each finding's sheet badges (WS9-024), and a finding whose subject has no badges (no
-// geometry) counts toward no sheet, a known undercount. A SINGLE-sheet design gets the total findings
-// count, because badges are deliberately empty for one-sheet designs (nowhere to navigate) and "0"
-// would read as clean on a design with findings.
+// through each finding's sheet badges (WS9-024). A finding whose subject has no geometry has no
+// badges, so it counts toward no sheet. We know this undercounts. A SINGLE-sheet design gets the
+// total findings count. Badges are deliberately empty on a one-sheet design, since there is nowhere
+// to navigate, and "0" would read as clean on a design with findings.
 export function sheetTiles(sheets: SheetRef[], findings: FindingItem[]): SheetTile[] {
   if (sheets.length === 1) {
     const defects = findings.filter((f) => !f.inconclusive).length;
@@ -74,7 +75,7 @@ export function sheetTiles(sheets: SheetRef[], findings: FindingItem[]): SheetTi
 }
 
 // sheetLabels is each sheet's label: its name, or its path when another sheet has the same name.
-// The path is the id without a leading "/", which for a KiCad sheet is the chain of sheet names
+// The path is the id without a leading "/". For a KiCad sheet the path is the chain of sheet names
 // from the root.
 export function sheetLabels(sheets: SheetRef[]): Map<string, string> {
   const named = new Map<string, number>();

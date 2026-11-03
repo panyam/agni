@@ -1,7 +1,8 @@
-// The viewer's app events: what a reader did, reported once the viewer has done it. A guided tour
-// advances on them (reviewtour.ts, over tsappkit's Tour), so an action the viewer reports no event
-// for cannot be a tour step, and the fix is an event here rather than a listener inferring intent
-// from the DOM (panyam/goapplib#128). They travel on the page's EventBus under these names.
+// The viewer's app events report what a reader did, once the viewer has done it. A guided tour
+// advances on them (reviewtour.ts, over tsappkit's Tour). If the viewer reports no event for an
+// action, that action cannot be a tour step. The fix is then an event here rather than a listener
+// inferring intent from the DOM (panyam/goapplib#128). They travel on the page's EventBus under
+// these names.
 
 import type { EventBus } from "@panyam/tsappkit";
 

@@ -17,8 +17,8 @@ describe("wheelZoomFactor", () => {
   });
 
   it("is scale-free: equal and opposite deltas cancel exactly", () => {
-    // Why the curve is exponential rather than a fixed step per notch. A user who
-    // overshoots and comes back the same distance lands where they started, at any zoom level.
+    // The curve is exponential rather than a fixed step per notch. So a user who overshoots
+    // and comes back the same distance ends up where they started, at any zoom level.
     expect(wheelZoomFactor(-120) * wheelZoomFactor(120)).toBeCloseTo(1, 12);
   });
 });

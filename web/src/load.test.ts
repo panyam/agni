@@ -1,5 +1,6 @@
-// The Load page's boot test (agni issue 1072): the real load.ts against the real LoadPage.html under
-// jsdom, on the server engine, so the page's wiring is exercised as a visitor's browser runs it.
+// The Load page's boot test (agni issue 1072). It runs the real load.ts against the real
+// LoadPage.html under jsdom, on the server engine, so it exercises the page's wiring as a visitor's
+// browser runs it.
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { afterEach, describe, expect, it, vi } from "vitest";

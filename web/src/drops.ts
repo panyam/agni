@@ -2,9 +2,10 @@
 // navigation from the Load page to the viewer (agni issue 1072). Before this they lived only in the
 // tab's engine worker, so a reload emptied them.
 //
-// A drop is the files one drop or pick brought in, under a folder of the browser mount named by its
-// id (`drop-<time>`), plus the design.yaml a visitor wrote for it under `.agni-overlay/<id>/`. Every
-// path here is a path in the browser mount, so what is saved is exactly what is added to the engine.
+// One drop or pick brings in a set of files, and a drop holds them. They sit under a folder of the
+// browser mount, named by the drop's id (`drop-<time>`). A visitor may also write a design.yaml for
+// the drop, and it sits under `.agni-overlay/<id>/`. Every path here is a path in the browser
+// mount, so the page saves exactly the files it adds to the engine.
 
 // Files maps a path in the browser mount to its bytes, the shape WasmEngine.add takes.
 export type DropFiles = Record<string, Uint8Array>;
@@ -15,7 +16,7 @@ export interface SavedDrop {
   // name is what the visitor dropped, a file's name or a folder's.
   name: string;
   // savedAt is when it was dropped, and updatedAt when a file of it last changed, in ms since the
-  // epoch. updatedAt is what a record of a dropped design's load is stamped with.
+  // epoch. A record of a dropped design's load is stamped with updatedAt.
   savedAt: number;
   updatedAt: number;
   bytes: number;

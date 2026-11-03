@@ -2,10 +2,10 @@
 // they are testable without importing pdf.js.
 import type { Document, Page, BBox } from "./gen/agni/v1/doc/doc_pb.js";
 
-// Region is one selectable region: a doc-IR table/figure/text block, or a "user" region the human
-// drew with the marquee (WS13-006 PR 2) where doc-IR missed one. kind drives the overlay color and
-// the info line; bbox is page-local points (top-left, y-down). A user region carries the page it was
-// drawn on so it can be merged back onto the right rendered page.
+// Region is one selectable region, either a doc-IR table/figure/text block or a "user" region. The
+// human draws a user region with the marquee (WS13-006 PR 2) where doc-IR missed one. kind drives
+// the overlay color and the info line; bbox is page-local points (top-left, y-down). A user region
+// records the page it was drawn on, so it can be merged back onto the right rendered page.
 export interface Region {
   id: string;
   kind: "table" | "figure" | "text" | "user";
@@ -38,11 +38,11 @@ export function regionsForPage(doc: Document | undefined, pageNumber: number): R
 // taggable with no extraction yet, so coverage still counts them.
 export type RegionType = "table" | "schematic" | "chart" | "pinout" | "text" | "other";
 
-// REGION_TYPES is the closed vocabulary the type picker offers, in display order.
+// REGION_TYPES is the type picker's closed vocabulary, in display order.
 export const REGION_TYPES: RegionType[] = ["table", "schematic", "chart", "pinout", "text", "other"];
 
-// defaultType is the type a region starts as before the human tags it. A table stays a table and
-// text stays text, while a figure (chart, schematic or pinout) and a user-drawn region default to
+// defaultType is the type a region starts as before the human tags it. A table starts as a table
+// and text as text, while a figure (chart, schematic or pinout) and a user-drawn region default to
 // "other".
 export function defaultType(kind: Region["kind"]): RegionType {
   switch (kind) {
@@ -67,7 +67,7 @@ export function pxRectToBBox(x0: number, y0: number, x1: number, y1: number, sca
   } as BBox;
 }
 
-// Coverage is the per-datasheet gap record the toolbar shows, counting regions with at least one
+// Coverage is the per-datasheet gap record for the toolbar. It counts regions with at least one
 // transcribed parameter against those still pending.
 export interface Coverage {
   total: number;
@@ -93,18 +93,19 @@ export function clampPage(n: number, total: number): number {
 // collapse a box to nothing.
 export const MIN_REGION_PTS = 4;
 
-// moveBBox translates a bbox by a delta in points (marquee move). No page-bounds clamp: a box may
-// sit slightly off the page edge, which the viewport scroll reveals.
+// moveBBox translates a bbox by a delta in points (marquee move). There is no page-bounds clamp. A
+// box may sit slightly off the page edge, and the viewport scroll reveals it.
 export function moveBBox(b: BBox, dxPts: number, dyPts: number): BBox {
   return { x: b.x + dxPts, y: b.y + dyPts, width: b.width, height: b.height } as BBox;
 }
 
-// Handle names the corner a resize drag moves; the opposite corner stays fixed.
+// Handle names the corner a resize drag moves; the opposite corner does not move.
 export type Handle = "nw" | "ne" | "sw" | "se";
 
-// resizeBBox returns the bbox after dragging one corner by (dxPts, dyPts). The two edges the handle
-// touches move; the opposite edges stay put. The result is normalized (positive width/height) and
-// floored at MIN_REGION_PTS so a drag past the opposite edge flips rather than inverts.
+// resizeBBox returns the bbox after dragging one corner by (dxPts, dyPts). The handle touches two
+// edges, and those move; the opposite edges do not. The result is normalized (positive
+// width/height) and floored at MIN_REGION_PTS so a drag past the opposite edge flips rather than
+// inverts.
 export function resizeBBox(b: BBox, handle: Handle, dxPts: number, dyPts: number): BBox {
   let x0 = b.x;
   let y0 = b.y;

@@ -10,17 +10,18 @@ import { readOnly, toolName, toolSchema } from "./toolschema.js";
 
 // viewerroom.ts lets an agent drive this tab (agni issue 1154). Under `agni serve --mcp
 // --viewer-rooms` the tab joins its design's relay room and offers each ViewerPageService method
-// there as a tool (viewer_show_sheet, viewer_locate_verdict, ...), answered by the same dispatcher
-// postMessage uses (pageservice.ts). The server's room bridge serves those tools to agents over
-// /mcp, each call naming a design, and sends a call to a tab only once its reader turns on "Let
-// agents drive this tab". The switch is per tab and off by default, and survives a reload of the tab.
+// there as a tool (viewer_show_sheet, viewer_locate_verdict, ...). The dispatcher that answers
+// postMessage (pageservice.ts) answers these tools too. The server's room bridge serves those tools
+// to agents over /mcp, each call naming a design. It sends a call to a tab only once its reader
+// turns on "Let agents drive this tab". The switch is per tab and off by default, and survives a
+// reload of the tab.
 //
 // The other direction goes through the same agreement (agni issue 1173). With the switch on, the tab
 // tells the room what the reader selected, and the Ask box beside the switch sends the reader's
-// question with the tab's location and selection. The bridge passes both to the agents the tab agreed
-// to, which hear them through next_request or the room's events resource.
+// question with the tab's location and selection. The bridge passes both to the agents that the tab
+// agreed to. Those agents hear them through next_request or the room's events resource.
 
-// RoomClient is the one ViewerRoomService call the tab makes, which the server answers.
+// RoomClient holds the one ViewerRoomService call that the tab makes to the server.
 export interface RoomClient {
   joinViewerRoom(req: Partial<JoinViewerRoomRequest>): Promise<JoinViewerRoomResponse>;
 }
@@ -52,7 +53,7 @@ export class ViewerRoomTab {
   // refusedNote names the tools a bridge refused to offer agents, hidden while it refused none.
   private readonly refusedNote: HTMLElement | undefined;
   private refused = new Map<string, string>();
-  // focus is what the reader last selected, which an ask carries.
+  // focus is what the reader last selected. An ask sends it along.
   private focus: Focus | undefined;
   private readonly join: (opts: JoinToolRoomOptions) => Promise<ToolRoom>;
   private readonly storage: Pick<Storage, "getItem" | "setItem"> | undefined;
@@ -67,7 +68,7 @@ export class ViewerRoomTab {
     this.checkbox = this.renderSwitch();
     this.askForm = this.renderAsk();
     this.refusedNote = this.renderRefused();
-    // The bridge sends a call naming no tab to the one its reader looked at last.
+    // When a call names no tab, the bridge sends it to the tab its reader looked at last.
     this.win.addEventListener("focus", () => this.room?.focus());
     this.doc.addEventListener("visibilitychange", () => {
       if (this.doc.visibilityState === "visible") this.room?.focus();
@@ -79,8 +80,9 @@ export class ViewerRoomTab {
     return this.storage?.getItem(AGENTS_KEY) === "1";
   }
 
-  // ask sends the reader's question to the agents the tab agreed to, with the tab's location and
-  // selection. It is false when nothing was sent: the tab is in no room, or its reader keeps agents out.
+  // ask sends the reader's question to the agents that the tab agreed to, with the tab's location
+  // and selection. It returns false when nothing was sent, because the tab is in no room or its
+  // reader keeps agents out.
   async ask(text: string): Promise<boolean> {
     const room = this.room;
     if (!room || !this.agentsAllowed() || !text.trim()) return false;
@@ -88,7 +90,8 @@ export class ViewerRoomTab {
     try {
       location = await this.deps.dispatch("GetLocation", {});
     } catch {
-      // An ask still goes without a location, which the agent can read with viewer_get_location.
+      // An ask still goes without a location. The agent can read the location with
+      // viewer_get_location.
     }
     room.emit(EVENT_ASK, { text: text.trim(), location, selection: this.focus ?? null });
     return true;
@@ -106,9 +109,9 @@ export class ViewerRoomTab {
     }
   }
 
-  // follow puts the tab in the room of the design loc shows, leaving the room it was in. A location
-  // naming no design leaves. It resolves once the tab is in the room, or has failed to join, which it
-  // logs rather than throws, since a page with no room still works.
+  // follow moves the tab into the room for the design that loc shows, leaving the room it was in. A
+  // location naming no design leaves. The promise resolves once the tab is in the room or has failed
+  // to join. A failure to join is logged rather than thrown, since a page with no room still works.
   follow(loc: Pick<ViewerLocation, "mount" | "path">): Promise<void> {
     const design = loc.mount && loc.path ? `${loc.mount}/${loc.path}` : "";
     if (design === this.design) return this.queue;
@@ -144,8 +147,9 @@ export class ViewerRoomTab {
         room.leave();
         return;
       }
-      // A bridge refuses a tool whose schema differs from the one it declares, which is a page and a
-      // server from different builds; the twin fixture keeps it from shipping (agni issue 1173).
+      // A bridge refuses a tool whose schema differs from the one it declares. That happens when the
+      // page and the server come from different builds, and the twin fixture keeps it from shipping
+      // (agni issue 1173).
       room.onToolRefused((r) => this.toolRefused(r));
       for (const m of ViewerPageService.methods) {
         room.registerTool({
@@ -192,8 +196,8 @@ export class ViewerRoomTab {
     return box;
   }
 
-  // renderAsk is the Ask box beside the switch, shown only while agents may drive the tab, since an
-  // agent the tab has not agreed to hears nothing it sends.
+  // renderAsk draws the Ask box beside the switch. The box shows only while agents may drive the tab,
+  // since agents that the tab has not agreed to hear nothing it sends.
   private renderAsk(): HTMLFormElement | undefined {
     const host = this.deps.host;
     if (!host) return undefined;
@@ -220,7 +224,8 @@ export class ViewerRoomTab {
     return form;
   }
 
-  // renderRefused is the note beside the switch naming the tools agents cannot call on this tab.
+  // renderRefused draws the note beside the switch. The note names the tools that agents cannot call
+  // on this tab.
   private renderRefused(): HTMLElement | undefined {
     const host = this.deps.host;
     if (!host) return undefined;

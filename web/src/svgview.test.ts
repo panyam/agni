@@ -120,8 +120,8 @@ describe("refit on resize", () => {
   });
 });
 
-// A click picks what it lands on, and a click on nothing keyed names the sheet (agni issue 902). A pan
-// is neither, which is the rule the click-versus-pan slop already enforces for picks.
+// A click picks what is under it, and a click on nothing keyed names the sheet (agni issue 902). A pan
+// is neither. The click-versus-pan slop already enforces that rule for picks.
 describe("a click on the drawing", () => {
   function clickAt(host: HTMLElement, hit: Element | null, moveBy = 0): void {
     const real = document.elementFromPoint;

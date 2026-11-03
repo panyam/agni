@@ -4,12 +4,14 @@ import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { abortable, laneFor, mountingFetch, withheldPlaceholder, wouldShrink, SHRINK_RATIO, WITHHELD_PREFIX, type DesignFiles, type EngineLane, type LaneName, type ServerFallback, type WasmEngine } from "./client.js";
 
-// A recording engine of its lanes, design source and network, so a test can see where each request
-// went. `replace` swaps a lane's worker for an empty one, as an abort does. The prepare lane starts a
-// worker per request, as the real one does; `holdPrepares` keeps each prepare unanswered until the
-// returned release is called, and `released` counts the prepare workers ended without a request.
-// `given` is the bytes each lane's worker holds per path. A request whose path `readsBoard` names is
-// refused as the engine refuses it, while the worker holds a placeholder for a file (agni issue 992).
+// A fake engine that records its lanes, design source and network, so a test can see where each
+// request went. `replace` swaps a lane's worker for an empty one, as an abort does. The prepare lane
+// starts a worker per request, as the real one does. `holdPrepares` keeps each prepare unanswered
+// until the returned release is called, and `released` counts the prepare workers ended without a
+// request.
+// `given` is the bytes each lane's worker holds per path. Suppose `readsBoard` names a request's path
+// and the worker holds a placeholder for a file. Then the request is refused as the engine refuses it
+// (agni issue 992).
 function harness(listing: DesignFiles | Error, readsBoard: (path: string) => boolean = () => false) {
   const engineCalls: string[] = [];
   const laneCalls: Record<LaneName, string[]> = { serve: [], jobs: [], prepare: [] };
@@ -287,9 +289,9 @@ describe("laneFor", () => {
   });
 });
 
-// agni issue 1061: a question names a snapshot, and each worker keeps its own, so the page's ingest
-// of a snapshot is what tells a worker its files and is sent to every worker before its first
-// question about it.
+// agni issue 1061: a question names a snapshot, and each worker keeps its own. The page's ingest of a
+// snapshot tells a worker its files. So the ingest is sent to every worker before that worker's first
+// question about the snapshot.
 describe("snapshots across the lanes", () => {
   it("brings the files a snapshot's ingest named into the worker a question about it reaches", async () => {
     const h = harness(listing);

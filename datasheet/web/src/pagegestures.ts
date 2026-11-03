@@ -15,9 +15,9 @@ export type PointerIntent =
   | { kind: "move" }
   | { kind: "pan" };
 
-// HitTarget describes what sits under the pointer, read off the DOM by the caller so this stays
-// pure. `handle` is set only when the pointer is on a resize handle, which only the selected user
-// region draws.
+// HitTarget describes what is under the pointer. The caller reads it off the DOM, so this file
+// remains pure. Only the selected user region draws resize handles, and `handle` is set only when
+// the pointer is on one.
 export interface HitTarget {
   deleteButton: boolean;
   handle: Handle | null;
@@ -48,7 +48,7 @@ export function classifyPointerDown(
 
 // selectionAfterPointerDown returns the region id the pointerdown selects, or null to leave the
 // selection alone. Pressing on a region selects it even when the gesture turns out to be a pan, so
-// one press still both selects and starts moving the page; a draw leaves the selection alone
+// one press still both selects and starts moving the page. A draw leaves the selection alone,
 // because addUserRegion will select the new box on pointerup.
 export function selectionAfterPointerDown(hit: HitTarget, intent: PointerIntent): string | null {
   if (intent.kind === "draw" || intent.kind === "delete") return null;

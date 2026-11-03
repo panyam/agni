@@ -55,7 +55,7 @@ describe("ranking overlapping candidates", () => {
 
 describe("pickAt", () => {
   // A 1px wire is a game of skill to hit exactly, so the pick samples a small ring around the
-  // cursor. Here the exact point is empty and only an offset probe lands on the wire.
+  // cursor. Here the exact point is empty and only an offset probe hits the wire.
   it("finds an entity the cursor is merely near", () => {
     const wire = el({ "data-kind": "net", "data-net": "GND" });
     const doc = {
@@ -72,8 +72,8 @@ describe("pickAt", () => {
 });
 
 describe("binding a served preset", () => {
-  // The presets live on the server, beside the relations they name, so what is tested here is the
-  // client's half of the job: turning what was clicked into the values the preset binds.
+  // The presets live on the server, beside the relations they name, so this tests the client's half
+  // of the job. The client turns what was clicked into values, and the preset binds them.
   it("binds a pin's ref and designator", () => {
     expect(entityBindings(["ref", "pin"], { kind: "pin", ref: "U7", pin: "12" })).toEqual({ ref: "U7", pin: "12" });
   });
@@ -101,8 +101,8 @@ describe("labelFor", () => {
   });
 });
 
-// A result cell is the second way a reader names an entity, and it has to produce the same value a
-// click on the drawing does, or else the walk needs its own copy of everything downstream.
+// A result cell is the second way a reader names an entity. It has to produce the same value as a
+// click on the drawing. Otherwise the walk needs its own copy of everything downstream.
 describe("reading a result cell", () => {
   it("reads the kinds the server types a column with", () => {
     expect(selectionFromCell("component", "R1")).toEqual({ kind: "component", ref: "R1" });
@@ -110,8 +110,8 @@ describe("reading a result cell", () => {
   });
 
   // A search can return a bus (entity() enumerates them), and a bus with nothing drawn is
-  // the sort of thing a reviewer hunts by name. Its subject is its label, the same key a drawn bus
-  // element carries, so the walk continues from a search hit the way it does from a click.
+  // the sort of thing a reviewer hunts by name. Its subject is its label, and a drawn bus element
+  // has the same key, so the walk continues from a search hit the way it does from a click.
   it("walks from a bus cell, using the label as the identity", () => {
     expect(selectionFromCell("bus", "DATA[7:0]")).toEqual({ kind: "bus", busId: "DATA[7:0]" });
   });
@@ -142,9 +142,8 @@ describe("reading a result cell", () => {
   });
 });
 
-// sameSelection is how a surface marks the pick it is currently showing, so what it has to get
-// right is the two ROUTES to one entity agreeing. The canvas knows a net by name and id, a result
-// cell only by name.
+// sameSelection is how a surface marks the pick it is showing now. It has to make the two ROUTES to
+// one entity agree. The canvas knows a net by name and id, a result cell only by name.
 describe("sameSelection", () => {
   it("matches a canvas net against the same net named by a result cell", () => {
     expect(sameSelection({ kind: "net", net: "SDA", netId: "n7" }, { kind: "net", net: "SDA" })).toBe(true);

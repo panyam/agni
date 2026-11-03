@@ -21,9 +21,9 @@ describe("staleLinkNote", () => {
     expect(note?.served).toBe("bbbbbbbbbbbb");
   });
 
-  // A server that could not hash must not be read as agreement. That
-  // is the "absent looks like fine" failure the hash exists to remove, and folding this into null
-  // would reintroduce it one layer down.
+  // A server that could not hash must not be read as agreement. The hash
+  // exists to remove that "absent looks like fine" failure, and folding this into null would
+  // reintroduce it one layer down.
   it("keeps an unhashable server distinct from a match", () => {
     const note = staleLinkNote(A, "");
     expect(note).not.toBeNull();

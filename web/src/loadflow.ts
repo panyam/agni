@@ -1,9 +1,9 @@
-// The Load page's work (agni issue 1072): read a design into the engine's store, say what it is doing
-// while it does, record it, and hand over to the viewer. The viewer then opens a design whose
-// drawing, netlist and board are already parsed, so no panel there waits on a first read.
+// The Load page's work (agni issue 1072). It reads a design into the engine's store, says what it is
+// doing while it does, records the load, and hands over to the viewer. The viewer then opens a design
+// with its drawing, netlist and board already parsed, so no panel there waits on a first read.
 //
-// The page is plain DOM over this module (load.ts), which takes its engine calls as ports so a test
-// can drive the whole flow.
+// The page (load.ts) is plain DOM over this module. This module takes its engine calls as ports, so a
+// test can drive the whole flow.
 
 // A LoadStepId is one stage the page shows. files is fetching the design's files into the browser
 // engine, and is skipped where nothing is fetched (the server engine, a dropped design).
@@ -27,7 +27,7 @@ export interface LoadView {
   failed(reason: string): void;
 }
 
-// A Listing is what the design's files are, for the files step's progress.
+// A Listing describes the design's files, for the files step's progress.
 export interface Listing {
   // stamp is what a record of this load must match (engineboot.designStamp).
   stamp: string;
@@ -108,8 +108,8 @@ export class LoadFlow {
       // The public demo's walk reads this line (web/browser/exercise.mjs).
       this.deps.log?.(`agni loaded ${this.deps.uri} in ${ms} ms: board ${b.boardRead ? (b.boardPersisted ? "persisted" : "not persisted") : "absent"}`);
     } catch (e) {
-      // The files step runs beside the reads, so the step that failed is the last one running, and
-      // any other stops where it was.
+      // The files step runs beside the reads. When a read fails, the last running step is marked
+      // failed, and any other running step goes back to waiting.
       const running = this.list.filter((s) => s.state === "running");
       for (const s of running.slice(0, -1)) this.set(s.id, { state: "waiting" });
       const last = running[running.length - 1];

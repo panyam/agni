@@ -12,8 +12,8 @@ function deps(over: Partial<AdmitDeps> = {}): AdmitDeps {
   };
 }
 
-// agni issue 1072: the viewer opens only a design the Load page read, and sends any other there with
-// its address whole, so a link lands where it pointed once the design is read.
+// The viewer opens only a design the Load page read (agni issue 1072). It sends any other design to
+// the Load page with its address whole, so a link opens what it pointed to once the design is read.
 describe("whether the viewer opens its design", () => {
   it("sends a design with no record to its Load page, the query kept", async () => {
     const a = await admit(deps({ search: "?verdict=v&rule=r" }));
@@ -32,8 +32,8 @@ describe("whether the viewer opens its design", () => {
     expect((await admit(deps({ stamp: async () => "", loaded: () => true }))).open).toBe(false);
   });
 
-  // The Load page may have been unable to write its record (a private window), so the marker it
-  // sends is what keeps the two pages from sending a reader back and forth.
+  // The Load page may have been unable to write its record (a private window). The marker it sends
+  // then keeps the two pages from sending a reader back and forth.
   it("opens a design the Load page has just sent, and drops the marker from the address", async () => {
     const stamp = vi.fn(async () => "s1");
     const a = await admit(deps({ search: "?sheet=s&loaded=1", stamp }));

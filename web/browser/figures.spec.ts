@@ -1,33 +1,33 @@
 // The docsite's hand-authored figures, measured as a browser actually renders them.
 //
 // A figure under `docsite/figures/` is inlined into its page at build time, so it inherits the
-// page's theme and its `currentColor`. What that costs is that nothing in the Go gate can see the
-// RESULT: `includefile_test.go` proves the path resolves, that no figure is uncalled, that no colour
-// is a literal and that no blank line splits the raw-HTML block, and every one of those reads the
-// file rather than the rendering. A caption printed past the canvas, two labels stacked on each
+// page's theme and its `currentColor`. The cost is that nothing in the Go gate can see the RESULT.
+// `includefile_test.go` proves the path resolves, that no figure is uncalled, that no colour is a
+// literal and that no blank line splits the raw-HTML block. Every one of those reads the file
+// rather than the rendering. A caption printed past the canvas, two labels stacked on each
 // other, or a label sitting on the wire it names all pass the whole gate and are obvious on screen.
 //
 // Three checks, and each one has caught something the other two passed:
 //
 //   bounds        an element outside its own viewBox. `max-width: 100%` then scales the figure to
-//                 fit the overflow, so every label shrinks to pay for one stray caption.
+//                 fit the overflow, so every label shrinks to make room for one stray caption.
 //   text on text  two runs printed over each other. Both are inside the viewBox, so bounds is
 //                 silent. Found one in a diagram whose every element was in bounds.
 //   text on wire  a label a few pixels off, sitting exactly on the rail it names. Inside the
 //                 viewBox and not touching another label, so the first two both pass it. This one
 //                 found two figures on its first run.
 //
-// And a fourth that is not about geometry: every file under `figures/` has to be REACHED by the
-// sweep. The sweep used to select on the `<title>` element's id, which silently skipped the two
-// figures that named themselves with `aria-label` instead, and a skipped figure is indistinguishable
-// from a clean one in the output. Selecting on `role="img"` is what closed that, and the coverage
-// assertion is what stops it reopening.
+// A fourth check is not about geometry. Every file under `figures/` has to be REACHED by the sweep.
+// The sweep used to select on the `<title>` element's id. That silently skipped the two figures that
+// named themselves with `aria-label` instead, and a skipped figure is indistinguishable from a clean
+// one in the output. Selecting on `role="img"` closed that gap, and the coverage assertion stops it
+// reopening.
 //
-// Aspect ratio is deliberately NOT asserted. `docsite/README.md` sets roughly 4:1 as a ceiling, and
-// it is a judgement about whether a diagram earns its width rather than a defect: one shipped figure
-// sits at 4.23:1 on purpose. Mermaid blocks are not covered here at all, because they render
-// client-side from a `<pre>` and a fetched page never runs them; `README.md` says to render those
-// with `mmdc` before committing.
+// Aspect ratio is deliberately NOT asserted. `docsite/README.md` sets roughly 4:1 as a ceiling. That
+// ceiling is a judgement about whether a diagram needs its width, not a defect, and one shipped
+// figure is 4.23:1 on purpose. Mermaid blocks are not covered here at all. They render client-side
+// from a `<pre>`, and a fetched page never runs them. `README.md` says to render those with `mmdc`
+// before committing.
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser } from "playwright-core";
@@ -43,8 +43,9 @@ const figuresDir = resolve(repoRoot, "docsite", "figures");
 
 const base = (): string => inject("docsiteUrl");
 
-// markdownUnder walks the content tree. A hand-rolled walk rather than `fs.globSync`, which needs
-// Node 22 and would make this file the one thing in the repo with a floor on the runtime.
+// markdownUnder walks the content tree. It is a hand-rolled walk rather than `fs.globSync`.
+// globSync needs Node 22, and this file would then be the only thing in the repo with a floor on the
+// runtime.
 function markdownUnder(dir: string, prefix = ""): string[] {
   const out: string[] = [];
   for (const entry of readdirSync(dir, { withFileTypes: true })) {
@@ -83,9 +84,9 @@ afterAll(async () => {
 });
 
 // sweep fetches every page into a detached div in ONE browser context and measures each figure
-// there. A detached div is the right harness for this and the wrong one for anything the page grid
-// decides: `getBBox()` reports SVG user-space coordinates, which do not depend on where the element
-// sits, while a table's width very much does.
+// there. A detached div is the right harness for this, and the wrong one for anything the page grid
+// decides. `getBBox()` reports SVG user-space coordinates, which do not depend on where the element
+// sits. A table's width very much does.
 async function sweep(): Promise<SweepResult> {
   const urls = pagesIncludingAFigure();
   let out: SweepResult = { seen: [], problems: [] };
@@ -104,8 +105,8 @@ async function sweep(): Promise<SweepResult> {
         div.style.cssText = "position:absolute;left:-99999px;top:0;width:800px";
         div.innerHTML = await res.text();
         document.body.appendChild(div);
-        // role="img" rather than the title's id: a figure may name itself with aria-label, and
-        // keying on the title is what let two of them go unswept for their whole life.
+        // Select on role="img" rather than the title's id. A figure may name itself with
+        // aria-label, and keying on the title let two of them go unswept for their whole life.
         for (const svg of Array.from(div.querySelectorAll<SVGSVGElement>('svg[role="img"][viewBox]'))) {
           const title = svg.querySelector("title");
           const name = title?.id || svg.getAttribute("aria-label")?.slice(0, 40) || "(unnamed)";
@@ -146,13 +147,13 @@ async function sweep(): Promise<SweepResult> {
               }
             }
           }
-          // A stroke's own box is thin on one axis, which is what separates a wire from a panel.
+          // A stroke's own box is thin on one axis, and that separates a wire from a panel.
           //
           // getBBox() reports the GEOMETRY and excludes the stroke, so a horizontal line's box is
-          // zero tall and a vertical one's is zero wide. Comparing a text box against that raw box
-          // can never overlap on the thin axis, which is a check that cannot fail: this fired on
-          // nothing at all until a red-check moved a label onto a rail and the suite stayed green.
-          // Inflate the thin axis by half the stroke, with a floor, so the box covers the ink.
+          // zero tall and a vertical one's is zero wide. A text box can never overlap that raw box
+          // on the thin axis, so a check against it cannot fail. It fired on nothing at all, and a
+          // red-check that moved a label onto a rail left the suite green. Inflate the thin axis by
+          // half the stroke, with a floor, so the box covers the ink.
           for (const el of Array.from(svg.querySelectorAll<SVGGraphicsElement>("line,path"))) {
             const raw = el.getBBox();
             if (!(raw.width < 3 || raw.height < 3)) continue;
@@ -186,8 +187,9 @@ describe("docsite figures", () => {
   }, 180_000);
 
   it("reaches every figure under docsite/figures", () => {
-    // The count, not the names: a figure's accessible name is prose and need not match its filename.
-    // What matters is that nothing is silently skipped, which a count catches and a spot check does not.
+    // Compare the count, not the names. A figure's accessible name is prose and need not match its
+    // filename. The point is that nothing is silently skipped. A count catches that, and a spot check
+    // does not.
     expect(result.seen.length).toBe(figureFiles().length);
   });
 

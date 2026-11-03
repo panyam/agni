@@ -1,14 +1,15 @@
-// The review tour: a reader's first review of a design, taken in the viewer itself, over tsappkit's
-// Tour (panyam/goapplib#128). Each step dims the page, leaves the controls the step needs reachable,
-// and advances on the viewer's own event for the action (viewerevents.ts), never on a click it
-// infers. `?tour=review` starts it. The browser-review walk takes the same tour (web/browser), so the
-// gate holds the steps to the viewer they describe.
+// The review tour is a reader's first review of a design, taken in the viewer itself, over
+// tsappkit's Tour (panyam/goapplib#128). Each step dims the page and keeps the step's controls
+// reachable. It advances on the viewer's own event for the action (viewerevents.ts), never on a click
+// it infers. `?tour=review` starts it. The browser-review walk (web/browser) takes the same tour, so
+// the gate holds the steps to the viewer they describe.
 
 import { Tour, type TourEventSource, type TourRect, type TourStep } from "@panyam/tsappkit";
 import { type ViewerEvents, viewerEventNames } from "./viewerevents.js";
 
-// ReviewTourHost is what the tour needs from the page beyond its DOM: a dock panel brought forward
-// for each step, and an area selected for the area step's Show me, which a click cannot make.
+// ReviewTourHost gives the tour what it needs from the page beyond its DOM. It brings a dock panel
+// forward for each step. It also selects an area for the area step's Show me, since a click cannot
+// make that selection.
 export interface ReviewTourHost {
   show: (panel: string) => void;
   selectArea: () => void;
@@ -22,8 +23,8 @@ const click = (sel: string) => () => one(sel)?.click();
 // re-reads its targets every frame, and on a large design a hole per row cost the page seconds while
 // it located the row the reader clicked.
 //
-// visible is the part of each element its scrolling ancestors show. A finding scrolled out of the
-// Checks list still has a box, over whatever panel sits there, and a hole cut there would hand that
+// visible is the part of each element that its scrolling ancestors show. A finding scrolled out of
+// the Checks list still has a box, over whatever panel is there. A hole cut there would pass that
 // panel's clicks through, so a hidden element contributes nothing.
 export function visible(els: Iterable<Element>): TourRect[] {
   const out: TourRect[] = [];
@@ -56,9 +57,9 @@ const panels: Record<string, string> = {
   "save-report": "review",
 };
 
-// reveals names, for a step whose controls can sit below their panel's fold, the elements to scroll
-// into view when the step goes live. The dimmed page takes no wheel, so a control off screen leaves the
-// reader no way to reach it.
+// Some steps have controls that can sit below their panel's fold. For each such step, reveals names
+// the elements to scroll into view when the step goes live. The dimmed page takes no wheel, so a
+// control off screen leaves the reader no way to reach it.
 const askConnect = () => {
   const asks = every(".pr-ask-go");
   return asks.find((b) => /connect to/.test(b.textContent ?? "")) ?? asks[0] ?? null;
@@ -72,8 +73,8 @@ const reveals: Record<string, () => (HTMLElement | null)[]> = {
   "save-report": () => [one(".rv-save")],
 };
 
-// reveal brings a step's panel forward and its control into view, a frame later so a panel the dock
-// just activated has laid out.
+// reveal brings a step's panel forward and its control into view. It waits a frame, so a panel that
+// the dock just activated has laid out.
 function reveal(host: ReviewTourHost, step: string): void {
   host.show(panels[step] ?? "");
   requestAnimationFrame(() => {
@@ -182,10 +183,10 @@ export function reviewTourSteps(host: ReviewTourHost): TourStep<ViewerEvents>[] 
   ];
 }
 
-// TourHandle is what `?tour=review` leaves on the page for a driver to follow, the browser-review
-// walk among them. With pace set to "host" the page shows a step only when the driver releases it,
-// so the walk can check one step's result before the reader starts the next; a step the walk has
-// not released yet is hidden and takes no input.
+// `?tour=review` leaves a TourHandle on the page for a driver to follow, such as the browser-review
+// walk. With pace set to "host" the page shows a step only when the driver releases it, so the walk
+// can check one step's result before the reader starts the next. A step the walk has not released
+// yet is hidden and takes no input.
 export interface TourHandle {
   step: string;
   index: number;

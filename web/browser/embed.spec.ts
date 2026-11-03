@@ -1,7 +1,7 @@
 // A parent page on another origin drives a framed viewer over postMessage (agni issue 1152). The
-// unit tests hold the envelope, the allowlist and the dispatcher apart from a browser; this spec is
-// the one place a real cross-origin frame, a real MessageEvent.origin and the served
-// --embed-origin meet, which jsdom cannot stand in for.
+// unit tests hold the envelope, the allowlist and the dispatcher apart from a browser. Only this
+// spec brings together a real cross-origin frame, a real MessageEvent.origin and the served
+// --embed-origin, and jsdom cannot stand in for them.
 //
 // The parent is examples/embed-viewer/parent.html, served from a second port so its origin differs
 // from the viewer's, and it is driven through the `agniCall` it exposes.
@@ -89,7 +89,7 @@ describe("a parent page on another origin", () => {
       expect(back.body?.location?.sheet).toBe(rootSheet);
       expect(await activeTile(viewerFrame)).toBe("Hier numeric root");
 
-      // A sheet the design lacks is refused with a code, and the page stays put.
+      // A sheet the design lacks is refused with a code, and the page does not move.
       const bad = await call(page, "ShowSheet", { sheet: "no-such-sheet" });
       expect(bad).toMatchObject({ ok: false, error: { code: "invalid_argument" } });
       expect(await activeTile(viewerFrame)).toBe("Hier numeric root");
@@ -97,9 +97,9 @@ describe("a parent page on another origin", () => {
   }, 120_000);
 });
 
-// A saved check report beside a viewer it links into (agni issue 1156). The report is written by this
-// checkout's agni from a fixture and served from an origin no server named, so the only request the
-// viewer takes from it is ApplyLocation with the link alone.
+// A saved check report beside a viewer it links into (agni issue 1156). The report is written by
+// this checkout's agni from a fixture and served from an origin that no server named. So the viewer
+// takes one request from it and no other, ApplyLocation with the link alone.
 describe("a check report beside the viewer", () => {
   let site: StaticServer;
   let viewerBase: string;
@@ -120,7 +120,7 @@ describe("a check report beside the viewer", () => {
 
   afterAll(() => site?.close());
 
-  // A link about a net drawn on the IO sheet alone, so landing there is the viewer moving.
+  // A link about a net drawn on the IO sheet alone, so arriving there shows the viewer moved.
   const ioLink = 'a[target="agni-viewer"][href*="R2-Pad1"]';
 
   it("moves the viewer beside it without reloading it", async () => {

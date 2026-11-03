@@ -1,7 +1,7 @@
 // Dropping files on the Load page (agni issues 854 and 1072). The files go into the browser mount,
 // never to the server, and into the page's saved drops, so the design survives a reload and the
-// navigation to the viewer. The engine proposes the designs they make, and the visitor reads and
-// edits each proposal's design.yaml before one is opened.
+// navigation to the viewer. The engine proposes designs from the files. The visitor reads and edits
+// each proposal's design.yaml before one is opened.
 //
 // The dialog is plain DOM. Every string in it came from the visitor's files, so it is set as text and
 // never parsed as markup.
@@ -10,7 +10,7 @@ import type { ProposeDesignsResponse } from "../gen/agni/v1/webapi/workspace_pb.
 import { mountOf, type Files, type WasmEngine } from "./client.js";
 import { OVERLAY_DIR, type DropStore } from "../drops.js";
 
-// BROWSER_MOUNT is the mount dropped files go into, wasmengine.BrowserMount on the Go side.
+// BROWSER_MOUNT is the mount that holds dropped files, wasmengine.BrowserMount on the Go side.
 export const BROWSER_MOUNT = "local";
 
 export interface DropDeps {
@@ -59,8 +59,8 @@ function pick(d: DropDeps, button: HTMLElement, input: HTMLInputElement): void {
   });
 }
 
-// bring puts one drop into the browser mount under a folder of its own, asks for the designs it
-// makes, and shows them.
+// bring puts one drop into the browser mount under a folder of its own. It then asks which designs
+// the drop makes, and shows them.
 async function bring(d: DropDeps, read: Promise<Files>): Promise<void> {
   if (!d.engine) {
     d.refuse("Dropped files are analysed in your browser and never sent to the server, so this page needs the browser engine: add ?engine=wasm to its address");
@@ -90,7 +90,7 @@ export async function proposeDrop(d: DropDeps, id: string, files: Files): Promis
   render(d, id, proposal);
 }
 
-// dropName is what a listing calls a drop: the folder or file dropped, or a count of them.
+// dropName is a drop's name in a listing. It is the folder or file dropped, or a count of them.
 export function dropName(paths: string[]): string {
   const tops = new Set(paths.map((p) => p.split("/")[0]));
   if (tops.size === 1) return [...tops][0];
@@ -116,8 +116,8 @@ function render(d: DropDeps, id: string, r: ProposeDesignsResponse): void {
     const path = entry.replace(/^mount:\/\/[^/]+\//, "");
     sec.append(el("h3", "drop-design-name", `${pd.design?.name ?? path}  (${pd.files.length} file${pd.files.length === 1 ? "" : "s"})`));
     if (pd.note) sec.append(el("p", "drop-design-note", pd.note));
-    // One design.yaml per folder: the first proposal in a folder can be declared by it, and any other
-    // is opened by its file.
+    // Each folder gets one design.yaml. The first proposal in a folder can be declared by it, and any
+    // other is opened by its file.
     const declarable = !pd.declared && !editable.has(pd.folder);
     if (declarable) editable.add(pd.folder);
     const yaml = el("textarea", "drop-design-yaml");

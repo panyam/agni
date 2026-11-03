@@ -1,13 +1,14 @@
 // Whether the viewer opens the design its address names, or hands it to the Load page first (agni
-// issue 1072). The viewer opens only a design the Load page read on this engine and build, from the
-// files it holds now, so no panel waits on a first read. The record is a convenience, and the engine
-// still checks every stored read by content, so a wrong answer here costs time and never a result.
+// issue 1072). The Load page reads a design on this engine and build, from the files it holds now.
+// The viewer opens only a design read that way, so no panel waits on a first read. The record is a
+// convenience. The engine still checks every stored read by content, so a wrong answer here costs
+// time and never a result.
 
 import { LOADED_PARAM } from "./loaded.js";
 import { dropPageUrl, hasFile, parseUrl, swapPage } from "./router.js";
 
-// An Admission is what the viewer does with its address: open it (with the address to show, which
-// drops the Load page's arrival marker), or go to another page.
+// An Admission is what the viewer does with its address. The viewer either opens it or goes to
+// another page. An open can carry the address to show, which drops the Load page's arrival marker.
 export type Admission = { open: true; replaceWith?: string } | { open: false; goTo: string };
 
 export interface AdmitDeps {
@@ -15,7 +16,7 @@ export interface AdmitDeps {
   search: string;
   // dropMountPrefix is the browser mount's address prefix, `<base>designs/local/`.
   dropMountPrefix: string;
-  // listing is the stamp of the design's files now, "" when they cannot be listed.
+  // stamp returns the stamp of the design's files now, "" when they cannot be listed.
   stamp(mount: string, path: string): Promise<string>;
   // loaded reports whether a record says this engine and build read the design with that stamp.
   loaded(mount: string, path: string, stamp: string): boolean;
@@ -24,7 +25,7 @@ export interface AdmitDeps {
 export async function admit(d: AdmitDeps): Promise<Admission> {
   const here = parseUrl(d.pathname, d.search);
   if (!hasFile(here)) {
-    // The browser mount's own address was where files were dropped, which is the Load page now.
+    // Files used to be dropped at the browser mount's own address. The Load page takes them now.
     return d.pathname.startsWith(d.dropMountPrefix) ? { open: false, goTo: dropPageUrl() } : { open: true };
   }
   const params = new URLSearchParams(d.search);

@@ -5,7 +5,8 @@ import { SheetFormat } from "./gen/agni/v1/webapi/design_pb.js";
 import { fakeSnapshots, snapName } from "./testsnaps.js";
 
 // Fakes follow the diffpresenter.test.ts harness, with plain stubs behind the typed client and a
-// recording view. defer lets a test hold a response open so an out-of-order landing is reachable.
+// recording view. defer lets a test hold a response open, so a test can reach an out-of-order
+// arrival.
 function harness(over: { getDesign?: ReturnType<typeof vi.fn>; getSheet?: ReturnType<typeof vi.fn> } = {}) {
   const getDesign =
     over.getDesign ??
@@ -33,7 +34,7 @@ function harness(over: { getDesign?: ReturnType<typeof vi.fn>; getSheet?: Return
   return { preview: new DesignPreview(client, view, fakeSnapshots()), getDesign, getSheet, showSvg, showNote, setCaption };
 }
 
-// deferred is a promise a test resolves by hand, so two loads can be landed in a chosen order.
+// deferred is a promise a test resolves by hand, so two loads can finish in a chosen order.
 function deferred<T>(): { promise: Promise<T>; resolve: (v: T) => void } {
   let resolve!: (v: T) => void;
   const promise = new Promise<T>((r) => (resolve = r));
@@ -45,8 +46,8 @@ describe("DesignPreview", () => {
     const h = harness();
     await h.preview.show("corpus", "boards/amp.kicad_sch");
 
-    // An EMPTY layout is the request that makes the preview faithful-first, because the server resolves
-    // "" to the faithful layout whenever the file carries geometry. Pinning it stops a later edit
+    // The preview asks for an EMPTY layout to be faithful-first. The server resolves "" to the
+    // faithful layout whenever the file carries geometry. Pinning it stops a later edit
     // from hard-coding a layout and silently drawing every design as a netlist graph.
     expect(h.getDesign).toHaveBeenCalledWith({ snapshot: snapName(artifactUri("corpus", "boards/amp.kicad_sch")), layout: "" });
     expect(h.getSheet).toHaveBeenCalledWith({
@@ -59,9 +60,9 @@ describe("DesignPreview", () => {
     expect(h.setCaption).toHaveBeenLastCalledWith("Amplifier", "kicad-sch · 12 components · 9 nets · 2 sheets");
   });
 
-  // The board case is why the preview is two calls rather than one, AND why the sheet is chosen
-  // rather than taken. Shapes below are the real GetDesign responses, read off the wire from a
-  // running server against cmd/agni/testdata/conformance.
+  // Because of the board case, the preview makes two calls rather than one, AND chooses the sheet
+  // rather than taking the first. Shapes below are the real GetDesign responses, read off the wire
+  // from a running server against cmd/agni/testdata/conformance.
   it("previews a board file as its board sheet, not as its netlist graph", async () => {
     const getDesign = vi.fn(async (_req: object) => ({
       name: "Board Geom Fixture",
@@ -117,7 +118,7 @@ describe("DesignPreview", () => {
 
     const first = h.preview.show("corpus", "slow.kicad_sch");
     // Let the slow load clear its design lookup and reach GetSheet BEFORE the newer load starts,
-    // so it is the post-render guard, not the post-lookup one, that has to reject it.
+    // so the post-render guard has to reject it, not the post-lookup one.
     await Promise.resolve();
     await Promise.resolve();
     expect(h.getSheet).toHaveBeenCalledTimes(1);
@@ -235,7 +236,7 @@ describe("captionFor", () => {
 
   // GetDesign fills format and both counts only on the AUTO-layout branch. A design carrying its
   // own geometry takes the faithful branch, where all three are empty, so a caption built from
-  // them alone is blank for every KiCad schematic, which is the common case, not an edge one.
+  // them alone is blank for every KiCad schematic. That is the common case, not an edge one.
   it("still says something for a faithful design, whose netlist fields are empty", () => {
     expect(captionFor("", 0, 0, 1)).toBe("1 sheet");
     expect(captionFor("", 0, 0, 4)).toBe("4 sheets");

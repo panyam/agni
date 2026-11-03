@@ -1,22 +1,23 @@
-// The Tables panel's presenter (agni issues 898 and 956). It shows the tables TableService.Tabulate
-// projects from an answer the page already holds, a check run or a revision comparison, and saves
-// any of them through TableService.Encode. A query answer is the query panel's to show, so it is no
-// source here, though saveAnswer serves that panel's Save CSV.
+// The Tables panel's presenter (agni issues 898 and 956). The page already holds an answer, a check
+// run or a revision comparison. TableService.Tabulate projects tables from that answer, and the
+// panel shows them and saves any of them through TableService.Encode. The query panel shows a query
+// answer, so a query answer is no source here, though saveAnswer serves that panel's Save CSV.
 //
-// It lays nothing out and encodes nothing itself. The rows are Tabulate's and the order is the one
-// Tabulate's order_by applies with each column's type (so R2 sorts before R10), and a saved file is
-// Encode's bytes, which are `--format csv`'s. A table on screen and the csv the CLI writes for the
-// same answer therefore agree row for row, which is C35's rule for every table agni emits.
+// It lays nothing out and encodes nothing itself. Tabulate supplies the rows. Tabulate's order_by
+// sorts them by each column's type, so R2 sorts before R10. A saved file holds Encode's bytes, and
+// those match `--format csv`'s. So a table on screen and the csv the CLI writes for the same answer
+// agree row for row. C35 asks that of every table agni emits.
 
 import type { Client } from "@connectrpc/connect";
 import { type Table, type TabulateRequest, TableEncoding, TableService } from "./gen/agni/v1/webapi/tables_pb.js";
 
 export type TableClient = Client<typeof TableService>;
 
-// TableAnswer is what Tabulate projects: the oneof of the request, as the generated type spells it.
+// TableAnswer is the answer oneof of a Tabulate request, as the generated type spells it.
 export type TableAnswer = TabulateRequest["answer"];
 
-// SavedTable is one encoded file for the host to hand the reader, the same shape a saved report is.
+// SavedTable is one encoded file for the host to hand the reader. It has the same shape as a saved
+// report.
 export interface SavedTable {
   filename: string;
   contentType: string;
@@ -27,8 +28,8 @@ export interface SavedTable {
 // runs exist only while a comparison is open.
 export type TablesSourceKey = "checks" | "compare" | "compare-a" | "compare-b";
 
-// CompareOptions are the two diff options a comparison's table reports on request, as `agni diff
-// --rename-approx --include-equal` does.
+// CompareOptions holds two diff options. A comparison's table reports near-renames and equal entries
+// only when asked, as `agni diff --rename-approx --include-equal` does.
 export interface CompareOptions {
   nearRenames: boolean;
   equal: boolean;
@@ -75,8 +76,8 @@ export interface TableAnswers {
   answer(source: TablesSourceKey, compare: CompareOptions): Promise<{ answer?: TableAnswer; label: string; stem: string; reason?: string }>;
 }
 
-// nextOrder is the order a click on a column header asks for: ascending first, descending on a second
-// click of the same column, and ascending again on a third.
+// nextOrder returns the order for a click on a column header. The first click asks for ascending, a
+// second click on the same column for descending, and a third for ascending again.
 export function nextOrder(current: string, column: string): string {
   return current === column ? `-${column}` : column;
 }
@@ -98,14 +99,15 @@ export class TablesPresenter {
     this.view.setState(this.state);
   }
 
-  // setCompareOpen says whether a comparison is open, which offers or withdraws its sources. Closing
-  // it while the panel shows one of them clears the panel, since that answer is gone.
-  // setNearRenames sets the comparison tables' near-rename pairing without asking for anything, so a
+  // setNearRenames sets the comparison tables' near-rename pairing without asking for anything. So a
   // diff link that paired near-renames opens tables that pair them too (agni issue 1126).
   setNearRenames(on: boolean): void {
     this.push({ compare: { ...this.state.compare, nearRenames: on } });
   }
 
+  // setCompareOpen says whether a comparison is open, and so offers or withdraws its sources. If the
+  // panel shows one of those sources when the comparison closes, the panel clears, since that answer
+  // is gone.
   setCompareOpen(open: boolean): void {
     const shown = this.state.source.startsWith("compare");
     if (!open && shown) {

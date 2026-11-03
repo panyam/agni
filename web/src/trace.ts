@@ -22,17 +22,17 @@ export interface TraceStubItem {
   cls: string;
 }
 
-// TraceNetItem is one net on the route. busLike marks a rail or plane, which a route may END on and
-// never passes through, so the panel can say why the walk stopped there rather than leaving a reader
-// to assume it gave up.
+// TraceNetItem is one net on the route. busLike marks a rail or plane. A route may END on one and
+// never passes through one. The flag lets the panel say why the walk stopped there, rather than
+// leaving a reader to assume it gave up.
 export interface TraceNetItem {
   name: string;
   stubs: TraceStubItem[];
   stubsElided: number;
   busLike: boolean;
-  // The sheets this net is drawn on, empty when it is drawn on none. Per net rather than one per
-  // trace, because a route crossing three sheets is when a reader wants to choose which to open (see
-  // service.AnnotateTraceSheets).
+  // The sheets this net is drawn on, empty when it is drawn on none. Imagine a route crossing three
+  // sheets. The reader then wants to choose which one to open, so the sheets are kept per net
+  // rather than one per trace (see service.AnnotateTraceSheets).
   sheetIds: string[];
 }
 
@@ -53,8 +53,8 @@ export interface TraceEndItem {
 // the design.
 //
 // `error` is for a request that failed (an unloadable design, a transport error). An UNRESOLVED
-// outcome is different, a successful answer saying the question named something the design does not
-// have.
+// outcome is different. It is a successful answer, and it says the question named something the
+// design does not have.
 export interface TraceState {
   from: TraceEndItem;
   to: TraceEndItem;
@@ -127,16 +127,16 @@ export function traceFromResponse(t: Trace): TraceState {
   };
 }
 
-// traceSubjects is what the canvas should light up for a trace, and it draws the answer whatever the
-// answer was.
+// traceSubjects lists what the canvas should light up for a trace. The canvas draws the answer
+// whatever the answer was.
 //
 // A route lights its nets and the parts it crossed. A no-route lights the two nets that fail to
 // join. An unresolved endpoint lights whichever end DID resolve, since the panel beside it already
 // says the other end named nothing.
 //
 // It is the twin of traceSpecs in cmd/agni. The CLI draws an SVG and the viewer paints a canvas, so
-// neither can call the other, and the CLAIM about which entities a trace is about is stated and
-// tested in both places.
+// neither can call the other. Both places state and test the CLAIM about which entities a trace is
+// about.
 export function traceSubjects(s: TraceState): HighlightSubject[] {
   if (!s.ran || s.error) return [];
   const subjects: HighlightSubject[] = [];
@@ -162,8 +162,8 @@ export interface TraceView {
 // parseEndpoint reads "U1.3" into its two halves, splitting at the FIRST dot because a ref-des does
 // not contain one and a pin designator occasionally does. null when the text is not a pin at all.
 //
-// Same reading the CLI takes, duplicated because the two live in different languages. Keep the
-// SPLIT RULE (first dot) in step with it.
+// The CLI reads it the same way, and the code is duplicated because the two live in different
+// languages. Keep the SPLIT RULE (first dot) in step with it.
 export function parseEndpoint(text: string): { refDes: string; pin: string } | null {
   const t = text.trim();
   const i = t.indexOf(".");
@@ -184,10 +184,10 @@ export function splitTraceParam(param: string): [string, string] {
 
 // traceSheet is the sheet a trace answer should open on, "" when it is drawn nowhere.
 //
-// The FROM endpoint's first, because the reader named that pin and a route reads in that direction;
-// then the first net of the route that is drawn. It picks ONE because the canvas shows one sheet at
-// a time. Every other sheet of every net stays reachable as a badge, as it is for a finding or a
-// query cell on several sheets.
+// It takes the FROM endpoint's first sheet, because the reader named that pin and a route reads in
+// that direction. Failing that, it takes the first sheet of the first drawn net on the route. It
+// picks ONE because the canvas shows one sheet at a time. Every other sheet of every net is still
+// reachable as a badge, as it is for a finding or a query cell on several sheets.
 export function traceSheet(t: TraceState): string {
   if (t.from.sheetIds.length > 0) return t.from.sheetIds[0];
   for (const n of t.nets) {

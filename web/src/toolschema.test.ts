@@ -13,7 +13,7 @@ const fixture = JSON.parse(readFileSync(join(here, "..", "..", "internal", "view
   messages: Record<string, unknown>;
 };
 
-// The same types internal/viewerrooms/tools_test.go puts in the fixture's messages.
+// internal/viewerrooms/tools_test.go puts these same types in the fixture's messages.
 const MESSAGES: DescMessage[] = [StructSchema, ValueSchema, Int64ValueSchema, BytesValueSchema, UninterpretedOptionSchema, SourceCodeInfoSchema, FieldSchema];
 
 describe("tool schemas, twinned with internal/viewerrooms via viewer_tools.json", () => {

@@ -1,7 +1,7 @@
-// The engine and shell settings both design pages boot with: the viewer (main.ts) and the Load page
-// (load.ts), which reads a design into the engine's store before the viewer opens it (agni issue
-// 1072). Importing this module reads the shell's base and host into the router, so it is imported
-// before anything builds or reads a URL.
+// Two design pages boot with these engine and shell settings. One is the viewer (main.ts). The other
+// is the Load page (load.ts), which reads a design into the engine's store before the viewer opens it
+// (agni issue 1072). Importing this module reads the shell's base and host into the router, so it is
+// imported before anything builds or reads a URL.
 
 import { useEngineFetch, timingMode, workspaceClient } from "./api.js";
 import { startEngine, mountingFetch, mountOf, type DesignFiles, type WasmEngine } from "./wasm/client.js";
@@ -21,8 +21,8 @@ export interface PageEngineOptions {
   onFetched?: (path: string, bytes: number) => void;
 }
 
-// engineParams are the query parameters that choose this page's engine. They ride along on every
-// URL the page pushes, so a refresh or a back/forward keeps the engine the visitor asked for.
+// engineParams are the query parameters that choose this page's engine. The page adds them to every
+// URL it pushes, so a refresh or a back/forward keeps the engine the visitor asked for.
 export const engineParams = (() => {
   const q = new URLSearchParams(window.location.search);
   const out = new URLSearchParams();
@@ -40,8 +40,8 @@ export function withEngineParams(url: string): string {
   return u.pathname + u.search;
 }
 
-// pageEngine is the engine this page analyses its design on: the URL's `engine=`, else the one the
-// server wrote into the shell (`agni serve --engine`), else the server.
+// pageEngine picks the engine that analyses this page's design. It takes the URL's `engine=`, else
+// the one the server wrote into the shell (`agni serve --engine`), else the server.
 export function pageEngine(): string {
   // A page served as plain files has no server to analyse anything, so it runs in the browser.
   if (onStaticHost) return "wasm";
@@ -55,14 +55,15 @@ export const onStaticHost = shell.host === "static";
 setBase(shell.base || "/");
 setStaticHost(onStaticHost);
 
-// fileURL is where one of a mount's files is fetched from: the server's read-only /raw/ route, or
-// the same path under the static site's raw/ folder, which `agni site` writes with that layout.
+// fileURL returns the address to fetch one of a mount's files from. On a server that is the
+// read-only /raw/ route. On a static site it is the same path under the site's raw/ folder, since
+// `agni site` writes that layout.
 export function fileURL(mount: string, path: string): URL {
   return new URL(`${appBase()}raw/${encodeURIComponent(mount)}/${path.split("/").map(encodeURIComponent).join("/")}`, location.href);
 }
 
-// wasmMaxBytes is the largest design the page analyses in the browser: the URL's `wasm-max-bytes=`,
-// else the server's `--wasm-max-bytes` from the shell (agni issue 852).
+// wasmMaxBytes is the largest design the page analyses in the browser. It takes the URL's
+// `wasm-max-bytes=`, else the server's `--wasm-max-bytes` from the shell (agni issue 852).
 export function wasmMaxBytes(): number {
   const v = engineParams.get("wasm-max-bytes") ?? document.querySelector<HTMLElement>(".app")?.dataset.wasmMaxBytes;
   const n = Number(v);
@@ -84,9 +85,9 @@ export function hideEngineNote(about: string): void {
   if (el?.textContent?.includes(about)) el.hidden = true;
 }
 
-// refuseBrowserMounts answers, on the server engine, every request naming a dropped design with a
-// refusal and a note rather than sending it, since the server has never seen those files (agni issue
-// 854). Requests about the server's own mounts pass.
+// refuseBrowserMounts runs on the server engine. It answers every request naming a dropped design
+// with a refusal and a note rather than sending it, since the server has never seen those files
+// (agni issue 854). Requests about the server's own mounts pass.
 export function refuseBrowserMounts(): void {
   const reason = "A dropped design is analysed in the browser and never sent to the server, so it needs the browser engine";
   const network = globalThis.fetch.bind(globalThis);
@@ -105,18 +106,19 @@ export function refuseBrowserMounts(): void {
   });
 }
 
-// SERVE_LANE_MAX_BYTES is the serve worker's memory limit (agni issues 911, 974, 990). A worker that has
-// crept past it is replaced, when its live heap says a replacement would come back smaller
-// (wouldShrink in wasm/client.ts), by one that restores the open design from the browser's cache. A
-// worker that is past it only because the open design is that large is kept.
+// SERVE_LANE_MAX_BYTES is the serve worker's memory limit (agni issues 911, 974, 990). A worker can
+// creep past it. If its live heap then says a replacement would come back smaller (wouldShrink in
+// wasm/client.ts), the worker is replaced. The replacement restores the open design from the
+// browser's cache. A worker that is past the limit only because the open design is that large is
+// kept.
 export const SERVE_LANE_MAX_BYTES = 512 << 20;
 
-// startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853): the engine
-// loads in a worker, and every client the page builds afterwards talks to it, bringing in each
-// design's files from the server the first time a request names it. The design keeps the URL it has
-// under the server engine. Listings and file reads go to the server, which owns the mount namespace.
-// It must finish before the app root builds its clients. The assets sit beside this bundle, so the
-// page works under any path prefix.
+// startPageEngine puts the page on the in-browser engine when it runs on wasm (agni issue 853). The
+// engine loads in a worker, and every client the page builds afterwards talks to it. The first time
+// a request names a design, the client brings in that design's files from the server. The design
+// keeps the URL it has under the server engine. Listings and file reads go to the server, which owns
+// the mount namespace. It must finish before the app root builds its clients. The assets sit beside
+// this bundle, so the page works under any path prefix.
 export async function startPageEngine(opts: PageEngineOptions = {}): Promise<WasmEngine | undefined> {
   if (pageEngine() !== "wasm") {
     refuseBrowserMounts();
@@ -188,7 +190,7 @@ function siteJSON(network: typeof globalThis.fetch): SiteRead {
   };
 }
 
-// shellBuild is the build that wrote the page, which a record of a load is keyed on, since another
+// shellBuild is the build that wrote the page. A record of a load is keyed on it, since another
 // build may read a file differently and keeps a store of its own.
 export function shellBuild(): string {
   return shell.build ?? "";
@@ -199,10 +201,11 @@ export function loadedKey(mount: string, path: string): LoadedKey {
   return { engine: pageEngine(), build: shellBuild(), uri: artifactUri(mount, path) };
 }
 
-// designListing is what a design's files hold now: the stamp a record of its load must match, and
-// how many files and bytes there are. A dropped design is named by its drop's last change, since its
-// files are the page's own; it is undefined for a drop this browser no longer keeps. A design on a
-// static host is named by its mount's listing, which `agni site` writes whole.
+// designListing describes a design's files as they are now. It returns the stamp that a record of
+// the design's load must match, and how many files and bytes there are. A dropped design is named by
+// its drop's last change, since its files are the page's own. The result is undefined for a drop
+// this browser no longer keeps. A design on a static host is named by its mount's listing, which
+// `agni site` writes whole.
 export async function designListing(mount: string, path: string, drops: DropStore): Promise<Listing | undefined> {
   if (mount === BROWSER_MOUNT) {
     const d = await drops.get(dropOf(path));

@@ -74,9 +74,9 @@ let restoring = false;
 // moved by syncUrl when the page opens another design. Undefined on every other server.
 let roomTab: ViewerRoomTab | undefined;
 
-// isTextEntry reports whether an event landed in somewhere the reader is typing, so a page-level key
-// binding can decline it. The query box and the review notes both take free text, and Escape inside
-// them belongs to the field.
+// isTextEntry reports whether an event's target is somewhere the reader is typing, so a page-level
+// key binding can decline it. The query box and the review notes both take free text, and Escape
+// inside them belongs to the field.
 function isTextEntry(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
   if (!el || !el.tagName) return false;
@@ -144,8 +144,8 @@ class AppRoot extends BaseComponent {
     // One app-level loader overlay drives both the viewer and the diff (they never run at once);
     // the shared delayedBusy keeps a single show-timer for it (WS7-043/044).
     const setBusyOverlay = delayedBusy(busyEl);
-    // WS9-045: the conformance expectation verdict strip (a plain-DOM sink, like the busy overlay;
-    // hidden on any design without a sidecar).
+    // WS9-045 added the conformance expectation verdict strip. It is a plain-DOM sink like the busy
+    // overlay, and it is hidden on any design without a sidecar.
     const setExpectCaption = expectationCaptionStrip(document.getElementById("expect-caption"));
     const setUndrawnNote = undrawnStrip(document.getElementById("undrawn-note"));
     const setStaleLinkNote = staleLinkStrip(document.getElementById("stale-link-note"));
@@ -174,7 +174,7 @@ class AppRoot extends BaseComponent {
         canvas.hideText(); // the SVG host renders its own text
         svgView.show();
         svgView.setSvg(markup);
-        // The readout stays visible in SVG mode, with the element count (see SvgView.stats).
+        // The readout remains visible in SVG mode, with the element count (see SvgView.stats).
         if (readoutEl) {
           readoutEl.textContent = `SVG — ${svgView.stats().elements} elements`;
           readoutEl.style.display = "";
@@ -200,7 +200,7 @@ class AppRoot extends BaseComponent {
     // The visual diff (WS9-005) is two SvgViews that mirror each other's pan and zoom. setView fires
     // no onViewChange, so the mirroring cannot loop. Each side pairs its view with a placeholder for
     // "no sheet on this side" and render errors. reveal (WS9-006) centers on the side's overlay and
-    // copies the camera to the sibling, so both panes land on the focused item.
+    // copies the camera to the sibling, so both panes show the focused item.
     const diffSvgViewA = new SvgView(diffSvgA);
     const diffSvgViewB = new SvgView(diffSvgB);
     diffSvgViewA.show();
@@ -255,9 +255,10 @@ class AppRoot extends BaseComponent {
       tablesPresenter.setCompareOpen(s.active && s.error === "");
     }, snapshots(), () => presenter.overlayConfig());
 
-    // The Tables panel (agni issues 898 and 956) shows an answer the page already holds as Tabulate's
-    // tables and saves them as csv through Encode. Its answers come from the presenters that hold
-    // them, and a comparison's from the open pair, asked again with the panel's diff options.
+    // The Tables panel shows an answer as Tabulate's tables and saves them as csv through Encode
+    // (agni issues 898 and 956). The page already holds each answer. The presenters holding them
+    // supply them, and a comparison's answer comes from the open pair, asked again with the panel's
+    // diff options.
     const tables = tablesPanelIsland(tablesEl, this._eventBus, {
       onSource: (key, opts) => void tablesPresenter.show(key, opts),
       onSelect: (i) => tablesPresenter.select(i),
@@ -311,13 +312,14 @@ class AppRoot extends BaseComponent {
     };
     const comparePick = comparePickerIsland(pickerEl, compareTreeEl, this._eventBus, compareWith);
     const compare = compareButton(compareEl, () => comparePick.picker.open(openFile));
-    // WS9-049: the visited-sheet tab strip, the only SheetsView in sheetNavs. Selecting a tab emits
-    // the same showSheet intent the sheet overview does.
+    // WS9-049 added the visited-sheet tab strip, and it is the only SheetsView in sheetNavs.
+    // Selecting a tab emits the same showSheet intent as the sheet overview.
     const sheetTabs = sheetTabsIsland(sheetTabsEl, this._eventBus, {
       onSelect: (id) => void presenter.showSheet(id),
     });
-    // The control bar (render-mode buttons + layout selector) is a Solid island that renders from
-    // the ControlsState the presenter pushes and emits mode/layout intents back up.
+    // The control bar holds the render-mode buttons and the layout selector. It is a Solid island.
+    // It renders from the ControlsState the presenter pushes, and it emits mode/layout intents back
+    // up.
     const controls = controlBarIsland(controlsEl, this._eventBus, {
       onMode: (mode) => void presenter.setMode(mode),
       onLayout: (layout) => void presenter.setLayout(layout),
@@ -344,9 +346,9 @@ class AppRoot extends BaseComponent {
         void presenter.selectFinding(subject, sheet, netId).then((sel) => {
           if (sel) propertiesPresenter.selectEntity(sel);
         }),
-      // A context entity is not a finding, so it locates through the same path a query result cell
-      // does (locateEntity) rather than through selectFinding, whose lookup is by finding subject
-      // and would find nothing (agni issue 349).
+      // A context entity is not a finding, so it locates through locateEntity, as a query result
+      // cell does. selectFinding looks up by finding subject and would find nothing (agni issue
+      // 349).
       onLocateContext: (kind, subject, pin) => void presenter.locateEntity(kind, subject, undefined, LocateReason.UNSPECIFIED, pin),
       onRun: () => void presenter.runChecks(),
       onCancel: () => presenter.cancelChecks(),
@@ -356,8 +358,8 @@ class AppRoot extends BaseComponent {
       onSave: (format) =>
         void (format === "csv" ? presenter.saveChecksCSV((a, s, n) => tablesPresenter.saveAnswer(a, s, n)) : presenter.saveReport(format)),
     });
-    // The rules panel is the catalog of what the engine can assert; ticking rules sets the active
-    // ruleset, which the presenter re-runs the checks over.
+    // The rules panel is the catalog of what the engine can assert. Ticking rules sets the active
+    // ruleset, and the presenter re-runs the checks over it.
     const rules = rulesPanelIsland(rulesEl, this._eventBus, {
       onSelectionChange: (names) => void presenter.setRuleSelection(names),
     });
@@ -427,15 +429,15 @@ class AppRoot extends BaseComponent {
       onVerdict: (id) => void presenter.locateVerdict(id),
       // A part names only its ref-des, so the trace field then lists that part's pins to pick from.
       onTrace: (end, sel) => {
-        // The tab comes forward first, since the field's focus is what opens its list and a hidden
-        // field takes none.
+        // The tab comes forward first. Focusing the field opens its list, and a hidden field takes
+        // no focus.
         if (dockApi) dockApi.getPanel("trace")?.api.setActive();
         trace.view.setEnd(end, sel.kind === "pin" ? `${sel.ref}.${sel.pin}` : `${sel.ref ?? ""}.`);
       },
     });
-    // Where a selected part or net is drawn is the engine's answer to the served find-by-name query,
-    // anchored to the whole name, since each entity in a query answer carries the sheets it is drawn
-    // on. Before the catalog arrives there is no template, and the panel lists no sheets.
+    // The engine says where a selected part or net is drawn. It answers the served find-by-name
+    // query, anchored to the whole name, and each entity in a query answer names the sheets it is
+    // drawn on. Before the catalog arrives there is no template, and the panel lists no sheets.
     let findByName: { query: string; bind: string } | null = null;
     const propertiesPresenter = new PropertiesPresenter(properties.view, {
       getDesign: async (uri, readMask) => designClient().getDesign({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), readMask: { paths: readMask } }),
@@ -454,8 +456,8 @@ class AppRoot extends BaseComponent {
         const resp = await queryClient().runQuery({ snapshot: await snapshots().of(uri, presenter.overlayConfig()), query, omitLocations: true });
         return resp.rows.map((r) => r.cells);
       },
-      // The selected rules asked about the selection alone (agni issue 897), on the design the Load page
-      // read, so the answer comes from the engine's kept results or a run over that subject.
+      // The selected rules are asked about the selection alone (agni issue 897), on the design as the
+      // Load page read it. The answer comes from the engine's kept results or a run over that subject.
       check: async (subject) => {
         const r = await presenter.checkSelection(subject);
         if (!r) return null;
@@ -464,7 +466,7 @@ class AppRoot extends BaseComponent {
       checkKey: () => presenter.checkKey(),
       // The trace pickers list the parts and pins Properties has already read.
       onInventory: (inv) => trace.view.setPicks(tracePicks(inv)),
-      // Under --viewer-rooms the tab tells the agents it lets in what the reader selected.
+      // Under --viewer-rooms the tab lets agents in, and it tells them what the reader selected.
       onSelect: (focus) => roomTab?.select(focus),
     });
     const locateSelection = (sel: Selection) =>
@@ -587,7 +589,8 @@ class AppRoot extends BaseComponent {
         const sel = selectionFromCell(v.kind, v.text, v.ref);
         if (sel) propertiesPresenter.selectEntity(sel);
       },
-      // The checklist page, written by the rpc `agni review --format html` calls (agni issue 1030).
+      // This saves the checklist page. `agni review --format html` calls the same rpc (agni issue
+      // 1030).
       onSave: () => void presenter.saveReviewReport(),
     }, { staticHost: onStaticHost });
     // The relation catalog (WS9-037) is static per build and design-independent, so fetch it once
@@ -637,7 +640,7 @@ class AppRoot extends BaseComponent {
         download: saveFile,
         linkBase: new URL(appBase(), location.href).href,
         // Every location report also feeds the Compare chrome, since the open design is side A of any
-        // comparison and Compare stays disabled until one is open.
+        // comparison and Compare is disabled until one is open.
         location: (loc) => {
           if (hasFile(loc)) {
             openFile = { mount: loc.mount, path: loc.path };
@@ -678,7 +681,7 @@ class AppRoot extends BaseComponent {
     );
     this.presenter = presenter;
 
-    // WS9-044: the highlight-style dropdown. Apply any saved style at boot, then update the
+    // WS9-044 added the highlight-style dropdown. Apply any saved style at boot, then update the
     // presenter (and persist) whenever the user edits color / opacity / width. It is top-bar
     // chrome, so it lives here, not in an island.
     const highlightMenuEl = document.getElementById("highlight-menu");
@@ -736,7 +739,7 @@ function saveFile(file: SavedFile): void {
 
 // Boot the dock shell before the island lifecycle. The dock adopts the server-rendered holes
 // into its panels first, so islands initialize inside laid-out (measurable) panels.
-// Islands in a closed panel still mount, and their hole stays parked and hidden.
+// Islands in a closed panel still mount, and their hole is parked and hidden.
 const dockEl = document.getElementById("dock");
 const parkEl = document.getElementById("panel-park");
 const menuEl = document.getElementById("panels-menu");
@@ -817,8 +820,9 @@ void admitted()
     window.addEventListener("popstate", () => void applyUrl());
     await applyUrl();
     // The live page contract (agni issues 1150, 1152). A parent page at an allowed origin drives the
-    // viewer through it over postMessage, and listening starts once the URL's design is open, so a
-    // host's first request never races the restore; the page announces itself to its parent then.
+    // viewer through it over postMessage. The page starts listening once the URL's design is open,
+    // so a host's first request never races the restore. At that point the page also announces
+    // itself to its parent.
     const page: ViewerPageAPI = pageApi(presenter);
     const dispatch = pageDispatcher(page);
     const shell = document.querySelector<HTMLElement>(".app")?.dataset;

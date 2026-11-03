@@ -1,9 +1,9 @@
 // The Lexicon panel's presenter and its edits (agni issue 1267). The panel edits a DRAFT of the
-// convention as written, not the effective lexicon, so a saved file holds what the team changed and
-// later engine defaults still reach it, and so a convention's rules stay in what Try sends:
-// CompareLexicons replaces rules as well as the lexicon, and a candidate without them would report
-// their findings as gone. The engine lists every draft (GetLexicon's candidate), so the page merges
-// nothing itself.
+// convention as written, not the effective lexicon. A saved file then holds what the team changed,
+// and later engine defaults still reach it. The draft also keeps a convention's rules in what Try
+// sends. CompareLexicons replaces rules as well as the lexicon, so a candidate without them would
+// report their findings as gone. The engine lists every draft (GetLexicon's candidate), so the page
+// merges nothing itself.
 import { clone, create } from "@bufbuild/protobuf";
 import {
   AttributeKeysSchema,
@@ -77,7 +77,7 @@ function sourceLabel(e: LexiconEntry): string {
 
 const entryKey = (e: { vocabulary: string; kind: string; value: string }) => `${e.vocabulary}\u0000${e.kind}\u0000${e.value}`;
 
-// rowsOf turns a listing of the draft into rows, each keeping the source it has in the convention in
+// rowsOf turns a listing of the draft into rows. Each row keeps its source from the convention in
 // effect, so an edit does not relabel every project pattern as this request's.
 export function rowsOf(entries: LexiconEntry[], base: LexiconEntry[]): LexiconRow[] {
   const was = new Map(base.map((e) => [entryKey(e), e]));
@@ -96,8 +96,8 @@ export function rowsOf(entries: LexiconEntry[], base: LexiconEntry[]): LexiconRo
   });
 }
 
-// vocabOf finds a vocabulary of the draft by the path LexiconEntry names it with ("net.gate_drive",
-// "class.tvs"), making it when make is set.
+// vocabOf finds a vocabulary of the draft by its path, the name LexiconEntry uses for it
+// ("net.gate_drive", "class.tvs"). It makes the vocabulary when make is set.
 function vocabOf(conv: NamingConvention, path: string, make: boolean): (VocabPatterns | ClassVocab) | undefined {
   const [space, name] = path.split(".");
   if (make) conv.lexicon ??= create(NamingLexiconSchema);
@@ -123,7 +123,7 @@ function vocabOf(conv: NamingConvention, path: string, make: boolean): (VocabPat
 }
 
 // A diff_pair vocabulary lists suffix pairs rather than patterns. An entry's value spells one as
-// "_P=_N", the form LexiconService lists it in.
+// "_P=_N", and LexiconService lists it in that form.
 const DIFF_PAIR = "net.diff_pair";
 
 function diffPairs(conv: NamingConvention): DiffPairVocab {
@@ -145,7 +145,8 @@ const VALUE_UNIT = "value_unit.";
 
 const LIST_OF: Record<string, string> = { pattern: "patterns", exclude: "exclude", prefix: "prefixes", exclude_prefix: "excludePrefixes", family: "families", key: "keys" };
 
-// kindsIn is the kinds a vocabulary's live entries are written back under when a built-in is removed.
+// kindsIn lists a vocabulary's entry kinds. When a built-in is removed, the vocabulary's live
+// entries are written back under these kinds.
 function kindsIn(vocabulary: string): string[] {
   if (vocabulary.startsWith("attribute.")) return ["key"];
   return vocabulary.startsWith("class.") ? ["pattern", "family"] : ["pattern", "exclude"];
@@ -182,10 +183,11 @@ export function canRemove(r: LexiconRow): boolean {
   return !r.replaced && r.kind !== "switch" && !(r.builtin && r.kind === "unit");
 }
 
-// removeEntry returns the draft without one row. A convention's own entry leaves its list. A built-in
-// has no list to leave, so the vocabulary becomes `replace: true` with every other live entry written
-// out, which is the one way a convention can drop a single built-in. A built-in prefix is the
-// exception, since `replace` leaves the prefix table alone, so it goes under exclude_prefixes.
+// removeEntry returns the draft without one row. A convention's own entry leaves its list. A
+// built-in has no list to leave, so the vocabulary becomes `replace: true` with every other live
+// entry written out. A convention has no other way to drop a single built-in. A built-in prefix is
+// the exception. `replace` leaves the prefix table alone, so a removed built-in prefix goes under
+// exclude_prefixes.
 export function removeEntry(conv: NamingConvention, rows: LexiconRow[], row: LexiconRow): NamingConvention {
   const next = clone(NamingConventionSchema, conv);
   if (row.vocabulary.startsWith(VALUE_UNIT)) {
@@ -283,7 +285,7 @@ export class LexiconPresenter {
   private draft = create(NamingConventionSchema, { name: "conventions" });
   private base: LexiconEntry[] = [];
   private state = emptyLexicon();
-  // ticket drops an answer a later edit or design overtook.
+  // ticket drops an answer once a later edit or design has overtaken it.
   private ticket = 0;
 
   constructor(
@@ -317,8 +319,8 @@ export class LexiconPresenter {
     }
   }
 
-  // edit lists a new draft through the engine and takes it only if it compiles, so a bad pattern stays
-  // an inline error and never reaches a run.
+  // edit lists a new draft through the engine and takes it only if it compiles, so a bad pattern
+  // shows as an inline error and never reaches a run.
   private async edit(next: NamingConvention): Promise<void> {
     const t = ++this.ticket;
     try {

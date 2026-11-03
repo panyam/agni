@@ -10,9 +10,8 @@
 
 const PREFIX = "mount://";
 
-// artifactUri assembles the wire name for an artifact from the mount and mount-relative path the
-// viewer holds. An empty path names the mount root, which is what a directory listing of a whole
-// mount asks for.
+// artifactUri assembles an artifact's wire name from the viewer's mount and mount-relative path. An
+// empty path names the mount root. A directory listing of a whole mount asks for the root.
 export function artifactUri(mount: string, path: string): string {
   const clean = path.replace(/^\/+/, "").replace(/\/+$/, "");
   return clean === "" ? PREFIX + mount : `${PREFIX}${mount}/${clean}`;

@@ -1,9 +1,9 @@
-// Entry point for the Load page (/designs/<mount>/<path>/load, agni issue 1072). It reads the design
-// the address names into the engine's store and then opens the viewer at the same address, so the
-// viewer opens a design already parsed. The browser mount's Load page with no design is where files
-// are dropped or picked, and where the drops this browser keeps are listed.
+// Entry point for the Load page (/designs/<mount>/<path>/load, agni issue 1072). The address names a
+// design. The page reads it into the engine's store and then opens the viewer at the same address, so
+// the viewer opens a design already parsed. With no design named, the browser mount's Load page takes
+// dropped or picked files and lists the drops this browser keeps.
 //
-// The page is plain DOM: every string it shows about a drop came from the visitor's files, so each is
+// The page is plain DOM. Every string it shows about a drop came from the visitor's files, so each is
 // set as text and never parsed as markup.
 
 import { designListing, loadedKey, pageEngine, refuseBrowserMounts, showEngineNote, startPageEngine, withEngineParams } from "./engineboot.js";
@@ -143,8 +143,8 @@ function describe(d: SavedDrop): string {
   return `${d.files} file${d.files === 1 ? "" : "s"} · ${mb} MB · dropped ${new Date(d.savedAt).toLocaleString()}`;
 }
 
-// renderDrops lists the drops this browser keeps, each reopened through the same proposal a new drop
-// shows, or deleted.
+// renderDrops lists the drops this browser keeps. Each drop can be deleted or reopened, and reopening
+// shows the same proposal as a new drop.
 async function renderDrops(listEl: HTMLElement, deps: DropDeps): Promise<void> {
   let all: SavedDrop[];
   try {
@@ -213,7 +213,7 @@ async function dropPage(drops: DropStore): Promise<void> {
   };
   installDrop(deps);
   await renderDrops(listEl, deps);
-  // A new drop lands in the listing too, once its proposal is up.
+  // A new drop also appears in the listing, once its proposal dialog closes.
   dialog.addEventListener("close", () => void renderDrops(listEl, deps));
 }
 

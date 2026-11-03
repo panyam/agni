@@ -65,7 +65,7 @@ interface PreviewSheets {
 // The discriminator is whether "faithful" is an available layout, not the file extension, so it
 // holds for every board format without a per-format list. A board file offers only auto-layouts,
 // so its board sheet is the only faithful drawing it has. A schematic with a board sidecar offers
-// "faithful" and keeps its schematic, which is what someone browsing a .kicad_sch means by that file.
+// "faithful" and keeps its schematic. Someone browsing a .kicad_sch means the schematic by that file.
 export function pickPreviewSheet(d: PreviewSheets): { id: string; name?: string } | undefined {
   const hasFaithful = (d.availableLayouts ?? []).includes("faithful");
   if (!hasFaithful) {
@@ -78,7 +78,7 @@ export function pickPreviewSheet(d: PreviewSheets): { id: string; name?: string 
 // DesignPreview loads and shows one design at a time.
 export class DesignPreview {
   // seq is the staleness token. Clicking down a file list starts a load per file and the responses
-  // can land out of order (a small design behind a large one returns first), so each load captures
+  // can arrive out of order (a small design behind a large one returns first), so each load captures
   // the token it started with and drops its own result once a newer load has begun. Without it the
   // stage can settle on a design the user already moved off.
   private seq = 0;
@@ -93,8 +93,8 @@ export class DesignPreview {
 
   // show renders the sheet that stands for a design. It takes two calls because the sheet has to
   // be named explicitly. GetSheet's empty selector means "index 0 of the geometry for this layout",
-  // which reaches neither the synthetic board sheet nor pickPreviewSheet's choice, and GetDesign is
-  // what knows the sheet list.
+  // which reaches neither the synthetic board sheet nor pickPreviewSheet's choice. Only GetDesign
+  // knows the sheet list.
   //
   // Both calls request an empty layout, so the preview is faithful-first. The server's
   // layoutForFile resolves "" to the faithful layout whenever the file carries geometry, and to the

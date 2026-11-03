@@ -31,9 +31,9 @@ describe("web api", () => {
     expect(typeof client.getSheet).toBe("function");
   });
 
-  // Reviews are the one RESOURCE surface in this API (CONSTRAINTS C23), so the contract check is
-  // that the four standard methods exist alongside the manifest resolver. A review run that could
-  // be created but not listed would put the panel's history back where it started.
+  // Reviews are the one RESOURCE surface in this API (CONSTRAINTS C23). So the contract check asks
+  // that the four standard methods exist alongside the manifest resolver. If a review run could be
+  // created but not listed, the panel's history would be back where it started.
   it("exposes the ReviewService resource contract", () => {
     expect(ReviewService.typeName).toBe("agni.v1.webapi.ReviewService");
     for (const method of ["createReview", "getReview", "listReviews", "deleteReview", "getReviewManifest"] as const) {
@@ -49,8 +49,8 @@ describe("web api", () => {
   });
 });
 
-// The page's ?timing asks every request where its time went (agni issue 914), and the breakdown the
-// engine sends back is logged so it can be read in the console.
+// The page's ?timing asks every request where its time went (agni issue 914). The engine sends back
+// a breakdown, and the page logs it to the console.
 describe("timing interceptor", () => {
   it("asks for the breakdown and logs what comes back", async () => {
     const info = vi.spyOn(console, "info").mockImplementation(() => {});
@@ -65,7 +65,8 @@ describe("timing interceptor", () => {
     expect(line.startsWith("agni timing CheckDesign: ")).toBe(true);
     const t = JSON.parse(line.slice("agni timing CheckDesign: ".length));
     expect(t.totalMicros).toBe("1200");
-    // The page's own clock rides along, so the time a request waited outside the engine shows.
+    // The log line also has the page's own clock, so it shows how long a request waited outside
+    // the engine.
     expect(typeof t.page.startMs).toBe("number");
     expect(t.page.wallMs).toBeGreaterThanOrEqual(0);
     info.mockRestore();

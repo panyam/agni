@@ -1,7 +1,7 @@
 // The extraction bank helpers, the manual backend (WS13-006). The PartSpec is SHARED, saved
-// server-side with optimistic locking (see regionview). The workbench UI state (user-drawn regions
-// and per-region routing types) is PER-USER and lives in localStorage, so two people transcribing
-// one datasheet do not clobber each other's boxes and tags.
+// server-side with optimistic locking (see regionview). The workbench UI state holds user-drawn
+// regions and per-region routing types. It is PER-USER and lives in localStorage, so two people
+// transcribing one datasheet do not clobber each other's boxes and tags.
 import { create, toJsonString, fromJson } from "@bufbuild/protobuf";
 import {
   PartSpecSchema,
@@ -35,10 +35,10 @@ import {
 import type { Region, RegionType } from "./regions.js";
 
 // docId derives a source document's STABLE identity from its corpus path, the file stem
-// (foo/LM1117.pdf -> "LM1117"). It is the id a SourceDoc carries and provenance.doc_ref cites.
-// It is NOT the doc-IR content_hash, which any byte change flips, so human work joined to it would
-// be orphaned on re-extraction. Two annotators derive the same stem with no shared registry, and it
-// is unique within a part, the only scope doc_ref needs. A rename changes it (WS13-010).
+// (foo/LM1117.pdf -> "LM1117"). A SourceDoc carries this id and provenance.doc_ref cites it. It is
+// NOT the doc-IR content_hash. Any byte change flips that hash, so human work joined to it would be
+// orphaned on re-extraction. Two annotators derive the same stem with no shared registry, and it is
+// unique within a part, the only scope doc_ref needs. A rename changes it (WS13-010).
 export function docId(path: string): string {
   const base = path.split("/").pop() ?? path;
   const dot = base.lastIndexOf(".");
@@ -56,8 +56,9 @@ export const REGION_ATTR = "region";
 //
 // contentHash is the doc-IR Document.content_hash, and recording it lets a human verification
 // EXPIRE when the vendor reissues the document (param.VerificationOfIn compares the two). With no
-// revision a verification can only answer "unknown", which the review layer distrusts. Empty is
-// allowed, since an un-extracted datasheet has no doc-IR yet, and means staleness cannot be decided.
+// revision a verification can only answer "unknown", and the review layer distrusts that answer. An
+// empty hash is allowed, since an un-extracted datasheet has no doc-IR yet. It means staleness
+// cannot be decided.
 export function emptySpec(path: string, docTitle: string, contentHash: string): PartSpec {
   return create(PartSpecSchema, {
     docs: [{ id: docId(path), title: docTitle, locator: path, contentHash }],
@@ -65,20 +66,20 @@ export function emptySpec(path: string, docTitle: string, contentHash: string): 
 }
 
 // suggestMpn guesses the part number a datasheet is for from its file name, as the starting value a
-// new draft offers (agni issue 749): ti/LM1117.pdf suggests LM1117. It is only ever a suggestion,
-// since a draft is keyed by its MPN and nothing is saved until the author confirms or edits it, and a
-// family datasheet is often named for none of its parts.
+// new draft offers (agni issue 749). For example, ti/LM1117.pdf suggests LM1117. It is only ever a
+// suggestion. A draft is keyed by its MPN, nothing is saved until the author confirms or edits it,
+// and a family datasheet is often named for none of its parts.
 export function suggestMpn(path: string): string {
   const base = path.split("/").pop() ?? "";
   return base.replace(/\.pdf$/i, "").trim();
 }
 
-// adoptDocRevision records the revision the corpus now holds on the spec's first SourceDoc,
-// reporting whether it changed anything.
+// adoptDocRevision copies the corpus's current revision onto the spec's first SourceDoc and reports
+// whether that changed anything.
 //
-// A spec saved before the workbench recorded a hash has none (#289), and a verification added to it
-// would read "unknown" forever, carrying a human's name the review layer distrusts. So the hash is
-// filled in on load as well as at creation.
+// A spec saved before the workbench recorded a hash has none (#289). A verification added to it
+// would read "unknown" forever. It would carry a human's name, and the review layer would distrust
+// it. So the hash is filled in on load as well as at creation.
 //
 // It does NOT overwrite an existing hash that disagrees. A disagreement is a real re-seed, and
 // adopting the new hash would re-validate every verification pinned to the old revision.
@@ -96,8 +97,8 @@ export function adoptDocRevision(spec: PartSpec, contentHash: string): boolean {
 // expire when the datasheet is reissued (#289). Contrast candidate.Accept, which refuses to mark a
 // machine proposal verified, because nobody read that page.
 //
-// Returns undefined when the document records no revision, because a verification that cannot be
-// invalidated is the failure the type exists to prevent. The value then saves unverified.
+// Returns undefined when the document records no revision. The type exists to prevent a
+// verification that cannot be invalidated. The value then saves unverified.
 export function handVerification(doc: SourceDoc | undefined, by: string, at: string): Verification | undefined {
   if (!doc?.contentHash || !by) return undefined;
   return create(VerificationSchema, {
@@ -116,8 +117,8 @@ export function today(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-// docRevisionNote says whether this document's revision is recorded, which decides whether anything
-// transcribed against it can be confirmed at all.
+// docRevisionNote says whether this document's revision is recorded. Without one, nothing
+// transcribed against the document can be confirmed at all.
 //
 // It reports the CONSEQUENCE rather than the hash, since an author can act on that. The short hash
 // prefix only shows that a revision is pinned.
@@ -170,8 +171,8 @@ export function saveUiState(mount: string, path: string, ui: UiState): void {
 }
 
 // LayerVis says which region layers the workbench draws. The doc-IR layers are split by kind so the
-// extractor's TEXT regions can be hidden without losing tables and figures, and "mine"/"others" gate
-// the two annotation layers. Coverage counts stay over ALL regions regardless.
+// extractor's TEXT regions can be hidden without losing tables and figures, and "mine"/"others"
+// gate the two annotation layers. Coverage still counts ALL regions.
 export interface LayerVis {
   table: boolean;
   figure: boolean;
@@ -278,7 +279,7 @@ export function otherUserRegions(sets: AnnotationSet[], me: string): Region[] {
 }
 
 // NewParamFields is the transcribe editor's input for one parameter row, before it becomes a
-// param.Parameter. Empty numeric fields stay unset, since RangeValue has explicit presence. A
+// param.Parameter. Empty numeric fields are left unset, since RangeValue has explicit presence. A
 // condition is captured as raw text only, so it is not machine-comparable, but coverage is still
 // COMPLETE rather than the row reading as a bare scalar.
 export interface NewParamFields {
@@ -369,9 +370,9 @@ export function newPin(f: NewPinFields, region: Region, page: number, docRef: st
 // derivePinId turns a pin's printed name into a spec-local id, suffixing when the obvious id is
 // already taken (nc, then nc2, then nc3).
 //
-// A part can print ONE NAME ON SEVERAL TERMINALS (the seeded TXB0104 prints NC twice), and two pins
-// sharing an id is a rejected save. Returns "" for an empty name, which the caller treats as "not
-// ready to add".
+// A part can print ONE NAME ON SEVERAL TERMINALS (the seeded TXB0104 prints NC twice), and a save
+// with two pins sharing an id is rejected. Returns "" for an empty name, and the caller treats that
+// as "not ready to add".
 export function derivePinId(name: string, taken: Iterable<string>): string {
   const base = name.trim().toLowerCase().replace(/\s+/g, "_");
   if (!base) return "";
@@ -383,8 +384,8 @@ export function derivePinId(name: string, taken: Iterable<string>): string {
   }
 }
 
-// newPackage declares one body the part ships in. It carries no provenance, because a package is the
-// label a pin number is relative to, and param.Validate asks only for a unique id.
+// newPackage declares one body the part ships in. It has no provenance. A package is only a label,
+// and a pin number is relative to it. param.Validate asks only for a unique id.
 export function newPackage(id: string, name: string, mpnSuffix = ""): Package {
   return create(PackageSchema, { id: id.trim(), name: name.trim(), mpnSuffix: mpnSuffix.trim() });
 }
@@ -396,17 +397,17 @@ export function pinsForRegion(spec: PartSpec, regionId: string): Pin[] {
 }
 
 // setPinNumber records a pin's designator within one package, REPLACING any existing entry for that
-// package rather than appending. An empty number removes the entry, which is how a mistyped
-// designator is cleared. A stale entry could leave two pins claiming one number, which ValidatePins
-// rejects.
+// package rather than appending. An empty number removes the entry, and that clears a mistyped
+// designator. A stale entry could leave two pins claiming one number, and the engine's
+// param.Validate rejects that (structuralProblems in core/param).
 export function setPinNumber(pin: Pin, packageRef: string, number: string): void {
   const rest = pin.numbers.filter((n) => n.packageRef !== packageRef);
   const trimmed = number.trim();
   pin.numbers = trimmed ? [...rest, create(PinNumberSchema, { packageRef, number: trimmed })] : rest;
 }
 
-// bindParam binds a parameter to a terminal, idempotently. Several calls express a row the datasheet
-// states once for a group of pins.
+// bindParam binds a parameter to a terminal, idempotently. A datasheet can state one row for a
+// group of pins, and several calls express that.
 export function bindParam(p: Parameter, pinId: string): void {
   if (!p.pinRefs.includes(pinId)) p.pinRefs = [...p.pinRefs, pinId];
 }
@@ -418,9 +419,9 @@ export function unbindParam(p: Parameter, pinId: string): void {
 }
 
 // NewRelationFields is the editor's input for one pin-to-pin constraint. The bound is a min and a
-// max ON THE DIFFERENCE (subject minus reference), which is what the contract stores. One shape then
-// holds both "VCCA <= VCCB" (max 0) and "never exceeds by more than 0.5 V" (max 0.5), and there is no
-// translation step here for a sign error to hide in.
+// max ON THE DIFFERENCE (subject minus reference), and the contract stores it that way. One shape
+// then holds both "VCCA <= VCCB" (max 0) and "never exceeds by more than 0.5 V" (max 0.5), and
+// there is no translation step here for a sign error to hide in.
 export interface NewRelationFields {
   subjectPinRef: string;
   referencePinRef: string;

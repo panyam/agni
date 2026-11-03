@@ -1,11 +1,11 @@
-// What the Load page read into the engine's store, so the viewer can tell a design it may open from
-// one it sends to the Load page first (agni issue 1072).
+// The Load page records what it read into the engine's store. The viewer uses the record to tell a
+// design it may open from one it sends to the Load page first (agni issue 1072).
 //
 // A record is a convenience, never evidence. The engine checks every stored read against the files'
-// content before using it, so a record that outlived its store (the browser evicted it, a server
-// restarted) costs a slower open in the viewer and never a wrong answer. That is why it lives in
-// localStorage, where a private window or a blocked site may keep nothing, and why every read and
-// write here survives that.
+// content before using it. A record can outlive its store, when the browser evicts the store or a
+// server restarts. Then the record costs a slower open in the viewer and never a wrong answer. So
+// records live in localStorage, where a private window or a blocked site may keep nothing, and every
+// read and write here survives that.
 
 // LoadedKey names one load: the engine that read the design, the build it was, and the design.
 export interface LoadedKey {
@@ -51,9 +51,9 @@ function read(storage: Storage | undefined): Records {
   }
 }
 
-// recordLoaded notes that k was read with files stamped stamp. A storage that refuses the write keeps
-// nothing, and the viewer then sends the design to the Load page again, which the viewer's own
-// arrival marker stops from looping (see LOADED_PARAM).
+// recordLoaded notes that k was read with files stamped stamp. If the storage refuses the write,
+// nothing is kept. The viewer then sends the design to the Load page again, and the viewer's own
+// arrival marker stops that from looping (see LOADED_PARAM).
 export function recordLoaded(storage: Storage | undefined, k: LoadedKey, stamp: string): void {
   const key = keyOf(k);
   const rest = read(storage).filter((r) => r.key !== key);
@@ -72,7 +72,7 @@ export function wasLoaded(storage: Storage | undefined, k: LoadedKey, stamp: str
   return read(storage).some((r) => r.key === key && r.stamp === stamp);
 }
 
-// LOADED_PARAM marks the viewer's address when the Load page sends it there, so the viewer opens the
-// design without consulting a record the Load page may have been unable to write. The viewer removes
-// it from the address bar, so a later reload asks the record as usual.
+// LOADED_PARAM marks the viewer's address when the Load page sends it there. The Load page may have
+// been unable to write a record, so the marker lets the viewer open the design without consulting
+// one. The viewer removes the marker from the address bar, so a later reload asks the record as usual.
 export const LOADED_PARAM = "loaded";

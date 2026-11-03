@@ -1,9 +1,9 @@
 // AgniViewer hydrates an <agni-viewer> tag into a pan/zoom canvas over a
 // pre-rendered design SVG.
 //
-// This is the Tier-1 proof-of-pattern: the SVG is baked at build time (an
-// `agni render` golden), so the widget needs no engine. The SAME tag and mount
-// contract is what the Tier-2 wasm backend plugs into later. It swaps the
+// This is the Tier-1 proof-of-pattern. The SVG is baked at build time (an
+// `agni render` golden), so the widget needs no engine. The Tier-2 wasm backend
+// plugs into the SAME tag and mount contract later. It swaps the
 // static `src` fetch for a live GetSheet/HighlightSheet call and leaves the
 // pan/zoom shell unchanged.
 //
@@ -61,7 +61,7 @@ async function mount(host: HTMLElement): Promise<void> {
   shell.append(toolbar, stage);
   host.replaceChildren(shell);
 
-  // Load the baked SVG inline so it inherits transforms and stays crisp.
+  // Load the baked SVG inline so it inherits transforms and renders crisp.
   let svg: SVGSVGElement | null = null;
   try {
     const res = await fetch(src);
@@ -90,8 +90,8 @@ async function mount(host: HTMLElement): Promise<void> {
   svg.style.maxHeight = "none";
 
   const view: ViewState = { scale: 1, tx: 0, ty: 0 };
-  // Auto-fit stays on until the reader pans or zooms, so a late layout still lands fitted but the
-  // viewer never yanks the view back from under someone who has moved it.
+  // Auto-fit is on until the reader pans or zooms. A late layout is still fitted, but the viewer
+  // never yanks the view back from under someone who has moved it.
   let autoFit = true;
 
   function apply(): void {
@@ -177,7 +177,7 @@ async function mount(host: HTMLElement): Promise<void> {
     fit();
   });
 
-  // A single rAF is not enough: on first paint the stage can still measure zero (fonts, the
+  // A single rAF is not enough. On first paint the stage can still measure zero (fonts, the
   // surrounding grid, a lazily sized parent), and fit() then clamps to MIN_SCALE and leaves the
   // drawing as a stamp in the middle of a large empty stage. Observe instead, and keep re-fitting
   // on resize until the reader takes control by panning or zooming.

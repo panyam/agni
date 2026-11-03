@@ -221,8 +221,8 @@ describe("per-instance net id (WS9)", () => {
 // with a user style that is undefined unless the reader opened the Highlight menu, so it took the
 // SAME fallback. The two differed only in alpha and shape, within one hue.
 //
-// These assert the separation at the spec level, which is where it is decidable. Whether a reader can
-// actually TELL them apart is a pixel claim and lives in the browser suite; jsdom has no compositor
+// These assert the separation at the spec level, since it is decidable there. Whether a reader can
+// actually TELL them apart is a pixel claim and belongs in the browser suite; jsdom has no compositor
 // and would pass on two colors a human could not distinguish.
 describe("focusStack separates the field from the figure (agni issue 348)", () => {
   const findings = [f({ kind: "component", subject: "R1" }), f({ kind: "component", subject: "R2" })];
@@ -279,9 +279,10 @@ describe("severitySections, twinned with core/results via severity_twin.json", (
 });
 
 describe("severitySections parity with the server report (WS3-022)", () => {
-  // The client's severity rollup must land on the same worst-first order and per-severity counts the
-  // server report (GetCheckReport) emits, so the merged panel's severity grouping cannot drift from the
-  // CLI report. This pins severitySections against reportFromWire over the SAME finding set.
+  // The server report (GetCheckReport) emits a worst-first order and per-severity counts. The
+  // client's severity rollup must reach the same ones, so the merged panel's severity grouping cannot
+  // drift from the CLI report. This pins severitySections against reportFromWire over the SAME
+  // finding set.
   const mixed: FindingItem[] = [
     f({ severity: "info", subject: "I1" }),
     f({ severity: "error", subject: "E1" }),
@@ -308,9 +309,9 @@ describe("severitySections parity with the server report (WS3-022)", () => {
   });
 });
 
-// What a selection is CHECKED for (agni issue 259). This is a FILTER over
-// the findings already computed, so what the tests pin is the matching rule and what a zero
-// means, not any evaluation.
+// These tests cover what a selection is CHECKED for (agni issue 259). The check is a FILTER over the
+// findings already computed. So the tests pin the matching rule and the meaning of a zero, and no
+// evaluation.
 describe("selectionFromFinding", () => {
   it("reads each subject kind as the thing the finding is about", () => {
     expect(selectionFromFinding(f({ kind: "component", subject: "R1" }))).toEqual({ kind: "component", ref: "R1" });
@@ -379,8 +380,8 @@ describe("tallySeverities", () => {
   });
 
   // An inconclusive result is never a pass and never a fail (agni issue 74). Counting it as a defect
-  // states what the rule explicitly declined to state; dropping it loses the one item a reader could
-  // act on by supplying what was missing.
+  // states something the rule explicitly declined to state. Dropping it loses an item a reader could
+  // act on, by supplying what was missing.
   it("counts an inconclusive result apart from the defects, and out of the total", () => {
     const t = tallySeverities([
       f({ severity: "error" }),
@@ -390,15 +391,15 @@ describe("tallySeverities", () => {
     expect(t).toEqual({ error: 1, warning: 0, info: 0, total: 1, inconclusive: 2 });
   });
 
-  // Its SEVERITY is not what makes it inconclusive, so an inconclusive error must not raise the
-  // error pip. That is the reading a reviewer would act on first.
+  // Its SEVERITY does not make it inconclusive, so an inconclusive error must not raise the error
+  // pip. A reviewer would act on that pip first.
   it("keeps an inconclusive result out of its own severity bucket", () => {
     expect(tallySeverities([f({ severity: "error", inconclusive: true })]).error).toBe(0);
   });
 });
 
-// A zero has four meanings and only one is "nothing is wrong". This is the function that keeps a
-// panel from showing the reassuring one when it has not earned it.
+// A zero has four meanings and only one is "nothing is wrong". This function keeps a panel from
+// showing the reassuring one when nothing supports it.
 describe("checkedState", () => {
   it("names the state a count can be read in", () => {
     expect(checkedState({ ruleCount: 0, pending: 0, running: false })).toBe("no-rules");
@@ -414,9 +415,9 @@ describe("checkedState", () => {
   });
 });
 
-// An inconclusive result is a result the rule could not DECIDE, never a defect it found. The
-// severity it carries is the one it WOULD have reported, which is why every projection keyed on
-// that string quietly filed it with the failures (agni issue 350).
+// An inconclusive result is a result the rule could not DECIDE, never a defect it found. It still
+// holds the severity it WOULD have reported. So every projection keyed on that string quietly filed
+// it with the failures (agni issue 350).
 describe("an inconclusive finding is not a defect", () => {
   const undecided = f({ rule: "esd-protection", severity: "error", subject: "U3", inconclusive: true });
 

@@ -164,8 +164,9 @@ describe("ViewerRoomTab", () => {
     warn.mockRestore();
   });
 
-  // The Ask box (agni issue 1173): the reader's question goes to the agents the tab agreed to, with
-  // where the tab is and what is selected, so the agent can answer without asking back.
+  // The Ask box sends the reader's question to the agents the tab agreed to (agni issue 1173). The
+  // question includes where the tab is and what is selected, so the agent can answer without asking
+  // back.
   it("sends the reader's question with the tab's location and selection, only once the switch is on", async () => {
     const h = harness();
     await h.tab.follow({ mount: "m", path: "a" });

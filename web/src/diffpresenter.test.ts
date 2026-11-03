@@ -262,8 +262,8 @@ describe("DiffPresenter.selectItem (WS9-006)", () => {
   });
 
   it("switches to the sub-sheet pair for a renamed net that lives only there (WS9-027)", async () => {
-    // The server fix (each side's design as NetSource) is what populates netSheets for a
-    // wireless sub-sheet net; the panel then navigates to it the same way a component does.
+    // The server fix uses each side's design as NetSource, and that populates netSheets for a
+    // wireless sub-sheet net. The panel then navigates to it the same way a component does.
     // A's side joins by the OLD name, B's by the NEW, and both resolve to the sub pair (s2).
     const h = harness({
       diffDesigns: vi.fn(async () => ({

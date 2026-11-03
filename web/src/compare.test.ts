@@ -39,9 +39,9 @@ describe("compareButton", () => {
     expect(onOpen).not.toHaveBeenCalled();
   });
 
-  // The armed state is gone (WS9-049 phase 3). These pin its ABSENCE, because the failure mode of
-  // a half-removed mode is a button that looks inert but still holds state. It used to toggle
-  // .active, relabel itself to "pick file B in the tree", and cancel on Escape.
+  // The armed state is gone (WS9-049 phase 3). These pin its ABSENCE. A half-removed mode fails as
+  // a button that looks inert but still holds state. The button used to toggle .active, relabel
+  // itself to "pick file B in the tree", and cancel on Escape.
   it("holds no armed state: every click is a fresh request, not a toggle", () => {
     const { control, btn, onOpen } = harness();
     control.setEnabled(true);

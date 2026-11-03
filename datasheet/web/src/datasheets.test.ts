@@ -3,14 +3,14 @@ import { describe, it, expect, vi, beforeAll } from "vitest";
 import { loadRecents } from "@agni/web-shared/recents.js";
 
 // The datasheets page's boot, under test for the first time. The three islands are mocked rather
-// than real, because the region viewer pulls in pdf.js, which needs a canvas and a worker jsdom
-// does not have, and none of that is what this asserts. What it asserts is the BOOT PATH, which is
-// where the page has a blind spot the viewer's composition.test.ts already covers for main.ts.
+// than real. The region viewer pulls in pdf.js, and pdf.js needs a canvas and a worker that jsdom
+// does not have. This test asserts none of that. It asserts the BOOT PATH. The page had a blind spot
+// there, and the viewer's composition.test.ts already covers the same path for main.ts.
 //
-// In the bug that prompted it, a deep link restored a datasheet by reaching past `open` to
-// view.load + tree.setState, which was the same sequence right up until `open` gained recording.
-// From then on a datasheet opened by URL never reached the landing page's Recent list, with every
-// unit test green. It was found by looking at a screenshot, which is not a test strategy.
+// In the bug that prompted it, a deep link restored a datasheet by calling view.load +
+// tree.setState directly instead of `open`. That was the same sequence until `open` gained
+// recording. From then on a datasheet opened by URL never reached the landing page's Recent list,
+// with every unit test green. It was found by looking at a screenshot, which is not a test strategy.
 const calls = vi.hoisted(() => ({ loaded: [] as string[] }));
 
 // A stand-in island. The lifecycle controller initializes whatever performLocalInit returns, so a
@@ -33,10 +33,10 @@ vi.mock("./regionview.js", () => ({
 vi.mock("./dstree.js", () => ({
   dsTreeIsland: () => ({ island: stubIsland(), view: { setState: () => {} } }),
 }));
-// pdf.js enters the app in this file's subject (the composition root hands realPdfSource to the
-// workbench), and importing it runs canvas setup that needs a DOMMatrix jsdom does not have. The
-// workbench itself is mocked below, so this stub is never called; it exists to keep the import from
-// loading the library.
+// pdf.js enters the app through this file's subject, because the composition root hands
+// realPdfSource to the workbench. Importing pdf.js runs canvas setup that needs a DOMMatrix, and
+// jsdom does not have one. The workbench itself is mocked below, so this stub is never called. It
+// only keeps the import from loading the library.
 vi.mock("./pdfrender.js", () => ({
   realPdfSource: { loadPdf: async () => ({}), renderPage: async () => ({}), rawDatasheetUrl: () => "" },
 }));
@@ -57,8 +57,8 @@ describe("the datasheets page boots from a deep link", () => {
     expect(calls.loaded).toContain("ds/vendor/txb0104.pdf");
   });
 
-  // Arriving by URL is arriving. The viewer counts a deep link as an opening, and a page that
-  // disagreed would leave the Recent list quietly dependent on how you got there.
+  // Arriving by URL is arriving. The viewer counts a deep link as an opening. If this page
+  // disagreed, the Recent list would quietly depend on how you got there.
   it("records it for the landing page's Recent list", () => {
     const got = loadRecents();
     expect(got.map((r) => `${r.mount}/${r.path}`)).toContain("ds/vendor/txb0104.pdf");

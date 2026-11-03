@@ -1,5 +1,5 @@
 // The datasheets workbench's URL <-> state codec (WS13-006), the analogue of router.ts for the
-// viewer. Pure functions with no page imports, so it stays testable and the viewer router never has
+// viewer. Pure functions with no page imports, so it is testable and the viewer router never has
 // to know about the datasheets space. A datasheet lives at /datasheets/files/<mount>/<path...>,
 // mirroring the viewer's /files/<mount>/<path...>. parseDsUrl returns the empty location for any
 // path outside the datasheets space (including the viewer's /files/), so the two codecs never

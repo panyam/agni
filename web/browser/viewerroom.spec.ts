@@ -1,8 +1,8 @@
 // An agent drives viewer tabs through `agni serve --mcp --viewer-rooms` (agni issue 1154). The unit
 // tests hold the tab's tools and switch apart from a relay (viewerroom.test.ts), and the Go tests run
-// the relay and the bridge with Go pages (internal/viewerrooms). This spec is where a real tab, the
-// served shell's switch, the relay's WebSocket under /relay/ and an agent on /mcp meet, on both MCP
-// wires.
+// the relay and the bridge with Go pages (internal/viewerrooms). This spec brings the parts together,
+// on both MCP wires. It runs a real tab, the served shell's switch, the relay's WebSocket under
+// /relay/ and an agent on /mcp.
 //
 // Three tabs: A1 and A2 on one design, B1 on another. A2 and B1 turn the switch on and A1 does not.
 
@@ -42,9 +42,9 @@ afterAll(async () => {
 
 type CallResult = { isError?: boolean; content?: { text?: string }[]; structuredContent?: { location?: { mount: string; path: string; sheet: string } } };
 
-// Agent is an MCP client on one wire, spoken by hand so the spec needs no SDK: "session" initializes
-// and sends its session id, "stateless" (the 2026-07-28 wire) sends the protocol version on every
-// request instead.
+// Agent is an MCP client on one wire, spoken by hand so the spec needs no SDK. The "session" wire
+// initializes and sends its session id. The "stateless" wire is the 2026-07-28 one, and it sends the
+// protocol version on every request instead.
 class Agent {
   private session = "";
   private id = 0;
@@ -172,8 +172,9 @@ describe.each(["session", "stateless"] as const)("an agent on the %s wire", (wir
     await tabs.A2.locator("#agents-switch input[type=checkbox]").check();
   }, 120_000);
 
-  // The Ask box (agni issue 1173): a question typed into a tab whose switch is on reaches an agent
-  // waiting in next_request, named by the design as every other tool is, with the tab's location.
+  // The Ask box (agni issue 1173). A reader types a question into a tab whose switch is on. The
+  // question reaches an agent waiting in next_request, with the tab's location. It is named by the
+  // design, as every other tool is.
   it("hears a question the reader types into a tab that lets agents in", async () => {
     const agent = new Agent(`${server.base}/mcp`, wire);
     await agent.connect();
@@ -200,10 +201,10 @@ describe.each(["session", "stateless"] as const)("an agent on the %s wire", (wir
   }, 120_000);
 });
 
-// intrude opens a page on the server's own origin, as any page holding a token for the room could
-// be, joins the room on the relay with that token and calls the tab directly, past the bridge. It
-// speaks servicekit's JSON envelope over a bare WebSocket and returns every reply the tab sent it
-// within waitMs.
+// intrude opens a page on the server's own origin. Any page holding a token for the room could be
+// on that origin. intrude joins the room on the relay with that token and calls the tab directly,
+// past the bridge. It speaks servicekit's JSON envelope over a bare WebSocket and returns every
+// reply the tab sent it within waitMs.
 async function intrude(relay: string, room: string, token: string, to: string, calls: unknown[], waitMs: number): Promise<unknown[]> {
   const page = await browser.newPage();
   try {
@@ -236,9 +237,9 @@ async function intrude(relay: string, room: string, token: string, to: string, c
   }
 }
 
-// The tab answers the server's bridge alone (trustBridges, agni issue 1173): a peer holding a token
-// JoinViewerRoom minted for the tab's own room gets no answer when it calls the tab directly, even
-// with the tab's switch on, and the tab stays where it was.
+// The tab answers the server's bridge alone (trustBridges, agni issue 1173). Imagine JoinViewerRoom
+// minted a token for the tab's own room, and a peer holding that token calls the tab directly. The
+// peer gets no answer, even with the tab's switch on, and the tab does not move.
 describe("a peer in the room that is not the bridge", () => {
   it("gets no answer from a tab, whose switch is on", async () => {
     const tab = await openTab(DESIGN_A, true);

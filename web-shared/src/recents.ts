@@ -7,12 +7,12 @@
 // datasheets.ts's open), never on a browse-page preview, or the list fills up while you look
 // around and stops answering "where was I".
 
-// RecentKind is which page reopens the entry. It is stored rather than derived from the extension,
-// which would put a second copy of the design/datasheet split in this module.
+// RecentKind is which page reopens the entry. It is stored rather than derived from the extension.
+// Deriving it would put a second copy of the design/datasheet split in this module.
 export type RecentKind = "design" | "datasheet";
 
 // Recent is one opened artifact. label is snapshotted at open time so the landing page renders
-// with no round trips. mount and path stay apart because both pages address an artifact by that
+// with no round trips. mount and path are kept apart because both pages address an artifact by that
 // pair.
 export interface Recent {
   kind: RecentKind;
@@ -24,7 +24,7 @@ export interface Recent {
 
 const KEY = "agni.recents";
 
-// LIMIT is what a landing page can show without becoming a second file tree.
+// LIMIT is how many entries a landing page can show without becoming a second file tree.
 export const LIMIT = 12;
 
 // idOf identifies an entry for de-duplication. Kind is part of it because a mount rename can make
@@ -72,13 +72,14 @@ export function noteOpen(entry: Omit<Recent, "at">, at: number = Date.now()): Re
   try {
     localStorage.setItem(KEY, JSON.stringify(next));
   } catch {
-    // A full or disabled store loses the history. Recording must never break the open it rides on.
+    // A full or disabled store loses the history. Recording must never break the open that called
+    // it.
   }
   return next;
 }
 
-// baseName is the file's own name, the label a recording site uses when it has nothing better. It
-// lives beside the store so the two call sites cannot label the same list differently.
+// baseName is the file's own name. A recording site uses it as the label when it has nothing
+// better. It lives beside the store so the two call sites cannot label the same list differently.
 export function baseName(path: string): string {
   const i = path.lastIndexOf("/");
   return i < 0 ? path : path.slice(i + 1);

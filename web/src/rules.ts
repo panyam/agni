@@ -1,13 +1,14 @@
 // The rules panel's command-down surface (see ViewSink in viewer.ts). The presenter owns the
-// catalog and the selection, keyed by rule name, which drives CheckDesign and survives view-knob
-// changes. The panel emits onSelectionChange(names) and holds group-by, filtering and search locally.
+// catalog and the selection. The selection is keyed by rule name, drives CheckDesign and survives
+// view-knob changes. The panel emits onSelectionChange(names) and holds group-by, filtering and
+// search locally.
 
 // RuleItem is the view-side shape of a catalog rule (the wire webapi.RuleInfo, minus proto
-// machinery). tags is the open classification the panel groups and filters by; available gates
-// whether the rule can run (an unavailable rule is shown greyed and cannot be selected).
-// summary/impact/remedy/detail are the rule's prose (WS9-020), in order the one-liner shown per
-// row, what goes wrong on violation, what to do about it, and the markdown behind the row's expand
-// affordance.
+// machinery). tags is the open classification, and the panel groups and filters by it. available
+// gates whether the rule can run (an unavailable rule is shown greyed and cannot be selected).
+// summary, impact, remedy and detail are the rule's prose (WS9-020). summary is the one-liner shown
+// per row, impact is what goes wrong on violation, remedy is what to do about it, and detail is the
+// markdown behind the row's expand affordance.
 export interface RuleItem {
   name: string;
   severity: string; // "error" | "warning" | "info"
@@ -116,7 +117,7 @@ export function toggleRule(rule: RuleItem, selected: string[]): string[] {
   return selected.includes(rule.name) ? selected.filter((n) => n !== rule.name) : [...selected, rule.name];
 }
 
-// toggleGroup flips a whole group: if any selectable rule in the group is unselected it selects all
+// toggleGroup flips a whole group. If any selectable rule in the group is unselected it selects all
 // selectable rules in the group, otherwise it deselects them all (the tri-state click target).
 export function toggleGroup(group: RuleItem[], selected: string[]): string[] {
   const selectable = group.filter((r) => r.available).map((r) => r.name);

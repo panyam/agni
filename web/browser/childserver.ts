@@ -4,17 +4,17 @@
 // process-group leader and one signal reaches both the `go` process and the binary it execs. Killing
 // only the `go` process orphans the server and leaves the port held.
 //
-// The hazard that motivated this file is the other half of that. `process.kill(-pid)` names a
-// process GROUP by number, and a pid is only meaningful while the process is alive: once the child
-// has exited, the number is free for the OS to reuse, and `-pid` then names whatever group inherited
-// it. `child.pid` keeps its value after exit, so the naive teardown cannot tell the two apart and
-// will happily signal a stranger.
+// This file exists for the other half of that. `process.kill(-pid)` names a process GROUP by
+// number, and a pid means something only while the process is alive. Once the child has exited, the
+// OS is free to reuse the number, and `-pid` then names whatever group inherited it. `child.pid`
+// keeps its value after exit, so the naive teardown cannot tell the two apart and will happily
+// signal a stranger.
 //
 // That is not theoretical. Inside `make testall`, which spawns thousands of short-lived processes,
 // this took down a developer's unrelated `agni serve` and SIGTERM'd the `make` invocation running the
 // suite. Standalone it never reproduced, because nothing else was churning pids.
 //
-// So the rule here: never signal a pid we have not confirmed is still ours. `exited` is set from the
+// So the rule here is to signal a pid only after confirming it is still ours. `exited` is set from the
 // child's own "exit" event, which Node delivers before the pid can be recycled, and teardown returns
 // early when it is set.
 //
@@ -33,7 +33,7 @@ export interface Server {
 }
 
 // freePort asks the kernel for an unused port and gives it back. There is a race between closing the
-// probe and the server binding, which is why nothing retries on it: the window is microseconds, and a
+// probe and the server binding. Nothing retries on it, because the window is microseconds and a
 // collision fails loudly rather than silently using the wrong server.
 export async function freePort(): Promise<number> {
   return new Promise((ok, fail) => {
@@ -51,9 +51,9 @@ export async function freePort(): Promise<number> {
   });
 }
 
-// start spawns a server, waits for it to answer, and hands back the handle the setup provides to the
-// specs. `health` is the URL that must return 2xx; it is not always the base (the docsite answers
-// under a path prefix).
+// start spawns a server, waits for it to answer, and returns a handle. The setup provides that
+// handle to the specs. `health` is the URL that must return 2xx. It is not always the base, since
+// the docsite answers under a path prefix.
 export async function start(opts: {
   what: string;
   command: string;

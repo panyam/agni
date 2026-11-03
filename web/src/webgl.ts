@@ -2,8 +2,8 @@
 // sheet-relative, so the attribute is an INTEGER attribute (ivec2) fed with
 // gl.vertexAttribIPointer + gl.INT. The vertex buffer is uploaded ONCE; only the mat3
 // view uniform changes per frame. Each primitive record becomes one gl.drawArrays call,
-// with the draw mode and color chosen per record. Records whose precomputed world-space
-// bounds fall entirely outside the current view rect are culled.
+// with the draw mode and color chosen per record. The renderer culls a record when its
+// precomputed world-space bounds fall entirely outside the current view rect.
 
 import {
   KIND_TRIANGLES, DecodedSheet, Primitive, KIND_LINE_STRIP, KIND_LINE_LOOP, KIND_POINTS } from "./packed.js";
@@ -41,17 +41,17 @@ export interface HighlightDraw {
   primitives: Set<number>;
 }
 
-// OverlayDraw is one bounding-shape highlight layer (WS9-017), world-space triangles the
-// canvas tessellated from the entity frames, drawn translucent above the base geometry. It is
-// the one dynamic buffer that crosses to the GPU after load (C4), and it re-uploads only when
-// the highlight specs change, not per frame.
+// OverlayDraw is one bounding-shape highlight layer (WS9-017). It holds world-space triangles
+// that the canvas tessellated from the entity frames, and it draws translucent above the base
+// geometry. It is the one dynamic buffer that crosses to the GPU after load (C4). It re-uploads
+// only when the highlight specs change, not per frame.
 export interface OverlayDraw {
   color: Rgba;
   vertices: Int32Array; // triangle list, (x,y) world-coordinate pairs
 }
 
 // hexToRgba parses "#rgb"/"#rrggbb" into GL's 0..1 RGBA. The palette (group colors + page
-// background) is chosen server-side from render.Style, so both renderers share it; an
+// background) is chosen server-side from render.Style, so both renderers share it. An
 // unparseable value falls back to `fallback`. alpha (default 1) fills the A channel, for
 // translucent highlight tints.
 export function hexToRgba(hex: string, fallback: Rgba, alpha = 1): Rgba {
@@ -240,7 +240,7 @@ export class Renderer {
 
   // hiddenGroups is board layer visibility (WS7-035), skipped at draw time so hiding the back
   // side needs no re-upload. Highlighted primitives still draw, so a finding on a hidden layer
-  // stays visible.
+  // is still visible.
   private hiddenGroups = new Set<number>();
 
   // setHiddenGroups replaces the hidden set.
@@ -279,7 +279,7 @@ export class Renderer {
     }
     gl.bindVertexArray(null);
 
-    // The bounding-shape overlay draws last, translucent so the entity it frames stays readable
+    // The bounding-shape overlay draws last, translucent so the framed entity is still readable
     // through it. Like highlighted primitives it is never culled, so a framed off-screen
     // entity's shape appears the moment it pans in.
     if (this.overlayVao && this.overlayGroups.length > 0) {

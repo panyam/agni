@@ -1,8 +1,8 @@
-// The Tables panel under Compare (agni issue 898), shared by the served page (tables.spec.ts) and the
-// static demo (site.spec.ts), which opens the same comparison since its Compare picker lists the
-// site's designs (agni issue 978). A revision comparison's tables in the viewer are the rows
-// `agni diff --rename-approx --format csv` writes for the same two files, and a net in them locates
-// on the drawing.
+// Checks for the Tables panel under Compare (agni issue 898). The served page (tables.spec.ts) and
+// the static demo (site.spec.ts) both use them. The static demo opens the same comparison, since
+// its Compare picker lists the site's designs (agni issue 978). For a revision comparison, the
+// viewer's tables hold the rows `agni diff --rename-approx --format csv` writes for the same two
+// files. A net in those tables locates on the drawing.
 
 import { expect } from "vitest";
 import { agniBin } from "./agnibin.js";
@@ -15,9 +15,9 @@ import { fileURLToPath } from "node:url";
 
 const repo = resolve(fileURLToPath(new URL("../..", import.meta.url)));
 
-// gatewayDiffRows are the csv rows the CLI writes comparing the gateway with its rev C, header first,
-// from the agni this checkout builds with no personal agni.yaml in the way. Every cell is plain, so a
-// line is a row, and the comparison is of lines as written.
+// gatewayDiffRows runs the agni this checkout builds, with no personal agni.yaml in the way. The
+// CLI compares the gateway with its rev C, and this returns the csv rows it writes, header first.
+// Every cell is plain, so a line is a row, and the comparison is of lines as written.
 export function gatewayDiffRows(): string[] {
   const home = mkdtempSync(join(tmpdir(), "agni-home-"));
   const csv = execFileSync(
@@ -33,9 +33,9 @@ export function gatewayDiffRows(): string[] {
   return csv.trimEnd().split("\n");
 }
 
-// expectCompareTables checks, on a page with the gateway's comparison against rev C open, that the
-// Tables panel's comparison holds want's rows once near renames are asked for, and that a net in
-// them locates on the drawing.
+// expectCompareTables needs a page with the gateway's comparison against rev C open. It checks that
+// the Tables panel's comparison holds want's rows once near renames are asked for, and that a net
+// in them locates on the drawing.
 export async function expectCompareTables(page: Page, want: string[]): Promise<void> {
   expect(want.length).toBeGreaterThan(2);
   await page.locator(".dv-default-tab-content", { hasText: /^Tables$/ }).first().click();

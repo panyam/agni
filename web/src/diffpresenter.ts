@@ -33,8 +33,8 @@ import {
 type DiffClient = Client<typeof DiffService>;
 type DesignClient = Client<typeof DesignService>;
 
-// DiffFileRef names one side's file by mount and path, and artifactUri builds the URI each
-// RPC takes from it.
+// DiffFileRef names one side's file by mount and path, and artifactUri turns it into the URI
+// that each RPC takes.
 export interface DiffFileRef {
   mount: string;
   path: string;
@@ -44,7 +44,7 @@ export interface DiffFileRef {
 // highlight overlay framed like the sheet ("" clears), and showPlaceholder replaces the sheet
 // when the pair has none on this side or it failed to render. showSvg and showPlaceholder each
 // hide the other. reveal pans and zooms to the current overlay's content (the focused item,
-// WS9-006) and is a no-op with nothing highlighted. Camera math stays in the view (C3).
+// WS9-006) and is a no-op with nothing highlighted. Camera math is kept in the view (C3).
 export interface DiffSideView {
   showSvg(markup: string): void;
   setOverlay(markup: string): void;
@@ -124,10 +124,10 @@ export class DiffPresenter {
   private focusItem: ChangedItem | null = null;
   private active = false;
   private error = "";
-  // The current pair's sheet documents are retained (docA/docB, null meaning a placeholder
-  // showing errA/errB), so the mode toggle (WS9-007) redraws from memory and re-fetches only
-  // the overlays. Their frames plus the response's shared placements are the alignment
-  // evidence behind overlayOk and overlayReason.
+  // The presenter retains the current pair's sheet documents in docA and docB. null means a
+  // placeholder showing errA or errB. The mode toggle (WS9-007) then redraws from memory and
+  // re-fetches only the overlays. The documents' frames and the response's shared placements are
+  // the alignment evidence behind overlayOk and overlayReason.
   private mode: DiffMode = "side";
   private docA: string | null = null;
   private docB: string | null = null;
@@ -145,9 +145,9 @@ export class DiffPresenter {
     private readonly designs: DesignClient,
     private readonly view: DiffRenderView,
     private readonly onState: (s: DiffState) => void,
-    // snaps names each side's snapshot (agni issue 1061), the page's registry unless a test hands one
-    // in. A comparison draws, so each side's sheets come from its snapshot under no overlay, the one
-    // the viewer draws.
+    // snaps names each side's snapshot (agni issue 1061). It is the page's registry unless a test
+    // hands one in. A comparison draws, so each side's sheets come from its snapshot under no
+    // overlay. The viewer draws from that snapshot too.
     private readonly snaps: SnapshotSource = snapshots(),
     // overlay is the convention the page's vocabulary bar shows. The diff itself is asked under it, so
     // Compare reads a design as the rest of the page does (agni issue 1275).
@@ -230,8 +230,8 @@ export class DiffPresenter {
 
   // selectItem focuses one changed item for the changes panel. The overlays emphasize only it
   // and the view reveals its location. When the current pair does not show the item, it first
-  // switches to the first pair that does, while an item with no sheet entries (no geometry)
-  // stays on the current pair. Clicking the focused item again clears the focus. An explicit
+  // switches to the first pair that does. An item with no sheet entries (no geometry) keeps the
+  // current pair. Clicking the focused item again clears the focus. An explicit
   // pair (a sheet-badge click) never toggles off, matching the findings panel's badges.
   async selectItem(id: string, pair?: number): Promise<void> {
     const item = this.items.find((i) => itemId(i) === id);
@@ -257,7 +257,7 @@ export class DiffPresenter {
 
   // revealFocus asks the side that owns the focused item to center on it, the old side for
   // removed/deleted entities and the new side otherwise. The view mirrors the camera to its
-  // sibling so both panes land there. In overlay mode everything draws on the a-canvas, so
+  // sibling so both panes center there. In overlay mode everything draws on the a-canvas, so
   // that is always the target.
   private revealFocus(item: ChangedItem): void {
     if (this.mode === "overlay") {
@@ -302,14 +302,14 @@ export class DiffPresenter {
     await this.showPair(i);
   }
 
-  // close ends the comparison and resets to the inactive state. It only clears the
-  // presenter's state, and the host closes the dock panel.
   // sides is the open comparison's two designs, old then new, or null when none is open or it failed.
   // The Tables panel asks for the comparison's table and each side's checks from them (agni issue 898).
   sides(): { a: DiffFileRef; b: DiffFileRef } | null {
     return this.active && this.error === "" ? { a: this.aRef, b: this.bRef } : null;
   }
 
+  // close ends the comparison and resets to the inactive state. It only clears the
+  // presenter's state, and the host closes the dock panel.
   close(): void {
     this.aRef = { mount: "", path: "" };
     this.bRef = { mount: "", path: "" };
@@ -416,7 +416,7 @@ export class DiffPresenter {
   }
 
   // sendUnionOverlays fetches the union canvas's two layers, b's specs on b's sheet and the
-  // removed/deleted ghosts on a's sheet, which land in place because the frames are aligned.
+  // removed/deleted ghosts on a's sheet. The ghosts sit in place because the frames are aligned.
   // A focused item narrows both layers as it does the side-by-side overlays.
   private async sendUnionOverlays(p: SheetPair): Promise<void> {
     const bSpecs = this.specsFor("b");
@@ -432,8 +432,8 @@ export class DiffPresenter {
     this.view.a.setOverlays([bo, go].filter((m) => m !== ""));
   }
 
-  // specsFor returns what a side highlights, which is the focused item alone while one is
-  // selected (its class colors, filtered to the side) and every change on that side otherwise.
+  // specsFor returns what a side highlights. While an item is selected, that is the focused item
+  // alone (its class colors, filtered to the side). Otherwise it is every change on that side.
   private specsFor(side: DiffSide) {
     return this.focusItem ? focusSpecs(this.focusItem, side) : sideSpecs(this.componentStatus, this.netStatus, side);
   }

@@ -19,7 +19,8 @@ export function bakeDivisor(maxFontUnits: number): number {
 
 // imageAttrs computes the SVG <image> attributes for a sheet image in the overlay's Y-flipped
 // world space. The image's world min corner is (x, y) and it spans w/h, so its top edge is the
-// world max-Y, and baked (y -> -y) it is -(y + h), the SVG top-left an image draws down from.
+// world max-Y. Baked (y -> -y), that edge is -(y + h), the SVG top-left, and the image draws down
+// from there.
 // Rotation and mirror follow core/render/svg.go's drawImage about the image center, in the baked
 // space. k is the shared bake multiplier (1 / bakeScale) that keeps images in the labels' user
 // space, and defaults to 1 (no rescale).
@@ -46,8 +47,8 @@ export function imageAttrs(
 
 // naturalTextWidth estimates a run's rendered width in fontSize units as ~0.6*fontSize per code
 // point, mirroring core/render/svg.go's naturalTextWidthPx. setContent uses it to decide whether a
-// box-bounded caption needs condensing. DEFAULT_FONT_STACK is proportional, so 0.6 is an average;
-// core/render/svg.go's glyphAdvanceEm carries the calibration and both must move together.
+// box-bounded caption needs condensing. DEFAULT_FONT_STACK is proportional, so 0.6 is an average.
+// core/render/svg.go's glyphAdvanceEm holds the calibration, and both must change together.
 export function naturalTextWidth(text: string, fontSize: number): number {
   return 0.6 * fontSize * [...text].length;
 }
@@ -57,10 +58,10 @@ export function naturalTextWidth(text: string, fontSize: number): number {
 export const lineHeight = 1.2;
 
 // splitLabelLines splits a label's (possibly multi-line) text into per-line runs, each stacked one
-// line height below the previous in the baked Y-down space. EDIF %10% decodes to a real newline
-// (an OrCAD table-of-contents sheet list, say), which an SVG <text> does not break on, so the
-// overlay emits one <text> per line as core/render/svg.go's drawText does. A single-line label
-// yields one run at bakedY0.
+// line height below the previous in the baked Y-down space. EDIF %10% decodes to a real newline,
+// for example in an OrCAD table-of-contents sheet list. An SVG <text> does not break on a newline,
+// so the overlay emits one <text> per line as core/render/svg.go's drawText does. A single-line
+// label yields one run at bakedY0.
 export function splitLabelLines(
   text: string,
   bakedY0: number,
@@ -70,9 +71,10 @@ export function splitLabelLines(
   const lines = text.split("\n");
   const step = fontPx * lineHeight;
   // A justify anchors the whole BLOCK, not its first line, so only a top-anchored block starts at
-  // the anchor; bottom grows up from it and centered grows both ways. Mirrors core/render/svg.go's
-  // blockTop, whose comment says why this is not cosmetic. The baked space is Y-DOWN (labels are
-  // stored at -y), so "up" is a NEGATIVE offset here, same sign as the SVG backend.
+  // the anchor. A bottom-anchored block grows up from it, and a centered one grows both ways. This
+  // mirrors core/render/svg.go's blockTop, whose comment says why this is not cosmetic. The baked
+  // space is Y-DOWN (labels are stored at -y), so "up" is a NEGATIVE offset here, the same sign as
+  // in the SVG backend.
   const span = (lines.length - 1) * step;
   let top = bakedY0;
   if (lines.length > 1 && !justify.includes("top")) {
@@ -110,10 +112,11 @@ export function overlayTransform(
 
 // TextOverlay draws schematic text over the WebGL canvas as an SVG layer, since a GPU line
 // pipeline renders no glyphs. Text nodes are positioned once per sheet in a Y-flipped world
-// space (y -> -y) so glyphs stay upright; pan/zoom is a single CSS transform on the <svg>
-// layer (translate + uniform scale), which the browser composites on the GPU in lockstep with
-// the canvas, so per-frame cost is one style write and no per-node relayout. pointer-events
-// are off, so the layer never intercepts canvas input; hide() removes it in non-WebGL modes.
+// space (y -> -y), so glyphs are upright. Pan/zoom is a single CSS transform on the <svg>
+// layer, a translate plus a uniform scale. The browser composites that transform on the GPU in
+// lockstep with the canvas, so a frame costs one style write and no per-node relayout.
+// pointer-events are off, so the layer never intercepts canvas input. hide() removes it in
+// non-WebGL modes.
 export class TextOverlay {
   private svg: SVGSVGElement;
   // Per-sheet divisor from bakeDivisor (see SAFE_FONT_UNITS). update() multiplies the CSS scale by it.
@@ -172,7 +175,8 @@ export class TextOverlay {
         // A box-bounded caption (maxWidth > 0) is condensed to fit its symbol box width rather than
         // spilling past it, matching core/render/svg.go's drawText. textLength forces the run to that
         // width (baked by k, like x/height) and lengthAdjust squeezes glyphs horizontally, keeping
-        // the font height. Only when it would otherwise overflow, so a short caption is not stretched.
+        // the font height. This applies only when the caption would otherwise overflow, so a short
+        // caption is not stretched.
         if (l.maxWidth > 0) {
           const maxW = l.maxWidth * k;
           if (naturalTextWidth(line.text, fontPx) > maxW) {
@@ -180,8 +184,8 @@ export class TextOverlay {
             t.setAttribute("lengthAdjust", "spacingAndGlyphs");
           }
         }
-        // Rotation is per-label and static (world CCW degrees; the baked Y-down space makes SVG's
-        // clockwise-positive rotate() match, same as the SVG backend).
+        // Rotation is per-label and static, in world CCW degrees. The baked Y-down space makes SVG's
+        // clockwise-positive rotate() match, as in the SVG backend.
         if (l.rotationDeg) t.setAttribute("transform", `rotate(${l.rotationDeg} ${x} ${line.y})`);
         t.textContent = line.text;
         this.svg.appendChild(t);

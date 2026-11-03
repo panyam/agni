@@ -64,8 +64,8 @@ describe("the Load page's flow", () => {
     expect(harness({ fetches: false }).flow.steps().map((s) => s.id)).toEqual(["drawing", "board"]);
   });
 
-  // A design that cannot be read stays on the Load page with the reason, rather than opening a viewer
-  // that would fail at its first question.
+  // If a design cannot be read, the Load page keeps it and shows the reason. A viewer opened on it
+  // would fail at its first question.
   it("stops at the step that failed, says why, and neither records nor opens", async () => {
     const h = harness({ board: async () => { throw new Error("no netlist in b.kicad_sch"); } });
     expect(await h.flow.run()).toBe(false);

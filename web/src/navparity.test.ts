@@ -10,13 +10,13 @@ import { ViewerPresenter, type RenderView } from "./viewer.js";
 
 // Navigation parity (agni issue 1151). A verdict or finding can be reached three ways: a link (a
 // cold restore from the URL), a click in the Checks panel, and a ViewerPageAPI call. All three must
-// land on the same sheet with the subject highlighted, or a link someone shares opens on a sheet the
-// reader was never shown.
+// open the same sheet with the subject highlighted. Otherwise someone shares a link, and it opens
+// on a sheet the reader was never shown.
 //
 // The synthetic demo-board has two sheets. SDA is drawn on both, so reaching it from s-root moves
 // nowhere. PG and SCL are drawn on s-power alone, so reaching either from s-root has to move. PG
-// fails demo-pull-up and has a finding; SCL passes and has only a verdict, which is the case a
-// verdict's own sheets (Verdict.sheets) exist for.
+// fails demo-pull-up and has a finding. SCL passes and has only a verdict. Verdict.sheets, a
+// verdict's own sheets, exists for that case.
 
 const MOUNT = "demo";
 const PATH = "boards/demo-board.kicad_sch";
@@ -47,8 +47,8 @@ function harness() {
     availableLayouts: ["faithful"],
   }));
   const getSheet = vi.fn(async (req: { sheet?: string; format?: SheetFormat }) => ({ content: { case: "svg", value: `<svg data-sheet="${req.sheet}"/>` } }));
-  // A scoped request (one rule about some subjects, as a link asks) answers those subjects alone; a
-  // whole run answers everything.
+  // A scoped request asks one rule about some subjects, as a link does, and answers those subjects
+  // alone. A whole run answers everything.
   const checkDesign = vi.fn(async (req: { rules?: string[]; subjects?: { kind: string; ref: string }[] }) => {
     const refs = (req.subjects ?? []).map((s) => s.ref);
     const scoped = refs.length > 0;

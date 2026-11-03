@@ -21,8 +21,8 @@ export interface ControlsState {
   hasHighlights: boolean;
 }
 
-// ControlsView is what the presenter pushes ControlsState to, implemented by the controls island
-// (C3). ViewSink in viewer.ts describes the pattern.
+// ControlsView receives ControlsState from the presenter. The controls island implements it (C3).
+// ViewSink in viewer.ts describes the pattern.
 export interface ControlsView {
   setState(s: ControlsState): void;
 }

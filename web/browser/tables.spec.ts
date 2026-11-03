@@ -1,6 +1,6 @@
-// The Tables panel against a real server (agni issue 898). A revision comparison's tables in the
-// viewer are the rows `agni diff --rename-approx --format csv` writes for the same two files, and a
-// net in them locates on the drawing. site.spec.ts checks the same comparison on the static demo.
+// The Tables panel against a real server (agni issue 898). In the viewer, a revision comparison's
+// tables hold the rows that `agni diff --rename-approx --format csv` writes for the same two files.
+// A net in them locates on the drawing. site.spec.ts checks the same comparison on the static demo.
 
 import { beforeAll, afterAll, describe, expect, it, inject } from "vitest";
 import type { Browser } from "playwright-core";
@@ -28,8 +28,8 @@ describe("the Tables panel under Compare", () => {
     });
   });
 
-  // The link `agni diff --server` and an MCP diff answer print (agni issue 1126) opens the same
-  // comparison with no click on the Compare picker.
+  // `agni diff --server` and an MCP diff answer print a link (agni issue 1126). The link opens the
+  // same comparison with no click on the Compare picker.
   it("opens the same comparison from a link naming the revision to compare against", async () => {
     const want = gatewayDiffRows();
     await withPage(browser, async (page) => {
