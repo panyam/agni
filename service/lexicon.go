@@ -31,9 +31,9 @@ type LexiconService struct {
 // NewLexiconService returns the lexicon questions over checks' loader, catalog and projects.
 func NewLexiconService(checks *CheckService) *LexiconService { return &LexiconService{checks: checks} }
 
-// conventionOf is the convention snap's lexicon was built from and the tier it came from. A snapshot
-// whose overlay carries none was read with the process-level vocabulary, which is the server's
-// startup convention when one was installed and the built-ins otherwise.
+// conventionOf returns the convention that snap's lexicon was built from, and the tier it came from.
+// A snapshot whose overlay holds none was read with the process-level vocabulary. That vocabulary is
+// the server's startup convention when one was installed, and the built-ins otherwise.
 func conventionOf(snap Snap) (*configpb.NamingConvention, webapi.LexiconSource) {
 	if snap.Overlay.Convention != nil {
 		return snap.Overlay.Convention, snap.Overlay.ConventionSource
@@ -138,8 +138,8 @@ func (s *LexiconService) ExplainNet(ctx context.Context, req *webapi.ExplainNetR
 	if req.GetNet() == "" {
 		return nil, fmt.Errorf("%w: ExplainNet needs a net", ErrInvalidArgument)
 	}
-	// Through the model, as a rule reads the net, so a role a datasheet backs shows that evidence. No
-	// role reads the copper, so the board stays unread.
+	// Read through the model, as a rule reads the net, so a role backed by a datasheet shows that
+	// evidence. No role reads the copper, so the board is not read.
 	b, err := buildModelEntry(ctx, LoaderOr(snap, s.checks.loader), snap.Netlist, snap.Board, snap.Overlay, s.checks.specs, SkipBoard)
 	if err != nil {
 		return nil, err
@@ -223,9 +223,9 @@ func (s *LexiconService) CompareLexicons(ctx context.Context, req *webapi.Compar
 		cfg.Config = &webapi.AnalysisConfig{}
 	}
 	cand := req.GetConventions()
-	// A candidate stating no lexicon reads names with the built-ins alone. A request's convention with
-	// no lexicon otherwise leaves the vocabulary it replaces in effect, which would compare the current
-	// names against themselves.
+	// A candidate stating no lexicon reads names with the built-ins alone. Otherwise a request's
+	// convention with no lexicon leaves in effect the vocabulary it replaces, and the diff would
+	// compare the current names against themselves.
 	if cand.GetLexicon() == nil {
 		cand = proto.Clone(cand).(*configpb.NamingConvention)
 		cand.Lexicon = &configpb.NamingLexicon{}
@@ -306,8 +306,9 @@ func roleChanges(was, now map[string]string) *webapi.Table {
 	return t
 }
 
-// findingChanges is one row per finding one run reports and the other does not, keyed on its rule,
-// subject and message, gone ones first and then by rule and subject.
+// findingChanges returns one row for each finding that one run reports and the other does not. A
+// finding is keyed on its rule, subject and message. Gone ones come first, then the rest by rule and
+// subject.
 func findingChanges(before, after []check.Finding) *webapi.Table {
 	t := &webapi.Table{Name: "finding_changes", Columns: []*webapi.TableColumn{
 		{Name: "change"}, {Name: "rule"}, {Name: "subject_kind"},

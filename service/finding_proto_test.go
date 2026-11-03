@@ -36,8 +36,9 @@ func fullFinding() check.Finding {
 	}
 }
 
-// C26: FindingProto and FindingFromProto carry a deep-equality round-trip test. Provenance is a proto
-// message held by pointer, so it is compared with proto.Equal and the rest with reflect.DeepEqual.
+// Under C26, FindingProto and FindingFromProto get a deep-equality round-trip test. Provenance is a
+// proto message held by pointer, so it is compared with proto.Equal and the rest with
+// reflect.DeepEqual.
 func TestFindingProtoRoundTrip(t *testing.T) {
 	want := fullFinding()
 	got := FindingFromProto(FindingProto(want))
@@ -50,8 +51,8 @@ func TestFindingProtoRoundTrip(t *testing.T) {
 	}
 }
 
-// A review item's findings travel inside its document, so the slice converters have to keep every
-// finding and every id, in order.
+// A review item's findings are stored inside its document, so the slice converters have to keep
+// every finding and every id, in order.
 func TestFindingsSurviveAReviewDocument(t *testing.T) {
 	second := fullFinding()
 	second.Rule, second.VerdictIDs = "copper-clearance", []string{"copper-clearance:(net:A,net:B)", "copper-clearance:(net:A,net:C)"}
@@ -67,8 +68,8 @@ func TestFindingsSurviveAReviewDocument(t *testing.T) {
 	}
 }
 
-// The census C26 asks for: a new field on check.Finding fails here until someone decides whether it
-// travels on the wire and adds it to the converters and to fullFinding.
+// This is the census C26 asks for. A new field on check.Finding fails here until someone decides
+// whether it belongs on the wire and adds it to the converters and to fullFinding.
 func TestFindingFieldCensus(t *testing.T) {
 	wire := []string{"Context", "DatasheetProv", "Inconclusive", "Message", "Prov", "Rule", "Severity", "Subject", "VerdictIDs"}
 	var got []string

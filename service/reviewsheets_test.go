@@ -13,17 +13,17 @@ import (
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// manifestFakeLoader is fakeLoader with the Manifest method ReviewLoader adds, so a review reads the
-// same in-memory design and geometry a check run does.
+// manifestFakeLoader is fakeLoader plus ReviewLoader's Manifest method, so a review reads the same
+// in-memory design and geometry as a check run.
 type manifestFakeLoader struct{ fakeLoader }
 
 func (manifestFakeLoader) Manifest(context.Context, artifact.URI) (review.Manifest, error) {
 	return review.Manifest{}, nil
 }
 
-// TestReviewFindingsCarryTheirSheets pins agni issue 1132. A review finding names the sheets its
-// subject is drawn on, the same ids CheckDesign gives the same finding, so a click in the Review
-// panel opens that sheet, and an undrawn subject carries the reason the Checks panel shows.
+// TestReviewFindingsCarryTheirSheets pins agni issue 1132. A review finding names the sheets that
+// draw its subject. CheckDesign gives the same finding the same ids. So a click in the Review panel
+// opens that sheet, and an undrawn subject gets the same reason as in the Checks panel.
 func TestReviewFindingsCarryTheirSheets(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R9"}, {RefDes: "R7"}},

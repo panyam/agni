@@ -18,9 +18,9 @@ func pinVerdict(rule string, outcome checkspb.Outcome, ref, pin string, ctx map[
 
 func netSubject(name string) *checkspb.Subject { return &checkspb.Subject{Kind: "net", Ref: name} }
 
-// Two rows naming one pin are two rows, each joined to its own verdict by the declared net, and a row
-// the map spells by function name joins through the "declared pin" context. A rule the run left out
-// leaves its column empty rather than reading as a judgement.
+// Two rows naming one pin are two rows, each joined to its own verdict by the declared net. A row
+// that the map spells by function name joins through the "declared pin" context. A rule the run left
+// out leaves its column empty rather than reading as a judgement.
 func TestPinMapTableJoinsEachRowToItsOwnVerdicts(t *testing.T) {
 	ioMap := []*configpb.PinAssignment{
 		{Device: "U1", Pin: "PTA0", Net: "A"},

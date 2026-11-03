@@ -102,8 +102,8 @@ func TestListQuerySetsRefusesWhatItCannotRead(t *testing.T) {
 	}
 }
 
-// ParseQuerySet checks a set's text as `agni query --set` does, so a file a reader picks in the
-// viewer is refused for the same reasons.
+// ParseQuerySet checks a set's text as `agni query --set` does. So when a reader picks a file in the
+// viewer, it is refused for the same reasons.
 func TestParseQuerySetChecksWhatTheCLIChecks(t *testing.T) {
 	svc := NewQueryService(nil, nil, nil)
 	got, err := svc.ParseQuerySet(context.Background(), &webapi.ParseQuerySetRequest{Text: "title: T\nqueries:\n  - name: Rails\n    query: net.rail(?n) => ?n\n    bind: {n: GND}\n"})

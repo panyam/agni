@@ -18,55 +18,57 @@ import (
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
-// Overlay is one request's composed catalog configuration: the rule sources to splice onto the
-// service's catalog, and the naming lexicon its design reads must be stamped with. Every surface
-// that accepts overlay config composes it here, so they all compose identically (WS3-102).
+// Overlay is one request's composed catalog configuration. It holds the rule sources to splice onto
+// the service's catalog, and the naming lexicon to stamp on the request's design reads. Every
+// surface that accepts overlay config composes it here, so they all compose identically (WS3-102).
 //
-// A convention carries rules AND a lexicon, and they land in different places. Rules extend the
-// catalog, while the lexicon has to reach the READ, because net roles are resolved once at ingestion.
+// A convention holds rules AND a lexicon, and the two go to different places. Rules extend the
+// catalog. The lexicon has to reach the READ, because net roles are resolved once at ingestion.
 // Doing only the catalog half compiles the naming rules and leaves every OTHER rule blind to the
 // project's rail names.
 type Overlay struct {
 	Sources []check.RuleSource
 	Lexicon *classify.Lexicon
 	// Specs is the datasheet corpus this run checks part limits against, nil when there is none. It
-	// travels with the rule sources so a run cannot compose one team's rules against another's data.
+	// is composed together with the rule sources, so a run cannot check one team's rules against
+	// another team's data.
 	Specs param.ParamProvider
 	// SymbolPaths are the symbol-library directories this run's config named, added to the read.
 	SymbolPaths []string
 	// Profiles and Intent record whether this overlay's Sources include a project's interface profiles
-	// and a design's intent declaration. See ResolvedConfig for why the flags travel rather than being
-	// derived from Sources.
+	// and a design's intent declaration. ResolvedConfig says why the overlay records these flags
+	// rather than deriving them from Sources.
 	Profiles bool
 	Intent   bool
 	// DesignIntent is the declared intent itself, nil when none was declared. Its rules are already in
-	// Sources, and the value travels too because part of it is read by the MODEL rather than by a rule:
-	// which connectors are internal (agni issue 831).
+	// Sources. The overlay keeps the value too, because part of it is for the MODEL rather than for a
+	// rule. The model reads which connectors are internal from it (agni issue 831).
 	DesignIntent *configpb.DesignIntent
-	// InterfaceProfiles are the profile VALUES behind the profile source in Sources: a project's own
-	// profiles/ and any a request's config names. Running a profile needs only its compiled rules, and
-	// these are for the surfaces that read a profile itself, the coverage panel and a review's
-	// interface-presence gate, so they see the profiles the run's rules came from (agni issue 833).
+	// InterfaceProfiles are the profile VALUES behind the profile source in Sources. They come from a
+	// project's own profiles/ and from any profiles a request's config names. Running a profile needs
+	// only its compiled rules. Two surfaces read a profile itself, the coverage panel and a review's
+	// interface-presence gate, and these values let them see the profiles the run's rules came from
+	// (agni issue 833).
 	InterfaceProfiles []profiles.Profile
 	// Library and LibraryDocs are the project's own derived relations and their pages, composed into
 	// a query vocabulary by Registry.
 	Library     []LibraryModule
 	LibraryDocs map[string]string
 	// FlattenHierarchy reads the design's hierarchical netlist as its whole schematic (agni issue
-	// 718). It is a choice of the snapshot rather than of a project's config, and rides the overlay
-	// because every read and every cache key already goes through ReadOptions and Identity. Set it
-	// with WithFlattenHierarchy, which folds it into the identity.
+	// 718). The snapshot chooses it, not a project's config. It sits on the overlay because every
+	// read and every cache key already goes through ReadOptions and Identity. Set it with
+	// WithFlattenHierarchy, which folds it into the identity.
 	FlattenHierarchy bool
-	// Convention is the convention whose lexicon this overlay's Lexicon was built from, nil when the
-	// read uses the built-ins or the server's startup default, and ConventionSource says which tier it
-	// came from. They let a reader of the lexicon tell a built-in pattern from a project's (agni 1266).
+	// Convention is the convention this overlay's Lexicon was built from. It is nil when the read uses
+	// the built-ins or the server's startup default. ConventionSource says which tier it came from.
+	// Together they let a reader of the lexicon tell a built-in pattern from a project's (agni 1266).
 	Convention       *configpb.NamingConvention
 	ConventionSource webapi.LexiconSource
 	// conventionName is the source name of the convention THIS overlay carries, from a project or the
 	// deployment default. A request-supplied convention replaces it by name (WS3-124).
 	conventionName string
-	// id accumulates the inputs this overlay was composed FROM, which is what Identity hashes. See
-	// overlayidentity.go for why it is the inputs rather than the composed value.
+	// id accumulates the inputs this overlay was composed FROM, and Identity hashes them.
+	// overlayidentity.go says why Identity hashes the inputs rather than the composed value.
 	id *overlayID
 	// baseConvention is the catalog source name of the SERVER's startup convention (`--conventions`),
 	// empty when the caller composed no such default. Catalog drops it before splicing this request's
@@ -86,9 +88,9 @@ type Overlay struct {
 // replaced. It is a required parameter rather than an optional wither so that a call site forgetting
 // it fails to compile instead of silently stacking conventions (WS3-102, WS3-109).
 //
-// It performs no I/O, since the config arrives as a value. An invalid convention (a pattern that will
-// not compile, an unknown component class) is an ERROR, never a skip, because an operator who silently
-// got the built-ins would read the clean report as a clean design.
+// It performs no I/O, since the config arrives as a value. An invalid convention is an ERROR, never a
+// skip, because an operator who silently got the built-ins would read the clean report as a clean
+// design. A pattern that will not compile is invalid, and so is an unknown component class.
 func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	o := Overlay{baseConvention: baseConvention}
 	// Library modules sent as values compose with no I/O, like the convention below (agni issue 788).
@@ -118,15 +120,16 @@ func ComposeOverlay(cfg *webapi.OverlayConfig, baseConvention string) (Overlay, 
 // carries none.
 //
 // It extends base rather than rebuilding a catalog (WS3-107). check.CatalogWith keeps the built-ins
-// but drops base, and for a review base holds the --profile-path and --intent-path sources, so one
-// naming rule in a convention disabled every interface profile and the whole intent tier. Measured on
-// one design, 19 items went pass -> needs-design-intent and 16 went pass -> not-automated.
+// but drops base. For a review, base holds the --profile-path and --intent-path sources, so with
+// CatalogWith one naming rule in a convention disabled every interface profile and the whole intent
+// tier. Measured on one design, 19 items went pass -> needs-design-intent and 16 went pass ->
+// not-automated.
 //
 // A request's convention REPLACES the server's startup one rather than stacking on it (WS3-124).
 // Catalog composition tags every rule with its source name (check.KeySource), so the replacement
-// drops the rules carrying baseConvention's name and nothing else. The built-ins and the profile and
-// intent sources are not the request's to remove. A caller that names no base convention (the CLI)
-// keeps the additive behaviour.
+// drops the rules tagged with baseConvention's name and nothing else. The built-ins and the profile
+// and intent sources are not the request's to remove. A caller naming no base convention keeps the
+// additive behaviour, and the CLI is one such caller.
 //
 // A name collision returns an error rather than panicking, since the sources come from a REQUEST.
 func (o Overlay) Catalog(base *check.Catalog) (*check.Catalog, error) {
@@ -143,9 +146,9 @@ func (o Overlay) Catalog(base *check.Catalog) (*check.Catalog, error) {
 	return out, nil
 }
 
-// explainCollision tells the caller that the source a duplicate-source error collided with may have
-// come from a server flag. The caller sees only their own convention, so the bare error reads as
-// though they sent it twice.
+// explainCollision adds to a duplicate-source error that the other source may have come from a
+// server flag. The caller sees only their own convention, so the bare error reads as though they
+// sent it twice.
 func (o Overlay) explainCollision(err error) error {
 	if !strings.Contains(err.Error(), "duplicate rule source") {
 		return err
@@ -155,11 +158,12 @@ func (o Overlay) explainCollision(err error) error {
 		"server's --conventions to replace it)", err)
 }
 
-// ProfileIndex is the set of interface profiles this run's rules came from, keyed by name: base (the
-// built-ins and a deployment's --profile-path, already composed) with this overlay's own profiles
-// REPLACING a base profile of the same name, as their compiled source supersedes its rules. A
-// surface reading a profile rather than running it uses this, so it never describes an interface by
-// a definition the run did not check (agni issue 833). base is not modified.
+// ProfileIndex returns the interface profiles this run's rules came from, keyed by name. It starts
+// from base, which holds the built-ins and a deployment's --profile-path, already composed. This
+// overlay's own profiles REPLACE a base profile of the same name, as their compiled source
+// supersedes its rules. A surface reading a profile rather than running it uses this, so it never
+// describes an interface by a definition the run did not check (agni issue 833). base is not
+// modified.
 func (o Overlay) ProfileIndex(base map[string][]profiles.Profile) map[string][]profiles.Profile {
 	out := make(map[string][]profiles.Profile, len(base))
 	for name, ps := range base {
@@ -181,8 +185,9 @@ func (o Overlay) ProfileIndex(base map[string][]profiles.Profile) map[string][]p
 	return out
 }
 
-// ReadOptions is what the overlay contributes to each design READ: the naming lexicon, the symbol
-// paths, and the datasheet device-class lookup, each only when present.
+// ReadOptions returns the options the overlay adds to each design READ. It adds the naming lexicon,
+// the symbol paths, the datasheet device-class lookup, the design intent and the flatten choice,
+// each only when present.
 func (o Overlay) ReadOptions() []ReadOption {
 	var opts []ReadOption
 	if o.Lexicon != nil {
@@ -210,8 +215,8 @@ func (o Overlay) ReadOptions() []ReadOption {
 
 // WithFlattenHierarchy returns o with its design reads flattening a hierarchical netlist when on is
 // set, and o unchanged otherwise. The choice joins the identity, so a cache never serves a flattened
-// read for an unflattened one. An overlay that cannot identify itself stays unidentifiable, while a
-// zero overlay gains an identity naming the choice alone.
+// read for an unflattened one. An overlay that cannot identify itself is still unidentifiable
+// afterwards. A zero overlay gains an identity naming the choice alone.
 func (o Overlay) WithFlattenHierarchy(on bool) Overlay {
 	if !on || o.FlattenHierarchy {
 		return o
@@ -227,9 +232,9 @@ func (o Overlay) WithFlattenHierarchy(on bool) Overlay {
 	return o
 }
 
-// DeviceClassLookup adapts a param provider to the one question the ingestion class pass asks of it:
-// the device_class a seeded spec states for an MPN. readers/formats takes this function and never the
-// provider, so the datasheet layer stays out of the readers.
+// DeviceClassLookup adapts a param provider for the ingestion class pass. That pass asks the provider
+// one question, the device_class a seeded spec states for an MPN. readers/formats takes this
+// function and never the provider, so the datasheet layer is kept out of the readers.
 //
 // A nil provider returns a nil function rather than panicking later. A caller that composed no corpus
 // holds a nil interface, which looks the same as an empty corpus at the call site.
@@ -245,9 +250,9 @@ func DeviceClassLookup(specs param.ParamProvider) func(string) string {
 	}
 }
 
-// ConfigResolver turns the ref-shaped tiers of an AnalysisConfig into the engine inputs a run needs.
-// It is the port that keeps file I/O out of a service (C13), since a config names its profiles and
-// parameters as URIs and only an adapter can read them.
+// ConfigResolver turns the ref-shaped tiers of an AnalysisConfig into engine inputs for a run. This
+// port keeps file I/O out of a service (C13). A config names its profiles and parameters as URIs, and
+// only an adapter can read them.
 //
 // It resolves ANY AnalysisConfig, a request's as well as a project's, so the two cannot drift apart.
 // Which config is being resolved shows up only as the namespace. A tier the config does not name is a
@@ -288,17 +293,18 @@ type ResolvedConfig struct {
 	// directory, in file order. Only ListQuerySets reads them.
 	QuerySets []NamedQuerySet
 	// Digest identifies the BYTES this resolution read, so an overlay composed from it can say
-	// whether two runs saw the same config. Empty means this resolver does not report one, which is
-	// legal and costs the overlay its identity (see Overlay.Identity).
+	// whether two runs saw the same config. Empty means this resolver does not report one. That is
+	// legal, and it leaves the overlay with no identity (see Overlay.Identity).
 	Digest string
 }
 
 // configNeedsResolver reports whether cfg names anything only an adapter can read.
 //
-// A host with no resolver (the engine in WASM, a service built without one) can still honour a config
-// carrying only a resolved convention, because that composes with no I/O. A config naming a URI is
-// an error there, on the same terms GetNamingConvention refuses a stored convention, because
-// dropping the tier would report a clean run against config that never loaded.
+// A host with no resolver can still honour a config carrying only a resolved convention, because
+// that composes with no I/O. The engine in WASM is one such host, and so is a service built without a
+// resolver. A config naming a URI is an error there, on the same terms GetNamingConvention refuses a
+// stored convention, because dropping the tier would report a clean run against config that never
+// loaded.
 func configNeedsResolver(cfg *webapi.AnalysisConfig) bool {
 	return len(cfg.GetProfileUris()) > 0 || len(cfg.GetParamUris()) > 0 ||
 		len(cfg.GetSymbolPathUris()) > 0 || len(cfg.GetLibraryUris()) > 0 || len(cfg.GetQuerySetUris()) > 0
@@ -331,7 +337,7 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 	if p == nil && d == nil {
 		return overlayWithRequest(ctx, resolver, req, Overlay{}, baseConvention, id)
 	}
-	// A design in no project still has config of its own, its symbol library and its intent, which
+	// A design in no project still has config of its own, its symbol library and its intent. They
 	// compose here exactly as they do under a project, with nothing inherited (agni issue 887). A
 	// design dropped into the browser rarely comes with a project.yaml.
 	//
@@ -343,8 +349,8 @@ func OverlayFor(ctx context.Context, resolver ConfigResolver, store ProjectStore
 		return Overlay{}, err
 	}
 	merged := mergeConfig(inherited, d.GetConfig())
-	// The request and project protos do not carry the INHERITED config, which comes from another
-	// project's descriptor through `extends`.
+	// The INHERITED config comes from another project's descriptor through `extends`. Neither the
+	// request proto nor the project proto holds it, so the identity names it here.
 	id.addProto("inherited-config", merged)
 	var o Overlay
 	if resolver != nil {
@@ -439,7 +445,7 @@ func mergeConfig(a, b *webapi.AnalysisConfig) *webapi.AnalysisConfig {
 }
 
 // mergeChecklists layers b's checklists over a's by name. One of the same name replaces the earlier
-// in place, so an inherited default stays first unless the nearer project redeclares it, and a new
+// in place, so an inherited default is still first unless the nearer project redeclares it, and a new
 // name is appended after the ones inherited.
 func mergeChecklists(a, b []*webapi.NamedChecklist) []*webapi.NamedChecklist {
 	out := append([]*webapi.NamedChecklist{}, a...)
@@ -462,9 +468,9 @@ func mergeChecklists(a, b []*webapi.NamedChecklist) []*webapi.NamedChecklist {
 // name labels the declaration in findings, and is the design's resource name where a project store
 // supplied the intent.
 //
-// An invalid declaration is an ERROR, never a skip, because a design whose intent silently failed to
-// compile would leave every intent-bound checklist item reading needs-design-intent, which looks like
-// a design that never declared any.
+// An invalid declaration is an ERROR, never a skip. Imagine a design's intent silently failed to
+// compile. Every intent-bound checklist item would then read needs-design-intent, and the design
+// would look as if it never declared any intent.
 func intentSource(cfg *webapi.AnalysisConfig, name string) (check.RuleSource, error) {
 	di := cfg.GetIntent()
 	if di == nil {
@@ -508,8 +514,9 @@ func overlayWithRequest(ctx context.Context, resolver ConfigResolver, req *webap
 	if reqIntent != nil {
 		reqOv.Sources = append(reqOv.Sources, reqIntent)
 	}
-	// Every tier a request can contribute must appear in this guard. A tier missing from it is silently
-	// dropped for a request carrying ONLY that tier, which is how symbol paths usually arrive.
+	// Every tier a request can contribute must appear in this guard. If a tier is missing from it, a
+	// request carrying ONLY that tier has it silently dropped. Symbol paths usually arrive that way,
+	// alone.
 	if reqOv.Lexicon == nil && len(reqOv.Sources) == 0 && len(reqResolved.Sources) == 0 &&
 		reqResolved.Specs == nil && len(reqResolved.SymbolPaths) == 0 && len(reqResolved.Library) == 0 &&
 		len(reqOv.Library) == 0 && len(reqOv.LibraryDocs) == 0 {

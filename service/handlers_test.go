@@ -87,8 +87,8 @@ func TestGetDesignAutoLayoutCountsFromIR(t *testing.T) {
 	}
 }
 
-// TestGetDesignCarriesUnexpandedHierarchy exists because the counts beside it cover the top level
-// alone when a read left blocks out, so the wire says so rather than the CLI alone (agni issue 707).
+// TestGetDesignCarriesUnexpandedHierarchy covers agni issue 707. When a read leaves blocks out,
+// GetDesign's counts cover the top level alone. The wire says so, and not only the CLI.
 func TestGetDesignCarriesUnexpandedHierarchy(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1"}},

@@ -10,8 +10,8 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// memProjects is an in-memory ProjectStore, enough to drive the service without a filesystem. That it
-// needs no tree, no descriptor, and no parent directory is the property the port exists to guarantee.
+// memProjects is an in-memory ProjectStore, enough to drive the service without a filesystem. It
+// needs no tree, no descriptor and no parent directory, and the port exists to guarantee that.
 type memProjects struct {
 	projects []*webapi.Project
 	designs  map[string][]*webapi.Design
@@ -100,8 +100,8 @@ func TestGetProjectAndDesign(t *testing.T) {
 	}
 }
 
-// TestGetClassifiesMalformedNameApartFromAbsent exists because a client has to be able to tell a typo
-// from a project it does not have, so the two map to different codes.
+// TestGetClassifiesMalformedNameApartFromAbsent checks that a malformed name and an absent project
+// map to different codes, because a client has to tell a typo from a project it does not have.
 func TestGetClassifiesMalformedNameApartFromAbsent(t *testing.T) {
 	svc := NewProjectService(fixtureStore())
 	ctx := context.Background()
@@ -166,8 +166,8 @@ func TestListProjectsFilter(t *testing.T) {
 	}
 }
 
-// TestResolveDesignMissIsEmptyNotError pins the contract that makes the project surfaces safe to
-// apply. Most files on a mount belong to no declared design, and that answer is a normal empty
+// TestResolveDesignMissIsEmptyNotError pins a contract, and the project surfaces are safe to apply
+// because of it. Most files on a mount belong to no declared design, and that answer is a normal empty
 // response. A client reading it shows the plain viewer rather than some other project's config.
 func TestResolveDesignMissIsEmptyNotError(t *testing.T) {
 	svc := NewProjectService(fixtureStore())
@@ -233,8 +233,8 @@ func TestResourceNameRoundTrip(t *testing.T) {
 	}
 }
 
-// TestSourcesFor is the one place the per-tier answer is decided, so CLI and web cannot disagree
-// about which companion supplies the board.
+// TestSourcesFor covers the one place that decides the per-tier answer, so CLI and web cannot
+// disagree about which companion supplies the board.
 func TestSourcesFor(t *testing.T) {
 	d := &webapi.Design{
 		EntryUri:      "mount://m/d/board.edn",
@@ -248,7 +248,7 @@ func TestSourcesFor(t *testing.T) {
 	}
 
 	// Naming a companion, only the NETLIST tier moves. The named artifact keeps whatever it alone
-	// supplies, because that is why the caller pointed at it.
+	// supplies, because the caller pointed at it for that.
 	s = SourcesFor(d, "mount://m/d/board.kicad_pcb")
 	if s.NetlistURI != "mount://m/d/board.edn" || s.BoardURI != "mount://m/d/board.kicad_pcb" {
 		t.Fatalf("companion-named sources = %+v", s)
@@ -289,7 +289,7 @@ func TestPaginateResumesByName(t *testing.T) {
 	if len(page) != 2 || names[page[0]] != "c" || next != "" {
 		t.Fatalf("second page = %v, next = %q", page, next)
 	}
-	// With "c" removed between the two calls, resuming by name lands on "d" rather than skipping it.
+	// With "c" removed between the two calls, resuming by name reaches "d" rather than skipping it.
 	shrunk := []string{"a", "b", "d"}
 	page, _ = paginate(len(shrunk), 2, "c", func(i int) string { return shrunk[i] })
 	if len(page) != 1 || shrunk[page[0]] != "d" {

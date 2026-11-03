@@ -12,8 +12,8 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
-// The tests here cover agni issue 836: GetDesign carries the design's IR when a read_mask asks for
-// it, only the parts asked for, and the summary it always had when none does.
+// The tests here cover agni issue 836. GetDesign returns the design's IR when a read_mask asks for
+// it, and only the parts asked for. With no mask it returns the summary it always had.
 
 func irDesign() *ir.Design {
 	return &ir.Design{
@@ -92,7 +92,7 @@ func TestAStarMaskIsEverything(t *testing.T) {
 }
 
 // The filters narrow which entities the IR carries, each its own list. Asking twice proves the
-// narrowing works on a copy: the second, unfiltered answer still has every net.
+// narrowing works on a copy, because the second, unfiltered answer still has every net.
 func TestFiltersNarrowACopyOfTheIR(t *testing.T) {
 	l := fakeLoader{design: irDesign()}
 	resp, err := askDesign(t, l, &webapi.GetDesignRequest{ReadMask: mask("design"), Nets: []string{"SDA", "NOPE"}, RefDes: []string{"U1"}})

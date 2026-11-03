@@ -33,8 +33,8 @@ type CheckService struct {
 	// check.NewCatalog(check.Builtins, check.NewSource("acme", suite)). The catalog rejects two
 	// rules with one name.
 	catalog *check.Catalog
-	// specs is the datasheet provider the params join reads (WS10-003), nil when serve ran without
-	// --params, in which case GetComponentParams returns an empty list.
+	// specs is the datasheet provider the params join reads (WS10-003). It is nil when serve ran
+	// without --params, and then GetComponentParams returns an empty list.
 	specs param.ParamProvider
 	// baseConvention names the catalog source of the deployment's --conventions default, "" when
 	// there is none. A request convention replaces that source (WS3-124). See ComposeOverlay.
@@ -42,15 +42,17 @@ type CheckService struct {
 	// conventions backs GetNamingConvention alone, so it is a narrow port rather than a Loader
 	// method, like ReviewLoader. A host that cannot resolve a stored convention passes nil.
 	conventions ConventionLoader
-	// env is the deployment provenance a document written by RenderCheckReport records. See WithEnv.
+	// env is the deployment provenance that RenderCheckReport records in each document it writes. See
+	// WithEnv.
 	env ReviewEnv
-	// profiles is the deployment's interface-profile index (the built-ins and any --profile-path),
-	// the one ReviewService holds, for GetInterfaceCoverage. Nil means the built-ins alone.
+	// profiles is the deployment's interface-profile index, holding the built-ins and any
+	// --profile-path. ReviewService holds the same index, and GetInterfaceCoverage reads it. Nil means
+	// the built-ins alone.
 	profiles map[string][]profiles.Profile
 }
 
-// WithProfileIndex gives the service the deployment's interface-profile index, keyed by name, which
-// the coverage panel walks with a design's own profiles layered on. Pass the same index the
+// WithProfileIndex gives the service the deployment's interface-profile index, keyed by name. The
+// coverage panel walks it with a design's own profiles layered on. Pass the same index the
 // ReviewService was built with, so the panel and a review describe an interface by one definition. It
 // returns s for chaining. Without it the panel walks the built-ins.
 func (s *CheckService) WithProfileIndex(byName map[string][]profiles.Profile) *CheckService {
@@ -61,8 +63,8 @@ func (s *CheckService) WithProfileIndex(byName map[string][]profiles.Profile) *C
 // ConventionLoader reads a stored naming-convention config, mount-scoped by the impl.
 //
 // It is NOT on the path that RUNS checks. A convention reaches a check run as a value on the
-// request (C22), so CheckDesign needs no filesystem. This backs the resolver rpc a client with a
-// ref and no filesystem calls first.
+// request (C22), so CheckDesign needs no filesystem. It backs the resolver rpc. A client with a ref
+// and no filesystem calls that rpc first.
 type ConventionLoader interface {
 	Convention(ctx context.Context, uri artifact.URI) (*configpb.NamingConvention, error)
 }
@@ -116,9 +118,9 @@ func (s *CheckService) Snapshots() *SnapshotService {
 	return NewSnapshotService(s.loader, s.projects, s.specs, s.baseConvention)
 }
 
-// ListRules returns the catalog a check of the same snapshot would run, each rule in its wire form
-// with its availability, which is true exactly for the rules a whole CheckDesign of that snapshot
-// does not report in `skipped` (listedGate). The design's netlist is read for it and its board is
+// ListRules returns the catalog that a check of the same snapshot would run, each rule in its wire
+// form with its availability. A rule is available exactly when a whole CheckDesign of that snapshot
+// does not report it in `skipped` (listedGate). The design's netlist is read for it, and its board is
 // not. The snapshot is optional, and without one the server's own catalog is listed with the
 // design-less availability, so ListRules works before a file is chosen.
 func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesRequest) (*webapi.ListRulesResponse, error) {
@@ -166,8 +168,9 @@ func (s *CheckService) ListRules(ctx context.Context, req *webapi.ListRulesReque
 
 // CheckDesign runs the rule checks over a loaded design's netlist IR. A geometry-only file with no
 // netlist is an invalid argument. request.rules selects the subset to run, empty meaning the whole
-// catalog, and request.subjects the nets and parts to answer for, empty meaning all of them. Each finding's sheets locate its subject in the design's geometry (WS9-024), and a
-// design with no resolvable geometry gets findings without sheets rather than an error.
+// catalog. request.subjects selects the nets and parts to answer for, empty meaning all of them.
+// Each finding's sheets locate its subject in the design's geometry (WS9-024). A design with no
+// resolvable geometry gets findings without sheets rather than an error.
 func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error) {
 	// The snapshot resolved the tiers and composed the config when it was ingested (agni issue 1061),
 	// so a check of a companion analyses the netlist and annotates against the schematic (agni 656).
@@ -189,7 +192,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
 	rules := cat.Filter(check.Facets{Names: req.GetRules()})
-	// check.Available is asked HERE with the model a run reads, board included, and ListRules asks the
+	// check.Available is asked HERE, with the model a run reads, board included. ListRules asks the
 	// same gate of that model without the board (listedGate), so the two agree. A rule gated on this
 	// design is reported in `skipped` rather than vanishing from the findings.
 	runnable, skipped := partitionAvailable(rules, m)
@@ -214,7 +217,7 @@ func (s *CheckService) CheckDesign(ctx context.Context, req *webapi.CheckDesignR
 	// The request's context reaches every rule, so a check nobody is waiting for stops and says so
 	// (agni issue 795) rather than finishing the catalog.
 	// A deployment's budget, narrowed by the request's, reaches every query-backed rule through ctx
-	// (agni issue 792); a rule past it reports itself inconclusive and the others still answer.
+	// (agni issue 792). A rule past it reports itself inconclusive, and the others still answer.
 	ctx = query.NarrowBudget(ctx, req.GetWorkBudget())
 	// One evaluation per rule for both contracts (agni issue 810). Calling Run and then RunVerdicts
 	// ran the whole catalog twice, since a finding is a projection of a verdict. A rule this model has
@@ -265,17 +268,17 @@ func (s *CheckService) GetExpectations(ctx context.Context, req *webapi.GetExpec
 // MPN resolves to a seeded PartSpec with that spec's parameters. A nil provider or an unseeded design
 // yields an empty list rather than an error. The join needs no board, so none is passed.
 func (s *CheckService) GetComponentParams(ctx context.Context, req *webapi.GetComponentParamsRequest) (*webapi.GetComponentParamsResponse, error) {
-	// Through the snapshot's overlay, as CheckDesign is, so the panel shows the same specs a check
-	// judges by, and its netlist rather than the name it was ingested under, which for a design
-	// folder names no file a reader takes (agni issue 736).
+	// Read through the snapshot's overlay, as CheckDesign does, so the panel shows the specs a check
+	// judges by. Read the snapshot's netlist, not the name it was ingested under. For a design folder
+	// that name points at no file a reader takes (agni issue 736).
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
 		return nil, err
 	}
 	ov := snap.Overlay
 	specs := ov.SpecsOver(s.specs)
-	// The kept board-less model, which ListRules built on the same open, so the panel builds no second
-	// one (agni issue 950).
+	// Use the kept board-less model. ListRules built it on the same open, so the panel builds no
+	// second one (agni issue 950).
 	m, _, err := BuildModelCachedTier(ctx, LoaderOr(snap, s.loader), snap.Netlist, snap.Board, ov, s.specs, SkipBoard)
 	if err != nil {
 		return nil, err
@@ -324,8 +327,8 @@ func FindingProto(f check.Finding) *checkspb.Finding {
 	return &checkspb.Finding{Subject: subjectProto(f.Subject), Rule: f.Rule, Severity: f.Severity, Inconclusive: f.Inconclusive, Message: f.Message, Provenance: f.Prov, Datasheets: datasheetCitationProtos(f.DatasheetProv), Context: contextSubjectProtos(f.Context), VerdictIds: f.VerdictIDs}
 }
 
-// contextSubjectProtos maps a finding's context entities to the wire form, PRESERVING ORDER, since
-// the order is the rule author's and matches the order the message names them (agni issue 349).
+// contextSubjectProtos maps a finding's context entities to the wire form, PRESERVING ORDER. The rule
+// author chose the order, and the message names the entities in it (agni issue 349).
 func contextSubjectProtos(cs []check.ContextSubject) []*checkspb.ContextSubject {
 	if len(cs) == 0 {
 		return nil
@@ -340,7 +343,7 @@ func contextSubjectProtos(cs []check.ContextSubject) []*checkspb.ContextSubject 
 // subjectProto is the ONE place a check.Entity becomes a wire Subject, shared by findings, verdict
 // tuples and context entries, so the bus rule below lives in one place.
 //
-// A bus carries no net, so its name is its only geometry join key and rides as bus_id (WS7-042b).
+// A bus has no net, so its name is its only geometry join key, sent as bus_id (WS7-042b).
 // A bus with no drawn geometry, such as a bus_alias or an EDIF array, resolves to nothing
 // (WS7-042c).
 func subjectProto(e check.Entity) *checkspb.Subject {
@@ -358,7 +361,7 @@ func subjectFromProto(s *checkspb.Subject) check.Entity {
 }
 
 // datasheetCitationProtos maps a finding's citations to the wire form, preserving order. A
-// connection-aware rule contributes one per part its conclusion rests on (WS3-028).
+// connection-aware rule contributes one per part that its conclusion depends on (WS3-028).
 func datasheetCitationProtos(cs []*check.DatasheetCitation) []*checkspb.DatasheetCitation {
 	if len(cs) == 0 {
 		return nil
@@ -391,9 +394,9 @@ func datasheetCitationProto(c *check.DatasheetCitation) *checkspb.DatasheetCitat
 }
 
 // FindingFromProto is the inverse of FindingProto, for a consumer that reads findings back off the
-// wire or out of a saved document: a review's items, `agni results`, a remote check. Sheets and
-// locate_reason are not read back, since the server fills them from the design's drawing and
-// check.Finding has no field for either.
+// wire or out of a saved document. A review's items, `agni results` and a remote check all do.
+// Sheets and locate_reason are not read back, since the server fills them from the design's drawing
+// and check.Finding has no field for either.
 func FindingFromProto(p *checkspb.Finding) check.Finding {
 	return check.Finding{
 		Severity:      p.GetSeverity(),
@@ -428,16 +431,17 @@ func FindingProtos(fs []check.Finding) []*checkspb.Finding {
 	return out
 }
 
-// listedGate is the availability ListRules reports for each rule of a snapshot's catalog, the answer a
-// run of that snapshot would give (agni issue 950). It asks check.Available's gate of the model a run
-// builds, without the board, which is the same entry a query or the coverage panel reads, so a later
-// question about the design builds no second one. The board is never read here (agni issue 943):
-// whether the run attaches one is decided by the board tier's format, as it is for the Board sheet.
+// listedGate returns the availability that ListRules reports for each rule of a snapshot's catalog.
+// It matches the answer a run of that snapshot would give (agni issue 950). It asks check.Available's
+// gate of the model a run builds, without the board. A query and the coverage panel read the same
+// entry, so a later question about the design builds no second one. The board is never read here
+// (agni issue 943). The board tier's format decides whether the run attaches one, as it does for the
+// Board sheet.
 //
-// Without a snapshot, or for one whose netlist cannot be read, there is no run to agree with, and the
-// design-less answer stands, where only the parameter set gates, known from the project's params/
-// and this host's own corpus (agni issue 940). A run of an unreadable design fails rather than
-// skipping rules.
+// Sometimes there is no run to agree with, because there is no snapshot or its netlist cannot be
+// read. Then the design-less answer holds. In that answer only the parameter set gates, and the
+// project's params/ and this host's own corpus supply the parameter set (agni issue 940). A run of
+// an unreadable design fails rather than skipping rules.
 func (s *CheckService) listedGate(ctx context.Context, snap Snap, ok bool, ov Overlay) func(*check.Rule) (bool, string) {
 	params := ov.SpecsOver(s.specs) != nil
 	designLess := func(r *check.Rule) (bool, string) { return check.ListedAvailable(r, params) }
@@ -455,7 +459,7 @@ func (s *CheckService) listedGate(ctx context.Context, snap Snap, ok bool, ov Ov
 
 // partitionAvailable splits selected rules into those that can evaluate on this design and those that
 // cannot, carrying each skipped rule's reason. check.Run already skips a gated rule, so the findings
-// are the same either way; the split lets the response REPORT the skipped half.
+// are the same either way. The split lets the response REPORT the skipped half.
 func partitionAvailable(rules []*check.Rule, m check.Model) ([]*check.Rule, []*webapi.SkippedRule) {
 	runnable := make([]*check.Rule, 0, len(rules))
 	var skipped []*webapi.SkippedRule
@@ -471,9 +475,9 @@ func partitionAvailable(rules []*check.Rule, m check.Model) ([]*check.Rule, []*w
 }
 
 // VerdictProto and VerdictFromProto are the conversion pair for the considered set. check.Verdict is
-// a hand-written twin of a wire message, so the pair carries a C26 round-trip guard
-// (TestVerdictProtoRoundTrip); a field the converter never learned is otherwise invisible to any
-// assertion on the proto, as naming.Lexicon and Profile.HostClass each found.
+// a hand-written twin of a wire message, so the pair has a C26 round-trip guard
+// (TestVerdictProtoRoundTrip). Without it, a field the converter never learned is invisible to any
+// assertion on the proto. naming.Lexicon and Profile.HostClass each hit this.
 //
 // Verdict.Finding is DELIBERATELY not on the wire. A failing verdict's finding travels in
 // CheckDesignResponse.findings, and a second copy here could disagree with it.
@@ -635,8 +639,9 @@ func RuleDocURL(r *check.Rule) string {
 	return RuleDocsBase + r.DocPage + "/"
 }
 
-// ShippedRules is the names of the rules agni ships, its default catalog's, which a sanitized report
-// may name (agni issue 1057). Composed once, since the shipped set is fixed for the process.
+// ShippedRules returns the names of the rules in agni's default catalog. A sanitized report may name
+// these rules (agni issue 1057). They are composed once, since the shipped set is fixed for the
+// process.
 var ShippedRules = sync.OnceValue(func() map[string]bool {
 	out := map[string]bool{}
 	for _, r := range check.DefaultCatalog().Rules() {

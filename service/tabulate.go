@@ -21,9 +21,9 @@ import (
 // csv`, `query --format csv` and the TableService all emit these tables, so a csv and a workbook of
 // one answer cannot disagree about its columns. Cells are raw; escaping belongs to the encoder.
 
-// FindingColumns is the findings table's header, which `check --format csv` has published since
-// before this projection existed, so a script binding to it keeps working. Datasheet citations are
-// left out because each is a document, page and section, which does not fit one cell; json has them.
+// FindingColumns is the findings table's header. `check --format csv` published it before this
+// projection existed, and a script binding to it still works. Datasheet citations are left out,
+// because each is a document, page and section and does not fit one cell. json has them.
 var FindingColumns = []webapi.TableColumn{
 	{Name: "severity"},
 	{Name: "inconclusive"},
@@ -39,7 +39,7 @@ var FindingColumns = []webapi.TableColumn{
 }
 
 // VerdictColumns is the verdicts table's header, the one `check --verdicts --format csv` published.
-// url is filled only by a caller that can link to a viewer (the CLI with --server); the TableService
+// Only a caller that can link to a viewer fills url, such as the CLI with --server. The TableService
 // has no viewer to link to and leaves it empty. subjects spells a relation's whole tuple as kind:ref
 // pairs, since a relation commonly joins different kinds and two bare refs do not say which is which.
 var VerdictColumns = []webapi.TableColumn{
@@ -84,9 +84,9 @@ func FindingsTable(findings []*checkspb.Finding) *webapi.Table {
 	return t
 }
 
-// subjectKinds is a row's cell_kinds when the cell at i names a net or a part, the two kinds a viewer
-// locates by a cell alone, and nil otherwise. A pin needs its part as well, and a bus has no single
-// place, so their rows carry none.
+// subjectKinds returns a row's cell_kinds when the cell at i names a net or a part, and nil
+// otherwise. A viewer can locate those two kinds by a cell alone. A pin needs its part as well, and a
+// bus has no single place, so their rows get no cell_kinds.
 func subjectKinds(n, i int, kind string) []string {
 	if kind != check.KindNet && kind != check.KindComponent {
 		return nil
@@ -124,7 +124,7 @@ func VerdictsTable(verdicts []*checkspb.Verdict, link func(*checkspb.Verdict) st
 // collections of different shapes, and one table with change_class naming each row's kind lets a
 // reader filter back to any one of them and sort across all of them at once. A row leaves the
 // columns its class does not use empty. The match_ columns are filled on a near rename only, since a
-// near match is a judgement and the numbers that decided it are what a reviewer triages it by.
+// near match is a judgement, and a reviewer triages it by the numbers that decided it.
 var DiffColumns = []webapi.TableColumn{
 	{Name: "change_class"},
 	{Name: "subject", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
@@ -142,9 +142,9 @@ var DiffColumns = []webapi.TableColumn{
 }
 
 // DiffTable is one row per change, components first and then nets, in the order the diff reported
-// them (by ref des, by ref des then field, nets by kind then name), with the unchanged nets last when
-// the diff carried them. A net row's class is its kind under a net- prefix, so the table names kinds
-// exactly as the diff does.
+// them. That order is by ref des, by ref des then field, and nets by kind then name. The unchanged
+// nets come last when the diff included them. A net row's class is its kind under a net- prefix, so
+// the table names kinds exactly as the diff does.
 func DiffTable(resp *webapi.DiffDesignsResponse) *webapi.Table {
 	t := &webapi.Table{Name: "diff", Columns: columns(DiffColumns)}
 	row := func(class, subject string) []string {
@@ -198,8 +198,8 @@ var ReviewColumns = []webapi.TableColumn{
 	{Name: "unmet"},
 }
 
-// ReviewTables is a review's items, one row each in the checklist's own order, since a reviewer reads
-// a checklist in the order it was written, and its one-row summary.
+// ReviewTables returns a review's items and its one-row summary. Each item gets one row, in the
+// checklist's own order, since a reviewer reads a checklist in the order it was written.
 func ReviewTables(rv *webapi.Review) []*webapi.Table {
 	items := &webapi.Table{Name: "review", Columns: columns(ReviewColumns)}
 	for _, area := range rv.GetResults().GetAreas() {
@@ -236,7 +236,7 @@ func ReviewTables(rv *webapi.Review) []*webapi.Table {
 	return []*webapi.Table{items, summary}
 }
 
-// SkippedTable is the selected rules that could not run on this design and why, so a workbook of a
+// SkippedTable lists the selected rules that could not run on this design, and why, so a workbook of a
 // run says which rules it is silent on. A revision read with no board lists its board-tier rules here
 // (agni issue 848). The reason is check.Available's own words.
 func SkippedTable(skipped []*webapi.SkippedRule) *webapi.Table {
@@ -288,9 +288,9 @@ func VerdictCountsTable(verdicts []*checkspb.Verdict) *webapi.Table {
 	return t
 }
 
-// QueryTable is a query answer's columns, then its provenance as the last column, the shape `query
-// --format csv` prints. A column the answer types as an entity kind orders as a name, and a row's
-// cell_why carries the reason an aggregate cell is absent.
+// QueryTable lays out a query answer's columns, with its provenance as the last column, as `query
+// --format csv` prints it. A column the answer types as an entity kind orders as a name, and a row's
+// cell_why holds the reason an aggregate cell is absent.
 func QueryTable(name string, resp *webapi.RunQueryResponse) *webapi.Table {
 	t := &webapi.Table{Name: name}
 	kinds := resp.GetColumnKinds()
@@ -353,8 +353,8 @@ func witnessesOf(src []string, ws []*webapi.QueryWitness) []rpt.Witness {
 	return out
 }
 
-// CellLocation is where an answer cell's entity is drawn and why it cannot be located, read
-// through the response's entity table (agni issue 916). A scalar cell has neither.
+// CellLocation returns where an answer cell's entity is drawn and why it cannot be located. It reads
+// them through the response's entity table (agni issue 916). A scalar cell has neither.
 func CellLocation(resp *webapi.RunQueryResponse, r *webapi.QueryRow, i int) ([]string, checkspb.LocateReason) {
 	ce := r.GetCellEntity()
 	if i >= len(ce) || ce[i] <= 0 || int(ce[i]) > len(resp.GetEntities()) {
@@ -380,8 +380,8 @@ func (t *SourceTable) Cite(row *webapi.QueryRow, cites []string) {
 	row.CiteIndex = append(row.CiteIndex, t.Indexes(cites)...)
 }
 
-// Indexes are cites as indices into the response's sources, adding each new one, for anything on the
-// response that cites, a row or a witness (agni issue 794). Nil for no citations.
+// Indexes returns cites as indices into the response's sources, adding each new one. A row and a
+// witness both cite, and both use it (agni issue 794). It returns nil for no citations.
 func (t *SourceTable) Indexes(cites []string) []int32 {
 	if len(cites) == 0 {
 		return nil
@@ -445,7 +445,7 @@ func subjectsCell(ss []*checkspb.Subject) string {
 	return strings.Join(parts, "|")
 }
 
-// subjectRef is a subject's name as a cell spells it: a pin is its ref-des and pin joined with a
+// subjectRef spells a subject's name as a cell does. A pin is its ref-des and pin joined with a
 // dot, as check.EntityRef does, and anything else is its ref. The context column dropped the pin
 // until agni issue 1193, so `declared pin=U1` named the part where the verdict named U1.PTB3.
 func subjectRef(s *checkspb.Subject) string {
@@ -526,9 +526,9 @@ func (TableService) Encode(_ context.Context, req *webapi.EncodeTablesRequest) (
 }
 
 // WriteTableCSV writes one table as csv, its column names as the header row and every cell guarded
-// against spreadsheet formulas (rpt.SanitizeCell). It is the one csv encoding of a Table, which
-// `--format csv` on every command and the Encode rpc both write, so a file saved from the viewer and
-// one written by the CLI are the same bytes. It writes the rows in the order they are in.
+// against spreadsheet formulas (rpt.SanitizeCell). It is the one csv encoding of a Table.
+// `--format csv` on every command and the Encode rpc both write it, so a file saved from the viewer
+// and one written by the CLI are the same bytes. It writes the rows in the order they are in.
 func WriteTableCSV(w io.Writer, t *webapi.Table) error {
 	c := rpt.NewCSVWriter(w)
 	header := make([]string, 0, len(t.GetColumns()))

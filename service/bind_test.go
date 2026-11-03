@@ -10,7 +10,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// The tests here cover agni issue 793: a caller binds goal variables rather than splicing values
+// The tests here cover agni issue 793. A caller binds goal variables rather than splicing values
 // into query text, and a bound variable answers exactly as the constant written in.
 
 func text(s string) *webapi.QueryValue {
@@ -66,8 +66,8 @@ func TestABindingTheGoalDoesNotUseIsInvalid(t *testing.T) {
 	}
 }
 
-// TestEachQueryInASetBindsItsOwnVariables: two queries with the same text and different bindings
-// answer differently, so bindings are per query rather than per set.
+// TestEachQueryInASetBindsItsOwnVariables checks that two queries with the same text and different
+// bindings answer differently. So bindings are per query rather than per set.
 func TestEachQueryInASetBindsItsOwnVariables(t *testing.T) {
 	svc, uri := tutorialQueries()
 	snap := snapOf(t, svc.Snapshots(), uri)
@@ -90,10 +90,10 @@ func TestEachQueryInASetBindsItsOwnVariables(t *testing.T) {
 	}
 }
 
-// TestABindingInANumberPositionIsReadAsANumber: a value bound where the schema declares a number is
-// read as one whatever type it arrived as (panyam/jaala#65), so a caller holding only text, such as a
-// viewer's input box, binds a count correctly, and text that is not a number is refused rather than
-// answering nothing.
+// TestABindingInANumberPositionIsReadAsANumber checks the case where the schema declares a number.
+// A value bound there is read as a number, whatever type it arrived as (panyam/jaala#65). So a
+// caller holding only text, such as a viewer's input box, binds a count correctly. Text that is not
+// a number is refused rather than answering nothing.
 func TestABindingInANumberPositionIsReadAsANumber(t *testing.T) {
 	svc, uri := tutorialQueries()
 	snap := snapOf(t, svc.Snapshots(), uri)
@@ -120,9 +120,9 @@ func TestABindingInANumberPositionIsReadAsANumber(t *testing.T) {
 	}
 }
 
-// TestAnUntypedBindingKeepsItsOwnType: where nothing in the query types a variable, the binding's own
-// type decides, which is what the typed wire value is for. As numbers 10 < 9 is false; as text "10"
-// sorts before "9".
+// TestAnUntypedBindingKeepsItsOwnType checks the case where nothing in the query types a variable.
+// Then the binding's own type decides, and the typed wire value exists for that. As numbers 10 < 9
+// is false, and as text "10" sorts before "9".
 func TestAnUntypedBindingKeepsItsOwnType(t *testing.T) {
 	svc, uri := tutorialQueries()
 	snap := snapOf(t, svc.Snapshots(), uri)

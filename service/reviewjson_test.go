@@ -55,8 +55,8 @@ func TestAReviewCarriesAFindingsDatasheetCitation(t *testing.T) {
 	}
 }
 
-// The Review carries the FULL finding list for a failing item, including findings past the cap the
-// markdown Detail cell applies, each with its subject and source file, so tooling loses nothing.
+// The Review carries the FULL finding list for a failing item, including findings past the markdown
+// Detail cell's cap. Each has its subject and source file, so tooling loses nothing.
 func TestAReviewCarriesEveryFindingUncapped(t *testing.T) {
 	var fs []check.Finding
 	for i := 0; i < 10; i++ {

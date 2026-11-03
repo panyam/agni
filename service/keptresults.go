@@ -10,23 +10,25 @@ import (
 	"github.com/panyam/agni/core/timing"
 )
 
-// ruleResults holds what each rule returned on one kept model (agni issue 390), so a check that asks
-// for a rule already run there answers from it rather than evaluating the rule again. Rule
-// evaluation is most of a check's time: on the largest fetched board, 9.4 of 9.9 seconds.
+// ruleResults holds what each rule returned on one kept model (agni issue 390). A check may ask for a
+// rule that already ran on that model, and then it answers from the stored results rather than
+// evaluating the rule again. Rule evaluation is most of a check's time, 9.4 of 9.9 seconds on the
+// largest fetched board.
 //
-// It lives on the model's cache entry, which is what makes it safe. That entry is keyed on the
-// design's tiers and the overlay's identity, and checked on every hit against every file its read
-// touched, so an edit to the netlist, the board, a sub-sheet or a symbol library, or a different
-// convention, reaches a different entry with nothing stored on it. An entry that could not be kept
-// (an overlay that does not identify, a corpus fetched over the network) stores nothing.
+// ruleResults lives on the model's cache entry, and the entry makes it safe. The entry is keyed on
+// the design's tiers and the overlay's identity. Every hit checks it against every file its read
+// touched. So an edit to the netlist, the board, a sub-sheet or a symbol library reaches a different
+// entry with nothing stored on it, and so does a different convention. Some entries cannot be kept,
+// such as one whose overlay does not identify or whose corpus is fetched over the network. Such an
+// entry stores nothing.
 type ruleResults struct {
 	mu    sync.Mutex
 	rules map[ruleKey]ruleRun
 }
 
-// ruleKey names a rule within the catalog it was composed into. The composed catalog follows from
-// the service's base catalog and the overlay, and the overlay is already in the entry's key, so the
-// base catalog is the one part a second service sharing the cache could change.
+// ruleKey names a rule within the catalog it was composed into. The service's base catalog and the
+// overlay determine the composed catalog. The overlay is already in the entry's key. So a second
+// service sharing the cache could change only the base catalog.
 type ruleKey struct {
 	base *check.Catalog
 	name string
@@ -38,18 +40,18 @@ type ruleRun struct {
 	verdicts []check.Verdict
 }
 
-// runKept is check.RunAll over rules, answering each rule this model has already run from what that
-// run returned and evaluating only the rest. Its answer is the one check.RunAll gives over the same
-// rules: findings and verdicts sorted by rule, and within a rule in the order RunAll left them, which
-// is the same whichever other rules ran beside it.
+// runKept is check.RunAll over rules. A rule this model has already run answers from that run's
+// results, and only the rest are evaluated. runKept answers exactly as check.RunAll does over the
+// same rules. Findings and verdicts are sorted by rule, and within a rule they keep RunAll's order.
+// That order does not depend on which other rules ran beside it.
 //
 // A run stopped by its context stores nothing. Under a work budget, a rule that came back
-// inconclusive is not stored, since the budget may be what stopped it and a request with a larger one
-// is owed the real answer; its results still answer this request.
+// inconclusive is not stored. The budget may be what stopped it, and a request with a larger budget
+// is owed the real answer. Its results still answer this request.
 //
-// A run under a subject scope (agni issue 897) answers a kept rule by narrowing its whole run to the
-// scope, and evaluates the rest under the scope without storing them, since a scoped answer is not
-// the rule's answer for the design.
+// A run under a subject scope answers a kept rule by narrowing its whole run to the scope (agni
+// issue 897). It evaluates the rest under the scope without storing them, since a scoped answer is
+// not the rule's answer for the design.
 func (b *builtModel) runKept(ctx context.Context, base *check.Catalog, rules []*check.Rule) ([]check.Finding, []check.Verdict, error) {
 	if scope := check.SubjectScope(ctx); scope != nil {
 		return b.runScoped(ctx, scope, base, rules)
@@ -108,8 +110,8 @@ func (b *builtModel) runKept(ctx context.Context, base *check.Catalog, rules []*
 	return joinRuns(have)
 }
 
-// runScoped is runKept under a scope: kept rules narrowed to it, the others evaluated under it, and
-// the two joined in check.RunAll's order.
+// runScoped is runKept under a scope. Kept rules are narrowed to the scope, the others are evaluated
+// under it, and the two are joined in check.RunAll's order.
 func (b *builtModel) runScoped(ctx context.Context, scope *check.Scope, base *check.Catalog, rules []*check.Rule) ([]check.Finding, []check.Verdict, error) {
 	have := map[string]ruleRun{}
 	var missing []*check.Rule

@@ -13,8 +13,8 @@ import (
 
 // TestDiffDesignsPairsANearRenameWhenAsked covers agni issue 817. Revision C of the tutorial board
 // renames PMIC_EN to PMIC_ENABLE and adds a pull-up to it, so the net is renamed and changed. A
-// client asking with near_renames gets the pairing and its evidence; without it, the default, the
-// net reads as one deleted and one new, as it always has.
+// client asking with near_renames gets the pairing and its evidence. Without it, which is the
+// default, the net reads as one deleted and one new, as it always has.
 func TestDiffDesignsPairsANearRenameWhenAsked(t *testing.T) {
 	svc := NewDiffService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project", "designs", "gateway")}, nil)
 	ask := func(near *webapi.NearRenameOptions) []*webapi.DiffReport_NetChange {

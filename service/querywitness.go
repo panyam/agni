@@ -10,8 +10,8 @@ import (
 )
 
 // witnessPresenter puts an evaluation's witnesses on the wire (agni issue 794). It shares the
-// response's entity and source tables with the rows, so a net a witness names is the entity a cell
-// naming it points to, and a citation is kept once whether a row or a witness cites it.
+// response's entity and source tables with the rows. A witness naming a net then points to the same
+// entity as a cell naming it, and a citation is kept once whether a row or a witness cites it.
 type witnessPresenter struct {
 	reg        *facts.Registry
 	rules      []query.Rule // the query's own rules, which type a witness of a relation the query defines
@@ -21,7 +21,8 @@ type witnessPresenter struct {
 	typed      map[string]witnessTyping
 }
 
-// witnessTyping is what each argument position of one relation denotes, read as a cell's column is.
+// witnessTyping records what each argument position of one relation denotes. It is read the way a
+// cell's column is.
 type witnessTyping struct {
 	kinds    []string
 	kindVars []int // the position whose value is this position's kind, -1 for none
@@ -33,7 +34,7 @@ func newWitnessPresenter(reg *facts.Registry, q query.Query, entity func(kind, r
 	return &witnessPresenter{reg: reg, rules: q.Rules, entity: entity, sources: sources, designPath: designPath, typed: map[string]witnessTyping{}}
 }
 
-// nodes are one row's witnesses as the wire carries them.
+// nodes returns one row's witnesses in wire form.
 func (p *witnessPresenter) nodes(ws []*query.Witness) []*webapi.QueryWitness {
 	if len(ws) == 0 {
 		return nil
@@ -74,9 +75,9 @@ func (p *witnessPresenter) node(w *query.Witness) *webapi.QueryWitness {
 	return n
 }
 
-// typing types a relation's positions the way columnKindsIn types a query's columns: it asks the
+// typing types a relation's positions the way columnKindsIn types a query's columns. It asks the
 // engine to type a goal that calls the relation with a fresh variable per position, under the query's
-// own rules, so a library member, a shipped relation and a relation the query defines all type from
+// own rules. So a library member, a shipped relation and a relation the query defines all type from
 // their declarations. A relation the engine cannot type, such as a walk, answers with scalars.
 func (p *witnessPresenter) typing(rel string, arity int) witnessTyping {
 	key := fmt.Sprintf("%s/%d", rel, arity)
@@ -105,8 +106,8 @@ func (p *witnessPresenter) typing(rel string, arity int) witnessTyping {
 	return t
 }
 
-// ref is the component a pin at position i belongs to, read from the position or constant its
-// relation names as the pin's owner.
+// ref returns the component that owns the pin at position i. The relation names the owner as a
+// position or a constant, and ref reads it from there.
 func (t witnessTyping) ref(i int, values []string) string {
 	o := t.refs[i]
 	if o.Const != nil {

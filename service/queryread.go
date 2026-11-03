@@ -9,10 +9,11 @@ import (
 	"github.com/panyam/jaala/ns"
 )
 
-// A QueryRead is one snapshot read for a program that something other than RunQuery evaluates, such
-// as the MCP server, whose query tool is jaala's (agni issue 910). It holds what RunQuery reads, the
-// fact base, the vocabulary with the project's library and the model, so the evaluator answers over
-// the same facts, and Present turns its rows into the response RunQuery would give.
+// A QueryRead is one snapshot read for a program that RunQuery does not evaluate. The MCP server is
+// one such caller, since its query tool is jaala's (agni issue 910). A QueryRead holds the fact base,
+// the vocabulary with the project's library, and the model. RunQuery reads the same three, so the
+// evaluator answers over the same facts. Present turns its rows into the response RunQuery would
+// give.
 type QueryRead struct {
 	s        *QueryService
 	snapshot string
@@ -41,14 +42,15 @@ func (r *QueryRead) Base() *query.Base { return r.d.base }
 // Vocabulary is the vocabulary Base answers over, the project's library included.
 func (r *QueryRead) Vocabulary() *ns.Vocabulary { return r.d.reg.Vocabulary() }
 
-// Present is the response for rows [lo, hi) of table, which q evaluated over Base with bind, echoing
-// queryText. It is RunQuery's own projection, so a row's cells, kinds, entities and citations are what
-// RunQuery gives for the same query, and when the evaluation recorded witnesses each row carries them
-// as RunQuery's do when asked (agni issue 794). Work is left zero, since the evaluation was not
-// RunQuery's, and Total is the table's length when the rows are a page of it.
+// Present returns the response for rows [lo, hi) of table, echoing queryText. q produced table by
+// evaluating over Base with bind. Present is RunQuery's own projection, so a row's cells, kinds,
+// entities and citations match what RunQuery gives for the same query. When the evaluation recorded
+// witnesses, each row carries them, as RunQuery's rows do when asked (agni issue 794). Work is left
+// zero, since the evaluation was not RunQuery's. Total is the table's length when the rows are a
+// page of it.
 func (r *QueryRead) Present(ctx context.Context, q query.Query, queryText string, table *query.Table, lo, hi int, bind query.Bindings) (*webapi.RunQueryResponse, error) {
-	// Answering under the snapshot's context records the geometry the cells are located on, as
-	// RunQuery's reads are.
+	// Answering under the snapshot's context records the geometry that locates the cells, as it is
+	// recorded for RunQuery's reads.
 	ctx, _, err := r.s.projects.Snapshot(ctx, r.snapshot)
 	if err != nil {
 		return nil, err
@@ -61,9 +63,9 @@ func (r *QueryRead) Present(ctx context.Context, q query.Query, queryText string
 	return resp, nil
 }
 
-// Vocabulary is the vocabulary a question about the named snapshot is checked against, the project's
-// library included, composed without reading the design, so describing it costs no read. With no
-// snapshot it is the shipped vocabulary.
+// Vocabulary returns the vocabulary that checks a question about the named snapshot, the project's
+// library included. It is composed without reading the design, so describing it costs no read. With
+// no snapshot it is the shipped vocabulary.
 func (s *QueryService) Vocabulary(ctx context.Context, snapshot string) (*ns.Vocabulary, error) {
 	reg, err := s.catalogRegistry(ctx, snapshot, nil)
 	if err != nil {

@@ -18,11 +18,12 @@ const maxExtendsDepth = 4
 // project's checklists, so the answer cannot differ from what a run composes.
 //
 // The chain is walked leaf-to-root and composed root-FIRST, so a project overrides what it inherits,
-// the same direction as request over project over deployment default. Why inheritance is declared
-// rather than ambient is on docsite/content/architecture/projects-and-designs.md#sharing-config-between-projects.
+// the same direction as request over project over deployment default.
+// docsite/content/architecture/projects-and-designs.md#sharing-config-between-projects explains why
+// inheritance is declared rather than ambient.
 //
-// A nil store is fine for a project that extends nothing. A project that declared an extends the
-// store cannot resolve gets an error rather than a subset of its declared config.
+// A nil store is fine for a project that extends nothing. A project may declare an extends that the
+// store cannot resolve. That project gets an error rather than a subset of its declared config.
 func ResolveExtends(ctx context.Context, store ProjectStore, p *webapi.Project) (*webapi.AnalysisConfig, error) {
 	cfg := p.GetConfig()
 	if cfg.GetExtends() == "" {

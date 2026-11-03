@@ -22,20 +22,22 @@ import (
 // QueryService evaluates ad-hoc datalog queries over a design's fact base (WS3-029) for the web
 // query panel, over the same injected Loader the design and check services use (CONSTRAINTS C13).
 // It answers what `agni query` answers and knows no transport. The evaluator sits behind
-// query.Evaluator and defaults to the naive interpreter.
+// query.Evaluator and defaults to query.Default, jaala's semi-naive evaluator.
 type QueryService struct {
 	// projects is documented on ProjectResolver.
 	projects *ProjectResolver
 	loader   Loader
 	eval     query.Evaluator
-	// specs is the datasheet provider the param.* and component.device_class relations read
-	// (WS9-048), nil when serve ran without --params. A project's own params are layered over it per MPN (Overlay.SpecsOver).
+	// specs is the datasheet provider. The param.* and component.device_class relations read it
+	// (WS9-048). It is nil when serve ran without --params. A project's own params are layered over
+	// it per MPN (Overlay.SpecsOver).
 	specs param.ParamProvider
 }
 
-// NewQueryService returns a QueryService backed by the given loader and (optional) datasheet
-// provider, using the default naive datalog evaluator. Pass a nil provider when no datasheet corpus
-// is wired; the model's param.* relations then yield no rows (never an error).
+// NewQueryService returns a QueryService backed by the given loader and an optional datasheet
+// provider. It evaluates with query.Default, jaala's semi-naive evaluator. Pass a nil provider when
+// no datasheet corpus is wired, and the model's param.* relations then yield no rows (never an
+// error).
 func NewQueryService(loader Loader, specs param.ParamProvider, projects *ProjectResolver) *QueryService {
 	projects = orEmptyResolver(projects)
 	return &QueryService{loader: loader, eval: query.Default, specs: specs, projects: projects}
@@ -89,16 +91,17 @@ func overBudget(err error) bool {
 }
 
 // stopped reports whether an evaluation ended because its caller's context was cancelled or timed
-// out. The engine checks the context it is handed, and so do the walks, so a query nobody is waiting
-// for stops; reporting that as the caller's mistake (ErrInvalidArgument) would misdescribe it, and in
-// a set it would be repeated for every query left.
+// out. The engine checks the context it is handed, and so do the walks, so a query stops once nobody
+// is waiting for it. Reporting that as the caller's mistake (ErrInvalidArgument) would misdescribe
+// it, and in a set the same error would repeat for every query left.
 func stopped(err error) bool {
 	return errors.Is(err, context.Canceled) || errors.Is(err, context.DeadlineExceeded)
 }
 
 // RunQueries answers every query of a set over one read of the design (agni issue 729). Each
-// result is what RunQuery would return for that query alone; a query that does not parse or names
-// something the design's relations lack is reported against its name, and the others still answer.
+// result matches what RunQuery would return for that query alone. A query may fail to parse or name
+// something the design's relations lack. That failure is reported against the query's name, and the
+// others still answer.
 // A set that is unusable as a whole is an invalid argument, and a design that cannot be read fails
 // the call as it would fail RunQuery.
 func (s *QueryService) RunQueries(ctx context.Context, req *webapi.RunQueriesRequest) (*webapi.RunQueriesResponse, error) {
@@ -264,7 +267,7 @@ func QuerySetProto(s query.QuerySet) *webapi.QuerySet {
 // fact base over it, and the schematic geometry, which loads once and only when some answer has a
 // cell to place on a sheet.
 type designRead struct {
-	// loader is what the snapshot reads through, an upload's or the service's.
+	// The snapshot reads through loader, which is an upload's or the service's.
 	loader Loader
 	u      artifact.URI
 	source string
@@ -283,12 +286,13 @@ type designRead struct {
 // read builds the snapshot's model and fact base once, with the board tier only when one of qs reads
 // it (agni issue 987).
 func (s *QueryService) read(ctx context.Context, snap Snap, qs ...query.Query) (*designRead, error) {
-	// The snapshot's overlay carries the lexicon the READ was stamped with (see readopt.go), which
-	// decides what `net.rail`, `net.feedback` and their derivatives answer (WS3-113). A query composes
-	// no catalog, so the overlay's rules are not read here.
+	// The READ was stamped with a lexicon, and the snapshot's overlay holds it (see readopt.go). That
+	// lexicon decides what `net.rail`, `net.feedback` and their derivatives answer (WS3-113). A query
+	// composes no catalog, so the overlay's rules are not read here.
 	//
-	// One FULL Model (netlist, board, params; WS9-048) backs the board.* and param.* relations and
-	// the per-cell locate classifier (WS9-039). The snapshot's tiers come from the design's
+	// One FULL Model backs the board.* and param.* relations and the per-cell locate classifier
+	// (WS9-039). It holds the netlist, the board and the params (WS9-048). The snapshot's tiers come
+	// from the design's
 	// declaration, so a query of a schematic companion counts the netlist's 1617 nets rather than the
 	// drawing's 4572 per-sheet segments (agni issue 656).
 	u, ov, nu, bu, gu, source := snap.Design, snap.Overlay, snap.Netlist, snap.Board, snap.Geometry, snap.Design.String()
@@ -308,8 +312,8 @@ func (s *QueryService) read(ctx context.Context, snap Snap, qs ...query.Query) (
 	return &designRead{loader: LoaderOr(snap, s.loader), u: u, source: source, model: model, base: baseOver(reg), reg: reg, ov: ov, gu: gu}, nil
 }
 
-// boardTierFor is ReadBoard when any of qs reads a board.* relation, its own rules and the library
-// members it calls included, since query.ReadsFrom links them over reg first.
+// boardTierFor returns ReadBoard when any of qs reads a board.* relation. A query's own rules and
+// the library members it calls count too, since query.ReadsFrom links them over reg first.
 func boardTierFor(reg *facts.Registry, qs ...query.Query) BoardTier {
 	for _, q := range qs {
 		for _, rel := range query.ReadsFrom(reg, q) {
@@ -338,12 +342,12 @@ func (d *designRead) geometry(ctx context.Context, loader Loader) (sheetIndex, m
 }
 
 // answer evaluates one query over a read and assembles its response, echoing queryText as the
-// response's query. With witnesses each row carries how it was derived (agni issue 794); without,
-// the evaluation is the one it always was. An error is the evaluator's (a malformed or unanswerable
+// response's query. With witnesses each row records how it was derived (agni issue 794). Without
+// them the evaluation runs unchanged. An error comes from the evaluator (a malformed or unanswerable
 // query), and the caller decides what it means for the call.
 func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query, queryText string, bind query.Bindings, omitLocations, witnesses bool) (*webapi.RunQueryResponse, error) {
-	// Work is measured on this read's own fact base, so it is this query's alone, and reported so a
-	// deployment can see what its queries cost before it sets a budget (agni issue 792).
+	// Work is measured on this read's own fact base, so it counts this query alone. It is reported so
+	// a deployment can see what its queries cost before it sets a budget (agni issue 792).
 	before := query.Work(d.base)
 	opts := query.EvalOptions(ctx)
 	if len(bind) > 0 {
@@ -352,8 +356,9 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	if witnesses {
 		opts = append(opts, query.Witnesses())
 	}
-	// A timed request that asked for plans gets this evaluation's (agni issue 914), recorded even when
-	// the evaluation stops at its budget, since that is when the plan is most wanted.
+	// When a timed request asks for plans, it gets this evaluation's plan (agni issue 914). The plan
+	// is recorded even when the evaluation stops at its budget, since a stopped evaluation is where a
+	// reader most wants one.
 	var plan *query.ExplainReport
 	if timing.Explaining(ctx) {
 		plan = &query.ExplainReport{}
@@ -382,9 +387,10 @@ func (s *QueryService) answer(ctx context.Context, d *designRead, q query.Query,
 	return resp, nil
 }
 
-// present is the response for rows [lo, hi) of table, which q evaluated over d's base with bind,
-// echoing queryText as the response's query. RunQuery presents every row of its own evaluation, and
-// a QueryRead presents a page of an evaluation someone else ran, so both answer in one shape.
+// present builds the response for rows [lo, hi) of table and echoes queryText as the response's
+// query. q produced table by evaluating over d's base with bind. RunQuery presents every row of its
+// own evaluation, and a QueryRead presents a page of an evaluation someone else ran, so both answer
+// in one shape.
 func (d *designRead) present(ctx context.Context, q query.Query, queryText string, table *query.Table, lo, hi int, bind query.Bindings, omitLocations bool) *webapi.RunQueryResponse {
 	cols := q.Columns()
 	kinds, kindVars, refTerms := columnKindsIn(d.reg, q)
@@ -438,8 +444,8 @@ func (d *designRead) present(ctx context.Context, q query.Query, queryText strin
 		entityAt[key] = n
 		return n
 	}
-	// The table's columns are the query's, so a variable a kind or a pin's ref is read from is found
-	// by its column.
+	// The table's columns are the query's. So when a kind or a pin's ref is read from a variable, the
+	// code finds that variable by its column.
 	colAt := make(map[query.Var]int, len(table.Columns))
 	for i, c := range table.Columns {
 		colAt[c] = i
@@ -495,7 +501,7 @@ func (d *designRead) present(ctx context.Context, q query.Query, queryText strin
 						row.CellRefs = make([]string, len(cols))
 					}
 					row.CellRefs[i] = ref
-					// A pin whose component did not resolve stays a scalar.
+					// A pin is left a scalar when its component did not resolve.
 					if ref == "" {
 						kind = ""
 					}
@@ -541,7 +547,7 @@ func drawnEntities(g *geom.SchematicGeometry) (comps, nets map[string]bool) {
 // NO_GEOMETRY (drawn nowhere for no more specific reason). A drawn entity never gets a reason, so a
 // rail that happens to carry a wire (e.g. VBUS) reports UNSPECIFIED.
 //
-// onSheet reports whether the cell resolved to any sheet, the only drawn-test a BUS has, since a
+// onSheet reports whether the cell resolved to any sheet. A BUS has no other drawn-test, since a
 // bus is neither a placement nor a named wire. Keep it identical to AnnotateSheets' rule for a bus
 // finding.
 func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[string]bool, onSheet bool) checkspb.LocateReason {
@@ -578,7 +584,7 @@ func cellReason(m check.Model, kind, subject string, drawnComps, drawnNets map[s
 // columnKinds derives each answer column's entity kind for the panel's click-to-locate (WS9-038):
 // "component" (a ref_des), "net", "bus", or "" (a scalar or unresolved column). The engine reads it
 // from what each relation and predicate DECLARES about its arguments, never their labels (agni issue
-// 548), and follows derived relations into their bodies (agni issue 654). An aggregate column stays
+// 548), and follows derived relations into their bodies (agni issue 654). An aggregate column is
 // scalar even when it reduces an entity variable, since count(?ref) is a number.
 //
 // kindVars[i] names the variable whose per-row binding types column i, for a relation like
@@ -592,8 +598,9 @@ func columnKinds(q query.Query) (kinds []string, kindVars []query.Var, refs []qu
 	return columnKindsIn(facts.DefaultRegistry(), q)
 }
 
-// columnKindsIn is columnKinds over an explicit vocabulary, the one a design's read composed with its
-// project's own library, so a project member's columns type as clickable as a shipped one's.
+// columnKindsIn is columnKinds over an explicit vocabulary. A design's read composes that
+// vocabulary with its project's own library, so a project member's columns type as clickable as a
+// shipped one's.
 func columnKindsIn(reg *facts.Registry, q query.Query) (kinds []string, kindVars []query.Var, refs []query.Term) {
 	n := len(q.Select)
 	if n == 0 {
@@ -628,8 +635,8 @@ func termValue(t query.Term, bound func(query.Var) query.Value) string {
 }
 
 // entityKind passes through the kinds a POLYMORPHIC column can take and rejects everything else.
-// The vocabulary is check's. Pins stay out because entity() does not enumerate them; a pin cell is
-// clickable through a pin column and its cell_refs instead (see columnKinds).
+// The vocabulary is check's. Pins are left out because entity() does not enumerate them. A pin
+// cell is clickable through a pin column and its cell_refs instead (see columnKinds).
 func entityKind(s string) string {
 	switch s {
 	case check.KindComponent, check.KindNet, check.KindBus:
@@ -702,9 +709,9 @@ func portableCites(cites []string, designPath string) []string {
 	return out
 }
 
-// catalogRegistry is the vocabulary a catalog request describes: the shipped one with overlay's
-// libraries, or with a snapshot named, its project's library and its own joined to it, exactly as a
-// query of that snapshot reads.
+// catalogRegistry returns the vocabulary a catalog request describes. With no snapshot named, it is
+// the shipped vocabulary with overlay's libraries. With a snapshot named, the snapshot's project
+// library and its own library join the shipped one, exactly as a query of that snapshot reads them.
 func (s *QueryService) catalogRegistry(ctx context.Context, name string, overlay *webapi.OverlayConfig) (*facts.Registry, error) {
 	_, snap, ok, err := s.projects.OptionalSnapshot(ctx, name)
 	if err != nil {
@@ -786,9 +793,9 @@ func (s *QueryService) RunSpecLibQuery(ctx context.Context, fs param.FactSource,
 	return s.answer(ctx, d, q, queryText, bind, true, witnesses)
 }
 
-// TextPositionOf is where in its query's text err points, when err is a query that would not parse,
-// and nil otherwise. The Connect transport attaches it to a RunQuery failure as an error detail, and
-// RunQueries sets it on the query that failed, so a client can point at the place.
+// TextPositionOf returns the place err points to in its query's text when err is a query that would
+// not parse, and nil otherwise. The Connect transport attaches it to a RunQuery failure as an error
+// detail, and RunQueries sets it on the query that failed, so a client can point at the place.
 func TextPositionOf(err error) *webapi.TextPosition {
 	p, ok := query.ErrorPosition(err)
 	if !ok {

@@ -15,9 +15,9 @@ import (
 )
 
 // recordingLoader answers every Loader method with a fixed fixture and records the ReadOptions each
-// call received, keyed by method. It is the only way to observe config reaching a read, because the
-// options are consumed inside the adapter, so a test that looked at the RESULT would be asserting on
-// the reader's symbol resolution rather than on whether the service passed the config at all.
+// call received, keyed by method. Recording is the only way to observe config reaching a read. The
+// options are consumed inside the adapter. A test that looked at the RESULT would assert on the
+// reader's symbol resolution, rather than on whether the service passed the config at all.
 type recordingLoader struct {
 	mu   sync.Mutex
 	seen map[string][]ReadOptions
@@ -98,8 +98,8 @@ func (s stubProjectStore) ResolveDesign(context.Context, artifact.URI) (*webapi.
 	return &webapi.Design{}, s.project, nil
 }
 
-// symbolProjectResolver is a resolver whose every design belongs to a project declaring hostDir as
-// its symbol library.
+// symbolProjectResolver puts every design in one project, and that project declares hostDir as its
+// symbol library.
 func symbolProjectResolver(hostDir string) *ProjectResolver {
 	return &ProjectResolver{
 		Store: stubProjectStore{project: &webapi.Project{
@@ -113,14 +113,14 @@ func symbolProjectResolver(hostDir string) *ProjectResolver {
 // TestSymbolPathsReachTheRenderRead is the twin of TestSymbolPathsReachTheRead, for the render tier.
 //
 // The reason is the same. An unresolved symbol changes what the design CONTAINS rather than
-// what is checked about it. On the render side the consequence is sharper, because it is invisible. A
-// placement whose symbol did not resolve contributes no shapes, so it is dropped from the document
-// along with the entity keys that make it pickable, while the annotation pass still draws its
-// reference designator. The sheet then looks complete and every component and pin on it is silently
+// what is checked about it. On the render side the consequence is sharper, because it is invisible.
+// Imagine a placement whose symbol did not resolve. It contributes no shapes, so it is dropped from
+// the document, and so are the entity keys that make it pickable. The annotation pass still draws its
+// reference designator. The sheet then looks complete, and every component and pin on it is silently
 // unclickable (agni issue 347).
 //
-// This assertion could not be written before, because Loader.Geometry took no options, so there was no
-// channel for a call site to pass config through and nothing for a test to observe.
+// This assertion could not be written before. Loader.Geometry took no options, so a call site had no
+// channel to pass config through, and a test had nothing to observe.
 func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 	uri := "mount://m/p/board.kicad_sch"
 	cases := []struct {
@@ -165,13 +165,13 @@ func TestSymbolPathsReachTheRenderRead(t *testing.T) {
 	}
 }
 
-// TestSymbolPathsReachTheNetlistReadsBesideTheRender covers the reads that sit NEXT to the render on
-// the same service and were equally unconfigured, namely GetDesign's component/net counts and the
-// netlist HighlightSheet reads to resolve net ids to names for a name-join.
+// TestSymbolPathsReachTheNetlistReadsBesideTheRender covers the reads NEXT to the render on the same
+// service. They were equally unconfigured. One is GetDesign's component/net counts. The other is the
+// netlist that HighlightSheet reads to resolve net ids to names for a name-join.
 //
 // They are here rather than in a separate test because they share the defect's cause. The service had
-// no resolver at all, so every read it made was unconfigured, and fixing only the ones the render
-// draws from would leave the counts beside the drawing describing a different read.
+// no resolver at all, so every read it made was unconfigured. Fixing only the reads behind the
+// drawing would leave the counts beside it describing a different read.
 func TestSymbolPathsReachTheNetlistReadsBesideTheRender(t *testing.T) {
 	ld := newRecordingLoader()
 	svc := NewDesignService(ld, noNative{}, render.Style{}, symbolProjectResolver("/host/p/symbols"))
@@ -195,9 +195,10 @@ func TestSymbolPathsReachTheNetlistReadsBesideTheRender(t *testing.T) {
 
 // TestDiffReadsBothSidesConfigured is the folded-in half of agni issue 347.
 //
-// A diff rests entirely on its two netlist reads, and both were made with no options. A project whose
-// symbol library did not resolve was therefore compared from two reads that each lose every connection
-// through the affected parts, so a revision that CHANGED such a connection showed no change at all.
+// A diff depends entirely on its two netlist reads, and both were made with no options. Imagine a
+// project whose symbol library did not resolve. Its diff compared two reads that each lost every
+// connection through the affected parts. So a revision that CHANGED such a connection showed no
+// change at all.
 // `agni diff` on the CLI reads through readDesign and is configured, so the two surfaces answered the
 // same question differently. This was the service-side survivor of agni issue 228.
 func TestDiffReadsBothSidesConfigured(t *testing.T) {
@@ -221,8 +222,9 @@ func TestDiffReadsBothSidesConfigured(t *testing.T) {
 			t.Errorf("diff side %d read with symbol paths %v, want [/host/p/symbols]", i, paths)
 		}
 	}
-	// The geometry each side is annotated against has to come from the SAME config as its netlist,
-	// or a change would be badged onto a sheet drawn from a shorter read than the one that found it.
+	// Each side is annotated against a geometry, and that geometry has to come from the SAME config as
+	// its netlist. Otherwise a change would be badged onto a sheet drawn from a shorter read than the
+	// one that found it.
 	for i, paths := range ld.symbolPathsFor("Geometry") {
 		if len(paths) != 1 || paths[0] != "/host/p/symbols" {
 			t.Errorf("diff geometry read %d saw symbol paths %v, want [/host/p/symbols]", i, paths)
@@ -231,11 +233,11 @@ func TestDiffReadsBothSidesConfigured(t *testing.T) {
 }
 
 // TestNoProjectResolverReadsUnderDefaults is the positive control for the three tests above. A design
-// belonging to no project genuinely has no config, and that has to stay a clean read rather than
-// becoming an error or inheriting another project's library.
+// belonging to no project genuinely has no config. Its read must still be clean, with no error and
+// no library inherited from another project.
 //
-// Without it the assertions above would also pass if the service had started passing some FIXED set
-// of paths, which is the failure mode a "config arrived" test cannot otherwise distinguish.
+// Without this control the assertions above would also pass if the service had started passing some
+// FIXED set of paths. A "config arrived" test cannot otherwise tell that failure apart.
 func TestNoProjectResolverReadsUnderDefaults(t *testing.T) {
 	ld := newRecordingLoader()
 	svc := NewDesignService(ld, noNative{}, render.Style{}, nil)

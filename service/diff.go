@@ -18,9 +18,9 @@ import (
 // table. The sample is deterministic (sorted ref_des, first placement per side).
 const sharedPlacementCap = 50
 
-// DesignLoader is the slice of Loader the diff tier needs, the netlist IR for both sides plus each
-// side's default-layout geometry for the sheet-membership annotation (WS9-006). Geometry is
-// best-effort there, see annotateDiffSheets. Any Loader satisfies it.
+// DesignLoader is the slice of Loader that the diff tier needs. It reads the netlist IR for both
+// sides, plus each side's default-layout geometry for the sheet-membership annotation (WS9-006).
+// Geometry is best-effort there (see annotateDiffSheets). Any Loader satisfies it.
 type DesignLoader interface {
 	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
 	Geometry(ctx context.Context, uri artifact.URI, layout string, faithfulSymbols bool, opts ...ReadOption) (*geom.SchematicGeometry, error)
@@ -77,18 +77,18 @@ func (s *DiffService) DiffDesigns(ctx context.Context, req *webapi.DiffDesignsRe
 	gA := BuildGeometry(actx, LoaderOr(as, s.loader), as.Geometry, aOpts...)
 	gB := BuildGeometry(bctx, LoaderOr(bs, s.loader), bs.Geometry, bOpts...)
 	// Plain netlist models, NOT BuildModel. Diff runs no rules and annotateDiffSheets reads only
-	// Nets(), so the board and params tiers would be dead weight. This is the one intended
-	// exception to the WS9-048 full-model rule.
+	// Nets(), so the board and params tiers would be dead weight. No other exception to the WS9-048
+	// full-model rule is intended.
 	annotateDiffSheets(resp, check.NewModel(a), gA, check.NewModel(b), gB)
 	annotateSharedPlacements(resp, gA, gB)
 	return resp, nil
 }
 
 // annotateDiffSheets fills the response's per-side sheet maps (WS9-006) for exactly the keys of
-// the status maps, using the same sheetIndex findings use (WS9-024). It runs after
-// DiffResponseProto so that conversion stays geometry-free, and a nil geometry side gets empty
+// the status maps, using sheetIndex as findings do (WS9-024). It runs after
+// DiffResponseProto so that conversion reads no geometry, and a nil geometry side gets empty
 // maps. A renamed net is keyed under both names, and each side's geometry knows only its own name,
-// so the old name lands in a's map and the new name in b's with no special casing.
+// so the old name goes into a's map and the new name into b's with no special casing.
 //
 // Each side passes its design as the NetSource so wireless sub-sheet nets get a sheet too
 // (WS9-027, WS9-028); see indexSheets.
@@ -164,10 +164,10 @@ func annotateSharedPlacements(resp *webapi.DiffDesignsResponse, gA, gB *geom.Sch
 	}
 }
 
-// DiffResponseProto is the one place a diff.Report becomes its webapi wire form, shared by the RPC
-// and the CLI's `diff --format json` (C31). It also derives the highlight maps, ref_des ->
-// added|removed|changed and net name -> new|deleted|renamed|hard|soft, with a renamed net keyed
-// under BOTH names so each side of a visual diff joins by the name its own geometry carries.
+// DiffResponseProto converts a diff.Report into its webapi wire form, and no other code does. The
+// RPC and the CLI's `diff --format json` share it (C31). It also derives the highlight maps, ref_des
+// -> added|removed|changed and net name -> new|deleted|renamed|hard|soft. A renamed net is keyed
+// under BOTH names, so each side of a visual diff joins by the name in its own geometry.
 func DiffResponseProto(r *diff.Report) *webapi.DiffDesignsResponse {
 	rep := &webapi.DiffReport{
 		ComponentsAdded:   r.ComponentsAdded,
@@ -227,8 +227,9 @@ func renameEvidenceProto(e *diff.RenameEvidence) *webapi.DiffReport_RenameEviden
 	}
 }
 
-// RenameOptionsFromProto turns a request's near-rename options into the diff's: nil is the pass
-// off, an empty message the calibrated defaults, and each set field overrides one threshold.
+// RenameOptionsFromProto turns a request's near-rename options into the diff's. A nil message turns
+// the pass off. An empty message selects the calibrated defaults, and each set field overrides one
+// threshold.
 func RenameOptionsFromProto(p *webapi.NearRenameOptions) diff.RenameOptions {
 	opts := diff.DefaultRenameOptions()
 	if p == nil {

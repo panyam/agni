@@ -11,14 +11,16 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// ReviewStore persists review runs (WS9-053). Like PartSpecStore and AnnotationStore, the interface
-// lives here and the os-backed adapter in cmd/agni owns all I/O (C1/C13). Unlike them it is not keyed
-// by an artifact.URI holding ONE current value, because a design accumulates MANY runs, so this store
-// mints identities and lists them.
+// ReviewStore persists review runs (WS9-053). Like DraftStore and AnnotationStore in
+// datasheet/dsservice, the interface is a port, and the os-backed adapter in cmd/agni owns all I/O
+// (C1/C13). Those two key on an
+// artifact.URI holding ONE current value. A design accumulates MANY runs, so this store mints
+// identities and lists them instead.
 //
-// Create owns identity AND time. The os adapter derives an id from the creation instant, which lets a
-// listing sort chronologically without opening a document, so the two cannot be assigned separately.
-// It also keeps ReviewService free of a clock, so its output is fixed for given inputs.
+// Create owns identity AND time. The os adapter derives an id from the creation instant. A listing
+// can then sort chronologically without opening a document, and the id and the time cannot be
+// assigned separately. Owning the time also keeps ReviewService free of a clock, so its output is
+// fixed for given inputs.
 type ReviewStore interface {
 	// Create stores a completed run under a parent project ("" for a design that belongs to none) and
 	// returns its assigned name and stamped creation time. The caller supplies neither, so it cannot
@@ -81,11 +83,12 @@ func validReviewID(id string) bool {
 	return id != "" && id != "." && id != ".." && !strings.ContainsAny(id, "/\\")
 }
 
-// MemReviewStore is an in-memory ReviewStore. It backs `agni review`, a thin client of CreateReview
-// that must leave no files behind (--results-out is how it writes a document), and most tests.
+// MemReviewStore is an in-memory ReviewStore. It backs most tests and `agni review`. That command is
+// a thin client of CreateReview and must leave no files behind, since --results-out is how it writes
+// a document.
 //
-// Ids are the insertion ordinal rather than a timestamp, which keeps tests deterministic and still
-// lists newest first.
+// Ids are the insertion ordinal rather than a timestamp. That keeps tests deterministic, and the store
+// still lists newest first.
 type MemReviewStore struct {
 	mu   sync.Mutex
 	seq  int
@@ -95,7 +98,7 @@ type MemReviewStore struct {
 	// document rather than inside it because a parent is where a run LIVES, not something the run
 	// recorded about itself.
 	parents map[string]string
-	// Clock, when set, stamps created_at. Nil leaves it empty, which the CLI wants for a run it never
+	// Clock, when set, stamps created_at. Nil leaves it empty, as the CLI wants for a run it never
 	// persists.
 	Clock func() string
 }
@@ -174,8 +177,8 @@ func (m *MemReviewStore) Delete(_ context.Context, name string) error {
 // adapter can disagree about whether a token is inclusive and make a client skip or repeat a run at
 // a page boundary.
 //
-// The token is the id to resume AFTER, so it stays valid when runs are created or deleted between
-// pages, which an offset would not. nameOf builds each kept run's resource name, because only the
+// The token is the id to resume AFTER. It is still valid when runs are created or deleted between
+// pages, and an offset would not be. nameOf builds each kept run's resource name, because only the
 // store knows which parent an id lives under.
 func PageReviews(newestFirst []string, pageSize int, pageToken, designFilter string, load func(string) *checkspb.CheckResults, nameOf func(string) string) ([]*checkspb.CheckResults, []string, string, error) {
 	if pageSize <= 0 {

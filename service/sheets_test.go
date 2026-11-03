@@ -12,9 +12,9 @@ import (
 )
 
 // TestAnnotateBusLocateReason checks the WS7-042c annotation. A bus finding whose bus is drawn gets
-// its sheet(s) and stays UNSPECIFIED (so it highlights), while a bus finding with no drawn bus of
-// that name gets BUS_NOT_DRAWN, the server-authoritative reason the viewer shows instead of
-// silently doing nothing.
+// its sheet(s) and keeps UNSPECIFIED, so it highlights. A bus finding with no drawn bus of that name
+// gets BUS_NOT_DRAWN. The server decides that reason, and the viewer shows it instead of silently
+// doing nothing.
 func TestAnnotateBusLocateReason(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{
 		Id: "root",
@@ -55,10 +55,10 @@ func TestAnnotateBusLocateReason(t *testing.T) {
 // clicking a query cell for a net explained itself and clicking the FINDING for the same net did
 // nothing at all. UNSPECIFIED is not a neutral default here. Its own contract says the entity IS
 // drawn and is expected to highlight, so leaving it on an undrawn subject actively tells the viewer
-// to stay quiet.
+// to say nothing.
 func TestAnnotateExplainsEveryUnlocatableSubject(t *testing.T) {
 	// A rail distributed by taps. It is in the netlist and carries a power role, and no wire on any
-	// sheet is labelled with it. This is the shape a decoupling-present finding lands on.
+	// sheet is labelled with it. A decoupling-present finding names a net of this shape.
 	d := &ir.Design{
 		Nets: []*ir.Net{
 			{Name: "VDD_3V3", Roles: classify.ConventionRoles(ir.Role_ROLE_RAIL)},
@@ -83,7 +83,7 @@ func TestAnnotateExplainsEveryUnlocatableSubject(t *testing.T) {
 	if rail.GetLocateReason() != checkspb.LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE {
 		t.Errorf("undrawn rail reason = %v, want POWER_RAIL_NO_WIRE", rail.GetLocateReason())
 	}
-	// The control for the rest. A subject that WILL highlight must stay UNSPECIFIED, or
+	// The control for the rest. A subject that WILL highlight must keep UNSPECIFIED, or
 	// the viewer shows an explanation over a working click.
 	if drawn.GetLocateReason() != checkspb.LocateReason_LOCATE_REASON_UNSPECIFIED {
 		t.Errorf("drawn net reason = %v, want UNSPECIFIED", drawn.GetLocateReason())
@@ -96,7 +96,7 @@ func TestAnnotateExplainsEveryUnlocatableSubject(t *testing.T) {
 	}
 }
 
-// With no model there is nothing to classify against, so an unlocatable subject stays UNSPECIFIED
+// With no model there is nothing to classify against, so an unlocatable subject keeps UNSPECIFIED
 // rather than being guessed at. This is the CLI's nil-source path and the pre-existing behaviour.
 func TestAnnotateWithoutAModelExplainsNothing(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "root"}}}
@@ -123,11 +123,11 @@ func TestAnnotateWithNoSourceIsANoOp(t *testing.T) {
 }
 
 // A trace was the third consumer of the sheet index and the only one that never asked, so a route
-// drew on the design's first sheet whatever it crossed (agni issue 657). These pin the two lookups
-// that differ from a finding's, and the outcome that is easiest to leave unfilled.
+// drew on the design's first sheet whatever it crossed (agni issue 657). These tests pin the two
+// lookups that differ from a finding's. They also pin the outcome that is easiest to leave unfilled.
 func TestAnnotateTraceSheets(t *testing.T) {
 	// Two sheets, and the parts are on the SECOND. A one-sheet fixture cannot tell "found the right
-	// sheet" from "returned the first one", which is the bug.
+	// sheet" from "returned the first one", and the bug returned the first one.
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
 		{Id: "contents"},
 		{Id: "page2", Placements: []*geom.SymbolPlacement{{RefDes: "U1"}, {RefDes: "R1"}}},
@@ -139,8 +139,8 @@ func TestAnnotateTraceSheets(t *testing.T) {
 	}
 	AnnotateTraceSheets(tr, g, nil)
 
-	// An endpoint resolves by PLACEMENT, not by its net, because it is a pin on a part, and where
-	// that part is drawn is what a reader opens. Resolving by net first put a route on a sheet
+	// An endpoint resolves by PLACEMENT, not by its net, because it is a pin on a part. A reader opens
+	// the sheet where that part is drawn. Resolving by net first put a route on a sheet
 	// carrying the middle net and none of the parts.
 	if got := tr.GetFrom().GetSheetIds(); len(got) != 1 || got[0] != "page2" {
 		t.Errorf("from endpoint sheets = %v, want [page2] from U1's placement", got)
@@ -150,8 +150,8 @@ func TestAnnotateTraceSheets(t *testing.T) {
 	}
 }
 
-// The no-route case is the one a field filled only on success answers with silence, and it is the
-// case a reader most wants a picture of, since the two nets that do NOT join are still drawn somewhere.
+// Imagine a field filled only on success. A no-route answer would leave it empty. A reader most
+// wants a picture in that case, since the two nets that do NOT join are still drawn somewhere.
 func TestAnnotateTraceSheetsFillsANoRoute(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
 		{Id: "contents"},
@@ -188,7 +188,7 @@ func TestANetFindingLocatesOnGeometryWithoutWireIDs(t *testing.T) {
 	}
 }
 
-// Where wires do carry ids, a net whose id is drawn nowhere stays drawn nowhere, rather than taking
+// Where wires do carry ids, a net whose id is drawn nowhere is still drawn nowhere, rather than taking
 // the sheets of another net sharing its name (WS9).
 func TestANetFindingDoesNotBorrowASameNamedNetsSheets(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{

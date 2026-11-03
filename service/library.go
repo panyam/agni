@@ -14,9 +14,9 @@ import (
 	"github.com/panyam/jaala/ns"
 )
 
-// LibraryModule is one module of a project's own derived relations, as a ConfigResolver read it: the
-// module path its members register under, the language and text it is written in, and Source, where
-// it was read from, which an error names so a reader can find the file.
+// LibraryModule is one module of a project's own derived relations, as a ConfigResolver read it. It
+// holds the module path that its members register under, the module's language and text, and Source.
+// Source says where the module was read from, and an error names it so a reader can find the file.
 type LibraryModule struct {
 	Path     string
 	Language string
@@ -24,14 +24,14 @@ type LibraryModule struct {
 	Source   string
 }
 
-// Registry is the query vocabulary this overlay's queries run over: the process default, plus the
-// project's own library when it has one (agni issue 773). An overlay with no library gets
+// Registry returns the query vocabulary for this overlay's queries. That is the process default,
+// plus the project's own library when it has one (agni issue 773). An overlay with no library gets
 // facts.DefaultRegistry itself, so nothing changes for a project that declares none.
 //
 // A library is composed once per distinct content and cached, because a server answers many queries
-// over one project and composing checks every module. An error names the module's file. A member
-// whose path the shipped vocabulary already defines is refused by name before composition, since the
-// vocabulary's own message for that names the path and not the file that caused it.
+// over one project and composing checks every module. An error names the module's file. If the
+// shipped vocabulary already defines a member's path, the member is refused by name before
+// composition. The vocabulary's own message for that names the path and not the file that caused it.
 func (o Overlay) Registry() (*facts.Registry, error) {
 	if len(o.Library) == 0 && len(o.LibraryDocs) == 0 {
 		return facts.DefaultRegistry(), nil
@@ -73,8 +73,9 @@ func composeLibrary(mods []LibraryModule, docs map[string]string) (*facts.Regist
 	ms := make([]ns.Module, 0, len(mods))
 	seen := map[string]bool{}
 	for _, m := range mods {
-		// The same module reaching a query twice, a project's lib/ also named by --lib or sent inline, is
-		// one module. Two DIFFERENT definitions of one member are still refused below.
+		// A module can reach a query twice, when --lib names a project's lib/ or a request sends it
+		// inline. It counts as one module. Two DIFFERENT definitions of one member are still refused
+		// below.
 		if k := m.Path + "\x00" + m.Language + "\x00" + m.Text; seen[k] {
 			continue
 		} else {
@@ -132,7 +133,7 @@ func inlineLibrary(cfg *webapi.AnalysisConfig) ([]LibraryModule, map[string]stri
 	return mods, docs
 }
 
-// datalogLanguage is the module language agni registers, and the one a module naming none is in.
+// datalogLanguage is the module language agni registers. A module naming no language is in it.
 const datalogLanguage = "datalog"
 
 // mergeDocs layers b's pages over a's without changing either.

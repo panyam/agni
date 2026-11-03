@@ -19,9 +19,9 @@ func (fixedTokens) Mint(room string) (string, time.Time, error) {
 
 func (fixedTokens) Bridges() []string { return []string{"the-bridge"} }
 
-// TestEveryNameOfADesignJoinsOneRoom is C32 for the viewer's rooms (agni issue 1154): a tab opened on
-// the design's folder and one opened on its entry are in one room, and an agent naming the design any
-// of those ways reaches both. The names are the report links' (linkNames).
+// TestEveryNameOfADesignJoinsOneRoom applies C32 to the viewer's rooms (agni issue 1154). A tab
+// opened on the design's folder and one opened on its entry are in one room. An agent naming the
+// design by any of its names reaches both. The names are the report links' names (linkNames).
 func TestEveryNameOfADesignJoinsOneRoom(t *testing.T) {
 	svc := NewViewerRoomService(&ProjectResolver{Store: declaringStore{design: withCompanion()}}, fixedTokens{}, "/relay/")
 	want := map[string]string{

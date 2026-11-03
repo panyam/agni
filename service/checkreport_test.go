@@ -33,8 +33,9 @@ func reportRun(t *testing.T) (*CheckService, *webapi.CheckDesignResponse, string
 	return svc, run, snap
 }
 
-// TestRenderCheckReportWritesTheResultsDocument holds the JSON form to the document `agni check
-// --results-out` writes: the producer, the design's hash, the selected catalog and the run's findings.
+// TestRenderCheckReportWritesTheResultsDocument checks the JSON form against the document from `agni
+// check --results-out`. Both hold the producer, the design's hash, the selected catalog and the run's
+// findings.
 func TestRenderCheckReportWritesTheResultsDocument(t *testing.T) {
 	svc, run, snap := reportRun(t)
 	resp, err := svc.RenderCheckReport(context.Background(), &webapi.RenderCheckReportRequest{
@@ -69,8 +70,8 @@ func TestRenderCheckReportWritesTheResultsDocument(t *testing.T) {
 	}
 }
 
-// TestRenderCheckReportWritesTheVerdictPage holds the HTML form to the run's verdicts, and its links
-// to what the caller asked for.
+// TestRenderCheckReportWritesTheVerdictPage checks that the HTML form lists the run's verdicts, and
+// that its links point where the caller asked.
 func TestRenderCheckReportWritesTheVerdictPage(t *testing.T) {
 	svc, run, snap := reportRun(t)
 	render := func(links *webapi.ReportLinks) string {
@@ -116,9 +117,9 @@ func TestRenderCheckReportRefusesAnIncompleteRequest(t *testing.T) {
 	}
 }
 
-// The HTML page carries the query sets the caller answered and sent, one Queries section each after
-// the rules, so one file holds the checks and the queries (agni issue 1190). A request sending none
-// renders the page with no Queries section at all.
+// The caller answers query sets and sends them with the request. The HTML page shows each set in its
+// own Queries section after the rules, so one file holds the checks and the queries (agni issue 1190).
+// A request sending no sets renders the page with no Queries section at all.
 func TestRenderCheckReportCarriesTheQuerySetsItIsSent(t *testing.T) {
 	svc, run, snap := reportRun(t)
 	render := func(sets ...*webapi.RunQueriesResponse) string {

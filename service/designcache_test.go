@@ -11,9 +11,9 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// TestAWaiterBuildsAgainWhenTheBuildersCallerGoesAway: a request waiting on another's read gets the
-// read, not the other request's cancellation (agni issue 1061). A background LoadDesign the page
-// abandons must not fail the check that was waiting on it.
+// TestAWaiterBuildsAgainWhenTheBuildersCallerGoesAway checks that a request waiting on another's read
+// gets the read, not the other request's cancellation (agni issue 1061). A background LoadDesign
+// that the page abandons must not fail the check that was waiting on it.
 func TestAWaiterBuildsAgainWhenTheBuildersCallerGoesAway(t *testing.T) {
 	c := NewDesignCache(8)
 	started := make(chan struct{})
@@ -54,7 +54,8 @@ func TestAWaiterBuildsAgainWhenTheBuildersCallerGoesAway(t *testing.T) {
 	}
 }
 
-// TestAWaiterGetsAFailedReadsError: a read that fails for itself is not run twice for one request.
+// TestAWaiterGetsAFailedReadsError checks that a read that fails for itself is not run twice for one
+// request.
 func TestAWaiterGetsAFailedReadsError(t *testing.T) {
 	c := NewDesignCache(8)
 	bad := errors.New("unreadable")
@@ -91,9 +92,10 @@ func TestAWaiterGetsAFailedReadsError(t *testing.T) {
 	}
 }
 
-// TestTheParseRequestReachesTheHostsLoader: every host reads through LoaderFor, so the parse level
-// gets a configuration-free design from any of them only if the request survives it (agni issue 1061).
-// control: a read with a vocabulary and no parse request still runs the configured passes.
+// TestTheParseRequestReachesTheHostsLoader checks that a parse request survives LoaderFor. Every host
+// reads through LoaderFor, so the parse level gets a configuration-free design from any host only if
+// the request survives it (agni issue 1061). The control is a read with a vocabulary and no parse
+// request, which still runs the configured passes.
 func TestTheParseRequestReachesTheHostsLoader(t *testing.T) {
 	base := &formats.Loader{}
 	if l := LoaderFor(base, withParseOnly()); l == nil || !l.ParseOnly {

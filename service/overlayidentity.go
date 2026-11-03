@@ -17,9 +17,9 @@ import (
 // field added later, and a cache keyed on it would serve wrong answers. The inputs are protos and
 // content digests, which have canonical forms already.
 //
-// REFUSING IS PART OF THE CONTRACT. An input nothing can identify (config a resolver read without
-// reporting what it read) makes Identity return false rather than a value covering less than it
-// appears to.
+// REFUSING IS PART OF THE CONTRACT. Imagine a resolver read config without reporting what it read.
+// Nothing can identify that input, so Identity returns false rather than a value covering less than
+// it appears to.
 
 // overlayID accumulates the labeled inputs one overlay was composed from, in composition order.
 type overlayID struct {

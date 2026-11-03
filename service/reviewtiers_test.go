@@ -14,7 +14,7 @@ import (
 )
 
 // boardRecordingLoader reads a netlist that carries no copper, as a served netlist does, and records
-// every artifact a board was asked of. Only the declared board file yields geometry.
+// every artifact it was asked to read a board from. Only the declared board file yields geometry.
 type boardRecordingLoader struct {
 	board string
 	mu    sync.Mutex
@@ -52,8 +52,8 @@ func withBoardCompanion() *webapi.Design {
 }
 
 // A review scored in the browser read no board where the CLI read the declared one, so board-tier
-// items came back not-applicable on one surface and fail on the other (agni issue 646). The review was
-// the one analysis path that never resolved a design's tiers, which is C32 at one more call site.
+// items came back not-applicable on one surface and fail on the other (agni issue 646). Of all the
+// analysis paths, only the review never resolved a design's tiers. C32 covers that call site too.
 func TestCreateReviewReadsTheDeclaredBoard(t *testing.T) {
 	const board = "mount://m/d/board.kicad_pcb"
 	for _, tc := range []struct {
@@ -62,7 +62,7 @@ func TestCreateReviewReadsTheDeclaredBoard(t *testing.T) {
 		want    string
 	}{
 		{"declared board attached", false, board},
-		// The opt-out the CLI's --as-named sends reads exactly what was named, which carries no board.
+		// The CLI's --as-named sends an opt-out. It reads exactly what was named, and that has no board.
 		{"as named reads the entry alone", true, "mount://m/d/board.edn"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

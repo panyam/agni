@@ -20,9 +20,10 @@ import (
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // registers the built-in EE rules into DefaultCatalog
 )
 
-// fsReviewLoader is a filesystem-backed reviewLoader over the CLI's own review fixtures, so the
-// service test runs the SAME inputs cmd/agni's TestReviewCmd asserts, so served parity is by
-// construction, not a re-encoded copy. It is the one os-touching test helper (production is os-free).
+// fsReviewLoader is a filesystem-backed reviewLoader over the CLI's own review fixtures. The service
+// test runs the SAME inputs as cmd/agni's TestReviewCmd, so served parity holds by construction
+// rather than through a re-encoded copy. It is the one os-touching test helper, since production is
+// os-free.
 type fsReviewLoader struct{ base string }
 
 // Design HONORS the read options rather than discarding them. A loader that dropped the lexicon
@@ -77,10 +78,10 @@ func newReviewSvc() *ReviewService {
 	return NewReviewService(fsReviewLoader{base: base}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "", nil)
 }
 
-// fixtureManifest reads a checklist fixture and returns its WIRE form, which is how a manifest now
-// reaches CreateReview (WS9-050). The tests below go through this rather than naming a path in the
-// request, so they exercise the conversion the CLI and the browser both depend on instead of a
-// hand-built proto that could drift from what the YAML actually parses to.
+// fixtureManifest reads a checklist fixture and returns its WIRE form. A manifest now reaches
+// CreateReview in that form (WS9-050). The tests below go through this helper rather than naming a
+// path in the request. So they exercise the conversion that the CLI and the browser both depend on,
+// instead of a hand-built proto that could drift from what the YAML actually parses to.
 func fixtureManifest(t *testing.T, name string) *checkspb.ReviewManifest {
 	t.Helper()
 	man, err := fsReviewLoader{base: filepath.Join("..", "cmd", "agni", "testdata")}.Manifest(context.Background(), testURI(t, "m", name))
@@ -91,9 +92,9 @@ func fixtureManifest(t *testing.T, name string) *checkspb.ReviewManifest {
 }
 
 // TestCreateReviewOverFixtures runs the same manifest+design the CLI's TestReviewCmd runs, WITH a
-// separate board attached (WS3-089), and checks each item's outcome end to end: the CAN profile
-// fails termination + signals, the datasheet rule with no --params is not-applicable, the noted item
-// is not-automated, the board item fails on the fires board, and the inline house-rule passes.
+// separate board attached (WS3-089), and checks each item's outcome end to end. The CAN profile
+// fails termination + signals, and the datasheet rule with no --params is not-applicable. The noted
+// item is not-automated, the board item fails on the fires board, and the inline house-rule passes.
 func TestCreateReviewOverFixtures(t *testing.T) {
 	svc := newReviewSvc()
 	resp, err := svc.CreateReview(context.Background(), &webapi.CreateReviewRequest{
@@ -146,9 +147,9 @@ func TestCreateReviewBoardURIGate(t *testing.T) {
 // and a board_ref at a non-board file each error. The run is all-or-nothing, so a partial read
 // never reports items clean.
 //
-// The invalid case is the one the value-carrying request made possible (WS9-050). A manifest that
-// arrives as a value never passed a parser, so nothing but this service would have rejected an item
-// declaring two mutually-exclusive bindings, and the run would have scored a design against whichever
+// The value-carrying request made the invalid case possible (WS9-050). A manifest that arrives as a
+// value never passed a parser. So nothing but this service would reject an item declaring two
+// mutually-exclusive bindings. Without that check, the run would score a design against whichever
 // binding the resolver reached first.
 func TestCreateReviewErrors(t *testing.T) {
 	svc := newReviewSvc()
@@ -175,7 +176,7 @@ func TestCreateReviewErrors(t *testing.T) {
 
 // TestGetReviewManifest resolves a stored checklist into the value CreateReview takes, and the value it
 // returns actually runs. Reading a manifest by ref did not disappear with WS9-050; it moved out of
-// the run and into its own RPC, and this is the round trip a browser makes.
+// the run and into its own RPC, and a browser makes this round trip.
 func TestGetReviewManifest(t *testing.T) {
 	svc := newReviewSvc()
 	ctx := context.Background()
@@ -199,7 +200,8 @@ func TestGetReviewManifest(t *testing.T) {
 }
 
 // TestGetReviewManifestErrors checks that an empty ref and an unreadable one each error. The
-// unreadable-file case lives here now rather than on the run, because that is where the read moved.
+// unreadable-file case lives here now rather than on the run, because the read moved into
+// GetReviewManifest.
 func TestGetReviewManifestErrors(t *testing.T) {
 	svc := newReviewSvc()
 	ctx := context.Background()
@@ -216,8 +218,8 @@ func TestGetReviewManifestErrors(t *testing.T) {
 }
 
 // TestReviewReportProtoMapsAllFields pins the one review.Report -> proto projection. Every item's id,
-// title, outcome, note, and findings must survive, so the served surface and the CLI (which renders
-// the Go review.Report) cannot silently drift on a lost field.
+// title, outcome, note, and findings must survive. Then the served surface and the CLI cannot
+// silently drift on a lost field. The CLI renders the Go review.Report.
 func TestReviewReportProtoMapsAllFields(t *testing.T) {
 	rep := review.Report{
 		Manifest: "M", Design: "d.edn",
@@ -290,10 +292,10 @@ func runOneItem(t *testing.T, p profiles.Profile, d *ir.Design) string {
 	return out
 }
 
-// TestReviewAbsentPrefixProfileNotApplicable (WS3-090 case 1) checks that a prefix-discriminated
-// rule-bearing profile whose own nets are absent reads not-applicable, even though foreign nets
-// share its bare suffix. Before the fix the loose suffix presence read it "present", the rules
-// (which require the prefix) did not fire, and the item false-passed.
+// TestReviewAbsentPrefixProfileNotApplicable covers WS3-090 case 1. A prefix-discriminated
+// rule-bearing profile whose own nets are absent must read not-applicable, even though foreign nets
+// share its bare suffix. Before the fix, the loose suffix presence read it as "present". The rules
+// require the prefix, so they did not fire, and the item false-passed.
 func TestReviewAbsentPrefixProfileNotApplicable(t *testing.T) {
 	pcie := profiles.Profile{Name: "PXTEST", Signals: []profiles.Signal{
 		{Name: "TX", Prefix: "PCIE_", Suffix: "_TX", Anchor: true},
@@ -305,9 +307,9 @@ func TestReviewAbsentPrefixProfileNotApplicable(t *testing.T) {
 	}
 }
 
-// TestReviewHostUnannotatedNotAutomated (WS3-090 case 2) checks that a host-bound profile whose
-// host is declared on no component and whose convention is not in use reads not-automated (the
-// intended host check could not evaluate) rather than a hollow pass.
+// TestReviewHostUnannotatedNotAutomated covers WS3-090 case 2. Take a host-bound profile whose host
+// is declared on no component and whose convention is not in use. It must read not-automated rather
+// than a hollow pass, since the intended host check could not evaluate.
 func TestReviewHostUnannotatedNotAutomated(t *testing.T) {
 	// Prefix-discriminated host-bound profile. Its nets are NAMED on the board (bare suffix) but not
 	// strictly in use (wrong prefix), and no component declares the host -> the host check is blocked.
@@ -322,9 +324,10 @@ func TestReviewHostUnannotatedNotAutomated(t *testing.T) {
 	}
 }
 
-// TestReviewAbsentHostProfileNotApplicable pins the regression the Named gate guards. A host-bound
-// interface that is GENUINELY absent (not named at all, no host declared) reads not-applicable, NOT
-// not-automated. Only a named-but-unresolvable host interface is not-automated.
+// TestReviewAbsentHostProfileNotApplicable pins the regression that the Named gate guards against. A
+// host-bound interface that is GENUINELY absent reads not-applicable, NOT not-automated. Genuinely
+// absent means not named at all, with no host declared. Only a named-but-unresolvable host interface
+// is not-automated.
 func TestReviewAbsentHostProfileNotApplicable(t *testing.T) {
 	xcan := profiles.Profile{Name: "XCAN", HostAttrKey: "interface", HostAttrVal: "XCAN_HOST",
 		Signals: []profiles.Signal{
@@ -337,9 +340,9 @@ func TestReviewAbsentHostProfileNotApplicable(t *testing.T) {
 	}
 }
 
-// TestReviewInUseWithoutAnchorNotAutomated (WS3-099) checks that a profile whose convention is in
-// use through two NON-anchor signals, with the anchor net absent, must not read pass. The
-// completeness rule hangs on the anchor, so it reports nothing, and zero findings scored a clean
+// TestReviewInUseWithoutAnchorNotAutomated covers WS3-099. A profile's convention is in use through
+// two NON-anchor signals, and the anchor net is absent. That profile must not read pass. The
+// completeness rule depends on the anchor, so it reports nothing, and zero findings scored a clean
 // pass on an interface nothing checked. This is the fifth route to the same defect after
 // WS3-090/096/097/098.
 func TestReviewInUseWithoutAnchorNotAutomated(t *testing.T) {
@@ -369,12 +372,12 @@ func TestReviewInUseWithoutAnchorNotAutomated(t *testing.T) {
 	}
 }
 
-// TestReviewOverlayProfileResolvesUnmatched (WS3-099) pins the REMEDIATION path for the verdict above.
-// A board whose bus is correctly designed but named to a convention the shipped profile cannot express
-// reads not-automated, and authoring an overlay profile with WS3-057 matchers makes it evaluate for
-// real. The two profiles share the interface Name and load as separate catalog sources, as a built-in
-// and a --profile-path overlay do. The core profile stays SILENT rather than clashing. It cannot anchor
-// on this naming, so the overlay's finding is the only verdict.
+// TestReviewOverlayProfileResolvesUnmatched pins the REMEDIATION path for the verdict above
+// (WS3-099). Imagine a board whose bus is correctly designed, but named to a convention that the
+// shipped profile cannot express. It reads not-automated. Authoring an overlay profile with WS3-057
+// matchers makes it evaluate for real. The two profiles share the interface Name and load as separate
+// catalog sources, as a built-in and a --profile-path overlay do. The core profile reports nothing
+// rather than clashing. It cannot anchor on this naming, so the overlay's finding is the only verdict.
 func TestReviewOverlayProfileResolvesUnmatched(t *testing.T) {
 	core := profiles.Profile{Name: "PXOVL", Signals: []profiles.Signal{
 		{Name: "PETP", Suffix: "_PETP", Anchor: true},
@@ -403,8 +406,8 @@ func TestReviewOverlayProfileResolvesUnmatched(t *testing.T) {
 }
 
 // runProfiles runs a one-item manifest bound to the interface every profile in ps names, loading the
-// first as a built-in source and the rest as an overlay source (the production namespacing, which is
-// also what keeps their generated rule names distinct).
+// first as a built-in source and the rest as an overlay source. This is the production namespacing,
+// and it also keeps their generated rule names distinct.
 func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 	t.Helper()
 	name := ps[0].Name
@@ -425,10 +428,11 @@ func runProfiles(t *testing.T, ps []profiles.Profile, d *ir.Design) string {
 	return out
 }
 
-// TestCreateReviewOverlayIsPerRequest is the property the process-global vocabulary could not provide,
-// and the reason the lexicon travels with the read (WS3-106). Two CreateReview calls in ONE process,
-// naming different conventions, must each see their own. Run concurrently and repeatedly so a shared
-// mutable vocabulary would show up as a race or a flipped outcome rather than passing by luck.
+// TestCreateReviewOverlayIsPerRequest checks a property that the process-global vocabulary could not
+// provide. The lexicon travels with the read for this reason (WS3-106). Two CreateReview calls in ONE
+// process name different conventions, and each must see its own. The test runs them concurrently and
+// repeatedly. A shared mutable vocabulary would then show up as a race or a flipped outcome, rather
+// than passing by luck.
 func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 	svc := NewReviewService(fsReviewLoader{base: "../cmd/agni/testdata"}, NewMemReviewStore(), check.DefaultCatalog(), reviewByName(), nil, testReviewEnv, "", nil)
 	man := fixtureManifest(t, "review/conv.yaml")
@@ -449,8 +453,8 @@ func TestCreateReviewOverlayIsPerRequest(t *testing.T) {
 		}
 		return &webapi.CreateReviewRequest{Manifest: man, Snapshot: snap.GetName()}, nil
 	}
-	// Item 64 is keyed on a pin's electrical type, which ONLY the ingestion stamp can set (no
-	// model-side name fallback exists for a pin direction), so this asserts the READ each request
+	// Item 64 is keyed on a pin's electrical type. ONLY the ingestion stamp can set that, since no
+	// model-side name fallback exists for a pin direction. So this asserts the READ each request
 	// performed, not merely the model it built afterwards.
 	cases := []struct{ conventions, want string }{
 		{"", "pass"},

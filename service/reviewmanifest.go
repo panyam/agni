@@ -6,9 +6,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// This file is the review manifest's wire <-> value conversion, the manifest half of what overlay.go
-// does for a naming convention (WS3-102, generalized by WS9-050). It lives here, not in core/review,
-// because the core must not depend on the wire types.
+// This file converts the review manifest between its wire form and its value. overlay.go does the
+// same for a naming convention, and this is the manifest half (WS3-102, generalized by WS9-050). It
+// lives here, not in core/review, because the core must not depend on the wire types.
 //
 // The conversions are lossless in both directions, and TestManifestProtoRoundTrip fails when a
 // Binding field is added to the Go struct without a matching proto field. A dropped binding field
@@ -17,8 +17,8 @@ import (
 // ManifestFromProto converts a wire manifest to the engine's value. A nil message yields the zero
 // Manifest, which validation then reports as absent.
 //
-// It does NOT validate, so a caller decides when to pay for the query compilation validation
-// performs. Every service path that converts an inbound manifest validates it.
+// It does NOT validate. Validation compiles the manifest's queries, so the caller decides when to
+// spend that cost. Every service path that converts an inbound manifest validates it.
 func ManifestFromProto(p *checkspb.ReviewManifest) review.Manifest {
 	if p == nil {
 		return review.Manifest{}

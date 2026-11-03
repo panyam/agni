@@ -27,8 +27,8 @@ func conventionProto(name, ruleName string) *configpb.NamingConvention {
 	}
 }
 
-// startupCatalog is a server built with --conventions: the deployment's own convention spliced onto
-// the built-ins, which is what serveRuleServices produces.
+// startupCatalog builds the catalog of a server started with --conventions. It splices the
+// deployment's own convention onto the built-ins, as serveRuleServices does.
 func startupCatalog(t *testing.T, name, ruleName string) *check.Catalog {
 	t.Helper()
 	src, err := naming.Source(&configpb.NamingConvention{
@@ -61,8 +61,8 @@ func ruleNames(cat *check.Catalog) map[string]bool {
 //
 // Stacking was not obviously wrong, but it disagreed with everything around it. The serve flag help
 // said a request "may name its own instead", the serve.go comment said it "overrode", and the
-// lexicon half of the very same config already overrode, because it travels with the design read.
-// One config whose two halves compose differently is the shape that let WS3-102's bug hide.
+// lexicon half of the very same config already overrode, because it goes with the design read.
+// WS3-102's bug hid in the same shape, one config whose two halves compose differently.
 func TestRequestConventionOverridesServerDefault(t *testing.T) {
 	base := startupCatalog(t, "house", "house-nets")
 	ov, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionProto("acme", "acme-nets")}}, "house")
@@ -91,8 +91,8 @@ func TestRequestConventionOverridesServerDefault(t *testing.T) {
 //
 // It used to fail outright with `duplicate rule source "house"`, because the request's source was
 // ADDED to a catalog that already had one by that name. Under override there is nothing to collide
-// with, so the natural case of a project refining the house convention it already uses, keeping the
-// name, simply works.
+// with, so the natural case simply works. A project refines the house convention it already uses,
+// and keeps the name.
 func TestRequestConventionMayReuseTheServersName(t *testing.T) {
 	base := startupCatalog(t, "house", "house-nets")
 	ov, err := ComposeOverlay(&webapi.OverlayConfig{Config: &webapi.AnalysisConfig{Conventions: conventionProto("house", "house-nets-v2")}}, "house")
@@ -113,8 +113,8 @@ func TestRequestConventionMayReuseTheServersName(t *testing.T) {
 }
 
 // TestAbsentRequestConventionKeepsTheServerDefault checks that the common case is unchanged. A
-// request that names no convention gets the deployment's, which is what makes --conventions a default
-// at all.
+// request that names no convention gets the deployment's. Without that, --conventions would not be a
+// default at all.
 func TestAbsentRequestConventionKeepsTheServerDefault(t *testing.T) {
 	base := startupCatalog(t, "house", "house-nets")
 	for name, cfg := range map[string]*webapi.OverlayConfig{
@@ -136,8 +136,8 @@ func TestAbsentRequestConventionKeepsTheServerDefault(t *testing.T) {
 }
 
 // TestOverrideOnlyDropsTheNamedBaseConvention checks that a caller that passes "" gets the additive
-// behaviour rather than a silent partial override. This is the CLI's case, whose catalog already has
-// the user's own --conventions spliced in and has no separate startup default for a request to
+// behaviour rather than a silent partial override. The CLI is this case. Its catalog already has the
+// user's own --conventions spliced in, and it has no separate startup default for a request to
 // replace.
 func TestOverrideOnlyDropsTheNamedBaseConvention(t *testing.T) {
 	base := startupCatalog(t, "house", "house-nets")
@@ -155,10 +155,10 @@ func TestOverrideOnlyDropsTheNamedBaseConvention(t *testing.T) {
 	}
 }
 
-// TestDuplicateSourceErrorNamesTheServerFlag is worth keeping regardless of the override decision. A
-// collision that CAN still happen (a request convention colliding with an overlay profile source,
-// say) must tell the caller where the other source came from. `duplicate rule source "house"` with
-// no other context is a bad five minutes.
+// TestDuplicateSourceErrorNamesTheServerFlag is worth keeping regardless of the override decision.
+// Some collisions CAN still happen, such as a request convention colliding with an overlay profile
+// source. Such a collision must tell the caller where the other source came from. `duplicate rule
+// source "house"` with no other context is a bad five minutes.
 func TestDuplicateSourceErrorNamesTheServerFlag(t *testing.T) {
 	src, err := naming.Source(&configpb.NamingConvention{
 		Name:  "house",
@@ -203,8 +203,8 @@ func writeConvention(t *testing.T, dir, name, body string) {
 }
 
 // TestGetNamingConvention resolves a stored config into the value an OverlayConfig carries, and the
-// value it returns actually composes. This is the browser's half of C22: it holds a ref and no
-// filesystem, so the read is a named rpc and the run still takes a value.
+// value it returns actually composes. This test covers the browser's half of C22. The browser holds
+// a ref and no filesystem, so the read is a named rpc and the run still takes a value.
 func TestGetNamingConvention(t *testing.T) {
 	dir := t.TempDir()
 	writeConvention(t, dir, "house.yaml", `
@@ -230,9 +230,9 @@ rules:
 	if len(conv.GetRules()) != 1 || conv.GetRules()[0].GetName() != "signal-net-naming" {
 		t.Errorf("rules = %+v", conv.GetRules())
 	}
-	// The LEXICON half has to survive too. It is the half that reaches the design read, and a
-	// resolver that dropped it would hand back a convention that compiles rules and leaves every
-	// other rule blind to the project's rail names.
+	// The LEXICON half has to survive too, because it reaches the design read. A resolver that
+	// dropped it would hand back a convention that compiles rules and leaves every other rule blind
+	// to the project's rail names.
 	if pats := conv.GetLexicon().GetNet().GetRail().GetPatterns(); len(pats) != 1 || pats[0] != "_[0-9]V[0-9]$" {
 		t.Errorf("lexicon rail patterns = %v, want the config's", pats)
 	}
@@ -244,8 +244,8 @@ rules:
 
 // TestGetNamingConventionRejectsBadInput checks that an absent ref, an absent file, and a config
 // whose patterns will not compile are each an error HERE, so a client learns once rather than on
-// every run that carries it. The malformed case is the one that matters, because naming.Load parses
-// but a bad regex only fails when the config is USED.
+// every run that names it. The malformed case matters most. naming.Load parses it, and a bad regex
+// only fails when the config is USED.
 func TestGetNamingConventionRejectsBadInput(t *testing.T) {
 	dir := t.TempDir()
 	writeConvention(t, dir, "bad-regex.yaml", "name: x\nrules:\n  - name: r\n    allow: [\"^(unclosed\"]\n")
@@ -265,7 +265,8 @@ func TestGetNamingConventionRejectsBadInput(t *testing.T) {
 }
 
 // TestGetNamingConventionNeedsALoader checks that a service built without a convention loader says so
-// rather than panicking. That is the CLI's construction, which reads its own config at the edge.
+// rather than panicking. The CLI constructs the service this way and reads its own config at the
+// edge.
 func TestGetNamingConventionNeedsALoader(t *testing.T) {
 	svc := NewCheckService(nil, check.DefaultCatalog(), nil, "", nil, nil)
 	if _, err := svc.GetNamingConvention(context.Background(), &webapi.GetNamingConventionRequest{Uri: "mount://m/x.yaml"}); err == nil {

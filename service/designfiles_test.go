@@ -48,9 +48,9 @@ func filePaths(resp *webapi.ListDesignFilesResponse) []string {
 	return out
 }
 
-// TestListDesignFilesIsWhatTheAnalysisReads holds the set to the tiers the engine reads. A file
-// missing here is a tier the browser's engine analyses without, and it reads clean rather than
-// failing, so each tier is named rather than counted.
+// TestListDesignFilesIsWhatTheAnalysisReads holds the set to the tiers the engine reads. If a file
+// is missing here, the browser's engine analyses without that tier, and the run reads clean rather
+// than failing. So each tier is named rather than counted.
 func TestListDesignFilesIsWhatTheAnalysisReads(t *testing.T) {
 	svc := designFilesSvc(t)
 	resp := listDesignFiles(t, svc, "mount://tut/designs/gateway")
@@ -109,8 +109,9 @@ func TestListDesignFilesRefusesWhatItCannotList(t *testing.T) {
 	}
 }
 
-// TestListDesignFilesMarksTheBoard holds the board flag to the board tier Ingest resolves, which the
-// browser engine holds back from a worker until a question there reads the board (agni issue 992).
+// TestListDesignFilesMarksTheBoard holds the board flag to the board tier that Ingest resolves. The
+// browser engine holds that file back from a worker until a question there reads the board (agni
+// issue 992).
 // Only the current revision's declared board is marked, under every spelling of the design, and a
 // design read exactly as named has no board of its own to mark.
 func TestListDesignFilesMarksTheBoard(t *testing.T) {
@@ -134,10 +135,10 @@ func TestListDesignFilesMarksTheBoard(t *testing.T) {
 	}
 }
 
-// A design's files are what its whole extends chain names (agni issue 1136): each project's
-// descriptor and the files and folders it names, and what the design names itself, a single file
-// included. A file in a folder a descriptor never names is not read, so it is not listed, since the
-// browser's engine fetches exactly this list.
+// A design's files are the files its whole extends chain names (agni issue 1136). That means each
+// project's descriptor and the files and folders it names, plus what the design names itself, a
+// single file included. A file in a folder no descriptor names is not read, so it is not listed,
+// since the browser's engine fetches exactly this list.
 func TestListDesignFilesFollowsTheExtendsChain(t *testing.T) {
 	m := fshost.Mount{Name: "m", FS: fshost.MemFS(map[string][]byte{
 		"house/project.yaml":      []byte("name: house\nprofiles: [profiles/can.yaml]\n"),

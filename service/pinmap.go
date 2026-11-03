@@ -9,10 +9,10 @@ import (
 	"github.com/panyam/agni/stdlib/rules/intent"
 )
 
-// The pin map is a design intent's IO map laid out one row per declared pin, each row joined to what
-// the four per-row IO-map rules concluded about it (agni issues 1188, 1189, 667). The rules stay
-// apart, because a reviewer acts on each answer differently; this is the reading a reviewer signing
-// off the map wants, the declaration beside the netlist and the datasheet.
+// The pin map lays out a design intent's IO map one row per declared pin. Each row is joined to the
+// conclusions of the four per-row IO-map rules (agni issues 1188, 1189, 667). The rules are kept
+// apart, because a reviewer acts on each answer differently. A reviewer signing off the map wants
+// this reading, with the declaration beside the netlist and the datasheet.
 
 var (
 	ioMapPinRule    = intent.SourceName + "/" + intent.RuleIOMapPin
@@ -22,10 +22,10 @@ var (
 	ioMapFuncRule   = intent.SourceName + "/" + intent.RuleIOMapFunction
 )
 
-// PinMapColumns is the pin_map table's header. pin is the map's spelling; wired_net is the net the
-// resolved pin sits on, empty when the pin resolved to no net or did not resolve. The four _check
-// columns are each rule's outcome, and outcome is the row's: fail when any rule failed, then
-// inconclusive, then pass, and not-considered when no rule could judge the row.
+// PinMapColumns is the pin_map table's header. pin is the map's spelling. wired_net is the resolved
+// pin's net, empty when the pin resolved to no net or did not resolve. The four _check columns are
+// each rule's outcome. outcome is the row's own. It is fail when any rule failed, then inconclusive,
+// then pass, and not-considered when no rule could judge the row.
 var PinMapColumns = []webapi.TableColumn{
 	{Name: "device", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
 	{Name: "pin", Type: webapi.ColumnType_COLUMN_TYPE_NAME},
@@ -41,7 +41,7 @@ var PinMapColumns = []webapi.TableColumn{
 	{Name: "outcome"},
 }
 
-// ranIOMap reports whether a run's rules include one the pin map reads, which is when a run carries
+// ranIOMap reports whether a run's rules include one that the pin map reads. Only such a run carries
 // its map. A run selecting other rules carries none, since its table would hold rows nothing judged.
 func ranIOMap(rules []*check.Rule) bool {
 	for _, r := range rules {
@@ -53,8 +53,9 @@ func ranIOMap(rules []*check.Rule) bool {
 	return false
 }
 
-// PinMapTable is one row per declared pin, in the map's order, each joined to its verdicts. A rule the
-// run did not include leaves its column empty. Nil when the run carries no map.
+// PinMapTable returns one row per declared pin, in the map's order, each joined to its verdicts. A
+// rule left out of the run leaves its column empty. PinMapTable returns nil when the run carries no
+// map.
 func PinMapTable(ioMap []*configpb.PinAssignment, verdicts []*checkspb.Verdict) *webapi.Table {
 	if len(ioMap) == 0 {
 		return nil
@@ -95,9 +96,9 @@ func PinMapTable(ioMap []*configpb.PinAssignment, verdicts []*checkspb.Verdict) 
 }
 
 // rowVerdict finds a per-row rule's verdict on one map row. The row's key is its device, its pin and
-// its net: the subject names the device and the pin (the design's designator once the lookup
-// landed, with the map's spelling in the "declared pin" context when they differ), and the
-// "declared net" context tells apart two rows naming one pin.
+// its net. The subject names the device and the pin. Once the lookup succeeded, the pin is the
+// design's designator, and the "declared pin" context holds the map's spelling when the two differ.
+// The "declared net" context tells apart two rows naming one pin.
 func rowVerdict(verdicts []*checkspb.Verdict, rule string, a *configpb.PinAssignment) *checkspb.Verdict {
 	for _, v := range verdicts {
 		if v.GetRule() != rule || len(v.GetSubjects()) == 0 || contextRef(v, intent.RoleDeclaredNet) != a.GetNet() {
@@ -114,8 +115,8 @@ func rowVerdict(verdicts []*checkspb.Verdict, rule string, a *configpb.PinAssign
 	return nil
 }
 
-// netVerdict finds io-map-net-absent's verdict on a declared net, which is one per net rather than one
-// per row, so two rows naming one net share it.
+// netVerdict finds io-map-net-absent's verdict on a declared net. That rule gives one verdict per net
+// rather than one per row, so two rows naming one net share it.
 func netVerdict(verdicts []*checkspb.Verdict, net string) *checkspb.Verdict {
 	for _, v := range verdicts {
 		if v.GetRule() == ioMapNetRule && len(v.GetSubjects()) > 0 && v.GetSubjects()[0].GetRef() == net {
@@ -125,7 +126,7 @@ func netVerdict(verdicts []*checkspb.Verdict, net string) *checkspb.Verdict {
 	return nil
 }
 
-// contextRef is the entity a verdict's context names under a role, spelled as EntityRef spells it.
+// contextRef returns the entity that a verdict's context names under a role, in EntityRef's spelling.
 func contextRef(v *checkspb.Verdict, role string) string {
 	for _, c := range v.GetContext() {
 		if c.GetRole() == role {
@@ -143,9 +144,9 @@ func outcomeCell(v *checkspb.Verdict) string {
 	return OutcomeWord(v.GetOutcome())
 }
 
-// rowOutcome is the row's own outcome: the worst any rule decided, and not-considered when none
-// decided anything. A row one rule passed and another could not judge passes, since each rule's
-// column says which judged it.
+// rowOutcome returns the row's own outcome. That is the worst outcome any rule decided, or
+// not-considered when no rule decided anything. A row one rule passed and another could not judge
+// passes, since each rule's column says which judged it.
 func rowOutcome(vs ...*checkspb.Verdict) string {
 	rank := map[checkspb.Outcome]int{
 		checkspb.Outcome_OUTCOME_FAIL:         3,
@@ -161,9 +162,9 @@ func rowOutcome(vs ...*checkspb.Verdict) string {
 	return OutcomeWord(worst)
 }
 
-// PinMapSections groups the pin_map table by device, in the order each device first appears, which is
-// how the HTML report lays it out ("Pins on U1"). It reads the table rather than the run, so the page
-// and every csv of the run encode one projection (C35).
+// PinMapSections groups the pin_map table by device, in the order each device first appears. The
+// HTML report lays it out the same way ("Pins on U1"). It reads the table rather than the run, so
+// the page and every csv of the run encode one projection (C35).
 func PinMapSections(t *webapi.Table) []rpt.PinMap {
 	if t == nil {
 		return nil

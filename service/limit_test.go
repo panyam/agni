@@ -9,7 +9,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// The tests here cover agni issue 896: a request's limit caps an answer inside evaluation, and the
+// The tests here cover agni issue 896. A request's limit caps an answer inside evaluation, and the
 // answer says how many rows the limit left out.
 
 // netPreset is the served click-to-ask query for a net.
@@ -53,7 +53,7 @@ func TestALimitedAnswerSaysHowManyRowsItLeftOut(t *testing.T) {
 	if int(page.GetTotal()) != all {
 		t.Errorf("limit 2 reports total %d, want the %d rows the whole answer has", page.GetTotal(), all)
 	}
-	// Only the rows returned are assembled: the page names fewer entities than the whole answer. The
+	// Only the rows returned are assembled, so the page names fewer entities than the whole answer. The
 	// goal is still solved whole, since counting the total needs every row.
 	if len(page.GetEntities()) >= len(whole.GetEntities()) {
 		t.Errorf("limit 2 names %d entities against %d for the whole answer, want fewer", len(page.GetEntities()), len(whole.GetEntities()))
@@ -97,8 +97,8 @@ func TestANegativeLimitIsInvalid(t *testing.T) {
 	}
 }
 
-// TestTheNetPresetAnswersAsTheJoinItReplaced: the net preset dropped a component.net atom that added
-// no row (agni issue 896), so it must answer exactly what the join did.
+// TestTheNetPresetAnswersAsTheJoinItReplaced covers agni issue 896. The net preset dropped a
+// component.net atom that added no row, so it must answer exactly what the join did.
 func TestTheNetPresetAnswersAsTheJoinItReplaced(t *testing.T) {
 	svc, uri := tutorialQueries()
 	snap := snapOf(t, svc.Snapshots(), uri)

@@ -11,17 +11,20 @@ import (
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
-// RoomTokens mints the relay tokens viewer pages join their design's room with. The host that runs
-// the relay implements it, since only it holds the key the relay checks (internal/viewerrooms).
+// RoomTokens mints relay tokens, and a viewer page joins its design's room with one. The host that
+// runs the relay implements RoomTokens, since only that host holds the relay's key
+// (internal/viewerrooms).
 type RoomTokens interface {
-	// Mint returns a token admitting its holder to room alone, and when it stops admitting a join.
+	// Mint returns a token admitting its holder to room alone, and the time it stops admitting a join.
 	Mint(room string) (token string, expires time.Time, err error)
-	// Bridges are the relay subjects the host's room bridges join as, which a page answers alone.
+	// Bridges returns the relay subjects that the host's room bridges join as. A page answers these
+	// subjects alone.
 	Bridges() []string
 }
 
-// ViewerRoomService is what an open viewer page asks before it offers its tools to agents through
-// its design's relay room (agni issue 1154): which room, and a token to join it with.
+// ViewerRoomService answers an open viewer page before the page offers its tools to agents through
+// its design's relay room (agni issue 1154). It tells the page which room to join, and gives it a
+// token to join with.
 type ViewerRoomService struct {
 	projects *ProjectResolver
 	tokens   RoomTokens
@@ -29,15 +32,16 @@ type ViewerRoomService struct {
 }
 
 // NewViewerRoomService answers JoinViewerRoom for a relay served at relayURL ("/relay/"), with
-// tokens minted by tokens. projects is the resolver every other service holds, so a design names the
-// same room here as in the bridge's WithRoomOf, which calls Room.
+// tokens minted by tokens. Every other service holds the same resolver as projects. So a design names
+// the same room here as in the bridge's WithRoomOf, which calls Room.
 func NewViewerRoomService(projects *ProjectResolver, tokens RoomTokens, relayURL string) *ViewerRoomService {
 	return &ViewerRoomService{projects: projects, tokens: tokens, relayURL: relayURL}
 }
 
-// Room is the room for a design named as mount/path or a mount:// URI: "design:" and the design's
-// declared entry, resolved by linkMountPath as a report's links are (C32), so the folder, the entry
-// and a declared companion name one room. An empty design is an invalid argument.
+// Room returns the room for a design named as mount/path or a mount:// URI. The room is "design:"
+// followed by the design's declared entry. linkMountPath resolves the entry, as it does for a
+// report's links (C32), so the folder, the entry and a declared companion name one room. An empty
+// design is an invalid argument.
 func (s *ViewerRoomService) Room(ctx context.Context, design string) (string, error) {
 	d := strings.TrimSpace(design)
 	if d == "" {

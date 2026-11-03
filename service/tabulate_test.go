@@ -164,9 +164,9 @@ func TestReviewTablesKeepChecklistOrderAndNameEachFiring(t *testing.T) {
 	}
 }
 
-// TestATableSaysEachCellsKindWhereItsColumnCannot covers agni issue 898: a column that names a part on
-// one row and a net on the next carries no kind, so each row names its own, which is what lets the
-// viewer locate a diff's subject or a finding's.
+// TestATableSaysEachCellsKindWhereItsColumnCannot covers agni issue 898. A column that names a part
+// on one row and a net on the next has no kind, so each row names its own. That lets the viewer
+// locate a diff's subject or a finding's.
 func TestATableSaysEachCellsKindWhereItsColumnCannot(t *testing.T) {
 	diff := DiffTable(&webapi.DiffDesignsResponse{Report: &webapi.DiffReport{
 		ComponentsAdded: []string{"R4"},

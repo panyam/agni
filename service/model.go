@@ -29,21 +29,21 @@ type GeometryLoader interface {
 // BuildGeometry loads a design's default-layout, glyph-symbol schematic geometry for LOCATING results
 // on sheets (AnnotateSheets badges, indexSheets query-cell navigation). It never feeds a rule, so
 // surfaces that run rules without locating them (GetComponentParams, scalar-only queries) skip it.
-// It is best-effort: a netlist-only file or an unresolvable layout yields nil, NOT an error, and the
-// caller shows no sheet badges. That is why geometry is not a BuildModel tier, where a bad board or
-// params tier fails the run.
+// It is best-effort. A netlist-only file or an unresolvable layout yields nil, NOT an error, and the
+// caller shows no sheet badges. So geometry is not a BuildModel tier, since a bad board or params
+// tier there fails the run.
 //
 // Pass the same ReadOptions the Model was built with (agni issue 347). A geometry read without them
-// misses a project's declared symbol library, so findings land on sheets missing the components they
-// name.
+// misses a project's declared symbol library, so findings are placed on sheets that lack the
+// components they name.
 func BuildGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI, opts ...ReadOption) *geom.SchematicGeometry {
 	g, _ := locateGeometry(ctx, loader, uri, opts...)
 	return g
 }
 
 // locateGeometry is BuildGeometry that also says whether the schematic failed to read. A netlist-only
-// file draws an auto-layout rather than failing, so a read error means the file that should draw the
-// design could not, and a locate answer says that rather than calling every entity drawn nowhere
+// file draws an auto-layout rather than failing. So a read error means the file meant to draw the
+// design failed to read. The locate answer says so rather than calling every entity drawn nowhere
 // (agni issue 1230).
 func locateGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI, opts ...ReadOption) (g *geom.SchematicGeometry, unreadable bool) {
 	defer timing.Begin(ctx, "read.geometry")()
@@ -60,29 +60,30 @@ func locateGeometry(ctx context.Context, loader GeometryLoader, uri artifact.URI
 // design's own sidecar, or boardURI when set (WS3-089's --board-path). specs is the datasheet provider
 // and may be nil when serve ran without --params. The CLI's counterpart is readModelWithParams.
 //
-// A boardURI that yields no board geometry is an error, since an explicit board request that read
-// nothing would report the board items clean without checking them. A design's OWN path carrying no
-// board (a netlist) is the normal nil-board case.
+// A boardURI that yields no board geometry is an error. Without that error, an explicit board
+// request that read nothing would report the board items clean without checking them. When a
+// design's OWN path has no board (a netlist), that is the normal nil-board case.
 func BuildModel(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, specs param.ParamProvider, opts ...ReadOption) (check.Model, error) {
 	return BuildModelTier(ctx, loader, uri, boardURI, specs, ReadBoard, opts...)
 }
 
-// A BoardTier says whether a model reads the design's board. On a large board the board's geometry,
-// and the per-net copper the model builds from it, are most of what a model holds (385 of 547 MB on
-// the Jetson seed, agni issue 987), so a request that asks nothing of the copper skips it.
+// A BoardTier says whether a model reads the design's board. On a large board, most of a model's
+// memory is the board's geometry and the per-net copper built from it (385 of 547 MB on the Jetson
+// seed, agni issue 987). So a request that asks nothing of the copper skips it.
 type BoardTier bool
 
 const (
 	// ReadBoard reads the board tier, as every rule run does.
 	ReadBoard BoardTier = true
 	// SkipBoard builds the model without one, so it reports HasBoard false and every board.*
-	// relation is empty. Only for a request that reads no board fact: a query naming no board.*
-	// relation (see boardTierFor), interface coverage, or a part's parameters.
+	// relation is empty. Use it only for a request that reads no board fact, such as a query naming
+	// no board.* relation (see boardTierFor), interface coverage, or a part's parameters.
 	SkipBoard BoardTier = false
 )
 
-// boardReadURI is the artifact a model's board is read from: the separate board when the request
-// names one, and the design itself otherwise, whose loader finds its sidecar or declared companion.
+// boardReadURI returns the artifact to read a model's board from. That is the separate board when
+// the request names one. Otherwise it is the design itself, and the loader finds the design's
+// sidecar or declared companion.
 func boardReadURI(uri, boardURI artifact.URI) artifact.URI {
 	if !boardURI.IsZero() {
 		return boardURI
@@ -130,8 +131,8 @@ func BuildModelTier(ctx context.Context, loader ModelLoader, uri, boardURI artif
 			return nil, fmt.Errorf("%w: %v", ErrUnavailable, err)
 		}
 	}
-	// The read's lexicon also reaches the MODEL, so name matches that hold no net (spec name FFIs,
-	// pin-role derivation) use the vocabulary the design was stamped with.
+	// The read's lexicon also reaches the MODEL. Some name matches hold no net (spec name FFIs,
+	// pin-role derivation), and they use the same vocabulary the design was stamped with.
 	mopts := []check.ModelOption{check.WithBoard(bg), check.WithParamProvider(specs)}
 	ro := ReadOpts(opts...)
 	if ro.Lexicon != nil {

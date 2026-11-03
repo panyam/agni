@@ -10,8 +10,9 @@ import (
 )
 
 // TestIncludeEqualAccountsForEveryNet covers agni issue 818. With include_equal, every net of both
-// revisions is accounted for exactly once: an unchanged net as equal, a rename as one entry covering
-// two names. Without it the response is what it was, and the status maps never list equal nets.
+// revisions is accounted for exactly once. An unchanged net counts as equal, and a rename counts as
+// one entry covering two names. Without it the response is unchanged, and the status maps never list
+// equal nets.
 func TestIncludeEqualAccountsForEveryNet(t *testing.T) {
 	base := filepath.Join("..", "examples", "tutorial-project", "designs", "gateway")
 	svc := NewDiffService(fsQueryLoader{base: base}, nil)

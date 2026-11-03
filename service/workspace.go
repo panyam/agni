@@ -3,7 +3,7 @@
 // ((ctx, *pb.XRequest) (*pb.XResponse, error)) and classifies its errors with this package's
 // sentinels. The transports (Connect, in internal/server) are thin translation layers over them.
 // Each implementation depends on injected I/O ports (Workspace, Loader, NativeRenderer) and never
-// on os, so the same code runs on the server and in tests and stays runnable in WASM (C1). All file
+// on os, so the same code runs on the server, in tests, and in WASM (C1). All file
 // I/O lives in cmd/agni's OS-backed adapters, which also wire the services.
 package service
 
@@ -105,9 +105,9 @@ func NewWorkspaceService(ws Workspace) *WorkspaceService {
 }
 
 // ListMounts returns the configured mounts in configuration order. It never errors. With Opens set,
-// a mount holding none of those kinds anywhere beneath it is left out and counted in PrunedMounts,
-// the rule ListDir applies to subdirectories. A mount serving only datasheets is thus hidden from
-// the DESIGN tree and shown in the datasheets tree.
+// a mount holding none of those kinds anywhere beneath it is left out and counted in PrunedMounts.
+// ListDir applies the same rule to subdirectories. A mount serving only datasheets is thus hidden
+// from the DESIGN tree and shown in the datasheets tree.
 //
 // The walk budget is per call and shared by every mount, so many roots cannot turn one page load
 // into many full walks. A later mount can inherit an exhausted budget and be kept without being
@@ -130,10 +130,10 @@ func (s *WorkspaceService) ListMounts(ctx context.Context, req *webapi.ListMount
 	return resp, nil
 }
 
-// Bounds on the subtree walk the two prune flags ask for. The walk is depth-first and exits on the
-// first openable file, so a normal design folder settles in a listing or two. The bounds are for a
-// vendored tree or a source checkout under a mount, where proving a folder empty means reading all
-// of it. pruneMaxDirs is a per-request budget shared by every subdirectory in the listing, so one
+// The two prune flags ask for a subtree walk, and these bound it. The walk is depth-first and exits
+// on the first openable file, so a normal design folder settles in a listing or two. The bounds are
+// for a vendored tree or a source checkout under a mount, where proving a folder empty means reading
+// all of it. pruneMaxDirs is a per-request budget shared by every subdirectory in the listing, so one
 // huge sibling cannot make the whole call slow.
 const (
 	pruneMaxDepth = 8

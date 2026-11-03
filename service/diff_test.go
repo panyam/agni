@@ -15,8 +15,8 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// pairLoader serves a distinct design (and optionally geometry) per path, the shape
-// DiffDesigns needs, where the single-design fakeLoader cannot distinguish the two sides.
+// pairLoader serves a distinct design (and optionally geometry) per path. DiffDesigns needs that,
+// and the single-design fakeLoader cannot distinguish the two sides.
 // A path with no geometry entry errors, exercising the annotation's nil tolerance.
 type pairLoader struct {
 	designs map[string]*ir.Design
@@ -133,7 +133,7 @@ func TestDiffDesigns(t *testing.T) {
 			}
 		}
 	}
-	// The rename appears under BOTH names so each side joins by the name its geometry carries.
+	// The rename appears under BOTH names so each side joins by the name in its geometry.
 	wantNet := map[string]string{"FRESH": "new", "OLD": "deleted", "SIG": "renamed", "DATA": "renamed", "CLK": "hard", "STYLE": "soft"}
 	if got := resp.GetNetStatus(); len(got) != len(wantNet) {
 		t.Errorf("net_status = %v, want %v", got, wantNet)
@@ -323,8 +323,8 @@ func TestDiffDesignsLoadErrors(t *testing.T) {
 // component changes value and a sub-sheet net renames, both on sheet "/sub". It proves the
 // diff panel can resolve a sub-sheet subject to its sheet id for navigation, and pins the
 // fix. The sub-sheet net's wires carry no uuid, so the geometry-only channel yields no net
-// badge and only the authoritative AttrSheets membership (each side's design as NetSource)
-// reaches it. Components locate through placements on either channel.
+// badge. Only the authoritative AttrSheets membership reaches it, with each side's design as
+// NetSource. Components locate through placements on either channel.
 func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 	l := &formats.Loader{}
 	load := func(rev string) (*ir.Design, *geom.SchematicGeometry) {
@@ -342,9 +342,9 @@ func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 	dA, gA := load("a")
 	dB, gB := load("b")
 
-	// The join gap this ticket closes, shown directly. The sub-sheet net's wires carry no uuid,
-	// so the geometry-only index (the old nil-NetSource path) has no entry for it, while the
-	// design's AttrSheets membership does. Components never had the gap, since placements
+	// This shows directly the join gap that this ticket closes. The sub-sheet net's wires carry
+	// no uuid, so the geometry-only index (the old nil-NetSource path) has no entry for it, while
+	// the design's AttrSheets membership does. Components never had the gap, since placements
 	// exist. The index keys nets by per-instance id (WS9), so resolve /sub/SIG's id to look it
 	// up.
 	var sigKey string
@@ -388,8 +388,8 @@ func TestDiffDesignsMultiSheetLocate(t *testing.T) {
 	if got := ids(resp.GetComponentSheetsB(), "R101"); !slicesEqual(got, []string{"/sub"}) {
 		t.Errorf("component_sheets_b[R101] = %v, want [/sub]", got)
 	}
-	// Renamed net: the old name locates on a's side and the new name on b's, the case that only
-	// resolves through AttrSheets (its wires are uuid-less, so the geometry channel is empty).
+	// Renamed net: the old name locates on a's side and the new name on b's. This case resolves
+	// only through AttrSheets, since its wires are uuid-less and the geometry channel is empty.
 	if got := ids(resp.GetNetSheetsA(), "/sub/SIG"); !slicesEqual(got, []string{"/sub"}) {
 		t.Errorf("net_sheets_a[/sub/SIG] = %v, want [/sub] (requires the AttrSheets channel)", got)
 	}

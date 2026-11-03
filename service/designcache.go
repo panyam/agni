@@ -24,25 +24,25 @@ import (
 
 // A DesignCache keeps what reading a design produced, so a second request for the same design does
 // not read it again (agni issue 895). It holds three levels, each keyed on the one below (agni issue
-// 1061). CachingLoader keeps the parse, which reads no configuration, and the design derived from it
-// under an overlay's conventions and corpus, beside the drawings and the board; every surface reads
-// through it. BuildModelCached keeps the check model and its fact base on top, which a query or a check
-// needs and building costs a further 100ms on a large board. The rule results a check keeps live on
-// the model's entry (keptresults.go).
+// 1061). CachingLoader keeps the parse, which reads no configuration. It also keeps the design
+// derived from that parse under an overlay's conventions and corpus, along with the drawings and the
+// board. Every surface reads through CachingLoader. On top, BuildModelCached keeps the check model
+// and its fact base. A query or a check needs them, and building them costs a further 100ms on a
+// large board. The rule results a check keeps live on the model's entry (keptresults.go).
 //
-// An entry is keyed by what was asked (the URI, the layout, the read options' identity) and checked
-// on every hit against what the read touched: every file it opened, walked or looked for, as a
-// formats.Touched. A hit whose files stamp differently is read again. So the key never has to name a
-// file, which is what lets a hierarchical schematic's sub-sheets, a declared companion and a symbol
-// library all invalidate it without anyone listing them.
+// An entry is keyed by what was asked, which is the URI, the layout and the read options' identity.
+// Every hit checks the entry against what the read touched. That is every file the read opened,
+// walked or looked for, recorded as a formats.Touched. A hit whose files stamp differently is read
+// again. So the key never has to name a file. A hierarchical schematic's sub-sheets, a declared
+// companion and a symbol library all invalidate the entry, and nobody has to list them.
 //
 // Two rules keep it from serving a wrong answer. A read whose options carry no identity is never
-// cached past the parse (see WithIdentity), and nothing is cached from a read that recorded no files, since that read went
-// around the formats.Loader and nothing could tell when it went stale.
+// cached past the parse (see WithIdentity). Nothing is cached from a read that recorded no files,
+// since that read went around the formats.Loader and nothing could tell when it went stale.
 //
-// It is the same code in `agni serve` and the browser engine. In the browser the engine is rebuilt
-// on every mount change, which drops its in-memory entries with it, and the parse, the derived design,
-// the drawing and the board are also kept in a BlobStore that outlives the worker (see Persist).
+// `agni serve` and the browser engine run the same code. In the browser the engine is rebuilt on
+// every mount change, and that drops its in-memory entries. The parse, the derived design, the
+// drawing and the board are also kept in a BlobStore that outlives the worker (see Persist).
 type DesignCache struct {
 	mu       sync.Mutex
 	max      int
@@ -56,8 +56,8 @@ type DesignCache struct {
 }
 
 // A BlobStore keeps bytes across processes, for a DesignCache's persistent tier (agni issue 911). It
-// is the shape of goapplib's wasmhost.Cache, which the browser engine hands it, so this package names
-// no host. Any error from Get, a miss included, means the read runs again, and an error from Put
+// has the shape of goapplib's wasmhost.Cache, and the browser engine hands it one. So this package
+// names no host. Any error from Get, a miss included, means the read runs again, and an error from Put
 // means only that the next process reads again too. A key is 64 lowercase hex digits.
 type BlobStore interface {
 	Get(ctx context.Context, key string) ([]byte, error)
@@ -66,7 +66,7 @@ type BlobStore interface {
 
 // A FingerprintCheck reports whether a stored read's content fingerprint (formats.Touched.Fingerprint)
 // still matches the files the host serves now, and if so returns a recorder of those names as they
-// stamp now. It is the host's, because only the host can open the files (C13);
+// stamp now. The host supplies it, because only the host can open the files (C13).
 // formats.CheckFingerprint over the Loader's FS is the usual one.
 type FingerprintCheck func(fp []byte) (*formats.Touched, bool)
 
@@ -99,10 +99,11 @@ func NewDesignCache(max int) *DesignCache {
 // fact base are rebuilt from a restored design, at about a tenth of a read's cost, because they have
 // no serialized form and C8 keeps it that way.
 //
-// A stored entry carries a content fingerprint of every name its read touched
-// (formats.Touched.Fingerprint) and is used only when check says they all read the same now, so a file
-// edited, added or removed since reads again, as it does in memory. version names what wrote the entry: an engine that reads a file differently must pass a
-// different one, or it restores what the older engine parsed. An empty version persists nothing.
+// A stored entry holds a content fingerprint of every name its read touched
+// (formats.Touched.Fingerprint). It is used only when check says they all read the same now. So a
+// file edited, added or removed since then reads again, as it does in memory. version names what
+// wrote the entry. An engine that reads a file differently must pass a different version, or it
+// restores what the older engine parsed. An empty version persists nothing.
 func (c *DesignCache) Persist(store BlobStore, check FingerprintCheck, version string) *DesignCache {
 	if c != nil && store != nil && check != nil && version != "" {
 		c.store = &persistTier{store: store, check: check, version: version}
@@ -111,8 +112,8 @@ func (c *DesignCache) Persist(store BlobStore, check FingerprintCheck, version s
 }
 
 // AfterLoad runs loaded after each layer the cache reads, builds or restores, before the value is
-// served. The browser engine passes runtime.GC (agni issue 1000): wasm memory never shrinks, so the
-// garbage a board's parse leaves becomes the floor the rules stage grows from, and one collection
+// served. The browser engine passes runtime.GC (agni issue 1000). Wasm memory never shrinks, so the
+// garbage left by a board's parse sets the floor that the rules stage grows from. One collection
 // there took the Jetson seed's check from a 1.34 GB peak to 805 MB. A server leaves it unset, since
 // its memory is returned to the system and a full collection per layer would cost every request.
 func (c *DesignCache) AfterLoad(loaded func()) *DesignCache {
@@ -139,15 +140,15 @@ func (c *DesignCache) Stats() (hits, misses int64) {
 }
 
 // get returns key's value, building it on a miss. Concurrent callers for one key share one build.
-// What the value's read touched is merged into the caller's recorder (see withTouched), so a value
-// built from another cached value stays checkable against both reads' files.
+// get merges what the value's read touched into the caller's recorder (see withTouched). So a value
+// built from another cached value can still be checked against both reads' files.
 func (c *DesignCache) get(ctx context.Context, key string, build func(context.Context) (any, error)) (any, error) {
 	return c.getPersisted(ctx, key, nil, build)
 }
 
 // peek returns key's value when it is already built and its files are unchanged, without building it
-// or waiting for a build in progress. It is for a caller that can use a value a different request
-// left, and builds something cheaper of its own otherwise.
+// or waiting for a build in progress. It serves a caller that can use a value left by a different
+// request, and that builds something cheaper of its own otherwise.
 func (c *DesignCache) peek(ctx context.Context, key string) (any, bool) {
 	if c == nil || c.max <= 0 || key == "" {
 		return nil, false
@@ -230,8 +231,8 @@ func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *proto
 		c.evictLocked()
 		c.mu.Unlock()
 
-		// The build runs under the caller's context, so a cancelled request stops it, and the entry
-		// it leaves is an error that is never served (the next caller builds again).
+		// The build runs under the caller's context, so a cancelled request stops it. The entry it
+		// leaves is an error that is never served, and the next caller builds again.
 		endRestore := func() {}
 		if c.store != nil {
 			endRestore = timing.Begin(ctx, "restore."+layer)
@@ -278,8 +279,8 @@ func (c *DesignCache) getPersisted(ctx context.Context, key string, codec *proto
 	}
 }
 
-// storeKey is key's name in the persistent tier: the hash of the writer's version and key, so an
-// entry another engine version wrote is never found.
+// storeKey is key's name in the persistent tier. The name hashes the writer's version and key, so an
+// entry written by another engine version is never found.
 func (p *persistTier) storeKey(key string) string {
 	h := sha256.Sum256([]byte(p.version + "\x00" + key))
 	return hex.EncodeToString(h[:])
@@ -348,8 +349,8 @@ func (c *DesignCache) persisted(key string) bool {
 	}
 }
 
-// protoCodec writes one of the cache's proto layers for the persistent tier. A layer may be absent (a
-// design with no board), which is a value worth keeping too, so the first byte says which.
+// protoCodec writes one of the cache's proto layers for the persistent tier. A layer may be absent,
+// as for a design with no board. An absent layer is worth keeping too, so the first byte says which.
 type protoCodec struct{ empty func() proto.Message }
 
 func (pc *protoCodec) encode(v any) ([]byte, error) {
@@ -399,7 +400,8 @@ func (c *DesignCache) evictLocked() {
 func cacheKey(parts ...string) string { return strings.Join(parts, "\x00") }
 
 // optsKey is the identity of a read's options, and false when they have none (see WithIdentity).
-// No options at all is an identity of its own: the loader's defaults, fixed for the process.
+// No options at all is an identity of its own. It stands for the loader's defaults, which are fixed
+// for the process.
 func optsKey(opts []ReadOption) (string, bool) {
 	if len(opts) == 0 {
 		return "-", true
@@ -411,7 +413,7 @@ func optsKey(opts []ReadOption) (string, bool) {
 	return o.Identity, true
 }
 
-// CacheableLoader is what a host hands its services: the read ports a CachingLoader wraps.
+// CacheableLoader holds the read ports that a CachingLoader wraps. A host hands one to its services.
 type CacheableLoader interface {
 	Loader
 	ReviewLoader
@@ -419,9 +421,9 @@ type CacheableLoader interface {
 }
 
 // CachingLoader is a host's loader with its design, drawing and board reads kept in a DesignCache.
-// Every other port passes through. Each answer is a copy of what the cache holds, because callers
-// stamp classes into a design they were handed (check.NewModel's datasheet pass), and a copy of a
-// large board's design and drawing costs about 10ms against a read of over a second.
+// Every other port passes through. Each answer is a copy of what the cache holds. Callers stamp
+// classes into a design they were handed, as check.NewModel's datasheet pass does. A copy of a large
+// board's design and drawing costs about 10ms, against a read of over a second.
 type CachingLoader struct {
 	CacheableLoader
 	cache *DesignCache
@@ -436,9 +438,9 @@ func NewCachingLoader(l CacheableLoader, c *DesignCache) *CachingLoader {
 func (l *CachingLoader) Cache() *DesignCache { return l.cache }
 
 // Design returns a copy of the design's IR, derived once per identity from the parse while its files
-// are unchanged. Both are stored, so a later worker under the same overlay restores the derived design
-// and one under another overlay restores the parse and pays only the derive (about a tenth of the
-// parse on a large board).
+// are unchanged. Both are stored. A later worker under the same overlay restores the derived design.
+// A worker under another overlay restores the parse and runs only the derive, which costs about a
+// tenth of the parse on a large board.
 func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error) {
 	o := ReadOpts(opts...)
 	derive := func(ctx context.Context) (any, error) {
@@ -454,7 +456,7 @@ func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...Re
 	ok, key := l.key("design", uri.String(), opts)
 	if !ok {
 		// Options with no identity cannot key the derived design, but the parse they derive from
-		// needs none, so only the derive is paid again.
+		// needs none, so only the derive runs again.
 		v, err := derive(ctx)
 		if err != nil {
 			return nil, err
@@ -469,9 +471,9 @@ func (l *CachingLoader) Design(ctx context.Context, uri artifact.URI, opts ...Re
 }
 
 // parse returns the design's configuration-free parse, read once per URI, symbol search path and
-// hierarchy choice (agni issues 1061, 718). It is keyed on no overlay, so two projects' conventions or a request's own
-// intent derive from one parse rather than reading the files again. The value is the cache's own,
-// for Design to copy before deriving into it.
+// hierarchy choice (agni issues 1061, 718). It is keyed on no overlay. So two projects'
+// conventions, or a request's own intent, derive from one parse rather than reading the files
+// again. The value is the cache's own, for Design to copy before deriving into it.
 func (l *CachingLoader) parse(ctx context.Context, uri artifact.URI, symbolPaths []string, flatten bool) (*ir.Design, error) {
 	parts := []string{"parse", uri.String(), strings.Join(symbolPaths, "\x01")}
 	if flatten {
@@ -574,7 +576,8 @@ type builtModel struct {
 	results ruleResults
 }
 
-// baseFor is base, timing the projection as the request's "factbase" stage when it builds one.
+// baseFor returns base. When it builds one, it times the projection as the request's "factbase"
+// stage.
 func (b *builtModel) baseFor(ctx context.Context, reg *facts.Registry) *query.Base {
 	b.mu.Lock()
 	defer b.mu.Unlock()
@@ -588,21 +591,21 @@ func (b *builtModel) baseFor(ctx context.Context, reg *facts.Registry) *query.Ba
 }
 
 // BuildModelCached is BuildModel kept in the loader's DesignCache, keyed on the tiers and the
-// overlay's identity. The model is SHARED between requests rather than copied, which is safe because
-// rules only read it and its memo (check.Memo) is built for concurrent use. A request whose overlay
-// cannot identify itself, or whose datasheet corpus is fetched over the network (where nothing here
-// can tell that it changed), builds its own.
+// overlay's identity. The model is SHARED between requests rather than copied. That is safe, because
+// rules only read it and its memo (check.Memo) is built for concurrent use. Two kinds of request
+// build their own model. One has an overlay that cannot identify itself. The other fetches its
+// datasheet corpus over the network, where nothing here can tell that it changed.
 //
-// It returns the fact base too, built on first use, so a query does not pay 100ms to project every
+// It returns the fact base too, built on first use, so a query does not spend 100ms projecting every
 // relation again.
 func BuildModelCached(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider) (check.Model, func(*facts.Registry) *query.Base, error) {
 	return BuildModelCachedTier(ctx, loader, uri, boardURI, ov, serverSpecs, ReadBoard)
 }
 
 // BuildModelCachedTier is BuildModelCached with the board tier chosen by the caller. The two tiers
-// are kept apart, and a SkipBoard request takes a model already kept WITH the board when there is
-// one, since that model answers everything the board-less one would, so a server that has run checks
-// on a design builds no second model for its coverage panel (agni issues 985, 987).
+// are kept apart. A SkipBoard request takes a model already kept WITH the board when there is one,
+// since that model answers everything the board-less one would. So a server that has run checks on
+// a design builds no second model for its coverage panel (agni issues 985, 987).
 func BuildModelCachedTier(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (check.Model, func(*facts.Registry) *query.Base, error) {
 	b, err := buildModelEntry(ctx, loader, uri, boardURI, ov, serverSpecs, board)
 	if err != nil {
@@ -611,9 +614,9 @@ func BuildModelCachedTier(ctx context.Context, loader ModelLoader, uri, boardURI
 	return b.model, func(reg *facts.Registry) *query.Base { return b.baseFor(ctx, reg) }, nil
 }
 
-// buildModelEntry is BuildModelCachedTier returning the entry itself, which a check run also keeps
-// its rules' results on (runKept). An entry built for one request alone is marked unkept, so nothing
-// is stored on it for a later request to find.
+// buildModelEntry is BuildModelCachedTier returning the entry itself. A check run also keeps its
+// rules' results on that entry (runKept). An entry built for one request alone is marked unkept, so
+// nothing is stored on it for a later request to find.
 func buildModelEntry(ctx context.Context, loader ModelLoader, uri, boardURI artifact.URI, ov Overlay, serverSpecs param.ParamProvider, board BoardTier) (*builtModel, error) {
 	specs := ov.SpecsOver(serverSpecs)
 	opts := ov.ReadOptions()

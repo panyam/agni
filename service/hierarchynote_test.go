@@ -14,8 +14,8 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// hierSentence is what every surface says about readers/edif/testdata/hier.edn, whose top cell
-// places one instance of the sub-cell SUB, which holds one instance of its own.
+// hierSentence is what every surface says about readers/edif/testdata/hier.edn. That file's top
+// cell places one instance of the sub-cell SUB, and SUB holds one instance of its own.
 const hierSentence = "hier.edn is hierarchical and only its top cell was read. 1 sub-cell holding 1 instance was not extracted (SUB: 1). Counts and checks cover the top cell alone."
 
 // manifestLoader is a fakeLoader that also answers the review port's Manifest, which no test here
