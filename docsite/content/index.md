@@ -6,7 +6,7 @@ hideTitle: true
 
 <div class="home-hero">
 <h1>Agni</h1>
-<p class="hero-subtitle">Agni checks schematics and boards for design mistakes, such as a bus with no pull-up, a rail with no decoupling, or a connector with no ESD protection, and locates every finding on the schematic. It reads KiCad, EDIF, IPC-2581, xschem and gEDA designs into one representation, then checks, diffs, queries, and renders them.</p>
+<p class="hero-subtitle">Agni checks schematics and boards for design mistakes and locates every finding on the schematic. A mistake might be a bus with no pull-up, a rail with no decoupling, or a connector with no ESD protection. It reads KiCad, EDIF, IPC-2581, xschem and gEDA designs into one representation, then checks, diffs, queries, and renders them.</p>
 <div class="hero-actions">
 <a href="{{.Site.PathPrefix}}/demo/" class="btn btn-primary">Try it in your browser</a>
 <a href="{{.Site.PathPrefix}}/guide/getting-started/" class="btn btn-secondary">Get started</a>
@@ -18,7 +18,7 @@ hideTitle: true
 <div class="features">
 <div class="feature-card">
 <h3>Many formats, one IR</h3>
-<p>EDIF, KiCad, IPC-2581, xschem, gEDA and Lepton, and Telesis read into a single neutral representation. Checks, diff, query, and rendering are written once and work across every format.</p>
+<p>Agni reads EDIF, KiCad, IPC-2581, xschem, gEDA and Lepton, and Telesis into a single neutral representation. Checks, diff, query, and rendering are written once and work across every format.</p>
 <a href="{{.Site.PathPrefix}}/architecture/ingestion-and-ir/">How ingestion works &rarr;</a>
 </div>
 <div class="feature-card">

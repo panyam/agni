@@ -3,17 +3,17 @@ title: "The seven levels"
 description: "What each level of hardware knowledge means, how to tell you have it, and which sections of the course operate there."
 ---
 
-The [course](../) is organised by topic, because a topic is what a chapter can be about. A chapter takes one subject up the ladder, which is how [chapter 3](../03-why-every-chip-needs-capacitors/) can show the same capacitor as a role, a failure mode, a number and a layout problem in one sitting.
+The [course](../) is organised by topic, because each chapter is about one topic. A chapter takes one subject up the ladder. That lets [chapter 3](../03-why-every-chip-needs-capacitors/) show the same capacitor as a role, a failure mode, a number and a layout problem in one sitting.
 
 This page is the other axis. Each level is defined here, with a test for whether you have it and a map of every section in the course that operates there. Read the course by topic, or read one level across the whole course.
 
-**The levels are a difficulty scale, not a syllabus.** Nobody climbs them uniformly. A working engineer is at EE7 on the two subsystems they own and EE3 on the rest of the board, which is the ordinary shape of the job rather than a gap in it. Their purpose is to calibrate an explanation: "explain `output-output-conflict` at EE4" asks for the bench symptom rather than the definition, in the same way ELI15 asks for a register.
+**The levels are a difficulty scale, not a syllabus.** Nobody climbs them uniformly. A working engineer is at EE7 on the two subsystems they own and EE3 on the rest of the board. That is the ordinary shape of the job rather than a gap in it. Their purpose is to calibrate an explanation: "explain `output-output-conflict` at EE4" asks for the bench symptom rather than the definition, in the same way ELI15 asks for a register.
 
 ## Parts (EE1)
 
-The question this level answers is *what is that component?*
+This level answers *what is that component?*
 
-It takes Ohm's law, and what a resistor, capacitor, inductor, diode and transistor each do on their own. This is the floor the course assumes rather than teaches, and most people arriving from software already have it.
+It takes Ohm's law, and what a resistor, capacitor, inductor, diode and transistor each do on their own. The course assumes this floor rather than teaching it, and most people arriving from software already have it.
 
 - [A board is a few kinds of thing](../01-what-a-board-is-made-of/#a-board-is-a-few-kinds-of-thing-ee1), the whole vocabulary, and how short it is
 
@@ -54,9 +54,9 @@ Every part has a job, and there are about twenty recurring ones. Most of `connec
 
 ## Failure modes (EE4)
 
-The question this level answers is *how does this break, and what does the bench see?*
+This level answers *how does this break, and what does the bench see?*
 
-A defect has a symptom, not just a state. Some faults never appear at power-on, which is what makes them expensive. This is the level at which severity, the `Impact` field and triage become readable.
+A defect has a symptom, not just a state. Some faults never appear at power-on, and that makes them expensive. At this level, severity, the `Impact` field and triage become readable.
 
 - [The failure mode](../03-why-every-chip-needs-capacitors/#the-failure-mode-ee4), why missing decoupling is a warning
 - [Why this one is an error](../04-pull-ups-and-undefined-states/#why-this-one-is-an-error-ee4), and why the other is not
@@ -88,7 +88,7 @@ It covers absolute maximum against recommended operating, derating, tolerance an
 
 The EE6 question is *what has to come up first, and what feeds what?*
 
-A board is a power tree with a sequence, a current budget, and interfaces carrying requirements. This is where the design-intent layer and the `profile/` family live.
+A board is a power tree with a sequence, a current budget, and interfaces carrying requirements. The design-intent layer and the `profile/` family live at this level.
 
 - [A board is fed by a cascade](../08-the-power-tree/#a-board-is-fed-by-a-cascade-ee6), reading a power tree off its regulators
 - [Nothing here is a fact about the world](../08-the-power-tree/#nothing-here-is-a-fact-about-the-world-ee6), why this level needs a declaration
@@ -106,7 +106,7 @@ A board is a power tree with a sequence, a current budget, and interfaces carryi
 
 ## Layout (EE7)
 
-The question this level answers is *why must that capacitor be at the pin?*
+This level answers *why must that capacitor be at the pin?*
 
 Where a part physically sits changes what it does electrically. The `board` category and the geometry tier check it.
 
@@ -116,4 +116,4 @@ Where a part physically sits changes what it does electrically. The `board` cate
 - [A fourth kind of authority](../12-when-the-copper-matters/#a-fourth-kind-of-authority-ee7), where a fabrication limit comes from
 - [The netlist did not change](../12-when-the-copper-matters/#the-netlist-did-not-change-ee7), why a connectivity rule cannot see the gap between two nets
 
-[Chapter 12](../12-when-the-copper-matters/) is the one properly about this level.
+[Chapter 12](../12-when-the-copper-matters/) is properly about this level.

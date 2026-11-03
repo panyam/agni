@@ -40,7 +40,7 @@ Run the first of those on the tutorial board and read what it concluded about ea
 
 The passes are the interesting part. They name the capacitor, so you can open the schematic and confirm that `C1` really is on `PMIC_CORE_3V3`. That is the difference between a check that ran and a check that found nothing.
 
-`bulk-cap` is deliberately absent from that run. It scopes on rails the design NAMES, using a net attribute that only the schematic-geometry readers set, so on this EDIF board it has no subject at all and reports nothing. Printing that beside the decoupling verdicts would read as "the bulk capacitors are fine", when the rule never looked at one. It is filed as agni issue 426.
+`bulk-cap` is deliberately absent from that run. It scopes on rails the design NAMES. It finds them through a net attribute, and only the schematic-geometry readers set that attribute. So on this EDIF board it has no subject at all and reports nothing. Printing that beside the decoupling verdicts would read as "the bulk capacitors are fine", when the rule never looked at one. It is filed as agni issue 426.
 
 ## The failure mode (EE4)
 
@@ -50,15 +50,15 @@ Here is the finding on its own:
 
 {{ agniRun "content/learn/runs/decoupling-finding.yaml" }}
 
-The severity is **warning**, not error. That choice carries the EE4 content of this rule. The naive reading says a missing decoupling cap is obviously serious and should be an error.
+The severity is **warning**, not error. The EE4 content of this rule is in that choice. The naive reading says a missing decoupling cap is obviously serious and should be an error.
 
-It is serious. It stays a warning because **the board works**, and that is what makes it expensive.
+It is serious. It is a warning anyway because **the board works**, and a board that works makes the fault expensive.
 
-A board with no decoupling on a rail powers up, runs, and passes bring-up. It fails later and intermittently: when many outputs happen to switch at once, when the enclosure is warm, on three units out of ten and not the other seven. What the bench sees is a spontaneous reset, a corrupted register read, an ADC that is noisier than it should be, a link that drops once an hour. None of those symptoms points at a capacitor. Engineers lose weeks to this class of fault, and they lose them at the end of a project rather than the beginning.
+A board with no decoupling on a rail powers up, runs, and passes bring-up. It fails later and intermittently: when many outputs happen to switch at once, when the enclosure is warm, on three units out of ten and not the other seven. On the bench you see a spontaneous reset, a corrupted register read, an ADC that is noisier than it should be, a link that drops once an hour. None of those symptoms points at a capacitor. Engineers lose weeks to this class of fault, and they lose them at the end of a project rather than the beginning.
 
 The rule's own `Impact` field says it in one line: *"Rarely visible at first power-on, expensive to find later."*
 
-This is the general shape of EE4 and it is why severity in this catalog is a **policy** signal rather than a confidence signal. An `error` is something that will not work at all, like an I2C bus with no pull-up, which cannot signal even once. A `warning` is something that usually indicates a defect but where the board still runs. Missing decoupling is the archetype of the second, with the largest eventual cost and the smallest immediate symptom.
+This is the general shape of EE4. So severity in this catalog is a **policy** signal rather than a confidence signal. An `error` is something that will not work at all, like an I2C bus with no pull-up, which cannot signal even once. A `warning` is something that usually indicates a defect but where the board still runs. Missing decoupling is the archetype of the second, with the largest eventual cost and the smallest immediate symptom.
 
 ## The numbers (EE5)
 
@@ -66,15 +66,15 @@ This is the general shape of EE4 and it is why severity in this catalog is a **p
 
 At EE3 the answer was "a capacitor". At EE5 you have to say *which* capacitor, and now two numbers matter.
 
-The first is **capacitance**, and the chip vendor states what the part needs, typically 100nF at each supply pin plus a shared bulk capacitor of a few µF to tens of µF. This is in the datasheet, not deducible from the schematic, which is why it lives in the parameter layer rather than in a netlist rule.
+The first is **capacitance**, and the chip vendor states what the part needs, typically 100nF at each supply pin plus a shared bulk capacitor of a few µF to tens of µF. That number is in the datasheet, and you cannot deduce it from the schematic. So it lives in the parameter layer rather than in a netlist rule.
 
-The second is the **voltage rating**. A capacitor has a maximum working voltage, and putting it on a rail above that rating is a failure with a mechanism rather than a guideline, because ceramic capacitors fail short, so an overstressed decoupling cap becomes a dead short from the rail to ground. [`cap-voltage`](../../reference/rules/cap-voltage/) checks it, with a derating factor, because running a part at exactly its rating leaves nothing for tolerance or transients:
+The second is the **voltage rating**. A capacitor has a maximum working voltage. On a rail above that rating it fails by a known mechanism, so the rating is more than a guideline. Ceramic capacitors fail short, and an overstressed decoupling cap becomes a dead short from the rail to ground. [`cap-voltage`](../../reference/rules/cap-voltage/) checks it, with a derating factor, because running a part at exactly its rating leaves nothing for tolerance or transients:
 
 {{ agniRun "content/learn/runs/cap-voltage.yaml" }}
 
-Read the finding closely, because its structure is the EE5 skill in miniature. It states the observed value (6.3V rated), the required value (12.5V), how the requirement was computed (`rail 10V × derate 1.25`), and **the datasheet page and table it came from**. An EE5 claim you cannot trace to a row in a document is an opinion.
+Read the finding closely, because its structure is the EE5 skill in miniature. It states the observed value (6.3V rated), the required value (12.5V), how the requirement was computed (`rail 10V × derate 1.25`), and **the datasheet page and table it came from**. If you cannot trace an EE5 claim to a row in a document, the claim is an opinion.
 
-There is a third number that nothing in this catalog checks yet, and it is the one that catches people. **A ceramic capacitor's capacitance falls as you apply DC voltage to it.** Class II dielectrics (X5R, X7R) can lose more than half their marked value at their rated voltage. A 100nF 6.3V X7R on a 5V rail may deliver under 50nF in circuit, so a design that looked correct on the schematic is short of decoupling on the bench. Class I dielectrics (C0G/NP0) do not do this, and cost more for the same capacitance. The usual working habit is to specify a voltage rating well above the rail, often 2× or more, for capacitance stability rather than for breakdown margin.
+A third number catches people, and nothing in this catalog checks it yet. **A ceramic capacitor's capacitance falls as you apply DC voltage to it.** Class II dielectrics (X5R, X7R) can lose more than half their marked value at their rated voltage. A 100nF 6.3V X7R on a 5V rail may deliver under 50nF in circuit, so a design that looked correct on the schematic is short of decoupling on the bench. Class I dielectrics (C0G/NP0) do not do this, and cost more for the same capacitance. The usual working habit is to specify a voltage rating well above the rail, often 2× or more, for capacitance stability rather than for breakdown margin.
 
 ## The copper (EE7)
 
@@ -88,7 +88,7 @@ The reason is the same inductance from EE3, now applied to the capacitor's own p
 
 The rule says so itself, in its remedy: *"Add a decoupling capacitor from the rail to ground at each supply pin, and place it at the pin in layout. A capacitor drawn on the rail but placed across the board does not decouple it."*
 
-This is a genuine limit of a netlist check rather than a gap someone forgot to fill, and the rule's scope note is explicit that placement is a board-tier notion. It is also why the tool has a board tier at all. Reading a netlist can prove a capacitor is *present*; only geometry can say whether it is *close*.
+This is a genuine limit of a netlist check rather than a gap someone forgot to fill. The rule's scope note says explicitly that placement is a board-tier notion. Limits like this one are the reason the tool has a board tier at all. Reading a netlist can prove a capacitor is *present*; only geometry can say whether it is *close*.
 
 ## What you can now answer
 

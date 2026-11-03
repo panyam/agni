@@ -16,7 +16,7 @@ cd examples/jetson-project
 make board
 ```
 
-Run the commands on this page and the next ones from that folder. The board lands in
+Run the commands on this page and the next ones from that folder. The board is copied into
 `designs/jetson/`, beside the project's own `design.yaml`.
 
 The vocabulary is the `conventions:` section of `project.yaml`, and it carries two halves that are
@@ -24,15 +24,15 @@ wired very differently.
 
 ## The problem
 
-This project already carries the section this rung is about, so to see the problem it solves the
-runs below delete it from their scratch copy of the project first. Ask the board how many of its nets
-are power rails:
+This project already carries the `conventions:` section. To show what goes wrong without it, the
+runs below first delete it from their scratch copy of the project. Ask the board how many of its
+nets are power rails:
 
 {{ agniRun "content/tutorials/runs/04-query-rails-off.yaml" }}
 
-The built-in vocabulary finds a lot. It is anchored on the names most boards use, `VCC`, `VDD`,
-`+3V3`, `5V_OUT`, and most of this board's rails are named that way. Now look at what it did not
-call a rail among the nets whose names mention a voltage or a supply:
+The built-in vocabulary finds a lot. Most boards name their rails `VCC`, `VDD`, `+3V3` or `5V_OUT`,
+the vocabulary is anchored on those names, and most of this board's rails are named that way. Now
+look at the nets whose names mention a voltage or a supply but which it did not call a rail:
 
 {{ agniRun "content/tutorials/runs/04-query-missed-rails.yaml" }}
 
@@ -71,7 +71,7 @@ read, before any rule runs, so it changes the input every rule sees. It is also 
 people skip. Each pattern here names a rail by its function rather than matching any trailing
 voltage, since a pattern as loose as `_3V3$` would sweep the logic-level signals in too.
 
-It is grouped by what is being named, because that is what decides whether a pattern is right.
+It is grouped by what is being named, because the named thing decides whether a pattern is right.
 `net` holds `rail`, `ground` and `feedback`, matched against NET names. `pin` holds `supply`,
 `gate`, `source` and `drain`, matched against a component's PIN names. A supply pin is called `VDD`
 or `VIN` while a rail net is called `3V3` or `+5V`, so a pattern that belongs in one group is wrong
@@ -84,9 +84,9 @@ a trailing `n`, and the rule asks for one spelling.
 
 ## Both halves, visible
 
-Both runs leave out the parameter corpus that rung 6 introduces, since a datasheet that names a part's
-supply pins also tells the engine which nets are rails, and here the point is what the conventions
-alone change. Without the section:
+Both runs leave out rung 6's parameter corpus. A datasheet that names a part's supply pins also
+tells the engine which nets are rails, and here we want to see what the conventions alone change.
+Without the section:
 
 {{ agniRun "content/tutorials/runs/04-check-conventions-off.yaml" }}
 
@@ -101,11 +101,11 @@ Several things changed, and they come from both halves.
 {{ agniRun "content/tutorials/runs/04-check-naming.yaml" }}
 
 The rest is the lexicon half. `test-point-coverage` found more rails without a test point, because
-nets that were invisible to it became rails. `rail-not-classified` is gone too. It is the shipped catalog's
-own tripwire for this gap, and it had named `FTDI_3V3`, a net whose name declares 3.3 V and which feeds
-four supply pins but carries no rail role. That net is already in the count above, since `net.rail` also
-counts any net something drives as a power net, but the rail ROLE is what the rules read, and only
-the lexicon gives it one. And two `i2c-pull-up` errors disappeared:
+nets that were invisible to it became rails. `rail-not-classified` is gone too. It is the shipped
+catalog's own tripwire for this gap, and it had named `FTDI_3V3`. That net's name declares 3.3 V,
+and it feeds four supply pins, but it carries no rail role. It is already in the count above, since
+`net.rail` also counts any net that something drives as a power net. The rules read the rail ROLE,
+though, and only the lexicon gives the net one. And two `i2c-pull-up` errors disappeared:
 
 {{ agniRun "content/tutorials/runs/04-verdicts-ftdi.yaml" }}
 
@@ -113,30 +113,30 @@ Both lines were pulled up all along, through R113 and R114 to `FTDI_3V3`. The ru
 pull-up to a RAIL, and until the lexicon named that net a rail, the resistors led nowhere the rule
 recognized. Two of rung 2's thirty errors were the vocabulary's blind spot rather than the design's.
 
-That is every tier's pattern. Supplying a tier adds its own findings, and it can also change what the
-rules you already had are able to see, in both directions.
+Every tier follows that pattern. Supplying a tier adds its own findings. It can also change what
+your existing rules are able to see, in both directions.
 
 ## Reading the lexicon directly
 
 Inferring the lexicon from finding counts that moved is indirect. You can ask the fact base itself,
-putting the same question this rung opened with:
+with the same question that opened this rung:
 
 {{ agniRun "content/tutorials/runs/04-query-rails-conventions.yaml" }}
 
 Nothing was added to the design and no rule ran. The lexicon changed what the engine believes a rail
 *is*, and every relation derived from that role now answers differently.
 
-This is the loop to write a lexicon in: ask, compare against the rails you know the board has, adjust
-the pattern, ask again. A query reads only the lexicon half, since it runs no rules.
+Write a lexicon in a loop. Ask, compare the answer against the board's known rails, adjust the
+pattern, and ask again. A query reads only the lexicon half, since it runs no rules.
 
 ## Writing your own
 
 Start with the lexicon, not the rules. Run `agni query <design> 'net.rail(?n) => ?n' --conventions
-<your file>` on a real board and compare the list against the rails you know it has. The file holds
-what the section holds (`name`, `lexicon`, `rules`) at its top level, and for that run it replaces any
-conventions the design's project declares, so you can try a candidate without editing the project.
-Whatever is missing tells you the pattern you need. Repeat until the list is right, move it into the
-project's `conventions:` section, and only then write naming rules.
+<your file>` on a real board and compare the list against the board's known rails. The file holds
+the section's keys (`name`, `lexicon`, `rules`) at its top level. For that run it replaces any
+conventions declared by the design's project, so you can try a candidate without editing the
+project. Whatever is missing tells you the pattern you need. Repeat until the list is right, move it
+into the project's `conventions:` section, and only then write naming rules.
 
 A rule's `allow` is a list of patterns, and a net name passes if it matches any of them. Getting
 this backwards is easy, because `allow` describes what is legal and the finding is a name matching

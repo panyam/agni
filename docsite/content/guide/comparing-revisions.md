@@ -24,7 +24,7 @@ The summary counts, then lists, each kind of change:
   - A **renamed** net kept the *same connections* under a new name (`SIG -> DATA`).
   - A **hard** change alters the connections themselves. `CLK: +[U1.6] -[]` means `U1` pin 6
     joined net `CLK`.
-  - A **soft** change is one the tool judges cosmetic (it did not alter connectivity).
+  - A **soft** change did not alter connectivity, and the tool judges it cosmetic.
 
 The `+[...] -[...]` notation on a changed net lists the pin connections gained and lost.
 
@@ -44,20 +44,20 @@ pull-up to it:
 
 {{ agniRun "content/guide/runs/diff-rename-approx.yaml" }}
 
-The pairing is marked `renamed?` because it is the best match among candidates rather than a fact the
-connectivity proves, which is why the pass is off unless you ask for it. The API takes the same
-option as `near_renames` on `DiffDesignsRequest`: an empty message runs the calibrated thresholds,
-and a field that is set overrides that one threshold, such as `min_new_coverage_significant`. The
+The pairing is marked `renamed?`. It is the best match among candidates, and the connectivity does
+not prove it, so the pass is off unless you ask for it. The API takes the same option as
+`near_renames` on `DiffDesignsRequest`. An empty message runs the calibrated thresholds. Setting a
+field, such as `min_new_coverage_significant`, overrides that one threshold. The
 pass matches by connectivity and never by name, so the thresholds are fractions of shared endpoints.
 The Python client sends it as `diff_designs(..., near_renames={})`; overriding a threshold needs a
 server, since the CLI runs the defaults only.
 
 ## Listing what did not change
 
-A diff reports changes, so a net that is the same in both revisions does not appear. A report that
-lists every net under its outcome, a revision workbook for instance, asks for the unchanged ones too
-with `--include-equal`. They come back as kind `equal` in `--format json`, as `net-equal` rows in
-`--format csv`, and as a count in the text summary:
+A diff reports changes, so a net that is the same in both revisions does not appear. Some reports
+list every net under its outcome, a revision workbook for instance. Such a report asks for the
+unchanged nets too with `--include-equal`. They come back as kind `equal` in `--format json`, as
+`net-equal` rows in `--format csv`, and as a count in the text summary:
 
 {{ agniRun "content/guide/runs/diff-include-equal.yaml" }}
 
@@ -80,9 +80,9 @@ revisions:
     companions: [gateway-rev-b.kicad_pcb]
 ```
 
-Naming a declared revision's entry, or one of its companions, reads that revision with its own
-views, so rev B's board-tier rules run against rev B's copper. A file belongs to one revision at
-most, so a board is never borrowed by a netlist it was not drawn for.
+When you name a declared revision's entry or one of its companions, agni reads that revision with
+its own views, so rev B's board-tier rules run against rev B's copper. A file belongs to one
+revision at most, so a board is never borrowed by a netlist it was not drawn for.
 
 A revision you have not declared reads exactly as named, with no board. Its connectivity diffs as
 well as a declared one's, but a check of it runs no board-tier rule, and `check` says on stderr which
@@ -109,20 +109,20 @@ those revisions are compared side by side rather than overlaid.
 [The web app](../../architecture/web-app/) page covers the visual diff in detail.
 
 While a comparison is open, the **Tables** panel offers it as a table, a row per change in the
-taxonomy above. They are the rows `agni diff --format csv` writes, because the engine lays them out
-(the `Tabulate` rpc) and the panel only shows them. Tick **near-renames** for `--rename-approx` and
-**unchanged nets** for `--include-equal`. Click a column heading to sort, which asks the engine for
-that order, so a ref-des column puts R2 before R10. A net or a part in the table is a link that finds
-it on the drawing, and **Save CSV** downloads the table as the CLI would write it. The same panel
-also runs the checks over either revision and shows each run's findings and verdicts.
+taxonomy above. `agni diff --format csv` writes the same rows. The engine lays them out (the
+`Tabulate` rpc) and the panel only shows them. Tick **near-renames** for `--rename-approx` and
+**unchanged nets** for `--include-equal`. Clicking a column heading sorts the table. The panel asks
+the engine for that order, so a ref-des column puts R2 before R10. A net or a part in the table is a
+link that finds it on the drawing, and **Save CSV** downloads the table as the CLI would write it.
+The same panel also runs the checks over either revision and shows each run's findings and verdicts.
 
 A comparison has an address too. `agni diff <old> <new> --server <url>` prints a `look at it:` link to
 stderr, and following it opens the old revision with Compare already started against the new one,
-as if you had picked it in the Compare picker. The link is the old revision's view with
-`?against=<mount>/<path>` naming the new one, and it carries the question rather than an answer, so
-it compares the two files as they are when you open it. It is printed only when both revisions can
-be linked on that server, under the rules [Checks and reports](../checks-and-reports/) gives for any
-link, and `--server self` serves both from the same process. An MCP `diff` answer carries the same
+as if you had picked it in the Compare picker. The link is the old revision's view, with
+`?against=<mount>/<path>` naming the new one. It carries the question rather than an answer, so it
+compares the two files as they are when you open it. It is printed only when both revisions can be
+linked on that server. [Checks and reports](../checks-and-reports/) gives the rules for any link,
+and `--server self` serves both from the same process. An MCP `diff` answer carries the same
 link (agni issue 1126). A diff that paired near-renames (`--rename-approx`) adds `rename_approx=1`, and
 the comparison's tables open with near-renames ticked, so they show what the command showed.
 

@@ -3,7 +3,7 @@ title: "11. Crystals and oscillators"
 description: "A crystal does not produce a signal. Two capacitors decide what frequency it runs at, and adding more of them is a defect."
 ---
 
-A short chapter about one component, chosen because it is the clearest case in the course of a part whose *value* matters as much as its presence, and where doing more of the obviously-good thing makes it worse.
+A short chapter about one component. No other part in the course shows as clearly that a part's *value* can matter as much as its presence, and here doing more of the obviously-good thing makes it worse.
 
 Read [chapter 3](../03-why-every-chip-needs-capacitors/) first for capacitors, and [chapter 7](../07-reading-a-datasheet/) for ratings.
 
@@ -11,7 +11,7 @@ This page teaches at [EE3](../levels/#roles-ee3) and [EE5](../levels/#numbers-ee
 
 ## A crystal is not an oscillator (EE3)
 
-The first surprise is that a quartz crystal does not produce anything. Put one on a bench supply and nothing happens. It is a **mechanical resonator**, a sliver of quartz that flexes when you apply a voltage and generates a voltage when it flexes, and which does both very efficiently at one particular frequency determined by how it was cut.
+The first surprise is that a quartz crystal does not produce anything. Put one on a bench supply and nothing happens. It is a **mechanical resonator**, a sliver of quartz that flexes when you apply a voltage and generates a voltage when it flexes. It does both very efficiently at one particular frequency, and how the quartz was cut sets that frequency.
 
 The oscillator is the chip. Inside is an amplifier, and the crystal is wired across it so that the amplifier's output feeds back to its input. Noise gets amplified, the crystal passes back only the component at its own frequency, that gets amplified again, and within a few milliseconds the whole thing is ringing steadily at the crystal's frequency.
 
@@ -27,7 +27,7 @@ A crystal's exact frequency depends on the **capacitance it sees** across its te
 
 The two capacitors are how a board supplies it. They sit in series as far as the crystal is concerned, so two 22 pF parts present about 11 pF, plus whatever the pins and the traces contribute.
 
-That last term is why this chapter reaches into [EE7](../levels/#layout-ee7). Stray capacitance from the copper is part of the load, so the same schematic on two different layouts presents two different loads, and the usual practice is to keep those tracks short and away from everything else.
+That last term takes this chapter into [EE7](../levels/#layout-ee7). Stray capacitance from the copper is part of the load, so the same schematic on two different layouts presents two different loads, and the usual practice is to keep those tracks short and away from everything else.
 
 ## Presence is checkable, value is not (EE3)
 
@@ -35,17 +35,17 @@ That last term is why this chapter reaches into [EE7](../levels/#layout-ee7). St
 
 The first board is missing a load capacitor on one terminal. The subject is `Y1.2`, a **terminal** rather than the part, because each side needs its own capacitor and having one is not half a solution. The second board has both and passes twice.
 
-What the rule does not check is the **value**, and by now the reason should be familiar. Presence is a fact about the netlist. The right value needs the crystal's specified load from its datasheet, the chip's own pin capacitance from another datasheet, and the stray capacitance of a layout that may not exist yet. That is the same boundary [chapter 3](../03-why-every-chip-needs-capacitors/) drew around decoupling and [chapter 4](../04-pull-ups-and-undefined-states/) drew around pull-ups, and it is handled the same way, by making the check a netlist allows and stating the rest rather than pretending to it.
+The rule does not check the **value**, and by now the reason should be familiar. Presence is a fact about the netlist. The right value needs the crystal's specified load from its datasheet, the chip's own pin capacitance from another datasheet, and the stray capacitance of a layout that may not exist yet. [Chapter 3](../03-why-every-chip-needs-capacitors/) drew the same boundary around decoupling, and [chapter 4](../04-pull-ups-and-undefined-states/) drew it around pull-ups. The rule handles it the same way, by making the check a netlist allows and stating the rest rather than pretending to it.
 
-Getting the value wrong does not stop the clock. It shifts it, by a small percentage, which is enough to matter. A UART running a few percent off will still frame most characters and corrupt some. A CAN controller off frequency fails at the far end of the bus first. These are the bugs that get blamed on cables.
+Getting the value wrong does not stop the clock. It shifts it, by a small percentage, which is enough to matter. A UART running a few percent off will still frame most characters and corrupt some. A CAN controller off frequency fails at the far end of the bus first. Bugs like these get blamed on cables.
 
 ## More is worse (EE5)
 
 Some parts are **ceramic resonators with the load capacitors built in**. Cheaper, less accurate, and physically one three-terminal part where a crystal plus two caps is three parts. They present their specified load internally, so they need nothing external.
 
-The capacitors can also live at the other end, inside the **chip that drives the crystal**. Many real-time clocks and low-power MCUs build them into their oscillator pins, often selectable in a register, so a 32.768 kHz crystal sits straight across two pins with nothing else on the board. Only the chip's datasheet says so, which is why `crystal-load-caps` passes such a terminal when that datasheet is in the run and binds the capacitance to that pin, and otherwise reports it while naming the chip it could not read.
+The capacitors can also live at the other end, inside the **chip that drives the crystal**. Many real-time clocks and low-power MCUs build them into their oscillator pins, often selectable in a register, so a 32.768 kHz crystal sits straight across two pins with nothing else on the board. Only the chip's datasheet says so. When that datasheet is in the run and binds the capacitance to that pin, `crystal-load-caps` passes such a terminal. Otherwise it reports the terminal and names the chip it could not read.
 
-Fit external caps to one anyway and the load roughly doubles. The oscillator now sees far more capacitance than either part was specified for, so it starts slowly, starts off-frequency, or over temperature and part spread does not start at all.
+Fit external caps to one anyway and the load roughly doubles. The oscillator now sees far more capacitance than either part was specified for, so it starts slowly, starts off-frequency, or does not start at all over temperature and part spread.
 
 The rule's own `Impact` describes how that arrives: *"The board usually oscillates on the bench and drifts or drops out in the field, and every timed peripheral clocked from it (UART baud, CAN bit timing) goes with it. It is a silent BOM/layout carry-over from a crystal design, invisible until the load is measured."*
 
@@ -68,4 +68,4 @@ The carry-over is the mechanism. Nobody adds redundant capacitors on purpose. So
 
 The second has no fixture in this course, so it is described from its own catalog entry rather than run. The pair is worth reading together, because one fires when a capacitor is missing and the other when one is present, on parts that look nearly identical on a schematic.
 
-The next chapter, [when the copper matters](../12-when-the-copper-matters/), is the last one, and covers the level everything so far has deferred to.
+The next chapter, [when the copper matters](../12-when-the-copper-matters/), is the last one, and covers the level that everything so far has deferred to.

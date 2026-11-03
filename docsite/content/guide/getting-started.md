@@ -24,14 +24,14 @@ between runs. Releases are plain git tags, so
 [the tag list](https://github.com/panyam/agni/tags) is the version list.
 
 A build installed this way carries no browser viewer, since the viewer's built JavaScript is not part
-of the Go module. The first time `agni open` or `agni serve` needs it, agni downloads the bundle its
-own release attached, checks it against that release's `checksums.txt`, and keeps it in your user
-cache directory, so later runs work offline.
+of the Go module. The first time `agni open` or `agni serve` needs it, agni downloads the bundle
+attached to its own release, checks it against that release's `checksums.txt`, and keeps it in your
+user cache directory, so later runs work offline.
 
 Without Go, download the tarball for your platform from
-[the latest release](https://github.com/panyam/agni/releases/latest). Each one holds an `agni`
-binary that carries the viewer, for macOS and Linux on arm64 and amd64, and `checksums.txt` beside
-them verifies the download. Or run the container image, which needs nothing but Docker:
+[the latest release](https://github.com/panyam/agni/releases/latest). There is one for macOS and
+Linux on arm64 and amd64. Each holds an `agni` binary that carries the viewer, and `checksums.txt`
+beside them verifies the download. Or run the container image, which needs nothing but Docker:
 
 ```
 docker run --rm -v "$PWD":/work -w /work ghcr.io/panyam/agni check <board>.kicad_sch
@@ -61,15 +61,17 @@ deliberately trips several rules:
 {{ agniRun "content/guide/runs/first-check.yaml" }}
 
 Read a finding as three parts: the **severity** (`error` / `warning` / `info`), the
-**rule** that fired (`i2c-pull-up`), and the **subject** it fired on (the net `/SCL`, a label on the
-root sheet, which KiCad names with a leading `/`), with a plain-language reason in parentheses. Each finding also carries its provenance, and
-`--format json` (below) shows exactly which net or pin, and for datasheet rules which page
-and table, the finding came from.
+**rule** that fired (`i2c-pull-up`), and the **subject** it fired on, with a plain-language reason
+in parentheses. Here the subject is the net `/SCL`, a label on the root sheet, and KiCad names a
+root-sheet label with a leading `/`. Each finding also carries its provenance. `--format json`
+(below) shows exactly which net or pin each finding came from, and for datasheet rules which page
+and table.
 
 Severity is a policy signal, not a measure of certainty. An `error` is something you almost
 certainly must fix (an I2C bus with no {{ explainable "pull-up" }} will not communicate). A `warning`
-sits between `error` and `info`, as with a rail with no {{ explainable "decoupling-capacitor" }}
-that often works on the bench and fails intermittently in the field. `info` is a note worth a look.
+sits between `error` and `info`. A rail with no {{ explainable "decoupling-capacitor" }} gets one,
+since it often works on the bench and fails intermittently in the field. `info` is a note worth a
+look.
 
 ## A clean run, and why "no findings" has a number in it
 
@@ -78,9 +80,9 @@ Run the passing twin of that board:
 {{ agniRun "content/guide/runs/clean-run.yaml" }}
 
 Read the `81 rule(s) run` first. It tells you the check actually *exercised* 81
-rules and none fired, rather than staying quiet because it had nothing to work with. This is
-the "silence is not a pass" idea from [Concepts](../concepts/), which says a real all-clear names how
-many rules ran. If you load only a schematic and no board file, the copper rules simply do
+rules and none fired, rather than staying quiet because it had nothing to work with.
+[Concepts](../concepts/) calls this idea "silence is not a pass". A real all-clear names how many
+rules ran. If you load only a schematic and no board file, the copper rules simply do
 not appear in that count, because their tier is empty.
 
 The second line is the narrower claim underneath it. 81 rules ran, and 22 of them reached a
@@ -119,8 +121,8 @@ agni check <file> --fail-on error   # fails the build only on errors
 ## Stop passing flags
 
 Everything above addresses a single file, and the flags pile up as you turn things on: your naming
-conventions, your interface profiles, your parameter corpus, your checklist. A **project** is where
-those live instead, declared once beside the design.
+conventions, your interface profiles, your parameter corpus, your checklist. A **project** holds
+them instead, declared once beside the design.
 
 `agni start` builds one from a design you already have, here the same board this page has been
 checking:
@@ -131,10 +133,10 @@ From then on the commands take a design and nothing else, as the two lines under
 because the project answers the rest.
 
 The design is **copied** into the project with any companion view it declares, and the project owns
-the copy, so edits to the original do not reach it. The `review` checklist it writes into
-`project.yaml` is a starting point seeded from the shipped catalog rather than a finished checklist;
-[Write your checklist](../../tutorials/08-write-your-checklist/) is about turning it into your
-team's.
+the copy, so edits to the original do not reach it. `agni start` also writes a `review` checklist
+into `project.yaml`. That checklist is a starting point seeded from the shipped catalog rather than a
+finished one, and [Write your checklist](../../tutorials/08-write-your-checklist/) is about turning
+it into your team's.
 
 ## Where to go next
 

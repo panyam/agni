@@ -51,32 +51,32 @@ design folder.
 
 ## Without Docker
 
-The image exists because it carries the viewer's built assets and the symbol libraries, which a
-server needs beyond the engine. Running the binary directly means supplying the first of those
-yourself.
+The image carries the viewer's built assets and the symbol libraries, and a server needs both
+beyond the engine. If you run the binary directly, you supply the viewer's built assets yourself.
 
 ```
 agni serve --addr :8080 --mount boards=~/boards --web-dir /path/to/agni/web
 ```
 
 `--web-dir` is the directory holding the viewer's own `templates/` and its built `static/*.js`, not a
-folder of designs. It defaults to `web`, which is where a repo checkout keeps them, so from a checkout
-you can leave it off.
+folder of designs. It defaults to `web`. A repo checkout keeps them there, so from a checkout you can
+leave it off.
 
-With no web dir at all, `agni serve` serves the API alone. That is what a binary from `go install`
-does outside a checkout, since the built JavaScript is not part of the Go module. The run says so on
+With no web dir at all, a release binary finds its own viewer. A `go install` of a release tag
+downloads the bundle its release attached. A build that is not a release, such as `make agni` or
+`go install ...@main`, has no bundle, so `agni serve` serves the API alone. The run says so on
 stderr, and `/` answers with a short text page listing the services and how to get the viewer. The
-Connect API, `/healthz`, and the rule and relation doc images all work, which is everything a script
-or the [Python client](../../build/other-languages/) needs.
+Connect API, `/healthz`, and the rule and relation doc images all work. A script or the
+[Python client](../../build/other-languages/) needs nothing more.
 
-That only happens when NOTHING named a web dir and there is no `./web`. A directory you did name
-through the flag, an `agni.yaml` or the environment still has to exist and hold a built viewer, and a
-`./web` holding templates without its bundle (a checkout that has not run `make ui`) still stops the
-run, because either one is a mistake you want to hear about.
+That only happens when NOTHING named a web dir and there is no `./web`. If you name a directory
+through the flag, an `agni.yaml` or the environment, it still has to exist and hold a built viewer.
+A `./web` that holds templates without its bundle also stops the run. A checkout that has not run
+`make ui` is in that state. Either one is a mistake you want to hear about.
 
 The datasheets workbench is a separate service, `agnids`, built from the `datasheet/` module. It has
-its own mounts, writes into them, and is where the docling environment lives, so it deploys apart
-from the viewer:
+its own mounts, writes into them, and holds the docling environment, so it deploys apart from the
+viewer:
 
 ```
 agnids serve --addr :8090 --mount ds=~/datasheets --web-dir /path/to/agni/datasheet/web --viewer-url http://host:8080
@@ -87,8 +87,9 @@ part of the viewer's `web/`. From a checkout, `make dsserve DATASHEET_DIR=~/data
 two link to each other only when told where the other is: `agni serve --datasheets-url
 http://host:8090` shows the landing page's Datasheets card, and `agnids serve --viewer-url
 http://host:8080` makes the workbench's heading link home. The same service can also serve a
-published corpus of PartSpecs with `--corpus <dir>`, which `agni serve --params-url http://host:8090`
-reads in place of a `--params` directory (see [Datasheets](../datasheets/#serving-a-shared-corpus)).
+published corpus of PartSpecs with `--corpus <dir>`. `agni serve --params-url http://host:8090`
+reads that corpus in place of a `--params` directory (see
+[Datasheets](../datasheets/#serving-a-shared-corpus)).
 
 Two ways to avoid typing it every time:
 
@@ -106,15 +107,14 @@ port and prints the URL of the board rather than of a file browser. It finds the
 
 ## Symbol libraries are already there
 
-A schematic that names rather than embeds its symbols needs the symbol library before it can
-resolve to a pin-level {{ explainable "netlist" }}. The image ships the KiCad, xschem, and gEDA
-symbol libraries and points `--symbol-path` at all three, so external symbols resolve with nothing
-to install.
+Some schematics name their symbols rather than embedding them. Such a schematic needs the symbol
+library before it can resolve to a pin-level {{ explainable "netlist" }}. The image ships the
+KiCad, xschem, and gEDA symbol libraries and points `--symbol-path` at all three, so external
+symbols resolve with nothing to install.
 
-The failure this prevents is a quiet one. Without the libraries the
-design still reads, it just reads short, with fewer components, fewer nets, and therefore fewer
-findings and no error to tell you so. If your component or net counts look low, that is the first
-thing to check, whether you are running in Docker or not.
+Without the libraries the design fails quietly. It still reads, but it reads short, with fewer
+components, fewer nets, and therefore fewer findings, and no error tells you so. If your component
+or net counts look low, check this first, whether you are running in Docker or not.
 
 The libraries are most of the image's ~310MB. The size is deliberate, because a smaller
 image that renders your board wrong is the worse default.
@@ -143,21 +143,21 @@ projects it again. A running server keeps what it read (see [Kept reads](#kept-r
 agni query designs/board --remote http://localhost:8080 'component.mpn(?r, ?m) => count(?r)'
 ```
 
-The output is the one the local command prints, because the CLI already builds the request the
-server receives and renders the response it gets back. On the Jetson board a warm query takes 0.02 s
+The output matches the local command's, because the CLI already builds a request for the server
+and renders the response it gets back. On the Jetson board a warm query takes 0.02 s
 end to end against 0.33 s run locally, and a check 0.18 s against 1.39 s.
 
 The design's files go with the request, so the server needs no copy of them (agni issue 1061). The
-CLI sends the manifest of the files its analysis reads (the design's folder, its project's descriptor
-and the config directories the project names, the set `ListDesignFiles` names for a browser), and
-the server asks for the contents it does not already hold, so a second run of an unchanged design
-sends the manifest alone. A server started with `--upload-max-bytes 0` takes no files, and keeps what
-it was sent within that limit otherwise, 1 GB by default.
-The server answers with the datasheet corpus and profiles it was started with, so `--params` and
-`--profile-path` are refused with `--remote` rather than ignored, and so is `--timing`, which would
-time this process. The server's own `--slow-request` and the `Agni-Timing` header time the request
-where it runs. A review is scored and returned
-without being stored, so it leaves nothing in the server's list. `stats`, `diff`, `render` and the
+CLI sends a manifest of the files its analysis reads. Those are the design's folder, its project's
+descriptor and the config directories the project names, and `ListDesignFiles` names the same set
+for a browser. The server asks for the contents it does not already hold, so a second run of an
+unchanged design sends the manifest alone. A server started with `--upload-max-bytes 0` takes no
+files. Otherwise it keeps what it was sent up to that limit, 1 GB by default.
+The server answers with its own datasheet corpus and profiles, the ones it was started with. So
+`--params` and `--profile-path` are refused with `--remote` rather than ignored. So is `--timing`,
+since it would time this process. The server's own `--slow-request` and the `Agni-Timing` header time
+the request where it runs. The server scores and returns a review without storing it, so the review
+leaves nothing in the server's list. `stats`, `diff`, `render` and the
 other commands that read a design themselves still run locally.
 
 ## Health
@@ -187,20 +187,20 @@ docker run -p 8080:8080 \
 Overriding the command like this replaces the default arguments, so `--mount-root` has to be
 repeated. The symbol paths do not, because they come from the environment.
 
-Note what an overlay means here. A profile named after a built-in supersedes it for **every**
-design this server reads, so point it at rules that suit the whole mounted set rather than one
+A profile named after a built-in supersedes the built-in for **every** design this server reads,
+so point it at rules that suit the whole mounted set rather than one
 project. See [interface profiles](../interface-profiles/) and
 [naming conventions](../naming-conventions/).
 
 ## Keeping review runs
 
-`serve --review-store <dir>` turns review runs into things the server keeps. Without it the server
+`serve --review-store <dir>` makes the server keep review runs. Without it the server
 still serves everything else, and the review endpoints answer that they store no reviews rather than
 storing a run and dropping it. The viewer's Review panel then scores the checklist without storing it
 (`CreateReview` with `validate_only`) and holds the run in the page until you leave it, as it does on
 the browser engine, which keeps no store at all.
 
-The store is a directory the server writes to, so in a container give it its own volume:
+The server writes the store into a directory, so in a container give it its own volume:
 
 ```
 docker run -p 8080:8080 \
@@ -216,29 +216,29 @@ It is deliberately a different volume from your board folders.
 <details>
 <summary>Why the store sits outside your design mounts, and what one stored run is</summary>
 
-Design mounts are read-only, and keeping runs somewhere else preserves that, because nothing the
-server saves ever lands beside your schematics. A named volume also survives `docker rm`, without
-which storing runs would be pointless.
+Design mounts are read-only. Keeping runs somewhere else preserves that, because the server never
+saves a file beside your schematics. A named volume also survives `docker rm`. Without that, storing
+runs would be pointless.
 
-Each run is one file, written in the same format `agni review --results-out` produces, so the volume
-stays readable with ordinary tools and a run can be copied out and rendered anywhere. A run records
+Each run is one file, in the same format as `agni review --results-out`. Ordinary tools can read the
+volume, and a run can be copied out and rendered anywhere. A run records
 the checklist it scored, not a pointer to it, so editing your project's checklist afterwards never
 rewrites what an older run says it asked.
 
 </details>
 
-Runs are visible to every client of the server, because
-`agni serve` has no authentication yet, so treat the store the way you treat the mounts, as fine for one
-team on a trusted network and no boundary between teams. And nothing prunes it, so a CI job creating
-a run per commit will grow the volume until you delete runs yourself.
+Every client of the server can see the runs, because `agni serve` has no authentication yet. Treat
+the store the way you treat the mounts. It is fine for one team on a trusted network, and it is no
+boundary between teams. Nothing prunes it either, so a CI job creating a run per commit will grow the
+volume until you delete runs yourself.
 
 ## The datasheet service image
 
 The datasheets workbench has an image of its own, `ghcr.io/panyam/agnids`, published by every release
 from the same tag as `agni`'s. It carries `agnids`, the workbench, and the docling environment behind
 the "Extract (first pass)" action, with docling's models already inside, so Extract works on a host
-with no outbound network. That environment is why the image is about 2.6GB where `agni`'s is about
-230MB, and why the two are separate.
+with no outbound network. The docling environment makes the image about 2.6GB, where `agni`'s is
+about 230MB, so the two are separate images.
 
 ```
 docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/ti -v ~/corpus:/corpus ghcr.io/panyam/agnids:latest
@@ -259,16 +259,16 @@ docker run -p 8090:8090 -v ~/datasheets/ti:/datasheets/ti ghcr.io/panyam/agnids:
 
 ## Writes and file ownership
 
-The datasheets workbench (`agnids`) writes back into what you mount: an annotation or an extracted
-doc-IR lands beside its datasheet, and a draft or a published spec lands in the corpus store. The `agni` image writes only to a
-`--review-store`. Both containers run as a non-root user (uid 10001), so those files are never
-written as root.
+The datasheets workbench (`agnids`) writes back into what you mount. It writes an annotation or an
+extracted doc-IR beside its datasheet, and a draft or a published spec into the corpus store. The
+`agni` image writes only to a `--review-store`. Both containers run as a non-root user
+(uid 10001), so those files are never written as root.
 
 On **Docker Desktop** (macOS, Windows) that is the whole story. Its file-sharing layer maps
 ownership to you, so a file the container wrote as uid 10001 appears on your host owned by your own
 account, and there is nothing to configure.
 
-On **Linux**, bind mounts pass ownership through unchanged, so those files land owned by uid 10001
+On **Linux**, bind mounts pass ownership through unchanged, so those files arrive owned by uid 10001
 and you may not be able to edit them afterwards. Run as yourself instead:
 
 ```
@@ -313,8 +313,8 @@ engine instead, and the top bar says so. The default comes from measuring a 97 M
 the browser read in 2.4 s and checked in 8.8 s.
 
 With no server at all, `agni site <outdir> --base <path> --seed <name>=<folder>` writes the viewer,
-the engine and the seeded designs as static files any web host can serve. That is how
-[the public demo](../../demos/) runs, since the project hosts no server for it.
+the engine and the seeded designs as static files for any web host to serve.
+[The public demo](../../demos/) runs this way, since the project hosts no server for it.
 
 ## Kept reads
 
@@ -366,18 +366,18 @@ slow request: /agni.v1.webapi.CheckService/CheckDesign took 87ms, over 1ms; slow
 slow request: /agni.v1.webapi.CheckService/CheckDesign took 29ms, over 1ms; slowest stage resolve.overlay 17ms; cache model=memory geometry=memory; slowest rules profile/emmc-signal-missing 2ms, profile/emmc-signal-dangling 1ms, profile/emmc-host-incomplete 1ms, gateway-profiles/can-host-incomplete 1ms, gateway-profiles/can-esd-missing 1ms
 ```
 
-The second request found the model in memory, so it read nothing, and the cache column is what says
-so. A cache layer reading `built` on every request is a design the server is failing to keep. When
+The second request found the model in memory, so it read nothing, and the cache column says so. If
+a cache layer reads `built` on every request, the server is failing to keep that design. When
 evaluating a query was the slowest stage, the line carries that query's plan as well.
 
 Any client can ask for the same breakdown on a single request by sending an `Agni-Timing: 1` header
 (`Agni-Timing: explain` adds each query's plan). The response then carries it in an `Agni-Timing`
-header, as the `RequestTiming` message in protojson, and as a `Server-Timing` header, which a
-browser's network panel draws as a bar per stage. It travels in headers rather than in the
-response, because a number that varied on every run would make every saved answer differ from the
-last. The viewer asks for it when its address carries `?timing` (or `?timing=explain`) and logs each
-request's breakdown to the console, and the browser engine answers it just as the server does. The
-CLI's `--timing` on `check`, `query`, `trace` and `review` prints it from the same record, and
+header, as the `RequestTiming` message in protojson, and as a `Server-Timing` header. A browser's
+network panel draws that header as a bar per stage. The breakdown travels in headers rather than in
+the response, because a number that varied on every run would make every saved answer differ from
+the last. The viewer asks for it when its address carries `?timing` (or `?timing=explain`) and logs
+each request's breakdown to the console, and the browser engine answers it just as the server does.
+The CLI's `--timing` on `check`, `query`, `trace` and `review` prints it from the same record, and
 `query --explain` prints the plans alone.
 
 To find which stage raised the memory peak, send `Agni-Timing: memory` instead, or open the page with

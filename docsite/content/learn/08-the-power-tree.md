@@ -13,15 +13,15 @@ This page teaches at [EE6](../levels/#systems-ee6), and the [levels page](../lev
 
 Power arrives at a connector as one voltage and has to become several, because the parts on a board do not agree about what they want. A processor core might run at 1.8 V, its I/O at 3.3 V, and a motor driver straight off a 12 V input. (The tutorial board happens to name its rails the other way round, `PMIC_CORE_3V3` and `PMIC_IO_1V8`.)
 
-So a board carries a chain of regulators, and that chain, drawn out, is the **power tree**. (Ask an engineer to sketch a board they own and this is usually the first thing they draw.) Read the tutorial board's off its regulators:
+So a board carries a chain of regulators. Drawn out, that chain is the **power tree**. (Ask an engineer to sketch a board they own and this is usually the first thing they draw.) Read the tutorial board's off its regulators:
 
 {{ agniRun "content/learn/runs/power-tree.yaml" }}
 
-`U1` touches `PMIC_MAIN_12V0` and `PMIC_CORE_3V3`. `U2` touches `PMIC_CORE_3V3` and `PMIC_IO_1V8`. So 12 V feeds U1, which makes 3.3 V, which feeds U2, which makes 1.8 V. A cascade, each stage taking the previous one's output as its input.
+`U1` touches `PMIC_MAIN_12V0` and `PMIC_CORE_3V3`. `U2` touches `PMIC_CORE_3V3` and `PMIC_IO_1V8`. So 12 V feeds U1, and U1 makes 3.3 V. That 3.3 V feeds U2, and U2 makes 1.8 V. A cascade, each stage taking the previous one's output as its input.
 
-Cascading rather than running three regulators from the input is a deliberate trade. A switching regulator is efficient over a big step, which is what you want taking 12 V down, and it is electrically noisy. A linear regulator wastes the voltage it drops as heat, which is fine over a small step, and it is quiet. So the usual shape is a switcher doing the heavy lifting and a linear part cleaning up a rail that feeds something sensitive.
+The board cascades its regulators rather than running three of them from the input, and that is a deliberate trade. A switching regulator is efficient over a big step, and taking 12 V down needs that. It is also electrically noisy. A linear regulator wastes the voltage it drops as heat. Over a small step that waste is fine, and a linear regulator is quiet. So the usual shape is a switcher doing the heavy lifting and a linear part cleaning up a rail that feeds something sensitive.
 
-Two other nets in that output are worth naming, because [chapter 1](../01-what-a-board-is-made-of/) met them already. `PMIC_EN` is the enable that R2 pulls high, and `PMIC_PG` is the power-good output that R3 feeds to the processor's reset. Neither carries power. They are how the tree gets turned on and how the rest of the board learns that it came up, which is [chapter 9](../09-sequencing-and-straps/).
+[Chapter 1](../01-what-a-board-is-made-of/) already met two other nets in that output, and they are worth naming. `PMIC_EN` is the enable that R2 pulls high, and `PMIC_PG` is the power-good output that R3 feeds to the processor's reset. Neither carries power. `PMIC_EN` turns the tree on, and `PMIC_PG` tells the rest of the board that the tree came up. [Chapter 9](../09-sequencing-and-straps/) covers both.
 
 ```mermaid
 flowchart TB
@@ -56,7 +56,7 @@ and then it can check the board against it:
 
 The third declaration is wrong on purpose. It puts `PMIC_IO_1V8`, whose name declares 1.8 V, in a domain declared at 3.3 V. The rule reports the disagreement without deciding which side is mistaken, because it cannot tell whether somebody declared the domain wrongly, the rail is named wrongly, or the rail really is at the wrong voltage. All three are worth knowing about and they are the same finding until a human looks.
 
-This is what an intent file buys and what it costs. It buys checks that no amount of cleverness could derive from the netlist. It costs you writing down what you meant and keeping that true as the design moves, which nobody enjoys and which is why the layer stays optional.
+An intent file has a benefit and a cost. It gives you checks that no amount of cleverness could derive from the netlist. It costs you writing down what you meant and keeping that true as the design moves. Nobody enjoys that work, so the layer is optional.
 
 ## Enough current to go round (EE6)
 
@@ -68,11 +68,11 @@ That is two separate questions, and the catalog keeps them as two rules. This ru
 
 **Capacity** asks whether the supply meets the declared peak at all. `3V3` is fed by a part rated 0.5 A against a declared 0.8 A, so it fails outright.
 
-**Margin** asks whether it meets the peak with headroom. `1V8`'s supply is rated 0.9 A, which clears the 0.8 A peak, and misses the 0.96 A that a 1.2× margin factor asks for. Designing a rail to exactly its worst-case draw leaves nothing for tolerance, temperature, or the load somebody adds next revision.
+**Margin** asks whether it meets the peak with headroom. `1V8`'s supply is rated 0.9 A. That clears the 0.8 A peak. A 1.2× margin factor asks for 0.96 A, and 0.9 A misses it. A rail designed to exactly its worst-case draw leaves nothing for tolerance, temperature, or the load somebody adds next revision.
 
 The margin rule reports `3V3` as **not-considered**, with the reason *"the supply is rated below the 0.8A peak itself, which rail-current-capacity reports rather than this rule"*.
 
-That is one defect being reported once. A rail that cannot meet its peak also cannot meet its peak with margin, so a naive pair of rules would report the same underlying problem twice, at two severities, and a reviewer would spend time working out whether they were looking at one problem or two. The margin rule declines instead, and says which rule owns the answer.
+Here one defect is reported once. A rail that cannot meet its peak also cannot meet its peak with margin, so a naive pair of rules would report the same underlying problem twice, at two severities, and a reviewer would spend time working out whether they were looking at one problem or two. The margin rule declines instead, and says which rule owns the answer.
 
 ## What you can now answer
 
@@ -90,6 +90,6 @@ That is one defect being reported once. A rail that cannot meet its peak also ca
 | [`intent/rail-current-margin`](../../reference/rules/intent-rail-current-margin/) | warning | the same, with a declared margin factor |
 | [`rail-not-classified`](../../reference/rules/rail-not-classified/) | info | a rail the naming vocabulary could not classify at all |
 
-The three `intent/` rules need something declared. That is the defining property of this level, and it is why a run against a design with no intent file reports them as needing design intent rather than as passing. `rail-not-classified` is the exception, a read-health check on the naming conventions rather than on intent.
+The three `intent/` rules need something declared. Needing a declaration defines this level. So a run against a design with no intent file reports them as needing design intent rather than as passing. `rail-not-classified` is the exception, a read-health check on the naming conventions rather than on intent.
 
-The next chapter, [sequencing and straps](../09-sequencing-and-straps/), takes the other half of the system question, the order the rails come up in and what the parts read at the moment they do.
+The next chapter, [sequencing and straps](../09-sequencing-and-straps/), takes the other half of the system question. It covers the order in which the rails come up, and what the parts read at the moment each rail comes up.

@@ -22,14 +22,16 @@ pick them with its buttons. The page proposes which designs the files make, show
 in your browser's storage, so a reload reopens them, and the same page lists them with a Delete. They
 are never sent anywhere.
 
-Every design, a seed or your own, is read on a Load page before the viewer opens it, which shows each
-step as it reads. A design read once opens straight in the viewer on the next visit.
+Every design is read on a Load page before the viewer opens it, whether it is a seed or your own.
+The Load page shows each step as it reads. Once a design has been read, it opens straight in the
+viewer on the next visit.
 
 The browser engine has a size limit, 128 MB of design files by default. A page served by
 `agni serve --engine wasm` sends a design over `--wasm-max-bytes` to the server and says so in its
 top bar. The demo has no server behind it, so it is for designs under that size.
 
-Having an agent move the tabs you have open needs a server, so the demo cannot show it.
+An agent can move the viewer tabs you have open, but only through a server, so the demo cannot show
+it.
 `agni serve --mcp --viewer-rooms` on your own machine does, and
 [Moving a viewer tab you have open](../guide/asking-with-an-llm/#moving-a-viewer-tab-you-have-open)
 covers it. `examples/embed-viewer/README.md` has the walk to show it to someone, step by step.
@@ -46,9 +48,9 @@ same calls whoever answers them. `agni serve` answers them on your machine or a 
 WebAssembly engine answers them in the visitor's browser. Either one reads the design, runs the
 checks and evaluates the queries, and the viewer only draws the answers. On your own server,
 `agni serve --engine wasm` or a page's `?engine=wasm` picks the browser engine for one design, and
-[Running the server](../guide/running-the-server/) covers both. How the two engines are held to the
-same answers is in
-[The same contract in the browser](../architecture/web-services/#the-same-contract-in-the-browser).
+[Running the server](../guide/running-the-server/) covers both.
+[The same contract in the browser](../architecture/web-services/#the-same-contract-in-the-browser)
+covers how the two engines are held to the same answers.
 
 ## Two static renders
 

@@ -5,7 +5,7 @@ description: "A schematic is a rendering of a netlist, and the two can disagree.
 
 Here is a question that sounds trivial and is not: **are these two pins connected?**
 
-You would think you could tell by looking. Two wires meet on the page, so they are joined. A wire runs from a pin to somewhere, so that pin is on that net. Neither of those is reliably true, and the gap between what a schematic *looks like* and what it *means* is where a particular class of expensive bug lives.
+You would think you could tell by looking. Two wires meet on the page, so they are joined. A wire runs from a pin to somewhere, so that pin is on that net. Neither of those is reliably true. A schematic *looks like* one thing and *means* another, and a particular class of expensive bug lives in the gap between the two.
 
 Read [EE1](../levels/#parts-ee1) first, and [chapter 1](../01-what-a-board-is-made-of/) for what the parts are doing.
 
@@ -13,11 +13,11 @@ This page teaches at [EE2](../levels/#nets-ee2), and the [levels page](../levels
 
 ## The drawing is a rendering (EE2)
 
-The thing a CAD tool actually exports, and the thing a board gets built from, is a **netlist**, which lists the nets and, for each one, the pins that share it. The picture on your screen is one rendering of that netlist, drawn by a human for other humans.
+A CAD tool actually exports a **netlist**, and the board gets built from it. A netlist lists the nets and, for each one, the pins that share it. The picture on your screen is one rendering of that netlist, drawn by a human for other humans.
 
-Most of the time the two agree, which is what makes the disagreements dangerous. When the drawing shows a connection the netlist does not have, every human in the review chain sees the connection, because they are all reading the same picture. The board comes back and the connection is absent.
+Most of the time the two agree, so people come to trust the picture, and that trust makes a disagreement dangerous. Imagine the drawing shows a connection the netlist does not have. Every human in the review chain sees the connection, because they are all reading the same picture. The board comes back and the connection is absent.
 
-This chapter is about those disagreements. A tool that reads the netlist looks at the thing that gets built rather than the thing that got drawn.
+This chapter is about those disagreements. A tool that reads the netlist looks at what gets built rather than at what got drawn.
 
 ## One dot changes the circuit (EE2)
 
@@ -29,13 +29,13 @@ Here they are. Look for the difference before reading on.
 
 ![The same three parts and the same wires, with a junction dot at the meeting point]({{.Site.PathPrefix}}/static/images/learn/tjunc-dotted.svg)
 
-The second has a dot where the vertical wire meets the horizontal one. That is the entire difference, and it is the sort of mark that survives a design review unnoticed on a dense sheet.
+The second has a dot where the vertical wire meets the horizontal one. Nothing else differs. On a dense sheet, a mark like that goes through a design review unnoticed.
 
 {{ agniRun "content/learn/runs/tjunc-nets.yaml" }}
 
 Same parts, different circuit. One file has five nets and the other has four.
 
-The reason is a KiCad convention that trips up nearly everyone the first time. **A wire crossing another, or ending on the middle of one, is not a connection.** Only a junction dot makes it one. That rule exists so you can route a wire across a busy sheet without accidentally shorting it to everything it passes over, which is genuinely useful, and it means a drawing that looks connected may not be.
+The reason is a KiCad convention that trips up nearly everyone the first time. **A wire crossing another, or ending on the middle of one, is not a connection.** Only a junction dot makes it one. The rule exists so you can route a wire across a busy sheet without accidentally shorting it to everything it passes over. That is genuinely useful. It also means a drawing that looks connected may not be.
 
 Ask what actually changed:
 
@@ -45,17 +45,17 @@ The net `/TAP` is gone, because it merged into `/BUS`. And `/BUS` gained `R3.1`,
 
 That is the failure mode in full. The author drew a T, meaning "connect these". The reviewer saw a T and read it the same way. The netlist has two separate nets, and R3 does nothing.
 
-Here is what the rule says about each:
+The rule reports on each file like this:
 
 {{ agniRun "content/learn/runs/tjunc-verdicts.yaml" }}
 
-The second run reports a **pass** rather than saying nothing. That is recent (agni issue 420), and it needed a reader change. The reader was computing which taps were joined and throwing that half away, because the step that makes a dot electrically real also erases the evidence that a tap was ever there. Before that, a sheet whose taps all had their dots produced the same silence as a sheet with no taps. A pass you can count is worth more here than almost anywhere else in the catalog, because this defect is invisible in review by construction.
+The second run reports a **pass** rather than saying nothing. That is recent (agni issue 420), and it needed a reader change. One step in the reader makes a dot electrically real, and the same step erases the evidence that a tap was ever there. So the reader computed which taps were joined and then threw that half away. Before the change, a sheet with every tap dotted produced the same silence as a sheet with no taps. A pass you can count is worth more here than almost anywhere else in the catalog, because this defect is invisible in review by construction.
 
 ## Names are wires too (EE2)
 
 The opposite problem. A schematic can also **hide** a connection that is genuinely there.
 
-Two pins on opposite corners of a sheet, with no wire drawn between them, are connected if they carry the same label. Labels are how anyone keeps a dense sheet readable, and every power symbol works the same way, so every `GND` symbol on every sheet is one net while the drawing shows twenty separate little triangles.
+Take two pins on opposite corners of a sheet, with no wire drawn between them. If they carry the same label, they are connected. Everyone uses labels to keep a dense sheet readable, and every power symbol works the same way. So every `GND` symbol on every sheet is one net, while the drawing shows twenty separate little triangles.
 
 So a name is a connection, and **renaming a net can rewire the board.** Give two unrelated nets the same label and they merge. Change one label of a pair and they split.
 
@@ -63,7 +63,7 @@ That makes names checkable, and gives two rules that are mirror images:
 
 {{ agniRun "content/learn/runs/name-conflicts.yaml" }}
 
-Both of those are one net with two claims on its identity. `label-alias-conflict` is two ordinary labels in the same scope; `power-tap-conflict` is two design-wide names, `+3.3V` and `+3V3`, which a human reads as obviously the same rail and a tool must not, because deciding they are the same is the kind of guess that merges two nets nobody meant to merge.
+Both of those are one net with two claims on its identity. `label-alias-conflict` is two ordinary labels in the same scope; `power-tap-conflict` is two design-wide names, `+3.3V` and `+3V3`. A human reads them as obviously the same rail. A tool must not, because deciding they are the same is a guess, and that kind of guess merges two nets nobody meant to merge.
 
 And the mirror:
 
@@ -71,7 +71,7 @@ And the mirror:
 
 One name, two nets, not connected. Somebody has two things called `VCC` and believes they are one thing. Whether that is a typo or a deliberate reuse across scopes, it is worth knowing before the board is built.
 
-The third variant is the tap fixture again with a label instead of a dot. A label sitting where the tap meets the through-wire joins them just as firmly as a junction dot does, because naming a point puts it on that net. That is correct KiCad behaviour and it is much easier to delete by accident, which is why `wire-no-junction`'s pass says *which* construct is holding the tap together rather than only that something is.
+The third variant is the tap fixture again with a label instead of a dot. Put a label where the tap meets the through-wire, and the label joins them just as firmly as a junction dot does, because naming a point puts it on that net. That is correct KiCad behaviour. A label is also much easier to delete by accident, so `wire-no-junction`'s pass says *which* construct is holding the tap together rather than only that something is.
 
 ## Wires that reach nothing (EE2)
 
@@ -79,17 +79,15 @@ The simplest case, and still worth a rule. A wire drawn from a pin out into empt
 
 Nothing electrical happens. The wire contributes nothing, and whatever it was meant to reach is unconnected. Usually somebody started drawing it and got interrupted, or moved the part it pointed at and left the stub behind (you will do this yourself, and the check is how you find out).
 
-`dangling-endpoint` reports these, and the subject is a coordinate rather than a component, because a wire end that reaches nothing has nothing else to be named after. It shares that with `wire-no-junction` above, and those two are the only rules in the catalog whose findings name a location on a sheet rather than a thing on the board. Both are checks about the drawing rather than about the board, which is where the difference comes from.
+`dangling-endpoint` reports these, and the subject is a coordinate rather than a component, because a wire end that reaches nothing has nothing else to be named after. It shares that with `wire-no-junction` above, and those two are the only rules in the catalog whose findings name a location on a sheet rather than a thing on the board. The difference comes from what they examine. Both are checks about the drawing rather than about the board.
 
 ## What the reader can and cannot see (EE2)
 
-Everything in this chapter has one thing in common, and it explains a whole corner of the tool.
+**Nothing in this chapter survives into the netlist**, and that fact explains a whole corner of the tool. A junction dot, a wire that ends in space and a label sitting mid-span are all facts about the *drawing*. By the time the design is a list of nets and pins, the dot has done its work and disappeared, and the dangling wire has left no trace at all. The netlist cannot tell you a dot was missing, because a missing dot just looks like two nets that were always separate.
 
-**None of it survives into the netlist.** A junction dot, a wire that ends in space and a label sitting mid-span are all facts about the *drawing*. By the time the design is a list of nets and pins, the dot has done its work and disappeared, and the dangling wire has left no trace at all. The netlist cannot tell you a dot was missing, because a missing dot just looks like two nets that were always separate.
+So these checks have to happen in the **reader**, at the moment the file is parsed, and the reader attaches its answers to the design as diagnostics. That makes them input diagnostics rather than analysis checks, and they behave differently from the rest of the catalog. `wire-no-junction` reports not-applicable on a netlist format like EDIF rather than passing, because EDIF has no wires in it to examine and a clean result there would mean nothing.
 
-So these checks have to happen in the **reader**, at the moment the file is parsed, and the answers are carried forward as diagnostics attached to the design. That is why they are input diagnostics rather than analysis checks, and why they behave differently from the rest of the catalog. `wire-no-junction` reports not-applicable on a netlist format like EDIF rather than passing, because EDIF has no wires in it to examine and a clean result there would mean nothing.
-
-This is also the limit of the whole approach. A tool reading a netlist can tell you what the netlist says. Whether the netlist matches what the designer meant is a question about intent, and the only reason any of this chapter's defects is catchable is that the drawing keeps enough evidence of intent for a reader to notice the mismatch.
+This is also the limit of the whole approach. A tool reading a netlist can tell you what the netlist says. Whether the netlist matches what the designer meant is a question about intent. This chapter's defects are catchable only because the drawing keeps enough evidence of intent for a reader to notice the mismatch.
 
 ## What you can now answer
 

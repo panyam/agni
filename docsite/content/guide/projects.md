@@ -63,35 +63,36 @@ is called, so renaming or moving the folder renames nothing.
 `conventions:` is the team's naming vocabulary and house rules, in the same shape a `--conventions`
 file takes. [Naming conventions](../naming-conventions/) covers what goes in it.
 
-`checklists:` maps a name to a review checklist. The first one written is the default that
-`agni review <design>` runs, and `--checklist <name>` picks another. `agni checklists <design>`
+`checklists:` maps a name to a review checklist. The first one written is the default, and
+`agni review <design>` runs it. `--checklist <name>` picks another. `agni checklists <design>`
 lists them.
 
-`extends: ../house/project.yaml` layers this project over another one's config, which is how several
-projects share one set of conventions or checklists. The shared one is an ordinary project with no
+`extends: ../house/project.yaml` layers this project over another one's config. Several projects
+share one set of conventions or checklists this way. The shared one is an ordinary project with no
 designs. The architecture page covers how the layers compose.
 
 Every key is checked, and an unknown one is a load error naming its line.
 
 ## The files a project names
 
-Five keys name the files a project's runs read, each a list of paths relative to the descriptor or
-`mount://` URIs, and each path a file or a directory of them:
+Five keys name files for a project's runs to read. Each key is a list of paths relative to the
+descriptor or `mount://` URIs, and each path is a file or a directory of files:
 
 - `profiles` names [interface profiles](../interface-profiles/), which supersede a built-in profile
   of the same name.
 - `params` names published part specs, layered over a shared corpus part by part (see
   [Datasheets](../datasheets/)).
 - `symbols` names symbol libraries for schematics that reference external symbols.
-- `lib` names derived relations, one `.dl` module per file, which every query can call (see
+- `lib` names derived relations, one `.dl` module per file, and every query can call them (see
   [Querying](../querying/)).
-- `queries` names query sets, which `agni query --set <name>` runs and the viewer's Sets menu opens.
+- `queries` names query sets. `agni query --set <name>` runs one, and the viewer's Sets menu opens
+  one.
 
-Nothing is read for its folder's name, so a folder called `profiles/` that no descriptor names is not
-in the run, and to run without a tier you delete its line. A path that names nothing is a load error,
-since reading on without it would report as though the team declared no such tier. A flag naming a
-directory the project already names adds nothing, and for `profiles` it is refused, since the
-profiles would load twice.
+Nothing is read for its folder's name. If no descriptor names a folder called `profiles/`, that
+folder is not in the run, and to run without a tier you delete its line. A path that names nothing is
+a load error, since reading on without it would report as though the team declared no such tier. A
+flag can name the same directory the project names. That adds nothing, and for `profiles` it is
+refused, since the profiles would load twice.
 
 ## design.yaml
 
@@ -112,20 +113,20 @@ intent:
     PMIC_CORE_3V3: {nominal: 3.3, domain: io}
 ```
 
-`extends` names the design's project, and a design takes its project's config only by naming it. A
-design that names none while a `project.yaml` sits in a folder above it is a load error, since that is
-the shape of a forgotten `extends`. A design that names none in a tree with no project reads on its
-own, with whatever its descriptor declares.
+`extends` names the design's project, and a design takes its project's config only by naming it.
+Suppose a design names no project while a `project.yaml` sits in a folder above it. That is a load
+error, since it is the shape of a forgotten `extends`. In a tree with no project, a design that names
+none reads on its own, with whatever its descriptor declares.
 
-`entry` is the file analysis reads, normally the netlist the team produces. `companions` are other
-views of the same design, a drawn schematic for sheets and a board for copper. They are drawn and
-checked against, never read as a second source of components. Naming the design folder, the entry
-or a companion reads the same design with the same tiers, and `--as-named` reads exactly the file
+Analysis reads the `entry` file, which is normally the team's netlist. `companions` are other views
+of the same design, a drawn schematic for sheets and a board for copper. They are drawn and checked
+against, never read as a second source of components. You can name the design folder, the entry or a
+companion, and each reads the same design with the same tiers. `--as-named` reads exactly the file
 you named instead.
 
 `revisions` declares later revisions, each with its own entry and companions, so each reads with its
-own board. [Comparing revisions](../comparing-revisions/#declared-revisions) covers what happens to
-one you leave undeclared.
+own board. [Comparing revisions](../comparing-revisions/#declared-revisions) covers what happens when
+you leave one undeclared.
 
 `intent:` declares what the board is supposed to contain, its modules, rails and pin maps.
 [Design intent](../design-intent/) covers its forms.
@@ -138,12 +139,13 @@ project's in place, and the files it names are read beside the project's. Only a
 `entry`, `companions`, `revisions` and `flatten_hierarchy`, and any of those in a `project.yaml` is a
 load error.
 
-`flatten_hierarchy: true` reads a hierarchical netlist whole, walking into every block its top level
-places, for every surface that opens the design: the CLI with no flag, a server, and the browser.
-Without it a hierarchical EDIF reads as its top cell, and `--flatten-hierarchy` or the viewer's
-**Read every block** asks for the whole design one read at a time. The naming rules for what a walk
-reads are in [Ingestion and the IR](../../architecture/ingestion-and-ir/). A release older than the one
-that added the key refuses a `design.yaml` carrying it, as it refuses any key it does not know.
+`flatten_hierarchy: true` reads a hierarchical netlist whole. The read walks into every block,
+starting at the top level, and every surface that opens the design reads it this way: the CLI with no
+flag, a server, and the browser. Without the key a hierarchical EDIF reads as its top cell, and
+`--flatten-hierarchy` or the viewer's **Read every block** asks for the whole design one read at a
+time. [Ingestion and the IR](../../architecture/ingestion-and-ir/) gives the naming rules for what a
+walk reads. A release from before the key was added refuses a `design.yaml` that carries it, as it
+refuses any key it does not know.
 
 Companions and revisions are listed file by file and never inferred from what sits in the folder,
 because a later revision beside the entry is a design of its own, and inferring would diff it against
