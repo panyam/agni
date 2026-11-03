@@ -81,7 +81,7 @@ and `ssh -X ... agni native open /boards/...`.
 - `natopen` needs XQuartz running (`brew install --cask xquartz`, then launch it) and a `DISPLAY`
   set in the shell. Smoke test the forwarding with
   `ssh -X -p 2222 -o SetEnv=LC_ALL=C.UTF-8 agni@localhost xeyes`. A pair of eyes should appear.
-- `agni native open` blocks until the window closes. The `ssh -X` tunnel has to stay up.
+- `agni native open` blocks until the window closes. The `ssh -X` tunnel has to remain open.
 - `LC_ALL=C.UTF-8` is forced over ssh. Lepton's guile front end aborts on an unavailable forwarded
   locale, and the slim image has none.
 
@@ -96,19 +96,20 @@ EDIF, IPC-2581, and ODB++ have no free macOS-native tool, so board and netlist c
 established without one.
 
 1. IPC-2581 authors component placements and copper pad lands on independent channels. A correct
-   placement puts every pin on its copper, so the distance from each pin to its pad is a ground
-   truth the file carries itself, stronger than a third-party render, which re-derives from the
-   same placement data. This is how the placement geometry was pinned.
+   placement puts every pin on its copper. So the distance from each pin to its pad is a ground
+   truth inside the file itself. A third-party render re-derives from the same placement data, so
+   this check is stronger than one. The placement geometry was pinned this way.
 2. Where a KiCad equivalent exists, `kicad-cli pcb drc` gives a numeric
    oracle. The board DRC counts were cross-checked this way.
 3. ODB++ has an oracle of its own in KiCad 9 and later, which writes a job from any board
-   (`kicad-cli pcb export odb`). The same board read from its `.kicad_pcb` and from the job has to
-   agree, which `TestODBReadsAsItsKiCadSource` holds for every fixture (`make odb-fixtures`
-   regenerates them) and `make odb-oracle` for every samples board, against a baseline of what the
-   exporter itself changes. `AGNI_ODB_PAIRS=board.kicad_pcb=job_dir` adds a board of your own. The
-   cross-check is how three KiCad board reader faults were found (agni issues 1260 and 1261). It
-   cannot show how another producer's dialect differs, which only a job from that producer can, so
-   the gate also reads foxBMS's Altium-written jobs and holds each to itself.
+   (`kicad-cli pcb export odb`). Read the same board from its `.kicad_pcb` and from the job, and
+   the two reads have to agree. `TestODBReadsAsItsKiCadSource` holds every fixture to this, and
+   `make odb-fixtures` regenerates the fixtures. `make odb-oracle` holds every samples board to it,
+   against a baseline of what the exporter itself changes. `AGNI_ODB_PAIRS=board.kicad_pcb=job_dir`
+   adds a board of your own. The cross-check found three KiCad board reader faults (agni issues
+   1260 and 1261). It cannot show how another producer's dialect differs. Only a job from that
+   producer can show that, so the gate also reads foxBMS's Altium-written jobs and holds each to
+   itself.
 4. For a visual sanity pass, a browser IPC-2581/ODB++ viewer (Eurocircuits PCB
    Visualizer, or the BoardUI parser run locally) renders the same file.
 5. For pixel truth, run the Siemens ODB++ Viewer or an IPC-2581 viewer in a VM on

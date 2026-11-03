@@ -2,8 +2,8 @@
 title: Running the gate
 ---
 
-`make testall` is the full gate. CI runs it as its two halves in parallel jobs, `make testall-core`
-and `make browser-test`, which together are exactly `testall`. Green means ship-ready. It also lies
+`make testall` is the full gate. CI runs its two halves, `make testall-core` and `make browser-test`,
+as parallel jobs, and together they are exactly `testall`. Green means ship-ready. It also lies
 to you in three specific ways, and most of this page is about them.
 
 ```mermaid
@@ -33,7 +33,7 @@ flowchart LR
 gitignored. `testall` depends on it, so the gate always has the corpus.
 
 Those boards are real designs published by other people, each under its own licence (Apache-2.0,
-CERN-OHL-P). Keeping them out of this tree lets this repo stay uniformly Apache-2.0. They are
+CERN-OHL-P). We keep them out of this tree, so this repo is uniformly Apache-2.0. They are
 worth having because every fixture we authored was built to the reader's own assumptions, so none of
 them can catch an assumption that is wrong. The first one added found three reader bugs.
 
@@ -43,21 +43,24 @@ The stamp is a hash of the pin file, so editing it re-fetches without anyone rem
 
 **The fetch has no offline mode, and that is deliberate.** Every failure path in
 `hack/fetch_samples.sh` exits non-zero: a download that fails, a checksum that does not match, a
-tarball that extracts to no schematics. A test whose corpus quietly failed to arrive passes over an
-empty set rather than failing, so a missing corpus would read as a green gate.
+tarball that extracts to no schematics. Imagine the corpus quietly failed to arrive. A test that
+reads it then passes over an empty set rather than failing, so a missing corpus would read as a
+green gate.
 
 A checksum mismatch means the published artifact changed or the download was corrupted. Do not update
 the pin to match without establishing which, because a released artifact is meant to be immutable.
 
-There are two tarballs, each with its own stamp so the targets compose. `tutorial-board` is one
+There are four tarballs, each with its own stamp so the targets compose. `tutorial-board` is one
 board's schematics, about 3MB. `oracle-corpus` adds every board's copper for the reader
-cross-checks, about 19MB, and the gate takes that one.
+cross-checks, about 19MB. `odb-altium` holds foxBMS's Altium-written ODB++ jobs. The gate fetches
+those three through `make samples-oracle`, and `make odb-oracle` adds `odb-kicad`.
 
-The stamp is per artifact because a single stamp over the requested SET made the two targets
-alternate: each wiped what the other had fetched. So `make testall` deleted the corpus a cross-view
-test needed, that test skipped, and it ran on nobody's machine for as long as it existed. A skipped
-test reports the same green as a passing one, which is why the tests that read the corpus now call
-`t.Fatalf` when it is absent rather than `t.Skip`.
+Each artifact has its own stamp. An earlier version kept one stamp over the requested SET, and
+`make samples` and `make samples-oracle` then alternated, each wiping what the other had fetched. So
+`make testall` deleted a corpus. A cross-view test needed that corpus, so the test skipped, and it
+ran on nobody's machine for as long as it existed. A skipped test reports the same green as a
+passing one. So the tests that read the corpus now call `t.Fatalf` when it is absent rather than
+`t.Skip`.
 
 ## A fixture that exists twice is checked against its twin
 
@@ -65,17 +68,17 @@ test reports the same green as a passing one, which is why the tests that read t
 be byte-identical, and fails on two things: a declared group that has drifted, and a copy in the tree
 that the manifest does not declare.
 
-The second half is what keeps the manifest complete. Twenty-four groups are declared, so duplication
-here is a habit rather than an accident, and the failure it guards against is a false green rather
-than a missing check. `demo/showcase.passes.kicad_pro` was a snapshot that lost three commits of
-net-class work while the conformance copy kept them, and every check in the repo passed from either
-file because none of them compared the two (agni issue 509).
+The second half keeps the manifest complete. Twenty-four groups are declared, so duplication here is
+a habit rather than an accident, and the failure it guards against is a false green rather than a
+missing check. `demo/showcase.passes.kicad_pro` was a snapshot. It lost three commits of net-class
+work while the conformance copy kept them. Every check in the repo passed from either file, because
+none of them compared the two (agni issue 509).
 
 It cannot infer which files are MEANT to match, and that is settled rather than pending. The tree is
 full of near-twins that must differ: `tjunc.fires` against `tjunc_labeled` and `tjunc_dotted`,
-`rev-a` against `rev-b`, `twosheet.fires` against `hier_root`, which are identical but for the sheet
-filename each names. Nothing in the content separates those from a copy that drifted, so the manifest
-declares intent and the check enforces it.
+`rev-a` against `rev-b`, `twosheet.fires` against `hier_root`. The last two are identical except for
+the sheet filename each one names. Nothing in the content separates those from a copy that drifted,
+so the manifest declares intent and the check enforces it.
 
 On a red, fix by hand. The check names both paths and does not know which is right.
 `hack/fixture_copies_check.sh --dump` prints the tree's copy groups for SEEDING a new entry, writes
@@ -86,11 +89,11 @@ It reads new unstaged files as well as committed ones, so it has no commit-first
 
 ## The architectural constraints are tests, not a checklist
 
-`CONSTRAINTS.md` holds C1 to C33 and nineteen of them fail the gate. They ride in under `go test ./...`
-rather than a target of their own, so nothing in the diagram above names them, which is easy to read
-as the document being advisory. It is not.
+`CONSTRAINTS.md` holds C1 to C35, and twenty-one of them fail the gate. They run under
+`go test ./...` rather than a target of their own, so nothing in the diagram above names them. That
+absence is easy to read as the document being advisory. It is not.
 
-Where a constraint's test lives follows from what it READS, and there are three homes:
+What a constraint's test READS decides where the test lives.
 
 | Reads | Home | Examples |
 |---|---|---|
@@ -99,8 +102,8 @@ Where a constraint's test lives follows from what it READS, and there are three 
 | a line of source somewhere nobody would think to guard | `internal/constraints` | C6, C12, C20, C22, C24, C25, C28, C33 |
 | what two surfaces print for one answer | a parity test beside the surface | C35 in `cmd/agni/tabulate_test.go`, and its Python ratchet |
 
-The other thirteen are REVIEW questions and say so, and C15 is a tombstone merged into C17. C5 turns
-on whether an ingestion path was approved, which is a fact about a conversation. C21 forbids
+The other thirteen are REVIEW questions and say so, and C15 is a tombstone merged into C17. C5 asks
+whether an ingestion path was approved, and that is a fact about a conversation. C21 forbids
 sourcing component identity from a geometry model, and a rule that did would compile and pass. A
 proxy test for those would pass and read as the rule holding, which is worse than prose. The
 reasoning is in `DECISIONS.md`, under "A constraint's Verify is a test, or it says why it cannot
@@ -109,18 +112,18 @@ be".
 **A new rule owes a test, never a command typed into the document.** The September 2026 audit read
 every constraint against the tree and found that a Verify written as a `grep` rots in four distinct
 ways. Two returned hits on clean code, because the tree beneath them had grown legitimate new call
-sites. Two deferred themselves to work that had since landed. One could not fail at all, because
-what it grepped lives in a separate Go module. And two rules had no Verify while the tree already
+sites. Two deferred themselves to work that had since merged. One could not fail at all, because it
+grepped code in a separate Go module. And two rules had no Verify while the tree already
 violated them, both found by reading rather than by anything failing. Both halves of a structural
 violation compile and pass, so nothing surfaces one until somebody re-reads the rule.
 
 Two shapes are worth copying when you write one. A graph or single-writer check needs a POSITIVE
-CONTROL, so a pattern that matched nothing fails instead of reading as clean, and that keeps a
-check alive through a rename that would otherwise make it vacuous. And when the invariant is
-narrower than anything a sweep can express, use a RATCHET with an allowlist rather than weakening it.
-C24 wants "the raw unit is never COMPARED outside `core/param`", but no sweep can tell a comparison
-from a display, so the two display sites are listed in the test and a new one is a deliberate
-addition. That addition is where a reviewer sees it.
+CONTROL, so a pattern that matches nothing fails instead of reading as clean. A rename can leave
+such a check matching nothing, and the control then fails it rather than letting it pass vacuously.
+And when the invariant is narrower than anything a sweep can express, use a RATCHET with an
+allowlist rather than weakening it. C24 wants "the raw unit is never COMPARED outside
+`core/param`", but no sweep can tell a comparison from a display. So the test lists the two display
+sites, and a new one has to be added there on purpose. A reviewer sees it in that addition.
 
 Red-check every one of them, per [evidence](../evidence/): break the thing it guards, watch it fail,
 put it back.
@@ -142,56 +145,58 @@ answers differently on arm64 and amd64 and no amount of regenerating makes it ag
 gate's only exemption. A capture belongs in it only when its command is not a function of this repo,
 and never because it went stale.
 
-**It checks the capture and not the prose around it.** A page that quotes a run's last line in a
-hand-written fence keeps whatever numbers it was written with, because the check regenerates
-`*.output` files and never reads the markdown citing them. `05-your-interfaces.md` carried
-`14 finding(s) ... 32 rule(s)` through a change that moved the run to 27 and 36, and the gate was
-green the whole time. When a change moves a capture, grep the docsite for the numbers that moved
-before believing the tutorials still read correctly.
+**It checks the capture and not the prose around it.** Imagine a page that quotes a run's last line
+in a hand-written fence. The page keeps whatever numbers it was written with, because the check
+regenerates `*.output` files and never reads the markdown citing them. `05-your-interfaces.md`
+carried `14 finding(s) ... 32 rule(s)` through a change that moved the run to 27 and 36, and the
+gate was green the whole time. When a change moves a capture, grep the docsite for the numbers that
+moved before believing the tutorials still read correctly.
 
 **The images the docs embed get the same check.** `docsite-images-check` runs `docsite/images.sh`,
-which renders the board drawings the tutorial and the `learn/` chapters show, and fails on any
-difference, in about two seconds. A reader change made it necessary, not a renderer one: "Name
-KiCad nets as KiCad does" moved every `data-net` on the Jetson Power sheet a day after that drawing
-was committed, and no stamp over the renderer would have seen it (agni issue 453). The two drawings
-on the demos page are copies of render goldens, so `fixture-copies-check` holds them to the goldens
-the render tests keep current. Nothing in `images.sh` may use `--layout force`, for the reason
-above. Every other layout, and every faithful sheet, renders byte-identical on arm64 and amd64, once
-a rotated label's pivot prints at one decimal like the coordinates around it.
+which renders the board drawings shown in the tutorial and the `learn/` chapters. It fails on any
+difference, in about two seconds. A reader change made it necessary, not a renderer one. The change
+"Name KiCad nets as KiCad does" moved every `data-net` on the Jetson Power sheet a day after that
+drawing was committed, and no stamp over the renderer would have seen it (agni issue 453). The two
+drawings on the demos page are copies of render goldens, so `fixture-copies-check` holds them to
+those goldens, and the render tests keep the goldens current. Nothing in `images.sh` may use
+`--layout force`, for the reason above. Every other layout and every faithful sheet renders
+byte-identical on arm64 and amd64, now that a rotated label's pivot prints at one decimal like the
+coordinates around it.
 
 It snapshots and restores, so it carries no commit-first trap and leaves the tree as it found it
 whether it passes or fails. That matters more here than for the catalog, because captures move on any
 fixture or output change and the natural loop is to regenerate and run the gate before committing.
 
-**The GENERATOR has the ordering rule the checker does not.** A stamp hashes `git ls-files` for the
-fixture directory, so it is a hash of COMMITTED content and of the tracked file LIST. `make
-tutorial-runs` run before you commit a new fixture file computes a stamp that does not know about it,
-and the gate then goes red after the commit lands. Commit the fixtures first, regenerate second.
+**The GENERATOR has an ordering rule, and the checker does not.** A stamp hashes `git ls-files` for
+the fixture directory, so it is a hash of COMMITTED content and of the tracked file LIST. Say you run
+`make tutorial-runs` before you commit a new fixture file. It computes a stamp that does not know
+about that file, and the gate then goes red after you commit. Commit the fixtures first, regenerate
+second.
 
 **That ordering is now enforced rather than remembered** (agni issue 588). `inputHash` refuses a
 fixture holding files git neither tracks nor ignores, naming them and saying to commit first, so the
-local run fails the way CI would instead of passing and failing one push later. It cost three
-branches in one session before the check existed, twice right after the person had described the
-trap. Files git IGNORES stay invisible, because counting them was agni issue 357, where the
+local run fails the way CI would instead of passing and failing one push later. Before the check
+existed, the trap cost three branches in one session, twice right after the person had described
+it. The stamp still leaves out files git IGNORES. Counting them caused agni issue 357. There the
 tutorial's own `make report` output meant everyone who had followed the tutorial rewrote the
-committed stamp on every gate run. `--exclude-standard` is the line between generated output nobody
-commits and a fixture somebody forgot to.
+committed stamp on every gate run. `--exclude-standard` separates generated output, which nobody
+commits, from a fixture file somebody forgot to commit.
 
-**A fixture under `tools/samples/` is the one that is meant to be ignored**, because `make samples`
+**A fixture under `tools/samples/` is meant to be ignored**, because `make samples`
 fetches it and the boards carry their own licences. A directory holding no tracked file at all is
 refused, so for a fetched board the stamp hashes `hack/samples.pin` and the fixture's path in place
 of the content (agni issue 682). A pin bump therefore regenerates every capture that reads a fetched
 board, including the ones whose board did not change, since the pin names artifacts rather than
-boards. The stamp needs no corpus on disk, so the docs workflow, which never fetches one, can still
-tell a current capture from a stale one. Only regenerating needs the board, and a run without it
-says to `make samples`.
+boards. The docs workflow never fetches a corpus, and the stamp needs none on disk, so the workflow
+can still tell a current capture from a stale one. Only regenerating needs the board, and a run
+without it says to `make samples`.
 
 A spec that cannot render does NOT fail the docsite build, because `AgniRun` deliberately puts the
 error in the page, on the theory that a tutorial showing an error is a tutorial someone fixes. It
-also writes to stderr now, because an operator running the build otherwise sees nothing at all, and
-`tutorial_runs_check.sh` keeps that output and prints it when a capture did not regenerate rather
-than merely changing. A MISSING capture and a stale one look identical in a `diff -rq` and want
-opposite responses.
+also writes to stderr now, because an operator running the build otherwise sees nothing at all.
+`tutorial_runs_check.sh` keeps that output, and prints it when a capture did not regenerate at all,
+as opposed to merely changing. A MISSING capture and a stale one look identical in a `diff -rq` and
+want opposite responses.
 
 Because a stamp hashes every tracked file in its fixture directory, **a file added to a fixture
 directory restamps every capture reading that directory, whatever the file is for.** The directories
@@ -199,7 +204,7 @@ are shared test-data trees, not per-capture folders, so an addition made for an 
 moves captures that have nothing to do with it. Adding bus fixtures to `readers/kicad/testdata/`
 restamped five captures across `guide/` and `learn/`.
 
-| fixture directory | captures riding on it |
+| fixture directory | captures that read it |
 |---|---:|
 | `examples/tutorial-project` | 61 |
 | `cmd/agni/testdata/conformance` | 25 |
@@ -209,7 +214,7 @@ restamped five captures across `guide/` and `learn/`.
 | `examples/common/designs` | 3 |
 
 `readers/kicad/oracle_corpus.baseline` used to sit in `readers/kicad/testdata/`, so regenerating it
-churned those five captures for no reason anyone could act on. It was moved out to break that. The
+churned those five captures for no reason anyone could act on. We moved it out to break that. The
 coupling is gone in both directions now, so a reader fix that shrinks the baseline no longer moves
 the captures, while a change touching the fixtures still needs its own `make tutorial-runs` after
 the commit.
@@ -222,28 +227,29 @@ diagnosed there rather than surfacing later as a confusing `examples-test` failu
 
 It exists because the gate built every module and never asked whether one was tidy, and those are
 different questions. An untidy module keeps building until some later change happens to need a
-requirement it never recorded, so the drift is invisible for exactly as long as nobody adds a
-dependency. **Eleven of the example modules had drifted this way before anyone looked.** They
-surfaced by accident, when promoting one root dependency to direct made `examples-test` fail with
-"updates to go.mod needed", and the tidy that fixed it swept up years of accumulated drift in the
-same commit.
+requirement, and the module never recorded it. So the drift is invisible for exactly as long as
+nobody adds a dependency. **Eleven of the example modules had drifted this way before anyone
+looked.** They surfaced by accident, when promoting one root dependency to direct made
+`examples-test` fail with "updates to go.mod needed", and the tidy that fixed it swept up years of
+accumulated drift in the same commit.
 
-The examples are separate modules on purpose (C10, so demokit and its terminal-UI dependencies stay
-out of the engine's `go.mod`), so each carries its own resolved graph and nothing recomputed them
-together.
+The examples are separate modules on purpose (C10). That keeps demokit and its terminal-UI
+dependencies out of the engine's `go.mod`. So each example carries its own resolved graph, and
+nothing recomputed them together.
 
-**It snapshots and restores rather than reading `git status`**, the shape `tutorial-runs-check` uses
-and for the same reason. Reaching for `git diff` here is wrong twice over, and both ways were found
-by deliberately drifting a manifest and watching an early version pass. It misses the drift whenever
-tidy happens to restore a file to what HEAD already had, and it reports every unrelated uncommitted
-edit as untidiness, which is the regenerate → commit → gate ordering this shape exists to avoid.
+**It snapshots and restores rather than reading `git status`**, as `tutorial-runs-check` does and for
+the same reason. Reaching for `git diff` here is wrong twice over. We found both ways by
+deliberately drifting a manifest and watching an early version pass. `git diff` misses the drift
+whenever tidy happens to restore a file to what HEAD already had. It also reports every unrelated
+uncommitted edit as untidiness. That would bring back the regenerate → commit → gate ordering, and
+this shape exists to avoid it.
 
 ## The three traps
 
 **Never judge it by a wrapper's status.** `make testall | tail` reports *tail's* exit code, so a red
 gate reads green and an `&&` chain sails on. Twice now. The pipe is the common instance and not the
-only one, since anything that runs the gate on your behalf and then reports its own completion, a
-task runner or a CI step or an agent harness, is reporting on ITSELF. One such wrapper announced
+only one. A task runner, a CI step or an agent harness can run the gate on your behalf and then
+report its own completion, and that report is about ITSELF. One such wrapper announced
 success for a run whose `browser-test` had failed, and the run's own status was sitting in the log.
 Write the status into the log and read it from there, so the number you read came from make:
 
@@ -251,7 +257,7 @@ Write the status into the log and read it from there, so the number you read cam
 
 **`catalog-docs-check` is git-status-based**, so a regenerated docsite file that is not yet COMMITTED
 reads as stale. Anything touching the shipped rule or relation catalog regenerates
-`docsite/content/reference/`, so the commit has to land before the gate runs:
+`docsite/content/reference/`, so you have to commit before the gate runs:
 
 ```mermaid
 flowchart TB
@@ -268,8 +274,9 @@ at the repo root if web deps changed; the web code is one pnpm workspace (`web/`
 `datasheet/web/`) with one lockfile there. A plain re-install can be INSUFFICIENT, because a partially-populated
 `node_modules` survives it and the bundle dies deep inside a transitive dep, which reads as a code bug
 rather than a toolchain one. **When the second error differs from the first**, stop re-installing and
-go to `rm -rf node_modules */node_modules datasheet/web/node_modules && pnpm install`. Match on the SHAPE, a failure inside a dep you did
-not touch right after a checkout switch or a fresh clone, not on the message.
+go to `rm -rf node_modules */node_modules datasheet/web/node_modules && pnpm install`. Match on the
+SHAPE and not on the message. The shape is a failure inside a dep you did not touch, right after a
+checkout switch or a fresh clone.
 
 ## A red gate that is none of your business
 
@@ -278,8 +285,9 @@ it wasted an afternoon being mistaken for a regression on `main`.
 
 **A server already listening on :8080 fails three verdict-link tests.** `--server <url>` asks the server
 at that address whether it serves the mount a link would name, and withholds the link when the answer
-is no. That is the feature working. But a development `agni serve` left running from earlier answers
-the probe, does not serve the tests' `demo` mount, and every link is withheld:
+is no. That is the feature working. But say a development `agni serve` is still running from
+earlier. It answers the probe, it does not serve the tests' `demo` mount, and every link is
+withheld:
 
     note: http://localhost:8080 serves no mount named "demo", so every link would resolve to nothing
 
@@ -288,15 +296,15 @@ the probe, does not serve the tests' `demo` mount, and every link is withheld:
 failure in that trio, check the port.
 
 **The server does not have to be one you started.** A gate run that dies partway can leave its own
-`agni serve` behind, and the next run then fails this trio for a reason the previous run created.
-Its command line names a binary under `~/Library/Caches/go-build` and the tests' own `--mount
-demo=demo`, which is how you tell a leaked one from a development server worth keeping. `lsof -nP
--iTCP:8080 -sTCP:LISTEN` is the whole diagnosis. More generally, this suite reaches out of the
-process, so **reproduce a suspected regression against unmodified `main` before reporting it**,
-which is what turned this one from a bug report into a `pkill`.
+`agni serve` behind, and the next run then fails this trio because of the previous run. Its command
+line names a binary under `~/Library/Caches/go-build` and the tests' own `--mount demo=demo`. Those
+two tell a leaked server from a development server worth keeping. `lsof -nP -iTCP:8080
+-sTCP:LISTEN` is the whole diagnosis. More generally, this suite reaches out of the process, so
+**reproduce a suspected regression against unmodified `main` before reporting it**. Reproducing
+turned this one from a bug report into a `pkill`.
 
 **A gate that greps the tree sees a nested checkout too.** An agent that finishes inside this repo
-can leave a git worktree under `.claude/worktrees/`, a second full copy of the source, and
+can leave a git worktree under `.claude/worktrees/`, a second full copy of the source.
 `ir_model_check.sh` then found every reader's producer twice and failed. It skips that directory
 now. Like the stamp trap, it came from a check reading the working directory rather than the commit.
 
@@ -307,18 +315,16 @@ because its answer changes without the code changing. The advisory database move
 scan on every pull request would mostly re-answer last week's question and still miss an advisory
 published between pull requests. `.github/workflows/vulncheck.yml` runs it weekly and on each
 release tag and files an issue when it fails, and `make audit` runs it with the three scanners the
-gate does run. Those three (`lint`, `seccheck`, `secrets`) run each tool through `go run` at the
-version the Makefile pins, so nothing has to be installed, and gosec runs under the Go that `go.mod`
-names, because under a newer one its SSA-based rules (G115 and the taint rules) skip without a word.
-A gosec finding is fixed or annotated on
-its line as `// #nosec G<n> -- <why>`, and a gitleaks false positive is allowlisted by exact value in
-`.gitleaks.toml`.
+gate does run. The three are `lint`, `seccheck` and `secrets`. Each runs its tool through `go run`
+at the version the Makefile pins, so nothing has to be installed. gosec runs under the Go that
+`go.mod` names, because under a newer one its SSA-based rules (G115 and the taint rules) skip
+without a word. A gosec finding is fixed or annotated on its line as `// #nosec G<n> -- <why>`, and
+a gitleaks false positive is allowlisted by exact value in `.gitleaks.toml`.
 
 `make oracle` cross-checks the KiCad reader against real boards, and is outside `testall` because of
-what it costs. It reads a design's schematic our way, reads the same design's `.kicad_pcb` for the
-netlist KiCad itself resolved, and requires the two to agree on which pins share a net. That needs
-the 19MB both-views corpus rather than the 3MB the gate already fetches, so the target pulls it
-first.
+what it costs. It reads a design's schematic our way. It reads the netlist KiCad itself resolved
+from the same design's `.kicad_pcb`. It then requires the two to agree on which pins share a net.
+That needs the 19MB both-views corpus, so the target pulls it first.
 
 It compares the PARTITION, never net names and never counts, for the reasons [net
 solving](../../architecture/net-solving/#verification-method) gives.
@@ -326,10 +332,10 @@ solving](../../architecture/net-solving/#verification-method) gives.
 It asserts a COMMITTED BASELINE of the disagreements rather than demanding zero, because several
 reader defects are still open and a test that has never passed teaches nothing.
 `readers/kicad/oracle_corpus.baseline` names the nets we still get wrong, so a fix shrinks the file
-and a regression grows it; `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Two boards is not a
-survey, and the file records that neither crosses a sheet boundary with a bus vector, so it does not
-move when that fix is reverted. The in-gate fixture pair (`hier_busvec_root.kicad_sch` against
-kicad-cli's own netlist) is that guard.
+and a regression grows it; `AGNI_ORACLE_UPDATE=1 make oracle` rewrites it. Two boards are not a
+survey. The file records that neither board crosses a sheet boundary with a bus vector, so the
+baseline does not move when that fix is reverted. An in-gate fixture pair guards that fix instead,
+`hier_busvec_root.kicad_sch` against kicad-cli's own netlist.
 
 ```mermaid
 flowchart LR
@@ -340,50 +346,51 @@ flowchart LR
 
 The browser suite runs inside `testall`, and in CI as a job of its own beside the rest of the gate
 (agni issue 1147). It needs a Chromium installed per machine (`cd web && pnpm
-exec playwright-core install chromium`; CI installs and caches one) and starts its own server on a
-kernel-picked port, so it will not fight a dev server you already have. `make hooks` installs an
+exec playwright-core install chromium`), and CI installs and caches one. It starts its own server
+on a kernel-picked port, so it will not fight a dev server you already have. `make hooks` installs an
 opt-in pre-push hook that runs it before a push leaves your machine.
 
-**A spec runs the CLI through the binary `serve.ts` built, never `go run`.** A spec points `HOME` at
-an empty directory so a personal `agni.yaml` stays out of the run, and under `go run` that also
-points Go's build cache at the empty directory, so every call rebuilt agni from nothing. That was
-about 30 s per comparison test on a CI runner and most of the suite's six minutes. `agniBin()` in
-`web/browser/agnibin.ts` is the binary to use.
+**A spec runs the CLI through a built binary, never `go run`.** `serve.ts` builds it, and `agniBin()`
+in `web/browser/agnibin.ts` names the binary to use. A spec points `HOME` at an empty directory to
+keep a personal `agni.yaml` out of the run. Under `go run` that also points Go's build cache at the
+empty directory, so every call rebuilt agni from nothing. That was about 30 s per comparison test on
+a CI runner and most of the suite's six minutes.
 
-`HEADED=1` runs the suite in a visible Chrome, and `SLOWMO=<ms>` paces each action, which is the
-quickest way to see why a layout assertion failed. One spec is a walk rather than a layout check.
-`review-walk.spec.ts` goes through mission #845's review from checklist to saved report, asserting
-structure rather than today's counts. The gate walks the tutorial project's small gateway board, and
-`make exercise-browser-review` runs the same spec on Jetson (`WALK_DESIGN=gateway` for the small one)
-and writes the step table the mission log quotes. The walk takes the viewer's review tour
-(`web/src/reviewtour.ts`). Headed, the default, you do each tour step yourself while the walk checks the
-result, and the walk's own steps stop to say what they check. `STEP_BY_STEP=0` has the walk take the
-tour itself, and `HEADED=0` runs it headless and straight through, which is how a script or an agent
-logging the mission runs it. Headless the walk still acts through the tour's holes, so in the gate a
-step whose hole misses its control, or whose action the viewer reports no event for, fails the walk.
+`HEADED=1` runs the suite in a visible Chrome, and `SLOWMO=<ms>` paces each action. Watching a paced
+run is the quickest way to see why a layout assertion failed. One spec is a walk rather than a
+layout check. `review-walk.spec.ts` goes through mission #845's review from checklist to saved
+report, asserting structure rather than today's counts. The gate walks the tutorial project's small
+gateway board. `make exercise-browser-review` runs the same spec on Jetson (`WALK_DESIGN=gateway`
+for the small one) and writes the step table for the mission log. The walk takes the viewer's review
+tour (`web/src/reviewtour.ts`). The default is headed. You then do each tour step yourself while the
+walk checks the result, and the walk's own steps stop to say what they check. `STEP_BY_STEP=0` has
+the walk take the tour itself. `HEADED=0` runs it headless and straight through, and a script or an
+agent logging the mission runs it that way. Headless, the walk still acts through the tour's holes.
+So in the gate a step fails the walk when its hole misses its control, or when the viewer reports no
+event for its action.
 
 **A Chromium that is present can still be the wrong one, and the message blames the wrong thing.**
 Playwright pins a browser BUILD per release, so `playwright-core` 1.62.1 wants chromium 1234 and a
 cache holding only 1243 fails with `Looks like Playwright was just installed or updated`. That reads
-as a change in your checkout, which may not have changed at all. The cause is that the browser cache
-is per MACHINE (`~/.cache/ms-playwright`) while `node_modules` is per clone, so a second checkout on
-a newer `playwright-core` installs its own revision and prunes the one this checkout wants. Read the
+as a change in your checkout, which may not have changed at all. The browser cache is per MACHINE
+(`~/.cache/ms-playwright`), while `node_modules` is per clone. So a second checkout on a newer
+`playwright-core` installs its own revision and prunes the one this checkout wants. Read the
 wanted revision out of `web/node_modules/playwright-core/browsers.json` rather than guessing, and
 re-run the install, which fetches the missing revision and leaves any other in place, so the other
 checkout keeps its browser. The system libraries are version-independent and do not need
 `install-deps` again.
 
 It was outside the gate until PR 629, on the argument that a machine without a browser should not go
-red for a reason unrelated to the change under test. What overturned that was v0.2.0 shipping a
-viewer whose query surface booted hidden behind the Trace tab. Every jsdom assertion passed, because
-the textarea was present the whole time and only its visibility was wrong, and the browser suite that
-did catch it ran after the tag was pushed. A suite that runs when somebody remembers is a suite that
-runs after the release. The specs take about 16 seconds; the real cost was always the browser
-download, which is now a cached CI step and a one-time cost for a developer.
+red for a reason unrelated to the change under test. Then v0.2.0 shipped a viewer whose query
+surface booted hidden behind the Trace tab, and that overturned the argument. Every jsdom assertion
+passed, because the textarea was present the whole time and only its visibility was wrong. The
+browser suite did catch it, but it ran after the tag was pushed. If a suite runs only when somebody
+remembers, it runs after the release. The specs take about 16 seconds; the real cost was always the
+browser download, which is now a cached CI step and a one-time cost for a developer.
 
 **Add to it sparingly.** Anything assertable in jsdom belongs in `src/*.test.ts`, which runs in a
 fraction of the time and on any machine. A test belongs here only when its claim is about pixels.
-Read the layout traps in `build/evidence.md` first: two versions of the first test there went green
+Read the layout traps in `build/evidence.md` first. Two versions of the first test there went green
 with the CSS under test deleted.
 
 ## What a run leaves behind
@@ -396,8 +403,8 @@ with the CSS under test deleted.
 
 If you add another generated artifact like a tutorial run's `#agni-run` stamp, a value written INTO a
 committed file has to be a function of committed content, or no single value can be correct for two
-people at once. Regenerating and committing is the fix that looks right and only moves the staleness
-to whoever has not run the thing yet.
+people at once. Regenerating and committing looks like the fix, but it only moves the staleness to
+whoever has not run the thing yet.
 
 The `.kicad_prl` ignore rule is SCOPED to `readers/kicad/testdata/` rather than a blanket
 `*.kicad_prl`, because the two under `cmd/agni/testdata/conformance/` are tracked on purpose so a
@@ -421,8 +428,8 @@ CI passed.
 imports in `gen/go/agni/v1/param/param.pb.go` turned main red, because `proto-check` compares the
 generated tree byte for byte, and **every open PR inherited the failure** since CI checks out the
 merge with main. The same commit sanitized a generated rule page differently from its `stdlib/`
-source, which the next `catalog-docs` run would have silently undone. Edit the SOURCE and regenerate,
-and exclude `gen/` and the generated docsite directories from any tree-wide sweep.
+source, and the next `catalog-docs` run would have silently undone that. Edit the SOURCE and
+regenerate, and exclude `gen/` and the generated docsite directories from any tree-wide sweep.
 
 **An editor reporting the generated types as MISSING is usually a stale language server.** After a
 branch switch the LSP can insist `Module ... has no exported member 'Foo'` for symbols that are

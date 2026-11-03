@@ -38,8 +38,8 @@ unchanged in the CLI, in the server, and in tests over an in-memory fixture.
 
 ## The registry entry
 
-Every format the engine reads is one entry in the registry, a `formats.Format` value keyed by
-extension (`readers/formats/formats.go`):
+Each format has one entry in the registry, a `formats.Format` value keyed by extension
+(`readers/formats/formats.go`):
 
 ```go
 type Format struct {
@@ -56,8 +56,8 @@ plain netlist format sets only `Design`. A schematic format that also carries dr
 sets `Design` and `Geometry`. A board format sets `Board`. `.eds` is dual-capability (`Design`
 plus `Geometry`), and `.kicad_pcb` and the IPC-2581 extensions show the `Board` case.
 
-For a built-in reader, add the registration to `readers/formats/registry.go`'s `init`. The wiring for a
-netlist-only format is one adapter that opens the file and hands the bytes to your pure `Read`:
+For a built-in reader, add the registration to `readers/formats/registry.go`'s `init`. A
+netlist-only format needs one adapter that opens the file and hands the bytes to your pure `Read`:
 
 ```go
 Register(&Format{Ext: ".myfmt", Name: "myfmt", Design: readMyFmt})
@@ -72,7 +72,7 @@ func readMyFmt(l *Loader, path string) (*ir.Design, error) {
 }
 ```
 
-Reach for the bytes through `l.Open` (or `l.ReadFile`), never `os` directly. The `Loader` decides
+Read the bytes through `l.Open` (or `l.ReadFile`), never `os` directly. The `Loader` decides
 what a path resolves against: the host filesystem by default, or an in-memory `fs.FS` when the host
 has no filesystem at all, such as a WASM build or an embedder holding designs in memory. A reader
 that opens its own files works on a server and fails everywhere else, and the failure looks like a
@@ -84,9 +84,9 @@ errors surfaced at process start, not runtime conditions. The `Ext` has to be lo
 with a dot, `Name` has to be non-empty, and at least one of the three capability funcs has to be
 set.
 
-Once registered, the extension resolves everywhere that reads this one table, which is the CLI
-reader dispatch, the file-tree label, and the supported-extensions error text. There is no
-second table to update.
+Once registered, the extension resolves in the CLI reader dispatch, the file-tree label, and the
+supported-extensions error text. All three read this one table, and there is no second table to
+update.
 
 ## One format, several extensions
 
@@ -102,7 +102,7 @@ for _, ext := range []string{".edn", ".edf", ".edif"} {
 Extension matching is case-insensitive, so `.EDF` resolves through the `.edf` entry with no extra
 registration.
 
-A reader existing is not the same as its files being visible. For years the EDIF corpus was
+A reader can exist while its files are still invisible. For years the EDIF corpus was
 invisible in the file tree and rejected by the CLI because only the nonstandard `.edn` was wired,
 even though the parser handled `.edf` fine. When a folder of files shows nothing, check that the
 extension is registered before suspecting the reader.
@@ -132,18 +132,18 @@ func readIPC2581(l *Loader, path string) (*ir.Design, error) {
 
 The `.sch` adapter sniffs the same way, dispatching to the xschem or gEDA reader by header.
 
-## Multi-file resolution stays in `formats`, not the reader
+## Multi-file resolution belongs in `formats`, not the reader
 
 {{ includeFile "figures/reader-boundary.svg" }}
 
-A format that references other files (KiCad sub-sheets, xschem or gEDA symbol libraries) still
-does not open a second file inside the reader. The `Loader` builds an opener closure and passes it
-in, so the reader receives already-resolved bytes or a resolver it can call, and the file I/O stays
-in one place.
+Some formats reference other files, such as KiCad sub-sheets and xschem or gEDA symbol libraries.
+Their readers still do not open a second file. The `Loader` builds an opener closure and passes it
+in, so the reader receives already-resolved bytes or a resolver it can call, and all file I/O
+happens in one place.
 
-The `Loader` carries the configuration a reader needs beyond the file itself: the `--symbol-path`
-search directories, the naming vocabulary reads are stamped with, and the file namespace those
-paths resolve in (abridged from `readers/formats/loader.go`):
+The `Loader` also carries configuration a reader needs beyond the file itself. It holds the
+`--symbol-path` search directories, the naming vocabulary that stamps each read, and the file
+namespace those paths resolve in (abridged from `readers/formats/loader.go`):
 
 ```go
 type Loader struct {
@@ -173,22 +173,22 @@ an opener closure and build that closure in the registry adapter, following `she
 `readers/formats/registry.go` and `symbolOpener` in `readers/formats/loader.go`.
 
 Any diagnostic that depends on the referenced files has to account for a failed resolution. An
-unresolved symbol drops that symbol's pins, so wire ends meant to land on it read as dangling.
+unresolved symbol drops that symbol's pins, so wire ends meant to end on it read as dangling.
 Gate any such check on full resolution rather than reporting the phantom findings.
 
 ## A format that is a directory
 
 ODB++ is the one format whose design is a directory tree rather than a file (agni issue 1250). Its
-reader (`readers/odb`) takes an `fs.FS` rooted at the job instead of an `io.Reader`, which keeps it
-as runtime-agnostic as a single-file reader. The registry adapter builds that `fs.FS` over the
+reader (`readers/odb`) takes an `fs.FS` rooted at the job instead of an `io.Reader`, so it is as
+runtime-agnostic as a single-file reader. The registry adapter builds that `fs.FS` over the
 `Loader`, so every file the job opens is still reached through `l.Open` and recorded for the cache,
 and an archive (`.tgz`, `.zip`) is unpacked in memory into the same shape.
 
 The registry is keyed by extension and a directory has none, so a job is entered by one file inside
-it, `matrix/matrix`, which `lowerExt` files under a key of its own. Two hosts then need the job's
-real extent rather than the entry's folder, and `formats.DesignRoot` answers it for both:
-`ListDesignFiles`, which gathers the files a browser engine fetches, and the proposer, which turns a
-dropped folder into designs. A second directory format would answer through the same function.
+it, `matrix/matrix`. `lowerExt` files that path under a key of its own. Two hosts then need the
+job's real extent rather than the entry's folder. `ListDesignFiles` gathers the files a browser
+engine fetches, and the proposer turns a dropped folder into designs. `formats.DesignRoot` answers
+the question for both, and a second directory format would answer through the same function.
 
 ## What the Loader does after your reader returns
 
@@ -214,38 +214,39 @@ classify.StampClassesFromSpecs(d, deviceClassFor) // device classes a datasheet 
 ```
 
 A server and the browser engine keep the parse and derive it again for each overlay (agni issue
-1061), so a new pass goes in the half that matches what it reads. A pass that reads a vocabulary
-placed in `ParseDesign` would be kept under one project's conventions and served under another's.
+1061), so a new pass goes in the half that matches what it reads. Suppose a pass that reads a
+vocabulary sits in `ParseDesign`. Its output would be kept under one project's conventions and
+served under another's.
 
 These run for every reader, so a new reader does not have to reproduce them. Build a faithful IR
 (components, nets, pins, provenance) and the shared passes fill in the derived facts. If your
 format under-types a construct the way EDIF types every supply pin as a plain input, the stamp
 passes normalize it after the fact rather than pushing that concern into your parser.
 
-### The part number is the one to get wrong quietly
+### Getting the part number wrong fails quietly
 
 Record the manufacturer part number wherever your grammar states it, under whatever key the format
-spells it, and on the part type if that is where the format puts it. `StampMPN` fills the typed
+spells it, and on the part type if the format puts it there. `StampMPN` fills the typed
 `ir.Component.mpn` field, trying the component's own attributes under each alias first and then the
 component's part type.
 
 Do not write your own promotion. Both halves of this used to live inside the EDIF reader, so EDIF
 designs resolved part numbers and no other format did. Telesis recorded the number on the part type,
 every consumer read the component, and `component.mpn` came back empty for every component of every
-`.tel` design, which silently disabled the whole datasheet tier on that format (agni issue 519).
-Nothing failed, because a parameter rule that finds no part number cannot tell "no datasheet seeded"
-from "this format never delivers one".
+`.tel` design. That silently disabled the whole datasheet tier on that format (agni issue 519).
+Nothing failed, because when a parameter rule finds no part number, it cannot tell "no datasheet
+seeded" from "this format never delivers one".
 
 If your format spells the key in some new way, add the spelling to `classify.MPNAliases` rather than
-normalizing it in your reader. The vocabulary is data, in one place, shared with the readers that
-need it to find the fact in their own grammar, and a project extends it with the lexicon's
-`attribute.mpn` without touching either. Keep a format's other fields where the attribute keys can
+normalizing it in your reader. The vocabulary is data in one place. Readers share it
+to find the fact in their own grammar, and a project extends it with the lexicon's `attribute.mpn`
+without touching either. Keep a format's other fields where the attribute keys can
 reach them, on the component section if classification should not read them as part text.
 
 ## Reconcile against the IR, not against your format
 
-Do not add IR fields a second format would not populate. The IR is a cross-format representation,
-so a field only one reader can fill tends to be a modeling mistake. When you reach for a new field,
+Do not add an IR field unless a second format would populate it. The IR is a cross-format
+representation, so a field only one reader can fill tends to be a modeling mistake. When you reach for a new field,
 check whether another format could carry the same concept. If it could not, the fact probably
 belongs in provenance or a derived pass, not the core IR.
 
@@ -262,8 +263,8 @@ oracle.
 
 ## Ship an example
 
-A reader lands with a runnable example under `examples/`, one directory per feature over the
-shared `common` reuse package. Each example is its own Go module so the demo code stays out of the
-engine's `go.mod`, with the narration in a sidecar `walkthrough.md` rather than in Go string
+A reader ships with a runnable example under `examples/`, one directory per feature over the
+shared `common` reuse package. Each example is its own Go module, so the demo code is kept out of
+the engine's `go.mod`, with the narration in a sidecar `walkthrough.md` rather than in Go string
 literals. `examples/CONVENTIONS.md` has the layout and `examples/read-and-stats/` is the reference
 to copy.

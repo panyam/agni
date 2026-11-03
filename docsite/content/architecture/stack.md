@@ -13,9 +13,9 @@ Parsing, the IR, diff, rules, and later simulation are backend-heavy work that G
 directly. The engine reuses shared Go libraries for utilities and, later, for concurrency when
 work fans out. All of it runs headless: in Go tests, in the CLI, and in the backend.
 
-The engine packages stay pure. A reader takes an `io.Reader` or bytes, not a file path, and diff
-and checks operate on the IR. Keeping the packages free of file paths, a database, and any
-browser-only calls is what lets the same code run in every one of those places.
+The engine packages are pure. A reader takes an `io.Reader` or bytes, not a file path, and diff
+and checks operate on the IR. The packages take no file paths, use no database and make no
+browser-only calls, so the same code runs in every one of those places.
 
 <details>
 <summary>Why there is no parser-generator in the ingestion path</summary>
@@ -36,9 +36,9 @@ the open-core boundary.
 
 {{ includeFile "figures/engine-layers.svg" }}
 
-- `core/` is the pure engine, and it owns the evaluation machinery and no rules: the IR model, the
-  net solver, `check` (the rule runtime and the spec interpreter), `query` (the adapter over the jaala Datalog engine),
-  `diff`, `render`, and `svg`.
+- `core/` is the pure engine. It owns no rules, only the evaluation machinery, which is the IR
+  model, the net solver, `check` (the rule runtime and the spec interpreter), `query` (the adapter
+  over the jaala Datalog engine), `diff`, `render`, and `svg`.
 - `stdlib/` is the standard content that registers into the engine through public registration points. Each rule
   and relation keeps its reference markdown beside its code, embedded and served as the runtime
   `Detail`.
@@ -48,23 +48,24 @@ the open-core boundary.
   `datasheet/derive`.
 - `cmd/` is the CLI, `protos/` and `gen/` are the schema and its generated code, `internal/`
   holds engine-private helpers, and `docsite/` is this documentation site, a separate module.
-- `service/` and `artifact/` are what an embedder composes against, the transport-neutral services
-  and the `mount://` URI their ports speak. `intake/`, `web/` and `clients/python` hold the
-  sanitized design summary, the browser viewer, and the typed Python client.
+- An embedder composes against `service/` and `artifact/`. `service/` holds the transport-neutral
+  services, and their ports speak the `mount://` URI that `artifact/` defines. `intake/`, `web/` and
+  `clients/python` hold the sanitized design summary, the browser viewer, and the typed Python
+  client.
 
 No `core` package depends on `stdlib` in its
-production build, so the engine has no built-in rules baked in, and a program composes the catalog
-it wants by importing the sources it wants. An extension adds its own rules the same way the standard
+production build, so the engine has no built-in rules baked in. A program imports the sources it
+wants and composes its catalog from them. An extension adds its own rules the same way the standard
 library does.
 
 ## The IR is protobuf
 
 One `.proto` schema is the source of truth. Code generation produces Go structs, TypeScript
 types, and the Python client's messages from it, so every language consumes the same schema and
-none can drift. Protobuf's built-in retention of unknown fields also gives lossless round-tripping and
-forward compatibility for free, which matters when a reader meets a construct a later schema will
-name but the current one does not. The [ingestion and IR](../ingestion-and-ir/) page covers how
-readers populate it.
+none can drift. Protobuf also retains unknown fields, which gives lossless round-tripping and
+forward compatibility with no extra work. That matters when a reader meets a construct that a
+later schema will name and the current one does not. The [ingestion and IR](../ingestion-and-ir/)
+page covers how readers populate it.
 
 ## The view is thin
 
@@ -74,26 +75,28 @@ GPU buffers and the DOM, and measures text. It holds no domain logic. Data flows
 an Elm or Redux app. The [web app and presenter](../web-app/) page covers the contract
 in full.
 
-Text metrics are the one measurement that has to travel the other way, because only the browser
-has them. A presenter laying out labels needs them back, so the contract includes a small
+Text metrics have to travel the other way, because only the browser has them. No other
+measurement does. A presenter laying out labels needs them back, so the contract includes a small
 measurement callback.
 
 ## The engine also runs in the browser
 
 The same engine compiles to WebAssembly and runs in a visitor's browser. `cmd/agni-wasm` is the
-binary, and `internal/wasmengine` composes the same services `agni serve` hosts, over in-memory
+binary, and `internal/wasmengine` composes the same services as `agni serve`, over in-memory
 mounts rather than host paths. The viewer does not change between the two. It sends the same Connect
 calls, and either `agni serve` or the browser engine answers them, reading the design, running the
 checks and answering the queries, while the viewer only draws.
 
 The public demo runs this way because the project hosts no server for it. `agni site` writes the
 viewer, the engine and a few seed designs as static files, and the docs host serves them under
-`/agni/demo/`. A visitor installs nothing, and a design dropped on the page stays in the tab.
+`/agni/demo/`. A visitor installs nothing, and a design dropped on the page never leaves the
+browser.
 
 The server path still needs no WebAssembly. `agni serve` runs the engine natively, and a page asks
 for the browser engine only through `agni serve --engine wasm` or its own `?engine=`. A design larger
-than `--wasm-max-bytes` goes to the server even then. How the two hosts are held to identical
-answers is in [Web service contract](../web-services/#the-same-contract-in-the-browser).
+than `--wasm-max-bytes` goes to the server even then.
+[Web service contract](../web-services/#the-same-contract-in-the-browser) covers how the two hosts
+are held to identical answers.
 
 Both hosts keep the presenter in TypeScript. WebAssembly here runs the analysis, not the drawing, so
 nothing crosses the boundary per frame. A high-frequency surface such as an editor would still use a
@@ -105,22 +108,22 @@ TypeScript presenter, to avoid a per-event boundary crossing.
 Go compiled to WebAssembly has higher per-call boundary overhead than a C or Rust equivalent, so
 if the presenter runs in the browser the boundary is designed to carry meaning, not pixels.
 
-- The render model is layered. Static geometry is uploaded to the GPU once and stays resident.
+- The render model is layered. Static geometry is uploaded to the GPU once and is kept resident.
   Only a small dynamic overlay for highlight, selection, and cursor crosses the boundary per
   frame.
 - Input is batched to the animation frame. One intent batch per frame, not one per raw event.
 - The camera is view-local. Pan and zoom are an affine transform applied in TypeScript and the
   GPU, and the presenter is told the new viewport only when culling or hit-testing needs it, so
-  dragging stays smooth even if a presenter frame lags.
+  dragging is smooth even if a presenter frame lags.
 - Bulk data crosses as typed arrays over linear memory, so there are only a handful of crossings
   per frame.
 
 At 60 frames per second, roughly 16 ms per frame, this keeps interop well under a millisecond.
-The real performance ceiling is geometry volume and rendering, solved with canvas or WebGL,
-viewport culling, and a spatial index, not the boundary.
+The boundary is not the real performance ceiling. Geometry volume and rendering are, and canvas or
+WebGL, viewport culling, and a spatial index solve them.
 
-A Go WebAssembly binary is also large, because it carries the runtime and garbage collector. That
-is a load-time concern to address with compression, or a smaller Go toolchain, only if it becomes
-a problem.
+A Go WebAssembly binary is also large, because it carries the runtime and garbage collector. The
+size affects load time. Compression or a smaller Go toolchain can address it, but only if it
+becomes a problem.
 
 </details>

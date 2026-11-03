@@ -53,14 +53,15 @@ for row in rows_as_dicts(answer):
 cli.delete_snapshot(snap)
 ```
 
-A design is loaded once with `ingest`, which takes its `mount://` URI and any `board_uri`, `as_named`,
-`flatten_hierarchy` or library `overlay`, and every question then names the snapshot it returns (agni issue 1061). A
-server resolves the design's tiers and config when it ingests and holds the snapshot until it is
-deleted, evicted or restarted. The client keeps each snapshot's definition, so a question naming one
-the server lost is retried once after ingesting it again under the same name, and one whose files
-changed after updating it, as the viewer does (agni issue 1067).
+A script loads a design once with `ingest`. It takes the design's `mount://` URI and any
+`board_uri`, `as_named`, `flatten_hierarchy` or library `overlay`, and it returns a snapshot. Every
+later question names that snapshot (agni issue 1061). A server resolves the design's tiers and
+config when it ingests and holds the snapshot until it is deleted, evicted or restarted. The client
+keeps each snapshot's definition. Suppose a question names a snapshot the server lost. The client
+ingests it again under the same name and retries the question once. If the snapshot's files
+changed, the client updates it and retries once, as the viewer does (agni issue 1067).
 `CliTransport` records the definition and mints a name, since each `agni` command reads the design
-itself, and turns its `mounts` into `--mount` flags. A server has to be started with the same
+itself. It also turns its `mounts` into `--mount` flags. A server has to be started with the same
 mounts:
 
 ```sh
@@ -79,14 +80,14 @@ client.run_query(snapshot=snap, query="component.net(?ref, ?net) => ?net",
                  bindings=agni.bindings({"ref": "U1"}))
 ```
 
-The query text stays the same for every part, and the value needs no escaping. Over the CLI transport
+The query text is the same for every part, and the value needs no escaping. Over the CLI transport
 the bindings travel as `--bind`, and a set's per-query bindings as the set file's `bind:` maps.
 
 ### Reading the design itself
 
 When a question is not yet a query, a check or a diff, a script can read the design's IR and work on
 it directly, prototyping an analysis before it moves into agni as a library relation or a rule.
-`get_design` carries it when a `read_mask` asks, and only the parts asked for:
+`get_design` returns the IR when a `read_mask` asks for it, and returns only the parts asked for:
 
 ```python
 d = client.get_design(snapshot=snap,
@@ -96,7 +97,7 @@ for net in d.nets:
     print(net.name, [f"{c.component_ref}.{c.pin_ref}" for c in net.connections])
 ```
 
-The messages are `agni.v1.ir` types. Unmasked, `get_design` is the summary it always was, because a
+The messages are `agni.v1.ir` types. Unmasked, `get_design` still returns only the summary, because a
 large board's IR runs to megabytes. `nets` and `ref_des` narrow which entities come back. Over the
 CLI transport the same request runs `agni stats --format json --mask ...`.
 
@@ -109,16 +110,17 @@ in one call, so over either transport a whole audit costs one read.
 **The Connect transport** posts to `/agni.v1.webapi.<Service>/<Method>`, in binary protobuf by
 default and in JSON with `ConnectTransport(url, binary=False)`. The message is the same either way.
 Binary is the default because a large answer is about half the bytes and decodes about a hundred
-times faster in Python: a 9,323-row query answer is 8.3 MB and 4 ms, against 15.5 MB and 0.43 s as
-JSON. The server reads a design once and answers many questions about it. `agni serve` with no web
-dir serves the API alone, so an installed binary needs no viewer assets for this.
+times faster in Python. In binary a 9,323-row query answer is 8.3 MB and 4 ms, against 15.5 MB and
+0.43 s as JSON. The server reads a design once and answers many questions about it. `agni serve`
+with no web dir serves the API alone, so an installed binary needs no viewer assets for this.
 
-A query's answer keeps each entity its cells name once, in `entities`, with the sheets it is drawn on
-and why it cannot be located, and each citation once, in `sources`. Each row points into both
-(`cell_entity`, `cite_index`), so a net named on a thousand rows is sent once (agni issue 916).
-`omit_locations=True` on `run_query` or `run_queries` (`--omit-locations` on the CLI) leaves out the
-sheets and reasons for a script that draws nothing, and skips loading the drawing; the entities, cells
-and citations are unchanged.
+A query's answer lists each entity once, in `entities`, however many cells name it. Each entry
+carries the sheets where the entity is drawn and the reason when it cannot be located. The answer
+also lists each citation once, in `sources`. Each row points into both (`cell_entity`,
+`cite_index`), so a net named on a thousand rows is sent once (agni issue 916). A script that draws
+nothing can pass `omit_locations=True` on `run_query` or `run_queries`, or `--omit-locations` on
+the CLI. The answer then leaves out the sheets and reasons, and the engine skips loading the
+drawing. The entities, cells and citations are unchanged.
 
 The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py` is the table:
 
@@ -134,18 +136,18 @@ The CLI covers the rpcs a command maps to. `CLI_COMMANDS` in `agni/transport.py`
 | `DesignService/TraceDesign` | `trace --format json` |
 | `DesignService/GetLayoutReport` | `render --report --report-format json` |
 
-Any other rpc raises `CliUnsupported`. So does a request field the command has no flag for, because
-dropping it would answer a different question from the one asked. The one part of an `overlay` the
-CLI sends is a library: a query or a set whose overlay carries only `library_modules` and
-`library_docs` is written to a temporary directory and passed as `--lib`, so it answers as the same
-request over Connect does (agni issue 788). `validate`
+Any other rpc raises `CliUnsupported`. So does a request field with no flag on the command, because
+dropping the field would answer a different question from the one asked. The CLI sends only one part
+of an `overlay`, the library. Suppose a query or a set has an overlay that carries only
+`library_modules` and `library_docs`. The CLI writes that library to a temporary directory and passes
+it as `--lib`, so the request answers as it does over Connect (agni issue 788). `validate`
 and `params` print a wire message with no rpc behind it, and `CliTransport.run` reads them. `intake`
-is C31's declared exception and has no wire message. `create_review` runs `agni review`, sending the
-manifest on stdin, and answers the same `Review` as the server except that it is unnamed, because the
-CLI stores nothing (agni issue 734). Getting, listing and deleting stored reviews need a server. To
-run a project's own checklist, ask `list_checklists(snapshot=…)` for the checklists its project
-declares, inherited ones included, and send one's `manifest` to `create_review`; the first is the
-project's default (agni issue 859).
+is C31's declared exception and has no wire message. `create_review` runs `agni review` and sends the
+manifest on stdin. It answers the same `Review` as the server, except that the review is unnamed,
+because the CLI stores nothing (agni issue 734). Getting, listing and deleting stored reviews need a
+server. To run a project's own checklist, call `list_checklists(snapshot=…)`. It returns the
+project's declared checklists, inherited ones included, and the first is the project's default. Send
+one checklist's `manifest` to `create_review` (agni issue 859).
 
 ### When a request fails
 
@@ -153,13 +155,14 @@ A failed rpc answers with a Connect error, a `code`, a `message` and a list of `
 `RunQuery` whose query does not parse fails with `invalid_argument` and carries one detail, an
 `agni.v1.webapi.TextPosition` saying where in the query's text it stopped. Its `offset` counts bytes,
 and its `line` and `column` count from 1, the column in characters as an editor counts it. A `RunQueries` answer does not
-fail for one bad query. That query's `NamedQueryResult` carries the reason in `error` and, when it
-did not parse, the place in `error_at`, while the rest of the set still answers.
+fail for one bad query. That query's `NamedQueryResult` carries the reason in `error`. When the query
+did not parse, `error_at` carries the place. The rest of the set still answers.
 
-The CLI writes the same error. A command run with `--format json` whose request fails writes the
-error as the Connect protocol encodes it, to stdout or to `-o`'s file, and still exits non-zero with
-the text error on stderr, so a script reads one JSON shape whichever transport it used. A mistake in
-the command's own flags makes no request, so it stays text on stderr. The
+The CLI writes the same error. Suppose a command runs with `--format json` and its request fails.
+The command writes the error as the Connect protocol encodes it, to stdout or to `-o`'s file. It
+still exits non-zero with the text error on stderr, so a script reads one JSON shape whichever
+transport it used. A mistake in the command's own flags makes no request, so its error goes to
+stderr as text alone. The
 [CLI reference](../../guide/cli-reference/) shows an example, and CONSTRAINTS C31 is the rule.
 
 ## Where the two transports differ today
@@ -171,33 +174,35 @@ it field by field, and each declaration fails once the difference goes away:
 - `CreateReview` over the CLI has an empty `name`, because the CLI stores nothing. The two runs also
   differ in `results.meta.created_at`, which the test clears on both sides before comparing.
 - `GetLayoutReport` on a design FOLDER answers an empty report from the server (agni issue 736).
-  Ingest the entry file with `as_named` until that lands.
+  Ingest the entry file with `as_named` until that is fixed.
 
 ## Tables and workbooks
 
-A table has two halves, and agni owns the first. Projecting an answer into rows (which columns, how
-a subject is spelled, how rows order) is the engine's call, made once and served by
-`TableService.Tabulate`. Writing the rows as a workbook is the client's. So a client never lays an
-answer out itself: `client.tabulate(check=…)`, `query=…`, `query_set=…`, `diff=…` or `review=…`
-returns the engine's tables, which are the rows the matching `agni … --format csv` prints for the
-same answer, and C35 holds the two together. A check run gives `findings`, and when the response
-carries verdicts, `verdicts` and a per-rule `verdicts_by_rule`. A diff gives one `diff` table, a row
-per change with `change_class` naming its kind, and a review gives `review`, one row per item in the
-checklist's order, and a one-row `review_summary`. `order_by` sorts them, as
-`["rule", "-subject"]`, by each column's type, so a net or part column puts `R2` before `R10`, and
-`column_types` overrides a column the projection could not type, such as a query's count.
+A table has two halves, and agni owns the first. The first half projects an answer into rows. It
+decides which columns there are, how a subject is spelled and how rows order. The engine makes that
+call once and serves it through `TableService.Tabulate`. The second half writes the rows as a
+workbook, and the client owns it. So a client never lays an answer out itself. It calls
+`client.tabulate(check=…)`, or passes `query=…`, `query_set=…`, `diff=…` or `review=…`, and gets the
+engine's tables back. They hold the same rows the matching `agni … --format csv` prints for that
+answer, and C35 holds the two together. A check run gives `findings`. When the response carries
+verdicts, it also gives `verdicts` and a per-rule `verdicts_by_rule`. A diff gives one `diff` table,
+with a row per change and `change_class` naming its kind. A review gives `review`, one row per item
+in the checklist's order, and a one-row `review_summary`. `order_by` sorts the tables by each
+column's type, as in `["rule", "-subject"]`, so a net or part column puts `R2` before `R10`.
+`column_types` sets a column's type when the projection could not type it, such as a query's count.
 
 `table_sheets(response, {"findings": "Findings"})` names each table as a sheet, and
 `tables_to_xlsx(path, sheets)` writes one sheet per table with a bold header row, a frozen top row
 and an autofilter. It keeps a cell that starts with `=` as text, since a cell is a name off a design
-file and must not run as a formula. It needs the `xlsx` extra, and tab names, colours and highlighted
-rows stay in the caller, which can reopen the file with openpyxl.
-`clients/python/examples/audit_workbook.py` writes a five-sheet audit of the tutorial board this way. `clients/python/examples/revision_audit.py` is the full form: two revisions in one workbook, with
-the audit questions in `revision_audit.yaml` rather than the script, and a committed summary of every
-tab the client's tests compare on each run (agni issue 823).
+file and must not run as a formula. It needs the `xlsx` extra. Tab names, colours and highlighted
+rows are left to the caller, which can reopen the file with openpyxl.
+`clients/python/examples/audit_workbook.py` writes a five-sheet audit of the tutorial board this way.
+`clients/python/examples/revision_audit.py` is the full form. It puts two revisions in one workbook
+and reads the audit questions from `revision_audit.yaml` rather than the script. A committed summary
+records every tab, and the client's tests compare against it on each run (agni issue 823).
 
-The engine has no xlsx writer, on purpose. A workbook is a zip of cross-referencing XML parts whose
-layout belongs to whoever reads it, so it stays in the client.
+The engine has no xlsx writer, on purpose. A workbook is a zip of cross-referencing XML parts. Its
+layout belongs to whoever reads it, so the writer belongs in the client.
 
 ## Another language
 
@@ -211,4 +216,4 @@ Everything the Python client does is available to any language with a protobuf r
    Connect library.
 
 A generated client committed to this repo belongs in `proto-check`, as the Go, TypeScript and Python
-halves are, so that a proto change which forgets it fails the gate.
+halves are, so that the gate fails on a proto change that forgets it.

@@ -12,105 +12,108 @@ can then say about what is selected. The render and highlight contracts undernea
 
 ## Picking from the drawing
 
-Clicking an entity is how a reader asks about it, and the rule is that **each renderer owns its own
+A reader asks about an entity by clicking it, and the rule is that **each renderer owns its own
 selection data**. The SVG backend keys every element it draws (`data-kind`, `data-ref`, `data-pin`,
 `data-net`, `data-net-id`, `data-bus`); the WebGL backend has `PrimitiveKey`, whose proto comment has
 always said it exists for picking. Neither reads the other's representation, so either can be retired
-without stranding the other, and a keyed SVG stays self-describing wherever it is embedded.
+without stranding the other, and a keyed SVG is self-describing wherever it is embedded.
 
-The renderers share the contract rather than the index, meaning a `Selection` (the same shape as a
-finding's subject), the priority order, and the intent, so a canvas click, a search result and a
-finding row produce one value.
+The renderers share the contract rather than the index. The contract is a `Selection`, which has the
+same shape as a finding's subject, plus the priority order and the intent. So a canvas click, a
+search result and a finding row produce one value.
 
 - Picking goes by **priority, not topmost**. A symbol is drawn over its own pins, so topmost-wins
   would make a pin unclickable. Resolution goes pin, component, {{ explainable "bus" }}, net, most
   specific first.
 - **A click is not a pan.** The press/release pair counts as a click only if the cursor moved less
-  than a few pixels, or a pan that ends over a wire selects it.
-- **Two pick aids are opt-in** (`render.WithPickTargets`, which only the served viewer asks for). A
-  pin has no drawn element in a faithful render, so it gets an invisible circle. A wire is a 0.8px
-  stroke and `fill="none"` hit-tests only ON the stroke. Measured in a browser, a probe at a wire's
-  own midpoint rounded to whole pixels hits the page rect, so it gets an invisible wide companion
-  with `pointer-events="stroke"`. Both are absent from a render destined for a file or a report,
-  which should not carry the viewer's interaction model.
+  than a few pixels. Otherwise a pan that ends over a wire would select it.
+- **Two pick aids are opt-in**, through `render.WithPickTargets`, and only the served viewer asks for
+  them. A pin has no drawn element in a faithful render, so it gets an invisible circle. A wire is a
+  0.8px stroke, and `fill="none"` hit-tests only ON the stroke. We measured a probe in a browser at
+  a wire's own midpoint, rounded to whole pixels, and it hit the page rect. So a wire gets an
+  invisible wide companion with `pointer-events="stroke"`. A render for a file or a report has
+  neither aid, because it should not carry the viewer's interaction model.
 - **Entity keys are design data, so they are escaped** (`svg.AEsc`). Attribute values are written
   verbatim otherwise, and the viewer mounts this document with `innerHTML`.
 
 ### Selecting is not asking
 
-A click selects what it lands on and the Properties panel describes it (agni issue 902). It used to
-write the served preset into the query box and run it, which mixed looking around with asking a
-question, and a stray click overwrote whatever the reader had typed. Asking is now one of the panel's
-Ask rows, each a question the server words and writes (several per kind, `EntityQuery.label`), and
-each opens a query tab of its own, so the query is still left in a box, editable, and using the
-viewer still teaches the language.
+A click selects the entity under it, and the Properties panel describes it (agni issue 902). A click
+used to write the served preset into the query box and run it. That mixed looking around with asking
+a question, and a stray click overwrote whatever the reader had typed. Asking is now one of the
+panel's Ask rows. The server words and writes each row's question (several per kind,
+`EntityQuery.label`), and each row opens a query tab of its own. So the query is still left in a
+box, editable, and using the viewer still teaches the language.
 
 **Something is always selected.** The design is the root, a click on empty paper selects the sheet on
 screen (`SvgView.onPickEmpty`), Escape selects the design, and an entity sits under the sheet it was
-picked on. The breadcrumb heading the panel moves between those levels, and every reference in it (a
-pin's net, a net's components) moves the selection, so a reader can walk the design inside the panel.
+picked on. The breadcrumb at the head of the panel moves between those levels. Every reference in it,
+such as a pin's net or a net's components, moves the selection, so a reader can walk the design
+inside the panel.
 A located query cell selects too, and so does a finding clicked in the Checks or Review panel, so the
 panel follows a walk through an answer or a run.
 
 **Where a part or net is drawn is asked once per selection.** Properties lists those sheets, each a
 link to it. No rpc answers "where is this drawn" on its own, but every entity in a query answer
-carries the sheets it is drawn on, so the viewer asks the served find-by-name query with the whole
-name anchored and reads the row of the right kind (`drawnSheets`), since a part and a net can share a
-name. A bus is listed by its members instead, read off the IR's record of the bus
-(`InputDiagnostics.unmodeled_buses`), because the `bus` relation records the construct a reader saw
-and nothing about its members.
+carries the sheets it is drawn on. So the viewer asks the served find-by-name query with the whole
+name anchored (`drawnSheets`). A part and a net can share a name, so the viewer reads the row of the
+right kind. Properties lists a bus by its members instead, and reads them off the IR's record of the
+bus (`InputDiagnostics.unmodeled_buses`). The `bus` relation records only the construct the format
+reader saw, and nothing about its members.
 
 **A selected net, part or pin is checked on its own** (agni issue 897). Properties asks
-`CheckDesign` for the rules ticked in the Rules panel with `subjects` naming the selection, and lists
-what fails or could not decide, each showing its proof on the drawing when clicked, above a count of
-every outcome. The rules the answer skipped are named with the engine's reason, so a rule that
-concludes about the whole design (`symbol-unresolved`) reads as not asked rather than as passing. The
-answer is held apart from the Checks panel's run (`Document.scoped`), because a rule answered for one
-net is not that rule's answer for the board, and an answer for a selection the reader has left, or
-for rules since changed, is dropped. A bus is not a subject a scope covers, so it keeps the run's
-findings. The design is read before the viewer opens (agni issue 1072), so the first selection on
-Jetson in the browser costs about 1.6 s, the restore and model build a first Run checks pays too, and
-each later one about 300 ms.
+`CheckDesign` for the rules ticked in the Rules panel, with `subjects` naming the selection. It lists
+each result that fails or could not decide, and clicking one shows its proof on the drawing. A count
+of every outcome sits below the list. Properties names each rule the answer skipped, with the
+engine's reason, so a rule that concludes about the whole design (`symbol-unresolved`) reads as not
+asked rather than as passing. The viewer holds the answer apart from the Checks panel's run
+(`Document.scoped`), because a rule's answer for one net is not its answer for the board. The viewer
+drops the answer once the reader leaves that selection or changes the rules. A scope covers no bus,
+so a selected bus keeps the run's findings. The design is read before the viewer opens (agni issue
+1072). On Jetson in the browser the first selection then costs about 1.6 s, which goes to the
+restore and the model build, as it does on a first Run checks. Each later selection costs about
+300 ms.
 
 **The panel reads the design once per open** (`PropertiesPresenter`, `INVENTORY_PATHS`). It asks
 `GetDesign` for the netlist IR under a field mask naming only what it shows, about 1.8 MB of JSON on
 the largest seed, and indexes it. A per-click read was the alternative, but a component's nets cannot
-be filtered on the server by component, so it would have fetched every net per click anyway. What a
-sheet holds is read off its rendered document's entity keys (`drawnOnSheet`), since membership is a
-property of the drawing.
+be filtered on the server by component, so it would have fetched every net per click anyway. The
+panel reads a sheet's contents off its rendered document's entity keys (`drawnOnSheet`), since
+membership is a property of the drawing.
 
-**The datasheet section keeps its outcomes apart.** No corpus connected, a part with no MPN, a corpus
-with no spec for this MPN, and the spec itself each read differently, because an unasked question and
-an absent answer must not look alike. `GetComponentParamsResponse.corpus_connected` is what tells the
-first from the third.
+**The datasheet section keeps its outcomes apart.** Four cases each read differently. No corpus is
+connected, the part has no MPN, the corpus has no spec for this MPN, or the spec is there. An unasked
+question and an absent answer must not look alike. `GetComponentParamsResponse.corpus_connected`
+tells the first case from the third.
 
 ### Selecting an area
 
 **A Shift-drag selects every part, pin and wire lying wholly inside a rectangle on the sheet on screen,
 and a Shift-click adds an entity or takes it out** (agni issue 904). A plain drag still pans and a
-plain click still picks one entity. The set is read off the rendered document's entity keys
-(`membersIn` in `web/src/area.ts`), measured with each element's client rectangle, so forming it asks
-the server nothing. A part drawn as several shapes is inside only when every shape is, and a pin of
-a part that is not wholly inside is a member on its own. A wire is identified by its net, since the
-renderer keys a wire with nothing finer.
+plain click still picks one entity. The viewer reads the set off the rendered document's entity keys
+(`membersIn` in `web/src/area.ts`) and measures each element's client rectangle, so forming the set
+asks the server nothing. A part drawn as several shapes is inside only when every shape is. If a
+part is only partly inside, its pins inside the rectangle are members on their own. A wire is
+identified by its net, since the renderer keys a wire with nothing finer.
 
 **An area is a `Selection` of kind `area`**, carrying its parts (`refs`), its loose pins (`pins`), the
 nets with a wire inside it (`wires`) and every net it touches (`nets`). So it goes wherever a
 selection goes: Properties describes it, the drawing lights its members, the selection bar names it,
-and the breadcrumb reads `Design › Sheet › Area (N)`. A member followed from the area keeps the area
-as its parent crumb (`Focus.within`), so the Area crumb steps back out.
+and the breadcrumb reads `Design › Sheet › Area (N)`. When the reader follows a member from the
+area, the member keeps the area as its parent crumb (`Focus.within`), so the Area crumb steps back
+out.
 
 **A net is classified, never contained**, because it may continue off the sheet. It is internal when
 every one of its pins is in the area, through a member part or a member pin, and on the boundary
-otherwise. The boundary nets are the block's interface. A net only wired through the area, with none
-of its pins inside, is boundary too.
+otherwise. The boundary nets are the block's interface. A net with a wire through the area and none
+of its pins inside is on the boundary too.
 
 **An area's Ask rows bind the whole set at once**, `?ref` to its parts and `?net` to its nets, so a
 question is evaluated once and an aggregate reduces across the area. The questions live in
 `core/query/entity.go` under kind `area`, like every other kind's. Two engine behaviours shaped them.
 A variable bound to a single value is substituted as a constant, so a question never aggregates a
-bound variable (the class question counts a `?part` filtered to `?ref`). And a bound variable is
-projected only for a set, where naming which value answered is the question.
+bound variable (the class question counts a `?part` filtered to `?ref`). And a question projects a
+bound variable only for a set, because there the question is which value answered.
 
 On a drawing agni laid out itself, nearness says nothing about the design, so Properties says so when
 an area is selected on one.
@@ -118,40 +121,41 @@ an area is selected on one.
 ### Walking from an answer to the next question
 
 A result cell is the second way a reader names an entity. The server types each answer column with
-an entity kind (`RunQueryResponse.column_kinds`, derived from the relation catalog's arg labels), so
-a component or net cell reads back as the same `Selection` a canvas click produces
-(`selectionFromCell`). Clicking one locates it, as it always did, and now also selects it, so the
-query panel names what is selected and offers the kind's first served question. Taking it opens a
-tab and runs, which lands the reader on a fresh set of cells to walk from. The preset's text is the same for every pick. It names the variables to bind
-(`EntityQuery.binds`), and `entityBindings` fills each from the selection field of the same name, so
-the pick reaches the query as a value shown in a chip rather than spliced text (agni issue 793).
-The list is explicit because one preset's input is another's output: the pin preset answers `?net`
-and the net preset asks about one.
+an entity kind (`RunQueryResponse.column_kinds`, derived from the relation catalog's arg labels). So
+a component or net cell reads back as a `Selection` (`selectionFromCell`), and a canvas click
+produces the same value. Clicking a cell locates it, as it always did, and now also selects it. The
+query panel then names what is selected and offers the kind's first served question. Taking that
+question opens a tab and runs it, and the reader gets a fresh set of cells to walk from. The
+preset's text is the same for every pick. It names the variables to bind (`EntityQuery.binds`), and
+`entityBindings` fills each from the selection field of the same name. So the pick reaches the query
+as a value shown in a chip rather than spliced text (agni issue 793). The list is explicit because
+one preset's input is another's output. The pin preset answers `?net`, and the net preset asks
+about one.
 
-Two things are deliberate here. A cell click does not itself re-run the query, because scanning a
-result set and highlighting each row in turn is what the locate affordance was for, and a click that
-replaced the table would take that away. And the question's wording comes from the server with its
-query (`EntityQuery.label`), because a kind now has several questions and a client copy of their
-wording would drift from the list the server sends.
+Two things are deliberate here. A cell click does not itself re-run the query. The locate affordance
+exists so a reader can scan a result set and highlight each row in turn, and a click that replaced
+the table would take that away. And the question's wording comes from the server with its query
+(`EntityQuery.label`). A kind now has several questions, and a client copy of their wording would
+drift from the server's list.
 
 ### Each question is a tab
 
 The query panel hosts any number of tabs (`querytabs.ts`). An Ask row, the selection bar's question
 and "+" each open one, so a question never overwrites another, and each tab keeps its own query,
-bindings and answer. The tabs are the panel's own strip rather than dockview tabs, so none lands in a
-saved dock layout, and the last one has no close button.
+bindings and answer. The tabs are the panel's own strip rather than dockview tabs, so a saved dock
+layout holds none of them, and the last one has no close button.
 
 The presenter answers a run in the tab that asked (`runQuery`'s `tab`, `QueryView.setState(result,
-tab)`), so an answer arriving after the reader moved to another tab still lands where it belongs, and
-Save CSV saves the answer of the tab it was pressed in. **The drawing follows the tab in front.** A tab
-remembers the cell it last located, and bringing it forward locates that cell again. A tab that
-located nothing releases what the previous tab had located (`releaseFocus`), back to the findings
-alone, so the canvas never shows a cell from an answer no longer on screen.
+tab)`). An answer that arrives after the reader moved to another tab still goes to the tab that
+asked, and Save CSV saves the answer of the tab it was pressed in. **The drawing follows the tab in
+front.** A tab remembers the cell it last located, and bringing it forward locates that cell again.
+A tab that located nothing releases what the previous tab had located (`releaseFocus`), back to the
+findings alone, so the canvas never shows a cell from an answer no longer on screen.
 
 **A pin cell takes its other half from its row.** A pin's identity is two fields, so the cell holding
-`5` names nothing until you know it means U7's pin 5, which is why a pin column typed as a scalar for
-so long. `QueryRow.cell_refs` carries the component per row, and `selectionFromCell(kind, cell, ref)`
-reads both.
+`5` names nothing until you know it means U7's pin 5. For a long time that left a pin column typed
+as a scalar. `QueryRow.cell_refs` carries the component per row, and `selectionFromCell(kind, cell,
+ref)` reads both.
 
 <details>
 <summary>Where the ref comes from, what counts as a pin column, and why a pin cannot be searched by name</summary>
@@ -159,8 +163,8 @@ reads both.
 `cell_refs` is a sibling of `cell_kinds` rather than the same mechanism. A pin column's KIND is
 fixed, since every row of it is a pin; what varies per row is the REF. The ref may come from a
 sibling column (`pin.net(?ref, ?pin, ?net)`), from a constant (`pin.net("U1", ?pin, ?net)`), or from
-a variable the projection dropped, so it resolves against the row's bindings rather than against the
-visible columns.
+a variable left out of the projection, so it resolves against the row's bindings rather than against
+the visible columns.
 
 The pairing also decides what counts as a pin column, since a `pin` position is a DESIGN pin only
 when the same atom also carries a `ref_des`. `param.pin(mpn, pin, name, function)` and
@@ -170,12 +174,12 @@ datasheet, with nothing on any canvas to highlight.
 Downstream, a pin takes its sheets and its locate reason from its component's placements, so a pin
 of a virtual `#PWR` symbol reports VIRTUAL_SYMBOL rather than a missing render. Asking either
 question about the designator would be asking about a thing called `5`. A pin whose component does
-not resolve stays plain text, since half a pin is not a less precise pin.
+not resolve is shown as plain text, since half a pin is not a less precise pin.
 
 Searching for a pin by name is still not possible. `entity(name, kind)` deliberately does not
-enumerate pins, because a pin cannot be one `name` without inventing a composite string nothing else
-in the fact base joins against, and `component.pin(?ref, ?pin)` already enumerates them for anyone writing the
-query by hand.
+enumerate pins. A pin cannot be one `name` unless we invent a composite string, and nothing else in
+the fact base joins against such a string. `component.pin(?ref, ?pin)` already enumerates pins for
+anyone writing the query by hand.
 
 </details>
 
@@ -187,15 +191,15 @@ the one on screen (`QueryView.setCurrentSheet`, pushed from `showSheet` on EVERY
 Both marks are DERIVED rather than remembered. A remembered mark is wrong the moment the reader
 picks something on the drawing or opens a finding, and wrong silently. Two consequences follow and
 both are deliberate. An entity answering in several rows marks all of them, which is true, since
-they all name the thing being shown. And a marked badge past the strip's three-chip cap forces the
-cut to grow, because a mark nobody can see is worse than no mark, as the reader would read the
-unmarked strip as being somewhere else.
+they all name the thing being shown. And when a marked badge falls past the strip's three-chip cap,
+the strip shows more chips to include it. A mark nobody can see is worse than no mark, because the
+reader would read the unmarked strip as being somewhere else.
 
 ### Searching by name
 
 A click says where to look and gets back what is there. A search says what a thing is called and
-gets back where it is. Both write datalog into the box and run it, which is why search is a MODE on
-the query panel rather than a widget of its own, and the reader keeps an editable query either way.
+gets back where it is. Both write datalog into the box and run it. So search is a MODE on the query
+panel rather than a widget of its own, and the reader keeps an editable query either way.
 
 The panel's "Find by name" mode takes a term, binds it into the served query
 (`ListRelationsResponse.search_query`, from `query.Search()`), runs it, and hands the panel back to
@@ -210,18 +214,18 @@ wants `^U` can write it. The client regex-escapes the typed term (`searchPattern
 needed because the bound value is a regex. A double quote is no longer special, since nothing is
 spliced into a string literal.
 
-**A search result is the one answer set whose rows are not all the same shape**. Kind is normally a
-COLUMN property, since a variable binds at the same relation position in every row. Under
+**A search result's rows are not all the same shape**, and no other answer set is like that. Kind is
+normally a COLUMN property, since a variable binds at the same relation position in every row. Under
 `entity(?name, ?kind)` one answer set holds a component, a net and a bus, so `column_kinds` has
 nothing true to say about the name column and types it scalar, which is to say unclickable.
-`QueryRow.cell_kinds` is the per-row override: empty for every ordinary query, and read through
-`cellKind(result, row, i)` so the fallback to `column_kinds` lives in one place. It types the
-sheet-badge lookup and the locate reason as well as the click, since a hit nobody can navigate from
-is only a third of an answer.
+`QueryRow.cell_kinds` is the per-row override. It is empty for every ordinary query, and the client
+reads it through `cellKind(result, row, i)`, so the fallback to `column_kinds` sits in one place. It
+types the sheet-badge lookup and the locate reason as well as the click, since a hit nobody can
+navigate from is only a third of an answer.
 
-A bus is the case that would have broken quietly. It is neither a placement nor a named wire, so
-neither drawn-entity set can speak for it, and the test is whether it resolved to a sheet at all,
-the same rule `AnnotateSheets` applies to a bus finding.
+A bus would have broken quietly. It is neither a placement nor a named wire, so neither drawn-entity
+set can speak for it. The test is whether it resolved to a sheet at all, and `AnnotateSheets`
+applies the same rule to a bus finding.
 
 ### What is already known about a selection
 
@@ -239,15 +243,15 @@ cannot disagree.
 <summary>Why a scoped re-run was ruled out, and why the filter takes a set</summary>
 
 The alternative fails in three ways at once. A scoped run resolves config independently and can
-contradict the report beside it, the disagreement C25 exists to prevent. It redoes net solving and
-reach walks once per click. And it makes "the union of what I clicked equals the full pass" a hope
-rather than a property.
+contradict the report beside it, and C25 exists to prevent that disagreement. It redoes net solving
+and reach walks once per click. And it makes "the union of what I clicked equals the full pass" a
+hope rather than a property.
 
 `findingsFor` takes a SET rather than one subject, because a set is the primitive and one click is
-its degenerate case. The results footer is the set case in the UI: every locatable cell, deduped by
-`sameSelection`, which is also how a finding matching several of the given subjects is still counted
-once. `selectionFromFinding` is the third producer of a `Selection`, after a keyed element and a
-result cell, so the canvas, the query table and the checks panel share one identity rule.
+its degenerate case. The results footer is the set case in the UI. It passes every locatable cell,
+deduped by `sameSelection`. That dedupe also counts a finding once when it matches several of the
+given subjects. `selectionFromFinding` is the third producer of a `Selection`, after a keyed element
+and a result cell, so the canvas, the query table and the checks panel share one identity rule.
 
 </details>
 
@@ -256,51 +260,52 @@ result cell, so the canvas, the query table and the checks panel share one ident
 **A count needs its state or it lies.** A zero has four meanings and only one of them is "nothing is
 wrong here": no rules are selected, nobody has run them, the ruleset is half-evaluated, or it ran
 clean. `checkedState` names which, and the panel prints the name rather than a bare number, because
-the reassuring reading is the one a reviewer acts on. A half-run ruleset reports its count as a floor.
+a reviewer acts on the reassuring reading. A half-run ruleset reports its count as a floor.
 
 #### Inconclusive results
 
 **An unresolved result is not a defect and not a pass.** `Finding.inconclusive` marks a result the
 rule could not DECIDE, meaning it ran, had what it needed, examined this subject, and could not
 conclude (agni issue 74). The client dropped that field for its whole life, so every surface counted
-"could not decide" as "found a problem". It now rides on `FindingItem`, and `tallySeverities` counts
+"could not decide" as "found a problem". `FindingItem` now carries it, and `tallySeverities` counts
 it apart and excludes it from the defect total, including from its own severity bucket, since an
 inconclusive error is not an error.
 
 Every surface says so the same way (agni issue 350). In the checks panel the severity dot gives way
-to a violet `?`, because the severity a finding carries is the one the rule WOULD have reported and
-painting it red states the conclusion the rule declined to reach. A group badge shows the defects
+to a violet `?`. A finding's severity names what the rule WOULD have reported, and painting it red
+would state a conclusion. The rule declined to reach that conclusion. A group badge shows the defects
 and then the unresolved count beside it, never one number over both. A sheet tile carries the same
 two numbers, each drawn only when it is above zero, and neither before a run, since a count over
 rules that never ran claims a clean sheet (agni issue 1132). On the severity axis an inconclusive
 finding groups under `unresolved` rather than under its severity, and it sorts after every defect,
-so the rows a reader is working through stay together.
+so the defect rows a reader works through sit together.
 
 **A sheet tile counts a finding on every sheet its subject is drawn on** (agni issue 1144). A defect
 on a net that runs through twelve sheets counts on all twelve, so on a large design many tiles carry
 the same total. We kept that rather than counting each finding once, because a tile is a way to a
-sheet, and every sheet it counts on is one where opening the finding shows it. A count of findings
-drawn on one sheet alone answers "what do I fix on this page" better, but a defect on a ground net
-would then count on no tile at all, which reads as a clean design. So the tile keeps the number it
-had, and its red pill's hover splits it, as in `12 defects on this sheet, 3 drawn here alone and 9
-also on other sheets` (`SheetTile.local`). The panel's legend says the same in a line. Rolling
-counts up to parent sheets was the third option, and on Jetson a parent's total mostly repeated its
-children's.
+sheet, and opening the finding from any sheet it counts on shows it there. Counting only the
+findings drawn on one sheet alone would answer "what do I fix on this page" better. But a defect on
+a ground net would then count on no tile at all, which reads as a clean design. So the tile keeps
+the number it had, and its red pill's hover splits it, as in `12 defects on this sheet, 3 drawn here
+alone and 9 also on other sheets` (`SheetTile.local`). The panel's legend says the same in a line.
+Rolling counts up to parent sheets was the third option, and on Jetson a parent's total mostly
+repeated its children's.
 
 **A sheet's id is unique within a design, and a repeated name is labelled by its path.** An EDIF
-export holding many block cells often names every block's page `(rename &1 "1")`, so the reader
+export holding many block cells often names every block's page `(rename &1 "1")`, so the EDIF reader
 prefixes a repeated page id with its owning cell view and a repeated name with the cell's name
 (`BlockA / 1`), and leaves a page whose id and name are already unique as the file spells them
 (agni issue 1140). A KiCad sheet's id is already its path from the root, so the dock shows that path
 where two sheets share a name (`Power/1`, `IO/1`) and nests each sheet under its `parent_id`, as the
 file tree does through the shared `sheetForest` (agni issue 1141).
-`readers/kicad/testdata/hier_numeric_root.kicad_sch` is the public fixture for that shape, which
-`make serve` mounts as `kicad`, so it opens at `/designs/kicad/hier_numeric_root.kicad_sch/view`
+`readers/kicad/testdata/hier_numeric_root.kicad_sch` is the public fixture for that shape. `make
+serve` mounts it as `kicad`, so it opens at `/designs/kicad/hier_numeric_root.kicad_sch/view`
 (agni issue 1143).
 
 `severitySections` is the deliberate exception. It is the parity oracle for the server report
-(`GetCheckReport`), so it mirrors what that report emits rather than what this client believes, and a
-client that quietly disagreed with it would hide the drift the oracle exists to catch.
+(`GetCheckReport`), so it mirrors what that report emits rather than what this client believes. If
+the client quietly disagreed with the report, it would hide drift, and the oracle exists to catch
+that drift.
 
 An inconclusive result is also per-SUBJECT, unlike the skip vocabulary. The needs-* outcomes are
 PRECONDITIONS, decided around the rule and always design-wide; this sits on the other side of the
@@ -309,11 +314,12 @@ without inventing anything, and the remedy lives in the message the way it does 
 
 #### What a count leaves out
 
-**A gated rule reports nothing anywhere**, which is the largest thing a per-entity count leaves out.
-`FindingsState.skipped` is design-wide, so the count states how many rules could not run at all (the
-ones the catalog lists unavailable for this design, and any selected rule a run skipped) and gives the
-engine's own reasons on hover. A clean entity under a half-gated ruleset is a much
-weaker statement than a clean entity under a full one, and nothing on the entity itself can say so.
+**A gated rule reports nothing anywhere**, so a per-entity count leaves it out, and nothing it leaves
+out is larger. `FindingsState.skipped` is design-wide. So the count states how many rules could not
+run at all, and gives the engine's own reasons on hover. Those rules are the ones the catalog lists
+as unavailable for this design, plus any selected rule a run skipped. A clean entity under a
+half-gated ruleset is a much weaker statement than a clean entity under a full one, and nothing on
+the entity itself can say so.
 
 **And the count says what it is not.** An entity view enumerates attention; a review pass enumerates
 the design. A design-global rule has no subject and can never appear beside an entity. The caveat is
@@ -322,8 +328,8 @@ rendered beside every count rather than parked in a hover, where nobody would se
 #### Context entities
 
 **A rule about two entities used to name one of them and lose the other.** `Finding` carries exactly
-one `Subject`, so a rule whose sentence involves two entities could highlight only one, and it was
-not always the one the sentence named. `crystal-load-caps` reads "crystal terminal net XOUT1 has no
+one `Subject`, so a rule whose sentence involves two entities could highlight only one. The sentence
+did not always name that one. `crystal-load-caps` reads "crystal terminal net XOUT1 has no
 load capacitor" with the crystal as its subject, so clicking it sent the reader to a part while the
 message talked about a net. No client-side filter reached that, because the net was bound in the
 rule's query and destroyed when the `Finding` was built, so the panel had nothing to render.
@@ -334,9 +340,10 @@ net in the sentence is reachable. They sit after the message rather than in the 
 because the subject column answers "what failed" and these answer "what else the sentence mentions".
 
 A context entity is deliberately NOT counted as a finding about itself. Grouping by subject partitions
-the findings, which is what makes "the union of what I clicked equals the full pass" a fact rather
-than a hope, so counting one finding under two entities would break the property the per-entity view
-rests on. Context makes a finding REACHABLE from another entity without making it ABOUT that entity.
+the findings. The partition makes "the union of what I clicked equals the full pass" a fact rather
+than a hope. The per-entity view depends on that property, and counting one finding under two
+entities would break it. Context makes a finding REACHABLE from another entity without making it
+ABOUT that entity.
 
 ### Table cells wrap, then scroll, and never bleed
 
@@ -347,7 +354,7 @@ where the sheet-badge strip on a {{ explainable "ground" }} net was one nowrap l
 the two columns beside it, its last badge's right edge sitting 1927px past its own cell.
 
 So a cell has three behaviours in order. `overflow-wrap: anywhere` breaks a long unbroken value, which
-handles nearly everything (a 66-character net name in a 120px column wraps to four lines and stays
+handles nearly everything (a 66-character net name in a 120px column wraps to four lines and remains
 inside). `overflow-x: auto` catches whatever still cannot wrap, so the cell scrolls within its own
 column. Nothing is allowed to paint across a neighbour. A `td` honours `overflow-x` directly, checked
 in Chromium, so no inner wrapper is needed.
