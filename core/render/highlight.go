@@ -3,9 +3,9 @@ package render
 import (
 	"math"
 
+	"github.com/panyam/agni/core/svg"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	geomath "github.com/panyam/agni/internal/geomath"
-	"github.com/panyam/agni/core/svg"
 )
 
 // The highlight layer projects a renderer-agnostic selection into a drawable overlay, decoupled
@@ -46,8 +46,8 @@ func highlightColor(c string) string {
 type specMatcher struct {
 	comps  map[string]bool
 	nets   map[string]bool
-	netIDs map[string]bool // per-instance net ids (WS9); a spec targeting one net instance lists it here
-	busIDs map[string]bool // bus NAMES (WS7-042b); a bus has no net, so it joins by name
+	netIDs map[string]bool    // per-instance net ids (WS9); a spec targeting one net instance lists it here
+	busIDs map[string]bool    // bus NAMES (WS7-042b); a bus has no net, so it joins by name
 	pins   map[[2]string]bool // {ref_des, pin}
 }
 

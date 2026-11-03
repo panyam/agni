@@ -3,8 +3,8 @@ package check
 import (
 	"testing"
 
-	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 	"github.com/panyam/agni/core/param"
+	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
 // A stale citation has to name BOTH revisions. Someone can act on a report that names both, and

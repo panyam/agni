@@ -11,8 +11,8 @@ import (
 	_ "embed"
 	"fmt"
 
-	"github.com/panyam/demokit"
 	"github.com/panyam/agni/examples/common"
+	"github.com/panyam/demokit"
 )
 
 //go:embed walkthrough.md

@@ -45,7 +45,6 @@ var unreachable = [2]check.Endpoint{{RefDes: "U1", Pin: "3"}, {RefDes: "U1", Pin
 // partnersDevice is the part for the partners step, which walks from every one of its pins at once.
 const partnersDevice = "U1"
 
-
 func main() {
 	design := common.AskPath("design", defaultDesign)
 	// from and to pass the picks to the later steps. Their defaults match the markdown inputs'

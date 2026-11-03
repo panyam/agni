@@ -117,7 +117,6 @@ func isConnector(c *ir.Component) bool {
 	return false
 }
 
-
 // physicalPins counts n's connections to real parts, leaving out a power symbol's virtual pin.
 func physicalPins(n *ir.Net) int {
 	k := 0

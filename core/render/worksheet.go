@@ -154,9 +154,9 @@ func titleBlockGrid(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []tbRo
 	for _, kv := range tb.GetExtraFields() {
 		full(kv.GetKey()+": "+kv.GetValue(), false, 1)
 	}
-	full(tb.GetCompany(), true, 1)          // Company
-	full("Sheet: "+sheet.Name, false, 1)    // Sheet path
-	full("Title: "+title, true, 1.7)        // Title (tall, emphasized)
+	full(tb.GetCompany(), true, 1)       // Company
+	full("Sheet: "+sheet.Name, false, 1) // Sheet path
+	full("Title: "+title, true, 1.7)     // Title (tall, emphasized)
 	rows = append(rows, tbRow{weight: 1, cells: []tbCell{
 		{text: "Size: " + paperName(g, sheet), x0: 0, x1: 0.30},
 		{text: "Date: " + tb.GetDate(), x0: 0.30, x1: 0.72},

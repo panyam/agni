@@ -103,4 +103,3 @@ func Fetches(p ParamProvider) bool {
 	}
 	return false
 }
-

@@ -57,10 +57,10 @@ func xlatDesign(mpn, netA, netB string) *ir.Design {
 			},
 		}}}},
 		Components: []*ir.Component{{
-			RefDes:     "U1",
-			Sections:   []*ir.ComponentSection{{PartRef: "XLAT", LibraryRef: "lib"}},
-			Mpn: mpn,
-			Prov:       &ir.Provenance{SourceFile: "t"},
+			RefDes:   "U1",
+			Sections: []*ir.ComponentSection{{PartRef: "XLAT", LibraryRef: "lib"}},
+			Mpn:      mpn,
+			Prov:     &ir.Provenance{SourceFile: "t"},
 		}},
 		Nets: []*ir.Net{
 			{Name: netA, Connections: []*ir.Connection{{ComponentRef: "U1", PinRef: "1"}}, Prov: &ir.Provenance{SourceFile: "t"}},

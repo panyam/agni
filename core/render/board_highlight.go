@@ -3,8 +3,8 @@ package render
 import (
 	"math"
 
-	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/core/svg"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
 // HighlightBoardSVG resolves highlight specs against a board and returns a transparent SVG

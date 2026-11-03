@@ -6,9 +6,9 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/panyam/agni/core/svg"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	geomath "github.com/panyam/agni/internal/geomath"
-	"github.com/panyam/agni/core/svg"
 )
 
 // boardTextMinPx is the legibility floor for silkscreen/fab text. Board text is authored at a

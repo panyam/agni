@@ -4,8 +4,8 @@ import (
 	"encoding/xml"
 	"math"
 	"sort"
-	"strings"
 	"strconv"
+	"strings"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )

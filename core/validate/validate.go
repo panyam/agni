@@ -9,8 +9,8 @@ import (
 	"fmt"
 
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
-	"github.com/panyam/agni/internal/geomath"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
+	"github.com/panyam/agni/internal/geomath"
 )
 
 // MinResolutionRate is the fraction of placements that must resolve to a symbol

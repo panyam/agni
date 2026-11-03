@@ -6,10 +6,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/panyam/agni/core/param"
 	derivepb "github.com/panyam/agni/datasheet/gen/go/agni/v1/derive"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/core/param"
 )
 
 func runPinFixture(t *testing.T) (*parampb.PartSpec, *derivepb.RunManifest) {
@@ -290,8 +290,8 @@ func TestSplitDesignators(t *testing.T) {
 	}{
 		{"6, 9", []string{"6", "9"}},
 		{"6,9", []string{"6", "9"}},
-		{"8 2", []string{"8"}},     // pin 8 carrying footnote 2
-		{"12 2", []string{"12"}},   // same, two-digit
+		{"8 2", []string{"8"}},   // pin 8 carrying footnote 2
+		{"12 2", []string{"12"}}, // same, two-digit
 		{"2, 3", []string{"2", "3"}},
 		{"B2", []string{"B2"}},
 		{"-", nil},

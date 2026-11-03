@@ -9,9 +9,9 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
+	"github.com/panyam/agni/core/param"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
-	"github.com/panyam/agni/core/param"
 )
 
 func cloneTable(t *docpb.Table) *docpb.Table {

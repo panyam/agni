@@ -159,12 +159,12 @@ func TestAnnotationSymbols(t *testing.T) {
 		t.Fatalf("title/code_shown should be placed, got refs %v", refs)
 	}
 	for _, want := range []string{
-		"Jane Doe",         // title @author from the instance
-		"annotations.sch",  // title @schname_ext from the source filename
-		"SCHEM",            // title static text
-		"CMDS",             // code_shown @name
-		".op",              // code_shown @value line 1
-		".tran 1n 10u",     // code_shown @value line 2 (multi-line split)
+		"Jane Doe",        // title @author from the instance
+		"annotations.sch", // title @schname_ext from the source filename
+		"SCHEM",           // title static text
+		"CMDS",            // code_shown @name
+		".op",             // code_shown @value line 1
+		".tran 1n 10u",    // code_shown @value line 2 (multi-line split)
 	} {
 		if !has(vals, want) {
 			t.Errorf("annotation text %q not rendered; got %v", want, vals)
