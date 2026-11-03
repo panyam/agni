@@ -29,8 +29,8 @@ func TestCoverageGood(t *testing.T) {
 }
 
 // TestCoverageBroken checks that the broken bus is still detected (five signals present), with IO2
-// missing, SCLK dangling (single-pin), and CS's pull-up missing, the three the profile rules fire
-// on.
+// missing, SCLK dangling (single-pin), and CS's pull-up missing. The profile rules fire on those
+// three.
 func TestCoverageBroken(t *testing.T) {
 	cov := Coverage(context.Background(), SPINOR, check.NewModel(spinorBroken()), nil)
 	if cov == nil {
@@ -57,8 +57,8 @@ func TestCoverageBroken(t *testing.T) {
 	}
 }
 
-// TestCoverageUndetected checks that a single matching signal is below the in-use confidence gate,
-// so the interface is not detected (nil), so a lone _CS net yields no false coverage.
+// TestCoverageUndetected checks that a single matching signal is below the in-use confidence gate.
+// The interface is then not detected (nil), and a lone _CS net yields no false coverage.
 func TestCoverageUndetected(t *testing.T) {
 	d := &ir.Design{Components: comps("U1"), Nets: []*ir.Net{net("SPI_CS", "U1.1")}}
 	if cov := Coverage(context.Background(), SPINOR, check.NewModel(d), nil); cov != nil {

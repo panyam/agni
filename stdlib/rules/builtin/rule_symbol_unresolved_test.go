@@ -17,9 +17,9 @@ func unresolvedDesign(us ...*ir.UnresolvedSymbol) *ir.Design {
 	}
 }
 
-// resolvedDesign is a read where some references loaded and some did not, which is what a reader now
-// hands over (agni issue 418). unresolvedDesign stays as it was, so the finding assertions above keep
-// running against a model that knows only about failures.
+// resolvedDesign is a read where some references loaded and some did not. A reader now hands over
+// that shape (agni issue 418). unresolvedDesign is unchanged, so the finding assertions above still
+// run against a model that knows only about failures.
 func resolvedDesign(rs []*ir.ResolvedSymbol, us ...*ir.UnresolvedSymbol) *ir.Design {
 	d := unresolvedDesign(us...)
 	d.InputDiagnostics.ResolvedSymbols = rs
@@ -28,8 +28,8 @@ func resolvedDesign(rs []*ir.ResolvedSymbol, us ...*ir.UnresolvedSymbol) *ir.Des
 }
 
 // TestSymbolUnresolvedReportsPerReference (WS1-052) checks one finding per missing REFERENCE,
-// naming the placements it cost pins. Per-reference because one missing file is one cause; listing
-// the parts is what says how much of the netlist is gone.
+// naming the placements it cost pins. Per-reference because one missing file is one cause; the list
+// of parts says how much of the netlist is gone.
 func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 	d := unresolvedDesign(&ir.UnresolvedSymbol{
 		Symref: "res.sym", Kind: "xschem_sym", RefDes: []string{"R1", "R2"},
@@ -58,9 +58,8 @@ func TestSymbolUnresolvedReportsPerReference(t *testing.T) {
 }
 
 // TestSymbolUnresolvedSilentWhenClean checks that a design whose symbols all resolved reports no
-// FINDING, so the rule is evidence of a real gap rather than a permanent fixture of every run. It
-// is no longer silent in verdicts, which is what agni issue 418 changed, and that is asserted
-// below.
+// FINDING, so the rule is evidence of a real gap rather than a permanent fixture of every run.
+// Since agni issue 418 it is no longer silent in verdicts, and a check below asserts that.
 func TestSymbolUnresolvedSilentWhenClean(t *testing.T) {
 	if fs := symbolUnresolved.Findings(context.Background(), check.NewModel(unresolvedDesign())); len(fs) != 0 {
 		t.Errorf("findings = %v, want none for a clean read", fs)
@@ -109,10 +108,10 @@ func TestSymbolUnresolvedStatesConsideredSet(t *testing.T) {
 // TestSymbolUnresolvedPassCarriesPinCount is the witness check that matters here (build/evidence.md).
 // A pass statement that reads the same on every subject proves nothing, and "the symbol resolved" is
 // such a statement. A stale library answering with an empty stub resolves as successfully as
-// the real symbol and costs the netlist just as much, so the count is what a reader inspects.
+// the real symbol and costs the netlist just as much, so a reader inspects the count.
 //
-// Asserting the two statements DIFFER, rather than that either contains a number, is what catches a
-// witness that carries a constant.
+// Asserting that the two statements DIFFER catches a witness that holds a constant. Asserting that
+// either contains a number would not.
 func TestSymbolUnresolvedPassCarriesPinCount(t *testing.T) {
 	statement := func(pins int32) string {
 		vs := symbolUnresolved.Eval(context.Background(), check.NewModel(resolvedDesign(
@@ -131,9 +130,9 @@ func TestSymbolUnresolvedPassCarriesPinCount(t *testing.T) {
 	}
 }
 
-// TestSymbolUnresolvedPassNamesSource checks provenance. A reference that came off --symbol-path is
-// the half that can be missing on somebody else's machine, so the witness separates it from one the
-// schematic carries itself.
+// TestSymbolUnresolvedPassNamesSource checks provenance. A reference from --symbol-path can be
+// missing on somebody else's machine, so the witness separates it from a reference the schematic
+// carries itself.
 func TestSymbolUnresolvedPassNamesSource(t *testing.T) {
 	vs := symbolUnresolved.Eval(context.Background(), check.NewModel(resolvedDesign([]*ir.ResolvedSymbol{
 		{Symref: "Device:R", Kind: "kicad_sym_embedded", PinCount: 2},
@@ -152,7 +151,7 @@ func TestSymbolUnresolvedPassNamesSource(t *testing.T) {
 
 // TestSymbolUnresolvedSeverityIsWarning pins the deliberate choice against error. A missing library
 // is almost always a defect in the INVOCATION, and the board it is read from may be flawless.
-// duplicate-ref-des earns error because the collision is in the design itself.
+// duplicate-ref-des is an error because the collision is in the design itself.
 func TestSymbolUnresolvedSeverityIsWarning(t *testing.T) {
 	if symbolUnresolved.Severity != "warning" {
 		t.Errorf("severity = %q, want warning", symbolUnresolved.Severity)

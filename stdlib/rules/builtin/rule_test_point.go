@@ -28,8 +28,8 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 		},
 	})
 	check.RegisterSpecFunc("not_a_supply", &check.SpecFunc{
-		// A lone exposed pad or a divider tap into a sense pin, which a rail-shaped name can make look
-		// like a rail to probe (agni issue 935). See notASupply.
+		// A lone exposed pad or a divider tap into a sense pin can have a rail-shaped name, and then
+		// it looks like a rail to probe (agni issue 935). See notASupply.
 		Reads:      []string{"on_net", "pin.electrical_type", "component.class"},
 		Primitives: []string{"select", "traverse"},
 		Fn: func(m check.Model, ents map[string]any, _ []any) any {
@@ -72,11 +72,11 @@ var testPointCoverage = matrixlessSpecRule(func() *check.Rule {
 			// A divider tap named for the rail it senses (VBUS_MON_UP) is not a rail either.
 			check.Not{X: check.IsTrue{T: check.Call{Fn: "not_a_supply"}}},
 		}},
-		// THE VIOLATION, and the only clause that is one, is an in-scope rail with no test point on
-		// it. A pass means the rail carries one. A test point marked do-not-populate still counts,
-		// unlike every other credited part, because the probe lands on its pad and the pad is copper on
-		// the bare board. Pad-only test points are marked DNP for exactly that reason, since nothing
-		// is placed on them (agni issue 961).
+		// THE VIOLATION is an in-scope rail with no test point on it, and this is the only clause
+		// that states one. A pass means the rail has a test point. A test point marked
+		// do-not-populate still counts, unlike every other credited part. The probe touches its pad,
+		// and the pad is copper on the bare board. Pad-only test points are marked DNP for exactly
+		// that reason, since nothing is placed on them (agni issue 961).
 		Where:   check.Not{X: check.ExistsIn{Over: "net.connections", Where: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "test_point"}}}},
 		Message: "rail carries no test point; bring-up and factory test cannot probe it",
 	}

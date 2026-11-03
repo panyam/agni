@@ -9,8 +9,8 @@ import (
 )
 
 // A negative reach would let the walk cross nothing, so a bus with its pull-up wired straight to the
-// rail would fail. That is wrong on every design, so it is refused at load, by Parse and by the
-// ParseProto route --intent-path takes, with the field named.
+// rail would fail. That is wrong on every design, so the load refuses it. Parse refuses it, and so
+// does ParseProto, which --intent-path calls. Both name the field.
 func TestPullUpReachRefusesANegativeValue(t *testing.T) {
 	doc := []byte("name: t\nintent:\n  nets:\n    SDA: {pull_up_reach_hops: -1}\n")
 	if _, err := Parse(doc); err == nil || !strings.Contains(err.Error(), "pull_up_reach_hops") {

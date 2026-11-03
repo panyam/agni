@@ -9,17 +9,18 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Rail-current sizing (WS3-095): does the part supplying a rail carry the current the architecture
-// says that rail draws, and does it carry it with the house margin on top.
+// Rail-current sizing (WS3-095). The architecture says how much current each rail draws. These rules
+// ask whether the part supplying the rail can deliver that current, and deliver it with the house
+// margin on top.
 //
 // These rules join a DECLARED number against a DATASHEET number. The declaration supplies the demand,
-// which no design artifact carries, and the regulator's seeded spec supplies the capacity, which no
+// which no design artifact states, and the regulator's seeded spec supplies the capacity, which no
 // declaration should restate. Both halves have to be present for either rule to conclude anything.
 //
-// TWO rules over one mechanism, because a review's "regulator output ratings" ask and its "current
-// capability margins" ask are separate items that must report independently. A rail whose supply clears the peak
-// but not the margin fires under margin ONLY, so capacity's silence there means "rated for the load",
-// not "adequately sized".
+// There are TWO rules over one mechanism. A review asks about "regulator output ratings" and about
+// "current capability margins" as separate items, and the two must report independently. A rail
+// whose supply clears the peak but not the margin fires under margin ONLY. So capacity's silence
+// there means "rated for the load", not "adequately sized".
 
 // railBudgetCapacityRule fires when the supply reaching a declared rail is rated below the rail's
 // peak budget.
@@ -47,7 +48,7 @@ func railBudgetCapacityRule(d Declaration) *check.Rule {
 }
 
 // railBudgetMarginRule fires when the supply clears the peak budget but not the declared margin over
-// it. It stays silent below the peak, which is railBudgetCapacityRule's finding.
+// it. It is silent below the peak, since railBudgetCapacityRule reports that.
 func railBudgetMarginRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleRailCurrentMargin,
@@ -75,7 +76,7 @@ func railBudgetMarginRule(d Declaration) *check.Rule {
 // the best-rated supply reaching that rail and compare it against factor x the peak. The margin rule
 // passes the declared factor, the capacity rule passes 1.
 //
-// Three cases stay SILENT:
+// Three cases are SILENT.
 //
 //   - A declared rail the design does not carry. That is a missing-rail defect, which the voltage-domain
 //     and subsystem forms report; firing here as well would report one defect under two items.
@@ -151,16 +152,16 @@ func evalRailBudgets(m check.Model, budgets []RailBudget, factor float64, msg fu
 // the part's ref-des and spec. nil when no part reaching the rail states one.
 //
 // Highest, not lowest, and the choice is about false fails. A rail can be within reach of more than
-// one seeded part (a second regulator one series element away, a multi-channel PMIC stating a rating
-// per channel with no way to say which channel this net is), and picking the smallest of those would
-// report a shortfall the design does not have. Where the evidence is ambiguous the rule takes the
-// reading that does not fire; the cost is a missed finding on a rail genuinely fed by the smaller of
-// two supplies.
+// one seeded part. A second regulator can sit one series element away, or a multi-channel PMIC can
+// state a rating per channel with no way to say which channel this net is. Picking the smallest of
+// those would report a shortfall the design does not have. Where the evidence is ambiguous the rule
+// takes the reading that does not fire. The cost is a missed finding on a rail genuinely fed by the
+// smaller of two supplies.
 //
 // Reach is check.SupplyPathReachHops, the same radius the connection-aware voltage rules use, so a
 // bead or a sense resistor between the regulator and the rail does not hide the supply. It needs no
-// power-output pin typing, so these rules carry no format capability gate, and an EDIF netlist (which
-// types no power outputs, WS3-072) resolves the association exactly as a KiCad one does.
+// power-output pin typing, so these rules have no format capability gate. An EDIF netlist types no
+// power outputs (WS3-072), and it resolves the association exactly as a KiCad one does.
 func bestSupply(m check.Model, rail *ir.Net) (string, *parampb.PartSpec, *parampb.Parameter) {
 	var bestRef string
 	var bestSpec *parampb.PartSpec
@@ -202,7 +203,7 @@ func reaches(m check.Model, c *ir.Component, rail *ir.Net) bool {
 // datasheet, and the two round differently. 0.1 x 1.5 is 0.15000000000000002 in float64 while the
 // literal 0.15 is 0.1499999999999999944, so a 150mA part on a 100mA rail at a 1.5 factor fails a
 // margin it meets exactly. Roughly one in six combinations of a milliamp-resolution budget and a
-// common factor lands this way, so it is the ordinary case rather than a corner.
+// common factor comes out this way, so it is the ordinary case rather than a corner.
 func below(have, want float64) bool {
 	return have < want*(1-1e-9)
 }

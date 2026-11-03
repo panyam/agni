@@ -1,15 +1,15 @@
-// Package lib is the shipped library of derived relations: Datalog modules over the relations
-// stdlib/relations projects, registered in the fact layer's vocabulary at the paths their file names
-// give (agni issue 751). component.dl defines component.two_terminal, component.probed_both and
-// component.probed_one; net.dl defines net.has_test_point. A query calls them exactly as it calls a
-// base relation, and `agni query --relations <path>` prints a member's signature and definition.
-// Each member has a reference page in docs/, and docsite/content/build/library-member.md is the
-// how-to for adding one.
+// Package lib is the shipped library of derived relations. It is a set of Datalog modules over the
+// relations that stdlib/relations projects. Each module registers in the fact layer's vocabulary at
+// the path its file name gives (agni issue 751). component.dl defines component.two_terminal,
+// component.probed_both and component.probed_one; net.dl defines net.has_test_point. A query calls
+// them exactly as it calls a base relation, and `agni query --relations <path>` prints a member's
+// signature and definition. Each member has a reference page in docs/, and
+// docsite/content/build/library-member.md is the how-to for adding one.
 //
-// A member belongs here when it is a general hardware question many queries ask. One that only a
-// single report needs stays in that report's query, and one that a Go rule or a Spec must read is
-// promoted to a base relation in stdlib/relations instead (DECISIONS, "The Datalog engine lives in
-// jaala").
+// A member belongs here when it is a general hardware question many queries ask. If only a single
+// report needs a member, it belongs in that report's query. If a Go rule or a Spec must read it, it
+// is promoted to a base relation in stdlib/relations instead (DECISIONS, "The Datalog engine lives
+// in jaala").
 //
 // The package imports core/query and stdlib/relations so the Datalog language and the relations these
 // modules read are registered before the modules are. The fact layer composes and checks the
@@ -30,9 +30,9 @@ import (
 	"github.com/panyam/jaala/ns"
 )
 
-// shipped is the library this package registers: one module per `<path>.dl` file, and one reference
-// page per public member in `docs/<path>.md`, served by Registry.Doc and generated into the docsite's
-// relation reference by `make catalog-docs`.
+// shipped is the library this package registers. It holds one module per `<path>.dl` file and one
+// reference page per public member in `docs/<path>.md`. Registry.Doc serves the pages, and `make
+// catalog-docs` generates them into the docsite's relation reference.
 //
 //go:embed *.dl docs/*.md
 var shipped embed.FS
@@ -50,22 +50,22 @@ func init() {
 	facts.RegisterDocs(docs)
 }
 
-// Module is one library file: the module path its rules register under, its Datalog text, and the
-// file it was read from.
+// Module is one library file. It holds the module path for its rules, its Datalog text, and the
+// name of its source file.
 type Module struct {
 	Path string
 	Text string
 	File string
 }
 
-// Read loads a library laid out as this package's is: each `<module.path>.dl` file at the root of fsys
-// is one module, registered at the path its name gives, and each `docs/<member.path>.md` is a member's
+// Read loads a library laid out like this package. Each `<module.path>.dl` file at the root of fsys
+// is one module, registered at the path its name gives. Each `docs/<member.path>.md` is a member's
 // reference page. A file whose name starts with "_" is skipped, so a template can sit beside the
 // pages. A missing docs directory is an empty set of pages, not an error.
 //
 // A project's own `lib/` directory is read with the same function, so the two layouts cannot drift.
-// Read only reads files; whether the modules parse and what they may read is decided when they are
-// composed into a vocabulary.
+// Read only reads files. Composing the modules into a vocabulary decides whether they parse and
+// what they may read.
 func Read(fsys fs.FS) ([]Module, map[string]string, error) {
 	names, err := fs.Glob(fsys, "*.dl")
 	if err != nil {

@@ -13,10 +13,10 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// ioMapFunctionRule: the function a map row selects is not one the part's datasheet lists for that
-// pin (agni issue 667). It is a fifth rule rather than a clause of io-map-pin-mismatch because the
-// fix differs: a wrong net is a schematic edit, and an illegal function is a pin-mux plan that
-// cannot be built on this pin at all.
+// ioMapFunctionRule checks the function each map row selects. A row fails when the part's datasheet
+// does not list that function for the pin (agni issue 667). It is a fifth rule rather than a clause
+// of io-map-pin-mismatch because the fix differs. A wrong net is a schematic edit, and an illegal
+// function is a pin-mux plan that cannot be built on this pin at all.
 func ioMapFunctionRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleIOMapFunction,
@@ -147,10 +147,10 @@ func functionNote(r ident.Result) string {
 	return " (" + string(r.Match) + " match: " + r.Note + ")"
 }
 
-// The phrases io-map-function's not-considered reasons are built from, one per step that can stop
+// io-map-function builds its not-considered reasons from these phrases, one per step that can stop
 // it. FunctionReasonOf reads a reason back to its kind through these same constants, so a reworded
-// reason keeps its kind, and a report sent from a board we never see can count why without carrying
-// the sentence, which names parts (agni issue 1196).
+// reason keeps its kind. A report sent from a board we never see can then count the reasons without
+// including the sentence, since the sentence names parts (agni issue 1196).
 const (
 	phraseNoFunction        = "declares no function"
 	phraseNoComponent       = "carries no component"
@@ -177,8 +177,8 @@ const (
 	FunctionReasonOther           FunctionReason = "other"
 )
 
-// FunctionReasonOf names the step a not-considered io-map-function reason came from, and
-// FunctionReasonOther for text this rule did not write.
+// FunctionReasonOf reads a not-considered io-map-function reason and names the step it came from.
+// It returns FunctionReasonOther for text this rule did not write.
 func FunctionReasonOf(reason string) FunctionReason {
 	for _, c := range []struct {
 		phrase string

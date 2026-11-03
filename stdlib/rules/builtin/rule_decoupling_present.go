@@ -37,7 +37,7 @@ var decouplingPresent = &check.Rule{
 // committed reach.fires fixture is that shape, so an inductor-alone guard would silence a real finding.
 //
 // Both checks are class proxies for the buck switch-node topology question in agni issue 374. Replace
-// them with that pattern when it lands.
+// them with that pattern when it ships.
 func notARail(m check.Model, n *ir.Net) string {
 	var gate, inductor, transistor string
 	for _, c := range n.Connections {
@@ -73,12 +73,12 @@ func notARail(m check.Model, n *ir.Net) string {
 //     ground is adequately decoupled, which this rule cannot support.
 //   - A net driving a transistor's GATE is a control node (agni issue 382).
 //   - A net carrying an inductor beside a transistor is a switching node (agni issue 382).
-//   - A lone exposed pad and a divider tap into a sense pin carry a power_in pin and draw no supply
+//   - A lone exposed pad and a divider tap into a sense pin have a power_in pin but draw no supply
 //     (notASupply, agni issue 935).
 //
 // An EXTERNAL net is NotConsidered instead. It is a rail that feeds supply pins, and its capacitor may
-// be drawn on a sheet this read did not open. So is a supply pin the design marks no-connect, which
-// draws nothing (agni issue 1244).
+// be drawn on a sheet this read did not open. A supply pin marked no-connect in the design is
+// NotConsidered too, since it draws nothing (agni issue 1244).
 //
 // A pass NAMES the capacitor in the witness and in Context, so a reviewer can go and see where it
 // sits, and deleting that capacitor changes the witness or flips the verdict. A capacitor across a
@@ -124,16 +124,16 @@ func decouplingPresentVerdicts(ctx context.Context, m check.Model) []check.Verdi
 }
 
 // decouplingPresentSpec is the rule's declarative twin (WS3-003). It is DELIBERATELY NARROWER than the
-// Go body, carrying the capacitor test without the not-a-rail guards, because those read a pin ROLE
-// and the spec AST has no pin-role term. Adding one would be an FFI with this rule as its only caller.
+// Go body. It has the capacitor test without the not-a-rail guards, because those read a pin ROLE and
+// the spec AST has no pin-role term. Adding one would be an FFI with this rule as its only caller.
 //
-// TestSpecParity passes only because no committed fixture carries a gate-drive or switching node. A
+// TestSpecParity passes only because no committed fixture has a gate-drive or switching node. A
 // fixture of either shape will make the two diverge and fail that test, and that failure is correct.
 //
-// Reads follows the twin and does NOT list pin.role, although the Go guard consults it, because
-// TestSpecMetadata validates Reads against the twin and would fail. The gap is safe, since pin.role
-// is RoleUnknown on a format with no pin data and the guard then does not fire. i2c-pull-up's
-// Primitives drift the same way (the deferred-work ledger records it), and the fix for both is to
+// The Go guard consults pin.role, but Reads follows the twin and does NOT list it. TestSpecMetadata
+// validates Reads against the twin and would fail otherwise. The gap is safe, since pin.role is
+// RoleUnknown on a format with no pin data and the guard then does not fire. i2c-pull-up's
+// Primitives drift the same way, and the deferred-work ledger records it. The fix for both is to
 // validate the field against the Go body.
 var decouplingPresentSpec = &check.Spec{
 	Over: "nets",

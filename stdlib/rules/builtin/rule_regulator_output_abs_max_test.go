@@ -14,7 +14,7 @@ import (
 
 // regSpec hand-builds a regulator spec whose OUTPUT voltage is stated the way a real one is, as a
 // recommended-operating row, not an absolute maximum. A rule filtering outputs to ABSOLUTE_MAX would
-// find nothing on a real part, which is why OutputVoltageLimits does not constrain the kind.
+// find nothing on a real part. So OutputVoltageLimits does not constrain the kind.
 func regSpec(mpn string, vout float64, method string, confidence float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
 	return &parampb.PartSpec{
@@ -86,7 +86,7 @@ func regModel(t *testing.T, d *ir.Design, vout, absMax float64) check.Model {
 
 // TestRegulatorOutputExceedsAbsMax is the WS3-028 acceptance. It compares a param on one part against a
 // param on ANOTHER, across the net joining them, citing both documents. The subject is the endangered
-// part, because that is the one a reviewer opens the datasheet for.
+// part, because a reviewer opens that part's datasheet.
 func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
 	m := regModel(t, railDesign(""), 5.0, 3.6)
 	fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m)
@@ -102,7 +102,7 @@ func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
 			t.Errorf("message missing %q: %s", want, f.Message)
 		}
 	}
-	// BOTH datasheets, which is why DatasheetProv is a slice.
+	// BOTH datasheets are cited, so DatasheetProv is a slice.
 	if len(f.DatasheetProv) != 2 {
 		t.Fatalf("want 2 citations (load and source), got %d: %+v", len(f.DatasheetProv), f.DatasheetProv)
 	}
@@ -115,8 +115,8 @@ func TestRegulatorOutputExceedsAbsMax(t *testing.T) {
 }
 
 // TestRegulatorOutputWithinRating checks that the same topology with the regulator inside the
-// load's rating is silent. Guards the comparison direction, which a sign error would invert while
-// every other assertion still passed.
+// load's rating is silent. It guards the comparison direction. A sign error would invert that
+// direction while every other assertion still passed.
 func TestRegulatorOutputWithinRating(t *testing.T) {
 	m := regModel(t, railDesign(""), 3.3, 3.6)
 	if fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m); len(fs) != 0 {
@@ -139,7 +139,7 @@ func TestRegulatorOutputAcrossSeriesElement(t *testing.T) {
 
 // TestRegulatorOutputSilentWithoutParams exists because the params tier is a per-run injection, so
 // with no seeded set there is nothing to compare. check.Available gates the rule to not-applicable,
-// which is what makes an unseeded design read unevaluable rather than clean (the WS3-097 posture).
+// so an unseeded design reads unevaluable rather than clean (the WS3-097 posture).
 func TestRegulatorOutputSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(railDesign(""))
 	if fs := regulatorOutputExceedsAbsMax.Findings(context.Background(), m); len(fs) != 0 {
@@ -169,14 +169,14 @@ func TestRegulatorOutputOneSidedSeed(t *testing.T) {
 	}
 }
 
-// TestRegulatorOutputCarriesBothEntitiesAsContext is the two-entity case of agni issue 349, and the
-// one that shows why context is a LIST with roles rather than a single extra subject.
+// TestRegulatorOutputCarriesBothEntitiesAsContext is the two-entity case of agni issue 349. It shows
+// why context is a LIST with roles rather than a single extra subject.
 //
 // The message names three entities: the endangered part (the subject), the regulator supplying it,
 // and the net between them. A reader who wants to look at the regulator, or at the rail, had to read
 // the ref des out of the sentence and find it by hand.
 //
-// The ORDER assertion matters as much as the presence: entries come in the order the message names
+// The ORDER assertion matters as much as the presence. Entries come in the order the message names
 // them, so a panel's chips read like the sentence above them.
 func TestRegulatorOutputCarriesBothEntitiesAsContext(t *testing.T) {
 	m := regModel(t, railDesign(""), 5.0, 3.6)

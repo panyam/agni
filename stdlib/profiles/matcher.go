@@ -10,10 +10,11 @@ import (
 
 // This file is the ONE place a net name is matched against a profile signal. It serves two callers'
 // worlds, the generated datalog (netMatch, compiled into every requirement's rules) and plain Go
-// (netMatchesSignal, behind InUse / Nets / Coverage). They must agree, or a rule that will not fire
-// gets scored as a clean pass (the WS3-090 false-pass shape) or a panel binds a net no finding ever
-// names. Both live here, side by side, and the glob/regex forms share one compiler with the
-// query predicates (query.CompileGlob / query.CompilePattern) rather than twinning the translation.
+// (netMatchesSignal, behind InUse / Nets / Coverage). They must agree. Otherwise a review scores a
+// clean pass on a rule that will not fire (the WS3-090 false-pass shape), or a panel binds a net no
+// finding ever names. Both live here, side by side, and the glob/regex forms share one compiler
+// with the query predicates (query.CompileGlob / query.CompilePattern) rather than twinning the
+// translation.
 //
 // A signal declares exactly one matcher FORM (WS3-057):
 //
@@ -30,10 +31,11 @@ import (
 // netMatch is the datalog literal(s) binding net-var v to signal s's naming convention. Every
 // generated rule that selects a signal's net goes through here (presence, the completeness anchor,
 // host-present, pull-up, and dangling), so a discriminating matcher is applied uniformly and no rule
-// can latch onto a foreign net that merely shares a suffix.
+// can match a foreign net that merely shares a suffix.
 //
-// A net a tool named, "N$1" or KiCad's "unconnected-(J1I-SGMII0_MDIO-PadE7)", matches no signal: a
-// KiCad name carries a pin's own name, and a pin called MDIO is not a net someone wired as MDIO.
+// A tool names some nets itself, like "N$1" or KiCad's "unconnected-(J1I-SGMII0_MDIO-PadE7)". Such a
+// net matches no signal. The KiCad name includes a pin's own name, and a pin called MDIO is not a net
+// someone wired as MDIO.
 func netMatch(v query.Term, s Signal) []query.Literal {
 	designer := query.Neg(query.Rel("str.match", v, query.Str(check.ToolNetNamePattern)))
 	switch {

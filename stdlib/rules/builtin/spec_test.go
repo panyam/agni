@@ -11,10 +11,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// specParityFixture is a deliberately messy design touching every twin's machinery: typed
-// pins in all directions, every guard attribute, ref-des classes, input diagnostics, diff
-// pairs, and I2C nets. Parity does not care which rules fire on it, only that both
-// evaluation paths agree, so breadth beats realism.
+// specParityFixture is a deliberately messy design touching every twin's machinery. It has typed
+// pins in all directions, every guard attribute, ref-des classes, input diagnostics, diff pairs,
+// and I2C nets. Parity does not care which rules fire on it, only that both evaluation paths agree,
+// so breadth beats realism.
 func specParityFixture() *ir.Design {
 	attrs := func(kv ...string) map[string]string {
 		m := map[string]string{}
@@ -35,9 +35,9 @@ func specParityFixture() *ir.Design {
 				{Designator: "3", Direction: ir.PinDirection_PIN_DIRECTION_OUTPUT},
 				{Designator: "4", Direction: ir.PinDirection_PIN_DIRECTION_NO_CONNECT},
 				{Designator: "5", Direction: ir.PinDirection_PIN_DIRECTION_INOUT},
-				// Bare on every placement. unconnected-pin's Go Eval fires on passive pins,
-				// and before check.DirString mapped PASSIVE the twin read them as "unspecified"
-				// and skipped, which is the divergence this pin holds the parity gate to.
+				// Bare on every placement. unconnected-pin's Go Eval fires on passive pins. Before
+				// check.DirString mapped PASSIVE, the twin read them as "unspecified" and skipped
+				// them. This pin holds the parity gate to that divergence.
 				{Designator: "6", Direction: ir.PinDirection_PIN_DIRECTION_PASSIVE},
 			}},
 			{Name: "REG", Pins: []*ir.Pin{
@@ -87,7 +87,7 @@ func specParityFixture() *ir.Design {
 			// pin-level shapes: U3 partially wired (bare pins 2,3,5), NC pin wired into a real net
 			tnet("U3_PWR", "U3.1", "REG1.1"),
 			tnet("BADNC", "U3.4", "R1.2"),
-			// virtual power-symbol connections (WS1-014), where direction rides the attribute
+			// virtual power-symbol connections (WS1-014), where the attribute holds the direction
 			vnet("VRAIL", vconn("#PWR07", "1", "power_in"), conn("U1.1")),
 			vnet("VDRIVE", vconn("#FLG01", "1", "power_out"), vconn("#FLG02", "1", "power_out")),
 		},
@@ -113,8 +113,8 @@ func rulesByName() map[string]*check.Rule {
 	return out
 }
 
-// conn/vconn/vnet build connections for the virtual-power shapes, and vconn carries the
-// WS1-014 direction attribute a power symbol's pin travels on.
+// conn/vconn/vnet build connections for the virtual-power shapes. vconn sets the WS1-014 direction
+// attribute, which holds a power symbol's pin direction.
 func conn(ref string) *ir.Connection {
 	p := strings.SplitN(ref, ".", 2)
 	return &ir.Connection{ComponentRef: p[0], PinRef: p[1]}
@@ -128,11 +128,11 @@ func vnet(name string, cs ...*ir.Connection) *ir.Net {
 	return &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: "p"}, Connections: cs}
 }
 
-// TestSpecParity holds every declarative twin to its Go Eval, identical findings in order
-// over both fixture designs. This is the gate that makes flipping a rule to spec-canonical a
-// safe one-line change. It iterates Specs, not Rules, because spec-only rules (the matrix rows)
-// have no Go side to compare (their Eval IS the interpreter), and every Specs key must name a
-// registered rule (no orphan twins).
+// TestSpecParity holds every declarative twin to its Go Eval, identical findings in order over both
+// fixture designs. This gate makes flipping a rule to spec-canonical a safe one-line change. It
+// iterates Specs, not Rules. Spec-only rules (the matrix rows) have no Go side to compare, since
+// their Eval IS the interpreter. Every Specs key must name a registered rule, so there are no orphan
+// twins.
 func TestSpecParity(t *testing.T) {
 	byName := rulesByName()
 	for _, tc := range []struct {
@@ -186,8 +186,8 @@ func sortedCopySet(xs []string) []string {
 	return out
 }
 
-// TestSpecRule covers the constructor path a spec-authored rule (no Go twin) takes, with metadata
-// filled from derivation, Eval bound, and a panic on an invalid spec.
+// TestSpecRule covers the constructor path for a spec-authored rule with no Go twin. The path fills
+// metadata from derivation, binds Eval, and panics on an invalid spec.
 func TestSpecRule(t *testing.T) {
 	s := &check.Spec{
 		Over:    "nets",
@@ -240,9 +240,9 @@ func TestSpecValidate(t *testing.T) {
 
 // TestSpecScopeRestore guards eachMember's scope save/restore. A quantifier nested in
 // another quantifier's Where must not leave its member bound when the outer one resumes.
-// CONFLICT has two output pins; the outer count matches members whose direction equals the
-// direction of at least one member (trivially true per member), which evaluates an inner
-// quantifier per outer member and only totals correctly if the outer binding is restored.
+// CONFLICT has two output pins. The outer count matches members whose direction equals the
+// direction of at least one member, which is trivially true per member. That count evaluates an
+// inner quantifier per outer member, and it totals correctly only if the outer binding is restored.
 func TestSpecScopeRestore(t *testing.T) {
 	s := &check.Spec{
 		Over: "nets",

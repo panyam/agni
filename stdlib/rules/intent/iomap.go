@@ -12,23 +12,23 @@ import (
 // The declared pin map checked against the netlist (agni issue 517).
 //
 // It catches a pin assignment that moved late, after layout wanted a swap or firmware hit a mux
-// conflict, where the map was updated and one net was not redrawn. The netlist stays self-consistent
-// and every electrical rule passes, because nothing is electrically wrong.
+// conflict, where the map was updated and one net was not redrawn. The netlist is still
+// self-consistent and every electrical rule passes, because nothing is electrically wrong.
 //
 // THREE rules here over one declaration, because a reviewer acts differently on each answer. A net on
 // the wrong pin is a schematic edit, a declared net the netlist lacks is usually a real
 // disconnection, and a wrong far end is a routing question. The last two are often confused, so they
-// never share a verdict. The fourth rule, io-map-coverage, is in iomapcoverage.go, and the fifth,
-// io-map-function, which checks a row's declared function against the datasheet, in
-// iomapfunction.go.
+// never share a verdict. The fourth rule, io-map-coverage, is in iomapcoverage.go. The fifth,
+// io-map-function, is in iomapfunction.go and checks a row's declared function against the
+// datasheet.
 //
 // Every comparison goes through core/ident, never string equality. A map uses the datasheet's
-// vocabulary and the netlist answers in package designators, and both carry zero-padded indices,
-// invisible characters pasted out of a PDF, and cells naming several functions at once. Measured on
-// a large production board, every warning a shipped in-house checker of this kind produced was a
-// string-comparison artifact and none was a design defect.
+// vocabulary and the netlist answers in package designators, and both contain zero-padded indices,
+// invisible characters pasted out of a PDF, and cells naming several functions at once. We ran a
+// shipped in-house checker of this kind on a large production board. Every warning it produced was
+// a string-comparison artifact, and none was a design defect.
 
-// ioMapPinRule: the declared net is not on the pin the map names.
+// ioMapPinRule reports a row whose declared net is not on the pin the map names.
 func ioMapPinRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleIOMapPin,
@@ -47,7 +47,7 @@ func ioMapPinRule(d Declaration) *check.Rule {
 	}
 }
 
-// ioMapNetAbsentRule: the map declares a net the netlist does not have.
+// ioMapNetAbsentRule reports a declared net the netlist does not have.
 func ioMapNetAbsentRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleIOMapNetAbsent,
@@ -65,7 +65,7 @@ func ioMapNetAbsentRule(d Declaration) *check.Rule {
 	}
 }
 
-// ioMapFarEndRule: the net does not reach the far end the map declares for it.
+// ioMapFarEndRule reports a net that does not reach the far end the map declares for it.
 func ioMapFarEndRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:     RuleIOMapFarEnd,
@@ -143,10 +143,10 @@ func ioMapPinVerdicts(m check.Model, d Declaration) []check.Verdict {
 	return out
 }
 
-// rowContext names the map row a per-row verdict answers: the declared net, and the declared pin
-// when the design spells it differently from the subject. With the subject's device that is the
-// row's key, so a consumer laying the map out one row per pin joins each rule's verdict back to its
-// row without a model (agni issue 1188).
+// rowContext names the map row that a per-row verdict answers. It gives the declared net, and the
+// declared pin when the design spells it differently from the subject. Together with the subject's
+// device that is the row's key. So a consumer laying the map out one row per pin joins each rule's
+// verdict back to its row without a model (agni issue 1188).
 func rowContext(a IOAssignment, res pinMatch) []check.ContextSubject {
 	ctx := []check.ContextSubject{check.Ctx(check.NetNameEntity(a.Net), RoleDeclaredNet)}
 	if res.outcome == check.Pass && res.designator != a.Pin {
@@ -260,8 +260,8 @@ func ioMapFarEndVerdicts(m check.Model, d Declaration) []check.Verdict {
 	return out
 }
 
-// pinMatch is one resolved declaration-to-design pin lookup: which pin it landed on, how sure that
-// is, and the verdict when it did not land at all.
+// pinMatch is one resolved declaration-to-design pin lookup. It holds the pin the lookup found, how
+// sure that match is, and the verdict when it found no pin at all.
 type pinMatch struct {
 	outcome    check.Outcome
 	reason     string
@@ -271,8 +271,8 @@ type pinMatch struct {
 	via        ident.Result
 }
 
-// label renders the pin the way a reader checking the finding needs to see it: the design's
-// designator, plus the map's spelling when the two differ.
+// label renders the pin for a reader checking the finding. It gives the design's designator, plus
+// the map's spelling when the two differ.
 func (p pinMatch) label() string {
 	if p.designator == p.declared {
 		return p.designator
@@ -282,8 +282,8 @@ func (p pinMatch) label() string {
 
 func (p pinMatch) endpoint(refDes string) string { return refDes + "." + p.label() }
 
-// subject is the pin a per-row verdict is about: the design's designator once the lookup landed, and
-// the map's own spelling when it did not, since then there is no design pin to name.
+// subject returns the pin a per-row verdict is about. That is the design's designator when the lookup
+// found a pin, and the map's own spelling when it did not, since then there is no design pin to name.
 func (p pinMatch) subject(refDes string) check.Entity {
 	if p.outcome == check.Pass {
 		return check.PinEntity(refDes, p.designator)
@@ -291,7 +291,7 @@ func (p pinMatch) subject(refDes string) check.Entity {
 	return check.PinEntity(refDes, p.declared)
 }
 
-// decide gives a verdict the outcome of a lookup that did not land. A failed or undecided lookup is
+// decide gives a verdict the outcome of a lookup that found no pin. A failed or undecided lookup is
 // stated as the witness and an unconsidered one as the reason, since the contract keeps the reason
 // for the subjects a rule could not judge.
 func (p pinMatch) decide(v *check.Verdict) {
@@ -312,8 +312,8 @@ func (p pinMatch) note() string {
 	return " (" + string(p.via.Match) + " pin-name match: " + p.via.Note + ")"
 }
 
-// resolvePin finds the design pin a map row names through check.LookupPin, the lookup trace shares,
-// and turns each kind of non-match into the verdict this rule gives it.
+// resolvePin finds the design pin a map row names. It goes through check.LookupPin, which trace also
+// uses, and turns each kind of non-match into the verdict this rule gives it.
 func resolvePin(m check.Model, refDes, declared string) pinMatch {
 	out := pinMatch{declared: declared}
 	l := check.LookupPin(m, refDes, declared)
@@ -352,7 +352,7 @@ func resolvePin(m check.Model, refDes, declared string) pinMatch {
 }
 
 // sameName compares two names of the same THING (a net against a net), where a fuzzy reading is
-// wrong. ident.Fuzzy drops tokens one side carries and the other does not, which suits a vendor's
+// wrong. ident.Fuzzy drops a token when only one side has it, which suits a vendor's
 // inconsistent function spellings, but dropping a token from a net name names a different net.
 func sameName(a, b string) bool {
 	switch ident.Compare(a, b).Match {
@@ -363,9 +363,9 @@ func sameName(a, b string) bool {
 }
 
 // nearestNet returns the design's net whose name differs from the declared one only by spelling, or
-// "" when none does. It keeps a misspelling from being reported as a disconnection, since a
-// reviewer sent after a missing net that is present under a name differing by an invisible
-// character stops trusting the tool.
+// "" when none does. It keeps a misspelling from being reported as a disconnection. Imagine a
+// reviewer sent to find a missing net. The net is present, under a name differing by an invisible
+// character. That reviewer stops trusting the tool.
 func nearestNet(m check.Model, declared string) string {
 	for _, n := range m.Nets() {
 		if sameName(n.Name, declared) {

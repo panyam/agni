@@ -10,15 +10,15 @@ import (
 
 // TestVerdictParity pins WHICH outcomes reach the findings contract.
 //
-// Its original job is gone. Eval and Findings were two hand-written bodies
-// that could disagree, and now Findings IS VerdictsToFindings(Eval), so per-rule drift is not a state
-// a rule can be in. What is left is the projection RULE itself, which is a real decision with real
-// consequences (an Inconclusive verdict must still reach a reviewer; a Pass must not).
+// Its original job is gone. Eval and Findings were two hand-written bodies that could disagree. Now
+// Findings IS VerdictsToFindings(Eval), so per-rule drift is not a state a rule can be in. The
+// projection RULE itself is left. It is a real decision with real consequences (an Inconclusive
+// verdict must still reach a reviewer; a Pass must not).
 //
 // The expectation is therefore still rebuilt HERE rather than by calling VerdictsToFindings, and the
 // reason is sharper than before. Findings() literally is that call, so comparing the two would run
 // one function against itself and pass for any projection, broken ones included. (It did. This test
-// asserted nothing until a red-check caught it.) Restating the rule independently means a change to
+// asserted nothing until a red-check caught it.) With the rule restated independently, a change to
 // what projects has to be made deliberately in two places instead of silently in one.
 func TestVerdictParity(t *testing.T) {
 	for _, tc := range []struct {
@@ -28,10 +28,10 @@ func TestVerdictParity(t *testing.T) {
 		{"ruleFixture", check.NewModel(ruleFixture())},
 		{"parityFixture", check.NewModel(specParityFixture())},
 		// The positive control for the Inconclusive half of the projection rule below. Neither
-		// fixture above puts a transistor on a power path, so without this the Inconclusive clause
+		// fixture above puts a transistor on a power path. Without this case the Inconclusive clause
 		// is a branch no case reaches, and the test would pass on a build that dropped inconclusive
-		// findings entirely, which is the negative-result-without-a-control shape build/evidence.md
-		// warns about.
+		// findings entirely. build/evidence.md warns about that shape, a negative result without a
+		// control.
 		{"unclassifiableTransistor", check.NewModel(revDesign("transistor", false))},
 	} {
 		var converted, inconclusive int
@@ -43,16 +43,16 @@ func TestVerdictParity(t *testing.T) {
 			// The expectation is rebuilt HERE rather than by calling VerdictsToFindings, because a
 			// converted rule's Eval already IS that call, so comparing the two would run one function
 			// against itself and pass for any projection, broken ones included. (It did. This test
-			// asserted nothing until a red-check caught it.) Restating the rule independently means
-			// a change to what projects has to be made deliberately in both places instead of
-			// silently in one.
+			// asserted nothing until a red-check caught it.) With the rule restated independently, a
+			// change to what projects has to be made deliberately in both places instead of silently
+			// in one.
 			want := []check.Finding{}
 			for _, v := range r.Eval(context.Background(), tc.m) {
 				// Fail AND Inconclusive. An inconclusive verdict is not a defect and must not be
-				// counted as one, but it must still reach a reviewer. A bound review item reading
-				// silence as a pass is what agni issue 74 cost. reverse-blocking-absent is the rule
-				// that produces one, and stating it here is the second half of the deliberate
-				// two-place change this test exists to force.
+				// counted as one, but it must still reach a reviewer. In agni issue 74 a bound review
+				// item read silence as a pass. reverse-blocking-absent produces an inconclusive
+				// verdict, and stating it here is the second half of the deliberate two-place change
+				// this test exists to force.
 				if (v.Outcome == check.Fail || v.Outcome == check.Inconclusive) && v.Finding != nil {
 					want = append(want, *v.Finding)
 				}
@@ -65,8 +65,8 @@ func TestVerdictParity(t *testing.T) {
 					tc.name, r.Name, got, want)
 			}
 		}
-		// The positive control. A test that iterates zero converted rules passes while proving nothing,
-		// which is the shape this catalog treats as the expensive failure.
+		// The positive control. A test that iterates zero converted rules passes while proving
+		// nothing, and this catalog treats that shape as the expensive failure.
 		if converted == 0 {
 			t.Fatalf("%s: no rule sets EvalVerdicts, so this test asserted nothing", tc.name)
 		}
@@ -87,8 +87,8 @@ func TestConvertedRulesConsiderSomething(t *testing.T) {
 		if !r.StatesConsideredSet {
 			continue
 		}
-		// i2c-pull-up's subjects are the fixture's SDA/SCL nets; the datasheet rules need seeded
-		// pin-bound params the plain fixture has none of, so only the connectivity rule can answer here.
+		// i2c-pull-up's subjects are the fixture's SDA/SCL nets. The datasheet rules need seeded
+		// pin-bound params and the plain fixture has none, so only the connectivity rule can answer.
 		if r.Name != "i2c-pull-up" {
 			continue
 		}
@@ -99,7 +99,7 @@ func TestConvertedRulesConsiderSomething(t *testing.T) {
 	}
 }
 
-// RunVerdicts is the entry point that makes a verdict reachable at all. Before it, every verdict died
+// RunVerdicts makes a verdict reachable at all. Before it, every verdict died
 // inside the function that built it and no caller outside these three rules could obtain one.
 func TestRunVerdictsCollectsAcrossRules(t *testing.T) {
 	vs := check.RunVerdictsBackground(check.NewModel(ruleFixture()), rules)

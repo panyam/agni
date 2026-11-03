@@ -130,8 +130,8 @@ func TestBothRulesStateWhatTheyLookedAt(t *testing.T) {
 	}
 }
 
-// A pass proves itself with the parts it counted, which is what makes a clean bus checkable rather
-// than merely unreported.
+// A pass names the parts it counted. A reviewer can then check a clean bus, rather than only see that
+// nothing was reported on it.
 func TestAPassNamesThePullUpItFound(t *testing.T) {
 	for _, v := range i2cRedundantPullUp.Eval(context.Background(), check.NewModel(pullupCountFixture())) {
 		if check.EntityRef(v.Subjects[0]) != "SCL1" {
@@ -155,10 +155,10 @@ func TestAPassNamesThePullUpItFound(t *testing.T) {
 	t.Fatal("SCL1 produced no verdict")
 }
 
-// THE POSITIVE CONTROL. Both rules count only resistors landing on a net the naming lexicon calls a
-// rail, so on a board whose supplies it does not recognise the count collapses to zero and neither
-// rule can fire. That is a silent no-op, and the only thing that separates it from a clean board is
-// a test that shows the same topology reporting nothing.
+// THE POSITIVE CONTROL. Both rules count only resistors on a net the naming lexicon calls a rail.
+// Imagine a board whose supplies the lexicon does not recognise. The count collapses to zero and
+// neither rule can fire. That is a silent no-op, and only a test separates it from a clean board.
+// This test shows the same topology reporting nothing.
 func TestNeitherRuleFiresWhenTheSupplyIsNotRecognisedAsARail(t *testing.T) {
 	d := pullupCountFixture()
 	for _, n := range d.Nets {

@@ -5,12 +5,12 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// Nets returns the net names that belong to interface p on this design, the scope a review filters a
-// broad rule's findings to so a per-interface ask (e.g. "CAN ESD") sees only that interface's nets.
-// When the interface declares a host and the host is on the design, the scope is exactly the host's
-// nets, which disambiguates suffixes shared across buses such as LIN's _TX/_RX. Otherwise it is the
-// nets matched by the profile's signal matchers, the same ones the rules compile to, so a scoped item
-// cannot pull in a net no finding can name.
+// Nets returns the net names that belong to interface p on this design. A review filters a broad
+// rule's findings to that scope, so a per-interface ask (e.g. "CAN ESD") sees only that interface's
+// nets. When the interface declares a host and the host is on the design, the scope is exactly the
+// host's nets, which disambiguates suffixes shared across buses such as LIN's _TX/_RX. Otherwise it
+// is the nets matched by the profile's signal matchers, the same ones the rules compile to, so a
+// scoped item cannot pull in a net no finding can name.
 //
 // An empty result means present but unmatched, a clean pass. Absence is InUse's job (see present.go).
 func Nets(m check.Model, p Profile) map[string]bool {
@@ -46,7 +46,7 @@ func scope(m check.Model, p Profile) (nets, comps map[string]bool) {
 		}
 	}
 	if p.Instance != "" {
-		// The nets of the buses in use, so a net another interface shares a suffix with stays out.
+		// The nets of the buses in use, so another interface's net that shares a suffix is left out.
 		onBus := p.busNets(m, p.Signals)
 		for _, n := range m.Nets() {
 			if onBus[n.GetName()] {

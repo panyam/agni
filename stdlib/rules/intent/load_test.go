@@ -61,7 +61,7 @@ func TestParseRejects(t *testing.T) {
 		// budget. Both are author errors, not policies.
 		"margin factor of one":    "name: N\nintent:\n  nets:\n    3V3: {peak: 0.8}\n  margin_factor: 1\n",
 		"margin factor below one": "name: N\nintent:\n  nets:\n    3V3: {peak: 0.8}\n  margin_factor: 0.9\n",
-		// A factor with nothing to apply it to is a declaration that reads as covered and checks nothing.
+		// A factor with nothing to apply it to reads as covered and checks nothing.
 		"margin factor alone": "name: N\nintent:\n  modules:\n  - {name: X, class: soc}\n  margin_factor: 1.2\n",
 	}
 	for label, doc := range cases {
@@ -71,7 +71,7 @@ func TestParseRejects(t *testing.T) {
 	}
 }
 
-// A key the intent section does not have fails at load, with the line, rather than reading as a design
+// An unknown key in the intent section fails at load, with the line, rather than reading as a design
 // that declares nothing. A form at the top level is no intent section at all.
 func TestParseRefusesAnUnknownForm(t *testing.T) {
 	for label, c := range map[string]struct{ doc, want string }{
@@ -107,8 +107,8 @@ func TestNetsFormVoltageDomains(t *testing.T) {
 }
 
 // TestParseRailBudgets checks that the WS3-095 form round-trips and margin_factor is optional.
-// Omitted it stays zero, which is what leaves the margin rule uncompiled (no house policy baked
-// into a rule literal).
+// Omitted, the factor is zero, and a zero factor leaves the margin rule uncompiled (no house policy
+// written into a rule literal).
 func TestParseRailBudgets(t *testing.T) {
 	d, err := Parse([]byte("name: N\nintent:\n  nets:\n    +3V3: {peak: 0.8}\n    +1V8: {peak: 0.35}\n  margin_factor: 1.2\n"))
 	if err != nil {
@@ -136,11 +136,11 @@ func TestParseErrorTeaches(t *testing.T) {
 	}
 }
 
-// TestLoadStrapBandValidation (WS3-119) covers a band that could never be satisfied, or one
-// declared on a kind with no resistance to bound, is an AUTHORING error. It is rejected at load
-// rather than compiling to a check that can never fire, which is the route-six false pass (a
-// well-formed-looking declaration that means nothing). A runtime verdict is the wrong tool for a
-// declaration that is wrong on every design.
+// TestLoadStrapBandValidation (WS3-119) covers two AUTHORING errors. One is a band that could never
+// be satisfied. The other is a band declared on a kind with no resistance to bound. Load rejects
+// both rather than compiling a check that can never fire. That check would be the route-six false
+// pass, a well-formed-looking declaration that means nothing. A runtime verdict is the wrong tool
+// for a declaration that is wrong on every design.
 func TestLoadStrapBandValidation(t *testing.T) {
 	for _, tc := range []struct{ name, yaml, want string }{
 		{
@@ -239,9 +239,9 @@ func TestLoadStrapGroupValidation(t *testing.T) {
 	}
 }
 
-// TestLoadStrapGroupAccepted checks that a declaration carrying ONLY strap_groups is valid (the
-// empty-declaration guard has to know about the new form), and the fields survive the loader
-// intact.
+// TestLoadStrapGroupAccepted checks that a declaration with ONLY strap_groups is valid, so the
+// empty-declaration guard has to know about the new form. It also checks that the fields survive
+// the loader intact.
 func TestLoadStrapGroupAccepted(t *testing.T) {
 	d, err := Parse([]byte("name: t\nintent:\n  strap_groups:\n" +
 		"    - {name: PHYAD, device: U12, nets: [PHYAD2, PHYAD1, PHYAD0], value: 5, bus: MDIO, default: low}\n"))

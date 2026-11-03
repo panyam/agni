@@ -15,8 +15,8 @@ var esdProtection = &check.Rule{
 	Primitives: []string{"reach", "select", "traverse", "exists", "pin-role", "pattern", "param-join"},
 	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect", "param.esd_rating"},
 	// The IC-ESD credit is an exemption rather than the finding basis. esd-protection is a netlist
-	// rule and stays applicable (reports over external nets) with no --params, unlike a
-	// datasheet rule whose finding requires the seeded value.
+	// rule. It is still applicable with no --params and reports over external nets. A datasheet
+	// rule differs, because its finding requires the seeded value.
 	OptionalReads: []string{"param.esd_rating"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
@@ -37,11 +37,11 @@ var esdProtection = &check.Rule{
 // THE ZENER CASE IS NotConsidered. A Zener clamps, slower and at higher energy than an ESD TVS, so
 // the net is neither unprotected (which this rule reports) nor clamped by the right device class
 // (which it passes). WS3-078 split that case off into esd-clamp-not-tvs, and the reason names that
-// rule so the two stay distinct downstream instead of both going silent on the other's turf.
+// rule. So the two remain distinct downstream, and neither goes silent on a net the other owns.
 //
-// The two passes rest on different evidence and say so. A discrete TVS is a part on the board, so the
-// witness names it. An IC-integrated rating is a datasheet claim, so the witness carries the value
-// and cites the document it was read from.
+// The two passes use different evidence and say so. A discrete TVS is a part on the board, so the
+// witness names it. An IC-integrated rating is a datasheet claim, so the witness states the value
+// and cites its source document.
 func esdProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
@@ -64,8 +64,8 @@ func esdProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 			}
 			v.Context = compContext(tvs, "TVS in reach")
 		case rated != "":
-			// IC-integrated ESD, the common industrial posture (WS3-073): the part behind the pin
-			// carries its own system-level rating, so a discrete clamp is not required.
+			// IC-integrated ESD is the common industrial posture (WS3-073). The part behind the pin
+			// has its own system-level rating, so a discrete clamp is not required.
 			v.Outcome = check.Pass
 			v.Witness = ratedWitness
 			v.Context = compContext(rated, "ESD-rated part")

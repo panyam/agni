@@ -34,11 +34,11 @@ var floatingInput = &check.Rule{
 // with no logic input is not this rule's subject, and a one-pin net belongs to single-pin-net, so
 // neither yields a verdict.
 //
-// Two exemptions are NotConsidered rather than passes (#400):
+// Two exemptions are NotConsidered rather than passes (#400).
 //
 //   - An EXTERNAL net continues onto a sheet this read did not open, so its driver may exist and be
 //     invisible here.
-//   - A net carrying a PASSIVE part is not provably floating, which is a weaker claim than not
+//   - A net with a PASSIVE part is not provably floating. That is a weaker claim than not
 //     floating. The part may be the pull-up that fixes it, a series element with the driver on the
 //     far side, or a footprint nobody stuffed. Context names it.
 //
@@ -48,12 +48,12 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
 		// A diode/LED/TVS terminal is typed INPUT by some libraries but is not a logic input, so it
-		// counts toward ncOrIn and not logicInputs. Excluding it per pin rather than per net keeps a
-		// floating IC input that carries a clamp diode firing.
+		// counts toward ncOrIn and not logicInputs. The rule excludes it per pin rather than per net,
+		// so a floating IC input with a clamp diode still fires.
 		//
 		// A part marked do-not-populate has no pins on the assembled board, so only fitted parts are
-		// counted (agni issue 1082). An input whose only pull is unfitted is then alone on its net,
-		// which is the floating input this rule exists for. A connector counts either way, because its
+		// counted (agni issue 1082). An input whose only pull is unfitted is then alone on its net.
+		// This rule exists to catch that floating input. A connector counts either way, because its
 		// pads are the board's interface whether or not a header is soldered to them, and a board
 		// shipped with its header loose marks it DNP.
 		logicInputs, ncOrIn, pins, unfittedInputs := 0, 0, 0, 0
@@ -119,8 +119,9 @@ func floatingInputVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return out
 }
 
-// notUnfitted holds for a part on the assembled board, which is a fitted part or a connector whose
-// pads stay the board's interface when its header is not fitted, as floatingInputVerdicts counts.
+// notUnfitted holds for a part on the assembled board, as floatingInputVerdicts counts it. That is a
+// fitted part, or a connector. A connector's pads are still the board's interface when its header is
+// not fitted.
 var notUnfitted = check.Not{X: check.And{Xs: []check.Expr{
 	check.IsTrue{T: check.Fact{Name: "component.dnp"}},
 	check.Not{X: check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "connector"}}},

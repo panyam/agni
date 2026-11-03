@@ -6,14 +6,15 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// Vendor symbols type pins power_in that take no supply, and the supply rules read the type (agni
-// issue 935). The two shapes here are recognised by structure, never by the symbol alone, so a pin
-// that really is a supply input still fails.
+// Vendor symbols type some pins power_in even though those pins take no supply, and the supply
+// rules read the type (agni issue 935). The two shapes here are recognised by structure, never by
+// the symbol alone, so a pin that really is a supply input still fails.
 
 // floatingExposedPad reports why a net is a lone exposed pad rather than a supply, and "" when it is
 // not one. KiCad names an unwired pin's net `unconnected-(U29-PadEP)`, and many parts' datasheets let
 // the exposed pad float, so a power_in pad alone on its net is not a rail missing its capacitor or its
-// driver. Only the pad name exempts it: a lone VDD pin is the forgotten wire these rules exist for.
+// driver. Only the pad name exempts it. A lone VDD pin is the forgotten wire these rules exist to
+// catch.
 func floatingExposedPad(m check.Model, n *ir.Net) string {
 	var only *ir.Connection
 	for _, c := range n.GetConnections() {
@@ -37,12 +38,12 @@ func floatingExposedPad(m check.Model, n *ir.Net) string {
 // dividerTap reports why a net is the midpoint of a resistive divider feeding a sense input rather
 // than a supply, and "" when it is not one. A USB hub's VBUS-sense pin sits between a resistor to VBUS
 // and one to ground, and a symbol types such a pin power_in, input or bidirectional (Jetson's hub
-// draws it bidirectional, agni issue 1241). A divider needs BOTH legs, so a supply fed
-// through a single series resistor or a 0 Ohm link, which still wants its decoupling, is not one.
+// draws it bidirectional, agni issue 1241). A divider needs BOTH legs. So a supply fed through a
+// single series resistor or a 0 Ohm link is not a divider tap, and it still wants its decoupling.
 //
 // A divider tap still reads as a rail to Model.IsRailNet when its name matches the rail vocabulary
-// (VBUS_MON_UP does). Subtracting it there would change every rail-quantified rule and query, and was
-// left until someone measures how many such taps a real corpus holds.
+// (VBUS_MON_UP does). Subtracting it there would change every rail-quantified rule and query. That
+// change waits until someone measures how many such taps a real corpus holds.
 func dividerTap(m check.Model, n *ir.Net) string {
 	self := map[string]bool{n.GetName(): true}
 	var up, down string
@@ -88,7 +89,7 @@ func senseDir(d ir.PinDirection) bool {
 	return false
 }
 
-// notASupply is the reason a net carrying a power-input pin is not a supply rail, or "".
+// notASupply returns the reason a net with a power-input pin is not a supply rail, or "".
 func notASupply(m check.Model, n *ir.Net) string {
 	if r := floatingExposedPad(m, n); r != "" {
 		return r

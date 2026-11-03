@@ -101,9 +101,9 @@ func TestCompileAndRegistered(t *testing.T) {
 }
 
 // TestCompileStampsRequirement (WS3-115) checks that every rule Compile emits carries the type of the
-// requirement that produced it, which is what lets a review item select one requirement of a profile
-// instead of its whole compiled set. The tag has to be right for a rule whose NAME does not carry the
-// type either (termination compiles to "-termination-missing"), which is why the tag exists at all.
+// requirement that produced it. The tag lets a review item select one requirement of a profile
+// instead of its whole compiled set. The tag has to be right for a rule whose NAME does not spell the
+// type either (termination compiles to "-termination-missing"). Such rules are why the tag exists.
 func TestCompileStampsRequirement(t *testing.T) {
 	byName := map[string]string{}
 	for _, r := range Compile(SPINOR) {
@@ -187,7 +187,7 @@ func TestHostIncomplete(t *testing.T) {
 }
 
 // When a host declares the interface but is wired to none of its signals, host-anchored completeness
-// flags every required signal (wholly-absent detection the convention path cannot do).
+// flags every required signal. The convention path cannot detect a wholly-absent bus.
 func TestHostWhollyAbsent(t *testing.T) {
 	d := &ir.Design{
 		Components: append(comps("U1"), flashHost("U2")),
@@ -220,9 +220,8 @@ func TestAnUnwiredNetIsNoSignal(t *testing.T) {
 	}
 }
 
-// Presence binds each net once, through net.pin_count, rather than once per connection through
-// component.net, which on a large board is four times the bindings and the allocation (agni issue
-// 1000).
+// Presence binds each net once, through net.pin_count. component.net would bind once per connection,
+// and on a large board that is four times the bindings and the allocation (agni issue 1000).
 func TestPresenceBindsEachNetOnce(t *testing.T) {
 	var text strings.Builder
 	for _, r := range SPINOR.presenceRules() {

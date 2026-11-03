@@ -61,10 +61,10 @@ var railNominalOutOfRecommended = &check.Rule{
 
 // singleRecommendedRow picks the binding row for the two-sided range, and refuses where a part states
 // more than one. A netlist does not label which power-in pin is which supply, so applying one part's
-// range to the wrong terminal invents an over- or under-voltage. supply-exceeds-abs-max carries no such
+// range to the wrong terminal invents an over- or under-voltage. supply-exceeds-abs-max has no such
 // restriction because its one-sided ceiling is conservative to apply across pins.
-// pin-out-of-recommended is the per-pin mapping that answers these parts properly, and it owns any
-// part whose spec binds pins.
+// pin-out-of-recommended maps these parts pin by pin and answers them properly. It owns any part
+// whose spec binds pins.
 func singleRecommendedRow(rows []*parampb.Parameter) (*parampb.Parameter, string) {
 	if len(rows) > 1 {
 		return nil, fmt.Sprintf("the datasheet states %d recommended supply ranges and a netlist does not say "+

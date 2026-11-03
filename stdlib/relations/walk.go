@@ -12,7 +12,7 @@ import (
 // They read nothing but a check.Model, so they live with the relations that project it rather than in
 // the query engine's adapter.
 
-// topologyReachHops is the radius net.reaches searches at, the whole series neighborhood.
+// topologyReachHops is the search radius of net.reaches, the whole series neighborhood.
 // check.Model.Reach is bounded by fan-out anyway (two-terminal pass elements only, no bus-like nets),
 // so this only caps pathological depth.
 //
@@ -23,32 +23,33 @@ import (
 // docsite/content/architecture/net-solving.md#how-far-a-walk-crosses-series-parts.
 const topologyReachHops = 100
 
-// RelReaches is the transitive relation net.reaches(from, to) and net.reaches(from, to, hops), the
-// nets reachable from `from` through series pass elements, bridged to check.Model.Reach. It is a
-// GENERATOR that binds `to` by enumerating from the Model. Every value it emits is a net the design
-// has or a distance the walk measured, which is the obligation any generator takes on, since one
-// inventing values would break the guarantee that evaluation terminates.
+// RelReaches is the transitive relation net.reaches(from, to) and net.reaches(from, to, hops). It
+// holds the nets reachable from `from` through series pass elements, bridged to check.Model.Reach.
+// It is a GENERATOR, and it binds `to` by enumerating from the Model. Every value it emits is a net
+// in the design or a distance the walk measured. Any generator owes that. A generator that invented
+// values would break the guarantee that evaluation terminates.
 const RelReaches = "net.reaches"
 
-// RelRoute is net.route(from, to, path), the SAME walk reaches makes with the route it found bound as
-// a value instead of discarded. `path` renders as
+// RelRoute is net.route(from, to, path). It makes the SAME walk as reaches, and it binds the route
+// it found as a value instead of discarding it. `path` renders as
 //
 //	VBUS -> [R5] -> VBUS_F -> [L1] -> VDD_3V3
 //
-// which is a string, so every query column stays scalar. It is a separate predicate rather than a
-// fourth argument on reaches because arity 3 there already means hops.
+// That value is a string, so every query column is still scalar. Arity 3 on reaches already means
+// hops, so route is a separate predicate rather than a fourth argument on reaches.
 //
-// It yields exactly the pairs reaches yields, so a route never ENDS on a rail (the walk excludes
-// bus-like nets); `agni trace` is the pin-to-pin form that does. ONE route per pair, the BFS tree
-// path, so of two resistors bridging the same nets it names one. See
+// It yields exactly the same pairs as reaches. The walk excludes bus-like nets, so a route never
+// ENDS on a rail; `agni trace` is the pin-to-pin form that does. It gives ONE route per pair, the
+// BFS tree path, so of two resistors bridging the same nets it names one. See
 // docsite/content/reference/relations/net.route.md.
 const RelRoute = "net.route"
 
-// walkModes are the bindings both walks accept. With `from` bound a walk starts from one net, and with
-// nothing bound it starts from every net on the board, which an all-pairs question legitimately asks.
-// Declaring the second is what makes that full walk a stated choice: the engine's planner runs a walk
-// once `from` is bound wherever the body can bind it first, and uses the full walk only when nothing
-// can (the WS3-114 rule that made `agni check` non-terminating opened with exactly that walk).
+// walkModes are the bindings both walks accept. With `from` bound a walk starts from one net. With
+// nothing bound it starts from every net on the board, and an all-pairs question legitimately asks
+// for that. Declaring the second mode makes the full walk a stated choice. Wherever the body can
+// bind `from` first, the engine's planner runs the walk after it is bound. The planner uses the
+// full walk only when nothing can bind it. The WS3-114 rule that made `agni check` non-terminating
+// opened with exactly that full walk.
 var walkModes = [][]bool{{true, false, false}, {false, false, false}}
 
 func init() {
@@ -83,27 +84,27 @@ func genReaches(ctx context.Context, src ns.Source, args []ns.Arg, emit func([]n
 	}, emit)
 }
 
-// genRoute binds net.route(from, to, path), the walk genReaches makes with the route rendered into the
-// third argument rather than the distance.
+// genRoute binds net.route(from, to, path). It makes the same walk as genReaches and renders the
+// route into the third argument instead of the distance.
 //
-// A path is bound and never TESTED against, which keeps it safe as a generator output. The value is
-// drawn from the walk, so the strings it can produce are bounded by the design, as the net names in
-// the first two arguments are, and evaluation stays finite.
+// A path is bound and never TESTED against, so it is safe as a generator output. Its value comes
+// from the walk, so the design bounds the strings it can produce, as it bounds the net names in the
+// first two arguments. Evaluation therefore remains finite.
 func genRoute(ctx context.Context, src ns.Source, args []ns.Arg, emit func([]ns.Value, []string) error) error {
 	return walk(ctx, RelRoute, src, args, func(r check.Reach, dst *ir.Net) (ns.Value, bool) {
 		return ns.Value{S: r.RouteLine(dst)}, true
 	}, emit)
 }
 
-// walk is the body reaches and route share. It resolves the start argument to one net or to every
-// net, walks from each, and emits every net the walk reached, with third supplying the third argument
-// when the atom has one.
+// walk is the shared body of reaches and route. It resolves the start argument to one net or to
+// every net, walks from each, and emits every net the walk reached. When the atom has a third
+// argument, third supplies it.
 //
 // The START RESOLUTION is shared so it cannot drift between the two. A bound or constant `from` is
 // one walk; an unbound one walks from every net on the board, the second of walkModes.
 //
-// The name index is built once per fact base (Env.Memo) rather than per call, because the walk runs
-// once per binding of the atom calling it and a per-call index would make it quadratic.
+// The name index is built once per fact base (Env.Memo) rather than per call. The walk runs once
+// per binding of the atom that calls it, so a per-call index would make it quadratic.
 func walk(ctx context.Context, rel string, src ns.Source, args []ns.Arg, third func(r check.Reach, dst *ir.Net) (ns.Value, bool), emit func([]ns.Value, []string) error) error {
 	env := facts.EnvOf(src)
 	if env == nil || env.Model == nil {
@@ -151,9 +152,10 @@ func walk(ctx context.Context, rel string, src ns.Source, args []ns.Arg, third f
 	return nil
 }
 
-// reachCost is what one walk examined, the connections on every net it reached. The engine charges a
-// generator per row it emits, and a walk reads each reached net's connections to find the next
-// crossing, so without this a walk over wide nets costs a budget little more than its answer does.
+// reachCost counts what one walk examined, the connections on every net it reached. The engine
+// charges a generator per row it emits. A walk also reads each reached net's connections to find
+// the next crossing. Without this cost, a walk over wide nets would charge a budget little more
+// than its answer does.
 func reachCost(r check.Reach) int64 {
 	var n int64
 	for _, net := range r.Nets {

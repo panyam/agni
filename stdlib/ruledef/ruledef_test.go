@@ -198,9 +198,9 @@ func TestMarshalParseRoundTripsADeck(t *testing.T) {
 }
 
 // TestARuleWithArithmeticSurvivesTheWire sends a query rule written with an expression through its
-// definition and back, then runs it. The wire form dropped an expression until it carried
-// DatalogExpr, which left the comparison with an empty operand, so the round trip alone is not
-// enough; the compiled rule has to answer as the parsed one does.
+// definition and back, then runs it. Until the wire form gained DatalogExpr, it dropped an
+// expression and left the comparison with an empty operand. The round trip alone is therefore not
+// enough. The compiled rule has to answer as the parsed one does.
 func TestARuleWithArithmeticSurvivesTheWire(t *testing.T) {
 	q, err := query.Parse(`net.pin_count(?n, ?c), ?c * 2 > 4 => ?n`)
 	if err != nil {

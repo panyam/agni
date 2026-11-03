@@ -24,67 +24,72 @@ package intent
 type Declaration struct {
 	// Name identifies the declaration in findings and reports (e.g. "Automotive design intent").
 	Name string
-	// Modules is the set of functional blocks the design is required to contain. moduleMissingRule
-	// fails once per declared module absent from the design.
+	// Modules lists the functional blocks that the design must contain. moduleMissingRule fails once
+	// for each declared module the design lacks.
 	Modules []Module
-	// VoltageDomains is the set of power domains the design declares, each pinning named rails to a
-	// nominal voltage. voltageDomainRule fails when a declared rail is absent, or present but its
-	// name-derived nominal disagrees with the declared domain (a rail on the wrong domain).
+	// VoltageDomains lists the declared power domains. Each one pins named rails to a nominal voltage.
+	// voltageDomainRule fails when a declared rail is absent. It also fails when the rail is present
+	// and its name-derived nominal disagrees with the declared domain (a rail on the wrong domain).
 	VoltageDomains []VoltageDomain
-	// Subsystems is the set of named architectural subsystems the design must instantiate (a clock
-	// tree, a reset scheme, the power tree). One rule each, intent/subsystem-<slug>. A subsystem fails
-	// when its declared source component is absent or any of its declared nets is missing.
+	// Subsystems lists the named architectural subsystems that the design must instantiate, such as a
+	// clock tree, a reset scheme or the power tree. Each compiles to one rule, intent/subsystem-<slug>.
+	// A subsystem fails when its declared source component is absent or any of its declared nets is
+	// missing.
 	Subsystems []Subsystem
-	// Protections are the rails that must carry a protection device (OVP clamp, discharge path), keyed
-	// on the declared NET NAME (see Protection). One rule per KIND, intent/protection-<kind>.
+	// Protections lists the rails that must have a protection device (OVP clamp, discharge path). Each
+	// is keyed on the declared NET NAME (see Protection). Each KIND compiles to one rule,
+	// intent/protection-<kind>.
 	Protections []Protection
-	// NetProperties asserts what a named net IS (a reset is active-low, a link is AC-coupled) rather
-	// than that it exists. One rule per KIND, intent/property-<kind>. A property fails when the
-	// design's structure CONTRADICTS the declaration.
+	// NetProperties asserts what a named net IS rather than that it exists. A reset is active-low, or a
+	// link is AC-coupled. Each KIND compiles to one rule, intent/property-<kind>. A property fails when
+	// the design's structure CONTRADICTS the declaration.
 	NetProperties []NetProperty
-	// RailBudgets is the declared CURRENT demand of named rails (WS3-095). It has to be declared
-	// because a netlist carries connectivity and not current. Compiles to
+	// RailBudgets is the declared CURRENT demand of named rails (WS3-095). A netlist records
+	// connectivity and not current, so the demand has to be declared. It compiles to
 	// intent/rail-current-capacity.
 	RailBudgets []RailBudget
-	// Sequences is the declared power-up ORDER of groups of rails (WS3-092), the third intent
-	// mechanism after presence and property. One rule each, intent/sequence-<slug>. A sequence fails
-	// when the gating chain it declares is not in the design, or runs the other way round.
+	// Sequences is the declared power-up ORDER of groups of rails (WS3-092). It is the third intent
+	// mechanism, after presence and property. Each compiles to one rule, intent/sequence-<slug>. A
+	// sequence declares a gating chain, and it fails when that chain is not in the design or runs the
+	// other way round.
 	Sequences []Sequence
-	// StrapGroups is the set of strap GROUPS, each several nets read as one binary number (WS3-120,
-	// see StrapGroup). One rule per group, intent/strap-group-<slug>, plus one cross-group collision
-	// rule for all of them.
+	// StrapGroups lists the strap GROUPS. Each group is several nets read as one binary number
+	// (WS3-120, see StrapGroup). Each group compiles to one rule, intent/strap-group-<slug>, and one
+	// cross-group collision rule covers all of them.
 	StrapGroups []StrapGroup
-	// IOMap is the design's declared PIN ASSIGNMENT, which net lands on which pin of which device and
-	// optionally what sits at its far end. The schematic is drawn FROM it, so it exists on any board
-	// carrying a large MCU or SoC.
+	// IOMap is the design's declared PIN ASSIGNMENT. It says which net connects to which pin of which
+	// device, and optionally what sits at the net's far end. The schematic is drawn FROM it, so any
+	// board with a large MCU or SoC has one.
 	//
-	// It compiles to four fixed-name rules whatever the map's length (agni issue 517), the documented
-	// exception to one rule per declared thing. Three ask whether the design kept the map's promises
-	// (pin mismatch, net absent, far end wrong) and io-map-coverage reports the nets the map never
-	// mentions. See compile.go.
+	// It compiles to four fixed-name rules whatever the map's length (agni issue 517). That is the
+	// documented exception to one rule per declared thing. Three rules ask whether the design kept
+	// the map's promises (pin mismatch, net absent, far end wrong). io-map-coverage reports the nets
+	// that the map never mentions. See compile.go.
 	IOMap []IOAssignment
-	// Exposures is what the declaration says about each named component's exposure, sorted by ref-des.
-	// The model reads the same declaration to decide which connectors the exposure rules check (see
-	// check.WithIntent), so the one rule compiled from it, intent/exposure-declared, only confirms that
-	// each declaration names a connector the design has.
+	// Exposures lists the declared exposure of each named component, sorted by ref-des. The model
+	// reads the same declaration to decide which connectors the exposure rules check (see
+	// check.WithIntent). So only one rule compiles from it, intent/exposure-declared, and that rule
+	// only confirms that each declaration names a connector the design has.
 	Exposures []Exposure
-	// MarginFactor is the house headroom policy, the multiple of a rail's peak budget its supply must
-	// be rated for (1.2 means 20% headroom). It compiles intent/rail-current-margin and has NO DEFAULT,
-	// because a default puts one company's policy in a rule literal (what WS3-069 moved naming
-	// vocabularies out of) and lets a bound item PASS against a number nobody declared. Absent, the
-	// margin rule is not compiled, so a bound item reads needs-design-intent.
+	// MarginFactor is the house headroom policy. A rail's supply must be rated for the rail's peak
+	// budget times this factor, so 1.2 means 20% headroom. It compiles intent/rail-current-margin and
+	// has NO DEFAULT. A default would put one company's policy in a rule literal, and WS3-069 moved
+	// naming vocabularies out of rule literals. A default would also let a bound item PASS against a
+	// number nobody declared. With no factor the margin rule is not compiled, so a bound item reads
+	// needs-design-intent.
 	MarginFactor float64
-	// PullUpReach is the pull-up reach each named net declares, sorted by net name (agni issue 820).
-	// The model reads the same declaration (see check.WithIntent), so the pull-up walk from that net
-	// asks at the declared reach rather than check.PullUpReachHops, and the one rule compiled from it,
-	// intent/pull-up-reach-declared, only confirms that each declaration names a net the design has.
+	// PullUpReach lists the pull-up reach that each named net declares, sorted by net name (agni issue
+	// 820). The model reads the same declaration (see check.WithIntent). So the pull-up walk from that
+	// net uses the declared reach rather than check.PullUpReachHops. Only one rule compiles from it,
+	// intent/pull-up-reach-declared, and that rule only confirms that each declaration names a net the
+	// design has.
 	PullUpReach []PullUpReach
 }
 
-// PullUpReach is one net's declared pull-up reach, the number of series resistors the walk from it
-// may cross to reach the rail its pull-up returns it to. It is the designer saying the bus's series
-// network (an isolation resistor, a level-shifting network) is sized for that reach, which the default
-// of 3 assumes it is not.
+// PullUpReach is one net's declared pull-up reach. The walk from the net may cross that many series
+// resistors on its way to the pull-up's rail. With it the designer says that the bus's series network
+// is sized for that reach. An isolation resistor or a level-shifting network is such a network. The
+// default reach of 3 assumes the network is not sized that way.
 type PullUpReach struct {
 	// Net is the exact net name the reach is declared on.
 	Net string
@@ -94,21 +99,23 @@ type PullUpReach struct {
 
 // StrapGroup is several strap nets read together as one binary number, such as a device's address or
 // mode select spread across pins (WS3-120). A per-net declaration cannot say "these three nets are
-// one number", so without it neither the encoded VALUE nor a collision between two devices is
-// expressible.
+// one number". Without a group neither the encoded VALUE nor a collision between two devices can be
+// expressed.
 //
-// PARTIAL EVIDENCE is the hard case. A strap pin usually carries an internal pull and the datasheet
-// asks for an external resistor only in the NON-DEFAULT state, so a 3-bit address commonly has
-// resistors on one or two bits. Default supplies the level those pins sit at, which the netlist does
-// not carry. With no Default an unbiased bit makes the value UNDECIDABLE and the group reports
-// inconclusive, because assuming zero fabricates an address, and a fabricated address can fabricate a
-// COLLISION between two parts that are fine.
+// PARTIAL EVIDENCE is the hard case. A strap pin usually has an internal pull, and the datasheet asks
+// for an external resistor only in the NON-DEFAULT state. So a 3-bit address commonly has resistors
+// on one or two bits. Default supplies the level of the other pins, since the netlist does not record
+// it. With no Default an unbiased bit makes the value UNDECIDABLE, and the group reports inconclusive.
+// Assuming zero would fabricate an address, and a fabricated address can fabricate a COLLISION
+// between two parts that are fine.
 type StrapGroup struct {
-	// Name labels the group ("PHYAD", "boot mode") and slugifies into the rule name
-	// (intent/strap-group-<slug>) a review item binds to. Must slugify uniquely (Load validates).
+	// Name labels the group ("PHYAD", "boot mode"). It slugifies into the rule name
+	// intent/strap-group-<slug>, and a review item binds to that name. It must slugify uniquely (Load
+	// validates).
 	Name string
-	// Device is the ref-des the group configures (U12). It is not matched against the design (the nets
-	// carry the evidence) and only names the part in findings, so a reviewer knows which page to open.
+	// Device is the ref-des the group configures (U12). The nets hold the evidence, so Device is not
+	// matched against the design. It only names the part in findings, so a reviewer knows which page
+	// to open.
 	Device string
 	// Nets are the group's strap nets in MSB-FIRST bit order. The declaration owns the order because a
 	// netlist never states which pin is the high bit, and inferring it from names like PHYAD2 would put
@@ -116,8 +123,8 @@ type StrapGroup struct {
 	Nets []string
 	// Value is the number the group is meant to encode, decoded MSB-first from Nets.
 	Value int
-	// Bus scopes collision detection: two groups sharing a Bus must not encode the same Value. Empty
-	// opts the group out, which suits a mode select that is not an address on any shared bus.
+	// Bus scopes collision detection. Two groups sharing a Bus must not encode the same Value. Empty
+	// opts the group out. A mode select that is not an address on any shared bus wants that.
 	Bus string
 	// Default is the level an UNBIASED pin in this group takes from the part's internal pull, one of
 	// "low", "high", or empty for "the netlist cannot tell, so do not guess". See the type doc.
@@ -129,65 +136,65 @@ type StrapGroup struct {
 // It has no typical-draw field because no rule reads one, and an author who filled it in would
 // believe the engine checked it. Add one when a rule consumes it.
 type RailBudget struct {
-	// Rail is the exact net name the budget is declared on, matched literally (like Protection.Rail)
-	// so a rail the rail-role heuristic does not recognize is still checkable.
+	// Rail is the exact net name of the budgeted rail. It is matched literally, like Protection.Rail,
+	// so a rail is still checkable when the rail-role heuristic does not recognize it.
 	Rail string
 	// Peak is the maximum current in amps the rail is expected to draw. Load requires it to be > 0,
 	// since a zero budget is satisfied by everything and would pass silently.
 	Peak float64
 }
 
-// SequenceEnableGated is the one sequence relation the netlist can evidence: each stage after the
-// first is held off by the previous stage's power-good signal driving its enable. Parse rejects any
-// other value rather than accepting a declaration nothing checks.
+// SequenceEnableGated names the only sequence relation that a netlist can show evidence of. Each
+// stage after the first is held off, because the previous stage's power-good signal drives its
+// enable. Parse rejects any other value rather than accept a declaration nothing checks.
 //
-// It is a named value rather than a flag because a second structure (a sequencer part stepping rails
-// from its own configuration, an explicit delay element) is a different query, and naming the
-// relation lets that kind be added.
+// It is a named value rather than a flag, so a second kind of relation can be added later. A
+// sequencer part stepping rails from its own configuration is one such structure, and an explicit
+// delay element is another. Each would be a different query.
 const SequenceEnableGated = "enable-gated"
 
-// Sequence is one declared power-up ordering: the stages in the order they must come up, plus the
-// relation that says how the design is claimed to enforce it.
+// Sequence is one declared power-up ordering. It lists the stages in the order they must come up,
+// and names the relation the design is claimed to enforce it with.
 //
-// WHAT A PASS MEANS HERE is narrower than "sequencing correct". A netlist holds no order, and the
-// only trace an order leaves in connectivity is the declared gating chain. So a silent rule means
-// every declared link was found in the design, not that the board powers up in that sequence. The
-// rule doc repeats this for the reviewer.
+// A pass here means less than "sequencing correct". A netlist holds no order. An order leaves only
+// one trace in connectivity, the declared gating chain. So a silent rule means every declared link
+// was found in the design. It does not mean the board powers up in that sequence. The rule doc
+// repeats this for the reviewer.
 //
 // A board that sequences inside a PMIC or in firmware has no chain to name, so it declares no
 // sequence and its review items read needs-design-intent. Parse rejects a sequence with no gating
 // handle (see load.go), since its rule could only ever pass.
 type Sequence struct {
-	// Name is the sequence label ("SoC power tree", "modem rails"); it slugifies into the rule name
-	// (intent/sequence-<slug>) a review item binds to, and appears in findings. Names must slugify
-	// uniquely within a declaration (Load validates this).
+	// Name is the sequence label ("SoC power tree", "modem rails"), and findings show it. It slugifies
+	// into the rule name intent/sequence-<slug>, and a review item binds to that name. Names must
+	// slugify uniquely within a declaration (Load validates this).
 	Name string
 	// Relation is how the order is claimed to be enforced. SequenceEnableGated is the only value
 	// today; Load rejects the rest.
 	Relation string
-	// Order is the stages, earliest first. At least two, and at least one adjacent pair must carry
-	// the handles the relation reads (Load validates both).
+	// Order is the stages, earliest first. There must be at least two. At least one adjacent pair
+	// must have the handles that the relation reads (Load validates both).
 	Order []SequenceStage
 }
 
-// SequenceStage is one step of a declared power-up order: a rail, plus the nets that signal it is up
-// and hold it off. The two handles are what the check reads; the rail names the stage.
+// SequenceStage is one step of a declared power-up order. It names a rail, a net that signals the
+// rail is up, and a net that holds it off. The check reads the two handles, and the rail names the
+// stage.
 type SequenceStage struct {
 	// Rail is the stage's rail net name. It identifies the stage in findings and in the declaration.
-	// A rail the design does not carry is NOT a finding here. That is a presence question the
-	// voltage-domain and subsystem forms own, and reporting it twice would put one defect under two
-	// review items.
+	// A rail missing from the design is NOT a finding here. The voltage-domain and subsystem forms own
+	// that presence question. Reporting it twice would put one defect under two review items.
 	Rail string
 	// Good is the net that signals this stage is up (a regulator's power-good output, a supervisor's
 	// output). Empty when the stage gates nothing after it.
 	//
-	// Unlike Rail, a declared Good the design does not carry IS a finding, because it is the evidence
-	// the declaration rests on and without it the chain enforces nothing.
+	// Unlike Rail, a declared Good missing from the design IS a finding. The declaration depends on it
+	// as evidence, and without it the chain enforces nothing.
 	Good string
 	// Enable is the net that holds this stage off until it is driven (a regulator's EN pin net, a
 	// load switch's control, a peripheral's reset-release line). Empty for the first stage, or for
-	// any stage nothing gates. A declared Enable the design does not carry is a finding, for Good's
-	// reason.
+	// any stage nothing gates. A declared Enable missing from the design is a finding, for the same
+	// reason as Good.
 	Enable string
 }
 
@@ -202,11 +209,11 @@ const (
 	PropStrap = "strap"
 )
 
-// NetProperty is one declared property of one net (WS3-088). Kinds (validated at load):
-// "reset-polarity" with Value "low" or "high"; "ac-coupled", which takes no Value; "strap" with
-// Value "low" or "high".
+// NetProperty is one declared property of one net (WS3-088). Load validates the kind.
+// "reset-polarity" takes Value "low" or "high", "ac-coupled" takes no Value, and "strap" takes Value
+// "low" or "high".
 //
-// WHAT THESE RULES CAN CONCLUDE differs by kind, and decides what a passing item means.
+// Each kind lets its rule conclude something different, and that decides what a passing item means.
 //
 //   - ac-coupled is DECIDABLE from the netlist. A series capacitor is on the net or it is not, so
 //     absent means the declaration is unmet and the rule fails.
@@ -227,23 +234,23 @@ type NetProperty struct {
 	Property string
 	// Value qualifies the kind: "low"/"high" for reset-polarity and strap, empty for ac-coupled.
 	Value string
-	// MinOhms / MaxOhms bound the acceptable resistance of a STRAP's pull resistor, in ohms. Both
-	// optional and independent: declare one to bound that side only, neither to check direction alone.
-	// A band the resistor's value cannot be compared to reports inconclusive (agni issue 1281). Ignored
-	// by every other property kind.
+	// MinOhms / MaxOhms bound the acceptable resistance of a STRAP's pull resistor, in ohms. Both are
+	// optional and independent. Declare one to bound that side only, or neither to check direction
+	// alone. When the resistor's value cannot be compared to the band, the rule reports inconclusive
+	// (agni issue 1281). Every other property kind ignores them.
 	//
-	// DECLARED, NOT BUILT IN. A strap resistor must be strong enough to hold against leakage and weak
-	// enough not to fight an active driver, and both ends depend on the part. A CMOS input with
-	// nanoamp leakage is happy past 100k, while a strap a driver has to override wants a few hundred
-	// ohms. Any universal band the engine invented would fire on correct boards, which the
-	// review-integrity rule forbids.
+	// The band is declared, not built in. A strap resistor must be strong enough to hold against
+	// leakage and weak enough not to fight an active driver, and both ends depend on the part. A CMOS
+	// input with nanoamp leakage is happy past 100k. A driver has to override some straps, and those
+	// want a few hundred ohms. A universal band from the engine would fire on correct boards, and the
+	// review-integrity rule forbids that.
 	MinOhms float64
 	MaxOhms float64
 }
 
 // Module is one required functional block, matched to a design component by device CLASS or by exact
-// MPN. Both match on any netlist with no --params: device_classes are stamped at ingestion, and every
-// model joins the MPNs the design carries (agni issue 748). At least one of Class/MPN is set (Load
+// MPN. Both match on any netlist with no --params, because device_classes are stamped at ingestion
+// and every model joins the design's MPNs (agni issue 748). At least one of Class/MPN is set (Load
 // validates this). A module matches when ANY design component satisfies its criterion.
 type Module struct {
 	// Name is the human label shown in a "declared module <Name> not present" finding.
@@ -262,8 +269,9 @@ type Module struct {
 	Count int
 }
 
-// VoltageDomain is one declared power domain: a nominal voltage and the rail net names that must sit on
-// it. The check flags a declared rail that is absent or whose name declares a different voltage.
+// VoltageDomain is one declared power domain. It gives a nominal voltage and the rail net names that
+// must sit on it. The check flags a declared rail when the rail is absent or its name declares a
+// different voltage.
 type VoltageDomain struct {
 	// Name is the human label for the domain (e.g. "io_3v3", "core"), shown in findings.
 	Name string
@@ -275,13 +283,13 @@ type VoltageDomain struct {
 	Rails []string
 }
 
-// Subsystem is one named architectural block the design must instantiate, evidenced by a source
-// component and/or a set of nets that must all exist, such as the clock tree, the reset scheme, or
-// the power tree. At least one of Source/Nets is set (Load validates this).
+// Subsystem is one named architectural block that the design must instantiate, such as the clock
+// tree, the reset scheme or the power tree. Its evidence is a source component, a set of nets that
+// must all exist, or both. At least one of Source/Nets is set (Load validates this).
 type Subsystem struct {
-	// Name is the subsystem label (e.g. "main clock", "reset", "power tree"); it slugifies into the
-	// rule name (intent/subsystem-<slug>) that a review item binds to, and appears in findings. Names
-	// must slugify uniquely within a declaration (Load validates this).
+	// Name is the subsystem label (e.g. "main clock", "reset", "power tree"), and findings show it. It
+	// slugifies into the rule name intent/subsystem-<slug>, and a review item binds to that name.
+	// Names must slugify uniquely within a declaration (Load validates this).
 	Name string
 	// Source is an optional required component for the subsystem (the clock's crystal, the reset
 	// supervisor), matched exactly like a Module (by class or MPN). nil to check nets only.
@@ -292,10 +300,10 @@ type Subsystem struct {
 }
 
 // Protection requires the named rail net to carry a protection device of the given kind, and fails
-// when no matching device is on the rail. Kinds (validated at load): "ovp", a TVS or zener clamps the
-// rail; "discharge", a resistor bridges the rail to a ground net (a bleeder). It is keyed on the exact
-// Rail net name, so an input rail named with no voltage token (VIN_MAIN, VSYS_AO) is checkable even
-// though the rail-role heuristic does not recognize it.
+// when no matching device is on the rail. Load validates the kind. "ovp" means a TVS or zener clamps
+// the rail, and "discharge" means a resistor bridges the rail to a ground net (a bleeder). It is
+// keyed on the exact Rail net name. So an input rail named with no voltage token (VIN_MAIN, VSYS_AO)
+// is checkable, even though the rail-role heuristic does not recognize it.
 type Protection struct {
 	// Rail is the exact net name that must be protected.
 	Rail string
@@ -303,13 +311,14 @@ type Protection struct {
 	Kind string
 }
 
-// IOAssignment is one row of a declared pin map: this net lands on this pin of this device.
+// IOAssignment is one row of a declared pin map. It says this net connects to this pin of this
+// device.
 //
 // Pin may be spelled either way. A map uses the functional NAME a datasheet and a firmware header use
 // ("PTC11"), a netlist answers in the package DESIGNATOR ("41"), and both resolve through core/ident
 // so the two spellings of one pin agree.
 type IOAssignment struct {
-	// Net is the net the map says lands here, named as the design names it.
+	// Net is the net the map places on this pin, named as the design names it.
 	Net string
 	// Device is the ref-des the pin belongs to.
 	Device string
@@ -331,8 +340,8 @@ type IOEndpoint struct {
 	Pin    string
 }
 
-// ExposureInternal and ExposureExternal are the two values a component's exposure takes. Internal is
-// a connector joining this board to another inside the same product, which the exposure rules leave
+// ExposureInternal and ExposureExternal are the two values of a component's exposure. Internal marks
+// a connector joining this board to another inside the same product, and the exposure rules leave it
 // alone. External is the default and needs no declaration.
 const (
 	ExposureInternal = "internal"

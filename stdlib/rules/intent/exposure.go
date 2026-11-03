@@ -7,9 +7,9 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// exposureDeclaredRule decides every component the declaration gives an exposure. The declaration
-// itself takes effect in the model (check.WithIntent), so this rule's job is to catch one that cannot
-// have: a ref-des the design does not carry, or a part that is not a connector.
+// exposureDeclaredRule decides each component that has a declared exposure. The model applies the
+// declaration itself (check.WithIntent), so this rule catches a declaration that cannot take effect.
+// It names a ref-des the design does not carry, or a part that is not a connector.
 func exposureDeclaredRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:                RuleExposureDeclared,

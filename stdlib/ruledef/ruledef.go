@@ -1,17 +1,17 @@
-// Package ruledef reads and writes rule DEFINITIONS, the declarative source a rule compiles from
-// (WS3-103). It is the one form shared by the three declarative sources, a check.Spec, a datalog
-// query and an interface profile. See
+// Package ruledef reads and writes rule DEFINITIONS (WS3-103). A rule compiles from its
+// definition. A check.Spec, a datalog query and an interface profile are the three declarative
+// sources, and they share this one form. See
 // docsite/content/architecture/checks-contract.md#the-other-half-rule-definitions.
 //
 // It sits ABOVE all three because core/query imports core/check and stdlib/profiles imports both, so
 // a converter for all three cannot live in core/check without a cycle. Each source owns the wire form
 // of its OWN body (check.SpecProto, query.QueryProto, profiles.ProfileProto). This package holds only
-// the join, meaning which body a definition carries and how to compile it back into rules.
+// the join, meaning which body a definition holds and how to compile it back into rules.
 //
-// A new NODE TYPE is caught where a type switch covers the vocabulary, but a new FIELD on a
-// body the converter copies by hand is silently not copied. Profile.HostClass was dropped that way
-// until the round-trip guard in stdlib/profiles caught it, so each body's wire form owes a
-// deep-equality round-trip test as well as a converter.
+// A type switch over the vocabulary catches a new NODE TYPE. A new FIELD is different. The
+// converter copies a body's fields by hand, so it silently skips a new one. Profile.HostClass was
+// dropped that way until the round-trip guard in stdlib/profiles caught it. Each body's wire form
+// therefore needs a deep-equality round-trip test as well as a converter.
 //
 // check.Rule itself is NOT serializable, because its Eval closure has no wire form. A rule with a
 // hand-written Go Eval and no declarative twin is outside this contract.
@@ -140,9 +140,9 @@ func Parse(b []byte) (*checkspb.RuleDeck, error) {
 	return deck, nil
 }
 
-// requirementsRegistered rejects a profile whose requirements this build cannot run, meaning an
-// unknown requirement type or params the type's validator refuses. profiles.Compile panics on either,
-// which suits a Go literal, but from a document it is an input error. It delegates to
+// requirementsRegistered rejects a profile with requirements this build cannot run. That covers an
+// unknown requirement type and params the type's validator refuses. profiles.Compile panics on
+// either. A panic suits a Go literal, but from a document either is an input error. It delegates to
 // profiles.ValidateRequirements so a deck and a YAML profile agree on what is valid (WS3-047).
 func requirementsRegistered(p profiles.Profile) error {
 	return profiles.ValidateRequirements(p)

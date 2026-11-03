@@ -6,7 +6,7 @@ import (
 )
 
 // Helpers shared by the converted rule bodies (agni issue 391). They exist because a witness has to
-// NAME the part its statement rests on, not merely assert that one exists. A reader told a rail is
+// NAME the part behind its statement, not merely assert that one exists. A reader told a rail is
 // decoupled still has to know which capacitor said so before they can judge whether the answer is
 // right. `check.Exists` answers the predicate and throws the entity away, so every converted rule
 // that used it needs the entity back.
@@ -58,8 +58,8 @@ func railCapacitorWitness(ref string, at check.JoinedNet, label string) (*check.
 }
 
 // compContext is the one-entity Context a witness attaches when it names a part. Role is the
-// author's word for what the part is doing in the proof, which is what a viewer renders beside the
-// chip it lights up.
+// author's word for what the part is doing in the proof. A viewer renders it beside the chip it
+// lights up.
 func compContext(ref, role string) []check.ContextSubject {
 	return []check.ContextSubject{{Entity: check.Entity{Kind: check.KindComponent, Ref: ref}, Role: role}}
 }

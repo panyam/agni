@@ -10,8 +10,8 @@ import (
 // esdRule fires when one of the profile's signal nets leaves the board through a connector and
 // nothing clamps it. It is the idiomatic form of a per-interface ESD ask. It is scoped to the
 // profile's signals and gated by the profile's presence machinery, so a binding says `profile: CAN`
-// instead of filtering a design-wide rule's findings down to an interface (the WS3-058 stopgap this
-// supersedes).
+// instead of filtering a design-wide rule's findings down to an interface. It supersedes that
+// WS3-058 stopgap.
 //
 // SCOPE COMES FROM THE DESIGN, NOT THE PROTOCOL. The requirement applies to whichever of the
 // profile's nets net.connector_signal selects, rather than to a per-signal `esd:` flag the way pull-up
@@ -19,16 +19,16 @@ import (
 // so a blanket per-signal application would fail the two lines that were never exposed. Whether a
 // line is connector-facing is a property of the board in hand. A profile whose bus is entirely
 // on-board therefore selects nothing and reports nothing, so declaring the requirement is safe even
-// where it usually stays quiet.
+// where it is usually quiet.
 //
-// PARITY WITH THE CORE RULE IS BY CONSTRUCTION. The scope is the same projected predicate
-// esd-protection uses, and the three protection clauses are the same three exemptions, at the same
-// radius (check.ProtectionReachHops, interpolated rather than written as a literal so the two cannot
-// drift).
+// PARITY WITH THE CORE RULE IS BY CONSTRUCTION. esd-protection uses the same projected predicate for
+// its scope. The three protection clauses are the same three exemptions, at the same radius. The
+// radius is check.ProtectionReachHops, interpolated rather than written as a literal so the two
+// cannot drift.
 func esdRule(p Profile, _ Requirement) *check.Rule {
 	var rules []query.Rule
-	// inUse is the gate unprotected and esd_scope carry. An instance-keyed profile folds it into
-	// needs_esd instead, since a net counts only on a bus in use, so its gate is empty.
+	// unprotected and esd_scope both include the inUse gate. An instance-keyed profile folds the gate
+	// into needs_esd instead, since a net counts only on a bus in use, so its inUse is empty.
 	inUse := []query.Literal{query.Pos(query.Rel("in_use", query.V("iu")))}
 	if p.Instance != "" {
 		rules = append(p.busRules(), query.Def(query.Rel("needs_esd", query.V("n")),
@@ -57,8 +57,8 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 	// TVS is the real answer. An IC on the net carrying a datasheet ESD rating is the common posture
 	// (WS3-073). A Zener is NOT adequate ESD protection but is deliberately exempt here, because
 	// esd-clamp-not-tvs (WS3-078) characterizes that case separately and the two rules partition these
-	// nets between them. Crediting it keeps this requirement from double-reporting a net the catalog
-	// already speaks about.
+	// nets between them. The catalog already reports on such a net, and crediting the Zener keeps this
+	// requirement from reporting it twice.
 	//
 	// Every clause carries needs_esd(?n), which binds the head variable for the walk. Without it the
 	// walk has nothing to start from and runs from every net on the board, which is quadratic and made
@@ -87,21 +87,22 @@ func esdRule(p Profile, _ Requirement) *check.Rule {
 		append(unprotected, query.Neg(query.Rel("esd_ok", query.V("n"))))...))
 
 	// esd_scope is the considered set, every net this requirement APPLIED to, protected or not. It is
-	// `unprotected` without the negated clause, so it holds the nets the profile selected as exposed on
-	// a bus the presence gate says is in use. A net that is not here was never judged, and a net that
-	// is here but absent from the findings is a net with a clamp in reach.
+	// `unprotected` without the negated clause. So it holds each net the profile selected as exposed,
+	// on a bus where the presence gate says the interface is in use. A net missing from esd_scope was
+	// never judged. A net in esd_scope and absent from the findings has a clamp in reach.
 	//
 	// Written out rather than derived from the goal above. It is derivable HERE, but signal-dangling
-	// ends in a comparison instead of a negation, and a derivation that handles four of the six
-	// requirement shapes would report the failures as the coverage on the other two.
+	// ends in a comparison instead of a negation. Suppose a derivation handled four of the six
+	// requirement shapes. On the other two it would report the failures as the coverage.
 	rules = append(rules, query.Def(query.Rel("esd_scope", query.V("n")),
 		append([]query.Literal{query.Pos(query.Rel("needs_esd", query.V("n")))}, inUse...)...))
 
 	// esd_by names the clamp for a passing net. esd_ok binds the clamping part but projects only the
-	// net, so this head carries the part a reviewer wants named on a pass (agni issue 662).
+	// net. This head projects the part too, because a reviewer wants it named on a pass (agni issue
+	// 662).
 	//
 	// A SECOND head rather than a widening of esd_ok, because unprotected negates that relation and a
-	// negated atom must stay unary. Giving esd_ok an arity of two would change what `not esd_ok(?n)`
+	// negated atom must be unary. Giving esd_ok an arity of two would change what `not esd_ok(?n)`
 	// means. The clauses below mirror the three above.
 	for _, c := range []struct{ v, class string }{{"t", "tvs"}, {"z", "zener"}} {
 		rules = append(rules, query.Def(query.Rel("esd_by", query.V("n"), query.V(c.v)),

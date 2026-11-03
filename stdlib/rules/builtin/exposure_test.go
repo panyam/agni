@@ -10,8 +10,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// exposureDesign has two plain connectors. J1 is the cable entry and J2 the one a design declares
-// internal, and each exposure rule has a net that reaches only J2, plus one net reaching both.
+// exposureDesign has two plain connectors. J1 is the cable entry, and a design declares J2 internal.
+// Each exposure rule has a net that reaches only J2, plus one net reaching both.
 func exposureDesign() *ir.Design {
 	load := &ir.PartType{Name: "LOAD", Pins: []*ir.Pin{
 		{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
@@ -54,7 +54,7 @@ func exposureFindings(m check.Model) map[string]map[string]bool {
 // Whether a connector faces the field comes from the design's intent (agni issue 831). The same two
 // mezzanine connectors are both exposed until the design declares one internal, and then the four
 // exposure rules leave the nets reaching only that one alone. A net that also reaches the cable entry
-// stays exposed.
+// is still exposed.
 func TestExposureFollowsDeclaredIntent(t *testing.T) {
 	cases := []struct {
 		rule string

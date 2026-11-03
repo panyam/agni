@@ -13,12 +13,12 @@ import (
 // auditModel is the design every rule is run against for the declaration audit, the parity
 // fixture's messy netlist with BOTH optional tiers attached.
 //
-// Attaching them is what makes the audit possible at all. Available gates a param or board rule to
-// not-applicable when its tier is absent, so on a bare design those rules never execute, never
-// touch an accessor, and would report as reading nothing, a false clean covering exactly the
-// rules the audit exists for.
+// The audit needs both tiers attached. Available gates a param or board rule to not-applicable
+// when its tier is absent, so on a bare design those rules never execute, never touch an accessor,
+// and would report as reading nothing. That false clean would cover exactly the rules the audit
+// exists for.
 //
-// The param set is empty on purpose. What is recorded is the CALL, not what it returns, so a rule that
+// The param set is empty on purpose. The audit records the CALL, not what it returns, so a rule that
 // asks for a PartSpec and gets nil has still demonstrated that it depends on the datasheet tier.
 // Seeding real specs would deepen each rule's path but is not needed to observe the dependency, and
 // an empty set keeps the fixture from encoding one rule's expectations.
@@ -89,13 +89,13 @@ func TestReadsAreDeclared(t *testing.T) {
 	}
 }
 
-// TestReadsAudit reports the direction that cannot be asserted, a tier a rule declares but
-// was not observed reading. Each is either a genuine over-declaration (the rule reads
+// TestReadsAudit reports the direction that cannot be asserted. A rule declares a tier, and the
+// audit never saw the rule read it. Each is either a genuine over-declaration (the rule reads
 // not-applicable where it would have worked) or simply a path this fixture does not drive. Telling
 // those apart needs a human, so this logs and never fails.
 //
-// It also prints twin coverage, since extending that is the other half of WS3-122 and the count is
-// the thing anyone picking it up wants first.
+// It also prints twin coverage, since extending twin coverage is the other half of WS3-122. Anyone
+// picking that up wants the count first.
 func TestReadsAudit(t *testing.T) {
 	m := auditModel()
 	var twinned, untwinned int

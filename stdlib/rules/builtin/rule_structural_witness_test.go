@@ -11,10 +11,10 @@ import (
 
 // Proof-on-pass for the three STRUCTURAL rules, one per subject kind (net, component, pin).
 //
-// What these assert is the property build/evidence.md asks for, not the presence of a witness. "A
-// witness is non-nil" cannot fail once the field is set, and a statement that reads well but would be
-// identical on a design where the rule concluded the opposite proves nothing. So each test below
-// changes THE FACT and requires the witness to change with it.
+// These tests assert the property build/evidence.md asks for, not the presence of a witness. "A
+// witness is non-nil" cannot fail once the field is set. A statement can read well and still be
+// identical on a design where the rule concluded the opposite, and such a statement proves nothing.
+// So each test below changes THE FACT and requires the witness to change with it.
 //
 // The second thing under test is the considered set itself. A converted rule must return a verdict
 // for every subject it was applied to, including the ones it passed and the ones it could not judge.
@@ -71,9 +71,9 @@ func TestSinglePinNetWitnessTracksTheCount(t *testing.T) {
 	}
 }
 
-// The no-connect exemption is a PASS with its own reason, not a silence. This is the case the
-// conversion exists for. Before it, a deliberate stub and a net the rule never saw were the same
-// nothing downstream.
+// The no-connect exemption is a PASS with its own reason, not a silence. The conversion exists for
+// this case. Before it, a deliberate stub and a net the rule never saw were the same nothing
+// downstream.
 func TestIntentionalNoConnectPassesRatherThanVanishing(t *testing.T) {
 	vs := singlePinNetVerdicts(context.Background(), check.NewModel(&ir.Design{
 		Components: comps("U1"), Nets: []*ir.Net{flaggedNet("unconnected-(U1-Pad1)", "U1.1")},
@@ -111,7 +111,7 @@ func TestUnconnectedComponentSeparatesCannotJudgeFromClean(t *testing.T) {
 	if r := verdictOf(t, vs, "", "").Reason; r == "" {
 		t.Error("a NotConsidered verdict must say why it could not be judged")
 	}
-	// The count is the fact. U1 lands on one net, and it is counted once despite two pins on it.
+	// The count is the fact. U1 sits on one net, and it is counted once despite two pins on it.
 	if got := termValue(verdictOf(t, vs, "U1", "").Witness, "nets reached"); got != "1" {
 		t.Errorf("U1 reaches one net (two pins on it), witness term = %q, want 1", got)
 	}

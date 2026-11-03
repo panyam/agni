@@ -9,9 +9,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// The supply rules read a power_in pin as a load, and vendor symbols type pins power_in that draw no
-// supply (agni issue 935). Each case below pairs the shape the rules now leave alone with the shape
-// that must still fail, because the second is what the rules exist for.
+// The supply rules read a power_in pin as a load. Vendor symbols type some pins power_in even though
+// they draw no supply (agni issue 935). Each case below pairs a shape the rules now leave alone with
+// a shape that must still fail. The rules exist to catch the second.
 
 // supplyPin is one pin of a test part: its name, designator and electrical direction.
 type supplyPin struct {
@@ -118,8 +118,9 @@ func TestADividerTapIntoASensePinIsNotASupply(t *testing.T) {
 }
 
 // TestADividerTapIntoAnInoutSensePinIsOutsideTestPoints holds the divider-tap exemption for a sense
-// pin the symbol types bidirectional, as Jetson's USB hub does. It read as power_in only while ingestion
-// promoted it by name, and test-point-coverage judged the tap as a rail once that stopped (agni 1241).
+// pin typed bidirectional by its symbol, as on Jetson's USB hub. It read as power_in only while
+// ingestion promoted it by name, and test-point-coverage judged the tap as a rail once that stopped
+// (agni 1241).
 func TestADividerTapIntoAnInoutSensePinIsOutsideTestPoints(t *testing.T) {
 	d := pinDesign(map[string][]supplyPin{
 		"U2": {{"OUT", "1", pwrOut}, {"GND", "2", pass}},

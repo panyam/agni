@@ -10,11 +10,11 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Tests for the proof-on-pass prototype. The failure mode these are written against is the one
-// build/evidence.md warns about. "A witness is present on a pass" is an assertion that cannot fail,
-// because a rule that hardcoded a witness would satisfy it. The property asserted here instead is
-// that the witness TRACKS THE FACT, so changing the seeded limit changes what the witness says and
-// removing the limit removes the pass.
+// Tests for the proof-on-pass prototype. These tests guard against the failure mode build/evidence.md
+// warns about. "A witness is present on a pass" is an assertion that cannot fail, because a rule
+// that hardcoded a witness would satisfy it. These tests assert instead that the witness TRACKS THE
+// FACT, so changing the seeded limit changes what the witness says and removing the limit removes
+// the pass.
 
 // absMaxSpec builds the two-supply translator with VCCB's absolute maximum set by the caller, so a
 // test can move the limit and watch the witness follow. A nil max omits the bound entirely, which is
@@ -97,10 +97,10 @@ func TestAbsMaxWitnessTracksTheSeededLimit(t *testing.T) {
 	}
 }
 
-// THE SPLIT THIS WORK EXISTS FOR. A row stating no maximum constrains nothing, so it must not
-// produce a pass. Before the verdict type both this and a genuine "comfortably under the limit" took
-// the same silent `return`, which is why a design could read clean against a datasheet that said
-// nothing about the terminal.
+// THE SPLIT. This work exists to separate two cases. A row stating no maximum constrains nothing, so
+// it must not produce a pass. Before the verdict type, both this and a genuine "comfortably under
+// the limit" took the same silent `return`. So a design could read clean against a datasheet that
+// said nothing about the terminal.
 func TestAbsMaxWithNoStatedMaximumIsNotAPass(t *testing.T) {
 	v := verdictFor(t, pinAbsMaxVerdicts(context.Background(), absMaxModel(t, nil, "+3V3", "+5V")), "14")
 
@@ -143,7 +143,7 @@ func TestRecommendedWitnessStatesBothBounds(t *testing.T) {
 	}
 }
 
-// PROJECTION PARITY. The refactor rests on Eval still returning exactly the failures it
+// PROJECTION PARITY. The refactor depends on Eval still returning exactly the failures it
 // always did, so the verdict list and the finding list must agree about what failed.
 func TestVerdictsProjectToTheSameFindings(t *testing.T) {
 	m := xlatModel(t, "+5V", "+5V") // over VCCA's limits, inside VCCB's

@@ -14,7 +14,7 @@ import (
 // Parse reads a YAML profile declaration into a Profile and validates its STRUCTURE (name present, at
 // least one signal, at most one anchor) and every signal's MATCHER (exactly one form, compiling, not
 // over-broad; see validateSignalMatcher). It does NOT check that requirement types are registered.
-// Load does that, so Parse stays free of any registry dependency and WASM-clean (yaml only, no os).
+// Load does that. Parse then has no registry dependency and is WASM-clean (yaml only, no os).
 // Built-in profiles load through mustParse, which adds ValidateRequirements; external/customer
 // profiles go through Load for the teaching type-check.
 func Parse(b []byte) (Profile, error) {
@@ -63,14 +63,14 @@ func isNamingMap(n *yaml.Node) bool {
 
 // Validate reports why a profile cannot do what it says: a missing name, no signals, an unnamed
 // signal, a requirement with no type, more than one anchor, an unsound signal matcher, or a
-// completeness requirement with no anchor to hang on.
+// completeness requirement with no anchor to anchor on.
 //
-// It is exported and separate from Parse because a profile arrives by more than one route (YAML, and
-// a serialized rule definition since WS3-103), and a second authoring route with its own idea of
-// validity is how an unsound profile eventually gets in. The two failure classes it covers produce a
-// rule which cannot fire rather than a rule that errors. An over-broad matcher silently claims foreign
-// nets, and a completeness requirement with no anchor compiles to nothing at all, so an item bound to
-// it scores a clean pass while the declared check never existed (WS3-099).
+// It is exported and separate from Parse because a profile arrives by more than one route (YAML,
+// and a serialized rule definition since WS3-103). If a second authoring route had its own idea of
+// validity, an unsound profile would eventually get in that way. The two failure classes it covers
+// produce a rule which cannot fire rather than a rule that errors. An over-broad matcher silently
+// claims foreign nets, and a completeness requirement with no anchor compiles to nothing at all, so
+// an item bound to it scores a clean pass while the declared check never existed (WS3-099).
 func Validate(p Profile) error {
 	if strings.TrimSpace(p.Name) == "" {
 		return fmt.Errorf("profile: missing required field \"name\"")
@@ -140,10 +140,10 @@ func Load(r io.Reader) (Profile, error) {
 // are author errors in the declaration, and both produce a check that cannot run (an unknown type
 // silently skipped, or a compiler handed params it cannot use).
 //
-// Separate from Validate because this half needs the requirement REGISTRY, which Validate (and so
-// Parse) does not depend on. Parse stays structure-only and WASM-clean, and a built-in Go literal
-// reaches its params gate through Compile instead. Exported for the same reason as Validate and
-// RequirementTypes (WS3-103).
+// It is separate from Validate because this half needs the requirement REGISTRY. Validate, and so
+// Parse, does not depend on the registry. Parse is still structure-only and WASM-clean, and a
+// built-in Go literal reaches its params gate through Compile instead. Exported for the same reason
+// as Validate and RequirementTypes (WS3-103).
 func ValidateRequirements(p Profile) error {
 	for _, req := range p.Requirements {
 		entry, ok := requirementRegistry[req.Type]
@@ -183,13 +183,14 @@ func loadNamingMap(doc *checkspb.ProfileNamingMap) (Profile, error) {
 	return applyNamingMap(core, doc.GetSuffixes()), nil
 }
 
-// applyNamingMap returns a copy of core with each signal whose role (Signal.Name) is in suffixes
-// rebound to the mapped suffix; unmapped signals keep the core matcher. Host binding, anchor/pull-up
+// applyNamingMap returns a copy of core. A signal whose role (Signal.Name) is in suffixes is rebound
+// to the mapped suffix, and an unmapped signal keeps the core matcher. Host binding, anchor/pull-up
 // flags, and requirements are inherited unchanged.
 //
-// A remap REPLACES the signal's matcher rather than adding to it, so the mapped suffix becomes the
-// whole convention and clears any prefix/glob/regex the core signal declared. A map that only overrode the
-// suffix of a glob-matched signal would leave two forms declared, which is not a matcher at all.
+// A remap REPLACES the signal's matcher rather than adding to it. The mapped suffix becomes the whole
+// convention and clears any prefix, glob or regex the core signal declared. Suppose a map only
+// overrode the suffix of a glob-matched signal. That would leave two forms declared, which is not a
+// matcher at all.
 func applyNamingMap(core Profile, suffixes map[string]string) Profile {
 	p := core
 	p.Signals = make([]Signal, len(core.Signals))
@@ -231,10 +232,10 @@ func profileRoles(p Profile) []string {
 // is. Parse covers structure and matchers, and ValidateRequirements covers requirement types and their
 // params (WS3-047).
 //
-// It does not call Load, which is the other route that pairs those two halves. Load also resolves
-// NAMING MAPS, which look their target up in Profiles, and Profiles is the list these very vars
-// populate, so a built-in initialized through Load is an initialization cycle the compiler
-// rejects (Profiles -> SPINOR -> Load -> loadNamingMap -> builtinProfileNames -> Profiles). Calling
+// It does not call Load, though Load also pairs those two halves. Load resolves NAMING MAPS too, and
+// a naming map looks its target up in Profiles. These very vars populate Profiles. So initializing a
+// built-in through Load creates an initialization cycle, and the compiler rejects it (Profiles ->
+// SPINOR -> Load -> loadNamingMap -> builtinProfileNames -> Profiles). Calling
 // the two validators directly gets identical coverage with no cycle, since neither reaches Profiles.
 func mustParse(b []byte) Profile {
 	p, err := Parse(b)

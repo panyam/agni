@@ -4,15 +4,15 @@ import (
 	checkspb "github.com/panyam/agni/gen/go/agni/v1/checks"
 )
 
-// This file is the interface-profile half of the rule-definition contract (WS3-103), and since agni
-// issue 827 ProfileDef is also the schema of a profile YAML file, which Parse binds through yamlpb. A Profile is
-// already a pure declaration (name, signals, an optional declared host, and a list of requirement
-// references), so this is a field mapping.
+// This file is the interface-profile half of the rule-definition contract (WS3-103). Since agni issue
+// 827 ProfileDef is also the schema of a profile YAML file, and Parse binds that file through yamlpb.
+// A Profile is already a pure declaration (name, signals, an optional declared host, and a list of
+// requirement references), so this is a field mapping.
 //
-// Validation is not duplicated here, since a decoded profile goes through the same exported Validate a
-// YAML one does. A second authoring route with its own idea of validity is how an unsound profile
-// eventually gets in. Both things Validate catches, an over-broad matcher and a completeness
-// requirement with no anchor, produce a rule that cannot fire rather than one that errors.
+// Validation is not duplicated here, since a decoded profile goes through the same exported Validate
+// a YAML one does. If a second authoring route had its own idea of validity, an unsound profile would
+// eventually get in that way. Validate catches two things, an over-broad matcher and a completeness
+// requirement with no anchor. Each produces a rule that cannot fire rather than one that errors.
 
 // ProfileProto encodes an interface profile as its wire form.
 func ProfileProto(p Profile) *checkspb.ProfileDef {

@@ -19,8 +19,8 @@ var inputProtection = &check.Rule{
 	Remedy:     "Put a fuse and a clamp in the path between the connector and the rail: a fuse for the sustained fault, a TVS for the transient.",
 	Primitives: []string{"select", "traverse", "exists", "pin-role", "pattern", "reach"},
 	Reads:      []string{"component.class", "component.device_class", "component.dnp", "net.attributes", "net.names", "on_net", "param.max", "pin.electrical_type"},
-	// A current-limiting switch is credited from its datasheet, which a run without a corpus does not
-	// have, so the rule still judges every entry then (agni issue 1248).
+	// A current-limiting switch is credited from its datasheet. A run without a corpus has no
+	// datasheet, so the rule still judges every entry then (agni issue 1248).
 	OptionalReads: []string{"component.device_class", "param.max"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
@@ -33,18 +33,18 @@ var inputProtection = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// inputProtectionVerdicts decides every connector net that actually feeds a power input, which is
-// the half a bool could not express. `UnprotectedPowerReach` is false
-// for a fused 12 V entry and equally false for a USB data pair, because in neither case did it find
-// something to complain about. Passing both would put every signal pin on a connector into the list
-// of things somebody checked for a fuse. `PowerPathProtection` reports the load COUNT for exactly
-// this reason, and a connector net reaching no supply pin yields no verdict at all.
+// inputProtectionVerdicts decides every connector net that actually feeds a power input. A bool
+// could not express that half. `UnprotectedPowerReach` is false for a fused 12 V entry and equally
+// false for a USB data pair, because in neither case did it find something to complain about.
+// Passing both would put every signal pin on a connector into the list of things somebody checked
+// for a fuse. `PowerPathProtection` reports the load COUNT for exactly this reason, and a connector
+// net reaching no supply pin yields no verdict at all.
 //
 // The pass names the fuse or TVS it credits, so the evidence points at a part rather than asserting
 // that one exists. A net the board drives itself is NotConsidered, since its connector is an outlet
-// (check.BoardSource, agni issue 1016). The failure names the exposed rail rather than the connector again. On a board
-// with a protected 5 V path and a bare 3V3 path off one connector, the finding is about the 3V3 path,
-// and the walk already knows which one it is.
+// (check.BoardSource, agni issue 1016). The failure names the exposed rail rather than the
+// connector again. Take a board with a protected 5 V path and a bare 3V3 path off one connector. The
+// finding is about the 3V3 path, and the walk already knows which one it is.
 func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, n := range check.ScopedNets(ctx, m) {
@@ -113,10 +113,9 @@ func inputProtectionVerdicts(ctx context.Context, m check.Model) []check.Verdict
 	return out
 }
 
-// inputProtectionSpec is the rule's declarative twin (WS3-003). The guard clauses stay
-// AST; the reach walk is one declared FFI shared with the Go Eval. The WS3-011
-// vocabulary is new, so the Go side stays canonical (see docsite/content/build/check-rule.md for
-// the twin discipline).
+// inputProtectionSpec is the rule's declarative twin (WS3-003). The guard clauses are still AST,
+// and the reach walk is one declared FFI shared with the Go Eval. The WS3-011 vocabulary is new, so
+// the Go side is still canonical (see docsite/content/build/check-rule.md for the twin discipline).
 var inputProtectionSpec = &check.Spec{
 	Over: "nets",
 	Where: check.And{Xs: []check.Expr{

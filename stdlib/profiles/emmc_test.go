@@ -76,8 +76,8 @@ func TestEMMCFires(t *testing.T) {
 }
 
 // Compile produces the four eMMC rules (signal-missing convention, host-incomplete, missing-pullup,
-// signal-dangling), registered under "profile". These are the same four SPI-NOR yields, with no
-// compiler change, because a new interface is a data value (WS3-046).
+// signal-dangling), registered under "profile". SPI-NOR yields the same four, with no compiler
+// change, because a new interface is a data value (WS3-046).
 func TestEMMCCompileAndRegistered(t *testing.T) {
 	if got := len(Compile(EMMC)); got != 4 {
 		t.Fatalf("Compile(EMMC): want 4 rules, got %d", got)
@@ -128,8 +128,8 @@ func TestEMMCHostIncomplete(t *testing.T) {
 }
 
 // When a host declares the interface but is wired to none of its signals, host-anchored completeness
-// flags every one of the eleven required signals (wholly-absent detection the convention path cannot
-// do).
+// flags every one of the eleven required signals. The convention path cannot detect a wholly-absent
+// bus.
 func TestEMMCHostWhollyAbsent(t *testing.T) {
 	d := &ir.Design{
 		Components: append(comps("U1"), emmcHost("U2")),
@@ -149,16 +149,16 @@ func TestEMMCHostWhollyAbsent(t *testing.T) {
 // emmcWideRail is emmcGood with a REALISTIC rail: +3V3 fans out to a couple of dozen loads instead of
 // the two in emmcGood. Everything else is identical, and CMD is still pulled up to it through R1.
 //
-// That one difference is the bug (WS3-108). The generated pull-up check asked
+// That one difference exposed the bug (WS3-108). The generated pull-up check asked
 // `net.reaches(n, rail)`, and the WS3-011 series walk refuses to cross INTO a net whose
 // fan-out exceeds maxWalkFan (16). That guard is right for its own purpose, since it stops a walk
 // wandering across a plane as though it were a series path. But a pull-up TERMINATES on a rail, and a
-// rail is wide almost by definition, so the one destination the rule needs was the one kind of net the
-// walk would not enter. On a real board, a CMD line pulled up through one resistor to a genuine 1.8V
-// rail with 51 pins on it was reported as reaching no rail.
+// rail is wide almost by definition. The rule needs to reach a rail, and the walk would not enter that
+// kind of net. On a real board, a CMD line pulled up through one resistor to a genuine 1.8V rail with
+// 51 pins on it was reported as reaching no rail.
 //
-// emmcGood keeps a two-pin rail, which is why the suite passed while the rule could not do its job on
-// any real design.
+// emmcGood has a two-pin rail. So the suite passed while the rule could not do its job on any real
+// design.
 func emmcWideRail() *ir.Design {
 	d := emmcGood()
 	loads := make([]string, 0, 24)
@@ -216,9 +216,9 @@ func TestEMMCWithoutItsAnchorIsNotInUse(t *testing.T) {
 	}
 }
 
-// A net a tool named after a pin is not a net a designer named, so a profile matches none. KiCad
-// names a module's unwired MDIO pin's stub "unconnected-(J1I-SGMII0_MDIO-PadE7)", which carries the
-// signal name and is no MDIO bus (agni issue 1019).
+// A tool names some nets after a pin, and no designer named those nets, so a profile matches none.
+// KiCad names a module's unwired MDIO pin's stub "unconnected-(J1I-SGMII0_MDIO-PadE7)", which
+// carries the signal name and is no MDIO bus (agni issue 1019).
 func TestToolNamedNetsMatchNoSignal(t *testing.T) {
 	d := &ir.Design{
 		Components: comps("J1"),

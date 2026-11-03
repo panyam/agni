@@ -8,9 +8,9 @@ import (
 )
 
 // Every registered built-in rule must declare the facts it Reads (Available derives from them) and
-// set the well-known category tag the catalog groups by. A rule added without these silently gates
-// as always-available and falls out of the default group-by, so guard the zero value rather than
-// trusting authors to remember.
+// set the well-known category tag the catalog groups by. A rule added without them silently gates
+// as always-available and is missing from the default group-by. So the test guards the zero value
+// rather than trusting authors to remember.
 func TestEveryRuleHasReadsAndCategory(t *testing.T) {
 	for _, r := range rules {
 		if len(r.Reads) == 0 {

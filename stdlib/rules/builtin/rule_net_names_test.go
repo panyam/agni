@@ -69,8 +69,8 @@ func TestLabelAliasConflict(t *testing.T) {
 	}
 }
 
-// TestPowerTapConflict checks that two design-wide names on one net fire and one rail plus local
-// aliases stays quiet.
+// TestPowerTapConflict checks that two design-wide names on one net fire. One rail name plus local
+// aliases is quiet.
 func TestPowerTapConflict(t *testing.T) {
 	got := fireSubjects(t, powerTapConflict,
 		anet("+3V3", "0:+3V3", "0:+3.3V"),   // rival rails -> fires

@@ -14,8 +14,8 @@ import (
 //
 // This is the OTHER half of io-map-net-absent, and the two are opposite defects. A net the map
 // declares and the netlist lacks is usually a real disconnection, and fails over there. A net the
-// netlist has and the map does not declare is usually an incomplete map, and lands here as NOT a
-// fail, since it is a question nobody asked rather than a design defect.
+// netlist has and the map does not declare is usually an incomplete map. This rule reports it as
+// NOT a fail, since it is a question nobody asked rather than a design defect.
 
 // ioMapCoverageRule reports, per net, whether the IO map declares it.
 func ioMapCoverageRule(d Declaration) *check.Rule {
@@ -35,9 +35,9 @@ func ioMapCoverageRule(d Declaration) *check.Rule {
 	}
 }
 
-// ioMapCoverageVerdicts emits one verdict per net in the DESIGN. It is the one rule in this family
-// whose considered set is the netlist rather than the declaration, so it reports which parts of the
-// design the map never mentions.
+// ioMapCoverageVerdicts emits one verdict per net in the DESIGN. The other rules in this family
+// consider the declaration. This one considers the netlist, so it reports which parts of the design
+// the map never mentions.
 //
 // It indexes the declared nets by ident.Canonical once and looks each design net up, since two
 // hundred rows against sixteen hundred nets is 320,000 comparisons (see the note on ident.Compare).

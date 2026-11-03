@@ -15,10 +15,10 @@ import (
 //
 // It is a warning rather than an error because a missing library is almost always a defect in the
 // INVOCATION (no --symbol-path, a library not checked out, a file not mounted) rather than in the
-// design, and the board it is read from may be flawless. duplicate-ref-des earns error because a
-// collision is an annotation slip the designer made. It is not info either, because a bus on a flat
-// sheet is usually already modeled and its flag is a tripwire, while an unresolved symbol is ALWAYS a
-// real gap in the read.
+// design, and the board it is read from may be flawless. duplicate-ref-des is an error, because a
+// collision is an annotation slip the designer made. It is not info either. A bus on a flat sheet is
+// usually already modeled, so its flag is a tripwire. An unresolved symbol is ALWAYS a real gap in
+// the read.
 var symbolUnresolved = &check.Rule{
 	Name:       "symbol-unresolved",
 	Severity:   "warning",
@@ -45,7 +45,7 @@ var symbolUnresolved = &check.Rule{
 // much of the netlist is missing. One unresolved decorative symbol and one unresolved 100-pin FPGA
 // read identically until the parts are listed.
 func unresolvedMessage(u *ir.UnresolvedSymbol) string {
-	// The remedy lives HERE and only here. Every connectivity rule emits a companion inconclusive
+	// Only this rule states the remedy. Every connectivity rule emits a companion inconclusive
 	// finding that points back to this one, so repeating the fix on each of them would print the
 	// same paragraph twenty times and bury the single finding that names the cause.
 	const remedy = " Re-read with the library that holds it on the symbol search path."
@@ -66,16 +66,16 @@ func unresolvedMessage(u *ir.UnresolvedSymbol) string {
 //
 // This needs the reader to keep both halves (agni issue 418). `unresolved_symbols` is a list of
 // failures, so a rule reading only it would report failures alone, and a design whose symbols all
-// loaded would produce the same nothing as a read that opened no symbol at all. That is the silence
-// StatesConsideredSet exists to withhold, and it matters more here than for most rules, because an
-// unresolved symbol makes the whole design report LESS. The parts keep their designators and lose
+// loaded would produce the same nothing as a read that opened no symbol at all. StatesConsideredSet
+// exists to prevent that silence. It matters more here than for most rules, because an unresolved
+// symbol makes the whole design report LESS. The parts keep their designators and lose
 // their pins, and every connectivity rule over them goes quiet on an incomplete netlist.
 //
 // bus-not-modeled has the same shape, since `unmodeled_buses` holds every bus the reader saw rather
 // than only the ones that went badly.
 //
 // THE PASS CARRIES THE PIN COUNT. "the symbol resolved" reads identically on a 100-pin FPGA and on a
-// stale library entry that answered with an empty stub, and the second costs the netlist what a
+// stale library entry that answered with an empty stub. The second loses as much of the netlist as a
 // missing file does. A count moves when the library does. A zero is still a Pass, because the rule's
 // question is whether the reference resolved and it did. A graphic-only symbol legitimately declares
 // no pin, so failing on the count would fire on title blocks.
@@ -120,11 +120,11 @@ func symbolUnresolvedVerdicts(ctx context.Context, m check.Model) []check.Verdic
 	return out
 }
 
-// resolvedSource turns a reader's construct kind into the phrase a witness can carry, so the pass
-// says WHERE the answer came from. An external library is the half that can go missing on another
-// machine, and a reader chasing a lost connection wants that separated from a symbol the schematic
-// carries itself. An unrecognised kind falls back to the kind string rather than a guess such as
-// "a library", since the source is the one thing this witness term states.
+// resolvedSource turns a reader's construct kind into a phrase for the witness, so the pass says
+// WHERE the answer came from. An external library can go missing on another machine. A symbol inside
+// the schematic cannot, and a reader chasing a lost connection wants the two kept apart. An
+// unrecognised kind falls back to the kind string rather than a guess such as "a library", since
+// this witness term states only the source.
 func resolvedSource(kind string) string {
 	switch kind {
 	case "kicad_sym_embedded":

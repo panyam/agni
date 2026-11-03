@@ -13,7 +13,7 @@ import (
 //
 //	U101.41 (PTC11) --- ADC_BATT_SENSE
 //	U101.42 (PTE7)  --- PMIC_PG --[R3]-- PMIC_PG_MCU --- U7000.9 (PG)
-//	U101.43 (GND)   --- GND     (and U101.44 is also named GND, which is what makes a name ambiguous)
+//	U101.43 (GND)   --- GND     (U101.44 is also named GND, so the name is ambiguous)
 func ioMapDesign() *ir.Design {
 	lib := &ir.PartLibrary{Name: "lib", Parts: []*ir.PartType{
 		{Name: "MCU", Pins: []*ir.Pin{
@@ -101,7 +101,7 @@ func TestIOMapPinResolvesTheFunctionalName(t *testing.T) {
 }
 
 // The spelling differences that produced every false warning in the run we measured. Each must pass,
-// and each must SAY what was assumed, because a match a reader cannot check is the thing being fixed.
+// and each must SAY what was assumed, because the fix targets matches a reader cannot check.
 func TestIOMapPinToleratesSpellingAndSaysSo(t *testing.T) {
 	for _, spelling := range []string{"pte7", "PTE07", "PTE7\u200b"} {
 		t.Run(spelling, func(t *testing.T) {
@@ -220,8 +220,8 @@ func TestIOMapNetAbsentFailsOnAMissingNet(t *testing.T) {
 	}
 }
 
-// A misspelling and a disconnection are opposite defects, and the expensive mistake is sending a
-// reviewer to look for a net that is present under a name differing by a character they cannot see.
+// A misspelling and a disconnection are opposite defects. The expensive mistake is to send a reviewer
+// looking for a missing net when the net is present under a name one invisible character away.
 func TestIOMapNetAbsentIsInconclusiveOnAMisspelling(t *testing.T) {
 	v := onlyVerdict(t, ioMapDecl(t, "  - {net: \"ADC_BATT_SENSE\u200b\", device: U101, pin: '41'}"), RuleIOMapNetAbsent)
 	if v.Outcome != check.Inconclusive {
@@ -249,7 +249,7 @@ func TestIOMapFarEndPassesAndReportsTheRoute(t *testing.T) {
 		t.Fatalf("outcome = %s, reason %q", v.Outcome, v.Reason)
 	}
 	// The route is the evidence. A verdict a reviewer cannot check is worth much less than one they
-	// can, and the series resistor is what they want to see.
+	// can, and they want to see the series resistor.
 	if v.Witness == nil || !strings.Contains(v.Witness.Statement, "[R3]") {
 		t.Errorf("the witness should carry the route it walked: %+v", v.Witness)
 	}
@@ -367,9 +367,9 @@ func TestIOMapCoverageNeverFails(t *testing.T) {
 	}
 }
 
-// Rails and grounds stay IN the denominator and say which they are. Excusing them would be the tool
-// deciding which absences are acceptable, and a map that forgot a whole peripheral bank would read as
-// well-covered if the arithmetic quietly dropped a third of the board.
+// Rails and grounds are kept IN the denominator, and each says which it is. Excusing them would be
+// the tool deciding which absences are acceptable. If the arithmetic quietly dropped a third of the
+// board, a map that forgot a whole peripheral bank would read as well-covered.
 func TestIOMapCoverageCountsRailsAndSaysSo(t *testing.T) {
 	decl := ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: '41'}")
 	var gnd *check.Verdict
@@ -396,7 +396,7 @@ func TestIOMapCoverageCountsRailsAndSaysSo(t *testing.T) {
 // BOTH sides are exercised, and that is not belt-and-braces. A first version of this test declared a
 // lowercase net against a fixture whose net names are already canonical, so canonicalizing the
 // DECLARATION alone was enough to pass it. A build that looked the design's raw name up in a
-// canonical index matched anyway and the test stayed green. Each case below fails if the
+// canonical index matched anyway and the test still passed. Each case below fails if the
 // canonicalization on its own side is dropped.
 func TestIOMapCoverageMatchesAcrossSpelling(t *testing.T) {
 	covered := func(t *testing.T, designNet, declaredNet string) int {

@@ -12,21 +12,21 @@ import (
 	"strconv"
 )
 
-// copperClearance flags cross-net track segments on the same layer whose copper edges
-// sit closer than the fabrication clearance floor. It is the one rule of the WS3-008
-// batch written as a Go Eval, because the check is a pairwise join across entities (every
-// segment of net A against every segment of net B), which the Spec AST cannot express.
-// A cross-entity/spatial vocabulary needs more rules than this one behind it before it
-// earns AST nodes (the WS3-003 earn-it guard;
-// docsite/content/architecture/rules-and-checks.md). This rule and its O(S²) walk are
-// what the WS3-004 spatial-index question was about. It sweeps each layer's segments in x order
-// rather than comparing every pair (agni issue 963), and BenchmarkCopperClearance tracks the cost.
-// clearanceEpsilonNm is how far under the floor a measured gap may sit and still meet it, KiCad's own
-// DRC epsilon (its DRCEpsilon advanced setting, 0.0005mm by default). A gap between diagonal tracks is
-// irrational in nanometres, so copper routed exactly at the minimum measures a nanometre or two under
-// it, which KiCad passes and a strict comparison failed (16 pairs on the Jetson baseboard, agni 933).
+// clearanceEpsilonNm is how far under the floor a measured gap may sit and still meet it. It is
+// KiCad's own DRC epsilon (its DRCEpsilon advanced setting, 0.0005mm by default). A gap between
+// diagonal tracks is irrational in nanometres, so copper routed exactly at the minimum measures a
+// nanometre or two under it. KiCad passes that gap, and a strict comparison failed it (16 pairs on
+// the Jetson baseboard, agni 933).
 const clearanceEpsilonNm = 500
 
+// copperClearance flags cross-net track segments on the same layer whose copper edges sit closer
+// than the fabrication clearance floor. It is the one rule of the WS3-008 batch written as a Go
+// Eval. The check is a pairwise join across entities, every segment of net A against every segment
+// of net B, and the Spec AST cannot express that join. A cross-entity or spatial vocabulary needs
+// more rules behind it than this one before it gets AST nodes (the WS3-003 earn-it guard;
+// docsite/content/architecture/rules-and-checks.md). The WS3-004 spatial-index question was about
+// this rule and its O(S²) walk. The rule sweeps each layer's segments in x order rather than
+// comparing every pair (agni issue 963), and BenchmarkCopperClearance tracks the cost.
 var copperClearance = &check.Rule{
 	Name:       "copper-clearance",
 	Severity:   "error",
@@ -49,7 +49,7 @@ var copperClearance = &check.Rule{
 	Eval:                copperClearanceVerdicts,
 	StatesConsideredSet: true,
 	// Asked about some nets, it measures only the segments of those nets against their neighbours
-	// (agni issue 1070), the pairs a full sweep filtered to them would hold.
+	// (agni issue 1070). Those are the same pairs a full sweep filtered to the nets would hold.
 	Scoping: check.ScopeSubjects,
 }
 
@@ -61,10 +61,10 @@ var copperClearance = &check.Rule{
 // one report link.
 //
 // THE CONSIDERED SET IS THE PAIRS THE WALK MEASURED, not every pair of nets on the board. The
-// bounding-box reject is what keeps this O(S²) walk affordable, and a pair it rejects has no computed
-// distance at all, so a pass over every possible pair would claim a measurement the walk never made.
-// The rule reports which pairs came near enough to measure and how they came out, which is also the
-// set a reviewer cares about.
+// bounding-box reject keeps this O(S²) walk affordable. A pair it rejects has no computed distance
+// at all, so a pass over every possible pair would claim a measurement the walk never made. The
+// rule reports which pairs came near enough to measure and how they came out. A reviewer cares
+// about the same set.
 //
 // A net with no track segments therefore appears in no pair. This rule compares SEGMENTS, so a net
 // present only as vias and pads was never measured.
@@ -125,11 +125,11 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			w.gap, w.at, w.ai, w.bi = gap, a.s.A, a.idx, b.idx
 		}
 	}
-	// A sweep per layer (agni issue 963). Comparing every segment with every other was O(S^2), about
-	// 197 million pairs and a second natively on the Jetson baseboard's 19,835 segments, nearly all
-	// rejected by the bounding box. Sorted by left edge, a segment only meets the ones that start
-	// before its right edge plus the farthest reach bboxNear allows, so the pairs measured are the same
-	// set the full walk measured.
+	// A sweep per layer (agni issue 963). Comparing every segment with every other was O(S^2),
+	// about 197 million pairs and a second natively on the Jetson baseboard's 19,835 segments,
+	// nearly all rejected by the bounding box. With segments sorted by left edge, a segment only
+	// meets the ones that start before its right edge plus the farthest reach bboxNear allows. So
+	// the sweep measures the same set of pairs as the full walk.
 	byLayer := map[string][]*flatSeg{}
 	widest := map[string]int64{}
 	longest := map[string]int64{} // the widest x extent of a segment on the layer, for the scoped window
@@ -140,8 +140,8 @@ func copperClearanceVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		longest[sg.s.Layer] = max64(longest[sg.s.Layer], sg.maxX-sg.minX)
 	}
 	// Asked about some nets (agni issue 1070), only the pairs with a segment of one of them are
-	// measured. Each such segment looks up the segments whose left edge lies within the reach bboxNear
-	// allows of it, and a pair of two scoped segments is measured once, from the one earlier in board
+	// measured. Each such segment looks up the segments whose left edge lies within bboxNear's
+	// reach of it. A pair of two scoped segments is measured once, from the one earlier in board
 	// order, so every count and tie-break matches the full sweep's.
 	if scope := check.SubjectScope(ctx); scope != nil {
 		inScope := map[string]bool{}

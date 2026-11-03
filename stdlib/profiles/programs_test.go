@@ -15,10 +15,10 @@ const programsGolden = "testdata/programs.golden"
 // TestBuiltinProgramsAreUnchanged holds every built-in profile to the datalog programs it compiles
 // to, one line per finding, domain and evidence query, so a change to a requirement compiler shows
 // which interfaces' rules it moved (agni issue 1210). A profile with no instance key must compile as
-// it did before one existed, and this is where that is held.
+// it did before one existed, and this test holds that.
 //
-// UPDATE_GOLDEN=1 rewrites the file. Read the diff before committing it, since a line that changed
-// for a profile the change was not about is the regression this test is for.
+// UPDATE_GOLDEN=1 rewrites the file. Read the diff before committing it. Suppose a line changed for a
+// profile the change was not about. That is the regression this test is for.
 func TestBuiltinProgramsAreUnchanged(t *testing.T) {
 	var lines []string
 	for _, p := range Profiles {

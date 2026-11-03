@@ -8,10 +8,10 @@ import (
 	"strings"
 )
 
-// ruleDocs embeds the per-rule documentation for the built-in rules: one markdown file per rule
-// under docs/, plus the images those files reference (WS3-025). The convention is in
-// docsite/content/build/check-rule.md. Embedding rather than reading files at runtime keeps the
-// single-binary and WASM builds working and the core free of file I/O (C1). The embed patterns are
+// ruleDocs embeds the per-rule documentation for the built-in rules. That is one markdown file per
+// rule under docs/, plus the images those files reference (WS3-025). The convention is in
+// docsite/content/build/check-rule.md. The docs are embedded rather than read at runtime, so the
+// single-binary and WASM builds work and the core is free of file I/O (C1). The embed patterns are
 // per-extension globs, so a doc referencing a new image type needs a pattern added below. The 1:1
 // between registered rules and doc files is harness-enforced (docs_test.go).
 //
@@ -29,10 +29,11 @@ func ruleDoc(name string) string {
 	return string(b)
 }
 
-// RuleDocImageHandler serves the rule docs' embedded explainer images (the diagrams a
-// docs/<rule>.md references, WS3-025) as a read-only static route, so the web rules/expectations
-// panels can resolve the relative image refs in Rule.Detail (WS9-030). Only image files under
-// docs/images/ are served (.svg and .png); any other path, including the markdown itself, a
+// RuleDocImageHandler serves the rule docs' embedded explainer images as a read-only static route.
+// The images are the diagrams a docs/<rule>.md references (WS3-025). The route lets the web
+// rules/expectations panels resolve the relative image refs in Rule.Detail (WS9-030). Only image
+// files under docs/images/ are served (.svg and .png). Any other path, including the markdown
+// itself, a directory, or a traversal attempt, is 404. Mount it under a prefix (the handler sees the
 // directory, or a traversal attempt, is 404. Mount it under a prefix (the handler sees the
 // prefix-stripped, relative path, e.g. "images/single-pin-net.svg"). SVG's content-type is set
 // explicitly because Go's mime table resolves .svg only from the host's mime files, which CI/WASM

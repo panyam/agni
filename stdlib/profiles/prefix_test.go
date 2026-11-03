@@ -7,8 +7,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// pcieLike is a completeness profile whose signals share generic serdes suffixes (_TXP/_RXP/...); a
-// prefix, when set, is what tells its nets apart from a foreign serdes of the same suffix.
+// pcieLike is a completeness profile whose signals share generic serdes suffixes (_TXP/_RXP/...).
+// When a prefix is set, it tells its nets apart from a foreign serdes of the same suffix.
 func pcieLike(prefix string) Profile {
 	return Profile{Name: "PCIeTest", Signals: []Signal{
 		{Name: "PETP", Prefix: prefix, Suffix: "_TXP", Anchor: true},
@@ -31,8 +31,8 @@ func foreignSerdesOnly() *ir.Design {
 
 func TestSignalPrefixDiscriminatesForeignAnchor(t *testing.T) {
 	d := check.NewModel(foreignSerdesOnly())
-	// Suffix-only, the _TXP anchor latches onto the foreign serdes and reports PCIe's other signals
-	// "missing", the false positive. (Guards that the prefix is what fixes it, not the design.)
+	// Suffix-only, the _TXP anchor anchors on the foreign serdes and reports PCIe's other signals
+	// "missing", the false positive. (This guards that the prefix fixes it, not the design.)
 	if fs := check.RunBackground(d, Compile(pcieLike(""))); len(fs) == 0 {
 		t.Fatal("suffix-only profile: expected an over-match false positive on the foreign serdes, got none")
 	}

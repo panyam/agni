@@ -11,7 +11,7 @@ import (
 
 // supplyExceedsAbsMax flags a power-input pin fed by a rail whose nominal voltage
 // exceeds the part's absolute-maximum supply rating from its seeded datasheet spec.
-// The first datasheet-backed rule (WS10-003). It is Go rather than a spec because the join
+// It was the first datasheet-backed rule (WS10-003). It is Go rather than a spec because the join
 // is not spec vocabulary yet, and it is silent without a seeded set.
 var supplyExceedsAbsMax = &check.Rule{
 	Name:       "supply-exceeds-abs-max",
@@ -84,14 +84,14 @@ func mostRestrictiveMax(rows []*parampb.Parameter) (*parampb.Parameter, string) 
 // aliasSupplyVerdicts is the body both alias-path datasheet rules share. It walks every supply
 // terminal of every seeded part the per-pin rules do not own and decides it against the part-level row.
 //
-// THE SUBJECT IS THE TERMINAL and the Finding stays part-scoped, the split pin-exceeds-abs-max also
-// draws, because a reviewer changes the part and the viewer highlights it. A part with three VDD pins
-// on one rail gives three verdicts and one finding, one per (part, rail). The extra terminals fail on
-// the same evidence and carry no Finding (#400).
+// THE SUBJECT IS THE TERMINAL and the Finding is still part-scoped, because a reviewer changes the
+// part and the viewer highlights it. pin-exceeds-abs-max draws the same split. A part with three VDD
+// pins on one rail gives three verdicts and one finding, one per (part, rail). The extra terminals
+// fail on the same evidence and get no Finding (#400).
 //
-// A part with no comparable row of this kind, a pin on no net, and a rail whose name states no
-// voltage are each NotConsidered with the step that stopped them. A row stating no bound is NoLimit,
-// which check.CompareToBound returns itself.
+// Three cases are each NotConsidered with the step that stopped them. A part has no comparable row
+// of this kind, a pin is on no net, or a rail's name states no voltage. A row stating no bound is
+// NoLimit, which check.CompareToBound returns itself.
 func aliasSupplyVerdicts(
 	m check.Model,
 	limitsOf func(*parampb.PartSpec) []*parampb.Parameter,

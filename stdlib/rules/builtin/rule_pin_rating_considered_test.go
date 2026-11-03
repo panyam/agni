@@ -11,9 +11,9 @@ import (
 )
 
 // Tests for the considered set (stage 2). The failure mode here is the mirror of stage 1's. Stage 1
-// asked whether a pass carries evidence, this asks whether a terminal the rule could NOT answer for
-// is reported at all. A rule that silently drops such a terminal produces output indistinguishable
-// from one that judged it clean, which is the coverage claim build/evidence.md warns about.
+// asked whether a pass carries evidence. This stage asks whether a terminal the rule could NOT
+// answer for is reported at all. A rule that silently drops such a terminal produces output
+// indistinguishable from one that judged it clean. build/evidence.md warns about that coverage claim.
 
 // twoRowAbsMaxSpec puts TWO absolute-maximum rows on VCCB, as a datasheet stating one limit per
 // condition does. The caller gives both maxima and their order, so a test can assert the answer is

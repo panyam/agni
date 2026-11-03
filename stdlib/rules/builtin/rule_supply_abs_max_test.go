@@ -148,7 +148,7 @@ func TestSupplySkipsNotFalsePasses(t *testing.T) {
 
 // TestSupplyReadsMillivoltRows (agni issue 148): 4600 mV and 4.6 V are ONE absolute-maximum row
 // written two ways, so a +5V rail violates it either way. The millivolt spelling used to fail the
-// extractor's unit gate, which left the rule with nothing to compare and scored the item a PASS on a
+// extractor's unit gate. That left the rule with nothing to compare, and the item scored a PASS on a
 // part the design genuinely over-volts.
 //
 // Asserted against the volt-spelled run rather than against a hardcoded count, so the test says the
@@ -184,8 +184,8 @@ func TestSupplyDedupsPerNet(t *testing.T) {
 
 // TestParamProviderMockBackend proves the datasheet source is pluggable behind the
 // ParamProvider interface. The model reaches specs through Lookup only, so an in-memory
-// ProviderFunc mock (no textproto directory) drives a datasheet rule exactly as a ParamSet
-// does. A shared datasheet service later slots in here.
+// ProviderFunc mock drives a datasheet rule exactly as a ParamSet does, with no textproto
+// directory. A shared datasheet service can later take its place.
 func TestParamProviderMockBackend(t *testing.T) {
 	spec := ldoSpec("ACME-33", 4.6)
 	var lookups int
@@ -209,12 +209,13 @@ func TestParamProviderMockBackend(t *testing.T) {
 	}
 }
 
-// TestSupplyInputPinViaIngestionStamp pins the format-neutral supply-pin detection (WS3-072 PR2). A
-// source that does not classify pin electrical type (EDIF marks a VDD pin plain INPUT) is recovered
-// by the ingestion stamp (classify.StampPowerInPins), which promotes an under-typed supply-named input
-// pin to POWER_IN. So the datasheet rail rules are not silently KiCad-only, but now via a plain
-// PinDir == POWER_IN check (the WS3-036 name-role fallback is gone). The stamp is gated away from
-// confident directions (OUTPUT) and non-supply names, so those stay silent.
+// TestSupplyInputPinViaIngestionStamp pins the format-neutral supply-pin detection (WS3-072 PR2).
+// Some sources do not classify pin electrical type, and EDIF marks a VDD pin plain INPUT. The
+// ingestion stamp (classify.StampPowerInPins) recovers such a source by promoting an under-typed
+// supply-named input pin to POWER_IN. So the datasheet rail rules are not silently KiCad-only, and
+// they now reach the pin through a plain PinDir == POWER_IN check (the WS3-036 name-role fallback
+// is gone). The stamp is gated away from confident directions (OUTPUT) and non-supply names, so
+// those are still silent.
 func TestSupplyInputPinViaIngestionStamp(t *testing.T) {
 	set := param.ParamSet{"ACME-33": ldoSpec("ACME-33", 4.6)}
 
@@ -227,8 +228,8 @@ func TestSupplyInputPinViaIngestionStamp(t *testing.T) {
 		t.Errorf("INPUT-typed VDD pin (EDIF-style): want 1 finding after the POWER_IN stamp, got %v", fs)
 	}
 
-	// A rail the part SOURCES (OUTPUT-typed, even with a supply-ish name) is a confident direction the
-	// stamp never overwrites, so it is not a consumed supply pin.
+	// The part may SOURCE a rail through a pin typed OUTPUT, even one with a supply-ish name. OUTPUT
+	// is a confident direction the stamp never overwrites, so the pin is not a consumed supply pin.
 	out := supplyDesign("+5V", false, "ACME-33")
 	out.Libraries[0].Parts[0].Pins[0].Direction = ir.PinDirection_PIN_DIRECTION_OUTPUT
 	classify.StampPowerInPins(out)
@@ -236,7 +237,7 @@ func TestSupplyInputPinViaIngestionStamp(t *testing.T) {
 		t.Errorf("OUTPUT-typed power pin: not a consumed rail, want silent, got %v", fs)
 	}
 
-	// A non-supply pin name (IO1) is not promoted even when typed INPUT, so it stays a plain input.
+	// A non-supply pin name (IO1) is not promoted even when typed INPUT, so it is still a plain input.
 	sig := supplyDesign("+5V", false, "ACME-33")
 	sig.Libraries[0].Parts[0].Pins[0].Name = "IO1"
 	sig.Libraries[0].Parts[0].Pins[0].Direction = ir.PinDirection_PIN_DIRECTION_INPUT

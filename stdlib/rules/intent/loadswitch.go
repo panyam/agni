@@ -14,10 +14,10 @@ import (
 // the protection acts (builtin's load-switch-trip-above-fet-rating). Below what the rail draws, the
 // switch opens on normal operation and the rail never comes up under load.
 //
-// The upper bound is decidable from two datasheets. THE LOWER BOUND IS NOT, which is why this half is an
-// intent rule and its twin is a builtin. Nothing in a design states what a rail draws, and summing rated
-// draws would need near-complete part seeding plus a guess at which loads draw at once. So the demand is
-// DECLARED, in the same per-net peak the regulator-sizing rules read.
+// The upper bound is decidable from two datasheets, so its twin is a builtin. THE LOWER BOUND IS
+// NOT, so this half is an intent rule. Nothing in a design states what a rail draws. Summing rated
+// draws would need near-complete part seeding plus a guess at which loads draw at once. So the
+// demand is DECLARED, in the same per-net peak the regulator-sizing rules read.
 
 // loadSwitchTripBelowBudgetRule reports a controller-based load switch whose limit is below the
 // declared peak draw of the rail it feeds.
@@ -51,12 +51,13 @@ func loadSwitchTripBelowBudgetRule(d Declaration) *check.Rule {
 //     may have no switch there, an INTEGRATED switch (one part, no external FET for the resolver to
 //     find), or one the resolver refused as ambiguous. None is a sizing defect.
 //   - A controller stating no overcurrent threshold, or a shunt with no value in ohms, keeps the switch
-//     out of ExternalFetLoadSwitches, so it lands in the case above. The review runner's needs-data
+//     out of ExternalFetLoadSwitches, so the case above applies to it. The review runner's needs-data
 //     gate covers it through ParamSymbols.
 //   - A trip point at or above the budget is a PASS carrying both numbers and the citation.
 //
-// A pass says only that the limit is above the declared draw. Whether it is below what the FET survives
-// is the builtin rule's question, and whether the FET runs cool is not judged at all (see sizingClause).
+// A pass says only that the limit is above the declared draw. The builtin rule asks whether the
+// limit is below what the FET survives. Whether the FET runs cool is not judged at all (see
+// sizingClause).
 func evalLoadSwitchTrip(m check.Model, budgets []RailBudget) []check.Verdict {
 	switches := check.ExternalFetLoadSwitches(m)
 	var out []check.Verdict

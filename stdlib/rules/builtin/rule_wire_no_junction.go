@@ -40,13 +40,13 @@ var wireNoJunction = &check.Rule{
 // wireNoJunctionVerdicts decides every wire-end-on-wire-body tap, the ones something joins and the
 // ones nothing does.
 //
-// Without the pass half, a design whose every tap carried its dot reported the same nothing as a
-// design with no tap in it and a format that cannot see wire geometry.
+// Without the pass half, three cases reported the same nothing. They were a design whose every tap
+// carried its dot, a design with no tap in it, and a format that cannot see wire geometry.
 //
-// `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass, so by the
-// time anything looks a joined tap is an endpoint of both wires and indistinguishable from a point
-// where no wire crossed. The reader runs the same detection once more BEFORE the split to recover the
-// joined set (agni issue 420), the same move that converted symbol-unresolved.
+// `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass. After that
+// split, a joined tap is an endpoint of both wires, and nothing can tell it from a point where no
+// wire crossed. So the reader runs the same detection once more BEFORE the split to recover the
+// joined set (agni issue 420). symbol-unresolved was converted with the same move.
 //
 // THE PASS NAMES THE CONSTRUCT THAT DID THE JOINING. "The tap is joined" only restates the outcome,
 // and it reads the same on a tap held by a junction dot somebody placed and one held by a label that
@@ -88,11 +88,11 @@ func wireNoJunctionVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 	return out
 }
 
-// tapJoinPhrase names the construct holding a tap together. A label's TEXT is carried because it is
-// the net name the tap resolves to, which is the thing a reviewer opens the schematic to confirm; a
-// junction dot names no net and has nothing to add. An unrecognised kind falls back to the kind
-// string rather than to "something", since guessing would blur the one distinction the witness exists
-// to draw.
+// tapJoinPhrase names the construct holding a tap together. The phrase includes a label's TEXT,
+// because that text is the net name the tap resolves to, and a reviewer opens the schematic to
+// confirm that name. A junction dot names no net and has nothing to add. An unrecognised kind falls
+// back to the kind string rather than to "something", since guessing would blur the one distinction
+// the witness exists to draw.
 func tapJoinPhrase(t *ir.JoinedTap) string {
 	switch t.GetJoinKind() {
 	case "junction":
@@ -106,8 +106,8 @@ func tapJoinPhrase(t *ir.JoinedTap) string {
 	return t.GetJoinKind()
 }
 
-// wireNoJunctionSpec is the rule's declarative twin (WS3-003); the no_junction_endpoints over-set
-// is new vocabulary, so the Go Eval stays canonical (twin discipline:
+// wireNoJunctionSpec is the rule's declarative twin (WS3-003). The no_junction_endpoints over-set
+// is new vocabulary, so the Go Eval is still canonical (twin discipline in
 // docsite/content/build/check-rule.md).
 var wireNoJunctionSpec = &check.Spec{
 	Over:    "no_junction_endpoints",

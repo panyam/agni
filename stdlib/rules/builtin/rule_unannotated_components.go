@@ -14,8 +14,8 @@ import (
 // A warning and not an error, because mid-design this is the normal state of a sheet somebody is
 // still drawing, and an error would make every work-in-progress read fail. Not info either, because
 // it does not survive release. An unannotated part has no BOM line to buy and no designator to find
-// it by on the board. duplicate-ref-des earns error because a collision falsifies a netlist that
-// claims to be finished; this one says the design is not finished yet.
+// it by on the board. duplicate-ref-des is an error because a collision falsifies a netlist that
+// claims to be finished. This one says the design is not finished yet.
 //
 // One finding per PLACEHOLDER rather than per part; see unannotatedComponentsVerdicts.
 var unannotatedComponents = &check.Rule{
@@ -40,16 +40,16 @@ var unannotatedComponents = &check.Rule{
 // unannotatedComponentsVerdicts decides every designator the design carries, so a run says which
 // parts were checked for annotation and not only which ones failed. The two halves are the same
 // question asked of the same set, split by `refdes.IsPlaceholder`. The rule calls that predicate
-// rather than re-deriving one. A layer deriving its own is how the predicate stopped being single
-// (agni issue 311), and here it would let a designator be reported as neither assigned nor a
-// placeholder.
+// rather than re-deriving one. The predicate stopped being single when a layer derived its own
+// (agni issue 311). Here a second predicate would let a designator be reported as neither assigned
+// nor a placeholder.
 //
 // THE GROUPING DIFFERS BETWEEN THE TWO OUTCOMES. A failure is per PLACEHOLDER, because
 // "176 parts are still called R?" is one reviewable fact and 176 copies of it is not; a pass is per
 // designator, because an assigned designator names exactly one part. Both are still one verdict per
 // subject, since the subject IS the designator on either side.
 //
-// Failures come first, in the reader's order, so the findings projection stays byte-identical to
+// Failures come first, in the reader's order, so the findings projection is still byte-identical to
 // what this rule has always reported.
 func unannotatedComponentsVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
@@ -75,8 +75,8 @@ func unannotatedComponentsVerdicts(ctx context.Context, m check.Model) []check.V
 		v := check.Verdict{Subjects: []check.Entity{check.Entity{Kind: check.KindComponent, Ref: ref}}}
 		if ref == "" {
 			// Not a placeholder and not a name either. `IsPlaceholder` describes designators a tool
-			// WROTE as unassigned ("R?", "REF**"), and an absent designator is a different gap the
-			// reader's diagnostic does not carry, so the rule says it cannot judge rather than
+			// WROTE as unassigned ("R?", "REF**"). An absent designator is a different gap, and the
+			// reader's diagnostic does not record it. So the rule says it cannot judge, rather than
 			// counting the part as annotated.
 			v.Outcome = check.NotConsidered
 			v.Reason = "the part carries no designator at all, which is neither an assigned name nor a placeholder the source wrote"
@@ -92,7 +92,7 @@ func unannotatedComponentsVerdicts(ctx context.Context, m check.Model) []check.V
 }
 
 // unannotatedMessage states the count, because the placeholder alone does not say how much of the
-// design is unnamed: one forgotten test point and ninety unnamed decoupling caps read identically
+// design is unnamed. One forgotten test point and ninety unnamed decoupling caps read identically
 // until the number is there.
 func unannotatedMessage(u *ir.UnannotatedComponent) string {
 	n := len(u.GetInstances())

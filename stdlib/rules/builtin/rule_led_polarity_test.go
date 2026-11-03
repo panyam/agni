@@ -8,9 +8,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// ledFixture wires three LEDs and a zener-shaped diode: LED1 reversed (anode on GND,
-// cathode on a rail) fires; LED2 forward stays silent; LED3 with unnamed pins stays
-// silent (RoleUnknown, never guess); D1 reversed is a diode, not an LED, so silent.
+// ledFixture wires three LEDs and a zener-shaped diode. LED1 is reversed (anode on GND,
+// cathode on a rail) and fires. LED2 is forward and is silent. LED3 has unnamed pins and
+// is silent (RoleUnknown, never guess). D1 is reversed, but it is a diode, not an LED, so
+// it is silent.
 func ledFixture() *ir.Design {
 	led := &ir.PartType{Name: "LED", Pins: []*ir.Pin{
 		{Designator: "1", Name: "A", Direction: ir.PinDirection_PIN_DIRECTION_PASSIVE},
@@ -49,9 +50,9 @@ func TestLedPolarity(t *testing.T) {
 	}
 }
 
-// TestPinNetConflict checks that the tripwire fires on a genuinely multi-claimed pin, and stays
-// silent when the multi-claim is the mechanical symptom of a ref-des collision (that
-// root cause belongs to duplicate-ref-des, learned from the sheetnav fixture).
+// TestPinNetConflict checks that the tripwire fires on a genuinely multi-claimed pin. It is silent
+// when the multi-claim is the mechanical symptom of a ref-des collision. That root cause belongs to
+// duplicate-ref-des, a lesson from the sheetnav fixture.
 func TestPinNetConflict(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
@@ -90,11 +91,12 @@ func TestPinRoleAndNetOnModel(t *testing.T) {
 	}
 }
 
-// TestPinNetConflictSkipsPlaceholderRefDes exists because "a pin belongs to exactly one net" is a
-// claim about a PIN, and (R?, 1) does not name one. On a real export 176 un-annotated resistors
-// shared that key, so the index saw one pin on 129 nets and the rule reported 81 findings about a
-// netlist that is fine. Suppressing them is declining to assert uniqueness over a non-identity, not
-// hiding a defect; the un-annotated parts are reported on their own terms instead.
+// TestPinNetConflictSkipsPlaceholderRefDes covers placeholder designators. "A pin belongs to
+// exactly one net" is a claim about a PIN, and (R?, 1) does not name one. On a real export 176
+// un-annotated resistors shared that key. The index saw one pin on 129 nets, and the rule reported
+// 81 findings about a netlist that is fine. Suppressing them does not hide a defect. The rule
+// declines to assert uniqueness over a non-identity, and the un-annotated parts are reported on
+// their own terms instead.
 func TestPinNetConflictSkipsPlaceholderRefDes(t *testing.T) {
 	for _, ref := range []string{"R?", "C?", "REF**", "C?1845"} {
 		t.Run(ref, func(t *testing.T) {

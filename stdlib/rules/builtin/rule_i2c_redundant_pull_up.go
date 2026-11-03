@@ -12,7 +12,7 @@ import (
 
 // i2cRedundantPullUp flags an I2C net pulled to ONE rail by more than one resistor. See Detail.
 //
-// It is the count question PullUpReachesRail cannot ask. Reachability reports a rail as reached
+// It asks the count question, and PullUpReachesRail cannot. Reachability reports a rail as reached
 // however many resistors reach it, so a doubly-pulled bus and a correct one are the same answer, and
 // only AllPullUpPathsToRail can tell them apart.
 var i2cRedundantPullUp = &check.Rule{
@@ -60,8 +60,8 @@ var i2cPullUpSplitRail = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// i2cRedundantPullUpVerdicts decides every I2C net, failing one with more than one resistor, all
-// landing on ONE rail.
+// i2cRedundantPullUpVerdicts decides every I2C net. It fails a net with more than one resistor when
+// all of them end on ONE rail.
 //
 // Its considered set is every I2C net, including the ones pulled correctly. "This bus has exactly one
 // pull-up" is a fact worth stating, and a rule reporting only the doubled ones could not distinguish a
@@ -74,8 +74,8 @@ func i2cRedundantPullUpVerdicts(ctx context.Context, m check.Model) []check.Verd
 	})
 }
 
-// i2cPullUpSplitRailVerdicts decides every I2C net, failing one with more than one resistor, landing
-// on DIFFERENT rails.
+// i2cPullUpSplitRailVerdicts decides every I2C net. It fails a net with more than one resistor when
+// they end on DIFFERENT rails.
 func i2cPullUpSplitRailVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	return pullUpCountVerdicts(ctx, m, "i2c-pull-up-split-rail", func(rails []string) bool {
 		return len(rails) > 1
@@ -88,8 +88,8 @@ func i2cPullUpSplitRailVerdicts(ctx context.Context, m check.Model) []check.Verd
 // the caller decide which rail arrangement is its defect.
 //
 // One walk, two rules, and the two fire on disjoint conditions (one rail versus several), so a bus
-// with a genuine problem is named once by the rule whose remedy applies to it. A rule carries one
-// severity and one remedy (see docsite/content/build/check-rule.md), which is why this is two rules over one
+// with a genuine problem is named once by the rule whose remedy applies to it. A rule has one
+// severity and one remedy (see docsite/content/build/check-rule.md). So this is two rules over one
 // walker rather than one rule with a clause.
 //
 // A net with ZERO pull-ups is NOT considered here. It is i2c-pull-up's subject, that rule is an
@@ -119,8 +119,8 @@ func pullUpCountVerdicts(ctx context.Context, m check.Model, rule string, fires 
 }
 
 // pullUpCountWitness proves the count with the parts it counted, on a pass as much as on a failure.
-// "SDA is pulled to +3V3 by R7" is what makes a passing bus checkable, and it is the same
-// proof-on-pass discipline PullUpVerdict applies to the absence question. The context and the path
+// A statement like "SDA is pulled to +3V3 by R7" makes a passing bus checkable. PullUpVerdict
+// applies the same proof-on-pass discipline to the absence question. The context and the path
 // terms are PullUpVerdict's own (check.PullUpEvidence), so a bus pulled up behind a series resistor
 // names every hop here too, and several pull-ups each get a `path` (agni issue 1165).
 func pullUpCountWitness(net string, terms []check.PullUpTermination, rails []string) (*check.Witness, []check.ContextSubject) {
@@ -138,9 +138,9 @@ func pullUpCountWitness(net string, terms []check.PullUpTermination, rails []str
 	return w, ctx
 }
 
-// distinctRails is the sorted set of rails the terminations landed on. Sorted so a message and a
-// witness read the same way on every run, which a committed capture depends on, and naturally so
-// +1V8 lists before +12V as it does in every table.
+// distinctRails returns the terminations' rails as a sorted set. The sort makes a message and a
+// witness read the same way on every run, and a committed capture depends on that. The sort is
+// natural, so +1V8 lists before +12V as it does in every table.
 func distinctRails(terms []check.PullUpTermination) []string {
 	seen := map[string]bool{}
 	var out []string

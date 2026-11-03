@@ -10,8 +10,8 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// protDesign builds a design whose parts give pins electrical directions and whose nets carry
-// the given attribute maps, for the rail/protection rule guards.
+// protDesign builds a design for the rail/protection rule guards. Its parts give pins
+// electrical directions, and its nets have the given attribute maps.
 func protDesign(comps []*ir.Component, lib []*ir.PartType, nets []*ir.Net) *ir.Design {
 	return &ir.Design{
 		Libraries:  []*ir.PartLibrary{{Name: "lib", Parts: lib}},
@@ -39,7 +39,7 @@ func withAttrs(n *ir.Net, kv ...string) *ir.Net {
 }
 
 // TestBulkCap checks that a named rail (global or power_driven) with no capacitor fires, and that a
-// rail with a cap, a ground-named rail, an unresolved external rail, and an unnamed net stay quiet.
+// rail with a cap, a ground-named rail, an unresolved external rail, and an unnamed net are quiet.
 func TestBulkCap(t *testing.T) {
 	comps := []*ir.Component{
 		{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -66,8 +66,9 @@ func TestBulkCap(t *testing.T) {
 	}
 }
 
-// TestInputProtection covers a net where a connector directly feeds a power-input pin, which must
-// carry a fuse or TVS; a series fuse splits the net so protected boards are not even selected.
+// TestInputProtection covers a net where a connector directly feeds a power-input pin. That net
+// must have a fuse or TVS. A series fuse splits the net, so the rule does not even select
+// protected boards.
 func TestInputProtection(t *testing.T) {
 	lib := []*ir.PartType{
 		{Name: "REG", Pins: []*ir.Pin{{Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN}}},
@@ -120,7 +121,7 @@ func TestInputProtection(t *testing.T) {
 }
 
 // TestEsdProtection checks that an external signal net (connector member, no power pins, not a rail)
-// needs a TVS member, and that protected, rail, ground, and connector-free nets stay quiet.
+// needs a TVS member, and that protected, rail, ground, and connector-free nets are quiet.
 func TestEsdProtection(t *testing.T) {
 	lib := []*ir.PartType{
 		{Name: "REG", Pins: []*ir.Pin{{Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN}}},
@@ -194,8 +195,8 @@ func TestEsdClampNotTVS(t *testing.T) {
 	}
 }
 
-// esdSpec builds a synthetic transceiver spec declaring an ESD tolerance (unconditional, so it is
-// machine-comparable; the test model lives in the name), at `volts`.
+// esdSpec builds a synthetic transceiver spec declaring an ESD tolerance at `volts`. The tolerance
+// is unconditional, so it is machine-comparable, and the test model is in the name.
 func esdSpec(mpn string, volts float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
 	return &parampb.PartSpec{
@@ -216,7 +217,7 @@ func esdSpec(mpn string, volts float64) *parampb.PartSpec {
 
 // TestEsdTestModelGate (WS3-077) checks that the IC-ESD credit honors only a SYSTEM-level (IEC)
 // rating. A handling model (HBM) at the same voltage does NOT credit, and an unstated test model
-// does not either, so a harness input reaching an IC with only a handling rating stays flagged.
+// does not either, so a harness input reaching an IC with only a handling rating is still flagged.
 func TestEsdTestModelGate(t *testing.T) {
 	comps := []*ir.Component{
 		{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -235,9 +236,10 @@ func TestEsdTestModelGate(t *testing.T) {
 	}
 }
 
-// TestEsdIcRating (WS3-073) checks that a connector-facing signal reaching an IC whose datasheet
-// declares an ESD rating at or above the credit floor is protected (no finding, IC-integrated ESD);
-// a signal to an unrated part still fires, and a rating below the floor does not credit.
+// TestEsdIcRating (WS3-073) covers a connector-facing signal that reaches an IC. When the IC's
+// datasheet declares an ESD rating at or above the credit floor, the signal is protected (no
+// finding, IC-integrated ESD). A signal to an unrated part still fires, and a rating below the floor
+// does not credit.
 func TestEsdIcRating(t *testing.T) {
 	comps := []*ir.Component{
 		{RefDes: "J1", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -267,8 +269,8 @@ func TestEsdIcRating(t *testing.T) {
 	}
 }
 
-// TestEsdAvailableWithoutParams (WS3-073) exists because esd-protection's param read is an optional
-// exemption, so the rule stays applicable (and reports) on a design with no seeded set, and the
+// TestEsdAvailableWithoutParams (WS3-073) covers a design with no seeded set. esd-protection reads
+// params only for an optional exemption, so the rule is still applicable and still reports. The
 // review runner must not mark it not-applicable. A genuine datasheet rule (supply-exceeds-abs-max)
 // still gates.
 func TestEsdAvailableWithoutParams(t *testing.T) {

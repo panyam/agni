@@ -26,8 +26,8 @@ import (
 )
 
 // Profile is one interface definition. Name appears in rule names, messages and the "profile" tag.
-// The Signal flagged Anchor is the always-present one the CONVENTION completeness check hangs on when
-// no host is declared.
+// One Signal is flagged Anchor. That signal is always present, and the CONVENTION completeness check
+// anchors on it when no host is declared.
 //
 // Host binding (WS3-042). When a component DECLARES this interface via an attribute
 // (component.attr(?ref, HostAttrKey, HostAttrVal), e.g. interface=SPI_NOR), an ADDITIONAL completeness
@@ -41,7 +41,7 @@ import (
 // CLASS form infers from the datasheet (a part IS an SPI-NOR flash because its spec says device_class
 // is spi_nor_flash), so host binding works on a design that carries MPNs but no interface annotation.
 //
-// Identifying a host by MPN prefix stays rejected, since a hardcoded part-family list is unverified
+// Identifying a host by MPN prefix is still rejected, since a hardcoded part-family list is unverified
 // and rots. The class form keys on component.device_class rather than component.class because the
 // latter also carries keyword evidence from the ref-des and description, which would bring that guess
 // back in.
@@ -54,8 +54,8 @@ type Profile struct {
 
 	// HostClass binds the host by the DATASHEET's declared device class (e.g. "crystal"), matched
 	// against component.device_class. "" = no class binding. It needs a seeded param set. Without
-	// --params no component has a spec, so no host is found and the host path stays silent rather
-	// than guessing.
+	// --params no component has a spec, so no host is found and the host path is silent rather than
+	// guessing.
 	//
 	// Both sides go through classify.NormalizeDeviceClass, which folds only what the WS10-015
 	// vocabulary KNOWS. For those, case and vendor aliases both fold, so a datasheet saying "XTAL" or
@@ -114,8 +114,8 @@ const BuiltinSourceName = "profile"
 
 // requirementCompiler turns one declared Requirement on a Profile into a check rule, or nil when the
 // requirement does not apply to this profile (no host, no pull-up signal). Most emit datalog through
-// the query builder (pullupRule is the exception). The check LOGIC stays Go, a closed vocabulary, and
-// only the COMPOSITION is data.
+// the query builder, except pullupRule. The check LOGIC is still Go, a closed vocabulary, and only
+// the COMPOSITION is data.
 type requirementCompiler func(Profile, Requirement) *check.Rule
 
 // requirementValidator reports why a requirement's declared params cannot produce the check its type
@@ -145,11 +145,12 @@ var requirementRegistry = map[string]requirementEntry{
 	"esd": {compile: func(p Profile, r Requirement) *check.Rule { return p.onSignalNets(esdRule(p, r)) }},
 }
 
-// onSignalNets answers a request about subjects none of which is a net matching one of this profile's
-// signals with nothing, before the rule's query derives whether the interface is in use, which is
-// design-wide and about a millisecond a rule on a large board (agni issue 1070). Every verdict these
-// requirement types state is about such a net, so the answer is the one the query would give, as
-// TestScopedRunMatchesFilteredFullRun holds. A request naming no subjects runs the rule as before.
+// onSignalNets wraps a rule so a scoped request can skip its query. Imagine a request whose subjects
+// include no net matching one of this profile's signals. The wrapped rule answers it with nothing. It
+// answers before the rule's query derives whether the interface is in use, a design-wide derivation
+// that costs about a millisecond a rule on a large board (agni issue 1070). Every verdict these
+// requirement types state is about such a net, so the query would give the same empty answer, and
+// TestScopedRunMatchesFilteredFullRun holds that. A request naming no subjects runs the rule as before.
 func (p Profile) onSignalNets(r *check.Rule) *check.Rule {
 	if r == nil {
 		return nil
@@ -194,9 +195,9 @@ func (p Profile) HasHost() bool { return p.HostAttrKey != "" || p.HostClass != "
 // attribute or its seeded datasheet declares the bound device class. This is the ONE definition of "host", read by
 // the review scope (Nets/Components) and HostDeclared, with hostRules as its datalog twin.
 //
-// Keep them in step, because a disagreement is invisible. A host the datalog anchors on but the
-// scope does not recognise produces findings that HostDeclared reports as unevaluable, so a
-// review shows an interface both failing and not-automated (WS3-044).
+// Keep them in step, because a disagreement is invisible. Suppose the datalog anchors on a host and
+// the scope does not recognise it. The datalog produces findings, HostDeclared reports them as
+// unevaluable, and a review shows an interface both failing and not-automated (WS3-044).
 //
 // The class path yields nothing without a seeded param set (PartSpec is nil for every component), so a
 // class-bound profile is silent rather than wrong on a design read without --params.
@@ -217,8 +218,8 @@ func (p Profile) IsHost(m check.Model, c *ir.Component) bool {
 	return classify.NormalizeDeviceClass(spec.GetDeviceClass()) == classify.NormalizeDeviceClass(p.HostClass)
 }
 
-// anchorSignal returns the profile's anchor signal (the always-present line the convention
-// completeness check hangs on), or nil when none is declared.
+// anchorSignal returns the profile's anchor signal, or nil when none is declared. The anchor is the
+// always-present line, and the convention completeness check anchors on it.
 func (p Profile) anchorSignal() *Signal {
 	for i := range p.Signals {
 		if p.Signals[i].Anchor {
@@ -228,8 +229,8 @@ func (p Profile) anchorSignal() *Signal {
 	return nil
 }
 
-// reqSignalMissing is the convention completeness requirement, the one built-in whose compiler can
-// only hang on a declared anchor, hence validateAnchorDeclared.
+// reqSignalMissing is the convention completeness requirement. Its compiler is the one built-in that
+// needs a declared anchor, and validateAnchorDeclared checks for one.
 const reqSignalMissing = "signal-missing"
 
 // validateAnchorDeclared rejects a profile that declares the convention completeness requirement but
@@ -267,8 +268,8 @@ func (p Profile) anchorSuffix() string {
 	return ""
 }
 
-// hostRules derives host(?ref), the datalog twin of IsHost. It emits one Def per declared host form
-// sharing the head, which is how datalog spells a union.
+// hostRules derives host(?ref), the datalog twin of IsHost. It emits one Def per declared host form,
+// and all of them share the head. Datalog spells a union that way.
 //
 // The class clause reads component.device_class, the DATASHEET-declared class, not component.class
 // (see the Profile doc). It is empty without a seeded param set, so the clause contributes nothing.
@@ -362,13 +363,13 @@ func stampRequirement(r *check.Rule, reqType string) *check.Rule {
 
 func (p Profile) lname() string { return strings.ToLower(strings.ReplaceAll(p.Name, "-", "_")) }
 
-// presenceRules are the IDB rules every requirement shares, has_signal("X") for each present signal
-// and the CONFIDENCE gate in_use, true only when TWO DISTINCT signals of the interface are present
-// and, for a profile that declares one, its ANCHOR is among them. One name-matched signal is not
-// evidence the interface exists. A real corpus has many `_CS` nets whose buses are named nothing like
-// SPI-NOR, and firing "missing SCLK" on each is noise. Two generic suffixes are not evidence either,
-// since a board with no eMMC still has an SMBus `_CLK` and a part's `_RST` (agni issue 1021). A
-// declared host (WS3-042) avoids the guess entirely.
+// presenceRules builds IDB rules, and every requirement shares them. has_signal("X") holds for each
+// present signal. The CONFIDENCE gate in_use holds only when TWO DISTINCT signals of the interface
+// are present. A profile that declares an ANCHOR also needs the anchor among them. One name-matched
+// signal is not evidence the interface exists. A real corpus has many `_CS` nets whose buses are
+// named nothing like SPI-NOR, and firing "missing SCLK" on each is noise. Two generic suffixes are
+// not evidence either, since a board with no eMMC still has an SMBus `_CLK` and a part's `_RST`
+// (agni issue 1021). A declared host (WS3-042) avoids the guess entirely.
 func (p Profile) presenceRules() []query.Rule {
 	var rules []query.Rule
 	for _, s := range p.Signals {
@@ -387,10 +388,10 @@ func (p Profile) presenceRules() []query.Rule {
 	return rules
 }
 
-// wiredNet binds n to each net carrying at least one connection, once per net. It is the set of nets
-// component.net names, read from net.pin_count, whose one row per net replaces component.net's one
-// row per connection: on the Jetson seed 1,355 rows rather than 5,426, each of which the evaluator
-// bound and ran the name match on (agni issue 1000).
+// wiredNet binds n to each net carrying at least one connection, once per net. component.net names
+// the same nets with one row per connection. net.pin_count has one row per net, so wiredNet reads it
+// instead. On the Jetson seed that is 1,355 rows rather than 5,426, and the evaluator bound each row
+// and ran the name match on it (agni issue 1000).
 func wiredNet(n query.Term) []query.Literal {
 	return []query.Literal{
 		query.Pos(query.Rel("net.pin_count", n, query.V("wired_pins"))),
@@ -407,9 +408,9 @@ func (p Profile) tags() map[string]string {
 	}
 }
 
-// signalMissingRule (convention path) fires when the interface is in use (its anchor net exists and
-// the in_use confidence gate holds) but a required signal net is absent. It covers un-annotated
-// designs, and a design that declares a host gets hostIncompleteRule instead.
+// signalMissingRule is the convention path. It fires when a required signal net is absent and the
+// interface is in use, meaning its anchor net exists and the in_use confidence gate holds. It covers
+// un-annotated designs, and a design that declares a host gets hostIncompleteRule instead.
 func (p Profile) signalMissingRule() *check.Rule {
 	anchorSig := p.anchorSignal()
 	if anchorSig == nil {
@@ -421,8 +422,8 @@ func (p Profile) signalMissingRule() *check.Rule {
 		return p.busSignalMissingRule()
 	}
 	rules := p.presenceRules()
-	// On a design that DECLARES a host, the host path covers it, so the convention path stands down
-	// rather than reporting a signal twice (net + component).
+	// On a design that DECLARES a host, the host path covers it, so the convention path reports
+	// nothing rather than reporting a signal twice (net + component).
 	rules, guard := p.hostGuard(rules)
 	n := 0
 	for _, s := range p.Signals {
@@ -454,9 +455,10 @@ func (p Profile) signalMissingRule() *check.Rule {
 	return p.signalMissingFrom(rules)
 }
 
-// hostGuard adds the host relations to rules and returns the literal that stands the convention path
-// down on a design that DECLARES a host, since the host path covers it there and a signal would
-// otherwise be reported twice (net + component). A profile with no host binding gets no guard.
+// hostGuard adds the host relations to rules and returns a guard literal. The guard turns the
+// convention path off on a design that DECLARES a host. The host path covers that design, and without
+// the guard a signal would be reported twice (net + component). A profile with no host binding gets
+// no guard.
 func (p Profile) hostGuard(rules []query.Rule) ([]query.Rule, []query.Literal) {
 	if !p.HasHost() {
 		return rules, nil
@@ -467,9 +469,9 @@ func (p Profile) hostGuard(rules []query.Rule) ([]query.Rule, []query.Literal) {
 	return rules, []query.Literal{query.Neg(query.Rel("any_host", query.Str("y")))}
 }
 
-// busSignalMissingRule is the convention completeness check for an instance-keyed profile: on each bus
-// in use, every required signal the bus lacks, reported at the bus's anchor net. A signal another bus
-// carries does not count, which is the difference from signalMissingRule.
+// busSignalMissingRule is the convention completeness check for an instance-keyed profile. On each bus
+// in use, it reports every required signal the bus lacks, at the bus's anchor net. Unlike
+// signalMissingRule, it does not count a signal that another bus has.
 func (p Profile) busSignalMissingRule() *check.Rule {
 	rules, guard := p.hostGuard(p.busRules())
 	n := 0
@@ -512,10 +514,10 @@ func (p Profile) signalMissingFrom(rules []query.Rule) *check.Rule {
 	return compileQuery(fq)
 }
 
-// hostIncompleteRule (host path, WS3-042) anchors completeness on a component that DECLARES the
-// interface. present_X(?h) holds when the host connects to a matching net, and missing(?h,"X") fires
-// per signal the host lacks, so a host wired to none of its bus fires for every signal. It reports one
-// finding per host per missing signal.
+// hostIncompleteRule is the host path (WS3-042). It anchors completeness on a component that
+// DECLARES the interface. present_X(?h) holds when the host connects to a matching net, and
+// missing(?h,"X") fires per signal the host lacks, so a host wired to none of its bus fires for
+// every signal. It reports one finding per host per missing signal.
 func (p Profile) hostIncompleteRule() *check.Rule {
 	if !p.HasHost() {
 		return nil // requirement declared but the profile binds no host, so nothing to anchor on
@@ -573,8 +575,8 @@ func (p Profile) missingFindingQuery(nameSuffix string, q query.Query, kind, sub
 
 // pullupRule fires when a pull-up signal net reaches no rail (no pull-up resistor to power/ground).
 //
-// IT IS THE ONLY REQUIREMENT THAT COMPILES TO GO RATHER THAN TO A QUERY. It asks whether a bounded
-// walk lands on a rail, which datalog could only approximate. Calling check.PullUpVerdict gives it
+// IT COMPILES TO GO RATHER THAN TO A QUERY, AND NO OTHER REQUIREMENT DOES. It asks whether a bounded
+// walk reaches a rail, and datalog could only approximate that. Calling check.PullUpVerdict gives it
 // the same witness and context entities as the built-in i2c-pull-up, so a pass names the PATH it
 // walked ("SCL reaches rail +3V3 through R7") rather than the net's own name (agni issue 516).
 // coverage.go's reachesRail calls the same predicate.
@@ -622,14 +624,16 @@ func (p Profile) pullupVerdicts(pullups []Signal) func(context.Context, check.Mo
 	rule := p.lname() + "-missing-pullup"
 	name := p.Name
 	return func(ctx context.Context, m check.Model) []check.Verdict {
-		// The signal nets come first and the design-wide InUse gate after, so a request about nets
-		// none of this profile's signals match (agni issue 1070) never pays for the gate.
+		// The signal nets come first and the design-wide InUse gate after. A request may name only
+		// nets that match none of this profile's signals, and then it never runs the gate (agni issue
+		// 1070).
 		var nets []*ir.Net
 		for _, n := range check.ScopedNets(ctx, m) {
 			// A net with NO connections is not a subject, mirroring the datalog form's component.net.
-			// On a read whose symbols did not resolve the net NAMES survive and the connections do not,
-			// and matching by name alone turned that into four confident findings about buses whose
-			// pins the reader never saw. matchSignalNet applies the same condition for coverage.
+			// Imagine a read whose symbols did not resolve. The net NAMES survive and the connections
+			// do not. Matching by name alone turned that into four confident findings about buses, and
+			// the reader had never seen those buses' pins. matchSignalNet applies the same condition
+			// for coverage.
 			if anySignalMatches(n.GetName(), pullups) && len(n.GetConnections()) > 0 {
 				nets = append(nets, n)
 			}
@@ -731,9 +735,9 @@ func (p Profile) danglingRule() *check.Rule {
 	})
 }
 
-// compileQuery is query.MustRuleFromQuery for every query a requirement compiler generates, with the
-// one difference that a test can watch the queries go by (onCompile), which is how
-// TestBuiltinProgramsAreUnchanged holds each built-in profile to the programs it compiled to before.
+// compileQuery is query.MustRuleFromQuery for every query a requirement compiler generates. The one
+// difference is that a test can watch the queries go by (onCompile). TestBuiltinProgramsAreUnchanged
+// uses that to hold each built-in profile to the programs it compiled to before.
 func compileQuery(fq query.FindingQuery) *check.Rule {
 	if onCompile != nil {
 		onCompile(fq)

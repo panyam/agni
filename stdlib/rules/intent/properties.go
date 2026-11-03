@@ -74,14 +74,15 @@ func propertyVerdicts(m check.Model, ps []NetProperty, kind string) []check.Verd
 }
 
 // propertyViolation reports whether the design contradicts one declared property, and the message to
-// say so. The kinds differ in what absence means:
+// say so. The kinds differ in what absence means.
 //
-//   - ac-coupled: a series capacitor is decidable, so ABSENT is a violation.
-//   - reset-polarity: bias is the only evidence a netlist carries, and a supervisor with an internal
-//     pull leaves none, so absent evidence is NOT a violation. Only a bias TOWARD the asserted level is.
-//   - strap: the same evidence read the other way round. The declared level is the one the pin should
-//     LATCH, so a bias toward it is correct and a bias AWAY from it is the violation, in either
-//     direction. Absent bias is silent for the reset-polarity reason (internal pulls).
+//   - For ac-coupled, a series capacitor is decidable, so ABSENT is a violation.
+//   - For reset-polarity, bias is the only evidence a netlist has, and a supervisor with an internal
+//     pull leaves none. So absent evidence is NOT a violation. Only a bias TOWARD the asserted level
+//     is.
+//   - A strap reads the same evidence the other way round. The pin should LATCH the declared level,
+//     so a bias toward it is correct and a bias AWAY from it is the violation, in either direction.
+//     Absent bias is silent for the reset-polarity reason (internal pulls).
 func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 	switch p.Property {
 	case PropACCoupled:
@@ -119,8 +120,9 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 		if msg, bad := strapValueViolation(m, p, refs); bad {
 			return msg, true
 		}
-		// Only an OPPOSITE bias is a contradiction. Neither direction (no bias, or a divider holding
-		// neither rail) leaves the latched level unevidenced, which is not the same as wrong.
+		// Only an OPPOSITE bias is a contradiction. No bias shows no direction, and neither does a
+		// divider holding neither rail. Then the latched level is unevidenced, which is not the same
+		// as wrong.
 		switch {
 		case p.Value == "high" && down:
 			return fmt.Sprintf("net %q is declared to strap HIGH, but it is biased LOW (a pull-down selects the opposite configuration)", p.Net), true
@@ -133,8 +135,8 @@ func propertyViolation(m check.Model, p NetProperty) (string, bool) {
 }
 
 // strapValueViolation checks a strap's pull resistor against the band the DECLARATION states, and
-// reports only a value it read and found outside the band (WS3-119). A band it cannot compare is
-// strapBandUnjudged's to report.
+// reports only a value it read and found outside the band (WS3-119). strapBandUnjudged reports a
+// band this check cannot compare.
 //
 // The finding quotes the SOURCE TEXT ("10k"), not the parsed 10000, so a reviewer reads the value
 // they will see on the schematic.
@@ -171,10 +173,11 @@ func strapValueViolation(m check.Model, p NetProperty, refs []string) (string, b
 // after the violation checks because a wrong-way strap is a defect whatever its value reads as.
 //
 // Unreadable is neither a defect nor a pass, since nothing shows the band held and nothing shows it
-// broke. Three shapes land here: a resistor with no value, a value that does not read as a resistance,
-// and several resistors biasing the net, because a divider's two resistors set a level together and
-// neither is "the" strap pull. A net with no strap resistor is not one of them. Its band has nothing
-// to bound, and leaving the resistor off is the datasheet's default-state case.
+// broke. Three shapes are reported here. One is a resistor with no value, one is a value that does
+// not read as a resistance, and one is several resistors biasing the net. A divider's two resistors
+// set a level together, and neither is "the" strap pull. A net with no strap resistor is not one of
+// them. Its band has nothing to bound, and leaving the resistor off is the datasheet's default-state
+// case.
 func strapBandUnjudged(m check.Model, p NetProperty) (string, bool) {
 	if p.Property != PropStrap || (p.MinOhms <= 0 && p.MaxOhms <= 0) {
 		return "", false
@@ -228,20 +231,21 @@ func ohmsText(ohms float64) string {
 
 func trimNum(v float64) string { return strconv.FormatFloat(v, 'g', -1, 64) }
 
-// propertyUndecidable reports the subjects this rule family can look at and genuinely cannot decide,
-// and the message saying so (agni issue 74). It runs BEFORE propertyViolation, so an undecidable
-// subject never reaches the contradiction test.
+// propertyUndecidable reports whether this rule family can look at p and still genuinely cannot
+// decide it, and returns the message saying so (agni issue 74). It runs BEFORE propertyViolation, so
+// an undecidable subject never reaches the contradiction test.
 //
 // Only reset-polarity has such a case, and it is PERMANENT rather than a data gap. A netlist states
 // polarity nowhere, the only structural evidence is a bias resistor, and a reset driven by a
-// supervisor with an internal pull carries none. No seeding, declaration or fact tier will ever
-// supply it, which is why this is not reported as needs-data.
+// supervisor with an internal pull has none. No seeding, declaration or fact tier will ever supply
+// it, so this is not reported as needs-data.
 //
 // ac-coupled and a strap's direction have no undecidable case. A series capacitor is decidable by
-// looking, so absent means the declaration is unmet. A strap with no bias is the DEFAULT-state case a
-// datasheet tells you to leave unfitted, so silence there is a correct pass rather than an unanswered
-// question, and emitting inconclusive for it would flag most correct boards. A strap's declared band
-// can be undecidable, which strapBandUnjudged reports once the direction has had its say.
+// looking, so absent means the declaration is unmet. A strap with no bias is the DEFAULT-state case,
+// and a datasheet tells you to leave that resistor unfitted. So silence there is a correct pass
+// rather than an unanswered question, and emitting inconclusive for it would flag most correct
+// boards. A strap's declared band can be undecidable. strapBandUnjudged reports that after the
+// direction check.
 func propertyUndecidable(m check.Model, p NetProperty) (string, bool) {
 	if p.Property != PropResetPolarity {
 		return "", false
@@ -268,7 +272,7 @@ func propertyUndecidable(m check.Model, p NetProperty) (string, bool) {
 			"(a supervisor or PMIC with an internal pull is normal and correct).", p.Net, p.Value), true
 }
 
-// dividerOn reports whether the net carries BOTH a pull-up and a pull-down, which is what makes
+// dividerOn reports whether the net has BOTH a pull-up and a pull-down. That combination makes
 // check.NetBias answer neither. It re-asks the two questions separately rather than adding a third
 // return to NetBias, whose other callers all want the two-value answer.
 func dividerOn(m check.Model, n *ir.Net) bool {
@@ -301,7 +305,7 @@ func connectsRef(n *ir.Net, refDes string) bool {
 
 // netNamed returns the design net with this exact name, or nil when the declaration names a net the
 // design does not have. An absent net is silent here, because the presence forms (modules,
-// subsystems) are what report a missing thing.
+// subsystems) report a missing thing.
 func netNamed(m check.Model, name string) *ir.Net {
 	for _, n := range m.Nets() {
 		if n.GetName() == name {

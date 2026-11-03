@@ -8,15 +8,15 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// requirementDocs is the set of requirement TYPES the compiler documents (one docs/<type>.md each),
-// and the canonical key list DocRules and the docs harness both iterate. It lives here, not in the
-// test, so DocRules and TestRuleDocsOneToOne share one source of truth.
+// requirementDocs is the set of requirement TYPES the compiler documents, one docs/<type>.md each. It
+// is also the canonical key list, and DocRules and the docs harness both iterate it. It lives here,
+// not in the test, so DocRules and TestRuleDocsOneToOne share one source of truth.
 var requirementDocs = []string{"signal-missing", "missing-pullup", "signal-dangling", "termination", "esd"}
 
 // requirementCaption is the docsite caption and severity for each requirement TYPE, shown in the
-// docsite reference index (tools/catalogdocs). The caption is interface-agnostic because the runtime
-// Rule.Summary a finding carries embeds the profile name (e.g. "A required CAN signal is absent"), so
-// a generic per-requirement page needs a name-free caption. Severity matches the generated rule's.
+// docsite reference index (tools/catalogdocs). The caption is interface-agnostic. A finding's runtime
+// Rule.Summary embeds the profile name (e.g. "A required CAN signal is absent"), so a generic
+// per-requirement page needs a name-free caption. Severity matches the generated rule's.
 // remedy fills check.Rule.Remedy. It sits here rather than at each rule builder for the same reason
 // as the caption. The rule is generated per-profile, but the fix is per-REQUIREMENT and identical
 // across every interface that declares one. Both the runtime rule and the docsite exemplar read it

@@ -9,10 +9,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// Proof-on-pass for a CONNECTIVITY rule. The datasheet rules prove a pass with values; this one
+// Proof-on-pass for a CONNECTIVITY rule. The datasheet rules prove a pass with values. This one
 // proves it with a path, and these tests assert that one Witness carries both without changing
-// shape. The failure mode is the same one build/evidence.md names. "A witness is present"
-// cannot fail, so what is asserted here is that the witness TRACKS THE TOPOLOGY.
+// shape. The failure mode is the same one build/evidence.md names. "A witness is present" cannot
+// fail, so these tests assert that the witness TRACKS THE TOPOLOGY.
 
 func verdictForNet(t *testing.T, vs []check.Verdict, net string) check.Verdict {
 	t.Helper()
@@ -30,7 +30,7 @@ func pullUpVerdicts(t *testing.T, refs []string, nets ...*ir.Net) []check.Verdic
 	return i2cPullUpVerdicts(context.Background(), check.NewModel(&ir.Design{Components: comps(refs...), Nets: nets}))
 }
 
-// THE PROPERTY. A pass must name the resistor and the rail it rests on, and changing either must
+// THE PROPERTY. A pass must name the resistor and the rail it ties to, and changing either must
 // change what the witness says. A witness that did not read the topology would produce the same
 // string for both halves and fail the comparison at the end.
 func TestPullUpWitnessTracksTheTopology(t *testing.T) {
@@ -65,8 +65,8 @@ func TestPullUpWitnessTracksTheTopology(t *testing.T) {
 	}
 }
 
-// THE SHAPE QUESTION THIS RULE EXISTS TO ANSWER. A multi-hop path must come out as ORDERED,
-// TYPED entities, because a path is carried so that a reader can be sent to each hop.
+// THE SHAPE QUESTION, which this rule exists to answer. A multi-hop path must come out as ORDERED,
+// TYPED entities, because the path is there to send a reader to each hop.
 //
 // It lives in Context and not Witness.Terms, and the distinction matters for more than
 // bookkeeping. A Term is a Label and a bare string, so "pull-up=R1" leaves a consumer guessing
@@ -102,14 +102,14 @@ func TestPullUpPathIsOrderedTypedContext(t *testing.T) {
 			t.Errorf("the subject net %s must not also appear as its own context", check.EntityRef(v.Subjects[0]))
 		}
 	}
-	// Everything this proof rests on is an entity, so there is no value left for a term to carry.
+	// Every fact behind this proof is an entity, so there is no value left for a term to carry.
 	// An entity duplicated into Terms would be the same fact with its type stripped off.
 	if len(v.Witness.Terms) != 0 {
 		t.Errorf("a path witness rests on entities, not values; want no terms, got %+v", v.Witness.Terms)
 	}
 }
 
-// A FAIL CARRIES ITS WITNESS TOO. "No rail within 3 hops" rests on the hop limit, and a reader has
+// A FAIL CARRIES ITS WITNESS TOO. "No rail within 3 hops" depends on the hop limit, and a reader has
 // to see it, because a pull-up sitting four hops away is a different situation from no pull-up at
 // all, and the bare finding cannot tell them apart.
 func TestFailingPullUpStatesTheHopLimit(t *testing.T) {

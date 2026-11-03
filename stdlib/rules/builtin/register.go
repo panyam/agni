@@ -1,9 +1,9 @@
 // Package builtin is the standard EE rule catalog. Each rule is a check.Rule value in a rule_*.go
-// file (a file may hold a few related rules), carrying its documentation and an Eval, plus the
-// declarative-twin Specs that the parity tests hold to those Evals. It registers through the same
-// public hook an extension uses, so the core engine (package check) owns no rules. Blank-importing
-// this package installs the catalog as the anonymous built-in source, and a program that omits the
-// import runs with no built-ins.
+// file, with its documentation and an Eval. A file may hold a few related rules. The package also
+// holds the declarative-twin Specs, and the parity tests hold them to those Evals. It registers
+// through the same public hook an extension uses, so the core engine (package check) owns no rules.
+// Blank-importing this package installs the catalog as the anonymous built-in source, and a program
+// that omits the import runs with no built-ins.
 package builtin
 
 import (
@@ -25,8 +25,7 @@ func init() {
 // rules is the built-in rule set, in evaluation order, and the single registry. Adding a rule
 // means writing it in a rule_*.go file and adding one line here. A rule that judges a part on the
 // assembled board (its rating, its orientation) is wrapped in check.OnFittedParts, so it judges no
-// part marked do-not-populate. check.Run evaluates these, and the
-// catalog groups them for display.
+// part marked do-not-populate. check.Run evaluates these, and the catalog groups them for display.
 var rules = []*check.Rule{
 	singlePinNet,
 	unconnectedComponent,
@@ -82,14 +81,14 @@ var rules = []*check.Rule{
 
 // specs maps each Go-eval'd rule to its declarative twin, the same rule body as a check.Spec value
 // (WS3-003; docsite/content/architecture/rules-and-checks.md "A rule is a value"). check.Run
-// evaluates the Eval, not the twin, and the twin is held to it by TestSpecParity (identical
-// findings on every fixture) and TestSpecMetadata (the rule's hand-written Reads/Primitives equal
+// evaluates the Eval, not the twin. TestSpecParity holds the twin to the Eval (identical findings
+// on every fixture). TestSpecMetadata holds it too (the rule's hand-written Reads/Primitives equal
 // the spec's derived ones). Flipping a rule to spec-canonical replaces its Eval with its twin's,
 // gated by the parity test, and drops it from this map. output-output-conflict was the first flip
 // (rule_pin_matrix.go), so it is absent here. Spec-only rules never appear either, because their
 // Eval IS the interpreter. Those are the matrix rows, plus new rules on proven vocabulary per the
-// twin discipline in docsite/content/build/check-rule.md. Benchmarks comparing the two
-// evaluation paths live in spec_bench_test.go and feed the WS3-004 fact-store decision.
+// twin discipline in docsite/content/build/check-rule.md. spec_bench_test.go holds benchmarks
+// comparing the two evaluation paths, and they inform the WS3-004 fact-store decision.
 var specs = map[string]*check.Spec{
 	"single-pin-net":         singlePinNetSpec,
 	"unconnected-component":  unconnectedComponentSpec,

@@ -16,11 +16,11 @@ import (
 // It checks a regulator's datasheet output voltage against the absolute-maximum supply rating of a
 // part it feeds. Both numbers are vendor values, so the finding cites both documents.
 //
-// WHY THIS IS NOT supply-exceeds-abs-max AGAIN. That rule asks the same question but takes the rail
-// voltage from the NET NAME (Model.NominalVoltage, so "+5V" means 5V). That is a naming
-// convention, and it is silent on a net named VOUT_A or 5V_SW, wrong on a net whose name outlived a
-// design change, and unavailable on a rail nobody named for its voltage. Reading the number off the
-// regulator's own datasheet replaces a convention with evidence.
+// This rule differs from supply-exceeds-abs-max in where it reads the rail voltage. That rule asks
+// the same question but takes the voltage from the NET NAME (Model.NominalVoltage, so "+5V" means
+// 5V). A naming convention is silent on a net named VOUT_A or 5V_SW, wrong on a net whose name
+// outlived a design change, and unavailable on a rail nobody named for its voltage. Reading the
+// number off the regulator's own datasheet replaces a convention with evidence.
 //
 // It does not supersede the older rule, because a rail fed by something with no seeded spec (a
 // connector, an unseeded module) still has only its name to go on.
@@ -50,14 +50,14 @@ var regulatorOutputExceedsAbsMax = &check.Rule{
 // regulatorOutputVerdicts decides every (source, rail, load) triple the supply walk reaches, one
 // verdict each.
 //
-// THE ARITY IS THREE, and the rail is the element that gets forgotten. A part fed from one PMIC over
-// two supplied rails is endangered twice, with different numbers, so dropping the rail from the
-// identity would merge them.
+// THE ARITY IS THREE, and people forget the rail. A part fed from one PMIC over two supplied rails
+// is endangered twice, with different numbers, so dropping the rail from the identity would merge
+// them.
 //
-// TWO CORPUS GAPS ARE NotConsidered rather than silent: a load with no seeded datasheet, and a load
-// whose datasheet states no absolute-maximum supply row. On a partially-seeded corpus that is most of
-// the board, and a reader who cannot tell "checked and fine" from "nobody has seeded this part"
-// cannot tell how much of the supply tree this rule covered.
+// TWO CORPUS GAPS ARE NotConsidered rather than silent. One is a load with no seeded datasheet. The
+// other is a load whose datasheet states no absolute-maximum supply row. On a partially-seeded
+// corpus those two gaps cover most of the board. If a reader cannot tell "checked and fine" from
+// "nobody has seeded this part", they cannot tell how much of the supply tree this rule covered.
 //
 // The SOURCE side is scope rather than an outcome. A part that states no output voltage is not a
 // source, so it yields no verdict at all.
@@ -72,9 +72,8 @@ func regulatorOutputVerdicts(ctx context.Context, m check.Model) []check.Verdict
 		if len(outputs) == 0 {
 			continue // states no output voltage, so it is not a source and this rule is not about it
 		}
-		// The HIGHEST output a part can present is what a downstream part is exposed to,
-		// since a regulator with an adjustable or multi-rail output endangers its load at the
-		// top of the range.
+		// A downstream part is exposed to the HIGHEST output a part can present, since a regulator
+		// with an adjustable or multi-rail output endangers its load at the top of the range.
 		srcParam := outputs[0]
 		for _, p := range outputs[1:] {
 			if p.Value.GetMax() > srcParam.Value.GetMax() {
@@ -133,8 +132,8 @@ func regulatorOutputVerdicts(ctx context.Context, m check.Model) []check.Verdict
 						// The regulator doing the supplying and the net it supplies over, which the
 						// sentence names and the FINDING's subject does not. Declared in the order the
 						// message names them, so the panel's chips read like the sentence
-						// (agni issue 349). The finding's subject stays the ENDANGERED part, because
-						// that is what a reader has to change.
+						// (agni issue 349). The finding's subject is still the ENDANGERED part,
+						// because a reader has to change that part.
 						Context: []check.ContextSubject{
 							check.Ctx(check.ComponentEntity(src.RefDes), "source"),
 							check.Ctx(check.NetEntity(n), "rail"),
@@ -159,7 +158,7 @@ func regulatorOutputVerdicts(ctx context.Context, m check.Model) []check.Verdict
 // suppliedNets returns the nets a part's output can reach, meaning the nets it sits on plus their
 // neighbourhood within check.SupplyPathReachHops, so a bead or series resistor between a regulator
 // and its load does not hide the connection. Deduplicated by name, since two of the part's pins
-// commonly land on the same net.
+// commonly sit on the same net.
 //
 // It does NOT walk far. Voltage does not fall off along a supply path the way a surge does, so a wide
 // radius would make every part on the board look connected to every regulator and the rule would

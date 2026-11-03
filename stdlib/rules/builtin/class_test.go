@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestComponentClass drives one fixture component per class through the Model: bare ref-des
-// prefixes, part-data refinement (LED/TVS out of D, ferrite out of L), the designator_prefix
+// TestComponentClass drives one fixture component per class through the Model. The cases cover bare
+// ref-des prefixes, part-data refinement (LED/TVS out of D, ferrite out of L), the designator_prefix
 // override, the KiCad Value attribute, and the unknown cases (unfamiliar prefix, ambiguous X,
 // absent ref-des).
 func TestComponentClass(t *testing.T) {
@@ -60,13 +60,13 @@ func TestComponentClass(t *testing.T) {
 		{&ir.Component{RefDes: "A1", Sections: sec("RES_ARRAY")}, check.ClassResistor},
 		// KiCad-style Value attribute classifies an otherwise-unknown prefix
 		{&ir.Component{RefDes: "E1", Attributes: map[string]string{"Value": "LED"}}, check.ClassLED},
-		// WS10-015: a "crystal"/"xtal"/"resonator" token marks CLOCK-FAMILY candidacy only (the
-		// vendor label can't be trusted to tell crystal from resonator), so X1 with an ABM8_Crystal
-		// part reaches the clock family, not the crystal subtype. The crystal subtype comes only
-		// from a datasheet.
+		// WS10-015: a "crystal"/"xtal"/"resonator" token marks CLOCK-FAMILY candidacy only, because
+		// the vendor label can't be trusted to tell crystal from resonator. So X1 with an
+		// ABM8_Crystal part reaches the clock family, not the crystal subtype. Only a datasheet gives
+		// the crystal subtype.
 		{&ir.Component{RefDes: "X1", Sections: sec("ABM8_Crystal")}, check.ClassClock},
-		// WS10-015: an "oscillator" TOKEN is family-only (unusable for subtyping on real vendor
-		// data, where a whole library is named "Oscillator"), so a token-only clock part stays at
+		// WS10-015: an "oscillator" TOKEN is family-only. It is unusable for subtyping on real vendor
+		// data, where a whole library is named "Oscillator", so a token-only clock part resolves to
 		// the clock family.
 		{&ir.Component{RefDes: "X3", Attributes: map[string]string{"Description": "50MHz Oscillator"}}, check.ClassClock},
 		// WS10-015: STRUCTURE is the reliable keyword-time oscillator signal. A Y-prefix part whose
@@ -79,16 +79,16 @@ func TestComponentClass(t *testing.T) {
 		{&ir.Component{RefDes: "W9"}, check.ClassUnknown},
 		// a token hint outside the prefix's device family does not flip the class
 		{&ir.Component{RefDes: "R5", Attributes: map[string]string{"Value": "LED"}}, check.ClassResistor},
-		// WS3-065: a diode's TVS/ESD identity lives in a Description / Part Label attribute (not just
+		// WS3-065: a diode's TVS/ESD identity is in a Description / Part Label attribute (not just
 		// Value), and TVS wins over the generic "diode" token whatever order they tokenize in
 		{&ir.Component{RefDes: "D9", Attributes: map[string]string{
 			"Description": "Diode, TVS array 24V", "Part Label": "ESD Protection Diodes"}}, check.ClassTVS},
-		// a plain signal diode with no TVS/ESD evidence stays a diode
+		// a plain signal diode with no TVS/ESD evidence is still a diode
 		{&ir.Component{RefDes: "D10", Attributes: map[string]string{"Description": "Fast switching diode 100V"}}, check.ClassDiode},
 		// WS3-066: a debug/test/edge connector refines out of the connector base to test_connector
 		{&ir.Component{RefDes: "J101", Attributes: map[string]string{"Description": "Debugger"}}, check.ClassTestConnector},
 		{&ir.Component{RefDes: "J9001", Attributes: map[string]string{"Description": "40 POS EDGE CARD for MEC1"}}, check.ClassTestConnector},
-		// a harness connector with no debug word stays a plain connector
+		// a harness connector with no debug word is still a plain connector
 		{&ir.Component{RefDes: "J1906", Attributes: map[string]string{"Description": "Molex MxDASH Gen2 harness"}}, check.ClassConnector},
 	}
 	d := &ir.Design{Libraries: []*ir.PartLibrary{lib}}

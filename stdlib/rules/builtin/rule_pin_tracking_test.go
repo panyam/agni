@@ -61,8 +61,8 @@ func TestPinTrackingSharedNetSatisfiesAMaxOfZero(t *testing.T) {
 	}
 }
 
-// The connectivity tier, violated, and the case naming cannot answer at all. A bound requiring the
-// subject to sit at least 1V above the reference is broken with certainty by tying them, and the
+// The connectivity tier, violated, in a case naming cannot answer at all. A bound may require the
+// subject to sit at least 1V above the reference, and tying the two breaks it with certainty. The
 // nets here carry no parseable voltage token, so the name tier would have been silent.
 func TestPinTrackingSharedNetViolatesAMinimum(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(f64(1), nil, parampb.Modality_MODALITY_REQUIRED), "VCC_MAIN", "VCC_MAIN")
@@ -83,7 +83,7 @@ func TestPinTrackingSharedNetViolatesAMinimum(t *testing.T) {
 	}
 }
 
-// The name tier: two different rails, both named for their voltage, breaking a max-0 bound.
+// The name tier, with two different rails, both named for their voltage, breaking a max-0 bound.
 func TestPinTrackingNameTierComparesTwoRails(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED), "+3V3", "+1V8")
 	fs := pinTrackingViolated.Findings(context.Background(), m)
@@ -149,7 +149,7 @@ func TestPinTrackingRegimeScopedBoundIsInconclusive(t *testing.T) {
 	}
 }
 
-// The same regime-scoped relation, not breached, stays silent. Reporting every scoped relation would
+// The same regime-scoped relation, not breached, is silent. Reporting every scoped relation would
 // convert a coverage gap into noise (the Finding.Inconclusive contract).
 func TestPinTrackingRegimeScopedBoundIsSilentWhenWithin(t *testing.T) {
 	rel := tracking(nil, f64(100), parampb.Modality_MODALITY_REQUIRED)
@@ -163,8 +163,8 @@ func TestPinTrackingRegimeScopedBoundIsSilentWhenWithin(t *testing.T) {
 }
 
 // param.Validate requires a relation's kind, bound and provenance but NOT its modality, so a spec can
-// carry a breach whose severity is unknown. It must not vanish: the required rule takes it and says
-// what is missing rather than inventing an error or passing in silence.
+// carry a breach whose severity is unknown. It must not vanish. The required rule takes it and says
+// what is missing, rather than inventing an error or passing in silence.
 func TestPinTrackingUnstatedModalityIsReportedInconclusive(t *testing.T) {
 	m := trackModel("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_UNSPECIFIED), "+3V3", "+1V8")
 
@@ -185,11 +185,11 @@ func TestPinTrackingUnstatedModalityIsReportedInconclusive(t *testing.T) {
 // only after the net classifies as a rail; the connectivity tier is unaffected because it reads no
 // name at all.
 //
-// THE SPEC'S PIN FUNCTIONS ARE STRIPPED ON PURPOSE, to isolate the name tier. With them present the
+// THE SPEC'S PIN FUNCTIONS ARE STRIPPED ON PURPOSE, to isolate the name tier. With them present, the
 // datasheet establishes the rail role directly (agni issue 280 phase 2) and the name is never
-// consulted, which is correct but tests the other tier. The original fixture here wired a
+// consulted. That is correct, but it tests the other tier. The original fixture here wired a
 // signal-NAMED net to a pin the spec types as a supply input, so it only read as a signal while the
-// name was the sole evidence; the case where a datasheet overrules the name is asserted below.
+// name was the sole evidence. The next test asserts the case where a datasheet overrules the name.
 func TestPinTrackingNameTierRequiresBothNetsToBeRails(t *testing.T) {
 	spec := trackSpec("ACME-XLAT", tracking(nil, f64(0), parampb.Modality_MODALITY_REQUIRED))
 	for _, p := range spec.Pins {

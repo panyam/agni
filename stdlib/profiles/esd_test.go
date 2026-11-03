@@ -36,8 +36,8 @@ func esdFindings(t *testing.T, d *ir.Design) []check.Finding {
 
 // TestESDRequirementScopedToExposedLines (WS3-061): the requirement reports the connector-facing line
 // with no clamp, and NOT the clamped one, and NOT the two lines that never leave the board. The
-// TXD/RXD half is why scope is read from the design instead of from a per-signal flag. They
-// are declared CAN signals, so a flag-driven check would fail two lines that carry no exposure.
+// TXD/RXD half shows why scope is read from the design instead of from a per-signal flag. They are
+// declared CAN signals, so a flag-driven check would fail two lines that have no exposure.
 func TestESDRequirementScopedToExposedLines(t *testing.T) {
 	got := map[string]bool{}
 	for _, f := range esdFindings(t, canExposed()) {
@@ -58,7 +58,7 @@ func TestESDRequirementScopedToExposedLines(t *testing.T) {
 
 // TestESDRequirementSilentWithoutConnector (WS3-061): the same bus wired entirely on-board reports
 // nothing. Declaring the requirement on a profile is therefore safe even where that bus is usually
-// internal, which is why it ships on every connector-facing built-in rather than a hand-picked two.
+// internal. So it ships on every connector-facing built-in rather than a hand-picked two.
 func TestESDRequirementSilentWithoutConnector(t *testing.T) {
 	d := canExposed()
 	d.Components = comps("U1", "U2", "TVS1") // no connector anywhere
@@ -67,12 +67,12 @@ func TestESDRequirementSilentWithoutConnector(t *testing.T) {
 	}
 }
 
-// TestESDRequirementMatchesCoreRule is the parity check WS3-061 requires before any binding migrates
+// TestESDRequirementMatchesCoreRule is a parity check. WS3-061 requires it before any binding migrates
 // from `rule: esd-protection + scope` to `profile: CAN`. The requirement is scoped and the catalog
 // rule is design-wide, so they are compared on the nets the profile actually claims, and within that
-// scope the two must agree exactly. They are built to agree by construction (one shared
-// net.connector_signal scope, the same three exemptions at check.ProtectionReachHops), and this pins
-// it so a later edit to either side cannot drift them apart silently.
+// scope the two must agree exactly. They agree by construction. They share one net.connector_signal
+// scope and the same three exemptions at check.ProtectionReachHops. This test pins that, so a later
+// edit to either side cannot drift them apart silently.
 func TestESDRequirementMatchesCoreRule(t *testing.T) {
 	d := canExposed()
 	m := check.NewModel(d)
@@ -116,8 +116,8 @@ func TestESDRequirementMatchesCoreRule(t *testing.T) {
 
 // TestESDRequirementCreditsZener (WS3-061) pins a deliberate exemption that reads like a false pass
 // until you know the partition. A Zener is NOT adequate ESD protection, but esd-clamp-not-tvs
-// (WS3-078) is the rule that says so, and this requirement stays quiet rather than double-reporting
-// the same net. The core rule exempts it for the same reason, so this is also parity.
+// (WS3-078) says so, and this requirement reports nothing rather than reporting the same net twice.
+// The core rule exempts it for the same reason, so this is also parity.
 func TestESDRequirementCreditsZener(t *testing.T) {
 	d := canExposed()
 	d.Components = comps("U1", "J1", "D1")
@@ -138,8 +138,8 @@ func TestESDRequirementCreditsZener(t *testing.T) {
 	}
 }
 
-// esdVerdicts runs the requirement for its considered set rather than its findings, which is where a
-// pass lives.
+// esdVerdicts runs the requirement for its considered set rather than its findings, because a pass
+// appears only in the considered set.
 func esdVerdicts(t *testing.T, d *ir.Design) []check.Verdict {
 	t.Helper()
 	r := esdRule(CAN, Requirement{Type: "esd"})
@@ -150,8 +150,8 @@ func esdVerdicts(t *testing.T, d *ir.Design) []check.Verdict {
 }
 
 // A query-backed requirement proved a path in prose and discarded the entities, so its PASS said a
-// net "reaches ESD protection within 2 hops" and named no clamp. The one claim a reviewer wanted to
-// check was the one thing they could not click (agni issue 662). The Go-walk requirements never had
+// net "reaches ESD protection within 2 hops" and named no clamp. A reviewer most wanted to check the
+// clamp, and could not click it (agni issue 662). The Go-walk requirements never had
 // this, because check.PullUpVerdict returns its hops as entities.
 //
 // The fixture's clamped line is BUS_CANH, protected by TVS1, so the pass on that net must name TVS1.
@@ -176,8 +176,8 @@ func TestESDPassNamesTheClampItFound(t *testing.T) {
 
 // THE CONTROL. A failing subject has no proof to name, and inventing an empty chip for it would be
 // worse than the silence. This also separates "the evidence query bound the right thing" from "the
-// evidence query bound everything". A version that attached every clamp on the board to every net
-// would pass the test above and fail here.
+// evidence query bound everything". Suppose a version attached every clamp on the board to every net.
+// It would pass the test above and fail here.
 func TestESDFailNamesNoClamp(t *testing.T) {
 	found := false
 	for _, v := range esdVerdicts(t, canExposed()) {
@@ -197,7 +197,7 @@ func TestESDFailNamesNoClamp(t *testing.T) {
 }
 
 // Negating esd_ok must keep working. The evidence lives in a SECOND head (esd_by) rather than in a
-// widened esd_ok, because `not esd_ok(?n)` requires that relation to stay unary; widening it would
+// widened esd_ok, because `not esd_ok(?n)` requires that relation to be unary; widening it would
 // silently change what the finding goal asks.
 func TestESDStillReportsTheUnclampedLine(t *testing.T) {
 	got := map[string]bool{}

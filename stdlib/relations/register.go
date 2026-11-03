@@ -1,9 +1,9 @@
-// Package relations is the standard EDB relation catalog, the built-in projectors that turn a
-// check.Model (and a seeded datasheet library) into the query engine's netlist, board and datasheet
-// facts. They register through the same public facts registration an extension uses
-// (facts.RegisterBuiltinFacts, issue 10), as the built-in rules do from stdlib/rules/builtin. The
-// core engine owns no relations, so a binary that omits the blank import runs the query engine with
-// only extension relations.
+// Package relations is the standard EDB relation catalog. Its built-in projectors turn a
+// check.Model, and a seeded datasheet library, into the query engine's netlist, board and datasheet
+// facts. They register through the public facts registration (facts.RegisterBuiltinFacts, issue
+// 10). An extension registers the same way, and so do the built-in rules from stdlib/rules/builtin.
+// The core engine owns no relations, so a binary that omits the blank import runs the query engine
+// with only extension relations.
 package relations
 
 import (
@@ -30,8 +30,8 @@ func init() {
 
 // builtinSchema is each built-in relation's positional argument layout over facts.Row, so a flat tuple
 // is queried as reln(arg0, arg1, ...). It lives here to keep the relation shapes beside the
-// projectors that fill them. Relations the evaluator computes rather than looks up (reaches) are NOT
-// here.
+// projectors that fill them. The evaluator computes some relations rather than looking them up,
+// such as reaches, and those are NOT here.
 var builtinSchema = map[string][]facts.Field{
 	RelNetMaxVoltage:     {facts.FieldSubject, facts.FieldNum},                                                                   // net.max_voltage(net, volts)
 	RelNetNominalVoltage: {facts.FieldSubject, facts.FieldNum},                                                                   // net.nominal_voltage(net, volts)
@@ -43,14 +43,14 @@ var builtinSchema = map[string][]facts.Field{
 	RelParamProv:         {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier, facts.FieldConditions}, // param.prov(mpn, symbol, doc, page, section). page is a STRING slot, see RelParamProv
 	RelParamUnit:         {facts.FieldSubject, facts.FieldObject, facts.FieldValue},                                              // param.unit(mpn, symbol, unit)
 	RelParamPin:          {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier},                        // param.pin(mpn, pin, name, function)
-	// param.pin_range is the widest relation. FieldQualifier was added for it because mpn/pin/symbol
-	// fill Subject/Object/Value and leave the limit kind nowhere to go. Conditions is NOT reused,
-	// because every param relation carries its test conditions there as unbound metadata and a
+	// param.pin_range is the widest relation. mpn, pin and symbol fill Subject, Object and Value,
+	// and then the limit kind has no field. FieldQualifier was added for it. Conditions is NOT
+	// reused. Every param relation keeps its test conditions there as unbound metadata, and a
 	// pin-rating rule needs that context on the rows it compares.
 	RelParamPinRange: {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier, facts.FieldMin, facts.FieldNum}, // param.pin_range(mpn, pin, symbol, kind, min, max)
-	// param.pin_relation borrows pin_range's shape for a different fact: Object and Value are the
-	// two PIN ids rather than a pin and a symbol, and Min/Num bound the difference between them
-	// rather than one terminal's own quantity.
+	// param.pin_relation uses pin_range's shape for a different fact. Object and Value are the two
+	// PIN ids rather than a pin and a symbol. Min/Num bound the difference between them rather than
+	// one terminal's own quantity.
 	RelParamPinRelation: {facts.FieldSubject, facts.FieldObject, facts.FieldValue, facts.FieldQualifier, facts.FieldMin, facts.FieldNum}, // param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max)
 	RelPartAudience:     {facts.FieldSubject, facts.FieldObject},                                                                         // part.audience(mpn, who)
 	RelComponentOnNet:   {facts.FieldSubject, facts.FieldObject},                                                                         // component.net(ref, net)

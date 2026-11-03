@@ -10,20 +10,20 @@ import (
 )
 
 // fetVdssBelowRail flags a MOSFET connected to a power rail whose voltage is at or above the part's
-// datasheet drain-source breakdown rating (WS3-116). A connection-aware datasheet rule in the class
-// WS3-028 established.
+// datasheet drain-source breakdown rating (WS3-116). WS3-028 established the class of
+// connection-aware datasheet rules, and this rule is one of them.
 //
-// Above VDSS the part stops behaving like a switch: it can avalanche, conduct when it is supposed to
+// Above VDSS the part stops behaving like a switch. It can avalanche, conduct when it is supposed to
 // block, or fail SHORT. The short is the direction that matters. A high-side switch that fails short
 // hands the full rail to whatever it was protecting, so the FET's failure becomes the load's failure.
 //
 // PRECISION LIMIT. VDSS is a DRAIN-SOURCE rating, but the pin-role vocabulary has no drain or source
 // (anode/cathode/power/ground only), so the rule cannot tell which of the FET's nets sits across those
-// two terminals. It therefore compares against every RAIL the part touches. Rails rather than every
-// net, because a gate-drive net is not a rail, so the common false pairing is excluded structurally. A
-// gate intentionally tied to a rail is the residual case. There the binding limit is VGSS rather than
-// VDSS, so the finding names the wrong parameter for a condition that is usually still a defect.
-// WS3-117 (FET pin roles) is what makes this exact.
+// two terminals. It therefore compares against every RAIL the part touches. It compares rails rather
+// than every net, because a gate-drive net is not a rail. That excludes the common false pairing
+// structurally. A gate intentionally tied to a rail is the residual case. There the binding limit is
+// VGSS rather than VDSS. So the finding names the wrong parameter, for a condition that is usually
+// still a defect. WS3-117 (FET pin roles) makes this exact.
 var fetVdssBelowRail = &check.Rule{
 	Name:       "fet-vdss-below-switched-rail",
 	Severity:   "error",
@@ -40,8 +40,8 @@ var fetVdssBelowRail = &check.Rule{
 	},
 	Detail: ruleDoc("fet-vdss-below-switched-rail"),
 	// The FET and the rail, in the order the message names them. VDSS is a rating on a part, but this
-	// rule's question is about a part ON a rail, and a high-side switch sits on its input rail and its
-	// output rail at once, so a part above breakdown on both is two answers rather than one.
+	// rule's question is about a part ON a rail. A high-side switch sits on its input rail and its
+	// output rail at once. So a part above breakdown on both is two answers rather than one.
 	SubjectShape:        []string{check.KindComponent, check.KindNet},
 	Eval:                fetVdssVerdicts,
 	StatesConsideredSet: true,
@@ -58,21 +58,23 @@ var fetVdssBelowRail = &check.Rule{
 //
 //   - Class alone would drop a seeded FET the classifier could not subtype, losing a finding.
 //   - A seeded row alone reads as "no subjects" on any design read without --params. Scoping on
-//     neither claims every capacitor, diode and connector that touches a rail as a subject it cannot
-//     judge, which was 17 verdicts on the tutorial board, a design with no transistor in it.
+//     neither claims as subjects every capacitor, diode and connector that touches a rail, and the
+//     rule cannot judge them. That gave 17 verdicts on the tutorial board, a design with no
+//     transistor in it.
 //
-// THREE SILENCES ARE ANSWERS. A transistor with no seeded datasheet, one whose datasheet states no
-// breakdown row, and a rail whose voltage nothing establishes each get a verdict rather than a skip.
-// Only the third is NoLimit; the first two are NotConsidered, because a missing document is a gap in
-// the corpus rather than a bound nobody stated.
+// THREE SILENCES ARE ANSWERS. Each of these cases gets a verdict rather than a skip. A transistor
+// has no seeded datasheet. A transistor's datasheet states no breakdown row. Nothing establishes a
+// rail's voltage. Only the third is NoLimit. The first two are NotConsidered, because a missing
+// document is a gap in the corpus rather than a bound nobody stated.
 //
 // Only rails are in scope (see the header), and a ground is not a subject.
 func fetVdssVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, c := range m.Components() {
 		spec := m.PartSpec(c.RefDes)
-		// The LOWEST breakdown row binds, since a part is endangered at its weakest rating. Guarded on the
-		// spec rather than left to the helper, which reads spec.Parameters directly.
+		// The LOWEST breakdown row binds, since a part is endangered at its weakest rating. The guard
+		// checks the spec here rather than in the helper, because the helper reads spec.Parameters
+		// directly.
 		var vdss *parampb.Parameter
 		if spec != nil {
 			for _, p := range check.FetBreakdownLimits(spec) {
@@ -134,12 +136,14 @@ func fetVdssVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 						check.Citation(spec, vdss)),
 					Prov:          c.Prov,
 					DatasheetProv: []*check.DatasheetCitation{check.DatasheetCitationOf(spec, vdss)},
-					// The rail the message names. The FINDING's subject is the FET, because that is the
-					// part to change, so without this the reader cannot get to the net from the finding.
+					// The rail the message names. The FINDING's subject is the FET, because the FET is
+					// the part to change. Without this entity the reader cannot get to the net from the
+					// finding.
 					Context: []check.ContextSubject{check.Ctx(check.NetEntity(n), "rail")},
 				}
-				// A rail voltage read off a DRIVING PART's datasheet is a second vendor value the
-				// conclusion rests on, so it earns a citation and the data-trust gate weighs it.
+				// A rail voltage can come from a DRIVING PART's datasheet. The conclusion then depends
+				// on a second vendor value, so that value gets a citation and the data-trust gate
+				// weighs it.
 				// A name-derived rail is a design convention, not a document, so it gets none. The
 				// message says which, because "5V" from a datasheet and "5V" from a net name are not
 				// equally trustworthy.
@@ -161,10 +165,10 @@ type railEvidence struct {
 	cite *check.DatasheetCitation
 }
 
-// railVolts resolves a rail's voltage, preferring DATASHEET evidence over the net's name. A part on
-// the rail whose spec states an output voltage is the strongest evidence available; the name-derived
-// nominal is the fallback a directionless netlist leaves. ok is false when neither yields a number,
-// so the rule skips rather than guessing.
+// railVolts resolves a rail's voltage, preferring DATASHEET evidence over the net's name. The
+// strongest evidence is a part on the rail whose spec states an output voltage. A directionless
+// netlist leaves only the name-derived nominal as a fallback. ok is false when neither yields a
+// number, so the rule skips rather than guessing.
 func railVolts(m check.Model, n *ir.Net) (float64, railEvidence, bool) {
 	best, found := 0.0, false
 	var ev railEvidence

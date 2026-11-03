@@ -23,8 +23,8 @@ func ncDef(name string, priority int, isDefault bool, params map[string]string) 
 	return &ir.Constraint{Name: name, Kind: "netclass", Params: p}
 }
 
-// ncCopper builds a board sidecar: one entry per net, with a track width and/or a via drill in mm.
-// Zero means "no copper of that kind on this net".
+// ncCopper builds a board sidecar with one entry per net, holding a track width, a via drill in mm,
+// or both. Zero means "no copper of that kind on this net".
 func ncCopper(entries ...ncNet) *geom.BoardGeometry {
 	bg := &geom.BoardGeometry{UnitNm: 1}
 	for _, e := range entries {
@@ -49,7 +49,8 @@ type ncNet struct {
 	drillMM float64
 }
 
-// ncModel builds a board-bearing model: nets with class membership, class definitions, and copper.
+// ncModel builds a board-bearing model from nets with class membership, class definitions and
+// copper.
 func ncModel(t *testing.T, nets []*ir.Net, defs []*ir.Constraint, bg *geom.BoardGeometry) check.Model {
 	t.Helper()
 	return check.NewModel(&ir.Design{Nets: nets, Constraints: defs}, check.WithBoard(bg))
@@ -57,9 +58,9 @@ func ncModel(t *testing.T, nets []*ir.Net, defs []*ir.Constraint, bg *geom.Board
 
 // TestNetclassTrackWidthCascade is the regression that motivated the design. VBUS is in HighSpeed
 // (priority 1, declaring only a clearance) and Power (priority 5, declaring 0.8mm). It is routed at
-// 0.8mm, which is what the winning class asks for. A naive per-class comparison would fan
-// out over both classes and FAIL it against Default's 0.25mm or against a class that lost. This
-// asserts it stays silent.
+// 0.8mm, and the winning class asks for exactly that. A naive per-class comparison would fan out over
+// both classes and FAIL it against Default's 0.25mm or against a class that lost. This asserts it is
+// silent.
 func TestNetclassTrackWidthCascade(t *testing.T) {
 	defs := []*ir.Constraint{
 		ncDef("HighSpeed", 1, false, map[string]string{"clearance": "0.15"}),
@@ -102,8 +103,8 @@ func TestNetclassTrackWidthDefaultAppliesToUnclassedNet(t *testing.T) {
 }
 
 // TestNetclassRulesSilentWithoutDefinitions checks that no definitions means no limit, so both
-// rules stay silent rather than inventing one. The capability gate is what reports this to a
-// review; this asserts the rule's own internal guard, which protects a direct caller of Eval.
+// rules are silent rather than inventing one. The capability gate reports this to a review. This
+// test asserts the rule's own internal guard, which protects a direct caller of Eval.
 //
 // The VBUS copper here is absurdly thin (1µm), so a rule that invented a limit would certainly
 // fire. That is the positive control, since "no findings" from a rule that could not fire either
@@ -118,8 +119,8 @@ func TestNetclassRulesSilentWithoutDefinitions(t *testing.T) {
 		t.Errorf("via-drill rule fired with no definitions: %+v", f)
 	}
 	// And silence is not the whole answer. A project that declared no limit has to be
-	// distinguishable from one whose copper clears the limit it declared, which is what the rules
-	// could not say before they stated a considered set (agni issue 391).
+	// distinguishable from one whose copper clears the limit it declared. The rules could not say
+	// that before they stated a considered set (agni issue 391).
 	for _, r := range []*check.Rule{netclassTrackWidth, netclassViaDrill} {
 		vs := r.Eval(context.Background(), m)
 		if len(vs) != 1 {
@@ -150,8 +151,8 @@ func TestNetclassViaDrill(t *testing.T) {
 	if len(f) != 1 || check.EntityRef(f[0].Subject) != "VBUS" {
 		t.Fatalf("findings = %+v, want exactly one on VBUS (SIG has no declared drill to compare)", f)
 	}
-	// SIG is skipped rather than passed, and the verdict is where that distinction now lives. A
-	// pass here would state that SIG's 0.1mm drill clears a limit, when no class states one.
+	// SIG is skipped rather than passed, and the verdict now holds that distinction. A pass here
+	// would state that SIG's 0.1mm drill clears a limit, when no class states one.
 	for _, v := range netclassViaDrill.Eval(context.Background(), m) {
 		if check.EntityRef(v.Subjects[0]) != "SIG" {
 			continue

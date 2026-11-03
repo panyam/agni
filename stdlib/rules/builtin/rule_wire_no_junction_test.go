@@ -11,8 +11,8 @@ import (
 )
 
 // tapDesign is a read that examined wire geometry, with whatever mix of joined and silent taps the
-// caller wants. Supplied is what separates a sheet with no tap on it from a format whose reader never
-// looked at a wire, and without it the rule gates to not-applicable.
+// caller wants. Supplied separates a sheet with no tap on it from a format whose reader never looked
+// at a wire. Without it the rule gates to not-applicable.
 func tapDesign(joined []*ir.JoinedTap, silent ...*ir.DanglingEndpoint) *ir.Design {
 	return &ir.Design{InputDiagnostics: &ir.InputDiagnostics{
 		Supplied:            []string{"junction_taps"},
@@ -59,8 +59,8 @@ func TestWireNoJunctionStatesConsideredSet(t *testing.T) {
 
 // TestWireNoJunctionPassNamesTheJoin is the witness check (build/evidence.md). "The tap is joined"
 // restates the outcome and reads the same on a tap held by a junction dot somebody placed on purpose
-// and one held by a label that happens to sit at the meet. Asserting the two statements DIFFER is
-// what catches a witness carrying a constant; asserting the label text appears is what makes the pass
+// and one held by a label that happens to sit at the meet. Asserting that the two statements DIFFER
+// catches a witness holding a constant. Asserting that the label text appears makes the pass
 // checkable against the drawing.
 func TestWireNoJunctionPassNamesTheJoin(t *testing.T) {
 	statement := func(j *ir.JoinedTap) string {
@@ -105,9 +105,9 @@ func TestWireNoJunctionGatedWhenNobodyLooked(t *testing.T) {
 	}
 }
 
-// TestWireNoJunctionFailWitnessSaysWhatIsWrong covers the failing side, which gained a witness it
-// did not have, and it has to state the consequence rather than repeat the finding message, since
-// the two sit side by side in the verdict output.
+// TestWireNoJunctionFailWitnessSaysWhatIsWrong covers the failing side, which has a witness now.
+// The witness has to state the consequence rather than repeat the finding message, since the two
+// sit side by side in the verdict output.
 func TestWireNoJunctionFailWitnessSaysWhatIsWrong(t *testing.T) {
 	vs := wireNoJunction.Eval(context.Background(), check.NewModel(tapDesign(nil, &ir.DanglingEndpoint{X: 5, Y: 6})))
 	if len(vs) != 1 || vs[0].Witness == nil {
@@ -121,8 +121,8 @@ func TestWireNoJunctionFailWitnessSaysWhatIsWrong(t *testing.T) {
 	}
 }
 
-// TestWireNoJunctionSegmentsInTerms keeps the count machine-readable, not only in prose, since the
-// CSV form is what a reviewer filters.
+// TestWireNoJunctionSegmentsInTerms keeps the count machine-readable, not only in prose, since a
+// reviewer filters the CSV form.
 func TestWireNoJunctionSegmentsInTerms(t *testing.T) {
 	vs := wireNoJunction.Eval(context.Background(), check.NewModel(tapDesign([]*ir.JoinedTap{{X: 1, Y: 1, JoinKind: "junction", Segments: 4}})))
 	var got string

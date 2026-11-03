@@ -9,9 +9,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// A declaration that names a connector the design has passes, and one naming a part the design lacks
-// or a part that is not a connector fails, since either would change nothing while reading as a
-// declaration that took effect (agni issue 831).
+// A declaration passes when it names a connector the design has. It fails when it names a part the
+// design lacks or a part that is not a connector. Either mistake would change nothing while reading
+// as a declaration that took effect (agni issue 831).
 func TestExposureDeclared(t *testing.T) {
 	decl := declOf(t, `
 name: carrier

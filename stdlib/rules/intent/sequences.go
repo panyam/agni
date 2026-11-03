@@ -11,12 +11,12 @@ import (
 
 // Power-up sequencing as design intent (WS3-092) is the third intent mechanism, after presence
 // (module/subsystem/protection) and property (a net's declared facts). Presence asks whether a thing
-// is on the design and property asks what a net IS; neither can express an ORDER, and order is what a
-// multi-rail board gets wrong in the way that damages parts.
+// is on the design and property asks what a net IS. Neither can express an ORDER. A multi-rail board
+// gets its order wrong in ways that damage parts.
 //
-// A netlist carries no order. It carries connectivity, and the only ordering an order leaves behind in
-// connectivity is a GATING CHAIN, where the earlier stage's power-good signal drives the later stage's
-// enable, so the later stage physically cannot come up first.
+// A netlist records no order. It records connectivity, and an order leaves only one trace there, a
+// GATING CHAIN. The earlier stage's power-good signal drives the later stage's enable, so the later
+// stage physically cannot come up first.
 //
 // The other two ways a board enforces order leave no netlist trace at all. A PMIC steps its rails from
 // its own NVM configuration, and firmware drives enables in turn after reading power-good. Both are
@@ -43,8 +43,8 @@ func sequenceRule(s Sequence) *check.Rule {
 		Reads:  []string{"on_net", "component.class"},
 		Tags:   intentTags(),
 		// The two gating handles, in the order the assertion reads, the earlier stage's power-good and then
-		// the later stage's enable. A gating link belongs to neither net alone, and the pair is what the
-		// rule judges (agni issue 391's tuple).
+		// the later stage's enable. A gating link belongs to neither net alone, and the rule judges
+		// the pair (agni issue 391's tuple).
 		SubjectShape:        []string{check.KindNet, check.KindNet},
 		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return evalSequence(m, s) },
 		StatesConsideredSet: true,
@@ -56,21 +56,21 @@ func sequenceRule(s Sequence) *check.Rule {
 // supplies both handles, because those two names are the assertion. Everything else in the stage
 // (the rail) is context.
 //
-// Three failing outcomes per pair:
+// Each pair has three failing outcomes.
 //
 //   - the design gates the pair the REVERSE way round -> finding (the sharpest diagnosis, so it is
 //     tested before the two below and reported even when the declared handles are themselves absent)
 //   - a declared handle net is not on the design      -> finding (the chain is not there to enforce anything)
 //   - the handles are on the design but not linked    -> finding (nothing holds the later stage off)
 //
-// A found link is a PASS naming the two handles it walked. An absent handle net fails here where an
-// absent RAIL is skipped, because a rail is a presence question the voltage-domain and subsystem forms
-// own and the gating nets ARE this rule's subject.
+// A found link is a PASS naming the two handles it walked. An absent handle net fails here, and an
+// absent RAIL is skipped. A rail is a presence question, and the voltage-domain and subsystem forms
+// own it. The gating nets ARE this rule's subject.
 //
 // THE SUBJECT IS THE PAIR, and which pair depends on the branch. A link judged the declared way round
 // is (earlier power-good, later enable); a link the design gates BACKWARDS is judged on the mirror
-// handles, so that verdict names those instead. Both are 2-tuples of nets, which is what the declared
-// SubjectShape says, and in each case the finding's own subject is one of the two.
+// handles, so that verdict names those instead. Both are 2-tuples of nets, as the declared
+// SubjectShape says. In each case the finding's own subject is one of the two.
 func evalSequence(m check.Model, s Sequence) []check.Verdict {
 	var out []check.Verdict
 	fan := netFan(m)
@@ -110,7 +110,7 @@ func evalSequence(m check.Model, s Sequence) []check.Verdict {
 						{Entity: check.Entity{Kind: check.KindNet, Ref: b.Good, NetID: rGood.GetId()}, Role: "power-good"},
 					}}
 				out = append(out, check.Verdict{
-					// The MIRROR handles, because those are the pair this branch judged.
+					// The MIRROR handles, because this branch judged that pair.
 					Subjects: pair(b.Good, a.Enable),
 					Outcome:  check.Fail,
 					Witness:  &check.Witness{Statement: fmt.Sprintf("%q reaches %q, which is the declared order inverted", b.Good, a.Enable)},
@@ -155,8 +155,8 @@ func evalSequence(m check.Model, s Sequence) []check.Verdict {
 	return out
 }
 
-// absentHandleWitness says which of the two declared handles the design does not carry, which is the
-// fact the finding's sentence rests on.
+// absentHandleWitness says which of the two declared handles the design lacks. The finding's sentence
+// states that fact.
 func absentHandleWitness(a, b SequenceStage, goodNet, enNet *ir.Net) string {
 	switch {
 	case goodNet == nil && enNet == nil:
@@ -193,18 +193,18 @@ func absentHandleFinding(s Sequence, a, b SequenceStage, goodNet, enNet *ir.Net)
 // load switch, a discrete FET. Those are small parts, and crediting them keeps a sequenced board off
 // a false fail.
 //
-// A controller is not that. When a power-good lands on an MCU and the MCU drives the enable, the order
-// lives in FIRMWARE, and firmware is not in the netlist. Crediting that path would let every board
+// A controller is not that. When a power-good goes to an MCU and the MCU drives the enable, the order
+// is in FIRMWARE, and firmware is not in the netlist. Crediting that path would let every board
 // whose supervisory signals converge on one processor read as correctly sequenced. The netlist-visible
 // fan-out separates the two without needing to know what any part is. A gate has a handful of nets, a
 // controller has dozens.
 const gatingFanLimit = 16
 
-// linked reports whether the design carries a path from a power-good net to an enable net that could
-// hold the later stage off, meaning the two names are one net or a single SMALL part touches both (see
-// gatingFanLimit). One part is the whole radius, and it covers both wirings that occur: a resistor
-// dropping an open-drain power-good to the enable pin's threshold, and an active gate or load switch
-// between them. A series element IS a part sitting on both nets.
+// linked reports whether the design has a path from a power-good net to an enable net that could
+// hold the later stage off. Either the two names are one net, or a single SMALL part touches both
+// (see gatingFanLimit). One part is the whole radius, and it covers both wirings that occur. One is a
+// resistor dropping an open-drain power-good to the enable pin's threshold, and the other is an
+// active gate or load switch between them. A series element IS a part sitting on both nets.
 //
 // A bounded series walk (check.Model.Reach) is not used, because at any radius tight enough to avoid
 // false credit it credits a strict SUBSET of what the one-part test credits.
@@ -242,7 +242,7 @@ func sharesGatingPart(fan map[string]int, from, to *ir.Net) bool {
 }
 
 // netFan counts the distinct nets each component appears on, once per evaluation. It is the
-// netlist-visible size of a part, which is what gatingFanLimit reads. A part-type pin count would say
+// netlist-visible size of a part, and gatingFanLimit reads it. A part-type pin count would say
 // how big the package is, and this says how much of the design the part actually touches.
 func netFan(m check.Model) map[string]int {
 	fan := map[string]int{}

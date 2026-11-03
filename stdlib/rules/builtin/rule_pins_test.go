@@ -68,7 +68,7 @@ func TestPinsModelSurface(t *testing.T) {
 
 // TestUnconnectedPin checks that the rule fires per bare typed pin with the designator on the finding.
 // U1.2 (unwired gate input) and U2.2 fire; U2.3 (bare NC), U2.4 (wired NC), and U2.5
-// (bare but direction-unknown) stay silent.
+// (bare but direction-unknown) are silent.
 func TestUnconnectedPin(t *testing.T) {
 	m := check.NewModel(pinFixture())
 	got := map[string]bool{}
@@ -89,7 +89,7 @@ func TestUnconnectedPin(t *testing.T) {
 	}
 }
 
-// TestNCPinConnected checks that the wired NC pin's net fires and the lone-stub NC case stays silent.
+// TestNCPinConnected checks that the wired NC pin's net fires and the lone-stub NC case is silent.
 func TestNCPinConnected(t *testing.T) {
 	m := check.NewModel(pinFixture())
 	fs := ncPinConnected.Findings(context.Background(), m)
@@ -126,7 +126,7 @@ func TestOutputConflictCountsComponents(t *testing.T) {
 
 // TestOutputConflictWiredOr (WS3-064) treats a multi-output net that carries a resistor as an
 // intentional open-drain wired-OR bus (a shared interrupt/inhibit line, the resistor its pull), not
-// contention, so it stays silent; two push-pull outputs with no resistor still fight. The signal is
+// contention, so it is silent; two push-pull outputs with no resistor still fight. The signal is
 // the resistor's PRESENCE, name-independent, because a real pull runs to an auto-named rail or to
 // ground.
 func TestOutputConflictWiredOr(t *testing.T) {
@@ -168,7 +168,7 @@ func TestOutputConflictWiredOr(t *testing.T) {
 // TestUnspecifiedPinWithDriver covers the matrix's unspecified column. An untyped pin fires
 // only where a driver is in evidence, including a virtual power symbol's power_out
 // (WS1-014), the evidence path that unblocked the row. Declared (passive) pins,
-// undriven nets, external nets, and virtual pins as subjects all stay out.
+// undriven nets, external nets, and virtual pins as subjects are all excluded.
 func TestUnspecifiedPinWithDriver(t *testing.T) {
 	lib := &ir.PartLibrary{Name: "lib", Parts: []*ir.PartType{
 		{Name: "DRV", Pins: []*ir.Pin{{Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_OUTPUT}}},
@@ -278,7 +278,7 @@ func TestFloatingInputDiodeExemption(t *testing.T) {
 
 // TestTestPointCoverage checks that uncovered rails and ground fire ONLY on boards that place test
 // points at all (the DFT channel gate), and that covered rails, external rails, and plain signal
-// nets stay out.
+// nets are excluded.
 func TestTestPointCoverage(t *testing.T) {
 	comp := func(ref string) *ir.Component {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}

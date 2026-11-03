@@ -8,10 +8,10 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// The fixtures below are duplicated from the check/builtin-rule test suites (the projector tests
-// moved here with Facts in issue 10, but the hand-built designs and specs are unexported test
-// helpers). Duplicating a proven test builder into the package that needs it is the same call the
-// 2b rule extraction made, since a test helper is cheaper to copy than to export.
+// The fixtures below are duplicated from the check/builtin-rule test suites. The projector tests
+// moved here with Facts in issue 10. The hand-built designs and specs are unexported test helpers
+// in those suites, so they were copied into this package. The 2b rule extraction made the same
+// choice, since a test helper is cheaper to copy than to export.
 
 // tnet builds a net with "refdes.pin" connections.
 func tnet(name string, conns ...string) *ir.Net {
@@ -125,8 +125,8 @@ func esdSpec(mpn string, volts float64) *parampb.PartSpec {
 	}
 }
 
-// typSpec hand-builds a part whose datasheet states a TYPICAL value, the half of RangeValue that had
-// nowhere to land while Min and Num were spent on the two bounds (agni issue 545).
+// typSpec hand-builds a part whose datasheet states a TYPICAL value. That part of RangeValue had no
+// slot while Min and Num held the two bounds (agni issue 545).
 func typSpec(mpn, unit string, typ float64) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
 	return &parampb.PartSpec{
@@ -209,8 +209,9 @@ func mm(x, y float64) *geom.Point {
 	return &geom.Point{X: int64(x * 1e6), Y: int64(y * 1e6)}
 }
 
-// drcBoard exercises every board relation (a sub-floor trace, a small drill, a thin annular ring,
-// and clean copper), reused from the DRC board fixture so the board facts have a real tier to project.
+// drcBoard exercises every board relation with a sub-floor trace, a small drill, a thin annular
+// ring and clean copper. It is reused from the DRC board fixture, so the board facts have a real
+// tier to project.
 func drcBoard() *geom.BoardGeometry {
 	seg := func(x1, y1, x2, y2, wMM float64, layer string) *geom.TrackSegment {
 		return &geom.TrackSegment{A: mm(x1, y1), B: mm(x2, y2), Width: int64(wMM * 1e6), Layer: layer}
@@ -236,9 +237,9 @@ func drcBoard() *geom.BoardGeometry {
 	}}
 }
 
-// dualSupplySpec hand-builds the shape the pin tier exists for, two supply terminals with DIFFERENT
-// recommended windows, plus a group-bound row covering both I/O pins and a part-wide row bound to
-// nothing. Mirrors the real TXB0104 encoding in core/param/testdata without depending on it,
+// dualSupplySpec hand-builds the shape the pin tier exists for. It has two supply terminals with
+// DIFFERENT recommended windows, a group-bound row covering both I/O pins, and a part-wide row bound
+// to nothing. It mirrors the real TXB0104 encoding in core/param/testdata without depending on it,
 // so a change to that fixture cannot silently reshape these assertions.
 func dualSupplySpec(mpn string) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }

@@ -26,11 +26,11 @@ import (
 //	  margin_factor: 1.25   # headroom over a declared peak, optional
 //	  components:   {...}   # facts about named components: a connector's exposure
 //
-// Parse reads that shape whether it comes from a whole design.yaml or from a file holding only `name`
-// and `intent:` (the --intent-path flag). The section's schema is the configpb.DesignIntent message
-// (CONSTRAINTS C26), which YAML only spells, so FromProto is the one place a declaration is validated
-// whether it arrived as a file or as a message. The six forms compile to exactly the
-// rules the nine earlier ones did, under the same names, so a review checklist binding
+// Parse reads that shape whether it comes from a whole design.yaml or from a file holding only
+// `name` and `intent:` (the --intent-path flag). The configpb.DesignIntent message defines the
+// section's schema (CONSTRAINTS C26), and the YAML only spells it. So FromProto is the one place a
+// declaration is validated, whether it arrived as a file or as a message. The six forms compile to
+// the same rules as the nine earlier forms, under the same names, so a review checklist binding
 // intent/voltage-domain-mismatch or intent/subsystem-<slug> is unaffected.
 
 // designDoc is the part of a design descriptor Parse reads. The descriptor's other keys (entry,
@@ -45,10 +45,10 @@ type designDoc struct {
 // where the error can teach, rather than at run. Parse is WASM-clean (yaml only, no os); LoadFile adds
 // the file read.
 //
-// Every form is checked for something it can evaluate: a module needs a class, an MPN or nets; a net
-// needs at least one fact, and each fact a value its kind accepts; a sequence needs an order the
-// netlist can be checked against; a strap group needs distinct nets that can encode its value; an
-// io_map row needs a net, a device and a pin.
+// Every form is checked for something it can evaluate. A module needs a class, an MPN or nets. A
+// net needs at least one fact, and each fact needs a value its kind accepts. A sequence needs an
+// order the netlist can be checked against. A strap group needs distinct nets that can encode its
+// value. An io_map row needs a net, a device and a pin.
 func Parse(b []byte) (Declaration, error) {
 	name, in, err := parseSection(b)
 	if err != nil {
@@ -57,9 +57,10 @@ func Parse(b []byte) (Declaration, error) {
 	return FromProto(name, in)
 }
 
-// ParseProto reads the same shape Parse does and returns the section as its proto, validated, for a
-// caller that sends intent as a VALUE rather than compiling it: the CLI's --intent-path, which rides
-// the request so the model sees the declaration as well as the catalog (agni issue 831).
+// ParseProto reads the same shape Parse does and returns the section as its proto, validated. It
+// serves a caller that sends intent as a VALUE rather than compiling it, such as the CLI's
+// --intent-path. That declaration travels with the request, so the model sees the declaration as
+// well as the catalog (agni issue 831).
 func ParseProto(b []byte) (*configpb.DesignIntent, error) {
 	name, in, err := parseSection(b)
 	if err != nil {
@@ -91,8 +92,8 @@ func parseSection(b []byte) (string, *configpb.DesignIntent, error) {
 }
 
 // DecodeSection binds a descriptor's intent section to its proto. It checks SHAPE only (keys and
-// types); FromProto is what validates the declarations, so a store can read a descriptor without
-// compiling rules from it.
+// types). FromProto validates the declarations, so a store can read a descriptor without compiling
+// rules from it.
 func DecodeSection(n *yaml.Node) (*configpb.DesignIntent, error) {
 	in := &configpb.DesignIntent{}
 	// A misspelled key is an error naming its line, not a fact that silently declares nothing.
@@ -130,8 +131,8 @@ func FromProto(name string, in *configpb.DesignIntent) (Declaration, error) {
 	}
 	// margin_factor is optional and has no default (see Declaration.MarginFactor). Omitted, the margin
 	// rule is never compiled. Declared, it must ask for headroom. A factor of 1 restates the capacity
-	// rule and anything below 1 asks for a supply SMALLER than the budget, so both are author errors
-	// caught here rather than a second rule that duplicates or inverts the first.
+	// rule, and anything below 1 asks for a supply SMALLER than the budget. Both are author errors.
+	// They are caught here, so no second rule duplicates or inverts the first.
 	mf := in.GetMarginFactor()
 	if mf != 0 && mf <= 1 {
 		return Declaration{}, fmt.Errorf("intent %q: \"margin_factor\" must be greater than 1 (got %g); omit it to leave the margin rule uncompiled", name, mf)
@@ -182,9 +183,9 @@ func buildExposures(name string, cs map[string]*configpb.ComponentIntent) ([]Exp
 	return out, nil
 }
 
-// buildModules splits the modules list into the two shapes it carries: a module checked by class or
-// MPN with an optional count, and a named block whose nets must exist (a subsystem), whose class or
-// MPN, when given, names a component that must be present too.
+// buildModules splits the modules list into its two shapes. One is a module checked by class or
+// MPN, with an optional count. The other is a named block whose nets must exist (a subsystem). A
+// subsystem may also give a class or MPN, and then a component matching it must be present too.
 func buildModules(name string, ms []*configpb.IntentModule, d *Declaration) error {
 	slugs := map[string]string{} // slug -> first name, to reject a rule-name collision
 	for i, m := range ms {
@@ -376,9 +377,9 @@ func buildStrapGroups(name string, gs []*configpb.StrapGroup, d *Declaration) er
 // Without a net there is no assignment, without a device there is nothing to look the pin up on, and
 // without a pin the row is a net-presence claim that io-map-net-absent already makes for every row.
 //
-// A far end must be COMPLETE or absent. A `to` naming a device and no pin is the shape that would
-// otherwise reach the rule as a half-question, and the rule would have to invent a reading of it.
-// Rejecting it at load is the same discipline the rail-budget and strap-group checks above use.
+// A far end must be COMPLETE or absent. Without this check, a `to` naming a device and no pin would
+// reach the rule as a half-question, and the rule would have to invent a reading of it. Rejecting
+// it at load is the same discipline the rail-budget and strap-group checks above use.
 func parseIOAssignment(declName string, i int, a *configpb.PinAssignment) (IOAssignment, error) {
 	row := fmt.Sprintf("io_map #%d", i+1)
 	if strings.TrimSpace(a.GetNet()) == "" {
@@ -416,15 +417,15 @@ func missingHalf(e *configpb.PinEndpoint) string {
 	}
 }
 
-// parseSequence validates one declared sequence and converts it. It is split out of Parse because it
-// carries the one validation in this file that is about EVALUABILITY rather than shape. A sequence
-// with no adjacent good/enable pair compiles to a rule with nothing to judge, and a rule that can only
-// ever pass is author error. It is caught at load (WS3-099), where the message can teach, rather than
-// at run as a verdict nobody can trace back to the declaration.
+// parseSequence validates one declared sequence and converts it. It is split out of Parse because
+// it holds this file's one check of EVALUABILITY rather than shape. A sequence with no adjacent
+// good/enable pair compiles to a rule with nothing to judge, and a rule that can only ever pass is
+// author error. It is caught at load (WS3-099), where the message can teach, rather than at run as
+// a verdict nobody can trace back to the declaration.
 //
-// The teaching matters more here than elsewhere, because the case it rejects is a real and correct
-// board, one whose rail order lives in a PMIC's configuration or in firmware. Saying so in the error
-// stops an author from inventing net names to satisfy the schema.
+// The error has to teach here more than elsewhere. The case it rejects is a real and correct board,
+// whose rail order is set in a PMIC's configuration or in firmware. An error that says so stops an
+// author from inventing net names to satisfy the schema.
 func parseSequence(declName string, i int, s *configpb.PowerSequence, slugs map[string]string) (Sequence, error) {
 	if strings.TrimSpace(s.GetName()) == "" {
 		return Sequence{}, fmt.Errorf("intent %q: sequence #%d is missing its \"name\"", declName, i+1)
@@ -462,9 +463,9 @@ func parseSequence(declName string, i int, s *configpb.PowerSequence, slugs map[
 	return seq, nil
 }
 
-// hasGatingPair reports whether any adjacent pair of stages supplies both handles the enable-gated
-// relation reads. It is the compiles-to-something test, and the same predicate Compile uses, so a
-// sequence that loads always yields a rule with at least one link to judge.
+// hasGatingPair reports whether any adjacent pair of stages supplies both handles of the
+// enable-gated relation. It is the compiles-to-something test, and Compile uses the same predicate,
+// so a sequence that loads always yields a rule with at least one link to judge.
 func hasGatingPair(s Sequence) bool {
 	for i := 0; i+1 < len(s.Order); i++ {
 		if s.Order[i].Good != "" && s.Order[i+1].Enable != "" {

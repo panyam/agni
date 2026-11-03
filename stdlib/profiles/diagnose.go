@@ -24,8 +24,8 @@ const (
 
 	// overBroadFloor is the smallest number of matched nets worth reporting at all. On a small design
 	// (a test fixture, a demo with a handful of nets) a single match is already a large share, so the
-	// share test alone would fire on correct profiles. The floor keeps it quiet until the share means
-	// something.
+	// share test alone would fire on correct profiles. The floor holds the report back until the
+	// share means something.
 	overBroadFloor = 8
 )
 
@@ -38,8 +38,8 @@ const (
 // into a design report and score it against the design.
 //
 // It takes net NAMES rather than a check.Model because names are all it reads. That makes it
-// testable without building a design, and callable from a surface that has read a design but not
-// built a model, which is where the CLI sits.
+// testable without building a design. It is also callable from a surface that has read a design but
+// not built a model, and the CLI is such a surface.
 func Diagnose(netNames []string, p Profile) []string {
 	if len(netNames) == 0 {
 		return nil

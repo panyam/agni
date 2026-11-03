@@ -49,8 +49,8 @@ func TestAnSDCardSlotIsNotAnEMMC(t *testing.T) {
 		t.Errorf("an SD slot shows eMMC coverage: %+v", c)
 	}
 
-	// Without the card detect line the same bus does read as an eMMC, which is what makes the line,
-	// rather than anything else in the fixture, the reason the bus above was left alone.
+	// Without the card detect line the same bus does read as an eMMC. So the bus above was left alone
+	// because of that line, and nothing else in the fixture.
 	m = check.NewModel(sdSlot(false))
 	rules := map[string]int{}
 	for _, f := range check.RunBackground(m, Compile(EMMC)) {
@@ -261,7 +261,7 @@ func twoCANBuses() *ir.Design {
 	}
 }
 
-// One bus's terminator no longer clears another bus, the design-wide limit agni issue 162 names.
+// One bus's terminator no longer clears another bus. agni issue 162 names that design-wide limit.
 func TestTerminationIsJudgedPerBus(t *testing.T) {
 	rule := func(p Profile) []string {
 		var got []string
@@ -280,8 +280,8 @@ func TestTerminationIsJudgedPerBus(t *testing.T) {
 	}
 }
 
-// A connector-facing net matching a signal but on no bus in use is not this interface's line, so a
-// per-bus ESD requirement leaves it alone where the design-wide one reports it.
+// Imagine a connector-facing net that matches a signal but is on no bus in use. It is not this
+// interface's line, so a per-bus ESD requirement leaves it alone, while the design-wide one reports it.
 func TestESDIsJudgedPerBus(t *testing.T) {
 	d := canExposed()
 	d.Components = append(d.Components, comps("J9")...)

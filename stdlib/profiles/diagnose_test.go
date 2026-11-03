@@ -61,7 +61,7 @@ func TestDiagnoseFlagsCollidingSignals(t *testing.T) {
 	}
 }
 
-// A design too small for a share to mean anything stays quiet. On four nets, one match is 25% and
+// A design too small for a share to mean anything reports nothing. On four nets, one match is 25% and
 // says nothing about the matcher. Without the floor every correct profile on a fixture would warn.
 func TestDiagnoseQuietBelowFloor(t *testing.T) {
 	p := Profile{Name: "MYBUS", Signals: []Signal{{Name: "H", Suffix: "_H", Anchor: true}}}
@@ -71,7 +71,7 @@ func TestDiagnoseQuietBelowFloor(t *testing.T) {
 }
 
 // Multi-instance naming is CORRECT, not over-broad, since a role legitimately matches one net per
-// channel. This is the false positive the share threshold is set to avoid. Sixteen LIN channels on
+// channel. The share threshold is set to avoid this false positive. Sixteen LIN channels on
 // a 200-net board is 8%, well under the bar.
 func TestDiagnoseQuietOnMultiInstanceNaming(t *testing.T) {
 	p := Profile{Name: "LIN_MULTI", Signals: []Signal{{Name: "TX", Suffix: "_TX", Anchor: true}}}
@@ -87,8 +87,8 @@ func TestDiagnoseQuietOnMultiInstanceNaming(t *testing.T) {
 	}
 }
 
-// The shipped built-ins must stay silent on the designs their own behavioral suites use, or the
-// warning is noise from the first run. This is the gate the ticket names.
+// The shipped built-ins must report nothing on the designs their own behavioral suites use, or the
+// warning is noise from the first run. The ticket names this gate.
 func TestDiagnoseQuietOnBuiltins(t *testing.T) {
 	designs := map[string]*ir.Design{
 		"spinorGood":   spinorGood(),

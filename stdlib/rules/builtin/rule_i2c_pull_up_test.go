@@ -8,8 +8,8 @@ import (
 )
 
 // TestIsI2CBoundary (WS3-037) checks that SDA/SCL match at a token boundary, not as a substring. The
-// case that matters is SPI_SCLK, an SPI clock and not an I2C net, which the old strings.Contains match
-// wrongly caught. An I2S data line named after its SDA pin is not I2C either (agni 1255).
+// case that matters is SPI_SCLK, an SPI clock and not an I2C net. The old strings.Contains match
+// wrongly caught it. An I2S data line named after its SDA pin is not I2C either (agni 1255).
 func TestIsI2CBoundary(t *testing.T) {
 	cases := map[string]bool{
 		"SDA": true, "SCL": true, "I2C_SCL": true, "SCL0": true, "SDA_1": true, "SENSOR_SDA": true,
@@ -45,8 +45,8 @@ func TestI2CPullUpSCLKNotFlagged(t *testing.T) {
 	}
 }
 
-// comps builds the component list for a topology test. Class comes from the ref-des prefix, so
-// naming them R* / U* is what makes them resistors and parts.
+// comps builds the component list for a topology test. Class comes from the ref-des prefix, so an R*
+// name makes a resistor and a U* name makes a part.
 func comps(refs ...string) []*ir.Component {
 	out := make([]*ir.Component, 0, len(refs))
 	for _, r := range refs {
@@ -56,13 +56,13 @@ func comps(refs ...string) []*ir.Component {
 }
 
 // TestI2CPullUpTopologies is the acceptance for agni issue 375. The rule used to ask whether ANY
-// resistor touched the bus, so every row below where a resistor exists but reaches no rail passed an
-// error-severity check while the bus was electrically unheld.
+// resistor touched the bus. In several rows below a resistor exists but reaches no rail. Each of
+// those rows passed an error-severity check while the bus was electrically unheld.
 //
-// The extended-net rows are the reason this is a WALK and not a one-hop test. A bus segment
-// separated from its pull-up by a series isolation or termination resistor is an ordinary topology,
-// and a one-hop rule would have fired on it, trading the false pass for a false positive, which is no
-// improvement on a rule at error severity.
+// The extended-net rows make this a WALK and not a one-hop test. A series isolation or termination
+// resistor can separate a bus segment from its pull-up, and that is an ordinary topology. A one-hop
+// rule would have fired on it. That trades the false pass for a false positive, and on a rule at
+// error severity that is no improvement.
 func TestI2CPullUpTopologies(t *testing.T) {
 	for _, tc := range []struct {
 		name      string

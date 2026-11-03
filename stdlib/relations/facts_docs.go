@@ -7,14 +7,14 @@ import (
 	"strings"
 )
 
-// relationDocs embeds the per-relation reference markdown under facts/docs/ (WS14-005), one file
-// per query relation plus the images it references, parallel to the per-rule docs that ruleDoc
-// serves. The one-line Summary stays in query.Catalog, which ListRelations carries to both the CLI
-// and the web panel; this is the longer Detail behind it. Embedding keeps the core free of file I/O
-// (C1).
+// relationDocs embeds the per-relation reference markdown under facts/docs/ (WS14-005). It holds
+// one file per query relation plus the images those files reference. ruleDoc serves the per-rule
+// docs the same way. The one-line Summary is in query.Catalog, and ListRelations sends it to both
+// the CLI and the web panel. These files hold the longer Detail behind it. Embedding keeps the core
+// free of file I/O (C1).
 //
-// facts_docs_test.go couples docs and relations in both directions, so every doc must name a
-// registered relation and a `doc: facts/docs/<name>.md` back-link on a Rel* const must resolve.
+// facts_docs_test.go couples docs and relations in both directions. Every doc must name a
+// registered relation, and a `doc: facts/docs/<name>.md` back-link on a Rel* const must resolve.
 //
 // The image glob is SVG-only because Go's embed errors on a glob that matches nothing. Adding the
 // first raster card means adding `facts/docs/images/*.png` here; the handler already serves .png.

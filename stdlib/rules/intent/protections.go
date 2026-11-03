@@ -13,12 +13,12 @@ const (
 	ProtectionDischarge = "discharge" // a resistor bridges the rail to ground (a bleeder)
 )
 
-// protectionRule builds the rule for ONE protection kind, covering every declared protection of that
-// kind, named intent/protection-<kind> (protection-ovp, protection-discharge). For each declared rail
-// it probes the design topology on that EXACT net rather than the rail-role heuristic, which misses
-// unconventional rail names. ovp requires a TVS/zener among the rail's components, and discharge
-// requires a resistor that also touches a ground net. A declared rail with no matching device fails
-// (a KindNet finding on the rail).
+// protectionRule builds the rule for ONE protection kind, named intent/protection-<kind>
+// (protection-ovp, protection-discharge). The rule covers every declared protection of that kind. For
+// each declared rail it probes the design topology on that EXACT net. It does not use the rail-role
+// heuristic, which misses unconventional rail names. ovp requires a TVS/zener among the rail's
+// components, and discharge requires a resistor that also touches a ground net. A declared rail with
+// no matching device fails (a KindNet finding on the rail).
 func protectionRule(kind string, ps []Protection) *check.Rule {
 	return &check.Rule{
 		Name:                "protection-" + kind,
@@ -35,8 +35,8 @@ func protectionRule(kind string, ps []Protection) *check.Rule {
 }
 
 // protectionVerdicts decides every declared protection OF THIS KIND. A declaration of another kind
-// belongs to a sibling rule and yields no verdict here, since these families compile to one rule per
-// kind and a pass about someone else's declaration would claim a check that never happened.
+// belongs to a sibling rule and yields no verdict here. These families compile to one rule per kind,
+// and a pass about someone else's declaration would claim a check that never happened.
 //
 // A protected rail reports a PASS naming the device found, so the report confirms each declaration
 // rather than going silent on it.

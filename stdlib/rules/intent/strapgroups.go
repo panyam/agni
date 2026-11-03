@@ -9,8 +9,8 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// Strap GROUPS (WS3-120): several strap nets read as one number, and the address collisions between
-// devices on one bus.
+// Strap GROUPS (WS3-120) read several strap nets as one number. They also catch address collisions
+// between devices on one bus.
 //
 // The per-net rule (property-strap) asks whether one pin latches the intended level. These rules ask
 // whether the GROUP encodes the intended number, and whether two devices on one bus encode the SAME
@@ -31,10 +31,11 @@ type strapBit struct {
 
 // groupValue decodes a group's OBSERVED number, MSB-first.
 //
-// ok is false when any bit is unevidenced. An unbiased strap pin is NORMAL (a resistor is fitted only
-// for the non-default state), so a missing bit usually sits at the part's internal default. Where the
-// declaration states that default the bits resolve and the group decodes. Where it does not, the value
-// is unknown, and decoding it anyway would invent an address that could then collide with a real one.
+// ok is false when any bit is unevidenced. An unbiased strap pin is NORMAL, because a resistor is
+// fitted only for the non-default state. So a missing bit usually sits at the part's internal
+// default. Where the declaration states that default, the bits resolve and the group decodes. Where
+// it does not, the value is unknown. Decoding it anyway would invent an address, and that address
+// could then collide with a real one.
 func groupValue(m check.Model, g StrapGroup) (value int, bits []strapBit, ok bool) {
 	ok = true
 	for _, netName := range g.Nets {
@@ -68,7 +69,7 @@ func groupValue(m check.Model, g StrapGroup) (value int, bits []strapBit, ok boo
 }
 
 // netContext turns a list of net names into context entities sharing one role, for a message that
-// names several at once. Order is preserved: it is the order the message prints them in.
+// names several at once. Order is preserved, because the message prints them in that order.
 func netContext(names []string, role string) []check.ContextSubject {
 	out := make([]check.ContextSubject, 0, len(names))
 	for _, n := range names {
@@ -77,8 +78,8 @@ func netContext(names []string, role string) []check.ContextSubject {
 	return out
 }
 
-// undecidedNets lists the bits nothing evidenced, for a message that tells a reviewer which pins to
-// look at rather than only that the group could not be read.
+// undecidedNets lists the bits with no evidence. The message then tells a reviewer which pins to
+// look at, rather than only that the group could not be read.
 func undecidedNets(bits []strapBit) []string {
 	var out []string
 	for _, b := range bits {
@@ -89,8 +90,8 @@ func undecidedNets(bits []strapBit) []string {
 	return out
 }
 
-// strapGroupRule checks ONE declared group's encoded value. One rule per group (the Subsystems shape)
-// so distinct review items bind and report independently.
+// strapGroupRule checks ONE declared group's encoded value. Each group gets one rule, as Subsystems
+// do, so distinct review items bind and report independently.
 func strapGroupRule(g StrapGroup) *check.Rule {
 	return &check.Rule{
 		Name:     "strap-group-" + slug(g.Name),
@@ -119,8 +120,8 @@ func strapShape(n int) []string {
 	return out
 }
 
-// strapGroupVerdicts decides ONE subject, the group itself, by asking whether the wiring encodes the
-// number the intent declares. The subject is the device plus every strap net, so a 4-bit address
+// strapGroupVerdicts decides ONE subject, the group itself. It asks whether the wiring encodes the
+// declared number. The subject is the device plus every strap net, so a 4-bit address
 // strap is a 5-tuple, and a matching group reports a pass naming the encoded value (#404).
 func strapGroupVerdicts(m check.Model, g StrapGroup) []check.Verdict {
 	subjects := make([]check.Entity, 0, len(g.Nets)+1)
@@ -149,8 +150,8 @@ func strapGroupVerdicts(m check.Model, g StrapGroup) []check.Verdict {
 		v.Finding = &check.Finding{
 			Subject: check.NetNameEntity(g.Nets[0]), Inconclusive: true, Message: msg,
 			// The part, then the nets that could not be read, in the order the message names
-			// them. The FINDING's subject is one net, because a reader is told one place to start;
-			// the verdict above names the whole group (agni issue 349). The group NAME is a
+			// them. The FINDING's subject is one net, so a reader gets one place to start. The
+			// verdict above names the whole group (agni issue 349). The group NAME is a
 			// declaration from the intent file rather than a design entity, so it is not context.
 			Context: append(
 				[]check.ContextSubject{check.Ctx(check.ComponentEntity(g.Device), "device")},
@@ -215,9 +216,9 @@ func strapCollisionRule(groups []StrapGroup) *check.Rule {
 		Reads:    []string{"component.net", "component.class", "net.ground", "net.rail"},
 		Tags:     intentTags(),
 		// The subject is a PAIR of devices (agni issue 391). A collision can involve 2 devices on one
-		// bus and 4 on the next, and Rule.SubjectShape is fixed per rule, but the QUESTION is binary:
-		// do these two devices strap to the same number. Three devices sharing an address are three
-		// yes answers, so pairs give a fixed shape without inventing a subject kind.
+		// bus and 4 on the next, and Rule.SubjectShape is fixed per rule. The QUESTION is binary,
+		// whether these two devices strap to the same number. Three devices sharing an address are
+		// three yes answers, so pairs give a fixed shape without inventing a subject kind.
 		SubjectShape:        []string{check.KindComponent, check.KindComponent},
 		Eval:                func(ctx context.Context, m check.Model) []check.Verdict { return strapCollisionVerdicts(m, groups) },
 		StatesConsideredSet: true,
@@ -232,9 +233,9 @@ type strapReading struct {
 }
 
 // readGroup decodes one declared group once, so a bus with n groups decodes n times rather than once
-// per pair. Both failure modes (a missing net, an unbiased bit with no declared default) are kept as
-// REASONS rather than a bool, so a pair this rule declines to judge says which half it could not read
-// and why (#423).
+// per pair. There are two failure modes, a missing net and an unbiased bit with no declared default.
+// Both are kept as REASONS rather than a bool. So when this rule declines to judge a pair, it says
+// which half it could not read and why (#423).
 func readGroup(m check.Model, g StrapGroup) strapReading {
 	for _, netName := range g.Nets {
 		if netNamed(m, netName) == nil {
@@ -249,12 +250,12 @@ func readGroup(m check.Model, g StrapGroup) strapReading {
 	return strapReading{value: v, ok: true}
 }
 
-// strapCollisionVerdicts decides every PAIR of declared groups sharing a bus. Two parts strapping to
-// different addresses, the normal state of a board, is a pass (#423).
+// strapCollisionVerdicts decides every PAIR of declared groups sharing a bus. A pass is two parts
+// strapping to different addresses, the normal state of a board (#423).
 //
 // AN UNREADABLE GROUP IS NOT-CONSIDERED, NEVER A PASS. Decoding a group with unevidenced bits would
-// invent an address, and an invented address can invent a COLLISION between two correctly strapped
-// parts, or invent the absence of one, which is what a pass would assert.
+// invent an address. An invented address can invent a COLLISION between two correctly strapped
+// parts. It can also invent the absence of a collision, and a pass would assert exactly that.
 func strapCollisionVerdicts(m check.Model, groups []StrapGroup) []check.Verdict {
 	read := make([]strapReading, len(groups))
 	byBus := map[string][]int{}
@@ -333,8 +334,8 @@ func strapPairVerdict(bus string, ga, gb StrapGroup, ra, rb strapReading) check.
 	v.Finding = &check.Finding{
 		Subject: check.Entity{Kind: check.KindNet, Ref: ga.Nets[0]},
 		Message: msg,
-		// Both colliding devices in message order, sharing one role, which is why context is a LIST
-		// with non-unique roles (agni issue 349). The bus is a declared label from the intent file
+		// Both colliding devices, in message order, share one role. So context is a LIST with
+		// non-unique roles (agni issue 349). The bus is a declared label from the intent file
 		// rather than a design entity, so it is not context.
 		Context: []check.ContextSubject{
 			{Entity: check.Entity{Kind: check.KindComponent, Ref: ga.Device}, Role: "device"},
@@ -353,10 +354,10 @@ func sortedKeys[V any](m map[string]V) []string {
 	return out
 }
 
-// collidableGroups reports whether any bus carries two or more declared groups, the only situation in
-// which a collision is expressible. Compiling the rule below that threshold would put a check in the
-// catalog that can never fail on this declaration, and a review item bound to it would read a pass it
-// did not earn (the compiles-to-nothing false pass).
+// collidableGroups reports whether any bus has two or more declared groups. Only then can a collision
+// be expressed. Compiling the rule below that threshold would put a check in the catalog that can
+// never fail on this declaration. A review item bound to it would then read a pass with no evidence
+// behind it (the compiles-to-nothing false pass).
 func collidableGroups(groups []StrapGroup) bool {
 	perBus := map[string]int{}
 	for _, g := range groups {

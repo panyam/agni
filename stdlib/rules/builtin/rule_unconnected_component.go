@@ -34,7 +34,7 @@ var unconnectedComponent = &check.Rule{
 // connectivity on or to name in a report, and a dropped subject answers 404 as though it did not
 // exist (#395).
 //
-// The pass witness counts the nets the part's pins land on, from the SAME net walk that backs
+// The pass witness counts the part's nets. The count comes from the SAME net walk that backs
 // Model.IsConnected, so the evidence cannot disagree with the outcome. Do not count pins instead,
 // because a design read with no symbol library has no pin records and a connected part would witness
 // "0 pins" beside a Pass.

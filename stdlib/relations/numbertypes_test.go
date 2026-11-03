@@ -7,9 +7,10 @@ import (
 	"github.com/panyam/jaala/ns"
 )
 
-// TestEveryNumericSlotIsTypedANumber: a relation position filled from a numeric slot declares itself a
-// number, so the engine reads a constant or bound value there as one (panyam/jaala#65). Undeclared, a
-// text "3" compared with a count answers nothing, and "abc" is not refused.
+// TestEveryNumericSlotIsTypedANumber checks that a relation position filled from a numeric slot
+// declares itself a number. The engine then reads a constant or bound value there as one
+// (panyam/jaala#65). Undeclared, a text "3" compared with a count answers nothing, and "abc" is not
+// refused.
 func TestEveryNumericSlotIsTypedANumber(t *testing.T) {
 	reg := facts.DefaultRegistry()
 	vocab := reg.Vocabulary()

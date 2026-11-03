@@ -8,8 +8,8 @@ import (
 )
 
 // An overlay profile carrying a built-in's name supersedes that built-in's rules rather than running
-// beside them (WS3-056). Augmenting is what produced the false failures this replaced; see the partial
-// naming-overlap case in cmd/agni's TestCheckNamingMapSupersedesCoreProfile.
+// beside them (WS3-056). Augmenting produced false failures, and supersession replaced it. See the
+// partial naming-overlap case in cmd/agni's TestCheckNamingMapSupersedesCoreProfile.
 func TestOverlaySourceSupersedesBuiltinProfile(t *testing.T) {
 	p, err := Load(strings.NewReader("override: SPI_NOR\nsuffixes: {IO0: _DQ0}\n"))
 	if err != nil {
@@ -34,8 +34,7 @@ func TestOverlaySourceSupersedesBuiltinProfile(t *testing.T) {
 }
 
 // A profile whose name matches no built-in is additive. It declares nothing, so the catalog composes
-// it exactly as before. This is what keeps a customer's own proprietary interface from silently
-// suppressing anything.
+// it exactly as before. So a customer's own proprietary interface cannot silently suppress anything.
 func TestOverlaySourceWithoutBuiltinNameDoesNotSupersede(t *testing.T) {
 	p, err := Load(strings.NewReader(
 		"name: HOUSEBUS\nsignals: [{name: A, suffix: _HA, anchor: true}]\nrequirements: [{type: signal-dangling}]\n"))
@@ -48,8 +47,8 @@ func TestOverlaySourceWithoutBuiltinNameDoesNotSupersede(t *testing.T) {
 }
 
 // The composed catalog keeps exactly one rule per requirement of a superseded interface, and it is the
-// overlay's. Asserted end-to-end through the catalog because the two halves (declaring, and applying
-// the declaration) can each look right while disagreeing about the source name they key on.
+// overlay's. Asserted end-to-end through the catalog. One half declares supersession and the other
+// applies it, and each can look right while they disagree about the source name they key on.
 func TestSupersededCatalogRunsOverlayRulesOnly(t *testing.T) {
 	p, err := Load(strings.NewReader("override: SPI_NOR\nsuffixes: {IO0: _DQ0}\n"))
 	if err != nil {
