@@ -33,7 +33,7 @@ func TestBoardGeometryPlacements(t *testing.T) {
 
 	r1 := byRef["R1"]
 	// (at 10 10 90): mm -> nm, Y flipped. KiCad's angle is counter-clockwise as drawn, and the Y
-	// flip keeps the picture, so it carries over unchanged (agni issue 1261: kicad-cli's position
+	// flip keeps the picture, so the reader keeps it unchanged (agni issue 1261: kicad-cli's position
 	// export says 90 for R1, and its ODB++ export puts pad 1 at (10,-11)mm). F.Cu so not mirrored.
 	if r1.At.X != 10_000_000 || r1.At.Y != -10_000_000 || r1.RotationDeg != 90 || r1.Layer != "F.Cu" || r1.Mirror {
 		t.Errorf("R1 placement = %+v", r1)
@@ -42,7 +42,7 @@ func TestBoardGeometryPlacements(t *testing.T) {
 		t.Fatalf("R1 pads = %d, want 2", len(r1.Pads))
 	}
 	p1 := r1.Pads[0]
-	// Pad positions stay footprint-local: (at -1 0) -> (-1mm, 0), not board coordinates.
+	// Pad positions are footprint-local: (at -1 0) -> (-1mm, 0), not board coordinates.
 	if p1.Number != "1" || p1.At.X != -1_000_000 || p1.At.Y != 0 || p1.Net != "SIG" || p1.Shape != "roundrect" {
 		t.Errorf("R1 pad 1 = %+v", p1)
 	}
@@ -80,8 +80,8 @@ func TestBoardGeometryText(t *testing.T) {
 	if ref == nil || ref.RefDes != "R1" || ref.Mirror {
 		t.Fatalf("R1 reference text = %+v", ref)
 	}
-	// KiCad saves a footprint text's angle as drawn, so local angle 0 stays horizontal on a footprint
-	// at 90 degrees (agni issue 1272).
+	// KiCad saves a footprint text's angle as drawn, so local angle 0 is still horizontal on a
+	// footprint at 90 degrees (agni issue 1272).
 	if ref.At.X != 8_000_000 || ref.At.Y != -10_000_000 || ref.RotationDeg != 0 {
 		t.Errorf("R1 reference placement = %+v (want 8mm,-10mm, rot 0)", ref)
 	}
@@ -137,8 +137,9 @@ func TestBoardGeometryGraphics(t *testing.T) {
 		}
 	}
 	// R1 fp_line: local (-1.5,-0.7)-(1.5,-0.7) rotated by the footprint's 90 deg -> a vertical
-	// segment at x = 10mm - 0.7mm (KiCad's x' = y = -0.7), spanning the rotated endpoints. Composed the same way pads
-	// and text are, so it lands on the part; layer and width are carried verbatim.
+	// segment at x = 10mm - 0.7mm (KiCad's x' = y = -0.7), spanning the rotated endpoints. It is
+	// composed the same way pads and text are, so it ends up on the part. Layer and width are copied
+	// verbatim.
 	if line == nil || line.Layer != "F.SilkS" || line.Width != 120_000 || len(line.Shape.Points) != 2 {
 		t.Fatalf("R1 fp_line = %+v", line)
 	}
@@ -288,8 +289,9 @@ func TestBoardGeometryJoinsNetlistIR(t *testing.T) {
 // collapsed to one, tripping pin-net-conflict).
 //
 // The fixture carries both forms this reader has to recognize: the fully unassigned "REF**"
-// and the partly-assigned "C?1845" a tool leaves when only some digits are filled in. The
-// second is the one a suffix-only predicate misses, which is what agni issue 311 unified.
+// and the partly-assigned "C?1845" a tool leaves when only some digits are filled in. A
+// suffix-only predicate misses the second form, and agni issue 311 unified both readers on one
+// predicate.
 func TestPlaceholderFootprintsSkipped(t *testing.T) {
 	raw := readFixture(t, "board.kicad_pcb")
 	d, err := Read(bytes.NewReader(raw), "board.kicad_pcb")
@@ -369,8 +371,8 @@ func TestBoardGeometryArcTrackAndSlot(t *testing.T) {
 	}
 }
 
-// Each want is the angle KiCad 10's PCB_TEXT::GetDrawRotation gives the same fixture, so these are
-// KiCad's answers rather than ours. KiCad reports an unlocked text's angle in [0, 360), which is why
+// Each want is the angle that KiCad 10's PCB_TEXT::GetDrawRotation gives for the same fixture, so
+// these are KiCad's answers rather than ours. KiCad reports an unlocked text's angle in [0, 360), so
 // the comparison is modulo a full turn. ODB++ cannot check this, since KiCad's export strokes text.
 func TestBoardTextAnglesMatchKiCad(t *testing.T) {
 	cases := []struct {

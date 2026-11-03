@@ -92,8 +92,8 @@ func pinDir(pt *ir.PartType, designator string) ir.PinDirection {
 // TestReadSchematicNets checks net extraction from schematic geometry (WS1-010). Before this the
 // reader produced zero nets, so every connectivity rule saw all components unconnected. Both
 // fixtures' connectivity was cross-checked against `kicad-cli sch export netlist`.
-// MPN and Manufacturer symbol properties land in attributes (the WS10-003 join key
-// fallback when no BomLine exists); other user properties are deliberately not swept.
+// The reader copies MPN and Manufacturer symbol properties into attributes (the WS10-003 join
+// key fallback when no BomLine exists); other user properties are deliberately not swept.
 func TestReadSchematicPartIdentityProperties(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "sch.kicad_sch")), "sch.kicad_sch")
 	if err != nil {
@@ -155,7 +155,7 @@ func TestReadSchematicFabricationAttributes(t *testing.T) {
 }
 
 func TestReadSchematicNets(t *testing.T) {
-	// sch.kicad_sch: the four component pins land on one net, which a rule can actually traverse.
+	// sch.kicad_sch: the four component pins join one net, and a rule can actually traverse it.
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "sch.kicad_sch")), "sch.kicad_sch")
 	if err != nil {
 		t.Fatal(err)
@@ -165,7 +165,7 @@ func TestReadSchematicNets(t *testing.T) {
 	}
 	// The #PWR symbol's pin is now a typed VIRTUAL connection (WS1-014): it joins the
 	// net's members carrying its power direction as a connection attribute, while the
-	// symbol itself stays out of Components.
+	// symbol itself is left out of Components.
 	if got := connKeys(d.Nets[0]); !equalStrs(got, []string{"#PWR01.1", "R1.1", "R1.2", "U1.1", "U1.2"}) {
 		t.Errorf("net connections = %v, want [#PWR01.1 R1.1 R1.2 U1.1 U1.2]", got)
 	}
@@ -185,7 +185,7 @@ func TestReadSchematicNets(t *testing.T) {
 	}
 
 	// geom.kicad_sch has a symbol rotated 270 deg. The placement transform must use KiCad's raw
-	// angle (see pinTransform). With the render-frame angle the rotated pins land swapped, which
+	// angle (see pinTransform). With the render-frame angle the rotated pins end up swapped, which
 	// mis-groups connectivity. As a regression guard, this fixture yielded 4 nets (incl. a spurious
 	// label-only net) before the fix; kicad-cli confirms 3.
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "geom.kicad_sch")), "geom.kicad_sch")
@@ -273,15 +273,15 @@ func TestReadSchematicRefDesCollision(t *testing.T) {
 	}
 }
 
-// TestReadSchematicUnannotatedComponents (agni issue 311) covers a KiCad schematic, which KEEPS its
-// placeholder-designated symbols, so it is the layer that has to say they are unannotated.
-// One entry per placeholder rather than per part, carrying each placement, because "2 parts are
-// still called R?" is the reviewable fact.
+// TestReadSchematicUnannotatedComponents (agni issue 311) covers a KiCad schematic. A schematic
+// KEEPS its placeholder-designated symbols, so the schematic layer has to say they are unannotated.
+// The reader writes one entry per placeholder rather than per part, listing each placement, because
+// "2 parts are still called R?" is the reviewable fact.
 //
 // The same fixture pins the collision boundary: two symbols sharing "R?" are not two parts
-// claiming one designator, so they must not ALSO be reported as a duplicate ref-des. That would
-// be an error-severity finding whose remedy (rename one) is wrong for a sheet nobody has
-// annotated yet, over the same two placements.
+// claiming one designator, so they must not ALSO be reported as a duplicate ref-des. Such a report
+// would be an error-severity finding over the same two placements. Its remedy (rename one) is wrong
+// for a sheet that nobody has annotated yet.
 func TestReadSchematicUnannotatedComponents(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "unannotated.kicad_sch")), "unannotated.kicad_sch")
 	if err != nil {
@@ -378,9 +378,9 @@ func TestSymbolRefPrefersInstances(t *testing.T) {
 		t.Errorf("property-derived ref %q survived; instances should win", "R1")
 	}
 	// An instances entry that is itself a placeholder is not post-annotation truth, so it is
-	// passed over like the "R?" property form. "R?1845" is the partly-assigned shape a
-	// suffix-only predicate reads as a real designator (agni issue 311). The symbol must land
-	// on the property's "R?" and stay visibly unannotated, not acquire "R?1845" as an identity.
+	// passed over like the "R?" property form. A suffix-only predicate reads the partly-assigned
+	// shape "R?1845" as a real designator (agni issue 311). The symbol must take the property's
+	// "R?" and still read as unannotated, not acquire "R?1845" as an identity.
 	if got["R?1845"] {
 		t.Errorf("partly-assigned instance ref %q was taken as an identity; have %v", "R?1845", got)
 	}
@@ -389,9 +389,9 @@ func TestSymbolRefPrefersInstances(t *testing.T) {
 	}
 }
 
-// TestNoJunctionEndpoint (WS1-012) checks that a wire endpoint mid-span on another wire's body with
-// no junction dot emits the no-junction diagnostic (sheet frame, tap wire's uuid) and is
-// NOT double-reported as dangling, because the endpoint touches something, the wrong way.
+// TestNoJunctionEndpoint (WS1-012) covers a wire endpoint that sits mid-span on another wire's body
+// with no junction dot. The reader emits the no-junction diagnostic (sheet frame, tap wire's uuid)
+// and does NOT also report it as dangling, because the endpoint touches something, the wrong way.
 func TestNoJunctionEndpoint(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "tjunc.kicad_sch")), "tjunc.kicad_sch")
 	if err != nil {
@@ -414,8 +414,8 @@ func TestNoJunctionEndpoint(t *testing.T) {
 // TestJoinedTapRecorded (agni issue 420) checks that the same T-tap with a junction dot on it is
 // recorded as a JOINED tap rather than vanishing. It used to vanish, because splitWiresAt runs at
 // the dot before the detection pass, so a joined tap is an endpoint of both wires by the time
-// anything looks and is indistinguishable from a point where no wire ever crossed. A schematic
-// whose every tap carried its dot then reported what a schematic with no tap in it reported.
+// anything looks and is indistinguishable from a point where no wire ever crossed. So a schematic
+// with a dot on every tap reported the same thing as a schematic with no taps at all.
 //
 // The dot fixture and the dotless one differ by exactly one line, so the pass and the fail are the
 // same geometry under one changed fact.
@@ -450,11 +450,10 @@ func TestJoinedTapRecorded(t *testing.T) {
 	}
 }
 
-// TestJoinedTapByLabel checks that a mid-span LABEL joins the wires too. It is the case worth
-// telling apart from a dot. KiCad connects there just as firmly, but nobody placed a connection
-// symbol, so the join is a side effect of naming the net and is much easier to delete by accident.
-// The label TEXT is the net the tap resolves to, which is what a reviewer opens the schematic to
-// confirm.
+// TestJoinedTapByLabel checks that a mid-span LABEL joins the wires too. This case is worth telling
+// apart from a dot. KiCad connects there just as firmly, but nobody placed a connection symbol, so
+// the join is a side effect of naming the net and is much easier to delete by accident. The label
+// TEXT is the net that the tap resolves to. A reviewer opens the schematic to confirm that net.
 func TestJoinedTapByLabel(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "tjunc_labeled.kicad_sch")), "tjunc_labeled.kicad_sch")
 	if err != nil {

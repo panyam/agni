@@ -63,8 +63,8 @@ func readOracle(t *testing.T, name string) map[string]string {
 }
 
 // disagreements compares two pin->net maps over the pins BOTH describe and returns one line per
-// disagreement: a reference net whose pins we spread across several nets (a split), and one of ours
-// that spans several of theirs (a merge). Empty means the two partitions are identical.
+// disagreement. A split is a reference net whose pins we spread across several nets. A merge is one
+// of our nets that spans several of theirs. Empty means the two partitions are identical.
 func disagreements(ours, ref map[string]string) []string {
 	shared := map[string]bool{}
 	for p := range ours {
@@ -116,7 +116,7 @@ func disagreements(ours, ref map[string]string) []string {
 }
 
 // TestBusVectorCrossesSheetBoundary is the regression guard for agni issue 561. A bus VECTOR entering
-// a sub-sheet through a bus sheet pin carries its members with it, so the root's DATA0 tap and the
+// a sub-sheet through a bus sheet pin takes its members with it, so the root's DATA0 tap and the
 // sub-sheet's DATA0 tap are one net. Before the fix each half kept its own sheet's scope, `AN0` and
 // `/inout_user/AN0` never met, and every such signal reported as two single-pin stubs.
 //
@@ -135,13 +135,13 @@ func TestBusVectorCrossesSheetBoundary(t *testing.T) {
 	}
 }
 
-// TestBusVectorOffsetRangeMapsByPosition is the other half of the same fix, and the half that says
-// why promotion is a MAP rather than a rename. The parent's bus is `PP[2..3]` and the sheet pin is
+// TestBusVectorOffsetRangeMapsByPosition covers the other half of the same fix. This half shows why
+// promotion is a MAP rather than a rename. The parent's bus is `PP[2..3]` and the sheet pin is
 // `PP[0..1]`, so the child's `PP0` is the parent's `PP2`. Joining members by name would leave all
 // four taps separate; promoting by name would merge the two buses into one.
 //
-// This is what `vme-wren` does at scale: it cuts `PP_OUT[0..31]` into four eight-wide slices and
-// hands each to its own instance of the same driver sheet, whose pin is always spelled
+// `vme-wren` does this at scale. It cuts `PP_OUT[0..31]` into four eight-wide slices and hands each
+// slice to its own instance of the same driver sheet. That sheet's pin is always spelled
 // `PP_OUT[0..7]`. An earlier revision refused to promote there at all, which was safe and left the
 // nets split.
 func TestBusVectorOffsetRangeMapsByPosition(t *testing.T) {
@@ -164,9 +164,9 @@ func TestBusVectorOffsetRangeMapsByPosition(t *testing.T) {
 // are one net, named by the parent's prefix.
 //
 // The fixture carries its own control. `I2C8{I2C}` expands the SAME two member names off the SAME
-// alias and crosses nothing, so R3 and R4 must stay off I2C0's nets. That direction is the
-// dangerous one, because eight buses share the `I2C` alias on the jetson baseboard, so a promotion
-// that dropped the prefix would short all eight while moving the net count toward KiCad's answer.
+// alias and crosses nothing, so R3 and R4 must not be on I2C0's nets. That direction is more
+// dangerous. Eight buses share the `I2C` alias on the jetson baseboard, so a promotion that dropped
+// the prefix would short all eight while moving the net count toward KiCad's answer.
 //
 // It red-checks both ways. Drop the group branch of busPinPromotions and the crossing halves split,
 // and promote without the prefix and the control merges.
@@ -188,13 +188,13 @@ func TestGroupBusCrossesSheetBoundary(t *testing.T) {
 //
 // KiCad renders `_{...}` as a subscript, `^{...}` as a superscript and `~{...}` as an overbar, so
 // `A_{1}`, `3V3_{OUT}` and `SWD_TRG.~{RESET}` are ordinary scalar labels with the shape of a group bus.
-// The jetson baseboard carries over a hundred distinct subscript labels. What separates them from a
-// group is the character before the brace, and reading one as a group would join nets across a sheet
-// boundary that the design keeps apart.
+// The jetson baseboard has over a hundred distinct subscript labels. The character before the brace
+// separates them from a group. Reading one as a group would join nets across a sheet boundary that
+// the design keeps apart.
 //
 // The braces of a group either name a bus_alias or list members inline (agni issue 936), so
 // `I2C0{SPI}` with no SPI alias is a one-member group, `I2C0.SPI`, as it is to KiCad. Recognition was
-// an alias lookup until the RoyalBlue54L Feather, whose every sheet crossing is an inline list.
+// an alias lookup until the RoyalBlue54L Feather. Every sheet crossing on that board is an inline list.
 func TestGroupBusRecognition(t *testing.T) {
 	aliases := map[string][]string{"I2C": {"SDA", "SCL"}}
 	for _, tc := range []struct {
@@ -230,7 +230,7 @@ func TestGroupBusRecognition(t *testing.T) {
 }
 
 // An inline member list expands a vector member and keeps a member's own formatting braces whole,
-// so each member names the net KiCad does (`ANALOG.A0`, `SWD_TRG.~{RESET}`).
+// so each member names the same net that KiCad names (`ANALOG.A0`, `SWD_TRG.~{RESET}`).
 func TestGroupBusInlineMembers(t *testing.T) {
 	for name, want := range map[string][]string{
 		"ANALOG{A[0..5]}":                  {"A0", "A1", "A2", "A3", "A4", "A5"},
@@ -245,10 +245,10 @@ func TestGroupBusInlineMembers(t *testing.T) {
 	}
 }
 
-// TestBusMembersAscending pins the ordering the positional map is built on. kicad-cli joins the
+// TestBusMembersAscending pins the ordering that the positional map is built on. kicad-cli joins the
 // child's bit 0 of `B[0..1]` to `A0` of a parent bus spelled `A[3..0]`, not to `A3`, so the members
 // pair off by ascending index whatever direction the range is written in. netgraph.ExpandBusName
-// keeps the WRITTEN direction for diagrams, which is why this does not reuse it.
+// keeps the WRITTEN direction for diagrams, so this does not reuse it.
 func TestBusMembersAscending(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -271,8 +271,8 @@ func TestBusMembersAscending(t *testing.T) {
 // TestInlineGroupBusesCrossTheFeathersSheets holds the RoyalBlue54L Feather to KiCad's own netlist for
 // every signal that crosses a sheet through an inline group bus (agni issue 936). The Feather joins its
 // header, MCU, PMIC and debugger sheets with groups whose members are listed in the braces, such as
-// `ANALOG{A[0..5]}`, over bare bus wires between sibling sheet pins. Recognising only alias groups kept
-// both sides of every crossing as one-pin nets, and the two spellings of one I2C bus,
+// `ANALOG{A[0..5]}`, over bare bus wires between sibling sheet pins. When the reader recognised only
+// alias groups, both sides of every crossing read as one-pin nets. The two spellings of one I2C bus,
 // `I2C{SCL, SDA}` and `I2C_54{SCL, SDA}`, are one net to KiCad because they share member names.
 func TestInlineGroupBusesCrossTheFeathersSheets(t *testing.T) {
 	dir := filepath.Join("..", "..", "tools", "samples", "boards", "royalblue54L-feather")

@@ -30,10 +30,11 @@ func TestEDIFArrayBusDetected(t *testing.T) {
 	}
 }
 
-// TestEDIFArrayBusResolved reads bus_resolved.edn, which joins each of the 8 array members into a
-// per-member net named DATA[i], so the reader produces a design where every expanded member is a
-// net. Combined with the resolution gate (rule_bus_not_modeled_test.go), the bus-not-modeled
-// finding is silent there. That is the resolution-aware behavior PR 286 gave KiCad, now for EDIF.
+// TestEDIFArrayBusResolved reads bus_resolved.edn. That file joins each of the 8 array members into
+// a per-member net named DATA[i], so every expanded member is a net in the design the reader
+// produces. The resolution gate (rule_bus_not_modeled_test.go) then keeps the bus-not-modeled
+// finding silent. PR 286 gave KiCad this resolution-aware behavior, and this test covers it for
+// EDIF.
 func TestEDIFArrayBusResolved(t *testing.T) {
 	d, err := Read(bytes.NewReader(readBusFixture(t, "bus_resolved.edn")), "bus_resolved.edn")
 	if err != nil {

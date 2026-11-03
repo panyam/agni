@@ -12,12 +12,12 @@ import (
 // stripped/minimal files and fixtures that want authentic artwork without pasting it in.
 // The reader owns no file I/O (C1). The caller supplies openSym, built by
 // formats from the project's sym-lib-table and the --symbol-path dirs, the same
-// opener pattern the xschem/gEDA readers use for `.sym` files.
+// opener pattern that the xschem/gEDA readers use for `.sym` files.
 
 // ParseSymLibTable parses a KiCad sym-lib-table, the project's nickname -> library-file
 // mapping. ${KIPRJMOD} expands to projDir (the table's own directory, per KiCad). Other
 // ${VAR} references are left verbatim, and the caller falls back to searching its symbol
-// dirs by nickname, which is how installed-lib names (${KICAD9_SYMBOL_DIR}/Device.kicad_sym)
+// dirs by nickname. That way installed-lib names (${KICAD9_SYMBOL_DIR}/Device.kicad_sym)
 // resolve without environment knowledge. Pure function on bytes; no file I/O.
 func ParseSymLibTable(data []byte, projDir string) map[string]string {
 	root, err := parse(bytes.NewReader(data))
@@ -96,7 +96,7 @@ func (c *symLibCache) load(lib string) map[string]*node {
 }
 
 // flattenExtends resolves a derived symbol against its same-library parent chain. When
-// the child has no unit sub-symbols, a synthetic node is built carrying the child's own
+// the child has no unit sub-symbols, it builds a synthetic node holding the child's own
 // entries (properties, the name) plus the parent's sub-symbols and pin display flags.
 // Depth-capped against cyclic extends.
 func flattenExtends(syms map[string]*node, sym *node, depth int) *node {

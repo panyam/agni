@@ -10,8 +10,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// railVocab builds a role lexicon that treats one extra name as a power rail, standing in for a
-// project whose rails are named function-first ("PMIC_VDD_LPM_1V8") and so match none of the
+// railVocab builds a role lexicon that treats one extra name as a power rail. It stands in for a
+// project that names rails function-first ("PMIC_VDD_LPM_1V8"). Those names match none of the
 // start-anchored built-ins.
 func railVocab(t *testing.T, pattern string) *classify.Lexicon {
 	t.Helper()
@@ -31,10 +31,10 @@ func rolesOf(d *ir.Design, net string) []ir.Role {
 	return nil
 }
 
-// TestReadDesignStampsPerLoaderLexicon is the property the process global could not provide. Two
-// loaders carrying different project conventions read the SAME file in ONE process and stamp
-// different net roles. Before WS3-106 the vocabulary lived in a package var, so the second read
-// would have overwritten the first's conventions (and on a server, another request's).
+// TestReadDesignStampsPerLoaderLexicon pins a property the process global could not provide. Two
+// loaders with different project conventions read the SAME file in ONE process and stamp different
+// net roles. Before WS3-106 the vocabulary lived in a package var. So the second read would have
+// overwritten the first's conventions, and on a server another request's.
 func TestReadDesignStampsPerLoaderLexicon(t *testing.T) {
 	const fixture = "../edif/testdata/basic.edn"
 
@@ -54,8 +54,8 @@ func TestReadDesignStampsPerLoaderLexicon(t *testing.T) {
 		t.Errorf("SIG roles with the project lexicon = %v, want it to carry %q", got, ir.Role_ROLE_RAIL)
 	}
 
-	// The first read's design is untouched by the second loader, because the vocabulary travelled
-	// with each read rather than being installed process-wide.
+	// The second loader leaves the first read's design untouched. Each read took its own
+	// vocabulary, and nothing installed one process-wide.
 	if got := rolesOf(plain, "SIG"); len(got) != 0 {
 		t.Errorf("the project read leaked into the default read: SIG roles = %v, want none", got)
 	}
@@ -63,8 +63,8 @@ func TestReadDesignStampsPerLoaderLexicon(t *testing.T) {
 		t.Error("a per-loader lexicon must not mutate the process-level vocabulary")
 	}
 
-	// A name every vocabulary agrees on is stamped the same either way, so the per-read lexicon
-	// EXTENDS the conventions rather than replacing them.
+	// Every vocabulary agrees on this name, and it is stamped the same either way. So the per-read
+	// lexicon EXTENDS the conventions rather than replacing them.
 	for _, d := range []*ir.Design{plain, project} {
 		if got := rolesOf(d, "GND"); !slices.Contains(got, ir.Role_ROLE_GROUND) {
 			t.Errorf("GND roles = %v, want it to carry %q under both lexicons", got, ir.Role_ROLE_GROUND)
@@ -72,8 +72,9 @@ func TestReadDesignStampsPerLoaderLexicon(t *testing.T) {
 	}
 }
 
-// TestNilLexiconReadsAsDefaults pins the degrade-safe contract three ways: a nil Lexicon field, a
-// partially-filled Lexicon (role set, class unset), and a nil *Loader, which ResolveGeometry reaches.
+// TestNilLexiconReadsAsDefaults pins the degrade-safe contract three ways. It reads with a nil
+// Lexicon field, with a partly filled Lexicon (role set, class unset), and with a nil *Loader, which
+// ResolveGeometry reaches.
 func TestNilLexiconReadsAsDefaults(t *testing.T) {
 	const fixture = "../edif/testdata/basic.edn"
 	for _, tc := range []struct {
@@ -96,9 +97,9 @@ func TestNilLexiconReadsAsDefaults(t *testing.T) {
 	}
 }
 
-// TestParseOnlyStopsBeforeTheConfiguredPasses is the parse level of agni issue 1061: a loader asked
-// for the parse returns the design before any vocabulary reaches it, and deriving that parse is the
-// whole of ReadDesign, over every reader the tutorial board uses.
+// TestParseOnlyStopsBeforeTheConfiguredPasses covers the parse level of agni issue 1061. A loader
+// asked for the parse returns the design before any vocabulary reaches it. Deriving that parse then
+// gives everything ReadDesign gives. The test checks this over every reader the tutorial board uses.
 func TestParseOnlyStopsBeforeTheConfiguredPasses(t *testing.T) {
 	for _, f := range []string{"../edif/testdata/basic.edn", "../../examples/tutorial-project/designs/gateway/gateway.edn", "../kicad/testdata/hier_root.kicad_sch"} {
 		read, err := (&Loader{}).ReadDesign(f)

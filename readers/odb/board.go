@@ -14,18 +14,24 @@ import (
 
 // ReadBoardGeometry parses the board-geometry sidecar out of the ODB++ job rooted at fsys.
 //
-// Fidelity: lossy-bounded (C6). This producer carries the board outline (the step's profile), the
-// layer stack, component placements with their pads (each pad's shape and size from the copper
-// feature eda/data ties to its toeprint, its drill from the drill layer), routed copper (lines, and
-// arcs approximated as polylines) grouped by the net eda/data assigns each feature, vias (a drill
-// hit and its copper lands), copper surfaces on a net as zones (each island's outline, holes
-// dropped), and silkscreen and fabrication lines and text. A pad drawn by a user symbol or as a
-// surface is carried as its extent with the shape "custom", not its outline. Negative features and
-// barcodes are not carried. Coordinates are integer nanometres (unit_nm=1).
+// Fidelity: lossy-bounded (C6). This producer reads the following.
+//   - The board outline, from the step's profile.
+//   - The layer stack.
+//   - Component placements with their pads. Each pad's shape and size come from the copper feature
+//     eda/data ties to its toeprint, and its drill from the drill layer.
+//   - Routed copper, as lines and as arcs approximated by polylines, grouped by the net eda/data
+//     assigns each feature.
+//   - Vias, each a drill hit and its copper lands.
+//   - Copper surfaces on a net, as zones. Each island keeps its outline and drops its holes.
+//   - Silkscreen and fabrication lines and text.
 //
-// Layers are renamed into the contract's KiCad-style vocabulary (the first copper layer F.Cu, the
-// last B.Cu, inner ones In1.Cu up, and the silkscreen, mask and paste on each side F./B.SilkS,
-// .Mask, .Paste), so the format-neutral renderer and the board rules read an ODB++ board as they
+// A pad drawn by a user symbol or as a surface is kept as its extent with the shape "custom", not
+// its outline. Negative features and barcodes are dropped. Coordinates are integer nanometres
+// (unit_nm=1).
+//
+// Layers are renamed into the contract's KiCad-style vocabulary. The first copper layer is F.Cu, the
+// last B.Cu, and inner ones In1.Cu upward. The silkscreen, mask and paste on each side are F./B.SilkS,
+// .Mask and .Paste. So the format-neutral renderer and the board rules read an ODB++ board as they
 // read every other one.
 func ReadBoardGeometry(fsys fs.FS, sourceFile string) (*geom.BoardGeometry, error) {
 	p, err := parseJob(fsys)
@@ -35,7 +41,7 @@ func ReadBoardGeometry(fsys fs.FS, sourceFile string) (*geom.BoardGeometry, erro
 	return p.toBoard(sourceFile)
 }
 
-// netRef is the net eda/data puts a feature on, and the kind of subnet it belongs to.
+// netRef names the net eda/data puts a feature on, and the kind of subnet the feature belongs to.
 type netRef struct {
 	net string
 	typ string
@@ -92,7 +98,7 @@ func (p *parsedJob) toBoard(src string) (*geom.BoardGeometry, error) {
 	return b.g, nil
 }
 
-// indexNets records, for every feature eda/data names, the net it is on.
+// indexNets records the net of every feature eda/data names.
 func (b *boardBuilder) indexNets() {
 	for _, n := range b.p.eda.nets {
 		name := n.name
@@ -144,8 +150,9 @@ func (b *boardBuilder) layerFeatures(upper string) (*featuresFile, error) {
 	return ff, nil
 }
 
-// symbol is what a feature's symbol says about its copper. A name the standard set does not know is
-// a user symbol, drawn by the job under symbols/<name>/, and takes the extent of what it draws.
+// symbol reads what a feature's symbol says about its copper. If the standard set does not know a
+// name, it is a user symbol. The job draws it under symbols/<name>/, and it takes the extent of what
+// it draws.
 func (b *boardBuilder) symbol(ff *featuresFile, i int) symbolShape {
 	if i < 0 || i >= len(ff.symbols) {
 		return symbolShape{}
@@ -157,9 +164,9 @@ func (b *boardBuilder) symbol(ff *featuresFile, i int) symbolShape {
 	return s
 }
 
-// userSymbol reads a job's own symbol and sizes it by the box around everything it draws, a line's
-// or arc's stroke and a pad's symbol included. A symbol the job does not define keeps its name and
-// no size.
+// userSymbol reads a job's own symbol and sizes it by the box around everything it draws. That box
+// includes a line's or arc's stroke and a pad's symbol. If the job does not define the symbol, it
+// keeps its name and no size.
 func (b *boardBuilder) userSymbol(name string) symbolShape {
 	if s, ok := b.users[name]; ok {
 		return s
@@ -226,8 +233,8 @@ func (b *boardBuilder) outline() error {
 	return nil
 }
 
-// placements builds each component's placement, its pads read off the copper eda/data ties to each
-// toeprint.
+// placements builds each component's placement. It reads the pads off the copper eda/data ties to
+// each toeprint.
 func (b *boardBuilder) placements() error {
 	pads := map[string]map[[2]int][]fid{} // side letter -> (component, toeprint) -> features
 	for _, n := range b.p.eda.nets {
@@ -279,8 +286,8 @@ func (b *boardBuilder) placements() error {
 				case pad.Shape != "":
 					pad.Layers = []string{sideLayer}
 				default:
-					// No copper and no hole: a toeprint whose only features are a paste or mask
-					// opening, which is where it is drawn.
+					// No copper and no hole. The toeprint's only features are a paste or mask
+					// opening, so the pad is drawn on that layer.
 					pad.Layers = others
 				}
 				pl.Pads = append(pl.Pads, pad)
@@ -292,10 +299,11 @@ func (b *boardBuilder) placements() error {
 }
 
 // padShape fills a pad's shape, size, rotation and drill from the features eda/data ties to its
-// toeprint, preferring the land on the component's own side. A land drawn as a surface (KiCad's
-// custom pads) takes its outline's extent. A drill hit makes the pad through-hole whatever the
-// package said, and one eda/data does not tie to the pin (a non-plated hole, on a drill layer of its
-// own) is found by the pin's position, for a through-hole or copperless pad.
+// toeprint. It prefers the land on the component's own side. A land drawn as a surface takes its
+// outline's extent, as KiCad's custom pads are. A drill hit makes the pad through-hole whatever the
+// package said. eda/data may not tie a drill hit to the pin, as for a non-plated hole on a drill
+// layer of its own. For a through-hole or copperless pad, padShape then finds the hit by the pin's
+// position.
 func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, at pt, through *bool) (others []string, err error) {
 	var best, surface *feature
 	var bestFF *featuresFile
@@ -332,26 +340,28 @@ func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, at 
 	}
 	bare := best == nil && surface == nil
 	if bare && len(fids) == 0 {
-		// A toeprint eda/data names nothing for, which Altium writes when several pins share a name
-		// (every SH pin of a shield pointing at the first): the land at the pin's position. One that
-		// names only paste or mask features is a stencil or mask opening and takes no copper, or a
-		// paste window over a thermal pad would take the pad's.
+		// eda/data names nothing for this toeprint. Altium writes that when several pins share a
+		// name, as every SH pin of a shield points at the first. The pad takes the land at the
+		// pin's position. A toeprint that names only paste or mask features is a stencil or mask
+		// opening and takes no copper. Otherwise a paste window over a thermal pad would take the
+		// pad's copper.
 		f, ff, err := b.padAt(sideLayer, at)
 		if err != nil {
 			return nil, err
 		}
 		best, bestFF = f, ff
 		if best == nil {
-			// A custom land eda/data ties to no pin (KiCad's mounting pads on no net, whose
-			// subnets name only their paste openings): the smallest copper surface on no net
-			// around the pin.
+			// eda/data ties this custom land to no pin. KiCad's mounting pads on no net do this,
+			// since their subnets name only their paste openings. The pad takes the smallest
+			// copper surface on no net around the pin.
 			if surface, err = b.surfaceAround(sideLayer, at); err != nil {
 				return nil, err
 			}
 		}
 	}
-	// Only a pad the package calls through-hole, or one with no copper at all (a non-plated hole),
-	// takes a drill by position; an SMD land under a via-in-pad would otherwise take the via's.
+	// A pad takes a drill by position only if the package calls it through-hole, or if it has no
+	// copper at all, as a non-plated hole has. Otherwise an SMD land under a via-in-pad would take
+	// the via's drill.
 	if pad.Drill == 0 && (*through || (bare && best == nil)) {
 		d, err := b.drillAt(at)
 		if err != nil {
@@ -372,15 +382,15 @@ func (b *boardBuilder) padShape(pad *geom.Pad, fids []fid, sideLayer string, at 
 		pad.Shape = "custom"
 		pad.Size = &geom.Point{X: w, Y: h}
 	case pad.Drill > 0:
-		// A hole with no copper, which is what a non-plated hole is.
+		// A hole with no copper is a non-plated hole.
 		pad.Shape = "circle"
 		pad.Size = &geom.Point{X: pad.Drill, Y: pad.Drill}
 	}
 	return others, nil
 }
 
-// drillAt is the size of the drill hit on any drill layer at p, to the micron, 0 when there is none.
-// The index is built the first time it is asked for.
+// drillAt returns the size of the drill hit on any drill layer at p, to the micron, or 0 when there
+// is none. It builds the index on the first call.
 func (b *boardBuilder) drillAt(p pt) (int64, error) {
 	if b.drills == nil {
 		b.drills = map[[2]int64]int64{}
@@ -411,8 +421,9 @@ func (b *boardBuilder) drillAt(p pt) (int64, error) {
 	return 0, nil
 }
 
-// padAt is the copper pad feature at p on the copper layer the contract names layer, to the micron,
-// nil when there is none. Each layer's index is built the first time it is asked for.
+// padAt returns the copper pad feature at p, to the micron, or nil when there is none. It looks on
+// the copper layer whose contract name is layer. It builds each layer's index on the first call for
+// that layer.
 func (b *boardBuilder) padAt(layer string, p pt) (*feature, *featuresFile, error) {
 	var upper string
 	for u, n := range b.names {
@@ -451,9 +462,10 @@ func (b *boardBuilder) padAt(layer string, p pt) (*feature, *featuresFile, error
 	return nil, nil, nil
 }
 
-// surfaceAround is the smallest positive surface on the named copper layer whose outline's box holds
-// p and that eda/data puts on no net, nil when there is none. A surface on a net is a pour or a
-// route, never a part's land, which is what keeps a ground pour under a pad from being taken for it.
+// surfaceAround returns the smallest positive surface on the named copper layer that meets two
+// tests. Its outline's box holds p, and eda/data puts it on no net. It returns nil when there is
+// none. A surface on a net is a pour or a route, never a part's land. So a ground pour under a pad
+// is never taken for the pad.
 func (b *boardBuilder) surfaceAround(layer string, p pt) (*feature, error) {
 	var upper string
 	for u, n := range b.names {
@@ -594,8 +606,8 @@ func (b *boardBuilder) copper() error {
 	return nil
 }
 
-// vias builds one Via per VIA subnet: at its drill hit, drilled to the hit's size, its land the
-// widest copper pad under it, spanning the drill layer's start and end.
+// vias builds one Via per VIA subnet. Each sits at its drill hit and is drilled to the hit's size.
+// Its land is the widest copper pad under it, and it spans the drill layer's start and end.
 func (b *boardBuilder) vias(get func(string) *geom.NetCopper) error {
 	for _, n := range b.p.eda.nets {
 		name := n.name
@@ -687,9 +699,9 @@ func (b *boardBuilder) artwork() error {
 	return nil
 }
 
-// drawnArtwork reports whether a non-copper layer is one the board view draws: the silkscreen,
-// and a document layer that is a fabrication or courtyard drawing, as the KiCad board reader keeps
-// (agni issue 946).
+// drawnArtwork reports whether the board view draws a non-copper layer. It draws the silkscreen. It
+// also draws a document layer that is a fabrication or courtyard drawing, the layers the KiCad board
+// reader keeps (agni issue 946).
 func drawnArtwork(l matrixLayer, name string) bool {
 	if l.typ == "SILK_SCREEN" {
 		return true
@@ -704,11 +716,11 @@ func drawnArtwork(l matrixLayer, name string) bool {
 	return false
 }
 
-// layerNames maps each matrix layer onto the contract's layer vocabulary. The first and last
-// copper layers are F.Cu and B.Cu and the ones between In1.Cu upward. A silkscreen, mask or paste
-// layer takes its side from where it sits in the stack, above the copper or below it, unless its
-// name says. A KiCad-produced document layer keeps the KiCad name it was exported from; anything
-// else keeps the matrix's name.
+// layerNames maps each matrix layer onto the contract's layer vocabulary. The first and last copper
+// layers are F.Cu and B.Cu, and the ones between are In1.Cu upward. A silkscreen, mask or paste layer
+// takes its side from where it sits in the stack, above the copper or below it. If its name says the
+// side, the name wins. A KiCad-produced document layer keeps the KiCad name it was exported from. Any
+// other layer keeps the matrix's name.
 func layerNames(m *matrix) map[string]string {
 	out := map[string]string{}
 	var copper []matrixLayer
@@ -772,9 +784,9 @@ func layerNames(m *matrix) map[string]string {
 	return out
 }
 
-// localOffset turns a pin's board position into the footprint-local offset the geom contract
-// stores, inverting world = at + M(R(rot) * offset), so a pad composes back onto exactly the point
-// the job put it at whatever angle convention its producer used.
+// localOffset turns a pin's board position into a footprint-local offset, which the geom contract
+// stores. It inverts world = at + M(R(rot) * offset). So a pad composes back onto exactly the point
+// the job put it at, whatever angle convention its producer used.
 func localOffset(at, world pt, rotDeg float64, mirror bool) *geom.Point {
 	dx, dy := float64(world.x-at.x), float64(world.y-at.y)
 	if mirror {
@@ -810,8 +822,8 @@ func polyShape(pts []pt) *geom.Shape {
 	return s
 }
 
-// closedPolyline is a contour's points with the first repeated at the end when the contour does not
-// already close itself.
+// closedPolyline returns a contour's points. If the contour does not already close itself, it
+// repeats the first point at the end.
 func closedPolyline(pts []pt) *geom.Polyline {
 	pl := &geom.Polyline{}
 	for _, p := range pts {

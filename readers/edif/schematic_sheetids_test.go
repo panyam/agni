@@ -21,7 +21,7 @@ func readSheets(t *testing.T, path string) []*geom.SheetGeometry {
 	return g.GetSheets()
 }
 
-// agni issue 1140: an export whose block cells all name their page (rename &1 "1") read as four
+// agni issue 1140. In one export every block cell names its page (rename &1 "1"). It read as four
 // sheets sharing one id and one name.
 func TestRepeatedPageRenamesGetUniqueSheets(t *testing.T) {
 	sheets := readSheets(t, "testdata/aggregator_dup_pages.eds")
@@ -66,7 +66,8 @@ func TestDistinctPageRenamesAreLeftAlone(t *testing.T) {
 	}
 }
 
-// Two pages one owner names alike still get ids of their own, numbered in file order.
+// One owner can give two pages the same name. They still get ids of their own, numbered in file
+// order.
 func TestAPageRenameRepeatedInOneOwnerIsNumbered(t *testing.T) {
 	sheets := []*geom.SheetGeometry{{Id: "&1", Name: "1"}, {Id: "&1", Name: "1"}}
 	pages := []*node{{}, {}}

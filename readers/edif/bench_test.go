@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// Benchmarks baseline the parse cost per fixture byte (C7 calls large-file parsing a
-// server-side concern; these are the tripwire, sized-up corpus runs are manual).
+// Benchmarks baseline the parse cost per fixture byte. C7 calls large-file parsing a
+// server-side concern. These benchmarks are the tripwire, and sized-up corpus runs are manual.
 func BenchmarkRead(b *testing.B) {
 	data, err := os.ReadFile("testdata/basic.edn")
 	if err != nil {

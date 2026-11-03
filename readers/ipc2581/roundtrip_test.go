@@ -46,8 +46,8 @@ func summarize(d *ir.Design) string {
 	return strings.Join(lines, "\n")
 }
 
-// TestRoundTrip is the semantic round-trip oracle: read -> IR -> Write -> read -> IR', and the
-// two IRs must be equal on every modeled field. Confirms the reader and emitter agree.
+// TestRoundTrip is the semantic round-trip oracle. It runs read -> IR -> Write -> read -> IR', and
+// the two IRs must be equal on every modeled field. It confirms the reader and emitter agree.
 func TestRoundTrip(t *testing.T) {
 	d1, err := Read(bytes.NewReader(readFixture(t, "board.xml")), "board.xml")
 	if err != nil {

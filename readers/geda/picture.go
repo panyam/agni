@@ -13,10 +13,10 @@ import (
 //	<filename>
 //	<base64 data lines...>        (only when embedded == 1)
 //
-// The schematic stores no data length, so the embedded bytes are read as the run of pure-base64
-// lines (no spaces) that follows the filename, stopping at the next object line (which has
-// spaces). An external (non-embedded) picture has no bytes to load here, so it yields a
-// placeholder Image with just its bbox. The mime is guessed from the filename extension.
+// The schematic stores no data length. So the embedded bytes are the run of pure-base64 lines
+// (no spaces) after the filename. The run stops at the next object line, which has spaces. An
+// external (non-embedded) picture has no bytes to load here, so it yields a placeholder Image
+// with just its bbox. The mime is guessed from the filename extension.
 func readPicture(lines []string, start int, pt func(x, y float64) *geom.Point) (*geom.Image, int) {
 	f := strings.Fields(lines[start])
 	x, _ := atof(field(f, 1))
@@ -57,7 +57,7 @@ func readPicture(lines []string, start int, pt func(x, y float64) *geom.Point) (
 }
 
 // isBase64Line reports whether a line is pure base64 (no spaces), i.e. embedded picture data
-// rather than the next object (object lines carry space-separated fields).
+// rather than the next object (object lines have space-separated fields).
 func isBase64Line(s string) bool {
 	s = strings.TrimRight(s, "\r")
 	if s == "" || strings.ContainsAny(s, " \t") {

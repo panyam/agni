@@ -7,9 +7,9 @@
 // Fidelity: lossy-bounded. Read extracts the placed components (grouped by their refdes
 // attribute) and the nets. gEDA net segments are geometric and unlabelled, so pin-level
 // membership needs the referenced .sym pin geometry. ReadWithSymbols resolves symbols through a
-// caller-supplied opener and returns a connected netlist (nets named from netname= attributes
-// that sit on a wire, else synthetic), while plain Read (no opener) returns only the netname=
-// nets by name. sourceFile is provenance only (C1).
+// caller-supplied opener and returns a connected netlist. A net takes its name from a netname=
+// attribute on its wire, or else gets a synthetic one. Plain Read has no opener and returns only
+// the netname= nets by name. sourceFile is provenance only (C1).
 package geda
 
 import (
@@ -39,16 +39,16 @@ var powerSymbols = map[string]bool{
 	"vss-1": true, "vss": true,
 }
 
-// annotationSymbols carry no electrical identity (title blocks and SPICE directive/model/
+// annotationSymbols have no electrical identity (title blocks and SPICE directive/model/
 // include markers). The NETLIST reader skips them entirely.
 var annotationSymbols = map[string]bool{
 	"title-a": true, "title-b": true, "title-c": true, "title-d": true,
 	"spice-directive-1": true, "spice-model-1": true, "spice-include-1": true,
 }
 
-// geomRenderAnnotation is the subset the GEOMETRY reader draws (WS7-037). Every gEDA annotation
-// symbol carries visible on-sheet content and its field text resolves through normal attribute
-// promotion, so the whole set renders.
+// geomRenderAnnotation lists the annotation symbols the GEOMETRY reader draws (WS7-037). Every
+// gEDA annotation symbol has visible on-sheet content, and its field text resolves through normal
+// attribute promotion, so the whole set renders.
 var geomRenderAnnotation = annotationSymbols
 
 // SymbolOpener resolves a symbol reference from a component's C line (e.g. "resistor-1.sym") to
@@ -130,9 +130,9 @@ func firstN(s []string, n int) []string {
 	return s[:n]
 }
 
-// extract walks the gEDA object stream of components (each with attribute block and placement),
-// net segments, power taps, and netname= labels. Wires and anchors feed netgraph, and component
-// placements are resolved to pins when an opener is supplied.
+// extract walks the gEDA object stream. The stream holds components (each with an attribute
+// block and a placement), net segments, power taps, and netname= labels. Wires and anchors feed
+// netgraph, and component placements are resolved to pins when an opener is supplied.
 func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 	d := &ir.Design{
 		IrVersion:    "0",
@@ -170,8 +170,8 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 			attrs, nets, next := readAttrBlock(lines, i+1)
 			i = next
 			if isPowerSymbol(sym) {
-				// A power/ground tap connects at its symbol's pin (offset from the origin), so
-				// it needs the .sym geometry; resolved after the walk. Its net name comes from
+				// A power/ground tap connects at its symbol's pin, offset from the origin, so it
+				// needs the .sym geometry and is resolved after the walk. Its net name comes from
 				// the instance net= attribute if present, else the symbol's net= or convention.
 				powers = append(powers, powerTap{symref: field(f, 6), x: cx, y: cy, angle: angle, mirror: mirror, instanceNet: firstTapNet(nets)})
 				continue
@@ -183,8 +183,9 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 			if ref == "" {
 				continue
 			}
-			// Hidden pin taps. net=NAME:pin[,pin] connects those pins to NAME with no drawn wire
-			// (how gEDA carries an IC's power/ground pins), resolved to grid points after the walk.
+			// Hidden pin taps. net=NAME:pin[,pin] connects those pins to NAME with no drawn wire.
+			// gEDA connects an IC's power/ground pins this way. The taps resolve to grid points
+			// after the walk.
 			for _, spec := range nets {
 				name, pinList := parseNetTap(spec)
 				for _, pin := range pinList {
@@ -197,9 +198,10 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 				partByName[sym] = part
 				lib.Parts = append(lib.Parts, part)
 			}
-			// A multi-gate package places one C line per gate, all sharing a refdes and carrying
-			// slot=. Fold those into one Component with a section per gate, so the ref-des is not a
-			// false duplicate. Instances without slot= stay separate, so a real collision still shows.
+			// A multi-gate package places one C line per gate. All of them share a refdes and each
+			// has a slot=. Fold those into one Component with a section per gate, so the ref-des is
+			// not a false duplicate. Instances without slot= remain separate, so a real collision
+			// still shows.
 			slot := attrs["slot"]
 			if comp := compByRef[ref]; comp != nil && slot != "" {
 				dialect.AddSection(comp, sym, attrs, src)
@@ -223,8 +225,8 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 				// through the member `netname=` labels on the ripped-off wires, never the bus itself
 				// (verified against lepton-netlist, WS1-034 Phase 2). Aliasing the bus to a wire invents
 				// a phantom `DATA[7:0]` net and a false single-pin-net finding. The bus is still drawn
-				// (geometry.go) and recorded with its range expansion as members, so bus-not-modeled
-				// stays silent once every member is a net.
+				// (geometry.go) and recorded with its range expansion as members. So bus-not-modeled
+				// is silent once every member is a net.
 				name := attrs["netname"]
 				buses = append(buses, &ir.BusNotModeled{
 					Kind:    "geda_bus",
@@ -263,21 +265,21 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 		anchors = append(anchors, resolveAnchors(powers, open)...)
 		resolveSlots(placements, placementSlots, open)
 		pins, resolved, unresolved := symread.ResolvePins(placements, loadPins(open), quant)
-		// Hidden net= pin taps land as anchors at their resolved pin points, the same mechanism
-		// power taps use.
+		// Hidden net= pin taps become anchors at their resolved pin points. Power taps use the
+		// same mechanism.
 		anchors = append(anchors, tapAnchors(netTaps, pins)...)
 		nets, dangles, _ := netgraph.Build(wires, anchors, pins, nil)
 		d.Nets = append(d.Nets, netgraph.IRNets(nets, src)...)
 		// Dangling endpoints are trustworthy only when every placement resolved (WS1-013). An
 		// unresolved symbol drops its pins and turns wire ends into phantom dangles, so one
-		// unresolved placement suppresses the whole design's dangles. The netgraph grid is the
-		// geometry frame (quant only rounds), and with no per-wire id the location is the subject.
-		// Unresolved symbols are recorded regardless (WS1-052), since the suppression would
-		// otherwise hide their cause.
+		// unresolved placement suppresses the whole design's dangles. quant only rounds, so the
+		// netgraph grid is the geometry frame. There is no per-wire id, so the location is the
+		// subject. Unresolved symbols are recorded regardless (WS1-052), since otherwise the
+		// suppression would hide their cause.
 		d.InputDiagnostics = &ir.InputDiagnostics{
 			UnresolvedSymbols: irUnresolved(unresolved, src),
-			// Declared only on this branch (agni issue 418). The no-opener path opens no symbol,
-			// so declaring it there would claim a check that never ran. See
+			// Only this branch declares the loaded references (agni issue 418). The no-opener
+			// path opens no symbol, so declaring them there would claim a check that never ran. See
 			// docsite/content/architecture/ingestion-and-ir.md#input-diagnostics.
 			ResolvedSymbols: irResolved(resolved),
 			Supplied:        []string{"resolved_symbols"},
@@ -305,23 +307,23 @@ func extract(lines []string, src string, open SymbolOpener) *ir.Design {
 	if len(buses) > 0 {
 		ensureDiag(d).UnmodeledBuses = buses
 	}
-	// gEDA KEEPS placeholder-designated parts (the libraries ship refdes=R? / U? as the template
-	// value), so it owes the unannotated diagnostic. See
+	// gEDA KEEPS placeholder-designated parts, because the libraries ship refdes=R? / U? as the
+	// template value. So this reader owes the unannotated diagnostic. See
 	// docsite/content/architecture/ingestion-and-ir.md#placeholder-designators.
 	if un := refdes.Unannotated(d.Components); len(un) > 0 {
 		ensureDiag(d).UnannotatedComponents = un
 	}
-	// Declared unconditionally, because `supplied` says this reader LOOKED and a clean read must
-	// say so too (agni issue 309).
+	// Declared unconditionally (agni issue 309). `supplied` says this reader LOOKED, and a clean
+	// read must say so too.
 	diag := ensureDiag(d)
 	diag.RefDesCollisions = symread.RefDesCollisions(d.Components)
 	diag.Supplied = append(diag.Supplied, "ref_des_collisions")
 	return d
 }
 
-// ensureDiag returns d's InputDiagnostics, building it on first use. Every signal recorded after
-// the symbol-resolution branch goes through it, because that branch leaves the field nil on one
-// path and assigning a fresh struct per signal drops whatever was recorded before it.
+// ensureDiag returns d's InputDiagnostics, building it on first use. The symbol-resolution branch
+// leaves the field nil on one path. Assigning a fresh struct per signal would drop whatever was
+// recorded before it, so every signal recorded after that branch goes through ensureDiag.
 func ensureDiag(d *ir.Design) *ir.InputDiagnostics {
 	if d.InputDiagnostics == nil {
 		d.InputDiagnostics = &ir.InputDiagnostics{}
@@ -350,16 +352,16 @@ type netTap struct {
 }
 
 // isPowerSymbol reports whether a symbol names a power/ground net at a point rather than being a
-// physical component. Besides gnd/vcc/vdd/vss, gEDA carries voltage rails as "<rail>-plus-N" /
-// "<rail>-minus-N" symbols (3.3V-plus-1, 12V-minus-1) that name the rail via a symbol-level net=.
-// They must not fall through to the component path, which drops anything without a ref-des.
+// physical component. Besides gnd/vcc/vdd/vss, gEDA draws voltage rails as "<rail>-plus-N" /
+// "<rail>-minus-N" symbols (3.3V-plus-1, 12V-minus-1). Each names its rail via a symbol-level
+// net=. They must not fall through to the component path, which drops anything without a ref-des.
 func isPowerSymbol(sym string) bool {
 	return powerSymbols[sym] || strings.Contains(sym, "-plus-") || strings.Contains(sym, "-minus-")
 }
 
 // parseNetTap splits a net= attribute value "NAME:pin[,pin...]" into the net name and its pin
-// list. A value with no ":pin" names nothing to tap (a bare rail name is a power symbol's job), so
-// it yields no pins.
+// list. A value with no ":pin" names nothing to tap, so it yields no pins. A bare rail name is a
+// power symbol's job.
 func parseNetTap(spec string) (name string, pins []string) {
 	i := strings.IndexByte(spec, ':')
 	if i < 0 {
@@ -384,8 +386,8 @@ func firstTapNet(nets []string) string {
 }
 
 // tapAnchors places each net= tap at its component pin's resolved grid point, so the pin merges
-// onto the named net. A tap whose (ref, pin) did not resolve (a missing symbol or a wrong pin
-// number) cannot be located and is dropped.
+// onto the named net. A tap's (ref, pin) may fail to resolve because of a missing symbol or a
+// wrong pin number. That tap cannot be located and is dropped.
 func tapAnchors(taps []netTap, pins []netgraph.Pin) []netgraph.Anchor {
 	loc := map[[2]string]netgraph.Point{}
 	for _, p := range pins {
@@ -400,7 +402,7 @@ func tapAnchors(taps []netTap, pins []netgraph.Pin) []netgraph.Anchor {
 	return out
 }
 
-// dialect carries the gEDA constants for the shared component emission (internal/symread).
+// dialect holds the gEDA constants for the shared component emission (internal/symread).
 var dialect = symread.Dialect{
 	Lib:          "geda",
 	NativeIDKind: gedaNativeIDKind,
@@ -426,8 +428,9 @@ func irResolved(rs []symread.Resolved) []*ir.ResolvedSymbol {
 	return out
 }
 
-// irUnresolved turns the resolver's unresolved references into IR diagnostics, stamping the
-// construct kind and source file the resolver does not know. Returns nil for an empty set.
+// irUnresolved turns the resolver's unresolved references into IR diagnostics. It stamps the
+// construct kind and source file, since the resolver does not know them. Returns nil for an
+// empty set.
 func irUnresolved(us []symread.Unresolved, src string) []*ir.UnresolvedSymbol {
 	var out []*ir.UnresolvedSymbol
 	for _, u := range us {

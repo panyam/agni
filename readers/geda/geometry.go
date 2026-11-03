@@ -10,12 +10,12 @@ import (
 	"github.com/panyam/agni/internal/symread"
 )
 
-// Faithful schematic geometry is the drawing (symbol artwork + wires + labels) for the WebGL/SVG
-// renderers, as opposed to the netlist (read.go). gEDA is Y-up like geom, so coordinates pass
-// through unscaled; the placement transform maps directly (an angle is a geom CCW rotation, a
-// mirror is a y-axis mirror). A .sym's L/B/V/A drawing objects become geom Shapes; an embedded G
-// picture becomes a geom.Image. Symbols resolve through the same opener as the netlist; an
-// unresolved symbol falls back to a placeholder box.
+// This file reads faithful schematic geometry, the drawing (symbol artwork, wires and labels),
+// for the WebGL/SVG renderers. read.go reads the netlist. gEDA is Y-up like geom, so coordinates
+// pass through unscaled. The placement transform maps directly. An angle is a geom CCW rotation,
+// and a mirror is a y-axis mirror. A .sym's L/B/V/A drawing objects become geom Shapes, and an
+// embedded G picture becomes a geom.Image. Symbols resolve through the same opener as the
+// netlist. An unresolved symbol falls back to a placeholder box.
 
 func gedaPt(x, y float64) *geom.Point {
 	return &geom.Point{X: int64(math.Round(x)), Y: int64(math.Round(y))}
@@ -70,16 +70,16 @@ func extractGeometry(lines []string, src string, open SymbolOpener) *geom.Schema
 				continue // clutter annotation, not drawn in geometry (WS7-037)
 			}
 			resolveSym(symref)
-			// A power/ground symbol names the net at its pin rather than being a part (read.go keeps
-			// it out of Components), and it spells that name in its instance net= attribute. Carrying
-			// it as net_anchor makes the glyph addressable, where a refdes would offer a component
-			// that does not exist.
+			// A power/ground symbol names the net at its pin rather than being a part, so read.go
+			// keeps it out of Components. It spells that name in its instance net= attribute. As a
+			// net_anchor the glyph is addressable. A refdes would offer a component that does not
+			// exist.
 			ref, anchor := attrs["refdes"], ""
 			if isPowerSymbol(base) {
-				// The same fallback the netlist side resolves an anchor by (resolveAnchors): the
+				// The netlist side resolves an anchor by the same fallback (resolveAnchors). The
 				// instance's net= names it, else the symbol's own, else the conventional supply for
-				// that symbol family. Sharing the ladder keeps the glyph's key and the net it joins in
-				// agreement. A ground symbol keyed to one name while the solver used another would be
+				// that symbol family. Sharing the ladder makes the glyph's key agree with the net it
+				// joins. A ground symbol keyed to one name while the solver used another would be
 				// worse than one keyed to nothing.
 				anchor = netFromNetAttr(attrs["net"])
 				if anchor == "" {
@@ -112,10 +112,11 @@ func extractGeometry(lines []string, src string, open SymbolOpener) *geom.Schema
 			i = next
 			pts := []*geom.Point{gedaPt(x1, y1), gedaPt(x2, y2)}
 			if field(f, 0) == "U" {
-				// A gEDA `U` is a bus segment (WS7-042), drawn as a KIND_BUS wire named by its inline
-				// netname (the same name the netlist reader flags on ir.BusNotModeled.Label), so it
-				// styles as a bus and a bus-not-modeled finding highlights it by name (WS7-042b). Not
-				// routed through findWire, so it never merges into the plain-net pool.
+				// A gEDA `U` is a bus segment (WS7-042). It is drawn as a KIND_BUS wire named by its
+				// inline netname. The netlist reader flags the same name on ir.BusNotModeled.Label,
+				// so the wire styles as a bus and a bus-not-modeled finding highlights it by name
+				// (WS7-042b). It is not routed through findWire, so it never merges into the
+				// plain-net pool.
 				sheet.Wires = append(sheet.Wires, &geom.WireGeometry{
 					Kind: geom.WireGeometry_KIND_BUS, Net: attrs["netname"],
 					Polylines: []*geom.Polyline{{Points: pts}},
@@ -195,8 +196,9 @@ func loadSymbol(symref, base string, open SymbolOpener) *geom.SymbolDef {
 	return sd
 }
 
-// symbolShapes turns a gEDA .sym's drawing objects into geom Shapes: L->polyline, B->rect (gEDA
-// boxes are x,y + width,height), V->circle, A->arc. P (pins) are captured as PinPoints elsewhere.
+// symbolShapes turns a gEDA .sym's drawing objects into geom Shapes. L becomes a polyline, B a
+// rect (gEDA boxes are x,y + width,height), V a circle and A an arc. P (pins) are captured as
+// PinPoints elsewhere.
 func symbolShapes(lines []string) []*geom.Shape {
 	var shapes []*geom.Shape
 	i := 0

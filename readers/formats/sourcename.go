@@ -5,8 +5,9 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// The locators whose source_file this rewrites, matched by full proto name rather than by Go type so
-// one walk covers both the netlist IR and the geometry sidecar without this file importing either.
+// relocateSources rewrites the source_file of these locators. It matches them by full proto name
+// rather than by Go type. So one walk covers both the netlist IR and the geometry sidecar, and this
+// file imports neither.
 const (
 	irProvenanceName   = "agni.v1.ir.Provenance"
 	geomProvenanceName = "agni.v1.geom.Provenance"
@@ -15,10 +16,10 @@ const (
 
 // relocateSources rewrites every Provenance.source_file anywhere in a message tree through name.
 //
-// It walks by REFLECTION rather than by visiting the types that carry a locator. Over twenty IR
-// messages carry one and the geometry sidecar carries its own, and a message gaining one is an
-// ordinary schema change nobody would think to come back here for. A hand-written walk would keep
-// compiling and quietly stop covering the new node, while its output still looked complete.
+// It walks by REFLECTION rather than by visiting the types that hold a locator. Over twenty IR
+// messages hold one, and the geometry sidecar has its own. Adding a locator to a message is an
+// ordinary schema change, and nobody would think to come back here for it. A hand-written walk would
+// keep compiling and quietly stop covering the new node, and its output would still look complete.
 //
 // A nil name is the identity, so a loader that sets nothing leaves every source_file as read.
 func relocateSources(m proto.Message, name func(string) string) {

@@ -7,11 +7,11 @@ import (
 )
 
 // mirrorProbe places one two-pin symbol at a given rotation and mirror, with four labelled wire
-// stubs at the compass points around it. Whichever label a pin joins says where that pin landed, so
-// the placement transform is readable straight off the netlist.
+// stubs at the compass points around it. Each pin joins one label, and that label says where the pin
+// ended up. So the placement transform can be read straight off the netlist.
 //
-// Pin 1 sits at local (-3.81, 0) and pin 2 at (+3.81, 0), which is the shape of the TVS diode array
-// StickHub places mirrored and rotated.
+// Pin 1 sits at local (-3.81, 0) and pin 2 at (+3.81, 0). That is the shape of the TVS diode array
+// that StickHub places mirrored and rotated.
 const mirrorProbe = `(kicad_sch
 	(version 20250114)
 	(generator "eeschema")
@@ -38,15 +38,15 @@ const mirrorProbe = `(kicad_sch
 	(wire (pts (xy 100 96.19) (xy 100 92)) (uuid "wn"))
 	(label "NORTH" (at 100 94 0) (effects (font (size 1.27 1.27)))))`
 
-// TestMirroredPinPlacement pins where each pin of a placed symbol lands, for every combination of
+// TestMirroredPinPlacement pins where each pin of a placed symbol ends up, for every combination of
 // rotation and mirror. The expectations are kicad-cli's own answers, taken by exporting a netlist
 // from each of these twelve schematics; they are not values we chose.
 //
 // The four mirrored 90 and 270 rows are agni issue 577. KiCad applies the rotation and THEN the
-// mirror, geomath.ApplyTransform applies the mirror and then the rotation, and a reflection does not
+// mirror. geomath.ApplyTransform applies the mirror and then the rotation. A reflection does not
 // commute with a quarter turn, so a symbol placed mirrored at 90 or 270 had its two pins swapped onto
-// each other's nets. Everything else already agreed, which is why the defect survived. It needs both
-// a mirror and an odd quarter turn, and it moves one connection out of a net and another in, so the
+// each other's nets. Everything else already agreed, so the defect went unnoticed. It needs both a
+// mirror and an odd quarter turn, and it moves one connection out of a net and another in, so the
 // net COUNT does not change. On StickHub that was 19 of 47 nets wrong with 47 nets reported.
 func TestMirroredPinPlacement(t *testing.T) {
 	cases := []struct {
@@ -97,8 +97,8 @@ func TestMirroredPinPlacement(t *testing.T) {
 	}
 }
 
-// TestMirroredProbeIsWellFormed is the positive control for the table above. A probe whose pins reach
-// no stub would report empty net names for both pins, and every row asserting a swap would pass
+// TestMirroredProbeIsWellFormed is the positive control for the table above. Suppose a probe's pins
+// reached no stub. Both pins would report empty net names, and every row asserting a swap would pass
 // against a design where nothing is connected at all.
 func TestMirroredProbeIsWellFormed(t *testing.T) {
 	src := fmt.Sprintf(mirrorProbe, 0, "")

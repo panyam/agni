@@ -8,18 +8,18 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// ConstraintKindBoardRules is the ir.Constraint.kind tag for the board-wide minimums a KiCad project
-// declares, the fabrication process the designer routed the board for (agni issue 933). There is at
-// most one per design, and its params are millimetres keyed by KiCad's own names.
+// ConstraintKindBoardRules is the ir.Constraint.kind tag for a KiCad project's declared board-wide
+// minimums. They describe the fabrication process that the designer routed the board for (agni issue
+// 933). There is at most one per design, and its params are millimetres keyed by KiCad's own names.
 const ConstraintKindBoardRules = "board_rules"
 
-// boardRuleKeys are the board.design_settings.rules entries agni checks copper against, in KiCad's
-// spelling. Millimetres, as KiCad writes every PCB scalar in a .kicad_pro.
+// boardRuleKeys lists the board.design_settings.rules entries that agni checks copper against, in
+// KiCad's spelling. Their values are millimetres, as KiCad writes every PCB scalar in a .kicad_pro.
 var boardRuleKeys = []string{"min_track_width", "min_clearance", "min_through_hole_diameter", "min_via_annular_width"}
 
-// ParseBoardRules reads board.design_settings.rules from a KiCad .kicad_pro: the minimum track width,
-// clearance, drill and annular ring the board is designed to. A key the project leaves out, or sets to
-// zero (KiCad's "no constraint"), is absent from the result, so a consumer can tell an undeclared
+// ParseBoardRules reads board.design_settings.rules from a KiCad .kicad_pro. Those rules set the
+// board's minimum track width, clearance, drill and annular ring. The result leaves out a key that
+// the project omits or sets to zero (KiCad's "no constraint"), so a consumer can tell an undeclared
 // minimum from a declared one. A malformed project, or one declaring none, yields an empty map rather
 // than failing the read, as ParseNetClassDefs does.
 func ParseBoardRules(r io.Reader) map[string]float64 {

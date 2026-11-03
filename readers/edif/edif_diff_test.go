@@ -26,12 +26,12 @@ func netChangeByName(r *diff.Report) map[string]diff.NetChange {
 }
 
 // TestEDIFDiffRoundTrip drives the read->diff pipeline end to end over a hand-authored
-// before/after EDIF netlist pair (WS6-002). It proves the reader hands diff a correct IR
-// and that the full change taxonomy surfaces through the real reader: component
-// added/removed/value-changed, and net new/deleted/renamed/hard. The in-package
-// TestNetTaxonomy exercises the same taxonomy on a hand-built ir.Design (nets only); this
-// closes the gap by covering the component-diff path and the reader->diff handoff a
-// synthetic Design cannot.
+// before/after EDIF netlist pair (WS6-002). It proves the reader hands diff a correct IR.
+// It also proves the full change taxonomy surfaces through the real reader, covering
+// component added/removed/value-changed and net new/deleted/renamed/hard. The in-package
+// TestNetTaxonomy exercises the same taxonomy on a hand-built ir.Design, for nets only.
+// This test also covers the component-diff path and the reader->diff handoff. A
+// synthetic Design cannot cover either.
 func TestEDIFDiffRoundTrip(t *testing.T) {
 	a := readEDN(t, "rev_a.edn")
 	b := readEDN(t, "rev_b.edn")
@@ -77,8 +77,8 @@ func TestEDIFDiffRoundTrip(t *testing.T) {
 		t.Errorf("BORN = %+v, want New", nc)
 	}
 
-	// Provenance survives the read on both sides of a rename (the handoff the round-trip
-	// proves that a hand-built Design would assume rather than exercise).
+	// Provenance survives the read on both sides of a rename. A hand-built Design would
+	// assume this handoff, and the round trip exercises it.
 	if nc := nets["SIGNEW"]; nc.OldProv.GetSourceFile() != "rev_a.edn" || nc.NewProv.GetSourceFile() != "rev_b.edn" {
 		t.Errorf("SIGNEW prov = old:%q new:%q, want rev_a.edn / rev_b.edn",
 			nc.OldProv.GetSourceFile(), nc.NewProv.GetSourceFile())

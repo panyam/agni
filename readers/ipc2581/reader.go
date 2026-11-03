@@ -64,8 +64,8 @@ type layerEl struct {
 	Span     *spanEl `xml:"Span"`
 }
 
-// spanEl is a drill layer's <Span fromLayer= toLayer=>, naming the copper layers a via on that
-// layer bridges. A through via spans TOP..BOTTOM; blind/buried vias narrow the pair.
+// spanEl is a drill layer's <Span fromLayer= toLayer=>. It names the copper layers that a via on
+// that drill layer bridges. A through via spans TOP..BOTTOM, and blind/buried vias narrow the pair.
 type spanEl struct {
 	From string `xml:"fromLayer,attr"`
 	To   string `xml:"toLayer,attr"`
@@ -97,9 +97,9 @@ type compEl struct {
 	NonstdAttrs []nonstdAttrEl `xml:"NonstandardAttribute"`
 }
 
-// nonstdAttrEl is an IPC-2581 <NonstandardAttribute name= value= type=>, the vendor slot that
-// carries a component's VALUE (e.g. "4.7UF") and other per-part properties IPC has no first-class
-// element for.
+// nonstdAttrEl is an IPC-2581 <NonstandardAttribute name= value= type=>, a vendor slot. It holds a
+// component's VALUE (e.g. "4.7UF") and other per-part properties. IPC has no first-class element
+// for those properties.
 type nonstdAttrEl struct {
 	Name  string `xml:"name,attr"`
 	Value string `xml:"value,attr"`
@@ -123,7 +123,7 @@ type pinRefEl struct {
 // Read parses an IPC-2581 interchange file into an ir.Design.
 //
 // Fidelity: lossy-bounded. We extract the netlist (components, nets, connections) and the
-// physical tier (footprints, layers, stackup, BOM); copper/pad geometry, specs, and styles
+// physical tier (footprints, layers, stackup, BOM). Copper/pad geometry, specs, and styles
 // are dropped. sourceFile is provenance only.
 func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	var f ipcFile
@@ -136,11 +136,11 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 	return f.toDesign(sourceFile), nil
 }
 
-// skipRefDes reports whether a component designator is absent or a placeholder the source has not
-// annotated yet, so it names no part this reader should carry. All four sites (the netlist
-// components, their connections, and the two geometry passes) call it because the netlist and the
-// board geometry join on ref_des, and a component one tier keeps and the other drops becomes a
-// placement with no component or a component with no placement.
+// skipRefDes reports whether a component designator is absent or an unannotated placeholder. Such
+// a designator names no part this reader should keep. Four sites call it: the netlist components,
+// their connections, and the two geometry passes. The netlist and the board geometry join on
+// ref_des. If one tier kept a component and the other dropped it, the result would be a placement
+// with no component or a component with no placement.
 func skipRefDes(ref string) bool { return ref == "" || refdes.IsPlaceholder(ref) }
 
 func (f *ipcFile) toDesign(src string) *ir.Design {
@@ -173,8 +173,8 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		putAttr(comp.Attributes, "part", c.Part)
 		putAttr(comp.Attributes, "mount_type", c.MountType)
 		putAttr(comp.Attributes, "layer_ref", c.LayerRef)
-		// Map the conventional "VALUE" NonstandardAttribute onto the "Value" key that checks, BOM
-		// and diff read (the KiCad convention), and keep any others verbatim.
+		// Map the conventional "VALUE" NonstandardAttribute onto the "Value" key, and keep any
+		// others verbatim. Checks, BOM and diff read "Value", following the KiCad convention.
 		for _, na := range c.NonstdAttrs {
 			if na.Name == "" {
 				continue
@@ -185,7 +185,7 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 				putAttr(comp.Attributes, na.Name, na.Value)
 			}
 		}
-		// One placed component is one physical section (see kicad/pcb.go); the "part" is the
+		// One placed component is one physical section (see kicad/pcb.go), and the "part" is the
 		// package, so section-aware consumers behave the same across formats.
 		comp.Sections = []*ir.ComponentSection{{
 			Index:      0,
@@ -205,13 +205,13 @@ func (f *ipcFile) toDesign(src string) *ir.Design {
 		net := &ir.Net{Name: n.Name, Attributes: map[string]string{}, Prov: prov()}
 		// The enum is a lossy normalization, so keep the source term beside the mapped one, as
 		// layer_function_raw does below. declared_role is the NEUTRAL key classify.StampNetRoles
-		// reads, and the format-specific translation happens here in the reader (C20's left-shift).
+		// reads. The format-specific translation happens here in the reader (C20's left-shift).
 		putAttr(net.Attributes, "netclass_raw", n.NetClass)
 		putAttr(net.Attributes, classify.AttrDeclaredRole, declaredRole(n.NetClass))
 		for _, pr := range n.Pins {
-			// Drop a connection to a component the loop above skipped. The net table is authored
-			// separately from the components, so the predicate runs twice (in KiCad a skipped
-			// footprint takes its pads with it).
+			// Drop a connection to a component that the loop above skipped. The net table is
+			// authored separately from the components, so the predicate runs twice. In KiCad a
+			// skipped footprint takes its pads with it.
 			if skipRefDes(pr.ComponentRef) {
 				continue
 			}
@@ -269,10 +269,10 @@ func (f *ipcFile) units() string {
 }
 
 // declaredRole translates IPC-2581's LogicalNet/@netClass enum into the engine's net-role
-// vocabulary, or "" when the term states no role. Only GROUND and POWER carry one. SIGNAL is the
+// vocabulary, or "" when the term states no role. Only GROUND and POWER state one. SIGNAL is the
 // default, FIXED is a routing directive (do not re-route), and UNUSED is a lifecycle status. CLK is
 // a role, but the engine has no clock role and a reader should not invent vocabulary. The source
-// term stays in netclass_raw either way.
+// term is kept in netclass_raw either way.
 func declaredRole(netClass string) string {
 	switch netClass {
 	case "GROUND":
@@ -306,8 +306,8 @@ func unitToNm(u string) float64 {
 	}
 }
 
-// thicknessNm converts a thickness string in source units to nanometers, reporting ok=false
-// when the unit is unknown or the value does not parse (caller keeps the raw string instead).
+// thicknessNm converts a thickness string in source units to nanometers. It reports ok=false
+// when the unit is unknown or the value does not parse, and the caller then keeps the raw string.
 func thicknessNm(s string, nmPerUnit float64) (int64, bool) {
 	if s == "" || nmPerUnit == 0 {
 		return 0, false
@@ -320,7 +320,7 @@ func thicknessNm(s string, nmPerUnit float64) (int64, bool) {
 }
 
 // mapLayerFunction normalizes an IPC-2581 layerFunction onto ir.LayerFunction. Unmapped
-// values fall through to UNSPECIFIED; the source term is always kept in attributes.
+// values fall through to UNSPECIFIED. The source term is always kept in attributes.
 func mapLayerFunction(f string) ir.LayerFunction {
 	switch strings.ToUpper(f) {
 	case "CONDUCTOR", "SIGNAL":

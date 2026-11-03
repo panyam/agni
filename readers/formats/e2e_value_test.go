@@ -5,15 +5,14 @@ import (
 	"testing"
 )
 
-// TestValueStampedOnRealRead is the end-to-end check that the value pass actually reaches a rule. A
-// committed KiCad fixture, read through the real loader, must come back with a machine-comparable
-// number rather than the vendor's text.
+// TestValueStampedOnRealRead checks end to end that the value pass actually reaches a rule. It reads
+// a committed KiCad fixture through the real loader. Each value must come back as a
+// machine-comparable number rather than the vendor's text.
 //
-// It exists because the unit-tested pass passed while the real read did not. The fixture writes "10u"
-// on a capacitor, which states the magnitude and omits the dimension, and an earlier version left the
-// unit empty there. ComponentValueIn rejects an empty unit by design, so every capacitor and inductor
-// on a real board would have been invisible to the rules that need them while every unit test stayed
-// green.
+// The pass once passed its unit tests while the real read failed. The fixture writes "10u" on a
+// capacitor, which states the magnitude and omits the dimension. An earlier version left the unit
+// empty there. ComponentValueIn rejects an empty unit by design. So the rules that need capacitors and
+// inductors would have seen none on a real board, and every unit test was still green.
 func TestValueStampedOnRealRead(t *testing.T) {
 	d, err := (&Loader{}).ReadDesign("../../cmd/agni/testdata/conformance/capcheck.fires.kicad_sch")
 	if err != nil {
@@ -39,17 +38,16 @@ func TestValueStampedOnRealRead(t *testing.T) {
 	}
 }
 
-// TestUnresolvedSetImpliesResolvedSet is the wiring guard for the next format reader (agni issue
-// 418). A reader that records what FAILED to resolve without recording what did leaves
-// symbol-unresolved holding a failure list, and a rule holding only failures can only report
-// failures, and its silence on a clean design becomes indistinguishable from silence on a design
-// nobody looked at. That is precisely the coverage claim the considered set exists to make
-// checkable.
+// TestUnresolvedSetImpliesResolvedSet guards the wiring for the next format reader (agni issue 418).
+// Suppose a reader records what FAILED to resolve and not what did. Then symbol-unresolved holds only
+// a failure list, and a rule holding only failures can only report failures. Its silence on a clean
+// design then looks the same as its silence on a design nobody looked at. The considered set exists
+// to make exactly that coverage claim checkable.
 //
-// It runs over the fixtures rather than over the reader registry because the omission is a property
-// of a real read. A reader could declare the diagnostic in one code path and forget it in another,
-// which is the shape both the xschem and gEDA readers have (the no-opener branch deliberately
-// declares nothing), and only reading a file exercises the branch that ran.
+// It runs over the fixtures rather than over the reader registry, because the omission shows only in
+// a real read. A reader could declare the diagnostic in one code path and forget it in another. Both
+// the xschem and gEDA readers have that shape, since their no-opener branch deliberately declares
+// nothing. Only reading a file exercises the branch that ran.
 func TestUnresolvedSetImpliesResolvedSet(t *testing.T) {
 	fixtures := []string{
 		"../kicad/testdata/extlib.kicad_sch",

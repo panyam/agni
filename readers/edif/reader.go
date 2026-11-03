@@ -32,7 +32,7 @@ func Read(r io.Reader, sourceFile string) (*ir.Design, error) {
 // Fidelity: lossy-bounded (netlist subset). We extract components, part
 // references, and net connectivity, not the full EDIF document. See CONSTRAINTS
 // C6. sourceFile is recorded in provenance only; the caller owns file I/O so the
-// core stays runtime-agnostic (CONSTRAINTS C1).
+// core remains runtime-agnostic (CONSTRAINTS C1).
 func ReadWith(r io.Reader, sourceFile string, opts Options) (*ir.Design, error) {
 	root, err := parse(r)
 	if err != nil {
@@ -55,8 +55,8 @@ func ReadWith(r io.Reader, sourceFile string, opts Options) (*ir.Design, error) 
 }
 
 // collectArrayBuses records each EDIF `(array name size)` bus-port declaration anywhere in the tree
-// as an unmodeled-bus diagnostic (WS1-034). Its members are the `size` indices, so the bus-not-modeled
-// rule can count a bus whose `NAME[i]` members are already nets as RESOLVED
+// as an unmodeled-bus diagnostic (WS1-034). The diagnostic's members are the `size` indices. The
+// bus-not-modeled rule can then count a bus as RESOLVED when its `NAME[i]` members are already nets
 // (docsite/content/architecture/ingestion-and-ir.md#input-diagnostics). The name resolves via parseName.
 func collectArrayBuses(root *node, src string) []*ir.BusNotModeled {
 	var arrays []*node
@@ -74,11 +74,11 @@ func collectArrayBuses(root *node, src string) []*ir.BusNotModeled {
 	return out
 }
 
-// arrayMembers expands an EDIF `(array NAME size)` bus into its member net names, `base[0]..base[size-1]`,
-// the `NAME[idx]` convention that portName projects a `(member NAME idx)` pin to (`reader_test.go`
-// pins it). Matching that convention lets the bus-not-modeled rule confirm each member as a net. Returns
-// nil for a missing base or a non-positive / non-numeric size, which leaves the bus flagged
-// unconditionally rather than asserting a member set the source did not give.
+// arrayMembers expands an EDIF `(array NAME size)` bus into its member net names, `base[0]..base[size-1]`.
+// portName projects a `(member NAME idx)` pin to `NAME[idx]`, and `reader_test.go` pins that
+// convention. Matching it lets the bus-not-modeled rule confirm each member as a net. It returns nil
+// for a missing base or a non-positive / non-numeric size. The bus is then flagged unconditionally,
+// and the reader asserts no member set the source did not give.
 func arrayMembers(base, size string) []string {
 	n, err := strconv.Atoi(size)
 	if base == "" || err != nil || n <= 0 {
@@ -114,9 +114,9 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 	recordRootRefs(d, root, dn)
 
 	// Scope extraction to the design's root cell so a hierarchical design's sub-cell
-	// contents are not merged into the top netlist (WS1-004), falling back to the whole
-	// document when the root cell cannot be resolved. Unflattened, the cells left out are
-	// recorded as InputDiagnostics.unexpanded_hierarchy below (agni issue 707); flattened,
+	// contents are not merged into the top netlist (WS1-004). When the root cell cannot be
+	// resolved, fall back to the whole document. Unflattened, the cells left out are
+	// recorded as InputDiagnostics.unexpanded_hierarchy below (agni issue 707). Flattened,
 	// the walk descends into them (agni issue 718, hierarchy.go).
 	scope := root
 	if tc := topCell(root); tc != nil {
@@ -155,13 +155,13 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 		}
 		pinMap = withCellDesignators(pinMap, cellPins, sec)
 		// Inside a block an instance id repeats across placements and across cells, so its locator is
-		// the occurrence path, which is what an emitter anchors a net's instanceRef on.
+		// the occurrence path. An emitter anchors a net's instanceRef on that path.
 		sec.Prov.NativeId = occurrence(lf.path, id)
 		if refDes == "" && namedByInstance {
 			refDes = parseName(lf.node.Arg(1)).best()
-			// An instance name is unique within its cell and nowhere else, so with no designator to
-			// say two of them are one part, one inside a block that another cell also uses is that
-			// block's own (agni issue 1105).
+			// An instance name is unique within its cell and nowhere else. No designator says that
+			// two of them are one part. So a name inside a block takes that block's path when
+			// another cell also uses the name (agni issue 1105).
 			if lf.path != "" && !lf.repeated && shared[refDes] {
 				refDes = lf.path + "/" + refDes
 			}
@@ -203,14 +203,14 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 	for i, g := range h.nets {
 		d.Nets = append(d.Nets, netOf(g, names[i], src, refByID, pinsByID, h.blockPaths))
 	}
-	// One struct for every diagnostic, built once, since a fresh InputDiagnostics per signal
-	// drops the previous one. Always set, because this reader looks at every cell and so
-	// SUPPLIES unexpanded_hierarchy on every read, where an empty list means a flat design.
+	// Build one struct for every diagnostic, once. A fresh InputDiagnostics per signal would
+	// drop the previous one. The struct is always set. This reader looks at every cell, so it
+	// SUPPLIES unexpanded_hierarchy on every read, and an empty list means a flat design.
 	//
-	// No ref_des_collisions and none in Supplied, so duplicate-ref-des reads not-applicable
-	// (agni issue 309). EDIF gives a multi-gate part several instances sharing a designator and
-	// carries no capture unit to tell that from a real duplicate, so detecting one would
-	// false-positive on every multi-gate part
+	// The reader sets no ref_des_collisions and lists none in Supplied, so duplicate-ref-des
+	// reads not-applicable (agni issue 309). EDIF gives a multi-gate part several instances
+	// sharing a designator. It has no capture unit to tell that from a real duplicate, so
+	// detecting one would false-positive on every multi-gate part
 	// (docsite/content/architecture/ingestion-and-ir.md#input-diagnostics).
 	d.InputDiagnostics = &ir.InputDiagnostics{
 		UnmodeledBuses:        collectArrayBuses(root, src),
@@ -222,7 +222,8 @@ func extract(root *node, src string, flatten bool) *ir.Design {
 }
 
 // libraryOf converts an EDIF (library ...) node into an ir.PartLibrary with its parts.
-// A cell in skip is a block the read walked into, a sheet rather than a part, and gets no part type.
+// A cell in skip is a block the read walked into. It is a sheet rather than a part, so it gets no
+// part type.
 func libraryOf(n *node, src string, skip map[*node]bool) *ir.PartLibrary {
 	name := parseName(n.Arg(1)).Display
 	lib := &ir.PartLibrary{Name: name, Prov: &ir.Provenance{SourceFile: src}}
@@ -238,22 +239,24 @@ func libraryOf(n *node, src string, skip map[*node]bool) *ir.PartLibrary {
 // cellDesignator returns a cell's OWN reference-designator prefix ("U", "C?", "REF**"), or "" when
 // it declares none.
 //
-// It looks only at the cell, its views, and each view's interface, and never descends into a port,
-// because a port's designator is a PIN NUMBER. A recursive search finds one whenever the cell
-// declares no prefix of its own, and the pin number then lands in PartType.DesignatorPrefix, where
-// Lexicon.Classify prefers it over the component's ref-des prefix. prefixClasses["1"] misses, every
-// component of that cell reads UNKNOWN, and every class-quantified rule selects zero members and
-// stays silent, indistinguishable from a clean design (agni issue 109).
+// It looks only at the cell, its views, and each view's interface. It never descends into a port,
+// because a port's designator is a PIN NUMBER. Imagine a cell that declares no prefix of its own. A
+// recursive search would find a port's designator instead and put the pin number in
+// PartType.DesignatorPrefix. Lexicon.Classify prefers that field over the component's ref-des
+// prefix. prefixClasses["1"] misses, so every component of that cell reads UNKNOWN. Every
+// class-quantified rule then selects zero members and is silent, indistinguishable from a clean
+// design (agni issue 109).
 //
-// Real EDIF puts the prefix inside the interface, alongside the ports rather than above them:
+// Real EDIF puts the prefix inside the interface, alongside the ports rather than above them, as in
+// this example.
 //
 //	(cell X (cellType GENERIC)
 //	  (view NORMAL (viewType SCHEMATIC)
 //	    (interface (designator "U")            <- the cell's prefix
 //	      (port IO1 ... (designator "1") ...)  <- a pin number
 //
-// which is why this cannot simply refuse to enter the interface. The cell and view levels are also
-// accepted because a hand-written netlist reasonably declares the prefix there.
+// So cellDesignator cannot simply refuse to enter the interface. It also accepts the cell and view
+// levels, because a hand-written netlist reasonably declares the prefix there.
 func cellDesignator(n *node) string {
 	if d := n.Child("designator"); d != nil {
 		return stringDisplayText(d)
@@ -281,11 +284,11 @@ func partTypeOf(n *node, src string) *ir.PartType {
 	}
 	pt.DesignatorPrefix = cellDesignator(n)
 	// OrCAD names a shared part-type cell by its part number and carries the Manufacturer_PN on
-	// the CELL, not on each placed instance (WS1-046 Piece B). It goes into the part type's mpn
-	// field, which classify.StampMPN falls back to for an instance carrying none of its own. Only
-	// a LEAF cell (no contents) is scanned, so a hierarchical cell's nested instance properties
-	// are never read as the cell's own. Classification reads component attributes, so this
-	// touches none.
+	// the CELL, not on each placed instance (WS1-046 Piece B). The reader puts it in the part
+	// type's mpn field. classify.StampMPN falls back to that field for an instance with no mpn of
+	// its own. Only a LEAF cell (no contents) is scanned, so a hierarchical cell's nested instance
+	// properties are never read as the cell's own. Classification reads component attributes, so
+	// this touches none.
 	if n.Child("contents") == nil {
 		var cprops []*node
 		collect(n, "property", &cprops)
@@ -322,13 +325,14 @@ func partTypeOf(n *node, src string) *ir.PartType {
 		}
 		if pin.Designator == "" {
 			// Fall back to the port NAME (issue 71). The Model indexes pins by Designator
-			// (`refDes + "\x00" + pin.Designator`) while EDIF's portRef names the PORT, so without
-			// this a part whose ports declare no designator indexes every pin under one empty key,
-			// PinRole returns unknown for every pin, and EVERY pin-role rule (diode orientation,
-			// gate/source/drain, LED polarity) is silently inert on EDIF.
+			// (`refDes + "\x00" + pin.Designator`), while EDIF's portRef names the PORT. Suppose a
+			// part's ports declare no designator. Without this fallback the part indexes every pin
+			// under one empty key, and PinRole returns unknown for every pin. EVERY pin-role rule is
+			// then silently inert on EDIF, including diode orientation, gate/source/drain and LED
+			// polarity.
 			//
-			// Only a fallback, because an explicit designator is the physical pin number a
-			// connection on such a part already carries, and overwriting it would break that join.
+			// This is only a fallback. An explicit designator is the physical pin number, and a
+			// connection on such a part already uses it. Overwriting it would break that join.
 			pin.Designator = pin.Name
 		}
 		pt.Pins = append(pt.Pins, pin)
@@ -352,10 +356,10 @@ func mapDirection(raw string) ir.PinDirection {
 }
 
 // anyDesignator reports whether any instance states its reference designator in a (designator ...)
-// list. A producer that writes none, such as Altium's EDIF For PCB export, names each instance by its
-// reference designator instead, so Read takes the instance's name then (agni issue 941). A producer
-// that writes designators leaves them off power and off-page symbols on purpose, so the name is
-// never used for an instance in a file that has any.
+// list. Some producers write none, such as Altium's EDIF For PCB export. Such a producer names each
+// instance by its reference designator instead, so Read then takes the instance's name (agni issue
+// 941). A producer that writes designators leaves them off power and off-page symbols on purpose.
+// So in a file that has any designator, the reader never uses an instance's name as its ref-des.
 func anyDesignator(insts []*node) bool {
 	for _, in := range insts {
 		if in.Child("designator") != nil {
@@ -365,11 +369,11 @@ func anyDesignator(insts []*node) bool {
 	return false
 }
 
-// cellPortDesignators indexes every cell's ports by the designator its interface declares, keyed
-// by library and cell id as an instance's cellRef names them (agni issue 1193). A port whose
-// interface states `(port MDIO (designator "1"))` is pin 1, and a net naming the port MDIO must
-// land on pin 1, or the part type declares pin 1 and the net connects to a pin MDIO it does not
-// have.
+// cellPortDesignators indexes every cell's ports by the designator in the cell's interface (agni
+// issue 1193). The index is keyed by library and cell id, the way an instance's cellRef names them.
+// Suppose an interface states `(port MDIO (designator "1"))`. That port is pin 1, and a net naming
+// the port MDIO must connect to pin 1. Otherwise the part type declares pin 1 and the net connects
+// to a pin MDIO, which the part type lacks.
 func cellPortDesignators(libs []*node) map[string]map[string][]string {
 	out := map[string]map[string][]string{}
 	for _, l := range libs {
@@ -384,8 +388,9 @@ func cellPortDesignators(libs []*node) map[string]map[string][]string {
 				}
 				des := stringDisplayText(dg)
 				port := portName(p.Arg(1))
-				// A designator naming the port itself (a writer spells pin 1 `(port &1 (designator
-				// "&1"))`) remaps nothing, and adding it would fan one connection out to two pins.
+				// A writer can spell pin 1 as `(port &1 (designator "&1"))`. A designator naming
+				// the port itself remaps nothing, and adding it would fan one connection out to two
+				// pins.
 				if des == "" || port == "" || strings.TrimPrefix(des, "&") == port {
 					continue
 				}
@@ -400,10 +405,10 @@ func cellPortDesignators(libs []*node) map[string]map[string][]string {
 	return out
 }
 
-// withCellDesignators adds the cell's own port designators to an instance's portInstance table
-// for every port the table does not map, so the instance's table wins and the cell's interface
-// fills the rest. A cellRef naming no library is looked up in every library and used only when
-// one library has that cell.
+// withCellDesignators adds the cell's own port designators to an instance's portInstance table,
+// for each port missing from the table. The instance's table wins and the cell's interface fills
+// the rest. A cellRef naming no library is looked up in every library. It is used only when one
+// library has that cell.
 func withCellDesignators(pinMap map[string][]string, cellPins map[string]map[string][]string, sec *ir.ComponentSection) map[string][]string {
 	ports := cellPins[sec.GetLibraryRef()+"\x00"+sec.GetPartRef()]
 	if sec.GetLibraryRef() == "" {
@@ -429,14 +434,14 @@ func withCellDesignators(pinMap map[string][]string, cellPins map[string]map[str
 	return pinMap
 }
 
-// instanceOf converts an EDIF (instance ...) node into one ComponentSection. It returns
-// the ref_des (to group sections into a Component), the instance's internal rename id
-// (so netOf can resolve instanceRefs, which use the internal id, back to the ref_des),
-// and the instance's portInstance table: logical port -> the PHYSICAL pin designator(s)
-// it maps to on this placement. The table keeps connection pin identity physical
+// instanceOf converts an EDIF (instance ...) node into one ComponentSection. It also
+// returns three values. The ref_des groups sections into a Component. instanceRefs use
+// the instance's internal rename id, so netOf uses that id to resolve them back to the
+// ref_des. The instance's portInstance table maps each logical port to the PHYSICAL pin
+// designator(s) on this placement. The table keeps connection pin identity physical
 // (WS1-025). A connector cell's single logical "GND" port fans out to different physical
-// pins per section, and without the mapping every section's ground collapses onto one
-// (ref_des, "GND") key, which the pin-net-conflict tripwire caught on a real corpus. A
+// pins per section. Without the mapping every section's ground collapses onto one
+// (ref_des, "GND") key, and the pin-net-conflict tripwire caught that on a real corpus. A
 // port may map to SEVERAL pins on one placement, and the slice preserves source order.
 func instanceOf(n *node, src string) (refDes string, sec *ir.ComponentSection, id string, pinMap map[string][]string) {
 	id = parseName(n.Arg(1)).ID
@@ -458,12 +463,13 @@ func instanceOf(n *node, src string) (refDes string, sec *ir.ComponentSection, i
 	}
 	if v := n.Child("viewRef"); v != nil {
 		if cr := v.Child("cellRef"); cr != nil {
-			// The EDIF "&" escapes an identifier the bare grammar cannot hold (one starting with a
-			// digit, which OrCAD/Allegro emit for numeric library-cell ids) and is NOT part of it.
-			// partTypeOf names the part by its un-escaped display ((rename &87844225 "87844225") ->
-			// "87844225") and PartIndex keys on that, so the cellRef must strip the escape too.
-			// Otherwise the component never links to its part type and has NO pins, invisible to every
-			// pin-level rule. portName does the same for pin references.
+			// The EDIF "&" escapes an identifier that the bare grammar cannot hold, and the & is NOT
+			// part of the identifier. OrCAD/Allegro emit such identifiers, starting with a digit, for
+			// numeric library-cell ids. partTypeOf names the part by its un-escaped display
+			// ((rename &87844225 "87844225") -> "87844225"), and PartIndex keys on that name. So the
+			// cellRef must strip the escape too. Otherwise the component never links to its part type
+			// and has NO pins, and every pin-level rule misses it. portName does the same for pin
+			// references.
 			sec.PartRef = strings.TrimPrefix(atom(cr.Arg(1)), "&")
 			if lr := cr.Child("libraryRef"); lr != nil {
 				sec.LibraryRef = strings.TrimPrefix(atom(lr.Arg(1)), "&")
@@ -479,18 +485,17 @@ func instanceOf(n *node, src string) (refDes string, sec *ir.ComponentSection, i
 	return refDes, sec, id, pinMap
 }
 
-// netOf converts an EDIF (net ...) node into an ir.Net, turning each (portRef pin
-// (instanceRef id)) into a Connection, resolving the internal id to a ref_des via
-// refByID and the logical port to its PHYSICAL pin designator(s) via the instance's
-// portInstance table (pinsByID). A port that maps to several pins on the placement
-// fans out to one Connection per pin. A port with no mapping keeps the port name, which
-// also keeps keys stable for the common `&N`-style port whose stripped name equals its
-// physical designator.
+// netOf converts an EDIF (net ...) node into an ir.Net. Each (portRef pin (instanceRef id))
+// becomes a Connection. refByID resolves the internal id to a ref_des. The instance's
+// portInstance table (pinsByID) resolves the logical port to its PHYSICAL pin designator(s).
+// A port that maps to several pins on the placement fans out to one Connection per pin. A
+// port with no mapping keeps the port name. That also keeps keys stable for the common
+// `&N`-style port, whose stripped name equals its physical designator.
 //
-// pieces are the (net) lists that are one electrical net once a hierarchy is flattened, the naming
-// piece first, and a flat read passes one; name is the net's name (hierarchy.netNames). Inside a
-// block, a portRef naming the block's own port, or naming a block placed in it (blockPaths), is a
-// join between pieces, not a pin.
+// pieces are the (net) lists that form one electrical net once a hierarchy is flattened, with the
+// naming piece first. A flat read passes one piece. name is the net's name (hierarchy.netNames).
+// Inside a block, a portRef can name the block's own port or a block placed in it (blockPaths).
+// Such a portRef is a join between pieces, not a pin.
 func netOf(pieces []netPiece, name, src string, refByID map[string]string, pinsByID map[string]map[string][]string, blockPaths map[string]string) *ir.Net {
 	nm := parseName(pieces[0].node.Arg(1))
 	net := &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: src, NativeId: nm.ID, NativeIdKind: edifNativeIDKind}}
@@ -513,10 +518,11 @@ func addConnections(net *ir.Net, piece netPiece, src string, refByID map[string]
 		if _, block := blockPaths[key]; block || (inst == "" && piece.path != "") {
 			continue
 		}
-		// An instanceRef that resolves to no ref_des (power/ground/off-page symbol, or a
-		// top-level port ref with no instanceRef) is keyed by the "" no-ref marker, NOT by the
-		// export-unstable internal id, which would make the connection read as changed on every
-		// revision diff (WS1-004). The raw id stays in provenance only.
+		// Some instanceRefs resolve to no ref_des, such as a power/ground/off-page symbol or a
+		// top-level port ref with no instanceRef. Such a connection is keyed by the "" no-ref
+		// marker, NOT by the export-unstable internal id. Keying by that id would make the
+		// connection read as changed on every revision diff (WS1-004). The raw id is kept in
+		// provenance only.
 		port := portName(pr.Arg(1))
 		pins := pinsByID[key][port]
 		if len(pins) == 0 {
@@ -535,7 +541,7 @@ func addConnections(net *ir.Net, piece netPiece, src string, refByID map[string]
 // propValue extracts the scalar value from an EDIF (property ...) node, handling the
 // string, integer, and boolean value forms. The string form covers both the netlist
 // (string "V") and the schematic (string (stringDisplay "V" ...)) wrappers via
-// stringDisplayText, so a property carries its value on the .eds view as well as the .edn.
+// stringDisplayText, so a property has its value on the .eds view as well as the .edn.
 func propValue(p *node) string {
 	if s := p.Child("string"); s != nil {
 		return stringDisplayText(s)
@@ -549,9 +555,9 @@ func propValue(p *node) string {
 	return ""
 }
 
-// edifName is a parsed EDIF entity name: an identifier plus an optional human display
-// string. best() resolves the pair the way every caller wants: the display when the form
-// carried one, else the identifier.
+// edifName is a parsed EDIF entity name, an identifier plus an optional human display
+// string. Every caller wants best(). It returns the display when the form had one, else
+// the identifier.
 type edifName struct {
 	ID      string
 	Display string
@@ -566,9 +572,9 @@ func (e edifName) best() string {
 
 // An EDIF name is a small recursive sum type. Each predicate below recognizes ONE form and
 // binds its parts, so parseName reads as an ordered alternation and adding a form is one
-// predicate plus one row in TestParseNameForms. Named predicates rather than a switch
-// inlined at each call site turn a missing form into a failing test instead of a silently
-// empty name (WS1-026).
+// predicate plus one row in TestParseNameForms. The forms are named predicates rather than
+// a switch inlined at each call site. A missing form then fails a test instead of giving a
+// silently empty name (WS1-026).
 
 // asAtom matches a bare identifier atom: FOO.
 func asAtom(n *node) (id string, ok bool) {
@@ -578,8 +584,8 @@ func asAtom(n *node) (id string, ok bool) {
 	return "", false
 }
 
-// asRename matches (rename INNER "Display"), binding the inner name (itself a bare id atom or
-// a nested (name ...)) and the trailing quoted string.
+// asRename matches (rename INNER "Display"). It binds the inner name and the trailing quoted
+// string. The inner name is a bare id atom or a nested (name ...).
 func asRename(n *node) (inner *node, disp string, ok bool) {
 	if n != nil && n.IsList && n.Head() == "rename" && len(n.Kids) >= 3 {
 		return n.Arg(1), atom(n.Arg(2)), true
@@ -587,7 +593,7 @@ func asRename(n *node) (inner *node, disp string, ok bool) {
 	return nil, "", false
 }
 
-// asName matches (name ID (display ...)): the display children carry placement, not a human
+// asName matches (name ID (display ...)). The display children hold placement, not a human
 // string, so the form yields an identifier with no display name.
 func asName(n *node) (id string, ok bool) {
 	if n != nil && n.IsList && n.Head() == "name" {
@@ -606,8 +612,8 @@ func asMember(n *node) (base, idx string, ok bool) {
 
 // parseName resolves an EDIF entity name (design, net, cell, library, part, pin, instance)
 // across every form: bare atom, (rename ID "D"), (name ID ...), and the nested
-// (rename (name ID ...) "D"). It leaves the identifier verbatim (no & strip, no member
-// expansion): those are pin-identity normalizations, applied only in portName.
+// (rename (name ID ...) "D"). It leaves the identifier verbatim, with no & strip and no
+// member expansion. Those are pin-identity normalizations, and only portName applies them.
 func parseName(n *node) edifName {
 	if id, ok := asAtom(n); ok {
 		return edifName{ID: id, Display: id}
@@ -628,10 +634,10 @@ func nameParts(n *node) (id, disp string) {
 	return p.ID, p.Display
 }
 
-// portName is the PIN-identity projection of a portRef's name: the & escape is stripped and a
-// (member NAME IDX) bus pin becomes NAME[IDX] so bus-pin identity survives (WS1-004). It is
-// separate from parseName because pin identity needs those normalizations and net/entity names
-// must not carry them. The two share the shape predicates.
+// portName projects a portRef's name to its PIN identity. It strips the & escape, and it turns a
+// (member NAME IDX) bus pin into NAME[IDX] so bus-pin identity survives (WS1-004). It is separate
+// from parseName because pin identity needs those normalizations and net/entity names must not
+// have them. The two share the shape predicates.
 func portName(n *node) string {
 	if id, ok := asAtom(n); ok {
 		return strings.TrimPrefix(id, "&")
@@ -671,13 +677,14 @@ func topCell(root *node) *node {
 	return nil
 }
 
-// unexpandedCells lists every cell outside scope whose contents hold instances, which extract
-// therefore never read (WS1-004 scopes it to the top cell, agni issue 707). A cell with no instances
-// is a leaf part and loses nothing. When the top cell cannot be resolved, scope is the whole document
-// and extract read everything, so nothing is listed.
+// unexpandedCells lists every cell outside scope whose contents hold instances (agni issue 707).
+// extract never read those cells, because WS1-004 scopes it to the top cell. A cell with no
+// instances is a leaf part and loses nothing. When the top cell cannot be resolved, scope is the
+// whole document and extract read everything, so nothing is listed.
 //
-// A flattened read walked into every block it placed, so it lists only the blocks a cycle kept it
-// out of. A block nothing places is a definition the design never uses and loses nothing either.
+// A flattened read walked into every block it placed. A cycle can keep the walk out of a block, and
+// the list then holds only those blocks. If nothing places a block, the design never uses that
+// definition, and it loses nothing either.
 func unexpandedCells(root, scope *node, h *hierarchy, src string) []*ir.UnexpandedHierarchy {
 	if scope == root {
 		return nil
@@ -703,9 +710,9 @@ func unexpandedCells(root, scope *node, h *hierarchy, src string) []*ir.Unexpand
 	return out
 }
 
-// stringDisplayText returns the scalar text held by a value node (a designator or a property
-// (string ...)), unwrapping the schematic-view (stringDisplay "V" ...) wrapper the .eds export
-// uses. The netlist (.edn) writes the value as a bare atom ((designator "R1"), (string "1%")),
+// stringDisplayText returns the scalar text in a value node, such as a designator or a property
+// (string ...). It unwraps the .eds export's schematic-view (stringDisplay "V" ...) wrapper. The
+// netlist (.edn) writes the value as a bare atom ((designator "R1"), (string "1%")),
 // while the schematic (.eds) wraps it ((designator (stringDisplay "R1")), (string (stringDisplay
 // "10k" ...))), and both views run through this one reader. A bare atom passes straight
 // through, so on the .edn form it is a no-op. Mirrors refDesOf/propText in schematic.go.
@@ -753,19 +760,20 @@ func edifVersion(root *node) []string {
 	return parts
 }
 
-// recordRootRefs stashes the three names extract resolves and then discards. Each is an
+// recordRootRefs stashes three names. extract resolves each one and then discards it. Each is an
 // escape-hatch attribute (CONSTRAINTS C9), in the same shape as edif_version.
 //
-// The design's root reference names two of them, the cell carrying the top-level contents and the
+// The design's root reference names two of them, the cell holding the top-level contents and the
 // library holding that cell. extract resolves the pair through topCell and works from the cell's
-// contents, so neither name reaches the IR. The scope a read recovers is decided by
-// (design ... (cellRef C (libraryRef L))), so an emitter that guesses the pair points the design at a
-// different cell, and the next read scopes to that cell and recovers different components and nets.
-// Recording them keeps a write-then-read on the same scope, not merely the same file.
+// contents, so neither name reaches the IR. (design ... (cellRef C (libraryRef L))) decides which
+// scope a read recovers. Suppose an emitter guesses the pair. It points the design at a different
+// cell, and the next read scopes to that cell and recovers different components and nets.
+// Recording the names keeps a write-then-read on the same scope, not merely the same file.
 //
-// The third is the (edif NAME ...) root name, distinct from the design's and consulted in extract
-// only as a fallback. Three fixtures carry a root name their design does not (CELLMPN/TOP, UNANN/D,
-// WRAPPED/a rename), so it would otherwise be lost. It is recorded only when it differs.
+// The third is the (edif NAME ...) root name. It is distinct from the design's name, and extract
+// consults it only as a fallback. Three fixtures have a root name that differs from their design's
+// (CELLMPN/TOP, UNANN/D, WRAPPED/a rename), so it would otherwise be lost. It is recorded only when
+// it differs.
 func recordRootRefs(d *ir.Design, root, design *node) {
 	if design != nil {
 		if cr := design.Child("cellRef"); cr != nil {

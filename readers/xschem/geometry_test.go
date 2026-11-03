@@ -17,8 +17,8 @@ func TestReadSchematicGeometry(t *testing.T) {
 	}
 	sheet := g.Sheets[0]
 
-	// The res symbol carries its drawing (two lead polylines) and two pins, marked as a loaded
-	// symbol asset. The pin boxes are captured as pins, not rects.
+	// The res symbol holds its drawing (two lead polylines) and two pins, and is marked as a
+	// loaded symbol asset. The pin boxes are captured as pins, not rects.
 	res := symbolDef(g, "res")
 	if res == nil {
 		t.Fatal("no res SymbolDef")
@@ -130,8 +130,8 @@ func shapeKinds(shapes []*geom.Shape) map[geom.Shape_Kind]int {
 
 // TestAnnotationSymbols (WS7-037) checks that the geometry reader draws two rendered-annotation
 // symbols, the title block (its @author, the schematic filename, and static text) and the visible
-// SPICE code block (@name plus its multi-line @value split into stacked lines), while a clutter
-// annotation (spice_probe) stays skipped.
+// SPICE code block (@name plus its multi-line @value split into stacked lines). A clutter
+// annotation (spice_probe) is still skipped.
 func TestAnnotationSymbols(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "annotations.sch")), "annotations.sch", testOpener(t))
 	if err != nil {
@@ -174,7 +174,7 @@ func TestAnnotationSymbols(t *testing.T) {
 
 // TestReadBusGeometry asserts the geometry reader draws an xschem bus (an `N` wire whose lab is a
 // range name) as a KIND_BUS wire named by that lab (WS7-042) rather than an undistinguished plain
-// wire. The lab is the join key a bus-not-modeled finding highlights it on.
+// wire. A bus-not-modeled finding joins on the lab to highlight the wire.
 func TestReadBusGeometry(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "bus.sch")), "bus.sch", nil)
 	if err != nil {
@@ -206,8 +206,8 @@ func TestReadBusGeometry(t *testing.T) {
 
 // An xschem label symbol (gnd/vdd/ipin/opin/lab_pin) names the net at its origin rather than being a
 // part, and read.go keeps it out of Components for that reason. Its instance name therefore
-// joins to nothing, so carrying it as a ref_des let a viewer select a component that does not exist;
-// the net it names goes in net_anchor instead.
+// joins to nothing. As a ref_des it let a viewer select a component that does not exist, so the
+// net it names goes in net_anchor instead.
 func TestLabelSymbolCarriesItsNetAnchor(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
 	if err != nil {

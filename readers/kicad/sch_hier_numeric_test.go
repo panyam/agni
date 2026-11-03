@@ -7,9 +7,9 @@ import (
 	"testing"
 )
 
-// agni issue 1143: hier_numeric_root is our own hierarchical project whose two sub-sheets under
-// different parents are both named "1", the case the Sheets dock has to tell apart. The ids are the
-// sheet paths, so they differ where the names do not, and each nests under its own parent.
+// agni issue 1143: hier_numeric_root is our own hierarchical project. Two of its sub-sheets sit under
+// different parents and are both named "1", and the Sheets dock has to tell them apart. The ids are
+// the sheet paths, so they differ where the names do not, and each nests under its own parent.
 func TestNumericSubSheetsKeepDistinctPaths(t *testing.T) {
 	open := func(rel string) ([]byte, error) { return os.ReadFile(filepath.Join("testdata", rel)) }
 	g, err := ReadSchematicHierarchy("hier_numeric_root.kicad_sch", readFixture(t, "hier_numeric_root.kicad_sch"), open)
@@ -37,8 +37,8 @@ func TestNumericSubSheetsKeepDistinctPaths(t *testing.T) {
 	}
 }
 
-// agni issue 1023: the sub-sheets a hierarchy references, nested ones included, so a read of one of
-// them can say it is part of a larger design.
+// agni issue 1023: SheetFiles lists every sub-sheet that a hierarchy references, nested ones
+// included, so a read of one of them can say it is part of a larger design.
 func TestSheetFilesListsEverySubSheet(t *testing.T) {
 	open := func(rel string) ([]byte, error) { return os.ReadFile(filepath.Join("testdata", rel)) }
 	got := SheetFiles(readFixture(t, "hier_numeric_root.kicad_sch"), open)

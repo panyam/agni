@@ -16,9 +16,9 @@ func readBoardGeom(t *testing.T, name string) *geom.BoardGeometry {
 	return g
 }
 
-// TestBoardGeometryZonesViaSpansUserPads (WS1-031 D/E/F) checks that a Set-direct Contour becomes a
-// copper Zone (fill), a drill layer's Span sets the via's layer span, and a pad using
-// UserPrimitiveRef resolves to a real size (its user-dictionary bounding box) instead of 0x0.
+// TestBoardGeometryZonesViaSpansUserPads (WS1-031 D/E/F) checks three things. A Set-direct Contour
+// becomes a copper Zone (fill). A drill layer's Span sets the via's layer span. A pad using
+// UserPrimitiveRef resolves to a real size, its user-dictionary bounding box, instead of 0x0.
 func TestBoardGeometryZonesViaSpansUserPads(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
 
@@ -57,10 +57,10 @@ func TestBoardGeometryZonesViaSpansUserPads(t *testing.T) {
 }
 
 // TestBoardGeometrySilkGraphics (WS1-031) checks that a package's Marking silkscreen artwork is
-// composed to board coordinates per placement, so it lands on its part. R1 (R0603, at 3mm,4mm,
-// rotation 0, front) carries the R0603 body Marking; its first point (local -0.5,-0.3 mm) composes
-// to (2.5mm, 3.7mm) on F.SilkS. R2 (same package, rotated 90) also emits one, so two graphics
-// total.
+// composed to board coordinates per placement, so it sits on its part. R1 is an R0603 at 3mm,4mm,
+// rotation 0, front, and it has the R0603 body Marking. The Marking's first point is local
+// (-0.5,-0.3 mm) and composes to (2.5mm, 3.7mm) on F.SilkS. R2 has the same package rotated 90 and
+// also emits one, so there are two graphics in total.
 func TestBoardGeometrySilkGraphics(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
 	var r1 *geom.BoardGraphic
@@ -104,9 +104,9 @@ func padByNumber(pl *geom.ComponentPlacement, num string) *geom.Pad {
 }
 
 // TestBoardGeometryPlacementRotationFrame pins the canonical emit contract (WS1-030). IPC-2581
-// is Y-up, so the source Xform rotation is carried verbatim and the back side sets Mirror; pads
-// stay footprint-local and unmodified. The renderer composes rotation and mirror (see the render
-// package's behavioral test that this lands each pin on its copper).
+// is Y-up, so the source Xform rotation is copied verbatim and the back side sets Mirror. Pads
+// are footprint-local and unmodified. The renderer composes rotation and mirror. The render
+// package has a behavioral test that this puts each pin on its copper.
 func TestBoardGeometryPlacementRotationFrame(t *testing.T) {
 	g := readBoardGeom(t, "board_geom_rotation.xml")
 
@@ -190,9 +190,9 @@ func TestBoardGeometryLayersOutline(t *testing.T) {
 
 // TestBoardGeometryOutlineArc checks that a Profile arc step (PolyStepCurve) is expanded into chord
 // points in document order (WS1-028), so the outline follows the arc bulge instead of cutting
-// across it. The fixture's top edge is a semicircle whose apex at (5,9) exists only if the curve is
-// emitted; before the fix the arc was dropped and the outline stopped at y=4 with 4 straight
-// points.
+// across it. The fixture's top edge is a semicircle with its apex at (5,9). The apex exists only if
+// the curve is emitted. Before the fix the arc was dropped, and the outline stopped at y=4 with 4
+// straight points.
 func TestBoardGeometryOutlineArc(t *testing.T) {
 	g := readBoardGeom(t, "board_geom_outline_arc.xml")
 	if g.Outline == nil || len(g.Outline.Paths) != 1 {
@@ -221,7 +221,7 @@ func TestBoardGeometryOutlineArc(t *testing.T) {
 }
 
 // TestBoardGeometryOutlineArcClockwiseCase guards the Allegro uppercase-casing fix. The arc step
-// carries clockwise="TRUE", so it must sweep clockwise (the apex dips DOWN to y=-1). A
+// has clockwise="TRUE", so it must sweep clockwise (the apex dips DOWN to y=-1). A
 // case-sensitive =="true" parse would read it as counter-clockwise and bulge UP to y=9 instead.
 func TestBoardGeometryOutlineArcClockwiseCase(t *testing.T) {
 	g := readBoardGeom(t, "board_geom_arc_cw.xml")
@@ -282,9 +282,9 @@ func netCopperByName(g *geom.BoardGeometry, net string) *geom.NetCopper {
 	return nil
 }
 
-// TestBoardGeometryCopper checks that a routed track becomes width-carrying TrackSegments (its arc step
-// approximated as arcSegments chords), and a drilled VIA hole becomes a Via whose annular is
-// the co-located copper pad minus the drill.
+// TestBoardGeometryCopper checks that a routed track becomes TrackSegments with widths, with its
+// arc step approximated as arcSegments chords. It also checks that a drilled VIA hole becomes a
+// Via, and the Via's annular is the co-located copper pad minus the drill.
 func TestBoardGeometryCopper(t *testing.T) {
 	g := readBoardGeom(t, "board_geom.xml")
 	gnd := netCopperByName(g, "GND")
@@ -314,9 +314,9 @@ func TestBoardGeometryCopper(t *testing.T) {
 	}
 }
 
-// TestBoardGeometryJoinsNetlistIR is the WS1-006/023 cross-artifact acceptance. The same file
-// read as netlist (Read) and as board geometry (ReadBoardGeometry) must agree on ref_des and
-// on pin<->pad identity, so a board rule can key one against the other.
+// TestBoardGeometryJoinsNetlistIR is the WS1-006/023 cross-artifact acceptance. It reads the same
+// file as netlist (Read) and as board geometry (ReadBoardGeometry). The two reads must agree on
+// ref_des and on pin<->pad identity, so a board rule can key one against the other.
 func TestBoardGeometryJoinsNetlistIR(t *testing.T) {
 	fixture := readFixture(t, "board_geom.xml")
 	d, err := Read(bytes.NewReader(fixture), "test.xml")
@@ -333,7 +333,7 @@ func TestBoardGeometryJoinsNetlistIR(t *testing.T) {
 			t.Errorf("placement %s has no netlist component", pl.RefDes)
 		}
 	}
-	// Every netlist connection lands on a pad of that component's placement.
+	// Every netlist connection maps to a pad of that component's placement.
 	for _, n := range d.Nets {
 		for _, c := range n.Connections {
 			pl := placementByRef(g, c.ComponentRef)

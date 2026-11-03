@@ -34,8 +34,8 @@ func flaggedPins(d *ir.Design) []string {
 }
 
 // agni issue 1023: KiCad writes a schematic pin's no-connect flag onto its pad's pin type
-// ("passive+no_connect"), so Jetson read from its board alone flags the same pins its schematic
-// read flags. Before, the board read flagged none.
+// ("passive+no_connect"). So a read of Jetson's board alone flags the same pins as a read of its
+// schematic. Before, the board read flagged none.
 func TestABoardReadFlagsThePinsItsSchematicLeavesOpen(t *testing.T) {
 	dir := filepath.Join("..", "..", "tools", "samples", "boards", "jetson-agx-thor-baseboard")
 	pcb, err := os.Open(filepath.Join(dir, "jetson-agx-thor-baseboard.kicad_pcb"))

@@ -10,10 +10,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// NetClassRules is the net-class assignment a KiCad project file carries in its net_settings, as name
-// patterns plus explicit per-net assignments. This is the ONLY source that states a net's class, since
-// neither the .kicad_sch nor the .kicad_pcb records membership, so ir.Net.net_classes is populated
-// from here (WS1-037). A project with no rules leaves every net unclassed.
+// NetClassRules is the net-class assignment in a KiCad project file's net_settings, as name patterns
+// plus explicit per-net assignments. No other source states a net's class. Neither the .kicad_sch nor
+// the .kicad_pcb records membership, so ir.Net.net_classes is filled from here (WS1-037). A project
+// with no rules leaves every net unclassed.
 //
 // BOTH SOURCES CONTRIBUTE. KiCad unions a net's explicit assignments with every matching pattern, so
 // these two fields are inputs to one union rather than a lookup with a fallback (WS1-050).
@@ -27,24 +27,24 @@ type netClassPattern struct {
 	pattern string
 }
 
-// NetClassDef is one class's DECLARED routing constraints, the values the project says nets in this
-// class are supposed to be routed at. Membership (who is in the class) is the other half, above.
+// NetClassDef is one class's DECLARED routing constraints. The project says that nets in this class
+// are supposed to be routed at these values. Membership (who is in the class) is the other half, above.
 //
 // Priority orders the cascade when a net is in several classes, and LOWER WINS. KiCad sorts
 // constituents ascending and pins the DEFAULT class at max-int, so it fills only what no other class
 // supplied. The cascade is PER FIELD, not per class. A net in a high-priority class that declares only
-// a clearance still takes its track width from the next class down, so this type carries per-field
+// a clearance still takes its track width from the next class down, so this type records per-field
 // presence rather than plain zero values.
 //
 // Absent and zero are different. A class that declares no track width leaves the field for a
 // lower-priority class to fill, where a class declaring 0 states a (nonsensical) value. KiCad writes
-// each key only when the class HasX(), so absence is expressible in the source and has to survive the
-// read.
+// each key only when the class HasX(), so absence is expressible in the source and the read has to
+// keep it.
 type NetClassDef struct {
 	Name string
-	// IsDefault marks the class KiCad applies to EVERY net, not only nets assigned to it. It is a
-	// magic NAME in the format ("Default"), so the reader recognizes it rather than the core, because
-	// identifying it is format knowledge (C9 left-shift).
+	// IsDefault marks the class KiCad applies to EVERY net, not only nets assigned to it. The format
+	// marks it with a magic NAME ("Default"). Identifying it is format knowledge, so the reader
+	// recognizes it rather than the core (C9 left-shift).
 	//
 	// It fills any constraint the net's own classes left unstated, and a net in no class at all takes
 	// its values outright. A cascade that only walked a net's own memberships would under-report on
@@ -113,7 +113,7 @@ func assignedClasses(raw json.RawMessage) []string {
 	return nil
 }
 
-// ClassesOf returns every net class netName belongs to, sorted and deduplicated, or nil when no
+// ClassesOf returns every net class that netName belongs to, sorted and deduplicated, or nil when no
 // rule matches. Membership is a UNION, matching KiCad's own resolution. The explicit assignment does
 // NOT short-circuit pattern matching, and pattern matching does not stop at the first hit, so a net
 // named by an assignment and matched by two patterns belongs to all three classes.
@@ -147,9 +147,9 @@ func (r *NetClassRules) ClassesOf(netName string) []string {
 }
 
 // ParseNetClassDefs reads net_settings.classes[] from a KiCad .kicad_pro. These are the per-class
-// routing constraints saying what a class's nets are SUPPOSED to be routed at, the declared half of
-// the declared-vs-actual comparison (WS3-111). As with ParseNetClasses, a malformed or class-free
-// project yields nothing rather than failing the read.
+// routing constraints. They say what a class's nets are SUPPOSED to be routed at, and they form the
+// declared half of the declared-vs-actual comparison (WS3-111). As with ParseNetClasses, a malformed
+// or class-free project yields nothing rather than failing the read.
 //
 // The default class arrives in this same array, named "Default", with its priority forced to max-int
 // so it cascades last. It is FLAGGED rather than merely ranked, because KiCad applies it to every net,
@@ -198,18 +198,18 @@ func ParseNetClassDefs(r io.Reader) []NetClassDef {
 	return out
 }
 
-// defaultClassName is the magic class name KiCad gives the fallback net class. Every net inherits
-// its unstated constraints, whether or not the net is assigned to it.
+// defaultClassName is the magic class name KiCad gives the fallback net class. Every net takes the
+// constraints it leaves unstated from this class, whether or not the net is assigned to it.
 const defaultClassName = "Default"
 
 // defaultPriority puts a class with no stated priority last in the cascade, beside the Default class.
-// It matches the max-int KiCad pins Default at, so an unstated priority never silently outranks a
-// class that actually declared one.
+// It equals the max-int priority that KiCad gives Default, so an unstated priority never silently
+// outranks a class that actually declared one.
 const defaultPriority = math.MaxInt32
 
 // AnnotateNetClasses stamps ir.Net.net_classes from a KiCad project's net-class rules, leaving a
 // net with no matching rule untouched. It runs after the project merge because the rules live
-// in the .kicad_pro, not in the schematic or board file the readers consume.
+// in the .kicad_pro, not in the schematic or board file that the readers consume.
 func AnnotateNetClasses(d *ir.Design, rules *NetClassRules) {
 	if d == nil || rules == nil {
 		return
@@ -222,13 +222,13 @@ func AnnotateNetClasses(d *ir.Design, rules *NetClassRules) {
 }
 
 // ConstraintKindNetClass is the ir.Constraint.kind tag for a net-class definition. The IR node is a
-// thin carrier (name + kind + params, "the rules DSL owns the semantics"), so the class name rides
-// `name`, the scalars ride `params`, and any consumer keys off this kind rather than guessing from the
-// shape of the params map.
+// thin carrier (name + kind + params, "the rules DSL owns the semantics"). So the class name goes in
+// `name` and the scalars go in `params`. Any consumer keys off this kind rather than guessing from
+// the shape of the params map.
 const ConstraintKindNetClass = "netclass"
 
 // AnnotateNetClassDefs stamps a KiCad project's per-class routing constraints onto ir.Design as
-// Constraint nodes (WS3-111), the first reader to populate that node.
+// Constraint nodes (WS3-111). This is the first reader to populate that node.
 //
 // Params are strings because ir.Constraint says they are. The IR carries the declaration and the query
 // layer parses and compares. Only stated scalars are written, so a consumer can tell "this class

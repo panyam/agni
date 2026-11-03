@@ -150,10 +150,10 @@ func TestReadSchematic_Sample(t *testing.T) {
 }
 
 // TestReadSchematic_WireNetNameForm checks that a net declared with the compound (net (name SIG)
-// ...) form names its wire "SIG". The reader previously kept only the display name of that form
-// (empty here) and fell back to atom(), which is empty for a compound, so every such wire was left
-// UNNAMED. That made net-subject findings unlocatable on the .eds canvas (under WS1-047 the
-// companion is joined by net name). The fix falls back to the id, matching how the netlist read
+// ...) form names its wire "SIG". The reader previously kept only the display name of that form,
+// which is empty here. It then fell back to atom(), which is empty for a compound. So every such
+// wire was left UNNAMED. Under WS1-047 the companion is joined by net name, so net-subject findings
+// were unlocatable on the .eds canvas. The fix falls back to the id, matching how the netlist read
 // names the same net.
 func TestReadSchematic_WireNetNameForm(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "net-name-id.eds")), "net-name-id.eds")
@@ -170,9 +170,10 @@ func TestReadSchematic_WireNetNameForm(t *testing.T) {
 
 // TestReadSchematic_FieldVisibility asserts placedFields honors the source visibility flag and
 // inherits a figureGroup's default text height (WS1-037 follow-up). An OrCAD/Mentor export records
-// a display origin for nearly every property but marks most (visible (false)); only the visible
-// ones become drawn Fields. A visible field that restates no textHeight inherits its figureGroup's
-// default height (so it scales with the sheet), while one with its own textHeight keeps it.
+// a display origin for nearly every property, but marks most (visible (false)). Only the visible
+// ones become drawn Fields. Suppose a visible field restates no textHeight. It inherits its
+// figureGroup's default height, so it scales with the sheet. A field with its own textHeight keeps
+// that height.
 func TestReadSchematic_FieldVisibility(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "visibility.eds")), "visibility.eds")
 	if err != nil {
@@ -193,7 +194,7 @@ func TestReadSchematic_FieldVisibility(t *testing.T) {
 	if len(fields) != 3 {
 		t.Fatalf("fields = %v, want 3 (Reference + Value + Rating)", fields)
 	}
-	// Heights are GLYPH heights, textLineRatio below the source textHeight the fixture states
+	// Heights are GLYPH heights. Each is the fixture's source textHeight divided by textLineRatio
 	// (see glyphHeight), because the EDIF value is a line pitch and is divided down to an em size.
 	// Value overrides ATTRIBUTE without a textHeight, so it inherits the group default 254000.
 	if v := fields["Value"]; v == nil || v.Value != "10k" || v.Height != glyphHeight(254000) {
@@ -205,11 +206,11 @@ func TestReadSchematic_FieldVisibility(t *testing.T) {
 	}
 }
 
-// TestReadSchematic_HiddenFieldFlood is the scaled, redistributable repro (hidden-field-flood.eds,
-// no org-specific data) of the WS1-037 field-visibility flood. Six parts each carry one visible
-// Value and several hidden attribute properties (manufacturer, part number, datasheet URL,
-// description, tolerance, footprint). Only the ref-des and the visible Value may be drawn, and the
-// hidden attributes must not flood the sheet.
+// TestReadSchematic_HiddenFieldFlood is a scaled, redistributable repro of the WS1-037
+// field-visibility flood. Its fixture, hidden-field-flood.eds, holds no org-specific data. Six parts
+// each have one visible Value and several hidden attribute properties (manufacturer, part number,
+// datasheet URL, description, tolerance, footprint). Only the ref-des and the visible Value may be
+// drawn, and the hidden attributes must not flood the sheet.
 func TestReadSchematic_HiddenFieldFlood(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "hidden-field-flood.eds")), "hidden-field-flood.eds")
 	if err != nil {
@@ -366,7 +367,7 @@ func TestReadSchematic_PinLabels(t *testing.T) {
 	if a1 == nil || a1.LabelOrigin == nil {
 		t.Fatalf("A1 pin label not captured: %v", pins)
 	}
-	// EDIF splits the two. The portImplementation names the PORT and the cell interface carries the
+	// EDIF splits the two. The portImplementation names the PORT and the cell interface holds the
 	// physical designator. PortRef is a join key (proto: ir.Port.designator), so it takes the
 	// number and the name goes to Name, matching what the KiCad reader already produces.
 	if a1.PortRef != "1" || a1.Name != "A1" {
@@ -376,7 +377,7 @@ func TestReadSchematic_PinLabels(t *testing.T) {
 	if a1.NumberOrigin.GetX() != 2 || a1.NumberOrigin.GetY() != 46 || a1.NumberJustify != "left top" {
 		t.Errorf("A1 number placement = %v / %q, want (2,46) left top", a1.NumberOrigin, a1.NumberJustify)
 	}
-	// A3 declares a designator EQUAL to its port name, so Name stays empty rather than drawing
+	// A3 declares a designator EQUAL to its port name, so Name is left empty rather than drawing
 	// the same string twice.
 	if a3 := pins["A3"]; a3 == nil || a3.Name != "" {
 		t.Errorf("A3 = %v, want Name empty (designator equals the port name)", a3)
@@ -388,7 +389,7 @@ func TestReadSchematic_PinLabels(t *testing.T) {
 	if a2 := pins["A2"]; a2 == nil || a2.LabelOrigin != nil {
 		t.Errorf("A2 label should be hidden (nil origin), got %v", a2)
 	}
-	// A pin label carries a text height like any other run, so it scales with the sheet instead
+	// A pin label has a text height like any other run, so it scales with the sheet instead
 	// of being sized from a renderer constant. A1 restates none and inherits the LABEL group's;
 	// A3 states its own, which wins. Both are converted from a line pitch (see glyphHeight).
 	if a1.Height != glyphHeight(12) {
@@ -399,17 +400,17 @@ func TestReadSchematic_PinLabels(t *testing.T) {
 		t.Errorf("A3 = %v, want height %d (its own textHeight 6, overriding the group)",
 			a3, glyphHeight(6))
 	}
-	// A hidden label has no height to carry, so the renderer's own default still applies.
+	// A hidden label gets no height, so the renderer's own default still applies.
 	if a2 := pins["A2"]; a2 != nil && a2.Height != 0 {
 		t.Errorf("A2 is hidden but carries height %d, want 0", a2.Height)
 	}
 }
 
-// TestReadSchematic_UpsideDown documents the input to the upside-down-text bug (a
-// real-corpus headers sheet, reproduced by the small upsidedown.eds fixture). The reader
-// faithfully captures a source R180 on both a placement transform and a label's own text
-// orientation. That the reader carries R180 through is correct; keeping such text readable is
-// the render layer's job (see render.TestSheetSVG_UprightText).
+// TestReadSchematic_UpsideDown documents the input to the upside-down-text bug. A
+// real-corpus headers sheet showed the bug, and the small upsidedown.eds fixture reproduces
+// it. The reader faithfully captures a source R180 on both a placement transform and a
+// label's own text orientation. Passing R180 through is correct. The render layer keeps such
+// text readable (see render.TestSheetSVG_UprightText).
 func TestReadSchematic_UpsideDown(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "upsidedown.eds")), "upsidedown.eds")
 	if err != nil {
@@ -434,8 +435,8 @@ func TestReadSchematic_UpsideDown(t *testing.T) {
 	}
 }
 
-// TestReadSchematic_OffPageLabels asserts off-page connector signal names (page-level
-// portImplementation name displays) are captured as sheet labels at their placed origins.
+// TestReadSchematic_OffPageLabels asserts that off-page connector signal names are captured as
+// sheet labels at their placed origins. Those names are page-level portImplementation name displays.
 func TestReadSchematic_OffPageLabels(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "offpage.eds")), "offpage.eds")
 	if err != nil {
@@ -459,8 +460,8 @@ func TestReadSchematic_OffPageLabels(t *testing.T) {
 	}
 }
 
-// TestReadSchematic_Annotations asserts static free-text annotations on a cell view (e.g.
-// a title block's field labels) are captured as symbol-local Labels.
+// TestReadSchematic_Annotations asserts that static free-text annotations on a cell view are
+// captured as symbol-local Labels. A title block's field labels are one example.
 func TestReadSchematic_Annotations(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "annot.eds")), "annot.eds")
 	if err != nil {
@@ -486,9 +487,10 @@ func TestReadSchematic_Annotations(t *testing.T) {
 
 // TestReadSchematic_TitleBlock asserts the drawing-sheet border/title-block instance is
 // promoted into the sheet's TitleBlock (WS7-019). The field-name'd properties map to
-// title/rev/date/company, the first non-empty of a REV_n/DATE_n sequence wins, an all-dashes
-// placeholder is treated as empty, and the border instance itself is dropped from placements
-// (the worksheet frame is synthesized) instead of double-drawing the raw border symbol.
+// title/rev/date/company. The first non-empty value of a REV_n/DATE_n sequence wins, and an
+// all-dashes placeholder is treated as empty. The worksheet frame is synthesized, so the
+// border instance itself is dropped from placements instead of double-drawing the raw
+// border symbol.
 func TestReadSchematic_TitleBlock(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "titleblock.eds")), "titleblock.eds")
 	if err != nil {
@@ -516,8 +518,8 @@ func TestReadSchematic_TitleBlock(t *testing.T) {
 		t.Errorf("company = %q, want %q", tb.Company, "Acme")
 	}
 
-	// Fields with no typed slot land in ExtraFields in source order, keyed by base name so
-	// DV_1 (empty, skipped) / DV_2 collapse to DV = first non-empty.
+	// Fields with no typed slot go into ExtraFields in source order, keyed by base name. DV_1
+	// is empty and skipped, so DV_1/DV_2 collapse to DV with the first non-empty value.
 	wantExtra := []struct{ key, value string }{
 		{"DRAWING", "DEMO-100-SCH"},
 		{"DESIGNER", "A ENGINEER"},
@@ -549,9 +551,9 @@ func TestReadSchematic_TitleBlock(t *testing.T) {
 // TestReadSchematic_RefDesDisplay asserts the ref-des is placed from its designator's own
 // (display ...) rather than anchored on the symbol origin. Anchoring on the origin put the ref-des
 // a line or two off its field column, at the renderer's fixed fallback size and center-anchored,
-// so it overran the neighbouring component's fields. The display also carries the visibility flag,
-// so an instance that hides its designator must draw nothing rather than falling back to the
-// origin. sample.eds covers the fallback for a designator with no display at all.
+// so it overran the neighbouring component's fields. The display also holds the visibility flag,
+// so an instance that hides its designator must draw nothing. It must not fall back to the origin.
+// sample.eds covers the fallback for a designator with no display at all.
 func TestReadSchematic_RefDesDisplay(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "refdes-display.eds")), "refdes-display.eds")
 	if err != nil {
@@ -589,11 +591,11 @@ func TestReadSchematic_RefDesDisplay(t *testing.T) {
 
 // TestGlyphHeight pins the textHeight -> glyph height conversion with LITERAL expectations, so a
 // change to textLineRatio fails here rather than silently rescaling every EDIF render. The inputs
-// are real line pitches an EDIF technology declares (100 mil and 70 mil at this file's 10nm unit).
+// are real line pitches from an EDIF technology (100 mil and 70 mil at this file's 10nm unit).
 //
-// The second assertion is the property that motivates the conversion at all. EDIF's textHeight is
-// the pitch consecutive field rows are stacked at, so a glyph height EQUAL to it leaves zero
-// leading and rows touch. The converted height must leave real space between lines.
+// The second assertion checks the reason for the conversion. EDIF stacks consecutive field rows
+// at a pitch of textHeight, so a glyph height EQUAL to it leaves zero leading and rows touch. The
+// converted height must leave real space between lines.
 func TestGlyphHeight(t *testing.T) {
 	for _, tc := range []struct {
 		pitch, want int64
@@ -616,10 +618,10 @@ func TestGlyphHeight(t *testing.T) {
 	}
 }
 
-// TestReadSchematic_CellNameField asserts the part name an instance references becomes a drawn
-// field when the source places and shows it. It rides on the cellRef rather than on a property:
-// (viewRef V (cellRef (name PART (display ...)))). Most instances mark it hidden, so honoring the
-// visibility flag is what keeps this to the few a schematic actually captions.
+// TestReadSchematic_CellNameField asserts that an instance's referenced part name becomes a drawn
+// field when the source places and shows it. The name sits on the cellRef rather than on a
+// property, as in (viewRef V (cellRef (name PART (display ...)))). Most instances mark it hidden.
+// Honoring the visibility flag limits the field to the few parts a schematic actually captions.
 func TestReadSchematic_CellNameField(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "pinlabel.eds")), "pl.eds")
 	if err != nil {
@@ -648,13 +650,13 @@ func refDesList(pls []*geom.SymbolPlacement) []string {
 	return out
 }
 
-// Half of a real .eds page is symbols with no designator: ground and rail glyphs, ports, off-page
-// connectors. They are drawn, and until they carried a net they were unaddressable, which made the
-// symbol that NAMES a rail the one thing on a sheet a reader could not click.
+// Half of a real .eds page is symbols with no designator, such as ground and rail glyphs, ports and
+// off-page connectors. They are drawn. Until they had a net, nothing could address them. So a reader
+// could click anything on a sheet except the symbol that NAMES a rail.
 //
-// The rule is a match that validates itself. A designator-less symbol takes a name it carries, its
-// cell or a field value, only when that name is a net on the same sheet. This fixture carries the
-// four shapes it has to tell apart.
+// The rule is a match that validates itself. A designator-less symbol takes one of its own names,
+// its cell or a field value, only when that name is a net on the same sheet. This fixture holds the
+// four shapes the rule has to tell apart.
 func TestSchematicNetAnchors(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "anchors.eds")), "anchors.eds")
 	if err != nil {
@@ -667,17 +669,17 @@ func TestSchematicNetAnchors(t *testing.T) {
 		}
 	}
 
-	// Named by its CELL: a GND glyph carries no fields at all (5772 such placements on one real
+	// Named by its CELL. A GND glyph has no fields at all (5772 such placements on one real
 	// export), so the cell name is the only name it has.
 	if got := byCell["GND"].GetNetAnchor(); got != "GND" {
 		t.Errorf("GND glyph anchor = %q, want GND", got)
 	}
-	// Named by a FIELD: a rail glyph's cell says PWR and the net name rides in a property (1666 of
+	// Named by a FIELD. A rail glyph's cell says PWR and the net name is in a property (1666 of
 	// them). A cell-name table would have caught the first case and missed this one.
 	if got := byCell["PWR"].GetNetAnchor(); got != "VBUS" {
 		t.Errorf("PWR glyph anchor = %q, want VBUS", got)
 	}
-	// Names nothing: a no-connect asserts a pin is deliberately open. No net matches it, so it gets
+	// Names nothing. A no-connect asserts a pin is deliberately open. No net matches it, so it gets
 	// no anchor, without the reader knowing what a no-connect is.
 	if got := byCell["NC"].GetNetAnchor(); got != "" {
 		t.Errorf("NC glyph anchor = %q, want none", got)
@@ -717,7 +719,8 @@ func TestReadSchematic_BackAnnotateInlineMismatch(t *testing.T) {
 	}
 }
 
-// A ref-des only the viewMap names keys the placement, and draws no label, since the page places none.
+// Suppose only the viewMap names a ref-des. It keys the placement and draws no label, since the
+// page places none.
 func TestReadSchematic_BackAnnotateOnly(t *testing.T) {
 	g, err := ReadSchematic(bytes.NewReader(readFixture(t, "backannotate-only.eds")), "backannotate-only.eds")
 	if err != nil {
@@ -740,8 +743,8 @@ func TestReadSchematic_BackAnnotateOnly(t *testing.T) {
 	}
 }
 
-// A .eds is read as a netlist and as geometry, and both reads must key a part by the same ref-des, or
-// a design shipping only the .eds would lose locate the way #1228's split export did.
+// A .eds is read as a netlist and as geometry, and both reads must key a part by the same ref-des.
+// Otherwise a design shipping only the .eds would lose locate, as #1228's split export did.
 func TestBackAnnotatedEdsNetlistAndGeometryAgree(t *testing.T) {
 	for _, tc := range []struct{ file, want string }{
 		{"backannotate-inline-mismatch.eds", "R1001"},
@@ -816,9 +819,9 @@ func TestBackAnnotatedRefDesSkipsConflictsAndPaths(t *testing.T) {
 	}
 }
 
-// The geometry lists each placement back-annotation relabelled, so an export's renumbering can be
-// audited (agni issue 1230). A file whose back-annotation agrees with its page lists nothing, and a
-// file with none is the control.
+// The geometry lists each placement that back-annotation relabelled, so an export's renumbering
+// can be audited (agni issue 1230). A file whose back-annotation agrees with its page lists
+// nothing, and a file with none is the control.
 func TestReadSchematicListsBackAnnotatedPlacements(t *testing.T) {
 	for _, tc := range []struct {
 		file string

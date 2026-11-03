@@ -7,8 +7,8 @@ import "bytes"
 // by that path, as the hierarchy readers' open does, and a sheet that will not open or parse is
 // listed but not walked into. The root itself is not listed.
 //
-// It answers whether a file someone named is one sheet of a larger design, so a read of that sheet
-// alone can say so (agni issue 1023).
+// It tells whether a named file is one sheet of a larger design, so a read of that sheet alone can
+// say so (agni issue 1023).
 func SheetFiles(rootContent []byte, open func(relPath string) ([]byte, error)) []string {
 	var out []string
 	seen := map[string]bool{}

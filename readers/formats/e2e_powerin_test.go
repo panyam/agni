@@ -22,8 +22,8 @@ const senseMonitor = `(kicad_sch
 	(symbol (lib_id "test:MON") (unit 1) (uuid "u1")
 		(property "Reference" "U1") (property "Value" "MON")))`
 
-// TestKiCadInputPinKeepsItsType reads a KiCad schematic through the real loader and requires a sense
-// pin named like a supply to stay an input. Before agni issue 1241 the ingestion pass promoted Vbus and
+// TestKiCadInputPinKeepsItsType reads a KiCad schematic through the real loader. A sense pin named
+// like a supply must keep its input type. Before agni issue 1241 the ingestion pass promoted Vbus and
 // Vin+ to power_in by name, and every current monitor's sense nets read as undriven rails.
 func TestKiCadInputPinKeepsItsType(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "mon.kicad_sch")

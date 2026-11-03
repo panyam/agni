@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// emitFile mirrors the reader's nesting for marshaling, reusing the reader's leaf element
-// structs (layerEl, compEl, ...) so read and write stay symmetric. Only the wrapper elements
+// emitFile mirrors the reader's nesting for marshaling. It reuses the reader's leaf element
+// structs (layerEl, compEl, ...), so read and write are symmetric. Only the wrapper elements
 // are new here.
 type emitFile struct {
 	XMLName  xml.Name    `xml:"IPC-2581"`
@@ -42,11 +42,11 @@ type emitStep struct {
 // Write emits an IPC-2581 document from an ir.Design (the inverse of Read).
 //
 // Fidelity: lossy-bounded, matching the reader. It writes the netlist and physical tier
-// (components, nets, footprints, layers, stackup, BOM) but not the source's byte layout or XML
-// namespace (the reader matches by local name, so the output round-trips at the IR level).
-// Copper and pad geometry live in the board sidecar (WS1-006), which Write does not take, and
-// byte/spec-lossless output waits on the FidelityFragment layer. Units are emitted as NANOMETER with raw
-// thickness_nm values, so a read-back recovers the same IR exactly.
+// (components, nets, footprints, layers, stackup, BOM). It does not write the source's byte
+// layout or XML namespace. The reader matches by local name, so the output round-trips at the IR
+// level. Copper and pad geometry live in the board sidecar (WS1-006), and Write does not take
+// it. Byte/spec-lossless output waits on the FidelityFragment layer. Units are emitted as
+// NANOMETER with raw thickness_nm values, so a read-back recovers the same IR exactly.
 func Write(w io.Writer, d *ir.Design) error {
 	f := emitFile{
 		Revision: d.Attributes["ipc2581_revision"],
@@ -65,7 +65,7 @@ func Write(w io.Writer, d *ir.Design) error {
 		})
 	}
 	for _, n := range d.Nets {
-		// netclass_raw is the source term kept verbatim by the reader; emitting it back keeps the
+		// The reader keeps the source term verbatim in netclass_raw. Emitting it back makes the
 		// round trip lossless on @netClass, the same way layer_function_raw does for @layerFunction.
 		ne := netEl{Name: n.Name, NetClass: n.Attributes["netclass_raw"]}
 		for _, cn := range n.Connections {

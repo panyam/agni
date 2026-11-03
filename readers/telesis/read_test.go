@@ -60,10 +60,10 @@ func pinByDesignator(p *ir.PartType, des string) *ir.Pin {
 	return nil
 }
 
-// TestBangDiscriminatesPackageFromProperty is the assertion that catches the format's nastiest
-// trap. The fixture's $PACKAGES section contains a line with the property grammar and no `!`. A
-// scanner keying on quotes alone reads it as a package and invents a component called NotAPackage,
-// which is a design that parses cleanly and is wrong.
+// TestBangDiscriminatesPackageFromProperty catches the format's nastiest trap. The fixture's
+// $PACKAGES section contains a line with the property grammar and no `!`. A scanner keying on
+// quotes alone reads it as a package and invents a component called NotAPackage. The design then
+// parses cleanly and is wrong.
 func TestBangDiscriminatesPackageFromProperty(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 
@@ -134,8 +134,8 @@ func TestPinDesignatorShapes(t *testing.T) {
 	}
 }
 
-// TestPropertiesTransposeOntoComponents checks the inverted index is inverted: the file groups by
-// value and the IR hangs attributes off each component.
+// TestPropertiesTransposeOntoComponents checks the inverted index is inverted. The file groups by
+// value, and the IR hangs attributes off each component.
 func TestPropertiesTransposeOntoComponents(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 
@@ -156,9 +156,9 @@ func TestPropertiesTransposeOntoComponents(t *testing.T) {
 	}
 }
 
-// TestPinTypeBecomesDirection is the reason the property sections are not optional. This block is
-// the only place the format states direction, so skipping it leaves every pin UNSPECIFIED and
-// silently disables every direction-dependent rule.
+// TestPinTypeBecomesDirection shows why the property sections are not optional. The format states
+// direction only in this block. Skipping it leaves every pin UNSPECIFIED and silently disables
+// every direction-dependent rule.
 func TestPinTypeBecomesDirection(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 
@@ -212,9 +212,9 @@ func TestPinTypeCaseIsFolded(t *testing.T) {
 }
 
 // TestPinTypeConflictIsRecorded is the other half. A genuine disagreement between two instances of
-// one part type is kept rather than silently resolved, since a library inconsistency that leaves no
-// trace is unfindable. Pin 2 carries it, so this stays independent of the case-folding case on
-// pin 1, since one fixture pin asserting both would let either behaviour mask the other.
+// one part type is kept rather than silently resolved. A library inconsistency that leaves no trace
+// is unfindable. The conflict is on pin 2, and the case-folding case is on pin 1, so the two are
+// independent. One fixture pin asserting both would let either behaviour mask the other.
 func TestPinTypeConflictIsRecorded(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 	res := partByName(d, "RES-10K")
@@ -244,9 +244,9 @@ func TestUnknownPinTypeDegrades(t *testing.T) {
 	}
 }
 
-// TestGeneratedNetsAreKeptAndTagged pins the decision that a `$`-named net stays in the design with
-// a marker, rather than being dropped at the reader. Dropping is quieter and throws away every real
-// dangling connection along with the noise, with no way for a consumer to know.
+// TestGeneratedNetsAreKeptAndTagged pins a decision. A `$`-named net is kept in the design with a
+// marker, rather than being dropped at the reader. Dropping is quieter, but it throws away every
+// real dangling connection along with the noise, and a consumer has no way to know.
 func TestGeneratedNetsAreKeptAndTagged(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 
@@ -272,8 +272,8 @@ func TestUnknownSectionIsSkipped(t *testing.T) {
 	}
 }
 
-// TestEmptyPinsSection checks the empty $PINS in the fixture, which is what every real export
-// carries, does not break the section walk that follows it.
+// TestEmptyPinsSection checks that the empty $PINS in the fixture does not break the section walk
+// that follows it. Every real export has an empty $PINS.
 func TestEmptyPinsSection(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 	if partByName(d, "IC-DUAL").GetPins() == nil {
@@ -294,8 +294,8 @@ func TestLatin1Fallback(t *testing.T) {
 	}
 }
 
-// TestDiagnosticsAreDeclared checks the reader states what it looked for. An empty list means both
-// "looked and found nothing" and "never looked", and a rule reading the second as the first reports
+// TestDiagnosticsAreDeclared checks the reader states what it looked for. An empty list can mean
+// "looked and found nothing" or "never looked". A rule that reads the second as the first reports
 // a clean pass over a question nobody asked (agni issue 309).
 func TestDiagnosticsAreDeclared(t *testing.T) {
 	d := readFixture(t, "basic.tel")
@@ -325,20 +325,20 @@ func TestSourceFormatAndProvenance(t *testing.T) {
 }
 
 // TestNotATelesisFile checks a file with no recognisable section produces an error rather than an
-// empty design, which would read as a design that genuinely has nothing in it.
+// empty design. An empty design would read as a design that genuinely has nothing in it.
 func TestNotATelesisFile(t *testing.T) {
 	if _, err := Read(strings.NewReader("(edif SOMETHING)\n"), "x.tel"); err == nil {
 		t.Fatal("a non-Telesis file parsed into a design instead of erroring")
 	}
 }
 
-// TestPackageWithoutAPartName covers a head shape found only by running against real exports: an
-// entry written `! 'MPN' ; targets`, naming a part solely by its manufacturer number.
+// TestPackageWithoutAPartName covers a head shape found only by running against real exports. The
+// entry is written `! 'MPN' ; targets`, and it names a part solely by its manufacturer number.
 //
 // This is not a cosmetic omission. A head shape the scanner does not recognise also breaks the
 // continuation chain, so the entry's whole ref-des run is skipped along with it. In one real export
-// that silently dropped 184 capacitors from the component set while every net still referenced
-// them, which reads as a design with dangling connections rather than as a parse failure.
+// that silently dropped 184 capacitors from the component set, while every net still referenced
+// them. The result read as a design with dangling connections rather than as a parse failure.
 func TestPackageWithoutAPartName(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 
@@ -360,7 +360,7 @@ func TestPackageWithoutAPartName(t *testing.T) {
 	}
 }
 
-// TestPackageWithExtraFields covers the other head shape real exports carry: more than two
+// TestPackageWithExtraFields covers the other head shape found in real exports, with more than two
 // bang-separated fields. Their meaning is positional and stated nowhere, so they are kept by
 // position rather than guessed at.
 func TestPackageWithExtraFields(t *testing.T) {
@@ -386,8 +386,8 @@ func TestPackageWithExtraFields(t *testing.T) {
 	}
 }
 
-// TestQuotedFieldContainingSeparators checks the scanner respects quoting, so a field whose text
-// contains a bang or a semicolon must not end the head early.
+// TestQuotedFieldContainingSeparators checks the scanner respects quoting. A bang or a semicolon
+// inside a field's text must not end the head early.
 func TestQuotedFieldContainingSeparators(t *testing.T) {
 	const src = "$PACKAGES\n\n'ODD;NAME!X' ! 'MPN-1' ;  U9\n\n$NETS\n\n'N1' ; U9.1 U9.2\n\n$END\n"
 	d, err := Read(strings.NewReader(src), "odd.tel")
@@ -402,13 +402,13 @@ func TestQuotedFieldContainingSeparators(t *testing.T) {
 	}
 }
 
-// TestUnparsedSectionIsRecorded is the answer to "did the reader skip it, or was there nothing
-// there". Those are different facts and without this they look identical.
+// TestUnparsedSectionIsRecorded answers "did the reader skip it, or was there nothing there".
+// Those are different facts, and without this record they look identical.
 //
 // $PINS is present and EMPTY in every real export examined, so nothing is known about its body and
-// the reader skips it. An export that populates it would otherwise parse cleanly and lose whatever
-// it held, with no error and no signal, which is the silence-reads-as-coverage failure the
-// diagnostics channel exists to prevent.
+// the reader skips it. Imagine an export that populates it. Without the record, the export would
+// parse cleanly and lose whatever $PINS held, with no error and no signal. Silence would then read
+// as coverage, and the diagnostics channel exists to prevent that failure.
 func TestUnparsedSectionIsRecorded(t *testing.T) {
 	// $PINS with content, which no real export has, and an unknown section from a writer this
 	// reader has never met.
@@ -432,9 +432,9 @@ func TestUnparsedSectionIsRecorded(t *testing.T) {
 	}
 }
 
-// TestEmptySectionIsNotRecordedAsUnparsed is the other half. An EMPTY $PINS, which is what every
-// real export carries, is fully handled, so flagging it would cry wolf on every real file and train
-// a reader to ignore the signal.
+// TestEmptySectionIsNotRecordedAsUnparsed is the other half. Every real export has an EMPTY $PINS.
+// The reader fully handles it. Flagging it would cry wolf on every real file and train a reader to
+// ignore the signal.
 func TestEmptySectionIsNotRecordedAsUnparsed(t *testing.T) {
 	d := readFixture(t, "basic.tel")
 	got := d.GetAttributes()[UnparsedSectionsAttr]
@@ -448,9 +448,9 @@ func TestEmptySectionIsNotRecordedAsUnparsed(t *testing.T) {
 }
 
 // TestPartsSharingAFootprintKeepTheirOwnMPN covers agni issue 835. Three entries share the package
-// name TP_SMD with three different MPNs, and one more repeats the first's MPN. Each part keeps the MPN its
-// own entry states; the later MPN gets a part type of its own that records the shared package, and
-// the repeat joins the first part type rather than making a third.
+// name TP_SMD with three different MPNs, and one more repeats the first's MPN. Each part keeps the
+// MPN its own entry states. Each later MPN gets a part type of its own, and that part type records
+// the shared package. The repeat joins the first part type rather than making another.
 func TestPartsSharingAFootprintKeepTheirOwnMPN(t *testing.T) {
 	const tel = "$PACKAGES\n\n" +
 		"'TP_SMD' ! 'TP_SMALL' ;  TP1 TP2\n\n" +

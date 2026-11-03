@@ -9,9 +9,9 @@ import (
 	"github.com/panyam/agni/readers/kicad"
 )
 
-// kicadProjectDir copies the two-sheet fixture into a temp dir beside a .kicad_pro that assigns every
-// net to a class and declares board-wide minimums, so a read can be checked for what only the project
-// carries.
+// kicadProjectDir copies the two-sheet fixture into a temp dir beside a .kicad_pro. The project
+// assigns every net to a class and declares board-wide minimums. A test can then check a read for
+// what only the project declares.
 func kicadProjectDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
@@ -80,8 +80,8 @@ func TestASubSheetDoesNotReadTheRootsProject(t *testing.T) {
 	}
 }
 
-// core/check mirrors the reader's constraint kinds rather than importing a reader (C1), so this holds
-// the two spellings together.
+// core/check mirrors the reader's constraint kinds rather than importing a reader (C1). This test
+// holds the two spellings together.
 func TestConstraintKindsAgree(t *testing.T) {
 	if kicad.ConstraintKindNetClass != check.NetClassConstraintKind {
 		t.Errorf("net class kind: reader %q, model %q", kicad.ConstraintKindNetClass, check.NetClassConstraintKind)

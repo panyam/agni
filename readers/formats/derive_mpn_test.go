@@ -10,8 +10,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// One parse derived under two lexicons answers each lexicon's part numbers, which is why the part
-// number pass runs in DeriveDesign: a host keeps the parse across projects (agni issues 1061, 1285).
+// A host keeps one parse across projects, so the part number pass runs in DeriveDesign (agni issues
+// 1061, 1285). Deriving that parse under two lexicons answers each lexicon's part numbers.
 func TestDeriveReadsPartNumbersWithItsOwnLexicon(t *testing.T) {
 	parsed := &ir.Design{Components: []*ir.Component{{RefDes: "U1", Attributes: map[string]string{"Manufacturer_No": "TPS62133"}}}}
 	v, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Attribute: &configpb.AttributeVocab{

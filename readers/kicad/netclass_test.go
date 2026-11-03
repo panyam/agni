@@ -8,9 +8,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestParseAndAnnotateNetClasses covers WS1-037. net_classes is populated from the .kicad_pro
-// net_settings (patterns plus explicit assignments), the only place KiCad records net-class
-// membership. Wildcards span '/' (net names embed sheet paths), and a net matching no rule is
+// TestParseAndAnnotateNetClasses covers WS1-037. The reader fills net_classes from the .kicad_pro
+// net_settings (patterns plus explicit assignments). KiCad records net-class membership there and
+// nowhere else. Wildcards span '/' (net names embed sheet paths), and a net matching no rule is
 // left untouched.
 func TestParseAndAnnotateNetClasses(t *testing.T) {
 	const pro = `{
@@ -77,9 +77,10 @@ func TestNetClassMultipleMemberships(t *testing.T) {
 	}
 }
 
-// TestNetClassesSortedAndDeduped pins the ordering contract the IR field documents, sorted for
-// determinism (the assignment map is a Go map, so read order is random) and deduplicated so a net
-// named by both an assignment and a pattern of the same class carries that class once.
+// TestNetClassesSortedAndDeduped pins the ordering contract that the IR field documents. The classes
+// are sorted for determinism, because the assignment map is a Go map and its read order is random.
+// They are deduplicated, so a net named by both an assignment and a pattern of the same class lists
+// that class once.
 func TestNetClassesSortedAndDeduped(t *testing.T) {
 	const pro = `{
 	  "net_settings": {
@@ -135,7 +136,7 @@ func TestWildcardMatch(t *testing.T) {
 }
 
 // TestParseNetClassDefs covers WS3-111. The classes[] block carries each class's declared routing
-// constraints. Absent and zero must stay distinguishable (a class that states no track width lets a
+// constraints. Absent and zero must be distinguishable (a class that states no track width lets a
 // lower-priority class fill it), and an unstated priority must cascade LAST rather than first.
 func TestParseNetClassDefs(t *testing.T) {
 	const pro = `{
@@ -181,9 +182,9 @@ func TestParseNetClassDefs(t *testing.T) {
 	}
 }
 
-// TestAnnotateNetClassDefs checks that the definitions land on ir.Design as Constraint nodes of kind
-// "netclass". This is the first reader to populate that provisional node. Only STATED scalars become
-// params, so a consumer can still tell "declares none" from "declares zero".
+// TestAnnotateNetClassDefs checks that the reader writes the definitions onto ir.Design as Constraint
+// nodes of kind "netclass". This is the first reader to populate that provisional node. Only STATED
+// scalars become params, so a consumer can still tell "declares none" from "declares zero".
 func TestAnnotateNetClassDefs(t *testing.T) {
 	d := &ir.Design{}
 	AnnotateNetClassDefs(d, []NetClassDef{{Name: "HighSpeed", Priority: 1, Clearance: ptr(0.15)}})

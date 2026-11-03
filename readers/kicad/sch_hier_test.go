@@ -26,7 +26,7 @@ func hierOpen(t *testing.T) func(string) ([]byte, error) {
 //   - local-label scoping ("SIG" exists on the root and in both instances as three
 //     separate nets, KiCad-qualified),
 //   - hierarchical label <-> sheet pin binding per instance edge (root wire joins
-//     /amp1/CTRL; amp2's port is unwired on the parent so /amp2/CTRL stays child-only),
+//     /amp1/CTRL; amp2's port is unwired on the parent so /amp2/CTRL is child-only),
 //   - design-wide rail unification (VCC power symbols on all three instances are one
 //     net, PWR_FLAG-driven, with the WS1-014 virtual pins deduped),
 //   - hierarchical sheet ids matching the geometry walk, and
@@ -101,12 +101,12 @@ func TestReadSchematicHierarchyNets(t *testing.T) {
 		t.Errorf("sheet ids = %q, want %q (geometry-walk identity)", got, want)
 	}
 
-	// Net->sheet membership (WS9-028): the walk attributes each net the sheet instances it
-	// touches, in sheet order, so a net-subject finding gets a sheet badge. A purely local
-	// sub-sheet net lists only its instance; a hierarchical port also lists the parent whose
-	// sheet pin sits on it (even /amp2/CTRL, wired on no parent wire, touches the root where its
-	// port symbol lives); the design-wide rail lists every instance. A single-sheet design would
-	// carry no attribute (guarded below two sheets).
+	// Net->sheet membership (WS9-028). For each net, the walk lists every sheet instance that
+	// the net touches, in sheet order, so a net-subject finding gets a sheet badge. A purely
+	// local sub-sheet net lists only its instance. A hierarchical port also lists the parent
+	// whose sheet pin sits on it. Even /amp2/CTRL touches the root, because its port symbol
+	// lives there, though no parent wire joins it. The design-wide rail lists every instance.
+	// A single-sheet design would get no attribute (guarded below two sheets).
 	wantSheets := map[string]string{
 		"/SIG":       "/",
 		"/amp1/SIG":  "/amp1",
@@ -178,10 +178,10 @@ func TestReadProjectPartialWalkStaysExternal(t *testing.T) {
 	t.Fatal("VCC net not found")
 }
 
-// TestLabelBindsMidSpan pins the KiCad connection-point rules (verified against
-// kicad-cli): a label anywhere ALONG a wire names and joins that wire's net; a pin whose
-// connect point lies mid-span does NOT connect (only a wire END on the pin joins); and a
-// second same-named label connects by name.
+// TestLabelBindsMidSpan pins the KiCad connection-point rules, verified against kicad-cli.
+// A label anywhere ALONG a wire names and joins that wire's net. A pin whose connect point
+// lies mid-span does NOT connect (only a wire END on the pin joins). A second same-named
+// label connects by name.
 func TestLabelBindsMidSpan(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "midspan.kicad_sch")), "midspan.kicad_sch")
 	if err != nil {
@@ -209,7 +209,7 @@ func TestNetNameUnescape(t *testing.T) {
 	}
 	for _, n := range d.Nets {
 		// KiCad keeps a slash inside a label escaped in the net name, so the sheet path's own "/"
-		// stays unambiguous (testdata/escapes.netnames).
+		// is unambiguous (testdata/escapes.netnames).
 		if n.Name == "/VPP{slash}MCLR" {
 			if got := strings.Join(connKeys(n), " "); got != "R1.2 R2.2" {
 				t.Errorf("/VPP{slash}MCLR = %q, want both spellings' wires joined", got)

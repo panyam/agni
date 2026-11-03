@@ -9,40 +9,41 @@ import (
 
 // The pinned sample board, fetched by `make samples` from github.com/panyam/agni-samples. It is a
 // real 17-sheet carrier board (Antmicro's Jetson AGX Thor baseboard, Apache-2.0) rather than a
-// fixture we authored. Every synthetic fixture in this repo was built to the
-// reader's own assumptions, so none of them can catch an assumption that is wrong.
+// fixture we authored. Every synthetic fixture in this repo was built to the reader's own
+// assumptions, so none of them can catch an assumption that is wrong.
 const sampleJetson = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch"
 
 // TestSampleBoardRead pins what the reader currently produces for a real hierarchical board.
 //
 // It is a CHARACTERIZATION test, so one of the three numbers below is knowingly wrong and is
-// asserted anyway. KiCad resolves this board to 1387 nets and we produce 1478, because a net crossing
-// a sheet boundary can still be read as two. Asserting the wrong number is what makes the next fix
-// VISIBLE, so whoever moves it changes the constant deliberately rather than discovering months later
-// that a number drifted.
+// asserted anyway. KiCad resolves this board to 1387 nets and we produce 1355, because we still merge
+// some nets that KiCad keeps apart (below). Asserting the wrong number makes the next fix VISIBLE.
+// Whoever moves it changes the constant deliberately, rather than discovering months later that a
+// number drifted.
 //
-// It has moved twice from 1729. Issue 577, the pin swap on mirrored symbols, took it to 1606,
-// because this board places a lot of them and each swap moved one connection out of a net and
-// another in. Issue 597 then taught the walk to follow a GROUP bus across a sheet boundary, which
-// is the spelling this board uses, `CAM0{CSI}`, whose members come from a `bus_alias` and are named
-// `CAM0.CSI2_CLK+`. Issue 561's first half, the bus VECTOR (`AN[0..7]`), landed before either and
-// moved this number not at all, which is why the two halves are separate issues.
+// It has moved twice from 1729. Issue 577, the pin swap on mirrored symbols, took it to 1606. This
+// board places a lot of mirrored symbols, and each swap moved one connection out of a net and another
+// in. Issue 597 then taught the walk to follow a GROUP bus across a sheet boundary. This board spells
+// its buses that way, as `CAM0{CSI}`. The members come from a `bus_alias` and are named
+// `CAM0.CSI2_CLK+`. Issue 561's first half, the bus VECTOR (`AN[0..7]`), merged before either and
+// did not move this number at all. So the two halves are separate issues.
 //
-// It is now BELOW KiCad's 1387, so falling further is the WRONG direction and the obvious reading of
-// this constant is backwards. Every remaining disagreement is an over-merge, ten of them, and all ten
-// predate both fixes. KiCad gives each unconnected pin its own `unconnected-(U65-GL-Pad10)` net where
-// we group a part's unconnected pins into one `N$nnn`. Ten of ours stand in for about thirty of
-// KiCad's, which is the whole of the gap. Closing that pushes this number UP toward 1387.
+// It is now BELOW KiCad's 1387. Falling further is the WRONG direction, and the obvious reading of
+// this constant is backwards. Every remaining disagreement is an over-merge. There are ten of them,
+// and all ten predate both fixes. KiCad gives each unconnected pin its own
+// `unconnected-(U65-GL-Pad10)` net. We group a part's unconnected pins into one `N$nnn`. Ten of ours
+// stand in for about thirty of KiCad's, and that accounts for the whole gap. Closing it pushes this
+// number UP toward 1387.
 //
-// Which nets are still wrong, rather than how many, is in readers/kicad/oracle_corpus.baseline, and
-// that file is the one to read, since it separates the two directions, and the split half is now empty.
+// readers/kicad/oracle_corpus.baseline lists which nets are still wrong, not just how many. Read that
+// file. It separates the two directions, and the split half is now empty.
 //
-// The other two are correct today and guard against regression. The component count matches KiCad
-// exactly, and the MPN count is what the datasheet tier joins on.
+// The other two numbers are correct today and guard against regression. The component count matches
+// KiCad exactly. The datasheet tier joins on MPNs, so the MPN count guards that join.
 func TestSampleBoardRead(t *testing.T) {
 	if _, err := os.Stat(sampleJetson); err != nil {
-		// Deliberately fatal rather than skipped. A missing corpus must not read as a pass, which is
-		// the failure shape docsite/content/build/the-gate.md exists to catalogue.
+		// Deliberately fatal rather than skipped. A missing corpus must not read as a pass.
+		// docsite/content/build/the-gate.md catalogues that failure shape.
 		t.Fatalf("sample corpus missing, run `make samples`: %v", err)
 	}
 
@@ -74,16 +75,16 @@ func TestSampleBoardRead(t *testing.T) {
 const sampleJetsonBoard = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"
 
 // TestSampleBoardPartIdentityAgreesAcrossViews asserts the two views of one design resolve the same
-// part numbers. It is a stronger claim than either view's count, because the schematic and the board
-// state the MPN in different places and a reader can satisfy a count while joining on nothing.
+// part numbers. That claim is stronger than either view's count. The schematic and the board state
+// the MPN in different places, and a reader can satisfy a count while joining on nothing.
 //
-// The board file is in the oracle corpus rather than the tutorial tarball, which is why testall
-// depends on `samples-oracle` rather than on `samples`.
+// The board file is in the oracle corpus rather than the tutorial tarball. So testall depends on
+// `samples-oracle` rather than on `samples`.
 func TestSampleBoardPartIdentityAgreesAcrossViews(t *testing.T) {
 	if _, err := os.Stat(sampleJetsonBoard); err != nil {
-		// Fatal rather than skipped, as its neighbour above. `make samples-oracle` is what testall
-		// depends on, so an absent corpus is a broken checkout rather than a normal state, and a skip
-		// here is how this test spent its first hours not running at all (agni issue 591).
+		// Fatal rather than skipped, as its neighbour above. testall depends on `make
+		// samples-oracle`, so an absent corpus is a broken checkout rather than a normal state. This
+		// test once had a skip here, and spent its first hours not running at all (agni issue 591).
 		t.Fatalf("oracle corpus missing, run `make samples-oracle`: %v", err)
 	}
 
@@ -124,15 +125,15 @@ func TestSampleBoardPartIdentityAgreesAcrossViews(t *testing.T) {
 	}
 }
 
-// TestSampleBoardPartIdentitySurvivesEmit requires the part numbers a board file states to reach an
-// EDIF export. An export is how a design leaves for a toolchain that is not ours, and a part-number
-// column is among the first things such a tool joins on, so an export with correct connectivity and
-// no part numbers hands the recipient a netlist that silently fails a BOM join.
+// TestSampleBoardPartIdentitySurvivesEmit requires a board file's part numbers to reach an EDIF
+// export. A design leaves for a toolchain that is not ours through an export. Such a tool joins on
+// a part-number column among the first things it does. An export with correct connectivity and no
+// part numbers hands the recipient a netlist that silently fails a BOM join.
 //
-// It reads the BOARD view because the schematic view exercised the same path already, and the
-// board view is where the value was lost. The reader recorded the part number on the component and
-// the writer emits a SECTION's attributes, so the value sat in the IR one field away from the half
-// the writer reads (agni issue 584).
+// It reads the BOARD view. The schematic view exercised the same path already, and the board view
+// lost the value. The reader recorded the part number on the component, and the writer emits a
+// SECTION's attributes. So the value sat in the IR one field away from the half the writer reads
+// (agni issue 584).
 func TestSampleBoardPartIdentitySurvivesEmit(t *testing.T) {
 	if _, err := os.Stat(sampleJetsonBoard); err != nil {
 		t.Fatalf("oracle corpus missing, run `make samples-oracle`: %v", err)

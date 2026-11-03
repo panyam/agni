@@ -15,21 +15,21 @@ import (
 )
 
 // odbPair is one board read twice: from KiCad's own file, and from the ODB++ job kicad-cli exported
-// from it (hack/odb_fixtures.sh). The KiCad board reader is the oracle, so every difference is one
-// reader or the other getting the board wrong, and the test says which way it went.
+// from it (hack/odb_fixtures.sh). The KiCad board reader is the oracle. So every difference means one
+// reader or the other got the board wrong, and the test says which way it went.
 type odbPair struct {
 	kicad, odb string
-	// exported names copper the exporter itself moved to another net, so the pair compares
-	// everything else. demo-board plants a short, a GND track laid over a VCC one, and KiCad's ODB++
-	// exporter nets copper by what touches rather than by what the file says, so the shorted
-	// cluster leaves the board on VCC. Reading the job as written is right; the job disagrees with
+	// exportRenetsCopper marks a pair whose exporter itself moved copper to another net, so the pair
+	// compares everything else. demo-board plants a short, a GND track laid over a VCC one. KiCad's
+	// ODB++ exporter nets copper by what touches rather than by what the file says. So the shorted
+	// cluster leaves the board on VCC. Reading the job as written is right, and the job disagrees with
 	// its source.
 	exportRenetsCopper bool
 }
 
 // odbPairs are the synthetic boards the fixtures were exported from. AGNI_ODB_PAIRS adds more as
-// `board.kicad_pcb=job_dir` separated by `;`, which is how a real board's export is held to its
-// source on a machine that has one, since kicad-cli is not on CI.
+// `board.kicad_pcb=job_dir` separated by `;`. kicad-cli is not on CI. So on a machine that has a real
+// board, AGNI_ODB_PAIRS holds that board's export to its source.
 func odbPairs(t *testing.T) []odbPair {
 	pairs := []odbPair{
 		{"../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb", "../../examples/common/designs/odb/gateway-layout", false},
@@ -47,9 +47,9 @@ func odbPairs(t *testing.T) []odbPair {
 	return pairs
 }
 
-// pinNets is every connected pin as `REF.PIN=NET`. Comparing the whole set, names included, is the
-// strict form of the oracle's partition check: KiCad wrote both files, so a net is named the same in
-// each, and a pin on the wrong net shows as one line missing and one extra.
+// pinNets is every connected pin as `REF.PIN=NET`. The test compares the whole set, names included.
+// That is a stricter form of the oracle's partition check. KiCad wrote both files, so a net has the
+// same name in each, and a pin on the wrong net shows as one line missing and one extra.
 func pinNets(d *ir.Design) []string {
 	var out []string
 	for _, n := range d.GetNets() {
@@ -87,8 +87,9 @@ func refValues(d *ir.Design) []string {
 }
 
 // placed is one pad, track segment or via, as what it is (key) and where it is (pts, nanometres).
-// Two readers are held to the same key and to points within placedTolerance, since they compute a
-// pad's position or an arc's vertices along different paths and land a nanometre or two apart.
+// The two readers must agree on the key, and their points must be within placedTolerance. They
+// compute a pad's position or an arc's vertices along different paths, and end up a nanometre or two
+// apart.
 type placed struct {
 	key string
 	pts [][2]int64
@@ -99,9 +100,10 @@ const placedTolerance = 2000 // 2 microns
 var exportedPadName = regexp.MustCompile(`^(NPTH|PAD)[0-9]+$`)
 
 // padItems is every pad of every placement keyed by its ref, number, net, shape, size, drill and
-// side, at the board position its offset composes to through the placement. KiCad leaves a mounting
-// or non-plated pad unnamed where its exporter names it PAD0 or NPTH0, so both read as "?", and a
-// custom pad's size is left out because KiCad gives the anchor's size where ODB++ gives the outline's.
+// side. Its point is the board position the pad's offset composes to through the placement. KiCad
+// leaves a mounting or non-plated pad unnamed, and its exporter names the same pad PAD0 or NPTH0, so
+// both read as "?". A custom pad's size is left out. KiCad gives the anchor's size and ODB++ gives
+// the outline's.
 func padItems(g *geom.BoardGeometry) []placed {
 	var out []placed
 	for _, pl := range g.GetPlacements() {
@@ -153,9 +155,9 @@ func copperItems(g *geom.BoardGeometry) []placed {
 	return out
 }
 
-// onCopper reports whether a pad has a copper land, or names no layers at all as the ODB++ reader's
-// copperless pads do. A KiCad pad on paste or mask alone is a stencil or mask opening, which an
-// ODB++ job carries on those layers and never as a part's pad.
+// onCopper reports whether a pad has a copper land. It also reports true for a pad that names no
+// layers at all, as the ODB++ reader's copperless pads do. A KiCad pad on paste or mask alone is a
+// stencil or mask opening. An ODB++ job puts that opening on those layers and never as a part's pad.
 func onCopper(p *geom.Pad) bool {
 	if len(p.GetLayers()) == 0 {
 		return true

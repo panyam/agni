@@ -1,8 +1,9 @@
 package xschem
 
-// Symbol (.sym) geometry, meaning the pins of a symbol, which place a component's terminals on
-// the schematic grid for netlisting. In xschem a pin is a box object on the pin layer (5) carrying
-// a {name=.. pinnumber=..} attribute block; the pin's connection point is the box centre.
+// This file reads symbol (.sym) geometry, meaning the pins of a symbol. The pins place a
+// component's terminals on the schematic grid for netlisting. In xschem a pin is a box object on
+// the pin layer (5) with a {name=.. pinnumber=..} attribute block. The pin's connection point is
+// the box centre.
 
 // symbolPin is one pin of a symbol in symbol-local coordinates.
 type symbolPin struct {

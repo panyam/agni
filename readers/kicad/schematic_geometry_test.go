@@ -373,7 +373,7 @@ func TestWireNetNames(t *testing.T) {
 
 // TestWireNetNamesHierarchy (WS1-022) checks that in a hierarchy the combined solve qualifies
 // sub-sheet local names ("/amp1/SIG"), matching the netlist read exactly, so a
-// sub-sheet's labeled wires carry the qualified name a net-subject finding would use.
+// sub-sheet's labeled wires carry the qualified name that a net-subject finding would use.
 func TestWireNetNamesHierarchy(t *testing.T) {
 	open := func(rel string) ([]byte, error) { return readFixture(t, rel), nil }
 	g, err := ReadSchematicHierarchy("hier_root.kicad_sch", readFixture(t, "hier_root.kicad_sch"), open)
@@ -399,7 +399,7 @@ func TestWireNetNamesHierarchy(t *testing.T) {
 // TestReadBusGeometry asserts the geometry reader draws KiCad bus constructs (WS7-042). A `bus`
 // trunk and a `bus_entry` stub become WireGeometry tagged KIND_BUS / KIND_BUS_ENTRY, carrying the
 // KiCad uuid on Prov.SourceId (the WS7-042b highlight join key) and no net, while a plain wire
-// stays an untagged (KIND_UNSPECIFIED) wire. bus_alias is a declaration and is not drawn.
+// is still an untagged (KIND_UNSPECIFIED) wire. bus_alias is a declaration and is not drawn.
 func TestReadBusGeometry(t *testing.T) {
 	g, err := ReadSchematicGeometry(bytes.NewReader(readFixture(t, "bus-render.kicad_sch")), "bus-render.kicad_sch")
 	if err != nil {
@@ -425,8 +425,8 @@ func TestReadBusGeometry(t *testing.T) {
 	if bus == nil {
 		t.Fatal("no KIND_BUS wire emitted")
 	}
-	// The bus is NAMED by the range label on its wire (WS7-042b), the key a bus finding joins on; it
-	// still has no net_id (its member nets are unmodeled).
+	// The range label on the bus's wire NAMES the bus (WS7-042b), and a bus finding joins on that
+	// name. The bus still has no net_id (its member nets are unmodeled).
 	if bus.GetNet() != "DATA[0..7]" {
 		t.Errorf("bus name = %q, want %q (the range label on the bus)", bus.GetNet(), "DATA[0..7]")
 	}
@@ -457,7 +457,7 @@ func TestReadBusGeometry(t *testing.T) {
 }
 
 // TestColonLabelNamesNoBusWire is busLabelFor's half of agni issue 605. KiCad reads `DATA[7:0]` as a
-// scalar, so the bus trunk it sits on carries no bus name, the same answer collectBuses gives.
+// scalar. So the bus trunk under that label has no bus name, which matches collectBuses.
 func TestColonLabelNamesNoBusWire(t *testing.T) {
 	src := bytes.ReplaceAll(readFixture(t, "bus-render.kicad_sch"), []byte(`"DATA[0..7]"`), []byte(`"DATA[7:0]"`))
 	g, err := ReadSchematicGeometry(bytes.NewReader(src), "bus-render.kicad_sch")
@@ -479,10 +479,10 @@ func TestColonLabelNamesNoBusWire(t *testing.T) {
 	}
 }
 
-// A #-prefixed symbol (#PWR, #FLG) is drawn but is not a component, and the geometry used to blank
-// its reference and stop there, leaving the glyph anonymous, so the thing that NAMES a rail was the
-// one thing on a sheet nothing could address. Its Value is the net name (the same fact sch_nets.go
-// turns into a rank-0 anchor), so it carries that as net_anchor instead.
+// A #-prefixed symbol (#PWR, #FLG) is drawn but is not a component. The geometry used to blank its
+// reference and stop there, which left the glyph anonymous. The symbol NAMES a rail, yet nothing on
+// the sheet could address it. Its Value is the net name (sch_nets.go turns the same fact into a
+// rank-0 anchor), so the geometry now records that name as net_anchor instead.
 func TestPowerSymbolCarriesItsNetAnchor(t *testing.T) {
 	open := func(rel string) ([]byte, error) { return readFixture(t, rel), nil }
 	g, err := ReadSchematicHierarchy("hier_root.kicad_sch", readFixture(t, "hier_root.kicad_sch"), open)
@@ -495,7 +495,7 @@ func TestPowerSymbolCarriesItsNetAnchor(t *testing.T) {
 		for _, pl := range sh.Placements {
 			if a := pl.GetNetAnchor(); a != "" {
 				anchors[a] = true
-				// An anchor is not a component: a ref_des here would join to nothing.
+				// An anchor is not a component, so a ref_des here would join to nothing.
 				if pl.GetRefDes() != "" {
 					t.Errorf("anchor %q also carries ref_des %q", a, pl.GetRefDes())
 				}

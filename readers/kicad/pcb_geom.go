@@ -14,9 +14,9 @@ import (
 )
 
 // ReadBoardGeometry parses a KiCad .kicad_pcb board into the board-geometry sidecar
-// (geom.BoardGeometry), the physical layout the netlist reader (Read) drops. That is
-// the layer table, the Edge.Cuts outline, per-footprint placement and pads, routed
-// copper grouped by net, and zone outlines. It is joined to the netlist IR by ref_des
+// (geom.BoardGeometry). The sidecar holds the physical layout that the netlist reader (Read)
+// drops. That layout is the layer table, the Edge.Cuts outline, per-footprint placement and
+// pads, routed copper grouped by net, and zone outlines. It is joined to the netlist IR by ref_des
 // (placements) and net name (copper); pad numbers match ir.Connection.pin_ref.
 //
 // Fidelity: lossy-bounded (render/DRC subset, CONSTRAINTS C6). Silkscreen/legend text and
@@ -24,7 +24,7 @@ import (
 // outlines) ARE carried (WS7); zone fill polygons, teardrops, and 3D references are not; outline,
 // silk and arc-track arcs are approximated as polylines, so a chorded track's path is slightly
 // shorter than the arc, which a future length rule has to allow for. Coordinates are emitted in
-// nanometers (unit_nm=1), Y-flipped to the geom contract's Y-up frame; rotations stay
+// nanometers (unit_nm=1), Y-flipped to the geom contract's Y-up frame; rotations are kept
 // verbatim (see the proto contract). The caller owns file I/O (C1).
 func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, error) {
 	root, err := parseBoard(r)
@@ -43,7 +43,7 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 		g.DesignRef = atomOf(tb.Child("title").Arg(1))
 	}
 
-	// The layer table doubles as the number->name map copper items resolve through.
+	// The layer table also serves as the number->name map that copper items resolve through.
 	layerName := map[string]string{}
 	if lt := root.Child("layers"); lt != nil {
 		for _, l := range lt.Kids[1:] { // Kids[0] is the "layers" head atom
@@ -58,7 +58,7 @@ func extractBoardGeometry(root *node, src string) *geom.BoardGeometry {
 	}
 
 	// Nets referenced by copper items carry a number; the top-level net table maps it to
-	// the name the IR keys on. (The netlist reader skips this table because pads carry
+	// the name that the IR keys on. (The netlist reader skips this table because pads carry
 	// their names, but segments and vias reference by number only.)
 	netName := map[string]string{}
 	for _, n := range root.Children("net") {
@@ -129,11 +129,12 @@ func boardGraphics(root *node) []*geom.BoardGraphic {
 	return out
 }
 
-// footprintLayerDrawn reports whether a footprint's graphic on layer belongs in the board drawing:
-// the silkscreen, fab and courtyard outlines that place a part. A footprint library's own artwork
-// on the user layers (User.1 to User.9, Dwgs.User, Cmts.User, Eco1/Eco2.User) is not, and one
-// vendor library draws hundreds of lines per passive there, 322,600 of the Jetson seed's 326,626
-// footprint lines and about 56 of its board file's 85 MB (agni issue 946).
+// footprintLayerDrawn reports whether a footprint's graphic on layer belongs in the board drawing.
+// The drawing keeps the silkscreen, fab and courtyard outlines that place a part. It leaves out a
+// footprint library's own artwork on the user layers (User.1 to User.9, Dwgs.User, Cmts.User,
+// Eco1/Eco2.User). One vendor library draws hundreds of lines per passive there. They are 322,600
+// of the Jetson seed's 326,626 footprint lines and about 56 of its board file's 85 MB (agni issue
+// 946).
 func footprintLayerDrawn(layer string) bool {
 	switch layer {
 	case "F.SilkS", "B.SilkS", "F.Fab", "B.Fab", "F.CrtYd", "B.CrtYd":
@@ -161,7 +162,7 @@ func boardGraphicOf(n *node, base string, place func(*geom.Point) *geom.Point, r
 
 // graphicShape converts a KiCad graphic node into a geom.Shape, mapping each source point
 // through place. Arcs are approximated as polylines by the shared arcPolyline (the same C6
-// bound the board outline uses), and circles keep center+radius (radius is rotation- and
+// bound that the board outline uses), and circles keep center+radius (radius is rotation- and
 // mirror-invariant, so it is measured in the source frame). Returns nil for a malformed node.
 func graphicShape(n *node, base string, place func(*geom.Point) *geom.Point) *geom.Shape {
 	switch base {
@@ -281,10 +282,11 @@ func boardTexts(root *node) []*geom.BoardText {
 
 // footprintText composes one footprint-owned text (a Reference or Value property) into a
 // board-frame BoardText. Its position is the footprint-local offset rotated by the footprint
-// orientation and mirrored on the back via geomath.ComposePlacement, the SAME composer
-// padWorld uses, so text lands on its part. Glyph rotation is the angle in the text's (at), which
-// KiCad saves as drawn rather than relative to its footprint, so the footprint's own angle does not
-// enter it (agni issue 1272). Returns nil for empty or hidden text, or a text with no local (at).
+// orientation and mirrored on the back via geomath.ComposePlacement, the SAME composer that
+// padWorld uses, so text ends up on its part. Glyph rotation is the angle in the text's (at).
+// KiCad saves that angle as drawn rather than relative to its footprint, so the footprint's own
+// angle does not enter it (agni issue 1272). Returns nil for empty or hidden text, or a text with
+// no local (at).
 func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom.BoardText {
 	local := n.Child("at")
 	if text == "" || local == nil || isHidden(n) {
@@ -309,9 +311,9 @@ func footprintText(n *node, text, kind, ref string, fpAt *node, back bool) *geom
 }
 
 // freeText converts a top-level gr_text (authored in absolute board coordinates) into a
-// BoardText. KiCad's angle is counter-clockwise as drawn, and flipping Y keeps the picture, so it
-// carries over unchanged, as a footprint's does in placementAngle. Returns nil for empty or hidden
-// text.
+// BoardText. KiCad's angle is counter-clockwise as drawn, and flipping Y keeps the picture, so the
+// reader keeps the angle unchanged, as placementAngle does for a footprint. Returns nil for empty
+// or hidden text.
 func freeText(n *node) *geom.BoardText {
 	text := atomOf(n.Arg(1))
 	if text == "" || isHidden(n) {
@@ -359,8 +361,8 @@ func effectsOf(n *node) (height int64, justify string, mirror bool) {
 
 // keepUpright folds a footprint text's glyph angle into (-90, 90] by half turns, so text on
 // a rotated (e.g. 180°) footprint never renders upside down, matching KiCad's default
-// keep_upright behavior for silkscreen fields. Unlocked text and free gr_text are exempt and stay
-// as authored, since a mirrored back-side title is intentional.
+// keep_upright behavior for silkscreen fields. Unlocked text and free gr_text are exempt and keep
+// their authored angle, since a mirrored back-side title is intentional.
 func keepUpright(deg float64) float64 {
 	for deg > 90 {
 		deg -= 180
@@ -396,9 +398,10 @@ func pcbPoint(n *node) *geom.Point {
 	return &geom.Point{X: mmToNm(atomOf(n.Arg(1))), Y: -mmToNm(atomOf(n.Arg(2)))}
 }
 
-// drillOf reads a pad's (drill d) or slotted (drill oval w h) hole as the one diameter the contract
-// carries, a slot's narrow width, which is the bit that cuts it. The slotted form read its "oval"
-// keyword as the size, so every slot came through undrilled.
+// drillOf reads a pad's (drill d) or slotted (drill oval w h) hole as one diameter, because the
+// contract has room for one. For a slot that is the narrow width, the size of the bit that cuts it.
+// The reader once read the slotted form's "oval" keyword as the size, so every slot came through
+// undrilled.
 func drillOf(dr *node) int64 {
 	if atomOf(dr.Arg(1)) != "oval" {
 		return mmToNm(atomOf(dr.Arg(1)))
@@ -412,7 +415,7 @@ func drillOf(dr *node) int64 {
 
 // placementAngle is a footprint's angle in the contract's frame. KiCad's angle is counter-clockwise
 // as the board is drawn, and flipping Y to reach the canonical Y-up frame keeps the picture, so a
-// front footprint's angle carries over unchanged. A back footprint is the contract's mirror after
+// front footprint's angle is unchanged. A back footprint is the contract's mirror after
 // rotation, and mirroring turns an angle round, so its angle is negated. Until agni issue 1261 every
 // angle was negated, which put pad 1 of a front part at 90 or 270 degrees where pad 2 is; KiCad's own
 // position and ODB++ exports are the evidence (TestODBReadsAsItsKiCadSource).
@@ -423,7 +426,7 @@ func placementAngle(at *node, back bool) float64 {
 	return rotOf(at)
 }
 
-// footprintLocal turns a point KiCad stores inside a footprint into the contract's footprint-local
+// footprintLocal turns a point that KiCad stores inside a footprint into the contract's footprint-local
 // offset. KiCad stores a flipped footprint's items already mirrored, where the contract wants the
 // footprint's own unflipped frame and mirrors it once, at composition, so a back footprint's x is
 // negated here. A pad then reads the same offset whichever side its part is on.
@@ -449,7 +452,7 @@ func atoi(s string) int {
 }
 
 // boardOutline collects the Edge.Cuts graphics: gr_line as a two-point path, gr_rect as
-// its four edges (one closed path), gr_arc approximated by arcPolyline. Paths stay as
+// its four edges (one closed path), gr_arc approximated by arcPolyline. Paths are kept as
 // authored; stitching them into a closed polygon is the consumer's job.
 func boardOutline(root *node) *geom.BoardOutline {
 	out := &geom.BoardOutline{}
@@ -579,7 +582,7 @@ func boardPlacement(fp *node, src string) *geom.ComponentPlacement {
 
 // netCopper groups the board's segments and vias by resolved net name, sorted by name
 // for a deterministic artifact. Items on net 0 / an unknown number ("no net") are
-// dropped, since copper the IR has no key for cannot join.
+// dropped. The IR has no key for that copper, so it cannot join.
 func netCopper(root *node, netName map[string]string) []*geom.NetCopper {
 	byNet := map[string]*geom.NetCopper{}
 	get := func(n *node) *geom.NetCopper {
@@ -606,9 +609,9 @@ func netCopper(root *node, netName map[string]string) []*geom.NetCopper {
 			Layer: atomOf(s.Child("layer").Arg(1)),
 		})
 	}
-	// An arc track is a curved run of copper, written as start, mid and end. The contract carries
-	// straight runs only (C6), so it becomes the same polyline an outline arc does. Until agni issue
-	// 1260 arcs were skipped, and the copper rules never saw a curved trace.
+	// An arc track is a curved run of copper, written as start, mid and end. The contract holds
+	// straight runs only (C6), so the arc becomes a polyline, as an outline arc does. Until agni
+	// issue 1260 arcs were skipped, and the copper rules never saw a curved trace.
 	for _, a := range root.Children("arc") {
 		nc := get(a)
 		if nc == nil {
@@ -644,7 +647,7 @@ func netCopper(root *node, netName map[string]string) []*geom.NetCopper {
 	return out
 }
 
-// copperNet resolves a copper item's (net ...) reference to the net name the IR keys on,
+// copperNet resolves a copper item's (net ...) reference to the net name that the IR keys on,
 // across the three source forms: (net N "name") carries the name directly; (net N) is the
 // pre-KiCad-10 numbered form resolved through the board's net table; (net "name") is the
 // KiCad 10 name-only form, recognizable because KiCad 10 also drops the table (and a name

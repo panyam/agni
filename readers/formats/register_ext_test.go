@@ -1,6 +1,6 @@
-// This file is package formats_test (black-box): it imports the package the way an
-// out-of-module consumer does, so it proves the WS12-003 acceptance, that an external caller can
-// register a reader and have the extension resolve end to end through every derived surface.
+// This file is package formats_test, a black-box test. It imports the package the way an
+// out-of-module consumer does. So it proves the WS12-003 acceptance. An external caller can register
+// a reader, and the extension then resolves end to end through every derived surface.
 package formats_test
 
 import (
@@ -11,9 +11,10 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// TestExternalRegistrationResolvesEndToEnd registers a synthetic ".widget" format from outside
-// the package and asserts the whole chain lights up: capability predicates, the supported-ext
-// list, the UI label, and the Loader dispatch that actually runs the registered reader.
+// TestExternalRegistrationResolvesEndToEnd registers a synthetic ".widget" format from outside the
+// package. It asserts that the whole chain works. That chain is the capability predicates, the
+// supported-ext list, the UI label, and the Loader dispatch, which actually runs the registered
+// reader.
 func TestExternalRegistrationResolvesEndToEnd(t *testing.T) {
 	const ext = ".widget"
 	if formats.ByExt("x"+ext) != nil {
@@ -48,8 +49,8 @@ func TestExternalRegistrationResolvesEndToEnd(t *testing.T) {
 		t.Errorf("NetlistExts = %v, want it to include %s (supported-ext error text)", formats.NetlistExts(), ext)
 	}
 
-	// The dispatch actually runs the registered reader. A zero-value Loader suffices for a
-	// reader that opens its own path (this one ignores it and returns the sentinel).
+	// The dispatch actually runs the registered reader. A zero-value Loader suffices for a reader
+	// that opens its own path. This one ignores the path and returns the sentinel.
 	got, err := (&formats.Loader{}).ReadDesign("anything.widget")
 	if err != nil {
 		t.Fatalf("ReadDesign(.widget) after Register: %v", err)
@@ -59,8 +60,8 @@ func TestExternalRegistrationResolvesEndToEnd(t *testing.T) {
 	}
 }
 
-// TestRegisterRejectsBadEntries pins the Register contract: duplicate extension and malformed
-// entries panic (programming errors at startup, matching stdlib registry conventions).
+// TestRegisterRejectsBadEntries pins the Register contract. A duplicate extension or a malformed
+// entry panics. Each is a programming error at startup, as in the stdlib registry conventions.
 func TestRegisterRejectsBadEntries(t *testing.T) {
 	design := func(_ *formats.Loader, _ string) (*ir.Design, error) { return &ir.Design{}, nil }
 	cases := map[string]*formats.Format{

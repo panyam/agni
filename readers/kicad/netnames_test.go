@@ -45,8 +45,8 @@ func TestFixtureNetNamesAreKiCads(t *testing.T) {
 				}
 			}
 			for pins, name := range want {
-				// An unannotated part ("R?1845") is a placeholder the reader does not take as a
-				// reference designator (refdes.IsPlaceholder), which is identity rather than naming.
+				// The reader does not take an unannotated part ("R?1845") as a reference
+				// designator (refdes.IsPlaceholder). That is a question of identity, not naming.
 				if strings.Contains(pins, "?") {
 					continue
 				}

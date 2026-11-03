@@ -11,13 +11,14 @@ import (
 	"github.com/panyam/agni/readers/odb"
 )
 
-// odbJobExt is the registry key an ODB++ job's entry is filed under. A job is a directory, and the
-// file that enters it, `<job>/matrix/matrix`, has no extension, so lowerExt maps that path here. The
-// key is spelled so no real file carries it (`.odb` is an OpenDocument database).
+// odbJobExt is the registry key for an ODB++ job's entry. A job is a directory. The file that enters
+// it is `<job>/matrix/matrix`, which has no extension, so lowerExt maps that path to this key. No
+// real file has this extension, since `.odb` is an OpenDocument database.
 const odbJobExt = ".odb++"
 
-// registerODB files the three ways an ODB++ job arrives: its matrix file inside a directory (and
-// inside a zip a host expands into one), a .tgz, and a .zip read as an archive.
+// registerODB registers the three ways an ODB++ job arrives. One is its matrix file inside a
+// directory, which also covers a zip a host expands into one. The others are a .tgz, and a .zip read
+// as an archive.
 func registerODB() {
 	Register(&Format{Ext: odbJobExt, Name: "odb++", Design: readODBJob, Board: readODBJobBoard})
 	for _, ext := range []string{".tgz", ".zip"} {
@@ -57,8 +58,8 @@ func archiveFS(l *Loader, p string) (fs.FS, error) {
 	return odb.FromArchive(b)
 }
 
-// jobFS presents the job a matrix path belongs to as an fs.FS whose every open goes through the
-// loader, so the reads are recorded (Touched) and resolve wherever the loader's names do.
+// jobFS presents a matrix path's job as an fs.FS. Every open goes through the loader. So the reads
+// are recorded (Touched), and they resolve wherever the loader's names do.
 func jobFS(l *Loader, matrixPath string) fs.FS {
 	return loaderFS{l: l, root: l.dir(l.dir(matrixPath))}
 }
@@ -89,10 +90,10 @@ func odbKey(name string) string {
 	return ""
 }
 
-// DesignRoot is the directory a design entered by entry spans, when that is wider than the entry's
-// own folder: an ODB++ job's matrix file sits two levels inside the job, and every layer the job
-// reads is under the job. It answers "" for any other entry. Hosts that gather a design's files to
-// send elsewhere (ListDesignFiles) walk this directory.
+// DesignRoot returns the directory a design spans when that is wider than its entry's own folder.
+// An ODB++ job's matrix file sits two levels inside the job, and every layer the job reads is under
+// the job. DesignRoot answers "" for any other entry. A host that gathers a design's files to send
+// elsewhere (ListDesignFiles) walks this directory.
 func DesignRoot(entry string) string {
 	if odb.IsMatrixPath(filepath.ToSlash(entry)) {
 		return odb.JobDir(filepath.ToSlash(entry))

@@ -4,10 +4,10 @@ import (
 	"errors"
 )
 
-// uncompress decodes the Unix compress(1) format (`.Z`), which Valor-lineage ODB++ producers use
-// for a job's larger members (`features.z`). It is LZW over variable-width codes, 9 bits growing to
-// the header's maximum, with code 256 clearing the table in block mode. Go's compress/lzw speaks a
-// different framing (GIF and TIFF), so this is the classic decoder written out.
+// uncompress decodes the Unix compress(1) format (`.Z`). Valor-lineage ODB++ producers use it for a
+// job's larger members (`features.z`). It is LZW over variable-width codes. Codes start at 9 bits and
+// grow to the header's maximum, and in block mode code 256 clears the table. Go's compress/lzw
+// speaks a different framing (GIF and TIFF), so this is the classic decoder written out.
 func uncompress(b []byte) ([]byte, error) {
 	if len(b) < 3 || b[0] != 0x1f || b[1] != 0x9d {
 		return nil, errors.New("not compress(1) data")
@@ -31,11 +31,11 @@ func uncompress(b []byte) ([]byte, error) {
 	}
 	next := first
 	bits := 9
-	// maxCode is the largest code the current width holds before it grows. compress(1) grows when
-	// the next free entry passes it, and at the top width parks it at 1<<maxBits, which nothing
-	// passes. Comparing against it rather than against maxBits matters at -b 9: the table fills at
-	// 512, which passes 511, so the codes grow to 10 bits though the table never does. The starting
-	// width is never treated as the top one for the same reason.
+	// maxCode is the largest code the current width holds before it grows. compress(1) grows the
+	// width when the next free entry passes maxCode. At the top width it sets maxCode to 1<<maxBits,
+	// and no entry passes that. Comparing against maxCode rather than against maxBits matters at -b
+	// 9. There the table fills at 512, which passes 511. So the codes grow to 10 bits, though the
+	// table never does. For the same reason the starting width is never treated as the top one.
 	maxCode := 1<<bits - 1
 	setWidth := func(b int) {
 		bits = b
@@ -50,8 +50,8 @@ func uncompress(b []byte) ([]byte, error) {
 	old := -1
 	var finChar byte
 
-	// Codes are read in groups of `bits` codes, which is how compress(1) pads its output: when the
-	// width changes or the table clears, the rest of the current group's bytes are skipped.
+	// Codes are read in groups of `bits` codes, because compress(1) pads its output that way. When
+	// the width changes or the table clears, the rest of the current group's bytes are skipped.
 	bitPos := 0
 	groupStart := 0
 	readCode := func() (int, bool) {
@@ -97,9 +97,9 @@ func uncompress(b []byte) ([]byte, error) {
 			continue
 		}
 		if block && code == clearCode {
-			// compress(1) keeps the previous code across a clear and parks the next free entry on
-			// 256, so the first code after it writes a throwaway entry there and real ones resume
-			// at 257.
+			// compress(1) keeps the previous code across a clear and sets the next free entry to
+			// 256. So the first code after the clear writes a throwaway entry there, and real
+			// entries resume at 257.
 			skipGroup()
 			next = first - 1
 			maxCode = 1<<9 - 1

@@ -5,8 +5,8 @@ import (
 	"strings"
 )
 
-// eda is the parsed eda/data file: the nets, which copper features each net owns, and the packages
-// components are placed from.
+// eda is the parsed eda/data file. It holds the nets, the copper features each net owns, and the
+// packages that components are placed from.
 type eda struct {
 	layers []string // the LYR list, which an FID's layer number indexes
 	nets   []edaNet // in file order; a component pin's net number indexes this
@@ -18,8 +18,8 @@ type edaNet struct {
 	subnets []subnet
 }
 
-// subnet is one SNT record and the features under it. A TOP subnet is a component pin's pad (side,
-// component number, toeprint number); TRC, VIA and PLN are a net's tracks, vias and planes.
+// subnet is one SNT record and the features under it. A TOP subnet is a component pin's pad, given by
+// side, component number and toeprint number. TRC, VIA and PLN are a net's tracks, vias and planes.
 type subnet struct {
 	typ        string
 	side       string
@@ -27,8 +27,8 @@ type subnet struct {
 	fids       []fid
 }
 
-// fid points at one feature: its kind (C copper, L laminate, H hole), the layer number in the LYR
-// list, and the feature's index in that layer's features file.
+// fid points at one feature. It holds the feature's kind (C copper, L laminate, H hole), its layer
+// number in the LYR list, and its index in that layer's features file.
 type fid struct {
 	typ   byte
 	layer int
@@ -40,8 +40,8 @@ type edaPkg struct {
 	pins []edaPin
 }
 
-// edaPin is one pin of a package: its name, its type (T through-hole, S surface, B blind), and its
-// centre in the package's own frame.
+// edaPin is one pin of a package. It holds the pin's name, its type (T through-hole, S surface, B
+// blind), and its centre in the package's own frame.
 type edaPin struct {
 	name string
 	typ  string
@@ -57,8 +57,8 @@ func parseEDA(b []byte) (*eda, error) {
 	var net *edaNet
 	var sn *subnet
 	var pkg *edaPkg
-	// inGroup is set inside a feature group (FGR), whose FIDs gather features for a purpose of the
-	// producer's (Altium's text groups) rather than for a net, so they are skipped.
+	// inGroup is set inside a feature group (FGR). A group's FIDs gather features for the producer's
+	// own purpose, such as Altium's text groups, rather than for a net. So they are skipped.
 	inGroup := false
 	err := lines(b, func(n int, line string) error {
 		w, _ := fields(line)

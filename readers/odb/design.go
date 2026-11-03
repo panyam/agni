@@ -11,11 +11,11 @@ import (
 
 // Read parses the ODB++ job rooted at fsys into an ir.Design.
 //
-// Fidelity: lossy-bounded. We extract the netlist (each placed component, each pin's net from its
-// toeprint record), the packages as footprints, every component property, and the board layer
-// stack; copper geometry goes to the board sidecar (ReadBoardGeometry, C7/C8). A net is built from
-// the pins on it, as the KiCad board reader builds one, so a net no pin lands on is dropped, and a
-// pin on the `$NONE$` net is unconnected. sourceFile is provenance only.
+// Fidelity: lossy-bounded. We extract the netlist, the packages as footprints, every component
+// property, and the board layer stack. The netlist is each placed component, with each pin's net
+// taken from its toeprint record. Copper geometry goes to the board sidecar (ReadBoardGeometry,
+// C7/C8). A net is built from the pins on it, as the KiCad board reader builds one. So a net with no
+// pin on it is dropped, and a pin on the `$NONE$` net is unconnected. sourceFile is provenance only.
 func Read(fsys fs.FS, sourceFile string) (*ir.Design, error) {
 	p, err := parseJob(fsys)
 	if err != nil {
@@ -67,8 +67,8 @@ func (p *parsedJob) toDesign(src string) *ir.Design {
 		putAttr(comp.Attributes, "side", sideWord(c.back))
 		for _, pr := range c.props {
 			key := pr[0]
-			// The Value key is what checks, the BOM and diff read, so a producer's spelling of it
-			// (KiCad's Value, a Valor-lineage VALUE) is folded onto that one key.
+			// Checks, the BOM and diff read the Value key. So a producer's spelling of it, KiCad's
+			// Value or a Valor-lineage VALUE, is folded onto that one key.
 			if strings.EqualFold(key, "value") {
 				key = "Value"
 			}
@@ -102,8 +102,8 @@ func (p *parsedJob) toDesign(src string) *ir.Design {
 		d.Nets = append(d.Nets, byNet[i])
 	}
 
-	// A repeated designator is two placements claiming one name. Declared even when empty so
-	// `duplicate-ref-des` knows this reader looked (agni issue 309).
+	// A repeated designator is two placements claiming one name. The list is declared even when
+	// empty, so `duplicate-ref-des` knows this reader looked (agni issue 309).
 	diag := &ir.InputDiagnostics{Supplied: []string{"ref_des_collisions"}}
 	for _, ref := range refs {
 		if counts[ref] < 2 {
@@ -131,8 +131,8 @@ func (p *parsedJob) toDesign(src string) *ir.Design {
 	return d
 }
 
-// skipRefDes reports whether a designator is absent or a placeholder the source has not annotated
-// ("REF**", "C?1845"). The netlist and the board both skip through it, since they join on ref_des.
+// skipRefDes reports whether a designator is absent, or is a placeholder the source has not
+// annotated ("REF**", "C?1845"). The netlist and the board join on ref_des, so both skip through it.
 func skipRefDes(ref string) bool { return ref == "" || refdes.IsPlaceholder(ref) }
 
 func sideWord(back bool) string {
@@ -142,8 +142,8 @@ func sideWord(back bool) string {
 	return "top"
 }
 
-// layerFunction normalizes a matrix layer TYPE onto ir.LayerFunction; the source word is kept in
-// layer_function_raw beside it.
+// layerFunction normalizes a matrix layer TYPE onto ir.LayerFunction. The source word is kept
+// beside it in layer_function_raw.
 func layerFunction(typ string) ir.LayerFunction {
 	switch typ {
 	case "SIGNAL", "MIXED":

@@ -59,7 +59,7 @@ func TestAMissingFileThatAppearsIsAChange(t *testing.T) {
 	}
 }
 
-// A walk that finds a symbol by name depends on the directory's entries, which no file's stamp shows.
+// A walk that finds a symbol by name depends on the directory's entries. No file's stamp shows them.
 func TestAFileAddedToAWalkedDirectoryIsAChange(t *testing.T) {
 	dir, l, rec := touchedOver(t)
 	if err := l.walkDir("lib", func(string, os.DirEntry, error) error { return nil }); err != nil {

@@ -150,10 +150,10 @@ func equalSet(a, b []string) bool {
 	return true
 }
 
-// TestDanglingEndpoints (WS1-013): a wire drawn to nothing surfaces as a dangling
-// endpoint IN THE GEOMETRY FRAME (native coords, not the scaled netgraph grid), but only
-// when every symbol resolves. An unresolved symbol drops its pins and would fabricate
-// dangles, so the whole design's dangles are suppressed.
+// TestDanglingEndpoints (WS1-013) checks that a wire drawn to nothing surfaces as a dangling
+// endpoint IN THE GEOMETRY FRAME, in native coords rather than the scaled netgraph grid. It
+// surfaces only when every symbol resolves. An unresolved symbol drops its pins and would
+// fabricate dangles, so the whole design's dangles are suppressed.
 func TestDanglingEndpoints(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dangle.sch")), "dangle.sch", testOpener(t))
 	if err != nil {
@@ -187,9 +187,9 @@ func TestDanglingSuppressedOnUnresolved(t *testing.T) {
 	}
 }
 
-// TestPinDirectionsAndExternal (WS1-021) checks that xschem pin `dir` maps to directions (res.sym
-// pins are dir=inout -> INOUT), and a supply symbol (vdd) marks its net External while a
-// plain net label (lab_pin) does not.
+// TestPinDirectionsAndExternal (WS1-021) checks that xschem pin `dir` maps to directions, so
+// res.sym's dir=inout pins read as INOUT. It also checks that a supply symbol (vdd) marks its net
+// External and a plain net label (lab_pin) does not.
 func TestPinDirectionsAndExternal(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "power.sch")), "x.sch", testOpener(t))
 	if err != nil {
@@ -219,18 +219,18 @@ func TestPinDirectionsAndExternal(t *testing.T) {
 }
 
 // TestUnannotatedComponents (agni issue 311) covers this reader keeping a placeholder-designated
-// component, which makes it the layer that has to report one.
+// component. The reader keeps it, so the reader has to report it.
 //
-// The caveat belongs on the record. Nothing attests that xschem SHIPS placeholders the way gEDA's
-// refdes=R? templates do, because xschem assigns an instance name from the symbol template on
-// placement, so this fixture is hand-authored rather than drawn from the format's conventions. It
-// is here because the reader's own assumption depends on the answer: the instance name is this
-// format's provenance native id and is documented as unique within a schematic, and two components
-// sharing "R?" break that quietly. Each pin 1 then collapses onto the same ("R?", "1") key in the
-// net graph, which is the degradation internal/refdes exists to keep out of the index.
+// One caveat. Nothing attests that xschem SHIPS placeholders the way gEDA's refdes=R? templates
+// do, because xschem assigns an instance name from the symbol template on placement. So this
+// fixture is hand-authored rather than drawn from the format's conventions. It exists because
+// the reader's own assumption depends on the answer. The instance name is this format's
+// provenance native id, and it is documented as unique within a schematic. Two components
+// sharing "R?" break that quietly. Each pin 1 then collapses onto the same ("R?", "1") key in
+// the net graph. internal/refdes exists to keep that degradation out of the index.
 //
-// Note this reader does NOT fold by designator, so the two "R?" placements stay two components. The
-// diagnostic is still one entry, because it groups by designator before walking sections.
+// Note this reader does NOT fold by designator, so the two "R?" placements remain two components.
+// The diagnostic is still one entry, because it groups by designator before walking sections.
 func TestUnannotatedComponents(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "unannotated.sch")), "unannotated.sch", testOpener(t))
 	if err != nil {
@@ -253,8 +253,8 @@ func TestUnannotatedComponents(t *testing.T) {
 }
 
 // TestUnannotatedWithoutSymbols pins the wiring on the other entry path. Plain Read supplies no
-// opener, and on that path InputDiagnostics stays nil unless the sheet has a bus, so a signal
-// attached inside the resolving branch is absent for every caller without a symbol library.
+// opener. On that path InputDiagnostics is nil unless the sheet has a bus. A signal attached
+// inside the resolving branch would then be absent for every caller without a symbol library.
 func TestUnannotatedWithoutSymbols(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "unannotated.sch")), "unannotated.sch")
 	if err != nil {
@@ -266,9 +266,9 @@ func TestUnannotatedWithoutSymbols(t *testing.T) {
 }
 
 // TestRefDesCollisions (agni issue 309) pins duplicate detection. xschem documents instance names
-// as unique within a schematic, and this reader relies on it (the name is the provenance native
-// id), so a repeat is both a duplicated designator and a break of that assumption. It reported
-// neither before, and duplicate-ref-des read as a clean pass on every xschem design.
+// as unique within a schematic. This reader relies on that, because the name is the provenance
+// native id. So a repeat is a duplicated designator and also breaks that assumption. Before, the
+// reader reported neither, and duplicate-ref-des read as a clean pass on every xschem design.
 func TestRefDesCollisions(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dup_name.sch")), "dup_name.sch", testOpener(t))
 	if err != nil {
@@ -283,8 +283,8 @@ func TestRefDesCollisions(t *testing.T) {
 	}
 }
 
-// A clean read still declares it looked, and a placeholder pair is not a collision, since two
-// components called "R?" have no name to fight over, which unannotated-components reports instead.
+// A clean read still declares it looked. A placeholder pair is not a collision, since two
+// components called "R?" have no name to fight over. unannotated-components reports them instead.
 func TestRefDesCollisionsCleanAndPlaceholders(t *testing.T) {
 	for _, fixture := range []string{"divider.sch", "unannotated.sch"} {
 		d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, fixture)), fixture, testOpener(t))
