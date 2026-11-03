@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-// `agni open` on a loose board minted the mount "local" before WS16-003, which is the viewer's mount
+// Before WS16-003, `agni open` on a loose board minted the mount "local". That is the viewer's mount
 // for dropped files, so the Load page read the board as a drop and asked for the browser engine.
 func TestAMintedMountNeverTakesTheBrowserMount(t *testing.T) {
 	freshWorkspace(t)

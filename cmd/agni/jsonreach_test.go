@@ -12,12 +12,13 @@ import (
 	"testing"
 )
 
-// TestNoCommandCallsAHandRolledEncoderInAnotherPackage closes the gap TestEveryJSONFormatEmitsAProto
-// states about itself: it reads this package's source, so a json encoder one package away is
-// invisible to it. `query` once reached one through report.TableJSON, and `review` through
-// review.RenderJSON until agni issue 734. This follows every call cmd/agni makes into the module's
-// other packages and fails on one that lands in an exported function building json with
-// encoding/json, which is a second shape of an answer the wire already has a message for (C31).
+// TestNoCommandCallsAHandRolledEncoderInAnotherPackage closes a gap that
+// TestEveryJSONFormatEmitsAProto states about itself. That test reads this package's source, so a
+// json encoder one package away is invisible to it. `query` once reached one through
+// report.TableJSON, and `review` through review.RenderJSON until agni issue 734. This test follows
+// every call cmd/agni makes into the module's other packages. It fails on a call that reaches an
+// exported function building json with encoding/json. Such a function emits a second shape for an
+// answer, and the wire already has a message for that answer (C31).
 func TestNoCommandCallsAHandRolledEncoderInAnotherPackage(t *testing.T) {
 	fset := token.NewFileSet()
 	cmdFiles := parseDir(t, fset, ".")
@@ -72,8 +73,8 @@ func TestNoCommandCallsAHandRolledEncoderInAnotherPackage(t *testing.T) {
 	}
 }
 
-// TestTheReachCheckFindsAHandRolledEncoder is the positive control: the detector finds an exported
-// function building json with encoding/json, and ignores protojson and unexported helpers, so the
+// TestTheReachCheckFindsAHandRolledEncoder is the positive control. The detector finds an exported
+// function building json with encoding/json, and it ignores protojson and unexported helpers. So the
 // test above cannot pass by matching nothing.
 func TestTheReachCheckFindsAHandRolledEncoder(t *testing.T) {
 	const src = `package p

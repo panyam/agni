@@ -22,8 +22,8 @@ func runRootSplit(t *testing.T, args ...string) (string, string) {
 
 const timedGateway = "../../examples/tutorial-project/designs/gateway/gateway.edn"
 
-// TestTimingGoesToStderrAndLeavesTheAnswerAlone holds --timing to reporting where a run's time went
-// (agni issue 914) on stderr, so a timed run pipes the same answer an untimed one does.
+// TestTimingGoesToStderrAndLeavesTheAnswerAlone holds --timing to reporting on stderr where a run's
+// time went (agni issue 914). So a timed run pipes the same answer as an untimed one.
 func TestTimingGoesToStderrAndLeavesTheAnswerAlone(t *testing.T) {
 	freshWorkspace(t)
 	plain, plainErr := runRootSplit(t, "check", timedGateway, "--format", "csv")

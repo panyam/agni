@@ -10,8 +10,8 @@ import (
 
 const combinedReportFixture = "testdata/combined-report"
 
-// `check --format html --query-sets` writes one file carrying the run's checks and every query set
-// the design's project keeps, the set's rows answered over the same read (agni issue 1190).
+// `check --format html --query-sets` writes one file. It holds the run's checks and every query set
+// in the design's project, and each set's rows are answered over the same read (agni issue 1190).
 func TestCheckHTMLCarriesTheProjectsQuerySets(t *testing.T) {
 	page := runCheck(t, "--format", "html", "--query-sets", combinedReportFixture+"/designs/demo-board")
 	rules, queries := strings.Index(page, "single-pin-net"), strings.Index(page, `<section class="query-set">`)
@@ -29,7 +29,7 @@ func TestCheckHTMLCarriesTheProjectsQuerySets(t *testing.T) {
 	}
 }
 
-// The rows come from the set the project keeps now, so editing its YAML changes the report.
+// The rows come from the project's current set, so editing its YAML changes the report.
 func TestTheQuerySectionFollowsTheSetFile(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.CopyFS(dir, os.DirFS(combinedReportFixture)); err != nil {

@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestCheckMarkdown pins the report contract: a severity summary table, sections ordered
-// error -> warning -> info (empty severities omitted), rule headings carrying the catalog
+// TestCheckMarkdown pins the report contract. The report has a severity summary table, sections
+// ordered error -> warning -> info (empty severities omitted), rule headings carrying the catalog
 // Summary, and one line per finding with subject, message, and source provenance. fires.edn
 // yields one finding of each severity, so the full ordering is exercised on a real reader path.
 func TestCheckMarkdown(t *testing.T) {
@@ -46,9 +46,9 @@ func TestCheckMarkdown(t *testing.T) {
 	}
 }
 
-// TestCheckFailOn covers the CI-gate exit matrix. The run errors exactly when a finding at or
-// above the threshold exists, and the default (no flag) stays exit-0 so existing callers are
-// unaffected. fires.edn has error+warning+info findings; passes.edn has none.
+// TestCheckFailOn covers the CI-gate exit matrix. The run errors exactly when a finding at or above
+// the threshold exists. With no flag the run exits 0, so existing callers are unaffected. fires.edn
+// has error+warning+info findings; passes.edn has none.
 func TestCheckFailOn(t *testing.T) {
 	run := func(args ...string) error {
 		cmd := checkCmd()
@@ -78,9 +78,9 @@ func TestCheckFailOn(t *testing.T) {
 	}
 }
 
-// TestCheckReportSheets pins WS3-023 for the report path, where `check --format report` annotates the
-// findings nested in the severity report with their sheet membership, via the same
-// service.AnnotateReport the web GetCheckReport RPC uses. The U1 component finding on the
+// TestCheckReportSheets pins WS3-023 for the report path. `check --format report` annotates the
+// findings nested in the severity report with their sheet membership. It uses the same
+// service.AnnotateReport as the web GetCheckReport RPC. The U1 component finding on the
 // multi-sheet sheetnav fixture locates on the root sheet.
 func TestCheckReportSheets(t *testing.T) {
 	cmd := checkCmd()

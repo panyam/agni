@@ -37,9 +37,9 @@ func TestVerdictCSVShowsAPassWithItsProof(t *testing.T) {
 		t.Errorf("header must be the fixed column set\n got: %s\nwant: %s", got, strings.Join(verdictCSVColumns, ","))
 	}
 	// Select the row this test makes claims about, NOT whichever pass happens to sort last. The
-	// original loop kept the final passing row, which was this one only while i2c-pull-up was the
-	// single converted rule; the first structural conversions put an unconnected-component pass
-	// after it and the assertions below started reading a row they were never about. Every further
+	// original loop kept the final passing row. That row was this one only while i2c-pull-up was
+	// the single converted rule. The first structural conversions put an unconnected-component pass
+	// after it, and the assertions below started reading a row they were never about. Every further
 	// conversion under agni issue 391 would have re-broken a positional pick.
 	var pass string
 	var anyPass bool
@@ -66,8 +66,8 @@ func TestVerdictCSVShowsAPassWithItsProof(t *testing.T) {
 	}
 }
 
-// THE REGRESSION GUARD. Adding a second table must not change the first one, or every consumer
-// binding to `check`'s output pays for a feature they did not ask for.
+// THE REGRESSION GUARD. Adding a second table must not change the first one. Otherwise a feature
+// they did not ask for breaks every consumer binding to `check`'s output.
 func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 	design := "testdata/conformance/showcase.fires.kicad_sch"
 
@@ -88,9 +88,9 @@ func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 			t.Errorf("SDA passes i2c-pull-up and must not be a finding: %v", r)
 		}
 	}
-	// The default JSON keeps its findings. It does gain an empty "verdicts" key, which EmitUnpopulated
-	// makes unavoidable once the field exists on the response, so what is asserted is that no verdict
-	// DATA rides along.
+	// The default JSON keeps its findings. It does gain an empty "verdicts" key. EmitUnpopulated
+	// makes that key unavoidable once the field exists on the response, so the test asserts that no
+	// verdict DATA comes along.
 	//
 	// Whitespace-insensitive because protojson varies the spacing after a colon on purpose to
 	// discourage byte-comparing its output, so `"verdicts": []` and `"verdicts":  []` are both it.
@@ -99,8 +99,8 @@ func TestVerdictsDoNotChangeTheFindingsOutput(t *testing.T) {
 	if !strings.Contains(js, `"verdicts": []`) {
 		t.Errorf("expected an empty verdicts key, got:\n%s", js)
 	}
-	// A finding names the verdict it came from (agni issue 485), which is the finding's own identity
-	// rather than verdict data, so those ids are taken out before looking for anything else.
+	// A finding names the verdict it came from (agni issue 485). That id is the finding's own
+	// identity rather than verdict data, so those ids are taken out before looking for anything else.
 	var resp webapi.CheckDesignResponse
 	if err := protojson.Unmarshal([]byte(raw), &resp); err != nil {
 		t.Fatal(err)
@@ -126,9 +126,9 @@ func TestVerdictCSVCarriesTheDerivedID(t *testing.T) {
 	}
 }
 
-// `--verdicts --format json` is the CheckDesign response with its considered set, the wire message
-// C31 asks for, so the Python client's CLI transport reads verdicts as a server sends them (agni issue
-// 822). The findings stay in it, since --verdicts selects what is printed and not what was run.
+// `--verdicts --format json` is the CheckDesign response with its considered set, as C31 asks. So the
+// Python client's CLI transport reads verdicts as a server sends them (agni issue 822). The findings
+// are still in it, since --verdicts selects what is printed and not what was run.
 func TestVerdictJSONIsTheCheckDesignResponse(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--format", "json", "testdata/conformance/showcase.fires.kicad_sch")
 	var resp webapi.CheckDesignResponse

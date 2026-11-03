@@ -87,8 +87,8 @@ func writeCheckMarkdown(w io.Writer, rep *checkspb.CheckReport) error {
 	return nil
 }
 
-// writeCheckReportJSON emits the report as protojson of GetCheckReportResponse, the shape the RPC
-// returns (C31), as writeCheckDesignJSON does for the findings.
+// writeCheckReportJSON emits the report as protojson of GetCheckReportResponse. The RPC returns the
+// same shape (C31), and writeCheckDesignJSON does the same for the findings.
 func writeCheckReportJSON(w io.Writer, rep *checkspb.CheckReport) error {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(&webapi.GetCheckReportResponse{Report: rep})
 	if err != nil {

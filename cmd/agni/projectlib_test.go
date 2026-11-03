@@ -28,8 +28,8 @@ func TestProjectLibraryAnswersInsideItsProject(t *testing.T) {
 	}
 }
 
-// TestProjectLibraryIsUnknownOutsideItsProject is the other half: a design in no project gets the
-// shipped vocabulary alone, so one team's members never leak into another's queries.
+// TestProjectLibraryIsUnknownOutsideItsProject covers the other half. A design in no project gets
+// the shipped vocabulary alone, so one team's members never leak into another's queries.
 func TestProjectLibraryIsUnknownOutsideItsProject(t *testing.T) {
 	cmd := queryCmd()
 	cmd.SetOut(&bytes.Buffer{})
@@ -40,8 +40,8 @@ func TestProjectLibraryIsUnknownOutsideItsProject(t *testing.T) {
 	}
 }
 
-// TestRelationsListsAProjectMember checks drill-down with --design: the project's member lists with
-// its signature, its definition, and its optional page from lib/docs.
+// TestRelationsListsAProjectMember checks drill-down with --design. The project's member is listed
+// with its signature, its definition, and its optional page from lib/docs.
 func TestRelationsListsAProjectMember(t *testing.T) {
 	out := runCLI(t, queryCmd(), "--relations", "house.pmic_rail", "--design", gatewayDesign)
 	for _, want := range []string{"house.pmic_rail(n: net)", "derived, defined in module house", `str.prefix(?n, "PMIC_")`, "### What it is"} {
@@ -69,8 +69,8 @@ func TestABrokenProjectModuleNamesItsFile(t *testing.T) {
 	}
 }
 
-// TestAProjectMemberCannotReplaceAShippedOne refuses a project module defining a path the shipped
-// library already does, naming the file and the path.
+// TestAProjectMemberCannotReplaceAShippedOne checks that a project module cannot define a path that
+// the shipped library already defines. The refusal names the file and the path.
 func TestAProjectMemberCannotReplaceAShippedOne(t *testing.T) {
 	projectWithLib(t, map[string]string{
 		"net.dl": "has_test_point(?n: net) :- entity(?n, \"net\");\n",
@@ -119,9 +119,9 @@ func runQueryErr(t *testing.T, args ...string) error {
 }
 
 // TestLibFlagAnswersAsTheInlineRequestDoes is the C32 parity test for agni issue 788. `--lib` reads a
-// directory and sends its modules inline, so the CLI and a client sending the same modules to the
-// service must get the same rows, on a design that belongs to no project and so has no library of its
-// own. Without the flag the member does not exist.
+// directory and sends its modules inline. A client can send the same modules to the service, and
+// the CLI and that client must get the same rows. The design belongs to no project, so it has no
+// library of its own. Without the flag the member does not exist.
 func TestLibFlagAnswersAsTheInlineRequestDoes(t *testing.T) {
 	const (
 		lib    = "../../examples/tutorial-project/lib"
@@ -160,10 +160,10 @@ func TestLibFlagAnswersAsTheInlineRequestDoes(t *testing.T) {
 }
 
 // TestAChecklistQueryCallsTheProjectLibrary is agni issue 779 end to end, on both surfaces. The
-// tutorial project's house checklist binds P6 to an inline query over its own lib/house.dl, and the item
-// fails on PMIC_MAIN_12V0, the one PMIC rail with no test point, whether `agni review` runs it or a
-// served CreateReview does (C32). Before this the query could not compile, since a rule from a
-// manifest saw only the shipped vocabulary.
+// tutorial project's house checklist binds P6 to an inline query over its own lib/house.dl. The
+// item fails on PMIC_MAIN_12V0, the only PMIC rail with no test point. It fails whether `agni
+// review` runs it or a served CreateReview does (C32). Before this the query could not compile,
+// since a rule from a manifest saw only the shipped vocabulary.
 func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 	cli := runReview(t, gatewayDesign, "--checklist", "house", "--format", "json")
 	if !strings.Contains(cli, `"PMIC rail PMIC_MAIN_12V0 has no test point"`) {
@@ -215,8 +215,8 @@ func TestAChecklistQueryCallsTheProjectLibrary(t *testing.T) {
 	}
 }
 
-// TestReviewLibFlagReachesAChecklistQuery: `agni review --lib` sends a library with the run (agni
-// issue 788), so a checklist's inline query on a design that belongs to no project can call it.
+// TestReviewLibFlagReachesAChecklistQuery covers `agni review --lib`, which sends a library with the
+// run (agni issue 788). A checklist's inline query on a design in no project can then call it.
 // Without the flag the checklist is refused before anything runs, naming the module, rather than
 // running with the item undecided.
 func TestReviewLibFlagReachesAChecklistQuery(t *testing.T) {

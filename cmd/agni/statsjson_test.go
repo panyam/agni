@@ -18,7 +18,7 @@ func statsJSONOf(t *testing.T, args ...string) *webapi.GetDesignResponse {
 	return &resp
 }
 
-// TestStatsJSONIsGetDesign covers agni issue 836 from the CLI: `stats --format json` is the message
+// TestStatsJSONIsGetDesign covers agni issue 836 from the CLI. `stats --format json` is the message
 // GetDesign returns, the summary alone by default and the IR when --mask asks for it.
 func TestStatsJSONIsGetDesign(t *testing.T) {
 	sum := statsJSONOf(t)

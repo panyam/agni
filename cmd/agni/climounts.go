@@ -22,15 +22,15 @@ import (
 var cliMountSpecs []string
 
 // maxProjectWalk bounds how far above a named file the CLI looks for a project descriptor when it
-// has to mint a mount. It stops short of the filesystem root so a stray `project.yaml` far up
-// someone's home directory never becomes the authority a stored review is recorded under.
+// has to mint a mount. It stops short of the filesystem root. A stored review is recorded under the
+// mount's authority, and a stray `project.yaml` far up someone's home directory must never be it.
 const maxProjectWalk = 4
 
 // cliWorkspace is the CLI's mount table. A server is handed its mounts by an operator and the CLI
-// is handed a PATH, so this turns each argument into an artifact URI whose authority is a mount
-// this table can resolve.
+// is handed a PATH. So this table turns each argument into an artifact URI, and the URI's authority
+// names one of this table's mounts.
 //
-// Three tiers, most explicit first:
+// It has three tiers, most explicit first.
 //
 //  1. An argument that already IS a URI is taken as written. Its authority must be a mount declared
 //     with --mount, so a URI can say which mount you mean but never name a place no mount covers.
@@ -40,9 +40,9 @@ const maxProjectWalk = 4
 //  3. A path outside every declared mount gets a mount MINTED for it, rooted at the enclosing
 //     project when one resolves and at the file's own directory otherwise.
 //
-// Tier 3 keeps `agni check some/board.edn` working with no configuration. Rooting it at the project
-// rather than the filesystem root keeps a host path out of the URI, because a URI carrying
-// `/Users/<someone>` would be recorded verbatim into every review document the run produced.
+// Tier 3 keeps `agni check some/board.edn` working with no configuration. It roots the minted mount
+// at the project rather than the filesystem root, and that keeps a host path out of the URI. A URI
+// carrying `/Users/<someone>` would be recorded verbatim into every review document of the run.
 type cliWorkspace struct {
 	mu       sync.Mutex
 	declared []mounts.Mount
@@ -59,9 +59,9 @@ func newCLIWorkspace() (*cliWorkspace, error) {
 	return &cliWorkspace{declared: declared}, nil
 }
 
-// Mounts returns every mount this run can resolve: the declared ones first, then any minted along
-// the way. Declared wins a name collision, matching mounts.Merge, since what an operator typed is
-// the more specific intent.
+// Mounts returns every mount this run can resolve. The declared ones come first, then any minted
+// along the way. A declared mount wins a name collision, matching mounts.Merge, since the operator
+// typed it and so it states the more specific intent.
 func (w *cliWorkspace) Mounts() []mounts.Mount {
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -97,8 +97,8 @@ func (w *cliWorkspace) URI(arg string) (artifact.URI, error) {
 // opposed to one this run minted for an argument no declared mount covered.
 //
 // A server started from the same table resolves a declared name to the same root, while a minted
-// one means nothing outside this process. Callers that turn a URI into something an OTHER process
-// will follow have to know which they are holding.
+// one means nothing outside this process. Some callers turn a URI into something an OTHER process
+// will follow, and those callers have to know which kind they hold.
 //
 // It reads w.declared rather than w.Mounts(), which merges in the minted ones and would answer yes
 // to both.
@@ -137,8 +137,8 @@ func (w *cliWorkspace) inDeclared(abs string) (artifact.URI, bool) {
 const mintedMountName = "files"
 
 // browserMount is the viewer's own mount for files dropped on a page (BROWSER_MOUNT in
-// web/src/wasm/drop.ts), so a minted mount never takes it: the Load page would read the design as a
-// drop and ask for the browser engine.
+// web/src/wasm/drop.ts). A minted mount never takes that name, or the Load page would read the
+// design as a drop and ask for the browser engine.
 const browserMount = "local"
 
 // mint creates a mount for a path that no declared mount covers, rooted at the enclosing project
@@ -174,8 +174,8 @@ func (w *cliWorkspace) mint(abs string) (artifact.URI, error) {
 // root and otherwise suffixing until the name is free and recording the new mount as minted. The
 // caller holds w.mu.
 //
-// The suffix covers diffing two designs in different trees that share a project id, where two roots
-// under one authority would make the second design unaddressable.
+// The suffix covers a diff of two designs in different trees that share a project id. Without it
+// the two roots would share one authority, and the second design would be unaddressable.
 func (w *cliWorkspace) uniqueNameLocked(want, root string) string {
 	all := append(append([]mounts.Mount{}, w.declared...), w.minted...)
 	for _, m := range all {
@@ -209,11 +209,11 @@ func (w *cliWorkspace) uniqueNameLocked(want, root string) string {
 // through the CLI or through a server.
 //
 // A parse error must never read as "no project here". This function decides where the mount is
-// ROOTED, and answering "none" for a broken descriptor roots the mount at the design's own folder,
-// leaving the descriptor OUTSIDE the mount where nothing downstream can see it. The run then
-// composes against the built-in vocabulary and reports an authoritative-looking answer (agni issue
-// 312; issue 306 measured 40 findings a project's own lexicon would not have raised and 95 it
-// would have). See
+// ROOTED. Suppose it answered "none" for a broken descriptor. The mount would be rooted at the
+// design's own folder, and the descriptor would sit OUTSIDE the mount, where nothing downstream can
+// see it. The run would then compose against the built-in vocabulary and report an
+// authoritative-looking answer (agni issue 312). Issue 306 measured 40 findings that the project's
+// own lexicon would not have raised, and 95 that it would have. See
 // docsite/content/architecture/projects-and-designs.md#resolution-is-an-interface-not-a-path-convention.
 func projectRootAbove(abs string) (root, id string, err error) {
 	dir := abs
@@ -245,7 +245,7 @@ func projectRootAbove(abs string) (root, id string, err error) {
 //
 // It is package-level like the flag variables, because a CLI process serves exactly one invocation
 // and "the mounts for this run" is process state. Nothing mutates it after the first call and no
-// request path reads it, which is the startup-default shape CONSTRAINTS C22 allows.
+// request path reads it. CONSTRAINTS C22 allows that startup-default shape.
 var (
 	cliWSOnce sync.Once
 	cliWSVal  *cliWorkspace
@@ -260,15 +260,16 @@ func workspace() (*cliWorkspace, error) {
 
 // cliArgURI turns a command-line argument into an artifact URI string for a request literal.
 //
-// A path that does not exist is not an error here, per cliWorkspace.URI. A failure to MINT (a
-// governing project descriptor that does not parse) IS returned, because passing the raw argument
-// through would leave the service no mount to resolve it against, and it would compose as though
-// the design belonged to no project (agni issue 312).
+// A path that does not exist is not an error here, per cliWorkspace.URI. A failure to MINT IS
+// returned. Minting fails when a governing project descriptor does not parse. Passing the raw
+// argument through would leave the service no mount to resolve it against, and the design would
+// compose as though it belonged to no project (agni issue 312).
 func cliArgURI(arg string) (string, error) {
 	if arg == "" {
-		// An unsupplied optional flag stays unsupplied. Without this, filepath.Abs("") resolves to the
-		// working directory and an absent --board-path arrives as a URI naming a real folder, which the
-		// service then reads as "a board was supplied" and fails on a directory that is not one.
+		// An unsupplied optional flag comes back as "". Without this, filepath.Abs("") resolves to
+		// the working directory and an absent --board-path arrives as a URI naming a real folder.
+		// The service then reads that as "a board was supplied" and fails on a directory that is
+		// not one.
 		return "", nil
 	}
 	ws, err := workspace()
@@ -282,11 +283,12 @@ func cliArgURI(arg string) (string, error) {
 	return u.String(), nil
 }
 
-// cliProjects is the CLI's project resolver: the same filesystem-backed store and config loader a
-// server uses, over the mounts this run has (declared with --mount, or minted per argument).
+// cliProjects is the CLI's project resolver. It uses the filesystem-backed store and config loader
+// that a server uses, over the mounts this run has (declared with --mount, or minted per argument).
 //
-// It goes through the same code serve does, so a design checked from the terminal and in the
-// browser compose the same config and agree about what a board was measured against.
+// It goes through the same code as serve. So a design composes the same config whether it is
+// checked from the terminal or in the browser, and both agree about what a board was measured
+// against.
 func cliProjects() *service.ProjectResolver {
 	cliResolverOnce.Do(func() {
 		cliResolver = &service.ProjectResolver{Store: cliProjectStore{}, Config: cliProjectConfig{}}
@@ -294,9 +296,9 @@ func cliProjects() *service.ProjectResolver {
 	return cliResolver
 }
 
-// cliResolver is one resolver for the process, so the snapshot a command ingests is the one every
-// service it asks holds (agni issue 1061). Its store and config read the mount table at call time, so
-// sharing it shares no stale state.
+// cliResolver is one resolver for the process. A command ingests a snapshot, and every service that
+// the command asks holds that same snapshot (agni issue 1061). Its store and config read the mount
+// table at call time, so sharing it shares no stale state.
 var (
 	cliResolver     *service.ProjectResolver
 	cliResolverOnce sync.Once
@@ -369,8 +371,8 @@ func (cliProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisC
 	return (&osProjectConfig{mounts: ws.Mounts()}).ResolveConfig(ctx, cfg, namespace)
 }
 
-// withProjectRules splices the rules a design's project supplies onto a catalog, for the CLI's own
-// facet resolution, and returns the composed Overlay beside it.
+// withProjectRules splices a design's project rules onto a catalog, for the CLI's own facet
+// resolution, and returns the composed Overlay beside it.
 //
 // The CLI resolves `--rule` and `--tag` to rule NAMES before calling the service, so its local
 // catalog has to span the same name space the run will. Without this a project's own rule is
@@ -379,9 +381,10 @@ func (cliProjectConfig) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisC
 // every project rule from the run.
 //
 // Both results come from one service.OverlayFor call, so the CLI and the service cannot disagree.
-// Composing separately produced a duplicate-source error for `--conventions` naming the file the
-// project already declares (see service/overlay.go). A caller writing a results document records
-// the Overlay's tiers, the ones the RUN attached, rather than the ones its own flags named.
+// When the two composed separately, a `--conventions` flag naming a file the project already
+// declares produced a duplicate-source error (see service/overlay.go). A caller that writes a
+// results document records the Overlay's tiers. Those are the tiers the RUN attached, not the ones
+// the caller's own flags named.
 //
 // A design with no project still gets the request's own config. A descriptor that exists and does
 // not parse is an error (see ProjectResolver.Overlay).
@@ -406,16 +409,16 @@ func withProjectRules(ctx context.Context, base *check.Catalog, arg string, req 
 // when the argument belongs to neither, and it errors only when something that EXISTS fails to
 // parse.
 //
-// Absent config is ordinary (most files on a mounted folder belong to no project) and malformed
-// config is not. A caller that flattens the two runs against the built-in vocabulary and reports an
-// authoritative-looking answer, so every CLI caller draws the line here (issue 312).
+// Absent config is ordinary, since most files on a mounted folder belong to no project. Malformed
+// config is not. If a caller treated the two alike, it would run against the built-in vocabulary
+// and report an authoritative-looking answer. So every CLI caller draws the line here (issue 312).
 //
 // An argument that names no existing path is not an error, and is left to the reader's not-found
 // message.
 //
 // The ErrNotFound case is DEFENSIVE and no test reaches it. A store reports it for a mount it does
-// not have, which this CLI cannot produce because the workspace and the store share one mount list
-// and URI registers the mount before this call names it. It stays because ProjectStore is an
+// not have. This CLI cannot produce that case. The workspace and the store share one mount list,
+// and URI registers the mount before this call names it. The case is kept because ProjectStore is an
 // interface, and an unknown mount means nothing to resolve against rather than something broken.
 func cliResolveProject(ctx context.Context, arg string) (*webapi.Design, *webapi.Project, error) {
 	ws, err := workspace()
@@ -437,8 +440,8 @@ func cliResolveProject(ctx context.Context, arg string) (*webapi.Design, *webapi
 	}
 }
 
-// cliProjectParent is the project resource name a design's review should be stored under, empty when
-// the design belongs to none.
+// cliProjectParent returns the project resource name to store a design's review under. It is empty
+// when the design belongs to none.
 //
 // Empty is a real answer. Reviewing a loose file is the ordinary case on a mounted folder, and such
 // a run is stored unparented, since a synthetic parent would assert ownership that does not exist.
@@ -455,8 +458,8 @@ func cliProjectParent(ctx context.Context, arg string) (string, error) {
 // cliProjectChecklists reports the checklists a design's project declares, in declared order, and
 // the project they came from.
 //
-// It returns THREE distinguishable states, because the caller has something different to say for
-// each:
+// It returns THREE distinguishable states, and the caller has something different to say for each
+// one.
 //
 //	(nil, "")            the design belongs to no project
 //	(nil, "projects/x")  it belongs to one, and that project declares no checklist
@@ -476,14 +479,14 @@ func cliProjectChecklists(ctx context.Context, arg string) ([]*webapi.NamedCheck
 	if err != nil {
 		return nil, "", err
 	}
-	// The resolver ListChecklists and the viewer's picker read, so the three cannot disagree about
-	// what a project declares, inherited checklists included (agni issues 829, 859).
+	// ListChecklists and the viewer's picker read this same resolver, so the three cannot disagree
+	// about what a project declares, inherited checklists included (agni issues 829, 859).
 	return cliProjects().Checklists(ctx, u)
 }
 
-// relName returns the name provenance records for an absolute host path, which is its path within
-// the mount that contains it, or its base name when no mount does. A relative path comes back
-// unchanged apart from slashes.
+// relName returns the name that provenance records for an absolute host path. That name is the
+// path within the containing mount, or the base name when no mount contains the path. A relative
+// path comes back unchanged apart from slashes.
 //
 // It is the read-time twin of inDeclared, with the longest root winning, so it agrees with the name
 // the browser would see.

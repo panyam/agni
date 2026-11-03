@@ -36,9 +36,9 @@ func newDesignSvcNative(mounts []mounts.Mount, enabled map[string]bool) *service
 	)
 }
 
-// testProjectResolver composes the project ports exactly as serve.go does, so a fixture carrying a
-// descriptor is read under its own config here too. Building it from the mounts (rather than passing
-// nil) is what makes these tests the served composition rather than a simplified one.
+// testProjectResolver composes the project ports exactly as serve.go does, so a fixture with a
+// descriptor is read under its own config here too. It builds the resolver from the mounts rather
+// than passing nil. So these tests exercise the served composition rather than a simplified one.
 func testProjectResolver(ms []mounts.Mount) *service.ProjectResolver {
 	return &service.ProjectResolver{
 		Store:  projects.NewFSStore(projectTrees(ms)...),
@@ -132,8 +132,8 @@ func TestDesignServiceGetDesign(t *testing.T) {
 }
 
 func TestDesignServiceCheckDesign(t *testing.T) {
-	// A self-contained netlist fixture with known violations: two I2C nets with no pull-up
-	// (i2c-pull-up), and a resistor on no net (unconnected-component). basic.edn is clean, so it
+	// A self-contained netlist fixture with known violations. Two I2C nets have no pull-up
+	// (i2c-pull-up), and a resistor is on no net (unconnected-component). basic.edn is clean, so it
 	// would not exercise the endpoint.
 	fixture := `(edif CHK
   (edifVersion 2 0 0)
@@ -317,7 +317,7 @@ func TestDesignServiceKicadFaithful(t *testing.T) {
 		}
 	})
 
-	// The GetSheet symbols field is honored (WS7-031b): a grid render with FAITHFUL symbols draws
+	// The GetSheet symbols field is honored (WS7-031b). A grid render with FAITHFUL symbols draws
 	// the design's own artwork, so its SVG differs from the GLYPH render. Before un-hardcoding the
 	// source, both requests produced the same glyph SVG.
 	t.Run("grid honors the symbols choice", func(t *testing.T) {
@@ -551,13 +551,12 @@ func tutorialMounts(t *testing.T) []mounts.Mount {
 // meets, the served document.
 //
 // The CLI twin (TestRenderResolvesProjectSymbolLibrary) covers `agni render`. This covers `agni
-// serve`, which reaches geometry through DesignService rather than through the render command, and
-// was the deployment the issue was reported against. Both had to be fixed separately because they
-// resolve config by different routes, and a test on either alone would have read as covering both.
+// serve`. It reaches geometry through DesignService rather than through the render command, and the
+// issue was reported against that deployment. Both had to be fixed separately, because they resolve
+// config by different routes. A test on either alone would have read as covering both.
 //
-// The served document is also the only one that carries per-pin pick targets, since the viewer is
-// the one consumer that picks. So this asserts pins as well, which the CLI render deliberately does
-// not emit.
+// Only the served document has per-pin pick targets, since only the viewer picks. So this test
+// asserts pins as well. The CLI render deliberately does not emit them.
 func TestServedSheetResolvesProjectSymbolLibrary(t *testing.T) {
 	svc := newDesignSvc(tutorialMounts(t))
 	resp, err := svc.GetSheet(context.Background(), &webapi.GetSheetRequest{
@@ -576,8 +575,8 @@ func TestServedSheetResolvesProjectSymbolLibrary(t *testing.T) {
 	if n := strings.Count(svg, `data-kind="pin"`); n == 0 {
 		t.Error("a served faithful sheet must carry per-pin pick targets; got none")
 	}
-	// The control. Ref-des labels come from the annotation pass and draw whether or not a symbol
-	// resolved, which is what made the degraded render look complete. If they ever stop drawing, the
+	// The control. Ref-des labels come from the annotation pass, and they draw whether or not a symbol
+	// resolved. That made the degraded render look complete. If they ever stop drawing, the
 	// assertions above are measuring something other than what they claim.
 	if !strings.Contains(svg, "C1") {
 		t.Error("expected the sheet's reference designators to draw; the fixture or the annotation pass changed")

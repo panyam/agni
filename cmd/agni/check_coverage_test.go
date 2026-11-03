@@ -13,11 +13,11 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// The DEFAULT text output states what the run looked at. A findings list cannot, because
-// twenty-nine rules finding nothing and twenty-nine rules that each examined the wrong thing print
-// an identical line, and "N rule(s) run" is a proxy for coverage that is not coverage. The
-// considered set rides on the same response, so stating it costs nothing, and it is stated by
-// default because coverage must not be something a reader has to know to ask for.
+// The DEFAULT text output states what the run looked at. A findings list cannot. Imagine
+// twenty-nine rules that find nothing, and twenty-nine rules that each examined the wrong thing.
+// Both print an identical line. "N rule(s) run" is a proxy for coverage, and it is not coverage. The
+// considered set is already on the same response, so stating it costs nothing. It is stated by
+// default, because a reader must not have to know to ask for coverage.
 func TestDefaultCheckStatesItsCoverage(t *testing.T) {
 	out := runCheck(t, "testdata/conformance/showcase.fires.kicad_sch")
 
@@ -32,9 +32,9 @@ func TestDefaultCheckStatesItsCoverage(t *testing.T) {
 		t.Error("the coverage line must point at the flag that shows the detail")
 	}
 
-	// The rows themselves stay behind the flag, since they are several times the volume of the findings
-	// list here and far more on a real board, so the default states the claim and the flag shows the
-	// evidence.
+	// The rows themselves appear only with the flag. They are several times the volume of the
+	// findings list here, and far more on a real board. So the default states the claim and the flag
+	// shows the evidence.
 	if len(strings.Split(runCheck(t, "--verdicts", "testdata/conformance/showcase.fires.kicad_sch"), "\n")) <=
 		len(strings.Split(out, "\n")) {
 		t.Error("--verdicts should be the fuller output; the default must not already be dumping rows")
@@ -42,9 +42,9 @@ func TestDefaultCheckStatesItsCoverage(t *testing.T) {
 }
 
 // The coverage claim counts only rules that STATED a considered set and names the rest, so a reader
-// can tell a covered rule from a quiet one. The count of rules it cannot vouch for is over rules
-// that REPORTED SOMETHING without stating a set, never over every rule that ran, because most rules
-// that run on a given board simply have no subject in scope, and calling those "violations only"
+// can tell a covered rule from a quiet one. It also counts the rules it cannot vouch for. That count
+// covers rules that REPORTED SOMETHING without stating a set, and never every rule that ran. Most
+// rules that run on a given board simply have no subject in scope. Calling those "violations only"
 // would invent a coverage hole out of rules that correctly had nothing to say.
 func TestCoverageOnlyBlamesRulesThatActuallyReported(t *testing.T) {
 	verdict := func(rule string, o checkspb.Outcome) *checkspb.Verdict {
@@ -125,9 +125,9 @@ func TestResultsReplayClaimsNoCoverage(t *testing.T) {
 	}
 }
 
-// TestCoverageLineMatchesTheVerdictsFooter: the default output's coverage line and --verdicts' footer
-// count one run one way, since both come from the verdict report (agni issue 1045). They used to be
-// two counts, one of which ignored the catalog's StatesConsideredSet.
+// TestCoverageLineMatchesTheVerdictsFooter checks that the default output's coverage line and
+// --verdicts' footer count one run one way. Both come from the verdict report (agni issue 1045).
+// They used to be two counts, and one of them ignored the catalog's StatesConsideredSet.
 func TestCoverageLineMatchesTheVerdictsFooter(t *testing.T) {
 	const design = "testdata/conformance/showcase.fires.kicad_sch"
 	line := regexp.MustCompile(`(\d+) subject\(s\) considered by (\d+) rule\(s\)(?:, (\d+) not considered)?`).FindStringSubmatch(runCheck(t, design))
@@ -144,9 +144,9 @@ func TestCoverageLineMatchesTheVerdictsFooter(t *testing.T) {
 	}
 }
 
-// TestSpecLibAnswersThroughTheService: `query --speclib` is answered by the QueryService's projection
-// rather than one the CLI built, so its json carries what a design query's does, a kind per column
-// and the work it cost (agni issue 1045).
+// TestSpecLibAnswersThroughTheService checks that the QueryService's projection answers `query
+// --speclib`, rather than a projection the CLI built. So its json carries what a design query's json
+// carries, a kind per column and the work it cost (agni issue 1045).
 func TestSpecLibAnswersThroughTheService(t *testing.T) {
 	out := runCLI(t, queryCmd(), "--speclib", "--params", filepath.Join("..", "..", "examples", "tutorial-project", "params"),
 		"param.max(?m, ?s, ?v) => ?m, ?s, ?v", "--format", "json")

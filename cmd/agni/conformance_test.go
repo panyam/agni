@@ -13,15 +13,16 @@ import (
 )
 
 // TestConformance is the reader -> IR -> check regression gate (WS6-004), driven by expectation
-// sidecars (WS6-006): each fixture in testdata/conformance has a <fixture>.expect.yaml naming the
-// rules that must fire and their exact subjects, so adding a case is adding a fixture + a sidecar,
-// with no edit here. It runs at the CLI edge so the reader is in the loop, and a fixture that should
-// fire but does not is a rule bug or a reader gap (the loop that surfaced WS1-010/WS1-006). Fixtures
-// are our own synthetic files (C10), never fetched corpus material.
+// sidecars (WS6-006). Each fixture in testdata/conformance has a <fixture>.expect.yaml. The sidecar
+// names the rules that must fire and their exact subjects. Adding a case means adding a fixture and
+// a sidecar, with no edit here. The test runs at the CLI edge so the reader is in the loop. A fixture
+// that should fire but does not points to a rule bug or a reader gap, and that loop surfaced WS1-010
+// and WS1-006. Fixtures are our own synthetic files (C10), never fetched corpus material.
 //
-// Assertion: every `fires` rule must produce exactly its listed subjects; any rule that fires but is
-// listed in neither `fires` nor `pending` is an unexpected finding and fails (the over-firing
-// guard); `pending` rules (staged before they exist) are neither required nor forbidden.
+// The assertion has three parts. Every `fires` rule must produce exactly its listed subjects. A rule
+// that fires but is listed in neither `fires` nor `pending` is an unexpected finding and fails, and
+// this guards against over-firing. `pending` rules are staged before they exist, and they are
+// neither required nor forbidden.
 func TestConformance(t *testing.T) {
 	sidecars, err := filepath.Glob(filepath.Join("testdata", "conformance", "*.expect.yaml"))
 	if err != nil {

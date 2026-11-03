@@ -22,11 +22,11 @@ const companionOverlapFloor = 0.5
 // renderReviewImages writes an annotated schematic image for each design in the review that has
 // findings. It draws on the first of: an explicit --companion file, a sibling <stem>.eds next to a
 // netlist design (joined to the netlist BY NET NAME, WS1-047), the design's own faithful geometry,
-// or the default auto-layout. Every finding's subject becomes a highlight, and it writes one SVG per
-// sheet the findings land on, to <outDir>/<design-stem>/<sheet>.svg, as the report-side twin of the
-// web click-to-locate. Designs with no findings are skipped, a per-design failure is reported and
-// skipped, and a companion whose net names poorly overlap the design's is flagged as likely
-// mis-paired. Returns a human summary.
+// or the default auto-layout. Every finding's subject becomes a highlight, and it writes one SVG for
+// each sheet that holds findings, to <outDir>/<design-stem>/<sheet>.svg, as the report-side twin of
+// the web click-to-locate. Designs with no findings are skipped, a per-design failure is reported and
+// skipped, and a companion is flagged as likely mis-paired when its net names poorly overlap the
+// design's. Returns a human summary.
 func renderReviewImages(reports []review.Report, sources []string, outDir, companionFlag string) (string, error) {
 	if err := os.MkdirAll(outDir, 0o755); err != nil { // #nosec G301 -- a report the user asked for, meant to be read by others
 		return "", fmt.Errorf("--render %s: %w", outDir, err)
@@ -90,10 +90,11 @@ func renderReviewImages(reports []review.Report, sources []string, outDir, compa
 	return "rendered annotated review images:\n" + strings.Join(lines, "\n") + "\n", nil
 }
 
-// companionPath resolves the geometry companion for one design: an explicit --companion file (valid
-// only with a single design, and it must exist), else an auto-detected sibling <stem>.eds next to a
-// NETLIST design (a design that already draws itself needs none), else "" (use the design's own
-// geometry or auto-layout). It looks at filenames only and never reads a file's contents.
+// companionPath resolves the geometry companion for one design. It takes an explicit --companion file
+// first, which is valid only with a single design and must exist. Else it takes an auto-detected
+// sibling <stem>.eds next to a NETLIST design, since a design that already draws itself needs none.
+// Else it returns "", and the caller uses the design's own geometry or auto-layout. It looks at
+// filenames only and never reads a file's contents.
 func companionPath(designPath, flag string, nDesigns int) (string, error) {
 	if flag != "" {
 		if nDesigns > 1 {
@@ -117,10 +118,11 @@ func companionPath(designPath, flag string, nDesigns int) (string, error) {
 	return "", nil
 }
 
-// reviewGeometry loads the geometry to annotate for one design: a companion's faithful geometry when
-// one is resolved (with an alignment warning when its net names poorly overlap the design's), else
-// the design's own faithful geometry, else the default auto-layout. The warning is advisory, so a
-// mismatched companion still renders and the caller surfaces the caveat.
+// reviewGeometry loads the geometry to annotate for one design. When a companion is resolved, it
+// takes the companion's faithful geometry, with an alignment warning when its net names poorly
+// overlap the design's. Else it takes the design's own faithful geometry, else the default
+// auto-layout. The warning is advisory, so a mismatched companion still renders and the caller
+// surfaces the caveat.
 func reviewGeometry(l *formats.Loader, reg *graph.Registry, designPath, companion string) (*geom.SchematicGeometry, string, error) {
 	if companion != "" {
 		g, err := l.FaithfulGeometry(companion)
@@ -190,9 +192,9 @@ func reviewReportFindings(r review.Report) []check.Finding {
 }
 
 // findingSpecs maps findings to highlight specs, deduplicated because one rule finding can bind to
-// several review items. A net draws as a PATH marker along its wire, carrying its per-instance id so
-// same-named nets stay distinct, and a component or pin as a bounding box. Severity picks the color,
-// in the same vocabulary as the render-highlight example and the web click-to-locate.
+// several review items. A net draws as a PATH marker along its wire, with its per-instance id so
+// same-named nets remain distinct, and a component or pin draws as a bounding box. Severity picks the
+// color, in the same vocabulary as the render-highlight example and the web click-to-locate.
 func findingSpecs(findings []check.Finding) []*geom.HighlightSpec {
 	seen := map[string]bool{}
 	var specs []*geom.HighlightSpec
@@ -236,7 +238,7 @@ func severityColor(severity string) string {
 }
 
 // sheetFileName makes a filesystem-safe base name for a sheet from its id, else its name, else
-// "sheet", folding path separators and spaces so a hierarchical id like "/amp1/in" stays one file.
+// "sheet", folding path separators and spaces so a hierarchical id like "/amp1/in" makes one file.
 func sheetFileName(sheet *geom.SheetGeometry) string {
 	name := sheet.GetId()
 	if name == "" {

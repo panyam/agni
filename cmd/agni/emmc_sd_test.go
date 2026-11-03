@@ -10,10 +10,10 @@ import (
 	"github.com/panyam/agni/stdlib/profiles"
 )
 
-// The shipped eMMC profile, read from an EDIF netlist through the CLI's reader, leaves a 4-bit SD card
-// bus with a card detect line alone and judges the same bus without one (agni issue 1246). The bus is
-// named as the MNT Reform motherboard names its SD2 slot, which the profile used to report nine
-// missing signals, a missing pull-up and a dangling clock on.
+// The CLI's reader reads an EDIF netlist, and the shipped eMMC profile runs over it. The profile leaves
+// a 4-bit SD card bus with a card detect line alone, and it judges the same bus without one (agni
+// issue 1246). The bus takes its names from the MNT Reform motherboard's SD2 slot. On that slot the
+// profile used to report nine missing signals, a missing pull-up and a dangling clock.
 func TestTheEMMCProfileLeavesAnSDCardSlotAlone(t *testing.T) {
 	var emmc []*check.Rule
 	for _, r := range check.DefaultCatalog().Rules() {

@@ -22,9 +22,9 @@ func outFileFlag(cmd *cobra.Command, out *string) {
 // closer. It is a no-op for stdout, so a caller may always defer the result.
 //
 // It redirects the COMMAND rather than each write site. Every format writes through
-// cmd.OutOrStdout(), so one call covers all of them, including a format added later. That is safe
-// only because the root command sets SilenceUsage and SilenceErrors, so cobra's usage and error
-// text cannot land in the middle of a report.
+// cmd.OutOrStdout(), so one call covers all of them, including a format added later. This is safe
+// only because the root command sets SilenceUsage and SilenceErrors. Cobra's usage and error text
+// then cannot appear in the middle of a report.
 //
 // It creates the file, so a caller resolves anything that can refuse the run (--server) BEFORE
 // calling it, or a refused run still announces "wrote <file>" over an empty one (agni issue 637).

@@ -13,10 +13,10 @@ import (
 	"github.com/panyam/agni/internal/native"
 )
 
-// nativeCmd groups commands that hand a design file to its own EDA tool: `render` produces the
-// tool's reference SVG (an independent oracle for agni's render), and `open` launches the
-// tool's GUI. Both dispatch by file extension via internal/native; formats with no native tool
-// (EDIF, IPC-2581, ODB++) report that. See docsite/content/build/native-verification.md.
+// nativeCmd groups commands that hand a design file to its own EDA tool. `render` produces the
+// tool's reference SVG, an independent oracle for agni's render. `open` launches the tool's GUI.
+// Both dispatch by file extension via internal/native. A format with no native tool (EDIF,
+// IPC-2581, ODB++) reports that. See docsite/content/build/native-verification.md.
 func nativeCmd() *cobra.Command {
 	c := &cobra.Command{
 		Use:   "native",
@@ -84,10 +84,10 @@ func nativeOpenCmd() *cobra.Command {
 			}
 			run := exec.CommandContext(cmd.Context(), bin, cmdArgs...) // #nosec G204 -- runs the native tool the user configured, with arguments agni builds
 			run.Stdout, run.Stderr = cmd.OutOrStdout(), cmd.ErrOrStderr()
-			// Block until the GUI exits. A macOS `open -a` launcher returns immediately (the app
-			// outlives it), but a direct X11 binary (xschem, lepton-schematic) must stay attached
-			// so that when this runs over `ssh -X` the forwarded display survives until the window
-			// is closed; detaching would tear the tunnel down and kill the GUI.
+			// Block until the GUI exits. A macOS `open -a` launcher returns immediately, and the
+			// app outlives it. A direct X11 binary (xschem, lepton-schematic) has to stay attached.
+			// Over `ssh -X`, detaching would tear the tunnel down and kill the GUI, so the
+			// process waits and the forwarded display survives until the window is closed.
 			return run.Run()
 		},
 	}

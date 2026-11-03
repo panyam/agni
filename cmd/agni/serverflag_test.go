@@ -140,9 +140,9 @@ func closeSpec(s serverSpec) {
 func webAssetsDir(t *testing.T) string {
 	t.Helper()
 	dir := t.TempDir()
-	// Every file checkWebAssets looks for. Kept as the full list rather than the two obvious ones,
-	// because a fixture that satisfies only part of the check makes the positive control below assert
-	// nothing, since it would fail for a missing fixture file and read as the guard working.
+	// Every file checkWebAssets looks for. Kept as the full list rather than the two obvious ones.
+	// With a fixture that satisfies only part of the check, the positive control below asserts
+	// nothing. It would fail for a missing fixture file and read as the guard working.
 	for _, f := range []string{
 		"templates/ViewerPage.html", "static/app.js",
 		"templates/DatasheetsPage.html", "static/datasheets.js",

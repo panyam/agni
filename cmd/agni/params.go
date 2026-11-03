@@ -18,10 +18,10 @@ import (
 
 // paramsCmd prints one part's whole datasheet record.
 //
-// The query relations carry the part of a datasheet a query can BIND: join keys, comparable scalars,
-// and closed vocabularies. Everything else in the record is read rather than queried, and this
-// command is how to read it outside the browser (agni issue 547; DECISIONS.md, "The datasheet tier is
-// normalized into narrow relations, never flattened into a wider tuple").
+// The query relations hold the parts of a datasheet that a query can BIND, which are join keys,
+// comparable scalars, and closed vocabularies. Everything else in the record is read rather than
+// queried, and this command reads it outside the browser (agni issue 547; DECISIONS.md, "The
+// datasheet tier is normalized into narrow relations, never flattened into a wider tuple").
 //
 // It takes NO DESIGN. A spec library is not a design, and the datasheet relations already answer
 // against a seeded corpus with none loaded (query.NewSpecLibBase). --design exists only so a design's
@@ -116,8 +116,8 @@ func paramsCorpus(paramsDir, designPath string) (param.ParamProvider, string, er
 }
 
 // writeSpecJSON emits the BARE PartSpec in protojson (C31). No rpc serves this, so it emits the
-// contract type rather than a wrapper invented for one consumer, and a script binding to it binds to
-// the same message the workbench and the params panel carry.
+// contract type rather than a wrapper invented for one consumer. A script binding to it binds to the
+// same message as the workbench and the params panel.
 func writeSpecJSON(w io.Writer, spec *parampb.PartSpec) error {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(spec)
 	if err != nil {
@@ -186,7 +186,7 @@ func specSections(spec *parampb.PartSpec) []specSection {
 	return out
 }
 
-// docsTable lists the source documents, each with the content hash staleness is decided on. The
+// docsTable lists the source documents, each with its content hash, which decides staleness. The
 // locator goes in the provenance column, since it says where this corpus keeps the file.
 func docsTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 	t := rpt.Table{Columns: []string{"id", "title", "vendor", "content hash"}}
@@ -225,7 +225,8 @@ func parametersTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 	return t, len(t.Rows) > 0
 }
 
-// packagesTable lists the bodies this document covers, which is what makes a pin NUMBER meaningful.
+// packagesTable lists the package bodies in this document. A pin NUMBER has a meaning only within a
+// body.
 func packagesTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 	t := rpt.Table{Columns: []string{"id", "name", "mpn suffix"}}
 	for _, p := range spec.GetPackages() {
@@ -278,7 +279,7 @@ func relationsTable(spec *parampb.PartSpec) (rpt.Table, bool) {
 // verificationCell reports whether anyone has stood behind a value, and what to do when the document
 // has moved on.
 //
-// STALE NAMES BOTH REVISIONS, from the printed identity Verification snapshots beside the hash.
+// Verification snapshots a printed identity beside the hash, and STALE NAMES BOTH REVISIONS from it.
 // "Verified against Rev K, corpus now holds Rev L" is a task someone can pick up, and two content
 // hashes are not (DECISIONS.md, "A document revision is recorded for the reader, and never
 // compared"). The state comes from param.VerificationOfIn, so staleness is decided on the hash as it
@@ -307,9 +308,8 @@ func by(v *parampb.Verification) string {
 	return "someone"
 }
 
-// conditionsCell renders the conditions a value holds under, preferring the vendor's own words. The
-// raw text is always populated for a captured condition, and it is what a reviewer matches against
-// the page.
+// conditionsCell renders the conditions on a value, preferring the vendor's own words. The raw text
+// is always populated for a captured condition, and a reviewer matches it against the page.
 func conditionsCell(cs []*parampb.Condition) string {
 	out := make([]string, 0, len(cs))
 	for _, c := range cs {

@@ -13,8 +13,8 @@ import (
 )
 
 // staleSpec seeds one part whose verification was taken against a revision the corpus no longer
-// holds: doc_content_hash "sha256:OLD" against the document's current "sha256:NEW". That is the
-// state the command exists to surface, and the one a reader has to be able to act on.
+// holds: doc_content_hash "sha256:OLD" against the document's current "sha256:NEW". The command
+// exists to surface that state, and a reader has to be able to act on it.
 const staleSpec = `mpn: "ACME-LDO"
 manufacturer: "Acme"
 device_class: "ldo"
@@ -80,9 +80,9 @@ func paramsErr(t *testing.T, args ...string) error {
 	return cmd.Execute()
 }
 
-// TestParamsRendersTheRecord covers what the command is for, the part of the record the flat
-// relations cannot carry, so the conditions, the pin binding column, the citation and the typical
-// value all have to reach the page.
+// TestParamsRendersTheRecord covers the command's purpose. The flat relations cannot hold the whole
+// record, so the conditions, the pin binding column, the citation and the typical value all have to
+// reach the page.
 func TestParamsRendersTheRecord(t *testing.T) {
 	dir := t.TempDir()
 	seedParams(t, filepath.Join(dir, "p"), staleSpec)
@@ -107,8 +107,8 @@ func TestParamsRendersTheRecord(t *testing.T) {
 // TestParamsNamesBothRevisionsForAStaleVerification is the assertion the command exists for.
 //
 // Staleness is decided by content hash and NEVER by the printed revision (DECISIONS.md, "A document
-// revision is recorded for the reader, and never compared"). What a reader can act on is the pair:
-// the revision that was checked, and the one the corpus holds now. Quoting two hashes is not a task.
+// revision is recorded for the reader, and never compared"). A reader can act on the pair of the
+// revision that was checked and the one the corpus holds now. Quoting two hashes is not a task.
 func TestParamsNamesBothRevisionsForAStaleVerification(t *testing.T) {
 	dir := t.TempDir()
 	seedParams(t, filepath.Join(dir, "p"), staleSpec)
@@ -146,7 +146,7 @@ func TestParamsMPNMatchIsCaseInsensitiveButNotFuzzy(t *testing.T) {
 	}
 }
 
-// TestParamsMissIsAnError holds that an MPN nothing seeds must not print an empty record, which
+// TestParamsMissIsAnError holds that an unseeded MPN must not print an empty record. An empty record
 // reads as a part with no parameters rather than a part nobody has transcribed.
 func TestParamsMissIsAnError(t *testing.T) {
 	dir := t.TempDir()
@@ -179,8 +179,8 @@ func TestParamsNeedsACorpus(t *testing.T) {
 	}
 }
 
-// TestParamsJSONIsTheRecordItself round-trips the output back through protojson. A field the
-// renderer drops fails here, which a substring assertion on rendered text cannot catch.
+// TestParamsJSONIsTheRecordItself round-trips the output back through protojson. If the renderer
+// drops a field, this test fails. A substring assertion on rendered text cannot catch that.
 func TestParamsJSONIsTheRecordItself(t *testing.T) {
 	dir := t.TempDir()
 	seedParams(t, filepath.Join(dir, "p"), staleSpec)
@@ -197,7 +197,7 @@ func TestParamsJSONIsTheRecordItself(t *testing.T) {
 	if len(spec.GetParameters()) != 2 {
 		t.Fatalf("parameters = %d, want 2", len(spec.GetParameters()))
 	}
-	// The nested parts the flat relations cannot carry are the reason this command exists.
+	// This command exists for the nested parts, which the flat relations cannot hold.
 	if got := spec.GetParameters()[0].GetVerification().GetDocRevision(); got != "ACME-LDO Rev A" {
 		t.Errorf("verification doc_revision = %q, want the snapshot", got)
 	}
@@ -255,8 +255,8 @@ parameters {
 		t.Errorf("the flag's corpus answered for a part the project seeds:\n%s", got)
 	}
 
-	// A part the project does NOT seed is answered by --params, which the old wholesale rule refused
-	// inside a project, and a note says which corpus answered (agni issue 749).
+	// --params answers a part the project does NOT seed, and a note says which corpus answered
+	// (agni issue 749). The old wholesale rule refused that inside a project.
 	cmd := rootCmd()
 	var out, notes bytes.Buffer
 	cmd.SetOut(&out)
@@ -270,8 +270,8 @@ parameters {
 	}
 }
 
-// TestParamsDesignOutsideAProjectFallsBackToTheFlag keeps the flag as the route for a loose design,
-// which widening to the project path must not close.
+// TestParamsDesignOutsideAProjectFallsBackToTheFlag keeps the flag as the route for a loose design.
+// Widening to the project path must not close that route.
 func TestParamsDesignFlagFallsBackToTheCorpusFlag(t *testing.T) {
 	dir := t.TempDir()
 	seedParams(t, filepath.Join(dir, "p"), staleSpec)

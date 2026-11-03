@@ -63,9 +63,9 @@ func importResultsCmd() *cobra.Command {
 	return cmd
 }
 
-// writeImportSummary prints what was imported and what could not be attached. It goes to stdout on
-// every run rather than behind a verbose flag, because the unattached residue is what a reader needs
-// to judge the import.
+// writeImportSummary prints what was imported and what could not be attached. A reader needs the
+// unattached residue to judge the import. So the summary goes to stdout on every run rather than
+// behind a verbose flag.
 func writeImportSummary(w io.Writer, doc *checkspb.CheckResults) error {
 	s := doc.GetImportSummary()
 	fmt.Fprintf(w, "%s %s — %d finding(s) from %s\n",

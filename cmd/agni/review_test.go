@@ -14,9 +14,9 @@ import (
 )
 
 // TestReviewCmd runs a review manifest over a broken-CAN design and checks the per-item outcomes end
-// to end: the built-in CAN profile fails the termination + signal items, an unbound item reads
-// not-automated, a shipped datasheet rule with no --params seeded and a board rule on a netlist both
-// read not-applicable, and an inline house-rule query passes.
+// to end. The built-in CAN profile fails the termination + signal items. An unbound item reads
+// not-automated. A shipped datasheet rule with no --params seeded reads not-applicable, and so does a
+// board rule on a netlist. An inline house-rule query passes.
 func TestReviewCmd(t *testing.T) {
 	cmd := reviewCmd()
 	var out bytes.Buffer
@@ -42,9 +42,10 @@ func TestReviewCmd(t *testing.T) {
 }
 
 // TestReviewCmdBoardPath checks that --board-path attaches a SEPARATE board-geometry file to the
-// netlist review, so the board-tier DRC item that reads not-applicable without it (WS3-008 rules
-// gated by check.Available) flips to a genuine pass/fail (WS3-089). The fires board routes a
-// sub-floor trace so track-width fails; the passes board is clean so the same item passes.
+// netlist review. Without that file the board-tier DRC item reads not-applicable, since
+// check.Available gates the WS3-008 rules. With it the item flips to a genuine pass/fail (WS3-089).
+// The fires board routes a sub-floor trace, so track-width fails. The passes board is clean, so the
+// same item passes.
 func TestReviewCmdBoardPath(t *testing.T) {
 	run := func(board string) string {
 		cmd := reviewCmd()
@@ -65,9 +66,9 @@ func TestReviewCmdBoardPath(t *testing.T) {
 	}
 }
 
-// TestReviewCmdBoardPathNonBoard checks that --board-path at a file whose format carries no board
-// geometry (a netlist) is a loud error, never a silent no-op. An explicit board request that reads
-// nothing would otherwise report the board items as clean without ever checking them.
+// TestReviewCmdBoardPathNonBoard checks that --board-path pointing at a netlist is a loud error,
+// never a silent no-op, since a netlist's format has no board geometry. Otherwise an explicit board
+// request could read nothing and still report the board items as clean without ever checking them.
 func TestReviewCmdBoardPathNonBoard(t *testing.T) {
 	cmd := reviewCmd()
 	cmd.SetOut(&bytes.Buffer{})
@@ -78,11 +79,11 @@ func TestReviewCmdBoardPathNonBoard(t *testing.T) {
 	}
 }
 
-// TestReviewCmdMultiDesign checks that several designs produce a project rollup of a manifest-level
-// automation header (stated ONCE, not summed across designs), a per-design outcome summary, and a
-// per-item x design traceability matrix. The same item reads its own outcome per design (202 fails
-// on the broken design, passes on the other) and a not-automated item stays not-automated in every
-// column.
+// TestReviewCmdMultiDesign checks that several designs produce a project rollup. The rollup has a
+// manifest-level automation header, stated ONCE and not summed across designs. It has a per-design
+// outcome summary and a per-item x design traceability matrix. The same item reads its own outcome
+// per design (202 fails on the broken design and passes on the other). A not-automated item is
+// not-automated in every column.
 func TestReviewCmdMultiDesign(t *testing.T) {
 	freshWorkspace(t)
 	cmd := reviewCmd()
@@ -98,8 +99,9 @@ func TestReviewCmdMultiDesign(t *testing.T) {
 		"# Review rollup: Mini board review",
 		"**5 of 6 items covered** (manifest-level), 1 not-automated.", // coverage stated once, not 10 of 12
 		"## Per-design outcomes",
-		// The leading cell is answered/total, which differs per design even though coverage does not:
-		// can-broken answers 3 of 6 (1 pass + 2 fail), overlay-bus answers 2 (2 pass, 3 not-applicable).
+		// The leading cell is answered/total. It differs per design even though coverage does not.
+		// can-broken answers 3 of 6 (1 pass + 2 fail), and overlay-bus answers 2 (2 pass, 3
+		// not-applicable).
 		"| `can-broken.edn` | 3/6 | 1 | 2 | 0 | 0 | 0 | 0 | 2 |",
 		"| `overlay-bus.edn` | 2/6 | 2 | 0 | 0 | 0 | 0 | 0 | 3 |",
 		"## Traceability matrix",
@@ -136,8 +138,9 @@ func TestReviewCmdMultiCoverage(t *testing.T) {
 }
 
 // Multi-design --format json is a ListReviewsResponse, one Review per design with its summary (agni
-// issue 734). The automation counts and the per-item outcome by design that the old rollup carried
-// are read from it: the summaries agree on the manifest, and each design's items carry their outcomes.
+// issue 734). The old rollup had the automation counts and each item's outcome by design, and the test
+// reads both from the response. The summaries agree on the manifest, and each design's items hold
+// their outcomes.
 func TestReviewCmdMultiJSON(t *testing.T) {
 	cmd := reviewCmd()
 	var out bytes.Buffer
@@ -268,18 +271,18 @@ func runReview(t *testing.T, args ...string) string {
 }
 
 // TestReviewIntentContract is the end-to-end proof of the design-intent contract. An intent-bound
-// item reads needs-design-intent with no --intent-path (with no declaration there is nothing to
-// check against), flips to fail when the loaded design DEVIATES from a declaration (a missing
-// module, an absent rail, an incomplete subsystem, an unprotected rail), and passes when the design
-// matches. It guards that the outcome is driven by the external declaration, not derived from the
-// netlist.
+// item reads needs-design-intent with no --intent-path, since with no declaration there is nothing to
+// check against. It flips to fail when the loaded design DEVIATES from a declaration, such as a
+// missing module, an absent rail, an incomplete subsystem or an unprotected rail. It passes when the
+// design matches. The test guards that the external declaration drives the outcome, and that the
+// outcome is not derived from the netlist.
 func TestReviewIntentContract(t *testing.T) {
 	checklist := "testdata/intent/checklist.yaml"
 	design := "testdata/intent/sample.edn"
 
-	// No --intent-path: the intent rules are not in the catalog, but the items BIND an intent/ rule, so
-	// they read needs-design-intent (covered, blocked on a declaration), not the misleading not-automated
-	// (WS10-014). Supplying --intent-path flips them to pass/fail (below).
+	// With no --intent-path the intent rules are not in the catalog. The items still BIND an intent/
+	// rule, so they read needs-design-intent (covered, blocked on a declaration) rather than the
+	// misleading not-automated (WS10-014). Supplying --intent-path flips them to pass/fail (below).
 	base := runReview(t, "--checklist", checklist, design)
 	for _, want := range []string{
 		"| 4 | component counts match architecture | needs-design-intent |",
@@ -293,8 +296,8 @@ func TestReviewIntentContract(t *testing.T) {
 		}
 	}
 
-	// Deviating declaration: the design has two ics (intent expects one), no soc, and no 1V8 rail, so
-	// the count, module, domain, and subsystem items all fail.
+	// A deviating declaration. The design has two ics where intent expects one, no soc, and no 1V8
+	// rail, so the count, module, domain, and subsystem items all fail.
 	dev := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/deviating.yaml", design)
 	for _, want := range []string{
 		"| 4 | component counts match architecture | fail |",
@@ -308,7 +311,7 @@ func TestReviewIntentContract(t *testing.T) {
 		}
 	}
 
-	// Matching declaration: exactly two ics are present and 3V3 sits at 3.3V, so the items pass.
+	// A matching declaration. Exactly two ics are present and 3V3 is at 3.3V, so the items pass.
 	ok := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/matching.yaml", design)
 	for _, want := range []string{
 		"| 4 | component counts match architecture | pass |",
@@ -323,19 +326,19 @@ func TestReviewIntentContract(t *testing.T) {
 	}
 }
 
-// TestReviewRailBudgets is the end-to-end proof for the rail-sizing pair (WS3-095), and it holds four
-// behaviours one CLI invocation apart:
+// TestReviewRailBudgets is the end-to-end proof for the rail-sizing pair (WS3-095). It holds four
+// behaviours, each one CLI invocation apart.
 //
 //   - The two items report INDEPENDENTLY. On the over-subscribed declaration item 18 fails on 3V3 (a
 //     0.5A supply under a 0.8A budget) while item 19 fails on 1V8 (a 0.9A supply that clears the 0.8A
-//     peak but not the 0.96A the 1.2 factor asks for). Neither rail appears under both items, which is
-//     the reason this ships as two rules rather than one at two thresholds (WS3-058).
+//     peak but not the 0.96A the 1.2 factor asks for). Neither rail appears under both items. So this
+//     ships as two rules rather than one at two thresholds (WS3-058).
 //   - Budgets the design meets pass both.
 //   - With budgets but NO margin_factor, item 18 still resolves and item 19 reads needs-design-intent.
 //     The margin rule has no default policy, so it is not compiled and cannot pass against a number
 //     nobody declared.
 //   - With --params attached but no output current seeded, both read needs-data. An unseeded regulator
-//     must never read as big enough, which is the guard the ticket asks for.
+//     must never read as big enough. The ticket asks for that guard.
 func TestReviewRailBudgets(t *testing.T) {
 	checklist := "testdata/intent/rails-checklist.yaml"
 	design := "testdata/intent/rails.edn"
@@ -370,7 +373,7 @@ func TestReviewRailBudgets(t *testing.T) {
 		}
 	}
 
-	// No margin_factor: the capacity item still resolves, the margin item names the missing input.
+	// No margin_factor. The capacity item still resolves, and the margin item names the missing input.
 	noFactor := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-no-factor.yaml", "--params", params, design)
 	if !strings.Contains(noFactor, "| 18 | regulator output ratings | pass |") {
 		t.Errorf("budgets without a factor should still resolve item 18\n%s", noFactor)
@@ -393,12 +396,12 @@ func TestReviewRailBudgets(t *testing.T) {
 }
 
 // TestReviewPowerSequences is the end-to-end proof for power-up sequencing as design intent
-// (WS3-092), and it holds four behaviours across four CLI invocations over one design:
+// (WS3-092). It holds four behaviours across four CLI invocations over one design.
 //
-//   - The two items report INDEPENDENTLY. The SoC tree's chain is wired (a power-good reaching the
-//     next regulator's enable through a resistor) so item 20 passes, while the modem rails' handles
-//     both land on the MCU, which is firmware rather than netlist evidence, so item 163 fails. One
-//     shared rule name would have given both items one verdict (WS3-058).
+//   - The two items report INDEPENDENTLY. The SoC tree's chain is wired, with a power-good reaching
+//     the next regulator's enable through a resistor, so item 20 passes. The modem rails' handles
+//     both connect to the MCU. That is firmware evidence rather than netlist evidence, so item 163
+//     fails. One shared rule name would have given both items one verdict (WS3-058).
 //   - The failing item names both ends of the missing link, so a reviewer knows where to look.
 //   - With NO sequences declared, both items read needs-design-intent. They are covered and blocked
 //     on a declaration; a design with no gating chain must never read as sequencing correct.
@@ -422,15 +425,15 @@ func TestReviewPowerSequences(t *testing.T) {
 			t.Errorf("the finding should name the missing link (%q)\n%s", want, declared)
 		}
 	}
-	// The passing item must not carry the other sequence's rail, since a merged verdict would put
+	// The passing item must not list the other sequence's rail, since a merged verdict would put
 	// both domains under both items.
 	if strings.Contains(declared, "sequence-soc-power-tree: MODEM_EN") {
 		t.Errorf("each item must report only its own sequence\n%s", declared)
 	}
 
 	// With no sequences declared the item is covered, blocked on the declaration, and never a pass.
-	// This is the correct reading for a board whose rail order lives in a PMIC or in firmware,
-	// which cannot declare a sequence at all.
+	// That reading is correct for a board whose rail order lives in a PMIC or in firmware, since
+	// such a board cannot declare a sequence at all.
 	none := runReview(t, "--checklist", checklist, "--intent-path", "testdata/intent/rails-ok.yaml", design)
 	for _, want := range []string{
 		"| 20 | SoC power sequence requirements | needs-design-intent |",
@@ -463,10 +466,10 @@ func TestReviewCmdRequiresChecklist(t *testing.T) {
 }
 
 // TestReviewCmdChecklistUnreadable is the --checklist twin of TestReviewCmdConventionsUnreadable, and
-// it guards the edge the manifest read moved to (WS9-050). The CLI now reads the YAML itself and sends
-// the value, so a missing or malformed checklist has to fail HERE. The failure mode it prevents is
-// specific: an unreported read error would send a zero manifest, and a review with no items reports
-// nothing wrong, which reads the same as a design that passed.
+// it guards the edge where the manifest read moved (WS9-050). The CLI now reads the YAML itself and
+// sends the value, so a missing or malformed checklist has to fail HERE. It prevents a specific
+// failure. An unreported read error would send a zero manifest. A review with no items reports
+// nothing wrong, and that reads the same as a design that passed.
 func TestReviewCmdChecklistUnreadable(t *testing.T) {
 	for _, path := range []string{"testdata/review/does-not-exist.yaml", "testdata/review/conv-demo.edn"} {
 		cmd := reviewCmd()
@@ -495,10 +498,10 @@ func runConvReview(t *testing.T, conventions string) string {
 	return out.String()
 }
 
-// TestReviewCmdConventionsRules covers the half that is merely invisible: a checklist item bound to a
-// convention rule. With no config the binding resolves to zero catalog rules, which the review reports
-// as not-automated, the same word it uses for a rule nobody has written, with no error to tell the
-// two apart. Loading the config compiles the rule and the item reaches a real verdict.
+// TestReviewCmdConventionsRules covers the half that is merely invisible, a checklist item bound to a
+// convention rule. With no config, the binding resolves to zero catalog rules. The review reports
+// that as not-automated. It uses the same word for a rule nobody has written, and no error tells the
+// two apart. Loading the config compiles the rule, and the item reaches a real verdict.
 func TestReviewCmdConventionsRules(t *testing.T) {
 	if want := "| 16 | nets named consistently | not-automated |"; !strings.Contains(runConvReview(t, ""), want) {
 		t.Errorf("without --conventions the item must read not-automated, missing %q", want)
@@ -515,8 +518,9 @@ func TestReviewCmdConventionsRules(t *testing.T) {
 }
 
 // TestReviewCmdConventionsLexicon covers the damaging half, the vocabulary that changes what OTHER
-// rules can see. This project names rails function-first (PMIC_VDD_LPM_1V8), which the start-anchored
-// built-in vocabulary matches nowhere, so without the config the item passes while checking nothing.
+// rules can see. This project names rails function-first (PMIC_VDD_LPM_1V8). The start-anchored
+// built-in vocabulary matches none of those names. So without the config the item passes while
+// checking nothing.
 func TestReviewCmdConventionsLexicon(t *testing.T) {
 	if want := "| 63 | rails recognized | pass |"; !strings.Contains(runConvReview(t, ""), want) {
 		t.Errorf("without --conventions the rail is unrecognized and the item passes hollowly, missing %q", want)
@@ -531,7 +535,7 @@ func TestReviewCmdConventionsLexicon(t *testing.T) {
 // role has a name-match fallback on the model, so a rail item answers even if the lexicon arrives
 // after ingestion; a pin's ELECTRICAL TYPE has no such fallback. EDIF's port grammar carries only
 // INPUT/OUTPUT/INOUT, so a supply pin arrives under-typed and nothing but the ingestion stamp can
-// promote it to power_in. If the lexicon ever stops reaching the read, this is the test that fails.
+// promote it to power_in. If the lexicon ever stops reaching the read, this test fails.
 func TestReviewCmdConventionsReachesTheRead(t *testing.T) {
 	if want := "| 64 | supply pins typed | pass |"; !strings.Contains(runConvReview(t, ""), want) {
 		t.Errorf("without --conventions the supply pin stays under-typed, missing %q", want)
@@ -577,19 +581,19 @@ func runFullOverlayReview(t *testing.T, conventions string) string {
 	return out.String()
 }
 
-// TestReviewOverlayTiersCoexist pins that a convention carrying RULES adds to the catalog rather than
+// TestReviewOverlayTiersCoexist pins that a convention with RULES adds to the catalog rather than
 // replacing it (WS3-107).
 //
-// Composing the per-request overlay used to rebuild the catalog from the standard sources, which keeps
-// the built-ins and every RegisterSource'd suite (true, and why the bug was invisible) but
-// drops the catalog it was handed. For a review that catalog is the --profile-path and --intent-path
-// tiers, so adding one naming rule to a working config silently disabled interface profiles and design
-// intent for the whole run: 19 items pass -> needs-design-intent and 16 pass -> not-automated on one
-// real design, with no error anywhere to explain it.
+// Composing the per-request overlay used to rebuild the catalog from the standard sources. The
+// rebuild kept the built-ins and every RegisterSource'd suite, so the bug was invisible. It dropped
+// the catalog it was handed, though. For a review, that catalog holds the --profile-path and
+// --intent-path tiers. So adding one naming rule to a working config silently disabled interface
+// profiles and design intent for the whole run. On one real design, 19 items went from pass to
+// needs-design-intent and 16 from pass to not-automated, with no error anywhere to explain it.
 //
-// The assertion is that the intent-bound and profile-bound items reach a REAL verdict with the
-// convention loaded. Both fixtures are authored to FAIL rather than pass, because a pass is also what
-// a vanished tier could produce on a design with nothing wrong.
+// The test asserts that the intent-bound and profile-bound items reach a REAL verdict with the
+// convention loaded. Both fixtures are authored to FAIL rather than pass, because a vanished tier
+// could also produce a pass on a design with nothing wrong.
 func TestReviewOverlayTiersCoexist(t *testing.T) {
 	got := runFullOverlayReview(t, "testdata/review/conventions.yaml")
 	for _, want := range []string{
@@ -613,16 +617,16 @@ func TestReviewOverlayTiersCoexist(t *testing.T) {
 	}
 }
 
-// TestReviewProfileRequirementSelector (WS3-115) drives the requirement selector end to end: an
-// overlay profile authored in YAML, compiled by stdlib/profiles, resolved by core/review through
-// the CLI. It is the test that PINS the two packages together. core/review selects on the tag as a
+// TestReviewProfileRequirementSelector (WS3-115) drives the requirement selector end to end. An
+// overlay profile is authored in YAML, compiled by stdlib/profiles, and resolved by core/review
+// through the CLI. This test PINS the two packages together. core/review selects on the tag as a
 // bare string because core never imports stdlib, so nothing but a real run would catch the two
 // drifting.
 //
 // The fixture is the oracle. TESTBUS declares two requirements over the same two signals, and on this
 // design they disagree. Both signal nets exist, so completeness is clean, while BUS_TBB has one
-// connection, so dangling fires. An item selecting completeness must therefore PASS on a design where
-// the profile as a whole fails, which union semantics cannot express.
+// connection, so dangling fires. So an item selecting completeness must PASS on a design where the
+// profile as a whole fails. Union semantics cannot express that.
 func TestReviewProfileRequirementSelector(t *testing.T) {
 	dir := t.TempDir()
 	write := func(name, body string) string {
@@ -647,8 +651,8 @@ requirements:
 `), 0o644); err != nil {
 		t.Fatal(err)
 	}
-	// A second KNOWN interface this design does not carry, so a requirement-selected item bound to it
-	// must still take the presence branch rather than resolving its rule.
+	// A second KNOWN interface, absent from this design. A requirement-selected item bound to it must
+	// still take the presence branch rather than resolving its rule.
 	if err := os.WriteFile(filepath.Join(profiles, "otherbus.yaml"), []byte(`
 name: OTHERBUS
 signals:
@@ -679,9 +683,9 @@ areas:
 	}
 	got := out.String()
 	for _, want := range []string{
-		// Unselected: the union of both requirements, so the dangling finding still fails it.
+		// Unselected, the item gets the union of both requirements, so the dangling finding fails it.
 		"| u | whole bus | fail |",
-		// Selected: each answered by its own requirement, and they disagree.
+		// Selected, each item is answered by its own requirement, and they disagree.
 		"| m | both signals present | pass |",
 		"| d | signals wired through | fail |",
 		// A requirement the profile does not declare is not covered by anything, so it is never a
@@ -697,8 +701,8 @@ areas:
 }
 
 // TestReviewOverlayTiersCoexistWithoutAConvention is the control. The bug only triggered when the
-// convention carried RULES (a lexicon-only config composes no sources and took an early return that
-// was always correct), so without a convention at all, the same two items must already resolve. If
+// convention had RULES. A lexicon-only config composes no sources, and it took an early return that
+// was always correct. So without a convention at all, the same two items must already resolve. If
 // this ever fails, the fixtures stopped exercising the tiers and the test above proves nothing.
 func TestReviewOverlayTiersCoexistWithoutAConvention(t *testing.T) {
 	got := runFullOverlayReview(t, "")
@@ -712,21 +716,21 @@ func TestReviewOverlayTiersCoexistWithoutAConvention(t *testing.T) {
 	}
 }
 
-// TestReviewLoadSwitchSizing is the end-to-end proof for the load-switch sizing lower bound (WS3-085),
-// and it holds four outcomes over ONE design so that nothing about the netlist explains the difference
-// between them. The design is the conformance corpus's PASSING load-switch fixture, clean by
-// load-switch-trip-above-fet-rating, because its 1A limit sits well under the pass FET's 3A rating.
+// TestReviewLoadSwitchSizing is the end-to-end proof for the load-switch sizing lower bound (WS3-085).
+// It holds four outcomes over ONE design, so nothing about the netlist explains the difference
+// between them. The design is the conformance corpus's PASSING load-switch fixture. It is clean by
+// load-switch-trip-above-fet-rating, because its 1A limit is well under the pass FET's 3A rating.
 //
-//   - No --intent-path: needs-design-intent. Nothing declares what the rail draws, so there is no
-//     question to ask. The runner names the MISSING INPUT rather than falling back to not-automated,
-//     which tells an author what to supply. Either way it must never be a pass.
-//   - A 2A budget: fail. The switch limits at 1A (a 50mV threshold across the design's 0R05 shunt), so
-//     it opens under the load the architecture was drawn for.
-//   - A 0.5A budget: pass. Same design, same parts, different declaration.
-//   - A params tier attached but no part stating an overcurrent threshold: needs-data. This is the
-//     guard the ticket asks for, and it is the one that fails silently if Rule.ParamSymbols is not
-//     declared. Without it the rule joins nothing, reports nothing, and the item scores a pass on a
-//     check that never ran, which is indistinguishable in the report from a genuinely sized switch.
+//   - With no --intent-path it reads needs-design-intent. Nothing declares what the rail draws, so
+//     there is no question to ask. The runner names the MISSING INPUT rather than falling back to
+//     not-automated, and that tells an author what to supply. Either way it must never be a pass.
+//   - A 2A budget fails. The switch limits at 1A (a 50mV threshold across the design's 0R05 shunt),
+//     so it opens under the load the architecture was drawn for.
+//   - A 0.5A budget passes. Same design, same parts, different declaration.
+//   - With a params tier attached and no part stating an overcurrent threshold, it reads needs-data.
+//     The ticket asks for this guard. The guard fails silently if Rule.ParamSymbols is not declared.
+//     Without ParamSymbols the rule joins nothing and reports nothing, and the item scores a pass on
+//     a check that never ran. The report cannot tell that apart from a genuinely sized switch.
 func TestReviewLoadSwitchSizing(t *testing.T) {
 	checklist := "testdata/intent/loadswitch-checklist.yaml"
 	design := "testdata/conformance/loadswitch.passes.kicad_sch"
@@ -742,8 +746,8 @@ func TestReviewLoadSwitchSizing(t *testing.T) {
 	if !strings.Contains(over, "| 26 | load switch current limit sizing | fail |") {
 		t.Errorf("a 2A budget against a 1A limit must fail\n%s", over)
 	}
-	// The finding has to carry the evidence a reviewer acts on: which switch, which shunt, and the
-	// document the threshold came from. A bare verdict cannot be triaged.
+	// The finding has to name which switch, which shunt, and the document the threshold came from,
+	// since a reviewer acts on that evidence. A bare verdict cannot be triaged.
 	for _, want := range []string{"U1", "R1", "DEMO-HSS-CTRL Rev A"} {
 		if !strings.Contains(over, want) {
 			t.Errorf("the report must name %q so the finding can be triaged\n%s", want, over)
@@ -766,7 +770,7 @@ func TestReviewLoadSwitchSizing(t *testing.T) {
 }
 
 // --coverage and --format are different axes, and the render switch tests coverage first, so an
-// explicit --format used to be discarded without a word: `--coverage --format html -o page.html`
+// explicit --format used to be discarded without a word. `--coverage --format html -o page.html`
 // wrote a markdown table into a file named .html and a browser showed it as text. Only an explicit
 // --format is refused, since the flag defaults to markdown and the rollup is markdown.
 func TestReviewCoverageRefusesAFormatItCannotRender(t *testing.T) {
@@ -801,8 +805,8 @@ func TestReviewCoverageRefusesAFormatItCannotRender(t *testing.T) {
 	}
 }
 
-// The refusal has to land before -o creates the file, or a rejected run leaves an empty artifact and
-// announces it, which is the shape agni issue 637 fixed for --server.
+// The refusal has to happen before -o creates the file. Otherwise a rejected run leaves an empty
+// artifact and announces it. agni issue 637 fixed that shape for --server.
 func TestReviewCoverageRefusalLeavesNoOutputFile(t *testing.T) {
 	p := filepath.Join(t.TempDir(), "page.html")
 	cmd := reviewCmd()
@@ -818,9 +822,9 @@ func TestReviewCoverageRefusalLeavesNoOutputFile(t *testing.T) {
 	}
 }
 
-// `review --format html` writes the page RenderReviewReport renders from the same run, which is the
-// page the viewer's Save report saves, so the two cannot drift (agni issue 1030). Only the generated
-// line differs between two renders.
+// `review --format html` writes the page that RenderReviewReport renders from the same run. The
+// viewer's Save report saves that same page, so the two cannot drift (agni issue 1030). Only the
+// generated line differs between two renders.
 func TestReviewHTMLIsTheRenderedReviewReport(t *testing.T) {
 	freshWorkspace(t)
 	args := []string{"--checklist", "testdata/review/mini.yaml", "testdata/review/can-broken.edn"}

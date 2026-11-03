@@ -7,10 +7,10 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// reportsFromDocs maps stored review documents back to the Go view-model the renderers consume, the
+// reportsFromDocs maps stored review documents back to the Go view-model for the renderers. It is the
 // CLI analogue of the web tier's reportFromWire. The document's item note is the already-joined
-// runtime+manifest note (reviewAreaProtos), placed in Item.Note so detail() and JSON reproduce it in
-// every outcome case, since they read Item.Note for pass/not-automated and join it for not-applicable.
+// runtime+manifest note (reviewAreaProtos). It goes in Item.Note, so detail() and JSON reproduce it
+// in every outcome case. They read Item.Note for pass/not-automated and join it for not-applicable.
 func reportsFromDocs(docs []*checkspb.CheckResults) []review.Report {
 	reports := make([]review.Report, 0, len(docs))
 	for _, doc := range docs {
@@ -40,9 +40,9 @@ func findingsFromProto(fs []*checkspb.Finding) []check.Finding {
 
 // designSourcesOf returns each document's design URI, positionally matching reportsFromDocs.
 //
-// The reports carry a READING name and the documents carry the address, which a renderer that opens
-// the file needs. Parallel slices rather than a URI on review.Report keep `core/review` free of any
-// notion of how an artifact is addressed.
+// The reports carry a READING name and the documents carry the address. A renderer that opens the
+// file needs the address. Parallel slices rather than a URI on review.Report keep `core/review` free
+// of any notion of how an artifact is addressed.
 func designSourcesOf(docs []*checkspb.CheckResults) []string {
 	out := make([]string, 0, len(docs))
 	for _, doc := range docs {

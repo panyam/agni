@@ -12,12 +12,12 @@ import (
 	"github.com/panyam/agni/census"
 )
 
-// censusCmd is the corpus-facing half of the element-coverage guard (WS6-011): it walks design
+// censusCmd is the corpus-facing half of the element-coverage guard (WS6-011). It walks design
 // files and reports every source construct NOT classified in its format's census manifest. The
-// committed-fixture half runs in CI (census package test); this half runs over the private corpus
-// (`make census`), which CI can never see, to surface real-world constructs the fixtures lack so a
-// human classifies them. Report-only by default; exits non-zero when unclassified constructs are
-// found so a gate can catch drift, matching `agni validate`'s posture.
+// committed-fixture half runs in CI (census package test). This half runs over the private corpus
+// (`make census`), which CI can never see. It surfaces real-world constructs that the fixtures lack,
+// so a human can classify them. Report-only by default; exits non-zero when unclassified constructs
+// are found so a gate can catch drift, matching `agni validate`'s posture.
 func censusCmd() *cobra.Command {
 	cmd := &cobra.Command{
 		Use:   "census <file|dir>...",

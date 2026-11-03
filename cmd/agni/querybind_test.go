@@ -7,8 +7,8 @@ import (
 
 const bindDesign = "../../examples/tutorial-project/designs/gateway/gateway.edn"
 
-// TestQueryBindAnswersAsTheWrittenConstant: `--bind r=U1` answers what `"U1"` written into the query
-// does, and the markdown view states the binding under the query (agni issue 793).
+// TestQueryBindAnswersAsTheWrittenConstant checks that `--bind r=U1` answers what `"U1"` written into
+// the query does, and the markdown view states the binding under the query (agni issue 793).
 func TestQueryBindAnswersAsTheWrittenConstant(t *testing.T) {
 	bound := runCLI(t, queryCmd(), bindDesign, `component.net(?r, ?n) => ?n`, "--bind", "r=U1")
 	written := runCLI(t, queryCmd(), bindDesign, `component.net("U1", ?n) => ?n`)
@@ -33,8 +33,8 @@ func TestQueryBindIsRefusedWithASet(t *testing.T) {
 	}
 }
 
-// TestQueryBindRepeatedIsAList: one name bound twice answers for both values, and the markdown view
-// states the list (agni issue 1121).
+// TestQueryBindRepeatedIsAList checks that one name bound twice answers for both values, and that the
+// markdown view states the list (agni issue 1121).
 func TestQueryBindRepeatedIsAList(t *testing.T) {
 	const q = `component.net(?r, ?n) => ?r, ?n`
 	u1 := runCLI(t, queryCmd(), bindDesign, q, "--bind", "r=U1", "--format", "csv")

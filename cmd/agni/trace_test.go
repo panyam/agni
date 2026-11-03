@@ -55,8 +55,8 @@ func TestTraceCLIShowsTheRouteAndItsProbePoints(t *testing.T) {
 	}
 }
 
-// A route may END on a rail. The pull-up resistor from the I2C line lands on +3V3, which is where
-// the walk that the protection rules use cannot go at all.
+// A route may END on a rail. The pull-up resistor from the I2C line connects to +3V3. The walk that
+// the protection rules use cannot go there at all.
 func TestTraceCLIEndsOnARail(t *testing.T) {
 	out, err := runTrace(t, traceFixtureSch, "--from", "U2.3", "--to", "U1.2")
 	if err != nil {
@@ -70,8 +70,8 @@ func TestTraceCLIEndsOnARail(t *testing.T) {
 	}
 }
 
-// No route is an ANSWER, so it exits clean, and it says what the answer rests on: which nets the
-// two pins are actually on, the radius searched, and what the walk will and will not cross.
+// No route is an ANSWER, so it exits clean. It also reports the basis of the answer. That is which
+// nets the two pins are actually on, the radius searched, and what the walk will and will not cross.
 func TestTraceCLINoRouteExplainsItself(t *testing.T) {
 	out, err := runTrace(t, traceFixtureSch, "--from", "U2.3", "--to", "TP2.1")
 	if err != nil {
@@ -117,9 +117,9 @@ func TestTraceCLIRadiusIsAFlag(t *testing.T) {
 	}
 }
 
-// The json is protojson of the WIRE message, the same shape TraceDesign returns, so this decodes
-// into the proto rather than into the Go struct, so a script reading the CLI and a client reading
-// the rpc parse one thing.
+// The json is protojson of the WIRE message, the same shape TraceDesign returns. So this test
+// decodes into the proto rather than into the Go struct. A script reading the CLI and a client
+// reading the rpc then parse one thing.
 func TestTraceCLIJSON(t *testing.T) {
 	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1", "--format", "json")
 	if err != nil {
@@ -180,7 +180,7 @@ func TestTraceCLIRendersTheRouteOntoTheSchematic(t *testing.T) {
 }
 
 // A netlist has no sheets, and refusing to draw it would make the flag useless on most designs. It
-// falls back to an auto-layout and SAYS so, which is what stops the picture being mistaken for a
+// falls back to an auto-layout and SAYS so. Saying so keeps the picture from being mistaken for a
 // schematic somebody drew.
 func TestTraceCLIFallsBackToAnAutoLayoutAndSaysSo(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "route.svg")
@@ -196,8 +196,8 @@ func TestTraceCLIFallsBackToAnAutoLayoutAndSaysSo(t *testing.T) {
 	}
 }
 
-// A no-route draws the two nets that fail to join, because that is the picture a reader goes looking
-// for the moment they read the words.
+// A no-route draws the two nets that fail to join. A reader goes looking for that picture the moment
+// they read the words.
 func TestTraceSpecsDrawTheAnswerWhateverItWas(t *testing.T) {
 	routed := check.Trace{
 		Outcome:   check.TraceRouted,
@@ -274,12 +274,11 @@ func TestTraceCLIWithholdsALinkForAnUndeclaredMountAndSaysSo(t *testing.T) {
 	}
 }
 
-// Without --url-base nothing is printed and nothing is asked of any server, so a run that never
-// wanted links stays quiet.
+// Without --server nothing is printed and nothing is asked of any server, so a run that never
+// wanted links is quiet.
 //
-// This holds through TraceURL's own refusal rather than through the early-out beside the call:
-// deleting that guard leaves this green, which is worth saying so nobody reads the guard as the
-// thing being tested here.
+// TraceURL's own refusal keeps this quiet, not the early-out beside the call. Deleting that guard
+// leaves this test green. So nobody should read the guard as the thing being tested here.
 func TestTraceCLIStaysQuietWithoutAUrlBase(t *testing.T) {
 	out, err := runTrace(t, traceFixtureSch, "--from", "J1.1", "--to", "U1.1")
 	if err != nil {

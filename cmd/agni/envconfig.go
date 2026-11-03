@@ -9,28 +9,29 @@ import (
 	"gopkg.in/yaml.v3"
 )
 
-// This file is TIER-1 configuration: where bytes are and what tools exist, as opposed to what a
-// design is checked against.
+// This file holds TIER-1 configuration. Tier 1 says where bytes are and what tools exist. It does
+// not say what a design is checked against.
 //
-// The boundary is one question: does this change WHAT is checked, or only WHERE bytes are found?
+// One question draws the boundary. Does this change WHAT is checked, or only WHERE bytes are found?
 // Conventions, profiles, parameters, intent and a review checklist change the answer, so they belong
 // to a PROJECT (agni.v1.webapi.AnalysisConfig), scoped to the designs that declared them. Mounts and
 // symbol paths only locate input and belong to a machine, so a plain file holds them. An analysis
 // tier added here would apply to every design the CLI opened; see
 // docsite/content/architecture/projects-and-designs.md#three-tiers-of-configuration.
 
-// envConfigName is the file, looked for beside the work as well as in a home directory, because a
-// repo checked out on two machines wants the same mounts on both.
+// envConfigName is the file's name. The CLI looks for it beside the work as well as in a home
+// directory, because a repo checked out on two machines wants the same mounts on both.
 const envConfigName = "agni.yaml"
 
 // maxEnvConfigWalk bounds the upward search from the working directory, as the project walk does, so
-// a stray agni.yaml far up a home directory never becomes the mount table a command ran against.
+// a stray agni.yaml far up a home directory never becomes a command's mount table.
 const maxEnvConfigWalk = 4
 
 // envConfig is the tier-1 file's shape.
 //
-// A field here reaches every command in the process with no design to scope it to, so anything whose
-// wrong value produces a QUIET wrong answer rather than a loud failure does not belong.
+// A field here reaches every command in the process, with no design to scope it to. Suppose a wrong
+// value for some setting would produce a QUIET wrong answer rather than a loud failure. That setting
+// does not belong here.
 type envConfig struct {
 	// Mounts expose folders as `name: path`, the file form of --mount.
 	Mounts map[string]string `yaml:"mounts"`
@@ -97,8 +98,8 @@ func envConfigSearch(cwd string, getenv func(string) string) []string {
 	return dirs
 }
 
-// mountSpecs renders the file's mounts as the `name=path` strings --mount takes, sorted so the table
-// a run builds does not depend on map iteration order.
+// mountSpecs renders the file's mounts as the `name=path` strings --mount takes. It sorts them, so a
+// run's mount table does not depend on map iteration order.
 func (c envConfig) mountSpecs() []string {
 	names := make([]string, 0, len(c.Mounts))
 	for n := range c.Mounts {

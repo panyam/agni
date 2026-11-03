@@ -10,13 +10,13 @@ import (
 	"testing"
 )
 
-// TestProjectLexiconReachesTheRead is the assertion nothing made.
+// TestProjectLexiconReachesTheRead makes an assertion that no earlier test made.
 //
-// A project's naming convention carries two halves that land in different places. Its RULES extend
-// the catalog, and its LEXICON has to reach the design READ, because net roles are resolved once at
+// A project's naming convention has two halves, and they go to different places. Its RULES extend
+// the catalog. Its LEXICON has to reach the design READ, because net roles are resolved once at
 // ingestion. Every existing test covers the first, or covers the second for a convention supplied on
 // a REQUEST. None asserted that a design belonging to a project is read under that project's
-// vocabulary, which is the half that decides what a rail is.
+// vocabulary. That half decides what a rail is.
 func TestProjectLexiconReachesTheRead(t *testing.T) {
 	const design = "../../examples/tutorial-project/designs/gateway/gateway.edn"
 	out := runCLI(t, queryCmd(), design, "net.rail(?n) => ?n")
@@ -32,9 +32,9 @@ func TestProjectLexiconReachesTheRead(t *testing.T) {
 // options at all. So every one of them read under the BUILT-IN naming vocabulary however their
 // project was configured, and saw none of its declared symbol libraries (agni issue 228).
 //
-// Asserted on the stamped roles rather than through a command's output, because that is what the
-// read produces and what every one of those commands then derives from. A command-level assertion
-// would test one derivation and leave the other five uncovered.
+// The test asserts on the stamped roles rather than on a command's output. The read produces the
+// roles, and every one of those commands then derives from them. A command-level assertion would
+// test one derivation and leave the other five uncovered.
 func TestReadDesignResolvesProjectConfig(t *testing.T) {
 	d, err := readDesign("../../examples/tutorial-project/designs/gateway/gateway.edn")
 	if err != nil {
@@ -55,15 +55,15 @@ func TestReadDesignResolvesProjectConfig(t *testing.T) {
 	}
 }
 
-// TestReadDesignResolvesSymbolPaths is the other half, and the acceptance criterion agni issue 229
-// left unmet. A design's declared symbol library reaches a read that no service mediates, so the
-// tutorial project's own Makefile no longer passes --symbol-path.
+// TestReadDesignResolvesSymbolPaths covers the other half. It is the acceptance criterion that agni
+// issue 229 left unmet. A design's declared symbol library reaches a read that no service mediates,
+// so the tutorial project's own Makefile no longer passes --symbol-path.
 //
 // A schematic whose external library does not resolve reads SHORT rather than failing, so the
 // assertion is on the count. `libraries` is 0 without the library and 1 with it.
 func TestReadDesignResolvesSymbolPaths(t *testing.T) {
-	// as-named reads exactly the schematic rather than the netlist its design.yaml declares as the
-	// entry. Set directly because it is a ROOT persistent flag.
+	// as-named reads exactly the schematic rather than the entry netlist that its design.yaml
+	// declares. The test sets it directly because it is a ROOT persistent flag.
 	saved := readAsNamed
 	readAsNamed = true
 	defer func() { readAsNamed = saved }()
@@ -77,13 +77,13 @@ func TestReadDesignResolvesSymbolPaths(t *testing.T) {
 	}
 }
 
-// TestStatsOutputIsCapturable is the test agni issue 253 existed to make possible, and it doubles as
-// the observable half of issue 228, since `stats` on a schematic reports the library its design
+// TestStatsOutputIsCapturable is the test that agni issue 253 set out to make possible. It also
+// covers the observable half of issue 228. `stats` on a schematic reports the library its design
 // declares, with no --symbol-path.
 //
 // Before, `stats` printed with fmt.Printf, so a caller setting cmd.SetOut got an empty buffer while
-// the text still reached the process stdout. An assertion then failed with the expected string
-// visibly printed a few lines above it, which is a confusing enough failure that the earlier test for
+// the text still reached the process stdout. An assertion then failed while the expected string was
+// visibly printed a few lines above it. That failure was confusing enough that the earlier test for
 // this behaviour was rewritten to assert on readDesign instead.
 func TestStatsOutputIsCapturable(t *testing.T) {
 	saved := readAsNamed
@@ -110,8 +110,8 @@ func TestStatsOutputIsCapturable(t *testing.T) {
 // declared symbol library therefore reached every analysis of the design and none of its drawings,
 // and --symbol-path was the only route to one (agni issue 347).
 //
-// Asserted on the drawn ENTITY KEYS rather than on the shape count, because the keys are what the
-// failure destroys. An unresolved symbol keeps its placement's reference designator and loses its
+// The test asserts on the drawn ENTITY KEYS rather than on the shape count, because the failure
+// destroys the keys. An unresolved symbol keeps its placement's reference designator and loses its
 // pins, so the sheet still draws all 19 ref-des labels from the annotation pass and draws no bodies.
 // Counting elements would call that "a smaller drawing"; counting keys calls it a sheet where nothing
 // can be clicked.
@@ -140,14 +140,14 @@ func TestRenderResolvesProjectSymbolLibrary(t *testing.T) {
 //
 // A render that lost its symbols does not look broken. Every reference designator, every wire and the
 // title block still draw, so the sheet reads as complete and only the component bodies are missing.
-// Nothing on the page says so, and the natural reading of a sheet showing C1 that will not respond to a
-// click is "the tool knows nothing about C1", which is false.
+// Nothing on the page says so. Imagine a sheet that shows C1, where C1 does not respond to a click.
+// A reader naturally concludes "the tool knows nothing about C1", and that is false.
 //
-// Asserted on stderr rather than the SVG, because the note is kept out of the drawing so that a
-// redirected document stays clean.
+// The test asserts on stderr rather than the SVG. The note is kept out of the drawing, so a
+// redirected document is still clean.
 func TestRenderNotesWhatItCouldNotDraw(t *testing.T) {
-	// The same schematic, away from the symbol library its project declares. This is what a checkout
-	// without the library, or a design opened outside its project, looks like.
+	// The same schematic, away from the symbol library its project declares. A checkout without the
+	// library looks like this, and so does a design opened outside its project.
 	dir := t.TempDir()
 	src, err := os.ReadFile("../../examples/tutorial-project/designs/gateway/gateway.kicad_sch")
 	if err != nil {
@@ -166,7 +166,7 @@ func TestRenderNotesWhatItCouldNotDraw(t *testing.T) {
 	if !strings.Contains(got, "not drawn") {
 		t.Errorf("a render that drew no bodies must say so on stderr, got:\n%s", got)
 	}
-	// The blast radius, which is what tells a reader whether the drawing is worth reading at all.
+	// The blast radius tells a reader whether the drawing is worth reading at all.
 	if !strings.Contains(got, "19 of 19") {
 		t.Errorf("the note must count what was lost against the total, got:\n%s", got)
 	}
@@ -176,8 +176,9 @@ func TestRenderNotesWhatItCouldNotDraw(t *testing.T) {
 	}
 }
 
-// The positive control, and the one that keeps the warning worth reading. The SAME schematic in its
-// project resolves every symbol, and a note on a complete render would appear on every render.
+// This is the positive control, and it keeps the warning worth reading. The SAME schematic in its
+// project resolves every symbol. A note that appeared on a complete render would appear on every
+// render.
 func TestRenderIsSilentWhenEverythingDraws(t *testing.T) {
 	var errOut bytes.Buffer
 	cmd := renderCmd()

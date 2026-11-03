@@ -16,9 +16,9 @@ const (
 	flatEDN = "../../readers/edif/testdata/basic.edn"
 )
 
-// TestStatsSaysWhatAHierarchicalReadLeftOut exists because stats is what someone runs when a count
-// looks wrong, and on a hierarchical .edn its counts are the top cell's alone (agni issue 707). The
-// flat design is the control, so a line printed unconditionally fails too.
+// TestStatsSaysWhatAHierarchicalReadLeftOut exists because someone runs stats when a count looks
+// wrong. On a hierarchical .edn, its counts are the top cell's alone (agni issue 707). The flat design
+// is the control, so a line printed unconditionally fails too.
 func TestStatsSaysWhatAHierarchicalReadLeftOut(t *testing.T) {
 	out := runCLI(t, statsCmd(), hierEDN)
 	if !regexp.MustCompile(`not extracted:\s+1 sub-cell holding 1 instance \(counts above are the top cell only\)`).MatchString(out) {
@@ -29,7 +29,7 @@ func TestStatsSaysWhatAHierarchicalReadLeftOut(t *testing.T) {
 	}
 }
 
-// TestStatsFlattensAHierarchicalEDIF is the stats golden for --flatten-hierarchy (agni issue 718):
+// TestStatsFlattensAHierarchicalEDIF is the stats golden for --flatten-hierarchy (agni issue 718).
 // hier_blocks.edn places LED_DRV once and RC twice, and U5 has a gate in TOP and one in LED_DRV.
 func TestStatsFlattensAHierarchicalEDIF(t *testing.T) {
 	const blocks = "../../readers/edif/testdata/hier_blocks.edn"
@@ -54,9 +54,10 @@ func TestStatsFlattensAHierarchicalEDIF(t *testing.T) {
 	}
 }
 
-// TestHierarchyNoteNamesTheFlag holds the CLI's note to naming --flatten-hierarchy while the flag is
-// off, and to dropping it on a flattened read, where a block still listed was kept out by a cycle
-// the flag cannot help with, whether the flag or a design.yaml asked for flattening.
+// TestHierarchyNoteNamesTheFlag checks when the CLI's note names --flatten-hierarchy. While the flag
+// is off, the note names it. On a flattened read the note drops it. A block still listed there was
+// kept out by a cycle, and the flag cannot help with a cycle. That holds whether the flag or a
+// design.yaml asked for flattening.
 func TestHierarchyNoteNamesTheFlag(t *testing.T) {
 	blocks := []*ir.UnexpandedHierarchy{{Name: "SUB", Kind: "edif_cell", InstanceCount: 1}}
 	if got := hierarchyNote("board.edn", blocks); !strings.Contains(got, "Pass --flatten-hierarchy to read every block.") {
@@ -97,8 +98,7 @@ func TestLocalLoaderNotesAHierarchicalRead(t *testing.T) {
 }
 
 // TestHierarchyNoteNamesTheLargestFirst checks the cap order. The largest blocks hold most of what
-// is missing, so they are the ones named when the list is capped, and the totals still count every
-// block.
+// is missing, so a capped list names them first. The totals still count every block.
 func TestHierarchyNoteNamesTheLargestFirst(t *testing.T) {
 	var blocks []*ir.UnexpandedHierarchy
 	for i, n := range []int32{3, 40, 1, 7, 12, 2, 9} {
@@ -114,9 +114,10 @@ func TestHierarchyNoteNamesTheLargestFirst(t *testing.T) {
 	}
 }
 
-// TestIssue1085FixtureMatchesItsGolden reads the fixture filed with #1085 the way stats and every
-// read no service mediates do, and holds it to the golden in its EXPECTED.md: D1, R1 and C1, the
-// three nets under their own names, and NET_LED_CATHODE joining D1.K and R1.1.
+// TestIssue1085FixtureMatchesItsGolden reads the fixture filed with #1085 as stats does, and as every
+// read outside a service does. It holds the read to the golden in the fixture's EXPECTED.md. The
+// golden lists D1, R1 and C1, the three nets under their own names, and NET_LED_CATHODE joining D1.K
+// and R1.1.
 func TestIssue1085FixtureMatchesItsGolden(t *testing.T) {
 	readFlatten = true
 	t.Cleanup(func() { readFlatten = false })
@@ -149,8 +150,8 @@ func TestIssue1085FixtureMatchesItsGolden(t *testing.T) {
 	}
 }
 
-// TestStatsSaysACycleLeftABlockOut holds the stats line on a flattened read that a self-placing
-// block stopped (agni issue 1102), which must not claim the counts are the top cell's.
+// TestStatsSaysACycleLeftABlockOut covers a flattened read where a self-placing block stopped the
+// flattening (agni issue 1102). The stats line must not claim the counts are the top cell's.
 func TestStatsSaysACycleLeftABlockOut(t *testing.T) {
 	readFlatten = true
 	t.Cleanup(func() { readFlatten = false })

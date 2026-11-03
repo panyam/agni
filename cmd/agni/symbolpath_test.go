@@ -43,8 +43,8 @@ func TestResolveSymbolPaths(t *testing.T) {
 		}
 	})
 
-	// A trailing colon or a stray space is what an operator's hand-edited compose file looks
-	// like; an empty entry would become a search of the process working directory.
+	// An operator's hand-edited compose file often has a trailing colon or a stray space. An
+	// empty entry would become a search of the process working directory.
 	t.Run("skips empty and whitespace entries", func(t *testing.T) {
 		symbolPaths = nil
 		got := resolveSymbolPaths(env("/a::  : /b :"))

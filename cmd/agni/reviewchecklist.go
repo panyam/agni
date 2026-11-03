@@ -16,19 +16,20 @@ import (
 //
 // It lives at the CLI edge because CreateReview takes the manifest as a VALUE (C22) and has no
 // filesystem. A project's checklists already arrive as values in its config (agni issue 828), so
-// only a checklist FILE is read here, as the file `--conventions` names is
+// this file reads only a checklist FILE. The CLI reads the file `--conventions` names the same way
 // (docsite/content/architecture/web-services.md).
 
 // reviewManifestFor returns the manifest `agni review` should run and a note saying where it came
 // from.
 //
 // --checklist takes a NAME or a FILE. A value ending in .yaml or .yml, or "-" for stdin, is a file,
-// read outright, so a manifest from outside the project still runs and a loose design (one on a
-// mounted folder that belongs to no project) needs it. Any other value names one of the designs'
-// project checklists. With no --checklist the project's first checklist runs, which is its default.
+// and it is read outright. So a manifest from outside the project still runs. A loose design needs
+// that, since it sits on a mounted folder that belongs to no project. Any other value names one of
+// the designs' project checklists. With no --checklist, the project's first checklist runs as its
+// default.
 func reviewManifestFor(ctx context.Context, checklist string, stdin io.Reader, designs []string) (review.Manifest, string, error) {
-	// `-` reads the manifest from stdin, which is how the Python client's CLI transport sends the
-	// one a CreateReview request carries (agni issue 734), as `query --set -` takes a set.
+	// `-` reads the manifest from stdin, as `query --set -` takes a set. The Python client's CLI
+	// transport sends a CreateReview request's manifest this way (agni issue 734).
 	if checklist == "-" {
 		man, err := review.Load(stdin)
 		return man, "", err

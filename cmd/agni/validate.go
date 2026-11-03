@@ -21,8 +21,8 @@ import (
 
 // validateCmd is the reader-health smoke over real design files (WS6-007). For every file it
 // runs the netlist and/or faithful-geometry reader the registry claims for its extension and
-// asserts the structural invariants in the validate package. It is how a reader gets checked
-// against a private corpus the committed tests never see.
+// asserts the structural invariants in the validate package. With it a reader can be checked
+// against a private corpus that the committed tests never see.
 func validateCmd() *cobra.Command {
 	var format string
 	cmd := &cobra.Command{
@@ -64,9 +64,9 @@ func validateCmd() *cobra.Command {
 }
 
 // buildValidateReport expands args (files as named, directories walked recursively in
-// sorted order) and validates each. A walk skips extensions no reader claims, as the file
-// tree greys them out, while an explicitly named file with no reader fails, since the user
-// asserted it should validate.
+// sorted order) and validates each. A walk skips extensions that no reader claims, as the file
+// tree greys them out. An explicitly named file with no reader fails, since the user asserted
+// it should validate.
 func buildValidateReport(l *formats.Loader, args []string) (*webapi.ValidateReport, error) {
 	rep := &webapi.ValidateReport{}
 	for _, arg := range args {

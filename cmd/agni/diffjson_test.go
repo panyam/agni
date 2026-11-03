@@ -20,7 +20,7 @@ func diffJSON(t *testing.T, args ...string) *webapi.DiffDesignsResponse {
 	return &resp
 }
 
-// TestDiffJSONCarriesTheSheetMaps covers agni issue 737: `diff --format json` is the message the
+// TestDiffJSONCarriesTheSheetMaps covers agni issue 737. `diff --format json` is the message the
 // DiffDesigns rpc returns, sheet and placement maps included, because the command now calls the
 // service rather than converting a diff of its own.
 func TestDiffJSONCarriesTheSheetMaps(t *testing.T) {
@@ -33,7 +33,7 @@ func TestDiffJSONCarriesTheSheetMaps(t *testing.T) {
 	}
 }
 
-// TestDiffJSONAsksTheServiceForNearRenames covers agni issue 817 from the CLI side: --rename-approx
+// TestDiffJSONAsksTheServiceForNearRenames covers agni issue 817 from the CLI side. --rename-approx
 // reaches the service as rename_approx, so the json carries the pairing.
 func TestDiffJSONAsksTheServiceForNearRenames(t *testing.T) {
 	count := func(resp *webapi.DiffDesignsResponse) int {
@@ -54,7 +54,7 @@ func TestDiffJSONAsksTheServiceForNearRenames(t *testing.T) {
 	}
 }
 
-// TestDiffIncludeEqual covers agni issue 818 on the CLI: --include-equal adds equal entries to the
+// TestDiffIncludeEqual covers agni issue 818 on the CLI. --include-equal adds equal entries to the
 // json (through the service), net-equal rows to the csv, and a count to the text, and changes none
 // of them without the flag.
 func TestDiffIncludeEqual(t *testing.T) {

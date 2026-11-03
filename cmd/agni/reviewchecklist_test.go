@@ -77,8 +77,8 @@ func TestReviewUsesProjectChecklist(t *testing.T) {
 	if !strings.Contains(out, "Mini board review") {
 		t.Errorf("the project's manifest should have run, got:\n%s", out)
 	}
-	// Which checklist scored a run is not recoverable from the outcomes, so a checklist nobody typed
-	// has to announce itself.
+	// The outcomes do not say which checklist scored a run. So a checklist that nobody typed has to
+	// announce itself.
 	if !strings.Contains(errOut, "projects/proj") || !strings.Contains(errOut, `"review"`) {
 		t.Errorf("stderr should name the project and the checklist it declared, got %q", errOut)
 	}
@@ -152,8 +152,9 @@ func TestReviewChecklistErrorsAreActionable(t *testing.T) {
 
 // TestReviewRollupRefusesMixedChecklists guards the rollup renderer's documented assumption that
 // every report shares the manifest structure. RenderAggregateMarkdown builds its traceability matrix
-// from Reports[0].Areas, so two manifests would label the rows from the first design's checklist and
-// fill the cells from the second's, so every row looks answered under the wrong labels.
+// from Reports[0].Areas. With two manifests, it would label the rows from the first design's
+// checklist and fill the cells from the second's. Every row would then look answered under the wrong
+// labels.
 func TestReviewRollupRefusesMixedChecklists(t *testing.T) {
 	a := checklistProject(t, t.TempDir(), "proj-a", mini)
 	b := checklistProject(t, t.TempDir(), "proj-b", mini)
@@ -171,7 +172,7 @@ func TestReviewRollupRefusesMixedChecklists(t *testing.T) {
 }
 
 // TestReviewRollupAcceptsOneChecklist checks that two designs under the SAME project resolve to one
-// checklist and roll up without a flag, which is the case a gate in CI is most likely to be.
+// checklist and roll up without a flag. A gate in CI most likely runs this case.
 func TestReviewRollupAcceptsOneChecklist(t *testing.T) {
 	root := t.TempDir()
 	first := checklistProject(t, root, "proj", mini)
@@ -199,7 +200,7 @@ func TestReviewRollupAcceptsOneChecklist(t *testing.T) {
 }
 
 // breakDescriptor overwrites a descriptor written by checklistProject with one that exists and does
-// not parse, which is the case the resolution has to tell apart from "no descriptor at all".
+// not parse. The resolution has to tell that case apart from "no descriptor at all".
 func breakDescriptor(t *testing.T, path string) {
 	t.Helper()
 	if err := os.WriteFile(path, []byte("name: My Board\ntitle: D\nentry: board.edn\n"), 0o644); err != nil {
@@ -207,8 +208,8 @@ func breakDescriptor(t *testing.T, path string) {
 	}
 }
 
-// TestReviewRefusesMalformedDesignDescriptor covers a design.yaml that exists and does not parse,
-// which is THIS design's own configuration. Reading it as "no project" sends the operator to
+// TestReviewRefusesMalformedDesignDescriptor covers a design.yaml that exists and does not parse.
+// That file is THIS design's own configuration. Reading it as "no project" sends the operator to
 // --checklist when the actionable fix is the descriptor, and would score the run against the
 // built-in vocabulary while looking authoritative.
 func TestReviewRefusesMalformedDesignDescriptor(t *testing.T) {

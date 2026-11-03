@@ -17,7 +17,7 @@ func runFailing(t *testing.T, cmd *cobra.Command, args ...string) (stdout, stder
 	var out, errOut bytes.Buffer
 	cmd.SetOut(&out)
 	cmd.SetErr(&errOut)
-	// As the root command does, so no usage text lands in the middle of a report.
+	// As the root command does, so no usage text appears in the middle of a report.
 	cmd.SilenceUsage, cmd.SilenceErrors = true, true
 	cmd.SetArgs(args)
 	err := cmd.Execute()
@@ -61,7 +61,7 @@ func TestAFailedRequestWritesTheWireErrorUnderJSON(t *testing.T) {
 	}
 }
 
-// Without --format json nothing changes: the error is text on stderr and stdout stays empty.
+// Without --format json nothing changes. The error is text on stderr, and stdout is empty.
 func TestAFailedRequestWritesNoJSONInOtherFormats(t *testing.T) {
 	_, design, _ := remoteParityServer(t)
 	out, _ := runFailing(t, queryCmd(), design, `component.net(?r ?n) => ?r`)

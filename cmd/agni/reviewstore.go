@@ -54,9 +54,9 @@ func (s *osReviewStore) path(parent, id string) string {
 	return filepath.Join(s.dirFor(parent), id+reviewFileSuffix)
 }
 
-// dirFor is the directory a parent's runs live in. A parent that is not a well-formed project name
-// resolves to the root. It cannot escape the store, because SplitReviewName has already rejected any
-// parent that is not "projects/{id}" and a project id cannot contain a separator.
+// dirFor returns the directory that holds a parent's runs. A parent that is not a well-formed
+// project name resolves to the root. It cannot escape the store, because SplitReviewName has already
+// rejected any parent that is not "projects/{id}" and a project id cannot contain a separator.
 func (s *osReviewStore) dirFor(parent string) string {
 	id, ok := service.ProjectID(parent)
 	if !ok || id == "" {
@@ -74,7 +74,7 @@ func (s *osReviewStore) dirFor(parent string) string {
 func (s *osReviewStore) Create(_ context.Context, parent string, doc *checkspb.CheckResults) (string, string, error) {
 	now := time.Now().UTC()
 	createdAt := now.Format(time.RFC3339)
-	// Stamp before marshalling so the file on disk carries the creation time the caller is handed.
+	// Stamp before marshalling, so the file on disk holds the same creation time the caller gets.
 	stamped, err := withCreatedAt(doc, createdAt)
 	if err != nil {
 		return "", "", err

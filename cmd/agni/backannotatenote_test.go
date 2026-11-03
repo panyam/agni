@@ -12,8 +12,8 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// The note names what back-annotation relabelled, the largest lists capped, and says nothing for a
-// schematic it relabelled none of.
+// The note names what back-annotation relabelled, with the largest lists capped. It says nothing for
+// a schematic where back-annotation relabelled nothing.
 func TestBackAnnotatedNote(t *testing.T) {
 	g := &geom.SchematicGeometry{BackAnnotated: []*geom.BackAnnotatedPlacement{
 		{RefDes: "R1001", DrawnRefDes: "R4", SheetId: "P1"},

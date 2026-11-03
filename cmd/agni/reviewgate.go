@@ -47,8 +47,8 @@ func exitCode(err error) int {
 	return 1
 }
 
-// reviewGate is the configured gate for one `agni review` invocation. A zero value gates nothing,
-// which is what an invocation that passed neither flag gets.
+// reviewGate is the configured gate for one `agni review` invocation. An invocation that passed
+// neither flag gets the zero value, and the zero value gates nothing.
 //
 // Both gates are OPT-IN, matching `check --fail-on`'s empty default. `agni review` has always exited
 // 0, so gating by default would turn every existing pipeline (including the tutorial rungs and
@@ -61,12 +61,13 @@ type reviewGate struct {
 	minAnswered int
 }
 
-// gatableOutcomes are the outcomes --fail-on-outcome accepts, and the set an unknown value is reported
-// against.
+// gatableOutcomes are the outcomes --fail-on-outcome accepts. An unknown value is reported against
+// this set.
 //
-// It is the WHOLE vocabulary rather than the two or three a team is likely to gate on. Each outcome
-// exists because a check that did not evaluate had been scoring as a pass, so a team may reasonably
-// decide `needs-data` blocks their release. Which outcomes block is the team's policy, not this file's.
+// It holds the WHOLE vocabulary, not only the two or three outcomes a team is likely to gate on. Each
+// outcome exists because a check that did not evaluate had been scoring as a pass, so a team may
+// reasonably decide `needs-data` blocks their release. The team's policy decides which outcomes
+// block, not this file.
 var gatableOutcomes = []review.Outcome{
 	review.Fail,
 	review.Provisional,
@@ -146,8 +147,8 @@ func (g reviewGate) trip(reports []review.Report) error {
 	return nil
 }
 
-// countGated returns how many of a report's items sit at a gated outcome, and which outcome the first
-// of them carried (for the message).
+// countGated returns how many of a report's items have a gated outcome. It also returns the first
+// such item's outcome, for the message.
 func (g reviewGate) countGated(r review.Report) (int, review.Outcome) {
 	var n int
 	var first review.Outcome
@@ -164,8 +165,8 @@ func (g reviewGate) countGated(r review.Report) (int, review.Outcome) {
 	return n, first
 }
 
-// designLabel names the design a gate message is about, falling back to the manifest when a report
-// carries no design (which a hand-built Report in a test may not).
+// designLabel names the design a gate message is about. It falls back to the manifest when a report
+// names no design, as a hand-built Report in a test may not.
 func designLabel(r review.Report) string {
 	if r.Design != "" {
 		return r.Design

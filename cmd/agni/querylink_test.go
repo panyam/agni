@@ -90,8 +90,8 @@ func TestASetFromAFileLinksEachQueryByItsText(t *testing.T) {
 	}
 }
 
-// A set the project keeps is linked by its name and the query's, so the link stays short however
-// long the query is and follows the set's current text.
+// A set from the project is linked by its name and the query's, so the link is short however long
+// the query is, and it follows the set's current text.
 func TestAProjectSetLinksEachQueryByName(t *testing.T) {
 	freshWorkspace(t)
 	cliMountSpecs = []string{"tut=" + filepath.Join("..", "..", "examples", "tutorial-project")}
@@ -116,8 +116,8 @@ func TestAProjectSetLinksEachQueryByName(t *testing.T) {
 }
 
 // Under --server self the link's base is the one this process serves, so both commands that ask a
-// question mint one. trace guarded its link on the url a remote server has, which self leaves empty,
-// so `trace --server self` served with no link to follow.
+// question mint one. trace used to print its link only when a remote server had a url. self leaves
+// that url empty, so `trace --server self` served with no link to follow.
 func TestSelfMintsTheLinkItServes(t *testing.T) {
 	withMount(t)
 	spec, err := parseServerSpec("self")

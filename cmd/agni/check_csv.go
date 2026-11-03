@@ -21,8 +21,8 @@ func writeCheckCSV(w io.Writer, findings []*checkspb.Finding, orderBy ...string)
 
 // writeTableCSV encodes a projected table as csv, ordered by orderBy first. The rows are the
 // TableService's, so a csv and a workbook built from one answer carry the same cells (agni issue
-// 862); escaping against spreadsheet formulas happens in service.WriteTableCSV, the encoder the
-// Encode rpc shares, so a file the viewer saves is these bytes.
+// 862). service.WriteTableCSV escapes against spreadsheet formulas. The Encode rpc shares that
+// encoder, so a file the viewer saves holds these same bytes.
 func writeTableCSV(w io.Writer, t *webapi.Table, orderBy []string) error {
 	if err := service.OrderTables([]*webapi.Table{t}, orderBy, nil); err != nil {
 		return err

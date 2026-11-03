@@ -70,14 +70,14 @@ func TestEnvConfigAbsenceIsNotAnError(t *testing.T) {
 	}
 }
 
-// TestEnvConfigRejectsMalformedAndUnknown. A malformed file is an error rather than a skip, because an
-// operator who wrote a mount table and silently got none would see every path resolve through a
-// minted mount instead, which reads as working.
+// TestEnvConfigRejectsMalformedAndUnknown. A malformed file is an error rather than a skip. Imagine an
+// operator writes a mount table and silently gets none. Every path then resolves through a minted
+// mount instead, and that reads as working.
 //
-// Unknown fields are rejected on the same reasoning the descriptors use, since a misspelled key that
-// silently does nothing is the failure worth spending strictness on. It also guards the boundary this
-// file exists to hold. Someone reaching for `conventions:` here gets told no rather than getting a
-// machine-wide analysis tier.
+// Unknown fields are rejected on the same reasoning the descriptors use. A misspelled key that
+// silently does nothing is the failure we want strictness against. The check also guards a boundary,
+// and this file exists to hold that boundary. Someone reaching for `conventions:` here gets told no
+// rather than getting a machine-wide analysis tier.
 func TestEnvConfigRejectsMalformedAndUnknown(t *testing.T) {
 	for name, body := range map[string]string{
 		"malformed":     "mounts: [this is not a map\n",
@@ -114,9 +114,10 @@ func TestEnvConfigFallsBackToTheUserDirectory(t *testing.T) {
 	}
 }
 
-// TestApplyEnvConfigYieldsToFlags checks that a passed flag wins outright. An operator who named a
-// mount table is answering for the whole table, and a file quietly adding one they did not ask for
-// is the ambient-config failure this tier is only allowed because it cannot change an answer.
+// TestApplyEnvConfigYieldsToFlags checks that a passed flag wins outright. An operator who names a
+// mount table answers for the whole table. If the file quietly added a mount they did not ask for,
+// that would be an ambient-config failure. This tier is allowed only because it cannot change an
+// answer.
 func TestApplyEnvConfigYieldsToFlags(t *testing.T) {
 	dir := t.TempDir()
 	writeEnvCfg(t, dir, "mounts:\n  fromfile: /f\n")
@@ -142,8 +143,8 @@ func TestApplyEnvConfigYieldsToFlags(t *testing.T) {
 		t.Errorf("nothing was taken from the file, so nothing should be announced, got %q", note.String())
 	}
 
-	// With no flag, the file fills in and SAYS so, because a mount table nobody typed is not
-	// recoverable from the output of a run that used it.
+	// With no flag, the file fills in and SAYS so. Nobody typed that mount table, so without the
+	// note nothing in the run's output would show it.
 	cliMountSpecs = nil
 	note.Reset()
 	if err := applyEnvConfig(&note, noEnv); err != nil {
@@ -157,10 +158,9 @@ func TestApplyEnvConfigYieldsToFlags(t *testing.T) {
 	}
 }
 
-// TestResolveWebDirPrecedence pins the four-tier order. The tiers exist because they answer
-// different situations: a flag is an operator's own words, agni.yaml is a repo artifact, the
-// environment is what a container or an install can set, and the default is what a checkout needs to
-// work with no configuration at all.
+// TestResolveWebDirPrecedence pins the four-tier order. Each tier answers a different situation. A
+// flag is an operator's own words. agni.yaml is a repo artifact. A container or an install can set
+// the environment. A checkout needs the default to work with no configuration at all.
 func TestResolveWebDirPrecedence(t *testing.T) {
 	env := func(m map[string]string) func(string) string {
 		return func(k string) string { return m[k] }
@@ -237,8 +237,9 @@ func TestEnvConfigCarriesNativeTools(t *testing.T) {
 	}
 }
 
-// TestApplyEnvConfigBindsNativeTools covers tools only serve consumes. The file is read once before any
-// command runs, so applyEnvConfig has to bind them for serve to find, and has to say it used them.
+// TestApplyEnvConfigBindsNativeTools covers the tools that only serve consumes. The file is read once
+// before any command runs. So applyEnvConfig has to bind the tools where serve can find them, and it
+// has to say it used them.
 func TestApplyEnvConfigBindsNativeTools(t *testing.T) {
 	dir := t.TempDir()
 	writeEnvCfg(t, dir, "native_tools:\n  - kicad-cli\n")

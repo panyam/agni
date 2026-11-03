@@ -8,8 +8,8 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// checklistsCmd is the CLI face of ReviewService.ListChecklists (agni issue 859): which checklists a
-// design's project declares, inherited ones included, the first being the one `agni review` runs
+// checklistsCmd is the CLI face of ReviewService.ListChecklists (agni issue 859). It lists the
+// checklists a design's project declares, inherited ones included. `agni review` runs the first one
 // when no --checklist is named.
 func checklistsCmd() *cobra.Command {
 	var format string
