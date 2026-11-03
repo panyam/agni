@@ -1,14 +1,15 @@
 // Package ident compares identifiers that name the same thing in two documents that spell it
-// differently: a pin map against a netlist, a selected function against a vendor's pin table.
+// differently. Examples are a pin map against a netlist, and a selected function against a vendor's
+// pin table.
 //
-// That comparison is where false warnings come from (agni issue 517). We reproduced a shipped
+// False warnings come from that comparison (agni issue 517). We reproduced a shipped
 // in-house checker against a large production board, and EVERY warning that run produced was a
 // string-comparison artifact rather than a design defect. The pin was legal in all of them and the
 // two strings naming it disagreed.
 //
 // ONE canonical form, defined once, applied to BOTH sides. That tool carried two normalizers with
-// opposite conventions (one stripped leading zeros, PTA00 to PTA0; the other padded to two digits,
-// PTE7 to PTE07) on the same field, and it worked only because each ran on its own side of a
+// opposite conventions on the same field. One stripped leading zeros (PTA00 to PTA0) and the other
+// padded to two digits (PTE7 to PTE07). It worked only because each ran on its own side of a
 // comparison. Everything here goes through Canonical, and a caller comparing raw strings brings
 // that bug back.
 package ident
@@ -55,8 +56,8 @@ type Result struct {
 	A, B string
 }
 
-// hasFormatRunes reports whether s holds a format character (category Cf), the invisible
-// characters that survive every defence people write for them.
+// hasFormatRunes reports whether s holds a format character (category Cf). These are invisible
+// characters, and they survive the usual defences.
 //
 // The obvious guard does not work. That in-house tool normalized with `re.sub(r'\s+', ”, s.upper())`.
 // U+200B ZERO WIDTH SPACE is a FORMAT character, not whitespace, so `\s` does not match it in
@@ -88,8 +89,8 @@ func stripSpace(s string) string {
 	}, s)
 }
 
-// canonIndex rewrites an identifier's trailing index into one spelling: brackets removed and leading
-// zeros dropped, so PTE07, PTE7 and TXD[1] against TXD1 all settle.
+// canonIndex rewrites an identifier's trailing index into one spelling. It removes brackets and drops
+// leading zeros, so PTE07, PTE7 and TXD[1] against TXD1 all settle.
 //
 // Leading zeros are DROPPED rather than padded to a fixed width. A width is a guess about the largest
 // index a part family will ever reach, and the two normalizers we found disagreed because one of
@@ -130,13 +131,12 @@ func allDigits(s string) bool {
 // Canonical is the one canonical form of an identifier, and the only spelling anything in this
 // package compares.
 //
-// The stage order matters. NFKC first, so a
-// fullwidth digit lifted out of a PDF becomes the ASCII one and a non-breaking space becomes an
-// ordinary space that the whitespace stage can then remove. Format characters next, since they
-// survive NFKC untouched. Upper case after that, because vendor tables mix camel-case and upper-case
-// spellings of one peripheral freely. Whitespace removed rather than collapsed, because a
-// multi-valued cell is split by Alternatives BEFORE this runs, so no separator depends on the
-// whitespace surviving. The index last, once the digits are ASCII.
+// The stage order matters. NFKC runs first, so a fullwidth digit lifted out of a PDF becomes the
+// ASCII one, and a non-breaking space becomes an ordinary space for the whitespace stage to remove.
+// Format characters go next, since they survive NFKC untouched. Upper case comes after that, because
+// vendor tables mix camel-case and upper-case spellings of one peripheral freely. Whitespace is
+// removed rather than collapsed. Alternatives splits a multi-valued cell BEFORE this runs, so no
+// separator depends on the whitespace surviving. The index goes last, once the digits are ASCII.
 func Canonical(s string) string {
 	return canonIndex(clean(s))
 }
@@ -149,20 +149,21 @@ func clean(s string) string {
 	return stripSpace(s)
 }
 
-// PinName is the key a pin's FUNCTIONAL name is compared on, Canonical with underscores removed.
+// PinName is the comparison key for a pin's FUNCTIONAL name. It is Canonical with underscores
+// removed.
 //
 // Pin names are compared more loosely than net names because the two sides split a subscript
-// differently: a datasheet prints `V CCA` and a symbol library writes `VCC_A`. A net name is the
-// design's own identifier and keeps its underscores, which is also why this is not folded into
-// Canonical, whose fuzzy pass splits on them.
+// differently. A datasheet prints `V CCA` and a symbol library writes `VCC_A`. A net name is the
+// design's own identifier and keeps its underscores. Compare's fuzzy pass also splits a Canonical
+// form on underscores. So this fold is not part of Canonical.
 //
 // The underscore goes AFTER the index rewrite, so `IO0_1` keys as `IO01` and never meets a distinct
 // `IO1` on the same part. Dropping it first would let the index rewrite strip the bank digit's zero.
 //
-// A subscript written as markup folds the same way (agni issue 1160): KiCad's `VCC_{A}` and a
+// A subscript written as markup folds the same way (agni issue 1160). KiCad's `VCC_{A}` and a
 // datasheet's `VCC(A)` both key as `VCCA`, since a symbol library and a pin table print one supply
-// pin those two ways. The parenthesized form folds only for one to three letters or digits, which is
-// how a pin table prints a domain, so a longer note such as `PB3(SWO_TRACE)` is left as written.
+// pin those two ways. The parenthesized form folds only for one to three letters or digits. A pin
+// table prints a domain that way, so a longer note such as `PB3(SWO_TRACE)` is left as written.
 // KiCad's overbar `~{RESET}` is NOT folded, since it marks an active-low pin, a different pin from
 // `RESET`.
 func PinName(s string) string {
@@ -177,9 +178,9 @@ var scriptMarkup = regexp.MustCompile(`[_^]\{([^{}]*)\}`)
 // parenSubscript is a pin table's parenthesized subscript, `VCC(A)`, directly after the name.
 var parenSubscript = regexp.MustCompile(`([A-Za-z0-9])\(([A-Za-z0-9]{1,3})\)`)
 
-// PinNumber is the key a pin's package designator is compared on. It is Canonical without the index
-// rewrite, so `01` and `A01` keep their zeros, since a pinout that writes one never writes the other,
-// while a zero-width or full-width character pasted out of a PDF still settles.
+// PinNumber is the comparison key for a pin's package designator. It is Canonical without the index
+// rewrite, so `01` and `A01` keep their zeros. A pinout that writes one never writes the other. A
+// zero-width or full-width character pasted out of a PDF still settles.
 func PinNumber(s string) string {
 	return clean(s)
 }
@@ -196,8 +197,8 @@ var altSeparators = []string{"\n", "/", ","}
 // `R` against a table and lose the name that was actually written. The caller reports WHICH reading
 // matched.
 //
-// Both sides of a comparison are split by this same function, which fixes the largest class of
-// false warning we measured. That tool looked for a separator only in the AVAILABLE function name,
+// This same function splits both sides of a comparison. That fixes the largest class of false
+// warning we measured. That tool looked for a separator only in the AVAILABLE function name,
 // so a map cell reading `GPIO[34] / WKPU[8]` could not match a table listing `GPIO[34]` and
 // `WKPU[8]` on separate rows, though both halves are legal on that pin.
 func Alternatives(s string) []string {
@@ -224,8 +225,8 @@ func Alternatives(s string) []string {
 
 // Compare reports whether two identifiers name the same thing, and what had to be done to say so.
 //
-// It tries the readings in order of how much they assume: byte equality, then canonical equality,
-// then a token-subsequence match. The first that succeeds wins, so a pair that agrees exactly is
+// It tries the readings in order of how much they assume. Byte equality comes first, then canonical
+// equality, then a token-subsequence match. The first that succeeds wins, so a pair that agrees exactly is
 // never reported as having needed normalizing.
 //
 // Every alternative on the left is tried against every alternative on the right, and the result
@@ -265,15 +266,15 @@ func Compare(a, b string) Result {
 	return Result{Match: None, A: a, B: b}
 }
 
-// reading is one alternative of a cell with the derived forms the comparison loops need, computed
-// once rather than per pair.
+// reading is one alternative of a cell. It holds the derived forms that the comparison loops need,
+// computed once rather than per pair.
 //
 // Compare's loops are n x m for n + m distinct inputs, so on a cell naming three functions a side
-// this is eight canonicalizations instead of sixty-four (#660). It costs one slice per side, so a
-// single-valued comparison, which is most map rows, went from 20 allocations to 22 while the
+// this is eight canonicalizations instead of sixty-four (#660). It costs one slice per side. Most map
+// rows are single-valued, and such a comparison went from 20 allocations to 22, while the
 // three-a-side cell went from 168 to 50. Trust the allocation counts over ns/op, which swings by a
-// factor of two between runs on one machine. The two extra allocations buy one match ladder instead
-// of a second short-circuit path, which would be the two-normalizers defect again.
+// factor of two between runs on one machine. The two extra allocations keep one match ladder. A
+// second short-circuit path would bring back the two-normalizers defect.
 //
 // A CALLER COMPARING MANY AGAINST MANY should not reach for Compare in a nested loop at all. Two
 // hundred map rows against sixteen hundred nets is 320,000 calls however fast each one is. Build a

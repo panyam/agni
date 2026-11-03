@@ -85,10 +85,11 @@ func TestCollectLabelsUpright(t *testing.T) {
 	}
 }
 
-// TestCaptionWidth checks the caption-width budget. It is the symbol's drawn BOX rectangle
-// (the box a label like "Net Splitter" is fit inside), not the full bounding box that pin
-// stubs widen, and it falls back to the bounding box when the symbol has no BOX figure. This
-// backs the condense-to-fit that stops the "Net Splitter" caption spilling past its rectangle.
+// TestCaptionWidth checks the caption-width budget. The budget is the symbol's drawn BOX
+// rectangle, the box that holds a label like "Net Splitter". It is not the full bounding box,
+// which pin stubs widen. It falls back to the bounding box when the symbol has no BOX figure.
+// This test backs the condense-to-fit that stops the "Net Splitter" caption spilling past its
+// rectangle.
 func TestCaptionWidth(t *testing.T) {
 	sym := &geom.SymbolDef{
 		Bbox: &geom.BBox{Min: &geom.Point{X: 0}, Max: &geom.Point{X: 1778}}, // pin stubs widen the bbox

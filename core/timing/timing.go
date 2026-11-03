@@ -1,8 +1,9 @@
 // Package timing records where one request's time went (agni issue 914): its stages, which cache
 // layer answered each read, how long each rule took, and the plan of each query evaluated.
 //
-// A Recorder rides the request's context. Every recording call here is a no-op when the context
-// carries none, so a request nobody is timing pays one context lookup per call and nothing else.
+// A Recorder travels in the request's context. Every recording call here is a no-op when the
+// context holds none, so a request nobody is timing costs one context lookup per call and nothing
+// else.
 // The package imports only the standard library, so the rule loop in core/check can record into it.
 package timing
 
@@ -23,8 +24,8 @@ type Recorder struct {
 	// proportion to the rules and literals a query runs.
 	Explain bool
 	// Memory asks each stage to record the process's memory as it ends (agni issue 994). Reading it
-	// stops the world briefly, so only a request asking for it pays. In wasm, whose memory only grows,
-	// the stage whose end first shows a higher Sys is the one that raised the peak.
+	// stops the world briefly, so only a request that asks for it is slowed. In wasm, memory only
+	// grows. So when a stage's end first shows a higher Sys, that stage raised the peak.
 	Memory bool
 
 	mu      sync.Mutex
@@ -42,8 +43,8 @@ type Stage struct {
 	Start time.Duration
 	Dur   time.Duration
 	// Sys and HeapAlloc are runtime.MemStats' figures as the stage ended, zero unless the Recorder
-	// asked for Memory. Sys is what the runtime has obtained, which in wasm is the memory's size, and
-	// HeapAlloc includes garbage not yet collected, since no collection is forced.
+	// asked for Memory. Sys counts what the runtime has obtained, and in wasm that is the memory's
+	// size. HeapAlloc includes garbage not yet collected, since no collection is forced.
 	Sys       uint64
 	HeapAlloc uint64
 }
@@ -158,7 +159,7 @@ func Explaining(ctx context.Context) bool {
 	return r != nil && r.Explain
 }
 
-// Planned records the plan one query evaluation ran.
+// Planned records the plan that one query evaluation ran.
 func Planned(ctx context.Context, query, plan string) {
 	if r := From(ctx); r != nil {
 		r.mu.Lock()

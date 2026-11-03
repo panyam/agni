@@ -10,7 +10,7 @@ import (
 
 // TestStampNetRoles checks that the ingestion pass stamps each net's role SET from the active
 // naming lexicon. The cases are a rail, a ground, a feedback node, a plain signal (no roles), and a
-// rail-NAMED feedback node that carries BOTH roles (precedence is the consumer's call, so the stamp
+// rail-NAMED feedback node that gets BOTH roles (the consumer decides precedence, so the stamp
 // records both).
 func TestStampNetRoles(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
@@ -32,7 +32,7 @@ func TestStampNetRoles(t *testing.T) {
 }
 
 // TestStampNetRolesIdempotent checks that a re-stamp (a re-read of the same design) overwrites
-// rather than accumulates, so the set stays correct.
+// rather than accumulates, so the set is still correct.
 func TestStampNetRolesIdempotent(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{{Name: "GND"}}}
 	StampNetRoles(d)
@@ -59,10 +59,10 @@ func TestStampNetRolesHonorsActiveVocab(t *testing.T) {
 	}
 }
 
-// TestStampNetRolesDeclared covers WS1-051: a role the SOURCE declared (translated to this
-// vocabulary by the reader that understood the format) is unioned with what the naming lexicon
-// infers, never replaced by it and never duplicating it. The declared role leads, because it is
-// evidence rather than inference.
+// TestStampNetRolesDeclared covers WS1-051. The reader that understood the format translates a role
+// the SOURCE declared into this vocabulary. That role is unioned with what the naming lexicon infers,
+// never replaced by it and never duplicating it. The declared role leads, because it is evidence
+// rather than inference.
 func TestStampNetRolesDeclared(t *testing.T) {
 	declared := func(name string, role ir.Role) *ir.Net {
 		return &ir.Net{Name: name, Attributes: map[string]string{AttrDeclaredRole: RoleToken(role)}}
@@ -99,9 +99,9 @@ func sourceOf(n *ir.Net, role ir.Role) ir.RoleSource {
 	return ir.RoleSource_ROLE_SOURCE_UNSPECIFIED
 }
 
-// Carrying provenance means a role read off the NAME and a role the SOURCE FILE stated are
-// no longer indistinguishable. Both were already unioned into the same set (WS1-051); before this
-// the consumer had no way to tell which one spoke.
+// With provenance recorded, a role read off the NAME and a role stated by the SOURCE FILE are no
+// longer indistinguishable. Both were already unioned into the same set (WS1-051). Before this the
+// consumer had no way to tell which one spoke.
 func TestStampNetRolesRecordsItsEvidence(t *testing.T) {
 	declared := &ir.Net{Name: "N$17", Attributes: map[string]string{AttrDeclaredRole: RoleToken(ir.Role_ROLE_GROUND)}}
 	named := &ir.Net{Name: "+3V3"}

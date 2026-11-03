@@ -31,8 +31,8 @@ func TestStampValuesFillsQuantity(t *testing.T) {
 	}
 }
 
-// TestStampValuesBareNumberNeedsTheClassConvention is why ValueVocab exists rather than the parser
-// deciding. The SAME text "100" means ohms on a resistor and nothing determinate on a capacitor,
+// TestStampValuesBareNumberNeedsTheClassConvention shows why ValueVocab exists rather than the
+// parser deciding. The SAME text "100" means ohms on a resistor and nothing determinate on a capacitor,
 // because only the first is a universal convention.
 func TestStampValuesBareNumberNeedsTheClassConvention(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
@@ -52,8 +52,8 @@ func TestStampValuesBareNumberNeedsTheClassConvention(t *testing.T) {
 	}
 }
 
-// TestStampValuesPrefixedValueTakesTheClassDimension is the distinction a real read forced. "10u" on a
-// capacitor states the MAGNITUDE and omits only the dimension, and a capacitor's value is a capacitance
+// TestStampValuesPrefixedValueTakesTheClassDimension covers a distinction a real read forced. "10u"
+// on a capacitor states the MAGNITUDE and omits only the dimension, and a capacitor's value is a capacitance
 // with no ambiguity at all, so the class settles it. Only a value with no prefix EITHER is genuinely
 // uncertain.
 //

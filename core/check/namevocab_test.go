@@ -17,8 +17,8 @@ func lexiconOf(t *testing.T, lx *configpb.NamingLexicon) ModelOption {
 	return WithLexicon(&classify.Lexicon{Role: rv})
 }
 
-// A convention reaches each model question with the process-level vocabulary at its defaults, which is
-// the half a vocabulary test in classify cannot show (agni issue 1285).
+// A convention reaches each model question with the process-level vocabulary at its defaults. A
+// vocabulary test in classify cannot show this half (agni issue 1285).
 func TestAModelReadsItsOwnNameVocabularies(t *testing.T) {
 	d := func(nets ...string) *ir.Design {
 		out := &ir.Design{}

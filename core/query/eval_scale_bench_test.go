@@ -10,21 +10,21 @@ import (
 )
 
 // Board-scale evidence for WS3-113. The Naive evaluator's doc comment says "naïve join is
-// sufficient because one design's fact base is small". This measures whether that survives a real
-// board. The real board this catalog is developed against carries 3,980 components and
+// sufficient because one design's fact base is small". This benchmark measures whether that claim
+// holds on a real board. This catalog is developed against a real board with 3,980 components and
 // 1,617 nets, so the sweep brackets it.
 //
-// The shapes are chosen to separate three claims that WS3-031 and WS3-113 bundle together:
+// WS3-031 and WS3-113 bundle three claims together, and the shapes are chosen to separate them.
 //
 //	flat      a conjunctive pattern with no recursion (the shipped pull-up shape)
-//	reach     a bounded-radius protection question, which is what a migrated ESD rule would run
+//	reach     a bounded-radius protection question, as a migrated ESD rule would run it
 //	closure   a recursive transitive closure, where addTuple's linear-scan dedup is O(n^2)
 //
 // They fail differently, and a fix aimed at one does nothing for the others.
 
-// benchDesign builds a synthetic board of n components in series chains, where every component bridges
-// two consecutive nets, which is the topology `net.reaches` walks. Resistors are the pass element, so
-// the chains are genuinely traversable rather than a star that terminates in one hop.
+// benchDesign builds a synthetic board of n components in series chains. Every component bridges
+// two consecutive nets, and `net.reaches` walks that topology. Resistors are the pass element, so
+// the chains are genuinely traversable rather than a star that ends in one hop.
 func benchDesign(n int) *ir.Design {
 	d := &ir.Design{}
 	nets := n + 1
@@ -42,8 +42,8 @@ func benchDesign(n int) *ir.Design {
 
 var benchSizes = []int{100, 500, 1000, 2000, 4000}
 
-// benchQuery runs one query shape at each size under both evaluators: Default, which agni answers
-// with, and Naive, the engine's reference, so a regression in either shows against the other.
+// benchQuery runs one query shape at each size under both evaluators. agni answers with Default,
+// and Naive is the engine's reference, so a regression in either shows against the other.
 func benchQuery(b *testing.B, name, text string) {
 	for _, ev := range []struct {
 		name string
@@ -72,14 +72,14 @@ func BenchmarkEvalFlat(b *testing.B) {
 	benchQuery(b, "flat", `component.net(?a,?n), component.net(?c,?n), ?a != ?c => ?a`)
 }
 
-// The bounded-radius protection shape, which is what an ESD rule migrated off its Go FFI would run
-// (the form documented in stdlib/relations/facts/docs/net.reaches.md).
+// The bounded-radius protection shape. An ESD rule migrated off its Go FFI would run it, in the
+// form documented in stdlib/relations/facts/docs/net.reaches.md.
 func BenchmarkEvalReach(b *testing.B) {
 	benchQuery(b, "reach", `net.reaches(?a,?bn,?h), ?h <= 2 => ?a`)
 }
 
-// Recursive transitive closure, the shape whose derived-tuple count grows quadratically on a chain,
-// and where addTuple dedups by linear scan.
+// Recursive transitive closure. Its derived-tuple count grows quadratically on a chain, and
+// addTuple dedups those tuples by linear scan.
 func BenchmarkEvalClosure(b *testing.B) {
 	benchQuery(b, "closure", `conn(?a,?bn) :- component.net(?a,?bn); `+
 		`linked(?a,?c) :- conn(?a,?n), conn(?c,?n), ?a != ?c; `+

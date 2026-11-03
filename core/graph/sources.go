@@ -8,12 +8,12 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// SymbolSource supplies the drawable symbol for each component node in an auto-layout, so the
-// layout stays fixed while what gets drawn at a node varies. The Registry (classified synthetic
-// glyphs, WS7-030) is one implementation and FaithfulSource (the design's own symbol artwork,
-// WS7-031) is another. Symbol is called once per placed component; the returned
-// SymbolDef's CellRef keys the placement to the shipped symbol library, so a source must return
-// a stable CellRef per distinct symbol. c may be nil when a placed ref has no matching component.
+// SymbolSource supplies the drawable symbol for each component node in an auto-layout. The layout
+// does not change, and the source decides what gets drawn at each node. The Registry (classified
+// synthetic glyphs, WS7-030) is one implementation and FaithfulSource (the design's own symbol
+// artwork, WS7-031) is another. Symbol is called once per placed component. The returned
+// SymbolDef's CellRef keys the placement to the shipped symbol library, so a source must return a
+// stable CellRef per distinct symbol. c may be nil when a placed ref has no matching component.
 type SymbolSource interface {
 	Symbol(ref string, c *ir.Component, parts map[string]*ir.PartType) *geom.SymbolDef
 }
@@ -80,8 +80,8 @@ func (f *FaithfulSource) Covers() int {
 type nodeSize struct{ w, h int64 }
 
 // symbolSize is a symbol's width and height in its own units, from its bounding box when set, else
-// from its shape and pin points. The zero size means the symbol has no geometry. It is what the
-// size-aware layout (compactBySize) spaces nodes by, so a small part gets a small cell and only a
+// from its shape and pin points. The zero size means the symbol has no geometry. The size-aware
+// layout (compactBySize) spaces nodes by this size, so a small part gets a small cell and only a
 // large symbol expands its column/row.
 func symbolSize(s *geom.SymbolDef) nodeSize {
 	if b := s.GetBbox(); b.GetMin() != nil && b.GetMax() != nil {

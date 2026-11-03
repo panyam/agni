@@ -25,7 +25,7 @@ func readFixture(t *testing.T, name string) *checkspb.CheckResults {
 }
 
 // TestImportedDocumentDeclaresItsWeakness is the assertion that matters most in this package. An
-// imported document and a clean native run both look like "few findings"; nothing in the data
+// imported document and a clean native run both look like "few findings". Nothing in the data
 // distinguishes them. So the weaker artifact has to SAY it is weaker, or a consumer will eventually
 // read a vendor report's silence as a pass.
 func TestImportedDocumentDeclaresItsWeakness(t *testing.T) {
@@ -43,8 +43,8 @@ func TestImportedDocumentDeclaresItsWeakness(t *testing.T) {
 	}
 }
 
-// TestReadKiCadDRC pins the DRC path: the producer, the version, and namespaced rule names carrying
-// the vendor's own vocabulary verbatim.
+// TestReadKiCadDRC pins the DRC path. It checks the producer, the version, and namespaced rule names
+// that keep the vendor's own vocabulary verbatim.
 func TestReadKiCadDRC(t *testing.T) {
 	doc := readFixture(t, "drc.json")
 	if got := doc.GetMeta().GetProducer(); got != ProducerKiCadDRC {
@@ -86,8 +86,8 @@ func TestReadKiCadERC(t *testing.T) {
 }
 
 // TestOneFindingPerItem pins that a violation naming two items yields two findings. A clearance
-// violation names both things that are too close together, and both are genuinely implicated;
-// collapsing to one would silently pick a side.
+// violation names both things that are too close together, and both are genuinely implicated.
+// Collapsing to one would silently pick a side.
 func TestOneFindingPerItem(t *testing.T) {
 	doc := readFixture(t, "drc.json")
 	var multi int
@@ -116,7 +116,7 @@ func TestOneFindingPerItem(t *testing.T) {
 	}
 }
 
-// TestSeverityMapping pins that KiCad's levels land inside our vocabulary. "exclusion" is the
+// TestSeverityMapping pins that KiCad's levels map into our vocabulary. "exclusion" is the
 // interesting one. It is a violation the user acknowledged, and passing it through verbatim would sort
 // it ABOVE error, because SeverityRank ranks an unrecognized level highest.
 func TestSeverityMapping(t *testing.T) {
@@ -135,7 +135,8 @@ func TestSeverityMapping(t *testing.T) {
 }
 
 // TestUnrecognizedReportIsAnError pins that a file we cannot classify fails loudly. Importing it as an
-// empty document would report zero findings, which reads exactly like a design the tool was happy with.
+// empty document would report zero findings. Zero findings read exactly like a design the tool was
+// happy with.
 func TestUnrecognizedReportIsAnError(t *testing.T) {
 	for _, body := range []string{`{}`, `{"hello": "world"}`, `{"$schema": "https://example.com/other.v1.json"}`} {
 		if _, err := ReadKiCad(strings.NewReader(body), time.Now()); err == nil {

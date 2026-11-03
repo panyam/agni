@@ -28,8 +28,8 @@ func TestForceDeterministic(t *testing.T) {
 	}
 }
 
-// TestForceSeparatesAndClusters checks two things. On a path, adjacent components must land nearer
-// each other than the path's endpoints land to each other (attraction worked), and no two nodes may
+// TestForceSeparatesAndClusters checks two things. On a path, adjacent components must be placed
+// nearer each other than the path's two endpoints are (attraction worked), and no two nodes may
 // share a cell (repulsion + snap worked).
 func TestForceSeparatesAndClusters(t *testing.T) {
 	s, _ := ByName("force")
@@ -51,8 +51,8 @@ func TestForceSeparatesAndClusters(t *testing.T) {
 }
 
 // TestForceHyperedgeStar checks that a 5-member net pulls all members toward a shared hub without
-// collapsing them (the virtual-node model); every member is placed, distinct, and no member
-// is stranded far away (its distance to the net's centroid is bounded by the layout extent).
+// collapsing them (the virtual-node model). Every member is placed and distinct. No member is
+// stranded far away, since the layout extent bounds its distance to the net's centroid.
 func TestForceHyperedgeStar(t *testing.T) {
 	d := &ir.Design{Name: "star"}
 	net := &ir.Net{Name: "BUS"}

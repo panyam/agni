@@ -5,10 +5,10 @@ import (
 	"strings"
 )
 
-// Aggregate is a multi-design review rollup: the same manifest run against N designs, one Report each.
-// Automation is MANIFEST-level, since the catalog is design-independent, so summing per-design tallies
-// would multiply the automated/not-automated counts by N. Pass/fail/n-a is PER DESIGN. A renderer
-// states automation once and the outcome per design.
+// Aggregate is a multi-design review rollup. One manifest runs against N designs and gives one Report
+// each. The catalog does not depend on the design, so automation is decided per MANIFEST. Summing the
+// per-design tallies would multiply the automated and not-automated counts by N. Pass, fail and n/a
+// are decided PER DESIGN. A renderer states automation once and the outcome once per design.
 type Aggregate struct {
 	Manifest string
 	Reports  []Report // one per design, in the order the designs were given (= column order)
@@ -23,8 +23,8 @@ func (a Aggregate) designs() []string {
 	return out
 }
 
-// outcomeByID indexes each design's item outcomes by item ID (all reports share the manifest's item
-// set, so this is how the matrix looks up one item's outcome per design).
+// outcomeByID indexes each design's item outcomes by item ID. All reports share the manifest's item
+// set, so the matrix uses these maps to look up one item's outcome per design.
 func (a Aggregate) outcomeByID() []map[string]Outcome {
 	ms := make([]map[string]Outcome, len(a.Reports))
 	for i, r := range a.Reports {
@@ -40,8 +40,8 @@ func (a Aggregate) outcomeByID() []map[string]Outcome {
 }
 
 // writeAggregateSummary writes the manifest-level automation header and the per-design Pass/Fail/N-A
-// table (with a project total of just those per-design cells). Shared by the coverage and full markdown
-// renderers.
+// table. The table's project total sums only the per-design cells. The coverage and full markdown
+// renderers both call it.
 func writeAggregateSummary(b *strings.Builder, a Aggregate) {
 	fmt.Fprintf(b, "# Review rollup: %s\n\n", a.Manifest)
 	fmt.Fprintf(b, "%d designs.\n\n", len(a.Reports))
@@ -70,18 +70,19 @@ func writeAggregateSummary(b *strings.Builder, a Aggregate) {
 		tot.Answered(), tot.Total, tot.Pass, tot.Fail, tot.Provisional, tot.NeedsDesignIntent, tot.NeedsData, tot.ComputedNA, tot.NotApplicable)
 }
 
-// RenderAggregateCoverageMarkdown is the multi-design analogue of RenderCoverageMarkdown: the automation
-// header plus the per-design outcome summary, without the per-item matrix. It backs `review <designs...>
-// --coverage`.
+// RenderAggregateCoverageMarkdown is the multi-design analogue of RenderCoverageMarkdown. It writes the
+// automation header and the per-design outcome summary, and leaves out the per-item matrix.
+// `review <designs...> --coverage` calls it.
 func RenderAggregateCoverageMarkdown(a Aggregate) string {
 	var b strings.Builder
 	writeAggregateSummary(&b, a)
 	return b.String()
 }
 
-// RenderAggregateMarkdown is the full project rollup: the summary above, then a per-item traceability
-// matrix (rows = checklist items grouped by review area, columns = designs, cells = the item's outcome
-// on that design), so each ask reads across every reference design.
+// RenderAggregateMarkdown is the full project rollup. It writes the summary above, then a per-item
+// traceability matrix. The matrix has a row per checklist item, grouped by review area, and a column
+// per design. Each cell holds the item's outcome on that design, so each ask reads across every
+// reference design.
 func RenderAggregateMarkdown(a Aggregate) string {
 	var b strings.Builder
 	writeAggregateSummary(&b, a)

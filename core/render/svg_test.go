@@ -62,9 +62,9 @@ func textY(elem string) float64 {
 	return v
 }
 
-// TestSheetSVG_MultiLineLabel checks that a label carrying newlines (EDIF %10% decodes to '\n', e.g. a
-// table-of-contents sheet list) is drawn as one stacked <text> per line, not a single overlapping
-// run. Guards the multi-line path in drawText.
+// TestSheetSVG_MultiLineLabel checks that a label with newlines is drawn as one stacked <text> per
+// line, not a single overlapping run. EDIF %10% decodes to '\n', as in a table-of-contents sheet
+// list. Guards the multi-line path in drawText.
 func TestSheetSVG_MultiLineLabel(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Sheets: []*geom.SheetGeometry{{
@@ -85,9 +85,9 @@ func TestSheetSVG_MultiLineLabel(t *testing.T) {
 	}
 }
 
-// TestReadableText pins the readable-text rule: text whose angle would read upside down
-// (normalized magnitude > 90) is turned a further 180 and its justify flipped on both axes,
-// while upright and vertical (+/-90) text is left untouched so KiCad-90 parity is preserved.
+// TestReadableText pins the readable-text rule. Text at a normalized angle magnitude over 90
+// would read upside down, so it is turned a further 180 and its justify flipped on both axes.
+// Upright and vertical (+/-90) text is left untouched, which preserves KiCad-90 parity.
 func TestReadableText(t *testing.T) {
 	cases := []struct {
 		name       string
@@ -115,10 +115,10 @@ func TestReadableText(t *testing.T) {
 	}
 }
 
-// TestSheetSVG_UprightText is the regression guard for the upside-down text bug seen on a
-// real-corpus headers sheet: a symbol placed at R180 (or text with its own R180 orientation)
-// was drawn genuinely upside down instead of flipped upright the way every EDA viewer draws
-// it. The render layer enforces that no text run ever carries a rotate(180 ...).
+// TestSheetSVG_UprightText is the regression guard for an upside-down text bug seen on a
+// real-corpus headers sheet. A symbol placed at R180, or text with its own R180 orientation, was
+// drawn genuinely upside down. Every EDA viewer flips such text upright instead. The render layer
+// enforces that no text run ever carries a rotate(180 ...).
 func TestSheetSVG_UprightText(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Symbols: []*geom.SymbolDef{{
@@ -147,7 +147,7 @@ func TestSheetSVG_UprightText(t *testing.T) {
 		t.Errorf("SVG has upside-down text (rotate(180 ...)):\n%s", out)
 	}
 	// The R180 field's justify must flip so the run still hangs off the same corner. A left
-	// justify becomes a right (text-anchor=end) rather than staying left.
+	// justify becomes a right (text-anchor=end) rather than remaining left.
 	if el := textElem(out, "X4"); el == "" {
 		t.Fatal("X4 ref-des text element not found")
 	} else if !strings.Contains(el, `text-anchor="end"`) {
@@ -173,7 +173,7 @@ func TestSheetSVG_AnnotationCondensed(t *testing.T) {
 			},
 		}},
 		// A large sheet so the ~1270-wide symbol box is a small fraction of it (as on a real
-		// sheet), giving the box a small pixel width the long caption overflows.
+		// sheet). The box then has a small pixel width, and the long caption overflows it.
 		Sheets: []*geom.SheetGeometry{{
 			Size: &geom.BBox{Min: &geom.Point{}, Max: &geom.Point{X: 84000, Y: 50000}},
 			Placements: []*geom.SymbolPlacement{{
@@ -196,7 +196,7 @@ func TestSheetSVG_AnnotationCondensed(t *testing.T) {
 	}
 }
 
-// TestSheetSVG_PinNameAndRotation covers two KiCad-faithfulness fixes: the pin NAME renders
+// TestSheetSVG_PinNameAndRotation covers two KiCad-faithfulness fixes. The pin NAME renders
 // (distinct from the number, WS7-023), and a placement's rotation propagates to its field and
 // pin text (WS7-024). A symbol placed at geom rotation 270 (KiCad 90) must draw its text with
 // rotate(-90 ...), matching kicad-cli; a placement at rotation 0 must draw text with no
@@ -274,9 +274,9 @@ func TestSheetSVG_Worksheet(t *testing.T) {
 	}
 }
 
-// TestSheetSVG_PinDotsOptional covers WS7-017: the per-pin verification dot (the Pin color)
-// is omitted by default so a faithful render looks like Eeschema, is drawn under WithPinDots
-// for the eyeball check, and a real junction dot (a sheet Shape) draws in both modes.
+// TestSheetSVG_PinDotsOptional covers WS7-017. The per-pin verification dot, in the Pin color,
+// is omitted by default so a faithful render looks like Eeschema. WithPinDots draws it for the
+// eyeball check. A real junction dot, a sheet Shape, draws in both modes.
 func TestSheetSVG_PinDotsOptional(t *testing.T) {
 	pinFill := `fill="` + DefaultStyle.Pin + `"`
 	g := &geom.SchematicGeometry{
@@ -311,10 +311,10 @@ func TestSheetSVG_PinDotsOptional(t *testing.T) {
 	}
 }
 
-// TestSheetSVG_TitleBlockGrid covers WS7-021: the title block renders KiCad's fixed cell grid
-// (Title / Size / Date / Rev / Company / Sheet / comments / Id), values filled from TitleBlock,
-// the Size cell derived from the A4 page, Id showing this sheet's n-of-m, empty cells still
-// drawing their label, and comments stacking highest-index first.
+// TestSheetSVG_TitleBlockGrid covers WS7-021. The title block renders KiCad's fixed cell grid
+// (Title / Size / Date / Rev / Company / Sheet / comments / Id) with values filled from
+// TitleBlock. The Size cell is derived from the A4 page, Id shows this sheet's n-of-m, empty
+// cells still draw their label, and comments stack highest-index first.
 func TestSheetSVG_TitleBlockGrid(t *testing.T) {
 	a4 := &geom.BBox{Min: &geom.Point{}, Max: &geom.Point{X: 297, Y: 210}}
 	g := &geom.SchematicGeometry{
@@ -387,7 +387,7 @@ func TestLabelFontHonorsSourceHeight(t *testing.T) {
 // first line. A tool that bottom-anchors its notes places the NEXT note relative to that same
 // bottom, so a block that grows downward from a bottom anchor runs onto whatever sits below it. One
 // export puts a 3-line note and the note under it exactly 2 line pitches apart, and stacking the
-// first downward landed its last line on the second note's anchor to the unit.
+// first downward put its last line on the second note's anchor to the unit.
 func TestBlockTopFollowsJustify(t *testing.T) {
 	const y, step, lines = 100.0, 10.0, 3
 	span := float64(lines-1) * step // 20
@@ -435,10 +435,10 @@ func TestSheetSVG_BottomAnchoredNotesDoNotCollide(t *testing.T) {
 	if !(yA < yC) {
 		t.Errorf("lines must still read top-to-bottom: A=%g C=%g", yA, yC)
 	}
-	// The property under test, stated exactly rather than as a gap heuristic, is that the block is
-	// bottom-anchored, so its LAST line lands on the anchor. ANCHOR is a single-line note sharing
+	// This states the property under test exactly, rather than as a gap heuristic. The block is
+	// bottom-anchored, so its LAST line sits on the anchor. ANCHOR is a single-line note sharing
 	// that same origin y, so the two must render at the same y. Growing the block downward instead
-	// puts line A there and pushes C two pitches past it, which is what collided with NOTE TWO.
+	// puts line A there and pushes C two pitches past it, and C then collided with NOTE TWO.
 	yAnchor := textY(textElem(out, "ANCHOR"))
 	if math.Abs(yC-yAnchor) > 0.05 {
 		t.Errorf("block last line y=%g, want %g (the anchor a single-line note at the same origin renders at); "+
@@ -452,6 +452,7 @@ func TestSheetSVG_BottomAnchoredNotesDoNotCollide(t *testing.T) {
 // A rendered sheet is its own pick index. Every element says what it belongs to, so a viewer
 // resolves a click by reading the DOM rather than joining a second representation (the packed tier)
 // to interpret its own picture. It also means a saved or embedded sheet keeps entity identity.
+//
 // keyFixture is one placement with one pin and one named wire, the three things a rendered element
 // can belong to.
 func keyFixture() (*geom.SchematicGeometry, *geom.SheetGeometry) {
@@ -510,9 +511,9 @@ func TestSheetSVGPickTargetsAddPins(t *testing.T) {
 }
 
 // A wire is a 0.8px stroke and a fill:none polyline hit-tests only ON its stroke, so a click has to
-// land within half a pixel of the line. Measured in a browser, a probe at the wire's own midpoint,
-// rounded to whole pixels, hits the page rect instead. The viewer's render therefore carries an
-// invisible wide companion whose only job is to be hit. A report's render does not carry one.
+// fall within half a pixel of the line. Measured in a browser, a probe at the wire's own midpoint,
+// rounded to whole pixels, hits the page rect instead. The viewer's render therefore includes an
+// invisible wide companion, and its only job is to be hit. A report's render has none.
 func TestPickTargetsAddWireHitCompanions(t *testing.T) {
 	g, sheet := keyFixture()
 
@@ -525,8 +526,7 @@ func TestPickTargetsAddWireHitCompanions(t *testing.T) {
 	if !strings.Contains(picky, `pointer-events="stroke"`) {
 		t.Fatal("no wire hit companion emitted")
 	}
-	// The companion carries the same identity as the wire it shadows, or a click on it resolves to
-	// nothing.
+	// The companion has the same identity as its wire, or a click on it resolves to nothing.
 	if strings.Count(picky, `data-net="SDA"`) < 2 {
 		t.Error("the hit companion does not carry the wire's net")
 	}
@@ -537,7 +537,7 @@ func TestPickTargetsAddWireHitCompanions(t *testing.T) {
 }
 
 // A design supplies these values, so a name carrying a quote must not be able to close the
-// attribute and inject markup into the document the viewer mounts with innerHTML.
+// attribute and inject markup into the document, which the viewer mounts with innerHTML.
 func TestSheetSVGEscapesEntityKeys(t *testing.T) {
 	g, sheet := keyFixture()
 	for _, w := range sheet.Wires {
@@ -561,9 +561,9 @@ func first(s string, n int) string {
 }
 
 // A ground or rail glyph is drawn like a part and is not one, since it NAMES the net at its pin.
-// Keying it as a component would offer a reader a part no consumer can join, so it is keyed as its
-// net. That makes the thing that names a rail clickable, and it was previously the one thing on a
-// sheet that was not.
+// Keying it as a component would offer a reader a part that no consumer can join, so it is keyed
+// as its net. The glyph that names a rail is then clickable. Before, it was the only element on a
+// sheet that a reader could not click.
 func TestSheetSVGKeysNetAnchorsAsNets(t *testing.T) {
 	g, sheet := keyFixture()
 	sheet.Placements = append(sheet.Placements, &geom.SymbolPlacement{
@@ -575,9 +575,9 @@ func TestSheetSVGKeysNetAnchorsAsNets(t *testing.T) {
 	if !strings.Contains(out, `data-net="DGND"`) {
 		t.Fatalf("the anchor's net is not keyed:\n%s", first(out, 600))
 	}
-	// An anchor's pin gets no pick target because it belongs to a symbol that is not a component,
-	// so the target would carry an empty ref and resolve to nothing, and what a reader means by
-	// clicking a ground glyph is its net.
+	// An anchor's pin gets no pick target, because it belongs to a symbol that is not a component.
+	// The target would carry an empty ref and resolve to nothing. A reader clicking a ground glyph
+	// means its net.
 	picky := SheetSVG(g, sheet, WithPickTargets())
 	if strings.Contains(picky, `data-kind="pin" data-ref=""`) {
 		t.Error("an anchor emitted a pin target with no identity")

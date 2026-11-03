@@ -2,8 +2,8 @@ package check
 
 import "sync"
 
-// Memoizer is a Model that can keep values derived from it, so work every rule would otherwise
-// repeat is done once per model. The model built by NewModel is one.
+// Memoizer is a Model that can keep values derived from it. A derivation that every rule would
+// otherwise repeat then runs once per model. The model built by NewModel is one.
 type Memoizer interface {
 	Memo(key any, build func() any) any
 }
@@ -11,11 +11,11 @@ type Memoizer interface {
 // Memo returns the value cached on m under key, building it with build the first time it is asked
 // for. A model that is not a Memoizer builds every time, which is correct and only slower.
 //
-// It exists for derived structures several rules read whole, such as the datalog fact base every
-// query-backed rule evaluates over (agni issue 810): rebuilding it per rule was most of a check's
-// time on a large board. A value cached here must be a pure function of the model and the key, and
-// must not be mutated by whoever reads it, because every later caller gets the same one. key should
-// be a value of a type private to the caller's package, so two packages cannot collide.
+// It exists for derived structures that several rules read whole. One is the datalog fact base,
+// which every query-backed rule evaluates over (agni issue 810). Rebuilding it per rule was most of
+// a check's time on a large board. A value cached here must be a pure function of the model and the
+// key, and must not be mutated by whoever reads it, because every later caller gets the same one.
+// key should be a value of a type private to the caller's package, so two packages cannot collide.
 func Memo(m Model, key any, build func() any) any {
 	if mz, ok := m.(Memoizer); ok {
 		return mz.Memo(key, build)

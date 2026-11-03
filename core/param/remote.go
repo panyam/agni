@@ -10,32 +10,32 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Fetcher is a published PartSpec corpus reached over some transport, the shape of the contract's
-// PartSpecService (agni issue 749). It is declared here, transport-neutral, so the caching below is
-// the engine's and a Connect or in-process implementation is only an adapter.
+// Fetcher is a published PartSpec corpus reached over some transport, in the shape of the contract's
+// PartSpecService (agni issue 749). It is declared here and is transport-neutral. So the engine owns
+// the caching below, and a Connect or in-process implementation is only an adapter.
 type Fetcher interface {
-	// BatchGet returns the current spec for each MPN that has one, and the corpus generation the
-	// answer was read at. An MPN with no spec is absent, not an error.
+	// BatchGet returns the current spec for each MPN that has one. It also returns the corpus
+	// generation it read the answer at. An MPN with no spec is absent, not an error.
 	BatchGet(ctx context.Context, mpns []string) ([]*parampb.PartSpec, uint64, error)
 	// Generation returns the corpus generation alone.
 	Generation(ctx context.Context) (uint64, error)
 }
 
-// Prefetcher is a ParamProvider that has to fetch before it can answer. Lookup returns no error, so a
-// provider that reaches its corpus over a network could only turn an unreachable service into a nil,
-// which reads as "this part is not seeded" and makes every datasheet rule skip it silently, the very
-// shrink LoadSet's all-or-nothing rule exists to prevent. Whoever builds a model calls Prefetch with
-// every MPN the design names, where a context and an error exist, and Lookup then answers from what
-// was fetched.
+// Prefetcher is a ParamProvider that has to fetch before it can answer. Imagine a provider that
+// reaches its corpus over a network, and the service is unreachable. Lookup returns no error, so the
+// provider could only return nil. A nil reads as "this part is not seeded", and every datasheet rule
+// skips the part silently. LoadSet's all-or-nothing rule exists to prevent that shrink. So whoever
+// builds a model calls Prefetch with every MPN the design names, where a context and an error exist.
+// Lookup then answers from what was fetched.
 type Prefetcher interface {
 	ParamProvider
 	Prefetch(ctx context.Context, mpns []string) error
 }
 
-// Remote is a caching Prefetcher over a Fetcher. It keeps every spec it has fetched, and every MPN it
-// learned has none, for as long as the corpus generation holds. It checks the generation at most once
-// per maxAge, and a generation that moved empties the cache, so a spec published while a server runs
-// reaches the next request without a restart.
+// Remote is a caching Prefetcher over a Fetcher. It keeps every spec it has fetched. It also keeps
+// every MPN that it learned has no spec. Both are kept until the corpus generation changes. It checks
+// the generation at most once per maxAge, and a generation that moved empties the cache. So a spec
+// published while a server runs reaches the next request without a restart.
 type Remote struct {
 	fetch  Fetcher
 	maxAge time.Duration

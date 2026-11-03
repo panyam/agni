@@ -2,14 +2,14 @@ package review
 
 import "testing"
 
-// TestTallyAnsweredTiers pins which tier every outcome in the vocabulary lands in, because that
-// assignment is the whole content of the Answered axis and it is not derivable from the outcome names.
+// TestTallyAnsweredTiers pins the tier of every outcome in the vocabulary. That assignment is the
+// whole content of the Answered axis, and the outcome names do not determine it.
 //
-// The pair that matters most is NotApplicable and ComputedNA. Both read as "this item does not apply",
-// and they are opposite answers. ComputedNA is the DESIGN determining the item is irrelevant (no
-// crystal on the board), which is an answer; NotApplicable is the rule's inputs being absent (the
-// datasheet corpus moved), which is the question going unasked. Covered() cannot tell them apart, and
-// the second is the regression this axis exists to catch.
+// NotApplicable and ComputedNA matter most. Both read as "this item does not apply", and they are
+// opposite answers. ComputedNA means the DESIGN determined the item is irrelevant, as when no crystal
+// is on the board. That is an answer. NotApplicable means the rule's inputs are absent, as when the
+// datasheet corpus moved. That is the question going unasked. Covered() cannot tell them apart, and
+// this axis exists to catch the second as a regression.
 func TestTallyAnsweredTiers(t *testing.T) {
 	for _, tc := range []struct {
 		outcome  Outcome
@@ -37,11 +37,11 @@ func TestTallyAnsweredTiers(t *testing.T) {
 	}
 }
 
-// TestAnsweredDivergesFromCovered is the acceptance case for the axis, a checklist whose answered count
-// drops while covered and fail both stay put.
+// TestAnsweredDivergesFromCovered is the acceptance case for the axis. A checklist's answered count
+// drops, and its covered and fail counts do not change.
 //
-// This is the shape `check --fail-on` structurally cannot see. Nothing failed, nothing left the
-// catalog, and one fewer question got answered.
+// `check --fail-on` structurally cannot see this shape. Nothing failed, nothing left the catalog, and
+// one fewer question got answered.
 func TestAnsweredDivergesFromCovered(t *testing.T) {
 	report := func(second Outcome) Report {
 		return Report{Manifest: "M", Design: "d", Areas: []AreaResult{{

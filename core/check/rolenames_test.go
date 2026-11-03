@@ -89,8 +89,8 @@ func TestSetActiveRoleVocab(t *testing.T) {
 	}
 }
 
-// NetRoleSource answers how we know a role, which NetHasRole does not. It is the
-// hook a consumer needs to weigh a role rather than just read it.
+// NetRoleSource answers how we know a role, and NetHasRole does not. A consumer
+// needs this hook to weigh a role rather than just read it.
 func TestNetRoleSourceReportsTheEvidence(t *testing.T) {
 	declared := &ir.Net{Name: "N$17", Roles: []*ir.NetRole{
 		{RoleKind: ir.Role_ROLE_GROUND, Source: ir.RoleSource_ROLE_SOURCE_DECLARED},
@@ -108,7 +108,7 @@ func TestNetRoleSourceReportsTheEvidence(t *testing.T) {
 
 // The name-fallback path (an IR built without the ingestion pass) reports CONVENTION, because the
 // fallback is a naming convention read at the point of use instead of at ingestion. Reporting
-// UNSPECIFIED there would hide that the answer rests on a name.
+// UNSPECIFIED there would hide that the answer comes from a name.
 func TestNetRoleSourceOnTheNameFallbackIsConvention(t *testing.T) {
 	unstamped := &ir.Net{Name: "GND"}
 	src, ok := NetRoleSource(unstamped, ir.Role_ROLE_GROUND, func(n string) bool { return n == "GND" })

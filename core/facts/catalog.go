@@ -2,8 +2,8 @@ package facts
 
 // RelationInfo describes one queryable relation or predicate for discovery surfaces such as the
 // web query panel's relation picker. It carries the name, the argument labels a template inserts
-// as `?arg`, a one-line summary, and a Kind for grouping. It is metadata only, and the schema
-// (layout) and the projectors (rows) stay authoritative.
+// as `?arg`, a one-line summary, and a Kind for grouping. It is metadata only. The schema (layout)
+// and the projectors (rows) remain authoritative.
 type RelationInfo struct {
 	Name    string
 	Args    []string
@@ -16,8 +16,8 @@ type RelationInfo struct {
 	// ArgKinds declares what an argument DENOTES, keyed by its label in Args. Present only for the
 	// arguments that name something a reader can act on; absent means a scalar, which is most of them.
 	//
-	// Args is PROSE, so a surface turning an answer cell into a clickable entity reads this rather
-	// than matching label strings (agni issue 548).
+	// Args is PROSE. When a surface turns an answer cell into a clickable entity, it reads ArgKinds
+	// rather than matching label strings (agni issue 548).
 	ArgKinds map[string]ArgKind
 	// Definition is a derived relation's clauses as its module's language prints them, one per
 	// clause, so a reader can see how the member is defined. Empty for every other kind.
@@ -55,7 +55,7 @@ type ArgKind struct {
 	// Strings rather than a typed enum because this package imports nothing. A registration site
 	// computes the list from whatever generated enum owns the vocabulary, so it cannot drift.
 	ValidOptions []string
-	// Unit is the base unit every number in a numeric argument is in ("V", "mm"), for a relation whose
+	// Unit is the base unit of every number in a numeric argument ("V", "mm"), for a relation whose
 	// rows all share one. The engine refuses an ordering comparison between two arguments declaring
 	// different units (volts against millimetres) rather than answering nothing. Leave it empty where
 	// rows vary, as a datasheet parameter's do, since the engine then reads each value's own unit.

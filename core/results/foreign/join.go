@@ -9,9 +9,10 @@ import (
 
 // Join attaches each imported finding to an entity in the model, and reports what it could not attach.
 //
-// The join is by NAME (the ref_des, pin, and net a foreign checker printed into its item description),
-// since that is the only identity the two tools share. KiCad's uuids stay as provenance, but they name
-// board and schematic OBJECTS (a track, a pad), which our netlist model has nothing to join to.
+// The join is by NAME, since a name is the only identity the two tools share. The names are the
+// ref_des, pin and net that a foreign checker printed into its item description. KiCad's uuids remain
+// as provenance, but they name board and schematic OBJECTS (a track, a pad), and our netlist model has
+// nothing to join those to.
 //
 // A finding joins only to an entity the model HAS, because a wrong join pins a real violation on an
 // innocent part. An unjoined finding is KEPT and counted in the summary, never dropped. See
@@ -39,9 +40,9 @@ func Join(m check.Model, doc *checkspb.CheckResults) {
 }
 
 // notInDesign is the residue class that matters most. The import UNDERSTOOD the description and the
-// entity is not in the model we loaded, which usually means the report ran against a different
-// revision, or against the board while we read the schematic. Kept distinct from "we did not
-// recognize the shape".
+// entity is not in the model we loaded. Usually the report ran against a different revision, or
+// against the board while we read the schematic. It is kept distinct from "we did not recognize the
+// shape".
 const notInDesign = "an entity the description names but the loaded design does not contain"
 
 // itemDescription recovers the per-item half of a finding message. findings() joins the violation
@@ -55,8 +56,8 @@ func itemDescription(msg string) string {
 	return msg[i+len(" — "):]
 }
 
-// subjectKind reports whether a parsed reference names a pin of a component or the component itself,
-// which is what decides how a consumer highlights it.
+// subjectKind reports whether a parsed reference names a pin of a component or the component itself.
+// The kind decides how a consumer highlights it.
 func subjectKind(r itemRef) string {
 	if r.Pin != "" {
 		return check.KindPin

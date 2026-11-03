@@ -76,7 +76,7 @@ func (i ChecklistItem) Failed() bool { return i.Outcome != "pass" }
 
 // ChecklistHTML writes the checklist as one self-contained page.
 //
-// html/template for the reason HTML gives, since titles, subjects and messages come from design files
+// It uses html/template, as HTML does, because titles, subjects and messages come from design files
 // the engine did not author.
 func ChecklistHTML(w io.Writer, c Checklist) error {
 	t, err := parse("checklist.html.tmpl")

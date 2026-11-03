@@ -35,8 +35,8 @@ func TestWorkListRanksByHowMuchAFactUnblocks(t *testing.T) {
 	}
 }
 
-// One part seeded once unblocks every design that places it; asking a person to find the same fact
-// per design is how a work list gets ignored.
+// One part seeded once unblocks every design that places it. A work list that asks a person to find
+// the same fact once per design gets ignored.
 func TestWorkListMergesAcrossDesigns(t *testing.T) {
 	a := wlReport("board-a", blockedItem("1", check.UnmetDependency{MPN: "ACME-1", Symbol: "IOUT"}))
 	b := wlReport("board-b", blockedItem("9", check.UnmetDependency{MPN: "ACME-1", Symbol: "IOUT"}))
@@ -90,7 +90,7 @@ func TestRenderNamesTheNextStep(t *testing.T) {
 	}
 }
 
-// Stability: the same report yields the same list, so a work list can be diffed between runs to see
+// The same report yields the same list, so a work list can be diffed between runs to see
 // what seeding actually cleared.
 func TestWorkListIsStable(t *testing.T) {
 	r := wlReport("d",

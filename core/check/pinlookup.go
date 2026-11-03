@@ -6,15 +6,15 @@ import (
 	"github.com/panyam/agni/core/ident"
 )
 
-// PinLookupKind is what a pin lookup found. The five stay apart because each sends a reader
-// somewhere different: a device the design lacks, a device the read gave no pins for, a spelling
-// no pin answers to, and one that several pins answer to.
+// PinLookupKind is what a pin lookup found. The five kinds are kept apart because each sends a
+// reader somewhere different. The design may lack the device, or the read may have given the
+// device no pins. No pin may answer to the spelling, or several pins may.
 type PinLookupKind string
 
 const (
 	// PinFound means exactly one pin answers to the spelling.
 	PinFound PinLookupKind = "found"
-	// PinAmbiguous means several pins answer to it, as a name a part prints on four GND pins does.
+	// PinAmbiguous means several pins answer to it, as GND does when a part prints it on four pins.
 	PinAmbiguous PinLookupKind = "ambiguous"
 	// PinUnknown means the part has pins and none answers to the spelling.
 	PinUnknown PinLookupKind = "unknown"
@@ -41,8 +41,8 @@ type PinLookup struct {
 // an invisible character pasted from a spreadsheet reach the same pin. The designator wins when a
 // pin matches both ways, since it is the netlist's own key.
 //
-// It is the one implementation of that question, read by the IO-map rules and by trace, so a pin a
-// map can name is a pin a trace can start from.
+// It is the one implementation of that question. The IO-map rules and trace both read it, so any
+// pin a map can name is a pin a trace can start from.
 func LookupPin(m Model, refDes, spelled string) PinLookup {
 	if !m.HasComponent(refDes) {
 		return PinLookup{Kind: PinNoComponent}

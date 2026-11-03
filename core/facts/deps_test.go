@@ -33,8 +33,8 @@ func isEngine(dep string) bool { return dep == queryEngine || dep == datalogEngi
 // compiles, passes, and silently re-couples the layer. C29 carried a `go list` command for this, which
 // went stale within three PRs of being written because nothing ran it.
 //
-// The shape is core/model/deps_test.go's, for the same reason. A contract that a consumer must be able
-// to depend on without dragging an implementation is only a contract while something checks.
+// The shape is core/model/deps_test.go's, for the same reason. A consumer must be able to depend on a
+// contract without dragging in an implementation, and the contract holds only while something checks.
 func TestCoreNamesNoQueryEngine(t *testing.T) {
 	for _, pkg := range corePackages(t) {
 		if pkg == queryEngine {
@@ -60,9 +60,10 @@ func TestQueryEngineReachesTheDatalogEngine(t *testing.T) {
 	t.Errorf("%s does not depend on %s; the engine paths these sweeps look for are stale", queryEngine, datalogEngine)
 }
 
-// TestTheVocabularyIsNoEngine is why C29 can admit jaala/ns. The fact layer imports it, so if it ever
-// imported the evaluator, every package under core/ would reach one through the fact layer and the
-// sweep above would report them all at once, naming the wrong culprit. This names the right one.
+// TestTheVocabularyIsNoEngine holds jaala/ns to no evaluator, so C29 can admit it. The fact layer
+// imports ns. Suppose ns ever imported the evaluator. Every package under core/ would then reach one
+// through the fact layer, and the sweep above would report them all at once, naming the wrong
+// culprit. This test names the right one.
 func TestTheVocabularyIsNoEngine(t *testing.T) {
 	for _, pkg := range []string{vocabulary, standardVocabulary} {
 		for _, dep := range deps(t, pkg) {

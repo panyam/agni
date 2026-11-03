@@ -14,8 +14,8 @@ import (
 // makes "the union of every entity's view is the whole report" true by construction. See
 // docsite/content/architecture/web-picking.md#what-is-already-known-about-a-selection.
 //
-// A set is the primitive and the one-entity call is a wrapper, because the useful selections (a
-// sheet, a netclass, a diff's changed entities) are sets already.
+// The useful selections are sets already, such as a sheet, a netclass, or a diff's changed entities.
+// So a set is the primitive, and the one-entity call is a wrapper.
 
 // Subject identifies one entity a finding can be about, using the same (Kind, Subject) pair
 // check.Finding carries.
@@ -41,9 +41,9 @@ func (s Subject) matches(f check.Finding) bool {
 // EntityView is what one report says about one entity, meaning the items that examined it and what
 // became of them.
 //
-// It carries ITEMS rather than bare findings because "this item could not run at all" is also an
-// answer about the entity and has no findings. A findings-only view would collapse a clean entity
-// and one nothing examined into the same state.
+// It holds ITEMS rather than bare findings. "This item could not run at all" is also an answer about
+// the entity, and it has no findings. A findings-only view would collapse a clean entity and an
+// entity that nothing examined into the same state.
 type EntityView struct {
 	Subject Subject
 	// Items that produced a finding about this subject, each carrying ONLY that subject's findings.
@@ -69,8 +69,8 @@ func blockedOutcome(o Outcome) bool {
 
 // ForSubjects projects a report onto a set of entities, one view per subject in order.
 //
-// An entity no item mentions yields an empty EntityView rather than being omitted, because "nothing
-// examined this" is an answer and silence must never read as coverage.
+// If no item mentions an entity, the entity still gets an empty EntityView rather than being
+// omitted. "Nothing examined this" is an answer, and silence must never read as coverage.
 //
 // Blocked items are attached to EVERY requested subject. A needs-data item did not evaluate, so it
 // has no subject, and it could not answer for any entity including this one.
@@ -109,7 +109,7 @@ func ForSubjects(r Report, subs []Subject) []EntityView {
 }
 
 // ForSubject is the one-entity case of ForSubjects. It always returns a view, even for an entity
-// nothing examined.
+// that nothing examined.
 func ForSubject(r Report, s Subject) EntityView {
 	return ForSubjects(r, []Subject{s})[0]
 }
@@ -140,8 +140,8 @@ func dedupeUnmet(items []ItemResult) []check.UnmetDependency {
 
 // SubjectsOf enumerates every entity the report has a finding about, sorted by kind, ref and pin.
 //
-// This is NOT the set of entities on the design, since an entity no rule examined appears nowhere
-// here. That is why an entity view cannot substitute for a review pass.
+// This is NOT the set of entities on the design. If no rule examined an entity, the entity appears
+// nowhere here. So an entity view cannot substitute for a review pass.
 func SubjectsOf(r Report) []Subject {
 	seen := map[Subject]bool{}
 	var out []Subject

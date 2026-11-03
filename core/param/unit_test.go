@@ -13,7 +13,7 @@ import (
 func ptr(v float64) *float64 { return &v }
 
 // row builds a minimal comparable parameter in the given unit. Condition coverage is UNCONDITIONAL so
-// the row is not under-specified, which keeps these tests about units and nothing else.
+// the row is not under-specified, and these tests are about units and nothing else.
 func row(unit string, min, typ, max *float64) *parampb.Parameter {
 	return &parampb.Parameter{
 		Symbol:            "X",
@@ -62,9 +62,9 @@ func TestBaseUnitReducesPrintedSpellings(t *testing.T) {
 }
 
 // TestBaseUnitRefusesUnrecognized holds the closed vocabulary. Each of these could plausibly be
-// "helpfully" resolved, and each would resolve to a guess: an empty unit is not evidence the number is
-// in the unit a caller wants, uppercase K is kelvin rather than kilo, a millidegree is a typo rather
-// than a temperature, and a compound or vendor unit has no single scale at all.
+// "helpfully" resolved, and each would resolve to a guess. An empty unit is not evidence the number
+// is in the unit a caller wants. Uppercase K is kelvin rather than kilo. A millidegree is a typo
+// rather than a temperature. A compound or vendor unit has no single scale at all.
 func TestBaseUnitRefusesUnrecognized(t *testing.T) {
 	for _, printed := range []string{"", " ", "V ", "dBm", "A/µs", "KV", "mC", "K", "uV", "MV/m", "Vpp"} {
 		if base, exp, ok := BaseUnit(printed); ok {
@@ -73,10 +73,9 @@ func TestBaseUnitRefusesUnrecognized(t *testing.T) {
 	}
 }
 
-// TestBaseUnitCaseIsNormative is the test that earns the case-sensitive table. The milli/mega pair is
-// the one spelling collision in SI that a datasheet actually prints on both sides, and resolving it by
-// guessing puts a number nine orders of magnitude out while looking exactly as authoritative as a
-// correct one.
+// TestBaseUnitCaseIsNormative justifies the case-sensitive table. Of the spelling collisions in SI, a
+// datasheet actually prints both sides of only the milli/mega pair. A guess at it puts a number nine
+// orders of magnitude out, and the wrong number looks exactly as authoritative as a correct one.
 func TestBaseUnitCaseIsNormative(t *testing.T) {
 	for _, tc := range []struct{ lower, upper string }{
 		{"mΩ", "MΩ"},
@@ -94,10 +93,10 @@ func TestBaseUnitCaseIsNormative(t *testing.T) {
 	}
 }
 
-// TestUnitScalesHasNoCollisions guards the generated table. Flattening a cross product silently
-// wins a duplicate key on whichever iteration lands last, so a base unit added later whose spelling
-// happens to be a prefixed form of another one would change an existing unit's scale rather than fail
-// to compile. Map iteration order means it would not even change it deterministically.
+// TestUnitScalesHasNoCollisions guards the generated table. When a cross product is flattened, the
+// last iteration to write a duplicate key silently wins. Say a base unit added later has a spelling
+// that happens to be a prefixed form of another unit. It would change an existing unit's scale rather
+// than fail to compile. Map iteration order means it would not even change it deterministically.
 func TestUnitScalesHasNoCollisions(t *testing.T) {
 	seen := map[string]unitScale{}
 	claim := func(spelling string, s unitScale) {
@@ -150,8 +149,8 @@ func TestInBaseUnitLeavesAbsentBoundsAbsent(t *testing.T) {
 	}
 }
 
-// TestInBaseUnitRespellingIsExact is the reason scalePow10 divides instead of multiplying by a
-// negative power of ten. A row transcribed as 50 mV and the same row transcribed as 0.05 V are the
+// TestInBaseUnitRespellingIsExact shows why scalePow10 divides instead of multiplying by a negative
+// power of ten. A row transcribed as 50 mV and the same row transcribed as 0.05 V are the
 // same datasheet row written twice, so they must produce the IDENTICAL double. 50 * 1e-3 does not,
 // because 1e-3 has no exact binary form and the result rounds twice. Rewriting the negative branch as
 // a multiplication fails this test.
@@ -180,8 +179,8 @@ func TestInBaseUnitRespellingIsExact(t *testing.T) {
 	}
 }
 
-// TestInBaseUnitReturnsBaseRowsUnchanged holds the no-allocation common path AND the pointer
-// identity a resolver relies on when it stores a returned row beside the spec it came from.
+// TestInBaseUnitReturnsBaseRowsUnchanged holds the no-allocation common path. It also holds the
+// pointer identity that a resolver relies on when it stores a returned row beside its spec.
 func TestInBaseUnitReturnsBaseRowsUnchanged(t *testing.T) {
 	for _, unit := range []string{"V", "A", UnitOhm, "C"} {
 		p := row(unit, nil, nil, ptr(3.3))
@@ -216,9 +215,9 @@ func TestInBaseUnitNormalizesOhmSpelling(t *testing.T) {
 	}
 }
 
-// TestInBaseUnitDoesNotMutateSource exists because one spec is shared across every rule in a run,
-// and the printed row is what a citation, the params panel and the `param` relations must keep
-// showing. A converting extractor that mutated in place would silently rewrite all three.
+// TestInBaseUnitDoesNotMutateSource exists because one spec is shared across every rule in a run. A
+// citation, the params panel and the `param` relations must keep showing the printed row. A
+// converting extractor that mutated in place would silently rewrite all three.
 func TestInBaseUnitDoesNotMutateSource(t *testing.T) {
 	p := row("mV", ptr(45), ptr(50), ptr(50))
 	before := proto.Clone(p).(*parampb.Parameter)
@@ -230,9 +229,9 @@ func TestInBaseUnitDoesNotMutateSource(t *testing.T) {
 	}
 }
 
-// TestInBaseUnitCarriesProvenance exists because the converted row is what a rule cites, so losing
-// prov would detach a finding from the document it came from, and losing conditions would let a row
-// that MachineComparable should reject read as comparable.
+// TestInBaseUnitCarriesProvenance exists because a rule cites the converted row. Losing prov would
+// detach a finding from the document it came from. Losing conditions would let a row that
+// MachineComparable should reject read as comparable.
 func TestInBaseUnitCarriesProvenance(t *testing.T) {
 	p := row("mA", nil, nil, ptr(500))
 	p.Name = "Output current"
@@ -259,11 +258,11 @@ func TestInBaseUnitCarriesProvenance(t *testing.T) {
 	}
 }
 
-// TestInBaseUnitLeavesConditionsInPrintedUnits exists because a condition qualifies the row rather
-// than carrying its value, MachineComparable only asks that conditions be structured rather than
-// evaluated, and nothing compares against one today. Converting a number no consumer reads would be
-// the speculative half of this change, and it would make the condition text disagree with the
-// datasheet page.
+// TestInBaseUnitLeavesConditionsInPrintedUnits exists for three reasons. A condition qualifies the row
+// rather than holding its value. MachineComparable only asks that conditions be structured rather
+// than evaluated. Nothing compares against a condition today. Converting a number that no consumer
+// reads would be the speculative half of this change, and it would make the condition text disagree
+// with the datasheet page.
 func TestInBaseUnitLeavesConditionsInPrintedUnits(t *testing.T) {
 	p := row("V", nil, nil, ptr(1.3))
 	p.Conditions = []*parampb.Condition{{Symbol: "IOUT", Eq: ptr(800), Unit: "mA", Raw: "IOUT = 800 mA"}}

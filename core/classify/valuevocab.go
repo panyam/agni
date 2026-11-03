@@ -10,8 +10,8 @@ import (
 
 // ValueVocab is the CONVENTION half of reading a component's value, kept out of the parser (WS3-118).
 //
-// ParseQuantity implements the part of the notation that is specified: IEC 60062's RKM code and the
-// SI prefixes. No specification says what unit a BARE number carries, because that depends on the
+// ParseQuantity implements the specified part of the notation, IEC 60062's RKM code and the SI
+// prefixes. No specification says what unit a BARE number is in, because that depends on the
 // component's class and on house habit. A bare "100" on a resistor is 100 Ω by universal convention;
 // on a capacitor it could be farads, microfarads or picofarads depending on the era and the tool that
 // wrote it. So it is a naming convention, declared under the lexicon's value_unit like the rail and
@@ -19,17 +19,18 @@ import (
 //
 // The DEFAULT covers resistors only. Guessing a bare capacitor or inductor unit would put a number
 // three or six orders of magnitude out into a field that reads as authoritative. An unset class
-// yields an empty unit, the "number known, unit not" state Quantity exists to represent.
+// yields an empty unit. Quantity exists to represent this "number known, unit not" state.
 type ValueVocab struct {
-	// dimension is the unit a class's value is measured in, applied whenever the NOTATION stated no
-	// unit. It is not a guess, since a capacitor's value is a capacitance and "10u" on one is 10 uF.
+	// dimension maps a class to the unit its value is measured in. It applies whenever the NOTATION
+	// stated no unit. It is not a guess, since a capacitor's value is a capacitance and "10u" on one
+	// is 10 uF.
 	// Almost nobody writes the F or the H, so without it most passives would get no unit.
 	dimension map[ComponentClass]string
 	// bareUnit is the narrower, uncertain case of a value with NO multiplier prefix either, where the
 	// magnitude is unstated and historic conventions disagree.
 	bareUnit map[ComponentClass]string
-	// bareExp is the power of ten a bare number on a class is in, so a house declaring pF has a bare
-	// capacitor "100" read as 100 pF. Absent is 0.
+	// bareExp maps a class to the power of ten of a bare number on it. So a house declaring pF has a
+	// bare capacitor "100" read as 100 pF. Absent is 0.
 	bareExp map[ComponentClass]int
 }
 
@@ -49,11 +50,13 @@ func DefaultValueVocab() *ValueVocab {
 	}
 }
 
-// BuildValueVocab returns a vocabulary from a convention's value_unit block, a map of device-class name
-// to the unit a bare number on that class means: an SI base unit ("F", "ohm", "henry") or one with a
-// multiplier prefix ("pF", "uH", "kohm"), which scales the bare number. An empty or nil config yields the defaults. A class the config names replaces the
-// default for that class; classes it does not name keep theirs. A class the engine does not ship, or a
-// unit it cannot read, is an error, since config is operator input and a skipped line reads as applied.
+// BuildValueVocab returns a vocabulary from a convention's value_unit block. The block maps a
+// device-class name to the unit of a bare number on that class. The unit is an SI base unit ("F",
+// "ohm", "henry") or one with a multiplier prefix ("pF", "uH", "kohm"), and the prefix scales the
+// bare number. An empty or nil config yields the defaults. Naming a class replaces that class's
+// default, and every class the config leaves out keeps its default. A class the engine does not ship,
+// or a unit it cannot read, is an error, since config is operator input and a skipped line reads as
+// applied.
 func BuildValueVocab(bareUnits map[string]string) (*ValueVocab, error) {
 	v := DefaultValueVocab()
 	for cls, unit := range bareUnits {
@@ -86,8 +89,8 @@ func canonicalUnit(s string) string {
 	return ""
 }
 
-// scaledUnit reads a declared unit as its base unit and the power of ten its prefix carries, and ""
-// when it is neither a unit nor a prefixed one.
+// scaledUnit splits a declared unit into its base unit and its prefix's power of ten. It returns ""
+// when the text is neither a unit nor a prefixed one.
 func scaledUnit(s string) (string, int) {
 	s = strings.TrimSpace(s)
 	if u := canonicalUnit(s); u != "" {
@@ -108,7 +111,7 @@ func scaledUnit(s string) (string, int) {
 	return "", 0
 }
 
-// bareScale applies the power of ten a bare number on class is declared in.
+// bareScale scales a bare number on class by the class's declared power of ten.
 func (v *ValueVocab) bareScale(class ComponentClass, value float64) float64 {
 	switch exp := v.bareExp[class]; {
 	case exp > 0:
@@ -119,9 +122,9 @@ func (v *ValueVocab) bareScale(class ComponentClass, value float64) float64 {
 	return value
 }
 
-// UnitFor returns the unit a value on this component class is measured in when the notation stated
-// none. prefixed says whether the value carried a multiplier ("10u" yes, "100" no), which selects
-// between the dimension and bareUnit cases. Empty is a real answer, not a failure.
+// UnitFor returns the unit for a value on this component class when the notation stated none.
+// prefixed says whether the value had a multiplier ("10u" yes, "100" no), and it selects between the
+// dimension and bareUnit cases. Empty is a real answer, not a failure.
 func (v *ValueVocab) UnitFor(class ComponentClass, prefixed bool) string {
 	if v == nil {
 		v = DefaultValueVocab()
@@ -140,13 +143,12 @@ func (v *ValueVocab) UnitFor(class ComponentClass, prefixed bool) string {
 var valueAttrKeys = []string{"value", "val", "partvalue", "component_value"}
 
 
-// StampValues fills each component's value Quantity from whatever attribute its format spelled the
-// value in (WS3-118), so a rule reads a NUMBER rather than re-parsing text per format. It is idempotent,
-// recomputing and overwriting.
+// StampValues fills each component's value Quantity from its value attribute, under whatever key its
+// format used (WS3-118). A rule then reads a NUMBER rather than re-parsing text per format. It is
+// idempotent, recomputing and overwriting.
 //
-// A component with no value attribute gets NO Quantity (nil). One whose value text could not be parsed
-// gets a Quantity carrying the input with the number absent, and only that second case is a gap worth
-// reporting.
+// A component with no value attribute gets NO Quantity (nil). If its value text cannot be parsed, it
+// gets a Quantity with the input and no number. Only that second case is a gap worth reporting.
 func (l *Lexicon) StampValues(d *ir.Design) {
 	vocab := l.value()
 	for _, c := range d.GetComponents() {
@@ -160,8 +162,8 @@ func (l *Lexicon) StampValues(d *ir.Design) {
 		if v, unit, prefixed, ok := parseQuantityDetail(text); ok {
 			q.Value = &v
 			if unit == "" {
-				// The notation gave a number but no unit, so the class decides. Still possibly empty
-				// (a bare value on an ambiguous class), and that stays empty rather than a guess.
+				// The notation gave a number but no unit, so the class decides. The unit can still be
+				// empty (a bare value on an ambiguous class), and then it is left empty, not guessed.
 				unit = vocab.UnitFor(class, prefixed)
 				if !prefixed {
 					v = vocab.bareScale(class, v)
@@ -175,12 +177,12 @@ func (l *Lexicon) StampValues(d *ir.Design) {
 	}
 }
 
-// valueFromName reads a value out of a library part name, `R_10k_0402` or `C_4u7_25V_0402`, which a
-// library uses as the Value and which parses to nothing whole (agni issue 1115). A token counts only
-// when it carries an SI prefix or a unit, so a package size (`0402`) is never read as ohms, and only
-// when its unit is the class's own (ohms, farads, henries), so a rating (`25V`, `22.4A`) is never read
-// as the value. A name holding two different such values says nothing reliable and reads as none, as
-// does a class with no unit of its own.
+// valueFromName reads a value out of a library part name such as `R_10k_0402` or `C_4u7_25V_0402`
+// (agni issue 1115). A library uses such a name as the Value, and the whole name parses to nothing.
+// A token counts only when it has an SI prefix or a unit, so a package size (`0402`) is never read as
+// ohms. It also counts only when its unit is the class's own (ohms, farads, henries), so a rating
+// (`25V`, `22.4A`) is never read as the value. A name holding two different such values says nothing
+// reliable and reads as none. So does a class with no unit of its own.
 func (v *ValueVocab) valueFromName(text string, class ComponentClass) (float64, string, bool) {
 	want := v.UnitFor(class, true)
 	if want == "" {
@@ -209,5 +211,5 @@ func (v *ValueVocab) valueFromName(text string, class ComponentClass) (float64, 
 	return *found, want, true
 }
 
-// StampValues is the process-level form of (*Lexicon).StampValues, which carries the contract.
+// StampValues is the process-level form of (*Lexicon).StampValues, whose doc states the contract.
 func StampValues(d *ir.Design) { ActiveLexicon().StampValues(d) }

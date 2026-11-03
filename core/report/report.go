@@ -1,5 +1,5 @@
-// Package report aggregates a check run into the shape a person reads: what was checked, what it
-// rests on, and what to do about the parts that failed.
+// Package report aggregates a check run for a person to read. A report says what was checked, what
+// evidence each outcome cites, and what to do about the parts that failed.
 //
 // It lives in core/ rather than cmd/ so a second consumer can import it (agni issue 380), and it does
 // no I/O of its own (CONSTRAINTS C1).
@@ -30,8 +30,9 @@ type Report struct {
 	URLBase     string // e.g. "http://localhost:8080"; empty means emit no links at all
 	MountPath   string // e.g. "demo/board.kicad_sch"; empty means emit no links at all
 	// LinksWithheld is why this run promised no links, when it was asked for them and refused.
-	// Empty when links were emitted, and empty when none were asked for. It travels in the report
-	// because the report is read long after the stderr that also said it is gone (issue 626).
+	// Empty when links were emitted, and empty when none were asked for. The CLI also says it on
+	// stderr, but a reader opens the report long after that stderr is gone, so the report holds it
+	// too (issue 626).
 	LinksWithheld string
 	// HierarchyNote says the read left out hierarchical blocks (HierarchyNote's sentence), so every
 	// count on the page covers the top level alone. Empty for a flat design (agni issue 717).
@@ -105,16 +106,16 @@ type Row struct {
 	// tuple for a rule whose question is a relation, such as both nets of a copper-clearance row.
 	Subjects []check.Entity
 	Message  string // the violation sentence, set on a failure
-	Witness  string // what the outcome rests on
+	Witness  string // the proof behind the outcome
 	Reason   string // why an undecidable subject could not be judged
 	Terms    []Term
 	Context  []string // other entities the proof names
 	URL      string   // empty when the caller supplied no base
 }
 
-// HasLinks says whether any row links into the viewer. Only such a report carries the script that
-// moves an open viewer (viewerlink.js), so a report written with no viewer to link to stays free of
-// script entirely (agni issue 1156).
+// HasLinks says whether any row links into the viewer. A report carries viewerlink.js, the script
+// that moves an open viewer, only when this is true. A report with no viewer to link to has no script
+// at all (agni issue 1156).
 func (r Report) HasLinks() bool {
 	for _, rule := range r.Rules {
 		for _, row := range rule.Rows {
@@ -137,8 +138,8 @@ func (r Row) SubjectLabel() string {
 	return strings.Join(parts, " + ")
 }
 
-// Detail is the sentence a row leads with: the violation where there is one, else the proof, else the
-// reason it could not be judged. A failing verdict carries both a Message and a Witness, and the
+// Detail is the sentence a row leads with. It is the violation where there is one, else the proof,
+// else the reason it could not be judged. A failing verdict carries both a Message and a Witness, and the
 // Message wins.
 func (r Row) Detail() string {
 	switch {
@@ -190,9 +191,9 @@ func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Ru
 		fromVerdict[v.Rule] = true
 		s := section(v.Rule)
 		// EMITTING A VERDICT IS STATING A CONSIDERED SET, so the verdict settles this and the catalog
-		// flag is only a fallback. An overlay's rules (a project's conventions, profiles/, a design's
-		// intent) have namespaced names the catalog lookup misses, which would caption their rows as
-		// findings-only.
+		// flag is only a fallback. An overlay adds rules from a project's conventions, its profiles/
+		// and a design's intent. Their names are namespaced, so the catalog lookup misses them and
+		// would caption their rows as findings-only.
 		// This cannot over-claim, since a rule with no considered set emits no verdict.
 		s.StatesConsideredSet = true
 		s.Counts[v.Outcome]++
@@ -214,8 +215,8 @@ func Build(verdicts []check.Verdict, findings []check.Finding, rules []*check.Ru
 
 	// Findings from rules that state no considered set have no verdict to carry them, so they are
 	// added here. A rule that DOES state one already contributed its failures above, so this is keyed
-	// on the rule to avoid double-counting. "Already contributed" means the rule EMITTED a verdict,
-	// not the catalog flag, which misses an overlay rule's namespaced name.
+	// on the rule to avoid double-counting. A rule has already contributed when it EMITTED a verdict.
+	// The catalog flag alone cannot tell, because it misses an overlay rule's namespaced name.
 	for _, f := range findings {
 		out.Totals.Findings++
 		if fromVerdict[f.Rule] {
@@ -316,13 +317,13 @@ func rowOf(v check.Verdict, meta Report) Row {
 // that design in the Compare picker does.
 //
 // Like TraceURL it carries the QUESTION, so it takes no content hash, and the viewer compares the two
-// designs as they are now. Both sides must be linkable on ONE server, since the viewer reads the
-// second design through the mount table that serves the first, so a withheld link on either side,
-// or two different bases, yields no link.
+// designs as they are now. The viewer reads the second design through the mount table that serves
+// the first, so both sides must be linkable on ONE server. A withheld link on either side, or two
+// different bases, yields no link.
 //
-// renameApprox carries the near-rename pairing the diff was asked for (--rename-approx, the MCP
-// tool's rename_approx), so the viewer's comparison tables pair them too rather than leaving the
-// reader to tick the option.
+// renameApprox says the diff was asked to pair near-renames (--rename-approx, the MCP tool's
+// rename_approx). The link passes it on, so the viewer's comparison tables pair them too and the
+// reader does not have to tick the option.
 func DiffURL(meta, bmeta Report, renameApprox bool) string {
 	if meta.URLBase == "" || meta.MountPath == "" || bmeta.MountPath == "" || bmeta.URLBase != meta.URLBase {
 		return ""
@@ -357,9 +358,9 @@ func TraceURL(meta Report, from, to string, hops int) string {
 
 // QueryURL builds the link that asks a query again in a running viewer's query panel, or "" when the
 // caller gave no base (agni issue 634). Like TraceURL it carries the QUESTION, so it takes no content
-// hash: following it re-asks the query of the design as it is now. binds are the values the query was
-// asked with, as `name=value` pairs spelled as `--bind` takes them, so the link asks the same
-// question rather than a wider one; title is the view's heading, "" for none.
+// hash. Following it re-asks the query of the design as it is now. binds hold the values the query
+// was asked with, as `name=value` pairs spelled as `--bind` takes them, so the link asks the same
+// question rather than a wider one. title is the view's heading, "" for none.
 func QueryURL(meta Report, query, title string, binds []string) string {
 	if meta.URLBase == "" || meta.MountPath == "" || strings.TrimSpace(query) == "" {
 		return ""
@@ -376,9 +377,9 @@ func QueryURL(meta Report, query, title string, binds []string) string {
 }
 
 // QuerySetURL builds the link that opens one query of a project's query set in a running viewer, by
-// the set's and the query's names, or "" when the caller gave no base. A set the project keeps has a
-// name the viewer can find (QueryService.ListQuerySets), so the link stays short however long the
-// query is, and follows the set's current text.
+// the set's and the query's names, or "" when the caller gave no base. The viewer finds a project's
+// set by its name (QueryService.ListQuerySets), so the link is short however long the query is, and
+// it follows the set's current text.
 func QuerySetURL(meta Report, set, query string) string {
 	if meta.URLBase == "" || meta.MountPath == "" || set == "" || query == "" {
 		return ""
@@ -396,8 +397,8 @@ func QuerySetURL(meta Report, set, query string) string {
 // writer composes the link per row because it emits in the run's order rather than the report's.
 //
 // A MISSING LINK IS THE CORRECT ANSWER for a loose file, not a gap to fill with a guess (issue 392),
-// because a URL built from an invented mount resolves on nobody's server. The content hash rides along
-// so the viewer can flag a link computed against different bytes.
+// because a URL built from an invented mount resolves on nobody's server. The link carries the content
+// hash, so the viewer can flag a link computed against different bytes.
 func VerdictURL(meta Report, id, rule string, subjects []string) string {
 	if meta.URLBase == "" || meta.MountPath == "" {
 		return ""
@@ -406,8 +407,8 @@ func VerdictURL(meta Report, id, rule string, subjects []string) string {
 	if meta.ContentHash != "" {
 		u += "&hash=" + url.QueryEscape(meta.ContentHash)
 	}
-	// The rule rides along so the viewer can resolve this verdict by running ONE rule rather than the
-	// whole catalog. It is passed in rather than recovered from the id because VerdictID is generated
+	// The link names the rule, so the viewer can resolve this verdict by running ONE rule rather than
+	// the whole catalog. It is passed in rather than recovered from the id because VerdictID is generated
 	// and never parsed (core/check/verdict.go).
 	//
 	// It is a HINT, not part of the address. A link without it still resolves by the slower route,
@@ -415,9 +416,9 @@ func VerdictURL(meta Report, id, rule string, subjects []string) string {
 	if rule != "" {
 		u += "&rule=" + url.QueryEscape(rule)
 	}
-	// The subjects ride along too, in check.SubjectParam's spelling, so the viewer asks that rule
-	// about this verdict's own nets and parts rather than the whole design (agni issue 897). Like the
-	// rule, a HINT: a link without them resolves by running the whole rule.
+	// The link names the subjects too, in check.SubjectParam's spelling, so the viewer asks that rule
+	// about this verdict's own nets and parts rather than the whole design (agni issue 897). They are
+	// a HINT like the rule, and a link without them resolves by running the whole rule.
 	for _, s := range subjects {
 		u += "&subject=" + url.QueryEscape(s)
 	}

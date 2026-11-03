@@ -1,26 +1,27 @@
-// Package query is the design query surface (WS3-029): Datalog over the design's fact base, so an
-// engineer runs ad-hoc queries ("search your whole design as relations, including datasheets") and
-// every answer carries the provenance of the facts that produced it. Rules and search share one
-// vocabulary, since a rule asserts a property over these relations and a search is an arbitrary query
-// over the same ones.
+// Package query is the design query surface (WS3-029). It runs Datalog over the design's fact base,
+// so an engineer runs ad-hoc queries ("search your whole design as relations, including
+// datasheets"). Every answer carries the provenance of the facts that produced it. Rules and search
+// share one vocabulary. A rule asserts a property over these relations, and a search is an
+// arbitrary query over the same ones.
 //
-// The engine itself lives in github.com/panyam/jaala/datalog (agni issue 731), which knows nothing
-// about circuits. This package is agni's adapter over it:
+// The engine itself lives in github.com/panyam/jaala/datalog (agni issue 731), and it knows nothing
+// about circuits. This package is agni's adapter over it, and it holds two things.
 //
 //   - a Source projecting a check.Model through a facts.Registry, so every relation the fact layer
 //     registers is queryable (source.go);
 //   - agni's own uses of queries: RuleFromQuery, the wire form, the catalog, and the teaching
 //     examples.
 //
-// Every name a query calls (relations, predicates, modules) is registered in the fact layer's
-// vocabulary (facts.Registry.Vocabulary), so this package adds no names of its own. The circuit walks
-// net.reaches and net.route live with the relations, in stdlib/relations.
+// Every name a query calls is registered in the fact layer's vocabulary
+// (facts.Registry.Vocabulary), whether it is a relation, a predicate or a module. So this package
+// adds no names of its own. The circuit walks net.reaches and net.route live with the relations, in
+// stdlib/relations.
 //
 // The types are aliases for the engine's, so a Query built here is the engine's Query and nothing
 // converts at the boundary.
 //
-// The package stays WASM-clean (the engine imports only the standard library, and this adapter only
-// check, facts and the generated IR), so the whole chain read → Model → facts → query runs
+// The package is WASM-clean. The engine imports only the standard library, and this adapter imports
+// only check, facts and the generated IR. So the whole chain read → Model → facts → query runs
 // client-side in the browser.
 package query
 
@@ -62,14 +63,15 @@ type (
 	SemiNaive = datalog.SemiNaive
 )
 
-// Default is the evaluator every agni surface answers with: the engine's semi-naive fixpoint, which
-// plans each rule body, inlines single-rule relations, and derives a relation called with a bound
-// argument only for the values the query demands. It answers as Naive does (the engine tests the two
-// against each other); what differs is cost, and that a body's written order no longer decides it, so a
-// rule opening with an unbound walk is reordered rather than walking from every net (WS3-114).
+// Default is the engine's semi-naive fixpoint, and every agni surface answers with it. It plans
+// each rule body, inlines single-rule relations, and derives a relation called with a bound
+// argument only for the values the query demands. It answers as Naive does, and the engine tests
+// the two against each other. They differ in cost. A body's written order also no longer decides
+// that cost, so a rule opening with an unbound walk is reordered rather than walking from every net
+// (WS3-114).
 //
-// Citations can differ from Naive's on a recursive relation reachable two ways, since the rounds run in
-// a different order; rows never do.
+// On a recursive relation reachable two ways, citations can differ from Naive's, since the rounds
+// run in a different order. Rows never differ.
 var Default Evaluator = SemiNaive{}
 
 // V builds a variable term (?name in the text syntax).

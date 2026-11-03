@@ -10,11 +10,11 @@ import (
 	configpb "github.com/panyam/agni/gen/go/agni/v1/config"
 )
 
-// ClassVocab is the component-classification lexicon, holding per-class regex patterns matched against
-// a part's text TOKENS to hint its ComponentClass and the ref-des prefix table that gives a part its base
-// class. Like the RoleVocab naming lexicon (WS3-069), a project extends it through config (an ESD-array
-// MPN family, a house part-name convention, a TH prefix for its thermistors) or tightens a fickle token
-// (WS3-070, agni issue 677).
+// ClassVocab is the component-classification lexicon. It holds per-class regex patterns, and each is
+// matched against a part's text TOKENS to hint its ComponentClass. It also holds the ref-des prefix
+// table, which gives a part its base class. A project extends it through config, as it does the
+// RoleVocab naming lexicon (WS3-069). It can add an ESD-array MPN family, a house part-name convention
+// or a TH prefix for its thermistors, or it can tighten a fickle token (WS3-070, agni issue 677).
 //
 // Patterns match a single token, case-insensitively. The built-in defaults are exact-anchored ("^tvs$")
 // so classification is whole-token, never a substring, as tokenClasses promises. A project may use
@@ -28,9 +28,9 @@ type ClassVocab struct {
 
 // builtinFamilies are the part-number families that are ESD or transient-voltage suppressors whatever
 // their ref-des says. Vendors sell TVS arrays as ICs (TI's TPD4E05U06 and TPD2E2U06, Nexperia's PESD
-// and PRTR, ST's ESDA and USBLC, Semtech's RClamp, Vishay's VBUS54, Murata's LXES) and label them U, so neither the
-// ref-des prefix nor a "tvs" word reaches them (agni 934, 1257). A family matches at the START of a
-// token of the part's text, which includes its MPN property.
+// and PRTR, ST's ESDA and USBLC, Semtech's RClamp, Vishay's VBUS54, Murata's LXES) and label them U.
+// So neither the ref-des prefix nor a "tvs" word matches them (agni 934, 1257). A family matches at
+// the START of a token of the part's text, and that text includes its MPN property.
 //
 // Only a family match promotes an IC. The bare words "tvs" and "esd" keep refining a diode alone,
 // because an IC's free-text description mentioning "ESD protection" says nothing about what it is.
@@ -38,8 +38,8 @@ var builtinFamilies = map[ComponentClass][]string{
 	ClassTVS: {`^tpd\d+e`, `^pesd`, `^esda`, `^esd\d`, `^usblc`, `^rclamp`, `^prtr`, `^sp05`, `^sm712`, `^smaj`, `^smbj`, `^smcj`, `^p6ke`, `^ptvs`, `^vbus54`, `^lxes`},
 }
 
-// DefaultClassVocab is the built-in classification lexicon, the tokenClasses map inverted to class ->
-// exact-anchored token patterns so the defaults reproduce the whole-token behavior exactly.
+// DefaultClassVocab returns the built-in classification lexicon. It inverts the tokenClasses map into
+// class -> exact-anchored token patterns, so the defaults reproduce the whole-token behavior exactly.
 func DefaultClassVocab() *ClassVocab {
 	byClass := map[ComponentClass][]string{}
 	for tok, cl := range tokenClasses {
@@ -99,9 +99,9 @@ func (v *ClassVocab) HintsFor(tokens []string) map[ComponentClass]bool {
 	return hints
 }
 
-// ClassForPrefix is the base class a ref-des letter prefix ("R", "TP") conventionally marks, or
-// ClassUnknown when neither the built-in table nor the project names it. The prefix is expected
-// uppercased, as refDesPrefix returns it.
+// ClassForPrefix maps a ref-des letter prefix ("R", "TP") to the base class it marks by convention.
+// It returns ClassUnknown when neither the built-in table nor the project names it. The prefix is
+// expected uppercased, as refDesPrefix returns it.
 func (v *ClassVocab) ClassForPrefix(prefix string) ComponentClass {
 	if cl, ok := v.prefixes[prefix]; ok {
 		return cl
@@ -118,9 +118,9 @@ func matchesAny(tok string, pats []*regexp.Regexp) bool {
 	return false
 }
 
-// componentClassByName is the set of classes a config may override, keyed by their string value. It is
-// derived from model.ComponentClasses, which leaves ClassUnknown out, so it cannot drift from the const
-// block and refuse a project extending a real class (agni issue 677).
+// componentClassByName holds every class a config may override, keyed by its string value. It is
+// derived from model.ComponentClasses, and that list leaves ClassUnknown out. So the set cannot drift
+// from the const block and refuse a project extending a real class (agni issue 677).
 var componentClassByName = func() map[string]ComponentClass {
 	m := map[string]ComponentClass{}
 	for _, cl := range model.ComponentClasses() {
@@ -132,9 +132,10 @@ var componentClassByName = func() map[string]ComponentClass {
 // deviceClassAliases maps common datasheet device_class spellings to a canonical ComponentClass, keyed
 // by the alnum-lowercased form (so "ceramic resonator", "Ceramic-Resonator", and "CERAMICRESONATOR" all
 // hit one key). It is the datasheet-path analogue of the keyword lexicon (WS10-015). A seeded
-// device_class is a free-form vendor string ("SPXO", "ceramic resonator") that must resolve to the same
-// canonical class the keyword path produces, or it lands bare and misses its family tag. Only synonyms
-// belong here, since a string already equal to a canonical class name passes through as itself.
+// device_class is a free-form vendor string ("SPXO", "ceramic resonator"). It must resolve to the
+// canonical class the keyword path would give, or it is stamped bare and misses its family tag. Only
+// synonyms belong here, since a string already equal to a canonical class name passes through as
+// itself.
 var deviceClassAliases = map[string]ComponentClass{
 	"ceramicresonator": ClassCeramicResonator,
 	"resonator":        ClassCeramicResonator,
@@ -171,10 +172,10 @@ var deviceClassAliases = map[string]ComponentClass{
 
 // NormalizeDeviceClass maps a datasheet device_class string to a canonical ComponentClass (WS10-015).
 // It alnum-lowercases the input and looks it up in the alias table, then falls back to the canonical
-// class-name set (so "efuse", "ldo", "crystal" pass through as themselves), then to the raw string cast
-// for an unknown-but-meaningful value (identity, the pass-through the additive enrichment relies on).
-// An empty string yields ClassUnknown. This is what the datasheet enrichment runs before ClassesOf, so
-// a vendor spelling reaches the same family tag the keyword path would.
+// class-name set (so "efuse", "ldo", "crystal" pass through as themselves). Failing both, it casts the
+// raw string, for an unknown-but-meaningful value. The additive enrichment relies on that identity
+// pass-through. An empty string yields ClassUnknown. The datasheet enrichment runs this before
+// ClassesOf, so a vendor spelling gets the same family tag the keyword path would.
 func NormalizeDeviceClass(s string) ComponentClass {
 	key := alnumLower(s)
 	if key == "" {
@@ -202,7 +203,7 @@ func alnumLower(s string) string {
 }
 
 // ParseComponentClass maps a class NAME (its string value, e.g. "tvs" or "test_point") to the class,
-// reporting whether it is a known, overridable class. It is the validation a config loader uses so an
+// reporting whether it is a known, overridable class. A config loader validates names with it, so an
 // unknown class name in a lexicon block is a teaching error, not a silently ignored key.
 func ParseComponentClass(name string) (ComponentClass, bool) {
 	cl, ok := componentClassByName[name]
@@ -226,9 +227,9 @@ func ActiveClassVocab() *ClassVocab { return activeClassVocab }
 
 // BuildClassVocab applies per-class overrides onto DefaultClassVocab, compiling and VALIDATING each
 // pattern and prefix (config is operator input, so a bad one is a returned error). An empty override
-// leaves that class at its default, and Replace drops the built-in patterns for that class and leaves
-// its prefixes alone. A prefix is added to the built-in table and wins over it. The caller has already
-// refused a class name the engine does not know (ParseComponentClass).
+// leaves that class at its default. Replace drops the built-in patterns and families for that class
+// and leaves its prefixes alone. A prefix is added to the built-in table and wins over it. The caller
+// has already refused a class name the engine does not know (ParseComponentClass).
 func BuildClassVocab(overrides map[ComponentClass]*configpb.ClassVocab) (*ClassVocab, error) {
 	def := DefaultClassVocab()
 	v := &ClassVocab{patterns: map[ComponentClass][]*regexp.Regexp{}, prefixes: def.prefixes, families: map[ComponentClass][]*regexp.Regexp{}}

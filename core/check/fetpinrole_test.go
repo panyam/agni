@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// pinRoleDesign places one component of the given ref-des with the given pin names, so the class the
-// ref-des prefix implies drives the role gating (Q -> transistor, U -> IC).
+// pinRoleDesign places one component of the given ref-des with the given pin names. The ref-des
+// prefix implies a class, and that class drives the role gating (Q -> transistor, U -> IC).
 func pinRoleDesign(refDes string, pinNames ...string) *ir.Design {
 	part := &ir.PartType{Name: "P"}
 	for i, n := range pinNames {
@@ -55,7 +55,7 @@ func TestTransistorTerminalRoles(t *testing.T) {
 // most of a design. A WRONG role is worse than a missing one, because a topology rule then walks
 // a path that does not exist and reports on it.
 //
-// U1 is an IC (not a transistor) whose pins are named exactly like a FET's. Every one must stay
+// U1 is an IC (not a transistor) whose pins are named exactly like a FET's. Every one must be left
 // unknown.
 func TestTerminalRolesAreClassGated(t *testing.T) {
 	m := NewModel(pinRoleDesign("U1", "G", "S", "D"))
@@ -92,8 +92,8 @@ func TestTerminalVocabIsAnchored(t *testing.T) {
 }
 
 // TestTerminalRolesHonourConventions checks that a house naming its gate "DRV" declares that in the
-// lexicon rather than patching the engine, which is why these are vocabularies and not literals (C20;
-// the polarity tokens above them are the counter-example this does not copy).
+// lexicon rather than patching the engine. These are vocabularies and not literals for that reason
+// (C20). The polarity tokens above them are the counter-example this does not copy.
 func TestTerminalRolesHonourConventions(t *testing.T) {
 	v, err := classify.BuildRoleVocab(&configpb.NamingLexicon{Pin: &configpb.PinNameVocab{Gate: &configpb.VocabPatterns{Patterns: []string{`^DRV$`}}}})
 	if err != nil {

@@ -5,9 +5,9 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// passClass reports a component class the walk may cross terminal to terminal, which is the
-// series pass elements. Capacitors are absent because a series cap is a DC block, as are diodes
-// (polarity) and everything active.
+// passClass reports whether the walk may cross a component class terminal to terminal. Those
+// classes are the series pass elements. Capacitors are absent because a series cap is a DC block,
+// as are diodes (polarity) and everything active.
 func passClass(c ComponentClass) bool {
 	switch c {
 	case ClassResistor, ClassInductor, ClassFerrite, ClassFuse, ClassNetTie:
@@ -16,7 +16,7 @@ func passClass(c ComponentClass) bool {
 	return false
 }
 
-// maxWalkFan bounds the fan-out of a net the walk may cross INTO. A series node carries a
+// maxWalkFan bounds the fan-out of a net that the walk may cross INTO. A series node carries a
 // handful of members and a rail or bus carries dozens, so without this guard a name-only rail (an
 // EDIF "+5V" with no attributes) turns a pull-up into a doorway to the whole design.
 const maxWalkFan = 16
@@ -40,10 +40,11 @@ const SupplyPathReachHops = 1
 // unprotected path as having nothing to protect.
 const PowerPathReachHops = 3
 
-// IsBusLike reports a shared-DISTRIBUTION net the series-reach walk must not cross INTO. It is a
-// ground, a net marked global, or one with more than maxWalkFan connections. A rail-looking NAME is
-// NOT bus-like, since protection rules walk through nodes like VBUS and 5V_PROT, and neither is the
-// power_driven fact, since a PWR_FLAG marks the power entry nets the walk exists to reach. The reach
+// IsBusLike reports a shared-DISTRIBUTION net, which the series-reach walk must not cross INTO. It
+// is a ground, a net marked global, or one with more than maxWalkFan connections. A rail-looking NAME
+// is NOT bus-like, since protection rules walk through nodes like VBUS and 5V_PROT. The power_driven
+// fact does not make a net bus-like either. A PWR_FLAG marks the power entry nets, and the walk
+// exists to reach those. The reach
 // walk and the net.bus_like relation share this ONE definition (WS3-080), and the walk's start net
 // is never treated as a stop.
 func IsBusLike(m Model, n *ir.Net) bool {
@@ -59,12 +60,12 @@ func (m *irModel) Reach(start *ir.Net, hops int) Reach {
 }
 
 // ReachToTerminus is Reach except that a bus-like net is admitted as a DESTINATION while still
-// refused as a transit node. The walk lands on a rail, records how it got there, and does not
+// refused as a transit node. The walk reaches a rail, records how it got there, and does not
 // continue through it.
 //
 // Reach excludes a bus-like net from the result set entirely, not merely from the frontier, so it
-// cannot arrive at the rail a pull-up terminates on (PullUpPathToRail carries its own BFS for that
-// reason). Use this variant when the question's endpoint may be a rail. Endpoint versus transit is
+// cannot arrive at the rail where a pull-up terminates. PullUpPathToRail has its own BFS for that
+// reason. Use this variant when the question's endpoint may be a rail. Endpoint versus transit is
 // a property of the POSITION in the path, so filtering the node set once cannot express it (agni
 // issue 374).
 func (m *irModel) ReachToTerminus(start *ir.Net, hops int) Reach {
@@ -124,7 +125,7 @@ func (m *irModel) walk(start *ir.Net, hops int, admitTerminus bool) Reach {
 }
 
 // pinOn returns ref's pin designator on net n, or "" when the connection carries none. The first
-// match wins: a part with both pins on one net is a short rather than a crossing, and the walk
+// match wins. A part with both pins on one net is a short rather than a crossing, and the walk
 // refuses that case (o.Name == n.Name) before it gets here.
 func pinOn(n *ir.Net, ref string) string {
 	for _, c := range n.Connections {

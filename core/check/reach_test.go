@@ -7,7 +7,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// reachFixture: J1 -> F1(fuse) -> VIN2 -> FB1(ferrite) -> VIN3 -> U1(power_in), with a
+// reachFixture builds J1 -> F1(fuse) -> VIN2 -> FB1(ferrite) -> VIN3 -> U1(power_in), with a
 // TVS on VIN2, a pull-up R2 onto the VCC rail (the walk must NOT cross into a rail), a
 // resistor loop R3/R4 (cycle guard), and a 4-pin "resistor" RN1 spanning three nets (the
 // two-terminal guard must refuse to cross it).

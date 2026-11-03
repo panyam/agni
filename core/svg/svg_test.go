@@ -50,9 +50,9 @@ func contains(s, sub string) bool {
 }
 
 // A design file supplies net and component names, and they now reach ATTRIBUTES (the data-* entity
-// keys picking reads) rather than only text content. Attribute values are written verbatim, so a
-// name carrying a quote would close the attribute and inject markup into a document the viewer
-// mounts with innerHTML. AEsc is the constructor that must be used for them.
+// keys that picking reads) rather than only text content. Attribute values are written verbatim, so
+// a name holding a quote would close the attribute and inject markup into a document the viewer
+// mounts with innerHTML. Those names must go through AEsc.
 func TestAEscContainsDesignSuppliedNames(t *testing.T) {
 	hostile := `N" onload="alert(1)`
 	c := Open(10, 10)
@@ -65,8 +65,8 @@ func TestAEscContainsDesignSuppliedNames(t *testing.T) {
 	if !strings.Contains(out, "&#34;") {
 		t.Errorf("the quote was not escaped at all:\n%s", out)
 	}
-	// The raw constructor is the one that must not be used for this, and the test states why by
-	// showing what it does.
+	// The raw constructor A must not be used for this. The test shows what A does, and that shows
+	// why.
 	raw := Open(10, 10)
 	raw.El("polyline", A("data-net", hostile))
 	if !strings.Contains(raw.String(), `onload=`) {

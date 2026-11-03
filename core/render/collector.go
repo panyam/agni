@@ -18,8 +18,9 @@ type wprim struct {
 
 // primCollector accumulates world-coordinate primitives and their bounds, then emits the
 // tier-2 columnar form (rebased int32 vertex pool, fixed-width primitive records, and the
-// PrimitiveKeys for picking). PackSheet and PackBoard share it and differ only in the
-// primitives they add and the label/image tails they build around the shared vertex origin.
+// PrimitiveKeys for picking). PackSheet and PackBoard share it. They differ only in which
+// primitives each one adds, and in the label/image tails each builds around the shared vertex
+// origin.
 type primCollector struct {
 	prims  []wprim
 	bounds geomath.Bounds
@@ -55,9 +56,10 @@ func (c *primCollector) add(p wprim) {
 	c.prims = append(c.prims, p)
 }
 
-// build rebases the gathered primitives to the bounds' min corner (so GLSL ES's 32-bit
-// vertex attributes stay exact) and serializes them into the vertex pool, primitive records,
-// and picking keys. ox,oy are the rebase origin the caller also applies to labels and images.
+// build rebases the gathered primitives to the bounds' min corner, which keeps GLSL ES's 32-bit
+// vertex attributes exact. It then serializes them into the vertex pool, primitive records, and
+// picking keys. ox,oy are the rebase origin, and the caller applies the same origin to labels and
+// images.
 func (c *primCollector) build() (vertices, records []byte, keys []*geom.PrimitiveKey, ox, oy int64) {
 	if c.bounds.Valid() {
 		ox, oy = c.bounds.Min()

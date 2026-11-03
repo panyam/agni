@@ -5,8 +5,8 @@ import "testing"
 // The id must be INJECTIVE over subject tuples, and the delimiters are already inside real refs, so
 // this is not a theoretical property.
 //
-// KindEndpoint's ref is literally "0,0", a comma sitting in the position the tuple syntax uses as a
-// separator. A net name comes from a source file and may carry anything. Without the escape,
+// KindEndpoint's ref is literally "0,0", with a comma where the tuple syntax puts a separator. A
+// net name comes from a source file and may contain anything. Without the escape,
 // ("A,B") and ("A", "B") are one string and two different verdicts answer to one name.
 func TestVerdictIDIsInjectiveOverTuples(t *testing.T) {
 	tuples := [][]Entity{
@@ -22,8 +22,8 @@ func TestVerdictIDIsInjectiveOverTuples(t *testing.T) {
 		// cannot be mistaken for one. A ref containing the whole sequence CAN: unescaped,
 		// ("A,net:B") and ("A", "B") both render as `r:(net:A,net:B)`.
 		{{Kind: KindNet, Ref: "A,net:B"}},
-		// A ref that legitimately carries colons keeps them, because kind is a closed vocabulary
-		// containing none of the escaped characters, so the element stays unambiguous without
+		// A ref that legitimately contains colons keeps them. Kind is a closed vocabulary
+		// containing none of the escaped characters, so the element is still unambiguous without
 		// escaping them.
 		{{Kind: KindSymbol, Ref: "Library:Symbol"}},
 	}
@@ -40,7 +40,7 @@ func TestVerdictIDIsInjectiveOverTuples(t *testing.T) {
 	}
 }
 
-// The case the whole change exists for, stated as one assertion. A high-side FET sits on its input
+// This one assertion states the case the whole change exists for. A high-side FET sits on its input
 // rail and its output rail, so a part above breakdown on both is two answers about one ref-des. Under
 // a one-entity id they were one name.
 func TestVerdictIDSeparatesTheSamePartOnTwoRails(t *testing.T) {

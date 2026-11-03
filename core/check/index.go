@@ -1,7 +1,7 @@
 package check
 
-// Well-known Tag keys the built-in rules populate. Tags is open, so any rule may add its own keys;
-// these are the axes the catalog and default group-by understand.
+// Well-known Tag keys that the built-in rules populate. Tags is open, so any rule may add its own
+// keys. The catalog and default group-by understand these axes.
 const (
 	KeyCategory     = "category"     // human organization bucket (provider-specific)
 	KeyTier         = "tier"         // expressiveness tier (docsite/content/architecture/rules-and-checks.md#expressiveness-tiers): "P" | "R" | "A" | "X"

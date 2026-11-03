@@ -5,12 +5,12 @@ import (
 	"strings"
 )
 
-// SubjectParam spells an entity the way a scoped check names it (agni issue 897): `net:NAME`,
+// SubjectParam spells an entity as a scoped check names it (agni issue 897), as `net:NAME`,
 // `component:REF`, or `pin:REF.PIN`. `agni check --subject` reads this spelling, a verdict link
 // carries it as `subject=`, and the viewer parses it back, so a link asks the same scoped question
 // the CLI does. It is "" for a kind no scope covers (a bus, an endpoint, a symbol).
 //
-// The viewer's reader of this spelling is held to this one by core/check/testdata/subject_param_twin.json.
+// core/check/testdata/subject_param_twin.json holds the viewer's reader of this spelling to this one.
 func SubjectParam(e Entity) string {
 	switch e.Kind {
 	case KindNet, KindComponent:

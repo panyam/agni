@@ -10,15 +10,15 @@ import (
 )
 
 // TestNoCatalogSaysSo is the red-check for the silent-empty-fact-base trap. A host that omits the
-// relation-catalog import still builds and still runs, and the fact base is simply empty, so every
-// relation is unknown. Before this, the error blamed a typo and offered the nearest catalog name,
-// which is empty too, so the reader got a bare "unknown relation" and no way to reach the real
-// cause. A datalog-authored rule swallows that error into zero findings, which is a clean pass on a
-// design nobody checked, so this message is the one place the omission is visible.
+// relation-catalog import still builds and still runs. Its fact base is simply empty, so every
+// relation is unknown. Before this, the error blamed a typo and offered the nearest catalog name.
+// That catalog is empty too, so the reader got a bare "unknown relation" and no way to reach the
+// real cause. A datalog-authored rule swallows that error into zero findings. Zero findings read as
+// a clean pass on a design nobody checked. So this message is the only place the omission shows.
 func TestNoCatalogSaysSo(t *testing.T) {
-	// A bare vocabulary with no built-in catalog, so every relation is unknown. Composed rather than
-	// stripped from the process default, which is the state a host that omits the catalog import is
-	// actually in.
+	// A bare vocabulary with no built-in catalog, so every relation is unknown. It is composed
+	// rather than stripped from the process default. A host that omits the catalog import is
+	// actually in this state.
 	bare, err := facts.NewRegistry()
 	if err != nil {
 		t.Fatalf("compose empty registry: %v", err)

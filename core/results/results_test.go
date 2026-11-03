@@ -16,9 +16,9 @@ func finding(rule, severity, ref string) *checkspb.Finding {
 	return &checkspb.Finding{Subject: &checkspb.Subject{Kind: "net", Ref: ref}, Rule: rule, Severity: severity, Message: rule + " on " + ref}
 }
 
-// TestPivotOrdersWorstFirstAndKeepsAnUnknownSeverityOnTop pins the ordering an unknown severity gets.
-// A provider's custom level must lead rather than sink to the bottom, because a level this build does
-// not recognize is the one a reader is most likely to be surprised by.
+// TestPivotOrdersWorstFirstAndKeepsAnUnknownSeverityOnTop pins where an unknown severity sorts. A
+// provider's custom level must lead rather than sink to the bottom, because a reader is most likely to
+// be surprised by a level that this build does not recognize.
 func TestPivotOrdersWorstFirstAndKeepsAnUnknownSeverityOnTop(t *testing.T) {
 	fs := []*checkspb.Finding{
 		finding("a", "info", "N1"),
@@ -41,8 +41,8 @@ func TestPivotOrdersWorstFirstAndKeepsAnUnknownSeverityOnTop(t *testing.T) {
 	}
 }
 
-// TestPivotIsIdempotentUnderItsOwnFlattening is the property that lets a document written from a
-// report render back to the same report. Re-pivoting a report's own findings must reproduce it. If it
+// TestPivotIsIdempotentUnderItsOwnFlattening holds that a document written from a report renders
+// back to the same report. Re-pivoting a report's own findings must reproduce it. If it
 // did not, the flat findings list in a document would be a lossy projection of what the terminal
 // showed, and the two surfaces would silently disagree.
 func TestPivotIsIdempotentUnderItsOwnFlattening(t *testing.T) {
@@ -93,7 +93,7 @@ func TestMarshalParseRoundTrip(t *testing.T) {
 
 // TestParseRejectsAnUnreadableSchema pins that an unknown or absent schema version is an error. A
 // best-effort read of a future document would produce a findings list shorter than the run that made
-// it with nothing to say so, which is the silence-as-coverage failure this contract rules out.
+// it with nothing to say so. This contract rules out that silence-as-coverage failure.
 func TestParseRejectsAnUnreadableSchema(t *testing.T) {
 	for name, body := range map[string]string{
 		"future": `{"meta":{"schema":"agni.checks.results/v9"}}`,
@@ -119,10 +119,10 @@ func TestParseToleratesAnUnknownField(t *testing.T) {
 	}
 }
 
-// TestSeverityTwinFixture checks Pivot against the fixture the web tier's findings.test.ts reads too
-// (agni issue 1045). The viewer groups and counts whatever findings it is showing, a filtered list or
-// one entity's, so it cannot read the report's sections and ranks them itself; one file holds both
-// to the same order and the same counts.
+// TestSeverityTwinFixture checks Pivot against a fixture that the web tier's findings.test.ts also
+// reads (agni issue 1045). The viewer groups and counts whatever findings it is showing, such as a
+// filtered list or one entity's. So it cannot read the report's sections, and it ranks them itself.
+// One file holds both to the same order and the same counts.
 func TestSeverityTwinFixture(t *testing.T) {
 	b, err := os.ReadFile("testdata/severity_twin.json")
 	if err != nil {

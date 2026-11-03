@@ -1,6 +1,6 @@
 // Package svg is a zero-dependency SVG element writer. Attribute values carry their own
 // formatting (F/I) and text content is XML-escaped (Text), so callers avoid quote-soup and
-// manual escaping. It holds no geometry model and makes no drawing decisions, which stay in
+// manual escaping. It holds no geometry model and makes no drawing decisions. Those live in
 // core/render.
 package svg
 
@@ -23,7 +23,7 @@ type Attr struct{ key, val string }
 func A(key, val string) Attr { return Attr{key, val} }
 
 // AEsc is an escaped attribute for a value that comes from the design (net names, designators, pin
-// numbers), so a quote or angle bracket lands as text rather than as markup.
+// numbers), so a quote or angle bracket is written as text rather than as markup.
 func AEsc(key, val string) Attr { return Attr{key, escapeAttr(val)} }
 
 // escapeAttr escapes a value for an attribute in double quotes. xml.EscapeText covers the five XML
@@ -62,7 +62,7 @@ func (c *Canvas) El(tag string, attrs ...Attr) {
 	c.b.WriteString("/>")
 }
 
-// Group opens a container element (<g k="v" ...>) that stays open until GroupEnd, as the board
+// Group opens a container element (<g k="v" ...>) that is left open until GroupEnd, as the board
 // renderer's class-per-layer groups do. Nesting is the caller's responsibility.
 func (c *Canvas) Group(attrs ...Attr) {
 	c.b.WriteString("\n<g")

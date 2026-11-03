@@ -18,27 +18,28 @@ import (
 //
 // THE SCALE LIVES HERE AND NOWHERE ELSE. No rule contains a number.
 //
-// This table is not core/classify's. That one parses value text by IEC 60062's RKM code, which reads
-// M as MEGA and ignores case, and would invert three orders of magnitude on a printed unit symbol.
+// This table is not core/classify's. That one parses value text by IEC 60062's RKM code. The RKM
+// code reads M as MEGA and ignores case, so it would invert three orders of magnitude on a printed
+// unit symbol.
 // TestUnitVocabulariesAgree in core/check holds the two base-unit vocabularies to each other. See
 // docsite/content/architecture/datasheet-layer.md#comparison-semantics.
 
-// UnitOhm is the canonical ohm symbol a converted parameter carries: GREEK CAPITAL LETTER OMEGA
-// (U+03A9). It is the same symbol ir.Quantity documents as canonical, so a rule comparing a
+// UnitOhm is the canonical ohm symbol, GREEK CAPITAL LETTER OMEGA (U+03A9), and a converted
+// parameter uses it. ir.Quantity documents the same symbol as canonical, so a rule comparing a
 // design-side resistance against a datasheet-side one compares two identical strings. Declared here
 // rather than imported from core/classify because the datasheet tier imports nothing from core (C17).
 const UnitOhm = "Ω" // Ω
 
 // ohmSign is the deprecated OHM SIGN codepoint (U+2126), visually identical to U+03A9. Unicode
-// normalizes it away, but a transcribed spec carries the raw bytes and nothing here normalizes first.
+// normalizes it away, but a transcribed spec holds the raw bytes and nothing here normalizes first.
 const ohmSign = "Ω" // Ω (deprecated codepoint)
 
-// prefixableUnits maps every spelling of a base unit a datasheet may print to its canonical symbol.
-// These are the units an SI multiplier may be attached to, so the flat lookup is their cross product
+// prefixableUnits maps each spelling that a datasheet may print for a base unit to its canonical
+// symbol. An SI multiplier may be attached to these units, so the flat lookup is their cross product
 // with siPrefixes.
 //
-// The five bases ir.Quantity names (Ω F H A V) are the ones a shipped extractor reads today. W, s and
-// Hz are here so the first timing or power row converts rather than being dropped.
+// ir.Quantity names five bases (Ω F H A V), and a shipped extractor reads those today. W, s and Hz
+// are here so the first timing or power row converts rather than being dropped.
 var prefixableUnits = map[string]string{
 	"V":     "V",
 	"A":     "A",
@@ -52,8 +53,8 @@ var prefixableUnits = map[string]string{
 }
 
 // unprefixedUnits are the units that carry NO multiplier, so no prefixed form of them is recognized.
-// Temperature is the one that matters, since a datasheet states a junction limit in degrees Celsius and
-// never in millidegrees, so admitting "mC" would only ever match a typo and scale it by a thousand.
+// Temperature matters most. A datasheet states a junction limit in degrees Celsius and never in
+// millidegrees, so admitting "mC" would only ever match a typo and scale it by a thousand.
 var unprefixedUnits = map[string]string{
 	"C": "C", "°C": "C", // °C
 }
@@ -62,11 +63,11 @@ var unprefixedUnits = map[string]string{
 //
 // CASE IS NORMATIVE AND THERE IS NO FALLBACK. SI writes milli lowercase and mega uppercase, so mΩ and
 // MΩ differ by nine orders of magnitude. A case-insensitive lookup or a retry in the other case would
-// guess, and a wrong guess yields a confidently wrong number rather than a skip. A spelling this table
-// does not hold is refused.
+// guess, and a wrong guess yields a confidently wrong number rather than a skip. The lookup refuses
+// any spelling that the table does not hold.
 //
-// Micro appears under both codepoints designs and datasheets carry, MICRO SIGN (U+00B5) and GREEK
-// SMALL LETTER MU (U+03BC). There is no ASCII "u", since a datasheet does not print one.
+// Designs and datasheets write micro with two codepoints, MICRO SIGN (U+00B5) and GREEK SMALL LETTER
+// MU (U+03BC), and the table holds both. There is no ASCII "u", since a datasheet does not print one.
 //
 // Kilo is lowercase k only. Uppercase K is kelvin, and a table that accepted it as kilo would read a
 // temperature row as a thousand of something.
@@ -83,8 +84,8 @@ var siPrefixes = map[string]int{
 
 // unitScales is the flat spelling -> (base, exponent) lookup, built once from the three tables above.
 // Flattening at init rather than parsing a prefix at call time keeps the vocabulary CLOSED. Every
-// string this package accepts is a key a test can enumerate, and no unforeseen spelling resolves by
-// accident.
+// string that this package accepts is a key, and a test can enumerate the keys. No unforeseen
+// spelling resolves by accident.
 var unitScales = func() map[string]unitScale {
 	out := make(map[string]unitScale, len(prefixableUnits)*(len(siPrefixes)+1)+len(unprefixedUnits))
 	for spelling, base := range prefixableUnits {
@@ -108,9 +109,9 @@ type unitScale struct {
 // BaseUnit reports the SI base unit a printed unit symbol reduces to, and the decimal exponent from
 // the printed unit to that base ("mV" -> "V", -3; "kΩ" -> "Ω", 3; "V" -> "V", 0).
 //
-// ok is false for a unit this layer does not recognize, INCLUDING the empty one, the same posture
-// check.ComponentValueIn takes on a bare component value. A caller must treat false as "not
-// comparable" and skip, never as "assume base".
+// ok is false for a unit that this layer does not recognize, INCLUDING the empty one.
+// check.ComponentValueIn takes the same position on a bare component value. A caller must treat false
+// as "not comparable" and skip, never as "assume base".
 func BaseUnit(unit string) (base string, exp int, ok bool) {
 	s, hit := unitScales[unit]
 	if !hit {
@@ -154,7 +155,7 @@ func InBaseUnit(p *parampb.Parameter) (*parampb.Parameter, bool) {
 }
 
 // scaleBound applies the exponent to one optional bound. An absent bound is a real state (a row
-// stating only a max), so it stays absent rather than becoming a scaled zero.
+// stating only a max), so it is returned absent rather than as a scaled zero.
 func scaleBound(v *float64, exp int) *float64 {
 	if v == nil || exp == 0 {
 		return v
@@ -163,10 +164,10 @@ func scaleBound(v *float64, exp int) *float64 {
 	return &s
 }
 
-// scalePow10 multiplies v by ten to the exp, DIVIDING on the negative branch rather than multiplying
-// by a negative power, as core/classify's value parser does. A positive power of ten is exact in a
-// double and a negative one is not, so 50 / 1e3 and 50 * 1e-3 land on different doubles. Dividing
-// makes a row transcribed as 50 mV and the same row as 0.05 V compare EQUAL.
+// scalePow10 multiplies v by ten to the exp. On the negative branch it DIVIDES rather than
+// multiplying by a negative power, as core/classify's value parser also does. A positive power of ten
+// is exact in a double and a negative one is not, so 50 / 1e3 and 50 * 1e-3 give different doubles.
+// Dividing makes a row transcribed as 50 mV and the same row as 0.05 V compare EQUAL.
 func scalePow10(v float64, exp int) float64 {
 	if exp > 0 {
 		return v * math.Pow10(exp)

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// Catalog is the composed rule set the engine runs, one or more RuleSources merged under
+// Catalog is the composed rule set that the engine runs, one or more RuleSources merged under
 // the namespace/collision policy (WS3-006). Rules come in source registration order, then
 // each source's own order, so findings and ListRules are stable. Non-built-in rules are
 // exposed as COPIES with the prefixed name and a stamped source tag. The source's own *Rule
@@ -41,7 +41,7 @@ func NewCatalog(sources ...RuleSource) (*Catalog, error) {
 
 // add composes sources into c under the collision policy, recording each source name in seen so a
 // duplicate source is rejected across calls as well as within one. NewCatalog and With both call it,
-// so extending a catalog follows exactly the policy composing one does.
+// so extending a catalog follows the same policy as composing one.
 func (c *Catalog) add(seen map[string]bool, sources ...RuleSource) error {
 	var declared []SupersedingSource
 	for _, s := range sources {
@@ -85,15 +85,15 @@ func (c *Catalog) add(seen map[string]bool, sources ...RuleSource) error {
 	return nil
 }
 
-// applySupersessions drops the rules the given sources supersede. It runs once, after every source in
-// the composition has been added, so a source can supersede one added alongside it in the same call
-// and not only one already present.
+// applySupersessions drops every rule that the given sources supersede. It runs once, after every
+// source in the composition has been added, so a source can supersede one added alongside it in the
+// same call and not only one already present.
 //
-// A source's declaration never applies to its OWN rules (WS3-056). A profile overlay and the built-in
-// profile it replaces carry identical tags (both stamp "profile": "SPI_NOR"), so matching on tags
-// alone would drop the replacement too and leave the interface with no rules, which a report shows as
-// a pass. Composition rejects duplicate source names, so exempting by name cannot exempt an unrelated
-// source.
+// A source's declaration never applies to its OWN rules (WS3-056). Imagine a profile overlay that
+// replaces a built-in profile. Both carry identical tags (both stamp "profile": "SPI_NOR").
+// Matching on tags alone would drop the replacement too and leave the interface with no rules, and
+// a report shows that as a pass. Composition rejects duplicate source names, so exempting by name
+// cannot exempt an unrelated source.
 func (c *Catalog) applySupersessions(sources []SupersedingSource) {
 	for _, s := range sources {
 		var dropped []string
@@ -132,9 +132,9 @@ func matchesAny(r *Rule, fs []Facets) bool {
 // rebuilding from the standard sources instead drops whatever else it carried (WS3-107).
 //
 // The base rules are carried across VERBATIM rather than re-composed, because they are already
-// namespaced and a name like "profile-overlay/spi-nor-signal-missing" would be rejected for containing
-// the separator. Only extra is namespaced, and its names are checked against everything already
-// present, so an extension can never shadow a rule the base carried.
+// namespaced and a name like "profile-overlay/spi-nor-signal-missing" would be rejected for
+// containing the separator. Only extra is namespaced, and its names are checked against everything
+// already present, so an extension can never shadow a rule from the base.
 func (c *Catalog) With(extra ...RuleSource) (*Catalog, error) {
 	out := &Catalog{
 		rules:      append(make([]*Rule, 0, len(c.rules)), c.rules...),
@@ -158,19 +158,19 @@ func (c *Catalog) With(extra ...RuleSource) (*Catalog, error) {
 	return out, nil
 }
 
-// DefaultCatalog is what the CLI and serve wire, the built-ins plus every source added via
-// RegisterSource, in registration order. With no source registered it is the built-ins alone.
-// It panics on a composition error, since the built-ins or a registered source failing the
-// policy is a programming error the catalog tests catch first.
+// DefaultCatalog composes the built-ins plus every source added via RegisterSource, in
+// registration order, and the CLI and serve wire it. With no source registered it is the built-ins
+// alone. It panics on a composition error. A built-in or registered source that fails the policy is
+// a programming error, and the catalog tests catch it first.
 func DefaultCatalog() *Catalog {
 	return CatalogWith()
 }
 
 // CatalogWith composes the built-ins, then every RegisterSource'd source, then the caller's
 // extra sources, under the same collision policy. Every engine surface builds through it so
-// registered sources are never dropped. The CLI passes its --conventions source here, and an
-// embedder that wants explicit control instead of the global RegisterSource passes its suites
-// as extras. It panics on a composition error, as DefaultCatalog does.
+// registered sources are never dropped. The CLI passes its --conventions source here. An embedder
+// can pass its suites as extras instead of using the global RegisterSource, for explicit control.
+// It panics on a composition error, as DefaultCatalog does.
 func CatalogWith(extra ...RuleSource) *Catalog {
 	sources := make([]RuleSource, 0, 1+len(registeredSources)+len(extra))
 	sources = append(sources, Builtins)
@@ -191,10 +191,10 @@ func (c *Catalog) Rules() []*Rule { return c.rules }
 // "source/name" for the rest), or nil.
 func (c *Catalog) Lookup(name string) *Rule { return c.byName[name] }
 
-// CheckNames refuses rule names c does not hold, so a misspelled rule fails rather than running
-// nothing and reading as a clean run (agni issue 1121). The error names each unknown rule, says which
-// source superseded one that a project's rules replaced, and offers the closest names c does hold.
-// Every name known, or none asked, is nil.
+// CheckNames refuses any rule name that c does not hold, so a misspelled rule fails rather than
+// running nothing and reading as a clean run (agni issue 1121). The error names each unknown rule,
+// says which source superseded one that a project's rules replaced, and offers the closest names in
+// c. It returns nil when every name is known or none was asked.
 func (c *Catalog) CheckNames(names []string) error {
 	var problems []string
 	for _, n := range names {
@@ -226,9 +226,10 @@ func (c *Catalog) supersededBy(name string) string {
 	return ""
 }
 
-// nearNames is up to n of c's rule names closest to name, compared without the source prefix or
-// hyphens. One whose letters run in order inside the other (i2c-pull-up in i2c-missing-pullup) comes
-// first, then the rest within a third of the name's length by edit distance, nearest first.
+// nearNames returns up to n of c's rule names, the ones closest to name, compared without the source
+// prefix or hyphens. A name whose letters run in order inside the other comes first (i2c-pull-up in
+// i2c-missing-pullup). The rest follow if they are within a third of the name's length by edit
+// distance, nearest first.
 func (c *Catalog) nearNames(name string, n int) []string {
 	flat := func(s string) string { return strings.ReplaceAll(s[strings.LastIndex(s, "/")+1:], "-", "") }
 	type near struct {
@@ -333,8 +334,8 @@ func (c *Catalog) Superseded() []Supersession { return c.superseded }
 // tag key -> acceptable values. An empty Facets selects every rule; within one tag key the listed
 // values OR, while distinct constrained keys (and Names) intersect (a rule must match every
 // constrained axis). The CLI (agni check) and the web service (CheckDesign subset) both select
-// through it, so subsets mean the same on both. Any tag key works, including ones provider-supplied
-// rules invent.
+// through it, so subsets mean the same on both. Any tag key works, including keys that
+// provider-supplied rules invent.
 type Facets struct {
 	Names []string
 	Tags  map[string][]string
@@ -377,13 +378,13 @@ var boardFormats = map[string]bool{
 	"ipc-2581":  true,
 }
 
-// NoBoardReason is the reason Available gives a rule that reads the board tier when the run attached
+// NoBoardReason is the reason Available gives when a rule reads the board tier and the run attached
 // no board. A caller saying "no board was read" compares against it rather than a copy of the text
 // (agni issue 848).
 const NoBoardReason = "design carries no board geometry (WS1-006 sidecar)"
 
-// Available reports whether r can produce meaningful findings over m, and if not, a short reason a
-// UI can show. It derives from r.Reads, so a rule is unavailable when it reads a fact whose tier is
+// Available reports whether r can produce meaningful findings over m, and if not, a short reason for
+// a UI to show. It derives from r.Reads, so a rule is unavailable when it reads a fact whose tier is
 // absent for this design. m is nil for the design-less catalog listing, where the param tier is
 // absent and board and capability rules are available. The review runner treats the result as an
 // authoritative per-run gate, not only a listing hint.
@@ -391,13 +392,13 @@ func Available(r *Rule, m Model) (ok bool, reason string) {
 	return available(r, m, m != nil && m.HasParams())
 }
 
-// ListedAvailable is Available for a catalog listed with no design model, as ListRules does with no
-// snapshot or one whose netlist cannot be read, given whether the run would carry a datasheet
-// parameter set. Only a run can say
-// whether a board or a source capability is present, so those gate nothing here, as with a nil model.
-// The parameter set is known before any read, from the design's project and the host's own corpus,
-// and asking a nil model instead called every datasheet-tier rule unavailable on a project with
-// params/, so a viewer selecting only available rules never ran them (agni issue 940).
+// ListedAvailable is Available for a catalog listed with no design model. ListRules lists that way
+// when it has no snapshot, or one whose netlist cannot be read. params says whether the run would
+// carry a datasheet parameter set. Only a run can say whether a board or a source capability is
+// present, so those gate nothing here, as with a nil model. The parameter set is known before any
+// read, from the design's project and the host's own corpus. Asking a nil model instead called every
+// datasheet-tier rule unavailable on a project with params/, so a viewer selecting only available
+// rules never ran them (agni issue 940).
 func ListedAvailable(r *Rule, params bool) (ok bool, reason string) {
 	return available(r, nil, params)
 }
@@ -406,8 +407,8 @@ func ListedAvailable(r *Rule, params bool) (ok bool, reason string) {
 // would attach a board. ListRules asks it, because opening a design must not parse the board (agni
 // issue 943) while the listing must still say what a run of that design would skip (agni issue 950).
 // The parameter set and every source-format capability are read off m exactly as the run's model
-// answers them, so m must be built from the same netlist, overlay and corpus as the run's. Whether a
-// board is attached is known from the board tier's format without reading it, as GetDesign lists the
+// answers them, so m must be built from the same netlist, overlay and corpus as the run's. The board
+// tier's format says whether a board is attached without reading it, the same way GetDesign lists the
 // Board sheet.
 func AvailableBoardUnread(r *Rule, m Model, board bool) (ok bool, reason string) {
 	return available(r, boardAsRun{Model: m, board: board}, m.HasParams())
@@ -421,8 +422,8 @@ type boardAsRun struct {
 
 func (b boardAsRun) HasBoard() bool { return b.board || b.Model.HasBoard() }
 
-// available is the shared gate: params says whether the run carries a datasheet parameter set, and m,
-// when non-nil, answers the board and capability questions.
+// available is the shared gate. params says whether the run carries a datasheet parameter set. A
+// non-nil m answers the board and capability questions.
 func available(r *Rule, m Model, params bool) (ok bool, reason string) {
 	for _, fact := range r.Reads {
 		if slices.Contains(r.OptionalReads, fact) {
@@ -444,9 +445,10 @@ func available(r *Rule, m Model, params bool) (ok bool, reason string) {
 			return false, NoBoardReason
 		}
 	}
-	// Source-format capability gate (WS3-096). A rule inferring a defect from the ABSENCE of a
-	// construct the format cannot express returns no findings, which a review cannot tell from a
-	// clean pass, so the declared requirement is checked here to report not-applicable instead.
+	// Source-format capability gate (WS3-096). Imagine a rule that infers a defect from the ABSENCE
+	// of a construct, on a format that cannot express the construct. It returns no findings, and a
+	// review cannot tell that from a clean pass. So the declared requirement is checked here, to
+	// report not-applicable instead.
 	// See docsite/content/architecture/rules-and-checks.md#source-format-capabilities.
 	for _, c := range r.RequiresCapability {
 		if m != nil && !capabilityMet(c, m) {
@@ -479,8 +481,8 @@ func capabilityMet(c Capability, m Model) bool {
 	return true
 }
 
-// capabilityReason is the short not-applicable reason a UI and the review report show for an unmet
-// capability c.
+// capabilityReason returns the short not-applicable reason for an unmet capability c. A UI and the
+// review report show it.
 func capabilityReason(c Capability) string {
 	switch c {
 	case CapTypesPowerOut:

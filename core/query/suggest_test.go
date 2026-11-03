@@ -32,8 +32,9 @@ func TestDidYouMeanFormatsOrEmpty(t *testing.T) {
 	}
 }
 
-// suggestRelation is the name didYouMean suggests, or "" when it suggests none. The ranking moved into
-// the engine with agni issue 731; this reads its answer back out of the hint it formats.
+// suggestRelation returns the name didYouMean suggests, or "" when it suggests none. The ranking
+// moved into the engine with agni issue 731, so this reads the engine's answer back out of the hint
+// it formats.
 func suggestRelation(reg *facts.Registry, name string) string {
 	const pre = `; did you mean "`
 	h := didYouMean(reg, name)

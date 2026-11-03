@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// A convention's value_unit reaches the lexicon a design is read with, and a bad one fails the load
-// rather than reading as applied (agni issue 1285).
+// A convention's value_unit reaches the lexicon that a design is read with, and a bad one fails the
+// load rather than reading as applied (agni issue 1285).
 func TestAConventionsValueUnitsReachTheLexicon(t *testing.T) {
 	cfg, err := Parse([]byte("name: house\nlexicon:\n  value_unit:\n    capacitor: uF_is_not_a_unit\n"))
 	if err != nil {

@@ -10,7 +10,7 @@ import (
 
 // The circuit walks charge the connections they examine to the evaluation's budget
 // (facts.Env.Spend, panyam/jaala#361). These tests read the all-pairs walk over the straight chain
-// N0 -R1- N1 -R2- N2 -R3- N3, the shape whose cost runs ahead of the rows it emits.
+// N0 -R1- N1 -R2- N2 -R3- N3. On that shape the cost grows faster than the rows emitted.
 
 const allPairs = `net.reaches(?a, ?b) => ?a, ?b`
 
@@ -26,8 +26,8 @@ func walkCost(t *testing.T) (engine, total int64) {
 	return b.Work(), Work(b)
 }
 
-// TestWorkCountsWhatAWalkSpent: the reported work is the engine's plus the walk's own steps, and a
-// query calling no walk reports the engine's alone.
+// TestWorkCountsWhatAWalkSpent checks that the reported work is the engine's plus the walk's own
+// steps. A query calling no walk reports the engine's alone.
 func TestWorkCountsWhatAWalkSpent(t *testing.T) {
 	engine, total := walkCost(t)
 	if total <= engine {
@@ -42,8 +42,9 @@ func TestWorkCountsWhatAWalkSpent(t *testing.T) {
 	}
 }
 
-// TestABudgetStopsAWalkOnWhatItSpent: a budget the engine's work alone fits in stops the walk once
-// its steps are charged too. control: a budget of the whole reported work answers.
+// TestABudgetStopsAWalkOnWhatItSpent sets a budget that fits the engine's work alone. That budget
+// stops the walk once its steps are charged too. As a control, a budget of the whole reported work
+// answers.
 func TestABudgetStopsAWalkOnWhatItSpent(t *testing.T) {
 	engine, total := walkCost(t)
 	eval := func(budget int64) error {

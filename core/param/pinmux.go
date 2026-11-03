@@ -10,16 +10,16 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// A pin-mux reference is a part's mux table kept as a file of its own, which a board team usually
-// produces from a spreadsheet transcribed out of the reference manual (agni issue 1200). It is a
-// PartSpec holding only pins, the docs they cite and the packages their numbers name, so the mux table
+// A pin-mux reference is a part's mux table kept as a file of its own. A board team usually produces
+// one from a spreadsheet transcribed out of the reference manual (agni issue 1200). It is a PartSpec
+// holding only pins, the docs they cite and the packages that their numbers name. So the mux table
 // has no schema beside the one the corpus reads. The datasheet service reads one from YAML and merges
 // it into the MPN's published spec before the corpus sees it, so a corpus keeps one file per MPN and
 // nothing that reads a corpus has to join two.
 
-// CheckPinMux refuses a reference that cannot be merged: one naming no MPN or no pins, one carrying
-// parameters or relations, since limits belong in the published spec and a merge that took them would
-// let a mux file override them, and a pin listing no alternates.
+// CheckPinMux refuses a reference that cannot be merged. It refuses one naming no MPN or no pins, and
+// one in which a pin lists no alternates. It also refuses one carrying parameters or relations. Limits
+// belong in the published spec, and a merge that took them would let a mux file override them.
 func CheckPinMux(mux *parampb.PartSpec) error {
 	if mux.Mpn == "" {
 		return fmt.Errorf("pin mux: no mpn, so it names no part to merge into")
@@ -41,27 +41,27 @@ func CheckPinMux(mux *parampb.PartSpec) error {
 // PinMuxMerge says what a merge does with the alternates a matched pin already lists.
 type PinMuxMerge struct {
 	// Replace drops a matched pin's alternates and takes the reference's in their place, for a
-	// revised table that should remove what the revision removed. Without it the two lists are joined,
-	// the published ones first and then the reference's new ones in its order, an exact repeat of a
-	// name dropped, so two partial tables for one part both land and merging a table twice changes
-	// nothing.
+	// revised table that should remove what the revision removed. Without it the two lists are
+	// joined. The published names come first, then the reference's new ones in its order, and an
+	// exact repeat of a name is dropped. So two partial tables for one part both take effect, and
+	// merging a table twice changes nothing.
 	Replace bool
 }
 
 // MergePinMux returns base with mux's pins merged in, leaving both arguments unchanged. A nil base
 // means the MPN has no published spec yet, and the result is the reference itself.
 //
-// Each reference pin finds the base pin it describes the way derive joins a mux row to a pin table:
-// by id, else by a designator they share in a package, else, for a reference pin with no designators,
-// by its name compared through ident.PinName. A matched pin gains the reference's alternates, joined
-// with its own or in their place as opts says, and any designator it lacked; its name, function, prov
-// and id stay as published, since parameters point at the id. A reference pin matching nothing is
-// added after the base's pins. Docs and packages join by id.
+// Each reference pin finds its base pin the way derive joins a mux row to a pin table. It matches by
+// id first, then by a shared designator in a package. A reference pin with no designators matches by
+// its name, compared through ident.PinName. A matched pin gains the reference's alternates, joined
+// with its own or in their place as opts says, and any designator it lacked. Its name, function, prov
+// and id do not change, since parameters point at the id. A reference pin matching nothing is added
+// after the base's pins. Docs and packages join by id.
 //
-// It refuses a reference CheckPinMux refuses, an MPN that differs from base's, a doc or package whose
-// id the base already uses for different content, a reference pin matching several base pins (a
-// repeated name such as NC), and two reference pins matching one base pin. The result is not
-// validated here; publishing does that.
+// It refuses any reference that CheckPinMux refuses. It also refuses an MPN that differs from base's,
+// a doc or package reusing a base id for different content, a reference pin matching several base
+// pins (a repeated name such as NC), and two reference pins matching one base pin. The result is not
+// validated here, because publishing does that.
 func MergePinMux(base, mux *parampb.PartSpec, opts PinMuxMerge) (*parampb.PartSpec, error) {
 	if err := CheckPinMux(mux); err != nil {
 		return nil, err

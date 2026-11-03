@@ -6,9 +6,9 @@ import (
 	"testing"
 )
 
-// TestParseQuantitySpellings covers the notations designs actually carry: SI prefixes, the IEC 60062
-// RKM code where the multiplier letter replaces the decimal point, an explicit unit or none, and the
-// concatenated fields real value strings arrive as.
+// TestParseQuantitySpellings covers the notations found in real designs. They include SI prefixes,
+// the IEC 60062 RKM code where the multiplier letter replaces the decimal point, an explicit unit or
+// none, and the concatenated fields that real value strings arrive as.
 func TestParseQuantitySpellings(t *testing.T) {
 	cases := []struct {
 		in   string
@@ -53,17 +53,17 @@ func TestParseQuantitySpellings(t *testing.T) {
 	}
 }
 
-// TestParseQuantityIsDecimalExact is the assertion the parse strategy exists for, and it is
+// TestParseQuantityIsDecimalExact asserts the property the parse strategy exists for. It is
 // written around a value where a naive implementation actually DIFFERS.
 //
 // Parsing the mantissa as a float and then scaling ("2.2" -> 2.2, times 1e-12) rounds twice, and
-// the second rounding does not always land where a single exact scaling does. Across 2-3
+// the second rounding does not always give the double a single exact scaling gives. Across 2-3
 // significant-figure mantissas over the SI prefixes designs use, the two approaches disagree on
 // 1573 of 7920 values, all at small magnitudes, in picofarads, where crystal load caps live and
 // where a shipped rule already reads capacitance.
 //
-// A test written on 4k7 would pass either way (4700 does not diverge) and would prove nothing, which is
-// why this one is pinned to 2p2 and asserts against the exactly-scaled double rather than a literal.
+// A test written on 4k7 would pass either way (4700 does not diverge) and would prove nothing. So
+// this one is pinned to 2p2 and asserts against the exactly-scaled double rather than a literal.
 func TestParseQuantityIsDecimalExact(t *testing.T) {
 	got, _, ok := ParseQuantity("2p2")
 	if !ok {

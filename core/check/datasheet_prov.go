@@ -20,7 +20,7 @@ func DatasheetCitationOf(spec *parampb.PartSpec, p *parampb.Parameter) *Datashee
 	return c
 }
 
-// DatasheetCitationOfProv is the same build from a bare ParamProvenance, for the rows that carry one
+// DatasheetCitationOfProv is the same build from a bare ParamProvenance, for the rows that have one
 // but are not parameters, such as a Pin's declaration and a PinRelation's bound. Like PinCitation on
 // the string side, it keeps the doc_ref resolution in one place so the row types cannot drift.
 func DatasheetCitationOfProv(spec *parampb.PartSpec, prov *parampb.ParamProvenance) *DatasheetCitation {
@@ -47,8 +47,8 @@ func DocTitle(spec *parampb.PartSpec, docRef string) string {
 }
 
 // DatasheetProvFor resolves the structured datasheet Citation for a component's parameter by symbol,
-// so a datalog-authored rule (query.RuleFromQuery) can carry the same doc/page/section/method/
-// confidence the built-in datasheet rules attach directly. refDes is the finding's component subject.
+// so a datalog-authored rule (query.RuleFromQuery) can attach the same doc/page/section/method/
+// confidence as the built-in datasheet rules do. refDes is the finding's component subject.
 // Nil when the component has no seeded spec, or the spec has no parameter with that symbol.
 func DatasheetProvFor(m Model, refDes, symbol string) *DatasheetCitation {
 	spec := m.PartSpec(refDes)

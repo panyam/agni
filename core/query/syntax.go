@@ -14,14 +14,15 @@ type Position struct {
 	Offset int // bytes from the start of the text
 	Line   int
 	Column int
-	// Caret is the line of text the position is on with a caret under its column (see Caret), so
-	// every surface draws the one the engine drew. "" when the position is not inside the text.
+	// Caret is the position's line of text with a caret under its column (see Caret). Every surface
+	// draws this caret, so each one shows what the engine drew. It is "" when the position is not
+	// inside the text.
 	Caret string
 }
 
-// SyntaxError is a query that would not parse, with where in its text the parser stopped. Its
-// message is the engine's, unchanged, so a caller printing the error prints what it always has; a
-// caller that can show the text as well asks ErrorPosition for where to point.
+// SyntaxError is a query that would not parse, with the place in its text where the parser stopped.
+// Its message is the engine's, unchanged, so a caller printing the error prints what it always has.
+// A caller that can also show the text asks ErrorPosition where to point.
 type SyntaxError struct {
 	At  Position
 	err error
@@ -54,9 +55,9 @@ func ErrorPosition(err error) (Position, bool) {
 	return Position{}, false
 }
 
-// Caret renders the line of text p points into with a caret under its column, for a terminal or a
-// fixed-width box. A tab before the column is kept as a tab, so the caret lines up however wide the
-// reader's tabs are. It returns "" when p is not inside text.
+// Caret renders p's line of text with a caret under its column, for a terminal or a fixed-width
+// box. A tab before the column is kept as a tab, so the caret lines up however wide the reader's
+// tabs are. It returns "" when p is not inside text.
 func Caret(text string, p Position) string {
 	lines := strings.Split(text, "\n")
 	if p.Line < 1 || p.Line > len(lines) || p.Column < 1 {
@@ -82,9 +83,10 @@ func Caret(text string, p Position) string {
 	return line + "\n" + pad.String() + "^"
 }
 
-// shifted moves err's position back by the n bytes of text a caller put in front of the query and
-// the lines that text spanned, so it points into the query as its author wrote it, and draws its
-// caret on that text. A position inside the prefix is dropped, since it is not in that query's text.
+// shifted moves err's position back by n bytes, the length of the caller's prefix in front of the
+// query, and by the lines that prefix spanned. The position then points into the query as its
+// author wrote it, and the caret is drawn on that text. A position inside the prefix is dropped,
+// since it is not in that query's text.
 func shifted(err error, prefix, text string) error {
 	se, ok := err.(*SyntaxError)
 	if !ok || prefix == "" {

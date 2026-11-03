@@ -12,15 +12,17 @@ import (
 // nameTokens splits a hierarchy leaf into its alphanumeric tokens, so LPC_VCC reads as LPC and VCC.
 var nameTokens = regexp.MustCompile(`[A-Za-z0-9]+`)
 
-// inferRails adds the rail role to each net that the rail vocabulary missed but whose name carries a
-// supply word as a LATER token (LPC_VCC, FAN_VDD) while the net feeds a fitted part's power_in pin.
+// inferRails adds the rail role to a net when the rail vocabulary did not match it, its name has a
+// supply word as a LATER token (LPC_VCC, FAN_VDD), and it feeds a fitted part's power_in pin.
 // Both halves are required. The name alone would make EN_VCC a rail, and a supply pin alone would make
-// a regulator's sense or bias net one. A net with a single physical pin carries nothing, so an unwired
-// supply pin's stub (KiCad's unconnected-(U30-VPP_FAST)) is not one either. A connector's own power_in pin is not counted, because on a
-// receptacle it marks where a cable delivers or takes power rather than a part drawing it (agni issues
-// 1243, 1254). The role records the pin that justified it.
+// a regulator's sense or bias net one. A net with a single physical pin connects nothing, so an
+// unwired supply pin's stub (KiCad's unconnected-(U30-VPP_FAST)) is not a rail either. A connector's
+// own power_in pin is not counted, because on a receptacle it marks where a cable delivers or takes
+// power rather than a part drawing it (agni issues 1243, 1254). The role records the pin that
+// justified it.
 //
-// It runs after rolesFor and after StampPowerInPins, since it reads the pin types that pass fills.
+// It runs after rolesFor and after StampPowerInPins, since StampPowerInPins fills the pin types it
+// reads.
 func inferRails(d *ir.Design, v *RoleVocab) {
 	if !v.InfersRails() {
 		return
@@ -47,8 +49,8 @@ func inferRails(d *ir.Design, v *RoleVocab) {
 	}
 }
 
-// laterSupplyToken returns the first token after the leaf's first that the supply-pin vocabulary
-// matches, or "". The first token is left to the rail vocabulary, which already reads a VCC prefix.
+// laterSupplyToken returns the first token of the leaf, after its first, that is a supply-pin name,
+// or "". It skips the first token because the rail vocabulary already reads a VCC prefix.
 func laterSupplyToken(v *RoleVocab, name string) string {
 	toks := nameTokens.FindAllString(roleLeaf(name), -1)
 	for _, t := range toks[min(1, len(toks)):] {

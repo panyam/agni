@@ -80,12 +80,8 @@ func TestPackSheet(t *testing.T) {
 	}
 }
 
-// TestPackSheetFreeGraphics checks that sheet-level free graphics (junction dots,
-// no-connect markers, notes), the ones the SVG backend draws from sheet.Shapes, are
-// packed into the WebGL path under groupFree, so the WebGL render reaches parity with the
-// SVG oracle. These carry no ref_des/net, so they get no PrimitiveKey.
-// TestPackSheetImages packs sheet-level images into PackedImage, rebased to the same origin as
-// the vertices, carrying mime + raw bytes; images with no bbox or no data are skipped.
+// TestPackSheetImages packs sheet-level images into PackedImage with their mime and raw bytes,
+// rebased to the same origin as the vertices. Images with no bbox or no data are skipped.
 func TestPackSheetImages(t *testing.T) {
 	data := []byte{0x89, 'P', 'N', 'G'}
 	g := &geom.SchematicGeometry{
@@ -119,6 +115,10 @@ func TestPackSheetImages(t *testing.T) {
 	}
 }
 
+// TestPackSheetFreeGraphics checks that sheet-level free graphics are packed into the WebGL path
+// under groupFree. These are junction dots, no-connect markers and notes, and the SVG backend
+// draws them from sheet.Shapes. Packing them gives the WebGL render parity with the SVG oracle.
+// They have no ref_des/net, so they get no PrimitiveKey.
 func TestPackSheetFreeGraphics(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Sheets: []*geom.SheetGeometry{{
@@ -154,9 +154,9 @@ func TestPackSheetFreeGraphics(t *testing.T) {
 	}
 }
 
-// TestPackSheetWorksheetFurniture checks that a sheet with a page (sheet.Size) gets the
-// synthesized worksheet furniture (frame + zone-ruler ticks + title-block box/dividers)
-// packed under groupFrame, and a sheet with no page gets none.
+// TestPackSheetWorksheetFurniture checks that a sheet with a page (sheet.Size) gets synthesized
+// worksheet furniture packed under groupFrame. The furniture is the frame, the zone-ruler ticks
+// and the title-block box and dividers. A sheet with no page gets none.
 func TestPackSheetWorksheetFurniture(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Sheets: []*geom.SheetGeometry{{
@@ -193,7 +193,7 @@ func TestPackSheetWorksheetFurniture(t *testing.T) {
 }
 
 // TestPackBusQuads checks that a bus trunk/entry (WS7-042) packs as true-width triangle quads in
-// groupBus (GL can't stroke a line wider than 1px), while a plain wire stays a groupWire line
+// groupBus (GL can't stroke a line wider than 1px), while a plain wire is still a groupWire line
 // strip, and that groupBus resolves the bus color.
 func TestPackBusQuads(t *testing.T) {
 	g := &geom.SchematicGeometry{
@@ -226,9 +226,9 @@ func TestPackBusQuads(t *testing.T) {
 	}
 }
 
-// TestPackBusKey checks that a bus primitive carries a PrimitiveKey keyed by the bus NAME (WS7-042b),
+// TestPackBusKey checks that a bus primitive has a PrimitiveKey keyed by the bus NAME (WS7-042b),
 // so a bus-not-modeled finding can highlight it. A bus has no net, so without this key the build()
-// guard would drop it and the bus would be unpickable. The name rides PrimitiveKey.bus_id, disjoint
+// guard would drop it and the bus would be unpickable. The name goes in PrimitiveKey.bus_id, apart
 // from a net wire's net key.
 func TestPackBusKey(t *testing.T) {
 	g := &geom.SchematicGeometry{

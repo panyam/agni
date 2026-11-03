@@ -170,8 +170,8 @@ func copperGroup(layer string) uint8 {
 	}
 }
 
-// quadPts is a track segment as a filled quad (two triangles) at true width, floored to
-// minStrokeNm, the same floor as the SVG backend's copperStrokePx so both draw copper alike.
+// quadPts returns a track segment as a filled quad (two triangles) at true width, floored to
+// minStrokeNm. The SVG backend's copperStrokePx uses the same floor, so both draw copper alike.
 func quadPts(ax, ay, bx, by, width int64) [][2]int64 {
 	dx, dy := float64(bx-ax), float64(by-ay)
 	l := math.Hypot(dx, dy)

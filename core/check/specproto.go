@@ -11,10 +11,10 @@ import (
 // converts, so a node added to the closed vocabulary gets its wire form in the same package, and a
 // missing case panics on first encode rather than dropping silently across a package boundary.
 //
-// The conversion is total in one direction and validating in the other. Encoding a Spec this package
-// built cannot fail, because the AST is closed and every node has a case. Decoding CAN fail, because
-// the bytes came from somewhere else, so SpecFromProto builds the value and then runs the same
-// Validate that binding a hand-written Spec runs. That catches an unknown fact, an unbound var, an
+// The conversion is total in one direction and validating in the other. Encoding cannot fail for a
+// Spec that this package built, because the AST is closed and every node has a case. Decoding CAN
+// fail, because the bytes came from somewhere else. So SpecFromProto builds the value and then runs
+// Validate, as binding a hand-written Spec does. Validate catches an unknown fact, an unbound var, an
 // unregistered FFI name, or a pattern that will not compile.
 
 // SpecProto encodes a Spec as its wire form. It panics on a Term or Expr outside the closed
@@ -143,8 +143,8 @@ func termFromProto(p *checkspb.SpecTerm) (Term, error) {
 	return nil, fmt.Errorf("spec term is empty (no variant set)")
 }
 
-// litFromProto decodes an integer literal as a Go int, not int64, because the facts a Cmp orders
-// against (net.pin_count, segment.width) are ints and the comparison is type-exact. An int64 here
+// litFromProto decodes an integer literal as a Go int, not int64. A Cmp orders against facts such as
+// net.pin_count and segment.width, which are ints, and the comparison is type-exact. An int64 here
 // would make every ordering silently false.
 func litFromProto(p *checkspb.SpecLit) (Term, error) {
 	switch v := p.GetValue().(type) {
@@ -286,7 +286,7 @@ func RuleMetaProto(r Rule) *checkspb.RuleMeta {
 	return m
 }
 
-// RuleMetaFromProto decodes rule metadata into the Rule fields a compiler then completes with Eval
+// RuleMetaFromProto decodes rule metadata into Rule fields. A compiler then completes them with Eval
 // and the derived Reads/Primitives.
 func RuleMetaFromProto(p *checkspb.RuleMeta) Rule {
 	r := Rule{

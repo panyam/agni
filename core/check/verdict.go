@@ -8,9 +8,9 @@ import (
 	"github.com/panyam/agni/core/param"
 )
 
-// Verdict is what one rule concluded about one subject, passes included, with the evidence the
-// conclusion rests on. A finding records only a violation, so a pass is the absence of one; a
-// Verdict is how a rule proves a pin is fine rather than merely not reporting it (#387). Its wire
+// Verdict is what one rule concluded about one subject, passes included, with the evidence behind
+// the conclusion. A finding records only a violation, so a pass is the absence of one. A Verdict
+// lets a rule prove a pin is fine rather than merely not report it (#387). Its wire
 // form is checks.Verdict in checks.proto. See
 // docsite/content/build/check-rule.md#say-what-you-looked-at-not-only-what-failed.
 type Verdict struct {
@@ -27,8 +27,8 @@ type Verdict struct {
 	// docsite/content/build/check-rule.md#a-tuple-in-the-verdict-one-entity-in-the-finding.
 	Subjects []Entity
 
-	// Witness is what the outcome rests on. REQUIRED on Pass and Fail, since without it a pass is
-	// silence. Nil only on NoLimit and NotConsidered, where there was nothing to rest on.
+	// Witness is the evidence for the outcome. REQUIRED on Pass and Fail, since without it a pass is
+	// silence. Nil only on NoLimit and NotConsidered, where there was no evidence to give.
 	Witness *Witness
 
 	// Reason says why a NotConsidered verdict could not be decided, in the rule author's words
@@ -38,16 +38,16 @@ type Verdict struct {
 	// rule-specific. The engine requires only that the reason EXISTS.
 	Reason string
 
-	// Context are the design entities this verdict's proof NAMES but is not ABOUT, typed so a
-	// consumer can highlight them: the resistor and rail a pull-up passes through, the rail a pin
-	// sits on. Ordered, and Role is the author's word for the part each plays.
+	// Context lists design entities that the verdict's proof NAMES. The verdict is not ABOUT them.
+	// They are typed so a consumer can highlight them, such as the resistor and rail a pull-up passes
+	// through, or the rail under a pin. Ordered, and Role is the author's word for the part each plays.
 	//
-	// The split from Witness.Terms is whether clicking it should light something up. A Term's value
-	// is a bare string ("R1" could be a component, net or pin), where a ContextSubject carries the
-	// Kind a highlight joins on (#388).
+	// Context and Witness.Terms differ in whether clicking an item should light something up. A
+	// Term's value is a bare string ("R1" could be a component, net or pin). A ContextSubject has a
+	// Kind, and a highlight joins on it (#388).
 	//
-	// Excludes the entities in Subjects, so a consumer draws subject-as-figure and Context-as-ground,
-	// the split focusStack implements in the web viewer.
+	// Excludes the entities in Subjects, so a consumer draws subject-as-figure and Context-as-ground.
+	// focusStack implements that split in the web viewer.
 	//
 	// Finding.Context is the projection of this for a failing verdict, and can differ. A Finding
 	// about a COMPONENT lists the pin in its context, where a pin-subject verdict does not, because
@@ -92,22 +92,23 @@ const (
 	NoLimit Outcome = "no-limit"
 )
 
-// Witness is why a verdict holds: a one-line statement a person can read, the facts that statement
-// rests on, and the datasheet provenance behind them.
+// Witness says why a verdict holds. It has a one-line statement a person can read, the facts
+// supporting that statement, and the datasheet provenance behind those facts.
 //
 // Terms is an ordered open list rather than a measured/limit pair because a path proof from
 // `net.reaches` ("SCL -> R7 -> +3V3") uses the same list with the hops as terms.
 type Witness struct {
 	// Statement is the human rendering, always set. It is the whole witness for a text consumer.
 	Statement string
-	// Terms are the VALUES Statement rests on, kept separately so a UI can lay them out and a test
-	// can assert on one without parsing prose: a measured voltage, a stated limit, a hop bound.
+	// Terms are the VALUES behind Statement, such as a measured voltage, a stated limit or a hop
+	// bound. They are kept separately so a UI can lay them out and a test can assert on one without
+	// parsing prose.
 	//
 	// Values only, never entities, which go in Verdict.Context with a Kind. So a witness whose proof
 	// is entirely a path has NO terms, and that is correct.
 	Terms []WitnessTerm
-	// Datasheet is the provenance of any seeded value the verdict used, the same citation form a
-	// Finding carries. Empty for a witness resting on nothing seeded.
+	// Datasheet is the provenance of any seeded value the verdict used, in the same citation form a
+	// Finding has. Empty when the witness used no seeded value.
 	Datasheet []*DatasheetCitation
 }
 
@@ -204,8 +205,9 @@ func CompareToBound(measured float64, unit string, b Bound, quantity, limitName 
 // Readable, not hashed, so a person can construct `pin-exceeds-abs-max:(pin:U12.7)` and ask about a
 // terminal without running check first.
 //
-// GENERATED, NEVER PARSED. The structure travels typed in Subjects, which is why a ref may keep its
-// own colons (`symbol:Library:Symbol`) and commas (an endpoint's `0,0`) behind encodeRef alone.
+// GENERATED, NEVER PARSED. The structure travels typed in Subjects. So a ref may keep its own
+// colons (`symbol:Library:Symbol`) and commas (an endpoint's `0,0`), and only encodeRef handles
+// them.
 //
 // KNOWN LIMIT: two nets sharing a name share an id, because a NetID would make the id impossible to
 // type. The wire Subject joins by name too, and duplicate net names are themselves a reported defect.
@@ -231,8 +233,8 @@ func EntityRef(e Entity) string {
 // tuples never produce the same id. KindEndpoint's ref is literally "0,0", and a net name can hold
 // anything, so without it ("A,B") and ("A", "B") collide.
 //
-// The colon is NOT escaped. Kind is a closed vocabulary with no colons, so "kind:ref" stays
-// unambiguous and KindSymbol's Library:Symbol stays readable in an id a person might type.
+// The colon is NOT escaped. Kind is a closed vocabulary with no colons, so "kind:ref" is still
+// unambiguous and KindSymbol's Library:Symbol is still readable in an id a person might type.
 func encodeRef(s string) string {
 	if !strings.ContainsAny(s, "%,()") {
 		return s
@@ -266,9 +268,9 @@ func SubjectRefs(v Verdict) string {
 	return strings.Join(parts, ",")
 }
 
-// VerdictsToFindings projects a verdict list down to the findings the `check` path reports, which is
-// how Rule.Findings and a spec derive findings from verdicts. Fail and Inconclusive carry a finding;
-// Pass, NotConsidered and NoLimit are silence to `check`.
+// VerdictsToFindings projects a verdict list down to the findings that the `check` path reports.
+// Rule.Findings and a spec derive their findings from verdicts this way. Fail and Inconclusive have
+// a finding; Pass, NotConsidered and NoLimit are silence to `check`.
 func VerdictsToFindings(vs []Verdict) []Finding {
 	// NON-NIL on empty, matching Report. TestSpecParity compares with reflect.DeepEqual, where nil is
 	// not equal to an empty slice, so a nil here breaks parity with a spec twin on every clean design.
@@ -283,11 +285,11 @@ func VerdictsToFindings(vs []Verdict) []Finding {
 	return out
 }
 
-// findingsOf is VerdictsToFindings for a run, which also stamps each finding with the id of the
-// verdict it came from (agni issue 485). Only a rule that states its considered set gets ids, since
-// RunVerdicts publishes no other rule's verdicts and an id would then name nothing. Each failing
-// verdict projects to its own finding, so a finding from a run carries one id; the field is a list so
-// a consumer that folds several findings into one keeps every id.
+// findingsOf is VerdictsToFindings for a run. It also stamps each finding with the id of its source
+// verdict (agni issue 485). Only a rule that states its considered set gets ids, since RunVerdicts
+// publishes no other rule's verdicts and an id would then name nothing. Each failing verdict
+// projects to its own finding, so a finding from a run has one id. The field is a list so a consumer
+// that folds several findings into one keeps every id.
 func findingsOf(r *Rule, vs []Verdict) []Finding {
 	if !r.StatesConsideredSet {
 		return VerdictsToFindings(vs)
@@ -335,8 +337,8 @@ func citationLine(c *DatasheetCitation) string {
 		s += ", " + c.Section
 	}
 	// Only a value from OUTSIDE the project is marked. The project's own params are the expected
-	// source, and a limit someone else transcribed deciding this design's verdict is the case worth
-	// a reader's attention.
+	// source. A reader should notice when someone else transcribed the limit that decides this
+	// design's verdict.
 	if c.Corpus == param.CorpusShared {
 		s += " (shared corpus)"
 	}

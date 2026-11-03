@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// The builder produces the SAME AST Parse does for the equivalent text, so switching a generator
-// from string-building to the builder is behavior-preserving by construction.
+// The builder and Parse produce the SAME AST for equivalent text. So switching a generator from
+// string-building to the builder is behavior-preserving by construction.
 func TestBuildMatchesParse(t *testing.T) {
 	built := Build(
 		[]Rule{Def(Rel("hit", V("n")),

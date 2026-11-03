@@ -76,8 +76,8 @@ func TestGeometryStructure(t *testing.T) {
 	}
 }
 
-// Resolved must agree with what the RENDERER draws, because a shortfall report built on it names
-// placements a reader is told did not draw (agni issue 354).
+// Resolved must agree with what the RENDERER draws. A shortfall report built on Resolved tells a
+// reader which placements did not draw, so it must not name one that drew (agni issue 354).
 //
 // It used to join on (cell_ref, library_ref) alone while the renderer falls back to cell-only, so a
 // placement naming no library counted as unresolved here and drew perfectly well there. A banner

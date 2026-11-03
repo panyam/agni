@@ -9,9 +9,9 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// supplyFedDesign is MNT's LPC_VCC shape in miniature: an MCU's VDD and a capacitor on LPC_VCC, an
-// enable signal EN_VCC on an MCU input, a net reaching only a connector's power_in pin, an unfitted
-// part's VDD, and a second MCU's unwired VDD alone on its stub.
+// supplyFedDesign is MNT's LPC_VCC shape in miniature. It has an MCU's VDD and a capacitor on
+// LPC_VCC, an enable signal EN_VCC on an MCU input, a net reaching only a connector's power_in pin,
+// an unfitted part's VDD, and a second MCU's unwired VDD alone on its stub.
 func supplyFedDesign() *ir.Design {
 	pin := func(name, des string, dir ir.PinDirection) *ir.Pin {
 		return &ir.Pin{Name: name, Designator: des, Direction: dir}
@@ -115,7 +115,7 @@ func TestRailInferenceCanBeTurnedOff(t *testing.T) {
 	}
 }
 
-// TestAnExclusionTakesANameOutOfAVocabulary checks the exclude list and its merge: a project's
+// TestAnExclusionTakesANameOutOfAVocabulary checks the exclude list and its merge. A project's
 // exclusion joins the built-in one, and replace drops both the built-in patterns and exclusions.
 func TestAnExclusionTakesANameOutOfAVocabulary(t *testing.T) {
 	added, err := BuildRoleVocab(&configpb.NamingLexicon{Net: &configpb.NetNameVocab{

@@ -115,9 +115,9 @@ func TestCatalogRejections(t *testing.T) {
 }
 
 // TestCatalogWithKeepsWhatTheBaseCarried pins that extending a catalog must ADD to it (WS3-107). A
-// *Catalog holds composed rules rather than its inputs, so a caller holding one it did not build
-// cannot rebuild it. The thing it did instead, recomposing from the standard sources,
-// silently discarded whatever else the base carried.
+// *Catalog holds composed rules rather than its inputs. A caller may hold a catalog it did not
+// build, and that caller cannot rebuild it. The old With recomposed from the standard sources
+// instead, and silently discarded whatever else the base held.
 func TestCatalogWithKeepsWhatTheBaseCarried(t *testing.T) {
 	base, err := NewCatalog(NewSource("alpha", []*Rule{{Name: "a1"}}), NewSource("beta", []*Rule{{Name: "b1"}}))
 	if err != nil {
@@ -165,9 +165,9 @@ func TestCatalogWithNamespacesOnlyTheExtras(t *testing.T) {
 	}
 }
 
-// TestCatalogWithRejectsACollision pins that an extension cannot shadow what the base carried, and
-// that re-adding a source the base already has is the same duplicate error a single composition would
-// give rather than a confusing per-rule collision.
+// TestCatalogWithRejectsACollision pins that an extension cannot shadow a base rule. Re-adding a
+// source the base already has gives the same duplicate error as a single composition, rather than a
+// confusing per-rule collision.
 func TestCatalogWithRejectsACollision(t *testing.T) {
 	base, err := NewCatalog(NewSource("alpha", []*Rule{{Name: "a1"}}))
 	if err != nil {
@@ -182,12 +182,12 @@ func TestCatalogWithRejectsACollision(t *testing.T) {
 }
 
 // TestAvailableRefDesCollisionsCapability (agni issue 309) covers a rule whose entire subject is a
-// reader diagnostic. It has nothing to report when the reader never computed it, and "nothing to
-// report" is also what a clean design looks like. So the gate reads the reader's own declaration
-// rather than the emptiness of the list.
+// reader diagnostic. It has nothing to report when the reader never computed it, and a clean
+// design also has nothing to report. So the gate reads the reader's own declaration rather than
+// the emptiness of the list.
 //
-// The two designs below carry the bug, identical empty collision lists with opposite meanings. Before
-// the declaration existed, both read as a pass.
+// The two designs below show the bug. Their collision lists are identical and empty, with opposite
+// meanings. Before the declaration existed, both read as a pass.
 func TestAvailableRefDesCollisionsCapability(t *testing.T) {
 	rule := &Rule{Reads: []string{"reader.ref_des_collision"}, RequiresCapability: []Capability{CapRefDesCollisions}}
 

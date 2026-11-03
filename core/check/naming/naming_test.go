@@ -161,8 +161,8 @@ lexicon:
 }
 
 // TestEveryShippedClassLoadsFromYAML checks that a project may extend every class the engine ships,
-// walked from the YAML a project writes. The names a config may use were a hand-kept list that
-// lacked thermistor, zener and ideal_diode_controller, so conventions naming any of them failed to
+// walked from the YAML a project writes. A hand-kept list once named the classes a config may use.
+// It lacked thermistor, zener and ideal_diode_controller, so conventions naming any of them failed to
 // load (agni 677).
 func TestEveryShippedClassLoadsFromYAML(t *testing.T) {
 	for _, cl := range model.ComponentClasses() {
@@ -177,8 +177,7 @@ func TestEveryShippedClassLoadsFromYAML(t *testing.T) {
 }
 
 // TestClassPrefixesReachTheReadFromYAML checks that a prefix declared in YAML gives a part its
-// class, and the family tag rides along, through the per-read lexicon rather than a process
-// install.
+// class, and the family tag with it, through the per-read lexicon rather than a process install.
 func TestClassPrefixesReachTheReadFromYAML(t *testing.T) {
 	cfg, err := Parse([]byte(`
 name: acme
@@ -209,10 +208,11 @@ lexicon:
 	}
 }
 
-// TestEveryNetVocabularyReachesTheEngineFromYAML walks the WHOLE path a project's config takes:
-// YAML text, protojson, the generated message, BuildRoleVocab, the compiled vocabulary. It covers
-// every net role rather than a sample, because the defect this guards is one vocabulary being absent
-// from the copy that fills the engine, and a test naming three of six would have passed throughout.
+// TestEveryNetVocabularyReachesTheEngineFromYAML walks the WHOLE path of a project's config, from
+// YAML text through protojson, the generated message and BuildRoleVocab to the compiled vocabulary.
+// It covers every net role rather than a sample. This test guards against one vocabulary going
+// missing from the copy that fills the engine, and a test naming three of six would have passed
+// throughout.
 //
 // That defect shipped twice. WS3-117 added gate/source/drain to the Go override struct and not to the
 // wire form, so a project declaring them had them silently dropped. Agni 680 did the same to

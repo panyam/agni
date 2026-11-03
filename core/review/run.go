@@ -12,8 +12,8 @@ import (
 
 // Outcome is how one checklist item resolved on a design, along TWO axes (WS10-014). COVERAGE asks
 // whether a mechanism exists, and everything but NotAutomated is covered. RATIFICATION asks whether
-// the data the mechanism ran on is trustworthy. An item no shipped rule covers must never read as
-// passed.
+// the data the mechanism ran on is trustworthy. If no shipped rule covers an item, the item must
+// never read as passed.
 type Outcome string
 
 const (
@@ -31,22 +31,23 @@ const (
 	// declaration was supplied, so the rule is absent from the catalog. It is COVERED and blocked on a
 	// per-design input. Supplying --intent-path flips it to pass/fail.
 	NeedsDesignIntent Outcome = "needs-design-intent"
-	// ComputedNA is a device-class-gated item (applies_to_class) whose class matches no component on
-	// the design. Unlike NotApplicable (a missing fact TIER), the tier is present and the mechanism
-	// computed that the check does not apply.
+	// ComputedNA marks a device-class-gated item (applies_to_class) when no component on the design
+	// matches its class. NotApplicable means a fact TIER is missing. Here the tier is present, and the
+	// mechanism computed that the check does not apply.
 	ComputedNA Outcome = "computed-n/a"
 	// NeedsData means the item's mechanism ran, but the specific data it joins against is absent, so it
-	// could not evaluate (WS3-097). The derivable case is a datasheet symbol seeded on no component:
-	// --params supplied the tier, so Available does not gate, and nothing matched because the value is
-	// unseeded rather than because the design is clean. It is COVERED, like NeedsDesignIntent.
+	// could not evaluate (WS3-097). The case we can derive is a datasheet symbol seeded on no
+	// component. --params supplied the tier, so Available does not gate. Nothing matched because the
+	// value is unseeded, not because the design is clean. It is COVERED, like NeedsDesignIntent.
 	NeedsData Outcome = "needs-data"
 	// Inconclusive means the item's rule(s) ran with everything they needed, examined a specific
 	// subject, and could not decide (agni issue 74). It is the only outcome on the RESULT side of a
 	// rule. Every other non-pass state above is a design-wide PRECONDITION. It is not folded into
-	// NeedsData because some of what it covers is not a data gap (a netlist states reset polarity
-	// nowhere), and needs-data would send a reviewer to supply something that does not exist.
+	// NeedsData, because some inconclusive cases are not data gaps. A netlist states reset polarity
+	// nowhere, for example, and needs-data would send a reviewer to supply something that does not
+	// exist.
 	//
-	// It is COVERED and NEVER a pass. The per-finding Message carries the remedy.
+	// It is COVERED and NEVER a pass. The per-finding Message states the remedy.
 	Inconclusive Outcome = "inconclusive"
 )
 
@@ -68,7 +69,7 @@ type AreaResult struct {
 	Items []ItemResult
 }
 
-// Report is the per-design review result, carrying the manifest and design names plus each area's
+// Report is the per-design review result. It holds the manifest and design names and each area's
 // item outcomes. The markdown, JSON and HTML renderers all read it.
 type Report struct {
 	Manifest string
@@ -76,9 +77,9 @@ type Report struct {
 	Areas    []AreaResult
 }
 
-// Presence is the review's evaluability verdict for an interface a profile item names, saying whether
-// the profile's rules will GENUINELY evaluate on this design (WS3-090). It is not a bare "on the
-// board" bool, because a rule that could not evaluate must not score as a clean pass.
+// Presence is the review's evaluability verdict for an interface that a profile item names. It says
+// whether the profile's rules will GENUINELY evaluate on this design (WS3-090). It is not a bare "on
+// the board" bool, because a rule that could not evaluate must not score as a clean pass.
 type Presence int
 
 const (
@@ -103,11 +104,12 @@ const (
 	IfaceConventionUnmatched
 )
 
-// PresenceFunc reports the review's evaluability verdict for an interface (by profile Name) and
-// whether the name is a KNOWN interface, meaning a profile or presence-only declaration of that name
-// is loaded (built-in or via --profile-path). An UNKNOWN name leaves the item running, so it can still
-// read not-automated when nothing covers it. nil disables the gate. It is a function so `review` does
-// not import `profiles`, and the service wires it (profiles.InUse / HostDeclared).
+// PresenceFunc takes an interface's profile Name. It reports the review's evaluability verdict for
+// that interface, and whether the name is a KNOWN interface. A name is known when a profile or a
+// presence-only declaration of that name is loaded, built-in or via --profile-path. An UNKNOWN name
+// leaves the item running, so it can still read not-automated when nothing covers it. nil disables the
+// gate. It is a function so `review` does not import `profiles`, and the service wires it
+// (profiles.InUse / HostDeclared).
 type PresenceFunc func(profileName string) (verdict Presence, known bool)
 
 // ScopeFunc returns the set of net names belonging to a profile, so a scoped binding (WS3-058) keeps
@@ -115,13 +117,13 @@ type PresenceFunc func(profileName string) (verdict Presence, known bool)
 // service wires it (profiles.Nets).
 type ScopeFunc func(profileName string) map[string]bool
 
-// CompScopeFunc returns the set of component RefDes belonging to a profile, so a scoped binding keeps
-// a COMPONENT-subject finding on the interface's parts, which ScopeFunc alone drops (WS3-083). nil
-// disables the component side. The service wires it (profiles.Components). A scoped item is
-// unfiltered only when BOTH Scope and CompScope are nil.
+// CompScopeFunc returns the set of component RefDes belonging to a profile. A scoped binding uses it
+// to keep a COMPONENT-subject finding on the interface's parts. ScopeFunc alone drops such a finding
+// (WS3-083). nil disables the component side. The service wires it (profiles.Components). A scoped
+// item is unfiltered only when BOTH Scope and CompScope are nil.
 type CompScopeFunc func(profileName string) map[string]bool
 
-// RunParams carries everything Run needs, as a struct so a new capability adds a field rather than
+// RunParams holds everything Run needs. It is a struct, so a new capability adds a field rather than
 // changing every caller (WS3-083).
 type RunParams struct {
 	Model     check.Model
@@ -131,24 +133,24 @@ type RunParams struct {
 	Present   PresenceFunc  // nil disables the interface-absence check (every item runs)
 	Scope     ScopeFunc     // nil disables net scoping
 	CompScope CompScopeFunc // nil disables component scoping
-	// RatifiedFloor is the datasheet-confidence floor below which a finding's data is "unratified"
-	// (WS10-014), so a fail whose findings are all mock or below it is Provisional. Zero means
+	// RatifiedFloor is a datasheet-confidence floor (WS10-014). A finding's data below it is
+	// "unratified". A fail whose findings are all mock or below the floor is Provisional. Zero means
 	// DefaultRatifiedFloor, since a floor of 0 would rate everything trustworthy. The CLI exposes it
 	// as --ratified-floor.
 	RatifiedFloor float64
-	// IntentRuleKnown reports whether an intent/-namespaced rule NAME is one the intent compiler can
-	// produce (WS3-098). It separates a real-but-undeclared intent rule (needs-design-intent) from a
-	// not-yet-shipped name a manifest pre-bound (not-automated), which a prefix test cannot. nil treats
-	// every intent/ name as known. The service wires intent.Emits.
+	// IntentRuleKnown reports whether the intent compiler can produce an intent/-namespaced rule NAME
+	// (WS3-098). It separates a real-but-undeclared intent rule (needs-design-intent) from a
+	// not-yet-shipped name that a manifest pre-bound (not-automated). A prefix test cannot tell the two
+	// apart. nil treats every intent/ name as known. The service wires intent.Emits.
 	IntentRuleKnown func(ruleName string) bool
 	// Vocabulary is the relation vocabulary an inline query compiles against: the shipped one plus
 	// the run's library (agni issue 779). Nil is the process default.
 	Vocabulary *facts.Registry
 }
 
-// DefaultRatifiedFloor is the confidence at or above which a datasheet value counts as ratified,
-// matching WS10-012's "confidence < 0.9 is (verify)" report convention. A finding below it (or method
-// "mock") makes an otherwise-failing item Provisional.
+// DefaultRatifiedFloor is the default ratification floor. A datasheet value with this confidence or
+// higher counts as ratified. The value matches WS10-012's "confidence < 0.9 is (verify)" report
+// convention. A finding below it, or with method "mock", makes an otherwise-failing item Provisional.
 const DefaultRatifiedFloor = 0.9
 
 func (p RunParams) ratifiedFloor() float64 {
@@ -158,13 +160,13 @@ func (p RunParams) ratifiedFloor() float64 {
 	return p.RatifiedFloor
 }
 
-// Run evaluates a review manifest against a design's Model, selecting each item's rules from the
-// composed catalog (so overlay profiles from --profile-path are in scope) and resolving each to an
-// Outcome. Rules whose fact tier is absent are not-applicable rather than run, and so is a profile
-// item whose interface Present reports absent.
+// Run evaluates a review manifest against a design's Model. It selects each item's rules from the
+// composed catalog, so overlay profiles from --profile-path are in scope. Then it resolves each item
+// to an Outcome. A rule whose fact tier is absent does not run and reads not-applicable. So does a
+// profile item when Present reports its interface absent.
 //
-// It returns ctx's error when the caller has gone (agni issue 795), checked after every item, rather
-// than a report whose unrun items would read as answered.
+// Run checks ctx after every item. When the caller has gone, it returns ctx's error (agni issue 795).
+// Returning a report instead would read its unrun items as answered.
 func Run(ctx context.Context, p RunParams) (Report, error) {
 	rep := Report{Manifest: p.Manifest.Name, Design: p.Design}
 	for _, a := range p.Manifest.Areas {
@@ -183,16 +185,17 @@ func Run(ctx context.Context, p RunParams) (Report, error) {
 
 func runItem(ctx context.Context, p RunParams, it Item) ItemResult {
 	m, cat, present := p.Model, p.Catalog, p.Present
-	// A present: binding is never not-applicable (the component-class tier exists on any netlist), so it
-	// resolves ahead of the paths below.
+	// The component-class tier exists on any netlist, so a present: binding is never not-applicable.
+	// It resolves ahead of the paths below.
 	if pb := it.Binding.Present; pb != nil {
 		return presentResult(m, it, pb)
 	}
 	// Interface absence takes precedence over every other outcome, so a KNOWN absent interface is
-	// not-applicable whether or not a rule checks it. Checked BEFORE the not-automated shortcut so one
-	// gate covers a full profile whose bus is absent (WS3-051) and a PRESENCE-ONLY declaration, which
-	// compiles to zero rules (WS3-068). An UNKNOWN interface falls through to not-automated. Several
-	// named interfaces are not-applicable only when EVERY one is known-absent.
+	// not-applicable whether or not a rule checks it. This runs BEFORE the not-automated shortcut, so
+	// one gate covers two cases. One is a full profile whose bus is absent (WS3-051). The other is a
+	// PRESENCE-ONLY declaration, which compiles to zero rules (WS3-068). An UNKNOWN interface falls
+	// through to not-automated. Several named interfaces are not-applicable only when EVERY one is
+	// known-absent.
 	ifaces := it.Binding.Scope.names()
 	if it.Binding.Profile != "" {
 		ifaces = []string{it.Binding.Profile}
@@ -225,8 +228,8 @@ func runItem(ctx context.Context, p RunParams, it Item) ItemResult {
 			return ItemResult{Item: it, Outcome: NotApplicable, Note: "interface not present on this design"}
 		}
 	}
-	// Device-class computed-n/a (WS10-014), read off the device-class fact (WS10-013/015). Checked
-	// before catalog resolution so it holds even for an item whose rule is not yet shipped.
+	// Device-class computed-n/a (WS10-014), read off the device-class fact (WS10-013/015). This runs
+	// before catalog resolution, so it applies even to an item whose rule is not yet shipped.
 	if classes := it.Binding.AppliesToClass; len(classes) > 0 && !anyComponentHasClass(m, classes) {
 		return ItemResult{Item: it, Outcome: ComputedNA, Note: "no " + strings.Join(classes, "/") + " part on this design"}
 	}
@@ -291,9 +294,9 @@ func runItem(ctx context.Context, p RunParams, it Item) ItemResult {
 		return ItemResult{Item: it, Outcome: Fail, Findings: fs}
 	}
 	// Zero findings is only a pass if the check could evaluate (WS3-097). Only the datasheet case is
-	// gated, since with --params supplied check.Available did not gate and a symbol seeded on no
-	// component is the silent gap. The general "all joined relations empty" case is not chased,
-	// because the params tier is the one sparse by nature.
+	// gated. With --params supplied, check.Available did not gate, so a symbol seeded on no component
+	// is the silent gap. The general "all joined relations empty" case is not chased, because the
+	// params tier is the only one that is sparse by nature.
 	if syms := datasheetSymbols(it, avail); len(syms) > 0 && !check.SeedsAnySymbol(m, syms) {
 		return ItemResult{
 			Item:    it,
@@ -303,8 +306,8 @@ func runItem(ctx context.Context, p RunParams, it Item) ItemResult {
 		}
 	}
 	// The unanchored interface (WS3-099) ran its secondary rules clean, but the completeness rule never
-	// evaluated. It reads not-automated rather than a needs-* state because no shipped mechanism covers
-	// THIS design's naming, and scoring it covered would inflate the coverage axis.
+	// evaluated. It reads not-automated rather than a needs-* state, because no shipped mechanism
+	// covers THIS design's naming. Scoring it covered would inflate the coverage axis.
 	if unmatched {
 		return ItemResult{Item: it, Outcome: NotAutomated, Note: "interface named but its completeness anchor signal is absent, so the convention check could not evaluate"}
 	}
@@ -345,8 +348,8 @@ func subjectList(fs []check.Finding) string {
 
 // datasheetSymbols returns the datasheet symbols an item's check joins against, deduplicated, from an
 // inline query's param_symbol and the ParamSymbols of each resolved rule. Reading the rules gives a
-// RULE-bound item the same needs-data gate (WS3-097) a query binding has without the runner knowing
-// any specific rule (WS3-095). Empty means the gate does not apply.
+// RULE-bound item the same needs-data gate (WS3-097) as a query binding. The runner still knows no
+// specific rule (WS3-095). Empty means the gate does not apply.
 func datasheetSymbols(it Item, rules []*check.Rule) []string {
 	var out []string
 	seen := map[string]bool{}
@@ -382,9 +385,9 @@ func anyComponentHasClass(m check.Model, classes []string) bool {
 	return false
 }
 
-// bindsIntent reports whether an item binds a design-intent rule the intent compiler can produce
-// (WS3-084/098), meaning the name is `intent/`-namespaced AND known accepts it. The prefix alone
-// over-matches a pre-bound NOT-YET-SHIPPED name (intent/power-sequence), which must read
+// bindsIntent reports whether an item binds a design-intent rule that the intent compiler can
+// produce (WS3-084/098). The name must be `intent/`-namespaced AND known must accept it. The prefix
+// alone over-matches a pre-bound NOT-YET-SHIPPED name (intent/power-sequence), and that name must read
 // not-automated. A nil known treats every intent/ name as known.
 func bindsIntent(it Item, known func(ruleName string) bool) bool {
 	if !strings.HasPrefix(it.Binding.Rule, "intent/") {
@@ -513,8 +516,8 @@ func resolve(cat *check.Catalog, it Item, vocab *facts.Registry) []*check.Rule {
 	return nil
 }
 
-// uncompiled is the rule an inline query that does not compile resolves to: one inconclusive finding
-// saying why, so the item reads as undecided rather than as not automated.
+// uncompiled builds the rule for an inline query that does not compile. The rule reports one
+// inconclusive finding saying why, so the item reads as undecided rather than as not automated.
 func uncompiled(it Item, err error) *check.Rule {
 	name := "review/" + it.ID
 	return &check.Rule{

@@ -8,11 +8,12 @@ import (
 )
 
 // TestCatalogMatchesSchema is the drift guard. Every EDB relation and predicate has a catalog entry
-// with the right arity, and no catalog entry names a construct that does not exist. A relation added
-// to the fact schema (or a predicate to builtins) without a catalog row fails here, so a new relation
-// cannot ship undiscoverable. Both halves are registered with core/facts, the relations and the
-// circuit walks by stdlib/relations (imported for the test binary via relations_register_test.go) and
-// the string tests by the vocabulary itself; this test spans both, since Catalog does.
+// with the right arity, and no catalog entry names a construct that does not exist. Adding a
+// relation to the fact schema, or a predicate to builtins, without a catalog row fails here. So a
+// new relation cannot ship undiscoverable. Both halves are registered with core/facts.
+// stdlib/relations registers the relations and the circuit walks, and the test binary imports it
+// through relations_register_test.go. The vocabulary itself registers the string tests. Catalog
+// spans both halves, so this test does too.
 func TestCatalogMatchesSchema(t *testing.T) {
 	byName := map[string]RelationInfo{}
 	for _, r := range Catalog() {
@@ -87,40 +88,41 @@ func TestCatalogIncludesOverlayRelation(t *testing.T) {
 	}
 }
 
-// entitySuggestingLabels are arg labels that READ like they name something on the canvas. They carry
-// no meaning any more (a column's kind comes from ArgKinds), so they need a guard.
-// A relation added with one of these labels and no declaration is the shape that used to work by
-// accident and now silently types as a scalar (agni issue 548).
+// entitySuggestingLabels are arg labels that READ like they name something on the canvas. They mean
+// nothing any more, since a column's kind comes from ArgKinds, so they need a guard. Imagine a
+// relation added with one of these labels and no declaration. That used to work by accident, and
+// now it silently types as a scalar (agni issue 548).
 var entitySuggestingLabels = map[string]bool{
 	"ref_des": true, "net": true, "from": true, "pin": true, "name": true, "label": true,
 }
 
-// deliberateScalars are the (relation, arg) pairs whose label suggests an entity and which are
-// genuinely NOT one. Each needed a hand-written guard in the old inference; here each is a line
+// deliberateScalars lists (relation, arg) pairs whose label suggests an entity, though each is
+// genuinely NOT one. Each needed a hand-written guard in the old inference. Here each is a line
 // somebody wrote on purpose.
 var deliberateScalars = map[string]string{
-	// jaala's path.step reads a step of a path VALUE that graph.paths built, whatever relation it walked,
-	// so its ends are values of that relation rather than entities of one kind (jaala v0.1.79).
+	// graph.paths builds a path VALUE over whatever relation it walked, and jaala's path.step reads
+	// one step of it. So the step's ends are values of that relation rather than entities of one
+	// kind (jaala v0.1.79).
 	"path.step/from": "an end of a step in a path value, of whatever kind the walked relation joins",
 	"path.step/to":   "an end of a step in a path value, of whatever kind the walked relation joins",
 	// A datasheet pin belongs to a part TYPE, not to a placement, so there is nothing on the canvas
-	// to locate. This pair is why the old code needed its pin/ref_des pairing guard.
+	// to locate. The old code needed its pin/ref_des pairing guard for this pair.
 	"param.pin/pin":       "a pin of a part type, not a placement",
 	"param.pin_range/pin": "a pin of a part type, not a placement",
 	"param.pin/name":      "the pin name a datasheet prints, not an entity name",
-	// The same reasoning one tier down. pin.name's locatable column is the PIN, which is declared
-	// and owned by ref_des; the functional name is a label the part type prints on it, and there is
-	// no "PTC11" in the design's entity vocabulary to navigate to.
+	// The same reasoning applies one tier down. pin.name's locatable column is the PIN, which is
+	// declared and owned by ref_des. The functional name is a label the part type prints on the
+	// pin. The design's entity vocabulary has no "PTC11" to navigate to.
 	"pin.name/name": "the functional name a part type prints on a pin, not an entity name",
-	// A bus label IS in the entity vocabulary and this is the one place the declaration could say
-	// more than the old inference did. Left as a scalar so this change alters no answers; declaring
-	// it is a behaviour change with its own review.
+	// A bus label IS in the entity vocabulary. Here alone, the declaration could say more than the
+	// old inference did. It is left as a scalar so this change alters no answers. Declaring it is a
+	// behaviour change with its own review.
 	"bus/label": "preserves the pre-declaration answer; making it locatable is a separate change",
 }
 
-// TestEveryEntitySuggestingLabelIsDecided fails when a relation carries an argument whose label reads
-// like an entity and neither declares a kind for it nor records why it is a scalar. Silence is the
-// failure mode this replaces, so silence is what it refuses.
+// TestEveryEntitySuggestingLabelIsDecided fails when a relation has an argument whose label reads
+// like an entity, and the relation neither declares a kind for it nor records why it is a scalar.
+// The old failure was silent, so this test refuses silence.
 func TestEveryEntitySuggestingLabelIsDecided(t *testing.T) {
 	for _, ri := range Catalog() {
 		for _, label := range ri.Args {
@@ -161,8 +163,9 @@ func TestDeclaredArgKindsAreCoherent(t *testing.T) {
 			case k.OwnerArg != "" && !args[k.OwnerArg]:
 				t.Errorf("%s/%s names owner %q, which is not one of its arguments %v", ri.Name, label, k.OwnerArg, ri.Args)
 			case k.KindArg == "" && k.Entity == "" && len(k.ValidOptions) == 0 && k.Unit == "":
-				// Domain (agni 696) and Unit (agni 972) joined Entity and KindArg as things an ArgKind
-				// can say. The invariant is unchanged: an ArgKind that says NOTHING should be omitted.
+				// Domain (agni 696) and Unit (agni 972) joined Entity and KindArg as things an
+				// ArgKind can say. The invariant is unchanged. An ArgKind that says NOTHING should
+				// be omitted.
 				t.Errorf("%s/%s declares no Entity, KindArg, Domain or Unit, so it says nothing; omit it instead", ri.Name, label)
 			case k.Unit != "" && (k.Entity != "" || k.KindArg != ""):
 				t.Errorf("%s/%s declares a Unit on an entity column; a unit belongs on a number", ri.Name, label)

@@ -8,7 +8,7 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// The multi-supply case the pin-binding contract exists for. VCCA and VCCB are two
+// The pin-binding contract exists for this multi-supply case. VCCA and VCCB are two
 // terminals with genuinely different ranges, and each recommended-operating row binds to
 // its own pin. Without the binding both rows answer for one "supply" concept.
 func TestTXB0104MultiSupplyPinsStayDistinct(t *testing.T) {
@@ -66,8 +66,8 @@ func TestTXB0104GroupBinding(t *testing.T) {
 	}
 }
 
-// Part-wide rows keep an EMPTY binding, which is what every spec seeded before pin binding
-// existed says. The junction-temperature rating is a fact about the die, not a terminal.
+// Part-wide rows keep an EMPTY binding. Every spec seeded before pin binding existed says the
+// same. The junction-temperature rating is a fact about the die, not a terminal.
 func TestPartWideRowsCarryNoBinding(t *testing.T) {
 	spec := readFixture(t, "txb0104.textproto")
 	for _, p := range spec.Parameters {
@@ -118,9 +118,10 @@ func TestNameSurvivesRepackaging(t *testing.T) {
 	}
 }
 
-// A pin name arrives from a symbol library or a netlist and is compared against the name a
-// datasheet printed, so it carries what a PDF paste adds. These are the four rows measured on
-// agni issue 702; the first three missed before PinsByName compared through core/ident.
+// A pin name arrives from a symbol library or a netlist, and PinsByName compares it against the
+// name that a datasheet printed. The arriving name can hold whatever a PDF paste adds. These are
+// the four rows measured on agni issue 702, and the first three missed before PinsByName compared
+// through core/ident.
 func TestPinsByNameMatchesAcrossDocuments(t *testing.T) {
 	spec := &parampb.PartSpec{Pins: []*parampb.Pin{
 		{Id: "vdd", Name: "VDD"},
@@ -347,8 +348,8 @@ func TestPinRelations(t *testing.T) {
 		t.Error("both ends must return the same relation, not a copy per end")
 	}
 
-	// The bound is on subject MINUS reference, so the direction is the part a caller must read
-	// rather than assume. VCCA - VCCB <= 0 says VCCA is the one held down.
+	// The bound is on subject MINUS reference, so a caller must read the direction rather than
+	// assume it. VCCA - VCCB <= 0 says VCCA is held down.
 	rel := subject[0]
 	if rel.GetSubjectPinRef() != "vcca" || rel.GetReferencePinRef() != "vccb" {
 		t.Errorf("direction: got %q vs %q, want vcca vs vccb", rel.GetSubjectPinRef(), rel.GetReferencePinRef())
@@ -369,8 +370,8 @@ func TestPinRelations(t *testing.T) {
 	}
 }
 
-// agni issue 1160: a symbol library's KiCad markup and a pin table's parentheses name one supply
-// pin, so the NTS0102's VCC_{A} resolves to the spec's VCC(A) and its VCC_{B} to VCC(B).
+// A symbol library's KiCad markup and a pin table's parentheses name one supply pin (agni issue
+// 1160), so the NTS0102's VCC_{A} resolves to the spec's VCC(A) and its VCC_{B} to VCC(B).
 func TestASubscriptedSupplyPinResolvesAcrossSpellings(t *testing.T) {
 	spec := &parampb.PartSpec{Pins: []*parampb.Pin{{Id: "vcca", Name: "VCC(A)"}, {Id: "vccb", Name: "VCC(B)"}}}
 	for name, want := range map[string]string{"VCC_{A}": "vcca", "VCC_{B}": "vccb", "VCCA": "vcca"} {

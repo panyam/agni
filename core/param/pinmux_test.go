@@ -13,8 +13,8 @@ import (
 	"github.com/panyam/agni/internal/yamlpb"
 )
 
-// A published spec as a pin function table leaves it: three pins with designators, one with stale
-// alternates, two sharing the name NC, and a parameter bound to a pin by id.
+// muxBase is a published spec as a pin function table leaves it. It has three pins with designators,
+// one with stale alternates, two sharing the name NC, and a parameter bound to a pin by id.
 const muxBase = `
 mpn: "KW47"
 docs { id: "ds" title: "KW47 data sheet Rev. 4" }

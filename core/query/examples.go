@@ -1,19 +1,19 @@
 package query
 
-// ExampleQuery is one runnable teaching query (WS14-002): a plain-language intent, the datalog text
-// that answers it, and the one concept it introduces. It is the shared catalog behind BOTH the web
-// panel's click-to-run examples and the CLI's `agni query --examples`, so the two surfaces cannot
-// drift.
+// ExampleQuery is one runnable teaching query (WS14-002). It holds a plain-language intent, the
+// datalog text that answers it, and the one concept it introduces. BOTH the web panel's
+// click-to-run examples and the CLI's `agni query --examples` read this one catalog, so the two
+// surfaces cannot drift.
 type ExampleQuery struct {
 	Label   string // plain-language intent, shown on the chip ("Parts on a rail above 3V")
 	Query   string // the datalog text the chip fills and runs
 	Teaches string // the one concept this rung introduces ("join", "filter", ...)
 }
 
-// examples is the concept ladder, in teaching order: each rung adds exactly one idea over the last
-// (projection → filter → join → predicate → recursion). The set is design-independent, but ordered
-// so the first (component.net) returns rows on any netlist while later rungs may return none on a
-// design that lacks the data, and that empty answer is itself a lesson (WS14-001).
+// examples is the concept ladder, in teaching order. Each rung adds exactly one idea over the last
+// (projection → filter → join → predicate → recursion). The set is design-independent. The first
+// rung (component.net) returns rows on any netlist. Later rungs may return none on a design that
+// lacks the data, and that empty answer is itself a lesson (WS14-001).
 var examples = []ExampleQuery{
 	{
 		Label:   "Every part on every net",

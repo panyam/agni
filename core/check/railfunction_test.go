@@ -6,14 +6,15 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// regulatorPageWithControlsDesign is one converter's full complement of rail-named nets: the output
-// it actually produces, and the six pin functions named after it that are not it.
+// regulatorPageWithControlsDesign holds one converter's full complement of rail-named nets. One is
+// the output it actually produces. Six are pin functions named after that output, and none of them
+// carries it.
 func regulatorPageWithControlsDesign() *ir.Design {
 	return &ir.Design{Nets: []*ir.Net{
 		{Name: "12V_OUT"}, {Name: "12V_FB"}, {Name: "12V_SW"}, {Name: "12V_BOOT"},
 		{Name: "12V_MODE1"}, {Name: "12V_MODE2"}, {Name: "20V_EN"}, {Name: "12V_VDRV"},
 		{Name: "+3V3"}, {Name: "SDA"},
-		// The objection this vocabulary invites: _EN is a common suffix on nets that have nothing to
+		// This vocabulary invites an objection. _EN is a common suffix on nets that have nothing to
 		// do with a regulator. These carry no rail token, so they never reach the rail question at
 		// all, and the role stamped on them is inert.
 		{Name: "USB_EN"}, {Name: "FAN_EN"},
@@ -70,9 +71,9 @@ func TestControlSuffixNeedsARailTokenToMatter(t *testing.T) {
 	}
 }
 
-// TestRegulatorInternalHasOneImplementation pins the predicate IsRailNet and the two voltage
-// relations both subtract, which spanned four roles across two packages. Asserting them against
-// each other here is what stops a fifth role being added to one and not the other.
+// TestRegulatorInternalHasOneImplementation pins one predicate. IsRailNet and the two voltage
+// relations both subtract it. It spanned four roles across two packages. Asserting them against each
+// other here stops a fifth role being added to one and not the other.
 func TestRegulatorInternalHasOneImplementation(t *testing.T) {
 	m := NewModel(regulatorPageWithControlsDesign())
 	for _, n := range m.Nets() {

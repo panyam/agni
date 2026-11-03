@@ -1,9 +1,10 @@
 // Package num narrows integers for the wire, saturating rather than wrapping.
 //
-// Most of what agni narrows is a count or a coordinate read off a design file, and a design file can
-// come from anyone, a dropped file in the browser demo included. A plain int32(n) of a value past the
-// range wraps to a number with the wrong sign, which reads as a real answer. Saturating keeps the
-// value at the end of the range it overflowed, so it is still the largest or smallest a field can say.
+// agni mostly narrows counts and coordinates read off a design file. A design file can come from
+// anyone, including a file dropped into the browser demo. A plain int32(n) of a value past the
+// range wraps to a number with the wrong sign, and that number reads as a real answer. Saturating
+// holds the value at the end of the range it overflowed, so it is still the largest or smallest
+// value the field can hold.
 package num
 
 import "math"

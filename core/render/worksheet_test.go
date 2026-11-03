@@ -21,9 +21,10 @@ func sheetWithPage(suppress bool) *geom.SchematicGeometry {
 	}
 }
 
-// TestWorksheetSuppressed checks that a sheet that carries its own title block (xschem/gEDA set
-// SuppressWorksheet) draws no synthetic worksheet furniture, while an unsuppressed sheet does
-// (WS7-036). The title-block field text is the tell; the schematic content renders either way.
+// TestWorksheetSuppressed checks a sheet that has its own title block, which xschem/gEDA mark
+// with SuppressWorksheet. That sheet draws no synthetic worksheet furniture, while an
+// unsuppressed sheet does (WS7-036). The title-block field text is the tell, and the schematic
+// content renders either way.
 func TestWorksheetSuppressed(t *testing.T) {
 	gOn := sheetWithPage(false)
 	on := SheetSVG(gOn, gOn.Sheets[0])

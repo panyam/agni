@@ -15,10 +15,10 @@ import (
 // is a rule plus a glyph (WS7-030) and users can extend classification without a code change. The
 // empty id is the "no class" fallback that draws the generic node box.
 //
-// Every id that names a class the engine stamps is BOUND to model's constant rather than spelled
-// again, because a glyph is chosen from the stamped set and an id that drifted by one character
-// would silently draw the box (agni issue 701). ClassGround and ClassOther have no model
-// counterpart, since a power symbol is drawn as a component and classified as none.
+// The engine stamps some of these classes, and each id naming one of them is BOUND to model's
+// constant rather than spelled again. A glyph is chosen from the stamped set, so an id that drifted
+// by one character would silently draw the box (agni issue 701). ClassGround and ClassOther have no
+// model counterpart, since a power symbol is drawn as a component and classified as none.
 const (
 	ClassResistor   = string(model.ClassResistor)
 	ClassCapacitor  = string(model.ClassCapacitor)
@@ -40,7 +40,8 @@ const (
 
 // glyphAliases maps a stamped class with no glyph of its own to the class whose glyph draws it, as
 // a schematic already does (a thermistor IS drawn as a resistor, an oscillator as a crystal). These
-// are drawing conventions and not classification claims, so they stay out of classify's family table.
+// are drawing conventions and not classification claims, so they are kept out of classify's family
+// table.
 //
 // Most stamped classes need no entry, because the device_classes set already carries the family
 // tag and choose walks it. An entry is needed when the set holds no drawable tag (clock,
@@ -230,7 +231,7 @@ func (r *Registry) Classify(c *ir.Component, parts map[string]*ir.PartType) stri
 }
 
 // choose resolves a component to its class id and the glyph to draw it with. The two can differ,
-// since a thermistor is drawn as a resistor and stays a thermistor in the report.
+// since a thermistor is drawn as a resistor and is still a thermistor in the report.
 func (r *Registry) choose(c *ir.Component, parts map[string]*ir.PartType) (string, *geom.SymbolDef) {
 	if c == nil {
 		return ClassOther, nodeSymbol()
@@ -267,9 +268,9 @@ func (r *Registry) Symbol(_ string, c *ir.Component, parts map[string]*ir.PartTy
 }
 
 // stamped reads the classes the ingestion passes put on the component. The identity is the most
-// specific of them and the glyph is the most specific one this registry can draw, both taken off ONE
-// ordering, classify.BySpecificity, which is the same order check.Model resolves component.class
-// with. Two independent rankings disagree once a set has more than one author (agni issue 710).
+// specific of them and the glyph is the most specific one this registry can draw. Both come from ONE
+// ordering, classify.BySpecificity, and check.Model resolves component.class with the same order.
+// Two independent rankings disagree once a set has more than one author (agni issue 710).
 //
 // Walking the ordered set lets the family tag pick the glyph, so a zener carrying
 // ["zener", "diode"] draws as a diode. An empty or unknown-only set returns "", meaning nothing was

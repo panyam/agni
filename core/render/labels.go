@@ -26,8 +26,8 @@ type placedLabel struct {
 // placement fields (ref-des/value), sheet labels, symbol annotations, pin numbers and names,
 // and the synthesized worksheet text (zone-ruler numbers/letters and the title-block fields).
 // It is the text counterpart to PackSheet's geometry. The packer rebases these into
-// PackedSheet.Labels and the WebGL overlay draws them, in colors from the same Style palette the
-// SVG backend uses.
+// PackedSheet.Labels and the WebGL overlay draws them. Their colors come from the Style palette,
+// which the SVG backend also uses.
 func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style Style) []placedLabel {
 	syms := indexSymbols(g)
 	// World text height for text that carries none, which many readers leave unset. One sheet
@@ -58,8 +58,8 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 			add(f.Origin.X, f.Origin.Y, f.Value, f.Height, rot+f.RotationDeg, f.Justify, style.Field, 0)
 		}
 	}
-	// Sheet labels (net labels, page text). Multi-line free-text columns shrink by the same
-	// freeTextFit factor the SVG backend uses (WS7-038), applied to the world text height.
+	// Sheet labels (net labels, page text). Multi-line free-text columns shrink by the
+	// freeTextFit factor, as in the SVG backend (WS7-038), applied to the world text height.
 	fit := freeTextFit(g, sheet)
 	for _, l := range sheet.Labels {
 		if l.Origin == nil {
@@ -116,9 +116,9 @@ func collectLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, style S
 	return out
 }
 
-// worksheetLabels positions the zone-ruler numbers/letters and the title-block field text
-// from the same frameLayout the furniture geometry uses (worksheet.go), so labels land in
-// their cells. Empty when the sheet has no page.
+// worksheetLabels positions the zone-ruler numbers/letters and the title-block field text. It
+// reads the frameLayout that also places the furniture geometry (worksheet.go), so labels sit in
+// their cells. It returns nothing when the sheet has no page.
 func worksheetLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, textH int64, style Style) []placedLabel {
 	if sheet.GetSuppressWorksheet() {
 		return nil // no synthetic worksheet, so no ruler/title-block text either (xschem/gEDA); WS7-036
@@ -171,10 +171,11 @@ func worksheetLabels(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, textH
 	return out
 }
 
-// captionWidth is the world-space width a symbol's caption may occupy, the width of its widest
-// BOX figure, which is where the authoring tool fits a label like "Net Splitter". A wider caption
-// is condensed to fit (drawText, and the WebGL overlay's textLength). Falls back to the symbol
-// bounding box, then 0 (unbounded). The box is symbol-local, so a rotated placement is correct too.
+// captionWidth returns the world-space width a symbol's caption may occupy. That is the width of
+// its widest BOX figure, and the authoring tool fits a label like "Net Splitter" inside that
+// figure. drawText and the WebGL overlay's textLength condense a wider caption to fit. It falls
+// back to the symbol bounding box, then 0 (unbounded). The box is symbol-local, so a rotated
+// placement is correct too.
 func captionWidth(sym *geom.SymbolDef) int64 {
 	if sym == nil {
 		return 0
@@ -209,9 +210,9 @@ func absI64(v int64) int64 {
 	return v
 }
 
-// defaultTextHeight is the world text height for labels that carry none (pin numbers/names),
-// the median of the explicit field/label heights on the sheet so pin text matches the rest.
-// Falls back to the frame margin, then 1.
+// defaultTextHeight returns the world text height for labels that have none, such as pin numbers
+// and names. It takes the median of the explicit field/label heights on the sheet, so pin text
+// matches the rest. It falls back to the frame margin, then 1.
 func defaultTextHeight(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) int64 {
 	var hs []int64
 	for _, pl := range sheet.Placements {

@@ -6,11 +6,11 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// The corpus names a citation carries, so a verdict says whose transcription it rests on.
+// A citation names its corpus with one of these, so a verdict says whose transcription it relies on.
 const (
 	// CorpusProject is the design's own project params/, which the project owns.
 	CorpusProject = "project"
-	// CorpusShared is any corpus the design's project does not own: a --params directory or a
+	// CorpusShared is any corpus the design's project does not own, such as a --params directory or a
 	// --params-url service.
 	CorpusShared = "shared"
 )
@@ -27,9 +27,9 @@ type CorpusNamer interface {
 }
 
 // Layered is a provider that asks each layer in order and answers with the first that seeds the MPN
-// (agni issue 749). A project's own params/ is layered over a shared corpus this way, so the project
-// decides every part it seeds and the shared corpus answers for the rest, rather than a project that
-// seeds two parts losing the datasheet tier for every other part.
+// (agni issue 749). A project's own params/ is layered over a shared corpus this way. The project
+// decides every part it seeds and the shared corpus answers for the rest. Without the layering, a
+// project that seeds two parts would lose the datasheet tier for every other part.
 //
 // A layer with a nil provider is skipped. Layered prefetches through every layer that needs it, so a
 // remote shared corpus under a local project corpus still fails loudly when it cannot be reached.
@@ -60,10 +60,10 @@ func (l Layered) Prefetch(ctx context.Context, mpns []string) error {
 	return nil
 }
 
-// CorpusOf names the layer a spec came from: the first layer whose own Lookup of the spec's MPN
-// returns that same spec. It is decided by identity rather than by MPN, because a lower layer can seed
-// the same MPN and only the spec actually returned is the one a citation rests on. "" when no layer
-// returned it.
+// CorpusOf names the layer a spec came from. That is the first layer whose own Lookup of the spec's
+// MPN returns that same spec. It compares by identity rather than by MPN, because a lower layer can
+// seed the same MPN, and a citation relies only on the spec actually returned. It returns "" when no
+// layer returned the spec.
 func (l Layered) CorpusOf(spec *parampb.PartSpec) string {
 	if spec == nil {
 		return ""
@@ -81,11 +81,12 @@ var (
 	_ CorpusNamer = Layered(nil)
 )
 
-// Fetches reports whether reading p goes beyond the process: whether p, or any layer of a Layered,
-// fetches over the network (a Prefetcher other than Layered itself). A local set, a nil provider, and
-// a Layered of only those do not. Layered implements Prefetch to forward to its layers, so asking
-// whether a provider is a Prefetcher says nothing about whether it fetches; a cache deciding whether
-// an answer can outlive the request asks this instead (agni issue 895).
+// Fetches reports whether reading p goes beyond the process. It is true when p, or any layer of a
+// Layered, fetches over the network, meaning it is a Prefetcher other than Layered itself. A local
+// set, a nil provider, and a Layered of only those do not fetch. Layered implements Prefetch to
+// forward to its layers, so asking whether a provider is a Prefetcher says nothing about whether it
+// fetches. A cache deciding whether an answer can outlive the request asks Fetches instead (agni
+// issue 895).
 func Fetches(p ParamProvider) bool {
 	switch v := p.(type) {
 	case nil:

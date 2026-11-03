@@ -12,8 +12,8 @@ import (
 // Every rule now returns verdicts, so an unconverted rule's output is a list of Fail verdicts, which
 // is structurally identical to a considered set whose every subject happened to fail. Nothing in the
 // data distinguishes them. If RunVerdicts collected both, `check --verdicts` would present ~55 rules'
-// failure lists as though they were coverage, which is a stronger claim than the run has earned and
-// the silence-reads-as-data mistake the verdict work exists to remove.
+// failure lists as though they were coverage. That claims more than the run has earned. It is also
+// the silence-reads-as-data mistake, and the verdict work exists to remove it.
 //
 // So the claim is a DECLARATION (StatesConsideredSet), and this pins that RunVerdicts honours it.
 func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
@@ -64,8 +64,8 @@ func TestRunVerdictsExcludesRulesThatOnlyReportFailures(t *testing.T) {
 }
 
 // FailuresOnly must not invent evidence. A Witness manufactured by restating the message would make
-// an unconverted rule look converted to anything reading verdicts, which is the decoration
-// build/evidence.md warns about.
+// an unconverted rule look converted to anything reading verdicts. build/evidence.md warns about
+// that decoration.
 func TestFailuresOnlyCarriesNoWitness(t *testing.T) {
 	eval := FailuresOnly(func(ctx context.Context, m Model) []Finding {
 		return []Finding{{Subject: NetNameEntity("SIG"), Message: "bad"}}

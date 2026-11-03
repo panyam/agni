@@ -60,7 +60,7 @@ func TestBothPagesStateTheReadLimitAboveTheCounts(t *testing.T) {
 	}
 }
 
-// TestCycleNoteSaysWhatTheWalkLeftOut covers agni issue 1102: a flattened read lists only blocks that
+// TestCycleNoteSaysWhatTheWalkLeftOut covers agni issue 1102. A flattened read lists only blocks that
 // place themselves, and the top-level sentence would claim a partial read that did not happen.
 func TestCycleNoteSaysWhatTheWalkLeftOut(t *testing.T) {
 	cycle := ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE

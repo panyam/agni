@@ -8,8 +8,8 @@ import (
 
 // TestPartIndexAliasesNativeId (WS1-045) checks that a section that references its part by the
 // source's NATIVE ID (not the PartType's display name) still resolves, via the id alias PartIndex
-// adds. This is the shape an EDIF `(rename ID "Display")` cell produces, where the PartType is
-// named by Display and the section's PartRef is the ID. Without the alias the part's pins were
+// adds. An EDIF `(rename ID "Display")` cell produces this shape. Its PartType is named by Display
+// and the section's PartRef is the ID. Without the alias the part's pins were
 // silently dropped. The display-name key still wins, and an empty/equal native id is a no-op.
 func TestPartIndexAliasesNativeId(t *testing.T) {
 	d := &ir.Design{Libraries: []*ir.PartLibrary{{Name: "Oscillator", Parts: []*ir.PartType{{

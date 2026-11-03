@@ -19,7 +19,7 @@ func TestSearchQueryParses(t *testing.T) {
 	}
 }
 
-// The query binds the variable Bind names, and the value carries the reader's term in place of
+// The query binds the variable named by Bind. The bound value holds the reader's term in place of
 // {term}, so a search builds no query text (agni issue 793).
 func TestSearchQueryBindsItsPattern(t *testing.T) {
 	s := Search()
@@ -43,9 +43,9 @@ func TestSearchQueryBindsItsPattern(t *testing.T) {
 	}
 }
 
-// A search that ranged over an association would silently miss a part with no connections, which is
-// the blind spot entity() was added to close. Pin the relation so a well-meaning rewrite to
-// component.net goes red here rather than in a review nobody runs.
+// A search over an association would silently miss a part with no connections. entity() was added
+// to close that blind spot. Pin the relation, so a well-meaning rewrite to component.net goes red
+// here rather than in a review nobody runs.
 func TestSearchQueryRangesOverEntity(t *testing.T) {
 	q, err := Parse(Search().Query)
 	if err != nil {
@@ -62,8 +62,8 @@ func TestSearchQueryRangesOverEntity(t *testing.T) {
 	}
 }
 
-// The term is matched case-insensitively. A search box that only matches case is one a newcomer
-// tries twice and abandons, and (?i) is the only thing in the served pattern that says otherwise.
+// The term is matched case-insensitively. A newcomer tries a case-sensitive search box twice and
+// abandons it. Only the (?i) in the served pattern makes the match case-insensitive.
 func TestSearchQueryIsCaseInsensitive(t *testing.T) {
 	if !strings.HasPrefix(Search().Pattern, "(?i)") {
 		t.Errorf("search pattern is case-sensitive: %s", Search().Pattern)

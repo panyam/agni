@@ -10,12 +10,13 @@ import (
 )
 
 // TestBoardIPCPlacementLandsInFrame is the WS1-029 behavioral gate. An IPC-2581 placement pad,
-// composed through the real renderer rule (padWorld), must land at its true board position.
+// composed through the real renderer rule (padWorld), must end up at its true board position.
 // Before the fix, top parts rotated the wrong way and bottom parts were not mirrored, so an
 // asymmetric rotated connector flew off the board (testcase1 CN11 sat ~0.8" past the edge). The
-// fixture places one asymmetric 3-pin part on each side, both rotated 90 deg; expected world
-// coordinates are hand-derived (top: R(+90)*pad; bottom: R(-90)*mirrorX(pad)) as an independent
-// oracle, so this checks the composition end to end rather than the reader's internal convention.
+// fixture places one asymmetric 3-pin part on each side, both rotated 90 deg. The expected world
+// coordinates are derived by hand as an independent oracle, as R(+90)*pad on top and
+// R(-90)*mirrorX(pad) on the bottom. So this checks the composition end to end rather than the
+// reader's internal convention.
 func TestBoardIPCPlacementLandsInFrame(t *testing.T) {
 	f, err := os.Open(filepath.Join("..", "..", "readers", "ipc2581", "testdata", "board_geom_rotation.xml"))
 	if err != nil {

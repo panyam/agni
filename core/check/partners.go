@@ -7,12 +7,12 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// PinPartners is one pin of a device with the pins on other devices that its net reaches through
-// series parts, which are the far ends a pin map would declare for it (agni issue 1238).
+// PinPartners is one pin of a device, with the pins on other devices that its net reaches through
+// series parts. A pin map would declare those pins as its far ends (agni issue 1238).
 //
-// Reason says why no far end was looked for, and is empty when the walk ran. A pin with Reason
-// empty and no Partners reached nothing that could be a far end, and one with several reached more
-// than one, which the netlist alone cannot decide between.
+// Reason says why no far end was looked for, and is empty when the walk ran. With Reason empty and
+// no Partners, the pin reached nothing that could be a far end. With several Partners it reached more
+// than one, and the netlist alone cannot decide between them.
 type PinPartners struct {
 	Pin      string
 	Name     string
@@ -28,9 +28,10 @@ const (
 	PartnerReasonRail   = "a supply rail"
 )
 
-// partnerClass reports a class whose pins can be a signal's far end: a part that drives or receives
-// it, or a connector that carries it off the board. Passives and protection parts sit on a signal
-// rather than terminate it, so a trace reports them as stubs and they are never a partner.
+// partnerClass reports whether a class's pins can be a signal's far end. Such a part drives or
+// receives the signal, or is a connector that carries it off the board. Passives and protection
+// parts sit on a signal rather than terminate it, so a trace reports them as stubs and they are
+// never a partner.
 func partnerClass(c ComponentClass) bool {
 	switch c {
 	case ClassIC, ClassConnector, ClassIdealDiodeController, ClassCurrentLimitSwitch, ClassClock, ClassOscillator:
@@ -41,7 +42,7 @@ func partnerClass(c ComponentClass) bool {
 
 // PartnersOf walks from every pin of refDes, as TracePins walks, and lists the pins of fitted
 // devices it reaches, in pin order. It drafts a pin map from the netlist, so what it finds agrees
-// with the netlist by construction: a reviewer still checks each row against the datasheet or the
+// with the netlist by construction. A reviewer still checks each row against the datasheet or the
 // interface it implements, and a later revision is then checked against the reviewed map.
 //
 // A pin on ground or a supply rail is not walked, since every part on the board reaches it. Rails
@@ -51,8 +52,8 @@ func PartnersOf(m Model, refDes string, hops int) []PinPartners {
 	if hops <= 0 {
 		hops = DefaultTraceHops
 	}
-	// One pass over the nets finds every pin of the device, where netOfPin per pin scans them all
-	// once per pin, which a module connector with hundreds of pins makes noticeable on a large board.
+	// One pass over the nets finds every pin of the device. Calling netOfPin per pin would scan every
+	// net once per pin. A module connector has hundreds of pins, so that cost shows on a large board.
 	netOf := map[string]*ir.Net{}
 	for _, n := range m.Nets() {
 		for _, c := range n.Connections {
@@ -63,8 +64,8 @@ func PartnersOf(m Model, refDes string, hops int) []PinPartners {
 			}
 		}
 	}
-	// The declared pins, which include the ones on no net, then any connected pin the part type does
-	// not declare, since a netlist with no part types gives the model no pin list at all.
+	// First the declared pins, including the ones on no net. Then any connected pin that the part
+	// type does not declare, since a netlist with no part types gives the model no pin list at all.
 	var pins []string
 	listed := map[string]bool{}
 	for _, p := range m.Pins() {

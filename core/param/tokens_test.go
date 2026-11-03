@@ -11,8 +11,8 @@ import (
 // "unspecified". Silent is the dangerous direction, because a query filtering on the token would match
 // nothing and read as "no such rows" rather than as an unrendered enum.
 //
-// Every relation test exercises only the members its fixtures happen to use, which is why this walks
-// the map.
+// Every relation test exercises only the members its fixtures happen to use, so this test walks the
+// map.
 func TestEveryEnumMemberHasItsOwnToken(t *testing.T) {
 	t.Run("LimitKind", func(t *testing.T) {
 		seen := map[string]bool{}
@@ -73,7 +73,7 @@ func TestEveryEnumMemberHasItsOwnToken(t *testing.T) {
 	})
 }
 
-// TestTokensAreTheContractStrings pins the literals a saved datalog query matches on
+// TestTokensAreTheContractStrings pins the literals that a saved datalog query matches on
 // (`param.range(?m, ?s, "absolute_max", ?min, ?max)`). Renaming one silently stops matching rows
 // that still exist, which reads as a clean result.
 func TestTokensAreTheContractStrings(t *testing.T) {

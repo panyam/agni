@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// designWithUnresolved builds a design carrying one unresolved-symbol diagnostic, the state a read
-// lands in when a symbol library is missing, with components present and pins absent.
+// designWithUnresolved builds a design carrying one unresolved-symbol diagnostic, with components
+// present and pins absent. A read is in that state when a symbol library is missing.
 func designWithUnresolved() *ir.Design {
 	return &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "U1"}},
@@ -33,7 +33,7 @@ func alwaysFires(reads ...string) *Rule {
 	}
 }
 
-// TestUnresolvedGateMakesConnectivityRulesInconclusive is the point of WS1-052: a rule whose
+// TestUnresolvedGateMakesConnectivityRulesInconclusive is the point of WS1-052. A rule whose
 // conclusions depend on pins must not report over a netlist that is missing connections. Before the
 // gate it evaluated normally and its silence (or its finding) read as authoritative.
 func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
@@ -51,8 +51,8 @@ func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 		if !strings.Contains(fs[0].Message, "res.sym") {
 			t.Errorf("reads %v: message %q does not name the unresolved symbol", reads, fs[0].Message)
 		}
-		// The remedy is NOT repeated here. Every gated rule emits this message, so the fix lives
-		// once on symbol-unresolved and each gate finding points at it.
+		// The remedy is NOT repeated here. Every gated rule emits this message, so the fix is stated
+		// once, on symbol-unresolved, and each gate finding points at it.
 		if !strings.Contains(fs[0].Message, "symbol-unresolved") {
 			t.Errorf("reads %v: message %q does not point at the rule that explains the cause", reads, fs[0].Message)
 		}
@@ -64,7 +64,7 @@ func TestUnresolvedGateMakesConnectivityRulesInconclusive(t *testing.T) {
 
 // TestUnresolvedGateLeavesOtherRulesAlone covers a rule that reads only names, classes or datasheet
 // params. It is unaffected by a lost symbol, so gating it would convert working checks into noise.
-// The gate has to cost nothing where it buys nothing.
+// Where the gate helps nothing, it must cost nothing.
 func TestUnresolvedGateLeavesOtherRulesAlone(t *testing.T) {
 	for _, reads := range [][]string{{"net.names"}, {"component.class"}, {"param.esd_rating"}, {"reader.ref_des_collision"}} {
 		fs := RunBackground(NewModel(designWithUnresolved()), []*Rule{alwaysFires(reads...)})

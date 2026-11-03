@@ -16,15 +16,16 @@ import (
 // designators vanish. Schematic text sizes from labelFont, which floors relative to the drawing.
 const boardTextMinPx = 6.0
 
-// BoardSVG renders a board (the WS1-006 geometry sidecar) to a standalone SVG document, the
-// board analogue of SheetSVG (the packed/WebGL tier is WS7-035). Copper draws per layer
-// back-to-front so the front side reads on top. Every stratum goes into a classed <g> (edge,
-// copper-front, copper-back, copper-inner, through, zones-*, silk, labels), so layer visibility is
-// client-side CSS with no re-render, and HighlightBoardSVG overlays share the same frame.
+// BoardSVG renders a board to a standalone SVG document. The board is the WS1-006 geometry
+// sidecar, and BoardSVG is the board analogue of SheetSVG. WS7-035 is the packed/WebGL tier.
+// Copper draws per layer back-to-front so the front side reads on top. Every stratum goes into a
+// classed <g> (edge, copper-front, copper-back, copper-inner, through, zones-*, silk, labels), so
+// client-side CSS sets layer visibility with no re-render. HighlightBoardSVG overlays share the
+// same frame.
 //
-// Coordinates are the sidecar's, nanometers and Y-up (the reader flips). Rotations arrive already
-// in the Y-up frame (see padWorld) and are negated only for the SVG transform. Pad positions are
-// footprint-local per the proto contract.
+// Coordinates are the sidecar's, in nanometers and Y-up, because the reader flips them. Rotations
+// arrive already in the Y-up frame (see padWorld), and BoardSVG negates them only for the SVG
+// transform. Pad positions are footprint-local per the proto contract.
 func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	style := resolveStyle(opts)
 	fr := frameBoard(b)
@@ -112,8 +113,8 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	c.GroupEnd()
 
 	// Silkscreen / fab body graphics (component outlines, courtyards, polarity marks), under
-	// the text so labels stay legible. Each element carries its source layer as data-layer so
-	// per-layer visibility is the same client-side CSS concern as the copper strata.
+	// the text so labels remain legible. Each element records its source layer in data-layer, so
+	// client-side CSS sets per-layer visibility here as it does for the copper strata.
 	if len(b.GetGraphics()) > 0 {
 		c.Group(svg.A("class", "silk"))
 		for _, gr := range b.GetGraphics() {
@@ -152,12 +153,13 @@ func BoardSVG(b *geom.BoardGeometry, opts ...Option) string {
 	return c.String()
 }
 
-// boardLabels is the text a board view draws: the board's own, or, for a board that draws no
-// designator at all (no reference text and no silkscreen), each placement's designator centred above
-// its pads. An ODB++ job carries only what its silkscreen draws, and KiCad's export of a board with
-// no silkscreen carries nothing, so its parts would otherwise go unlabelled where the same board read
-// from its .kicad_pcb is labelled (agni issue 1263). A board whose silkscreen draws its designators
-// already gets none added, which is the Altium case.
+// boardLabels returns the text a board view draws. A board with text of its own gets that text.
+// A board may also draw no designator at all, with no reference text and no silkscreen. For that
+// board boardLabels makes each placement's designator, centred above its pads. An ODB++ job holds
+// only what its silkscreen draws, and KiCad exports a board with no silkscreen with no text at
+// all. Without the added designators those parts would go unlabelled, while the same board read
+// from its .kicad_pcb is labelled (agni issue 1263). A board whose silkscreen draws its
+// designators gets none added, as in the Altium case.
 func boardLabels(b *geom.BoardGeometry) []*geom.BoardText {
 	if len(b.GetTexts()) > 0 {
 		return b.GetTexts()
@@ -232,8 +234,8 @@ func svgAnchor(t *geom.BoardText) string {
 }
 
 // frameBoard maps board nanometers into the shared pixel space, bounding over the outline,
-// copper, pads (world positions), zones, texts and graphics. It returns the same sheetFrame
-// contract SheetSVG uses, so highlight overlays composite exactly.
+// copper, pads (world positions), zones, texts and graphics. It returns a sheetFrame, as SheetSVG
+// does, so highlight overlays composite exactly.
 func frameBoard(b *geom.BoardGeometry) sheetFrame {
 	var bounds geomath.Bounds
 	for _, p := range b.GetOutline().GetPaths() {
@@ -288,17 +290,17 @@ func frameBoard(b *geom.BoardGeometry) sheetFrame {
 }
 
 // padWorld composes a pad's footprint-local offset with its placement in the canonical Y-up
-// frame (WS1-030). geomath.ComposePlacement carries the transform, the mirror order and the
-// frame contract, and every board producer shares it.
+// frame (WS1-030). geomath.ComposePlacement holds the transform, the mirror order and the frame
+// contract, and every board producer calls it.
 func padWorld(pl *geom.ComponentPlacement, pad *geom.Pad) (int64, int64) {
 	p := geomath.ComposePlacement(pl.GetAt(), pl.GetRotationDeg(), pl.GetMirror(), pad.GetAt())
 	return p.X, p.Y
 }
 
 // drawPad draws one pad at its world position, rect/roundrect/oval as a (rounded) rectangle and
-// circle as a circle. It rotates by the pad's own verbatim angle, which KiCad stores cumulative
-// with the footprint, so it is NOT composed with the placement again, only negated for the Y-flip.
-// A drilled pad gets a page-colored hole.
+// circle as a circle. It rotates by the pad's own angle verbatim. KiCad stores that angle
+// cumulative with the footprint's, so drawPad does NOT compose it with the placement again. It
+// only negates it for the Y-flip. A drilled pad gets a page-colored hole.
 func drawPad(c *svg.Canvas, pl *geom.ComponentPlacement, pad *geom.Pad, fr sheetFrame, color string, style Style) {
 	wx, wy := padWorld(pl, pad)
 	cx, cy := fr.tx(wx), fr.ty(wy)
@@ -362,8 +364,8 @@ func layerSide(layer string) string {
 	}
 }
 
-// copperStrokePx is a copper trace's rendered stroke width, its true width floored to the
-// physical minStrokeNm and then scaled to output pixels. A floor in board space keeps a dense
+// copperStrokePx returns a copper trace's rendered stroke width. It floors the true width to the
+// physical minStrokeNm and then scales it to output pixels. A floor in board space keeps a dense
 // board's fine traces proportional instead of clamping to one pixel width and merging. It matches
 // the WebGL packer's quadPts, so both renderers draw copper at identical width.
 func copperStrokePx(widthNm int64, scale float64) float64 {

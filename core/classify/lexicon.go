@@ -2,16 +2,16 @@ package classify
 
 import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 
-// Lexicon is the naming vocabulary one READ is performed with: the role vocabulary (rail, ground,
+// Lexicon is the naming vocabulary for one READ. It holds the role vocabulary (rail, ground,
 // feedback, switching, control, gate-drive and supply-pin names), the classification vocabulary
-// (device-class token hints) and the value vocabulary. It is a VALUE carried by the loader, not a
+// (device-class token hints) and the value vocabulary. The loader holds it as a VALUE rather than a
 // process global, so two designs read in one process can be stamped with different project
 // conventions (WS3-106).
 //
 // The stamps below turn a vocabulary into DATA (ir.Net.roles, ir.Component.device_classes, POWER_IN
-// pin directions), after which rules read the data and the vocabulary is spent (WS3-072's
+// pin directions). Rules then read the data and no longer consult the vocabulary (WS3-072's
 // left-shift). The package-level Stamp, StampNetRoles, StampValues and StampPowerInPins are the
-// process-level forms of the methods here, reading the globals through ActiveLexicon.
+// process-level forms of the methods here, and they read the globals through ActiveLexicon.
 //
 // A nil *Lexicon means the process defaults.
 type Lexicon struct {
@@ -21,8 +21,8 @@ type Lexicon struct {
 	Value *ValueVocab
 }
 
-// DefaultLexicon returns the engine's built-in vocabularies, the value a read with no project
-// convention uses.
+// DefaultLexicon returns the engine's built-in vocabularies. A read with no project convention uses
+// this value.
 func DefaultLexicon() *Lexicon {
 	return &Lexicon{Role: DefaultRoleVocab(), Class: DefaultClassVocab(), Value: DefaultValueVocab()}
 }
@@ -73,8 +73,8 @@ func (l *Lexicon) ClassVocab() *ClassVocab { return l.class() }
 // Stamp runs the classification pass with this lexicon, filling each component's device_classes SET.
 // See the package-level Stamp for the pass's contract.
 //
-// It REPLACES the set, which keeps a re-stamp idempotent and also drops any datasheet tag an earlier
-// StampClassesFromSpecs added, so StampClassesFromSpecs must run after it. See
+// It REPLACES the set. Replacing keeps a re-stamp idempotent, and it also drops any datasheet tag
+// from an earlier StampClassesFromSpecs. So StampClassesFromSpecs must run after it. See
 // docsite/content/architecture/ingestion-and-ir.md#derived-fields-and-the-tiers-that-fill-them.
 func (l *Lexicon) Stamp(d *ir.Design) {
 	index := PartIndex(d)

@@ -38,7 +38,7 @@ func TestClockClassesOf(t *testing.T) {
 
 // TestNormalizeDeviceClass checks that a free-form vendor device_class string resolves to the
 // canonical class it names (alias table for synonyms, canonical-name set for exact names, identity
-// for an unknown-but- meaningful value), so the datasheet path reaches the same class the keyword
+// for an unknown-but-meaningful value), so the datasheet path reaches the same class the keyword
 // path would (WS10-015).
 func TestNormalizeDeviceClass(t *testing.T) {
 	cases := []struct {

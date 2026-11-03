@@ -48,7 +48,7 @@ func TestFailuresLead(t *testing.T) {
 }
 
 // A rule that states a considered set already carried its failures as verdicts. Counting the matching
-// findings again would double them, which is why the merge is keyed on the RULE and not the finding.
+// findings again would double them. So the merge is keyed on the RULE and not the finding.
 func TestConvertedRuleDoesNotDoubleCountItsFailures(t *testing.T) {
 	r := Build(
 		[]check.Verdict{verdict("converted", "N", check.Fail)},
@@ -63,10 +63,10 @@ func TestConvertedRuleDoesNotDoubleCountItsFailures(t *testing.T) {
 	}
 }
 
-// THE HONESTY PROPERTY, carried into the report. A rule that reports violations without stating what
-// it examined must be visibly that, or the report presents a failure list as coverage. This is the
-// same claim StatesConsideredSet makes on the rule definition, and a report is where it would be most
-// convincing and most wrong.
+// THE COVERAGE PROPERTY, carried into the report. A rule that reports violations without stating what
+// it examined must be visibly that, or the report presents a failure list as coverage.
+// StatesConsideredSet makes the same claim on the rule definition. A failure list posing as coverage
+// would be most convincing, and most wrong, in a report.
 func TestFindingsOnlyRuleIsLabelledAndNotCountedAsCoverage(t *testing.T) {
 	r := Build(
 		nil,
@@ -126,12 +126,12 @@ func TestNoLinksWithoutABase(t *testing.T) {
 	}
 }
 
-// An OPERATOR's rule (from conventions.yaml, profiles/ or a design's intent) is namespaced and is absent
-// from the catalog the report is handed, so the catalog lookup cannot vouch for it. Its verdicts
-// can, because emitting one IS stating a considered set. Before this, every rule a team wrote
-// itself was captioned "absence here is not evidence of correctness" over rows that were exactly
-// that evidence, which is the false-confidence failure this layer exists to remove, aimed at the
-// rules they care most about.
+// An OPERATOR writes rules in conventions.yaml, profiles/ or a design's intent. Such a rule is
+// namespaced and absent from the catalog handed to the report, so the catalog lookup cannot vouch for
+// it. Its verdicts can, because emitting one IS stating a considered set. Before this, the report
+// captioned every rule a team wrote itself "absence here is not evidence of correctness", over rows
+// that were exactly that evidence. This layer exists to remove that false-confidence failure, and it
+// hit the rules a team cares most about.
 func TestARuleAbsentFromTheCatalogIsVouchedForByItsVerdicts(t *testing.T) {
 	r := Build(
 		[]check.Verdict{
@@ -175,7 +175,7 @@ func TestTraceURL(t *testing.T) {
 }
 
 // A URL is a promise the reader can follow. Every condition that cannot promise one yields no link
-// at all rather than one assembled from a guess, which is the rule VerdictURL states and this shares.
+// at all rather than one assembled from a guess. VerdictURL states this rule and TraceURL shares it.
 func TestTraceURLRefusesWhatItCannotPromise(t *testing.T) {
 	full := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
 	cases := []struct {
@@ -234,8 +234,8 @@ func TestDiffURLRefusesWhatItCannotPromise(t *testing.T) {
 	}
 }
 
-// The rule rides with the verdict so the viewer can resolve one link by running one rule instead of
-// the whole catalog. It is a hint on top of the identity, not part of it, so a link that carries no
+// The link carries the verdict's rule, so the viewer can resolve one link by running one rule instead
+// of the whole catalog. It is a hint on top of the identity, not part of it, so a link that carries no
 // rule still addresses the same verdict and every link already written into a saved report keeps
 // working.
 func TestVerdictURLCarriesTheRule(t *testing.T) {
@@ -254,8 +254,9 @@ func TestVerdictURLCarriesTheRule(t *testing.T) {
 	}
 }
 
-// The subjects ride with the rule, so the viewer asks that one rule about the verdict's own nets and
-// parts (agni issue 897), every element of a relation's tuple in the rule's order.
+// The link carries the subjects beside the rule, so the viewer asks that one rule about the verdict's
+// own nets and parts (agni issue 897). It names every element of a relation's tuple, in the rule's
+// order.
 func TestVerdictURLCarriesTheSubjects(t *testing.T) {
 	meta := Report{URLBase: "http://h:8080", MountPath: "m/b.edn"}
 	got := VerdictURL(meta, "copper-clearance:(net:A,net:B)", "copper-clearance", []string{"net:A", "pin:U7.3"})
@@ -278,7 +279,7 @@ func TestReportVerdictRowsLinkTheirSubjects(t *testing.T) {
 	}
 }
 
-// A report read a week later is read by someone wondering why its subjects are plain text, and until
+// Imagine someone opens a report a week later and wonders why its subjects are plain text. Until
 // issue 626 the only answer was on a terminal that had long since closed. Both surfaces carry the
 // reason now, because a link means the same thing on both and so does its absence.
 func TestWithheldLinkReasonReachesBothReports(t *testing.T) {

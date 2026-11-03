@@ -17,8 +17,8 @@ const (
 	LocateNotInDesign = "not_in_design"  // the ref/net is absent from the loaded netlist
 )
 
-// LocateModel is the slice of Model that LocateReason reads: whether a ref is a real component,
-// whether a name is a real net, and whether that net is a power rail.
+// LocateModel is the slice of Model that LocateReason reads. It answers whether a ref is a real
+// component, whether a name is a real net, and whether that net is a power rail.
 //
 // Named separately so a caller holding less than a whole Model can still ask, such as the findings
 // annotation's LocateSource in service/sheets.go (agni issue 366). Model satisfies it.
@@ -28,9 +28,10 @@ type LocateModel interface {
 	IsPowerRail(name string) bool
 }
 
-// LocateReason classifies why the entity named by (kind, subject) may not highlight, from the
-// design Model's indexed reads (never a raw-proto scan): a `#`-ref virtual power/flag symbol, a
-// power/ground rail (no drawn wire on a faithful schematic), or a ref/net not in the design. It
+// LocateReason classifies why the entity named by (kind, subject) may not highlight. It reads the
+// design Model's indexes, never a raw-proto scan. The reasons are a `#`-ref virtual power/flag
+// symbol, a power/ground rail (no drawn wire on a faithful schematic), or a ref/net not in the
+// design. It
 // returns LocatableNormal ("") for an entity that should highlight. kind is check.KindComponent or
 // check.KindNet; any other kind is LocatableNormal. Over-classifying a rail is safe because the
 // caller only shows the reason when a highlight actually resolves nothing.
@@ -79,8 +80,8 @@ func (m *irModel) IsPowerRail(name string) bool {
 }
 
 // ComponentProv locates a component in its source file, or nil when the design carries no provenance
-// for it. A rule that builds a finding on a component subject passes it through, so the finding
-// stays locatable in the viewer.
+// for it. A rule that builds a finding on a component subject passes it through, so the viewer can
+// still locate the finding.
 func ComponentProv(m Model, refDes string) *ir.Provenance {
 	for _, c := range m.Components() {
 		if c.GetRefDes() == refDes {
