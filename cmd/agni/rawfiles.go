@@ -11,7 +11,7 @@ import (
 
 // rawFileHandler serves one file inside a mount at /raw/<mount>/<path>, for a page that analyses a
 // design in the browser and fetches the files ListDesignFiles named (agni issue 853). It answers
-// files only: a directory, an unknown mount and a path escaping its mount are all not found, since
+// files only. A directory, an unknown mount and a path escaping its mount are all not found, since
 // the listing is the only index a client gets.
 func rawFileHandler(ms []mounts.Mount) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

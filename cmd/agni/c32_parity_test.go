@@ -15,9 +15,9 @@ import (
 //
 // It lives in cmd/agni because this is the only package that can see BOTH surfaces. The CLI's
 // resolver is unexported here and the service is importable, where service cannot import package
-// main. internal/constraints is the other candidate and is wrong for this one, because its own doc
-// says it holds rules "whose violation is a line of source", and C32's violation was a function
-// that was never CALLED, which no sweep over source can see.
+// main. internal/constraints is the other candidate and is wrong for this one. Its own doc says it
+// holds rules "whose violation is a line of source", and C32's violation was a function that was
+// never CALLED. No sweep over source can see a missing call.
 //
 // The rule was already broken when C32 was written. service.SourcesFor had two callers, both outside
 // the served path, so the CLI attached a design's declared companions and the server did not. The
@@ -54,9 +54,9 @@ func tiersFromService(t *testing.T, ref string) service.DesignSources {
 // TestC32SurfacesResolveOneDesignAlike checks that every spelling of a design, through both surfaces,
 // names the same artifact for each tier.
 //
-// The fixture declares a netlist entry with a schematic companion and a board companion, which is the
-// shape that broke. A netlist carries no faithful geometry of its own, so a surface that does not
-// resolve falls back to an auto-layout while the other draws the real sheets.
+// The fixture declares a netlist entry with a schematic companion and a board companion. That shape
+// broke. A netlist has no faithful geometry of its own, so a surface that does not resolve falls back
+// to an auto-layout while the other draws the real sheets.
 func TestC32SurfacesResolveOneDesignAlike(t *testing.T) {
 	for _, spelling := range []string{
 		c32Design,
@@ -76,8 +76,8 @@ func TestC32SurfacesResolveOneDesignAlike(t *testing.T) {
 				t.Errorf("board tier: cli %q, service %q", cli.BoardURI, svc.BoardURI)
 			}
 			// Agreement alone is not the property. Both surfaces resolving NOTHING agree perfectly,
-			// and that is the state this constraint exists to catch, so the tiers must also
-			// have actually moved off the entry.
+			// and this constraint exists to catch that state. So the tiers must also have moved off
+			// the entry.
 			if !strings.HasSuffix(cli.GeometryURI, ".kicad_sch") {
 				t.Errorf("geometry tier = %q, want the declared schematic companion", cli.GeometryURI)
 			}
@@ -94,8 +94,8 @@ func TestC32SurfacesResolveOneDesignAlike(t *testing.T) {
 // because both return the ref they were handed and the refs match. `gateway-rev-c.edn` is a later
 // revision sitting in the same folder and deliberately NOT declared, as a revision or a companion, so
 // it must be read exactly as named on both surfaces. (Rev B is declared with its own board since agni
-// issue 848, so it no longer serves.) If the test above ever starts passing vacuously, this one is
-// what still distinguishes "resolved to the design" from "resolved to nothing".
+// issue 848, so it no longer serves.) If the test above ever starts passing vacuously, this one
+// still distinguishes "resolved to the design" from "resolved to nothing".
 func TestC32LeavesAnUndeclaredSiblingAlone(t *testing.T) {
 	sibling := filepath.Join(c32Design, "gateway-rev-c.edn")
 	cli := tiersFromCLI(t, sibling)

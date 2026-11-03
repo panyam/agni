@@ -16,7 +16,7 @@ import (
 const lexiconGateway = "../../examples/tutorial-project/designs/gateway"
 
 // The gateway's project adds one rail pattern to the built-ins, so the listing has to tell the two
-// apart, and a pattern a run no longer matches has no place in it unmarked.
+// apart. A pattern that a run no longer matches must be marked if the listing shows it.
 func TestLexiconSaysWhereEachPatternCameFrom(t *testing.T) {
 	out := runCLI(t, lexiconCmd(), lexiconGateway)
 	for _, want := range []*regexp.Regexp{
@@ -48,7 +48,8 @@ func TestLexiconExplainsANet(t *testing.T) {
 		t.Errorf("the match list must name the control pattern and its tier:\n%s", out)
 	}
 
-	// A net the datasheet tier also backs reads as the rules read it, with the pin that established it.
+	// When the datasheet tier also backs a net, the net reads as the rules read it, with the pin
+	// that established it.
 	out = runCLI(t, lexiconCmd(), lexiconGateway, "--net", "PMIC_MAIN_12V0")
 	if !regexp.MustCompile(`(?m)^  rail \(datasheet\): the datasheet lists \S+ pin \S+ as a power pin$`).MatchString(out) {
 		t.Errorf("want the datasheet role with its pin:\n%s", out)
@@ -72,9 +73,9 @@ func TestLexiconExplainsANet(t *testing.T) {
 	}
 }
 
-// --try reads the design with the candidate in place of the project's convention, rules included, so
-// switching the control vocabulary off takes PMIC_EN's role and dropping the house rule takes its two
-// findings.
+// --try reads the design with the candidate in place of the project's convention, rules included.
+// So switching the control vocabulary off removes PMIC_EN's role, and dropping the house rule
+// removes its two findings.
 func TestLexiconTryListsWhatMoves(t *testing.T) {
 	out := runCLI(t, lexiconCmd(), lexiconGateway, "--try", "testdata/lexicon/no-control.yaml", "--format", "json")
 	var resp webapi.CompareLexiconsResponse
@@ -135,7 +136,7 @@ func TestLexiconYAMLReadsTheDesignAsItWasRead(t *testing.T) {
 
 // A candidate that states no lexicon reads names with the built-ins alone, rather than keeping the
 // project's vocabulary it replaces. PMIC_MAIN_12V0 is a rail by its PMIC's datasheet either way, and
-// test-point-coverage asks the name, so dropping the house rail pattern is what takes its finding.
+// test-point-coverage asks the name, so dropping the house rail pattern removes its finding.
 func TestLexiconTryWithoutALexiconUsesTheBuiltins(t *testing.T) {
 	out := runCLI(t, lexiconCmd(), lexiconGateway, "--try", "testdata/lexicon/rules-only.yaml", "--format", "json")
 	var resp webapi.CompareLexiconsResponse

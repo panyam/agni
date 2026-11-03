@@ -13,10 +13,11 @@ import (
 	"github.com/panyam/agni/mounts"
 )
 
-// The viewer selects the rules ListRules calls available and runs those (agni issue 950). A listing
-// that calls a rule unavailable when a run would run it hides that rule's findings, which is how the
-// gateway showed 25 findings where CheckDesign returns 28 (agni issue 940). A listing that calls a
-// rule available when every run skips it offers a checkbox that answers nothing. So for each fixture,
+// The viewer selects the rules ListRules calls available and runs those (agni issue 950). Suppose a
+// listing calls a rule unavailable when a run would run it. The listing then hides that rule's
+// findings. The gateway showed 25 findings this way, where CheckDesign returns 28 (agni issue 940).
+// Suppose instead a listing calls a rule available when every run skips it. The listing then offers
+// a checkbox that answers nothing. So for each fixture,
 // on the server and on the browser engine alike, ListRules' available set must be the set of rules a
 // whole CheckDesign run did not report in `skipped`.
 func TestListRulesAvailableIsWhatARunRuns(t *testing.T) {
@@ -48,8 +49,8 @@ func TestListRulesAvailableIsWhatARunRuns(t *testing.T) {
 	}
 	// runs and skips name a rule each fixture's run must run and one it must skip, so both directions
 	// of the comparison are exercised on every fixture. The gateway's supply-exceeds-abs-max is a
-	// datasheet-tier rule its project's params/ ungates, the rule shape agni issue 940 hid, and
-	// track-width is gated on the board tier.
+	// datasheet-tier rule, and its project's params/ ungates it. Agni issue 940 hid a rule of that
+	// shape. track-width is gated on the board tier.
 	designs := []struct{ name, uri, runs, skips string }{
 		{"tutorial gateway in its project", "mount://tut/designs/gateway", "supply-exceeds-abs-max", "unconnected-pin"},
 		{"bare KiCad schematic", "mount://com/dangling-wire.kicad_sch", "wire-no-junction", "track-width"},

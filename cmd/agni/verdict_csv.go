@@ -19,9 +19,9 @@ import (
 // one row per violation, so passing rows added there would be counted as defects by every consumer
 // that counts rows.
 //
-// `context` carries what to HIGHLIGHT, as role=ref pairs a viewer can resolve, and `terms` carries
-// the VALUES the statement rests on. A term is a bare string with no kind and is not clickable, so a
-// path proof puts its hops in context and carries no terms.
+// `context` holds what to HIGHLIGHT, as role=ref pairs a viewer can resolve, and `terms` holds the
+// VALUES behind the statement. A term is a bare string with no kind and is not clickable, so a path
+// proof puts its hops in context and has no terms.
 //
 // Datasheet citations are absent for the reason checkCSVColumns gives. A consumer that needs them
 // wants json.
@@ -37,9 +37,9 @@ func writeVerdictCSV(w io.Writer, vs []*checkspb.Verdict, meta rpt.Report, order
 	return writeTableCSV(w, service.VerdictsTable(vs, link), orderBy)
 }
 
-// checkTable is one of the tables Tabulate projects a check run into, by name, so `check --table
-// pin_map` writes the rows the TableService serves for that run (C35). An unknown name lists the
-// tables the run has, since which exist depends on the run (pin_map needs an IO map).
+// checkTable picks, by name, one of the tables that Tabulate projects from a check run. So `check
+// --table pin_map` writes the TableService's rows for that run (C35). An unknown name gets a list of
+// the run's tables, since which tables exist depends on the run (pin_map needs an IO map).
 func checkTable(resp *webapi.CheckDesignResponse, name string) (*webapi.Table, error) {
 	out, err := service.TableService{}.Tabulate(context.Background(), &webapi.TabulateRequest{
 		Answer: &webapi.TabulateRequest_Check{Check: resp},

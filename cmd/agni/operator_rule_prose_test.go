@@ -14,11 +14,13 @@ var sectionSummaries = regexp.MustCompile(`<span class="rule">([^<]+)</span>\s*<
 // An operator's own rules must carry their prose (agni issue 411).
 //
 // The report looked its rules up in the catalog it was handed, and the CLI handed it the one built
-// BEFORE the project's rules and the --conventions value were composed on. So a rule a team wrote for
-// its own boards rendered with its rows and no summary, no impact and no remedy, under a bare name.
+// BEFORE the project's rules and the --conventions value were composed on. So when a team wrote a
+// rule for its own boards, the rule rendered with its rows and no summary, no impact and no remedy,
+// under a bare name.
 //
-// That is backwards for a tool whose whole adoption path is teaching it your house conventions, and it
-// loses the report's most valuable content on the rules a newcomer is least able to read from the name.
+// That is backwards for a tool that people adopt by teaching it their house conventions. It also
+// loses the report's most valuable content on exactly the rules whose names a newcomer can least
+// read.
 func TestReportCarriesProseForOperatorRules(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--format", "html", tutorialDesign)
 
@@ -47,8 +49,8 @@ func TestReportCarriesProseForOperatorRules(t *testing.T) {
 	}
 }
 
-// The summary is the cheapest field to get right and the least useful. Impact and remedy are what turn
-// a finding into something a reviewer can act on without asking whoever wrote the rule.
+// The summary is the cheapest field to get right and the least useful. Impact and remedy turn a
+// finding into something a reviewer can act on without asking whoever wrote the rule.
 func TestReportCarriesImpactAndRemedyForAnOperatorRule(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--format", "html", tutorialDesign)
 
@@ -69,7 +71,7 @@ func TestReportCarriesImpactAndRemedyForAnOperatorRule(t *testing.T) {
 
 // The report must read the catalog the RUN used, and this is the property rather than the symptom.
 // Rules render from the verdicts and findings, so a report built against a narrower catalog still
-// shows every rule that ran; only the prose goes missing, which is why the defect was quiet. Compare
+// shows every rule that ran. Only the prose goes missing, so the defect was quiet. Compare
 // the two sets directly so a refactor that re-narrows the catalog fails here rather than in a reader's
 // report.
 func TestEveryRuleThatRanHasASectionWithProse(t *testing.T) {

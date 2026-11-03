@@ -42,8 +42,8 @@ func TestFindingSpecs(t *testing.T) {
 	}
 }
 
-// TestCompanionPath covers companion resolution: an explicit --companion is honored for one design
-// and rejected for several; otherwise a sibling <stem>.eds next to a netlist is auto-detected, a
+// TestCompanionPath covers companion resolution. An explicit --companion is honored for one design
+// and rejected for several. Otherwise a sibling <stem>.eds next to a netlist is auto-detected. A
 // design that already draws itself (.eds/.kicad_sch) auto-detects none, and a missing sibling is "".
 func TestCompanionPath(t *testing.T) {
 	dir := t.TempDir()
@@ -113,10 +113,10 @@ func TestReviewRenderCompanion(t *testing.T) {
 	}
 }
 
-// TestReviewRenderCompanionMismatch checks that an explicit companion whose net names do not
-// overlap the design's is flagged (likely a different-revision or wrong file), rather than silently
-// drawing a wrong picture. can-broken's CAN_* nets share nothing with companion-demo.eds's
-// SIGA/SIGB.
+// TestReviewRenderCompanionMismatch passes an explicit companion whose net names do not overlap the
+// design's. The companion is likely a different revision or the wrong file. The test checks that it
+// is flagged, rather than silently drawn as a wrong picture. can-broken's CAN_* nets share nothing
+// with companion-demo.eds's SIGA/SIGB.
 func TestReviewRenderCompanionMismatch(t *testing.T) {
 	dir := t.TempDir()
 	r := review.Report{Design: "testdata/review/can-broken.edn", Areas: []review.AreaResult{{
@@ -134,7 +134,7 @@ func TestReviewRenderCompanionMismatch(t *testing.T) {
 }
 
 // TestReviewCmdRender checks that --render writes an annotated SVG per design that has findings,
-// with the findings baked in (a highlight stroke), while the report on stdout stays the normal
+// with the findings baked in (a highlight stroke). The report on stdout is still the normal
 // markdown. can-broken is a netlist, so it renders on the auto-layout sheet ("graph"), proving
 // findings locate there and not only on faithful geometry.
 func TestReviewCmdRender(t *testing.T) {
@@ -169,8 +169,8 @@ func TestReviewCmdRender(t *testing.T) {
 }
 
 // sourcesOf gives renderReviewImages the addressable source for each report. In production those
-// come from the documents; a test that builds reports directly re-uses the reading name, which is a
-// real path here.
+// come from the documents. A test that builds reports directly re-uses the reading name, and that
+// name is a real path here.
 func sourcesOf(reports []review.Report) []string {
 	out := make([]string, 0, len(reports))
 	for _, r := range reports {

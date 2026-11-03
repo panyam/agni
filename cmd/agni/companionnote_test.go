@@ -13,9 +13,9 @@ import (
 
 const backannotateDir = "testdata/github-issues/backannotate-locate"
 
-// A schematic companion the descriptor declares and that fails to parse was silent everywhere but
-// render, so a check or query read as though every part were drawn on no sheet (agni issue 1230). The
-// read says so once per file, and the intact fixture is the control.
+// Imagine a descriptor declares a schematic companion, and the companion fails to parse. Only render
+// used to say so, and a check or query read as though every part were drawn on no sheet (agni issue
+// 1230). The read now says so once per file. The intact fixture is the control.
 func TestLocalLoaderWarnsAnUnreadableCompanion(t *testing.T) {
 	dir := t.TempDir()
 	for _, name := range []string{"design.yaml", "demo_netlist.edn", "demo_schematic.eds"} {

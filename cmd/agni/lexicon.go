@@ -242,7 +242,8 @@ func writeLexiconChanges(w io.Writer, r *webapi.CompareLexiconsResponse) {
 	}
 }
 
-// lexiconYAML writes lx as a conventions file naming.Parse reads back to the same lexicon.
+// lexiconYAML writes lx as a conventions file. naming.Parse reads that file back to the same
+// lexicon.
 func lexiconYAML(name string, lx *configpb.NamingLexicon) ([]byte, error) {
 	body, err := service.ConventionYAML(&configpb.NamingConvention{Name: name, Lexicon: lx})
 	if err != nil {

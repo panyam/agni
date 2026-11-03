@@ -15,7 +15,7 @@ import (
 
 func TestWorkspaceServiceListDir(t *testing.T) {
 	root := t.TempDir()
-	// Layout: a subdir, two supported files, one unsupported, one dotfile.
+	// The layout holds a subdir, two supported files, one unsupported file and one dotfile.
 	mustMkdir(t, filepath.Join(root, "sub"))
 	mustWrite(t, filepath.Join(root, "board.edn"))
 	mustWrite(t, filepath.Join(root, "amp.sch")) // xschem/gEDA schematic (regression, it was hidden)
@@ -54,8 +54,8 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 		if got[3].GetName() != "layout.kicad_pcb" || got[3].GetFormat() != "kicad" {
 			t.Errorf("want layout.kicad_pcb/kicad, got %+v", got[3])
 		}
-		// An unrecognized file is listed (folder never looks empty) but carries no format, which
-		// the UI renders disabled.
+		// An unrecognized file is listed, so a folder never looks empty. It has no format, and the
+		// UI renders it disabled.
 		if got[4].GetName() != "notes.txt" || got[4].GetFormat() != "" {
 			t.Errorf("want notes.txt with empty format (unsupported), got %+v", got[4])
 		}
@@ -73,7 +73,7 @@ func TestWorkspaceServiceListDir(t *testing.T) {
 	})
 
 	// Over a real filesystem, not just the in-memory port. "hollow" holds only folders and a file
-	// no reader opens, so a design browser asking for pruning never sees it.
+	// that no reader opens, so a design browser asking for pruning never sees it.
 	t.Run("opens drops a subtree with nothing the caller can open", func(t *testing.T) {
 		mustMkdir(t, filepath.Join(root, "hollow", "libs"))
 		mustWrite(t, filepath.Join(root, "hollow", "libs", "parts.lock"))

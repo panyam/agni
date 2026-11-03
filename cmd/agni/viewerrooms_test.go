@@ -28,8 +28,8 @@ import (
 	"github.com/panyam/mcpkit/experimental/integrations/roomsevents/channel"
 )
 
-// viewerRoomsServer serves the tutorial project as `serve --mcp --viewer-rooms` does: the Connect
-// API, the relay, ViewerRoomService and /mcp with the bridge's tools and room events on it.
+// viewerRoomsServer serves the tutorial project as `serve --mcp --viewer-rooms` does. It runs the
+// Connect API, the relay, ViewerRoomService, and /mcp with the bridge's tools and room events on it.
 func viewerRoomsServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	freshWorkspace(t)
@@ -42,8 +42,8 @@ func viewerRoomsServer(t *testing.T) *httptest.Server {
 	resolver := &service.ProjectResolver{Store: projects.NewFSStore(projectTrees(ms)...), Config: &osProjectConfig{mounts: ms}}
 	mux := http.NewServeMux()
 	api.Register(mux)
-	// A tab is a page, so its relay connection carries the page's Origin; a Go dialer sends none,
-	// which the relay refuses.
+	// A tab is a page, so its relay connection carries the page's Origin. A Go dialer sends no
+	// Origin, and the relay refuses a connection without one.
 	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if r.Header.Get("Origin") == "" && strings.HasPrefix(r.URL.Path, relayPath) {
 			r.Header.Set("Origin", "http://"+r.Host)
@@ -65,9 +65,9 @@ func viewerRoomsServer(t *testing.T) *httptest.Server {
 }
 
 // TestViewerRoomsServesTheViewerToolsBesideAgnis composes what `serve --mcp --viewer-rooms` adds over
-// the tutorial project (agni issue 1154): the bridge's tools join agni's own on /mcp without
-// displacing any, and a tab opened on a design's folder is told the room of its declared entry, which
-// is the room an agent naming the design reaches.
+// the tutorial project (agni issue 1154). The bridge's tools join agni's own on /mcp without
+// displacing any. A tab opened on a design's folder is told the room of its declared entry. An agent
+// naming the design reaches that same room.
 func TestViewerRoomsServesTheViewerToolsBesideAgnis(t *testing.T) {
 	srv := viewerRoomsServer(t)
 
@@ -117,10 +117,10 @@ func TestViewerRoomsNeedsMCP(t *testing.T) {
 }
 
 // TestARoomsChannelHearsATabsQuestion runs mcpkit's rooms-channel front end against agni's /mcp as
-// Claude Code starts it, over a pipe (agni issue 1173): it attaches to the room a tab joined, the
-// tab's reader asks, and the pipe carries one notifications/claude/channel holding the question.
-// An agent attaches by design, which names no room, so rooms-channel has to watch the room attach
-// answers with (panyam/mcpkit#1640).
+// Claude Code starts it, over a pipe (agni issue 1173). The front end attaches to the room a tab
+// joined. The tab's reader asks a question, and the pipe carries one notifications/claude/channel
+// holding it. An agent attaches by design, and a design names no room. So rooms-channel has to watch
+// the room that attach answers with (panyam/mcpkit#1640).
 func TestARoomsChannelHearsATabsQuestion(t *testing.T) {
 	for _, tc := range []struct {
 		name   string
@@ -192,8 +192,8 @@ func roomsChannelHearsATabsQuestion(t *testing.T, attachArgs func(room string) m
 	}
 }
 
-// channelHost is Claude Code's side of a rooms-channel pipe: it sends requests and keeps the
-// responses and notifications the front end writes.
+// channelHost is Claude Code's side of a rooms-channel pipe. It sends requests and keeps the
+// responses and notifications that the front end writes.
 type channelHost struct {
 	t     *testing.T
 	w     io.Writer

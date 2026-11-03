@@ -112,9 +112,9 @@ func TestCheckCSVIsDeterministic(t *testing.T) {
 	}
 }
 
-// TestCheckCSVEscapesARealNetName is the end-to-end half of the escaping guarantee. The unit test
-// above can be satisfied by a helper nothing calls, so this one drives the whole command over a
-// fixture that really carries a rail named +3V3 and asserts the emitted cell is escaped. The rail is a
+// TestCheckCSVEscapesARealNetName is the end-to-end half of the escaping guarantee. A helper that
+// nothing calls could satisfy the unit test above. So this test drives the whole command over a
+// fixture that really has a rail named +3V3, and asserts the emitted cell is escaped. The rail is a
 // power symbol's, because KiCad names a root-sheet label "/+3V3", which needs no escaping.
 func TestCheckCSVEscapesARealNetName(t *testing.T) {
 	recs, raw := runCheckCSV(t, "--rule", "decoupling-present", "testdata/conformance/showcase.fires.kicad_sch")
@@ -196,8 +196,9 @@ func equalStrings(a, b []string) bool {
 	return true
 }
 
-// TestTheEncodeRPCWritesTheCLIsCSV covers agni issue 956: a check run tabulated and encoded through
-// the TableService, as the viewer saves one, is byte for byte what `check --format csv` writes.
+// TestTheEncodeRPCWritesTheCLIsCSV covers agni issue 956. The viewer saves a check run by tabulating
+// and encoding it through the TableService. The result has to match what `check --format csv`
+// writes, byte for byte.
 func TestTheEncodeRPCWritesTheCLIsCSV(t *testing.T) {
 	run := func(args ...string) []byte {
 		t.Helper()

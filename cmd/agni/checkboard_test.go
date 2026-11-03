@@ -5,13 +5,12 @@ import (
 	"testing"
 )
 
-// TestCheckBoardPath checks that `check` can attach a board that is not a declared companion, which
-// `review` and `query` have been able to do since WS3-089.
+// TestCheckBoardPath checks that `check` can attach a board that is not a declared companion.
+// `review` and `query` have been able to do that since WS3-089.
 //
-// The asymmetry mattered because of which command it hit. "Does this layout pass the fab's rules" is
-// the question `check` exists to answer, and it was the one command that could not be pointed at a
-// layout. A netlist read on its own carries no copper, so every board-tier rule found nothing and the
-// run reported clean.
+// The asymmetry hit the command where it mattered most. `check` exists to answer "Does this layout
+// pass the fab's rules", and it was the one command that could not be pointed at a layout. A netlist
+// read on its own has no copper, so every board-tier rule found nothing and the run reported clean.
 func TestCheckBoardPath(t *testing.T) {
 	const (
 		netlist = "../../examples/tutorial-project/designs/gateway/gateway.edn"

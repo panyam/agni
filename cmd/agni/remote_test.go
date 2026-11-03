@@ -14,7 +14,7 @@ import (
 	"github.com/panyam/agni/mounts"
 )
 
-// remoteParityServer is an `agni serve` with no mounts at all, and this process mounts the tutorial
+// remoteParityServer is an `agni serve` with no mounts at all. This process mounts the tutorial
 // project as tut, so a remote run's answer comes from the files it sent (agni issue 1061). served
 // reports the procedures the server has answered so far.
 func remoteParityServer(t *testing.T) (url, design string, served func() []string) {
@@ -46,16 +46,16 @@ func runBoth(t *testing.T, mk func() *cobra.Command, url string, args ...string)
 	return runCLI(t, mk(), args...), runCLI(t, mk(), append(append([]string{}, args...), "--remote", url)...)
 }
 
-// TestRemoteAnswersAsTheLocalCommandDoes is agni issue 998's acceptance: each command that can send
-// its request to a server prints the same bytes whichever engine answered, in every format that
-// renders the response a different way.
+// TestRemoteAnswersAsTheLocalCommandDoes is agni issue 998's acceptance. Each command that can send
+// its request to a server has to print the same bytes whichever engine answered. The test covers
+// every format that renders the response a different way.
 func TestRemoteAnswersAsTheLocalCommandDoes(t *testing.T) {
 	url, design, served := remoteParityServer(t)
 	cases := []struct {
 		name string
 		mk   func() *cobra.Command
-		// rpc is the procedure the remote run must have reached, so a --remote the command ignored
-		// cannot pass by printing its local answer twice.
+		// rpc names the procedure the remote run must have reached. A command that ignored --remote
+		// would print its local answer twice, and this check keeps that from passing.
 		rpc  string
 		args []string
 	}{
@@ -102,8 +102,8 @@ func TestRemoteAnswersAsTheLocalCommandDoes(t *testing.T) {
 }
 
 // TestRemoteRefusesWhatItCannotSend holds the two refusals --remote makes rather than answering from
-// somewhere else: a flag that configures this process's engine, and a design whose files this
-// process cannot list to send, which is refused before anything reaches the server.
+// somewhere else. It refuses a flag that configures this process's engine. It also refuses a design
+// whose files this process cannot list to send, and it does so before anything reaches the server.
 func TestRemoteRefusesWhatItCannotSend(t *testing.T) {
 	url, design, served := remoteParityServer(t)
 	run := func(mk func() *cobra.Command, args ...string) error {
@@ -133,8 +133,8 @@ func TestRemoteRefusesWhatItCannotSend(t *testing.T) {
 	}
 }
 
-// TestABadQueryPointsAtItsPlace: a query that would not parse prints the line it stopped on with a
-// caret under the place, whether this process or a --remote server parsed it.
+// TestABadQueryPointsAtItsPlace checks that a query that would not parse prints the line it stopped
+// on, with a caret under the place. That holds whether this process or a --remote server parsed it.
 func TestABadQueryPointsAtItsPlace(t *testing.T) {
 	url, design, _ := remoteParityServer(t)
 	want := "\n  component.net(?r ?n) => ?r\n                ^"

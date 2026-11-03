@@ -9,9 +9,9 @@ import (
 )
 
 // withTiming gives a command --timing, and --explain when it evaluates queries (agni issue 914). The
-// command's service calls run in-process under its context, so a recorder put on that context before
-// the command runs collects what a served request would report in its Agni-Timing header. The
-// breakdown goes to stderr, so a timed run still pipes its answer.
+// command's service calls run in-process under its context. So withTiming puts a recorder on that
+// context before the command runs, and the recorder collects what a served request would report in
+// its Agni-Timing header. The breakdown goes to stderr, so a timed run still pipes its answer.
 func withTiming(c *cobra.Command, explain bool) *cobra.Command {
 	var timed, explained, memory bool
 	c.Flags().BoolVar(&timed, "timing", false, "print where the run's time went to stderr: each stage, which cache tier answered each read, and the slowest rules")

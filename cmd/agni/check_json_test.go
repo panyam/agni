@@ -9,10 +9,10 @@ import (
 	"testing"
 )
 
-// TestCheckJSON pins the `check --format json` wire contract the rules-conformance runner reads:
-// a findings array, each with rule + subject{kind,ref} + severity + message + provenance carried
-// through from the reader. Uses the EDIF conformance fixture (single-pin net STUB) so the shape is
-// asserted on a real reader path, not a stub.
+// TestCheckJSON pins the `check --format json` wire contract for the rules-conformance runner.
+// The contract is a findings array, each with rule + subject{kind,ref} + severity + message +
+// provenance passed through from the reader. Uses the EDIF conformance fixture (single-pin net STUB)
+// so the shape is asserted on a real reader path, not a stub.
 func TestCheckJSON(t *testing.T) {
 	cmd := checkCmd()
 	var out bytes.Buffer
@@ -92,7 +92,7 @@ func TestConventionsReachBoardSource(t *testing.T) {
 			cmd.SetOut(&out)
 			args := []string{"--format", "json", "--rule", "input-protection", "--rule", "reverse-blocking-absent"}
 			cmd.SetArgs(append(append(args, tc.args...), "testdata/conventions/house-feedback-pin.edn"))
-			// Findings exit non-zero, so the count below is what this test reads.
+			// Findings exit non-zero, so this test reads the count below.
 			_ = cmd.Execute()
 			var got struct {
 				Findings []struct {
@@ -162,8 +162,8 @@ func TestCheckConventionsFlag(t *testing.T) {
 	}
 }
 
-// sheetFinding is the finding subset the sheet-annotation tests read (WS3-023), meaning the subject
-// and the sheets it locates on. Shared by the JSON and report acceptance tests.
+// sheetFinding holds the subject and the sheets it locates on, which is the part of a finding that
+// the sheet-annotation tests read (WS3-023). The JSON and report acceptance tests share it.
 type sheetFinding struct {
 	Subject struct {
 		Kind string `json:"kind"`
@@ -172,13 +172,12 @@ type sheetFinding struct {
 	Sheets []string `json:"sheets"`
 }
 
-// TestCheckJSONSheets pins WS3-023 + WS9-048: `check --format json` carries each finding's sheet
-// membership. On the multi-sheet sheetnav fixture the U1 duplicate-ref-des finding (a component
-// subject) locates on the root sheet via faithful geometry. A bare netlist has no faithful sheets,
-// so it renders via auto-layout and its findings locate on the single auto-layout sheet "graph",
-// the same place the web viewer draws them, now that the CLI shares the service's layout-based
-// annotation (before the thin-client conversion the CLI used faithful-only geometry and these were
-// empty).
+// TestCheckJSONSheets pins WS3-023 + WS9-048. `check --format json` includes each finding's sheet
+// membership. On the multi-sheet sheetnav fixture the U1 duplicate-ref-des finding, a component
+// subject, locates on the root sheet via faithful geometry. A bare netlist has no faithful sheets, so
+// it renders via auto-layout. Its findings locate on the single auto-layout sheet "graph", where the
+// web viewer draws them too. The CLI now shares the service's layout-based annotation. Before the
+// thin-client conversion the CLI used faithful-only geometry and these were empty.
 func TestCheckJSONSheets(t *testing.T) {
 	parse := func(path string) []sheetFinding {
 		cmd := checkCmd()
@@ -252,8 +251,8 @@ func TestRegulatorOutputAbsMaxConformance(t *testing.T) {
 	if f.Subject.Ref != "U2" {
 		t.Errorf("subject = %q, want U2 (the endangered part)", f.Subject.Ref)
 	}
-	// Two citations, one per part the conclusion rests on. A single-citation regression here would
-	// still produce a correct-looking finding, which is why the count is asserted and not just the docs.
+	// Two citations, one for each part behind the conclusion. A single-citation regression here would
+	// still produce a correct-looking finding, so the count is asserted and not just the docs.
 	if len(f.Datasheets) != 2 {
 		t.Fatalf("want 2 citations on the wire, got %d: %+v", len(f.Datasheets), f.Datasheets)
 	}
@@ -264,7 +263,7 @@ func TestRegulatorOutputAbsMaxConformance(t *testing.T) {
 
 // TestFetVdssConformance is WS3-116's end-to-end, and it runs against the REAL seeded BSS138 rather
 // than a synthetic fixture spec, a 50V part on a 60V rail. Unlike the WS3-028 conformance test, the
-// rail's voltage here comes from the net NAME, so exactly one citation (the FET's) should ride the
+// rail's voltage here comes from the net NAME, so exactly one citation (the FET's) should be on the
 // wire. A regression that cited a nonexistent second source would still look plausible in the
 // message, so the count is the assertion that catches it.
 func TestFetVdssConformance(t *testing.T) {

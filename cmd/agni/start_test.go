@@ -53,10 +53,10 @@ func mustStart(t *testing.T, design, dir, name string) string {
 // TestStartProducesAResolvableProject is the acceptance case. After `agni start`, the two commands
 // that used to need a flag list resolve everything from the scaffolded descriptors.
 //
-// It runs `check` and `review` for real rather than asserting on the generated YAML, because the
-// files being well-formed is not the claim. The claim is that the store resolves them, the config
-// tiers load, and the seeded checklist scores. A stub that parsed but did not LOAD (a
-// conventions.yaml the project declares and osProjectConfig then rejects) would pass a
+// It runs `check` and `review` for real rather than asserting on the generated YAML. The claim is
+// not that the files are well-formed. The claim is that the store resolves them, the config tiers
+// load, and the seeded checklist scores. Imagine a stub that parsed but did not LOAD, such as a
+// conventions.yaml that the project declares and osProjectConfig then rejects. It would pass a
 // file-shape assertion and break every command on the project it just created.
 func TestStartProducesAResolvableProject(t *testing.T) {
 	design, root := startFixture(t)
@@ -74,17 +74,17 @@ func TestStartProducesAResolvableProject(t *testing.T) {
 	if !strings.Contains(reviewOut, "review") || !strings.Contains(reviewOut, "| Outcome |") {
 		t.Errorf("review should run the seeded checklist with no flags, got:\n%s", reviewOut)
 	}
-	// A seeded checklist whose every item read not-automated would be a checklist that binds
-	// nothing, which is worse than no checklist because it reports coverage that does not exist.
-	// Counted over the item ROWS, since the per-area tally lines name every outcome whether or not
-	// any item holds it.
+	// Suppose every item of a seeded checklist read not-automated. That checklist would bind
+	// nothing. It would be worse than no checklist, because it reports coverage that does not exist.
+	// The count is over the item ROWS, since the per-area tally lines name every outcome whether or
+	// not any item holds it.
 	rows := strings.Count(reviewOut, "| not-automated |")
 	if rows != 1 {
 		t.Errorf("exactly one seeded item (the deliberate manual one) should be not-automated, got %d:\n%s", rows, reviewOut)
 	}
 }
 
-// TestStartCompanionRule is the judgment call in this command, so it is pinned from both sides.
+// TestStartCompanionRule pins this command's judgment call from both sides.
 //
 // A same-stem sibling carrying a BOARD is a view of the design and is declared. A different-stem
 // netlist is a later revision and a legitimate analysis source of its own, so declaring it would turn
@@ -164,9 +164,9 @@ func TestStartRefusesToOverwrite(t *testing.T) {
 	}
 }
 
-// TestStartAddsToAnExistingProject checks that pointing at a folder that already declares a project
-// adds a design to it rather than nesting a second project, which would give one tree two config
-// scopes.
+// TestStartAddsToAnExistingProject points `agni start` at a folder that already declares a project.
+// The command must add a design to that project rather than nest a second project. A nested project
+// would give one tree two config scopes.
 func TestStartAddsToAnExistingProject(t *testing.T) {
 	design, root := startFixture(t)
 	proj := filepath.Join(root, "p")
@@ -194,9 +194,9 @@ func TestStartAddsToAnExistingProject(t *testing.T) {
 	}
 }
 
-// TestStartRejectsANonNetlistEntry exists because entry names the file ANALYSIS reads, so a
-// geometry-only file cannot be one. Accepting it would produce a project whose every command failed
-// later, at a place that no longer names the mistake.
+// TestStartRejectsANonNetlistEntry covers the entry field. The entry names the file that ANALYSIS
+// reads, so a geometry-only file cannot be one. Accepting it would produce a project whose every
+// command failed later, at a place that no longer names the mistake.
 func TestStartRejectsANonNetlistEntry(t *testing.T) {
 	_, root := startFixture(t)
 	notADesign := filepath.Join(root, "src", "notes.txt")

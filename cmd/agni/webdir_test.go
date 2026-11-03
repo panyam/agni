@@ -9,10 +9,10 @@ import (
 // --web-dir is a relative path that does not exist. Rung 3 handed a reader exactly that command and
 // promised `agni open` "works that out for itself" (agni issue 625).
 //
-// #640 rewrote the message while this was in flight, and named all three routes, which is what the
-// page now documents. Nothing pinned it, so this does. The message is the one thing standing between
-// a first-time reader and a dead end, and it is a string, which is the kind of thing that gets
-// shortened by someone tidying.
+// #640 rewrote the message while this was in flight, and named all three routes. The page now
+// documents those routes. Nothing pinned the message, so this does. The message is the one thing
+// standing between a first-time reader and a dead end. It is also a string, and someone tidying
+// tends to shorten strings.
 func TestWebDirErrorNamesEveryWayToSetIt(t *testing.T) {
 	_, _, err := resolveWebAssets(t.TempDir()+"/absent", func(string) string { return "" })
 	if err == nil {

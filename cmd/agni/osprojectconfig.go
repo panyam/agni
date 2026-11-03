@@ -42,8 +42,8 @@ func (c *osProjectConfig) dir(uri string) (string, error) {
 	return mounts.Resolve(c.mounts, u)
 }
 
-// refuseProfilePathTheProjectOwns rejects a --profile-path naming a directory the design's own
-// project already composes.
+// refuseProfilePathTheProjectOwns rejects a --profile-path naming a profiles directory that the
+// design's own project already composes.
 //
 // The flag would load the project's own profiles a SECOND time under a second source name. The
 // namespaces differ, so nothing collides and both copies run, reporting every profile finding twice.
@@ -51,8 +51,9 @@ func (c *osProjectConfig) dir(uri string) (string, error) {
 // issue 450). It refuses rather than dropping the duplicate, as --conventions does (see
 // service/overlay.go).
 //
-// A design in NO project, a project declaring no profiles, or a flag naming somewhere else return
-// nil. So does any failure to resolve the project, which whichever call needs the project reports.
+// It returns nil for a design in NO project, a project declaring no profiles, or a flag naming
+// somewhere else. It also returns nil when the project fails to resolve. Whichever call needs the
+// project reports that failure.
 func refuseProfilePathTheProjectOwns(ctx context.Context, designArg, profilePath string) error {
 	_, p, err := cliResolveProject(ctx, designArg)
 	if err != nil || p == nil {

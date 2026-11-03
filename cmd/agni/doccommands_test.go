@@ -15,9 +15,9 @@ import (
 const docContentDir = "../../docsite/content"
 
 // docCommandCount is how many `agni ...` commands the extractor finds in hand-written fences across
-// the whole content tree. Asserted so a block written in a shape the extractor does not recognise
-// shows up as a coverage DROP rather than as silence, which is the failure mode of every scanner
-// that reports only on what it managed to read.
+// the whole content tree. The test asserts it, so a block in a shape the extractor does not
+// recognise shows up as a coverage DROP rather than as silence. Silence is the failure mode of every
+// scanner that reports only on what it managed to read.
 //
 // It moves when a page gains or loses a hand-written command, and it goes DOWN when a fence converts
 // to a generated capture (an agniRun spec runs its command for real, so it needs no parse check).
@@ -27,20 +27,20 @@ const docCommandCount = 44
 // TestDocumentedCommandsParse runs every hand-written `agni ...` line in the docsite through the
 // real command tree, checking that the command and its flags exist.
 //
-// The docsite carries two kinds of command and only one of them was checked. A run spec under
+// The docsite has two kinds of command, and only one of them was checked. A run spec under
 // `runs/*.yaml` is EXECUTED, and `tutorial-runs-check` regenerates every capture on each gate run, so
 // a command that stops working fails the build. A command typed into a fenced block was checked by
 // nothing, and three PRs that each changed how a command behaves updated the page documenting the
 // flag while leaving the pages that USE it. Four tutorial commands stopped working and the ladder
 // still read as though they did (agni issue 471).
 //
-// This checks that a command PARSES, not that it runs, and that difference is what lets it exist at
-// all. Several of these commands cannot be executed by a test: `agni serve` blocks until
-// interrupted, some name a board the reader has rather than a fixture in this repo, and one is on the
-// page precisely to show a mistake. Parsing needs no fixture, no server, and no terminating process,
-// and every one of the four regressions was an unknown subcommand or an unknown flag.
+// This checks that a command PARSES, not that it runs. That difference lets the test exist at all,
+// because a test cannot execute several of these commands. `agni serve` blocks until interrupted.
+// Some name a board the reader has rather than a fixture in this repo. One is on the page precisely
+// to show a mistake. Parsing needs no fixture, no server, and no terminating process, and every one
+// of the four regressions was an unknown subcommand or an unknown flag.
 //
-// What it does NOT catch is a command that parses and does the wrong thing. `--format jsn` is a
+// It does NOT catch a command that parses and does the wrong thing. `--format jsn` is a
 // well-formed string for a flag that takes one, so cobra accepts it and so does this. A fence whose
 // output matters wants an agniRun spec instead, which runs it.
 func TestDocumentedCommandsParse(t *testing.T) {
@@ -62,9 +62,9 @@ func TestDocumentedCommandsParse(t *testing.T) {
 // parseArgs resolves argv against the real command tree and validates it without running anything.
 //
 // The three steps are separate because each catches a different regression and cobra reports them at
-// different moments. Find resolves the subcommand path, ParseFlags rejects a flag that no longer
-// exists, and ValidateArgs rejects a positional the command does not take, which is what an
-// `agni serve web` reads as once serve stopped accepting one.
+// different moments. Find resolves the subcommand path, and ParseFlags rejects a flag that no longer
+// exists. ValidateArgs rejects a positional the command does not take. `agni serve web` fails that
+// way, since serve stopped accepting one.
 func parseArgs(argv []string) error {
 	root := rootCmd()
 	root.SetArgs(argv)
@@ -207,9 +207,9 @@ func shellCommands(fence string) []string {
 	return out
 }
 
-// shellSplit tokenizes a command line the way a shell would for the parts that matter here: quoting,
-// then a trailing comment or redirect. Both are stripped only OUTSIDE quotes, because the datalog
-// query on rules-and-checks.md carries `<`, `>` and `=>` inside its quoted program.
+// shellSplit tokenizes a command line the way a shell would, for the parts that matter here. It
+// handles quoting, then a trailing comment or redirect. Both are stripped only OUTSIDE quotes,
+// because the datalog query on rules-and-checks.md has `<`, `>` and `=>` inside its quoted program.
 //
 // `<` is NOT a terminator even unquoted. No page redirects input, and every unquoted `<` in the tree
 // opens a placeholder (`agni check <file> --fail-on error`), which has to survive as a positional or

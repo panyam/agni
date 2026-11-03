@@ -15,10 +15,11 @@ const urlBaseFlag = "http://localhost:8080"
 
 // withMount declares a mount for one test.
 //
-// Two things have to be undone, and the second is the one that bites. --mount is a root PERSISTENT
-// flag, so the variable is set directly rather than passed to a check command built on its own. And
-// the mount TABLE is parsed once per process behind a sync.Once, which is right for a CLI serving one
-// invocation and wrong inside a test binary where every test shares the process. Without the reset
+// Two things have to be undone, and the second one causes the failures. --mount is a root
+// PERSISTENT flag, so the variable is set directly rather than passed to a check command built on
+// its own. And the mount TABLE is parsed once per process behind a sync.Once. That is right for a
+// CLI serving one invocation. It is wrong inside a test binary, where every test shares the process.
+// Without the reset
 // these tests pass alone and fail in the package run, because whichever test resolves a mount first
 // fixes the table for all of them.
 func withMount(t *testing.T) {
@@ -27,11 +28,11 @@ func withMount(t *testing.T) {
 	cliMountSpecs = []string{"demo=testdata/conformance"}
 }
 
-// freshWorkspace gives one test the mount table a fresh CLI process starts with: no --mount, and a
-// table not yet parsed, so its arguments mint their own mounts. It restores the previous table after.
-// A test whose output names a design by its path within a mount needs it, since an earlier test's
-// table changes that path (`review/can-broken.edn` for `can-broken.edn`), which read as a scoring
-// difference in agni issue 869.
+// freshWorkspace gives one test the mount table of a fresh CLI process. That table has no --mount
+// and is not yet parsed, so the test's arguments mint their own mounts. It restores the previous
+// table after. Some tests print a design's path within a mount, and those tests need it. An earlier
+// test's table changes that path (`review/can-broken.edn` for `can-broken.edn`), and in agni issue
+// 869 the change read as a scoring difference.
 func freshWorkspace(t *testing.T) {
 	t.Helper()
 	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
@@ -43,7 +44,7 @@ func freshWorkspace(t *testing.T) {
 	})
 }
 
-// mountedShowcase runs the showcase board through a named mount, which a link needs because the
+// mountedShowcase runs the showcase board through a named mount. A link needs one, because the
 // viewer's path is /designs/<mount>/<path>/view and a CLI reading a loose file has no mount to put
 // there.
 func mountedShowcase(t *testing.T, args ...string) string {
@@ -55,8 +56,7 @@ func mountedShowcase(t *testing.T, args ...string) string {
 }
 
 // A row for a registered design carries a URL that opens that verdict's proof (agni issue 392,
-// acceptance 1). The id is already in the row; what was missing is the CLI knowing what to put in
-// front of it.
+// acceptance 1). The id is already in the row. The CLI did not know what to put in front of it.
 func TestVerdictRowsCarryAProofURL(t *testing.T) {
 	for _, tc := range []struct{ name, out string }{
 		{"text", mountedShowcase(t)},
@@ -65,8 +65,8 @@ func TestVerdictRowsCarryAProofURL(t *testing.T) {
 		if !strings.Contains(tc.out, urlBaseFlag+"/designs/demo/showcase.fires.kicad_sch/view?verdict=") {
 			t.Errorf("%s: no verdict link in:\n%s", tc.name, tc.out)
 		}
-		// The hash rides along so a stale link can be told apart from a live one, which the id alone
-		// cannot do.
+		// The link also carries the hash, so a stale link can be told apart from a live one. The id
+		// alone cannot tell them apart.
 		if !strings.Contains(tc.out, "hash=sha256") {
 			t.Errorf("%s: the link carries no content hash, so nothing downstream can detect a stale one", tc.name)
 		}
@@ -104,9 +104,9 @@ func TestNoURLBaseMeansNoLinks(t *testing.T) {
 }
 
 // The three renderers compose one link, so a row in a terminal, a cell in a spreadsheet and an anchor
-// on the page all address the same verdict. They read it from different places (Row.URL for two of
-// them, a per-row call for the csv, which emits in the run's order rather than the report's), and
-// that split is how two spellings drift apart.
+// on the page all address the same verdict. They read it from different places. Two of them read
+// Row.URL. The csv makes a per-row call, because it emits in the run's order rather than the
+// report's. Two spellings of the link can drift apart through that split.
 func TestEveryFormatComposesTheSameLink(t *testing.T) {
 	text, csv, html := mountedShowcase(t), mountedShowcase(t, "--format", "csv"), mountedShowcase(t, "--format", "html")
 	const want = urlBaseFlag + "/designs/demo/showcase.fires.kicad_sch/view?verdict=esd-protection%3A%28net%3A%2FUSB_D%2B%29"
@@ -135,8 +135,8 @@ func TestAPlainPathThroughADeclaredMountIsLinkable(t *testing.T) {
 	}
 }
 
-// The refusal is what the widening must not cost. A mount this run MINTED still gets no link, because
-// its name means nothing on a server the operator did not start with it.
+// The widening above must keep the refusal. A mount this run MINTED still gets no link, because its
+// name means nothing on a server the operator did not start with it.
 func TestAMintedMountIsStillNotLinkable(t *testing.T) {
 	// No withMount, so nothing is declared and the argument is minted a mount of its own.
 	csv := runCheck(t, "--verdicts", "--format", "csv", "--server", urlBaseFlag,
@@ -160,8 +160,8 @@ func TestAMintedMountIsStillNotLinkable(t *testing.T) {
 	}
 }
 
-// Declared separates the two tables the workspace keeps. inDeclared would answer yes to a minted
-// mount as well, since it searches Mounts(), which is why the predicate reads the field directly.
+// Declared separates the two tables the workspace keeps. inDeclared searches Mounts(), so it would
+// answer yes to a minted mount as well. The predicate reads the field directly for that reason.
 func TestWorkspaceDeclaredSeparatesNamedFromMinted(t *testing.T) {
 	withMount(t)
 	ws, err := workspace()
@@ -189,9 +189,9 @@ func TestWorkspaceDeclaredSeparatesNamedFromMinted(t *testing.T) {
 	}
 }
 
-// A nil workspace yields no link rather than a panic. The caller ignores workspace()'s error, because
-// a failure there is reported by whichever call needed it for real work, and fail-closed is the same
-// answer every other unlinkable case gets.
+// A nil workspace yields no link rather than a panic. The caller ignores workspace()'s error. A
+// failure there is reported by whichever call needed the workspace for real work. Every other
+// unlinkable case fails closed too.
 func TestLinkTargetIsNilSafe(t *testing.T) {
 	got, why := linkTarget(nil, "mount://demo/x.edn", false)
 	if got != "" {
@@ -202,7 +202,7 @@ func TestLinkTargetIsNilSafe(t *testing.T) {
 	}
 }
 
-// Every refusal carries a reason, and the note on stderr rests on that. If any path can
+// Every refusal carries a reason, and the note on stderr depends on it. If any path can
 // return ("", "") the operator gets "no verdict links were emitted: " with nothing after the colon.
 func TestLinkTargetAlwaysExplainsARefusal(t *testing.T) {
 	ws, err := newCLIWorkspace()
@@ -221,13 +221,12 @@ func TestLinkTargetAlwaysExplainsARefusal(t *testing.T) {
 	}
 }
 
-// TestDesignContentHashIsTheEntryForBothForms covers the &hash= a verdict link carries so the
-// viewer can say it was computed against different bytes than the ones now on disk. That parameter
-// went missing on the design-FOLDER form, which is the form the tutorial teaches and the one `agni
-// open` prints, because hashing the caller's argument opened a directory, failed the read with
-// EISDIR, and reported it the same way it reports a genuinely unhashable file. The file form
-// carried a hash and the folder form silently did not, so the staleness signal was absent on most
-// runs.
+// TestDesignContentHashIsTheEntryForBothForms covers the &hash= parameter of a verdict link. With it
+// the viewer can say the link was computed against different bytes than the ones now on disk. That
+// parameter went missing on the design-FOLDER form. The tutorial teaches that form, and `agni open`
+// prints it. Hashing the caller's argument opened a directory and failed the read with EISDIR. The
+// code reported that the same way it reports a genuinely unhashable file. So the file form carried
+// a hash and the folder form silently did not, and the staleness signal was absent on most runs.
 //
 // Both forms name the same design, so both must hash the same entry.
 func TestDesignContentHashIsTheEntryForBothForms(t *testing.T) {
@@ -332,9 +331,9 @@ func TestVerdictLinkTargetNamesTheResolvedEntry(t *testing.T) {
 
 // TestVerdictLinkPathAndHashNameOneArtifact is the invariant behind the fix rather than a third
 // case of it. The two halves are resolved together now, so no argument form can produce a path and
-// a hash that describe different files. A regression here is a false stale-link banner, which is
-// worse than the silence the banner replaced, because it discredits the one mechanism built to
-// catch a real mismatch.
+// a hash that describe different files. A regression here is a false stale-link banner. That is
+// worse than the silence before the banner existed, because it discredits the one mechanism built
+// to catch a real mismatch.
 func TestVerdictLinkPathAndHashNameOneArtifact(t *testing.T) {
 	dir := distinctDesignFolder(t)
 	withDeclaredMount(t, dir)

@@ -10,16 +10,17 @@ import (
 	"testing"
 )
 
-// KiCad's own ERC and DRC are an independent answer for the agni rules that mirror one of its
-// checks, and the seeds are KiCad designs, so a seed finding from such a rule can be checked rather
-// than asserted (agni issue 967). hack/kicad_oracle.sh writes KiCad's reports beside the triage
-// records, since CI has no kicad-cli, and TestSeedTriageAgainstKiCad holds each record to them in both
-// directions. A group of a mirrored rule says `kicad: agrees` or `kicad: disagrees`, and a KiCad
-// violation agni does not report is recorded under `kicad_only`, keyed by KiCad's check.
+// Some agni rules mirror one of KiCad's checks. For those rules, KiCad's own ERC and DRC give an
+// independent answer. The seeds are KiCad designs, so a seed finding from such a rule can be checked
+// rather than asserted (agni issue 967). hack/kicad_oracle.sh writes KiCad's reports beside the
+// triage records, since CI has no kicad-cli. TestSeedTriageAgainstKiCad holds each record to them in
+// both directions. A group of a mirrored rule says `kicad: agrees` or `kicad: disagrees`. When KiCad
+// reports a violation that agni does not, the record lists it under `kicad_only`, keyed by KiCad's
+// check.
 
-// kicadMirrors are the agni rules that answer a KiCad check. A KiCad violation whose subject one of
-// them reports is a finding KiCad agrees with. pin_to_pin mirrors output-output-conflict only for two
-// outputs, since KiCad's matrix also reports pairs agni's has no rule for.
+// kicadMirrors are the agni rules that answer a KiCad check. If one of them reports the subject of
+// a KiCad violation, KiCad agrees with that finding. pin_to_pin mirrors output-output-conflict only
+// for two outputs, since KiCad's matrix also reports pairs for which agni has no rule.
 func kicadMirrors(check, description string) []string {
 	switch check {
 	case "power_pin_not_driven":
@@ -46,9 +47,9 @@ func kicadMirrors(check, description string) []string {
 	return nil
 }
 
-// kicadUnmirrored are the KiCad checks no agni rule answers, each with the reason. A check in an
-// oracle that is neither mirrored nor listed here fails the test, so a new KiCad report is read before
-// it is ignored.
+// kicadUnmirrored are the KiCad checks that no agni rule answers, each with the reason. A check in
+// an oracle that is neither mirrored nor listed here fails the test, so a new KiCad report is read
+// before it is ignored.
 var kicadUnmirrored = map[string]string{
 	"pin_to_pin":                "only two outputs are mirrored; agni has no rule for a power output on a bidirectional pin",
 	"label_dangling":            "agni reads nets, not the labels that name them",
@@ -66,10 +67,11 @@ var kicadUnmirrored = map[string]string{
 	"unconnected_items":         "agni has no rule for a connection the board leaves unrouted",
 }
 
-// kicadOnlyClasses are the judgements a KiCad violation agni does not report can carry: agni's rule
-// declines it on purpose, agni misses it, agni reads no input that holds it, or KiCad reads the file
-// differently from agni. All but a decline name the ticket that settles them. A group whose subject is
-// `*` covers every subject KiCad reports for its check, for a check whose violations share one cause.
+// kicadOnlyClasses are the judgements for a KiCad violation that agni does not report. Either
+// agni's rule declines it on purpose, agni misses it, agni reads no input that holds it, or KiCad
+// reads the file differently from agni. All but a decline name the ticket that settles them. A
+// group whose subject is `*` covers every subject KiCad reports for its check. It is for a check
+// whose violations share one cause.
 var kicadOnlyClasses = map[string]bool{"declined": true, "missed": true, "unread": true, "differs": true}
 
 // kicadViolation is one oracle line agni has a mirroring rule for.

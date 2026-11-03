@@ -11,8 +11,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// sharedChecklistTree is a project that extends a config-only one, both under one mount that an
-// agni.yaml declares, which is how a team shares its checklists (agni issue 829).
+// sharedChecklistTree is a project that extends a config-only one. Both are under one mount that an
+// agni.yaml declares. A team shares its checklists this way (agni issue 829).
 func sharedChecklistTree(t *testing.T) string {
 	t.Helper()
 	root := t.TempDir()
@@ -64,8 +64,8 @@ func runRoot(t *testing.T, args ...string) string {
 	return out.String()
 }
 
-// `agni checklists` reads the resolver ListChecklists and `review --checklist` read, so an inherited
-// checklist is listed, first, and is the one review runs by default.
+// `agni checklists` reads the same resolver as ListChecklists and `review --checklist`. So an
+// inherited checklist is listed first, and review runs it by default.
 func TestChecklistsListsInheritedOnesFirst(t *testing.T) {
 	sharedChecklistTree(t)
 	var resp webapi.ListChecklistsResponse

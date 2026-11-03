@@ -16,9 +16,9 @@ const vendorFixture = "../../core/results/foreign/testdata/erc.json"
 // TestImportJoinsToTheDesignAndReportsTheRest is the end-to-end join, run against a REAL design through
 // the reader rather than a hand-built model, for the same reason TestConformance lives at the CLI edge.
 //
-// The second assertion is the one that matters. Whatever the import cannot attach must be COUNTED. An
-// importer that dropped its residue would report fewer problems than the tool found, with nothing to
-// say so, and that is the failure this contract exists to rule out.
+// The second assertion matters more. Whatever the import cannot attach must be COUNTED. An importer
+// that dropped its residue would report fewer problems than the tool found, with nothing to say so.
+// This contract exists to rule out that failure.
 func TestImportJoinsToTheDesignAndReportsTheRest(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "imported.json")
 	runCLI(t, importResultsCmd(),
@@ -87,7 +87,7 @@ func TestImportJoinsToTheDesignAndReportsTheRest(t *testing.T) {
 func TestImportNeverInventsASubject(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "imported.json")
 	// Joined against a DIFFERENT design, where the report's entities do not exist, so every finding
-	// that names one must land in the residue rather than in a subject.
+	// that names one must go into the residue rather than into a subject.
 	runCLI(t, importResultsCmd(),
 		"--design", "testdata/conformance/fires.edn", "-o", out, vendorFixture)
 

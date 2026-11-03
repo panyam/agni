@@ -11,8 +11,8 @@ import (
 // evaluating when ANY profile under its name is in use, and unions all of their nets for scoping. If
 // the index kept the built-in while the catalog superseded its rules, the gate would clear on a profile
 // whose rules are not in the run, and an item scoped by it would score a clean pass on an interface
-// nothing checked. That is the WS3-090 twin disagreement, and it is silent by construction, which is
-// why it is asserted here rather than left to the end-to-end review output.
+// nothing checked. That is the WS3-090 twin disagreement. It is silent by construction, so this test
+// asserts it here rather than leaving it to the end-to-end review output.
 func TestReviewIndexDropsSupersededBuiltinProfile(t *testing.T) {
 	p, err := profiles.Load(strings.NewReader("override: SPI_NOR\nsuffixes: {IO0: _DQ0}\n"))
 	if err != nil {
@@ -37,9 +37,9 @@ func TestReviewIndexDropsSupersededBuiltinProfile(t *testing.T) {
 }
 
 // Two overlay profiles sharing one name never reach the index, because they compile to identical rule
-// names, which catalog composition rejects as a duplicate before any of this runs. Pinned because the
-// review index code reads as though it has to handle the case, and a future reader would otherwise be
-// right to wonder what happens. Composition, not the index, is where that is decided.
+// names, which catalog composition rejects as a duplicate before any of this runs. This is pinned
+// because the review index code reads as though it has to handle the case. A future reader would
+// otherwise be right to wonder what happens. Composition decides it, not the index.
 func TestTwoOverlayProfilesOfOneNameAreRejectedAtComposition(t *testing.T) {
 	a, err := profiles.Load(strings.NewReader("override: SPI_NOR\nsuffixes: {IO0: _DQ0}\n"))
 	if err != nil {

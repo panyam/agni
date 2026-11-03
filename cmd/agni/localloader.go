@@ -26,8 +26,8 @@ import (
 // localLoader is the CLI's service.Loader, osLoader's sibling behind the same interfaces (WS9-048).
 // It resolves a URI to a local path through the run's mount table (see localPath) and runs it
 // through the enclosing design's descriptor. It satisfies the full service.Loader (the check and
-// query thin clients) plus Manifest (the review thin client), so a CLI command constructs its
-// service over this and calls the same method the web serves.
+// query thin clients) plus Manifest (the review thin client). So a CLI command constructs its
+// service over this and calls the same method as the web.
 type localLoader struct {
 	loader   *formats.Loader
 	resolver *designResolver
@@ -104,10 +104,10 @@ func (l *localLoader) Board(ctx context.Context, uri artifact.URI) (*geom.BoardG
 	return l.loader.BoardGeometry(localOf(src.BoardURI))
 }
 
-// Geometry reads the sheet tier and says, once per file, when a schematic companion the descriptor
-// declares cannot be read, and which placements its back-annotation relabelled. The services treat
-// a failed geometry read as no sheets and go on, so without the warning a broken companion reads as
-// every part drawn on no sheet (agni issue 1230).
+// Geometry reads the sheet tier. Once per file, it says when the descriptor declares a schematic
+// companion that cannot be read, and which placements the back-annotation relabelled. The services
+// treat a failed geometry read as no sheets and go on, so without the warning a broken companion
+// reads as every part drawn on no sheet (agni issue 1230).
 func (l *localLoader) Geometry(ctx context.Context, uri artifact.URI, layout string, faithful bool, opts ...service.ReadOption) (*geom.SchematicGeometry, error) {
 	src, err := l.resolve(ctx, localPath(uri))
 	if err != nil {
@@ -130,7 +130,7 @@ func (l *localLoader) Report(ctx context.Context, uri artifact.URI, faithful boo
 	return readerFor(l.loader, opts...).ConversionReport(localOf(src.GeometryURI), symbolsFor(faithful), nil)
 }
 
-// Expectations reads the sidecar beside the ENTRY rather than beside the named file: an expectation
+// Expectations reads the sidecar beside the ENTRY rather than beside the named file. An expectation
 // set states what this design should read, and the design is its entry.
 func (l *localLoader) Expectations(ctx context.Context, uri artifact.URI) (*expect.Expectations, error) {
 	src, err := l.resolve(ctx, localPath(uri))
@@ -150,7 +150,7 @@ func (l *localLoader) Manifest(_ context.Context, uri artifact.URI) (review.Mani
 
 // Convention resolves a naming-convention config from a local path. Nothing in the CLI calls it,
 // since the CLI reads its own --conventions at the edge and sends the value. It exists so localLoader
-// and osLoader satisfy the same interfaces and stay swappable.
+// and osLoader satisfy the same interfaces and are swappable.
 func (l *localLoader) Convention(_ context.Context, uri artifact.URI) (*configpb.NamingConvention, error) {
 	return naming.Load(localPath(uri))
 }
@@ -170,9 +170,9 @@ func (l *localLoader) DesignHash(ctx context.Context, uri artifact.URI) (string,
 	return hashSource(localPath(e)), nil
 }
 
-// designEntry resolves the ONE artifact a read of this design actually opens: the descriptor's
-// declared ENTRY when the caller named a design folder or a declared companion, and the named URI
-// itself when the folder carries no descriptor.
+// designEntry resolves the ONE artifact that a read of this design opens. When the caller named a
+// design folder or a declared companion, that is the descriptor's declared ENTRY. When the folder
+// has no descriptor, it is the named URI itself.
 //
 // A verdict link takes both its path and its hash from this ENTRY, so the two halves name the same
 // artifact (agni issue 489). A link built from the caller's argument instead would open nothing for
@@ -198,7 +198,7 @@ func loadManifest(path string) (review.Manifest, error) {
 	return review.Load(f)
 }
 
-// localPath turns an artifact URI back into the local path the CLI's readers take.
+// localPath turns an artifact URI back into a local path for the CLI's readers.
 //
 // This is the ONLY place the CLI unpacks a URI, at the port boundary, so every caller above it holds
 // one contained value and the readers below it see plain paths. It resolves through the run's mount

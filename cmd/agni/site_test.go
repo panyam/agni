@@ -31,8 +31,8 @@ func fakeWebDir(t *testing.T) string {
 }
 
 // TestSiteWritesEveryPageUnderItsBase writes a demo under a prefix and reads it back as a static
-// host would: the landing page and every viewer page load their assets under the prefix and say they
-// are static, the seed's files sit under raw/, and its listing parses as the message the page reads.
+// host would. The landing page and every viewer page load their assets under the prefix and say they
+// are static. The seed's files sit under raw/, and its listing parses as the message the page reads.
 func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 	out := t.TempDir()
 	seed := filepath.Join("..", "..", "examples", "tutorial-project")
@@ -48,7 +48,7 @@ func TestSiteWritesEveryPageUnderItsBase(t *testing.T) {
 		return string(b)
 	}
 	landing := read("index.html")
-	// The landing page is what a shared demo link shows, so it carries a link card.
+	// A shared demo link shows the landing page, so the page carries a link card.
 	for _, want := range []string{`<meta name="description"`, `property="og:title"`, `property="og:image" content="https://example.org/card.png"`, `name="twitter:card" content="summary_large_image"`} {
 		if !strings.Contains(landing, want) {
 			t.Errorf("landing page lacks %s", want)
@@ -109,8 +109,9 @@ func wantBoards(t *testing.T, listing *webapi.ListDesignFilesResponse, want ...s
 	}
 }
 
-// gatewayInNoProject copies the tutorial gateway's folder to a temp dir as a design in no project, its
-// descriptor without the `extends` naming the project the folder alone does not hold.
+// gatewayInNoProject copies the tutorial gateway's folder to a temp dir as a design in no project. The
+// copy's descriptor drops its `extends` line, since that line names a project the folder alone does
+// not hold.
 func gatewayInNoProject(t *testing.T) string {
 	t.Helper()
 	src := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")
@@ -172,10 +173,11 @@ func TestSiteSeedsAFolderThatIsItselfADesign(t *testing.T) {
 	wantBoards(t, &listing, "gateway/gateway.kicad_pcb")
 }
 
-// TestSiteWritesTheListingsTheFileTreesRead writes two seeds and reads back what the page answers
-// ListMounts and ListDir from on a static host (agni issue 978): every seed's mount, naming no host
-// path, and each mount's entries as the server's ListDir names them, folders included, down to the
-// gateway's other revision two folders below the mount root.
+// TestSiteWritesTheListingsTheFileTreesRead writes two seeds. On a static host the page answers
+// ListMounts and ListDir from listings, and the test reads those back (agni issue 978). They hold
+// every seed's mount, naming no host path. They hold each mount's entries as the server's ListDir
+// names them, folders included, down to the gateway's other revision two folders below the mount
+// root.
 func TestSiteWritesTheListingsTheFileTreesRead(t *testing.T) {
 	out := t.TempDir()
 	tutorial := filepath.Join("..", "..", "examples", "tutorial-project")

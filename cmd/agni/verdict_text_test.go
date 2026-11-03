@@ -55,7 +55,7 @@ func TestVerdictTextAttributesEveryRowToItsRule(t *testing.T) {
 }
 
 // A reader opening a run with four failures among 125 rows should meet the four. The flat form
-// ordered rules alphabetically, so a failure landed wherever its rule's name happened to sort.
+// ordered rules alphabetically, so a failure appeared wherever its rule's name happened to sort.
 func TestVerdictTextLeadsWithWhatFailed(t *testing.T) {
 	out := runCheck(t, "--verdicts", "testdata/conformance/showcase.fires.kicad_sch")
 
@@ -74,7 +74,7 @@ func TestVerdictTextLeadsWithWhatFailed(t *testing.T) {
 }
 
 // A findings-only rule's rows are what it FOUND, not what it checked. Without the note a reader
-// scanning a column of outcomes reads them as coverage, which is the claim the verdict work removes.
+// scanning a column of outcomes reads them as coverage. The verdict work removes that claim.
 func TestVerdictTextMarksAFindingsOnlyRule(t *testing.T) {
 	out := runCheck(t, "--verdicts", "testdata/conformance/dangling.fires.kicad_sch")
 	sec := section(t, out, "dangling-endpoint")
@@ -96,8 +96,8 @@ func TestVerdictTextShowsTheWholeSubjectTuple(t *testing.T) {
 }
 
 // The terminal and the page render one report, so they cannot disagree about what the run contained
-// or what order to meet it in. That drift is what agni issue 380 describes and what core/report
-// exists to prevent; this pins that the second renderer actually uses it.
+// or what order to meet it in. Agni issue 380 describes that drift, and core/report exists to
+// prevent it. This pins that the second renderer actually uses core/report.
 func TestVerdictTextAndHTMLAgreeOnRuleOrder(t *testing.T) {
 	const design = "testdata/conformance/showcase.fires.kicad_sch"
 	text := runCheck(t, "--verdicts", design)
@@ -152,7 +152,7 @@ func bigRule(passes, notConsidered, fails int) rpt.RuleReport {
 			check.Pass: passes, check.NotConsidered: notConsidered, check.Fail: fails,
 		},
 	}
-	// Worst first, which is the order the report builder produces and the order the cap relies on.
+	// Worst first. The report builder produces this order, and the cap relies on it.
 	for i := 0; i < fails; i++ {
 		r.Rows = append(r.Rows, rpt.Row{Outcome: check.Fail,
 			Subjects: []check.Entity{check.NetNameEntity(fmt.Sprintf("BAD%d", i))}, Message: "broken"})
@@ -176,7 +176,7 @@ func renderRule(r rpt.RuleReport) string {
 
 // A rule that examined a thousand subjects and cleared them says so in its heading, and printing all
 // thousand pushes every other rule off the screen. One sample board reports 351 unconnected pins
-// under a single rule, which is the shape agni issue 644 describes.
+// under a single rule. Agni issue 644 describes this shape.
 func TestVerdictTextCapsNonActionableRows(t *testing.T) {
 	out := renderRule(bigRule(500, 500, 0))
 	shown := strings.Count(out, "OK") + strings.Count(out, "UNK")
@@ -205,7 +205,8 @@ func TestVerdictTextNeverCapsFailures(t *testing.T) {
 	}
 }
 
-// The mixed case is the real one: failures survive in full and the quiet rows around them are folded.
+// The mixed case is the real one. Failures survive in full, and the quiet rows around them are
+// folded.
 func TestVerdictTextKeepsFailuresWhileFoldingTheRest(t *testing.T) {
 	out := renderRule(bigRule(400, 400, 5))
 	if n := strings.Count(out, "BAD"); n != 5 {

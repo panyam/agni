@@ -70,7 +70,7 @@ func TestValidateExplicitVsWalkedUnknownExtension(t *testing.T) {
 	}
 }
 
-// TestValidateCmdJSONAndExit drives the cobra command end to end: --format json emits the
+// TestValidateCmdJSONAndExit drives the cobra command end to end. --format json emits the
 // canonical ValidateReport protojson, and a failing file makes the command error (non-zero
 // exit at main).
 func TestValidateCmdJSONAndExit(t *testing.T) {

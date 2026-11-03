@@ -6,9 +6,10 @@ import (
 	"testing"
 )
 
-// TestDiffJSON pins the `diff --format json` wire contract (the DiffDesignsResponse shape the
-// viewer's DiffService also serves, WS9-004) over the rev-a/rev-b fixture pair, covering the report's
-// classified changes plus the highlight maps, with a renamed net keyed under both names.
+// TestDiffJSON pins the `diff --format json` wire contract over the rev-a/rev-b fixture pair. The
+// contract is the DiffDesignsResponse shape, which the viewer's DiffService also serves (WS9-004).
+// The test covers the report's classified changes plus the highlight maps, with a renamed net keyed
+// under both names.
 func TestDiffJSON(t *testing.T) {
 	cmd := diffCmd()
 	var out bytes.Buffer

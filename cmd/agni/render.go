@@ -44,10 +44,10 @@ func renderLoader(file string) (*formats.Loader, error) {
 
 // renderSource resolves the artifact a render should DRAW, and the note to say so. It asks the
 // design's `service.DesignSources.GeometryURI`, so rendering a design folder draws the schematic
-// companion its descriptor declares instead of trying to open the directory as a file (#433).
+// companion that its descriptor declares. It no longer tries to open the directory as a file (#433).
 //
-// Falls back to the path as named whenever nothing resolves, which is the ordinary loose-file case,
-// and whenever the resolver errors, since the named file may still be drawable.
+// It falls back to the path as named whenever nothing resolves, as in the ordinary loose-file case.
+// It also falls back whenever the resolver errors, since the named file may still be drawable.
 func renderSource(path string) (string, string) {
 	ws, err := workspace()
 	if err != nil {
@@ -61,22 +61,22 @@ func renderSource(path string) (string, string) {
 	if geom == "" {
 		return path, ""
 	}
-	// Compare as absolute paths. localOf answers absolutely whether or not anything was redirected,
-	// so a string compare against the named path calls every loose file a redirect and hands the
-	// loader an absolute path the user never typed, which then shows up in its error messages.
+	// Compare as absolute paths. localOf answers absolutely whether or not anything was redirected.
+	// A string compare against the named path would call every loose file a redirect. It would hand
+	// the loader an absolute path the user never typed, and that path would show up in its errors.
 	if abs, err := filepath.Abs(path); err == nil && abs == geom {
 		return path, ""
 	}
 	return geom, src.Note
 }
 
-// renderCmd renders a design to a schematic view along two orthogonal axes. --layout is the source
-// of node positions (faithful ingested geometry, or an auto-layout computed from the netlist
-// IR) and --format is the output encoding (svg or the WebGL pack). Both feed the same
-// backend-neutral render layer. The two accept different file types: faithful needs ingested
-// geometry (an EDIF .eds, a KiCad .kicad_sch, or whatever a design declares as its schematic
-// companion), while auto-layout needs an IR, which a bare .eds does not carry. The errors say which
-// to use.
+// renderCmd renders a design to a schematic view along two orthogonal axes. --layout picks the
+// source of node positions, either faithful ingested geometry or an auto-layout computed from the
+// netlist IR. --format picks the output encoding, svg or the WebGL pack. Both feed the same
+// backend-neutral render layer. The two accept different file types. Faithful needs ingested
+// geometry, such as an EDIF .eds, a KiCad .kicad_sch, or whatever a design declares as its
+// schematic companion. Auto-layout needs an IR, and a bare .eds has none. The errors say which to
+// use.
 func renderCmd() *cobra.Command {
 	var layout, format, sheetSel, out, classFile, symbols, reportFormat, conventions string
 	var compare, stats, pinDots, report bool
@@ -91,9 +91,9 @@ func renderCmd() *cobra.Command {
 			"--format selects the output: svg (default) or pack (a PackedSheet for the WebGL viewer).",
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			// The path as NAMED stays the analysis source, because readDesign resolves it itself and
-			// a design's entry is what analysis reads. `file` is what gets DRAWN, which is a
-			// different question and the one the descriptor's geometry companion answers.
+			// The path as NAMED is still the analysis source, because readDesign resolves it itself
+			// and analysis reads a design's entry. `file` names what gets DRAWN. That is a different
+			// question, and the descriptor's geometry companion answers it.
 			reset, err := withConventions(conventions)
 			if err != nil {
 				return err
@@ -126,7 +126,7 @@ func renderCmd() *cobra.Command {
 				return fmt.Errorf("--symbols %q is not one of: %s, %s", symbols, symbolsGlyph, symbolsFaithful)
 			}
 			// --highlight bakes finding-locating overlays (a net's wire, a component's outline, a
-			// pin) into the rendered SVG, so a static picture carries its annotations. Parse early
+			// pin) into the rendered SVG, so a static picture shows its annotations. Parse early
 			// so a malformed spec fails before any load, and gate it to the SVG schematic path.
 			specs, err := parseHighlightSpecs(highlightFlags)
 			if err != nil {
@@ -144,9 +144,9 @@ func renderCmd() *cobra.Command {
 			if report {
 				return writeReport(os.Stdout, file, symbols, reg, reportFormat)
 			}
-			// The faithful drawing of a board file IS the board (WS7-034): when the format
-			// carries the board sidecar and no auto-layout was requested, render it. An
-			// explicit auto-layout still draws the netlist graph.
+			// The faithful drawing of a board file IS the board (WS7-034). When the format has
+			// the board sidecar and no auto-layout was requested, render the board. An explicit
+			// auto-layout still draws the netlist graph.
 			if layout == faithfulLayout && format == "svg" && !stats {
 				if b, err := newLoader().BoardGeometry(file); err == nil && b != nil {
 					if len(specs) > 0 {
@@ -299,8 +299,8 @@ func parseHighlightShape(v string) (geom.HighlightShape, error) {
 	}
 }
 
-// noteUndrawn reports the placements a render could not draw, to stderr so a redirected SVG or a
-// `--format json` document on stdout stays clean.
+// noteUndrawn reports to stderr the placements a render could not draw. So nothing extra enters a
+// redirected SVG or a `--format json` document on stdout.
 //
 // It names the missing LIBRARIES rather than listing every placement, because one missing file
 // commonly costs every part drawn from it and forty identical lines bury that single cause. The
@@ -367,9 +367,9 @@ func writeReport(w io.Writer, file, symbols string, reg *graph.Registry, format 
 	}
 }
 
-// writeReportText renders the report as a grouped human summary: a line per class/kind with its
-// count and ref-des, then explicit call-outs for the unmapped (box) and unresolved components,
-// the latter pointing at --symbol-path.
+// writeReportText renders the report as a grouped human summary. It writes a line per class/kind
+// with its count and ref-des. Then it writes explicit call-outs for the unmapped (box) and the
+// unresolved components, and the unresolved call-out points at --symbol-path.
 func writeReportText(w io.Writer, design, symbols string, rep *graph.ConversionReport) {
 	fmt.Fprintf(w, "%s — %s symbols · %d components\n", design, symbols, len(rep.Components))
 
@@ -398,8 +398,8 @@ func writeReportText(w io.Writer, design, symbols string, rep *graph.ConversionR
 
 // buildRegistry layers user classification rules (from --class flags and a --class-file) on top
 // of the default registry, so a user can steer how auto-layout draws their parts without a code
-// change (WS7-030). Each rule is "<symbol-glob>=<class>"; the class must be one the registry can
-// draw. File and flag parsing happens here at the CLI edge so the graph core stays pure (C1).
+// change (WS7-030). Each rule is "<symbol-glob>=<class>", and the registry must be able to draw the
+// class. File and flag parsing happens here at the CLI edge, so the graph core is still pure (C1).
 func buildRegistry(classFlags []string, classFile string) (*graph.Registry, error) {
 	reg := graph.DefaultRegistry()
 	var lines []string

@@ -21,8 +21,8 @@ import (
 //
 // It is a CLI-side scaffolder and NOT a service rpc, because ProjectService is read-only (C23's
 // declared-identity case, docsite/content/architecture/projects-and-designs.md#read-only-on-purpose).
-// Writing descriptors into a folder the operator named on the command line raises none of the
-// ownership, concurrency and provenance questions a server mutating a mount would.
+// The operator names the folder on the command line, so writing descriptors into it raises no
+// ownership, concurrency or provenance questions. A server mutating a mount would raise all three.
 func startCmd() *cobra.Command {
 	var name, title string
 	c := &cobra.Command{
@@ -57,9 +57,9 @@ var idUnsafe = regexp.MustCompile(`[^a-z0-9._-]+`)
 
 // deriveID turns a folder or file name into a legal resource id, or "" when nothing usable survives.
 //
-// It sanitizes rather than rejecting, because the common case is a folder named "Sample Board" and
-// failing on it would send an operator to --name to type almost the same string back. The result is
-// printed, so the rename is visible.
+// It sanitizes rather than rejecting. The common case is a folder named "Sample Board", and failing
+// on it would send an operator to --name to type almost the same string back. The result is printed,
+// so the rename is visible.
 func deriveID(s string) string {
 	id := idUnsafe.ReplaceAllString(strings.ToLower(s), "-")
 	id = strings.Trim(id, "-._")
@@ -76,7 +76,7 @@ func deriveID(s string) string {
 // source of its own, and declaring it a companion would turn a diff of two revisions into a diff of
 // one against itself (docsite/content/architecture/projects-and-designs.md#the-netlist-is-the-source-the-rest-are-views).
 //
-// Carrying geometry or a board keeps a second ENCODING out, since a `.edf` beside a `.edn` is another
+// Requiring geometry or a board keeps a second ENCODING out, since a `.edf` beside a `.edn` is another
 // netlist and not a view. The test asks the format registry rather than a list of extensions, so a
 // reader added later is classified by what it can do.
 func companionsOf(designPath string) ([]string, error) {
@@ -225,10 +225,10 @@ func writeDescriptorFile(path string, emit func(io.Writer) error) error {
 	return emit(f)
 }
 
-// projectDescriptor renders the scaffolded project.yaml: the descriptor WriteProject writes, then the
-// conventions stub and the seeded checklist as its two sections. It parses the result before
-// returning it, so a scaffold that would not load fails here rather than on the first command run
-// against the project it created.
+// projectDescriptor renders the scaffolded project.yaml. It starts with the descriptor that
+// WriteProject writes, then adds the conventions stub and the seeded checklist as its two sections.
+// It parses the result before returning it. A scaffold that would not load then fails here rather
+// than on the first command run against the new project.
 func projectDescriptor(projectID, title string) ([]byte, error) {
 	var b bytes.Buffer
 	if err := projects.WriteProject(&b, projectHeader, projectID, title, projects.Sources{}); err != nil {
@@ -244,7 +244,7 @@ func projectDescriptor(projectID, title string) ([]byte, error) {
 }
 
 // indentYAML places a YAML document under key, indenting its body by pad. The document's leading
-// comment block stays above the key at the key's own indent, so it reads as the section's heading.
+// comment block goes above the key at the key's own indent, so it reads as the section's heading.
 func indentYAML(doc, key, pad string) string {
 	lines := strings.Split(strings.TrimRight(doc, "\n"), "\n")
 	keyIndent := key[:len(key)-len(strings.TrimLeft(key, " "))]
@@ -272,9 +272,9 @@ func copyFile(src, dst string) error {
 	return os.WriteFile(dst, b, 0o644) // #nosec G306 G703 -- a project the user creates, in their own tree
 }
 
-// report tells the operator what was created and what was COPIED from where. The copy is what can
-// surprise someone later, because the project owns its copy from here on and editing the original
-// leaves the project checking a stale file with nothing to say so.
+// report tells the operator what was created and what was COPIED from where. The copy can surprise
+// someone later. From here on the project owns its copy, so editing the original leaves the project
+// checking a stale file, and nothing says so.
 func report(w io.Writer, root, projectID, designID, entry string, companions []string, adopted bool) {
 	rel := func(p ...string) string {
 		return filepath.Join(append([]string{filepath.Base(root)}, p...)...)
@@ -350,12 +350,12 @@ name: ` + projectID + `
 `
 }
 
-// checklistAreas is the seeded checklist's shape: one area per rule CATEGORY the shipped catalog
-// carries, so a first run answers something real rather than reporting an empty checklist.
+// checklistAreas gives the seeded checklist one area per rule CATEGORY in the shipped catalog, so a
+// first run answers something real rather than reporting an empty checklist.
 //
-// Items bind by tag rather than by rule so they survive the catalog growing. A rule added to a
-// category later joins the item that already covers it, where an item naming one rule would silently
-// stay as narrow as the day it was written.
+// Items bind by tag rather than by rule, so they still work as the catalog grows. A rule added to a
+// category later joins the item that already covers it. An item naming one rule would silently
+// remain as narrow as the day it was written.
 var checklistAreas = []struct {
 	category, area, title string
 }{

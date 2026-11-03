@@ -59,9 +59,9 @@ checklists:
 	return filepath.Join(root, "designs", "d")
 }
 
-// The coverage panel walks the profiles the run's rules came from, so a project's own CAN profile is
-// the one it describes, and the bus it re-binds shows its nets (agni issue 833). Against the built-in
-// CAN profile the panel listed no CAN interface on this board at all.
+// The coverage panel walks the profiles the run's rules came from. So it describes a project's own
+// CAN profile, and the bus that profile re-binds shows its nets (agni issue 833). Against the
+// built-in CAN profile the panel listed no CAN interface on this board at all.
 func TestCoverageReadsTheProjectsProfiles(t *testing.T) {
 	design := reboundCANProject(t)
 	uri, err := cliArgURI(design)

@@ -8,9 +8,9 @@ import (
 	"testing"
 )
 
-// writeProjectWithParams builds the smallest project that reproduces agni issue 474: a project.yaml
-// so the design resolves to a project, a params/ directory the project therefore composes by default,
-// and a design under designs/ carrying an MPN that corpus does not seed.
+// writeProjectWithParams builds the smallest project that reproduces agni issue 474. It writes a
+// project.yaml, so the design resolves to a project, and a params/ directory, which project.yaml
+// names. It also writes a design under designs/ with an MPN missing from that corpus.
 func writeProjectWithParams(t *testing.T, root string) {
 	t.Helper()
 	mk := func(rel, body string) {
@@ -41,10 +41,10 @@ func intakeOut(t *testing.T, args ...string) string {
 	return out.String()
 }
 
-// TestIntakeReadsTheProjectsParams reproduces the issue. check and review compose the params/ a
-// project declares, while intake took its corpus from --params alone. Inside a project the
-// datasheet-gap section was absent rather than empty unless you named a directory the project
-// already names.
+// TestIntakeReadsTheProjectsParams reproduces the issue. check and review compose a project's
+// declared params/, while intake took its corpus from --params alone. Inside a project the
+// datasheet-gap section was absent rather than empty, unless --params named the same directory
+// as the project.
 func TestIntakeReadsTheProjectsParams(t *testing.T) {
 	proj := t.TempDir()
 	writeProjectWithParams(t, proj)
@@ -60,7 +60,7 @@ func TestIntakeReadsTheProjectsParams(t *testing.T) {
 }
 
 // TestIntakeParamsFlagStillWorksOutsideAProject keeps the flag working as the route for a loose
-// design, which widening the project path must not have closed.
+// design. Widening the project path must not have closed that route.
 func TestIntakeParamsFlagStillWorksOutsideAProject(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.MkdirAll(filepath.Join(dir, "p"), 0o755); err != nil {
@@ -82,9 +82,9 @@ func TestIntakeParamsFlagStillWorksOutsideAProject(t *testing.T) {
 	}
 }
 
-// TestIntakeAndCheckAgreeOnTheCorpus holds both commands to the same project for the same design. A
-// corpus one of them sees and the other does not is the drift this closes. check reads it through the
-// service overlay; intake now reads the same overlay rather than a second resolution of its own.
+// TestIntakeAndCheckAgreeOnTheCorpus holds both commands to the same project for the same design. It
+// closes a drift where one of them saw a corpus and the other did not. check reads the corpus through
+// the service overlay, and intake now reads the same overlay rather than resolving its own.
 func TestIntakeAndCheckAgreeOnTheCorpus(t *testing.T) {
 	proj := t.TempDir()
 	writeProjectWithParams(t, proj)

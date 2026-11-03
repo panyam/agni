@@ -50,13 +50,13 @@ func writeFile(t *testing.T, name, body string) string {
 	return path
 }
 
-// servedRuleNames lists the rule names the served CheckService advertises, built through the same
-// serveRuleServices call serve's startup makes. That is what the web check panel and ListRules
-// populate from.
+// servedRuleNames lists the rule names that the served CheckService advertises. It builds the
+// service through the same serveRuleServices call that serve's startup makes. The web check panel
+// and ListRules populate from that list.
 //
-// It goes through serveRuleServices rather than composing a catalog here because an earlier
-// version of this helper built its own catalog and handed it to NewCheckService, which meant a
-// mutation replacing serve's catalog with a bare DefaultCatalog survived every test in this file.
+// It goes through serveRuleServices rather than composing a catalog here. An earlier version of
+// this helper built its own catalog and handed it to NewCheckService. Then a mutation that replaced
+// serve's catalog with a bare DefaultCatalog survived every test in this file.
 //
 // It skips naming.ApplyLexicon, which serve also does at startup, because the lexicon is a process
 // global and installing it here would leak one test's vocabulary into the next while testing
@@ -86,8 +86,8 @@ func servedRuleNames(t *testing.T, profileDir, conventionsPath string) []string 
 	return out
 }
 
-// WS3-048: an overlay profile passed to `agni serve --profile-path` must reach the CHECK surface, not
-// only the review one. Before this, serve handed the CheckService a bare DefaultCatalog, so a
+// An overlay profile passed to `agni serve --profile-path` must reach the CHECK surface, not only
+// the review one (WS3-048). Before this, serve handed the CheckService a bare DefaultCatalog, so a
 // customer's profile fired on the CLI and was invisible in the viewer, where the
 // interface-aware view presents it.
 func TestServeCheckCatalogIncludesOverlayProfiles(t *testing.T) {
@@ -103,9 +103,9 @@ func TestServeCheckCatalogIncludesOverlayProfiles(t *testing.T) {
 	}
 }
 
-// WS3-109: a --conventions config carrying RULES had those rules composed into the review catalog
-// only. Its lexicon already reached both surfaces through the startup ApplyLexicon, which is what made
-// the rules half easy to miss.
+// In WS3-109, a --conventions config carrying RULES had those rules composed into the review
+// catalog only. Its lexicon already reached both surfaces through the startup ApplyLexicon, so the
+// rules half was easy to miss.
 func TestServeCheckCatalogIncludesConventionRules(t *testing.T) {
 	names := servedRuleNames(t, "", writeFile(t, "conventions.yaml", overlayConventionsYAML))
 	want := "house/signal-net-naming"
@@ -114,12 +114,11 @@ func TestServeCheckCatalogIncludesConventionRules(t *testing.T) {
 	}
 }
 
-// This pins the regression that matters most, where serve REBUILT its review catalog when
-// --conventions carried rules (check.CatalogWith(src)), which silently dropped the profile sources
-// composed just above it. So the combination an operator is most likely to run
-// (house conventions plus their own interface profiles) was the one that lost both tiers, with
-// nothing in the output to say so. This is the startup-side twin of the service-layer bug WS3-107
-// fixed.
+// This pins the regression that matters most. Serve REBUILT its review catalog when --conventions
+// carried rules (check.CatalogWith(src)), and that silently dropped the profile sources composed
+// just above it. An operator is most likely to run house conventions plus their own interface
+// profiles. That combination lost both tiers, and nothing in the output said so. This is the
+// startup-side twin of the service-layer bug that WS3-107 fixed.
 func TestServeCatalogKeepsEveryOverlaySourceTogether(t *testing.T) {
 	names := servedRuleNames(t,
 		writeProfileDir(t, overlayProfileYAML),
@@ -139,11 +138,11 @@ func TestServeCatalogKeepsEveryOverlaySourceTogether(t *testing.T) {
 //
 // The check-surface tests above all read ListRules, so they cannot see a catalog that reached one
 // service and not the other, and mutation testing confirmed that starving only the ReviewService
-// survived every one of them. This runs an actual review through the service serve hands to
+// survived every one of them. This runs an actual review through the service that serve hands to
 // CreateReview, over the same fixtures as the CLI-side TestReviewOverlayTiersCoexist, and asserts
-// all three overlay tiers arrive. Intent is per design, so it rides the request as `agni review
-// --intent-path` sends it (agni issue 831). Both fixtures are authored to FAIL rather than pass, because a
-// pass is also what a vanished tier would produce on a design with nothing wrong.
+// all three overlay tiers arrive. Intent is per design, so it travels on the request, the way
+// `agni review --intent-path` sends it (agni issue 831). Both fixtures are authored to FAIL rather
+// than pass, because a vanished tier would also produce a pass on a design with nothing wrong.
 func TestServeReviewServiceGetsEveryOverlayTier(t *testing.T) {
 	cfg, err := naming.Load("testdata/review/conventions.yaml")
 	if err != nil {
@@ -213,15 +212,15 @@ func TestServeBadProfileFailsStartup(t *testing.T) {
 	}
 }
 
-// The same holds for conventions: a bad declaration stops the server coming up rather than serving a
-// catalog quietly missing a tier the operator asked for. A bad --intent-path fails the CLI command
-// before any request is sent.
+// The same holds for conventions. A bad declaration stops the server coming up, rather than serving
+// a catalog that quietly lacks a tier the operator asked for. A bad --intent-path fails the CLI
+// command before any request is sent.
 func TestServeBadIntentAndConventionsFailStartup(t *testing.T) {
 	if _, err := intent.LoadFileProto(writeFile(t, "intent.yaml", "name: x\nintent:\n  nets:\n    5V0:\n      protect: [nope]\n")); err == nil {
 		t.Error("a bad --intent-path should fail before the request")
 	}
 	// A convention's regexes are validated when it is compiled into a source, not when the YAML is
-	// read, so this is the call serve has to reach for the operator to hear about it at startup.
+	// read. So serve has to reach this call for the operator to hear about it at startup.
 	cfg, err := naming.Load(writeFile(t, "conventions.yaml", "name: house\nrules:\n  - {name: r, allow: [\"([\"]}\n"))
 	if err != nil {
 		return
@@ -240,18 +239,18 @@ func slicesContains(s []string, v string) bool {
 	return false
 }
 
-// WS3-124: a request that carries its own naming convention REPLACES the server's startup one rather
-// than stacking on it, end to end through the wiring serve actually builds.
+// A request that carries its own naming convention REPLACES the server's startup one rather than
+// stacking on it (WS3-124). This test runs end to end through the wiring serve actually builds.
 //
 // This goes through serveRuleServices for the same reason servedRuleNames does. The base
 // convention's NAME has to reach the services, and a test that composed an Overlay by hand would
-// pass while the production wiring forgot to thread it. That is the failure mode WS3-109 was
-// written about.
+// pass while the production wiring forgot to thread it. WS3-109 was written about that failure
+// mode.
 //
 // The stacking behaviour was defensible in isolation and wrong in context. The flag help says a
 // request's own config "REPLACES this one for that request", the serve.go comment says it
 // overrides, and the LEXICON half of the same config already overrode because it travels with the
-// read. One config whose halves compose differently is what let the WS3-102 bug hide.
+// read. The WS3-102 bug hid because the two halves of one config composed differently.
 func TestServedRequestConventionReplacesTheStartupOne(t *testing.T) {
 	house, err := naming.Load("testdata/review/conventions.yaml")
 	if err != nil {

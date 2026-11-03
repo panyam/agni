@@ -14,10 +14,10 @@ import (
 
 // docFlagExceptions are flag-shaped strings a page may name without the CLI defining them, each
 // with the reason. Keep it short, because every entry is a place the docs and the tool are allowed
-// to disagree. It holds ANOTHER TOOL'S flags, which is the one category syntax cannot separate from
+// to disagree. It holds ANOTHER TOOL'S flags, because syntax cannot separate that category from
 // ours. A backticked `--cask` is a real flag and it is brew's. Every entry names the tool, so a
-// reader can tell a deliberate exception from a stale one, and the list stays short because agni's
-// own flags come from the command tree rather than from here.
+// reader can tell a deliberate exception from a stale one. The list is short because agni's own
+// flags come from the command tree rather than from here.
 var docFlagExceptions = map[string]string{
 	"--cask":             "brew",
 	"--pages":            "kicad-cli",
@@ -39,12 +39,12 @@ var docFlagExceptions = map[string]string{
 	"--entrypoint": "docker compose run and podman compose run",
 }
 
-// TestDocsNameNoFlagTheCLILacks is issue 636's guard, and it covers the half TestDocumentedCommandsParse
-// cannot reach.
+// TestDocsNameNoFlagTheCLILacks is issue 636's guard. It covers the half that
+// TestDocumentedCommandsParse cannot reach.
 //
 // That test extracts hand-written `agni ...` commands from FENCES and runs them through cobra, so a
-// removed flag inside a fence fails there. It cannot see a flag named in PROSE, and prose is where
-// most of a stale flag lives. Nine of the thirteen `--url-base` references that survived its removal
+// removed flag inside a fence fails there. It cannot see a flag named in PROSE, and most stale flag
+// names live in prose. Nine of the thirteen `--url-base` references that survived its removal
 // were sentences, not commands.
 //
 // The flag set comes from walking the command tree, so nothing here is hand-maintained except the
@@ -59,13 +59,13 @@ func TestDocsNameNoFlagTheCLILacks(t *testing.T) {
 	// `git --exclude-standard`. A rule that read them would report a dozen flags this CLI has no
 	// opinion about, and an exception list that long stops being read.
 	//
-	// Inline code because that is how prose names a flag it means. A bare `--o` in an ASCII diagram or
-	// a `--no` at a line wrap is not a claim about the CLI, and requiring the backticks separates the
-	// two without a list.
+	// Inline code, because prose names a flag it means in inline code. A bare `--o` in an ASCII
+	// diagram or a `--no` at a line wrap is not a claim about the CLI, and requiring the backticks
+	// separates the two without a list.
 	// TWO passes. A span is found first, then EVERY flag inside it. One
 	// combined pattern reports only the first flag per span, so `agni check --mount … --url-base …`
 	// matched on --mount, found it known, and cleared the span with the stale flag still in it. That
-	// is the shape of a guard that reports clean because it stopped looking.
+	// guard reported clean because it stopped looking.
 	spanRe := regexp.MustCompile("`[^`]+`")
 	flagRe := regexp.MustCompile(`--[a-z][a-z0-9-]*`)
 
@@ -117,8 +117,8 @@ func knownFlags(root *cobra.Command) map[string]bool {
 	var walk func(*cobra.Command)
 	walk = func(c *cobra.Command) {
 		// cobra adds --help and --version lazily, on Execute, so a tree that has not run yet does not
-		// declare them. Without this the guard reports `agni --version` as a flag the CLI lacks, which
-		// is the guard being wrong about its own tool.
+		// declare them. Without this the guard reports `agni --version` as a flag the CLI lacks. The
+		// guard would then be wrong about its own tool.
 		c.InitDefaultHelpFlag()
 		c.InitDefaultVersionFlag()
 		c.Flags().VisitAll(func(f *pflag.Flag) { out["--"+f.Name] = true })

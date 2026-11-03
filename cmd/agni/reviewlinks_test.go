@@ -14,11 +14,11 @@ import (
 var verdictParam = regexp.MustCompile(`verdict=([^&"]+)`)
 
 // TestEveryChecklistLinkResolves is agni issue 485's acceptance, measured the way the ticket
-// measured it. The tutorial project's two checklists are rendered as pages with links, every verdict
-// id a page links is collected, and each must be among the verdicts `check --verdicts` reports for
-// the same design. A link synthesized from a finding's subject misses whenever the verdict is keyed
-// on a tuple, on a context entity, or on a profile's signal, and the viewer then opens the design with
-// nothing highlighted.
+// measured it. The tutorial project's two checklists are rendered as pages with links. The test
+// collects every verdict id the pages link to, and each must be among the verdicts `check --verdicts`
+// reports for the same design. A link synthesized from a finding's subject misses whenever the
+// verdict is keyed on a tuple, on a context entity, or on a profile's signal. The viewer then opens
+// the design with nothing highlighted.
 func TestEveryChecklistLinkResolves(t *testing.T) {
 	freshWorkspace(t)
 	cliMountSpecs = []string{"tp=../../examples/tutorial-project"}
@@ -53,8 +53,8 @@ func TestEveryChecklistLinkResolves(t *testing.T) {
 			}
 		}
 	}
-	// The count guard. Fewer links than the tutorial board's checklists carry means the pages lost
-	// their links, and an empty loop resolves every link it saw.
+	// The count guard. If the pages hold fewer links than the tutorial board's checklists, the pages
+	// lost their links. An empty loop resolves every link it saw.
 	if links < 10 {
 		t.Fatalf("the two checklists linked %d verdicts, want at least 10", links)
 	}

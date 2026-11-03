@@ -7,9 +7,10 @@ import (
 
 // THE BOUNDARY that keeps a link a promise rather than a guess (agni issue 392).
 //
-// A bare file path is minted a mount name locally, from the enclosing project or as "files", and that
-// name means nothing on a server the operator did not start with it. --url-base says where the viewer
-// is; it does not say that this design is on it. Both are needed, and neither implies the other.
+// The CLI mints a mount name for a bare file path locally, from the enclosing project or as "files".
+// A server knows that name only if the operator started it with that mount. --server says where the
+// viewer is. It does not say that this design is on it. Both are needed, and neither implies the
+// other.
 func TestHTMLReportOnlyLinksAMountTheOperatorNamed(t *testing.T) {
 	loose := runCheck(t, "--verdicts", "--format", "html", "--server", "http://localhost:8080",
 		"testdata/conformance/showcase.fires.kicad_sch")
@@ -22,7 +23,7 @@ func TestHTMLReportOnlyLinksAMountTheOperatorNamed(t *testing.T) {
 	}
 }
 
-// Without --url-base there is nothing to link to, and the report says so by saying nothing.
+// Without --server there is nothing to link to, and the report says so by saying nothing.
 func TestHTMLReportHasNoLinksWithoutABase(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--format", "html", "testdata/conformance/showcase.fires.kicad_sch")
 	if strings.Contains(out, "<a href") {
@@ -47,8 +48,8 @@ func TestHTMLImpliesVerdicts(t *testing.T) {
 	}
 }
 
-// The page must stand on its own: emailed, committed, opened from a file:// path, read with scripts
-// off. Collapsing is <details>, so a reader with no JavaScript still sees everything.
+// The page must stand on its own. It may be emailed, committed, opened from a file:// path, or read
+// with scripts off. Collapsing is <details>, so a reader with no JavaScript still sees everything.
 func TestHTMLReportIsSelfContainedAndNeedsNoScript(t *testing.T) {
 	out := runCheck(t, "--verdicts", "--format", "html", "testdata/conformance/showcase.fires.kicad_sch")
 	if strings.Contains(out, "<script") {

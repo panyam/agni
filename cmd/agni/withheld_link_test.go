@@ -15,8 +15,9 @@ import (
 )
 
 // The reason a run withheld its links has to reach the saved page, not just stderr (issue 626).
-// core/report pins the templates; these pin the wiring, so a withholding path that stops setting
-// LinksWithheld fails here rather than shipping a page that is silent about its plain-text subjects.
+// core/report pins the templates, and these tests pin the wiring. If a withholding path stops setting
+// LinksWithheld, it fails here. Otherwise it would ship a page that is silent about its plain-text
+// subjects.
 //
 // Asserted fragments carry no quotes, because html/template escapes them and the reasons quote the
 // mount name.
@@ -28,10 +29,10 @@ const (
 	otherRootReason      = "so every link would name a different design"
 )
 
-// mountServer answers ListMounts with one mount. Given another root it is the second withholding
-// path, a server that disagrees about what the name means; given the declared root it is the control
-// that proves the same run WOULD link, so an absent link below is the withholding and not a fixture
-// that never had anything to link.
+// mountServer answers ListMounts with one mount. Given another root, it plays the second withholding
+// path, a server that disagrees about what the name means. Given the declared root, it is the
+// control. The control proves the same run WOULD link. So an absent link below comes from the
+// withholding, and not from a fixture that never had anything to link.
 type mountServer struct {
 	webapiconnect.UnimplementedWorkspaceServiceHandler
 	mount *webapi.Mount

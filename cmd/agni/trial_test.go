@@ -15,9 +15,9 @@ import (
 )
 
 // TestATrialReportHoldsNothingFromTheDesign is agni issue 1057's guarantee, asserted rather than
-// promised: every name the tutorial design and its project carry (nets, reference designators, part
-// numbers, the design's and project's names, its mount and files, its project rules) is looked for in
-// the report's markdown, its JSON and its issue link, and none is there.
+// promised. It collects every name in the tutorial design and its project. Those are nets, reference
+// designators, part numbers, the design's and project's names, its mount and files, and its project
+// rules. It looks for each in the report's markdown, its JSON and its issue link, and finds none.
 func TestATrialReportHoldsNothingFromTheDesign(t *testing.T) {
 	freshWorkspace(t)
 	root := filepath.Join("..", "..", "examples", "tutorial-project")
@@ -54,8 +54,8 @@ func TestATrialReportHoldsNothingFromTheDesign(t *testing.T) {
 	for _, s := range []string{"gateway", "Sample Board", "tutorial-project", "tut", "gateway.edn", "gateway.kicad_pcb", "gateway-profiles", "house"} {
 		names[s] = "design, project, mount or file name"
 	}
-	// The positive control: the names are really there to find, and the project's own rules really
-	// reported something, so a report that says nothing would not pass for a sanitized one.
+	// This is the positive control. The names are really there to find, and the project's own rules
+	// really reported something, so a report that says nothing would not pass for a sanitized one.
 	if n := len(names); n < 40 {
 		t.Fatalf("collected %d names from the design, too few for the check to mean anything", n)
 	}
@@ -88,8 +88,8 @@ func TestOnlyAShippedRuleIsNamed(t *testing.T) {
 	}
 }
 
-// A trial under --flatten-hierarchy reads every block of a hierarchical netlist, and counts what a
-// flattened read of the design holds rather than the top cell alone (agni issue 1103).
+// A trial under --flatten-hierarchy reads every block of a hierarchical netlist. It counts the
+// contents of a flattened read of the design rather than the top cell alone (agni issue 1103).
 func TestATrialReadsEveryBlockUnderFlattenHierarchy(t *testing.T) {
 	for _, path := range []string{
 		"../../readers/edif/testdata/hier_blocks.edn",

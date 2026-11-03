@@ -18,11 +18,11 @@ import (
 //
 // It exists because the CLI and the viewer disagreed about where you are standing. Every other
 // command assumes the working directory is where your netlist lives (`agni check board.edn`), and
-// the viewer assumed the opposite: start a server, give it a mount, then navigate a browse tree to
-// find the file you were already pointing at. `agni serve` from a design directory did not even
-// start, because its assets are not there (agni issue 462).
+// the viewer assumed the opposite. You started a server, gave it a mount, then navigated a browse
+// tree to find the file you were already pointing at. `agni serve` from a design directory did not
+// even start, because its assets are not there (agni issue 462).
 //
-// It composes the same server `serve` does, through runViewer, so the two cannot drift into
+// It composes the same server as `serve`, through runViewer, so the two cannot drift into
 // answering differently about the same design.
 func openCmd() *cobra.Command {
 	var addr, webDir string
@@ -90,9 +90,9 @@ func openCmd() *cobra.Command {
 // in a directory that is neither is the exception, and from $HOME it would put a home directory on an
 // HTTP listener.
 //
-// It refuses rather than warning, and offers no override. A warning is read after the fact, and a
-// --force flag is the thing someone pastes from a forum without reading the sentence above it. Naming
-// a design, or a narrower directory, is not a hardship.
+// It refuses rather than warning, and offers no override. A warning is read after the fact, and
+// someone pastes a --force flag from a forum without reading the sentence above it. Naming a design,
+// or a narrower directory, is not a hardship.
 func refuseTooBroadRoot(root string) error {
 	abs, err := filepath.Abs(root)
 	if err != nil {
@@ -110,10 +110,10 @@ func refuseTooBroadRoot(root string) error {
 
 // freePort asks the kernel for a port nobody is using.
 //
-// Binding :0 and reading back the assignment races with anything else doing the same, and the race is
-// worth taking here: the alternative is a fixed default, and 8080 is exactly the port a developer
-// already has a server on. A collision at this scale is a retry, where a fixed port is a daily
-// annoyance.
+// Binding :0 and reading back the assignment races with anything else doing the same. The race is
+// worth taking here. The alternative is a fixed default, and 8080 is the very port where a
+// developer already has a server. A collision at this scale is a retry, where a fixed port is a
+// daily annoyance.
 func freePort() (string, error) {
 	l, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
@@ -127,29 +127,29 @@ func freePort() (string, error) {
 	return strings.TrimSpace(port), nil
 }
 
-// openBanner prints what `open` exists to give you: the design's own URL, and a check command that
-// works when pasted.
+// openBanner prints the design's own URL and a check command that works when pasted. `open` exists
+// to give you those two.
 //
 // serveURLs ends its addresses with a slash, and both the view path and --server want a bare
 // origin. A doubled slash is cosmetic in a browser and is NOT cosmetic in --server, which
 // concatenates rather than joins.
 //
-// The check line carries --mount for a reason that is easy to miss. Mounts are minted PER PROCESS, so
-// the mount this server invented means nothing to a second agni, which refuses the URI outright and
-// says to pass --mount. Printing it is what makes the line paste-able rather than illustrative.
+// The check line includes --mount. Mounts are minted PER PROCESS, so a second agni knows nothing of
+// the mount this server minted. It refuses the URI outright and says to pass --mount. With --mount
+// printed, the line runs when pasted rather than only illustrating.
 func openBanner(w io.Writer, rawURL string, m mounts.Mount, designURI, viewPath string) {
 	base := strings.TrimSuffix(rawURL, "/")
 	fmt.Fprintf(w, "%s%s\n", base, viewPath)
 	fmt.Fprintf(w, "\ncheck it against this server:\n  agni check --mount %s=%s %s --verdicts --server %s\n",
 		m.Name, m.Root, designURI, base)
-	// The trace line is here for the same reason the check line is: --server needs a mount the
-	// operator declared, and assembling that by hand against a server whose mount was minted by
-	// THIS process is exactly the mismatch the flag's server check exists to catch. One process
-	// mints the mount and serves it, so a command it writes out cannot disagree with it.
+	// The trace line is printed for the same reason as the check line. --server needs a mount the
+	// operator declared. This process minted its own mount, so a hand-built command naming another
+	// mount gives exactly the mismatch the flag's server check exists to catch. One process mints
+	// the mount and serves it, so a command it writes out cannot disagree with it.
 	//
-	// This line kept saying --url-base for a release after the check line above it moved to --server,
-	// which is worse than a stale doc: it is generated for someone to copy (agni issue 636).
-	// TestOpenBannerNamesNoRemovedFlag is what stops the pair drifting again.
+	// This line kept saying --url-base for a release after the check line above it moved to --server.
+	// That is worse than a stale doc, because the line is generated for someone to copy (agni issue
+	// 636). TestOpenBannerNamesNoRemovedFlag stops the pair drifting again.
 	fmt.Fprintf(w, "\ntrace a signal on it:\n  agni trace --mount %s=%s %s --from <ref.pin> --to <ref.pin> --server %s\n",
 		m.Name, m.Root, designURI, base)
 	fmt.Fprintf(w, "\nCtrl-C to stop.\n")

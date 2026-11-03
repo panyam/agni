@@ -18,8 +18,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// This file is the CLI edge of the checks results contract (WS3-103): writing a run to a
-// self-contained document, and rendering one back.
+// This file is the CLI edge of the checks results contract (WS3-103). It writes a run to a
+// self-contained document, and it renders one back.
 //
 // Rendering goes through the SAME writers the live commands use, so a replayed document cannot
 // disagree with the tool. The parity is one writer rather than two held equal by a test.
@@ -96,7 +96,7 @@ func renderCheckResults(w io.Writer, doc *checkspb.CheckResults, format string) 
 		writeCheckText(w, findingsFromProto(doc.GetFindings()), len(doc.GetCatalog()), nil)
 		return nil
 	case "json":
-		// Skipped travels back too, because `check --format json` emits it and a re-render must
+		// Skipped comes back too, because `check --format json` emits it and a re-render must
 		// reproduce that output byte for byte (#250).
 		return writeCheckDesignJSON(w, &webapi.CheckDesignResponse{
 			Findings: doc.GetFindings(),
@@ -112,11 +112,11 @@ func renderCheckResults(w io.Writer, doc *checkspb.CheckResults, format string) 
 	return fmt.Errorf("unknown --format %q for a check document (want: text, json, csv, markdown, report)", format)
 }
 
-// renderReviewResults rebuilds the review view-model from the document and renders it with the same
-// renderers the live command uses. The reconstruction is the document's own areas and items, so a
-// rendered review needs neither the manifest nor the design that produced it.
-// renderReviewResults renders a review document. Its json is the Review resource the rpc returns
-// (C31, agni issue 734), named when the run has a name and summarized from the document.
+// renderReviewResults renders a review document. It rebuilds the review view-model from the
+// document's own areas and items, and renders it with the same renderers the live command uses. So a
+// rendered review needs neither the manifest nor the design that produced it. Its json is the Review
+// resource the rpc returns (C31, agni issue 734). The resource is named when the run has a name, and
+// it is summarized from the document.
 func renderReviewResults(w io.Writer, name string, doc *checkspb.CheckResults, format string, coverage bool) error {
 	if format == "" {
 		format = "markdown"
@@ -191,8 +191,8 @@ func displayName(s string) string {
 }
 
 // forDisplay returns a copy of a check report with every source rendered for reading. It copies
-// because the caller's document is what gets stored, and shortening names in place would write the
-// un-portable form to disk on the next --results-out.
+// because the caller stores its own document. Shortening names in place would write the un-portable
+// form to disk on the next --results-out.
 func forDisplay(rep *checkspb.CheckReport) *checkspb.CheckReport {
 	out := proto.CloneOf(rep)
 	out.Source = displayName(rep.GetSource())
@@ -220,8 +220,9 @@ func skippedFromDoc(in []*checkspb.SkippedRule) []*webapi.SkippedRule {
 	return out
 }
 
-// protoJSON renders a wire message the way every command's --format json does (C31): protojson,
-// indented, with unpopulated fields emitted so a consumer sees a zero rather than an absent key.
+// protoJSON renders a wire message the way every command's --format json does (C31). It writes
+// protojson, indented, with unpopulated fields emitted, so a consumer sees a zero rather than an
+// absent key.
 func protoJSON(m proto.Message) (string, error) {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  ", EmitUnpopulated: true}.Marshal(m)
 	if err != nil {

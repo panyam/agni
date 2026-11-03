@@ -10,10 +10,10 @@ import (
 )
 
 // projectFixture writes a minimal PROJECT around a copy of a design fixture and returns the path to
-// the design folder. `project.yaml` carries the conventions as a section and the rest is found beside
-// it by its conventional name: params/.
+// the design folder. `project.yaml` holds the conventions as a section and names params/ in its
+// `params` list.
 //
-// It is built here rather than committed as testdata because the point is the config being RESOLVED
+// The test builds it here rather than committing it as testdata. The test is about config RESOLVED
 // through the descriptors, and a fixture tree makes it easy to add a file to one and forget the other.
 func projectFixture(t *testing.T) string {
 	t.Helper()
@@ -109,10 +109,10 @@ func runConfigOf(t *testing.T, path string) map[string]any {
 // shipped tutorial project. A design whose PROJECT declares conventions and params/ was scored
 // against both and wrote `"run": {}`.
 //
-// The failure direction is what makes it worth a test. RunConfig exists so a reader can tell a design
-// with no datasheet violations from a run that had no datasheet corpus attached; recording false for a
-// corpus that WAS attached makes a clean report look better-founded than it is, and nothing in the
-// document contradicts it except the catalog snapshot nobody cross-reads.
+// The direction of the failure makes this worth a test. RunConfig exists so a reader can tell a
+// design with no datasheet violations from a run that had no datasheet corpus attached. Suppose the
+// run records false for a corpus that WAS attached. A clean report then looks better-founded than it
+// is. Only the catalog snapshot in the document contradicts it, and nobody cross-reads that.
 func TestResultsRunConfigRecordsProjectTiers(t *testing.T) {
 	design := projectFixture(t)
 	out := filepath.Join(t.TempDir(), "check.results.json")
@@ -121,7 +121,7 @@ func TestResultsRunConfigRecordsProjectTiers(t *testing.T) {
 	cmd.SetOut(&bytes.Buffer{})
 	cmd.SetErr(&bytes.Buffer{})
 	// With no --conventions and no --params, every tier below comes from the project's descriptors
-	// alone, which is the case the old code recorded as nothing.
+	// alone. The old code recorded this case as nothing.
 	cmd.SetArgs([]string{"--results-out", out, design})
 	if err := cmd.Execute(); err != nil {
 		t.Fatalf("check: %v", err)
@@ -138,7 +138,7 @@ func TestResultsRunConfigRecordsProjectTiers(t *testing.T) {
 
 // TestReviewResultsRunConfigRecordsProjectTiers is the same regression on the review path, which builds
 // its RunConfig inside the service rather than at the CLI edge. Both surfaces had it, so both are
-// pinned. Fixing one and leaving the other is how the two documents come to disagree about one run.
+// pinned. If one were fixed and the other left, the two documents would disagree about one run.
 func TestReviewResultsRunConfigRecordsProjectTiers(t *testing.T) {
 	design := projectFixture(t)
 	out := filepath.Join(t.TempDir(), "review.results.json")
@@ -160,18 +160,18 @@ func TestReviewResultsRunConfigRecordsProjectTiers(t *testing.T) {
 	}
 }
 
-// TestCheckProvenanceIsMountRelative pins the SHAPE of provenance.sourceFile. The path a locator
-// records is relative to the design's mount, never the absolute path the command was handed.
+// TestCheckProvenanceIsMountRelative pins the SHAPE of provenance.sourceFile. A locator records a
+// path relative to the design's mount, never the absolute path the command was handed.
 //
-// The failure direction is the reason this is a test rather than a nicety. A results document is
+// The direction of the failure makes this a test rather than a nicety. A results document is
 // meant to be written on one machine and re-read on another (architecture/checks-contract), and
 // `--results-out` STORES every locator. An absolute source path makes the stored document a record
 // of the producer's filesystem, so a reader holding the design still cannot resolve a finding to a
 // file, and nothing in the document says why. It also publishes a directory layout that a public
 // artifact has no business carrying.
 //
-// Asserted on an absolute argument specifically, because that is the only case that can regress. A
-// relative argument used to come out looking correct by accident.
+// The test passes an absolute argument specifically, because only that case can regress. A relative
+// argument used to come out looking correct by accident.
 func TestCheckProvenanceIsMountRelative(t *testing.T) {
 	dir := projectFixture(t)
 	design := filepath.Join(dir, "board.edn")
@@ -205,7 +205,7 @@ func TestCheckProvenanceIsMountRelative(t *testing.T) {
 	}
 
 	// The stored document is checked separately from the printed one. They are written by different
-	// code paths, and it is the stored one that outlives the machine.
+	// code paths, and the stored one outlives the machine.
 	stored, err := os.ReadFile(results)
 	if err != nil {
 		t.Fatal(err)

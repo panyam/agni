@@ -42,9 +42,9 @@ func TestViewerPageRendersShell(t *testing.T) {
 			t.Errorf("rendered page missing %q", want)
 		}
 	}
-	// The Files dock panel is retired (WS9-049 phase 3). Its HOLE is what matters here, because the
-	// dock adopts panels by finding a data-dock-panel element, so a stale hole would let a saved
-	// layout resurrect the panel even with the registry entry deleted.
+	// The Files dock panel is retired (WS9-049 phase 3). The test checks for its HOLE. The dock
+	// adopts panels by finding a data-dock-panel element, so a stale hole would let a saved layout
+	// bring the panel back even with the registry entry deleted.
 	for _, deny := range []string{
 		`data-dock-panel="files"`,
 		`id="file-tree"`,
@@ -55,12 +55,12 @@ func TestViewerPageRendersShell(t *testing.T) {
 	}
 }
 
-// TestWorkPageServesDesignsSpace asserts the WS9-049 work-page URL space renders the shell, AND
-// that it does so because /designs/ is registered rather than because the root pattern catches
-// everything. The pattern check is the half that can fail, since "/" is a catch-all and a 200 alone
-// would pass even with no /designs/ registration at all, and phase 2 hangs the browse page off this
-// same pattern (the /view suffix is what splits them, since a ServeMux pattern cannot put a
-// wildcard segment before a literal one).
+// TestWorkPageServesDesignsSpace asserts that the WS9-049 work-page URL space renders the shell. It
+// also asserts that the shell renders because /designs/ is registered, not because the root pattern
+// catches everything. Only the pattern check can fail, since "/" is a catch-all. A 200 alone would
+// pass even with no /designs/ registration at all. Phase 2 hangs the browse page off this same
+// pattern, and the /view suffix splits the two, since a ServeMux pattern cannot put a wildcard
+// segment before a literal one.
 func TestWorkPageServesDesignsSpace(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
@@ -84,12 +84,12 @@ func TestWorkPageServesDesignsSpace(t *testing.T) {
 
 // TestDesignsSpaceSplitsBrowseFromWork is the phase-2 contract: one registered pattern, two
 // different shells, chosen by the /view suffix. Each case asserts BOTH that the expected shell
-// rendered and that the other one did not, because both pages descend from BasePage and share
-// enough markup that a one-sided check would pass if the dispatcher sent every request to the
-// same page.
-// "/" is the landing page rather than the design browser, and it is also the catch-all, so a URL
-// matching no other pattern lands somewhere that offers the destinations instead of on an empty
-// tree. The browser did not move, so the same test asserts /designs/ still serves it.
+// rendered and that the other one did not. Both pages descend from BasePage and share a lot of
+// markup, so a one-sided check would pass even if the dispatcher sent every request to the same
+// page.
+// "/" is the landing page rather than the design browser, and it is also the catch-all. A URL that
+// matches no other pattern then reaches a page offering the destinations instead of an empty tree.
+// The browser did not move, so the same test asserts /designs/ still serves it.
 func TestRootServesLandingPage(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
@@ -116,10 +116,10 @@ func TestRootServesLandingPage(t *testing.T) {
 	}
 }
 
-// Every page a person can land on offers a way back to the landing page. This is a cross-page
+// Every page a person can open offers a way back to the landing page. This is a cross-page
 // omission test, and it is written that way because the omission is invisible from inside any one
-// page. The viewer shipped with no route out of itself, and a design URL is the one people share, so
-// it is the page most likely to be somebody's first (PR 318 deferred it, this closes it).
+// page. The viewer shipped with no route out of itself. People share design URLs, so the viewer is
+// the page most likely to be somebody's first (PR 318 deferred it, this closes it).
 //
 // A page is checked for the crumb's own markup rather than a bare href="/", which any stylesheet or
 // icon reference would satisfy.
@@ -167,7 +167,7 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 		{"/designs/corpus/b.kicad_sch/load", loadMarkers, append(workMarkers, browseMarkers...)},
 		{"/designs/corpus/boards/b.kicad_sch/load?verdict=x&rule=r", loadMarkers, append(workMarkers, browseMarkers...)},
 		{"/designs/local/load/", loadMarkers, append(workMarkers, browseMarkers...)},
-		// The suffix is matched as a whole segment, so a folder named loads stays a folder.
+		// The suffix is matched as a whole segment, so a folder named loads is still a folder.
 		{"/designs/corpus/loads/", browseMarkers, append(workMarkers, loadMarkers...)},
 	} {
 		rec := httptest.NewRecorder()
@@ -192,8 +192,8 @@ func TestDesignsSpaceSplitsBrowseFromWork(t *testing.T) {
 
 // TestBrowsePageOmitsAnalysisChrome pins the ticket's structural promise that the browse preview is
 // read-only, so the page must not ship the viewer's analysis surfaces. These are template-level
-// holes, so their absence is what keeps the presenter, WebGL canvas, and checks machinery from
-// ever mounting (the islands resolve their holes by id at boot and bail when they are missing).
+// holes. The islands resolve their holes by id at boot and bail when they are missing, so without
+// the holes the presenter, WebGL canvas and checks machinery never mount.
 func TestBrowsePageOmitsAnalysisChrome(t *testing.T) {
 	mux := http.NewServeMux()
 	registerPages(newPageApp(filepath.Join("..", "..", "web"), &serveApp{}), mux)
@@ -225,7 +225,7 @@ func TestLegacyFilesRedirect(t *testing.T) {
 
 	for _, tc := range []struct{ from, want string }{
 		{"/files/corpus/boards/b.kicad_sch", "/designs/corpus/boards/b.kicad_sch/view"},
-		// The knobs ride in the query string in both spaces, so they carry over verbatim.
+		// The knobs travel in the query string in both spaces, so they carry over verbatim.
 		{"/files/corpus/b.eds?sheet=root&mode=svg", "/designs/corpus/b.eds/view?sheet=root&mode=svg"},
 		// A folder keeps its trailing slash and does NOT gain /view.
 		{"/files/corpus/boards/", "/designs/corpus/boards/"},

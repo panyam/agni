@@ -55,7 +55,7 @@ func TestRefuseTooBroadRoot(t *testing.T) {
 		t.Errorf("the refusal should say why, got %v", err)
 	}
 	// A trailing slash and a redundant path element name the same directory and must be refused too,
-	// or the guard is a string comparison wearing a filesystem's clothes.
+	// or the guard is only a string comparison and not a filesystem check.
 	if err := refuseTooBroadRoot(home + "/./"); err == nil {
 		t.Error("an unnormalized spelling of the home directory must also be refused")
 	}
@@ -66,7 +66,7 @@ func TestRefuseTooBroadRoot(t *testing.T) {
 		t.Errorf("an ordinary directory is fine, got %v", err)
 	}
 	// A directory INSIDE the home directory is the ordinary case and must not be caught by a prefix
-	// match, which is the obvious wrong implementation of this guard.
+	// match. A prefix match is the obvious wrong implementation of this guard.
 	if err := refuseTooBroadRoot(filepath.Join(home, "boards", "gw")); err != nil {
 		t.Errorf("a directory under home is not the home directory, got %v", err)
 	}
@@ -89,9 +89,9 @@ func TestFreePortIsBindable(t *testing.T) {
 }
 
 // The banner prints TWO commands and they drifted. The check line moved to --server and the trace
-// line beside it went on saying --url-base for a release, which is worse than a stale doc because it
-// is generated for someone to copy (agni issue 636). This holds both lines to the flag set the CLI
-// actually defines, so the pair cannot drift again.
+// line beside it went on saying --url-base for a release. That is worse than a stale doc, because
+// the banner is generated for someone to copy (agni issue 636). This holds both lines to the flag
+// set the CLI actually defines, so the pair cannot drift again.
 func TestOpenBannerNamesNoRemovedFlag(t *testing.T) {
 	var b bytes.Buffer
 	openBanner(&b, "http://127.0.0.1:5000/", mounts.Mount{Name: "m", Root: "/r"},

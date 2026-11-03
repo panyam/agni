@@ -14,11 +14,11 @@ import (
 // selfServer is the --server value that means "this process". Everything else is an address.
 const selfServer = "self"
 
-// serverSpec is a parsed --server value, saying where the links this run mints should point.
+// serverSpec is a parsed --server value. It says where this run's minted links should point.
 //
-// Three states. Empty is the default and mints no links, which is what a pipeline wants. A URL names a
-// server someone else is running, so the run asks it whether it serves the same mounts from the same
-// roots (verifyServerMount) before trusting a link. self is this process, which reads the design and
+// Three states. Empty is the default and mints no links, as a pipeline wants. A URL names a server
+// someone else is running. The run asks that server whether it serves the same mounts from the same
+// roots (verifyServerMount) before trusting a link. self is this process. It reads the design and
 // serves it from one mount table, so that question cannot arise.
 type serverSpec struct {
 	self bool
@@ -33,7 +33,7 @@ type serverSpec struct {
 // active reports whether this run mints links at all.
 func (s serverSpec) active() bool { return s.self || s.url != "" }
 
-// base is the address links are built from.
+// base returns the address that links are built from.
 func (s serverSpec) base() string {
 	if s.self {
 		return "http://" + s.ln.Addr().String()
@@ -97,15 +97,15 @@ func serverFlag(cmd *cobra.Command, server *string) {
 // artifact and then serves them, so both preconditions must hold before the wrapped command writes
 // anything, or the report fills with links to a server that never bound (agni issue 637).
 //
-// A failed check CLOSES the listener parseServerSpec bound, per that function's contract, so a failed
-// run does not leak the port it reserved.
+// A failed check CLOSES the listener that parseServerSpec bound, per that function's contract. So a
+// failed run does not leak the port it reserved.
 func resolveServer(server string) (serverSpec, error) {
 	spec, err := parseServerSpec(server)
 	if err != nil || !spec.self {
 		return spec, err
 	}
-	// Commands that mint links carry no --web-dir of their own, so the flag is empty here and the
-	// value comes from the agni.yaml/environment chain resolveWebDir applies.
+	// Commands that mint links have no --web-dir of their own, so the flag is empty here.
+	// resolveWebDir fills the value from the agni.yaml/environment chain.
 	if _, _, err := resolveWebAssets("", os.Getenv); err != nil {
 		spec.Close()
 		return serverSpec{}, fmt.Errorf("--server %s cannot serve: %w", server, err)
@@ -125,7 +125,7 @@ func (s serverSpec) Close() error {
 // serveSelf runs the viewer over the mount table THIS RUN built, then blocks.
 //
 // It reads the workspace after the command body has run, because the CLI mints a mount lazily while
-// resolving its argument, so a table read any earlier would be missing the design the links name.
+// resolving its argument. A table read any earlier would miss the design that the links name.
 func serveSelf(cmd *cobra.Command, spec serverSpec) error {
 	ws, err := workspace()
 	if err != nil {

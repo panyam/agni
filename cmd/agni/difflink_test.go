@@ -20,9 +20,9 @@ func runDiffBoth(t *testing.T, args ...string) (string, string) {
 	return out.String(), errOut.String()
 }
 
-// A diff opens in the viewer as a comparison (agni issue 1126): the link names the earlier
-// revision's view and the later one as what to compare against, on stderr whatever the format, so
-// the json on stdout stays the DiffDesignsResponse (C31).
+// A diff opens in the viewer as a comparison (agni issue 1126). The link names the earlier revision's
+// view, and it names the later revision to compare against. The link goes to stderr whatever the
+// format, so the json on stdout is still the DiffDesignsResponse (C31).
 func TestADiffLinksToTheViewersComparison(t *testing.T) {
 	for _, format := range []string{"text", "json", "csv"} {
 		t.Run(format, func(t *testing.T) {
@@ -42,8 +42,8 @@ func TestADiffLinksToTheViewersComparison(t *testing.T) {
 	}
 }
 
-// A revision reached through a mount this run minted gets no link, and the run says why, as check's
-// and trace's do (issue 626).
+// Imagine this run mints a mount and reaches a revision through it. That revision gets no link, and
+// the run says why, as check and trace do (issue 626).
 func TestADiffWithholdsALinkForAnUndeclaredMount(t *testing.T) {
 	freshWorkspace(t)
 	_, stderr := runDiffBoth(t, "testdata/conformance/crystal.fires.edn", "testdata/conformance/crystal.passes.edn", "--server", "http://127.0.0.1:1")
@@ -61,8 +61,8 @@ func TestADiffWithoutAServerPrintsNoLink(t *testing.T) {
 	}
 }
 
-// A diff that paired near-renames links a comparison that pairs them too, so the reader does not
-// have to tick the option the command was already given.
+// When a diff paired near-renames, its link opens a comparison that pairs them too. The reader does
+// not have to tick an option the command already had.
 func TestADiffLinkCarriesNearRenames(t *testing.T) {
 	withMount(t)
 	_, stderr := runDiffBoth(t, "mount://demo/crystal.fires.edn", "mount://demo/crystal.passes.edn", "--rename-approx", "--server", urlBaseFlag)
@@ -71,8 +71,8 @@ func TestADiffLinkCarriesNearRenames(t *testing.T) {
 	}
 }
 
-// Both revisions ask one server, so a note about that server (an unreachable one leaves the links
-// unverified) is said once, not once per revision.
+// Both revisions ask one server, so the run prints a note about that server once, not once per
+// revision. An unreachable server gets such a note, since it leaves the links unverified.
 func TestADiffSaysEachLinkNoteOnce(t *testing.T) {
 	withMount(t)
 	_, stderr := runDiffBoth(t, "mount://demo/crystal.fires.edn", "mount://demo/crystal.passes.edn", "--server", "http://127.0.0.1:1")

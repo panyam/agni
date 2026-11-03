@@ -13,8 +13,8 @@ import (
 // itself is RenderReviewReport's (agni issue 1030), so this decides only what the rpc is told.
 //
 // It applies the rule `check --server` applies by calling the same two functions, verdictLinkTarget
-// and verifyServerMount, so the two surfaces cannot disagree about what a link means. The mount has to
-// be one the operator DECLARED, and the server has to agree it serves that name from the same root.
+// and verifyServerMount, so the two surfaces cannot disagree about what a link means. The operator has
+// to have DECLARED the mount, and the server has to agree it serves that name from the same root.
 func checklistLinks(cmd *cobra.Command, ll *localLoader, designArg string, spec serverSpec) (*webapi.ReportLinks, error) {
 	designURI, err := cliArgURI(designArg)
 	if err != nil {

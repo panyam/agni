@@ -41,8 +41,8 @@ func TestConfigDigestIsStableAcrossEqualTrees(t *testing.T) {
 	}
 }
 
-// CONTENT, not stat metadata. A file restored from a copy keeps its size and can keep its mtime,
-// which is a state a developer reaches by switching branches.
+// CONTENT, not stat metadata. A file restored from a copy keeps its size and can keep its mtime. A
+// developer reaches that state by switching branches.
 func TestConfigDigestFollowsContent(t *testing.T) {
 	base := map[string]string{"a.yaml": "one"}
 	changed := map[string]string{"a.yaml": "ONE"}
@@ -61,8 +61,8 @@ func TestConfigDigestFollowsNames(t *testing.T) {
 	}
 }
 
-// Symbol paths are URIs this resolver never opens. Statting one is an error rather than a digest,
-// which is why they fold in as names and not as paths.
+// Symbol paths are URIs this resolver never opens. Statting one is an error rather than a digest, so
+// they fold in as names and not as paths.
 func TestConfigDigestFoldsUnreadNamesWithoutStattingThem(t *testing.T) {
 	dir := writeTree(t, map[string]string{"a.yaml": "one"})
 	withLib, err := digestConfig([]string{dir}, []string{"mount://sym/lib"})

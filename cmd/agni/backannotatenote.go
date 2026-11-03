@@ -10,10 +10,10 @@ import (
 // backAnnotatedShown is how many relabelled placements the note names before counting the rest.
 const backAnnotatedShown = 5
 
-// backAnnotatedNote is the stderr line for a schematic whose back-annotation renamed parts the page
-// draws under another designator, empty when it renamed none (agni issue 1230). Every read names the
-// part by the back-annotated designator, so a reader comparing the drawing with an answer needs to
-// know which labels were replaced.
+// backAnnotatedNote is the stderr line for a schematic whose back-annotation renamed parts. The page
+// draws those parts under another designator. The line is empty when nothing was renamed (agni issue
+// 1230). Every read names the part by the back-annotated designator, so a reader comparing the
+// drawing with an answer needs to know which labels were replaced.
 func backAnnotatedNote(file string, g *geom.SchematicGeometry) string {
 	ba := g.GetBackAnnotated()
 	if len(ba) == 0 {

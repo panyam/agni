@@ -12,9 +12,9 @@ import (
 	"github.com/panyam/agni/internal/server"
 )
 
-// rpcError marks an error a service returned for the command's request, as distinct from a flag
-// mistake before any request or a status the command reports after writing its answer (a query
-// set's "2 of 5 could not be answered"). Only a marked error is written as JSON, so a failure
+// rpcError marks an error that a service returned for the command's request. A flag mistake before
+// any request is not marked. Nor is a status the command reports after writing its answer, such as
+// a query set's "2 of 5 could not be answered". Only a marked error is written as JSON, so a failure
 // after the answer was written never puts a second document on stdout.
 type rpcError struct{ err error }
 
@@ -32,12 +32,13 @@ func rpcFailed(err error) error {
 }
 
 // reportError prints a failed command's error on stderr, as every command always has. When the
-// command was asked for --format json and its request failed, it also writes the failure as the
-// Connect protocol encodes it, `{"code": ..., "message": ..., "details": [...]}`, where the answer
-// would have gone (stdout, or -o's file). C31 makes a command's json the wire message its rpc
-// returns, and a failed rpc's wire message is this error, so a script reading the CLI and a client
-// reading the API parse one shape for a failure as for an answer. A query that would not parse
-// carries its position as a TextPosition detail, whose `debug` field spells it as JSON.
+// command was asked for --format json and its request failed, it also writes the failure where the
+// answer would have gone, on stdout or in -o's file. It writes the failure as the Connect protocol
+// encodes it, `{"code": ..., "message": ..., "details": [...]}`. C31 makes a command's json the
+// wire message its rpc returns, and a failed rpc's wire message is this error. So a script reading
+// the CLI and a client reading the API parse one shape for a failure as for an answer. A query that
+// would not parse carries its position as a TextPosition detail, whose `debug` field spells it as
+// JSON.
 func reportError(cmd *cobra.Command, err error, stderr io.Writer) {
 	_, _ = io.WriteString(stderr, "error: "+err.Error()+"\n")
 	var re *rpcError
