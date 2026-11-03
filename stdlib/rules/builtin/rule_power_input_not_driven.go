@@ -33,18 +33,18 @@ var powerInputNotDriven = &check.Rule{
 
 // powerInputNotDrivenVerdicts decides every net carrying a power-INPUT pin, and that set is the
 // considered set. A net with no supply pin on it is not a subject of a supply rule and yields no
-// verdict, since a pass about a subject the rule never asked about claims a check that did not happen.
+// verdict. A pass about such a net would claim a check that did not happen.
 //
 // THE FORMAT GATE IS NotConsidered. "No power source" is only conclusive where the format types power
-// OUTPUTS. EDIF and IPC-2581 carry no power_out, so a rail's own regulator reads as a plain input there
+// OUTPUTS. EDIF and IPC-2581 have no power_out, so a rail's own regulator reads as a plain input there
 // and the rule would fire on every switched or derived rail. A SILENT gate would read the same as a
 // board whose rails are all properly fed, so each gated net gets a verdict saying why. `Run` never
 // consults RequiresCapability, so the rule-level declaration reaches only a caller that asks
 // Available first, and this reaches every caller.
 //
 // The EXTERNAL exemption is NotConsidered for the same reason it is in floating-input, since the feed
-// may be on a sheet this read did not open. The power-flag exemption is a genuine PASS, because a
-// power flag is the designer stating the net is driven.
+// may be on a sheet this read did not open. The power-flag exemption is a genuine PASS, because with
+// a power flag the designer states that the net is driven.
 func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	typesPowerOut := m.FormatTypesPowerOut()
 
@@ -55,10 +55,11 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 		if powerIns == 0 {
 			continue // no supply pin here, so this net is not a subject of a supply rule
 		}
-		// On a net carrying a power symbol only a power source feeds its supply pins, as KiCad's ERC
-		// holds, because a logic output there is a signal pin tied to the rail. That passed a ground fed
-		// by four strap pins until agni issue 1082. Elsewhere any driver counts, since a supply-typed pin
-		// on an ordinary net (a module connector's power-good input, say) is fed by whatever drives it.
+		// On a net with a power symbol, only a power source feeds the supply pins, as KiCad's ERC
+		// holds. A logic output there is a signal pin tied to the rail. Until agni issue 1082 the rule
+		// passed a ground fed by four strap pins. Elsewhere any driver counts. A supply-typed pin can
+		// sit on an ordinary net, such as a module connector's power-good input, and whatever drives
+		// that net feeds it.
 		feeds := check.IsDriver
 		powerNet := powerSymbolNet(m, n)
 		if powerNet {
@@ -97,7 +98,7 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 				},
 			}
 		case notASupply(m, n) != "":
-			// A lone exposed pad and a divider tap carry a power_in pin and draw no supply, so an absent
+			// A lone exposed pad and a divider tap have a power_in pin and draw no supply, so an absent
 			// driver says nothing about an unfed rail (agni issue 935).
 			v.Outcome = check.NotConsidered
 			v.Reason = notASupply(m, n)
@@ -122,15 +123,15 @@ func powerInputNotDrivenVerdicts(ctx context.Context, m check.Model) []check.Ver
 	return out
 }
 
-// powerSymbolNet reports whether a net carries a power symbol, a virtual power-input pin such as a
-// KiCad #PWR, which makes it a named supply net that only a power source can feed.
+// powerSymbolNet reports whether a net has a power symbol, a virtual power-input pin such as a KiCad
+// #PWR. A power symbol makes the net a named supply net, and only a power source can feed it.
 func powerSymbolNet(m check.Model, n *ir.Net) bool {
 	return check.Exists(n.Connections, func(c *ir.Connection) bool {
 		return check.IsVirtualRef(c.ComponentRef) && check.ConnDir(m, c) == ir.PinDirection_PIN_DIRECTION_POWER_IN
 	})
 }
 
-// powerInputNotDrivenSpec is the rule's declarative twin (WS3-003). A net carrying a power symbol
+// powerInputNotDrivenSpec is the rule's declarative twin (WS3-003). A net with a power symbol
 // needs a power_out pin; any other net needs any driver, as the Go rule decides.
 var powerInputNotDrivenSpec = &check.Spec{
 	Over: "nets",

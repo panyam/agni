@@ -28,7 +28,7 @@ func voltageDomainRule(d Declaration) *check.Rule {
 	}
 }
 
-// voltageDomainVerdicts decides every rail every declared domain names, one verdict each. A rail whose
+// voltageDomainVerdicts decides each rail of every declared domain, one verdict each. A rail whose
 // name states no voltage (VBUS, SYS_PWR) is NotConsidered, since it has no NAME-derived nominal to
 // compare. Folding that case into Pass makes a domain over such rails report total agreement (#417).
 func voltageDomainVerdicts(m check.Model, d Declaration) []check.Verdict {
@@ -82,7 +82,7 @@ func voltageDomainVerdicts(m check.Model, d Declaration) []check.Verdict {
 
 // netByName returns the first design net with the given name, or nil when none matches. Rails are
 // unique by name in practice; the first match is the rail. It reads Model.Nets (the same slice the IR
-// carries), so returning a raw *ir.Net stays inside the C19 read surface.
+// carries), so returning a raw *ir.Net is still inside the C19 read surface.
 func netByName(m check.Model, name string) *ir.Net {
 	for _, n := range m.Nets() {
 		if n.GetName() == name {

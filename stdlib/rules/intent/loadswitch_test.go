@@ -43,7 +43,7 @@ func lsNet(name string, conns ...*ir.Connection) *ir.Net {
 }
 
 // lsSwitch describes one controller-based high-side switch to place on a test design. The controller
-// U<n> drives Q<n>'s gate and senses across R<n>, whose value the design states in ohms. The trip
+// U<n> drives Q<n>'s gate and senses across R<n>. The design states R<n>'s value in ohms. The trip
 // current is the controller's threshold over senseOhms.
 type lsSwitch struct {
 	n         string  // ref-des suffix, so several switches coexist on one design
@@ -53,8 +53,8 @@ type lsSwitch struct {
 	fetMPN    string  // the pass FET's MPN
 }
 
-// lsDesign wires one switch per spec. Each switch's shunt sits between two nets the controller also
-// touches, which is the Kelvin-sensing signature the resolver looks for.
+// lsDesign wires one switch per spec. Each switch's shunt sits between two nets, and the controller
+// also touches both. The resolver looks for that Kelvin-sensing signature.
 //
 // Nets are merged BY NAME across specs, because a name is a net's identity in every format this
 // reads and two switches fed from one input share that input. Appending a second net called VIN
@@ -96,9 +96,9 @@ func oneSwitch(senseOhms float64) *ir.Design {
 		ctrlMPN: "ACME-HSS", fetMPN: "ACME-NFET"})
 }
 
-// hssSpec is a switch controller stating an overcurrent sense threshold in volts. That row is what
-// identifies a part as a controller (the resolver reads the datasheet, not a class keyword) and it is
-// the only datasheet value the verdict rests on.
+// hssSpec is a switch controller stating an overcurrent sense threshold in volts. That row identifies
+// a part as a controller, since the resolver reads the datasheet, not a class keyword. It is also the
+// only datasheet value the verdict depends on.
 func hssSpec(mpn string, ocpVolts float64) *parampb.PartSpec {
 	return &parampb.PartSpec{
 		Mpn: mpn, Manufacturer: "Acme",
@@ -146,7 +146,7 @@ func lsModel(d *ir.Design, ocpVolts, rdsOhms float64) check.Model {
 	}))
 }
 
-// lsDecl is a one-rail declaration carrying only a budget.
+// lsDecl is a one-rail declaration with only a budget.
 func lsDecl(rail string, peak float64) Declaration {
 	return Declaration{Name: "t", RailBudgets: []RailBudget{{Rail: rail, Peak: peak}}}
 }
@@ -156,10 +156,10 @@ func lsEval(d Declaration, m check.Model) []check.Finding {
 }
 
 // TestLoadSwitchTripBelowBudgetFires is the WS3-085 acceptance for the sizing lower bound. A 50mV
-// threshold across a 25mOhm shunt limits at 2A, on a rail the intent declares draws up to 5A, so the
-// switch opens under the load the design was drawn for.
+// threshold across a 25mOhm shunt limits at 2A. The intent declares that the rail draws up to 5A, so
+// the switch opens under the load the design was drawn for.
 //
-// The finding has to name all three inputs. A message carrying only the verdict leaves a reviewer
+// The finding has to name all three inputs. A message with only the verdict leaves a reviewer
 // unable to tell which of the budget, the threshold and the shunt is the wrong one.
 func TestLoadSwitchTripBelowBudgetFires(t *testing.T) {
 	fs := lsEval(lsDecl("VOUT", 5), lsModel(oneSwitch(0.025), 0.05, 0.02))
@@ -183,7 +183,7 @@ func TestLoadSwitchTripBelowBudgetFires(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchTripAboveBudgetSilent guards the comparison DIRECTION, which a sign error would invert
+// TestLoadSwitchTripAboveBudgetSilent guards the comparison DIRECTION. A sign error would invert it
 // while every assertion in the firing test still passed. The same board with a 10mOhm shunt limits at
 // 5A, above the 2A the rail is declared to draw.
 func TestLoadSwitchTripAboveBudgetSilent(t *testing.T) {
@@ -195,15 +195,15 @@ func TestLoadSwitchTripAboveBudgetSilent(t *testing.T) {
 // TestLoadSwitchTripAtExactlyTheBudget is the float-comparison guard, and the values are chosen so the
 // mutation shows.
 //
-// 22mV across a 4.4mOhm shunt is 5A. In float64 the DIVISION lands on 4.999999999999999, so a rail
-// declared at 5.0 reads as under-limited and fires unless below() carries its relative tolerance.
+// 22mV across a 4.4mOhm shunt is 5A. In float64 the DIVISION gives 4.999999999999999, so a rail
+// declared at 5.0 reads as under-limited and fires unless below() applies its relative tolerance.
 // The arithmetic has to happen at runtime for the test to mean anything, because 0.022/0.0044
 // written as a constant expression folds at arbitrary precision and is exactly 5, so a check
 // spelled that way would disagree with the running code. Here both sides arrive as float64 values,
 // one from a seeded parameter and one from a stamped component value.
 //
-// A pair that happens to round the other way (50mV across 10mOhm is one) would make this test pass with
-// the tolerance deleted, which is the wrong reason to be green.
+// Some pairs round the other way, and 50mV across 10mOhm is one. Such a pair would make this test
+// pass with the tolerance deleted, and that is the wrong reason to be green.
 func TestLoadSwitchTripAtExactlyTheBudget(t *testing.T) {
 	m := lsModel(oneSwitch(0.0044), 0.022, 0.02)
 	if fs := lsEval(lsDecl("VOUT", 5), m); len(fs) != 0 {
@@ -216,10 +216,9 @@ func TestLoadSwitchTripAtExactlyTheBudget(t *testing.T) {
 }
 
 // TestLoadSwitchSilentOnUndeclaredAndAbsentRails holds the direction of the iteration. The rule
-// walks the DECLARATION and probes the design. A rail the design carries but the intent does not
-// budget is not its business, and a budgeted rail the design does not carry is a missing-rail
-// defect the voltage-domain and subsystem forms report, so firing here would report one defect
-// twice.
+// walks the DECLARATION and probes the design. It ignores a rail the design has and the intent does
+// not budget. A budgeted rail missing from the design is a missing-rail defect. The voltage-domain
+// and subsystem forms report that defect, so firing here would report it twice.
 func TestLoadSwitchSilentOnUndeclaredAndAbsentRails(t *testing.T) {
 	m := lsModel(oneSwitch(0.025), 0.05, 0.02)
 	if fs := lsEval(lsDecl("NOT_A_RAIL", 5), m); len(fs) != 0 {
@@ -299,8 +298,8 @@ func beadChain(n int) *ir.Design {
 	return d
 }
 
-// TestLoadSwitchAcrossSeriesElement pins the association RADIUS from both sides, which is the pair of
-// errors a single-distance test cannot tell apart.
+// TestLoadSwitchAcrossSeriesElement pins the association RADIUS from both sides. A single-distance
+// test cannot tell those two errors apart.
 //
 // One crossing must be reached, because a ferrite between the pass element and the rail is ordinary
 // layout and must not hide the switch. Two must NOT be, and that is the review-integrity half.
@@ -390,7 +389,7 @@ func TestLoadSwitchSilentWithoutTheControllerDatasheet(t *testing.T) {
 		t.Fatal("the rule must declare the datasheet symbols it joins on, or a bound item reads pass")
 	}
 	// The gate has to recognize the spelling a real spec is seeded under, or it fires on every design and
-	// the rule never reports anything. V(OCP) is what the controller above states.
+	// the rule never reports anything. The controller above states V(OCP).
 	seeded := lsModel(oneSwitch(0.025), 0.05, 0.02)
 	if !check.SeedsAnySymbol(seeded, r.ParamSymbols) {
 		t.Error("the declared symbols must match a seeded V(OCP) row, else every design reads needs-data")
@@ -414,8 +413,8 @@ func TestLoadSwitchSilentWithoutAThreshold(t *testing.T) {
 }
 
 // TestLoadSwitchSilentWithoutTheShuntValue relies on the trip current being the threshold divided
-// by a resistance the DESIGN states. A shunt whose value the reader never normalized is not
-// evidence of a milliohm part, so the switch does not resolve and the rule says nothing.
+// by a resistance from the DESIGN. If the reader never normalized the shunt's value, the shunt is not
+// evidence of a milliohm part. So the switch does not resolve and the rule says nothing.
 func TestLoadSwitchSilentWithoutTheShuntValue(t *testing.T) {
 	d := oneSwitch(0.025)
 	for _, c := range d.Components {

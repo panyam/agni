@@ -9,9 +9,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// twoStage is the declaration every test below varies against, with VDD_CORE up first, signalled by
-// CORE_PG, gating VDD_IO through IO_EN. The middle handles (IO's own power-good, CORE's enable) are
-// declared where a test needs the reversed-chain diagnosis.
+// twoStage is the base declaration, and every test below varies it. VDD_CORE comes up first and
+// CORE_PG signals it. CORE_PG gates VDD_IO through IO_EN. twoStage also declares the middle handles
+// (IO's own power-good, CORE's enable) for the tests that need the reversed-chain diagnosis.
 const twoStage = `
 name: I
 intent:
@@ -41,7 +41,7 @@ func runSeq(t *testing.T, decl Declaration, d *ir.Design) []check.Finding {
 }
 
 // TestSequenceSameNetChainIsSilent covers a declaration that names ONE net as both the earlier stage's
-// power-good and the later stage's enable, which is how an open-drain PG tied to an EN pin reads.
+// power-good and the later stage's enable. An open-drain PG tied to an EN pin reads that way.
 func TestSequenceSameNetChainIsSilent(t *testing.T) {
 	decl := declOf(t, `
 name: I
@@ -57,18 +57,18 @@ intent:
 	if fs := runSeq(t, decl, d); len(fs) != 0 {
 		t.Errorf("one net serving as both handles is a chain, got %+v", fs)
 	}
-	// The same declaration where the shared net carries no parts the model can see (a source that
-	// names the net but lists no connections). A net cannot fail to reach itself, so this must stay
-	// silent rather than reporting that nothing connects PG_EN to PG_EN.
+	// The same declaration, on a design whose shared net has no parts the model can see. A source can
+	// name the net and list no connections. A net cannot fail to reach itself, so this must be silent
+	// rather than report that nothing connects PG_EN to PG_EN.
 	bare := &ir.Design{Nets: []*ir.Net{net("VDD_CORE"), net("VDD_IO"), net("PG_EN")}}
 	if fs := runSeq(t, decl, bare); len(fs) != 0 {
 		t.Errorf("a net is linked to itself whatever sits on it, got %+v", fs)
 	}
 }
 
-// TestSequenceChainThroughSeriesResistorIsSilent covers the divider that drops an open-drain
-// power-good to the enable pin's threshold, which sits between the two nets. A series element is a
-// part on both nets, so the one-part test credits it with no separate series walk.
+// TestSequenceChainThroughSeriesResistorIsSilent covers a divider between the two nets. The divider
+// drops an open-drain power-good to the enable pin's threshold. A series element is a part on both
+// nets, so the one-part test credits it with no separate series walk.
 func TestSequenceChainThroughSeriesResistorIsSilent(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1", DeviceClasses: classify.Tags("resistor")}},
@@ -108,10 +108,9 @@ func TestSequenceChainAbsentFires(t *testing.T) {
 	}
 }
 
-// TestSequenceAbsentHandleNetFires covers a declared gating net the design does not carry at all.
-// The chain is not there to enforce anything, so this fires rather than being skipped. That is the
-// opposite of how an absent RAIL is treated (see the test below), because the handles ARE the
-// assertion.
+// TestSequenceAbsentHandleNetFires covers a declared gating net that is missing from the design. The
+// chain is not there to enforce anything, so this fires rather than being skipped. An absent RAIL
+// gets the opposite treatment (see the test below), because the handles ARE the assertion.
 func TestSequenceAbsentHandleNetFires(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{net("VDD_CORE"), net("VDD_IO")}}
 	fs := runSeq(t, declOf(t, twoStage), d)
@@ -125,9 +124,9 @@ func TestSequenceAbsentHandleNetFires(t *testing.T) {
 	}
 }
 
-// TestSequenceAbsentRailIsSilent pins that a declared rail the design does not carry is NOT this rule's
-// business. Missing nets are what the voltage-domain and subsystem forms report, and firing here as
-// well would put one defect under two review items.
+// TestSequenceAbsentRailIsSilent pins that this rule ignores a declared rail missing from the design.
+// The voltage-domain and subsystem forms report missing nets. Firing here as well would put one
+// defect under two review items.
 func TestSequenceAbsentRailIsSilent(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{net("CORE_PG", "U1", "U2"), net("IO_EN", "U1", "U2")}}
 	if fs := runSeq(t, declOf(t, twoStage), d); len(fs) != 0 {
@@ -136,8 +135,8 @@ func TestSequenceAbsentRailIsSilent(t *testing.T) {
 }
 
 // TestSequenceReversedChainFires covers a design that gates the EARLIER rail on the LATER one's
-// power-good. It is the defect this rule is most worth having for, because it looks correct on the
-// schematic, so it gets its own message rather than reading as a missing link.
+// power-good. This rule matters most for that defect, because it looks correct on the schematic. So
+// it gets its own message rather than reading as a missing link.
 func TestSequenceReversedChainFires(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1"}, {RefDes: "U2"}},
@@ -160,10 +159,10 @@ func TestSequenceReversedChainFires(t *testing.T) {
 	}
 }
 
-// TestSequenceReversedChainBeatsAbsentHandles exists because an order declared the wrong way round
-// usually names the wrong handles too, so the declared pair does not exist on the design at all
-// while the mirror pair is wired. The reversed diagnosis has to win, or the author is told their
-// nets are missing and goes looking for the wrong thing.
+// TestSequenceReversedChainBeatsAbsentHandles covers an order declared the wrong way round. Such an
+// order usually names the wrong handles too. The declared pair then does not exist on the design at
+// all, and the mirror pair is wired. The reversed diagnosis has to win. Otherwise the author is told
+// their nets are missing and goes looking for the wrong thing.
 func TestSequenceReversedChainBeatsAbsentHandles(t *testing.T) {
 	decl := declOf(t, `
 name: I
@@ -193,8 +192,8 @@ intent:
 }
 
 // TestSequenceLinkThroughSmallPartIsCredited holds that a single-gate buffer between the power-good
-// and the enable is a real chain, and the series walk cannot cross an active part. Crediting a
-// small part is what keeps a genuinely sequenced board off a false fail.
+// and the enable is a real chain. The series walk cannot cross an active part, so the rule credits a
+// small part directly. Without that credit a genuinely sequenced board would get a false fail.
 func TestSequenceLinkThroughSmallPartIsCredited(t *testing.T) {
 	// U3 sits on four nets, the shape of a single-gate buffer in a 5-pin package. The count is a
 	// literal, not gatingFanLimit-derived, so raising the limit cannot quietly make this test agree
@@ -212,15 +211,16 @@ func TestSequenceLinkThroughSmallPartIsCredited(t *testing.T) {
 	}
 }
 
-// TestSequenceLinkThroughControllerIsNotCredited is the other half of that judgement, and the one the
-// motivating design turns on. A power-good landing on an MCU that also drives the enable means the
-// order lives in FIRMWARE, which is not in the netlist. Crediting it would let any board whose
-// supervisory signals converge on one processor read as correctly sequenced.
+// TestSequenceLinkThroughControllerIsNotCredited is the other half of that judgement, and the
+// motivating design depends on it. Imagine a power-good that goes to an MCU, and the MCU also drives
+// the enable. Then FIRMWARE sets the order, and firmware is not in the netlist. Suppose the rule
+// credited the MCU. Any board would then read as correctly sequenced once its supervisory signals
+// converge on one processor.
 func TestSequenceLinkThroughControllerIsNotCredited(t *testing.T) {
 	nets := []*ir.Net{net("VDD_CORE"), net("VDD_IO"), net("CORE_PG", "U9"), net("IO_EN", "U9")}
 	// U9 touches 24 nets, the shape of a small MCU. The count is a LITERAL rather than
-	// gatingFanLimit+1. Derived from the constant, this test would move with the limit and could never
-	// detect it being widened, which is a test that agrees with whatever the code says.
+	// gatingFanLimit+1. A count derived from the constant would move with the limit. The test could
+	// then never detect a widened limit, and it would agree with whatever the code says.
 	for i := 0; i < 20; i++ {
 		nets = append(nets, net("GPIO"+string(rune('A'+i)), "U9"))
 	}
@@ -234,9 +234,9 @@ func TestSequenceLinkThroughControllerIsNotCredited(t *testing.T) {
 	}
 }
 
-// TestSequenceVirtualSymbolIsNotAGatingPart exists because a KiCad-style virtual connectivity
-// symbol (#PWR/#FLG) is a marker, not a part, so two nets it appears on are not gated by it. It is
-// small by every measure the fan test uses, so it needs excluding by name.
+// TestSequenceVirtualSymbolIsNotAGatingPart covers a KiCad-style virtual connectivity symbol
+// (#PWR/#FLG). Such a symbol is a marker, not a part, so it gates no pair of nets it appears on. It
+// is small by every measure the fan test uses, so the rule has to exclude it by name.
 func TestSequenceVirtualSymbolIsNotAGatingPart(t *testing.T) {
 	d := &ir.Design{
 		Nets: []*ir.Net{
@@ -249,9 +249,9 @@ func TestSequenceVirtualSymbolIsNotAGatingPart(t *testing.T) {
 	}
 }
 
-// TestSequencesCompileToDistinctRules checks that several sequences bind and report independently,
-// which is why this is one rule per declaration rather than one shared intent/power-sequence. A
-// shared name gives six review items one verdict (WS3-058).
+// TestSequencesCompileToDistinctRules checks that several sequences bind and report independently.
+// Each declaration gets its own rule rather than one shared intent/power-sequence, because a shared
+// name gives six review items one verdict (WS3-058).
 func TestSequencesCompileToDistinctRules(t *testing.T) {
 	decl := declOf(t, `
 name: I
@@ -277,10 +277,10 @@ intent:
 	}
 }
 
-// TestSequenceWithoutGatingPairCompilesToNothing exists because a Declaration built in Go can carry
-// a sequence Parse would reject. It must compile to NO rule, because a rule with no link to judge
-// can only ever pass, which is the hollow verdict this family exists to avoid. Parse is where an
-// author meets this (TestParseRejectsUncheckableSequence); this guard covers the programmatic path.
+// TestSequenceWithoutGatingPairCompilesToNothing covers a Declaration built in Go. Such a declaration
+// can hold a sequence that Parse would reject. It must compile to NO rule. A rule with no link to
+// judge can only ever pass, and this family exists to avoid that hollow verdict. An author meets the
+// check in Parse (TestParseRejectsUncheckableSequence), and this guard covers the programmatic path.
 func TestSequenceWithoutGatingPairCompilesToNothing(t *testing.T) {
 	decl := Declaration{
 		Name: "I",
@@ -311,9 +311,9 @@ func TestParseSequenceValid(t *testing.T) {
 }
 
 // TestParseRejectsUncheckableSequence is the load-time half of the hollow-pass guard. A board sequenced
-// inside a PMIC or by firmware has no gating nets to name, and the right answer is that it cannot
-// declare a sequence at all, not a rule that passes on evidence nobody has. The error has to say so,
-// or an author will invent net names to satisfy the schema.
+// inside a PMIC or by firmware has no gating nets to name. So it cannot declare a sequence at all,
+// and it must not get a rule that passes on evidence nobody has. The error has to say so, or an
+// author will invent net names to satisfy the schema.
 func TestParseRejectsUncheckableSequence(t *testing.T) {
 	_, err := Parse([]byte(`
 name: I
@@ -335,8 +335,8 @@ intent:
 	}
 }
 
-// TestParseRejectsBadSequences covers the rest of the load validation, each case being a declaration
-// that would otherwise compile to a rule nobody can trust.
+// TestParseRejectsBadSequences covers the rest of the load validation. Without it, each case would
+// compile to a rule nobody can trust.
 func TestParseRejectsBadSequences(t *testing.T) {
 	cases := map[string]string{
 		"no name": "name: N\nintent:\n  sequences:\n  - relation: enable-gated\n    order:\n    - {rail: A, good: A_PG}\n    - {rail: B, enable: B_EN}\n",
@@ -369,9 +369,10 @@ func TestParseRejectsBadSequences(t *testing.T) {
 	}
 }
 
-// TestNetFanCountsDistinctNets pins that the part-size measure counts NETS, not connections, so a
-// part with several pins on one net (a load switch's paralleled outputs, an MCU's many grounds) is
-// not inflated into a controller and stops crediting the gating links it really makes.
+// TestNetFanCountsDistinctNets pins that the part-size measure counts NETS, not connections. Some
+// parts have several pins on one net, such as a load switch's paralleled outputs or an MCU's many
+// grounds. Such a part must not be inflated into a controller, or the rule stops crediting the
+// gating links it really makes.
 func TestNetFanCountsDistinctNets(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{net("VOUT", "U1", "U1", "U1"), net("EN", "U1")}}
 	if got := netFan(check.NewModel(d))["U1"]; got != 2 {

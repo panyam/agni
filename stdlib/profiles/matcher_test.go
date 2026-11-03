@@ -10,8 +10,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// pulledProfile is a prefix-discriminated bus whose CS line needs a pull-up. Its suffix (_CS) is one
-// a real corpus carries many of, so the prefix is the only thing telling its net from a foreign one.
+// pulledProfile is a prefix-discriminated bus whose CS line needs a pull-up. A real corpus has many
+// nets with its suffix (_CS), so only the prefix tells its net from a foreign one.
 func pulledProfile() Profile {
 	return Profile{Name: "PBus", Signals: []Signal{
 		{Name: "CS", Prefix: "PBUS_", Suffix: "_CS", PullUp: true, Anchor: true},
@@ -59,9 +59,9 @@ func TestPrefixedProfileDanglingIgnoresForeignNet(t *testing.T) {
 	}
 }
 
-// TestNetsScopeRespectsMatcher guards the review scope (profiles.Nets/Components, what a per-interface
-// item filters its findings through), which matched by suffix alone, so a prefixed profile's scope
-// pulled in foreign nets, and the components on them, that no rule of that profile can ever name.
+// TestNetsScopeRespectsMatcher guards the review scope, profiles.Nets/Components. A per-interface item
+// filters its findings through that scope. The scope matched by suffix alone, so a prefixed profile's
+// scope pulled in foreign nets and the components on them. No rule of that profile can ever name those.
 func TestNetsScopeRespectsMatcher(t *testing.T) {
 	m := check.NewModel(prefixedBusWithForeignNet())
 	got := Nets(m, pulledProfile())
@@ -76,9 +76,9 @@ func TestNetsScopeRespectsMatcher(t *testing.T) {
 	}
 }
 
-// TestCoverageRespectsMatcher guards the WS9-041 coverage panel, which bound each signal by suffix
-// alone, so a prefixed profile could display a foreign net as the signal's net, a cell disagreeing
-// with every finding, which the panel's contract says cannot happen.
+// TestCoverageRespectsMatcher guards the WS9-041 coverage panel. The panel bound each signal by suffix
+// alone, so a prefixed profile could display a foreign net as the signal's net. That cell disagreed
+// with every finding, and the panel's contract says that cannot happen.
 func TestCoverageRespectsMatcher(t *testing.T) {
 	d := prefixedBusWithForeignNet()
 	// Put the foreign net FIRST so a suffix-only scan reaches it before the profile's own CS net.
@@ -161,7 +161,8 @@ func TestGlobProfileSilentOnForeignBusOnly(t *testing.T) {
 }
 
 // TestRegexSignalMatching checks that the escape hatch expresses multi-instance naming a glob
-// cannot, here "an ETH port's H line, but only the 1000M ones", and stays off the 10M port and off CAN.
+// cannot, here "an ETH port's H line, but only the 1000M ones". It matches neither the 10M port nor
+// CAN.
 func TestRegexSignalMatching(t *testing.T) {
 	p := Profile{Name: "EthGig", Signals: []Signal{
 		{Name: "H", Regex: `^ETH_SW\d+_P\d+_1000M_._H$`, Anchor: true},
@@ -191,8 +192,8 @@ func TestRegexSignalMatching(t *testing.T) {
 }
 
 // TestInUseAgreesWithRulesForGlobAndRegex holds the WS3-090 twin discipline across the new forms. The
-// Go presence gate and the compiled in_use gate must reach the same verdict, or an interface the rules
-// cannot fire on is scored as a clean pass by a review.
+// Go presence gate and the compiled in_use gate must reach the same verdict. Otherwise a review scores
+// a clean pass on an interface the rules cannot fire on.
 func TestInUseAgreesWithRulesForGlobAndRegex(t *testing.T) {
 	designs := map[string]*ir.Design{
 		"foreign only": {Components: comps("U3"), Nets: []*ir.Net{net("CAN_00_H", "U3.1"), net("CAN_00_L", "U3.2")}},
@@ -221,7 +222,7 @@ func TestInUseAgreesWithRulesForGlobAndRegex(t *testing.T) {
 
 // TestSuffixOnlyProfilesUnchanged covers the built-ins. A built-in's suffix signals went through the
 // matcher unchanged, and SPI_NOR's regex signals have to fire the same rules.
-// spinorBroken's three findings are the ones TestCoverageBroken pins.
+// TestCoverageBroken pins spinorBroken's three findings.
 func TestSuffixOnlyProfilesUnchanged(t *testing.T) {
 	m := check.NewModel(spinorBroken())
 	names := map[string]int{}

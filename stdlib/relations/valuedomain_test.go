@@ -53,9 +53,9 @@ func TestPinTypeDomainCoversEveryDirection(t *testing.T) {
 	}
 }
 
-// TestOpenColumnsDeclareNoDomain is the negative half. A
-// domain on a net name, a part number or an attribute key would reject legitimate questions, so the
-// absence is the property worth asserting rather than a thing nobody got round to.
+// TestOpenColumnsDeclareNoDomain is the negative half. A domain on a net name, a part number or an
+// attribute key would reject legitimate questions. The absence is therefore a property worth
+// asserting, not something nobody got round to.
 func TestOpenColumnsDeclareNoDomain(t *testing.T) {
 	for _, c := range []struct{ rel, arg string }{
 		{RelNetAttr, "key"}, {RelNetAttr, "value"},
@@ -68,9 +68,9 @@ func TestOpenColumnsDeclareNoDomain(t *testing.T) {
 	}
 }
 
-// TestEveryDeclaredDomainIsNonEmptyAndSorted keeps a domain from silently becoming the empty set,
-// which would reject EVERY constant in that column while looking like a column with no domain at the
-// call site that builds it.
+// TestEveryDeclaredDomainIsNonEmptyAndSorted keeps a domain from silently becoming the empty set.
+// An empty domain would reject EVERY constant in that column. At the call site that builds it, it
+// would look like a column with no domain.
 func TestEveryDeclaredDomainIsNonEmpty(t *testing.T) {
 	for _, info := range builtinCatalog {
 		for arg, kind := range info.ArgKinds {

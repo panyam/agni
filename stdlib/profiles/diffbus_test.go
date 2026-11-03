@@ -50,7 +50,7 @@ func silent(t *testing.T, p Profile, d *ir.Design) {
 	}
 }
 
-// SGMII stays silent on the good design; the broken one fires signal-missing (RXN absent) + dangling
+// SGMII is silent on the good design; the broken one fires signal-missing (RXN absent) + dangling
 // (TXN single-pin).
 func TestSGMII(t *testing.T) {
 	silent(t, SGMII, &ir.Design{Components: comps("U1", "U2"), Nets: []*ir.Net{
@@ -63,7 +63,7 @@ func TestSGMII(t *testing.T) {
 	}}, "sgmii-signal-missing", "sgmii-signal-dangling")
 }
 
-// PCIe stays silent on the good design; the broken one fires signal-missing (PERN absent) + dangling
+// PCIe is silent on the good design; the broken one fires signal-missing (PERN absent) + dangling
 // (REFCLKN single-pin).
 func TestPCIe(t *testing.T) {
 	silent(t, PCIE, &ir.Design{Components: comps("U1", "U2"), Nets: []*ir.Net{

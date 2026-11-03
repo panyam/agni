@@ -82,8 +82,8 @@ func goRuleByName(name string) *check.Rule {
 
 // TestCrystalDatalogParity (WS3-074) checks that the unregistered datalog twin fires
 // finding-for-finding identically to the built-in Go crystal-load-caps rule over the full guard
-// matrix. That is the proof the datalog surface (component.class + net.ground + net.external)
-// expresses the rule faithfully.
+// matrix. That proves the datalog surface (component.class + net.ground + net.external) expresses
+// the rule faithfully.
 func TestCrystalDatalogParity(t *testing.T) {
 	m := check.NewModel(crystalParityDesign())
 
@@ -104,8 +104,8 @@ func TestCrystalDatalogParity(t *testing.T) {
 }
 
 // TestTwinNotRegistered documents the Approach-A intent (WS3-074). The datalog crystal rule is a
-// parity twin, not a shipped rule, so the "dl" source carries no crystal rule, so DefaultCatalog holds
-// only the built-in one and no duplicate findings can fire.
+// parity twin, not a shipped rule. So the "dl" source has no crystal rule, DefaultCatalog holds only
+// the built-in one, and no duplicate findings can fire.
 func TestTwinNotRegistered(t *testing.T) {
 	for _, r := range check.DefaultCatalog().Rules() {
 		if r.Name == "dl/crystal-load-caps" {
@@ -114,16 +114,16 @@ func TestTwinNotRegistered(t *testing.T) {
 	}
 }
 
-// TestCrystalContextNamesTheTerminal is the rule agni issue 349 was filed about.
+// TestCrystalContextNamesTheTerminal covers the rule that agni issue 349 was filed about.
 //
-// The finding reads "crystal terminal net XOUT1 has no load capacitor" and its subject is Y1. That is
-// the right subject, because the crystal is the part a reader changes, but the sentence is about a
-// NET and clicking the finding sent the reader to a part the sentence never mentioned. A crystal has
-// two terminals and both sit inside the highlighted symbol, so the drawing could not say which one
-// was at fault either.
+// The finding reads "crystal terminal net XOUT1 has no load capacitor" and its subject is Y1. Y1 is
+// the right subject, because a reader changes the crystal. But the sentence is about a NET, and
+// clicking the finding sent the reader to a part the sentence never mentioned. A crystal has two
+// terminals and both sit inside the highlighted symbol, so the drawing could not say which one was
+// at fault either.
 //
-// Asserted on BOTH twins, because a context entity on one and not the other is the drift the
-// parity test exists to catch, and the parity key (subject|message) cannot see this field.
+// The test asserts on BOTH twins. The parity test exists to catch drift such as a context entity on
+// one twin and not the other, and its parity key (subject|message) cannot see this field.
 func TestCrystalContextNamesTheTerminal(t *testing.T) {
 	m := check.NewModel(crystalParityDesign())
 	goRule := goRuleByName("crystal-load-caps")
@@ -158,7 +158,7 @@ func TestCrystalContextNamesTheTerminal(t *testing.T) {
 			if ctx[0].Role != "terminal" {
 				t.Errorf("%s: context role = %q, want %q", name, ctx[0].Role, "terminal")
 			}
-			// The entity a reader is sent to must be the one the sentence names.
+			// The finding must send a reader to the entity the sentence names.
 			if !strings.Contains(fs[0].Message, ctx[0].Ref) {
 				t.Errorf("%s: context %q is not named in the message %q", name, ctx[0].Ref, fs[0].Message)
 			}

@@ -7,7 +7,7 @@ import "github.com/panyam/agni/core/check"
 var Profiles = []Profile{SPINOR, EMMC, SD, CAN, LIN, A2B, PCIE, SGMII, MDIO}
 
 // ByName returns the built-in profile with the given Name (SPI_NOR, eMMC, CAN, LIN); ok is false if
-// none matches. It is the lookup a naming map (WS3-054) uses to find the core profile it re-binds.
+// none matches. A naming map (WS3-054) uses it to find the core profile it re-binds.
 func ByName(name string) (Profile, bool) {
 	for _, p := range Profiles {
 		if p.Name == name {

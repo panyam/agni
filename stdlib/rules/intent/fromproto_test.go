@@ -47,8 +47,8 @@ func fullIntent() *configpb.DesignIntent {
 
 // TestFromProtoCarriesEveryField holds FromProto to the schema. Each field of the message tree has a
 // check that its fixture value reached the Declaration, and the test walks the DESCRIPTORS, so a field
-// added to intent.proto fails here until somebody decides where it goes. That is the guard C26 asks of
-// a converter, in the one-way form a compile step allows.
+// added to intent.proto fails here until somebody decides where it goes. C26 asks a converter for that
+// guard, and this is the one-way form of it that a compile step allows.
 func TestFromProtoCarriesEveryField(t *testing.T) {
 	d, err := FromProto("board", fullIntent())
 	if err != nil {

@@ -10,8 +10,8 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// functionModel is ioMapDesign with U101 carrying a part number and a datasheet entry whose pin
-// PTC11 lists three functions and whose PTE7 lists none.
+// functionModel is ioMapDesign with a part number on U101 and a datasheet entry for it. In that entry
+// pin PTC11 lists three functions, and PTE7 lists none.
 func functionModel(withSpec bool) check.Model {
 	d := ioMapDesign()
 	d.Components[0].Mpn = "ACME-MCU"
@@ -88,7 +88,7 @@ func TestAFunctionTheDatasheetDoesNotListFails(t *testing.T) {
 	}
 }
 
-// Without a datasheet to compare against, a declared function is never reported as checked: the row
+// Without a datasheet to compare against, a declared function is never reported as checked. The row
 // is not-considered with the reason, and no other IO-map rule mentions the function.
 func TestADeclaredFunctionWithNothingToCompareIsNotConsidered(t *testing.T) {
 	for _, tc := range []struct {
@@ -119,7 +119,7 @@ func TestADeclaredFunctionWithNothingToCompareIsNotConsidered(t *testing.T) {
 	}
 }
 
-// A map with no function column compiles no function rule, which could only say not-considered.
+// A map with no function column compiles no function rule. That rule could only say not-considered.
 func TestAMapWithNoFunctionsCompilesNoFunctionRule(t *testing.T) {
 	for _, r := range Compile(ioMapDecl(t, "  - {net: ADC_BATT_SENSE, device: U101, pin: PTC11}")) {
 		if r.Name == RuleIOMapFunction {
@@ -129,7 +129,8 @@ func TestAMapWithNoFunctionsCompilesNoFunctionRule(t *testing.T) {
 }
 
 // Every step that can stop io-map-function reads back to its own kind, from the reason the rule
-// itself wrote, so a report counting kinds stays right when a sentence is reworded (agni issue 1196).
+// itself wrote, so a report counting kinds is still right when a sentence is reworded (agni issue
+// 1196).
 func TestEveryNotConsideredReasonReadsBackToItsKind(t *testing.T) {
 	noPins := ioMapDesign()
 	noPins.Components[0].Mpn = "ACME-MCU"

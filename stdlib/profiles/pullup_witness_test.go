@@ -109,8 +109,8 @@ func TestTheProfileAndTheBuiltinProveAPassTheSameWay(t *testing.T) {
 	t.Fatal("SPI_CS produced no verdict")
 }
 
-// A FAILING net still carries its witness, which is what says the answer rests on the hop limit
-// rather than on nothing.
+// A FAILING net still carries its witness. The witness shows that the answer depends on the hop
+// limit rather than on nothing.
 func TestAProfileFailureStatesTheRadiusItSearchedTo(t *testing.T) {
 	d := directPullUpDesign("SPI_CS")
 	d.Nets[0].Connections = d.Nets[0].Connections[:1] // drop R1 from the CS net: no pull-up left
@@ -131,8 +131,8 @@ func TestAProfileFailureStatesTheRadiusItSearchedTo(t *testing.T) {
 
 // THE COVERAGE BUG, as a regression test. The panel implemented only the reaches clause and claimed
 // in a comment it matched the rule, so a direct pull-up onto a wide rail scored pullup_missing in the
-// panel while the rule said nothing. A correct board read as defective in the one surface a reviewer
-// looks at before the findings.
+// panel while the rule said nothing. A reviewer looks at the panel before the findings, and there a
+// correct board read as defective.
 func TestCoverageAgreesWithTheRuleOnADirectPullUp(t *testing.T) {
 	m := check.NewModel(directPullUpDesign("SPI_CS"))
 	cov := Coverage(context.Background(), spiProfile(), m, nil)
@@ -151,8 +151,8 @@ func TestCoverageAgreesWithTheRuleOnADirectPullUp(t *testing.T) {
 	t.Fatal("CS is absent from the coverage matrix")
 }
 
-// The gate the datalog form conjoined has to survive the move, or a profile whose signals are not on
-// this board reports a page of failures about an interface that is not there.
+// The datalog form conjoined a gate, and the gate has to survive the move. Otherwise a profile whose
+// signals are not on this board reports a page of failures about an interface that is not there.
 func TestNoVerdictsWhenTheInterfaceIsNotInUse(t *testing.T) {
 	d := directPullUpDesign("UNRELATED_NET")
 	d.Nets[1].Name = "OTHER" // and drop the second matching signal, so InUse is false

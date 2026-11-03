@@ -79,8 +79,8 @@ func entryVerdict(t *testing.T, rule *check.Rule, m check.Model) check.Verdict {
 	return check.Verdict{}
 }
 
-// A USB power switch with a current limit and reverse blocking, the entry's only load, answers both
-// power-entry rules, and each pass cites its datasheet (agni issue 1248).
+// Here the entry's only load is a USB power switch with a current limit and reverse blocking. It
+// answers both power-entry rules, and each pass cites its datasheet (agni issue 1248).
 func TestACurrentLimitingSwitchGuardsAPowerEntry(t *testing.T) {
 	m := check.NewModel(usbEntry(false), check.WithParamProvider(param.ParamSet{"DEMO-USBSW": switchSpec("DEMO-USBSW", "USB power switch", true)}))
 	ip := entryVerdict(t, inputProtection, m)
@@ -141,7 +141,7 @@ func TestAPowerEntryOnAnUnreadICIsReportedUnverified(t *testing.T) {
 	}
 }
 
-// translatorBus is an I2C pair whose only pull-up is inside U2, a level translator whose datasheet
+// translatorBus is an I2C pair whose only pull-up is inside U2, a level translator. U2's datasheet
 // binds an internal pull-up to its A1 and A2 pins, as the MNT Reform's TXS0108E pulls its SD lines up
 // (agni issue 1298). boundTo names the pins the row is bound to, none for a part-wide row.
 func translatorBus(boundTo ...string) check.Model {
@@ -168,8 +168,8 @@ func translatorBus(boundTo ...string) check.Model {
 	return check.NewModel(d, check.WithParamProvider(param.ParamSet{"DEMO-XLATE": spec}))
 }
 
-// A bus line pulled up inside a part's pin passes i2c-pull-up citing the part, and the declarative
-// twin, which reads PullUpReachesRail, agrees.
+// A bus line pulled up inside a part's pin passes i2c-pull-up citing the part. The declarative twin
+// reads PullUpReachesRail and agrees.
 func TestAnIntegratedPullUpPullsTheLineUp(t *testing.T) {
 	m := translatorBus("a1", "a2")
 	for _, v := range i2cPullUp.Eval(context.Background(), m) {

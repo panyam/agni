@@ -59,9 +59,9 @@ var capVoltage = func() *check.Rule {
 	return r
 }()
 
-// capVoltageDetail is the cap_voltage_detail SpecFunc body: the join, the worst-rail
-// scan, and the derated compare. It returns the full violation message (with the
-// datasheet Citation) or "" for pass and for every skip case, so the Spec's Where
+// capVoltageDetail is the cap_voltage_detail SpecFunc body. It does the join, the
+// worst-rail scan and the derated compare. It returns the full violation message, with
+// the datasheet Citation, or "" for pass and for every skip case. So the Spec's Where
 // clause and Message share one memoized Let binding.
 func capVoltageDetail(m check.Model, c *ir.Component) string {
 	spec := m.PartSpec(c.RefDes)

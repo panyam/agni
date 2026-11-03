@@ -10,13 +10,13 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// houseNamedDesign places a board whose rails are named function-first, the shape the built-in
-// start-anchored vocabulary (VCC / VDD / +3V3) does not match. PMIC_CORE_3V3 is the tutorial
-// project's own convention, which is why that project ships a conventions.yaml.
+// houseNamedDesign places a board whose rails are named function-first. The built-in
+// start-anchored vocabulary (VCC / VDD / +3V3) does not match that shape. PMIC_CORE_3V3 is the
+// tutorial project's own convention, so that project ships a conventions.yaml.
 //
-// It carries one net of each kind the rule has to tell apart: a house-named rail feeding a supply
-// pin, a signal that merely SWINGS at a voltage and feeds an ordinary input, and a built-in-named
-// rail that already classifies correctly.
+// It has one net of each kind the rule has to tell apart. One is a house-named rail feeding a
+// supply pin. One is a signal that merely SWINGS at a voltage and feeds an ordinary input. The last
+// is a built-in-named rail that already classifies correctly.
 func houseNamedDesign() *ir.Design {
 	return &ir.Design{
 		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{
@@ -41,8 +41,8 @@ func houseNamedDesign() *ir.Design {
 	}
 }
 
-// The rule's reason for existing is that a house-named rail the built-in vocabulary misses gets
-// reported, so the run says the analysis is short rather than reporting clean.
+// This rule exists to report a house-named rail that the built-in vocabulary misses. The run then
+// says the analysis is short rather than reporting clean.
 func TestRailNotClassifiedFiresOnAHouseNamedRail(t *testing.T) {
 	fs := railNotClassified.Findings(context.Background(), check.NewModel(houseNamedDesign()))
 	if len(fs) != 1 {
@@ -60,7 +60,7 @@ func TestRailNotClassifiedFiresOnAHouseNamedRail(t *testing.T) {
 
 // The discriminator, and the reason the rule is not just "voltage token and not a rail". A signal
 // that SWINGS at 1.8V is named the same way a 1.8V rail is, and no naming grammar separates them. It
-// feeds an ordinary input rather than a supply pin, and must stay silent.
+// feeds an ordinary input rather than a supply pin, so the rule must be silent on it.
 func TestRailNotClassifiedIgnoresASignalAtALevel(t *testing.T) {
 	for _, f := range railNotClassified.Findings(context.Background(), check.NewModel(houseNamedDesign())) {
 		if check.EntityRef(f.Subject) == "UART_TX_1V8" {
@@ -69,7 +69,7 @@ func TestRailNotClassifiedIgnoresASignalAtALevel(t *testing.T) {
 	}
 }
 
-// A rail the built-in vocabulary already matches carries the role, so there is no gap to report.
+// A rail the built-in vocabulary already matches has the role, so there is no gap to report.
 func TestRailNotClassifiedSilentOnAnAlreadyClassifiedRail(t *testing.T) {
 	for _, f := range railNotClassified.Findings(context.Background(), check.NewModel(houseNamedDesign())) {
 		if check.EntityRef(f.Subject) == "+5V" {
@@ -79,8 +79,8 @@ func TestRailNotClassifiedSilentOnAnAlreadyClassifiedRail(t *testing.T) {
 }
 
 // In the intended end state, once the project declares its rail patterns, the rule goes silent on the
-// nets it was reporting. A diagnostic that keeps firing after the fix is applied is a nag, and this
-// is also what proves the finding was about the CONFIG rather than the design.
+// nets it was reporting. A diagnostic that keeps firing after the fix is applied is a nag. This test
+// also proves that the finding was about the CONFIG rather than the design.
 func TestRailNotClassifiedGoesSilentOnceTheLexiconIsDeclared(t *testing.T) {
 	d := houseNamedDesign()
 	// Stamp the role the way the ingestion pass would under a project lexicon matching `_<n>V<n>`.
@@ -112,7 +112,7 @@ func TestRailNotClassifiedSilentWithoutEvidence(t *testing.T) {
 		}
 	}
 
-	// Ground carries a role of its own and is never this rule's subject.
+	// Ground has a role of its own and is never this rule's subject.
 	gnd := houseNamedDesign()
 	gnd.Nets[0].Name = "GND_0V0"
 	for _, f := range railNotClassified.Findings(context.Background(), check.NewModel(gnd)) {

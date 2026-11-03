@@ -35,26 +35,26 @@ func validateTermination(params map[string]string) error {
 // compiler, with NO new engine primitive. The `net.reaches` walk already crosses 2-net series pass
 // elements (R/L/ferrite/fuse) but NOT a multi-pin transceiver, so "the high net reaches the low net
 // through a passive" finds the terminating resistor and ignores the transceiver that legitimately sits
-// on both. A new requirement is new datalog, not new facts (the WS3-034 lesson). Because `net.reaches` is
-// transitive it also accepts a split termination (60Ω + 60Ω with a midpoint).
+// on both. A new requirement is new datalog, not new facts (the WS3-034 lesson). `net.reaches` is
+// transitive, so it also accepts a split termination (60Ω + 60Ω with a midpoint).
 //
 // Params "high" and "low" name the two bridged net-name suffixes (e.g. "_CANH" / "_CANL"), required
 // and validated by validateTermination before this compiler is reached.
 func terminationRule(p Profile, req Requirement) *check.Rule {
 	high, low := req.Params["high"], req.Params["low"]
 	if high == "" || low == "" {
-		// Unreachable for a validated profile (Load rejects this, Compile panics on it); kept so a
-		// hand-built Requirement that bypasses both degrades to no rule instead of generating one that
-		// matches the empty suffix, i.e. every net on the board.
+		// Unreachable for a validated profile (Load rejects this, Compile panics on it). The check is
+		// kept for a hand-built Requirement that bypasses both. Such a Requirement gets no rule,
+		// instead of one that matches the empty suffix, i.e. every net on the board.
 		return nil
 	}
 	// The termination-specific rules as legible datalog. terminated(?h) holds for a high-suffix net
 	// that reaches a low-suffix net through the series-passive walk, meaning a resistor (or split
 	// pair) bridges the pair. reaches does NOT cross the multi-pin transceiver, so this finds the
 	// terminator, not the IC that drives both lines. unterminated(?h) holds when a high net exists,
-	// the bus is in use, and nothing terminates it. The per-signal presence rules (which define
-	// in_use) are generated from the profile's signal list, so they are appended as AST rather than
-	// inlined into this text.
+	// the bus is in use, and nothing terminates it. The per-signal presence rules define in_use. They
+	// are generated from the profile's signal list, so they are appended as AST rather than inlined
+	// into this text.
 	if p.Instance != "" {
 		return busTerminationRule(p, high, low)
 	}
@@ -64,13 +64,14 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 		 unterminated(?h) :- component.net(?r, ?h), str.suffix(?h, %q), in_use(?iu), not any_term("x");
 		 unterminated(?h) => ?h`, high, low, high))
 	tq.Rules = append(p.presenceRules(), tq.Rules...)
-	// The considered set: the high-side nets of a bus the presence gate says is in use, which is
-	// `unterminated` without its negated clause. A high net here and absent from the findings is one
-	// the series walk bridged to its low twin through a passive, so the pair is terminated.
+	// term_scope is the considered set. It is `unterminated` without its negated clause, so it holds
+	// the high-side nets of a bus the presence gate says is in use. Suppose a high net is in term_scope
+	// and absent from the findings. Then the series walk bridged it to its low twin through a passive,
+	// so the pair is terminated.
 	//
 	// The domain is per HIGH NET, not per bus. Two CAN segments share one `any_term` fact, so a board
-	// with two buses and one terminator reports both as terminated. That limit is the rule's own and
-	// predates the considered set, which only makes it visible on the coverage line.
+	// with two buses and one terminator reports both as terminated. The rule had that limit before the
+	// considered set existed. The considered set only makes it visible on the coverage line.
 	dq := query.MustParse(fmt.Sprintf(
 		`term_scope(?h) :- component.net(?r, ?h), str.suffix(?h, %q), in_use(?iu);
 		 term_scope(?h) => ?h`, high))
@@ -78,10 +79,10 @@ func terminationRule(p Profile, req Requirement) *check.Rule {
 	return terminationFrom(p, high, low, tq, dq)
 }
 
-// busTerminationRule is the termination check for an instance-keyed profile, judged one bus at a time:
-// a bus in use whose stem's high net reaches no stem's low net through a passive. Each bus answers for
-// itself, so a terminator on one bus no longer clears another, which is the design-wide any_term limit
-// the profile without an instance key keeps (agni issue 162).
+// busTerminationRule is the termination check for an instance-keyed profile, judged one bus at a time.
+// It fires on a bus in use when the stem's high net does not reach the same stem's low net through a
+// passive. Each bus answers for itself, so a terminator on one bus no longer clears another. A profile
+// without an instance key still has that design-wide any_term limit (agni issue 162).
 func busTerminationRule(p Profile, high, low string) *check.Rule {
 	tq := query.MustParse(fmt.Sprintf(
 		`terminated(?s) :- anchor_bus(?a, ?s), str.concat(?s, %q, ?h), str.concat(?s, %q, ?l), net.reaches(?h, ?l);

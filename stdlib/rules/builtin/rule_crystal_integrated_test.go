@@ -94,8 +94,8 @@ func TestAnIntegratedLoadCapCreditsOnlyThePinItIsBoundTo(t *testing.T) {
 }
 
 // With no datasheet for the RTC the terminal still fails, and the witness says the absence is
-// unverified and names the part it could not read. Its finding message stays the one the datalog
-// twin produces.
+// unverified and names the part it could not read. Its finding message still matches the message
+// the datalog twin produces.
 func TestACrystalOnAnUnreadICIsReportedUnverified(t *testing.T) {
 	vs := crystalVerdicts(t, check.NewModel(rtcDesign()))
 	for _, sub := range []string{"Y1.1", "Y1.2"} {

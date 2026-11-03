@@ -14,9 +14,9 @@ import (
 // TestBuiltinRelationsRegisteredWithQuery is the registration-hook guard (issue 10): blank-importing
 // stdlib/relations must install the built-in EDB relations into the query engine through
 // facts.RegisterBuiltinFacts, so query.Catalog lists them and query.NewBase projects them. Before
-// this package existed the query engine held these relations directly; if the init or the
-// RegisterBuiltinFacts payload ever regressed (a dropped projector, an empty schema), this fails
-// where the byte-identical CLI checks might not pinpoint the wiring.
+// this package existed, the query engine held these relations directly. Suppose the init or the
+// RegisterBuiltinFacts payload regresses, through a dropped projector or an empty schema. This test
+// then fails on the wiring, where the byte-identical CLI checks might not pinpoint it.
 func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 	// The catalog lists the built-in relations, with their kinds, once relations is imported.
 	want := map[string]string{
@@ -36,7 +36,7 @@ func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 	}
 
 	// NewBase projects the built-in relations from a Model, so a component on a net yields a
-	// component.net fact, which is empty when the built-ins are not registered.
+	// component.net fact. Without the built-ins registered, that relation is empty.
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "t"}}},
 		Nets: []*ir.Net{{Name: "N1", Prov: &ir.Provenance{SourceFile: "t"},
@@ -51,9 +51,9 @@ func TestBuiltinRelationsRegisteredWithQuery(t *testing.T) {
 	}
 }
 
-// TestBuiltinRelationCollisionDetected proves the schema half of the registration wired: composing an
-// overlay relation on a built-in name must fail, which only works if RegisterBuiltinFacts installed
-// that name into the vocabulary this package registers.
+// TestBuiltinRelationCollisionDetected proves that the schema half of the registration is wired.
+// Composing an overlay relation on a built-in name must fail. That works only if
+// RegisterBuiltinFacts installed the name into the vocabulary that this package registers.
 func TestBuiltinRelationCollisionDetected(t *testing.T) {
 	opt := facts.WithRelation("component.mpn", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
 	if _, err := facts.NewRegistry(append(facts.Registered(), opt)...); err == nil {

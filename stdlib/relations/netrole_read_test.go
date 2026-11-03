@@ -9,9 +9,9 @@ import (
 )
 
 // TestNetRoleStampedIsAuthoritative (WS3-072) checks that the core reads the STAMPED net.role fact,
-// not the name, when a net carries one. A net named "MYSTERY" (which no naming pattern matches) but
-// stamped with the ground role projects a net.ground fact, which proves the read comes from the
-// field, not a re-run of the name lexicon. This is the left-shift made observable: had the
+// not the name, when a net has one. No naming pattern matches a net named "MYSTERY". Stamped
+// with the ground role, it still projects a net.ground fact. That proves the read comes from the
+// field, not a re-run of the name lexicon, and so makes the left-shift observable. Had the
 // projector still called IsGroundName, MYSTERY would yield nothing.
 func TestNetRoleStampedIsAuthoritative(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
@@ -23,9 +23,10 @@ func TestNetRoleStampedIsAuthoritative(t *testing.T) {
 	}
 }
 
-// TestNetRoleFallsBackToName (WS3-072) checks that a net with NO stamped roles (a hand-authored
-// test IR that skipped the ingestion pass) re-derives its role from the name, so behavior is
-// unchanged for every existing fixture. A plain GND net still grounds; a signal net still does not.
+// TestNetRoleFallsBackToName (WS3-072) checks that a net with NO stamped roles re-derives its role
+// from the name. A hand-authored test IR that skipped the ingestion pass has such nets, so behavior
+// is unchanged for every existing fixture. A plain GND net still grounds; a signal net still does
+// not.
 func TestNetRoleFallsBackToName(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
 		{Name: "GND", Prov: &ir.Provenance{SourceFile: "t"}},

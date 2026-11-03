@@ -19,7 +19,7 @@ var duplicateRefDes = &check.Rule{
 	Reads:      []string{"reader.ref_des_collision"},
 	// The rule IS the reader's diagnostic, so a reader that does not compute it leaves this rule
 	// with nothing to report, the same output as a clean design. Gating on the capability makes the
-	// rule not-applicable, with a reason, instead of a pass nobody earned (agni issue 309).
+	// rule not-applicable, with a reason, instead of a pass with no check behind it (agni issue 309).
 	RequiresCapability: []check.Capability{check.CapRefDesCollisions},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,
@@ -33,16 +33,17 @@ var duplicateRefDes = &check.Rule{
 }
 
 // duplicateRefDesVerdicts decides every designator the design carries, a wider set than the reader's
-// collision list. A collision list alone answers
-// "which designators are claimed twice"; the considered set answers "which designators were checked
-// for that", and those differ by every part on the board.
+// collision list. A collision list alone answers "which designators are claimed twice". The
+// considered set answers "which designators were checked for that", and the two differ by every part
+// on the board.
 //
 // THE CAPABILITY GATE IS RESTATED HERE, over the PASSES ONLY. `Run` does not consult
-// RequiresCapability (the review layer does), so on a format whose reader never looks for collisions
-// this Eval still runs and finds none, which reads as a clean design. The rule-level gate from agni
-// issue 309 covers only callers that ask Available first. A caller that skipped Available must not be
-// told "R7 has no collision", so those subjects come back NotConsidered instead. A reported collision
-// needs no such hedge, since the reader cannot report one without having looked.
+// RequiresCapability (the review layer does). Imagine a format whose reader never looks for
+// collisions. This Eval still runs there and finds none, and that reads as a clean design. The
+// rule-level gate from agni issue 309 covers only callers that ask Available first. A caller that
+// skipped Available must not be told "R7 has no collision", so those subjects come back
+// NotConsidered instead. A reported collision needs no such hedge, since the reader cannot report
+// one without having looked.
 //
 // The fails come first and in the reader's own order so the findings projection is byte-identical to
 // what this rule has always reported. Passes follow in design order, deduplicated by designator,
@@ -76,8 +77,8 @@ func duplicateRefDesVerdicts(ctx context.Context, m check.Model) []check.Verdict
 			v.Outcome = check.Pass
 			v.Witness = &check.Witness{
 				// The reader is the authority on multi-unit versus duplicate (one part drawn as
-				// three sections is not a collision), so the pass rests on the same judgement the
-				// failure does rather than on a second count taken here that could disagree with it.
+				// three sections is not a collision). So the pass uses the same judgement as the
+				// failure, not a second count taken here that could disagree with it.
 				Statement: fmt.Sprintf("the reader found no second physical part claiming %q", ref),
 			}
 		}
@@ -88,8 +89,7 @@ func duplicateRefDesVerdicts(ctx context.Context, m check.Model) []check.Verdict
 
 // dedupedRefDes yields the design's designators once each, in design order, skipping the empty one.
 // A part with no designator has no identity to collide on and nothing to name in a report, so it is
-// not a subject of this rule at all; unannotated-components is the rule that has something to say
-// about it.
+// not a subject of this rule at all. unannotated-components reports it instead.
 func dedupedRefDes(m check.Model) []string {
 	seen := map[string]bool{}
 	var out []string

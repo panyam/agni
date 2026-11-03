@@ -50,19 +50,19 @@ func TestNetRoleProjectsEveryStampedRole(t *testing.T) {
 			t.Errorf("net.role(%s, %s) missing; got %v", c.net, c.role, got[c.net])
 		}
 	}
-	// A net can carry several, and 12V_SW is rail by prefix and switching by suffix.
+	// A net can have several, and 12V_SW is rail by prefix and switching by suffix.
 	if !got["12V_SW"][classify.RoleToken(ir.Role_ROLE_RAIL)] {
 		t.Errorf("net.role must emit EVERY role, not the first: 12V_SW = %v", got["12V_SW"])
 	}
-	// The negative half. A plain signal carries none.
+	// The negative half. A plain signal has none.
 	if len(got["SDA"]) != 0 {
 		t.Errorf("net.role(SDA) = %v, want no rows", got["SDA"])
 	}
 }
 
-// TestEveryRoleInTheVocabularyIsProjectable is the ratchet. classify.AllNetRoles is what the projector
-// iterates, so a role added to the token list and forgotten here is invisible to every query, which is
-// how control and gate_drive spent a release unqueryable.
+// TestEveryRoleInTheVocabularyIsProjectable is the ratchet. The projector iterates
+// classify.AllNetRoles. A role added to the token list and forgotten here is invisible to every
+// query. control and gate_drive went a release unqueryable that way.
 func TestEveryRoleInTheVocabularyIsProjectable(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(rolesDesign())))
 	seen := map[string]bool{}

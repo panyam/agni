@@ -8,9 +8,9 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// undeclaredCellDesign places R1 and R2 from a cell RES no library declares, and U1 from a part type
-// that declares pin 1 alone while the netlist also connects its pin 2, so the two cases a pin read
-// off a connection could cover sit side by side.
+// undeclaredCellDesign places R1 and R2 from a cell RES that no library declares. It places U1 from
+// a part type that declares pin 1 alone, while the netlist also connects its pin 2. A pin read off a
+// connection could cover either case, and the two sit side by side.
 func undeclaredCellDesign() *ir.Design {
 	return &ir.Design{
 		SourceFormat: "edif",
@@ -26,9 +26,9 @@ func undeclaredCellDesign() *ir.Design {
 	}
 }
 
-// agni issue 975: a part from a cell the file never declares has the pins its connections name, so
-// pin.net answers the same connections net.pin_count counts. Its pins carry no direction, since no
-// library gave one, so pin.type says nothing rather than "unspecified".
+// In agni issue 975, a part from a cell the file never declares gets the pins its connections name.
+// pin.net then answers for the same connections that net.pin_count counts. No library gave its pins
+// a direction, so pin.type says nothing rather than "unspecified".
 func TestAPartFromAnUndeclaredCellHasThePinsItsConnectionsName(t *testing.T) {
 	m := check.NewModel(undeclaredCellDesign())
 	byRel := factsByRelation(Facts(m))

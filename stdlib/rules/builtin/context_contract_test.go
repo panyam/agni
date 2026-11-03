@@ -11,14 +11,15 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// The contract every Finding.Context entry has to satisfy, asserted over whatever the catalog
-// actually fires rather than rule by rule (agni issue 349, sweep agni issue 361).
+// assertContextContract checks the contract every Finding.Context entry has to satisfy. It asserts
+// over whatever the catalog actually fires rather than rule by rule (agni issue 349, sweep agni
+// issue 361).
 //
-// Written as a property over the whole catalog. The per-rule tests below assert that a
-// given rule DOES carry context; this asserts that no rule carries it WRONGLY, and it keeps holding
-// for rules converted later without anybody remembering to add a check. The failure modes it catches
-// are the four the authoring convention warns about, and all four produce a chip that looks fine and
-// misbehaves when clicked.
+// It is written as a property over the whole catalog. The per-rule tests below assert that a given
+// rule DOES carry context. This asserts that no rule carries it WRONGLY, and it still holds for rules
+// converted later without anybody remembering to add a check. The authoring convention warns about
+// four failure modes, and this catches all four. Each produces a chip that looks fine and misbehaves
+// when clicked.
 func assertContextContract(t *testing.T, fs []check.Finding) {
 	t.Helper()
 	for _, f := range fs {
@@ -49,8 +50,8 @@ func assertContextContract(t *testing.T, fs []check.Finding) {
 			}
 			// What the message has to NAME depends on the kind. A pin context on a component-subject
 			// finding shares the subject's ref des, and the message names the pin DESIGNATOR ("pin 1"),
-			// not the ref des, because the ref des is already the subject. Checking the ref there would
-			// fail on correct rules, which is what the first version of this helper did.
+			// not the ref des, because the ref des is already the subject. The first version of this
+			// helper checked the ref there and failed on correct rules.
 			named := c.Ref
 			if c.Kind == check.KindPin && c.Pin != "" {
 				named = c.Pin
@@ -85,8 +86,8 @@ func ctxOf(f check.Finding) map[string]check.ContextSubject {
 }
 
 // Every rule converted in the agni issue 361 sweep, asserted through the fixture its own test already
-// builds. Each case says which entity the message names that the subject is not, because that is the
-// question the conversion answers and the thing a later refactor could silently drop.
+// builds. Each case says which entity the message names beyond the subject. The conversion added
+// that entity, and a later refactor could silently drop it.
 func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 	t.Run("fet-vdss-below-rail names the rail", func(t *testing.T) {
 		m := check.NewModel(fetDesign("+60V", ""), check.WithParamProvider(param.ParamSet{"ACME-FET": fetSpec("ACME-FET", 50)}))
@@ -140,7 +141,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 		if by["terminal"].Kind != check.KindNet {
 			t.Errorf("terminal context = %+v, want a net", by["terminal"])
 		}
-		// The cap is what a reader DELETES, so it is the actionable half and must be reachable.
+		// A reader DELETES the cap, so it is the actionable half and must be reachable.
 		if by["capacitor"].Kind != check.KindComponent {
 			t.Errorf("capacitor context = %+v, want a component", by["capacitor"])
 		}
@@ -199,7 +200,7 @@ func TestSweptRulesCarryTheEntitiesTheyName(t *testing.T) {
 		if by["controller"].Kind != check.KindComponent || by["sense"].Kind != check.KindComponent {
 			t.Errorf("context = %+v, want a controller and a sense resistor", fs[0].Context)
 		}
-		// The subject is the FET because it is what overheats, but the fix is usually one of these.
+		// The subject is the FET because the FET overheats, but the fix is usually one of these.
 		for _, c := range fs[0].Context {
 			if c.Ref == fs[0].Subject.Ref {
 				t.Errorf("context repeats the subject %q", fs[0].Subject)

@@ -29,14 +29,14 @@ var danglingEndpoint = &check.Rule{
 	//
 	// `dangling_endpoints` holds the wire ends that terminate on nothing, and nothing counts the wire
 	// ends that terminate on something. The Model has no set of everything the reader examined, so
-	// mapping verdicts over it would reproduce the failure list and present it as the coverage claim
-	// StatesConsideredSet exists to withhold.
+	// mapping verdicts over it would reproduce the failure list and present it as a coverage claim.
+	// StatesConsideredSet exists to withhold that claim.
 	//
 	// bus-not-modeled is the diagnostic rule that CAN state one.
 	// `unmodeled_buses` holds every bus construct the reader saw and the rule partitions it, so a bus
-	// whose members are already nets is a pass the reader made visible. Doing the same here means a
-	// reader recording what it looked at, alongside the `supplied` flag that already records THAT it
-	// looked. That is a reader-and-IR change rather than a rule conversion.
+	// whose members are already nets is a pass the reader made visible. Doing the same here needs the
+	// reader to record what it looked at. The `supplied` flag already records THAT it looked. So the
+	// change belongs in the reader and the IR rather than in a rule conversion.
 	// Its subjects are wire ends, which no net or part names, so a run asked about some
 	// nets or parts leaves it out (agni issue 897).
 	Scoping: check.ScopeDesignWide,

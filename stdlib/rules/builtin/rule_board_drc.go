@@ -12,14 +12,14 @@ import (
 // expresses directly, and the first rules quantifying the board.nets entity set. The fourth
 // (copper-clearance, rule_copper_clearance.go) is a pairwise spatial join the AST does not
 // express yet. Per the WS3-008 overfitting guard, a geometry-query primitive must be evidenced
-// by more than one rule before it earns an AST node, and this batch is that evidence.
+// by more than one rule before it gets an AST node, and this batch is that evidence.
 //
 // A board that declares its own minimums is checked against them (agni issue 933), because the
 // declaration is the designer saying which fabrication process the board is routed for, and an HDI
 // board at 0.1mm is a design for a finer fab rather than 1300 defects. A board declaring none is
 // checked against the loosest common fabrication floors from the corpus JLCPCB capability rules
-// (corpus/rules/kicad-dru/cimos-jlcpcb, MIT), which a mainstream fab cannot manufacture below at
-// all. Every finding names which of the two it was measured against.
+// (corpus/rules/kicad-dru/cimos-jlcpcb, MIT). A mainstream fab cannot manufacture below those floors
+// at all. Every finding names which of the two it was measured against.
 //
 // Subjects are the owning net (KindNet), one finding per net per rule with the violation
 // count in the message, because copper primitives have no stable identity. Per-violation
@@ -33,8 +33,8 @@ const (
 	minClearanceNm  = 127_000 // 0.127mm (5mil) minimum copper-to-copper spacing
 )
 
-// boardFloor names one of the board-wide minimums: the default floor, the name a finding gives it, and
-// where a declaration sits in check.BoardRules.
+// boardFloor names one of the board-wide minimums. It holds the default floor, the name a finding
+// gives it, and where a declaration sits in check.BoardRules.
 type boardFloor struct {
 	dflt     int64
 	dfltDesc string
@@ -48,8 +48,8 @@ var boardFloors = map[string]boardFloor{
 	"clearance": {minClearanceNm, "0.127mm fabrication floor", func(r check.BoardRules) int64 { return r.ClearanceNm }},
 }
 
-// floorFor is the minimum a board's copper is held to for one quantity, and how a finding names it:
-// the board's own declaration when it makes one, else the default floor.
+// floorFor returns the minimum a board's copper is held to for one quantity, and the name a finding
+// gives it. The board's own declaration wins when it makes one. Otherwise the default floor applies.
 func floorFor(m check.Model, which string) (int64, string) {
 	f := boardFloors[which]
 	if nm := f.declared(m.BoardRules()); nm > 0 {
@@ -58,9 +58,9 @@ func floorFor(m check.Model, which string) (int64, string) {
 	return f.dflt, f.dfltDesc
 }
 
-// registerBoardFloors registers the Spec functions the threshold rules read their floor through. Each
-// rule's initializer calls it, because a Spec validates its Calls when it binds, and registering again
-// replaces a function with itself.
+// registerBoardFloors registers two Spec functions, and the threshold rules read their floor through
+// them. Each rule's initializer calls it, because a Spec validates its Calls when it binds.
+// Registering again replaces a function with itself.
 func registerBoardFloors() {
 	which := func(args []any) string {
 		s, _ := args[0].(string)
@@ -85,7 +85,8 @@ func registerBoardFloors() {
 	})
 }
 
-// floorLets are the Let bindings a threshold rule compares against and names in its message.
+// floorLets adds the floor's Let bindings. A threshold rule compares against them and names them in
+// its message.
 func floorLets(which string, extra map[string]check.Term) map[string]check.Term {
 	extra["floor"] = check.Call{Fn: "board_floor", Args: []check.Term{check.Lit{V: which}}}
 	extra["floor_desc"] = check.Call{Fn: "board_floor_desc", Args: []check.Term{check.Lit{V: which}}}

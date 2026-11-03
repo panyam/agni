@@ -11,10 +11,10 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// xlatSpec hand-builds the part the pin tier exists for, with two supply terminals with DIFFERENT
-// limits, so the most-restrictive-row shortcut the alias-path rules take is wrong on it. Values
-// mirror the seeded TXB0104 (VCCA 1.2..3.6 recommended, 4.6 abs-max; VCCB 1.65..5.5 recommended,
-// 6.5 abs-max) without depending on that fixture.
+// xlatSpec hand-builds the kind of part the pin tier exists for. It has two supply terminals with
+// DIFFERENT limits. The alias-path rules take a most-restrictive-row shortcut, and that shortcut is
+// wrong on this part. Values mirror the seeded TXB0104 (VCCA 1.2..3.6 recommended, 4.6 abs-max;
+// VCCB 1.65..5.5 recommended, 6.5 abs-max) without depending on that fixture.
 func xlatSpec(mpn string) *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
 	prov := func() *parampb.ParamProvenance {
@@ -74,8 +74,8 @@ func xlatModel(t *testing.T, netA, netB string) check.Model {
 	return check.NewModel(xlatDesign("ACME-XLAT", netA, netB), check.WithParamProvider(param.ParamSet{"ACME-XLAT": xlatSpec("ACME-XLAT")}))
 }
 
-// The rule's reason for existing is that 5V on VCCB is WITHIN that terminal's 6.5V absolute maximum
-// and must not fire. The alias path applies the most restrictive row across every power-in pin, so it
+// This rule exists because 5V on VCCB is WITHIN that terminal's 6.5V absolute maximum and must not
+// fire. The alias path applies the most restrictive row across every power-in pin, so it
 // checks VCCB against VCCA's 4.6V and reports a violation that is not there.
 func TestPinAbsMaxDoesNotFireOnAPinRatedForTheRail(t *testing.T) {
 	m := xlatModel(t, "+3V3", "+5V")
@@ -105,7 +105,7 @@ func TestPinAbsMaxFiresOnTheTerminalThatIsActuallyOver(t *testing.T) {
 	}
 }
 
-// The recommended-range rule answers per terminal on a part rail-nominal-out-of-recommended skips
+// The recommended-range rule answers per terminal. rail-nominal-out-of-recommended skips this part
 // entirely, because that rule acts only on a spec with exactly ONE recommended row.
 func TestPinOutOfRecommendedAnswersPerTerminal(t *testing.T) {
 	m := xlatModel(t, "+5V", "+5V") // over VCCA's 3.6 max, inside VCCB's 1.65..5.5
@@ -121,8 +121,8 @@ func TestPinOutOfRecommendedAnswersPerTerminal(t *testing.T) {
 	}
 }
 
-// A rail below a terminal's recommended MINIMUM is as much a breach as one above its maximum, and
-// the two-sided answer is what the alias path could not give for a multi-supply part.
+// A rail below a terminal's recommended MINIMUM is as much a breach as one above its maximum. The
+// alias path could not give that two-sided answer for a multi-supply part.
 func TestPinOutOfRecommendedCatchesUnderVoltage(t *testing.T) {
 	m := xlatModel(t, "+3V3", "+1V2") // VCCB minimum is 1.65
 	fs := pinOutOfRecommended.Findings(context.Background(), m)
@@ -176,9 +176,10 @@ func TestPinRatingRulesSilentWithoutTheirInputs(t *testing.T) {
 	}
 }
 
-// A design pin the spec cannot resolve unambiguously must produce nothing. Two spec pins share the
-// name the design uses and no package is identified, so ResolvePin refuses. That refusal is the
-// safety property, and a rule that fell back to the first match would report on a guessed terminal.
+// When the spec cannot resolve a design pin unambiguously, the rule must produce nothing. Two spec
+// pins share the name the design uses and no package is identified, so ResolvePin refuses. That
+// refusal is the safety property. A rule that fell back to the first match would report on a guessed
+// terminal.
 func TestPinRatingSkipsAnUnresolvablePin(t *testing.T) {
 	spec := xlatSpec("ACME-XLAT")
 	spec.Pins[1].Name = "VCCA" // both terminals now print VCCA; the name no longer separates them

@@ -159,7 +159,7 @@ func TestTheSweepMeasuresWhatEveryPairMeasured(t *testing.T) {
 			}
 		}
 	}
-	// Positive control: the boards hold failing and passing pairs both, so agreeing covers each.
+	// The positive control. The boards hold both failing and passing pairs, so agreeing covers each.
 	if fails < 100 || passes < 100 {
 		t.Fatalf("the boards compared gave %d failing and %d passing pairs, too few to prove the sweep", fails, passes)
 	}
@@ -167,8 +167,8 @@ func TestTheSweepMeasuresWhatEveryPairMeasured(t *testing.T) {
 
 // agni issue 1070: asked about some nets, the rule measures only their segments' neighbours, and its
 // answer must be the full sweep's verdicts about those nets, count for count. The scopes here hold
-// one net, and two or three nets that are each other's neighbours, which is the case where a pair
-// could be measured from both ends.
+// one net, and two or three nets that are each other's neighbours. In that second case a pair could
+// be measured from both ends.
 func TestAScopedSweepGivesTheFullSweepsVerdictsAboutItsNets(t *testing.T) {
 	asked, both := 0, 0
 	for seed := int64(1); seed <= 25; seed++ {
@@ -193,8 +193,8 @@ func TestAScopedSweepGivesTheFullSweepsVerdictsAboutItsNets(t *testing.T) {
 			}
 		}
 	}
-	// Positive control: some answers are pairs both of whose nets were asked about, the case a pair
-	// measured from both ends would double count.
+	// The positive control. Some answers are pairs whose two nets were both asked about, and a pair
+	// measured from both ends would be double counted there.
 	if asked < 100 || both < 10 {
 		t.Fatalf("%d scoped questions, %d pairs inside a scope, too few to prove anything", asked, both)
 	}

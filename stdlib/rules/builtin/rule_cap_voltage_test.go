@@ -174,8 +174,8 @@ func TestCapVoltageSkipsNotFalsePasses(t *testing.T) {
 
 // TestCapVoltageReadsMillivoltRows (agni issue 148): 6300 mV and 6.3 V are ONE rated-voltage row
 // written two ways, and a 6.3V cap on a 10V rail is under-rated either way. The millivolt spelling
-// used to fail the extractor's unit gate, so the rule compared nothing and the item scored a PASS on a
-// capacitor the design will destroy.
+// used to fail the extractor's unit gate, so the rule compared nothing. The item scored a PASS, and
+// the design will destroy that capacitor.
 func TestCapVoltageReadsMillivoltRows(t *testing.T) {
 	d := capDesign("+10V", "DEMO-CAP-6V3")
 	volts := runCapRule(t, d, param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)})

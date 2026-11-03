@@ -10,7 +10,7 @@ import (
 )
 
 // fourHopBus is SDA_MAIN reaching +3V3 through four series resistors, one past the default reach.
-// SCL rides along with a direct pull-up so the run has a net the declaration does not name.
+// SCL has a direct pull-up, so the run has a net that the declaration does not name.
 func fourHopBus() ([]string, []*ir.Net) {
 	return []string{"U1", "R1", "R2", "R3", "R4", "R9"}, []*ir.Net{
 		tnet("SDA_MAIN", "U1.3", "R1.1"),
@@ -57,7 +57,7 @@ func TestDeclaredPullUpReachIsTheLimitTheWalkUses(t *testing.T) {
 	}
 
 	// A declared reach NARROWER than the path fails, and the witness names the declared number
-	// rather than the default, which is what tells a reader which limit the bus was held to.
+	// rather than the default. That tells a reader which limit the bus was held to.
 	tight := &configpb.DesignIntent{Nets: map[string]*configpb.NetIntent{"SDA_MAIN": {PullUpReachHops: 2}}}
 	refs2 := []string{"U1", "R1", "R2", "R3"}
 	nets2 := []*ir.Net{
@@ -81,7 +81,7 @@ func TestDeclaredPullUpReachIsTheLimitTheWalkUses(t *testing.T) {
 	}
 }
 
-// The declaration reaches every walk, not only i2c-pull-up: the redundant-pull-up count walks with
+// The declaration reaches every walk, not only i2c-pull-up. The redundant-pull-up count walks with
 // the same limit, so a second pull-up four resistors out is counted once the reach covers it.
 func TestDeclaredPullUpReachReachesTheCountRules(t *testing.T) {
 	refs := []string{"U1", "R1", "R2", "R3", "R4", "R5"}
@@ -198,7 +198,7 @@ func TestPullUpPassListsPathsToEachRail(t *testing.T) {
 	}
 }
 
-// The count rules carry i2c-pull-up's evidence (agni issue 1165). A bus pulled up twice, once
+// The count rules report i2c-pull-up's evidence (agni issue 1165). A bus pulled up twice, once
 // directly and once behind a series resistor, lists both as paths under each rule, and the hop in
 // between is context a reader can be sent to.
 func TestCountRulesListEveryPath(t *testing.T) {

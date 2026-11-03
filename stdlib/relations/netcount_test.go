@@ -7,9 +7,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// netCountDesign carries one of each case component.net_count has to tell apart: a two-terminal
-// part across two nets, a part with both pins on ONE net, a placed part wired to nothing, and a
-// connection naming a ref the design has no component record for.
+// netCountDesign holds one of each case that component.net_count has to tell apart. It has a
+// two-terminal part across two nets, a part with both pins on ONE net, a placed part wired to
+// nothing, and a connection naming a ref with no component record.
 func netCountDesign() *ir.Design {
 	comp := func(ref string) *ir.Component {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
@@ -81,8 +81,8 @@ func TestComponentNetCountAgreesWithComponentOnNet(t *testing.T) {
 	}
 }
 
-// TestComponentNetCountCitesTheComponent checks that a row cites the placement it rests on. A ref with
-// no component record has no placement to cite and cites nothing rather than inventing one.
+// TestComponentNetCountCitesTheComponent checks that a row cites its component's placement. A ref
+// with no component record has no placement to cite, so it cites nothing rather than inventing one.
 func TestComponentNetCountCitesTheComponent(t *testing.T) {
 	rows := factsByRelation(Facts(check.NewModel(netCountDesign())))[RelComponentNetCount]
 	if len(rows) == 0 {

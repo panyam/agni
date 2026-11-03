@@ -14,9 +14,9 @@ import (
 // WS3-114's shape, a rule opening with an unbound walk, is covered where it is now prevented, by
 // TestTheDefaultEvaluatorPlansAnUnboundWalk in core/query.
 //
-// A wall-clock assertion would be the obvious test and is the wrong one. It is flaky on CI and it
-// only fires on a design big enough to hurt, which no fixture in this repo is. That is why
-// the original regression shipped green.
+// A wall-clock assertion would be the obvious test and is the wrong one. It is flaky on CI. It also
+// fires only on a design big enough to hurt, and no fixture in this repo is that big. So the original
+// regression shipped green.
 func TestBuiltinsCompileAsInjective(t *testing.T) {
 	for _, c := range []struct {
 		name string
@@ -34,12 +34,12 @@ func TestBuiltinsCompileAsInjective(t *testing.T) {
 }
 
 // The gate has to REJECT, not merely exist. Compiling the built-ins proves nothing about the check
-// if the check never fires, which is the failure mode a lint is most prone to, passing forever
-// because it cannot see anything.
+// if the check never fires. A lint most often fails this way, and passes forever because it cannot
+// see anything.
 //
-// The shape here is the interface-presence rule with its disequality removed, which is the real bug
-// this guards. One matching signal would satisfy both has_signal atoms, so the interface reports
-// itself in use on half the evidence.
+// The shape here is the interface-presence rule with its disequality removed. That is the real bug
+// this guard exists for. One matching signal would satisfy both has_signal atoms, so the interface
+// reports itself in use on half the evidence.
 func TestGateRejectsANonInjectiveRule(t *testing.T) {
 	bad := query.MustParse(
 		`has_signal(?x) :- component.net(?x,?n); in_use(?x) :- has_signal(?x), has_signal(?y); in_use(?z) => ?z`)

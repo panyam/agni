@@ -39,7 +39,7 @@ func TestADoNotPopulatePullUpPullsNothing(t *testing.T) {
 	if got := verdictOn(t, i2cPullUpSplitRail, pullUpDesign(), "I2C_SCL"); got != string(check.Fail) {
 		t.Errorf("split-rail with both pull-ups fitted = %q, want fail", got)
 	}
-	// With every pull-up unfitted the line has none, which is the finding i2c-pull-up exists for.
+	// With every pull-up unfitted the line has none, and i2c-pull-up exists to find that.
 	if got := verdictOn(t, i2cPullUp, pullUpDesign("R1", "R2"), "I2C_SCL"); got != string(check.Fail) {
 		t.Errorf("i2c-pull-up with every pull-up unfitted = %q, want fail", got)
 	}
@@ -169,8 +169,8 @@ func TestAnUnfittedCircuitIsNotJudged(t *testing.T) {
 }
 
 // On the assembled board an unfitted part has no pins, so an input whose only pull is unfitted is
-// alone on its net and floats. A connector's pads stay the board's interface when its header is not
-// fitted, and an input that only unfitted parts listen to is no subject (agni issue 1082).
+// alone on its net and floats. A connector's pads are still the board's interface when its header
+// is not fitted. An input that only unfitted parts listen to is no subject (agni issue 1082).
 func TestFloatingInputCountsTheAssembledBoard(t *testing.T) {
 	in := ir.PinDirection_PIN_DIRECTION_INPUT
 	design := func(dnp ...string) *ir.Design {

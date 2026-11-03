@@ -18,7 +18,7 @@ var esdClampNotTVS = &check.Rule{
 	Primitives: []string{"reach", "select", "traverse", "exists", "pin-role", "pattern", "param-join"},
 	Reads:      []string{"component.class", "net.attributes", "net.names", "on_net", "pin.electrical_type", "pin.no_connect", "param.esd_rating"},
 	// The IC-ESD credit is an exemption rather than the finding basis, as on esd-protection, so the
-	// rule stays applicable over external nets with no --params.
+	// rule is still applicable over external nets with no --params.
 	OptionalReads: []string{"param.esd_rating"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
@@ -31,11 +31,11 @@ var esdClampNotTVS = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// esdClampNotTVSVerdicts decides the same externally-exposed signal nets esd-protection does, and the
+// esdClampNotTVSVerdicts decides the same externally-exposed signal nets as esd-protection, and the
 // two mirror each other. A bare net is esd-protection's finding and this rule's NotConsidered, and a
 // Zener-clamped net is this rule's finding and that one's NotConsidered. Stating the decline keeps the
-// WS3-078 split visible, since if both rules stayed silent on the other's turf, "clamped by the wrong
-// device class" and "clamped correctly" would read the same.
+// WS3-078 split visible. Suppose each rule were silent on the nets the other owns. Then "clamped by
+// the wrong device class" and "clamped correctly" would read the same.
 //
 // The question this rule asks is narrow (is the transient protection a Zener where the review wants
 // a TVS), so its passes are narrow too, and each names the device it credits.

@@ -86,9 +86,9 @@ func TestReverseBlockingSilentWithCorrectDiode(t *testing.T) {
 	}
 }
 
-// TestReverseBlockingFiresOnBackwardsDiode is the assertion that makes orientation matter. A
-// diode fitted the other way round blocks the SUPPLY rather than the fault, so it must not satisfy the
-// check. A rule that only asked "is a diode present" would pass this board.
+// TestReverseBlockingFiresOnBackwardsDiode makes orientation matter. A diode fitted the other way
+// round blocks the SUPPLY rather than the fault, so it must not satisfy the check. A rule that only
+// asked "is a diode present" would pass this board.
 func TestReverseBlockingFiresOnBackwardsDiode(t *testing.T) {
 	if fs := revFindings(revDesign("diode", true)); len(fs) != 1 {
 		t.Errorf("a reversed diode does not block reverse flow, want the finding: %+v", fs)
@@ -101,8 +101,8 @@ func TestReverseBlockingFiresOnBackwardsDiode(t *testing.T) {
 // would false-fail every ORing-FET design.
 //
 // This asserted SILENCE until agni issue 74 gave a rule somewhere to put "I could not decide".
-// Silence was the wrong answer for a reason invisible at this layer, because a review item bound to
-// the rule read it as PASS, so the report claimed protection on a path nothing had verified. The
+// Silence was the wrong answer, for a reason this layer cannot see. A review item bound to the rule
+// read the silence as PASS, so the report claimed protection on a path nothing had verified. The
 // finding must be Inconclusive, so it is neither a defect nor a pass.
 func TestReverseBlockingReportsUnclassifiableTransistor(t *testing.T) {
 	fs := revFindings(revDesign("transistor", false))
@@ -117,19 +117,19 @@ func TestReverseBlockingReportsUnclassifiableTransistor(t *testing.T) {
 	}
 }
 
-// TestReverseBlockingSilentOnIdentifiedController is the capability the class was added for. When a
-// datasheet IDENTIFIES the part as an ideal-diode / ORing / power-mux controller, the path carries a
-// directional element and the rule is genuinely silent.
+// TestReverseBlockingSilentOnIdentifiedController tests the capability the class was added for.
+// When a datasheet IDENTIFIES the part as an ideal-diode / ORing / power-mux controller, the path
+// carries a directional element and the rule is genuinely silent.
 //
 // It is the other half of the test above, and the two are meant as a pair. Before this, "verified
 // protected" and "could not tell" were the same silence, so classification could not have changed
-// any observable behaviour. Now they are distinguishable, which is what lets a bound review item
-// read a real pass.
+// any observable behaviour. Now they are distinguishable, so a bound review item can read a real
+// pass.
 func TestReverseBlockingSilentOnIdentifiedController(t *testing.T) {
-	// The controller is a SEPARATE part from the FET it drives, which is both the real topology and
-	// what makes this test able to fail. Stamping the class onto the FET itself would stop it being
-	// classified a transistor at all, so the path would go silent by falling through rather than by
-	// the controller being credited, and deleting the credit branch would not fail this test.
+	// The controller is a SEPARATE part from the FET it drives. That matches the real topology, and
+	// it lets this test fail. Stamping the class onto the FET itself would stop it being classified
+	// a transistor at all. The path would then go silent by falling through, not by crediting the
+	// controller, and deleting the credit branch would not fail this test.
 	d := revDesign("transistor", false)
 	d.Components = append(d.Components, &ir.Component{
 		RefDes:        "U9",
@@ -163,15 +163,13 @@ func TestReverseBlockingIgnoresConnectorlessPath(t *testing.T) {
 	}
 }
 
-// TestReverseBlockingTransistorBeatsBackwardsDiode is what makes the transistor branch matter rather
-// than decorative. Silence on a transistor is otherwise just the default, since a transistor is not
-// a diode and so never sets the finding, and a test with only a transistor passes whether the guard
-// exists or not (verified by deleting it).
+// TestReverseBlockingTransistorBeatsBackwardsDiode tests the transistor branch where it changes the
+// answer. A transistor is not a diode, so it never sets the failing finding by itself.
 //
-// The guard earns its place when BOTH bridge the neighbourhood, a backwards diode on one leg and a
-// FET on another. The FET may be an ideal diode protecting the board, so the correct report is silence,
-// not a finding derived from the leg we happened to understand. Unclassifiable beats partially
-// classified.
+// The guard matters when BOTH bridge the neighbourhood, a backwards diode on one leg and a FET on
+// another. The FET may be an ideal diode protecting the board, so the correct report is one
+// inconclusive finding, not a fail derived from the leg we happened to understand. Unclassifiable
+// beats partially classified.
 func TestReverseBlockingTransistorBeatsBackwardsDiode(t *testing.T) {
 	d := revDesign("diode", true) // J1 -> VIN -> D1 (backwards) -> VOUT -> U1 power input
 	// A second leg off VIN, a transistor to its own load.
@@ -197,11 +195,11 @@ func TestReverseBlockingTransistorBeatsBackwardsDiode(t *testing.T) {
 	}
 }
 
-// revShuntClampDesign models the false fire in issue 63's first mechanism. A high-side switch output
-// drives a load connector and carries a FREEWHEEL diode, anode on ground, cathode on the switched
-// output. That diode is a shunt clamp beside the path, not a series element in it, so it says nothing
-// about reverse blocking. U1's ground pin is declared power_in, which is ordinary, and is what made the
-// far side of the clamp look like a load.
+// revShuntClampDesign models the false fire in issue 63's first mechanism. A high-side switch
+// output drives a load connector and carries a FREEWHEEL diode, anode on ground, cathode on the
+// switched output. That diode is a shunt clamp beside the path, not a series element in it, so it
+// says nothing about reverse blocking. U1's ground pin is declared power_in. That is ordinary, and
+// it made the far side of the clamp look like a load.
 func revShuntClampDesign() *ir.Design {
 	load := &ir.PartType{Name: "LOAD", Pins: []*ir.Pin{
 		{Name: "GND", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
@@ -225,7 +223,7 @@ func revShuntClampDesign() *ir.Design {
 	}
 }
 
-// TestReverseBlockingIgnoresShuntClamp (issue 63) checks that a diode whose far terminal lands on
+// TestReverseBlockingIgnoresShuntClamp (issue 63) checks that a diode whose far terminal sits on
 // GROUND is a shunt clamp, and the rule must not evaluate it as a reverse-blocking candidate at
 // all.
 //
@@ -243,7 +241,7 @@ func TestReverseBlockingIgnoresShuntClamp(t *testing.T) {
 //
 // The transistor guard reached the part only through farNet, which returns nil for anything touching
 // more than one net outside the reach set. A 3-terminal FET touches two, so the guard was skipped and
-// the diode drove the finding. A 2-terminal stand-in cannot catch this, which is why the existing
+// the diode drove the finding. A 2-terminal stand-in cannot catch this, so the existing
 // TestReverseBlockingTransistorBeatsBackwardsDiode passed throughout.
 func revMultiTerminalFETDesign() *ir.Design {
 	load := &ir.PartType{Name: "LOAD", Pins: []*ir.Pin{
@@ -283,9 +281,9 @@ func revMultiTerminalFETDesign() *ir.Design {
 // ANYWHERE on the neighbourhood makes the arrangement unclassifiable, however many terminals it
 // has.
 //
-// This is the 14-net half of the real-board false fires. The rule's safety posture is that it
-// stays silent on a possible ORing FET or ideal diode rather than false-failing a correct design, and
-// a guard that only recognises 2-terminal parts does not deliver it for any real MOSFET.
+// This is the 14-net half of the real-board false fires. For safety the rule reports a possible
+// ORing FET or ideal diode as inconclusive rather than false-failing a correct design. A guard that only
+// recognises 2-terminal parts does not deliver that for any real MOSFET.
 func TestReverseBlockingGuardCountsMultiTerminalTransistor(t *testing.T) {
 	fs := revFindings(revMultiTerminalFETDesign())
 	if len(fs) != 1 || !fs[0].Inconclusive {

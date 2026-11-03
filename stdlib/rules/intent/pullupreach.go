@@ -8,8 +8,8 @@ import (
 )
 
 // pullUpReachDeclaredRule decides every net the declaration gives a pull-up reach. The reach itself
-// takes effect in the model (check.WithIntent), keyed by the exact net name, so this rule's job is to
-// catch a declaration that cannot have: a net name the design does not carry (agni issue 1165).
+// takes effect in the model (check.WithIntent), keyed by the exact net name. So this rule catches a
+// declaration that cannot take effect, one naming a net the design does not carry (agni issue 1165).
 func pullUpReachDeclaredRule(d Declaration) *check.Rule {
 	return &check.Rule{
 		Name:                RulePullUpReachDeclared,

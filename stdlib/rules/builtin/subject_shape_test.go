@@ -8,12 +8,12 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// A rule's subject ARITY is fixed, and a declared shape is what a person needs to construct an id
-// without running the check first.
+// A rule's subject ARITY is fixed, and a person needs a declared shape to construct an id without
+// running the check first.
 //
-// The undeclared case is the ordinary one and means a 1-tuple. That is checked too, and it is the
-// half that catches a mistake, since a rule that grew a second subject element without saying so
-// would produce ids nothing can index, and nothing else in the build would notice.
+// The undeclared case is the ordinary one and means a 1-tuple. That is checked too, and that half
+// catches a mistake. A rule that grew a second subject element without saying so would produce ids
+// nothing can index, and nothing else in the build would notice.
 func TestSubjectShapeHolds(t *testing.T) {
 	for _, tc := range []struct {
 		name string
@@ -84,15 +84,15 @@ func TestFindingSubjectComesFromTheVerdictsTuple(t *testing.T) {
 			}
 		}
 	}
-	// The positive control. A run with no failing verdict asserts nothing, which is the shape this
-	// catalog treats as the expensive failure.
+	// The positive control. A run with no failing verdict asserts nothing, and this catalog treats
+	// that shape as the expensive failure.
 	if checked == 0 {
 		t.Fatal("no verdict carried a finding, so this test compared nothing")
 	}
 }
 
-// Every verdict a run emits must answer to its own name. This is the standing guard over the whole
-// catalog for the property the relation-shaped rules broke, two answers under one id.
+// Every verdict a run emits must answer to its own name. The relation-shaped rules once gave two
+// answers under one id, and this test guards the whole catalog against that.
 func TestVerdictIDsAreUniqueWithinARun(t *testing.T) {
 	for _, tc := range []struct {
 		name string

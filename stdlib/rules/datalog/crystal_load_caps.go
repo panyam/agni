@@ -24,11 +24,11 @@ import (
 //   - the Go rule's datasheet credit for an oscillator that integrates its load capacitance (agni
 //     issue 1247) is NOT mirrored. It resolves the design pin to a datasheet pin through
 //     param.ResolvePin, whose refusals a join cannot express, so a seeded design can pass a terminal
-//     this twin still reports. Parity holds on a design read without datasheet parameters, which is
-//     what TestCrystalDatalogParity reads.
+//     this twin still reports. TestCrystalDatalogParity reads a design without datasheet
+//     parameters, and parity holds on that read.
 //   - "exactly two terminals" is two AND not three, since the evaluator aggregates only in the goal
 //     and not in an IDB head. It also excludes a 3+-pin active oscillator whose Vcc net is not
-//     recognizable as a rail by name (the real-corpus false positive PR 265 fixed).
+//     recognizable as a rail by name (PR 265 fixed that false positive on the real corpus).
 var crystalLoadCapsQ = query.FindingQuery{
 	Rule: check.Rule{
 		Name:     "crystal-load-caps",

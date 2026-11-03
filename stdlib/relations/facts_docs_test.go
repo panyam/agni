@@ -9,10 +9,10 @@ import (
 	"testing"
 )
 
-// relRe extracts the built-in relation names from their Rel* const declarations in facts.go, the
-// authoritative set of EDB relations (the ones with a Go projector, hence the ones a projector→doc
-// back-link can couple to). Reading the source keeps the harness single-source with the code it
-// guards, the same spirit as docs_test.go reading the registered Rules.
+// relRe extracts the built-in relation names from their Rel* const declarations in facts.go. Those
+// consts are the authoritative set of EDB relations. Each has a Go projector, so a projector→doc
+// back-link can couple to it. The harness reads the source, so the test and the code it guards
+// share one list. docs_test.go reads the registered Rules for the same reason.
 var relRe = regexp.MustCompile(`Rel\w+\s*=\s*"([^"]+)"`)
 
 // backlinkRe extracts a `doc: facts/docs/<file>.md` back-link wherever it appears in facts.go.
@@ -34,20 +34,20 @@ func builtinRelationNames(t *testing.T) map[string]bool {
 	return names
 }
 
-// predicateDocs are non-EDB relation names that earn a doc but have no facts.go projector (they are
-// computed query built-ins, so they carry no projector→doc back-link and are outside the EDB
-// require-all set). net.reaches is the reach-walk predicate, the recursive counterpart to
-// net.bus_like, and net.route is the same walk with its path bound as a value. The string predicates
-// (contains/prefix/suffix) are deliberately not documented here (tracked in OUT_OF_SCOPE); add a
-// name to this set when its doc lands.
+// predicateDocs are non-EDB relation names that have a doc but no facts.go projector. They are
+// computed query built-ins, so they have no projector→doc back-link and are outside the EDB
+// require-all set. net.reaches is the reach-walk predicate, the recursive counterpart to
+// net.bus_like. net.route is the same walk with its path bound as a value. The string predicates
+// (contains/prefix/suffix) are deliberately not documented here (tracked in OUT_OF_SCOPE). Add a
+// name to this set when its doc is written.
 var predicateDocs = map[string]bool{"net.reaches": true, "net.route": true}
 
 // TestRelationDocsBidirectional couples facts/docs to the relation set in both directions
-// (WS14-005), the docs_test.go analogue for facts, now REQUIRE-ALL: every built-in EDB relation
-// (every Rel* const) must have a doc, so a new relation added without one fails CI (the staged flip
-// from PR 287, once the backfill landed). What is enforced: every EDB relation has a doc; every doc
-// names a real relation (EDB or an allowlisted predicate) and opens with its own heading; every
-// projector→doc back-link resolves; every referenced image exists.
+// (WS14-005). It is the docs_test.go analogue for facts. It has been REQUIRE-ALL since the staged
+// flip from PR 287, which followed the backfill, so a new relation added without a doc fails CI.
+// It enforces four things. Every EDB relation (every Rel* const) has a doc. Every doc names a real
+// relation, EDB or an allowlisted predicate, and opens with its own heading. Every projector→doc
+// back-link resolves. Every referenced image exists.
 func TestRelationDocsBidirectional(t *testing.T) {
 	relations := builtinRelationNames(t)
 
@@ -116,9 +116,9 @@ func TestRelationDocsBidirectional(t *testing.T) {
 		}
 	}
 
-	// require-all (the staged flip): every built-in EDB relation must have a doc. A relation added
-	// to facts.go without a facts/docs/<name>.md now fails here, the same discipline docs_test.go
-	// holds rules to.
+	// require-all (the staged flip). Every built-in EDB relation must have a doc. A relation added
+	// to facts.go without a facts/docs/<name>.md now fails here. docs_test.go holds rules to the
+	// same discipline.
 	for rel := range relations {
 		if !docStems[rel] {
 			t.Errorf("relation %q has no doc: write facts/docs/%s.md (require-all)", rel, rel)

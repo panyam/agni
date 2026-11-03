@@ -10,8 +10,8 @@ import (
 )
 
 // TestBusNotModeledResolution checks that the rule fires only when a bus's members are NOT all
-// present as nets. A bus whose every member is a net (the flat-sheet case, members formed by the
-// tap labels) is silent; a bus with a missing member, or with no known member set, fires.
+// present as nets. In the flat-sheet case the tap labels form the members. Every member is then a
+// net, and the bus is silent. A bus with a missing member, or with no known member set, fires.
 func TestBusNotModeledResolution(t *testing.T) {
 	design := func(buses []*ir.BusNotModeled, nets ...string) *ir.Design {
 		d := &ir.Design{InputDiagnostics: &ir.InputDiagnostics{UnmodeledBuses: buses}}
@@ -39,11 +39,11 @@ func TestBusNotModeledResolution(t *testing.T) {
 	}
 }
 
-// TestBusNotModeledStatesTheResolvedBus is the half the findings contract cannot carry. A resolved
-// bus is silent to `check` and always was, so a design whose buses are all properly modelled and a
-// design with no bus in it report the same nothing. The verdict is where the difference now lives,
-// and the witness has to rest on the member count rather than merely asserting resolution. Drop a
-// member's net and the same bus comes back a failure naming it.
+// TestBusNotModeledStatesTheResolvedBus covers the half that the findings contract cannot express.
+// A resolved bus is silent to `check` and always was. So a design whose buses are all properly
+// modelled and a design with no bus in it report the same nothing. The verdict now shows the
+// difference. Its witness has to be based on the member count rather than merely assert resolution.
+// Drop a member's net and the same bus comes back a failure naming it.
 func TestBusNotModeledStatesTheResolvedBus(t *testing.T) {
 	design := func(buses []*ir.BusNotModeled, nets ...string) *ir.Design {
 		d := &ir.Design{InputDiagnostics: &ir.InputDiagnostics{UnmodeledBuses: buses}}
@@ -65,7 +65,7 @@ func TestBusNotModeledStatesTheResolvedBus(t *testing.T) {
 		t.Errorf("the pass must rest on the member count, not assert resolution: %q", vs[0].Witness.Statement)
 	}
 
-	// The red half of the same assertion: take one member's net away and the statement changes to
+	// The red half of the same assertion. Take one member's net away, and the statement changes to
 	// name it. A witness that read the same either way would prove nothing.
 	vs = busNotModeled.Eval(context.Background(), check.NewModel(design([]*ir.BusNotModeled{bus}, "DATA0")))
 	if len(vs) != 1 || vs[0].Outcome != check.Fail {

@@ -9,11 +9,12 @@ import (
 )
 
 // kitchenSink is a declaration that exercises EVERY intent rule kind, so compiling it emits at least
-// one rule per doc key: module-missing + module-count (a module with a count), voltage-domain-mismatch,
-// subsystem-<slug>, both protection kinds, every net-property kind, both rail-sizing rules, and
-// sequence-<slug>. TestRuleDocsOneToOne compiles it to tie the RUNTIME
-// rules to their docs (the stronger binding a fully-dynamic source needs over the profiles list-only
-// harness, since it catches a builder that forgets to set Detail at all, not only a missing file).
+// one rule per doc key. The kinds are module-missing + module-count (a module with a count),
+// voltage-domain-mismatch, subsystem-<slug>, both protection kinds, every net-property kind, both
+// rail-sizing rules, and sequence-<slug>. TestRuleDocsOneToOne compiles it to tie the RUNTIME rules
+// to their docs. A fully dynamic source needs that stronger binding, rather than the list-only
+// harness the profiles use. It catches a builder that forgets to set Detail at all, not only a
+// missing file.
 func kitchenSink() Declaration {
 	return Declaration{
 		Name:           "test intent",
@@ -26,14 +27,14 @@ func kitchenSink() Declaration {
 			{Net: "PCIE_TX0_P", Property: PropACCoupled},
 			{Net: "BOOT_MODE0", Property: PropStrap, Value: "high"},
 		},
-		// Both rail-sizing rules. The budgets emit rail-current-capacity, and the factor is what
-		// emits rail-current-margin (it has no default, so omitting it here would leave that doc
-		// key unemitted and fail the one-to-one check below).
+		// Both rail-sizing rules. The budgets emit rail-current-capacity, and the factor emits
+		// rail-current-margin. The factor has no default, so omitting it here would leave that doc
+		// key unemitted and fail the one-to-one check below.
 		RailBudgets:  []RailBudget{{Rail: "3V3", Peak: 0.8}},
 		MarginFactor: 1.2,
 		// One IO-map row emits every io-map rule, far-end included. That rule is compiled whenever a
-		// map is declared rather than only when a row fills its far end, because its verdicts are what
-		// report the denominator. The row declares a function, which io-map-function needs.
+		// map is declared rather than only when a row fills its far end, because its verdicts report
+		// the denominator. The row declares a function, which io-map-function needs.
 		IOMap:       []IOAssignment{{Net: "SYS_RESET_N", Device: "U1", Pin: "PTC11", Function: "GPIO"}},
 		Exposures:   []Exposure{{Ref: "J1", Exposure: ExposureInternal}},
 		PullUpReach: []PullUpReach{{Net: "SDA", Hops: 4}},
@@ -59,16 +60,18 @@ func kitchenSink() Declaration {
 }
 
 // TestRuleDocsOneToOne holds the intent rule KINDS, the rules Compile emits, and the docs/ directory to
-// each other, the same discipline builtin/docs_test and profiles/docs_test enforce, adapted for a
-// source whose rules are generated (and partly named) per design. It checks four things:
-//   - every docKey has a docs/<key>.md that opens with its own '## <key>' heading;
-//   - every rule a kitchen-sink declaration emits gets its Detail from intentDoc(docKey(name)) and is
-//     non-empty (the runtime tie, where a rule shipped without a doc, or with Detail left unset, fails here);
-//   - the emitted docKey set equals docKeys (a new rule kind added to Compile without a doc key, or a
-//     doc key never emitted, fails);
-//   - docs/ has no orphan .md and every image a doc references exists.
+// each other. builtin/docs_test and profiles/docs_test enforce the same discipline. This test adapts
+// it for a source that generates its rules per design, and names some of them per design. It checks
+// four things.
+//   - Every docKey has a docs/<key>.md that opens with its own '## <key>' heading.
+//   - Every rule a kitchen-sink declaration emits gets its Detail from intentDoc(docKey(name)), and
+//     the Detail is non-empty. This is the runtime tie. A rule shipped without a doc, or with Detail
+//     left unset, fails here.
+//   - The emitted docKey set equals docKeys. A new rule kind added to Compile without a doc key
+//     fails, and so does a doc key that is never emitted.
+//   - docs/ has no orphan .md, and every image a doc references exists.
 //
-// So an intent rule PR without its doc/card fails here, not in review, which closed the WS3-093
+// So an intent rule PR without its doc/card fails here, not in review. This closed the WS3-093
 // harness gap.
 func TestRuleDocsOneToOne(t *testing.T) {
 	// docKeys each resolve to a doc that opens with its heading.
@@ -167,10 +170,10 @@ func TestRuleDocImageHandler(t *testing.T) {
 	}
 }
 
-// TestDocRules holds intent.DocRules to the doc-key set the docsite catalog generator projects, one
-// entry per docKey, each with a non-empty caption and its Detail from intentDoc. A new docKey without
-// a DocRules entry (or a caption) fails here, so the docsite catalog cannot silently drop an intent
-// rule kind.
+// TestDocRules holds intent.DocRules to the doc-key set, which the docsite catalog generator
+// projects. It wants one entry per docKey, each with a non-empty caption and its Detail from
+// intentDoc. A new docKey without a DocRules entry, or without a caption, fails here, so the docsite
+// catalog cannot silently drop an intent rule kind.
 func TestDocRules(t *testing.T) {
 	got := DocRules()
 	if len(got) != len(docKeys) {

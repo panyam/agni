@@ -10,8 +10,8 @@ import (
 
 // TestPowerInStampFlipsConnectivityRule (WS3-072 PR2) is the red-before-green for the EDIF flip. An
 // EDIF-style VDD pin (typed INPUT) on an undriven net is invisible to power-input-not-driven today,
-// because the rule keys on POWER_IN; the ingestion stamp promotes the pin, so the rule then fires.
-// This is the behavior the corpus delta measures at scale.
+// because the rule keys on POWER_IN. The ingestion stamp promotes the pin, so the rule then fires.
+// The corpus delta measures this behavior at scale.
 func TestPowerInStampFlipsConnectivityRule(t *testing.T) {
 	mk := func() *ir.Design {
 		return &ir.Design{

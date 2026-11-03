@@ -11,18 +11,18 @@ import (
 	"github.com/panyam/jaala/ns"
 )
 
-// These test core/review's Validate through the compiler this package registers, which is what a real
-// run uses; core/review's own tests register a stub compiler, so they cannot.
+// These tests run core/review's Validate through this package's registered compiler, as a real run
+// does. core/review's own tests register a stub compiler, so they cannot.
 
 const badQuery = "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'garbage(', subject: r, message: m}}]}]"
 
 const houseQuery = "name: t\nareas: [{name: A, items: [{id: i, query: {match: 'house.pmic_rail(?n) => ?n', subject: n, kind: net, message: 'rail {n}'}}]}]"
 
-// TestValidateRefusesABadInlineQuery is where an unparseable inline query is now refused (agni issue
-// 779). Load reads a manifest before any design or project is known, so it cannot compile a query
-// that may name the run's own library; it checks structure, and Validate, given the run's
-// vocabulary, compiles. Every caller validates before it runs, so a bad query still fails before
-// anything is checked, one step later than it used to.
+// TestValidateRefusesABadInlineQuery checks that Validate refuses an unparseable inline query (agni
+// issue 779). Load reads a manifest before any design or project is known. It cannot compile a
+// query that may name the run's own library, so it checks structure only. Validate has the run's
+// vocabulary, so it compiles the query. Every caller validates before it runs, so a bad query still
+// fails before anything is checked, one step later than it used to.
 func TestValidateRefusesABadInlineQuery(t *testing.T) {
 	m, err := review.Load(strings.NewReader(badQuery))
 	if err != nil {
@@ -34,9 +34,9 @@ func TestValidateRefusesABadInlineQuery(t *testing.T) {
 	}
 }
 
-// TestValidateReadsTheRunsVocabulary: a query naming a library member validates against a vocabulary
-// that has it, and is refused against one that does not, so the error a manifest author sees depends
-// on the library the review will actually run with.
+// TestValidateReadsTheRunsVocabulary checks that a query naming a library member validates against
+// a vocabulary that has the member. It is refused against one that does not. The error a manifest
+// author sees therefore depends on the library the review will run with.
 func TestValidateReadsTheRunsVocabulary(t *testing.T) {
 	m, err := review.Load(strings.NewReader(houseQuery))
 	if err != nil {

@@ -73,9 +73,9 @@ func TestRailNominalPassesInRange(t *testing.T) {
 	}
 }
 
-// TestRailNominalOneSidedRange proves a row that states only a max (many recommended
-// tables print a ceiling with no explicit floor) checks the over side and never
-// under-fires for want of a min.
+// TestRailNominalOneSidedRange proves that a row stating only a max checks the over side
+// and never under-fires for want of a min. Many recommended tables print a ceiling with
+// no explicit floor.
 func TestRailNominalOneSidedRange(t *testing.T) {
 	maxOnly := ldoRecommendedSpec("ACME-33", 0, 3.6)
 	maxOnly.Parameters[0].Value.Min = nil
@@ -149,8 +149,9 @@ func TestRailNominalSkipsNotFalsePasses(t *testing.T) {
 // spelling used to fail the extractor's unit gate, so the rule had no range to compare against and the
 // item scored a PASS.
 //
-// This rule is the two-sided one, so the conversion has to carry BOTH bounds. A conversion that scaled
-// only the max would leave a 3000V minimum in place and report the rail as under-volted instead.
+// This rule is the two-sided one, so the conversion has to scale BOTH bounds. A conversion that
+// scaled only the max would leave a 3000V minimum in place and report the rail as under-volted
+// instead.
 func TestRailNominalReadsMillivoltRows(t *testing.T) {
 	d := supplyDesign("+5V", false, "ACME-33")
 	volts := runRailNominal(t, d, param.ParamSet{"ACME-33": ldoRecommendedSpec("ACME-33", 3.0, 3.6)})

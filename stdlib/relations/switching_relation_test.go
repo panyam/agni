@@ -20,7 +20,7 @@ func switchingRelationDesign() *ir.Design {
 }
 
 // TestSwitchingRelationProjectsThePowerStageNodes checks that the relation names exactly the nets
-// carrying the switching role, so "a rail that is not a power-stage node" becomes writable in
+// with the switching role, so "a rail that is not a power-stage node" becomes writable in
 // datalog. Until this existed only the feedback half of that pair could be said.
 func TestSwitchingRelationProjectsThePowerStageNodes(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(switchingRelationDesign())))
@@ -43,11 +43,11 @@ func TestSwitchingRelationProjectsThePowerStageNodes(t *testing.T) {
 }
 
 // TestRailExcludesBothRegulatorInternalRoles checks that `net.rail` and the two "not a rail" relations
-// cannot overlap. This is the cross-relation assertion agni 684 was filed on the belief that it
-// would FAIL, because railFacts asks Model.IsPowerRail (a name function) while net.nominal_voltage
-// asks IsRailNet. It passes, because IsPowerRail delegates to IsRailNet for the name path and so
-// inherits the agni 683 exclusion. Kept as a ratchet, because the two answers agreed by delegation
-// rather than by anything asserting it, and a future change to either could part them silently.
+// cannot overlap. agni 684 was filed in the belief that this cross-relation assertion would FAIL.
+// railFacts asks Model.IsPowerRail (a name function), while net.nominal_voltage asks IsRailNet. It
+// passes, because IsPowerRail delegates to IsRailNet for the name path and so inherits the agni 683
+// exclusion. It is kept as a ratchet. The two answers agreed by delegation and nothing asserted
+// it, so a future change to either could part them silently.
 func TestRailExcludesBothRegulatorInternalRoles(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(switchingRelationDesign())))
 

@@ -2,38 +2,40 @@ package intent
 
 import "github.com/panyam/agni/core/check"
 
-// Rule names the intent rules emit under. These are the BARE names (Rule.Name may not contain the
-// catalog's "/" namespace separator); Source("intent", ...) exposes them in the catalog as
-// "intent/module-missing" and "intent/voltage-domain-mismatch", which is what a review manifest binds
-// to (rule: intent/module-missing). They are stable so an item flips to pass/fail once a declaration
-// is loaded.
+// The intent rules emit under these rule names. They are the BARE names, since Rule.Name may not
+// contain the catalog's "/" namespace separator. Source("intent", ...) exposes them in the catalog as
+// "intent/module-missing" and "intent/voltage-domain-mismatch", and a review manifest binds to those
+// names (rule: intent/module-missing). The names do not change, so an item flips to pass/fail once a
+// declaration is loaded.
 const (
 	RuleModuleMissing = "module-missing"
 	RuleModuleCount   = "module-count"
 	RuleVoltageDomain = "voltage-domain-mismatch"
-	// RuleRailCurrentCapacity and RuleRailCurrentMargin are the two rail-sizing rules (WS3-095), one
-	// mechanism at two thresholds split into two names so the ratings item and the margins item get
-	// separate verdicts.
+	// RuleRailCurrentCapacity and RuleRailCurrentMargin are the two rail-sizing rules (WS3-095). They
+	// are one mechanism at two thresholds. It is split into two names so the ratings item and the
+	// margins item get separate verdicts.
 	RuleRailCurrentCapacity = "rail-current-capacity"
 	RuleRailCurrentMargin   = "rail-current-margin"
-	// RuleLoadSwitchTripBelowBudget is the LOWER bound of load-switch sizing (WS3-085), checking the
+	// RuleLoadSwitchTripBelowBudget is the LOWER bound of load-switch sizing (WS3-085). It checks the
 	// switch's current limit against the rail's declared draw. It reads the same declared peaks as the
-	// two rules above, but judges a different part (the switch rather than the supply), so it is its own rule.
+	// two rules above. It judges a different part, the switch rather than the supply, so it is its
+	// own rule.
 	RuleLoadSwitchTripBelowBudget = "load-switch-trip-below-budget"
-	// The three IO-map rules that check the netlist (agni issue 517). Fixed names rather than one per declared row, because a
-	// real map is hundreds of rows and a reviewer signs off "the netlist matches the IO map", not each
-	// row (docsite/content/guide/design-intent.md#one-rule-per-declared-thing). Three names because each
-	// answer is acted on differently, and the last two are opposite defects that get confused when they
-	// share a verdict.
+	// These three IO-map rules check the netlist (agni issue 517). They have fixed names rather than
+	// one per declared row. A real map is hundreds of rows, and a reviewer signs off "the netlist
+	// matches the IO map", not each row
+	// (docsite/content/guide/design-intent.md#one-rule-per-declared-thing). There are three names
+	// because a reviewer acts on each answer differently. The last two are opposite defects, and they
+	// get confused when they share a verdict.
 	RuleIOMapPin       = "io-map-pin-mismatch"
 	RuleIOMapNetAbsent = "io-map-net-absent"
 	RuleIOMapFarEnd    = "io-map-far-end"
-	// RuleIOMapFunction checks a row's declared function against the alternate functions the part's
-	// datasheet lists for the pin (agni issue 667).
+	// RuleIOMapFunction checks a row's declared function against the pin's alternate functions, as the
+	// part's datasheet lists them (agni issue 667).
 	RuleIOMapFunction = "io-map-function"
-	// The context roles a per-row IO-map verdict carries, which with the subject's device are the map
-	// row's key (agni issue 1188). RoleOnThePin is the net the resolved pin actually sits on, and
-	// RoleDeclaredPin appears only when the map spells the pin differently from the design.
+	// A per-row IO-map verdict has these context roles. Together with the subject's device, they form
+	// the map row's key (agni issue 1188). RoleOnThePin is the net that the resolved pin actually sits
+	// on. RoleDeclaredPin appears only when the map spells the pin differently from the design.
 	RoleDeclaredNet    = "declared net"
 	RoleDeclaredPin    = "declared pin"
 	RoleOnThePin       = "on the pin"
@@ -41,11 +43,11 @@ const (
 	// RuleIOMapCoverage reports the parts of the design the map never mentions. Its considered set is
 	// the NETLIST, not the declaration; see ioMapCoverageRule.
 	RuleIOMapCoverage = "io-map-coverage"
-	// RuleExposureDeclared confirms each component a declaration gives an exposure is a connector the
+	// RuleExposureDeclared confirms that each component with a declared exposure is a connector the
 	// design has (agni issue 831). Without it a misspelled ref-des would change nothing and read as a
 	// declaration that took effect.
 	RuleExposureDeclared = "exposure-declared"
-	// RulePullUpReachDeclared confirms each net a declaration gives a pull-up reach is a net the design
+	// RulePullUpReachDeclared confirms that each net with a declared pull-up reach is a net the design
 	// has (agni issue 1165). The reach is keyed by the exact net name, so without it a misspelled name
 	// would change nothing and read as a declaration that took effect.
 	RulePullUpReachDeclared = "pull-up-reach-declared"
@@ -73,10 +75,10 @@ func Compile(d Declaration) []*check.Rule {
 	}
 	if len(d.RailBudgets) > 0 {
 		rules = append(rules, railBudgetCapacityRule(d))
-		// The load-switch lower bound needs the budget and nothing else, so it rides the capacity
-		// condition rather than a second one. A design with no controller-based switch resolves none
-		// and the rule reports nothing. No declaration field says "this rail is switched", and adding
-		// one would let an author's omission read as a defect.
+		// The load-switch lower bound needs the budget and nothing else, so it compiles under the
+		// capacity condition rather than a second one. A design with no controller-based switch
+		// resolves none, and the rule reports nothing. No declaration field says "this rail is
+		// switched", and adding one would let an author's omission read as a defect.
 		rules = append(rules, loadSwitchTripBelowBudgetRule(d))
 		// Only when a factor is declared, because the factor IS the rule's threshold. See
 		// Declaration.MarginFactor for why there is no default.
@@ -158,8 +160,8 @@ func anyModuleHasCount(d Declaration) bool {
 	return false
 }
 
-// anyRowDeclaresFunction reports whether any IO-map row selects a function, which is when
-// io-map-function has something to compare.
+// anyRowDeclaresFunction reports whether any IO-map row selects a function. Only then does
+// io-map-function have something to compare.
 func anyRowDeclaresFunction(d Declaration) bool {
 	for _, a := range d.IOMap {
 		if a.Function != "" {
@@ -169,7 +171,7 @@ func anyRowDeclaresFunction(d Declaration) bool {
 	return false
 }
 
-// intentTags is the classification every intent rule carries. Category integrity marks a design-intent
+// intentTags is the classification of every intent rule. Category integrity marks a design-intent
 // deviation as a "the design does not match what was declared" tripwire, and distribution open marks it
 // as derivable from the authored declaration (no proprietary source in the mechanism itself).
 func intentTags() map[string]string {

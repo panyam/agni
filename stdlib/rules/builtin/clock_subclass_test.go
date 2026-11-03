@@ -33,11 +33,11 @@ func resonatorSpec(mpn string) *parampb.PartSpec {
 	}
 }
 
-// TestDatasheetSubtypesClockFamily checks that a bare Y clock part is the clock FAMILY (so
-// crystal-load-caps acts on it), and a seeded device_class "ceramic resonator" enriches it to the
-// ceramic_resonator subtype (via the normalization + family-tag path), which then EXCLUDES it from
-// crystal-load-caps. The datasheet suppresses a false load-cap finding on an integrated-cap
-// resonator.
+// TestDatasheetSubtypesClockFamily checks two things. A bare Y clock part is the clock FAMILY, so
+// crystal-load-caps acts on it. A seeded device_class "ceramic resonator" enriches it to the
+// ceramic_resonator subtype through the normalization and family-tag path, and that subtype
+// EXCLUDES it from crystal-load-caps. So the datasheet suppresses a false load-cap finding on an
+// integrated-cap resonator.
 func TestDatasheetSubtypesClockFamily(t *testing.T) {
 	// Without a datasheet, Y1 is the ambiguous clock family, has no subtype, and fires (2
 	// terminals, no caps).

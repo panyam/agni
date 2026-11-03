@@ -8,8 +8,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// canGood has CANH/CANL/TXD/RXD all wired end-to-end, and R1 (a resistor, and the reach walk crosses
-// R-prefixed 2-net parts) bridges CANH↔CANL, so `net.reaches(CANH, CANL)` holds and the pair is
+// canGood has CANH/CANL/TXD/RXD all wired end-to-end. R1 bridges CANH↔CANL. It is a resistor, and the
+// reach walk crosses R-prefixed 2-net parts, so `net.reaches(CANH, CANL)` holds and the pair is
 // terminated. No profile finding. (A real terminator named "RT1" is classified by its part-type
 // data; this hand fixture has none, so it uses the R-prefix convention.)
 func canGood() *ir.Design {
@@ -24,8 +24,8 @@ func canGood() *ir.Design {
 	}
 }
 
-// canBroken has no termination resistor (only the multi-pin U1/U2 sit on both bus nets, which `net.reaches`
-// must NOT count), no RXD net (missing), and TXD on a single-pin net (dangling).
+// canBroken has no termination resistor, no RXD net (missing), and TXD on a single-pin net
+// (dangling). Only the multi-pin U1/U2 sit on both bus nets, and `net.reaches` must NOT count them.
 func canBroken() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2"),
@@ -116,14 +116,14 @@ func TestCANHostWhollyAbsent(t *testing.T) {
 	}
 }
 
-// TestCANHostVerdictsAreSeparatelyAddressable is the reason host-incomplete carries a subject tuple
+// TestCANHostVerdictsAreSeparatelyAddressable shows why host-incomplete carries a subject tuple
 // (agni issue 424). The same wholly-absent fixture as above produces FOUR answers about U2, and
 // before the signal joined the tuple all four had the id `can-host-incomplete:(component:U2)`. A
 // reader following that link reached whichever row the report wrote last, and a consumer indexing by
 // id silently kept one of four.
 //
-// The finding count above is what makes this worth pinning separately, because the rule already
-// emitted four violations, so nothing in the findings contract would have shown the collision.
+// The rule already emitted four violations, as the finding count above shows. So nothing in the
+// findings contract would have shown the collision, and this test pins it separately.
 func TestCANHostVerdictsAreSeparatelyAddressable(t *testing.T) {
 	d := &ir.Design{
 		Components: append(comps("U1"), canHost("U2")),

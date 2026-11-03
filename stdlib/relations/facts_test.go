@@ -30,7 +30,7 @@ func factsByRelation(fs []facts.Row) map[string][]facts.Row {
 
 // TestParamRangeAndNominalFacts (WS3-082) checks that the two enriched relations project as
 // expected. A recommended-operating row keeps BOTH bounds and its kind token, and a named rail
-// yields its name-derived nominal. These are the facts the datasheet-range family joins.
+// yields its name-derived nominal. The datasheet-range family joins these facts.
 func TestParamRangeAndNominalFacts(t *testing.T) {
 	set := param.ParamSet{"ACME-33": ldoRecommendedSpec("ACME-33", 3.0, 3.6)}
 	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(set))
@@ -67,8 +67,8 @@ func TestParamRangeAndNominalFacts(t *testing.T) {
 
 // TestFactsProjectsSeedRelations (WS3-004) checks that the four seed relations are derived from a
 // datasheet-joined design with the right subjects, numeric values, param conditions, and
-// provenance. This is the same design + seeded spec the cap-voltage rule runs on, so the facts
-// are exactly the reads that rule declares, materialized as tuples.
+// provenance. The cap-voltage rule runs on the same design and seeded spec, so the facts are
+// exactly the reads that rule declares, materialized as tuples.
 func TestFactsProjectsSeedRelations(t *testing.T) {
 	set := param.ParamSet{"DEMO-CAP-6V3": capSpec("DEMO-CAP-6V3", 6.3)}
 	m := check.NewModel(capDesign("+10V", "DEMO-CAP-6V3"), check.WithParamProvider(set))
@@ -165,9 +165,9 @@ func TestExternalSignalNetFacts(t *testing.T) {
 
 // TestNetClassFacts (WS3-105) checks that net.netclass projects the TOOL-assigned class verbatim,
 // one row per classed net, and leaves an unclassed net out (so `not net.netclass(?n, ?_)` reads as
-// unclassed). design.has_netclass is the design-level marker that separates "no net is in class X"
-// from "this design assigns no classes", the distinction a netclass-scoped rule needs to avoid
-// reading as a pass.
+// unclassed). design.has_netclass is the design-level marker. It separates "no net is in class X"
+// from "this design assigns no classes". A netclass-scoped rule needs that distinction, or it
+// reads as a pass.
 func TestNetClassFacts(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
 		{Name: "USB_D+", NetClasses: []string{"HighSpeed"}, Prov: &ir.Provenance{SourceFile: "t"}},
@@ -194,9 +194,9 @@ func TestNetClassFacts(t *testing.T) {
 }
 
 // TestNetClassFactsFanOut (WS1-050) covers membership as a set, so the projection is 1:many. A net
-// in two classes emits one row per class and `?net` is NOT unique. This is what a rule joining on ?net
-// must expect; the relation shape is unchanged (it was already {FieldSubject, FieldValue}), only
-// the arity is.
+// in two classes emits one row per class and `?net` is NOT unique. A rule joining on ?net must
+// expect that. The relation shape did not change, since it was already {FieldSubject, FieldValue}.
+// Only the number of rows per net changed.
 func TestNetClassFactsFanOut(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
 		{Name: "VBUS", NetClasses: []string{"HighCurrent", "Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
@@ -219,10 +219,10 @@ func TestNetClassFactsFanOut(t *testing.T) {
 	}
 }
 
-// TestNetClassFactsAbsent (WS3-105) checks that a design whose source carries no net classes (every
-// format but a KiCad project read, and a KiCad project that declares none) projects neither the
-// relation nor the marker. The empty marker is the signal a class-scoped rule gates on; without it
-// an empty net.netclass join is indistinguishable from a clean pass.
+// TestNetClassFactsAbsent (WS3-105) covers a design whose source has no net classes. Every format
+// but a KiCad project read is such a source, and so is a KiCad project that declares none. The
+// design must project neither the relation nor the marker. A class-scoped rule gates on the empty
+// marker. Without it, an empty net.netclass join is indistinguishable from a clean pass.
 func TestNetClassFactsAbsent(t *testing.T) {
 	d := &ir.Design{SourceFormat: "edif-2.0.0", Nets: []*ir.Net{
 		{Name: "USB_D+", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -250,9 +250,9 @@ func TestFeedbackFacts(t *testing.T) {
 }
 
 // TestEsdRatedFacts (WS3-076) checks that component.esd_rated projects a part whose seeded
-// datasheet declares an ESD rating at or above the credit floor (the concept esd-protection's Go
-// rule credits, now datalog). A below-floor rating and an unseeded part yield no row, and the
-// relation is empty without --params.
+// datasheet declares an ESD rating at or above the credit floor. esd-protection's Go rule credits
+// the same concept, and this relation states it in datalog. A below-floor rating and an unseeded
+// part yield no row, and the relation is empty without --params.
 func TestEsdRatedFacts(t *testing.T) {
 	d := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U9", Mpn: "DEMO-XCVR", Prov: &ir.Provenance{SourceFile: "t"}},
@@ -275,9 +275,9 @@ func TestEsdRatedFacts(t *testing.T) {
 	}
 }
 
-// TestNetBusLikeFacts (WS3-080) checks that net.bus_like projects a shared-distribution net (rail-scale
-// fan-out, a ground name, or the global fact), the same predicate the reach walk stops at. A
-// point-to-point net does not project.
+// TestNetBusLikeFacts (WS3-080) checks that net.bus_like projects a shared-distribution net. Such a
+// net has rail-scale fan-out, a ground name, or the global fact. The reach walk stops at the same
+// nets. A point-to-point net does not project.
 func TestNetBusLikeFacts(t *testing.T) {
 	wide := &ir.Net{Name: "WIDE", Prov: &ir.Provenance{SourceFile: "t"}}
 	for i := 0; i < 17; i++ { // > maxWalkFan (16)
@@ -301,7 +301,7 @@ func TestNetBusLikeFacts(t *testing.T) {
 	}
 }
 
-// TestFactsAlwaysCited (WS3-004) checks that every fact carries provenance. A fact you cannot cite is
+// TestFactsAlwaysCited (WS3-004) checks that every fact has provenance. A fact you cannot cite is
 // not verifiable, and verifiability is the point of a provenance-carrying fact base. The param fact
 // cites the datasheet document/page; the IR facts cite the source file.
 func TestFactsAlwaysCited(t *testing.T) {
@@ -334,9 +334,9 @@ func TestFactsRegenerable(t *testing.T) {
 	}
 }
 
-// TestBoardFacts (WS1-041) checks that the board tier projects per-net derived facts (the minimum
-// track width and via drill in mm, and layer membership), reusing the DRC board fixture. This is what
-// makes board geometry queryable through the same fact base, with no query-engine change.
+// TestBoardFacts (WS1-041) checks that the board tier projects per-net derived facts, reusing the
+// DRC board fixture. The facts are the minimum track width and via drill, and layer membership.
+// Board geometry is then queryable through the same fact base, with no query-engine change.
 func TestBoardFacts(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(&ir.Design{}, check.WithBoard(drcBoard()))))
 
@@ -387,10 +387,10 @@ func TestBoardFacts(t *testing.T) {
 }
 
 // TestComponentClassAndNetAttrFacts (WS3-074) checks that the class + net-attribute relations
-// project the datalog reads a class-quantified rule needs. component.class carries each component's
-// established device class and OMITS ClassUnknown (never guessed); net.ground isolates ground-named
-// nets from the net.rail relation (which covers power AND ground); net.external marks read-gap nets.
-// All cited.
+// project the datalog reads a class-quantified rule needs. component.class holds each component's
+// established device class and OMITS ClassUnknown, since a class is never guessed. net.rail covers
+// power AND ground, and net.ground isolates the ground-named nets from it. net.external marks
+// read-gap nets. All are cited.
 func TestComponentClassAndNetAttrFacts(t *testing.T) {
 	ext := tnet("XEXT", "Y1.1")
 	ext.Attributes = map[string]string{netgraph.AttrExternal: "true"}
@@ -449,9 +449,9 @@ func TestComponentClassAndNetAttrFacts(t *testing.T) {
 }
 
 // TestFactsSilentWithoutDatasheet (WS3-004) checks that a design read without a seeded datasheet
-// set yields only the IR relations (net/connection) and no mpn/param facts, the same
-// silent-by-construction posture the datasheet rules have. The projection never fabricates a
-// datasheet it does not have.
+// set yields only the IR relations (net/connection) and no mpn/param facts. The datasheet rules are
+// silent by construction in the same way. The projection never fabricates a datasheet it does not
+// have.
 func TestFactsSilentWithoutDatasheet(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(capDesign("+10V", ""))))
 	if len(byRel[RelParam]) != 0 || len(byRel[RelComponentMPN]) != 0 {
@@ -463,11 +463,11 @@ func TestFactsSilentWithoutDatasheet(t *testing.T) {
 }
 
 // TestNetBiasAndACCoupledFacts (WS3-088) checks that the two derived net properties project as
-// relations, so the intent rules that compare them against a declaration and an engineer's ad-hoc
-// query read one definition rather than two.
+// relations. The intent rules compare these properties against a declaration, and an engineer asks
+// about them in ad-hoc queries. Both read one definition rather than two.
 //
 // The assertions that matter are the negative ones. A DECOUPLING cap must not read as AC-coupled, or
-// nearly every net on a board would; and a divider must not read as biased, since it holds neither
+// nearly every net on a board would. A divider must not read as biased, since it holds neither
 // rail.
 func TestNetBiasAndACCoupledFacts(t *testing.T) {
 	net := func(name string, conns ...string) *ir.Net {
@@ -515,11 +515,11 @@ func TestNetBiasAndACCoupledFacts(t *testing.T) {
 		t.Errorf("a cap to GND decouples, it does not couple: %v", coupled)
 	}
 
-	// Neither property is meaningful about a supply net, and BOTH answered from the wrong end before
-	// this guard existed: the rail read as biased high (a pull-up connects it to the line it pulls)
-	// and GND read as AC-coupled (a crystal load cap puts a signal on its far side). Found by running
-	// the relations on a real board, not by a fixture. Excluding the far side was never enough, and the
-	// SUBJECT has to be a signal too.
+	// Neither property means anything on a supply net. Before this guard existed, BOTH answered from
+	// the wrong end. The rail read as biased high, because a pull-up connects it to the line it
+	// pulls. GND read as AC-coupled, because a crystal load cap puts a signal on its far side.
+	// Running the relations on a real board found this, and no fixture did. Excluding the far side
+	// was never enough. The SUBJECT has to be a signal too.
 	for _, supply := range []string{"+3V3", "GND"} {
 		if lv, ok := bias[supply]; ok {
 			t.Errorf("net.bias(%s) = %q: a supply net is not held at a level, it IS the level", supply, lv)
@@ -531,7 +531,7 @@ func TestNetBiasAndACCoupledFacts(t *testing.T) {
 }
 
 // netClassDef builds an ir.Constraint the way kicad.AnnotateNetClassDefs does. Only stated params
-// are set, because absent-vs-zero is the distinction the cascade turns on.
+// are set, because the cascade depends on telling an absent value from a zero.
 func netClassDef(name string, priority int, params map[string]string) *ir.Constraint {
 	p := map[string]string{"priority": strconv.Itoa(priority)}
 	for k, v := range params {
@@ -543,7 +543,7 @@ func netClassDef(name string, priority int, params map[string]string) *ir.Constr
 // TestNetClassDefCascade (WS3-111) is the central test of the declared-vs-actual story. A net in
 // several classes does NOT take one class's values wholesale. KiCad fills each constraint from the
 // highest-priority class that states THAT constraint, with the default class last. Getting this
-// wrong produces confident, wrong findings, which is why the per-net relation exists at all.
+// wrong produces confident, wrong findings. The per-net relation exists to get it right.
 func TestNetClassDefCascade(t *testing.T) {
 	d := &ir.Design{
 		Constraints: []*ir.Constraint{
@@ -580,17 +580,17 @@ func TestNetClassDefCascade(t *testing.T) {
 	if got["PLAIN"] != 0.25 {
 		t.Errorf("PLAIN declared track width = %v, want 0.25", got["PLAIN"])
 	}
-	// The Default class is not just the lowest-priority one: KiCad hands it to a net that is in NO
-	// class, so an unclassed net still has a limit the tool would enforce.
+	// The Default class is more than the lowest-priority one. KiCad assigns it to a net that is in
+	// NO class, so an unclassed net still has a limit the tool would enforce.
 	if got["UNCLASSED"] != 0.25 {
 		t.Errorf("UNCLASSED declared track width = %v, want 0.25 (Default applies to every net)", got["UNCLASSED"])
 	}
-	// One row per net per quantity: the cascade resolved, never one row per class.
+	// One row per net per quantity. The cascade is resolved, and there is never one row per class.
 	if n := len(byRel[RelNetDeclaredTrackWidth]); n != 3 {
 		t.Errorf("declared track width rows = %d, want 3 (resolved per NET, not per class)", n)
 	}
-	// via_drill is stated only by Default, which fills it for EVERY net including VBUS, whose own
-	// two classes state none. This is the half a memberships-only cascade would silently miss.
+	// Only Default states via_drill. It fills via_drill for EVERY net, including VBUS, whose own two
+	// classes state none. A memberships-only cascade would silently miss this half.
 	if n := len(byRel[RelNetDeclaredViaDrill]); n != 3 {
 		t.Errorf("declared via drill rows = %d, want 3 (Default fills gaps for every net)", n)
 	}
@@ -603,13 +603,13 @@ func TestNetClassDefCascade(t *testing.T) {
 	}
 }
 
-// TestNetClassDefAbsent (WS3-111): a design with no class definitions projects neither the per-class
-// rows, the cascaded rows, nor the marker. Without the marker a declared-vs-actual rule cannot tell
-// "nothing to compare" from "everything conformed".
+// TestNetClassDefAbsent (WS3-111) checks that a design with no class definitions projects none of
+// the per-class rows, the cascaded rows or the marker. Without the marker a declared-vs-actual rule
+// cannot tell "nothing to compare" from "everything conformed".
 func TestNetClassDefAbsent(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
-		// Membership WITHOUT definitions. net_settings allows it, and it is the case that would
-		// otherwise read as a clean pass over zero comparisons.
+		// Membership WITHOUT definitions. net_settings allows it. Without the marker, this case
+		// would read as a clean pass over zero comparisons.
 		{Name: "VBUS", NetClasses: []string{"Power"}, Prov: &ir.Provenance{SourceFile: "t"}},
 	}}
 	byRel := factsByRelation(Facts(check.NewModel(d)))
@@ -618,13 +618,14 @@ func TestNetClassDefAbsent(t *testing.T) {
 			t.Errorf("%s on a design with membership but no definitions = %+v, want empty", rel, rows)
 		}
 	}
-	// design.has_netclass still fires because membership exists. The two markers are independent on purpose.
+	// design.has_netclass still fires because membership exists. The two markers are independent
+	// on purpose.
 	if mk := byRel[RelHasNetClass]; len(mk) != 1 {
 		t.Errorf("design.has_netclass = %+v, want one row (membership is present even with no definitions)", mk)
 	}
 }
 
-// defaultNetClassDef builds the DEFAULT class, which carries KiCad's max-int priority and the flag
+// defaultNetClassDef builds the DEFAULT class, which has KiCad's max-int priority and the flag
 // marking it as the class every net inherits from.
 func defaultNetClassDef(name string, params map[string]string) *ir.Constraint {
 	c := netClassDef(name, 2147483647, params)
@@ -657,10 +658,10 @@ func TestNetClassDefCascadeHonoursPriority(t *testing.T) {
 	}
 }
 
-// TestRefDesCollisionFactsCiteEveryInstance is the reason facts.Row carries a LIST of citations
-// (agni issue 546). A ref-des collision is several placements sharing one designator, so the
-// plurality IS the finding, and a row that cites one of them withholds the half a reviewer needs.
-// They already know R5 exists, and what they are chasing is where the two R5s are.
+// TestRefDesCollisionFactsCiteEveryInstance covers why facts.Row holds a LIST of citations (agni
+// issue 546). A ref-des collision is several placements sharing one designator, so the plurality IS
+// the finding. A row that cites one of them withholds the half a reviewer needs. The reviewer
+// already knows R5 exists, and wants to know where the two R5s are.
 func TestRefDesCollisionFactsCiteEveryInstance(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R5"}},
@@ -698,9 +699,10 @@ func TestEsdRatedFactsCiteEveryQualifyingRating(t *testing.T) {
 	}
 }
 
-// TestEveryFactCitesSomething keeps the property turning one string into a slice could quietly lose.
-// A fact you cannot cite is not verifiable, and an EMPTY SLICE is a new way to say nothing that the
-// old empty-string check would have caught.
+// TestEveryFactCitesSomething guards a property that the change from one citation string to a
+// slice could quietly lose. A fact you cannot cite is not verifiable. The old empty-string check
+// caught a fact that cited nothing. An EMPTY SLICE is a new way to cite nothing, so this test
+// checks for it.
 func TestEveryFactCitesSomething(t *testing.T) {
 	spec := typSpec("ACME-33", "A", 0.000042)
 	d := supplyDesign("+5V", false, "ACME-33")
@@ -727,8 +729,9 @@ func TestEveryFactCitesSomething(t *testing.T) {
 }
 
 // TestUnresolvedSymbolFacts (WS1-052) checks that the relation is keyed by ref_des, one row per
-// PLACEMENT, so it joins to the components that lost pins. That asymmetry with the rule (one finding
-// per reference) is deliberate, since the rule reports a cause and the relation exposes a blast radius.
+// PLACEMENT, so it joins to the components that lost pins. The rule gives one finding per reference
+// instead, and the asymmetry is deliberate. The rule reports a cause, and the relation shows every
+// placement that cause affects.
 func TestUnresolvedSymbolFacts(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R1"}, {RefDes: "R2"}, {RefDes: "U1"}},
@@ -764,7 +767,7 @@ func TestUnresolvedSymbolFactsEmptyWhenClean(t *testing.T) {
 	}
 }
 
-// TestParamFactsAreInBaseUnits (agni issue 165) checks that the query surface carries a parameter's
+// TestParamFactsAreInBaseUnits (agni issue 165) checks that the query surface publishes a parameter's
 // number in its SI base unit, so a datalog threshold is written once and does not change meaning
 // because one vendor printed millivolts and another printed volts.
 //
@@ -790,10 +793,9 @@ func TestParamFactsAreInBaseUnits(t *testing.T) {
 	}
 }
 
-// TestParamRangeFactsConvertBothBounds covers param.range, the two-sided relation, so a conversion that
-// scaled only the max would leave a "3000..3.6" row. That does not merely report the wrong number, it
-// reports the OPPOSITE finding, where a 5V rail reads as below a 3000V minimum rather than above a 3.6V
-// maximum.
+// TestParamRangeFactsConvertBothBounds covers param.range, the two-sided relation. A conversion that
+// scaled only the max would leave a "3000..3.6" row. That row reports the OPPOSITE finding. A 5V
+// rail reads as below a 3000V minimum rather than above a 3.6V maximum.
 func TestParamRangeFactsConvertBothBounds(t *testing.T) {
 	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
 	milli.Parameters[0].Unit = "mV"
@@ -811,9 +813,8 @@ func TestParamRangeFactsConvertBothBounds(t *testing.T) {
 	}
 }
 
-// TestParamUnitFactExposesPrintedUnit pins that normalizing the numbers must not destroy what the
-// vendor actually printed, which is what a reviewer checking a citation against a datasheet page
-// reads.
+// TestParamUnitFactExposesPrintedUnit pins that normalizing the numbers keeps the unit the vendor
+// printed. A reviewer reads that unit when checking a citation against a datasheet page.
 func TestParamUnitFactExposesPrintedUnit(t *testing.T) {
 	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
 	milli.Parameters[0].Unit = "mV"
@@ -875,14 +876,13 @@ func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
 //
 // The field must hold an SI BASE symbol, never a prefixed spelling, because scale normalization
 // happens once and far upstream (param.InBaseUnit, C24). A projector that set "mV" here would make a
-// volts-against-millivolts comparison REFUSE as a dimension mismatch rather than convert, which is a
-// fresh silent wrong answer wearing the fix's clothes. Naming the field BaseUnit discourages that;
-// this test is what actually prevents it, including for a relation added later.
+// volts-against-millivolts comparison REFUSE as a dimension mismatch rather than convert. That
+// refusal is a new silent wrong answer. Naming the field BaseUnit discourages it, and this test
+// prevents it, including for a relation added later.
 //
-// The board tier's "mm" is deliberately exempt from the SI-base check and is asserted by name
-// instead, because millimetres are what every board format states and every board query is written
-// in, and the invariant that matters is one spelling per dimension across all relations, not SI
-// purity.
+// The loop still skips "mm" by name. Since agni issue 1035 the board tier publishes metres
+// (unitMetre), so no current relation reaches that branch. The invariant that matters is one
+// spelling per dimension across all relations.
 func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
 	milli.Parameters[0].Unit = "mV"
@@ -906,8 +906,8 @@ func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 		}
 		seen[u] = f.Relation
 	}
-	// The millivolt-seeded spec must reach the fact base as VOLTS, which is the end-to-end statement
-	// that upstream normalization and this field agree.
+	// The millivolt-seeded spec must reach the fact base as VOLTS. That shows end to end that
+	// upstream normalization and this field agree.
 	if got := seen["V"]; got == "" {
 		t.Error("no relation published volts; the mV-seeded fixture should have arrived as V")
 	}
@@ -917,8 +917,8 @@ func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 }
 
 // TestParamTypFacts checks that the typical value is its own relation rather than a sixth column on
-// param.range, because a typ is not a bound. A row with no typ emits nothing, so absence stays
-// absence instead of arriving downstream as a zero somebody compares a rail against.
+// param.range, because a typ is not a bound. A parameter with no typ emits no row, so no query can
+// compare a rail against a zero the datasheet never stated.
 func TestParamTypFacts(t *testing.T) {
 	spec := typSpec("ACME-LDO", "A", 0.000042)
 	m := check.NewModel(supplyDesign("+3V3", false, "ACME-LDO"), check.WithParamProvider(param.ParamSet{"ACME-LDO": spec}))
@@ -963,9 +963,9 @@ func TestParamTypFactsConvertToBaseUnit(t *testing.T) {
 	}
 }
 
-// TestParamTypFactsKeepUnconvertibleRow follows specParamRangeRows' posture, where a unit with no known
-// scale costs the row its NUMBER, never its existence, so "what does this part specify" never
-// shortens its list in silence.
+// TestParamTypFactsKeepUnconvertibleRow follows specParamRangeRows. A unit with no known scale
+// removes the row's NUMBER and keeps the row, so the answer to "what does this part specify" never
+// shortens in silence.
 func TestParamTypFactsKeepUnconvertibleRow(t *testing.T) {
 	spec := typSpec("ACME-LDO", "dBm", 12)
 	m := check.NewModel(supplyDesign("+3V3", false, "ACME-LDO"), check.WithParamProvider(param.ParamSet{"ACME-LDO": spec}))
@@ -989,8 +989,8 @@ func TestSpecLibFactsCarryParamTyp(t *testing.T) {
 	}
 }
 
-// TestParamProvPageIsNotAQuantity checks that the page binds as a string. It is a document locator,
-// and a number in a slot the dimension guard protects unifies with a voltage (agni issue 545).
+// TestParamProvPageIsNotAQuantity checks that the page binds as a string. The page is a document
+// locator. As a number in a dimension-guarded slot, it would unify with a voltage (agni issue 545).
 func TestParamProvPageIsNotAQuantity(t *testing.T) {
 	spec := ldoRecommendedSpec("ACME-33", 3.0, 3.6)
 	m := check.NewModel(supplyDesign("+5V", false, "ACME-33"), check.WithParamProvider(param.ParamSet{"ACME-33": spec}))
@@ -1024,13 +1024,13 @@ var numericRelationControl = []string{
 	RelNetPinCount, RelNetDeclaredTrackWidth, RelBoardTrackWidth,
 }
 
-// TestNoRelationPublishesAnUnlabelledNumber closes the hole TestRelationBaseUnitsAreCanonical cannot
-// see. That test skips a row whose BaseUnit is empty, treating it as dimensionless, so a projector
-// putting a NON-quantity in a numeric slot passes it in silence. param.prov did exactly that with a
+// TestNoRelationPublishesAnUnlabelledNumber covers a gap in TestRelationBaseUnitsAreCanonical. That
+// test skips a row whose BaseUnit is empty, treating it as dimensionless. A projector putting a
+// NON-quantity in a numeric slot therefore passes it in silence. param.prov did exactly that with a
 // page number for as long as the relation existed (agni issue 545).
 //
-// The rule is that a number in Num or Min carries its dimension, or its relation is on the short
-// list above.
+// A number in Num or Min must declare its dimension, or its relation must be on the short list
+// above.
 func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
 	seen := map[string]bool{}
 	for _, f := range Facts(everyNumericFamily()) {
@@ -1054,8 +1054,8 @@ func TestNoRelationPublishesAnUnlabelledNumber(t *testing.T) {
 	}
 }
 
-// everyNumericFamily is a model publishing a row from every numeric relation family: a datasheet
-// parameter, a rail voltage, a net class and the board.
+// everyNumericFamily is a model that publishes a row from each numeric relation family. The
+// families are a datasheet parameter, a rail voltage, a net class and the board.
 func everyNumericFamily() check.Model {
 	spec := typSpec("ACME-33", "A", 0.000042)
 	d := supplyDesign("+5V", false, "ACME-33")
@@ -1145,7 +1145,7 @@ func TestParamFactsMarkUnconvertibleRowsAbsent(t *testing.T) {
 }
 
 // TestParamPinFactsDeclarePinsWithFunction checks that the pin dimension table is keyed by the
-// spec-local id, carries the printed name as a value, and renders the function as a token.
+// spec-local id, holds the printed name as a value, and renders the function as a token.
 func TestParamPinFactsDeclarePinsWithFunction(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
 	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
@@ -1173,8 +1173,8 @@ func TestParamPinFactsDeclarePinsWithFunction(t *testing.T) {
 }
 
 // TestParamPinRangeFactsAnswerPerTerminal covers why the pin tier exists. Two supply pins
-// with different windows produce two DIFFERENT answers, where param.range collapses them onto one
-// symbol-keyed pair of rows a query cannot tell apart by terminal.
+// with different windows produce two DIFFERENT answers. param.range collapses them onto one
+// symbol-keyed pair of rows, and a query cannot tell those rows apart by terminal.
 func TestParamPinRangeFactsAnswerPerTerminal(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
 	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
@@ -1223,8 +1223,8 @@ func TestParamPinRangeFanOutsAGroupBinding(t *testing.T) {
 }
 
 // TestParamPinRangeOmitsPartWideRows covers an empty binding, which is a fact about the DIE.
-// Emitting it against every pin would read as each terminal carrying that limit itself, which is
-// the collapse the pin tier undoes, re-created one layer down. Those rows stay on param.range.
+// Emitting it against every pin would read as each terminal having that limit itself. That would
+// re-create the collapse the pin tier undoes, one layer down. Those rows remain on param.range.
 func TestParamPinRangeOmitsPartWideRows(t *testing.T) {
 	spec := dualSupplySpec("ACME-XLAT")
 	m := check.NewModel(supplyDesign("+3V3", false, "ACME-XLAT"), check.WithParamProvider(param.ParamSet{"ACME-XLAT": spec}))
@@ -1322,10 +1322,10 @@ func TestPinRelationsBindPositionallyThroughDatalog(t *testing.T) {
 	}
 }
 
-// TestEntityFacts checks that the enumeration relation names what EXISTS, which is what makes it
-// the one a search can start from. The case that matters is the isolated one. A part on no net and
-// a net with nothing on it are both invisible to component.net, so a search that borrows that
-// relation's range silently cannot find them. Both are exactly what a reviewer wants to find.
+// TestEntityFacts checks that the enumeration relation names what EXISTS, so a search can start
+// from it. The case that matters is the isolated one. A part on no net and a net with nothing on
+// it are both invisible to component.net. A search over component.net's range therefore cannot
+// find them, and says nothing. A reviewer wants to find exactly those two.
 func TestEntityFacts(t *testing.T) {
 	d := supplyDesign("+3V3", false, "")
 	d.Components = append(d.Components, &ir.Component{
@@ -1364,9 +1364,8 @@ func TestEntityFacts(t *testing.T) {
 	}
 }
 
-// TestEntityFactsSkipsUnnamed covers a nameless net, which answers "" to a question about what
-// things are called, and no name search could ever match it, so it is omitted rather than emitted
-// as an empty row.
+// TestEntityFactsSkipsUnnamed covers a nameless net. Its name is "", so no name search could ever
+// match it. It is omitted rather than emitted as an empty row.
 func TestEntityFactsSkipsUnnamed(t *testing.T) {
 	d := supplyDesign("+3V3", false, "")
 	d.Nets = append(d.Nets, &ir.Net{Prov: &ir.Provenance{SourceFile: "t"}})
@@ -1377,6 +1376,6 @@ func TestEntityFactsSkipsUnnamed(t *testing.T) {
 	}
 }
 
-// mmOf reads a published length, which is in metres (agni issue 1035), back in millimetres, rounded
-// to the nanometre a board records, so a test states the number the board's own tools print.
+// mmOf converts a published length from metres (agni issue 1035) back to millimetres. It rounds to
+// the nanometre a board records, so a test states the number the board's own tools print.
 func mmOf(m float64) float64 { return math.Round(m*1e9) / 1e6 }

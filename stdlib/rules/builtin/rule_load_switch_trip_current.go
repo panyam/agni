@@ -10,9 +10,9 @@ import (
 // loadSwitchTripAboveFetRating flags a controller-based load switch whose current limit is set above
 // the continuous drain rating of the external MOSFET it switches through (WS3-085). Silence here means
 // "I could not tell", never "this is fine", because a switch is only resolved when the controller, the
-// FET and the shunt are each unambiguous (see check.ExternalFetLoadSwitches). The gaps that produce
-// silence, and what the rule does not claim about derating, are in
-// stdlib/rules/builtin/docs/load-switch-trip-above-fet-rating.md.
+// FET and the shunt are each unambiguous (see check.ExternalFetLoadSwitches).
+// stdlib/rules/builtin/docs/load-switch-trip-above-fet-rating.md lists the gaps that produce
+// silence, and what the rule does not claim about derating.
 var loadSwitchTripAboveFetRating = &check.Rule{
 	Name:       "load-switch-trip-above-fet-rating",
 	Severity:   "error",
@@ -35,13 +35,14 @@ var loadSwitchTripAboveFetRating = &check.Rule{
 	StatesConsideredSet: true,
 }
 
-// loadSwitchTripVerdicts gives one verdict per pass FET of every RESOLVED external-FET load switch. A
-// transistor check.ExternalFetLoadSwitches could not tie to a controller and a sense resistor is not
-// a subject, since as far as the netlist shows it is not a load switch at all.
+// loadSwitchTripVerdicts gives one verdict per pass FET of every RESOLVED external-FET load switch.
+// Suppose check.ExternalFetLoadSwitches could not tie a transistor to a controller and a sense
+// resistor. That transistor is not a subject, since as far as the netlist shows it is not a load
+// switch at all.
 //
 // THE UNRATED PASS FET BECOMES NotConsidered rather than passing silently (#400).
-// check.CompareToBound makes the comparison and the witness together, so a pass carries the two
-// numbers it rests on.
+// check.CompareToBound makes the comparison and the witness together, so a pass states the two
+// numbers behind it.
 func loadSwitchTripVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	var out []check.Verdict
 	for _, sw := range check.ExternalFetLoadSwitches(m) {
@@ -94,7 +95,7 @@ func loadSwitchTripVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 			sw.Fet, id.Symbol, id.Value.GetMax(),
 			check.Citation(fetSpec, id), check.Citation(ctrlSpec, sw.Ocp))
 		// The switch's effective on-resistance is the external FET's RDS(on), quoted with an inline
-		// citation but NOT added to DatasheetProv. The verdict does not rest on it, and the review's
+		// citation but NOT added to DatasheetProv. The verdict does not depend on it, and the review's
 		// data-trust gate rates a finding by its WEAKEST citation, so an unused low-confidence row
 		// would drag a real failure down to provisional.
 		if sw.OnResistance != nil {
@@ -108,7 +109,7 @@ func loadSwitchTripVerdicts(ctx context.Context, m check.Model) []check.Verdict 
 			Context: v.Context,
 			Prov:    check.ComponentProv(m, sw.Fet),
 			// The FET's exceeded rating first, then the controller threshold the trip current came
-			// from. The conclusion rests on both (WS3-028).
+			// from. The conclusion depends on both (WS3-028).
 			DatasheetProv: []*check.DatasheetCitation{
 				check.DatasheetCitationOf(fetSpec, id),
 				check.DatasheetCitationOf(ctrlSpec, sw.Ocp),

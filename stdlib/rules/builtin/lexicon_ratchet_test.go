@@ -10,8 +10,8 @@ import (
 
 // TestRulesMatchNamesOnlyThroughTheLexicon holds the shipped rules to reading a name through the
 // lexicon (Model.IsI2CName, IsRailNet, and the rest) rather than a pattern of their own, which a
-// project can neither see nor override (agni 1265). A rule file importing regexp is the shape that
-// let I2S data lines read as I2C (agni 1255).
+// project can neither see nor override (agni 1265). A rule file importing regexp once let I2S data
+// lines read as I2C (agni 1255).
 func TestRulesMatchNamesOnlyThroughTheLexicon(t *testing.T) {
 	var scanned int
 	for _, dir := range []string{".", "../datalog"} {

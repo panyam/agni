@@ -11,9 +11,9 @@ import (
 
 // The net-name consistency batch (WS3-016/017). Naming is connectivity on schematic
 // formats, where labels join by name, so a naming slip silently merges or splits nets.
-// Three rules read two channels: the per-net alias list (netgraph.AttrAliases, every label
-// the naming pass collapsed into one net) and the design's name->net-count index
-// (Model.NetNameCount).
+// Three rules read two channels. One is the per-net alias list (netgraph.AttrAliases),
+// with every label that the naming pass collapsed into one net. The other is the design's
+// name->net-count index (Model.NetNameCount).
 //
 // The alias RANK tells the rules which scoping class a name came from (the FQN model in
 // docsite/content/architecture/net-solving.md). Rank 0 is design-wide (a global label or
@@ -41,7 +41,7 @@ var duplicateNetName = matrixlessSpecRule(func() *check.Rule {
 	check.RegisterSpecFunc("nets_sharing_name", &check.SpecFunc{
 		// How many nets in the design carry the in-scope net's exact name. Synthesized
 		// stub names (N$, unconnected-()) are the reader's per-net inventions and never
-		// collide; empty names carry no claim.
+		// collide; empty names make no claim.
 		Reads:      []string{"net.names"},
 		Primitives: []string{"count", "pair"},
 		Fn: func(m check.Model, ents map[string]any, _ []any) any {
@@ -85,10 +85,11 @@ var labelAliasConflict = matrixlessSpecRule(func() *check.Rule {
 		Primitives: []string{"pattern", "select"},
 		//
 		// Two names rival only where they MET on their own sheet's wiring (agni issue 1249). A
-		// reused sheet's two hierarchical labels on separate wires share a scope, and the parent
-		// that straps both to GND meets them on the PARENT's wiring, through its sheet pins, which
-		// carry the child's names. netgraph.AttrSheetGroups records where each group met, and a net
-		// without it met in one place, so its aliases are one group on every sheet.
+		// reused sheet's two hierarchical labels on separate wires share a scope. A parent can
+		// strap both to GND. It then meets them on the PARENT's wiring, through its sheet pins,
+		// and those pins hold the child's names. netgraph.AttrSheetGroups records where each
+		// group met. A net without that attribute met in one place, so its aliases are one group
+		// on every sheet.
 		Fn: func(m check.Model, ents map[string]any, _ []any) any {
 			n := ents["net"].(*ir.Net)
 			rank := map[string]int{}

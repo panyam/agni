@@ -19,7 +19,7 @@ var crystalLoadCaps = &check.Rule{
 	Remedy:     "Fit a load capacitor from each oscillator terminal to ground, sized from the crystal's specified load capacitance and the stray capacitance of the layout rather than copied from another design.",
 	Primitives: []string{"select", "exists", "traverse", "pattern"},
 	Reads:      []string{"component.class", "component.dnp", "net.attributes", "net.names", "on_net", "param.pin", "param.pin_range"},
-	// The datasheet credit for integrated load capacitance is optional: without a corpus the rule
+	// The datasheet credit for integrated load capacitance is optional. Without a corpus the rule
 	// still judges every terminal, and a failure names the IC it could not read (agni issue 1247).
 	OptionalReads: []string{"param.pin", "param.pin_range"},
 	Tags: map[string]string{
@@ -33,9 +33,9 @@ var crystalLoadCaps = &check.Rule{
 }
 
 // crystalTerminal is one oscillator terminal of one clock part, holding the net it sits on and the
-// part's own pin on that net. Both are needed, and for different jobs. The NET is what carries the capacitor and
-// what the finding's sentence names; the PIN is what makes the verdict addressable, since a crystal
-// has two terminals and a verdict keyed by the part alone would be one identity for both.
+// part's own pin on that net. Both are needed, and for different jobs. The capacitor sits on the
+// NET, and the finding's sentence names the net. The PIN makes the verdict addressable. A crystal has
+// two terminals, and a verdict keyed by the part alone would give both one identity.
 type crystalTerminal struct {
 	net *ir.Net
 	pin string
@@ -50,19 +50,19 @@ type clockPart struct {
 
 // crystalLoadCapsVerdicts decides every oscillator TERMINAL of every passive crystal, one verdict
 // each. The terminal is the subject because a crystal with a cap on one leg and none on the other is
-// half right, and a part-level verdict could not say which half. The
-// Finding stays part-scoped, matching what the viewer highlights and what every existing test asserts,
-// the same split the per-pin datasheet rules already draw.
+// half right, and a part-level verdict could not say which half. The Finding is still part-scoped.
+// That matches what the viewer highlights and what every existing test asserts. The per-pin
+// datasheet rules already split verdict and finding the same way.
 //
-// A crystal's terminals and whether it carries a power pin are BOTH cross-net facts about one
-// component, so the enumeration quantifies over components and then over nets, rather than over nets
-// alone.
+// Two facts about a crystal are cross-net facts about one component, its terminals and whether it
+// has a power pin. So the enumeration quantifies over components and then over nets, rather than
+// over nets alone.
 //
-// THE TWO-TERMINAL GATE IS NotConsidered. A clock part carrying a recognized rail IS an active
-// oscillator, which takes no external load caps, so it is not a subject of this rule and gets no
-// verdict. The terminal COUNT is a heuristic for the same question where the rail is not
-// recognizable, as with an oscillator on a real EDIF corpus whose Vcc net was neither flagged nor
-// rail-named. A part failing that count is one the rule declined to classify, so it reports
+// THE TWO-TERMINAL GATE IS NotConsidered. A clock part on a recognized rail IS an active oscillator.
+// An active oscillator takes no external load caps, so it is not a subject of this rule and gets no
+// verdict. Where the rail is not recognizable, the terminal COUNT answers the same question by
+// heuristic. One oscillator on a real EDIF corpus needed it, because its Vcc net was neither flagged
+// nor rail-named. The rule declines to classify a part that fails the count, so that part reports
 // NotConsidered rather than a pass.
 func crystalLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	parts := map[string]*clockPart{}
@@ -70,9 +70,9 @@ func crystalLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict
 	for _, c := range m.Components() {
 		// Quantify over the CLOCK FAMILY (WS10-015), excluding the subtypes that take no external load
 		// caps (an active oscillator has none, a ceramic resonator has them integrated).
-		// A bare clock candidate the classifier could not subtype (the common un-seeded case) stays in,
-		// and the powered / exactly-two-terminal topology gates below remain the backstop that catches
-		// an oscillator whose Vcc net is not rail-recognizable.
+		// The rule keeps a bare clock candidate that the classifier could not subtype, the common
+		// un-seeded case. The powered and exactly-two-terminal topology gates below still catch an
+		// oscillator whose Vcc net is not rail-recognizable.
 		if m.HasClass(c.RefDes, check.ClassClock) &&
 			!m.HasClass(c.RefDes, check.ClassOscillator) && !m.HasClass(c.RefDes, check.ClassCeramicResonator) {
 			parts[c.RefDes] = &clockPart{comp: c, terms: map[string]crystalTerminal{}}
@@ -156,10 +156,10 @@ func crystalLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict
 				v.Witness = &check.Witness{
 					Statement: "no capacitor sits on terminal net " + name,
 				}
-				// An IC on the terminal whose datasheet this run did not read may carry the load
-				// capacitance itself, as many RTCs and low-power MCUs do, so the absence is unverified
-				// rather than settled (agni issue 1247). The witness says so; the finding's message and
-				// context stay the datalog twin's, which reads no datasheet.
+				// Suppose this run did not read the datasheet of an IC on the terminal. That IC may
+				// integrate the load capacitance itself, as many RTCs and low-power MCUs do. So the
+				// absence is unverified rather than settled (agni issue 1247). The witness says so. The
+				// finding's message and context still match the datalog twin, which reads no datasheet.
 				unread := check.UnreadIC(m, t.net, ref)
 				if unread != "" {
 					v.Witness.Statement += ", and " + unread + "'s datasheet was not read, so whether it integrates the load capacitance is unverified"
@@ -169,10 +169,10 @@ func crystalLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict
 					Subject: check.Entity{Kind: check.KindComponent, Ref: ref},
 					Message: "crystal terminal net " + name + " has no load capacitor",
 					Prov:    p.comp.Prov,
-					// The terminal the sentence is about. The subject is the crystal, because that
-					// is the part a reader changes, but a crystal has two terminals and both sit
-					// inside the highlighted symbol, so without this the drawing cannot say which
-					// one is at fault (agni issue 349). Kept in step with the datalog twin.
+					// The terminal the sentence is about. The subject is the crystal, because a reader
+					// changes the crystal. But a crystal has two terminals, and both sit inside the
+					// highlighted symbol. Without this entity the drawing cannot say which one is at
+					// fault (agni issue 349). Kept in step with the datalog twin.
 					Context: []check.ContextSubject{{Entity: check.Entity{Kind: check.KindNet, Ref: name, NetID: t.net.Id}, Role: "terminal"}},
 				}
 			}

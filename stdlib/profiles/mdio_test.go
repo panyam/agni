@@ -8,9 +8,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// mdioGood has MDIO and MDC both wired, and R1 (a resistor, since the pull-up walk crosses R-prefixed
-// 2-net parts) bridges ETH_MDIO to the +3V3 rail. MDC deliberately carries NO pull-up, which is how a
-// correct board is built, so a silent run here is the profile's central claim.
+// mdioGood has MDIO and MDC both wired. R1 bridges ETH_MDIO to the +3V3 rail, and the pull-up walk
+// crosses it because it is an R-prefixed 2-net part. MDC deliberately has NO pull-up. A correct board
+// is built that way, so a silent run here is the profile's central claim.
 func mdioGood() *ir.Design {
 	return &ir.Design{
 		Components: comps("U1", "U2", "R1"),
@@ -56,8 +56,8 @@ func TestMDIOMissingPullUpFires(t *testing.T) {
 }
 
 // MDC is a driven clock, not an open-drain line, so requiring a pull-up on it would fail every
-// correctly-built board. This is the assertion that keeps the profile from copying the four-signal
-// treatment other tools give this bus. Re-check it by adding `pullup: true` to MDC in the yaml.
+// correctly-built board. This assertion keeps the profile from copying the four-signal treatment
+// other tools give this bus. Re-check it by adding `pullup: true` to MDC in the yaml.
 func TestMDCIsNotRequiredToHaveAPullUp(t *testing.T) {
 	for _, f := range check.RunBackground(check.NewModel(mdioBroken()), Compile(MDIO)) {
 		if f.Rule == "mdio-missing-pullup" && check.EntityRef(f.Subject) == "ETH_MDC" {
@@ -66,8 +66,8 @@ func TestMDCIsNotRequiredToHaveAPullUp(t *testing.T) {
 	}
 }
 
-// A clock whose name merely opens with MDC is not this bus. Same trap the built-in I2C rule guards
-// with SPI_SCLK, and the reason both patterns bound their match at a token boundary.
+// A clock whose name merely opens with MDC is not this bus. The built-in I2C rule guards the same
+// trap with SPI_SCLK, and for this reason both patterns bound their match at a token boundary.
 func TestMDIODoesNotMatchMDCLK(t *testing.T) {
 	d := &ir.Design{
 		Components: comps("U1", "U2"),
@@ -81,9 +81,9 @@ func TestMDIODoesNotMatchMDCLK(t *testing.T) {
 	}
 }
 
-// agni issue 1070: asked about some nets, a profile's rules answer for those nets alone, and give the
-// verdicts a whole run filtered to them gives. Each rule's raw answer is checked too, so a rule that
-// still walked the whole board would fail here rather than only run slowly.
+// agni issue 1070. Asked about some nets, a profile's rules answer for those nets alone. Their
+// verdicts equal a whole run's verdicts filtered to those nets. Each rule's raw answer is checked
+// too, so a rule that still walked the whole board would fail here rather than only run slowly.
 func TestProfileRulesAskedAboutOneNetAnswerForItAlone(t *testing.T) {
 	m := check.NewModel(mdioBroken())
 	ctx := context.Background()

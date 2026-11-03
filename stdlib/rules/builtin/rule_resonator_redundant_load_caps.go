@@ -14,7 +14,7 @@ import (
 // It is the inverse of crystal-load-caps. A passive crystal NEEDS external load caps, while a ceramic
 // resonator of the built-in-cap family (Murata CERALOCK and kin) already contains them, so an
 // external cap to ground doubles the load. The ceramic_resonator class is datasheet-seeded
-// (WS10-015), so the rule stays silent until a resonator is classified and never fires on a crystal
+// (WS10-015), so the rule is silent until a resonator is classified and never fires on a crystal
 // or an un-subtyped clock candidate.
 var resonatorRedundantLoadCaps = &check.Rule{
 	Name:       "resonator-redundant-load-caps",
@@ -35,15 +35,15 @@ var resonatorRedundantLoadCaps = &check.Rule{
 }
 
 // resonatorRedundantLoadCapsVerdicts decides every signal terminal of every ceramic resonator, one
-// verdict each, the same terminal-scoped subject crystal-load-caps uses, because a part-level verdict
-// cannot say which leg carries the stray cap (#400).
+// verdict each. crystal-load-caps uses the same terminal-scoped subject, because a part-level verdict
+// cannot say which leg has the stray cap (#400).
 //
 // An un-subtyped clock part gets no verdict, not even NotConsidered. Until a datasheet says a part
 // integrates its load caps, an external cap on its terminal may be exactly what it needs, and
 // crystal-load-caps owns that case.
 //
 // A terminal whose net continues onto a sheet the read did not open is NotConsidered rather than
-// dropped, so it stays distinguishable from a resonator with no such terminal (#400).
+// dropped, so it can still be told apart from a resonator with no such terminal (#400).
 func resonatorRedundantLoadCapsVerdicts(ctx context.Context, m check.Model) []check.Verdict {
 	// Ceramic resonators only. A bare un-subtyped clock candidate may be a crystal that needs caps.
 	resos := map[string]*clockPart{}
@@ -128,8 +128,8 @@ func resonatorRedundantLoadCapsVerdicts(ctx context.Context, m check.Model) []ch
 				Message: "ceramic resonator terminal net " + name + " has an external load capacitor " + capRef + " (this part integrates its load caps)",
 				Prov:    r.comp.Prov,
 				// The terminal and the cap, in the order the sentence names them. The subject
-				// stays the resonator, because that is the part whose datasheet makes the caps
-				// redundant, but the cap is what a reader deletes (agni issue 349).
+				// is still the resonator, because its datasheet makes the caps redundant. A
+				// reader deletes the cap, though (agni issue 349).
 				Context: []check.ContextSubject{
 					{Entity: check.Entity{Kind: check.KindNet, Ref: name, NetID: t.net.Id}, Role: "terminal"},
 					{Entity: check.Entity{Kind: check.KindComponent, Ref: capRef}, Role: "capacitor"},

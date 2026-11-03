@@ -35,8 +35,8 @@ var busSpellingNotABus = &check.Rule{
 }
 
 // busSpellingNotABusVerdicts decides every range-spelled label the reader recorded. A label the
-// format reads as a bus passes and one it reads as a plain net fails, so a sheet whose every bus is
-// spelled correctly says so rather than reporting the nothing a sheet with no bus reports.
+// format reads as a bus passes, and one it reads as a plain net fails. So a sheet whose every bus
+// is spelled correctly says so. Otherwise it would report nothing, as a sheet with no bus does.
 //
 // A name spelled the same way on several sheets is one verdict, since respelling it is one change.
 func busSpellingNotABusVerdicts(ctx context.Context, m check.Model) []check.Verdict {
@@ -65,5 +65,5 @@ func busSpellingNotABusVerdicts(ctx context.Context, m check.Model) []check.Verd
 	return out
 }
 
-// busSpellingNotABusMessage is the finding message. The label lives in the finding's Subject.
+// busSpellingNotABusMessage is the finding message. The finding's Subject names the label.
 const busSpellingNotABusMessage = "label is spelled like a bus and reads as one net (respell it in this format's bus syntax)"

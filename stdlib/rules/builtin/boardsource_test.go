@@ -12,7 +12,7 @@ import (
 
 // railFromConnector is a connector J1 whose pin sits on 3V3 beside U1's supply pin, plus whatever
 // else the case wires onto the board. U2 is the converter, with a switch pin, a feedback pin and a
-// power-output pin each landing wherever the case's nets put them.
+// power-output pin, each on whichever net the case gives it.
 func railFromConnector(nets map[string][]string) *ir.Design {
 	all := map[string][]string{"3V3": {"J1.1", "U1.1"}, "GND": {"U1.2", "J1.2"}}
 	for n, pins := range nets {

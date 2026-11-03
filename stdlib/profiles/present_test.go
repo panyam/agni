@@ -69,7 +69,7 @@ func TestHostDeclared(t *testing.T) {
 
 // TestAnchoredRequiresAnchorNet is the WS3-099 core. InUse clears on two NON-anchor signals while
 // the anchor net is absent, so InUse alone does not mean the convention completeness rule can
-// evaluate, because signalMissingRule hangs on the anchor net existing. Anchored is the missing
+// evaluate, because signalMissingRule needs the anchor net to exist. Anchored is the missing
 // half of that gate.
 func TestAnchoredRequiresAnchorNet(t *testing.T) {
 	pcie := Profile{Name: "PCIe", Signals: []Signal{
@@ -78,8 +78,7 @@ func TestAnchoredRequiresAnchorNet(t *testing.T) {
 		{Name: "REFCLKN", Suffix: "_REFCLKN"},
 	}}
 	// Two non-anchor signals match and the anchor does not, so it is in use but the completeness
-	// rule has nothing to hang on. This is the shape that scored a clean pass while checking
-	// nothing.
+	// rule has nothing to anchor on. That shape scored a clean pass while checking nothing.
 	partial := check.NewModel(&ir.Design{Nets: nets("PCIE_NAD_REFCLKP", "PCIE_NAD_REFCLKN")})
 	if !InUse(partial, pcie) {
 		t.Error("two matching non-anchor signals should still read as in use (InUse keeps its meaning)")

@@ -27,11 +27,11 @@ func subsystemRule(s Subsystem) *check.Rule {
 	}
 }
 
-// subsystemVerdicts decides every part the declaration NAMES: the source component when one is
-// declared, and each required net. The considered set is the declaration itself, so the rule can say
-// "five of the six things this subsystem declares are here, and the sixth is not" with no extra
-// machinery. A fully present subsystem reports passes, which separates it from a subsystem whose
-// declaration nobody wrote (#417).
+// subsystemVerdicts decides every part the declaration NAMES. Those are the source component when
+// one is declared, and each required net. The considered set is the declaration itself, so the rule
+// can say "five of the six things this subsystem declares are here, and the sixth is not" with no
+// extra machinery. A fully present subsystem reports passes. Those passes separate it from a
+// subsystem whose declaration nobody wrote (#417).
 func subsystemVerdicts(m check.Model, s Subsystem) []check.Verdict {
 	var out []check.Verdict
 	if s.Source != nil {
@@ -71,10 +71,10 @@ func subsystemVerdicts(m check.Model, s Subsystem) []check.Verdict {
 	return out
 }
 
-// slug turns a subsystem name into the kebab-case suffix of its rule name: lower-cased, runs of
-// non-alphanumeric characters collapsed to a single "-", and leading/trailing "-" trimmed. So "main
-// clock" -> "main-clock" and the rule is intent/subsystem-main-clock. Load validates that names
-// slugify uniquely, so two subsystems never collide on one rule name.
+// slug turns a subsystem name into the kebab-case suffix of its rule name. It lower-cases the name,
+// collapses runs of non-alphanumeric characters to a single "-", and trims a leading or trailing
+// "-". So "main clock" -> "main-clock" and the rule is intent/subsystem-main-clock. Load validates
+// that names slugify uniquely, so two subsystems never collide on one rule name.
 func slug(name string) string {
 	var b strings.Builder
 	prevDash := false

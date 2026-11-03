@@ -99,8 +99,8 @@ func TestTestPointCountAgreesWithADistinctCount(t *testing.T) {
 	}
 }
 
-// TestEveryMemberIsDocumentedAndTyped holds the library to what drill-down shows a reader: a doc, and
-// argument types the author declared rather than ones the engine had to infer.
+// TestEveryMemberIsDocumentedAndTyped checks what drill-down shows a reader for each member. Each
+// member needs a doc, and argument types the author declared rather than ones the engine inferred.
 func TestEveryMemberIsDocumentedAndTyped(t *testing.T) {
 	derived := facts.DefaultRegistry().Derived()
 	if len(derived) < 4 {
@@ -122,17 +122,18 @@ func TestEveryMemberIsDocumentedAndTyped(t *testing.T) {
 	}
 }
 
-// TestModulesThatReadEachOtherRegisterTogether is why lib registers its modules as one batch.
-// component.dl reads net.has_test_point, and it sorts first, so one module at a time it is refused
-// before net.dl arrives.
+// TestModulesThatReadEachOtherRegisterTogether shows why lib registers its modules as one batch.
+// component.dl reads net.has_test_point and sorts first. Registered one module at a time, it is
+// refused before net.dl arrives.
 func TestModulesThatReadEachOtherRegisterTogether(t *testing.T) {
 	base := facts.Registered()
 	var ms []ns.Module
 	for _, m := range lib.Modules() {
 		ms = append(ms, ns.Module{Path: m.Path, Language: datalog.LanguageName, Text: m.Text})
 	}
-	// The process default already holds the library, registered last because it imports everything
-	// else this binary registers: its modules, then its docs. Compose from everything before both.
+	// The process default already holds the library. The library imports everything else this
+	// binary registers, so it registers last, its modules and then its docs. Compose from
+	// everything before both.
 	var without []facts.Option
 	without = append(without, base[:len(base)-2]...)
 	if r, err := facts.NewRegistry(without...); err != nil || len(r.Derived()) != 0 {
@@ -154,8 +155,8 @@ func TestABrokenModuleFailsComposition(t *testing.T) {
 	}
 }
 
-// TestEveryMemberHasItsDoc holds the library to its reference pages in both directions: a member with
-// no doc ships with no page, and a doc naming no member is a page for something that does not exist.
+// TestEveryMemberHasItsDoc checks the library's reference pages in both directions. A member with
+// no doc ships with no page. A doc naming no member is a page for something that does not exist.
 func TestEveryMemberHasItsDoc(t *testing.T) {
 	docs := lib.Docs()
 	derived := facts.DefaultRegistry().Derived()

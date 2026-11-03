@@ -63,16 +63,17 @@ func LoadFS(fsys fs.FS, dir string) ([]Profile, error) {
 // a built-in one by its namespace.
 // It SUPERSEDES rather than augments, so an overlay profile carrying the name of a built-in one
 // replaces that built-in's rules in the composed catalog (WS3-056). Augmenting was WS3-054's v0 and it
-// produces false failures, not just duplicates. A naming map that re-binds some roles and leaves others
-// at core naming lets the CORE profile still anchor and clear its in-use gate, so it reports every
-// re-bound role as a missing signal at severity error while the overlay reads the same design clean.
-// Re-binding the ANCHOR role hides the effect, because the core profile stops anchoring and goes quiet,
-// so the closer a house convention sits to the core one, the more false failures augmenting generates.
+// produces false failures, not just duplicates. Imagine a naming map that re-binds some roles and
+// leaves others at core naming. The CORE profile still anchors and clears its in-use gate. It then
+// reports every re-bound role as a missing signal at severity error, while the overlay reads the same
+// design clean. Re-binding the ANCHOR role hides the effect, because the core profile stops anchoring
+// and reports nothing. So the closer a house convention is to the core one, the more false failures
+// augmenting generates.
 //
 // Supersession is keyed on the profile NAME and scoped to the built-in "profile" source. Same
-// interface name means same interface, so the overlay's reading of it wins. Scoped to the built-ins,
-// two overlay sources that both define an interface do not delete each other, which under a
-// source-agnostic rule would depend on composition order.
+// interface name means same interface, so the overlay's reading of it wins. Because supersession is
+// scoped to the built-ins, two overlay sources that both define an interface do not delete each
+// other. Under a source-agnostic rule, which one survived would depend on composition order.
 func Source(name string, ps []Profile) check.RuleSource {
 	var rules []*check.Rule
 	var supersedes []check.Facets

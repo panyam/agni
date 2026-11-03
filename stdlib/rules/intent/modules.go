@@ -10,7 +10,7 @@ import (
 
 // moduleMissingRule fails once per declared module that no design component satisfies. A module matches
 // when ANY component is of its declared class (Model.HasClass, so a family tag matches its specific
-// classes) or carries its exact MPN (Model.ComponentMPN).
+// classes) or has its exact MPN (Model.ComponentMPN).
 // The finding is a design-level absence, a KindComponent finding with the module label as Subject and
 // no provenance, because an absent module has no source site to cite (the presentResult shape).
 func moduleMissingRule(d Declaration) *check.Rule {
@@ -29,8 +29,9 @@ func moduleMissingRule(d Declaration) *check.Rule {
 }
 
 // modulePresent reports whether any component satisfies the module's criterion. Class is checked first
-// (available on any netlist); MPN second (resolves only under --params). A module with both set matches
-// on EITHER, so an MPN that does not resolve still matches by class.
+// (available on any netlist); MPN second. Every model joins the design's MPNs, with or without a
+// datasheet provider (agni issue 748). A module with both set matches on EITHER, so a part whose MPN
+// differs still matches by class.
 func modulePresent(m check.Model, mod Module) bool {
 	for _, c := range m.Components() {
 		if mod.Class != "" && m.HasClass(c.RefDes, check.ComponentClass(mod.Class)) {
@@ -64,8 +65,8 @@ func moduleCountRule(d Declaration) *check.Rule {
 }
 
 // modulePresenceVerdicts decides every module the declaration names. The considered set is the
-// declaration, so the rule can say "all four declared modules are here" rather than the silence a
-// missing declaration also produces.
+// declaration, so the rule can say "all four declared modules are here". A missing declaration
+// produces silence, and the rule must not read the same.
 func modulePresenceVerdicts(m check.Model, d Declaration) []check.Verdict {
 	out := make([]check.Verdict, 0, len(d.Modules))
 	for _, mod := range d.Modules {

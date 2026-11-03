@@ -7,8 +7,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// pinNameDesign places one part whose type declares three pins: a named one, one KiCad marks as
-// unnamed with "~", and one the type declares with no name at all.
+// pinNameDesign places one part whose type declares three pins. One pin is named. KiCad marks one
+// as unnamed with "~". The type declares the third with no name at all.
 func pinNameDesign(format string) *ir.Design {
 	return &ir.Design{
 		SourceFormat: format,
@@ -41,13 +41,13 @@ func TestPinNameProjectsTheFunctionalName(t *testing.T) {
 	}
 }
 
-// A pin the source did not name yields no row rather than a row holding "". The distinction is
-// what lets a query ask `component.pin(?r,?p), not pin.name(?r,?p,?_)` and have it mean "the read
-// gave this pin no name" instead of matching every pin whose name happens to be empty.
+// A pin the source did not name yields no row rather than a row holding "". With that distinction,
+// a query can ask `component.pin(?r,?p), not pin.name(?r,?p,?_)` and have it mean "the read gave
+// this pin no name". It does not match every pin whose name happens to be empty.
 //
 // "~" is covered by the same assertion. It is KiCad's spelling of "this pin has no name"
 // and it reaches the IR verbatim, so a projector taking it at face value would publish a pin named
-// "~" and every downstream comparison would carry it.
+// "~" and every downstream comparison would include it.
 func TestPinNameIsAbsentRatherThanEmpty(t *testing.T) {
 	byRel := factsByRelation(Facts(check.NewModel(pinNameDesign("kicad-sch"))))
 	// Two positive controls first. The loop below is a negative assertion and passes vacuously on a
@@ -67,11 +67,11 @@ func TestPinNameIsAbsentRatherThanEmpty(t *testing.T) {
 	}
 }
 
-// The projector reads Name and never Designator, so a pin carrying one and not the other is still
+// The projector reads Name and never Designator, so a pin with one and not the other is still
 // named. No shipped reader produces this today (the EDIF reader falls back Designator <- Name per
-// issue 71), and it is still worth pinning. The fallback is what makes the two spellings
-// agree on EDIF, and a projector that quietly keyed off the designator would look correct for as
-// long as that fallback held and go silent the moment a reader stopped applying it.
+// issue 71), and it is still worth pinning. On EDIF the fallback makes the two spellings agree. A
+// projector that quietly keyed off the designator would look correct for as long as that fallback
+// held. It would go silent the moment a reader stopped applying it.
 func TestPinNameReachesAPinWithNoDesignator(t *testing.T) {
 	d := &ir.Design{
 		SourceFormat: "edif",
@@ -93,8 +93,8 @@ func TestPinNameReachesAPinWithNoDesignator(t *testing.T) {
 }
 
 // The name is recorded exactly as the source spells it. Anything comparing a name against a name
-// from another document canonicalizes both sides itself, and pinning that here is what stops a
-// normalizer being added at the projector, where it would silently rewrite what the file said.
+// from another document canonicalizes both sides itself. Pinning the verbatim name here stops
+// anyone adding a normalizer at the projector, where it would silently rewrite what the file said.
 func TestPinNameIsNotNormalized(t *testing.T) {
 	d := pinNameDesign("kicad-sch")
 	d.Libraries[0].Parts[0].Pins[0].Name = "PTE7"

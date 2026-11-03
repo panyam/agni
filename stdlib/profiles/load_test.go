@@ -12,8 +12,8 @@ import (
 )
 
 // A naming map re-binds a core profile's signals to a project's own suffixes. It inherits the core
-// structure/requirements and fires on a design named that way, where the core default (looking for
-// the standard suffixes) is silent. This is the structure-vs-naming split (WS3-054).
+// structure/requirements and fires on a design named that way. The core default looks for the
+// standard suffixes and is silent there. The test covers the structure-vs-naming split (WS3-054).
 func TestNamingMapRemapsSuffixes(t *testing.T) {
 	p, err := Load(strings.NewReader(
 		"override: SPI_NOR\nsuffixes: {CS: _XCS, SCLK: _XSCLK, IO0: _XIO0, IO1: _XIO1, IO2: _XIO2, IO3: _XIO3}\n"))
@@ -62,12 +62,12 @@ func TestNamingMapErrors(t *testing.T) {
 // Every built-in profile is well-formed and compiles to the rule set its declaration implies. This
 // replaces TestBuiltinsMatchYAML (WS3-049), which held each built-in's Go literal identical to its
 // embedded YAML while both forms were kept side by side. With the YAML authoritative there is only
-// one form, so equality with itself proves nothing; what still needs a gate is that the authoritative
-// declaration parses, validates, and yields the expected rules. The per-profile behavioral suites
-// (TestSPINORFires, TestCANFires, ...) remain the check on what those rules DO.
+// one form, so equality with itself proves nothing. A gate is still needed to show that the
+// authoritative declaration parses, validates, and yields the expected rules. The per-profile
+// behavioral suites (TestSPINORFires, TestCANFires, ...) remain the check on what those rules DO.
 //
-// The rule counts are the observable the flip had to preserve. They were captured from the Go-literal
-// build and must not move.
+// The flip had to preserve the rule counts. They were captured from the Go-literal build and must not
+// move.
 func TestBuiltinsCompileToExpectedRules(t *testing.T) {
 	for _, c := range []struct {
 		name  string
@@ -100,8 +100,8 @@ func TestBuiltinsCompileToExpectedRules(t *testing.T) {
 }
 
 // The embedded built-in YAML round-trips to the expected declaration: Parse(spinorYAML) yields the
-// six SPI-NOR signals with CS as the pulled-up anchor and the four requirements, the same value the
-// old Go literal held, which the behavioral suite (TestSPINORFires/Silent/...) confirms compiles
+// six SPI-NOR signals with CS as the pulled-up anchor and the four requirements. The old Go literal
+// held the same value, and the behavioral suite (TestSPINORFires/Silent/...) confirms it compiles
 // identically.
 func TestParseBuiltinShape(t *testing.T) {
 	p, err := Parse(spinorYAML)
@@ -139,9 +139,9 @@ requirements:
 	}
 }
 
-// An overlay can author a glob- or regex-matched signal in YAML (WS3-057), which is what lets a
-// project whose bus identity is the PREFIX and whose suffix is shared with a foreign bus declare an
-// interface at all. The compiled rules carry the pattern through, so the profile stays off CAN.
+// An overlay can author a glob- or regex-matched signal in YAML (WS3-057). Imagine a project whose bus
+// identity is the PREFIX, with a suffix shared with a foreign bus. Without these forms it could not
+// declare the interface at all. The compiled rules keep the pattern, so the profile matches no CAN net.
 func TestLoadPatternSignals(t *testing.T) {
 	y := `
 name: ETHX
@@ -185,8 +185,8 @@ func TestNamingMapReplacesPatternMatcher(t *testing.T) {
 	}
 }
 
-// Load reports an unknown requirement type with the list of known types (teaching error), the surface
-// a customer authoring an overlay profile hits on a typo.
+// Load reports an unknown requirement type with the list of known types (teaching error). A customer
+// authoring an overlay profile sees this error on a typo.
 func TestLoadUnknownRequirementTeaches(t *testing.T) {
 	y := `
 name: MYBUS
@@ -249,8 +249,8 @@ func TestLoadDirAndSource(t *testing.T) {
 
 // TestSignalMissingRequiresAnchor (WS3-099): a profile declaring the convention completeness
 // requirement without a usable anchor compiles it to NOTHING, silently. Paired with any requirement
-// that does compile (signal-dangling), the item then runs clean and scores a pass while the check
-// the author asked for never existed. That is the same false-pass shape, arriving through author
+// that does compile (signal-dangling), the item then runs clean and scores a pass. The author asked
+// for a check, and that check never existed. That is the same false-pass shape, arriving through author
 // error rather than design state. Both entry points reject it: Parse with a teaching error, Compile
 // with a panic.
 func TestSignalMissingRequiresAnchor(t *testing.T) {
@@ -355,9 +355,9 @@ func TestLoadDirRejectsBadRequirementParams(t *testing.T) {
 	}
 }
 
-// A Go-literal profile bypasses Load, so Compile keeps its own gate, the same twin posture the file
-// already takes for an unsound matcher and a missing anchor. Removing it in favour of Load alone
-// would leave every built-in unguarded.
+// A Go-literal profile bypasses Load, so Compile keeps its own gate. The file already takes the same
+// twin posture for an unsound matcher and a missing anchor. Removing it in favour of Load alone would
+// leave every built-in unguarded.
 func TestCompilePanicsOnIncompleteRequirementParams(t *testing.T) {
 	defer func() {
 		r := recover()
@@ -376,7 +376,7 @@ func TestCompilePanicsOnIncompleteRequirementParams(t *testing.T) {
 }
 
 // An overlay registering its own requirement type can ship a validator with it, so its params get the
-// same load-time teaching error the built-in gets. This is the hook a customer extends through.
+// same load-time teaching error the built-in gets. A customer extends the engine through this hook.
 func TestRegisterRequirementWithValidatorRejectsAtLoad(t *testing.T) {
 	RegisterRequirementWithValidator("house-rule",
 		func(p Profile, _ Requirement) *check.Rule { return nil },
@@ -401,8 +401,8 @@ func TestRegisterRequirementWithValidatorRejectsAtLoad(t *testing.T) {
 	}
 }
 
-// Every built-in still loads and validates. CAN is the one that declares termination, so this is the
-// regression gate that the new check does not reject the profiles that ship.
+// Every built-in still loads and validates. CAN declares termination, so this test gates against the
+// new check rejecting the profiles that ship.
 func TestBuiltinsPassRequirementValidation(t *testing.T) {
 	for _, p := range Profiles {
 		if err := ValidateRequirements(p); err != nil {

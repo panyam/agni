@@ -9,7 +9,7 @@ import (
 )
 
 // LoadFile reads a single intent declaration from a YAML file (the --intent-path flag). The os
-// dependency lives here, isolated from the WASM-clean Parse/Load path. Unlike profiles' LoadDir, this
+// dependency is here, isolated from the WASM-clean Parse/Load path. Unlike profiles' LoadDir, this
 // reads one file rather than a directory to merge, because a design has ONE intended architecture.
 func LoadFile(path string) (Declaration, error) {
 	f, err := os.Open(path) // #nosec G304 -- reads a file the user named

@@ -19,8 +19,9 @@ func tnet(name string, conns ...string) *ir.Net {
 	return n
 }
 
-// flaggedNet is a net a pin's no-connect flag landed on, the reader's statement that the open pin is
-// deliberate (netgraph.AttrNoConnect). A tool stub name alone is not that statement (agni issue 1019).
+// flaggedNet is a net with a pin's no-connect flag on it. The flag is the reader's statement that the
+// open pin is deliberate (netgraph.AttrNoConnect). A tool stub name alone is not that statement
+// (agni issue 1019).
 func flaggedNet(name string, conns ...string) *ir.Net {
 	n := tnet(name, conns...)
 	n.Attributes = map[string]string{netgraph.AttrNoConnect: "true"}
@@ -52,8 +53,8 @@ func ruleFixture() *ir.Design {
 			tnet("SDA", "U1.5"),                         // I2C, no pull-up -> flag
 			tnet("SCL", "U1.6", "R3.1"),                 // I2C, R3 pull-up -> ok
 			// R3's OTHER end. A pull-up is a resistor to a rail, and before agni issue 375 this
-			// fixture drew only the bus-side leg, which is precisely the assumption the rule was
-			// making. Without this net the "R3 pull-up" comment describes a resistor to nowhere.
+			// fixture drew only the bus-side leg. The rule was making that same assumption. Without
+			// this net the "R3 pull-up" comment describes a resistor to nowhere.
 			tnet("+3V3", "R3.2", "U1.1"),
 		},
 	}
@@ -258,7 +259,7 @@ func TestDuplicateRefDes(t *testing.T) {
 }
 
 // TestDanglingEndpoint checks that the rule reports each dangling endpoint the reader recorded,
-// with the endpoint location as the subject and KindEndpoint, and stays silent when there are none.
+// with the endpoint location as the subject and KindEndpoint, and is silent when there are none.
 func TestDanglingEndpoint(t *testing.T) {
 	d := &ir.Design{InputDiagnostics: &ir.InputDiagnostics{DanglingEndpoints: []*ir.DanglingEndpoint{
 		{X: 0, Y: 0, Prov: &ir.Provenance{SourceFile: "t", NativeId: "w1", NativeIdKind: "kicad-uuid"}},
@@ -290,7 +291,7 @@ func TestDanglingEndpoint(t *testing.T) {
 
 // TestDiffPairNaming exercises the differential-pair rule. An orphaned positive member is
 // flagged, a complete pair is not, and an active-low "_N" net is not mistaken for a diff half
-// (positive-anchored detection). Nets carry two connections so single-pin-net stays quiet.
+// (positive-anchored detection). Nets have two connections so single-pin-net is quiet.
 func TestDiffPairNaming(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{
 		tnet("HDMI_TX0_P", "U1.10", "J1.1"),  // orphaned positive -> flag (expects HDMI_TX0_N)

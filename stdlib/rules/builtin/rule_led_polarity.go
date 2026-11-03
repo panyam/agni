@@ -6,10 +6,10 @@ import (
 )
 
 // ledPolarity flags an LED wired so it can never conduct, with its anode on a ground-named
-// net and its cathode on a power-rail-named net. It rides the derived pin.role fact
+// net and its cathode on a power-rail-named net. It reads the derived pin.role fact
 // (WS1-009), and is deliberately LED-only. For zeners and TVS diodes the reverse-biased
-// topology is correct usage, and flagging it is the false positive that makes engineers
-// mute orientation rules. Generalizing to all diodes needs net-polarity facts (which way
+// topology is correct usage. Flagging it is a false positive, and false positives like it make
+// engineers mute orientation rules. Generalizing to all diodes needs net-polarity facts (which way
 // current is meant to flow), not rail names.
 //
 // The FFI is registered inside the rule var's own initializer rather than an init func,
@@ -22,7 +22,7 @@ var ledPolarity = func() *check.Rule {
 
 var ledPolaritySpec = &check.Spec{
 	Over: "components",
-	// SCOPE: this rule is about LEDs. Without the split every resistor and capacitor in the design
+	// This rule's scope is LEDs. Without the split every resistor and capacitor in the design
 	// would report a pass reading "component.class == led does not hold", which says the part is not
 	// an LED rather than anything about its polarity.
 	Scope:   check.Cmp{L: check.Fact{Name: "component.class"}, Op: "==", R: check.Lit{V: "led"}},
@@ -46,7 +46,7 @@ var ledPolarityMeta = check.Rule{
 
 func registerLedReversed() {
 	check.RegisterSpecFunc("led_reversed", &check.SpecFunc{
-		// Resolves the anode and cathode by derived role, then tests the nets they land
+		// Resolves the anode and cathode by derived role, then tests the nets they sit
 		// on against the rail-name conventions. Multi-clause and entity-shaped, so it
 		// lives behind the FFI.
 		Reads:      []string{"net.names", "on_net", "pin.role"},

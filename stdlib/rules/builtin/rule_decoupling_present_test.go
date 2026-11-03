@@ -9,9 +9,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// decouplingDesign builds one net carrying an IC's supply pin and whatever else the case needs, with
-// no capacitor anywhere. Every design here would fire the rule before the scope guards; what differs
-// is whether the net is a supply rail at all.
+// decouplingDesign builds one net with an IC's supply pin and whatever else the case needs, and no
+// capacitor anywhere. Without the scope guards every design here would fire the rule. The designs
+// differ in whether the net is a supply rail at all.
 func decouplingDesign(extra ...*ir.Connection) *ir.Design {
 	load := &ir.PartType{Name: "LOAD", Pins: []*ir.Pin{
 		{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
@@ -45,7 +45,7 @@ func TestDecouplingFiresOnABareSupplyPin(t *testing.T) {
 	}
 }
 
-// A gate-drive net carries a controller output and a FET's GATE. It is a control node, and on one
+// A gate-drive net connects a controller output and a FET's GATE. It is a control node, and on one
 // real board six of this rule's fourteen findings were this shape (agni issue 382).
 func TestDecouplingIsSilentOnAGateDrive(t *testing.T) {
 	if decouplingFires(t, decouplingDesign(&ir.Connection{ComponentRef: "Q1", PinRef: "1"})) {
@@ -53,18 +53,18 @@ func TestDecouplingIsSilentOnAGateDrive(t *testing.T) {
 	}
 }
 
-// The guard asks about the GATE rather than about the transistor, and this is why. A high-side load
-// switch's OUTPUT carries the FET's SOURCE, feeds downstream supply pins, and wants decoupling
-// exactly as much as a regulator output does. Disqualifying any net with a transistor on it would be
-// simpler and would silence a real defect.
+// The guard asks about the GATE rather than about the transistor. Consider a high-side load switch.
+// Its OUTPUT connects to the FET's SOURCE, feeds downstream supply pins, and wants decoupling exactly
+// as much as a regulator output does. Disqualifying any net with a transistor on it would be simpler,
+// and it would silence a real defect.
 func TestDecouplingStillFiresOnALoadSwitchOutput(t *testing.T) {
 	if !decouplingFires(t, decouplingDesign(&ir.Connection{ComponentRef: "Q1", PinRef: "2"})) {
 		t.Error("a FET's source feeding a supply pin is a switched rail; it still wants a capacitor")
 	}
 }
 
-// A buck's switch node carries the switching FET and the inductor. Telling someone to fit a capacitor
-// there is advice that shorts the switch to ground every cycle, which is worse than saying nothing.
+// A buck's switch node connects the switching FET and the inductor. A capacitor fitted there would
+// short the switch to ground every cycle. That advice is worse than saying nothing.
 func TestDecouplingIsSilentOnASwitchingNode(t *testing.T) {
 	d := decouplingDesign(
 		&ir.Connection{ComponentRef: "Q1", PinRef: "2"}, // source: the switch node side

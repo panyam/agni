@@ -6,7 +6,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// unconnectedPin flags a part-type pin that lands on no net and carries no no-connect
+// unconnectedPin flags a part-type pin that sits on no net and carries no no-connect
 // marking, the per-pin complement of unconnected-component. See Detail.
 //
 // It keeps a Go Eval beside its twin because it introduced NEW interpreter vocabulary (the pins

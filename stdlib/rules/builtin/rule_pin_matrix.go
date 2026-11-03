@@ -14,11 +14,11 @@ import (
 // discipline is in docsite/content/build/check-rule.md). One file holds every row, a
 // deliberate exception to one-file-per-rule, so adding a pairing is adding a row.
 //
-// Rows deliberately absent, and why:
-//   - input-only-with-no-driver: shipped separately as floating-input, whose guards
+// Two kinds of row are deliberately absent.
+//   - input-only-with-no-driver ships separately as floating-input. Its guards
 //     (external skip, >= 2 pins, all-input) are more specific than a pairing.
-//   - power-pairing rows beyond the hard-driver conflict: subsumed by
-//     output-output-conflict once power-symbol pins became driver connections
+//   - Power-pairing rows beyond the hard-driver conflict are subsumed by
+//     output-output-conflict, since power-symbol pins became driver connections
 //     (WS1-014). power_out ↔ power_out and power_out ↔ output are the same
 //     distinct-driver count.
 
@@ -69,11 +69,11 @@ var rowOutputOutput = matrixRow{
 
 // isWiredOrBus reports whether a multi-driver net looks like an intentional open-drain WIRED-OR bus (a
 // shared interrupt/inhibit/reset line) rather than output contention. The evidence is a resistor member
-// (the pull an open-drain bus needs, its idle level) AND NO power-source (POWER_OUT) driver. The
-// resistor is keyed on PRESENCE and not on where it pulls to, because a real pull runs through several
-// elements to an auto-named rail or to ground (both defeat a name-based "pull to a rail" test). A
-// POWER_OUT driver blocks the exemption, since two power sources fighting on a rail is a real conflict
-// even with a bleeder/load resistor present.
+// AND NO power-source (POWER_OUT) driver. The resistor is the pull an open-drain bus needs, and it
+// sets the idle level. The resistor is keyed on PRESENCE and not on where it pulls to, because a real
+// pull runs through several elements to an auto-named rail or to ground. Both defeat a name-based
+// "pull to a rail" test. A POWER_OUT driver blocks the exemption, since two power sources fighting on
+// a rail is a real conflict even with a bleeder/load resistor present.
 func isWiredOrBus(m check.Model, n *ir.Net) bool {
 	resistor := false
 	for _, c := range n.Connections {
@@ -97,8 +97,8 @@ func registerHasPull() {
 	})
 }
 
-// rowNCConnected is the matrix's no-connect column, a pin the symbol marks "do not
-// connect" wired into a real net.
+// rowNCConnected is the matrix's no-connect column. It catches a pin wired into a real
+// net although its symbol marks it "do not connect".
 var rowNCConnected = matrixRow{
 	meta: check.Rule{
 		Name:     "nc-pin-connected",
@@ -127,8 +127,8 @@ var rowNCConnected = matrixRow{
 	},
 }
 
-// rowUnspecifiedWithDriver is the matrix's unspecified column against the driver rows, a
-// pin whose symbol declares NO electrical type, on a net something actively drives.
+// rowUnspecifiedWithDriver is the matrix's unspecified column against the driver rows. It
+// catches a pin whose symbol declares NO electrical type, on a net with an active driver.
 var rowUnspecifiedWithDriver = matrixRow{
 	meta: check.Rule{
 		Name:     "unspecified-pin-with-driver",

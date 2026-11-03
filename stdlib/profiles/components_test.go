@@ -9,8 +9,8 @@ import (
 
 // Components returns the parts on an interface's nets, inheriting Nets' host-beats-convention scope. A
 // host-declared interface resolves to the host's nets and thus every part on them (disambiguating a
-// shared suffix); with no host it falls back to the suffix-matched signal nets and their parts. The
-// join it enables keeps a component on an interface signal net even though its rail net is not.
+// shared suffix); with no host it falls back to the suffix-matched signal nets and their parts.
+// Through this join, a component on an interface signal net is kept even though its rail net is not.
 func TestComponentsHostAndSuffix(t *testing.T) {
 	hosted := Profile{
 		Name: "LINX", HostAttrKey: "interface", HostAttrVal: "LINX",

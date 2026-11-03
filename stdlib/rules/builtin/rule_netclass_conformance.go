@@ -8,11 +8,11 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// Declared-vs-actual net-class conformance (WS3-111). These are the first rules in the catalog that
-// compare a board against a limit THE PROJECT SET rather than a constant compiled in here. The
-// track-width and hole-size rules next door check manufacturability against a universal fabrication
-// floor; these check the design against its own stated intent, and can fail on a perfectly
-// manufacturable board.
+// Declared-vs-actual net-class conformance (WS3-111). These are the first rules in the catalog to
+// read their limit from THE PROJECT rather than from a constant compiled in here. The track-width and
+// hole-size rules next door check manufacturability against a universal fabrication floor. These
+// check the design against its own stated intent, and they can fail on a perfectly manufacturable
+// board.
 //
 // Both gate on CapNetClassDefs, so a design that declares no class definitions reads not-applicable
 // rather than running over zero comparisons and reporting a clean pass.
@@ -68,17 +68,17 @@ var netclassViaDrill = &check.Rule{
 // declaredVsActual is the shared body. For each routed net it resolves what the project declared for
 // this quantity and compares the copper against it.
 //
-// The resolution is why this cannot be a naive join. A net belongs to a SET of classes (WS1-050), and
-// KiCad does not pick one of them. It fills each constraint from the highest-priority class that
-// states THAT constraint, with the Default class supplying whatever is left and applying to every net
-// including unclassed ones. Comparing the copper against each class the net belongs to would fail a
-// net that correctly obeys the class that won.
+// This cannot be a naive join, because of how the limit resolves. A net belongs to a SET of classes
+// (WS1-050), and KiCad does not pick one of them. It fills each constraint from the highest-priority
+// class that states THAT constraint. The Default class supplies whatever is left, and it applies to
+// every net including unclassed ones. Comparing the copper against each class the net belongs to
+// would fail a net that correctly obeys the class that won.
 //
-// A NET THE PROJECT CONSTRAINED NOWHERE IS NoLimit, the outcome the datasheet rules give a row stating
-// no bound, since the comparison was reached and nothing constrains the value. As a pass, a project
-// that forgot to state a width for its power class would read like one whose power tracks are all
-// wide enough. CapNetClassDefs catches that false pass for the design as a whole and cannot see it
-// per net.
+// When the project constrains a net NOWHERE, its verdict is NoLimit. The datasheet rules give the
+// same outcome to a row stating no bound, since the comparison was reached and nothing constrains
+// the value. Reported as a pass instead, a project that forgot to state a width for its power class
+// would read like one whose power tracks are all wide enough. CapNetClassDefs catches that false
+// pass for the design as a whole and cannot see it per net.
 //
 // check.CompareToBound does the comparison and builds the witness in one call, so every pass carries
 // the statement that justifies it.
@@ -93,7 +93,7 @@ func declaredVsActual(
 ) []check.Verdict {
 	// No explicit empty-definitions guard. With no definitions no class states anything, so the
 	// cascade reports "not stated" for every net and every verdict is NoLimit.
-	// CapNetClassDefs is what reports that situation to a review as a rule-level answer.
+	// CapNetClassDefs reports that situation to a review as a rule-level answer.
 	cascade := check.NewNetClassCascade(m.NetClassDefs())
 	classesOf := map[string][]string{}
 	for _, n := range m.Nets() {
@@ -134,7 +134,7 @@ func declaredVsActual(
 
 func mmText(mm float64) string { return strconv.FormatFloat(mm, 'g', -1, 64) + "mm" }
 
-// minSegmentWidthMM / minViaDrillMM narrow a net's copper to the value the declared limit is about,
+// minSegmentWidthMM / minViaDrillMM reduce a net's copper to the value the declared limit is about,
 // its THINNEST track and its SMALLEST drill. A net conforms only if its worst copper does, so a
 // single narrow segment on an otherwise-wide net is the finding. Matches board.track_width /
 // board.via_drill, which project the same minima, so a rule and an ad-hoc query agree.

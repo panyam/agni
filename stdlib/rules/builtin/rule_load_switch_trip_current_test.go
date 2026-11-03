@@ -123,7 +123,7 @@ func runLoadSwitchRule(d *ir.Design, set param.ParamSet) []check.Finding {
 	return loadSwitchTripAboveFetRating.Findings(context.Background(), check.NewModel(d, check.WithParamProvider(set)))
 }
 
-// TestLoadSwitchTripAboveFetRatingFires covers 50mV across a 10mOhm shunt, which trips at 5A, above
+// TestLoadSwitchTripAboveFetRatingFires covers 50mV across a 10mOhm shunt. That trips at 5A, above
 // the external FET's 3A continuous rating, so the current limit never protects the pass element.
 func TestLoadSwitchTripAboveFetRatingFires(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
@@ -140,9 +140,9 @@ func TestLoadSwitchTripAboveFetRatingFires(t *testing.T) {
 	if f.Subject.Kind != check.KindComponent {
 		t.Errorf("kind = %q, want component", f.Subject.Kind)
 	}
-	// The three inputs must all be visible: the computed trip current, the shunt it came from, and
-	// the rating it was judged against. A message naming only the verdict leaves a reviewer unable to
-	// tell which of the three numbers is the wrong one.
+	// The message must show all three inputs. They are the computed trip current, the shunt it came
+	// from, and the rating it was judged against. A message naming only the verdict leaves a reviewer
+	// unable to tell which of the three numbers is the wrong one.
 	for _, want := range []string{"5A", "R1", "V(OCP)", "3A", "U1"} {
 		if !strings.Contains(f.Message, want) {
 			t.Errorf("message must mention %q: %s", want, f.Message)
@@ -186,9 +186,9 @@ func TestLoadSwitchTripEqualsRatingIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchLowestRatingBinds exists because a part is endangered at its weakest rating, so a
-// second, higher drain-current row must not excuse the over-current. Taking the highest would
-// silence this design.
+// TestLoadSwitchLowestRatingBinds gives the FET a second, higher drain-current row. A part is
+// endangered at its weakest rating, so that row must not excuse the over-current. Taking the highest
+// would silence this design.
 func TestLoadSwitchLowestRatingBinds(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -203,12 +203,12 @@ func TestLoadSwitchLowestRatingBinds(t *testing.T) {
 }
 
 // TestLoadSwitchReportsEffectiveOnResistance checks that the effective on-resistance of a
-// controller-based switch is the external FET's RDS(on), which is what switch sizing needs and what
-// no number on the controller's sheet answers.
+// controller-based switch is the external FET's RDS(on). Switch sizing needs that number, and no
+// number on the controller's sheet answers it.
 //
-// It is quoted in the message but deliberately NOT added to DatasheetProv, because the verdict does
-// not rest on it, and the review's data-trust gate rates a finding by its WEAKEST citation, so
-// listing an unused value could drag a genuine failure to provisional.
+// The message quotes it, and it is deliberately NOT added to DatasheetProv. The verdict does not
+// depend on it. The review's data-trust gate rates a finding by its WEAKEST citation, so listing an
+// unused value could pull a genuine failure down to provisional.
 func TestLoadSwitchReportsEffectiveOnResistance(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -243,8 +243,8 @@ func TestLoadSwitchWithoutOnResistanceSaysNothing(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchUnseededFetIsSilent exists because the pass element carries the rating being
-// exceeded, so without it there is nothing to judge. Skip, never pass.
+// TestLoadSwitchUnseededFetIsSilent leaves the pass FET unseeded. The rating being exceeded belongs
+// to the pass element, so without its spec there is nothing to judge. Skip, never pass.
 func TestLoadSwitchUnseededFetIsSilent(t *testing.T) {
 	fs := runLoadSwitchRule(loadSwitchBoard(0.01), param.ParamSet{
 		"DEMO-HSS-CTRL": hssCtrlSpec(0.05),
@@ -266,9 +266,9 @@ func TestLoadSwitchFetWithNoDrainRatingIsSilent(t *testing.T) {
 	}
 }
 
-// TestLoadSwitchSilentWithoutParams exists because the params tier is a per-run injection, so an
-// unseeded design has no threshold to compute from and Available gates the rule to not-applicable
-// rather than clean.
+// TestLoadSwitchSilentWithoutParams covers a run with no params. The params tier is a per-run
+// injection, so an unseeded design has no threshold to compute from. Available gates the rule to
+// not-applicable rather than clean.
 func TestLoadSwitchSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(loadSwitchBoard(0.01))
 	if fs := loadSwitchTripAboveFetRating.Findings(context.Background(), m); len(fs) != 0 {

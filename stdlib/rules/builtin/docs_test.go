@@ -11,8 +11,8 @@ import (
 // TestRuleDocsOneToOne holds the built-in catalog and this package's docs/ to each other
 // (WS3-025). Every registered rule's Detail comes from its own docs/<name>.md, every doc
 // file names a registered rule, and every image a doc references is present. It is the same
-// exhaustiveness discipline as the conformance sidecars, so a rule PR without its doc (or a
-// doc orphaned by a rename) fails here, not in review.
+// exhaustiveness discipline as the conformance sidecars. A rule PR without its doc fails here,
+// not in review, and so does a doc left orphaned by a rename.
 func TestRuleDocsOneToOne(t *testing.T) {
 	entries, err := ruleDocs.ReadDir("docs")
 	if err != nil {

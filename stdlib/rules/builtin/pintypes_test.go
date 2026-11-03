@@ -15,8 +15,8 @@ const (
 	untyped       = ir.PinDirection_PIN_DIRECTION_UNSPECIFIED
 )
 
-// A pin its symbol declares tri-state is typed, so it is no unspecified pin beside the driver it
-// shares a net with (agni issue 1082). Jetson's TXU0304 OE on +1V8 was the case.
+// A symbol can declare a pin tri-state. Such a pin is typed, so it does not count as an unspecified
+// pin beside the driver on its net (agni issue 1082). Jetson's TXU0304 OE on +1V8 was the case.
 func TestATriStatePinIsNotUntyped(t *testing.T) {
 	design := func(dir ir.PinDirection) *ir.Design {
 		return pinDesign(map[string][]supplyPin{
@@ -51,7 +51,7 @@ func TestSharedTriStateAndOpenCollectorOutputsDoNotConflict(t *testing.T) {
 
 // On a net carrying a power symbol only a power output feeds a supply pin, so a logic output tied to
 // ground does not pass it, as KiCad's ERC holds. On an ordinary net a supply-typed pin is fed by any
-// driver, so a module connector's power-good input on an open-drain flag stays clean (agni issue 1082).
+// driver, so a module connector's power-good input on an open-drain flag is clean (agni issue 1082).
 func TestOnlyAPowerSourceFeedsAPowerNet(t *testing.T) {
 	design := func(symbol bool, source ir.PinDirection) *ir.Design {
 		d := pinDesign(map[string][]supplyPin{

@@ -11,13 +11,13 @@ import (
 
 // This file is the instance dimension of a profile (agni issues 1210, 1246). Without one, every net
 // on the design that matches a signal counts toward one interface, so an SD card slot's SD2_CMD
-// anchors the eMMC profile and an M.2 slot's M2_SMB_CLK becomes its clock. With one, each net the
-// anchor matches is its own bus, and a signal belongs to that bus only when its net is named from the
-// same stem.
+// anchors the eMMC profile and an M.2 slot's M2_SMB_CLK becomes its clock. With one, each net
+// matching the anchor is its own bus, and a signal belongs to that bus only when its net is named from
+// the same stem.
 //
-// The datalog (busRules) and the Go twin (buses) must agree on membership, for the same reason
-// matcher.go's two halves must: a review gate or coverage cell that disagrees with the rules scores
-// a pass on a bus nothing checked.
+// The datalog (busRules) and the Go twin (buses) must agree on membership. matcher.go's two halves
+// must agree for the same reason. Imagine a review gate or coverage cell that disagrees with the
+// rules. It scores a pass on a bus nothing checked.
 
 // InstanceAnchorStem keys a bus on its anchor net's name less the anchor's suffix, so SD2_CMD is bus
 // SD2 and its clock is SD2_CLK. A signal declared by suffix belongs to a bus when its net is exactly
@@ -26,9 +26,10 @@ import (
 // never takes SD2_DATA0.
 const InstanceAnchorStem = "anchor_stem"
 
-// validateInstance rejects an instance key the compiler cannot build: an unknown key, an anchor_stem
-// profile whose anchor has no suffix to take off, and exclude signals with no instance to exclude, or
-// that claim the anchor or a pull-up, neither of which means anything for a line that rules a bus out.
+// validateInstance rejects an instance key the compiler cannot build. It rejects an unknown key, and
+// an anchor_stem profile whose anchor has no suffix to take off. It rejects exclude signals with no
+// instance to exclude. It also rejects exclude signals that claim the anchor or a pull-up, since
+// neither means anything for a line that rules a bus out.
 func validateInstance(p Profile) error {
 	switch p.Instance {
 	case "":
@@ -57,8 +58,8 @@ func validateInstance(p Profile) error {
 	return nil
 }
 
-// stemSeparator is the character a glob- or regex-declared signal's net must carry right after the
-// stem, the first character of the anchor's suffix.
+// stemSeparator returns the first character of the anchor's suffix. A glob- or regex-declared
+// signal's net must have that character right after the stem.
 func (p Profile) stemSeparator() string {
 	if sfx := p.anchorSuffix(); sfx != "" {
 		return sfx[:1]
@@ -153,7 +154,8 @@ func (p Profile) busNets(m check.Model, signals []Signal) map[string]bool {
 	return out
 }
 
-// busRules derives the instance-keyed presence relations every requirement of such a profile reads.
+// busRules derives the instance-keyed presence relations. Every requirement of such a profile reads
+// them.
 //
 //	anchor_bus(a, s)    anchor net a founds the bus with stem s
 //	on_bus(s, sig, n)   net n plays required signal sig on bus s

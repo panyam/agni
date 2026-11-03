@@ -18,8 +18,8 @@ var i2cPullUp = &check.Rule{
 	Remedy:     "Fit a pull-up resistor from each of SDA and SCL to the bus rail, sized from the bus capacitance and the clock rate the design actually runs at rather than from a habitual value.",
 	Primitives: []string{"select", "pattern", "traverse", "exists", "reach", "pin-role"},
 	Reads:      []string{"net.names", "on_net", "component.class", "pin.no_connect", "param.pin", "param.pin_range"},
-	// A part's internal pull-up is credited from its datasheet, which a run without a corpus does not
-	// have, so the rule still judges every bus then (agni issue 1298).
+	// A part's internal pull-up is credited from its datasheet. A run without a corpus has no
+	// datasheet, so the rule still judges every bus then (agni issue 1298).
 	OptionalReads: []string{"param.pin", "param.pin_range"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryConnectivity,

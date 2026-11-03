@@ -36,15 +36,15 @@ type InterfaceCoverage struct {
 // Coverage projects a profile onto a design's per-signal coverage matrix, or nil when the interface
 // is not DETECTED, matching the rules. DETECTED means two of its signals are present or a component
 // declares the interface via its host attribute. It uses the same signal matcher (matcher.go) and the
-// same check.PullUpReachesRail the profile rules decide on, so the panel and the findings cannot
-// drift; see InUse in present.go for why they must agree.
+// same check.PullUpReachesRail as the profile rules, so the panel and the findings cannot drift. InUse
+// in present.go says why they must agree.
 //
-// base supplies the fact base the host binding is asked of, and is called only for an interface with
-// fewer than two signals present. Pass the one the model keeps (service.BuildModelCached), since
+// base supplies the fact base that the host binding queries. Coverage calls it only for an interface
+// with fewer than two signals present. Pass the one the model keeps (service.BuildModelCached), since
 // projecting a base costs about 50ms on a large board and a caller walks every profile (agni issue
 // 985). A nil base builds one from the default registry on each call.
 //
-// It is the first of Coverages, which is the one to call for an instance-keyed profile, since such a
+// It returns the first of Coverages. Call Coverages for an instance-keyed profile, since such a
 // profile can have several buses on one design.
 func Coverage(ctx context.Context, p Profile, m check.Model, base func() *query.Base) *InterfaceCoverage {
 	if all := Coverages(ctx, p, m, base); len(all) > 0 {
@@ -116,8 +116,8 @@ func coverageOf(m check.Model, p Profile, anchor string, nets []*ir.Net) *Interf
 }
 
 // matchSignalNet returns the first net satisfying the signal's matcher that carries at least one
-// component connection. That is the net component.net(?r,?n) plus netMatch(?n, s) selects, so the
-// panel binds the net a finding would name and not a foreign one that merely shares a suffix.
+// component connection. component.net(?r,?n) plus netMatch(?n, s) selects the same net, so the panel
+// binds the net a finding would name and not a foreign one that merely shares a suffix.
 func matchSignalNet(m check.Model, s Signal) *ir.Net {
 	for _, n := range m.Nets() {
 		if netMatchesSignal(n.GetName(), s) && len(n.GetConnections()) > 0 {
@@ -127,14 +127,14 @@ func matchSignalNet(m check.Model, s Signal) *ir.Net {
 	return nil
 }
 
-// reachesRail reports whether the net reaches a power rail through a pull-up, by calling the same
-// check.PullUpReachesRail the missing-pullup rule decides on (agni issue 516).
+// reachesRail reports whether the net reaches a power rail through a pull-up. It calls
+// check.PullUpReachesRail, as the missing-pullup rule does (agni issue 516).
 //
-// Do not replace it with a `net.reaches(?n, ?rail), net.rail(?rail)` query. The reach walk refuses a net whose
-// fan-out exceeds maxWalkFan (WS3-108), and a rail is nearly always that wide, so a DIRECT pull-up
-// onto a real rail is invisible to it. Measured with a resistor between a signal and a 21-connection
-// rail, that query said false where PullUpReachesRail said true, and the panel scored a clean bus
-// `pullup_missing` while the rule stayed silent.
+// Do not replace it with a `net.reaches(?n, ?rail), net.rail(?rail)` query. The reach walk refuses a
+// net whose fan-out exceeds maxWalkFan (WS3-108), and a rail is nearly always that wide, so a DIRECT
+// pull-up onto a real rail is invisible to it. Measured with a resistor between a signal and a
+// 21-connection rail, that query said false where PullUpReachesRail said true. The panel scored a
+// clean bus `pullup_missing`, and the rule was silent.
 func reachesRail(m check.Model, net string) bool {
 	for _, n := range m.Nets() {
 		if n.GetName() == net {

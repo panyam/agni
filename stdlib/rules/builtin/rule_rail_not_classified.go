@@ -10,27 +10,27 @@ import (
 )
 
 // railNotClassified is the tripwire for a project that has not declared its rail naming vocabulary.
-// The rail-quantified rules and `net.nominal_voltage` all answer over nets carrying the RAIL ROLE,
-// stamped at ingestion from the naming lexicon, and the built-in lexicon is start-anchored (VCC,
-// VDD, +3V3). A project naming rails function-first (PMIC_CORE_3V3, SENSOR_5V0) matches none of it
-// and must supply its own through `--conventions`. Measured on a real 1700-net board, declaring the
-// lexicon moved the rail count from 13 to 91.
+// The rail-quantified rules and `net.nominal_voltage` all answer over nets with the RAIL ROLE.
+// Ingestion stamps that role from the naming lexicon, and the built-in lexicon is start-anchored
+// (VCC, VDD, +3V3). A project naming rails function-first (PMIC_CORE_3V3, SENSOR_5V0) matches none
+// of it and must supply its own through `--conventions`. Measured on a real 1700-net board, declaring
+// the lexicon moved the rail count from 13 to 91.
 //
 // It needs a STRUCTURAL signal as well as the name, because `..._3V3` may be a 3.3V rail or a signal
-// that SWINGS at 3.3V (agni issue 194 is the same ambiguity from the other side): the net must also
-// feed at least one pin the design types as a power INPUT.
+// that SWINGS at 3.3V (agni issue 194 is the same ambiguity from the other side). So the net must
+// also feed at least one pin that the design types as a power INPUT.
 //
-// CategoryIntegrity because a firing means fix the CONFIG, not the design. Full rationale in
-// docs/rail-not-classified.md.
+// It is CategoryIntegrity, because a firing means fix the CONFIG, not the design.
+// docs/rail-not-classified.md has the full rationale.
 
-// railCandidate is a net whose NAME declares a voltage, the first of the rule's two channels, with
-// the second channel's evidence attached.
+// railCandidate is a net whose NAME declares a voltage. The name is the first of the rule's two
+// channels, and railCandidate also holds the second channel's evidence.
 type railCandidate struct {
 	net       *ir.Net
 	volts     float64
 	supplyPin string // one ref_des:pin feeding evidence, for the message
 	// The same pin as a pair rather than a formatted string, so it can travel as a context entity
-	// (agni issue 349). supplyPin stays because the message reads better with the words in it.
+	// (agni issue 349). supplyPin is kept because the message reads better with the words in it.
 	supplyRef   string
 	supplyPinNo string
 	supplies    int
@@ -39,7 +39,7 @@ type railCandidate struct {
 
 // eachRailCandidate walks the nets whose NAME declares a voltage and yields one per net, with the
 // second channel's count attached rather than applied as a filter. Ground is excluded, since a ground
-// net carries a role of its own and is not a subject of a rail-classification question.
+// net has a role of its own and is not a subject of a rail-classification question.
 //
 // THE COUNT TRAVELS INSTEAD OF GATING. A net naming a voltage that types NO power-input pin is missing
 // its second channel, and the caller reports that rather than dropping it. On a source format that
@@ -97,7 +97,7 @@ var railNotClassified = &check.Rule{
 // railNotClassifiedVerdicts decides every net whose name declares a voltage.
 //
 // A net the role stamp already calls a rail PASSES. This rule reports that the analysis is running
-// with less than it should, so "the rail rules can see this net" is what a reader wants counted.
+// with less than it should. So a reader wants a count of the nets that the rail rules can see.
 // Without the pass, a project with a correct lexicon would get the same silence as one whose rails
 // are invisible.
 //
@@ -144,9 +144,9 @@ func railNotClassifiedVerdicts(ctx context.Context, m check.Model) []check.Verdi
 				Message: fmt.Sprintf(
 					"net %q declares %gV in its name and feeds %d supply pin(s) (e.g. %s), but carries no rail role, so the rail rules and net.nominal_voltage skip it. If this project names rails off the built-in vocabulary, declare its patterns in the project's conventions lexicon",
 					rc.net.GetName(), rc.volts, rc.supplies, rc.supplyPin),
-				// The supply pin the message offers as evidence. The subject is the net, so without
-				// this the pin that makes it look like a rail is named in prose and reachable nowhere
-				// (agni issue 349).
+				// The supply pin the message offers as evidence. The subject is the net, and this pin
+				// makes the net look like a rail. Without this entity the message names the pin in
+				// prose and nothing links to it (agni issue 349).
 				Context: []check.ContextSubject{
 					{Entity: check.Entity{Kind: check.KindPin, Ref: rc.supplyRef, Pin: rc.supplyPinNo}, Role: "supply-pin"},
 				},

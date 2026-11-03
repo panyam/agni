@@ -11,10 +11,11 @@ import (
 )
 
 // ruleDocs embeds the per-rule documentation for the intent rules under docs/, the single source of
-// Rule.Detail. The convention is docsite/content/build/check-rule.md. Two deviations here: the whole
-// docs/ directory is embedded rather than a *.md glob, so a doc can add an image with no build change,
-// and the files are keyed by rule KIND (see intentDoc). The 1:1 between kinds and doc files, and that
-// every emitted rule's Detail comes from its doc, is harness-enforced (docs_test.go).
+// Rule.Detail. The convention is docsite/content/build/check-rule.md, and this package deviates from
+// it twice. The whole docs/ directory is embedded rather than a *.md glob, so a doc can add an image
+// with no build change. And the files are keyed by rule KIND (see intentDoc). The harness enforces
+// two things (docs_test.go). Kinds and doc files match 1:1, and every emitted rule's Detail comes
+// from its doc.
 //
 //go:embed docs
 var ruleDocs embed.FS
@@ -22,8 +23,8 @@ var ruleDocs embed.FS
 // intentDoc returns the embedded markdown for an intent rule doc KEY (docKey, not the composed
 // "intent/" catalog name and not the per-instance rule name). A missing file is a programmer error
 // caught at package init, when Compile loads each rule's Detail. Keys are rule KINDS (module-missing,
-// protection-ovp, subsystem, ...) rather than rule NAMES, which is what lets the dynamically-named
-// subsystem-<slug> family and the per-kind protection rules share one doc each.
+// protection-ovp, subsystem, ...) rather than rule NAMES. So the dynamically-named subsystem-<slug>
+// family and the per-kind protection rules can share one doc each.
 func intentDoc(key string) string {
 	b, err := ruleDocs.ReadFile("docs/" + key + ".md")
 	if err != nil {
@@ -46,9 +47,9 @@ const docKeySequence = "sequence"
 const docKeyStrapGroup = "strap-group"
 
 // docKeys is the canonical set of intent rule-doc keys. Every kind Compile can emit maps to exactly one
-// entry here, and each has a docs/<key>.md. It is the harness's expectation set (docs_test.go holds
-// docKeys, the emitted rules, and the docs/ directory to each other), so a new intent rule kind added
-// to Compile without its doc key + doc file fails CI.
+// entry here, and each has a docs/<key>.md. It is the harness's expectation set. docs_test.go holds
+// docKeys, the emitted rules and the docs/ directory to each other. So CI fails when Compile gains a
+// new intent rule kind without its doc key and doc file.
 var docKeys = []string{
 	RuleModuleMissing,                   // module-missing
 	RuleModuleCount,                     // module-count
@@ -95,10 +96,10 @@ func docKey(ruleName string) string {
 func docPage(ruleName string) string { return "intent-" + docKey(ruleName) }
 
 // docSummaries is the one-line catalog caption for each intent rule KIND, shown in the docsite
-// reference index (tools/catalogdocs). It is a doc caption, distinct from the runtime Rule.Summary a
-// finding carries, because the runtime summaries for the per-kind protection and per-instance subsystem rules
-// embed a design-specific kind/name, so a generic page needs a name-free caption. Every docKey has an
-// entry (DocRules would emit an empty caption otherwise; TestDocRules holds them 1:1).
+// reference index (tools/catalogdocs). It is a doc caption, distinct from a finding's runtime
+// Rule.Summary. The runtime summaries of the per-kind protection and per-instance subsystem rules
+// embed a design-specific kind or name, so a generic page needs a name-free caption. Every docKey has
+// an entry. DocRules would emit an empty caption otherwise, and TestDocRules holds them 1:1.
 var docSummaries = map[string]string{
 	RuleModuleMissing:                   "A functional block the design intent declares required is absent from the design.",
 	RuleModuleCount:                     "The number of components for a declared module does not match the design intent.",
@@ -180,11 +181,12 @@ func DocRules() []*check.Rule {
 	return out
 }
 
-// RuleDocImageHandler serves the intent rule docs' embedded schematic-card images (the diagram a
-// docs/<kind>.md references) as a read-only static route, so the web rules/checks panels resolve the
-// relative image refs in an intent rule's Detail. The contract is builtin.RuleDocImageHandler's: .svg
-// and .png only, 404 for anything else including the markdown, mounted under a prefix (e.g.
-// "images/protection-ovp.svg"), and an explicit SVG content-type.
+// RuleDocImageHandler serves the schematic-card images embedded with the intent rule docs. Each is a
+// diagram that a docs/<kind>.md references. The handler is a read-only static route, so the web
+// rules/checks panels resolve the relative image refs in an intent rule's Detail. It follows
+// builtin.RuleDocImageHandler's contract. It serves .svg and .png only and answers 404 for anything
+// else, the markdown included. It is mounted under a prefix (e.g. "images/protection-ovp.svg") and
+// sets an explicit SVG content-type.
 func RuleDocImageHandler() http.Handler {
 	sub, err := fs.Sub(ruleDocs, "docs")
 	if err != nil {

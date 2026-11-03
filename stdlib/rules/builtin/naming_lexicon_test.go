@@ -33,8 +33,8 @@ func TestAPullUpThroughAZeroOhmLinkToAnInferredRailPasses(t *testing.T) {
 }
 
 // TestBulkCapJudgesRailsNotGlobalLabels holds bulk-cap's subjects (agni 1252). A signal drawn with a
-// global label gets no verdict, while a net carrying a power symbol, and a global net that reads as a
-// rail, are still judged.
+// global label gets no verdict. A net with a power symbol is still judged, and so is a global net
+// that reads as a rail.
 func TestBulkCapJudgesRailsNotGlobalLabels(t *testing.T) {
 	d := pinDesign(map[string][]supplyPin{
 		"U1": {{"DA0", "1", ir.PinDirection_PIN_DIRECTION_OUTPUT}, {"VDD", "2", pwrIn}, {"VDDIO", "3", pwrIn}},

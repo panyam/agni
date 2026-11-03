@@ -57,7 +57,7 @@ func TestModulePresentPasses(t *testing.T) {
 
 func TestModuleMatchesByFamilyTag(t *testing.T) {
 	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: any diode, class: diode}\n")
-	// A component classed tvs carries the diode family tag, so a diode-declared module matches it.
+	// A component classed tvs has the diode family tag, so a diode-declared module matches it.
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "D1", DeviceClasses: classify.Tags("tvs", "diode")}}}
 	if fs := check.RunBackground(check.NewModel(d), Compile(decl)); len(fs) != 0 {
 		t.Errorf("family-tag match should pass, got %+v", fs)
@@ -129,7 +129,7 @@ func TestNegativeCountIsALoadError(t *testing.T) {
 func TestModuleMatchesByMPN(t *testing.T) {
 	decl := declOf(t, "name: I\nintent:\n  modules:\n  - {name: flash, mpn: W25Q128}\n")
 	// Every model joins the design's MPNs, with or without a datasheet provider (agni issue 748), so
-	// the module matches on a plain model. A part carrying a DIFFERENT MPN leaves it unmatched (fires).
+	// the module matches on a plain model. A part with a DIFFERENT MPN leaves it unmatched (fires).
 	other := &ir.Design{Components: []*ir.Component{
 		{RefDes: "U2", Mpn: "MX25L128"},
 	}}

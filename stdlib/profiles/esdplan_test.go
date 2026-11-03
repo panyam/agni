@@ -37,10 +37,10 @@ func tvsChain() *ir.Design {
 
 // The ESD requirement walks from the nets that need protection and nowhere else (agni issue 1037).
 // From jaala v0.1.57 to v0.1.59 the planner started its protection clauses from the TVS index and
-// called net.reaches once per TVS net with only its second argument bound, a full walk each time:
-// Jetson's ESD rules went from about 95 ms to about 1 s each (panyam/jaala#304). Under a budget a
-// walk from the scope fits in easily, that plan runs out of it, and a rule that runs out reports an
-// inconclusive finding rather than a clean result.
+// called net.reaches once per TVS net with only its second argument bound. Each call was a full walk,
+// and Jetson's ESD rules went from about 95 ms to about 1 s each (panyam/jaala#304). Imagine a budget
+// that a walk from the scope fits in easily. That plan runs out of it, and a rule that runs out
+// reports an inconclusive finding rather than a clean result.
 func TestESDRequirementWalksFromTheNetsThatNeedIt(t *testing.T) {
 	r := esdRule(CAN, Requirement{Type: "esd"})
 	ctx := query.WithBudget(context.Background(), 20_000)
@@ -48,7 +48,7 @@ func TestESDRequirementWalksFromTheNetsThatNeedIt(t *testing.T) {
 	for _, f := range findings {
 		t.Errorf("finding %q on %s (inconclusive %v); want none, since no CAN line leaves the board and the walk has nowhere to start", f.Message, f.Subject.Ref, f.Inconclusive)
 	}
-	// The positive control: unbudgeted, the same plan is clean, so a finding above is the budget.
+	// The positive control. Unbudgeted, the same plan is clean, so the budget caused any finding above.
 	if got := r.Findings(context.Background(), check.NewModel(tvsChain())); len(got) != 0 {
 		t.Fatalf("unbudgeted: %d findings, want none", len(got))
 	}

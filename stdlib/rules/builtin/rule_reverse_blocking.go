@@ -11,9 +11,9 @@ import (
 )
 
 // reverseBlockingAbsent flags a connector-fed power path with no DIRECTIONAL blocking element
-// (WS3-094). It walks the same path as input-protection but asks whether anything stops current
-// flowing the WRONG WAY, where that rule asks for a fuse or TVS. Why a fuse and a TVS do not count,
-// and why a transistor reads as unclassifiable, are in docs/reverse-blocking-absent.md.
+// (WS3-094). It walks the same path as input-protection, which asks for a fuse or TVS. This rule
+// asks whether anything stops current flowing the WRONG WAY. docs/reverse-blocking-absent.md
+// explains why a fuse and a TVS do not count, and why a transistor reads as unclassifiable.
 var reverseBlockingAbsent = &check.Rule{
 	Name:       "reverse-blocking-absent",
 	Severity:   "warning",
@@ -22,8 +22,9 @@ var reverseBlockingAbsent = &check.Rule{
 	Remedy:     "Add a directional element between the connector and the load: a series FET where the voltage drop matters, a diode where it does not, or a bridge where the input polarity is genuinely unknown.",
 	Primitives: []string{"select", "traverse", "reach", "pin-role"},
 	Reads:      []string{"component.class", "component.device_class", "net.attributes", "on_net", "param.max", "pin.electrical_type", "pin.role"},
-	// A current-limiting switch that blocks reverse current is credited from its datasheet, which a
-	// run without a corpus does not have, so the rule still judges every entry then (agni issue 1248).
+	// A current-limiting switch that blocks reverse current is credited from its datasheet. A run
+	// without a corpus has no datasheet, so the rule still judges every entry then (agni issue
+	// 1248).
 	OptionalReads: []string{"component.device_class", "param.max"},
 	Tags: map[string]string{
 		check.KeyCategory:     check.CategoryPower,
@@ -123,10 +124,10 @@ func reverseBlockingVerdicts(ctx context.Context, m check.Model) []check.Verdict
 // between the connector and the load. A directional part stops the walk, and the rule then has to
 // inspect what stopped it, because a backwards diode stops the walk exactly as a correct one does.
 //
-// The one load that is its own blocking element is a current-limiting switch whose datasheet states a
-// reverse current, so a load the walk reaches through passives passes when that is all the entry
-// feeds, with the datasheet witness (agni issue 1248). An unblocked path returns, as its ref, an IC on
-// the entry the run has no datasheet for, "" when there is none.
+// One kind of load is its own blocking element, a current-limiting switch whose datasheet states a
+// reverse current. A load the walk reaches through passives passes when that switch is all the
+// entry feeds, with the datasheet witness (agni issue 1248). For an unblocked path, the returned
+// ref names an IC on the entry that the run has no datasheet for, or "" when there is none.
 func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string, *check.Witness) {
 	r := m.Reach(n, check.PowerPathReachHops)
 	inReach := map[string]bool{}
@@ -179,7 +180,7 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string, *check.Wi
 		for _, c := range rn.GetConnections() {
 			ref := c.GetComponentRef()
 			far := farNet(m, ref, inReach)
-			// A part whose far terminal lands on GROUND is a shunt beside the path, so it says
+			// A part whose far terminal sits on GROUND is a shunt beside the path, so it says
 			// nothing about reverse blocking. A freewheel diode across an inductive load otherwise
 			// fails the orientation test below (issue 63, 20 false FAILs). Ground only, because a
 			// series blocking diode's far side is often a NAMED RAIL (connector -> D1 -> +12V_SW ->
@@ -210,22 +211,24 @@ func classifyPowerPath(m check.Model, n *ir.Net) (pathVerdict, string, *check.Wi
 type pathVerdict int
 
 const (
-	// pathProtected: a directional element stands between the connector and the load, either a
+	// pathProtected means a directional element stands between the connector and the load, either a
 	// correctly-fitted diode or a datasheet-identified ideal-diode controller. A genuine pass.
 	pathProtected pathVerdict = iota
-	// pathUnblocked: nothing directional is in the way, or a diode is fitted backwards. The defect.
+	// pathUnblocked means nothing directional is in the way, or a diode is fitted backwards. The
+	// defect.
 	pathUnblocked
-	// pathUnclassifiable: a transistor is on the path and nothing identifies it. Reported as an
-	// INCONCLUSIVE finding, never as a defect.
+	// pathUnclassifiable means a transistor is on the path and nothing identifies it. It is
+	// reported as an INCONCLUSIVE finding, never as a defect.
 	pathUnclassifiable
-	// pathNoLoad: the connector net reaches no power input, in its passive neighborhood or across a
-	// part bridging out of it. The net is not a power path, so it gets no verdict (agni issue 391).
+	// pathNoLoad means the connector net reaches no power input, in its passive neighborhood or
+	// across a part bridging out of it. The net is not a power path, so it gets no verdict (agni
+	// issue 391).
 	pathNoLoad
 )
 
 // hasPowerInput reports whether a net carries a real power-input pin, meaning a load. Virtual power
-// symbols are excluded, and so is a connector's own pin: a USB-C receptacle's symbol types VBUS
-// power_in, but the connector is where power enters or leaves the board, and counting it made every
+// symbols are excluded, and so is a connector's own pin. A USB-C receptacle's symbol types VBUS
+// power_in, but the connector is where power enters or leaves the board. Counting it made every
 // source port's VBUS read as a load reached through passives alone (agni issue 935). A clamp's own
 // supply pin is excluded too, since a clamp array biased from the rail it guards is no load on that
 // rail (agni issue 1257).

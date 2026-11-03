@@ -17,13 +17,13 @@ import (
 )
 
 // The design fact base (WS3-004) is a set of named, typed, provenanced relations over the IR and
-// its datasheet joins. Rules and ad-hoc queries read the same vocabulary. Facts derives the tuples and
-// nothing here evaluates a query (that is core/query).
+// its datasheet joins. Rules and ad-hoc queries read the same vocabulary. Facts derives the tuples.
+// core/query evaluates queries, and nothing here does.
 //
 // The relations are a DERIVED PROJECTION of the Model, regenerated on demand and never a second
-// authoritative schema (C8). Every fact carries provenance (an IR site or a datasheet page) so an
-// answer built from it stays checkable. Names are neutral IR/param concepts, not format specifics
-// (C9). Each relation's full contract is its page under facts/docs/.
+// authoritative schema (C8). Every fact cites an IR site or a datasheet page, so a reader can check
+// an answer built from it. Names are neutral IR/param concepts, not format specifics (C9). Each
+// relation's full contract is its page under facts/docs/.
 const (
 	RelNetMaxVoltage  = "net.max_voltage" // net.max_voltage(net, volts): a net's declared rail voltage. doc: facts/docs/net.max_voltage.md
 	RelComponentMPN   = "component.mpn"   // component.mpn(ref_des, mpn): the design-side part identity. doc: facts/docs/component.mpn.md
@@ -39,28 +39,30 @@ const (
 	// net.nominal_voltage so a rule says which set it means (issue 194).
 	RelNetSignalLevel = "net.signal_level" // net.signal_level(net, volts): name-derived level on a non-rail net. doc: facts/docs/net.signal_level.md
 
-	// param.range adds the lower bound and the limit kind that param.max(mpn, symbol, max) lacks, so
-	// absolute-max and recommended-operating rows on one symbol stay apart (WS3-082).
+	// param.range adds a lower bound and a limit kind to what param.max(mpn, symbol, max) has, so
+	// absolute-max and recommended-operating rows on one symbol remain separate rows (WS3-082).
 	RelParamRange = "param.range" // param.range(mpn, symbol, kind, min, max): a two-sided datasheet limit. doc: facts/docs/param.range.md
 
-	// param.typ is its own relation rather than a column on param.range because A TYP IS NOT A
-	// BOUND. Comparing a rail against one as though it were a limit gives a confident wrong answer
-	// (agni issue 545).
+	// A TYP IS NOT A BOUND, so param.typ is its own relation rather than a column on param.range.
+	// Comparing a rail against a typ as though it were a limit gives a confident wrong answer (agni
+	// issue 545).
 	RelParamTyp = "param.typ" // param.typ(mpn, symbol, typ): a parameter's typical value. doc: facts/docs/param.typ.md
 
-	// param.prov is where a datasheet value was read from, so a datalog rule can carry the citation
-	// onto its findings (WS10-012). doc is the resolved SourceDoc title, not the doc_ref id; method
-	// and confidence come from check.DatasheetProvFor. THE PAGE BINDS AS A STRING, since a unitless
+	// param.prov names the source of a datasheet value, so a datalog rule can copy the citation onto
+	// its findings (WS10-012). doc is the resolved SourceDoc title, not the doc_ref id; method and
+	// confidence come from check.DatasheetProvFor. THE PAGE BINDS AS A STRING, since a unitless
 	// number would unify with a voltage (agni issue 545).
 	RelParamProv = "param.prov" // param.prov(mpn, symbol, doc, page, section): a datasheet value's Citation. doc: facts/docs/param.prov.md
 
-	// param.unit is the unit a parameter is PRINTED in, kept queryable because param and param.range
-	// publish SI base units (agni issue 165). String-valued, so no ordering comparison binds it.
+	// param.unit names the unit the datasheet PRINTS a parameter in. param and param.range publish
+	// SI base units (agni issue 165), so this relation keeps the printed unit queryable. It is
+	// string-valued, so no ordering comparison binds it.
 	RelParamUnit = "param.unit" // param.unit(mpn, symbol, unit): the unit a parameter is printed in. doc: facts/docs/param.unit.md
 
 	// The PIN tier of the datasheet relations (agni issue 189) states limits per TERMINAL rather
-	// than per (mpn, symbol). Keyed by the spec-local Pin.id, since a printed name is not unique. Mapping a
-	// DESIGN pin onto an id is param.ResolvePin, not a datalog join, because resolution can refuse.
+	// than per (mpn, symbol). It is keyed by the spec-local Pin.id, since a printed name is not
+	// unique. param.ResolvePin maps a DESIGN pin onto an id. A datalog join cannot, because
+	// resolution can refuse.
 	RelParamPin      = "param.pin"       // param.pin(mpn, pin, name, function): a declared pin of a part. doc: facts/docs/param.pin.md
 	RelParamPinRange = "param.pin_range" // param.pin_range(mpn, pin, symbol, kind, min, max): a limit bound to one pin. doc: facts/docs/param.pin_range.md
 
@@ -68,7 +70,8 @@ const (
 	// are ordered, since the bound is on subject minus reference.
 	RelParamPinRelation = "param.pin_relation" // param.pin_relation(mpn, subject_pin, reference_pin, modality, min, max): a pin-to-pin bound. doc: facts/docs/param.pin_relation.md
 
-	// Board-tier relations (WS1-006) are derived per-net lengths in metres, shown in mm, not raw geometry.
+	// Board-tier relations (WS1-006) publish derived per-net lengths in metres, shown in mm. They
+	// publish no raw geometry.
 	RelBoardTrackWidth = "board.track_width" // board.track_width(net, mm): the net's MINIMUM copper width. doc: facts/docs/board.track_width.md
 	RelBoardViaDrill   = "board.via_drill"   // board.via_drill(net, mm): the net's MINIMUM via drill. doc: facts/docs/board.via_drill.md
 	RelBoardLayer      = "board.layer"       // board.layer(net, layer): a layer the net's copper occupies. doc: facts/docs/board.layer.md
@@ -99,12 +102,12 @@ const (
 	RelNetGround      = "net.ground"      // net.ground(net): the net is a ground rail (name-derived). doc: facts/docs/net.ground.md
 	RelNetExternal    = "net.external"    // net.external(net): the net may extend onto an unread sheet. doc: facts/docs/net.external.md
 
-	// component.esd_rated is the credit the esd-protection Go rule gives, from the same
-	// EsdRatingLimits extractor, keyed by ref_des (WS3-076). Empty without --params.
+	// component.esd_rated holds the esd-protection Go rule's credit. Both read the same
+	// EsdRatingLimits extractor. It is keyed by ref_des (WS3-076) and empty without --params.
 	RelEsdRated = "component.esd_rated" // component.esd_rated(ref_des): part carries a floor-clearing ESD rating. doc: facts/docs/component.esd_rated.md
 
-	// component.device_class is the class the part's DATASHEET declares (PartSpec.device_class),
-	// joined by MPN (WS10-013). Empty without --params. WithParamProvider also merges it into
+	// component.device_class holds the class from the part's DATASHEET (PartSpec.device_class),
+	// joined by MPN (WS10-013). It is empty without --params. WithParamProvider also merges it into
 	// component.class's set, so HasClass answers from it too.
 	RelComponentDNP         = "component.dnp"          // component.dnp(ref_des): the part is marked do-not-populate. doc: facts/docs/component.dnp.md
 	RelComponentDeviceClass = "component.device_class" // component.device_class(ref_des, class): the datasheet-declared device class. doc: facts/docs/component.device_class.md
@@ -113,27 +116,28 @@ const (
 	// is empty for an anonymous wire.
 	RelBus = "bus" // doc: facts/docs/bus.md
 
-	// entity(name, kind) is the ENUMERATION relation, the one a search starts from, since every other
-	// relation misses whatever it does not reach (a part with no connections). kind uses the
-	// check.Kind* vocabulary a finding subject carries. Pins are absent because their identity is two
+	// entity(name, kind) is the ENUMERATION relation, and a search starts from it. Every other
+	// relation misses whatever it does not reach, such as a part with no connections. kind uses the
+	// check.Kind* vocabulary of a finding subject. Pins are absent because their identity is two
 	// fields; component.pin(ref_des, pin) enumerates them.
 	RelEntity = "entity" // entity(name, kind): a component, net or bus exists under this name. doc: facts/docs/entity.md
-	// RelUnresolvedSymbol is keyed by ref_des, NOT by the symbol reference, so a query can ask what
-	// KIND of parts a missing library cost (WS1-052).
+	// RelUnresolvedSymbol is keyed by ref_des, NOT by the symbol reference. A query can then ask
+	// which KIND of parts lost their pins to a missing library (WS1-052).
 	RelUnresolvedSymbol = "reader.unresolved_symbol" // doc: facts/docs/reader.unresolved_symbol.md
 
-	// Reader-diagnostic relations (WS3-081). A diagnostic earns a query relation only when it carries
-	// an entity key to join on; point-geometry ones (dangling endpoints) stay rule-scoped.
+	// Reader-diagnostic relations (WS3-081). A diagnostic gets a query relation only when it has an
+	// entity key to join on. A point-geometry diagnostic, such as a dangling endpoint, is visible to
+	// rules alone.
 	RelRefDesCollision = "reader.ref_des_collision" // reader.ref_des_collision(ref_des): a designator shared by >1 part. doc: facts/docs/reader.ref_des_collision.md
 	RelPinNetConflict  = "reader.pin_net_conflict"  // reader.pin_net_conflict(ref_des, pin, net): the read put a pin on >1 net. doc: facts/docs/reader.pin_net_conflict.md
 
-	// net.bus_like is a shared-distribution net, the predicate the series-reach walk stops at
-	// (WS3-080). Not bus(label, kind), which is an unmodeled bus LABEL.
+	// net.bus_like is a shared-distribution net. The series-reach walk stops at one (WS3-080). It
+	// differs from bus(label, kind), which is an unmodeled bus LABEL.
 	RelNetBusLike = "net.bus_like" // doc: facts/docs/net.bus_like.md
 
-	// net.connector_signal is the SCOPE the ESD rules share (WS3-061). It reads net attributes and
-	// the no-connect channel that no relation exposes, so datalog cannot rebuild it, and a dropped
-	// guard is a false FAIL on a rail or an unconnected pad.
+	// net.connector_signal is the SCOPE of the ESD rules (WS3-061). It reads net attributes and the
+	// no-connect channel, and no relation exposes those, so datalog cannot rebuild it. Dropping one
+	// of its guards gives a false FAIL on a rail or an unconnected pad.
 	RelExternalSignalNet = "net.connector_signal" // net.connector_signal(net): connector-facing signal net, the ESD scope. doc: facts/docs/net.connector_signal.md
 
 	// Derived net properties (WS3-088) say what the DESIGN does, for comparing against an intent
@@ -141,10 +145,10 @@ const (
 	RelNetBias      = "net.bias"       // net.bias(net, level): a bias resistor holds the net high or low. doc: facts/docs/net.bias.md
 	RelNetACCoupled = "net.ac_coupled" // net.ac_coupled(net): a SERIES capacitor carries the net. doc: facts/docs/net.ac_coupled.md
 
-	// Net-class relations (WS3-105) carry the TOOL-assigned class string. NOT named net.class, which
-	// would read as the derived role space and invite a join that matches nothing.
-	// design.has_netclass separates "no net in this class" from "this design has no classes" (only
-	// KiCad supplies them).
+	// Net-class relations (WS3-105) hold the TOOL-assigned class string. They are NOT named
+	// net.class, because that name reads as the derived role space and invites a join that matches
+	// nothing. design.has_netclass separates "no net in this class" from "this design has no
+	// classes". Only KiCad supplies classes.
 	RelNetNetClass = "net.netclass"        // net.netclass(net, class): the tool-assigned net class. doc: facts/docs/net.netclass.md
 	RelHasNetClass = "design.has_netclass" // design.has_netclass(present): one row when the design assigns net classes at all. doc: facts/docs/design.has_netclass.md
 
@@ -157,13 +161,13 @@ const (
 	RelHasNetClassDefs     = "design.has_netclass_defs" // design.has_netclass_defs(present). doc: facts/docs/design.has_netclass_defs.md
 
 	// The CASCADED per-net values. A declared-vs-actual rule joins THESE, never the per-class rows,
-	// because a net in two classes matches two of those. Only the two quantities with a board-tier
-	// counterpart are derived.
+	// because a net in two classes matches two per-class rows. Only two quantities have a board-tier
+	// counterpart, and only those two are derived.
 	RelNetDeclaredTrackWidth = "net.declared_track_width" // net.declared_track_width(net, mm). doc: facts/docs/net.declared_track_width.md
 	RelNetDeclaredViaDrill   = "net.declared_via_drill"   // net.declared_via_drill(net, mm). doc: facts/docs/net.declared_via_drill.md
 )
 
-// unitVolt and unitMetre are the BASE units the numeric relations publish. One dimension has ONE
+// unitVolt and unitMetre are the BASE units of the numeric relations. One dimension has ONE
 // spelling across every relation.
 //
 // A length is published in METRES, the SI base, although every board format draws in millimetres.
@@ -172,14 +176,15 @@ const (
 // mm (agni issue 1035, from jaala v0.1.59). So a length is metres here, a query writes its threshold
 // with a unit (`?w < 0.2mm`), and query.Display shows the cell in mm.
 //
-// Counts carry NO base unit. An empty base unit is polymorphic, so `?c < 5` works; a new count
+// Counts have NO base unit. An empty base unit is polymorphic, so `?c < 5` works; a new count
 // must be listed in dimensionlessNumericRelations (facts_test.go).
 const (
 	unitVolt  = "V"
 	unitMetre = "m"
 )
 
-// metres is a length in millimetres, as a board draws it, in the unit a length is published in.
+// metres converts a length from millimetres, the unit a board draws in, to metres, the unit a
+// length is published in.
 func metres(mm float64) *float64 {
 	m := mm / 1000
 	return &m
@@ -267,9 +272,9 @@ func netMaxVoltageFacts(m check.Model) []facts.Row {
 // netNominalVoltageFacts emits the name-derived nominal of each RAIL (3V3 -> 3.3). It reads only
 // the NAME, never the max_voltage attribute, and a name with no parseable nominal yields no row.
 //
-// THE RAIL GATE IS THE POINT (agni issue 194). NominalVoltage token-scans the whole name,
-// so without the gate a signal net like `U3_12_U7_4_3V3` projected 3.3 as a rail nominal. That
-// level goes to net.signal_level instead.
+// The relation gates on rails (agni issue 194). NominalVoltage token-scans the whole name, so
+// without the gate a signal net like `U3_12_U7_4_3V3` projected 3.3 as a rail nominal. That level
+// goes to net.signal_level instead.
 //
 // The gate is on the RELATION, not on Model.NominalVoltage, which is a pure string
 // function. A Go rule holding a net must gate for itself (Model.IsRailNet), as rule_pin_tracking
@@ -288,14 +293,14 @@ func netNominalVoltageFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// netSignalLevelFacts emits the voltage a NON-RAIL net's name carries, the other half of the
-// issue-194 split.
+// netSignalLevelFacts emits the voltage written in a NON-RAIL net's name. It is the other half of
+// the issue-194 split.
 //
 // The two relations are DISJOINT but not exhaustive (agni 679). A regulator internal such as
 // "12V_FB" gets NO row in either, because the number in its name is a DIFFERENT net's voltage (the
 // tap sits near the internal reference, typically 0.6V to 0.8V). Moving those nets to this relation
-// would state the same wrong number under a new name. Ground is a rail role, so a ground net stays
-// on the nominal side.
+// would state the same wrong number under a new name. Ground is a rail role, so a ground net gets
+// its row in net.nominal_voltage.
 func netSignalLevelFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
@@ -320,8 +325,8 @@ func componentMPNFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// paramFacts emits every parameter of each JOINED datasheet spec, not only the ones a rule
-// consumes, keyed by mpn and deduped by it.
+// paramFacts emits every parameter of each JOINED datasheet spec, including parameters no rule
+// reads. Rows are keyed by mpn and deduped by it.
 func paramFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	seen := map[string]bool{}
@@ -355,8 +360,8 @@ func specParamRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	for _, p := range spec.Parameters {
 		q, ok := param.InBaseUnit(p)
 		if !ok {
-			// The unit has no known scale, so there is no number to publish. The row still appears,
-			// carrying its symbol, conditions and citation, with the numeric slot EMPTY: an
+			// The unit has no known scale, so there is no number to publish. The row still appears
+			// with its symbol, conditions and citation, and its numeric slot is EMPTY. An
 			// unmeasurable value must not be orderable, and evalCompare refuses to order an absent
 			// number against a present one.
 			out = append(out, facts.Row{Relation: RelParam, Subject: mpn, Object: p.GetSymbol(), Conditions: conditionsText(p.GetConditions()), Cites: cite(check.Citation(spec, p))})
@@ -388,11 +393,11 @@ func specParamPinRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 }
 
 // specParamPinRangeRows projects the `param.pin_range` rows of one PartSpec: one per (parameter,
-// bound pin), carrying the symbol (Value), the limit kind (Qualifier) and both bounds in SI base
+// bound pin), holding the symbol (Value), the limit kind (Qualifier) and both bounds in SI base
 // units (Min/Num). A parameter bound to four pins emits FOUR rows.
 //
 // PART-WIDE ROWS ARE ABSENT. A parameter with no pin_refs is about the die, and emitting it per pin
-// would read as each terminal carrying that limit; those rows live on `param.range`. An
+// would read as each terminal having that limit; those rows live on `param.range`. An
 // unconvertible unit keeps the row with both numeric slots empty, as specParamRangeRows does.
 func specParamPinRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	var out []facts.Row
@@ -446,8 +451,8 @@ func paramPinRangeFacts(m check.Model) []facts.Row {
 // the bound on their difference in SI base units (Min/Num). Swapping the ids inverts the
 // requirement.
 //
-// TRACKING ONLY, since PinRelationKind has one member. A second kind must revisit this projection,
-// which spends no column on the kind. An unconvertible unit keeps the row with both numeric slots
+// TRACKING ONLY, since PinRelationKind has one member. This projection has no column for the kind,
+// so a second kind must revisit it. An unconvertible unit keeps the row with both numeric slots
 // empty.
 func specParamPinRelationRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	var out []facts.Row
@@ -548,7 +553,7 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	for _, p := range spec.Parameters {
 		q, ok := param.InBaseUnit(p)
 		if !ok {
-			// As in specParamRows, the row stays with both numeric slots empty.
+			// As in specParamRows, the row is kept with both numeric slots empty.
 			out = append(out, facts.Row{Relation: RelParamRange, Subject: mpn, Object: p.GetSymbol(), Value: param.LimitKindToken(p.GetLimitKind()), Conditions: conditionsText(p.GetConditions()), Cites: cite(check.Citation(spec, p))})
 			continue
 		}
@@ -571,8 +576,8 @@ func specParamRangeRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 }
 
 // specParamTypRows projects the `param.typ` rows of one PartSpec, one per parameter that states a
-// typ. An absent typ stays absent rather than arriving as a zero. An unconvertible unit keeps the
-// row with no number.
+// typ. An absent typ emits no row rather than a zero. An unconvertible unit keeps the row with no
+// number.
 func specParamTypRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 	out := make([]facts.Row, 0, len(spec.Parameters))
 	for _, p := range spec.Parameters {
@@ -599,8 +604,8 @@ func paramTypFacts(m check.Model) []facts.Row {
 	return perJoinedSpec(m, specParamTypRows)
 }
 
-// paramRangeFacts emits `param.range` over the same joined specs paramFacts reads, deduped by MPN
-// and empty without --params.
+// paramRangeFacts emits `param.range` over the joined specs, as paramFacts does. Rows are deduped
+// by MPN and empty without --params.
 func paramRangeFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	seen := map[string]bool{}
@@ -690,7 +695,7 @@ func audienceRows(mpn string, spec *parampb.PartSpec) []facts.Row {
 }
 
 // SpecLibFacts projects the per-spec datasheet relations of a whole seeded corpus with NO design
-// join (WS10-010), which is what `agni query --speclib` searches. The three pin relations are not
+// join (WS10-010). `agni query --speclib` searches these rows. The three pin relations are not
 // included. Rows are sorted as Facts sorts them.
 func SpecLibFacts(specs []*parampb.PartSpec) []facts.Row {
 	var out []facts.Row
@@ -757,15 +762,16 @@ func pinFacts(m check.Model) []facts.Row {
 		if role := m.PinRole(ref, des); role != check.RoleUnknown {
 			out = append(out, facts.Row{Relation: RelPinRole, Subject: ref, Object: des, Value: string(role), Cites: cites})
 		}
-		// A pin no part type declares (a part from a cell the file never defines, agni issue 975) has no
-		// direction to state, and "unspecified" is a direction a library declares.
+		// Imagine a part from a cell the file never defines (agni issue 975). No part type declares
+		// its pins, so they have no direction to state. "unspecified" is a direction a library
+		// declares, so it would be wrong here.
 		if m.PinDeclared(ref, des) {
 			out = append(out, facts.Row{Relation: RelPinType, Subject: ref, Object: des, Value: check.DirString(m.PinDir(ref, des)), Cites: cites})
 		}
 		if net := m.PinNetName(ref, des); net != "" {
 			out = append(out, facts.Row{Relation: RelPinNet, Subject: ref, Object: des, Value: net, Cites: cites})
 		}
-		// The FUNCTIONAL name, beside the designator the other rows key on (agni issue 517).
+		// The FUNCTIONAL name. The other rows key on the designator (agni issue 517).
 		// Emitted only when declared. KiCad's "~" means "no name" and reaches the IR verbatim, so
 		// it reads as absent, as in classifyPinRole and resolveEndpoint.
 		if name := m.PinName(ref, des); name != "" && name != "~" {
@@ -818,9 +824,9 @@ func componentNetCountFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// ncChannelFacts emits one row when the design can express intentional no-connect (a
-// NO_CONNECT-typed pin, a no-connect-flagged net, or an NC_ name), and none otherwise, so a `design.has_nc_channel(?_)` gate
-// fails closed.
+// ncChannelFacts emits one row when the design can express intentional no-connect, and none
+// otherwise. A design can express it with a NO_CONNECT-typed pin, a no-connect-flagged net, or an
+// NC_ name. A `design.has_nc_channel(?_)` gate therefore fails closed.
 func ncChannelFacts(m check.Model) []facts.Row {
 	if m.HasNoConnectChannel() {
 		return []facts.Row{{Relation: RelHasNCChannel, Subject: "true", Cites: cite("design")}}
@@ -828,9 +834,9 @@ func ncChannelFacts(m check.Model) []facts.Row {
 	return nil
 }
 
-// typesPowerOutFacts emits one row when the source format types power-OUTPUT pins (KiCad and gEDA
-// do, EDIF and IPC do not; see Model.FormatTypesPowerOut). It is the queryable twin of the spec
-// fact power-input-not-driven gates on.
+// typesPowerOutFacts emits one row when the source format types power-OUTPUT pins. KiCad and gEDA
+// do, and EDIF and IPC do not (see Model.FormatTypesPowerOut). power-input-not-driven gates on a
+// spec fact, and this relation is its queryable twin.
 func typesPowerOutFacts(m check.Model) []facts.Row {
 	if m.FormatTypesPowerOut() {
 		return []facts.Row{{Relation: RelTypesPowerOut, Subject: "true", Cites: cite("design")}}
@@ -863,8 +869,8 @@ func feedbackFacts(m check.Model) []facts.Row {
 }
 
 // switchingFacts emits one row per net the naming lexicon reads as a regulator power-stage node
-// (switch node, bootstrap node, or a vendor spelling of either; agni 680). With net.feedback it is the
-// pair a coverage rule subtracts from net.rail.
+// (switch node, bootstrap node, or a vendor spelling of either; agni 680). A coverage rule
+// subtracts this relation and net.feedback from net.rail.
 func switchingFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
@@ -875,7 +881,7 @@ func switchingFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// netRoleFacts emits one row per ROLE a net carries, the net-side twin of component.class (agni
+// netRoleFacts emits one row per ROLE a net has, the net-side twin of component.class (agni
 // 691). It iterates classify.AllNetRoles rather than the stamped set, so an unstamped net still
 // answers through the name fallback.
 //
@@ -894,8 +900,8 @@ func netRoleFacts(m check.Model) []facts.Row {
 }
 
 // netAttrFacts emits each net-level attribute as net.attr(net, key, value), the twin of
-// component.attr. Attributes are DECLARED by the source file and roles DERIVED by the engine, so
-// net.attr and net.role stay separate relations.
+// component.attr. The source file DECLARES attributes and the engine DERIVES roles, so net.attr
+// and net.role are separate relations.
 func netAttrFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
@@ -932,9 +938,9 @@ func componentClassFacts(m check.Model) []facts.Row {
 }
 
 // componentDNPFacts emits component.dnp(ref) for each component the design marks do-not-populate
-// (agni issue 961). The part stays in the netlist, so its class, pins and nets are all still facts;
-// this is what a query negates to stop crediting it with a role on the assembled board, as the Go rules
-// ask Model.IsFitted.
+// (agni issue 961). The part is still in the netlist, so its class, pins and nets are all still
+// facts. A query negates component.dnp to stop crediting the part with a role on the assembled
+// board. The Go rules ask Model.IsFitted for the same purpose.
 func componentDNPFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, c := range m.Components() {
@@ -945,7 +951,7 @@ func componentDNPFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// esdRatedFacts emits component.esd_rated(ref) for each component whose joined spec carries an ESD
+// esdRatedFacts emits component.esd_rated(ref) for each component whose joined spec has an ESD
 // rating at or above the credit floor (check.EsdRatingLimits). It cites the datasheet ESD rows, not
 // the component's IR site. Empty without --params.
 func esdRatedFacts(m check.Model) []facts.Row {
@@ -1048,8 +1054,8 @@ func unresolvedSymbolFacts(m check.Model) []facts.Row {
 }
 
 // refDesCollisionFacts emits reader.ref_des_collision(ref) for each designator used by more than
-// one part (WS3-081). EVERY colliding instance is cited, since where the duplicates are is the
-// finding (agni issue 546).
+// one part (WS3-081). EVERY colliding instance is cited, since the finding is where the duplicates
+// are (agni issue 546).
 func refDesCollisionFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, c := range m.RefDesCollisions() {
@@ -1076,8 +1082,8 @@ func pinNetConflictFacts(m check.Model) []facts.Row {
 	return out
 }
 
-// netBusLikeFacts emits net.bus_like(net) for each net check.IsBusLike accepts, the predicate the
-// series-reach walk stops at (WS3-080).
+// netBusLikeFacts emits net.bus_like(net) for each net check.IsBusLike accepts. The series-reach
+// walk stops at those nets (WS3-080).
 func netBusLikeFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
@@ -1089,7 +1095,7 @@ func netBusLikeFacts(m check.Model) []facts.Row {
 }
 
 // externalSignalNetFacts emits net.connector_signal(net) for each net check.ExternalSignalNet
-// accepts, the scope the ESD rules share. Empty on a design with no connectors.
+// accepts. The ESD rules share that scope. It is empty on a design with no connectors.
 func externalSignalNetFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, n := range m.Nets() {
@@ -1155,9 +1161,9 @@ func hasNetClassFacts(m check.Model) []facts.Row {
 	return nil
 }
 
-// boardFacts projects the board tier (WS1-006), per net the MINIMUM track width and via drill in
-// mm and the layers its copper occupies. Empty without a board tier. The cite names the board net,
-// since a derived BoardNet carries no file span.
+// boardFacts projects the board tier (WS1-006). Per net it emits the MINIMUM track width and via
+// drill, in metres with mm text, and the layers its copper occupies. It is empty without a board
+// tier. The cite names the board net, since a derived BoardNet has no file span.
 func boardFacts(m check.Model) []facts.Row {
 	var out []facts.Row
 	for _, bn := range m.BoardNets() {
@@ -1255,8 +1261,8 @@ func hasNetClassDefsFacts(m check.Model) []facts.Row {
 // check.NetClassCascade.
 //
 // KiCad composes the effective netclass PER FIELD, not per class. Classes sort by priority (Default
-// last) and each field comes from the first class stating it. There is no single winning class. A quantity
-// no class states yields no row.
+// last) and each field comes from the first class stating it. There is no single winning class. A
+// quantity no class states yields no row.
 func netDeclaredFacts(m check.Model) []facts.Row {
 	defs := m.NetClassDefs()
 	if len(defs) == 0 {
@@ -1298,15 +1304,15 @@ func parseMM(s string) (float64, bool) {
 	return v, true
 }
 
-// nmToMM converts a board dimension from nanometres to millimetres, the unit the board relations
-// publish.
+// nmToMM converts a board dimension from nanometres to millimetres. The board relations print
+// millimetres in their text and publish metres as the number.
 func nmToMM(nm int64) float64 { return float64(nm) / 1e6 }
 
 func mmStr(mm float64) string { return fmt.Sprintf("%gmm", mm) }
 
-// cite wraps one rendered citation as the slice facts.Row carries. A fact with SEVERAL sources
-// builds the slice itself (refDesCollisionFacts, esdRatedFacts). An empty string yields no citation,
-// so a failed resolution "cites nothing", which TestEveryFactCitesSomething catches.
+// cite wraps one rendered citation as a facts.Row Cites slice. A fact with SEVERAL sources builds
+// the slice itself (refDesCollisionFacts, esdRatedFacts). An empty string yields no citation, so a
+// failed resolution "cites nothing". TestEveryFactCitesSomething catches that.
 func cite(s string) []string {
 	if s == "" {
 		return nil

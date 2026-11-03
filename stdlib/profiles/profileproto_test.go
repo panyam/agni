@@ -6,9 +6,9 @@ import (
 )
 
 // fullProfile is a profile with EVERY field set to a distinguishable non-zero value, including the
-// ones a conversion is most likely to forget. A drift guard is only as good as its fixture, because
-// a field left at its zero value round-trips through a conversion that drops it, because zero in
-// equals zero out and the comparison cannot tell the difference.
+// ones a conversion is most likely to forget. A drift guard is only as good as its fixture. A field
+// left at its zero value round-trips even through a conversion that drops it. Zero in equals zero
+// out, and the comparison cannot tell the difference.
 func fullProfile() Profile {
 	return Profile{
 		Name:        "acme-bus",
@@ -34,18 +34,18 @@ func fullProfile() Profile {
 }
 
 // TestProfileProtoRoundTrip is the field-drift guard for the interface-profile half of the
-// rule-definition contract (WS3-103), and it is the test this converter never had.
+// rule-definition contract (WS3-103). This converter had no such test before.
 //
 // Going Profile -> proto -> Profile and requiring deep equality means a conversion that forgets a
 // field cannot pass, because the returned struct differs from the one that went in. Asserting on
-// the proto instead would not catch it, because a field the conversion never writes is absent from
-// both sides of that comparison, so the two agree about nothing being there.
+// the proto instead would not catch it. The conversion never writes the field, so the field is
+// absent from both sides of that comparison, and the two agree about nothing being there.
 //
-// This is the same guard service's manifest conversion has carried since it was written
+// service's manifest conversion has had the same guard since it was written
 // (TestManifestProtoRoundTrip). Profiles went without one, and HostClass (WS3-044) was silently
 // dropped in consequence. A profile binding its host by datasheet device class lost the binding
-// crossing stdlib/ruledef, so no host was found and the host path stayed silent. Silent is also the
-// documented behaviour when no params are seeded, which is what made the failure invisible.
+// crossing stdlib/ruledef, so no host was found and the host path was silent. Silence is also the
+// documented behaviour when no params are seeded, so nobody could see the failure.
 func TestProfileProtoRoundTrip(t *testing.T) {
 	want := fullProfile()
 	got := ProfileFromProto(ProfileProto(want))
@@ -55,7 +55,7 @@ func TestProfileProtoRoundTrip(t *testing.T) {
 }
 
 // TestProfileProtoCarriesClassOnlyHost pins the case the drop actually broke, a profile whose ONLY
-// host binding is a device class. HasHost is what gates every host-dependent requirement, so losing
+// host binding is a device class. HasHost gates every host-dependent requirement, so losing
 // HostClass turns a profile that has a host into one that does not, and the requirement compiles to
 // nothing instead of erroring.
 func TestProfileProtoCarriesClassOnlyHost(t *testing.T) {

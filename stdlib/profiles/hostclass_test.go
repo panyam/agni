@@ -49,12 +49,12 @@ func flashSpec() param.ParamSet {
 	}}
 }
 
-// TestHostClassIdentifiesHostInAllReaders is the WS3-044 acceptance, and the reason the host test
-// moved to one shared predicate. "Is this component the host" has four consumers, and before this
-// change each tested the declared attribute on its own. Extending only the datalog rule would have
-// produced an interface whose host path emits findings while the review gate reports that same path
-// as unable to evaluate, so it would be failing and not-automated at once. So the assertion is that
-// they AGREE, not merely that the rule fires.
+// TestHostClassIdentifiesHostInAllReaders is the WS3-044 acceptance. It also explains why the host
+// test moved to one shared predicate. "Is this component the host" has four consumers, and before
+// this change each tested the declared attribute on its own. Suppose only the datalog rule had been
+// extended. The interface's host path would emit findings, and the review gate would report that same
+// path as unable to evaluate. The interface would be failing and not-automated at once. So the
+// assertion is that they AGREE, not merely that the rule fires.
 func TestHostClassIdentifiesHostInAllReaders(t *testing.T) {
 	m := check.NewModel(flashDesign(), check.WithParamProvider(flashSpec()))
 
@@ -81,8 +81,8 @@ func TestHostClassIdentifiesHostInAllReaders(t *testing.T) {
 }
 
 // TestHostClassSilentWithoutParams covers the no-evidence case. The class path is datasheet
-// evidence, so with no seeded set there is no evidence and the profile finds no host. It must stay
-// quiet rather than fall through to a guess, and HostDeclared must say the path could not evaluate
+// evidence, so with no seeded set there is no evidence and the profile finds no host. It must report
+// nothing rather than fall through to a guess, and HostDeclared must say the path could not evaluate
 // so the review reads not-automated instead of a hollow pass (WS3-090).
 func TestHostClassSilentWithoutParams(t *testing.T) {
 	m := check.NewModel(flashDesign())
@@ -98,15 +98,14 @@ func TestHostClassSilentWithoutParams(t *testing.T) {
 }
 
 // TestHostClassNormalizesBothSides pins the reason the relation stopped projecting device_class
-// verbatim. The seeded spec says "XTAL" and the profile declares "crystal"; an exact string match would
-// find no host and the whole check would go quiet, which is the failure shape that looks like a clean
-// board.
+// verbatim. The seeded spec says "XTAL" and the profile declares "crystal". An exact string match
+// would find no host and the whole check would report nothing. That failure looks like a clean board.
 //
 // The folding covers what the WS10-015 vocabulary KNOWS. For those, case and vendor aliases both fold
 // ("XTAL" and "Crystal" each reach crystal, "TCXO" reaches oscillator). A class the vocabulary does not
 // recognize passes through UNCHANGED, including its case, so "LDO" and "ldo" are different strings and
-// would not match. Two classes in the seeded corpus ("ldo", "mcu") are in exactly that position, which
-// is the sharp edge here and part of why no built-in declares a HostClass yet.
+// would not match. Two classes in the seeded corpus ("ldo", "mcu") are in exactly that position. No
+// built-in declares a HostClass yet, partly because of this edge.
 func TestHostClassNormalizesBothSides(t *testing.T) {
 	m := check.NewModel(flashDesign(), check.WithParamProvider(flashSpec()))
 	u1 := m.Components()[0]

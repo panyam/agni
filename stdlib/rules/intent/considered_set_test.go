@@ -21,9 +21,9 @@ func verdictsFor(t *testing.T, decl Declaration, m check.Model, rule string) []c
 	return out
 }
 
-// An intent rule's considered set is the DECLARATION, which is what makes these the conversions worth
-// having. The rule already knows what it was asked to look for, so it can say "both declared
-// modules are here" where before it said nothing, which is what a declaration nobody wrote says too.
+// An intent rule's considered set is the DECLARATION, so these conversions are worth having. The
+// rule already knows what it was asked to look for. So it can say "both declared modules are here",
+// where before it said nothing. A declaration nobody wrote also says nothing.
 func TestIntentRuleStatesWhatItWasAskedToLookFor(t *testing.T) {
 	decl := declOf(t, `
 name: I
@@ -48,7 +48,7 @@ intent:
 			t.Errorf("%s: a pass with no witness is the silence this conversion removes", check.SubjectRefs(v))
 		}
 	}
-	// And the findings do not move. The failing half is what `check` has always reported.
+	// And the findings do not move. `check` has always reported the failing half.
 	absent := check.NewModel(&ir.Design{Components: []*ir.Component{{RefDes: "U1", DeviceClasses: classify.Tags("soc")}}})
 	if fs := check.RunBackground(absent, Compile(decl)); len(fs) != 1 {
 		t.Errorf("want the one absent-module finding, got %d: %+v", len(fs), fs)
@@ -56,8 +56,8 @@ intent:
 }
 
 // A module declaring no COUNT is not a subject of the count rule. Reporting it as a pass would claim
-// the design has the right number of something nobody stated a number for, which is the scope mistake
-// fet-vdss shipped and PR 405 fixed.
+// the design has the right number of something nobody stated a number for. fet-vdss shipped that
+// scope mistake, and PR 405 fixed it.
 func TestIntentCountRuleClaimsOnlyModulesThatDeclareOne(t *testing.T) {
 	decl := declOf(t, `
 name: I
@@ -81,9 +81,9 @@ intent:
 }
 
 // A rail whose NAME states no voltage is neither a match nor a mismatch. The rule compares a
-// name-derived nominal against the declared one, so a rail called VBUS supplies nothing to compare,
-// and it took the same silent path a correctly-named rail took, so a domain declared over rails nobody
-// named for their voltage reported total agreement.
+// name-derived nominal against the declared one, so a rail called VBUS supplies nothing to compare.
+// Such a rail took the same silent path as a correctly-named rail. So a domain declared over rails
+// with no voltage in their names reported total agreement.
 func TestVoltageDomainSeparatesAgreementFromNothingToCompare(t *testing.T) {
 	decl := declOf(t, `
 name: I
