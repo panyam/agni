@@ -94,8 +94,8 @@ func TestParamProvenanceResolves(t *testing.T) {
 	}
 }
 
-// A recipe fragment (title pattern -> LimitKind) evaluated over the doc-IR, which is
-// the consumer surface WS10-002's recipes will use.
+// A recipe fragment (title pattern -> LimitKind) evaluated over the doc-IR. WS10-002's
+// recipes will use this consumer surface.
 func TestRecipeFragmentClassifiesTables(t *testing.T) {
 	d := readFixture(t, "bss138-docir.textproto")
 	recipe := []struct {

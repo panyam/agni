@@ -35,8 +35,8 @@ var exampleRule = &check.Rule{
 	// failure list as coverage.
 	StatesConsideredSet: true,
 	// Eval MAPS each subject onto a verdict rather than filtering down to what failed. A pass
-	// carries the proof it rests on, so a reader can tell a part you cleared from one nobody
-	// checked. The rule's findings are projected from this (Rule.Findings).
+	// holds its proof, so a reader can tell a part you cleared from one nobody checked. The
+	// rule's findings are projected from this (Rule.Findings).
 	Eval: func(ctx context.Context, m check.Model) []check.Verdict {
 		var out []check.Verdict
 		for _, c := range m.Components() {

@@ -17,8 +17,9 @@ func gapsOfKind(m *derivepb.RunManifest, kind string) []*derivepb.Gap {
 	return out
 }
 
-// A refusal that is not recorded is indistinguishable from a success. The gap is what makes leaving
-// the field empty affordable rather than just lossy.
+// Imagine derive leaves a document's title empty and records nothing. A reader cannot tell that
+// refusal from a success. The gap records the refusal, so an empty field is acceptable rather than
+// just lost information.
 func TestUnidentifiedDocumentIsGappedWithItsEvidence(t *testing.T) {
 	d := loadDocFixture(t, "bss138-raw-docir.textproto")
 	recipes, patches := loadArtifacts(t)
@@ -40,7 +41,8 @@ func TestUnidentifiedDocumentIsGappedWithItsEvidence(t *testing.T) {
 	if !strings.Contains(detail, "Opening prose:") {
 		t.Errorf("gap carries no evidence to decide from: %q", detail)
 	}
-	// The doc-IR title is named as what it is, so the next reader does not re-make the assignment.
+	// The gap names the doc-IR title as the part, so the next reader does not make the assignment
+	// again.
 	if !strings.Contains(detail, "BSS138") {
 		t.Errorf("gap should name the doc-IR's own title as the part rather than the document: %q", detail)
 	}

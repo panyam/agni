@@ -1,10 +1,10 @@
 // Package common is the shared plumbing for Agni's runnable examples. It holds design loading,
 // the bundled synthetic fixtures, narration pretty-printers, and the demokit renderer wiring, so
-// each example stays a thin walkthrough over its own sidecar markdown.
+// each example is only a thin walkthrough over its own sidecar markdown.
 //
 // It lives at the I/O edge, since C1 keeps file paths out of the engine core. Reads go through
-// formats.Loader, the same entry point cmd/agni uses, because the Loader is where the
-// format-neutral INGESTION PASSES run and a direct reader call skips them silently.
+// formats.Loader, the same entry point cmd/agni uses. The format-neutral INGESTION PASSES run in
+// the Loader, and a direct reader call skips them silently.
 package common
 
 import (
@@ -37,9 +37,9 @@ func Load(arg string) (*ir.Design, error) {
 	return nil, fmt.Errorf("no design at path %q, and no bundled fixture named %q", arg, filepath.Base(arg))
 }
 
-// ReadDesign reads a design file from disk into the IR through formats.Loader, which is what
-// cmd/agni reads through. Reader dispatch by extension, the .kicad_pro project merge, and the
-// format-neutral ingestion passes all live there.
+// ReadDesign reads a design file from disk into the IR through formats.Loader, as cmd/agni does.
+// The Loader holds reader dispatch by extension, the .kicad_pro project merge, and the
+// format-neutral ingestion passes.
 //
 // Keep this one Loader call rather than a dispatch of its own (agni issue 618). The passes fill
 // ir.Component.mpn (classify.StampMPN) and rewrite provenance paths, and a read that skips them

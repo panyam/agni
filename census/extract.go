@@ -11,8 +11,8 @@ import (
 )
 
 // Kind selects the extractor for a format family. The two s-expr kinds differ only in the shared
-// parser's string dialect (KiCad escapes vs EDIF CR/LF drop), which the census needs correct so a
-// quoted string terminates where the reader would find it.
+// parser's string dialect (KiCad escapes vs EDIF CR/LF drop). The census needs the dialect right, so
+// a quoted string ends where the reader would end it.
 type Kind int
 
 const (
@@ -46,12 +46,13 @@ func Enumerate(data []byte, kind Kind) []string {
 }
 
 // opaqueSExpr are s-expr subtrees the census records as ONE construct without enumerating their
-// children. They are editor/plotter configuration blobs (dozens of one-off knob names) carrying no
+// children. They are editor/plotter configuration blobs (dozens of one-off knob names) holding no
 // reader-relevant vocabulary. The block head itself is still classified once.
 var opaqueSExpr = map[string]bool{"pcbplotparams": true}
 
-// extractSExpr parses data with the shared s-expr parser, so quoted parens, escapes and the
-// EDIF/KiCad string dialects match the readers, and walks the tree for head atoms. A numeric head
+// extractSExpr parses data with the shared s-expr parser and walks the tree for head atoms. The
+// shared parser makes quoted parens, escapes and the EDIF/KiCad string dialects match the readers.
+// A numeric head
 // collapses to NumberToken, and an opaqueSExpr block contributes its head but not its children. A
 // malformed file yields nothing, since the census is coarse and not a validator.
 func extractSExpr(data []byte, mode sexpr.StringMode) []string {

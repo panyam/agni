@@ -11,8 +11,8 @@ import (
 	"github.com/panyam/goapplib/wasmhost"
 )
 
-// The tests here cover Ingest with read_board (agni issue 1061), which the page sends from a worker
-// that ends when it answers, so the worker that later runs the checks restores the board instead of
+// The tests here cover Ingest with read_board (agni issue 1061). The page sends it from a worker that
+// ends when it answers. The worker that later runs the checks then restores the board instead of
 // parsing it.
 
 // ingestEngine sends req to eng over Connect and returns the snapshot it made.
@@ -38,9 +38,9 @@ func loadDesign(t *testing.T, eng *Engine) *webapi.Snapshot {
 	return ingestEngine(t, eng, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m"}, ReadBoard: true})
 }
 
-// TestABoardLoadedInOneWorkerIsRestoredByTheNext is the page's two-worker shape: the prepare worker
-// loads the design and ends, and a fresh worker over the same store ingests it and runs the checks.
-// control: a fresh worker over a store nothing loaded into parses the board itself.
+// TestABoardLoadedInOneWorkerIsRestoredByTheNext runs the page's two-worker shape. The prepare worker
+// loads the design and ends. A fresh worker over the same store ingests it and runs the checks. As a
+// control, a fresh worker over an empty store parses the board itself.
 func TestABoardLoadedInOneWorkerIsRestoredByTheNext(t *testing.T) {
 	store := &wasmhost.MemCache{}
 	got := loadDesign(t, gatewayEngine(t, store, "v1", nil)).GetTiers()
@@ -59,8 +59,8 @@ func TestABoardLoadedInOneWorkerIsRestoredByTheNext(t *testing.T) {
 	}
 }
 
-// TestABuildThatPersistsNothingSaysSo: an engine with no version keeps nothing past itself, so the page
-// learns that loading in a worker that ends bought nothing.
+// TestABuildThatPersistsNothingSaysSo checks that an engine with no version keeps nothing past
+// itself. The page then learns that loading in a worker that ends gained nothing.
 func TestABuildThatPersistsNothingSaysSo(t *testing.T) {
 	got := loadDesign(t, gatewayEngine(t, &wasmhost.MemCache{}, "", nil)).GetTiers()
 	if !got.GetBoardRead() || got.GetBoardPersisted() {
@@ -68,8 +68,8 @@ func TestABuildThatPersistsNothingSaysSo(t *testing.T) {
 	}
 }
 
-// TestACheckAfterALoadInTheSameWorkerStartsFromItsModel is the shape agni serve has, one process: a
-// check of the snapshot finds the model its read_board ingest kept.
+// TestACheckAfterALoadInTheSameWorkerStartsFromItsModel runs the shape agni serve has, with one
+// process. The read_board ingest keeps a model, and a check of the snapshot finds it.
 func TestACheckAfterALoadInTheSameWorkerStartsFromItsModel(t *testing.T) {
 	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
 	snap := loadDesign(t, eng).GetName()

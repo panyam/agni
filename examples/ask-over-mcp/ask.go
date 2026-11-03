@@ -14,8 +14,8 @@ import (
 // mountName is the mount the example serves its folder under, so the design names it as ex/<path>.
 const mountName = "ex"
 
-// A session is an MCP client connected to `agni mcp`, which it started over the folder holding the
-// design.
+// A session is an MCP client connected to `agni mcp`. The session started `agni mcp` over the folder
+// holding the design.
 type session struct {
 	c      *client.Client
 	design string
@@ -36,8 +36,8 @@ func agniBinary() string {
 	return "agni"
 }
 
-// mountFor is the folder to serve and the design within it, as the tools name it. A folder is served
-// whole with the design at design within it, and a file is served from its own folder.
+// mountFor returns the folder to serve and the design within it, as the tools name it. A folder is
+// served whole, with the design inside it. A file is served from its own folder.
 func mountFor(path, design string) (root, name string, err error) {
 	abs, err := filepath.Abs(path)
 	if err != nil {
@@ -79,7 +79,7 @@ func (s *session) tools(ctx context.Context) ([]string, error) {
 }
 
 // ask calls tool with args, adding the design when the tool takes one and the caller didn't name
-// it, and answers the text an agent reads. A tool error is an error carrying that text.
+// it. It returns the text an agent reads. A tool error is an error holding that text.
 func (s *session) ask(ctx context.Context, tool string, args map[string]any) (string, error) {
 	if _, ok := args["design"]; !ok && tool != "designs" {
 		args["design"] = s.design

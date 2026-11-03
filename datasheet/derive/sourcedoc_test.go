@@ -6,9 +6,9 @@ import (
 	"github.com/panyam/agni/core/param"
 )
 
-// The seeder is the only producer of SourceDoc.content_hash, and everything downstream that can tell
-// a stale verification from a current one reads it. A run that leaves it empty produces a corpus in
-// which staleness can never be concluded, only "unknown", which demotes every verified value.
+// The seeder is the only producer of SourceDoc.content_hash. Downstream code reads it to tell a
+// stale verification from a current one. Imagine a run leaves it empty. Its corpus can then never
+// conclude staleness, only "unknown", and "unknown" demotes every verified value.
 func TestRunRecordsTheRevisionItDerivedFrom(t *testing.T) {
 	d := loadDocFixture(t, "bss138-raw-docir.textproto")
 	recipes, patches := loadArtifacts(t)
@@ -31,7 +31,7 @@ func TestRunRecordsTheRevisionItDerivedFrom(t *testing.T) {
 	}
 }
 
-// The property the field exists for, end to end through the real seeder. Verify a derived value
+// This tests the field's purpose end to end, through the real seeder. Verify a derived value
 // against the revision it came from, re-derive from a revised document, and the verification must
 // stop counting without anyone touching it.
 func TestAReDeriveFromANewRevisionStalesAVerification(t *testing.T) {
@@ -47,9 +47,9 @@ func TestAReDeriveFromANewRevisionStalesAVerification(t *testing.T) {
 		t.Fatal("fixture derived no parameters, so this test proves nothing")
 	}
 	// derive leaves the document identity unstated (issue 290) because it cannot read the printed
-	// revision yet, and a part number in that field is a citation that cannot name what it cites.
-	// Curating it is what an author does, and doing it here is what gives the snapshot below
-	// something to carry.
+	// revision yet. A part number in that field would be a citation that cannot name what it cites.
+	// An author curates the field. The test curates it here, so the snapshot below has something to
+	// record.
 	spec.Docs[0].Title = "BSS138 datasheet - REVISED MAY 2019"
 
 	p := spec.GetParameters()[0]
@@ -68,8 +68,8 @@ func TestAReDeriveFromANewRevisionStalesAVerification(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// The corpus re-seeds. The spec's documents move to the new revision while the verification,
-	// which lives on the fact, stays pinned to the old one.
+	// The corpus re-seeds. The spec's documents move to the new revision. The verification lives on
+	// the fact, and it is still pinned to the old one.
 	spec.Docs = newSpec.GetDocs()
 	if got := param.VerificationOfIn(spec, p); got != param.Stale {
 		t.Errorf("after a re-derive from a new revision: got %q, want %q", got, param.Stale)

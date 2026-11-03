@@ -22,8 +22,9 @@ type flattenFixture struct {
 	diff  *service.DiffService
 }
 
-// newFlattenFixture serves the EDIF reader's fixtures through ONE caching loader, so a flattened and
-// an unflattened snapshot of one file share every cache tier and only the keys can keep them apart.
+// newFlattenFixture serves the EDIF reader's fixtures through ONE caching loader. A flattened and
+// an unflattened snapshot of one file then share every cache tier, and only the keys keep them
+// apart.
 func newFlattenFixture(t *testing.T) *flattenFixture {
 	t.Helper()
 	return newFlattenFixtureOver(t, os.DirFS(filepath.Join("..", "readers", "edif", "testdata")))
@@ -56,15 +57,16 @@ func (f *flattenFixture) components(t *testing.T, snap string) int {
 	return len(r.GetRows())
 }
 
-// TestFlattenedSnapshotIsOneModelAcrossServices holds a snapshot's flatten_hierarchy to every
-// analysis rpc, checks, queries and diff, over one cache that also holds the unflattened read.
+// TestFlattenedSnapshotIsOneModelAcrossServices holds every analysis rpc to a snapshot's
+// flatten_hierarchy. The rpcs are checks, queries and diff, over one cache that also holds the
+// unflattened read.
 func TestFlattenedSnapshotIsOneModelAcrossServices(t *testing.T) {
 	ctx := context.Background()
 	f := newFlattenFixture(t)
 	top := f.ingest(t, false)
 	flat := f.ingest(t, true)
 
-	// The top cell's blocks carry no designator, so unflattened only U5 and J1 have a ref-des; any
+	// The top cell's blocks have no designator, so unflattened only U5 and J1 have a ref-des. Any
 	// count but 11 tells the two reads apart.
 	if n := f.components(t, top); n == 11 {
 		t.Errorf("unflattened query sees %d components, want the top cell's alone", n)
@@ -107,8 +109,8 @@ func TestFlattenedSnapshotIsOneModelAcrossServices(t *testing.T) {
 	}
 }
 
-// TestDesignDeclaresItsNetlistBeReadWhole holds a design.yaml's flatten_hierarchy to a snapshot that
-// asks for nothing, which is how the browser opens a declared design (agni issue 1102).
+// TestDesignDeclaresItsNetlistBeReadWhole applies a design.yaml's flatten_hierarchy to a snapshot
+// that asks for nothing. The browser opens a declared design that way (agni issue 1102).
 func TestDesignDeclaresItsNetlistBeReadWhole(t *testing.T) {
 	ctx := context.Background()
 	b, err := os.ReadFile(filepath.Join("..", "readers", "edif", "testdata", "hier_blocks.edn"))

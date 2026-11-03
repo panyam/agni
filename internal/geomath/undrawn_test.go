@@ -6,8 +6,8 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// MarkUndrawn is all of agni issue 354 on the engine side. A render that loses a symbol still
-// produces a complete-LOOKING sheet, so the only way a reader learns the drawing is short is if the
+// MarkUndrawn is all of agni issue 354 on the engine side. Imagine a render loses a symbol. It
+// still produces a complete-LOOKING sheet, so a reader learns the drawing is short only if the
 // geometry says so.
 func TestMarkUndrawnRecordsOnlyWhatWillNotDraw(t *testing.T) {
 	g := &geom.SchematicGeometry{
@@ -26,7 +26,7 @@ func TestMarkUndrawnRecordsOnlyWhatWillNotDraw(t *testing.T) {
 	if u.GetRefDes() != "U1" {
 		t.Errorf("undrawn ref_des = %q, want U1", u.GetRefDes())
 	}
-	// What the placement ASKED FOR, which is what a reader pastes into a --symbol-path search.
+	// The refs the placement ASKED FOR. A reader pastes them into a --symbol-path search.
 	if u.GetCellRef() != "MCU" || u.GetLibraryRef() != "Acme" {
 		t.Errorf("undrawn = %+v, want the refs the placement asked for", u)
 	}
@@ -35,7 +35,7 @@ func TestMarkUndrawnRecordsOnlyWhatWillNotDraw(t *testing.T) {
 	}
 }
 
-// R2 above is the reason the join is shared. A stricter join would report it undrawn while the
+// The join is shared because of R2 above. A stricter join would report it undrawn while the
 // renderer draws it, and a banner naming a part that is plainly on screen is worse than no banner.
 func TestMarkUndrawnDoesNotReportWhatTheRendererDraws(t *testing.T) {
 	g := &geom.SchematicGeometry{
@@ -72,7 +72,7 @@ func TestMarkUndrawnDistinguishesEmptyFromShort(t *testing.T) {
 }
 
 // Re-running must not double the list. The fill happens where geometry is produced, and more than one
-// path can reach a geometry, so idempotence is the property that keeps a second pass harmless.
+// path can reach a geometry, so idempotence keeps a second pass harmless.
 func TestMarkUndrawnIsIdempotent(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Sheets: []*geom.SheetGeometry{{Id: "s1", Placements: []*geom.SymbolPlacement{{RefDes: "U1", CellRef: "MCU"}}}},

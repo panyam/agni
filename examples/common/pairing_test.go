@@ -7,11 +7,11 @@ import (
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 )
 
-// The i2c-sensor fixture is one design in two files, and they are hand-authored separately. The
-// netlist is what every analysis reads and the schematic is what a finding gets drawn on, and they
-// are joined BY NAME, so a highlight for net SDA lands on the wire the .eds calls SDA and nowhere else.
-// Nothing in the engine holds the two together, so a ref-des renamed in one and not the other
-// produces a drawing that is silently pointing at the wrong part.
+// The i2c-sensor fixture is one design in two files, and they are hand-authored separately. Every
+// analysis reads the netlist, and a finding is drawn on the schematic. The two are joined BY NAME,
+// so a highlight for net SDA is drawn on the .eds wire named SDA and nowhere else. Nothing in the
+// engine holds the two together. If a ref-des is renamed in one file and not the other, the drawing
+// silently points at the wrong part.
 
 func TestTheDrawnSheetCoversEveryPartInTheNetlist(t *testing.T) {
 	d, err := ReadFixture("i2c-sensor.edn")
@@ -44,8 +44,8 @@ func TestTheDrawnSheetCoversEveryPartInTheNetlist(t *testing.T) {
 	}
 }
 
-// A wire's name is the join key a finding's highlight resolves through, so a net the netlist has and
-// the sheet spells differently is a highlight that silently lands nowhere.
+// A finding's highlight resolves through a wire's name. If the sheet spells a net differently from
+// the netlist, the highlight silently appears nowhere.
 func TestEveryNetlistNetIsDrawnUnderItsOwnName(t *testing.T) {
 	d, err := ReadFixture("i2c-sensor.edn")
 	if err != nil {
@@ -75,10 +75,10 @@ func TestEveryNetlistNetIsDrawnUnderItsOwnName(t *testing.T) {
 
 // A wire may not run over a pin that belongs to a different net.
 //
-// This is the failure the other two guards cannot see and the one a reader is least able to defend
-// against, because the drawing looks deliberate. The first version of this schematic ran the VCC rail
-// along y=1000, which is exactly where R1 sits, so the rail passed through the resistor's body and
-// touched its far pin. That pin is on SDA, so the picture showed VCC shorted to SDA while the netlist
+// The other two guards cannot see this failure. A reader is least able to defend against it,
+// because the drawing looks deliberate. The first version of this schematic ran the VCC rail along
+// y=1000. R1 sits exactly there, so the rail passed through the resistor's body and touched its
+// far pin. That pin is on SDA, so the picture showed VCC shorted to SDA while the netlist
 // underneath said nothing of the kind, and every highlight drawn on it inherited the lie.
 //
 // Names agreeing is not enough for a drawing to be true. Where the wires RUN has to agree too.
@@ -91,7 +91,7 @@ func TestNoWireRunsOverAPinOfAnotherNet(t *testing.T) {
 	if err != nil {
 		t.Fatalf("schematic: %v", err)
 	}
-	// netOf maps "REF.PIN" to the net the NETLIST puts it on, which is the truth the drawing owes.
+	// netOf maps "REF.PIN" to its net in the NETLIST. The drawing must agree with that net.
 	netOf := map[string]string{}
 	for _, n := range d.GetNets() {
 		for _, c := range n.GetConnections() {

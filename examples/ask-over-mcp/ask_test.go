@@ -70,9 +70,10 @@ func TestTheWalkthroughAnswersAsItSays(t *testing.T) {
 	}
 }
 
-// The mission's exercise passes over the tutorial gateway: every call's reply states its question,
-// says why it has no link (stdio has no viewer), holds the CLI's rows for the same request and the
-// rows the spec pins (agni issue 1121). The http run, with links opened, is make exercise-mcp-ask.
+// The mission's exercise passes over the tutorial gateway. Every call's reply states its question
+// and says why it has no link, since stdio has no viewer. Each reply holds the CLI's rows for the
+// same request and the rows the spec pins (agni issue 1121). make exercise-mcp-ask runs the http
+// variant, with links opened.
 func TestTheGatewayExercisePasses(t *testing.T) {
 	agni := agniBinary()
 	if agni == "agni" {

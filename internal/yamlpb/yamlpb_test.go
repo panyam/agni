@@ -49,7 +49,8 @@ margin_factor: 1.25
 	}
 }
 
-// Presence survives the conversion: an absent nominal is nil, and a stated zero is a zero someone wrote.
+// Presence survives the conversion. An absent nominal is nil, and a stated zero is a zero someone
+// wrote.
 func TestDecodeKeepsPresence(t *testing.T) {
 	m, err := decode(t, "nets:\n  A: {peak: 1}\n  B: {nominal: 0}\n")
 	if err != nil {

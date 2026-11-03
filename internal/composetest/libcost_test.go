@@ -14,14 +14,14 @@ import (
 
 // The probed_* library members ask net.has_test_point about one net at a time. Until jaala v0.1.23
 // the engine re-ran that member's join for every net asked about (panyam/jaala#139), so the cost grew
-// as parts times test points: on the 1123-component sample board probed_both cost 518,388 units of
+// as parts times test points. On the 1123-component sample board probed_both cost 518,388 units of
 // work and probed_one 826,335, and on a 3,973-component board 7 million and 6.5 s. With the member
-// derived once per query they cost 5,799 and 12,741 here. The ceilings sit well above that and far
+// derived once per query they cost 5,799 and 12,741 here. The ceilings are well above that and far
 // below the old cost, so a regression in the member or in the engine fails here.
 func TestProbedMembersCostLinearlyOnTheSampleBoard(t *testing.T) {
 	const path = "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch"
 	if _, err := os.Stat(path); err != nil {
-		// Fatal rather than skipped: a missing corpus must not read as a pass.
+		// Fatal rather than skipped, because a missing corpus must not read as a pass.
 		t.Fatalf("%s missing (run `make samples-oracle`): %v", path, err)
 	}
 	e, err := agni.New()

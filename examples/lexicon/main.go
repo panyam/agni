@@ -35,7 +35,7 @@ import (
 var walkthroughMD []byte
 
 // The bundled fixture and the net the walkthrough explains. They are package-level because
-// walkthrough.md states what they do and lexicon_test.go holds those claims against the fixture.
+// walkthrough.md states what they do and lexicon_test.go checks those claims against the fixture.
 const (
 	defaultDesign = "../common/designs/lexicon-demo"
 	defaultNet    = "SENSOR_3V3"
@@ -101,8 +101,8 @@ func main() {
 	demo.Execute()
 }
 
-// withoutLexicon is the candidate the try step compares against: a convention stating no lexicon,
-// which reads the design's names with the built-in vocabularies alone.
+// withoutLexicon is the candidate for the try step's comparison. It is a convention stating no
+// lexicon, so the design's names are read with the built-in vocabularies alone.
 var withoutLexicon = &configpb.NamingConvention{Name: "built-ins-only"}
 
 // session is one design ingested into the services `agni serve` runs, over the folder holding it.
@@ -147,8 +147,8 @@ func sourceOf(e *webapi.LexiconEntry) string {
 	return s
 }
 
-// lexiconLines counts the entries by where they came from, then lists the rail vocabulary, which is
-// the one this design's convention adds to.
+// lexiconLines counts the entries by where they came from, then lists the rail vocabulary. This
+// design's convention adds to that vocabulary.
 func lexiconLines(r *webapi.GetLexiconResponse) string {
 	var b strings.Builder
 	counts := map[string]int{}

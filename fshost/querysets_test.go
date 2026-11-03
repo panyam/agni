@@ -37,7 +37,7 @@ func TestConfigResolverReadsAProjectsQuerySets(t *testing.T) {
 }
 
 // A set file that does not parse fails the listing and names the file, rather than leaving the set
-// out, which would read as the project having no such set.
+// out. A missing set would read as the project having no such set.
 func TestConfigResolverRefusesASetThatDoesNotParse(t *testing.T) {
 	c := &ConfigResolver{Mounts: []Mount{{Name: "m", FS: MemFS(map[string][]byte{
 		"queries/bad.yaml": []byte("queries:\n  - name: Rails\n    qeury: net.rail(?n) => ?n\n"),
@@ -76,7 +76,7 @@ func TestConfigResolverReadsASourceNamingOneFile(t *testing.T) {
 	}
 }
 
-// oneFile answers as an fs.FS whose root holds the one file, which is what every tier's loader walks.
+// oneFile returns an fs.FS whose root holds the one file. Every tier's loader walks such an FS.
 func TestOneFileIsAnFS(t *testing.T) {
 	inner := MemFS(map[string][]byte{"dir/x.yaml": []byte("a: 1\n"), "dir/y.yaml": []byte("b: 2\n")})
 	info, err := fs.Stat(inner, "dir/x.yaml")

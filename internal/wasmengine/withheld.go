@@ -17,15 +17,15 @@ import (
 )
 
 // The page holds a design's board file back from its serve worker until a question there reads the
-// board (agni issue 992), since a query, a coverage or a trace builds no board and the bytes are most
-// of what that worker would hold. It puts a placeholder at the file's path instead, so the folder
-// lists, stats and resolves exactly as it does with the file in place.
+// board (agni issue 992). A query, a coverage or a trace builds no board, and the board's bytes are
+// most of what that worker would hold. The page puts a placeholder at the file's path instead, so the
+// folder lists, stats and resolves exactly as it does with the file in place.
 //
-// Opening a placeholder fails, and an engine that has opened one answers every request from then on
-// as FilesWithheldError, whatever its service made of the failed read. A reader that treats an
-// unreadable sibling as an absent one would otherwise answer with less than the design, and a cache
-// would keep that answer for the next question. The page sends the files and asks again, and the
-// files arriving rebuild the engine, which starts with nothing read around a placeholder.
+// Opening a placeholder fails. From then on the engine answers every request as
+// FilesWithheldError, whatever its service made of the failed read. Without that, a reader that
+// treats an unreadable sibling as an absent one would answer with less than the design, and a cache
+// would keep that answer for the next question. The page sends the files and asks again. The files
+// arriving rebuild the engine, and the new engine has read nothing around a placeholder.
 
 // withheldPrefix starts every placeholder. Its first byte is NUL, which no design format's text
 // starts with. testdata/withheld_twin.json holds it to the page's copy in web/src/wasm/client.ts.
@@ -104,9 +104,9 @@ func (f withholdingFS) Stat(name string) (fs.FileInfo, error) { return fs.Stat(f
 
 func (f withholdingFS) ReadDir(name string) ([]fs.DirEntry, error) { return fs.ReadDir(f.FS, name) }
 
-// guard answers a request as FilesWithheldError once the engine has opened a held-back file. The
-// decision is taken when the handler first writes, which a Connect handler does only once it has its
-// answer, so nothing it wrote reaches the page.
+// guard answers a request as FilesWithheldError once the engine has opened a held-back file. guard
+// decides when the handler first writes. A Connect handler writes only once it has its answer, so
+// nothing the handler wrote reaches the page.
 func (w *withholding) guard(h http.Handler) http.Handler { return &guarded{next: h, w: w} }
 
 type guarded struct {

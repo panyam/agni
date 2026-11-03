@@ -8,7 +8,7 @@ import (
 	"testing/fstest"
 )
 
-// fakeHeap is a heap a test grows by hand, and a collection shrinks to what it says survives.
+// fakeHeap is a heap a test grows by hand. A collection shrinks it to what the test says survives.
 type fakeHeap struct {
 	bytes, survives uint64
 	gcs             int
@@ -18,8 +18,8 @@ func (f *fakeHeap) collector() *collector {
 	return &collector{heap: func() uint64 { return f.bytes }, gc: func() { f.gcs++; f.bytes = f.survives }, later: func(g func()) { g() }}
 }
 
-// agni issue 1010: with automatic collection off, a request collects after it ends only once the heap
-// has doubled since the last collection, the growth GOGC=100 allows.
+// With automatic collection off, a request collects after it ends only once the heap has doubled
+// since the last collection (agni issue 1010). GOGC=100 allows the same growth.
 func TestCollectorCollectsAfterARequestOnlyOnceTheHeapDoubled(t *testing.T) {
 	f := &fakeHeap{bytes: 100, survives: 100}
 	c := f.collector()
@@ -41,7 +41,7 @@ func TestCollectorCollectsAfterARequestOnlyOnceTheHeapDoubled(t *testing.T) {
 	if f.gcs != 2 {
 		t.Fatalf("a heap past twice its live size ran %d collections, want 2", f.gcs)
 	}
-	// The bar is now what survived that collection, 120, so 240 is under it and 241 past it.
+	// The bar is now 120, the heap that survived that collection, so 240 is under it and 241 past it.
 	f.bytes = 240
 	ask()
 	f.bytes = 241
@@ -51,8 +51,8 @@ func TestCollectorCollectsAfterARequestOnlyOnceTheHeapDoubled(t *testing.T) {
 	}
 }
 
-// A read collects between its files once the heap is a fixed allowance past what last survived,
-// whatever the live heap is, since a read's garbage dwarfs what it keeps.
+// A read collects between its files once the heap is a fixed allowance past what last survived. The
+// live heap's size does not matter, since a read's garbage dwarfs what it keeps.
 func TestOpeningAFileCollectsOnceTheHeapIsPastItsHeadroom(t *testing.T) {
 	f := &fakeHeap{bytes: 10 << 20, survives: 10 << 20}
 	c := f.collector()
@@ -75,9 +75,9 @@ func TestOpeningAFileCollectsOnceTheHeapIsPastItsHeadroom(t *testing.T) {
 	}
 }
 
-// The option is what turns the per-request collection on, and an engine without it serves the mux
-// itself, so a native caller pays nothing. Every engine guards against a held-back file (agni issue
-// 992), so the mux is looked for inside that guard.
+// The option turns the per-request collection on. An engine without it serves the mux itself, so a
+// native caller spends nothing on collection. Every engine guards against a held-back file (agni
+// issue 992), so the test looks for the mux inside that guard.
 func TestOnlyAnEngineAskedToCollectWrapsItsHandler(t *testing.T) {
 	plain, err := New()
 	if err != nil {

@@ -9,17 +9,17 @@ import (
 )
 
 // ErrNoCorpus is returned by PartSpecService and the draft rpcs on a server started without a
-// published corpus (--corpus), which is where drafts are kept too. A transport maps it to
-// FailedPrecondition, since the operator must name one.
+// published corpus (--corpus). Drafts are kept in that corpus too. A transport maps the error to
+// FailedPrecondition, since the operator must name a corpus.
 var ErrNoCorpus = errors.New("no published corpus is served")
 
-// ErrCorpusNotReady is a corpus that exists but cannot be served as it stands: it has no index, or the
-// index no longer matches its files. The store wraps its own cause in it, so the message says what to
-// run, and a transport maps it to FailedPrecondition.
+// ErrCorpusNotReady reports a corpus that exists but cannot be served as it stands. Either it has
+// no index, or the index no longer matches its files. The store wraps its own cause in it, so the
+// message says what to run, and a transport maps it to FailedPrecondition.
 var ErrCorpusNotReady = errors.New("the published corpus cannot be served")
 
 // PartSpecService is the read side of the published corpus, the contract's PartSpecService (agni
-// issue 749). It is how `agni serve --params-url` reaches the specs this service publishes. It serves
+// issue 749). `agni serve --params-url` reads this service's published specs through it. It serves
 // published specs only, through store, and never a workbench draft.
 type PartSpecService struct {
 	store param.Fetcher

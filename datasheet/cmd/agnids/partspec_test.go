@@ -16,9 +16,9 @@ import (
 	"github.com/panyam/agni/internal/paramclient"
 )
 
-// The whole read path `agni serve --params-url` takes: agnids serves a published corpus, the engine's
-// Connect client fetches through param.Remote, and a part published while both run reaches the next
-// prefetch once the generation is re-checked (agni issue 749).
+// This test covers the whole read path of `agni serve --params-url`. agnids serves a published
+// corpus, and the engine's Connect client fetches through param.Remote. A part published while both
+// run reaches the next prefetch once the generation is re-checked (agni issue 749).
 func TestParamsURLReadsThePublishedCorpus(t *testing.T) {
 	dir := draftCorpus(t)
 	if _, err := runAgnids(t, "index", dir); err != nil {
@@ -67,7 +67,7 @@ func TestPartSpecServiceWithoutACorpusSaysSo(t *testing.T) {
 }
 
 // agnids with no workbench assets serves the API alone, so a deployment that only publishes a
-// corpus needs no web build: the page is absent, and PartSpecService answers.
+// corpus needs no web build. The page is absent, and PartSpecService answers.
 func TestServeWithNoWebDirIsTheAPIAlone(t *testing.T) {
 	dir := draftCorpus(t)
 	if _, err := runAgnids(t, "index", dir); err != nil {

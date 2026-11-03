@@ -1,6 +1,7 @@
 // Package plugins holds the agent skills agni ships, packaged so that Claude Code and Cursor install
 // them as a plugin and GitHub's `gh skill install` finds them for any agent. The files are data, so
-// this package is its test alone, which holds the layout every one of those installers reads.
+// this package is only its test. Every one of those installers reads the layout, and the test holds
+// it.
 package plugins
 
 import (
@@ -59,7 +60,7 @@ type marketplace struct {
 
 // Claude Code and Cursor each read their own marketplace file at the repo root and their own
 // manifest in the plugin. All four have to name the same plugin at the same folder, or one tool
-// installs it and the other reports it missing. No manifest carries a version, because the git tag
+// installs it and the other reports it missing. No manifest has a version, because the git tag
 // is agni's only version and a second one would drift from it.
 func TestTheMarketplacesAndManifestsAgree(t *testing.T) {
 	root := repoRoot(t)
@@ -91,9 +92,9 @@ func TestTheMarketplacesAndManifestsAgree(t *testing.T) {
 	}
 }
 
-// Every folder under the plugin's skills/ is one skill, named by its folder. That is the
-// skills/*/SKILL.md convention all three installers discover, so a skill added there needs no
-// other edit to reach Claude Code, Cursor and Copilot.
+// Every folder under the plugin's skills/ is one skill, named by its folder. All three installers
+// discover skills by the skills/*/SKILL.md convention, so a skill added there needs no other edit
+// to reach Claude Code, Cursor and Copilot.
 func TestEverySkillIsWellFormed(t *testing.T) {
 	dir := filepath.Join(repoRoot(t), "plugins", pluginName, "skills")
 	entries, err := os.ReadDir(dir)
@@ -142,7 +143,7 @@ func TestEverySkillIsWellFormed(t *testing.T) {
 }
 
 // A SKILL.md anywhere else in the tree reaches no installer, so it would work only for someone
-// with a checkout, which is the case this layout exists to avoid.
+// with a checkout. This layout exists to avoid that case.
 func TestNoSkillLivesOutsideThePlugin(t *testing.T) {
 	root := repoRoot(t)
 	plugin := filepath.Join(root, "plugins", pluginName, "skills")

@@ -1,11 +1,11 @@
 // Package projects is the filesystem-backed implementation of service.ProjectStore. It discovers
-// the `project.yaml` / `design.yaml` descriptors that name a design and the set of designs a team
-// shares config across (agni issue 170).
+// the `project.yaml` and `design.yaml` descriptors (agni issue 170). A `design.yaml` names a
+// design, and a `project.yaml` holds the config a team shares across a set of designs.
 //
-// It is ONE implementation of that port. Tree walking, descriptor file names, and
-// design-folder-relative paths are facts about storing projects in directories, which a
-// database-backed store would not share, so the port lives in `service/` and nothing above it
-// imports this package.
+// It is ONE implementation of that port. Tree walking, descriptor file names and
+// design-folder-relative paths are facts about storing projects in directories. A database-backed
+// store would not share them. So the port lives in `service/`, and nothing above it imports this
+// package.
 //
 // The descriptors parse straight into the wire types (`webapi.Project`, `webapi.Design`), with no
 // third Go shape between the YAML and the proto, because the proto is the contract (CONSTRAINTS
@@ -38,14 +38,14 @@ const (
 
 // descriptorYAML is the on-disk SHAPE of both descriptors, giving the YAML decoder field tags. A
 // project and a design share one schema (agni issue 1136), and the file's name says which role it
-// plays: a design names the files it reads (entry, companions, revisions) and a project names none.
-// It is not a model of either, since parsed values become the proto and nothing outside this file
+// plays. A design names the files it reads (entry, companions, revisions), and a project names
+// none. It is not a model of either. Parsed values become the proto, and nothing outside this file
 // sees this type.
 type descriptorYAML struct {
 	Name  string `yaml:"name"`
 	Title string `yaml:"title"`
-	// Extends names the project descriptor this one layers on, as a path relative to this descriptor
-	// or a mount:// URI. A design names its project and a project names shared config.
+	// Extends names the project descriptor that this one layers over, as a path relative to this
+	// descriptor or a mount:// URI. A design names its project and a project names shared config.
 	Extends string `yaml:"extends,omitempty"`
 	// Conventions, Checklists and Intent are written inline, each bound to its proto
 	// (config.NamingConvention, checks.ReviewManifest, config.DesignIntent), so the file and the wire
@@ -54,16 +54,17 @@ type descriptorYAML struct {
 	Checklists  yaml.Node `yaml:"checklists,omitempty"`
 	Intent      yaml.Node `yaml:"intent,omitempty"`
 	// The file tiers, each a list of files or directories, as paths relative to this descriptor or
-	// mount:// URIs. Nothing is found by its folder's name, so a tier this list does not name is not
-	// in the run.
+	// mount:// URIs. Nothing is found by its folder's name, so a tier is in the run only when this
+	// list names it.
 	Profiles []string `yaml:"profiles,omitempty"`
 	Params   []string `yaml:"params,omitempty"`
 	Symbols  []string `yaml:"symbols,omitempty"`
 	Lib      []string `yaml:"lib,omitempty"`
 	Queries  []string `yaml:"queries,omitempty"`
 	// The design's own files, relative to its folder. The top-level entry is the current revision.
-	// Revisions are its others, each its own entry with its own companions, so a later netlist is read
-	// with its own board (agni issue 848). A file belongs to one revision at most.
+	// Revisions lists the other revisions. Each has its own entry and its own companions, so a
+	// later netlist is read with its own board (agni issue 848). A file belongs to one revision at
+	// most.
 	Entry      string         `yaml:"entry,omitempty"`
 	Companions []string       `yaml:"companions,omitempty"`
 	Revisions  []revisionYAML `yaml:"revisions,omitempty"`
@@ -77,9 +78,10 @@ type revisionYAML struct {
 	Companions []string `yaml:"companions,omitempty"`
 }
 
-// Sources is what a descriptor names outside itself, as written: the descriptor it extends and the
-// files of each tier, each a descriptor-relative path or a mount:// URI. The store resolves them,
-// since only it knows where the descriptor sits, and a source naming nothing is an error there.
+// Sources holds a descriptor's references outside itself, as written. They are the descriptor it
+// extends and the files of each tier, each a descriptor-relative path or a mount:// URI. Only the
+// store knows where the descriptor sits, so the store resolves them, and there a source naming
+// nothing is an error.
 type Sources struct {
 	Extends  string
 	Profiles []string
@@ -96,14 +98,14 @@ func (y descriptorYAML) sources() Sources {
 	}
 }
 
-// idPattern is what a project or design id may look like, the AIP-122 resource-id shape narrowed
-// to what is safe in a resource name and comparable without case folding. An id is a path segment in
-// "projects/{p}/designs/{d}", so a slash would make one name parse as two resources, and ids
+// idPattern matches a valid project or design id. It narrows the AIP-122 resource-id shape to ids
+// that are safe in a resource name and comparable without case folding. An id is a path segment in
+// "projects/{p}/designs/{d}", so a slash would make one name parse as two resources. Two ids
 // differing only by case would collide on a case-insensitive filesystem.
 var idPattern = regexp.MustCompile(`^[a-z0-9][a-z0-9._-]*$`)
 
-// ParseProject reads a `project.yaml`, returning the declared id, the wire message and the sources it
-// names, which the store resolves.
+// ParseProject reads a `project.yaml`. It returns the declared id, the wire message and the
+// project's sources, and the store resolves those sources.
 //
 // The id comes back SEPARATELY rather than as `Project.name`, because a bare id is not a resource
 // name and only the store knows where the descriptor was reached.
@@ -125,15 +127,15 @@ func ParseProject(r io.Reader) (id string, p *webapi.Project, src Sources, err e
 	return y.Name, &webapi.Project{Title: orName(y.Title, y.Name), Config: cfg}, src, nil
 }
 
-// ParseDesign reads a `design.yaml`, returning the declared id, the wire message and the sources it
-// names, with the same id-separate and strict-field posture as ParseProject.
+// ParseDesign reads a `design.yaml`. It returns the declared id, the wire message and the design's
+// sources. Like ParseProject, it returns the id separately and refuses an unknown field.
 //
 // `entry_uri` and `companion_uris` come back holding DESIGN-FOLDER-RELATIVE NAMES, not URIs. The
 // store turns them into URIs when it locates the design, and nothing outside this package observes
 // the intermediate state.
 //
-// An entry or companion that escapes the design folder is rejected here rather than where a loader
-// would open it, so the error names the descriptor the operator has to fix.
+// An entry or companion that escapes the design folder is rejected here, not where a loader would
+// open it. The error then names the descriptor, and the operator knows which file to fix.
 func ParseDesign(r io.Reader) (id string, d *webapi.Design, src Sources, err error) {
 	y, cfg, src, err := parseDescriptor(r, DesignDescriptor)
 	if err != nil {
@@ -163,8 +165,9 @@ func ParseDesign(r io.Reader) (id string, d *webapi.Design, src Sources, err err
 		seen[clean] = true
 		out.CompanionUris = append(out.CompanionUris, clean)
 	}
-	// Each revision is its own entry and views, checked against every file already declared, so no
-	// file is two revisions' at once and a board is never borrowed by a netlist it was not drawn for.
+	// Each revision has its own entry and views. Each is checked against every file already
+	// declared, so no file belongs to two revisions. A netlist never borrows a board drawn for
+	// another revision.
 	for i, r := range y.Revisions {
 		where := fmt.Sprintf("revisions[%d]", i)
 		if r.Entry == "" {
@@ -255,12 +258,13 @@ func parseConventions(n *yaml.Node) (*configpb.NamingConvention, error) {
 	return conv, nil
 }
 
-// parseChecklists reads a descriptor's checklists section, a mapping from a name to a review
-// manifest, in the order it is written, since the first is the default. Each manifest is validated
-// here, so a malformed checklist fails the load and names the checklist.
+// parseChecklists reads a descriptor's checklists section. The section maps a name to a review
+// manifest. parseChecklists keeps the written order, since the first checklist is the default. Each
+// manifest is validated here, so a malformed checklist fails the load and names the checklist.
 //
-// A manifest's YAML is the review package's authoring form, which spells an item's binding flat where
-// the proto nests it, so it is read by review.Load and converted, rather than bound to the proto.
+// A manifest's YAML uses the review package's authoring form. That form spells an item's binding
+// flat, and the proto nests it. So review.Load reads each manifest and the result is converted,
+// rather than bound to the proto.
 func parseChecklists(n *yaml.Node) ([]*webapi.NamedChecklist, error) {
 	if n.IsZero() || n.Tag == "!!null" {
 		return nil, nil
@@ -297,8 +301,8 @@ func parseChecklists(n *yaml.Node) ([]*webapi.NamedChecklist, error) {
 }
 
 // CleanRel normalizes a descriptor-relative file name for comparison (forward slashes, no `./`, no
-// trailing slash). Exported because the store joins on this rule, and a second spelling of "clean"
-// would stop a companion being recognised as one.
+// trailing slash). It is exported because the store joins on this rule. A second definition of
+// "clean" would stop a companion being recognised as one.
 func CleanRel(rel string) string {
 	return path.Clean(strings.ReplaceAll(strings.TrimSpace(rel), "\\", "/"))
 }
@@ -335,9 +339,10 @@ func validID(field, id string) error {
 	return nil
 }
 
-// validRel checks that a descriptor's file reference stays inside the descriptor's own folder. An
-// absolute path or one climbing out with `..` is rejected, because a descriptor is read on behalf of
-// whoever mounted the folder and must not name a path its author never had access to.
+// validRel checks that a descriptor's file reference is inside the descriptor's own folder. It
+// rejects an absolute path and one climbing out with `..`. A descriptor is read on behalf of
+// whoever mounted the folder, and its author may never have had access to a path outside it, so it
+// must not name one.
 func validRel(field, rel string) error {
 	clean := CleanRel(rel)
 	switch {
@@ -351,9 +356,9 @@ func validRel(field, rel string) error {
 	return nil
 }
 
-// validSource checks the shape of a source a descriptor names: a mount:// URI, or a path relative to
-// the descriptor. A relative path may climb with `..`, since the containment boundary is the mount and
-// artifact.URI.Join refuses a path that leaves it.
+// validSource checks the shape of one source in a descriptor. A source is a mount:// URI or a path
+// relative to the descriptor. A relative path may climb with `..`, since the containment boundary
+// is the mount and artifact.URI.Join refuses a path that leaves it.
 func validSource(field, ref string) error {
 	ref = strings.TrimSpace(ref)
 	switch {
@@ -375,9 +380,9 @@ func validSource(field, ref string) error {
 // WriteProject writes a `project.yaml`, the write half of ParseProject. It lives here so the
 // descriptor SHAPE has one definition, and TestDescriptorRoundTrip pins the two halves together.
 //
-// src names the project's parent and its file tiers, as ParseProject returns them. The conventions and
-// checklists sections are a scaffolder's to append, since their content is prose an operator edits
-// rather than a value this writer could own.
+// src names the project's parent and its file tiers, as ParseProject returns them. A scaffolder
+// appends the conventions and checklists sections. Their content is prose for an operator to edit,
+// and this writer has no value of its own to put there.
 //
 // header is prose written as a YAML comment above the document, "" for none.
 func WriteProject(w io.Writer, header, id, title string, src Sources) error {
@@ -391,9 +396,9 @@ func WriteProject(w io.Writer, header, id, title string, src Sources) error {
 
 // WriteDesign writes a `design.yaml`, the write half of ParseDesign.
 //
-// entry and companions are descriptor-relative names, cleaned on the way in on the same terms
-// ParseDesign cleans them, so a caller cannot write a descriptor its own parser would reject. src.Extends
-// names the design's project, "" for a design in none.
+// entry and companions are descriptor-relative names. WriteDesign cleans them as ParseDesign does,
+// so a caller cannot write a descriptor that ParseDesign would reject. src.Extends names the
+// design's project, "" for a design in none.
 func WriteDesign(w io.Writer, header, id, title, entry string, companions []string, src Sources) error {
 	if !idPattern.MatchString(id) {
 		return fmt.Errorf("design id %q must match %s", id, idPattern)

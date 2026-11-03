@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-// fixtureGlobs maps a format name to the committed fixtures the CI census walks. These are the
-// hand-authored testdata files (plus the conformance boards/schematics), which are the only design
-// files CI can see (the real corpus is a separate private repo, swept by `agni census` / `make
-// census`).
+// fixtureGlobs maps a format name to the committed fixtures for the CI census to walk. They are the
+// hand-authored testdata files plus the conformance boards and schematics. CI can see no other
+// design files. The real corpus is a separate private repo, swept by `agni census` or `make
+// census`.
 var fixtureGlobs = map[string][]string{
 	"kicad-pcb": {"../readers/kicad/testdata/*.kicad_pcb", "../cmd/agni/testdata/conformance/*.kicad_pcb"},
 	"kicad-sch": {"../readers/kicad/testdata/*.kicad_sch", "../cmd/agni/testdata/conformance/*.kicad_sch"},
@@ -20,9 +20,9 @@ var fixtureGlobs = map[string][]string{
 }
 
 // TestFixtureCensus is the coverage guard. Every construct in the committed fixtures must be
-// classified in its format's manifest. An unclassified construct (a new fixture that introduces
-// a source element the reader has never decided about, say) fails here, forcing a human to
-// mark it consumed or a known drop rather than letting it be dropped silently (WS6-011).
+// classified in its format's manifest. Suppose a new fixture introduces a source element that the
+// reader has never decided about. That unclassified construct fails here (WS6-011). A human must
+// then mark it consumed or a known drop, and it is never dropped silently.
 func TestFixtureCensus(t *testing.T) {
 	for _, m := range Manifests() {
 		t.Run(m.Format, func(t *testing.T) {

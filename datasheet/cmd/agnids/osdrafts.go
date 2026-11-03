@@ -23,8 +23,8 @@ import (
 )
 
 // osDraftStore is the OS-backed dsservice.DraftStore over a corpus directory (agni issue 749). It
-// holds both entity types: drafts under drafts/, keyed by MPN, and the published specs and index
-// that `agnids publish` and PublishDraft write and PartSpecService reads.
+// holds both entity types. Drafts live under drafts/, keyed by MPN. `agnids publish` and PublishDraft
+// write the published specs and the index, and PartSpecService reads them.
 //
 // Save is compare-and-swap under a per-file lock, and publishing holds one lock for the whole corpus,
 // since it rewrites the index. Both locks are per PROCESS, so two agnids on one corpus can still
@@ -81,8 +81,8 @@ func (s *osDraftStore) ListByDocument(_ context.Context, documentURI string) ([]
 	return out, nil
 }
 
-// Save implements dsservice.DraftStore: under the file's lock it reads the current version, requires
-// it to equal baseVersion (empty means "expected absent"), then writes.
+// Save implements dsservice.DraftStore. Under the file's lock it reads the current version and
+// requires it to equal baseVersion, then writes. An empty baseVersion means "expected absent".
 func (s *osDraftStore) Save(_ context.Context, d *dsapi.Draft, baseVersion string) (string, error) {
 	abs := s.draftPath(d.GetMpn())
 	lock := s.lockFor(abs)
@@ -140,17 +140,18 @@ func (s *osDraftStore) Publish(ctx context.Context, mpn string) (*dsservice.Publ
 	return &dsservice.Published{Replaced: p.Replaces, Generation: p.Index.Generation}, nil
 }
 
-// publishSpec writes a validated spec into the corpus at dir and records it in the index, the
-// sequence both PublishDraft and `agnids publish` use. corpus.PromoteSpec decides.
+// publishSpec writes a validated spec into the corpus at dir and records it in the index. Both
+// PublishDraft and `agnids publish` use this sequence. corpus.PromoteSpec decides what to write.
 func publishSpec(dir string, spec *parampb.PartSpec) (*corpus.Promoted, error) {
 	return writePromoted(dir, func(fsys fs.FS, prev *corpus.Index) (*corpus.Promoted, error) {
 		return corpus.PromoteSpec(spec, fsys, prev)
 	})
 }
 
-// writePromoted asks decide what to write into the corpus at dir, writes the spec, re-loads the corpus
-// and restores what was there if it no longer loads, so a publication cannot leave a corpus that
-// fails every check, and only then writes the index.
+// writePromoted asks decide what to write into the corpus at dir, and writes the spec. Then it
+// re-loads the corpus. If the corpus no longer loads, it restores what was there, so a publication
+// cannot leave a corpus that fails every check. Only after the load succeeds does it write the
+// index.
 func writePromoted(dir string, decide func(fs.FS, *corpus.Index) (*corpus.Promoted, error)) (*corpus.Promoted, error) {
 	fsys := os.DirFS(dir)
 	prev, err := readIndex(fsys)

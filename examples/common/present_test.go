@@ -35,7 +35,7 @@ func TestStatsLines(t *testing.T) {
 	if !hasRow(got, "components", 2) || !hasRow(got, "nets", 3) {
 		t.Errorf("StatsLines netlist counts wrong:\n%s", got)
 	}
-	// Structural (tier 1) counts land in format detail.
+	// Structural (tier 1) counts appear in format detail.
 	for _, r := range []struct {
 		label string
 		n     int

@@ -21,11 +21,11 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
-// The tests here are agni issue 1061's step 4b: a design a client sends as files, named by a
-// manifest of paths and hashes with the contents uploaded apart.
+// The tests here are agni issue 1061's step 4b. A client sends a design as files. A manifest of
+// paths and hashes names the files, and the contents are uploaded separately.
 
-// uploadFixture is a host serving the tutorial project as mount m, that also takes uploads, counting
-// the upload hosts it builds.
+// uploadFixture is a host that serves the tutorial project as mount m. It also takes uploads, and it
+// counts the upload hosts it builds.
 type uploadFixture struct {
 	res    *service.ProjectResolver
 	snaps  *service.SnapshotService
@@ -143,15 +143,15 @@ func TestAnUploadedDesignIsReadFromItsFilesAlone(t *testing.T) {
 		t.Fatal("the uploaded gateway has no findings, so agreeing with the served one proves nothing")
 	}
 	// The upload is the project the host serves as m, so the two answer alike, project config
-	// included, which shows the project inside the upload was resolved.
+	// included. That shows the host resolved the project inside the upload.
 	if !equalSets(f.findings(t, up.GetName()), f.findings(t, served)) {
 		t.Error("the uploaded gateway and the served one answer differently")
 	}
 	if up.GetProject() == "" {
 		t.Error("the uploaded design names no project, so its own project.yaml was not read")
 	}
-	// Now the same paths with a part removed from the netlist: the upload answers from its files,
-	// and neither its reads nor the served mount's reach the other's cache.
+	// Now send the same paths with a part removed from the netlist. The upload answers from its
+	// files, and neither its reads nor the served mount's reach the other's cache.
 	edited := map[string][]byte{}
 	for p, b := range files {
 		edited[p] = b
@@ -185,7 +185,7 @@ func (f *uploadFixture) ingest(t *testing.T, uri string) string {
 	return s.GetName()
 }
 
-// parts is the reference designators a snapshot's design has, asked of the query service.
+// parts asks the query service for the reference designators in a snapshot's design.
 func (f *uploadFixture) parts(t *testing.T, snap string) map[string]bool {
 	t.Helper()
 	resp, err := f.query.RunQuery(context.Background(), &webapi.RunQueryRequest{Snapshot: snap, Query: "component.class(?r, ?c) => ?r"})
@@ -244,7 +244,7 @@ func TestAnUploadIsRefusedPastItsLimitsAndOutsideItsMount(t *testing.T) {
 	if _, err := f.snaps.Ingest(context.Background(), &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/b.edn", Files: unclean}}); !errors.Is(err, service.ErrInvalidPath) {
 		t.Errorf("a path spelled two ways answered %v; want invalid_path", err)
 	}
-	// control: a host that takes no files refuses a manifest outright.
+	// The control. A host that takes no files refuses a manifest outright.
 	f.res.Uploads = nil
 	small := []*webapi.SnapshotFile{{Path: "a.edn", Sha256: "sha256:00", Size: 1}}
 	if _, err := f.snaps.Ingest(context.Background(), &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/a.edn", Files: small}}); err == nil || !strings.Contains(err.Error(), "takes no files") {

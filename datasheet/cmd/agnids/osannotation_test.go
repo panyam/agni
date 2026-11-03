@@ -66,7 +66,7 @@ func TestOsAnnotationStoreUnion(t *testing.T) {
 		t.Fatalf("after alice overwrite: %v", sets)
 	}
 
-	// The overlay landed in the per-datasheet annotation directory as <author>.json.
+	// The overlay was written to the per-datasheet annotation directory as <author>.json.
 	if _, err := os.Stat(filepath.Join(dir, "d.annotations", "alice.json")); err != nil {
 		t.Fatalf("alice's overlay not written to the annotation dir: %v", err)
 	}

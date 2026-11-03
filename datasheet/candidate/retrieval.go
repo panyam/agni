@@ -13,11 +13,11 @@ import (
 // about a symbol and nothing about what the passage says, so a number guessed from a ranked hit would
 // be a confident wrong answer.
 //
-// An author still lands on the row instead of scrolling 58 pages, and every candidate is a real
-// region quoted verbatim, so there is nothing invented for the fabrication check to catch.
+// An author still goes straight to the row instead of scrolling 58 pages. Every candidate is a real
+// region quoted verbatim, so the fabrication check has nothing invented to catch.
 type RetrievalSource struct {
-	// MaxHits bounds what a person is asked to look at. Zero means 3, since twenty passages move the
-	// search rather than do it.
+	// MaxHits bounds how many passages a person is asked to look at. Zero means 3. Twenty passages
+	// would hand the search back to the person rather than do it.
 	MaxHits int
 	// Confidence is stamped on every candidate. Outside (0, 1) it falls back to 0.3, because "this
 	// passage mentions your symbol" is weak evidence for a specific value.

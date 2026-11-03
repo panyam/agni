@@ -44,8 +44,9 @@ func numbersString(p *parampb.Pin) string {
 	return strings.Join(out, " ")
 }
 
-// The one-row-per-pin layout, read against the page: every slot of a cell, the supply-domain
-// column, a pin continued across a page break, and a function whose name contains a label.
+// This reads the one-row-per-pin layout against the page. It covers every slot of a cell, the
+// supply-domain column, a pin continued across a page break, and a function whose name contains a
+// label.
 func TestCellListReadsEveryMuxSlot(t *testing.T) {
 	spec, manifest := runMuxFixture(t, "kw47-pinmux-docir.textproto", "KW47")
 	for _, tc := range []struct{ pin, numbers, alternates string }{
@@ -101,8 +102,8 @@ func TestALabelInsideAFunctionNameIsNotASlot(t *testing.T) {
 	}
 }
 
-// A header the producer folded the previous pin's slots into cannot be found, and the table is
-// gapped by name rather than read with a guessed column.
+// Imagine the producer folded the previous pin's slots into a header. That header cannot be found,
+// so the table is gapped by name rather than read with a guessed column.
 func TestAFoldedMuxHeaderGapsTheTable(t *testing.T) {
 	spec, manifest := runMuxFixture(t, "kw47-pinmux-docir.textproto", "KW47")
 	gaps := gapsOfKind(manifest, "unparsed-mux-table")
@@ -114,9 +115,9 @@ func TestAFoldedMuxHeaderGapsTheTable(t *testing.T) {
 	}
 }
 
-// The one-row-per-function layout, read against the page: a pin is the rows from one filled
-// reset-state cell to the next, and its numbers are the cells that start in those rows, wherever
-// the producer put them.
+// This reads the one-row-per-function layout against the page. A pin is the rows from one filled
+// reset-state cell to the next. Its numbers are the cells that start in those rows, wherever the
+// producer put them.
 func TestRowPerFunctionGroupsByTheStartColumn(t *testing.T) {
 	spec, _ := runMuxFixture(t, "msp430fr2355-pinattr-docir.textproto", "MSP430FR2355")
 	for _, tc := range []struct{ pin, numbers, alternates string }{
@@ -129,7 +130,7 @@ func TestRowPerFunctionGroupsByTheStartColumn(t *testing.T) {
 		// RHA 24 spans eleven rows, and P1.7's numbers sit on its fifth row.
 		{"P2.0", "pt=30 rha=24 dbt=27 rsm=18", "P2.0 | TB1.1 | COMP0.O"},
 		{"P1.7", "pt=31 rha=25 dbt=28 rsm=19", "P1.7 | UCA0TXD | UCA0SIMO | TB0.2 | TDO | OA1+ | A7 | VREF+"},
-		// "- -" does not start a pin, so TCLK stays on P1.6.
+		// "- -" does not start a pin, so TCLK is still on P1.6.
 		{"P1.6", "rha=26 dbt=29 rsm=20 pt=32", "P1.6 | UCA0RXD | UCA0SOMI | TB0.1 | TDI | TCLK | OA1- | A6"},
 	} {
 		p := pinNamed(spec, tc.pin)
@@ -152,7 +153,8 @@ func TestRowPerFunctionGroupsByTheStartColumn(t *testing.T) {
 	}
 }
 
-// Two pins' signals in one cell collect two designators in one package, which is gapped.
+// Imagine one cell holds two pins' signals. The cell collects two designators in one package, and
+// that is gapped.
 func TestTwoPinsInOneGroupAreGapped(t *testing.T) {
 	_, manifest := runMuxFixture(t, "msp430fr2355-pinattr-docir.textproto", "MSP430FR2355")
 	gaps := gapsOfKind(manifest, "mux-pin-boundary")
@@ -221,7 +223,7 @@ func TestMuxRecipesAreValidated(t *testing.T) {
 	}
 }
 
-// A function name drops the notes a vendor hangs off it and keeps a slot naming two signals whole.
+// A function name drops any notes a vendor appends to it. A slot naming two signals is kept whole.
 func TestCleanFunctionDropsNotesAndRejoinsAWrappedSlot(t *testing.T) {
 	for in, want := range map[string]string{
 		"CAN0_TX [1]":                 "CAN0_TX",

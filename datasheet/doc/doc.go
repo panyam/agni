@@ -1,8 +1,8 @@
 // Package doc loads, validates, and queries doc-IR Documents (agni.v1.doc), the
 // decomposition of a source document (datasheet PDF, app note) that sits between
 // the raw bytes and the parameter-IR. The schema is protos/agni/v1/doc/doc.proto.
-// This package is query tier 1, the deterministic in-process one that recipes,
-// tests, and revision diffing use; see
+// This package is query tier 1, the deterministic in-process tier. Recipes, tests,
+// and revision diffing use it. See
 // docsite/content/architecture/datasheet-layer.md#the-document-contract.
 package doc
 
@@ -213,8 +213,8 @@ func TableHash(t *docpb.Table) string {
 // table label as the encoder wrote it) to a doc-IR table. The label matches when it
 // equals the title or either contains the other, case-insensitively, so a
 // section-qualified label ("Electrical Characteristics - On Characteristics") still
-// finds "Electrical Characteristics". Nil when nothing on that page matches, which
-// callers treat as a broken citation rather than a soft miss.
+// finds "Electrical Characteristics". It returns nil when nothing on that page
+// matches, and callers treat nil as a broken citation rather than a soft miss.
 func FindTableForProv(d *docpb.Document, page int32, label string) *docpb.Table {
 	l := strings.ToLower(label)
 	for _, pg := range d.Pages {

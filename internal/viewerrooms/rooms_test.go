@@ -21,11 +21,12 @@ import (
 	mcpkit "github.com/panyam/mcpkit/server"
 )
 
-// These run agni's composition rather than the bridge's logic, which mcpkit tests: the relay under
-// /relay/ admitting only tokens this process minted, each for one room, the declared viewer_* tools,
-// and an agent naming a design on each call, on both MCP wires.
+// These run agni's composition rather than the bridge's logic, since mcpkit tests the logic. They
+// check three things on both MCP wires. The relay under /relay/ admits only tokens this process
+// minted, each for one room. The viewer_* tools are declared. An agent names a design on each call.
 
-// roomOf stands in for service.ViewerRoomService.Room: a design's folder and its entry name one room.
+// roomOf stands in for service.ViewerRoomService.Room. A design's folder and its entry name one
+// room.
 func roomOf(_ context.Context, design string) (string, error) {
 	return "design:" + strings.TrimSuffix(design, ".sch") + ".sch", nil
 }
@@ -72,8 +73,8 @@ func (c *calls) all() []string {
 	return slices.Clone(c.got)
 }
 
-// tab joins design's room with a token minted for it, as a viewer page does, and offers every
-// declared tool, each recording the tab's name and the sheet it was asked for.
+// tab joins design's room with a token minted for it, as a viewer page does. It offers every
+// declared tool, and each tool records the tab's name and the requested sheet.
 func (st *stack) tab(t *testing.T, name, design string, rec *calls, opts ...rooms.PageOption) *rooms.Page {
 	t.Helper()
 	room, err := roomOf(t.Context(), design)
@@ -137,8 +138,8 @@ func eachWire(t *testing.T, fn func(t *testing.T, wire string)) {
 	}
 }
 
-// TestAnAgentDrivesTheTabOfTheDesignItNames is the case #1154 is for: six tabs over three designs,
-// and an agent switching between designs call by call, never attaching.
+// TestAnAgentDrivesTheTabOfTheDesignItNames covers the case behind #1154. Six tabs show three
+// designs, and an agent switches between designs call by call, never attaching.
 func TestAnAgentDrivesTheTabOfTheDesignItNames(t *testing.T) {
 	eachWire(t, func(t *testing.T, wire string) {
 		st := newStack(t)
@@ -168,8 +169,8 @@ func TestAnAgentDrivesTheTabOfTheDesignItNames(t *testing.T) {
 			t.Fatalf("tabs ran %v, want %v", got, want)
 		}
 
-		// No tab on design A turned its switch on, so the call reaches none of them and says how a
-		// reader lets an agent in.
+		// No tab on design A turned its switch on. The call reaches none of them, and its answer
+		// says how a reader lets an agent in.
 		ok, out = call(t, a, "viewer_show_sheet", map[string]any{"design": "m/a", "sheet": "x"})
 		if ok || len(rec.all()) != 2 {
 			t.Fatalf("a call to design A ran (%v): %s", rec.all(), out)
@@ -213,8 +214,8 @@ func TestACallWithNoDesignSaysToNameOne(t *testing.T) {
 	}
 }
 
-// TestATokenAdmitsItsOwnRoomAlone: a tab's token is for its design, so a page cannot join another
-// design's room with it, and a token another process signed is refused.
+// TestATokenAdmitsItsOwnRoomAlone checks that a tab's token is for its design. A page cannot join
+// another design's room with it, and a token signed by another process is refused.
 func TestATokenAdmitsItsOwnRoomAlone(t *testing.T) {
 	st := newStack(t)
 	tok, _, err := st.rooms.Mint("design:m/a.sch")
@@ -243,9 +244,9 @@ func TestATokenAdmitsItsOwnRoomAlone(t *testing.T) {
 	p.Leave()
 }
 
-// TestATabTrustingTheBridgesAnswersNoOtherPeer (agni issue 1173): a tab that answers only the
-// subjects Bridges names still takes the agent's calls through the bridge, and a peer holding a
-// genuine token for the same room gets no answer when it calls the tab directly.
+// TestATabTrustingTheBridgesAnswersNoOtherPeer covers agni issue 1173. A tab answers only the
+// subjects in Bridges. It still takes the agent's calls through the bridge. A peer holding a
+// genuine token for the same room calls the tab directly and gets no answer.
 func TestATabTrustingTheBridgesAnswersNoOtherPeer(t *testing.T) {
 	st := newStack(t)
 	rec := &calls{}
@@ -291,9 +292,9 @@ func TestATabTrustingTheBridgesAnswersNoOtherPeer(t *testing.T) {
 	}
 }
 
-// TestAnAgentHearsAReadersQuestionByNamingTheDesign is the Ask box's receive side (agni issue 1173):
-// an agent calls next_request naming the design as every other tool does, and hears a question from
-// a tab that agreed to it, never from one whose switch is off.
+// TestAnAgentHearsAReadersQuestionByNamingTheDesign covers the Ask box's receive side (agni issue
+// 1173). An agent calls next_request and names the design, as every other tool does. It hears a
+// question from a tab that agreed to it, never from one whose switch is off.
 func TestAnAgentHearsAReadersQuestionByNamingTheDesign(t *testing.T) {
 	eachWire(t, func(t *testing.T, wire string) {
 		st := newStack(t)
@@ -351,10 +352,11 @@ func TestAnAgentHearsAReadersQuestionByNamingTheDesign(t *testing.T) {
 	})
 }
 
-// TestAnAgentHearsAReadersQuestionAsAnEvent is the Ask box as a turn (agni issue 1173): an agent on
-// the session wire attaches by naming the design, subscribes to room.ask for the room attach
-// answers, and is pushed a question from a tab that agreed to it, never one from a tab whose switch
-// is off. This is what rooms-channel turns into a message in a Claude Code session.
+// TestAnAgentHearsAReadersQuestionAsAnEvent covers the Ask box as a turn (agni issue 1173). An
+// agent on the session wire attaches by naming the design. attach answers with a room, and the
+// agent subscribes to room.ask for that room. The server pushes it a question from a tab that
+// agreed to it, never one from a tab whose switch is off. rooms-channel turns this event into a
+// message in a Claude Code session.
 func TestAnAgentHearsAReadersQuestionAsAnEvent(t *testing.T) {
 	st := newStack(t)
 	rec := &calls{}

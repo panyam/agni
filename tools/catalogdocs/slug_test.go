@@ -14,9 +14,9 @@ import (
 // item 3). Impact says why a finding matters; a reader who accepts that it matters still has to know
 // the fix, and before this every rule left them to know it already.
 //
-// It lives here because this is the only package composing all four rule sources, and it is
-// catalog-wide so that rule 69 cannot ship without a remedy, which a per-source
-// test would not catch for a source nobody thought to add one to. Detail-less rules are NOT skipped
+// It lives here because no other package composes all four rule sources. It is catalog-wide so
+// that rule 69 cannot ship without a remedy. A per-source test would miss a source that nobody
+// thought to give one. Detail-less rules are NOT skipped
 // the way TestPageSlugsUnique skips them, because a rule with no docsite page still emits findings.
 func TestEveryRuleStatesARemedy(t *testing.T) {
 	sources := []struct {
@@ -45,10 +45,11 @@ func TestEveryRuleStatesARemedy(t *testing.T) {
 	}
 }
 
-// TestPageSlugsUnique guards the reason non-built-in rules are namespaced. A rule name shared across
-// sources (or a future collision, e.g. the datalog crystal-load-caps twin of the built-in) must not
-// resolve to the same page slug, or one page would overwrite the other. It composes the same source
-// list genRules uses and asserts every documented rule's slug is unique.
+// TestPageSlugsUnique guards why non-built-in rules are namespaced. Two sources can share a rule
+// name, and a future collision could too, such as the datalog crystal-load-caps twin of the
+// built-in. A shared name must not resolve to one page slug, or one page would overwrite the
+// other. The test composes the source list as genRules does and asserts every documented rule's
+// slug is unique.
 func TestPageSlugsUnique(t *testing.T) {
 	sources := []struct {
 		rules  []*check.Rule

@@ -55,10 +55,10 @@ func TestEDIFStrings(t *testing.T) {
 	}
 }
 
-// TestEDIFPercentEscape pins the EDIF %<code(s)>% escape (spec: characters not directly
-// representable). %10% is a newline, so a multi-line annotation string keeps its line breaks
-// instead of leaking a literal "%10%"; multiple codes decode in order; a percent that does not
-// form a valid escape stays literal (lossless). KiCad mode leaves '%' untouched.
+// TestEDIFPercentEscape pins the EDIF %<code(s)>% escape, which the spec uses for characters it
+// cannot represent directly. %10% is a newline, so a multi-line annotation string keeps its line
+// breaks instead of leaking a literal "%10%". Multiple codes decode in order. A percent that does
+// not form a valid escape is kept literally (lossless). KiCad mode leaves '%' untouched.
 func TestEDIFPercentEscape(t *testing.T) {
 	cases := []struct{ src, want string }{
 		{`(x "1: TOC%10%2: HDR")`, "1: TOC\n2: HDR"}, // %10% -> newline (the TOC bug)
@@ -87,14 +87,13 @@ func TestParenInString(t *testing.T) {
 	}
 }
 
-// TestParseRejectsTruncation pins the property that made a 97% under-read look like a clean read
-// (agni issue 562). A surplus ')' closes the top-level expression early, and everything after it
-// used to be discarded in silence. The board that found this is a KiCad demo whose teardrop blocks
-// are each written a '(' short, so the shape below is that file in miniature, where the ')' meant
-// to close `teardrops` closes `pad` instead, and the cascade reaches depth 0 while a whole second
-// footprint is still unread.
+// TestParseRejectsTruncation covers a 97% under-read that looked like a clean read (agni issue
+// 562). A surplus ')' closes the top-level expression early, and everything after it used to be
+// discarded in silence. A KiCad demo board found this. Each of its teardrop blocks is written a '('
+// short, and the shape below is that file in miniature. The ')' meant to close `teardrops` closes
+// `pad` instead, and the cascade reaches depth 0 while a whole second footprint is still unread.
 func TestParseRejectsTruncation(t *testing.T) {
-	// The intended structure with exactly one '(' removed, which is what the board does 349 times.
+	// The intended structure with exactly one '(' removed. The board does this 349 times.
 	const src = `(kicad_pcb
 	(footprint "A"
 		(pad "1"
@@ -125,8 +124,8 @@ func TestParseRejectsTruncation(t *testing.T) {
 	}
 }
 
-// TestParseRejectsTrailingContent covers two top-level expressions, which is the same defect
-// without the paren cascade. One file is one expression in both dialects.
+// TestParseRejectsTrailingContent covers two top-level expressions. That is the same defect without
+// the paren cascade. One file is one expression in both dialects.
 func TestParseRejectsTrailingContent(t *testing.T) {
 	for _, mode := range []StringMode{KiCadStrings, EDIFStrings} {
 		if _, err := Parse(strings.NewReader("(a 1)\n(b 2)\n"), mode); err == nil {
@@ -140,9 +139,9 @@ func TestParseRejectsTrailingContent(t *testing.T) {
 	}
 }
 
-// TestTokenizerLineCount checks that the position an error quotes survives the tokenizer's
-// pushbacks (scanAtom unreads its terminator, which may be the newline) and the newlines held
-// inside strings.
+// TestTokenizerLineCount checks that an error quotes the right position after the tokenizer's
+// pushbacks and after newlines held inside strings. scanAtom unreads its terminator, and that
+// terminator may be the newline.
 func TestTokenizerLineCount(t *testing.T) {
 	cases := []struct {
 		name string

@@ -11,8 +11,8 @@ import (
 
 // TestMain clears AGNI_EXAMPLE_DESIGN, for the same reason examples/common does. Every test here
 // asserts what the walkthrough does on its BUNDLED fixture, and the variable exists to replace that
-// fixture with someone's own board. Left set, these assert the narration against a design the prose
-// was never written about.
+// fixture with someone's own board. Left set, these tests would hold the narration to a design the
+// prose never describes.
 func TestMain(m *testing.M) {
 	os.Unsetenv(common.DesignPathEnv)
 	os.Exit(m.Run())

@@ -18,9 +18,9 @@ import (
 //go:embed designs
 var designsFS embed.FS
 
-// Designs lists the bundled fixtures as paths relative to the designs root, sorted:
-// "two-resistors.edn" for a loose file, "i2c-sensor/i2c-sensor.edn" for one inside a declared
-// design.
+// Designs lists the bundled fixtures as paths relative to the designs root, sorted. A loose file
+// appears as "two-resistors.edn", and a file inside a declared design as
+// "i2c-sensor/i2c-sensor.edn".
 //
 // It WALKS the tree rather than reading one directory, because a fixture that carries a design.yaml
 // lives in its own folder beside the companions it declares (#609).
@@ -44,8 +44,8 @@ func Designs() []string {
 
 // isDesignFile reports whether a bundled file is something a reader opens, so a walkthrough never
 // offers a design.yaml and a caller iterating every format is never handed a descriptor to parse.
-// The set is the registered reader extensions (readers/formats/registry.go) the bundled fixtures
-// use, including the .eds that ReadSchematicFixture opens.
+// The bundled fixtures use some of the registered reader extensions (readers/formats/registry.go),
+// and the set lists those. It includes .eds, which ReadSchematicFixture opens.
 func isDesignFile(p string) bool {
 	switch strings.ToLower(path.Ext(p)) {
 	case ".edn", ".eds", ".tel", ".kicad_pcb", ".kicad_sch", ".xml", ".cvg":
@@ -54,9 +54,9 @@ func isDesignFile(p string) bool {
 	return false
 }
 
-// fixturePath resolves name against the embedded tree, as either the relative path Designs reports
-// or a bare base name. Walkthrough defaults and sidecar prose use the base name, so a fixture can
-// move into a declared design folder without every example changing.
+// fixturePath resolves name against the embedded tree. name is either a relative path, as Designs
+// reports it, or a bare base name. Walkthrough defaults and sidecar prose use the base name, so a
+// fixture can move into a declared design folder without every example changing.
 func fixturePath(name string) (string, error) {
 	if _, err := fs.Stat(designsFS, "designs/"+name); err == nil {
 		return "designs/" + name, nil

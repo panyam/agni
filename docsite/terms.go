@@ -18,9 +18,9 @@ import (
 //
 //	CAN needs a {{ explainable "differential-pair" }} for anything leaving the board.
 //
-// The tag renders an ordinary anchor with the one-line summary in `title`, so with no JavaScript a
-// hover still shows the summary and a click lands on the term page; terms.js upgrades it to a popover
-// carrying the whole page. An optional label overrides the term's own. Conventions and how to add a
+// The tag renders an ordinary anchor with the one-line summary in `title`. With no JavaScript, a
+// hover still shows the summary and a click opens the term page. terms.js upgrades the anchor to a
+// popover holding the whole page. An optional label overrides the term's own. Conventions and how to add a
 // term are in docsite/README.md#glossary-terms, and `terms_test.go` enforces them.
 func Explainable(id string, label ...string) string {
 	return renderTerm(id, label, false)
@@ -122,8 +122,8 @@ func TermURL(id string) string {
 	return PathPrefix + "/reference/terms/" + id + "/"
 }
 
-// renderTerm builds the inline anchor. A missing term renders LOUDLY rather than as plain text, which
-// would read as ordinary prose and hide the typo. terms_test.go fails the build on it.
+// renderTerm builds the inline anchor. A missing term renders LOUDLY rather than as plain text. Plain
+// text would read as ordinary prose and hide the typo. terms_test.go fails the build on it.
 func renderTerm(id string, label []string, capitalize bool) string {
 	terms, err := LoadTerms()
 	if err != nil {

@@ -1,7 +1,7 @@
-// agnids is the datasheet service: the extraction workbench's page and API, and the derive step. It
-// is a separate binary from agni because it is a separate service, deployed with its own mounts, its
-// own writable store and the docling environment, and it is built from the datasheet module, which
-// the engine never imports (C34, agni issue 744).
+// agnids is the datasheet service. It serves the extraction workbench's page and API, and it runs the
+// derive step. It is a separate binary from agni because it is a separate service. It is deployed
+// with its own mounts, its own writable store and the docling environment. It is built from the
+// datasheet module, and the engine never imports that module (C34, agni issue 744).
 package main
 
 import (

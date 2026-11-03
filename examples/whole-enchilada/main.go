@@ -32,7 +32,7 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// echo prints the CLI command(s) a step is equivalent to. Paths are relative to the repo root.
+// echo prints the CLI commands equivalent to a step. Paths are relative to the repo root.
 func echo(cmds ...string) {
 	for _, c := range cmds {
 		fmt.Printf("$ %s\n", c)

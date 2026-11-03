@@ -1,7 +1,7 @@
 // Package symread is the shared netlist-tier logic of the symbol-file schematic readers (xschem,
 // gEDA gschem, and any future dialect such as Lepton EDA). Each reader keeps the format itself
 // (parsing, the rotation/flip encodings, the coordinate grid) and passes it in as closures and a
-// Dialect. The tokenizers stay forked per reader.
+// Dialect. The tokenizers are still forked per reader.
 package symread
 
 import (
@@ -14,9 +14,10 @@ import (
 )
 
 // Pin is a symbol-local terminal as read from a .sym file: the connection point plus the
-// designator/name/direction the IR carries. Dir is the pin's electrical direction mapped
-// to the neutral vocabulary (gEDA pintype / xschem dir); UNSPECIFIED when the format's pin
-// carries no type or one with no clean mapping, so direction-based rules stay conservative.
+// designator, name and direction that the IR records. Dir is the pin's electrical direction
+// mapped to the neutral vocabulary (gEDA pintype / xschem dir). Dir is UNSPECIFIED when the
+// format's pin has no type, or one with no clean mapping, so direction-based rules remain
+// conservative.
 //
 // Seq is the pin's 1-based sequence position within the symbol (gEDA pinseq), used only to
 // select a slot's physical pin number via Placement.SlotPins; it is 0 for formats/symbols
@@ -38,7 +39,7 @@ type Pin struct {
 // its number, so slot 2 of a hex inverter resolves to physical pins 3,4 instead of the
 // drawn 1,2. It is nil for single-gate placements, where the drawn Number stands. A symbol's
 // slotdef is the same for every instance, but the selected row differs per instance, so the
-// remap rides here and not on the memoized symbol load.
+// remap lives here and not on the memoized symbol load.
 type Placement struct {
 	Symref   string
 	Ref      string
@@ -53,12 +54,12 @@ type Placement struct {
 // grid. Resolved pins are also recorded on the PartType, so the library reflects the
 // symbol's terminals.
 //
-// load reports whether the symbol RESOLVED (its file opened and parsed) alongside its pins. Zero
-// pins is fine (a graphic-only part), but a failed resolve drops every pin and turns each wire end
-// meant to land on them into a phantom dangling endpoint (WS1-013). unresolved lists each reference
-// that failed with the placements it cost pins, so the caller can gate dangling emission AND report
-// the gap (WS1-052). resolved lists the references that DID load with each one's pin count, so a
-// caller can say what it examined (agni issue 418).
+// load reports its pins and whether the symbol RESOLVED, meaning its file opened and parsed. Zero
+// pins is fine for a graphic-only part. A failed resolve drops every pin, and each wire end meant to
+// meet those pins becomes a phantom dangling endpoint (WS1-013). unresolved lists each reference
+// that failed, with the placements it cost pins. The caller can then gate dangling emission AND
+// report the gap (WS1-052). resolved lists the references that DID load, with each one's pin count,
+// so a caller can say what it examined (agni issue 418).
 func ResolvePins(pls []Placement, load func(symref string) ([]Pin, bool), quant func(x, y float64) netgraph.Point) (out []netgraph.Pin, resolved []Resolved, unresolved []Unresolved) {
 	type entry struct {
 		pins []Pin
@@ -173,7 +174,7 @@ func SymbolBase(ref string) string {
 }
 
 // Dialect carries the constants that distinguish one symbol-file format's IR emission from
-// another's: the library name components file under, the provenance id kind, and which
+// another's: the library name that components are filed under, the provenance id kind, and which
 // instance attributes copy onto a component section ("value" also promotes to the
 // component-level Value).
 type Dialect struct {
@@ -219,7 +220,7 @@ func (d Dialect) AddSection(comp *ir.Component, sym string, attrs map[string]str
 }
 
 // sectionNativeID names a section's provenance native id: the component ref-des, suffixed with
-// the gEDA slot when present so a multi-gate package's sections stay distinguishable.
+// the gEDA slot when present so a multi-gate package's sections remain distinguishable.
 func sectionNativeID(comp *ir.Component, attrs map[string]string) string {
 	if slot := attrs["slot"]; slot != "" {
 		return comp.RefDes + ":" + slot
@@ -230,19 +231,18 @@ func sectionNativeID(comp *ir.Component, attrs map[string]string) string {
 // RefDesCollisions reports designators claimed by more than one distinct physical placement, for
 // the readers that build components through this package (gEDA and xschem).
 //
-// Both formats settle the question by their own rules. gEDA STATES THE GATE, since a package's gates
-// share a refdes and carry distinct slot=, folded by the caller into one Component with a section per
-// gate. xschem DECLARES NAMES UNIQUE within a schematic (an instance name is the provenance native
-// id), so a repeat is a duplicate. EDIF has no unit to distinguish gates sharing a designator, so it
-// supplies nothing (agni issue 309).
+// Both formats settle the question by their own rules. gEDA STATES THE GATE. A package's gates share
+// a refdes and have distinct slot= values, and the caller folds them into one Component with a
+// section per gate. xschem DECLARES NAMES UNIQUE within a schematic, since an instance name is the
+// provenance native id, so a repeat is a duplicate. EDIF has no unit to distinguish gates sharing a
+// designator, so it supplies nothing (agni issue 309).
 //
-// A designator is duplicated when the same gate is claimed twice, in either of the two shapes that
-// produces:
+// A designator is duplicated when the same gate is claimed twice. The claim takes one of two shapes:
 //
 //   - two placements with the SAME slot=, folded into one Component whose sections then share a
 //     native id (refdes:slot);
-//   - two placements that were never folded, which stay separate Components wearing one refdes.
-//     That is every xschem repeat, and gEDA's unslotted one.
+//   - two placements that were never folded, so they are still separate Components under one
+//     refdes. That is every xschem repeat, and gEDA's unslotted one.
 //
 // A placeholder designator ("R?") is not a claimed name, so it is skipped as the KiCad reader skips
 // it, and unannotated-components reports those.

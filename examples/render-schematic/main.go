@@ -1,10 +1,10 @@
 // Command render-schematic is the render rung of the Agni examples ladder. It reads an EDIF
-// schematic into the geometry sidecar and drives both render backends over it, the offline SVG
-// one and the tier-2 packer that feeds the WebGL2 viewer. Narration lives in the sidecar
-// walkthrough.md, and this file only binds the steps that run engine code.
+// schematic into the geometry sidecar and drives both render backends over it. One is the offline
+// SVG backend, and the other is the tier-2 packer that feeds the WebGL2 viewer. Narration is in the
+// sidecar walkthrough.md, and this file only binds the steps that run engine code.
 //
-// Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
-// `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
+// The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
+// `make runquiet` takes non-interactive defaults (CI-safe), and `make doc` renders to markdown.
 package main
 
 import (

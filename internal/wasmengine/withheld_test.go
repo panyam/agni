@@ -18,9 +18,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi/webapiconnect"
 )
 
-// The tests here cover a board the page held back from a worker (agni issue 992): a question that
-// reads no board is answered without it, and every question that reads it is refused with the
-// file's hash, never answered from a design missing its copper.
+// The tests here cover a page holding a board back from a worker (agni issue 992). A question that
+// reads no board is answered without it. Every question that reads the board is refused with the
+// file's hash, and is never answered from a design missing its copper.
 
 const gatewayBoard = "gateway.kicad_pcb"
 
@@ -80,10 +80,10 @@ func TestThePageAndTheEngineSpellAPlaceholderAlike(t *testing.T) {
 	}
 }
 
-// TestAPlaceholderStatsAsItsFileAndRefusesToOpen is the mount as the engine sees it: the placeholder
-// lists and stats where the file is, so the design resolves as it would with the file in place, and
-// opening it fails and is recorded. control: a file that is not a placeholder, small enough to be
-// looked inside, opens with its bytes intact.
+// TestAPlaceholderStatsAsItsFileAndRefusesToOpen checks the mount as the engine sees it. The
+// placeholder lists and stats where the file is, so the design resolves as it would with the file in
+// place. Opening the placeholder fails and is recorded. As a control, a small file that is not a
+// placeholder opens with its bytes intact. It is small enough for Open to look inside.
 func TestAPlaceholderStatsAsItsFileAndRefusesToOpen(t *testing.T) {
 	const hash = "sha256:abc"
 	w := &withholding{}
@@ -107,8 +107,8 @@ func TestAPlaceholderStatsAsItsFileAndRefusesToOpen(t *testing.T) {
 
 func TestAQuestionThatReadsTheBoardAsksForIt(t *testing.T) {
 	const boardQuery = "board.layer(?n, ?l) => ?n, ?l"
-	// control: with the board in place the query answers from it, so a refusal below is the board
-	// being read rather than a query that reads nothing.
+	// As a control, the query answers from the board when the board is in place. So a refusal below
+	// means the board was read, and not that the query reads nothing.
 	full := httptest.NewServer(gatewayEngine(t, nil, "", nil).Handler)
 	defer full.Close()
 	if r, err := runQuery(full, snapAt(t, full), boardQuery); err != nil || len(r.GetRows()) == 0 {
@@ -146,8 +146,8 @@ func TestAQuestionThatReadsTheBoardAsksForIt(t *testing.T) {
 				t.Fatalf("a netlist query with the board held back: %v", err)
 			}
 			wantWithheld(t, what, ask(srv, snap), hash)
-			// Whatever the engine kept from a read around the placeholder is not trusted either, so a
-			// question that reads no board is refused too until the files arrive.
+			// The engine does not trust anything it kept from a read around the placeholder either.
+			// Until the files arrive it refuses even a question that reads no board.
 			_, err = runQuery(srv, snap, "net.rail(?n) => ?n")
 			wantWithheld(t, "a netlist query after "+what, err, hash)
 		})

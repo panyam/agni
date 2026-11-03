@@ -7,10 +7,10 @@ import (
 	"testing"
 )
 
-// TestDescriptorRoundTrip is why the writer lives in this package. The parser is strict (an unknown
-// field is an error, not an ignored line), so a scaffolder marshalling its own struct would produce
-// descriptors its own parser rejects the moment either side gained a field. Writing through the same
-// shapes makes that impossible rather than unlikely.
+// TestDescriptorRoundTrip pins the reason the writer lives in this package. The parser is strict,
+// and an unknown field is an error, not an ignored line. Imagine a scaffolder marshalling its own
+// struct. The moment either side gained a field, the parser would reject its descriptors. Writing
+// through the same shapes makes that impossible rather than unlikely.
 func TestDescriptorRoundTrip(t *testing.T) {
 	t.Run("project, nothing declared", func(t *testing.T) {
 		var b bytes.Buffer
@@ -60,8 +60,8 @@ func TestDescriptorRoundTrip(t *testing.T) {
 		if id != "gateway" {
 			t.Errorf("id = %q", id)
 		}
-		// Written paths are cleaned on the way in, so a caller passing "./x" cannot produce a
-		// descriptor whose entry differs from what the parser will resolve.
+		// Written paths are cleaned on the way in. A caller passing "./x" cannot produce an entry
+		// that differs from the one the parser will resolve.
 		if got := d.GetEntryUri(); !strings.HasSuffix(got, "gateway.edn") || strings.Contains(got, "./") {
 			t.Errorf("entry = %q, want a cleaned gateway.edn", got)
 		}
@@ -74,9 +74,9 @@ func TestDescriptorRoundTrip(t *testing.T) {
 	})
 }
 
-// TestWriteDescriptorRejectsBadIds exists because an id becomes a path segment in a resource name,
-// so a writer that accepted a slash or an uppercase letter would produce a descriptor the parser
-// refuses, from a command that reported success.
+// TestWriteDescriptorRejectsBadIds covers an id with a slash or an uppercase letter. An id becomes
+// a path segment in a resource name. A writer accepting such an id would report success, and the
+// parser would then refuse the descriptor it wrote.
 func TestWriteDescriptorRejectsBadIds(t *testing.T) {
 	for _, id := range []string{"", "Gateway", "a/b", "-lead"} {
 		if err := WriteProject(&bytes.Buffer{}, "", id, "T", Sources{}); err == nil {

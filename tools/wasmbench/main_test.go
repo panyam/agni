@@ -6,8 +6,8 @@ import (
 	"testing"
 )
 
-// TestRunMeasuresTheTutorialBoard keeps the bench honest about what it measured: a run that read
-// nothing, ran no rules or answered no query would print fast, plausible timings over an empty board.
+// TestRunMeasuresTheTutorialBoard checks that the bench measured something. A run that read nothing,
+// ran no rules or answered no query would print fast, plausible timings over an empty board.
 func TestRunMeasuresTheTutorialBoard(t *testing.T) {
 	r, err := Run(filepath.Join("..", "..", "examples", "tutorial-project"), "designs/gateway")
 	if err != nil {
@@ -18,9 +18,9 @@ func TestRunMeasuresTheTutorialBoard(t *testing.T) {
 	}
 }
 
-// TestLayersMeasuresEachLayer keeps --layers from printing a split over layers it never built: each
-// step must allocate, the order must be the one a Run checks needs, and the restored pass must have
-// come from the store rather than a read.
+// TestLayersMeasuresEachLayer keeps --layers from printing a split over layers it never built. Each
+// step must allocate, the order must match what a Run checks needs, and the restored pass must come
+// from the store rather than a read.
 func TestLayersMeasuresEachLayer(t *testing.T) {
 	r, err := Layers(filepath.Join("..", "..", "examples", "tutorial-project"), "designs/gateway")
 	if err != nil {
@@ -43,8 +43,9 @@ func TestLayersMeasuresEachLayer(t *testing.T) {
 	}
 }
 
-// TestLayersMeasuresADesignWithNoBoard covers a design declaring no board companion, whose model the
-// tool used to build with its own schematic named as an explicit board, which BuildModel refuses.
+// TestLayersMeasuresADesignWithNoBoard covers a design declaring no board companion. The tool used to
+// build its model with the design's own schematic named as an explicit board, and BuildModel refuses
+// that.
 func TestLayersMeasuresADesignWithNoBoard(t *testing.T) {
 	dir := t.TempDir()
 	b, err := os.ReadFile(filepath.Join("..", "..", "readers", "kicad", "testdata", "bus_resolved.kicad_sch"))

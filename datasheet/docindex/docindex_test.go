@@ -58,8 +58,8 @@ func TestFindsAFlattenedSubscript(t *testing.T) {
 	}
 }
 
-// A value cell is meaningless alone, since "3.6" is not a fact. The row label and column header are
-// what make it one, so they are indexed with the cell and returned beside it.
+// A value cell is meaningless alone, since "3.6" is not a fact. The row label and column header make
+// it one, so they are indexed with the cell and returned beside it.
 func TestCellCarriesItsRowAndColumnContext(t *testing.T) {
 	got := Build(doc()).Search("VCCA max", 5)
 	if len(got) == 0 {
@@ -79,7 +79,7 @@ func TestCellCarriesItsRowAndColumnContext(t *testing.T) {
 	}
 }
 
-// A term on every page discriminates nothing; a rare one is what makes a hit specific.
+// A term on every page discriminates nothing, and a rare one makes a hit specific.
 func TestRareTermsOutrankCommonOnes(t *testing.T) {
 	got := Build(doc()).Search("absolute maximum", 5)
 	if len(got) == 0 || got[0].RegionID != "p2.x1" {

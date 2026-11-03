@@ -10,12 +10,12 @@ import (
 	"github.com/panyam/agni/stdlib/profiles"
 )
 
-// datalogSourceName is the catalog source stdlib/rules/datalog registers under.
+// datalogSourceName is the catalog source name for the rules stdlib/rules/datalog registers.
 const datalogSourceName = "dl"
 
 // builder accumulates what the options set, so New composes once from a complete picture rather
 // than mutating an Engine per option. As in facts.Registry, collisions are checked once at the end
-// instead of depending on the order the caller wrote the options in.
+// instead of depending on the order of the caller's options.
 type builder struct {
 	profiles    []profiles.Profile
 	sources     []check.RuleSource
@@ -40,9 +40,9 @@ func WithProfiles(ps []profiles.Profile) Option {
 	return func(b *builder) { b.profiles = append(b.profiles, ps...) }
 }
 
-// WithSources composes arbitrary rule sources into the catalog: a house suite built in Go, a naming
-// convention's rules, anything satisfying check.RuleSource. They compose after the profile
-// sources, and a source implementing check.SupersedingSource replaces what it names.
+// WithSources composes arbitrary rule sources into the catalog, such as a house suite built in Go,
+// a naming convention's rules, or anything satisfying check.RuleSource. They compose after the
+// profile sources, and a source implementing check.SupersedingSource replaces what it names.
 func WithSources(srcs ...check.RuleSource) Option {
 	return func(b *builder) { b.sources = append(b.sources, srcs...) }
 }
@@ -61,8 +61,8 @@ func WithProjectStore(s service.ProjectStore) Option {
 	return func(b *builder) { b.store = s }
 }
 
-// Tree is one named filesystem WithFSProjectStore searches for project and design descriptors. Mount
-// is the name a mount:// URI addresses the tree by, and FS is its root.
+// Tree is one named filesystem. WithFSProjectStore searches it for project and design descriptors.
+// A mount:// URI addresses the tree by Mount, and FS is its root.
 type Tree struct {
 	Mount string
 	FS    fs.FS
@@ -84,25 +84,25 @@ func WithFSProjectStore(trees ...Tree) Option {
 	}
 }
 
-// WithProjectResolver supplies an already-composed resolver, for a caller that built one to share
-// with the services this package does not construct (the design, diff, query, check and review
-// services all take the same resolver). It is the composed form of WithProjectStore plus WithConfigResolver and wins
-// over both, so one run cannot resolve projects two ways.
+// WithProjectResolver supplies an already-composed resolver. A caller may build one to share with
+// services this package does not construct, since the design, diff, query, check and review
+// services all take the same resolver. It is the composed form of WithProjectStore plus
+// WithConfigResolver and wins over both, so one run cannot resolve projects two ways.
 func WithProjectResolver(r *service.ProjectResolver) Option {
 	return func(b *builder) { b.resolver = r }
 }
 
-// WithConfigResolver supplies what resolves an analysis config's URIs into engine values: a
-// project's interface profiles, its seeded parameters, its symbol paths, a design's intent. This is
-// where per-design config enters a run, so a server serving several projects composes each one's own
-// rules rather than applying one team's config to every design.
+// WithConfigResolver supplies the resolver that turns an analysis config's URIs into engine values,
+// such as a project's interface profiles, its seeded parameters, its symbol paths and a design's
+// intent. Per-design config enters a run here, so a server serving several projects composes each
+// one's own rules rather than applying one team's config to every design.
 func WithConfigResolver(c service.ConfigResolver) Option {
 	return func(b *builder) { b.config = c }
 }
 
 // WithProducerVersion stamps the build identity onto every results document the engine writes, a
-// stored review run and a saved check report alike, so the document records which engine produced it. An embedder passes its own version string; the CLI passes the
-// engine's.
+// stored review run and a saved check report alike. The document then records which engine
+// produced it. An embedder passes its own version string, and the CLI passes the engine's.
 func WithProducerVersion(v string) Option {
 	return func(b *builder) { b.version = v }
 }

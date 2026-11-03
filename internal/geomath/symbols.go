@@ -5,10 +5,11 @@ import geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 // SymbolIndex is a geometry's symbol table keyed for placement lookup, with the fallbacks a
 // placement may need when its refs do not match a definition exactly.
 //
-// The renderer, the readers (to report what they could not draw, agni issue 354) and validate all
-// ask "does this placement draw?", and they must get one answer. With separate joins, a placement
-// the renderer resolved by its cell-only fallback counted as UNRESOLVED to validate. It lives here
-// rather than core/render because C17 forbids a reader importing core/render.
+// The renderer, the readers and validate all ask "does this placement draw?", and they must get one
+// answer. The readers ask so they can report what they could not draw (agni issue 354). With
+// separate joins, the renderer resolved some placements by its cell-only fallback, and validate
+// counted those as UNRESOLVED. The index lives here rather than in core/render because C17 forbids a
+// reader importing core/render.
 type SymbolIndex map[string]*geom.SymbolDef
 
 // symKey is the composite lookup key. NUL separates the parts because it cannot occur in a cell,
@@ -18,8 +19,10 @@ func symKey(cell, lib, view string) string { return cell + "\x00" + lib + "\x00"
 // IndexSymbols builds the lookup table for a geometry's symbol definitions.
 //
 // Each definition is registered under its exact (cell, library, view) triple and then under two
-// progressively looser keys, FIRST DEFINITION WINS, so a placement whose view or library ref does not
-// match exactly still resolves. That lets a multi-section cell and a single-view cell share one table.
+// progressively looser keys. The FIRST DEFINITION WINS each looser key, and a later definition with
+// the same exact triple replaces the earlier one. So a placement still resolves when its
+// view or library ref does not match exactly. That lets a multi-section cell and a single-view cell
+// share one table.
 func IndexSymbols(g *geom.SchematicGeometry) SymbolIndex {
 	m := make(SymbolIndex, len(g.GetSymbols()))
 	for _, s := range g.GetSymbols() {
@@ -36,7 +39,7 @@ func IndexSymbols(g *geom.SchematicGeometry) SymbolIndex {
 
 // SymbolFor resolves a placement to the definition that will be drawn for it, or nil when nothing
 // will be. An exact (cell, library, view) match selects the right bank of a multi-section cell; the
-// view- and library-agnostic fallbacks keep single-view cells and any ref mismatch resolving.
+// view- and library-agnostic fallbacks let single-view cells and any ref mismatch still resolve.
 //
 // nil means the placement contributes no shapes. A consumer asking whether a placement draws should
 // call THIS rather than re-deriving the join.

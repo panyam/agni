@@ -1,7 +1,7 @@
-// Command netlist-audit walks a netlist audit written as a query set (agni issue 729). Each table a
-// review workbook holds (parts on nets, part numbers, test points per net, passives a tester can
-// measure, part numbers never probed on both ends) is a named query in audit.yaml, and all of them
-// are answered over one read of the design.
+// Command netlist-audit walks a netlist audit written as a query set (agni issue 729). A review
+// workbook holds several tables: parts on nets, part numbers, test points per net, passives a tester
+// can measure, and part numbers never probed on both ends. Each table is a named query in audit.yaml,
+// and all of them are answered over one read of the design.
 //
 // The narration lives in the sidecar walkthrough.md (demokit FromMarkdown), and this file only binds
 // the steps that run engine code. Every step prints the CLI line that reproduces it.
@@ -123,8 +123,8 @@ func answerSet(d *ir.Design, yaml []byte) ([]section, error) {
 }
 
 // rowsCap bounds the rows a section prints. The fixture's tables are small, and a real board's "parts
-// on nets" runs to thousands of rows, which would bury every other table (agni issue 644). The count
-// is never truncated.
+// on nets" runs to thousands of rows. Those rows would bury every other table (agni issue 644). The
+// count is never truncated.
 const rowsCap = 6
 
 func (s section) summary() string {

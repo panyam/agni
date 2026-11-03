@@ -39,7 +39,7 @@ func TestParseSkippingLeavesOutTheNamedLists(t *testing.T) {
 	if got := strings.Join(heads(skipped.Child("zone")), " "); got != "polygon" {
 		t.Errorf("a zone's lists after skipping = %q, want only its polygon", got)
 	}
-	// What is not skipped is the same tree Parse builds.
+	// Everything not skipped matches the tree Parse builds.
 	if a, b := full.Child("via").Child("at").Arg(1).Text(), skipped.Child("via").Child("at").Arg(1).Text(); a != b || a != "3" {
 		t.Errorf("an unskipped list reads %q skipped and %q in full", b, a)
 	}
@@ -58,8 +58,8 @@ func TestParseSkippingHonoursStrings(t *testing.T) {
 	}
 }
 
-// TestParseSkippingReportsAnUnclosedSkippedList holds a skipped list that never closes to the error
-// Parse gives an unclosed list, rather than reading the rest of the file as skipped.
+// TestParseSkippingReportsAnUnclosedSkippedList checks that a skipped list that never closes gets
+// the same error Parse gives an unclosed list. The rest of the file must not read as skipped.
 func TestParseSkippingReportsAnUnclosedSkippedList(t *testing.T) {
 	_, err := ParseSkipping(strings.NewReader(`(board (filled_polygon (pts (xy 1 1))`), KiCadStrings, "filled_polygon")
 	if err == nil || !strings.Contains(err.Error(), "EOF") {

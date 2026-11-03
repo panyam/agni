@@ -40,9 +40,9 @@ func readTree(t *testing.T, dir string) map[string][]byte {
 	return files
 }
 
-// gatewayAlone is the tutorial gateway's folder on its own, as a design in no project: its descriptor
-// is read without the `extends` naming the project it is copied out of, which the folder alone does not
-// hold.
+// gatewayAlone is the tutorial gateway's folder on its own, as a design in no project. The folder
+// was copied out of a project, and its descriptor's `extends` names that project. The folder alone
+// does not hold the project, so the descriptor is read without the `extends` line.
 func gatewayAlone(t *testing.T) map[string][]byte {
 	t.Helper()
 	files := readTree(t, filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway"))
@@ -89,11 +89,11 @@ func hostDo(t *testing.T, h *wasmhost.Host, url, body string) string {
 }
 
 // TestBuildServesThroughWasmhost runs the composition the browser runs, through goapplib's host
-// natively: files go in by mount and add, the host rebuilds, and the check report carries the
-// project's own profile rules. Adding a design's files to a mount must keep what the mount held,
-// which is what the page relies on when it brings designs in one at a time (agni issue 853). Until
-// the project's files arrive, the design names a project.yaml the mount does not hold, which is
-// refused rather than read without the project (agni issue 1136).
+// natively. Files go in by mount and add, the host rebuilds, and the check report holds the
+// project's own profile rules. Adding a design's files to a mount must keep what the mount held. The
+// page relies on that when it brings designs in one at a time (agni issue 853). Until the project's
+// files arrive, the design names a project.yaml the mount does not hold. The engine refuses that
+// design rather than reading it without the project (agni issue 1136).
 func TestBuildServesThroughWasmhost(t *testing.T) {
 	h := wasmhost.New(Namespace)
 	if err := h.Rebuild(Build); err != nil {
@@ -131,9 +131,9 @@ func TestBuildServesThroughWasmhost(t *testing.T) {
 }
 
 // TestADesignInNoProjectDrawsWithItsOwnSymbols mounts the tutorial gateway's folder on its own, as a
-// design in no project, its descriptor naming no parent. Its symbol library
-// beside the descriptor must draw every part, and its declared intent must run (agni issue 887). The
-// same folder inside its project drew 0 undrawn placements and on its own drew 19.
+// design in no project, and its descriptor names no parent. The symbol library beside the
+// descriptor must draw every part, and the declared intent must run (agni issue 887). Inside its
+// project the same folder drew 0 undrawn placements, and on its own it drew 19.
 func TestADesignInNoProjectDrawsWithItsOwnSymbols(t *testing.T) {
 	eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(gatewayAlone(t))})
 	if err != nil {

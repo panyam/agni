@@ -10,9 +10,10 @@ import (
 	"testing"
 )
 
-// TestOpenArgs checks that the GUI launch command dispatches by format (KiCad file types, and .sch
-// sniffed for xschem vs Lepton) and by platform (macOS via `open -a`, otherwise the binary
-// direct); formats with no native GUI report ErrNoTool.
+// TestOpenArgs checks that the GUI launch command dispatches by format and by platform. The formats
+// are the KiCad file types and a .sch sniffed for xschem vs Lepton. macOS launches via
+// `open -a`, and other platforms run the binary directly. A format with no native GUI reports
+// ErrNoTool.
 func TestOpenArgs(t *testing.T) {
 	dir := t.TempDir()
 	write := func(name, content string) string {

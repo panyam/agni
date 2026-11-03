@@ -13,9 +13,9 @@ func refRows(n int) [][]string {
 	return out
 }
 
-// TestRefsCapsALongList exists because, pointed at a real board, these buckets run to several
-// hundred parts and an uncapped list buries the lines around it. The count stays exact; only the
-// naming is trimmed.
+// TestRefsCapsALongList covers a real board. There these buckets run to several hundred parts, and
+// an uncapped list buries the lines around it. The count is still exact, and only the naming is
+// trimmed.
 func TestRefsCapsALongList(t *testing.T) {
 	got := refs(refRows(400))
 	if n := strings.Count(got, ",") + 1 - 1; n > refsCap+1 {

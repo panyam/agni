@@ -37,7 +37,7 @@ import (
 // at a glance or a reviewer waves through whatever they are shown.
 type Hit struct {
 	Page int32
-	// RegionID is the doc-IR text block or table id, which is what a viewer highlights.
+	// RegionID is the doc-IR text block or table id. A viewer highlights that region.
 	RegionID string
 	// Row and Col locate a table cell, and are -1 for a text block.
 	Row, Col int32

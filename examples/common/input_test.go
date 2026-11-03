@@ -12,12 +12,12 @@ import (
 // Every test below asserts what AskPath does with its BUNDLED default, and replacing that default is
 // the variable's entire job (agni 643). So a developer who exports it to drive a walkthrough over
 // their own board could not run this package's tests. Three failed, and each printed the path they
-// had set into the test log. The gate was green in CI and red on the machine that had the variable,
-// which is the worst way round for a test to fail.
+// had set into the test log. The gate was green in CI and red on the machine that had the variable.
+// That is the worst way round for a test to fail.
 //
-// Clearing it here rather than in each test means one added later inherits the isolation instead of
-// inheriting the bug. TestAskPathEnvDefault sets it back with t.Setenv, which restores afterwards, so
-// the one test that is ABOUT the variable still exercises it.
+// It is cleared here rather than in each test, so a test added later inherits the isolation
+// instead of the bug. TestAskPathEnvDefault sets it back with t.Setenv, which restores it
+// afterwards, so the one test ABOUT the variable still exercises it.
 func TestMain(m *testing.M) {
 	os.Unsetenv(DesignPathEnv)
 	os.Unsetenv(ReviewPathEnv)

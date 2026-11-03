@@ -7,9 +7,9 @@ import (
 	"io/fs"
 )
 
-// The built bundle is gitignored, so this file only compiles after `pnpm build`, which is what makes
-// a release build without one fail rather than ship a binary with no viewer. The wasm engine is left
-// out: it is 37 MB, and a viewer an installed binary serves runs on the server engine.
+// The built bundle is gitignored, so this file only compiles after `pnpm build`. A release build
+// without the bundle then fails rather than shipping a binary with no viewer. The wasm engine is left
+// out. It is 37 MB, and the viewer an installed binary serves runs on the server engine.
 //
 //go:embed templates static/*.js static/*.css
 var files embed.FS

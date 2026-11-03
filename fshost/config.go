@@ -23,9 +23,10 @@ import (
 	"github.com/panyam/jaala/datalog"
 )
 
-// ConfigResolver is the service.ConfigResolver over a mount table. It reads the interface profiles,
-// seeded parameters, symbol libraries and derived-relation libraries a project names. A design's
-// intent is not among them, since it arrives as a value the service compiles. The server and the CLI
+// ConfigResolver is the service.ConfigResolver over a mount table. A project names interface
+// profiles, seeded parameters, symbol libraries and derived-relation libraries, and the resolver
+// reads them. It does not read a design's intent, which arrives as a value for the service to
+// compile. The server and the CLI
 // resolve through it over os.DirFS mounts, and the wasm engine over in-memory ones, so a project's
 // config composes one way everywhere.
 //
@@ -35,17 +36,17 @@ type ConfigResolver struct {
 	Mounts []Mount
 	// SymbolPath turns a symbol-library directory into the name the host's formats.Loader opens. A
 	// symbol library is handed to the reader rather than read here, so it has to be spelled in the
-	// reader's name space: a host path for a loader reading the host filesystem. Nil spells it as its
-	// path in Root, which is what a Host's loader opens.
+	// reader's name space, such as a host path for a loader reading the host filesystem. Nil spells
+	// it as its path in Root, and a Host's loader opens that.
 	SymbolPath func(uri artifact.URI) (string, error)
 }
 
 // ResolveConfig loads what an AnalysisConfig's URIs point at, whether it came from a project
 // descriptor or from a request.
 //
-// A tier that fails to load is an ERROR, not a skip, since an operator who wrote a profiles
-// directory and silently got the built-ins would read the clean report as a clean design (C24). A
-// tier the config does not name is not an error, because the loops below run zero times.
+// A tier that fails to load is an ERROR, not a skip. Imagine an operator who wrote a profiles
+// directory and silently got the built-ins. They would read the clean report as a clean design
+// (C24). A tier the config does not name is not an error, because the loops below run zero times.
 func (c *ConfigResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisConfig, namespace string) (service.ResolvedConfig, error) {
 	var out service.ResolvedConfig
 	// read records every directory this resolution opened, so the digest covers what was read rather
@@ -188,8 +189,8 @@ func (c *ConfigResolver) source(uri string) (DigestRoot, fs.FS, error) {
 	return d, sub, nil
 }
 
-// under is the URI of the directory a source's files sit in: the source itself, or the folder holding
-// it when it names one file, so a file's own name is not written twice.
+// under is the URI of the directory holding a source's files. That is the source itself, or the
+// folder holding it when it names one file, so a file's own name is not written twice.
 func under(uri string, d DigestRoot) string {
 	if info, err := fs.Stat(d.FS, d.Name); err == nil && !info.IsDir() {
 		return uri[:strings.LastIndex(uri, "/")]
@@ -253,8 +254,8 @@ func (rootInfo) ModTime() time.Time { return time.Time{} }
 func (rootInfo) IsDir() bool        { return true }
 func (rootInfo) Sys() any           { return nil }
 
-// ProfileSourceName is the catalog namespace a project's interface profiles appear under, so a
-// finding reads `gateway-profiles/can-esd-missing` and says which project asked for it.
+// ProfileSourceName names the catalog namespace for a project's interface profiles. A finding then
+// reads `gateway-profiles/can-esd-missing` and says which project asked for it.
 func ProfileSourceName(namespace string) string {
 	if id, ok := service.ProjectID(namespace); ok {
 		return id + "-profiles"
@@ -264,14 +265,13 @@ func ProfileSourceName(namespace string) string {
 	return namespace + "-profiles"
 }
 
-// A config digest identifies the BYTES a config resolution read, which is what lets an overlay
-// composed from it say whether two runs were configured alike (agni issue 390, service.Overlay's
-// Identity).
+// A config digest identifies the BYTES a config resolution read. An overlay composed from it can
+// then say whether two runs were configured alike (agni issue 390, service.Overlay's Identity).
 //
 // It hashes CONTENT rather than stat metadata. The directories involved hold a handful of small YAML
-// files, so reading them costs a fraction of the analysis the digest exists to let a caller skip, and
-// content is the thing a reader actually means by "the same config". mtime and size agree for a file
-// restored from a copy, which is a state a developer reaches by checking out a branch.
+// files. Reading them costs a fraction of the analysis that the digest lets a caller skip. Content
+// is also what a reader means by "the same config". mtime and size agree for a file restored from a
+// copy, and a developer reaches that state by checking out a branch.
 //
 // The walk is SORTED and each entry folds in its relative path with an explicit length, so two trees
 // cannot digest alike by holding the same bytes under different names, and one cannot be confused
@@ -286,9 +286,9 @@ type DigestRoot struct {
 // DigestConfig returns one digest over the bytes under roots, plus the literal names.
 //
 // The split is not cosmetic. roots are what this resolution OPENED, and their contents decide the
-// run. names are things it only referred to, symbol library URIs being the case: they are handed to
-// the reader rather than read here, so they are folded in by name. A run searching a different
-// library is configured differently.
+// run. names are things it only referred to, such as symbol library URIs. Those are handed to the
+// reader rather than read here, so they are folded in by name. A run searching a different library
+// is configured differently.
 func DigestConfig(roots []DigestRoot, names []string) (string, error) {
 	h := sha256.New()
 	for _, r := range roots {
@@ -308,9 +308,9 @@ func foldRoot(h io.Writer, r DigestRoot) error {
 		return fmt.Errorf("digest %s: %w", r.Name, err)
 	}
 	// A root's own NAME is not folded in. The same profile set mounted at two paths is the same
-	// config, and its bytes are what decide the run. What IS folded is a boundary marker and the
-	// entry count, because without them two roots holding one file each produce the same byte stream
-	// as one root holding both.
+	// config, and its bytes decide the run. A boundary marker and the entry count ARE folded in.
+	// Without them, two roots holding one file each produce the same byte stream as one root
+	// holding both.
 	foldField(h, []byte("root"))
 	if !info.IsDir() {
 		foldCount(h, 1)
@@ -334,8 +334,8 @@ func foldRoot(h io.Writer, r DigestRoot) error {
 	if err != nil {
 		return fmt.Errorf("digest %s: %w", r.Name, err)
 	}
-	// WalkDir is already lexical, but the order is what the digest MEANS, so it is sorted here rather
-	// than inherited from a traversal whose guarantees could change.
+	// WalkDir is already lexical, but the digest's MEANING depends on the order. So a sort here sets
+	// the order, rather than a traversal whose guarantees could change.
 	sort.Strings(rels)
 	foldCount(h, len(rels))
 	for _, rel := range rels {

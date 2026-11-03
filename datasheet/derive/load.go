@@ -14,11 +14,11 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// LoadRecipes walks fsys for *.textproto Recipes and validates each: a name, a
-// compilable doc_title_pattern, and table rules whose patterns compile and whose
-// limit_kind names resolve to agni.v1.param.LimitKind values, and mux-table rules
-// that name a layout and at least one function column. All-or-nothing, like
-// param.LoadSet, so a broken recipe fails the load rather than shrinking the corpus.
+// LoadRecipes walks fsys for *.textproto Recipes and validates each. A recipe needs a
+// name and a compilable doc_title_pattern. Its table rules need patterns that compile
+// and limit_kind names that resolve to agni.v1.param.LimitKind values. Its mux-table
+// rules need a layout and at least one function column. The load is all-or-nothing,
+// like param.LoadSet, so a broken recipe fails the load rather than shrinking the corpus.
 func LoadRecipes(fsys fs.FS) ([]*derivepb.Recipe, error) {
 	var out []*derivepb.Recipe
 	err := walkTextprotos(fsys, func(path string, data []byte) error {
@@ -109,8 +109,8 @@ func MarshalManifest(m *derivepb.RunManifest) ([]byte, error) {
 	return prototext.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(m)
 }
 
-// MarshalSpec renders a derived PartSpec as textproto, the same hand-diffable form
-// the fixture corpus uses, through the one writer promotion uses too (param.MarshalSpecText).
+// MarshalSpec renders a derived PartSpec as textproto. The fixture corpus uses the same
+// hand-diffable form. It writes through param.MarshalSpecText, the writer promotion uses too.
 func MarshalSpec(s *parampb.PartSpec) ([]byte, error) {
 	return param.MarshalSpecText(s)
 }

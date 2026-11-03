@@ -1,10 +1,10 @@
-// Command diff is the diff rung of the Agni examples ladder, which compares two revisions of a
-// design and reads the semantic change taxonomy. It is the walkthrough form of `agni diff`.
-// The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only
-// binds the steps that run engine code.
+// Command diff is the diff rung of the Agni examples ladder. It compares two revisions of a design
+// and reads the semantic change taxonomy. It is the walkthrough form of `agni diff`. The narration
+// is in the sidecar walkthrough.md (demokit FromMarkdown). This file only binds the steps that run
+// engine code.
 //
-// Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
-// `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
+// The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
+// `make runquiet` takes non-interactive defaults (CI-safe), and `make doc` renders to markdown.
 package main
 
 import (

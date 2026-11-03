@@ -1,11 +1,11 @@
-// Package yamlpb binds a YAML document to a protobuf message, so a config the operator writes as YAML
-// keeps the message as its one schema (CONSTRAINTS C26).
+// Package yamlpb binds a YAML document to a protobuf message. An operator writes the config as
+// YAML, and the message is still its one schema (CONSTRAINTS C26).
 //
 // The plain route converts YAML to a generic tree, the tree to JSON, and binds the JSON with protojson.
-// It loses two things this package keeps. A YAML scalar's type is decided by its spelling rather than
-// by the field it fills, so `pin: 9` becomes a JSON number and protojson refuses it for a string field,
-// where an author plainly meant the pin named "9". And protojson's errors carry no line, so a typo in a
-// two-hundred-row map is reported without saying where.
+// That route loses two things, and this package keeps both. A YAML scalar's type is decided by its
+// spelling rather than by the field it fills, so `pin: 9` becomes a JSON number and protojson
+// refuses it for a string field, where an author plainly meant the pin named "9". And protojson's
+// errors carry no line, so a typo in a two-hundred-row map is reported without saying where.
 //
 // Decode walks the YAML node tree beside the message descriptor instead. Each scalar is written as the
 // JSON type its FIELD wants, every key is checked against the field names with the line it sits on,

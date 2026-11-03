@@ -23,11 +23,12 @@ import (
 // directory union (WS13-011).
 const annotationsDirSuffix = ".annotations"
 
-// osAnnotationStore is the OS-backed dsservice.AnnotationStore, writing per-author region-annotation
-// overlays under the mount. It follows the stores' shared I/O discipline (mounts.Resolve containment,
-// per-file lock, protojson) except that there is NO compare-and-swap, since each author owns their
-// file, and Get UNIONS every author's file for one datasheet. Anyone who mounts the folder sees every
-// overlay, because author namespaces and does not authenticate (mounts are the security boundary).
+// osAnnotationStore is the OS-backed dsservice.AnnotationStore. It writes per-author
+// region-annotation overlays under the mount. It follows the stores' shared I/O discipline of
+// mounts.Resolve containment, a per-file lock and protojson, with two differences. There is NO
+// compare-and-swap, since each author owns their file. And Get UNIONS every author's file for one
+// datasheet. Anyone who mounts the folder sees every overlay, because the author is a namespace and
+// not an authentication. The mounts are the security boundary.
 type osAnnotationStore struct {
 	mounts []mounts.Mount
 	locks  sync.Map // abs author-file path -> *sync.Mutex
@@ -64,8 +65,9 @@ func safeAuthor(author string) string {
 	return b.String()
 }
 
-// Get returns every author's overlay for the datasheet, ordered by author for a stable union. A
-// datasheet nobody has annotated (the directory does not exist) is (nil, nil), a normal state.
+// Get returns every author's overlay for the datasheet, ordered by author for a stable union. For a
+// datasheet nobody has annotated, the directory does not exist and Get returns (nil, nil). That is a
+// normal state.
 func (s *osAnnotationStore) Get(ctx context.Context, uri artifact.URI) ([]*dsapi.AnnotationSet, error) {
 	dir, err := resolveSibling(s.mounts, uri, annotationsDir)
 	if err != nil {

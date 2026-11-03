@@ -8,8 +8,9 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// ingestWith is a test's snapshot of def through ss, the snapshot service of the service under test,
-// so a request names it as a client's does after ingesting (agni issue 1061).
+// ingestWith ingests def through ss, the snapshot service of the service under test, and returns
+// the snapshot's name. A test's request then names it as a client's does after ingesting (agni
+// issue 1061).
 func ingestWith(t testing.TB, ss *service.SnapshotService, def *webapi.Snapshot) string {
 	t.Helper()
 	s, err := ss.Ingest(context.Background(), &webapi.IngestRequest{Snapshot: def})

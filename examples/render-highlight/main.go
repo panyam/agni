@@ -1,12 +1,12 @@
 // Command render-highlight is the explainability rung of the Agni examples ladder. It runs the
 // rule catalog over a design, then BAKES each finding's subject as a highlight into one rendered
 // SVG, so a report finding becomes a picture of the design. It is the offline twin of the web
-// viewer's click-to-locate, one render.SheetSVGHighlighted call over the same HighlightSpec
-// vocabulary the server projects as a live overlay. Narration lives in the sidecar
-// walkthrough.md, and this file only binds the steps that run engine code.
+// viewer's click-to-locate. It makes one render.SheetSVGHighlighted call over the HighlightSpec
+// vocabulary, and the server projects the same vocabulary as a live overlay. Narration is in the
+// sidecar walkthrough.md, and this file only binds the steps that run engine code.
 //
-// Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
-// `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
+// The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
+// `make runquiet` takes non-interactive defaults (CI-safe), and `make doc` renders to markdown.
 package main
 
 import (
@@ -28,7 +28,7 @@ import (
 var walkthroughMD []byte
 
 func main() {
-	// Default to a bundled KiCad schematic with faithful geometry AND a clear finding: two symbols
+	// Default to a bundled KiCad schematic with faithful geometry AND a clear finding. Two symbols
 	// share ref-des U1, so the component finding draws a box on each real placement.
 	design := common.AskPath("design", "../common/designs/duplicate-refdes.kicad_sch")
 
@@ -58,8 +58,8 @@ func main() {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
 		// FaithfulGeometry dispatches by extension (KiCad, EDIF .eds, ...), as the CLI does, so the
-		// highlight lands on the design's own drawing. common.Load read the netlist; this reads the
-		// render canvas.
+		// highlight is drawn on the design's own drawing. common.Load read the netlist, and this
+		// reads the render canvas.
 		g, err := (&formats.Loader{}).FaithfulGeometry(design.Path())
 		if err != nil {
 			return demokit.Errf("load geometry %s: %v", design.Path(), err)
@@ -83,11 +83,11 @@ func main() {
 	demo.Execute()
 }
 
-// specsForFindings maps each finding's subject to one HighlightSpec, the same net/component/pin
-// vocabulary the web click-to-locate builds. A net draws as a PATH marker along its wire and
-// carries its per-instance net id, so two same-named nets stay distinct. A component or pin draws
-// as a translucent bounding box, one per matched placement. Findings are computed on the netlist
-// and located on the geometry by name/id (CONSTRAINTS C21).
+// specsForFindings maps each finding's subject to one HighlightSpec. It uses the same
+// net/component/pin vocabulary as the web click-to-locate. A net draws as a PATH marker along its
+// wire and has its per-instance net id, so two same-named nets are kept distinct. A component or
+// pin draws as a translucent bounding box, one per matched placement. Findings are computed on the
+// netlist and located on the geometry by name/id (CONSTRAINTS C21).
 func specsForFindings(findings []check.Finding) []*geom.HighlightSpec {
 	var specs []*geom.HighlightSpec
 	for _, f := range findings {

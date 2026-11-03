@@ -10,14 +10,14 @@ import (
 )
 
 // A diagram lives in `figures/` and a page pulls it in with `{{ includeFile "figures/x.svg" }}`, so
-// the SVG is inlined at BUILD time. That keeps `currentColor` and `--accent-color` working, which an
-// `<img src>` cannot do because the image renders in its own document and inherits nothing from the
-// host page, while keeping several hundred lines of path data out of the prose.
+// the SVG is inlined at BUILD time. Inlining keeps `currentColor` and `--accent-color` working, and
+// it keeps several hundred lines of path data out of the prose. An `<img src>` cannot do that,
+// because the image renders in its own document and inherits nothing from the host page.
 //
-// The failure mode this guards is silence. `IncludeFile` returns an empty string when the path does
-// not resolve, so a typo, a rename, or a moved file removes the figure from the page and the build
-// still succeeds. Verified by pointing a live include at a missing file, and the page rendered with
-// zero SVG in its body and no error anywhere.
+// This test guards against a silent failure. `IncludeFile` returns an empty string when the path
+// does not resolve, so a typo, a rename, or a moved file removes the figure from the page and the
+// build still succeeds. We verified this by pointing a live include at a missing file. The page
+// rendered with zero SVG in its body and no error anywhere.
 
 var includeFileRe = regexp.MustCompile(`\{\{-?\s*includeFile\s+"([^"]+)"`)
 
@@ -56,8 +56,8 @@ func TestEveryIncludedFileResolves(t *testing.T) {
 	}
 }
 
-// A figure nothing includes is a diagram someone drew and the prose never adopted, the same argument
-// terms_test.go makes for a glossary entry with no caller.
+// If nothing includes a figure, someone drew a diagram and the prose never adopted it. terms_test.go
+// makes the same argument for a glossary entry with no caller.
 func TestEveryFigureIsIncluded(t *testing.T) {
 	included := includedFiles(t)
 	entries, err := os.ReadDir(filepath.Join(projectRoot, figuresDir))
@@ -78,7 +78,7 @@ func TestEveryFigureIsIncluded(t *testing.T) {
 	}
 }
 
-// The figures directory exists so these stay theme-aware. A literal colour reads
+// The figures directory exists so these figures are theme-aware. A literal colour reads
 // correctly in whichever theme it was authored in and badly in the other, and the docsite has both.
 func TestFiguresCarryNoColourLiterals(t *testing.T) {
 	entries, err := os.ReadDir(filepath.Join(projectRoot, figuresDir))
@@ -104,8 +104,8 @@ func TestFiguresCarryNoColourLiterals(t *testing.T) {
 	}
 }
 
-// A BLANK LINE inside a figure file ends the raw-HTML block the inlined SVG is, and the failure is
-// invisible in the source and in the build.
+// The inlined SVG is a raw-HTML block, and a BLANK LINE inside a figure file ends that block. The
+// failure is invisible in the source and in the build.
 //
 // `IncludeFile` splices the file into the page BEFORE the markdown renderer runs, so the SVG is
 // ordinary raw HTML by the time CommonMark sees it, and CommonMark ends an HTML block at the first
@@ -113,12 +113,12 @@ func TestFiguresCarryNoColourLiterals(t *testing.T) {
 // holding nothing but an open tag (`<g fill="...">`) opens a new HTML block and survives, while a
 // line with content after the tag (`<text x="8" y="44">your machine</text>`) does not, and is parsed
 // as a paragraph instead. The renderer then wraps that chunk in `<p>`, which closes the `<svg>`
-// early, and every element after it lands OUTSIDE the figure. The page still builds, the figure
+// early, and every element after it ends up OUTSIDE the figure. The page still builds, the figure
 // still renders, and the elements in the orphaned tail are simply absent.
 //
 // Four figures merged before this test shipped in that state, each missing its closing
-// caption on the live site. Found by screenshotting a figure and counting the text runs, not by any
-// test, which is why this one exists. `docsite/README.md` carried the opposite advice until then.
+// caption on the live site. We found them by screenshotting a figure and counting the text runs,
+// not by any test, so this test now exists. `docsite/README.md` gave the opposite advice until then.
 func TestFiguresCarryNoBlankLines(t *testing.T) {
 	entries, err := os.ReadDir(filepath.Join(projectRoot, figuresDir))
 	if err != nil {

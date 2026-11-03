@@ -41,7 +41,7 @@ func TestValidateAcceptsACitedCandidate(t *testing.T) {
 }
 
 // The fabrication check. A proposer that invents a plausible sentence fails without anyone opening
-// the document, which is what makes an unreliable proposer safe to put in front of a person.
+// the document. So an unreliable proposer is safe to put in front of a person.
 func TestValidateRejectsAnInventedQuote(t *testing.T) {
 	c := good()
 	c.Citation.Quote = "4.2"
@@ -73,8 +73,8 @@ func TestValidateRejectsUncheckableCandidates(t *testing.T) {
 	}
 }
 
-// Line breaking is the producer's, not the claim's, so whitespace is normalised. Nothing else is:
-// a paraphrase is not a quote.
+// Line breaking belongs to the producer, not the claim, so whitespace is normalised. Nothing else
+// is, and a paraphrase is not a quote.
 func TestQuoteMatchingIgnoresOnlyWhitespace(t *testing.T) {
 	c := good()
 	c.Citation.RegionId, c.Citation.Row, c.Citation.Col = "p1.x1", -1, -1
@@ -119,7 +119,7 @@ func TestAcceptRevalidatesAndStampsProvenance(t *testing.T) {
 }
 
 // Retrieval knows which passage is about a symbol and nothing about what it says. Proposing a value
-// would be the confident wrong answer this package exists to keep out.
+// would give a confident wrong answer, and this package exists to keep those out.
 func TestRetrievalSourceProposesRegionsNeverValues(t *testing.T) {
 	got, err := RetrievalSource{}.Propose(&candpb.Request{Mpn: "ACME-1", Symbol: "VCC"}, testDoc())
 	if err != nil {
@@ -138,7 +138,7 @@ func TestRetrievalSourceProposesRegionsNeverValues(t *testing.T) {
 	}
 }
 
-// A document that does not discuss the symbol yields nothing, which is the correct answer and not a
+// A document that does not discuss the symbol yields nothing. That is the correct answer, not a
 // reason to lower the bar.
 func TestRetrievalSourceReturnsNothingRatherThanReaching(t *testing.T) {
 	got, err := RetrievalSource{}.Propose(&candpb.Request{Symbol: "thermalimpedance"}, testDoc())

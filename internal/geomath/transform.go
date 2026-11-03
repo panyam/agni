@@ -4,9 +4,9 @@
 // translate, matching section 7 of docsite/content/reference/edif-schematic-primer.md and the
 // Transform message in docsite/content/architecture/geometry-and-rendering.md#proto-contract-sketch.
 //
-// Readers computing pin world positions for connectivity (kicad) and core/render drawing
-// placements both use it, so pins land where symbols are drawn. Readers must not import the
-// presentation tier for it (CONSTRAINTS C17).
+// Two kinds of caller use it. Readers compute pin world positions for connectivity (kicad), and
+// core/render draws placements. Both use the same math, so pins sit where symbols are drawn.
+// Readers must not import the presentation tier for it (CONSTRAINTS C17).
 package geomath
 
 import (
@@ -95,11 +95,11 @@ func roundInt64(v float64) int64 {
 }
 
 // ComposePlacement maps a footprint-local offset into board (world) coordinates as
-// world = at + M(R(rotationDeg) * offset). R rotates CCW and M mirrors X iff the part is on the
-// back side, applied AFTER the rotation, so a back part is its front footprint rotated then
+// world = at + M(R(rotationDeg) * offset). R rotates CCW. M mirrors X iff the part is on the
+// back side, and it applies AFTER the rotation, so a back part is its front footprint rotated then
 // reflected. rotationDeg is already in the canonical Y-up frame (a Y-down source negates it on
-// import) and offset is in the reader's Y-flipped source-unit frame (pcbPoint). Every board
-// producer and the board renderer share it, which keeps a footprint's pads and silkscreen text
+// import), and offset is in the reader's Y-flipped source-unit frame (pcbPoint). Every board
+// producer and the board renderer share it, so a footprint's pads and silkscreen text are placed
 // together. A nil at yields the origin and a nil offset yields at unchanged. It truncates to int64
 // rather than rounding, to match the board renderer's pad placement byte-for-byte.
 func ComposePlacement(at *geom.Point, rotationDeg float64, mirror bool, offset *geom.Point) *geom.Point {
