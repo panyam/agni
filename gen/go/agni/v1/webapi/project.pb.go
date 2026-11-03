@@ -23,23 +23,23 @@ const (
 
 // Project is one declared set of designs that share configuration.
 //
-// It is READ-ONLY. There is no CreateProject, and its absence is deliberate rather than pending:
-// scaffolding a project means authoring design intent from a design, which is a judgment step with a
-// confidentiality boundary rather than a server operation. See CONSTRAINTS C23 for why a read-only
-// resource is still AIP-shaped here.
+// It is READ-ONLY. There is no CreateProject, and that is deliberate rather than pending.
+// Scaffolding a project means authoring design intent from a design. That is a judgment step with a
+// confidentiality boundary, not a server operation. CONSTRAINTS C23 says why a read-only resource is
+// still AIP-shaped here.
 //
-// Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which is
-// the same boundary drawn from the other side: writing descriptors into a folder an operator named is
+// Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which
+// draws the same boundary from the other side. Writing descriptors into a folder an operator named is
 // not a server mutating a mount.
 //
-// Its configuration is an AnalysisConfig, the same message a request carries and a Design declares, so
+// Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
 // a config tier is added once and every surface gets it (agni issue 224).
 type Project struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// name is the resource name, "projects/{project}". The id is DECLARED by the operator in
-	// `project.yaml`, not derived from the folder path and not server-assigned. That is what makes it
-	// stable: a project keeps its identity when its folder is renamed or moved between mounts, and two
-	// mounts do not accidentally collide by having directories of the same name.
+	// name is the resource name, "projects/{project}". The operator DECLARES the id in
+	// `project.yaml`. It is not derived from the folder path and not server-assigned, so it is stable.
+	// A project keeps its identity when its folder is renamed or moved between mounts, and two mounts
+	// do not accidentally collide by having directories of the same name.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// title is the human-readable label, falling back to the id when the descriptor gave none.
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
@@ -48,14 +48,15 @@ type Project struct {
 	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	// config is what this project's designs are checked against, and the reason the resource exists.
 	// Naming conventions, interface profiles, and seeded parameters describe the TEAM rather than any
-	// one board, so they belong to the project and reach a run through the design's edge to it. Before
-	// this they could only be `agni serve` startup flags, which a deployment mounting a mixed set
-	// applied to every design it read: an overlay's profiles superseded the built-ins for every board
-	// on the server, and an overlay's rail lexicon changed net roles on designs that never asked.
+	// one board. So they belong to the project, and they reach a run through the design's edge to it.
+	// Before this they could only be `agni serve` startup flags. A deployment mounting a mixed set
+	// applied those flags to every design it read. An overlay's profiles superseded the built-ins for
+	// every board on the server, and an overlay's rail lexicon changed net roles on designs that never
+	// asked.
 	//
-	// A Project and a Design carry the same message, as their descriptors share one schema (agni issue
-	// 1136), because the shape genuinely is the same and two copies of it would be one more place for
-	// two layers to disagree about what config is. A design's own layer goes on top of its project's.
+	// A Project and a Design use the same message, as their descriptors share one schema (agni issue
+	// 1136). The shape really is the same. Two copies of it would be one more place for two layers to
+	// disagree about what config is. A design's own layer goes on top of its project's.
 	Config        *AnalysisConfig `protobuf:"bytes,9,opt,name=config,proto3" json:"config,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -133,38 +134,38 @@ type Design struct {
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	// uri is the folder holding `design.yaml`.
 	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
-	// entry_uri names the file this design's ANALYSIS reads: the netlist the
-	// design team produces (CONSTRAINTS C21). Making it explicit is what turns a warning into
-	// behaviour. A folder holding an OrCAD `.eds` schematic export beside the `.edn` netlist reads a
-	// different component count depending on which a tool opens, and the CLI could previously only
-	// print a warning telling the operator to go consult their own descriptor, because nothing in the
-	// engine modelled "this folder is one design, and this file is its entry".
+	// entry_uri names the file this design's ANALYSIS reads, which is the netlist the design team
+	// produces (CONSTRAINTS C21). Imagine a folder holding an OrCAD `.eds` schematic export beside the
+	// `.edn` netlist. The component count depends on which file a tool opens. Nothing in the engine
+	// modelled "this folder is one design, and this file is its entry". So the CLI could only print a
+	// warning telling the operator to consult their own descriptor. With entry_uri explicit, the
+	// engine acts on it instead of warning.
 	EntryUri string `protobuf:"bytes,4,opt,name=entry_uri,json=entryUri,proto3" json:"entry_uri,omitempty"`
-	// companion_uris name files that are VIEWS of this same design rather than
-	// independent sources of it: a schematic export, a board file, an IPC-2581. They are geometry to
-	// render and to locate findings on, never a second component source to reconcile against the
-	// netlist (C21).
+	// companion_uris name files that are VIEWS of this same design rather than independent sources of
+	// it, such as a schematic export, a board file, or an IPC-2581. They are geometry to render and to
+	// locate findings on. They are never a second component source to reconcile against the netlist
+	// (C21).
 	//
-	// Membership is declared per file rather than inferred from "everything beside the entry", because
-	// a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
-	// inferred rule would turn a diff of two revisions into a diff of one against itself.
+	// Membership is declared per file rather than inferred from "everything beside the entry". A later
+	// revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
+	// rule would turn a diff of two revisions into a diff of one against itself.
 	CompanionUris []string `protobuf:"bytes,5,rep,name=companion_uris,json=companionUris,proto3" json:"companion_uris,omitempty"`
-	// config is this design's own analysis config, what its descriptor declares on top of its project's:
-	// usually its intent and its symbol library, and any section a board needs apart from its team, such
-	// as its own convention or an extra checklist. Its extends names the design's project. Carrying both
-	// in one message shape is what lets a composer layer them without knowing which tier it holds.
+	// config is this design's own analysis config, which its descriptor declares on top of its
+	// project's. It usually has the design's intent and symbol library. It also has any section a board
+	// needs apart from its team, such as its own convention or an extra checklist. Its extends names the
+	// design's project. The project and the design use one message shape, so a composer can layer them
+	// without knowing which tier it holds.
 	Config *AnalysisConfig `protobuf:"bytes,7,opt,name=config,proto3" json:"config,omitempty"`
-	// intent_uri, which moved into config and is now config.intent.
 	// revisions are the design's other revisions, each with its own entry and the companions that are
 	// views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
 	// Naming a revision's entry reads it with its own companions, so a later netlist is checked against
 	// its own board rather than none, and a companion is never borrowed from another revision. A file
 	// in the folder that no revision lists still reads exactly as named.
 	Revisions []*DesignRevision `protobuf:"bytes,8,rep,name=revisions,proto3" json:"revisions,omitempty"`
-	// flatten_hierarchy says this design's netlist is read whole, walking into every hierarchical block
-	// its top level places, as Snapshot.flatten_hierarchy asks for one read (agni issues 718, 1102). It
-	// is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a snapshot cannot
-	// turn off what its design declares. It applies to every revision.
+	// flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
+	// that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
+	// 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
+	// snapshot cannot turn off what its design declares. It applies to every revision.
 	FlattenHierarchy bool `protobuf:"varint,9,opt,name=flatten_hierarchy,json=flattenHierarchy,proto3" json:"flatten_hierarchy,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -360,10 +361,10 @@ type ListProjectsRequest struct {
 	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token continues a previous call. An empty token starts at the first project.
 	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	// filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`, matched
-	// against the authority of the project's URI. An unsupported
-	// filter is an error rather than a silently ignored argument, because a client that believed it had
-	// filtered and had not would read another mount's projects as its own.
+	// filter narrows the listing (AIP-160). Only `mount` is supported, as in `mount="boards"`, matched
+	// against the authority of the project's URI. An unsupported filter is an error rather than a
+	// silently ignored argument. A client that believed it had filtered, and had not, would read
+	// another mount's projects as its own.
 	Filter        string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -695,18 +696,18 @@ type ResolveDesignResponse struct {
 	// Unset is a normal answer rather than an error. A mounted folder with no declared designs is the
 	// ordinary case, and a client that gets nothing back shows the plain viewer and the built-in
 	// catalog. Turning the common path into an error would push every caller into treating a failure
-	// path as normal, which is how a real failure stops being noticed.
+	// path as normal. A real failure would then go unnoticed.
 	Design *Design `protobuf:"bytes,1,opt,name=design,proto3" json:"design,omitempty"`
 	// project is the design's project, UNSET when the design has none above it.
 	//
 	// A design without a project is a real design, not a half-resolved one. Its declaration still says
-	// which file that folder's analysis reads, which is all a caller pointed at a path by a human
-	// needs. What it lacks is a NAME: a resource name needs a parent, so such a design comes back with
-	// `Design.name` empty and cannot be fetched by name later. Meaning without addressability.
+	// which file that folder's analysis reads. A caller that a human pointed at a path needs nothing
+	// more. Such a design has no NAME, because a resource name needs a parent. So it comes back with
+	// `Design.name` empty and cannot be fetched by name later.
 	//
-	// This is also the shape of the guarantee. Project config reaches a design through this edge, so a
-	// design with no project has no project config to apply and cannot be checked against another
-	// project's rules — structural rather than discouraged.
+	// This edge also gives the guarantee. Project config reaches a design only through it. So a design
+	// with no project has no project config to apply, and it cannot be checked against another
+	// project's rules. The structure enforces that.
 	Project       *Project `protobuf:"bytes,2,opt,name=project,proto3" json:"project,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

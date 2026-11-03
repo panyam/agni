@@ -21,19 +21,21 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// PROVISIONAL: nothing consumes this schema yet, so names and shape may change until a front-end or a
-// deck-loading surface arrives to exercise it. See the file header.
+// PROVISIONAL. Nothing consumes this schema yet, so names and shape may change until a front-end or
+// a deck-loading surface arrives to exercise it. See the file header.
 //
-// RuleDeck is a set of rule definitions from one source: a shipped catalog exported for inspection, a
-// customer's house rules, or a foreign rule file translated by a front-end. The deck is the unit a
-// front-end emits and a catalog source consumes, which is what makes profile YAML, datalog text, a
-// future DSL, and a vendor rule deck four front-ends onto one form rather than four parallel paths.
+// RuleDeck is a set of rule definitions from one source. The source can be a shipped catalog
+// exported for inspection, a customer's house rules, or a foreign rule file translated by a
+// front-end. A front-end emits a deck, and a catalog source consumes one. So profile YAML, datalog
+// text, a future DSL, and a vendor rule deck are four front-ends onto one form rather than four
+// parallel paths.
 type RuleDeck struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the catalog namespace the deck's rules appear under, matching check.RuleSource.Name().
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// source names where the deck came from, for provenance in an error or a listing. Free text: a file
-	// name, a vendor tool, an exporting build. It is descriptive, never resolved or opened.
+	// source names where the deck came from, for provenance in an error or a listing. It is free text,
+	// such as a file name, a vendor tool or an exporting build. It is descriptive, never resolved or
+	// opened.
 	Source        string     `protobuf:"bytes,2,opt,name=source,proto3" json:"source,omitempty"`
 	Rules         []*RuleDef `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -91,10 +93,10 @@ func (x *RuleDeck) GetRules() []*RuleDef {
 	return nil
 }
 
-// RuleDef is one declaration. It compiles to one OR MORE rules: a spec and a query each yield one, an
-// interface profile yields one per requirement. That asymmetry is the point of a profile rather than a
-// wart — one declaration standing in for a family of near-identical checks is the whole mechanism —
-// so the shape says so instead of pretending every definition is a single rule.
+// RuleDef is one declaration. It compiles to one OR MORE rules. A spec and a query each yield one,
+// and an interface profile yields one per requirement. That asymmetry is the purpose of a profile,
+// not a wart, because one declaration stands in for a family of near-identical checks. So the shape
+// says so instead of pretending every definition is a single rule.
 type RuleDef struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Body:
@@ -193,10 +195,10 @@ func (*RuleDef_Query) isRuleDef_Body() {}
 
 func (*RuleDef_Profile) isRuleDef_Body() {}
 
-// RuleMeta is the identity and prose a compiled rule carries. Reads and Primitives are absent on
-// purpose: both are DERIVED from a definition's body by its compiler, and serializing a derived value
-// invites a document whose declared reads disagree with what the rule actually does. What IS here is
-// what a body cannot imply — the declared gates.
+// RuleMeta is the identity and prose of a compiled rule. Reads and Primitives are absent on purpose.
+// A definition's compiler DERIVES both from its body. Serializing a derived value invites a document
+// whose declared reads disagree with what the rule actually does. This message holds what a body
+// cannot imply, the declared gates.
 type RuleMeta struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Name     string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -206,13 +208,14 @@ type RuleMeta struct {
 	Detail   string                 `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`                                                                       // long-form markdown: meaning, rationale, diagram, query structure
 	Tags     map[string]string      `protobuf:"bytes,6,rep,name=tags,proto3" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // the open classification (category, tier, distribution, ...)
 	// optional_reads is the subset of reads a rule consults opportunistically. Their absence must not
-	// make the rule inapplicable, which is a claim only the author can make: a netlist rule that merely
-	// EXEMPTS findings using a datasheet fact would otherwise read not-applicable wherever no datasheet
-	// corpus is attached, and report nothing at all.
+	// make the rule inapplicable, and only the author can make that claim. Imagine a netlist rule that
+	// merely EXEMPTS findings using a datasheet fact. Without this field it would read not-applicable
+	// wherever no datasheet corpus is attached, and report nothing at all.
 	OptionalReads []string `protobuf:"bytes,7,rep,name=optional_reads,json=optionalReads,proto3" json:"optional_reads,omitempty"`
 	// requires_capability lists source-format capabilities the rule needs to evaluate SOUNDLY. A rule
-	// inferring a defect from the ABSENCE of a construct the format cannot express produces no findings,
-	// which is indistinguishable from a clean pass, so it must be gated to not-applicable instead.
+	// may infer a defect from the ABSENCE of a construct. If the format cannot express that construct,
+	// the rule produces no findings, and that looks the same as a clean pass. So such a rule must be
+	// gated to not-applicable instead.
 	RequiresCapability []string `protobuf:"bytes,8,rep,name=requires_capability,json=requiresCapability,proto3" json:"requires_capability,omitempty"`
 	// remedy is what to do about a violation, in the imperative. It is generic over the RULE rather
 	// than the subject, so it names the class of change and never a designator or a computed value.
@@ -368,8 +371,8 @@ func (x *SpecRule) GetBody() *SpecBody {
 	return nil
 }
 
-// SpecBody mirrors check.Spec. over names the entity set (nets, components, pins, ...); let names
-// intermediate terms usable in both the predicate and the message; message is a template where
+// SpecBody mirrors check.Spec. over names the entity set (nets, components, pins, ...). let names
+// intermediate terms usable in both the predicate and the message. message is a template, where
 // "{name}" interpolates a let binding or a fact and "{name:q}" quotes it. An absent where selects
 // every entity.
 type SpecBody struct {
@@ -379,9 +382,9 @@ type SpecBody struct {
 	Where   *SpecExpr              `protobuf:"bytes,3,opt,name=where,proto3" json:"where,omitempty"`
 	Message string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
 	// scope is which elements of over the rule JUDGES; absent judges all of them. It is separate from
-	// where because falling out of each means something different: out of scope produces no verdict at
-	// all, while failing where produces a PASS. With one predicate a subject the rule was never about
-	// is indistinguishable from one it checked and cleared.
+	// where because the two exclusions mean different things. An element out of scope produces no
+	// verdict at all, while an element failing where produces a PASS. With one predicate, a subject
+	// the rule was never about would look the same as one it checked and cleared.
 	Scope         *SpecExpr `protobuf:"bytes,5,opt,name=scope,proto3" json:"scope,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -452,8 +455,8 @@ func (x *SpecBody) GetScope() *SpecExpr {
 	return nil
 }
 
-// SpecTerm produces a value for one entity. The set is closed, which is what keeps the rule layer
-// datalog-class rather than Turing-complete, and what makes a generated rule cheap to validate.
+// SpecTerm produces a value for one entity. The set is closed. That keeps the rule layer
+// datalog-class rather than Turing-complete, and it makes a generated rule cheap to validate.
 type SpecTerm struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Term:
@@ -683,9 +686,9 @@ func (*SpecLit_I) isSpecLit_Value() {}
 
 func (*SpecLit_B) isSpecLit_Value() {}
 
-// SpecCall invokes a registered function by NAME with evaluated arguments — the Go escape hatch for
-// multi-clause logic the AST should not express. The name is the entire serialized form: an
-// unregistered name is rejected when a definition is read, not discovered when a rule runs.
+// SpecCall invokes a registered function by NAME with evaluated arguments. It is the Go escape hatch
+// for multi-clause logic the AST should not express. The name is the entire serialized form.
+// Reading a definition rejects an unregistered name, so a rule run never discovers one.
 type SpecCall struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Fn            string                 `protobuf:"bytes,1,opt,name=fn,proto3" json:"fn,omitempty"`
@@ -1236,8 +1239,8 @@ func (x *SpecExistsIn) GetWhere() *SpecExpr {
 }
 
 // QueryRule is a rule whose body is a datalog program plus the mapping from an answer row to a
-// finding. Rules and search share one vocabulary here: a rule asserts a property over the fact
-// relations, a search is an arbitrary query over the same ones.
+// finding. Rules and search share one vocabulary here. A rule asserts a property over the fact
+// relations, and a search is an arbitrary query over the same relations.
 type QueryRule struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Meta       *RuleMeta              `protobuf:"bytes,1,opt,name=meta,proto3" json:"meta,omitempty"`
@@ -1246,17 +1249,17 @@ type QueryRule struct {
 	SubjectVar string                 `protobuf:"bytes,4,opt,name=subject_var,json=subjectVar,proto3" json:"subject_var,omitempty"` // projected variable (no leading "?") bound to the finding's subject
 	PinVar     string                 `protobuf:"bytes,5,opt,name=pin_var,json=pinVar,proto3" json:"pin_var,omitempty"`             // projected variable bound to the finding's pin; kind="pin" only
 	Message    string                 `protobuf:"bytes,6,opt,name=message,proto3" json:"message,omitempty"`                         // template; each {var} is replaced by that variable's bound value
-	// param_symbol, on a component-subject datasheet rule, names the datasheet symbol the rule checks.
-	// The compiler resolves that parameter's citation from the subject's seeded spec, so a
-	// datalog-authored datasheet finding carries the same doc/page/section/confidence a built-in one
-	// does. Empty means the rule is not datasheet-backed.
+	// param_symbol names the datasheet symbol that a component-subject datasheet rule checks. The
+	// compiler resolves that parameter's citation from the subject's seeded spec. So a
+	// datalog-authored datasheet finding has the same doc/page/section/confidence as a built-in one.
+	// Empty means the rule is not datasheet-backed.
 	ParamSymbol string `protobuf:"bytes,7,opt,name=param_symbol,json=paramSymbol,proto3" json:"param_symbol,omitempty"`
-	// context_vars are further projected variables to carry as the finding's context entities: the
-	// entities the message NAMES but is not ABOUT (agni issue 349). Empty for a rule whose message
-	// names only its subject.
+	// context_vars are further projected variables, emitted as the finding's context entities. The
+	// message NAMES these entities but is not ABOUT them (agni issue 349). Empty for a rule whose
+	// message names only its subject.
 	//
 	// subject_var already proves this authoring surface can say which projected variable plays which
-	// part. This generalizes it from one variable to a list, which is all the field is.
+	// part. This field generalizes it from one variable to a list, and does nothing more.
 	ContextVars   []*ContextVar `protobuf:"bytes,8,rep,name=context_vars,json=contextVars,proto3" json:"context_vars,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1411,15 +1414,15 @@ func (x *ContextVar) GetRole() string {
 	return ""
 }
 
-// DatalogQuery mirrors query.Query: rules define derived relations and goal is the conjunction to
-// solve, with select naming the answer columns. Every field of the engine's query is carried, and
-// TestQueryProtoCarriesEveryField fails when the engine grows one this message does not.
+// DatalogQuery mirrors query.Query. rules define derived relations, goal is the conjunction to
+// solve, and select names the answer columns. This message has every field of the engine's query, and
+// TestQueryProtoKnowsEveryEngineField fails when the engine adds a field this message lacks.
 type DatalogQuery struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Rules  []*DatalogRule         `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
 	Goal   *DatalogBody           `protobuf:"bytes,2,opt,name=goal,proto3" json:"goal,omitempty"`
 	Select []*DatalogTerm         `protobuf:"bytes,3,rep,name=select,proto3" json:"select,omitempty"`
-	// having filters the GROUPS the select's aggregates form, after the reduce. Each is a
+	// having filters the GROUPS that the select's aggregates form, after the reduce. Each is a
 	// DatalogCompare whose left term is an aggregate.
 	Having []*DatalogCompare `protobuf:"bytes,4,rep,name=having,proto3" json:"having,omitempty"`
 	// order_by sorts the answer by select columns, after the reduce and the having filter.
@@ -1575,7 +1578,7 @@ func (x *DatalogOrder) GetDesc() bool {
 }
 
 // DatalogRule derives its head for every binding satisfying its body. Disjunction is several rules
-// sharing one head relation rather than an OR node, which is what keeps a program stratifiable.
+// sharing one head relation rather than an OR node. That keeps a program stratifiable.
 type DatalogRule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Head  *DatalogAtom           `protobuf:"bytes,1,opt,name=head,proto3" json:"head,omitempty"`
@@ -1646,9 +1649,10 @@ func (x *DatalogRule) GetHeadTypes() []*DatalogArgType {
 	return nil
 }
 
-// DatalogArgType is a declared argument type: an entity kind (kind, or kind_from naming the head
-// variable that carries each row's kind, with owner naming the variable that locates it), or a
-// scalar type with its unit. domain lists the values the argument may take, when it is closed.
+// DatalogArgType is a declared argument type, either an entity kind or a scalar type with its unit.
+// kind gives the entity kind directly. kind_from instead names the head variable that holds each
+// row's kind, and owner names the variable that locates that entity. domain lists the values the
+// argument may take, when that set is closed.
 type DatalogArgType struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Kind          string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
@@ -1897,8 +1901,8 @@ type DatalogLiteral_Agg struct {
 }
 
 type DatalogLiteral_Opt struct {
-	// opt is `optional { body }`, a left outer join: the clause's row holds whether body matches or
-	// not, and a variable only body binds is absent when it does not.
+	// opt is `optional { body }`, a left outer join. The clause's row holds whether body matches or
+	// not, and a variable that only body binds is absent when body does not match.
 	Opt *DatalogBody `protobuf:"bytes,5,opt,name=opt,proto3,oneof"`
 }
 
@@ -1912,9 +1916,10 @@ func (*DatalogLiteral_Agg) isDatalogLiteral_Literal() {}
 
 func (*DatalogLiteral_Opt) isDatalogLiteral_Literal() {}
 
-// DatalogBodyAggregate binds result to an aggregate over the bindings of body, reduced once per value
-// of the variables body shares with the rest of the clause: `part(?r), ?c = count(?n) : { pin(?r, ?n,
-// _) }` counts each part's pins, and a part with no pins counts 0.
+// DatalogBodyAggregate binds result to an aggregate over the bindings of body. The aggregate is
+// reduced once per value of the variables that body shares with the rest of the clause. For example,
+// `part(?r), ?c = count(?n) : { pin(?r, ?n, _) }` counts each part's pins, and a part with no pins
+// counts 0.
 type DatalogBodyAggregate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Result        string                 `protobuf:"bytes,1,opt,name=result,proto3" json:"result,omitempty"` // the variable bound, without its leading "?"
@@ -1981,9 +1986,9 @@ type DatalogAtom struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Relation string                 `protobuf:"bytes,1,opt,name=relation,proto3" json:"relation,omitempty"`
 	Args     []*DatalogTerm         `protobuf:"bytes,2,rep,name=args,proto3" json:"args,omitempty"`
-	// fact is the variable `edge(?a, ?b) as ?r` binds to the fact the atom matched, without its leading
-	// "?" (panyam/jaala#279). Empty when the atom binds none. Only a positive atom over a fact relation
-	// may set it, and the engine refuses it anywhere else.
+	// fact names the variable bound to the fact the atom matched, as ?r is in `edge(?a, ?b) as ?r`,
+	// without its leading "?" (panyam/jaala#279). Empty when the atom binds none. Only a positive atom
+	// over a fact relation may set it, and the engine refuses it anywhere else.
 	Fact          string `protobuf:"bytes,3,opt,name=fact,proto3" json:"fact,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2040,8 +2045,8 @@ func (x *DatalogAtom) GetFact() string {
 	return ""
 }
 
-// DatalogCompare is a built-in predicate over two terms, evaluated once both are bound. Numeric when
-// both bound values carry a number, string otherwise.
+// DatalogCompare is a built-in predicate over two terms, evaluated once both are bound. It compares
+// numerically when both bound values have a number, and as strings otherwise.
 type DatalogCompare struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Left          *DatalogTerm           `protobuf:"bytes,1,opt,name=left,proto3" json:"left,omitempty"`
@@ -2102,8 +2107,9 @@ func (x *DatalogCompare) GetRight() *DatalogTerm {
 	return nil
 }
 
-// DatalogTerm is a variable, a constant, an aggregate over the group formed by the projection's
-// plain-variable columns, or an expression, which only a comparison's operand may hold.
+// DatalogTerm is a variable, a constant, an aggregate, or an expression. An aggregate reduces over
+// the group that the projection's plain-variable columns form. Only a comparison's operand may hold
+// an expression.
 type DatalogTerm struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Term:
@@ -2284,25 +2290,25 @@ func (x *DatalogExpr) GetArgs() []*DatalogTerm {
 	return nil
 }
 
-// DatalogValue is a scalar fact value. A fact carries a string and, when numeric, a number, so a bound
-// term keeps both and neither string equality nor numeric comparison needs a re-parse.
+// DatalogValue is a scalar fact value. A fact has a string and, when numeric, a number. A bound term
+// keeps both, so neither string equality nor numeric comparison needs a re-parse.
 type DatalogValue struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	S     string                 `protobuf:"bytes,1,opt,name=s,proto3" json:"s,omitempty"`
 	Num   *float64               `protobuf:"fixed64,2,opt,name=num,proto3,oneof" json:"num,omitempty"`
-	// absent marks a field the source did not state at all, which is NOT the same as an empty string
+	// absent marks a field the source did not state at all. That is NOT the same as an empty string,
 	// and not the same as zero. A datasheet row stating only a maximum leaves its minimum absent, and
-	// a parameter whose unit has no known scale has no number to publish. Before this was
-	// representable, such a field bound to the empty string and an ordering comparison fell through to
-	// string order, where "" precedes every string and therefore "passed" every upper-bound test.
+	// a parameter whose unit has no known scale has no number to publish. Before this flag existed,
+	// such a field bound to the empty string. An ordering comparison then fell back to string order,
+	// where "" precedes every string, so the field "passed" every upper-bound test.
 	Absent bool `protobuf:"varint,3,opt,name=absent,proto3" json:"absent,omitempty"`
 	// base_unit is the SI BASE symbol the number is expressed in ("V", "A", "\u03a9"), or empty for a
-	// dimensionless value. NEVER a prefixed spelling: scale normalization happens once, far upstream
-	// (param.InBaseUnit, CONSTRAINTS C24), so a millivolt row arrives here already reduced to volts.
-	// The query layer checks DIMENSION (is this volts or amps) and never converts SCALE.
+	// dimensionless value. It is NEVER a prefixed spelling. Scale normalization happens once, far
+	// upstream (param.InBaseUnit, CONSTRAINTS C24), so a millivolt row arrives here already reduced to
+	// volts. The query layer checks DIMENSION (is this volts or amps) and never converts SCALE.
 	//
-	// Distinct from the `param.unit` RELATION, which reports the unit as the vendor PRINTED it ("mV")
-	// for a human checking a citation. This says what the number is in, for a machine comparing it.
+	// The `param.unit` RELATION is different. It reports the unit as the vendor PRINTED it ("mV"), for
+	// a human checking a citation. base_unit says what the number is in, for a machine comparing it.
 	BaseUnit      string `protobuf:"bytes,4,opt,name=base_unit,json=baseUnit,proto3" json:"base_unit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2369,7 +2375,7 @@ func (x *DatalogValue) GetBaseUnit() string {
 // DatalogAggregate reduces a variable over each group of the projection's plain-variable columns.
 type DatalogAggregate struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	Func  string                 `protobuf:"bytes,1,opt,name=func,proto3" json:"func,omitempty"` // count | min | max | sum | list
+	Func  string                 `protobuf:"bytes,1,opt,name=func,proto3" json:"func,omitempty"` // count | min | max | sum | avg | list
 	Var   string                 `protobuf:"bytes,2,opt,name=var,proto3" json:"var,omitempty"`
 	// distinct reduces var's distinct VALUES rather than one entry per binding, for every func.
 	Distinct      bool `protobuf:"varint,3,opt,name=distinct,proto3" json:"distinct,omitempty"`
@@ -2428,12 +2434,12 @@ func (x *DatalogAggregate) GetDistinct() bool {
 	return false
 }
 
-// ProfileDef is one interface definition (SPI-NOR, eMMC, CAN, ...): its required signals, an optional
-// declared-host binding, and the checks it declares. It compiles to one rule per requirement, which is
-// why adding an interface is a data value rather than new code.
+// ProfileDef is one interface definition (SPI-NOR, eMMC, CAN, ...). It holds the required signals,
+// an optional declared-host binding, and the checks the interface declares. It compiles to one rule
+// per requirement, so adding an interface is a data value rather than new code.
 //
-// It carries no RuleMeta: each generated rule names itself from the profile and the requirement, so a
-// single meta block here would have to be either ignored or applied to rules it does not describe.
+// It has no RuleMeta. Each generated rule names itself from the profile and the requirement. A
+// single meta block here would either be ignored or be applied to rules it does not describe.
 type ProfileDef struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	Name         string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -2441,20 +2447,21 @@ type ProfileDef struct {
 	Requirements []*ProfileRequirement  `protobuf:"bytes,5,rep,name=requirements,proto3" json:"requirements,omitempty"`
 	// host binds the interface to the component that carries it. Absent means no host binding.
 	//
-	// It replaced three flat fields (agni issue 827) when this message became the schema for the
-	// authoring file as well as the wire, because the file has always nested them under host:. A
-	// reader of an older encoding sees no host, so a deck written before the change must be rewritten.
+	// This message became the schema for the authoring file as well as the wire (agni issue 827). The
+	// file has always nested these fields under host:, so host replaced three flat fields. A reader of
+	// an older encoding sees no host, so a deck written before the change must be rewritten.
 	Host *ProfileHost `protobuf:"bytes,7,opt,name=host,proto3" json:"host,omitempty"`
-	// instance says how the naming convention tells one bus from another on a board that carries
-	// several, or one bus from a different interface that shares its suffixes. Empty treats every
-	// matching net on the design as one interface. "anchor_stem" makes each net the anchor signal
-	// matches its own bus, keyed on the anchor's name less its suffix (SD2_CMD is bus SD2), and a
-	// signal belongs to that bus only when its net is named from the same stem (agni issue 1246).
+	// instance says how the naming convention tells one bus from another on a board with several, or
+	// one bus from a different interface that shares its suffixes. Empty treats every matching net on
+	// the design as one interface. "anchor_stem" gives each net that the anchor signal matches its own
+	// bus, keyed on the anchor's name less its suffix (SD2_CMD is bus SD2). A signal then belongs to
+	// that bus only when its net is named from the same stem (agni issue 1246).
 	Instance string `protobuf:"bytes,8,opt,name=instance,proto3" json:"instance,omitempty"`
-	// excludes are signals whose presence on a bus says it is a different interface, such as the card
-	// detect line of a removable SD card on a bus the eMMC profile would otherwise read. A bus carrying
-	// one is not in use, so nothing on it is required or judged. They need an instance key, since such
-	// a line rules out only the bus it belongs to, and they take no pullup or anchor.
+	// excludes are signals whose presence on a bus says it is a different interface. One example is
+	// the card detect line of a removable SD card, on a bus the eMMC profile would otherwise read. A
+	// bus with one of these signals is not in use, so nothing on it is required or judged. Excludes
+	// need an instance key, since such a line rules out only its own bus, and they take no pullup or
+	// anchor.
 	Excludes      []*ProfileSignal `protobuf:"bytes,9,rep,name=excludes,proto3" json:"excludes,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2534,16 +2541,16 @@ func (x *ProfileDef) GetExcludes() []*ProfileSignal {
 
 // ProfileHost binds an interface to its host component, by a declared attribute (interface=SPI_NOR),
 // by the datasheet's device class (WS3-044), or both. A declared host gives a precise anchor and can
-// flag a wholly-absent bus, which the naming-convention path cannot. A profile declaring both forms
-// binds a host matching either.
+// flag a wholly-absent bus. The naming-convention path cannot flag one. A profile declaring both
+// forms binds a host matching either.
 type ProfileHost struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// attr and value are the attribute form: the component carries attribute attr set to value.
+	// attr and value are the attribute form. The component has attribute attr set to value.
 	Attr  string `protobuf:"bytes,1,opt,name=attr,proto3" json:"attr,omitempty"`
 	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	// class is the device-class form, matched against component.device_class. A class-only binding
-	// was once dropped crossing this contract, and TestProfileProtoRoundTrip is what makes that class
-	// of omission fail now.
+	// was once dropped on its way across this contract. TestProfileProtoRoundTrip now fails on that
+	// class of omission.
 	Class         string `protobuf:"bytes,3,opt,name=class,proto3" json:"class,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2601,8 +2608,8 @@ func (x *ProfileHost) GetClass() string {
 }
 
 // ProfileNamingMap re-binds a built-in profile's signals to a project's net-name suffixes without
-// re-authoring the profile (WS3-054). It is the other shape a profile file takes: a file whose top
-// level carries override is a naming map, and one carrying name is a full ProfileDef.
+// re-authoring the profile (WS3-054). It is the other shape a profile file takes. A file with
+// override at its top level is a naming map, and one with name is a full ProfileDef.
 type ProfileNamingMap struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// override names the built-in profile being re-bound.
@@ -2658,10 +2665,10 @@ func (x *ProfileNamingMap) GetSuffixes() map[string]string {
 	return nil
 }
 
-// ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
-// affix (suffix, optionally narrowed by prefix), glob (whole-name), or regex (unanchored RE2). Zero
-// forms, several forms, or a form matching the empty string are rejected when the definition is read —
-// an over-broad matcher would silently claim foreign nets rather than fail.
+// ProfileSignal is one line of the interface. Exactly ONE matcher form matches it against net names.
+// The forms are affix (suffix, optionally narrowed by prefix), glob (whole-name), and regex
+// (unanchored RE2). Reading the definition rejects zero forms, several forms, or a form matching the
+// empty string. An over-broad matcher would silently claim foreign nets rather than fail.
 type ProfileSignal struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Name   string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // the signal's role name, e.g. "IO2"
@@ -2670,9 +2677,10 @@ type ProfileSignal struct {
 	Glob   string                 `protobuf:"bytes,4,opt,name=glob,proto3" json:"glob,omitempty"`
 	Regex  string                 `protobuf:"bytes,5,opt,name=regex,proto3" json:"regex,omitempty"`
 	Pullup bool                   `protobuf:"varint,6,opt,name=pullup,proto3" json:"pullup,omitempty"` // the signal needs a pull-up, spelled as profile files have always written it
-	// anchor marks the always-present signal the naming-convention completeness check hangs on. At most
-	// one, and a profile declaring a completeness requirement must declare it: without an anchor that
-	// requirement compiles to nothing, and a check that silently does not exist scores as a pass.
+	// anchor marks the always-present signal. The naming-convention completeness check starts from
+	// it. A profile has at most one. A profile declaring a completeness requirement must declare an
+	// anchor, because without one that requirement compiles to nothing, and a check that silently does
+	// not exist scores as a pass.
 	Anchor        bool `protobuf:"varint,7,opt,name=anchor,proto3" json:"anchor,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2758,8 +2766,8 @@ func (x *ProfileSignal) GetAnchor() bool {
 }
 
 // ProfileRequirement is one declared check: a registered requirement-type name plus its parameters.
-// Making the composition data rather than a hardcoded compile step is what lets a new interface, or a
-// new requirement type, be a declaration instead of engine code.
+// The composition is data rather than a hardcoded compile step. So a new interface, or a new
+// requirement type, can be a declaration instead of engine code.
 type ProfileRequirement struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Type          string                 `protobuf:"bytes,1,opt,name=type,proto3" json:"type,omitempty"` // signal-missing | host-incomplete | missing-pullup | signal-dangling | termination | an overlay's own

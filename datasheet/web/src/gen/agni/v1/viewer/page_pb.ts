@@ -61,8 +61,8 @@ export type ViewerLocation = Message<"agni.v1.viewer.ViewerLocation"> & {
   flatten?: boolean | undefined;
 
   /**
-   * verdict is a verdict id ("<rule>:(<kind>:<ref>,...)"), with hash, rule and subjects as the
-   * link's hints, which mean nothing without it.
+   * verdict is a verdict id ("<rule>:(<kind>:<ref>,...)"). hash, rule and subjects are the link's
+   * hints for it, and they mean nothing without it.
    *
    * @generated from field: string verdict = 8;
    */
@@ -183,13 +183,14 @@ export type ApplyLocationRequest = Message<"agni.v1.viewer.ApplyLocationRequest"
   location?: ViewerLocation | undefined;
 
   /**
-   * url is a viewer link instead of a location, as the server mints one (`agni check --server`, an
-   * MCP answer's `link`, a report row), and the page reads it with the same parser it reads its own
-   * address with. Only the fields the link sets are applied. Exactly one of location and url.
+   * url is a viewer link, sent instead of a location. The server mints such links (`agni check
+   * --server`, an MCP answer's `link`, a report row). The page reads url with the same parser it
+   * uses for its own address. Only the fields the link sets are applied. Exactly one of location
+   * and url.
    *
-   * A request carrying only a url is taken from a page at ANY origin, and its reply carries no
+   * The page accepts a request with only a url from a page at ANY origin, and the reply has no
    * location (agni issue 1156). Any page holding the viewer's window can already navigate it to the
-   * same link, so this grants nothing that loading the link would not, except keeping the page.
+   * same link. So this grants nothing that loading the link would not, except keeping the page.
    *
    * @generated from field: string url = 2;
    */
@@ -240,9 +241,9 @@ export type LocateVerdictRequest = Message<"agni.v1.viewer.LocateVerdictRequest"
   id: string;
 
   /**
-   * rule and subjects are the same hints a link carries (ViewerLocation.rule, .subjects). When the
-   * page has not answered the verdict yet they let it ask that one rule about those subjects alone,
-   * as a cold link does; without them a verdict the page has not answered stays unresolved.
+   * rule and subjects are the same hints a link has (ViewerLocation.rule, .subjects). Suppose the
+   * page has not answered the verdict yet. The hints let it ask that one rule about those subjects
+   * alone, as a cold link does. Without them, the verdict is left unresolved.
    *
    * @generated from field: string rule = 2;
    */
@@ -429,27 +430,29 @@ export const ShowSheetResponseSchema: GenMessage<ShowSheetResponse> = /*@__PURE_
   messageDesc(file_agni_v1_viewer_page, 12);
 
 /**
- * This file: ViewerPageService, the contract a LIVE viewer page answers (agni issues 1150, 1152).
+ * This file defines ViewerPageService, the contract a LIVE viewer page answers (agni issues 1150,
+ * 1152).
  *
- * Every other service in agni is answered by a server or the browser engine. This one is answered by
- * the open viewer page itself, so a host can move it without reloading it: open a sheet, focus a
- * verdict, apply a link's location to the page already showing the design. A link (ViewerLocation
- * in the URL) is the cold form of the same question, and ApplyLocation is its hot form, so a link
- * and a call land the same way.
+ * A server or the browser engine answers every other service in agni. The open viewer page answers
+ * this one itself, so a host can move the page without reloading it. The host can open a sheet,
+ * focus a verdict, or apply a link's location to the page already showing the design. A link
+ * (ViewerLocation in the URL) is the cold form of the same question, and ApplyLocation is its hot
+ * form. So a link and a call have the same effect.
  *
  * The service is transport-neutral. The page dispatches a method name and a protojson body
- * (web/src/pageservice.ts), and each transport only carries that pair: postMessage from a parent
- * page today (web/src/embed.ts, the `agni-viewer/v1` envelope), and a design's relay room, where
- * each method is an agent's tool (web/src/viewerroom.ts, agni issue 1154). No server implements it.
+ * (web/src/pageservice.ts), and each transport only carries that pair. One transport is postMessage
+ * from a parent page (web/src/embed.ts, the `agni-viewer/v1` envelope). The other is a design's
+ * relay room, where each method is an agent's tool (web/src/viewerroom.ts, agni issue 1154). No
+ * server implements it.
  *
- * Every response carries the page's location after the call, so a caller learns where the page
- * landed (which sheet a verdict opened) without asking again.
+ * Every response includes the page's location after the call. So a caller learns where the page
+ * ended up (which sheet a verdict opened) without asking again.
  *
  * @generated from service agni.v1.viewer.ViewerPageService
  */
 export const ViewerPageService: GenService<{
   /**
-   * GetLocation returns where the page is now. It changes nothing, which NO_SIDE_EFFECTS records so
+   * GetLocation returns where the page is now. It changes nothing. NO_SIDE_EFFECTS records that, so
    * an agent holding only read access may call it (agni issue 1154).
    *
    * @generated from rpc agni.v1.viewer.ViewerPageService.GetLocation
@@ -461,8 +464,8 @@ export const ViewerPageService: GenService<{
   },
   /**
    * ApplyLocation moves the open page to a location, as following a link to it would. A location
-   * naming a different design (or a different flatten) opens it, which is the cold path; one naming
-   * the open design, or no design, applies to the page as it stands.
+   * naming a different design, or a different flatten, opens that design. That is the cold path. A
+   * location naming the open design, or no design, applies to the page as it stands.
    *
    * @generated from rpc agni.v1.viewer.ViewerPageService.ApplyLocation
    */

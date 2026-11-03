@@ -24,9 +24,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// SheetFormat selects which renderer draws a sheet. It is an axis distinct from
-// GetSheetRequest.layout (faithful vs auto-layout geometry): layout chooses the geometry,
-// format chooses how it is rendered.
+// SheetFormat selects which renderer draws a sheet. It is a separate axis from
+// GetSheetRequest.layout, which picks faithful or auto-layout geometry. layout chooses the
+// geometry, and format chooses how it is rendered.
 type SheetFormat int32
 
 const (
@@ -79,8 +79,9 @@ func (SheetFormat) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_design_proto_rawDescGZIP(), []int{0}
 }
 
-// SymbolSource selects what an auto-layout draws at each component node: predefined synthetic
-// glyphs, or the design's own provided symbols re-laid-out (partial-faithful, WS7-031).
+// SymbolSource selects what an auto-layout draws at each component node. It draws either
+// predefined synthetic glyphs, or the design's own symbols laid out again (partial-faithful,
+// WS7-031).
 type SymbolSource int32
 
 const (
@@ -132,8 +133,8 @@ func (SymbolSource) EnumDescriptor() ([]byte, []int) {
 
 // TraceOutcome is what a trace answered.
 //
-// An enum rather than the string the Go side started with, so a client meets an unrecognised value
-// at decode rather than in a string comparison that quietly falls through to "not connected".
+// The Go side started with a string, and this is an enum instead. So a client meets an unrecognised
+// value at decode. With a string, a comparison could quietly fall through to "not connected".
 type TraceOutcome int32
 
 const (
@@ -191,9 +192,9 @@ type SheetRef struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Name  string                 `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
-	// parent_id is the id of this sheet's parent sheet, or empty for a top-level sheet. It lets
-	// the UI show a sheet hierarchy (KiCad hierarchical schematics); flat formats (EDIF pages,
-	// single-sheet designs) leave it empty. Populated by hierarchy-aware readers (a later step).
+	// parent_id is the id of this sheet's parent sheet, or empty for a top-level sheet. The UI uses
+	// it to show a sheet hierarchy, as in KiCad hierarchical schematics. Flat formats, such as EDIF
+	// pages and single-sheet designs, leave it empty. Hierarchy-aware readers fill it (a later step).
 	ParentId      string `protobuf:"bytes,3,opt,name=parent_id,json=parentId,proto3" json:"parent_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -254,21 +255,21 @@ type GetDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// snapshot names the design to describe, "snapshots/{snapshot}" (agni issue 1061).
 	Snapshot string `protobuf:"bytes,7,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	// layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
-	// empty uses the default. Ignored for geometry-bearing files, which render faithfully.
+	// layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered").
+	// Empty uses the default. Ignored for geometry-bearing files, which render faithfully.
 	Layout string `protobuf:"bytes,1,opt,name=layout,proto3" json:"layout,omitempty"`
-	// read_mask selects what the response carries (agni issue 836). Unset, the response is the summary
-	// it has always been, with no IR, because the viewer asks on every open and a large board's IR is
-	// megabytes. Set, it keeps exactly the paths named, over GetDesignResponse: `design` for the whole
-	// IR, `design.nets` or `design.components.mpn` for parts of it, `sheets` for a summary field, `*`
-	// for everything. A path through a repeated or map field applies to every element. When every path
-	// is under `design`, the server reads the netlist alone and skips the drawing. An unknown path is
-	// an invalid argument.
+	// read_mask selects which fields the response fills (agni issue 836). When unset, the response is
+	// the usual summary, with no IR. The viewer asks on every open, and a large board's IR is
+	// megabytes. When set, the response keeps exactly the named paths of GetDesignResponse. `design`
+	// selects the whole IR. `design.nets` or `design.components.mpn` select parts of it. `sheets`
+	// selects a summary field, and `*` selects everything. A path through a repeated or map field
+	// applies to every element. When every path is under `design`, the server reads the netlist alone
+	// and skips the drawing. An unknown path is an invalid argument.
 	ReadMask *fieldmaskpb.FieldMask `protobuf:"bytes,4,opt,name=read_mask,json=readMask,proto3" json:"read_mask,omitempty"`
-	// nets and ref_des narrow WHICH entities `design` carries, by exact name: only these nets in
-	// design.nets, only these components in design.components. Each narrows its own list; neither
-	// filters the other. A name the design does not have is simply absent. They apply only when the
-	// mask selects `design`.
+	// nets and ref_des narrow WHICH entities `design` holds, by exact name. design.nets then holds
+	// only these nets, and design.components only these components. Each narrows its own list, and
+	// neither filters the other. A name missing from the design is simply absent. They apply only
+	// when the mask selects `design`.
 	Nets          []string `protobuf:"bytes,5,rep,name=nets,proto3" json:"nets,omitempty"`
 	RefDes        []string `protobuf:"bytes,6,rep,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -352,10 +353,10 @@ type GetDesignResponse struct {
 	// undrawn are the placements this design's drawing cannot draw, because no symbol resolved for them
 	// (agni issue 354). Empty is the normal case.
 	//
-	// It is on the DESIGN response rather than per sheet because it is a property of the read: a symbol
-	// library either resolved or did not, and a reader needs to know before deciding whether the
-	// drawing in front of them is worth trusting. It describes the layout this response resolved, so a
-	// client changing layout re-reads it with the rest of the design.
+	// It is on the DESIGN response rather than per sheet, because it is a property of the read. A
+	// symbol library either resolved or did not. A reader needs to know that before deciding whether
+	// to trust the drawing in front of them. It describes the layout this response resolved. So a
+	// client changing layout reads it again with the rest of the design.
 	Undrawn []*geom.UndrawnPlacement `protobuf:"bytes,9,rep,name=undrawn,proto3" json:"undrawn,omitempty"`
 	// layout is the render mode actually used: "faithful" or the auto-layout name.
 	Layout string `protobuf:"bytes,5,opt,name=layout,proto3" json:"layout,omitempty"`
@@ -364,40 +365,41 @@ type GetDesignResponse struct {
 	// native_available is true when this file's format has a native renderer that is enabled
 	// and installed, so the UI can offer the NATIVE format. False otherwise.
 	NativeAvailable bool `protobuf:"varint,7,opt,name=native_available,json=nativeAvailable,proto3" json:"native_available,omitempty"`
-	// available_layouts are the layouts this file can render (the geometry axis, distinct from
-	// the render format): "faithful" for geometry-bearing files, plus auto-layout strategy names
-	// (grid, layered, ...) for files with a netlist IR. The UI offers these; `layout` above is
-	// the one used for this response.
+	// available_layouts are the layouts this file can render. This is the geometry axis, separate
+	// from the render format. A geometry-bearing file offers "faithful". A file with a netlist IR
+	// also offers the auto-layout strategy names (grid, layered, ...). The UI offers these, and
+	// `layout` above names the one this response used.
 	AvailableLayouts []string `protobuf:"bytes,8,rep,name=available_layouts,json=availableLayouts,proto3" json:"available_layouts,omitempty"`
-	// content_hash is "sha256:<hex>" over the design's entry file, the same revision identity
-	// agni.v1.checks.DesignRef.content_hash carries and computed by the same loader call, so a link
-	// minted by the CLI can be compared against what this server just read (agni issue 392).
+	// content_hash is "sha256:<hex>" over the design's entry file (agni issue 392). It is the same
+	// revision identity as agni.v1.checks.DesignRef.content_hash, and the same loader call computes
+	// it. So a link the CLI minted can be compared against what this server just read.
 	//
-	// It is on the DESIGN response for the same reason `undrawn` is: it is a property of THIS read.
-	// The viewer needs it before it draws a proof a link asked for, which is before any check has run,
-	// so hanging it off the check response would arrive one step too late to prevent the highlight the
-	// reader should not trust.
+	// It is on the DESIGN response for the same reason as `undrawn`, since it is a property of THIS
+	// read. A link may ask the viewer to draw a proof. The viewer needs the hash before it draws
+	// that, and that is before any check has run. On the check response, the hash would arrive one
+	// step too late to stop a highlight the reader should not trust.
 	//
-	// Empty when this server could not hash the file, which a consumer MUST NOT read as a match. It is
-	// the third state: an unverifiable link is not a verified one, and collapsing the two reproduces
-	// exactly the false confidence the hash exists to remove.
+	// Empty when this server could not hash the file. A consumer MUST NOT read empty as a match.
+	// Empty is a third state. An unverifiable link is not a verified one. Treating the two alike
+	// brings back the false confidence the hash exists to remove.
 	ContentHash string `protobuf:"bytes,10,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
-	// unexpanded_hierarchy lists the hierarchical blocks whose contents the netlist read left out, the
-	// reader's InputDiagnostics field carried as is (agni issue 707). Non-empty means component_count
-	// and net_count cover the top level alone, which a viewer should say before anyone trusts them.
+	// unexpanded_hierarchy lists the hierarchical blocks whose contents the netlist read left out
+	// (agni issue 707). It copies the reader's InputDiagnostics field as is. When it is non-empty,
+	// component_count and net_count cover the top level alone. A viewer should say so before anyone
+	// trusts the counts.
 	//
-	// It is on the DESIGN response for the reason `undrawn` is: it is a property of this read. Empty
-	// whenever the counts are, since both come from the same netlist read.
+	// It is on the DESIGN response for the same reason as `undrawn`, since it is a property of this
+	// read. It is empty whenever the counts are, since both come from the same netlist read.
 	UnexpandedHierarchy []*ir.UnexpandedHierarchy `protobuf:"bytes,11,rep,name=unexpanded_hierarchy,json=unexpandedHierarchy,proto3" json:"unexpanded_hierarchy,omitempty"`
-	// design is the design's IR as every analysis reads it (the project's configuration, the declared
-	// tiers, the format-neutral ingestion passes such as part-number promotion), present only when the
-	// request's read_mask selects it (agni issue 836). A client prototyping an analysis reads this
-	// rather than parsing the netlist again.
+	// design is the design's IR as every analysis reads it (agni issue 836). It reflects the project's
+	// configuration, the declared tiers, and the format-neutral ingestion passes such as part-number
+	// promotion. It is present only when the request's read_mask selects it. A client prototyping an
+	// analysis reads this instead of parsing the netlist again.
 	Design *ir.Design `protobuf:"bytes,12,opt,name=design,proto3" json:"design,omitempty"`
-	// hierarchy_note is the sentence stating what unexpanded_hierarchy means for this read, or "" when
-	// the read left nothing out (agni issue 717). It is report.HierarchyNote, the wording the CLI's
-	// stderr note and both HTML reports use, sent whole so the viewer's strip renders it rather than
-	// composing a second copy of it.
+	// hierarchy_note is a sentence stating what unexpanded_hierarchy means for this read (agni issue
+	// 717). It is "" when the read left nothing out. report.HierarchyNote builds it, and the CLI's
+	// stderr note and both HTML reports use the same wording. The server sends it whole, so the
+	// viewer's strip renders it and does not compose a second copy.
 	HierarchyNote string `protobuf:"bytes,13,opt,name=hierarchy_note,json=hierarchyNote,proto3" json:"hierarchy_note,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -533,8 +535,8 @@ type GetSheetRequest struct {
 	Layout string `protobuf:"bytes,2,opt,name=layout,proto3" json:"layout,omitempty"`
 	// format selects the renderer; unset means PACKED.
 	Format SheetFormat `protobuf:"varint,3,opt,name=format,proto3,enum=agni.v1.webapi.SheetFormat" json:"format,omitempty"`
-	// symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
-	// faithful layout (always the design's own symbols).
+	// symbols selects the node artwork for an auto-layout, and unset means GLYPH. The faithful
+	// layout ignores it, since it always draws the design's own symbols.
 	Symbols       SymbolSource `protobuf:"varint,4,opt,name=symbols,proto3,enum=agni.v1.webapi.SymbolSource" json:"symbols,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -607,8 +609,8 @@ func (x *GetSheetRequest) GetSymbols() SymbolSource {
 
 type GetSheetResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// content carries exactly one rendering, matching the requested format: packed geometry
-	// for PACKED, an SVG document for SVG/NATIVE.
+	// content holds exactly one rendering, matching the requested format. PACKED gets packed
+	// geometry, and SVG or NATIVE gets an SVG document.
 	//
 	// Types that are valid to be assigned to Content:
 	//
@@ -969,10 +971,10 @@ type TraceDesignRequest struct {
 	// from / to are the endpoint pins, as ref-des and pin designator.
 	From *TraceEndpoint `protobuf:"bytes,2,opt,name=from,proto3" json:"from,omitempty"`
 	To   *TraceEndpoint `protobuf:"bytes,3,opt,name=to,proto3" json:"to,omitempty"`
-	// hops bounds the search in series crossings; 0 takes the server's default. Unlike the protection
-	// radii this is a SEARCH BUDGET rather than an electrical claim, which is why the response repeats
-	// the value it rests on: nothing about a route degrades with distance, so a no-route can be
-	// re-asked wider and the reader has to be able to see what was asked the first time.
+	// hops bounds the search in series crossings, and 0 takes the server's default. The protection
+	// radii make an electrical claim. hops does not, since it is a SEARCH BUDGET. Nothing about a
+	// route degrades with distance, so a reader can ask a no-route again with a wider budget. The
+	// reader has to see what was asked the first time. So the response repeats the radius it used.
 	Hops          int32 `protobuf:"varint,4,opt,name=hops,proto3" json:"hops,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1232,18 +1234,18 @@ func (x *Trace) GetNets() []*TraceNet {
 type TraceEnd struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Endpoint *TraceEndpoint         `protobuf:"bytes,1,opt,name=endpoint,proto3" json:"endpoint,omitempty"`
-	// pin_name is the functional name the part type declares for this pin ("SDA", "PTC11"), or empty
-	// on a source carrying no part-type pin data. It is what a datasheet and a firmware header call
-	// the pin, so it is what makes the endpoint recognisable to the person reading.
+	// pin_name is the functional name the part type declares for this pin ("SDA", "PTC11"). It is
+	// empty on a source with no part-type pin data. A datasheet and a firmware header call the pin by
+	// this name. So the person reading recognises the endpoint by it.
 	PinName string `protobuf:"bytes,2,opt,name=pin_name,json=pinName,proto3" json:"pin_name,omitempty"`
 	// net is the net the pin sits on, empty when the endpoint did not resolve.
 	Net string `protobuf:"bytes,3,opt,name=net,proto3" json:"net,omitempty"`
 	// sheet_ids names the sheets this endpoint's net is drawn on, empty when it is drawn on none.
 	//
-	// Filled on EVERY outcome, including no-route. The two nets that fail to join are drawn somewhere,
-	// and that picture is what a reader goes looking for the moment they read "no route", so a field
-	// populated only on success would answer with silence exactly where the question is sharpest. Empty
-	// then honestly means not drawn, rather than nobody looked.
+	// Filled on EVERY outcome, including no-route. Imagine a reader sees "no route". The two nets that
+	// fail to join are drawn somewhere, and the reader goes looking for that picture at once. A field
+	// filled only on success would give them nothing at the moment they most need it. So empty means
+	// not drawn, rather than nobody looked.
 	SheetIds      []string `protobuf:"bytes,4,rep,name=sheet_ids,json=sheetIds,proto3" json:"sheet_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1397,19 +1399,18 @@ type TraceNet struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Stubs []*TraceStub           `protobuf:"bytes,2,rep,name=stubs,proto3" json:"stubs,omitempty"`
-	// stubs_elided is how many further parts sit on this net beyond the ones listed, so a capped list
-	// reads as capped rather than as complete.
+	// stubs_elided counts the parts on this net beyond the ones listed. So a capped list reads as
+	// capped, not as complete.
 	StubsElided int32 `protobuf:"varint,3,opt,name=stubs_elided,json=stubsElided,proto3" json:"stubs_elided,omitempty"`
-	// bus_like marks a net the walk would refuse to continue THROUGH: a rail, a ground, or any
-	// rail-scale fan-out. A route may END on one, so saying which net it was is what stops a reader
-	// assuming the trace stopped early for some other reason.
+	// bus_like marks a net that the walk refuses to continue THROUGH, such as a rail, a ground, or
+	// any rail-scale fan-out. A route may END on one. This flag names that net, so a reader does not
+	// assume the trace stopped early for some other reason.
 	BusLike bool `protobuf:"varint,4,opt,name=bus_like,json=busLike,proto3" json:"bus_like,omitempty"`
 	// sheet_ids names the sheets this net is drawn on, empty when it is drawn on none.
 	//
-	// PER NET rather than one sheet for the whole trace, because a route crossing three sheets is
-	// exactly when a reader wants to choose. It is the same shape a Finding's `sheets` and a query
-	// cell's `cell_sheets` already carry, so the panel renders the same SheetBadges and a click
-	// navigates the same way.
+	// It is PER NET rather than one sheet for the whole trace. A reader most wants to choose when a
+	// route crosses three sheets. A Finding's `sheets` and a query AnswerEntity's `sheet_ids` have
+	// the same shape. So the panel renders the same SheetBadges, and a click navigates the same way.
 	SheetIds      []string `protobuf:"bytes,5,rep,name=sheet_ids,json=sheetIds,proto3" json:"sheet_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1480,9 +1481,9 @@ func (x *TraceNet) GetSheetIds() []string {
 	return nil
 }
 
-// TraceStub is a part sitting on a net of the route that the route does not pass through. Test
-// points especially: a probe point on a path net is the most actionable thing on the line, and
-// reducing the answer to its series elements removes exactly the parts a person reads a trace to find.
+// TraceStub is a part on one of the route's nets, which the route does not pass through. Test points
+// matter most. A probe point on a path net is the most actionable thing on the line. A person often
+// reads a trace to find those parts, and an answer with series elements alone would drop them.
 type TraceStub struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
@@ -1596,9 +1597,9 @@ type ComponentReport struct {
 	DeviceClass string                 `protobuf:"bytes,3,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"` // device class (empty for a provided symbol or a component with no class)
 	Cell        string                 `protobuf:"bytes,4,opt,name=cell,proto3" json:"cell,omitempty"`                                  // drawn symbol cell_ref
 	Kind        string                 `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`                                  // provided | glyph | box | unresolved
-	// label is how the report's summary groups the component: its device class for a glyph, else its
-	// kind. The engine decides it (graph.ComponentReport.Label) so the CLI's summary and the viewer's
-	// Properties group one report alike (agni issue 1045).
+	// label is how the report's summary groups the component. A glyph groups by its device class, and
+	// anything else by its kind. The engine decides it in graph.ComponentReport.Label (agni issue
+	// 1045). So the CLI's summary and the viewer's Properties group one report alike.
 	Label         string `protobuf:"bytes,6,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

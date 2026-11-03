@@ -58,47 +58,50 @@ const (
 
 // ReviewServiceClient is a client for the agni.v1.webapi.ReviewService service.
 type ReviewServiceClient interface {
-	// CreateReview runs the checklist against the design and persists the result, returning the stored
-	// Review. The run is all-or-nothing: an invalid or absent manifest, an unreadable design, or a
-	// board_ref at a file carrying no board geometry is an error, so a partial read never reports items
-	// clean without checking them. Nothing is stored when the run fails.
+	// CreateReview runs the checklist against the design, stores the result, and returns the stored
+	// Review. The run is all-or-nothing. An invalid or absent manifest is an error, and so is a
+	// snapshot whose design cannot be read. So a partial read never
+	// reports items clean without checking them. Nothing is stored when the run fails.
 	//
-	// It is synchronous. A review is a check sweep per item and finishes in the time a request can
-	// wait, so this returns the Review itself rather than an Operation. If that stops being true the
-	// answer is AIP-151, not a client-side poll invented here.
+	// It is synchronous. A review is a check sweep per item, and it finishes within the time a
+	// request can wait. So this returns the Review itself rather than an Operation. If that stops
+	// being true, the answer is AIP-151, not a client-side poll invented here.
 	//
-	// One review is about ONE design. A project rollup is several Reviews, because a document carries
-	// a single DesignRef on purpose: averaging several designs into one document would misrepresent
+	// One review is about ONE design. A project rollup is several Reviews. A document holds a single
+	// DesignRef on purpose, because averaging several designs into one document would misrepresent
 	// every one of them.
 	CreateReview(context.Context, *connect.Request[webapi.CreateReviewRequest]) (*connect.Response[webapi.Review], error)
 	// GetReview returns a stored run by name. The document is self-contained, so this needs neither the
 	// design nor the checklist to still exist.
 	GetReview(context.Context, *connect.Request[webapi.GetReviewRequest]) (*connect.Response[webapi.Review], error)
-	// ListReviews returns stored runs, newest first. Results are paginated, and `filter` narrows to one
-	// design so a client can ask the question it actually has ("how has THIS board been trending").
+	// ListReviews returns stored runs, newest first. Results are paginated. `filter` narrows them to
+	// one design, so a client can ask the question it actually has ("how has THIS board been
+	// trending").
 	ListReviews(context.Context, *connect.Request[webapi.ListReviewsRequest]) (*connect.Response[webapi.ListReviewsResponse], error)
-	// DeleteReview removes a stored run. Deleting a run that is already absent is an error rather than
-	// a silent success, because a client asking to delete something that is not there has a stale view
-	// and is better told so.
+	// DeleteReview removes a stored run. Deleting a run that is already absent is an error, not a
+	// silent success. A client asking to delete something that is not there has a stale view, and
+	// should be told so.
 	DeleteReview(context.Context, *connect.Request[webapi.DeleteReviewRequest]) (*connect.Response[emptypb.Empty], error)
-	// GetReviewManifest resolves a stored checklist into the value CreateReview takes. It parses AND
-	// validates, so a client learns its manifest is malformed once, here, rather than on every run. A
-	// caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
+	// GetReviewManifest resolves a stored checklist into a value for CreateReview. It parses AND
+	// validates. So a client learns once, here, that its manifest is malformed, and not on every run.
+	// A caller that already holds a manifest skips this call. The CLI is one, since it reads the YAML
+	// the user named.
 	GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error)
-	// ListChecklists returns the checklists a design's project declares, inherited ones included, in
-	// the order the project writes them, so the first is the project's default (agni issue 859). It is
-	// the one answer to "which checklists does this design have": `agni review --checklist <name>`,
-	// `agni checklists` and the viewer's picker all read it. A design in no project answers an empty
-	// project and no checklists, and a project declaring none answers its name and no checklists, since
-	// the fix differs (send a manifest, or add a checklists section). A descriptor that exists and does
-	// not parse is an error. The checklists are values, so a client runs one by sending it to
-	// CreateReview.
+	// ListChecklists returns the checklists a design's project declares, inherited ones included
+	// (agni issue 859). They come in the order the project writes them, so the first is the
+	// project's default. Every surface asks this rpc which checklists a design has. `agni review
+	// --checklist <name>`, `agni checklists` and the viewer's picker all read it. A design in no
+	// project answers an empty project and no checklists. A project declaring none answers its name
+	// and no checklists. The two answers differ because the fixes differ. The first sends a manifest,
+	// and the second adds a checklists section. A descriptor that exists and does not parse is an
+	// error. The checklists are values, so a client runs one by sending it to CreateReview.
 	ListChecklists(context.Context, *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error)
-	// RenderReviewReport writes a review the caller already holds as the checklist page `agni review
-	// --format html` writes (agni issue 1030): the manifest's areas and items in its own order, each
-	// with its outcome and every finding behind it. It runs nothing and reads no store, so a run that
-	// was never stored (validate_only) renders as a stored one does, and the CLI's page and the
-	// viewer's saved one come from this one renderer.
+	// RenderReviewReport takes a review the caller already holds and writes it as a checklist page
+	// (agni issue 1030). `agni review --format html` writes the same page. The page lists the
+	// manifest's areas and items in the manifest's order, each with its outcome and every finding
+	// behind it. It runs nothing and reads no store. So a run that was never stored (validate_only)
+	// renders as a stored one does. The CLI's page and the viewer's saved page both come from this
+	// one renderer.
 	RenderReviewReport(context.Context, *connect.Request[webapi.RenderReviewReportRequest]) (*connect.Response[webapi.RenderReviewReportResponse], error)
 }
 
@@ -206,47 +209,50 @@ func (c *reviewServiceClient) RenderReviewReport(ctx context.Context, req *conne
 
 // ReviewServiceHandler is an implementation of the agni.v1.webapi.ReviewService service.
 type ReviewServiceHandler interface {
-	// CreateReview runs the checklist against the design and persists the result, returning the stored
-	// Review. The run is all-or-nothing: an invalid or absent manifest, an unreadable design, or a
-	// board_ref at a file carrying no board geometry is an error, so a partial read never reports items
-	// clean without checking them. Nothing is stored when the run fails.
+	// CreateReview runs the checklist against the design, stores the result, and returns the stored
+	// Review. The run is all-or-nothing. An invalid or absent manifest is an error, and so is a
+	// snapshot whose design cannot be read. So a partial read never
+	// reports items clean without checking them. Nothing is stored when the run fails.
 	//
-	// It is synchronous. A review is a check sweep per item and finishes in the time a request can
-	// wait, so this returns the Review itself rather than an Operation. If that stops being true the
-	// answer is AIP-151, not a client-side poll invented here.
+	// It is synchronous. A review is a check sweep per item, and it finishes within the time a
+	// request can wait. So this returns the Review itself rather than an Operation. If that stops
+	// being true, the answer is AIP-151, not a client-side poll invented here.
 	//
-	// One review is about ONE design. A project rollup is several Reviews, because a document carries
-	// a single DesignRef on purpose: averaging several designs into one document would misrepresent
+	// One review is about ONE design. A project rollup is several Reviews. A document holds a single
+	// DesignRef on purpose, because averaging several designs into one document would misrepresent
 	// every one of them.
 	CreateReview(context.Context, *connect.Request[webapi.CreateReviewRequest]) (*connect.Response[webapi.Review], error)
 	// GetReview returns a stored run by name. The document is self-contained, so this needs neither the
 	// design nor the checklist to still exist.
 	GetReview(context.Context, *connect.Request[webapi.GetReviewRequest]) (*connect.Response[webapi.Review], error)
-	// ListReviews returns stored runs, newest first. Results are paginated, and `filter` narrows to one
-	// design so a client can ask the question it actually has ("how has THIS board been trending").
+	// ListReviews returns stored runs, newest first. Results are paginated. `filter` narrows them to
+	// one design, so a client can ask the question it actually has ("how has THIS board been
+	// trending").
 	ListReviews(context.Context, *connect.Request[webapi.ListReviewsRequest]) (*connect.Response[webapi.ListReviewsResponse], error)
-	// DeleteReview removes a stored run. Deleting a run that is already absent is an error rather than
-	// a silent success, because a client asking to delete something that is not there has a stale view
-	// and is better told so.
+	// DeleteReview removes a stored run. Deleting a run that is already absent is an error, not a
+	// silent success. A client asking to delete something that is not there has a stale view, and
+	// should be told so.
 	DeleteReview(context.Context, *connect.Request[webapi.DeleteReviewRequest]) (*connect.Response[emptypb.Empty], error)
-	// GetReviewManifest resolves a stored checklist into the value CreateReview takes. It parses AND
-	// validates, so a client learns its manifest is malformed once, here, rather than on every run. A
-	// caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
+	// GetReviewManifest resolves a stored checklist into a value for CreateReview. It parses AND
+	// validates. So a client learns once, here, that its manifest is malformed, and not on every run.
+	// A caller that already holds a manifest skips this call. The CLI is one, since it reads the YAML
+	// the user named.
 	GetReviewManifest(context.Context, *connect.Request[webapi.GetReviewManifestRequest]) (*connect.Response[webapi.GetReviewManifestResponse], error)
-	// ListChecklists returns the checklists a design's project declares, inherited ones included, in
-	// the order the project writes them, so the first is the project's default (agni issue 859). It is
-	// the one answer to "which checklists does this design have": `agni review --checklist <name>`,
-	// `agni checklists` and the viewer's picker all read it. A design in no project answers an empty
-	// project and no checklists, and a project declaring none answers its name and no checklists, since
-	// the fix differs (send a manifest, or add a checklists section). A descriptor that exists and does
-	// not parse is an error. The checklists are values, so a client runs one by sending it to
-	// CreateReview.
+	// ListChecklists returns the checklists a design's project declares, inherited ones included
+	// (agni issue 859). They come in the order the project writes them, so the first is the
+	// project's default. Every surface asks this rpc which checklists a design has. `agni review
+	// --checklist <name>`, `agni checklists` and the viewer's picker all read it. A design in no
+	// project answers an empty project and no checklists. A project declaring none answers its name
+	// and no checklists. The two answers differ because the fixes differ. The first sends a manifest,
+	// and the second adds a checklists section. A descriptor that exists and does not parse is an
+	// error. The checklists are values, so a client runs one by sending it to CreateReview.
 	ListChecklists(context.Context, *connect.Request[webapi.ListChecklistsRequest]) (*connect.Response[webapi.ListChecklistsResponse], error)
-	// RenderReviewReport writes a review the caller already holds as the checklist page `agni review
-	// --format html` writes (agni issue 1030): the manifest's areas and items in its own order, each
-	// with its outcome and every finding behind it. It runs nothing and reads no store, so a run that
-	// was never stored (validate_only) renders as a stored one does, and the CLI's page and the
-	// viewer's saved one come from this one renderer.
+	// RenderReviewReport takes a review the caller already holds and writes it as a checklist page
+	// (agni issue 1030). `agni review --format html` writes the same page. The page lists the
+	// manifest's areas and items in the manifest's order, each with its outcome and every finding
+	// behind it. It runs nothing and reads no store. So a run that was never stored (validate_only)
+	// renders as a stored one does. The CLI's page and the viewer's saved page both come from this
+	// one renderer.
 	RenderReviewReport(context.Context, *connect.Request[webapi.RenderReviewReportRequest]) (*connect.Response[webapi.RenderReviewReportResponse], error)
 }
 

@@ -21,17 +21,22 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// HighlightShape selects HOW a highlight layer draws its matched entities (WS9-017). OUTLINE
-// re-strokes each matched element's own geometry (wires, symbol shapes) — the WS9-016
-// behavior and the zero-value default. The bounding shapes frame each matched ENTITY (one
-// rect/circle per component, net, or listed pin, never one box over the whole union) with a
-// translucent fill, for callers that want area emphasis over line emphasis (a selection
-// layer vs a finding layer). PATH is the focus highlighter (WS9-040): it re-strokes the
-// entity's own geometry like OUTLINE but wider and translucent by default, so focusing a net
-// marks its actual PATH like a highlighter pen rather than an opaque bar or a bounding box
-// over its whole span. The SVG backend draws the wider stroke; the WebGL backend cannot
-// thicken 1px GL lines, so it recolors the primitives translucently (same as OUTLINE), the
-// documented backend asymmetry.
+// HighlightShape selects HOW a highlight layer draws its matched entities (WS9-017).
+//
+// OUTLINE re-strokes each matched element's own geometry (wires, symbol shapes). It is the
+// WS9-016 behavior and the zero-value default.
+//
+// The bounding shapes frame each matched ENTITY with a translucent fill. They draw one
+// rect/circle per component, net, or listed pin, and never one box over the whole union. They
+// suit callers that want area emphasis over line emphasis, such as a selection layer against
+// a finding layer.
+//
+// PATH is the focus highlighter (WS9-040). It re-strokes the entity's own geometry like
+// OUTLINE, but wider and translucent by default. So focusing a net marks its actual PATH like
+// a highlighter pen, rather than an opaque bar or a bounding box over its whole span. The SVG
+// backend draws the wider stroke. The WebGL backend cannot thicken 1px GL lines, so it
+// recolors the primitives translucently, as for OUTLINE. That is the documented backend
+// asymmetry.
 type HighlightShape int32
 
 const (
@@ -104,7 +109,7 @@ type PrimitiveKey struct {
 	NetId string `protobuf:"bytes,5,opt,name=net_id,json=netId,proto3" json:"net_id,omitempty"`
 	// bus_id is the bus's NAME (its range-label identity, WireGeometry.net) for a bus trunk/entry
 	// primitive, so a bus-not-modeled finding highlights its own bus rather than a net (WS7-042b). A
-	// bus carries no net/net_id, so this is its only join key. Empty for a non-bus primitive.
+	// bus has no net/net_id, so this is its only join key. Empty for a non-bus primitive.
 	BusId         string `protobuf:"bytes,6,opt,name=bus_id,json=busId,proto3" json:"bus_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -236,12 +241,12 @@ func (x *PinRef) GetPin() string {
 }
 
 // HighlightSpec selects a set of schematic elements and the style to draw them with. It is
-// the renderer-agnostic INPUT of the highlight layer: the same spec projects to a
-// PackedHighlight (for a GPU renderer, joining PackedSheet by primitive index) or to an SVG
-// overlay document (for the SVG backend, composited above the sheet render). Selection is a
-// union: every listed component (all its symbol + pin primitives), net (its wires), and pin
-// matches. Several specs form independent layers with their own colors (e.g. selection vs
-// finding); a later spec wins where they overlap.
+// the renderer-agnostic INPUT of the highlight layer. The same spec projects to a
+// PackedHighlight for a GPU renderer, which joins PackedSheet by primitive index. It also
+// projects to an SVG overlay document for the SVG backend, composited above the sheet render.
+// Selection is a union. Every listed component (all its symbol + pin primitives), net (its
+// wires), and pin matches. Several specs form independent layers with their own colors (e.g.
+// selection vs finding), and a later spec wins where they overlap.
 type HighlightSpec struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Components []string               `protobuf:"bytes,1,rep,name=components,proto3" json:"components,omitempty"` // ref_des values; matches symbol graphics and their pins
@@ -255,10 +260,10 @@ type HighlightSpec struct {
 	// its own bus (WS7-042b). A bus has no net, so it matches ONLY by bus_id.
 	BusIds []string `protobuf:"bytes,9,rep,name=bus_ids,json=busIds,proto3" json:"bus_ids,omitempty"`
 	Color  string   `protobuf:"bytes,4,opt,name=color,proto3" json:"color,omitempty"` // "#rrggbb"; empty lets the renderer pick its default
-	// alpha in (0, 1]; 0/unset means fully opaque (proto3 cannot distinguish unset from 0,
-	// and an invisible highlight is never what a caller means). Exception: the bounding
-	// shapes default an unset alpha to 0.3, not opaque — a fully opaque box would hide the
-	// entity it frames, which is likewise never what a caller means.
+	// alpha in (0, 1]; 0/unset means fully opaque. proto3 cannot distinguish unset from 0,
+	// and a caller never means an invisible highlight. The bounding shapes are the exception.
+	// They default an unset alpha to 0.3, not opaque, because a fully opaque box would hide
+	// the entity it frames, and a caller never means that either.
 	Alpha float32        `protobuf:"fixed32,5,opt,name=alpha,proto3" json:"alpha,omitempty"`
 	Shape HighlightShape `protobuf:"varint,6,opt,name=shape,proto3,enum=agni.v1.geom.HighlightShape" json:"shape,omitempty"` // how matched entities draw; unset means OUTLINE (WS9-016)
 	// stroke_scale multiplies the PATH highlighter's width (WS9-044), so a user can make the
@@ -362,10 +367,11 @@ func (x *HighlightSpec) GetStrokeScale() float32 {
 	return 0
 }
 
-// PackedHighlight is the packed projection of highlight specs against one PackedSheet: for
-// each input spec (same order), the indices of the primitives it selects. The client redraws
-// those primitives in the group's color/alpha above the base geometry — no new vertices
-// cross the wire, the group joins the already-uploaded buffer by index.
+// PackedHighlight is the packed projection of highlight specs against one PackedSheet. For
+// each input spec, in the same order, it lists the indices of the primitives the spec
+// selects. The client redraws those primitives in the group's color/alpha above the base
+// geometry. No new vertices cross the wire, because the group joins the already-uploaded
+// buffer by index.
 type PackedHighlight struct {
 	state         protoimpl.MessageState   `protogen:"open.v1"`
 	Groups        []*PackedHighlight_Group `protobuf:"bytes,1,rep,name=groups,proto3" json:"groups,omitempty"` // one per input HighlightSpec, in request order
@@ -412,10 +418,10 @@ func (x *PackedHighlight) GetGroups() []*PackedHighlight_Group {
 
 // PackedLabel is one text label positioned in sheet-relative world coordinates (rebased by
 // origin_x/origin_y, the same as the vertex blob). A GPU line pipeline draws no glyphs, so
-// text is drawn by an overlay above the geometry (text metrics are browser-owned, docs/14).
-// The server computes the world position and the color with the same transform math the SVG
-// backend uses, so the overlay and the SVG oracle agree; the browser only maps world->screen
-// with the view camera. O(labels), stays structured (like keys).
+// an overlay above the geometry draws the text. The browser owns text metrics (docsite
+// architecture/geometry-and-rendering.md). The server computes the world position and the
+// color with the SVG backend's transform math, so the overlay and the SVG oracle agree. The
+// browser only maps world->screen with the view camera. O(labels), and structured like keys.
 type PackedLabel struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             int32                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"` // sheet-relative world origin (rebased, like the vertex blob)
@@ -518,12 +524,12 @@ func (x *PackedLabel) GetMaxWidth() int32 {
 
 // PackedImage is one raster image positioned in sheet-relative world coordinates (rebased by
 // origin_x/origin_y, like PackedLabel and the vertex blob). A GPU line pipeline draws no
-// raster, so images ride the same overlay above the geometry as text: the browser positions an
-// <image> with the per-frame camera transform. x/y is the world min corner and w/h the bbox
-// span, so the client bakes the Y-up->Y-down flip the same way it does for labels. data is the
-// raw image bytes (not a data URI) to avoid base64 bloat on the binary transport; the client
-// builds "data:<mime>;base64,...". Sheet-level only for now (SymbolDef images are not drawn in
-// the SVG backend either), so the overlay stays in step with the SVG oracle.
+// raster, so images go in the same overlay above the geometry as text. The browser positions
+// an <image> with the per-frame camera transform. x/y is the world min corner and w/h the
+// bbox span, so the client bakes the Y-up->Y-down flip the same way it does for labels. data
+// is the raw image bytes, not a data URI, to avoid base64 bloat on the binary transport. The
+// client builds "data:<mime>;base64,...". Images are sheet-level only for now. The SVG
+// backend does not draw SymbolDef images either, so the overlay matches the SVG oracle.
 type PackedImage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             int32                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"`                                        // sheet-relative world min-x (rebased)
@@ -625,8 +631,8 @@ func (x *PackedImage) GetMirror() bool {
 }
 
 // PackedSheet is the GPU-upload form of one sheet's vertex geometry. Coordinates are
-// int32 and sheet-relative (subtract origin_x/origin_y) because a GPU vertex pipeline has
-// no 64-bit vertex attribute; rebasing bounds them by the sheet extent so int32 is exact.
+// int32 and sheet-relative (subtract origin_x/origin_y), because a GPU vertex pipeline has
+// no 64-bit vertex attribute. Rebasing bounds them by the sheet extent, so int32 is exact.
 type PackedSheet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SheetId       string                 `protobuf:"bytes,1,opt,name=sheet_id,json=sheetId,proto3" json:"sheet_id,omitempty"`
@@ -640,17 +646,17 @@ type PackedSheet struct {
 	Keys       []*PrimitiveKey `protobuf:"bytes,7,rep,name=keys,proto3" json:"keys,omitempty"`     // O(primitives), stays structured
 	Labels     []*PackedLabel  `protobuf:"bytes,8,rep,name=labels,proto3" json:"labels,omitempty"` // O(labels), stays structured; drawn by the text overlay
 	// The default font-family for the sheet's text (render.Style.Font), so the overlay draws in
-	// the same face the SVG backend uses. One face per sheet; per-element font is not carried yet.
+	// the same face as the SVG backend. One face per sheet; per-element font is not sent yet.
 	FontFamily string `protobuf:"bytes,9,opt,name=font_family,json=fontFamily,proto3" json:"font_family,omitempty"`
-	// Geometry colors indexed by primitive group (0 symbol, 1 wire, 2 pin, 3 free, 4 frame),
-	// resolved server-side from render.Style so the WebGL renderer colors geometry from the same
-	// palette as the SVG backend instead of a hardcoded client map. "#rrggbb".
+	// Geometry colors indexed by primitive group (0 symbol, 1 wire, 2 pin, 3 free, 4 frame).
+	// The server resolves them from render.Style. So the WebGL renderer colors geometry from the
+	// same palette as the SVG backend instead of a hardcoded client map. "#rrggbb".
 	GroupColors []string `protobuf:"bytes,10,rep,name=group_colors,json=groupColors,proto3" json:"group_colors,omitempty"`
 	// The page background color (render.Style.Page), so the WebGL canvas clears to the same
 	// background the SVG backend paints. "#rrggbb".
 	BackgroundColor string `protobuf:"bytes,11,opt,name=background_color,json=backgroundColor,proto3" json:"background_color,omitempty"`
 	// Sheet-level raster images (logos, notes), rebased to origin_x/origin_y; drawn by the
-	// overlay above the geometry. O(images), stays structured (like labels).
+	// overlay above the geometry. O(images), and structured like labels.
 	Images        []*PackedImage `protobuf:"bytes,12,rep,name=images,proto3" json:"images,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -775,9 +781,9 @@ type PackedHighlight_Group struct {
 	Color      string                 `protobuf:"bytes,1,opt,name=color,proto3" json:"color,omitempty"`                   // "#rrggbb"; empty means the renderer's default
 	Alpha      float32                `protobuf:"fixed32,2,opt,name=alpha,proto3" json:"alpha,omitempty"`                 // (0,1]; 0/unset means opaque, as in HighlightSpec
 	Primitives []uint32               `protobuf:"varint,3,rep,packed,name=primitives,proto3" json:"primitives,omitempty"` // indices into PackedSheet.primitives, ascending
-	// Echo of the spec's shape so a packed consumer knows what to draw. The wire stays
-	// index-only for every shape: a bounding-shape consumer computes each entity's bounds
-	// locally from the vertices it already holds (grouping indices by its PrimitiveKeys).
+	// Echo of the spec's shape, so a packed consumer knows what to draw. The wire is
+	// index-only for every shape. A bounding-shape consumer computes each entity's bounds
+	// locally from the vertices it already holds, grouping indices by its PrimitiveKeys.
 	Shape         HighlightShape `protobuf:"varint,4,opt,name=shape,proto3,enum=agni.v1.geom.HighlightShape" json:"shape,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

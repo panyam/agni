@@ -17,26 +17,26 @@ export const file_agni_v1_webapi_project: GenFile = /*@__PURE__*/
 /**
  * Project is one declared set of designs that share configuration.
  *
- * It is READ-ONLY. There is no CreateProject, and its absence is deliberate rather than pending:
- * scaffolding a project means authoring design intent from a design, which is a judgment step with a
- * confidentiality boundary rather than a server operation. See CONSTRAINTS C23 for why a read-only
- * resource is still AIP-shaped here.
+ * It is READ-ONLY. There is no CreateProject, and that is deliberate rather than pending.
+ * Scaffolding a project means authoring design intent from a design. That is a judgment step with a
+ * confidentiality boundary, not a server operation. CONSTRAINTS C23 says why a read-only resource is
+ * still AIP-shaped here.
  *
- * Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which is
- * the same boundary drawn from the other side: writing descriptors into a folder an operator named is
+ * Read-only here means no SERVICE mutator. `agni start` scaffolds a project at the CLI edge, which
+ * draws the same boundary from the other side. Writing descriptors into a folder an operator named is
  * not a server mutating a mount.
  *
- * Its configuration is an AnalysisConfig, the same message a request carries and a Design declares, so
+ * Its configuration is an AnalysisConfig. A request uses the same message, and so does a Design. So
  * a config tier is added once and every surface gets it (agni issue 224).
  *
  * @generated from message agni.v1.webapi.Project
  */
 export type Project = Message<"agni.v1.webapi.Project"> & {
   /**
-   * name is the resource name, "projects/{project}". The id is DECLARED by the operator in
-   * `project.yaml`, not derived from the folder path and not server-assigned. That is what makes it
-   * stable: a project keeps its identity when its folder is renamed or moved between mounts, and two
-   * mounts do not accidentally collide by having directories of the same name.
+   * name is the resource name, "projects/{project}". The operator DECLARES the id in
+   * `project.yaml`. It is not derived from the folder path and not server-assigned, so it is stable.
+   * A project keeps its identity when its folder is renamed or moved between mounts, and two mounts
+   * do not accidentally collide by having directories of the same name.
    *
    * @generated from field: string name = 1;
    */
@@ -60,14 +60,15 @@ export type Project = Message<"agni.v1.webapi.Project"> & {
   /**
    * config is what this project's designs are checked against, and the reason the resource exists.
    * Naming conventions, interface profiles, and seeded parameters describe the TEAM rather than any
-   * one board, so they belong to the project and reach a run through the design's edge to it. Before
-   * this they could only be `agni serve` startup flags, which a deployment mounting a mixed set
-   * applied to every design it read: an overlay's profiles superseded the built-ins for every board
-   * on the server, and an overlay's rail lexicon changed net roles on designs that never asked.
+   * one board. So they belong to the project, and they reach a run through the design's edge to it.
+   * Before this they could only be `agni serve` startup flags. A deployment mounting a mixed set
+   * applied those flags to every design it read. An overlay's profiles superseded the built-ins for
+   * every board on the server, and an overlay's rail lexicon changed net roles on designs that never
+   * asked.
    *
-   * A Project and a Design carry the same message, as their descriptors share one schema (agni issue
-   * 1136), because the shape genuinely is the same and two copies of it would be one more place for
-   * two layers to disagree about what config is. A design's own layer goes on top of its project's.
+   * A Project and a Design use the same message, as their descriptors share one schema (agni issue
+   * 1136). The shape really is the same. Two copies of it would be one more place for two layers to
+   * disagree about what config is. A design's own layer goes on top of its project's.
    *
    * @generated from field: agni.v1.webapi.AnalysisConfig config = 9;
    */
@@ -114,43 +115,43 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
   uri: string;
 
   /**
-   * entry_uri names the file this design's ANALYSIS reads: the netlist the
-   * design team produces (CONSTRAINTS C21). Making it explicit is what turns a warning into
-   * behaviour. A folder holding an OrCAD `.eds` schematic export beside the `.edn` netlist reads a
-   * different component count depending on which a tool opens, and the CLI could previously only
-   * print a warning telling the operator to go consult their own descriptor, because nothing in the
-   * engine modelled "this folder is one design, and this file is its entry".
+   * entry_uri names the file this design's ANALYSIS reads, which is the netlist the design team
+   * produces (CONSTRAINTS C21). Imagine a folder holding an OrCAD `.eds` schematic export beside the
+   * `.edn` netlist. The component count depends on which file a tool opens. Nothing in the engine
+   * modelled "this folder is one design, and this file is its entry". So the CLI could only print a
+   * warning telling the operator to consult their own descriptor. With entry_uri explicit, the
+   * engine acts on it instead of warning.
    *
    * @generated from field: string entry_uri = 4;
    */
   entryUri: string;
 
   /**
-   * companion_uris name files that are VIEWS of this same design rather than
-   * independent sources of it: a schematic export, a board file, an IPC-2581. They are geometry to
-   * render and to locate findings on, never a second component source to reconcile against the
-   * netlist (C21).
+   * companion_uris name files that are VIEWS of this same design rather than independent sources of
+   * it, such as a schematic export, a board file, or an IPC-2581. They are geometry to render and to
+   * locate findings on. They are never a second component source to reconcile against the netlist
+   * (C21).
    *
-   * Membership is declared per file rather than inferred from "everything beside the entry", because
-   * a later revision of the netlist sits in the same folder and IS a legitimate analysis source. An
-   * inferred rule would turn a diff of two revisions into a diff of one against itself.
+   * Membership is declared per file rather than inferred from "everything beside the entry". A later
+   * revision of the netlist sits in the same folder and IS a legitimate analysis source. An inferred
+   * rule would turn a diff of two revisions into a diff of one against itself.
    *
    * @generated from field: repeated string companion_uris = 5;
    */
   companionUris: string[];
 
   /**
-   * config is this design's own analysis config, what its descriptor declares on top of its project's:
-   * usually its intent and its symbol library, and any section a board needs apart from its team, such
-   * as its own convention or an extra checklist. Its extends names the design's project. Carrying both
-   * in one message shape is what lets a composer layer them without knowing which tier it holds.
+   * config is this design's own analysis config, which its descriptor declares on top of its
+   * project's. It usually has the design's intent and symbol library. It also has any section a board
+   * needs apart from its team, such as its own convention or an extra checklist. Its extends names the
+   * design's project. The project and the design use one message shape, so a composer can layer them
+   * without knowing which tier it holds.
    *
    * @generated from field: agni.v1.webapi.AnalysisConfig config = 7;
    */
   config?: AnalysisConfig | undefined;
 
   /**
-   * intent_uri, which moved into config and is now config.intent.
    * revisions are the design's other revisions, each with its own entry and the companions that are
    * views of THAT revision (agni issue 848). entry_uri and companion_uris above are the current one.
    * Naming a revision's entry reads it with its own companions, so a later netlist is checked against
@@ -162,10 +163,10 @@ export type Design = Message<"agni.v1.webapi.Design"> & {
   revisions: DesignRevision[];
 
   /**
-   * flatten_hierarchy says this design's netlist is read whole, walking into every hierarchical block
-   * its top level places, as Snapshot.flatten_hierarchy asks for one read (agni issues 718, 1102). It
-   * is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a snapshot cannot
-   * turn off what its design declares. It applies to every revision.
+   * flatten_hierarchy says to read this design's netlist whole, walking into every hierarchical block
+   * that its top level places. Snapshot.flatten_hierarchy asks the same for one read (agni issues
+   * 718, 1102). It is `flatten_hierarchy: true` in design.yaml. Either one asking is enough, so a
+   * snapshot cannot turn off what its design declares. It applies to every revision.
    *
    * @generated from field: bool flatten_hierarchy = 9;
    */
@@ -242,10 +243,10 @@ export type ListProjectsRequest = Message<"agni.v1.webapi.ListProjectsRequest"> 
   pageToken: string;
 
   /**
-   * filter narrows the listing (AIP-160). Only `mount` is supported: `mount="boards"`, matched
-   * against the authority of the project's URI. An unsupported
-   * filter is an error rather than a silently ignored argument, because a client that believed it had
-   * filtered and had not would read another mount's projects as its own.
+   * filter narrows the listing (AIP-160). Only `mount` is supported, as in `mount="boards"`, matched
+   * against the authority of the project's URI. An unsupported filter is an error rather than a
+   * silently ignored argument. A client that believed it had filtered, and had not, would read
+   * another mount's projects as its own.
    *
    * @generated from field: string filter = 3;
    */
@@ -395,7 +396,7 @@ export type ResolveDesignResponse = Message<"agni.v1.webapi.ResolveDesignRespons
    * Unset is a normal answer rather than an error. A mounted folder with no declared designs is the
    * ordinary case, and a client that gets nothing back shows the plain viewer and the built-in
    * catalog. Turning the common path into an error would push every caller into treating a failure
-   * path as normal, which is how a real failure stops being noticed.
+   * path as normal. A real failure would then go unnoticed.
    *
    * @generated from field: agni.v1.webapi.Design design = 1;
    */
@@ -405,13 +406,13 @@ export type ResolveDesignResponse = Message<"agni.v1.webapi.ResolveDesignRespons
    * project is the design's project, UNSET when the design has none above it.
    *
    * A design without a project is a real design, not a half-resolved one. Its declaration still says
-   * which file that folder's analysis reads, which is all a caller pointed at a path by a human
-   * needs. What it lacks is a NAME: a resource name needs a parent, so such a design comes back with
-   * `Design.name` empty and cannot be fetched by name later. Meaning without addressability.
+   * which file that folder's analysis reads. A caller that a human pointed at a path needs nothing
+   * more. Such a design has no NAME, because a resource name needs a parent. So it comes back with
+   * `Design.name` empty and cannot be fetched by name later.
    *
-   * This is also the shape of the guarantee. Project config reaches a design through this edge, so a
-   * design with no project has no project config to apply and cannot be checked against another
-   * project's rules — structural rather than discouraged.
+   * This edge also gives the guarantee. Project config reaches a design only through it. So a design
+   * with no project has no project config to apply, and it cannot be checked against another
+   * project's rules. The structure enforces that.
    *
    * @generated from field: agni.v1.webapi.Project project = 2;
    */
@@ -426,28 +427,27 @@ export const ResolveDesignResponseSchema: GenMessage<ResolveDesignResponse> = /*
   messageDesc(file_agni_v1_webapi_project, 10);
 
 /**
- * This file: ProjectService, the engine's answer to "which design is this, and whose design is it"
+ * This file defines ProjectService. It answers "which design is this, and whose design is it"
  * (agni issue 170).
  *
  * Everything else in this API addresses a FILE. Almost everything the review layer needs is scoped to
- * something larger, and until now the engine had no name for it: a folder holding a netlist, a
- * schematic export, and a board says nothing about which of the three IS the design, and the config
- * that decides what a design is checked against (naming vocabulary, interface profiles, seeded
- * parameters, a checklist) applies to some designs and not others. With no model of the larger thing,
- * that config could only be process-wide server flags, which a deployment serving a mixed set applies
- * to every design it reads.
+ * something larger, and until now the engine had no name for it. Imagine a folder holding a netlist,
+ * a schematic export, and a board. The folder says nothing about which of the three IS the design.
+ * Some config decides what a design is checked against (naming vocabulary, interface profiles, seeded
+ * parameters, a checklist). That config applies to some designs and not others. With no model of the
+ * larger thing, the config could only be process-wide server flags. A deployment serving a mixed set
+ * then applies them to every design it reads.
  *
- * Two resources, and the split follows the on-disk layout a review project already takes:
+ * There are two resources, and the split follows the on-disk layout of a review project.
  *
  *   Project  owns what is shared across designs (a team's config).
  *   Design   owns what is specific to one: which file is the analysis source, and which files are
  *            companion VIEWS of that same design rather than independent sources of it.
  *
- * "Project" is an overloaded word here and the overloading is worth naming. A KiCad `.kicad_pro` is
- * DESIGN-scoped: it is one board's own file, and it resolves to a Design below, never to a Project. An
- * overlay repository is a Go module that extends the engine, and has nothing to do with this. The
- * engine's Project is the scope a team's REVIEW CONFIG belongs to, which is the thing neither of the
- * other two names.
+ * "Project" is an overloaded word here, and the overloading is worth naming. A KiCad `.kicad_pro` is
+ * DESIGN-scoped. It is one board's own file, and it resolves to a Design below, never to a Project.
+ * An overlay repository is a Go module that extends the engine, and has nothing to do with this. The
+ * engine's Project is the scope of a team's REVIEW CONFIG. Neither of the other two names that.
  *
  * @generated from service agni.v1.webapi.ProjectService
  */
@@ -474,10 +474,10 @@ export const ProjectService: GenService<{
   },
   /**
    * GetDesign returns one design by resource name. The rpc shares its name with
-   * DesignService.GetDesign and answers a different question: that one loads a design's CONTENT from a
-   * (mount, path) pair, this one returns a design's IDENTITY and which of the files around it is
-   * which. They are distinct rpcs on distinct services, and their request messages are named apart
-   * because one proto package cannot hold two GetDesignRequest.
+   * DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
+   * design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
+   * the files around it is which. They are distinct rpcs on distinct services. Their request messages
+   * have different names because one proto package cannot hold two GetDesignRequest.
    *
    * @generated from rpc agni.v1.webapi.ProjectService.GetDesign
    */
@@ -497,15 +497,15 @@ export const ProjectService: GenService<{
     output: typeof ListProjectDesignsResponseSchema;
   },
   /**
-   * ResolveDesign answers the question a viewer has when it opens a file: is this file part of a
-   * declared design, and if so which. It is the seam that keeps resolution an INTERFACE rather than a
-   * path convention — a file-backed store walks the tree for descriptors, another may consult an
-   * index, and a caller cannot tell which it is talking to.
+   * ResolveDesign answers a viewer's question when it opens a file. Is this file part of a declared
+   * design, and if so which one? This rpc keeps resolution an INTERFACE rather than a path
+   * convention. A file-backed store walks the tree for descriptors, and another store may consult an
+   * index. A caller cannot tell which one it is talking to.
    *
-   * Resolving to nothing is a normal answer, not an error: a mounted folder with no descriptors is
-   * the ordinary case, and it is what makes the project surfaces impossible to misapply. A file that
-   * resolves to no design gets the plain viewer and the built-in catalog, so it cannot be checked
-   * against some other project's rules — a structural guarantee rather than a discouraged practice.
+   * Resolving to nothing is a normal answer, not an error. A mounted folder with no descriptors is
+   * the ordinary case. A file that resolves to no design gets the plain viewer and the built-in
+   * catalog, so it cannot be checked against some other project's rules. So the project surfaces
+   * cannot be misapplied, by structure rather than by convention.
    *
    * @generated from rpc agni.v1.webapi.ProjectService.ResolveDesign
    */

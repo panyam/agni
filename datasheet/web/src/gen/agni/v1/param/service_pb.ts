@@ -97,15 +97,15 @@ export const GetGenerationResponseSchema: GenMessage<GetGenerationResponse> = /*
  * spec.
  *
  * The engine consumes it through param.ParamProvider. A design asks about a few hundred part numbers
- * at once, so the lookup is batched, and every answer carries the corpus generation, which a caching
- * reader compares to learn that what it holds is stale.
+ * at once, so the lookup is batched. Every answer includes the corpus generation. A caching reader
+ * compares generations to learn that what it holds is stale.
  *
  * @generated from service agni.v1.param.PartSpecService
  */
 export const PartSpecService: GenService<{
   /**
    * BatchGetPartSpecs returns the current spec for each part number that has one. A part number
-   * with no published spec is simply absent from the answer, which is not an error, because most
+   * with no published spec is simply absent from the answer. That is not an error, because most
    * parts on a board are never seeded. Matching is case-insensitive and never fuzzy, as
    * param.ParamSet.Lookup matches.
    *

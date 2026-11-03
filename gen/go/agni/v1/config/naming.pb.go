@@ -21,20 +21,20 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// This file: an operator's naming policy, as the ONE schema both the engine and the wire use.
+// This file defines an operator's naming policy. The engine and the wire both use this ONE schema.
 //
-// It lives in agni.v1.config rather than agni.v1.webapi so the ENGINE can import it. A naming
-// convention is engine config, not a request shape: core/check/naming compiles it into the lexicon a
-// design is read with. While the only definition was a webapi message, the engine could not depend on
-// it without pulling the web request tier into every consumer (C17), so it carried a hand-written Go
-// twin instead and internal/service converted between them.
+// It is in agni.v1.config rather than agni.v1.webapi, so the ENGINE can import it. A naming
+// convention is engine config, not a request shape. core/check/naming compiles it into the lexicon
+// for reading a design. The only definition used to be a webapi message. The engine could not
+// depend on it without pulling the web request tier into every consumer (C17). So the engine kept a
+// hand-written Go twin, and internal/service converted between the two.
 //
-// That twin is why this package exists. The two schemas drifted: the Go side grew gate, source and
-// drain terminal vocabularies (WS3-117) that the wire form had no field for, so a project declaring
-// them had them silently dropped on every path that crossed the converter, which is every path except
-// serve's startup install. BuildRoleVocab then fell back to the built-in names and the run reported
-// against a vocabulary the operator did not ask for. One schema removes the class of bug rather than
-// that one instance of it.
+// This package exists to remove that twin. The two schemas drifted. The Go side grew gate, source
+// and drain terminal vocabularies (WS3-117), and the wire form had no field for them. Imagine a
+// project declaring them. Every path through the converter dropped them silently, and every path
+// except serve's startup install went through it. BuildRoleVocab then fell back to the built-in
+// names, and the run reported against a vocabulary the operator did not ask for. One schema removes
+// the whole class of bug, not just that one instance.
 type NamingConvention struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"` // the catalog namespace its rules appear under, e.g. "acme" -> acme/signal-net-naming
@@ -97,28 +97,30 @@ func (x *NamingConvention) GetRules() []*NamingRule {
 
 // NamingLexicon overrides the engine's built-in role vocabularies.
 //
-// The vocabularies are GROUPED BY NAME SPACE, because that is the distinction that governs whether a
-// pattern is correct. A supply PIN is named VDD or VIN while a rail NET is named 3V3 or +5V, so a
-// pattern belonging in one is wrong in the other. A flat list of siblings stated that in prose and
-// enforced nothing, and the three vocabularies that went missing were three of the four pin ones.
-// Grouped, adding a pin vocabulary is a field on PinNameVocab rather than a seventh sibling somebody
-// has to remember to thread through by hand.
+// The vocabularies are GROUPED BY NAME SPACE. The name space decides whether a pattern is correct.
+// A supply PIN is named VDD or VIN, while a rail NET is named 3V3 or +5V. So a pattern that belongs
+// in one is wrong in the other. A flat list of siblings stated that in prose and enforced nothing.
+// Three vocabularies went missing, and all three were among the four pin ones. With grouping, a new
+// pin vocabulary is a field on PinNameVocab. Nobody has to remember to thread a seventh sibling
+// through by hand.
 type NamingLexicon struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Net   *NetNameVocab          `protobuf:"bytes,1,opt,name=net,proto3" json:"net,omitempty"`
 	Pin   *PinNameVocab          `protobuf:"bytes,2,opt,name=pin,proto3" json:"pin,omitempty"`
-	// Component-class name (e.g. "tvs") -> what marks a part as that class. Its own name space again:
-	// this matches a PART, not a net or a pin. The key must name a class the engine ships; an unknown
-	// one is a load error, because a class the resolver has no place for would classify nothing.
+	// Component-class name (e.g. "tvs") -> what marks a part as that class. This is its own name
+	// space again, since it matches a PART, not a net or a pin. The key must name a class the engine
+	// ships. An unknown key is a load error. The resolver would have no place for that class, so it
+	// would classify nothing.
 	Class map[string]*ClassVocab `protobuf:"bytes,3,rep,name=class,proto3" json:"class,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Component-class name -> the unit a BARE number on that class means, a base unit ("F", "ohm") or a
-	// prefixed one ("pF", "uH") that scales the bare number, so "capacitor": "pF" reads a bare 100 as
-	// 100 pF. Only resistor ships a default (ohm), since a bare capacitor value meant farads, microfarads
-	// or picofarads depending on the era and tool. A class named here replaces its default. The key must
-	// name a class the engine ships and the value a unit it reads, or the load fails.
+	// Component-class name -> the unit of a BARE number on that class. The unit may be a base unit
+	// ("F", "ohm"), or a prefixed one ("pF", "uH") that scales the bare number. So "capacitor": "pF"
+	// reads a bare 100 as 100 pF. Only resistor ships a default (ohm). A bare capacitor value meant
+	// farads, microfarads or picofarads, depending on the era and the tool. A class named here
+	// replaces its default. The key must name a class the engine ships, and the value must name a
+	// unit the engine reads, or the load fails.
 	ValueUnit map[string]string `protobuf:"bytes,4,rep,name=value_unit,json=valueUnit,proto3" json:"value_unit,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// attribute names the component attributes a part number, a value and a do-not-populate flag are
-	// read from, so a house property such as "Part Number" or "DNF" reaches the rules.
+	// attribute names which component attributes hold a part number, a value and a do-not-populate
+	// flag. So a house property such as "Part Number" or "DNF" reaches the rules.
 	Attribute     *AttributeVocab `protobuf:"bytes,5,opt,name=attribute,proto3" json:"attribute,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -189,13 +191,13 @@ func (x *NamingLexicon) GetAttribute() *AttributeVocab {
 	return nil
 }
 
-// AttributeVocab lists the attribute KEYS each fact is read from, matched without regard to case and
-// tried in order, so the first key a component carries with a non-empty value answers. dnp_values are
-// the values of a dnp key that mean the part is not fitted, compared the same way. Each list is ADDED
-// to the built-ins, after them, unless replace is set.
+// AttributeVocab lists the attribute KEYS that hold each fact. Keys match without regard to case and
+// are tried in order. The first key that a component has with a non-empty value answers. dnp_values
+// lists the values of a dnp key that mean the part is not fitted, compared the same way. Each list is
+// ADDED to the built-ins, after them, unless replace is set.
 //
-// A part number on an EDIF cell (rather than its placed instance) is read by the reader with the
-// built-in keys alone, since the reader reads no configuration.
+// A part number may sit on an EDIF cell rather than on its placed instance. The reader reads that
+// one with the built-in keys alone, since the reader reads no configuration.
 type AttributeVocab struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Mpn           *AttributeKeys         `protobuf:"bytes,1,opt,name=mpn,proto3" json:"mpn,omitempty"`
@@ -317,40 +319,43 @@ func (x *AttributeKeys) GetReplace() bool {
 	return false
 }
 
-// NetNameVocab is the vocabulary for NET names, the roles resolved once at ingestion and read
-// afterwards as a normalized net.role fact (C20).
+// NetNameVocab is the vocabulary for NET names. Ingestion resolves the roles once, and later reads
+// see them as a normalized net.role fact (C20).
 type NetNameVocab struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Rail     *VocabPatterns         `protobuf:"bytes,1,opt,name=rail,proto3" json:"rail,omitempty"`
 	Ground   *VocabPatterns         `protobuf:"bytes,2,opt,name=ground,proto3" json:"ground,omitempty"`
 	Feedback *VocabPatterns         `protobuf:"bytes,3,opt,name=feedback,proto3" json:"feedback,omitempty"`
-	// feedback, switching, control and gate_drive are the four ways a net can be NAMED after a rail
-	// without being one, because a regulator's pins are conventionally named for the supply they serve.
-	// Model.IsRailNet subtracts all four. They are separate vocabularies rather than one because they
-	// differ in what they are: the first two are the regulator's power plumbing and must never be
-	// probed, a control input is an ordinary signal that a test point is welcome on, and a gate drive
-	// is a real supply sitting at a voltage its name does not state.
+	// feedback, switching, control and gate_drive are four ways a net can be NAMED after a rail
+	// without being one. A regulator's pins are conventionally named for the supply they serve.
+	// Model.IsRailNet subtracts all four. They are four vocabularies, not one, because the nets differ.
+	// Feedback and switching nets are the regulator's power plumbing, and must never be probed. A
+	// control input is an ordinary signal, and a test point on it is welcome. A gate drive is a real
+	// supply, at a voltage its name does not state.
 	Switching *VocabPatterns `protobuf:"bytes,4,opt,name=switching,proto3" json:"switching,omitempty"`
 	Control   *VocabPatterns `protobuf:"bytes,5,opt,name=control,proto3" json:"control,omitempty"`
 	GateDrive *VocabPatterns `protobuf:"bytes,6,opt,name=gate_drive,json=gateDrive,proto3" json:"gate_drive,omitempty"`
-	// i2c names an I2C bus line (SDA or SCL), the nets the I2C pull-up rules judge. It is a vocabulary
-	// rather than a rule's own pattern so a house that spells its bus differently, or a part whose I2S
-	// data pin is named SDA, is fixed in config (agni issues 1255, 1265).
+	// i2c names an I2C bus line (SDA or SCL). The I2C pull-up rules judge these nets. It is a
+	// vocabulary rather than a rule's own pattern (agni issues 1255, 1265). So config can fix a house
+	// that spells its bus differently, or a part whose I2S data pin is named SDA.
 	I2C *VocabPatterns `protobuf:"bytes,7,opt,name=i2c,proto3" json:"i2c,omitempty"`
-	// infer_rail_from_supply_pins makes a net a rail when a LATER token of its name is a supply-pin word
-	// (LPC_VCC, FAN_VDD) and the net feeds a fitted part's power_in pin that is not a connector's own. A
-	// name alone stays a signal (EN_VCC feeds no supply pin), and the inferred role records the pin that
-	// justified it. Absent means on; a project or a request sets false to turn it off (agni issue 1243).
+	// infer_rail_from_supply_pins makes a net a rail under two conditions. A LATER token of its name
+	// is a supply-pin word (LPC_VCC, FAN_VDD). And the net feeds a fitted part's power_in pin, not a
+	// connector's own. A name alone is still a signal, since EN_VCC feeds no supply pin. The inferred
+	// role records the pin that justified it. Absent means on. A project or a request sets false to
+	// turn it off (agni issue 1243).
 	InferRailFromSupplyPins *bool `protobuf:"varint,8,opt,name=infer_rail_from_supply_pins,json=inferRailFromSupplyPins,proto3,oneof" json:"infer_rail_from_supply_pins,omitempty"`
-	// no_connect names a net its designer marked as deliberately unconnected. One match also tells the
-	// run that the design marks no-connects at all, so an open pin elsewhere reads as an omission.
+	// no_connect names a net that its designer marked as deliberately unconnected. One match also
+	// tells the run that the design marks no-connects at all. So an open pin elsewhere reads as an
+	// omission.
 	NoConnect *VocabPatterns `protobuf:"bytes,9,opt,name=no_connect,json=noConnect,proto3" json:"no_connect,omitempty"`
 	// diff_pair spells a differential pair's two members.
 	DiffPair *DiffPairVocab `protobuf:"bytes,10,opt,name=diff_pair,json=diffPair,proto3" json:"diff_pair,omitempty"`
-	// voltage reads a nominal voltage off a net's name, one TOKEN at a time (the name split on anything
-	// but letters, digits, "." and "+"), so P3V3_EN reads its 3V3 token. Each pattern needs a capture
-	// group: the first holds the whole volts and the first later group to match holds the fraction, so
-	// ^(\d+)V(\d+)$ reads 3V3 as 3.3. A name whose tokens state two different voltages reads as none.
+	// voltage reads a nominal voltage off a net's name, one TOKEN at a time. Tokens come from
+	// splitting the name on anything but letters, digits, "." and "+". So P3V3_EN reads its 3V3 token.
+	// Each pattern needs a capture group. The first group holds the whole volts. The first later group
+	// that matches holds the fraction. So ^(\d+)V(\d+)$ reads 3V3 as 3.3. If a name's tokens state
+	// two different voltages, the name reads as no voltage.
 	Voltage       *VocabPatterns `protobuf:"bytes,11,opt,name=voltage,proto3" json:"voltage,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -463,8 +468,8 @@ func (x *NetNameVocab) GetVoltage() *VocabPatterns {
 	return nil
 }
 
-// DiffPairVocab lists the suffix pairs that name a differential pair. It is not a VocabPatterns
-// because a rule needs the complement of a name, and a pattern can only say a name matches. A
+// DiffPairVocab lists the suffix pairs that name a differential pair. It is not a VocabPatterns. A
+// rule needs the complement of a name, and a pattern can only say whether a name matches. A
 // convention's pairs are ADDED to the built-ins unless replace is set, as on VocabPatterns.
 type DiffPairVocab struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -574,25 +579,26 @@ func (x *DiffSuffix) GetNegative() string {
 
 // PinNameVocab is the vocabulary for a component's PIN names.
 //
-// The three transistor terminals are applied only to parts the class lexicon reads as a transistor,
-// so a house spelling here cannot leak onto an MCU's pins. They are deliberately short and would
-// collide badly if applied to any part: an unanchored "S" matches SDA, SCLK and SENSE.
+// The engine applies the three transistor terminals only to parts that the class lexicon reads as a
+// transistor. So a house spelling here cannot leak onto an MCU's pins. The names are short on
+// purpose, and on an arbitrary part they would collide badly. An unanchored "S" matches SDA, SCLK
+// and SENSE.
 type PinNameVocab struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Supply *VocabPatterns         `protobuf:"bytes,1,opt,name=supply,proto3" json:"supply,omitempty"` // a component's power-supply INPUT pin names (WS3-072)
 	Gate   *VocabPatterns         `protobuf:"bytes,2,opt,name=gate,proto3" json:"gate,omitempty"`     // transistor TERMINAL pin names (WS3-117)
 	Source *VocabPatterns         `protobuf:"bytes,3,opt,name=source,proto3" json:"source,omitempty"`
 	Drain  *VocabPatterns         `protobuf:"bytes,4,opt,name=drain,proto3" json:"drain,omitempty"`
-	// exposed_pad names a package's exposed thermal pad, which datasheets often let float, so a lone
-	// power_in pad on its own net is not read as an undriven rail (agni issue 935).
+	// exposed_pad names a package's exposed thermal pad (agni issue 935). Datasheets often let it
+	// float. So a lone power_in pad on its own net does not read as an undriven rail.
 	ExposedPad *VocabPatterns `protobuf:"bytes,5,opt,name=exposed_pad,json=exposedPad,proto3" json:"exposed_pad,omitempty"`
-	// anode and cathode are applied only to the diode family, and match the WHOLE pin name rather than
-	// its leaf, so a pin named A/K stays unread instead of reading as a cathode.
+	// anode and cathode apply only to the diode family. They match the WHOLE pin name rather than its
+	// leaf. So a pin named A/K is left unread, instead of reading as a cathode.
 	Anode   *VocabPatterns `protobuf:"bytes,6,opt,name=anode,proto3" json:"anode,omitempty"`
 	Cathode *VocabPatterns `protobuf:"bytes,7,opt,name=cathode,proto3" json:"cathode,omitempty"`
-	// feedback and switching name a regulator's own pins, which is how a connector on a converter's
-	// output reads as an outlet when no net is named for the converter. They are separate from the net
-	// vocabularies of the same names because a pin name carries no rail prefix to end in _FB.
+	// feedback and switching name a regulator's own pins. Through them, a connector on a converter's
+	// output reads as an outlet when no net is named for the converter. They are separate from the
+	// net vocabularies of the same names. A pin name has no rail prefix to end in _FB.
 	Feedback      *VocabPatterns `protobuf:"bytes,8,opt,name=feedback,proto3" json:"feedback,omitempty"`
 	Switching     *VocabPatterns `protobuf:"bytes,9,opt,name=switching,proto3" json:"switching,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -692,17 +698,16 @@ func (x *PinNameVocab) GetSwitching() *VocabPatterns {
 	return nil
 }
 
-// VocabPatterns is one vocabulary override: RE2 patterns, case-insensitive, matched on the hierarchy
-// leaf. They are MERGED onto the built-in set unless replace is set, in which case they become the
-// whole set. A project normally teaches the engine additional names rather than discarding what it
-// already knows.
+// VocabPatterns is one vocabulary override. Its patterns are RE2, case-insensitive, and matched on
+// the hierarchy leaf. They are MERGED onto the built-in set. If replace is set, they become the whole
+// set instead. A project normally teaches the engine more names, and keeps what it already knows.
 type VocabPatterns struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Patterns []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
 	Replace  bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
-	// exclude takes a name OUT of the vocabulary even when a pattern matches it, since RE2 has no
-	// lookaround to say "SDA, but not I2S0_RX_SDA" in one pattern. Merged and replaced as patterns are.
-	// Field 3 is skipped because ClassVocab's prefixes holds it and the two share numbers.
+	// exclude takes a name OUT of the vocabulary even when a pattern matches it. RE2 has no lookaround
+	// to say "SDA, but not I2S0_RX_SDA" in one pattern. It is merged and replaced as patterns are.
+	// Field 3 is skipped, because ClassVocab's prefixes uses it and the two messages share numbers.
 	Exclude       []string `protobuf:"bytes,4,rep,name=exclude,proto3" json:"exclude,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -760,26 +765,28 @@ func (x *VocabPatterns) GetExclude() []string {
 }
 
 // ClassVocab is one component class's override. patterns and replace mean what they mean on
-// VocabPatterns, matched against a part's text TOKENS, and field numbers are shared with it so a
+// VocabPatterns, and match against a part's text TOKENS. The two messages share field numbers. So a
 // block written before prefixes existed reads the same.
 //
-// prefixes are ref-des letter prefixes (TH, Z) that mark a part as this class, matched against the
-// leading run of letters of a ref-des or a part's declared designator prefix, case-insensitively. They
-// are ADDED to the built-in prefix table and win over it, so a house that writes F for a ferrite
-// re-points F. replace does not touch them. A prefix holding anything but letters, or one listed under
-// two classes, is a load error: the first could never match and the second has no defensible answer.
+// prefixes are ref-des letter prefixes (TH, Z) that mark a part as this class. They match the
+// leading run of letters of a ref-des, or of a part's declared designator prefix, case-insensitively.
+// They are ADDED to the built-in prefix table and win over it. So a house that writes F for a
+// ferrite re-points F. replace does not touch them. Two kinds of prefix are load errors. A prefix
+// holding anything but letters could never match. A prefix listed under two classes has no
+// defensible answer.
 type ClassVocab struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Patterns []string               `protobuf:"bytes,1,rep,name=patterns,proto3" json:"patterns,omitempty"`
 	Replace  bool                   `protobuf:"varint,2,opt,name=replace,proto3" json:"replace,omitempty"`
 	Prefixes []string               `protobuf:"bytes,3,rep,name=prefixes,proto3" json:"prefixes,omitempty"`
-	// families are part-number families (RE2, matched at the start of a part's text token) that decide
-	// this class even on a part whose ref-des reads as an IC, as a suppressor array labelled U does.
-	// ADDED to the built-in families unless replace is set. Only the tvs class ships any (agni 1257).
+	// families are part-number families, as RE2 matched at the start of a part's text token. A family
+	// decides this class even on a part whose ref-des reads as an IC, such as a suppressor array
+	// labelled U. ADDED to the built-in families unless replace is set. Only the tvs class ships any
+	// (agni 1257).
 	Families []string `protobuf:"bytes,5,rep,name=families,proto3" json:"families,omitempty"`
-	// exclude_prefixes takes a BUILT-IN prefix of this class out of the table, so a house whose D is a
-	// display rather than a diode can say so. Naming a prefix the built-ins give another class is a load
-	// error, since moving it is what prefixes is for.
+	// exclude_prefixes takes a BUILT-IN prefix of this class out of the table. So a house whose D is a
+	// display rather than a diode can say so. Naming a prefix that the built-ins give another class is
+	// a load error. To move a prefix, use prefixes.
 	ExcludePrefixes []string `protobuf:"bytes,6,rep,name=exclude_prefixes,json=excludePrefixes,proto3" json:"exclude_prefixes,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -850,10 +857,10 @@ func (x *ClassVocab) GetExcludePrefixes() []string {
 	return nil
 }
 
-// NamingRule is one convention rule. A net name FIRES when it matches none of `allow`; names matching
-// any `exempt` are skipped. Patterns are RE2 and UNANCHORED (write ^...$ for a whole-name match), and
-// they match the LEAF of a hierarchy-qualified name unless match_full is set, since qualification is
-// the reader's scoping rather than the author's spelling.
+// NamingRule is one convention rule. A net name FIRES when it matches none of `allow`. Names matching
+// any `exempt` are skipped. Patterns are RE2 and UNANCHORED, so write ^...$ for a whole-name match.
+// They match the LEAF of a hierarchy-qualified name unless match_full is set. The qualification
+// comes from the reader's scoping, not from the author's spelling.
 type NamingRule struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`

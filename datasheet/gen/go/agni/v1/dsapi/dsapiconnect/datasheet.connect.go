@@ -69,19 +69,19 @@ const (
 // DatasheetServiceClient is a client for the agni.v1.dsapi.DatasheetService service.
 type DatasheetServiceClient interface {
 	// ListMounts and ListDir are the workbench's folder tree. They take and return the engine's own
-	// workspace messages and answer exactly as WorkspaceService does, because the datasheet service
-	// lists through the same mounts.Workspace; they are here so the datasheet service serves its whole
-	// page from its own API when it is hosted apart from the engine (agni issue 744).
+	// workspace messages. They answer exactly as WorkspaceService does, because the datasheet service
+	// lists through the same mounts.Workspace. With them the datasheet service serves its whole page
+	// from its own API when it is hosted apart from the engine (agni issue 744).
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 	// GetDocument returns the doc-IR for the datasheet at (mount, path). path names the source
 	// document (the PDF the browser renders); the server resolves the datasheet's sibling doc-IR.
-	// When none has been derived yet, extracted is false and document is unset — a normal state,
-	// not an error.
+	// When none has been derived yet, extracted is false and document is unset. That is a normal
+	// state, not an error.
 	GetDocument(context.Context, *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error)
 	// DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
-	// and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit so
-	// work is never lost, and no check ever reads one: readers see only PUBLISHED specs, through the
+	// and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit, so
+	// work is never lost. No check ever reads a draft. Readers see only PUBLISHED specs, through the
 	// contract's PartSpecService. PublishDraft is the one step between the two. Drafts live in the
 	// published corpus's store, so these rpcs need agnids serve --corpus.
 	//
@@ -91,35 +91,36 @@ type DatasheetServiceClient interface {
 	// ListDrafts returns the drafts that cite a datasheet, so opening a document finds the parts
 	// transcribed from it. A family datasheet can be cited by several.
 	ListDrafts(context.Context, *connect.Request[dsapi.ListDraftsRequest]) (*connect.Response[dsapi.ListDraftsResponse], error)
-	// SaveDraft writes a draft with optimistic concurrency: base_version must equal the stored
-	// version (empty asserts the draft does not exist yet, a first save), or the save is rejected as
-	// a conflict (Connect Aborted) and the client refetches. It never refuses a draft for being
-	// incomplete; what is wrong with it comes back as problems.
+	// SaveDraft writes a draft with optimistic concurrency. base_version must equal the stored
+	// version, and an empty one asserts the draft does not exist yet (a first save). Otherwise the
+	// save is rejected as a conflict (Connect Aborted), and the client refetches. It never refuses a
+	// draft for being incomplete. What is wrong with the draft comes back as problems.
 	SaveDraft(context.Context, *connect.Request[dsapi.SaveDraftRequest]) (*connect.Response[dsapi.SaveDraftResponse], error)
 	// PublishDraft validates a draft and, when it passes, makes it the current published spec for its
 	// MPN, recording it in the corpus index under a new generation. A draft that does not validate is
-	// not published, and the response lists every problem. The draft stays, as the start of the
+	// not published, and the response lists every problem. The draft is kept as the start of the
 	// next edit.
 	PublishDraft(context.Context, *connect.Request[dsapi.PublishDraftRequest]) (*connect.Response[dsapi.PublishDraftResponse], error)
 	// ExtractDocIR runs the configured doc-IR producer (pdf2doc/docling) over the datasheet, writes
-	// the <stem>.doc.textproto sibling, and returns the produced doc-IR so the workbench can show the
-	// auto-detected regions immediately (the "first pass" the human then reviews). It is gated: a
-	// server started without --pdf2doc rejects it as FailedPrecondition (GetDocumentResponse.
-	// extract_available reports whether it is offered). Docling is external and CI-excluded; the
-	// engine invokes a configured command, never bundles it, and it runs in-boundary (C16).
+	// the <stem>.doc.textproto sibling, and returns the produced doc-IR. The workbench can then show
+	// the auto-detected regions immediately, as the "first pass" for the human to review. It is
+	// gated. A server started without --pdf2doc rejects it as FailedPrecondition, and
+	// GetDocumentResponse.extract_available reports whether it is offered. Docling is external and
+	// CI-excluded. The engine invokes a configured command and never bundles it, and the command runs
+	// in-boundary (C16).
 	ExtractDocIR(context.Context, *connect.Request[dsapi.ExtractDocIRRequest]) (*connect.Response[dsapi.ExtractDocIRResponse], error)
 	// GetAnnotations returns the region-annotation overlay for a datasheet as the UNION of every
-	// author's overlay (WS13-011): a per-author working layer of drawn boxes, routing-type tags, and
-	// draft parameter assertions the human made against the doc-IR regions. Unlike the single shared
-	// PartSpec, annotations are per author (a coordination namespace, NOT a security boundary — mounts
-	// are the boundary), so two people annotating one datasheet compose instead of clobbering. They
-	// are the SOURCE that WS13-012 canonicalizes into the shared PartSpec; query/check never read
-	// them. Empty when nobody has annotated yet.
+	// author's overlay (WS13-011). Each author's overlay is a working layer. It holds the boxes the
+	// human drew, routing-type tags, and draft parameter assertions against the doc-IR regions. There
+	// is one shared PartSpec, but annotations are per author. The author is a coordination namespace,
+	// NOT a security boundary, since mounts are the boundary. So two people annotating one datasheet
+	// compose instead of clobbering. WS13-012 canonicalizes annotations into the shared PartSpec, and
+	// query/check never read them. Empty when nobody has annotated yet.
 	GetAnnotations(context.Context, *connect.Request[dsapi.GetAnnotationsRequest]) (*connect.Response[dsapi.GetAnnotationsResponse], error)
 	// SaveAnnotations writes ONE author's complete overlay for a datasheet, replacing that author's
-	// prior overlay. There is no compare-and-swap: each author owns their own file, so writes never
-	// contend and a delete only ever removes the caller's own annotations. author is supplied by the
-	// client (self-asserted); it namespaces the overlay, it does not authenticate.
+	// prior overlay. There is no compare-and-swap. Each author owns their own file, so writes never
+	// contend, and a delete only ever removes the caller's own annotations. The client supplies
+	// author, self-asserted. It namespaces the overlay and does not authenticate.
 	SaveAnnotations(context.Context, *connect.Request[dsapi.SaveAnnotationsRequest]) (*connect.Response[dsapi.SaveAnnotationsResponse], error)
 }
 
@@ -264,19 +265,19 @@ func (c *datasheetServiceClient) SaveAnnotations(ctx context.Context, req *conne
 // DatasheetServiceHandler is an implementation of the agni.v1.dsapi.DatasheetService service.
 type DatasheetServiceHandler interface {
 	// ListMounts and ListDir are the workbench's folder tree. They take and return the engine's own
-	// workspace messages and answer exactly as WorkspaceService does, because the datasheet service
-	// lists through the same mounts.Workspace; they are here so the datasheet service serves its whole
-	// page from its own API when it is hosted apart from the engine (agni issue 744).
+	// workspace messages. They answer exactly as WorkspaceService does, because the datasheet service
+	// lists through the same mounts.Workspace. With them the datasheet service serves its whole page
+	// from its own API when it is hosted apart from the engine (agni issue 744).
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
 	// GetDocument returns the doc-IR for the datasheet at (mount, path). path names the source
 	// document (the PDF the browser renders); the server resolves the datasheet's sibling doc-IR.
-	// When none has been derived yet, extracted is false and document is unset — a normal state,
-	// not an error.
+	// When none has been derived yet, extracted is false and document is unset. That is a normal
+	// state, not an error.
 	GetDocument(context.Context, *connect.Request[dsapi.GetDocumentRequest]) (*connect.Response[dsapi.GetDocumentResponse], error)
 	// DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
-	// and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit so
-	// work is never lost, and no check ever reads one: readers see only PUBLISHED specs, through the
+	// and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit, so
+	// work is never lost. No check ever reads a draft. Readers see only PUBLISHED specs, through the
 	// contract's PartSpecService. PublishDraft is the one step between the two. Drafts live in the
 	// published corpus's store, so these rpcs need agnids serve --corpus.
 	//
@@ -286,35 +287,36 @@ type DatasheetServiceHandler interface {
 	// ListDrafts returns the drafts that cite a datasheet, so opening a document finds the parts
 	// transcribed from it. A family datasheet can be cited by several.
 	ListDrafts(context.Context, *connect.Request[dsapi.ListDraftsRequest]) (*connect.Response[dsapi.ListDraftsResponse], error)
-	// SaveDraft writes a draft with optimistic concurrency: base_version must equal the stored
-	// version (empty asserts the draft does not exist yet, a first save), or the save is rejected as
-	// a conflict (Connect Aborted) and the client refetches. It never refuses a draft for being
-	// incomplete; what is wrong with it comes back as problems.
+	// SaveDraft writes a draft with optimistic concurrency. base_version must equal the stored
+	// version, and an empty one asserts the draft does not exist yet (a first save). Otherwise the
+	// save is rejected as a conflict (Connect Aborted), and the client refetches. It never refuses a
+	// draft for being incomplete. What is wrong with the draft comes back as problems.
 	SaveDraft(context.Context, *connect.Request[dsapi.SaveDraftRequest]) (*connect.Response[dsapi.SaveDraftResponse], error)
 	// PublishDraft validates a draft and, when it passes, makes it the current published spec for its
 	// MPN, recording it in the corpus index under a new generation. A draft that does not validate is
-	// not published, and the response lists every problem. The draft stays, as the start of the
+	// not published, and the response lists every problem. The draft is kept as the start of the
 	// next edit.
 	PublishDraft(context.Context, *connect.Request[dsapi.PublishDraftRequest]) (*connect.Response[dsapi.PublishDraftResponse], error)
 	// ExtractDocIR runs the configured doc-IR producer (pdf2doc/docling) over the datasheet, writes
-	// the <stem>.doc.textproto sibling, and returns the produced doc-IR so the workbench can show the
-	// auto-detected regions immediately (the "first pass" the human then reviews). It is gated: a
-	// server started without --pdf2doc rejects it as FailedPrecondition (GetDocumentResponse.
-	// extract_available reports whether it is offered). Docling is external and CI-excluded; the
-	// engine invokes a configured command, never bundles it, and it runs in-boundary (C16).
+	// the <stem>.doc.textproto sibling, and returns the produced doc-IR. The workbench can then show
+	// the auto-detected regions immediately, as the "first pass" for the human to review. It is
+	// gated. A server started without --pdf2doc rejects it as FailedPrecondition, and
+	// GetDocumentResponse.extract_available reports whether it is offered. Docling is external and
+	// CI-excluded. The engine invokes a configured command and never bundles it, and the command runs
+	// in-boundary (C16).
 	ExtractDocIR(context.Context, *connect.Request[dsapi.ExtractDocIRRequest]) (*connect.Response[dsapi.ExtractDocIRResponse], error)
 	// GetAnnotations returns the region-annotation overlay for a datasheet as the UNION of every
-	// author's overlay (WS13-011): a per-author working layer of drawn boxes, routing-type tags, and
-	// draft parameter assertions the human made against the doc-IR regions. Unlike the single shared
-	// PartSpec, annotations are per author (a coordination namespace, NOT a security boundary — mounts
-	// are the boundary), so two people annotating one datasheet compose instead of clobbering. They
-	// are the SOURCE that WS13-012 canonicalizes into the shared PartSpec; query/check never read
-	// them. Empty when nobody has annotated yet.
+	// author's overlay (WS13-011). Each author's overlay is a working layer. It holds the boxes the
+	// human drew, routing-type tags, and draft parameter assertions against the doc-IR regions. There
+	// is one shared PartSpec, but annotations are per author. The author is a coordination namespace,
+	// NOT a security boundary, since mounts are the boundary. So two people annotating one datasheet
+	// compose instead of clobbering. WS13-012 canonicalizes annotations into the shared PartSpec, and
+	// query/check never read them. Empty when nobody has annotated yet.
 	GetAnnotations(context.Context, *connect.Request[dsapi.GetAnnotationsRequest]) (*connect.Response[dsapi.GetAnnotationsResponse], error)
 	// SaveAnnotations writes ONE author's complete overlay for a datasheet, replacing that author's
-	// prior overlay. There is no compare-and-swap: each author owns their own file, so writes never
-	// contend and a delete only ever removes the caller's own annotations. author is supplied by the
-	// client (self-asserted); it namespaces the overlay, it does not authenticate.
+	// prior overlay. There is no compare-and-swap. Each author owns their own file, so writes never
+	// contend, and a delete only ever removes the caller's own annotations. The client supplies
+	// author, self-asserted. It namespaces the overlay and does not authenticate.
 	SaveAnnotations(context.Context, *connect.Request[dsapi.SaveAnnotationsRequest]) (*connect.Response[dsapi.SaveAnnotationsResponse], error)
 }
 

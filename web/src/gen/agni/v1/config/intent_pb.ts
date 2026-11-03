@@ -13,16 +13,17 @@ export const file_agni_v1_config_intent: GenFile = /*@__PURE__*/
   fileDesc("ChthZ25pL3YxL2NvbmZpZy9pbnRlbnQucHJvdG8SDmFnbmkudjEuY29uZmlnIvsDCgxEZXNpZ25JbnRlbnQSLQoHbW9kdWxlcxgBIAMoCzIcLmFnbmkudjEuY29uZmlnLkludGVudE1vZHVsZRI0CgRuZXRzGAIgAygLMiYuYWduaS52MS5jb25maWcuRGVzaWduSW50ZW50Lk5ldHNFbnRyeRIwCglzZXF1ZW5jZXMYAyADKAsyHS5hZ25pLnYxLmNvbmZpZy5Qb3dlclNlcXVlbmNlEjAKDHN0cmFwX2dyb3VwcxgEIAMoCzIaLmFnbmkudjEuY29uZmlnLlN0cmFwR3JvdXASLQoGaW9fbWFwGAUgAygLMh0uYWduaS52MS5jb25maWcuUGluQXNzaWdubWVudBIVCg1tYXJnaW5fZmFjdG9yGAYgASgBEkAKCmNvbXBvbmVudHMYByADKAsyLC5hZ25pLnYxLmNvbmZpZy5EZXNpZ25JbnRlbnQuQ29tcG9uZW50c0VudHJ5GkYKCU5ldHNFbnRyeRILCgNrZXkYASABKAkSKAoFdmFsdWUYAiABKAsyGS5hZ25pLnYxLmNvbmZpZy5OZXRJbnRlbnQ6AjgBGlIKD0NvbXBvbmVudHNFbnRyeRILCgNrZXkYASABKAkSLgoFdmFsdWUYAiABKAsyHy5hZ25pLnYxLmNvbmZpZy5Db21wb25lbnRJbnRlbnQ6AjgBIiMKD0NvbXBvbmVudEludGVudBIQCghleHBvc3VyZRgBIAEoCSJVCgxJbnRlbnRNb2R1bGUSDAoEbmFtZRgBIAEoCRINCgVjbGFzcxgCIAEoCRILCgNtcG4YAyABKAkSDQoFY291bnQYBCABKAUSDAoEbmV0cxgFIAMoCSLcAQoJTmV0SW50ZW50EhQKB25vbWluYWwYASABKAFIAIgBARIOCgZkb21haW4YAiABKAkSEQoEcGVhaxgDIAEoAUgBiAEBEg8KB3Byb3RlY3QYBCADKAkSDQoFcmVzZXQYBSABKAkSDQoFc3RyYXAYBiABKAkSEAoIbWluX29obXMYByABKAESEAoIbWF4X29obXMYCCABKAESEgoKYWNfY291cGxlZBgJIAEoCBIaChJwdWxsX3VwX3JlYWNoX2hvcHMYCiABKAVCCgoIX25vbWluYWxCBwoFX3BlYWsiXQoNUG93ZXJTZXF1ZW5jZRIMCgRuYW1lGAEgASgJEhAKCHJlbGF0aW9uGAIgASgJEiwKBW9yZGVyGAMgAygLMh0uYWduaS52MS5jb25maWcuU2VxdWVuY2VTdGFnZSI7Cg1TZXF1ZW5jZVN0YWdlEgwKBHJhaWwYASABKAkSDAoEZ29vZBgCIAEoCRIOCgZlbmFibGUYAyABKAkiZQoKU3RyYXBHcm91cBIMCgRuYW1lGAEgASgJEg4KBmRldmljZRgCIAEoCRIMCgRuZXRzGAMgAygJEg0KBXZhbHVlGAQgASgFEgsKA2J1cxgFIAEoCRIPCgdkZWZhdWx0GAYgASgJInQKDVBpbkFzc2lnbm1lbnQSCwoDbmV0GAEgASgJEg4KBmRldmljZRgCIAEoCRILCgNwaW4YAyABKAkSEAoIZnVuY3Rpb24YBCABKAkSJwoCdG8YBSABKAsyGy5hZ25pLnYxLmNvbmZpZy5QaW5FbmRwb2ludCIqCgtQaW5FbmRwb2ludBIOCgZkZXZpY2UYASABKAkSCwoDcGluGAIgASgJQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY29uZmlnYgZwcm90bzM");
 
 /**
- * This file: a design's declared intent, as the ONE schema the authoring YAML and any wire form share
- * (CONSTRAINTS C26, agni issue 824).
+ * This file defines a design's declared intent. The authoring YAML and any wire form share this ONE
+ * schema (CONSTRAINTS C26, agni issue 824).
  *
- * A design writes it under `intent:` in its design.yaml. YAML is the syntax and this message is the
- * schema, so the loader binds the section to DesignIntent and compiles that, and a field added here is
- * a field every surface carries. The compiled form the rules read (stdlib/rules/intent.Declaration) is
- * derived from this message in one direction, since it deals each net's facts out into per-kind lists.
+ * A design writes its intent under `intent:` in its design.yaml. YAML is the syntax and this
+ * message is the schema. The loader binds the section to DesignIntent and compiles that, so a field
+ * added here reaches every surface. The rules read a compiled form,
+ * stdlib/rules/intent.Declaration. That form is derived from this message in one direction only,
+ * because it splits each net's facts into per-kind lists.
  *
  * Every field is checked at load for something it can evaluate, and the error names the offending
- * entry. The rule each field compiles to is in the guide's "Design intent" page.
+ * entry. The guide's "Design intent" page lists which rule each field compiles to.
  *
  * @generated from message agni.v1.config.DesignIntent
  */
@@ -58,7 +59,7 @@ export type DesignIntent = Message<"agni.v1.config.DesignIntent"> & {
   strapGroups: StrapGroup[];
 
   /**
-   * io_map says which net lands on which pin of which device.
+   * io_map says which net connects to which pin of which device.
    *
    * @generated from field: repeated agni.v1.config.PinAssignment io_map = 5;
    */
@@ -66,7 +67,8 @@ export type DesignIntent = Message<"agni.v1.config.DesignIntent"> & {
 
   /**
    * margin_factor is the headroom every supply must have over the peaks declared on its rails. Zero
-   * means none was declared, which leaves the margin rule uncompiled. A declared factor must exceed 1.
+   * means none was declared, and then the margin rule does not compile. A declared factor must
+   * exceed 1.
    *
    * @generated from field: double margin_factor = 6;
    */
@@ -88,17 +90,18 @@ export const DesignIntentSchema: GenMessage<DesignIntent> = /*@__PURE__*/
   messageDesc(file_agni_v1_config_intent, 0);
 
 /**
- * ComponentIntent is everything declared about one component. It exists for what a part number cannot
- * say, because the same part is used differently on different boards.
+ * ComponentIntent is everything declared about one component. It records what a part number cannot
+ * say, since the same part is used differently on different boards.
  *
  * @generated from message agni.v1.config.ComponentIntent
  */
 export type ComponentIntent = Message<"agni.v1.config.ComponentIntent"> & {
   /**
-   * exposure says whether a connector faces the outside of the product: "internal" for one that joins
-   * this board to another inside the same enclosure (a module socket, a mezzanine), or "external".
-   * An undeclared connector is external, so the exposure rules (esd-protection, esd-clamp-not-tvs,
-   * input-protection, reverse-blocking-absent) check every connector nobody declared internal.
+   * exposure says whether a connector faces the outside of the product. "internal" marks a connector
+   * that joins this board to another inside the same enclosure, such as a module socket or a
+   * mezzanine. The other value is "external". An undeclared connector is external, so the exposure
+   * rules check every connector not declared internal. Those rules are esd-protection,
+   * esd-clamp-not-tvs, input-protection and reverse-blocking-absent.
    *
    * @generated from field: string exposure = 1;
    */
@@ -183,7 +186,7 @@ export type NetIntent = Message<"agni.v1.config.NetIntent"> & {
   peak?: number | undefined;
 
   /**
-   * protect lists the protection the rail must carry: "ovp" or "discharge".
+   * protect lists the protections the rail requires, each "ovp" or "discharge".
    *
    * @generated from field: repeated string protect = 4;
    */
@@ -197,7 +200,7 @@ export type NetIntent = Message<"agni.v1.config.NetIntent"> & {
   reset: string;
 
   /**
-   * strap is the level this strap net must latch: "low" or "high".
+   * strap is the level that this strap net must latch, "low" or "high".
    *
    * @generated from field: string strap = 6;
    */
@@ -223,11 +226,12 @@ export type NetIntent = Message<"agni.v1.config.NetIntent"> & {
   acCoupled: boolean;
 
   /**
-   * pull_up_reach_hops is how many series resistors the pull-up walk from this net may cross before it
-   * must land on a rail, for a bus whose series network is sized for a deeper reach than the default.
-   * Zero or absent keeps the default of 3 (check.PullUpReachHops), and a negative value is a load
-   * error. It compiles to no rule. The model reads it, so every rule that walks to a pull-up
-   * (i2c-pull-up, the redundant and split-rail counts, a profile's missing-pullup) asks at this limit.
+   * pull_up_reach_hops limits the pull-up walk from this net. The walk may cross this many series
+   * resistors before it must reach a rail. A bus sets it when its series network is sized for a
+   * deeper reach than the default. Zero or absent keeps the default of 3 (check.PullUpReachHops), and
+   * a negative value is a load error. It compiles to no rule. The model reads it, so every rule that
+   * walks to a pull-up asks at this limit. Those rules are i2c-pull-up, the redundant and split-rail
+   * counts, and a profile's missing-pullup.
    *
    * @generated from field: int32 pull_up_reach_hops = 10;
    */
@@ -342,7 +346,8 @@ export type StrapGroup = Message<"agni.v1.config.StrapGroup"> & {
   bus: string;
 
   /**
-   * default is the level a bit with no strap resistor reads at: "low", "high", or empty.
+   * default is the level that a bit reads at when it has no strap resistor. It is "low", "high", or
+   * empty.
    *
    * @generated from field: string default = 6;
    */
@@ -378,8 +383,8 @@ export type PinAssignment = Message<"agni.v1.config.PinAssignment"> & {
   pin: string;
 
   /**
-   * function is the peripheral function selected on the pin, which io-map-function checks against
-   * the alternate functions the part's datasheet lists (agni issue 667).
+   * function is the peripheral function selected on the pin. io-map-function checks it against the
+   * pin's alternate functions in the part's datasheet (agni issue 667).
    *
    * @generated from field: string function = 4;
    */

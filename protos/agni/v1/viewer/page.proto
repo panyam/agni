@@ -4,30 +4,32 @@ package agni.v1.viewer;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/viewer";
 
-// This file: ViewerPageService, the contract a LIVE viewer page answers (agni issues 1150, 1152).
+// This file defines ViewerPageService, the contract a LIVE viewer page answers (agni issues 1150,
+// 1152).
 //
-// Every other service in agni is answered by a server or the browser engine. This one is answered by
-// the open viewer page itself, so a host can move it without reloading it: open a sheet, focus a
-// verdict, apply a link's location to the page already showing the design. A link (ViewerLocation
-// in the URL) is the cold form of the same question, and ApplyLocation is its hot form, so a link
-// and a call land the same way.
+// A server or the browser engine answers every other service in agni. The open viewer page answers
+// this one itself, so a host can move the page without reloading it. The host can open a sheet,
+// focus a verdict, or apply a link's location to the page already showing the design. A link
+// (ViewerLocation in the URL) is the cold form of the same question, and ApplyLocation is its hot
+// form. So a link and a call have the same effect.
 //
 // The service is transport-neutral. The page dispatches a method name and a protojson body
-// (web/src/pageservice.ts), and each transport only carries that pair: postMessage from a parent
-// page today (web/src/embed.ts, the `agni-viewer/v1` envelope), and a design's relay room, where
-// each method is an agent's tool (web/src/viewerroom.ts, agni issue 1154). No server implements it.
+// (web/src/pageservice.ts), and each transport only carries that pair. One transport is postMessage
+// from a parent page (web/src/embed.ts, the `agni-viewer/v1` envelope). The other is a design's
+// relay room, where each method is an agent's tool (web/src/viewerroom.ts, agni issue 1154). No
+// server implements it.
 //
-// Every response carries the page's location after the call, so a caller learns where the page
-// landed (which sheet a verdict opened) without asking again.
+// Every response includes the page's location after the call. So a caller learns where the page
+// ended up (which sheet a verdict opened) without asking again.
 service ViewerPageService {
-  // GetLocation returns where the page is now. It changes nothing, which NO_SIDE_EFFECTS records so
+  // GetLocation returns where the page is now. It changes nothing. NO_SIDE_EFFECTS records that, so
   // an agent holding only read access may call it (agni issue 1154).
   rpc GetLocation(GetLocationRequest) returns (GetLocationResponse) {
     option idempotency_level = NO_SIDE_EFFECTS;
   }
   // ApplyLocation moves the open page to a location, as following a link to it would. A location
-  // naming a different design (or a different flatten) opens it, which is the cold path; one naming
-  // the open design, or no design, applies to the page as it stands.
+  // naming a different design, or a different flatten, opens that design. That is the cold path. A
+  // location naming the open design, or no design, applies to the page as it stands.
   rpc ApplyLocation(ApplyLocationRequest) returns (ApplyLocationResponse);
   // LocateVerdict focuses one verdict and draws its proof on a sheet it is drawn on.
   rpc LocateVerdict(LocateVerdictRequest) returns (LocateVerdictResponse);
@@ -54,8 +56,8 @@ message ViewerLocation {
   string layout = 5;
   optional bool symbols = 6;
   optional bool flatten = 7;
-  // verdict is a verdict id ("<rule>:(<kind>:<ref>,...)"), with hash, rule and subjects as the
-  // link's hints, which mean nothing without it.
+  // verdict is a verdict id ("<rule>:(<kind>:<ref>,...)"). hash, rule and subjects are the link's
+  // hints for it, and they mean nothing without it.
   string verdict = 8;
   string hash = 9;
   string rule = 10;
@@ -83,13 +85,14 @@ message GetLocationResponse {
 
 message ApplyLocationRequest {
   ViewerLocation location = 1;
-  // url is a viewer link instead of a location, as the server mints one (`agni check --server`, an
-  // MCP answer's `link`, a report row), and the page reads it with the same parser it reads its own
-  // address with. Only the fields the link sets are applied. Exactly one of location and url.
+  // url is a viewer link, sent instead of a location. The server mints such links (`agni check
+  // --server`, an MCP answer's `link`, a report row). The page reads url with the same parser it
+  // uses for its own address. Only the fields the link sets are applied. Exactly one of location
+  // and url.
   //
-  // A request carrying only a url is taken from a page at ANY origin, and its reply carries no
+  // The page accepts a request with only a url from a page at ANY origin, and the reply has no
   // location (agni issue 1156). Any page holding the viewer's window can already navigate it to the
-  // same link, so this grants nothing that loading the link would not, except keeping the page.
+  // same link. So this grants nothing that loading the link would not, except keeping the page.
   string url = 2;
 }
 
@@ -103,9 +106,9 @@ message ApplyLocationResponse {
 message LocateVerdictRequest {
   // id is the verdict's derived id, as `agni check --verdicts` prints it.
   string id = 1;
-  // rule and subjects are the same hints a link carries (ViewerLocation.rule, .subjects). When the
-  // page has not answered the verdict yet they let it ask that one rule about those subjects alone,
-  // as a cold link does; without them a verdict the page has not answered stays unresolved.
+  // rule and subjects are the same hints a link has (ViewerLocation.rule, .subjects). Suppose the
+  // page has not answered the verdict yet. The hints let it ask that one rule about those subjects
+  // alone, as a cold link does. Without them, the verdict is left unresolved.
   string rule = 2;
   repeated string subjects = 3;
 }

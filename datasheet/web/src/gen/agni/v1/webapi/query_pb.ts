@@ -36,10 +36,11 @@ export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
   query: string;
 
   /**
-   * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-   * a fact base counts, candidate comparisons, each row a generator emits and the connections a
-   * circuit walk examines. It can only LOWER the
-   * deployment's own budget, never raise it, and zero leaves that budget as it is. A query past its budget fails with RESOURCE_EXHAUSTED, naming the budget.
+   * work_budget caps the work each query in this request may do (agni issue 792). Work counts
+   * candidate comparisons, each row a generator emits, and each connection a circuit walk
+   * examines, in the units a fact base counts. It can only LOWER the deployment's own budget,
+   * never raise it, and zero leaves that budget as it is. A query past its budget fails with
+   * RESOURCE_EXHAUSTED, naming the budget.
    *
    * @generated from field: int64 work_budget = 6;
    */
@@ -47,43 +48,43 @@ export type RunQueryRequest = Message<"agni.v1.webapi.RunQueryRequest"> & {
 
   /**
    * bindings give goal variables values from the caller, keyed by the variable's name without its
-   * `?` (agni issue 793). A bound variable answers exactly as the same value written into the goal as
-   * a constant, so a caller asking about one net or part sends the same query text every time and the
-   * value as data, with nothing to escape or splice. A binding naming a variable the goal does not use
-   * is refused as an invalid argument. Rules are unaffected: their variables are their own.
+   * `?` (agni issue 793). A bound variable answers exactly as if the value were written into the
+   * goal as a constant. So a caller asking about one net or part sends the same query text every
+   * time, and sends the value as data, with nothing to escape or splice. If a binding names a
+   * variable that the goal does not use, the request fails as an invalid argument. Bindings do
+   * not reach rules, since a rule's variables are its own.
    *
    * @generated from field: map<string, agni.v1.webapi.QueryValue> bindings = 7;
    */
   bindings: { [key: string]: QueryValue };
 
   /**
-   * omit_locations leaves out where each answer entity is drawn: its AnswerEntity.sheet_ids and
-   * reason stay empty, and the drawing is not loaded to find them, for a caller that draws nothing,
-   * such as a script writing a workbook. The entities themselves, and cell kinds and pin refs, are
-   * still filled, since they type the answer.
+   * omit_locations leaves out where each answer entity is drawn. It is for a caller that draws
+   * nothing, such as a script writing a workbook. Each AnswerEntity's sheet_ids and reason are then
+   * empty, and the server does not load the drawing to find them. The entities themselves, the cell
+   * kinds and the pin refs are still filled, since they type the answer.
    *
    * @generated from field: bool omit_locations = 8;
    */
   omitLocations: boolean;
 
   /**
-   * limit caps the rows the answer returns, for a caller that wants the first page of a large answer
-   * fast, such as a click on a net carrying a thousand pins (agni issue 896). It goes into evaluation
-   * rather than being a slice of the full answer, so only the rows returned are kept, located and
-   * sent. The goal is still solved whole, because total counts every row. Where the query text
-   * writes its own `limit`, the smaller of the two applies.
-   * Zero leaves the query's own limit, if any, as it is. RunQueryResponse.total says how many rows
-   * the limit left out.
+   * limit caps the rows the answer returns. It serves a caller that wants the first page of a large
+   * answer fast, such as a click on a net with a thousand pins (agni issue 896). Evaluation applies
+   * the limit, instead of slicing the full answer afterwards. So the server keeps, locates and sends
+   * only the returned rows. It still solves the goal whole, because total counts every row. If the
+   * query text writes its own `limit`, the smaller of the two applies. Zero leaves the query's own
+   * limit, if any, as it is. RunQueryResponse.total says how many rows the limit left out.
    *
    * @generated from field: int32 limit = 9;
    */
   limit: number;
 
   /**
-   * witnesses asks for how each row was derived (agni issue 794): QueryRow.witnesses then holds, per
-   * goal literal, the fact or rule that proved it. Off by default, because the engine keeps a
-   * derivation per derived tuple only when asked, and a query that wants answers alone pays nothing.
-   * An aggregate row has none, since a group merges many derivations.
+   * witnesses asks how each row was derived (agni issue 794). QueryRow.witnesses then holds the fact
+   * or rule that proved each goal literal. Off by default. The engine keeps a derivation per derived
+   * tuple only when asked, so a query that wants answers alone costs nothing extra. An aggregate row
+   * has no witnesses, since a group merges many derivations.
    *
    * @generated from field: bool witnesses = 11;
    */
@@ -98,10 +99,10 @@ export const RunQueryRequestSchema: GenMessage<RunQueryRequest> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 0);
 
 /**
- * QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns. Its provenance
- * (the citations of the base facts that produced it) and each entity cell's location are kept once
- * on the response and pointed to from here (agni issue 916), so a value shared by many rows is sent
- * once.
+ * QueryRow is one answer, and cells aligns positionally with RunQueryResponse.columns. The row's
+ * provenance is the citations of the base facts that produced it. The response keeps that
+ * provenance and each entity cell's location once, and the row points to them (agni issue 916). So
+ * a value shared by many rows is sent once.
  *
  * @generated from message agni.v1.webapi.QueryRow
  */
@@ -113,44 +114,42 @@ export type QueryRow = Message<"agni.v1.webapi.QueryRow"> & {
 
   /**
    * cell_kinds aligns positionally with cells and OVERRIDES column_kinds for this row (agni issue
-   * 338), set only where a column's kind cannot be a column property at all.
+   * 338). It is set only where a column's kind cannot be a column property at all.
    *
    * Kind is normally fixed per column, because a variable binds at the same relation position in
-   * every row. `entity(?name, ?kind)` breaks that: it enumerates what exists, so one answer set
-   * holds a component, a net and a bus, and the kind of the `name` cell is whatever that row's
-   * `kind` cell says. Without this the name column types as a scalar and a search result is the one
-   * answer a reader cannot click.
+   * every row. `entity(?name, ?kind)` breaks that. It enumerates what exists, so one answer set holds
+   * a component, a net and a bus. The kind of each `name` cell is whatever that row's `kind` cell
+   * says. Without cell_kinds, the name column would type as a scalar, and a reader could not click a
+   * search result, though every other answer is clickable.
    *
-   * Empty for every ordinary query, and "" for every non-polymorphic cell within a row that has
-   * one, so a client reads `cell_kinds[i] || column_kinds[i]` and column_kinds keeps meaning what it
-   * has always meant.
+   * Empty for every ordinary query. In a row that has a polymorphic cell, every other cell is "".
+   * So a client reads `cell_kinds[i] || column_kinds[i]`, and column_kinds means what it always has.
    *
    * @generated from field: repeated string cell_kinds = 5;
    */
   cellKinds: string[];
 
   /**
-   * cell_refs aligns positionally with cells and carries the OTHER HALF of a cell's identity, set
-   * only where one cell cannot name the entity by itself (agni issue 259 follow-up).
+   * cell_refs aligns positionally with cells and holds the OTHER HALF of a cell's identity. It is
+   * set only where one cell cannot name the entity by itself (agni issue 259 follow-up).
    *
-   * A pin is the case. Its identity is two fields, the component and the designator, so the cell
-   * holding "5" names nothing until you know it means U7's pin 5. That is why a pin column typed as
-   * a scalar for so long: not because a pin is unlocatable, but because a table cell is one string
-   * and a pin is two.
+   * A pin needs it. A pin's identity is two fields, the component and the designator. A cell holding
+   * "5" names nothing until you know it means U7's pin 5. A table cell is one string and a pin is
+   * two. So a pin column typed as a scalar for a long time, though a pin can be located.
    *
-   * This is a sibling of cell_kinds rather than the same mechanism. A pin column's KIND is fixed
-   * (every row is a pin, so column_kinds says "pin"); what varies per row is the ref, which may come
-   * from a sibling column, from a constant in the query, or from a variable the projection dropped.
-   * Empty for every column that is not a pin column.
+   * This is a sibling of cell_kinds, not the same mechanism. A pin column's KIND is fixed, since
+   * every row is a pin and column_kinds says "pin". The ref varies per row. It may come from a
+   * sibling column, from a constant in the query, or from a variable the projection dropped. Empty
+   * for every column that is not a pin column.
    *
    * @generated from field: repeated string cell_refs = 6;
    */
   cellRefs: string[];
 
   /**
-   * cell_entity aligns with cells: for an entity cell, 1 + its index in RunQueryResponse.entities,
-   * where its sheets and locate reason are kept once for every row naming it; 0 for a scalar cell
-   * (agni issue 916). Empty when the answer has no entity column.
+   * cell_entity aligns with cells (agni issue 916). An entity cell holds 1 + its index in
+   * RunQueryResponse.entities. That entry keeps the entity's sheets and locate reason once for every
+   * row naming it. A scalar cell holds 0. Empty when the answer has no entity column.
    *
    * @generated from field: repeated int32 cell_entity = 7;
    */
@@ -173,9 +172,9 @@ export type QueryRow = Message<"agni.v1.webapi.QueryRow"> & {
   cellWhy: string[];
 
   /**
-   * witnesses say how the row holds, one per literal of the goal that proves something, in the order
-   * the goal is written (agni issue 794). Filled only when the request asked for witnesses, and empty
-   * for an aggregate row.
+   * witnesses say how the row holds (agni issue 794). There is one per goal literal that proves
+   * something, in the goal's written order. Filled only when the request asked for witnesses, and
+   * empty for an aggregate row.
    *
    * @generated from field: repeated agni.v1.webapi.QueryWitness witnesses = 10;
    */
@@ -190,11 +189,11 @@ export const QueryRowSchema: GenMessage<QueryRow> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 1);
 
 /**
- * QueryWitness is how one fact behind an answer row holds (agni issue 794). A leaf is a fact the
- * design's relations gave, with its citations. A derived node names the rule that derived it and
- * holds that rule's body witnesses as children, in the order the rule is written, so a row over a
- * library member reads as the member's definition with each body fact filled in. A `not` that held
- * is a negated leaf, which proves an absence and so has no citations and no children.
+ * QueryWitness is how one fact behind an answer row holds (agni issue 794). A leaf is a fact from
+ * the design's relations, with its citations. A derived node names the rule that derived it. Its
+ * children are that rule's body witnesses, in the rule's written order. So a row over a library
+ * member reads as the member's definition with each body fact filled in. A `not` that held becomes
+ * a negated leaf. It proves an absence, so it has no citations and no children.
  *
  * @generated from message agni.v1.webapi.QueryWitness
  */
@@ -215,9 +214,9 @@ export type QueryWitness = Message<"agni.v1.webapi.QueryWitness"> & {
   values: string[];
 
   /**
-   * value_entity aligns with values as QueryRow.cell_entity aligns with cells: 1 + the index in
-   * RunQueryResponse.entities of the entity a value names, typed from the relation's signature, and 0
-   * for a scalar. Empty when no value names an entity.
+   * value_entity aligns with values, as QueryRow.cell_entity aligns with cells. A value that names
+   * an entity holds 1 + that entity's index in RunQueryResponse.entities. The relation's signature
+   * decides whether a value names an entity. A scalar holds 0. Empty when no value names an entity.
    *
    * @generated from field: repeated int32 value_entity = 3;
    */
@@ -238,8 +237,8 @@ export type QueryWitness = Message<"agni.v1.webapi.QueryWitness"> & {
   negated: boolean;
 
   /**
-   * cite_index is a leaf's citations as indices into RunQueryResponse.sources, the table the rows'
-   * own citations point into, so a source is sent once however many witnesses cite it.
+   * cite_index is a leaf's citations as indices into RunQueryResponse.sources. The rows' own
+   * citations point into the same table. So a source is sent once, however many witnesses cite it.
    *
    * @generated from field: repeated int32 cite_index = 6;
    */
@@ -261,9 +260,9 @@ export const QueryWitnessSchema: GenMessage<QueryWitness> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 2);
 
 /**
- * AnswerEntity is one entity an answer's cells name, with where it is drawn, kept once on the
- * response however many rows name it (agni issue 916). kind is net, component or pin; ref is the
- * net or ref_des, and for a pin the component; pin is the pin's name, empty otherwise.
+ * AnswerEntity is one entity that an answer's cells name, with where it is drawn (agni issue 916).
+ * The response keeps it once, however many rows name it. kind is net, component or pin. ref is the
+ * net or ref_des, and for a pin it is the component. pin is the pin's name, and empty otherwise.
  *
  * @generated from message agni.v1.webapi.AnswerEntity
  */
@@ -284,8 +283,8 @@ export type AnswerEntity = Message<"agni.v1.webapi.AnswerEntity"> & {
   pin: string;
 
   /**
-   * The sheet ids this entity is drawn on, for the client to resolve to names. Empty when the answer omitted
-   * locations or the entity is drawn nowhere, which reason then says.
+   * The sheet ids this entity is drawn on, for the client to resolve to names. Empty when the
+   * answer omitted locations or the entity is drawn nowhere. reason then says which.
    *
    * @generated from field: repeated string sheet_ids = 4;
    */
@@ -309,8 +308,8 @@ export const AnswerEntitySchema: GenMessage<AnswerEntity> = /*@__PURE__*/
  */
 export type RunQueryResponse = Message<"agni.v1.webapi.RunQueryResponse"> & {
   /**
-   * columns are the projected answer columns (the query's Select, or its goal variables in
-   * first-seen order), naming each cell position in every row.
+   * columns are the projected answer columns, and they name each cell position in every row. They
+   * come from the query's Select, or else from its goal variables in first-seen order.
    *
    * @generated from field: repeated string columns = 1;
    */
@@ -322,26 +321,27 @@ export type RunQueryResponse = Message<"agni.v1.webapi.RunQueryResponse"> & {
   rows: QueryRow[];
 
   /**
-   * column_kinds aligns positionally with columns (WS9-038): the entity kind of each column,
-   * derived from the arg-label of the relation position its variable was bound from — "component"
-   * (a ref_des), "net", or "" for a scalar or unresolved column. It drives which cells the panel
-   * renders as clickable-to-locate. Empty (or all "") when no column resolves to an entity.
+   * column_kinds aligns positionally with columns (WS9-038) and gives each column's entity kind.
+   * Each column's variable was bound at some relation position. That position's arg-label
+   * decides the kind: "component" (a ref_des), "net", or "" for a scalar or unresolved column. The
+   * panel renders a cell as clickable-to-locate according to this kind. Empty, or all "", when no
+   * column resolves to an entity.
    *
    * @generated from field: repeated string column_kinds = 3;
    */
   columnKinds: string[];
 
   /**
-   * query and source echo the request's identifying inputs, so an ANSWER says which question
+   * query and source echo the request's identifying inputs. So an ANSWER says which question
    * produced it and which design it was asked of.
    *
-   * Added when the CLI's `--format json` moved onto this message. The CLI had been emitting a
-   * hand-rolled shape that carried both, and dropping them to adopt the wire form would have made
-   * the machine-readable format the only one that cannot say what it is an answer to, which is
-   * backwards: markdown and html carry them precisely so a saved view states its own question.
+   * They were added when the CLI's `--format json` moved onto this message. The CLI's earlier
+   * hand-rolled shape had both. Without them, the machine-readable format would have been the only
+   * one unable to say what it answers. markdown and html include both, so that a saved view states
+   * its own question, and JSON should do no less.
    *
-   * The panel ignores them, since it sent the request and already knows. That is the ordinary cost
-   * of a self-describing response and it is one string each.
+   * The panel ignores them, since it sent the request and already knows. Any self-describing
+   * response costs this much, and here it is one string each.
    *
    * @generated from field: string query = 4;
    */
@@ -353,12 +353,12 @@ export type RunQueryResponse = Message<"agni.v1.webapi.RunQueryResponse"> & {
   source: string;
 
   /**
-   * work is what answering this query cost, in the units a work budget counts, so a deployment can
-   * see which queries are expensive and choose a budget from evidence (agni issue 792). It is what
-   * THIS request spent: a server keeps a design's fact base between requests (agni issue 895), and
-   * a derived relation an earlier query already worked out is reused rather than derived again
-   * (panyam/jaala#140), so the same query can cost less on a warm server than on a cold read. A
-   * cold read costs at least this much.
+   * work is what answering this query cost, in the units a work budget counts (agni issue 792). A
+   * deployment can see which queries are expensive and choose a budget from evidence. It counts
+   * what THIS request spent. A server keeps a design's fact base between requests (agni issue 895).
+   * When an earlier query already derived a relation, the server reuses it rather than deriving it
+   * again (panyam/jaala#140). So the same query can cost less on a warm server than on a cold read.
+   * A cold read costs at least this much.
    *
    * @generated from field: int64 work = 6;
    */
@@ -373,25 +373,25 @@ export type RunQueryResponse = Message<"agni.v1.webapi.RunQueryResponse"> & {
   bindings: { [key: string]: QueryValue };
 
   /**
-   * entities is every distinct entity the answer's cells name, which QueryRow.cell_entity points
-   * into (agni issue 916). With omit_locations their sheet_ids and reason are empty.
+   * entities lists every distinct entity that the answer's cells name (agni issue 916).
+   * QueryRow.cell_entity points into it. With omit_locations, their sheet_ids and reason are empty.
    *
    * @generated from field: repeated agni.v1.webapi.AnswerEntity entities = 8;
    */
   entities: AnswerEntity[];
 
   /**
-   * sources is every distinct citation the answer's rows carry, which QueryRow.cite_index points
-   * into (agni issue 916).
+   * sources lists every distinct citation in the answer's rows (agni issue 916).
+   * QueryRow.cite_index points into it.
    *
    * @generated from field: repeated string sources = 9;
    */
   sources: string[];
 
   /**
-   * total is how many rows the answer has before any offset and limit, the query's own or the
-   * request's (agni issue 896), so a caller showing the first rows can say how many it left out.
-   * It is filled only when a limit or offset applied, and zero otherwise, since without one every
+   * total is how many rows the answer has before any offset and limit, from the query or the
+   * request (agni issue 896). A caller showing the first rows can then say how many it left out.
+   * It is filled only when a limit or offset applied, and zero otherwise. Without either, every
    * row is in rows.
    *
    * @generated from field: int32 total = 10;
@@ -407,17 +407,17 @@ export const RunQueryResponseSchema: GenMessage<RunQueryResponse> = /*@__PURE__*
   messageDesc(file_agni_v1_webapi_query, 4);
 
 /**
- * QueryValue is a value bound to a query variable. Where the schema types the variable's position,
- * the engine reads the value as that type whichever field carries it (panyam/jaala#65): text that
- * parses binds a number in a number position, text that does not is refused, and a number in a name
- * position matches by its text. Where nothing types the variable, this field decides, as `3.3`
- * versus `"3.3"` written into the query would.
+ * QueryValue is a value bound to a query variable. The schema may type the variable's position.
+ * Then the engine reads the value as that type, whichever field holds it (panyam/jaala#65). Text
+ * that parses binds a number in a number position. Text that does not parse is refused. A number
+ * in a name position matches by its text. When nothing types the variable, the field decides,
+ * just as writing `3.3` or `"3.3"` into the query would.
  *
- * A list binds the variable to each of its values, and the goal answers for every one of them, as if
- * it were joined with a relation holding exactly those values (agni issue 1121): `?net` bound to
- * [I2C_SDA, I2C_SCL] answers both nets in one answer, an aggregate reduces across all of them, and an
- * empty list matches nothing. Its values are text or numbers; a list inside a list is refused as an
- * invalid argument.
+ * A list binds the variable to each of its values, and the goal answers for every one (agni issue
+ * 1121). It behaves as a join with a relation holding exactly those values. `?net` bound to
+ * [I2C_SDA, I2C_SCL] answers both nets in one answer. An aggregate reduces across all of them. An
+ * empty list matches nothing. A list's values are text or numbers. A list inside a list is refused
+ * as an invalid argument.
  *
  * @generated from message agni.v1.webapi.QueryValue
  */
@@ -477,27 +477,27 @@ export const QueryValueListSchema: GenMessage<QueryValueList> = /*@__PURE__*/
  */
 export type ListRelationsRequest = Message<"agni.v1.webapi.ListRelationsRequest"> & {
   /**
-   * snapshot, "snapshots/{snapshot}", names the design whose config decides the vocabulary, its
-   * project's library and its own included (agni issue 1061). Empty lists the shipped vocabulary.
+   * snapshot names a design, "snapshots/{snapshot}" (agni issue 1061). That design's config decides
+   * the vocabulary, including its project's library and its own. Empty lists the shipped vocabulary.
    *
    * @generated from field: string snapshot = 4;
    */
   snapshot: string;
 
   /**
-   * overlay adds a config's libraries to the shipped vocabulary when no snapshot is named, which is
-   * how `agni query --relations --lib <dir>` lists a library's members before any design is read.
-   * With a snapshot it is refused, since the snapshot's config is already the vocabulary.
+   * overlay adds a config's libraries to the shipped vocabulary when no snapshot is named.
+   * `agni query --relations --lib <dir>` uses it to list a library's members before any design is
+   * read. With a snapshot, overlay is refused, since the snapshot's config is already the vocabulary.
    *
    * @generated from field: agni.v1.webapi.OverlayConfig overlay = 3;
    */
   overlay?: OverlayConfig | undefined;
 
   /**
-   * path names a place in the namespace tree to describe in `entry`: "net" a module,
+   * path names a place in the namespace tree for `entry` to describe. "net" names a module,
    * "net.has_test_point" a member, and "." the root module. Empty asks for the flat catalog, as
-   * before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
-   * with the suggestion a query would get.
+   * before. So the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT, with the
+   * same suggestion a query would get.
    *
    * @generated from field: string path = 1;
    */
@@ -512,9 +512,9 @@ export const ListRelationsRequestSchema: GenMessage<ListRelationsRequest> = /*@_
   messageDesc(file_agni_v1_webapi_query, 7);
 
 /**
- * RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
- * `args` the labels a template inserts as `?arg` (so `component.net` inserts
- * `component.net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
+ * RelationInfo is the discovery metadata for one relation or predicate. `name` is spelled as queries
+ * write it. `args` are the labels a template inserts as `?arg`, so `component.net` inserts
+ * `component.net(?ref_des, ?net)`. `summary` is a one-liner. `kind` is the grouping bucket
  * ("netlist" | "board" | "datasheet" | "derived" | "predicate" | "extension").
  *
  * @generated from message agni.v1.webapi.RelationInfo
@@ -541,9 +541,10 @@ export type RelationInfo = Message<"agni.v1.webapi.RelationInfo"> & {
   kind: string;
 
   /**
-   * detail is the relation's rich reference markdown from check/facts/docs/<name>.md (WS14-005),
-   * or "" when the relation has no doc yet. summary is the one-liner for the picker chip; detail is
-   * the deep-dive the panel renders on demand, the same markdown pipeline rule Detail uses.
+   * detail is the relation's reference markdown from stdlib/relations/facts/docs/<name>.md
+   * (WS14-005), or "" when the relation has no doc yet. summary is the one-liner for the picker
+   * chip. detail is the full reference, and the panel renders it on demand through the same
+   * markdown pipeline as a rule's Detail.
    *
    * @generated from field: string detail = 5;
    */
@@ -628,25 +629,25 @@ export type RelationEntry = Message<"agni.v1.webapi.RelationEntry"> & {
   definition: string[];
 
   /**
-   * inferred names the arguments whose types the engine worked out from the rules rather than
-   * reading from a declaration, so a reader can tell which types the author stated.
+   * inferred names the arguments whose types the engine worked out from the rules. The other
+   * arguments' types come from a declaration. So a reader can tell which types the author stated.
    *
    * @generated from field: repeated string inferred = 8;
    */
   inferred: string[];
 
   /**
-   * members are a module's direct children, each a member or a nested module, described one level
-   * deep (their own members are not filled).
+   * members are a module's direct children, each a member or a nested module. Each is described
+   * one level deep, and its own members are not filled.
    *
    * @generated from field: repeated agni.v1.webapi.RelationEntry members = 9;
    */
   members: RelationEntry[];
 
   /**
-   * args are a member's argument names in order, as RelationInfo.args, so a client inserting a
-   * template (`net.rail(?net)`) reads them rather than parsing the signature (agni issue 774). Empty
-   * for a module.
+   * args are a member's argument names in order, as in RelationInfo.args (agni issue 774). A client
+   * inserting a template (`net.rail(?net)`) reads them instead of parsing the signature. Empty for a
+   * module.
    *
    * @generated from field: repeated string args = 10;
    */
@@ -661,9 +662,9 @@ export const RelationEntrySchema: GenMessage<RelationEntry> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 9);
 
 /**
- * ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog
- * `query` a click fills and runs, and the one `teaches` concept it introduces. The panel and the CLI
- * `--examples` read the same catalog, so they never drift.
+ * ExampleQuery is one runnable teaching query (WS14-002). `label` is plain language. `query` is the
+ * datalog that a click fills in and runs. `teaches` is the one concept it introduces. The panel and
+ * the CLI's `--examples` read the same catalog, so they never drift.
  *
  * @generated from message agni.v1.webapi.ExampleQuery
  */
@@ -692,14 +693,14 @@ export const ExampleQuerySchema: GenMessage<ExampleQuery> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 10);
 
 /**
- * EntityQuery is one question a viewer offers about a selected entity: the datalog that asks
- * something about a pin, a component, a net or a bus. A kind has several, which the viewer lists
- * as the Properties panel's Ask rows, each opening a query tab of its own (agni issue 902).
+ * EntityQuery is one question a viewer offers about a selected entity. It is the datalog that asks
+ * something about a pin, a component, a net or a bus. Each kind has several. The viewer lists them
+ * as the Properties panel's Ask rows, and each row opens a query tab of its own (agni issue 902).
  *
- * It is served rather than held in the browser because every preset names relations defined on this
- * side. A client-held template would be the one caller nothing checks — renaming a relation would go
- * red in the example tests while every click in the viewer started producing a query that errors.
- * Here it inherits the same parse and evaluate guards the examples have.
+ * The server serves these, and the browser does not hold them. Every preset names relations defined
+ * on the server side. Nothing would check a client-held template. Imagine someone renames a
+ * relation. The example tests go red, while every click in the viewer starts producing a query that
+ * errors. Served from here, the presets get the same parse and evaluate guards as the examples.
  *
  * @generated from message agni.v1.webapi.EntityQuery
  */
@@ -712,7 +713,7 @@ export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
   kind: string;
 
   /**
-   * query is the same text for every click: the picked entity reaches it through binds.
+   * query is the same text for every click. The picked entity reaches it through binds.
    *
    * @generated from field: string query = 2;
    */
@@ -727,9 +728,10 @@ export type EntityQuery = Message<"agni.v1.webapi.EntityQuery"> & {
   teaches: string;
 
   /**
-   * binds names the variables the client binds from the picked selection (agni issue 793), each
-   * also the selection field that fills it: ref, pin, net or bus. It is explicit because one
-   * preset's input is another's output (the pin preset answers ?net, the net preset asks about one).
+   * binds names the variables the client binds from the picked selection (agni issue 793). Each
+   * name is also the selection field that fills it: ref, pin, net or bus. The list is explicit,
+   * because one preset's input is another's output. The pin preset answers ?net, and the net preset
+   * asks about one.
    *
    * @generated from field: repeated string binds = 4;
    */
@@ -752,13 +754,13 @@ export const EntityQuerySchema: GenMessage<EntityQuery> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_query, 11);
 
 /**
- * SearchQuery is the query the panel's search mode runs: find a design's entities by name (agni
- * issue 338). The client binds the variable `bind` names to `pattern` with {term} replaced by the
- * reader's escaped text (agni issue 793), so the query text never changes and the (?i) that makes
- * the search case-insensitive is written here, once.
+ * SearchQuery is the query the panel's search mode runs to find a design's entities by name (agni
+ * issue 338). `bind` names a variable. The client takes `pattern`, replaces {term} with the
+ * reader's escaped text, and binds the variable to the result (agni issue 793). So the query text
+ * never changes. The (?i) flag makes the search case-insensitive, and it is written here, once.
  *
- * It is served for the same reason the entity presets are. It names `entity` and `str.match`, both
- * defined on this side, and a client-held copy would be the one caller nothing checks.
+ * The server serves it for the same reason it serves the entity presets. It names `entity` and
+ * `str.match`, both defined on the server side, and nothing would check a client-held copy.
  *
  * @generated from message agni.v1.webapi.SearchQuery
  */
@@ -769,8 +771,8 @@ export type SearchQuery = Message<"agni.v1.webapi.SearchQuery"> & {
   query: string;
 
   /**
-   * teaches is the concept a search leaves behind, since what the reader gets back is an editable
-   * datalog query rather than a search box's opinion.
+   * teaches is the concept a search leaves behind. The reader gets back an editable datalog query,
+   * not a search box's opinion.
    *
    * @generated from field: string teaches = 2;
    */
@@ -833,8 +835,8 @@ export type ListRelationsResponse = Message<"agni.v1.webapi.ListRelationsRespons
   searchQuery?: SearchQuery | undefined;
 
   /**
-   * entry answers a request naming a path. When it is set the other fields are empty, since a
-   * drill-down asks about one place rather than for the whole picker.
+   * entry answers a request naming a path. When it is set, the other fields are empty. A drill-down
+   * asks about one place, not for the whole picker.
    *
    * @generated from field: agni.v1.webapi.RelationEntry entry = 5;
    */
@@ -850,7 +852,7 @@ export const ListRelationsResponseSchema: GenMessage<ListRelationsResponse> = /*
 
 /**
  * QuerySet is a named list of queries sharing a preamble of derived relations. It travels as values
- * rather than as YAML (C22); `agni query --set` reads the YAML file and sends this.
+ * rather than as YAML (C22). `agni query --set` reads the YAML file and sends this.
  *
  * @generated from message agni.v1.webapi.QuerySet
  */
@@ -863,8 +865,8 @@ export type QuerySet = Message<"agni.v1.webapi.QuerySet"> & {
   title: string;
 
   /**
-   * preamble holds rules (clauses with `:-`) every query may use. Rules only: each query brings its
-   * own goal.
+   * preamble holds rules (clauses with `:-`), and every query may use them. It holds no goal, since
+   * each query brings its own.
    *
    * @generated from field: string preamble = 2;
    */
@@ -941,10 +943,11 @@ export type RunQueriesRequest = Message<"agni.v1.webapi.RunQueriesRequest"> & {
   set?: QuerySet | undefined;
 
   /**
-   * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-   * a fact base counts, candidate comparisons, each row a generator emits and the connections a
-   * circuit walk examines. It can only LOWER the
-   * deployment's own budget, never raise it, and zero leaves that budget as it is. Each query in the set has the whole budget; one past it reports that in its own result.
+   * work_budget caps the work each query in this request may do (agni issue 792). Work counts
+   * candidate comparisons, each row a generator emits, and each connection a circuit walk
+   * examines, in the units a fact base counts. It can only LOWER the deployment's own budget,
+   * never raise it, and zero leaves that budget as it is. Each query in the set gets the whole
+   * budget. A query that goes past it reports that in its own result.
    *
    * @generated from field: int64 work_budget = 6;
    */
@@ -1032,17 +1035,17 @@ export type NamedQueryResult = Message<"agni.v1.webapi.NamedQueryResult"> & {
   result?: RunQueryResponse | undefined;
 
   /**
-   * error says why this query could not be answered: it would not parse, or it named something the
-   * design's relations do not have. The query's text is in the request.
+   * error says why this query has no answer. Either it would not parse, or it named something
+   * missing from the design's relations. The query's text is in the request.
    *
    * @generated from field: string error = 4;
    */
   error: string;
 
   /**
-   * error_at is where in the query's own text a query that would not parse stopped, so a reader can
-   * be pointed at it. Unset for an error with no place in the text, such as a relation the design's
-   * vocabulary lacks.
+   * error_at is where the parser stopped in the query's own text, so a reader can be pointed at it.
+   * Unset for an error with no place in the text, such as a relation missing from the design's
+   * vocabulary.
    *
    * @generated from field: agni.v1.webapi.TextPosition error_at = 5;
    */
@@ -1057,9 +1060,9 @@ export const NamedQueryResultSchema: GenMessage<NamedQueryResult> = /*@__PURE__*
   messageDesc(file_agni_v1_webapi_query, 18);
 
 /**
- * TextPosition is where in a query's text a syntax error points. A RunQuery whose query would not
- * parse fails with invalid_argument carrying one as an error detail, and a set's query carries one
- * in NamedQueryResult.error_at.
+ * TextPosition is where in a query's text a syntax error points. When a RunQuery's query does not
+ * parse, the call fails with invalid_argument and attaches one as an error detail. A set's query
+ * reports one in NamedQueryResult.error_at.
  *
  * @generated from message agni.v1.webapi.TextPosition
  */
@@ -1086,9 +1089,9 @@ export type TextPosition = Message<"agni.v1.webapi.TextPosition"> & {
   column: number;
 
   /**
-   * caret is the line of the query's text the position is on, a newline, and a caret under the
-   * column, as the engine draws it, so the CLI and the viewer show the same picture without either
-   * drawing it again (agni issue 1045). Empty when the position is not inside the text.
+   * caret holds the line of query text with the position, a newline, and a caret under the column
+   * (agni issue 1045). The engine draws it. So the CLI and the viewer show the same picture, and
+   * neither draws it again. Empty when the position is not inside the text.
    *
    * @generated from field: string caret = 4;
    */
@@ -1147,8 +1150,8 @@ export const ListQuerySetsResponseSchema: GenMessage<ListQuerySetsResponse> = /*
   messageDesc(file_agni_v1_webapi_query, 21);
 
 /**
- * NamedQuerySet is one query set a project keeps. name is its file's stem, which is what a viewer
- * lists, and source the file it was read from, for a reader asking where it lives.
+ * NamedQuerySet is one query set a project keeps. name is its file's stem, and a viewer lists it by
+ * that name. source is the file it was read from, for a reader asking where it lives.
  *
  * @generated from message agni.v1.webapi.NamedQuerySet
  */
@@ -1213,21 +1216,22 @@ export const ParseQuerySetResponseSchema: GenMessage<ParseQuerySetResponse> = /*
   messageDesc(file_agni_v1_webapi_query, 24);
 
 /**
- * QueryService evaluates a declarative-datalog query over a design's fact relations (the WS3-004
- * fact base, the same relations the rules assert over) and returns the answer rows with provenance.
- * A geometry-only file with no netlist is an invalid argument; a malformed query is an invalid
- * argument the caller shows inline.
+ * QueryService evaluates a declarative-datalog query over a design's fact relations and returns
+ * the answer rows with provenance. The relations are the WS3-004 fact base, and the rules assert
+ * over the same ones. A geometry-only file with no netlist is an invalid argument. A malformed
+ * query is also an invalid argument, and the caller shows it inline.
  *
  * @generated from service agni.v1.webapi.QueryService
  */
 export const QueryService: GenService<{
   /**
-   * RunQuery parses and evaluates the query text over the loaded design and returns the projected
-   * columns and answer rows, each row carrying the provenance of the facts that produced it. The
-   * relation vocabulary is the same the CLI documents (net.max_voltage, component.mpn,
-   * component.net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
-   * relation is empty because the server wires no params dir and datasheet data is deployment-bound
-   * (C16), so a query over `param` returns no rows rather than an error.
+   * RunQuery parses and evaluates the query text over the loaded design. It returns the projected
+   * columns and the answer rows, and each row has the provenance of the facts that produced it.
+   * The relation vocabulary matches what the CLI documents (net.max_voltage, component.mpn,
+   * component.net, reaches). The `param` (datasheet) relations read the server's corpus
+   * (`--params` or `--params-url`), with the project's own `params/` layered over it per MPN.
+   * Datasheet data is deployment-bound (C16), so with no corpus a query over `param` returns no
+   * rows rather than an error.
    *
    * @generated from rpc agni.v1.webapi.QueryService.RunQuery
    */
@@ -1238,11 +1242,12 @@ export const QueryService: GenService<{
   },
   /**
    * RunQueries answers a named list of queries over ONE read of the design (agni issue 729). An
-   * audit is usually a workbook rather than a question, and asking each table through RunQuery would
-   * read and project the design once per table. Every result has exactly the shape RunQuery returns
-   * for that query alone. A query that fails is reported against its name and the others still
-   * answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
-   * goal) and a design that cannot be read are errors for the call.
+   * audit is usually a workbook rather than a question. Asking each table through RunQuery would
+   * read and project the design once per table. Every result has exactly the shape RunQuery would
+   * return for that query alone. When a query fails, its error is reported against its name, and
+   * the other queries still answer. Two cases fail the whole call. One is a set that is unusable
+   * as a whole, with no queries, a repeated name, or a preamble holding a goal. The other is a
+   * design that cannot be read.
    *
    * @generated from rpc agni.v1.webapi.QueryService.RunQueries
    */
@@ -1252,15 +1257,15 @@ export const QueryService: GenService<{
     output: typeof RunQueriesResponseSchema;
   },
   /**
-   * ListRelations returns the queryable relation catalog (WS9-037): the built-in relations, the
-   * derived relations the shipped library defines, the predicates, and any overlay-registered
-   * relations, each with its argument labels, a one-line summary, and a kind for grouping. The
-   * catalog is static per service build (it does not depend on a loaded design), so the client
-   * fetches it once to populate the panel's relation picker.
+   * ListRelations returns the queryable relation catalog (WS9-037). The catalog holds the built-in
+   * relations, the shipped library's derived relations, the predicates, and any relations an
+   * overlay registers. Each entry has its argument labels, a one-line summary, and a kind for
+   * grouping. The catalog is static per service build and does not depend on a loaded design. So
+   * the client fetches it once to fill the panel's relation picker.
    *
-   * With a path set it answers one place in the namespace tree instead (agni issue 751): a module
-   * and its members, or one member with its signature and, for a derived relation, its definition.
-   * `agni query --relations <path>` prints the same answer.
+   * With a path set, it answers one place in the namespace tree instead (agni issue 751). That
+   * place is a module and its members, or one member with its signature. A derived member also
+   * gets its definition. `agni query --relations <path>` prints the same answer.
    *
    * @generated from rpc agni.v1.webapi.QueryService.ListRelations
    */
@@ -1271,8 +1276,8 @@ export const QueryService: GenService<{
   },
   /**
    * ListQuerySets returns the query sets a design's project keeps (agni issue 745), inherited ones
-   * first, each parsed and named by its file, so a viewer can open one as a tab per query and run
-   * it through RunQueries. A design in no project has none, and that is not an error.
+   * first. Each set is parsed and named by its file. A viewer can open a set as one tab per query
+   * and run it through RunQueries. A design in no project has no sets, and that is not an error.
    *
    * @generated from rpc agni.v1.webapi.QueryService.ListQuerySets
    */
@@ -1282,11 +1287,11 @@ export const QueryService: GenService<{
     output: typeof ListQuerySetsResponseSchema;
   },
   /**
-   * ParseQuerySet reads a query set file's text into the QuerySet RunQueries takes, for a caller
-   * holding the text and no parser, such as a browser given a file the reader picked. It checks
-   * what `agni query --set` checks: an unknown key, no queries, a repeated name, a preamble that
-   * holds a goal. A config value a client does not hold comes from its own rpc (C22), so RunQueries
-   * itself never takes YAML.
+   * ParseQuerySet reads a query set file's text into a QuerySet, which RunQueries takes. It serves
+   * a caller that holds the text and has no parser, such as a browser after the reader picks a
+   * file. It checks the same things `agni query --set` checks: an unknown key, no queries, a
+   * repeated name, and a preamble that holds a goal. Under C22, a client gets a config value it
+   * does not hold from that value's own rpc. So RunQueries itself never takes YAML.
    *
    * @generated from rpc agni.v1.webapi.QueryService.ParseQuerySet
    */

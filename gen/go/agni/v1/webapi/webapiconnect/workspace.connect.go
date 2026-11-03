@@ -49,28 +49,30 @@ const (
 
 // WorkspaceServiceClient is a client for the agni.v1.webapi.WorkspaceService service.
 type WorkspaceServiceClient interface {
-	// ListMounts returns the mounts the server is serving, in the order they were configured, and
-	// never fails for a running server. Set opens to leave out the ones holding nothing the caller
-	// can open.
+	// ListMounts returns the mounts the server is serving, in the order they were configured. It
+	// never fails for a running server. Set opens to leave out each mount that holds nothing the
+	// caller can open.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
-	// ListDir lists one directory level inside a mount: its subdirectories and its files, each file
-	// labeled with the reader that would open it. The client addresses a location by an artifact URI
-	// whose authority is a mount, never an absolute host path; the server resolves it inside that
-	// mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
-	// subdirectories holding nothing the caller can open, at any depth.
+	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
+	// file is labeled with the reader that would open it. The client addresses a location by an
+	// artifact URI. The URI's authority is a mount, never an absolute host path, and the server
+	// resolves it inside that mount. It is lazy, one level per call, so large trees remain
+	// responsive. Set opens to leave out each subdirectory that holds nothing the caller can open,
+	// at any depth.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
-	// ListDesignFiles lists every file a design's analysis reads, so a client that analyses it
-	// somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
-	// issue 853). That is the design's folder, its project's descriptor, and every config directory
-	// the project names. Each file is then fetched by its path under the server's read-only
-	// `/raw/<mount>/<path>` route. A set larger than the server's bound (256 MB) is refused with its size,
-	// since a board that big is what the server's own engine is for.
+	// ListDesignFiles lists every file a design's analysis reads (agni issue 853). A client may
+	// analyse the design somewhere else, and the in-browser engine is the first such client. It can
+	// then fetch exactly those files and nothing more. The list covers the design's folder, its
+	// project's descriptor, and every config directory the project names. The client fetches each
+	// file by its path under the server's read-only `/raw/<mount>/<path>` route. A set larger than
+	// the server's bound (256 MB) is refused with its size. A board that big belongs on the server's
+	// own engine.
 	ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error)
-	// ProposeDesigns groups the files under a folder that declares no design into the designs they
-	// make, for a page that was handed a drop of files and must show what it will read before it
-	// reads it (agni issue 854). A folder already holding a `design.yaml` is reported as declared and
-	// not re-guessed. Each proposal carries the `design.yaml` that would declare it, and every file
-	// no proposal reads is listed with the reason, so nothing is dropped silently.
+	// ProposeDesigns takes a folder that declares no design, and groups its files into the designs
+	// they make (agni issue 854). Imagine a page handed a drop of files. It must show what it will
+	// read before it reads it. A folder already holding a `design.yaml` is reported as declared, and
+	// the server does not guess again. Each proposal includes the `design.yaml` that would declare
+	// it. Every file that no proposal reads is listed with the reason, so nothing is dropped silently.
 	ProposeDesigns(context.Context, *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error)
 }
 
@@ -142,28 +144,30 @@ func (c *workspaceServiceClient) ProposeDesigns(ctx context.Context, req *connec
 
 // WorkspaceServiceHandler is an implementation of the agni.v1.webapi.WorkspaceService service.
 type WorkspaceServiceHandler interface {
-	// ListMounts returns the mounts the server is serving, in the order they were configured, and
-	// never fails for a running server. Set opens to leave out the ones holding nothing the caller
-	// can open.
+	// ListMounts returns the mounts the server is serving, in the order they were configured. It
+	// never fails for a running server. Set opens to leave out each mount that holds nothing the
+	// caller can open.
 	ListMounts(context.Context, *connect.Request[webapi.ListMountsRequest]) (*connect.Response[webapi.ListMountsResponse], error)
-	// ListDir lists one directory level inside a mount: its subdirectories and its files, each file
-	// labeled with the reader that would open it. The client addresses a location by an artifact URI
-	// whose authority is a mount, never an absolute host path; the server resolves it inside that
-	// mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
-	// subdirectories holding nothing the caller can open, at any depth.
+	// ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
+	// file is labeled with the reader that would open it. The client addresses a location by an
+	// artifact URI. The URI's authority is a mount, never an absolute host path, and the server
+	// resolves it inside that mount. It is lazy, one level per call, so large trees remain
+	// responsive. Set opens to leave out each subdirectory that holds nothing the caller can open,
+	// at any depth.
 	ListDir(context.Context, *connect.Request[webapi.ListDirRequest]) (*connect.Response[webapi.ListDirResponse], error)
-	// ListDesignFiles lists every file a design's analysis reads, so a client that analyses it
-	// somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
-	// issue 853). That is the design's folder, its project's descriptor, and every config directory
-	// the project names. Each file is then fetched by its path under the server's read-only
-	// `/raw/<mount>/<path>` route. A set larger than the server's bound (256 MB) is refused with its size,
-	// since a board that big is what the server's own engine is for.
+	// ListDesignFiles lists every file a design's analysis reads (agni issue 853). A client may
+	// analyse the design somewhere else, and the in-browser engine is the first such client. It can
+	// then fetch exactly those files and nothing more. The list covers the design's folder, its
+	// project's descriptor, and every config directory the project names. The client fetches each
+	// file by its path under the server's read-only `/raw/<mount>/<path>` route. A set larger than
+	// the server's bound (256 MB) is refused with its size. A board that big belongs on the server's
+	// own engine.
 	ListDesignFiles(context.Context, *connect.Request[webapi.ListDesignFilesRequest]) (*connect.Response[webapi.ListDesignFilesResponse], error)
-	// ProposeDesigns groups the files under a folder that declares no design into the designs they
-	// make, for a page that was handed a drop of files and must show what it will read before it
-	// reads it (agni issue 854). A folder already holding a `design.yaml` is reported as declared and
-	// not re-guessed. Each proposal carries the `design.yaml` that would declare it, and every file
-	// no proposal reads is listed with the reason, so nothing is dropped silently.
+	// ProposeDesigns takes a folder that declares no design, and groups its files into the designs
+	// they make (agni issue 854). Imagine a page handed a drop of files. It must show what it will
+	// read before it reads it. A folder already holding a `design.yaml` is reported as declared, and
+	// the server does not guess again. Each proposal includes the `design.yaml` that would declare
+	// it. Every file that no proposal reads is listed with the reason, so nothing is dropped silently.
 	ProposeDesigns(context.Context, *connect.Request[webapi.ProposeDesignsRequest]) (*connect.Response[webapi.ProposeDesignsResponse], error)
 }
 

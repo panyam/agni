@@ -43,7 +43,8 @@ export const GetDocumentRequestSchema: GenMessage<GetDocumentRequest> = /*@__PUR
 export type GetDocumentResponse = Message<"agni.v1.dsapi.GetDocumentResponse"> & {
   /**
    * extracted is true when a derived doc-IR exists for this datasheet. False means "not yet
-   * extracted": document is unset and the workbench shows the PDF with an empty region overlay.
+   * extracted". document is then unset, and the workbench shows the PDF with an empty region
+   * overlay.
    *
    * @generated from field: bool extracted = 1;
    */
@@ -137,7 +138,7 @@ export type Draft = Message<"agni.v1.dsapi.Draft"> & {
   documentUris: string[];
 
   /**
-   * version is an opaque token (the stored draft's content hash) the client passes back as
+   * version is an opaque token, the stored draft's content hash. The client passes it back as
    * base_version on its next save.
    *
    * @generated from field: string version = 4;
@@ -270,14 +271,14 @@ export type SaveDraftResponse = Message<"agni.v1.dsapi.SaveDraftResponse"> & {
   version: string;
 
   /**
-   * problems is what is wrong with the spec that was just written. IT NEVER PREVENTS THE WRITE:
-   * saving records what an author has, and whether it is any good is a separate question answered
-   * as status and correctable later. Coupling the two would let a judgement destroy work, and would
-   * oblige every editing action to preserve an invariant or strand the document.
+   * problems is what is wrong with the spec that was just written. IT NEVER PREVENTS THE WRITE.
+   * Saving records what an author has. Whether it is any good is a separate question, answered as
+   * status and correctable later. Coupling the two would let a judgement destroy work. It would also
+   * force every editing action to preserve an invariant or strand the document.
    *
-   * Returned here rather than from a validate endpoint because the workbench already saves on every
-   * edit, so the judgement rides a request that is happening anyway. It is also the reason the
-   * client does not reimplement these rules: one implementation, in Go, reported back.
+   * It is returned here rather than from a validate endpoint, because the workbench already saves
+   * on every edit. So the judgement comes back on a request that is happening anyway. The client
+   * also does not reimplement these rules. There is one implementation, in Go, and it reports back.
    *
    * Empty means the draft would publish today.
    *
@@ -316,7 +317,7 @@ export const PublishDraftRequestSchema: GenMessage<PublishDraftRequest> = /*@__P
 export type PublishDraftResponse = Message<"agni.v1.dsapi.PublishDraftResponse"> & {
   /**
    * published is false when the draft did not validate, or when another published file already
-   * seeds its MPN; reason then says which, and problems lists what to fix.
+   * seeds its MPN. reason then says which, and problems lists what to fix.
    *
    * @generated from field: bool published = 1;
    */
@@ -356,8 +357,9 @@ export const PublishDraftResponseSchema: GenMessage<PublishDraftResponse> = /*@_
 
 /**
  * ValidationProblem is one thing wrong with a PartSpec, classified so a client can treat the two
- * kinds differently: STRUCTURAL is wrong now and worth interrupting for, COMPLETENESS is the
- * ordinary state of unfinished work and is better shown as progress toward being publishable.
+ * kinds differently. A STRUCTURAL problem is wrong now and worth interrupting for. A COMPLETENESS
+ * problem is the ordinary state of unfinished work, and is better shown as progress toward being
+ * publishable.
  *
  * @generated from message agni.v1.dsapi.ValidationProblem
  */
@@ -368,8 +370,8 @@ export type ValidationProblem = Message<"agni.v1.dsapi.ValidationProblem"> & {
   kind: ValidationProblem_Kind;
 
   /**
-   * Human-readable, already naming its subject ("vcca: duplicate pin id"). Not a code: these are
-   * shown to the person who just typed the thing, not dispatched on.
+   * Human-readable, already naming its subject ("vcca: duplicate pin id"). It is not a code. A
+   * client shows it to the person who just typed the thing, and never dispatches on it.
    *
    * @generated from field: string message = 2;
    */
@@ -393,17 +395,18 @@ export enum ValidationProblem_Kind {
   UNSPECIFIED = 0,
 
   /**
-   * The spec contradicts itself: two pins sharing an id, one designator claimed twice within a
-   * package, a parameter bound to a pin that is not declared. Wrong at any stage of authoring.
+   * The spec contradicts itself, for example with two pins sharing an id, one designator claimed
+   * twice within a package, or a parameter bound to an undeclared pin. Wrong at any stage of
+   * authoring.
    *
    * @generated from enum value: KIND_STRUCTURAL = 1;
    */
   STRUCTURAL = 1,
 
   /**
-   * The spec is merely unfinished: no part number yet, a row with no limit kind, missing
-   * provenance. True of every spec under transcription, and only decisive when promoting one
-   * into a corpus.
+   * The spec is merely unfinished, for example with no part number yet, a row with no limit kind,
+   * or missing provenance. True of every spec under transcription, and only decisive when
+   * promoting one into a corpus.
    *
    * @generated from enum value: KIND_COMPLETENESS = 2;
    */
@@ -417,10 +420,11 @@ export const ValidationProblem_KindSchema: GenEnum<ValidationProblem_Kind> = /*@
   enumDesc(file_agni_v1_dsapi_datasheet, 13, 0);
 
 /**
- * RegionAnnotation is one human judgement about one region of a datasheet: its routing type, its
- * geometry (only for a user-drawn region — a doc-IR region already has geometry server-side), and
- * the draft parameter assertions transcribed from it. The document it belongs to is the enclosing
- * AnnotationSet's doc_id, so (doc_id, region_id) is the annotation's key.
+ * RegionAnnotation is one human judgement about one region of a datasheet. It holds the region's
+ * routing type, its geometry, and the draft parameter assertions transcribed from it. Geometry is
+ * set only for a user-drawn region, since a doc-IR region already has geometry server-side. The
+ * enclosing AnnotationSet's doc_id names the document, so (doc_id, region_id) is the annotation's
+ * key.
  *
  * @generated from message agni.v1.dsapi.RegionAnnotation
  */
@@ -433,8 +437,8 @@ export type RegionAnnotation = Message<"agni.v1.dsapi.RegionAnnotation"> & {
   regionId: string;
 
   /**
-   * type is the user's routing tag: table/schematic/chart/pinout/text/other (the RegionType
-   * vocabulary). Distinct from doc-IR kind, which cannot tell a chart from a schematic.
+   * type is the user's routing tag, one of table/schematic/chart/pinout/text/other (the RegionType
+   * vocabulary). It differs from the doc-IR kind, which cannot tell a chart from a schematic.
    *
    * @generated from field: string type = 2;
    */
@@ -442,7 +446,7 @@ export type RegionAnnotation = Message<"agni.v1.dsapi.RegionAnnotation"> & {
 
   /**
    * bbox is the region's page-local geometry (points, top-left origin), present ONLY for a
-   * user-drawn region; a doc-IR region's geometry lives in the doc-IR and is not duplicated here.
+   * user-drawn region. A doc-IR region's geometry is in the doc-IR and is not duplicated here.
    *
    * @generated from field: optional agni.v1.doc.BBox bbox = 3;
    */
@@ -468,9 +472,9 @@ export type RegionAnnotation = Message<"agni.v1.dsapi.RegionAnnotation"> & {
   label: string;
 
   /**
-   * draft_params are the human's draft parameter assertions for this region, the SOURCE WS13-012
-   * canonicalizes into the shared PartSpec. Empty until WS13-012 moves param authoring here; the
-   * field exists now so that is a pure-logic change, not a proto change.
+   * draft_params are the human's draft parameter assertions for this region. WS13-012
+   * canonicalizes this SOURCE into the shared PartSpec. Empty until WS13-012 moves param authoring
+   * here. The field exists now, so that move is a pure-logic change, not a proto change.
    *
    * @generated from field: repeated agni.v1.param.Parameter draft_params = 7;
    */
@@ -492,9 +496,10 @@ export const RegionAnnotationSchema: GenMessage<RegionAnnotation> = /*@__PURE__*
   messageDesc(file_agni_v1_dsapi_datasheet, 14);
 
 /**
- * AnnotationSet is ONE author's overlay for ONE datasheet: their drawn/tagged regions. doc_id is
- * the datasheet's stable SourceDoc id (WS13-010), so the overlay survives re-extraction; author is
- * the self-asserted coordination namespace. GetAnnotations returns one set per author (the union).
+ * AnnotationSet is ONE author's overlay for ONE datasheet, with their drawn and tagged regions.
+ * doc_id is the datasheet's stable SourceDoc id (WS13-010), so the overlay survives re-extraction.
+ * author is the self-asserted coordination namespace. GetAnnotations returns one set per author
+ * (the union).
  *
  * @generated from message agni.v1.dsapi.AnnotationSet
  */
@@ -603,19 +608,19 @@ export const SaveAnnotationsResponseSchema: GenMessage<SaveAnnotationsResponse> 
 
 /**
  * DatasheetService serves a datasheet's doc-IR to the extraction workbench. It is the analogue
- * of DesignService for documents: DesignService turns a schematic file into drawable geometry,
- * DatasheetService turns a datasheet into its decomposed region model. Directory listing is the
- * shared WorkspaceService (mounts are the security boundary); this service only resolves and
- * returns doc-IR for a named datasheet.
+ * of DesignService for documents. DesignService turns a schematic file into drawable geometry,
+ * and DatasheetService turns a datasheet into its decomposed region model. The shared
+ * WorkspaceService lists directories, and mounts are the security boundary. This service only
+ * resolves and returns doc-IR for a named datasheet.
  *
  * @generated from service agni.v1.dsapi.DatasheetService
  */
 export const DatasheetService: GenService<{
   /**
    * ListMounts and ListDir are the workbench's folder tree. They take and return the engine's own
-   * workspace messages and answer exactly as WorkspaceService does, because the datasheet service
-   * lists through the same mounts.Workspace; they are here so the datasheet service serves its whole
-   * page from its own API when it is hosted apart from the engine (agni issue 744).
+   * workspace messages. They answer exactly as WorkspaceService does, because the datasheet service
+   * lists through the same mounts.Workspace. With them the datasheet service serves its whole page
+   * from its own API when it is hosted apart from the engine (agni issue 744).
    *
    * @generated from rpc agni.v1.dsapi.DatasheetService.ListMounts
    */
@@ -635,8 +640,8 @@ export const DatasheetService: GenService<{
   /**
    * GetDocument returns the doc-IR for the datasheet at (mount, path). path names the source
    * document (the PDF the browser renders); the server resolves the datasheet's sibling doc-IR.
-   * When none has been derived yet, extracted is false and document is unset — a normal state,
-   * not an error.
+   * When none has been derived yet, extracted is false and document is unset. That is a normal
+   * state, not an error.
    *
    * @generated from rpc agni.v1.dsapi.DatasheetService.GetDocument
    */
@@ -647,8 +652,8 @@ export const DatasheetService: GenService<{
   },
   /**
    * DRAFTS (agni issue 749). A draft is the editing copy of one part's PartSpec, keyed by its MPN,
-   * and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit so
-   * work is never lost, and no check ever reads one: readers see only PUBLISHED specs, through the
+   * and it cites the datasheets it was transcribed from. It is saved unvalidated on every edit, so
+   * work is never lost. No check ever reads a draft. Readers see only PUBLISHED specs, through the
    * contract's PartSpecService. PublishDraft is the one step between the two. Drafts live in the
    * published corpus's store, so these rpcs need agnids serve --corpus.
    *
@@ -674,10 +679,10 @@ export const DatasheetService: GenService<{
     output: typeof ListDraftsResponseSchema;
   },
   /**
-   * SaveDraft writes a draft with optimistic concurrency: base_version must equal the stored
-   * version (empty asserts the draft does not exist yet, a first save), or the save is rejected as
-   * a conflict (Connect Aborted) and the client refetches. It never refuses a draft for being
-   * incomplete; what is wrong with it comes back as problems.
+   * SaveDraft writes a draft with optimistic concurrency. base_version must equal the stored
+   * version, and an empty one asserts the draft does not exist yet (a first save). Otherwise the
+   * save is rejected as a conflict (Connect Aborted), and the client refetches. It never refuses a
+   * draft for being incomplete. What is wrong with the draft comes back as problems.
    *
    * @generated from rpc agni.v1.dsapi.DatasheetService.SaveDraft
    */
@@ -689,7 +694,7 @@ export const DatasheetService: GenService<{
   /**
    * PublishDraft validates a draft and, when it passes, makes it the current published spec for its
    * MPN, recording it in the corpus index under a new generation. A draft that does not validate is
-   * not published, and the response lists every problem. The draft stays, as the start of the
+   * not published, and the response lists every problem. The draft is kept as the start of the
    * next edit.
    *
    * @generated from rpc agni.v1.dsapi.DatasheetService.PublishDraft
@@ -701,11 +706,12 @@ export const DatasheetService: GenService<{
   },
   /**
    * ExtractDocIR runs the configured doc-IR producer (pdf2doc/docling) over the datasheet, writes
-   * the <stem>.doc.textproto sibling, and returns the produced doc-IR so the workbench can show the
-   * auto-detected regions immediately (the "first pass" the human then reviews). It is gated: a
-   * server started without --pdf2doc rejects it as FailedPrecondition (GetDocumentResponse.
-   * extract_available reports whether it is offered). Docling is external and CI-excluded; the
-   * engine invokes a configured command, never bundles it, and it runs in-boundary (C16).
+   * the <stem>.doc.textproto sibling, and returns the produced doc-IR. The workbench can then show
+   * the auto-detected regions immediately, as the "first pass" for the human to review. It is
+   * gated. A server started without --pdf2doc rejects it as FailedPrecondition, and
+   * GetDocumentResponse.extract_available reports whether it is offered. Docling is external and
+   * CI-excluded. The engine invokes a configured command and never bundles it, and the command runs
+   * in-boundary (C16).
    *
    * @generated from rpc agni.v1.dsapi.DatasheetService.ExtractDocIR
    */
@@ -716,12 +722,12 @@ export const DatasheetService: GenService<{
   },
   /**
    * GetAnnotations returns the region-annotation overlay for a datasheet as the UNION of every
-   * author's overlay (WS13-011): a per-author working layer of drawn boxes, routing-type tags, and
-   * draft parameter assertions the human made against the doc-IR regions. Unlike the single shared
-   * PartSpec, annotations are per author (a coordination namespace, NOT a security boundary — mounts
-   * are the boundary), so two people annotating one datasheet compose instead of clobbering. They
-   * are the SOURCE that WS13-012 canonicalizes into the shared PartSpec; query/check never read
-   * them. Empty when nobody has annotated yet.
+   * author's overlay (WS13-011). Each author's overlay is a working layer. It holds the boxes the
+   * human drew, routing-type tags, and draft parameter assertions against the doc-IR regions. There
+   * is one shared PartSpec, but annotations are per author. The author is a coordination namespace,
+   * NOT a security boundary, since mounts are the boundary. So two people annotating one datasheet
+   * compose instead of clobbering. WS13-012 canonicalizes annotations into the shared PartSpec, and
+   * query/check never read them. Empty when nobody has annotated yet.
    *
    * @generated from rpc agni.v1.dsapi.DatasheetService.GetAnnotations
    */
@@ -732,9 +738,9 @@ export const DatasheetService: GenService<{
   },
   /**
    * SaveAnnotations writes ONE author's complete overlay for a datasheet, replacing that author's
-   * prior overlay. There is no compare-and-swap: each author owns their own file, so writes never
-   * contend and a delete only ever removes the caller's own annotations. author is supplied by the
-   * client (self-asserted); it namespaces the overlay, it does not authenticate.
+   * prior overlay. There is no compare-and-swap. Each author owns their own file, so writes never
+   * contend, and a delete only ever removes the caller's own annotations. The client supplies
+   * author, self-asserted. It namespaces the overlay and does not authenticate.
    *
    * @generated from rpc agni.v1.dsapi.DatasheetService.SaveAnnotations
    */

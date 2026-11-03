@@ -22,22 +22,22 @@ const (
 )
 
 // FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
-// the READER: a browser cares which of its pages a file belongs to, not whether the netlist behind
-// it is EDIF or KiCad.
+// the READER. A browser cares which of its pages a file belongs to. It does not care whether the
+// netlist behind the file is EDIF or KiCad.
 //
-// The set is closed and server-defined. An out-of-module reader registering through readers/formats
-// adds an extension to FILE_KIND_DESIGN; it does not add a kind, because a kind is a page in this
-// application rather than a capability of the engine.
+// The set is closed and server-defined. A reader from another module may register through
+// readers/formats. It adds an extension to FILE_KIND_DESIGN, and it does not add a kind. A kind is
+// a page in this application, not a capability of the engine.
 type FileKind int32
 
 const (
-	// FILE_KIND_UNSPECIFIED is a file no page opens (a library file, a lock file, a sidecar) and is
-	// also what an unset field decodes to, so a client that ignores kinds sees them all as one.
+	// FILE_KIND_UNSPECIFIED is a file no page opens, such as a library file, a lock file, or a
+	// sidecar. An unset field also decodes to it. So a client that ignores kinds sees them all as one.
 	FileKind_FILE_KIND_UNSPECIFIED FileKind = 0
-	// FILE_KIND_DESIGN is a file some reader in the registry understands: the viewer's material.
+	// FILE_KIND_DESIGN is a file some reader in the registry understands. The viewer opens these.
 	FileKind_FILE_KIND_DESIGN FileKind = 1
 	// FILE_KIND_DATASHEET is a vendor document the extraction workbench opens (a PDF). No DESIGN
-	// reader opens one, which is exactly why pruning by design format hid the workbench's folders.
+	// reader opens one. So pruning by design format used to hide the workbench's folders.
 	FileKind_FILE_KIND_DATASHEET FileKind = 2
 )
 
@@ -82,17 +82,17 @@ func (FileKind) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_webapi_workspace_proto_rawDescGZIP(), []int{0}
 }
 
-// Mount is one configured root folder. Clients reference it by name in later calls;
-// root is a human-readable display path and is not a capability.
+// Mount is one configured root folder. Clients reference it by name in later calls. root is a
+// human-readable display path and is not a capability.
 type Mount struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the stable handle the client passes back to address this mount.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// root is the absolute host path the mount serves, for display in the UI.
 	Root string `protobuf:"bytes,2,opt,name=root,proto3" json:"root,omitempty"`
-	// uri names the mount itself, "mount://<name>". It is served rather than left for the client to
-	// build, because a client that concatenates a scheme by hand is a client that can get the scheme
-	// wrong, and every other artifact reference it makes will be a child of this one.
+	// uri names the mount itself, "mount://<name>". The server sends it, so the client does not
+	// build it. A client that concatenates a scheme by hand can get the scheme wrong. Every other
+	// artifact reference the client makes is a child of this one.
 	Uri           string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -151,15 +151,15 @@ func (x *Mount) GetUri() string {
 
 type ListMountsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// opens declares what this client can open, on the same terms as ListDirRequest.opens, and
-	// setting it drops mounts with none of those kinds anywhere beneath them: the same rule applied
-	// to the roots. Leave it empty to prune nothing.
+	// opens declares what this client can open, on the same terms as ListDirRequest.opens. When it is
+	// set, the response drops each mount with none of those kinds anywhere beneath it. ListDir
+	// applies the same rule, and this field applies it to the roots. Leave it empty to prune nothing.
 	//
-	// Hiding a configured mount is a deliberate trade. An operator who mounted a folder and cannot
-	// find it in the sidebar has no way to tell "this mount holds nothing I open" from "this mount
-	// failed to resolve", so a client that prunes should say when it is showing fewer roots than the
-	// server was given rather than render a silently shorter list. pruned_mounts is what it says it
-	// with.
+	// Hiding a configured mount is a deliberate trade. Imagine an operator mounts a folder and cannot
+	// find it in the sidebar. They cannot tell "this mount holds nothing I open" from "this mount
+	// failed to resolve". So a client that prunes should say when it shows fewer roots than the server
+	// was given. It should not render a silently shorter list. It reports the count from
+	// pruned_mounts.
 	Opens         []FileKind `protobuf:"varint,2,rep,packed,name=opens,proto3,enum=agni.v1.webapi.FileKind" json:"opens,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -205,9 +205,9 @@ func (x *ListMountsRequest) GetOpens() []FileKind {
 type ListMountsResponse struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Mounts []*Mount               `protobuf:"bytes,1,rep,name=mounts,proto3" json:"mounts,omitempty"`
-	// pruned_mounts counts the mounts opens left out, so a client can tell the user its
-	// sidebar is shorter than the server's configuration rather than leaving them to wonder where a
-	// mount went. Zero when pruning is off.
+	// pruned_mounts counts the mounts that opens left out. A client can then tell the user that its
+	// sidebar is shorter than the server's configuration, so the user need not wonder where a mount
+	// went. Zero when pruning is off.
 	PrunedMounts  int32 `protobuf:"varint,2,opt,name=pruned_mounts,json=prunedMounts,proto3" json:"pruned_mounts,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -265,19 +265,18 @@ type DirEntry struct {
 	// is_dir is true for a subdirectory.
 	IsDir bool `protobuf:"varint,2,opt,name=is_dir,json=isDir,proto3" json:"is_dir,omitempty"`
 	// format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
-	// "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
-	// has no reader for). The listing carries such files rather than dropping them, so a client
-	// decides for itself what to show: the design tree hides them, the datasheets tree keeps the
-	// PDFs among them. It is a hint for the UI; ambiguous extensions are resolved for real at
-	// load time.
+	// "edif-schematic"). It is empty for a directory, and for an unrecognized file that no agni
+	// reader opens. The listing keeps such files rather than dropping them, so a client decides for
+	// itself what to show. The design tree hides them, and the datasheets tree keeps the PDFs among
+	// them. It is a hint for the UI. Ambiguous extensions are resolved for real at load time.
 	Format string `protobuf:"bytes,3,opt,name=format,proto3" json:"format,omitempty"`
-	// uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
-	// (for a file).
+	// uri addresses this entry. A client passes a directory's uri back to ListDir, and a file's uri
+	// to a design or sheet load.
 	Uri string `protobuf:"bytes,4,opt,name=uri,proto3" json:"uri,omitempty"`
-	// kind is which client opens this file, FILE_KIND_UNSPECIFIED for a directory and for a file no
-	// page opens. It is served rather than left to the client so that "what is a datasheet" has one
-	// definition: the browser used to decide by extension, which put a second copy of the rule in
-	// TypeScript, where nothing could notice it disagreeing with the server.
+	// kind is which client opens this file. It is FILE_KIND_UNSPECIFIED for a directory and for a
+	// file no page opens. The server sends it, so "what is a datasheet" has one definition. The
+	// browser used to decide by extension. That put a second copy of the rule in TypeScript, and
+	// nothing could notice when it disagreed with the server.
 	Kind          FileKind `protobuf:"varint,5,opt,name=kind,proto3,enum=agni.v1.webapi.FileKind" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -353,17 +352,17 @@ type ListDirRequest struct {
 	// uri is the directory to list, "mount://<mount>/<dir>". A bare "mount://<mount>" lists the
 	// mount root.
 	Uri string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
-	// opens declares what this client can open, and setting it drops subdirectories whose subtree
-	// holds none of those kinds at any depth: the folders this client can only ever show empty.
+	// opens declares what this client can open. When it is set, the response drops each
+	// subdirectory whose subtree holds none of those kinds at any depth. This client could only
+	// ever show those folders empty.
 	//
 	// It replaces a prune_empty_dirs bool, which could only mean designs. The bool was opt-in
-	// precisely because "empty" is per-client, which is the same fact this field states directly
-	// instead of leaving the definition on the server and the exception in the comment. Leave it
-	// empty to prune nothing.
+	// because "empty" depends on the client. This field states that fact directly. The bool kept the
+	// definition on the server and the exception in a comment. Leave it empty to prune nothing.
 	//
-	// Answering it costs a bounded walk of each subtree. A directory the walk cannot settle (bound
-	// reached, adapter error) is kept, since a folder wrongly shown costs a click and one wrongly
-	// hidden costs a file.
+	// Answering it costs a bounded walk of each subtree. The walk may fail to settle a directory,
+	// because it reached its bound or the adapter failed. That directory is kept. A folder shown
+	// wrongly costs a click, and a folder hidden wrongly costs a file.
 	Opens         []FileKind `protobuf:"varint,3,rep,packed,name=opens,proto3,enum=agni.v1.webapi.FileKind" json:"opens,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -415,8 +414,8 @@ func (x *ListDirRequest) GetOpens() []FileKind {
 
 type ListDirResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// entries are the directory's subdirectories and supported files, directories first,
-	// each group sorted by name.
+	// entries are the directory's subdirectories and supported files. Directories come first, and
+	// each group is sorted by name.
 	Entries       []*DirEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -506,8 +505,8 @@ func (x *ListDesignFilesRequest) GetUri() string {
 
 type ListDesignFilesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// mount is the mount every path below is relative to. A client mounts the files under this name,
-	// so the design keeps its URI whichever engine reads it.
+	// mount is the mount, and every path below is relative to it. A client mounts the files under
+	// this name. So the design keeps its URI, whichever engine reads it.
 	Mount string `protobuf:"bytes,1,opt,name=mount,proto3" json:"mount,omitempty"`
 	// files are the design's files, sorted by path, each listed once.
 	Files []*DesignFile `protobuf:"bytes,2,rep,name=files,proto3" json:"files,omitempty"`
@@ -576,9 +575,9 @@ type DesignFile struct {
 	Size int64  `protobuf:"varint,2,opt,name=size,proto3" json:"size,omitempty"`
 	// sha256 is the file's content hash, "sha256:<hex>", so a client can tell a cached copy is current.
 	Sha256 string `protobuf:"bytes,3,opt,name=sha256,proto3" json:"sha256,omitempty"`
-	// board is set on the design's board tier when it is a file of its own, one the netlist and the
-	// drawing are not read from, so a host answering a question that reads no board need not hold it
-	// (agni issue 992).
+	// board is set on the design's board-tier file when that file is separate from the netlist and
+	// the drawing (agni issue 992). A host answering a question that reads no board then need not
+	// hold it.
 	Board         bool `protobuf:"varint,4,opt,name=board,proto3" json:"board,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -644,8 +643,8 @@ func (x *DesignFile) GetBoard() bool {
 
 type ProposeDesignsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// uri is the folder to group, "mount://<mount>/<dir>". A `.zip` under it reads as a folder only on
-	// a mount that expands archives (the browser's).
+	// uri is the folder to group, "mount://<mount>/<dir>". A `.zip` under it reads as a folder only
+	// on a mount that expands archives, such as the browser's.
 	Uri           string `protobuf:"bytes,1,opt,name=uri,proto3" json:"uri,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -694,8 +693,8 @@ type ProposeDesignsResponse struct {
 	Designs []*ProposedDesign `protobuf:"bytes,1,rep,name=designs,proto3" json:"designs,omitempty"`
 	// unread are the files no design reads, each with why.
 	Unread []*UnreadFile `protobuf:"bytes,2,rep,name=unread,proto3" json:"unread,omitempty"`
-	// support are files a design or its project reads without being a design file, such as a
-	// project's descriptor and config directories or a KiCad symbol library.
+	// support lists files that a design or its project reads and that are not design files. Examples
+	// are a project's descriptor and config directories, or a KiCad symbol library.
 	Support       []string `protobuf:"bytes,3,rep,name=support,proto3" json:"support,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -757,19 +756,19 @@ type ProposedDesign struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// folder is the design's folder, mount-relative, where its `design.yaml` would go.
 	Folder string `protobuf:"bytes,1,opt,name=folder,proto3" json:"folder,omitempty"`
-	// design is the design as a descriptor would declare it: entry_uri, companion_uris and revisions
+	// design is the design as a descriptor would declare it. entry_uri, companion_uris and revisions
 	// are `mount://` URIs, and name is the entry's stem.
 	Design *Design `protobuf:"bytes,2,opt,name=design,proto3" json:"design,omitempty"`
 	// design_yaml is the `design.yaml` text that declares this design, for a person to read and edit.
 	DesignYaml string `protobuf:"bytes,3,opt,name=design_yaml,json=designYaml,proto3" json:"design_yaml,omitempty"`
-	// files are every file the design reads: its entry, companions, revisions, and a KiCad root's
-	// child sheets and libraries. Mount-relative.
+	// files lists every file the design reads, mount-relative. That covers its entry, companions and
+	// revisions, and a KiCad root's child sheets and libraries.
 	Files []string `protobuf:"bytes,4,rep,name=files,proto3" json:"files,omitempty"`
-	// note says anything a reader should know before trusting the read, such as a schematic export
-	// standing in for a netlist, or a second design sharing a folder that can declare only one.
+	// note says anything a reader should know before trusting the read. Two examples are a schematic
+	// export standing in for a netlist, and a second design in a folder that can declare only one.
 	Note string `protobuf:"bytes,5,opt,name=note,proto3" json:"note,omitempty"`
-	// declared is true when the folder already held a `design.yaml`, which the proposal reports
-	// rather than replaces.
+	// declared is true when the folder already held a `design.yaml`. The proposal reports that file
+	// and does not replace it.
 	Declared      bool `protobuf:"varint,6,opt,name=declared,proto3" json:"declared,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

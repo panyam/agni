@@ -21,11 +21,11 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// ValidateReport is the canonical wire form of `agni validate` (WS6-007): per-file
-// reader-health results over a corpus sweep. Like CheckReport, the report is a wire shape
-// rather than a CLI-side pivot, so `validate --format json`, a future RPC, and any tooling
-// parse one message. A file's format is the registry label; an empty format means no
-// reader claims the extension (surfaced for explicitly named files, skipped in dir walks).
+// ValidateReport is the canonical wire form of `agni validate` (WS6-007). It holds per-file
+// reader-health results over a corpus sweep. Like CheckReport, it is a wire shape rather than
+// a CLI-side pivot, so `validate --format json`, a future RPC and any tooling parse one
+// message. A file's format is the registry label. An empty format means no reader claims the
+// extension. Such a file is reported when it was named explicitly and skipped in a dir walk.
 type ValidateReport struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Files         []*FileValidation      `protobuf:"bytes,1,rep,name=files,proto3" json:"files,omitempty"`
@@ -94,9 +94,10 @@ func (x *ValidateReport) GetSkipped() int32 {
 	return 0
 }
 
-// FileValidation is one file's reader-health result. The counts messages are present only
-// for the tiers the format carries (a netlist-only format has no geometry counts and vice
-// versa); problems lists the failed invariants in human-readable form, empty when ok.
+// FileValidation is one file's reader-health result. A counts message is present only when
+// the format has that tier. A netlist-only format has no geometry counts, and a drawing-only
+// format has no netlist counts. problems lists the failed invariants in human-readable form,
+// and it is empty when ok.
 type FileValidation struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Path          string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
@@ -181,7 +182,7 @@ func (x *FileValidation) GetGeometry() *GeometryCounts {
 	return nil
 }
 
-// NetlistCounts is the netlist-tier structural summary validate reports per file.
+// NetlistCounts is a structural summary of the netlist tier. validate reports one per file.
 type NetlistCounts struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Components    int32                  `protobuf:"varint,1,opt,name=components,proto3" json:"components,omitempty"`
@@ -234,7 +235,7 @@ func (x *NetlistCounts) GetNets() int32 {
 	return 0
 }
 
-// GeometryCounts is the drawing-tier structural summary validate reports per file.
+// GeometryCounts is a structural summary of the drawing tier. validate reports one per file.
 // resolved counts the placements whose (cell_ref, library_ref) joins a symbol definition.
 type GeometryCounts struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`

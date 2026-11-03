@@ -56,21 +56,21 @@ const (
 // SnapshotServiceClient is a client for the agni.v1.webapi.SnapshotService service.
 type SnapshotServiceClient interface {
 	// Ingest creates a snapshot from a source. It resolves the design's tiers and composes its config,
-	// and reads no design file, since opening a KiCad design draws from its schematic's geometry and
-	// parses its netlist only for the first check or query, so a design that cannot be read fails at
-	// its first question. With read_board it builds the model a check builds, board included, so a
-	// later check finds it parsed; opening a design must not wait on its board (agni issue 943).
+	// and it reads no design file. Opening a KiCad design draws from its schematic's geometry, and the
+	// netlist is parsed only for the first check or query. So a design that cannot be read fails at its
+	// first question. With read_board, Ingest builds the same model a check builds, board included, and
+	// a later check finds it parsed. Opening a design must not wait on its board (agni issue 943).
 	Ingest(context.Context, *connect.Request[webapi.IngestRequest]) (*connect.Response[webapi.Snapshot], error)
 	GetSnapshot(context.Context, *connect.Request[webapi.GetSnapshotRequest]) (*connect.Response[webapi.Snapshot], error)
 	ListSnapshots(context.Context, *connect.Request[webapi.ListSnapshotsRequest]) (*connect.Response[webapi.ListSnapshotsResponse], error)
 	// UpdateSnapshot replaces a snapshot's definition, whole or by update_mask, and reads it again.
-	// Its id stays and its revision_id moves on. An update that cannot be read leaves the snapshot as
-	// it was.
+	// Its id does not change, and its revision_id moves on. An update that cannot be read leaves the
+	// snapshot as it was.
 	UpdateSnapshot(context.Context, *connect.Request[webapi.UpdateSnapshotRequest]) (*connect.Response[webapi.Snapshot], error)
 	DeleteSnapshot(context.Context, *connect.Request[webapi.DeleteSnapshotRequest]) (*connect.Response[emptypb.Empty], error)
-	// UploadBlobs stores file contents for a manifest an Ingest names (agni issue 1061), keyed by
-	// their SHA-256, and answers each one's hash. The server keeps what it can within its limit and
-	// may drop a blob no snapshot holds, so a client sends a blob only when an Ingest reports it
+	// UploadBlobs stores the file contents named in an Ingest's manifest (agni issue 1061), keyed by
+	// their SHA-256, and answers each one's hash. The server keeps what it can within its limit. It may
+	// drop a blob that no snapshot holds, so a client sends a blob only when an Ingest reports it
 	// missing.
 	UploadBlobs(context.Context, *connect.Request[webapi.UploadBlobsRequest]) (*connect.Response[webapi.UploadBlobsResponse], error)
 }
@@ -168,21 +168,21 @@ func (c *snapshotServiceClient) UploadBlobs(ctx context.Context, req *connect.Re
 // SnapshotServiceHandler is an implementation of the agni.v1.webapi.SnapshotService service.
 type SnapshotServiceHandler interface {
 	// Ingest creates a snapshot from a source. It resolves the design's tiers and composes its config,
-	// and reads no design file, since opening a KiCad design draws from its schematic's geometry and
-	// parses its netlist only for the first check or query, so a design that cannot be read fails at
-	// its first question. With read_board it builds the model a check builds, board included, so a
-	// later check finds it parsed; opening a design must not wait on its board (agni issue 943).
+	// and it reads no design file. Opening a KiCad design draws from its schematic's geometry, and the
+	// netlist is parsed only for the first check or query. So a design that cannot be read fails at its
+	// first question. With read_board, Ingest builds the same model a check builds, board included, and
+	// a later check finds it parsed. Opening a design must not wait on its board (agni issue 943).
 	Ingest(context.Context, *connect.Request[webapi.IngestRequest]) (*connect.Response[webapi.Snapshot], error)
 	GetSnapshot(context.Context, *connect.Request[webapi.GetSnapshotRequest]) (*connect.Response[webapi.Snapshot], error)
 	ListSnapshots(context.Context, *connect.Request[webapi.ListSnapshotsRequest]) (*connect.Response[webapi.ListSnapshotsResponse], error)
 	// UpdateSnapshot replaces a snapshot's definition, whole or by update_mask, and reads it again.
-	// Its id stays and its revision_id moves on. An update that cannot be read leaves the snapshot as
-	// it was.
+	// Its id does not change, and its revision_id moves on. An update that cannot be read leaves the
+	// snapshot as it was.
 	UpdateSnapshot(context.Context, *connect.Request[webapi.UpdateSnapshotRequest]) (*connect.Response[webapi.Snapshot], error)
 	DeleteSnapshot(context.Context, *connect.Request[webapi.DeleteSnapshotRequest]) (*connect.Response[emptypb.Empty], error)
-	// UploadBlobs stores file contents for a manifest an Ingest names (agni issue 1061), keyed by
-	// their SHA-256, and answers each one's hash. The server keeps what it can within its limit and
-	// may drop a blob no snapshot holds, so a client sends a blob only when an Ingest reports it
+	// UploadBlobs stores the file contents named in an Ingest's manifest (agni issue 1061), keyed by
+	// their SHA-256, and answers each one's hash. The server keeps what it can within its limit. It may
+	// drop a blob that no snapshot holds, so a client sends a blob only when an Ingest reports it
 	// missing.
 	UploadBlobs(context.Context, *connect.Request[webapi.UploadBlobsRequest]) (*connect.Response[webapi.UploadBlobsResponse], error)
 }

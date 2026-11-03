@@ -9,57 +9,57 @@ import "agni/v1/geom/geom_packed.proto";
 import "agni/v1/ir/ir.proto";
 import "google/protobuf/field_mask.proto";
 
-// This file: DesignService, loading and rendering one design. Rule checks are the separate
-// CheckService (checks.proto); the structural diff is DiffService (diff.proto).
+// This file defines DesignService, which loads and renders one design. Rule checks are in the
+// separate CheckService (checks.proto), and the structural diff is in DiffService (diff.proto).
 
 // DesignService loads a design file into something the viewer can draw. It reuses the
-// engine's readers, auto-layout, and packer; the web tier only chooses which per file and
-// serves the result. A design that carries schematic geometry (EDIF .eds) renders faithfully;
-// any other supported format is drawn as an auto-layout of its netlist graph.
+// engine's readers, auto-layout, and packer. The web tier only chooses which to use per file,
+// and serves the result. A design with schematic geometry (EDIF .eds) renders faithfully. Any
+// other supported format is drawn as an auto-layout of its netlist graph.
 service DesignService {
-  // GetDesign loads a file and returns its summary plus the list of drawable sheets (the
-  // sheet navigator's source). It resolves the render mode per file (faithful for geometry,
-  // else an auto-layout).
+  // GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+  // navigator reads that list. It resolves the render mode per file, faithful for geometry and
+  // an auto-layout otherwise.
   rpc GetDesign(GetDesignRequest) returns (GetDesignResponse);
 
-  // GetSheet returns one rendered sheet. The `format` selects the renderer: PACKED (the
-  // tier-2 geometry for the WebGL viewer, C8), SVG (the render.SheetSVG verification
-  // backend), or NATIVE (the format's own tool, a golden reference; not yet implemented).
-  // `sheet` selects by id, name, or 0-based index (as the CLI does).
+  // GetSheet returns one rendered sheet. The `format` selects the renderer. PACKED is the
+  // tier-2 geometry for the WebGL viewer (C8). SVG is the render.SheetSVG verification
+  // backend. NATIVE is the format's own tool as a golden reference, and is not yet
+  // implemented. `sheet` selects by id, name, or 0-based index, as the CLI does.
   rpc GetSheet(GetSheetRequest) returns (GetSheetResponse);
 
-  // HighlightSheet resolves highlight specs ("these components, nets, and pins, in this
-  // color/alpha") against one rendered sheet and returns a drawable overlay layer, decoupled
-  // from the base render: PACKED yields primitive-index groups that join the GetSheet
-  // PackedSheet by index (the WebGL viewer redraws just those primitives), SVG yields a
-  // transparent overlay document with the same viewBox as the GetSheet SVG (the client
-  // stacks or composites it above the sheet). NATIVE has no overlay and is rejected. The
-  // request's sheet/layout/symbols must match the GetSheet call that produced the base
-  // render, so the two layers describe the same geometry.
+  // HighlightSheet resolves highlight specs against one rendered sheet. A spec says "these
+  // components, nets, and pins, in this color/alpha". It returns a drawable overlay layer,
+  // separate from the base render. PACKED yields primitive-index groups. They join the GetSheet
+  // PackedSheet by index, and the WebGL viewer redraws just those primitives. SVG yields a
+  // transparent overlay document with the same viewBox as the GetSheet SVG. The client stacks
+  // or composites it above the sheet. NATIVE has no overlay and is rejected. The request's
+  // sheet/layout/symbols must match the GetSheet call that produced the base render. Then the
+  // two layers describe the same geometry.
   rpc HighlightSheet(HighlightSheetRequest) returns (HighlightSheetResponse);
 
-  // GetLayoutReport explains how an auto-layout maps each component to a drawn node (device class,
-  // and whether it drew a glyph, the generic box, the design's own symbol, or an unresolved
-  // fallback). It uses the same symbol source as the render, so it describes what the viewer
-  // shows and points at --symbol-path when provided symbols do not resolve.
+  // GetLayoutReport explains how an auto-layout maps each component to a drawn node. It gives the
+  // device class, and says whether the node is a glyph, the generic box, the design's own symbol,
+  // or an unresolved fallback. It uses the same symbol source as the render, so it describes what
+  // the viewer shows. It points at --symbol-path when provided symbols do not resolve.
   rpc GetLayoutReport(GetLayoutReportRequest) returns (GetLayoutReportResponse);
 
-  // TraceDesign walks from one pin to another through the series parts between them and returns the
-  // route: each part crossed with its own pin on both sides, each net passed through, and what else
-  // sits on those nets. It is the same answer `agni trace` prints, so a route read in a terminal and
-  // a route drawn on the canvas cannot disagree.
+  // TraceDesign walks from one pin to another through the series parts between them, and returns
+  // the route. The route lists each part crossed with its own pin on both sides, each net passed
+  // through, and the other parts on those nets. `agni trace` prints the same answer. So a route read
+  // in a terminal and a route drawn on the canvas cannot disagree.
   //
-  // Verb-shaped (C23): a route does not exist after the call, so it is derived rather than a
-  // resource. The three outcomes stay apart on the wire for the reason they stay apart everywhere
-  // else — an endpoint naming nothing the design has is a failed QUESTION, and a client that
-  // rendered it as "not connected" would send its reader to look at the board instead of at what
+  // It is verb-shaped (C23). A route does not exist after the call, so it is derived rather than a
+  // resource. The wire keeps the three outcomes apart, as every other surface does. Imagine an
+  // endpoint that names nothing the design has. That is a failed QUESTION. A client that rendered
+  // it as "not connected" would send its reader to look at the board, when the mistake is in what
   // they typed.
   rpc TraceDesign(TraceDesignRequest) returns (TraceDesignResponse);
 }
 
-// SheetFormat selects which renderer draws a sheet. It is an axis distinct from
-// GetSheetRequest.layout (faithful vs auto-layout geometry): layout chooses the geometry,
-// format chooses how it is rendered.
+// SheetFormat selects which renderer draws a sheet. It is a separate axis from
+// GetSheetRequest.layout, which picks faithful or auto-layout geometry. layout chooses the
+// geometry, and format chooses how it is rendered.
 enum SheetFormat {
   SHEET_FORMAT_UNSPECIFIED = 0; // treated as PACKED
   SHEET_FORMAT_PACKED = 1;      // tier-2 PackedSheet for the WebGL viewer
@@ -67,8 +67,9 @@ enum SheetFormat {
   SHEET_FORMAT_NATIVE = 3;      // the format's native tool (golden); not yet implemented
 }
 
-// SymbolSource selects what an auto-layout draws at each component node: predefined synthetic
-// glyphs, or the design's own provided symbols re-laid-out (partial-faithful, WS7-031).
+// SymbolSource selects what an auto-layout draws at each component node. It draws either
+// predefined synthetic glyphs, or the design's own symbols laid out again (partial-faithful,
+// WS7-031).
 enum SymbolSource {
   SYMBOL_SOURCE_UNSPECIFIED = 0; // treated as GLYPH
   SYMBOL_SOURCE_GLYPH = 1;       // classified synthetic glyphs
@@ -79,30 +80,30 @@ enum SymbolSource {
 message SheetRef {
   string id = 1;
   string name = 2;
-  // parent_id is the id of this sheet's parent sheet, or empty for a top-level sheet. It lets
-  // the UI show a sheet hierarchy (KiCad hierarchical schematics); flat formats (EDIF pages,
-  // single-sheet designs) leave it empty. Populated by hierarchy-aware readers (a later step).
+  // parent_id is the id of this sheet's parent sheet, or empty for a top-level sheet. The UI uses
+  // it to show a sheet hierarchy, as in KiCad hierarchical schematics. Flat formats, such as EDIF
+  // pages and single-sheet designs, leave it empty. Hierarchy-aware readers fill it (a later step).
   string parent_id = 3;
 }
 
 message GetDesignRequest {
   // snapshot names the design to describe, "snapshots/{snapshot}" (agni issue 1061).
   string snapshot = 7;
-  // layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered");
-  // empty uses the default. Ignored for geometry-bearing files, which render faithfully.
+  // layout overrides the auto-layout strategy for netlist formats (e.g. "grid", "layered").
+  // Empty uses the default. Ignored for geometry-bearing files, which render faithfully.
   string layout = 1;
-  // read_mask selects what the response carries (agni issue 836). Unset, the response is the summary
-  // it has always been, with no IR, because the viewer asks on every open and a large board's IR is
-  // megabytes. Set, it keeps exactly the paths named, over GetDesignResponse: `design` for the whole
-  // IR, `design.nets` or `design.components.mpn` for parts of it, `sheets` for a summary field, `*`
-  // for everything. A path through a repeated or map field applies to every element. When every path
-  // is under `design`, the server reads the netlist alone and skips the drawing. An unknown path is
-  // an invalid argument.
+  // read_mask selects which fields the response fills (agni issue 836). When unset, the response is
+  // the usual summary, with no IR. The viewer asks on every open, and a large board's IR is
+  // megabytes. When set, the response keeps exactly the named paths of GetDesignResponse. `design`
+  // selects the whole IR. `design.nets` or `design.components.mpn` select parts of it. `sheets`
+  // selects a summary field, and `*` selects everything. A path through a repeated or map field
+  // applies to every element. When every path is under `design`, the server reads the netlist alone
+  // and skips the drawing. An unknown path is an invalid argument.
   google.protobuf.FieldMask read_mask = 4;
-  // nets and ref_des narrow WHICH entities `design` carries, by exact name: only these nets in
-  // design.nets, only these components in design.components. Each narrows its own list; neither
-  // filters the other. A name the design does not have is simply absent. They apply only when the
-  // mask selects `design`.
+  // nets and ref_des narrow WHICH entities `design` holds, by exact name. design.nets then holds
+  // only these nets, and design.components only these components. Each narrows its own list, and
+  // neither filters the other. A name missing from the design is simply absent. They apply only
+  // when the mask selects `design`.
   repeated string nets = 5;
   repeated string ref_des = 6;
   reserved 2, 3;
@@ -120,10 +121,10 @@ message GetDesignResponse {
   // undrawn are the placements this design's drawing cannot draw, because no symbol resolved for them
   // (agni issue 354). Empty is the normal case.
   //
-  // It is on the DESIGN response rather than per sheet because it is a property of the read: a symbol
-  // library either resolved or did not, and a reader needs to know before deciding whether the
-  // drawing in front of them is worth trusting. It describes the layout this response resolved, so a
-  // client changing layout re-reads it with the rest of the design.
+  // It is on the DESIGN response rather than per sheet, because it is a property of the read. A
+  // symbol library either resolved or did not. A reader needs to know that before deciding whether
+  // to trust the drawing in front of them. It describes the layout this response resolved. So a
+  // client changing layout reads it again with the rest of the design.
   repeated agni.v1.geom.UndrawnPlacement undrawn = 9;
   // layout is the render mode actually used: "faithful" or the auto-layout name.
   string layout = 5;
@@ -132,40 +133,41 @@ message GetDesignResponse {
   // native_available is true when this file's format has a native renderer that is enabled
   // and installed, so the UI can offer the NATIVE format. False otherwise.
   bool native_available = 7;
-  // available_layouts are the layouts this file can render (the geometry axis, distinct from
-  // the render format): "faithful" for geometry-bearing files, plus auto-layout strategy names
-  // (grid, layered, ...) for files with a netlist IR. The UI offers these; `layout` above is
-  // the one used for this response.
+  // available_layouts are the layouts this file can render. This is the geometry axis, separate
+  // from the render format. A geometry-bearing file offers "faithful". A file with a netlist IR
+  // also offers the auto-layout strategy names (grid, layered, ...). The UI offers these, and
+  // `layout` above names the one this response used.
   repeated string available_layouts = 8;
-  // content_hash is "sha256:<hex>" over the design's entry file, the same revision identity
-  // agni.v1.checks.DesignRef.content_hash carries and computed by the same loader call, so a link
-  // minted by the CLI can be compared against what this server just read (agni issue 392).
+  // content_hash is "sha256:<hex>" over the design's entry file (agni issue 392). It is the same
+  // revision identity as agni.v1.checks.DesignRef.content_hash, and the same loader call computes
+  // it. So a link the CLI minted can be compared against what this server just read.
   //
-  // It is on the DESIGN response for the same reason `undrawn` is: it is a property of THIS read.
-  // The viewer needs it before it draws a proof a link asked for, which is before any check has run,
-  // so hanging it off the check response would arrive one step too late to prevent the highlight the
-  // reader should not trust.
+  // It is on the DESIGN response for the same reason as `undrawn`, since it is a property of THIS
+  // read. A link may ask the viewer to draw a proof. The viewer needs the hash before it draws
+  // that, and that is before any check has run. On the check response, the hash would arrive one
+  // step too late to stop a highlight the reader should not trust.
   //
-  // Empty when this server could not hash the file, which a consumer MUST NOT read as a match. It is
-  // the third state: an unverifiable link is not a verified one, and collapsing the two reproduces
-  // exactly the false confidence the hash exists to remove.
+  // Empty when this server could not hash the file. A consumer MUST NOT read empty as a match.
+  // Empty is a third state. An unverifiable link is not a verified one. Treating the two alike
+  // brings back the false confidence the hash exists to remove.
   string content_hash = 10;
-  // unexpanded_hierarchy lists the hierarchical blocks whose contents the netlist read left out, the
-  // reader's InputDiagnostics field carried as is (agni issue 707). Non-empty means component_count
-  // and net_count cover the top level alone, which a viewer should say before anyone trusts them.
+  // unexpanded_hierarchy lists the hierarchical blocks whose contents the netlist read left out
+  // (agni issue 707). It copies the reader's InputDiagnostics field as is. When it is non-empty,
+  // component_count and net_count cover the top level alone. A viewer should say so before anyone
+  // trusts the counts.
   //
-  // It is on the DESIGN response for the reason `undrawn` is: it is a property of this read. Empty
-  // whenever the counts are, since both come from the same netlist read.
+  // It is on the DESIGN response for the same reason as `undrawn`, since it is a property of this
+  // read. It is empty whenever the counts are, since both come from the same netlist read.
   repeated agni.v1.ir.UnexpandedHierarchy unexpanded_hierarchy = 11;
-  // design is the design's IR as every analysis reads it (the project's configuration, the declared
-  // tiers, the format-neutral ingestion passes such as part-number promotion), present only when the
-  // request's read_mask selects it (agni issue 836). A client prototyping an analysis reads this
-  // rather than parsing the netlist again.
+  // design is the design's IR as every analysis reads it (agni issue 836). It reflects the project's
+  // configuration, the declared tiers, and the format-neutral ingestion passes such as part-number
+  // promotion. It is present only when the request's read_mask selects it. A client prototyping an
+  // analysis reads this instead of parsing the netlist again.
   agni.v1.ir.Design design = 12;
-  // hierarchy_note is the sentence stating what unexpanded_hierarchy means for this read, or "" when
-  // the read left nothing out (agni issue 717). It is report.HierarchyNote, the wording the CLI's
-  // stderr note and both HTML reports use, sent whole so the viewer's strip renders it rather than
-  // composing a second copy of it.
+  // hierarchy_note is a sentence stating what unexpanded_hierarchy means for this read (agni issue
+  // 717). It is "" when the read left nothing out. report.HierarchyNote builds it, and the CLI's
+  // stderr note and both HTML reports use the same wording. The server sends it whole, so the
+  // viewer's strip renders it and does not compose a second copy.
   string hierarchy_note = 13;
 }
 
@@ -177,16 +179,16 @@ message GetSheetRequest {
   string layout = 2;
   // format selects the renderer; unset means PACKED.
   SheetFormat format = 3;
-  // symbols selects the node artwork for an auto-layout; unset means GLYPH. Ignored by the
-  // faithful layout (always the design's own symbols).
+  // symbols selects the node artwork for an auto-layout, and unset means GLYPH. The faithful
+  // layout ignores it, since it always draws the design's own symbols.
   SymbolSource symbols = 4;
   reserved 5, 6;
   reserved "uri", "as_named";
 }
 
 message GetSheetResponse {
-  // content carries exactly one rendering, matching the requested format: packed geometry
-  // for PACKED, an SVG document for SVG/NATIVE.
+  // content holds exactly one rendering, matching the requested format. PACKED gets packed
+  // geometry, and SVG or NATIVE gets an SVG document.
   oneof content {
     agni.v1.geom.PackedSheet packed = 1; // tier-2 contract (C8), for the WebGL viewer
     string svg = 2;                        // standalone SVG document
@@ -233,8 +235,8 @@ message GetLayoutReportResponse {
 
 // TraceOutcome is what a trace answered.
 //
-// An enum rather than the string the Go side started with, so a client meets an unrecognised value
-// at decode rather than in a string comparison that quietly falls through to "not connected".
+// The Go side started with a string, and this is an enum instead. So a client meets an unrecognised
+// value at decode. With a string, a comparison could quietly fall through to "not connected".
 enum TraceOutcome {
   TRACE_OUTCOME_UNSPECIFIED = 0;
   TRACE_OUTCOME_ROUTED = 1;      // a route was found within the radius
@@ -248,10 +250,10 @@ message TraceDesignRequest {
   // from / to are the endpoint pins, as ref-des and pin designator.
   TraceEndpoint from = 2;
   TraceEndpoint to = 3;
-  // hops bounds the search in series crossings; 0 takes the server's default. Unlike the protection
-  // radii this is a SEARCH BUDGET rather than an electrical claim, which is why the response repeats
-  // the value it rests on: nothing about a route degrades with distance, so a no-route can be
-  // re-asked wider and the reader has to be able to see what was asked the first time.
+  // hops bounds the search in series crossings, and 0 takes the server's default. The protection
+  // radii make an electrical claim. hops does not, since it is a SEARCH BUDGET. Nothing about a
+  // route degrades with distance, so a reader can ask a no-route again with a wider budget. The
+  // reader has to see what was asked the first time. So the response repeats the radius it used.
   int32 hops = 4;
   reserved 1, 5;
   reserved "uri", "as_named";
@@ -283,18 +285,18 @@ message Trace {
 // TraceEnd is one resolved endpoint of a trace.
 message TraceEnd {
   TraceEndpoint endpoint = 1;
-  // pin_name is the functional name the part type declares for this pin ("SDA", "PTC11"), or empty
-  // on a source carrying no part-type pin data. It is what a datasheet and a firmware header call
-  // the pin, so it is what makes the endpoint recognisable to the person reading.
+  // pin_name is the functional name the part type declares for this pin ("SDA", "PTC11"). It is
+  // empty on a source with no part-type pin data. A datasheet and a firmware header call the pin by
+  // this name. So the person reading recognises the endpoint by it.
   string pin_name = 2;
   // net is the net the pin sits on, empty when the endpoint did not resolve.
   string net = 3;
   // sheet_ids names the sheets this endpoint's net is drawn on, empty when it is drawn on none.
   //
-  // Filled on EVERY outcome, including no-route. The two nets that fail to join are drawn somewhere,
-  // and that picture is what a reader goes looking for the moment they read "no route", so a field
-  // populated only on success would answer with silence exactly where the question is sharpest. Empty
-  // then honestly means not drawn, rather than nobody looked.
+  // Filled on EVERY outcome, including no-route. Imagine a reader sees "no route". The two nets that
+  // fail to join are drawn somewhere, and the reader goes looking for that picture at once. A field
+  // filled only on success would give them nothing at the moment they most need it. So empty means
+  // not drawn, rather than nobody looked.
   repeated string sheet_ids = 4;
 }
 
@@ -312,25 +314,24 @@ message TraceCross {
 message TraceNet {
   string name = 1;
   repeated TraceStub stubs = 2;
-  // stubs_elided is how many further parts sit on this net beyond the ones listed, so a capped list
-  // reads as capped rather than as complete.
+  // stubs_elided counts the parts on this net beyond the ones listed. So a capped list reads as
+  // capped, not as complete.
   int32 stubs_elided = 3;
-  // bus_like marks a net the walk would refuse to continue THROUGH: a rail, a ground, or any
-  // rail-scale fan-out. A route may END on one, so saying which net it was is what stops a reader
-  // assuming the trace stopped early for some other reason.
+  // bus_like marks a net that the walk refuses to continue THROUGH, such as a rail, a ground, or
+  // any rail-scale fan-out. A route may END on one. This flag names that net, so a reader does not
+  // assume the trace stopped early for some other reason.
   bool bus_like = 4;
   // sheet_ids names the sheets this net is drawn on, empty when it is drawn on none.
   //
-  // PER NET rather than one sheet for the whole trace, because a route crossing three sheets is
-  // exactly when a reader wants to choose. It is the same shape a Finding's `sheets` and a query
-  // cell's `cell_sheets` already carry, so the panel renders the same SheetBadges and a click
-  // navigates the same way.
+  // It is PER NET rather than one sheet for the whole trace. A reader most wants to choose when a
+  // route crosses three sheets. A Finding's `sheets` and a query AnswerEntity's `sheet_ids` have
+  // the same shape. So the panel renders the same SheetBadges, and a click navigates the same way.
   repeated string sheet_ids = 5;
 }
 
-// TraceStub is a part sitting on a net of the route that the route does not pass through. Test
-// points especially: a probe point on a path net is the most actionable thing on the line, and
-// reducing the answer to its series elements removes exactly the parts a person reads a trace to find.
+// TraceStub is a part on one of the route's nets, which the route does not pass through. Test points
+// matter most. A probe point on a path net is the most actionable thing on the line. A person often
+// reads a trace to find those parts, and an answer with series elements alone would drop them.
 message TraceStub {
   string ref_des = 1;
   string pin = 2;
@@ -349,8 +350,8 @@ message ComponentReport {
   string device_class = 3; // device class (empty for a provided symbol or a component with no class)
   string cell = 4;         // drawn symbol cell_ref
   string kind = 5;         // provided | glyph | box | unresolved
-  // label is how the report's summary groups the component: its device class for a glyph, else its
-  // kind. The engine decides it (graph.ComponentReport.Label) so the CLI's summary and the viewer's
-  // Properties group one report alike (agni issue 1045).
+  // label is how the report's summary groups the component. A glyph groups by its device class, and
+  // anything else by its kind. The engine decides it in graph.ComponentReport.Label (agni issue
+  // 1045). So the CLI's summary and the viewer's Properties group one report alike.
   string label = 6;
 }

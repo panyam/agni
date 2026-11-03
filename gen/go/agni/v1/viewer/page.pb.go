@@ -37,8 +37,8 @@ type ViewerLocation struct {
 	Layout  string `protobuf:"bytes,5,opt,name=layout,proto3" json:"layout,omitempty"`
 	Symbols *bool  `protobuf:"varint,6,opt,name=symbols,proto3,oneof" json:"symbols,omitempty"`
 	Flatten *bool  `protobuf:"varint,7,opt,name=flatten,proto3,oneof" json:"flatten,omitempty"`
-	// verdict is a verdict id ("<rule>:(<kind>:<ref>,...)"), with hash, rule and subjects as the
-	// link's hints, which mean nothing without it.
+	// verdict is a verdict id ("<rule>:(<kind>:<ref>,...)"). hash, rule and subjects are the link's
+	// hints for it, and they mean nothing without it.
 	Verdict  string   `protobuf:"bytes,8,opt,name=verdict,proto3" json:"verdict,omitempty"`
 	Hash     string   `protobuf:"bytes,9,opt,name=hash,proto3" json:"hash,omitempty"`
 	Rule     string   `protobuf:"bytes,10,opt,name=rule,proto3" json:"rule,omitempty"`
@@ -313,13 +313,14 @@ func (x *GetLocationResponse) GetLocation() *ViewerLocation {
 type ApplyLocationRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Location *ViewerLocation        `protobuf:"bytes,1,opt,name=location,proto3" json:"location,omitempty"`
-	// url is a viewer link instead of a location, as the server mints one (`agni check --server`, an
-	// MCP answer's `link`, a report row), and the page reads it with the same parser it reads its own
-	// address with. Only the fields the link sets are applied. Exactly one of location and url.
+	// url is a viewer link, sent instead of a location. The server mints such links (`agni check
+	// --server`, an MCP answer's `link`, a report row). The page reads url with the same parser it
+	// uses for its own address. Only the fields the link sets are applied. Exactly one of location
+	// and url.
 	//
-	// A request carrying only a url is taken from a page at ANY origin, and its reply carries no
+	// The page accepts a request with only a url from a page at ANY origin, and the reply has no
 	// location (agni issue 1156). Any page holding the viewer's window can already navigate it to the
-	// same link, so this grants nothing that loading the link would not, except keeping the page.
+	// same link. So this grants nothing that loading the link would not, except keeping the page.
 	Url           string `protobuf:"bytes,2,opt,name=url,proto3" json:"url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -427,9 +428,9 @@ type LocateVerdictRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// id is the verdict's derived id, as `agni check --verdicts` prints it.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// rule and subjects are the same hints a link carries (ViewerLocation.rule, .subjects). When the
-	// page has not answered the verdict yet they let it ask that one rule about those subjects alone,
-	// as a cold link does; without them a verdict the page has not answered stays unresolved.
+	// rule and subjects are the same hints a link has (ViewerLocation.rule, .subjects). Suppose the
+	// page has not answered the verdict yet. The hints let it ask that one rule about those subjects
+	// alone, as a cold link does. Without them, the verdict is left unresolved.
 	Rule          string   `protobuf:"bytes,2,opt,name=rule,proto3" json:"rule,omitempty"`
 	Subjects      []string `protobuf:"bytes,3,rep,name=subjects,proto3" json:"subjects,omitempty"`
 	unknownFields protoimpl.UnknownFields

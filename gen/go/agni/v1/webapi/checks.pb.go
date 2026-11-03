@@ -30,12 +30,12 @@ type CheckReportFormat int32
 
 const (
 	CheckReportFormat_CHECK_REPORT_FORMAT_UNSPECIFIED CheckReportFormat = 0
-	// The CheckResults document, as results.Marshal writes it: findings, skipped rules, the catalog
-	// snapshot, the run's provenance, the producer version and the design's content hash. The durable,
-	// machine-readable record of a run, and what `agni results` re-renders.
+	// The CheckResults document, as results.Marshal writes it. It holds the findings, skipped rules,
+	// the catalog snapshot, the run's provenance, the producer version and the design's content hash.
+	// It is the durable, machine-readable record of a run, and `agni results` re-renders it.
 	CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON CheckReportFormat = 1
-	// The self-contained verdict report page: every rule's considered set, passes included. A
-	// CheckResults document cannot carry it, because it holds findings and not verdicts.
+	// The self-contained verdict report page, with every rule's considered set, passes included. A
+	// CheckResults document cannot hold it, because that document holds findings and not verdicts.
 	CheckReportFormat_CHECK_REPORT_FORMAT_HTML CheckReportFormat = 2
 )
 
@@ -84,20 +84,22 @@ type CheckDesignRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// snapshot names the design to check, "snapshots/{snapshot}" (agni issue 1061).
 	Snapshot string `protobuf:"bytes,7,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	// rules names the subset of rules to run (by RuleInfo.name); empty runs the full catalog, so an
-	// existing caller is unchanged. A selection lets the client run only what it wants to see (and
-	// avoid running expensive rules it did not select).
+	// rules names the subset of rules to run, by RuleInfo.name. Empty runs the full catalog, so an
+	// existing caller is unchanged. A selection lets the client run only what it wants to see, and it
+	// skips expensive rules the client did not select.
 	Rules []string `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
-	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-	// a fact base counts, candidate comparisons, each row a generator emits and the connections a
-	// circuit walk examines. It can only LOWER the
-	// deployment's own budget, never raise it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself inconclusive, naming the budget, and the other rules still answer.
+	// work_budget caps the work of each query that this request evaluates (agni issue 792). The work
+	// counts a fact base's units, candidate comparisons, each row a generator emits, and each
+	// connection a circuit walk examines. It can only LOWER the deployment's own budget, never raise
+	// it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself
+	// inconclusive, naming the budget, and the other rules still answer.
 	WorkBudget int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	// subjects narrows the run to these nets, components and pins (agni issue 897). Each rule answers
-	// for them alone: the findings and verdicts are the ones a full run reports with one of them as a
-	// subject, and a component covers its own pins. Empty checks the whole design. A rule that
-	// concludes about the design as a whole has no answer for a subset, so it is not run and is named
-	// in `skipped`. A net matches by net_id when both sides carry one, and by name otherwise.
+	// for them alone. The run returns each finding and verdict that a full run reports with one of
+	// them as a subject, and a component covers its own pins. Empty checks the whole design. Some
+	// rules conclude about the design as a whole and have no answer for a subset. Such a rule is not
+	// run, and `skipped` names it. A net matches by net_id when both sides have one, and by name
+	// otherwise.
 	Subjects      []*checks.Subject `protobuf:"bytes,8,rep,name=subjects,proto3" json:"subjects,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -167,39 +169,39 @@ type CheckDesignResponse struct {
 	Findings []*checks.Finding `protobuf:"bytes,1,rep,name=findings,proto3" json:"findings,omitempty"`
 	// skipped names the selected rules that could NOT run on this design, and why.
 	//
-	// It exists because silence reads as coverage. A rule whose fact tier this design lacks — a board
-	// rule on a netlist, a datasheet rule with no corpus — is gated off before it evaluates, so it
-	// contributes no findings, and a findings list has no way to say the difference between "checked
-	// and clean" and "never ran". On the viewer's default-open panel that is the whole failure: tick a
-	// rule the design cannot support and the result is indistinguishable from a healthy board.
+	// It exists because silence reads as coverage. Imagine a rule that needs a fact tier this design
+	// lacks, such as a board rule on a netlist or a datasheet rule with no corpus. The rule is gated
+	// off before it evaluates, so it contributes no findings. A findings list cannot tell "checked and
+	// clean" from "never ran". On the viewer's default-open panel, a reader ticks a rule the design
+	// cannot support, and the result looks exactly like a healthy board.
 	//
-	// The review layer answers this with a per-item outcome vocabulary (not-applicable, needs-data and
-	// the rest). This is the same honesty at the finding tier, and deliberately NOT that vocabulary: a
-	// flat rule sweep has no checklist item to score, so it reports which rules were gated and the
-	// reason check.Available gave, and nothing more.
+	// The review layer handles this with a per-item outcome vocabulary (not-applicable, needs-data and
+	// the rest). This field does the same job at the finding tier, and deliberately NOT with that
+	// vocabulary. A flat rule sweep has no checklist item to score. So it reports which rules were
+	// gated and the reason check.Available gave, and nothing more.
 	Skipped []*SkippedRule `protobuf:"bytes,2,rep,name=skipped,proto3" json:"skipped,omitempty"`
-	// verdicts is the CONSIDERED SET: what each rule concluded about every subject it was applied to,
-	// including the passes and the subjects it could not judge. `findings` above stays exactly what it
-	// was, the violations, so a consumer that wants defects is unaffected.
+	// verdicts is the CONSIDERED SET. It says what each rule concluded about every subject the rule
+	// was applied to, including the passes and the subjects it could not judge. `findings` above still
+	// holds the violations alone, so a consumer that wants defects is unaffected.
 	//
-	// Only rules that STATE a considered set contribute. A rule absent from here is declining to state
-	// one rather than reporting that it considered nothing, and a consumer must not read the two the
-	// same way. That is the same distinction `skipped` draws one level up.
+	// Only rules that STATE a considered set contribute. When a rule is absent from here, it declined
+	// to state one. It did not report that it considered nothing, and a consumer must not read the two
+	// the same way. `skipped` draws the same distinction one level up.
 	Verdicts []*checks.Verdict `protobuf:"bytes,3,rep,name=verdicts,proto3" json:"verdicts,omitempty"`
-	// unexpanded_hierarchy lists the hierarchical blocks whose contents the read this run scored left
-	// out, the reader's InputDiagnostics field carried as is (agni issues 707, 717). Non-empty means
-	// every finding and verdict above covers the top level alone.
+	// unexpanded_hierarchy lists the hierarchical blocks that this run's read left out. It copies the
+	// reader's InputDiagnostics field as is (agni issues 707, 717). Non-empty means every finding and
+	// verdict above covers the top level alone.
 	//
-	// It rides on the run, rather than being read again where a report is rendered, because
-	// RenderCheckReport writes from the run the caller holds and reads no design (C19). A report saved
-	// from this run states it in its header.
+	// It is part of the run rather than read again where a report is rendered. RenderCheckReport
+	// writes from the run the caller holds and reads no design (C19). A report saved from this run
+	// states the list in its header.
 	UnexpandedHierarchy []*ir.UnexpandedHierarchy `protobuf:"bytes,4,rep,name=unexpanded_hierarchy,json=unexpandedHierarchy,proto3" json:"unexpanded_hierarchy,omitempty"`
-	// io_map is the design intent's IO map this run checked, in declared order, set when the run
-	// included an IO-map rule and the design declares a map (agni issue 1188). The verdicts answer
-	// each rule separately, and a reader signing off a pin map wants one row per declared pin with
-	// the declared function, which no verdict carries on a row a rule could not judge. So the run
-	// carries the rows themselves, and Tabulate's "pin_map" table and the HTML report lay them out
-	// joined to their verdicts without reading the design again.
+	// io_map is the IO map from the design intent that this run checked, in declared order. It is set
+	// when the run included an IO-map rule and the design declares a map (agni issue 1188). The
+	// verdicts answer each rule separately. A reader signing off a pin map wants one row per declared
+	// pin, with the declared function. When a rule could not judge a row, no verdict holds that
+	// function. So the run includes the rows themselves. Tabulate's "pin_map" table and the HTML
+	// report join them to their verdicts without reading the design again.
 	IoMap         []*config.PinAssignment `protobuf:"bytes,5,rep,name=io_map,json=ioMap,proto3" json:"io_map,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -276,13 +278,13 @@ type SkippedRule struct {
 	// name is the catalog rule name, as ListRules reports it.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// reason is check.Available's own explanation ("design carries no board geometry"), not a
-	// reconstruction. The rule decides why it cannot run; a second sentence written here would be a
+	// reconstruction. The rule decides why it cannot run. A second sentence written here would be a
 	// second opinion that drifts.
 	Reason string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
-	// design_wide is set when the rule was left out only because the request named subjects and the
-	// rule concludes about the design as a whole (agni issue 897), so it would run on an unscoped
-	// request. A client tells the rules a scope left out from the rules this design cannot run at all
-	// by this field, never by the reason's text.
+	// design_wide is set when the rule was left out only because the request named subjects, and the
+	// rule concludes about the design as a whole (agni issue 897). The rule would run on an unscoped
+	// request. Some rules are left out by a scope, and others cannot run on this design at all. A
+	// client tells them apart by this field, never by the reason's text.
 	DesignWide    bool `protobuf:"varint,3,opt,name=design_wide,json=designWide,proto3" json:"design_wide,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -447,8 +449,8 @@ type ReportLinks struct {
 	// design_uri is the design as that viewer addresses it, "mount://<mount>/<path>". Empty emits no
 	// links.
 	DesignUri string `protobuf:"bytes,2,opt,name=design_uri,json=designUri,proto3" json:"design_uri,omitempty"`
-	// withheld is why links were asked for and refused, carried into the page because whoever opens the
-	// saved file later never saw the reason (agni issue 626).
+	// withheld says why links were asked for and refused. The page includes it, because whoever opens
+	// the saved file later never saw the reason (agni issue 626).
 	Withheld      string `protobuf:"bytes,3,opt,name=withheld,proto3" json:"withheld,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -507,7 +509,8 @@ func (x *ReportLinks) GetWithheld() string {
 
 type RenderCheckReportRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// snapshot names the design the run read. It decides the project whose catalog the report describes and the netlist whose content hash it records, "snapshots/{snapshot}" (agni issue 1061).
+	// snapshot names the design the run read, "snapshots/{snapshot}" (agni issue 1061). It decides
+	// which project's catalog the report describes, and which netlist's content hash it records.
 	Snapshot string `protobuf:"bytes,9,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// rules is the selection the run used, empty meaning the whole catalog, as CheckDesignRequest.rules.
 	Rules []string `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`
@@ -516,10 +519,10 @@ type RenderCheckReportRequest struct {
 	Format CheckReportFormat    `protobuf:"varint,5,opt,name=format,proto3,enum=agni.v1.webapi.CheckReportFormat" json:"format,omitempty"`
 	// links applies to CHECK_REPORT_FORMAT_HTML only.
 	Links *ReportLinks `protobuf:"bytes,6,opt,name=links,proto3" json:"links,omitempty"`
-	// query_sets are the design project's query sets the caller answered, each the RunQueries answer
-	// it holds, rendered as Queries sections after the rules so one HTML file carries the checks and
-	// the queries (agni issue 1190). Values the caller ran, never re-run here. HTML only; empty leaves
-	// the page as it was.
+	// query_sets are the caller's answers to the design project's query sets. Each is a RunQueries
+	// answer that the caller holds. They render as Queries sections after the rules, so one HTML file
+	// holds the checks and the queries (agni issue 1190). The caller ran them, and nothing re-runs them
+	// here. HTML only. Empty leaves the page as it was.
 	QuerySets     []*RunQueriesResponse `protobuf:"bytes,10,rep,name=query_sets,json=querySets,proto3" json:"query_sets,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -793,15 +796,16 @@ func (x *GetExpectationsRequest) GetSnapshot() string {
 	return ""
 }
 
-// RuleExpectation is one expected-findings entry from a design's sidecar: a rule that should fire
-// and the exact subjects it should fire on. `pending` marks a staged expectation -- a rule not yet
-// implemented, kept so the viewer can show it red without the harness asserting it (WS6-006).
+// RuleExpectation is one expected-findings entry from a design's sidecar. It names a rule that
+// should fire and the exact subjects it should fire on. `pending` marks a staged expectation, for a
+// rule not yet implemented. It is kept so the viewer can show it red without the harness asserting
+// it (WS6-006).
 type RuleExpectation struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Rule     string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
 	Subjects []string               `protobuf:"bytes,2,rep,name=subjects,proto3" json:"subjects,omitempty"`
 	Pending  bool                   `protobuf:"varint,3,opt,name=pending,proto3" json:"pending,omitempty"`
-	// The sidecar's optional narration for this expectation (WS6-008): what is wrong in the
+	// The sidecar's optional narration for this expectation (WS6-008). It says what is wrong in the
 	// fixture and what the control case is. Empty for short-form entries.
 	Why           string `protobuf:"bytes,4,opt,name=why,proto3" json:"why,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -871,8 +875,8 @@ type GetExpectationsResponse struct {
 	// The `fires` entries (pending=false) then the `pending` entries. The viewer reconciles these
 	// against the CheckDesign findings.
 	Expectations []*RuleExpectation `protobuf:"bytes,1,rep,name=expectations,proto3" json:"expectations,omitempty"`
-	// whether a sidecar was found at all, so the viewer tells "no expectations file" (nothing to
-	// check against) from "a sidecar that expects nothing" (both have an empty expectations list).
+	// whether a sidecar was found at all. Both "no expectations file" and "a sidecar that expects
+	// nothing" have an empty expectations list, and the viewer tells them apart by this field.
 	HasSidecar    bool `protobuf:"varint,2,opt,name=has_sidecar,json=hasSidecar,proto3" json:"has_sidecar,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -925,7 +929,11 @@ func (x *GetExpectationsResponse) GetHasSidecar() bool {
 // ListRulesRequest names the design whose catalog and availability are reported.
 type ListRulesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// snapshot names the design whose config and availability decide the listed catalog, so it is the one a check of that snapshot runs, "snapshots/{snapshot}" (agni issue 1061). Empty lists the server's own catalog, where only a missing datasheet parameter set makes a rule unavailable. A snapshot whose netlist cannot be read is listed the same way, since a run of it fails rather than skipping rules.
+	// snapshot names the design, "snapshots/{snapshot}" (agni issue 1061). Its config and
+	// availability decide the listed catalog, so the list matches what a check of that snapshot runs.
+	// Empty lists the server's own catalog. There, only a missing datasheet parameter set makes a rule
+	// unavailable. A snapshot whose netlist cannot be read is listed the same way, since a run of it
+	// fails rather than skipping rules.
 	Snapshot      string `protobuf:"bytes,3,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -968,30 +976,30 @@ func (x *ListRulesRequest) GetSnapshot() string {
 	return ""
 }
 
-// RuleInfo is the catalog entry for one rule: its identity, its prose (one-line summary, impact,
-// long-form detail), the facts it reads, its open classification tags, and whether it can run now.
-// The full catalog is small (tens of rules, prose included), so the list carries the detail
-// markdown inline rather than behind a per-rule RPC (WS9-020).
+// RuleInfo is the catalog entry for one rule. It gives the rule's identity, its prose (one-line
+// summary, impact, long-form detail), the facts it reads, its open classification tags, and whether
+// it can run now. The full catalog is small, tens of rules with prose included. So the list sends
+// the detail markdown inline rather than behind a per-rule RPC (WS9-020).
 type RuleInfo struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	Name              string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Severity          string                 `protobuf:"bytes,2,opt,name=severity,proto3" json:"severity,omitempty"` // "error" | "warning" | "info"
 	Summary           string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
-	Reads             []string               `protobuf:"bytes,4,rep,name=reads,proto3" json:"reads,omitempty"`                                                                         // facts the rule reads (docs/15 vocabulary)
+	Reads             []string               `protobuf:"bytes,4,rep,name=reads,proto3" json:"reads,omitempty"`                                                                         // facts the rule reads
 	Tags              map[string]string      `protobuf:"bytes,5,rep,name=tags,proto3" json:"tags,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // open classification: category, tier, distribution, provider keys
 	Available         bool                   `protobuf:"varint,6,opt,name=available,proto3" json:"available,omitempty"`                                                                // a whole CheckDesign of this snapshot runs the rule rather than skipping it
 	UnavailableReason string                 `protobuf:"bytes,7,opt,name=unavailable_reason,json=unavailableReason,proto3" json:"unavailable_reason,omitempty"`                        // why not, when available is false (e.g. "needs the datasheet parameter layer")
 	Impact            string                 `protobuf:"bytes,8,opt,name=impact,proto3" json:"impact,omitempty"`                                                                       // what goes wrong when the rule is violated (check.Rule.Impact)
 	Detail            string                 `protobuf:"bytes,9,opt,name=detail,proto3" json:"detail,omitempty"`                                                                       // long-form markdown: meaning, rationale, query structure (check.Rule.Detail)
 	Remedy            string                 `protobuf:"bytes,10,opt,name=remedy,proto3" json:"remedy,omitempty"`                                                                      // what to do about a violation, in the imperative (check.Rule.Remedy)
-	// shipped is whether agni itself ships this rule, rather than a project, a convention or an
-	// overlay composing it. A report that crosses the confidentiality boundary may name a shipped rule
-	// and never another, since a project's rule is namespaced by the project's own name (agni issue
-	// 1057).
+	// shipped says whether agni itself ships this rule. The alternative is a project, a convention or
+	// an overlay composing it. A report that crosses the confidentiality boundary may name a shipped
+	// rule and never another, since a project's rule is namespaced by the project's own name (agni
+	// issue 1057).
 	Shipped bool `protobuf:"varint,11,opt,name=shipped,proto3" json:"shipped,omitempty"`
-	// doc_url is the published reference page that explains the rule, empty when no page does, as for a
-	// project's own rule or a profile requirement type that has none. Several rules can share one page,
-	// since every intent/subsystem-<slug> rule is explained on intent-subsystem.
+	// doc_url is the published reference page that explains the rule. It is empty when no page does,
+	// as for a project's own rule or a profile requirement type with no page. Several rules can share
+	// one page. For example, the intent-subsystem page explains every intent/subsystem-<slug> rule.
 	DocUrl        string `protobuf:"bytes,12,opt,name=doc_url,json=docUrl,proto3" json:"doc_url,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1114,8 +1122,8 @@ func (x *RuleInfo) GetDocUrl() string {
 type ListRulesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Rules []*RuleInfo            `protobuf:"bytes,1,rep,name=rules,proto3" json:"rules,omitempty"`
-	// engine_version is the build answering, for a report a client prefills (agni issue 1057). Empty
-	// when the deployment did not say.
+	// engine_version names the build that answered, so a client can prefill a report (agni issue
+	// 1057). Empty when the deployment did not say.
 	EngineVersion string `protobuf:"bytes,2,opt,name=engine_version,json=engineVersion,proto3" json:"engine_version,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1211,8 +1219,8 @@ func (x *GetInterfaceCoverageRequest) GetSnapshot() string {
 }
 
 // SignalCoverage is one required interface signal's state (WS9-041). net is the matched net name,
-// "" when the signal is missing. state is "present" | "missing" | "dangling" | "pullup_missing" —
-// the same conditions the profile rules fire on, so a coverage cell and a finding agree.
+// "" when the signal is missing. state is "present" | "missing" | "dangling" | "pullup_missing".
+// The profile rules fire on the same conditions, so a coverage cell and a finding agree.
 type SignalCoverage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`   // the signal's role name, e.g. "IO2"
@@ -1274,8 +1282,8 @@ func (x *SignalCoverage) GetState() string {
 }
 
 // InterfaceCoverage is one DETECTED interface profile's coverage matrix. profile is the interface
-// name (e.g. "SPI_NOR"); anchor_net is the net the interface is anchored at (for context/locate);
-// signals lists every required signal in profile order.
+// name (e.g. "SPI_NOR"). anchor_net is the net where the interface is anchored, for context and
+// locate. signals lists every required signal in profile order.
 type InterfaceCoverage struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Profile       string                 `protobuf:"bytes,1,opt,name=profile,proto3" json:"profile,omitempty"`
@@ -1382,7 +1390,8 @@ func (x *GetInterfaceCoverageResponse) GetInterfaces() []*InterfaceCoverage {
 
 type GetComponentParamsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// snapshot names the design whose components to join against the datasheet corpus, "snapshots/{snapshot}" (agni issue 1061).
+	// snapshot names the design, "snapshots/{snapshot}" (agni issue 1061). Its components are joined
+	// against the datasheet corpus.
 	Snapshot      string `protobuf:"bytes,2,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1425,9 +1434,9 @@ func (x *GetComponentParamsRequest) GetSnapshot() string {
 	return ""
 }
 
-// ComponentParams is one design component joined to its datasheet spec: the ref_des the viewer
-// highlights, the resolved MPN, and the full PartSpec (its parameters, limit kinds, conditions, and
-// per-parameter provenance) for the tree the panel renders.
+// ComponentParams is one design component joined to its datasheet spec. It gives the ref_des for
+// the viewer to highlight and the resolved MPN. It also gives the full PartSpec for the panel's
+// tree, with its parameters, limit kinds, conditions and per-parameter provenance.
 type ComponentParams struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	RefDes string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
@@ -1501,8 +1510,9 @@ type GetComponentParamsResponse struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Components []*ComponentParams     `protobuf:"bytes,1,rep,name=components,proto3" json:"components,omitempty"`
 	// corpus_connected says whether any datasheet corpus was consulted, the project's or the server's.
-	// Without it an empty components list means two things a reader must not confuse: nothing was
-	// asked (no corpus), or the corpus was asked and holds no spec for these parts.
+	// Without it, an empty components list could mean either of two things. Maybe nothing was asked,
+	// because there is no corpus. Or the corpus was asked and holds no spec for these parts. A reader
+	// must not confuse the two.
 	CorpusConnected bool `protobuf:"varint,2,opt,name=corpus_connected,json=corpusConnected,proto3" json:"corpus_connected,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache

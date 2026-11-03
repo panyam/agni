@@ -15,8 +15,8 @@ export const file_agni_v1_webapi_workspace: GenFile = /*@__PURE__*/
   fileDesc("Ch5hZ25pL3YxL3dlYmFwaS93b3Jrc3BhY2UucHJvdG8SDmFnbmkudjEud2ViYXBpIjAKBU1vdW50EgwKBG5hbWUYASABKAkSDAoEcm9vdBgCIAEoCRILCgN1cmkYAyABKAkiQgoRTGlzdE1vdW50c1JlcXVlc3QSJwoFb3BlbnMYAiADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAEQAiJSChJMaXN0TW91bnRzUmVzcG9uc2USJQoGbW91bnRzGAEgAygLMhUuYWduaS52MS53ZWJhcGkuTW91bnQSFQoNcHJ1bmVkX21vdW50cxgCIAEoBSJtCghEaXJFbnRyeRIMCgRuYW1lGAEgASgJEg4KBmlzX2RpchgCIAEoCBIOCgZmb3JtYXQYAyABKAkSCwoDdXJpGAQgASgJEiYKBGtpbmQYBSABKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZCJMCg5MaXN0RGlyUmVxdWVzdBILCgN1cmkYASABKAkSJwoFb3BlbnMYAyADKA4yGC5hZ25pLnYxLndlYmFwaS5GaWxlS2luZEoECAIQAyI8Cg9MaXN0RGlyUmVzcG9uc2USKQoHZW50cmllcxgBIAMoCzIYLmFnbmkudjEud2ViYXBpLkRpckVudHJ5IiUKFkxpc3REZXNpZ25GaWxlc1JlcXVlc3QSCwoDdXJpGAEgASgJImcKF0xpc3REZXNpZ25GaWxlc1Jlc3BvbnNlEg0KBW1vdW50GAEgASgJEikKBWZpbGVzGAIgAygLMhouYWduaS52MS53ZWJhcGkuRGVzaWduRmlsZRISCgp0b3RhbF9zaXplGAMgASgDIkcKCkRlc2lnbkZpbGUSDAoEcGF0aBgBIAEoCRIMCgRzaXplGAIgASgDEg4KBnNoYTI1NhgDIAEoCRINCgVib2FyZBgEIAEoCCIkChVQcm9wb3NlRGVzaWduc1JlcXVlc3QSCwoDdXJpGAEgASgJIoYBChZQcm9wb3NlRGVzaWduc1Jlc3BvbnNlEi8KB2Rlc2lnbnMYASADKAsyHi5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlZERlc2lnbhIqCgZ1bnJlYWQYAiADKAsyGi5hZ25pLnYxLndlYmFwaS5VbnJlYWRGaWxlEg8KB3N1cHBvcnQYAyADKAkijAEKDlByb3Bvc2VkRGVzaWduEg4KBmZvbGRlchgBIAEoCRImCgZkZXNpZ24YAiABKAsyFi5hZ25pLnYxLndlYmFwaS5EZXNpZ24SEwoLZGVzaWduX3lhbWwYAyABKAkSDQoFZmlsZXMYBCADKAkSDAoEbm90ZRgFIAEoCRIQCghkZWNsYXJlZBgGIAEoCCIqCgpVbnJlYWRGaWxlEgwKBHBhdGgYASABKAkSDgoGcmVhc29uGAIgASgJKlQKCEZpbGVLaW5kEhkKFUZJTEVfS0lORF9VTlNQRUNJRklFRBAAEhQKEEZJTEVfS0lORF9ERVNJR04QARIXChNGSUxFX0tJTkRfREFUQVNIRUVUEAIy+AIKEFdvcmtzcGFjZVNlcnZpY2USUwoKTGlzdE1vdW50cxIhLmFnbmkudjEud2ViYXBpLkxpc3RNb3VudHNSZXF1ZXN0GiIuYWduaS52MS53ZWJhcGkuTGlzdE1vdW50c1Jlc3BvbnNlEkoKB0xpc3REaXISHi5hZ25pLnYxLndlYmFwaS5MaXN0RGlyUmVxdWVzdBofLmFnbmkudjEud2ViYXBpLkxpc3REaXJSZXNwb25zZRJiCg9MaXN0RGVzaWduRmlsZXMSJi5hZ25pLnYxLndlYmFwaS5MaXN0RGVzaWduRmlsZXNSZXF1ZXN0GicuYWduaS52MS53ZWJhcGkuTGlzdERlc2lnbkZpbGVzUmVzcG9uc2USXwoOUHJvcG9zZURlc2lnbnMSJS5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlRGVzaWduc1JlcXVlc3QaJi5hZ25pLnYxLndlYmFwaS5Qcm9wb3NlRGVzaWduc1Jlc3BvbnNlQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvd2ViYXBpYgZwcm90bzM", [file_agni_v1_webapi_project]);
 
 /**
- * Mount is one configured root folder. Clients reference it by name in later calls;
- * root is a human-readable display path and is not a capability.
+ * Mount is one configured root folder. Clients reference it by name in later calls. root is a
+ * human-readable display path and is not a capability.
  *
  * @generated from message agni.v1.webapi.Mount
  */
@@ -36,9 +36,9 @@ export type Mount = Message<"agni.v1.webapi.Mount"> & {
   root: string;
 
   /**
-   * uri names the mount itself, "mount://<name>". It is served rather than left for the client to
-   * build, because a client that concatenates a scheme by hand is a client that can get the scheme
-   * wrong, and every other artifact reference it makes will be a child of this one.
+   * uri names the mount itself, "mount://<name>". The server sends it, so the client does not
+   * build it. A client that concatenates a scheme by hand can get the scheme wrong. Every other
+   * artifact reference the client makes is a child of this one.
    *
    * @generated from field: string uri = 3;
    */
@@ -57,15 +57,15 @@ export const MountSchema: GenMessage<Mount> = /*@__PURE__*/
  */
 export type ListMountsRequest = Message<"agni.v1.webapi.ListMountsRequest"> & {
   /**
-   * opens declares what this client can open, on the same terms as ListDirRequest.opens, and
-   * setting it drops mounts with none of those kinds anywhere beneath them: the same rule applied
-   * to the roots. Leave it empty to prune nothing.
+   * opens declares what this client can open, on the same terms as ListDirRequest.opens. When it is
+   * set, the response drops each mount with none of those kinds anywhere beneath it. ListDir
+   * applies the same rule, and this field applies it to the roots. Leave it empty to prune nothing.
    *
-   * Hiding a configured mount is a deliberate trade. An operator who mounted a folder and cannot
-   * find it in the sidebar has no way to tell "this mount holds nothing I open" from "this mount
-   * failed to resolve", so a client that prunes should say when it is showing fewer roots than the
-   * server was given rather than render a silently shorter list. pruned_mounts is what it says it
-   * with.
+   * Hiding a configured mount is a deliberate trade. Imagine an operator mounts a folder and cannot
+   * find it in the sidebar. They cannot tell "this mount holds nothing I open" from "this mount
+   * failed to resolve". So a client that prunes should say when it shows fewer roots than the server
+   * was given. It should not render a silently shorter list. It reports the count from
+   * pruned_mounts.
    *
    * @generated from field: repeated agni.v1.webapi.FileKind opens = 2;
    */
@@ -89,9 +89,9 @@ export type ListMountsResponse = Message<"agni.v1.webapi.ListMountsResponse"> & 
   mounts: Mount[];
 
   /**
-   * pruned_mounts counts the mounts opens left out, so a client can tell the user its
-   * sidebar is shorter than the server's configuration rather than leaving them to wonder where a
-   * mount went. Zero when pruning is off.
+   * pruned_mounts counts the mounts that opens left out. A client can then tell the user that its
+   * sidebar is shorter than the server's configuration, so the user need not wonder where a mount
+   * went. Zero when pruning is off.
    *
    * @generated from field: int32 pruned_mounts = 2;
    */
@@ -127,29 +127,28 @@ export type DirEntry = Message<"agni.v1.webapi.DirEntry"> & {
 
   /**
    * format names the reader that would open this file (e.g. "edif", "kicad", "ipc2581",
-   * "edif-schematic"). It is empty for a directory and for an unrecognized file (one agni
-   * has no reader for). The listing carries such files rather than dropping them, so a client
-   * decides for itself what to show: the design tree hides them, the datasheets tree keeps the
-   * PDFs among them. It is a hint for the UI; ambiguous extensions are resolved for real at
-   * load time.
+   * "edif-schematic"). It is empty for a directory, and for an unrecognized file that no agni
+   * reader opens. The listing keeps such files rather than dropping them, so a client decides for
+   * itself what to show. The design tree hides them, and the datasheets tree keeps the PDFs among
+   * them. It is a hint for the UI. Ambiguous extensions are resolved for real at load time.
    *
    * @generated from field: string format = 3;
    */
   format: string;
 
   /**
-   * uri addresses this entry, to pass back to ListDir (for a directory) or to a design/sheet load
-   * (for a file).
+   * uri addresses this entry. A client passes a directory's uri back to ListDir, and a file's uri
+   * to a design or sheet load.
    *
    * @generated from field: string uri = 4;
    */
   uri: string;
 
   /**
-   * kind is which client opens this file, FILE_KIND_UNSPECIFIED for a directory and for a file no
-   * page opens. It is served rather than left to the client so that "what is a datasheet" has one
-   * definition: the browser used to decide by extension, which put a second copy of the rule in
-   * TypeScript, where nothing could notice it disagreeing with the server.
+   * kind is which client opens this file. It is FILE_KIND_UNSPECIFIED for a directory and for a
+   * file no page opens. The server sends it, so "what is a datasheet" has one definition. The
+   * browser used to decide by extension. That put a second copy of the rule in TypeScript, and
+   * nothing could notice when it disagreed with the server.
    *
    * @generated from field: agni.v1.webapi.FileKind kind = 5;
    */
@@ -176,17 +175,17 @@ export type ListDirRequest = Message<"agni.v1.webapi.ListDirRequest"> & {
   uri: string;
 
   /**
-   * opens declares what this client can open, and setting it drops subdirectories whose subtree
-   * holds none of those kinds at any depth: the folders this client can only ever show empty.
+   * opens declares what this client can open. When it is set, the response drops each
+   * subdirectory whose subtree holds none of those kinds at any depth. This client could only
+   * ever show those folders empty.
    *
    * It replaces a prune_empty_dirs bool, which could only mean designs. The bool was opt-in
-   * precisely because "empty" is per-client, which is the same fact this field states directly
-   * instead of leaving the definition on the server and the exception in the comment. Leave it
-   * empty to prune nothing.
+   * because "empty" depends on the client. This field states that fact directly. The bool kept the
+   * definition on the server and the exception in a comment. Leave it empty to prune nothing.
    *
-   * Answering it costs a bounded walk of each subtree. A directory the walk cannot settle (bound
-   * reached, adapter error) is kept, since a folder wrongly shown costs a click and one wrongly
-   * hidden costs a file.
+   * Answering it costs a bounded walk of each subtree. The walk may fail to settle a directory,
+   * because it reached its bound or the adapter failed. That directory is kept. A folder shown
+   * wrongly costs a click, and a folder hidden wrongly costs a file.
    *
    * @generated from field: repeated agni.v1.webapi.FileKind opens = 3;
    */
@@ -205,8 +204,8 @@ export const ListDirRequestSchema: GenMessage<ListDirRequest> = /*@__PURE__*/
  */
 export type ListDirResponse = Message<"agni.v1.webapi.ListDirResponse"> & {
   /**
-   * entries are the directory's subdirectories and supported files, directories first,
-   * each group sorted by name.
+   * entries are the directory's subdirectories and supported files. Directories come first, and
+   * each group is sorted by name.
    *
    * @generated from field: repeated agni.v1.webapi.DirEntry entries = 1;
    */
@@ -244,8 +243,8 @@ export const ListDesignFilesRequestSchema: GenMessage<ListDesignFilesRequest> = 
  */
 export type ListDesignFilesResponse = Message<"agni.v1.webapi.ListDesignFilesResponse"> & {
   /**
-   * mount is the mount every path below is relative to. A client mounts the files under this name,
-   * so the design keeps its URI whichever engine reads it.
+   * mount is the mount, and every path below is relative to it. A client mounts the files under
+   * this name. So the design keeps its URI, whichever engine reads it.
    *
    * @generated from field: string mount = 1;
    */
@@ -299,9 +298,9 @@ export type DesignFile = Message<"agni.v1.webapi.DesignFile"> & {
   sha256: string;
 
   /**
-   * board is set on the design's board tier when it is a file of its own, one the netlist and the
-   * drawing are not read from, so a host answering a question that reads no board need not hold it
-   * (agni issue 992).
+   * board is set on the design's board-tier file when that file is separate from the netlist and
+   * the drawing (agni issue 992). A host answering a question that reads no board then need not
+   * hold it.
    *
    * @generated from field: bool board = 4;
    */
@@ -320,8 +319,8 @@ export const DesignFileSchema: GenMessage<DesignFile> = /*@__PURE__*/
  */
 export type ProposeDesignsRequest = Message<"agni.v1.webapi.ProposeDesignsRequest"> & {
   /**
-   * uri is the folder to group, "mount://<mount>/<dir>". A `.zip` under it reads as a folder only on
-   * a mount that expands archives (the browser's).
+   * uri is the folder to group, "mount://<mount>/<dir>". A `.zip` under it reads as a folder only
+   * on a mount that expands archives, such as the browser's.
    *
    * @generated from field: string uri = 1;
    */
@@ -354,8 +353,8 @@ export type ProposeDesignsResponse = Message<"agni.v1.webapi.ProposeDesignsRespo
   unread: UnreadFile[];
 
   /**
-   * support are files a design or its project reads without being a design file, such as a
-   * project's descriptor and config directories or a KiCad symbol library.
+   * support lists files that a design or its project reads and that are not design files. Examples
+   * are a project's descriptor and config directories, or a KiCad symbol library.
    *
    * @generated from field: repeated string support = 3;
    */
@@ -383,7 +382,7 @@ export type ProposedDesign = Message<"agni.v1.webapi.ProposedDesign"> & {
   folder: string;
 
   /**
-   * design is the design as a descriptor would declare it: entry_uri, companion_uris and revisions
+   * design is the design as a descriptor would declare it. entry_uri, companion_uris and revisions
    * are `mount://` URIs, and name is the entry's stem.
    *
    * @generated from field: agni.v1.webapi.Design design = 2;
@@ -398,24 +397,24 @@ export type ProposedDesign = Message<"agni.v1.webapi.ProposedDesign"> & {
   designYaml: string;
 
   /**
-   * files are every file the design reads: its entry, companions, revisions, and a KiCad root's
-   * child sheets and libraries. Mount-relative.
+   * files lists every file the design reads, mount-relative. That covers its entry, companions and
+   * revisions, and a KiCad root's child sheets and libraries.
    *
    * @generated from field: repeated string files = 4;
    */
   files: string[];
 
   /**
-   * note says anything a reader should know before trusting the read, such as a schematic export
-   * standing in for a netlist, or a second design sharing a folder that can declare only one.
+   * note says anything a reader should know before trusting the read. Two examples are a schematic
+   * export standing in for a netlist, and a second design in a folder that can declare only one.
    *
    * @generated from field: string note = 5;
    */
   note: string;
 
   /**
-   * declared is true when the folder already held a `design.yaml`, which the proposal reports
-   * rather than replaces.
+   * declared is true when the folder already held a `design.yaml`. The proposal reports that file
+   * and does not replace it.
    *
    * @generated from field: bool declared = 6;
    */
@@ -455,26 +454,26 @@ export const UnreadFileSchema: GenMessage<UnreadFile> = /*@__PURE__*/
 
 /**
  * FileKind is what a client can open. It is deliberately coarser than DirEntry.format, which names
- * the READER: a browser cares which of its pages a file belongs to, not whether the netlist behind
- * it is EDIF or KiCad.
+ * the READER. A browser cares which of its pages a file belongs to. It does not care whether the
+ * netlist behind the file is EDIF or KiCad.
  *
- * The set is closed and server-defined. An out-of-module reader registering through readers/formats
- * adds an extension to FILE_KIND_DESIGN; it does not add a kind, because a kind is a page in this
- * application rather than a capability of the engine.
+ * The set is closed and server-defined. A reader from another module may register through
+ * readers/formats. It adds an extension to FILE_KIND_DESIGN, and it does not add a kind. A kind is
+ * a page in this application, not a capability of the engine.
  *
  * @generated from enum agni.v1.webapi.FileKind
  */
 export enum FileKind {
   /**
-   * FILE_KIND_UNSPECIFIED is a file no page opens (a library file, a lock file, a sidecar) and is
-   * also what an unset field decodes to, so a client that ignores kinds sees them all as one.
+   * FILE_KIND_UNSPECIFIED is a file no page opens, such as a library file, a lock file, or a
+   * sidecar. An unset field also decodes to it. So a client that ignores kinds sees them all as one.
    *
    * @generated from enum value: FILE_KIND_UNSPECIFIED = 0;
    */
   UNSPECIFIED = 0,
 
   /**
-   * FILE_KIND_DESIGN is a file some reader in the registry understands: the viewer's material.
+   * FILE_KIND_DESIGN is a file some reader in the registry understands. The viewer opens these.
    *
    * @generated from enum value: FILE_KIND_DESIGN = 1;
    */
@@ -482,7 +481,7 @@ export enum FileKind {
 
   /**
    * FILE_KIND_DATASHEET is a vendor document the extraction workbench opens (a PDF). No DESIGN
-   * reader opens one, which is exactly why pruning by design format hid the workbench's folders.
+   * reader opens one. So pruning by design format used to hide the workbench's folders.
    *
    * @generated from enum value: FILE_KIND_DATASHEET = 2;
    */
@@ -496,17 +495,18 @@ export const FileKindSchema: GenEnum<FileKind> = /*@__PURE__*/
   enumDesc(file_agni_v1_webapi_workspace, 0);
 
 /**
- * WorkspaceService exposes the read-only folders ("mounts") the server was started with
- * and their directory contents. Mounts are the security boundary: a client names an artifact by a
- * `mount://<mount>/<path>` URI whose authority is a mount, never an absolute host path.
+ * WorkspaceService exposes the server's read-only folders ("mounts") and their directory contents.
+ * The server is started with the mounts. Mounts are the security boundary. A client names an
+ * artifact by a `mount://<mount>/<path>` URI. The URI's authority is a mount, never an absolute
+ * host path.
  *
  * @generated from service agni.v1.webapi.WorkspaceService
  */
 export const WorkspaceService: GenService<{
   /**
-   * ListMounts returns the mounts the server is serving, in the order they were configured, and
-   * never fails for a running server. Set opens to leave out the ones holding nothing the caller
-   * can open.
+   * ListMounts returns the mounts the server is serving, in the order they were configured. It
+   * never fails for a running server. Set opens to leave out each mount that holds nothing the
+   * caller can open.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ListMounts
    */
@@ -516,11 +516,12 @@ export const WorkspaceService: GenService<{
     output: typeof ListMountsResponseSchema;
   },
   /**
-   * ListDir lists one directory level inside a mount: its subdirectories and its files, each file
-   * labeled with the reader that would open it. The client addresses a location by an artifact URI
-   * whose authority is a mount, never an absolute host path; the server resolves it inside that
-   * mount. Lazy, one level per call, so large trees stay responsive. Set opens to leave out
-   * subdirectories holding nothing the caller can open, at any depth.
+   * ListDir lists one directory level inside a mount, with its subdirectories and its files. Each
+   * file is labeled with the reader that would open it. The client addresses a location by an
+   * artifact URI. The URI's authority is a mount, never an absolute host path, and the server
+   * resolves it inside that mount. It is lazy, one level per call, so large trees remain
+   * responsive. Set opens to leave out each subdirectory that holds nothing the caller can open,
+   * at any depth.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ListDir
    */
@@ -530,12 +531,13 @@ export const WorkspaceService: GenService<{
     output: typeof ListDirResponseSchema;
   },
   /**
-   * ListDesignFiles lists every file a design's analysis reads, so a client that analyses it
-   * somewhere else, the in-browser engine first, can fetch exactly those and nothing more (agni
-   * issue 853). That is the design's folder, its project's descriptor, and every config directory
-   * the project names. Each file is then fetched by its path under the server's read-only
-   * `/raw/<mount>/<path>` route. A set larger than the server's bound (256 MB) is refused with its size,
-   * since a board that big is what the server's own engine is for.
+   * ListDesignFiles lists every file a design's analysis reads (agni issue 853). A client may
+   * analyse the design somewhere else, and the in-browser engine is the first such client. It can
+   * then fetch exactly those files and nothing more. The list covers the design's folder, its
+   * project's descriptor, and every config directory the project names. The client fetches each
+   * file by its path under the server's read-only `/raw/<mount>/<path>` route. A set larger than
+   * the server's bound (256 MB) is refused with its size. A board that big belongs on the server's
+   * own engine.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ListDesignFiles
    */
@@ -545,11 +547,11 @@ export const WorkspaceService: GenService<{
     output: typeof ListDesignFilesResponseSchema;
   },
   /**
-   * ProposeDesigns groups the files under a folder that declares no design into the designs they
-   * make, for a page that was handed a drop of files and must show what it will read before it
-   * reads it (agni issue 854). A folder already holding a `design.yaml` is reported as declared and
-   * not re-guessed. Each proposal carries the `design.yaml` that would declare it, and every file
-   * no proposal reads is listed with the reason, so nothing is dropped silently.
+   * ProposeDesigns takes a folder that declares no design, and groups its files into the designs
+   * they make (agni issue 854). Imagine a page handed a drop of files. It must show what it will
+   * read before it reads it. A folder already holding a `design.yaml` is reported as declared, and
+   * the server does not guess again. Each proposal includes the `design.yaml` that would declare
+   * it. Every file that no proposal reads is listed with the reason, so nothing is dropped silently.
    *
    * @generated from rpc agni.v1.webapi.WorkspaceService.ProposeDesigns
    */

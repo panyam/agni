@@ -44,7 +44,7 @@ const (
 // PartSpecServiceClient is a client for the agni.v1.param.PartSpecService service.
 type PartSpecServiceClient interface {
 	// BatchGetPartSpecs returns the current spec for each part number that has one. A part number
-	// with no published spec is simply absent from the answer, which is not an error, because most
+	// with no published spec is simply absent from the answer. That is not an error, because most
 	// parts on a board are never seeded. Matching is case-insensitive and never fuzzy, as
 	// param.ParamSet.Lookup matches.
 	BatchGetPartSpecs(context.Context, *connect.Request[param.BatchGetPartSpecsRequest]) (*connect.Response[param.BatchGetPartSpecsResponse], error)
@@ -98,7 +98,7 @@ func (c *partSpecServiceClient) GetGeneration(ctx context.Context, req *connect.
 // PartSpecServiceHandler is an implementation of the agni.v1.param.PartSpecService service.
 type PartSpecServiceHandler interface {
 	// BatchGetPartSpecs returns the current spec for each part number that has one. A part number
-	// with no published spec is simply absent from the answer, which is not an error, because most
+	// with no published spec is simply absent from the answer. That is not an error, because most
 	// parts on a board are never seeded. Matching is case-insensitive and never fuzzy, as
 	// param.ParamSet.Lookup matches.
 	BatchGetPartSpecs(context.Context, *connect.Request[param.BatchGetPartSpecsRequest]) (*connect.Response[param.BatchGetPartSpecsResponse], error)

@@ -49,21 +49,21 @@ const (
 
 // LexiconServiceClient is a client for the agni.v1.webapi.LexiconService service.
 type LexiconServiceClient interface {
-	// GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from, or
-	// of a candidate convention laid over the built-ins, so a client editing one lists what it would
-	// read with and never merges a convention itself. A pattern that will not compile is
-	// INVALID_ARGUMENT.
+	// GetLexicon returns every pattern of the snapshot's effective lexicon, with where it came from.
+	// Given a candidate convention, it lays that over the built-ins instead. So a client editing a
+	// convention lists what a read would use, and never merges a convention itself. A pattern that
+	// will not compile is INVALID_ARGUMENT.
 	GetLexicon(context.Context, *connect.Request[webapi.GetLexiconRequest]) (*connect.Response[webapi.GetLexiconResponse], error)
-	// ExplainNet returns one net's roles with their reasons, and every pattern of the effective lexicon
-	// its name matches, exclusions included, so a name that missed a vocabulary shows what stopped it.
-	// A name the design does not carry is NOT_FOUND.
+	// ExplainNet returns one net's roles with their reasons. It also returns every pattern of the
+	// effective lexicon that the net's name matches, exclusions included. So a name that missed a
+	// vocabulary shows what stopped it. A name missing from the design is NOT_FOUND.
 	ExplainNet(context.Context, *connect.Request[webapi.ExplainNetRequest]) (*connect.Response[webapi.ExplainNetResponse], error)
-	// CompareLexicons reads the snapshot again with a candidate convention in place of the one it was
-	// read with, runs the rule catalog over both, and returns the nets whose roles change and the
+	// CompareLexicons reads the snapshot again, with a candidate convention replacing the original
+	// one. It runs the rule catalog over both reads. It returns the nets whose roles change, and the
 	// findings that appear or disappear.
 	CompareLexicons(context.Context, *connect.Request[webapi.CompareLexiconsRequest]) (*connect.Response[webapi.CompareLexiconsResponse], error)
-	// RenderConvention writes a convention as the YAML file a project carries, which naming.Parse reads
-	// back to the same message. It asks nothing about a design, so it names no snapshot.
+	// RenderConvention writes a convention as a project's YAML file. naming.Parse reads that file back
+	// to the same message. It asks nothing about a design, so it names no snapshot.
 	RenderConvention(context.Context, *connect.Request[webapi.RenderConventionRequest]) (*connect.Response[webapi.RenderConventionResponse], error)
 }
 
@@ -135,21 +135,21 @@ func (c *lexiconServiceClient) RenderConvention(ctx context.Context, req *connec
 
 // LexiconServiceHandler is an implementation of the agni.v1.webapi.LexiconService service.
 type LexiconServiceHandler interface {
-	// GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from, or
-	// of a candidate convention laid over the built-ins, so a client editing one lists what it would
-	// read with and never merges a convention itself. A pattern that will not compile is
-	// INVALID_ARGUMENT.
+	// GetLexicon returns every pattern of the snapshot's effective lexicon, with where it came from.
+	// Given a candidate convention, it lays that over the built-ins instead. So a client editing a
+	// convention lists what a read would use, and never merges a convention itself. A pattern that
+	// will not compile is INVALID_ARGUMENT.
 	GetLexicon(context.Context, *connect.Request[webapi.GetLexiconRequest]) (*connect.Response[webapi.GetLexiconResponse], error)
-	// ExplainNet returns one net's roles with their reasons, and every pattern of the effective lexicon
-	// its name matches, exclusions included, so a name that missed a vocabulary shows what stopped it.
-	// A name the design does not carry is NOT_FOUND.
+	// ExplainNet returns one net's roles with their reasons. It also returns every pattern of the
+	// effective lexicon that the net's name matches, exclusions included. So a name that missed a
+	// vocabulary shows what stopped it. A name missing from the design is NOT_FOUND.
 	ExplainNet(context.Context, *connect.Request[webapi.ExplainNetRequest]) (*connect.Response[webapi.ExplainNetResponse], error)
-	// CompareLexicons reads the snapshot again with a candidate convention in place of the one it was
-	// read with, runs the rule catalog over both, and returns the nets whose roles change and the
+	// CompareLexicons reads the snapshot again, with a candidate convention replacing the original
+	// one. It runs the rule catalog over both reads. It returns the nets whose roles change, and the
 	// findings that appear or disappear.
 	CompareLexicons(context.Context, *connect.Request[webapi.CompareLexiconsRequest]) (*connect.Response[webapi.CompareLexiconsResponse], error)
-	// RenderConvention writes a convention as the YAML file a project carries, which naming.Parse reads
-	// back to the same message. It asks nothing about a design, so it names no snapshot.
+	// RenderConvention writes a convention as a project's YAML file. naming.Parse reads that file back
+	// to the same message. It asks nothing about a design, so it names no snapshot.
 	RenderConvention(context.Context, *connect.Request[webapi.RenderConventionRequest]) (*connect.Response[webapi.RenderConventionResponse], error)
 }
 

@@ -24,18 +24,18 @@ export const file_agni_v1_webapi_snapshot: GenFile = /*@__PURE__*/
  */
 export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
   /**
-   * name is "snapshots/{snapshot}". The id is assigned by the host unless Ingest names one.
+   * name is "snapshots/{snapshot}". The host assigns the id unless Ingest names one.
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * revision_id names this definition over the netlist as it was read, a hash of the definition, the
-   * tiers it resolved to and the netlist entry's content, so two hosts that ingested one definition
-   * over the same netlist report the same one. It moves on an UpdateSnapshot that changed any of
-   * them. A change to another tier's file is caught as stale rather than by the revision, since
-   * hashing a large board on every ingest cost about a second in a browser worker.
+   * revision_id names this definition over the netlist as it was read. It hashes the definition, the
+   * tiers the definition resolved to and the netlist entry's content. So two hosts that ingested one
+   * definition over the same netlist report the same revision_id. It moves on an UpdateSnapshot that
+   * changed any of those three. A change to another tier's file is caught as stale rather than by the
+   * revision, since hashing a large board on every ingest cost about a second in a browser worker.
    *
    * @generated from field: string revision_id = 2;
    */
@@ -50,7 +50,7 @@ export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
   uri: string;
 
   /**
-   * board_uri attaches a board-geometry export other than the one the design declares, such as a
+   * board_uri attaches a different board-geometry export from the one the design declares, such as a
    * fab's returned file or a layout under review. Empty uses the design's own.
    *
    * @generated from field: string board_uri = 4;
@@ -58,7 +58,7 @@ export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
   boardUri: string;
 
   /**
-   * geometry_uri draws the design from a schematic other than the one the design declares. Empty
+   * geometry_uri draws the design from a different schematic from the one the design declares. Empty
    * uses the design's own.
    *
    * @generated from field: string geometry_uri = 5;
@@ -66,16 +66,17 @@ export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
   geometryUri: string;
 
   /**
-   * as_named reads exactly the artifact uri names, even when the design declares it a companion of a
-   * different entry. Reading a companion as a netlist is how two views of one design are compared.
+   * as_named reads exactly the artifact that uri names, even when the design declares that artifact
+   * a companion of a different entry. Two views of one design are compared by reading a companion as
+   * a netlist.
    *
    * @generated from field: bool as_named = 6;
    */
   asNamed: boolean;
 
   /**
-   * overlay is the config every question about this snapshot is answered under: conventions,
-   * profiles, intent, parameters, libraries and query sets, the request's own or the project's.
+   * overlay is the config for every question about this snapshot. It holds conventions, profiles,
+   * intent, parameters, libraries and query sets, from the request or from the project.
    *
    * @generated from field: agni.v1.webapi.OverlayConfig overlay = 7;
    */
@@ -89,8 +90,9 @@ export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
   tiers?: SnapshotTiers | undefined;
 
   /**
-   * consistency compares the tiers that have been read with each other, so a board updated on its own
-   * that no longer matches its netlist says so. Absent until two tiers have been read. Output only.
+   * consistency compares the tiers that have been read with each other. Imagine a board updated on
+   * its own, so it no longer matches its netlist. consistency then reports the difference. It is
+   * absent until two tiers have been read. Output only.
    *
    * @generated from field: agni.v1.webapi.SnapshotConsistency consistency = 9;
    */
@@ -104,23 +106,24 @@ export type Snapshot = Message<"agni.v1.webapi.Snapshot"> & {
   project: string;
 
   /**
-   * files is the design's files when the client sends them rather than naming files the host
-   * serves: each file's path within uri's mount, its SHA-256 and its size. With files set, uri's
-   * mount is read from these files alone, so a design, its companions, its project's descriptor and
-   * config directories all have to be listed; ListDesignFiles names that set. Its contents are sent
-   * with UploadBlobs. Paths are the client's own, so every locator an answer records reads as it
-   * would on the client (C28). Part of the definition.
+   * files lists the design's files when the client sends them, instead of naming files the host
+   * serves. Each entry gives a path within uri's mount, a SHA-256 and a size. With files set, uri's
+   * mount is read from these files alone. So the list must hold the design, its companions, and its
+   * project's descriptor and config directories. ListDesignFiles names that set. The contents go up
+   * with UploadBlobs. Paths are the client's own, so every locator in an answer reads as it would on
+   * the client (C28). Part of the definition.
    *
    * @generated from field: repeated agni.v1.webapi.SnapshotFile files = 11;
    */
   files: SnapshotFile[];
 
   /**
-   * flatten_hierarchy reads a hierarchical netlist as its whole schematic, walking into every block
-   * cell its top cell places, rather than as its top cell alone (agni issue 718). A net crossing a
-   * block's port joins its parent's, a net inside a block keeps its name when no other net carries
-   * it and is otherwise named by the block's instance path ("/A1/MID"), and a part inside a block placed more than once carries that path ("B2/R1"). A flat
-   * netlist reads the same either way. Only EDIF has blocks to walk today. Part of the definition.
+   * flatten_hierarchy reads a hierarchical netlist as its whole schematic rather than as its top cell
+   * alone (agni issue 718). The read walks into every block cell that the top cell places. A net
+   * crossing a block's port joins its parent's net. A net inside a block keeps its name when no other
+   * net has that name. Otherwise the block's instance path names it ("/A1/MID"). When a block is
+   * placed more than once, a part inside it takes that path too ("B2/R1"). A flat netlist reads the
+   * same either way. Only EDIF has blocks to walk today. Part of the definition.
    *
    * @generated from field: bool flatten_hierarchy = 12;
    */
@@ -135,7 +138,7 @@ export const SnapshotSchema: GenMessage<Snapshot> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_snapshot, 0);
 
 /**
- * SnapshotFile is one file of a design a client sends, named within its mount.
+ * SnapshotFile is one file of a design that a client sends, named within its mount.
  *
  * @generated from message agni.v1.webapi.SnapshotFile
  */
@@ -166,7 +169,7 @@ export const SnapshotFileSchema: GenMessage<SnapshotFile> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_snapshot, 1);
 
 /**
- * SnapshotTiers are the artifacts a snapshot's definition resolved to (C32's ResolveSources).
+ * SnapshotTiers are the artifacts that a snapshot's definition resolved to (C32's ResolveSources).
  *
  * @generated from message agni.v1.webapi.SnapshotTiers
  */
@@ -193,9 +196,9 @@ export type SnapshotTiers = Message<"agni.v1.webapi.SnapshotTiers"> & {
   geometryUri: string;
 
   /**
-   * board_read is whether this host has read the board for this snapshot, and board_persisted
-   * whether that board is in the host's persistent store, so another process restores it rather
-   * than parsing it. Both are false on a host that has not read the board yet.
+   * board_read says whether this host has read the board for this snapshot. board_persisted says
+   * whether that board is in the host's persistent store. If it is, another process restores the
+   * board rather than parsing it. Both are false on a host that has not read the board yet.
    *
    * @generated from field: bool board_read = 4;
    */
@@ -216,15 +219,15 @@ export const SnapshotTiersSchema: GenMessage<SnapshotTiers> = /*@__PURE__*/
 
 /**
  * SnapshotConsistency compares a snapshot's tiers by reference designator. A difference is reported
- * rather than refused, because a board part on its way into the netlist is an ordinary state of a
- * design being edited, and the cross-view rules say what each difference means.
+ * rather than refused. A board part that is not yet in the netlist is an ordinary state of a design
+ * being edited, and the cross-view rules say what each difference means.
  *
  * @generated from message agni.v1.webapi.SnapshotConsistency
  */
 export type SnapshotConsistency = Message<"agni.v1.webapi.SnapshotConsistency"> & {
   /**
-   * board_only and netlist_only are the reference designators found in one tier and not the other,
-   * sorted, at most 20 each; the counts are the full numbers.
+   * board_only and netlist_only are the reference designators found in one tier and not the other.
+   * Each list is sorted and holds at most 20. The counts are the full numbers.
    *
    * @generated from field: repeated string board_only = 1;
    */
@@ -265,11 +268,11 @@ export type IngestRequest = Message<"agni.v1.webapi.IngestRequest"> & {
   snapshot?: Snapshot | undefined;
 
   /**
-   * snapshot_id names the new snapshot, "snapshots/{snapshot_id}", instead of one the host assigns.
-   * A browser page passes the id it holds to each worker it asks, since every worker keeps its own
-   * snapshots. An id already in use with the same definition returns that snapshot, after reading
-   * what read_board asks, so a client can send its ingest again without asking first whether the
-   * host still holds it. The same id with a different definition is ALREADY_EXISTS.
+   * snapshot_id names the new snapshot, "snapshots/{snapshot_id}", instead of letting the host
+   * assign one. Every browser worker keeps its own snapshots, so a page passes its id to each worker
+   * it asks. An id already in use with the same definition returns that snapshot, after reading
+   * whatever read_board asks for. So a client can send its ingest again without first asking whether
+   * the host still holds it. The same id with a different definition is ALREADY_EXISTS.
    *
    * @generated from field: string snapshot_id = 2;
    */
@@ -277,8 +280,8 @@ export type IngestRequest = Message<"agni.v1.webapi.IngestRequest"> & {
 
   /**
    * read_board reads the board now, so a later question finds it parsed (agni issue 1061). The
-   * browser's prepare lane sends this from a worker that ends when it answers, leaving the board in
-   * the store for the worker that runs the checks.
+   * browser's prepare lane sends this from a worker that ends when it answers. The board is left in
+   * the store, and the worker that runs the checks restores it from there.
    *
    * @generated from field: bool read_board = 3;
    */
@@ -324,8 +327,8 @@ export type ListSnapshotsRequest = Message<"agni.v1.webapi.ListSnapshotsRequest"
   pageToken: string;
 
   /**
-   * filter narrows the listing (AIP-160). Only `uri` is supported, `uri="mount://m/board"`, which
-   * matches a snapshot's definition exactly. Anything else is an error.
+   * filter narrows the listing (AIP-160). Only `uri` is supported, as in `uri="mount://m/board"`, and
+   * it matches a snapshot's definition exactly. Anything else is an error.
    *
    * @generated from field: string filter = 3;
    */
@@ -368,7 +371,7 @@ export const ListSnapshotsResponseSchema: GenMessage<ListSnapshotsResponse> = /*
  */
 export type UpdateSnapshotRequest = Message<"agni.v1.webapi.UpdateSnapshotRequest"> & {
   /**
-   * snapshot carries the new definition and names the snapshot to update.
+   * snapshot holds the new definition and names the snapshot to update.
    *
    * @generated from field: agni.v1.webapi.Snapshot snapshot = 1;
    */
@@ -376,8 +379,8 @@ export type UpdateSnapshotRequest = Message<"agni.v1.webapi.UpdateSnapshotReques
 
   /**
    * update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-   * overlay, files). Empty replaces the whole definition, and the same definition again reads the files
-   * again, which is how a stale snapshot is refreshed.
+   * overlay, files). Empty replaces the whole definition. Sending the same definition again reads the
+   * files again, and that refreshes a stale snapshot.
    *
    * @generated from field: google.protobuf.FieldMask update_mask = 2;
    */
@@ -416,9 +419,9 @@ export const DeleteSnapshotRequestSchema: GenMessage<DeleteSnapshotRequest> = /*
   messageDesc(file_agni_v1_webapi_snapshot, 9);
 
 /**
- * BlobsMissing is the detail on an Ingest or UpdateSnapshot that names files whose contents the host
- * does not hold (FAILED_PRECONDITION): their hashes, which the client sends with UploadBlobs before
- * asking again.
+ * BlobsMissing is the error detail when an Ingest or UpdateSnapshot names files whose contents the
+ * host does not hold (FAILED_PRECONDITION). It lists their hashes. The client sends those contents
+ * with UploadBlobs and then asks again.
  *
  * @generated from message agni.v1.webapi.BlobsMissing
  */
@@ -473,11 +476,11 @@ export const UploadBlobsResponseSchema: GenMessage<UploadBlobsResponse> = /*@__P
   messageDesc(file_agni_v1_webapi_snapshot, 12);
 
 /**
- * SnapshotUnavailable is the detail on an error from a question whose snapshot cannot answer it: one
- * the host does not hold (NOT_FOUND) or one whose files changed since they were read
- * (FAILED_PRECONDITION). It is how a client tells these apart from a design file that is missing,
- * which no ingest would fix: on MISSING it ingests the snapshot again under the same name, and on
- * STALE it updates it, then asks again.
+ * SnapshotUnavailable is the error detail when a question's snapshot cannot answer it. Either the
+ * host does not hold the snapshot (NOT_FOUND), or the snapshot's files changed since they were read
+ * (FAILED_PRECONDITION). A client uses this detail to tell both cases from a missing design file, and
+ * no ingest would fix a missing file. On MISSING the client ingests the snapshot again under the same
+ * name, and on STALE it updates the snapshot. Then it asks again.
  *
  * @generated from message agni.v1.webapi.SnapshotUnavailable
  */
@@ -493,10 +496,10 @@ export type SnapshotUnavailable = Message<"agni.v1.webapi.SnapshotUnavailable"> 
   reason: SnapshotUnavailable_Reason;
 
   /**
-   * changed names, for a STALE snapshot, the netlist tier when its entry file no longer reads as it
-   * did, and every tier otherwise, since the file that moved may be any tier's or one a tier read
-   * beneath its entry (a sub-sheet, a symbol library). They are artifact URIs, never the host's own
-   * paths.
+   * changed is set for a STALE snapshot. It names the netlist tier when the netlist's entry file no
+   * longer reads as it did. Otherwise it names every tier, since the file that moved may belong to
+   * any tier, or a tier may have read it beneath its entry (a sub-sheet, a symbol library). The names
+   * are artifact URIs, never the host's own paths.
    *
    * @generated from field: repeated string changed = 3;
    */
@@ -537,36 +540,37 @@ export const SnapshotUnavailable_ReasonSchema: GenEnum<SnapshotUnavailable_Reaso
   enumDesc(file_agni_v1_webapi_snapshot, 13, 0);
 
 /**
- * This file: SnapshotService, a design loaded once and asked many questions (agni issue 1061).
+ * This file defines SnapshotService. A snapshot is a design loaded once and asked many questions
+ * (agni issue 1061).
  *
- * Every analysis rpc names a snapshot rather than files. A snapshot is created by Ingest from a
- * source, resolves the design's tiers and its config once, and is what CheckDesign, RunQuery,
- * GetSheet and the rest answer about. So a question never resolves a companion, a project or a
+ * Every analysis rpc names a snapshot rather than files. Ingest creates a snapshot from a source. The
+ * snapshot resolves the design's tiers and its config once. CheckDesign, RunQuery, GetSheet and the
+ * rest then answer about that snapshot. So a question never resolves a companion, a project or a
  * convention again, and two questions about one snapshot cannot read the design two ways.
  *
  * Each Ingest makes a new snapshot with an id of its own, even of the same files under the same
- * config: two ingests are two designs a client can change apart. What the server read for them is
- * still shared underneath, keyed on the files' content, so a second ingest of one design costs a
- * lookup and holds no second copy until one of the two is updated.
+ * config. Two ingests are two designs, and a client can change each without the other. The server
+ * still shares what it read for them underneath, keyed on the files' content. So a second ingest of
+ * one design costs a lookup and holds no second copy until one of the two is updated.
  *
- * A snapshot's files stay live. It records every file its questions read, and a question asked
- * after one of them changed is refused as stale (FAILED_PRECONDITION) rather than answered from the
- * files as they are now, so an answer is always about the revision it names. UpdateSnapshot reads
- * it again, whole or one tier at a time.
+ * A snapshot's files are still live after the ingest. The snapshot records every file its questions
+ * read. Imagine one of those files changes. The next question is refused as stale
+ * (FAILED_PRECONDITION) rather than answered from the files as they are now, so an answer is always
+ * about the revision it names. UpdateSnapshot reads the snapshot again, whole or one tier at a time.
  *
  * A snapshot is held in the host's memory. A server keeps it until it is deleted or evicted, and a
- * browser worker until the worker ends, so a client keeps each snapshot's definition and ingests it
- * again, under the same id, when a question answers NOT_FOUND.
+ * browser worker keeps it until the worker ends. So a client keeps each snapshot's definition, and
+ * when a question answers NOT_FOUND, the client ingests the snapshot again under the same id.
  *
  * @generated from service agni.v1.webapi.SnapshotService
  */
 export const SnapshotService: GenService<{
   /**
    * Ingest creates a snapshot from a source. It resolves the design's tiers and composes its config,
-   * and reads no design file, since opening a KiCad design draws from its schematic's geometry and
-   * parses its netlist only for the first check or query, so a design that cannot be read fails at
-   * its first question. With read_board it builds the model a check builds, board included, so a
-   * later check finds it parsed; opening a design must not wait on its board (agni issue 943).
+   * and it reads no design file. Opening a KiCad design draws from its schematic's geometry, and the
+   * netlist is parsed only for the first check or query. So a design that cannot be read fails at its
+   * first question. With read_board, Ingest builds the same model a check builds, board included, and
+   * a later check finds it parsed. Opening a design must not wait on its board (agni issue 943).
    *
    * @generated from rpc agni.v1.webapi.SnapshotService.Ingest
    */
@@ -593,8 +597,8 @@ export const SnapshotService: GenService<{
   },
   /**
    * UpdateSnapshot replaces a snapshot's definition, whole or by update_mask, and reads it again.
-   * Its id stays and its revision_id moves on. An update that cannot be read leaves the snapshot as
-   * it was.
+   * Its id does not change, and its revision_id moves on. An update that cannot be read leaves the
+   * snapshot as it was.
    *
    * @generated from rpc agni.v1.webapi.SnapshotService.UpdateSnapshot
    */
@@ -612,9 +616,9 @@ export const SnapshotService: GenService<{
     output: typeof EmptySchema;
   },
   /**
-   * UploadBlobs stores file contents for a manifest an Ingest names (agni issue 1061), keyed by
-   * their SHA-256, and answers each one's hash. The server keeps what it can within its limit and
-   * may drop a blob no snapshot holds, so a client sends a blob only when an Ingest reports it
+   * UploadBlobs stores the file contents named in an Ingest's manifest (agni issue 1061), keyed by
+   * their SHA-256, and answers each one's hash. The server keeps what it can within its limit. It may
+   * drop a blob that no snapshot holds, so a client sends a blob only when an Ingest reports it
    * missing.
    *
    * @generated from rpc agni.v1.webapi.SnapshotService.UploadBlobs

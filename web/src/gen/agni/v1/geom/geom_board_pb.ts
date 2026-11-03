@@ -15,10 +15,9 @@ export const file_agni_v1_geom_geom_board: GenFile = /*@__PURE__*/
   fileDesc("Ch1hZ25pL3YxL2dlb20vZ2VvbV9ib2FyZC5wcm90bxIMYWduaS52MS5nZW9tIokDCg1Cb2FyZEdlb21ldHJ5EhIKCmRlc2lnbl9yZWYYASABKAkSDwoHdW5pdF9ubRgCIAEoAxIoCgZsYXllcnMYAyADKAsyGC5hZ25pLnYxLmdlb20uQm9hcmRMYXllchIrCgdvdXRsaW5lGAQgASgLMhouYWduaS52MS5nZW9tLkJvYXJkT3V0bGluZRI0CgpwbGFjZW1lbnRzGAUgAygLMiAuYWduaS52MS5nZW9tLkNvbXBvbmVudFBsYWNlbWVudBIlCgRuZXRzGAYgAygLMhcuYWduaS52MS5nZW9tLk5ldENvcHBlchIhCgV6b25lcxgHIAMoCzISLmFnbmkudjEuZ2VvbS5ab25lEiYKBXRleHRzGAggAygLMhcuYWduaS52MS5nZW9tLkJvYXJkVGV4dBIsCghncmFwaGljcxgJIAMoCzIaLmFnbmkudjEuZ2VvbS5Cb2FyZEdyYXBoaWMSJgoEcHJvdhgQIAEoCzIYLmFnbmkudjEuZ2VvbS5Qcm92ZW5hbmNlIq8BCglCb2FyZFRleHQSDAoEdGV4dBgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESDgoGaGVpZ2h0GAQgASgDEg0KBWxheWVyGAUgASgJEg4KBm1pcnJvchgGIAEoCBIPCgdqdXN0aWZ5GAcgASgJEg8KB3JlZl9kZXMYCCABKAkSDAoEa2luZBgJIAEoCSJhCgxCb2FyZEdyYXBoaWMSIgoFc2hhcGUYASABKAsyEy5hZ25pLnYxLmdlb20uU2hhcGUSDQoFbGF5ZXIYAiABKAkSDwoHcmVmX2RlcxgDIAEoCRINCgV3aWR0aBgEIAEoAyI4CgpCb2FyZExheWVyEg4KBm51bWJlchgBIAEoBRIMCgRuYW1lGAIgASgJEgwKBGtpbmQYAyABKAkiNQoMQm9hcmRPdXRsaW5lEiUKBXBhdGhzGAEgAygLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lIsQBChJDb21wb25lbnRQbGFjZW1lbnQSDwoHcmVmX2RlcxgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESDQoFbGF5ZXIYBCABKAkSHwoEcGFkcxgFIAMoCzIRLmFnbmkudjEuZ2VvbS5QYWQSDgoGbWlycm9yGAYgASgIEiYKBHByb3YYECABKAsyGC5hZ25pLnYxLmdlb20uUHJvdmVuYW5jZSKqAQoDUGFkEg4KBm51bWJlchgBIAEoCRIfCgJhdBgCIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBIUCgxyb3RhdGlvbl9kZWcYAyABKAESIQoEc2l6ZRgEIAEoCzITLmFnbmkudjEuZ2VvbS5Qb2ludBINCgVzaGFwZRgFIAEoCRIOCgZsYXllcnMYBiADKAkSDQoFZHJpbGwYByABKAMSCwoDbmV0GAggASgJImcKCU5ldENvcHBlchILCgNuZXQYASABKAkSLAoIc2VnbWVudHMYAiADKAsyGi5hZ25pLnYxLmdlb20uVHJhY2tTZWdtZW50Eh8KBHZpYXMYAyADKAsyES5hZ25pLnYxLmdlb20uVmlhImwKDFRyYWNrU2VnbWVudBIeCgFhGAEgASgLMhMuYWduaS52MS5nZW9tLlBvaW50Eh4KAWIYAiABKAsyEy5hZ25pLnYxLmdlb20uUG9pbnQSDQoFd2lkdGgYAyABKAMSDQoFbGF5ZXIYBCABKAkiaQoDVmlhEh8KAmF0GAEgASgLMhMuYWduaS52MS5nZW9tLlBvaW50EgwKBHNpemUYAiABKAMSDQoFZHJpbGwYAyABKAMSEgoKbGF5ZXJfZnJvbRgEIAEoCRIQCghsYXllcl90bxgFIAEoCSJLCgRab25lEgsKA25ldBgBIAEoCRINCgVsYXllchgCIAEoCRInCgdvdXRsaW5lGAMgASgLMhYuYWduaS52MS5nZW9tLlBvbHlsaW5lQixaKmdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvZ2VvbWIGcHJvdG8z", [file_agni_v1_geom_geom]);
 
 /**
- * BoardGeometry is the root: one message per board, the layout analogue of
- * SchematicGeometry. Coordinates are Points in raw source units (unit_nm nanometers per
- * unit); the KiCad reader emits unit_nm=1 (plain nanometers), Y-up like the schematic
- * contract.
+ * BoardGeometry is the root, with one message per board. It is the layout analogue of
+ * SchematicGeometry. Coordinates are Points in raw source units, unit_nm nanometers per unit.
+ * The KiCad reader emits unit_nm=1 (plain nanometers), Y-up like the schematic contract.
  *
  * @generated from message agni.v1.geom.BoardGeometry
  */
@@ -100,14 +99,14 @@ export const BoardGeometrySchema: GenMessage<BoardGeometry> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 0);
 
 /**
- * BoardText is one placed text string on the board: a footprint's silkscreen ref-des or
- * value, footprint user text, or free graphic text (KiCad gr_text, including the title
- * block). Text is universal across board formats (IPC-2581 legend, ODB++, Gerber), so it
- * belongs in the shared contract (C9), not in a single reader. Footprint-owned text is
- * pre-composed to BOARD coordinates by the reader (placement transform applied to the
- * text's footprint-local offset), so every entry here is already board-frame Y-up and a
- * consumer draws it without re-deriving the placement -- the same way gr_text is authored
- * absolute. Hidden source text is dropped, not carried (mirrors the no-ref placement skip).
+ * BoardText is one placed text string on the board. It may be a footprint's silkscreen ref-des
+ * or value, footprint user text, or free graphic text (KiCad gr_text, including the title
+ * block). Every board format has text (IPC-2581 legend, ODB++, Gerber). So it belongs in the
+ * shared contract (C9), not in a single reader. The reader composes footprint-owned text into
+ * BOARD coordinates in advance. It applies the placement transform to the text's
+ * footprint-local offset. So every entry here is already board-frame Y-up. A consumer draws it
+ * without deriving the placement again, just as gr_text is authored absolute. Hidden source
+ * text is dropped, as a placement with no ref is skipped.
  *
  * @generated from message agni.v1.geom.BoardText
  */
@@ -184,15 +183,16 @@ export const BoardTextSchema: GenMessage<BoardText> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 1);
 
 /**
- * BoardGraphic is one piece of non-copper board artwork: a footprint's silkscreen or fab
- * body outline / courtyard / polarity mark, or a free graphic line (KiCad `gr_*` that is not
- * the board edge). Like BoardText it is a universal board concept (IPC-2581 legend, ODB++,
- * Gerber silk are all line/arc/region artwork), so it lives in the shared contract (C9), and
- * footprint-owned graphics are pre-composed to BOARD coordinates by the reader (each point
- * through the placement transform, the same `geomath.ComposePlacement` pads and text use),
- * so a consumer draws it as-is. The board EDGE (KiCad Edge.Cuts) is NOT carried here — it is
- * BoardOutline; graphics are the silk/fab layers. Reuses geom.Shape for the geometry itself
- * (POLYLINE / RECT / CIRCLE / ARC, with Fill for filled bodies) so no primitive is duplicated.
+ * BoardGraphic is one piece of non-copper board artwork. It may be a footprint's silkscreen or
+ * fab body outline, courtyard, or polarity mark. It may also be a free graphic line, a KiCad
+ * `gr_*` that is not the board edge. Like BoardText, every board format has it. IPC-2581
+ * legend, ODB++ and Gerber silk are all line, arc and region artwork. So it is in the shared
+ * contract (C9). The reader composes footprint-owned graphics into BOARD coordinates in advance.
+ * It passes each point through the placement transform, the same `geomath.ComposePlacement`
+ * that pads and text use. So a consumer draws it as-is. The board EDGE (KiCad Edge.Cuts) is NOT
+ * here. It is BoardOutline, and graphics are the silk and fab layers. The geometry itself is a
+ * geom.Shape (POLYLINE / RECT / CIRCLE / ARC, with Fill for filled bodies), so no primitive is
+ * duplicated.
  *
  * @generated from message agni.v1.geom.BoardGraphic
  */
@@ -234,10 +234,10 @@ export const BoardGraphicSchema: GenMessage<BoardGraphic> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 2);
 
 /**
- * BoardLayer is one row of the board's layer table, as the source declares it: the
- * numeric id copper references resolve through, the name ("F.Cu", "In1.Cu"), and the
- * source's kind word ("signal", "power", "user") kept verbatim rather than mapped to an
- * enum a second format might not share.
+ * BoardLayer is one row of the board's layer table, as the source declares it. number is the
+ * numeric id, and copper references resolve through it. name is the layer name ("F.Cu",
+ * "In1.Cu"). kind is the source's kind word ("signal", "power", "user"), kept verbatim. An enum
+ * could hold values a second format does not share.
  *
  * @generated from message agni.v1.geom.BoardLayer
  */
@@ -266,10 +266,10 @@ export const BoardLayerSchema: GenMessage<BoardLayer> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 3);
 
 /**
- * BoardOutline is the board edge: the closed (or to-be-closed) paths of the outline
- * layer. Paths are as authored — consumers wanting a closed polygon must stitch
- * segments, since sources commonly draw the edge as disconnected lines and arcs
- * (arcs are approximated as polylines by the reader, per the C6 bound).
+ * BoardOutline is the board edge, as the closed or to-be-closed paths of the outline layer.
+ * Paths are as authored. Sources commonly draw the edge as disconnected lines and arcs. So a
+ * consumer that wants a closed polygon must stitch segments. The reader approximates arcs as
+ * polylines, per the C6 bound.
  *
  * @generated from message agni.v1.geom.BoardOutline
  */
@@ -288,9 +288,9 @@ export const BoardOutlineSchema: GenMessage<BoardOutline> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 4);
 
 /**
- * ComponentPlacement is one placed physical component: where it sits, which side, and
- * its copper lands. ref_des is the join key to ir.Component; a placement whose source
- * footprint has no reference is not emitted (mirrors the netlist reader's skip).
+ * ComponentPlacement is one placed physical component. It gives where the component sits, which
+ * side it is on, and its copper pads. ref_des is the join key to ir.Component. If the source
+ * footprint has no reference, the placement is not emitted, as the netlist reader skips it too.
  *
  * @generated from message agni.v1.geom.ComponentPlacement
  */
@@ -315,9 +315,10 @@ export type ComponentPlacement = Message<"agni.v1.geom.ComponentPlacement"> & {
   rotationDeg: number;
 
   /**
-   * reader converts its native frame here: a Y-down source (KiCad)
-   * negates its rotation as it Y-flips coordinates; a Y-up source
-   * (IPC-2581) carries the source angle verbatim. The renderer is a
+   * reader converts its native frame here. KiCad's angle is CCW as
+   * drawn, so a front footprint's angle carries over unchanged and a
+   * back one's is negated (agni 1261). A Y-up source (IPC-2581)
+   * carries the source angle verbatim. The renderer is a
    * pure composer: world = at + M(R(rotation_deg) * pad_offset),
    * where M mirrors X iff `mirror`.
    *
@@ -340,7 +341,7 @@ export type ComponentPlacement = Message<"agni.v1.geom.ComponentPlacement"> & {
   mirror: boolean;
 
   /**
-   * rotation) so its pads land on the mirrored copper. Set by the
+   * rotation) so its pads sit on the mirrored copper. Set by the
    * reader from the placed side; the renderer applies it.
    *
    * @generated from field: agni.v1.geom.Provenance prov = 16;
@@ -356,12 +357,12 @@ export const ComponentPlacementSchema: GenMessage<ComponentPlacement> = /*@__PUR
   messageDesc(file_agni_v1_geom_geom_board, 5);
 
 /**
- * Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL
- * (relative to ComponentPlacement.at before its rotation is applied), matching how
- * sources author them and keeping identical footprints comparable across placements;
- * a consumer composes placement transform x pad offset for board coordinates. number
- * matches ir.Connection.pin_ref, so (ref_des, number) joins a pad to the netlist pin.
- * net is the connected net's name, "" for an unconnected pad.
+ * Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL. They are
+ * relative to ComponentPlacement.at, before its rotation is applied. Sources author them that
+ * way, and identical footprints then compare across placements. For board coordinates, a
+ * consumer composes the placement transform with the pad offset. number matches
+ * ir.Connection.pin_ref, so (ref_des, number) joins a pad to the netlist pin. net is the
+ * connected net's name, "" for an unconnected pad.
  *
  * @generated from message agni.v1.geom.Pad
  */
@@ -377,7 +378,7 @@ export type Pad = Message<"agni.v1.geom.Pad"> & {
   at?: Point | undefined;
 
   /**
-   * as printed; same verbatim rule as ComponentPlacement
+   * degrees CCW in the footprint's own frame
    *
    * @generated from field: double rotation_deg = 3;
    */
@@ -425,9 +426,9 @@ export const PadSchema: GenMessage<Pad> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 6);
 
 /**
- * NetCopper is the routed copper of one net: its track segments and vias, grouped so a
- * consumer joins per-net geometry by name (the same key WireGeometry uses on the
- * schematic side).
+ * NetCopper is the routed copper of one net, with its track segments and vias. They are grouped
+ * so a consumer joins per-net geometry by name. WireGeometry uses the same key on the schematic
+ * side.
  *
  * @generated from message agni.v1.geom.NetCopper
  */
@@ -494,8 +495,8 @@ export const TrackSegmentSchema: GenMessage<TrackSegment> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 8);
 
 /**
- * Via is one drilled inter-layer connection. layer_from/layer_to bound the span
- * ("F.Cu".."B.Cu" for a through via); blind/buried vias narrow the pair.
+ * Via is one drilled inter-layer connection. layer_from and layer_to bound the span, and a
+ * through via spans "F.Cu".."B.Cu". Blind and buried vias narrow the pair.
  *
  * @generated from message agni.v1.geom.Via
  */
@@ -538,9 +539,9 @@ export const ViaSchema: GenMessage<Via> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom_board, 9);
 
 /**
- * Zone is one copper pour: its net, layer, and AUTHORED outline (the polygon the
- * designer drew, not the computed fill — fills are derived data a consumer regenerates
- * or a later tier carries; the C6 bound above).
+ * Zone is one copper pour, with its net, its layer, and its AUTHORED outline. The outline is the
+ * polygon the designer drew, not the computed fill. A fill is derived data. A consumer computes
+ * it again, or a later tier will hold it, per the C6 bound above.
  *
  * @generated from message agni.v1.geom.Zone
  */

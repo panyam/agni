@@ -22,9 +22,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Request is the fact being asked for. Deliberately the same shape as a check's
-// unmet dependency, so the thing that reported a gap and the thing that proposes a
-// fix speak about it in the same terms rather than through a translation nobody owns.
+// Request is the fact being asked for. It has the same shape as a check's unmet
+// dependency, on purpose. A check reports a gap, and a proposer proposes a fix. Both
+// then describe the gap in the same terms, with no translation that nobody owns.
 type Request struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Mpn           string                 `protobuf:"bytes,1,opt,name=mpn,proto3" json:"mpn,omitempty"`
@@ -79,21 +79,21 @@ func (x *Request) GetSymbol() string {
 
 // Citation locates a candidate precisely enough to HIGHLIGHT, and quotes it.
 //
-// Precision is not a nicety here. Verification has to be possible at a glance or a
-// reviewer waves through whatever they are shown, and a citation resolving only to a
-// page fails that test.
+// Precision matters here. A reviewer must be able to verify a candidate at a glance.
+// Otherwise they wave through whatever they are shown. A citation that resolves only to
+// a page fails that test.
 type Citation struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Page  int32                  `protobuf:"varint,1,opt,name=page,proto3" json:"page,omitempty"`
-	// A doc-IR text block or table id: what a viewer highlights.
+	// A doc-IR text block or table id. A viewer highlights this region.
 	RegionId string `protobuf:"bytes,2,opt,name=region_id,json=regionId,proto3" json:"region_id,omitempty"`
-	// Locate a table cell. Both -1 for a text block. A cell is the unit worth citing
-	// in a datasheet, because most facts worth finding are in one.
+	// Locate a table cell. Both are -1 for a text block. In a datasheet, most facts
+	// worth finding are in a table cell, so a cell is the unit worth citing.
 	Row int32 `protobuf:"varint,3,opt,name=row,proto3" json:"row,omitempty"`
 	Col int32 `protobuf:"varint,4,opt,name=col,proto3" json:"col,omitempty"`
-	// The region's text VERBATIM. This is what makes a claim checkable rather than
-	// merely plausible: a proposer that invents a sentence fails a mechanical check
-	// against the document, with nobody reading the page.
+	// The region's text VERBATIM. It makes a claim checkable rather than merely
+	// plausible. Imagine a proposer that invents a sentence. It fails a mechanical check
+	// against the document, and nobody has to read the page.
 	Quote         string `protobuf:"bytes,5,opt,name=quote,proto3" json:"quote,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -169,18 +169,18 @@ type Candidate struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Request  *Request               `protobuf:"bytes,1,opt,name=request,proto3" json:"request,omitempty"`
 	Citation *Citation              `protobuf:"bytes,2,opt,name=citation,proto3" json:"citation,omitempty"`
-	// May be absent: a proposer that found the right passage and could not read a
-	// number from it has still done most of the work, and saying so is more useful
-	// than guessing. Retrieval-backed proposers never populate this.
+	// May be absent. A proposer may find the right passage and fail to read a number
+	// from it. It has still done most of the work. Saying so is more useful than
+	// guessing. Retrieval-backed proposers never fill this.
 	Value     *param.RangeValue `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 	Unit      string            `protobuf:"bytes,4,opt,name=unit,proto3" json:"unit,omitempty"`
 	LimitKind param.LimitKind   `protobuf:"varint,5,opt,name=limit_kind,json=limitKind,proto3,enum=agni.v1.param.LimitKind" json:"limit_kind,omitempty"`
-	// What proposed this, becoming the provenance method on acceptance, so a corpus
-	// records which mechanism produced each value rather than flattening them all.
+	// What proposed this. On acceptance it becomes the provenance method. So a corpus
+	// records which mechanism produced each value, and does not flatten them all.
 	Source string `protobuf:"bytes,6,opt,name=source,proto3" json:"source,omitempty"`
 	// The proposer's own estimate, in the OPEN interval (0, 1). It can never be 1.0
-	// through this path: only a human verification earns certainty, which is the
-	// posture derive already takes and which agni.v1.param.Verification records.
+	// through this path. Only a human verification grants certainty. derive already
+	// takes that posture, and agni.v1.param.Verification records it.
 	Confidence    float64 `protobuf:"fixed64,7,opt,name=confidence,proto3" json:"confidence,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

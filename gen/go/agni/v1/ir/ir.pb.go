@@ -25,10 +25,10 @@ const (
 // spelling onto this and keep the raw string in attributes ("direction_raw") when it does
 // not map cleanly.
 //
-// POWER is the generic power/ground pin for readers that do not distinguish source from sink;
-// POWER_IN (a rail consumed, e.g. a chip's VCC) and POWER_OUT (a rail sourced, e.g. a regulator
-// output or a KiCad PWR_FLAG) are the finer split the connectivity rules need to tell a power
-// driver from a power sink. Treat POWER as "either" when classifying drivers.
+// POWER is the generic power/ground pin, for readers that do not distinguish source from sink.
+// POWER_IN marks a rail consumed, e.g. a chip's VCC. POWER_OUT marks a rail sourced, e.g. a
+// regulator output or a KiCad PWR_FLAG. The connectivity rules need that finer split to tell a
+// power driver from a power sink. Treat POWER as "either" when classifying drivers.
 type PinDirection int32
 
 const (
@@ -44,8 +44,8 @@ const (
 	// A tri-state output drives its net only while enabled, so a net it shares with another tri-state
 	// pin is a bus rather than a conflict. It answers "is this net driven" and is no hard driver.
 	PinDirection_PIN_DIRECTION_TRISTATE PinDirection = 9
-	// An open-collector (or open-drain) output can only pull its net low, so several on one net are a
-	// wire-OR, which needs a pull-up rather than being a conflict.
+	// An open-collector (or open-drain) output can only pull its net low. So several on one net are a
+	// wire-OR rather than a conflict, and a wire-OR needs a pull-up.
 	PinDirection_PIN_DIRECTION_OPEN_COLLECTOR PinDirection = 10
 	// An open-emitter (or open-source) output can only pull its net high, the mirror of open-collector.
 	PinDirection_PIN_DIRECTION_OPEN_EMITTER PinDirection = 11
@@ -116,11 +116,11 @@ type UnexpandedReason int32
 const (
 	// UNEXPANDED_REASON_UNSPECIFIED is a reader that predates the field, read as NOT_WALKED.
 	UnexpandedReason_UNEXPANDED_REASON_UNSPECIFIED UnexpandedReason = 0
-	// UNEXPANDED_REASON_NOT_WALKED is a read of the top level alone, which reads every block when
-	// asked to flatten (Snapshot.flatten_hierarchy, agni issue 718).
+	// UNEXPANDED_REASON_NOT_WALKED is a read of the top level alone. Asked to flatten, the read takes
+	// in every block instead (Snapshot.flatten_hierarchy, agni issue 718).
 	UnexpandedReason_UNEXPANDED_REASON_NOT_WALKED UnexpandedReason = 1
-	// UNEXPANDED_REASON_CYCLE is a block a flattened read refused to enter because it places itself,
-	// directly or through the blocks it places (agni issue 1102).
+	// UNEXPANDED_REASON_CYCLE is a block that a flattened read refused to enter, because the block
+	// places itself, directly or through the blocks it places (agni issue 1102).
 	UnexpandedReason_UNEXPANDED_REASON_CYCLE UnexpandedReason = 2
 )
 
@@ -165,23 +165,24 @@ func (UnexpandedReason) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{1}
 }
 
-// ClassSource is the evidence that established a device-class membership. It orders by strength, and
-// the order is read numerically (a later tier records itself only where it outranks what is already
-// there), so a new source slots in by number rather than by a table somebody has to keep.
+// ClassSource is the evidence that established a device-class membership. It orders by strength,
+// and the order is read numerically. A later tier records itself only where it outranks the source
+// already there. So a new source slots in by number rather than by a table somebody has to keep.
 type ClassSource int32
 
 const (
 	// Unknown. A tag stamped by a pass that did not say where it came from, or a hand-authored IR.
-	// Treated as no weaker than CONVENTION by consumers, since that is what it historically was.
+	// Consumers treat it as no weaker than CONVENTION, since historically it was a convention.
 	ClassSource_CLASS_SOURCE_UNSPECIFIED ClassSource = 0
-	// A CONVENTION matched: a ref-des prefix, a whole-token hint in the part's text, or a pattern the
-	// project's own lexicon.class declared. It is a claim by whoever drew the schematic and named the
-	// parts, not evidence about the device, which is why it is the weakest source here.
+	// A CONVENTION matched. That is a ref-des prefix, a whole-token hint in the part's text, or a
+	// pattern declared in the project's own lexicon.class. It is a claim by whoever drew the schematic
+	// and named the parts, not evidence about the device. So it is the weakest source here.
 	ClassSource_CLASS_SOURCE_CONVENTION ClassSource = 1
-	// A DATASHEET said so. The vendor's own device_class, seeded into the param corpus and joined on
-	// MPN. It ranks highest because it is evidence about the PART rather than about the design's
-	// spelling, and because it is the only source that can reach the classes the structural path is
-	// documented as unable to resolve: crystal versus ceramic resonator, and ideal_diode_controller.
+	// A DATASHEET said so. The vendor's own device_class is seeded into the param corpus and joined on
+	// MPN. It ranks highest for two reasons. It is evidence about the PART rather than about the
+	// design's spelling. It is also the only source that can reach two classes that the structural
+	// path is documented as unable to resolve. Those are crystal versus ceramic resonator, and
+	// ideal_diode_controller.
 	ClassSource_CLASS_SOURCE_DATASHEET ClassSource = 3
 )
 
@@ -226,41 +227,41 @@ func (ClassSource) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{2}
 }
 
-// Net is a set of electrically connected pins.
-// RoleSource is HOW a net role was established. It exists because the roles pass has always unioned
-// evidence of different strengths and discarded which one spoke, leaving a consumer unable to tell a
-// role read off a naming convention from one the source file stated outright.
+// RoleSource is HOW a net role was established. The roles pass has always unioned evidence of
+// different strengths and discarded which one spoke. A consumer could not tell a role read off a
+// naming convention from one the source file stated outright. This enum keeps that distinction.
 //
-// ONLY SOURCES SOMETHING POPULATES ARE MEMBERS (C9's field discipline). Human confirmation and
-// evidence derived from the netlist or a datasheet are the obvious next ones, and are deliberately
-// NOT declared here: an unpopulated member reads to a consumer as a source that never occurs rather
-// than one nothing produces yet. The datasheet layer's verification lifecycle is the shape to borrow
-// when a human-confirmed source arrives.
+// AN ENUM MEMBER EXISTS ONLY FOR A SOURCE THAT SOMETHING POPULATES (C9's field discipline).
+// DATASHEET joined once a pass populated it (agni 1265, 1266). Human confirmation and evidence
+// derived from the netlist are the obvious next ones. They are deliberately NOT declared here. A consumer would read an unpopulated member as a source that
+// never occurs, rather than one that nothing produces yet. When a human-confirmed source arrives,
+// borrow the shape of the datasheet layer's verification lifecycle.
 type RoleSource int32
 
 const (
 	// Unknown. A role stamped by a pass that did not say where it came from, or a hand-authored IR.
-	// Treated as no weaker than CONVENTION by consumers, since that is what it historically was.
+	// Consumers treat it as no weaker than CONVENTION, since historically it was a convention.
 	RoleSource_ROLE_SOURCE_UNSPECIFIED RoleSource = 0
-	// A naming convention matched: the active lexicon read the role out of the net's NAME. The weakest
-	// source, and until this enum existed the only one a consumer could assume. A name is a claim by
-	// whoever drew the schematic, not evidence about the circuit.
+	// A naming convention matched, so the active lexicon read the role out of the net's NAME. It is the
+	// weakest source. Until this enum existed it was the only one a consumer could assume. A name is a
+	// claim by whoever drew the schematic, not evidence about the circuit.
 	RoleSource_ROLE_SOURCE_CONVENTION RoleSource = 1
 	// The SOURCE FORMAT stated it. IPC-2581's LogicalNet/@netClass is a closed enum saying what a net
-	// is, so a reader that understands one translates it into this vocabulary at the edge. Stronger
-	// than a convention: the tool that wrote the file asserted it, rather than it being inferred from
+	// is, so a reader that understands one translates it into this vocabulary at the edge. It is
+	// stronger than a convention. The tool that wrote the file asserted it, and nobody inferred it from
 	// spelling.
 	RoleSource_ROLE_SOURCE_DECLARED RoleSource = 2
-	// A DATASHEET pin function established it: the net reaches a terminal a vendor types as a power
-	// input, a power output, or ground, so what the net carries follows from the silicon rather than
-	// from anything anyone named. The only source here that is evidence about the CIRCUIT instead of a
-	// claim about the design's spelling or annotation, which is why it ranks highest.
+	// A DATASHEET pin function established it. The net reaches a terminal that a vendor types as a
+	// power input, a power output or ground. So what the net carries follows from the silicon, not
+	// from anything anyone named. It is the only source here that is evidence about the CIRCUIT
+	// instead of a claim about the design's spelling or annotation. So it ranks highest.
 	//
-	// Ranking it above DECLARED is a judgement rather than a derivation. A format declaration is direct
-	// (it is about THIS net) while a datasheet function is inferential (this net touches a ground pin,
-	// so it is ground), but a declaration is a CAD tool's annotation that can go stale against the
-	// design while a vendor's pin table cannot. Ordering only decides which source is RECORDED when two
-	// establish the same role, never whether the role is present, so the cost of being wrong is small.
+	// Ranking it above DECLARED is a judgement rather than a derivation. A format declaration is
+	// direct, since it is about THIS net. A datasheet function is inferential: this net touches a
+	// ground pin, so it is ground. But a declaration is a CAD tool's annotation, and it can go stale
+	// against the design. A vendor's pin table cannot. Ordering only decides which source is RECORDED
+	// when two establish the same role, never whether the role is present. So the cost of being wrong
+	// is small.
 	RoleSource_ROLE_SOURCE_DATASHEET RoleSource = 3
 )
 
@@ -307,22 +308,22 @@ func (RoleSource) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_ir_ir_proto_rawDescGZIP(), []int{3}
 }
 
-// Role is what a net IS, as the engine worked it out from the naming lexicon. A net may carry several
-// at once: a buck's switch node is named after the rail it produces, so "12V_SW" is both RAIL by its
-// prefix and SWITCHING by its suffix, and the second reading is the one that decides whether rules
-// treat it as a supply.
+// Role is what a net IS, as the engine worked it out from the naming lexicon. A net may have several
+// at once. A buck's switch node is named after the rail it produces, so "12V_SW" is both RAIL by its
+// prefix and SWITCHING by its suffix. The SWITCHING reading decides whether rules treat the net as a
+// supply.
 //
-// A CLOSED vocabulary, deliberately, and the reasoning is worth keeping because the previous decision
-// went the other way. A string field was chosen so a project could name a role the engine does not
-// ship; no project ever could, because the lexicon that supplies the patterns has one field per role.
-// So the openness was theoretical while the cost was real: the tokens lived only in Go, nothing
-// generated them for the viewer, and two roles the engine acts on went unprojected for a release
-// because adding one was expensive.
+// The vocabulary is CLOSED, deliberately. The reasoning is worth keeping, because the previous
+// decision went the other way. A string field was chosen so a project could name a role the engine
+// does not ship. No project ever could, because the lexicon that supplies the patterns has one field
+// per role. So the openness was theoretical, and the cost was real. The tokens lived only in Go, and
+// nothing generated them for the viewer. Adding a role was expensive, so two roles the engine acts
+// on went unprojected for a release.
 //
 // If the vocabulary is ever opened, the intended shape is a registry of declared role types keyed by
-// name, with these as the pre-registered entries, so the enum becomes a generated convenience rather
-// than a competing model and no consumer has to learn two representations. That is the shape
-// facts.Registry and check.Catalog already use. See agni 692.
+// name. These values would be the pre-registered entries. The enum then becomes a generated
+// convenience rather than a competing model, and no consumer has to learn two representations.
+// facts.Registry and check.Catalog already use that shape. See agni 692.
 type Role int32
 
 const (
@@ -331,9 +332,9 @@ const (
 	// digits-then-V form.
 	Role_ROLE_RAIL   Role = 1
 	Role_ROLE_GROUND Role = 2
-	// The four that mean "named after a rail, and not one", because a regulator's pins are
-	// conventionally named for the supply they serve. The first two must never be probed; the last two
-	// are ordinary signals excluded from rail rules only because they are not rails.
+	// These four mean "named after a rail, but not a rail". A regulator's pins are conventionally named
+	// for the supply they serve. The first two must never be probed. The last two are ordinary
+	// signals, and rail rules leave them out only because they are not rails.
 	Role_ROLE_FEEDBACK   Role = 3
 	Role_ROLE_SWITCHING  Role = 4
 	Role_ROLE_CONTROL    Role = 5
@@ -452,7 +453,7 @@ func (LayerFunction) EnumDescriptor() ([]byte, []int) {
 }
 
 // Span locates a node within its source file, for lossless reconstruction and surgical
-// edits (docs/13). Zero when the reader does not track offsets.
+// edits (architecture/ingestion-and-ir.md). Zero when the reader does not track offsets.
 type Span struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	ByteOffset    int64                  `protobuf:"varint,1,opt,name=byte_offset,json=byteOffset,proto3" json:"byte_offset,omitempty"`
@@ -522,10 +523,10 @@ func (x *Span) GetColumn() int32 {
 }
 
 // Provenance is the neutral locator linking an IR node back to its source. native_id is
-// a format-native identifier whose kind is named in native_id_kind; it is NOT assumed
-// stable across exports (an EDIF rename &id is regenerated per export; a KiCad uuid is
-// stable). Never use native_id as a cross-revision or cross-format key -- use the
-// semantic keys (ref_des, net name, pin) for that (see WS1-004).
+// a format-native identifier, and native_id_kind names its kind. It is NOT assumed stable
+// across exports. An EDIF rename &id is regenerated per export, while a KiCad uuid is
+// stable. Never use native_id as a cross-revision or cross-format key. Use the semantic
+// keys (ref_des, net name, pin) for that (see WS1-004).
 type Provenance struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	SourceFile    string                 `protobuf:"bytes,1,opt,name=source_file,json=sourceFile,proto3" json:"source_file,omitempty"`
@@ -594,8 +595,8 @@ func (x *Provenance) GetNativeIdKind() string {
 	return ""
 }
 
-// FidelityFragment is one piece of the format-fidelity layer: raw source a lossless
-// reader retains, keyed to a node by provenance, so write-back is byte/semantically
+// FidelityFragment is one piece of the format-fidelity layer. A lossless reader retains
+// raw source in it, keyed to a node by provenance, so write-back is byte/semantically
 // identical. Lossy-bounded readers (e.g. the EDIF netlist reader) leave this empty.
 type FidelityFragment struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -676,7 +677,7 @@ type Design struct {
 	Components       []*Component      `protobuf:"bytes,5,rep,name=components,proto3" json:"components,omitempty"`
 	Nets             []*Net            `protobuf:"bytes,6,rep,name=nets,proto3" json:"nets,omitempty"`
 	Sheets           []*Sheet          `protobuf:"bytes,7,rep,name=sheets,proto3" json:"sheets,omitempty"`
-	InputDiagnostics *InputDiagnostics `protobuf:"bytes,17,opt,name=input_diagnostics,json=inputDiagnostics,proto3" json:"input_diagnostics,omitempty"` // reader-emitted, front-end origin (see docs/19)
+	InputDiagnostics *InputDiagnostics `protobuf:"bytes,17,opt,name=input_diagnostics,json=inputDiagnostics,proto3" json:"input_diagnostics,omitempty"` // reader-emitted, front-end origin (see architecture/rules-and-checks.md)
 	// Semantic layer, tier 2 (physical) -- PROVISIONAL (see file header, CONSTRAINTS C9).
 	Footprints    []*Footprint        `protobuf:"bytes,8,rep,name=footprints,proto3" json:"footprints,omitempty"`
 	Layers        []*Layer            `protobuf:"bytes,9,rep,name=layers,proto3" json:"layers,omitempty"`
@@ -832,129 +833,133 @@ func (x *Design) GetProv() *Provenance {
 	return nil
 }
 
-// InputDiagnostics groups the problems the reader (front-end) detects while building the IR --
-// things the normalized netlist cannot reconstruct because the reader has already normalized the
-// detail away, so they are found once, at read time, applying each format's own semantics, and
-// recorded in a neutral form here. They are reportable as findings by thin check/ rules, but they
-// originate at ingestion, not analysis (see docs/19 "Where a rule runs"). Distinct from input
-// *facts* (net.attributes power_driven/external, ...), which are annotations a check reads, not
-// problems. Empty for sources with none.
+// InputDiagnostics groups the problems that the reader (front-end) detects while building the IR.
+// The normalized netlist cannot reconstruct them, because the reader has already normalized the
+// detail away. So the reader finds them once, at read time, with each format's own semantics, and
+// records them here in a neutral form. Thin check/ rules can report them as findings, but they
+// originate at ingestion, not analysis (see "Where a rule runs" in
+// architecture/rules-and-checks.md). They differ from input *facts* (net.attributes
+// power_driven/external, ...). A fact is an annotation that a check reads, not a problem. Empty for
+// sources with none.
 type InputDiagnostics struct {
 	state             protoimpl.MessageState `protogen:"open.v1"`
 	DanglingEndpoints []*DanglingEndpoint    `protobuf:"bytes,1,rep,name=dangling_endpoints,json=danglingEndpoints,proto3" json:"dangling_endpoints,omitempty"`
 	RefDesCollisions  []*RefDesCollision     `protobuf:"bytes,2,rep,name=ref_des_collisions,json=refDesCollisions,proto3" json:"ref_des_collisions,omitempty"`
 	// A wire endpoint dropped onto the BODY (mid-span) of another wire with no junction dot
-	// (WS1-012): the drawing shows a T-tap or crossing the author meant as connected, but the
-	// tool treats it as two separate nets -- the most dangerous silent connectivity slip in
-	// capture. Same shape and frame as dangling_endpoints; the endpoint is the subject.
-	// Populated by readers of formats whose tools require an explicit dot (KiCad); formats
-	// that auto-connect T-touches (gEDA) never emit it.
+	// (WS1-012). The drawing shows a T-tap or crossing, and the author meant it as connected.
+	// The tool treats it as two separate nets. This is the most dangerous silent connectivity
+	// slip in capture. It has the same shape and frame as dangling_endpoints, and the endpoint
+	// is the subject. Readers populate it for formats whose tools require an explicit dot
+	// (KiCad). Formats that auto-connect T-touches (gEDA) never emit it.
 	NoJunctionEndpoints []*DanglingEndpoint `protobuf:"bytes,3,rep,name=no_junction_endpoints,json=noJunctionEndpoints,proto3" json:"no_junction_endpoints,omitempty"`
-	// A bus construct the reader recognized but does NOT yet expand into member nets (WS1-034):
-	// gEDA `U` bus segments, KiCad `bus`/`bus_entry`/`bus_alias`, xschem `NAME[n:0]` bus labels,
-	// EDIF `array` bus ports. Until Phase 2 expands members, a bussed design's connectivity is
-	// unresolved (members merge onto one net or land off-net), so the reader records each construct
-	// here and the bus-not-modeled integrity rule surfaces it rather than letting silence read as
-	// coverage. Format-neutral: every schematic reader populates it, so the read-health signal is
-	// uniform across formats.
+	// A bus construct the reader recognized but does NOT yet expand into member nets (WS1-034).
+	// Examples are gEDA `U` bus segments, KiCad `bus`/`bus_entry`/`bus_alias`, xschem `NAME[n:0]`
+	// bus labels and EDIF `array` bus ports. Until Phase 2 expands members, a bussed design's
+	// connectivity is unresolved. Its members merge onto one net or end up off-net. So the reader
+	// records each construct here, and the bus-not-modeled integrity rule reports it, rather than
+	// letting silence read as coverage. It is format-neutral. Every schematic reader populates it,
+	// so the read-health signal is uniform across formats.
 	UnmodeledBuses []*BusNotModeled `protobuf:"bytes,4,rep,name=unmodeled_buses,json=unmodeledBuses,proto3" json:"unmodeled_buses,omitempty"`
-	// A symbol reference the reader could NOT resolve (WS1-052): an xschem/gEDA `.sym` file or a
-	// KiCad external `.kicad_sym` library that failed to open or parse. The parse of the SCHEMATIC
-	// succeeds, so there is no error to raise, but every placement of that symbol loses its pins --
-	// and a component with no pins has no connections, so the design reads as valid and emptier than
-	// it is. Silence would be indistinguishable from a design that genuinely has none.
+	// A symbol reference the reader could NOT resolve (WS1-052). It is an xschem/gEDA `.sym` file
+	// or a KiCad external `.kicad_sym` library that failed to open or parse. The parse of the
+	// SCHEMATIC succeeds, so there is no error to raise. But every placement of that symbol loses
+	// its pins. A component with no pins has no connections, so the design reads as valid and
+	// emptier than it is. Without this list, the read would look exactly like a design that
+	// genuinely has no such symbols.
 	//
-	// The reader ALREADY knew this: the unresolved count gates dangling-endpoint emission (WS1-013),
+	// The reader ALREADY knew this. The unresolved count gates dangling-endpoint emission (WS1-013),
 	// because missing pins turn real wire ends into phantom dangles. Until now that knowledge made
-	// the read quieter and was then discarded. Recording it is what lets the pin-dependent rules
+	// the read quieter and was then discarded. Now it is recorded, so the pin-dependent rules can
 	// report inconclusive instead of passing over a netlist that is missing connections.
 	UnresolvedSymbols []*UnresolvedSymbol `protobuf:"bytes,5,rep,name=unresolved_symbols,json=unresolvedSymbols,proto3" json:"unresolved_symbols,omitempty"`
-	// The symbol references that DID resolve, one per distinct reference, so a consumer can tell a
-	// design whose symbols all loaded from one the reader never looked at (agni issue 418).
+	// The symbol references that DID resolve, one per distinct reference (agni issue 418). With this
+	// list, a consumer can tell a design whose symbols all loaded from one the reader never looked at.
 	//
-	// Recorded because unresolved_symbols alone is a list of failures, and the rule reading it could
-	// therefore only ever report failures: a design with no missing symbol produced the same nothing as
-	// a read that resolved no symbols at all. unmodeled_buses is the diagnostic that got this right and
-	// is the shape copied here — it holds every bus construct the reader saw, not only the ones that
-	// went badly, so the rule reading it partitions rather than filters.
+	// unresolved_symbols alone is a list of failures, so a rule reading it could only ever report
+	// failures. A design with no missing symbol produced the same nothing as a read that resolved no
+	// symbols at all. unmodeled_buses got this right, and this field copies its shape. That list
+	// holds every bus construct the reader saw, not only the ones that went badly. So the rule
+	// reading it partitions rather than filters.
 	//
-	// The reader already knew. The resolve walk decides per reference and kept only the misses, so this
-	// retains a set that already forms rather than computing a new one.
+	// The reader already knew. The resolve walk decides per reference and used to keep only the
+	// misses. This field keeps a set the walk already forms, rather than computing a new one.
 	//
-	// Not every reader supplies it, and the omission is stated through `supplied` below rather than
-	// being indistinguishable from a design with no symbols: a rule reading an empty list where nobody
-	// looked would claim coverage it has not got.
+	// Not every reader supplies it. `supplied` below states the omission, so it does not look like a
+	// design with no symbols. A rule reading an empty list where nobody looked would claim coverage it
+	// does not have.
 	ResolvedSymbols []*ResolvedSymbol `protobuf:"bytes,8,rep,name=resolved_symbols,json=resolvedSymbols,proto3" json:"resolved_symbols,omitempty"`
 	// The wire-end-on-wire-body taps that ARE joined, the other half of no_junction_endpoints
 	// (agni issue 420).
 	//
-	// Recorded for the reason resolved_symbols is: a rule reading only no_junction_endpoints could
-	// report only failures, so a schematic whose every T-tap carries its junction dot produced the same
-	// nothing as a format that cannot detect a T-tap at all. That silence costs more here than
-	// anywhere else in the diagnostics, because a silent T-tap is the failure mode wire-no-junction
-	// exists for: the drawing shows a connection the netlist does not have.
+	// It is recorded for the same reason as resolved_symbols. A rule reading only
+	// no_junction_endpoints could report only failures. A schematic with a junction dot on every
+	// T-tap produced the same nothing as a format that cannot detect a T-tap at all. That silence
+	// costs more here than anywhere else in the diagnostics. wire-no-junction exists for the silent
+	// T-tap, where the drawing shows a connection that the netlist does not have.
 	//
 	// The reader already knew. splitWiresAt runs at a junction dot or a mid-span label BEFORE the
-	// detection pass, so a joined tap is no longer interior to a segment by the time anything looks at
-	// it. This keeps the set that pass throws away rather than computing a new one.
+	// detection pass. By the time anything looks, a joined tap is no longer interior to a segment.
+	// This field keeps the set that splitWiresAt throws away, rather than computing a new one.
 	JoinedTaps []*JoinedTap `protobuf:"bytes,9,rep,name=joined_taps,json=joinedTaps,proto3" json:"joined_taps,omitempty"`
-	// Components the source has not annotated yet: their designator is a placeholder (`R?`, `C?`,
+	// Components the source has not annotated yet. Their designator is a placeholder (`R?`, `C?`,
 	// `REF**`) rather than an identity, so every unannotated resistor on the sheet reads `R?`.
 	//
-	// Recorded because the alternative is silence. A placeholder is not a key, so the pin-uniqueness
-	// index cannot assert anything about `(R?, 1)` and pin-net-conflict declines to (see the second
-	// suppression in its doc). Without this the parts would then be reported by nothing at all, and
-	// "no findings" would read as "annotated" — the same silence-as-coverage failure unmodeled_buses
-	// and unresolved_symbols exist to prevent.
+	// It is recorded because the alternative is silence. A placeholder is not a key. So the
+	// pin-uniqueness index cannot assert anything about `(R?, 1)`, and pin-net-conflict declines to
+	// (see the second suppression in its doc). Without this field nothing would report the parts,
+	// and "no findings" would read as "annotated". unmodeled_buses and unresolved_symbols exist to
+	// prevent the same silence-as-coverage failure.
 	//
-	// It is a real review item on its own terms rather than a read-health signal: unlike a missing
-	// symbol, nothing was lost in the read. The design genuinely has parts nobody has named, and on
-	// one export that was 369 of them across live sheets.
+	// It is a real review item on its own terms rather than a read-health signal. Unlike a missing
+	// symbol, nothing was lost in the read. The design genuinely has parts nobody has named, and one
+	// export had 369 of them across live sheets.
 	UnannotatedComponents []*UnannotatedComponent `protobuf:"bytes,6,rep,name=unannotated_components,json=unannotatedComponents,proto3" json:"unannotated_components,omitempty"`
-	// The hierarchical blocks whose CONTENTS this read did not extract (agni issue 707): a sub-cell, a
-	// sub-sheet, a subcircuit, anything the design instantiates as a box while the source also holds
-	// what is inside it. One entry per block, so a consumer can say what was dropped and how much.
+	// The hierarchical blocks whose CONTENTS this read did not extract (agni issue 707). A block is a
+	// sub-cell, a sub-sheet, a subcircuit, or anything else the design instantiates as a box while
+	// the source also holds its insides. There is one entry per block, so a consumer can say what was
+	// dropped and how much.
 	//
-	// Recorded because the alternative is a design that reads as smaller than it is. The EDIF reader
-	// scopes extraction to the top cell on purpose (WS1-004), and a hierarchical `.edn` therefore
-	// yields the top cell's instances alone: the read succeeds, the counts look plausible, and every
-	// rule evaluates cleanly over a design that is mostly absent. The reader already counted the cells
-	// carrying instances and kept only whether there was more than one, as an attribute nothing read.
+	// It is recorded because otherwise a design reads as smaller than it is. The EDIF reader scopes
+	// extraction to the top cell on purpose (WS1-004). So a hierarchical `.edn` yields the top cell's
+	// instances alone. The read succeeds and the counts look plausible. Every rule then evaluates
+	// cleanly over a design that is mostly absent. The reader already counted the cells with
+	// instances. It kept only whether there was more than one, as an attribute that nothing read.
 	//
-	// A reader that DESCENDS into a block does not list it, so a list that empties out is the
-	// hierarchy walk landing rather than the signal going away. EDIF populates it today; the xschem
-	// and gEDA readers skip `type=subcircuit` and `source=` in the same way (agni issue 134) and are
-	// the intended second and third. Named in `supplied` by every reader that looked.
+	// A reader that DESCENDS into a block does not list it. So when the list empties out, the reader
+	// has started walking the hierarchy, and the signal has not gone away. EDIF populates it today.
+	// The xschem and gEDA readers skip `type=subcircuit` and `source=` in the same way (agni issue
+	// 134), and they are meant to be the second and third. Every reader that looked names it in
+	// `supplied`.
 	UnexpandedHierarchy []*UnexpandedHierarchy `protobuf:"bytes,10,rep,name=unexpanded_hierarchy,json=unexpandedHierarchy,proto3" json:"unexpanded_hierarchy,omitempty"`
 	// Every label spelled with an index range, and whether this format reads it as a bus (agni issue
-	// 605). The spelling is the user's claim that the label names a bus, and a format that reads it
-	// as one plain net instead merges every signal they meant to keep apart. KiCad reads only
-	// `PREFIX[first..last]` as a bus, so a KiCad label written `DATA[7:0]`, the xschem and gEDA
+	// 605). With that spelling, the user claims the label names a bus. A format that reads it as one
+	// plain net instead merges every signal they meant to keep apart. KiCad reads only
+	// `PREFIX[first..last]` as a bus. So a KiCad label written `DATA[7:0]`, the xschem and gEDA
 	// spelling, is recorded here with reads_as_bus false.
 	//
 	// It holds the labels that DO read as buses too, so the rule over it partitions rather than
-	// filters. Declared through `supplied` ("range_labels"), since a reader that never looked returns
-	// the same nothing as a sheet with no range label.
+	// filters. A reader declares it through `supplied` ("range_labels"). A reader that never looked
+	// returns the same nothing as a sheet with no range label.
 	RangeLabels []*RangeLabel `protobuf:"bytes,11,rep,name=range_labels,json=rangeLabels,proto3" json:"range_labels,omitempty"`
 	// The diagnostics this reader COMPUTED, named by their field name here ("ref_des_collisions",
 	// "dangling_endpoints", ...), whether or not it found any.
 	//
-	// Every list above is empty in two different situations that a consumer cannot otherwise tell
-	// apart: the reader looked and found nothing, or the reader never looked. A rule reading the
-	// second as the first reports a clean pass over a question nobody asked, which is the
-	// silence-as-coverage failure the comments above keep naming — and it shipped:
+	// Every list above is empty in two different situations. Either the reader looked and found
+	// nothing, or the reader never looked. Without this field a consumer cannot tell them apart. A
+	// rule that reads the second as the first reports a clean pass over a question nobody asked. The
+	// comments above keep naming that silence-as-coverage failure, and it shipped.
 	// `duplicate-ref-des` read as passing on every EDIF, IPC-2581, gEDA and xschem design, because
 	// only the KiCad reader ever populated ref_des_collisions (agni issue 309).
 	//
 	// Not every reader can supply every diagnostic, and that is not a defect. EDIF represents a
-	// multi-gate part as instances sharing a designator with no capture-unit to tell that legitimate
-	// grouping from a duplicate, so it CANNOT supply ref_des_collisions and says so by omission
-	// here. What changes is that the omission is now stated rather than indistinguishable from a
-	// clean result: check.Available gates the rule to not-applicable instead of letting it pass.
+	// multi-gate part as instances sharing a designator. It has no capture-unit to tell that
+	// legitimate grouping from a duplicate. So it CANNOT supply ref_des_collisions, and it says so
+	// by leaving the name out here. The omission is now stated, so it no longer looks like a clean
+	// result. check.Available gates the rule to not-applicable instead of letting it pass.
 	//
-	// Declared per READ rather than per format, because it is a property of the reader's
-	// implementation and not of the file: a reader that learns to detect a construct starts
-	// supplying it, and an out-of-module reader (the C18 extension seam) declares its own.
+	// It is declared per READ rather than per format. Supplying a diagnostic is a property of the
+	// reader's implementation, not of the file. A reader that learns to detect a construct starts
+	// supplying it, and an out-of-module reader (the C18 extension point) declares its own.
 	Supplied      []string `protobuf:"bytes,7,rep,name=supplied,proto3" json:"supplied,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1071,10 +1076,12 @@ func (x *InputDiagnostics) GetSupplied() []string {
 //
 // name is the block as the source names it (an EDIF cell name). kind names the construct
 // ("edif_cell"), so a reader-neutral consumer can say what sort of thing was skipped. instance_count
-// is how many instances the block's own contents hold, counted once however many times the block is
-// placed and not following the blocks it places in turn. It is the useful half of the message: "SUB holds 212 instances and none were read" says how much of the design is
-// missing, where "this design is hierarchical" does not. prov locates the block's declaration.
-// reason says why the read left the block out, which decides what a surface tells the reader.
+// is how many instances the block's own contents hold. It counts them once, however many times the
+// block is placed, and it does not follow the blocks this block places in turn. instance_count is
+// the useful half of the message. "SUB holds 212 instances and none were read" says how much of the
+// design is missing, and "this design is hierarchical" does not. prov locates the block's
+// declaration. reason says why the read left the block out, and a surface decides what to tell the
+// reader from it.
 type UnexpandedHierarchy struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1151,10 +1158,10 @@ func (x *UnexpandedHierarchy) GetReason() UnexpandedReason {
 	return UnexpandedReason_UNEXPANDED_REASON_UNSPECIFIED
 }
 
-// UnannotatedComponent is one placeholder designator and every placement wearing it. Keyed per
-// DESIGNATOR rather than per placement, matching RefDesCollision: "176 parts are still called R?"
-// is the reviewable fact, where 176 separate findings would be the same sentence 176 times.
-// instances carries each placement's provenance so a consumer can point at all of them.
+// UnannotatedComponent is one placeholder designator and every placement that uses it. It is keyed
+// per DESIGNATOR rather than per placement, matching RefDesCollision. "176 parts are still called
+// R?" is the reviewable fact, and 176 separate findings would be the same sentence 176 times.
+// instances holds each placement's provenance, so a consumer can point at all of them.
 type UnannotatedComponent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
@@ -1207,24 +1214,15 @@ func (x *UnannotatedComponent) GetInstances() []*Provenance {
 	return nil
 }
 
-// UnresolvedSymbol is one symbol reference that failed to resolve, with every placement it cost
-// pins. Keyed per REFERENCE rather than per placement: one missing library file affects every part
-// drawn with it, and a finding per part would bury that single cause under N identical messages.
-//
-// symref is the reference exactly as the source spelled it (`res.sym`, `devices/res.sym`, a KiCad
-// `Library:Symbol` lib_id), so the message can be pasted into a --symbol-path search. kind names
-// the construct ("xschem_sym", "geda_sym", "kicad_sym_lib") so a reader-neutral consumer can still
-// say what kind of thing is missing. ref_des lists the placements that lost pins, which is the
-// blast radius and the join key for the reader.unresolved_symbol query relation.
 // ResolvedSymbol is one symbol reference that loaded, with the pin count it contributed.
 //
-// The COUNT is what makes a pass evidence rather than an assertion. "the symbol resolved" reads
-// identically on a design where it resolved to a 100-pin FPGA and one where a stale library answered
-// with an empty stub, and the second is a silent read gap of exactly the kind unresolved_symbols
-// exists to surface. A count moves when the library does.
+// The COUNT turns a pass into evidence rather than an assertion. Imagine one design where a symbol
+// resolved to a 100-pin FPGA, and another where a stale library answered with an empty stub. "the
+// symbol resolved" reads identically on both. The second is a silent read gap, exactly the kind
+// unresolved_symbols exists to report. A count moves when the library does.
 //
-// Keyed per REFERENCE rather than per placement, matching UnresolvedSymbol: one library entry is one
-// answer however many parts are drawn with it.
+// It is keyed per REFERENCE rather than per placement, matching UnresolvedSymbol. One library entry
+// is one answer, however many parts are drawn with it.
 type ResolvedSymbol struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Symref        string                 `protobuf:"bytes,1,opt,name=symref,proto3" json:"symref,omitempty"`
@@ -1285,6 +1283,16 @@ func (x *ResolvedSymbol) GetPinCount() int32 {
 	return 0
 }
 
+// UnresolvedSymbol is one symbol reference that failed to resolve, with every placement that lost
+// pins because of it. It is keyed per REFERENCE rather than per placement. One missing library file
+// affects every part drawn with it, and a finding per part would bury that single cause under N
+// identical messages.
+//
+// symref is the reference exactly as the source spelled it (`res.sym`, `devices/res.sym`, a KiCad
+// `Library:Symbol` lib_id), so the message can be pasted into a --symbol-path search. kind names
+// the construct ("xschem_sym", "geda_sym", "kicad_sym_lib"), so a reader-neutral consumer can
+// still say what kind of thing is missing. ref_des lists the placements that lost pins. That list
+// is the blast radius, and it is the join key for the reader.unresolved_symbol query relation.
 type UnresolvedSymbol struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Symref        string                 `protobuf:"bytes,1,opt,name=symref,proto3" json:"symref,omitempty"`
@@ -1353,23 +1361,25 @@ func (x *UnresolvedSymbol) GetProv() *Provenance {
 	return nil
 }
 
-// BusNotModeled is one bus construct a reader detected but has not expanded into member nets
-// (WS1-034 Phase 1). label is the source's bus name when it carries one (a KiCad bus-alias name, an
-// xschem `DATA[7:0]` label, an EDIF array port name), else empty. kind names the source construct
-// ("bus", "bus_entry", "bus_alias", "geda_bus", "edif_array", "xschem_bus_label") so a finding can
-// say what was seen. prov carries the source file and the construct's native id/location. Emitting
-// it does not change connectivity: it marks the read as incomplete for this construct, the same
-// silence-is-not-coverage posture as the dangling-endpoint diagnostics.
+// BusNotModeled is one bus construct that a reader detected but has not expanded into member nets
+// (WS1-034 Phase 1). label is the source's bus name when it has one, else empty. Examples are a
+// KiCad bus-alias name, an xschem `DATA[7:0]` label and an EDIF array port name. kind names the
+// source construct ("bus", "bus_entry", "bus_alias", "geda_bus", "edif_array",
+// "xschem_bus_label"), so a finding can say what was seen. prov holds the source file and the
+// construct's native id/location. Emitting it does not change connectivity. It marks the read as
+// incomplete for this construct, the same silence-is-not-coverage posture as the dangling-endpoint
+// diagnostics.
 type BusNotModeled struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Label string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
 	Kind  string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
 	Prov  *Provenance            `protobuf:"bytes,3,opt,name=prov,proto3" json:"prov,omitempty"`
-	// members is the expanded member-signal set the bus names (a range `DATA[7:0]` -> DATA7..DATA0, or
-	// an explicit `bus_alias` member list), when the reader can determine it — empty otherwise. The
-	// bus-not-modeled rule uses it to tell a RESOLVED bus (every member already a net, via member labels
-	// on the taps — the common flat-sheet case, verified against kicad-cli) from one whose members are
-	// genuinely unmodeled, so the flag reports real read-gaps rather than the mere presence of a bus.
+	// members is the expanded set of member signals that the bus names, when the reader can determine
+	// it, and empty otherwise. A range `DATA[7:0]` gives DATA7..DATA0, and a `bus_alias` gives its
+	// explicit member list. The bus-not-modeled rule uses it to tell a RESOLVED bus from one whose
+	// members are genuinely unmodeled. In a resolved bus every member is already a net, through member
+	// labels on the taps. That is the common flat-sheet case, verified against kicad-cli. So the flag
+	// reports real read-gaps rather than the mere presence of a bus.
 	Members       []string `protobuf:"bytes,4,rep,name=members,proto3" json:"members,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1433,26 +1443,16 @@ func (x *BusNotModeled) GetMembers() []string {
 	return nil
 }
 
-// DanglingEndpoint is a schematic wire endpoint that terminates on nothing -- no pin, junction,
-// label, or other wire shares its point -- so a connection the author drew is incomplete. Derived
-// from wire geometry via the shared net solver; board- and netlist-only sources have none. x,y
-// locate the endpoint in the sheet geometry frame (the same integer grid the geometry sidecar uses,
-// so a viewer highlight joins directly); prov carries the source file and, when the format has one,
-// the wire's native id (e.g. a KiCad uuid; xschem/gEDA wires carry none, so location is the
-// subject). Populated by the KiCad, xschem, and gEDA readers (WS1-011/013): xschem/gEDA
-// gate emission on full external-symbol resolution, since an unresolved symbol drops its
-// pins and would fabricate dangles. The same message shape carries both endpoint-on-nothing
-// (dangling_endpoints) and endpoint-on-body (no_junction_endpoints, KiCad-only: xschem and
-// gEDA auto-connect mid-span touches, so a missing junction is not a defect there).
-// JoinedTap is one wire endpoint landing on another wire's body where something joins them.
+// JoinedTap is one wire endpoint that meets another wire's body, where something joins them.
 //
-// join_kind names WHICH construct did the joining, because the two are different things to a
-// reviewer. A junction dot is explicit intent someone placed. A mid-span label joins the wires as a
-// side effect of naming the net there, which is correct in KiCad and is easier to delete by accident.
-// label carries the text for the second case, so a pass names the net rather than asserting one.
+// join_kind names WHICH construct did the joining, because the two mean different things to a
+// reviewer. Someone placed a junction dot as explicit intent. A mid-span label joins the wires as a
+// side effect of naming the net there. That is correct in KiCad, and the label is easier to delete
+// by accident. label holds the text in the label case, so a pass names the net rather than
+// asserting one.
 //
-// segments is how many wire ends meet at the point after the split. It separates an ordinary T (three)
-// from a crossing (four) and is what a reader compares against the drawing.
+// segments is how many wire ends meet at the point after the split. It separates an ordinary T
+// (three) from a crossing (four), and a reader compares it against the drawing.
 type JoinedTap struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             int64                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"`
@@ -1537,9 +1537,9 @@ func (x *JoinedTap) GetProv() *Provenance {
 	return nil
 }
 
-// RangeLabel is one label whose name carries an index range, as the source spells it. reads_as_bus
-// says whether this format's own tool treats it as a bus, which decides whether the members the
-// range names are separate signals or one net under a bus-shaped name.
+// RangeLabel is one label whose name includes an index range, as the source spells it. reads_as_bus
+// says whether this format's own tool treats it as a bus. If it does, the range names separate
+// signals. If not, it is one net under a bus-shaped name.
 type RangeLabel struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Label         string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
@@ -1600,6 +1600,18 @@ func (x *RangeLabel) GetProv() *Provenance {
 	return nil
 }
 
+// DanglingEndpoint is a schematic wire endpoint that terminates on nothing. No pin, junction,
+// label or other wire shares its point, so a connection the author drew is incomplete. It is
+// derived from wire geometry by the shared net solver, and board- and netlist-only sources have
+// none. x,y locate the endpoint in the sheet geometry frame. That frame is the same integer grid
+// the geometry sidecar uses, so a viewer highlight joins directly. prov holds the source file and,
+// when the format has one, the wire's native id, e.g. a KiCad uuid. xschem/gEDA wires have none,
+// so the location is the subject. The KiCad, xschem and gEDA readers populate it (WS1-011/013).
+// xschem/gEDA gate emission on full external-symbol resolution, since an unresolved symbol drops
+// its pins and would fabricate dangles. The same message shape serves both endpoint-on-nothing
+// (dangling_endpoints) and endpoint-on-body (no_junction_endpoints). Endpoint-on-body is
+// KiCad-only. xschem and gEDA auto-connect mid-span touches, so a missing junction is not a
+// defect there.
 type DanglingEndpoint struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	X             int64                  `protobuf:"varint,1,opt,name=x,proto3" json:"x,omitempty"`
@@ -1660,12 +1672,13 @@ func (x *DanglingEndpoint) GetProv() *Provenance {
 	return nil
 }
 
-// RefDesCollision is a reference designator claimed by more than one distinct physical placement --
-// a genuine duplicate, not the legitimate multi-section grouping of a multi-unit part (which the IR
-// keeps as one component with distinct-index sections, WS1-001). The reader decides duplicate from
-// legitimate using its own format's rule (KiCad: the same unit claimed twice; a flat netlist: a
-// repeated designator) because the merged netlist can no longer tell them apart. instances carries
-// the provenance of each colliding placement so a finding can point at all of them.
+// RefDesCollision is a reference designator claimed by more than one distinct physical placement.
+// It is a genuine duplicate, not the legitimate multi-section grouping of a multi-unit part. The IR
+// keeps such a part as one component with distinct-index sections (WS1-001). The merged netlist can
+// no longer tell a duplicate from a legitimate grouping. So the reader decides, with its own
+// format's rule. In KiCad the rule is the same unit claimed twice, and in a flat netlist it is a
+// repeated designator. instances holds the provenance of each colliding placement, so a finding can
+// point at all of them.
 type RefDesCollision struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
@@ -1795,13 +1808,13 @@ type PartType struct {
 	Kind             string                 `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`                                                 // format-native type tag (EDIF cellType), free-form
 	DesignatorPrefix string                 `protobuf:"bytes,3,opt,name=designator_prefix,json=designatorPrefix,proto3" json:"designator_prefix,omitempty"` // ref-des prefix, e.g. "R", "J"
 	Pins             []*Pin                 `protobuf:"bytes,4,rep,name=pins,proto3" json:"pins,omitempty"`
-	// mpn is the part number the LIBRARY states for this type, when it states one. Set by a reader
-	// straight from its own grammar, unlike Component.mpn which a shared pass derives.
+	// mpn is the part number that the LIBRARY states for this type, when it states one. A reader sets
+	// it straight from its own grammar. A shared pass derives Component.mpn instead.
 	//
-	// A part type carries one only when the source models the type AS an orderable part (an OrCAD cell
-	// named by its part number, a Telesis $PACKAGES line). That is the minority case: a library symbol
-	// is usually generic and the part number lives on the placement. So this is the FALLBACK source
-	// for Component.mpn, never the primary one.
+	// A part type has one only when the source models the type AS an orderable part. Examples are an
+	// OrCAD cell named by its part number and a Telesis $PACKAGES line. That is the minority case. A
+	// library symbol is usually generic, and the part number is on the placement. So this is the
+	// FALLBACK source for Component.mpn, never the primary one.
 	Mpn           string            `protobuf:"bytes,5,opt,name=mpn,proto3" json:"mpn,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Prov          *Provenance       `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
@@ -1974,35 +1987,34 @@ type Component struct {
 	Sections      []*ComponentSection    `protobuf:"bytes,2,rep,name=sections,proto3" json:"sections,omitempty"`
 	FootprintRef  string                 `protobuf:"bytes,3,opt,name=footprint_ref,json=footprintRef,proto3" json:"footprint_ref,omitempty"` // PROVISIONAL: joins to Footprint.name (no reader yet)
 	DeviceClasses []*ComponentClassTag   `protobuf:"bytes,7,rep,name=device_classes,json=deviceClasses,proto3" json:"device_classes,omitempty"`
-	// value is the component's VALUE as a machine-comparable quantity, derived ONCE at ingestion by the
-	// format-neutral value pass (WS3-118) from whatever attribute the source spelled it in. It is the
-	// third DERIVED-NORMALIZATION field (C9), after device_classes and Net.roles, and exists for the
-	// same reason: a rule that has to compute with a resistance must read a NUMBER, and every format
-	// writes that number as text in its own dialect ("10k", "4R7", "0R05", "100nF/50V").
+	// value is the component's VALUE as a machine-comparable quantity. The format-neutral value pass
+	// (WS3-118) derives it ONCE at ingestion, from whatever attribute the source spelled it in. It is
+	// the third DERIVED-NORMALIZATION field (C9), after device_classes and Net.roles, and it exists for
+	// the same reason. A rule that computes with a resistance must read a NUMBER. Every format writes
+	// that number as text in its own dialect ("10k", "4R7", "0R05", "100nF/50V").
 	//
-	// Absent when the source carried no value attribute at all. Present-but-unparsed (Quantity.value
-	// absent) when it carried one this engine could not read, which is deliberately distinguishable:
-	// "no value stated" and "a value stated that we failed on" are different facts, and only the second
-	// is a gap worth reporting.
+	// It is absent when the source had no value attribute at all. It is present but unparsed
+	// (Quantity.value absent) when the source had one that this engine could not read. The two states
+	// are deliberately distinct. "no value stated" and "a value stated that we failed on" are
+	// different facts, and only the second is a gap worth reporting.
 	Value *Quantity `protobuf:"bytes,5,opt,name=value,proto3" json:"value,omitempty"`
-	// mpn is the ORDERABLE PART this placement will be built as ("RC0603FR-0710KL"), derived ONCE at
-	// ingestion by the format-neutral pass classify.StampMPN (agni issue 519). It is the fourth
-	// DERIVED-NORMALIZATION field (C9), after device_classes, Net.roles and value.
+	// mpn is the ORDERABLE PART that this placement will be built as ("RC0603FR-0710KL"). The
+	// format-neutral pass classify.StampMPN derives it ONCE at ingestion (agni issue 519). It is the
+	// fourth DERIVED-NORMALIZATION field (C9), after device_classes, Net.roles and value.
 	//
-	// It is a distinct identity from the other two a component has, and confusing them is what this
-	// field exists to stop. ref_des names this PLACEMENT and means nothing on another board.
-	// ComponentSection.part_ref names the LIBRARY SYMBOL, which is internal to whoever drew the
-	// schematic. mpn names the product a manufacturer sells, and is the only one of the three that
-	// means anything outside this design: it is what the BOM lists, what procurement buys, and the key
-	// every datasheet fact joins on (param.max(mpn, symbol, max)).
+	// A component has two other identities, and this field exists to keep the three apart. ref_des
+	// names this PLACEMENT and means nothing on another board. ComponentSection.part_ref names the
+	// LIBRARY SYMBOL, which is internal to whoever drew the schematic. mpn names the product that a
+	// manufacturer sells. Of the three, only mpn means anything outside this design. The BOM lists
+	// it, procurement buys it, and every datasheet fact joins on it (param.max(mpn, symbol, max)).
 	//
-	// It is stated PER PLACEMENT rather than per part type because a library symbol is coarser than an
-	// orderable product: one generic 0603 resistor symbol is placed as dozens of part numbers. The pass
-	// therefore prefers a component's own value and falls back to PartType.mpn.
+	// It is stated PER PLACEMENT rather than per part type, because a library symbol is coarser than
+	// an orderable product. One generic 0603 resistor symbol is placed as dozens of part numbers. So
+	// the pass prefers a component's own value and falls back to PartType.mpn.
 	//
-	// Empty when the source states no part number, which is a normal state and NOT a defect: it means
-	// no datasheet can be joined to this component, so a parameter rule reports it as unevaluated
-	// rather than passing. Empty also when the design was built without the ingestion pass (a
+	// It is empty when the source states no part number. That is a normal state and NOT a defect. No
+	// datasheet can then be joined to this component, so a parameter rule reports it as unevaluated
+	// rather than passing. It is also empty when the design was built without the ingestion pass (a
 	// hand-authored test IR).
 	Mpn           string            `protobuf:"bytes,6,opt,name=mpn,proto3" json:"mpn,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"` // component-level properties (aggregated across sections)
@@ -2097,15 +2109,15 @@ func (x *Component) GetProv() *Provenance {
 	return nil
 }
 
-// ComponentClassTag is one device-class membership, with the evidence that established it. The class
-// is a STRING rather than an enum, unlike Role: the class vocabulary is meant to open (a project
-// declaring its own class is agni issue 677, gated on a class registry), where the role vocabulary
-// was closed for the opposite reason (agni 692 found nothing could ever extend it).
+// ComponentClassTag is one device-class membership, with the evidence that established it. Unlike
+// Role, the class is a STRING rather than an enum. The class vocabulary is meant to open. Agni issue
+// 677 covers a project declaring its own class, gated on a class registry. The role vocabulary was
+// closed for the opposite reason, since agni 692 found that nothing could ever extend it.
 type ComponentClassTag struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// The canonical lowercase class name (tvs, thermistor, ceramic_resonator). The vocabulary the
-	// engine ships is model.ComponentClasses; a datasheet may carry a value outside it, which is kept
-	// as written rather than dropped, since an unrecognised class is still a fact about the part.
+	// The canonical lowercase class name (tvs, thermistor, ceramic_resonator). The engine ships the
+	// vocabulary in model.ComponentClasses. A datasheet may hold a value outside it. Such a value is
+	// kept as written rather than dropped, since an unrecognised class is still a fact about the part.
 	Class         string      `protobuf:"bytes,1,opt,name=class,proto3" json:"class,omitempty"`
 	Source        ClassSource `protobuf:"varint,2,opt,name=source,proto3,enum=agni.v1.ir.ClassSource" json:"source,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -2156,26 +2168,27 @@ func (x *ComponentClassTag) GetSource() ClassSource {
 	return ClassSource_CLASS_SOURCE_UNSPECIFIED
 }
 
-// Quantity is a physical quantity read off a design: a number, its unit, and the source text it came
-// from. It is the component-value counterpart to the parameter layer's RangeValue, and like that type
-// it uses an OPTIONAL double so absent is distinguishable from zero (0R05 and DNP must not look alike;
-// zero is a legal resistance).
+// Quantity is a physical quantity read off a design. It holds a number, its unit, and the source text
+// of both. It is the component-value counterpart to the parameter layer's RangeValue. Like that type,
+// it uses an OPTIONAL double, so absent is distinct from zero. Zero is a legal resistance, and 0R05
+// and DNP must not look alike.
 //
-// THREE FIELDS BECAUSE THE PARSE IS FALLIBLE AND THE SOURCE IS AUTHORITATIVE. Keeping `input` makes the
-// normalization non-lossy and auditable: when a value reads wrong, the evidence to fix it sits beside
-// the wrong answer rather than having been discarded at ingestion. The same discipline the datasheet
-// layer applies by citing doc/page/confidence rather than shipping a bare number.
+// THREE FIELDS, BECAUSE THE PARSE IS FALLIBLE AND THE SOURCE IS AUTHORITATIVE. Keeping `input` makes
+// the normalization non-lossy and auditable. When a value reads wrong, the evidence to fix it sits
+// beside the wrong answer and was not discarded at ingestion. The datasheet layer applies the same
+// discipline by citing doc/page/confidence rather than shipping a bare number.
 //
-// PARTIAL KNOWLEDGE IS REPRESENTABLE, and has to be. A bare "100" on a capacitor is a known number with
-// an unknown unit: farads by one convention, microfarads by an older one, picofarads by a third, and
-// nothing in the notation decides. That is `{input: "100", value: 100, unit: ""}` rather than a failed
-// parse, so a consumer that knows the convention can still use it and one that does not is not misled.
+// PARTIAL KNOWLEDGE IS REPRESENTABLE, and has to be. A bare "100" on a capacitor is a known number
+// with an unknown unit. It means farads by one convention, microfarads by an older one and picofarads
+// by a third, and nothing in the notation decides. So it is `{input: "100", value: 100, unit: ""}`
+// rather than a failed parse. A consumer that knows the convention can still use it, and one that
+// does not is not misled.
 //
-// VALUE IS ALWAYS THE SI BASE UNIT, never a prefixed one: 4k7 is 4700 Ω, 100n is 1e-7 F. Prefixes are a
-// display concern, re-derived when something wants to show "4.7k". Storing canonically means the only
-// correction anyone ever needs to apply later is FILLING IN an unknown unit, never CONVERTING a known
-// one, which keeps the dangerous operation out of the API entirely (docs/20: unlike units are
-// under-specified, never converted).
+// VALUE IS ALWAYS IN THE SI BASE UNIT, never a prefixed one. 4k7 is 4700 Ω, and 100n is 1e-7 F.
+// Prefixes are a display concern, re-derived when something wants to show "4.7k". With canonical
+// storage, the only correction anyone ever needs later is FILLING IN an unknown unit, never
+// CONVERTING a known one. That keeps the dangerous operation out of the API entirely
+// (architecture/datasheet-layer.md: unlike units are under-specified, never converted).
 type Quantity struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// input is the source text verbatim, never rewritten or trimmed of what the parser ignored. Always
@@ -2184,15 +2197,16 @@ type Quantity struct {
 	// value is the quantity in its unit's SI BASE unit (ohms, farads, henries, amps, volts). Absent means
 	// the parser could not read a number from input, which is NOT the same as zero.
 	//
-	// The parser works in exact decimal internally and only then emits a double, so two spellings of one
-	// value produce the IDENTICAL double: "4k7" and "4700" both give exactly 4700, not two neighbouring
-	// floats. That is what lets a diff compare values across revisions by equality. Comparisons against
-	// numbers of OTHER provenance (a datasheet parameter) should still go through a relative-epsilon
-	// helper rather than ==, since those doubles were never produced by this parser.
+	// The parser works in exact decimal internally and only then emits a double. So two spellings of
+	// one value produce the IDENTICAL double. "4k7" and "4700" both give exactly 4700, not two
+	// neighbouring floats, and a diff can compare values across revisions by equality. A comparison
+	// against a number of OTHER provenance, such as a datasheet parameter, should still go through a
+	// relative-epsilon helper rather than ==, since this parser never produced that double.
 	Value *float64 `protobuf:"fixed64,2,opt,name=value,proto3,oneof" json:"value,omitempty"`
 	// unit is the canonical SI base unit symbol ("Ω", "F", "H", "A", "V"), or EMPTY when the number is
-	// known but the unit is not. Empty is a real state, not a default: see the partial-knowledge note
-	// above. Never a prefixed unit ("kΩ", "nF") and never converted between unlike units.
+	// known but the unit is not. Empty is a real state, not a default, as the partial-knowledge note
+	// above explains. It is never a prefixed unit ("kΩ", "nF"), and it is never converted between
+	// unlike units.
 	Unit          string `protobuf:"bytes,3,opt,name=unit,proto3" json:"unit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2328,16 +2342,17 @@ func (x *ComponentSection) GetProv() *Provenance {
 	return nil
 }
 
-// NetRole is one role a net carries, with the evidence that established it. Two facts about the same
-// net may disagree in strength -- ground by declaration and rail by naming -- and both are kept,
-// because collapsing them is what made "how do we know" unanswerable.
+// NetRole is one role of a net, with the evidence that established it. Two facts about the same net
+// may disagree in strength, such as ground by declaration and rail by naming. Both are kept, because
+// collapsing them made "how do we know" unanswerable.
 type NetRole struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	RoleKind Role                   `protobuf:"varint,3,opt,name=role_kind,json=roleKind,proto3,enum=agni.v1.ir.Role" json:"role_kind,omitempty"`
 	Source   RoleSource             `protobuf:"varint,2,opt,name=source,proto3,enum=agni.v1.ir.RoleSource" json:"source,omitempty"`
-	// reason says what established the role, for a reader asking why: the vocabulary pattern a name
-	// matched, or for a rail inferred from its supply pins or read from a datasheet, the pin that
-	// justified it (agni 1265, 1266). Empty for a role a source format declared.
+	// reason says what established the role, for a reader asking why. For a role read from a name, it
+	// is the vocabulary pattern that the name matched. For a rail inferred from its supply pins or
+	// read from a datasheet, it is the pin that justified the role (agni 1265, 1266). It is empty for a
+	// role that a source format declared.
 	Reason        string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2394,33 +2409,35 @@ func (x *NetRole) GetReason() string {
 	return ""
 }
 
+// Net is a set of electrically connected pins.
 type Net struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// net_classes is the TOOL-ASSIGNED constraint-group membership: the named groups a design tool
-	// puts a net in so a set of nets can share routing rules (clearance, track width, impedance).
-	// Read from the source, never derived — the derived counterpart is `roles` below.
+	// net_classes is the TOOL-ASSIGNED constraint-group membership. A design tool puts a net in named
+	// groups so a set of nets can share routing rules (clearance, track width, impedance). This field
+	// is read from the source and never derived. Its derived counterpart is `roles` below.
 	//
-	// A SET, because every tool that has this concept stores one. KiCad holds
-	// `map<netname, set<netclass>>` and unions an explicit assignment with EVERY matching pattern;
-	// Altium likewise lets a net join several classes. The field was singular until WS1-050 purely
-	// because the first reader took the first match, and that discarded real memberships (C6).
-	// Empty for a net the tool left in its implicit default. Order is sorted, for determinism only:
-	// it is NOT the tool's precedence order, which needs the per-class definitions (WS3-111).
+	// It is a SET, because every tool with this concept stores one. KiCad holds
+	// `map<netname, set<netclass>>` and unions an explicit assignment with EVERY matching pattern.
+	// Altium likewise lets a net join several classes. The field was singular until WS1-050, only
+	// because the first reader took the first match, and that discarded real memberships (C6). It is
+	// empty for a net that the tool left in its implicit default. The order is sorted for determinism
+	// only. It is NOT the tool's precedence order, which needs the per-class definitions (WS3-111).
 	//
-	// NOT IPC-2581's `LogicalNet/@netClass`, despite the name. That is a singular CLOSED enum
-	// (CLK/FIXED/GROUND/SIGNAL/POWER/UNUSED) describing what a net IS, which belongs to the `roles`
-	// space, not to user-named constraint groups. Two formats, one word, different concepts; do not
-	// populate this field from an IPC-2581 read.
+	// It is NOT IPC-2581's `LogicalNet/@netClass`, despite the name. That attribute is a singular
+	// CLOSED enum (CLK/FIXED/GROUND/SIGNAL/POWER/UNUSED) describing what a net IS. It belongs to the
+	// `roles` space, not to user-named constraint groups. The two formats use one word for different
+	// concepts, so do not populate this field from an IPC-2581 read.
 	NetClasses  []string      `protobuf:"bytes,2,rep,name=net_classes,json=netClasses,proto3" json:"net_classes,omitempty"`
 	Connections []*Connection `protobuf:"bytes,3,rep,name=connections,proto3" json:"connections,omitempty"`
-	// id is a deterministic identity derived from the connection set (a hash of the sorted
-	// pins), independent of name. Two electrically-distinct nets that share a name get distinct
-	// ids, so a consumer can tell them apart where the name collides. Ephemeral (recomputed each
-	// solve, never persisted) and connectivity-dependent, so it is a within-load join key, NOT a
-	// durable cross-revision handle (that would be a separate stable id — the datasheet-layer
-	// content-hash-vs-stable-id lesson). Empty for a pinless net. Distinct from Provenance.native_id,
-	// which is the source-native id (a KiCad uuid), not a semantic connectivity identity.
+	// id is a deterministic identity derived from the connection set, as a hash of the sorted pins.
+	// It does not depend on the name. Two electrically-distinct nets that share a name get distinct
+	// ids, so a consumer can tell them apart where the name collides. The id is ephemeral, recomputed
+	// on each solve and never persisted, and it depends on connectivity. So it is a within-load join
+	// key, NOT a durable cross-revision handle. A durable handle would be a separate stable id, as the
+	// datasheet layer learned with content hashes and stable ids. Empty for a pinless net. It differs
+	// from Provenance.native_id. That is the source-native id (a KiCad uuid), not a semantic
+	// connectivity identity.
 	Id            string            `protobuf:"bytes,4,opt,name=id,proto3" json:"id,omitempty"`
 	Roles         []*NetRole        `protobuf:"bytes,6,rep,name=roles,proto3" json:"roles,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -2514,12 +2531,12 @@ type Connection struct {
 	state        protoimpl.MessageState `protogen:"open.v1"`
 	ComponentRef string                 `protobuf:"bytes,1,opt,name=component_ref,json=componentRef,proto3" json:"component_ref,omitempty"` // Component.ref_des
 	PinRef       string                 `protobuf:"bytes,2,opt,name=pin_ref,json=pinRef,proto3" json:"pin_ref,omitempty"`                   // Pin.designator on that component
-	// Per-connection input facts ("this is so" annotations a reader derives, docs/19), the
-	// same open map every other IR entity carries. First tenant: "direction" — the
-	// electrical direction of a connection whose component is virtual and therefore not in
-	// Components (a KiCad power symbol's pin, WS1-014: component_ref "#PWR05" with
-	// direction "power_in"/"power_out"); consumers resolve direction from here first, then
-	// from the component's part-type pins. Next expected tenant: EDIF portRef properties.
+	// Per-connection input facts, which are "this is so" annotations that a reader derives
+	// (architecture/rules-and-checks.md). Every other IR entity has the same open map. The first key
+	// is "direction". It gives the electrical direction of a connection whose component is virtual
+	// and so is not in Components. A KiCad power symbol's pin is one (WS1-014), with component_ref
+	// "#PWR05" and direction "power_in"/"power_out". Consumers resolve direction from here first,
+	// then from the component's part-type pins. EDIF portRef properties are the next expected keys.
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Prov          *Provenance       `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -2655,7 +2672,7 @@ func (x *Sheet) GetProv() *Provenance {
 }
 
 // Footprint is a physical land pattern / package (KiCad footprint, IPC-2581/ODB++
-// package). Modeled as a separate entity a Component references, since KiCad and the PCB
+// package). It is a separate entity that a Component references, since KiCad and the PCB
 // formats justify separating it from the logical PartType.
 type Footprint struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
@@ -2931,8 +2948,8 @@ func (x *Stackup) GetProv() *Provenance {
 	return nil
 }
 
-// Constraint is a design rule/gate. Its class is `kind`; the rules DSL (WS3) owns the
-// semantics, so the IR node stays a thin carrier.
+// Constraint is a design rule/gate. Its class is `kind`. The rules DSL (WS3) owns the
+// semantics, so the IR node only holds the data.
 type Constraint struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`

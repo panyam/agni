@@ -22,22 +22,22 @@ const (
 )
 
 // PinColumnAxis says what the SUB-COLUMNS under a pin table's banded "PIN" header
-// mean. It is declared by the recipe rather than inferred, and that is the whole
-// reason this field exists.
+// mean. The recipe declares it rather than leaving it to inference. This field exists
+// only to hold that declaration.
 //
 // A banded pin table looks identical whether its sub-columns are package codes
-// ("D, PW" | "RUT" | "YZT") or part variants ("ADS1113" | "ADS1114" | "ADS1115"),
-// and the two are semantically opposite: the first is per-package numbering of one
-// die, the second is three different parts sharing a pinout description. Inferring
-// from the header text was tried and rejected. Measured over a 63-document corpus,
-// the banded shape appears 44 times: six are variant columns, one is package
-// columns, and the rest carry no sub-columns at all. A rule keyed on "looks like a
-// short all-caps token" would therefore be fitted to a single example and would
-// silently mint packages named after part numbers on six others.
+// ("D, PW" | "RUT" | "YZT") or part variants ("ADS1113" | "ADS1114" | "ADS1115").
+// The two are semantically opposite. Package codes number the pins of one die per
+// package. Part variants are three different parts sharing a pinout description.
+// Inferring from the header text was tried and rejected. Measured over a 63-document
+// corpus, the banded shape appears 44 times. Six are variant columns, one is package
+// columns, and the rest have no sub-columns at all. So a rule keyed on "looks like a
+// short all-caps token" would be fitted to a single example. It would silently mint
+// packages named after part numbers on six others.
 //
-// UNSPECIFIED is the safe default and is NOT an error: the pins are still extracted,
-// they simply carry no PinNumber, and the run records a gap naming the columns it
-// declined to interpret. Silence never reads as coverage.
+// UNSPECIFIED is the safe default and is NOT an error. The pins are still extracted,
+// but they have no PinNumber, and the run records a gap naming the columns it declined
+// to interpret. Silence never reads as coverage.
 type PinColumnAxis int32
 
 const (
@@ -46,7 +46,8 @@ const (
 	// ("D, PW" is two packages sharing one column of numbers).
 	PinColumnAxis_PIN_COLUMN_AXIS_PACKAGE PinColumnAxis = 1
 	// Each sub-column is a part variant. The parameter contract has no per-variant
-	// pin numbering, so pins are emitted without numbers and the run gaps the columns.
+	// pin numbering, so pins are emitted without numbers and the run records the
+	// columns as a gap.
 	PinColumnAxis_PIN_COLUMN_AXIS_VARIANT PinColumnAxis = 2
 )
 
@@ -91,8 +92,8 @@ func (PinColumnAxis) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{0}
 }
 
-// MuxLayout is how a pin-mux table lays one pin's functions out. Each member is the
-// layout of a real vendor table, named in its comment, and it is declared by the recipe
+// MuxLayout is how a pin-mux table lays out one pin's functions. Each member is the
+// layout of a real vendor table, named in its comment. The recipe declares the layout,
 // because the two cannot be told apart from cell text alone.
 type MuxLayout int32
 
@@ -102,10 +103,10 @@ const (
 	// column's label_pattern matches. NXP's "Package pinout" table: "ALT0 - ADC0_B13
 	// ALT1 - PTB3 ALT2 - LPSPI1_SOUT".
 	MuxLayout_MUX_LAYOUT_CELL_LIST MuxLayout = 1
-	// One row per function, several rows to a pin. TI's "Pin Attributes" table: pin 1 is
-	// the rows P1.2, UCB0SIMO, UCB0SDA, TB0TRG, OA0-, A2 and Veref-. The pin is named by its
-	// first row, which is the GPIO, and where each pin begins is read from the rule's
-	// pin_start_column.
+	// One row per function, several rows to a pin. TI's "Pin Attributes" table is one. Its
+	// pin 1 is the rows P1.2, UCB0SIMO, UCB0SDA, TB0TRG, OA0-, A2 and Veref-. The pin's first
+	// row names it, and that row is the GPIO. The rule's pin_start_column says where each
+	// pin begins.
 	MuxLayout_MUX_LAYOUT_ROW_PER_FUNCTION MuxLayout = 2
 )
 
@@ -150,27 +151,28 @@ func (MuxLayout) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_derive_derive_proto_rawDescGZIP(), []int{1}
 }
 
-// Recipe is one doc-family's extraction rules: how to classify this family's tables
-// into limit kinds. It matches by document title (the vendor doc-number line the
-// producer read), never by content hash: a recipe covers a family of documents and
-// revisions, while a Patch pins exactly one.
+// Recipe is one doc-family's extraction rules. It says how to classify this family's
+// tables into limit kinds. It matches by document title, which is the vendor doc-number
+// line the producer read. It never matches by content hash, because a recipe covers a
+// family of documents and revisions, while a Patch pins exactly one.
 type Recipe struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Recipe identity, recorded in RunManifest.recipes, e.g. "fairchild-mosfet-sheets".
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// RE2 pattern over Document.title selecting the documents this recipe understands.
-	// An empty pattern matches nothing (a recipe must opt in).
+	// RE2 pattern over Document.title. It selects the documents that this recipe
+	// understands. An empty pattern matches nothing, since a recipe must opt in.
 	DocTitlePattern string       `protobuf:"bytes,2,opt,name=doc_title_pattern,json=docTitlePattern,proto3" json:"doc_title_pattern,omitempty"`
 	Tables          []*TableRule `protobuf:"bytes,3,rep,name=tables,proto3" json:"tables,omitempty"`
 	// Pin FUNCTION tables, which yield agni.v1.param.Pin and Package rather than
-	// Parameter. A separate list from `tables` rather than an axis on TableRule
-	// because TableRule.limit_kind is required and validated non-zero; making it
-	// optional to accommodate pins would weaken a live invariant, and "every
-	// TableRule yields parameters" is worth keeping true.
+	// Parameter. They get a separate list from `tables` rather than an axis on TableRule.
+	// TableRule.limit_kind is required and validated non-zero. Making it optional for
+	// pins would weaken a live invariant, and "every TableRule yields parameters" is
+	// worth keeping true.
 	PinTables []*PinTableRule `protobuf:"bytes,4,rep,name=pin_tables,json=pinTables,proto3" json:"pin_tables,omitempty"`
 	// Pin-mux (alternate-function) tables, which add PinAlternates to the spec's pins
-	// (agni issue 667). A third list because the table is a third shape: it answers which
-	// peripheral a pin can be, where a pin table answers what kind of pin it is.
+	// (agni issue 667). They get a third list because the table is a third shape. It
+	// answers which peripheral a pin can be, and a pin table answers what kind of pin it
+	// is.
 	MuxTables     []*MuxTableRule   `protobuf:"bytes,5,rep,name=mux_tables,json=muxTables,proto3" json:"mux_tables,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
@@ -249,16 +251,17 @@ func (x *Recipe) GetAttributes() map[string]string {
 	return nil
 }
 
-// TableRule classifies tables whose (attached) title matches the pattern into a
-// parameter limit kind. Tables no rule matches are not extracted; they land in the
-// manifest's gap list so coverage is visible.
+// TableRule classifies a table into a parameter limit kind when the table's attached
+// title matches the pattern. A table that matches no rule is not extracted. It goes in
+// the manifest's gap list, so coverage is visible.
 type TableRule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// RE2 pattern over the table's title after title attachment.
 	TitlePattern string `protobuf:"bytes,1,opt,name=title_pattern,json=titlePattern,proto3" json:"title_pattern,omitempty"`
-	// The agni.v1.param.LimitKind enum NAME this table's rows carry, e.g.
-	// "LIMIT_KIND_ABSOLUTE_MAX". A string (not an imported enum) so derive.proto does
-	// not import param.proto for one constant; the derive stage validates the name.
+	// The agni.v1.param.LimitKind enum NAME for this table's rows, e.g.
+	// "LIMIT_KIND_ABSOLUTE_MAX". It is a string rather than an imported enum, so
+	// derive.proto does not import param.proto for one constant. The derive stage
+	// validates the name.
 	LimitKind     string `protobuf:"bytes,2,opt,name=limit_kind,json=limitKind,proto3" json:"limit_kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -308,8 +311,8 @@ func (x *TableRule) GetLimitKind() string {
 	return ""
 }
 
-// PinTableRule classifies a pin function table. Unlike TableRule it carries no limit
-// kind: a pin table's rows are terminals, not values.
+// PinTableRule classifies a pin function table. Unlike TableRule it has no limit kind,
+// because a pin table's rows are terminals, not values.
 type PinTableRule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// RE2 pattern over the table's title after title attachment.
@@ -364,27 +367,28 @@ func (x *PinTableRule) GetColumnAxis() PinColumnAxis {
 }
 
 // MuxTableRule classifies a pin-mux table and says where its pins, numbers and
-// functions are. Every column is named by its header text, compared case-insensitively
-// with whitespace collapsed and trailing footnote markers ("(1) (2)") removed, because
-// these tables have no shared header vocabulary to infer from.
+// functions are. These tables share no header vocabulary to infer from, so the rule
+// names every column by its header text. The comparison ignores case, collapses
+// whitespace and removes trailing footnote markers ("(1) (2)").
 type MuxTableRule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// RE2 pattern over the table's title after title attachment.
 	TitlePattern string    `protobuf:"bytes,1,opt,name=title_pattern,json=titlePattern,proto3" json:"title_pattern,omitempty"`
 	Layout       MuxLayout `protobuf:"varint,2,opt,name=layout,proto3,enum=agni.v1.derive.MuxLayout" json:"layout,omitempty"`
-	// The column naming each pin. Required by CELL_LIST; ROW_PER_FUNCTION names a pin by
+	// The column naming each pin. CELL_LIST requires it. ROW_PER_FUNCTION names a pin by
 	// its first function and leaves this empty.
 	NameColumn      string               `protobuf:"bytes,3,opt,name=name_column,json=nameColumn,proto3" json:"name_column,omitempty"`
 	NumberColumns   []*MuxNumberColumn   `protobuf:"bytes,4,rep,name=number_columns,json=numberColumns,proto3" json:"number_columns,omitempty"`
 	FunctionColumns []*MuxFunctionColumn `protobuf:"bytes,5,rep,name=function_columns,json=functionColumns,proto3" json:"function_columns,omitempty"`
-	// ROW_PER_FUNCTION only, and required there. A column filled once per pin, on the pin's
-	// first row, and "-" or empty on the rest. TI's reset-state column is one.
+	// ROW_PER_FUNCTION only, and required there. It names a column that is filled once per
+	// pin, on the pin's first row, and is "-" or empty on the rest. TI's reset-state column
+	// is one.
 	//
 	// Neither the designator spans nor the designator cells mark a pin's rows reliably. A
 	// producer places an unspanned designator at the vertical middle of its merged cell, so
-	// a pin's numbers can sit on its fifth row, and it can stretch a span over the next pin
-	// (on the MSP430FR2355's page 20, RHA pin 24 spans P2.0 and P1.7). A designator belongs
-	// to the pin whose rows it STARTS in.
+	// a pin's numbers can sit on its fifth row. A producer can also stretch a span over the
+	// next pin. On the MSP430FR2355's page 20, RHA pin 24 spans P2.0 and P1.7. A designator
+	// belongs to the pin whose rows it STARTS in.
 	PinStartColumn string `protobuf:"bytes,6,opt,name=pin_start_column,json=pinStartColumn,proto3" json:"pin_start_column,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -462,13 +466,13 @@ func (x *MuxTableRule) GetPinStartColumn() string {
 	return ""
 }
 
-// MuxNumberColumn is one column of designators and the package they number. The
+// MuxNumberColumn is one column of designators, with the package that they number. The
 // package is declared rather than read off the header, since a header like "KW47 48QFN"
 // names the part as well as the body.
 type MuxNumberColumn struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Header string                 `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
-	// Package id the column's designators belong to. Empty takes the header, lowercased.
+	// Package id for the column's designators. Empty takes the header, lowercased.
 	Package       string `protobuf:"bytes,2,opt,name=package,proto3" json:"package,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -523,9 +527,9 @@ type MuxFunctionColumn struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Header string                 `protobuf:"bytes,1,opt,name=header,proto3" json:"header,omitempty"`
 	// RE2 pattern matching the label printed before each function in a CELL_LIST cell
-	// ("ALT\\d+"). The cell splits at each match, and the text after the label's " - " up
-	// to the next label is one function. Empty means the whole cell is one function, which
-	// is what ROW_PER_FUNCTION reads.
+	// ("ALT\\d+"). The cell splits at each match. One function runs from after the label's
+	// " - " up to the next label. Empty means the whole cell is one function, and
+	// ROW_PER_FUNCTION reads a cell that way.
 	LabelPattern  string `protobuf:"bytes,2,opt,name=label_pattern,json=labelPattern,proto3" json:"label_pattern,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -576,28 +580,29 @@ func (x *MuxFunctionColumn) GetLabelPattern() string {
 }
 
 // Patch is one pinned human correction to one cell of one table of one exact
-// document: the layer applied LAST in a derivation, so a verified fix can never be
-// regressed by a re-run. Keys are content hashes, so a new document revision or a
-// structurally different re-detection invalidates the patch by construction (it
-// simply stops matching, and the manifest reports it unapplied).
+// document. A derivation applies patches LAST, so a re-run can never regress a
+// verified fix. Keys are content hashes. So a new document revision or a structurally
+// different re-detection invalidates the patch by construction. The patch simply
+// stops matching, and the manifest reports it unapplied.
 type Patch struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Patch identity, recorded in RunManifest.patches_applied.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	// Document.content_hash this patch pins.
 	DocContentHash string `protobuf:"bytes,2,opt,name=doc_content_hash,json=docContentHash,proto3" json:"doc_content_hash,omitempty"`
-	// Table.content_hash BEFORE patching (the detected table this correction targets).
+	// Table.content_hash BEFORE patching, so it names the detected table that this
+	// correction targets.
 	TableContentHash string `protobuf:"bytes,3,opt,name=table_content_hash,json=tableContentHash,proto3" json:"table_content_hash,omitempty"`
 	// 0-based grid position of the corrected cell. A position with no detected cell
-	// is inserted (a producer that mis-placed a value leaves the right position
-	// empty), so a cell-placement error is corrected by a clear + an insert pair.
+	// is inserted. A producer that mis-placed a value leaves the right position empty,
+	// so a pair of patches corrects a cell-placement error, a clear and an insert.
 	Row int32 `protobuf:"varint,4,opt,name=row,proto3" json:"row,omitempty"`
 	Col int32 `protobuf:"varint,5,opt,name=col,proto3" json:"col,omitempty"`
-	// The corrected cell text (what the human read on the page). Empty text clears
+	// The corrected cell text, as the human read it on the page. Empty text clears
 	// the cell.
 	Text string `protobuf:"bytes,6,opt,name=text,proto3" json:"text,omitempty"`
-	// Why: what was wrong ("parser read 13, page says 1.3"). Required by LoadPatches;
-	// an unexplained correction cannot be reviewed.
+	// Why the patch exists, saying what was wrong ("parser read 13, page says 1.3").
+	// LoadPatches requires it, because an unexplained correction cannot be reviewed.
 	Note          string `protobuf:"bytes,7,opt,name=note,proto3" json:"note,omitempty"`
 	Author        string `protobuf:"bytes,8,opt,name=author,proto3" json:"author,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -690,15 +695,15 @@ func (x *Patch) GetAuthor() string {
 	return ""
 }
 
-// RunManifest is the lockfile of one derivation run: enough to reproduce the
-// PartSpec (pinned inputs) and to see what the run did NOT extract (the gap list --
-// silence must never read as absence, docs/17 coverage accounting).
+// RunManifest is the lockfile of one derivation run. Its pinned inputs are enough to
+// reproduce the PartSpec. Its gap list shows what the run did NOT extract, because
+// silence must never read as absence (coverage accounting, architecture/datasheet-layer.md).
 type RunManifest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Document.content_hash the run derived from.
 	DocContentHash string `protobuf:"bytes,1,opt,name=doc_content_hash,json=docContentHash,proto3" json:"doc_content_hash,omitempty"`
 	// The doc-IR's producer (e.g. "docling/2.113.0") and this derive stage's version
-	// (e.g. "derive/v0"): together the toolchain pin.
+	// (e.g. "derive/v0"). Together they pin the toolchain.
 	DocProducer   string `protobuf:"bytes,2,opt,name=doc_producer,json=docProducer,proto3" json:"doc_producer,omitempty"`
 	DeriveVersion string `protobuf:"bytes,3,opt,name=derive_version,json=deriveVersion,proto3" json:"derive_version,omitempty"`
 	// Part identity the operator supplied for the emitted PartSpec.
@@ -706,18 +711,20 @@ type RunManifest struct {
 	Manufacturer string `protobuf:"bytes,5,opt,name=manufacturer,proto3" json:"manufacturer,omitempty"`
 	// Recipe names that matched the document, in application order.
 	Recipes []string `protobuf:"bytes,6,rep,name=recipes,proto3" json:"recipes,omitempty"`
-	// Patch names that actually applied. A patch that was loaded but no longer matched
-	// (revision changed, table re-detected) appears in gaps with kind "patch-unapplied".
+	// Patch names that actually applied. Imagine a patch that loaded but no longer
+	// matched, because the revision changed or the table was re-detected. That patch
+	// appears in gaps with kind "patch-unapplied".
 	PatchesApplied []string `protobuf:"bytes,7,rep,name=patches_applied,json=patchesApplied,proto3" json:"patches_applied,omitempty"`
 	// Parameters emitted into the PartSpec (post-Validate).
 	ParametersEmitted int32 `protobuf:"varint,8,opt,name=parameters_emitted,json=parametersEmitted,proto3" json:"parameters_emitted,omitempty"`
-	// Pins and packages emitted into the PartSpec (post-Validate). Counted separately
-	// from parameters because a run over a document with only a pin table emits zero
-	// parameters, and one number reading zero would otherwise look like a failed run.
+	// Pins and packages emitted into the PartSpec (post-Validate). They are counted
+	// apart from parameters. A run over a document with only a pin table emits zero
+	// parameters, and a single count reading zero would look like a failed run.
 	PinsEmitted     int32 `protobuf:"varint,12,opt,name=pins_emitted,json=pinsEmitted,proto3" json:"pins_emitted,omitempty"`
 	PackagesEmitted int32 `protobuf:"varint,13,opt,name=packages_emitted,json=packagesEmitted,proto3" json:"packages_emitted,omitempty"`
-	// Ensemble agreement stats: zero until a second extraction path exists (the
-	// VLM/ensemble gate of docs/17). Declared here so the manifest shape is stable.
+	// Ensemble agreement stats. They are zero until a second extraction path exists (the VLM/ensemble
+	// gate in architecture/datasheet-layer.md). They are declared now so the manifest shape does not
+	// change later.
 	EnsembleAgreed    int32  `protobuf:"varint,9,opt,name=ensemble_agreed,json=ensembleAgreed,proto3" json:"ensemble_agreed,omitempty"`
 	EnsembleDisagreed int32  `protobuf:"varint,10,opt,name=ensemble_disagreed,json=ensembleDisagreed,proto3" json:"ensemble_disagreed,omitempty"`
 	Gaps              []*Gap `protobuf:"bytes,11,rep,name=gaps,proto3" json:"gaps,omitempty"`
@@ -847,10 +854,13 @@ func (x *RunManifest) GetGaps() []*Gap {
 }
 
 // Gap is one thing the run saw and did not extract, with enough locator to act on
-// it. Kinds are open strings; the v0 extractor emits: "unclassified-table" (no
-// recipe rule matched), "unparsed-row" (a classified table's row yielded no
-// parameter), "raw-condition" (a condition kept as text only), "validate-reject"
-// (an extracted parameter failed param.Validate), "patch-unapplied".
+// it. Kinds are open strings. The v0 extractor emits these.
+//
+//	"unclassified-table"  no recipe rule matched
+//	"unparsed-row"        a classified table's row yielded no parameter
+//	"raw-condition"       a condition kept as text only
+//	"validate-reject"     an extracted parameter failed param.Validate
+//	"patch-unapplied"
 type Gap struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Kind  string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`

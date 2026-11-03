@@ -5,52 +5,53 @@ package agni.v1.doc;
 option go_package = "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc";
 
 // The doc-IR is the intermediate artifact between a source document (a datasheet PDF,
-// an app note) and the parameter-IR (agni.v1.param): the document decomposed into
+// an app note) and the parameter-IR (agni.v1.param). It is the document decomposed into
 // pages, tables, figures, and text blocks, with cell structure and bounding-box
-// provenance. It is the house pattern at document scale: N document parsers produce
-// doc-IR; recipes, LLM proposal stages, the human verification UI, and revision
-// diffing consume doc-IR and never touch the source bytes. Design and the two-tier
-// query interface are in docs/21-document-ir.md; the derivation model it serves is
-// the WS10 extraction pipeline.
+// provenance. It is the house pattern at document scale. N document parsers produce
+// doc-IR. Recipes, LLM proposal stages, the human verification UI, and revision diffing
+// consume doc-IR and never touch the source bytes. The design and the two-tier query
+// interface are in the docsite's architecture/datasheet-layer.md. The doc-IR serves the
+// derivation model of the WS10 extraction pipeline.
 //
-// PROVISIONAL (the ir.proto tier-2 posture): one prototype producer exists; names and
+// PROVISIONAL, with the ir.proto tier-2 posture. One prototype producer exists. Names and
 // shape may change until the extraction pipeline (WS10-002) exercises it end to end.
-// Field discipline mirrors CONSTRAINTS C9 with "document parser" as the producer
-// class: no field a second parser could not populate.
+// Field discipline mirrors CONSTRAINTS C9, with "document parser" as the producer class,
+// so there is no field a second parser could not populate.
 //
-// Coordinate frame: page-local, origin at the TOP-LEFT of the page, y growing DOWN,
-// units are PDF points (1/72 inch). This matches what raster crop tooling consumes;
-// producers reading PDF-native (bottom-left, y-up) coordinates flip at emit time.
+// The coordinate frame is page-local, with the origin at the TOP-LEFT of the page, y
+// growing DOWN, and units in PDF points (1/72 inch). Raster crop tooling consumes that
+// frame. Producers reading PDF-native (bottom-left, y-up) coordinates flip at emit time.
 //
-// Identity: region ids are deterministic within one derivation ("p2.t1") and are NOT
-// stable across producer/toolchain versions (detection changes renumber). The
+// Region ids are deterministic within one derivation ("p2.t1"). They are NOT stable
+// across producer/toolchain versions, because detection changes renumber them. The
 // cross-version key is content_hash. Documents are keyed by the hash of their source
 // bytes, so a datasheet revision is a different Document by construction.
 
-// Document is the root: one source document, decomposed. One doc-IR per
-// (source content hash, producer) pair; derived artifacts are immutable.
+// Document is the root, one source document decomposed. There is one doc-IR per
+// (source content hash, producer) pair, and derived artifacts are immutable.
 message Document {
   // Hash of the source document bytes, prefixed with the algorithm ("sha256:...").
-  // The primary key of the derivation layer: revision changes change it.
+  // It is the primary key of the derivation layer, and a revision change changes it.
   string content_hash = 1;
   // Source container format, e.g. "pdf".
   string source_format = 2;
   // Document-declared title when the source carries one; empty otherwise.
   //
-  // NOT the document's IDENTITY. Producers fill this with whatever the source declares about
-  // itself, which for a vendor datasheet is the PART number ("LM1117"), not the document number
-  // and revision ("SNOS412Q - REVISED JANUARY 2023"). Do not assign it to
-  // agni.v1.param.SourceDoc.title, which is specified as the latter: the two fields share a name
-  // and answer different questions, and conflating them produced citations that could not say
-  // which revision they cited and read identically before and after a reissue (agni issue 290).
-  // Selecting a derive recipe by this value IS a correct use: a recipe understands a part.
+  // It is NOT the document's IDENTITY. Producers fill this with whatever the source declares
+  // about itself. For a vendor datasheet that is the PART number ("LM1117"), not the document
+  // number and revision ("SNOS412Q - REVISED JANUARY 2023"). Do not assign it to
+  // agni.v1.param.SourceDoc.title, which is specified as the document number and revision. The
+  // two fields share a name and answer different questions. Conflating them produced citations
+  // that could not say which revision they cited, and that read the same before and after a
+  // reissue (agni issue 290). Selecting a derive recipe by this value IS a correct use, because
+  // a recipe understands a part.
   string title = 3;
-  // Producer toolchain identity + version, e.g. "docling/2.5.1" or "hand". The
+  // Producer toolchain identity + version, e.g. "docling/2.5.1" or "hand". It is the
   // run-manifest key that says which toolchain derived this artifact.
   string producer = 4;
   int32 page_count = 5;
-  // Pages actually decomposed. May be a subset of page_count (a partial derivation
-  // targets the tables a consumer needs); page numbers say which.
+  // Pages actually decomposed. They may be a subset of page_count, because a partial
+  // derivation targets the tables a consumer needs. Page numbers say which.
   repeated Page pages = 6;
   map<string, string> attributes = 14;
 }
@@ -77,28 +78,28 @@ message BBox {
   double height = 4;
 }
 
-// TextBlock is a run of page text outside tables and figures. Kept in doc-IR so a
-// full-text index can be built from doc-IR alone, without re-parsing the source, and
-// so recipes and LLM stages can fetch a region's textual neighborhood (headings,
-// footnotes) as prompt context.
+// TextBlock is a run of page text outside tables and figures. doc-IR keeps it so a
+// full-text index can be built from doc-IR alone, without re-parsing the source. Recipes
+// and LLM stages can also fetch a region's textual neighborhood (headings, footnotes)
+// as prompt context.
 message TextBlock {
   // Deterministic within this derivation, e.g. "p2.x3".
   string id = 1;
   string text = 2;
   BBox bbox = 3;
   // Producer's classification as free text ("heading", "paragraph", "footnote").
-  // Free-form on purpose: producers disagree on taxonomies, and no consumer may
+  // It is free-form on purpose. Producers disagree on taxonomies, and no consumer may
   // dispatch on values a second producer would not emit.
   string kind = 4;
 }
 
-// Table is one detected table: a sparse cell grid with merged-cell spans. Cells are
-// listed explicitly with row/col coordinates; absent cells are genuinely empty.
+// Table is one detected table, a sparse cell grid with merged-cell spans. Cells are
+// listed explicitly with row/col coordinates, and absent cells are genuinely empty.
 message Table {
   // Deterministic within this derivation, e.g. "p2.t1".
   string id = 1;
-  // The table's title/caption as printed. This is what parameter provenance
-  // (param.ParamProvenance.table_or_figure) resolves against.
+  // The table's title/caption as printed. Parameter provenance
+  // (param.ParamProvenance.table_or_figure) resolves against it.
   string title = 2;
   // Nearest section heading when the producer attaches one; empty otherwise.
   string section = 3;
@@ -108,26 +109,26 @@ message Table {
   int32 cols = 6;
   repeated Cell cells = 7;
   // Footnote texts the producer attached to this table (table-note markers,
-  // "unless otherwise noted" headers). Attachment quality varies by producer;
-  // unattached footnotes remain TextBlocks.
+  // "unless otherwise noted" headers). Attachment quality varies by producer, and
+  // unattached footnotes are still TextBlocks.
   repeated string footnotes = 8;
   // Detection confidence in (0, 1]; 1.0 for hand-authored fixtures.
   double confidence = 9;
   // Hash of the normalized structure + cell text (doc.TableHash), independent of
-  // bboxes and ids. The cross-toolchain-version identity used by revision diffing:
-  // same hash means same table content, no re-extraction needed.
+  // bboxes and ids. Revision diffing uses it as the cross-toolchain-version identity.
+  // The same hash means the same table content, so no re-extraction is needed.
   string content_hash = 10;
 }
 
-// Cell is one table cell. row/col are 0-based grid coordinates; row_span/col_span
-// are 1 for a plain cell (0 is normalized to 1 by consumers) and >1 for merged cells,
-// which appear once at their top-left position.
+// Cell is one table cell. row/col are 0-based grid coordinates. row_span/col_span are
+// 1 for a plain cell, and consumers normalize 0 to 1. They are >1 for a merged cell,
+// which appears once at its top-left position.
 message Cell {
   int32 row = 1;
   int32 col = 2;
   int32 row_span = 3;
   int32 col_span = 4;
-  // Text as printed; no unit or symbol parsing here (that is the recipe layer).
+  // Text as printed. There is no unit or symbol parsing here; the recipe layer does that.
   string text = 5;
   BBox bbox = 6;
   // Producer marked this cell as a header (column or row label).
@@ -135,13 +136,14 @@ message Cell {
 }
 
 // Figure is one detected figure/graph region. Doc-IR records its location and
-// caption so provenance can point at it and a human can jump to it; curve data
-// extraction is out of scope by design (see docs/21).
+// caption so provenance can point at it and a human can jump to it. Curve data
+// extraction is out of scope by design (see the docsite's
+// architecture/datasheet-layer.md).
 message Figure {
   // Deterministic within this derivation, e.g. "p3.f1".
   string id = 1;
   // Caption as printed ("Figure 3. On-Resistance Variation with Temperature.").
-  // What param.ParamProvenance.table_or_figure resolves against for figures.
+  // param.ParamProvenance.table_or_figure resolves against it for figures.
   string caption = 2;
   BBox bbox = 3;
   // Detection confidence in (0, 1].
