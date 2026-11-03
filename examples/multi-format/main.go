@@ -20,7 +20,7 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// formats is the matched trio: the same board authored once per source format.
+// formats is the matched trio, the same board authored once per source format.
 var formats = []struct{ label, fixture string }{
 	{"EDIF netlist", "mixer.edn"},
 	{"KiCad PCB", "mixer.kicad_pcb"},

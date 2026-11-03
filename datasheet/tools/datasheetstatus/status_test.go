@@ -50,7 +50,7 @@ func TestNeedsExtraction(t *testing.T) {
 	}
 }
 
-// TestHashPDF pins the digest of a known input so the hash stays byte-for-byte compatible with
+// TestHashPDF pins the digest of a known input, so the hash remains byte-for-byte compatible with
 // tools/pdf2doc (sha256 over raw bytes, "sha256:" prefix). If this drifts, extracted files would
 // spuriously read stale-source.
 func TestHashPDF(t *testing.T) {
@@ -68,8 +68,9 @@ func TestHashPDF(t *testing.T) {
 	}
 }
 
-// A part reports the drafts citing its PDFs, by the mount URI the workbench cites them with, and
-// whether each draft's MPN is published; a draft citing another datasheet is not attached.
+// A part reports the drafts citing its PDFs, and whether each draft's MPN is published. A draft
+// cites a PDF by the workbench's mount URI for it. A draft citing another datasheet is not
+// attached.
 func TestAttachDraftsByCitedDocument(t *testing.T) {
 	draft := func(mpn, doc string) string {
 		return `{"mpn": "` + mpn + `", "spec": {"mpn": "` + mpn + `"}, "documentUris": ["` + doc + `"]}`

@@ -5,8 +5,9 @@ import (
 	"testing"
 )
 
-// A list is left out by the value of its direct child, a quoted value as well as a bare one, a nested
-// child of the same name does not count, and a list without the child is kept (agni issue 1005).
+// A list is left out by the value of its direct child, whether that value is quoted or bare. A
+// nested child of the same name does not count, and a list without the child is kept (agni issue
+// 1005).
 func TestSkipWhenDecidesByAChildsValue(t *testing.T) {
 	const src = `(fp (g (start 0 0) (layer "User.9") (s "a) (")) (g (layer F.SilkS)) (g (start 1 1))
 		(g (inner (layer User.9))) (h (layer User.9)))`

@@ -15,11 +15,12 @@ import (
 
 // Every link the BUILT site makes to itself names a page or file that exists (agni issue 1169).
 //
-// Built rather than source, because the builder rewrites links: a relation card's
-// `../../../../docsite/content/reference/analogy.md` comes out as `/agni/reference/analogy/`, and the
-// nav templates and HeaderNavLinks.json only become links in the build. A source scan would need a
-// second copy of that rewrite and still miss the template links. A link one level short builds,
-// renders and 404s, which is how web-client.md's link to the embedding guide shipped in #1158.
+// It checks the built site rather than the source, because the builder rewrites links. A relation
+// card's `../../../../docsite/content/reference/analogy.md` comes out as
+// `/agni/reference/analogy/`. The nav templates and HeaderNavLinks.json only become links in the
+// build. A source scan would need a second copy of that rewrite and still miss the template links.
+// A link one level short builds, renders and 404s. web-client.md's link to the embedding guide
+// shipped that way in #1158.
 func TestBuiltSiteLinksResolve(t *testing.T) {
 	out := t.TempDir()
 	saved := Site.OutputDir
@@ -40,8 +41,9 @@ func TestBuiltSiteLinksResolve(t *testing.T) {
 	}
 }
 
-// The checker reports the one link that names nothing, and none of the ones that resolve: a page
-// directory, a file, a static asset, a fragment, an external link and a link outside the site.
+// The checker reports the one link that names nothing, and none of the links that resolve. Those
+// are a page directory, a file, a static asset, a fragment, an external link and a link outside the
+// site.
 func TestBrokenLinksFindsOnlyTheBrokenOne(t *testing.T) {
 	out, static := t.TempDir(), t.TempDir()
 	write := func(root, rel, body string) {
@@ -82,9 +84,9 @@ var linkAttr = regexp.MustCompile(`(?:href|src)="([^"]*)"`)
 
 // brokenLinks reads every HTML page under out and returns, sorted, each link under PathPrefix that
 // names nothing in out, and how many such links it checked. A link into PathPrefix/static/ resolves
-// against staticDir, since the build copies that folder in after it renders. Two prefixes are not
-// the build's to answer for: demo/ is the static demo docs.yml deploys beside the site, and
-// pagefind/ is the search index `make build` writes over the finished tree.
+// against staticDir, since the build copies that folder in after it renders. The build does not
+// produce two prefixes. docs.yml deploys the static demo at demo/ beside the site, and `make build`
+// writes the search index at pagefind/ over the finished tree.
 func brokenLinks(out, staticDir string) ([]string, int, error) {
 	prefix := PathPrefix + "/"
 	elsewhere := []string{prefix + "demo/", prefix + "pagefind/"}
@@ -100,7 +102,7 @@ func brokenLinks(out, staticDir string) ([]string, int, error) {
 			return err
 		}
 		page, _ := filepath.Rel(out, p)
-		// The page's own URL, which a relative link resolves against: dir/index.html serves at dir/.
+		// A relative link resolves against the page's own URL. dir/index.html serves at dir/.
 		base, err := url.Parse(prefix + strings.TrimSuffix(filepath.ToSlash(page), "index.html"))
 		if err != nil {
 			return err

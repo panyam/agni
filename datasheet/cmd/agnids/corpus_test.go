@@ -14,7 +14,7 @@ import (
 )
 
 // draftCorpus copies the tutorial project's params and turns ACME-LDO-1V8's published spec into a
-// DRAFT in the corpus's store, the state a transcription is in before anyone publishes it. It
+// DRAFT in the corpus's store. A transcription is in that state before anyone publishes it. It
 // returns the corpus directory.
 func draftCorpus(t *testing.T) string {
 	t.Helper()
@@ -52,8 +52,9 @@ func runAgnids(t *testing.T, args ...string) (string, error) {
 	return out.String(), err
 }
 
-// A draft is not seeded until it is published. Publishing writes the spec where LoadSet, which every
-// check reads through, finds it, and records it in the index; the draft stays.
+// A draft is not seeded until it is published. Publishing writes the spec where LoadSet finds it, and
+// every check reads through LoadSet. Publishing also records the spec in the index and keeps the
+// draft.
 func TestPublishedDraftIsSeededAndIndexed(t *testing.T) {
 	dir := draftCorpus(t)
 	if set, err := param.LoadSet(os.DirFS(dir)); err != nil || set.Lookup("ACME-LDO-1V8") != nil {
@@ -85,8 +86,8 @@ func TestPublishedDraftIsSeededAndIndexed(t *testing.T) {
 	}
 }
 
-// A refusal writes nothing, neither a spec nor an index, so a failed publish cannot leave the corpus
-// in a state no check loads.
+// A refusal writes nothing, neither a spec nor an index. So a failed publish cannot leave behind a
+// corpus that fails to load.
 func TestRefusedPublishWritesNothing(t *testing.T) {
 	dir := draftCorpus(t)
 	empty := &dsapi.Draft{Mpn: "SEEDED-EMPTY", Spec: unprovenanced("SEEDED-EMPTY")}
@@ -104,8 +105,8 @@ func TestRefusedPublishWritesNothing(t *testing.T) {
 	}
 }
 
-// --check is what a corpus repository's CI runs: missing and stale both fail and say what to run, and
-// a rebuild makes it pass.
+// A corpus repository's CI runs --check. A missing or a stale index fails and says what to run, and a
+// rebuild makes it pass.
 func TestIndexCheckCatchesAHandEdit(t *testing.T) {
 	dir := draftCorpus(t)
 	if _, err := runAgnids(t, "index", dir, "--check"); err == nil || !strings.Contains(err.Error(), "has no "+corpus.IndexFile) {
@@ -136,8 +137,8 @@ func TestIndexCheckCatchesAHandEdit(t *testing.T) {
 
 const pinMuxFixture = "../../../cmd/agni/testdata/pin-mux"
 
-// muxCorpus is a corpus publishing the KW47 spec whose pins list no alternates, indexed, and the
-// pin-mux reference that supplies them.
+// muxCorpus returns an indexed corpus that publishes the KW47 spec with no alternates on its pins.
+// It also returns the pin-mux reference that supplies those alternates.
 func muxCorpus(t *testing.T) (dir, mux string) {
 	t.Helper()
 	dir = filepath.Join(t.TempDir(), "params")
@@ -157,7 +158,7 @@ func muxCorpus(t *testing.T) (dir, mux string) {
 	return dir, filepath.Join(pinMuxFixture, "kw47.pin_mux.yaml")
 }
 
-// Merging a mux table rewrites the file that already seeds the MPN, whatever it is named, so the corpus
+// Merging a mux table rewrites the file that already seeds the MPN, whatever its name. The corpus
 // still holds one file per MPN, and the index records the new content.
 func TestMergeMuxRewritesThePublishedSpec(t *testing.T) {
 	dir, mux := muxCorpus(t)
@@ -186,7 +187,8 @@ func TestMergeMuxRewritesThePublishedSpec(t *testing.T) {
 	}
 }
 
-// A second table adds to what the first merged, and --replace takes a revision's alternates instead.
+// A second table adds to the first table's alternates. With --replace, a revision's alternates
+// replace them instead.
 func TestMergeMuxJoinsUnlessToldToReplace(t *testing.T) {
 	dir, mux := muxCorpus(t)
 	if _, err := runAgnids(t, "merge-mux", mux, "--corpus", dir); err != nil {
@@ -255,7 +257,7 @@ pins:
 	}
 }
 
-// A merge whose result Validate rejects writes nothing and lists the problem.
+// When Validate rejects a merge's result, the merge writes nothing and lists the problem.
 func TestMergeMuxRefusesAnInvalidResultAndWritesNothing(t *testing.T) {
 	dir, _ := muxCorpus(t)
 	before, err := os.ReadFile(filepath.Join(dir, "kw47.textproto"))

@@ -64,8 +64,8 @@ func TestPinTableDerivesPackagesFromHeaderCells(t *testing.T) {
 
 // The golden gate for the pin path, mirroring TestGoldenAgreementWithHandEncoded. Every
 // pin of the hand-encoded WS10 fixture must have a derived pin agreeing on the packages
-// that fixture declares. The hand encoding is the ORACLE; the derived spec is allowed to
-// carry more (it reads all 13 rows and all 9 bodies), never to disagree.
+// that fixture declares. The hand encoding is the ORACLE. The derived spec may hold more,
+// since it reads all 13 rows and all 9 bodies, but it may never disagree.
 func TestGoldenAgreementWithHandEncodedPins(t *testing.T) {
 	derived, _ := runPinFixture(t)
 
@@ -147,8 +147,8 @@ func TestAbsentDesignatorYieldsNoNumber(t *testing.T) {
 	}
 }
 
-// A row with a name and a description and no designator anywhere is legal in the contract
-// and is what the real table's thermal-pad row is.
+// A row may have a name and a description and no designator anywhere. The contract allows
+// it, and the real table's thermal-pad row has that shape.
 func TestRowWithNoDesignatorStillYieldsAPin(t *testing.T) {
 	spec, _ := runPinFixture(t)
 	var found *parampb.Pin
@@ -169,10 +169,10 @@ func TestRowWithNoDesignatorStillYieldsAPin(t *testing.T) {
 }
 
 // This stage must not invent a classification the document did not make. That rule is
-// unchanged; what sharpened is where the document is allowed to make one. The type column
-// is still authoritative when it speaks, and the DESCRIPTION now counts as the document
-// speaking too, because it is where real tables put the supply and ground rows they leave
-// dashed in the type column. A pin's NAME is still never evidence.
+// unchanged. The change is in where the document may make one. The type column is still
+// authoritative when it speaks, and the DESCRIPTION now counts as the document speaking
+// too. Real tables leave the type column dashed on supply and ground rows and type those
+// rows in the description instead. A pin's NAME is still never evidence.
 func TestTypeColumnIsNotSecondGuessed(t *testing.T) {
 	spec, _ := runPinFixture(t)
 	byID := map[string]*parampb.Pin{}
@@ -188,9 +188,9 @@ func TestTypeColumnIsNotSecondGuessed(t *testing.T) {
 	}
 }
 
-// The classifier draws its line at a description, not a name. A pin named like a supply
-// whose prose does not say so stays untyped, because typing it would be this stage guessing
-// from spelling, which is what the type column's silence was protecting against.
+// The classifier draws its line at a description, not a name. Imagine a pin named like a
+// supply whose prose does not say so. It is left untyped. Typing it would be this stage
+// guessing from spelling, and the type column's silence protects against that guess.
 func TestPinNameIsNeverEvidenceOfFunction(t *testing.T) {
 	cases := []struct {
 		name, desc string
@@ -212,8 +212,8 @@ func TestPinNameIsNeverEvidenceOfFunction(t *testing.T) {
 }
 
 // A pin nobody could type is recorded as a gap, so a narrow classifier produces a curation
-// worklist rather than a silent absence. Without this the decline is indistinguishable from
-// a pin that genuinely carries no function.
+// worklist rather than a silent absence. Without the gap, a reader cannot tell the decline
+// from a pin that genuinely has no function.
 func TestUntypedPinIsGapped(t *testing.T) {
 	_, manifest := runPinFixture(t)
 	var untyped []string
@@ -413,8 +413,9 @@ func TestPackageCodesSurviveFootnotesAndHyphens(t *testing.T) {
 }
 
 // A pin table spanning several pages arrives as several tables that restate rows. Each
-// restatement was emitted as a new pin claiming a designator the first already held,
-// which fails param.Validate. Same name AND a shared designator means same terminal.
+// restatement used to be emitted as a new pin. The new pin claimed a designator the first
+// already held, and that fails param.Validate. Same name AND a shared designator means
+// same terminal.
 func TestContinuationTableMergesRestatedPins(t *testing.T) {
 	d := pinTableDoc(3, 3,
 		cell(0, 0, "PIN"), cell(1, 0, "NAME"), cell(1, 1, "HTQFP"), cell(1, 2, "DESCRIPTION"),
@@ -469,8 +470,8 @@ func TestMergeDoesNotCollapseTheNoConnectSplit(t *testing.T) {
 	}
 }
 
-// twoRowHeaderTable is the shape a pin table takes the moment it bands its designator
-// columns, with the outer TYPE and DESCRIPTION a row ABOVE the row naming the pin.
+// twoRowHeaderTable builds the shape a pin table takes once it bands its designator
+// columns. The outer TYPE and DESCRIPTION sit a row ABOVE the row naming the pin.
 //
 //	row 0:  PIN (spanning)          TYPE (2)   DESCRIPTION
 //	row 1:  NO.        NAME
@@ -504,8 +505,8 @@ func TestTwoRowHeaderFindsOuterColumns(t *testing.T) {
 	}
 }
 
-// The inner row still wins where both rows label the same thing, so widening the scan
-// upward cannot displace a column the name's own row already resolved.
+// The inner row still wins where both rows label the same thing. So widening the scan
+// upward cannot displace a column that the name's own row already resolved.
 func TestInnerHeaderRowWinsOverTheBandRow(t *testing.T) {
 	tbl := twoRowHeaderTable()
 	tbl.Cells = append(tbl.Cells, cell(1, 4, "DESCRIPTION")) // a second, inner description

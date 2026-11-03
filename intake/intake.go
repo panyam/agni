@@ -1,8 +1,8 @@
-// Package intake produces a SANITIZED, deterministic summary of a design, the factual skeleton the
-// /design-intake onboarding workflow builds on (WS3-091). Its confidentiality guarantee is
-// STRUCTURAL. The Skeleton type has no field that can hold a net name or a net-to-net connection, so
+// Package intake produces a SANITIZED, deterministic summary of a design (WS3-091). The
+// /design-intake onboarding workflow builds on that factual skeleton. Its confidentiality guarantee
+// is STRUCTURAL. The Skeleton type has no field that can hold a net name or a net-to-net connection, so
 // an intake summary cannot leak the confidential parts of a design (net names, topology, layout). It
-// carries only counts, device classes, part identities (the AVL/BOM view), anomaly kinds + ref-des,
+// holds only counts, device classes, part identities (the AVL/BOM view), anomaly kinds + ref-des,
 // and nominal voltages. The /design-intake skill runs this first, then layers judgment on top.
 package intake
 
@@ -23,9 +23,9 @@ import (
 // because the struct fits on one screen and every field's comment says what it drops.
 //
 // ITS JSON IS HAND-ROLLED, the one exception to the CLI's protojson convention (C31, agni issue
-// 603). A proto twin would have to carry this guarantee too, in a file people edit to add fields for
-// other reasons, so it would survive only as long as everyone remembered it. Keep encoding/json until
-// something needs intake on a wire, and design the guarantee then.
+// 603). A proto twin would need this guarantee too. People edit a proto file to add fields for other
+// reasons, so the guarantee would last only as long as everyone remembered it. Keep encoding/json
+// until something needs intake on a wire, and design the guarantee then.
 type Skeleton struct {
 	Components    int            `json:"components"`
 	Sections      int            `json:"sections"`
@@ -52,8 +52,8 @@ type PartRow struct {
 
 // PartTypeRow is one distinct part type in the BOM, a (MPN, manufacturer, value, class) tuple and how
 // many components share it. It collapses jellybean passives (1000+ identical caps into one row) and
-// leaves distinct MPNs one per row. A manufacturer-name variant ("Murata" vs "MURATA") surfaces as
-// two rows, which is the intended AVL-hygiene signal.
+// leaves distinct MPNs one per row. A manufacturer-name variant ("Murata" vs "MURATA") shows up as
+// two rows, and that is the intended AVL-hygiene signal.
 type PartTypeRow struct {
 	Count        int    `json:"count"`
 	MPN          string `json:"mpn,omitempty"`
@@ -63,7 +63,7 @@ type PartTypeRow struct {
 }
 
 // Anomaly is a detected read/design issue, reported as a kind + count + the ref-des it touches. It
-// carries NO net name by construction, so a pin-net conflict names the pin's COMPONENT, not the nets.
+// holds NO net name by construction, so a pin-net conflict names the pin's COMPONENT, not the nets.
 type Anomaly struct {
 	Kind   string   `json:"kind"`
 	Count  int      `json:"count"`
@@ -184,8 +184,8 @@ func collisionRefDes(m check.Model) []string {
 }
 
 // Markdown renders the Skeleton as the intake.md sections. It can only print what the Skeleton
-// holds, which is no net name. full selects the parts view, false (default) printing the BOM by
-// distinct type and true the per-component AVL.
+// holds, and it holds no net name. full selects the parts view. false, the default, prints the BOM
+// by distinct type, and true prints the per-component AVL.
 func Markdown(s *Skeleton, full bool) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "## Aggregates\n- Components: %d | Sections: %d | Nets: %d\n\n", s.Components, s.Sections, s.Nets)

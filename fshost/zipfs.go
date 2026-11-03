@@ -12,15 +12,15 @@ import (
 
 // ExpandZips presents every `.zip` file in fsys as a directory of the same name holding the
 // archive's contents, so a dropped zip reads exactly as the folder it was made from (agni issue
-// 854). It nests: a zip inside a zip is a directory too. Everything else is fsys unchanged.
+// 854). It nests, so a zip inside a zip is a directory too. Everything else is fsys unchanged.
 //
-// An archive is read whole on first use and kept, which suits a browser mount whose bytes are in
-// memory already. A file that ends in `.zip` but does not parse stays a plain file.
+// An archive is read whole on first use and kept. That suits a browser mount, whose bytes are in
+// memory already. A file that ends in `.zip` but does not parse is still a plain file.
 //
-// A file at OverlayDir/<path> in fsys reads as <path>, over whatever is there, archives included, and
-// OverlayDir itself is hidden. It is how the page writes a design.yaml beside a design that came
-// out of a zip: the store under the browser mount refuses a path whose parent is a file, which is
-// what an archive is until it is expanded.
+// A file at OverlayDir/<path> in fsys reads as <path>, over whatever is there, archives included.
+// OverlayDir itself is hidden. The page uses it to write a design.yaml beside a design that came
+// out of a zip. Until it is expanded, an archive is a file. The store under the browser mount
+// refuses a path whose parent is a file, so the page cannot write beside the design directly.
 func ExpandZips(fsys fs.FS) fs.FS {
 	return &zipFS{base: fsys, open: map[string]*zip.Reader{}}
 }
@@ -33,8 +33,8 @@ type zipFS struct {
 	open map[string]*zip.Reader // archive path in base terms -> its reader
 }
 
-// resolve walks name one element at a time and returns the FS and the name inside it that name
-// lands in, descending into each archive the walk passes through.
+// resolve walks name one element at a time and descends into each archive on the way. It returns
+// the FS that holds name, and name's path inside that FS.
 func (z *zipFS) resolve(op, name string) (fs.FS, string, error) {
 	if !fs.ValidPath(name) {
 		return nil, "", &fs.PathError{Op: op, Path: name, Err: fs.ErrInvalid}
@@ -105,8 +105,8 @@ func (z *zipFS) Open(name string) (fs.File, error) {
 		return nil, err
 	}
 	if inner == "." && name != "." {
-		// An archive's root, which reports itself as "." inside the archive and as the zip's name
-		// here, as its directory entry does.
+		// An archive's root reports itself as "." inside the archive. Here it reports the zip's
+		// name, as its directory entry does.
 		return &zipDirFile{ReadDirFile: mountRoot{File: f, name: path.Base(name)}, z: z, dir: name}, nil
 	}
 	if d, ok := f.(fs.ReadDirFile); ok {
@@ -188,8 +188,8 @@ func (z *zipFS) asDirs(dir string, des []fs.DirEntry) []fs.DirEntry {
 	return out
 }
 
-// zipDirFile is a directory opened through a zipFS, so reading it through the file (as fs.WalkDir
-// does) reports archives as directories too.
+// zipDirFile is a directory opened through a zipFS. Reading it through the file, as fs.WalkDir
+// does, also reports archives as directories.
 type zipDirFile struct {
 	fs.ReadDirFile
 	z    *zipFS

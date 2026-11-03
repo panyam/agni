@@ -10,9 +10,8 @@ import (
 // NAME (the duplicate-net-name case) get distinct ids, a net with the same connectivity hashes the
 // same across two solves, and a pinless net has an empty id (nothing to hash, falls back to name).
 func TestNetID(t *testing.T) {
-	// Three separate two-pin clusters, all labelled "DUP". Connect-by-name would merge same-label
-	// clusters, so keep each on its own label ("DUP1".."DUP3") to stay electrically distinct, which
-	// is the real duplicate-net-name shape (distinct nets a human named the same).
+	// Two separate two-pin clusters, labelled "A" and "B". Connect-by-name would merge clusters
+	// that share a label, so each cluster gets its own label and is its own net.
 	build := func() []Net {
 		wires := []Wire{
 			{A: Point{0, 0}, B: Point{10, 0}, Label: "A"},
@@ -90,11 +89,11 @@ func TestBuildConnectByName(t *testing.T) {
 	}
 }
 
-// BuildWithPoints reports which net every input point resolved to, so a caller that offset its
-// points into meaningful bands (the KiCad hierarchy walk's sheet instances, WS9-028) can read
-// membership back. Points a wire unions share a net; a pin's point maps to its net; an anchor's
-// point maps to the net it named; a point on drawing noise (unnamed, pinless) is omitted, matching
-// the wireNets rule.
+// BuildWithPoints reports which net every input point resolved to. A caller can offset its points
+// into meaningful bands, as the KiCad hierarchy walk does with its sheet instances (WS9-028), and
+// then read membership back. Two points joined by a wire share a net. A pin's point maps to its
+// net, and an anchor's point maps to the net it named. A point on drawing noise (unnamed, pinless)
+// is omitted, matching the wireNets rule.
 func TestBuildWithPoints(t *testing.T) {
 	wires := []Wire{
 		{A: Point{0, 0}, B: Point{0, 10}, Label: "VOUT"},
@@ -174,8 +173,8 @@ func TestBuildDrivenExternal(t *testing.T) {
 }
 
 // A wire endpoint on nothing is dangling; ends met by a pin, an anchor, a junction, or a second
-// wire endpoint are not. Carries every non-dangling exclusion so the degree/occupancy logic is
-// pinned in one place.
+// wire endpoint are not. The test covers every non-dangling exclusion, so one place pins the
+// degree and occupancy logic.
 func TestBuildDangling(t *testing.T) {
 	wires := []Wire{
 		{A: Point{0, 0}, B: Point{10, 0}, Id: "w1"},   // (0,0) floats -> dangle
@@ -204,8 +203,8 @@ func TestBuildDangling(t *testing.T) {
 
 // A node carrying two labels aliases them, so every cluster under EITHER name folds into one
 // net. Before label-union, merging used only each node's single chosen name, so the
-// two-label node joined one group and abandoned the other (the hierarchy walk relies on a
-// local-labelled node still folding into the rail its power tap names).
+// two-label node joined one group and abandoned the other. The hierarchy walk needs a
+// local-labelled node to fold into the rail named by its power tap.
 func TestBuildLabelAliasUnion(t *testing.T) {
 	wires := []Wire{
 		{A: Point{0, 0}, B: Point{10, 0}},    // node with BOTH labels
@@ -248,7 +247,7 @@ func TestBuildAnchorRank(t *testing.T) {
 	}
 }
 
-// TestBuildAliases checks that a net reports EVERY distinct label that landed on it, with rank, so
+// TestBuildAliases checks that a net reports EVERY distinct label on it, with rank, so
 // naming-conflict rules can see what the naming pass collapsed. Single-labeled and
 // unnamed nets carry no alias list.
 func TestBuildAliases(t *testing.T) {

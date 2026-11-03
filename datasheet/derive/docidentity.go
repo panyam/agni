@@ -8,18 +8,18 @@ import (
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
 )
 
-// Document identity: which revision of which document a spec's values were read from.
-// SourceDoc.title is specified to carry it ("SNOS412Q - REVISED JANUARY 2023"), and nothing
+// A spec's document identity says which revision of which document its values were read from.
+// SourceDoc.title is specified to hold it ("SNOS412Q - REVISED JANUARY 2023"), and nothing
 // establishes it today (agni issue 290).
 //
 // This file does not guess it. Measured over real vendor documents, the printed identity came in
 // several unrelated shapes, and the obvious "document number" detector accepted TPS22918 and
-// TCAN1145, which are parts, and missed SLVSAG5, which is a document. So the refusal is recorded as
-// a gap carrying the cover-page prose, the way an untyped pin carries its description, and answering
-// it is a curation act. See
+// TCAN1145, which are parts, and missed SLVSAG5, which is a document. So the run records the refusal
+// as a gap. The gap holds the cover-page prose, the way an untyped pin holds its description.
+// Answering the gap is a curation act. See
 // docsite/content/architecture/datasheet-layer.md#how-a-partspec-is-derived-from-a-document.
 
-// identityEvidenceBlocks is how many leading page-one text blocks ride along with the gap. Enough
+// identityEvidenceBlocks is how many leading page-one text blocks the gap includes. That is enough
 // for a title block (document number, revision line, date) and short enough to read at a glance.
 const identityEvidenceBlocks = 6
 
@@ -36,9 +36,9 @@ func gapUnidentifiedDocument(d *docpb.Document, manifest *derivepb.RunManifest) 
 	})
 }
 
-// identityEvidence renders page one's opening text blocks, where a printed identity lives when it is
-// anywhere. A document whose cover is a company-transition notice (a real shape) shows that notice,
-// which explains why nothing was found.
+// identityEvidence renders page one's opening text blocks. A printed identity appears there if it
+// appears anywhere. Some real documents have a company-transition notice as their cover. The
+// evidence then shows that notice, and the notice explains why nothing was found.
 func identityEvidence(d *docpb.Document) string {
 	var parts []string
 	for _, pg := range d.GetPages() {

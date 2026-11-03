@@ -40,8 +40,8 @@ func (f *fakeDocLoader) Document(context.Context, artifact.URI) (*docpb.Document
 	return f.doc, f.err
 }
 
-// fakeDraftStore stands in for the OS store; saveErr drives the conflict path and publishErr the
-// publish outcomes.
+// fakeDraftStore stands in for the OS store. saveErr drives the conflict path, and publishErr
+// drives the publish outcomes.
 type fakeDraftStore struct {
 	draft      *dsapi.Draft
 	found      bool
@@ -76,7 +76,8 @@ func (f *fakeDraftStore) Publish(context.Context, string) (*Published, error) {
 	return &Published{Generation: 7}, nil
 }
 
-// fakeDocExtractor stands in for the OS extractor; `available` drives the gate, `doc`/`err` the run.
+// fakeDocExtractor stands in for the OS extractor. `available` drives the gate, and `doc`/`err`
+// drive the run.
 type fakeDocExtractor struct {
 	doc       *docpb.Document
 	available bool
@@ -88,8 +89,8 @@ func (f *fakeDocExtractor) Extract(context.Context, artifact.URI) (*docpb.Docume
 	return f.doc, f.err
 }
 
-// fakeAnnotationStore stands in for the OS annotation store; `sets` is what Get returns (the union),
-// and `saved`/`author` capture the last SaveAnnotations for assertions.
+// fakeAnnotationStore stands in for the OS annotation store. Get returns `sets` as the union, and
+// `saved`/`author` capture the last SaveAnnotations for assertions.
 type fakeAnnotationStore struct {
 	sets   []*dsapi.AnnotationSet
 	saved  *dsapi.AnnotationSet
@@ -207,8 +208,8 @@ func TestDraftRPCsNeedACorpus(t *testing.T) {
 	}
 }
 
-// A refused publish is an answer for the author, carried in the response with its problems, not a
-// transport error; a store failure is still an error.
+// A refused publish is an answer for the author. The response holds it with its problems, and it is
+// not a transport error. A store failure is still an error.
 func TestPublishDraftReportsARefusal(t *testing.T) {
 	ctx := context.Background()
 	refused := &PublishRefused{Reason: "not ready", Problems: []param.Problem{{Kind: param.ProblemCompleteness, Message: "no provenance"}}}
@@ -290,12 +291,13 @@ func TestSaveAndGetAnnotations(t *testing.T) {
 }
 
 // Saving records what the author has. It is NOT a judgment about whether the spec is any good, so
-// neither incompleteness nor structural incoherence may block a write. A rejected save costs work,
-// and every mutation path would otherwise have to preserve an invariant or strand the document.
+// neither incompleteness nor structural incoherence may block a write. A rejected save loses the
+// author's work. Without this rule, every mutation path would have to preserve an invariant or
+// strand the document.
 //
-// Nothing downstream needs the gate. The sibling is <stem>.partspec.json and param.LoadSet reads
-// *.textproto, so a draft cannot reach the corpus by sitting on disk; promotion is a separate step
-// and that is where param.Validate belongs.
+// Nothing downstream needs the gate. A draft is saved as drafts/<MPN>.draft.json and param.LoadSet
+// reads *.textproto, so a draft cannot reach the corpus by sitting on disk. Publishing is a
+// separate step, and param.Validate belongs there.
 func TestSaveDraftRecordsWhateverTheAuthorHas(t *testing.T) {
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
 	save := func(spec *parampb.PartSpec) error {
@@ -312,8 +314,8 @@ func TestSaveDraftRecordsWhateverTheAuthorHas(t *testing.T) {
 		t.Errorf("an incomplete spec must save; got %v", err)
 	}
 
-	// Structurally incoherent too. param.Validate would reject both of these, and that is the right
-	// answer for loading a corpus and the wrong one for persisting a draft.
+	// Structurally incoherent too. param.Validate would reject both of these. Rejecting is right
+	// when loading a corpus and wrong when persisting a draft.
 	if err := save(&parampb.PartSpec{
 		Docs: []*parampb.SourceDoc{{Id: "ds", Title: "d"}},
 		Pins: []*parampb.Pin{{Id: "vcc", Name: "VCC"}, {Id: "vcc", Name: "VCC2"}},
@@ -329,8 +331,8 @@ func TestSaveDraftRecordsWhateverTheAuthorHas(t *testing.T) {
 	}
 }
 
-// The save response is where the editor learns what is wrong, so the two kinds have to arrive
-// distinguishable. Structural problems are worth interrupting for, and completeness ones are the
+// The editor learns what is wrong from the save response, so the two kinds have to arrive
+// distinguishable. Structural problems are worth interrupting for. Completeness problems are the
 // ordinary state of unfinished work.
 func TestSaveDraftReportsClassifiedProblems(t *testing.T) {
 	svc := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})
@@ -364,8 +366,8 @@ func TestSaveDraftReportsClassifiedProblems(t *testing.T) {
 	}
 }
 
-// cleanSpec is the minimum spec param.Validate accepts, so the no-problems case is asserted against
-// something real rather than against an empty message.
+// cleanSpec returns the minimum spec that param.Validate accepts. The no-problems case is then
+// asserted against something real rather than against an empty message.
 func cleanSpec() *parampb.PartSpec {
 	f := func(v float64) *float64 { return &v }
 	return &parampb.PartSpec{
@@ -381,8 +383,8 @@ func cleanSpec() *parampb.PartSpec {
 	}
 }
 
-// The workbench's folder tree answers exactly as the viewer's, because both list through one port
-// with the engine's WorkspaceService (agni issue 744).
+// The workbench's folder tree answers exactly as the viewer's. Both list through one port with the
+// engine's WorkspaceService (agni issue 744).
 func TestFolderTreeAnswersAsWorkspaceServiceDoes(t *testing.T) {
 	ctx := context.Background()
 	ds := NewDatasheetService(&fakeDocLoader{}, &fakeDraftStore{}, &fakeDocExtractor{}, &fakeAnnotationStore{}, fakeWorkspace{})

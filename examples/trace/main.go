@@ -38,18 +38,18 @@ const (
 )
 
 // unreachable is a pin pair the bundled fixture joins through nothing, for the no-route step.
-// Named here rather than asked, because the point of that step is the shape of the answer and a
+// The pair is named here rather than asked for. That step shows the shape of the answer, and a
 // user-supplied pair could accidentally be connected.
 var unreachable = [2]check.Endpoint{{RefDes: "U1", Pin: "3"}, {RefDes: "U1", Pin: "2"}}
 
-// partnersDevice is the part whose every pin the partners step walks from at once.
+// partnersDevice is the part for the partners step, which walks from every one of its pins at once.
 const partnersDevice = "U1"
 
 
 func main() {
 	design := common.AskPath("design", defaultDesign)
-	// from / to carry the picks to the later steps, defaulted to the same values the markdown
-	// inputs default to, so a non-interactive run stays coherent.
+	// from and to pass the picks to the later steps. Their defaults match the markdown inputs'
+	// defaults, so a non-interactive run is still coherent.
 	from, to := defaultFrom, defaultTo
 
 	demo := demokit.New("trace").
@@ -207,9 +207,9 @@ func traceLines(t check.Trace) string {
 
 // drawTrace writes the trace onto the design's drawn schematic as an SVG, and returns the path.
 //
-// The nets a Trace passed through and the parts it crossed ARE the subjects a highlight overlay
-// takes, so nothing is re-derived and no second walk happens. An embedder wanting different
-// colours or subjects writes their own version of this loop.
+// A highlight overlay takes nets and parts as its subjects. A Trace already lists the nets it
+// passed through and the parts it crossed, so nothing is re-derived and no second walk happens. An
+// embedder wanting different colours or subjects writes their own version of this loop.
 func drawTrace(designPath string, t check.Trace, out string) (string, error) {
 	if designPath != defaultDesign {
 		return "", fmt.Errorf("this step draws the bundled design's own schematic (%s); "+
@@ -249,7 +249,7 @@ const (
 )
 
 // partnerLines prints each pin of a device with its net and the device pins its net reaches, or why
-// it was not walked, which is what `agni pinmap` writes as a draft io_map.
+// the pin was not walked. `agni pinmap` writes the same listing as a draft io_map.
 func partnerLines(device string, pins []check.PinPartners) string {
 	var b strings.Builder
 	for _, p := range pins {

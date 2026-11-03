@@ -40,8 +40,8 @@ func (t Timing) Interceptor() connect.UnaryInterceptorFunc {
 				return next(ctx, req)
 			}
 			rec := timing.New()
-			// A slow-logged request records its plans too, since whether it will be slow is only known
-			// at the end, and a plan costs time in proportion to the query's rules, not its tuples.
+			// A slow-logged request records its plans too. The request is known to be slow only at
+			// the end, and a plan costs time in proportion to the query's rules, not its tuples.
 			rec.Explain = strings.Contains(asked, "explain") || logging
 			rec.Memory = strings.Contains(asked, "memory")
 			resp, err := next(timing.With(ctx, rec), req)

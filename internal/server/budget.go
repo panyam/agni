@@ -12,7 +12,7 @@ import (
 )
 
 // Budget is the work budget a server applies to every query it evaluates, and how it reports the
-// queries that cost the most (agni issue 792). Work is the unit a fact base counts: candidate
+// queries that cost the most (agni issue 792). Work is what a fact base counts. It counts candidate
 // comparisons, each row a generator emits, and the connections a circuit walk examines.
 type Budget struct {
 	// Enforce caps each evaluation's work. Zero enforces nothing, so a deployment can watch what its
@@ -25,9 +25,9 @@ type Budget struct {
 	Log func(format string, args ...any)
 }
 
-// Interceptor sets the budget on every request's context, where every query and every query-backed
-// rule the request evaluates reads it (a request may narrow it, never raise it), and logs each query
-// whose reported work passes Warn and each one stopped by the budget.
+// Interceptor sets the budget on every request's context. The request's queries and query-backed
+// rules read it there. A request may narrow the budget but never raise it. Interceptor also logs
+// each query whose reported work passes Warn, and each one the budget stopped.
 func (b Budget) Interceptor() connect.UnaryInterceptorFunc {
 	return func(next connect.UnaryFunc) connect.UnaryFunc {
 		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
@@ -37,8 +37,8 @@ func (b Budget) Interceptor() connect.UnaryInterceptorFunc {
 			}
 			name := req.Spec().Procedure
 			if errors.Is(err, service.ErrResourceExhausted) {
-				// The error names the budget that applied, which is the request's when it narrowed the
-				// server's, so it is logged rather than b.Enforce.
+				// The error names the budget that applied. That is the request's budget when it
+				// narrowed the server's, so the log uses the error rather than b.Enforce.
 				msg := err.Error()
 				if ce := new(connect.Error); errors.As(err, &ce) {
 					msg = ce.Message()

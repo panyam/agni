@@ -14,8 +14,9 @@ import (
 type API struct {
 	Workspace *service.WorkspaceService
 	Project   *service.ProjectService
-	// Snapshot ingests the designs every other service answers about (agni issue 1061). It must hold
-	// the same ProjectResolver they do, or a question names a snapshot none of them holds.
+	// Snapshot ingests designs, and every other service answers questions about them (agni issue
+	// 1061). It must hold the same ProjectResolver as they do, or a question names a snapshot that
+	// none of them holds.
 	Snapshot *service.SnapshotService
 	Design   *service.DesignService
 	Check    *service.CheckService
@@ -28,8 +29,8 @@ type API struct {
 }
 
 // Register mounts every service on mux and returns the paths it registered, in a fixed order.
-// queryOpts apply to the services that evaluate queries (check, query, review), which is where a
-// deployment's query budget attaches.
+// queryOpts apply to the services that evaluate queries (check, query, review). A deployment's
+// query budget attaches to those services.
 func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []string {
 	var paths []string
 	add := func(p string, h http.Handler) {
@@ -45,7 +46,7 @@ func (a API) Register(mux *http.ServeMux, queryOpts ...connect.HandlerOption) []
 	add(webapiconnect.NewDesignServiceHandler(NewDesign(a.Design), timed))
 	add(webapiconnect.NewCheckServiceHandler(NewCheck(a.Check), queried...))
 	// The lexicon questions run the check service's catalog over its loader, so they are built from
-	// it rather than listed as a field a host could fill with a different one (agni issue 1266).
+	// the check service. A field would let a host fill in a different catalog (agni issue 1266).
 	add(webapiconnect.NewLexiconServiceHandler(NewLexicon(service.NewLexiconService(a.Check)), queried...))
 	add(webapiconnect.NewDiffServiceHandler(NewDiff(a.Diff), timed))
 	add(webapiconnect.NewTableServiceHandler(NewTable(), timed))

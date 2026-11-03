@@ -13,9 +13,9 @@ import (
 	dsapi "github.com/panyam/agni/datasheet/gen/go/agni/v1/dsapi"
 )
 
-// The corpus store keeps drafts beside the published specs (agni issue 749). This is the layout
-// every reader of it shares, so the service's store and the status report cannot disagree about
-// where a draft lives or what one is. Writing stays with the store that owns it.
+// The corpus store keeps drafts beside the published specs (agni issue 749). Every reader of the
+// store shares this layout, so the service's store and the status report cannot disagree about where
+// a draft lives or what one is. Only the store that owns the drafts writes them.
 
 // DraftsDir is where drafts live in the corpus. param's corpus walk reads *.textproto only, so a
 // draft never seeds a check and never enters the index.
@@ -25,9 +25,10 @@ const DraftsDir = "drafts"
 // since the version is the file's own content hash.
 const DraftSuffix = ".draft.json"
 
-// DraftFile is the corpus-relative file a draft for mpn lives in: the MPN upper-cased, since a draft
-// is keyed case-insensitively as LoadSet matches, then made file-safe as a published spec's name is.
-// The MPN inside the file is what keys it, so two MPNs sharing a name are told apart on read.
+// DraftFile is the corpus-relative file for mpn's draft. The name is the MPN upper-cased, since a
+// draft is keyed case-insensitively as LoadSet matches. The upper-cased MPN is then made file-safe,
+// as a published spec's name is. The MPN inside the file keys the draft, so two MPNs sharing a name
+// are told apart on read.
 func DraftFile(mpn string) string {
 	name := strings.TrimSuffix(SpecFileName(strings.ToUpper(strings.TrimSpace(mpn))), ".textproto")
 	return path.Join(DraftsDir, name+DraftSuffix)
@@ -78,6 +79,6 @@ func Drafts(corpus fs.FS) ([]*dsapi.Draft, error) {
 	return out, nil
 }
 
-// VersionOf is the version token of a stored file's bytes, its content hash, as a draft's
-// compare-and-swap carries it.
+// VersionOf is the version token of a stored file's bytes. The token is the content hash, and a
+// draft's compare-and-swap sends it.
 func VersionOf(data []byte) string { return hashOf(data) }

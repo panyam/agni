@@ -43,10 +43,10 @@ func TestResolvePinsReportsUnresolved(t *testing.T) {
 	if len(pins) != 4 { // R1 and R3 contribute 2 each; R2 and R4 none
 		t.Errorf("pins = %d, want 4", len(pins))
 	}
-	// The other half of the same answer (agni issue 418). Grouped per reference like the failures,
-	// so the cached second hit on good.sym does not report it twice, and carrying the pin count
-	// because a reference that resolved to an empty stub costs the netlist what a missing file does
-	// and reads identically without it.
+	// The other half of the same answer (agni issue 418). The successes are grouped per reference
+	// like the failures, so the cached second hit on good.sym does not report it twice. Each one
+	// records its pin count. A reference that resolved to an empty stub costs the netlist as much as
+	// a missing file does, and without the count the two read identically.
 	if len(resolved) != 1 {
 		t.Fatalf("resolved = %v, want exactly one entry (only good.sym, deduped across R1 and R3)", resolved)
 	}

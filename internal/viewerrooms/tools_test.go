@@ -15,9 +15,9 @@ import (
 	"google.golang.org/protobuf/types/known/wrapperspb"
 )
 
-// twinPath is the fixture this walk and web/src/toolschema.ts are both held to. The bridge refuses a
-// tab's tool whose schema differs from the declaration by a byte, so a drift between the two walks
-// would leave every tab's tools refused with nothing failing but the agent's call.
+// twinPath is the fixture for this walk and web/src/toolschema.ts. The bridge refuses a tab's tool
+// when its schema differs from the declaration by a byte. If the two walks drifted apart, every
+// tab's tools would be refused, and only the agent's call would fail.
 var twinPath = filepath.Join("testdata", "viewer_tools.json")
 
 type twinTool struct {
@@ -28,9 +28,9 @@ type twinTool struct {
 
 type twin struct {
 	Tools []twinTool `json:"tools"`
-	// Messages are types both runtimes ship, covering what ViewerPageService does not use: the
-	// well-known types' own JSON forms, enums, 64-bit integers, a double and bytes. None carries
-	// descriptor.proto's options, whose FeatureSet differs between protobuf releases.
+	// Messages are types that both runtimes ship. They cover what ViewerPageService does not use,
+	// such as the well-known types' own JSON forms, enums, 64-bit integers, a double and bytes.
+	// None uses descriptor.proto's options, whose FeatureSet differs between protobuf releases.
 	Messages map[string]map[string]any `json:"messages"`
 }
 
@@ -57,8 +57,8 @@ func built() twin {
 	return t
 }
 
-// asJSON is v as it reads back from JSON, so a Go map and the fixture compare as the bridge compares
-// a declaration with a tab's schema.
+// asJSON returns v as it reads back from JSON. A Go map and the fixture then compare the way the
+// bridge compares a declaration with a tab's schema.
 func asJSON(t *testing.T, v any) any {
 	t.Helper()
 	b, err := json.Marshal(v)
@@ -99,7 +99,7 @@ func TestToolsMatchTheTwinFixture(t *testing.T) {
 	}
 }
 
-// TestEveryPageMethodIsATool is the census: each ViewerPageService method is one tool with a
+// TestEveryPageMethodIsATool is the census. Each ViewerPageService method is one tool with a
 // description, and no description names a method that is gone.
 func TestEveryPageMethodIsATool(t *testing.T) {
 	ms := viewerpb.File_agni_v1_viewer_page_proto.Services().ByName("ViewerPageService").Methods()
@@ -140,8 +140,8 @@ func TestToolNamesAndReadOnly(t *testing.T) {
 	}
 }
 
-// TestPropertiesUseTheJSONName is the mapping's first rule: the schema describes the JSON a tab
-// decodes with protojson, so trace_hops is traceHops.
+// TestPropertiesUseTheJSONName pins the mapping's first rule. A tab decodes the JSON with
+// protojson, and the schema describes that JSON, so trace_hops is traceHops.
 func TestPropertiesUseTheJSONName(t *testing.T) {
 	s := MessageSchema((&viewerpb.ViewerLocation{}).ProtoReflect().Descriptor())
 	props := s["properties"].(map[string]any)
@@ -153,8 +153,8 @@ func TestPropertiesUseTheJSONName(t *testing.T) {
 	}
 }
 
-// TestARecursiveMessageEndsAtItsSecondVisit: DescriptorProto nests itself, and the walk writes the
-// inner one as a bare object rather than recursing forever.
+// TestARecursiveMessageEndsAtItsSecondVisit covers DescriptorProto, which nests itself. The walk
+// writes the inner one as a bare object rather than recursing forever.
 func TestARecursiveMessageEndsAtItsSecondVisit(t *testing.T) {
 	s := MessageSchema((&descriptorpb.DescriptorProto{}).ProtoReflect().Descriptor())
 	nested := s["properties"].(map[string]any)["nestedType"].(map[string]any)["items"]

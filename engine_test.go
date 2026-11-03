@@ -9,10 +9,10 @@ import (
 	"github.com/panyam/agni/core/facts"
 )
 
-// This test binary deliberately imports NEITHER stdlib/relations NOR stdlib/rules/builtin, which is
-// what makes the refusals below testable at all, because the package under test is in exactly the
-// state an embedder's binary is in when they forget a blank import. internal/composetest is the
-// other half, composing everything and asserting the green path.
+// This test binary deliberately imports NEITHER stdlib/relations NOR stdlib/rules/builtin. The
+// package under test is then in exactly the state an embedder's binary is in when they forget a
+// blank import, so the refusals below can be tested at all. internal/composetest is the other half.
+// It composes everything and asserts the green path.
 
 func TestNewRefusesWhenNoRelationsAreInstalled(t *testing.T) {
 	_, err := New()
@@ -25,8 +25,8 @@ func TestNewRefusesWhenNoRelationsAreInstalled(t *testing.T) {
 }
 
 func TestNewRefusesWhenBuiltinRulesAreNotInstalled(t *testing.T) {
-	// Get past the relations check, so the builtins check is what we are actually reading. Without
-	// this the first refusal masks the second and the test would pass for the wrong reason.
+	// Get past the relations check, so the test reads the builtins check. Without this the first
+	// refusal masks the second, and the test would pass for the wrong reason.
 	facts.RegisterRelation("composetest_probe", []facts.Field{facts.FieldSubject}, func(check.Model) []facts.Row { return nil })
 	_, err := New()
 	if !errors.Is(err, MissingBuiltinsError) {
@@ -37,9 +37,9 @@ func TestNewRefusesWhenBuiltinRulesAreNotInstalled(t *testing.T) {
 	}
 }
 
-// A size check on the composed catalog would NOT catch a missing built-in source, because
-// stdlib/profiles registers its own rules from an init that this package's imports trigger. Pinning
-// it keeps anyone from "simplifying" checkSeams into the check that silently passes.
+// A size check on the composed catalog would NOT catch a missing built-in source. stdlib/profiles
+// registers its own rules from an init, and this package's imports trigger that init. This test
+// pins the fact, so nobody "simplifies" checkSeams into a size check that silently passes.
 func TestComposedCatalogIsNonEmptyWithoutTheBuiltins(t *testing.T) {
 	if len(check.BuiltinRules()) != 0 {
 		t.Skip("built-in rules are installed in this binary; the premise does not hold")

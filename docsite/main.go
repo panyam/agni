@@ -55,9 +55,9 @@ func IncludeFileText(relativePath string) string {
 	return string(data)
 }
 
-// IncludeCard returns a GENERATED catalog card's markdown body, frontmatter stripped, for
-// transcluding a rule or relation reference into the guide page that teaches it, so the card keeps
-// ONE source in `make catalog-docs` (WS14-006). The card's own frontmatter would render as a stray
+// IncludeCard returns a GENERATED catalog card's markdown body, with its frontmatter stripped. A
+// guide page calls it to transclude the rule or relation reference it teaches, so the card has ONE
+// source in `make catalog-docs` (WS14-006). The card's own frontmatter would render as a stray
 // heading in the host page. Cards open at h3 so they nest under the host page's h2.
 func IncludeCard(relativePath string) string {
 	absPath, ok := safeJoin(relativePath)
@@ -72,11 +72,11 @@ func IncludeCard(relativePath string) string {
 	return resolveSiteRefs(stripFrontmatter(string(data)))
 }
 
-// resolveSiteRefs substitutes the site directives a GENERATED card carries, because a transcluded
-// card's return value is spliced in after the host page's template pass and nothing re-scans it
-// (#449). Without this, `{{.Site.PathPrefix}}` in an image path reached the browser verbatim and
-// 404'd. Substituting the const avoids re-running the template engine, and its recursion risk, inside
-// a host render. See docsite/README.md for the transclusion trap.
+// resolveSiteRefs substitutes the site directives in a GENERATED card. A transcluded card's return
+// value is spliced in after the host page's template pass, and nothing re-scans it (#449). Without
+// this, `{{.Site.PathPrefix}}` in an image path reached the browser verbatim and 404'd.
+// Substituting the const avoids re-running the template engine, and its recursion risk, inside a
+// host render. See docsite/README.md for the transclusion trap.
 func resolveSiteRefs(s string) string {
 	for _, form := range []string{"{{.Site.PathPrefix}}", "{{ .Site.PathPrefix }}"} {
 		s = strings.ReplaceAll(s, form, PathPrefix)
@@ -114,9 +114,9 @@ func safeJoin(relativePath string) (string, bool) {
 	return absPath, true
 }
 
-// PathPrefix is the URL prefix every page and asset is served under. A const rather than a read of
-// Site, because Explainable needs it and Site's literal references Explainable, which Go rejects as
-// an initialization cycle.
+// PathPrefix is the URL prefix every page and asset is served under. It is a const rather than a
+// read of Site. Explainable needs it, and Site's literal references Explainable, so a read of Site
+// would be an initialization cycle. Go rejects that cycle.
 const PathPrefix = "/agni"
 
 // Site is the s3gen configuration for the Agni documentation site.
@@ -151,7 +151,8 @@ var Site = &s3.Site{
 		"explainable":     Explainable,
 		"explainableCap":  ExplainableCap,
 
-		// Helpers newer s3gen supplies in its default func map and the pinned version does not.
+		// Newer s3gen supplies these helpers in its default func map, and the pinned version does
+		// not.
 		"Contains":      strings.Contains,
 		"HasPrefix":     strings.HasPrefix,
 		"HasSuffix":     strings.HasSuffix,

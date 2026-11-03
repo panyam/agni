@@ -65,8 +65,8 @@ func TestNormalizeSymbol(t *testing.T) {
 	}
 }
 
-// parseCondition covers the two structured forms; everything else stays raw-only,
-// and the schema records it as raw-only (MachineComparable then excludes it).
+// parseCondition covers the two structured forms. Everything else is kept raw-only, and the
+// schema records it as raw-only, so MachineComparable excludes it.
 func TestParseCondition(t *testing.T) {
 	cases := []struct {
 		in             string

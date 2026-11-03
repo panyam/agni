@@ -12,14 +12,13 @@ import (
 // benchDir builds a mount holding `projects` projects, each with `designs` designs and a conventions
 // file, plus `noise` unrelated directories at various depths.
 //
-// The noise is the point. A mount is a folder an operator handed the server, not a curated tree, so
-// the walk's cost is driven by what ELSE is in there: a vendored library, a build output directory,
-// somebody's home folder. Not by how many projects there are.
+// The noise matters most. An operator can hand the server any folder as a mount, not a curated
+// tree. The walk's cost then depends on what ELSE is in there, such as a vendored library, a build
+// output directory or somebody's home folder. The number of projects matters less.
 //
-// It writes to a REAL directory because that is the filesystem the server runs on, and fstest.MapFS
-// actively misleads here, because its ReadDir scans the entire map, so a walk over it costs O(all
-// files) per directory and any measurement is dominated by the fake rather than by the code under
-// test.
+// It writes to a REAL directory, since the server runs on a real filesystem. fstest.MapFS actively
+// misleads here. Its ReadDir scans the entire map, so a walk over it costs O(all files) per
+// directory, and the fake dominates any measurement rather than the code under test.
 func benchDir(b *testing.B, projects, designs, noise int) Tree {
 	b.Helper()
 	root := b.TempDir()
@@ -48,8 +47,8 @@ func benchDir(b *testing.B, projects, designs, noise int) Tree {
 	return Tree{Mount: "m", FS: os.DirFS(root)}
 }
 
-// BenchmarkProjectsWalk measures the cost this ticket is about, a bounded directory walk plus a
-// parse of every descriptor found, on every ListProjects.
+// BenchmarkProjectsWalk measures the cost behind this ticket. Every ListProjects does a bounded
+// directory walk and parses every descriptor it finds.
 func BenchmarkProjectsWalk(b *testing.B) {
 	for _, c := range []struct {
 		name                     string
@@ -72,8 +71,9 @@ func BenchmarkProjectsWalk(b *testing.B) {
 	}
 }
 
-// BenchmarkDesignsWalk is the listing a browse UI hits after picking a project. It resolves the
-// project first and then walks that project's own folder, so it pays two of the three costs.
+// BenchmarkDesignsWalk measures the listing a browse UI asks for after picking a project. It
+// resolves the project first and then walks that project's own folder, so it incurs two of the
+// three costs.
 func BenchmarkDesignsWalk(b *testing.B) {
 	for _, c := range []struct {
 		name                     string
@@ -95,9 +95,9 @@ func BenchmarkDesignsWalk(b *testing.B) {
 	}
 }
 
-// BenchmarkResolveDesign is the OTHER hot path, and the one a viewer hits on every file open. It
-// walks UP rather than down, so it should be cheap regardless of how big the mount is. This exists
-// to confirm that rather than to assume it.
+// BenchmarkResolveDesign measures the OTHER hot path. A viewer calls it on every file open. It
+// walks UP rather than down, so it should be cheap regardless of how big the mount is. This
+// benchmark confirms that rather than assuming it.
 func BenchmarkResolveDesign(b *testing.B) {
 	for _, c := range []struct {
 		name                     string

@@ -13,19 +13,21 @@ import (
 )
 
 // A run asked about some nets or parts (agni issue 897) must answer for each exactly as a whole run
-// filtered to it does, for every rule in the composed catalog. Per rule, it asks about a spread of
-// the subjects the whole run named and one entity the rule said nothing about, and compares the two
-// answers in order. A rule declaring ScopeSubjects is also run outside check.RunAll, so one that
-// declares it and still walks the whole design fails here rather than only running slowly.
+// filtered to it does, for every rule in the composed catalog. Per rule, it picks a spread of the
+// subjects named by the whole run, plus one entity the rule said nothing about. It asks about them
+// and compares the two answers in order. A rule declaring ScopeSubjects is also run outside
+// check.RunAll, so one that declares it and still walks the whole design fails here rather than
+// only running slowly.
 func TestScopedRunMatchesFilteredFullRun(t *testing.T) {
 	e, err := agni.New()
 	if err != nil {
 		t.Fatal(err)
 	}
 	rules := e.Catalog().Rules()
-	// The gateway and Jetson are read with their boards, so the board-tier rules (copper-clearance and
-	// the rest) are asked too (agni issue 1070); without one they skip and prove nothing here. The
-	// feather's board does not parse, which the public demo walk reports as "board absent".
+	// The gateway and Jetson are read with their boards, so the board-tier rules are asked too,
+	// copper-clearance and the rest (agni issue 1070). Without a board they skip and prove nothing
+	// here. The feather's board does not parse, and the public demo walk reports that as "board
+	// absent".
 	for name, files := range map[string]struct{ design, board string }{
 		"gateway": {"../../examples/tutorial-project/designs/gateway/gateway.edn", "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb"},
 		"jetson":  {"../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_sch", "../../tools/samples/boards/jetson-agx-thor-baseboard/jetson-agx-thor-baseboard.kicad_pcb"},
@@ -38,7 +40,7 @@ func TestScopedRunMatchesFilteredFullRun(t *testing.T) {
 					continue
 				}
 				if _, err := os.Stat(f); err != nil {
-					// Fatal rather than skipped: a missing corpus must not read as a pass.
+					// Fatal rather than skipped, because a missing corpus must not read as a pass.
 					t.Fatalf("%s missing (run `make samples-oracle` for the sample boards): %v", f, err)
 				}
 			}
@@ -104,9 +106,9 @@ func TestScopedRunMatchesFilteredFullRun(t *testing.T) {
 	}
 }
 
-// askAbout picks the entities to ask one rule about: up to eight of the subjects its whole run named,
-// spread across them, and a net and a part it named nothing about, so a scoped run that invents an
-// answer fails as well as one that drops one.
+// askAbout picks the entities to ask one rule about. It takes up to eight of the subjects named by
+// the rule's whole run, spread across them, and a net and a part that the run named nothing about.
+// A scoped run that invents an answer then fails, as does one that drops one.
 func askAbout(fs []check.Finding, vs []check.Verdict, m check.Model) []check.Entity {
 	seen := map[string]bool{}
 	var named []check.Entity

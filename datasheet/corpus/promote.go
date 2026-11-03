@@ -17,16 +17,15 @@ import (
 
 // Promotion turns a workbench DRAFT into a seeded corpus file (agni issues 747, 749).
 //
-// A draft is the `<stem>.partspec.json` the workbench saves beside a datasheet. It is unvalidated on
-// purpose, so a half-finished transcription can always be saved, and LoadSet never reads one, so an
-// incoherent draft cannot reach a check by sitting on disk. Promotion is the one step that crosses
-// from draft to corpus, and it is where Validate is enforced. It belongs to the datasheet service,
-// which owns the corpus and its index, rather than to the engine, which only reads specs.
+// The workbench saves a draft in the corpus store at DraftFile's path, `drafts/<MPN>.draft.json`. A
+// draft is unvalidated on purpose, so a half-finished transcription can always be saved. LoadSet
+// never reads a draft, so an incoherent draft cannot reach a check by sitting on disk. Only promotion
+// moves a draft into the corpus, and promotion enforces Validate. Promotion belongs to the datasheet
+// service, which owns the corpus and its index. The engine only reads specs.
 
-// Promoted is what a successful promotion produced: the spec, its seeded text, the corpus-relative
-// file name to write it to, and the index to write after it. Replaces is true when that file already
-// holds the same MPN, which is the case of re-promoting a draft that was edited after its first
-// promotion.
+// Promoted holds what a successful promotion produced: the spec, its seeded text, the
+// corpus-relative file name to write it to, and the index to write after it. Replaces is true when
+// that file already holds the same MPN. That happens when a draft is promoted again after an edit.
 type Promoted struct {
 	Spec     *parampb.PartSpec
 	Text     []byte
@@ -54,19 +53,19 @@ func (e *PromoteError) Error() string {
 	return b.String()
 }
 
-// Promote checks a draft (protojson, as the workbench writes it) against the corpus it is headed for
-// and returns what to write: the spec's file, then the index. It writes nothing; the caller owns the
-// filesystem.
+// Promote checks a draft against the corpus it is headed for. The draft is protojson, as the
+// workbench writes it. Promote returns what to write, the spec's file and then the index. It writes
+// nothing, and the caller owns the filesystem.
 //
-// The corpus is walked and validated whole, as LoadSet does, rather than trusted from prev. Promotion
-// is rare and human-paced, and walking it means a hand edit since the last index cannot slip a
-// duplicate past the rule. prev is the index currently written, or nil; it supplies the generation the
-// new index advances from.
+// The corpus is walked and validated whole, as LoadSet does, rather than trusted from prev.
+// Promotion is rare and human-paced. Walking the corpus means a hand edit since the last index cannot
+// slip a duplicate past the rule. prev is the index currently written, or nil. The new index advances
+// its generation from prev.
 //
-// It refuses, with a *PromoteError, a draft that does not parse, one Validate rejects (every problem
-// listed), a corpus that does not load as it stands, and an MPN another corpus file already seeds. A
-// corpus file that already holds the SAME MPN under the promoted file's name is replaced rather than
-// refused.
+// Promote refuses four things with a *PromoteError: a draft that does not parse, a draft that
+// Validate rejects (with every problem listed), a corpus that does not load as it stands, and an MPN
+// another corpus file already seeds. A corpus file may already hold the SAME MPN under the promoted
+// file's name. Promote replaces that file rather than refusing it.
 func Promote(draft []byte, corpus fs.FS, prev *Index) (*Promoted, error) {
 	spec := &parampb.PartSpec{}
 	if err := protojson.Unmarshal(draft, spec); err != nil {
@@ -92,10 +91,10 @@ func PromoteSpec(spec *parampb.PartSpec, corpus fs.FS, prev *Index) (*Promoted, 
 	return promoted(spec, file, seeded, ix, prev)
 }
 
-// LoadPinMux reads a pin-mux reference from YAML, a PartSpec holding only pins and the docs and
-// packages they name (agni issue 1200). A host usually writes one from the spreadsheet its team keeps,
-// so the format is the contract: keys are PartSpec's proto field names and nothing else, an unknown
-// key fails with its line, and param.CheckPinMux's refusals apply.
+// LoadPinMux reads a pin-mux reference from YAML (agni issue 1200). A reference is a PartSpec holding
+// only pins and the docs and packages they name. A host usually writes one from its team's
+// spreadsheet, so the format is the contract. Keys are PartSpec's proto field names and nothing else.
+// An unknown key fails with its line, and param.CheckPinMux's refusals apply.
 func LoadPinMux(b []byte) (*parampb.PartSpec, error) {
 	var doc yaml.Node
 	if err := yaml.Unmarshal(b, &doc); err != nil {
@@ -111,14 +110,15 @@ func LoadPinMux(b []byte) (*parampb.PartSpec, error) {
 	return mux, nil
 }
 
-// MergeMux merges a pin-mux reference (LoadPinMux's YAML) into the spec the corpus publishes for its
-// MPN and returns what to write, as Promote does. The merged spec replaces the file that already seeds
-// the MPN, whatever it is named, so a corpus keeps one file per MPN; an MPN the corpus does not seed
-// yet gets SpecFileName's file, and the reference must then be a complete spec on its own. The merge
-// rules, and what opts changes, are param.MergePinMux's.
+// MergeMux merges a pin-mux reference in LoadPinMux's YAML into the corpus's published spec for its
+// MPN. It returns what to write, as Promote does. The merged spec replaces the file that already
+// seeds the MPN, whatever its name, so a corpus keeps one file per MPN. An MPN the corpus does not
+// seed yet gets SpecFileName's file, and the reference must then be a complete spec on its own.
+// param.MergePinMux defines the merge rules and what opts changes.
 //
-// It refuses, with a *PromoteError, a reference that does not load, a merge MergePinMux refuses, a
-// corpus that does not load as it stands, and a merged spec Validate rejects (every problem listed).
+// MergeMux refuses four things with a *PromoteError: a reference that does not load, a merge that
+// MergePinMux refuses, a corpus that does not load as it stands, and a merged spec that Validate
+// rejects (with every problem listed).
 func MergeMux(mux []byte, opts param.PinMuxMerge, corpus fs.FS, prev *Index) (*Promoted, error) {
 	ref, err := LoadPinMux(mux)
 	if err != nil {
@@ -193,8 +193,8 @@ func (ix *Index) upsert(e Entry) {
 // a slash ("LM1117-3.3/NOPB"), which would otherwise turn a name into a directory.
 var unsafeFileChars = regexp.MustCompile(`[^A-Za-z0-9._-]`)
 
-// SpecFileName is the corpus file a promoted spec is written to. The name is for people: LoadSet keys a
-// spec by the MPN inside the file, never by its name.
+// SpecFileName is the corpus file a promoted spec is written to. The name is for people. LoadSet keys
+// a spec by the MPN inside the file, never by its name.
 func SpecFileName(mpn string) string {
 	return unsafeFileChars.ReplaceAllString(mpn, "_") + ".textproto"
 }

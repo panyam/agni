@@ -32,8 +32,8 @@ const Namespace = "agni"
 // the visitor's browser, and a `.zip` in it reads as the folder it was made from.
 const BrowserMount = "local"
 
-// Build composes the engine over root, whose top-level directories are the mounts, which is how
-// goapplib's wasmhost holds them, with nothing kept past the worker.
+// Build composes the engine over root and keeps nothing past the worker. Each top-level directory
+// of root is a mount, as goapplib's wasmhost holds them.
 func Build(root fs.FS) (http.Handler, error) { return BuildWith(Options{})(root) }
 
 // BuildWith is Build with options, the rebuild function cmd/agni-wasm hands the host.
@@ -81,11 +81,12 @@ type Options struct {
 	Store service.BlobStore
 	// Version names the engine that wrote what Store holds. Empty means StoreVersion().
 	Version string
-	// CollectBetweenRequests is set by a caller that has turned the Go collector's automatic cycles
-	// off (debug.SetGCPercent(-1)), as cmd/agni-wasm does. The engine then collects after a request
-	// when the heap has doubled since its last collection, and likewise as each file opens, as well as
-	// after each layer it loads, so never in the middle of evaluating (agni issue 1010). A native caller leaves it off, since its collector
-	// runs concurrently on other cores and is cheap there.
+	// CollectBetweenRequests is set by a caller that has turned off the Go collector's automatic
+	// cycles with debug.SetGCPercent(-1), as cmd/agni-wasm does. The engine then collects after a
+	// request when the heap has doubled since its last collection. It does the same as each file
+	// opens, and after each layer it loads, so it never collects in the middle of evaluating (agni
+	// issue 1010). A native caller leaves it off, since its collector runs concurrently on other
+	// cores and is cheap there.
 	CollectBetweenRequests bool
 }
 
@@ -94,9 +95,9 @@ type Options struct {
 var buildID string
 
 // StoreVersion names this build for the persistent tier: the commit, the uncommitted changes when
-// there are any, and the layout of what is stored. It is empty, which persists nothing, for a build
-// that cannot say what it was built from, since one could read a file differently from another and
-// share a name with it.
+// there are any, and the layout of what is stored. A build that cannot say what it was built from
+// gets an empty name, and an empty name persists nothing. Two such builds could read a file
+// differently and still share a name.
 func StoreVersion() string {
 	v := version.Version()
 	switch {
@@ -124,19 +125,19 @@ type Engine struct {
 	Cache *service.DesignCache
 }
 
-// New composes the engine over ms through agni.New, which refuses a build missing the rule catalog
-// or the fact relations. That refusal matters most here: a browser bundle that silently shipped
-// without the built-in rules would report every design clean.
-//
-// What the browser engine leaves out is deliberate. There is no native renderer (xschem and Lepton
-// are processes), no review store (nothing a visitor drops is kept), no datasheet corpus yet (#852
-// decides whether one ships), and no query budget, since the only person waiting on a query is the
-// one who asked it.
-// designCache is how many reads the browser engine keeps: fewer than a server, since a tab's memory
-// is the visitor's. One open design with its board checked holds about seven (the parse, the derived
-// design, a drawing, the board and a model with and without it).
+// designCache is how many reads the browser engine keeps. It keeps fewer than a server, since a
+// tab's memory is the visitor's. One open design with its board checked holds about seven: the parse,
+// the derived design, a drawing, the board, and a model with and without the board.
 const designCache = 10
 
+// New composes the engine over ms through agni.New. agni.New refuses a build missing the rule
+// catalog or the fact relations. The refusal matters most here, because a browser bundle that
+// silently shipped without the built-in rules would report every design clean.
+//
+// The browser engine leaves four things out on purpose. It has no native renderer, since xschem and
+// Lepton are processes. It has no review store, since nothing a visitor drops is kept. It has no
+// datasheet corpus yet, and #852 decides whether one ships. And it has no query budget, since only
+// the person who asked a query is waiting on it.
 func New(ms ...fshost.Mount) (*Engine, error) { return NewWith(Options{}, ms...) }
 
 // NewWith is New with options.
@@ -153,8 +154,8 @@ func NewWith(o Options, ms ...fshost.Mount) (*Engine, error) {
 		}
 		ms = wrapped
 	}
-	// A file the page held back reads as a placeholder (agni issue 992), outermost so that a Stat
-	// through the collector's Open still sees the file.
+	// A file the page held back reads as a placeholder (agni issue 992). This wrapper goes outermost,
+	// so a Stat through the collector's Open still sees the file.
 	held := &withholding{}
 	withheld := make([]fshost.Mount, len(ms))
 	for i, m := range ms {

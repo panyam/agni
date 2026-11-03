@@ -1,8 +1,8 @@
 // Package acmerules is a demonstration out-of-module rule suite for the open-core extension
 // skeleton (WS12-001). It registers a private "house-style" rule with the engine's public rule
-// registry (WS12-004). Blank-importing it (import _ ".../acmerules") puts the rule in ListRules and
-// CheckDesign on the engine's own CLI and serve, namespaced "acme/..." so it can never shadow a
-// built-in.
+// registry (WS12-004). A blank import of it puts the rule in ListRules and CheckDesign on the
+// engine's own CLI and serve. The import is import _ ".../acmerules". The rule is namespaced
+// "acme/..." so it can never shadow a built-in.
 //
 // A real extension's rules encode a company's private design policy. This one shows only the
 // wiring, so the rule is simple.
@@ -21,7 +21,7 @@ import (
 // with one blank import. The alternative is an explicit RegisterSource call from the composing
 // binary's main (see WS12-004).
 //
-// The suite carries one rule of each authoring style, a Go rule with an Eval closure (below) and a
+// The suite holds one rule of each authoring style, a Go rule with an Eval closure (below) and a
 // datalog rule declared as a query (acmedatalog.go). They register identically.
 func init() {
 	check.RegisterSource(check.NewSource("acme", []*check.Rule{
@@ -30,7 +30,7 @@ func init() {
 	}))
 }
 
-// noExperimentalRefDes is a house rule: an X-prefixed ref-des marks an experimental/breadboard
+// noExperimentalRefDes is a house rule. An X-prefixed ref-des marks an experimental/breadboard
 // part that must not reach a production design. It reads only component ref-des, so it runs on
 // any format the engine ingests, including the extension's own .acme reader.
 var noExperimentalRefDes = &check.Rule{

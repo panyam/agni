@@ -1,8 +1,8 @@
 // Package netgraph assembles a pin-level netlist from schematic geometry. Both the xschem and
-// gEDA readers reduce their format to the same neutral inputs, expressed as integer grid points:
-// wire segments (optionally carrying a net name), named net anchors (power taps, port/label
-// markers), and component pin placements. netgraph unions everything that shares a
-// grid point, names each resulting net, and reports which component pins land on it.
+// gEDA readers reduce their format to the same neutral inputs on an integer grid. The inputs are
+// wire segments, each optionally with a net name, named net anchors such as power taps and port or
+// label markers, and component pin placements. netgraph unions everything that shares a grid
+// point, names each resulting net, and reports which component pins sit on it.
 //
 // It is format-agnostic and coordinate-agnostic. The caller quantizes its native units to an
 // integer grid so that endpoints meant to touch compare equal. Two connection points at the
@@ -37,9 +37,9 @@ type Wire struct {
 
 // Anchor names the net passing through a grid point, such as a power/ground tap or a port/label
 // marker. It contributes a name but no pin. Driver marks an anchor that asserts the net is driven
-// without being a pin (a KiCad PWR_FLAG), so a rail fed only by a flag is not read as undriven; it
-// sets Net.Driven. External marks an anchor that continues the net onto another sheet (a
-// global/hierarchical label or a global power rail); it sets Net.External.
+// without being a pin, such as a KiCad PWR_FLAG. It sets Net.Driven, so a rail fed only by a flag
+// is not read as undriven. External marks an anchor that continues the net onto another sheet,
+// such as a global or hierarchical label or a global power rail. It sets Net.External.
 type Anchor struct {
 	At       Point
 	Label    string
@@ -58,23 +58,24 @@ type Anchor struct {
 // Pin is one component pin placed at a grid point. Comp is the component ref_des and Pin is
 // the pin designator on that component. NoConnect marks a pin whose connect point carries
 // the format's no-connect flag (a KiCad no_connect marker placed ON the pin, WS1-019). The
-// caller detects the coincidence, and Build names that pin's LONE stub net in the
-// tool-marker vocabulary ("unconnected-(REF-Pad)") instead of "N$<n>", so existing
-// no-connect consumers (intentionallyUnconnected, the NC channel) recognise it with no new IR
-// field. A marked pin on a multi-pin net keeps normal naming, because that is an
-// nc-pin-connected problem rather than an intentional stub.
+// caller detects the coincidence. Build then names that pin's LONE stub net in the tool-marker
+// vocabulary ("unconnected-(REF-Pad)") instead of "N$<n>". The existing no-connect consumers
+// recognise that name with no new IR field. They are intentionallyUnconnected and the NC channel.
+// A marked pin on a multi-pin net is named normally, because that net is an nc-pin-connected
+// problem rather than an intentional stub.
 type Pin struct {
 	At        Point
 	Comp, Pin string
 	NoConnect bool
 	// Dir is the pin's electrical direction in the check vocabulary ("power_in",
-	// "power_out", ...), set only for a pin on a VIRTUAL component (a KiCad power symbol,
-	// WS1-014) that never enters Components, since no part-type pin exists to resolve it
-	// from. Empty for ordinary pins, whose direction resolves via the part type.
+	// "power_out", ...). Only a pin on a VIRTUAL component sets it, such as a KiCad power
+	// symbol (WS1-014). A virtual component never enters Components, so no part-type pin
+	// exists to resolve the direction from. Dir is empty for ordinary pins, whose direction
+	// resolves via the part type.
 	Dir string
-	// AutoName is the name the format's own tool gives a net no label names, when this pin is
-	// the one it is named after (KiCad's "Net-(R1-Pad2)"), and NCName the name it gives a
-	// no-connect-flagged pin's lone stub ("unconnected-(J1A-MID0-PadK40)"). A format that sets
+	// AutoName is the format tool's own name for an unlabelled net named after this pin, such
+	// as KiCad's "Net-(R1-Pad2)". NCName is the tool's name for the lone stub of a
+	// no-connect-flagged pin, such as "unconnected-(J1A-MID0-PadK40)". A format that sets
 	// neither gets the synthetic "N$<n>" and "unconnected-(REF-PadN)" names.
 	AutoName, NCName string
 }
@@ -92,12 +93,12 @@ type Options struct {
 type Conn struct{ Comp, Pin, Dir string }
 
 // Net is one assembled net, a name and the pins on it, with Conns sorted. Driven is true when a
-// driver anchor (a PWR_FLAG) landed on the net. External is true when the net continues onto
-// another sheet, so an absence-based rule (nothing drives this, only inputs here) knows its view
-// is incomplete and can decline to fire. Aliases lists EVERY distinct label that landed on the
-// net (Name included) with its rank, in first-appearance order, so naming-conflict rules can see
-// what the naming pass collapsed (taps spelled "+3V3" and "+3.3V" on one net). Empty for unnamed
-// nets.
+// driver anchor such as a PWR_FLAG sits on the net. External is true when the net continues onto
+// another sheet. An absence-based rule, such as "nothing drives this" or "only inputs here", then
+// knows its view is incomplete and can decline to fire. Aliases lists EVERY distinct label on the
+// net, Name included, with its rank, in first-appearance order. The naming pass collapses them to
+// one name, and naming-conflict rules read Aliases to see what it collapsed, such as taps spelled
+// "+3V3" and "+3.3V" on one net. Aliases is empty for unnamed nets.
 type Net struct {
 	Name string
 	// ID is a hash of the sorted connection set (see netID), independent of Name, so two
@@ -108,23 +109,25 @@ type Net struct {
 	Conns    []Conn
 	Driven   bool
 	External bool
-	// NoConnect is true when a pin on the net carries the format's no-connect flag, which is the
-	// designer saying the open pin is deliberate. A net's name never says so: KiCad names every
-	// unlabelled one-pin net "unconnected-(...)", flagged or not (agni issue 1019).
+	// NoConnect is true when a pin on the net carries the format's no-connect flag. The flag is
+	// the designer saying the open pin is deliberate. A net's name never says so, because KiCad
+	// names every unlabelled one-pin net "unconnected-(...)", flagged or not (agni issue 1019).
 	NoConnect bool
 	Aliases   []Alias
-	// SheetGroups splits Aliases by where the names met: each group is the names that share one
-	// sheet's wiring, joined by a wire or by one name drawn twice on that sheet, before any other
-	// sheet joined them, with the sheet it is on. It is set only when the net's names fall into two
-	// groups or more, which needs a caller that sets Sheet, so two hierarchical labels a parent
-	// sheet straps together are told apart from two labels on one wire (agni issue 1249). Nil means
-	// every alias met in one place, which is what a caller that sets no Sheet always gets.
+	// SheetGroups splits Aliases by where the names met. Each group holds the names that share one
+	// sheet's wiring, with that sheet. A wire joins them there, or one name drawn twice on that
+	// sheet does, before any other sheet joins them. SheetGroups is set only when the net's names
+	// fall into two groups or more, and only a caller that sets Sheet can produce two. Two labels
+	// on one wire form one group. A parent sheet can strap two hierarchical labels together, and
+	// those form two groups (agni issue 1249). Nil means every alias met in one place. A caller
+	// that sets no Sheet always gets nil.
 	SheetGroups []SheetGroup
 }
 
-// NetRef identifies the net a wire or point resolved to by its display Name and the deterministic
-// ID (see Net.ID). The wire/point maps carry both so the geometry sidecar can draw a wire by name
-// AND join a highlight to the specific net instance by id, even when two nets share a name.
+// NetRef identifies a net by its display Name and its deterministic ID (see Net.ID). The wire and
+// point maps give each wire or point the NetRef of the net it resolved to. The geometry sidecar
+// can then draw a wire by name AND join a highlight to the specific net instance by id, even when
+// two nets share a name.
 type NetRef struct {
 	Name string
 	ID   string
@@ -172,8 +175,9 @@ type Alias struct {
 }
 
 // SheetGroup is the names of one net that met on one sheet's wiring (Net.SheetGroups). A name can
-// sit in a group on a sheet other than its own: a parent sheet's pin carries its child's
-// hierarchical name, so two child ports the parent wires together meet on the parent.
+// sit in a group on a sheet other than its own. A parent sheet's pin carries its child's
+// hierarchical name, so when the parent wires two child ports together, their names meet on the
+// parent.
 type SheetGroup struct {
 	Sheet string
 	Names []string
@@ -181,33 +185,34 @@ type SheetGroup struct {
 
 // Dangle is a wire endpoint that terminates on nothing (no pin, anchor/label, junction, or other
 // wire endpoint shares its grid point). At is the endpoint and WireId the Wire.Id it belongs to, ""
-// when unknown. A wire end landing mid-span on another wire without a junction (a T-tap missing its
-// dot) is not reported here; that is WS1-012 and needs point-on-segment geometry.
+// when unknown. A wire end can sit mid-span on another wire without a junction, as a T-tap missing
+// its dot does. Dangle does not report that case, which is WS1-012 and needs point-on-segment
+// geometry.
 type Dangle struct {
 	At     Point
 	WireId string
 }
 
 // Build assembles nets from schematic geometry in two stages. First it unions connection
-// points by grid coincidence (a wire also unions its two endpoints), giving geometric nodes.
-// Then it unions nodes by EVERY label they carry, since schematic net labels and power taps connect
-// by name across the whole sheet, not only where wires physically touch, so every "0" ground
-// tap is one net regardless of geometry. A node carrying two labels aliases them into one net,
-// which is how the KiCad hierarchy walk stitches a parent sheet pin to its child hierarchical
+// points by grid coincidence, and a wire also unions its two endpoints. That gives geometric
+// nodes. Then it unions nodes by EVERY label they carry. Schematic net labels and power taps
+// connect by name across the whole sheet, not only where wires physically touch, so every "0"
+// ground tap is one net regardless of geometry. A node carrying two labels aliases them into one
+// net. The KiCad hierarchy walk uses this to stitch a parent sheet pin to its child hierarchical
 // label.
 // The merged net's name is its lowest-ranked label (wire labels first, then Anchor.Rank,
-// ties by input order). Unnamed geometric nodes stay separate and get a synthetic "N$<n>"
+// ties by input order). Unnamed geometric nodes are kept separate and get a synthetic "N$<n>"
 // name numbered by first appearance; an unnamed, pinless node is dropped as drawing noise.
 // Conns within a net are deduplicated and sorted.
 //
 // It also returns the dangling endpoints (see Dangle), each a wire endpoint whose grid point holds
-// nothing else (no pin, anchor, terminal, or second wire endpoint). terminals are the points a
-// format marks as a legitimate wire end, a junction dot or a no-connect flag; formats with
-// neither pass nil. Dangles are sorted.
+// nothing else (no pin, anchor, terminal, or second wire endpoint). A format marks a junction dot
+// or a no-connect flag as a legitimate wire end and passes those points as terminals. Formats
+// with neither pass nil. Dangles are sorted.
 //
-// The third return maps each identified wire (by Wire.Id) to the net its endpoints resolved
-// to, which the geometry sidecar uses to draw a KiCad wire by net (WS1-022). Only wires with a
-// native id populate it; a wire whose node is drawing noise is omitted.
+// The third return maps each identified wire, keyed by Wire.Id, to the net of its endpoints. The
+// geometry sidecar uses the map to draw a KiCad wire by net (WS1-022). Only wires with a native
+// id populate it, and a wire whose node is drawing noise is omitted.
 func Build(wires []Wire, anchors []Anchor, pins []Pin, terminals []Point, opts ...Options) ([]Net, []Dangle, map[string]NetRef) {
 	nets, dangles, wireNets, _ := BuildWithPoints(wires, anchors, pins, terminals, opts...)
 	return nets, dangles, wireNets
@@ -351,13 +356,14 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 		nm := name[r].name
 		cs := conns[r]
 		if nm == "" && len(cs) == 1 {
-			// A lone no-connect-marked pin gets the tool-marker name, not N$: the stub is
-			// intentional and every no-connect-aware consumer keys on this vocabulary.
+			// A lone no-connect-marked pin gets the tool-marker name, not N$. The stub is
+			// intentional, and every no-connect-aware consumer keys on this vocabulary.
 			nm = ncName[r]
 		}
 		if nm == "" && autoName[r] != "" {
-			// A net one pin alone names is a stub whatever its flags say, so it takes that pin's
-			// unconnected name, as KiCad does for a weakly driven single-pin net.
+			// When only one pin can name an unlabelled net, the net is a stub whatever its flags
+			// say. It takes that pin's unconnected name, as KiCad does for a weakly driven
+			// single-pin net.
 			// A no-connect flag on the net does the same for every pin, as KiCad's forced no-connect
 			// naming does.
 			switch {
@@ -417,8 +423,8 @@ func BuildWithPoints(wires []Wire, anchors []Anchor, pins []Pin, terminals []Poi
 	return nets, dangling(wires, anchors, pins, terminals), wireNets, pointNets
 }
 
-// betterAutoName reports whether a pin-derived net name should replace the current pick: a name
-// with no pad number beats one with, and otherwise the alphabetically lower wins. That is KiCad's
+// betterAutoName reports whether a pin-derived net name should replace the current pick. A name
+// with no pad number beats one with, and otherwise the alphabetically lower wins. KiCad uses this
 // order for a net named after one of its pins.
 func betterAutoName(a, cur string) bool {
 	aPad, curPad := strings.Contains(a, "-Pad"), strings.Contains(cur, "-Pad")
@@ -493,10 +499,10 @@ type unionFind struct {
 	parent []int
 }
 
-// sheetGroups groups each net's names by where they met, for Net.SheetGroups. It unions the same
-// points the solve does, wires and one name drawn twice, except that a name joins only within one
-// sheet, so the groups of one net are the pieces it was in before other sheets joined them. It
-// returns, per root of uf, the sorted name groups of a net whose names fall into two groups or more.
+// sheetGroups groups each net's names by where they met, for Net.SheetGroups. It unions points as
+// the solve does, by wire and by one name drawn twice, except that a name joins only within one
+// sheet. So the groups of one net are the pieces it was in before other sheets joined them. For
+// each root of uf whose net's names fall into two groups or more, it returns the sorted groups.
 func sheetGroups(uf *unionFind, wires []Wire, anchors []Anchor) map[int][]SheetGroup {
 	local := newUnionFind()
 	for _, w := range wires {

@@ -17,7 +17,7 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
-// maxLinks is the most verdict links one check answer lists; each verdict's id is in the tables.
+// maxLinks caps the verdict links one check answer lists. The tables hold each verdict's id.
 const maxLinks = 50
 
 // registerTools adds agni's own tools, each one wrapping a service the Connect API serves.
@@ -69,8 +69,8 @@ func closed(schema any) any {
 	return m
 }
 
-// answer is a tool's text, then its structured content: the design, what was asked, the tables and
-// the wire message the service returned.
+// answer returns a tool's text, then its structured content. The content holds the design, what was
+// asked, the tables and the wire message the service returned.
 func answer(text string, data map[string]any) (core.ToolResult, error) {
 	raw, err := json.Marshal(data)
 	if err != nil {
@@ -166,8 +166,9 @@ func (s *srv) check(ctx context.Context, in checkInput) (core.ToolResult, error)
 	var b strings.Builder
 	fmt.Fprintf(&b, "design: %s\nchecked: %s\n\n", u, rulesAsked(in.Rules))
 	for _, t := range tables {
-		// The verdict list repeats the findings with every pass beside them; the per-rule counts and
-		// the findings say the same in a page an agent can read, and the structured content has it.
+		// The verdict list repeats the findings with every pass beside them, so the text leaves it
+		// out. The per-rule counts and the findings say the same in a page an agent can read, and
+		// the structured content holds the full list.
 		if t.GetName() == "verdicts" {
 			continue
 		}
@@ -289,7 +290,7 @@ func (s *srv) diff(ctx context.Context, in diffInput) (core.ToolResult, error) {
 		writeTable(&b, t)
 	}
 	// One link opens the earlier revision with the viewer's Compare started against the later, so the
-	// reader lands on the same change table (agni issue 1126).
+	// reader sees the same change table (agni issue 1126).
 	var link string
 	meta, why := s.linkMeta(snaps[0])
 	if why == "" {
@@ -497,9 +498,9 @@ func tablesJSON(tables []*webapi.Table) []json.RawMessage {
 	return out
 }
 
-// contentHash is the revision snap's design was read at, which a verdict link carries so the viewer
-// can say when the design has changed since (agni issue 392). "" when it can't be read, and the link
-// then carries none.
+// contentHash is the revision that snap's design was read at. A verdict link carries it, so the
+// viewer can say when the design has changed since (agni issue 392). It is "" when it can't be read,
+// and the link then carries none.
 func (s *srv) contentHash(ctx context.Context, snap *webapi.Snapshot) string {
 	resp, err := s.api.Design.GetDesign(ctx, &webapi.GetDesignRequest{Snapshot: snap.GetName()})
 	if err != nil {
@@ -508,8 +509,9 @@ func (s *srv) contentHash(ctx context.Context, snap *webapi.Snapshot) string {
 	return resp.GetContentHash()
 }
 
-// listed is what the designs tool and resource say: each design a project declares, by the name the
-// tools take, and the mounts a file outside a project is named under.
+// listed is the answer the designs tool and resource give. It holds each design a project declares,
+// under the name the tools take. It also holds the mounts, since a file outside a project is named
+// by its mount.
 type listed struct {
 	Designs []listedDesign `json:"designs"`
 	Mounts  []string       `json:"mounts"`

@@ -13,16 +13,16 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// ErrStale is a corpus whose index no longer describes its files: an entry names a file that is gone,
-// or one whose bytes no longer hash to what was indexed, the trace of a hand edit that skipped
-// `agnids index`. It is reported rather than served around, because serving the file would hand out
-// a spec nobody validated, and skipping it would make the part read as unseeded.
+// ErrStale reports a corpus whose index no longer describes its files. An entry names a file that is
+// gone, or a file whose bytes no longer hash to what was indexed. A hand edit that skipped `agnids
+// index` leaves that trace. The Reader reports it rather than serving around it. Serving the file
+// would hand out a spec nobody validated, and skipping it would make the part read as unseeded.
 var ErrStale = errors.New("the corpus index is stale; run `agnids index` over the corpus")
 
 // Reader answers the contract's PartSpecService from a published corpus on an fs.FS, through its
 // index, and is a param.Fetcher. It reads only what is asked for: the index, then one file per part
 // number requested. The index is re-read when its modification time or size changes, so a promotion
-// reaches the next request, and a parsed spec is kept by content hash, so an unchanged file is parsed
+// reaches the next request. A parsed spec is kept by content hash, so an unchanged file is parsed
 // once.
 type Reader struct {
 	fsys fs.FS
@@ -106,7 +106,7 @@ func (r *Reader) index() (*Index, error) {
 	return ix, nil
 }
 
-// spec returns the parsed spec an entry names, reading and verifying the file unless a spec with that
+// spec returns the parsed spec for an entry. It reads and verifies the file unless a spec with that
 // hash was already parsed. The caller holds r.mu.
 func (r *Reader) spec(e Entry) (*parampb.PartSpec, error) {
 	if s, ok := r.parsed[e.Hash]; ok {

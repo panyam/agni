@@ -25,9 +25,9 @@ import (
 	skhttp "github.com/panyam/servicekit/http"
 )
 
-// serveCmd serves the extraction workbench: its page, the raw PDFs it renders, and DatasheetService,
-// which carries the workbench's whole API including its folder tree, so agnids can be hosted apart
-// from the engine's `agni serve` (agni issue 744).
+// serveCmd serves the extraction workbench's page, the raw PDFs it renders, and DatasheetService.
+// DatasheetService holds the workbench's whole API, including its folder tree, so agnids can be
+// hosted apart from the engine's `agni serve` (agni issue 744).
 func serveCmd() *cobra.Command {
 	var addr, webDir, pdf2doc, viewerURL, mountRoot, corpusDir string
 	var specs []string
@@ -44,9 +44,9 @@ func serveCmd() *cobra.Command {
 				return err
 			}
 			// With NO web dir named and no default one present, serve the API alone, as `agni serve`
-			// does (agni 735): a deployment that only publishes a corpus for --params-url has no
-			// workbench to show. A dir that was named, or a default one that exists, must hold a built
-			// workbench, because then a broken one is a mistake to hear about.
+			// does (agni 735). A deployment that only publishes a corpus for --params-url has no
+			// workbench to show. A named dir, or a default one that exists, must hold a built
+			// workbench. A broken one is then a mistake the operator needs to hear about.
 			if !cmd.Flags().Changed("web-dir") {
 				if _, err := os.Stat(webDir); errors.Is(err, os.ErrNotExist) {
 					fmt.Fprintf(cmd.ErrOrStderr(), "note: no web dir was named and %s is absent, so this serves the API without the workbench\n", webDir)
@@ -105,7 +105,8 @@ func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerU
 	// The workbench renders the source PDF with pdf.js, so its raw bytes are served from the mounts.
 	// The prefix is more specific than the page's, so ServeMux routes it here.
 	mux.Handle("/datasheets/raw/", http.StripPrefix("/datasheets/raw/", rawDatasheetHandler(ms)))
-	// An empty webDir is the API alone: no page, no bundle, no redirect to a page that is not there.
+	// An empty webDir serves the API alone, with no page, no bundle, and no redirect to a missing
+	// page.
 	if webDir != "" {
 		mux.Handle("/static/", http.StripPrefix("/static/", http.FileServer(http.Dir(filepath.Join(webDir, "static")))))
 		app := goal.NewApp(&dsApp{viewerURL: viewerURL}, goal.SetupTemplates(filepath.Join(webDir, "templates")))
@@ -120,12 +121,12 @@ func newWorkbenchMux(ms []mounts.Mount, webDir string, pdf2doc []string, viewerU
 }
 
 // openCorpus opens the published corpus at dir for PartSpecService. It refreshes the index first,
-// writing it when it is missing or no longer matches the files: the index is derived and can always
-// be rebuilt, so a fresh corpus (a new volume, a new directory) needs no separate step, and a hand
-// edit made while the server was down is picked up at start. A corpus that does not validate fails
-// here, by name. While the server runs, a file edited behind the index is refused rather than
-// re-indexed, and the errors that mean so are classified as dsservice.ErrCorpusNotReady, so a
-// caller is told what to run rather than given a bad request.
+// and writes it when it is missing or no longer matches the files. The index is derived and can
+// always be rebuilt. So a fresh corpus, such as a new volume or a new directory, needs no separate
+// step, and start picks up a hand edit made while the server was down. A corpus that does not
+// validate fails here, by name. While the server runs, a file edited behind the index is refused
+// rather than re-indexed. Those errors are classified as dsservice.ErrCorpusNotReady, so a caller is
+// told what to run rather than given a bad request.
 func openCorpus(dir string, notes io.Writer) (param.Fetcher, error) {
 	if fi, err := os.Stat(dir); err != nil || !fi.IsDir() {
 		return nil, fmt.Errorf("not a directory")
@@ -173,8 +174,8 @@ func classifyCorpusErr(err error) error {
 }
 
 // serveMounts composes the mount table from --mount and --mount-root. The root is the image's
-// zero-flag path, as on `agni serve`: every subdirectory becomes a mount named after itself, so
-// `-v ~/datasheets/ti:/datasheets/ti` needs no flag, and an explicit --mount of the same name wins.
+// zero-flag path, as on `agni serve`. Every subdirectory becomes a mount named after itself, so
+// `-v ~/datasheets/ti:/datasheets/ti` needs no flag. An explicit --mount of the same name wins.
 func serveMounts(specs []string, root string) ([]mounts.Mount, error) {
 	explicit, err := mounts.Parse(specs)
 	if err != nil {
@@ -210,8 +211,8 @@ func checkWorkbenchAssets(dir string) error {
 	return nil
 }
 
-// dsApp is the goapplib application context for the workbench page. It carries where the viewer is,
-// for the heading's link home, since the workbench is hosted apart from it.
+// dsApp is the goapplib application context for the workbench page. It holds the viewer's location
+// for the heading's link home, since the workbench is hosted apart from the viewer.
 type dsApp struct {
 	viewerURL string
 }

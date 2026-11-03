@@ -8,9 +8,9 @@ import (
 	"github.com/panyam/agni/examples/common"
 )
 
-// TestTheFixtureAnswersAreTheDesignedOnes pins the coverage cases the fixture was built around (see
-// README.md, "The design"), so a change to a bucket's query or to the library members it calls shows
-// up as a changed answer rather than a quietly different walkthrough.
+// TestTheFixtureAnswersAreTheDesignedOnes pins the coverage cases behind the fixture's design (see
+// README.md, "The design"). A change to a bucket's query, or to a library member it calls, then
+// shows up as a changed answer rather than a quietly different walkthrough.
 func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
 	d, err := common.Load("../common/designs/probe-coverage.edn")
 	if err != nil {
@@ -39,9 +39,9 @@ func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
 	}
 }
 
-// TestTheWhyStepExplainsARowThroughTheLibrary pins what the witness step prints for the fixture's first
-// one-end row: the walk's own passive rule, then the library member with its body facts, ending in the
-// `not` that held on the unprobed net (agni issue 794).
+// TestTheWhyStepExplainsARowThroughTheLibrary pins the witness step's output for the fixture's
+// first one-end row (agni issue 794). It prints the walk's own passive rule, then the library
+// member with its body facts, and ends in the `not` that held on the unprobed net.
 func TestTheWhyStepExplainsARowThroughTheLibrary(t *testing.T) {
 	d, err := common.Load("../common/designs/probe-coverage.edn")
 	if err != nil {

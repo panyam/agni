@@ -11,7 +11,7 @@
 // stdlib/relations is the exception and is listed for intent rather than for effect.
 // stdlib/rules/datalog imports it, so dropping the blank import here changes nothing and the hook
 // cannot be red-checked in this binary. The facade's own TestNewRefusesWhenNoRelationsAreInstalled
-// is where that refusal is proven, in a binary that genuinely installs none. Keep the import
+// proves that refusal, in a binary that genuinely installs none. Keep the import
 // anyway, because a program that drops the datalog suite would otherwise lose the fact base with it
 // and silently.
 package composetest
@@ -76,8 +76,8 @@ func TestComposedCatalogCarriesEverySource(t *testing.T) {
 }
 
 // The two rule-running services must see ONE catalog. RuleServices does not take a catalog and
-// returns both services together for exactly this reason, so the assertion is that what the check
-// surface lists is what the engine composed, rule for rule.
+// returns both services together for exactly this reason. The assertion is that the check surface
+// lists the catalog the engine composed, rule for rule.
 func TestRuleServicesRunTheEnginesCatalog(t *testing.T) {
 	e, err := agni.New()
 	if err != nil {
@@ -102,10 +102,10 @@ func TestRuleServicesRunTheEnginesCatalog(t *testing.T) {
 	}
 }
 
-// An overlay profile REPLACES the same-named built-in in the catalog, and the profile index the
-// review's absence gate reads has to track that. An index still naming the built-in would let the
-// gate clear on an interface whose rules are no longer in the run, so an item scoped by it would
-// score a clean pass on an interface nothing checked.
+// An overlay profile REPLACES the same-named built-in in the catalog. The review's absence gate
+// reads the profile index, and the index has to track that. An index still naming the built-in
+// would let the gate clear on an interface whose rules are no longer in the run, so an item scoped
+// by it would score a clean pass on an interface nothing checked.
 func TestProfileIndexTracksAnOverlaySupersession(t *testing.T) {
 	overlay := profiles.Profile{
 		Name:    "CAN",

@@ -1,7 +1,7 @@
 // Command catalogdocs generates the docsite's rule and relation catalog (issue 14) from the composed
 // engine catalog and the embedded per-rule and per-relation Detail markdown. It writes
 // docsite/content/reference/{rules,relations}/ and the SVG cards under
-// docsite/static/images/catalog/, so the stdlib docs stay the one source of truth.
+// docsite/static/images/catalog/, so the stdlib docs are the one source of truth.
 //
 // Run it from the repo root via `make catalog-docs`. `make catalog-docs-check` regenerates and fails
 // when the committed output drifts. Output is sorted, so a clean regen produces no diff.
@@ -69,8 +69,8 @@ var relationKindOrder = []string{
 	query.KindExtension,
 }
 
-// libSource is where a library module's file is read on GitHub, for the link a derived member's page
-// carries to its definition.
+// libSource is the GitHub location of a library module's file. A derived member's page links there
+// to its definition.
 const libSource = "https://github.com/panyam/agni/blob/main/stdlib/lib/"
 
 func main() {
@@ -209,10 +209,10 @@ func genRelations() error {
 	return os.WriteFile(filepath.Join(outDir, "index.md"), []byte(relationsIndex(rels)), 0o644) // #nosec G306 -- committed docs pages
 }
 
-// definitionSection renders a derived member's definition as the engine registered it: the typed
-// signature, which argument types were inferred rather than declared, every clause, and a link to the
-// module file. It is generated rather than written in the member's doc so the page cannot drift from
-// the rules.
+// definitionSection renders a derived member's definition as the engine registered it. It shows
+// the typed signature, which argument types were inferred rather than declared, every clause, and a
+// link to the module file. It is generated rather than written in the member's doc so the page
+// cannot drift from the rules.
 func definitionSection(path string) (string, error) {
 	e, err := query.Describe(path)
 	if err != nil {
@@ -275,15 +275,15 @@ func remedySection(remedy string) string {
 }
 
 // frontMatter builds a page's YAML header. The title is the entity name; the description is its
-// one-line summary with quotes escaped so the YAML stays valid.
+// one-line summary with quotes escaped so the YAML is valid.
 func frontMatter(name, summary string) string {
 	desc := strings.ReplaceAll(summary, `"`, `\"`)
 	return fmt.Sprintf("---\ntitle: \"%s\"\ndescription: \"%s\"\n---\n\n", name, desc)
 }
 
-// resetDir ensures dir exists and removes every file in it with the given extension, so a removed
-// rule, relation or image ref drops its file rather than lingering as an orphan the freshness check
-// cannot see. Files with other extensions survive.
+// resetDir ensures dir exists and removes every file in it with the given extension. A removed
+// rule, relation or image ref then loses its file. Otherwise the file would linger as an orphan,
+// and the freshness check cannot see orphans. Files with other extensions survive.
 func resetDir(dir, ext string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil { // #nosec G301 -- committed docs pages
 		return err

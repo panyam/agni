@@ -9,18 +9,19 @@ import (
 )
 
 // TestMain clears the two path variables for the same reason examples/common does. They replace the
-// bundled defaults these tests assert against, so a developer who exports either to drive the walk
-// over their own board could not run the gate, and the failure would print their path into the log.
+// bundled defaults, and these tests assert against those defaults. A developer who exports either
+// variable to drive the walk over their own board could not run the gate, and the failure would
+// print their path into the log.
 func TestMain(m *testing.M) {
 	os.Unsetenv(common.DesignPathEnv)
 	os.Unsetenv(common.ReviewPathEnv)
 	os.Exit(m.Run())
 }
 
-// The walkthrough's argument is that a checklist reports what it could NOT answer, and the
-// bundled checklist is sized so each of those states occurs. Prose cannot be checked by building, so
-// this holds the claim. Change the fixture or the checklist and a narration that no longer matches
-// fails here rather than teaching the wrong lesson quietly.
+// The walkthrough argues that a checklist reports what it could NOT answer. The bundled checklist
+// is sized so each of those states occurs. Prose cannot be checked by building, so this test holds
+// the claim. Change the fixture or the checklist, and a narration that no longer matches fails here
+// rather than teaching the wrong lesson quietly.
 func TestBundledChecklistShowsEveryOutcomeItNarrates(t *testing.T) {
 	rep, err := run(
 		common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn"),
@@ -46,9 +47,9 @@ func TestBundledChecklistShowsEveryOutcomeItNarrates(t *testing.T) {
 	}
 }
 
-// The unbound item is the one the last step is about, and it is the one most likely to be "tidied
-// up" by someone raising the coverage number. Removing it would leave every other assertion here
-// passing, so it gets its own.
+// The last step is about the unbound item. Someone raising the coverage number is likely to "tidy
+// up" that item. Removing it would leave every other assertion here passing, so it gets its own
+// test.
 func TestOneItemIsDeliberatelyUnbound(t *testing.T) {
 	rep, err := run(
 		common.AskPath("design", "../common/designs/i2c-sensor/i2c-sensor.edn"),

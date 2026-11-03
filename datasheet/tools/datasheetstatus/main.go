@@ -1,8 +1,9 @@
 // Command datasheetstatus reports the Stage-A (PDF -> doc-IR) extraction freshness of a datasheet
-// corpus laid out as <vendor>/<PART>/ (WS13-009). Per part it reports which PDFs have a doc-IR
-// sibling, whether that doc-IR still matches the PDF bytes and the installed toolchain, and, given
-// the corpus store, which drafts cite the part's PDFs and whether each is published (agni issue
-// 749). It never writes. `make datasheets-status` runs it over DATASHEET_DIR and CORPUS_DIR.
+// corpus laid out as <vendor>/<PART>/ (WS13-009). For each part it reports which PDFs have a doc-IR
+// sibling, and whether that doc-IR still matches the PDF bytes and the installed toolchain. Given
+// the corpus store, it also reports which drafts cite the part's PDFs and whether each is published
+// (agni issue 749). It never writes. `make datasheets-status` runs it over DATASHEET_DIR and
+// CORPUS_DIR.
 //
 // Freshness is read from each doc-IR's Document.content_hash (the source bytes at extraction time)
 // and Document.producer (the toolchain). A recipe or patch change is a derive-stage concern and
@@ -12,8 +13,9 @@
 //
 //	datasheetstatus [--toolchain docling/X.Y.Z] [--corpus <dir> [--mount ds]] [--list] <root>...
 //
-// Default output is a per-part table plus a summary tally. With --list it prints, one per line,
-// the PDF paths that need (re)extraction (not-extracted or stale-source) for `make pdf2doc-all`.
+// Default output is a per-part table plus a summary tally. With --list it prints the PDF paths that
+// need (re)extraction, one per line, for `make pdf2doc-all`. Those are the not-extracted and
+// stale-source PDFs.
 package main
 
 import (
@@ -32,7 +34,7 @@ import (
 )
 
 // docSiblingSuffix is the doc-IR sibling extension, so LM1117.pdf pairs with LM1117.doc.textproto.
-// Keep it in step with cmd/agni/osdocloader.go.
+// Keep it in step with datasheet/cmd/agnids/osdocloader.go.
 const docSiblingSuffix = ".doc.textproto"
 
 type pdfInfo struct {
@@ -54,7 +56,7 @@ type draftInfo struct {
 	published bool
 }
 
-// rollup is the status most needing attention across the part's PDFs.
+// rollup returns the worst status across the part's PDFs, the one most needing attention.
 func (p partInfo) rollup() PDFStatus {
 	worst := Fresh
 	for _, f := range p.pdfs {

@@ -1,8 +1,8 @@
 // Package sexpr is the shared s-expression parser for the format readers (KiCad, EDIF) and the
-// coverage census. It is a tokenizer plus a generic AST, parameterized on the ONE point where the
-// KiCad and EDIF dialects diverge, how a quoted string's bytes are resolved (StringMode). Readers
-// extract their format subset from the generic tree (readers/edif, readers/kicad), and the census
-// walks it for the construct vocabulary.
+// coverage census. It is a tokenizer plus a generic AST. The KiCad and EDIF dialects differ at ONE
+// point, how a quoted string's bytes are resolved, and StringMode selects that. Readers extract
+// their format subset from the generic tree (readers/edif, readers/kicad), and the census walks it
+// for the construct vocabulary.
 //
 // Parse reads the whole input into one string and builds the tree over it compactly, because an
 // 80 MB board is about 8M atoms and a heap object per atom held it at 11 times its size (agni issue
@@ -134,24 +134,24 @@ func ParseSkipping(r io.Reader, mode StringMode, skip ...string) (*Node, error) 
 	return ParseWith(r, mode, Skips{Heads: skip})
 }
 
-// Skips names the lists a parse leaves out. A list in Heads is left out by its head alone. A list
-// matching a When rule is left out by the value of one of its children, which the head cannot
-// decide, such as a KiCad footprint graphic on a layer no reader draws (agni issue 1005).
+// Skips says which lists a parse leaves out. A list in Heads is left out by its head alone. Some
+// lists the head cannot decide, such as a KiCad footprint graphic on a layer no reader draws (agni
+// issue 1005). A When rule leaves those out by the value of one of their children.
 type Skips struct {
 	Heads []string
 	When  []SkipWhen
 }
 
-// SkipWhen leaves out a list whose head is Head when its child list (Child value ...) holds a value
-// Drop refuses. Only a direct child counts, the first one found decides, and a list with no such child
-// is kept. The parse reads ahead to the child without building nodes, so a list left out costs its
-// tokens and nothing else, and a list kept is tokenized twice and built once.
+// SkipWhen leaves out a list whose head is Head when Drop returns true for the value of its child
+// list (Child value ...). Only a direct child counts, the first one found decides, and a list with
+// no such child is kept. The parse reads ahead to the child without building nodes, so a list left
+// out costs its tokens and nothing else, and a list kept is tokenized twice and built once.
 type SkipWhen struct {
 	Head, Child string
 	Drop        func(value string) bool
 }
 
-// ParseWith is Parse leaving out the lists s names, wherever they sit. A skipped list is still
+// ParseWith is Parse leaving out every list that s names, wherever it sits. A skipped list is still
 // tokenized, so its strings cannot unbalance the parse, but it builds no node and its parent's Kids
 // hold nothing for it.
 func ParseWith(r io.Reader, mode StringMode, s Skips) (*Node, error) {
@@ -262,8 +262,8 @@ type tokenizer struct {
 	when map[string]SkipWhen // heads of the lists left out by a child's value, see SkipWhen
 }
 
-// line is the 1-based line of the next unread byte, which is where Parse's own errors point. It is
-// counted only when an error needs it.
+// line is the 1-based line of the next unread byte. Parse's own errors point there. It is counted
+// only when an error needs it.
 func (t *tokenizer) line() int {
 	return 1 + strings.Count(t.src[:t.pos], "\n")
 }
@@ -299,9 +299,9 @@ func (t *tokenizer) scan() (token, error) {
 	}
 }
 
-// scanString reads the body of a "..." string; the opening quote is already consumed. A string
-// holding nothing its dialect rewrites is a substring of the input. One that does is decoded by
-// decodeString, where the two dialects (see StringMode) differ.
+// scanString reads the body of a "..." string; the opening quote is already consumed. When the
+// dialect rewrites none of the string's bytes, the string is a substring of the input. Otherwise
+// decodeString decodes it, and the two dialects (see StringMode) differ there.
 func (t *tokenizer) scanString() (token, error) {
 	start := t.pos
 	rest := t.src[start:]
@@ -326,8 +326,8 @@ func (t *tokenizer) scanString() (token, error) {
 	return t.decodeString([]byte(rest[:special]))
 }
 
-// decodeString finishes a string whose bytes so far are buf, from the first byte its dialect
-// rewrites.
+// decodeString finishes a string. buf holds its bytes so far, and decoding starts at the first byte
+// that needs rewriting.
 func (t *tokenizer) decodeString(buf []byte) (token, error) {
 	for {
 		b, ok := t.next()
@@ -596,9 +596,10 @@ func nextSlab(cur, limit int) int {
 	return min(cur*2, limit)
 }
 
-// atom returns the one Node this parse holds for an atom with text and quoted, making it on first
-// sight with a copy of text. A board repeats its atoms heavily (684K distinct among 7.9M on an 80 MB
-// one, mostly keywords and numbers), so sharing costs a map lookup per atom and saves a Node.
+// atom returns the shared Node for an atom with text and quoted. The first time it sees the atom it
+// makes the Node, with a copy of text. A board repeats its atoms heavily (684K distinct among 7.9M
+// on an 80 MB one, mostly keywords and numbers), so sharing costs a map lookup per atom and saves a
+// Node.
 func (t *tokenizer) atom(text string, quoted bool) *Node {
 	m := &t.atoms
 	if quoted {

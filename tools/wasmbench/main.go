@@ -1,7 +1,7 @@
 // Command wasmbench measures the engine the browser runs, natively, over one board (agni issue 852).
-// It composes internal/wasmengine over the board's folder held in memory, which is the worker's code
-// path less the wasm runtime, and times the questions a viewer asks first: the read, the full
-// check catalog, and one query. The browser half is web/browser/bench.mjs, which asks the same
+// It composes internal/wasmengine over the board's folder held in memory. That is the worker's code
+// path without the wasm runtime. It times the questions a viewer asks first: the read, the full
+// check catalog, and one query. The browser half is web/browser/bench.mjs. It asks the same
 // questions of the real worker, and `make wasm-bench` prints the two side by side.
 //
 //	go run ./tools/wasmbench --dir tools/samples/boards/royalblue54L-feather --design RoyalBlue54L-Feather.kicad_sch
@@ -35,7 +35,7 @@ import (
 )
 
 // Query is the question the bench times. It joins every component to every net, so it scales with
-// the board, which is what a measurement wants.
+// the board, as a measurement needs.
 const Query = "component.net(?r, ?n) => ?r, ?n"
 
 // The board's size, asked as queries. Both halves of the bench count the same way.
@@ -118,7 +118,7 @@ func Run(dir, design string) (Result, error) {
 	qs := webapiconnect.NewQueryServiceClient(http.DefaultClient, srv.URL)
 	ss := webapiconnect.NewSnapshotServiceClient(http.DefaultClient, srv.URL)
 
-	// The read is the ingest and the open's GetDesign, what a page waits on before its first sheet.
+	// The read is the ingest and the open's GetDesign. A page waits on both before its first sheet.
 	t = time.Now()
 	snap, err := ss.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: uri}}))
 	if err != nil {

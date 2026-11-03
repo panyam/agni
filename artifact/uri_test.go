@@ -21,8 +21,8 @@ func TestParseRoundTrip(t *testing.T) {
 		if u.Mount != c.mount || u.Path != c.path {
 			t.Errorf("Parse(%q) = {%q %q}, want {%q %q}", c.in, u.Mount, u.Path, c.mount, c.path)
 		}
-		// String round-trips to something Parse reads back identically, which is what lets a URI be
-		// stored, logged, and sent without a normalization step at each hop.
+		// String round-trips to something Parse reads back identically. So a URI can be stored,
+		// logged, and sent without a normalization step at each hop.
 		again, err := Parse(u.String())
 		if err != nil || again != u {
 			t.Errorf("round trip of %q via %q = {%+v} %v", c.in, u.String(), again, err)
@@ -78,10 +78,11 @@ func TestNewAndParseAgree(t *testing.T) {
 	}
 }
 
-// TestResolve is the operation a reader performs when a file names another file relative to itself:
-// a schematic's sub-sheets, a symbol library. It replaces a hand-rolled sibling join whose own
-// comment warned that mixing path and filepath separators is invisible on unix and breaks on
-// Windows. A URI path is always slash-separated, so that split has nowhere to hide.
+// TestResolve covers the operation a reader performs when a file names another file relative to
+// itself, such as a schematic's sub-sheets or a symbol library. Resolve replaces a hand-rolled
+// sibling join. That join's own comment warned that mixing path and filepath separators is
+// invisible on unix and breaks on Windows. A URI path is always slash-separated, so that split has
+// nowhere to hide.
 func TestResolve(t *testing.T) {
 	base, err := Parse("mount://boards/designs/gateway/gateway.kicad_sch")
 	if err != nil {
@@ -95,7 +96,7 @@ func TestResolve(t *testing.T) {
 		// A full URI reference replaces everything, mount included.
 		{"mount://other/x.edn", "mount://other/x.edn"},
 		// A leading slash is AUTHORITY-relative, per RFC 3986, so it names the mount root rather
-		// than the current directory. It stays contained, because the authority is the mount.
+		// than the current directory. It is still contained, because the authority is the mount.
 		{"/shared/lib.kicad_sym", "mount://boards/shared/lib.kicad_sym"},
 	}
 	for _, c := range cases {
@@ -110,7 +111,7 @@ func TestResolve(t *testing.T) {
 }
 
 // TestResolveCannotEscape holds that being inside a design is not authority to leave the mount. A
-// file that names its way out is a file reading past the boundary its own mount established.
+// file that names its way out reads past the boundary that its own mount set.
 func TestResolveCannotEscape(t *testing.T) {
 	base, _ := Parse("mount://boards/designs/gateway/gateway.kicad_sch")
 	for _, rel := range []string{"../../../etc/passwd", "../../..", "/../etc/passwd", "mount://boards/../x"} {

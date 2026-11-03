@@ -28,9 +28,8 @@ func TestAgniRunCapturesAndCaches(t *testing.T) {
 		t.Errorf("capture should carry a stamp and the body, got stamp=%q", stamp)
 	}
 
-	// A second call must be a CACHE HIT. Proven by corrupting the body, since if the run happened
-	// again the corruption would be overwritten, and it is the reuse that keeps a docs build
-	// hermetic.
+	// A second call must be a CACHE HIT. The test proves it by corrupting the body. If the run
+	// happened again, it would overwrite the corruption. The reuse keeps a docs build hermetic.
 	if err := os.WriteFile(spec+outputSuffix, []byte(stampPrefix+stamp+"\nSENTINEL\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -38,7 +37,7 @@ func TestAgniRunCapturesAndCaches(t *testing.T) {
 		t.Errorf("a fresh capture must be reused, not regenerated:\n%s", got)
 	}
 
-	// A stamp mismatch, which an edited fixture or spec produces, regenerates.
+	// An edited fixture or spec produces a stamp mismatch, and a mismatch regenerates.
 	if err := os.WriteFile(spec+outputSuffix, []byte(stampPrefix+"stale\nSENTINEL\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
@@ -48,9 +47,9 @@ func TestAgniRunCapturesAndCaches(t *testing.T) {
 }
 
 // keepCapture puts a tracked capture back as it was when the test ends, passing or failing. The
-// tests below delete and corrupt it to prove the cache, and a run that fails part way (the oracle
-// samples not fetched, say) used to leave it deleted, a change nobody made on purpose that the next
-// `git add` of the directory stages (agni issue 1167).
+// tests below delete and corrupt it to prove the cache. A run that failed part way used to leave it
+// deleted, for example when the oracle samples were not fetched. Nobody made that change on
+// purpose, and the next `git add` of the directory staged it (agni issue 1167).
 func keepCapture(t *testing.T, path string) {
 	t.Helper()
 	orig, err := os.ReadFile(path)
@@ -89,9 +88,9 @@ func TestAgniRunIsolatesTheFixture(t *testing.T) {
 	}
 }
 
-// TestCaptureRulesAreDeclarative covers the three fields that replaced shell plumbing. They are worth
-// testing directly because their justification is that the fragile mechanics live in Go, where
-// they CAN be tested, instead of being re-derived in every spec.
+// TestCaptureRulesAreDeclarative covers the three fields that replaced shell plumbing. The fields
+// exist to move the fragile mechanics into Go, where they CAN be tested, instead of re-deriving
+// them in every spec. So they are worth testing directly.
 func TestCaptureRulesAreDeclarative(t *testing.T) {
 	base := runSpec{Script: "echo out; echo err 1>&2; exit 3"}
 	for name, tc := range map[string]struct {
@@ -120,9 +119,8 @@ func TestCaptureRulesAreDeclarative(t *testing.T) {
 	}
 }
 
-// TestMatchingNothingIsAnError is the guard that makes a shape-based filter safe to rely on. A filter
-// that stops matching has to say so, because rendering an empty block is how a page ends up teaching
-// from a blank space.
+// TestMatchingNothingIsAnError makes a shape-based filter safe to rely on. A filter that stops
+// matching has to say so. Otherwise the page renders an empty block and teaches from a blank space.
 func TestMatchingNothingIsAnError(t *testing.T) {
 	_, err := execute(runSpec{Script: "echo hello", Match: "^goodbye"})
 	if err == nil {
@@ -156,7 +154,7 @@ func TestAFailureThatPrintsNothingIsAnError(t *testing.T) {
 	}
 }
 
-// The three ways an empty or failing step stays legal: the spec declares the exit status as the
+// An empty or failing step is legal in three cases. The spec declares the exit status as the
 // lesson, the step succeeded and printed nothing by design, or it failed while printing a report.
 func TestADeclaredOrExplainedExitStaysLegal(t *testing.T) {
 	for name, tc := range map[string]struct {
@@ -251,17 +249,17 @@ func TestInputHashChangesWithTrackedContent(t *testing.T) {
 }
 
 // A fixture git cannot list is an error rather than a silent fall back to walking the directory.
-// Falling back would restore the bug this file is about, invisibly, since the
-// stamp would start depending on the working tree again with nothing to say so.
+// A fall back would invisibly restore the bug this file guards against. The stamp would start
+// depending on the working tree again, with nothing to say so.
 func TestInputHashRefusesAnUnlistableFixture(t *testing.T) {
 	if _, err := inputHash([]byte("spec"), "no/such/fixture"); err == nil {
 		t.Error("a fixture that does not exist must be an error")
 	}
 
 	// This case distinguishes the two implementations, a fixture that EXISTS on disk and
-	// is tracked by nothing. Walking it produces a confident hash over files no other checkout has;
-	// listing it produces nothing, and answering with a hash of no content would be a stamp that looks
-	// stable and means nothing. A fixture nobody committed is a mistake, so say so.
+	// is tracked by nothing. Walking it produces a confident hash over files that no other checkout
+	// has. Listing it produces nothing. A hash of no content would be a stamp that looks stable and
+	// means nothing. A fixture nobody committed is a mistake, so say so.
 	dir := filepath.Join("..", "docsite", "testdata-untracked-fixture")
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		t.Fatal(err)
@@ -275,9 +273,9 @@ func TestInputHashRefusesAnUnlistableFixture(t *testing.T) {
 	}
 }
 
-// A fetched fixture has nothing tracked, so its stamp has to cover something else, or naming a board
-// as the fixture stamps identically to naming none (agni issue 682). It covers the samples pin, and
-// needs no corpus on disk to do so, since the fixture below does not exist.
+// A fetched fixture has nothing tracked, so its stamp has to cover something else. Otherwise a spec
+// naming a board as the fixture stamps identically to one naming none (agni issue 682). It covers
+// the samples pin, and needs no corpus on disk to do so, since the fixture below does not exist.
 func TestInputHashCoversAFetchedFixtureByItsPin(t *testing.T) {
 	pin := filepath.Join(t.TempDir(), "samples.pin")
 	if err := os.WriteFile(pin, []byte("VERSION v1\n"), 0o644); err != nil {
@@ -314,7 +312,7 @@ func TestInputHashCoversAFetchedFixtureByItsPin(t *testing.T) {
 	}
 }
 
-// A continued command carries ONE prompt. Prefixing the continuation line too rendered a second `$`
+// A continued command has ONE prompt. Prefixing the continuation line too rendered a second `$`
 // where there is no second command, and a reader copying the block got a command broken in half.
 func TestAContinuedCommandCarriesOnePrompt(t *testing.T) {
 	for _, tc := range []struct {
@@ -370,8 +368,8 @@ func TestStepsCaptureSeparately(t *testing.T) {
 	}
 }
 
-// Steps share the scratch directory but not a shell, which is what lets a step be its own
-// process. Rung 11 writes a results document in one step and re-renders it in the next.
+// Steps share the scratch directory but not a shell, so each step can be its own process. Rung 11
+// writes a results document in one step and re-renders it in the next.
 func TestAStepReadsWhatAnEarlierStepWrote(t *testing.T) {
 	got, err := execute(runSpec{Steps: []runStep{
 		{Script: "echo stored > artifact.txt"},
@@ -402,14 +400,14 @@ func TestAnEmptyCaptureIsNotAMatchFailure(t *testing.T) {
 	if len(got) != 2 || got[0] != "" || got[1] != "kept\n" {
 		t.Errorf("got %q, want [\"\" \"kept\\n\"]", got)
 	}
-	// As the positive control, the guard must still fire on a step that printed something the filter
-	// then rejected entirely, which is the regression it exists to catch.
+	// As the positive control, the guard must still fire on a step that printed something and had
+	// all of it rejected by the filter. The guard exists to catch that regression.
 	if _, err := execute(runSpec{Match: "^kept", Steps: []runStep{{Script: "echo nothing-matches"}}}); err == nil {
 		t.Error("a filter selecting nothing from a NON-empty capture must still be an error")
 	}
 }
 
-// Exit belongs to the run rather than to a command, so it lands once, on the last block.
+// Exit belongs to the run rather than to a command, so it appears once, on the last block.
 func TestExitLandsOnTheLastStep(t *testing.T) {
 	got, err := execute(runSpec{Exit: true, Steps: []runStep{
 		{Script: "echo one"},
@@ -424,7 +422,7 @@ func TestExitLandsOnTheLastStep(t *testing.T) {
 }
 
 // The capture file round-trips through the delimiter, and a ONE-step spec writes no delimiter at all.
-// That second half is why adding steps left all 80 single-command captures byte-identical.
+// Because of that second half, adding steps left all 80 single-command captures byte-identical.
 func TestCaptureFileRoundTrips(t *testing.T) {
 	for name, bodies := range map[string][]string{
 		"one step":      {"only\n"},
@@ -538,7 +536,7 @@ func TestSpecStampCoversItsFetchedBoard(t *testing.T) {
 }
 
 // The board is copied INTO the project copy without replacing anything the project tracks, because
-// the project's own design.yaml is the one the tutorial teaches and the fetched one is its seed.
+// the tutorial teaches the project's own design.yaml, and the fetched one is its seed.
 func TestCopyFetchedKeepsTheProjectsOwnFiles(t *testing.T) {
 	src, dst := t.TempDir(), t.TempDir()
 	for name, body := range map[string]string{"board.kicad_sch": "fetched sch", "design.yaml": "fetched descriptor"} {

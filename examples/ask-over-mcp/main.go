@@ -1,7 +1,7 @@
 // Command ask-over-mcp asks a design questions the way an LLM client does, through agni's MCP
 // server (agni issue 910). It starts `agni mcp` over a folder, connects mcpkit's client to it, and
-// makes the calls a model would make, printing what the model reads back: the question, the rows
-// with what they rest on, and why there is no viewer link. The narration lives in the sidecar
+// makes the calls a model would make. It prints what the model reads back: the question, the rows
+// with the facts behind them, and why there is no viewer link. The narration lives in the sidecar
 // walkthrough.md (demokit FromMarkdown), and this file only binds the steps that run code.
 //
 // Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
@@ -24,8 +24,8 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// The folder served and the design asked about by default, package-level because walkthrough.md
-// states what they hold and ask_test.go holds those claims against them.
+// The folder served and the design asked about by default. They are package-level because
+// walkthrough.md states what they hold, and ask_test.go checks those claims against them.
 const (
 	defaultFolder = "../tutorial-project"
 	defaultDesign = "designs/gateway"

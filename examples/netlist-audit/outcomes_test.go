@@ -7,9 +7,8 @@ import (
 	"github.com/panyam/agni/examples/common"
 )
 
-// TestEveryTableAnswersOnTheFixture relies on a fixture that exists so each table has something in
-// it, which makes a table that quietly stops matching show up as a failure rather than as an empty
-// section.
+// TestEveryTableAnswersOnTheFixture relies on a fixture built so each table has something in it. A
+// table that quietly stops matching then shows up as a failure rather than as an empty section.
 func TestEveryTableAnswersOnTheFixture(t *testing.T) {
 	d, err := common.Load("../common/designs/netlist-audit.tel")
 	if err != nil {
@@ -31,8 +30,8 @@ func TestEveryTableAnswersOnTheFixture(t *testing.T) {
 	}
 }
 
-// TestTheFixtureAnswersAreTheDesignedOnes pins the cases the fixture was built around, so a change in
-// a relation that moves one of them is seen here rather than in someone's review.
+// TestTheFixtureAnswersAreTheDesignedOnes pins the fixture's designed cases. A relation change that
+// moves one of them then shows up here rather than in someone's review.
 func TestTheFixtureAnswersAreTheDesignedOnes(t *testing.T) {
 	d, err := common.Load("../common/designs/netlist-audit.tel")
 	if err != nil {

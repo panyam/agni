@@ -19,8 +19,8 @@ type ingester interface {
 }
 
 // designs keeps one snapshot per design an agent has named, so a conversation of questions about one
-// design reads it once (agni issue 1061). A snapshot the host lost, or whose files changed since it
-// was read, is ingested again on the next question rather than failing it.
+// design reads it once (agni issue 1061). Suppose the host lost a snapshot, or its files changed
+// since it was read. The next question then ingests the design again rather than failing.
 //
 // Each design has a lock of its own, held while it is read, so a question about one design waits for
 // that design alone and never for another being read (agni issue 1121).

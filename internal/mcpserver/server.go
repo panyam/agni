@@ -2,12 +2,13 @@
 // issue 910). It is a transport adapter beside internal/server's Connect one (C13), so it asks the
 // same services and adds no analysis.
 //
-// The query language's tools come from jaala's MCP server (frontends/mcp): query, explain, schema,
-// look and values, answering over the fact base of the design a call names. This package adds the
-// rest of agni's questions as tools of its own (check, trace, diff, design, checklists, review,
-// query_set and designs) and the catalogs as resources. Every answer carries the question that
-// produced it, its rows as TableService projects them (C35), the citations they rest on and a link
-// that opens the answer in the viewer, so a client shows evidence rather than the model's say-so.
+// The query language's tools come from jaala's MCP server (frontends/mcp). They are query, explain,
+// schema, look and values, and they answer over the fact base of the design a call names. This
+// package adds the rest of agni's questions as tools of its own (check, trace, diff, design,
+// checklists, review, query_set and designs) and the catalogs as resources. Every answer carries the
+// question that produced it, its rows as TableService projects them (C35), the citations behind
+// those rows, and a link that opens the answer in the viewer. So a client shows evidence rather than
+// the model's say-so.
 package mcpserver
 
 import (
@@ -84,12 +85,12 @@ func New(api server.API, o Options) (*mcpkit.Server, error) {
 	return srv, nil
 }
 
-// HTTPHandler is srv served over streamable HTTP at prefix, the path it is mounted at on a mux. Only
-// a localhost Origin is accepted, so a page on another site can't drive a local server (DNS
-// rebinding); origins adds others.
+// HTTPHandler serves srv over streamable HTTP at prefix, the path where a mux mounts it. Only a
+// localhost Origin is accepted, so a page on another site can't drive a local server (DNS
+// rebinding). origins adds others.
 //
-// It accepts both MCP wires on one URL (Wire), so each host speaks the one it prefers: the stateless
-// 2026-07-28 wire, or the session wire a host that never asked for it gets.
+// It accepts both MCP wires on one URL (Wire), so each host speaks the one it prefers. A host can
+// ask for the stateless 2026-07-28 wire, and a host that never asks for it gets the session wire.
 func HTTPHandler(srv *mcpkit.Server, prefix string, origins ...string) http.Handler {
 	opts := []mcpkit.TransportOption{
 		mcpkit.WithStreamableHTTP(true), mcpkit.WithSSE(false), mcpkit.WithPrefix(prefix),
@@ -101,14 +102,15 @@ func HTTPHandler(srv *mcpkit.Server, prefix string, origins ...string) http.Hand
 	return srv.Handler(opts...)
 }
 
-// listTTLMs is how long a client may keep the tool, resource and prompt lists before asking again:
-// an hour, since agni's tools are fixed for a server's life and nothing announces a change (agni
-// issue 1172). It saves every stateless client a tools/list per conversation.
+// listTTLMs is how long a client may keep the tool, resource and prompt lists before asking again.
+// It is an hour, since agni's tools are fixed for a server's life and nothing announces a change
+// (agni issue 1172). It saves every stateless client a tools/list per conversation.
 const listTTLMs = 60 * 60 * 1000
 
-// Wire is the MCP wires agni's HTTP endpoint accepts: both (stateless.ModeDual), set here rather
-// than left to mcpkit's default so a change of that default can't drop the wire a host speaks (agni
-// issue 1172). MCPKIT_STATELESS_MODE still overrides it, to force one wire while debugging a host.
+// Wire names the MCP wires agni's HTTP endpoint accepts, which is both (stateless.ModeDual). It is
+// set here rather than left to mcpkit's default, so a change of that default can't drop the wire a
+// host speaks (agni issue 1172). MCPKIT_STATELESS_MODE still overrides it, to force one wire while
+// debugging a host.
 func Wire() stateless.Mode {
 	if m, ok := stateless.ParseMode(os.Getenv(stateless.ModeEnvVar)); ok {
 		return m
@@ -142,9 +144,9 @@ type designArg struct {
 	Design string `json:"design,omitempty" jsonschema_description:"The design to ask about, as mount/path (tut/designs/gateway): its folder, entry file or a declared companion. The designs tool lists them. Omit only for schema, look and the shipped vocabulary."`
 }
 
-// prepare is how one of jaala's tools runs for the design it names: over that design's fact base,
-// read for the program asked (so the board is read only for a program reading board.*), with the
-// project's vocabulary, and answering in agni's shape.
+// prepare sets up one of jaala's tools to run for the design it names. The tool runs over that
+// design's fact base, read for the program asked, so the board is read only for a program reading
+// board.*. It uses the project's vocabulary and answers in agni's shape.
 func (s *srv) prepare(ctx context.Context, tool string, a designArg) (mcp.Run, error) {
 	if strings.TrimSpace(a.Design) == "" {
 		return mcp.Run{}, nil
@@ -175,8 +177,8 @@ func (s *srv) prepare(ctx context.Context, tool string, a designArg) (mcp.Run, e
 	return run, nil
 }
 
-// designURI is a design as an agent names it, mount/path or a mount:// URI, as the artifact URI the
-// services take.
+// designURI turns an agent's design name into the artifact URI the services take. An agent names a
+// design as mount/path or as a mount:// URI.
 func designURI(design string) (artifact.URI, error) {
 	d := strings.TrimSpace(design)
 	if !strings.HasPrefix(d, artifact.Scheme+"://") {
@@ -189,8 +191,8 @@ func designURI(design string) (artifact.URI, error) {
 	return u, nil
 }
 
-// withBudget is ctx carrying the server's work budget, which every query and query-backed rule a
-// service evaluates reads, as the Connect interceptor sets it.
+// withBudget returns ctx carrying the server's work budget, as the Connect interceptor sets it.
+// Every query and query-backed rule a service evaluates reads that budget.
 func (s *srv) withBudget(ctx context.Context) context.Context {
 	return query.WithBudget(ctx, s.o.Budget)
 }
@@ -204,8 +206,8 @@ func protoJSON(m proto.Message) json.RawMessage {
 	return b
 }
 
-// failed is err as a tool error an agent can act on: the service's own message, which already names
-// the argument at fault.
+// failed turns err into a tool error an agent can act on. It keeps the service's own message, which
+// already names the argument at fault.
 func failed(err error) core.ToolResult {
 	return core.ErrorResult(err.Error())
 }

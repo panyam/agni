@@ -1,16 +1,16 @@
 // Package corpus keeps a published PartSpec corpus: promotion of a workbench draft into it, and the
 // index the datasheet service maintains beside it (agni issue 749).
 //
-// The files are the source of truth and the index is derived from them, so an index can always be
-// rebuilt and a rebuild is the answer to any doubt about one. What the index adds is what files
-// cannot give cheaply: which file seeds an MPN without parsing every file, the content hash of what
-// was validated, and a generation that advances whenever the corpus changes, which is how a reader
-// will learn that what it cached is stale.
+// The files are the source of truth and the index is derived from them. So an index can always be
+// rebuilt, and a rebuild settles any doubt about one. The index adds three things the files cannot
+// give cheaply. It names the file that seeds an MPN without parsing every file. It records the
+// content hash of what was validated. And it holds a generation that advances whenever the corpus
+// changes, so a reader will learn that its cache is stale.
 //
 // The engine never reads this package (C34). It reads PartSpecs through core/param, the contract, and
-// LoadSet stays the way a project's own params/ is read. The index is the datasheet service's, and a
-// reader outside the service will reach it through a lookup in the contract rather than through this
-// file format.
+// LoadSet is still the way a project's own params/ is read. The index belongs to the datasheet
+// service. A reader outside the service will reach it through a lookup in the contract rather than
+// through this file format.
 //
 // This package does no I/O of its own. It reads a corpus through an fs.FS and returns bytes for its
 // caller to write.
@@ -54,10 +54,10 @@ type Entry struct {
 	Hash string `json:"hash"`
 }
 
-// Build walks the corpus with param.LoadCorpus, the walk LoadSet makes, and indexes what it finds. It
-// is all-or-nothing for the same reason LoadSet is: a file that does not parse or Validate, or two
-// files claiming one MPN, fail the build with the file named, rather than leaving a spec out of the
-// index. The result has generation zero; Refresh decides the generation.
+// Build walks the corpus with param.LoadCorpus, the walk LoadSet makes, and indexes what it finds.
+// Build is all-or-nothing for the same reason LoadSet is. A file that does not parse or Validate
+// fails the build with the file named, and so do two files claiming one MPN. The build never leaves a
+// spec out of the index. The result has generation zero, and Refresh decides the generation.
 func Build(corpus fs.FS) (*Index, error) {
 	files, err := param.LoadCorpus(corpus)
 	if err != nil {
@@ -71,9 +71,10 @@ func Build(corpus fs.FS) (*Index, error) {
 	return ix, nil
 }
 
-// Refresh rebuilds the index from the corpus and carries the generation on from prev: unchanged when
-// the entries are the same, one more when they are not. prev may be nil, for a corpus never indexed,
-// and then any corpus is a change. It reports whether the entries changed.
+// Refresh rebuilds the index from the corpus and continues the generation from prev. The generation
+// is unchanged when the entries are the same, and one more when they are not. prev may be nil for a
+// corpus never indexed, and then any corpus is a change. Refresh reports whether the entries
+// changed.
 func Refresh(corpus fs.FS, prev *Index) (*Index, bool, error) {
 	ix, err := Build(corpus)
 	if err != nil {

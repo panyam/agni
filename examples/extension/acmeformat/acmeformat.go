@@ -1,11 +1,11 @@
 // Package acmeformat is a demonstration out-of-module format reader for the open-core extension
 // skeleton (WS12-001). It parses a toy ".acme" netlist into the agni IR and registers itself
-// with the engine's public formats registry (WS12-003). A blank import (import _ ".../acmeformat")
-// makes ".acme" resolve through the CLI reader dispatch, the file-tree label and the Loader, with
-// no fork of the engine.
+// with the engine's public formats registry (WS12-003). After a blank import (import _
+// ".../acmeformat"), ".acme" resolves through the CLI reader dispatch, the file-tree label and the
+// Loader, with no fork of the engine.
 //
-// A real extension's reader would be a proprietary format the house does not release. This one
-// shows only the wiring, so the format is trivial.
+// A real extension's reader would read an unreleased proprietary format. This one shows only the
+// wiring, so the format is trivial.
 package acmeformat
 
 import (
@@ -26,7 +26,7 @@ func init() {
 	formats.Register(&formats.Format{
 		Ext:  ".acme",
 		Name: "acme",
-		// The registry entry opens the file and Read stays io.Reader-pure (C1). It calls os.Open
+		// The registry entry opens the file, so Read is io.Reader-pure (C1). It calls os.Open
 		// rather than the Loader's Open, so it reads the host filesystem and never the Loader's FS.
 		Design: func(_ *formats.Loader, path string) (*ir.Design, error) {
 			f, err := os.Open(path)

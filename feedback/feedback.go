@@ -1,16 +1,17 @@
-// Package feedback is the report a trial of agni sends back from a machine that holds designs we
-// never see (agni issue 1057). Its confidentiality guarantee is STRUCTURAL, as intake's is: the
-// Report type has no field that can hold a net name, a reference designator, a part number, a design
-// or project name, a path, or an error message, so a report cannot carry any of them however it is
-// filled. It is stricter than intake.Skeleton, which keeps ref-des and MPNs because it stays inside
-// the boundary; this crosses it, into a public issue.
+// Package feedback builds the report a trial of agni sends back. The trial runs on a machine that
+// holds designs we never see (agni issue 1057). The report's confidentiality guarantee is
+// STRUCTURAL, as intake's is. The Report type has no field that can hold a net name, a reference
+// designator, a part number, a design or project name, a path, or an error message. So a report
+// cannot carry any of them however it is filled. It is stricter than intake.Skeleton. Skeleton keeps
+// ref-des and MPNs because it never leaves the boundary, and this report crosses it, into a public
+// issue.
 //
-// Every field is one of four things: a count, a duration, a value from a fixed vocabulary this
-// package declares (Step, Status, ErrorKind, the design's format), or the name of a rule agni ships.
+// Every field is a count, a duration, a value from a fixed vocabulary this package declares (Step,
+// Status, ErrorKind, the design's format), or the name of a rule agni ships.
 // A rule a project wrote is counted in aggregate and never named, because its namespace is the
 // project's own name.
 //
-// Its JSON is hand-rolled rather than a proto, for the reason intake.Skeleton gives: a proto twin
+// Its JSON is hand-rolled rather than a proto, for the same reason as intake.Skeleton. A proto twin
 // would have to carry this guarantee into a file people edit for other reasons.
 package feedback
 
@@ -39,8 +40,8 @@ const (
 // Status is how a step ended.
 type Status string
 
-// The outcomes a step can have. Skipped means the design gave the step nothing to do (a design in
-// no project has no checklist), which is not a failure.
+// The outcomes a step can have. Skipped means the design gave the step nothing to do, and that is
+// not a failure. A design in no project has no checklist, for example.
 const (
 	StatusOK      Status = "ok"
 	StatusFailed  Status = "failed"
@@ -72,8 +73,8 @@ type Report struct {
 	ProjectRules ProjectRules `json:"project_rules"`
 	Review       ReviewTally  `json:"review"`
 	Queries      QueryTally   `json:"queries"`
-	// PinMap is the design intent's IO map checked against the netlist and the datasheet, as counts,
-	// and nil when the design declares no map (agni issue 1196).
+	// PinMap counts how the design intent's IO map fared against the netlist and the datasheet. It
+	// is nil when the design declares no map (agni issue 1196).
 	PinMap *PinMapTally `json:"pin_map,omitempty"`
 }
 
@@ -108,14 +109,14 @@ type RuleTally struct {
 	Fail         int         `json:"fail"`
 }
 
-// ProjectRules is what rules the design's project wrote reported, in aggregate.
+// ProjectRules counts in aggregate what the project's own rules reported.
 type ProjectRules struct {
 	Rules    int `json:"rules"`
 	Findings int `json:"findings"`
 }
 
-// ReviewTally is what scoring the project's checklists produced, counted across them. A checklist's
-// name and its items' titles are the project's words, so neither is kept.
+// ReviewTally counts what scoring the project's checklists produced, across all of them. A
+// checklist's name and its items' titles are the project's words, so neither is kept.
 type ReviewTally struct {
 	Checklists int `json:"checklists"`
 	Items      int `json:"items"`
@@ -124,7 +125,7 @@ type ReviewTally struct {
 	Fail       int `json:"fail"`
 }
 
-// QueryTally is what answering the project's query sets produced, counted across them.
+// QueryTally counts what answering the project's query sets produced, across all of them.
 type QueryTally struct {
 	Sets     int `json:"sets"`
 	Queries  int `json:"queries"`
@@ -132,8 +133,8 @@ type QueryTally struct {
 	Failed   int `json:"failed"`
 }
 
-// PinMapTally is a declared pin map's rows and what each check concluded about them, counted. A row
-// names a net, a part and a pin, and a function names a peripheral, so none of them is kept; a team
+// PinMapTally counts a declared pin map's rows and what each check concluded about them. A row names
+// a net, a part and a pin, and a function names a peripheral, so none of them is kept. A team
 // running agni on a board we never see sends this back to say how its map fared.
 type PinMapTally struct {
 	Rows         int `json:"rows"`
@@ -152,9 +153,9 @@ type PinMapTally struct {
 	Inferred int `json:"inferred_matches"`
 }
 
-// OutcomeCounts is one check's outcomes over the map's rows. NotRun counts rows the run held no
-// verdict for, which is every row when the check's rule did not run (the function check needs a
-// datasheet corpus).
+// OutcomeCounts is one check's outcomes over the map's rows. NotRun counts the rows with no verdict
+// in the run. When the check's rule did not run, every row counts as NotRun. The function check's
+// rule, for one, needs a datasheet corpus.
 type OutcomeCounts struct {
 	Pass          int `json:"pass"`
 	Fail          int `json:"fail"`
@@ -179,7 +180,7 @@ const (
 )
 
 // ShippedRule is the name of a rule agni ships. It has an unexported field so that only Shipped can
-// make one, from a name the caller's list of shipped rules holds.
+// make one, and only from a name in the caller's list of shipped rules.
 type ShippedRule struct{ name string }
 
 // String is the rule's name.
@@ -281,7 +282,7 @@ func (r Report) Markdown() string {
 const issueBodyLimit = 6000
 
 // IssueURL is a link that opens a new issue on repo ("panyam/agni") prefilled with the report, for
-// the person to read and submit. A body past the limit is cut at a line, saying so.
+// the person to read and submit. A body past the limit is cut at a line, and the body says so.
 func (r Report) IssueURL(repo string) string {
 	body := "<!-- Read this before submitting: it holds counts, timings and agni's own rule names, and nothing from your design. Add what you saw below it. -->\n\n" + r.Markdown() + "\n**What I saw:**\n\n"
 	if len(body) > issueBodyLimit {

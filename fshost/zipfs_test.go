@@ -53,10 +53,10 @@ func TestExpandZipsReadsAZipAsItsFolder(t *testing.T) {
 	}
 }
 
-// TestExpandZipsReadsTheOverlayOverAnArchive is how the page declares a design that came out of a
-// zip: the store holding the browser mount (goutils' memfs, as goapplib's wasmhost uses) refuses a
-// file under a path that is itself a file, so the descriptor is written under OverlayDir and reads
-// as if it sat in the archive's folder.
+// TestExpandZipsReadsTheOverlayOverAnArchive covers how the page declares a design that came out of
+// a zip. The browser mount's store is goutils' memfs, as goapplib's wasmhost uses. That store
+// refuses a file under a path that is itself a file. So the descriptor is written under OverlayDir
+// and reads as if it sat in the archive's folder.
 func TestExpandZipsReadsTheOverlayOverAnArchive(t *testing.T) {
 	board := zipOf(t, map[string]string{"g/g.edn": "edn", "g/g.kicad_sch": "sch"})
 	if _, err := memfs.New(map[string][]byte{"d/g.zip": board, "d/g.zip/g/design.yaml": []byte("x")}); err == nil {

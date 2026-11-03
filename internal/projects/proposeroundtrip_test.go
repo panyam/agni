@@ -15,8 +15,9 @@ import (
 )
 
 // TestProposedDescriptorsReadBackAsTheProposedDesign writes each proposal's design.yaml into its
-// folder and resolves the design through the store a server uses. A descriptor the page shows a
-// visitor that then reads as some other design would teach them the wrong thing (agni issue 854).
+// folder and resolves the design through the store a server uses. The page shows a visitor the
+// descriptor. If it then read as some other design, it would teach them the wrong thing (agni issue
+// 854).
 func TestProposedDescriptorsReadBackAsTheProposedDesign(t *testing.T) {
 	tree := map[string]string{
 		"edif/x-rev-a.edn":      "",
@@ -62,8 +63,8 @@ func TestProposedDescriptorsReadBackAsTheProposedDesign(t *testing.T) {
 }
 
 // TestProposingTheTutorialGatewayRecoversItsDeclaredDesign hides the gateway's design.yaml and asks
-// for a proposal over the rest of its folder. The entry and companions must be the ones the
-// tutorial declares, since a visitor dropping that folder should get the design the docs describe.
+// for a proposal over the rest of its folder. The entry and companions must match the tutorial's
+// declaration. A visitor dropping that folder should get the design the docs describe.
 func TestProposingTheTutorialGatewayRecoversItsDeclaredDesign(t *testing.T) {
 	// The whole project is mounted, since the gateway names its project by a path that climbs to it.
 	fsys := os.DirFS(filepath.Join("..", "..", "examples", "tutorial-project"))

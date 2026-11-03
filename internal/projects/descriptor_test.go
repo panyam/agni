@@ -24,8 +24,9 @@ companions:
 	if d.GetTitle() != "Sample Board" {
 		t.Errorf("title = %q", d.GetTitle())
 	}
-	// Parsing leaves the refs DESIGN-FOLDER-RELATIVE; the store rewrites them once it knows where the
-	// folder sits. The `./` spelling is normalized here so a companion is recognisable by comparison.
+	// Parsing leaves the refs DESIGN-FOLDER-RELATIVE, and the store rewrites them once it knows
+	// where the folder sits. The `./` spelling is normalized here, so a companion is recognisable
+	// by comparison.
 	if d.GetEntryUri() != "gateway.edn" {
 		t.Errorf("entry ref = %q, want it design-relative", d.GetEntryUri())
 	}
@@ -78,8 +79,8 @@ func TestParseDesignRejects(t *testing.T) {
 		{"escaping entry", "name: g\nentry: ../../secrets.edn\n", "stay inside"},
 		{"escaping companion", "name: g\nentry: a.edn\ncompanions: ['../b.kicad_pcb']\n", "stay inside"},
 		{"entry also companion", "name: g\nentry: a.edn\ncompanions: ['./a.edn']\n", "listed twice"},
-		// A misspelled key that silently does nothing is the failure this strictness is for. The
-		// operator believes they declared companions and nothing says otherwise.
+		// This strictness exists to catch a misspelled key that silently does nothing. The operator
+		// believes they declared companions, and nothing says otherwise.
 		{"unknown field", "name: g\nentry: a.edn\ncompanion: [b.kicad_pcb]\n", "field companion not found"},
 		{"empty", "", "is empty"},
 		// A revision is declared file by file, and a file belongs to one revision at most, so a board
@@ -134,8 +135,9 @@ func TestParseProject(t *testing.T) {
 	}
 }
 
-// One schema serves both descriptors (agni issue 1136), and the file's name says which role it plays,
-// so a key naming a design's own files is refused in a project with where it goes.
+// One schema serves both descriptors (agni issue 1136), and the file's name says which role it
+// plays. So a project refuses a key naming a design's own files, and the error says where the key
+// goes.
 func TestParseProjectRefusesADesignsKeys(t *testing.T) {
 	for _, doc := range []string{
 		"name: p\nentry: a.edn\n",

@@ -14,9 +14,9 @@ import (
 	"strings"
 )
 
-// Lookup resolves a design file to the manifest that classifies its constructs, by extension
-// (and, for the ambiguous `.sch`/`.sym`, a light header sniff of data to tell xschem from gEDA
-// from legacy KiCad). ok is false for a file no manifest covers. `agni census` uses it to walk a
+// Lookup resolves a design file to the manifest that classifies its constructs, by extension. For
+// the ambiguous `.sch`/`.sym` it also sniffs the header of data lightly, to tell xschem from gEDA
+// from legacy KiCad. ok is false for a file no manifest covers. `agni census` uses it to walk a
 // mixed corpus directory.
 func Lookup(path string, data []byte) (Manifest, bool) {
 	var format string
@@ -40,7 +40,7 @@ func Lookup(path string, data []byte) (Manifest, bool) {
 	return Manifest{}, false
 }
 
-// sniffSch distinguishes the header of the three formats that share `.sch`/`.sym`: xschem files
+// sniffSch distinguishes the header of the three formats that share `.sch`/`.sym`. xschem files
 // name "xschem" in their version line, gEDA's version line is `v <int> <int>`, and a legacy
 // KiCad s-expr schematic opens with "(kicad_sch". Returns "" when none matches.
 func sniffSch(data []byte) string {

@@ -76,8 +76,8 @@ func TestAnAnswerKeepsEachEntityAndSourceOnce(t *testing.T) {
 	}
 }
 
-// TestOmittingLocationsKeepsTheEntitiesUnlocated: the table still names each entity, so a client
-// can type and link a cell, but carries no sheets.
+// TestOmittingLocationsKeepsTheEntitiesUnlocated checks that the table still names each entity but
+// holds no sheets. A client can still type and link a cell.
 func TestOmittingLocationsKeepsTheEntitiesUnlocated(t *testing.T) {
 	r := gatewayQuery(t, &webapi.RunQueryRequest{Query: `pin.net(?r, ?p, ?n) => ?n, ?r, ?p`, OmitLocations: true})
 	if len(r.GetEntities()) == 0 {

@@ -8,18 +8,19 @@ import (
 	"time"
 )
 
-// collector decides when a browser engine whose automatic collection is off collects (agni issue
-// 1010). Go's wasm port runs on one thread with no asynchronous preemption, so a concurrent mark there
+// collector decides when a browser engine collects once its automatic collection is off (agni issue
+// 1010). Go's wasm port runs on one thread with no asynchronous preemption. A concurrent mark there
 // runs beside whatever request is evaluating and slows it for as long as the cycle lasts. On Jetson
 // two such cycles cost 3.0 and 2.5 s of a 7.8 s check, while a forced collection over the same heap
-// took 20 to 57 ms. So the engine collects only between requests, and after each layer its
-// DesignCache loads, and lets a request's garbage stand until it ends.
+// took 20 to 57 ms. So the engine collects only between requests and after each layer its
+// DesignCache loads. A request's garbage is left in place until the request ends.
 //
-// After a request it collects only when the heap has doubled since the last collection, which is the
-// growth GOGC=100 would have allowed, so a run of small requests does not pay a collection each. It
-// does the same as each file of a mount opens, so a read that parses many files frees one file's parse
-// before the next: opening Jetson built its drawing with the heap at 576 MB and 105 MB live, against
-// 285 MB while the automatic cycles ran, and a wasm memory keeps its largest size.
+// After a request it collects only when the heap has doubled since the last collection. GOGC=100
+// would have allowed the same growth, and a run of small requests does not trigger a collection each.
+// It does the same as each file of a mount opens, so a read that parses many files frees one file's
+// parse before the next. Collecting only between requests, opening Jetson built its drawing with the
+// heap at 576 MB and 105 MB live. With the automatic cycles running the heap was 285 MB. A wasm
+// memory keeps its largest size.
 type collector struct {
 	heap  func() uint64 // the bytes the heap holds now
 	gc    func()
@@ -56,9 +57,10 @@ func (c *collector) collect() {
 // collectIfGrown collects when the heap has doubled since the last collection.
 func (c *collector) collectIfGrown() { c.collectPast(0) }
 
-// fileHeadroom is how far past the live heap a read may grow before a file's opening collects. A
-// fixed allowance rather than doubling, since a read's live heap is small beside its garbage: doubling
-// a 100 MB live heap collected so often that Jetson's drawing took 2.8 s to build rather than 1.8 s.
+// fileHeadroom is how far past the live heap a read may grow before a file's opening collects. It is
+// a fixed allowance rather than doubling, since a read's live heap is small beside its garbage.
+// Doubling a 100 MB live heap collected so often that Jetson's drawing took 2.8 s to build rather
+// than 1.8 s.
 // At 128 MB the worker opened Jetson at 318 MB of wasm memory (312 MB with the automatic cycles, 606
 // MB collecting only between requests, 388 MB at 256 MB), with its reads no slower.
 const fileHeadroom = 128 << 20
@@ -87,8 +89,8 @@ func (c *collector) after(h http.Handler) http.Handler {
 	})
 }
 
-// files wraps a mount's files so that opening one first collects if the heap has grown enough to,
-// which is the boundary between one file's parse and the next.
+// files wraps a mount's files so that opening one first collects if the heap has grown enough to.
+// A file's opening marks the boundary between one file's parse and the next.
 func (c *collector) files(fsys fs.FS) fs.FS { return collectingFS{fsys, c} }
 
 type collectingFS struct {

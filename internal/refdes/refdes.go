@@ -1,9 +1,9 @@
 // Package refdes holds what a reference designator MEANS, for the layers that have to agree on it.
 //
 // It holds one predicate plus the diagnostic built from it. A designator is the join key between a
-// schematic symbol, a BOM line and a board footprint, so readers (is this placement a real part?)
-// and the check model (does this pin have an identity?) both key on it, and when they disagree they
-// silently answer different questions about the same design.
+// schematic symbol, a BOM line and a board footprint. Readers key on it to ask whether a placement
+// is a real part. The check model keys on it to ask whether a pin has an identity. When the two
+// disagree, they silently answer different questions about the same design.
 //
 // Readers import nothing from core and core imports no reader, so internal/ is the one place both
 // reach.
@@ -30,7 +30,7 @@ func IsPlaceholder(ref string) bool {
 	return strings.Contains(ref, "?") || strings.HasSuffix(ref, "**")
 }
 
-// Unannotated groups the components whose designator is still a placeholder into the
+// Unannotated finds the components whose designator is still a placeholder. It groups them into the
 // unannotated_components input diagnostic, one entry per PLACEHOLDER rather than per part, so "176
 // parts are still called R?" is one entry. Order follows first appearance, so the diagnostic is
 // stable across reads of one file.
@@ -51,8 +51,8 @@ func Unannotated(comps []*ir.Component) []*ir.UnannotatedComponent {
 			byRef[c.GetRefDes()] = u
 			order = append(order, c.GetRefDes())
 		}
-		// One placement per SECTION, since that is what a placement is in the source; a component
-		// merged from several unannotated instances carries each.
+		// One placement per SECTION, since a section is a placement in the source. A component
+		// merged from several unannotated instances lists each one.
 		for _, s := range c.GetSections() {
 			if p := s.GetProv(); p != nil {
 				u.Instances = append(u.Instances, p)

@@ -5,10 +5,11 @@
 // # A candidate without a resolvable citation is refused, not down-weighted
 //
 // A pattern sweep over a real corpus ran 71% precision on the easy form and 17% on the hard one. At
-// those rates an author who cannot check an answer instantly will wave it through, and a wrong seeded
-// value is a confident wrong answer a design review then rests on, where a blocked check is at least
-// visibly blocked. So Validate accepts or rejects a citation and never scores one. "I could not cite
-// this precisely" is a legitimate answer from a proposer; "a value, roughly from page 12" is not.
+// those rates an author who cannot check an answer instantly will wave it through. A wrong seeded
+// value is a confident wrong answer, and a design review then relies on it. A blocked check is at
+// least visibly blocked. So Validate accepts or rejects a citation and never scores one. "I could
+// not cite this precisely" is a legitimate answer from a proposer, and "a value, roughly from page
+// 12" is not.
 //
 // # Fabrication is detectable
 //
@@ -19,8 +20,8 @@
 // # The manual path does not depend on any of this
 //
 // Source is an interface with no privileged implementation, and a deployment with no proposer still
-// authors facts by hand. Same posture as param.ParamProvider: pluggable, absent-tolerant, never
-// required.
+// authors facts by hand. param.ParamProvider works the same way. Both are pluggable, tolerate being
+// absent, and are never required.
 package candidate
 
 import (
@@ -36,8 +37,8 @@ import (
 // The wire types ARE the types here, as in param and doc, because this is a cross-runtime contract
 // and a Go twin would drift from it.
 
-// Source proposes candidates for a request against one document. Returning none is a common answer,
-// and is what a proposer must do rather than lower its standards to produce something.
+// Source proposes candidates for a request against one document. Returning none is a common answer.
+// A proposer must return none rather than lower its standards to produce something.
 type Source interface {
 	Propose(req *candpb.Request, d *docpb.Document) ([]*candpb.Candidate, error)
 }
@@ -45,24 +46,25 @@ type Source interface {
 // Refusal reasons, distinguished so a caller can tell a proposer that is misconfigured from one that
 // is behaving correctly and simply found nothing worth standing behind.
 var (
-	// ErrNoCitation: the candidate names no region, so nobody can check it.
+	// ErrNoCitation means the candidate names no region, so nobody can check it.
 	ErrNoCitation = errors.New("candidate has no citation")
-	// ErrRegionUnknown: the cited region does not exist in this document. A proposer reading a
+	// ErrRegionUnknown means the cited region does not exist in this document. A proposer reading a
 	// different revision produces this, so it is a refusal and not a warning.
 	ErrRegionUnknown = errors.New("cited region does not exist in this document")
-	// ErrQuoteNotFound: the quote does not occur in the region it cites. This is the fabrication
-	// check.
+	// ErrQuoteNotFound means the quote does not occur in the region it cites. This is the
+	// fabrication check.
 	ErrQuoteNotFound = errors.New("quoted text does not occur in the cited region")
-	// ErrConfidenceRange: confidence outside (0, 1], or 1.0 claimed by a machine proposer. A value
-	// nobody stands behind must not be emitted, and only a human verification earns certainty.
+	// ErrConfidenceRange means the confidence is outside (0, 1], or a machine proposer claimed 1.0.
+	// A proposer must not emit a value that nobody stands behind. Only a human verification can
+	// claim certainty.
 	ErrConfidenceRange = errors.New("confidence outside (0, 1], or 1.0 claimed without human verification")
 )
 
 // Validate accepts or rejects a candidate against the document it cites, with no middle verdict (see
 // the package doc).
 //
-// The quote check normalises whitespace and case before comparing, since a producer's line breaking
-// is not part of the claim, and nothing else. A proposer that paraphrases fails.
+// The quote check normalises whitespace and case before comparing, and nothing else. A producer's
+// line breaking is not part of the claim. A proposer that paraphrases fails.
 func Validate(c *candpb.Candidate, d *docpb.Document) error {
 	if c.GetCitation().GetRegionId() == "" || strings.TrimSpace(c.GetCitation().GetQuote()) == "" {
 		return fmt.Errorf("%w: region %q quote %q", ErrNoCitation, c.GetCitation().GetRegionId(), c.GetCitation().GetQuote())
@@ -80,9 +82,10 @@ func Validate(c *candpb.Candidate, d *docpb.Document) error {
 	return nil
 }
 
-// regionText returns the text of the cited region: a text block, one cell of a table, or the whole
-// table when no cell is named. A citation naming a cell that does not exist is unknown rather than
-// empty, so a stale row/column reference is caught rather than silently matching nothing.
+// regionText returns the text of the cited region. The region is a text block, one cell of a table,
+// or the whole table when no cell is named. A citation naming a cell that does not exist is unknown
+// rather than empty, so a stale row/column reference is caught rather than silently matching
+// nothing.
 func regionText(d *docpb.Document, cit *candpb.Citation) (string, bool) {
 	for _, pg := range d.GetPages() {
 		if pg.GetNumber() != cit.GetPage() {
@@ -117,15 +120,15 @@ func regionText(d *docpb.Document, cit *candpb.Citation) (string, bool) {
 
 func squash(s string) string { return strings.Join(strings.Fields(strings.ToLower(s)), " ") }
 
-// Accept turns a validated candidate into the parameter a corpus holds, stamping provenance that
-// points back at the exact region it came from.
+// Accept turns a validated candidate into a corpus parameter. It stamps provenance that points back
+// at the exact region the candidate came from.
 //
 // It re-validates rather than trusting the caller, because this is the one door between a proposal
 // and a corpus.
 //
-// The result is NOT verified. It carries the proposer's confidence and method, and a human
-// confirmation is a separate act on a separate artifact, so "a machine proposed this" never reads as
-// "a person checked this".
+// The result is NOT verified. It records the proposer's confidence and method. A human confirmation
+// is a separate act on a separate artifact, so "a machine proposed this" never reads as "a person
+// checked this".
 func Accept(c *candpb.Candidate, d *docpb.Document, docRef string) (*parampb.Parameter, error) {
 	if err := Validate(c, d); err != nil {
 		return nil, err

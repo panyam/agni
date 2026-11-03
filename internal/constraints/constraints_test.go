@@ -62,13 +62,13 @@ func nonTestSources(t *testing.T, dir string) []string {
 
 // C6: each reader declares its fidelity, in the package doc of the file that owns Read.
 //
-// The declaration is a comment rather than a type because what it has to say is prose, naming WHICH
-// subset survives the read and what is dropped. A `Fidelity` enum would record the word
-// "lossy-bounded" and none of the bound. This test asserts the line exists, which is the half a
-// machine can check; whether the bound it states is true is a review question.
+// The declaration is a comment rather than a type, because it has to say something in prose. It
+// names WHICH subset survives the read and what is dropped. A `Fidelity` enum would record the word
+// "lossy-bounded" and none of the bound. This test asserts the line exists, and a machine can check
+// that half. A review decides whether the stated bound is true.
 //
-// It is here because readers/telesis shipped without one in August 2026 and nothing said so. The
-// constraint had carried no Verify at all since it was written.
+// This test exists because readers/telesis shipped without one in August 2026 and nothing said so.
+// The constraint had had no Verify at all since it was written.
 func TestC6EveryReaderDeclaresFidelity(t *testing.T) {
 	root := repoRoot(t)
 	entries, err := os.ReadDir(filepath.Join(root, "readers"))
@@ -102,16 +102,16 @@ func TestC6EveryReaderDeclaresFidelity(t *testing.T) {
 // C20: convention interpretation is left-shifted to ingestion, so the check path reads the stamped
 // fact rather than re-running name matching per entity per rule.
 //
-// The sweep is for the process-wide ACTIVE vocabulary, which is the spelling a rule reaches for when
-// it wants to ask "is this ground" and does not know the model already answers it. That is two
-// violations in one call: the convention matching runs in the hot path (C20) and the vocabulary
-// arrives as ambient state rather than travelling with the run (C22). Read it off the model instead,
-// through m.IsGroundNet, m.IsRailNet or check.NetHasRole, which trust ir.Net.roles and fall back to
-// THIS model's lexicon for an IR that skipped the loader.
+// The sweep looks for the process-wide ACTIVE vocabulary. A rule reaches for that spelling when it
+// wants to ask "is this ground" and does not know the model already answers it. That one call holds
+// two violations. The convention matching runs in the hot path (C20), and the vocabulary arrives as
+// ambient state rather than travelling with the run (C22). Read it off the model instead, through
+// m.IsGroundNet, m.IsRailNet or check.NetHasRole. Those trust ir.Net.roles and fall back to THIS
+// model's lexicon for an IR that skipped the loader.
 //
-// The one call site this would have caught is stdlib/rules/intent/protections.go, whose groundRefs
-// matched ground net names itself; both left-shift tickets (WS3-071, WS3-072) had landed by then and
-// the constraint's Verify still read "becomes checkable once those land".
+// This sweep would have caught one call site, stdlib/rules/intent/protections.go. Its groundRefs
+// matched ground net names itself. Both left-shift tickets (WS3-071, WS3-072) had merged by then,
+// and the constraint's Verify still read "becomes checkable once those land".
 func TestC20CheckPathReadsStampedFacts(t *testing.T) {
 	root := repoRoot(t)
 	// check.ActiveRoleVocab and friends are aliases of the classify originals, so both spellings
@@ -137,7 +137,7 @@ func TestC20CheckPathReadsStampedFacts(t *testing.T) {
 
 // C20 again, for core/check itself, where a helper taking a Model has the same reason to ask it.
 // BoardSource read the process-wide vocabulary until agni 1284, so a project's convention never
-// reached it. The files listed hold the package-level fallbacks a Model is not in hand for, and each
+// reached it. The listed files hold the package-level fallbacks for code with no Model in hand. Each
 // has to still match, or the sweep could be matching nothing.
 func TestC20CheckHelpersAskTheModel(t *testing.T) {
 	root := repoRoot(t)
@@ -183,13 +183,13 @@ func TestC20CheckHelpersAskTheModel(t *testing.T) {
 // The sweep is narrower than the constraint's prose in two ways, both deliberate. Test files are
 // excluded, because a test asserting that a custom style reaches the output has to name a colour to
 // assert on. And it matches `font-family=` rather than the bare word, because the renderers pass
-// "font-family" to svg.A as an ATTRIBUTE NAME with style.Font as the value, which is the rule being
-// obeyed rather than broken. The Verify in CONSTRAINTS.md read on the bare word until the audit, and
+// "font-family" to svg.A as an ATTRIBUTE NAME with style.Font as the value. That call obeys the rule
+// rather than breaking it. Until the audit, the Verify in CONSTRAINTS.md matched the bare word and
 // returned two dozen hits on a clean tree.
 func TestC12RenderLayerHasNoStyleLiterals(t *testing.T) {
 	root := repoRoot(t)
 	for _, f := range nonTestSources(t, filepath.Join(root, "core", "render")) {
-		// style.go IS the one source of truth, so it is where the literals belong.
+		// style.go IS the one source of truth, so the literals belong there.
 		if filepath.Base(f) == "style.go" {
 			continue
 		}
@@ -213,19 +213,18 @@ var styleLiteral = regexp.MustCompile(`"#[0-9a-fA-F]{3,8}"|font-family=`)
 // C24: a datasheet parameter is compared in SI base units, converted in one place, so the RAW unit a
 // vendor printed is read only inside core/param.
 //
-// This is a ratchet rather than a clean sweep, the shape hack/ir_model_baseline.txt uses for C19,
-// because the invariant a grep can express ("nothing reads p.Unit") is not the invariant that
-// matters ("nothing COMPARES on p.Unit"). Both sites below read the printed unit to PUBLISH it,
-// which is what the param.unit relation and `agni params` exist to do, and neither compares
-// anything.
+// This is a ratchet rather than a clean sweep, the same shape hack/ir_model_baseline.txt uses for
+// C19. A grep can express "nothing reads p.Unit", but the invariant that matters is "nothing
+// COMPARES on p.Unit". Both sites below read the printed unit to PUBLISH it. The param.unit relation
+// and `agni params` exist to publish it, and neither site compares anything.
 //
 // A new site failing here is one of two things. If it compares, it is the bug the constraint
 // exists for, and the fix is to convert through core/param first. If it displays, add it
 // here, and that addition is the review moment the constraint is asking for.
 func TestC24RawUnitIsReadOnlyToDisplay(t *testing.T) {
 	allowed := map[string]bool{
-		// the param.unit relation, which carries what the vendor actually printed beside the
-		// converted number
+		// the param.unit relation, holding what the vendor actually printed beside the converted
+		// number
 		"stdlib/relations/facts.go": true,
 		// the parameters table `agni params <mpn>` prints
 		"cmd/agni/params.go": true,
@@ -237,8 +236,8 @@ func TestC24RawUnitIsReadOnlyToDisplay(t *testing.T) {
 			t.Fatalf("read %s: %v", f, err)
 		}
 		rel := filepath.ToSlash(mustRel(t, root, f))
-		// core/param IS the one place and reads the raw unit by definition, since that is where
-		// the conversion to SI base units happens and what every other tier compares through.
+		// core/param IS the one place, and it reads the raw unit by definition. The conversion to SI
+		// base units happens there, and every other tier compares through it.
 		if strings.HasPrefix(rel, "core/param/") || allowed[rel] || !rawUnitRead.Match(b) {
 			continue
 		}
@@ -251,10 +250,10 @@ var rawUnitRead = regexp.MustCompile(`\bp\.(Unit\b|GetUnit\(\))`)
 
 // C22: an artifact is named by a single URI, so the web API carries no locator the callee resolves.
 //
-// A `mount` + `path` pair, or a bare `*_path` / `*_ref` field, is a locator the caller half-resolves
-// and the callee finishes, which is the shape that let a config mean one thing to the CLI and
-// another to the service. `ref_des` and `cell_refs` are domain names rather than locators and do not
-// match, because the rule is about the exact `_path` / `_ref` suffix.
+// A `mount` + `path` pair, or a bare `*_path` / `*_ref` field, is a half-resolved locator. The caller
+// resolves part of it and the callee finishes it. That shape let a config mean one thing to the CLI
+// and another to the service. `ref_des` and `cell_refs` are domain names rather than locators and do
+// not match, because the rule is about the exact `_path` / `_ref` suffix.
 func TestC22WebAPICarriesNoLocatorPair(t *testing.T) {
 	root := repoRoot(t)
 	dir := filepath.Join(root, "protos", "agni", "v1", "webapi")
@@ -296,9 +295,9 @@ func TestC25RunConfigHasOneWriter(t *testing.T) {
 // rename has one implementation and one call site per read entry point.
 //
 // Acceptance for the behaviour is TestCheckProvenanceIsMountRelative (cmd/agni), which asserts the
-// shape on both the printed and the STORED document. This guards the structure that makes it hold,
-// since a second implementation elsewhere is how a new output format or a new host starts
-// publishing host paths again.
+// shape on both the printed and the STORED document. This test guards the structure behind that
+// shape. A second implementation elsewhere would let a new output format or a new host publish host
+// paths again.
 func TestC28SourceRenameHasOneImplementation(t *testing.T) {
 	assertSoleWriter(t, "relocateSources", "readers/formats/",
 		"the read-time locator rename has one implementation (C28), so a new output format inherits "+
@@ -340,15 +339,15 @@ func mustRel(t *testing.T, base, target string) string {
 	return rel
 }
 
-// Every constraint carries a Verify, which is the gap that let C6 ship without one.
+// Every constraint has a Verify. C6 had none, and that gap let a reader ship without its fidelity
+// line.
 //
-// C6 was violated by readers/telesis from the day that reader landed, and what made it invisible was
-// not the violation being subtle. It was that C6 had no Verify at all, so there was nothing to run
-// and nothing to notice had gone stale. Four rules were in that state when the September 2026 audit
-// read them.
+// readers/telesis violated C6 from the day that reader merged. The violation was not subtle. Nobody
+// saw it because C6 had no Verify at all, so there was nothing to run and nothing to notice had gone
+// stale. Four rules were in that state when the September 2026 audit read them.
 //
-// A retired constraint is the one exception, and it says so in its heading. The number stays
-// reserved rather than reused so a comment or a commit citing it still resolves.
+// A retired constraint is the one exception, and it says so in its heading. Its number is kept
+// reserved rather than reused, so a comment or a commit citing it still resolves.
 func TestEveryConstraintCarriesAVerify(t *testing.T) {
 	b, err := os.ReadFile(filepath.Join(repoRoot(t), "CONSTRAINTS.md"))
 	if err != nil {

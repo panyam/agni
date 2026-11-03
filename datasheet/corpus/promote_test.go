@@ -88,8 +88,8 @@ func mustDraft(t *testing.T, b []byte) *parampb.PartSpec {
 	return s
 }
 
-// One MPN in two corpus files fails every LoadSet, so promotion refuses to create the second one and
-// names the file the corpus already seeds it in.
+// One MPN in two corpus files fails every LoadSet. So promotion refuses to create the second one and
+// names the corpus file that already seeds the MPN.
 func TestPromoteRefusesAnMPNAnotherFileSeeds(t *testing.T) {
 	_, draft := draftOf(t, "lm1117.textproto")
 	corpus := fstest.MapFS{"vendor/ti-ldo.textproto": {Data: fixtureBytes(t, "lm1117.textproto")}}
@@ -134,8 +134,8 @@ func TestSpecFileNameKeepsAnMPNToOneFile(t *testing.T) {
 	}
 }
 
-// A pin-mux reference is a file a host writes from its own spreadsheet, so its format refuses what
-// yamlpb refuses everywhere else, with the line, and what param.CheckPinMux refuses.
+// A host writes a pin-mux reference from its own spreadsheet. So the format refuses whatever yamlpb
+// refuses everywhere else, with the line, and whatever param.CheckPinMux refuses.
 func TestLoadPinMuxRefusals(t *testing.T) {
 	for _, tc := range []struct {
 		name, y, want string

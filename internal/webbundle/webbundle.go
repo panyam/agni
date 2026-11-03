@@ -1,11 +1,11 @@
 // Package webbundle finds the viewer for an agni binary that runs outside a checkout (agni WS16-003).
 //
 // The server reads the viewer from a directory, so both sources end as one under the user cache. A
-// release binary carries the bundle (package web, built with the embedweb tag) and writes it out
-// once. A `go install` binary carries none, since the built JS is not in the Go module, and downloads
-// the bundle its own release attached, checked against that release's checksums.txt. A build that
-// is not a release (a checkout's `make agni`, `go install ...@main`) has no bundle to name, so it
-// gets ErrNoBundle and keeps today's answer: `open` refuses and `serve` serves the API alone.
+// release binary embeds the bundle (package web, built with the embedweb tag) and writes it out
+// once. A `go install` binary embeds none, since the built JS is not in the Go module. It downloads
+// the bundle attached to its own release and checks it against that release's checksums.txt. A
+// checkout's `make agni` or `go install ...@main` is not a release, so it has no bundle to name. It
+// gets ErrNoBundle and keeps today's answer, where `open` refuses and `serve` serves the API alone.
 package webbundle
 
 import (
@@ -44,13 +44,13 @@ const ChecksumsName = "checksums.txt"
 // maxBundle caps what a download or an extracted file may hold. The bundle is about 1 MB gzipped.
 const maxBundle = 64 << 20
 
-// releaseTag is the only version shape a release has, so a pseudo-version or a dirty build never
-// names a download that does not exist.
+// releaseTag matches the only version shape a release has. A pseudo-version or a dirty build then
+// never names a download that does not exist.
 var releaseTag = regexp.MustCompile(`^v[0-9]+\.[0-9]+\.[0-9]+$`)
 
 // Source says where a viewer may come from and where to keep it.
 type Source struct {
-	// Embedded is the bundle the binary carries, nil when it carries none.
+	// Embedded is the bundle embedded in the binary, nil when there is none.
 	Embedded fs.FS
 	// Version is the binary's own version. A download is tried only for a release tag.
 	Version string
@@ -65,8 +65,8 @@ type Source struct {
 
 // Dir returns a directory holding the viewer's templates/ and static/, and how it got there
 // ("embedded" or "downloaded"). A directory written by an earlier call is reused. An error wraps
-// ErrNoBundle when the binary has nothing to offer; any other error is a download or a write that
-// failed, which a caller reports.
+// ErrNoBundle when the binary has nothing to offer. Any other error is a failed download or write,
+// and a caller reports it.
 func (s Source) Dir(ctx context.Context) (dir, how string, err error) {
 	if s.Embedded != nil {
 		key, err := treeHash(s.Embedded)
@@ -84,8 +84,8 @@ func (s Source) Dir(ctx context.Context) (dir, how string, err error) {
 }
 
 // materialize returns CacheRoot/web/<key>, filling it through fill once. It fills a temporary
-// sibling and renames it into place, so a run interrupted halfway leaves nothing a later run reads as
-// complete, and two runs racing both end with one whole directory.
+// sibling and renames it into place. A run interrupted halfway then leaves nothing that a later run
+// would read as complete. Two runs racing both end with one whole directory.
 func (s Source) materialize(key string, fill func(tmp string) error) (string, error) {
 	root := filepath.Join(s.CacheRoot, "web")
 	dir := filepath.Join(root, key)
@@ -180,8 +180,8 @@ func checksumFor(sums []byte, name string) (string, error) {
 	return "", fmt.Errorf("no checksum for %s", name)
 }
 
-// untar writes a gzipped tar's regular files under into. An entry naming a path outside into, a link
-// or anything but a file or directory is refused, since the archive came over the network.
+// untar writes a gzipped tar's regular files under into. The archive came over the network, so
+// untar refuses an entry naming a path outside into, a link, and anything but a file or directory.
 func untar(gz []byte, into string) error {
 	zr, err := gzip.NewReader(bytes.NewReader(gz))
 	if err != nil {

@@ -9,7 +9,8 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// maxTextRows is the most rows of one table the text shows; the structured content carries them all.
+// maxTextRows caps the rows of one table that the text shows. The structured content carries them
+// all.
 const maxTextRows = 200
 
 // writeTable writes t as a markdown table under its name, at most maxTextRows of it.
@@ -43,8 +44,8 @@ func cell(s string) string {
 	return strings.Join(strings.Fields(s), " ")
 }
 
-// maxWitnessLines is the most lines of one row's witness tree the text shows, the cap jaala's own text
-// format uses; the structured content carries every tree whole.
+// maxWitnessLines caps the lines of one row's witness tree that the text shows. jaala's own text
+// format uses the same cap. The structured content carries every tree whole.
 const maxWitnessLines = 8
 
 // writeWitnesses writes how each row of the page holds (agni issue 1166), numbered from offset as the
@@ -89,8 +90,8 @@ func writeLink(b *strings.Builder, link, why string) {
 }
 
 // writeQueryLink writes a query's link, or why there is none. A query link asks again rather than
-// pointing at an answer, so it lands in the Query panel and draws only a one-row answer (agni issue
-// 1239), and the label says so where a model would otherwise promise the reader a drawing.
+// pointing at an answer. So it opens in the Query panel and draws only a one-row answer (agni issue
+// 1239). The label says so, where a model would otherwise promise the reader a drawing.
 func writeQueryLink(b *strings.Builder, link, why string) {
 	if link == "" {
 		writeLink(b, link, why)

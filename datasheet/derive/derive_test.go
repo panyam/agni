@@ -68,11 +68,11 @@ func TestRunEmitsValidatedSpec(t *testing.T) {
 	if int(manifest.ParametersEmitted) != len(spec.Parameters) {
 		t.Errorf("manifest count %d != emitted %d", manifest.ParametersEmitted, len(spec.Parameters))
 	}
-	// A derived spec cites its source document by the two things derive actually knows: the local
-	// ref its parameters point at, and the revision it read. It does NOT state a printed identity,
-	// because it cannot read one; the old assertion here required a non-empty title and was
-	// satisfied by the doc-IR's PART number, which is a citation that cannot name what it cites
-	// (agni issue 290). The refusal is carried by an unidentified-document gap instead.
+	// A derived spec cites its source document by the two things derive actually knows. They are
+	// the local ref its parameters point at, and the revision it read. It does NOT state a printed
+	// identity, because it cannot read one. The old assertion here required a non-empty title, and
+	// the doc-IR's PART number satisfied it. A part number is a citation that cannot name what it
+	// cites (agni issue 290). An unidentified-document gap records the refusal instead.
 	if len(spec.Docs) != 1 || spec.Docs[0].Id == "" || spec.Docs[0].ContentHash == "" {
 		t.Errorf("derived spec must cite its source document, got %v", spec.Docs)
 	}
@@ -169,7 +169,7 @@ func TestRunConditionCoverage(t *testing.T) {
 	}
 }
 
-// The golden gate, because verified values are the regression corpus
+// This is the golden gate, because verified values are the regression corpus
 // (docsite/content/architecture/datasheet-layer.md#how-a-partspec-is-derived-from-a-document).
 // Every row of the hand-encoded WS10-001 fixture must have a derived row agreeing on (symbol,
 // kind, min/typ/max, unit). Conditions are compared by the coverage tests above, not
@@ -218,7 +218,7 @@ func TestRunGapsAndManifest(t *testing.T) {
 	for _, g := range manifest.Gaps {
 		kinds = append(kinds, g.Kind)
 	}
-	// The fixture's page-3 figure region is not a gap; but the unclassified filler
+	// The fixture's page-3 figure region is not a gap, but the unclassified filler
 	// table on page 1 must be.
 	if !strings.Contains(strings.Join(kinds, " "), "unclassified-table") {
 		t.Errorf("the unclassified ordering-info table must appear in gaps, got %v", manifest.Gaps)
@@ -227,7 +227,7 @@ func TestRunGapsAndManifest(t *testing.T) {
 
 // TI-shaped tables carry no Symbol column, so the row label is an unlabeled column 0
 // ("Maximum input voltage (VIN to GND)  |  MIN | MAX | UNIT"). The extractor falls
-// back to column 0 as the parameter name, and symbol stays empty.
+// back to column 0 as the parameter name, and symbol is left empty.
 func TestExtractSymbollessTable(t *testing.T) {
 	d := &docpb.Document{
 		ContentHash: "sha256:test", Producer: "hand", PageCount: 1, Title: "TI SHAPE",
@@ -266,9 +266,9 @@ func TestExtractSymbollessTable(t *testing.T) {
 	}
 }
 
-// A patch may target a position with NO detected cell (in one real case docling placed
-// LM1117's abs-max 20 under MIN, leaving MAX empty, so correcting means clearing one
-// cell and writing another). Insert-if-absent plus empty-text-clears make a
+// A patch may target a position with NO detected cell. In one real case docling placed
+// LM1117's abs-max 20 under MIN and left MAX empty, so correcting it means clearing one
+// cell and writing another. Insert-if-absent plus empty-text-clears make a
 // cell-placement error correctable with two patches.
 func TestPatchInsertsAndClears(t *testing.T) {
 	fx := loadDocFixture(t, "bss138-raw-docir.textproto")

@@ -8,10 +8,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// pageAction is a ViewerPageService call a host can make on a viewer it already has open, beside the
-// link that opens one (agni issue 1155). method is the rpc's bare name and body its request in
-// protojson, the pair the viewer's postMessage envelope carries, so a host embedding the viewer sends
-// it as it stands rather than opening the link in a new tab.
+// pageAction is a ViewerPageService call. A host makes it on a viewer it already has open, beside
+// the link that opens one (agni issue 1155). method is the rpc's bare name, and body is its request
+// in protojson. The viewer's postMessage envelope carries the same pair, so a host embedding the
+// viewer sends it unchanged rather than opening the link in a new tab.
 type pageAction struct {
 	Method string          `json:"method"`
 	Body   json.RawMessage `json:"body"`
@@ -27,8 +27,8 @@ func newPageAction(method string, req proto.Message) *pageAction {
 	return &pageAction{Method: method, Body: b}
 }
 
-// linkAction applies a link to an open viewer, which every link an answer carries can be. Nil for no
-// link.
+// linkAction applies a link to an open viewer. Any link an answer carries can be applied this way.
+// It returns nil for no link.
 func linkAction(url string) *pageAction {
 	if url == "" {
 		return nil
@@ -36,8 +36,8 @@ func linkAction(url string) *pageAction {
 	return newPageAction("ApplyLocation", &viewerpb.ApplyLocationRequest{Url: url})
 }
 
-// verdictAction focuses one verdict on an open viewer, with the rule and subjects that let a viewer
-// that has not answered it ask that one rule, as the verdict's link does.
+// verdictAction focuses one verdict on an open viewer. It sends the verdict's rule and subjects, as
+// the verdict's link does. A viewer that has not answered the verdict then asks that one rule.
 func verdictAction(id, rule string, subjects []string) *pageAction {
 	return newPageAction("LocateVerdict", &viewerpb.LocateVerdictRequest{Id: id, Rule: rule, Subjects: subjects})
 }

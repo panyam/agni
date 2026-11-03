@@ -53,8 +53,8 @@ func TestBuildRefusesWhatLoadSetRefuses(t *testing.T) {
 	}
 }
 
-// The generation is how a reader will learn its cache is stale, so it advances on a change and
-// holds still on a rebuild that found nothing new.
+// A reader will learn from the generation that its cache is stale. So the generation advances on a
+// change and holds still on a rebuild that found nothing new.
 func TestRefreshAdvancesTheGenerationOnlyOnAChange(t *testing.T) {
 	fsys := twoSpecCorpus(t)
 	first, changed, err := Refresh(fsys, nil)
@@ -102,8 +102,8 @@ func TestIndexRoundTrips(t *testing.T) {
 	}
 }
 
-// Promotion hands back the index to write: the promoted entry with the hash of the text it writes,
-// and the generation after the one already written.
+// Promotion hands back the index to write. The index holds the promoted entry with the hash of the
+// text promotion writes, and the generation after the one already written.
 func TestPromoteReturnsTheNextIndex(t *testing.T) {
 	_, draft := draftOf(t, "txb0104.textproto")
 	fsys := twoSpecCorpus(t)
@@ -122,7 +122,7 @@ func TestPromoteReturnsTheNextIndex(t *testing.T) {
 	if !ok || e.File != p.File || e.Hash != hashOf(p.Text) {
 		t.Errorf("promoted entry = %+v, want file %s hashed from the written text", e, p.File)
 	}
-	// The index Promote returns is the one a rebuild of the written corpus produces.
+	// Promote returns the same index that a rebuild of the written corpus produces.
 	fsys[p.File] = &fstest.MapFile{Data: p.Text}
 	rebuilt, err := Build(fsys)
 	if err != nil {

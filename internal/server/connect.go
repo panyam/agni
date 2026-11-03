@@ -21,14 +21,15 @@ import (
 // toConnectErr maps the service tier's error sentinels to Connect codes, for every adapter.
 func toConnectErr(err error) error { return ConnectError(err) }
 
-// ConnectError is a service error as the wire carries it: the service tier's error sentinels mapped
-// to Connect codes, with a query's syntax-error position as a detail. An unclassified error is
-// treated as an invalid argument, the service tier's documented default (load/parse failures). The
-// CLI writes a failed request through it under --format json, so a script reading the CLI and a
-// client reading the API see one error shape.
+// ConnectError converts a service error to its wire form. It maps the service tier's error
+// sentinels to Connect codes and adds a query's syntax-error position as a detail. An unclassified
+// error is treated as an invalid argument, the service tier's documented default (load/parse
+// failures). The CLI writes a failed request through it under --format json, so a script reading
+// the CLI and a client reading the API see one error shape.
 func ConnectError(err error) *connect.Error {
-	// A snapshot the host cannot answer from carries what a client needs to recover: ingest it again
-	// when it is missing, update it when it is stale (agni issue 1061).
+	// When the host cannot answer from a snapshot, the error tells the client how to recover. The
+	// client ingests the snapshot again when it is missing and updates it when it is stale (agni
+	// issue 1061).
 	var se *service.SnapshotError
 	if errors.As(err, &se) {
 		code := connect.CodeNotFound
@@ -50,7 +51,8 @@ func ConnectError(err error) *connect.Error {
 		}
 		return ce
 	}
-	// A question that read a file its engine was held back from says which, so the client sends it.
+	// When a question read a file that was held back from its engine, the error names the file, so
+	// the client sends it.
 	var fw *service.FilesWithheldError
 	if errors.As(err, &fw) {
 		ce := connect.NewError(connect.CodeFailedPrecondition, err)

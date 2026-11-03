@@ -8,7 +8,7 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// TestExtensionComposesReaderAndRule is the WS12-001 acceptance: a SEPARATE module (this one)
+// TestExtensionComposesReaderAndRule is the WS12-001 acceptance test. A SEPARATE module, this one,
 // contributes a format reader and a rule suite through the engine's public extension points,
 // and both take effect on the engine's own surfaces. The blank imports in main.go run the
 // extension packages' init, so by the time this test runs the .acme reader and the acme/ rule
@@ -26,7 +26,8 @@ func TestExtensionComposesReaderAndRule(t *testing.T) {
 		t.Fatalf("components = %d, want 4 (R1 C1 U1 X1)", len(d.Components))
 	}
 
-	// The rule reached the catalog the CLI and serve wire (WS12-004), namespaced + source-tagged.
+	// The CLI and serve wire up one catalog, and the rule reached it (WS12-004), namespaced and
+	// source-tagged.
 	r := check.DefaultCatalog().Lookup("acme/no-experimental-refdes")
 	if r == nil {
 		t.Fatal("acme/no-experimental-refdes not in DefaultCatalog")
@@ -50,8 +51,8 @@ func TestExtensionComposesReaderAndRule(t *testing.T) {
 
 // TestExtensionDatalogPinRule is the WS3-038 acceptance. A separate module authors a PIN-level rule as
 // DATALOG over the engine's public relations, with no engine change, and it produces findings like
-// any built-in. The Go rule above proves the registration hook; this proves the AUTHORING path, which
-// is the one the open-core story actually rests on.
+// any built-in. The Go rule above proves the registration hook. This test proves the AUTHORING
+// path, and the open-core story depends on that path.
 func TestExtensionDatalogPinRule(t *testing.T) {
 	d, err := (&formats.Loader{}).ReadDesign("testdata/example.acme")
 	if err != nil {
@@ -79,14 +80,14 @@ func TestExtensionDatalogPinRule(t *testing.T) {
 	// Findings, not Eval. Eval returns VERDICTS, and Verdict shares Subject/Kind/Pin/NetID with
 	// Finding, so `for _, f := range r.Eval(context.Background(), m)` reading f.Subject compiles and silently counts
 	// passes as failures. It happens to be right today only because a datalog rule is still wrapped
-	// in FailuresOnly and emits nothing but failures; it would start lying the moment a datalog
+	// in FailuresOnly and emits nothing but failures. It would start lying the moment a datalog
 	// rule states a considered set.
 	for _, f := range r.Findings(context.Background(), m) {
 		got = append(got, check.EntityRef(f.Subject))
 	}
 	// VCC carries U1's declared VDD power pin and X1. GND carries only ground-role pins, so the
-	// rule must leave it alone. That is a pin-ROLE discrimination a net-level rule could not make,
-	// and the reason this had to be a pin rule at all.
+	// rule must leave it alone. A net-level rule could not make that pin-ROLE discrimination, so
+	// this had to be a pin rule.
 	if len(got) != 1 || got[0] != "VCC" {
 		t.Errorf("datalog pin rule findings = %v, want exactly [VCC]", got)
 	}

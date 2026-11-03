@@ -60,8 +60,8 @@ func askPathEnv(name, def, env string) *PathInput {
 	return &PathInput{key: name, path: def}
 }
 
-// Def is the demokit input to attach to the step that collects the path. Declaring it here rather
-// than in a markdown `inputs` block keeps the prompt wording identical across examples.
+// Def is the demokit input to attach to the step that collects the path. It is declared here
+// rather than in a markdown `inputs` block, so the prompt wording is identical across examples.
 func (p *PathInput) Def() demokit.InputDef {
 	return demokit.String().Named(p.key, "Path to a design (relative to this folder)").WithDefault(p.path)
 }
