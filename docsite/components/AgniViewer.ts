@@ -2,10 +2,11 @@
 // pre-rendered design SVG.
 //
 // This is the Tier-1 proof-of-pattern. The SVG is baked at build time (an
-// `agni render` golden), so the widget needs no engine. The Tier-2 wasm backend
-// plugs into the SAME tag and mount contract later. It swaps the
-// static `src` fetch for a live GetSheet/HighlightSheet call and leaves the
-// pan/zoom shell unchanged.
+// `agni render` golden), so the widget needs no engine. The in-browser engine
+// has shipped (mission #851), and this widget does not use it yet. The plan is
+// for it to plug into the SAME tag and mount contract, swapping the static
+// `src` fetch for a live GetSheet/HighlightSheet call and leaving the pan/zoom
+// shell unchanged.
 //
 // Usage in a page (front-matter must set `playground: viewer`):
 //   <agni-viewer src="{{.Site.PathPrefix}}/static/designs/demo-board.svg"
