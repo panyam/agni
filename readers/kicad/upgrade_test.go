@@ -11,8 +11,8 @@ import (
 
 // TestKiCad6SheetPropertiesReadAsKiCad7 reads the hierarchy fixture respelled the way KiCad 6 wrote
 // it, ("Sheet name" and "Sheet file"), and requires the same components and nets as the fixture
-// itself. Before upgrade, the root named no sub-sheets and the read held only the root's parts, which
-// is how HackRF One read as an empty design (agni issue 1233).
+// itself. Before upgrade, the root named no sub-sheets and the read held only the root's parts. That
+// made HackRF One read as an empty design (agni issue 1233).
 func TestKiCad6SheetPropertiesReadAsKiCad7(t *testing.T) {
 	root := readFixture(t, "hier_root.kicad_sch")
 	if !bytes.Contains(root, []byte(`"Sheetfile"`)) {
@@ -88,7 +88,7 @@ func TestKiCad7FootprintTextReadsAsReference(t *testing.T) {
 		texts = append(texts, tx.RefDes+":"+tx.Kind+"="+tx.Text)
 	}
 	sort.Strings(texts)
-	// R2's hidden reference is not drawn, and the fp_text user stays out of this tier.
+	// R2's hidden reference is not drawn, and the fp_text user is not in this tier.
 	if got, want := strings.Join(texts, " "), "R1:reference=R1 R1:value=10k R2:value=1k"; got != want {
 		t.Errorf("board texts = %q, want %q", got, want)
 	}

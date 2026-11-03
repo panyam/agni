@@ -9,18 +9,18 @@ Feed the part from a rail inside its rated supply range, or change the part for 
 
 ### What it means
 
-A component joined to a seeded datasheet spec (by MPN) has a power-input
-pin on a rail whose name states a nominal voltage above the spec's absolute-maximum supply
-rating (VIN/VDD/VCC-family symbol, limit kind ABSOLUTE_MAX).
+A component is joined by MPN to a seeded datasheet spec. It has a power-input pin on a rail, and
+the rail's name states a nominal voltage above the spec's absolute-maximum supply rating
+(VIN/VDD/VCC-family symbol, limit kind ABSOLUTE_MAX).
 
 ![a rail above the datasheet abs-max is flagged; a rail under it is fine]({{.Site.PathPrefix}}/static/images/catalog/rules/supply-exceeds-abs-max.svg)
 
 ### Why engineers want it
 
 This was the first rule of the datasheet layer (`architecture/datasheet-layer.md`). Its limit is
-the vendor's own number rather than a heuristic threshold baked into a rule, carried with
-provenance (document revision, page, table, extraction method, confidence) into the finding, so a
-reviewer checks the citation rather than trusting the tool.
+the vendor's own number rather than a heuristic threshold baked into a rule. The finding carries
+that number with its provenance (document revision, page, table, extraction method, confidence),
+so a reviewer checks the citation rather than trusting the tool.
 
 ### What it skips rather than guesses
 
@@ -32,8 +32,8 @@ Every input that cannot be trusted is a skip, never a guess:
 - limit rows that are under-specified or carry text-only conditions are not compared
   (param.MachineComparable, the comparison semantics in `architecture/datasheet-layer.md`);
 - a row printed in a prefixed unit (mV, kV) is reduced to volts by the parameter layer's one
-  conversion table, so a spec seeded as the sheet prints it compares; a unit that table does not
-  recognize is skipped rather than scaled by a guess;
+  conversion table, so a spec seeded as the sheet prints it still compares; if that table does not
+  recognize a unit, the row is skipped rather than scaled by a guess;
 - a rail name with no parseable nominal, or with conflicting nominals, is not compared
   (the net name is the only voltage evidence a netlist carries).
 

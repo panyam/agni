@@ -7,7 +7,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// UnitOhm is the canonical ohm symbol a Quantity carries, re-exported so a rule comparing resistances
+// UnitOhm is the canonical ohm symbol in a Quantity, re-exported so a rule comparing resistances
 // does not import the classify package for one string.
 const UnitOhm = classify.UnitOhm
 
@@ -44,8 +44,8 @@ func ComponentValueIn(m Model, refDes, unit string) (float64, bool) {
 	return v, true
 }
 
-// ComponentValueText returns the SOURCE TEXT a component's value was read from, and whether it carried
-// one at all. A finding should quote this ("10k" rather than 10000) so a reviewer can find it on the
+// ComponentValueText returns the SOURCE TEXT of a component's value, and whether the component has one
+// at all. A finding should quote this ("10k" rather than 10000) so a reviewer can find it on the
 // schematic.
 //
 // It is present even when the parse FAILED, so a report can tell "states DNP, no number read" apart
@@ -92,9 +92,9 @@ func OhmsLawCurrent(volts, ohms float64) (amps float64, ok bool) {
 	return volts / ohms, true
 }
 
-// ResistivePowerWatts returns the power in WATTS a current of amps dissipates in ohms, and whether the
-// inputs admit an answer. Like OhmsLawCurrent, it is a NAMED operation so a rule does not spell its
-// own `i*i*r`, where a unit bug could hide.
+// ResistivePowerWatts returns the power in WATTS that a current of amps dissipates in ohms, and
+// whether the inputs admit an answer. Like OhmsLawCurrent, it is a NAMED operation so a rule does not
+// spell its own `i*i*r`, where a unit bug could hide.
 //
 // It sizes a load switch's pass FET at the current the design draws. The figure is REPORTED, never
 // judged, because a verdict needs a thermal limit (package resistance, ambient, accepted rise) that no

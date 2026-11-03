@@ -15,9 +15,10 @@ stable. Everything is a change, so nothing is.
 ## Two revisions
 
 The Jetson board upstream is a single snapshot, so the project makes its second revision itself, by a
-documented edit. `tools/make_rev_b.py` copies rev A and changes two things a reviewer would plausibly
-ask for after the first review: it fits R357 and R358, two I2C pull-ups the schematic marked
-do-not-populate, and renames the two interrupt nets spelled with a trailing `n` to KiCad's overbar.
+documented edit. `tools/make_rev_b.py` copies rev A and changes two things. It fits R357 and R358,
+two I2C pull-ups that the schematic marked do-not-populate. It also renames the two interrupt nets
+spelled with a trailing `n` to KiCad's overbar. A reviewer would plausibly ask for both after the
+first review.
 Rev B is a design folder of its own, `designs/jetson-rev-b`, with a descriptor matching rev A's, so the
 two read the same way and differ only by the edit.
 
@@ -49,7 +50,7 @@ identical in a text diff.
 The new name carries a lesson of its own. The obvious spelling, `~{PDC_I2C1_IRQ}`, already names the
 net on the far side of the series resistor R110, so a label spelled that way would have JOINED the two
 nets, and the diff would have shown a hard change where a rename was meant. The script refuses a name
-that is already in use, and the board's own convention for the near side of a series resistor is the
+that is already in use. The board's own convention names the near side of a series resistor with an
 `_R` suffix, as in `~{USBC2_INT_R}`.
 
 ## Hard and soft
@@ -74,15 +75,15 @@ pull-ups, still fails, because the board has other undriven buses, but it fails 
 
 Read the subjects. The two fitted resistors pull up `I2C0_SCL_1V8` and `I2C3_SDA_1V8`, the clock of one
 bus and the data line of another, which their neighbouring reference designators would not suggest. The diff told you which parts changed. The verdicts told you
-which buses that helped, and on a real revision that is the half to check, because a fix that lands on
-a different net than the one intended is how a fix causes a regression.
+which buses that helped. On a real revision, check that half. A fix can go onto a different net than
+the one intended, and then the fix causes a regression.
 
 ## Comparing across formats
 
 The diff runs over the internal representation rather than the file, so the two sides do not have to
 be the same format. A design exported as EDIF last quarter and as KiCad this quarter compares
-cleanly, and a diff that comes back empty is a real statement that the two describe the same
-netlist. That is also how you verify a CAD migration did not quietly change the design.
+cleanly. If the diff comes back empty, the two describe the same netlist. The same diff verifies
+that a CAD migration did not quietly change the design.
 
 ## Next
 

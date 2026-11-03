@@ -17,9 +17,9 @@ import (
 // name a point), so nets are computed by feeding wires, net-name anchors and absolute pin positions
 // into the shared solver in internal/netgraph, as the xschem and gEDA readers do.
 //
-// Each lib pin is mapped to sheet coordinates with geomath.ApplyTransform, the transform the renderer
-// draws with (C17), so a pin lands on the wire endpoint it connects to. Wires, labels and pins all go
-// through the same coordinate conversion so coincident points compare equal.
+// Each lib pin is mapped to sheet coordinates with geomath.ApplyTransform, the transform that the
+// renderer draws with (C17), so a pin ends up on the wire endpoint it connects to. Wires, labels and
+// pins all go through the same coordinate conversion so coincident points compare equal.
 func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.DanglingEndpoint, []*ir.DanglingEndpoint, []*ir.JoinedTap) {
 	var in netInputs
 	collectSheetNets(root, sheetScope{src: src, syms: syms}, &in)
@@ -36,13 +36,13 @@ func schNets(root *node, src string, syms *symLibCache) ([]*ir.Net, []*ir.Dangli
 
 // Anchor ranks for KiCad net naming, which netgraph resolves lowest first and, between equal
 // ranks, alphabetically (netgraph.Options.AlphaTies). They follow KiCad's driver priority (agni
-// issue 1019): a design-wide name (a global label or a power symbol) beats any sheet-scoped name, and
+// issue 1019). A design-wide name (a global label or a power symbol) beats any sheet-scoped name, and
 // among those a local label beats a hierarchical label, which beats a sheet pin. Global labels and
 // power symbols share rank 0, because the alias rules read 0 as "design-wide" (netgraph.AttrAliases);
-// KiCad also prefers a global label to a power symbol, which only matters when both name one net. A sheet-scoped rank adds
-// the sheet's depth, because KiCad prefers the name nearer the root at equal priority. rankJoin
-// names nothing and exists only to union a promoted bus member with its parent's. See
-// docsite/content/architecture/net-solving.md#name-scoping.
+// KiCad also prefers a global label to a power symbol, which only matters when both name one net. A
+// sheet-scoped rank adds the sheet's depth, because KiCad prefers the name nearer the root at equal
+// priority. rankJoin names nothing and exists only to union a promoted bus member with its
+// parent's. See docsite/content/architecture/net-solving.md#name-scoping.
 const (
 	rankGlobal   = 0   // global labels
 	rankPower    = 0   // power-symbol rails, design-wide like a global label
@@ -55,9 +55,9 @@ const (
 // kicadNaming is the netgraph naming every KiCad build uses, so a net's name is KiCad's own.
 var kicadNaming = netgraph.Options{AlphaTies: true}
 
-// netName spells a label as KiCad spells the net it names: the label's escapes resolved, then a
-// slash escaped again and line breaks dropped, so "FTDI_CBUS0{slash}SDA" stays as written while
-// the "/" separating a sheet path from a name does not collide with one inside it.
+// netName spells a label the way KiCad spells the net it names. It resolves the label's escapes,
+// then escapes a slash again and drops line breaks. So "FTDI_CBUS0{slash}SDA" is kept as written,
+// and the "/" separating a sheet path from a name does not collide with one inside it.
 func netName(raw string) string {
 	s := unescapeName(raw)
 	s = strings.NewReplacer("/", "{slash}", "\n", "", "\r", "").Replace(s)
@@ -71,7 +71,7 @@ func netName(raw string) string {
 // instances path for per-instance ref-des resolution of reused sheet files.
 type sheetScope struct {
 	offset   netgraph.Point
-	prefix   string // "" for the root sheet, whose locals stay bare to match KiCad net names
+	prefix   string // "" for the root sheet, whose locals are left bare to match KiCad net names
 	instPath string
 	src      string // this instance's source file, for collector-emitted diagnostics
 	syms     *symLibCache
@@ -79,13 +79,13 @@ type sheetScope struct {
 	// promoted maps a sheet-scoped name to the name it takes INSTEAD of this instance's
 	// qualification, for members of a bus vector that entered through a bus sheet pin. So `AN0`
 	// inside a sub-sheet reached by `AN[0..7]` is the PARENT's `AN0` (agni issue 561). Nil on the
-	// root and on any instance no bus enters, which is the common case.
+	// root and on any instance that no bus enters, which is the common case.
 	promoted map[string]promotion
 }
 
-// promotion is the parent's name a promoted bus member unions with, and the rank that name has as a
-// candidate: a local label's when the parent draws a label for the bus, else rankJoin, a join that
-// names nothing.
+// promotion holds the parent's name that a promoted bus member unions with, and that name's rank as
+// a candidate. The rank is a local label's when the parent draws a label for the bus. Otherwise it is
+// rankJoin, a join that names nothing.
 type promotion struct {
 	name string
 	rank int
@@ -97,7 +97,7 @@ func (sc sheetScope) at(p netgraph.Point) netgraph.Point {
 
 // wireID namespaces a wire uuid to this sheet instance for the wire->net map, because a reused
 // sub-sheet's wires share uuids across instances and the bare uuid would collapse them (WS1-022).
-// An empty uuid stays empty. Callers that do not build the map (the netlist walk) leave wirePfx
+// An empty uuid is returned empty. Callers that do not build the map (the netlist walk) leave wirePfx
 // empty and get the bare uuid.
 func (sc sheetScope) wireID(uuid string) string {
 	if uuid == "" || sc.wirePfx == "" {
@@ -107,14 +107,15 @@ func (sc sheetScope) wireID(uuid string) string {
 }
 
 // local qualifies a sheet-scoped name as KiCad does: "/X" on the root and "/<sheet path>/X" on a
-// sub-sheet instance, the spelling the board reader produces too, so schematic-vs-board joins
+// sub-sheet instance, the spelling that the board reader produces too, so schematic-vs-board joins
 // agree. A bus member that entered through a bus sheet pin keeps this qualified name; join gives
-// the parent's name it must union with.
+// the parent's name that the member must union with.
 func (sc sheetScope) local(name string) string {
 	return sc.prefix + "/" + name
 }
 
-// join returns the parent's name a promoted bus member unions with (agni issue 561), if it is one.
+// join returns the parent's name that a promoted bus member unions with (agni issue 561), if name
+// is one.
 func (sc sheetScope) join(name string) (promotion, bool) {
 	p, ok := sc.promoted[name]
 	return p, ok
@@ -125,8 +126,8 @@ func (sc sheetScope) depth() int {
 	return strings.Count(sc.prefix, "/")
 }
 
-// localAnchors returns a sheet-scoped label's anchor at the given rank, plus the join anchor a
-// promoted bus member needs so it still unions with its parent's member.
+// localAnchors returns a sheet-scoped label's anchor at the given rank, plus the join anchor that a
+// promoted bus member needs to union with its parent's member.
 func (sc sheetScope) localAnchors(at netgraph.Point, name string, rank int, external bool) []netgraph.Anchor {
 	out := []netgraph.Anchor{{At: at, Label: sc.local(name), External: external, Rank: rank + sc.depth()}}
 	if p, ok := sc.join(name); ok {
@@ -145,8 +146,8 @@ type netInputs struct {
 	// noJunction holds the WS1-012 endpoint-on-body diagnostics in SHEET-frame coordinates,
 	// collected before the walk's offset.
 	noJunction []*ir.DanglingEndpoint
-	// joinedTaps are the WS1-012 taps that something DOES join, the other half of noJunction, so the
-	// rule over them partitions rather than filters (agni issue 420).
+	// joinedTaps lists the WS1-012 taps that something DOES join. They are the other half of
+	// noJunction, so the rule over them partitions rather than filters (agni issue 420).
 	joinedTaps []*ir.JoinedTap
 }
 
@@ -162,11 +163,10 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	var onWire []netgraph.Point // points that bind anywhere ALONG a wire, not only at its ends
 	// joins records WHAT binds at each on-wire point, for the joined-tap half of the T-tap diagnostic
 	// (agni issue 420). Junction dots are collected before labels and the label branches do not
-	// overwrite, so a dot wins over a label at the same point, since the dot is what a reviewer is
-	// checking for.
+	// overwrite, so a dot wins over a label at the same point. A reviewer checks for the dot.
 	joins := map[netgraph.Point]tapJoin{}
 
-	// Each (wire (pts (xy ..) (xy ..) ..)) becomes a segment per consecutive point pair, carrying the
+	// Each (wire (pts (xy ..) (xy ..) ..)) becomes a segment per consecutive point pair, with the
 	// wire's uuid (qualified per instance by sc.wireID) so a dangling endpoint can point back at it.
 	for _, w := range root.Children("wire") {
 		pts := xyPoints(w.Child("pts"), sheetPt)
@@ -178,8 +178,8 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 
 	// A wire ending on a junction dot (connected) or a no-connect flag (intentionally open) is not
 	// dangling, so both are terminals. The no-connect points are also kept in ncPts, because a marker
-	// ON a pin's connect point declares that pin intentionally unconnected (WS1-019), which the pin
-	// collection below stamps onto netgraph.Pin.NoConnect.
+	// ON a pin's connect point declares that pin intentionally unconnected (WS1-019). The pin
+	// collection below stamps that onto netgraph.Pin.NoConnect.
 	ncPts := map[netgraph.Point]bool{}
 	for _, tag := range []string{"junction", "no_connect"} {
 		for _, t := range root.Children(tag) {
@@ -196,8 +196,8 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 		}
 	}
 	// A bus entry joins a wire to a bus, so a wire ending on either of its two ends is connected rather
-	// than dangling (agni issue 808). It contributes terminals only: which bus member the wire carries
-	// comes from the wire's own label, not from the entry, so the entry joins no net here. Without this
+	// than dangling (agni issue 808). It contributes terminals only. The wire's own label says which
+	// bus member the wire carries, and the entry does not, so the entry joins no net here. Without this
 	// every wire drawn to a bus entry was a dangling endpoint, 428 of them on one 17-sheet board.
 	for _, e := range root.Children("bus_entry") {
 		for _, p := range busEntryPoints(e) {
@@ -216,16 +216,16 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	}
 
 	// Anchors from labels. A local label is sheet-scoped and qualified by the instance prefix. A
-	// global label is design-wide, bare, and External, since it may continue into sheets this read
-	// did not cover (a complete project walk downgrades that, WS1-017). A hierarchical label is the
-	// child half of a parent sheet-pin port, so on the walk it takes the SAME qualified name the
-	// parent's port anchor emits and is not External. On a single-sheet read (empty prefix) it keeps
-	// its bare name and is marked External, because the binding parent, if any, was not read.
+	// global label is design-wide, bare, and External, since it may continue into sheets that this
+	// read did not cover (a complete project walk downgrades that, WS1-017). A hierarchical label is
+	// the child half of a parent sheet-pin port, so on the walk it takes the SAME qualified name that
+	// the parent's port anchor emits and is not External. On a single-sheet read (empty prefix) it
+	// keeps its bare name and is marked External, because the binding parent, if any, was not read.
 	//
-	// A local label sharing its text with a global label or a power symbol on the SAME sheet instance
-	// joins that design-wide net as well, as KiCad 10 does, which also warns about the pair
-	// (same_local_global_label). A local label on a sheet carrying no such name stays sheet-scoped
-	// (agni issue 1234).
+	// Suppose a local label shares its text with a global label or a power symbol on the SAME sheet
+	// instance. The local label joins that design-wide net as well, as KiCad 10 does. KiCad 10 also
+	// warns about the pair (same_local_global_label). A local label on a sheet with no such name is
+	// still sheet-scoped (agni issue 1234).
 	wide := designWideNames(root, sc)
 	for _, l := range root.Children("label") {
 		if at := sheetPt(l.Child("at")); at != nil {
@@ -281,11 +281,11 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 			for _, pp := range local {
 				at := gp(geomath.ApplyTransform(t, pp.loc))
 				anchors = append(anchors, netgraph.Anchor{At: at, Label: name, Driver: isFlag, External: !isFlag, Rank: rankPower})
-				// The symbol's pin ALSO becomes a typed virtual connection (WS1-014) carrying
-				// the power evidence rules reason over. A PWR_FLAG's power_out pin is the
+				// The symbol's pin ALSO becomes a typed virtual connection (WS1-014) with
+				// the power evidence that rules reason over. A PWR_FLAG's power_out pin is the
 				// driver, and a rail symbol's power_in pin is KiCad's "this rail wants a
 				// driver" declaration. The virtual component (#PWR05) never enters
-				// Components, so the direction rides ir.Connection.attributes["direction"].
+				// Components, so the direction goes in ir.Connection.attributes["direction"].
 				if d := powerDir(pp.etype); d != "" {
 					pins = append(pins, netgraph.Pin{At: at, Comp: ref, Pin: pp.designator, Dir: d})
 				}
@@ -309,7 +309,7 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	// NOT split candidates. See docsite/content/architecture/net-solving.md#kicad-connection-point-semantics.
 	// The joined taps must be found BEFORE the split, because afterwards a dotted or labeled tap is an
 	// endpoint of both wires and looks like a point no wire crossed (agni issue 420). segments is
-	// counted after, since a tap joins the wire halves the split creates.
+	// counted after, since a tap joins the wire halves that the split creates.
 	preSplit := wires
 	wires = splitWiresAt(wires, onWire)
 	segments := map[netgraph.Point]int{}
@@ -334,8 +334,9 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 	for _, w := range wires {
 		in.wires = append(in.wires, netgraph.Wire{A: sc.at(w.A), B: sc.at(w.B), Label: w.Label, Id: w.Id, Sheet: sc.prefix})
 	}
-	// Every wire and anchor names its sheet instance, so the solver can tell two labels one wire
-	// joins on this sheet from two that only a parent sheet straps together (agni issue 1249).
+	// Every wire and anchor names its sheet instance, so the solver can tell two cases apart. In one,
+	// a wire on this sheet joins two labels. In the other, only a parent sheet straps the two labels
+	// together (agni issue 1249).
 	for _, a := range anchors {
 		a.At = sc.at(a.At)
 		a.Sheet = sc.prefix
@@ -354,8 +355,8 @@ func collectSheetNets(root *node, sc sheetScope, in *netInputs) {
 // id of the wire the endpoint belongs to. O(endpoints x segments) with the bbox early-out in
 // onSegment, the same cost class as the split pass.
 //
-// Both halves of the T-tap diagnostic run this one definition at two points in the pipeline, which
-// keeps them a partition. Run POST-split it yields the silent taps, since a junction dot or a
+// Both halves of the T-tap diagnostic run this one definition at two points in the pipeline, so the
+// halves form a partition. Run POST-split it yields the silent taps, since a junction dot or a
 // mid-span label has already made a joined tap an endpoint of both wires. Run PRE-split it yields
 // every tap, joined or not.
 func endpointsOnBody(wires []netgraph.Wire) []bodyTap {
@@ -388,8 +389,8 @@ type bodyTap struct {
 	WireId string
 }
 
-// noJunctionEndpoints reports the taps with NOTHING joining them (post-split, sheet frame), which
-// are the silent T-taps the rule reports.
+// noJunctionEndpoints reports the taps with NOTHING joining them (post-split, sheet frame). These
+// are the silent T-taps that the rule reports.
 func noJunctionEndpoints(wires []netgraph.Wire, src string) []*ir.DanglingEndpoint {
 	var out []*ir.DanglingEndpoint
 	for _, t := range endpointsOnBody(wires) {
@@ -401,7 +402,7 @@ func noJunctionEndpoints(wires []netgraph.Wire, src string) []*ir.DanglingEndpoi
 // joinedTaps reports the taps that ARE joined (pre-split, sheet frame), naming the construct that
 // joined them (agni issue 420). joins maps a point to whatever binds along a wire there; segments
 // counts the wire ends meeting at the point once the split has run. Callers run it pre-split,
-// because after the split a joined tap is indistinguishable from a point no wire crossed.
+// because after the split a joined tap is indistinguishable from a point that no wire crossed.
 func joinedTaps(wires []netgraph.Wire, joins map[netgraph.Point]tapJoin, segments map[netgraph.Point]int, src string) []*ir.JoinedTap {
 	var out []*ir.JoinedTap
 	for _, t := range endpointsOnBody(wires) {
@@ -419,8 +420,8 @@ func joinedTaps(wires []netgraph.Wire, joins map[netgraph.Point]tapJoin, segment
 	return out
 }
 
-// tapJoin is what binds a point along a wire: an explicit junction dot, or a label whose text names
-// the net there.
+// tapJoin records what binds a point along a wire. That is an explicit junction dot, or a label
+// whose text names the net there.
 type tapJoin struct {
 	kind  string // "junction" | "label"
 	label string
@@ -436,8 +437,8 @@ func tapProv(wireID, src string) *ir.Provenance {
 
 // splitWiresAt splits wire segments at the given points where a point lies strictly
 // inside a segment (collinear, between the endpoints). Sheet-frame coordinates only, because
-// the collinearity cross product needs |coord| well under sqrt(MaxInt64), which sheet
-// coordinates satisfy and the hierarchy walk's offset bands do not.
+// the collinearity cross product needs |coord| well under sqrt(MaxInt64). Sheet coordinates
+// satisfy that, and the hierarchy walk's offset bands do not.
 func splitWiresAt(wires []netgraph.Wire, pts []netgraph.Point) []netgraph.Wire {
 	uniq := map[netgraph.Point]bool{}
 	for _, p := range pts {
@@ -500,7 +501,7 @@ func absI64(v int64) int64 {
 
 // unescapeName undoes KiCad's brace escapes in label and net names, so "VPP{slash}MCLR" and
 // "VPP/MCLR" are ONE net, as kicad-cli reads them (pic_programmer has both). Unknown {tokens}
-// stay literal. See docsite/content/architecture/net-solving.md#kicad-connection-point-semantics.
+// are left literal. See docsite/content/architecture/net-solving.md#kicad-connection-point-semantics.
 func unescapeName(s string) string {
 	if !strings.Contains(s, "{") {
 		return s
@@ -575,14 +576,14 @@ type pinPos struct {
 type libPinsByUnit map[int][]pinPos
 
 // schPinIndex maps each lib_symbols entry (by lib_id) to its pins keyed by unit, falling
-// back to the external symbol cache (WS1-016) for lib_ids the schematic does not embed.
+// back to the external symbol cache (WS1-016) for lib_ids that the schematic does not embed.
 type schPinIndex struct {
 	byID map[string]libPinsByUnit
 	syms *symLibCache
 }
 
 // libPinIndex reads each lib symbol's pins (local connect point + designator, via the same kicadPin
-// the geometry reader uses) into an index keyed by lib_id then unit.
+// that the geometry reader uses) into an index keyed by lib_id then unit.
 func libPinIndex(root *node, syms *symLibCache) schPinIndex {
 	idx := schPinIndex{syms: syms, byID: map[string]libPinsByUnit{}}
 	for _, libSym := range root.Child("lib_symbols").Children("symbol") {
@@ -609,7 +610,7 @@ func symPinsByUnit(libSym *node) libPinsByUnit {
 	return byUnit
 }
 
-// multiUnit reports whether a lib symbol draws more than one unit, which is when KiCad adds the
+// multiUnit reports whether a lib symbol draws more than one unit. Only then does KiCad add the
 // unit letter to a reference in a net name.
 func (idx schPinIndex) multiUnit(libID string) bool {
 	units := 0
@@ -621,9 +622,9 @@ func (idx schPinIndex) multiUnit(libID string) bool {
 	return units > 1
 }
 
-// pinNetNames are the two names KiCad gives a net after one of its pins (agni issue 1019): auto,
-// "Net-(...)" for an unlabelled net, and nc, "unconnected-(...)" for a no-connect-flagged pin's
-// lone stub. A pin with a real name is named by reference (with the unit letter on a multi-unit
+// pinNetNames returns the two names that KiCad gives a net after one of its pins (agni issue 1019).
+// auto is "Net-(...)" for an unlabelled net. nc is "unconnected-(...)" for a no-connect-flagged
+// pin's lone stub. A pin with a real name is named by reference (with the unit letter on a multi-unit
 // part) and pin name, adding the pad number when the pin is unconnected or the part has another
 // pin of that name. A pin with no name, or one named by its own number, is named by pad. A
 // no-connect pin type is always "unconnected". See KiCad's SCH_PIN::GetDefaultNetName.
@@ -674,8 +675,8 @@ func unitLetter(unit int) string {
 	return string(out)
 }
 
-// forUnit returns the pins a placement of the given unit exposes: the common (unit 0) pins plus
-// that unit's own pins.
+// forUnit returns the pins that a placement of the given unit exposes. Those are the common (unit 0)
+// pins plus that unit's own pins.
 func (idx schPinIndex) forUnit(libID string, unit int) []pinPos {
 	byUnit, ok := idx.byID[libID]
 	if !ok {
@@ -691,8 +692,9 @@ func (idx schPinIndex) forUnit(libID string, unit int) []pinPos {
 	return out
 }
 
-// designWideNames is the set of design-wide net names drawn on one sheet instance, the text of its
-// global labels and the values of its power symbols, a power flag excluded since it names nothing.
+// designWideNames returns the set of design-wide net names drawn on one sheet instance. The set holds
+// the text of its global labels and the values of its power symbols. It leaves out a power flag,
+// since a flag names nothing.
 func designWideNames(root *node, sc sheetScope) map[string]bool {
 	out := map[string]bool{}
 	for _, l := range root.Children("global_label") {

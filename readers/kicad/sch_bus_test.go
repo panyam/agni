@@ -8,7 +8,7 @@ import (
 
 // TestCollectBuses checks that the reader records NAMED buses with their member set (WS1-034). The
 // resolved fixture yields the range-bus "DATA[1:0]" with the range-expanded members. The alias fixture
-// only DECLARES `bus_alias "DATA"` and draws no bus that uses it, so it records nothing: a declaration
+// only DECLARES `bus_alias "DATA"` and draws no bus that uses it, so it records nothing. A declaration
 // is a member list, not a bus (agni issue 939). The bare bus/bus_entry wire geometry is not flagged on
 // its own.
 func TestCollectBuses(t *testing.T) {
@@ -46,10 +46,10 @@ func TestCollectBuses(t *testing.T) {
 	}
 }
 
-// TestColonLabelIsARangeLabelAndNoBus pins KiCad's reading of `DATA[1:0]`, a plain scalar net, so the
-// reader records no bus for it and records the label as range-spelled and not read as a bus, which is
-// what bus-spelling-not-a-bus reports (agni issue 605). The fixture is bus_resolved with only the
-// spelling changed; kicad-cli exports no net named by either spelling, and the member nets alike.
+// TestColonLabelIsARangeLabelAndNoBus pins KiCad's reading of `DATA[1:0]` as a plain scalar net. The
+// reader records no bus for it. It records the label as range-spelled and not read as a bus, and
+// bus-spelling-not-a-bus reports that label (agni issue 605). The fixture is bus_resolved with only
+// the spelling changed. kicad-cli exports no net named by either spelling, and no member net either.
 func TestColonLabelIsARangeLabelAndNoBus(t *testing.T) {
 	src := bytes.ReplaceAll(readFixture(t, "bus_resolved.kicad_sch"), []byte(`"DATA[0..1]"`), []byte(`"DATA[1:0]"`))
 	d, err := ReadSchematic(bytes.NewReader(src), "bus_resolved.kicad_sch")

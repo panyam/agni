@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// --addr host:0 binds a free port before serving, so what the banner prints is a port a client can
-// reach (agni issue 1121), and any other address is left for the serve to bind.
+// --addr host:0 binds a free port before serving, so the banner prints a port a client can reach
+// (agni issue 1121), and any other address is left for the serve to bind.
 func TestServeOnPortZeroNamesThePortItGot(t *testing.T) {
 	ln, err := bindFreePort("127.0.0.1:0")
 	if err != nil {

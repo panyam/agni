@@ -42,8 +42,8 @@ func (b *Bounds) BBox() *geom.BBox {
 	return &geom.BBox{Min: &geom.Point{X: b.minX, Y: b.minY}, Max: &geom.Point{X: b.maxX, Y: b.maxY}}
 }
 
-// SymbolBBox is the extent of a symbol definition's artwork and pins, the bbox recorded on
-// SymbolDef for renderer fit and auto-layout sizing.
+// SymbolBBox is the extent of a symbol definition's artwork and pins. SymbolDef records it as its
+// bbox, for renderer fit and auto-layout sizing.
 func SymbolBBox(sd *geom.SymbolDef) *geom.BBox {
 	var b Bounds
 	for _, s := range sd.Shapes {

@@ -12,9 +12,10 @@ import (
 	mcpkit "github.com/panyam/mcpkit/server"
 )
 
-// registerResources adds the catalogs an agent reads before asking: the relations a query can call,
-// the shipped library's derived relations, the rules a check runs and the designs to ask about. Each
-// is read from the service that answers it, so a resource and the tools never disagree.
+// registerResources adds four catalogs, and an agent reads them before it asks anything. They list
+// the relations a query can call, the shipped library's derived relations, the rules a check runs
+// and the designs to ask about. Each is read from the service that answers it, so a resource and
+// the tools never disagree.
 func (s *srv) registerResources(srv *mcpkit.Server) {
 	srv.RegisterResource(core.ResourceDef{
 		URI: "agni://relations", Name: "relations", MimeType: "text/plain",

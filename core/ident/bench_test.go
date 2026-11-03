@@ -29,8 +29,8 @@ func BenchmarkCompareNoMatch(b *testing.B) {
 	}
 }
 
-// The shape a real map hits is a multi-valued cell on both sides, which is where the nested
-// alternative loops do the most work.
+// A real map hits a multi-valued cell on both sides. There the nested alternative loops do the most
+// work.
 func BenchmarkCompareMultiValuedNoMatch(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		sink = Compare("GPIO[34] / WKPU[8] / ADC0_S17", "GPIO[35] / WKPU[9] / ADC0_S18")

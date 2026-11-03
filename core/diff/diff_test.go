@@ -103,9 +103,9 @@ func TestNetClassSetDiff(t *testing.T) {
 	}
 }
 
-// TestComponentFabricationDiff covers WS1-037: a dnp flip (populated -> not) and a footprint
-// swap surface as component field changes, so a review diff shows a part dropped from the build
-// or re-footprinted, not just a value edit.
+// TestComponentFabricationDiff covers WS1-037. A dnp flip (populated -> not) and a footprint swap
+// show up as component field changes. A review diff then shows a part dropped from the build or
+// re-footprinted, not just a value edit.
 func TestComponentFabricationDiff(t *testing.T) {
 	comp := func(dnp, fp string) *ir.Component {
 		return &ir.Component{

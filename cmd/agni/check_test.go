@@ -13,8 +13,7 @@ import (
 // resistor values came from the ingestion value pass rather than a hand-built IR.
 //
 // BOOT_MODE0 and BOOT_MODE1 are both strapped HIGH, so the direction half is satisfied on both and
-// cannot be what fires. Only the VALUE separates them, which is what makes this a test of the new
-// half rather than of the old one.
+// cannot fire. Only the VALUE separates them. So this tests the new half rather than the old one.
 func TestCheckStrapBandCLI(t *testing.T) {
 	cmd := checkCmd()
 	var buf bytes.Buffer
@@ -28,13 +27,14 @@ func TestCheckStrapBandCLI(t *testing.T) {
 	if !strings.Contains(out, "BOOT_MODE0") {
 		t.Errorf("the 100R strap is below the declared 1k minimum and must be reported:\n%s", out)
 	}
-	// The finding has to be actionable: which resistor, its value as WRITTEN, and the bound it broke.
+	// The finding has to be actionable. It names the resistor, its value as WRITTEN, and the bound
+	// it broke.
 	for _, want := range []string{"R1", "100R", "1k"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("finding is missing %q, which a reviewer needs to act on it:\n%s", want, out)
 		}
 	}
-	// The 10k strap sits inside the same band and must not be reported.
+	// The 10k strap is inside the same band and must not be reported.
 	if strings.Contains(out, "BOOT_MODE1") {
 		t.Errorf("the 10k strap is inside the declared band and must be silent:\n%s", out)
 	}
@@ -82,9 +82,9 @@ func TestCheckStrapImpossibleBandRejected(t *testing.T) {
 }
 
 // TestCheckStrapGroupCollisionCLI (WS3-120) is the end-to-end proof of the check that most needs to be
-// a rule rather than a reviewer. Both PHYs strap to address 1, each group encodes exactly the value
-// its declaration states, so BOTH per-group rules pass. The only finding is the one that is invisible
-// on any single schematic page, that the two devices collide on the shared bus.
+// a rule rather than a reviewer. Both PHYs strap to address 1. Each group encodes exactly the value
+// its declaration states, so BOTH per-group rules pass. The only finding is that the two devices
+// collide on the shared bus, and no single schematic page shows that.
 func TestCheckStrapGroupCollisionCLI(t *testing.T) {
 	cmd := checkCmd()
 	var buf bytes.Buffer
@@ -111,10 +111,10 @@ func TestCheckStrapGroupCollisionCLI(t *testing.T) {
 }
 
 // TestCheckStrapGroupClearanceCLI is the end-to-end proof of the case that used to produce no output
-// at all (agni issue 391). The same board, declared for a part whose address pins are numbered the
-// other way round, so both groups encode their declared value AND the two devices answer to different
-// addresses. Every rule passes, and before the collision rule stated a considered set that was
-// indistinguishable from a run where nobody declared a bus.
+// at all (agni issue 391). It reads the same board, declared for a part whose address pins are
+// numbered the other way round. So both groups encode their declared value AND the two devices
+// answer to different addresses. Every rule passes. Until the collision rule stated a considered
+// set, that run was indistinguishable from a run where nobody declared a bus.
 //
 // It pairs with TestCheckStrapGroupCollisionCLI over the SAME design file, so the difference between
 // the two runs is the declaration and nothing else.
@@ -127,9 +127,9 @@ func TestCheckStrapGroupClearanceCLI(t *testing.T) {
 		t.Fatal(err)
 	}
 	out := buf.String()
-	// The rule's own tally line, not a bare substring search. "U12", "MDIO" and "pass" all appear in
-	// other rules' rows on this design, so a looser assertion holds even when this rule emits nothing,
-	// which is the failure it exists to catch.
+	// The rule's own tally line, not a bare substring search. "U12", "MDIO" and "pass" all appear
+	// in other rules' rows on this design, so a looser assertion holds even when this rule emits
+	// nothing. This test exists to catch that failure.
 	if !strings.Contains(out, "intent/strap-address-collision  1 pass") {
 		t.Fatalf("the clean pair must be reported as a pass by this rule, and it is the case that used "+
 			"to produce no output at all:\n%s", out)
@@ -169,10 +169,10 @@ func TestCheckStrapGroupUndecidableCLI(t *testing.T) {
 	}
 }
 
-// --intent-path rides the request as a value, so on a design that declares its own intent it
-// replaces that declaration rather than compiling a second intent source, and the model reads it, so
+// --intent-path travels on the request as a value. On a design that declares its own intent, it
+// replaces that declaration rather than compiling a second intent source. The model reads it too, so
 // a connector declared internal leaves the exposure rules (agni issue 831). The gateway's J1 carries
-// the CAN bus, which esd-protection reports until the declaration says J1 joins another board.
+// the CAN bus. esd-protection reports J1 until the declaration says J1 joins another board.
 func TestCheckIntentPathDeclaresAConnectorInternal(t *testing.T) {
 	const gateway = "../../examples/tutorial-project/designs/gateway"
 	run := func(extra ...string) string {

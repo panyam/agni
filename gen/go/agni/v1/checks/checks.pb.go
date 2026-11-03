@@ -23,20 +23,20 @@ const (
 )
 
 // LocateReason is why an entity a consumer wants to highlight may not be locatable in the canvas
-// (WS9-039). It is computed server-side from the loaded geometry, because a client-side resolve
-// check silently fails in SVG render mode. It lives on the checks contract rather than the web API
-// because it answers a question about a Subject's drawability, and both findings and query result
-// cells ask it.
+// (WS9-039). The server computes it from the loaded geometry, because a client-side resolve check
+// fails silently in SVG render mode. Both findings and query result cells ask whether a Subject can
+// be drawn, so the enum is on the checks contract rather than the web API.
 type LocateReason int32
 
 const (
-	LocateReason_LOCATE_REASON_UNSPECIFIED        LocateReason = 0 // the entity IS drawn — expected to highlight; no explanation
+	LocateReason_LOCATE_REASON_UNSPECIFIED        LocateReason = 0 // the entity IS drawn and should highlight; no explanation
 	LocateReason_LOCATE_REASON_VIRTUAL_SYMBOL     LocateReason = 1 // a `#`-ref power port / flag (#PWR/#FLG), not a placed part
 	LocateReason_LOCATE_REASON_POWER_RAIL_NO_WIRE LocateReason = 2 // a power/ground rail distributed via taps, no drawn wire
 	LocateReason_LOCATE_REASON_NOT_IN_DESIGN      LocateReason = 3 // the ref/net is not in the loaded netlist
 	LocateReason_LOCATE_REASON_NO_GEOMETRY        LocateReason = 4 // undrawn in the faithful view for no more specific reason
 	LocateReason_LOCATE_REASON_BUS_NOT_DRAWN      LocateReason = 5 // a bus with no drawn wire (a bus_alias, an EDIF array, a
-	// hierarchical bus port with no wire on the shown sheet) — WS7-042c
+	// hierarchical bus port with no wire on the shown sheet),
+	// WS7-042c
 	LocateReason_LOCATE_REASON_SCHEMATIC_UNREADABLE LocateReason = 6 // the design's schematic could not be read, so nothing is
 )
 
@@ -89,15 +89,10 @@ func (LocateReason) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_checks_checks_proto_rawDescGZIP(), []int{0}
 }
 
-// CheckReport is the severity-organized pivot over one check run: THE report shape, rendered by the
-// CLI (`check --format markdown|report`), the web report path, and a reloaded results document
-// alike, so no two consumers drift (WS3-022). Sections come worst-severity first and empty
-// severities are omitted; within a section findings group by rule, each group carrying the catalog's
-// one-line summary so a report reads without the tool at hand.
-// Outcome is what a rule concluded about ONE subject, which is a narrower question than the review
-// layer's per-ITEM outcome vocabulary and deliberately does not reuse its spellings. A review outcome
-// answers "did we get an answer to this question", mostly from preconditions decided around the rule.
-// This answers "what did the rule conclude about this thing", decided inside it.
+// Outcome is what a rule concluded about ONE subject. That question is narrower than the review
+// layer's per-ITEM outcome vocabulary, and Outcome deliberately does not reuse its spellings. A
+// review outcome answers "did we get an answer to this question", mostly from preconditions decided
+// around the rule. Outcome answers "what did the rule conclude about this thing", decided inside it.
 type Outcome int32
 
 const (
@@ -106,21 +101,21 @@ const (
 	Outcome_OUTCOME_PASS Outcome = 1
 	// The comparison was made and the design is on the wrong side of it.
 	Outcome_OUTCOME_FAIL Outcome = 2
-	// There was no bound to compare against, so nothing was checked. Distinct from a pass: a datasheet
-	// row stating no maximum constrains nothing, and used to be indistinguishable from a design sitting
-	// comfortably under a real limit.
+	// There was no bound to compare against, so nothing was checked. This differs from a pass. A
+	// datasheet row stating no maximum constrains nothing, and it used to look the same as a design
+	// sitting comfortably under a real limit.
 	Outcome_OUTCOME_NO_LIMIT Outcome = 3
-	// The rule applied to this subject and never reached a comparison, with `reason` naming the step
-	// that stopped it. This is what makes a considered set honest: an enumerator that drops a subject
-	// silently reports the same nothing as a rule that never looked.
+	// The rule applied to this subject and never reached a comparison, and `reason` names the step
+	// that stopped it. Without this outcome, an enumerator that drops a subject silently reports the
+	// same nothing as a rule that never looked.
 	Outcome_OUTCOME_NOT_CONSIDERED Outcome = 4
-	// The rule had everything it needed, REACHED its decision, and could not decide. Distinct from
-	// NOT_CONSIDERED, where there was no decision to reach, and from NO_LIMIT, where a specific input
-	// was absent: here the inputs are present and the DISCRIMINATION is impossible. A transistor in a
-	// power path is either an ideal-diode controller or an ordinary switch and a netlist cannot tell
-	// them apart.
+	// The rule had everything it needed and REACHED its decision, but could not decide. NOT_CONSIDERED
+	// differs because there was no decision to reach. NO_LIMIT differs because a specific input was
+	// absent. Here the inputs are present and the DISCRIMINATION is impossible. For example, a
+	// transistor in a power path is either an ideal-diode controller or an ordinary switch, and a
+	// netlist cannot tell them apart.
 	//
-	// It maps to Finding.inconclusive, which already ships, and carries that field's contract: a
+	// It maps to Finding.inconclusive, which already ships, and it has that field's contract. A
 	// consumer must NOT count it as a failure.
 	Outcome_OUTCOME_INCONCLUSIVE Outcome = 5
 )
@@ -185,8 +180,8 @@ type Subject struct {
 	// Empty for a component/pin subject or a pinless net; the client then joins by ref (the name).
 	NetId string `protobuf:"bytes,4,opt,name=net_id,json=netId,proto3" json:"net_id,omitempty"`
 	// bus_id is the bus's NAME (its range-label identity) for a kind="bus" subject, so a
-	// bus-not-modeled finding highlights its drawn bus rather than a net (WS7-042b). A bus carries
-	// no net, so this is its only geometry join key; empty for every other subject kind.
+	// bus-not-modeled finding highlights its drawn bus rather than a net (WS7-042b). A bus has no
+	// net, so this is its only geometry join key. Empty for every other subject kind.
 	BusId         string `protobuf:"bytes,5,opt,name=bus_id,json=busId,proto3" json:"bus_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -259,36 +254,37 @@ func (x *Subject) GetBusId() string {
 
 // ContextSubject is an entity a finding's message NAMES but is not ABOUT.
 //
-// A Finding carries exactly one subject, so a rule whose sentence involves two entities could
-// highlight only one of them, and it was not always the one the sentence named. crystal-load-caps
-// reads "crystal terminal net XOUT1 has no load capacitor" and its subject is the crystal Y1, so
-// clicking it sent the reader to a part while the message talked about a net. Worse, a crystal has
-// two terminals and both sit inside the highlighted symbol, so the drawing could not say which one
-// was at fault (agni issue 349).
+// A Finding has exactly one subject. So a rule whose sentence involves two entities could highlight
+// only one of them, and it was not always the one the sentence named. crystal-load-caps reads
+// "crystal terminal net XOUT1 has no load capacitor", and its subject is the crystal Y1. Clicking it
+// sent the reader to a part while the message talked about a net. Worse, a crystal has two
+// terminals and both sit inside the highlighted symbol, so the drawing could not say which one was
+// at fault (agni issue 349).
 //
-// The net was bound in the query and destroyed when the Finding was built. Nothing downstream could
-// recover it without parsing prose, which is the thing a typed subject exists to avoid.
+// The query bound the net, and building the Finding destroyed it. Nothing downstream could recover
+// it without parsing prose, and a typed subject exists to avoid parsing prose.
 //
-// WHAT ROLE MEANS. A short lower-case noun naming the part this entity plays in the rule's sentence
-// ("terminal", "rail", "source", "sense"), not a description and not a kind: the kind is already on
-// the Subject. Roles are the rule author's vocabulary and are NOT a closed set, because the useful
-// name is rule-specific and a shared enum would collapse distinctions the message depends on.
+// A role is a short lower-case noun naming the part this entity plays in the rule's sentence
+// ("terminal", "rail", "source", "sense"). It is not a description and not a kind, since the
+// Subject already has the kind. Roles are the rule author's vocabulary and are NOT a closed set.
+// The useful name is rule-specific, and a shared enum would collapse distinctions the message
+// depends on.
 //
-// A role is not required to be unique within a finding. Two entities can play the same part, which
-// is exactly the i2c-address-collision shape ("A and B both strap to address N"), so a consumer must
-// treat context as a LIST rather than a map.
+// A role is not required to be unique within a finding. Two entities can play the same part, as in
+// the i2c-address-collision shape ("A and B both strap to address N"). So a consumer must treat
+// context as a LIST rather than a map.
 //
-// ORDER IS SIGNIFICANT and is the author's: entries arrive in the order the message names them, so a
-// panel rendering chips left to right reads in the same order as the sentence above it. A consumer
-// must not sort them.
+// ORDER IS SIGNIFICANT and the author sets it. Entries arrive in the order the message names them,
+// so a panel rendering chips left to right reads in the same order as the sentence above it. A
+// consumer must not sort them.
 //
 // Empty context means the finding's message names no entity other than its subject. That is the
 // common case and always will be.
 type ContextSubject struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Subject *Subject               `protobuf:"bytes,1,opt,name=subject,proto3" json:"subject,omitempty"`
-	// role names the part this entity plays in the message. See the message comment: open vocabulary,
-	// not unique within a finding, ordered by the author.
+	// role names the part this entity plays in the message. The vocabulary is open, a role need not be
+	// unique within a finding, and the author sets the order. The message comment says why.
 	Role          string `protobuf:"bytes,2,opt,name=role,proto3" json:"role,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -338,9 +334,9 @@ func (x *ContextSubject) GetRole() string {
 	return ""
 }
 
-// DatasheetCitation is where a datasheet-backed value came from, so a consumer shows the source (and
-// flags a low confidence) as structured data rather than only inside the finding message. The wire
-// form of check.DatasheetCitation.
+// DatasheetCitation is where a datasheet-backed value came from. A consumer can show the source and
+// flag a low confidence from structured data rather than only from the finding message. It is the
+// wire form of check.DatasheetCitation.
 type DatasheetCitation struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Doc        string                 `protobuf:"bytes,1,opt,name=doc,proto3" json:"doc,omitempty"`                     // the SourceDoc title (vendor doc number + revision), "" if unresolved
@@ -349,21 +345,23 @@ type DatasheetCitation struct {
 	Section    string                 `protobuf:"bytes,4,opt,name=section,proto3" json:"section,omitempty"`             // the table or figure the value was read from
 	Method     string                 `protobuf:"bytes,5,opt,name=method,proto3" json:"method,omitempty"`               // how the value was extracted ("hand", "derive/v0", "mock", ...)
 	Confidence float64                `protobuf:"fixed64,6,opt,name=confidence,proto3" json:"confidence,omitempty"`     // extraction confidence in (0, 1]; a low value flags "verify before trusting"
-	// Whether a PERSON has stood behind this value, and whether that still holds given the revision
-	// the corpus now has: "unverified" | "verified" | "stale" | "unknown" (param.VerificationState).
-	// Distinct from confidence, which says how the value was PRODUCED and cannot say which revision
-	// anyone checked. "stale" is the load-bearing one: a human confirmed it against a revision the
-	// corpus no longer holds, so the confirmation is not evidence about the document in hand.
-	// Empty for a citation carrying no parameter (a pin declaration, a relation bound).
+	// verification says whether a PERSON has confirmed this value, and whether that confirmation still
+	// holds for the revision the corpus now has. It is "unverified", "verified", "stale" or "unknown"
+	// (param.VerificationState). Confidence is different. It says how the value was PRODUCED, and it
+	// cannot say which revision anyone checked. "stale" matters most. It means a human confirmed the
+	// value against a revision the corpus no longer holds, so the confirmation is not evidence about
+	// the document in hand. Empty for a citation with no parameter (a pin declaration, a relation
+	// bound).
 	Verification string `protobuf:"bytes,7,opt,name=verification,proto3" json:"verification,omitempty"`
-	// The document identity as printed when the verification was performed
-	// (Verification.doc_revision), so a stale citation can name the revision that WAS checked rather
-	// than only the one the corpus now holds. Display only, never compared; see the field's own
-	// comment in param.proto. Empty when nothing was ever verified.
+	// verified_revision is the document identity as printed when the verification was performed
+	// (Verification.doc_revision). A stale citation can then name the revision that WAS checked, as
+	// well as the one the corpus now holds. Display only, never compared; see the field's own comment
+	// in param.proto. Empty when nothing was ever verified.
 	VerifiedRevision string `protobuf:"bytes,8,opt,name=verified_revision,json=verifiedRevision,proto3" json:"verified_revision,omitempty"`
-	// Whose transcription the value rests on: "project" for the design's own project params/, "shared"
-	// for a corpus the project does not own (--params, --params-url), "" when unknown. A project's
-	// corpus is layered over a shared one per MPN, so one run can cite both (agni issue 749).
+	// corpus says whose transcription the value came from. It is "project" for the design's own
+	// project params/, "shared" for a corpus the project does not own (--params, --params-url), and ""
+	// when unknown. A project's corpus is layered over a shared one per MPN, so one run can cite both
+	// (agni issue 749).
 	Corpus        string `protobuf:"bytes,9,opt,name=corpus,proto3" json:"corpus,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -463,59 +461,61 @@ func (x *DatasheetCitation) GetCorpus() string {
 }
 
 // Finding is one rule violation, the wire form of check.Finding. `subject` is the highlight join
-// key; `provenance` locates the finding in the source (file, native id, span) for a source-link
-// tooltip or an out-of-viewer consumer such as the CLI's `check --format json`. It is unset when the
-// subject carries no provenance.
+// key. `provenance` locates the finding in the source (file, native id, span) for a source-link
+// tooltip or an out-of-viewer consumer such as the CLI's `check --format json`. `provenance` is
+// unset when the subject has no provenance.
 type Finding struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Rule     string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`
 	Severity string                 `protobuf:"bytes,2,opt,name=severity,proto3" json:"severity,omitempty"` // "error" | "warning" | "info"
 	Subject  *Subject               `protobuf:"bytes,3,opt,name=subject,proto3" json:"subject,omitempty"`   // the entity that failed (kind + ref); the highlight join key
 	Message  string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
-	// inconclusive marks a finding as a RESULT the rule could not decide rather than a defect it found
-	// (agni issue 74). A consumer must not count it as a failure: the review reads such an item
-	// "inconclusive", never pass and never fail, and a viewer should present it distinctly from a
-	// defect. The message carries what could not be resolved and what would resolve it.
+	// inconclusive marks a finding where the rule could not decide, rather than a defect it found
+	// (agni issue 74). A consumer must not count it as a failure. The review reads such an item as
+	// "inconclusive", never pass and never fail, and a viewer should present it apart from a defect.
+	// The message says what could not be resolved and what would resolve it.
 	Inconclusive bool           `protobuf:"varint,10,opt,name=inconclusive,proto3" json:"inconclusive,omitempty"`
 	Provenance   *ir.Provenance `protobuf:"bytes,5,opt,name=provenance,proto3" json:"provenance,omitempty"` // source location of the subject; unset when none
-	// Sheet ids (SheetRef.id) where the subject appears in the design's default-layout geometry,
-	// filled server-side from placements (components/pins) and wires (nets) per sheet (WS9-024). A
-	// net spanning sheets lists each; empty when the design has no resolvable geometry, in which
-	// case a viewer highlights on the current sheet as before.
+	// sheets lists the sheet ids (SheetRef.id) where the subject appears in the design's
+	// default-layout geometry. The server fills it per sheet from placements (components and pins)
+	// and wires (nets) (WS9-024). A net spanning sheets lists each sheet. It is empty when the design
+	// has no resolvable geometry, and a viewer then highlights on the current sheet as before.
 	Sheets []string `protobuf:"bytes,6,rep,name=sheets,proto3" json:"sheets,omitempty"`
-	// locate_reason explains why locating this finding may highlight nothing, computed server-side
-	// from the loaded geometry (WS7-042c). Set to BUS_NOT_DRAWN for a bus finding whose bus has no
-	// drawn wire; UNSPECIFIED (the default) means the subject is drawn and will highlight.
+	// locate_reason explains why locating this finding may highlight nothing. The server computes it
+	// from the loaded geometry (WS7-042c). It is BUS_NOT_DRAWN for a bus finding whose bus has no
+	// drawn wire. UNSPECIFIED, the default, means the subject is drawn and will highlight.
 	LocateReason LocateReason `protobuf:"varint,7,opt,name=locate_reason,json=locateReason,proto3,enum=agni.v1.checks.LocateReason" json:"locate_reason,omitempty"`
 	// datasheets is the datasheet-side provenance of a datasheet-backed finding (WS10-012), the wire
-	// form of check.Finding.DatasheetProv: which document, page, and section each limit came from, plus
-	// the extraction method and confidence. Empty for a finding not backed by a seeded datasheet value.
+	// form of check.Finding.DatasheetProv. Each entry names the document, page and section a limit
+	// came from, plus the extraction method and confidence. Empty for a finding not backed by a seeded
+	// datasheet value.
 	//
-	// REPEATED because a connection-aware rule joins TWO parts' datasheets (WS3-028): a regulator's
-	// output against a downstream part's absolute maximum rests on a value from each, and the review's
-	// data-trust gate has to see both — judging such a finding on one citation would rate it
-	// trustworthy while half its evidence was unverified. Singular before WS3-028; the tag is unchanged
-	// because for a message field singular and repeated are wire-compatible, so old data parses as a
-	// one-element list.
+	// It is REPEATED because a connection-aware rule joins TWO parts' datasheets (WS3-028). Imagine a
+	// regulator's output checked against a downstream part's absolute maximum. The finding uses a
+	// value from each part, so the review's data-trust gate has to see both citations. Judging it on
+	// one citation would rate it trustworthy while half its evidence was unverified. The field was
+	// singular before WS3-028. The tag did not change, because a singular and a repeated message field
+	// are wire-compatible, so old data parses as a one-element list.
 	Datasheets []*DatasheetCitation `protobuf:"bytes,8,rep,name=datasheets,proto3" json:"datasheets,omitempty"`
 	// context are the entities this finding's message names but is not ABOUT (agni issue 349). Empty
 	// for the common case of a message that names only its subject. See ContextSubject for what a role
 	// means, why roles are not unique, and why order is the author's.
 	//
-	// This does NOT make a finding count as a finding about its context entities. Grouping by subject
-	// partitions the findings, which is what makes "the union of what I clicked equals the full pass"
-	// a fact rather than a hope (agni issue 259), and counting a finding under two entities would break
-	// that. Context makes the finding REACHABLE from the other entity; it does not make it ABOUT it.
+	// Grouping by subject partitions the findings. Because of that partition, "the union of what I
+	// clicked equals the full pass" is a fact rather than a hope (agni issue 259). Counting a finding
+	// under two entities would break the partition, so context does NOT make a finding count as one
+	// about its context entities. Context makes the finding REACHABLE from the other entity; it does
+	// not make it ABOUT it.
 	Context []*ContextSubject `protobuf:"bytes,11,rep,name=context,proto3" json:"context,omitempty"`
 	// verdict_ids names the verdicts this finding was projected from, each spelled as check.VerdictID
-	// computes it (`<rule>:(<kind>:<ref>,...)`), so a consumer holding only the finding, such as a
-	// review item, links to the proof by a real id (agni issue 485). A verdict id is not recoverable
-	// from the finding's subject and context, since a verdict may be keyed on a tuple, on an entity the
-	// finding lists as context, or on an element such as a signal that no finding field can hold.
+	// computes it (`<rule>:(<kind>:<ref>,...)`). A consumer holding only the finding, such as a review
+	// item, can then link to the proof by a real id (agni issue 485). A verdict id cannot be recovered
+	// from the finding's subject and context. A verdict may be keyed on a tuple, on one of the
+	// finding's context entities, or on an element such as a signal that no finding field can hold.
 	//
-	// Empty when the rule states no considered set, because such a rule publishes no verdicts and an id
-	// would name nothing a viewer can resolve. A finding from a check run carries one id; the field is
-	// repeated so a consumer that folds findings together keeps every id.
+	// Empty when the rule states no considered set. Such a rule publishes no verdicts, and an id would
+	// name nothing a viewer can resolve. A finding from a check run has one id. The field is repeated
+	// so a consumer that folds findings together keeps every id.
 	VerdictIds    []string `protobuf:"bytes,12,rep,name=verdict_ids,json=verdictIds,proto3" json:"verdict_ids,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -628,10 +628,10 @@ func (x *Finding) GetVerdictIds() []string {
 	return nil
 }
 
-// WitnessTerm is one labelled VALUE a witness rests on ("absolute maximum" = "3.6 V").
+// WitnessTerm is one labelled VALUE that a witness uses ("absolute maximum" = "3.6 V").
 //
-// Values only, never entities. An entity belongs in Verdict.context, which carries the Subject a
-// highlight joins on; a term's value is a bare string no consumer can resolve to anything drawable.
+// Values only, never entities. An entity belongs in Verdict.context, whose Subject a highlight joins
+// on. A term's value is a bare string, and no consumer can resolve it to anything drawable.
 type WitnessTerm struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Label         string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
@@ -684,19 +684,19 @@ func (x *WitnessTerm) GetValue() string {
 	return ""
 }
 
-// Witness is why a verdict holds: a line a person can read, the values it rests on, and the datasheet
-// provenance behind them. It is what makes a PASS evidence rather than silence.
+// Witness is why a verdict holds. It has a line a person can read, the values the verdict used, and
+// the datasheet provenance behind them. A witness turns a PASS into evidence rather than silence.
 type Witness struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// statement is the human rendering, always set. It is the whole witness for a text consumer.
 	Statement string `protobuf:"bytes,1,opt,name=statement,proto3" json:"statement,omitempty"`
-	// terms are the values statement rests on, kept apart so a UI can lay them out and a test can
-	// assert on one without parsing prose. ORDERED and open rather than a fixed measured/limit pair,
-	// because a witness family whose proof is a PATH carries no values at all and would have had to
-	// rewrite this shape.
+	// terms are the values the statement uses, kept apart so a UI can lay them out and a test can
+	// assert on one without parsing prose. They are ORDERED and open rather than a fixed measured/limit
+	// pair. A witness family whose proof is a PATH has no values at all, and a fixed pair would have
+	// forced a rewrite of this shape.
 	Terms []*WitnessTerm `protobuf:"bytes,2,rep,name=terms,proto3" json:"terms,omitempty"`
-	// datasheet is the provenance of any seeded value the verdict used, the same citation form a
-	// Finding carries. Empty for a witness resting on nothing seeded.
+	// datasheet is the provenance of any seeded value the verdict used, in the same citation form a
+	// Finding uses. Empty when the witness uses no seeded value.
 	Datasheet     []*DatasheetCitation `protobuf:"bytes,3,rep,name=datasheet,proto3" json:"datasheet,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -755,67 +755,71 @@ func (x *Witness) GetDatasheet() []*DatasheetCitation {
 
 // Verdict is what one rule concluded about ONE subject, including the subjects it could not judge.
 //
-// It exists because a Finding is a violation, so a pass emits nothing and the set of subjects a rule
-// considered is recorded nowhere. That answers "what is wrong with this board" and cannot answer
-// "prove this pin is fine", which is what a reviewer asks of a design they are signing off. A verdict
-// list IS the considered set: every subject in scope produces exactly one.
+// A Finding is a violation, so a pass emits nothing, and nothing records which subjects a rule
+// considered. Findings answer "what is wrong with this board". They cannot answer "prove this pin is
+// fine", and a reviewer signing off a design asks exactly that. A verdict list IS the considered
+// set, because every subject in scope produces exactly one verdict.
 //
-// It deliberately does NOT carry the Finding for a failing verdict. A finding travels in
-// CheckDesignResponse.findings as it always has, and duplicating it here would put the same defect on
-// the wire twice and invite the two copies to disagree.
+// A failing verdict deliberately does NOT hold its Finding. The finding travels in
+// CheckDesignResponse.findings as it always has. Duplicating it here would put the same defect on
+// the wire twice, and the two copies could disagree.
 type Verdict struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// id is the verdict's stable name, "<rule>:<kind>:<ref>", DERIVED from the fields below rather than
-	// assigned, so a CLI run and a server run compute the same name without talking to each other. It
-	// is carried so a consumer need not recompute it, never so a producer can choose it.
+	// id is the verdict's stable name, `<rule>:(<kind>:<ref>,...)` as check.VerdictID spells it. It
+	// is DERIVED from the fields below rather than assigned, so a CLI run and a server run compute the
+	// same name without talking to each other. The field saves a consumer from recomputing it. A
+	// producer never chooses it.
 	//
-	// Built from rule, kind and the kind's own reference, and from NOTHING else: not run order, not the
-	// message text, and not the outcome. Leaving the outcome out is what lets a link filed against a
-	// passing check survive the answer flipping, which is when someone most wants to follow it.
+	// The id is built from the rule and each subject's kind and reference, and from NOTHING else. Run
+	// order, the message text and the outcome are not part of it. Imagine a link filed against a
+	// passing check, and later the check fails. The id leaves the outcome out, so the link still
+	// resolves, at the moment someone most wants to follow it.
 	Id      string  `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Rule    string  `protobuf:"bytes,2,opt,name=rule,proto3" json:"rule,omitempty"`
 	Outcome Outcome `protobuf:"varint,3,opt,name=outcome,proto3,enum=agni.v1.checks.Outcome" json:"outcome,omitempty"`
-	// subjects is the TUPLE of entities this verdict is about, in the rule's own order, and it is what
-	// `id` above is derived from. Never empty.
+	// subjects is the TUPLE of entities this verdict is about, in the rule's own order. `id` above is
+	// derived from it. Never empty.
 	//
-	// REPEATED BECAUSE SOME RULES ASK ABOUT A RELATION, and a relation belongs to no single entity. A
-	// clearance violation is a distance between two nets; a regulator over-driving a part it feeds is
-	// only pinned down by the regulator, the rail and the load, since one source feeding one load over
-	// two rails is two different answers; a strap group is a device and the N nets encoding its value.
-	// Keying those by one entity gives one id to several answers.
+	// It is REPEATED BECAUSE SOME RULES ASK ABOUT A RELATION, and a relation belongs to no single
+	// entity. A clearance violation is a distance between two nets. A regulator over-driving a part it
+	// feeds needs the regulator, the rail and the load to pin it down, since one source feeding one
+	// load over two rails gives two different answers. A strap group is a device and the N nets
+	// encoding its value. Keying those by one entity gives one id to several answers.
 	//
-	// ORDER IS THE RULE'S AND IS SIGNIFICANT: a tracking bound reads subject-pin minus reference-pin,
-	// so swapping the two inverts the sign. A symmetric relation is canonicalised by the rule before it
-	// gets here, never by a consumer.
+	// ORDER IS THE RULE'S AND IS SIGNIFICANT. A tracking bound reads subject-pin minus reference-pin,
+	// so swapping the two inverts the sign. The rule canonicalises a symmetric relation before it gets
+	// here, and a consumer never does.
 	//
-	// A Finding's subject stays SINGULAR and is one of these. The two answer different questions: this
-	// tuple is the verdict's identity, and a finding's subject is the one entity a reader has to change.
+	// A Finding's subject is still SINGULAR and is one of these. The two answer different questions.
+	// This tuple is the verdict's identity, and a finding's subject is the one entity a reader has to
+	// change.
 	Subjects []*Subject `protobuf:"bytes,4,rep,name=subjects,proto3" json:"subjects,omitempty"`
-	// witness is what the outcome rests on. REQUIRED on PASS, FAIL and INCONCLUSIVE, and what makes a
-	// pass evidence. Unset is legitimate only on NO_LIMIT and NOT_CONSIDERED, where the point of the
-	// verdict is that there was nothing to rest on.
+	// witness is the evidence for the outcome. It is REQUIRED on PASS, FAIL and INCONCLUSIVE, and it
+	// turns a pass into evidence. Unset is legitimate only on NO_LIMIT and NOT_CONSIDERED, because on
+	// those the verdict's point is that there was no evidence to give.
 	Witness *Witness `protobuf:"bytes,5,opt,name=witness,proto3" json:"witness,omitempty"`
 	// reason says why a NOT_CONSIDERED verdict could not be decided, in the rule author's words
 	// ("pin could not be resolved to a datasheet terminal"). Empty for every other outcome.
 	//
-	// An open string rather than an enum, for the reason Tags and ContextSubject.role are open: the
-	// useful vocabulary is rule-specific, and a closed set would either collapse distinctions a rule
-	// depends on or grow a member per rule family. What matters is that a reason EXISTS.
+	// It is an open string rather than an enum, for the same reason Tags and ContextSubject.role are
+	// open. The useful vocabulary is rule-specific. A closed set would either collapse distinctions a
+	// rule depends on or grow a member per rule family. A reason only has to EXIST.
 	Reason string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
-	// context are the design entities this verdict's proof NAMES but is not ABOUT, typed so a consumer
-	// can highlight them: the resistor and rail a pull-up passes through, the rail a pin sits on.
+	// context are the design entities this verdict's proof NAMES but is not ABOUT. They are typed so a
+	// consumer can highlight them, such as the resistor and rail a pull-up passes through, or the rail
+	// a pin sits on.
 	//
-	// THIS IS THE HIGHLIGHTABLE HALF, and the division from witness.terms is exactly that. Excludes the
-	// subject, which `subject` already names, so a consumer draws subject-as-figure over
-	// context-as-ground.
+	// THIS IS THE HIGHLIGHTABLE HALF, and that is the whole division from witness.terms. The list
+	// excludes the subjects, since `subjects` already names them. A consumer then draws the subjects
+	// as figure over the context as ground.
 	Context []*ContextSubject `protobuf:"bytes,7,rep,name=context,proto3" json:"context,omitempty"`
-	// sheets are the sheet ids (SheetRef.id) where the verdict's subjects are drawn, filled
-	// server-side as Finding.sheets is: each subject's sheets in tuple order, then design order,
-	// without repeats. A viewer opens one of them before drawing the proof, so a verdict on another
-	// sheet is shown where it is rather than highlighted off-screen (agni issue 1151). Empty when the
-	// design has no resolvable geometry, as for a finding.
+	// sheets are the sheet ids (SheetRef.id) where the verdict's subjects are drawn. The server fills
+	// it the way it fills Finding.sheets. It lists each subject's sheets in tuple order, then in design
+	// order, without repeats. A viewer opens one of them before drawing the proof, so a verdict on
+	// another sheet is shown where it is rather than highlighted off-screen (agni issue 1151). Empty
+	// when the design has no resolvable geometry, as for a finding.
 	//
-	// A PASSING verdict has no finding to borrow sheets from, which is why the verdict carries its own.
+	// A PASSING verdict has no finding to borrow sheets from, so the verdict has its own list.
 	Sheets        []string `protobuf:"bytes,8,rep,name=sheets,proto3" json:"sheets,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -907,6 +911,11 @@ func (x *Verdict) GetSheets() []string {
 	return nil
 }
 
+// CheckReport is the severity-organized pivot over one check run. It is THE report shape. The CLI
+// (`check --format markdown|report`), the web report path and a reloaded results document all
+// render it, so no two consumers drift (WS3-022). Sections come worst-severity first, and empty
+// severities are omitted. Within a section, findings group by rule. Each group has the catalog's
+// one-line summary, so a report reads without the tool at hand.
 type CheckReport struct {
 	state         protoimpl.MessageState         `protogen:"open.v1"`
 	Source        string                         `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`                      // the checked file (mount-relative path or CLI argument)
@@ -967,9 +976,10 @@ func (x *CheckReport) GetSections() []*CheckReport_SeveritySection {
 	return nil
 }
 
-// ReviewManifest is a project's review checklist: named review areas, each holding items, each item
-// bound to the check that verifies it. The authoring form is YAML; this mirrors the parsed struct
-// rather than the file, so an item's binding is a nested message here where the YAML inlines it flat.
+// ReviewManifest is a project's review checklist. It has named review areas, each area holds items,
+// and each item is bound to the check that verifies it. The authoring form is YAML. This message
+// mirrors the parsed struct rather than the file, so an item's binding is a nested message here
+// while the YAML inlines it flat.
 type ReviewManifest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -1076,13 +1086,13 @@ func (x *ManifestArea) GetItems() []*ManifestItem {
 	return nil
 }
 
-// ManifestItem is one checklist entry. title is the short human review label shown in a report;
-// description is an optional longer explanation; note is an optional hint shown for an item that did
+// ManifestItem is one checklist entry. title is the short human review label shown in a report.
+// description is an optional longer explanation. note is an optional hint shown for an item that did
 // not fail, most usefully WHY an item is not automated. id names the item in the report.
 //
-// An item with no binding, or one bound to a rule that has not shipped, is tracked but not automated.
-// That is a feature: bind it to its intended future rule name and it flips to pass/fail on its own
-// once that rule lands.
+// An item with no binding, or one bound to a rule that has not shipped, is tracked but not
+// automated. This is deliberate. Bind the item to its intended future rule name, and it flips to
+// pass/fail on its own once that rule ships.
 type ManifestItem struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
@@ -1160,9 +1170,9 @@ func (x *ManifestItem) GetBinding() *ItemBinding {
 }
 
 // ItemBinding selects the check that verifies an item. At most ONE selector is set (rule, tag,
-// profile, query, present); they are mutually exclusive and a second one is a validation error, not a
-// precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than selectors, so
-// they do not count toward that limit and compose with whichever selector is set.
+// profile, query, present). They are mutually exclusive, and a second one is a validation error,
+// not a precedence rule. scope, requirement, and applies_to_class are NARROWERS rather than
+// selectors. They do not count toward that limit, and they compose with whichever selector is set.
 type ItemBinding struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Rule    string                 `protobuf:"bytes,1,opt,name=rule,proto3" json:"rule,omitempty"`       // a catalog rule by exact name, e.g. "profile/can-termination-missing"
@@ -1178,8 +1188,8 @@ type ItemBinding struct {
 	// so a profile's requirement list can GROW without re-scoring every item already bound to it.
 	// Requires profile to be set.
 	Requirement string `protobuf:"bytes,7,opt,name=requirement,proto3" json:"requirement,omitempty"`
-	// applies_to_class gates the item on device class (WS10-014): computed-n/a when no component
-	// carries any of these classes. Values are component.class names, family tags included.
+	// applies_to_class gates the item on device class (WS10-014). The item is computed-n/a when no
+	// component has any of these classes. Values are component.class names, family tags included.
 	AppliesToClass []string `protobuf:"bytes,8,rep,name=applies_to_class,json=appliesToClass,proto3" json:"applies_to_class,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -1272,8 +1282,8 @@ func (x *ItemBinding) GetAppliesToClass() []string {
 }
 
 // ManifestQuery is an inline datalog check authored in the manifest (a house rule). match is the
-// program, whose goal must project subject; message is the finding template, where {var} is replaced
-// by the bound value. kind defaults to "component" and severity to "warning".
+// program, and its goal must project subject. message is the finding template, where {var} is
+// replaced by the bound value. kind defaults to "component" and severity to "warning".
 type ManifestQuery struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Match    string                 `protobuf:"bytes,1,opt,name=match,proto3" json:"match,omitempty"`
@@ -1282,7 +1292,7 @@ type ManifestQuery struct {
 	Message  string                 `protobuf:"bytes,4,opt,name=message,proto3" json:"message,omitempty"`
 	Severity string                 `protobuf:"bytes,5,opt,name=severity,proto3" json:"severity,omitempty"`
 	// param_symbol names the datasheet symbol this query checks (e.g. "IOUT"). It does not change the
-	// query logic; the finding gains a structured datasheet citation resolved from the subject's spec.
+	// query logic. The finding gains a structured datasheet citation resolved from the subject's spec.
 	ParamSymbol   string `protobuf:"bytes,6,opt,name=param_symbol,json=paramSymbol,proto3" json:"param_symbol,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1360,9 +1370,9 @@ func (x *ManifestQuery) GetParamSymbol() string {
 	return ""
 }
 
-// ManifestPresent asserts that a class of component must EXIST on the design: the item passes when at
-// least one is present and fails when none is. It is never not-applicable, because the
-// component-class tier exists on any netlist, so the presence question always has a pass/fail answer.
+// ManifestPresent asserts that a class of component must EXIST on the design. The item passes when
+// at least one is present and fails when none is. It is never not-applicable. The component-class
+// tier exists on any netlist, so the presence question always has a pass/fail answer.
 type ManifestPresent struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Class         string                 `protobuf:"bytes,1,opt,name=class,proto3" json:"class,omitempty"`
@@ -1455,20 +1465,20 @@ func (x *ManifestScope) GetProfiles() []string {
 
 // ReviewItem is one checklist item's outcome, the wire form of review.ItemResult.
 //
-// The outcome vocabulary is the part of this contract with no incumbent equivalent, and it is the
-// reason the review layer exists: a check that did not evaluate must not score as a pass. pass and
-// fail are the two verdicts a vendor's flat violation list can express; every other value records a
-// distinct way the question went unanswered (not-applicable, not-automated, needs-data,
-// needs-design-intent, computed-n/a) or answered on data not yet trustworthy (provisional). A
-// producer that has no such axis must leave these unspoken rather than manufacture them.
+// The review layer exists because a check that did not evaluate must not score as a pass. Its
+// outcome vocabulary has no incumbent equivalent. A vendor's flat violation list can express two
+// verdicts, pass and fail. Every other value records a distinct way the question went unanswered
+// (not-applicable, not-automated, needs-data, needs-design-intent, computed-n/a), or an answer on
+// data not yet trustworthy (provisional). A producer with no such axis must leave these values
+// unused rather than manufacture them.
 type ReviewItem struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Id    string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	Title string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	// outcome is the review.Outcome string: pass | fail | not-applicable | not-automated |
 	// needs-data | needs-design-intent | computed-n/a | provisional. It is a string, not an enum, so
-	// a new honest verdict is a review-layer change rather than a schema migration — the same posture
-	// Finding.severity takes.
+	// a new verdict is a review-layer change rather than a schema migration. Finding.severity takes
+	// the same approach.
 	Outcome  string     `protobuf:"bytes,3,opt,name=outcome,proto3" json:"outcome,omitempty"`
 	Note     string     `protobuf:"bytes,4,opt,name=note,proto3" json:"note,omitempty"`         // why, for an outcome that is neither pass nor fail
 	Findings []*Finding `protobuf:"bytes,5,rep,name=findings,proto3" json:"findings,omitempty"` // the rule firings that made the item fail
@@ -1551,32 +1561,18 @@ func (x *ReviewItem) GetUnmet() []*UnmetDependency {
 	return nil
 }
 
-// UnmetDependency names ONE datasheet fact a check reached for and did not find. It exists because
-// the blocked-on-data outcome already knew this at the moment it gave up, and then flattened it into
-// a sentence: the symbol is computed to decide the outcome, and which parts lack it is computed to
-// decide whether ANY part has it. Both were discarded, so every consumer wanting to act on the
-// outcome had to re-derive them from prose or not act at all.
-//
-// The unit is (part, symbol), NOT (component, symbol). A PartSpec is per-MPN, so ten placements of
-// one part are one thing to go seed, and deduplicating by MPN is what keeps this a work list rather
-// than a restatement of the bill of materials.
-//
-// WHAT IS DELIBERATELY ABSENT: no limit_kind, no pin_ref, no unit. Nothing derives them at the site
-// this is produced, and an always-empty field would mean two different things forever ("the rule was
-// not asking per-terminal" and "we cannot work it out yet"), which is the ambiguity RangeValue's
-// explicit presence exists to avoid one layer down. proto3 fields are additive, so admitting one the
-// day something populates it costs nothing; shipping it empty costs the distinction permanently.
 // WorkItem is one datasheet fact to go and find, and what finding it would unblock. It is the
-// rollup of UnmetDependency across a run: an item lists the facts IT needs, and only a rollup can
-// say which fact the most items are waiting on, which is the prioritisation signal.
+// rollup of UnmetDependency across a run. An item lists the facts IT needs. Only a rollup can say
+// which fact the most items are waiting on, and that count is the prioritisation signal.
 //
-// A proto rather than a Go type because it crosses to the browser: a portal renders this as the
-// datasheet author's work list, and a hand-written twin there is the drift a shared schema prevents.
+// It is a proto rather than a Go type because it crosses to the browser. A portal renders it as the
+// datasheet author's work list, and a hand-written twin there would drift in the way a shared schema
+// prevents.
 type WorkItem struct {
 	state      protoimpl.MessageState `protogen:"open.v1"`
 	Dependency *UnmetDependency       `protobuf:"bytes,1,opt,name=dependency,proto3" json:"dependency,omitempty"`
-	// The review items this fact stands between, ordered and deduplicated. Its LENGTH is the
-	// prioritisation signal; the names are what lets a reader see what clearing it buys.
+	// The review items this fact blocks, ordered and deduplicated. Its LENGTH is the prioritisation
+	// signal. The names let a reader see what clearing the fact would unblock.
 	Blocked       []string `protobuf:"bytes,2,rep,name=blocked,proto3" json:"blocked,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1626,19 +1622,35 @@ func (x *WorkItem) GetBlocked() []string {
 	return nil
 }
 
+// UnmetDependency names ONE datasheet fact that a check reached for and did not find. The
+// blocked-on-data outcome already knew this fact when it gave up, and then flattened it into a
+// sentence. It computes the symbol to decide the outcome, and it computes which parts lack the
+// symbol to decide whether ANY part has it. Both values were discarded, so every consumer wanting to
+// act on the outcome had to re-derive them from prose or not act at all.
+//
+// The unit is (part, symbol), NOT (component, symbol). A PartSpec is per-MPN, so ten placements of
+// one part are one thing to go seed. Deduplicating by MPN keeps this a work list rather than a
+// restatement of the bill of materials.
+//
+// There is deliberately no limit_kind, no pin_ref and no unit. Nothing derives them where this
+// message is produced. An always-empty field would mean two different things forever, "the rule was
+// not asking per-terminal" and "we cannot work it out yet". RangeValue's explicit presence exists to
+// avoid that ambiguity one layer down. proto3 fields are additive, so adding one on the day something
+// populates it costs nothing. Shipping it empty would lose the distinction permanently.
 type UnmetDependency struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The design-side part identity (ir.BomLine.mpn, else the MPN attribute) that needs the fact.
 	Mpn string `protobuf:"bytes,1,opt,name=mpn,proto3" json:"mpn,omitempty"`
-	// Manufacturer as the seeded spec states it. EMPTY WHEN NO SPEC EXISTS, which is precisely the
-	// case where a document has to be found in the first place, so a consumer must treat it as a hint
-	// and never as a search key.
+	// Manufacturer as the seeded spec states it. It is EMPTY WHEN NO SPEC EXISTS, and that is exactly
+	// the case where a document has to be found first. So a consumer must treat it as a hint and
+	// never as a search key.
 	Manufacturer string `protobuf:"bytes,2,opt,name=manufacturer,proto3" json:"manufacturer,omitempty"`
 	// The parameter symbol as the check asked for it ("VCC", "VIN"), matching the rule's param_symbol.
 	Symbol string `protobuf:"bytes,3,opt,name=symbol,proto3" json:"symbol,omitempty"`
 	// True when the part has NO seeded spec at all, false when a spec exists but states no such
-	// symbol. Different next steps: extract a document, versus find one fact in a document already
-	// extracted. One boolean rather than two message types because the pair is exhaustive.
+	// symbol. The next steps differ. One means extracting a document, and the other means finding one
+	// fact in a document already extracted. One boolean rather than two message types, because the
+	// pair is exhaustive.
 	SpecAbsent    bool `protobuf:"varint,4,opt,name=spec_absent,json=specAbsent,proto3" json:"spec_absent,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1755,59 +1767,58 @@ func (x *ReviewArea) GetItems() []*ReviewItem {
 	return nil
 }
 
-// CheckResults is a self-contained check-result document: what was checked, by what, with what
-// outcome. It is the artifact half of this contract — N checkers produce it, N consumers read it —
-// and it is deliberately NOT a view over live state. Everything a consumer needs to render the run
-// is inside it, which is what lets a report be read, diffed, archived, or handed to a reviewer with
-// no design file, no rule catalog, and no engine build present.
+// CheckResults is a self-contained check-result document. It says what was checked, by what, and
+// with what outcome. It is the artifact half of this contract, where N checkers produce it and N
+// consumers read it, and it is deliberately NOT a view over live state. Everything a consumer needs
+// to render the run is inside it. So a report can be read, diffed, archived, or handed to a reviewer
+// with no design file, no rule catalog, and no engine build present.
 //
-// That self-containment is the acceptance test, not a design aspiration: writing a run and
+// That self-containment is the acceptance test, not a design aspiration. Writing a run and
 // re-rendering it from the document alone must reproduce the original output byte for byte.
 type CheckResults struct {
 	state  protoimpl.MessageState `protogen:"open.v1"`
 	Meta   *ResultsMeta           `protobuf:"bytes,1,opt,name=meta,proto3" json:"meta,omitempty"`
 	Design *DesignRef             `protobuf:"bytes,2,opt,name=design,proto3" json:"design,omitempty"`
 	Run    *RunConfig             `protobuf:"bytes,3,opt,name=run,proto3" json:"run,omitempty"`
-	// catalog is the snapshot of the rules this run evaluated, so a reader knows what was ASKED as
-	// well as what was found — the difference between a clean design and a run that checked nothing.
-	// It carries identity and one-line prose only: the long-form rule detail belongs to the engine's
-	// catalog surface, and copying it into every document would multiply the same markdown across
-	// every archived run.
+	// catalog is the snapshot of the rules this run evaluated. With it a reader knows what was ASKED
+	// as well as what was found, and can tell a clean design from a run that checked nothing. It holds
+	// identity and one-line prose only. The long-form rule detail belongs to the engine's catalog
+	// surface, and copying it into every document would repeat the same markdown across every
+	// archived run.
 	Catalog []*RuleRecord `protobuf:"bytes,4,rep,name=catalog,proto3" json:"catalog,omitempty"`
 	// skipped names the selected rules that could NOT evaluate on this design, and why.
 	//
-	// It is the other half of what `catalog` exists for. A catalog snapshot separates a clean design
-	// from a run that checked nothing; this separates a clean design from one whose questions were
-	// GATED — a board rule on a netlist, a datasheet rule with no corpus. Both are silence that reads
-	// as coverage, and a document carrying one without the other lets a reader conclude the run was
-	// broader than it was.
+	// It complements `catalog`. A catalog snapshot separates a clean design from a run that checked
+	// nothing. This list separates a clean design from one whose questions were GATED, such as a board
+	// rule on a netlist or a datasheet rule with no corpus. Both kinds of silence read as coverage. A
+	// document with one list and not the other lets a reader conclude the run was broader than it was.
 	//
-	// An IMPORTED vendor report leaves it empty, on the same terms `meta.coverage_axis` is false for
-	// one: a foreign checker has no notion of a rule it declined to run, and manufacturing the field
+	// An IMPORTED vendor report leaves it empty, for the same reason `meta.coverage_axis` is false on
+	// one. A foreign checker has no notion of a rule it declined to run, and manufacturing the field
 	// would give an import a property it does not have.
 	Skipped []*SkippedRule `protobuf:"bytes,10,rep,name=skipped,proto3" json:"skipped,omitempty"`
-	// findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and carries
-	// its findings per item instead, and that is not an oversight: a review runs each item's bound rules
-	// scoped to that item, so a flat union would assert a design-wide sweep that never happened.
+	// findings is the design-wide finding list of a CHECK run. A REVIEW run leaves it empty and lists
+	// its findings per item instead. That is deliberate. A review runs each item's bound rules scoped
+	// to that item, so a flat union would claim a design-wide sweep that never happened.
 	Findings []*Finding `protobuf:"bytes,5,rep,name=findings,proto3" json:"findings,omitempty"`
-	// manifest is the review checklist's name; empty for a plain check run. Its presence is what
-	// distinguishes a review document from a check document, so a consumer never reports an absent
-	// coverage axis as a complete one. It is kept alongside manifest_snapshot because a listing wants
-	// the name without paying to read the whole checklist.
+	// manifest is the review checklist's name, empty for a plain check run. A non-empty manifest marks
+	// a review document rather than a check document, so a consumer never reports an absent coverage
+	// axis as a complete one. It is kept alongside manifest_snapshot because a listing wants the name
+	// without reading the whole checklist.
 	Manifest string        `protobuf:"bytes,6,opt,name=manifest,proto3" json:"manifest,omitempty"`
 	Areas    []*ReviewArea `protobuf:"bytes,7,rep,name=areas,proto3" json:"areas,omitempty"`
-	// import_summary is present only on a document IMPORTED from a foreign checker: how many of that
-	// tool's findings could be attached to an entity in our model, and what the rest were. Unset for a
-	// native run, whose findings are produced from the model and therefore joined by construction.
+	// import_summary is present only on a document IMPORTED from a foreign checker. It says how many of
+	// that tool's findings could be attached to an entity in our model, and what the rest were. Unset
+	// for a native run, whose findings are produced from the model and so are joined by construction.
 	ImportSummary *ImportSummary `protobuf:"bytes,8,opt,name=import_summary,json=importSummary,proto3" json:"import_summary,omitempty"`
 	// manifest_snapshot is the checklist this run actually scored, embedded rather than referenced
 	// (WS9-053). Empty for a plain check run, and empty on documents written before it existed.
 	//
-	// It is what makes an archived review honest about what it asked. The areas above record the
-	// ANSWERS, but a reader cannot tell an item that was never on the checklist from one that was
-	// removed afterwards, and cannot see the binding an outcome came from at all. Naming the checklist
-	// is not enough either: a manifest is an editable file, so a name resolves to whatever that file
-	// says TODAY, and a run archived last quarter would re-render against a checklist it never saw.
+	// With it an archived review records what it asked. The areas above record the ANSWERS. Without
+	// the snapshot, a reader cannot tell an item that was never on the checklist from one removed
+	// afterwards, and cannot see the binding an outcome came from at all. Naming the checklist is not
+	// enough either. A manifest is an editable file, so a name resolves to whatever that file says
+	// TODAY. A run archived last quarter would then re-render against a checklist it never saw.
 	ManifestSnapshot *ReviewManifest `protobuf:"bytes,9,opt,name=manifest_snapshot,json=manifestSnapshot,proto3" json:"manifest_snapshot,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -1913,14 +1924,15 @@ func (x *CheckResults) GetManifestSnapshot() *ReviewManifest {
 	return nil
 }
 
-// ImportSummary is the honest accounting of an import. A foreign checker names the entity a violation
-// is about in free text ("Pad 1 [VCC] of R1 on B.Cu"), so attaching it to our model is a parse, and a
-// parse has a residue: a wire whose description carries only its length and orientation names nothing
-// we can join to.
+// ImportSummary accounts for an import. A foreign checker names the entity a violation is about in
+// free text ("Pad 1 [VCC] of R1 on B.Cu"). Attaching it to our model is therefore a parse, and a
+// parse leaves a residue. For example, a wire whose description gives only its length and
+// orientation names nothing we can join to.
 //
-// The residue is REPORTED rather than dropped, and the unjoined findings are kept rather than
-// discarded, because either silence would read as coverage. A consumer seeing 40 imported findings has
-// to be able to tell "the tool found 40 things" from "the tool found 60 and we understood 40".
+// The import REPORTS the residue rather than dropping it, and keeps the unjoined findings rather than
+// discarding them, because either silence would read as coverage. A consumer seeing 40 imported
+// findings has to be able to tell "the tool found 40 things" from "the tool found 60 and we
+// understood 40".
 type ImportSummary struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Findings      int32                  `protobuf:"varint,1,opt,name=findings,proto3" json:"findings,omitempty"` // findings read from the source document
@@ -2044,9 +2056,9 @@ func (x *UnjoinedReason) GetExamples() []string {
 	return nil
 }
 
-// ResultsMeta is who produced the document and when. producer matters because this contract is meant
-// to hold a foreign checker's output too: a document is only comparable to another once you know
-// which tool and which build made it.
+// ResultsMeta is who produced the document and when. The producer matters because this contract is
+// meant to hold a foreign checker's output too. A document is only comparable to another once you
+// know which tool and which build made it.
 type ResultsMeta struct {
 	state           protoimpl.MessageState `protogen:"open.v1"`
 	Schema          string                 `protobuf:"bytes,1,opt,name=schema,proto3" json:"schema,omitempty"`                                          // the document schema version, e.g. "agni.checks.results/v1"
@@ -2054,14 +2066,14 @@ type ResultsMeta struct {
 	ProducerVersion string                 `protobuf:"bytes,3,opt,name=producer_version,json=producerVersion,proto3" json:"producer_version,omitempty"` // that tool's build identity
 	CreatedAt       string                 `protobuf:"bytes,4,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`                   // RFC 3339, UTC
 	// coverage_axis states whether this producer's outcomes distinguish "checked and clean" from "not
-	// checked". A native run does: every verdict that is neither pass nor fail records a distinct way a
-	// question went unanswered. An incumbent DRC or ERC report does NOT — it is a flat violation list,
-	// and its silence about a rule is unreadable.
+	// checked". A native run does. Each of its verdicts that is neither pass nor fail records a
+	// distinct way a question went unanswered. An incumbent DRC or ERC report does NOT. It is a flat
+	// violation list, and its silence about a rule says nothing.
 	//
-	// It is declared rather than inferred because the difference is invisible in the data: an imported
-	// document and a clean native run both look like "few findings". A consumer that treated them alike
-	// would report a fab-capability pass that was never checked, so the weaker artifact says it is
-	// weaker instead of being quietly promoted.
+	// It is declared rather than inferred because the difference is invisible in the data. An imported
+	// document and a clean native run both look like "few findings". A consumer that treated them
+	// alike would report a fab-capability pass that was never checked. So the weaker artifact declares
+	// that it is weaker instead of being quietly promoted.
 	CoverageAxis  bool `protobuf:"varint,5,opt,name=coverage_axis,json=coverageAxis,proto3" json:"coverage_axis,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -2133,21 +2145,21 @@ func (x *ResultsMeta) GetCoverageAxis() bool {
 }
 
 // DesignRef identifies the design a run was about, WITHOUT containing it. content_hash is the
-// revision identity: two documents describe the same revision when their hashes match, which is what
-// makes a findings diff between revisions meaningful and what stops a stale document from being
-// silently re-read against a design that has since changed.
+// revision identity. Two documents describe the same revision when their hashes match. That makes a
+// findings diff between revisions meaningful, and it stops a stale document from being silently
+// re-read against a design that has since changed.
 //
 // The design's own name and source format are deliberately absent. A producer would have to parse
-// the design to know them, and this document is written by a surface that is a thin client of the
-// check service and never loads one itself. A field only a second read could fill would either cost
-// every write a redundant parse or sit empty pretending to be optional.
+// the design to know them. A thin client of the check service writes this document, and it never
+// loads a design itself. A field that only a second read could fill would either cost every write a
+// redundant parse or sit empty pretending to be optional.
 type DesignRef struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	Source      string                 `protobuf:"bytes,1,opt,name=source,proto3" json:"source,omitempty"`                              // the checked file as the run named it (path or CLI argument)
 	ContentHash string                 `protobuf:"bytes,2,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"` // "sha256:<hex>" over the source bytes; empty when the producer did not hash
 	// unexpanded_hierarchy lists the hierarchical blocks the read left out (agni issues 707, 717), so a
 	// document says that its findings cover the top level alone. A check document and a review document
-	// both carry it here, since both describe one read of one design. Empty for a flat design, and for
+	// both have it here, since both describe one read of one design. Empty for a flat design, and for
 	// a document from a producer that did not record it.
 	UnexpandedHierarchy []*ir.UnexpandedHierarchy `protobuf:"bytes,3,rep,name=unexpanded_hierarchy,json=unexpandedHierarchy,proto3" json:"unexpanded_hierarchy,omitempty"`
 	unknownFields       protoimpl.UnknownFields
@@ -2205,22 +2217,22 @@ func (x *DesignRef) GetUnexpandedHierarchy() []*ir.UnexpandedHierarchy {
 	return nil
 }
 
-// RunConfig records the inputs that changed what was even EVALUABLE, so a reader can tell a design
-// with no datasheet violations from a run that had no datasheet corpus attached. These are the
-// overlay tiers whose absence turns a rule not-applicable or an item not-automated; without them a
-// document's silence is unreadable.
+// RunConfig records the inputs that changed what was even EVALUABLE. A reader can then tell a
+// design with no datasheet violations from a run that had no datasheet corpus attached. These are
+// the overlay tiers whose absence turns a rule not-applicable or an item not-automated. Without them
+// a document's silence is unreadable.
 //
-// It records that a tier was present and under what name, never the path it was read from. Where the
-// configuration came from is the producer's business (CONSTRAINTS C22), and a path is meaningless to
-// every consumer that is not on the producing machine.
+// It records that a tier was present and under what name, never the path it was read from. The
+// producer decides where the configuration came from (CONSTRAINTS C22), and a path means nothing to
+// a consumer that is not on the producing machine.
 type RunConfig struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Params   bool                   `protobuf:"varint,1,opt,name=params,proto3" json:"params,omitempty"`     // a datasheet parameter corpus was attached
 	Profiles bool                   `protobuf:"varint,2,opt,name=profiles,proto3" json:"profiles,omitempty"` // overlay interface profiles were attached
 	Intent   bool                   `protobuf:"varint,3,opt,name=intent,proto3" json:"intent,omitempty"`     // a design-intent declaration was attached
-	// conventions is the naming convention's NAME, not a flag, because it is also the namespace its
-	// rules appear under: a finding from `acme/signal-net-naming` is unreadable without it. "" is the
-	// engine defaults.
+	// conventions is the naming convention's NAME, not a flag, because its rules appear under that
+	// name as a namespace. A finding from `acme/signal-net-naming` is unreadable without it. ""
+	// means the engine defaults.
 	Conventions   string  `protobuf:"bytes,4,opt,name=conventions,proto3" json:"conventions,omitempty"`
 	RatifiedFloor float64 `protobuf:"fixed64,5,opt,name=ratified_floor,json=ratifiedFloor,proto3" json:"ratified_floor,omitempty"` // review only: the datasheet-confidence floor for a ratified fail
 	unknownFields protoimpl.UnknownFields
@@ -2294,9 +2306,9 @@ func (x *RunConfig) GetRatifiedFloor() float64 {
 
 // SkippedRule is one selected rule that could not evaluate, and the reason the rule itself gave.
 //
-// A separate list rather than a field on RuleRecord, because `catalog` means "the rules that ran" and
-// a reader counts it. Folding these in would make that count mean "rules considered", silently
-// changing a number every existing consumer already reads.
+// It is a separate list rather than a field on RuleRecord. `catalog` means "the rules that ran", and
+// a reader counts it. Folding these in would make that count mean "rules considered", and would
+// silently change a number every existing consumer already reads.
 type SkippedRule struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// name is the catalog rule name.
@@ -2352,10 +2364,10 @@ func (x *SkippedRule) GetReason() string {
 	return ""
 }
 
-// RuleRecord is one rule as the run saw it: enough to render and group a report without the engine's
-// catalog. Availability is deliberately absent — it is a per-design question answered by the item
-// outcomes and the not-applicable reasons they carry, and a snapshot field claiming it would have to
-// be filled from a design the document does not contain.
+// RuleRecord is one rule as the run saw it, with enough to render and group a report without the
+// engine's catalog. Availability is deliberately absent. It is a per-design question, and the item
+// outcomes and their not-applicable reasons answer it. A snapshot field claiming it would have to be
+// filled from a design the document does not contain.
 type RuleRecord struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -2426,9 +2438,10 @@ func (x *RuleRecord) GetTags() map[string]string {
 
 type CheckReport_SeveritySection struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// severity is "error" | "warning" | "info", worst first in `sections` with an unrecognized
-	// severity ahead of error, and then "unresolved", the section holding every inconclusive finding
-	// whatever severity it carries, since a rule that declined to decide is not a defect.
+	// severity is "error" | "warning" | "info", worst first in `sections`, with an unrecognized
+	// severity ahead of error. After those comes "unresolved". That section holds every
+	// inconclusive finding whatever its severity, since a rule that declined to decide has not found
+	// a defect.
 	Severity      string                   `protobuf:"bytes,1,opt,name=severity,proto3" json:"severity,omitempty"`
 	Count         int32                    `protobuf:"varint,2,opt,name=count,proto3" json:"count,omitempty"` // findings in this section, for the summary table
 	Rules         []*CheckReport_RuleGroup `protobuf:"bytes,3,rep,name=rules,proto3" json:"rules,omitempty"`

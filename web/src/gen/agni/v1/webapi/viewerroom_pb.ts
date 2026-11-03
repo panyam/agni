@@ -39,9 +39,9 @@ export const JoinViewerRoomRequestSchema: GenMessage<JoinViewerRoomRequest> = /*
  */
 export type JoinViewerRoomResponse = Message<"agni.v1.webapi.JoinViewerRoomResponse"> & {
   /**
-   * room is "design:<mount>/<entry>", the design's declared entry whatever the request named, so
-   * tabs opened on the folder and on the entry share one room, and an agent naming either reaches
-   * them.
+   * room is "design:<mount>/<entry>". It names the design's declared entry whatever the request
+   * named. So tabs opened on the folder and on the entry share one room, and an agent naming either
+   * reaches them.
    *
    * @generated from field: string room = 1;
    */
@@ -62,16 +62,18 @@ export type JoinViewerRoomResponse = Message<"agni.v1.webapi.JoinViewerRoomRespo
   token: string;
 
   /**
-   * expire_time is when the token stops admitting a new join. A page already in the room stays.
+   * expire_time is when the token stops admitting a new join. A page already in the room is not
+   * removed.
    *
    * @generated from field: google.protobuf.Timestamp expire_time = 4;
    */
   expireTime?: Timestamp | undefined;
 
   /**
-   * bridge_subjects are the relay subjects the server's room bridges join as. The page answers only
-   * peers the relay admitted under one of them, so a page holding a token for the room cannot call
-   * the other tabs in it directly, past the bridge's agreement check (agni issue 1173).
+   * bridge_subjects are the relay subjects that the server's room bridges join as. The page answers
+   * only peers that the relay admitted under one of them. So a page holding a token for the room
+   * cannot call the other tabs in it directly and skip the bridge's agreement check (agni issue
+   * 1173).
    *
    * @generated from field: repeated string bridge_subjects = 5;
    */
@@ -86,15 +88,16 @@ export const JoinViewerRoomResponseSchema: GenMessage<JoinViewerRoomResponse> = 
   messageDesc(file_agni_v1_webapi_viewerroom, 1);
 
 /**
- * This file: ViewerRoomService, how an open viewer page joins its design's room so an agent can
- * drive it (agni issue 1154).
+ * This file defines ViewerRoomService. An open viewer page uses it to join its design's room, so an
+ * agent can drive the page (agni issue 1154).
  *
  * `agni serve --mcp --viewer-rooms` embeds a relay at /relay/ and mcpkit's room bridge beside /mcp.
- * A viewer page joins the room of the design it shows and offers ViewerPageService's methods there
- * as tools (viewer_show_sheet, viewer_locate_verdict, ...), and the bridge serves them to agents,
- * each call naming its design. This service is the one step the page needs from the server first:
- * the room's name, resolved as every other surface resolves the design (C32), and a token the relay
- * admits it with. Without --viewer-rooms the service is not served.
+ * A viewer page joins the room of the design it shows. There it offers ViewerPageService's methods
+ * as tools (viewer_show_sheet, viewer_locate_verdict, ...). The bridge serves them to agents, and
+ * each call names its design. Before joining, the page needs two things from the server. One is
+ * the room's name, resolved as every other surface resolves the design (C32). The other is a token
+ * for the relay to admit the page. This service returns both. Without --viewer-rooms the service is
+ * not served.
  *
  * @generated from service agni.v1.webapi.ViewerRoomService
  */

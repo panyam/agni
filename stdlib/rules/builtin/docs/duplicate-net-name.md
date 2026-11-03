@@ -11,7 +11,7 @@ join, so this cannot happen there by construction (the solver merges them; see
 label-alias-conflict for the collapsed-alias hazards). It happens on formats with EXPLICIT
 net lists (an EDIF netlist can state two (net VCC ...) entries) and wherever a tool export
 or a reader gap splits one logical net into two records. Either way, every consumer that
-keys on net names, whether diff identity, board joins or reviews, is now quietly wrong.
+keys on net names is now quietly wrong, whether diff identity, board joins or reviews.
 
 ### Impact
 

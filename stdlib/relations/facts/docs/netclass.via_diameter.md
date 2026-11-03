@@ -2,10 +2,10 @@
 
 ### What it is
 
-`netclass.via_diameter(class, mm)` yields the via pad diameter a net class DECLARES its nets should
-route at, held in metres and shown in mm, one row per class that states one. A class that states none yields no row,
-which is a meaningful fact rather than a gap, because that field then cascades to a lower-priority
-class.
+`netclass.via_diameter(class, mm)` yields the via pad diameter that a net class DECLARES for its
+nets, held in metres and shown in mm, one row per class that states one. A class that states none
+yields no row. That absence is a meaningful fact rather than a gap, because the field then cascades
+to a lower-priority class.
 
 ### For hardware engineers
 
@@ -20,8 +20,8 @@ diameter, so there is nothing yet to compare this against.
 **Keyed by CLASS, not by net, and there is no cascaded per-net counterpart for this quantity.** Only
 `net.declared_track_width` and `net.declared_via_drill` are derived, because only those two have a
 board-tier actual to be compared against (WS3-111 scope). Do not join this to `net.netclass` and
-treat the result as a per-net limit, because a net in several classes matches several rows, and
-resolving which one wins is the cascade this relation has deliberately not done for you.
+treat the result as a per-net limit, because a net in several classes matches several rows.
+Resolving which one wins is the cascade, and this relation deliberately does not do it for you.
 
 ### Go projector
 
@@ -32,10 +32,10 @@ nodes of kind `netclass`, and parses the `via_diameter` param. Populated in the 
 ### Absence is not a pass
 
 Only a KiCad project read populates this. An EDIF netlist, an IPC-2581 board, a bare `.kicad_sch`,
-and a KiCad project that defines no classes all leave it empty. `design.has_netclass_defs` is the marker
-that separates those cases, and it is deliberately distinct from `design.has_netclass`, because membership and
-definitions are independent blocks of `net_settings`, so a project can assign nets to a class it
-never defined.
+and a KiCad project that defines no classes all leave it empty. The marker
+`design.has_netclass_defs` separates those cases. It is deliberately distinct from
+`design.has_netclass`, because membership and definitions are independent blocks of
+`net_settings`. A project can assign nets to a class it never defined.
 
 ### Datalog
 

@@ -141,8 +141,8 @@ func pinCount(s *geom.SymbolDef) int {
 
 // TestStampedClassChoosesTheGlyph is agni issue 701. The glyph comes from the class the ingestion
 // pass stamped, so the picture and the facts cannot disagree about what a part is. Each case is a
-// row of the issue's measured table, and the third field is what the built-in rules alone answered
-// before the stamp was read, the wrong picture this closes.
+// row of the issue's measured table. The third field holds the built-in rules' own answer from
+// before the stamp was read, and that answer drew the wrong picture.
 func TestStampedClassChoosesTheGlyph(t *testing.T) {
 	reg := DefaultRegistry()
 	cases := []struct {
@@ -185,7 +185,7 @@ func TestUserClassRuleBeatsTheStamp(t *testing.T) {
 	if got := reg.Classify(c, parts); got != ClassCapacitor {
 		t.Errorf("user rule = %q, want it to beat the stamped resistor with %q", got, ClassCapacitor)
 	}
-	// The stamp still wins over the BUILT-IN rules, which is the other half of the ordering.
+	// The stamp still wins over the BUILT-IN rules. That is the other half of the ordering.
 	plain := DefaultRegistry()
 	d1 := &ir.Component{RefDes: "D1", DeviceClasses: classify.Tags("tvs", "diode")}
 	if got := plain.Classify(d1, nil); got != ClassTVS {
@@ -207,10 +207,10 @@ func TestUnstampedComponentUsesTheRules(t *testing.T) {
 	}
 }
 
-// TestEveryStampedClassDraws is the ratchet the issue asks for. A class the engine ships but the
-// registry cannot draw is a part the viewer shows as a box while every rule and query knows what it
-// is, and nothing else would report it. The set is built with classify.ClassesOf so the test reads
-// what ingestion actually stamps, family tag and all, rather than a hand-kept list.
+// TestEveryStampedClassDraws is the ratchet the issue asks for. Suppose the engine ships a class
+// that the registry cannot draw. The viewer shows that part as a box while every rule and query
+// knows what it is, and nothing else would report it. The set is built with classify.ClassesOf, so
+// the test reads what ingestion actually stamps, family tag and all, rather than a hand-kept list.
 func TestEveryStampedClassDraws(t *testing.T) {
 	reg := DefaultRegistry()
 	for _, cl := range model.ComponentClasses() {
@@ -225,8 +225,8 @@ func TestEveryStampedClassDraws(t *testing.T) {
 	}
 }
 
-// TestDrawableClassesAcceptAStampedName covers the CLI's --class validation. A class that draws
-// through an alias is a class a user may name, because the registry can draw it.
+// TestDrawableClassesAcceptAStampedName covers the CLI's --class validation. A user may name a
+// class that draws through an alias, because the registry can draw it.
 func TestDrawableClassesAcceptAStampedName(t *testing.T) {
 	have := map[string]bool{}
 	for _, c := range DefaultRegistry().GlyphClasses() {
@@ -239,10 +239,10 @@ func TestDrawableClassesAcceptAStampedName(t *testing.T) {
 	}
 }
 
-// TestDatasheetClassChoosesTheGlyph is agni issue 710 at the drawing. The classes a datasheet
-// establishes now reach the IR, so the glyph follows them for the same reason it follows the
-// keyword-derived ones. D1 is the case where the PICTURE moves and not only the label. Nothing in a
-// netlist says a part is a suppressor, so it drew as an ordinary rectifier while every rule and query
+// TestDatasheetClassChoosesTheGlyph is agni issue 710 at the drawing. A datasheet can establish a
+// class, and those classes now reach the IR. The glyph follows them for the same reason it follows
+// the keyword-derived ones. For D1 the PICTURE moves, and not only the label. Nothing in a netlist
+// says a part is a suppressor, so D1 drew as an ordinary rectifier while every rule and query
 // already called it a tvs.
 func TestDatasheetClassChoosesTheGlyph(t *testing.T) {
 	reg := DefaultRegistry()
@@ -255,8 +255,8 @@ func TestDatasheetClassChoosesTheGlyph(t *testing.T) {
 		{"D1", append(classify.Tags("diode"), datasheetTag("tvs")), "tvs", ClassTVS},
 		{"Y1", append(classify.Tags("clock"), datasheetTag("crystal")), "crystal", ClassCrystal},
 		{"Y2", append(classify.Tags("clock"), datasheetTag("ceramic_resonator")), "ceramic_resonator", ClassCrystal},
-		// An unranked vendor class must not take the headline from the keyword class, which is what
-		// keeps a corpus saying "regulator" from turning every regulator into a box.
+		// An unranked vendor class must not take the headline from the keyword class. Otherwise a
+		// corpus saying "regulator" would turn every regulator into a box.
 		{"U1", append(classify.Tags("ic"), datasheetTag("regulator")), "ic", ClassIC},
 	}
 	for _, tc := range cases {

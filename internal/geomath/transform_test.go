@@ -8,8 +8,8 @@ import (
 
 // TestApplyTransform_Orientations pins the 8 EDIF orientation codes to hand-computed
 // results (primer §7 matrices). The probe point (10, 5) is asymmetric so every code
-// yields a distinct output; this is the ground-truth oracle for the transform math that
-// the SVG dumper and the connectivity oracle both depend on.
+// yields a distinct output. This is the ground-truth oracle for the transform math, and
+// the SVG dumper and the connectivity oracle both depend on that math.
 func TestApplyTransform_Orientations(t *testing.T) {
 	p := &geom.Point{X: 10, Y: 5}
 	cases := []struct {
@@ -37,7 +37,7 @@ func TestApplyTransform_Orientations(t *testing.T) {
 	}
 }
 
-// TestApplyTransform_OriginAndScale checks translation and the rare scale factor compose
+// TestApplyTransform_OriginAndScale checks that translation and the rare scale factor compose
 // after the orientation (scale, then mirror/rotate, then translate).
 func TestApplyTransform_OriginAndScale(t *testing.T) {
 	// R90 of (10,5) = (-5,10); origin (100,200) -> (95,210).
@@ -53,7 +53,7 @@ func TestApplyTransform_OriginAndScale(t *testing.T) {
 }
 
 // TestPlaceShape_RectStaysAxisAligned confirms a rect's corners transform pointwise; at
-// 90 degrees width and height swap but the shape stays axis-aligned (EDIF only rotates by
+// 90 degrees width and height swap but the shape is still axis-aligned (EDIF only rotates by
 // multiples of 90).
 func TestPlaceShape_RectStaysAxisAligned(t *testing.T) {
 	rect := &geom.Shape{Kind: geom.Shape_KIND_RECT, Points: []*geom.Point{{X: 0, Y: 0}, {X: 40, Y: 20}}}

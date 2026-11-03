@@ -18,10 +18,11 @@ func findingLines(out string) []string {
 	return lines
 }
 
-// TestODBChecksAsItsKiCadSource runs the whole catalog over the gateway board twice, from its
-// .kicad_pcb and from the ODB++ job KiCad exported from it, each copied out of its project so no
-// config differs. The board-tier rules (copper clearance, track width) read the copper the ODB++
-// reader builds, so every finding has to match, those included (agni issue 1250).
+// TestODBChecksAsItsKiCadSource runs the whole catalog over the gateway board twice. One run reads its
+// .kicad_pcb, and the other reads the ODB++ job KiCad exported from that file. Each is copied out of
+// its project so no config differs. The ODB++ reader builds the copper, and the board-tier rules
+// (copper clearance, track width) read it, so every finding has to match, those included (agni issue
+// 1250).
 func TestODBChecksAsItsKiCadSource(t *testing.T) {
 	freshWorkspace(t)
 	kicad := isolatedDesign(t, "../../examples/tutorial-project/designs/gateway/gateway.kicad_pcb")
@@ -42,8 +43,8 @@ func TestODBChecksAsItsKiCadSource(t *testing.T) {
 }
 
 // TestDiffSchematicAgainstODBLayout compares the gateway's netlist with the layout of each revision
-// as ODB++. Rev A's layout is its schematic, and rev B's adds the two I2C pull-ups and renames the
-// crystal nets, which is what checking a layout against its schematic has to show.
+// as ODB++. Rev A's layout is its schematic. Rev B's adds the two I2C pull-ups and renames the crystal
+// nets, and a check of a layout against its schematic has to show exactly those changes.
 func TestDiffSchematicAgainstODBLayout(t *testing.T) {
 	freshWorkspace(t)
 	edn := "../../examples/common/designs/odb/gateway.edn"

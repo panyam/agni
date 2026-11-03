@@ -23,11 +23,12 @@ func textFontSize(elem string) float64 {
 	return v
 }
 
-// TestSheetSVG_FreeTextColumnsFit covers WS7-038's width dimension on a documentation page: when
-// one multi-line free-text column overflows the gap to the frame edge, every column is shrunk by
-// the same factor (font-size below natural) so the widest fits and the columns stay one uniform
-// size, the way the native output draws them. The fix is a font shrink, not textLength, so it
-// also holds in rsvg PNG exports; the test asserts no textLength attribute is emitted.
+// TestSheetSVG_FreeTextColumnsFit covers WS7-038's width dimension on a documentation page.
+// Imagine one multi-line free-text column overflows the gap to the frame edge. Every column then
+// shrinks by the same factor, below its natural font size, so the widest fits and the columns keep
+// one uniform size. The native output draws them that way. The fix is a font shrink, not
+// textLength, so it also holds in rsvg PNG exports, and the test asserts no textLength attribute
+// is emitted.
 func TestSheetSVG_FreeTextColumnsFit(t *testing.T) {
 	wideLine := "WIDE" + strings.Repeat("X", 76) // 80 runes: 0.6*120*80 = 5760 world units
 	g := &geom.SchematicGeometry{
@@ -65,8 +66,8 @@ func TestSheetSVG_FreeTextColumnsFit(t *testing.T) {
 	}
 }
 
-// TestFreeTextFitLeavesFittingColumnsAlone: when every multi-line column already fits its layout,
-// no shrink factor is produced, so the free text renders at its natural size.
+// TestFreeTextFitLeavesFittingColumnsAlone checks that a page whose multi-line columns all fit
+// produces no shrink factor, so the free text renders at its natural size.
 func TestFreeTextFitLeavesFittingColumnsAlone(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Sheets: []*geom.SheetGeometry{{
@@ -82,11 +83,11 @@ func TestFreeTextFitLeavesFittingColumnsAlone(t *testing.T) {
 	}
 }
 
-// TestFreeTextFitClearsTitleBlock covers WS7-038's height dimension: a tall free-text column
-// standing over the corner title block is shrunk so its stacked lines clear the title-block top,
-// instead of dropping into it. The clearance is computed from the same worksheet layout the
-// renderer draws, so the assertion is on the geometric goal (the shrunk stack stays above the
-// title block), not on the mechanism.
+// TestFreeTextFitClearsTitleBlock covers WS7-038's height dimension. A tall free-text column
+// stands over the corner title block, and the fit shrinks it so its stacked lines clear the
+// title-block top instead of dropping into it. The test computes the clearance from the renderer's
+// own worksheet layout. So the assertion is on the geometric goal, that the shrunk stack is above
+// the title block, and not on the mechanism.
 func TestFreeTextFitClearsTitleBlock(t *testing.T) {
 	const top, x, h, lines = int64(7500), int64(7000), int64(200), 30
 	g := &geom.SchematicGeometry{
@@ -119,9 +120,9 @@ func TestFreeTextFitClearsTitleBlock(t *testing.T) {
 	}
 }
 
-// TestFreeTextFitSingleLineUntouched guards the net-stub safety gate: single-line page labels
-// (off-page connectors carry a single-line net name) are never in the fit map, so the free-text
-// column fit only touches multi-line documentation text.
+// TestFreeTextFitSingleLineUntouched guards the net-stub safety gate. Off-page connectors carry a
+// single-line net name, and single-line page labels are never in the fit map. So the free-text
+// column fit touches only multi-line documentation text.
 func TestFreeTextFitSingleLineUntouched(t *testing.T) {
 	g := &geom.SchematicGeometry{
 		Sheets: []*geom.SheetGeometry{{
@@ -136,12 +137,12 @@ func TestFreeTextFitSingleLineUntouched(t *testing.T) {
 	}
 }
 
-// TestFreeTextFitSkipsSchematicSheet guards WS7-041: the free-text column fit is a
-// documentation-page feature (an OrCAD table-of-contents style sheet, no component placements). A
-// schematic sheet's multi-line text is stand-alone annotation notes, not document columns, so
-// squeezing them against a neighbor or the frame margin shrinks legible text to an unreadable blob
-// (verified over a real industrial design: the fit engaged on 18 schematic notes, some to
-// 0.3x). The fit must skip any sheet that carries component placements.
+// TestFreeTextFitSkipsSchematicSheet guards WS7-041. The free-text column fit is a
+// documentation-page feature, for an OrCAD table-of-contents style sheet with no component
+// placements. A schematic sheet's multi-line text is stand-alone annotation notes, not document
+// columns. Squeezing those notes against a neighbor or the frame margin shrinks legible text to an
+// unreadable blob. Over a real industrial design the fit engaged on 18 schematic notes, some to
+// 0.3x. The fit must skip any sheet that has component placements.
 func TestFreeTextFitSkipsSchematicSheet(t *testing.T) {
 	wideLine := "WIDE" + strings.Repeat("X", 76) // overflows the gap to the frame edge
 	labels := func() []*geom.Label {
@@ -159,7 +160,7 @@ func TestFreeTextFitSkipsSchematicSheet(t *testing.T) {
 	}
 
 	// Schematic page: identical overflowing text, but the sheet has a component placement, so the
-	// text is an annotation note and must stay at natural size.
+	// text is an annotation note and must keep its natural size.
 	sch := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{
 		Size:       size(),
 		Labels:     labels(),
@@ -174,7 +175,7 @@ func TestFreeTextFitSkipsSchematicSheet(t *testing.T) {
 // the redistributable freetext-fit-demo.eds fixture. Its "NOTES ON A SCHEMATIC" page carries two
 // component placements plus an overflowing multi-line note, and its "CONTENTS" page is a
 // documentation page (no placements) with an overflowing column. The schematic page must skip the
-// fit (its note stays at natural, legible size) while the documentation page still gets fitted.
+// fit, so its note keeps its natural, legible size. The documentation page must still get fitted.
 func TestFreeTextFitDemoFixture(t *testing.T) {
 	f, err := os.Open(filepath.Join("..", "..", "readers", "edif", "testdata", "freetext-fit-demo.eds"))
 	if err != nil {
@@ -211,9 +212,9 @@ func TestFreeTextFitDemoFixture(t *testing.T) {
 	}
 }
 
-// TestWorksheetZoneGridBySize covers WS7-038's frame fidelity: a D-size sheet's zone ruler has 8
-// divisions numbered right-to-left (8 on the left, 1 on the right), while an unrecognized page
-// keeps the historical 6, still numbered right-to-left.
+// TestWorksheetZoneGridBySize covers WS7-038's frame fidelity. A D-size sheet's zone ruler has 8
+// divisions numbered right-to-left, 8 on the left and 1 on the right. An unrecognized page keeps
+// the historical 6, also numbered right-to-left.
 func TestWorksheetZoneGridBySize(t *testing.T) {
 	dSize := &geom.SchematicGeometry{
 		UnitNm: 1_000_000, // 1 unit = 1 mm

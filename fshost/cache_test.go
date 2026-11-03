@@ -61,9 +61,9 @@ func hasSuffix(names map[string]bool, suffix string) bool {
 	return false
 }
 
-// TestASecondReadIsServedFromTheCache is the point of agni issue 895: the same design asked twice is
-// read once. A read misses twice, at the parse and at the design derived from it (agni issue 1061),
-// and the second ask hits the derived design without reaching the parse.
+// TestASecondReadIsServedFromTheCache checks the point of agni issue 895. The same design asked
+// twice is read once. A read misses twice, at the parse and at the design derived from it (agni
+// issue 1061), and the second ask hits the derived design without reaching the parse.
 func TestASecondReadIsServedFromTheCache(t *testing.T) {
 	_, l, c := hierCopy(t)
 	netNames(t, l)
@@ -98,9 +98,9 @@ func TestEditingASubSheetReadsTheDesignAgain(t *testing.T) {
 	}
 }
 
-// TestOptionsWithNoIdentityAreNeverCached: a lexicon passed without the overlay's identity could be
-// anything, so two reads under it derive twice. The parse reads no options, so every read after the
-// first hits it, and nothing else (agni issue 1061).
+// TestOptionsWithNoIdentityAreNeverCached covers a lexicon passed without the overlay's identity.
+// Such a lexicon could be anything, so two reads under it derive twice. The parse reads no options,
+// so every read after the first hits the parse, and nothing else (agni issue 1061).
 func TestOptionsWithNoIdentityAreNeverCached(t *testing.T) {
 	_, l, c := hierCopy(t)
 	opt := service.WithLexicon(classify.DefaultLexicon())
@@ -118,9 +118,9 @@ func TestOptionsWithNoIdentityAreNeverCached(t *testing.T) {
 	}
 }
 
-// TestAnotherConventionDerivesFromTheSameParse is agni issue 1061's step 3: the parse is keyed on no
-// configuration, so a second overlay pays the derive and not the read, and its design is the one an
-// uncached read under it gives. control: an edited file reads the parse again.
+// TestAnotherConventionDerivesFromTheSameParse covers agni issue 1061's step 3. The parse is keyed
+// on no configuration, so a second overlay runs the derive and not the read. Its design matches
+// what an uncached read under it gives. As a control, an edited file reads the parse again.
 func TestAnotherConventionDerivesFromTheSameParse(t *testing.T) {
 	dir, l, c := hierCopy(t)
 	u := artifact.URI{Mount: "m", Path: "hier_root.kicad_sch"}
@@ -164,8 +164,8 @@ func TestAnotherConventionDerivesFromTheSameParse(t *testing.T) {
 	}
 }
 
-// TestACopyIsHandedOut: a caller that stamps into the design it was handed (check.NewModel's
-// datasheet pass does) must not change what the next caller reads.
+// TestACopyIsHandedOut checks that a caller who stamps into the design it was handed cannot change
+// what the next caller reads. check.NewModel's datasheet pass stamps that way.
 func TestACopyIsHandedOut(t *testing.T) {
 	_, l, _ := hierCopy(t)
 	u := artifact.URI{Mount: "m", Path: "hier_root.kicad_sch"}
@@ -186,7 +186,7 @@ func TestACopyIsHandedOut(t *testing.T) {
 // TestAModelIsKeptWhenTheCorpusIsLocal builds a project design's model twice with a local shared
 // corpus, as `agni serve --params` has. SpecsOver wraps every corpus in a Layered, which implements
 // Prefetch, and the cache used to read that as a remote corpus and rebuild the model and its fact
-// base on every request: about 250 ms per query on a 3,980-component board.
+// base on every request, about 250 ms per query on a 3,980-component board.
 func TestAModelIsKeptWhenTheCorpusIsLocal(t *testing.T) {
 	ms := []Mount{{Name: "m", FS: os.DirFS(filepath.Join("..", "examples", "tutorial-project"))}}
 	trees := []projects.Tree{{Mount: "m", FS: ms[0].FS}}
@@ -229,8 +229,8 @@ func roled(d *ir.Design) int {
 	return n
 }
 
-// TestAfterLoadRunsOncePerRead covers agni issue 1000: the browser engine collects after each layer
-// the cache reads, and a hit, which made nothing, collects nothing.
+// TestAfterLoadRunsOncePerRead covers agni issue 1000. The browser engine collects after each layer
+// that the cache reads. A hit made nothing, so it collects nothing.
 func TestAfterLoadRunsOncePerRead(t *testing.T) {
 	_, l, c := hierCopy(t)
 	loads := 0

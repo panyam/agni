@@ -14,22 +14,22 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// MaxDepth bounds the downward walk that discovers descriptors under a tree, counting the tree root
-// as depth 0. A tree is whatever folder an operator handed the server, possibly a build output or a
-// home directory, so an unbounded walk would stat all of it on every listing. Four levels reaches
+// MaxDepth bounds the downward walk that discovers descriptors under a tree. The tree root is depth
+// 0. An operator can hand the server any folder as a tree, such as a build output or a home
+// directory, so an unbounded walk would stat all of it on every listing. Four levels reaches
 // `<root>/<team>/<project>/<design>/` with one to spare.
 const MaxDepth = 4
 
-// Tree is one named filesystem the store looks in: a mount on a server, a bounded slice of the local
-// filesystem for the CLI, an embedded FS in a test.
+// Tree is one named filesystem for the store to look in. It is a mount on a server, a bounded slice
+// of the local filesystem for the CLI, or an embedded FS in a test.
 type Tree struct {
-	// Mount is the name callers address this tree by, and the value that lands in Project.mount.
+	// Mount is the name callers use to address this tree. It is also the value of Project.mount.
 	Mount string
 	FS    fs.FS
 }
 
-// FSStore is the filesystem-backed service.ProjectStore. Nothing above the port knows it exists,
-// because the tree walking below is only true of keeping projects in directories.
+// FSStore is the filesystem-backed service.ProjectStore. Nothing above the port knows it exists.
+// The tree walking below is only true of keeping projects in directories.
 //
 // It caches, but every read revalidates against the filesystem before returning, so an operator's
 // edit to a descriptor is visible on the very next request. See cache.go.
@@ -74,8 +74,8 @@ func (s *FSStore) Project(ctx context.Context, name string) (*webapi.Project, er
 
 // Projects discovers every project across the trees, ordered by resource name.
 //
-// A duplicate id is an ERROR rather than a first-wins pick, since first-wins would answer a question
-// about project A with project B's designs.
+// A duplicate id is an ERROR. A first-wins pick could answer a question about project A with
+// project B's designs.
 func (s *FSStore) Projects(context.Context) ([]*webapi.Project, error) {
 	var out []*webapi.Project
 	seen := map[string]string{}
@@ -118,9 +118,10 @@ func (s *FSStore) Design(ctx context.Context, name string) (*webapi.Design, erro
 	return nil, fmt.Errorf("%w: no design %q", service.ErrNotFound, name)
 }
 
-// Designs returns one project's designs, the descriptors that name it in `extends`, ordered by
-// resource name, with a duplicate id rejected on the same reasoning as a duplicate project id. A design
-// may sit anywhere a mount reaches, since its parent is named rather than found above it.
+// Designs returns one project's designs, ordered by resource name. A design belongs to the project
+// when its descriptor names that project in `extends`. A duplicate design id is rejected, for the
+// same reason as a duplicate project id. A design may sit anywhere a mount reaches, since it names
+// its parent and is not found under it.
 func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design, error) {
 	p, err := s.Project(ctx, parent)
 	if err != nil {
@@ -157,14 +158,15 @@ func (s *FSStore) Designs(ctx context.Context, parent string) ([]*webapi.Design,
 
 // ResolveDesign maps a URI to the design containing it and the project that design extends. It walks
 // UP from the URI's path to find the design, so the answer costs a few stats however many designs a
-// tree holds. The project is the one the design names, never one found above it.
+// tree holds. The design names its project, and ResolveDesign never takes one found above it.
 //
 // A miss is (nil, nil, nil), the ordinary state of a mounted folder.
 //
-// A design that extends nothing is NOT a miss. It comes back with its declaration intact and an EMPTY
-// `name`, since a resource name needs a parent, and the CLI still honours the declaration. A design
-// that extends nothing while a project descriptor sits above it is an error, since that is the shape
-// of a forgotten `extends`, and reading it would run it on the built-in config with nothing said.
+// A design that extends nothing is NOT a miss. It comes back with its declaration intact and an
+// EMPTY `name`, since a resource name needs a parent, and the CLI still honours the declaration.
+// Suppose instead that a project descriptor sits above a design that extends nothing. The author
+// most likely forgot the `extends`, and reading the design would run it on the built-in config with
+// nothing said. So that case is an error.
 func (s *FSStore) ResolveDesign(_ context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error) {
 	t, ok := s.tree(uri.Mount)
 	if !ok {
@@ -218,10 +220,10 @@ func (s *FSStore) projectsIn(t Tree) ([]locatedProject, error) {
 	return out, nil
 }
 
-// loadProject parses one project descriptor and fills in what only the store knows: its resource
-// name, which tree it came from, and where in that tree. Its `extends` comes back as the PARENT'S
-// descriptor URI, which nameParent turns into a resource name, since the cached value must not depend
-// on a file outside its own dependencies.
+// loadProject parses one project descriptor. It fills in three facts only the store knows, the
+// resource name, the tree it came from and where in that tree. Its `extends` comes back as the
+// PARENT'S descriptor URI, and nameParent turns that into a resource name. The cached value must
+// not depend on a file outside its own dependencies.
 func (s *FSStore) loadProject(t Tree, dir string) (string, *webapi.Project, error) {
 	name := path.Join(walkRoot(dir), ProjectDescriptor)
 	var deps []string
@@ -254,16 +256,17 @@ func (s *FSStore) readProject(t Tree, dir, name string, deps *[]string) (string,
 	return id, p, nil
 }
 
-// attachSources resolves what a descriptor names outside itself into the mount:// URIs the wire type
-// promises: its parent descriptor into config.extends, and each tier's files into that tier's field.
-// The paths are relative to the descriptor's folder, base.
+// attachSources resolves a descriptor's outside references into mount:// URIs, as the wire type
+// promises. The parent descriptor goes into config.extends, and each tier's files go into that
+// tier's field. The paths are relative to the descriptor's folder, base.
 //
-// A source naming nothing is an ERROR. Nothing is found by its folder's name any more, so a path the
-// descriptor wrote is a tier the operator asked for, and reading on without it would report as though
+// A source naming nothing is an ERROR. Nothing is found by its folder's name any more. So each path
+// in the descriptor is a tier the operator asked for. Reading on without it would report as though
 // the team declared none. Each same-tree source joins deps, so removing one revalidates the descriptor.
 func (s *FSStore) attachSources(t Tree, base artifact.URI, src Sources, cfg *webapi.AnalysisConfig, deps *[]string) error {
-	// fix says what to do about a source that cannot be read, which differs for the parent: a design
-	// copied or mounted without its project reads on its own once its extends goes.
+	// fix says what to do about a source that cannot be read. The advice differs for the parent. A
+	// design copied or mounted without its project reads on its own once its extends line is
+	// removed.
 	fix := func(field string) string {
 		if field == "extends" {
 			return "mount or drop the folder holding that project.yaml as well, or remove extends to read this descriptor on its own"
@@ -321,8 +324,9 @@ func (s *FSStore) attachSources(t Tree, base artifact.URI, src Sources, cfg *web
 	return nil
 }
 
-// resolveSource turns a descriptor's source into a URI: a mount:// URI as written, or a path joined
-// onto the descriptor's folder, which artifact refuses when it climbs out of the mount.
+// resolveSource turns a descriptor's source into a URI. A mount:// URI is kept as written. A path
+// is joined onto the descriptor's folder, and artifact refuses the join when it climbs out of the
+// mount.
 func resolveSource(base artifact.URI, ref string) (artifact.URI, error) {
 	ref = strings.TrimSpace(ref)
 	if strings.HasPrefix(ref, artifact.Scheme+"://") {
@@ -331,8 +335,8 @@ func resolveSource(base artifact.URI, ref string) (artifact.URI, error) {
 	return base.Join(CleanRel(ref))
 }
 
-// projectAt loads the project whose descriptor a design or project names in `extends`, with its own
-// parent named as a resource name.
+// projectAt loads a project from the descriptor that a design or project names in `extends`. The
+// loaded project names its own parent as a resource name.
 func (s *FSStore) projectAt(descriptor string) (*webapi.Project, error) {
 	u, err := artifact.Parse(descriptor)
 	if err != nil {
@@ -352,9 +356,9 @@ func (s *FSStore) projectAt(descriptor string) (*webapi.Project, error) {
 	return p, nil
 }
 
-// nameParent turns a loaded project's `extends`, its parent's descriptor URI, into that parent's
-// resource name, which is what service.ResolveExtends walks the chain by. visiting guards a cycle
-// that runs through descriptors whose ids differ.
+// nameParent turns a loaded project's `extends` into the parent's resource name. The `extends`
+// holds the parent's descriptor URI, and service.ResolveExtends walks the chain by resource name.
+// visiting guards against a cycle through descriptors with different ids.
 func (s *FSStore) nameParent(p *webapi.Project, visiting map[string]bool) error {
 	parent := p.GetConfig().GetExtends()
 	if parent == "" || !strings.HasPrefix(parent, artifact.Scheme+"://") {
@@ -379,8 +383,8 @@ func (s *FSStore) nameParent(p *webapi.Project, visiting map[string]bool) error 
 	return nil
 }
 
-// descriptorURI is the URI of the descriptor a loaded project was read from, which is what a design
-// naming it in `extends` resolves to.
+// descriptorURI returns the URI of the descriptor a loaded project was read from. A design naming
+// that project in `extends` resolves to this URI.
 func descriptorURI(p *webapi.Project) string {
 	u, err := artifact.Parse(p.GetUri())
 	if err != nil {
@@ -393,10 +397,11 @@ func descriptorURI(p *webapi.Project) string {
 	return d.String()
 }
 
-// loadDesign parses one design descriptor and rewrites its design-folder-relative refs into the
-// mount:// URIs the wire type promises. The join happens HERE, once, because no consumer above the
-// port knows where the design folder sits. The caller sets Name, which needs the parent, and turns
-// config.extends, its project's descriptor URI, into the project's resource name.
+// loadDesign parses one design descriptor and rewrites its design-folder-relative refs into
+// mount:// URIs, as the wire type promises. The join happens HERE, once, because no consumer above
+// the port knows where the design folder sits. The caller sets Name, which needs the parent.
+// config.extends holds the project's descriptor URI, and the caller turns it into the project's
+// resource name.
 func (s *FSStore) loadDesign(t Tree, dir string) (string, *webapi.Design, error) {
 	name := path.Join(walkRoot(dir), DesignDescriptor)
 	var deps []string
@@ -533,8 +538,8 @@ func uriOf(s string) artifact.URI {
 
 // cloneProject and cloneDesign keep a cached message from being handed out by pointer.
 //
-// The store MUTATES what it loads (resource names, refs rewritten into URIs), so handing out the
-// cached value would make the second call join a URI onto a URI.
+// The store MUTATES what it loads. It sets resource names and rewrites refs into URIs. Handing out
+// the cached value would make the second call join a URI onto a URI.
 func cloneProject(p *webapi.Project) *webapi.Project { return proto.CloneOf(p) }
 
 func cloneDesign(d *webapi.Design) *webapi.Design { return proto.CloneOf(d) }

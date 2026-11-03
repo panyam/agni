@@ -41,10 +41,10 @@ type remoteServer struct {
 	http *http.Client
 }
 
-// dialRemote checks the server at raw answers, by asking it for its mounts.
+// dialRemote checks that the server at raw answers, by asking it for its mounts.
 //
-// UNREACHABLE IS AN ERROR HERE, unlike --server's link check (verifyServerMount), because --server
-// only decides whether a link is printed while --remote is where the answer comes from. Falling back
+// UNREACHABLE IS AN ERROR HERE, unlike --server's link check (verifyServerMount). --server only
+// decides whether a link is printed, while --remote supplies the answer itself. Falling back
 // to a local read would answer from a different engine without saying so.
 func dialRemote(ctx context.Context, raw string) (*remoteServer, error) {
 	u, err := url.Parse(raw)
@@ -62,15 +62,16 @@ func dialRemote(ctx context.Context, raw string) (*remoteServer, error) {
 }
 
 // uri names a command-line argument as this process does (cliArgURI), with this machine's own
-// mounts: under --remote the design's files are sent with it (agni issue 1061), so the server needs
-// no mount of its own over the path, and every locator in the answer reads as a local run's does.
+// mounts. Under --remote the design's files are sent with the request (agni issue 1061). The server
+// then needs no mount of its own over the path, and every locator in the answer reads as a local
+// run's does.
 func (r *remoteServer) uri(arg string) (string, error) {
 	return cliArgURI(arg)
 }
 
-// refuseLocalOnly names the flags a --remote run cannot honour, because each one configures the
-// engine THIS process would have built rather than riding the request. The server answers with the
-// corpus, profiles and catalog it was started with, so passing one of these would read as applied
+// refuseLocalOnly names the flags a --remote run cannot honour. Each one configures the engine that
+// THIS process would have built, and none of them travels with the request. The server answers with
+// the corpus, profiles and catalog it was started with. Passing one of these would look applied
 // while doing nothing.
 //
 // --timing, --timing-memory and --explain are refused for every command too, because they record the
@@ -90,8 +91,8 @@ func refuseLocalOnly(cmd *cobra.Command, flags ...string) error {
 }
 
 // The services a command calls, narrowed to the methods it uses. The in-process service satisfies
-// each one, and so does the Connect client wrapper below, which is what keeps a remote answer the
-// same message the local one is (C31, C32).
+// each one, and so does the Connect client wrapper below. So a remote answer is the same message as
+// the local one (C31, C32).
 type (
 	checkAPI interface {
 		CheckDesign(context.Context, *webapi.CheckDesignRequest) (*webapi.CheckDesignResponse, error)
@@ -147,8 +148,8 @@ func (r *remoteServer) snapshots() snapshotAPI {
 	return remoteSnapshot{webapiconnect.NewSnapshotServiceClient(r.http, r.url)}
 }
 
-// Ingest sends the design as files: the manifest of the files its analysis reads, with their
-// contents uploaded only when the server reports them missing, so a second run of an unchanged
+// Ingest sends the design as files. It sends a manifest of the files that its analysis reads, and it
+// uploads their contents only when the server reports them missing. A second run of an unchanged
 // design sends the manifest alone (agni issue 1061).
 func (r remoteSnapshot) Ingest(ctx context.Context, req *webapi.IngestRequest) (*webapi.Snapshot, error) {
 	req = proto.Clone(req).(*webapi.IngestRequest)
@@ -208,9 +209,9 @@ func (r remoteSnapshot) upload(ctx context.Context, hashes []string, read func(s
 	return flush()
 }
 
-// sendFiles fills def's manifest with the files its design's analysis reads on this machine, as
-// ListDesignFiles names them for a browser, plus a --board-path outside that set, and answers how to
-// read a file's contents by its hash.
+// sendFiles fills def's manifest with the files that its design's analysis reads on this machine.
+// It names them as ListDesignFiles does for a browser, and adds a --board-path outside that set. It
+// returns a function that reads a file's contents by its hash.
 func sendFiles(ctx context.Context, def *webapi.Snapshot) (func(sha string) ([]byte, error), error) {
 	u, err := artifact.Parse(def.GetUri())
 	if err != nil {

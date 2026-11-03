@@ -9,25 +9,25 @@ Re-read with the library that holds the symbol on the symbol search path. Until 
 
 ### What it means
 
-A symbol reference the reader could not open or parse, such as an xschem or gEDA `.sym` file or a
-KiCad external `.kicad_sym` library named by a `lib_id` the schematic does not embed. The schematic
-itself parsed fine. Only the file holding the part's pin definitions is missing.
+The reader could not open or parse a symbol reference, such as an xschem or gEDA `.sym` file or a
+KiCad external `.kicad_sym` library named by a `lib_id` that the schematic does not embed. The
+schematic itself parsed fine. Only the file holding the part's pin definitions is missing.
 
 ### Why engineers want it
 
 A symbol carries a part's terminals. When it fails to load, the placement keeps its reference
 designator and gains no pins, and a part with no pins has no connections. So the netlist is missing
-every connection those parts make, and nothing about the result looks wrong, since the design reads as
+every connection those parts make. Nothing about the result looks wrong, since the design reads as
 valid and simply emptier than it is.
 
 A missing library produces a smaller netlist rather than an error.
-Connectivity rules then run over the incomplete read and report a clean pass, which is
-indistinguishable from a design where those connections were never drawn.
+Connectivity rules then run over the incomplete read and report a clean pass. That pass reads the
+same as one on a design where those connections were never drawn.
 
 ### Impact
 
-Every connection made by the affected parts is absent from the netlist. The reader compounds this
-by design, suppressing dangling-endpoint findings whenever any symbol fails to resolve, because a
+Every connection made by the affected parts is absent from the netlist. The reader makes this worse
+by design. Whenever any symbol fails to resolve, it suppresses dangling-endpoint findings, because a
 missing pin turns a real wire end into a phantom dangle. Without this rule, the only visible effect
 of a lost symbol is that the design reports LESS than it would have.
 
@@ -35,18 +35,17 @@ of a lost symbol is that the design reports LESS than it would have.
 
 ### What it does to other rules
 
-Any unresolved symbol gates every rule that reads a pin or connectivity fact to `inconclusive` for
-the whole design, rather than letting it pass over an incomplete netlist. The gate is DESIGN-WIDE,
-which is deliberately the conservative reading and matches what the readers already do with dangling
-endpoints, where one unresolved placement suppresses the whole design's dangles.
+If any symbol is unresolved, every rule that reads a pin or connectivity fact reports
+`inconclusive` for the whole design, rather than passing over an incomplete netlist. The gate is
+DESIGN-WIDE. That is deliberately the conservative reading. It matches what the readers already do
+with dangling endpoints, where one unresolved placement suppresses the whole design's dangles.
 
-Narrowing it to only the affected parts needs a mapping from a finding back to the ref-des it
-concerns, which does not exist yet. Until it does, a narrower gate would amount to asserting that
-the parts not flagged are unaffected, and the reader cannot support that claim.
+A gate on only the affected parts would need a mapping from a finding back to the ref-des it
+concerns. That mapping does not exist yet. Until it does, a narrower gate would amount to asserting
+that the parts not flagged are unaffected, and the reader cannot support that claim.
 
-The outcome is `inconclusive` rather than `not-applicable` because a missing source-format
-capability is permanent, while an unresolved symbol is a property of THIS read that a
-`--symbol-path` away is fixable.
+The outcome is `inconclusive` rather than `not-applicable`. A missing source-format capability is
+permanent. An unresolved symbol is a property of THIS read, and a `--symbol-path` can fix it.
 
 ### The one subtlety
 
@@ -56,5 +55,5 @@ design. An unresolved symbol is almost always a defect in the invocation: no `--
 library not checked out, a file not mounted. The board itself may be flawless, and every FAIL is
 supposed to be a defect in the design.
 
-Reading without symbols at all (the plain `Read` entry, no opener) reports nothing. That is a caller
-deliberately asking for names-only, not a resolution failure.
+A read without symbols at all reports nothing. That read is the plain `Read` entry with no opener.
+It means a caller deliberately asked for names only, and it is not a resolution failure.

@@ -44,8 +44,9 @@ func (s PDFStatus) rank() int {
 
 // classify decides a PDF's status from its bytes hash and its doc-IR sibling's stored facts.
 // pdfHash and storedHash are both in the "sha256:..." form, and storedProducer is the doc-IR's
-// Document.producer. curToolchain is the producer the installed toolchain would stamp now (e.g.
-// "docling/2.5.1"); empty means unknown, which disables toolchain drift but not hash freshness.
+// Document.producer. curToolchain names the producer that the installed toolchain would stamp now,
+// such as "docling/2.5.1". Empty means unknown. That disables toolchain drift but not hash
+// freshness.
 func classify(docExists bool, pdfHash, storedHash, storedProducer, curToolchain string) PDFStatus {
 	if !docExists {
 		return NotExtracted

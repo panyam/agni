@@ -26,10 +26,10 @@ type osDocLoader struct {
 	mounts []mounts.Mount
 }
 
-// Document resolves the sibling doc-IR for the datasheet at uri and parses it. An unknown mount or
-// a path escaping the mount comes back already classified by mounts.Resolve (service.ErrNotFound or
-// ErrInvalidPath). A missing sibling is (nil, nil), and an unparseable one is a parse error the
-// service classifies as invalid.
+// Document resolves the sibling doc-IR for the datasheet at uri and parses it. mounts.Resolve already
+// classifies an unknown mount or a path escaping the mount, as service.ErrNotFound or ErrInvalidPath.
+// A missing sibling returns (nil, nil). An unparseable one returns a parse error, and the service
+// classifies it as invalid.
 func (l *osDocLoader) Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error) {
 	abs, err := resolveSibling(l.mounts, uri, docSibling)
 	if err != nil {

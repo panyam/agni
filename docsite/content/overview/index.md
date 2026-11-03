@@ -4,23 +4,23 @@ description: "Where Agni came from, who it is for, and how these docs are organi
 ---
 
 Agni began as a way to learn hardware design by building tooling for it. I am a software
-engineer, and reading a domain's files and reasoning about them in code is how I tend to learn
-a domain. The idea was to read real schematics and board layouts, turn them into a
-representation a program can work with, and then see what ordinary software techniques like an
-intermediate representation, static checks, queries, and structured diffs can say about a
-hardware design.
+engineer, and I tend to learn a domain by reading its files and reasoning about them in code.
+The idea was to read real schematics and board layouts and turn them into a representation that
+a program can work with. Then I could see what ordinary software techniques can say about a
+hardware design. Those techniques include an intermediate representation, static checks,
+queries, and structured diffs.
 
 So Agni is closer to a playground than a finished product. It is useful for looking at a design,
 running some analysis over it, and understanding what is there. It is not trying to replace a
 professional EDA suite, and it does not claim to catch everything a real design review would.
-The interesting part is the process of learning the domain by making software analysis work on
-real files, and adding more analysis as the understanding grows.
+The interesting part is learning the domain by making software analysis work on real files,
+and adding more analysis as the understanding grows.
 
 The whole thing is built for a software engineer's eyes. Hardware has its own vocabulary, and
 most of it maps onto something a programmer already knows. A netlist is a graph. A bill of
 materials is a lockfile. A datasheet is a type definition with runtime limits. These mappings
-carry real weight here. The docs explain hardware through them, and they are how someone from
-software can pick up a real design and reason about it. The [software analogy](../reference/analogy/)
+matter here. The docs explain hardware through them, and someone from software can use them to
+pick up a real design and reason about it. The [software analogy](../reference/analogy/)
 collects them in one place, and the [concepts](../guide/concepts/) page in the user guide is
 the read-first version.
 

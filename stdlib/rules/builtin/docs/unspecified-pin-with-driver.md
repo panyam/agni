@@ -10,13 +10,13 @@ all.
 
 It is the "unspecified" column of the ERC connection matrix (KiCad
 warns on unspecified against everything). An untyped pin is a library gap, since the matrix cannot
-say whether the pairing is legal, and the place that matters most is a driven net, where the
-untyped pin might itself be a fighting driver or a supply pin shorted to a signal.
+say whether the pairing is legal. The gap matters most on a driven net, where the untyped pin
+might itself be a fighting driver or a supply pin shorted to a signal.
 
 ### Impact
 
-If the untyped pin turns out to be an output, this is output-output-conflict the
-matrix could not see; if a supply pin, a rail-to-signal short. Fixing the symbol (typing the
+If the untyped pin turns out to be an output, this is an output-output-conflict that the matrix
+could not see. If it is a supply pin, this is a rail-to-signal short. Fixing the symbol (typing the
 pin) either clears the warning or upgrades it to the real error.
 
 ![A driver joined to an untyped J1 pin is flagged; the same driver joined to a declared passive R1 pin is fine](images/unspecified-pin-with-driver.svg)
@@ -24,12 +24,12 @@ pin) either clears the warning or upgrades it to the real error.
 ### Scope note
 
 "Unspecified" means the symbol DECLARES the pin and types it as nothing. A
-KiCad passive pin is typed and never fires this (the resistor-on-every-driven-net false
-positive that kept this row out of the catalog until PASSIVE entered the direction
-vocabulary), and a pin the read never saw a symbol for (a board footprint's pads, a
-sub-sheet component in a root-only hierarchy read) is a read gap, not an authoring gap, and
-is skipped via pin.declared. The rule is gated on a driver being present, so a wholly untyped read (a
-bare EDIF netlist with no direction data) has no drivers in evidence and stays silent by
+KiCad passive pin is typed and never fires this. That false positive, a resistor on every driven
+net, kept this row out of the catalog until PASSIVE entered the direction vocabulary. Sometimes
+the read never saw a symbol for a pin (a board footprint's pads, a sub-sheet component in a
+root-only hierarchy read). That is a read gap, not an authoring gap, and the rule skips the pin via
+pin.declared. The rule is gated on a driver being present. A wholly untyped read (a bare EDIF
+netlist with no direction data) has no drivers in evidence, so the rule reports nothing on it by
 construction. Cross-sheet (external) nets are skipped. Virtual power-symbol pins carry
 power types by construction and are excluded as subjects.
 

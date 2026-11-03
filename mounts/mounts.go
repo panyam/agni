@@ -1,8 +1,8 @@
-// Package mounts is the containment boundary of the web tier, the named root folders the server
-// exposes plus the join that keeps every client-supplied path inside its mount. Mounts are checked
-// against the filesystem at parse time. It lives outside cmd/agni so any entrypoint hosting the
-// serve services reuses the same boundary, and outside internal/ because one of those entrypoints,
-// the datasheet service, is in a module of its own (agni issue 744).
+// Package mounts is the containment boundary of the web tier. It holds the named root folders the
+// server exposes, and the join that keeps every client-supplied path inside its mount. Mounts are
+// checked against the filesystem at parse time. The package is outside cmd/agni so any entrypoint
+// hosting the serve services reuses the same boundary. It is outside internal/ because one of those
+// entrypoints, the datasheet service, is in a module of its own (agni issue 744).
 package mounts
 
 import (
@@ -15,10 +15,10 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// Mount is one configured root folder the web API serves. Name is the handle a client passes back
-// to address the mount, and Root is the resolved absolute host path. Clients never send absolute
+// Mount is one configured root folder the web API serves. A client passes Name back to address the
+// mount, and Root is the resolved absolute host path. Clients never send absolute
 // paths. They send an artifact.URI naming a mount and a mount-relative path, which Resolve joins.
-// The OS-backed service adapters in cmd/agni hold these, and the service package stays os-free
+// The OS-backed service adapters in cmd/agni hold these, so the service package can be os-free
 // (CONSTRAINTS C13).
 type Mount struct {
 	Name string
@@ -59,7 +59,7 @@ func Parse(specs []string) ([]Mount, error) {
 // Discover turns each immediate SUBDIRECTORY of root into a mount named after it, so a container
 // can expose design folders by bind-mounting them under one path with no flags
 // (`-v ~/boards:/workspace/boards`). Parse is the explicit half, and Merge combines the two. The
-// subdirectories are the mounts rather than root, so each folder keeps its own handle in ListMounts.
+// subdirectories are the mounts rather than root, so each folder has its own handle in ListMounts.
 //
 // A missing root is NOT an error and returns no mounts, because the container always passes
 // --mount-root and one with nothing bind-mounted should still start. A root that is a file is an
@@ -90,8 +90,8 @@ func Discover(root string) ([]Mount, error) {
 		if strings.HasPrefix(name, ".") {
 			continue
 		}
-		// Stat through the symlink, since a bind mount can land as a link and DirEntry.IsDir
-		// reports on the link itself, which would skip a perfectly good design folder.
+		// Stat through the symlink, since a bind mount can appear as a link. DirEntry.IsDir
+		// reports on the link itself, and that would skip a perfectly good design folder.
 		sub := filepath.Join(abs, name)
 		si, err := os.Stat(sub)
 		if err != nil || !si.IsDir() {
@@ -102,9 +102,9 @@ func Discover(root string) ([]Mount, error) {
 	return found, nil
 }
 
-// Merge combines discovered mounts with explicitly configured ones. Explicit wins a name collision,
-// since --mount is what the operator typed for this run and a discovered mount is whatever sat under
-// the mount root. Order is discovered then explicit, so ListMounts stays stable.
+// Merge combines discovered mounts with explicitly configured ones. Explicit wins a name collision.
+// The operator typed --mount for this run, and a discovered mount is whatever sat under the mount
+// root. Order is discovered then explicit, so ListMounts is stable.
 func Merge(discovered, explicit []Mount) []Mount {
 	byName := map[string]bool{}
 	for _, m := range explicit {
@@ -120,7 +120,7 @@ func Merge(discovered, explicit []Mount) []Mount {
 	return append(merged, explicit...)
 }
 
-// SafeResolve joins a mount-relative path onto root and confirms the result stays inside root,
+// SafeResolve joins a mount-relative path onto root and confirms the result is inside root,
 // returning the cleaned absolute path. It rejects absolute inputs and any path that escapes the
 // mount via "..". Resolve is its only non-test caller.
 func SafeResolve(root, rel string) (string, error) {
@@ -147,7 +147,7 @@ func Find(mounts []Mount, name string) (Mount, bool) {
 
 // Resolve maps an artifact URI to an absolute host path inside its mount, for the OS-backed service
 // adapters. An unknown mount returns service.ErrNotFound, so the service classifies without
-// importing os. Containment is decided by artifact.Parse, and a parsed URI cannot escape its mount,
+// importing os. artifact.Parse decides containment, and a parsed URI cannot escape its mount,
 // so the SafeResolve call below is only an assertion.
 func Resolve(mounts []Mount, uri artifact.URI) (string, error) {
 	m, ok := Find(mounts, uri.Mount)

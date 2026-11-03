@@ -12,11 +12,11 @@ import (
 // tool other than KiCad.
 const altiumJobs = "../../tools/samples/odb/altium/foxbms"
 
-// TestODBAltiumJobsHoldTogether reads each Altium job and holds its two tiers to each other, since
-// there is no netlist of these boards to hold them to (agni issue 1268). Every pin the netlist
-// connects has a sized land on the board on the same net, its name is the pin's own rather than
-// Altium's designator-prefixed toeprint name, every through-hole land is drilled, and the design
-// is named.
+// TestODBAltiumJobsHoldTogether reads each Altium job and holds its two tiers to each other. No
+// separate netlist of these boards exists to hold them to (agni issue 1268). Each pin in the netlist
+// must have a sized land on the board on the same net. The pin's name must be its own, not Altium's
+// designator-prefixed toeprint name. Every through-hole land must be drilled, and the design must
+// be named.
 func TestODBAltiumJobsHoldTogether(t *testing.T) {
 	jobs, _ := filepath.Glob(filepath.Join(altiumJobs, "*", "*.odb.zip"))
 	if len(jobs) == 0 {
@@ -85,8 +85,8 @@ func TestODBAltiumJobsHoldTogether(t *testing.T) {
 				t.Errorf("of %d connected pins: %d carry the designator in the pin name, %d have no land, %d sit on a land of another net, %d have a land of no size",
 					pins, prefixed, missing, wrongNet, unsized)
 			}
-			// A land on no net is mechanical, and its hole may be one this job leaves out: hw-master's
-			// Micro-Fit pegs are pins named empty-1 with no drill on the job's only drill layer.
+			// A land on no net is mechanical, and this job may leave its hole out. hw-master's
+			// Micro-Fit pegs are pins named empty-1, and the job's only drill layer has no drill for them.
 			undrilled := 0
 			for _, l := range lands {
 				if l.through && !l.drilled && l.net != "" {

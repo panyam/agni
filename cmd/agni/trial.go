@@ -24,9 +24,9 @@ import (
 // feedbackRepo is where a trial's prefilled issue goes.
 const feedbackRepo = "panyam/agni"
 
-// trialCmd walks what a reviewer does with a design and reports how it went as a feedback.Report,
-// which holds nothing from the design (agni issue 1057). It is how a release is tried on a machine
-// whose boards we never see: the compose bundle runs it as its `trial` service.
+// trialCmd walks what a reviewer does with a design and reports how it went as a feedback.Report.
+// The report holds nothing from the design (agni issue 1057). We try a release this way on a machine
+// whose boards we never see. The compose bundle runs it as its `trial` service.
 func trialCmd() *cobra.Command {
 	var format, outPath string
 	cmd := &cobra.Command{
@@ -204,8 +204,8 @@ func runTrial(ctx context.Context, uri string) (feedback.Report, error) {
 	})
 
 	step(feedback.StepTrace, func() (feedback.Status, error) {
-		// Through the first resistor the design has, end to end, which any board with a resistor can
-		// answer. Its name is used for the request and kept nowhere.
+		// Trace through the design's first resistor, end to end. Any board with a resistor can
+		// answer that. The resistor's name goes into the request and is kept nowhere.
 		ans, err := queries.RunQuery(ctx, &webapi.RunQueryRequest{Snapshot: snap, Query: `component.class(?r, "resistor") => ?r`, Limit: 1, OmitLocations: true})
 		if err != nil {
 			return "", err
@@ -235,8 +235,8 @@ func runTrial(ctx context.Context, uri string) (feedback.Report, error) {
 	return rep, nil
 }
 
-// tallyRules counts the run per rule. A shipped rule is named; any other rule, which a project or
-// its overlay composed, is counted in ProjectRules without its name.
+// tallyRules counts the run per rule. A shipped rule is named. A project or its overlay composed any
+// other rule, and ProjectRules counts those without their names.
 func tallyRules(rep *feedback.Report, run *webapi.CheckDesignResponse, catalog *check.Catalog, shipped map[string]bool) {
 	byRule := map[string]*feedback.RuleTally{}
 	project := map[string]bool{}
@@ -287,9 +287,9 @@ func tallyRules(rep *feedback.Report, run *webapi.CheckDesignResponse, catalog *
 	}
 }
 
-// tallyPinMap counts the run's pin map, the table `check --table pin_map` writes, without keeping a
-// cell of it, and counts why each function check compared nothing by kind alone (agni issue 1196).
-// Nil when the design declares no IO map.
+// tallyPinMap counts the run's pin map without keeping a cell of it. `check --table pin_map` writes
+// the same table. It also counts, by kind alone, why each function check compared nothing (agni issue
+// 1196). Nil when the design declares no IO map.
 func tallyPinMap(run *webapi.CheckDesignResponse) *feedback.PinMapTally {
 	tb := service.PinMapTable(run.GetIoMap(), run.GetVerdicts())
 	if tb == nil {
@@ -347,8 +347,8 @@ func tallyPinMap(run *webapi.CheckDesignResponse) *feedback.PinMapTally {
 	return t
 }
 
-// functionReason carries the intent rule's reason kind into the report's own vocabulary, so the
-// report's type holds only words feedback declares.
+// functionReason maps the intent rule's reason kind into the report's own vocabulary, so the
+// report's type holds only words that feedback declares.
 func functionReason(k intent.FunctionReason) feedback.FunctionReason {
 	switch k {
 	case intent.FunctionReasonNotDeclared:

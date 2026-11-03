@@ -2,15 +2,15 @@
 // probe can reach and which two-terminal passives can be measured on an assembled board, using the
 // fact relations rather than the rule catalog.
 //
-// The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only binds the
+// The narration is in the sidecar walkthrough.md (demokit FromMarkdown). This file only binds the
 // steps that run engine code.
 //
 // The grouped counts come from the QUERY's aggregates, not from a fold in this file, so "test points
 // per net" is one query (docsite/content/guide/querying.md#count-parts-per-net-aggregation). Every
 // step prints the CLI line that reproduces it.
 //
-// Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
-// `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
+// The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
+// `make runquiet` takes non-interactive defaults (CI-safe), and `make doc` renders to markdown.
 package main
 
 import (
@@ -35,9 +35,9 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// passiveDef is the one idea this walk defines for itself: a `passive` is a resistor or a capacitor,
-// the parts this coverage report counts. Datalog has no disjunction, so "resistor or capacitor" is two
-// rules for one relation, and adding a rule extends every question below.
+// passiveDef is the one idea this walk defines for itself. A `passive` is a resistor or a
+// capacitor, and this coverage report counts those parts. Datalog has no disjunction, so "resistor
+// or capacitor" is two rules for one relation. Adding a rule extends every question below.
 //
 // Everything else comes from the shipped library (stdlib/lib): net.has_test_point,
 // component.two_terminal, component.probed_both and component.probed_one. `agni query --relations
@@ -106,10 +106,10 @@ func main() {
 		if err != nil {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
-		// Both ends, one end, neither. The first two are library members; the third negates
-		// net.has_test_point on both of the nets component.two_terminal binds, so neither negated atom
-		// has an unbound variable (an unbound one is unsafe and returns nothing rather than an error,
-		// agni issue 522).
+		// Both ends, one end, neither. The first two are library members. The third negates
+		// net.has_test_point on both nets that component.two_terminal binds, so neither negated
+		// atom has an unbound variable. An unbound one is unsafe and returns nothing rather than an
+		// error (agni issue 522).
 		cli("agni query <design> '" + oneQuery + "'")
 		fmt.Printf("both ends probed (measurable in circuit): %d\n", len(must(rows(d, bothQuery))))
 		fmt.Printf("one end probed  (present, not measurable): %d  %s\n", len(must(rows(d, oneQuery))), refs(must(rows(d, oneQuery))))
@@ -122,8 +122,9 @@ func main() {
 		if err != nil {
 			return demokit.Errf("load %s: %v", design.Path(), err)
 		}
-		// Witnesses say how a row holds (agni issue 794): the walk's own passive rule, then the library
-		// member with its body facts, and the `not` that put the part in this bucket.
+		// Witnesses say how a row holds (agni issue 794). They show the walk's own passive rule,
+		// then the library member with its body facts, and then the `not` that put the part in this
+		// bucket.
 		cli("agni query <design> '" + oneQuery + "' --witnesses")
 		cells, ws, err := witnessed(d, oneQuery)
 		if err != nil {
@@ -201,7 +202,7 @@ func subjectRefs(es []check.Entity) string {
 	return strings.Join(out, ",")
 }
 
-// refsCap bounds the ref-des list a bucket prints. On a real board these buckets run to several
+// refsCap bounds the ref-des list for each bucket. On a real board these buckets run to several
 // hundred and bury the lines around them (agni issue 644). The count is never truncated, only the
 // naming.
 const refsCap = 12
@@ -230,8 +231,8 @@ func rows(d *ir.Design, q string) ([][]string, error) {
 	if err != nil {
 		return nil, fmt.Errorf("parse: %w", err)
 	}
-	// No provider: component.mpn reads the MPN every model joins from the design (agni issue 748), and
-	// only the datasheet relations need specs.
+	// No provider is needed. Every model joins the MPN from the design (agni issue 748), and
+	// component.mpn reads it there. Only the datasheet relations need specs.
 	got, err := query.Default.Eval(context.Background(), parsed, query.NewBase(check.NewModel(d)))
 	if err != nil {
 		return nil, fmt.Errorf("eval: %w", err)
@@ -272,8 +273,8 @@ func witnessed(d *ir.Design, q string) ([]string, []report.Witness, error) {
 	return cells, reportWitnesses(tab.Witness[0]), nil
 }
 
-// reportWitnesses is the engine's witnesses as report.WitnessLines renders them, the tree `agni query
-// --witnesses` prints.
+// reportWitnesses converts the engine's witnesses for report.WitnessLines. That renders the same
+// tree that `agni query --witnesses` prints.
 func reportWitnesses(ws []*query.Witness) []report.Witness {
 	out := make([]report.Witness, 0, len(ws))
 	for _, w := range ws {

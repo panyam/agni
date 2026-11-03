@@ -13,11 +13,11 @@ import (
 	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
-// corpus is every EDIF netlist this repo commits, in three groups: the reader's own grammar fixtures
-// (names, buses, hierarchy, duplicate ports, escaped ids, wrapped tokens), the CLI conformance
-// designs, and the tutorial board, which is the largest and the only one written to be read by a
-// person. A directory that is not there is skipped rather than failed, so moving one of the other
-// two groups does not break this package.
+// corpus lists every EDIF netlist this repo commits, in three groups. The first is the reader's own
+// grammar fixtures (names, buses, hierarchy, duplicate ports, escaped ids, wrapped tokens). The
+// second is the CLI conformance designs. The third is the tutorial board, the largest and the only
+// one written to be read by a person. A missing directory is skipped rather than failed, so moving
+// one of the other two groups does not break this package.
 func corpus(t *testing.T) []string {
 	t.Helper()
 	var out []string
@@ -55,7 +55,7 @@ func readFile(t *testing.T, path string) *ir.Design {
 	return d
 }
 
-// roundTrip writes a design and reads the result back, which is the operation the oracle is about.
+// roundTrip writes a design and reads the result back. The oracle tests that operation.
 func roundTrip(t *testing.T, d *ir.Design, path string) *ir.Design {
 	t.Helper()
 	var buf bytes.Buffer
@@ -74,36 +74,38 @@ func roundTrip(t *testing.T, d *ir.Design, path string) *ir.Design {
 // this one declares lossy-bounded, so the assertion is at the IR level, the level every consumer of
 // this package actually reads.
 //
-// Four exclusions, each because the READER already dropped the information before the writer could
-// see it. They are listed here rather than quietly normalized away, because the next person to hit
-// one needs to know it is the reader's loss being reported and not a writer bug to go and fix:
+// The test makes four exclusions. In each, the READER already dropped the information before the
+// writer could see it. They are listed here rather than quietly normalized away. The next person to
+// hit one needs to know that the test is reporting the reader's loss, and that no writer bug needs
+// fixing.
 //
 //   - InputDiagnostics.UnexpandedHierarchy. Read without FlattenHierarchy, extract scopes to the
-//     design's top cell and drops every sub-cell's contents, so writing a hierarchical design emits a
-//     flat one and the re-read lists no unexpanded cell. A flattened read writes back whole
-//     (TestFlattenedDesignWritesAndReadsBack). Making this pass would mean emitting a sub-cell whose contents no longer
-//     exist, which is fabricating structure.
+//     design's top cell and drops every sub-cell's contents. So writing a hierarchical design emits
+//     a flat one, and the re-read lists no unexpanded cell. A flattened read writes back whole
+//     (TestFlattenedDesignWritesAndReadsBack). Making this pass would mean emitting a sub-cell
+//     whose contents no longer exist. That would fabricate structure.
 //   - Provenance.SourceFile. Different by construction; the writer takes a design, not a path.
 //   - InputDiagnostics.UnmodeledBuses, and with them the NAMELESS PINS an array port leaves behind.
-//     A BusNotModeled records the bus label and its members but not the cell or port it was declared
-//     on, so an array port has nowhere to be written back to; and partTypeOf, whose parseName knows
-//     four name forms and not (array DATA 8), files the port itself as a pin with no name at all.
-//     Excluding one without the other would assert that a bus we decline to write comes back anyway.
-//   - PART TYPES, AND PART-TYPE PINS, THE NETLIST REFERENCES AND NO LIBRARY DECLARES. Both halves of
-//     one exclusion, because EDIF resolves a reference against a declaration and our reader does not
-//     need one. basic.edn instantiates cells RES and GATE that its single library never declares, and
-//     reads fine here; written back without those cells it is a file a conforming reader cannot
-//     follow, so the writer declares them and the re-read reports them as part types. The pins half is
-//     the same thing one level down, and is described next.
-//   - PART-TYPE PINS THE NETLIST REFERENCES AND THE INTERFACE DOES NOT DECLARE. Read consumes the
-//     portInstance table that resolved a logical port to its physical pins and keeps only the
-//     resolved pin (WS1-025), so for a source that used one the writer cannot tell that pins 5 and
-//     6 are both the GND port. EDIF resolves a portRef against the interface, so writing those pins
-//     without declaring them produces a file a conforming reader cannot follow; the writer declares
-//     them, and the re-read reports them as pins. That is the same reader loss as the bullets above,
-//     surfacing on the cell rather than on the net, so the exclusion is computed by the writer's
-//     own rule rather than hand-listed, as whatever the nets reference and the interface does not
-//     declare.
+//     A BusNotModeled records the bus label and its members, but not the cell or port that declared
+//     the bus. So an array port has nowhere to be written back to. Also, parseName knows four name
+//     forms and not (array DATA 8), so partTypeOf files the port itself as a pin with no name at
+//     all. Excluding one without the other would assert that a bus we decline to write comes back
+//     anyway.
+//   - PART TYPES AND PART-TYPE PINS THAT THE NETLIST REFERENCES AND NO LIBRARY DECLARES. These are
+//     both halves of one exclusion. EDIF resolves a reference against a declaration, and our reader
+//     does not need one. basic.edn instantiates cells RES and GATE, and its single library never
+//     declares them. It reads fine here. Written back without those cells, it would be a file that a
+//     conforming reader cannot follow. So the writer declares them, and the re-read reports them as
+//     part types. The pins half is the same thing one level down, and the next bullet describes it.
+//   - PART-TYPE PINS THAT THE NETLIST REFERENCES AND THE INTERFACE DOES NOT DECLARE. A portInstance
+//     table resolves a logical port to its physical pins. Read consumes that table and keeps only
+//     the resolved pin (WS1-025). So for a source that used one, the writer cannot tell that pins 5
+//     and 6 are both the GND port. EDIF resolves a portRef against the interface. Writing those pins
+//     without declaring them would produce a file a conforming reader cannot follow. So the writer
+//     declares them, and the re-read reports them as pins. This is the same reader loss as the
+//     bullets above, showing on the cell rather than on the net. So the writer's own rule computes
+//     the exclusion, as whatever the nets reference and the interface does not declare. It is not
+//     hand-listed.
 func TestWriteRoundTripsIR(t *testing.T) {
 	for _, path := range corpus(t) {
 		t.Run(filepath.Base(path), func(t *testing.T) {
@@ -119,8 +121,8 @@ func TestWriteRoundTripsIR(t *testing.T) {
 }
 
 // diffIR compares two designs field by field, reporting the first difference per section rather than
-// dumping two protos. A whole-message proto.Equal says only "not equal", which on a design with
-// nineteen components and fifteen nets is not a lead.
+// dumping two protos. A whole-message proto.Equal says only "not equal". On a design with nineteen
+// components and fifteen nets, that is not a lead.
 func diffIR(t *testing.T, want, got *ir.Design) {
 	t.Helper()
 	w, g := normalize(want, want), normalize(got, want)
@@ -255,9 +257,9 @@ func portsTheNetlistAdds(d *ir.Design) map[string]map[string]bool {
 	return out
 }
 
-// clearSourceFiles walks the message tree and clears every Provenance.source_file, the same
-// reflective shape relocateSources uses on the read side rather than a hand-listed set of paths that
-// would go stale the moment a message gains a Provenance.
+// clearSourceFiles walks the message tree and clears every Provenance.source_file. It uses the same
+// reflective shape as relocateSources on the read side. A hand-listed set of paths would go stale
+// the moment a message gains a Provenance.
 func clearSourceFiles(m protoreflect.Message) {
 	if fd := m.Descriptor().Fields().ByName("source_file"); fd != nil {
 		m.Clear(fd)
@@ -285,21 +287,21 @@ func clearSourceFiles(m protoreflect.Message) {
 	})
 }
 
-// TestWritePreservesDiffIdentity is the second-order check the first-order one cannot make. An IR
-// comparison is per design; a diff is BETWEEN two, and it keys on identity that survives a
-// revision (net names, ref-des, section part refs) while ignoring the export-unstable
-// internal ids. A writer could therefore perturb exactly the fields diff keys on and still pass
-// TestWriteRoundTripsIR if it perturbed them the same way on both sides.
+// TestWritePreservesDiffIdentity makes a second-order check that the first-order one cannot. An
+// IR comparison is per design. A diff is BETWEEN two designs. It keys on identity that survives a
+// revision (net names, ref-des, section part refs) and ignores the export-unstable internal
+// ids. So a writer could perturb exactly the fields diff keys on and still pass
+// TestWriteRoundTripsIR, if it perturbed them the same way on both sides.
 //
 // So the report between the two committed revisions must equal the report between their
-// round-tripped forms. rev_a and rev_b carry the whole change taxonomy already
-// (TestEDIFDiffRoundTrip pins it), which is what makes them the right pair.
+// round-tripped forms. rev_a and rev_b already cover the whole change taxonomy
+// (TestEDIFDiffRoundTrip pins it), so they are the right pair.
 func TestWritePreservesDiffIdentity(t *testing.T) {
 	a, b := readFile(t, filepath.Join("testdata", "rev_a.edn")), readFile(t, filepath.Join("testdata", "rev_b.edn"))
 	want := diff.Designs(a, b)
-	// The same path strings the originals were read with. Provenance carries the source file, diff
-	// carries provenance into its report, so a round trip read under a different name would differ here
-	// for a reason that has nothing to do with the writer.
+	// Use the same path strings the originals were read with. Provenance holds the source file, and
+	// diff copies provenance into its report. A round trip read under a different name would differ
+	// here for a reason unrelated to the writer.
 	got := diff.Designs(
 		roundTrip(t, a, filepath.Join("testdata", "rev_a.edn")),
 		roundTrip(t, b, filepath.Join("testdata", "rev_b.edn")))

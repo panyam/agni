@@ -19,9 +19,9 @@ func runPullUpCheck(t *testing.T, args ...string) (string, error) {
 	return buf.String(), err
 }
 
-// The end-to-end proof for agni issue 820 that a declared pull-up reach travels from the YAML, as a
-// value through the request, into the model the rule walks. Both routes a declaration takes are
-// asked: --intent-path, and the design's own descriptor.
+// This is the end-to-end proof for agni issue 820. A declared pull-up reach travels from the YAML,
+// as a value through the request, into the model that the rule walks. The test asks both routes a
+// declaration takes, --intent-path and the design's own descriptor.
 func TestCheckDeclaredPullUpReachCLI(t *testing.T) {
 	const fail = "no rail is reachable from SDA_MAIN through a resistor within 3 hops"
 	const pass = "SDA_MAIN reaches rail VCC_3V3 along SDA_MAIN -> [R1] -> SER_A -> [R2] ->\n                    SER_B -> [R3] -> SER_C -> [R4] -> VCC_3V3"

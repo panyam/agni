@@ -7,8 +7,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// tupleRule fails one verdict keyed on a TWO-entity tuple whose finding names only the first, and
-// passes another, which is the shape a finding cannot reconstruct its verdict from (agni issue 485).
+// tupleRule fails one verdict and passes another. The failing verdict is keyed on a TWO-entity
+// tuple, and its finding names only the first. A finding cannot reconstruct its verdict from that
+// shape (agni issue 485).
 func tupleRule(states bool) *Rule {
 	return &Rule{
 		Name:                "tuple",
@@ -47,7 +48,7 @@ func TestAFindingNamesItsVerdict(t *testing.T) {
 	if !found {
 		t.Errorf("the finding names %s, which is not among the run's verdicts", want)
 	}
-	// Run alone stamps the same id, since it is the path a review takes.
+	// Run alone stamps the same id, since a review takes that path.
 	if only, err := Run(context.Background(), NewModel(&ir.Design{}), []*Rule{tupleRule(true)}); err != nil || len(only) != 1 || len(only[0].VerdictIDs) != 1 || only[0].VerdictIDs[0] != want {
 		t.Errorf("Run's finding = %+v (err %v), want one carrying %s", only, err, want)
 	}

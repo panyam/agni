@@ -10,21 +10,21 @@ import (
 )
 
 // jsonEncoderExceptions are the files allowed to hand-roll json, each for a reason stated where the
-// type is defined. C31 is only worth enforcing while this list stays short and argued.
+// type is defined. C31 is only worth enforcing while this list is short and argued.
 var jsonEncoderExceptions = map[string]string{
 	"intake.go": "intake.Skeleton's confidentiality guarantee is structural (C16); see the type's doc comment",
 	"trial.go":  "feedback.Report crosses into a public issue and its guarantee is structural, as intake's is; see the package comment",
 }
 
-// C31's Verify. A command that hand-rolls its json is emitting a second shape of an answer the wire
-// already has a message for, which is C26's silent-drift failure one layer out.
+// C31's Verify. A command that hand-rolls its json emits a second shape for an answer, and the wire
+// already has a message for that answer. This is C26's silent-drift failure, one layer out.
 //
-// It reads the SOURCE rather than running the commands. Running them would prove the
-// shape of the answers a fixture happens to produce; the claim is about which encoder a code path
-// reaches for, and that is a property of the code.
+// It reads the SOURCE rather than running the commands. Running them would only prove the shape of
+// whatever answers a fixture produces. The claim is about which encoder a code path uses, and that
+// is a property of the code.
 //
-// WHAT IT CANNOT SEE, stated because it caught me, is an encoder reached through a HELPER in another
-// package. `query` used to call `report.TableJSON`, and putting that call back does not fail this
+// IT CANNOT SEE an encoder reached through a HELPER in another package. I say so because it caught
+// me. `query` used to call `report.TableJSON`, and putting that call back does not fail this
 // test, because the `json.NewEncoder` was one package away. The answer was to delete `TableJSON`
 // rather than to widen the pattern, since it had no caller left and a function that exists only to be
 // grepped for is worse than one that does not exist. A future helper of the same shape would slip
@@ -65,7 +65,7 @@ func TestEveryJSONFormatEmitsAProto(t *testing.T) {
 	}
 }
 
-// The exception list is only worth having if it stays small and each entry is real, so a stale entry
+// The exception list is only worth having if it is small and each entry is real, so a stale entry
 // naming a file that no longer hand-rolls anything has to fail rather than quietly widen the rule.
 func TestJSONExceptionsAreStillNeeded(t *testing.T) {
 	encoder := regexp.MustCompile(`json\.NewEncoder|json\.Marshal(Indent)?\(`)

@@ -42,8 +42,8 @@ func (l *osLoader) Geometry(ctx context.Context, uri artifact.URI, layout string
 	// Through LoaderIn, as in Design, because a project's declared symbol library changes what the
 	// geometry read CONTAINS and arrives as a read option (agni issue 347).
 	reader := service.LoaderIn(ctx, l.loader, opts...)
-	// The companion is what GetDesign, GetSheet and HighlightSheet draw, so all three funnel through
-	// here (WS1-047). The sibling sits in the SAME mount dir as the already-contained abs, so it needs
+	// GetDesign, GetSheet and HighlightSheet draw the companion, so all three go through here
+	// (WS1-047). The sibling sits in the SAME mount dir as the already-contained abs, so it needs
 	// no extra containment check.
 	if comp := reader.Companion(abs); comp != "" {
 		return reader.FaithfulGeometry(comp)

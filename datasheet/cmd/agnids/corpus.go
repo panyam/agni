@@ -15,10 +15,11 @@ import (
 	"github.com/panyam/agni/datasheet/dsservice"
 )
 
-// publishCmd publishes a draft from the corpus's store by MPN (agni issues 747, 749), the scripted
-// form of the workbench's PublishDraft. It validates the draft, refuses one that fails (listing every
-// problem) or whose MPN another published file already seeds, and otherwise writes <mpn>.textproto
-// and the index. The draft stays, as the start of the next edit.
+// publishCmd publishes a draft from the corpus's store by MPN (agni issues 747, 749). It is the
+// scripted form of the workbench's PublishDraft. It validates the draft and refuses one that fails,
+// listing every problem. It also refuses a draft whose MPN another published file already seeds.
+// Otherwise it writes <mpn>.textproto and the index. The draft is kept as the start of the next
+// edit.
 func publishCmd() *cobra.Command {
 	var dir string
 	c := &cobra.Command{
@@ -64,9 +65,9 @@ an MPN again replaces its earlier published spec.
 	return c
 }
 
-// mergeMuxCmd merges a pin-mux reference kept as its own file into the spec the corpus publishes for
-// its MPN (agni issue 1200), so a team holding a mux table publishes one file per MPN rather than
-// hand-merging the table into the spec.
+// mergeMuxCmd merges a pin-mux reference into the corpus's published spec for its MPN (agni issue
+// 1200). The reference is kept as its own file. A team holding a mux table then publishes one file
+// per MPN rather than hand-merging the table into the spec.
 func mergeMuxCmd() *cobra.Command {
 	var dir string
 	var replace bool
@@ -126,9 +127,9 @@ func requireDir(flag, dir string) error {
 	return nil
 }
 
-// indexCmd rebuilds a corpus's index from its files, which are the source of truth. It is what to run
-// after editing a published spec by hand, and --check is what a corpus repository's CI runs to catch
-// an edit that skipped it.
+// indexCmd rebuilds a corpus's index from its files. The files are the source of truth. Run it after
+// editing a published spec by hand. A corpus repository's CI runs it with --check to catch an edit
+// that skipped the rebuild.
 func indexCmd() *cobra.Command {
 	var check bool
 	c := &cobra.Command{

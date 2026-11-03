@@ -27,7 +27,8 @@ import (
 var readAsNamed bool
 
 // readFlatten is the --flatten-hierarchy flag's binding, set once at startup like readAsNamed. It
-// rides every snapshot the CLI ingests (ingest) and every read no service mediates (designOverlay).
+// goes with every snapshot the CLI ingests (ingest), and with every read that no service mediates
+// (designOverlay).
 var readFlatten bool
 
 // designResolver answers "which artifacts should this read open" for the CLI, as a client of
@@ -51,12 +52,13 @@ func newDesignResolver(ws *cliWorkspace) *designResolver {
 	return &designResolver{ws: ws, asNamed: readAsNamed}
 }
 
-// designSource is which artifact each tier of a read opens, plus the line that says so (agni issue
-// 170). The fields are REFS resolved by the loader, not paths this type does arithmetic on.
+// designSource records which artifact each tier of a read opens, plus the line that says so (agni
+// issue 170). The fields are REFS, and the loader resolves them. This type does no path arithmetic
+// on them.
 type designSource struct {
 	service.DesignSources
-	// Note is a line for stderr, written whenever an artifact the user did NOT name was read and
-	// empty when the named path was taken exactly as given.
+	// Note is a line for stderr. It is written whenever the read opened an artifact that the user
+	// did NOT name. It is empty when the named path was taken exactly as given.
 	Note string
 }
 
@@ -127,11 +129,12 @@ func (r *designResolver) Resolve(ctx context.Context, named string) (designSourc
 	return designSource{DesignSources: res.DesignSources, Note: note}, nil
 }
 
-// subSheetNote is the stderr line for naming one sheet of a design's KiCad hierarchy rather than the
-// design, empty when the named file is not a sub-sheet of the design's entry. Reading a sub-sheet
-// alone checks that sheet as though it were the whole design: on Jetson, one sheet of fifteen gave
-// 383 findings and a review scoring rules that judged nothing (agni issue 1023). It stays a note
-// rather than a redirect, because an undeclared sibling is read as named on purpose.
+// subSheetNote returns the stderr line for a user who names one sheet of a design's KiCad hierarchy
+// rather than the design. It is empty when the named file is not a sub-sheet of the design's entry.
+// Reading a sub-sheet alone checks that sheet as though it were the whole design. On Jetson, one
+// sheet of fifteen gave 383 findings and a review scoring rules that judged nothing (agni issue
+// 1023). This is a note rather than a redirect, because an undeclared sibling is read as named on
+// purpose.
 func subSheetNote(root, typed string, named artifact.URI, d *webapi.Design) string {
 	entry := uriPath(d.GetEntryUri())
 	if !strings.EqualFold(path.Ext(named.Path), ".kicad_sch") || !strings.EqualFold(path.Ext(entry), ".kicad_sch") || entry == named.Path {
@@ -153,8 +156,8 @@ func subSheetNote(root, typed string, named artifact.URI, d *webapi.Design) stri
 	}
 	for _, f := range kicad.SheetFiles(content, open) {
 		if path.Join(dir, f) == named.Path {
-			// The design's folder as the user would type it, from the path they typed, since its path
-			// within the mount is empty when the CLI mounted the folder itself.
+			// This is the design's folder as the user would type it, taken from the path they typed.
+			// Its path within the mount is empty when the CLI mounted the folder itself.
 			rel, err := filepath.Rel(filepath.FromSlash(path.Dir(named.Path)), filepath.FromSlash(dir))
 			if err != nil {
 				rel = "."
@@ -196,8 +199,8 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 	if namedIsTheDesign {
 		note = fmt.Sprintf("note: reading %s (the entry %s declares)", path.Base(tiers.NetlistURI), descriptor)
 	} else {
-		// The netlist the tiers resolved to, which for a revision's companion is that revision's entry
-		// rather than the design's (agni issue 848).
+		// This is the netlist the tiers resolved to. For a revision's companion it is that revision's
+		// entry rather than the design's (agni issue 848).
 		whose := "the design's entry"
 		if tiers.NetlistURI != d.GetEntryUri() {
 			whose = "its revision's entry"
@@ -214,11 +217,11 @@ func resolutionNote(named, ref string, d *webapi.Design, tiers service.DesignSou
 	return note + ".\n"
 }
 
-// edsSiblingNote is the fallback advice for a folder that declares no design, when reading an EDIF
-// SCHEMATIC-geometry (.eds) export while the sibling NETLIST (.edn) exists. The .eds reflects what
-// the schematic DRAWS and the .edn is authoritative for component identity, so counts differ (565
-// test points off the .eds against the .edn's 1385, on one real board). Empty when there is no .eds,
-// no sibling .edn, or the input already is the .edn.
+// edsSiblingNote returns fallback advice for a folder that declares no design. It applies when the
+// read opens an EDIF SCHEMATIC-geometry (.eds) export and the sibling NETLIST (.edn) exists. The .eds
+// reflects what the schematic DRAWS, and the .edn is authoritative for component identity, so counts
+// differ. On one real board the .eds gave 565 test points against the .edn's 1385. The note is empty
+// when there is no .eds, no sibling .edn, or the input already is the .edn.
 //
 // A design that declares its entry gets Resolve's redirect instead (agni issue 170).
 func edsSiblingNote(path string) string {
@@ -236,8 +239,8 @@ func edsSiblingNote(path string) string {
 }
 
 // mountRoot returns the host root a URI's mount resolves to. It reports false when the mount is
-// unknown, which for the CLI means the argument named a path that does not exist, since the
-// workspace mints a mount for anything real.
+// unknown. For the CLI that means the argument named a path that does not exist, since the workspace
+// mints a mount for anything real.
 func mountRoot(ws *cliWorkspace, uri artifact.URI) (string, bool) {
 	m, ok := mounts.Find(ws.Mounts(), uri.Mount)
 	if !ok {
@@ -256,8 +259,8 @@ func uriPath(s string) string {
 }
 
 // noteNoBoard tells the operator when a check read no board, so a revision without copper does not
-// read as a revision with clean copper (agni issue 848). The response carries the same thing as
-// skipped rules; this is the line a person running the command sees. It names the rules and the fix,
+// read as a revision with clean copper (agni issue 848). The response carries the same fact as
+// skipped rules, and a person running the command sees this line. It names the rules and the fix,
 // since a later revision usually has a board somewhere that its design.yaml does not yet declare.
 func noteNoBoard(w io.Writer, named string, skipped []*webapi.SkippedRule) {
 	var rules []string
@@ -275,14 +278,15 @@ func noteNoBoard(w io.Writer, named string, skipped []*webapi.SkippedRule) {
 		path.Base(named), len(rules), strings.Join(rules, ", "))
 }
 
-// readOverlay carries the --conventions of a command no service mediates (stats, diff, render) to
-// its reads, in the three places they compose config: designOverlay, renderLoader through it, and
-// ingest. It is set for one command by withConventions and nil otherwise, so a command that sends its
-// own overlay on a request is unaffected.
+// readOverlay passes a command's --conventions to its reads, for the commands that no service
+// mediates (stats, diff, render). Those commands compose config in three places, designOverlay,
+// renderLoader through it, and ingest. withConventions sets it for one command, and it is nil
+// otherwise, so a command that sends its own overlay on a request is unaffected.
 var readOverlay *webapi.OverlayConfig
 
-// withConventions reads a --conventions file for the running command and returns what clears it.
-// An empty path changes nothing. The convention rides as a value, as it does on check (C22).
+// withConventions reads a --conventions file for the running command and returns a function that
+// clears it. An empty path changes nothing. The convention travels as a value, as it does on check
+// (C22).
 func withConventions(path string) (func(), error) {
 	if path == "" {
 		return func() {}, nil

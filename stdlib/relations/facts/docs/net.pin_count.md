@@ -27,8 +27,8 @@ This is the degree of each net node in the design graph, meaning the number of e
 net.
 It is a projection over `Nets()` that reads `len(net.Connections)`, so rows are 1:1 with nets and
 the count carries as a number for direct comparison. Higher-level relations use the same count.
-`net.bus_like` treats a count above 16 as one of the conditions that make a
-net a shared-distribution node the reachability walk must stop at, so `net.pin_count` is the
+`net.bus_like` treats a count above 16 as one of the conditions for a shared-distribution
+node, and the reachability walk must stop at such a node. So `net.pin_count` is the
 measured input behind that threshold.
 
 ### Go projector
@@ -45,8 +45,8 @@ Every net and its connection count:
 net.pin_count(?n, ?c) => ?n, ?c
 ```
 
-Filter to the single-pin stubs (the likely-dangling nets), a threshold query that reads the count
-as a number:
+Filter to the single-pin stubs, the likely-dangling nets. This threshold query reads the count as
+a number:
 
 ```
 net.pin_count(?n, ?c), ?c < 2 => ?n

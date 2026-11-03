@@ -32,7 +32,7 @@ func LoadSchematic(arg string) (*geom.SchematicGeometry, error) {
 
 // ReadSchematicFixture decodes a bundled EDIF schematic (.eds) fixture into the geometry sidecar,
 // as edif.ReadSchematic does for on-disk files. Geometry is a separate artifact from the netlist IR
-// that ReadFixture returns, keyed to it and feeding the renderers.
+// that ReadFixture returns. It is keyed to that IR, and it feeds the renderers.
 func ReadSchematicFixture(name string) (*geom.SchematicGeometry, error) {
 	p, err := fixturePath(name)
 	if err != nil {
@@ -46,8 +46,8 @@ func ReadSchematicFixture(name string) (*geom.SchematicGeometry, error) {
 	return edif.ReadSchematic(f, name)
 }
 
-// GeomStatsLines summarizes a schematic geometry sidecar for narration: the symbol library
-// size and the per-sheet placement, wire, and label counts.
+// GeomStatsLines summarizes a schematic geometry sidecar for narration. It gives the symbol
+// library size and the per-sheet placement, wire, and label counts.
 func GeomStatsLines(g *geom.SchematicGeometry) string {
 	placements, wires, labels := 0, 0, 0
 	for _, s := range g.Sheets {

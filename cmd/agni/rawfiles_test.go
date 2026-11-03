@@ -10,9 +10,9 @@ import (
 	"github.com/panyam/agni/mounts"
 )
 
-// TestRawFileHandlerServesFilesInsideAMountOnly is the read-only route's containment: a file in a
-// mount is served, and a directory, an unknown mount and a path climbing out of its mount are all
-// not found.
+// TestRawFileHandlerServesFilesInsideAMountOnly checks the read-only route's containment. A file in
+// a mount is served. A directory, an unknown mount and a path climbing out of its mount are all not
+// found.
 func TestRawFileHandlerServesFilesInsideAMountOnly(t *testing.T) {
 	root, err := filepath.Abs(filepath.Join("..", "..", "examples", "tutorial-project"))
 	if err != nil {

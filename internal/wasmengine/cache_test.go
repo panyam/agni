@@ -70,9 +70,9 @@ func TestConcurrentRequestsShareOneReadAndAgree(t *testing.T) {
 
 type request func(s *httptest.Server, snap string) (proto.Message, error)
 
-// requests are what a viewer asks of a design's snapshot as it opens: two queries, the checks and the
-// report.
-// A query's work is zeroed, since it is a counter on the shared base that concurrent queries add to.
+// requests lists what a viewer asks of a design's snapshot as it opens: two queries, the checks and
+// the report. A query's work is zeroed. Work is a counter on the shared base, and concurrent queries
+// add to it.
 var requests = []request{
 	func(s *httptest.Server, snap string) (proto.Message, error) {
 		r, err := webapiconnect.NewQueryServiceClient(s.Client(), s.URL).RunQuery(context.Background(), connect.NewRequest(&webapi.RunQueryRequest{Snapshot: snap, Query: `entity(?n, "net") => count(?n)`}))
@@ -108,8 +108,8 @@ var requests = []request{
 
 // TestTwoLibrariesOnOneKeptDesignAnswerApart asks one question of one kept design under two inline
 // libraries that define the same member differently. The design's model and fact base are kept
-// between requests (agni issue 895) and jaala keeps derived relations on a fact base for later queries
-// (panyam/jaala#140), so a library's answer leaking into the next request is the failure to fear.
+// between requests (agni issue 895). jaala keeps derived relations on a fact base for later queries
+// (panyam/jaala#140). So the failure to fear is one library's answer leaking into the next request.
 func TestTwoLibrariesOnOneKeptDesignAnswerApart(t *testing.T) {
 	eng, err := New(fshost.Mount{Name: "m", FS: fshost.MemFS(gatewayAlone(t))})
 	if err != nil {

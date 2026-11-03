@@ -7,9 +7,9 @@ import (
 	"testing/fstest"
 )
 
-// TestCompanion runs one table over a host directory and an in-memory FS holding the same tree, since
-// the server reads host paths and the wasm engine reads an FS, and a companion one of them finds and
-// the other misses draws one design two ways.
+// TestCompanion runs one table over a host directory and over an in-memory FS holding the same tree.
+// The server reads host paths and the wasm engine reads an FS. If one finds a companion and the other
+// misses it, the two draw one design two ways.
 func TestCompanion(t *testing.T) {
 	files := map[string]string{
 		"d/board.edn":       "",

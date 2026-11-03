@@ -120,8 +120,8 @@ export type TableColumn = Message<"agni.v1.webapi.TableColumn"> & {
   type: ColumnType;
 
   /**
-   * kind is the entity kind every cell of the column names ("net", "component"), empty when the
-   * column names no entity or names different kinds on different rows.
+   * kind is the entity kind that every cell of the column names, such as "net" or "component". It is
+   * empty when the column names no entity or names different kinds on different rows.
    *
    * @generated from field: string kind = 3;
    */
@@ -145,19 +145,20 @@ export type TableRow = Message<"agni.v1.webapi.TableRow"> & {
   cells: string[];
 
   /**
-   * cell_why aligns with cells and says why an empty cell is absent, such as a sum over numbers in
-   * different units, and "" for every other cell. Empty when no cell in the row has a reason. The cell
-   * itself stays empty, so a csv encoder writes it raw.
+   * cell_why aligns with cells. For an empty cell it says why the value is absent, such as a sum over
+   * numbers in different units. Every other cell gets "". cell_why is empty when no cell in the row
+   * has a reason. The cell itself is still empty, so a csv encoder writes it raw.
    *
    * @generated from field: repeated string cell_why = 2;
    */
   cellWhy: string[];
 
   /**
-   * cell_kinds aligns with cells and names the entity kind of a cell whose column names different kinds
-   * on different rows ("net", "component"), such as a diff's subject, which is a part on one row and a
-   * net on the next (agni issue 898). "" for a cell its column's kind already types, or that names no
-   * entity. Empty when no cell in the row needs one. A viewer locates a cell by it; an encoder ignores it.
+   * cell_kinds aligns with cells. Some columns name different kinds on different rows. A diff's
+   * subject is one, since it is a part on one row and a net on the next (agni issue 898). For a cell
+   * in such a column, cell_kinds names the cell's entity kind ("net", "component"). It is "" for a
+   * cell whose column's kind already types it, or a cell that names no entity. cell_kinds is empty
+   * when no cell in the row needs one. A viewer locates a cell by it, and an encoder ignores it.
    *
    * @generated from field: repeated string cell_kinds = 3;
    */
@@ -214,9 +215,10 @@ export type TabulateRequest = Message<"agni.v1.webapi.TabulateRequest"> & {
    */
   answer: {
     /**
-     * check gives the "findings" table and, when verdicts are present, the "verdicts" table and the
-     * "verdicts_by_rule" count of each outcome per rule, and "pin_map" when the run carries an IO map
-     * (one row per declared pin joined to its IO-map verdicts, agni issue 1188).
+     * check gives the "findings" table. When verdicts are present it also gives the "verdicts" table
+     * and "verdicts_by_rule", a count of each outcome per rule. When verdicts are present and the run
+     * includes an IO map, it gives "pin_map" too, with one row per declared pin joined to its IO-map
+     * verdicts (agni issue 1188). It always gives "skipped", the rules the run did not evaluate.
      *
      * @generated from field: agni.v1.webapi.CheckDesignResponse check = 1;
      */
@@ -236,8 +238,9 @@ export type TabulateRequest = Message<"agni.v1.webapi.TabulateRequest"> & {
     case: "querySet";
   } | {
     /**
-     * diff gives the "diff" table, one row per change with change_class naming its kind, components
-     * first, then nets by kind and name, then the unchanged nets when the diff asked for them.
+     * diff gives the "diff" table, one row per change, and change_class names the change's kind.
+     * Components come first, then nets by kind and name, then the unchanged nets when the diff asked
+     * for them.
      *
      * @generated from field: agni.v1.webapi.DiffDesignsResponse diff = 6;
      */
@@ -255,18 +258,18 @@ export type TabulateRequest = Message<"agni.v1.webapi.TabulateRequest"> & {
   } | { case: undefined; value?: undefined };
 
   /**
-   * order_by sorts each table by these columns, in priority order. A name sorts ascending and a name
-   * with a leading "-" descending: ["rule", "-outcome", "subjects"]. The sort is stable and empty
-   * cells sort last. A table lacking a named column ignores that entry, and a name no table carries
-   * is an invalid argument. Empty keeps the order the answer arrived in.
+   * order_by sorts each table by these columns, in priority order. A plain name sorts ascending, and
+   * a name with a leading "-" sorts descending, as in ["rule", "-outcome", "subjects"]. The sort is
+   * stable and empty cells sort last. A table lacking a named column ignores that entry. A name that
+   * no table has is an invalid argument. Empty keeps the answer's own order.
    *
    * @generated from field: repeated string order_by = 4;
    */
   orderBy: string[];
 
   /**
-   * column_types overrides how a named column orders, for a column the projection could not type,
-   * such as a query's count.
+   * column_types overrides how a named column orders. It is for a column that the projection could
+   * not type, such as a query's count.
    *
    * @generated from field: map<string, agni.v1.webapi.ColumnType> column_types = 5;
    */
@@ -311,8 +314,8 @@ export enum TableEncoding {
   UNSPECIFIED = 0,
 
   /**
-   * CSV is RFC 4180 with the header row first and nothing before it, each cell guarded against
-   * spreadsheet formula execution as `agni check --format csv` guards it.
+   * CSV is RFC 4180 with the header row first and nothing before it. Each cell is guarded against
+   * spreadsheet formula execution, as `agni check --format csv` guards it.
    *
    * @generated from enum value: TABLE_ENCODING_CSV = 1;
    */
@@ -370,18 +373,18 @@ export const ColumnTypeSchema: GenEnum<ColumnType> = /*@__PURE__*/
   enumDesc(file_agni_v1_webapi_tables, 1);
 
 /**
- * TableService projects an answer the caller already holds into tables. It reads no design and keeps
- * no state, so the request carries the answer itself.
+ * TableService projects an answer into tables. The caller already holds the answer and sends it in
+ * the request. The service reads no design and keeps no state.
  *
  * @generated from service agni.v1.webapi.TableService
  */
 export const TableService: GenService<{
   /**
-   * Tabulate returns the answer's tables. A check run gives its findings and, when the response
-   * carries them, its verdicts and a count of them per rule. A diff gives one table, a row per change.
-   * A review gives its items and its summary. A query answer gives one table, and a query set one per
-   * answered query; a set with a query that failed is an invalid argument naming
-   * it, since a missing table reads as a question that matched nothing.
+   * Tabulate returns the answer's tables. A check run gives its findings. When the response includes
+   * verdicts, it also gives the verdicts and a count of them per rule. A diff gives one table, a row
+   * per change. A review gives its items and its summary. A query answer gives one table, and a query
+   * set gives one per answered query. A set with a failed query is an invalid argument naming that
+   * query, since a missing table would read as a question that matched nothing.
    *
    * @generated from rpc agni.v1.webapi.TableService.Tabulate
    */
@@ -391,10 +394,10 @@ export const TableService: GenService<{
     output: typeof TabulateResponseSchema;
   },
   /**
-   * Encode writes tables as files, for a caller that wants the bytes `--format csv` writes without
-   * an encoder of its own, such as the viewer saving a table (agni issue 956). It is the encoder the
-   * CLI uses, so a cell a spreadsheet would read as a formula is guarded the same way everywhere. It
-   * encodes the tables as sent, in their order, and reads no design.
+   * Encode writes tables as files. It serves a caller that has no encoder of its own and wants the
+   * bytes `--format csv` writes, such as the viewer saving a table (agni issue 956). The CLI uses the
+   * same encoder, so a cell that a spreadsheet would read as a formula is guarded the same way
+   * everywhere. Encode writes the tables as sent, in their order, and reads no design.
    *
    * @generated from rpc agni.v1.webapi.TableService.Encode
    */

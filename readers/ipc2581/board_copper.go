@@ -15,8 +15,8 @@ import (
 // native arc primitive.
 const arcSegments = 16
 
-// Copper XML subset. A LayerFeature groups per-layer feature Sets; each Set names its net and
-// carries routed Polylines (tracks), copper Pads, and drilled Holes (vias).
+// Copper XML subset. A LayerFeature groups per-layer feature Sets. Each Set names its net and
+// holds routed Polylines (tracks), copper Pads, and drilled Holes (vias).
 type layerFeatureEl struct {
 	LayerRef string  `xml:"layerRef,attr"`
 	Sets     []setEl `xml:"Set"`
@@ -37,8 +37,8 @@ type cPadEl struct {
 	UserRef  primRefEl `xml:"UserPrimitiveRef"`
 }
 
-// primID returns the pad's primitive id, preferring a standard-dictionary reference and falling
-// back to a user-dictionary one (both resolve through the same prims map).
+// primID returns the pad's primitive id. It prefers a standard-dictionary reference and falls
+// back to a user-dictionary one. Both resolve through the same prims map.
 func (p cPadEl) primID() string {
 	if p.PrimRef.ID != "" {
 		return p.PrimRef.ID
@@ -53,8 +53,9 @@ type holeEl struct {
 	Y             string `xml:"y,attr"`
 }
 
-// dictLineDesc is a line-descriptor dictionary of trace widths referenced by id from a track's
-// LineDescRef (the width def half of the def/instance split, mirroring the padstack dict).
+// dictLineDesc is a line-descriptor dictionary of trace widths. A track's LineDescRef references
+// an entry by id. The dictionary is the width-def half of the def/instance split, mirroring the
+// padstack dict.
 type dictLineDesc struct {
 	Entries []entryLineDescEl `xml:"EntryLineDesc"`
 }
@@ -86,8 +87,8 @@ type polyPath struct {
 	lineRef string
 }
 
-// UnmarshalXML reads a Polyline's children in order so straight (PolyStepSegment) and arc
-// (PolyStepCurve) steps keep their interleaving; encoding/xml's default slice decoding would
+// UnmarshalXML reads a Polyline's children in order, so straight (PolyStepSegment) and arc
+// (PolyStepCurve) steps keep their interleaving. encoding/xml's default slice decoding would
 // scramble them and corrupt the path.
 func (p *polyPath) UnmarshalXML(d *xml.Decoder, start xml.StartElement) error {
 	for {
@@ -180,7 +181,7 @@ func (f *ipcGeomFile) copperNets(nmPerUnit float64, prims map[string]primShape) 
 }
 
 // copperLayers is the set of layer names whose IPC-2581 layerFunction is a copper function
-// (CONDUCTOR or PLANE). Only these carry pours/planes that become geom.Zones; DOCUMENT (fab,
+// (CONDUCTOR or PLANE). Only these hold pours/planes that become geom.Zones. DOCUMENT (fab,
 // assembly), mask, silkscreen and drill Contours are drawing geometry, not copper.
 func (f *ipcGeomFile) copperLayers() map[string]bool {
 	m := map[string]bool{}
@@ -205,9 +206,10 @@ func (f *ipcGeomFile) layerSpans() map[string][2]string {
 	return m
 }
 
-// zones emits each Set's copper plane/pour fill (a Set-direct Contour) as a geom.Zone carrying
-// net, layer, and the authored outline polygon. Cutouts (holes in the fill) are dropped per the
-// C6 zone bound, so consumers regenerate the fill or a later tier carries it. Sorted for a deterministic artifact.
+// zones emits each Set's copper plane/pour fill (a Set-direct Contour) as a geom.Zone with its
+// net, layer, and authored outline polygon. The C6 zone bound drops cutouts (holes in the fill),
+// so consumers regenerate the fill or a later tier supplies it. Sorted for a deterministic
+// artifact.
 func (f *ipcGeomFile) zones(nmPerUnit float64) []*geom.Zone {
 	copper := f.copperLayers()
 	var out []*geom.Zone
@@ -241,9 +243,9 @@ func (f *ipcGeomFile) lineWidths(nmPerUnit float64) map[string]int64 {
 	return m
 }
 
-// copperPadIndex indexes copper pad radii by (net, location) so a via's annular pad size is
-// the co-located copper pad; the drilled Hole and its copper land are separate features that
-// share a net and position.
+// copperPadIndex indexes copper pad radii by (net, location), so a via's annular pad size comes
+// from the co-located copper pad. The drilled Hole and its copper land are separate features,
+// and they share a net and position.
 func (f *ipcGeomFile) copperPadIndex(nmPerUnit float64, prims map[string]primShape) map[string]int64 {
 	m := map[string]int64{}
 	for _, lf := range f.Features {
@@ -282,8 +284,8 @@ func flattenPath(p polyPath, nmPerUnit float64) []*geom.Point {
 	return pts
 }
 
-// arcPoints approximates one arc step (from the current point to s.x,s.y about s.cx,s.cy) as
-// arcSegments chords, walking the shorter or longer way per the clockwise flag.
+// arcPoints approximates one arc step as arcSegments chords. The step runs from the current
+// point to s.x,s.y about s.cx,s.cy, and walks the shorter or longer way per the clockwise flag.
 func arcPoints(fromX, fromY float64, s polyStep, nmPerUnit float64) []*geom.Point {
 	a0 := math.Atan2(fromY-s.cy, fromX-s.cx)
 	a1 := math.Atan2(s.y-s.cy, s.x-s.cx)

@@ -4,19 +4,18 @@ import (
 	"testing"
 )
 
-// TestMPNResolvesOnEveryFormat is the guard agni issue 519 needed and did not have. It asserts
+// TestMPNResolvesOnEveryFormat adds the guard agni issue 519 needed and did not have. It asserts
 // the same claim through the real loader for more than one format.
 //
-// The bug it pins was invisible to every existing test because each format's tests only ever checked
-// that format. EDIF resolved part numbers (its reader carried a private promotion pass), Telesis did
-// not (it recorded the number on the PART TYPE and the model only read the COMPONENT), and nothing
-// compared them. `component.mpn` came back empty for every component of every .tel design, which
-// silently disabled the whole datasheet tier on that format, because the join is
-// component.mpn -> param and a parameter rule cannot tell "no datasheet seeded" from "this format
-// never delivers a part number".
+// Each format's tests only ever checked that format, so no existing test could see the bug. EDIF
+// resolved part numbers, because its reader had a private promotion pass. Telesis did not. It
+// recorded the number on the PART TYPE, and the model only read the COMPONENT. Nothing compared the
+// two. So `component.mpn` came back empty for every component of every .tel design. The datasheet
+// tier joins component.mpn -> param, and a parameter rule cannot tell "no datasheet seeded" from
+// "this format never delivers a part number". The whole tier was silently off on that format.
 //
-// A single-format test would have passed throughout the bug's life. This one is table-driven ACROSS
-// formats for that reason, and adding a row is how a new reader inherits the guarantee.
+// A single-format test would have passed throughout the bug's life. So this one is table-driven
+// ACROSS formats. A new reader inherits the guarantee by adding a row.
 func TestMPNResolvesOnEveryFormat(t *testing.T) {
 	for _, tc := range []struct {
 		name, path  string
@@ -46,18 +45,18 @@ func TestMPNResolvesOnEveryFormat(t *testing.T) {
 	}
 }
 
-// TestMPNNeverInvented is the other half, and the one that keeps the pass from guessing. A
-// component whose source states no part number must come back with none. A fallback that guesses is
-// worse than the gap it fills, because a wrong part number joins to a real datasheet and produces
-// confident findings about a part that is not on the board.
+// TestMPNNeverInvented is the other half, and it keeps the pass from guessing. If a component's
+// source states no part number, the component must come back with none. A guessing fallback is worse
+// than the gap it fills. A wrong part number joins to a real datasheet and produces confident
+// findings about a part that is not on the board.
 func TestMPNNeverInvented(t *testing.T) {
 	d, err := (&Loader{}).ReadDesign("../telesis/testdata/basic.tel")
 	if err != nil {
 		t.Fatal(err)
 	}
-	// R1 is placed by a package line that carries no `!` discriminator, so the source states no
-	// part number for it. See readers/telesis, where a line with two quoted strings and no bang is
-	// a property entry, not a package one.
+	// A package line with no `!` discriminator places R1, so the source states no part number for
+	// it. In readers/telesis, a line with two quoted strings and no bang is a property entry, not a
+	// package one.
 	for _, c := range d.GetComponents() {
 		if c.GetRefDes() != "R1" {
 			continue

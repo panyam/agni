@@ -22,9 +22,9 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// queryCmd runs an ad-hoc datalog query over the design's fact base (WS3-029). The relations are
-// the ones rules assert over, so search and rules share one vocabulary. Every answer row prints the
-// provenance of the facts that produced it.
+// queryCmd runs an ad-hoc datalog query over the design's fact base (WS3-029). Queries and rules
+// assert over the same relations, so search and rules share one vocabulary. Every answer row prints
+// the provenance of the facts that produced it.
 func queryCmd() *cobra.Command {
 	var paramsDir string
 	var conventions string
@@ -117,8 +117,8 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				return err
 			}
 			defer closeOut()
-			// A budget rides the command's context to every query it evaluates, as a server's does
-			// (agni issue 792). None by default: a local run's caller is the person waiting.
+			// The command's context carries a budget to every query it evaluates, as a server's does
+			// (agni issue 792). There is none by default, since a local run's caller is the person waiting.
 			cmd.SetContext(query.WithBudget(cmd.Context(), budget))
 			if remoteURL != "" && (showRelations || specLib) {
 				return fmt.Errorf("--remote sends a design query to a server; --relations and --speclib read no design and run here")
@@ -158,9 +158,9 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 				}
 				return renderTable(cmd.OutOrStdout(), format, resp, tableFromProto(resp, title, args[0], filepath.Base(paramsDir)), orderBy)
 			}
-			// A design query goes through the in-process QueryService (WS9-048), the same service and
-			// BuildModel fact base the web query panel uses, so the two cannot drift. The CLI supplies
-			// an os-backed loader and the datasheet corpus.
+			// A design query goes through the in-process QueryService (WS9-048). The web query panel uses
+			// the same service and BuildModel fact base, so the two cannot drift. The CLI supplies an
+			// os-backed loader and the datasheet corpus.
 			// The CLI reads the convention file and the service takes the value (C22), as in `check`
 			// and `review`.
 			overlay := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{}}
@@ -208,7 +208,7 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 			if err != nil {
 				return err
 			}
-			// --conventions and --lib ride the snapshot's definition, so the lexicon reaches the read.
+			// --conventions and --lib travel in the snapshot's definition, so the lexicon reaches the read.
 			snap, drop, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: designURI, Overlay: overlay, BoardUri: boardURI, AsNamed: readAsNamed})
 			if err != nil {
 				return rpcFailed(err)
@@ -267,16 +267,16 @@ A term is a ?variable, a "string", or a number; relations join on shared variabl
 	return c
 }
 
-// printRelations writes what sits at path in the namespace tree, through the same ListRelations rpc
-// the viewer's picker asks (agni issue 751), so the two cannot describe a member differently. A
-// design, when named, joins its project's own library to the tree (agni issue 773). The
-// root prints every module with its members' signatures and one-line docs, a module prints its own
-// members, and a member prints everything the rpc carries. --format json writes the rpc's
-// ListRelationsResponse for the path (C31); for the root that is the entry, not the flat catalog.
+// printRelations writes what is at path in the namespace tree. It asks the ListRelations rpc, as the
+// viewer's picker does (agni issue 751), so the two cannot describe a member differently. When a
+// design is named, its project's own library joins the tree (agni issue 773). The root prints every
+// module with its members' signatures and one-line docs, a module prints its own members, and a
+// member prints everything the rpc returns. --format json writes the rpc's ListRelationsResponse for
+// the path (C31). For the root that is the entry, not the flat catalog.
 func printRelations(ctx context.Context, w io.Writer, path, design string, cfg *webapi.AnalysisConfig, format string, verbose bool) error {
 	svc := service.NewQueryService(nil, nil, cliProjects())
-	// A design's project library joins the tree through a snapshot of it, and with no design the
-	// --lib directories ride the request alone.
+	// A design's project library joins the tree through a snapshot of the design. With no design,
+	// the --lib directories travel on the request alone.
 	req := &webapi.ListRelationsRequest{Overlay: &webapi.OverlayConfig{Config: cfg}}
 	if design != "" {
 		uri, err := cliArgURI(design)
@@ -389,8 +389,8 @@ func printMember(w io.Writer, e *webapi.RelationEntry) {
 	}
 }
 
-// printExamples writes the shared teaching-query catalog (WS14-002), the set the web panel renders,
-// in concept-ladder order, each as a runnable line the user can copy.
+// printExamples writes the shared teaching-query catalog (WS14-002) in concept-ladder order, each as
+// a runnable line the user can copy. The web panel renders the same set.
 func printExamples(w io.Writer) {
 	for _, e := range query.Examples() {
 		fmt.Fprintf(w, "%s  (%s)\n  %s\n\n", e.Label, e.Teaches, e.Query)
@@ -436,9 +436,9 @@ func renderTable(w io.Writer, format string, resp *webapi.RunQueryResponse, t rp
 // document is written before any failure is reported, so a script gets the answers that exist and a
 // non-zero exit that says some are missing, rather than either alone.
 //
-// path is a set file, - for stdin, or the name of a set the design's project keeps in its queries/
-// directory (agni issue 745), which ListQuerySets answers as it does for the viewer. Only a name
-// ending .yaml or .yml is read as a file, the rule --checklist follows.
+// path is a set file, - for stdin, or the name of a set in the queries/ directory of the design's
+// project (agni issue 745). ListQuerySets answers a name as it does for the viewer. Only a name
+// ending .yaml or .yml is read as a file, and --checklist follows the same rule.
 func runQuerySet(cmd *cobra.Command, svc queryAPI, path, snap, format, title string, budget int64, witnesses bool, link linker) error {
 	named := path
 	set, path, err := readQuerySet(cmd, svc, path, snap)
@@ -458,9 +458,9 @@ func runQuerySet(cmd *cobra.Command, svc queryAPI, path, snap, format, title str
 	if err := renderQuerySet(cmd.OutOrStdout(), format, set, resp); err != nil {
 		return err
 	}
-	// One link per query. A set the project keeps is linked by its name and the query's, so the link
-	// stays short and follows the set; a set read from a file is not on the server, so its link
-	// carries each query's text as the set would ask it (agni issue 634).
+	// One link per query. A set from the project is linked by its name and the query's, so the link
+	// is short and follows the set. A set read from a file is not on the server, so its link holds
+	// each query's text as the set would ask it (agni issue 634).
 	if link != nil {
 		fromProject := named != "-" && !strings.HasSuffix(named, ".yaml") && !strings.HasSuffix(named, ".yml")
 		for i, q := range set.Queries {
@@ -511,8 +511,8 @@ func readQuerySet(cmd *cobra.Command, svc queryAPI, path, snap string) (query.Qu
 	return set, path, nil
 }
 
-// projectQuerySet finds the set called name among those the design's project keeps, and names the
-// ones it does keep when there is no such set.
+// projectQuerySet finds the set called name among the sets of the design's project. When there is
+// no such set, the error names the sets the project does have.
 func projectQuerySet(cmd *cobra.Command, svc queryAPI, name, snap string) (query.QuerySet, string, error) {
 	resp, err := svc.ListQuerySets(cmd.Context(), &webapi.ListQuerySetsRequest{Snapshot: snap})
 	if err != nil {
@@ -559,8 +559,8 @@ func renderQuerySet(w io.Writer, format string, set query.QuerySet, resp *webapi
 	}
 }
 
-// tableFromProto builds the view from a RunQueryResponse, the shape the QueryService returns and
-// the web panel renders, through service.QueryResultTable.
+// tableFromProto builds the view from a RunQueryResponse through service.QueryResultTable. The
+// QueryService returns that shape and the web panel renders it.
 func tableFromProto(resp *webapi.RunQueryResponse, title, queryText, source string) rpt.Table {
 	return service.QueryResultTable(resp, title, queryText, source)
 }
@@ -592,8 +592,8 @@ func addLibraries(cfg *webapi.AnalysisConfig, dirs []string) error {
 	return nil
 }
 
-// parseBindings reads each --bind name=value into the values the query is asked with; a name given
-// more than once binds its variable to each value.
+// parseBindings reads each --bind name=value into the query's bindings. A name given more than once
+// binds its variable to each value.
 func parseBindings(args []string) (query.Bindings, error) {
 	b, err := query.ParseBindings(args)
 	if err != nil {
@@ -602,9 +602,9 @@ func parseBindings(args []string) (query.Bindings, error) {
 	return b, nil
 }
 
-// withCaret adds the line a query that would not parse stopped on, with a caret under the place, as
-// the engine drew it, read off the error in this process or off the detail a --remote server
-// attached. Any other error is returned as it is.
+// withCaret handles a query that would not parse. It adds the line where the parse stopped, with a
+// caret under the place, as the engine drew it. The line comes off the error in this process or off
+// the detail a --remote server attached. Any other error is returned as it is.
 func withCaret(err error) error {
 	at, ok := query.ErrorPosition(err)
 	caret := at.Caret
@@ -632,7 +632,7 @@ func withCaret(err error) error {
 type linker func(build func(meta rpt.Report) string) string
 
 // queryLinker returns the linker for a query run under --server, or nil when the run asked for no
-// links. Whether a link is safe is decided by viewerLinkMeta, the helper check and trace use, from
+// links. viewerLinkMeta decides whether a link is safe, as it does for check and trace. It reads
 // this machine's mount table whichever engine answered.
 func queryLinker(cmd *cobra.Command, spec serverSpec, design string) linker {
 	if !spec.active() {

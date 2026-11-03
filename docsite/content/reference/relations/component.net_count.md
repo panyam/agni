@@ -6,7 +6,7 @@ description: "the number of distinct nets a component touches (0 for a part wire
 ### What it is
 
 `component.net_count(ref_des, count)` yields one row per component, pairing its reference
-designator with the number of distinct nets its pins land on. It is the part-side twin of
+designator with the number of distinct nets its pins connect to. It is the part-side twin of
 `net.pin_count`. Every component gets a row, so a part wired to nothing answers `0` rather than
 being absent.
 
@@ -30,7 +30,7 @@ The other two values are worth a look during a review:
 ### For software engineers
 
 This is the degree of each component node in the design graph, counting distinct neighbouring
-nets rather than edges. It is a derived count of `component.net`, and for every ref it equals the
+nets rather than edges. It is a derived count of `component.net`. For every ref it equals the
 number of distinct `?n` in `component.net(ref, ?n)`, and a test holds the two to that. It is
 total over components, so an absent row means the ref is not in the design, never that it has no
 connections.
@@ -41,10 +41,10 @@ three copies of `component.net` and a negation (agni issue 727).
 ### Go projector
 
 `componentNetCountFacts` in `stdlib/relations/facts.go` walks `Model.Components()` and then each
-net's connection list, the same source `component.net` reads, and emits one row per ref with the
-count in the numeric slot. It reads connections rather than part-type pins, so it answers on a bare
-netlist that carries no pin data. A ref that appears in a connection with no component record still
-gets a row, citing nothing because there is no placement to cite. The count is dimensionless.
+net's connection list, as `component.net` does. It emits one row per ref with the count in the
+numeric slot. It reads connections rather than part-type pins, so it answers on a bare netlist that
+carries no pin data. A ref can appear in a connection with no component record. That ref still gets
+a row, citing nothing because there is no placement to cite. The count is dimensionless.
 
 ### Datalog
 

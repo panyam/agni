@@ -7,7 +7,7 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// chainReach hand-builds the walk result for N0 -R1- N1 -R2- N2, which is what the BFS records.
+// chainReach hand-builds the walk result for N0 -R1- N1 -R2- N2, as the BFS records it.
 // Every reached net has a Depth, and every net past the start has the step that entered it.
 func chainReach() (Reach, map[string]*ir.Net) {
 	nets := map[string]*ir.Net{}
@@ -27,8 +27,8 @@ func chainReach() (Reach, map[string]*ir.Net) {
 }
 
 // TestRouteLineRendersTheCrossings covers the three returns separately, because two of them are
-// answers and one is not, and collapsing them is what lets a caller print an empty line and call it
-// a route (agni issue 518).
+// answers and one is not. If they collapse, a caller can print an empty line and call it a route
+// (agni issue 518).
 func TestRouteLineRendersTheCrossings(t *testing.T) {
 	r, nets := chainReach()
 	for _, c := range []struct {
@@ -71,9 +71,9 @@ func TestRouteLineReadsTheSameWalkAsStepsTo(t *testing.T) {
 // column rendered off a walk result and the IO-map witness rendered off a check.Trace, in two
 // separate implementations that matched only because one person wrote both.
 //
-// This drives RenderRoute the way each caller does and requires one answer. It is the guard
-// DECISIONS.md asks for under "A path is not a query column", because rendering a path into a
-// string makes the rendering a format nobody can change, so the format needs exactly one owner.
+// This drives RenderRoute the way each caller does and requires one answer. DECISIONS.md asks for
+// this guard under "A path is not a query column". Rendering a path into a string makes the
+// rendering a format nobody can change, so the format needs exactly one owner.
 func TestRenderRouteIsTheOnlyFormat(t *testing.T) {
 	r, nets := chainReach()
 	viaWalk := r.RouteLine(nets["N2"])

@@ -19,11 +19,11 @@ import (
 	"google.golang.org/protobuf/types/known/fieldmaskpb"
 )
 
-// The tests here are agni issue 1061's step 4: a snapshot as a resource, over a copy of the tutorial
-// project on the real filesystem, so an edited file stamps as it does on disk.
+// The tests here are agni issue 1061's step 4. They treat a snapshot as a resource, over a copy of
+// the tutorial project on the real filesystem, so an edited file stamps as it does on disk.
 
-// readCountingHost is a host that counts the netlist reads that reach it, which are the ones no
-// cache answered.
+// readCountingHost counts the netlist reads that reach it. Only the reads no cache answered reach
+// it.
 type readCountingHost struct {
 	*Host
 	reads atomic.Int64
@@ -160,7 +160,8 @@ func TestABoardOnlyUpdateKeepsTheNetlistItRead(t *testing.T) {
 	if n := f.host.reads.Load(); n != reads {
 		t.Errorf("replacing the board read the netlist again (%d reads after %d)", n, reads)
 	}
-	// control: a mask naming a field the definition does not have is refused, and the snapshot stands.
+	// As a control, a mask naming a field missing from the definition is refused, and the snapshot is
+	// unchanged.
 	if _, err := f.snaps.UpdateSnapshot(context.Background(), &webapi.UpdateSnapshotRequest{
 		Snapshot:   &webapi.Snapshot{Name: s.GetName()},
 		UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"tiers"}},
@@ -202,8 +203,8 @@ func TestConsistencyComparesTheBoardWithTheNetlist(t *testing.T) {
 	if c.GetBoardOnlyCount() != 0 || c.GetNetlistOnlyCount() != 0 {
 		t.Errorf("the gateway's own board and netlist differ by %v and %v", c.GetBoardOnly(), c.GetNetlistOnly())
 	}
-	// The second revision's netlist against the first revision's board, the shape a board updated
-	// on its own takes.
+	// The second revision's netlist against the first revision's board. A board updated on its own
+	// takes this shape.
 	mixed := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m/designs/gateway/gateway-rev-c.edn", BoardUri: "mount://m/designs/gateway/gateway.kicad_pcb", AsNamed: true}, ReadBoard: true})
 	m := mixed.GetConsistency()
 	if m.GetBoardOnlyCount()+m.GetNetlistOnlyCount() == 0 {
@@ -212,7 +213,7 @@ func TestConsistencyComparesTheBoardWithTheNetlist(t *testing.T) {
 	if int(m.GetBoardOnlyCount()) < len(m.GetBoardOnly()) || int(m.GetNetlistOnlyCount()) < len(m.GetNetlistOnly()) {
 		t.Errorf("the counts %d and %d are below the names listed, %v and %v", m.GetBoardOnlyCount(), m.GetNetlistOnlyCount(), m.GetBoardOnly(), m.GetNetlistOnly())
 	}
-	// control: without the board read there is nothing to compare.
+	// As a control, without the board read there is nothing to compare.
 	plain := f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}})
 	if plain.GetConsistency() != nil {
 		t.Error("a snapshot whose board was not read reports a consistency")
@@ -228,7 +229,7 @@ func TestAnEvictedSnapshotIsNotFound(t *testing.T) {
 	if !errors.As(err, &se) || se.Stale || !errors.Is(err, service.ErrNotFound) || se.Name != a.GetName() {
 		t.Fatalf("a check of an evicted snapshot answered %v; want it missing, by name", err)
 	}
-	// Ingesting it again under its id is how a client recovers.
+	// A client recovers by ingesting it again under its id.
 	id := a.GetName()[len("snapshots/"):]
 	f.ingest(t, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: gateway}, SnapshotId: id})
 	if err := f.checkDesign(a.GetName()); err != nil {

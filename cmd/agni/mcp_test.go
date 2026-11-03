@@ -29,17 +29,18 @@ import (
 
 const mcpGateway = "tut/designs/gateway"
 
-// mcpServed is `agni serve --mcp` over the tutorial project: the Connect API and the MCP endpoint on
-// one server, sharing its services, with a client for each.
+// mcpServed is `agni serve --mcp` over the tutorial project. It runs the Connect API and the MCP
+// endpoint on one server, sharing its services, with a client for each.
 type mcpServed struct {
 	url string
 	mcp *client.Client
 	api parityClients
 }
 
-// mcpWires are the wires an agent may speak to `serve --mcp`, which accepts both (mcpserver.Wire):
-// "session" is the initialize handshake, "stateless" the 2026-07-28 wire with no session, and
-// "adaptive" probes for the stateless wire and falls back to a session (agni issue 1172).
+// mcpWires are the wires an agent may speak to `serve --mcp`, and the server accepts both
+// (mcpserver.Wire). "session" is the initialize handshake. "stateless" is the 2026-07-28 wire with
+// no session. "adaptive" probes for the stateless wire and falls back to a session (agni issue
+// 1172).
 var mcpWires = map[string]client.ClientMode{
 	"session":   client.ClientModeLegacyOnly,
 	"stateless": client.ClientModeStateless,
@@ -57,7 +58,7 @@ func eachWire(t *testing.T, fn func(t *testing.T, wire string)) {
 func serveMCP(t *testing.T, o mcpserver.Options, wire string) mcpServed {
 	t.Helper()
 	url, mux := serveMCPEndpoint(t, o)
-	// An adaptive client lands on the stateless wire unless the server was forced back to sessions.
+	// An adaptive client uses the stateless wire unless the server was forced back to sessions.
 	onStateless := wire == "stateless" || (wire == "adaptive" && mcpserver.Wire() != stateless.ModeLegacyOnly)
 	return mcpServed{url: url, mcp: connectMCP(t, url+"/mcp", wire, onStateless), api: newParityClients(t, mux)}
 }
@@ -89,8 +90,8 @@ func serveMCPEndpoint(t *testing.T, o mcpserver.Options) (string, *http.ServeMux
 	return url, mux
 }
 
-// connectMCP connects a client speaking wire and fails unless it landed on the stateless wire exactly
-// when onStateless says it should.
+// connectMCP connects a client speaking wire. It fails unless the client reached the stateless wire
+// exactly when onStateless says it should.
 func connectMCP(t *testing.T, url, wire string, onStateless bool) *client.Client {
 	t.Helper()
 	mode, ok := mcpWires[wire]
@@ -118,15 +119,15 @@ type mcpAnswer struct {
 	Page   json.RawMessage   `json:"page"`
 }
 
-// pageCall is an answer's page action (agni issue 1155): the ViewerPageService method and the
-// request a host embedding the viewer sends it instead of opening the link.
+// pageCall is an answer's page action (agni issue 1155). It names a ViewerPageService method and a
+// request. A host embedding the viewer sends that request instead of opening the link.
 type pageCall struct {
 	Method string          `json:"method"`
 	Body   json.RawMessage `json:"body"`
 }
 
-// appliesLink fails unless raw is ApplyLocation carrying exactly link, so the action and the link an
-// answer carries move a viewer to one place.
+// appliesLink fails unless raw is ApplyLocation carrying exactly link. An answer carries both the
+// action and the link, so the two move a viewer to one place.
 func appliesLink(t *testing.T, name string, raw json.RawMessage, link string) {
 	t.Helper()
 	var p pageCall
@@ -213,7 +214,7 @@ func sameTables(t *testing.T, name string, got, want []*webapi.Table) {
 	}
 }
 
-// The tools answer as the Connect API does: each question asked both ways over one server gives the
+// The tools answer as the Connect API does. Each question asked both ways over one server gives the
 // same tables, or the same wire message where the answer is not a table. This is #910's done-when.
 func TestMCPAnswersAsConnectDoes(t *testing.T) {
 	eachWire(t, func(t *testing.T, wire string) {
@@ -233,7 +234,7 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 				t.Errorf("the link opens %q, want the design's entry with the query", a.Link)
 			}
 			appliesLink(t, "query", a.Page, a.Link)
-			// A query link re-asks in the Query panel and a verdict link lands on a finding (agni
+			// A query link re-asks in the Query panel and a verdict link opens on a finding (agni
 			// issue 1239), so a reader told it opens the answer must not expect a drawing.
 			if !strings.Contains(res.Content[0].Text, "re-run in the Query panel, in the viewer: "+a.Link+"\n") {
 				t.Errorf("the query reply doesn't label its link as a re-run:\n%s", res.Content[0].Text)
@@ -348,8 +349,9 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 			if strings.Contains(res.Content[0].Text, "re-run in the Query panel") {
 				t.Errorf("a verdict link lands on its finding, and the reply calls it a re-run:\n%s", res.Content[0].Text)
 			}
-			// Each link carries the LocateVerdict a host embedding the viewer sends instead, naming the
-			// verdict, rule and subjects the link itself carries (agni issue 1155).
+			// Each link comes with a LocateVerdict. A host embedding the viewer sends it instead of
+			// opening the link. It names the verdict, rule and subjects that the link itself carries
+			// (agni issue 1155).
 			for _, l := range links {
 				req := &viewerpb.LocateVerdictRequest{}
 				if l.Page.Method != "LocateVerdict" || protojson.Unmarshal(l.Page.Body, req) != nil {
@@ -437,8 +439,8 @@ func TestMCPAnswersAsConnectDoes(t *testing.T) {
 	})
 }
 
-// mcpTools are the tools an agent sees: jaala's query language tools, each taking a design, and
-// agni's own.
+// mcpTools are the tools an agent sees. They are jaala's query language tools, each taking a
+// design, and agni's own.
 var mcpTools = []string{"check", "checklists", "design", "designs", "diff", "explain", "look", "query", "query_set", "review", "schema", "trace", "values"}
 
 func toolNames(t *testing.T, c *client.Client) []string {
@@ -455,8 +457,8 @@ func toolNames(t *testing.T, c *client.Client) []string {
 	return names
 }
 
-// Every tool is offered, jaala's take a design beside their own arguments, and an argument no tool
-// names is refused rather than ignored.
+// Every tool is offered, jaala's take a design beside their own arguments, and an argument that no
+// tool names is refused rather than ignored.
 func TestMCPOffersEveryToolAndRefusesAStrayArgument(t *testing.T) {
 	eachWire(t, func(t *testing.T, wire string) {
 		s := serveMCP(t, mcpserver.Options{}, wire)
@@ -532,8 +534,8 @@ func TestMCPTraceToAPinTheDesignLacksIsAToolError(t *testing.T) {
 	})
 }
 
-// `agni mcp` serves the same tools over stdio as `serve --mcp` does over HTTP, and answers a query, on
-// either wire: a stateless client sends no initialize.
+// `agni mcp` serves the same tools over stdio as `serve --mcp` does over HTTP, and answers a query,
+// on either wire. A stateless client sends no initialize.
 func TestAgniMCPServesTheSameToolsOverStdio(t *testing.T) {
 	eachWire(t, func(t *testing.T, wire string) {
 		home := t.TempDir()
@@ -587,8 +589,8 @@ func TestAgniMCPServesTheSameToolsOverStdio(t *testing.T) {
 	})
 }
 
-// An agent that asks for no wire in particular gets the stateless one, and one talking to a server
-// forced back to sessions (MCPKIT_STATELESS_MODE=legacy) gets its answers on a session instead.
+// An agent that asks for no wire in particular gets the stateless one. If the server was forced back
+// to sessions (MCPKIT_STATELESS_MODE=legacy), the agent gets its answers on a session instead.
 func TestMCPAdaptiveClientPrefersTheStatelessWire(t *testing.T) {
 	for _, env := range []string{"", "legacy"} {
 		t.Run("server="+cmp.Or(env, "dual"), func(t *testing.T) {
@@ -619,7 +621,7 @@ func TestMCPAcceptsBothWiresWhateverMcpkitDefaults(t *testing.T) {
 }
 
 // A client may keep agni's tool list for an hour, since the tools are fixed for a server's life
-// (SEP-2549's ttlMs), which saves a stateless client a tools/list per conversation.
+// (SEP-2549's ttlMs). That saves a stateless client a tools/list per conversation.
 func TestMCPToolListIsCachedForAnHour(t *testing.T) {
 	eachWire(t, func(t *testing.T, wire string) {
 		s := serveMCP(t, mcpserver.Options{}, wire)

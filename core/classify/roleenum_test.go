@@ -6,10 +6,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestRoleTokenIsDerivedNotTabulated checks that the tokens the query surface and conventions.yaml
-// speak are produced from the generated enum name, so they cannot drift from the vocabulary and
-// another language can perform the identical transform on its own generated enum. A table here
-// would be the duplication agni 692 removed.
+// TestRoleTokenIsDerivedNotTabulated checks that the role tokens are produced from the generated
+// enum name. The query surface and conventions.yaml use these tokens. So they cannot drift from the
+// vocabulary, and another language can perform the identical transform on its own generated enum.
+// agni 692 removed a table like that, and one here would bring the duplication back.
 func TestRoleTokenIsDerivedNotTabulated(t *testing.T) {
 	for _, c := range []struct {
 		role ir.Role
@@ -20,7 +20,7 @@ func TestRoleTokenIsDerivedNotTabulated(t *testing.T) {
 		{ir.Role_ROLE_FEEDBACK, "feedback"},
 		{ir.Role_ROLE_SWITCHING, "switching"},
 		{ir.Role_ROLE_CONTROL, "control"},
-		// The multi-word case, which is the one a naive transform gets wrong.
+		// The multi-word case. A naive transform gets it wrong.
 		{ir.Role_ROLE_GATE_DRIVE, "gate_drive"},
 	} {
 		if got := RoleToken(c.role); got != c.want {
@@ -33,9 +33,9 @@ func TestRoleTokenIsDerivedNotTabulated(t *testing.T) {
 	}
 }
 
-// TestRoleTokensAreStableAcrossTheVocabulary checks that every role renders to the token the docs,
-// the config lexicon and every committed query already use. Renaming an enum value silently changes
-// a user-facing string, and this is what objects.
+// TestRoleTokensAreStableAcrossTheVocabulary checks that every role renders to its existing token.
+// The docs, the config lexicon and every committed query already use those tokens. Renaming an enum
+// value silently changes a user-facing string, and this test objects.
 func TestRoleTokensAreStableAcrossTheVocabulary(t *testing.T) {
 	want := map[ir.Role]string{
 		ir.Role_ROLE_RAIL: "rail", ir.Role_ROLE_GROUND: "ground",
@@ -55,7 +55,7 @@ func TestRoleTokensAreStableAcrossTheVocabulary(t *testing.T) {
 
 // TestParseRoleRefusesWhatTheVocabularyDoesNotHave is the loud half of a closed vocabulary. A
 // reader translating its format's netclass, or config naming a role, gets a refusal rather than a
-// value that silently matches nothing. That silence is the shape agni 677 is about.
+// value that silently matches nothing. agni 677 is about that silence.
 func TestParseRoleRefusesWhatTheVocabularyDoesNotHave(t *testing.T) {
 	for _, r := range AllNetRoles() {
 		got, ok := ParseRole(RoleToken(r))
@@ -72,7 +72,7 @@ func TestParseRoleRefusesWhatTheVocabularyDoesNotHave(t *testing.T) {
 
 // TestAllNetRolesReadsTheGeneratedEnum checks that the list is derived, so a role added to the
 // proto is projected, parseable and configurable without anyone editing a second place. Before agni
-// 692 this was a hand-kept slice, and two roles spent a release absent from the query surface.
+// 692 this was a hand-kept slice, and two roles were absent from the query surface for a release.
 func TestAllNetRolesReadsTheGeneratedEnum(t *testing.T) {
 	all := AllNetRoles()
 	if len(all) != len(ir.Role_name)-1 {

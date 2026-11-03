@@ -15,8 +15,8 @@ terminal that carries no capacitor.
 
 ### Why engineers want it
 
-A crystal is specified for a nominal LOAD CAPACITANCE (`C_L`), and the two load caps plus
-the board stray capacitance are what present that load. With a load cap missing the
+A crystal is specified for a nominal LOAD CAPACITANCE (`C_L`). The two load caps and the
+board's stray capacitance together present that load. With a load cap missing the
 oscillator sees the wrong load and may fail to start, start only sometimes across
 temperature, or run off its rated frequency. Everything clocked from it drifts with it, so
 the defect surfaces as flaky UART/USB/CAN timing rather than an obvious "no clock".
@@ -31,29 +31,31 @@ bench bring-up.
 ### Scope note
 
 The rule quantifies over crystal COMPONENTS, not nets, because "which terminals" and "is
-this an active oscillator" are both cross-net facts about the one part. A crystal that
-connects to a non-ground POWER RAIL is treated as an ACTIVE oscillator (a packaged XO with
-a Vdd pin, which supplies its own load internally and takes no external caps) and is
-skipped entirely, so the rule never demands load caps of the wrong device. A part classed as an
-oscillator or a ceramic resonator is excluded the same way, and a part left with anything other than
-exactly two non-ground signal terminals reports not-considered, since the count cannot tell it from
-an active oscillator whose supply net was not recognized as a rail. Ground-named
-terminals (the grounded case pins of a 3- or 4-pin crystal) are not signal terminals and
-are excluded. An unresolved external net is skipped (the cap may live on an unread sheet),
-matching the decoupling-present / bulk-cap external-skip convention. The load-cap VALUE
-(does `2*(C_L - C_stray)` match the crystal's spec) is a datasheet-joined refinement
-(WS10) and out of scope here, because this rule checks PRESENCE and not value.
+this an active oscillator" are both cross-net facts about the one part. Imagine a crystal
+connected to a non-ground POWER RAIL. The rule treats it as an ACTIVE oscillator and skips
+it entirely, so the rule never demands load caps of the wrong device. An active oscillator
+is a packaged XO with a Vdd pin, which supplies its own load internally and takes no
+external caps. A part classed as an oscillator or a ceramic resonator is excluded the same
+way. A part reports not-considered when it has anything other than exactly two non-ground
+signal terminals, since the count cannot tell it from an active oscillator whose supply net
+was not recognized as a rail. The grounded case pins of a 3- or 4-pin crystal are
+ground-named, so they are not signal terminals and are excluded. An unresolved external net
+is skipped (the cap may live on an unread sheet), matching the decoupling-present / bulk-cap
+external-skip convention. This rule checks PRESENCE and not value. Whether the load-cap
+VALUE matches the crystal's spec, as `2*(C_L - C_stray)`, is a datasheet-joined refinement
+(WS10) and out of scope here.
 
 ### When the oscillator carries its own load capacitance
 
 Many RTCs and low-power MCUs build the load capacitors into their oscillator pins, often
 selectable in a register, so the crystal sits straight across two pins with nothing else on
 the board. The MNT Reform motherboard's PCF8523T and the RoyalBlue54L Feather's nRF54L15 are
-both wired this way. When the part on a terminal net has a datasheet in the run that binds an
-integrated load capacitance to that PIN (a row printed `CL(itg)`, `C_INT`, or named
-"integrated" or "internal load capacitance"), the terminal passes, and the pass names the part,
-the value and the datasheet row (agni issue 1247). A row stated for the whole part credits
-nothing, because an MCU often integrates capacitors on one oscillator and not the other.
+both wired this way. Suppose the part on a terminal net has a datasheet in the run, and the
+datasheet binds an integrated load capacitance to that PIN. Such a row is printed `CL(itg)` or
+`C_INT`, or named "integrated" or "internal load capacitance". The terminal then passes, and
+the pass names the part, the value and the datasheet row (agni issue 1247). A row stated for
+the whole part credits nothing, because an MCU often integrates capacitors on one oscillator
+and not the other.
 
 Without that datasheet the terminal still fails, since the rule cannot tell an RTC that
 integrates its capacitors from one that does not. The verdict then says which IC on the net it
@@ -62,11 +64,11 @@ settle. The datalog twin reads no datasheet, so it keeps reporting the terminal 
 
 ### For software readers
 
-Think of the crystal as a component with a hard runtime dependency that the type system
-can't express: it only works when two specific companion parts (the load caps) are wired
+Think of the crystal as a component with a hard runtime dependency, one the type system
+can't express. It only works when two specific companion parts, the load caps, are wired
 to it. This is a static "is the required dependency present on this node" check, the same
 shape as decoupling-present ("does this power rail have its bypass cap"). The active-XO skip
-is a guard clause: an active oscillator is a different type that satisfies the dependency
+is a guard clause. An active oscillator is a different type that satisfies the dependency
 internally, and we detect it structurally (it has a power pin) rather than by trusting a
 name.
 

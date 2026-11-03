@@ -11,18 +11,17 @@ import (
 	"github.com/panyam/agni/readers/edif"
 )
 
-// The three properties below are what separates EDIF a foreign reader can use from EDIF only our own
-// reader can. Every one of them was false for every file this writer produced before agni issue 580,
-// and none was visible to the round-trip oracle, because our reader is forgiving in exactly the three
-// places a conforming one is not: it resolves references after the whole file is parsed rather than
-// as it goes, it accepts any atom the tokenizer returns as an identifier, and it falls back to
-// treating a port reference as a pin designator when no portInstance table maps it.
+// The three properties below separate EDIF a foreign reader can use from EDIF only our own reader
+// can use. Before agni issue 580 every file this writer produced broke all three. The round-trip
+// oracle saw none of it, because our reader is forgiving in three places where a conforming one is
+// not. It resolves references after parsing the whole file rather than as it goes. It accepts any atom
+// the tokenizer returns as an identifier. And when no portInstance table maps a port reference, it
+// falls back to treating the reference as a pin designator.
 //
-// They are asserted over the emitted TEXT rather than over a re-read. A re-read goes
-// back through the same forgiving reader and so agrees with the writer no matter what either does,
-// which is how this went unnoticed. GNU Electric is the out-of-tree check that these
-// three are the RIGHT properties (see the issue for how to run it); these tests are what keeps them
-// true without a 23MB Java dependency in the gate.
+// The tests assert over the emitted TEXT rather than over a re-read. A re-read goes back through the
+// same forgiving reader, so it agrees with the writer no matter what either does, and so the breakage
+// went unnoticed. GNU Electric checks out of tree that these three are the RIGHT properties (the issue
+// says how to run it). These tests keep them true without a 23MB Java dependency in the gate.
 
 // TestEmitEDIFDeclaresBeforeReferencing pins the file ORDER. A reader that resolves a cellRef when it
 // meets it, rather than after parsing the whole document, cannot follow a forward reference, and the
@@ -50,20 +49,19 @@ func TestEmitEDIFDeclaresBeforeReferencing(t *testing.T) {
 var badAtom = regexp.MustCompile(`[:;{}|]`)
 
 // identifier matches the identifier position of every construct that declares or references one. The
-// display half of a (rename ID "Display") is not checked. It is a quoted string, so it
-// can hold anything, and it is where a name too rich for the grammar is supposed to end up.
+// display half of a (rename ID "Display") is not checked. It is a quoted string, so it can hold
+// anything, and a name too rich for the grammar is supposed to go there.
 var identifier = regexp.MustCompile(`\((?:cell|library|instance|port|portInstance|net|cellRef|libraryRef|instanceRef|portRef|viewRef|rename) ([^\s()"]+)`)
 
 // TestEmitEDIFWritesLegalIdentifiers pins that no identifier carries a character a reader rejects.
 // The escape hatch is the rename, whose quoted display half is unconstrained, so nothing is lost by
 // holding the identifier half to the grammar.
 //
-// It does NOT make every file Electric will load, and the difference is worth knowing before reading
-// a green run as one. Electric takes a cell's rename DISPLAY as the cell's name (EDIF.java, KeyRename)
-// where our reader takes the identifier, so a KiCad part named `gateway:CAP` still stops its import
-// even though the identifier beside it is clean. Which of the two a rename really names is a genuine
-// disagreement between readers, and picking a different display would mean discarding the part name
-// the source gave. Tracked on agni issue 580 rather than papered over here.
+// A green run does NOT mean Electric will load every file. Electric takes a cell's rename DISPLAY as
+// the cell's name (EDIF.java, KeyRename), and our reader takes the identifier. So a KiCad part named
+// `gateway:CAP` still stops Electric's import, even though the identifier beside it is clean. Readers
+// genuinely disagree about which of the two a rename names. Picking a different display would discard
+// the part name the source gave. Agni issue 580 tracks it rather than papering over it here.
 func TestEmitEDIFWritesLegalIdentifiers(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -82,21 +80,21 @@ func TestEmitEDIFWritesLegalIdentifiers(t *testing.T) {
 	}
 }
 
-// TestEmitEDIFResolvesEveryPortRef is the one that matters most, and the one the round trip could
-// never see. A portRef names a PORT on the instance's cell. We named the pin's physical designator
-// instead, which our reader recovers through netOf's no-mapping fallback and nobody else does, so a
-// conforming reader looked for a port by that name, found none, and dropped the connection. On the
-// gateway board that was 34 of 56 references, and the ones that survived did so only because a
-// resistor's ports happen to be literally named "1" and "2".
+// TestEmitEDIFResolvesEveryPortRef matters most of the three, and the round trip could never see
+// it. A portRef names a PORT on the instance's cell. We named the pin's physical designator instead.
+// Our reader recovers that through netOf's no-mapping fallback and nobody else does. So a conforming
+// reader looked for a port by that name, found none, and dropped the connection. On the gateway board
+// that was 34 of 56 references. The rest survived only because a resistor's ports happen to be
+// literally named "1" and "2".
 //
 // A reference resolves if the cell declares a port of that name, or the instance's portInstance
-// table maps it. The table is what the writer now rebuilds from the part type's pins.
+// table maps it. The writer now rebuilds that table from the part type's pins.
 //
 // EVERY row resolves, including the two formats that deliver no part types at all. A design read
-// from a board file or from IPC-2581 knows its footprints, its pads and its nets and never learns
-// what the parts are, so the writer declares the cell and its ports from the connections. That is
-// why this assertion is a plain zero rather than a per-row count, since there is no format left
-// where a reference dangles.
+// from a board file or from IPC-2581 knows its footprints, its pads and its nets, and never learns
+// what the parts are. For those the writer declares the cell and its ports from the connections. No
+// format is left where a reference dangles, so this assertion is a plain zero rather than a per-row
+// count.
 func TestEmitEDIFResolvesEveryPortRef(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -150,8 +148,8 @@ type portRef struct{ port, inst string }
 var (
 	reCell = regexp.MustCompile(`^\s*\(cell (?:\(rename ([^\s()"]+)|([^\s()"]+))`)
 	rePort = regexp.MustCompile(`^\s*\(port (?:\(rename ([^\s()"]+)|([^\s()"]+))`)
-	// Both name forms, as reCell above. An instance carries a rename when its source id is not a
-	// legal identifier (a KiCad uuid), and the identifier half is what an instanceRef looks up.
+	// Both name forms, as reCell above. An instance has a rename when its source id is not a legal
+	// identifier (a KiCad uuid). An instanceRef looks up the identifier half.
 	reInstance = regexp.MustCompile(`^\s*\(instance (?:\(rename ([^\s()"]+) "[^"]*"\)|([^\s()"]+)) \(viewRef [^\s()"]+ \(cellRef ([^\s()"]+)`)
 	rePortInst = regexp.MustCompile(`^\s*\(portInstance ([^\s()"]+)`)
 	rePortRef  = regexp.MustCompile(`\(portRef ([^\s()"]+) \(instanceRef ([^\s()"]+)\)\)`)
@@ -203,21 +201,21 @@ func firstNonEmpty(a, b string) string {
 // than badAtom above, which asks what a reader refuses mid-name.
 var opensLegally = regexp.MustCompile(`^[A-Za-z_&]`)
 
-// TestEmitEDIFInstanceIdentifiersOpenLegally pins the one identifier position a foreign reader
-// resolves instances THROUGH. An instanceRef is a lookup by identifier, so a name it cannot parse
-// costs every connection hanging off that instance rather than the instance alone.
+// TestEmitEDIFInstanceIdentifiersOpenLegally pins the instance identifier. A foreign reader resolves
+// instances THROUGH that one position. An instanceRef is a lookup by identifier. If the reader cannot
+// parse the name, it loses every connection hanging off that instance, not only the instance.
 //
-// KiCad names a symbol placement with a uuid, which opens with a digit and carries hyphens. Our
+// KiCad names a symbol placement with a uuid, which opens with a digit and contains hyphens. Our
 // reader takes any atom, and Electric tolerates it, so neither oracle above objects. A third-party
-// EDIF parser read 1123 components and 0 of 1123 instances from a board exported that way, because
-// it gates on the instance carrying a (rename ...) the way real exports write one:
+// EDIF parser read 1123 components and 0 of 1123 instances from a board exported that way. It expects
+// the instance to have a (rename ...) the way real exports write one:
 //
 //	(instance  (rename &04441I612 "$41I612")
 //	  (viewRef Resistor  (cellRef RK73Z1ETTP  (libraryRef Resistor)))
 //
-// That is a real EDIF file from a commercial tool, and the "&" is the format's escape for a name
-// that would otherwise open with a digit. The writer now mints the same way, keeping a native id
-// that is already legal exactly as it was so an EDIF round-trip stays byte-faithful.
+// That comes from a real EDIF file written by a commercial tool. The "&" is the format's escape for a
+// name that would otherwise open with a digit. The writer now mints names the same way. It keeps a
+// native id unchanged when the id is already legal, so an EDIF round-trip is still byte-faithful.
 func TestEmitEDIFInstanceIdentifiersOpenLegally(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {

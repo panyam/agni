@@ -1,16 +1,17 @@
-// Package formats is the single registry of design-file formats the engine reads: for each
-// extension, the UI label, the netlist reader, and the faithful-geometry reader. The CLI's extension
-// switch, the geometry switch, the service's faithful/netlist extension sets and the file-tree labels
-// all derive from it, so adding a reader is one entry here (plus CONSTRAINTS C10's example). File
-// I/O lives in this package's Loader, the edge-orchestration layer the CLI and the serve adapters
-// share (CONSTRAINTS C13). The readers themselves stay io.Reader-pure (C1).
+// Package formats is the single registry of design-file formats the engine reads. For each
+// extension it holds the UI label, the netlist reader, and the faithful-geometry reader. The CLI's
+// extension switch, the geometry switch, the service's faithful/netlist extension sets and the
+// file-tree labels all derive from it. So adding a reader is one entry here, plus CONSTRAINTS C10's
+// example. File I/O lives in this package's Loader. The Loader is the edge-orchestration layer, and
+// the CLI and the serve adapters share it (CONSTRAINTS C13). The readers themselves are still
+// io.Reader-pure (C1).
 //
 // A registered reader reaches its bytes through Loader.Open / Loader.ReadFile / Loader.Sibling,
-// never through os directly (WS1-049), so one Loader can serve a host filesystem or an in-memory
+// never through os directly (WS1-049). So one Loader can serve a host filesystem or an in-memory
 // fs.FS. See docsite/content/build/format-reader.md#the-registry-entry.
 //
-// This package is public (not internal/) because it is the engine's reader extension point for the
-// open-core split (WS12-003). A reader in another module registers itself with Register and gains
+// This package is public rather than under internal/. It is the engine's reader extension point for
+// the open-core split (WS12-003). A reader in another module registers itself with Register and gains
 // every derived surface with no fork of the engine. The built-in readers use the same Register.
 package formats
 
@@ -29,8 +30,9 @@ import (
 // graph.Strategy, since it reads the geometry sidecar rather than computing from the IR.
 const LayoutFaithful = "faithful"
 
-// Symbol-source names for an auto-layout, which draws nodes with synthetic classified glyphs
-// (default) or with the design's own symbol artwork re-laid-out (partial-faithful, WS7-031).
+// Symbol-source names for an auto-layout. An auto-layout draws nodes with synthetic classified
+// glyphs by default. It can instead re-lay-out the design's own symbol artwork (partial-faithful,
+// WS7-031).
 const (
 	SymbolsGlyph    = "glyph"
 	SymbolsFaithful = "faithful"
@@ -60,12 +62,12 @@ type Format struct {
 var byExt = map[string]*Format{}
 
 // Register adds a format to the registry, keyed by its extension. A package in another module
-// calls it from its init or from the composing binary's main, and its extension then resolves
-// through ByExt, the CLI reader dispatch, the file-tree label and the supported-extensions error text.
+// calls it from its init or from the composing binary's main. Its extension then resolves through
+// ByExt, the CLI reader dispatch, the file-tree label and the supported-extensions error text.
 //
 // Register panics on a malformed entry or a duplicate extension, as image.RegisterFormat and
-// sql.Register do. An extension is claimed first-come, so to override a built-in a consumer composes
-// a binary that does not register the built-in rather than re-registering the extension.
+// sql.Register do. The first registration claims an extension. To override a built-in, a consumer
+// composes a binary that does not register the built-in, rather than re-registering the extension.
 func Register(f *Format) {
 	switch {
 	case f == nil:
@@ -111,9 +113,9 @@ func HasFaithful(name string) bool {
 	return f != nil && f.Geometry != nil
 }
 
-// HasBoard reports whether the file's extension carries board geometry (copper, layers, courtyards)
-// the board-tier rules run against. It is the question a caller asks when a design declares several
-// companion views and only one of them can supply the board tier.
+// HasBoard reports whether the file's extension holds board geometry, the copper, layers and
+// courtyards that the board-tier rules run against. A design can declare several companion views,
+// and only one of them may supply the board tier. A caller asks HasBoard to find that one.
 func HasBoard(name string) bool {
 	f := ByExt(name)
 	return f != nil && f.Board != nil
@@ -141,7 +143,7 @@ func lowerExt(name string) string {
 }
 
 // faithfulUnavailable explains why a file has no faithful schematic geometry and points at
-// the auto-layout fallback. The message differs by format, so a netlist or board file says the
+// the auto-layout fallback. The message differs by format. For a netlist or board file it says the
 // format has no schematic view at all.
 func faithfulUnavailable(ext string) error {
 	switch ext {

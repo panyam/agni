@@ -13,8 +13,8 @@ The load a crystal or resonator sees sets whether it starts and at what frequenc
 resonator with integrated caps is specified for that load already built in. Add external load
 caps to ground and the total load roughly doubles, well above spec, so the oscillator starts
 slowly, starts only over part of the temperature range, or runs off-frequency. Everything
-clocked from it drifts with it. It is a common carry-over when a crystal footprint (which does
-need the caps) is reused for an integrated-cap resonator, and it usually oscillates on the
+clocked from it drifts with it. The mistake usually comes from reusing a crystal footprint for
+an integrated-cap resonator. A crystal does need the caps. The circuit usually oscillates on the
 bench and fails in the field.
 
 ### Impact
@@ -26,27 +26,27 @@ resulting timing failures pass bench bring-up and appear in the field.
 
 ### Scope note
 
-The rule quantifies over ceramic-resonator COMPONENTS. The `ceramic_resonator` class is
-datasheet-seeded (WS10-015) because the classifier cannot tell a resonator from a crystal by tokens,
-so an un-subtyped clock candidate is NOT treated as a resonator and this rule stays silent on it (a
-crystal genuinely needs its caps, which crystal-load-caps checks). A capacitor is counted as an
-external LOAD cap only when it sits on a resonator terminal net AND also reaches ground; a coupling
-or series cap between two signals (not touching ground) is not a load cap and is not flagged.
+The rule quantifies over ceramic-resonator COMPONENTS. The classifier cannot tell a resonator from
+a crystal by tokens, so the `ceramic_resonator` class is datasheet-seeded (WS10-015). An
+un-subtyped clock candidate is NOT treated as a resonator, and this rule is silent on it. A crystal
+genuinely needs its caps, and crystal-load-caps checks them. A capacitor is counted as an external
+LOAD cap only when it sits on a resonator terminal net AND also reaches ground. A coupling or
+series cap between two signals does not touch ground, so it is not a load cap and is not flagged.
 Ground-named nets are the resonator's center/case pin, not signal terminals. An unresolved external
-net is reported not-considered (its wiring may live on an unread sheet), matching the
+net is reported not-considered, because its wiring may live on an unread sheet. That matches the
 crystal-load-caps external-skip convention. This rule checks the PRESENCE of a redundant cap, not
-its value; the exact integrated-cap value is a datasheet-joined refinement (WS10), out of scope
+its value. The exact integrated-cap value is a datasheet-joined refinement (WS10), out of scope
 here.
 
 ### For software readers
 
 This is the mirror of crystal-load-caps. A crystal is a component with a required companion
-dependency (load caps) that must be present; a built-in-cap resonator is a variant that
-satisfies that dependency internally, so wiring the companion parts again is a redundant, and
-harmful, override of a default. The check is "this node has a dependency it should NOT have,"
-the negative of "this node is missing a dependency it must have." We detect the resonator
-variant from its declared class (datasheet-seeded), not from a name, much as the active-XO
-skip in crystal-load-caps detects its variant, though that one is structural.
+dependency, its load caps, which must be present. A built-in-cap resonator is a variant that
+satisfies that dependency internally. Wiring the companion parts again overrides a default, which
+is redundant and harmful. The check is "this node has a dependency it should NOT have," the
+negative of "this node is missing a dependency it must have." We detect the resonator variant from
+its declared class (datasheet-seeded), not from a name. The active-XO skip in crystal-load-caps
+also detects a variant, though structurally.
 
 ### Query structure
 

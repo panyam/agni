@@ -45,8 +45,8 @@ func TestCheckWorkbenchAssets(t *testing.T) {
 }
 
 // TestWorkbenchServesItsWholePage drives agnids' real routes: the page shell, the folder tree over
-// its own API, a raw PDF, the root redirect and the liveness probe. The tree going through
-// DatasheetService rather than the engine's WorkspaceService is what lets agnids be hosted alone.
+// its own API, a raw PDF, the root redirect and the liveness probe. agnids can be hosted alone
+// because the tree goes through DatasheetService rather than the engine's WorkspaceService.
 func TestWorkbenchServesItsWholePage(t *testing.T) {
 	root := t.TempDir()
 	writeEmpty(t, filepath.Join(root, "ti", "LM1117.pdf"))
@@ -113,8 +113,8 @@ func TestWorkbenchHeadingLinksTheViewerOnlyWhenConfigured(t *testing.T) {
 	}
 }
 
-// TestMountRootExposesEachFolder pins the image's zero-flag path: every subdirectory of
-// --mount-root is a mount named after itself, a plain file beside them is not, and an explicit
+// TestMountRootExposesEachFolder pins the image's zero-flag path. Every subdirectory of
+// --mount-root is a mount named after itself, and a plain file beside them is not. An explicit
 // --mount of the same name wins over the discovered one.
 func TestMountRootExposesEachFolder(t *testing.T) {
 	root := t.TempDir()
@@ -147,7 +147,7 @@ func TestMountRootExposesEachFolder(t *testing.T) {
 	}
 }
 
-// TestAgnidsCarriesTheImageCommands pins the two subcommands the agnids image leans on: the release
+// TestAgnidsCarriesTheImageCommands pins two subcommands that the agnids image uses. The release
 // workflow checks `version` against the tag, and HEALTHCHECK runs `healthcheck`.
 func TestAgnidsCarriesTheImageCommands(t *testing.T) {
 	root := rootCmd()

@@ -10,16 +10,18 @@ import (
 // The store's cache. Discovery is a bounded directory walk per call, ~20ms on a mount holding a few
 // hundred directories, and a browse UI pays it on every listing.
 //
-// It never TRUSTS itself. Every read revalidates against the filesystem before returning, because an
-// operator who edits a descriptor while the server runs must see the edit on the next request (agni
-// issue 176). Revalidation stays cheap, since a stat is a fraction of a ReadDir and comparing stats is a
-// fraction of parsing YAML.
+// It never TRUSTS itself. Every read revalidates against the filesystem before returning, because
+// an operator who edits a descriptor while the server runs must see the edit on the next request
+// (agni issue 176). Revalidation is still cheap, since a stat is a fraction of a ReadDir and
+// comparing stats is a fraction of parsing YAML.
 //
-// Two levels, because two things change independently:
+// The cache has two levels, because two things change independently.
 //
-//   - DISCOVERY (which directories hold a descriptor) is keyed on the mtimes of the directories the
-//     walk visited, since a directory's mtime moves when a descriptor is added or removed.
-//   - CONTENT (what a descriptor says) is keyed on each read file's mtime and size.
+//   - DISCOVERY asks which directories hold a descriptor. It is keyed on the mtime of each
+//     directory the walk visited, since a directory's mtime moves when a descriptor is added or
+//     removed.
+//   - CONTENT asks what a descriptor says. It is keyed on the mtime and size of each file the load
+//     read.
 //
 // Keying discovery on file content, or content on directory mtime, would each miss half the edits.
 
@@ -51,7 +53,7 @@ type walkEntry struct {
 func newWalkCache() *walkCache { return &walkCache{entries: map[string]walkEntry{}} }
 
 // find returns the folders under root holding `name`, walking only when the previous answer can no
-// longer be trusted. The key carries the mount, since every tree is walked from its own ".".
+// longer be trusted. The key includes the mount, since every tree is walked from its own ".".
 func (c *walkCache) find(t Tree, root, name string) ([]string, error) {
 	fsys := t.FS
 	key := t.Mount + "\x00" + root + "\x00" + name
@@ -91,16 +93,16 @@ func stampsHold(fsys fs.FS, visited []dirStamp) bool {
 	return true
 }
 
-// findDescriptorsStamped returns the tree-relative folders under root (root included) holding a
-// descriptor of the given name, to MaxDepth, along with what each visited directory looked like so
-// the answer can be revalidated later.
+// findDescriptorsStamped walks root to MaxDepth. It returns each tree-relative folder holding a
+// descriptor of the given name, root included. It also returns a stamp of each directory it
+// visited, so the answer can be revalidated later.
 //
 // It does NOT descend into a folder that already holds the descriptor, since a project inside a
 // project would be ambiguous, and stopping there keeps the walk off a design's own symbol and sheet
 // subfolders. Dot-directories are skipped so `.git` or `.venv` never costs a traversal.
 //
-// The descriptor is looked for AMONG THE ENTRIES ReadDir already returned rather than with a second
-// Open, which would cost a syscall per directory.
+// It looks for the descriptor AMONG THE ENTRIES that ReadDir already returned. A second Open would
+// cost a syscall per directory.
 func findDescriptorsStamped(fsys fs.FS, root, name string) ([]string, []dirStamp, error) {
 	var out []string
 	var visited []dirStamp
@@ -141,10 +143,11 @@ func findDescriptorsStamped(fsys fs.FS, root, name string) ([]string, []dirStamp
 
 // parseCache memoizes a loaded descriptor against every file the load read.
 //
-// Against EVERY file the load read, not only the descriptor. A descriptor's conventions, checklists
-// and intent are sections of it, so the descriptor covers them, but a load also checks that each
-// profiles, params, symbols, lib and queries source it names exists, and removing one must revalidate
-// it. The parse reports those dependencies, since only reading the descriptor says what they are.
+// It tracks EVERY file the load read, not only the descriptor. A descriptor's conventions,
+// checklists and intent are sections of it, so the descriptor's own stamp covers them. A load also
+// checks that each source in profiles, params, symbols, lib and queries exists, and removing one
+// must revalidate the descriptor. Only reading the descriptor says what those dependencies are, so
+// the parse reports them.
 type parseCache[T any] struct {
 	mu      sync.Mutex
 	entries map[string]parseEntry[T]
@@ -160,8 +163,8 @@ func newParseCache[T any]() *parseCache[T] {
 	return &parseCache[T]{entries: map[string]parseEntry[T]{}}
 }
 
-// get returns the parsed value cached under key, re-parsing only when a file the last parse depended
-// on has changed. parse returns the files it depended on alongside its value.
+// get returns the parsed value cached under key. It re-parses only when a dependency of the last
+// parse has changed. parse returns its value and the files it depended on.
 //
 // The clone keeps a cached message from being handed out by pointer, since the store mutates what it
 // loads (see cloneProject).

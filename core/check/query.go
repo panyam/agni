@@ -21,8 +21,8 @@ import (
 type irModel struct {
 	d      *ir.Design
 	pinDir map[string]ir.PinDirection // "refdes\x00pin" -> direction
-	// pinListed is the pins of parts from undeclared cells already in pins, read off connections
-	// (agni issue 975), so a pin two nets name is listed once.
+	// pinListed marks the pins of parts from undeclared cells that are already in pins. They are
+	// read off connections (agni issue 975), so a pin named by two nets is listed once.
 	pinListed map[string]bool
 	pinName   map[string]string           // "refdes\x00pin" -> declared pin name (for role derivation)
 	pinless   map[string]bool             // ref-des whose resolved part types declare no pins at all
@@ -50,14 +50,15 @@ type irModel struct {
 	memo      sync.Map                    // key -> *memoEntry, values derived from this model once (Memo)
 }
 
-// ModelOption configures a Model at construction. Options are applied before anything is derived, so an
-// option the derivation reads (the lexicon) is in place when it runs.
+// ModelOption configures a Model at construction. Options are applied before anything is derived.
+// The derivation reads some options (the lexicon), so those are in place when it runs.
 type ModelOption func(*irModel)
 
-// WithLexicon tells the model which naming vocabulary its design was READ with, so the residual
-// name projections (the spec name FFIs, pin-role derivation, and the stamped-role fallback for a
-// hand-built IR) answer with the project's conventions rather than a process global (WS3-106).
-// Pass the same *classify.Lexicon the loader used; omitting it means the process defaults.
+// WithLexicon tells the model which naming vocabulary its design was READ with. The residual name
+// projections then answer with the project's conventions rather than a process global (WS3-106).
+// Those projections are the spec name FFIs, pin-role derivation, and the stamped-role fallback for
+// a hand-built IR. Pass the same *classify.Lexicon the loader used; omitting it means the process
+// defaults.
 func WithLexicon(lex *classify.Lexicon) ModelOption {
 	return func(m *irModel) { m.lex = lex }
 }
@@ -107,17 +108,17 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 		passNets:  map[string][]*ir.Net{},
 	}
 	// Apply options FIRST, because the device-class fallback below re-derives through the lexicon
-	// and a model built WithLexicon must already carry it.
+	// and a model built WithLexicon must already hold it.
 	for _, opt := range opts {
 		opt(m)
 	}
 	// Index part-type pins by (library, part) so a component's sections resolve to pin
-	// directions. The loose "/part" key matches when a section omits the library ref. This is
-	// the index the ingestion classify pass uses (WS3-071), so part resolution never drifts.
+	// directions. The loose "/part" key matches when a section omits the library ref. The
+	// ingestion classify pass uses the same index (WS3-071), so part resolution never drifts.
 	parts := classify.PartIndex(d)
-	// undeclared are the components placed from a cell no part type in the file declares (agni issue
-	// 975). Their pins are read off the netlist's connections below, since the connections are all
-	// the file says about them.
+	// undeclared holds the components whose cell has no part type in the file (agni issue 975).
+	// Their pins are read off the netlist's connections below, since the connections are all the
+	// file says about them.
 	undeclared := map[string]*ir.Component{}
 	for _, c := range d.Components {
 		if m.lexicon().RoleVocab().IsUnfitted(c) {
@@ -185,8 +186,9 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 			m.connected[c.ComponentRef] = true
 			key := c.ComponentRef + "\x00" + c.PinRef
 			m.pinConn[key] = true
-			// A part from an undeclared cell has the pins its connections name, with no direction or
-			// name, so PinDeclared stays false for them and a rule that needs a direction skips them.
+			// A part from an undeclared cell has only the pins named by its connections, with no
+			// direction or name. So PinDeclared is false for them, and a rule that needs a direction
+			// skips them.
 			if uc := undeclared[c.ComponentRef]; uc != nil && !m.pinListed[key] {
 				m.pins = append(m.pins, PinInst{Component: uc, Designator: c.PinRef})
 				m.pinListed[key] = true
@@ -217,9 +219,9 @@ func NewModel(d *ir.Design, opts ...ModelOption) Model {
 	return m
 }
 
-// lexicon resolves the naming vocabulary this model reads names with, defaulting to the process-level
-// one for a model built without WithLexicon (a hand-authored test IR, or a caller that declares no
-// project convention). Never nil, so the call sites need no guard.
+// lexicon resolves the naming vocabulary for this model's names. A model built without WithLexicon
+// gets the process-level one (a hand-authored test IR, or a caller that declares no project
+// convention). Never nil, so the call sites need no guard.
 func (m *irModel) lexicon() *classify.Lexicon {
 	if m.lex == nil {
 		return classify.ActiveLexicon()
@@ -276,7 +278,7 @@ func (m *irModel) IsGroundNet(n *ir.Net) bool {
 // REGULATOR-PIN-FUNCTION SUFFIX FOLLOWS, THE TOKEN NAMES THE CONVERTER RATHER THAN THE VOLTAGE. So
 // net.signal_level's free-standing token (agni 194's `U3_12_U7_4_3V3`) is untouched. Encoding the
 // grammar in general was held back because it would decide railhood from a suffix list nobody has
-// enumerated. DECISIONS.md carries the reasoning.
+// enumerated. DECISIONS.md has the reasoning.
 //
 // Of seven rail-quantified consumers only one excluded feedback for itself, which left 48 of 77
 // "rails" on one real board as regulator internals. A consumer that wants every rail-NAMED net uses
@@ -311,8 +313,8 @@ func (m *irModel) HasAnyRole(n *ir.Net, roles ...ir.Role) bool {
 	return false
 }
 
-// nameMatcherFor returns the lexicon projection that answers for a role when a net carries no stamped
-// role set, which is the hand-authored-IR path NetHasRole falls back to. A role with no matcher here
+// nameMatcherFor returns the lexicon projection that answers for a role when a net has no stamped
+// role set. NetHasRole falls back to it on that hand-authored-IR path. A role with no matcher here
 // answers on the stamp alone, which is correct for anything the lexicon does not name.
 func (m *irModel) nameMatcherFor(role ir.Role) func(string) bool {
 	switch role {
@@ -461,7 +463,7 @@ func (m *irModel) FormatTypesPowerOut() bool { return formatTypesPowerOut(m.d.Ge
 func (m *irModel) HasNetClasses() bool { return m.netClass }
 
 // NetClassDefs returns the design's net-class definition constraints (see model.Model). It filters by
-// kind because ir.Design.constraints is a general carrier and may hold other kinds.
+// kind because ir.Design.constraints is a general list and may hold other kinds.
 func (m *irModel) NetClassDefs() []*ir.Constraint {
 	var out []*ir.Constraint
 	for _, c := range m.d.GetConstraints() {
@@ -515,8 +517,8 @@ func (m *irModel) HasNetName(name string) bool { return m.netNames[strings.ToUpp
 
 func (m *irModel) NetNameCount(name string) int { return m.nameCount[name] }
 
-// ComponentClass returns the most-specific class of a ref-des's device_classes set; a ref-des the
-// design does not carry is ClassUnknown, matching the absent-tolerant contract.
+// ComponentClass returns the most-specific class of a ref-des's device_classes set. A ref-des
+// missing from the design gives ClassUnknown, matching the absent-tolerant contract.
 func (m *irModel) ComponentClass(refDes string) ComponentClass {
 	tags := make([]string, len(m.classSet[refDes]))
 	for i, c := range m.classSet[refDes] {
@@ -531,7 +533,8 @@ func (m *irModel) HasClass(refDes string, class ComponentClass) bool {
 	return slices.Contains(m.classSet[refDes], class)
 }
 
-// ExposedConnector is a connector the intent does not declare internal; see Model.ExposedConnector.
+// ExposedConnector reports whether refDes is a connector and the intent does not declare it
+// internal; see Model.ExposedConnector.
 func (m *irModel) ExposedConnector(refDes string) bool {
 	return m.HasClass(refDes, ClassConnector) && !m.internal[refDes]
 }

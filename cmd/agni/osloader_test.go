@@ -59,8 +59,8 @@ func hasWireNet(g *geom.SchematicGeometry, net string) bool {
 	return false
 }
 
-// mustURI builds an artifact URI from a (mount, path) pair the test itself declared. It panics
-// rather than returning an error, since a fixture URI that will not parse is a broken test.
+// mustURI builds an artifact URI from a mount and a path, both declared by the test itself. It panics
+// rather than returning an error, since a fixture URI that will not parse means the test is broken.
 func mustURI(mount, p string) artifact.URI {
 	u, err := artifact.New(mount, p)
 	if err != nil {

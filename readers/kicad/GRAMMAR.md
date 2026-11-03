@@ -35,7 +35,7 @@ SYMBOL = { any char except whitespace, ( ) " }
 ## 2. The board file (.kicad_pcb, pcb.go)
 
 The board is the physical and connectivity view, holding placed footprints and the nets their
-pads sit on. This is where connectivity is explicit and exact.
+pads sit on. Connectivity in the board file is explicit and exact.
 
 ```
 pcb        = "(" "kicad_pcb" version? generator? title-block? net-decl* footprint* ... ")"
@@ -75,10 +75,10 @@ Meaning and IR mapping:
   `ir.Net{name}` and adds the connection, deduped per net by `ref.pad`.
 
 This netlist reader does not extract geometry, because geometry is always a keyed sidecar and
-never the netlist IR (C7/C8). That covers component placement (`at`), pad `size` and shape,
-copper, layers, zones, vias and 3D models. The **board-geometry sidecar** exists
-(`ReadBoardGeometry` in pcb_geom.go, WS1-006) and recovers all of it except 3D models into
-`geom.BoardGeometry`, while the netlist reader keeps only the logical netlist plus footprint refs.
+never the netlist IR (C7/C8). Geometry here means component placement (`at`), pad `size` and
+shape, copper, layers, zones, vias and 3D models. The **board-geometry sidecar** exists
+(`ReadBoardGeometry` in pcb_geom.go, WS1-006). It recovers all of that except 3D models into
+`geom.BoardGeometry`, and the netlist reader keeps only the logical netlist plus footprint refs.
 A PCB component has **no `ComponentSection`s**, because units are a schematic concept (see §3).
 
 ### 2b. Board-geometry productions (pcb_geom.go, WS1-006)
@@ -159,11 +159,12 @@ Meaning and IR mapping:
   `#FLG`) are skipped as components, because they are connectivity anchors and not physical
   parts. Their PINS still reach the netlist (WS1-014). A power symbol's pin with a power
   electrical type (`power_in`/`power_out`) becomes a typed virtual connection on the net,
-  `ir.Connection{component_ref="#PWR05", attributes={"direction": "power_in"}}`, so power
-  rules see driver evidence (a `PWR_FLAG`'s `power_out` IS the assertion that the net is
-  driven) while the component list stays physical. Only power directions travel, and a virtual
-  pin never fabricates signal-direction facts. The name-anchor semantics (net naming, the
-  WS1-017 external and global attrs) are unchanged and ride alongside.
+  `ir.Connection{component_ref="#PWR05", attributes={"direction": "power_in"}}`. Power rules
+  then see driver evidence, and the component list still holds only physical parts. A
+  `PWR_FLAG`'s `power_out` IS the assertion that the net is driven. Only power directions
+  travel, and a virtual pin never fabricates signal-direction facts. The name-anchor semantics
+  are unchanged and apply alongside, covering net naming and the WS1-017 external and global
+  attrs.
 - **`sheet` (with `Sheetname`/`Sheetfile` properties and `(pin "NAME" ...)` ports)** is a
   hierarchical sub-sheet reference. The netlist hierarchy walk (WS1-018,
   `ReadSchematicHierarchyNets`) follows `Sheetfile` through the caller-supplied opener (C1)
@@ -181,9 +182,9 @@ Meaning and IR mapping:
   against `kicad-cli sch export netlist`, since the showcase board has a GND pin sitting
   mid-span on the USB_D- wire, unconnected. Label and net-name text is unescaped from KiCad's
   brace forms (`VPP{slash}MCLR` is `VPP/MCLR`, and two labels in either spelling are one net).
-  An endpoint left strictly INSIDE another segment's body after that split is the undotted
-  T-tap. It is drawn as connected and is electrically two nets, and it emits the
-  no_junction_endpoints diagnostic (WS1-012). The wire-no-junction rule reports it, and
+  After that split, an endpoint can still sit strictly INSIDE another segment's body. That
+  shape is the undotted T-tap. It is drawn as connected and is electrically two nets, and it
+  emits the no_junction_endpoints diagnostic (WS1-012). The wire-no-junction rule reports it, and
   dangling-endpoint deliberately skips those points. The full solving algorithm, covering the
   netgraph unions, name ranks, instance scoping and the walk, is in
   [net solving](../../docsite/content/architecture/net-solving.md).
@@ -193,11 +194,11 @@ Meaning and IR mapping:
   then each `--symbol-path` directory by `<Library>.kicad_sym` nickname. Embedded definitions
   always win, and unresolved libraries keep the placeholder behavior. Same-library `extends`
   chains flatten, so a derived symbol with no units of its own inherits the parent's.
-  Cross-library extends is ledgered. Resolution is held equal to the embedded read by test,
-  because kicad-cli cannot oracle this one (headless, it ignores the project table entirely).
+  Cross-library extends is ledgered. A test holds resolution equal to the embedded read,
+  because kicad-cli cannot oracle this one. Run headless, it ignores the project table entirely.
 
 Symbol, wire and label drawing geometry belongs in a **geometry sidecar** and not in the
-netlist IR (C7/C8), so this reader does not carry it. Schematic-page geometry is what the
-`agni.v1.geom` sidecar models, and `ReadSchematicGeometry` in schematic_geometry.go (with
-`ReadSchematicHierarchy` for a sheet tree) populates it for KiCad, as the EDIF `.eds` reader
-does for EDIF. The netlist reader also drops symbol graphics and text.
+netlist IR (C7/C8), so this reader does not carry it. The `agni.v1.geom` sidecar models
+schematic-page geometry. For KiCad, `ReadSchematicGeometry` in schematic_geometry.go populates
+it, and `ReadSchematicHierarchy` does the same for a sheet tree. The EDIF `.eds` reader does
+the same for EDIF. The netlist reader also drops symbol graphics and text.

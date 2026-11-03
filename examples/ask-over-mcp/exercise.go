@@ -28,10 +28,10 @@ import (
 
 // The exercise asks mission #909's five questions of one design through an MCP client, the way a model
 // would, and checks every reply (agni issue 1121). A spec under exercise/ names the folder, the design
-// and the calls each question takes. Every reply must state the question it answers before its rows
-// and end in a viewer link (or, over stdio, the reason it has none); its rows must equal what the CLI
-// answers to the same request, encoded through the same csv encoder; and the strings a spec pins must
-// be in it, so a wrong question fails even when the two transports agree.
+// and the calls each question takes. Every reply must state the question it answers before its rows.
+// It must end in a viewer link, or over stdio, the reason it has none. Its rows must equal the CLI's
+// answer to the same request, encoded through the same csv encoder. And it must contain the strings
+// the spec pins, so a wrong question fails even when the two transports agree.
 
 // spec is one exercise file.
 type spec struct {
@@ -53,7 +53,8 @@ type call struct {
 	Args map[string]any `yaml:"args"`
 	// CLI is the `agni` command asking the same thing, run with the exercise's mount.
 	CLI []string `yaml:"cli"`
-	// Table names the reply's table the CLI's csv must equal; empty compares the trace instead.
+	// Table names the reply's table, and the CLI's csv must equal it. Empty compares the trace
+	// instead.
 	Table string `yaml:"table"`
 	// Has is text the reply must contain.
 	Has []string `yaml:"has"`
@@ -96,7 +97,7 @@ func exercise(args []string) error {
 
 // wires are the MCP wires the exercise speaks, by the name --wire takes. "session" is the initialize
 // handshake, "stateless" the 2026-07-28 wire, and "adaptive" the stateless wire when the server
-// offers it and a session otherwise, which is what agni's own clients prefer (agni issue 1172).
+// offers it and a session otherwise. agni's own clients prefer "adaptive" (agni issue 1172).
 var wires = map[string]client.ClientMode{
 	"adaptive":  client.ClientModeAdaptive,
 	"stateless": client.ClientModeStateless,
@@ -392,8 +393,8 @@ func firstLine(s string) string {
 	return s
 }
 
-// render is the report, one row per call in the mission log's table form, and an error when any call
-// failed.
+// render returns the report, one row per call in the mission log's table form. It returns an error
+// when any call failed.
 func render(sp spec, transport string, outs []outcome) (string, error) {
 	var b strings.Builder
 	fmt.Fprintf(&b, "## Asking %s over MCP (%s)\n\n", sp.Design, transport)

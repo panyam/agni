@@ -19,7 +19,7 @@ func draftFor(mpn string, docs ...string) *dsapi.Draft {
 	return &dsapi.Draft{Mpn: mpn, Spec: &parampb.PartSpec{Mpn: mpn}, DocumentUris: docs}
 }
 
-// Save is compare-and-swap on the draft's MPN: a first save asserts absence, a later one must carry
+// Save is compare-and-swap on the draft's MPN. A first save asserts absence, a later one must send
 // the version it read, and Get gives back that version.
 func TestOSDraftStoreCAS(t *testing.T) {
 	st := newOSDraftStore(t.TempDir())
@@ -69,8 +69,8 @@ func TestOSDraftStoreListsADocumentsDrafts(t *testing.T) {
 	}
 }
 
-// Two MPNs that share a file name once unsafe characters are replaced are different drafts: the
-// second is refused rather than overwriting the first, and neither reads as the other.
+// Two MPNs can share a file name once unsafe characters are replaced, and they are still different
+// drafts. The second is refused rather than overwriting the first, and neither reads as the other.
 func TestOSDraftStoreKeepsCollidingMPNsApart(t *testing.T) {
 	st := newOSDraftStore(t.TempDir())
 	ctx := context.Background()
@@ -119,8 +119,9 @@ func TestOSDraftStorePublishes(t *testing.T) {
 	}
 }
 
-// unprovenanced is a draft spec Validate rejects: a parameter with no provenance, the shape
-// corpus's own refusal tests use. A spec carrying only an MPN validates, so it cannot stand in.
+// unprovenanced is a draft spec that Validate rejects. It holds a parameter with no provenance, and
+// corpus's own refusal tests use the same shape. A spec holding only an MPN validates, so it cannot
+// stand in.
 func unprovenanced(mpn string) *parampb.PartSpec {
 	s := &parampb.PartSpec{}
 	if err := protojson.Unmarshal([]byte(`{"mpn": "`+mpn+`", "parameters": [{"name": "VIN",

@@ -28,12 +28,13 @@ type ValidationProblem_Kind int32
 
 const (
 	ValidationProblem_KIND_UNSPECIFIED ValidationProblem_Kind = 0
-	// The spec contradicts itself: two pins sharing an id, one designator claimed twice within a
-	// package, a parameter bound to a pin that is not declared. Wrong at any stage of authoring.
+	// The spec contradicts itself, for example with two pins sharing an id, one designator claimed
+	// twice within a package, or a parameter bound to an undeclared pin. Wrong at any stage of
+	// authoring.
 	ValidationProblem_KIND_STRUCTURAL ValidationProblem_Kind = 1
-	// The spec is merely unfinished: no part number yet, a row with no limit kind, missing
-	// provenance. True of every spec under transcription, and only decisive when promoting one
-	// into a corpus.
+	// The spec is merely unfinished, for example with no part number yet, a row with no limit kind,
+	// or missing provenance. True of every spec under transcription, and only decisive when
+	// promoting one into a corpus.
 	ValidationProblem_KIND_COMPLETENESS ValidationProblem_Kind = 2
 )
 
@@ -126,7 +127,8 @@ func (x *GetDocumentRequest) GetUri() string {
 type GetDocumentResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// extracted is true when a derived doc-IR exists for this datasheet. False means "not yet
-	// extracted": document is unset and the workbench shows the PDF with an empty region overlay.
+	// extracted". document is then unset, and the workbench shows the PDF with an empty region
+	// overlay.
 	Extracted bool `protobuf:"varint,1,opt,name=extracted,proto3" json:"extracted,omitempty"`
 	// document is the doc-IR (pages/tables/figures/text with bboxes) when extracted; unset otherwise.
 	Document *doc.Document `protobuf:"bytes,2,opt,name=document,proto3" json:"document,omitempty"`
@@ -287,7 +289,7 @@ type Draft struct {
 	Spec *param.PartSpec `protobuf:"bytes,2,opt,name=spec,proto3" json:"spec,omitempty"`
 	// document_uris are the datasheets (artifact URIs, mount://...) the draft was transcribed from.
 	DocumentUris []string `protobuf:"bytes,3,rep,name=document_uris,json=documentUris,proto3" json:"document_uris,omitempty"`
-	// version is an opaque token (the stored draft's content hash) the client passes back as
+	// version is an opaque token, the stored draft's content hash. The client passes it back as
 	// base_version on its next save.
 	Version       string `protobuf:"bytes,4,opt,name=version,proto3" json:"version,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -598,14 +600,14 @@ type SaveDraftResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// version is the new version after this write; the client keeps it for its next save.
 	Version string `protobuf:"bytes,1,opt,name=version,proto3" json:"version,omitempty"`
-	// problems is what is wrong with the spec that was just written. IT NEVER PREVENTS THE WRITE:
-	// saving records what an author has, and whether it is any good is a separate question answered
-	// as status and correctable later. Coupling the two would let a judgement destroy work, and would
-	// oblige every editing action to preserve an invariant or strand the document.
+	// problems is what is wrong with the spec that was just written. IT NEVER PREVENTS THE WRITE.
+	// Saving records what an author has. Whether it is any good is a separate question, answered as
+	// status and correctable later. Coupling the two would let a judgement destroy work. It would also
+	// force every editing action to preserve an invariant or strand the document.
 	//
-	// Returned here rather than from a validate endpoint because the workbench already saves on every
-	// edit, so the judgement rides a request that is happening anyway. It is also the reason the
-	// client does not reimplement these rules: one implementation, in Go, reported back.
+	// It is returned here rather than from a validate endpoint, because the workbench already saves
+	// on every edit. So the judgement comes back on a request that is happening anyway. The client
+	// also does not reimplement these rules. There is one implementation, in Go, and it reports back.
 	//
 	// Empty means the draft would publish today.
 	Problems      []*ValidationProblem `protobuf:"bytes,2,rep,name=problems,proto3" json:"problems,omitempty"`
@@ -704,7 +706,7 @@ func (x *PublishDraftRequest) GetMpn() string {
 type PublishDraftResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// published is false when the draft did not validate, or when another published file already
-	// seeds its MPN; reason then says which, and problems lists what to fix.
+	// seeds its MPN. reason then says which, and problems lists what to fix.
 	Published bool                 `protobuf:"varint,1,opt,name=published,proto3" json:"published,omitempty"`
 	Reason    string               `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	Problems  []*ValidationProblem `protobuf:"bytes,3,rep,name=problems,proto3" json:"problems,omitempty"`
@@ -782,13 +784,14 @@ func (x *PublishDraftResponse) GetGeneration() uint64 {
 }
 
 // ValidationProblem is one thing wrong with a PartSpec, classified so a client can treat the two
-// kinds differently: STRUCTURAL is wrong now and worth interrupting for, COMPLETENESS is the
-// ordinary state of unfinished work and is better shown as progress toward being publishable.
+// kinds differently. A STRUCTURAL problem is wrong now and worth interrupting for. A COMPLETENESS
+// problem is the ordinary state of unfinished work, and is better shown as progress toward being
+// publishable.
 type ValidationProblem struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Kind  ValidationProblem_Kind `protobuf:"varint,1,opt,name=kind,proto3,enum=agni.v1.dsapi.ValidationProblem_Kind" json:"kind,omitempty"`
-	// Human-readable, already naming its subject ("vcca: duplicate pin id"). Not a code: these are
-	// shown to the person who just typed the thing, not dispatched on.
+	// Human-readable, already naming its subject ("vcca: duplicate pin id"). It is not a code. A
+	// client shows it to the person who just typed the thing, and never dispatches on it.
 	Message       string `protobuf:"bytes,2,opt,name=message,proto3" json:"message,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -838,28 +841,29 @@ func (x *ValidationProblem) GetMessage() string {
 	return ""
 }
 
-// RegionAnnotation is one human judgement about one region of a datasheet: its routing type, its
-// geometry (only for a user-drawn region — a doc-IR region already has geometry server-side), and
-// the draft parameter assertions transcribed from it. The document it belongs to is the enclosing
-// AnnotationSet's doc_id, so (doc_id, region_id) is the annotation's key.
+// RegionAnnotation is one human judgement about one region of a datasheet. It holds the region's
+// routing type, its geometry, and the draft parameter assertions transcribed from it. Geometry is
+// set only for a user-drawn region, since a doc-IR region already has geometry server-side. The
+// enclosing AnnotationSet's doc_id names the document, so (doc_id, region_id) is the annotation's
+// key.
 type RegionAnnotation struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// region_id is a doc-IR region id ("p4.t1") or a user-drawn region's id, unique within the doc.
 	RegionId string `protobuf:"bytes,1,opt,name=region_id,json=regionId,proto3" json:"region_id,omitempty"`
-	// type is the user's routing tag: table/schematic/chart/pinout/text/other (the RegionType
-	// vocabulary). Distinct from doc-IR kind, which cannot tell a chart from a schematic.
+	// type is the user's routing tag, one of table/schematic/chart/pinout/text/other (the RegionType
+	// vocabulary). It differs from the doc-IR kind, which cannot tell a chart from a schematic.
 	Type string `protobuf:"bytes,2,opt,name=type,proto3" json:"type,omitempty"`
 	// bbox is the region's page-local geometry (points, top-left origin), present ONLY for a
-	// user-drawn region; a doc-IR region's geometry lives in the doc-IR and is not duplicated here.
+	// user-drawn region. A doc-IR region's geometry is in the doc-IR and is not duplicated here.
 	Bbox *doc.BBox `protobuf:"bytes,3,opt,name=bbox,proto3,oneof" json:"bbox,omitempty"`
 	// page is the 1-based page the region is on (needed to place a user-drawn box on re-open).
 	Page int32 `protobuf:"varint,4,opt,name=page,proto3" json:"page,omitempty"`
 	// kind is the doc-IR-style kind (table/figure/text) or "user" for a marquee-drawn region.
 	Kind  string `protobuf:"bytes,5,opt,name=kind,proto3" json:"kind,omitempty"`
 	Label string `protobuf:"bytes,6,opt,name=label,proto3" json:"label,omitempty"`
-	// draft_params are the human's draft parameter assertions for this region, the SOURCE WS13-012
-	// canonicalizes into the shared PartSpec. Empty until WS13-012 moves param authoring here; the
-	// field exists now so that is a pure-logic change, not a proto change.
+	// draft_params are the human's draft parameter assertions for this region. WS13-012
+	// canonicalizes this SOURCE into the shared PartSpec. Empty until WS13-012 moves param authoring
+	// here. The field exists now, so that move is a pure-logic change, not a proto change.
 	DraftParams []*param.Parameter `protobuf:"bytes,7,rep,name=draft_params,json=draftParams,proto3" json:"draft_params,omitempty"`
 	// confidence is the author's draft confidence in (0, 1]; 0 means unset (WS13-012 assigns it).
 	Confidence    float64 `protobuf:"fixed64,8,opt,name=confidence,proto3" json:"confidence,omitempty"`
@@ -953,9 +957,10 @@ func (x *RegionAnnotation) GetConfidence() float64 {
 	return 0
 }
 
-// AnnotationSet is ONE author's overlay for ONE datasheet: their drawn/tagged regions. doc_id is
-// the datasheet's stable SourceDoc id (WS13-010), so the overlay survives re-extraction; author is
-// the self-asserted coordination namespace. GetAnnotations returns one set per author (the union).
+// AnnotationSet is ONE author's overlay for ONE datasheet, with their drawn and tagged regions.
+// doc_id is the datasheet's stable SourceDoc id (WS13-010), so the overlay survives re-extraction.
+// author is the self-asserted coordination namespace. GetAnnotations returns one set per author
+// (the union).
 type AnnotationSet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DocId         string                 `protobuf:"bytes,1,opt,name=doc_id,json=docId,proto3" json:"doc_id,omitempty"`

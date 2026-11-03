@@ -10,13 +10,14 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestRouteBindsTheRouteItWalked is the artifact agni issue 518 asks for, over the straight chain
-// N0 -R1- N1 -R2- N2 -R3- N3. The answer names the parts it crossed and the nets between them, so a
-// reviewer reading a hundred rows can check any one of them without re-asking the question.
+// TestRouteBindsTheRouteItWalked checks the route artifact from agni issue 518, over the straight
+// chain N0 -R1- N1 -R2- N2 -R3- N3. The answer names the parts it crossed and the nets between
+// them. So a reviewer reading a hundred rows can check any one of them without re-asking the
+// question.
 //
 // The reflexive row is asserted alongside the others rather than skipped. A net reaches itself at
-// distance zero, and its route is its own name. The two points are one electrical node, which is the
-// strongest form of connected there is and not a degenerate case to filter out.
+// distance zero, and its route is its own name. The two points are one electrical node. That is the
+// strongest form of connected, not a degenerate case to filter out.
 func TestRouteBindsTheRouteItWalked(t *testing.T) {
 	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.route("N0", ?n, ?p) => ?n, ?p`)
 	got := map[string]string{}
@@ -39,11 +40,11 @@ func TestRouteBindsTheRouteItWalked(t *testing.T) {
 	}
 }
 
-// TestRouteNeverBindsAnEmptyPath is the requirement issue 518 states as the one thing that must not
+// TestRouteNeverBindsAnEmptyPath holds a requirement from issue 518, the one thing that must not
 // happen. A path question that finds nothing must never render as an empty line. In a query the
-// correct form of "no route" is NO ROW, so what this guards is the other shape, a row that arrives
-// with an empty string in its path column, which a table renders as a blank cell beside two net
-// names and a reader takes for a route with nothing on it.
+// correct form of "no route" is NO ROW. So this test guards the other shape, a row with an empty
+// string in its path column. A table renders that as a blank cell beside two net names, and a
+// reader takes it for a route with nothing on it.
 func TestRouteNeverBindsAnEmptyPath(t *testing.T) {
 	rows := runQuery(t, check.NewModel(reachChainDesign()), `net.route(?a, ?b, ?p) => ?a, ?b, ?p`)
 	if len(rows) == 0 {
@@ -57,13 +58,13 @@ func TestRouteNeverBindsAnEmptyPath(t *testing.T) {
 }
 
 // TestRouteAgreesWithReachesOnWhatIsConnected is the sibling guard. route and reaches run the same
-// walk, so a pair one of them yields and the other does not is an inconsistency in the engine rather
-// than a difference anyone asked for.
+// walk. If one yields a pair and the other does not, the engine is inconsistent, and nobody asked
+// for that difference.
 //
-// The fixture carries a GROUND net for the assertion to have teeth. A bus-like net is excluded from
-// the walk outright rather than admitted as a terminus, so a route implementation that reached for
-// ReachToTerminus (which `agni trace` does use, correctly, for a pin-to-pin question) would bind
-// pairs reaches denies. Without the rail both sides agree whatever the walk does.
+// The fixture has a GROUND net so the assertion has teeth. A bus-like net is excluded from the walk
+// outright rather than admitted as a terminus. Imagine a route implementation that reached for
+// ReachToTerminus. It would bind pairs that reaches denies. `agni trace` does use ReachToTerminus,
+// correctly, for a pin-to-pin question. Without the rail, both sides agree whatever the walk does.
 func TestRouteAgreesWithReachesOnWhatIsConnected(t *testing.T) {
 	m := check.NewModel(railChainDesign())
 	pairs := func(text, a, b string) []string {
@@ -82,23 +83,23 @@ func TestRouteAgreesWithReachesOnWhatIsConnected(t *testing.T) {
 	// Two positive controls, because the assertion above passes on an empty result and on a fixture
 	// where nothing is bus-like.
 	//
-	// The first: the rail must not be a DESTINATION of any other net, which is the pair a
-	// terminus-admitting walk would add. Reflexively GND reaches itself, since a walk's own start net
-	// is never treated as a stop, so the reflexive pair is not the one to look for.
+	// First, the rail must not be a DESTINATION of any other net. A terminus-admitting walk would
+	// add exactly such a pair. GND does reach itself reflexively, since a walk never treats its own
+	// start net as a stop. So the reflexive pair is not the one to look for.
 	for _, p := range routed {
 		if a, b, _ := strings.Cut(p, "->"); b == "GND" && a != "GND" {
 			t.Errorf("route reached the ground net from %s: a rail is a stop, not a destination", a)
 		}
 	}
-	// The second: the chain has to route at all, so agreement is agreement about something.
+	// Second, the chain has to route at all, so the two agree about something.
 	if len(routed) < 4 {
 		t.Fatalf("fixture routed %d pairs, too few to prove agreement: %v", len(routed), routed)
 	}
 }
 
 // railChainDesign is reachChainDesign with a ground net hung off the far end through R4. GND is
-// bus-like by name, so the series walk refuses it. It is the net that separates a walk which stops
-// at a rail from one that ends on it.
+// bus-like by name, so the series walk refuses it. This net separates a walk that stops at a rail
+// from one that ends on it.
 func railChainDesign() *ir.Design {
 	d := reachChainDesign()
 	d.Components = append(d.Components, &ir.Component{
@@ -117,9 +118,9 @@ func railChainDesign() *ir.Design {
 	return d
 }
 
-// TestRouteArityIsFixed pins that route takes exactly three arguments. reaches next door accepts two
-// or three. route does not, because it is a separate predicate so that no spelling binds a path
-// without the caller asking for one.
+// TestRouteArityIsFixed pins that route takes exactly three arguments. reaches next door accepts
+// two or three. route does not. It is a separate predicate, so no spelling binds a path unless the
+// caller asks for one.
 func TestRouteArityIsFixed(t *testing.T) {
 	for _, text := range []string{`net.route(?a, ?b) => ?a`, `net.route(?a, ?b, ?p, ?q) => ?a`} {
 		q, err := Parse(text)

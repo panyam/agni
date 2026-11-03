@@ -13,7 +13,7 @@ import (
 // rawDatasheetHandler streams a datasheet's PDF from a mount so the /datasheets page can render it
 // in pdf.js under the region overlay (WS13-006). It is mounted under /datasheets/raw/<mount>/<path...>,
 // and mounts.Resolve keeps the path inside its mount. Only .pdf files are served, since doc-IR goes
-// structured over DatasheetService. Rendering stays in the browser, so the document goes no
+// structured over DatasheetService. Rendering happens in the browser, so the document goes no
 // further than the local client (C16).
 func rawDatasheetHandler(ms []mounts.Mount) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

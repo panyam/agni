@@ -6,11 +6,10 @@ import (
 	"testing/fstest"
 )
 
-// A root schematic read beside its own same-stem .kicad_pro is the project's root, so a walk that
-// opened every sub-sheet covers the design and its by-name nets resolve from external to global,
-// exactly as a .kicad_pro read does (agni issue 1013). A schematic with no project beside it may
-// be someone else's sub-sheet, and a walk that missed a sub-sheet is partial, so both keep the
-// marking.
+// A root schematic read beside its own same-stem .kicad_pro is the project's root. If the walk opened
+// every sub-sheet, it covers the design. Its by-name nets then resolve from external to global,
+// exactly as a .kicad_pro read does (agni issue 1013). A schematic with no project beside it may be
+// someone else's sub-sheet. A walk that missed a sub-sheet is partial. Both keep the marking.
 func TestKicadRootBesideItsProjectResolvesExternalNets(t *testing.T) {
 	root, err := os.ReadFile("../kicad/testdata/hier_root.kicad_sch")
 	if err != nil {

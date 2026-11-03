@@ -73,7 +73,8 @@ func (s Style) GroupColor(group uint8) string {
 }
 
 // SchematicFontStack is the default font-family for schematic text, a CSS fallback chain the
-// viewer resolves locally. Arial leads because the authoring tools this engine reads print in it.
+// viewer resolves locally. This engine reads files from authoring tools that print in Arial, so
+// Arial leads.
 // Liberation Sans is metric-compatible with Arial, so a machine without Arial lays text out at
 // identical advance widths. See
 // docsite/content/architecture/geometry-and-rendering.md#the-font-is-a-name-never-a-file.
@@ -160,7 +161,7 @@ func resolveStyle(opts []Option) Style {
 	return s
 }
 
-// DefaultHighlightColor is the color a highlight spec with no color gets, a saturated magenta
-// that stands out against the schematic palette. It lives here so every drawable color stays
-// in one file (C12), and the web mirror is DEFAULT_HIGHLIGHT_COLOR in web/src/highlights.ts.
+// DefaultHighlightColor is the color of a highlight spec that names none. It is a saturated
+// magenta that stands out against the schematic palette. It lives here so every drawable color
+// is in one file (C12), and the web mirror is DEFAULT_HIGHLIGHT_COLOR in web/src/highlights.ts.
 const DefaultHighlightColor = "#ed1cb8"

@@ -9,8 +9,8 @@ import (
 
 // TestEveryRoleHasANameMatcher is step 2 of agni 692, and it is a TEST rather than a compiler feature
 // because Go does not check switch exhaustiveness over an enum. nameMatcherFor's default returns a
-// never-matches function, so a role added to the vocabulary and forgotten there would answer false for
-// every net that skipped the ingestion stamp, silently.
+// never-matches function. Imagine a role added to the vocabulary and forgotten there. It would
+// answer false for every net that skipped the ingestion stamp, silently.
 //
 // The fallback only fires for an unstamped net (a hand-authored IR), so nothing louder would
 // notice. A normal read stamps roles, so the gap would sit unexercised until someone hit

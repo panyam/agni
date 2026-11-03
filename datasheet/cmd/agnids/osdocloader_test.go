@@ -39,7 +39,7 @@ func TestOsDocLoaderDocument(t *testing.T) {
 		t.Fatalf("want parsed doc-IR, got %+v", doc)
 	}
 
-	// A datasheet with no sibling is (nil, nil): "not yet extracted", a normal state.
+	// A datasheet with no sibling returns (nil, nil). It means "not yet extracted", a normal state.
 	missing, err := l.Document(context.Background(), mustURI("m", "other.pdf"))
 	if err != nil || missing != nil {
 		t.Fatalf("absent sibling => (%v, %v), want (nil, nil)", missing, err)

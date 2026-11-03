@@ -5,7 +5,7 @@ import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 // The built-in SpecFuncs are the Go escape hatches the rule specs call. Each wraps an existing
 // rule helper rather than reimplementing it, so the Go rules and the specs share one
 // implementation of every heuristic, and each declares the reads/primitives it consumes so
-// derivation stays accurate through the FFI boundary (see SpecFunc).
+// derivation remains accurate through the FFI boundary (see SpecFunc).
 func init() { registerBuiltinSpecFuncs() }
 
 // registerBuiltinSpecFuncs is idempotent (map assignment) and ALSO called from rule var
@@ -29,10 +29,10 @@ func registerBuiltinSpecFuncs() {
 		},
 	})
 	RegisterSpecFunc("unprotected_power_reach", &SpecFunc{
-		// The WS3-011 reach walk behind input-protection. True when, from the in-scope
-		// connector net, SOME series-reachable net carries a real power-input pin with
-		// neither a fuse crossed on its path nor a TVS on a path net, and is not a current-limiting
-		// switch its datasheet names (agni issue 1248).
+		// The WS3-011 reach walk behind input-protection. True when SOME net series-reachable
+		// from the in-scope connector net has a real power-input pin with neither a fuse
+		// crossed on its path nor a TVS on a path net. The load's datasheet must also not name
+		// it a current-limiting switch (agni issue 1248).
 		Reads:      []string{"component.class", "component.device_class", "on_net", "param.max", "pin.electrical_type"},
 		Primitives: []string{"exists", "pin-role", "reach", "traverse"},
 		Fn: func(m Model, ents map[string]any, _ []any) any {

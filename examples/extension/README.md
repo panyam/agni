@@ -1,7 +1,7 @@
 # extension
 
-This module is the reference **extension**, a Go module in its own right that depends on the
-public agni engine and adds a private format reader and a private rule suite through the
+This module is the reference **extension**. It is a Go module in its own right, and it depends on
+the public agni engine. It adds a private format reader and a private rule suite through the
 engine's public extension points, without forking the engine. It is the runnable proof of the
 open-core split (see `docsite/content/build/extending.md`).
 
@@ -61,23 +61,24 @@ the rule. `main.go` spells the import out, `agni.New` now refuses the compositio
 
 **Clause order no longer decides the cost.** agni evaluates with the engine's semi-naive evaluator,
 which plans each rule body, so a literal runs once its inputs are bound whatever order the body is
-written in. Before the planner, the evaluator ran literals left to right, and a shipped profile rule
-that opened on every power pin rather than on the few parts it was about never finished on a real
-board. The rule here still leads with the handful of `X`-prefixed parts, because that is the order
-a reader follows. A toy fixture would not have shown the difference then, and the planner test in
-`core/query` is what holds it now.
+written in. Before the planner, the evaluator ran literals left to right. One shipped profile rule
+opened on every power pin rather than on the few parts it was about, and it never finished on a
+real board. The rule here still leads with the handful of `X`-prefixed parts, because a reader
+follows that order. A toy fixture would not have shown the difference then, and the planner test
+in `core/query` now holds it.
 
 **Pin relations need the reader to declare pins.** `component.pin`, `pin.role`, `pin.type` and `pin.net`
 project from PART-TYPE pins, not from net connections. A connection says a pin is wired somewhere; a
 pin declaration says the pin exists, what it is called, and what type it is. A format that emits only
-connections leaves every pin relation empty, so a pin-level rule silently finds nothing. That is why `.acme` has a `pin` line and why the reader synthesizes a `PartType` per
-component for its sections to reference.
+connections leaves every pin relation empty, so a pin-level rule silently finds nothing. So `.acme`
+has a `pin` line, and the reader synthesizes a `PartType` per component for its sections to
+reference.
 
 ## How it depends on the engine
 
-`go.mod` requires `github.com/panyam/agni` and, because this extension lives inside the engine
-repo for demonstration, uses `replace github.com/panyam/agni => ../..`, so it builds against
-the working tree with no release tag. A real, separately-hosted extension drops the `replace` and
+`go.mod` requires `github.com/panyam/agni`. This extension lives inside the engine repo for
+demonstration, so `go.mod` uses `replace github.com/panyam/agni => ../..` and builds against the
+working tree with no release tag. A real, separately-hosted extension drops the `replace` and
 requires a published engine version instead. Dependencies point **extension → engine only**; the
 engine never imports the extension (CONSTRAINTS C18).
 
@@ -87,5 +88,5 @@ This skeleton drives the engine *library* so the composition is visible in one f
 engine's whole CLI (`agni-extension serve`/`check`/…) needs the engine to export a reusable
 command root, which is a separate change.
 
-The datalog rule here is still a Go *value* compiled into the binary. Loading rule text from a file
-at runtime, with no Go build, rides the WS3-004/007 + WS12-002 dynamic-loader path.
+The datalog rule here is still a Go *value* compiled into the binary. The WS3-004/007 + WS12-002
+dynamic-loader path covers loading rule text from a file at runtime, with no Go build.

@@ -31,10 +31,10 @@ func Load(r io.Reader) (*parampb.PartSpec, error) {
 	return spec, nil
 }
 
-// Validate checks the invariants every PartSpec must hold before any consumer (the
-// WS10-003 join, a store) may trust it, which is every Problem joined into one error.
-// Nil means the spec is trustworthy as data, not that its values are true; the
-// provenance is for that.
+// Validate checks a PartSpec against the invariants that must hold before a consumer
+// may trust it. The WS10-003 join and a store are two such consumers. The error joins
+// every Problem into one. Nil means the spec is trustworthy as data. It does not mean
+// the values are true, and the provenance answers that.
 //
 // When a spec carries pin data it must also be COHERENT (see structuralProblems). A
 // dangling pin binding is worth catching at load because downstream it does not look
@@ -68,7 +68,8 @@ type Problem struct {
 
 // Problems reports everything wrong with a spec, classified. The workbench consumes it, showing
 // structural problems as things to fix now and completeness ones as what stands between a draft and a
-// corpus. Validate is this, joined. An empty result means the spec would load into a corpus today.
+// corpus. Validate joins the same list into one error. An empty result means the spec would load into
+// a corpus today.
 func Problems(spec *parampb.PartSpec) []Problem {
 	var out []Problem
 	for _, e := range structuralProblems(spec) {
@@ -94,20 +95,21 @@ func completenessProblems(spec *parampb.PartSpec) []error {
 		if d.Id == "" {
 			errs = append(errs, fmt.Errorf("docs[%d] has no id", i))
 		}
-		// The title is the citation an engineer opens, so it names the DOCUMENT, number and
-		// revision as printed.
+		// An engineer opens the document the title cites, so the title names the DOCUMENT, number
+		// and revision as printed.
 		//
 		// ABSENT is not a problem here. A first-pass derivation cannot state the identity yet, and
-		// that refusal goes in the run manifest's gap list. Reporting it here too would make every
-		// derived spec fail Validate, which is how derive tells a bug from a data gap. The citation
-		// says "revision unrecorded" at the point of use.
+		// that refusal goes in the run manifest's gap list. derive reads any Validate failure as its
+		// own bug rather than a data gap, so reporting the absence here too would make every derived
+		// spec fail. The citation says "revision unrecorded" at the point of use.
 		//
 		// EQUAL TO THE MPN is a problem, because it is a wrong assertion rather than an absence. A
 		// producer copying a doc-IR title writes it, and it is the same string before and after a
 		// reissue, so a reader learns nothing about which revision to open (agni issue 290).
 		//
-		// Equality, not a guess at what a part number looks like, because a heuristic would reject
-		// legitimate titles from vendors whose document numbering nobody has seen.
+		// The check is plain equality rather than a guess at what a part number looks like. A
+		// heuristic would reject legitimate titles from vendors whose document numbering nobody has
+		// seen.
 		if d.Title != "" && spec.Mpn != "" && strings.EqualFold(strings.TrimSpace(d.Title), strings.TrimSpace(spec.Mpn)) {
 			errs = append(errs, fmt.Errorf(
 				"docs[%d] (%s) is titled %q, which is the part, not the document; the title is the citation an engineer opens, so it wants the vendor's document number and revision as printed",
@@ -219,10 +221,11 @@ func MachineComparable(p *parampb.Parameter) bool {
 	return true
 }
 
-// structuralProblems checks the STRUCTURAL coherence of a spec's pin data: unique package and pin ids,
-// numbers that resolve to a declared package with no two pins claiming one number within it, every
-// Parameter.pin_refs resolving to a declared pin, and every relation's two ends resolving to two
-// distinct pins. These can never be a valid work-in-progress state, unlike completenessProblems.
+// structuralProblems checks the STRUCTURAL coherence of a spec's pin data. Package and pin ids must be
+// unique. Every pin number must resolve to a declared package, and no two pins may claim one number
+// within it. Every Parameter.pin_refs must resolve to a declared pin, and every relation's two ends
+// must resolve to two distinct pins. None of these can be a valid work-in-progress state, unlike
+// completenessProblems.
 //
 // The workbench's draft save is not gated on it, and param.LoadSet reads only *.textproto, so a draft
 // cannot reach the corpus by sitting on disk. The editor mirrors these rules in TS for live feedback,
@@ -242,8 +245,8 @@ func structuralProblems(spec *parampb.PartSpec) []error {
 	}
 
 	pins := make(map[string]bool, len(spec.Pins))
-	// A pin NUMBER belongs to one pin within one package. Names may repeat (the
-	// multi-supply case pin binding exists for), but one terminal on two pins would make
+	// A pin NUMBER belongs to one pin within one package. Names may repeat, since pin
+	// binding exists for the multi-supply case, but one terminal on two pins would make
 	// the number unusable as the tie-breaking channel.
 	claimed := map[string]string{}
 	for i, p := range spec.Pins {

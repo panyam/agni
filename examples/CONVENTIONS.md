@@ -43,8 +43,8 @@ Keep behavior in Go and prose in markdown. `main.go` should only:
    pure narration need no bind.
 3. `common.SetupRenderer(demo)` then `demo.Execute()`.
 
-State shared between steps (e.g. the fixture the user picked) lives in a closure variable
-captured by the bound `Run` funcs, defaulted so a `--non-interactive` run stays coherent.
+Keep state that steps share, such as the fixture the user picked, in a closure variable. The
+bound `Run` funcs capture it, and its default keeps a `--non-interactive` run coherent.
 
 ## 3. walkthrough.md (the sidecar)
 
@@ -56,15 +56,15 @@ demokit's `FromMarkdown` decides step vs section by content shape:
 - A ` ```mermaid ` block with `A ->> B: label` (solid) / `A -->> B: label` (dashed) lines
   becomes sequence-diagram arrows.
 - A ` ```inputs ` block (YAML list of `{name, prompt, type, options, default}`) declares
-  step inputs. The one exception is a design-path input, which is declared in Go via
-  `common.AskPath(...).Def()` (see §4) so the prompt stays identical across examples, and the
+  step inputs. The one exception is a design-path input. It is declared in Go via
+  `common.AskPath(...).Def()` (see §4), so the prompt is identical across examples, and the
   sidecar step then carries only its note.
 - A heading with any of [blockquote, mermaid, inputs, refs] is a **step**; a prose-only
   heading is a **section**.
 
 Prose obeys the repo writing style (no em-dashes, plain declarative). The demokit renderer
-may insert its own separators in generated output; that is out of our control, but the
-authored `.md` stays clean.
+may insert its own separators in generated output. That is out of our control, but keep the
+authored `.md` clean.
 
 ## 4. Design inputs are paths, asked via `common.AskPath`
 
@@ -85,36 +85,37 @@ demo.Bind("run").Run(func(ctx demokit.StepContext) *demokit.StepResult {
 })
 ```
 
-Setting **`AGNI_EXAMPLE_DESIGN`** replaces the default every `AskPath` offers, so a walkthrough
-can be driven over a design this repo cannot carry without that path being typed at the prompt
-or committed anywhere. It moves the DEFAULT rather than the value, so the prompt still shows it
-and a typed path still wins, and `--non-interactive` picks it up, which a typed path cannot do.
-A blank or whitespace-only value is not a value, so an `export AGNI_EXAMPLE_DESIGN=` left in a
-shell does not point every example at `""`.
+Setting **`AGNI_EXAMPLE_DESIGN`** replaces the default that every `AskPath` offers. This repo
+cannot carry some designs, and the variable lets a walkthrough run over one without anyone
+typing its path at the prompt or committing it anywhere. It moves the DEFAULT rather than the
+value. The prompt still shows it, a typed path still wins, and `--non-interactive` picks it up.
+A typed path cannot reach a `--non-interactive` run. A blank or whitespace-only value is not a
+value, so an `export AGNI_EXAMPLE_DESIGN=` left in a shell does not point every example at `""`.
 
 A review manifest works the same way. `common.AskReviewPath(name, default)` reads
 **`AGNI_EXAMPLE_REVIEW`** with the same semantics, because a team's checklist is as unshippable
 here as their board (`design-review` takes both). A package whose tests read either default must
 clear both variables in its `TestMain` (`os.Unsetenv(common.DesignPathEnv)` and
-`os.Unsetenv(common.ReviewPathEnv)`, as `design-review/outcomes_test.go` does). Otherwise a
-developer who exported one to drive a walkthrough over their own board fails the gate, and the
-failure prints their path into the log.
+`os.Unsetenv(common.ReviewPathEnv)`, as `design-review/outcomes_test.go` does). Otherwise
+imagine a developer exports one to drive a walkthrough over their own board. Their gate run
+fails, and the failure prints their path into the log.
 
-`Load` (which `design.Load()` calls) reads the path from disk first, so a user can point the
-example at their own design, then falls back to the embedded fixture whose base name matches,
-so the example still runs from any directory. A file that exists but fails to parse is
-surfaced, not masked. List the bundled designs as their relative paths in the asking step's
-note so it is clear where they live. This applies to every path an example prompts for.
+`design.Load()` calls `Load`. `Load` reads the path from disk first, so a user can point the
+example at their own design. When no file exists at the path, it falls back to the embedded
+fixture with the same base name, so the example still runs from any directory. When a file
+exists but fails to parse, `Load` reports the error rather than masking it. List the bundled
+designs as their relative paths in the asking step's note so it is clear where they live. This
+applies to every path an example prompts for.
 
-An example that loads schematic **geometry** rather than the netlist IR uses the same
-`AskPath` for the path, but calls `common.LoadSchematic(design.Path())` (disk-first, embedded
+Some examples load schematic **geometry** rather than the netlist IR. Such an example uses the
+same `AskPath` for the path, but calls `common.LoadSchematic(design.Path())` (disk-first, embedded
 fixture fallback, EDIF `.eds` only) instead of `design.Load()`. See `render-schematic`.
 
 ## 5. Fixtures
 
 Examples read bundled synthetic fixtures from `common/designs/`, and may also load any path
 the user supplies (see §4). The bundled fixtures are hand-authored, not real customer boards,
-so every example runs hermetically and the repo stays shareable. **Never bundle a
+so every example runs hermetically and the repo can be shared. **Never bundle a
 company-specific or otherwise protected netlist.** Bundle only hand-authored synthetic
 fixtures or a design that is redistributable under a license that permits it. New fixtures go
 in `common/designs/` and are reached through `common.Load` / `common.ReadFixture(name)` /
@@ -125,7 +126,7 @@ in `common/designs/` and are reached through `common.Load` / `common.ReadFixture
 Each example and `common` is its own Go module with local `replace` directives (mcpkit
 style). This keeps demokit and its terminal-UI dependency tree out of the shippable
 `github.com/panyam/agni` go.mod. `go build ./...` at the repo root does not descend into
-these nested modules, so the engine build stays clean.
+these nested modules, so they never enter the engine build.
 
 ## 7. Makefile targets (from common/walkthrough.mk)
 

@@ -37,16 +37,16 @@ func TestVerificationStates(t *testing.T) {
 	}
 }
 
-// A caller that cannot check must not be told the answer is fine. Folding Unknown into Verified is
-// how a stale fact keeps its badge.
+// A caller that cannot check must not be told the answer is fine. If Unknown folded into Verified, a
+// stale fact would keep its badge.
 func TestUnknownIsNotVerified(t *testing.T) {
 	if VerificationOf(verifiedParam("sha256:a"), "") == Verified {
 		t.Error("with no revision in hand, drift cannot be ruled out and must not be reported as verified")
 	}
 }
 
-// The old signal and the new one stay in step, so a consumer reading confidence is not misled while
-// the explicit state becomes available.
+// The old signal and the new one agree, so a consumer reading confidence is not misled while the
+// explicit state becomes available.
 func TestMarkVerifiedKeepsTheOlderSignalInStep(t *testing.T) {
 	p := verifiedParam("sha256:a")
 	if p.Prov.GetConfidence() != 1.0 {
@@ -57,7 +57,7 @@ func TestMarkVerifiedKeepsTheOlderSignalInStep(t *testing.T) {
 	}
 }
 
-// A verification nobody can invalidate is the failure this type exists to prevent.
+// This type exists to prevent a verification that nobody can invalidate.
 func TestMarkVerifiedRefusesAnUnanchoredClaim(t *testing.T) {
 	p := &parampb.Parameter{Symbol: "VCC"}
 	if MarkVerified(p, "sri", nil, "2026-08-13", "") {
@@ -74,8 +74,8 @@ func TestMarkVerifiedRefusesAnUnanchoredClaim(t *testing.T) {
 	}
 }
 
-// The snapshot is what makes a stale fact actionable. The corpus overwrites SourceDoc on a re-seed,
-// so the revision that was CHECKED survives only if it was frozen beside the hash it was taken with.
+// The snapshot makes a stale fact actionable. The corpus overwrites SourceDoc on a re-seed, so the
+// CHECKED revision survives only if it was frozen beside the hash it was taken with.
 func TestVerificationSnapshotsTheRevisionItCheckedAgainst(t *testing.T) {
 	spec := &parampb.PartSpec{
 		Mpn:  "ACME-1",
@@ -132,8 +132,8 @@ func specWithDoc(docHash string, params ...*parampb.Parameter) *parampb.PartSpec
 	}
 }
 
-// After a revision lands, a portal can offer "re-confirm these" rather than waiting for someone to
-// notice the document moved. The revision is the one the SPEC records, so nobody has to supply it.
+// After a new revision is seeded, a portal can offer "re-confirm these" rather than waiting for
+// someone to notice the document moved. The SPEC records the revision, so nobody has to supply it.
 func TestStaleVerificationsAfterARevision(t *testing.T) {
 	same := specWithDoc("sha256:relK",
 		verifiedParam("sha256:relK"),
@@ -144,8 +144,8 @@ func TestStaleVerificationsAfterARevision(t *testing.T) {
 		t.Errorf("same revision, nothing stale: %d", len(got))
 	}
 
-	// The vendor ships rev L, so the corpus re-seeds and the SourceDoc hash moves, which is the whole
-	// invalidation mechanism. Nothing about the verifications themselves changed.
+	// The vendor ships rev L, so the corpus re-seeds and the SourceDoc hash moves. That move is the
+	// whole invalidation mechanism. Nothing about the verifications themselves changed.
 	moved := specWithDoc("sha256:relL",
 		verifiedParam("sha256:relK"),
 		verifiedParam("sha256:relK"),
@@ -163,8 +163,8 @@ func TestStaleVerificationsAfterARevision(t *testing.T) {
 }
 
 // A spec carrying a datasheet AND an app note must judge each value against the document IT cites.
-// Comparing every parameter to one hash reports everything citing the other document as stale, which
-// is a false alarm on a shape that is ordinary rather than exotic.
+// Comparing every parameter to one hash reports everything citing the other document as stale. That
+// is a false alarm, and the shape is ordinary rather than exotic.
 func TestStalenessIsPerDocumentNotPerSpec(t *testing.T) {
 	ds := &parampb.Parameter{Symbol: "VCC", Prov: &parampb.ParamProvenance{DocRef: "ds", Confidence: 0.9}}
 	an := &parampb.Parameter{Symbol: "RPULLUP", Prov: &parampb.ParamProvenance{DocRef: "an", Confidence: 0.9}}

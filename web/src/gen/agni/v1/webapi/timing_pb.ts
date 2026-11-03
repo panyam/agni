@@ -48,22 +48,24 @@ export type RequestTiming = Message<"agni.v1.webapi.RequestTiming"> & {
   lookups: CacheLookup[];
 
   /**
-   * rules are the rule evaluations, slowest first, capped at the slowest twenty with every rule's
-   * time still counted in rules_micros.
+   * rules are the rule evaluations, slowest first. The list stops at the slowest twenty. When
+   * allocation was recorded, it also holds the twenty that allocated most, since the rule raising a
+   * worker's memory is often not among the slowest (agni issue 994).
    *
    * @generated from field: repeated agni.v1.webapi.RuleTiming rules = 5;
    */
   rules: RuleTiming[];
 
   /**
-   * rules_evaluated is how many rules ran, of which `rules` lists the slowest.
+   * rules_evaluated is how many rules ran. `rules` lists the slowest of them.
    *
    * @generated from field: int32 rules_evaluated = 6;
    */
   rulesEvaluated: number;
 
   /**
-   * plans are the query plans the request's evaluations ran, when it asked for them.
+   * plans holds the plan of each query evaluation in the request. It is set only when the request
+   * asked for plans.
    *
    * @generated from field: repeated agni.v1.webapi.QueryPlan plans = 7;
    */
@@ -97,11 +99,11 @@ export type TimedStage = Message<"agni.v1.webapi.TimedStage"> & {
   micros: bigint;
 
   /**
-   * sys_bytes and heap_bytes are the process's memory as the stage ended (runtime.MemStats' Sys and
-   * HeapAlloc), set only when the request asked for memory (an Agni-Timing value containing
-   * "memory", agni issue 994). In the browser engine Sys is the wasm memory's size, which never
-   * shrinks, so the first stage ending with a higher figure is the one that raised the peak.
-   * heap_bytes counts garbage not yet collected.
+   * sys_bytes and heap_bytes are the process's memory as the stage ended, read from
+   * runtime.MemStats' Sys and HeapAlloc. They are set only when the request asked for memory, with an
+   * Agni-Timing value containing "memory" (agni issue 994). In the browser engine Sys is the wasm
+   * memory's size, and that size never shrinks. So when a stage ends with a higher figure than every
+   * stage before it, that stage raised the peak. heap_bytes counts garbage not yet collected.
    *
    * @generated from field: int64 sys_bytes = 4;
    */

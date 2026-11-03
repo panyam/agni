@@ -49,13 +49,13 @@ the board rather than with the team, in the one file that already says which fil
 project shared by a family of boards can declare it once in its `project.yaml`, and a design's own
 declaration replaces the project's.
 
-A design that belongs to no project still runs the intent its own `design.yaml` declares.
+A design that belongs to no project still runs intent, and its own `design.yaml` declares it.
 `--intent-path` on `check` and `review` names a file in the same shape, a `name` and an `intent:`
-section, for a design with no `design.yaml`, or to try a declaration before committing it. It
-rides the request as the declaration's value, so on a design that already declares intent it REPLACES
-that declaration for the run rather than being added to it, the way a request's naming convention
-replaces the project's. A server takes no intent flag, since intent is per design and a flag would
-apply one board's declaration to every design it serves (agni issue 831).
+section, for a design with no `design.yaml`, or to try a declaration before committing it. The file
+travels with the request as the declaration's value. On a design that already declares intent, it
+REPLACES that declaration for the run and is not added to it. A request's naming convention replaces
+the project's in the same way. A server takes no intent flag, since intent is per design and a flag
+would apply one board's declaration to every design it serves (agni issue 831).
 
 The section's schema is the `DesignIntent` message in `protos/agni/v1/config/intent.proto`, so a
 declaration has the same shape in YAML, in JSON and on the wire, and a key the message does not have
@@ -75,7 +75,7 @@ net, a component), and the other four describe relationships between several net
 | `nets` | what each named net is, keyed by name (its voltage and domain, its peak draw, the protection it carries, its reset polarity, strap level, AC coupling or pull-up reach) | the design contradicts any fact declared for it |
 | `sequences` | the power-up order of groups of rails | the gating chain is absent, or runs the other way round |
 | `strap_groups` | several strap nets read together as one binary number, and the value it encodes | the group does not encode the declared value, or two devices collide |
-| `io_map` | which net lands on which pin of which device, and optionally the function selected there and what sits at the far end | the net is on a different pin, the declared net is absent, the far end is wrong, or the datasheet lists no such function on that pin |
+| `io_map` | which net is on which pin of which device, and optionally the function selected there and what sits at the far end | the net is on a different pin, the declared net is absent, the far end is wrong, or the datasheet lists no such function on that pin |
 | `margin_factor` | the headroom every supply must have over its rails' declared peaks | a supply is rated below peak times the factor |
 | `components` | what each named component is, keyed by ref-des (a connector's exposure) | a declared component is absent, or is not a connector |
 
@@ -97,12 +97,12 @@ bleeder to ground). A resistance band belongs to a strap, so `min_ohms` without 
 error. A band whose resistor has no readable resistance, or a divider's two resistors, reports
 inconclusive with the band unchecked.
 
-`pull_up_reach_hops` changes how far the pull-up walk searches from that net (agni issue 820). `i2c-pull-up` and the rules beside it look for
-a rail within three series resistors of a bus, because past three the series resistance is usually
-comparable to the pull-up and the bus no longer returns high in time. Some buses reach their pull-up
-through a deeper network on purpose, such as a series isolation resistor followed by a
-level-shifting stage, and the designer has sized it so the bus still works. Declaring the reach on
-that net is how the design says so.
+`pull_up_reach_hops` changes how far the pull-up walk searches from that net (agni issue 820).
+`i2c-pull-up` and the rules beside it look for a rail within three series resistors of a bus,
+because past three the series resistance is usually comparable to the pull-up and the bus no longer
+returns high in time. Some buses reach their pull-up through a deeper network on purpose, such as a
+series isolation resistor followed by a level-shifting stage, and the designer has sized it so the
+bus still works. Declaring the reach on that net says so.
 
 ```yaml
 intent:
@@ -112,23 +112,23 @@ intent:
 
 {{ agniRun "content/guide/runs/pullup-reach.yaml" }}
 
-The first run is the default, so `SDA_MAIN` fails within 3 hops. The second declares a reach of 4 for
-`SDA_MAIN` alone and it passes through all four resistors, while `SCL_MAIN` keeps the default. A
+The first run is the default, so `SDA_MAIN` fails within 3 hops. The second declares a reach of 4
+for `SDA_MAIN` alone and it passes through all four resistors, while `SCL_MAIN` keeps the default. A
 failing verdict always states the limit it searched to, so a declared net that still fails says
 "within 4 hops". The reach is per net because the default is an electrical judgement, and moving it
 for the whole design would pass buses nobody has sized. Zero or an absent value keeps the default,
-and a negative one fails the load. The reach is looked up by the net's exact name, so
-`intent/pull-up-reach-declared` fails a declaration naming a net the design lacks, which is how a
-misspelled name gets reported rather than ignored (agni issue 1165). `SCL_MAIN` also shows a passing verdict with two pull-ups, one direct and
-one behind a series resistor, which names both paths.
+and a negative one fails the load. The reach is looked up by the net's exact name. So
+`intent/pull-up-reach-declared` fails a declaration that names a net missing from the design, and a
+misspelled name is reported rather than ignored (agni issue 1165). `SCL_MAIN` also has two pull-ups,
+one direct and one behind a series resistor, and its passing verdict names both paths.
 
 A `components` entry says whether a connector faces the outside of the product. The exposure rules
-(`esd-protection`, `esd-clamp-not-tvs`, `input-protection` and `reverse-blocking-absent`) treat every
-connector as a way into the board, which is right for a cable entry and wrong for a module socket or
-a mezzanine that joins two boards inside one enclosure. Whether a connector is which depends on the
-product rather than the part. The same board-to-board connector is the module socket on one carrier
-and the cable entry on another, and its part number and footprint rarely say either way, so the
-engine does not guess from them.
+(`esd-protection`, `esd-clamp-not-tvs`, `input-protection` and `reverse-blocking-absent`) treat
+every connector as a way into the board, which is right for a cable entry and wrong for a module
+socket or a mezzanine that joins two boards inside one enclosure. The product decides which one a
+connector is, and the part does not. The same board-to-board connector is the module socket on one
+carrier and the cable entry on another, and its part number and footprint rarely say either way, so
+the engine does not guess from them.
 
 ```yaml
 intent:
@@ -140,15 +140,15 @@ intent:
 A connector declared `internal` leaves the exposure rules, so a net reaching only it is not checked
 for ESD or input protection. A net that also reaches an undeclared connector still is. An undeclared
 connector is external, and `external` can be written to say so. The declarations themselves compile
-to `intent/exposure-declared`, which fails a ref-des the design does not have and a part that is not a
-connector, because either would change nothing while reading as a declaration that took effect.
+to `intent/exposure-declared`. It fails a ref-des missing from the design, and it fails a part that
+is not a connector. Either declaration would change nothing while reading as one that took effect.
 
-`io_map` is the largest of them in practice and the one most boards already have, usually as a
-spreadsheet. On any board carrying a big MCU or SoC, someone decides which peripheral lands on which
-pin long before the schematic exists, firmware is written against that decision, and the schematic is
-drawn from it. Usually an assignment moves late, the map is updated, and one net
-does not get redrawn. Nothing about the resulting board is electrically wrong, so every other rule
-passes, and it surfaces at bring-up as a peripheral that does not respond.
+`io_map` is the largest form in practice, and most boards already have one, usually as a
+spreadsheet. On any board carrying a big MCU or SoC, someone decides which peripheral goes on which
+pin long before the schematic exists, firmware is written against that decision, and the schematic
+is drawn from it. Usually an assignment moves late, the map is updated, and one net does not get
+redrawn. Nothing about the resulting board is electrically wrong, so every other rule passes, and it
+surfaces at bring-up as a peripheral that does not respond.
 
 ```yaml
 io_map:
@@ -162,19 +162,20 @@ io_map:
     to: {device: U1, pin: '5'}     # optional far end
 ```
 
-Write the pin either way. A map is authored in the vocabulary a datasheet and a firmware header use,
-and a netlist answers in package designators, so both are resolved: `PTE7`, `PTE07`, `pte7` and a
-name carrying a zero-width space pasted out of a spreadsheet all reach the same pin. A match that
-needed any of that says so in the verdict, so a note always means something was inferred. `agni
-trace` resolves a pin through the same lookup, so a pin a map names is a pin a trace can start from.
+Write the pin either way. A map is written in the names a datasheet and a firmware header use, and
+a netlist answers in package designators, so both are resolved. `PTE7`, `PTE07`, `pte7` and a name
+carrying a zero-width space pasted out of a spreadsheet all reach the same pin. When a match needed
+any of that, the verdict says so, so a note always means something was inferred. `agni trace`
+resolves a pin through the same lookup, so a trace can start from any pin named in a map.
 
 It compiles to as many as five rules rather than one. Three of them ask whether the design kept the
 promises the map made, one inverts the question to ask which nets the map never mentioned, and the
-fifth, compiled when a row declares a `function`, asks whether the part can be set to it. That number
-is usually the important one. A design with sixteen hundred nets and a map declaring two hundred has
-two hundred checked and fourteen hundred unexamined, which is not the same as clean, and nothing else
-in a run tells those apart. Nets it does not name report as `not-considered` rather than as failures,
-because an undeclared net is a question nobody asked and not a fault in the board.
+fifth compiles when a row declares a `function` and asks whether the part can be set to it. The
+fourth rule's count of unmentioned nets is usually the important one. A design with sixteen hundred
+nets and a map declaring two hundred has two hundred checked and fourteen hundred unexamined, which
+is not the same as clean, and nothing else in a run tells those apart. Nets it does not name report
+as `not-considered` rather than as failures, because an undeclared net is a question nobody asked
+and not a fault in the board.
 
 The three that check the promises are separated because a reviewer acts on them differently, and
 because two of them catch opposite defects (a net the map declares and the netlist does not have is
@@ -184,27 +185,27 @@ third of rows declared a far end, so `io-map-far-end` gives EVERY row a verdict 
 end reads `not-considered`. A rule that reported only the rows carrying one would show a clean result
 over a third of the map and say nothing about the rest.
 
-A row's `function` is checked by `io-map-function` against the functions the part's datasheet lists
-for that pin, read from the vendor's pin-mux table into the corpus (see
-[the datasheet layer](../../architecture/datasheet-layer/#pin-mux-tables)). SDA mapped onto the pin
-that offers SCL fails, and the failure lists what the pin can be. A part with no datasheet entry, or
-whose entry has no pin-mux table, reads `not-considered` with that reason, so a function column
-filled in never reads as checked when it was not. A run with no datasheet corpus at all skips the
-rule, as it skips every rule that needs one.
+`io-map-function` checks a row's `function` against the functions listed for that pin in the part's
+datasheet. Those functions are read from the vendor's pin-mux table into the corpus (see
+[the datasheet layer](../../architecture/datasheet-layer/#pin-mux-tables)). Mapping SDA onto the pin
+that offers SCL fails, and the failure lists what the pin can be. When a part has no datasheet
+entry, or its entry has no pin-mux table, the row reads `not-considered` with that reason. A
+filled-in function column therefore never reads as checked when it was not. A run with no datasheet
+corpus at all skips the rule, as it skips every rule that needs one.
 
-The map and the mux table are different records. The map is this board's allocation and lives here,
-and the mux table is what the part can do and lives in its datasheet spec. A mux table kept as a
-file of its own, as one transcribed from a reference manual usually is, goes into the corpus through
+The map and the mux table are different records. The map is this board's allocation and lives here.
+The mux table lists what the part can do and lives in its datasheet spec. A mux table transcribed
+from a reference manual is usually a file of its own. That file goes into the corpus through
 [`agnids merge-mux`](../datasheets/#merging-a-pin-mux-table) rather than into the map.
 
 ### Reading the map one pin at a time
 
-The four rules each list their own verdicts, which suits a reviewer working through one kind of
-defect and does not suit one signing off the map itself, who reads it a pin at a time. So a run that
-checks a map also lays it out that way. `agni check --format html` opens with a section per device
-("Pins on U1"), and each declared pin is one row. A row shows the declared function, the declared
-net, the net the netlist puts on that pin, the far end and the route to it, and what each of the
-four per-row rules concluded.
+The four rules each list their own verdicts. That suits a reviewer working through one kind of
+defect. It does not suit a reviewer signing off the map itself, who reads it a pin at a time. So a
+run that checks a map also lays it out that way. `agni check --format html` opens with a section per
+device ("Pins on U1"), and each declared pin is one row. A row shows the declared function, the
+declared net, the net the netlist puts on that pin, the far end and the route to it, and what each
+of the four per-row rules concluded.
 
 | outcome | pin | function | declared net | netlist net | far end | route |
 |---|---|---|---|---|---|---|
@@ -213,21 +214,21 @@ four per-row rules concluded.
 
 A row's outcome is the worst any rule reached on it, so the reset row fails on its far end alone
 while its pin and its net both pass. A row no rule could judge reads `not considered`. The route
-is the one `agni trace` prints, net to net through each series part.
+column holds the route `agni trace` prints, net to net through each series part.
 
-The same rows are the `pin_map` table the Tabulate rpc returns for a check run, the one a workbook
-of the run carries, and `--table` writes it as csv.
+The same rows make up the `pin_map` table. The Tabulate rpc returns it for a check run, a workbook
+of the run carries it, and `--table` writes it as csv.
 
     agni check --verdicts --format csv --table pin_map design/
 
-A spreadsheet already kept as ball, function and expected net maps straight onto a row. The ball
-is `pin`, the function is `function`, the expected net is `net`, and the MCU is each row's
-`device`. A partner pin, when the sheet names one, is `to`.
+Suppose a team already keeps a spreadsheet of ball, function and expected net. Each of its rows
+maps straight onto a map row. The ball is `pin`, the function is `function`, the expected net is
+`net`, and the MCU is each row's `device`. A partner pin, when the sheet names one, is `to`.
 
 ### Drafting a map from the netlist
 
-A board with a module connector has hundreds of pins to declare, and writing each row by hand is
-where a map goes wrong first. `agni pinmap` drafts one for a device from the netlist:
+A board with a module connector has hundreds of pins to declare, and a map goes wrong first when
+someone writes each row by hand. `agni pinmap` drafts one for a device from the netlist:
 
     agni pinmap designs/jetson --device J1 -o j1-pins.yaml
 
@@ -241,22 +242,22 @@ in a comment, and the rest sit on ground or a supply and are not walked. The CAN
 - {device: J1, pin: G38, net: /Expansion connector/CAN0.DOUT, to: {device: J18, pin: H08}}  # FSI_GPIO07
 ```
 
-That is the route `agni trace designs/jetson --from J1.G38 --to J18.H08` prints, and the row passes
+`agni trace designs/jetson --from J1.G38 --to J18.H08` prints the same route, and the row passes
 when the draft is checked:
 
     agni check designs/jetson --intent-path j1-pins.yaml --verdicts --format csv --table pin_map
 
 The draft was read off the same netlist, so every row passes by construction, and that run proves
-nothing yet about the board. Its use is the inventory. Review each row against the module's pinout
-and the interface it implements, correct or delete what is wrong, and then the map checks this board
-and every later revision against something a person signed off. `--intent-path` replaces the
-design's own intent for the run, so a design that declares other intent carries the reviewed rows
-into its `design.yaml` instead.
+nothing yet about the board. The draft is useful as an inventory. Review each row against the
+module's pinout and the interface it implements, correct or delete what is wrong, and then the map
+checks this board and every later revision against something a person signed off. `--intent-path`
+replaces the design's own intent for the run, so a design that declares other intent carries the
+reviewed rows into its `design.yaml` instead.
 
 A `peak` joins two tiers. The declaration supplies the demand, which no design
 artifact carries, and a seeded {{ explainable "absolute-maximum-rating" "datasheet parameter" }}
-supplies the regulator's capacity. Both halves have to be present or the rule stays quiet rather than
-guessing.
+supplies the regulator's capacity. Both halves have to be present, or the rule reports nothing
+rather than guessing.
 
 ### One rule per declared thing
 
@@ -285,8 +286,8 @@ never the reverse.
 
 A design run with no declaration leaves
 its intent-bound review items reading **needs-design-intent**, never **pass**. The mechanism exists
-and is blocked on an input you have not supplied yet, which is a different thing from a board that
-was checked and found clean. [Checks and reports](../checks-and-reports/) covers the full outcome
+and is blocked on an input you have not supplied yet. A board that was checked and found clean is a
+different thing. [Checks and reports](../checks-and-reports/) covers the full outcome
 vocabulary.
 
 ## What intent cannot do
@@ -295,9 +296,9 @@ It checks presence, property and order, over the netlist. It does not simulate. 
 is verified as a gating chain in the connectivity, not as timing on a scope, so a board that wires
 the enables correctly and still browns out at power-up is outside what a declaration can see.
 
-It is also only as good as the names. A rail the declaration calls `PMIC_CORE_3V3` has to be called
-that on the board, which is the same dependency [naming conventions](../naming-conventions/) exist to
-make explicit rather than accidental.
+It is also only as good as the names. If the declaration calls a rail `PMIC_CORE_3V3`, the board has
+to call it that too. [Naming conventions](../naming-conventions/) exist to make that same dependency
+explicit rather than accidental.
 
 ## Where to go next
 

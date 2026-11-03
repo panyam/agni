@@ -10,12 +10,13 @@ import (
 	"google.golang.org/protobuf/types/descriptorpb"
 )
 
-// toolPrefix starts every page tool's name, so an agent tells the viewer's tools from agni's
+// toolPrefix starts every page tool's name, so an agent can tell the viewer's tools from agni's
 // analysis tools on the same server.
 const toolPrefix = "viewer_"
 
-// descriptions are what tools/list says of each ViewerPageService method. Generated descriptors carry
-// no comments, so they are written here, and TestEveryPageMethodIsATool fails on a method without one.
+// descriptions holds the tools/list text for each ViewerPageService method. Generated descriptors
+// have no comments, so the text is written here. TestEveryPageMethodIsATool fails on a method
+// without one.
 var descriptions = map[string]string{
 	"GetLocation": "Where an open viewer tab is now: its design, sheet, view and focused verdict, query or trace. Changes nothing.",
 	"ApplyLocation": "Move an open viewer tab to a location, as following a link would. Pass url (a viewer link, such as the one an answer from check, trace or query carries) or location (only the fields to change). " +
@@ -30,9 +31,9 @@ var descriptions = map[string]string{
 const toolNote = " design names the design the tab shows, as mount/path. A call goes to the tab named by page (list_pages lists them), " +
 	"else the tab of that design the reader looked at last, among the tabs whose reader turned on \"let my agents drive this tab\"."
 
-// ToolDecls are the page tools the bridge declares: one per ViewerPageService method, named
-// viewer_<method in snake_case>, taking the request message's fields and the design, and read-only
-// when the method is marked NO_SIDE_EFFECTS.
+// ToolDecls returns the page tools for the bridge to declare. There is one per ViewerPageService
+// method, named viewer_<method in snake_case>. Each takes the request message's fields and the
+// design. A tool is read-only when its method is marked NO_SIDE_EFFECTS.
 func ToolDecls() []rooms.PageToolDecl {
 	sd := viewerpb.File_agni_v1_viewer_page_proto.Services().ByName("ViewerPageService")
 	ms := sd.Methods()
@@ -71,8 +72,9 @@ func readOnly(m protoreflect.MethodDescriptor) bool {
 	return o.GetIdempotencyLevel() == descriptorpb.MethodOptions_NO_SIDE_EFFECTS
 }
 
-// ToolSchema is a page tool's input schema: the request message's, with a required design beside
-// its fields, which the bridge maps to the room and the tab drops before it decodes the request.
+// ToolSchema returns a page tool's input schema. It is the request message's schema plus a required
+// design field. The bridge maps design to the room, and the tab drops it before decoding the
+// request.
 func ToolSchema(md protoreflect.MessageDescriptor) map[string]any {
 	s := MessageSchema(md)
 	s["properties"].(map[string]any)["design"] = map[string]any{"type": "string"}
@@ -80,11 +82,12 @@ func ToolSchema(md protoreflect.MessageDescriptor) map[string]any {
 	return s
 }
 
-// MessageSchema is the JSON Schema of a message as protojson writes it, the mapping mcpkit#1609 sets
-// out for protogen: properties under their JSON names, 64-bit integers as strings, bytes as base64,
-// enums by name, the well-known types in their own JSON forms (wellKnown), and nothing required,
-// since proto3 has no required fields and these protos carry no field_behavior. web/src/toolschema.ts is the same walk
-// over protobuf-es descriptors, and both are held to testdata/viewer_tools.json.
+// MessageSchema returns the JSON Schema of a message as protojson writes it. It follows the mapping
+// that mcpkit#1609 sets out for protogen. Properties go under their JSON names, 64-bit integers are
+// strings, bytes are base64, enums go by name, and the well-known types take their own JSON forms
+// (wellKnown). Nothing is required, since proto3 has no required fields and these protos have no
+// field_behavior. web/src/toolschema.ts does the same walk over protobuf-es descriptors, and both
+// are held to testdata/viewer_tools.json.
 func MessageSchema(md protoreflect.MessageDescriptor) map[string]any {
 	return messageSchema(md, map[protoreflect.FullName]bool{})
 }
@@ -117,7 +120,7 @@ func fieldSchema(f protoreflect.FieldDescriptor, visiting map[protoreflect.FullN
 	return valueSchema(f, visiting)
 }
 
-// valueSchema is one value of f, so a list's element or a map's value.
+// valueSchema returns the schema of one value of f, such as a list's element or a map's value.
 func valueSchema(f protoreflect.FieldDescriptor, visiting map[protoreflect.FullName]bool) map[string]any {
 	switch f.Kind() {
 	case protoreflect.BoolKind:
@@ -145,8 +148,8 @@ func valueSchema(f protoreflect.FieldDescriptor, visiting map[protoreflect.FullN
 	return map[string]any{}
 }
 
-// wellKnown are the types protojson writes in a JSON form of their own rather than as their fields:
-// a wrapper as its bare value, Struct as any object, a Timestamp as an RFC 3339 string.
+// wellKnown lists the types that protojson writes in a JSON form of their own rather than as their
+// fields. A wrapper is its bare value, Struct is any object, and a Timestamp is an RFC 3339 string.
 var wellKnown = map[protoreflect.FullName]func() map[string]any{
 	"google.protobuf.Timestamp":   func() map[string]any { return map[string]any{"type": "string", "format": "date-time"} },
 	"google.protobuf.Duration":    func() map[string]any { return map[string]any{"type": "string"} },

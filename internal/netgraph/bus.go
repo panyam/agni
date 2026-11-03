@@ -39,8 +39,8 @@ func ExpandBusName(name string) []string {
 	return out
 }
 
-// IsBusName reports whether name carries an index range in either dialect's spelling. It is the
-// geometry-free bus detector the readers share.
+// IsBusName reports whether name carries an index range in either dialect's spelling. The readers
+// share it as their geometry-free bus detector.
 func IsBusName(name string) bool { return busRangeRe.MatchString(name) }
 
 func mustAtoi(s string) int { n, _ := strconv.Atoi(s); return n }

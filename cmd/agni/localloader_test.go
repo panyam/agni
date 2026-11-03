@@ -38,8 +38,8 @@ func TestLocalLoaderNotesOncePerPath(t *testing.T) {
 	l := &localLoader{loader: &formats.Loader{}, notes: &notes}
 	ctx := context.Background()
 
-	// The reads themselves fail (the fixture files hold throwaway bytes), which is fine because the
-	// note is written during resolution, before any parse.
+	// The reads themselves fail, since the fixture files hold throwaway bytes. That is fine, because
+	// the note is written during resolution, before any parse.
 	l.Design(ctx, pcb)
 	l.Board(ctx, pcb)
 	l.Geometry(ctx, pcb, "", false)
@@ -49,8 +49,8 @@ func TestLocalLoaderNotesOncePerPath(t *testing.T) {
 	}
 }
 
-// TestLocalLoaderResolvesEachTier pins the split that makes a design's tiers come from different
-// files: connectivity from the netlist entry, copper from the declared board companion.
+// TestLocalLoaderResolvesEachTier pins how a design's tiers come from different files. Connectivity
+// comes from the netlist entry, and copper comes from the declared board companion.
 func TestLocalLoaderResolvesEachTier(t *testing.T) {
 	dir := designFolder(t)
 	l := &localLoader{loader: &formats.Loader{}, notes: &bytes.Buffer{}}
@@ -67,8 +67,8 @@ func TestLocalLoaderResolvesEachTier(t *testing.T) {
 	}
 }
 
-// TestLocalLoaderDesignHashFollowsTheEntry holds that a run recorded against a companion and one
-// recorded against the entry describe the same bytes, so they must record the same revision identity.
+// TestLocalLoaderDesignHashFollowsTheEntry covers two runs, one recorded against a companion and one
+// against the entry. Both describe the same bytes, so they must record the same revision identity.
 func TestLocalLoaderDesignHashFollowsTheEntry(t *testing.T) {
 	dir := designFolder(t)
 	l := &localLoader{loader: &formats.Loader{}, notes: &bytes.Buffer{}}

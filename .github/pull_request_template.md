@@ -11,5 +11,6 @@ real design, a rendered output, a corpus sweep).
 
 - [ ] `make testall` passes locally
 - [ ] New behavior has a test (readers: a fixture in the package's `testdata/`)
-- [ ] A new rule ships its `check/docs/<name>.md`; user-facing changes update the relevant `docs/`
+- [ ] A new rule ships its `docs/<name>.md` (`stdlib/rules/builtin/docs/` for a built-in), and
+  user-facing changes update the relevant `docsite/content/` page
 - [ ] The change reads the IR, not source files, and adds no format-specific IR field (CONSTRAINTS C9)

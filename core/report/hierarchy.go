@@ -18,14 +18,14 @@ const hierarchyNoteListed = 5
 // none (agni issues 707, 717). file names the design, and only its last path element is printed, so
 // a mount URI and a host path read alike.
 //
-// It is ONE sentence for every surface that says it: the CLI's stderr note, the check and checklist
-// HTML reports, and the viewer's canvas strip, which GetDesignResponse.hierarchy_note carries. Each
-// surface frames it (the CLI prefixes "note: ") and none rewords it, so a reader who has seen it in
-// one place recognises it in the next.
+// Every surface that states the limit uses this ONE sentence. The CLI prints it as a stderr note, the
+// check and checklist HTML reports show it, and the viewer's canvas strip reads it from
+// GetDesignResponse.hierarchy_note. Each surface frames it (the CLI prefixes "note: ") and none
+// rewords it, so a reader who has seen it in one place recognises it in the next.
 //
 // It takes the diagnostic rather than the design, so it reads nothing else. A hierarchical design is
-// not a defect, so this is never a finding. The largest blocks are named first, because that is where
-// most of the missing design is.
+// not a defect, so this is never a finding. The largest blocks are named first, because they hold most
+// of the missing design.
 //
 // A flattened read lists only the blocks that place themselves (UNEXPANDED_REASON_CYCLE), and saying
 // "only its top cell was read" there would be false, so those get a sentence of their own (agni issue
@@ -52,8 +52,8 @@ func HierarchyNote(file string, blocks []*ir.UnexpandedHierarchy) string {
 		path.Base(file), noun, HierarchySummary(blocks), verb, named, noun)
 }
 
-// HierarchyCycles reports whether every listed block was left out because it places itself, which is
-// all a flattened read leaves out.
+// HierarchyCycles reports whether every listed block was left out because it places itself. A
+// flattened read leaves out only such blocks.
 func HierarchyCycles(blocks []*ir.UnexpandedHierarchy) bool {
 	for _, b := range blocks {
 		if b.GetReason() != ir.UnexpandedReason_UNEXPANDED_REASON_CYCLE {

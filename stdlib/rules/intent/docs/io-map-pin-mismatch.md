@@ -3,8 +3,8 @@
 ### What it checks
 
 Every row of the declared IO map names a net, a device and a pin. This rule looks the pin up in the
-netlist and reports the rows where the pin carries something other than the net the map assigns to
-it.
+netlist. It reports a row when the map assigns one net to the pin and the netlist puts another net
+there.
 
 The map is the declaration; the netlist is the design. Neither is derived from the other, so a
 disagreement between them means something.
@@ -12,23 +12,23 @@ disagreement between them means something.
 ### For hardware engineers
 
 On any board carrying a large MCU or SoC, the pin assignment is decided long before the schematic
-exists. Someone works out which peripheral lands on which pin, firmware is written against that
+exists. Someone works out which peripheral goes on which pin, firmware is written against that
 decision, and the schematic is drawn from it.
 
 Then a pin assignment moves. Layout wanted a swap to clean up a crossing, or firmware hit a mux
 conflict and needed the peripheral somewhere else. The map is updated and one net does not get
 redrawn.
 
-**Nothing about the resulting board is electrically wrong**, which is why no other rule finds it.
-Every net is properly driven, every rail is in range, every bus is terminated. The board simply
-disagrees with a document that, until now, nothing had ever read. It surfaces at bring-up as a
+**Nothing about the resulting board is electrically wrong**, so no other rule finds it. Every net
+is properly driven, every rail is in range, every bus is terminated. The board simply disagrees with
+a document, and until now nothing had ever read that document. It surfaces at bring-up as a
 peripheral that does not respond, and the time is spent looking at the peripheral rather than at the
 pin it is on.
 
 ### The pin may be spelled either way
 
-A map is authored in the vocabulary a datasheet and a firmware header use, the functional pin NAME
-(`PTC11`, `SDA`). A netlist answers in package DESIGNATORS (`41`, `12`). An author should not have to
+A map is authored in functional pin NAMES (`PTC11`, `SDA`), the vocabulary of a datasheet and a
+firmware header. A netlist answers in package DESIGNATORS (`41`, `12`). An author should not have to
 know which one the checker wants, so both are tried.
 
 Both go through the shared identifier comparison, so these agree:
@@ -51,10 +51,10 @@ meant, and the row may well be correct, so it says exactly that and names the ca
 package designator instead makes the row decidable.
 
 **A pin the device does not declare is a fail.** The map names something the part does not have, by
-either spelling, which is a defect in one document or the other.
+either spelling. That is a defect in one document or the other.
 
-**A device the design does not carry is `not-considered`.** A missing part is what the module and
-subsystem forms report; firing here as well would put one defect under two review items.
+**A device the design does not carry is `not-considered`.** The module and subsystem forms report a
+missing part, and firing here as well would put one defect under two review items.
 
 **A device whose part type carried no pin list is `not-considered`**, naming that. It is a gap in the
 READ rather than anything about the design, and it must not read as a wrong pin.
@@ -83,8 +83,8 @@ io_map:
 
 `net`, `device` and `pin` are required. A row missing any of them states nothing checkable.
 
-**`function` is checked by its own rule.** Whether a selected function is legal on a pin is
-`intent/io-map-function`, which reads the part's alternate-function table from the datasheet corpus.
+**`function` is checked by its own rule.** `intent/io-map-function` checks whether a selected
+function is legal on a pin. It reads the part's alternate-function table from the datasheet corpus.
 This rule says nothing about it, because a net on the wrong pin and a function the pin cannot carry
 are fixed in different places.
 

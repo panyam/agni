@@ -33,11 +33,11 @@ build it up yourself, delete the `conventions:` and `checklists:` sections of `p
 `profiles/`, `params/`, and the `intent:` section of `designs/jetson/design.yaml` and add them back as
 you go.
 
-The board is a real, shipped design, and it is not a test fixture with flaws planted in it. What the
-tool reports about it is a mix of genuine review points, design choices a netlist cannot see the
-reasons for, and the limits of what any tool can tell from the files, and learning to tell those apart
-is most of what the ladder teaches. Rung 10's second revision is the one place the board is edited,
-and that page says exactly how.
+The board is a real, shipped design, and it is not a test fixture with flaws planted in it. The
+tool's reports about it mix genuine review points, design choices whose reasons a netlist cannot
+see, and the limits of what any tool can tell from the files. The ladder mostly teaches you to tell
+those apart. The board is edited in only one place, rung 10's second revision, and that page says
+exactly how.
 
 ## The rungs
 
@@ -62,8 +62,8 @@ and the ones you added still work.
 
 Rungs 8 to 11 run your review.
 
-8. [Write your checklist](08-write-your-checklist/) binds the questions your team asks of every
-   board to the engine.
+8. [Write your checklist](08-write-your-checklist/) binds your team's questions for every board to
+   the engine.
 9. [Read the verdicts](09-read-the-verdicts/) explains why a question nobody answered must not
    score as a pass.
 10. [Compare revisions](10-compare-revisions/) shows what changed between rev A and rev B,
@@ -88,7 +88,7 @@ same step on your own design by changing which files it points at.
 | 1 | `agni stats .` on the board | point `designs/<name>/design.yaml` at your schematic or netlist, and list your board and other exports under `companions` |
 | 2 | `agni check .` | same command, your design folder |
 | 4 | `conventions:` in `project.yaml` | your team's rail names and naming rules |
-| 5 | the project's `profiles/pcie.yaml` | one file per bus your team designs with |
+| 5 | the project's `profiles/pcie.yaml` | one file per bus in your team's designs |
 | 6 | the project's `params/` | a seeded PartSpec per part worth checking |
 | 7 | `intent:` in `designs/jetson/design.yaml` | one per design, since each board has its own architecture |
 | 8 | `checklists:` in `project.yaml` | your team's checklists, by name |

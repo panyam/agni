@@ -12,23 +12,23 @@ import (
 // (WS3-122).
 //
 // A rule without a Spec twin has nothing holding its declaration to its body, so the declaration
-// is prose, and three gates trust it. A rule that reads datasheet params without declaring them
-// RUNS where it should have been gated to not-applicable, and reports over a tier that was never
+// is prose, and three gates trust it. Suppose a rule reads datasheet params without declaring them.
+// It RUNS where it should have been gated to not-applicable, and reports over a tier that was never
 // attached. Nothing about that fails loudly.
 //
-// It records TIERS, not fact names, because that is the granularity the gates key on. See FactTier.
+// It records TIERS, not fact names, because the gates key on tiers. See FactTier.
 //
 // # What an observation proves, and what it does not
 //
 // A recorded read is EVIDENCE that the rule called that accessor and so depends on that tier. An
-// ABSENT read is not evidence of anything, because a rule that early-returns on the fixture it was
-// given never reaches its accessors. So a caller may soundly assert "everything read is declared"
+// ABSENT read is not evidence of anything. A rule may early-return on its fixture, and then it never
+// reaches its accessors. So a caller may soundly assert "everything read is declared"
 // and may NOT assert "everything declared is read". The second reads as an over-declaration report
 // to a human, never as a gate.
 //
 // It embeds Model, so accessors it does not override delegate unchanged and a Model method added
-// later keeps compiling. Adding a method that reaches a gated tier means overriding it here too,
-// which is why each override is annotated with its tier.
+// later keeps compiling. Adding a method that reaches a gated tier means overriding it here too, so
+// each override is annotated with its tier.
 //
 // Not safe for concurrent use. Rules run sequentially within one Run.
 type RecordingModel struct {
@@ -59,7 +59,7 @@ func (r *RecordingModel) Reset() { clear(r.read) }
 
 func (r *RecordingModel) note(t FactTier) { r.read[t] = true }
 
-// param tier: the seeded datasheet join. ComponentMPN is NOT here, because it is the
+// PartSpec reads the param tier, the seeded datasheet join. ComponentMPN is NOT here. It is the
 // design-side part identity (a BomLine or an attribute), declared as component.mpn, and present
 // with or without a seeded set.
 func (r *RecordingModel) PartSpec(refDes string) *parampb.PartSpec {
@@ -67,14 +67,14 @@ func (r *RecordingModel) PartSpec(refDes string) *parampb.PartSpec {
 	return r.Model.PartSpec(refDes)
 }
 
-// board tier.
+// BoardNets reads the board tier.
 func (r *RecordingModel) BoardNets() []BoardNet {
 	r.note(TierBoard)
 	return r.Model.BoardNets()
 }
 
-// connectivity tier: everything sourced from a component's pins, which a placement that lost its
-// symbol does not have.
+// Pins reads the connectivity tier, everything sourced from a component's pins. A placement that
+// lost its symbol has none of it.
 func (r *RecordingModel) Pins() []PinInst {
 	r.note(TierConnectivity)
 	return r.Model.Pins()

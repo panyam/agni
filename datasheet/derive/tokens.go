@@ -24,7 +24,7 @@ var (
 // parseRatings parses one absolute-maximum-ratings value cell. A plain number is a
 // max-only bound (a stress ceiling), "±N" or "+/-N" spans -N..N, and "A to B" is a
 // range. Anything else (prose like "Internally Limited", empty) does not parse, and
-// the row lands in the gap list.
+// the row goes into the gap list.
 func parseRatings(s string) (min, max *float64, ok bool) {
 	s = strings.TrimSpace(s)
 	if m := plusMinus.FindStringSubmatch(s); m != nil {
@@ -68,11 +68,11 @@ func parseNumberCell(s string) *float64 {
 }
 
 // parseCondition parses one test-condition fragment into a param Condition. It
-// recognizes "SYM = N UNIT" and "A <= SYM <= B UNIT" (ASCII or ≤). Anything else,
-// such as a symbol-to-symbol relation ("VDS = VGS") or a prose range, keeps only Raw,
-// which is captured but not machine-comparable
+// recognizes "SYM = N UNIT" and "A <= SYM <= B UNIT" (ASCII or ≤). Anything else
+// keeps only Raw, such as a symbol-to-symbol relation ("VDS = VGS") or a prose range.
+// Raw is captured but not machine-comparable
 // (docsite/content/architecture/datasheet-layer.md#comparison-semantics). Raw always
-// carries the source text.
+// holds the source text.
 func parseCondition(s string) *parampb.Condition {
 	s = strings.TrimSpace(s)
 	c := &parampb.Condition{Raw: s}

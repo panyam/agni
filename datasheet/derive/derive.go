@@ -1,10 +1,10 @@
-// Package derive is the deterministic extraction stage of the datasheet pipeline:
-// PartSpec = f(document, toolchain, recipes, patches). It consumes a doc-IR
-// (agni.v1.doc), classifies tables through declarative recipes, tokenizes rows into
-// parameter-IR rows, applies pinned human patches LAST so a verified fix cannot
-// regress, and emits the PartSpec with a RunManifest that pins the inputs and lists
-// every gap the run saw and did not extract. Pure data-in data-out, no I/O
-// (CONSTRAINTS C1); loaders take fs.FS.
+// Package derive is the deterministic extraction stage of the datasheet pipeline. It
+// computes PartSpec = f(document, toolchain, recipes, patches). It consumes a doc-IR
+// (agni.v1.doc), classifies tables through declarative recipes, and tokenizes rows into
+// parameter-IR rows. It applies pinned human patches LAST so a verified fix cannot
+// regress. It emits the PartSpec with a RunManifest, and the manifest pins the inputs
+// and lists every gap the run saw and did not extract. The package is pure data-in
+// data-out with no I/O (CONSTRAINTS C1), and its loaders take fs.FS.
 //
 // The stages and the trust posture are in
 // docsite/content/architecture/datasheet-layer.md#how-a-partspec-is-derived-from-a-document.
@@ -31,8 +31,8 @@ import (
 // it on any behavior change; the golden agreement tests are the regression gate.
 const Version = "derive/v0"
 
-// Confidence is stamped on every derived parameter. Below 1 because only a human
-// verification (param.MarkVerified) earns 1.0.
+// Confidence is stamped on every derived parameter. It is below 1 because only a human
+// verification (param.MarkVerified) sets 1.0.
 const Confidence = 0.9
 
 // Identity is the part identity the operator supplies for a derivation, because the
@@ -47,11 +47,12 @@ type Identity struct {
 	Locator string
 }
 
-// Run derives a PartSpec from a doc-IR: attach titles to untitled tables, classify
-// them through the recipes matching the document, apply patches, tokenize rows,
-// validate, and emit spec + manifest. The error return is for structural failures
-// (an invalid recipe regex, or a spec that fails param.Validate, which is a derive
-// bug). Data-level shortfalls are never errors; they are manifest gaps.
+// Run derives a PartSpec from a doc-IR. It attaches titles to untitled tables,
+// classifies them through the recipes matching the document, applies patches,
+// tokenizes rows, validates, and emits spec + manifest. The error return is for
+// structural failures, such as an invalid recipe regex or a spec that fails
+// param.Validate (a derive bug). Data-level shortfalls are never errors. They are
+// manifest gaps.
 func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patch, id Identity) (*parampb.PartSpec, *derivepb.RunManifest, error) {
 	if id.MPN == "" {
 		return nil, nil, errors.New("derive: identity.MPN is required (the join key of the emitted spec)")
@@ -74,7 +75,7 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 			// Title is NOT filled from the doc-IR. SourceDoc.title is the vendor's document
 			// number and revision as printed, while producers fill Document.title with the PART
 			// number, so copying it gave a citation that could not name its revision (agni issue
-			// 290). It stays empty and gapUnidentifiedDocument records the refusal.
+			// 290). It is left empty, and gapUnidentifiedDocument records the refusal.
 			Vendor: id.Manufacturer,
 			// The revision this spec describes. param.VerificationOfIn compares a verification's
 			// pinned hash against this one, so leaving it empty makes staleness "unknown" forever
@@ -85,7 +86,7 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 	}
 	gapUnidentifiedDocument(work, manifest)
 
-	// matchRecipes reads the doc-IR title, which is the RIGHT use of it, because a recipe
+	// matchRecipes reads the doc-IR title. That is the RIGHT use of it, because a recipe
 	// selects documents by the part they describe and not by revision.
 	rules, pinRules, muxRules, err := matchRecipes(work.Title, recipes, manifest)
 	if err != nil {
@@ -161,12 +162,13 @@ func Run(d *docpb.Document, recipes []*derivepb.Recipe, patches []*derivepb.Patc
 	return spec, manifest, nil
 }
 
-// candidateTitles returns the plausible titles for a table, best-first: the
-// producer-attached title, then band cells (wide merged header cells in the top rows,
-// since real parsers fold a section band INTO the table), then short text blocks
-// within 72pt above the table, nearest first. Classification takes the FIRST one a
-// recipe rule matches, so a note line between heading and table ("TA = 25C unless
-// otherwise noted") is a candidate that never matches.
+// candidateTitles returns the plausible titles for a table, best first. The
+// producer-attached title comes first. Band cells come next. They are wide merged
+// header cells in the top rows, since real parsers fold a section band INTO the
+// table. Short text blocks within 72pt above the table come last, nearest first.
+// Classification takes the FIRST candidate a recipe rule matches. So a note line
+// between heading and table ("TA = 25C unless otherwise noted") is a candidate that
+// never matches.
 func candidateTitles(pg *docpb.Page, t *docpb.Table) []string {
 	var out []string
 	if t.Title != "" {
@@ -216,7 +218,7 @@ func bandCells(t *docpb.Table) []string {
 // findHeaderRow locates the column-header row, the first of the top four rows whose
 // cells match at least two recognized column names. Real parsers put band rows
 // above it and hand fixtures have it at row 0. Returns 0 when nothing matches, and
-// the detectColumns miss then lands the table in gaps.
+// the detectColumns miss then puts the table in gaps.
 func findHeaderRow(t *docpb.Table) int32 {
 	for row := int32(0); row < min(t.Rows, 4); row++ {
 		hits := 0
@@ -295,8 +297,8 @@ func matchRecipes(title string, recipes []*derivepb.Recipe, manifest *derivepb.R
 }
 
 // classifyPin reports whether a title names a pin function table, and what the recipe
-// says its designator columns mean. The bool is the match, because an axis of UNSPECIFIED
-// is a legitimate answer ("this is a pin table, do not read its columns as packages") and
+// says its designator columns mean. The bool reports the match. An axis of UNSPECIFIED is
+// a legitimate answer ("this is a pin table, do not read its columns as packages"), so it
 // cannot double as the not-matched signal the way LimitKind's zero value does.
 func classifyPin(title string, rules []compiledPinRule) (derivepb.PinColumnAxis, bool) {
 	for _, r := range rules {
@@ -317,8 +319,8 @@ func classify(title string, rules []compiledRule) parampb.LimitKind {
 }
 
 // applyPatches overwrites cell text for every patch whose (doc hash, pre-patch table
-// content hash) key matches; patches that match the document but no table are
-// recorded as "patch-unapplied" gaps (a revision or re-detection invalidated them).
+// content hash) key matches. A patch can match the document but no table, when a
+// revision or re-detection invalidated it. Those are recorded as "patch-unapplied" gaps.
 func applyPatches(d *docpb.Document, patches []*derivepb.Patch, manifest *derivepb.RunManifest) (int, error) {
 	applied := 0
 	for _, p := range patches {
@@ -393,15 +395,15 @@ func detectColumns(t *docpb.Table, headerRow int32) columns {
 	return c
 }
 
-// extractTable turns one classified table's rows into parameters. Merged cells
-// (a symbol spanning its condition-set rows) carry down through their span; rows
-// that yield no value bound land in gaps, never as empty parameters.
+// extractTable turns one classified table's rows into parameters. A merged cell is
+// copied down through its span, such as a symbol spanning its condition-set rows.
+// Rows that yield no value bound go into gaps, never as empty parameters.
 func extractTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg *docpb.Page, t *docpb.Table, kind parampb.LimitKind) {
 	headerRow := findHeaderRow(t)
 	cols := detectColumns(t, headerRow)
 	// Band texts other than the chosen title are table-level conditions ("TA = 25C
-	// unless otherwise noted"). Every row inherits them, raw when they do not parse,
-	// which keeps such rows machine-incomparable until verified.
+	// unless otherwise noted"). Every row inherits them, raw when they do not parse.
+	// Raw conditions keep such rows machine-incomparable until verified.
 	var tableConds []*parampb.Condition
 	for _, band := range bandCells(t) {
 		if band == t.Title {
@@ -412,7 +414,7 @@ func extractTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg *do
 	if cols.symbol < 0 && cols.name < 0 {
 		// TI-shaped tables label rows in an unlabeled column 0 ("Maximum input
 		// voltage (VIN to GND) | MIN | MAX | UNIT"), so fall back to column 0 as the
-		// name column when no value column claims it. Symbol stays empty.
+		// name column when no value column claims it. Symbol is left empty.
 		if cols.ratings != 0 && cols.min != 0 && cols.typ != 0 && cols.max != 0 && cols.unit != 0 && cols.cond != 0 {
 			cols.name = 0
 		}
@@ -511,9 +513,9 @@ func extractTable(spec *parampb.PartSpec, manifest *derivepb.RunManifest, pg *do
 			// members still make the row machine-incomparable.
 			p.ConditionCoverage = parampb.ConditionCoverage_CONDITION_COVERAGE_COMPLETE
 		}
-		// With no conditions channel, coverage stays UNSPECIFIED and never
-		// UNCONDITIONAL, because header defaults this stage cannot prove captured
-		// may qualify every row (datasheet-layer.md#trust-defaults).
+		// With no conditions channel, coverage is UNSPECIFIED and never
+		// UNCONDITIONAL. Header defaults may qualify every row, and this stage cannot
+		// prove it captured them (datasheet-layer.md#trust-defaults).
 
 		spec.Parameters = append(spec.Parameters, p)
 	}

@@ -6,10 +6,10 @@ import (
 	"testing"
 )
 
-// TestNoNameIsBothAMemberAndAModule holds the namespace rule agni issue 751 adopted: a dot separates
-// a module from its member, so no queryable name may also be the module part of another name. `pin`
-// beside `pin.net` read either as a relation or as a module, depending on what followed it; the
-// relation became `component.pin` so that `pin` is only ever a module.
+// TestNoNameIsBothAMemberAndAModule holds a namespace rule from agni issue 751. A dot separates a
+// module from its member, so no queryable name may also be the module part of another name. `pin`
+// beside `pin.net` read either as a relation or as a module, depending on what followed it. The
+// relation became `component.pin`, so `pin` is only ever a module.
 func TestNoNameIsBothAMemberAndAModule(t *testing.T) {
 	names := map[string]bool{}
 	for _, r := range Catalog() {

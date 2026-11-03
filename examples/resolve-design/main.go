@@ -1,11 +1,11 @@
 // Command resolve-design is the walkthrough of the engine's design descriptors. It points at a
 // file, learns which design it belongs to, and reads the design's declared entry rather than
-// whatever file happened to be named. The narration lives in the sidecar walkthrough.md (loaded via
+// whatever file happened to be named. The narration is in the sidecar walkthrough.md (loaded via
 // demokit's FromMarkdown), so this file only binds the steps that run engine code and wires the
 // renderer.
 //
-// Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
-// `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
+// The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
+// `make runquiet` takes non-interactive defaults (CI-safe), and `make doc` renders to markdown.
 package main
 
 import (
@@ -27,13 +27,13 @@ import (
 //go:embed walkthrough.md
 var walkthroughMD []byte
 
-// fixtureRoot is the bundled project the walkthrough resolves against. A store's tree is rooted at
-// one filesystem, which on a server is a mount and here is this folder. Everything the example
-// names is relative to it, never a host path.
+// fixtureRoot is the bundled project for the walkthrough to resolve against. A store's tree is
+// rooted at one filesystem. On a server that is a mount, and here it is this folder. Everything the
+// example names is relative to it, never a host path.
 const fixtureRoot = "../common/designs/demo-project"
 
-// mount is the name this one tree is addressed by. An artifact URI always carries an authority, so
-// even a single-tree client names its tree rather than inventing a path-shaped alternative.
+// mount names this one tree. An artifact URI always has an authority, so even a single-tree client
+// names its tree rather than inventing a path-shaped alternative.
 const mount = "fixtures"
 
 func main() {
@@ -45,8 +45,8 @@ func main() {
 		Dir("resolve-design").
 		FromMarkdownBytes(walkthroughMD)
 
-	// The same ProjectService a server hosts, over the same filesystem-backed store, differing only
-	// in which tree it was pointed at. Clients pick a store and everyone asks the service.
+	// A server hosts this same ProjectService over the same filesystem-backed store. Only the tree
+	// differs. Clients pick a store, and everyone asks the service.
 	svc := service.NewProjectService(projects.NewFSStore(projects.Tree{Mount: mount, FS: os.DirFS(fixtureRoot)}))
 	ctx := context.Background()
 
@@ -90,8 +90,8 @@ func main() {
 		fmt.Printf("project:    %s\n", resp.GetProject().GetName())
 		fmt.Printf("entry:      %s\n", d.GetEntryUri())
 		fmt.Printf("companions: %s\n", strings.Join(d.GetCompanionUris(), ", "))
-		// Which artifact each TIER opens is decided once, above every client, so the CLI and the
-		// browser cannot disagree about which companion supplies the board.
+		// SourcesFor decides once, above every client, which artifact each TIER opens. So the CLI
+		// and the browser cannot disagree about which companion supplies the board.
 		src := service.SourcesFor(d, "")
 		fmt.Printf("tiers:      netlist=%s board=%s sheets=%s\n", src.NetlistURI, src.BoardURI, src.GeometryURI)
 		return nil
@@ -126,8 +126,7 @@ func main() {
 }
 
 // artifactUri names a file inside the bundled fixture tree. The example declares one mount, so the
-// authority is fixed and only the path varies; a server does the same thing with the mounts an
-// operator configured.
+// authority is fixed and only the path varies. A server does the same with the operator's mounts.
 func artifactUri(rel string) string {
 	u, err := artifact.New(mount, rel)
 	if err != nil {

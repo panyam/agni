@@ -46,9 +46,8 @@ func isolatedDesign(t *testing.T, fixture string) string {
 //
 // It proves that by deleting the design before re-rendering. Every format the live command emits has
 // to come back byte for byte from the document alone, with no design file and no re-run of a single
-// rule. A document that merely round-tripped its own fields would pass a weaker test while still
-// being unreadable to anyone who does not have the design, and those readers are who this artifact
-// exists for.
+// rule. A document that merely round-tripped its own fields would pass a weaker test. It could still
+// be unreadable to anyone without the design, and this artifact exists for those readers.
 func TestResultsRoundTripWithoutTheDesign(t *testing.T) {
 	design := isolatedDesign(t, "testdata/conformance/fires.edn")
 	doc := filepath.Join(t.TempDir(), "run.results.json")
@@ -87,7 +86,8 @@ func TestResultsRoundTripWithoutTheDesign(t *testing.T) {
 	}
 }
 
-// stripCoverage removes the run-coverage lines the live command adds and a document cannot carry.
+// stripCoverage removes the run-coverage lines. The live command adds them and a document cannot
+// hold them.
 func stripCoverage(s string) string {
 	keep := []string{}
 	for _, ln := range strings.Split(s, "\n") {
@@ -100,10 +100,10 @@ func stripCoverage(s string) string {
 	return strings.Join(keep, "\n")
 }
 
-// TestResultsDocumentRecordsTheRun checks the fields that make a document interpretable later: what
-// produced it, which revision it is about, and which overlay tiers were in effect. Without those a
-// reader cannot tell a design with no datasheet violations from a run that had no datasheet corpus,
-// which is the same silence-reads-as-coverage failure the review outcomes exist to prevent.
+// TestResultsDocumentRecordsTheRun checks that a document records what produced it, which revision it
+// is about, and which overlay tiers were in effect. A later reader needs those to interpret it.
+// Without them a reader cannot tell a design with no datasheet violations from a run that had no
+// datasheet corpus. The review outcomes exist to prevent the same silence-reads-as-coverage failure.
 func TestResultsDocumentRecordsTheRun(t *testing.T) {
 	design := isolatedDesign(t, "testdata/conformance/fires.edn")
 	path := filepath.Join(t.TempDir(), "run.results.json")
@@ -168,8 +168,8 @@ func TestResultsDocumentRecordsTheRun(t *testing.T) {
 }
 
 // TestResultsDocumentRecordsOverlayTiers pins the other half of the run record. With a convention
-// attached, the document names it. The name matters more than a flag would, because it is also the
-// namespace the convention's rules are reported under.
+// attached, the document names it. The name matters more than a flag would, because the convention's
+// rules are also reported under it as their namespace.
 func TestResultsDocumentRecordsOverlayTiers(t *testing.T) {
 	design := isolatedDesign(t, "testdata/review/conv-demo.edn")
 	path := filepath.Join(t.TempDir(), "run.results.json")
@@ -239,9 +239,9 @@ func TestReviewResultsRejectsARollup(t *testing.T) {
 	}
 }
 
-// TestResultsRejectsAForeignDocument pins the schema gate. Half-reading a document this build does
-// not understand would produce a findings list shorter than the run that made it, with nothing to say
-// so. That is the silence-as-coverage failure the contract exists to rule out, so an unknown schema
+// TestResultsRejectsAForeignDocument pins the schema gate. Imagine this build half-reads a document
+// it does not understand. It produces a findings list shorter than the run that made it, with nothing
+// to say so. The contract exists to rule out that silence-as-coverage failure, so an unknown schema
 // is an error rather than a best-effort read.
 func TestResultsRejectsAForeignDocument(t *testing.T) {
 	dir := t.TempDir()
@@ -270,8 +270,8 @@ func TestResultsRejectsAForeignDocument(t *testing.T) {
 // It is the other half of what `catalog` exists for. A catalog snapshot separates a clean design from
 // a run that checked nothing; this separates a clean design from one whose questions were GATED. A
 // document carrying one without the other lets a reader conclude the run was broader than it was. A
-// re-render is meant to reproduce the original output, which it could not while one surface
-// knew something the other did not.
+// re-render is meant to reproduce the original output. It could not do that while one surface knew
+// something the other did not.
 func TestResultsCarriesSkippedRules(t *testing.T) {
 	design := isolatedDesign(t, "testdata/review/can-broken.edn")
 	out := filepath.Join(t.TempDir(), "run.results.json")
@@ -316,14 +316,14 @@ func TestReviewResultsCoverageRefusesAFormatItCannotRender(t *testing.T) {
 	if !strings.Contains(err.Error(), "would be discarded") {
 		t.Errorf("the refusal should say the format was going to be thrown away: %v", err)
 	}
-	// --coverage on its own is the supported spelling and stays working.
+	// --coverage on its own is the supported spelling and still works.
 	if got := runCLI(t, resultsCmd(), "--coverage", doc); !strings.Contains(got, "Review coverage") {
 		t.Errorf("--coverage alone should still render the rollup, got:\n%s", got)
 	}
 }
 
-// reviewAt parses a review's json with its creation time cleared, the one field two runs of the same
-// review over the same design differ in.
+// reviewAt parses a review's json with its creation time cleared. Two runs of the same review over
+// the same design differ in that field alone.
 func reviewAt(t *testing.T, js string) *webapi.Review {
 	t.Helper()
 	var rv webapi.Review

@@ -7,8 +7,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// pinNameModel is traceFixture with U7 given more pins: two it names GND, and one named
-// GMAC0_MII_RGMII_TXD2 that a spelling of GMAC0_TXD2 matches only by dropping tokens.
+// pinNameModel is traceFixture with U7 given more pins. Two are named GND, and one is named
+// GMAC0_MII_RGMII_TXD2. The spelling GMAC0_TXD2 matches that one only by dropping tokens.
 func pinNameModel() Model {
 	d := traceFixture()
 	d.Libraries[0].Parts[0].Pins = append(d.Libraries[0].Parts[0].Pins,
@@ -40,8 +40,8 @@ func TestTraceResolvesAPinByItsName(t *testing.T) {
 	}
 }
 
-// A name several pins carry, and a name a pin matches only loosely, are refused with the candidates,
-// since a route from a guessed pin is an answer about the wrong node.
+// Two spellings are refused with the candidates. One is a name several pins share, and the other is
+// a name a pin matches only loosely. A route from a guessed pin is an answer about the wrong node.
 func TestTraceRefusesAnAmbiguousOrLoosePinName(t *testing.T) {
 	m := pinNameModel()
 	for _, tc := range []struct{ pin, want string }{

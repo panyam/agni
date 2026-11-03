@@ -17,20 +17,20 @@ import (
 // (geom.BoardGeometry), the second producer of that contract after KiCad (WS1-006/023).
 // sourceFile is recorded in provenance only (C1).
 //
-// Fidelity: lossy-bounded (C6). This producer carries the board outline (Profile), the layer
-// stackup table, component placements with their pads (resolved through the padstack
-// def/instance indirection), and routed copper: tracks (arcs approximated as polylines) and
-// vias (drilled holes with the co-located pad as annular, with their layer span), silkscreen/fab
-// body graphics (a package's Marking/Outline/AssemblyDrawing composed per placement), and copper
-// plane/pour fills as zones (authored outline; WS1-031). Non-via copper lands are NOT carried yet;
-// fill cutouts drop per the C6 zone bound. Emitted coordinates are
-// integer nanometers (unit_nm=1), matching the KiCad producer so downstream consumers see one
-// frame.
+// Fidelity: lossy-bounded (C6). This producer emits the board outline (Profile), the layer
+// stackup table, and component placements with their pads. Pads resolve through the padstack
+// def/instance indirection. It also emits routed copper. Tracks have their arcs approximated
+// as polylines. Vias are drilled holes with the co-located pad as annular, and each records its
+// layer span. It emits silkscreen/fab body graphics, composing a package's
+// Marking/Outline/AssemblyDrawing per placement. It emits copper plane/pour fills as zones with
+// their authored outline (WS1-031). Non-via copper lands are NOT emitted yet, and fill cutouts
+// drop per the C6 zone bound. Emitted coordinates are integer nanometers (unit_nm=1), matching
+// the KiCad producer so downstream consumers see one frame.
 //
-// Frame: IPC-2581 is Y-up like the geom contract, so coordinates map directly with no Y
-// negation (unlike KiCad, which is Y-down). Sides normalize into the contract's KiCad-style
-// vocabulary (TOP->F.Cu, BOTTOM->B.Cu) so the format-neutral renderer classifies them without
-// change. Rotation is carried verbatim in degrees; the renderer applies its own Y-flip.
+// IPC-2581 is Y-up like the geom contract, so coordinates map directly with no Y negation.
+// KiCad, by contrast, is Y-down. Sides normalize into the contract's KiCad-style vocabulary
+// (TOP->F.Cu, BOTTOM->B.Cu), so the format-neutral renderer classifies them without change.
+// Rotation is copied verbatim in degrees, and the renderer applies its own Y-flip.
 func ReadBoardGeometry(r io.Reader, sourceFile string) (*geom.BoardGeometry, error) {
 	var f ipcGeomFile
 	if err := xml.NewDecoder(r).Decode(&f); err != nil {
@@ -56,8 +56,9 @@ type ipcGeomFile struct {
 	Features  []layerFeatureEl `xml:"Ecad>CadData>Step>LayerFeature"`
 }
 
-// dictStd is a standard-primitive dictionary, holding a units tag and the shape definitions
-// pads reference by id (the padstack def half of the def/instance split).
+// dictStd is a standard-primitive dictionary. It holds a units tag and shape definitions, and
+// pads reference those definitions by id. The dictionary is the padstack-def half of the
+// def/instance split.
 type dictStd struct {
 	Units   string       `xml:"units,attr"`
 	Entries []entryStdEl `xml:"EntryStandard"`
@@ -71,9 +72,10 @@ type entryStdEl struct {
 	Cont   *contourEl `xml:"Contour"`
 }
 
-// dictUser is a user-primitive dictionary of pad shapes IPC has no standard element for (custom
-// contacts, stroke artwork), each a UserSpecial of one or more Contour polygons. Pads reference
-// them by <UserPrimitiveRef>. It carries its own units, which may differ from the standard dict.
+// dictUser is a user-primitive dictionary of pad shapes. IPC has no standard element for these
+// shapes, such as custom contacts and stroke artwork. Each shape is a UserSpecial of one or more
+// Contour polygons, and pads reference them by <UserPrimitiveRef>. The dictionary declares its
+// own units, which may differ from the standard dict.
 type dictUser struct {
 	Units   string        `xml:"units,attr"`
 	Entries []entryUserEl `xml:"EntryUser"`
@@ -120,8 +122,8 @@ type gPkgEl struct {
 	} `xml:"AssemblyDrawing"`
 }
 
-// shapeHolderEl is an IPC element that wraps drawing geometry as either Polyline or Polygon (silk
-// and outline elements use both interchangeably).
+// shapeHolderEl is an IPC element that wraps drawing geometry as either Polyline or Polygon. Silk
+// and outline elements use both interchangeably.
 type shapeHolderEl struct {
 	Polylines []polyPath `xml:"Polyline"`
 	Polygons  []polyPath `xml:"Polygon"`
@@ -201,7 +203,7 @@ func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
 
 	for i, l := range f.Layers {
 		// kind keeps IPC-2581's layerFunction verbatim, same discipline as KiCad's kind word.
-		// BoardLayer carries no stackup material/thickness until a consumer needs it (C9).
+		// BoardLayer has no stackup material/thickness until a consumer needs it (C9).
 		g.Layers = append(g.Layers, &geom.BoardLayer{Number: int32(i), Name: l.Name, Kind: l.Function})
 	}
 
@@ -218,10 +220,11 @@ func (f *ipcGeomFile) toBoardGeometry(src string) *geom.BoardGeometry {
 	return g
 }
 
-// graphics composes each placed component's package-local silk/fab artwork onto the board via the
-// same placement transform pads use (geomath.ComposePlacement), so silk lands on its part. Every
-// BoardGraphic is board-frame per the proto contract; the layer word normalizes into the KiCad
-// F.SilkS/F.Fab vocabulary the renderer classifies on (N producers -> one vocabulary).
+// graphics composes each placed component's package-local silk/fab artwork onto the board. It uses
+// the same placement transform as pads (geomath.ComposePlacement), so silk sits on its part. Every
+// BoardGraphic is board-frame per the proto contract. The layer word normalizes into the KiCad
+// F.SilkS/F.Fab vocabulary, and the renderer classifies on that vocabulary (N producers -> one
+// vocabulary).
 func (f *ipcGeomFile) graphics(nmPerUnit float64) []*geom.BoardGraphic {
 	byPkg := map[string][]pkgGraphic{}
 	for _, p := range f.Pkgs {
@@ -256,8 +259,8 @@ func (f *ipcGeomFile) graphics(nmPerUnit float64) []*geom.BoardGraphic {
 	return out
 }
 
-// silkLayer normalizes a package graphic's class + side into the KiCad silk/fab layer vocabulary
-// the renderer keys on.
+// silkLayer normalizes a package graphic's class + side into the KiCad silk/fab layer vocabulary.
+// The renderer keys on that vocabulary.
 func silkLayer(fab, back bool) string {
 	switch {
 	case fab && back:
@@ -292,7 +295,8 @@ func (f *ipcGeomFile) primitives(nmPerUnit float64) map[string]primShape {
 	}
 	// Resolve the user-primitive dictionaries too, or a pad referencing one via UserPrimitiveRef
 	// resolves to a zero-size shape. Each entry's extent is the bounding box over all its
-	// UserSpecial contours, measured in the DICTIONARY's own units (which may differ from the file's).
+	// UserSpecial contours. It is measured in the DICTIONARY's own units, which may differ from the
+	// file's.
 	for _, d := range f.UserDicts {
 		uNm := unitToNm(d.Units)
 		for _, e := range d.Entries {
@@ -335,9 +339,10 @@ func (f *ipcGeomFile) packagePins() map[string][]gPinEl {
 	return m
 }
 
-// placements emits one ComponentPlacement per placed component, resolving each pin through the
-// package's pin list and the primitive dictionary into a flattened Pad (the def/instance split
-// collapsed to the contract's inline pad form). Sorted by ref_des for deterministic output.
+// placements emits one ComponentPlacement per placed component. It resolves each pin through the
+// package's pin list and the primitive dictionary into a flattened Pad. That collapses the
+// def/instance split into the contract's inline pad form. Sorted by ref_des for deterministic
+// output.
 func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string]primShape, pkgPins map[string][]gPinEl) []*geom.ComponentPlacement {
 	var out []*geom.ComponentPlacement
 	for _, c := range f.Comps {
@@ -346,8 +351,8 @@ func (f *ipcGeomFile) placements(src string, nmPerUnit float64, prims map[string
 		}
 		side := normalizeSide(c.LayerRef)
 		// IPC-2581 is Y-up like the canonical geom frame, so the source Xform rotation is
-		// carried verbatim; the back side is flagged for the renderer to mirror (WS1-030).
-		// Pads stay footprint-local and unmodified, since the renderer composes rotation and mirror.
+		// copied verbatim. The back side is flagged for the renderer to mirror (WS1-030). Pads
+		// are footprint-local and unmodified, since the renderer composes rotation and mirror.
 		pl := &geom.ComponentPlacement{
 			RefDes:      c.RefDes,
 			At:          ptNm(c.Location, nmPerUnit),
@@ -397,7 +402,7 @@ func (f *ipcGeomFile) units() string {
 
 // polyline converts a closed IPC polygon into a Polyline, expanding arc steps (PolyStepCurve)
 // into chord approximations in document order via the shared flattenPath (WS1-028). A polygon
-// that interleaves straight and arc steps keeps its edge; returns nil for a degenerate polygon.
+// that interleaves straight and arc steps keeps its edge. Returns nil for a degenerate polygon.
 func polyline(p polyPath, nmPerUnit float64) *geom.Polyline {
 	pts := flattenPath(p, nmPerUnit)
 	if len(pts) < 2 {
@@ -406,9 +411,9 @@ func polyline(p polyPath, nmPerUnit float64) *geom.Polyline {
 	return &geom.Polyline{Points: pts}
 }
 
-// polyBBox returns the width and height of a polygon's bounding box in nanometers, the C6
-// reduction PR-1 uses for arbitrary Contour pad primitives. Arc steps are flattened first, so
-// the box spans the arc bulge, not just its endpoints (WS1-028).
+// polyBBox returns the width and height of a polygon's bounding box in nanometers. PR-1 uses
+// this C6 reduction for arbitrary Contour pad primitives. Arc steps are flattened first, so the
+// box spans the arc bulge, not just its endpoints (WS1-028).
 func polyBBox(p polyPath, nmPerUnit float64) (w, h int64) {
 	pts := flattenPath(p, nmPerUnit)
 	if len(pts) == 0 {

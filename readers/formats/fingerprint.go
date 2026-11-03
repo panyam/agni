@@ -9,23 +9,26 @@ import (
 	"sort"
 )
 
-// fingerprintVersion changes whenever what Fingerprint records does, so an older blob reads as a miss.
+// fingerprintVersion changes whenever Fingerprint records something new, so an older blob reads as a
+// miss.
 const fingerprintVersion = 1
 
 var crcTable = crc64.MakeTable(crc64.ECMA)
 
-// Fingerprint is what t recorded, by CONTENT rather than by stamp, so it can be checked in another
-// process over another copy of the same files (agni issue 911). A stamp's modification time is the
-// moment a browser worker was handed a file, so after a reload nothing would match.
+// Fingerprint encodes what t recorded by CONTENT rather than by stamp. Another process can then check
+// it over another copy of the same files (agni issue 911). A stamp's modification time is the moment a
+// browser worker was handed a file, so after a reload no stamp would match.
 //
-// Each name carries whether it existed, and a file its size and CRC-64 while a directory the hash of
-// its entry names, as Unchanged already compares. CRC-64 rather than SHA-256 because the check runs on
-// every restore and costs 82ms over a 97MB board in wasm against 458ms. It guards against a file that
-// changed, not against one built to collide, and the files are the visitor's own.
+// Each name records whether it existed. A file adds its size and CRC-64, and a directory adds the hash
+// of its entry names, as Unchanged already compares. The sum is CRC-64 rather than SHA-256, because the
+// check runs on every restore. Over a 97MB board in wasm it costs 82ms, against 458ms for SHA-256. It
+// guards against a file that changed, not against one built to collide, and the files are the
+// visitor's own.
 //
-// It reports false when the read cannot be fingerprinted: nothing was recorded, a name was read off the
-// host filesystem rather than through a Loader's FS (no other process sees that name space), or a file
-// changed between the read and now, so the content hashed would not be what the read saw.
+// It reports false when the read cannot be fingerprinted. That happens when nothing was recorded. It
+// happens when a name was read off the host filesystem rather than through a Loader's FS, since no
+// other process sees that name space. And it happens when a file changed between the read and now,
+// since the hashed content would then differ from what the read saw.
 func (t *Touched) Fingerprint() ([]byte, bool) {
 	if t == nil {
 		return nil, false
@@ -58,9 +61,10 @@ func (t *Touched) Fingerprint() ([]byte, bool) {
 	return b, true
 }
 
-// CheckFingerprint reports whether every name fp records reads the same in fsys, and if so returns a
-// recorder holding each name as it stamps NOW, so the restored result is checked by stamp from then on,
-// as a fresh read's is. A blob it cannot decode, or one an older version wrote, does not match.
+// CheckFingerprint reports whether every name in fp reads the same in fsys. If so, it returns a
+// recorder holding each name as it stamps NOW. From then on the restored result is checked by stamp,
+// as a fresh read's is. A blob it cannot decode does not match, and nor does one an older version
+// wrote.
 func CheckFingerprint(fsys fs.FS, fp []byte) (*Touched, bool) {
 	var f fingerprint
 	if fsys == nil || json.Unmarshal(fp, &f) != nil || f.V != fingerprintVersion || len(f.Names) == 0 {

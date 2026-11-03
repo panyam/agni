@@ -20,7 +20,7 @@ func mpnDesign(comp map[string]string, partAttrs map[string]string) *ir.Design {
 func mpnOf(d *ir.Design) string { return d.Components[0].GetMpn() }
 
 // TestStampMPNPrefersTheComponent. A part number stated on the placement is more specific than one
-// stated on the part type, so it wins. This is the case where a shared part type is placed as several
+// stated on the part type, so it wins. The case arises when a shared part type is placed as several
 // different orderable parts.
 func TestStampMPNPrefersTheComponent(t *testing.T) {
 	d := mpnDesign(map[string]string{"Manufacturer PN": "ON-THE-PART"}, map[string]string{"mpn": "ON-THE-TYPE"})
@@ -96,11 +96,11 @@ func TestStampMPNDegradesWhenThePassNeverRan(t *testing.T) {
 	}
 }
 
-// TestStampMPNResolvesThroughTheSharedPartIndex. The reader-local version this replaced joined on the
-// first section's bare PartRef, so a part whose DISPLAY NAME differs from its native id never
-// resolved and its components silently kept no part number. PartIndex already handles that case for
-// the class pass, and using it here means a component's class and its part number can never disagree
-// about which part type it has.
+// TestStampMPNResolvesThroughTheSharedPartIndex. This pass replaced a reader-local version, and that
+// version joined on the first section's bare PartRef. So a part whose DISPLAY NAME differs from its
+// native id never resolved, and its components silently kept no part number. PartIndex already
+// handles that case for the class pass. Using it here means a component's class and its part number
+// can never disagree about which part type it has.
 func TestStampMPNResolvesThroughTheSharedPartIndex(t *testing.T) {
 	d := &ir.Design{
 		Libraries: []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{{

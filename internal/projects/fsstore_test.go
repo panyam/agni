@@ -16,7 +16,7 @@ func mapFS(files map[string]string) fstest.MapFS {
 	return out
 }
 
-// demoStore is the layout a review project takes:
+// demoStore builds the layout of a review project.
 //
 //	project.yaml                      the project
 //	designs/gateway/design.yaml       extends it, entry gateway.edn, board + schematic companions
@@ -106,8 +106,8 @@ func TestFSStoreResolve(t *testing.T) {
 }
 
 // TestFSStoreResolveWithoutAProjectKeepsTheDeclaration pins that a design with no project above it
-// is a real design, not a half-resolved one. Its declaration still says which file analysis reads;
-// what it lacks is a resource NAME, since a name needs a parent.
+// is a real design, not a half-resolved one. Its declaration still says which file analysis reads.
+// It lacks only a resource NAME, since a name needs a parent.
 func TestFSStoreResolveWithoutAProjectKeepsTheDeclaration(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"board/design.yaml": "name: board\nentry: board.edn\n",
@@ -131,7 +131,7 @@ func TestFSStoreResolveWithoutAProjectKeepsTheDeclaration(t *testing.T) {
 	}
 }
 
-// TestFSStoreRejectsDuplicateIDs exists because two projects claiming one name means one is
+// TestFSStoreRejectsDuplicateIDs covers two projects claiming one name. One of them is then
 // unreachable through its own resource name, and serving the other would answer a question about A
 // with B's designs.
 func TestFSStoreRejectsDuplicateIDs(t *testing.T) {
@@ -144,8 +144,8 @@ func TestFSStoreRejectsDuplicateIDs(t *testing.T) {
 	}
 }
 
-// TestFSStoreRejectsDuplicateIDsAcrossTrees pins that the check spans trees, since each tree only ever
-// sees its own descriptors and a resource name is global to the store.
+// TestFSStoreRejectsDuplicateIDsAcrossTrees pins that the check spans trees. Each tree only ever
+// sees its own descriptors, and a resource name is global to the store.
 func TestFSStoreRejectsDuplicateIDsAcrossTrees(t *testing.T) {
 	one := mapFS(map[string]string{"project.yaml": "name: same\n"})
 	s := NewFSStore(Tree{Mount: "a", FS: one}, Tree{Mount: "b", FS: one})
@@ -154,8 +154,9 @@ func TestFSStoreRejectsDuplicateIDsAcrossTrees(t *testing.T) {
 	}
 }
 
-// TestFSStoreMalformedDescriptorFailsLoudly exists because a skipped descriptor would leave an
-// operator reading default behaviour as the engine agreeing with what they wrote.
+// TestFSStoreMalformedDescriptorFailsLoudly covers a descriptor that fails to parse. If the store
+// skipped it, the engine would run with defaults, and the operator would read that as the engine
+// agreeing with what they wrote.
 func TestFSStoreMalformedDescriptorFailsLoudly(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: Gateway\n"})})
 	if _, err := s.Projects(context.Background()); err == nil {
@@ -163,8 +164,8 @@ func TestFSStoreMalformedDescriptorFailsLoudly(t *testing.T) {
 	}
 }
 
-// TestFSStoreSkipsDotDirsAndStopsAtDepth keeps the walk off a `.git` and off however deep a
-// bind-mounted home directory happens to be.
+// TestFSStoreSkipsDotDirsAndStopsAtDepth keeps the walk out of a `.git`. It also keeps the walk
+// from descending the whole depth of a bind-mounted home directory.
 func TestFSStoreSkipsDotDirsAndStopsAtDepth(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		".git/modules/project.yaml": "name: hidden\n",
@@ -180,8 +181,8 @@ func TestFSStoreSkipsDotDirsAndStopsAtDepth(t *testing.T) {
 	}
 }
 
-// TestFSStoreNestedProjectsDoNotCompound exists because a project inside a project is an ambiguity
-// nobody meant, so the walk stops at the outer one.
+// TestFSStoreNestedProjectsDoNotCompound covers a project inside a project. Nobody means that, and
+// it is ambiguous, so the walk stops at the outer one.
 func TestFSStoreNestedProjectsDoNotCompound(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"outer/project.yaml":       "name: outer\n",
@@ -196,9 +197,9 @@ func TestFSStoreNestedProjectsDoNotCompound(t *testing.T) {
 	}
 }
 
-// TestFSStoreCannotEscapeItsTree is the containment property, and it is STRUCTURAL rather than
-// checked. An fs.FS has no parent to climb into, so an upward walk stops at the root and a ref
-// carrying `..` never opens a file at all.
+// TestFSStoreCannotEscapeItsTree pins the containment property. The property is STRUCTURAL rather
+// than checked. An fs.FS has no parent to climb into, so an upward walk stops at the root and a ref
+// holding `..` never opens a file at all.
 func TestFSStoreCannotEscapeItsTree(t *testing.T) {
 	d, _, err := demoStore().ResolveDesign(context.Background(), testURI(t, "m", "elsewhere/design.yaml"))
 	if d != nil || err != nil {
@@ -213,7 +214,7 @@ func TestFSStoreUnknownMount(t *testing.T) {
 	}
 }
 
-// testURI builds an artifact URI for a test, failing rather than returning an error, because a
+// testURI builds an artifact URI for a test. It fails the test rather than returning an error. A
 // hard-coded fixture URI that will not parse is a broken test, not a condition under test.
 func testURI(t *testing.T, mount, p string) artifact.URI {
 	t.Helper()
@@ -225,7 +226,7 @@ func testURI(t *testing.T, mount, p string) artifact.URI {
 }
 
 // A project's conventions and checklists are sections of its descriptor (agni issue 828), so they
-// reach the config as values, the checklists in the order they are written, since the first is the
+// reach the config as values. The checklists keep their written order, since the first is the
 // project's default.
 func TestFSStoreCarriesTheProjectsSections(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
@@ -248,7 +249,7 @@ func TestFSStoreCarriesTheProjectsSections(t *testing.T) {
 	for _, c := range p.GetConfig().GetChecklists() {
 		names = append(names, c.GetName())
 	}
-	// Written order, not sorted, which is what makes zeta the default here.
+	// Written order, not sorted, so zeta is the default here.
 	if strings.Join(names, ",") != "zeta,alpha" {
 		t.Errorf("checklists = %v, want [zeta alpha] in the order written", names)
 	}
@@ -257,8 +258,8 @@ func TestFSStoreCarriesTheProjectsSections(t *testing.T) {
 	}
 }
 
-// A project declaring neither section carries neither, so a client offers no checklist and the
-// engine's vocabulary applies.
+// A project declaring neither section has neither in its config, so a client offers no checklist
+// and the engine's vocabulary applies.
 func TestFSStoreProjectWithNoSections(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{"project.yaml": "name: bare\n"})})
 	p, err := s.Project(context.Background(), "projects/bare")
@@ -270,8 +271,8 @@ func TestFSStoreProjectWithNoSections(t *testing.T) {
 	}
 }
 
-// A section is written inline, so a section holding a file name fails at its line rather than reading
-// as a project that declared none.
+// A section is written inline. So a section holding a file name fails at its line, and the project
+// does not read as one that declared no section.
 func TestParseProjectRefusesMalformedSections(t *testing.T) {
 	for label, c := range map[string]struct{ doc, want string }{
 		"conventions naming a file": {"name: p\nconventions: house.yaml\n", "must be a mapping"},
@@ -289,7 +290,7 @@ func TestParseProjectRefusesMalformedSections(t *testing.T) {
 }
 
 // A design's intent section reaches its config as a value (agni issue 824), so nothing above the
-// store opens design.yaml again, and a design without one carries none.
+// store opens design.yaml again. A design without the section has no intent in its config.
 func TestFSStoreCarriesTheDesignsIntent(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"project.yaml":          "name: gateway\n",
@@ -315,9 +316,9 @@ func TestFSStoreCarriesTheDesignsIntent(t *testing.T) {
 	}
 }
 
-// Every tier a run reads is named in a descriptor (agni issue 1136). A directory or a single file
-// becomes a URI, a folder with a tier's conventional name that nothing names is not read, and a path
-// naming nothing fails the load rather than reading as a team that declared no such tier.
+// A descriptor names every tier a run reads (agni issue 1136). A directory or a single file becomes
+// a URI. A folder with a tier's conventional name is not read unless something names it. A path
+// naming nothing fails the load, so the run does not read as a team that declared no such tier.
 func TestFSStoreReadsOnlyTheSourcesADescriptorNames(t *testing.T) {
 	files := map[string]string{
 		"lib/house.dl":         "x(?n: net) :- net.rail(?n);\n",
@@ -367,8 +368,8 @@ func TestFSStoreReadsOnlyTheSourcesADescriptorNames(t *testing.T) {
 	}
 }
 
-// A design names its project (agni issue 1136), so its project is the one it names wherever the two
-// sit, and a project's designs are the ones naming it, not the ones under its folder.
+// A design names its project (agni issue 1136). Wherever the two sit, the design belongs to the
+// project it names. A project's designs are the ones naming it, not the ones under its folder.
 func TestFSStoreADesignBelongsToTheProjectItNames(t *testing.T) {
 	s := NewFSStore(Tree{Mount: "m", FS: mapFS(map[string]string{
 		"teams/house/project.yaml":  "name: house\n",
@@ -403,8 +404,9 @@ func TestFSStoreADesignBelongsToTheProjectItNames(t *testing.T) {
 	}
 }
 
-// A design that names no parent while a project descriptor sits above it is the shape of a forgotten
-// `extends`, and reading on would run the board on the built-in config with nothing said.
+// Suppose a project descriptor sits above a design that names no parent. The author most likely
+// forgot the `extends`, and reading on would run the board on the built-in config with nothing
+// said.
 func TestFSStoreRefusesAForgottenExtends(t *testing.T) {
 	files := map[string]string{
 		"project.yaml":          "name: p\n",
@@ -422,8 +424,8 @@ func TestFSStoreRefusesAForgottenExtends(t *testing.T) {
 	}
 }
 
-// A project names the descriptor it extends by path or by mount:// URI, and the store hands it on as
-// that project's resource name, which is what the service walks the chain by.
+// A project names the descriptor it extends by path or by mount:// URI. The store hands that parent
+// on as a resource name, and the service walks the chain by resource name.
 func TestFSStoreNamesAProjectsParentByResourceName(t *testing.T) {
 	s := NewFSStore(
 		Tree{Mount: "m", FS: mapFS(map[string]string{

@@ -80,51 +80,48 @@ export const RenderReviewReportResponseSchema: GenMessage<RenderReviewReportResp
 /**
  * Review is one stored review run.
  *
- * The resource is little more than a name plus the document, and that is the point: the document was
- * already designed to be self-contained, so making runs addressable needed an identity and a store,
- * not a new payload. Anything a consumer needs to render, diff, or archive this run is inside
- * `results`.
+ * The resource is little more than a name plus the document, on purpose. The document was already
+ * self-contained. So making runs addressable needed an identity and a store, and no new payload.
+ * `results` holds anything a consumer needs to render, diff, or archive this run.
  *
  * @generated from message agni.v1.webapi.Review
  */
 export type Review = Message<"agni.v1.webapi.Review"> & {
   /**
-   * name is the resource name. A run whose design belongs to a project is
-   * "projects/{project}/reviews/{review}"; one whose design belongs to none is "reviews/{review}".
-   * The id is server-assigned, opaque, and time-sortable, so a listing is chronological without
-   * opening every document.
+   * name is the resource name. If the run's design belongs to a project, the name is
+   * "projects/{project}/reviews/{review}". If it belongs to none, the name is "reviews/{review}".
+   * The server assigns the id, which is opaque and time-sortable. So a listing is chronological
+   * without opening every document.
    *
    * The two shapes are deliberate, and the second is not a degenerate case of the first. A project
-   * genuinely OWNS the runs made under it: the checklist, the rule catalog, and the vocabulary a run
-   * scored against are all the project's, so nesting states a real relationship. A design that
-   * resolves to no project is the ORDINARY state of a mounted folder, and its runs have no such
-   * owner — giving them a synthetic parent would assert exactly the ownership this message once
-   * refused to assert about mounts, where nesting under a location would have broken the moment a
-   * design moved.
+   * really OWNS the runs made under it. The checklist, the rule catalog, and the vocabulary a run
+   * scored against all belong to the project, so nesting states a real relationship. A design in a
+   * mounted folder ORDINARILY resolves to no project, and its runs have no such owner. A synthetic
+   * parent would assert ownership that does not exist. This message once refused the same claim
+   * about mounts. Nesting under a location would have broken the moment a design moved.
    *
-   * Listing is unified even though naming is not: ListReviews takes an OPTIONAL parent, so a client
-   * that wants everything asks once. Which design a run was about is recorded where it belongs, in
-   * results.design.
+   * Naming has two shapes, and listing has one. ListReviews takes an OPTIONAL parent, so a client
+   * that wants everything asks once. results.design records which design a run was about.
    *
    * @generated from field: string name = 1;
    */
   name: string;
 
   /**
-   * results is the self-contained document: meta (producer, created_at), the design ref and its
-   * content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
-   * item outcomes.
+   * results is the self-contained document. It holds meta (producer, created_at), the design ref
+   * and its content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the
+   * per-area item outcomes.
    *
    * @generated from field: agni.v1.checks.CheckResults results = 2;
    */
   results?: CheckResults | undefined;
 
   /**
-   * summary is the counts a pipeline gates on, computed from results.areas each time a review is
-   * returned and never stored, so a document stored before the field existed still answers with one
-   * (agni issue 734). It carries exactly the inputs of the two gates `agni review` exposes
-   * (--fail-on-outcome and --min-answered), so a consumer reads the numbers the exit code came from
-   * rather than recomputing them and disagreeing.
+   * summary holds the counts a pipeline gates on (agni issue 734). The server computes it from
+   * results.areas each time it returns a review, and never stores it. So a document stored before
+   * the field existed still answers with one. It holds exactly the inputs of the two gates `agni
+   * review` exposes, --fail-on-outcome and --min-answered. So a consumer reads the same numbers the
+   * exit code came from, instead of computing them again and disagreeing.
    *
    * @generated from field: agni.v1.webapi.ReviewSummary summary = 3;
    */
@@ -139,11 +136,11 @@ export const ReviewSchema: GenMessage<Review> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_review, 2);
 
 /**
- * ReviewSummary counts a run's checklist items. covered is every item a mechanism exists for (all
- * but not-automated); answered is the stricter count of items the run produced an answer for (pass,
- * fail, provisional, and computed not-applicable), which is what --min-answered gates on.
- * provisional is a fail resting on unratified datasheet data, broken out because gating on it is a
- * per-team choice.
+ * ReviewSummary counts a run's checklist items. covered counts every item that has a mechanism,
+ * which is all but not-automated. answered is stricter. It counts the items the run produced an
+ * answer for: pass, fail, provisional, and computed not-applicable. --min-answered gates on
+ * answered. provisional counts each fail that depends on unratified datasheet data. It is broken
+ * out because each team chooses whether to gate on it.
  *
  * @generated from message agni.v1.webapi.ReviewSummary
  */
@@ -199,46 +196,50 @@ export type CreateReviewRequest = Message<"agni.v1.webapi.CreateReviewRequest"> 
 
   /**
    * parent is the project the run belongs to, "projects/{project}", empty when the design resolves
-   * to none. It is the CALLER's answer rather than something derived here, because the caller has
-   * already resolved the design to decide which config to send and re-deriving it in the service
-   * would be a second resolution that could disagree with the first.
+   * to none. The CALLER supplies it, and the service does not derive it. The caller has already
+   * resolved the design to decide which config to send. Deriving it again in the service would be
+   * a second resolution, and the two could disagree.
    *
    * @generated from field: string parent = 6;
    */
   parent: string;
 
   /**
-   * ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
-   * (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
+   * ratified_floor is a datasheet-confidence floor (WS10-014). A failing item's data below it is
+   * unratified. If all of a fail's findings are mock or below this floor, the fail is provisional.
+   * 0 uses the default.
    *
    * @generated from field: double ratified_floor = 3;
    */
   ratifiedFloor: number;
 
   /**
-   * manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
-   * that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
-   * held to exactly the same rules as one read from a file. It is also stored with the run, so the
-   * archived document scores against the checklist it actually saw.
+   * manifest is the checklist this run scores, and it is required. The server validates it on
+   * arrival. Some manifests never pass through the YAML loader, such as one a browser form built or
+   * one a test wrote inline. Those meet exactly the same rules as one read from a file. The
+   * manifest is also stored with the run, so the archived document scores against the checklist
+   * it actually saw.
    *
    * @generated from field: agni.v1.checks.ReviewManifest manifest = 5;
    */
   manifest?: ReviewManifest | undefined;
 
   /**
-   * work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-   * a fact base counts, candidate comparisons, each row a generator emits and the connections a
-   * circuit walk examines. It can only LOWER the
-   * deployment's own budget, never raise it, and zero leaves that budget as it is. A checklist item whose query passes its budget reads inconclusive, naming the budget, and the other items still answer.
+   * work_budget caps the work each query in this request may do (agni issue 792). Work counts
+   * candidate comparisons, each row a generator emits, and each connection a circuit walk
+   * examines, in the units a fact base counts. It can only LOWER the deployment's own budget,
+   * never raise it, and zero leaves that budget as it is. If a checklist item's query goes past
+   * its budget, the item reads inconclusive and names the budget. The other items still answer.
    *
    * @generated from field: int64 work_budget = 8;
    */
   workBudget: bigint;
 
   /**
-   * validate_only scores the run and returns it without storing it (AIP-163), so the Review comes back
-   * with no name and its document with no created_at. It needs no review store, which is how the CLI
-   * asks a server for a review (`agni review --remote`) without leaving a run in that server's list.
+   * validate_only scores the run and returns it without storing it (AIP-163). The Review then comes
+   * back with no name, and its document with no created_at. It needs no review store. The CLI uses
+   * it to ask a server for a review (`agni review --remote`) without leaving a run in that server's
+   * list.
    *
    * @generated from field: bool validate_only = 9;
    */
@@ -276,16 +277,16 @@ export const GetReviewRequestSchema: GenMessage<GetReviewRequest> = /*@__PURE__*
  */
 export type ListReviewsRequest = Message<"agni.v1.webapi.ListReviewsRequest"> & {
   /**
-   * parent narrows the listing to one project's runs, "projects/{project}". EMPTY lists every run the
-   * server holds, parented or not, which is what makes the two name shapes cost a client nothing: it
-   * asks once and gets everything, and only narrows when it has a project in mind.
+   * parent narrows the listing to one project's runs, "projects/{project}". EMPTY lists every run
+   * the server holds, parented or not. So the two name shapes cost a client nothing. It asks once and
+   * gets everything, and narrows only when it has a project in mind.
    *
    * @generated from field: string parent = 4;
    */
   parent: string;
 
   /**
-   * page_size is the maximum number of reviews to return. 0 uses the server default; the server may
+   * page_size is the maximum number of reviews to return. 0 uses the server default. The server may
    * return fewer.
    *
    * @generated from field: int32 page_size = 1;
@@ -300,10 +301,10 @@ export type ListReviewsRequest = Message<"agni.v1.webapi.ListReviewsRequest"> & 
   pageToken: string;
 
   /**
-   * filter narrows the listing (AIP-160). Only `design` is supported: `design="proj/board.kicad_sch"`
-   * matches results.design.source exactly. An unsupported filter is an error rather than a silently
-   * ignored argument, because a client that believed it had filtered and did not would read another
-   * board's verdicts as its own.
+   * filter narrows the listing (AIP-160). Only `design` is supported, and
+   * `design="proj/board.kicad_sch"` matches results.design.source exactly. An unsupported filter is
+   * an error, and is never silently ignored. Imagine a client that believes it filtered and did not.
+   * It would read another board's verdicts as its own.
    *
    * @generated from field: string filter = 3;
    */
@@ -443,41 +444,41 @@ export const ListChecklistsResponseSchema: GenMessage<ListChecklistsResponse> = 
   messageDesc(file_agni_v1_webapi_review, 12);
 
 /**
- * ReviewService manages review RUNS as resources (WS9-053). A run used to be a call: you sent a
- * checklist and a design, got outcomes back, and nothing remained. That is the wrong shape for what
- * a review actually is. A checklist verdict is the artifact a team acts on over weeks, compares
- * between revisions, and gates a release on, and every one of those uses needs the run to still
- * exist tomorrow.
+ * ReviewService manages review RUNS as resources (WS9-053). A run used to be a call. You sent a
+ * checklist and a design, got outcomes back, and nothing remained. A review does not work that
+ * way. A team acts on a checklist verdict over weeks. It compares verdicts between revisions, and
+ * gates a release on one. Every one of those uses needs the run to still exist tomorrow.
  *
- * So a run is created, fetched, listed, and deleted, and what it produces is the same self-contained
- * agni.v1.checks.CheckResults document `agni review --results-out` writes. Everything needed to
- * re-render a run lives inside it, including the checklist snapshot, so a review from last quarter
- * renders against the checklist it actually scored rather than whatever that file says today.
+ * So a client creates, fetches, lists, and deletes runs. A run produces a self-contained
+ * agni.v1.checks.CheckResults document, the same one `agni review --results-out` writes. The
+ * document holds everything needed to render the run again, including the checklist snapshot. So
+ * a review from last quarter renders against the checklist it actually scored, and not against
+ * whatever that file says today.
  *
- * This service is deliberately AIP-shaped where the rest of this API is verb-shaped (see
- * CONSTRAINTS C23). The difference is not stylistic: every other rpc here is a pure function of
- * files on disk, so `GetDesign(mount, path)` names its whole input. A review run has a lifetime
- * independent of its inputs and therefore needs an identity of its own.
+ * This service is AIP-shaped on purpose, while the rest of this API is verb-shaped (see
+ * CONSTRAINTS C23). The difference is not one of style. Every other rpc here is a pure function of
+ * the snapshot it names, so `GetDesign(snapshot)` names its whole input. A review run has a lifetime
+ * independent of its inputs, so it needs an identity of its own.
  *
- * The overlay knobs (--profile-path / --intent-path / --params) remain serve-startup config composed
- * once into the catalog the service holds, so a create carries the checklist, names the design and
- * an optional separate board export, and sets the ratified-data floor.
+ * The overlay knobs (--profile-path / --intent-path / --params) are still serve-startup config.
+ * The service composes them once into the catalog it holds. So a create request sends the
+ * checklist, names the design's snapshot, and sets the ratified-data floor.
  *
  * @generated from service agni.v1.webapi.ReviewService
  */
 export const ReviewService: GenService<{
   /**
-   * CreateReview runs the checklist against the design and persists the result, returning the stored
-   * Review. The run is all-or-nothing: an invalid or absent manifest, an unreadable design, or a
-   * board_ref at a file carrying no board geometry is an error, so a partial read never reports items
-   * clean without checking them. Nothing is stored when the run fails.
+   * CreateReview runs the checklist against the design, stores the result, and returns the stored
+   * Review. The run is all-or-nothing. An invalid or absent manifest is an error, and so is a
+   * snapshot whose design cannot be read. So a partial read never
+   * reports items clean without checking them. Nothing is stored when the run fails.
    *
-   * It is synchronous. A review is a check sweep per item and finishes in the time a request can
-   * wait, so this returns the Review itself rather than an Operation. If that stops being true the
-   * answer is AIP-151, not a client-side poll invented here.
+   * It is synchronous. A review is a check sweep per item, and it finishes within the time a
+   * request can wait. So this returns the Review itself rather than an Operation. If that stops
+   * being true, the answer is AIP-151, not a client-side poll invented here.
    *
-   * One review is about ONE design. A project rollup is several Reviews, because a document carries
-   * a single DesignRef on purpose: averaging several designs into one document would misrepresent
+   * One review is about ONE design. A project rollup is several Reviews. A document holds a single
+   * DesignRef on purpose, because averaging several designs into one document would misrepresent
    * every one of them.
    *
    * @generated from rpc agni.v1.webapi.ReviewService.CreateReview
@@ -499,8 +500,9 @@ export const ReviewService: GenService<{
     output: typeof ReviewSchema;
   },
   /**
-   * ListReviews returns stored runs, newest first. Results are paginated, and `filter` narrows to one
-   * design so a client can ask the question it actually has ("how has THIS board been trending").
+   * ListReviews returns stored runs, newest first. Results are paginated. `filter` narrows them to
+   * one design, so a client can ask the question it actually has ("how has THIS board been
+   * trending").
    *
    * @generated from rpc agni.v1.webapi.ReviewService.ListReviews
    */
@@ -510,9 +512,9 @@ export const ReviewService: GenService<{
     output: typeof ListReviewsResponseSchema;
   },
   /**
-   * DeleteReview removes a stored run. Deleting a run that is already absent is an error rather than
-   * a silent success, because a client asking to delete something that is not there has a stale view
-   * and is better told so.
+   * DeleteReview removes a stored run. Deleting a run that is already absent is an error, not a
+   * silent success. A client asking to delete something that is not there has a stale view, and
+   * should be told so.
    *
    * @generated from rpc agni.v1.webapi.ReviewService.DeleteReview
    */
@@ -522,9 +524,10 @@ export const ReviewService: GenService<{
     output: typeof EmptySchema;
   },
   /**
-   * GetReviewManifest resolves a stored checklist into the value CreateReview takes. It parses AND
-   * validates, so a client learns its manifest is malformed once, here, rather than on every run. A
-   * caller that already holds a manifest (the CLI reads the YAML the user named) skips it entirely.
+   * GetReviewManifest resolves a stored checklist into a value for CreateReview. It parses AND
+   * validates. So a client learns once, here, that its manifest is malformed, and not on every run.
+   * A caller that already holds a manifest skips this call. The CLI is one, since it reads the YAML
+   * the user named.
    *
    * @generated from rpc agni.v1.webapi.ReviewService.GetReviewManifest
    */
@@ -534,14 +537,14 @@ export const ReviewService: GenService<{
     output: typeof GetReviewManifestResponseSchema;
   },
   /**
-   * ListChecklists returns the checklists a design's project declares, inherited ones included, in
-   * the order the project writes them, so the first is the project's default (agni issue 859). It is
-   * the one answer to "which checklists does this design have": `agni review --checklist <name>`,
-   * `agni checklists` and the viewer's picker all read it. A design in no project answers an empty
-   * project and no checklists, and a project declaring none answers its name and no checklists, since
-   * the fix differs (send a manifest, or add a checklists section). A descriptor that exists and does
-   * not parse is an error. The checklists are values, so a client runs one by sending it to
-   * CreateReview.
+   * ListChecklists returns the checklists a design's project declares, inherited ones included
+   * (agni issue 859). They come in the order the project writes them, so the first is the
+   * project's default. Every surface asks this rpc which checklists a design has. `agni review
+   * --checklist <name>`, `agni checklists` and the viewer's picker all read it. A design in no
+   * project answers an empty project and no checklists. A project declaring none answers its name
+   * and no checklists. The two answers differ because the fixes differ. The first sends a manifest,
+   * and the second adds a checklists section. A descriptor that exists and does not parse is an
+   * error. The checklists are values, so a client runs one by sending it to CreateReview.
    *
    * @generated from rpc agni.v1.webapi.ReviewService.ListChecklists
    */
@@ -551,11 +554,12 @@ export const ReviewService: GenService<{
     output: typeof ListChecklistsResponseSchema;
   },
   /**
-   * RenderReviewReport writes a review the caller already holds as the checklist page `agni review
-   * --format html` writes (agni issue 1030): the manifest's areas and items in its own order, each
-   * with its outcome and every finding behind it. It runs nothing and reads no store, so a run that
-   * was never stored (validate_only) renders as a stored one does, and the CLI's page and the
-   * viewer's saved one come from this one renderer.
+   * RenderReviewReport takes a review the caller already holds and writes it as a checklist page
+   * (agni issue 1030). `agni review --format html` writes the same page. The page lists the
+   * manifest's areas and items in the manifest's order, each with its outcome and every finding
+   * behind it. It runs nothing and reads no store. So a run that was never stored (validate_only)
+   * renders as a stored one does. The CLI's page and the viewer's saved page both come from this
+   * one renderer.
    *
    * @generated from rpc agni.v1.webapi.ReviewService.RenderReviewReport
    */

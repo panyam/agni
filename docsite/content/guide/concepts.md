@@ -14,10 +14,10 @@ explained to a software engineer, see [the software analogy](../../reference/ana
 
 ## IR (the internal representation)
 
-The tool calls it the IR, or "the design model." It is one normalized
-{{ explainable "netlist" }}-plus-BOM that every EDA export collapses into. KiCad, Allegro,
-OrCAD, and an EDIF dump all land in the same shape, the way a bench multimeter reads volts
-the same whichever of them drew the board.
+The tool calls it the IR, or "the design model." Every EDA export collapses into one
+normalized {{ explainable "netlist" }}-plus-BOM. KiCad, Allegro, OrCAD, and an EDIF dump all
+read into the same shape, the way a bench multimeter reads volts the same whichever of them
+drew the board.
 
 So a rule you write, or a report you read, behaves identically no matter which tool exported
 the design. You learn the tool once, not once per CAD package. When a finding looks wrong,
@@ -32,7 +32,7 @@ means there is no copper to run clearance against, the same way a DNP
 {{ explainable "footprint" }} contributes no connection to the circuit. The tier is empty
 rather than broken.
 
-That is why **silence is not a pass.** A quiet board tier means "I had no layout to check,"
+So **silence is not a pass.** A quiet board tier means "I had no layout to check,"
 not "your layout is clean." The report names which tiers were live, so you can tell a real
 all-clear from a check that never ran. Feed it more inputs (a board file, a datasheet set)
 and more tiers go live.
@@ -45,9 +45,9 @@ present, supply exceeds a part's abs-max, copper clearance,
 {{ explainable "port-protection" "ESD protection" }} on exposed nets). You can add your own
 house rules on top without touching the engine.
 
-The rules your team argues about in review ("every regulator gets a bulk cap," "USB nets get
-ESD") stop being tribal knowledge and become something every export is checked against
-automatically.
+Your team argues about some rules in review, such as "every regulator gets a bulk cap" and
+"USB nets get ESD." Those rules stop being tribal knowledge, and every export is checked
+against them automatically.
 
 ## Findings, severity, and provenance
 
@@ -64,11 +64,11 @@ versus what is a note.
 
 ## Datasheets as checkable data
 
-The tool calls it a parameter set (`PartSpec` values), and a datasheet becomes a
-`doc-IR`. It holds the {{ explainable "absolute-maximum-rating" "abs-max" }} and operating
-limits you would otherwise read off a PDF by eye, turned into numbers the tool can compare
-against your design. Think of it as transcribing the "Absolute Maximum Ratings" table once,
-with the conditions attached, so it is checked on every run.
+The tool calls it a parameter set (`PartSpec` values), and a datasheet becomes a `doc-IR`. It holds
+the {{ explainable "absolute-maximum-rating" "abs-max" }} and operating limits as numbers, so the
+tool can compare them against your design. Without it you would read those limits off a PDF by eye.
+Think of it as transcribing the "Absolute Maximum Ratings" table once, with the conditions attached,
+so it is checked on every run.
 
 The tool can then catch "you are driving 24V into a part rated for 20V" before the board is
 built, and show you the exact row it read. A limit that has only a
@@ -85,14 +85,14 @@ eyeballing two prints side by side.
 
 ## Naming conventions as patterns
 
-The tool reads naming conventions (allow / exempt regex sets), from a project's `project.yaml` or a
-`--conventions` file, which is your net and
-{{ explainable "reference-designator" "ref-des" }} house style written down once as patterns
-instead of a wiki page nobody reads. "Power nets look like `+3V3`," "diff pairs end in
+The tool reads naming conventions from a project's `project.yaml` or a `--conventions` file.
+A convention is a set of allow and exempt regexes. It writes down your net and
+{{ explainable "reference-designator" "ref-des" }} house style once, as patterns instead of a
+wiki page nobody reads. "Power nets look like `+3V3`," "diff pairs end in
 `_P`/`_N`," "no ref des reused."
 
-The style is then enforced on every export automatically, and tool-generated stub names (the
-`N$…` autonames CAD tools invent) are exempt by default, so you are only flagged on names a
+The style is then enforced on every export automatically. CAD tools generate stub names such
+as the `N$…` autonames, and those are exempt by default, so you are only flagged on names a
 human chose.
 
 ## Where to go next

@@ -23,10 +23,10 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// siteCmd writes the public demo as plain files for a static host (agni issue 856): a landing page
-// listing seeded example boards, the viewer shell at each seeded design's address and at the drop
-// page, the built viewer and wasm engine, and each seed's files with a listing of them. Nothing in
-// it needs an agni server; every page runs the engine in the visitor's browser.
+// siteCmd writes the public demo as plain files for a static host (agni issue 856). It writes a
+// landing page listing seeded example boards, the viewer shell at each seeded design's address and
+// at the drop page, the built viewer and wasm engine, and each seed's files with a listing of them.
+// Nothing in it needs an agni server. Every page runs the engine in the visitor's browser.
 func siteCmd() *cobra.Command {
 	var base, webDir, socialImage string
 	var seeds []string
@@ -203,9 +203,9 @@ func renderPage(h http.Handler) ([]byte, error) {
 	return bytes.Clone(rec.Body.Bytes()), nil
 }
 
-// copySeed copies a seed folder's files, dotfiles skipped, and returns their listing in the shape
-// ListDesignFiles answers, which is what the page reads on a static host. under is the folder dst
-// sits at within the mount, "" for its root, and prefixes every listed path.
+// copySeed copies a seed folder's files, skipping dotfiles. It returns their listing in the shape
+// that ListDesignFiles answers, and the page reads that listing on a static host. under is dst's
+// folder within the mount, "" for its root. It prefixes every listed path.
 func copySeed(src, dst, mount, under string) (*webapi.ListDesignFilesResponse, error) {
 	resp := &webapi.ListDesignFilesResponse{Mount: mount}
 	fsys := os.DirFS(src)
@@ -241,11 +241,12 @@ func copySeed(src, dst, mount, under string) (*webapi.ListDesignFilesResponse, e
 	return resp, err
 }
 
-// siteDir is a seed's mount as ListMounts names it, and every entry under it as ListDir answers
-// for each folder, each folder's own entries following their parent's in one listing. A static host
-// has no server to list a mount, and the page's engine holds only the files it was given, so the
-// page answers its file trees from these (agni issue 978). They are the answers the browser engine
-// gives over the same files, which name the mount as its root rather than a host path.
+// siteDir holds a seed's mount as ListMounts names it. It also holds every entry under that mount as
+// ListDir answers for each folder. They form one listing, where each folder's entries follow their
+// parent's. A static host has no server to list a mount, and the page's engine holds only the files
+// it was given. So the page answers its file trees from these (agni issue 978). The browser engine
+// gives the same answers over the same files, and they name the mount as its root rather than a
+// host path.
 func siteDir(root, mount string) (*webapi.Mount, *webapi.ListDirResponse, error) {
 	host := fshost.New(fshost.Mount{Name: mount, FS: os.DirFS(root)})
 	svc := service.NewWorkspaceService(host.Workspace())
@@ -292,9 +293,9 @@ func writeProto(dst string, m proto.Message) error {
 
 type seededDesign struct{ uri, addr, title, format, note string }
 
-// markBoards flags each seeded design's board file in the mount's listing as ListDesignFiles flags
-// it, which a static host cannot be asked, so the page holds a board back from its serve worker on a
-// static host as it does on a server (agni issue 992).
+// markBoards flags each seeded design's board file in the mount's listing, as ListDesignFiles would.
+// Nobody can ask a static host ListDesignFiles. With these flags the page holds a board back from its
+// serve worker on a static host, as it does on a server (agni issue 992).
 func markBoards(listing *webapi.ListDesignFilesResponse, root, mount string, designs []seededDesign) error {
 	m := fshost.Mount{Name: mount, FS: os.DirFS(root)}
 	host := fshost.New(m)
@@ -329,8 +330,8 @@ func seedDesigns(dir, mount string) ([]seededDesign, error) {
 	}
 	var out []seededDesign
 	// One example per folder, the design that folder's design.yaml would declare. A KiCad project
-	// folder often holds sheets nothing references, which propose as designs of their own and would
-	// crowd the list with fragments of the board.
+	// folder often holds sheets that nothing references. Each would propose as a design of its own,
+	// and they would crowd the list with fragments of the board.
 	listed := map[string]bool{}
 	for _, pd := range resp.GetDesigns() {
 		if listed[pd.GetFolder()] {
@@ -383,7 +384,8 @@ func yamlField(text, key string) string {
 	return ""
 }
 
-// licenceOf is the first line of a seed's LICENSE file, which names the licence its files carry.
+// licenceOf returns the first line of a seed's LICENSE file. That line names the licence of the
+// seed's files.
 func licenceOf(dir string) string {
 	for _, n := range []string{"LICENSE", "LICENSE.txt", "LICENSE.md", "LICENCE"} {
 		b, err := os.ReadFile(filepath.Join(dir, n)) // #nosec G304 -- reads the built viewer bundle the site is assembled from

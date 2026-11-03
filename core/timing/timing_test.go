@@ -67,8 +67,8 @@ func TestAPlanIsRecordedOnlyWhenAsked(t *testing.T) {
 }
 
 // TestARecorderReadsMemoryOnlyWhenAsked holds the memory figures to the request that asked for them
-// (agni issue 994), since reading them stops the world and a timed request that did not ask must not
-// pay for it.
+// (agni issue 994). Reading them stops the world, and a timed request that did not ask must not be
+// slowed by it.
 func TestARecorderReadsMemoryOnlyWhenAsked(t *testing.T) {
 	for _, asked := range []bool{true, false} {
 		r := New()

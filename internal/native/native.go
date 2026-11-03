@@ -1,6 +1,6 @@
-// Package native shells out to a format's own CLI to produce a golden reference render (SVG) to
-// validate the WebGL/SVG paths against. Running an external process is gated three ways. A tool
-// must be registered for the file's extension, the operator must allowlist it
+// Package native shells out to a format's own CLI to produce a golden reference render (SVG). The
+// WebGL/SVG paths are validated against that render. Running an external process is gated three
+// ways. A tool must be registered for the file's extension, the operator must allowlist it
 // (--enable-native <tool>), and its binary must be on PATH. Tools run under exec (no shell), on an
 // already mount-safe absolute path, into a temp output dir, under a timeout. See
 // docsite/content/build/native-verification.md.
@@ -37,8 +37,8 @@ const nativeTimeout = 60 * time.Second
 // nativeRenderer describes one external tool that renders a file's format to SVG.
 type nativeRenderer struct {
 	tool string // allowlist key the operator enables (also the binary looked up on PATH)
-	// args builds the command arguments (after the binary) to write SVG(s) into outDir for
-	// the given 1-based page of absPath.
+	// args builds the command arguments that follow the binary. The command writes SVG(s) into
+	// outDir for the given 1-based page of absPath.
 	args func(absPath, outDir string, page int) []string
 }
 
@@ -53,9 +53,9 @@ var nativeByExt = map[string]nativeRenderer{
 }
 
 // xschemNative exports an xschem schematic to SVG headlessly (--no_x). xschem writes the SVG as
-// plot.svg in the process working directory, which runRender sets to outDir, so exactly one SVG
-// lands there. It renders the whole sheet (no page selection), so page is ignored. Symbol
-// resolution uses the tool's own XSCHEM_LIBRARY_PATH environment.
+// plot.svg in the process working directory. runRender sets that directory to outDir, so exactly
+// one SVG is written there. It renders the whole sheet (no page selection), so page is ignored.
+// Symbol resolution uses the tool's own XSCHEM_LIBRARY_PATH environment.
 var xschemNative = nativeRenderer{
 	tool: "xschem",
 	args: func(absPath, _ string, _ int) []string {
@@ -72,10 +72,10 @@ var gedaNative = nativeRenderer{
 	},
 }
 
-// nativeRendererFor resolves the native renderer for a file. Most formats key off the
-// extension; the shared .sch extension is disambiguated by sniffing the header (xschem opens
-// with "v {xschem", gEDA with "v <date>"), the same rule readers/formats uses. A .sch whose header
-// matches neither, or an unreadable file, has no native renderer.
+// nativeRendererFor resolves the native renderer for a file. Most formats key off the extension.
+// The shared .sch extension is disambiguated by sniffing the header, by the same rule
+// readers/formats uses. An xschem file opens with "v {xschem", and a gEDA file with "v <date>". A
+// .sch whose header matches neither, or an unreadable file, has no native renderer.
 func nativeRendererFor(absPath string) (nativeRenderer, bool) {
 	if lowerExt(absPath) == ".sch" {
 		head, err := readHead(absPath, 256)
@@ -130,8 +130,8 @@ var kicadPcb = nativeRenderer{
 	},
 }
 
-// Available reports whether NATIVE can be served for absPath, meaning a renderer is registered
-// (by extension, or by sniffing a .sch), its tool is enabled, and its binary is installed.
+// Available reports whether NATIVE can be served for absPath. That needs three things. A renderer
+// is registered, by extension or by sniffing a .sch. Its tool is enabled. Its binary is installed.
 func Available(absPath string, enabled map[string]bool) bool {
 	r, ok := nativeRendererFor(absPath)
 	if !ok || !enabled[r.tool] {
@@ -190,9 +190,9 @@ func (c *Cache) Render(ctx context.Context, absPath string, page int, enabled ma
 }
 
 // RenderFile renders one page (1-based) of absPath to SVG using its registered native tool, for
-// direct CLI use, uncached. Unlike Cache.Render it does NOT consult the operator allowlist, which
-// guards a shared server against shelling out on a request, whereas invoking the CLI is itself the
-// operator's consent. It returns ErrNoTool or ErrNotFound for the other two gates.
+// direct CLI use, uncached. Unlike Cache.Render it does NOT consult the operator allowlist. The
+// allowlist guards a shared server against shelling out on a request, and invoking the CLI is
+// itself the operator's consent. It returns ErrNoTool or ErrNotFound for the other two gates.
 func RenderFile(ctx context.Context, absPath string, page int) (string, error) {
 	r, ok := nativeRendererFor(absPath)
 	if !ok {
@@ -216,8 +216,8 @@ func runRender(ctx context.Context, r nativeRenderer, bin, absPath string, page 
 	ctx, cancel := context.WithTimeout(ctx, nativeTimeout)
 	defer cancel()
 	cmd := exec.CommandContext(ctx, bin, r.args(absPath, outDir, page)...) // #nosec G204 -- runs the native tool the user configured, with arguments agni builds
-	// Run in outDir so xschem, which writes plot.svg to its working directory, lands its output
-	// where readOnlySVG looks. kicad-cli and lepton-cli take an explicit output path.
+	// Run in outDir. xschem writes plot.svg to its working directory, and readOnlySVG looks for it
+	// there. kicad-cli and lepton-cli take an explicit output path.
 	cmd.Dir = outDir
 	if out, err := cmd.CombinedOutput(); err != nil {
 		return "", fmt.Errorf("%s: %w: %s", r.tool, err, string(out))
@@ -226,8 +226,8 @@ func runRender(ctx context.Context, r nativeRenderer, bin, absPath string, page 
 }
 
 // guiToolFor returns the GUI application (macOS app name) or binary that natively edits
-// absPath, or ("", false). KiCad opens all of its file types; the shared .sch extension is
-// sniffed for xschem vs Lepton the same way nativeRendererFor does, but resolves to the GUI
+// absPath, or ("", false). KiCad opens all of its file types. The shared .sch extension is
+// sniffed for xschem vs Lepton as nativeRendererFor does it, but it resolves to the GUI
 // binary (lepton-schematic, not the lepton-cli exporter).
 func guiToolFor(absPath string) (string, bool) {
 	switch lowerExt(absPath) {
@@ -250,7 +250,7 @@ func guiToolFor(absPath string) (string, bool) {
 
 // OpenArgs returns the command (binary + args) that opens absPath in its native GUI tool on the
 // current platform, or ErrNoTool when no native GUI is known for the format or platform. It launches
-// nothing, so the caller execs the result and the command stays unit testable. On macOS KiCad opens
+// nothing, so the caller execs the result and the command can be unit tested. On macOS KiCad opens
 // via `open -a`. Otherwise, and for the X11 schematic editors, the binary runs directly, so a
 // missing binary surfaces at exec time.
 func OpenArgs(absPath string) (bin string, args []string, err error) {
@@ -297,7 +297,8 @@ func readOnlySVG(dir string) (string, error) {
 	return string(b), nil
 }
 
-// cacheKey is path|mtime|page; ok is false when the file cannot be stat'd (then skip caching).
+// cacheKey returns path|mtime|page. ok is false when the file cannot be stat'd, and the caller then
+// skips caching.
 func cacheKey(absPath string, page int) (string, bool) {
 	fi, err := os.Stat(absPath)
 	if err != nil {

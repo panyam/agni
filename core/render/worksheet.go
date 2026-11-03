@@ -16,7 +16,7 @@ type framePrim struct {
 
 // frameLayout is the world-space (Y-up) geometry of the drawing-sheet furniture: the inner
 // frame corners, the ruler divisions, and the title-block box. worksheetLines and collectLabels
-// both read it, so the furniture lines and their text stay in step.
+// both read it, so the furniture lines and their text remain in step.
 type frameLayout struct {
 	l, r, b, t int64 // inner frame corners (b = bottom, t = top; Y-up)
 	m          int64 // inset margin
@@ -110,7 +110,7 @@ func worksheetLines(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) []fram
 }
 
 // tbCell is one cell of the title-block grid. text may be empty, drawn as an empty cell. x0/x1
-// are the cell's horizontal span as fractions of the block width. bold marks the cells KiCad
+// are the cell's horizontal span as fractions of the block width. bold marks a cell that KiCad
 // emphasizes (Title, Rev).
 type tbCell struct {
 	text   string
@@ -178,9 +178,10 @@ func gridWeight(rows []tbRow) float64 {
 	return total
 }
 
-// titleBlockBox is the world-space (Y-up) box the grid fills: x,y is the bottom-left corner,
-// w,h the size. The width is the frame's fixed title-block width; the height grows with the
-// row count so a block with comments does not cram, but never shrinks below the base box.
+// titleBlockBox returns the world-space (Y-up) box that the grid fills. x,y is the bottom-left
+// corner and w,h the size. The width is the frame's fixed title-block width. The height grows
+// with the row count so a block with comments does not cram, and it never shrinks below the base
+// box.
 func titleBlockBox(fl frameLayout, rows []tbRow) (x, y, w, h int64) {
 	rowUnit := (fl.t - fl.b) / 30 // ~one row per 1/30 of the frame height
 	h = int64(gridWeight(rows) * float64(rowUnit))
@@ -206,8 +207,8 @@ func sheetOrdinal(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) string {
 	return fmt.Sprintf("%d/%d", n, m)
 }
 
-// isoPaper is the ISO/ANSI sheet-size table (landscape mm) paperName matches page dimensions
-// against.
+// isoPaper is the ISO/ANSI sheet-size table in landscape mm. paperName matches page dimensions
+// against it.
 var isoPaper = []struct {
 	name string
 	w, h float64

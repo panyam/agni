@@ -2,9 +2,8 @@
 
 The board rung of the examples ladder. Read a KiCad board (`.kicad_pcb`) into the WS1-006
 board geometry sidecar and render the physical board (outline, per-layer copper, pads,
-vias, zones) plus a net-highlight overlay. It is the walkthrough form of
-`agni render <file>.kicad_pcb` (which draws the board by default) and of the viewer's
-"Board" sheet.
+vias, zones) plus a net-highlight overlay. It is the walkthrough form of the viewer's
+"Board" sheet and of `agni render <file>.kicad_pcb`, which draws the board by default.
 
 ## What it shows
 
@@ -12,8 +11,8 @@ vias, zones) plus a net-highlight overlay. It is the walkthrough form of
   holding layers, outline, placements with footprint-local pads, and copper grouped per net.
 - `render.BoardSVG`, the SVG backend, which stratifies the document into classed layer
   groups so layer visibility is a CSS toggle (the web viewer's front/back/all selector).
-- `render.HighlightBoardSVG`, the board face of the highlight contract, which maps a net to
-  its routed copper and connected pads and a ref_des to its pads, framed exactly like the base
+- `render.HighlightBoardSVG`, the board face of the highlight contract. It maps a net to its
+  routed copper and connected pads, and a ref_des to its pads, framed exactly like the base
   document.
 
 This example reads `.kicad_pcb` through `kicad.ReadBoardGeometry`. IPC-2581 is the board

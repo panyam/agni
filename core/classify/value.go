@@ -11,7 +11,7 @@ import (
 //
 // IEC 60062 defines the RKM code, where the multiplier letter stands in for the decimal point (4R7 is
 // 4.7 Ω, 4k7 is 4700 Ω, 0R05 is 0.05 Ω, 1M5 is 1.5 MΩ). With SI prefixes that covers nearly every
-// spelling a design carries:
+// spelling found in designs.
 //
 //	quantity := mantissa prefix? unit?        // 10k, 1.5kΩ, 100nF
 //	          | digits prefix digits          // RKM: 4k7, 0R05
@@ -23,7 +23,7 @@ import (
 // THE PARSE IS EXACT DECIMAL AND SCALES ONCE. A component value is printed in decimal, so the text is
 // exact and the parse is string manipulation into (digits, decimal exponent), which scale() converts
 // in a single operation.
-// Reading the mantissa as a float first and scaling after rounds twice, and the two routes land on
+// Reading the mantissa as a float first and scaling after rounds twice, and the two routes give
 // DIFFERENT doubles for 1573 of the 7920 two-and-three-significant-figure values across the SI prefixes
 // designs use. The divergence is concentrated at small magnitudes, in picofarads, where crystal load caps
 // live and where a shipped rule already reads capacitance.
@@ -38,13 +38,14 @@ func ParseQuantity(text string) (value float64, unit string, ok bool) {
 	return v, u, ok
 }
 
-// parseQuantityDetail is ParseQuantity plus whether the notation carried a MULTIPLIER PREFIX. The stamp
+// parseQuantityDetail is ParseQuantity plus whether the notation had a MULTIPLIER PREFIX. The stamp
 // pass needs it because the two unit-less cases differ:
 //
 //   - "10u" on a capacitor omits only the DIMENSION, which the class settles.
 //   - "100" on a capacitor omits the magnitude too, which only a declared convention settles.
 //
-// ValueVocab's dimension and bareUnit fields are the two halves, and its doc says why they stay apart.
+// ValueVocab's dimension and bareUnit fields are the two halves, and its doc says why they are kept
+// apart.
 func parseQuantityDetail(text string) (value float64, unit string, prefixed bool, ok bool) {
 	s := strings.TrimSpace(text)
 	if s == "" {
@@ -62,16 +63,16 @@ func parseQuantityDetail(text string) (value float64, unit string, prefixed bool
 	return scale(mant, exp), unitSym, sawPrefix, true
 }
 
-// UnitOhm is the canonical ohm symbol every reader's spelling normalizes to, GREEK CAPITAL LETTER OMEGA
-// (U+03A9). Designs also carry the visually IDENTICAL OHM SIGN (U+2126) and a bare "R", which a consumer
-// comparing unit strings would treat as three different units.
+// UnitOhm is the canonical ohm symbol, GREEK CAPITAL LETTER OMEGA (U+03A9), and every reader's
+// spelling normalizes to it. Designs also contain the visually IDENTICAL OHM SIGN (U+2126) and a bare
+// "R". A consumer comparing unit strings would treat the three as different units.
 const UnitOhm = "\u03a9" // Ω
 
 // ohmSign is the deprecated OHM SIGN codepoint (U+2126). Unicode normalizes it to U+03A9, but designs
-// carry the raw byte sequence and nothing in the pipeline normalizes for us.
+// contain the raw byte sequence and nothing in the pipeline normalizes for us.
 const ohmSign = "\u2126" // Ω (deprecated codepoint)
 
-// unitSuffixes maps the trailing unit symbol a value may carry to its canonical SI base symbol.
+// unitSuffixes maps a value's trailing unit symbol to its canonical SI base symbol.
 var unitSuffixes = map[string]string{
 	UnitOhm: UnitOhm, ohmSign: UnitOhm, "R": UnitOhm, "OHM": UnitOhm, "OHMS": UnitOhm,
 	"F": "F", "FARAD": "F",
@@ -81,7 +82,7 @@ var unitSuffixes = map[string]string{
 }
 
 // siPrefixes maps a multiplier letter to its power of ten. It doubles as the RKM decimal-point letter
-// set, which is why "R" (10^0) is here, so 4R7 means 4.7 Ω with R marking the point.
+// set. So "R" (10^0) is here, and 4R7 means 4.7 Ω with R marking the point.
 //
 // "M" is the one collision in the notation, mega in IEC 60062 and milli in several SPICE dialects. This
 // table takes the IEC reading because a schematic uses it, and a house that means milli says so through
@@ -169,7 +170,7 @@ func parseDecimal(s string) (mant int64, exp int, unit string, prefixed bool, ok
 	return mant, prefixExp - frac, unit, seenPrefix, true
 }
 
-// unitForPrefixLetter recovers the unit a multiplier letter implies on its own. Only R does, as the RKM
+// unitForPrefixLetter recovers a unit from a multiplier letter alone. Only R implies one, as the RKM
 // point marker for OHMS, so "4R7" is 4.7 Ω with no unit written. Every other prefix is unit-neutral
 // ("100n" could be nF or nH) and yields an empty unit for the lexicon to fill.
 func unitForPrefixLetter(c byte) string {
@@ -211,7 +212,7 @@ func atoi(digits []byte) (int64, bool) {
 }
 
 // scale turns an exact (mantissa, decimal exponent) pair into a double. It is the ONLY floating-point
-// step in the parse, and the DIVISION on the negative branch is the part that matters.
+// step in the parse, and the DIVISION on the negative branch matters most.
 //
 // A positive power of ten is exactly representable in a double up to 1e22, and a NEGATIVE one is not,
 // since 1e-9 has no exact binary form. So dividing by Pow10(9) is exact where multiplying by Pow10(-9)

@@ -7,9 +7,9 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// efuseSpec is a seeded spec whose datasheet declares device_class "efuse" (the class no ref-des
-// prefix or description keyword on a real export can establish; WS10-013). It carries a
-// source doc so the projected fact cites it, and no parameters (the class is a PartSpec-level field).
+// efuseSpec is a seeded spec whose datasheet declares device_class "efuse". No ref-des prefix or
+// description keyword on a real export can establish that class (WS10-013). It has a source doc so
+// the projected fact cites it. It has no parameters, since the class is a PartSpec-level field.
 func efuseSpec(mpn string) *parampb.PartSpec {
 	return &parampb.PartSpec{
 		Mpn:          mpn,
@@ -19,9 +19,9 @@ func efuseSpec(mpn string) *parampb.PartSpec {
 	}
 }
 
-// The component.device_class PROJECTION test (that a seeded class projects a fact) moved to
-// stdlib/relations with the Facts projector (issue 10); the tests below exercise the check.Model
-// side of WS10-013 (class-set enrichment and the Available gate), which stays in check.
+// The component.device_class PROJECTION test moved to stdlib/relations with the Facts projector
+// (issue 10). It checks that a seeded class projects a fact. The tests below exercise the check.Model
+// side of WS10-013, class-set enrichment and the Available gate, and that side is still in check.
 
 // TestDeviceClassEnrichesClassSet (WS10-013 Phase 2) checks that a seeded device_class is merged
 // into the component's device_classes SET, so HasClass answers from the datasheet. That happens
@@ -50,8 +50,9 @@ func TestDeviceClassEnrichesClassSet(t *testing.T) {
 }
 
 // TestDeviceClassRelationAvailability checks that a rule reading component.device_class is
-// not-applicable without a seeded params set (so a review item bound to it reads not-automated, not a
-// hollow pass), and applicable once a params tier is attached, the same gate the param.max(...) reads get.
+// not-applicable without a seeded params set, so a review item bound to it reads not-automated rather
+// than a hollow pass. The rule is applicable once a params tier is attached, the same gate that the
+// param.max(...) reads get.
 func TestDeviceClassRelationAvailability(t *testing.T) {
 	r := &Rule{Reads: []string{"component.device_class"}}
 	if ok, reason := Available(r, NewModel(supplyDesign("+5V", false, "TPS2HB16"))); ok || reason == "" {

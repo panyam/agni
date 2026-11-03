@@ -16,8 +16,9 @@ import (
 //
 // Fidelity is lossy-bounded (render subset, CONSTRAINTS C6). It extracts symbol graphics,
 // pin coordinates, placements with their visible fields, wire polylines, labels, and
-// sheets. It drops the connectivity graph (the core IR gets that from the .edn), hidden
-// and data-only properties, the style palette, and back-annotation. See
+// sheets, and it relabels a top-level placement by the designator back-annotation gives it
+// (agni 1228). It drops the connectivity graph (the core IR gets that from the .edn), hidden
+// and data-only properties, and the style palette. See
 // docsite/content/reference/edif-schematic-primer.md and
 // docsite/content/architecture/geometry-and-rendering.md. sourceFile is provenance only (C1).
 func ReadSchematic(r io.Reader, sourceFile string) (*geom.SchematicGeometry, error) {
@@ -118,9 +119,9 @@ func extractGeom(root *node, src string) *geom.SchematicGeometry {
 	return g
 }
 
-// backAnnotatedPlacements lists the placements whose page designator back-annotation replaced, so a
-// reader can audit what the drawing relabelled (agni issue 1230). pages and sheets are parallel, one
-// sheet per page, and the sheet ids are final, so an entry names the sheet a viewer opens.
+// backAnnotatedPlacements lists each placement where back-annotation replaced the page's designator,
+// so a reader can audit what the drawing relabelled (agni issue 1230). pages and sheets are
+// parallel, one sheet per page. The sheet ids are final, so an entry names the sheet a viewer opens.
 func backAnnotatedPlacements(pages []*node, sheets []*geom.SheetGeometry, backRef map[string]string) []*geom.BackAnnotatedPlacement {
 	if len(backRef) == 0 {
 		return nil
@@ -140,11 +141,12 @@ func backAnnotatedPlacements(pages []*node, sheets []*geom.SheetGeometry, backRe
 	return out
 }
 
-// pageOwner is the cell view or design a page is drawn in, as an id path and a display name.
+// pageOwner names the cell view or design that holds a page, as an id path and a display name.
 type pageOwner struct{ id, name string }
 
-// pageOwners maps each page to the cell view (library -> cell -> view -> contents) or design
-// (design -> contents) it sits in. A page found anywhere else has no owner.
+// pageOwners maps each page to the cell view or design that holds it. A cell view holds a page as
+// library -> cell -> view -> contents, and a design holds one as design -> contents. A page found
+// anywhere else has no owner.
 func pageOwners(root *node) map[*node]pageOwner {
 	out := map[*node]pageOwner{}
 	display := func(n *node) (string, string) {
@@ -187,11 +189,11 @@ func pageOwners(root *node) map[*node]pageOwner {
 
 // qualifyRepeatedSheets gives every sheet a unique id and tells apart sheets whose names repeat
 // (agni issue 1140). A schematic export holding many block cells often names each block's pages
-// alike, (page (rename &1 "1")) in every block, and a sheet id that repeats breaks everything keyed
-// on it: showing a sheet, a finding's sheet badges, the per-sheet counts. A repeated id or name is
-// prefixed with the owning cell view or design, and a page whose id and name are already unique is
-// left exactly as the file spells it, so a single design's pages read as before. pages[i] is the page
-// sheets[i] was read from.
+// alike, (page (rename &1 "1")) in every block. A repeated sheet id breaks everything keyed on it,
+// such as showing a sheet, a finding's sheet badges and the per-sheet counts. A repeated id or name
+// is prefixed with the owning cell view or design. A page whose id and name are already unique is
+// left exactly as the file spells it, so a single design's pages read as before. sheets[i] was read
+// from pages[i].
 func qualifyRepeatedSheets(sheets []*geom.SheetGeometry, pages []*node, owners map[*node]pageOwner) {
 	ids := map[string]int{}
 	names := map[string]int{}
@@ -211,8 +213,9 @@ func qualifyRepeatedSheets(sheets []*geom.SheetGeometry, pages []*node, owners m
 			sh.Name = o.name + " / " + sh.Name
 		}
 	}
-	// Two pages with one rename in one owner, or pages no owner claims, can still collide. Number
-	// the later ones, in file order, so an id names one sheet whatever the file did.
+	// Two pages can still collide when one owner gives both the same rename, or when no owner
+	// claims them. Number the later ones in file order, so an id names one sheet whatever the file
+	// did.
 	seen := map[string]int{}
 	for _, sh := range sheets {
 		seen[sh.Id]++
@@ -222,7 +225,7 @@ func qualifyRepeatedSheets(sheets []*geom.SheetGeometry, pages []*node, owners m
 	}
 }
 
-// textLineRatio converts an EDIF textHeight into the GLYPH height geom.Field/Label carry.
+// textLineRatio converts an EDIF textHeight into a GLYPH height for geom.Field/Label.
 //
 // EDIF's textHeight is a LINE PITCH, not an em size. The authoring tool stacks a component's
 // field rows exactly textHeight apart. Over 2377 instances of one export, 3161 of the
@@ -234,13 +237,13 @@ func qualifyRepeatedSheets(sheets []*geom.SheetGeometry, pages []*node, owners m
 // it is calibrated against nine points rather than fitted to one. It also falls in the 1.2 to
 // 1.35 range of ordinary typesetting, so it is a real line height and not a fudge factor.
 //
-// Applied in the READER, not the renderer, because geom's height means glyph height and the
+// The READER applies it, not the renderer, because geom's height means glyph height and the
 // renderer maps it straight to font-size. KiCad states a glyph height directly and is left
 // alone. See docsite/content/architecture/geometry-and-rendering.md#a-source-text-height-may-not-be-an-em-size.
 const textLineRatio = 1.3148
 
-// glyphHeight converts one EDIF textHeight (a line pitch) to the glyph height geom carries.
-// A zero or negative height passes through unchanged, so "unspecified" stays unspecified and
+// glyphHeight converts one EDIF textHeight (a line pitch) to the glyph height geom stores.
+// A zero or negative height passes through unchanged, so "unspecified" remains unspecified and
 // the renderer's own fallback still applies.
 func glyphHeight(textHeight int64) int64 {
 	if textHeight <= 0 {
@@ -251,10 +254,10 @@ func glyphHeight(textHeight int64) int64 {
 
 // figureGroupHeights reads the technology's default textHeight per figureGroup, in source units.
 // EDIF records a display's height once on the figureGroup (e.g. (figureGroup ATTRIBUTE (textHeight
-// 254000))); a per-instance (figureGroupOverride GROUP) that changes only color/visibility omits
-// the height and inherits the group default, so without this map such a field would not scale
-// with the sheet. If two libraries declare one group name with different heights, the first
-// definition wins.
+// 254000))). A per-instance (figureGroupOverride GROUP) may change only color/visibility. Such an
+// override omits the height and inherits the group default. Without this map such a field would
+// not scale with the sheet. If two libraries declare one group name with different heights, the
+// first definition wins.
 func figureGroupHeights(root *node) map[string]int64 {
 	m := map[string]int64{}
 	var fgs []*node
@@ -299,9 +302,9 @@ func graphicContents(view *node) *node {
 	return nil
 }
 
-// symbolOf builds a SymbolDef from a cell's geometry node (a (symbol ...) view, or a
-// GRAPHIC view's (contents ...) for builtin cells): its bounding box, drawn shapes, and
-// pin connect-locations (symbol-local coordinates).
+// symbolOf builds a SymbolDef from a cell's geometry node. That node is a (symbol ...) view,
+// or a GRAPHIC view's (contents ...) for builtin cells. The SymbolDef holds the bounding box,
+// the drawn shapes, and the pin connect-locations in symbol-local coordinates.
 func symbolOf(sym, cell, view *node, libName, viewName, src string, fgh map[string]int64) *geom.SymbolDef {
 	id, disp := nameParts(cell.Arg(1))
 	name := disp
@@ -343,7 +346,7 @@ func symbolOf(sym, cell, view *node, libName, viewName, src string, fgh map[stri
 
 // portDesignators maps a view's interface ports to their physical pin designators, keyed by both
 // the port's internal id and its display name because a portImplementation may name either.
-// A bus port declared as (port (array NAME N)) carries no designator and is skipped.
+// A bus port declared as (port (array NAME N)) has no designator and is skipped.
 func portDesignators(view *node) map[string]string {
 	m := map[string]string{}
 	for _, p := range view.Child("interface").Children("port") {
@@ -383,23 +386,24 @@ func pinOf(pi *node, fgh map[string]int64, des map[string]string) *geom.PinPoint
 	if loc == nil {
 		return nil
 	}
-	// PortRef is a JOIN KEY holding the physical pin number (ir.Port.designator), which EDIF keeps
-	// on the cell interface rather than on the portImplementation (#303). See
+	// PortRef is a JOIN KEY. It holds the physical pin number (ir.Port.designator). EDIF keeps that
+	// number on the cell interface rather than on the portImplementation (#303). See
 	// docsite/content/architecture/geometry-and-rendering.md#a-pins-number-is-a-join-key-not-a-caption.
-	// The 6% of ports that declare no designator keep the port name, their only identity.
+	// 6% of ports declare no designator. They keep the port name, which is their only identity.
 	pp := &geom.PinPoint{PortRef: portRef, Loc: loc, SourceId: portRef}
 	if num := des[portRef]; num != "" {
 		pp.PortRef = num
-		// Only carry the name when it says something the number does not; a part whose port is
-		// literally called "1" would otherwise draw "1" twice.
+		// Keep the name only when it differs from the number. A part whose port is literally
+		// called "1" would otherwise draw "1" twice.
 		if portRef != num {
 			pp.Name = portRef
 		}
 	}
-	// The pin label is the port name shown at (name X (display (origin ...))), in symbol-local
-	// coordinates, skipped when the source marks it hidden. Its text height comes from the
-	// display or the figureGroup it overrides (typically LABEL). Without it, pin text drew at a
-	// renderer constant more than twice the size the authoring tool prints (#301).
+	// The pin label is the port name at (name X (display (origin ...))), in symbol-local
+	// coordinates. It is skipped when the source marks it hidden. Its text height comes from the
+	// display, or from the figureGroup the display overrides (typically LABEL). Without that
+	// height, pin text drew at a renderer constant, more than twice the size the authoring tool
+	// prints (#301).
 	if nm != nil {
 		if d := nm.Child("display"); d != nil && labelVisible(d) {
 			if o := d.Child("origin"); o != nil {
@@ -456,8 +460,8 @@ func canonicalJustify(code string) string {
 	return strings.TrimSpace(h + " " + v)
 }
 
-// labelVisible reports whether a (display ...) is shown. A nested (visible (false)) (from
-// a figureGroupOverride) hides it; absent visibility means visible.
+// labelVisible reports whether a (display ...) is shown. A nested (visible (false)) from
+// a figureGroupOverride hides it. Absent visibility means visible.
 func labelVisible(display *node) bool {
 	if v := findFirst(display, "visible"); v != nil && v.Arg(1) != nil && v.Arg(1).Head() == "false" {
 		return false
@@ -466,8 +470,8 @@ func labelVisible(display *node) bool {
 }
 
 // shapesOfFigure converts an EDIF (figure GROUP shape...) node into geometry shapes.
-// The GROUP (BOX/PIN/NET/...) is carried as a style hint. connectLocation dots are
-// skipped here (they are captured as pins).
+// The GROUP (BOX/PIN/NET/...) becomes a style hint. connectLocation dots are skipped
+// here, since pins capture them.
 func shapesOfFigure(f *node) []*geom.Shape {
 	group := ""
 	// The figure's first child may be a bare group atom, e.g. (figure BOX ...).
@@ -533,9 +537,9 @@ func sheetOf(p *node, src string, cellByID, libByID, viewByID, backRef map[strin
 	var insts []*node
 	collect(p, "instance", &insts)
 	for _, in := range insts {
-		// The title-block border is promoted into the sheet's TitleBlock and its instance dropped,
-		// since the worksheet frame is synthesized from the page size and drawing the raw border
-		// cell would double the frame and its captions (WS7-019).
+		// Promote the title-block border into the sheet's TitleBlock and drop its instance. The
+		// worksheet frame is synthesized from the page size, and drawing the raw border cell would
+		// double the frame and its captions (WS7-019).
 		if tb := titleBlockFromInstance(in, cellByID, libByID); tb != nil {
 			if sh.TitleBlock == nil {
 				sh.TitleBlock = tb
@@ -543,8 +547,8 @@ func sheetOf(p *node, src string, cellByID, libByID, viewByID, backRef map[strin
 			continue
 		}
 		pl := placementOf(in, src, cellByID, libByID, viewByID, backRef)
-		// A ref-des known only from back-annotation keys the placement and draws nothing, since the
-		// page gives it no position and the tool that wrote the page printed no label there.
+		// Suppose only back-annotation gives the ref-des. It keys the placement and draws nothing.
+		// The page gives it no position, and the tool that wrote the page printed no label there.
 		if in.Child("designator") != nil {
 			if f := refDesField(in, pl.RefDes, placementOrigin(pl), fgh); f != nil {
 				pl.Fields = append(pl.Fields, f)
@@ -588,8 +592,8 @@ func sheetOf(p *node, src string, cellByID, libByID, viewByID, backRef map[strin
 
 // placementOf builds a SymbolPlacement from an (instance ...) node on a sheet. Its
 // cell, library and view references are normalized to display names, so a placement resolves to
-// its SymbolDef whichever form the source used (see the maps in extractGeom). Its ref-des is the
-// back-annotated one when backRef names the instance, as the netlist read's is (backannotate.go).
+// its SymbolDef whichever form the source used (see the maps in extractGeom). When backRef names
+// the instance, its ref-des is the back-annotated one, as in the netlist read (backannotate.go).
 func placementOf(in *node, src string, cellByID, libByID, viewByID, backRef map[string]string) *geom.SymbolPlacement {
 	id, _ := nameParts(in.Arg(1))
 	pl := &geom.SymbolPlacement{
@@ -627,11 +631,11 @@ func placementOf(in *node, src string, cellByID, libByID, viewByID, backRef map[
 
 // placedFields reads an instance's DRAWN (property ...) overrides (value, tolerance, rating)
 // into geom.Field entries (WS1-037). Only a property with a stringDisplay and a display origin
-// becomes a Field, since a data-only property rides the .edn attributes. A Reference/RefDes
-// property is skipped because the caller synthesizes the ref-des field.
+// becomes a Field, since the .edn attributes already hold a data-only property. A
+// Reference/RefDes property is skipped because the caller synthesizes the ref-des field.
 //
-// The authoring tool records a display origin for nearly every property but marks most
-// (visible (false)), drawing only a few (typically Value), so hidden properties are skipped.
+// The authoring tool records a display origin for nearly every property. It marks most of them
+// (visible (false)) and draws only a few, typically Value. So hidden properties are skipped.
 // A missing textHeight inherits the overridden figureGroup's default (fgh).
 func placedFields(in *node, fgh map[string]int64) []*geom.Field {
 	var out []*geom.Field
@@ -661,11 +665,11 @@ func placedFields(in *node, fgh map[string]int64) []*geom.Field {
 	return out
 }
 
-// fieldFromDisplay builds one placed Field from a (display ...) node: its origin, justify,
-// orientation, and text height, inheriting the overridden figureGroup's default height when the
-// display does not restate one. Returns nil when the display has no origin (an unplaced value) or
-// the source marks it hidden. Shared by placedFields, refDesField and cellNameField, which read
-// the same display grammar off different parents.
+// fieldFromDisplay builds one placed Field from a (display ...) node. The Field takes the display's
+// origin, justify, orientation, and text height. When the display states no height, the Field
+// inherits the overridden figureGroup's default. It returns nil when the display has no origin (an
+// unplaced value) or the source marks it hidden. placedFields, refDesField and cellNameField share
+// it, since each reads the same display grammar off a different parent.
 func fieldFromDisplay(name, value string, d *node, fgh map[string]int64) *geom.Field {
 	o := d.Child("origin")
 	if o == nil || !labelVisible(d) {
@@ -682,10 +686,10 @@ func fieldFromDisplay(name, value string, d *node, fgh map[string]int64) *geom.F
 	return f
 }
 
-// displayHeight is the GLYPH height a (display ...) implies, taken from its own textHeight when
-// it states one and otherwise from the default of the figureGroup it overrides. Zero when
-// neither is known, and the renderer then picks a default. Shared by fieldFromDisplay and pinOf
-// so fields and pin labels are sized by one rule.
+// displayHeight returns the GLYPH height of a (display ...). It takes the display's own textHeight
+// when it states one, and otherwise the default of the figureGroup the display overrides. It
+// returns zero when neither is known, and the renderer then picks a default. fieldFromDisplay and
+// pinOf share it, so one rule sizes fields and pin labels.
 func displayHeight(d *node, fgh map[string]int64) int64 {
 	if th := findFirst(d, "textHeight"); th != nil {
 		if h := glyphHeight(parseInt(atom(th.Arg(1)))); h > 0 {
@@ -695,12 +699,12 @@ func displayHeight(d *node, fgh map[string]int64) int64 {
 	return fgh[displayGroup(d)]
 }
 
-// refDesField builds the ref-des Reference field for an instance, placed by the designator's own
-// display (origin, justify, text height), which typically puts it in a column of fields beside
-// the symbol rather than at the placement origin (#299).
+// refDesField builds the ref-des Reference field for an instance. The designator's own display
+// places the field, with its origin, justify and text height. That usually puts the field in a
+// column of fields beside the symbol rather than at the placement origin (#299).
 //
 // A display is authoritative when present, including its visibility flag, so a hidden designator
-// stays hidden rather than falling back. The fallback origin is only for a bare
+// is still hidden and does not fall back. The fallback origin is only for a bare
 // (designator REF) with no display at all.
 func refDesField(in *node, refDes string, fallback *geom.Point, fgh map[string]int64) *geom.Field {
 	if refDes == "" {
@@ -715,13 +719,14 @@ func refDesField(in *node, refDes string, fallback *geom.Point, fgh map[string]i
 	return &geom.Field{Name: "Reference", Value: refDes, Origin: fallback, Visible: true}
 }
 
-// cellNameField builds the drawn part-name field, captioning the cell an instance references where
-// the tool placed it. The display sits on the cellRef's name:
+// cellNameField builds the drawn part-name field. The field captions the cell that an instance
+// references, at the position the tool chose. The display is on the cellRef's name, as in this form.
 //
 //	(viewRef V (cellRef (name PARTNUM (display (justify LOWERLEFT) (origin (pt ...)))) ...))
 //
-// Most instances mark it hidden, so honoring the visibility flag keeps this to the few parts a
-// schematic captions by MPN. Returns nil for the common (cellRef NAME) form, which has no display.
+// Most instances mark it hidden. Honoring the visibility flag limits the field to the few parts
+// that a schematic captions by MPN. It returns nil for the common (cellRef NAME) form, which has no
+// display.
 func cellNameField(in *node, cellRef string, fgh map[string]int64) *geom.Field {
 	cr := in.Child("viewRef").Child("cellRef")
 	if cr == nil {
@@ -794,8 +799,8 @@ func titleBlockFromInstance(in *node, cellByID, libByID map[string]string) *geom
 			}
 		default:
 			// Any other property is a title-block field with no typed slot (Drawing, Designer,
-			// signatures). Kept in source order, keyed by base name so DV_1/DV_2 collapse, first
-			// non-empty wins.
+			// signatures). Keep them in source order, keyed by base name so DV_1/DV_2 collapse.
+			// The first non-empty value wins.
 			if !seenExtra[base] {
 				seenExtra[base] = true
 				tb.ExtraFields = append(tb.ExtraFields, &geom.KeyValue{Key: base, Value: val})
@@ -847,7 +852,7 @@ func propText(p *node) string {
 
 // baseFieldKey uppercases a property key and strips a trailing sequence suffix (an optional
 // "_" then digits), so REV_1..REV_5 and DATE_1 collapse to REV and DATE. It maps only the base
-// name, so a distinct key like CHANGE_DATE_1 stays CHANGE_DATE and is not read as the date.
+// name, so a distinct key like CHANGE_DATE_1 becomes CHANGE_DATE and is not read as the date.
 func baseFieldKey(k string) string {
 	u := strings.ToUpper(strings.TrimSpace(k))
 	i := len(u)
@@ -867,13 +872,13 @@ func isTitleBlockPlaceholder(v string) bool {
 	return strings.Trim(v, "-") == ""
 }
 
-// stampNetAnchors gives the sheet's designator-less symbols (ground and rail glyphs, off-page
-// connectors) the net they name, measured at 3329 of 6102 placements on one export. A symbol is
-// anchored to its CELL name or one of its field values only when that name is a net on this same
-// sheet, so nothing here knows what a ground symbol is called, and a no-connect or a sheet port,
-// which names no net, stays anonymous. A placement WITH a designator is never anchored. The
-// spellings and counts that ruled out a table of cell names are in
-// docsite/content/architecture/geometry-and-rendering.md#symbols-that-name-a-net.
+// stampNetAnchors anchors each of the sheet's designator-less symbols to the net it names. These
+// are ground and rail glyphs and off-page connectors, measured at 3329 of 6102 placements on one
+// export. A symbol is anchored to its CELL name or one of its field values only when that name is a
+// net on this same sheet. So nothing here knows what a ground symbol is called. A no-connect or a
+// sheet port names no net, so it remains anonymous. A placement WITH a designator is never
+// anchored. docsite/content/architecture/geometry-and-rendering.md#symbols-that-name-a-net records
+// the spellings and counts that ruled out a table of cell names.
 func stampNetAnchors(sh *geom.SheetGeometry) {
 	nets := map[string]bool{}
 	for _, w := range sh.Wires {
@@ -901,13 +906,13 @@ func stampNetAnchors(sh *geom.SheetGeometry) {
 	}
 }
 
-// wireOf collects the routed wire polylines for one net on a sheet. Nets nest (an outer
-// logical net, inner physical net-segment groups carrying the wires); the wires are
-// gathered from the whole subtree and keyed by the outer net name.
+// wireOf collects the routed wire polylines for one net on a sheet. Nets nest. An outer
+// logical net holds inner physical net-segment groups, and those groups hold the wires.
+// The wires are gathered from the whole subtree and keyed by the outer net name.
 func wireOf(n *node, src string) *geom.WireGeometry {
-	// Display name, else the id, the same resolution the netlist read uses (nm.best), so wire.Net
-	// EQUALS the ir.Net name a finding carries. The .eds joins the .edn BY NET NAME, so a bare
-	// (name ID) net must keep its id or its findings cannot be located (WS1-047).
+	// Use the display name, else the id. The netlist read resolves names the same way (nm.best),
+	// so wire.Net EQUALS the ir.Net name in a finding. The .eds joins the .edn BY NET NAME, so a
+	// bare (name ID) net must keep its id. Otherwise its findings cannot be located (WS1-047).
 	id, disp := nameParts(n.Arg(1))
 	name := disp
 	if name == "" {
@@ -953,9 +958,10 @@ func labelOf(an *node) *geom.Label {
 	return l
 }
 
-// labelFromNameDisplay builds a Label from a (name X (display ...)) node, as an off-page
-// connector uses to place its signal name. The text is the name; position/justify come
-// from the display. Returns nil when there is no display with an origin (an unplaced name).
+// labelFromNameDisplay builds a Label from a (name X (display ...)) node. An off-page
+// connector uses this form to place its signal name. The text is the name, and
+// position/justify come from the display. Returns nil when there is no display with an
+// origin (an unplaced name).
 func labelFromNameDisplay(nm *node) *geom.Label {
 	if nm == nil {
 		return nil

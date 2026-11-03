@@ -1,11 +1,11 @@
-// Package fshost serves designs from a mount table of fs.FS values. It is the backend the wasm engine
-// composes the services over (agni issue 178), and it implements the service ports (Loader,
+// Package fshost serves designs from a mount table of fs.FS values. The wasm engine composes the
+// services over it (agni issue 178). It implements the service ports (Loader,
 // ReviewLoader, ConventionLoader, Workspace, ConfigResolver) without touching the host filesystem, so
 // an in-memory map, an embedded tree, a zip and os.DirFS all serve the same way.
 //
 // Every mount is a top-level directory of ONE composed fs.FS (Root). A design names a sibling in
-// another mount, such as a project's symbol library, as an ordinary path, which a separate fs.FS per
-// mount could not express.
+// another mount as an ordinary path, such as a project's symbol library. A separate fs.FS per mount
+// could not express that path.
 package fshost
 
 import (
@@ -17,7 +17,7 @@ import (
 	"time"
 )
 
-// Mount is one named tree. Name is the handle a client addresses it by in an artifact.URI.
+// Mount is one named tree. A client addresses it by Name in an artifact.URI.
 type Mount struct {
 	Name string
 	FS   fs.FS

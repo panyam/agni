@@ -1,6 +1,6 @@
 //go:build !embedweb
 
-// Package web carries the viewer's built assets into a release binary (agni WS16-003). Only a build
+// Package web embeds the viewer's built assets in a release binary (agni WS16-003). Only a build
 // with the embedweb tag holds them; `go install` and `make agni` builds hold none, and
 // internal/webbundle fetches the matching release's bundle for them instead.
 package web

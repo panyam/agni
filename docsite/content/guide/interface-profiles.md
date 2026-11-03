@@ -13,7 +13,7 @@ own reading of a standard one, go in a directory you hand to `--profile-path`. N
 
 ## Write a profile
 
-I2C is not one of the built-ins, which makes it a short first example. Two signals, both
+I2C is not one of the built-ins, and it makes a short first example. Two signals, both
 needing a {{ explainable "pull-up" }}:
 
 ```yaml
@@ -33,15 +33,15 @@ profile's rules:
 
 {{ agniRun "content/guide/runs/profile-i2c.yaml" }}
 
-Three rules came out of that declaration, one per requirement, and the last line is how you know all
+Three rules came out of that declaration, one per requirement, and the last line shows that all
 three ran rather than one. On the variant of the same board with the pull-ups fitted, they run and
-stay quiet:
+report nothing:
 
 {{ agniRun "content/guide/runs/profile-i2c-clean.yaml" }}
 
 Rules from `--profile-path` are namespaced `profile-overlay/`, so an overlay rule is never
-mistaken for a built-in one. A profile sent with a request (`AnalysisConfig.profile_uris`) is
-namespaced `request-profiles/`, so a client choosing rules by name asks for
+mistaken for a built-in one. A request can send a profile in `AnalysisConfig.profile_uris`. That
+profile is namespaced `request-profiles/`, so a client choosing rules by name asks for
 `request-profiles/<name>-missing-pullup`. Asking for `profile/<name>-missing-pullup` instead runs
 nothing and reports no error today (#905).
 
@@ -69,12 +69,12 @@ The requirements decide how many rules there are. The signals decide what each o
 |---|---|
 | `name` | the profile's name. It appears in rule names, in every finding's message, and as the `profile` tag. |
 | `signals` | the interface's roles, each with a `name` (the role, e.g. `SCL`) and one matcher. |
-| `requirements` | the checks this profile declares, each naming a registered type. |
+| `requirements` | the profile's checks, each naming a registered type. |
 | `host` | optional. Binds the interface to the component that declares it. |
 | `instance` | optional. `anchor_stem` judges each bus of the interface on its own, as described in [One bus at a time](#one-bus-at-a-time). |
 | `excludes` | optional, and only with `instance`. Signals whose net on a bus says that bus is some other interface. |
 
-`host` takes `{attr: <key>, value: <val>}` to match a component attribute the design carries
+`host` takes `{attr: <key>, value: <val>}` to match a component attribute in the design
 (`interface=CAN`), or `{class: <device-class>}` to match what a part's datasheet says it is.
 Either or both, and a component matching either one is a host. The class form needs a seeded
 parameter set, so without [`--params`](../datasheets/) it finds nothing rather than guessing.
@@ -83,7 +83,7 @@ parameter set, so without [`--params`](../datasheets/) it finds nothing rather t
 
 A signal is found by net name, and declares exactly one of these:
 
-| form | example | when it earns its place |
+| form | example | when to use it |
 |---|---|---|
 | `suffix` | `suffix: _CANH` | the readable default. The role is the tail of the net name. |
 | `prefix` + `suffix` | `prefix: PCIE_`, `suffix: _TXP` | the tail is shared with a foreign bus, and a bus prefix tells them apart. |
@@ -109,7 +109,7 @@ enforce.
 | `termination` | a terminating device bridges the bus pair | `high`, `low` |
 | `esd` | a signal leaving through a connector has an ESD clamp | |
 
-`termination` is the one that takes params, naming the two bridged net-name suffixes. The
+Only `termination` takes params. They name the two bridged net-name suffixes. The
 shipped CAN profile is the worked example:
 
 ```yaml
@@ -134,8 +134,8 @@ examples.
 
 ## A profile with no host, and signals that differ from each other
 
-The shipped MDIO profile is the one to copy when the boards you check are exports nobody is going to
-annotate for you. It declares no `host:` at all.
+Suppose you check exported boards and nobody is going to annotate them for you. Then copy the
+shipped MDIO profile. It declares no `host:` at all.
 
 ```yaml
 name: MDIO
@@ -148,19 +148,19 @@ requirements:
   - {type: signal-dangling}
 ```
 
-`missing-pullup` and `signal-dangling` gate on the in-use test below, which is two distinct signals
-matching by name, and not on a host part. So this profile evaluates on any board whose nets are named
-conventionally, with nothing asked of the design.
+`missing-pullup` and `signal-dangling` gate on the in-use test below, not on a host part. That test
+asks for two distinct signals matching by name. So this profile evaluates on any board whose nets
+are named conventionally, with nothing asked of the design.
 
 **MDIO carries `pullup` and MDC does not**, because they
 are not the same kind of line. MDIO is bidirectional and open-drain, undriven between frames and
-through every turnaround cycle, so a resistor is what holds it high and IEEE 802.3 clause 22 calls
+through every turnaround cycle, so a resistor holds it high and IEEE 802.3 clause 22 calls
 for one. MDC is a clock sourced by the station side, push-pull, driven whenever it matters. Requiring
 a pull-up on it would report a failure on every correctly-built board that omits one.
 
 The same holds beyond Ethernet. `pullup` belongs on the signals that
-float when nobody is driving, not on every signal of a bus that has a pull-up somewhere. Marking a
-whole bus is how a profile starts producing failures a reviewer has to learn to ignore, and a
+float when nobody is driving, not on every signal of a bus that has a pull-up somewhere. If you mark
+a whole bus, the profile starts producing failures, and a reviewer has to learn to ignore them. A
 checklist whose failures are routinely ignored is worse than no checklist.
 
 The pattern also shows why a signal's match is bounded. `MDCLK` opens with the letters `MDC` and is
@@ -170,28 +170,29 @@ lookaround, so the boundary is written as explicit character classes.
 ### Why MDIO is a profile and not a wider built-in
 
 The engine had one pull-up rule, and it answered one bus family by name. Its pattern matched SDA and
-SCL at a token boundary and nothing else looked at a management-interface name, so a board whose PHY
-bus had no pull-up on either line reported nothing, from a rule whose entire subject is that failure
-(agni issue 516). MDIO asks the same electrical question as I2C. Both lines idle high only because a
-resistor returns them there, and both sit undriven between transactions.
+SCL at a token boundary, and nothing else looked at a management-interface name. Take a board with
+no pull-up on either line of its PHY bus. That rule reported nothing for it, though that failure is
+the rule's entire subject (agni issue 516). MDIO asks the same electrical question as I2C. Both
+lines idle high only because a resistor returns them there, and both sit undriven between
+transactions.
 
-Widening the built-in rule's pattern as well would report the same net from two rules, so the
-coverage lives in this profile as data instead. That leaves one gap, and it is the unresolved half
-of issue 516. The built-in I2C rule proves a pass with the resistor and rail it walked through, while
+If the built-in rule's pattern were widened as well, two rules would report the same net, so the
+coverage is in this profile as data instead. That leaves one gap, the unresolved half of issue
+516. The built-in I2C rule proves a pass with the resistor and rail it walked through, while
 a profile requirement's finding names only the net. A reviewer asking "show me the pull-up" gets a
 path on I2C and a bare net name on MDIO.
 
 ## The anchor, and when a profile decides it is looking at your board
 
-A profile that finds none of its signals has to stay silent. A board with no CAN on it is not
+A profile that finds none of its signals has to report nothing. A board with no CAN on it is not
 a board with a broken CAN bus. Two gates decide this, and both have to clear before the
 completeness check runs.
 
 The **in-use gate** wants at least two distinct signals of the profile to appear as nets. One
 match is not evidence, because a real design has many `_CS` nets belonging to many things.
 
-The **anchor** is the signal you mark `anchor: true`, the one that is always present when the
-interface is. Completeness is reported against it, so a finding reads `CAN interface
+You mark one signal `anchor: true`, and that signal is the **anchor**. It is always present when
+the interface is. Completeness is reported against it, so a finding reads `CAN interface
 (anchored at net CAN_CANH) is missing required signal RXD` rather than naming a net that is not
 there. At most one signal may be the anchor, and a profile that declares none generates no
 completeness rule at all.
@@ -208,22 +209,23 @@ flowchart TB
 ## One bus at a time
 
 Without an `instance` key a profile treats every matching net on the design as one interface. That
-is fine for a bus a board carries once. It goes wrong when a board carries two buses that share
+is fine when a board carries a bus once. It goes wrong when a board carries two buses that share
 suffixes, because each lends the other its signals. An SD card slot next to an eMMC is the usual
 case on a SoC board, and an unused M.2 SMBus clock ending `_CLK` used to read as the eMMC's clock.
 
-`instance: anchor_stem` makes each net the anchor matches its own bus. The bus is named by the
+Under `instance: anchor_stem`, the anchor's matcher finds nets, and each of those nets founds its
+own bus. The bus is named by the
 anchor's net name less the anchor's suffix, so `SD2_CMD` founds bus `SD2`. A signal belongs to the
 bus when its net is named from that stem. For a `suffix` signal that means exactly the stem and the
 suffix (`SD2_CLK`). For a `glob` or `regex` signal it means the net matches and starts with the stem
-and the anchor suffix's first character, so bus `SD` never takes `SD2_DATA0`. The in-use gate,
-completeness, pull-up and dangling checks and the coverage panel then run per bus, and a missing
-signal is reported against that bus's anchor.
+and the anchor suffix's first character, so bus `SD` never takes `SD2_DATA0`. Then each of these
+runs per bus: the in-use gate, completeness, the pull-up and dangling checks, and the coverage panel.
+A missing signal is reported against that bus's anchor.
 
 `excludes` lists signals whose presence on a bus says it is a different interface. The shipped eMMC
 profile excludes a card detect line, because a removable SD card shares eMMC's `CMD`, `CLK` and `DAT`
-names but has four data lines and no reset, and judging it as an eMMC reports a list of signals it was
-never going to have:
+names but has four data lines and no reset. Judging it as an eMMC would report a list of missing
+signals that an SD card never has:
 
 ```yaml
 # stdlib/profiles/builtins/emmc.yaml
@@ -236,11 +238,11 @@ excludes:
   - {name: CD, regex: '_(CD|CD_B|CD_N|CDn|nCD|DET)$'}
 ```
 
-A bus carrying an excluded signal is not in use, so nothing on it is required or judged, and a review
-item bound to the profile reads it as absent. The shipped SD profile is the mirror image. It excludes
-an eighth data line and a reset, which say a bus is an eMMC, so the two profiles split one naming
-convention between them and each judges its own bus. An `instance` key needs an anchor declared by
-`suffix`, since the stem comes from taking that suffix off.
+A bus carrying an excluded signal is not in use, so nothing on it is required or judged, and a
+review item bound to the profile reads it as absent. The shipped SD profile is the mirror image. It
+excludes an eighth data line and a reset, since those say a bus is an eMMC. So the two profiles
+split one naming convention between them, and each judges its own bus. An `instance` key needs an
+anchor declared by `suffix`, since the stem comes from taking that suffix off.
 
 Every requirement runs per bus under an instance key. `termination` asks each bus's own high net to
 reach that bus's low net, so one bus's terminator no longer clears another, and `esd` judges an
@@ -268,7 +270,7 @@ running beside it, and the CLI says so on stderr:
 note: profile-overlay supersedes 5 rule(s): profile/can-signal-missing, profile/can-host-incomplete, profile/can-termination-missing, profile/can-signal-dangling, profile/can-esd-missing
 ```
 
-Two readings of one interface running together would invent failures rather than merely
+If two readings of one interface ran together, they would invent failures rather than merely
 duplicate them, since the built-in still anchors on its own naming and reports each re-bound
 role as missing. [Extending and embedding the engine](../../build/extending/) covers the mechanism.
 
@@ -286,7 +288,7 @@ A profile that cannot do what it says is refused at load, with the error naming 
 <details>
 <summary>The four load-time refusals, verbatim</summary>
 
-A key the file's schema does not have. The schema is the `ProfileDef` message in
+A key missing from the file's schema. The schema is the `ProfileDef` message in
 `protos/agni/v1/checks/ruledef.proto`, so a misspelled key fails with its line rather than leaving
 the signal without the requirement it was meant to carry:
 
@@ -294,7 +296,7 @@ the signal without the requirement it was meant to carry:
 error: profiles: i2c.yaml: profile: line 3: unknown key "pull_up" in "signals[0]" (known: anchor, glob, name, prefix, pullup, regex, suffix)
 ```
 
-A requirement type nothing registers:
+An unregistered requirement type:
 
 ```
 error: profiles: i2c.yaml: profile "I2C": unknown requirement type "pullup" (known: esd, host-incomplete, missing-pullup, signal-dangling, signal-missing, termination)
@@ -314,7 +316,7 @@ error: profiles: mybus.yaml: profile "MYBUS": signal "H" declares 2 matcher form
 
 </details>
 
-A matcher that is merely too loose cannot be caught that way, because whether `_H` names one
+Load cannot catch a matcher that is merely too loose, because whether `_H` names one
 role or half the board depends on the board. `check` judges that against the design in front of
 it. A profile whose signals claim an implausible share of the nets:
 
@@ -329,7 +331,7 @@ warning: profile "MYBUS": signals "DATA" and "CLK" both match net "CAN_CANH" —
 ```
 
 Both describe the profile you wrote, not the board, so neither is a finding. They go to stderr,
-they never change the exit code, and they stay out of `--format json`.
+they never change the exit code, and they are left out of `--format json`.
 
 ## What a profile cannot do
 
@@ -346,5 +348,5 @@ naming is merely different rather than absent, a naming map is the cheaper fix.
   private readers and rules in your own module.
 - [CLI reference](../cli-reference/) documents the `--profile-path` flag.
 - [How a rule gets written](../../architecture/rules-and-checks/#how-a-rule-gets-written) explains where a
-  profile sits among the four ways to author a rule, and why the YAML here is the same format the
-  shipped profiles are written in rather than a layer over something else.
+  profile sits among the four ways to author a rule, and why the shipped profiles use this same
+  YAML format rather than a layer over something else.

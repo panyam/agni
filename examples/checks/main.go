@@ -1,4 +1,4 @@
-// Command checks is the checks rung of the Agni examples ladder, which runs the structural rule
+// Command checks is the checks rung of the Agni examples ladder. It runs the structural rule
 // checks over a design and reads the findings. It is the walkthrough form of `agni check`.
 // The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only
 // binds the steps that run engine code.

@@ -10,8 +10,9 @@ import (
 	goal "github.com/panyam/goapplib"
 )
 
-// serveApp is the goapplib application context for `agni serve`. It carries the configured mounts,
-// and where the datasheets workbench is served when it is hosted at all (--datasheets-url).
+// serveApp is the goapplib application context for `agni serve`. It holds the configured mounts. It
+// also holds where the datasheets workbench is served, when the workbench is hosted at all
+// (--datasheets-url).
 type serveApp struct {
 	mounts        []mounts.Mount
 	datasheetsURL string
@@ -21,8 +22,8 @@ type serveApp struct {
 	// wasmMaxBytes is the largest design file set the page analyses in the browser (--wasm-max-bytes,
 	// agni issue 852). A bigger design goes to the server engine.
 	wasmMaxBytes int64
-	// embedOrigins are the origins besides the page's own whose pages may drive the viewer over
-	// postMessage (--embed-origin, agni issue 1152).
+	// embedOrigins lists other origins whose pages may drive the viewer over postMessage, besides
+	// the page's own (--embed-origin, agni issue 1152).
 	embedOrigins []string
 	// base is the path the pages are served under, "/" for `agni serve` and the static demo's prefix
 	// for `agni site` (agni issue 856).
@@ -33,14 +34,14 @@ type serveApp struct {
 	viewerRooms bool
 	// siteSeeds are the example boards the static demo's landing page lists.
 	siteSeeds []siteSeed
-	// socialImage is the absolute image URL the static demo's landing page names for its link card.
+	// socialImage is the absolute image URL for the link card of the static demo's landing page.
 	socialImage string
 }
 
-// ViewerPage is the server-rendered work page of the web viewer. Its template
-// (web/templates/ViewerPage.html) renders the border-layout shell (a file-tree sidebar, the WebGL
-// canvas region, and a detail panel) with holes that frontend islands mount into (WS9-002+).
-// goapplib maps this type to ViewerPage.html by name.
+// ViewerPage is the server-rendered work page of the web viewer. Its template is
+// web/templates/ViewerPage.html, and it renders the border-layout shell. The shell holds a file-tree
+// sidebar, the WebGL canvas region and a detail panel, and frontend islands mount into its holes
+// (WS9-002+). goapplib maps this type to ViewerPage.html by name.
 type ViewerPage struct {
 	Title string
 	// Engine is the engine the page analyses its design on, written into the shell for the bundle
@@ -52,8 +53,8 @@ type ViewerPage struct {
 	// server engine, saying why.
 	WasmMaxBytes int64
 	// Base is the path the page is served under, ending in "/". Every asset and link in the shell
-	// goes through it, because a page served under a prefix with root-relative assets returns 200
-	// and renders with no CSS (agni issue 856).
+	// goes through it. If a page is served under a prefix and its assets are root-relative, it
+	// returns 200 and renders with no CSS (agni issue 856).
 	Base string
 	// Host is "static" when the page is a plain file with no agni server behind it, so the bundle
 	// reads every design's files as static files and answers everything in the worker.
@@ -62,8 +63,8 @@ type ViewerPage struct {
 	// and the viewer checks it, since another build may read a file differently and keeps a store of
 	// its own (agni issue 1072).
 	Build string
-	// EmbedOrigins are the origins, space-separated, whose pages may drive this viewer over
-	// postMessage besides its own (agni issue 1152). Empty allows only the page's own origin.
+	// EmbedOrigins is a space-separated list of other origins whose pages may drive this viewer
+	// over postMessage (agni issue 1152). Empty allows only the page's own origin.
 	EmbedOrigins string
 	// ViewerRooms is "on" when the server lets agents drive its viewer tabs (--viewer-rooms, agni
 	// issue 1154), so the page asks ViewerRoomService for its room and offers its tools there. Empty
@@ -100,15 +101,16 @@ func (p *ViewerPage) fill(a *serveApp) {
 	}
 }
 
-// LoadPage reads a design into the engine's store before the viewer opens it, and is where files are
-// dropped (agni issue 1072). It carries the viewer's shell fields, because it starts the same engine
-// the viewer will ask and must name the same build. goapplib maps this type to LoadPage.html by name.
+// LoadPage reads a design into the engine's store before the viewer opens it. Files are also
+// dropped on it (agni issue 1072). It carries the viewer's shell fields. It starts the engine that
+// the viewer will ask, so it must name the same build. goapplib maps this type to LoadPage.html by
+// name.
 type LoadPage struct {
 	ViewerPage
 }
 
 // Load populates the Load page before render. Like the viewer's, the shell is the same for every
-// design, which the bundle reads from the URL.
+// design, and the bundle reads the design from the URL.
 func (p *LoadPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[*serveApp]) (error, bool) {
 	p.Title = "Agni: loading a design"
 	p.fill(app.Context)
@@ -132,10 +134,11 @@ func (p *BrowsePage) Load(r *http.Request, w http.ResponseWriter, app *goal.App[
 }
 
 // LandingPage is the server-rendered shell of "/", the page that routes rather than browses (#318).
-// The shell carries the destinations as plain links, so it works with no JavaScript, plus two island
-// holes for what this browser opened lately and the designs the server's projects declare by name.
-// Its own bundle (static/landing.js) keeps the trees, the renderer, and pdf.js out of the first page
-// anyone loads. goapplib maps this type to LandingPage.html by name.
+// The shell carries the destinations as plain links, so it works with no JavaScript. It also has
+// two island holes. One lists what this browser opened lately, and the other lists the designs that
+// the server's projects declare by name. Its own bundle (static/landing.js) keeps the trees, the
+// renderer, and pdf.js out of the first page anyone loads. goapplib maps this type to
+// LandingPage.html by name.
 type LandingPage struct {
 	Title string
 	// DatasheetsURL is the workbench's base URL, and the card and datasheet recents render only when
@@ -152,10 +155,10 @@ func (p *LandingPage) Load(r *http.Request, w http.ResponseWriter, app *goal.App
 	return nil, false
 }
 
-// redirectLegacyFiles permanently redirects the pre-WS9-049 deep-link space to its replacement:
+// redirectLegacyFiles permanently redirects the pre-WS9-049 deep-link space to its replacement.
 // /files/<mount>/<path> becomes /designs/<mount>/<path>/view, and a folder URL (trailing slash)
-// becomes the same folder under /designs/. The sheet and view knobs ride in the query string in
-// both spaces, so they carry over untouched. It is a plain handler rather than a proto service
+// becomes the same folder under /designs/. Both spaces put the sheet and view knobs in the query
+// string, so they pass through untouched. It is a plain handler rather than a proto service
 // because it serves no message, and C2 governs the API surface, not HTTP-level redirects.
 func redirectLegacyFiles(w http.ResponseWriter, r *http.Request) {
 	rest := strings.TrimPrefix(r.URL.Path, "/files/")
@@ -196,9 +199,9 @@ func pageHandler[V goal.View[*serveApp]](app *goal.App[*serveApp]) http.Handler 
 
 // designsRouter splits the one /designs/ URL space between its pages by the trailing verb. A
 // design's work page ends in /view, its Load page in /load (or /load/, where files are dropped), and
-// everything else is a folder, which the browse page renders. Folders are the default so that the
-// space root ("/designs/", naming no mount) and a bare mount root land on the browser instead of
-// 404ing, matching what router.ts's parseUrl treats as addressable.
+// everything else is a folder, which the browse page renders. Folders are the default, so the space
+// root and a bare mount root open the browser instead of 404ing. The space root is "/designs/" and
+// names no mount. This matches what router.ts's parseUrl treats as addressable.
 func designsRouter(browse, work, load http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
@@ -217,8 +220,8 @@ func designsRouter(browse, work, load http.Handler) http.Handler {
 // frontend reads the URL on load to reopen the design or folder. The /designs/ space carries two
 // pages behind one pattern (see designsRouter).
 //
-// "/" is the landing page and also the catch-all, so a URL matching no other pattern lands on a page
-// offering the destinations rather than on an empty file tree (#318).
+// "/" is the landing page and also the catch-all. So a URL matching no other pattern opens a page
+// offering the destinations rather than an empty file tree (#318).
 func registerPages(app *goal.App[*serveApp], mux *http.ServeMux) {
 	browse := pageHandler[*BrowsePage](app)
 	mux.Handle("/", pageHandler[*LandingPage](app))

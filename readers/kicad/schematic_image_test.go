@@ -12,8 +12,8 @@ import (
 )
 
 // A KiCad (image ...) node decodes into a geom.Image marked as a loaded image asset, with a bbox
-// sized from the PNG's pixel dimensions and the (scale). This is the extraction half of KiCad
-// embedded-bitmap rendering (logos etc.), previously dropped by the geometry reader.
+// sized from the PNG's pixel dimensions and the (scale). The geometry reader used to drop these
+// nodes. This test covers the extraction half of rendering KiCad's embedded bitmaps, such as logos.
 func TestKicadImageExtraction(t *testing.T) {
 	raw := tinyPNG(t, 8, 8)
 	b64 := base64.StdEncoding.EncodeToString(raw)

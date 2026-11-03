@@ -11,9 +11,10 @@ import (
 
 // The seeding work list, meaning what a run asked for and could not get.
 //
-// This is the demand side of corpus seeding, so bulk extraction is not speculative. Extracting every
-// fact a rule MIGHT want fills a store with unverified rows that look like data. What runs asked for
-// and failed to find is bounded, and prioritised by how many items each fact blocks.
+// The list is the demand side of corpus seeding, so bulk extraction is not speculative. Extracting
+// every fact a rule MIGHT want fills a store with unverified rows that look like data. Runs asked for
+// some facts and failed to find them. That set is bounded, and the list prioritises it by how many
+// items each fact blocks.
 
 // WorkItem is the wire type agni.v1.checks.WorkItem, computed directly rather than through a Go twin
 // because the portal consuming it reads the proto.
@@ -22,14 +23,14 @@ type WorkItem = checkspb.WorkItem
 // WorkList collapses every unmet dependency in a report into the set of facts to find.
 //
 // Ordering is by how many items a fact blocks, descending, then by part and symbol so the list is
-// stable between runs. A report with nothing blocked returns nothing, which is the ordinary state of
-// a fully seeded design and not an error.
+// stable between runs. A report with nothing blocked returns nothing. That is the ordinary state of a
+// fully seeded design, not an error.
 func WorkList(r Report) []*WorkItem {
 	return WorkListAcross([]Report{r})
 }
 
-// WorkListAcross merges the work lists of several reports into one, so a fact shared by several
-// designs appears once, since seeding its part once unblocks every design that places it.
+// WorkListAcross merges the work lists of several reports into one. A fact shared by several designs
+// appears once, since seeding its part once unblocks every design that places it.
 func WorkListAcross(rs []Report) []*WorkItem {
 	type agg struct {
 		dep     check.UnmetDependency

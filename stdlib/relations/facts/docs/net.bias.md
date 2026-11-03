@@ -2,18 +2,18 @@
 
 ### What it is
 
-`net.bias(net, level)` yields one row per net a bias resistor holds at a rail: `high` when the
-resistor reaches a supply, `low` when it reaches ground. A net with no bias resistor produces no row,
-and so does a net held by a divider, so `not net.bias(?n, ?_)` reads as "unbiased", a genuinely
-different state from "biased the other way".
+`net.bias(net, level)` yields one row per net held at a rail by a bias resistor. The level is `high`
+when the resistor reaches a supply and `low` when it reaches ground. A net with no bias resistor
+produces no row, and so does a net held by a divider, so `not net.bias(?n, ?_)` reads as "unbiased",
+a genuinely different state from "biased the other way".
 
 ### For hardware engineers
 
 A bias resistor decides what a line does when nothing is actively driving it. A reset line that must
 sit released between drives needs a pull-up; an enable that must default off needs a pull-down. The
-resistor is what makes the resting state a design decision rather than an accident.
+resistor makes the resting state a design decision rather than an accident.
 
-Getting it backwards is a classic bring-up failure: a pull-down on an active-low reset holds the part
+Getting it backwards is a classic bring-up failure. A pull-down on an active-low reset holds the part
 in reset from the moment power comes up, and the board looks dead. One resistor to the wrong net,
 invisible until someone meters the pin.
 
@@ -28,13 +28,13 @@ for the direct arrangement would silently report those nets as unbiased.
 
 Both forms count here. `profiles.pullupRule` hit this in WS3-108, when its walk-based form
 could not enter a wide rail at all, so a direct clause had to be added beside it. Keeping both in one
-predicate is what stops the next consumer reimplementing half of it.
+predicate stops the next consumer from reimplementing half of it.
 
 ### A divider reports neither
 
 A net with both a pull-up and a pull-down sits at an intermediate level. It is not held at either
-rail, so it yields no row rather than an arbitrary one. A caller asking "is this held asserted" gets
-the answer "neither" instead of a coin flip.
+rail, so it yields no row rather than an arbitrary one. If a caller asks "is this held asserted", the
+answer is "neither" instead of a coin flip.
 
 ### Go projector
 
@@ -50,13 +50,13 @@ Every biased net and which way:
 net.bias(?n, ?level) => ?n, ?level
 ```
 
-Lines that rest low, the ones an active-low reset must not be among:
+Lines that rest low. An active-low reset must not be among them:
 
 ```
 net.bias(?n, "low") => ?n
 ```
 
-Unbiased nets that a part still drives, which is where an undeclared internal pull is doing the work:
+Unbiased nets that a part still drives. On these an undeclared internal pull is doing the work:
 
 ```
 component.net(?r, ?n), not net.bias(?n, ?_) => ?n, ?r

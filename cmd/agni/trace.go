@@ -96,8 +96,8 @@ func traceCmd() *cobra.Command {
 			}
 			t := service.TraceFromProto(resp.GetTrace())
 
-			// Whether a link is safe to make is decided by viewerLinkMeta, the helper `check` also
-			// uses. The link is printed for every outcome, since "these two pins do not join" is
+			// viewerLinkMeta decides whether a link is safe to make, and `check` uses the same
+			// helper. The link is printed for every outcome, since "these two pins do not join" is
 			// worth sending someone too.
 			//
 			// The guard is only an EARLY-OUT that skips the design resolution and content hash for a
@@ -163,8 +163,8 @@ func traceCmd() *cobra.Command {
 }
 
 // The route and the parts crossed get different colours, so a reader can tell the wire from the part
-// the signal passes through. The endpoint colour marks what was ASKED rather than what was found,
-// which keeps a no-route drawing legible.
+// the signal passes through. The endpoint colour marks what was ASKED rather than what was found.
+// That keeps a no-route drawing legible.
 const (
 	traceRouteColor    = "#2563eb"
 	traceCrossColor    = "#e11d48"
@@ -181,12 +181,12 @@ func parseEndpoint(s, flag string) (check.Endpoint, error) {
 	return check.Endpoint{RefDes: ref, Pin: pin}, nil
 }
 
-// traceSpecs turns a trace into the entities a drawing should point at, which are the nets it passed
+// traceSpecs turns a trace into the entities for a drawing to point at. Those are the nets it passed
 // through, the parts it crossed, and the two endpoint pins.
 //
 // A route gets its nets and crossings, a no-route gets the two nets that fail to join, and an
-// unresolved endpoint gets whichever end DID resolve. It sits beside the command rather than in
-// subjectrender.go for the reason findingSpecs sits beside the review renderer.
+// unresolved endpoint gets whichever end DID resolve. It is defined beside the command rather than
+// in subjectrender.go, for the same reason findingSpecs is defined beside the review renderer.
 func traceSpecs(t check.Trace) []*geom.HighlightSpec {
 	var specs []*geom.HighlightSpec
 	netSpec := func(name, color string) *geom.HighlightSpec {
@@ -223,9 +223,9 @@ func traceSpecs(t check.Trace) []*geom.HighlightSpec {
 	return specs
 }
 
-// traceSheet is the sheet a rendered trace should open on. That is the FROM endpoint's sheet, else
-// the first route net drawn anywhere, else "" for the caller's default. From wins because the reader
-// named that pin first.
+// traceSheet picks the sheet for a rendered trace to open on. It picks the FROM endpoint's sheet,
+// else the first route net drawn anywhere, else "" for the caller's default. From wins because the
+// reader named that pin first.
 //
 // The server decides where each net lives and this only chooses among what it returned (C32, agni
 // issue 657). One SVG shows one sheet, while the viewer offers every sheet of every net as a badge.
@@ -245,8 +245,8 @@ func traceSheet(p *webapi.Trace) string {
 // or none is safe to make. It is built from this machine's mount table whichever engine answered, as
 // `check` does, and viewerLinkMeta decides whether a link is safe.
 //
-// It asks spec.active() rather than spec.url, because under --server self the url is empty and the
-// base is the one this process serves; guarding on url printed no link for self at all (agni 634).
+// It asks spec.active() rather than spec.url. Under --server self the url is empty, and this process
+// serves the base itself. Guarding on url printed no link for self at all (agni 634).
 func traceLink(cmd *cobra.Command, spec serverSpec, design, from, to string, hops int) string {
 	if !spec.active() {
 		return ""

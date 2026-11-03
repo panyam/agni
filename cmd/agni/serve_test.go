@@ -91,9 +91,9 @@ func TestServeTakesNoPositional(t *testing.T) {
 	}
 }
 
-// TestServeWebDirErrorSaysWhatItIsNot pins the message, which exists because people pass a design
-// folder here, so it has to name the flag's real subject and point at --mount for the thing
-// they actually wanted.
+// TestServeWebDirErrorSaysWhatItIsNot pins the message. People pass a design folder here, so the
+// message names the flag's real subject. It also points at --mount, which does what they actually
+// wanted.
 func TestServeWebDirErrorSaysWhatItIsNot(t *testing.T) {
 	dir := t.TempDir() // a real directory with none of the viewer's assets in it
 	err := checkWebAssets(dir)
@@ -140,8 +140,8 @@ func TestHealthHandler(t *testing.T) {
 }
 
 // The startup line is the only instruction most people get for reaching the server, so it has to
-// name an address they can actually open. The bug this pins is that printing the bind address
-// verbatim turns the default ":8080" into "http://:8080/", which no browser resolves.
+// name an address they can actually open. This pins a bug. Printing the bind address verbatim turns
+// the default ":8080" into "http://:8080/", which no browser resolves.
 func TestServeURLs(t *testing.T) {
 	fixedIPs := func() []string { return []string{"192.168.1.23"} }
 	noIPs := func() []string { return nil }
@@ -225,7 +225,7 @@ func TestLanIPsAreRoutable(t *testing.T) {
 
 // TestServeNarratesOnlyTheEnvironment checks that a reader is told once. applyEnvConfig names the
 // agni.yaml it read and the serving line names the resolved directory, so a third line for that case
-// is noise; the environment is the only provenance nothing else reports.
+// is noise. Nothing else reports a value that came from the environment.
 func TestServeNarratesOnlyTheEnvironment(t *testing.T) {
 	t.Cleanup(func() { envConfigWebDir = "" })
 

@@ -13,11 +13,10 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// mountFS builds an in-memory fs.FS from real on-disk fixtures, keyed by the name the FS read
-// will use. Every FS name here is one that does NOT exist relative to the test's
-// working directory, so any read that still reaches the host filesystem fails outright instead of
-// quietly succeeding. That makes the parity tests below evidence of the FS path rather than
-// evidence that both reads found the same file on disk.
+// mountFS builds an in-memory fs.FS from real on-disk fixtures, keyed by the name the FS read will
+// use. No FS name here exists relative to the test's working directory. So a read that still reaches
+// the host filesystem fails outright instead of quietly succeeding. The parity tests below then show
+// the FS path works. They do not merely show that both reads found the same file on disk.
 func mountFS(t *testing.T, files map[string]string) fstest.MapFS {
 	t.Helper()
 	m := fstest.MapFS{}
@@ -34,11 +33,10 @@ func mountFS(t *testing.T, files map[string]string) fstest.MapFS {
 	return m
 }
 
-// summarize renders the parts of a Design that must not depend on WHERE the bytes came from:
-// components with their stamped classes, and every net with its sorted pin membership and
-// tool-assigned classes. Provenance is excluded because a read is stamped with the name it
-// was asked for, so the two reads legitimately differ there (TestReadDesignFSProvenance covers
-// that separately).
+// summarize renders the parts of a Design that must not depend on WHERE the bytes came from. Those
+// are the components with their stamped classes, and every net with its sorted pin membership and
+// tool-assigned classes. Provenance is excluded. A read is stamped with the name it was asked for, so
+// the two reads legitimately differ there. TestReadDesignFSProvenance covers that separately.
 func summarize(d *ir.Design) string {
 	var b strings.Builder
 	fmt.Fprintf(&b, "format=%s\n", d.SourceFormat)
@@ -69,18 +67,19 @@ func summarize(d *ir.Design) string {
 }
 
 // TestReadDesignFSParity is the core WS1-049 acceptance. The same bytes read through an fs.FS
-// produce the same design as an on-disk read, for every registered netlist format including both
-// sniffed extensions (.sch picks its dialect by header, .xml must see an IPC-2581 root). The FS
-// names are unreachable on disk, so this also proves no read silently fell back to os.
+// produce the same design as an on-disk read. That holds for every registered netlist format,
+// including both sniffed extensions. A .sch picks its dialect by header, and a .xml must show an
+// IPC-2581 root. The FS names are unreachable on disk, so this also proves no read silently fell
+// back to os.
 func TestReadDesignFSParity(t *testing.T) {
 	cases := []struct {
 		name   string
 		disk   string
 		fsName string
 		// siblings are the files the design resolves BESIDE itself, mounted in the same FS
-		// directory. An xschem/gEDA schematic gets its pins from .sym artwork in its own dir, so
-		// mounting the schematic alone would compare a pin-bearing disk read against a pin-less FS
-		// one and blame the FS read for a missing fixture.
+		// directory. An xschem/gEDA schematic gets its pins from .sym artwork in its own dir.
+		// Mounting the schematic alone would compare a disk read with pins against an FS read
+		// without them. The test would then blame the FS read for a missing fixture.
 		siblings []string
 	}{
 		{name: "edif netlist", disk: "../edif/testdata/basic.edn", fsName: "designs/basic.edn"},
@@ -134,9 +133,9 @@ func TestReadDesignFSNoOSFallback(t *testing.T) {
 }
 
 // TestReadDesignFSStampsRunOnFSReads proves the FS entry reaches the SAME post-read pass sequence
-// as the path entry, not a parallel one. The classify/net-role stamps are what a rule reads, and a
-// second entry point that skipped them would produce a design that looks fine and checks wrong.
-// basic.edn's R1/R2 classify as resistors, and VCC/GND carry rail/ground roles.
+// as the path entry, not a parallel one. A rule reads the classify/net-role stamps. A second entry
+// point that skipped them would produce a design that looks fine and checks wrong. basic.edn's
+// R1/R2 classify as resistors, and VCC/GND have rail/ground roles.
 func TestReadDesignFSStampsRunOnFSReads(t *testing.T) {
 	l := &Loader{FS: mountFS(t, map[string]string{"designs/basic.edn": "../edif/testdata/basic.edn"})}
 	d, err := l.ReadDesign("designs/basic.edn")
@@ -165,9 +164,9 @@ func TestReadDesignFSStampsRunOnFSReads(t *testing.T) {
 	}
 }
 
-// TestReadDesignFSProvenance checks that a read is stamped with the name it was ASKED for, so an FS
-// read carries the FS name rather than anything host-shaped. A consumer joining findings back to a
-// file (the web mount+path key) depends on this being the caller's own name space.
+// TestReadDesignFSProvenance checks that a read is stamped with the name it was ASKED for. So an FS
+// read records the FS name rather than anything host-shaped. A consumer joins findings back to a
+// file by the web mount+path key, and that join needs the caller's own name space.
 func TestReadDesignFSProvenance(t *testing.T) {
 	l := &Loader{FS: mountFS(t, map[string]string{"designs/basic.edn": "../edif/testdata/basic.edn"})}
 	d, err := l.ReadDesign("designs/basic.edn")
@@ -179,11 +178,11 @@ func TestReadDesignFSProvenance(t *testing.T) {
 	}
 }
 
-// TestKicadHierarchyOverFS is the multi-file case, and the reason this ticket wanted an fs.FS
-// rather than a bytes entry point. A KiCad root resolves its sub-sheet through the loader's sheet
+// TestKicadHierarchyOverFS covers the multi-file case. This ticket wanted an fs.FS rather than a
+// bytes entry point because of it. A KiCad root resolves its sub-sheet through the loader's sheet
 // opener, so the whole tree has to live in the same name space. Sibling resolution is relative to
-// the root's directory, here a nested one, so it also pins that the FS join is not accidentally
-// anchored at the FS root.
+// the root's directory, here a nested one. So the test also pins that the FS join is not
+// accidentally anchored at the FS root.
 func TestKicadHierarchyOverFS(t *testing.T) {
 	onDisk, err := (&Loader{}).ReadDesign("../kicad/testdata/hier_root.kicad_sch")
 	if err != nil {
@@ -204,8 +203,8 @@ func TestKicadHierarchyOverFS(t *testing.T) {
 
 // TestKicadHierarchyOverFSDegradesLikeOS checks that an FS missing the sub-sheet fails the same way
 // a disk read missing it fails. The root still reads, and the sub-sheet's components are absent.
-// The parity is the assertion. A host that supplies an incomplete FS gets the same partial read
-// (and the same completeness signal) as one with an incomplete directory, rather than a new
+// The test asserts that parity. A host that supplies an incomplete FS gets the same partial read
+// and the same completeness signal as one with an incomplete directory. It does not get a new
 // failure mode nobody has rules for.
 func TestKicadHierarchyOverFSDegradesLikeOS(t *testing.T) {
 	dir := t.TempDir()
@@ -231,10 +230,10 @@ func TestKicadHierarchyOverFSDegradesLikeOS(t *testing.T) {
 	}
 }
 
-// TestKicadSymbolLibOverFS covers the other multi-file resolver, an external .kicad_sym reached
-// through the project's own sym-lib-table (${KIPRJMOD} = the schematic's directory). Symbols carry
-// the pins, so a lib that fails to resolve reads as a pin-less design. The parity check keeps that
-// failure mode from arriving only on FS hosts.
+// TestKicadSymbolLibOverFS covers the other multi-file resolver. It reaches an external .kicad_sym
+// through the project's own sym-lib-table, where ${KIPRJMOD} is the schematic's directory. Symbols
+// hold the pins, so a lib that fails to resolve reads as a pin-less design. The parity check makes
+// sure that failure mode does not appear only on FS hosts.
 func TestKicadSymbolLibOverFS(t *testing.T) {
 	onDisk, err := (&Loader{}).ReadDesign("../kicad/testdata/extlib.kicad_sch")
 	if err != nil {
@@ -261,10 +260,10 @@ func TestKicadSymbolLibOverFS(t *testing.T) {
 	}
 }
 
-// TestSymbolPathOverFS checks that --symbol-path entries resolve in the loader's name space too,
-// including the recursive subtree search a gEDA/Lepton library root needs. An xschem/gEDA schematic
-// gets its pins from .sym artwork, so this is the same pin-bearing dependency as the KiCad case
-// above.
+// TestSymbolPathOverFS checks that --symbol-path entries resolve in the loader's name space too. A
+// gEDA/Lepton library root needs a recursive subtree search, and that resolves there as well. An
+// xschem/gEDA schematic gets its pins from .sym artwork. So the read depends on the library for its
+// pins, as in the KiCad case above.
 func TestSymbolPathOverFS(t *testing.T) {
 	onDisk, err := (&Loader{SymbolPaths: []string{"../xschem/testdata"}}).ReadDesign("../xschem/testdata/divider.sch")
 	if err != nil {
@@ -288,10 +287,10 @@ func TestSymbolPathOverFS(t *testing.T) {
 	}
 }
 
-// TestKicadProjectOverFS covers the .kicad_pro entry, which merges two siblings AND re-reads the
-// project file twice for net-class membership and definitions. The second pass used to depend on
-// seeking the open file back to the start; an fs.File is not required to be an io.Seeker, so this
-// pins that both passes still land.
+// TestKicadProjectOverFS covers the .kicad_pro entry. That entry merges two siblings AND re-reads
+// the project file twice, once for net-class membership and once for definitions. The second pass
+// used to seek the open file back to the start. An fs.File need not be an io.Seeker, so this pins
+// that both passes still run.
 func TestKicadProjectOverFS(t *testing.T) {
 	sch, err := os.ReadFile("../kicad/testdata/wirenet.kicad_sch")
 	if err != nil {
@@ -323,8 +322,7 @@ func TestKicadProjectOverFS(t *testing.T) {
 }
 
 // TestGeometryAndBoardOverFS checks that the geometry and board sidecar entries take the same fs.FS
-// path, so a
-// host with no filesystem can DRAW a design, not just netlist it.
+// path. So a host with no filesystem can DRAW a design, not just netlist it.
 func TestGeometryAndBoardOverFS(t *testing.T) {
 	l := &Loader{FS: mountFS(t, map[string]string{
 		"designs/sample.eds":      "../edif/testdata/sample.eds",

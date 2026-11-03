@@ -19,8 +19,8 @@ const (
 	pinFunctionFixture = "testdata/pin-functions"
 )
 
-// pinMapRows runs a design's IO-map rules as `check --verdicts --format json` and tabulates the run, so
-// the rows are the ones a csv or a workbook of the same run carries.
+// pinMapRows runs a design's IO-map rules as `check --verdicts --format json` and tabulates the run.
+// So the rows match what a csv or a workbook of the same run carries.
 func pinMapRows(t *testing.T, design string, rules ...string) [][]string {
 	t.Helper()
 	return pinMapRowsWith(t, design, nil, rules...)
@@ -55,8 +55,9 @@ func pinMapRowsWith(t *testing.T, design string, flags []string, rules ...string
 
 var ioMapRules = []string{"intent/io-map-pin-mismatch", "intent/io-map-net-absent", "intent/io-map-far-end", "intent/io-map-function"}
 
-// The two tables agni issues 1188 and 1189 asked for, from the synthetic designs they shipped: each
-// declared pin beside the net the netlist puts there, and each signal's chain to its partner.
+// This covers the two tables that agni issues 1188 and 1189 asked for, over the synthetic designs
+// those issues shipped. One table puts each declared pin beside the net the netlist puts there. The
+// other gives each signal's chain to its partner.
 func TestPinMapTableAnswersBothIssues(t *testing.T) {
 	for _, tc := range []struct {
 		design string
@@ -124,9 +125,9 @@ func TestCheckHTMLHasASectionPerDevice(t *testing.T) {
 	}
 }
 
-// A declared function checked against the datasheet's alternate-function table (agni issue 667): a
-// legal function passes, SDA on the pin that offers SCL fails, and a part with no datasheet entry is
-// not-considered rather than passed.
+// A declared function is checked against the datasheet's alternate-function table (agni issue 667).
+// A legal function passes, SDA on the pin that offers SCL fails, and a part with no datasheet entry
+// is not-considered rather than passed.
 func TestPinMapChecksDeclaredFunctionsAgainstTheDatasheet(t *testing.T) {
 	got := pinMapRows(t, pinFunctionFixture, ioMapRules...)
 	want := [][]string{

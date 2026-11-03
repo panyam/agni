@@ -1,7 +1,7 @@
 // Package paramclient reaches a published PartSpec corpus over the contract's PartSpecService, as a
-// param.Fetcher (agni issue 749). It is the transport adapter only; the caching, the generation
-// check and the rule that an unreachable corpus is an error rather than an unseeded part all live in
-// param.Remote, which wraps it.
+// param.Fetcher (agni issue 749). It is only the transport adapter. param.Remote wraps it and holds
+// the caching, the generation check, and the rule that an unreachable corpus is an error rather
+// than an unseeded part.
 package paramclient
 
 import (

@@ -21,9 +21,10 @@ const cellPortsEDIF = `(edif CELLPORTS
         (net FLOAT (joined (portRef NC (instanceRef U2)))))))))
 `
 
-// A port's own designator maps the connections that name it (agni issue 1193): MDIO_NET lands on
-// pin 1, the pin the part type declares, rather than on a pin MDIO it does not have. An instance's
-// portInstance table still wins over the cell's, and a port with no designator keeps its name.
+// A port's own designator maps the connections that name it (agni issue 1193). MDIO_NET connects to
+// pin 1, and the part type declares pin 1. It does not connect to a pin named MDIO, which the part
+// type lacks. An instance's portInstance table still wins over the cell's, and a port with no
+// designator keeps its name.
 func TestACellPortsDesignatorMapsItsConnections(t *testing.T) {
 	d, err := Read(strings.NewReader(cellPortsEDIF), "cellports.edn")
 	if err != nil {

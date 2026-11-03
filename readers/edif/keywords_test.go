@@ -11,9 +11,9 @@ import (
 	"testing"
 )
 
-// lookedUp returns every keyword literal the reader's non-test source looks a list up by: the
-// second argument of collect and findFirst, the argument of Child and Children, a string compared
-// with Head(), and a case label of a switch on Head().
+// lookedUp returns every keyword literal the reader's non-test source uses to look a list up. Four
+// shapes count as a lookup. They are the second argument of collect and findFirst, the argument of
+// Child and Children, a string compared with Head(), and a case label of a switch on Head().
 func lookedUp(t *testing.T) []string {
 	t.Helper()
 	fset := token.NewFileSet()
@@ -88,9 +88,9 @@ func lookedUp(t *testing.T) []string {
 	return out
 }
 
-// TestEveryLookedUpKeywordIsCanonicalized holds the keyword table to the reader. A keyword the
-// reader looks a list up by but the table lacks would match only in the reader's own spelling, which
-// is how an Altium export read as an empty design (agni issue 941).
+// TestEveryLookedUpKeywordIsCanonicalized holds the keyword table to the reader. Suppose the reader
+// looks a list up by some keyword and the table lacks that keyword. The keyword then matches only in
+// the reader's own spelling. An Altium export read as an empty design that way (agni issue 941).
 func TestEveryLookedUpKeywordIsCanonicalized(t *testing.T) {
 	used := lookedUp(t)
 	// Positive control: the sweep has to find the reader's lookups, or a pattern that matches

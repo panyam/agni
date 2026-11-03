@@ -9,7 +9,7 @@ import (
 
 // layeredPlace is a layered (Sugiyama-style) placement. Components are ranked into rows by distance
 // from a high-degree root, ordered within each row to reduce edge crossings, then given coordinates.
-// Unlike the grid placer it uses connectivity, so connected components land near each other.
+// Unlike the grid placer it uses connectivity, so connected components are placed near each other.
 //
 // It is rank plus barycenter ordering plus straight edges, with no dummy-node edge routing. Adjacency
 // and roots are chosen in ref_des order and the sweep count is fixed, so a design always lays out

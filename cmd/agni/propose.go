@@ -12,9 +12,10 @@ import (
 	"github.com/spf13/cobra"
 )
 
-// proposeCmd is the CLI face of WorkspaceService.ProposeDesigns (agni issue 854): the designs a
-// folder or a zip of files makes, each with the design.yaml that would declare it, and every file no
-// design reads with the reason. The viewer shows the same proposal for a drop, so the two agree.
+// proposeCmd is the CLI face of WorkspaceService.ProposeDesigns (agni issue 854). It lists the
+// designs that a folder or a zip of files makes, each with the design.yaml that would declare it.
+// It also lists every file that no design reads, with the reason. The viewer shows the same
+// proposal for a drop, so the two agree.
 func proposeCmd() *cobra.Command {
 	var format string
 	c := &cobra.Command{

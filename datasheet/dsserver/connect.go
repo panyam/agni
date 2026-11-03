@@ -100,8 +100,8 @@ func (a *Datasheet) ListDir(ctx context.Context, req *connect.Request[webapi.Lis
 	return unary(ctx, req, a.svc.ListDir)
 }
 
-// PartSpec adapts dsservice.PartSpecService to the contract's generated PartSpecService handler, the
-// read side `agni serve --params-url` calls (agni issue 749).
+// PartSpec adapts dsservice.PartSpecService to the contract's generated PartSpecService handler.
+// `agni serve --params-url` calls this read side (agni issue 749).
 type PartSpec struct {
 	paramconnect.UnimplementedPartSpecServiceHandler
 	svc *dsservice.PartSpecService

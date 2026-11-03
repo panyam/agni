@@ -3,16 +3,17 @@
 ### What it is
 
 `net.reaches(from, net)` is true when `net` is reachable from `from` by walking THROUGH series pass
-elements: resistors, inductors, ferrite beads, and fuses. It is the transitive-closure predicate
-the protection rules use to answer "is there a component of class X somewhere on the path between
-these two nets?" without hard-coding a topology.
+elements: resistors, inductors, ferrite beads, and fuses. It is a transitive-closure predicate.
+The protection rules use it to answer "is there a component of class X somewhere on the path
+between these two nets?" without hard-coding a topology.
 
-`net.reaches(from, net, hops)` is the same walk with the distance exposed, so a rule states the radius
-its own question needs. Read the next section before using it: `hops` is an exact count, not a
-budget.
+`net.reaches(from, net, hops)` is the same walk with the distance exposed, so a rule states the
+radius its own question needs. `hops` is an exact count, not a budget, and the next section explains
+why that matters before you use it.
 
-Unlike the fact relations, `net.reaches` is computed on demand from the design graph rather than stored, so it is a datalog *predicate* (kind `predicate` in the catalog), the recursive
-counterpart to `net.bus_like`, which names the nets the walk refuses to enter while
+Unlike the fact relations, `net.reaches` is computed on demand from the design graph rather than
+stored, so it is a datalog *predicate* (kind `predicate` in the catalog). It is the recursive
+counterpart to `net.bus_like`. `net.bus_like` names the nets the walk refuses to enter, and
 `net.reaches` is the walk itself.
 
 ### Distance, and the trap in it
@@ -28,44 +29,45 @@ net.reaches(?n, ?rn, ?h), ?h <= 2 # within 2 crossings, which is what a protecti
 The first line reads like a radius and is almost never what a query means. Use the
 comparison form for a radius.
 
-The radius belongs in the rule because the engine holds more than one of them, deliberately. The
+The engine deliberately holds more than one radius, so the radius belongs in the rule. The
 query built-in searches the whole neighborhood (`topologyReachHops`), because a topology question
 like "what is connected to what through passives" wants distant answers. The protection guards ask at
 `check.ProtectionReachHops` (2), and the power-entry walk at `check.PowerPathReachHops` (3), because
 "is a clamp electrically adjacent to this pin" wants only near ones. A discharge pushes through every
 series element before the clamp conducts, so a TVS six resistors away protects what is downstream of
-itself, not the pin. Composing a protection predicate out of the wide default would credit that
-distant TVS and report a genuinely unprotected pin as clean, which is a false pass rather than a
-missing result.
+itself, not the pin. Suppose a protection predicate were composed out of the wide default. It would
+credit that distant TVS and report a genuinely unprotected pin as clean. That outcome is a false
+pass rather than a missing result.
 
 ### For hardware engineers
 
-The walk crosses a two-terminal series part (a resistor, bead, or fuse joins exactly two nets, so
-crossing it is following the signal one hop along its path) and stops at anything that is not a
-point-to-point series node: a capacitor (a DC block, the signal does not continue through it), a
-ground plane or global rail or any rail-scale fan-out (a distribution node, not a path), and any
-part with more than two nets (a transceiver or connector, not a series element). This is how an
-ESD or input-protection review asks "does a clamp sit anywhere between this connector pin and the
-device pin?" while a resistor or bead in the middle of the path does not break the question.
+The walk crosses a two-terminal series part. A resistor, bead, or fuse joins exactly two nets, so
+crossing one follows the signal one hop along its path. The walk stops at anything that is not a
+point-to-point series node. A capacitor stops it, since a DC block does not pass the signal on. A
+ground plane, a global rail or any rail-scale fan-out stops it, since a distribution node is not a
+path. A part with more than two nets stops it too, since a transceiver or connector is not a series
+element. With this walk, an ESD or input-protection review can ask "does a clamp sit anywhere
+between this connector pin and the device pin?", and a resistor or bead in the middle of the path
+does not break the question.
 
 ### For software engineers
 
-`net.reaches` is transitive reachability over a filtered graph whose nodes are nets, where an edge
-exists only through a two-net pass element, and `net.bus_like` nets are excluded so the traversal cannot leak
-into a global singleton and mark the whole design reachable. It is a bounded BFS (a hop cap guards
-pathological depth; fan-out and finiteness bound it anyway), so a query over it terminates.
+`net.reaches` is transitive reachability over a filtered graph whose nodes are nets. An edge
+exists only through a two-net pass element. `net.bus_like` nets are excluded, so the traversal
+cannot leak into a global singleton and mark the whole design reachable. It is a bounded BFS, so a
+query over it terminates. A hop cap guards pathological depth, and fan-out and finiteness bound the
+walk anyway.
 
 ### Go projector
 
 `net.reaches` has no `stdlib/relations/facts.go` projector because it is not a stored fact. The query
 engine evaluates it as a built-in in `core/query/preds.go` (bounded by `topologyReachHops`),
-delegating to `check.Model.Reach` in `core/check/reach.go` and the same `IsBusLike` stop predicate
-that `net.bus_like` exposes. It is the same walk the protection rules run, at a wider radius (see
-Distance above). The distance the third argument binds is
-`Reach.Depth`, recorded by the BFS as it goes rather than re-derived from the `Parent` chain, which
-can disagree where parallel passes bridge the same two nets. Because it is computed, not projected,
-it is outside the per-relation EDB doc requirement and is documented here as the reference behind
-the walk.
+delegating to `check.Model.Reach` in `core/check/reach.go`. It uses the same `IsBusLike` stop
+predicate that `net.bus_like` exposes. The protection rules run the same walk at a smaller radius
+(see Distance above). The third argument binds `Reach.Depth`. The BFS records that depth as it goes
+rather than re-deriving it from the `Parent` chain, because the chain can disagree where parallel
+passes bridge the same two nets. `net.reaches` is computed, not projected, so it is outside the
+per-relation EDB doc requirement. This page documents it as the reference behind the walk.
 
 ### Datalog
 
@@ -88,8 +90,7 @@ over a TVS within two series crossings of the net:
 net.reaches(?n, ?rn, ?h), ?h <= 2, component.net(?t, ?rn), component.class(?t, "tvs") => ?n, ?t
 ```
 
-How far away each reachable net is, the query to run when a radius is not behaving as
-expected:
+When a radius is not behaving as expected, ask how far away each reachable net is:
 
 ```
 net.reaches("VBUS_IN", ?net, ?hops) => ?net, ?hops
@@ -101,8 +102,8 @@ net.reaches("VBUS_IN", ?net, ?hops) => ?net, ?hops
 
 ### Where this is going
 
-The hop-radius trap above, the per-caller radius constants, and the baked-in edge class are all
-symptoms of a path question having no way to state itself, so each caller hand-codes a
-walk. Issue 374 designs a topology-pattern surface where the radius is a quantifier, the edge class
-is a character class, and a match carries the path it found. If that lands, `net.reaches` becomes one
+A path question has no way to state itself, so each caller hand-codes a walk. The hop-radius trap
+above, the per-caller radius constants, and the baked-in edge class are all symptoms of that.
+Issue 374 designs a topology-pattern surface where the radius is a quantifier, the edge class is a
+character class, and a match carries the path it found. If that ships, `net.reaches` becomes one
 canned pattern and this page becomes the migration note.

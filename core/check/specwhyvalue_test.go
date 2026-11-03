@@ -7,9 +7,9 @@ import (
 )
 
 // A pass must state the VALUE that decided it, not the syntax of the test. "claims >= 2 does not
-// hold" reads identically on every passing subject a rule sees and tracks no fact, which
-// build/evidence.md calls decoration; "claims is 1, not >= 2" is a claim about THIS subject that a
-// reader can go and check against the design.
+// hold" reads identically on every passing subject a rule sees and tracks no fact.
+// build/evidence.md calls that decoration. "claims is 1, not >= 2" is a claim about THIS subject,
+// and a reader can go and check it against the design.
 func TestSpecPassWitnessCarriesTheValue(t *testing.T) {
 	for _, tc := range []struct {
 		name  string
@@ -69,7 +69,7 @@ func TestSpecPassWitnessCarriesTheValue(t *testing.T) {
 
 // The mirror of the test above, on the branches PR 401 did not reach (agni issue 412).
 //
-// A false Not means its operand HOLDS, and the operand is where the value lives. Rendering the
+// A false Not means its operand HOLDS, and the value is in the operand. Rendering the
 // operand's syntax instead produced a statement identical on every passing subject. On the tutorial
 // board's naming rule that was 13 consecutive rows reading "net.name_leaf matches /^(PMIC|...)/
 // holds".
@@ -81,8 +81,8 @@ func TestSpecPassWitnessExplainsWhyANegatedTestHeld(t *testing.T) {
 		want  string
 	}{
 		{
-			// In the naming-rule shape, an allow-list is an Or of patterns, and the one that
-			// MATCHED is what a reader wants named, along with the name that matched it.
+			// In the naming-rule shape, an allow-list is an Or of patterns. A reader wants the
+			// pattern that MATCHED named, along with the name that matched it.
 			name:  "a negated allow-list names the value and the pattern it satisfied",
 			where: Not{X: Or{Xs: []Expr{Match{T: Fact{Name: "net.names"}, Pattern: "^Z"}, Match{T: Fact{Name: "net.names"}, Pattern: "^O"}}}},
 			want:  `passes because net.names is "OK", which matches /^O/`,
@@ -101,9 +101,9 @@ func TestSpecPassWitnessExplainsWhyANegatedTestHeld(t *testing.T) {
 	}
 }
 
-// The FFI hands back a bare bool and has discarded what it looked at, but its ARGUMENT is a term the
-// interpreter can read. That is what lets 12 of the catalog's 14 IsTrue sites state a value without
-// the SpecFunc contract changing at all.
+// The FFI hands back a bare bool and has discarded what it looked at. Its ARGUMENT is a term, and
+// the interpreter can read it. So 12 of the catalog's 14 IsTrue sites can state a value without the
+// SpecFunc contract changing at all.
 //
 // The subject here is GND, because the clause has to HOLD for the rule to pass. A spec fires where
 // its Where is true, so a negated call only explains a pass when the call accepted.
@@ -115,7 +115,7 @@ func TestSpecPassWitnessNamesWhatACallAccepted(t *testing.T) {
 	}
 }
 
-// The residue, pinned so it stays a recorded gap rather than becoming an oversight. An
+// This test pins the residue, so it is still a recorded gap rather than an oversight. An
 // argument-less call takes the whole scope and returns a verdict, so there is nothing here to read
 // and nothing to print beyond the fact that it accepted. Closing it needs a SpecFunc able to hand
 // back what it observed, which cap-voltage needs for the same reason (OUT_OF_SCOPE.md).
@@ -160,15 +160,15 @@ func passWitnessFor(t *testing.T, let map[string]Term, where Expr, subject strin
 //
 // The test is not "no two statements are identical", which would be wrong. `labels is empty` on
 // fifteen nets is fifteen correct readings of the same fact, and a rule whose value genuinely
-// repeats should say so. What must not happen is a statement that CANNOT differ, because it renders
-// the rule's syntax and never reads the design. This checks the weaker, correct thing, that every
-// passing statement either carries a value the subject supplied, or admits it read none.
+// repeats should say so. The defect is a statement that CANNOT differ, because it renders the
+// rule's syntax and never reads the design. This checks the weaker, correct thing, that every
+// passing statement either holds a value the subject supplied, or admits it read none.
 //
-// It is the guard that would have caught the original defect. `net.name_leaf matches /^(PMIC|...)/
+// This guard would have caught the original defect. `net.name_leaf matches /^(PMIC|...)/
 // holds` passes any uniqueness test with one subject and fails this one with any.
 func TestEverySpecPassStatementReadsSomething(t *testing.T) {
 	// A statement is about its subject when it names a value ("... is X"), counts what it examined,
-	// or says plainly that the FFI it rests on states no value. Anything else is the rule's syntax.
+	// or says plainly that its FFI states no value. Anything else is the rule's syntax.
 	statesSomething := func(s string) bool {
 		return strings.Contains(s, " is ") || strings.Contains(s, " examined)") ||
 			strings.Contains(s, "states no value it read")

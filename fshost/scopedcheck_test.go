@@ -32,8 +32,8 @@ func TestAScopedCheckAnswersFromAKeptRun(t *testing.T) {
 	}
 }
 
-// A scoped run answers for some nets, so keeping it as the rule's run would answer a later whole
-// check with that subset.
+// A scoped run answers for some nets. Keeping it as the rule's run would answer a later whole check
+// with that subset.
 func TestAScopedRunIsNotKept(t *testing.T) {
 	f := newCheckFixture(t, check.Fail, true, nil)
 	f.check(t, &webapi.CheckDesignRequest{Rules: []string{countedRule}, Subjects: netSubject("VCC")})

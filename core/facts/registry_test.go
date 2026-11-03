@@ -38,10 +38,10 @@ func TestInstalledSeparatesEmptyFromAbsent(t *testing.T) {
 	}
 }
 
-// TestCompositionIsOrderIndependent is why composing beats accumulating. A predicate and a relation
-// sharing a name must clash whichever was supplied first; an engine and a relation catalog are
-// independent imports whose init order nothing controls, so a check that ran at registration time had
-// to look in both directions to cover the same ground.
+// TestCompositionIsOrderIndependent shows why composing beats accumulating. A predicate and a
+// relation sharing a name must clash whichever was supplied first. An engine and a relation catalog
+// are independent imports, and nothing controls their init order. So a check that ran at
+// registration time had to look in both directions to cover the same ground.
 func TestCompositionIsOrderIndependent(t *testing.T) {
 	for name, opts := range map[string][]Option{
 		"predicate then relation": {WithPredicate("test.clash", always), rel("test.clash")},
@@ -127,8 +127,8 @@ func TestNewRegistryReportsEveryProblem(t *testing.T) {
 	}
 }
 
-// TestDuplicateRelationFailsComposition pins that a name cannot be claimed twice, which is what keeps
-// a query's meaning from depending on which registration ran last.
+// TestDuplicateRelationFailsComposition pins that a name cannot be claimed twice. Otherwise a query's
+// meaning would depend on which registration ran last.
 func TestDuplicateRelationFailsComposition(t *testing.T) {
 	if _, err := NewRegistry(rel("test.dup"), rel("test.dup")); err == nil {
 		t.Fatal("a relation registered twice composed without error")
@@ -156,8 +156,8 @@ func TestRegistryIsASnapshot(t *testing.T) {
 }
 
 // TestOverlayRowsAreStampedWithTheRegisteredName pins that a projector cannot name its own rows.
-// The registration name is the one a query writes, so a projector naming them could answer under a
-// name nothing registered, and silently shadow another relation.
+// A query writes the registration name. A projector naming its own rows could answer under a name
+// nothing registered, and silently shadow another relation.
 func TestOverlayRowsAreStampedWithTheRegisteredName(t *testing.T) {
 	reg, err := NewRegistry(WithRelation("test.stamped", []Field{FieldSubject}, func(check.Model) []Row {
 		return []Row{{Relation: "something.else", Subject: "U1"}}

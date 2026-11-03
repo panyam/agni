@@ -1,7 +1,7 @@
-// Package dsservice is the datasheet producer's service: the extraction workbench's doc-IR, its
-// shared PartSpec draft, the per-author annotation overlays, and the folder tree it browses. It is
-// transport-neutral over injected ports, the shape the engine's service package has (C13), and it
-// lives in the datasheet module so the engine never imports it (C34, agni issue 744).
+// Package dsservice is the datasheet producer's service. It serves the extraction workbench's
+// doc-IR, its shared PartSpec draft, the per-author annotation overlays and the folder tree the
+// workbench browses. It is transport-neutral over injected ports, as the engine's service package
+// is (C13). It lives in the datasheet module so the engine never imports it (C34, agni issue 744).
 package dsservice
 
 import (
@@ -19,9 +19,10 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// ErrConflict is the optimistic-concurrency failure, a SaveDraft whose base_version no longer
-// matches the on-disk version because another writer got there first. A transport maps it to a code
-// the client treats as "refetch and retry" (Connect Aborted), distinct from a bad request.
+// ErrConflict is the optimistic-concurrency failure. A SaveDraft gets it when its base_version no
+// longer matches the on-disk version, because another writer saved first. A transport maps it to
+// Connect Aborted, and the client treats that code as "refetch and retry", distinct from a bad
+// request.
 var ErrConflict = errors.New("version conflict")
 
 // ErrExtractNotEnabled is returned when ExtractDocIR is called on a server started without a
@@ -39,16 +40,17 @@ type DocLoader interface {
 	Document(ctx context.Context, uri artifact.URI) (*docpb.Document, error)
 }
 
-// DraftStore keeps drafts, the editing copies of PartSpecs, and publishes them (agni issue 749). It
-// is the published corpus's store, holding both entity types: drafts by MPN, and the published
-// specs and index the contract's PartSpecService reads. The os-backed adapter (agnids) keeps both in
-// the --corpus directory.
+// DraftStore keeps drafts and publishes them (agni issue 749). A draft is the editing copy of a
+// PartSpec. DraftStore is the published corpus's store and holds both entity types. It holds drafts
+// by MPN, and it holds the published specs and the index that the contract's PartSpecService reads.
+// The os-backed adapter (agnids) keeps both in the --corpus directory.
 //
 // Get matches an MPN case-insensitively and returns (nil, false, nil) when there is no draft.
-// ListByDocument returns the drafts citing a datasheet URI, ordered by MPN. Save is compare-and-swap:
-// baseVersion must equal the stored version (empty asserts absence) or it returns ErrConflict, and it
-// returns the new version. Publish validates the draft and makes it the current published spec,
-// returning a *PublishRefused when the draft is not fit to publish.
+// ListByDocument returns the drafts citing a datasheet URI, ordered by MPN. Save is
+// compare-and-swap. baseVersion must equal the stored version, and an empty baseVersion asserts
+// absence. Otherwise Save returns ErrConflict. On success it returns the new version. Publish
+// validates the draft and makes it the current published spec. It returns a *PublishRefused when
+// the draft is not fit to publish.
 type DraftStore interface {
 	Get(ctx context.Context, mpn string) (*dsapi.Draft, bool, error)
 	ListByDocument(ctx context.Context, documentURI string) ([]*dsapi.Draft, error)
@@ -62,9 +64,9 @@ type Published struct {
 	Generation uint64
 }
 
-// PublishRefused is a draft that was not published: it does not validate, or another published
-// file already seeds its MPN. It is an answer for the author, not a failure of the service, so
-// PublishDraft reports it in its response rather than as an error.
+// PublishRefused describes a draft that was not published. Either it does not validate, or another
+// published file already seeds its MPN. It is an answer for the author, not a failure of the
+// service, so PublishDraft reports it in its response rather than as an error.
 type PublishRefused struct {
 	Reason   string
 	Problems []param.Problem
@@ -84,8 +86,8 @@ type DocExtractor interface {
 
 // AnnotationStore persists and loads a datasheet's per-author region-annotation overlays
 // (WS13-011). The os-backed adapter (agnids) writes one file per author in the mount. Unlike
-// PartSpecStore there is NO compare-and-swap, because each author owns their own file, so Save
-// overwrites just that author's overlay and Get UNIONS every author's overlay for the datasheet.
+// DraftStore it has NO compare-and-swap, because each author owns their own file. Save overwrites
+// just that author's overlay, and Get UNIONS every author's overlay for the datasheet.
 // Get returns an empty slice (not an error) when nobody has annotated yet. author is a
 // client-supplied coordination namespace, not an authenticated identity.
 type AnnotationStore interface {
@@ -98,7 +100,7 @@ type AnnotationStore interface {
 // analogue of DesignService, plus the manual backend's read/write side for the shared PartSpec.
 // It performs no file I/O and knows no transport. Directory listing goes through the engine's
 // WorkspaceService over the same Workspace port, so the workbench's folder tree answers exactly as
-// the viewer's does, and per-user workbench UI state stays in the client (localStorage), never here.
+// the viewer's does. Per-user workbench UI state is kept in the client (localStorage), never here.
 type DatasheetService struct {
 	loader      DocLoader
 	drafts      DraftStore
@@ -198,7 +200,7 @@ func (s *DatasheetService) ListDrafts(ctx context.Context, req *dsapi.ListDrafts
 
 // SaveDraft persists a draft with optimistic concurrency. A version mismatch surfaces as ErrConflict
 // (mapped to Aborted so the client refetches). A draft must name its MPN, and its spec must carry the
-// same one, because the MPN is the draft's key; renaming a draft is not an edit this rpc makes.
+// same one, because the MPN is the draft's key. This rpc never renames a draft.
 func (s *DatasheetService) SaveDraft(ctx context.Context, req *dsapi.SaveDraftRequest) (*dsapi.SaveDraftResponse, error) {
 	if s.drafts == nil {
 		return nil, ErrNoCorpus
@@ -216,15 +218,16 @@ func (s *DatasheetService) SaveDraft(ctx context.Context, req *dsapi.SaveDraftRe
 			return nil, err
 		}
 	}
-	// NO VALIDATION HERE, DELIBERATELY. Saving records what the author has, and whether it is any
-	// good is reported as status after the write. Rejecting an invalid save would leave a document
-	// its author cannot save and cannot fix through the UI. Validation is PublishDraft's.
+	// NO VALIDATION HERE, DELIBERATELY. Saving records what the author has. The response reports,
+	// after the write, whether the draft is any good. Rejecting an invalid save would leave the
+	// author with a document they cannot save and cannot fix through the UI. PublishDraft
+	// validates.
 	version, err := s.drafts.Save(ctx, d, req.GetBaseVersion())
 	if err != nil {
 		return nil, err
 	}
-	// Judged AFTER the write and reported rather than enforced. The editor (transcribe.tsx) renders
-	// these rather than keeping its own copy of the rules.
+	// The problems are judged AFTER the write and reported, not enforced. The editor
+	// (transcribe.tsx) renders them rather than keeping its own copy of the rules.
 	return &dsapi.SaveDraftResponse{Version: version, Problems: validationProblems(d.GetSpec())}, nil
 }
 
@@ -249,9 +252,9 @@ func (s *DatasheetService) PublishDraft(ctx context.Context, req *dsapi.PublishD
 	return &dsapi.PublishDraftResponse{Published: true, Replaced: p.Replaced, Generation: p.Generation}, nil
 }
 
-// validationProblems renders param's classified findings onto the wire type. The mapping is total,
-// so a kind this does not recognize travels as UNSPECIFIED and still shows its message rather than
-// vanishing from the editor.
+// validationProblems renders param's classified findings onto the wire type. The mapping is total.
+// An unrecognized kind is sent as UNSPECIFIED, and its message still shows in the editor rather
+// than vanishing.
 func validationProblems(spec *parampb.PartSpec) []*dsapi.ValidationProblem {
 	return toProblems(param.Problems(spec))
 }

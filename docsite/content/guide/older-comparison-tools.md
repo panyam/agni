@@ -9,15 +9,15 @@ disagree on some rows of the same pair of revisions, and most of those rows come
 the design. This page goes through the kinds we have seen, each on a small synthetic fixture, so you
 can tell a real change from an artifact of how the old tool read the file.
 
-agni does not reproduce an export's mistakes to make the numbers match. A row it reports is a fact
-about the design, which is what makes the comparison worth having.
+agni does not reproduce an export's mistakes to make the numbers match. Each row it reports is a fact
+about the design, so the comparison is worth having.
 
 ## A pin named by a letter
 
-Diodes, transistors and connectors often name pins by letter: `K` and `A` on a diode, `G`, `D` and `S`
-on a FET. An export that splits a pin reference with a pattern expecting a digit drops those pins, and
-the net they sat on then reads as changed between two revisions that are identical. agni keeps the
-pin under its own name, so the same pair diffs clean:
+Diodes, transistors and connectors often name pins by letter: `K` and `A` on a diode, `G`, `D` and
+`S` on a FET. Some exports split a pin reference with a pattern that expects a digit. Such an export
+drops those pins, and their net then reads as changed between two identical revisions. agni keeps
+the pin under its own name, so the same pair diffs clean:
 
 {{ agniRun "content/guide/runs/legacy-letter-pins.yaml" }}
 
@@ -48,15 +48,16 @@ part type by the rename, never by the identifier:
 ## Two package lines sharing a footprint
 
 A Telesis netlist lists part numbers in `$PACKAGES`, one line per part number, and two lines can name
-the same footprint. agni gives each part the part number of its own line (agni issue 835). An export
-that drops a block's last line loses that line's parts, which a parts table then shows as removed:
+the same footprint. agni gives each part the part number of its own line (agni issue 835). Some
+exports drop a block's last line. Such an export loses that line's parts, and a parts table then
+shows them as removed:
 
 {{ agniRun "content/guide/runs/legacy-telesis-footprint.yaml" }}
 
 ## Reading a disagreement
 
-When the two tables disagree on a row, check the row against the design itself with one query, as each
-section above does, rather than against the other table. If agni's answer matches the file, the row is
-an artifact of the export, and recording which of these kinds it is saves the next reviewer the same
-work. If it does not, that is a defect in agni's reading of the file, and worth an issue with the
-smallest file that shows it.
+When the two tables disagree on a row, check the row against the design itself with one query, as
+each section above does, rather than against the other table. If agni's answer matches the file, the
+row is an artifact of the export. Record which of these kinds it is, and the next reviewer does not
+have to do the same work. If it does not, that is a defect in agni's reading of the file, and worth
+an issue with the smallest file that shows it.

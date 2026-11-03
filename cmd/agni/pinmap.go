@@ -14,10 +14,10 @@ import (
 
 // pinmapCmd drafts a design intent's io_map for one device from the netlist (agni issue 1238).
 //
-// The draft agrees with the netlist by construction, so checking the design against it passes. Its
-// use is the inventory a reviewer edits into the map they sign off, and the map a LATER revision is
-// checked against. The header says so, because a draft checked unedited against its own board reads
-// as a sign-off that never happened.
+// The draft agrees with the netlist by construction, so checking the design against it passes. A
+// reviewer uses it as an inventory and edits it into the map they sign off. A LATER revision is then
+// checked against that map. The header says so. Without it, checking the draft unedited against its
+// own board reads as a sign-off that never happened.
 func pinmapCmd() *cobra.Command {
 	var device, out string
 	var pins []string
@@ -72,8 +72,8 @@ func pinmapCmd() *cobra.Command {
 	return cmd
 }
 
-// pickPins keeps the rows a --pin names, in the order named. A pin is resolved by the lookup trace
-// and the IO-map rules use, so a functional name works as well as a designator.
+// pickPins keeps the rows that --pin names, in the order named. It resolves a pin through the same
+// lookup as trace and the IO-map rules, so a functional name works as well as a designator.
 func pickPins(m check.Model, device string, rows []check.PinPartners, names []string) ([]check.PinPartners, error) {
 	byPin := map[string]check.PinPartners{}
 	for _, r := range rows {
@@ -98,9 +98,9 @@ func pickPins(m check.Model, device string, rows []check.PinPartners, names []st
 	return out, nil
 }
 
-// writePinMap writes the draft as an intent file: a header saying where it came from and what it
-// does not prove, then one io_map row per pin on a net. A pin on no net gets a comment rather than a
-// row, since a row with no net declares nothing a rule can check.
+// writePinMap writes the draft as an intent file. It starts with a header saying where the draft came
+// from and what it does not prove. Then it writes one io_map row per pin on a net. A pin on no net
+// gets a comment rather than a row, since a row with no net declares nothing a rule can check.
 func writePinMap(w io.Writer, source, name, device string, rows []check.PinPartners) error {
 	var b strings.Builder
 	fmt.Fprintf(&b, "# A pin map for %s, drafted by `agni pinmap` from the netlist of %s.\n", device, source)

@@ -8,8 +8,8 @@ import (
 
 // The model package is the design read-surface CONTRACT (WS1-043), so a consumer must be able to
 // depend on it without pulling the check implementation (rules + irModel) or the param logic
-// package. If this fails, the interface has grown a
-// dependency that re-couples the contract to the implementation.
+// package. If this fails, the interface has grown a dependency that re-couples the contract to the
+// implementation.
 func TestModelDepsExcludeImplementation(t *testing.T) {
 	out, err := exec.Command("go", "list", "-deps", "github.com/panyam/agni/core/model").CombinedOutput()
 	if err != nil {

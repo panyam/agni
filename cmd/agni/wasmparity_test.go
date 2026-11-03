@@ -30,11 +30,11 @@ import (
 )
 
 // The browser engine serves designs from an in-memory copy through fshost, and `agni serve` reads the
-// same files through osLoader. Two adapters behind one port can disagree with nothing erroring, which
-// is how one design read two ways for most of 2026 (C32), so this asks both the same questions and
-// requires identical answers. Two fixtures cover the two ways a design finds its drawing: the
-// tutorial project names its companions in a descriptor and carries profiles, params and a library,
-// and the review testdata holds an EDIF netlist whose schematic is an undeclared sibling .eds.
+// same files through osLoader. Two adapters behind one port can disagree with nothing erroring. For
+// most of 2026 one design read two ways like that (C32). So this test asks both the same questions
+// and requires identical answers. Two fixtures cover the two ways a design finds its drawing. The
+// tutorial project names its companions in a descriptor and has profiles, params and a library. The
+// review testdata holds an EDIF netlist whose schematic is an undeclared sibling .eds.
 
 // parityMounts is the table both sides serve, relative to this package.
 var parityMounts = []struct{ name, dir string }{
@@ -51,9 +51,9 @@ func servedParityMux(t *testing.T, ms []mounts.Mount) http.Handler {
 	return servedMuxFor(t, ms, ms)
 }
 
-// servedMuxFor is servedParityMux with this process's mounts (cli) apart from the server's own
-// (ms), for a client whose files the server does not share. The server takes uploaded files, as
-// `agni serve` does by default (agni issue 1061).
+// servedMuxFor is servedParityMux with two mount tables. cli holds this process's mounts, and ms
+// holds the server's own. It serves a client whose files the server does not share. The server
+// takes uploaded files, as `agni serve` does by default (agni issue 1061).
 func servedMuxFor(t *testing.T, cli, ms []mounts.Mount) http.Handler {
 	t.Helper()
 	mux := http.NewServeMux()
@@ -61,8 +61,8 @@ func servedMuxFor(t *testing.T, cli, ms []mounts.Mount) http.Handler {
 	return mux
 }
 
-// servedAPIFor is the services servedMuxFor registers, for a test that serves them over another
-// transport beside Connect, as `agni serve --mcp` does.
+// servedAPIFor returns the services that servedMuxFor registers. A test uses it to serve them over
+// another transport beside Connect, as `agni serve --mcp` does.
 func servedAPIFor(t *testing.T, cli, ms []mounts.Mount) server.API {
 	t.Helper()
 	prevSpecs, prevVal, prevErr := cliMountSpecs, cliWSVal, cliWSErr
@@ -233,7 +233,7 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		})
 	}
 	// The page ingests with read_board after the first sheet draws (agni issue 1061), on either host.
-	// The name is the one field that is the host's own, since each host picks it at random.
+	// Only the name belongs to the host, since each host picks it at random.
 	ask("Ingest read_board", func(c parityClients) (proto.Message, error) {
 		r, err := c.snap.Ingest(ctx, connect.NewRequest(&webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: design}, ReadBoard: true}))
 		if err != nil {
@@ -337,8 +337,8 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 		}
 	}
 	// A checklist run saved from the Review panel is rendered by whichever host the page runs on (agni
-	// issue 1030), so both write one run's page identically. The run is a value, so neither reads a
-	// store, which the browser engine does not have.
+	// issue 1030), so both write one run's page identically. The run is a value, so neither host reads
+	// a store. The browser engine has no store.
 	rv := &webapi.Review{Results: &checkspb.CheckResults{
 		Design:   &checkspb.DesignRef{Source: design, ContentHash: "abc123"},
 		Manifest: "Parity",
@@ -450,8 +450,9 @@ func askParity(t *testing.T, served, wasm parityClients, design, query, ruleFrom
 	})
 }
 
-// writtenAt matches the moment a saved report records it was written, the one part two hosts writing
-// the same run cannot share: a document's created_at and a verdict page's generated line.
+// writtenAt matches the time a saved report records as its writing time. Two hosts writing the same
+// run cannot share that part. It appears as a document's created_at and as a verdict page's
+// generated line.
 var writtenAt = regexp.MustCompile(`"createdAt":\s*"[^"]*"|\d{4}-\d{2}-\d{2}[ T]\d{2}:\d{2}:\d{2}(Z| UTC)`)
 
 func msgOf[T any](r *connect.Response[T], err error) (proto.Message, error) {

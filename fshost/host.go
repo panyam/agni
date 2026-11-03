@@ -24,8 +24,8 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// MemFS is an in-memory tree of the given files, keyed by slash-separated path. It is how the wasm
-// engine holds a design the browser handed it. Directories are implied by the paths.
+// MemFS is an in-memory tree of the given files, keyed by slash-separated path. The wasm engine
+// holds a design from the browser in one. Directories are implied by the paths.
 func MemFS(files map[string][]byte) fs.FS {
 	m := fstest.MapFS{}
 	for p, b := range files {
@@ -35,8 +35,8 @@ func MemFS(files map[string][]byte) fs.FS {
 }
 
 // Host serves a mount table through the service ports. It is the fs.FS twin of the server's
-// OS-backed adapters, and behaves as they do for the same tree, which the parity test in cmd/agni
-// holds it to.
+// OS-backed adapters. For the same tree it behaves as they do, and the parity test in cmd/agni
+// holds it to that.
 type Host struct {
 	mounts []Mount
 	root   fs.FS
@@ -174,8 +174,8 @@ func (h *Host) DesignHash(_ context.Context, uri artifact.URI) (string, error) {
 	return ContentHash(h.root, n), nil
 }
 
-// ContentHash is "sha256:<hex>" over one file, or "" when it cannot be read. It is the revision
-// identity a verdict link is checked against, so every host computes it here.
+// ContentHash is "sha256:<hex>" over one file, or "" when it cannot be read. A verdict link is
+// checked against this revision identity, so every host computes it here.
 func ContentHash(fsys fs.FS, name string) string {
 	f, err := fsys.Open(name)
 	if err != nil {
@@ -190,7 +190,7 @@ func ContentHash(fsys fs.FS, name string) string {
 }
 
 // MountInfo lists the mounts for WorkspaceService. A mount held in memory has no host root, so Root
-// carries its name.
+// holds its name.
 func (h *Host) MountInfo() []service.MountInfo {
 	out := make([]service.MountInfo, 0, len(h.mounts))
 	for _, m := range h.mounts {
@@ -212,8 +212,8 @@ type workspace struct{ h *Host }
 
 func (w workspace) Mounts() []service.MountInfo { return w.h.MountInfo() }
 
-// ListDir reads one directory level. An unknown mount or a missing directory is an error the service
-// maps to NotFound.
+// ListDir reads one directory level. An unknown mount or a missing directory is an error, and the
+// service maps it to NotFound.
 func (w workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
 	n, err := w.h.name(uri)
 	if err != nil {

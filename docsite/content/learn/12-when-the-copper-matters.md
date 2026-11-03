@@ -15,11 +15,11 @@ This page teaches at [EE7](../levels/#layout-ee7), and the [levels page](../leve
 
 Three earlier chapters pointed at this one.
 
-[Chapter 3](../03-why-every-chip-needs-capacitors/#the-copper-ee7) said a decoupling capacitor on the correct net but placed 20 mm from the pin does not decouple it, because the loop it forms with the chip has enough inductance to defeat it at the frequencies it was fitted for. Same netlist, working or not working depending on where it sits.
+[Chapter 3](../03-why-every-chip-needs-capacitors/#the-copper-ee7) took a decoupling capacitor on the correct net, placed 20 mm from the pin. That capacitor does not decouple the pin, because the loop it forms with the chip has enough inductance to defeat it at the frequencies it was fitted for. Same netlist, working or not working depending on where it sits.
 
 [Chapter 11](../11-crystals-and-oscillators/) said the stray capacitance of the tracks counts toward a crystal's load, so the same oscillator schematic runs at two frequencies on two layouts.
 
-And [chapter 1](../01-what-a-board-is-made-of/) put {{ explainable "termination" }} on its list of jobs, which only means anything because a track is a transmission line, and whether it acts as one depends on its physical length relative to the signal on it.
+And [chapter 1](../01-what-a-board-is-made-of/) put {{ explainable "termination" }} on its list of jobs. Termination only means anything because a track is a transmission line. Whether a track acts as one depends on its physical length relative to the signal on it.
 
 None of those is checkable from a netlist. All of them are ordinary.
 
@@ -31,7 +31,7 @@ Give the tool the copper and a different class of question opens up:
 
 Three rules, and each verdict carries something no earlier chapter's did.
 
-**`copper-clearance` names a pair and a place.** `CLOSE_A + CLOSE_B`, with `worst gap 0.040mm near (10.00, -12.00)mm`. Two nets that should be electrically separate have copper running closer than the process can reliably keep apart, and the verdict carries a coordinate because "these two are too close" is unactionable without knowing where. This is the same pair-shaped subject [chapter 9](../09-sequencing-and-straps/) used for sequencing, for the same reason, that the defect is a relation rather than a property.
+**`copper-clearance` names a pair and a place.** `CLOSE_A + CLOSE_B`, with `worst gap 0.040mm near (10.00, -12.00)mm`. Two nets that should be electrically separate have copper running closer than the process can reliably keep apart, and the verdict carries a coordinate because "these two are too close" is unactionable without knowing where. [Chapter 9](../09-sequencing-and-straps/) used the same pair-shaped subject for sequencing, for the same reason. The defect is a relation rather than a property.
 
 **`track-width` and `annular-width` name a net and a count.** One track segment below `0.127mm`, one via whose ring of copper is below `0.075mm`. Neither is a connectivity question at all. The net is connected; it is connected by metal too thin to be made reliably.
 
@@ -39,18 +39,18 @@ Three rules, and each verdict carries something no earlier chapter's did.
 
 ## A fourth kind of authority (EE7)
 
-Look at where those numbers come from, because it is not any of the sources the course has met so far.
+Look at where those numbers come from. The source is none of the ones the course has met so far.
 
-`0.127mm` is not a physical law and it is not in a component's datasheet. It is what a **fabricator** can hold. A different process, or more money, buys a smaller number. A cheaper one may not manage this one.
+`0.127mm` is not a physical law and it is not in a component's datasheet. It is the width a **fabricator** can hold. A different process, or more money, gets you a smaller number. A cheaper one may not manage this one.
 
 So the course has now seen four different answers to "who says what is correct":
 
 - **Physics** answers in chapters 1 through 6. A floating input drifts and a reversed LED does not conduct whatever anyone thinks.
 - **A vendor** answers in chapter 7, through the part's own datasheet and the trust question that came with it.
 - **Your own declaration** answers in chapters 8 through 10, because nothing states what a rail was supposed to be until you do.
-- **A manufacturing process** answers here, with what can actually be built, which is a business relationship as much as an engineering fact.
+- **A manufacturing process** answers here, with what can actually be built. That limit is a business relationship as much as an engineering fact.
 
-A check is only as meaningful as the authority behind its threshold, and knowing which of the four you are looking at tells you what to do when one fires. You argue with a fab about clearance. You do not argue with a floating input.
+A check is only as meaningful as the authority behind its threshold. When one fires, ask which of the four you are looking at, and the answer tells you what to do. You argue with a fab about clearance. You do not argue with a floating input.
 
 The `netclass-track-width` and `netclass-via-drill` rules sit at the same tier and answer to a **net class**, which is your own declaration about how a particular group of nets should be routed. A power net wants more copper than a signal net because it carries more current, and nothing in the geometry says which is which.
 
@@ -62,7 +62,7 @@ The `netclass-track-width` and `netclass-via-drill` rules sit at the same tier a
 
 `single-pin-net` does fail, because a bare `.kicad_pcb` is a board fixture with one pad per net, so every net on it is a stub. That has nothing to do with the clearance and would fire identically on a board whose copper was a mile apart.
 
-There is no netlist you could inspect, no query you could write, and no amount of care with the schematic that would find the real defect here. The connectivity is right. The board is wrong.
+No netlist you could inspect would find the real defect here. Neither would a query you could write, or any amount of care with the schematic. The connectivity is right. The board is wrong.
 
 A geometry pass says so with the same discipline:
 
@@ -70,7 +70,7 @@ A geometry pass says so with the same discipline:
 
 It states that the two nets never came within the floor and says in how many places it looked. That is the considered set from [chapter 5](../05-who-drives-this-net/#two-nets-opposite-problems-ee3) arriving at the board tier.
 
-That is where everything before this chapter stops, and it is why the tool has a board tier rather than treating the schematic as the design. A netlist is a model, models leave things out, and the things this one leaves out are exactly the ones that get decided after the schematic is signed off.
+Everything before this chapter stops here. So the tool has a board tier rather than treating the schematic as the design. A netlist is a model, models leave things out, and this one leaves out exactly the things that get decided after the schematic is signed off.
 
 ## What you can now answer
 
@@ -91,9 +91,9 @@ That is where everything before this chapter stops, and it is why the tool has a
 
 ## The end of the course
 
-Twelve chapters climb the ladder, and the shape they make is worth stating once.
+Twelve chapters climb the ladder. Here is the shape they make, stated once.
 
-You started able to name components. You can now look at an unfamiliar board, say what most of its parts are for, predict how each would fail and what the bench would see, check a part against its datasheet and cite the row, read its power tree and say what has to come up first, and know which questions the copper answers that the schematic cannot.
+You started able to name components. You can now look at an unfamiliar board, say what most of its parts are for, predict how each would fail and what the bench would see, check a part against its datasheet and cite the row, read its power tree and say what has to come up first, and know which questions only the copper answers.
 
 More usefully, you can tell **what a report did not look at**. That has been the through-line since chapter 5's pass on a broken net, through the `not-considered` verdicts, to [chapter 10's](../10-interfaces-and-what-they-require/#what-a-satisfied-requirement-says-ee6) satisfied requirement, which used to produce no output at all. A tool that tells you what it checked is worth more than one that tells you it found nothing, and knowing the difference is most of what separates using a checker from trusting one.
 

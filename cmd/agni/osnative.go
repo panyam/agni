@@ -10,9 +10,9 @@ import (
 	"github.com/panyam/agni/service"
 )
 
-// osNative is the OS-backed service.NativeRenderer adapter: it gates and shells out to the format's
-// own golden tool (the kicad-cli cache), translating the cmd gate errors to the service's
-// ErrNative* sentinels so the service maps them to Connect codes without importing the cache.
+// osNative is the OS-backed service.NativeRenderer adapter. It checks the gate and shells out to the
+// format's own golden tool, the kicad-cli cache. It translates the cmd gate errors to the service's
+// ErrNative* sentinels, so the service maps them to Connect codes without importing the cache.
 type osNative struct {
 	mounts  []mounts.Mount
 	enabled map[string]bool

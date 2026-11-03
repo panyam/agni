@@ -14,8 +14,8 @@ different bodies. A pin name survives the change and a number does not.
 
 ## What is actually in there
 
-An integrated circuit is a stack of five objects rather than one, and the words for them get used
-interchangeably in conversation, which is where the confusion starts.
+An integrated circuit is a stack of five objects rather than one. People use the words for them
+interchangeably in conversation, and the confusion starts there.
 
 | Layer | What it is |
 |---|---|
@@ -27,7 +27,7 @@ interchangeably in conversation, which is where the confusion starts.
 
 The die is the part. The package is how it was shipped. A vendor sells the same die in a handful of
 packages, because a phone needs the small one and a lab instrument wants the one you can solder by
-hand. Each body also lands on its own {{ explainable "footprint" }}, so picking a different one
+hand. Each body also needs its own {{ explainable "footprint" }}, so picking a different one
 changes the board as well as the part.
 
 Here is a real one, the TXB0104 in its 14-lead TSSOP body, drawn the way the datasheet draws it.
@@ -54,15 +54,15 @@ between them.
 | `NC` | no connect | 6 | absent | absent |
 | `NC` | no connect | 9 | absent | absent |
 
-Three things fall out of that table, and each one breaks a plausible-sounding shortcut.
+That table shows three things, and each one breaks a plausible-sounding shortcut.
 
 **Number 11 means different terminals in different bodies.** In the TSSOP it is `B3`, a data line.
-In the UQFN it is `VCCB`, the main supply input. A tool that joined a design to a datasheet by pin
-number, on a part seeded from one body and placed in another, would compare a
+In the UQFN it is `VCCB`, the main supply input. Imagine a part seeded from one body and placed in
+another. A tool joining the design to the datasheet by pin number would compare a
 {{ explainable "rail" "power rail" }} against a data line's limits. It would not error while doing
-it, because both are real terminals with real limits. It would report that everything looks fine. That failure
-is worse than no answer at all, so the name serves as the primary key and the number is only ever
-a tie-breaker.
+it, because both are real terminals with real limits. It would report that everything looks fine.
+That failure is worse than no answer at all, so the name serves as the primary key and the number
+is only ever a tie-breaker.
 
 **A number is not always a number.** Ball-grid packages designate by row and column, so `A2` and
 `B2` are pin "numbers" in the DSBGA. Anything storing a designator as an integer has already lost.
@@ -85,7 +85,7 @@ ground legs means a better thermal path. The exposed metal pad on the underside 
 idea taken as far as it goes.
 
 The third is inductance. At high switching speeds, several short return paths behave better than one long
-one. It costs a leg and buys real margin.
+one. It costs a leg and gives real margin.
 
 <figure>
 {{ includeFile "figures/one-bond-pad-three-legs.svg" }}
@@ -107,8 +107,8 @@ symmetric.
 
 - **Match on the name.** Both sides copy it from the same pin function table, the datasheet directly
   and the symbol library by transcription, so it survives a change of body.
-- **Use the number to break ties**, and only inside a body you have actually identified. It is the
-  answer to the name's one weakness rather than a competing key.
+- **Use the number to break ties**, and only inside a body you have actually identified. It answers
+  the name's one weakness, and it does not compete with the name as a key.
 - **Refuse when the two disagree.** That is a repackaging mismatch or a wrong symbol, and either
   channel taken alone would have produced a confident wrong answer.
 - **Refuse when a name is ambiguous and no body is known.** Reporting nothing is recoverable.
@@ -119,6 +119,6 @@ A design carries both channels already. A schematic connection names a component
 part type through its section, and that part type's pin carries a name alongside the designator. So
 the join has a name and a number on both sides, and the only question is which one leads.
 
-How Agni models this, and the exact precedence its resolver implements, is in
-[the datasheet layer](../../architecture/datasheet-layer/#pin-binding). The wider map from circuit
-concepts to software ones is in [the software analogy](../analogy/).
+[The datasheet layer](../../architecture/datasheet-layer/#pin-binding) covers how Agni models this
+and the exact precedence its resolver implements. [The software analogy](../analogy/) maps circuit
+concepts to software ones more widely.

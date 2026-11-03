@@ -5,26 +5,26 @@ description: "the signalling level a NON-RAIL net's name declares, the other hal
 
 ### What it is
 
-`net.signal_level(net, volts)` yields the voltage a **non-rail** net's name declares. It is the other
-half of `net.nominal_voltage`, carrying the same name-derived number over the nets that are not
-rails.
+`net.signal_level(net, volts)` yields the voltage declared by a **non-rail** net's name. It is the
+other half of `net.nominal_voltage`, carrying the same name-derived number over the nets that are
+not rails.
 
-The two are disjoint, and since agni 679 they are not exhaustive. A net carrying the rail role (which
-includes ground) goes to `net.nominal_voltage`; every other net whose name carries a voltage token
-lands here. A name with no parseable token, or with tokens that disagree (`12V_TO_5V`), yields no row
-in either relation.
+The two are disjoint, and since agni 679 they are not exhaustive. A net with the rail role goes to
+`net.nominal_voltage`, and the rail role includes ground. Every other net whose name carries a
+voltage token goes here. A name with no parseable token, or with tokens that disagree (`12V_TO_5V`),
+yields no row in either relation.
 
 **A regulator internal is the third case and yields no row either.** `12V_FB` and `12V_SW` are named
 after the rail they serve rather than after what they carry, so the number is a different net's
-voltage and is neither a rail nominal nor a signalling level. Dropping them from the rail side alone
-would have landed them here restating the same wrong number under a relation that claims less, so
+voltage and is neither a rail nominal nor a signalling level. If only the rail side dropped them,
+they would show up here instead, with the same wrong number under a relation that claims less. So
 both projectors exclude them.
 
 ### Why the split exists
 
 `net.nominal_voltage` is documented as a rail's nominal, and its projector used to emit a row for
 *any* net whose name parsed. Many teams encode a signalling level into a signal net's name, so those
-levels were landing in a relation that means "rail nominal". The number was right and the relation
+levels were showing up in a relation that means "rail nominal". The number was right and the relation
 carrying it was not.
 
 In one verified instance, a net named `U3_12_U7_4_3V3` yielded a nominal of 3.3 while classifying as
@@ -39,8 +39,8 @@ supposed to sit at 3.3 V". A level mismatch across a link is an interfacing ques
 receiver tolerate the driver's level), while a rail nominal out of range is a supply question.
 
 Treat it as the design's own label, not a measurement. It is exactly as trustworthy as the naming
-convention that produced it, so the level and the rail nominal are kept apart rather than
-merged into one number a rule cannot interpret.
+convention that produced it. So the level and the rail nominal are kept apart, rather than merged
+into one number that no rule can interpret.
 
 ### For software engineers
 
@@ -49,8 +49,8 @@ and falls back to the naming lexicon only for a net that skipped the loader. So 
 same role stamp the rest of the engine uses, rather than inventing a second notion of "rail".
 
 This gates the RELATION only. `check.NominalVoltageFromName` is a pure string function with no net to
-ask about, so a Go rule that holds a net and wants rails must gate for itself. The pin-tracking rules
-are the worked example.
+ask about. So when a Go rule holds a net and wants rails, the rule must gate for itself. The
+pin-tracking rules are the worked example.
 
 ### Go projector
 
@@ -67,15 +67,15 @@ Every signal net whose name declares a level:
 net.signal_level(?net, ?v) => ?net, ?v
 ```
 
-Levels that disagree across the design, the cheap way to spot a mixed-voltage interface
-somebody has to think about:
+Levels that disagree across the design. This is the cheap way to spot a mixed-voltage interface
+that somebody has to think about:
 
 ```
 net.signal_level(?a, ?v1), net.signal_level(?b, ?v2), ?v1 != ?v2 => ?a, ?v1, ?b, ?v2
 ```
 
-A signal whose declared level does not match any rail the design carries, which is usually either a
-naming slip or a level nobody generates:
+A signal whose declared level matches no rail in the design. That is usually either a naming slip
+or a level that nothing generates:
 
 ```
 net.signal_level(?net, ?v), not net.nominal_voltage(?rail, ?v) => ?net, ?v

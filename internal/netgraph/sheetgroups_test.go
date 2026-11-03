@@ -5,8 +5,9 @@ import (
 	"testing"
 )
 
-// strapped is a child sheet's two ports, A and B, each on its own wire, which the parent wires
-// together through its two sheet pins (anchors carrying the child's names on the parent's sheet).
+// strapped is a child sheet's two ports, A and B, each on its own wire. The parent wires them
+// together through its two sheet pins, which are anchors carrying the child's names on the
+// parent's sheet.
 func strapped(childSheet, parentSheet string) ([]Wire, []Anchor, []Pin) {
 	p := func(x int64) Point { return Point{X: x} }
 	wires := []Wire{

@@ -39,9 +39,9 @@ const (
 
 // DiffServiceClient is a client for the agni.v1.webapi.DiffService service.
 type DiffServiceClient interface {
-	// DiffDesigns loads both files' netlist IR and returns the classified report plus the
-	// highlight maps the viewer joins to geometry. Either file failing to load (unknown mount,
-	// escaping path, no netlist reader) fails the call; there is no partial diff.
+	// DiffDesigns loads both snapshots' netlist IR. It returns the classified report and the
+	// highlight maps, and the viewer joins those maps to geometry. If either side fails to load
+	// (unknown mount, escaping path, no netlist reader), the call fails. There is no partial diff.
 	DiffDesigns(context.Context, *connect.Request[webapi.DiffDesignsRequest]) (*connect.Response[webapi.DiffDesignsResponse], error)
 }
 
@@ -77,9 +77,9 @@ func (c *diffServiceClient) DiffDesigns(ctx context.Context, req *connect.Reques
 
 // DiffServiceHandler is an implementation of the agni.v1.webapi.DiffService service.
 type DiffServiceHandler interface {
-	// DiffDesigns loads both files' netlist IR and returns the classified report plus the
-	// highlight maps the viewer joins to geometry. Either file failing to load (unknown mount,
-	// escaping path, no netlist reader) fails the call; there is no partial diff.
+	// DiffDesigns loads both snapshots' netlist IR. It returns the classified report and the
+	// highlight maps, and the viewer joins those maps to geometry. If either side fails to load
+	// (unknown mount, escaping path, no netlist reader), the call fails. There is no partial diff.
 	DiffDesigns(context.Context, *connect.Request[webapi.DiffDesignsRequest]) (*connect.Response[webapi.DiffDesignsResponse], error)
 }
 

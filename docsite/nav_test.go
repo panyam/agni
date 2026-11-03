@@ -12,9 +12,9 @@ import (
 
 // Adding a docs section takes five coordinated edits: the pages, a nav template, BOTH the include
 // and the dispatch branch in Sidebar.html, HeaderNavLinks.json, and a link from a sibling index.
-// Nothing enforced that, and it had already drifted twice before these tests existed: an orphan nav
-// template pointing at a content directory that was never created, and an architecture page absent
-// from every nav, reachable only by typing its URL.
+// Nothing enforced that, and it had already drifted twice before these tests existed. Once an
+// orphan nav template pointed at a content directory that was never created. Once an architecture
+// page was absent from every nav, reachable only by typing its URL.
 //
 // These tests read the same files the site generator reads, so they fail on the edit rather than on
 // someone later noticing a section renders the wrong sidebar.
@@ -69,7 +69,7 @@ func TestEveryNavTemplateIsWired(t *testing.T) {
 }
 
 // TestEveryDispatchedSectionExists fails when Sidebar.html routes a URL prefix to a nav template
-// but no such content directory exists, which is how an orphan template survives unnoticed.
+// but no such content directory exists. An orphan template survives unnoticed that way.
 func TestEveryDispatchedSectionExists(t *testing.T) {
 	sidebar := read(t, sidebarPath)
 	re := regexp.MustCompile(`Contains \$currentPath "/([a-z-]+)/"`)
@@ -115,8 +115,8 @@ func dispatchedSections(t *testing.T) []string {
 }
 
 // TestEveryPageIsReachable fails when a page exists in a navigated section but no nav template
-// links it. Such a page still renders and is still indexed; it is simply unreachable by clicking,
-// which is indistinguishable from it not existing.
+// links it. Such a page still renders and is still indexed. Nobody can reach it by clicking, so to
+// a reader it might as well not exist.
 func TestEveryPageIsReachable(t *testing.T) {
 	navBlob := ""
 	for file := range navTemplates(t) {
@@ -186,7 +186,7 @@ func TestHeaderNavLinksResolve(t *testing.T) {
 }
 
 // TestSectionIndexesAreListedInHeader fails when a navigated section is missing from the header
-// nav entirely, which is how a whole section becomes reachable only from a sibling page's prose.
+// nav entirely. A whole section is then reachable only from a sibling page's prose.
 func TestSectionIndexesAreListedInHeader(t *testing.T) {
 	header := read(t, headerLinks)
 	for _, section := range dispatchedSections(t) {
@@ -202,7 +202,7 @@ func TestSectionIndexesAreListedInHeader(t *testing.T) {
 // dist without it has no CSS, no JS bundle, no images and no rendered designs, and an interactive
 // component whose bundle never loads renders as nothing at all rather than as a broken box.
 //
-// This asserts the Makefile wiring rather than running a build, so it stays fast and does not need
+// This asserts the Makefile wiring rather than running a build, so it is fast and does not need
 // node. The build is exercised for real by `make build` in CI.
 func TestBuiltSiteIsSelfContained(t *testing.T) {
 	mk := read(t, "Makefile")
@@ -216,7 +216,7 @@ func TestBuiltSiteIsSelfContained(t *testing.T) {
 	}
 }
 
-// headerEntry is one HeaderNavLinks.json record. A child carries the same fields, and "group": true
+// headerEntry is one HeaderNavLinks.json record. A child has the same fields, and "group": true
 // marks a child that renders as a subheading inside the dropdown rather than an ordinary item.
 type headerEntry struct {
 	Name     string        `json:"name"`
@@ -239,17 +239,17 @@ func headerEntries(t *testing.T) []headerEntry {
 // looks broken. It is absent from the most visible nav the site has, and you do not notice because
 // you reach the page by typing the URL you just wrote.
 //
-// TestHeaderNavLinksResolve covers the json-to-content direction. This is content-to-json, which is
-// the half nothing checked (agni issue 574).
+// TestHeaderNavLinksResolve covers the json-to-content direction. This test covers content-to-json,
+// and nothing checked that half before (agni issue 574).
 //
 // The exemption is READ FROM THE DATA rather than listed here. A section is required to be complete
-// only when it has a top-level entry of its own carrying children, which is the header declaring an
-// intent to itemise that section. `learn/` and `build/` appear instead as group headings inside
-// another section's dropdown, and `learn/` lists two of its fifteen pages on purpose, since twelve
-// chapters would swamp the menu and the course has its own index and level map. Give `learn/` a
-// top-level dropdown later and every chapter becomes required with no edit here. What this costs is
-// that a section itemised only as a group heading goes unchecked, which is why
-// TestSectionIndexLinksEveryPage carries no exemption at all.
+// only when it has a top-level entry of its own with children. Such an entry is the header
+// declaring an intent to itemise that section. `learn/` and `build/` appear instead as group
+// headings inside another section's dropdown, and `learn/` lists two of its pages on
+// purpose, since thirteen chapters would swamp the menu and the course has its own index and level
+// map. Give `learn/` a top-level dropdown later and every chapter becomes required with no edit
+// here. The cost is that a section itemised only as a group heading goes unchecked.
+// TestSectionIndexLinksEveryPage has no exemption at all for that reason.
 func TestHeaderDropdownListsEveryPage(t *testing.T) {
 	for _, entry := range headerEntries(t) {
 		section := strings.Trim(entry.URL, "/")
@@ -287,11 +287,11 @@ func sectionIndexLinks(t *testing.T, section string) map[string]bool {
 }
 
 // TestSectionIndexLinksEveryPage fails when a section's index.md does not link one of the section's
-// pages. The index is where a reader who arrived at the section rather than at the page starts, so a
-// page missing from it is invisible to anyone browsing rather than searching.
+// pages. A reader who arrives at the section rather than at a page starts at the index. So a page
+// missing from it is invisible to anyone browsing rather than searching.
 //
-// This one has no exemption. Every section indexes every page it holds today, `learn/` included,
-// which is what makes it the check covering the sections the header rule above lets through.
+// This one has no exemption. Every section indexes every page it holds today, `learn/` included.
+// So this check covers the sections that the header rule above lets through.
 func TestSectionIndexLinksEveryPage(t *testing.T) {
 	for _, section := range dispatchedSections(t) {
 		if _, err := os.Stat(filepath.Join(contentDir, section, "index.md")); err != nil {

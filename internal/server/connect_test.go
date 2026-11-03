@@ -20,8 +20,8 @@ import (
 	"google.golang.org/protobuf/proto"
 )
 
-// TestToConnectErr pins the one sentinel-to-code table every adapter shares, the mapping the
-// per-RPC connect.NewError calls used to encode before WS9-026 moved translation here.
+// TestToConnectErr pins the sentinel-to-code table, which every adapter shares. Before WS9-026
+// moved translation here, per-RPC connect.NewError calls encoded the mapping.
 func TestToConnectErr(t *testing.T) {
 	cases := []struct {
 		err  error
@@ -139,8 +139,8 @@ func (m memReviewLoader) Manifest(context.Context, artifact.URI) (review.Manifes
 }
 
 // TestReviewAdapterRoundTrip drives the Review adapter both ways. A served CreateReview returns a
-// wrapped response (proving the mux-visible handler delegates to the service, the CodeUnimplemented
-// gotcha), and a classified service error comes back as a coded connect error.
+// wrapped response. That proves the mux-visible handler delegates to the service and is not the
+// CodeUnimplemented stub. A classified service error comes back as a coded connect error.
 func TestReviewAdapterRoundTrip(t *testing.T) {
 	man := review.Manifest{Name: "M", Areas: []review.Area{{
 		Name:  "A",
@@ -172,9 +172,8 @@ func TestReviewAdapterRoundTrip(t *testing.T) {
 
 // TestGetReviewManifestAdapter drives the second Review RPC the same way. The mux-visible handler
 // must delegate to the service rather than inheriting the generated CodeUnimplemented stub, and a
-// classified service error must come back coded. This is the gotcha that makes a hand-written
-// adapter worth testing at all, since an unimplemented method compiles fine and fails only at
-// request time.
+// classified service error must come back coded. A hand-written adapter is worth testing for this
+// gotcha alone. An unimplemented method compiles fine and fails only at request time.
 func TestGetReviewManifestAdapter(t *testing.T) {
 	man := review.Manifest{Name: "M", Areas: []review.Area{{
 		Name:  "A",
@@ -196,8 +195,9 @@ func TestGetReviewManifestAdapter(t *testing.T) {
 	}
 }
 
-// TestAnIngestMissingBlobsSaysWhich: a client sends a design's contents only when asked, so the
-// error naming them carries the hashes it needs (agni issue 1061).
+// TestAnIngestMissingBlobsSaysWhich checks the error for an ingest whose contents were not sent. A
+// client sends a design's contents only when asked, so the error names the hashes the client needs
+// (agni issue 1061).
 func TestAnIngestMissingBlobsSaysWhich(t *testing.T) {
 	ce := ConnectError(fmt.Errorf("ingest: %w", &service.BlobsMissingError{Hashes: []string{"sha256:aa", "sha256:bb"}}))
 	if ce.Code() != connect.CodeFailedPrecondition {

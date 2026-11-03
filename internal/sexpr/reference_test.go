@@ -12,10 +12,10 @@ import (
 	"testing"
 )
 
-// The reference below is the parser as it stood before agni issue 945 compacted the tree: a bufio
-// tokenizer, a heap Node per element and Kids grown by append. It stays here as the definition of
-// what Parse must build, so the compact parser is held to it over every fixture in the repo rather
-// than to a handful of hand-written cases.
+// The reference below is the parser from before agni issue 945 compacted the tree. It has a bufio
+// tokenizer, a heap Node per element and Kids grown by append. We keep it to define what Parse must
+// build, so the compact parser is held to it over every fixture in the repo rather than to a
+// handful of hand-written cases.
 
 func refParse(r io.Reader, mode StringMode) (*Node, error) {
 	t := &refTokenizer{r: bufio.NewReaderSize(r, 1<<20), mode: mode, line: 1}
@@ -200,9 +200,9 @@ func (t *refTokenizer) parseList() (*Node, error) {
 	}
 }
 
-// sameTree reports the first place got differs from want, or "" when they match. It also requires
-// every Kids in got to have no spare capacity, which is what keeps an append from writing into a
-// neighbour's children.
+// sameTree reports the first place where got differs from want, or "" when they match. It also
+// requires every Kids in got to have no spare capacity. Without spare capacity, an append cannot
+// write into a neighbour's children.
 func sameTree(got, want *Node, path string) string {
 	switch {
 	case got.IsList != want.IsList:
@@ -324,9 +324,9 @@ func TestParseMatchesReferenceOnEveryFixture(t *testing.T) {
 	t.Logf("compared %d KiCad and %d EDIF files", counts[KiCadStrings], counts[EDIFStrings])
 }
 
-// edgeInputs are the shapes where a substring fast path and the byte-at-a-time decoder could
-// disagree: escapes at the ends of a string, an escape split by a column wrap, input ending
-// mid-token, and every way a file can be malformed.
+// edgeInputs hold escapes at the ends of a string, an escape split by a column wrap, input ending
+// mid-token, and every way a file can be malformed. In each of these shapes a substring fast path
+// and the byte-at-a-time decoder could disagree.
 var edgeInputs = []string{
 	``, ` `, `x`, `)`, `(`, `()`, `(())`, `(a)`, `(a`, `(a b`, `("a`, `(a "b`, `(a "b\`, `(a "b\"`,
 	`(a "")`, `(a "\\")`, `(a "\"")`, `(a "x\n\ty")`, `(a "\q")`, `(a "\`, "(a \"line1\nline2\")",
@@ -364,10 +364,10 @@ func FuzzParseMatchesReference(f *testing.F) {
 	})
 }
 
-// TestParsedAtomsAreSharedAndListsAreNot pins the aliasing Parse promises. Atoms with the same text
-// and Quoted flag are one Node, which is where the memory goes back, while a bare atom and a quoted
-// one of the same text stay apart, since the EDIF name grammar tells them apart. Lists are never
-// shared, and appending to one list's Kids leaves its neighbour's children alone.
+// TestParsedAtomsAreSharedAndListsAreNot pins the aliasing that Parse promises. Atoms with the same
+// text and Quoted flag are one Node, and that sharing saves the memory. A bare atom and a quoted
+// one of the same text are separate Nodes, since the EDIF name grammar tells them apart. Lists are
+// never shared, and appending to one list's Kids leaves its neighbour's children alone.
 func TestParsedAtomsAreSharedAndListsAreNot(t *testing.T) {
 	n := parse(t, `(top (a 1) (b 2) (a 1) (a "1"))`, KiCadStrings)
 	first, second, third, fourth := n.Arg(1), n.Arg(2), n.Arg(3), n.Arg(4)

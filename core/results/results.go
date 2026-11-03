@@ -2,8 +2,8 @@
 // artifact half of the checks contract (WS3-103).
 //
 // The document is self-contained, so a report renders with no design file, no rule catalog and no
-// engine build present. That holds only while the rendering path is shared, which is why the severity
-// pivot lives here and both the live service and a reloaded document call it. See
+// engine build present. That holds only while the rendering path is shared. So the severity pivot
+// lives here, and both the live service and a reloaded document call it. See
 // docsite/content/architecture/checks-contract.md#the-document.
 //
 // The package sits low in the stack, reading only the generated contract and check's rule type
@@ -22,7 +22,7 @@ import (
 
 // Schema is the document schema version stamped into every document this package writes, and the
 // only value Parse accepts. It changes when a consumer that understood the old shape would
-// misread the new one; an additive field is not that, so it is not a version bump.
+// misread the new one. An additive field does not cause that, so it needs no version bump.
 const Schema = "agni.checks.results/v1"
 
 // Producer is the producer name a native engine run stamps. A foreign checker's import stamps its
@@ -44,9 +44,9 @@ func SeverityRank(s string) int {
 	return 3
 }
 
-// RuleRecords snapshots the rules a run evaluated into the document's lean catalog form: identity,
-// severity, one-line summary, and the classification tags. The long-form rule prose stays in the
-// engine's catalog, rather than being repeated across every archived run.
+// RuleRecords snapshots the rules a run evaluated into the document's lean catalog form. Each record
+// holds identity, severity, a one-line summary, and the classification tags. The long-form rule prose
+// is kept only in the engine's catalog rather than repeated across every archived run.
 func RuleRecords(rules []*check.Rule) []*checkspb.RuleRecord {
 	out := make([]*checkspb.RuleRecord, 0, len(rules))
 	for _, r := range rules {
@@ -60,25 +60,26 @@ func RuleRecords(rules []*check.Rule) []*checkspb.RuleRecord {
 	return out
 }
 
-// UnresolvedSection is the report section an inconclusive finding is filed under, after every
-// severity. The rule declined to decide, so filing it under the severity it would have reported would
-// count it among the defects (agni issues 350, 1045).
+// UnresolvedSection names the report section for inconclusive findings, placed after every
+// severity. The rule declined to decide. Filing such a finding under the severity it would have
+// reported would count it among the defects (agni issues 350, 1045).
 const UnresolvedSection = "unresolved"
 
-// Pivot is THE severity-organized report pivot (WS3-022): sections worst-severity first (an unknown
-// severity leads, then error, warning, info, then the unresolved section holding every inconclusive
-// finding), empty sections omitted, findings grouped by rule in input order, each group stamped with
-// the rule's summary so a report reads without the tool at hand.
+// Pivot is THE severity-organized report pivot (WS3-022). Sections come worst-severity first. An
+// unknown severity leads, then error, warning and info, and last the unresolved section holding every
+// inconclusive finding. Empty sections are omitted. Within a section, findings are grouped by rule in
+// input order. Each group is stamped with the rule's summary, so a report reads without the tool at
+// hand.
 //
 // The viewer groups and counts the findings it shows by the same rules, and
 // testdata/severity_twin.json holds the two to one answer (agni issue 1045).
 //
 // It takes wire-form findings and a rule -> summary lookup rather than a catalog, so a live run and a
 // reloaded document both call it. rulesRun is passed in rather than derived from the findings, because
-// it is what distinguishes a clean design from a run that checked nothing.
+// it distinguishes a clean design from a run that checked nothing.
 //
-// Re-pivoting the findings of a report it produced yields the same report, which is what lets a
-// document written from a report round-trip.
+// Re-pivoting the findings of a report it produced yields the same report. So a document written from
+// a report round-trips.
 func Pivot(source string, fs []*checkspb.Finding, summaries map[string]string, rulesRun int) *checkspb.CheckReport {
 	bySeverity := map[string][]*checkspb.Finding{}
 	var unresolved []*checkspb.Finding
@@ -124,9 +125,9 @@ func Pivot(source string, fs []*checkspb.Finding, summaries map[string]string, r
 	return rep
 }
 
-// Report rebuilds a document's severity pivot from the document alone: the findings it carries, the
-// summaries in its catalog snapshot, and the size of that snapshot as the rules-run count. This is
-// why the catalog is in the document at all.
+// Report rebuilds a document's severity pivot from the document alone. It reads the document's
+// findings, the summaries in its catalog snapshot, and the size of that snapshot as the rules-run
+// count. The document holds a catalog snapshot for this reason.
 func Report(doc *checkspb.CheckResults) *checkspb.CheckReport {
 	summaries := make(map[string]string, len(doc.GetCatalog()))
 	for _, r := range doc.GetCatalog() {
@@ -135,9 +136,9 @@ func Report(doc *checkspb.CheckResults) *checkspb.CheckReport {
 	return Pivot(doc.GetDesign().GetSource(), doc.GetFindings(), summaries, len(doc.GetCatalog()))
 }
 
-// Marshal encodes a document as indented protojson, the encoding the datasheet workbench uses for a
-// PartSpec sibling, because a results document is a file a human opens, greps, and diffs. Unpopulated
-// fields are omitted.
+// Marshal encodes a document as indented protojson. The datasheet workbench uses the same encoding
+// for a PartSpec sibling. A person opens, greps and diffs a results document, so the encoding is
+// indented. Unpopulated fields are omitted.
 func Marshal(doc *checkspb.CheckResults) ([]byte, error) {
 	b, err := protojson.MarshalOptions{Multiline: true, Indent: "  "}.Marshal(doc)
 	if err != nil {

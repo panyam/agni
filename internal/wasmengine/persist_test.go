@@ -18,8 +18,8 @@ import (
 // The browser hands the engine goapplib's cache, so the port must be its shape.
 var _ service.BlobStore = (*wasmhost.MemCache)(nil)
 
-// countingStore is a store that counts what was written, since every layer a worker READ is written
-// and a layer it restored is not.
+// countingStore counts what was written. A worker writes every layer it READ and no layer it
+// restored.
 type countingStore struct {
 	wasmhost.MemCache
 	puts atomic.Int64
@@ -30,7 +30,7 @@ func (s *countingStore) Put(ctx context.Context, key string, b []byte) error {
 	return s.MemCache.Put(ctx, key, b)
 }
 
-// opened is what a viewer asks of the gateway as it opens and runs its checks.
+// opened lists what a viewer asks of the gateway as it opens and runs its checks.
 func opened(t *testing.T, eng *Engine) []proto.Message {
 	t.Helper()
 	srv := httptest.NewServer(eng.Handler)

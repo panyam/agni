@@ -1,5 +1,5 @@
-// Command validate loads a doc-IR textproto, runs doc.Validate (which recomputes table content
-// hashes), and prints a per-page region summary. It checks that pdf2doc output is
+// Command validate loads a doc-IR textproto, runs doc.Validate, and prints a per-page region
+// summary. doc.Validate recomputes table content hashes. The command checks that pdf2doc output is
 // schema-conformant.
 package main
 

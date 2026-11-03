@@ -27,8 +27,8 @@ type ProviderFunc func(mpn string) *parampb.PartSpec
 // Lookup calls the wrapped function.
 func (f ProviderFunc) Lookup(mpn string) *parampb.PartSpec { return f(mpn) }
 
-// ParamSet is a seeded parameter corpus: PartSpecs indexed by upper-cased MPN, and the
-// directory-backed ParamProvider. The spec-side half of the WS10-003 validation join (design
+// ParamSet is a seeded parameter corpus of PartSpecs indexed by upper-cased MPN. It is the
+// directory-backed ParamProvider, and the spec-side half of the WS10-003 validation join (design
 // component -> PartSpec). A nil or empty ParamSet is valid and means nothing is seeded, so every
 // Lookup misses.
 type ParamSet map[string]*parampb.PartSpec
@@ -60,20 +60,20 @@ func LoadSet(fsys fs.FS) (ParamSet, error) {
 	return set, nil
 }
 
-// SeededFile is one corpus file as LoadCorpus read it: the spec, its path within the corpus, and the
-// bytes it was parsed from, so a caller that keeps an index of the corpus can hash exactly what was
-// validated rather than reading the file a second time.
+// SeededFile is one corpus file as LoadCorpus read it. It holds the spec, its path within the corpus,
+// and the bytes it was parsed from. A caller that keeps an index of the corpus can then hash exactly
+// what was validated rather than reading the file a second time.
 type SeededFile struct {
 	Spec *parampb.PartSpec
 	File string
 	Data []byte
 }
 
-// LoadCorpus is the walk LoadSet makes, keeping each file. It applies the same rules, all-or-nothing:
-// only *.textproto is read (a workbench draft is never one, so it never seeds anything), every file
-// must parse and Validate, and two files claiming one MPN fail the load. Files come back in walk
-// order, which is lexical by path. The datasheet service's corpus index is built from it, so the
-// index and every eager load agree on what the corpus holds.
+// LoadCorpus makes the same walk as LoadSet and keeps each file. It applies the same all-or-nothing
+// rules. Only *.textproto is read, and a workbench draft is never one, so a draft never seeds
+// anything. Every file must parse and Validate, and two files claiming one MPN fail the load. Files
+// come back in walk order, which is lexical by path. The datasheet service builds its corpus index
+// from LoadCorpus, so the index and every eager load agree on what the corpus holds.
 func LoadCorpus(fsys fs.FS) ([]SeededFile, error) {
 	var files []SeededFile
 	from := map[string]string{}

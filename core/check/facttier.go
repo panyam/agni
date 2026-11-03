@@ -4,8 +4,8 @@ import "strings"
 
 // FactTier names a family of declared facts that a GATE keys on. Three gates read a rule's Reads to
 // decide whether the rule can run at all, and each keys on a prefix rather than on individual fact
-// names, so no gate distinguishes param.esd_rating from param.supply_abs_max. The tier is therefore
-// the granularity at which a declaration matters, and the one the Reads audit checks (WS3-122).
+// names, so no gate distinguishes param.esd_rating from param.supply_abs_max. So a declaration
+// matters per tier, and the Reads audit checks tiers too (WS3-122).
 type FactTier string
 
 const (
@@ -21,8 +21,8 @@ const (
 	TierConnectivity FactTier = "connectivity"
 )
 
-// paramTierRelations are relation names that carry datasheet-joined data without a "param" prefix
-// (the prefix test misses them), but which are just as absent without a seeded set. They gate the
+// paramTierRelations names relations that carry datasheet-joined data without a "param" prefix.
+// The prefix test misses them, and they are just as absent without a seeded set. They gate the
 // same way. The names are literals rather than the relations package's consts because those are
 // stdlib content now (issue 10) and relations imports check, so check cannot import it. A
 // relation NAME is a stable contract string, so a literal is safe.
@@ -36,7 +36,7 @@ var paramTierRelations = map[string]bool{
 // placements.
 var connectivityFactPrefixes = []string{"pin.", "on_net"}
 
-// TierOf reports which gated tier a declared fact belongs to, or "" for a fact no gate keys on
+// TierOf reports which gated tier a declared fact belongs to, or "" when no gate keys on the fact
 // (net.names, component.class and the rest, which are always available once a design is read).
 //
 // This is the ONE definition of those prefix tests. Available, the unresolved-symbol gate and the

@@ -21,20 +21,22 @@ import (
 
 const countedRule = "test/counted"
 
-// checkFixture is the tutorial project copied into a temp folder, so a test can edit its files, and
-// a check service over it whose catalog carries one rule that counts its evaluations.
+// checkFixture holds the tutorial project, copied into a temp folder so a test can edit its files.
+// It also holds a check service over that copy. The service's catalog has one rule, and the rule
+// counts its evaluations.
 type checkFixture struct {
 	dir    string
 	evals  *atomic.Int64
 	svc    *service.CheckService
 	design string
-	// snaps is the snapshot ingested for each overlay, by its text, so a check under one overlay asks
-	// the same snapshot every time, as a client does.
+	// snaps maps each overlay's text to the snapshot ingested for it. A check under one overlay
+	// then asks the same snapshot every time, as a client does.
 	snaps map[string]string
 }
 
-// newCheckFixture builds the fixture. outcome is what the counted rule answers, and cached false
-// gives the same service with no DesignCache, the answer a check owes whether or not anything is kept.
+// newCheckFixture builds the fixture. outcome is the counted rule's answer. cached false gives the
+// same service with no DesignCache. A check owes the same answer whether or not anything is kept,
+// so that service gives the reference answer.
 func newCheckFixture(t *testing.T, outcome check.Outcome, cached bool, wrap func(service.ConfigResolver) service.ConfigResolver) *checkFixture {
 	t.Helper()
 	dir := t.TempDir()
@@ -46,7 +48,7 @@ func newCheckFixture(t *testing.T, outcome check.Outcome, cached bool, wrap func
 		Name:     "counted",
 		Severity: "info",
 		Summary:  "counts its evaluations",
-		// So its verdicts reach the response, which is where an inconclusive one is seen.
+		// So its verdicts reach the response. An inconclusive verdict shows only there.
 		StatesConsideredSet: true,
 		Eval: func(context.Context, check.Model) []check.Verdict {
 			evals.Add(1)
@@ -118,7 +120,8 @@ func (f *checkFixture) touch(t *testing.T, rel string) {
 	}
 	later := time.Now().Add(2 * time.Second)
 	_ = os.Chtimes(p, later, later)
-	// A snapshot whose files changed is stale, so each is read again, as a client told so does.
+	// A snapshot whose files changed is stale, so each is ingested again. A client does the same
+	// when told its snapshot is stale.
 	for _, name := range f.snaps {
 		if _, err := f.svc.Snapshots().UpdateSnapshot(context.Background(), &webapi.UpdateSnapshotRequest{
 			Snapshot: &webapi.Snapshot{Name: name, Uri: f.design}, UpdateMask: &fieldmaskpb.FieldMask{Paths: []string{"uri"}},
@@ -135,7 +138,7 @@ func (f *checkFixture) wantEvals(t *testing.T, want int64, why string) {
 	}
 }
 
-// TestASecondCheckDoesNotEvaluateTheRuleAgain is agni issue 390's first acceptance: the same check
+// TestASecondCheckDoesNotEvaluateTheRuleAgain is agni issue 390's first acceptance. The same check
 // asked twice evaluates its rule once.
 func TestASecondCheckDoesNotEvaluateTheRuleAgain(t *testing.T) {
 	f := newCheckFixture(t, check.Fail, true, nil)
@@ -145,8 +148,8 @@ func TestASecondCheckDoesNotEvaluateTheRuleAgain(t *testing.T) {
 	f.wantEvals(t, 1, "an identical second check ran the rule again")
 }
 
-// TestEditingAnyTierEvaluatesTheRuleAgain edits the netlist, then the board, which the issue's first
-// key (the entry's hash alone) would have missed.
+// TestEditingAnyTierEvaluatesTheRuleAgain edits the netlist, then the board. The issue's first key
+// was the entry's hash alone, and it would have missed the board edit.
 func TestEditingAnyTierEvaluatesTheRuleAgain(t *testing.T) {
 	f := newCheckFixture(t, check.Fail, true, nil)
 	f.counted(t, &webapi.CheckDesignRequest{})
@@ -160,8 +163,8 @@ func TestEditingAnyTierEvaluatesTheRuleAgain(t *testing.T) {
 	f.wantEvals(t, 3, "the check after the edits ran the rule again, so the edits are not what moved the count")
 }
 
-// TestADifferentConventionEvaluatesTheRuleAgain: a convention changes the lexicon every rule reads,
-// so a run under one must never answer for a run under another.
+// TestADifferentConventionEvaluatesTheRuleAgain covers a change of convention. A convention changes
+// the lexicon that every rule reads, so a run under one must never answer for a run under another.
 func TestADifferentConventionEvaluatesTheRuleAgain(t *testing.T) {
 	f := newCheckFixture(t, check.Fail, true, nil)
 	f.counted(t, &webapi.CheckDesignRequest{})
@@ -174,8 +177,8 @@ func TestADifferentConventionEvaluatesTheRuleAgain(t *testing.T) {
 	f.wantEvals(t, 3, "the second check under the other convention ran the rule again")
 }
 
-// noDigest is a config resolver that does not say what it read, which leaves an overlay built on it
-// unable to identify itself.
+// noDigest is a config resolver that does not say what it read. An overlay built on it cannot
+// identify itself.
 type noDigest struct{ service.ConfigResolver }
 
 func (r noDigest) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisConfig, ns string) (service.ResolvedConfig, error) {
@@ -184,8 +187,8 @@ func (r noDigest) ResolveConfig(ctx context.Context, cfg *webapi.AnalysisConfig,
 	return rc, err
 }
 
-// TestAnOverlayThatDoesNotIdentifyIsNeverAnsweredFromAKeptRun: with no identity there is nothing to
-// tell one configuration from another, so every check evaluates.
+// TestAnOverlayThatDoesNotIdentifyIsNeverAnsweredFromAKeptRun covers an overlay with no identity.
+// Nothing then tells one configuration from another, so every check evaluates.
 func TestAnOverlayThatDoesNotIdentifyIsNeverAnsweredFromAKeptRun(t *testing.T) {
 	f := newCheckFixture(t, check.Fail, true, func(r service.ConfigResolver) service.ConfigResolver { return noDigest{r} })
 	f.counted(t, &webapi.CheckDesignRequest{})
@@ -193,8 +196,9 @@ func TestAnOverlayThatDoesNotIdentifyIsNeverAnsweredFromAKeptRun(t *testing.T) {
 	f.wantEvals(t, 2, "a check whose overlay has no identity was answered from a kept run")
 }
 
-// TestABudgetedInconclusiveRuleIsNotKept: under a work budget an inconclusive answer may be the
-// budget's doing, and a later request is owed the real one. Without a budget it is the answer.
+// TestABudgetedInconclusiveRuleIsNotKept covers a work budget. Under a budget, the budget may have
+// caused an inconclusive answer, and a later request is owed the real one. Without a budget, the
+// inconclusive answer is the answer.
 func TestABudgetedInconclusiveRuleIsNotKept(t *testing.T) {
 	f := newCheckFixture(t, check.Inconclusive, true, nil)
 	f.counted(t, &webapi.CheckDesignRequest{WorkBudget: 1_000_000})
@@ -205,8 +209,8 @@ func TestABudgetedInconclusiveRuleIsNotKept(t *testing.T) {
 	f.wantEvals(t, 3, "an inconclusive answer with no budget was not kept")
 }
 
-// TestAKeptRunAnswersAsAFreshOneDoes runs part of the catalog and then all of it, so the second
-// answer joins kept rules to rules run now, and compares it with the whole catalog run on a service
+// TestAKeptRunAnswersAsAFreshOneDoes runs part of the catalog and then all of it. The second answer
+// joins kept rules to rules run now. The test compares it with the whole catalog run on a service
 // that keeps nothing. Every finding and verdict must match, in order.
 func TestAKeptRunAnswersAsAFreshOneDoes(t *testing.T) {
 	kept := newCheckFixture(t, check.Fail, true, nil)

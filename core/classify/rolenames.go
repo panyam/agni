@@ -54,9 +54,9 @@ func AllNetRoles() []ir.Role {
 	return out
 }
 
-// AttrDeclaredRole is the ir.Net.attributes key carrying a role the SOURCE FILE stated outright,
-// already translated into the NetRole vocabulary above by the reader that understood the format.
-// StampNetRoles unions it with what the naming lexicon infers.
+// AttrDeclaredRole is the ir.Net.attributes key for a role that the SOURCE FILE stated outright. The
+// reader that understood the format has already translated the role into the NetRole vocabulary
+// above. StampNetRoles unions it with what the naming lexicon infers.
 //
 // A role can be KNOWN rather than guessed. IPC-2581 declares it on LogicalNet/@netClass as a closed
 // enum, so a net called "N$17" can be authoritatively GROUND with nothing in the name to go on.
@@ -68,9 +68,9 @@ func AllNetRoles() []ir.Role {
 // populates it.
 const AttrDeclaredRole = "declared_role"
 
-// RoleVocab is the naming lexicon, the regex sets that decide a net's electrical ROLE by name (rail,
-// ground, feedback), for the cases where a directionless netlist carries the name as the only
-// evidence. A project whose house naming differs extends or replaces each vocabulary via config
+// RoleVocab is the naming lexicon. Its regex sets decide a net's electrical ROLE by name (rail,
+// ground, feedback), for the cases where a directionless netlist has only the name as evidence. A
+// project whose house naming differs extends or replaces each vocabulary via config
 // (WS3-069). check re-exports the names (WS3-072).
 //
 // Matching is on the hierarchy LEAF ("/psu/12V" -> "12V", the WS3-006 convention) and case-insensitive.
@@ -81,42 +81,45 @@ const AttrDeclaredRole = "declared_role"
 // named VDD/VIN, never "3V3", and a bare "+" is a polarized-part terminal, so the net-name forms (^+,
 // digit-then-V) and the supply OUTPUT name VOUT are absent from it.
 type RoleVocab struct {
-	// The EFFECTIVE patterns this vocabulary was built from, so a caller can read back what a project
-	// installed rather than only asking yes/no questions. Embedded by POINTER because a protobuf-go
-	// message holds a DoNotCopy, so a value embedding makes every RoleVocab copy a vet copylocks error.
+	// These are the EFFECTIVE patterns the vocabulary was built from. A caller can read back what a
+	// project installed rather than only asking yes/no questions. The message is embedded by POINTER
+	// because a protobuf-go message holds a DoNotCopy. A value embedding would make every RoleVocab
+	// copy a vet copylocks error.
 	*configpb.NamingLexicon
 
-	// The compiled form, derived from the patterns above at construction and never written again, so
-	// it cannot go stale against them. Replace a vocabulary by building a new one, never by reaching in.
+	// The compiled form is derived from the patterns above at construction and never written again,
+	// so it cannot go stale against them. Replace a vocabulary by building a new one, never by
+	// reaching in.
 	rail, ground, feedback, switching, control, gateDrive, i2c, supplyPin, exposedPad vocab
 	// Transistor TERMINAL pin names (WS3-117), each its own vocabulary because a house can spell them
-	// independently. Consumed ONLY where the component's class is a transistor (see classifyPinRole),
+	// independently. They are read ONLY where the component's class is a transistor (see classifyPinRole),
 	// because bare "S" and "D" mean something on almost every part and an ungated match would mis-role
 	// most of a design. A wrong role is worse than a missing one, since a topology rule then walks a
 	// path that does not exist.
 	gate, source, drain vocab
 	// anode and cathode are the diode family's terminals, under the same gate. feedbackPin and
-	// switchingPin read a regulator's own pins, and noConnect a net its designer left open.
+	// switchingPin read a regulator's own pins, and noConnect reads a net that its designer left open.
 	anode, cathode, feedbackPin, switchingPin, noConnect vocab
 	// voltage reads a net name's tokens as a nominal voltage, through each pattern's capture groups.
 	voltage vocab
-	// attrs are the attribute keys a part number, a value and a do-not-populate flag are read from.
+	// attrs lists the attribute keys to read a part number, a value and a do-not-populate flag from.
 	attrs attrVocab
 	// inferRail is NetNameVocab.infer_rail_from_supply_pins, resolved (absent reads as on).
 	inferRail bool
 }
 
-// vocab is one compiled vocabulary: a name is in it when a pattern matches and no exclusion does.
-// Each pattern keeps the text it was written as, so a role can say which pattern gave it.
+// vocab is one compiled vocabulary. A name is in it when a pattern matches and no exclusion does.
+// Each pattern keeps its source text, so a role can say which pattern gave it.
 type vocab struct {
 	pats, excl []*regexp.Regexp
 	src        []string
 }
 
-// match returns the pattern a name's hierarchy leaf matched, or "" when the name is not in v.
+// match returns the pattern that matched a name's hierarchy leaf, or "" when the name is not in v.
 func (v vocab) match(name string) string { return v.matchWhole(roleLeaf(name)) }
 
-// matchWhole is match over the name as written, for a vocabulary a hierarchy separator means nothing to.
+// matchWhole is match over the name as written, for a vocabulary where a hierarchy separator means
+// nothing.
 func (v vocab) matchWhole(name string) string {
 	for _, x := range v.excl {
 		if x.MatchString(name) {
@@ -131,51 +134,52 @@ func (v vocab) matchWhole(name string) string {
 	return ""
 }
 
-// defaultLexicon is the built-in naming policy, in the SAME schema a project's conventions section
-// carries, so the engine, the wire and the viewer read one definition of the vocabularies (C2). A
-// hand-written Go twin lost three vocabularies twice (WS3-117, agni 680). What the four
-// "named after a rail, not a rail" roles mean is in docsite/content/guide/naming-conventions.md.
+// defaultLexicon is the built-in naming policy, in the SAME schema as a project's conventions
+// section, so the engine, the wire and the viewer read one definition of the vocabularies (C2). A
+// hand-written Go twin lost three vocabularies twice (WS3-117, agni 680).
+// docsite/content/guide/naming-conventions.md explains the four "named after a rail, not a rail"
+// roles.
 func defaultLexicon() *configpb.NamingLexicon {
 	vp := func(pats ...string) *configpb.VocabPatterns { return &configpb.VocabPatterns{Patterns: pats} }
 	return &configpb.NamingLexicon{
 		Net: &configpb.NetNameVocab{
-			// rail: a "+" prefix, the supply-name prefixes, or a "12V"/"3V3"/"5V0" digits-then-V form.
+			// rail matches a "+" prefix, the supply-name prefixes, or a "12V"/"3V3"/"5V0" digits-then-V form.
 			// PWR must end its token, so PWR_3V3 is a rail and PWRGOOD or PWRCTL_POL is not (agni 1245).
 			Rail: vp(`^\+`, `^(VCC|VDD|VEE|VBUS|VIN|VOUT|VBAT|VSUP)`, `^PWR([^A-Z]|$)`, `^[0-9]+V`),
-			// ground: GND or EARTH anywhere, or a VSS prefix.
+			// ground matches GND or EARTH anywhere, or a VSS prefix.
 			Ground: vp(`GND`, `EARTH`, `^VSS`),
-			// feedback: a regulator sense node named with an _FB / feedback / sense suffix.
+			// feedback matches a regulator sense node named with an _FB / feedback / sense suffix.
 			Feedback: vp(`_FB$`, `_VFB$`, `_FEEDBACK$`, `_VSENSE$`, `_SENSE$`, `_SNS$`, `^V?FB$`),
-			// switching: a regulator's power-stage node (_SW, _PHASE, _LX) and bootstrap node (_BOOT).
+			// switching matches a regulator's power-stage node (_SW, _PHASE, _LX) and bootstrap node (_BOOT).
 			// "3V3_SW" is also a load-switch output in some houses; reading it as a regulator internal
 			// is the safe direction, and a project with the other convention narrows this vocabulary.
 			Switching: vp(`_SW$`, `_BOOT$`, `_PHASE$`, `_LX$`),
-			// control: enable and configuration inputs, where the voltage token names the CONVERTER
+			// control matches enable and configuration inputs. Their voltage token names the CONVERTER
 			// ("20V_EN" enables the 20V converter and is driven at logic level).
 			Control: vp(`_EN$`, `_MODE\d*$`, `_SEL\d*$`),
-			// gateDrive: the gate driver's own supply, named after the converter rather than its
-			// voltage ("12V_VDRV" commonly sits at 5V).
+			// gateDrive matches the gate driver's own supply. It is named after the converter rather
+			// than its voltage ("12V_VDRV" is commonly at 5V).
 			GateDrive: vp(`_VDRV$`, `_VDRIVE$`, `_VGATE$`),
-			// i2c: SDA or SCL as a whole token, so SPI_SCLK and MISCL are not, and an I2S data line
-			// named after its SDA pin (I2S0_RX_SDA) is excluded (agni 1255).
+			// i2c matches SDA or SCL as a whole token, so SPI_SCLK and MISCL do not match. An I2S data
+			// line named after its SDA pin (I2S0_RX_SDA) is excluded (agni 1255).
 			I2C: &configpb.VocabPatterns{
 				Patterns: []string{`(^|[^A-Z])(SDA|SCL)([^A-Z]|$)`},
 				Exclude:  []string{`(^|[^A-Z])I2S`},
 			},
 			InferRailFromSupplyPins: proto.Bool(true),
-			// noConnect: a designer's own no-connect spelling. A tool's stub name is not one, so KiCad's
-			// "unconnected-(...)" stays out (agni 1019).
+			// noConnect matches a designer's own no-connect spelling. A tool's stub name is not one, so
+			// KiCad's "unconnected-(...)" is left out (agni 1019).
 			NoConnect: vp(`^no_connect`, `^nc_`),
-			// diffPair: _DP is listed so a USB D+ spelled that way keeps its D.
+			// In diffPair, _DP is listed so a USB D+ spelled that way keeps its D.
 			DiffPair: &configpb.DiffPairVocab{Pairs: []*configpb.DiffSuffix{
 				{Positive: "_DP", Negative: "_DN"}, {Positive: "_P", Negative: "_N"}, {Positive: "+", Negative: "-"},
 			}},
-			// voltage: "5V", "+5V", "3V3", "12V0", "3.3V", each a whole token, so an embedded digit run
-			// ("USB5V", "EVENT5") never reads.
+			// voltage matches "5V", "+5V", "3V3", "12V0" and "3.3V", each as a whole token, so an
+			// embedded digit run ("USB5V", "EVENT5") never reads.
 			Voltage: vp(`^\+?(\d+)V(\d+)?$`, `^\+?(\d+)\.(\d+)V$`),
 		},
-		// Attribute keys, each list matched without regard to case. The values a do-not-populate key
-		// carries include KiCad's yes and a house field's own DNP or y (HackRF One, MNT Reform).
+		// Attribute keys, each list matched without regard to case. A do-not-populate key's values
+		// include KiCad's yes and a house field's own DNP or y (HackRF One, MNT Reform).
 		Attribute: &configpb.AttributeVocab{
 			Mpn:       &configpb.AttributeKeys{Keys: append([]string{}, MPNAliases...)},
 			Value:     &configpb.AttributeKeys{Keys: append([]string{}, valueAttrKeys...)},
@@ -183,15 +187,15 @@ func defaultLexicon() *configpb.NamingLexicon {
 			DnpValues: &configpb.AttributeKeys{Keys: []string{"yes", "true", "1", "y", "dnp"}},
 		},
 		Pin: &configpb.PinNameVocab{
-			// supplyPin: a power-supply INPUT pin name, by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC covers
-			// VCCIO). Stricter than rail (see the RoleVocab doc).
+			// supplyPin matches a power-supply INPUT pin name by prefix (VDD covers VDDA/VDDIO/VDDQ, VCC
+			// covers VCCIO). It is stricter than rail (see the RoleVocab doc).
 			Supply: vp(`^(VCC|VDD|VIN|VBAT|VBUS|VSUP|VPP|AVDD|DVDD|VAUX|VCORE|VEE)`),
 			// Transistor terminals, whole-name anchored, because even inside the class gate an
 			// unanchored "S" would match SDA, SCLK and SENSE.
 			Gate:   vp(`^G$`, `^GATE$`),
 			Source: vp(`^S$`, `^SOURCE$`, `^SRC$`),
 			Drain:  vp(`^D$`, `^DRAIN$`, `^DRN$`),
-			// exposedPad: a package's exposed thermal pad, whole-name anchored (agni 935).
+			// exposedPad matches a package's exposed thermal pad, whole-name anchored (agni 935).
 			ExposedPad: vp(`^(EP|EPAD|EXP|PAD|EXPOSED_?PAD|THERMAL_?PAD)$`),
 			// Diode polarity, whole-name anchored, because CLKA must not read as an anode.
 			Anode:   vp(`^(A|AN|ANODE|\+)$`),
@@ -272,8 +276,8 @@ func (v *RoleVocab) DiffNegative(name string) (string, bool) {
 	return name[:cut] + casedLike(best.GetNegative(), name[cut:]), true
 }
 
-// NominalVoltage reads a rail's nominal voltage off its net name (3V3 -> 3.3), the only voltage
-// evidence a directionless netlist carries. Each token is matched whole against the voltage
+// NominalVoltage reads a rail's nominal voltage off its net name (3V3 -> 3.3). A directionless
+// netlist has no other voltage evidence. Each token is matched whole against the voltage
 // vocabulary. ok is false when no token reads or two disagree ("12V_TO_5V"), and every voltage rule
 // relies on that refusal.
 func (v *RoleVocab) NominalVoltage(name string) (volts float64, ok bool) {
@@ -293,8 +297,8 @@ func (v *RoleVocab) NominalVoltage(name string) (volts float64, ok bool) {
 	return volts, found
 }
 
-// volts reads one token through the first pattern that matches it, the whole volts from its first
-// group and the fraction from the first later group that matched.
+// volts reads one token through the first pattern that matches it. The whole volts come from its
+// first group, and the fraction from the first later group that matched.
 func (v vocab) volts(tok string) (float64, bool) {
 	for _, x := range v.excl {
 		if x.MatchString(tok) {
@@ -407,8 +411,8 @@ func BuildRoleVocab(over *configpb.NamingLexicon) (*RoleVocab, error) {
 }
 
 // mergeLexicon resolves a project's overrides against the built-ins, vocabulary by vocabulary, and
-// returns the EFFECTIVE lexicon. That value is what RoleVocab embeds, so reading the patterns back off
-// a vocabulary answers what it actually matches rather than what was shipped.
+// returns the EFFECTIVE lexicon. RoleVocab embeds that value, so reading the patterns back off a
+// vocabulary answers what it actually matches rather than what was shipped.
 func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 	if over == nil {
 		return base
@@ -455,7 +459,7 @@ func mergeLexicon(base, over *configpb.NamingLexicon) *configpb.NamingLexicon {
 
 // mergeVocab applies one vocabulary's override. Patterns are ADDED to the built-ins unless replace is
 // set, in which case they become the whole set. Replace with no patterns yields an empty vocabulary,
-// which is how a project turns a built-in role off.
+// and a project turns a built-in role off that way.
 func mergeVocab(base, over *configpb.VocabPatterns) *configpb.VocabPatterns {
 	if over == nil || (len(over.GetPatterns()) == 0 && len(over.GetExclude()) == 0 && !over.GetReplace()) {
 		return base
@@ -510,13 +514,13 @@ func compilePatterns(pats []string) ([]*regexp.Regexp, error) {
 
 // StampNetRoles fills each net's roles SET once at ingestion (WS3-072), so the core reads a normalized
 // net.role fact instead of re-running name matching per net per rule. It recomputes and overwrites. A
-// net matching no vocabulary gets an empty set, which consumers read as "no role", the same way an
+// net matching no vocabulary gets an empty set. Consumers read that as "no role", the same way an
 // empty device_classes reads as "unknown". This is the process-level form of (*Lexicon).StampNetRoles.
 func StampNetRoles(d *ir.Design) { ActiveLexicon().StampNetRoles(d) }
 
-// RoleTokens returns just the role tokens a net carries, dropping the evidence. For the many callers
-// that ask WHICH roles rather than how each was established; a caller that needs the source reads
-// the NetRole values, or asks check.NetRoleSource.
+// RoleTokens returns a net's role tokens, dropping the evidence. It is for the many callers that ask
+// WHICH roles rather than how each was established. A caller that needs the source reads the NetRole
+// values, or asks check.NetRoleSource.
 func RoleTokens(n *ir.Net) []string {
 	roles := n.GetRoles()
 	if len(roles) == 0 {
@@ -529,8 +533,8 @@ func RoleTokens(n *ir.Net) []string {
 	return out
 }
 
-// NetRoles returns the roles a net carries, dropping the evidence. The typed counterpart of
-// RoleTokens, for a caller comparing against the vocabulary rather than rendering it.
+// NetRoles returns a net's roles, dropping the evidence. It is the typed counterpart of RoleTokens,
+// for a caller comparing against the vocabulary rather than rendering it.
 func NetRoles(n *ir.Net) []ir.Role {
 	roles := n.GetRoles()
 	if len(roles) == 0 {
@@ -543,7 +547,7 @@ func NetRoles(n *ir.Net) []ir.Role {
 	return out
 }
 
-// ConventionRoles builds the role set a naming convention would stamp, for an IR assembled by hand
+// ConventionRoles builds a role set as a naming convention would stamp it, for an IR assembled by hand
 // rather than by the ingestion pass (a test fixture, an overlay composing a design in memory). It
 // names CONVENTION explicitly rather than leaving the source unspecified, so a hand-built net states
 // the same thing the pass would have stated about the same name.
@@ -556,13 +560,13 @@ func ConventionRoles(roles ...ir.Role) []*ir.NetRole {
 }
 
 // AddNetRole merges one role fact into a net's set, keeping the STRONGER evidence when that role is
-// already present. Every evidence tier merges through it: the ingestion pass (names and format
+// already present. Every evidence tier merges through it, both the ingestion pass (names and format
 // declarations) and the params tier (a datasheet's pin functions). A declared ground whose name also
-// spells "GND" stays declared, and running a pass twice merges rather than duplicating.
+// spells "GND" keeps its declared source, and running a pass twice merges rather than duplicating.
 func AddNetRole(n *ir.Net, role ir.Role, src ir.RoleSource) { addNetRoleWhy(n, role, src, "") }
 
-// AddNetRoleWhy is AddNetRole with the reason the role carries, which travels with the stronger
-// evidence: a role upgraded to a stronger source takes that source's reason.
+// AddNetRoleWhy is AddNetRole with a reason for the role. The reason goes with the stronger evidence,
+// so a role upgraded to a stronger source takes that source's reason.
 func AddNetRoleWhy(n *ir.Net, role ir.Role, src ir.RoleSource, why string) {
 	addNetRoleWhy(n, role, src, why)
 }
@@ -585,7 +589,7 @@ func addNetRoleWhy(n *ir.Net, role ir.Role, src ir.RoleSource, why string) {
 
 // rolesFor is the per-net projection StampNetRoles applies. It emits the role the SOURCE declared
 // (if any), then every vocabulary the NAME matches, in a stable order and without repeats. A rail-named
-// feedback node ("VCC1V2_FB") carries both rail and feedback, and precedence is the consumer's call.
+// feedback node ("VCC1V2_FB") gets both rail and feedback, and the consumer decides precedence.
 // The declared role is UNIONED with the name reading rather than replacing it, because a source that
 // says GROUND does not thereby say "and nothing else".
 func rolesFor(v *RoleVocab, n *ir.Net) []*ir.NetRole {

@@ -3,8 +3,8 @@
 // services that run over them.
 //
 // There are FOUR global registration hooks and three fail quietly when a binary misses one. Without
-// stdlib/rules/builtin the catalog is empty, without stdlib/relations the fact base is, and either
-// reports every design clean, so New refuses both at startup. See
+// stdlib/rules/builtin the catalog is empty. Without stdlib/relations the fact base is empty. Either
+// one reports every design clean, so New refuses both at startup. See
 // docsite/content/build/extending.md#compose-in-main.
 //
 // Every option takes a VALUE (a loaded profile set, a parsed declaration, an fs.FS), never a path.
@@ -40,8 +40,8 @@ type Engine struct {
 // naming the import that fixes it.
 //
 // It returns an error where check.CatalogWith and facts.NewRegistry panic. Those run from an init or
-// a composing main, where a startup panic is the convention; New runs inside an embedder's program,
-// which has to decide for itself what to do about a bad composition.
+// a composing main, where a startup panic is the convention. New runs inside an embedder's program,
+// and that program has to decide for itself what to do about a bad composition.
 func New(opts ...Option) (*Engine, error) {
 	b := &builder{}
 	for _, o := range opts {
@@ -119,7 +119,7 @@ func (e *Engine) checkSeams(b *builder) error {
 
 // Warnings reports compositions that are legitimate but worth saying out loud, each naming the
 // import that would change it. An embedder may want the engine without one of these pieces, and
-// nothing else reports their absence; an empty catalog or fact base gets an error from New instead.
+// nothing else reports their absence. An empty catalog or fact base gets an error from New instead.
 func (e *Engine) Warnings() []string { return e.warnings }
 
 // Catalog returns the composed rule catalog, holding the built-ins, every RegisterSource'd suite,
@@ -131,13 +131,14 @@ func (e *Engine) Catalog() *check.Catalog { return e.catalog }
 // core/query's *From entry points rather than through a service.
 func (e *Engine) Registry() *facts.Registry { return e.registry }
 
-// ProfileIndex returns the by-name interface-profile index the review's absence gate reads. An
-// interface counts as evaluating when any profile under its name is in the run, and the item scoped
-// to it unions their nets.
+// ProfileIndex returns the by-name interface-profile index, which the review's absence gate reads.
+// An interface counts as evaluating when any profile under its name is in the run, and the item
+// scoped to it unions their nets.
 //
 // A caller running a review itself needs it, and it MUST come from the same call that built the
-// catalog. A separately built index can silently disagree, clearing the gate on an interface whose
-// rules the catalog dropped, so the item scores a clean pass on an interface nothing checked.
+// catalog. A separately built index can silently disagree. It can clear the gate on an interface
+// after the catalog dropped that interface's rules, and the item then scores a clean pass on an
+// interface nothing checked.
 func (e *Engine) ProfileIndex() map[string][]profiles.Profile { return e.byName }
 
 // ProjectResolver returns the resolver the rule-running services use to find a design's project and
@@ -169,9 +170,9 @@ type RuleLoader interface {
 	service.ConventionLoader
 }
 
-// RuleServiceDeps is the per-deployment I/O a rule-running service needs and the Engine does not
-// hold: where designs are read from, where stored runs live, the seeded datasheet corpus, and the
-// name of the deployment's base naming convention.
+// RuleServiceDeps holds the per-deployment I/O a rule-running service needs and the Engine does not
+// hold. It covers where designs are read from, where stored runs live, the seeded datasheet corpus,
+// and the name of the deployment's base naming convention.
 type RuleServiceDeps struct {
 	Loader         RuleLoader
 	ReviewStore    service.ReviewStore
@@ -179,7 +180,7 @@ type RuleServiceDeps struct {
 	BaseConvention string
 }
 
-// RuleServices builds the two services that RUN rules from this Engine's one catalog, the
+// RuleServices builds the two services that RUN rules from this Engine's one catalog. They are the
 // CheckService behind a check panel and ListRules, and the ReviewService behind the review
 // resources.
 //

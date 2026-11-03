@@ -14,7 +14,7 @@ func TestDesigns(t *testing.T) {
 	got := Designs()
 	// Contains the fixtures the examples rely on; other examples add more over time, so this
 	// is a subset check, not an exact-list assertion. A fixture that is a declared design is
-	// listed at its path, since that is where it lives beside the companions it declares.
+	// listed at its path, because it lives there beside the companions it declares.
 	for _, name := range []string{
 		"demo-board.ipc2581.xml", "demo-board.kicad_pcb", "two-resistors.edn",
 		"i2c-sensor/i2c-sensor.edn", "i2c-sensor/i2c-sensor.eds",
@@ -97,8 +97,8 @@ func TestI2CSensorFindings(t *testing.T) {
 }
 
 // TestRevPairDiff pins the diff-example fixture pair, where rev-a -> rev-b must produce one change of
-// each class (renamed, hard, new, deleted) plus one added component, with the unchanged nets
-// staying quiet. Compared as Report fields, not the rendered string.
+// each class (renamed, hard, new, deleted) plus one added component, and must not report the
+// unchanged nets. Compared as Report fields, not the rendered string.
 func TestRevPairDiff(t *testing.T) {
 	a, err := ReadFixture("rev-a.edn")
 	if err != nil {
@@ -185,8 +185,8 @@ func TestDesignsOmitsDescriptors(t *testing.T) {
 	}
 }
 
-// The base name keeps working after a fixture moves into a declared design's folder, which is what
-// lets a walkthrough's default and a prose sentence go on naming it the way a reader would.
+// The base name keeps working after a fixture moves into a declared design's folder. A
+// walkthrough's default and a prose sentence can then go on naming it the way a reader would.
 func TestReadFixtureResolvesABareBaseName(t *testing.T) {
 	byBase, err := ReadFixture("i2c-sensor.edn")
 	if err != nil {

@@ -13,11 +13,11 @@ export const file_agni_v1_webapi_validate: GenFile = /*@__PURE__*/
   fileDesc("Ch1hZ25pL3YxL3dlYmFwaS92YWxpZGF0ZS5wcm90bxIOYWduaS52MS53ZWJhcGkicAoOVmFsaWRhdGVSZXBvcnQSLQoFZmlsZXMYASADKAsyHi5hZ25pLnYxLndlYmFwaS5GaWxlVmFsaWRhdGlvbhIOCgZwYXNzZWQYAiABKAUSDgoGZmFpbGVkGAMgASgFEg8KB3NraXBwZWQYBCABKAUirgEKDkZpbGVWYWxpZGF0aW9uEgwKBHBhdGgYASABKAkSDgoGZm9ybWF0GAIgASgJEgoKAm9rGAMgASgIEhAKCHByb2JsZW1zGAQgAygJEi4KB25ldGxpc3QYBSABKAsyHS5hZ25pLnYxLndlYmFwaS5OZXRsaXN0Q291bnRzEjAKCGdlb21ldHJ5GAYgASgLMh4uYWduaS52MS53ZWJhcGkuR2VvbWV0cnlDb3VudHMiMQoNTmV0bGlzdENvdW50cxISCgpjb21wb25lbnRzGAEgASgFEgwKBG5ldHMYAiABKAUiZgoOR2VvbWV0cnlDb3VudHMSDgoGc2hlZXRzGAEgASgFEg8KB3N5bWJvbHMYAiABKAUSEgoKcGxhY2VtZW50cxgDIAEoBRINCgV3aXJlcxgEIAEoBRIQCghyZXNvbHZlZBgFIAEoBUIuWixnaXRodWIuY29tL3BhbnlhbS9hZ25pL2dlbi9nby9hZ25pL3YxL3dlYmFwaWIGcHJvdG8z");
 
 /**
- * ValidateReport is the canonical wire form of `agni validate` (WS6-007): per-file
- * reader-health results over a corpus sweep. Like CheckReport, the report is a wire shape
- * rather than a CLI-side pivot, so `validate --format json`, a future RPC, and any tooling
- * parse one message. A file's format is the registry label; an empty format means no
- * reader claims the extension (surfaced for explicitly named files, skipped in dir walks).
+ * ValidateReport is the canonical wire form of `agni validate` (WS6-007). It holds per-file
+ * reader-health results over a corpus sweep. Like CheckReport, it is a wire shape rather than
+ * a CLI-side pivot, so `validate --format json`, a future RPC and any tooling parse one
+ * message. A file's format is the registry label. An empty format means no reader claims the
+ * extension. Such a file is reported when it was named explicitly and skipped in a dir walk.
  *
  * @generated from message agni.v1.webapi.ValidateReport
  */
@@ -53,9 +53,10 @@ export const ValidateReportSchema: GenMessage<ValidateReport> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_validate, 0);
 
 /**
- * FileValidation is one file's reader-health result. The counts messages are present only
- * for the tiers the format carries (a netlist-only format has no geometry counts and vice
- * versa); problems lists the failed invariants in human-readable form, empty when ok.
+ * FileValidation is one file's reader-health result. A counts message is present only when
+ * the format has that tier. A netlist-only format has no geometry counts, and a drawing-only
+ * format has no netlist counts. problems lists the failed invariants in human-readable form,
+ * and it is empty when ok.
  *
  * @generated from message agni.v1.webapi.FileValidation
  */
@@ -99,7 +100,7 @@ export const FileValidationSchema: GenMessage<FileValidation> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_validate, 1);
 
 /**
- * NetlistCounts is the netlist-tier structural summary validate reports per file.
+ * NetlistCounts is a structural summary of the netlist tier. validate reports one per file.
  *
  * @generated from message agni.v1.webapi.NetlistCounts
  */
@@ -123,7 +124,7 @@ export const NetlistCountsSchema: GenMessage<NetlistCounts> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_validate, 2);
 
 /**
- * GeometryCounts is the drawing-tier structural summary validate reports per file.
+ * GeometryCounts is a structural summary of the drawing tier. validate reports one per file.
  * resolved counts the placements whose (cell_ref, library_ref) joins a symbol definition.
  *
  * @generated from message agni.v1.webapi.GeometryCounts

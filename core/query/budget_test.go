@@ -5,8 +5,8 @@ import (
 	"testing"
 )
 
-// TestNarrowBudgetNeverRaises is the rule that lets a request ask for less work than a deployment
-// allows and never more (agni issue 792).
+// TestNarrowBudgetNeverRaises holds the rule that a request may ask for less work than a deployment
+// allows, and never more (agni issue 792).
 func TestNarrowBudgetNeverRaises(t *testing.T) {
 	for _, c := range []struct {
 		name        string

@@ -9,8 +9,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// patternDesign carries net names whose ROLE suffix is shared across buses (_H) and whose identity is
-// the prefix, a naming that affix matching cannot discriminate (WS3-057).
+// patternDesign has net names whose ROLE suffix (_H) is shared across buses, and whose identity is
+// the prefix. Affix matching cannot discriminate this naming (WS3-057).
 func patternDesign() check.Model {
 	return check.NewModel(&ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "d"}}},
@@ -32,8 +32,8 @@ func matched(t *testing.T, m check.Model, text string) []string {
 	return out
 }
 
-// TestGlobPredicate pins that glob matches the WHOLE name with * as any run and ? as one character,
-// which is what discriminates an ETH_ bus from a CAN_ bus that shares the bare _H suffix.
+// TestGlobPredicate pins that glob matches the WHOLE name, with * as any run and ? as one
+// character. Whole-name matching tells an ETH_ bus from a CAN_ bus that shares the bare _H suffix.
 func TestGlobPredicate(t *testing.T) {
 	m := patternDesign()
 	cases := map[string][]string{
@@ -51,9 +51,9 @@ func TestGlobPredicate(t *testing.T) {
 	}
 }
 
-// TestGlobStarCrossesSlash pins the reason glob is translated to a regexp rather than deferring to
-// path.Match. path.Match's * stops at "/", and a hierarchical net name (a sub-sheet local) contains
-// one, so path.Match would silently miss exactly the names a multi-instance bus is named with.
+// TestGlobStarCrossesSlash pins why glob is translated to a regexp rather than deferring to
+// path.Match. path.Match's * stops at "/". A hierarchical net name, such as a sub-sheet local,
+// contains one. So path.Match would silently miss exactly the names of a multi-instance bus.
 func TestGlobStarCrossesSlash(t *testing.T) {
 	if got := matched(t, patternDesign(), `net.pin_count(?n,?c), str.glob(?n,"*DATA0") => ?n`); len(got) != 1 || got[0] != "/amp1/DATA0" {
 		t.Errorf(`str.glob("*DATA0") => %v, want the hierarchical net /amp1/DATA0`, got)
@@ -77,9 +77,9 @@ func TestMatchPredicate(t *testing.T) {
 	}
 }
 
-// TestPatternPredicateErrors pins that a malformed regex is an EVAL ERROR, not a silent non-match,
-// as a bad pattern that quietly matched nothing would read as "the design is clean" on a
-// completeness check. Unbound and wrong-arity forms fail like every other filter.
+// TestPatternPredicateErrors pins that a malformed regex is an EVAL ERROR, not a silent non-match.
+// On a completeness check, a bad pattern that quietly matched nothing would read as "the design is
+// clean". Unbound and wrong-arity forms fail like every other filter.
 func TestPatternPredicateErrors(t *testing.T) {
 	m := patternDesign()
 	for _, text := range []string{

@@ -11,7 +11,7 @@ import (
 // because the assembled board has no such part to judge (agni issue 1082). It is the blame-side twin
 // of a credit-side rule asking Model.IsFitted, which agni issue 961 made every crediting rule do.
 //
-// It is opt-in, because a rule about a part can still matter when the part is not fitted: two
+// It is opt-in, because a rule about a part can still matter when the part is not fitted. Two
 // unfitted parts sharing a reference designator are still a netlist defect. It wraps r's Eval in
 // place, so every surface that evaluates r gets it, and marking a rule twice wraps it once.
 func OnFittedParts(r *Rule) *Rule {
@@ -35,8 +35,8 @@ func OnFittedParts(r *Rule) *Rule {
 	return r
 }
 
-// unfittedSubject returns the first part among subjects, named as a component or through one of its
-// pins, that is marked do-not-populate, or "" when every one is fitted.
+// unfittedSubject returns the first part among subjects that is marked do-not-populate, or "" when
+// every one is fitted. A subject names a part as a component or through one of its pins.
 func unfittedSubject(m Model, subjects []Entity) string {
 	for _, s := range subjects {
 		if (s.Kind == KindComponent || s.Kind == KindPin) && !m.IsFitted(s.Ref) {

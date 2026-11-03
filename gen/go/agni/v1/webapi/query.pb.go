@@ -30,34 +30,35 @@ type RunQueryRequest struct {
 	//
 	//	component.mpn(?r,?m), component.net(?r,?n), net.max_voltage(?n,?v), ?v < 30 => ?r, ?n
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
-	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-	// a fact base counts, candidate comparisons, each row a generator emits and the connections a
-	// circuit walk examines. It can only LOWER the
-	// deployment's own budget, never raise it, and zero leaves that budget as it is. A query past its budget fails with RESOURCE_EXHAUSTED, naming the budget.
+	// work_budget caps the work each query in this request may do (agni issue 792). Work counts
+	// candidate comparisons, each row a generator emits, and each connection a circuit walk
+	// examines, in the units a fact base counts. It can only LOWER the deployment's own budget,
+	// never raise it, and zero leaves that budget as it is. A query past its budget fails with
+	// RESOURCE_EXHAUSTED, naming the budget.
 	WorkBudget int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	// bindings give goal variables values from the caller, keyed by the variable's name without its
-	// `?` (agni issue 793). A bound variable answers exactly as the same value written into the goal as
-	// a constant, so a caller asking about one net or part sends the same query text every time and the
-	// value as data, with nothing to escape or splice. A binding naming a variable the goal does not use
-	// is refused as an invalid argument. Rules are unaffected: their variables are their own.
+	// `?` (agni issue 793). A bound variable answers exactly as if the value were written into the
+	// goal as a constant. So a caller asking about one net or part sends the same query text every
+	// time, and sends the value as data, with nothing to escape or splice. If a binding names a
+	// variable that the goal does not use, the request fails as an invalid argument. Bindings do
+	// not reach rules, since a rule's variables are its own.
 	Bindings map[string]*QueryValue `protobuf:"bytes,7,rep,name=bindings,proto3" json:"bindings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// omit_locations leaves out where each answer entity is drawn: its AnswerEntity.sheet_ids and
-	// reason stay empty, and the drawing is not loaded to find them, for a caller that draws nothing,
-	// such as a script writing a workbook. The entities themselves, and cell kinds and pin refs, are
-	// still filled, since they type the answer.
+	// omit_locations leaves out where each answer entity is drawn. It is for a caller that draws
+	// nothing, such as a script writing a workbook. Each AnswerEntity's sheet_ids and reason are then
+	// empty, and the server does not load the drawing to find them. The entities themselves, the cell
+	// kinds and the pin refs are still filled, since they type the answer.
 	OmitLocations bool `protobuf:"varint,8,opt,name=omit_locations,json=omitLocations,proto3" json:"omit_locations,omitempty"`
-	// limit caps the rows the answer returns, for a caller that wants the first page of a large answer
-	// fast, such as a click on a net carrying a thousand pins (agni issue 896). It goes into evaluation
-	// rather than being a slice of the full answer, so only the rows returned are kept, located and
-	// sent. The goal is still solved whole, because total counts every row. Where the query text
-	// writes its own `limit`, the smaller of the two applies.
-	// Zero leaves the query's own limit, if any, as it is. RunQueryResponse.total says how many rows
-	// the limit left out.
+	// limit caps the rows the answer returns. It serves a caller that wants the first page of a large
+	// answer fast, such as a click on a net with a thousand pins (agni issue 896). Evaluation applies
+	// the limit, instead of slicing the full answer afterwards. So the server keeps, locates and sends
+	// only the returned rows. It still solves the goal whole, because total counts every row. If the
+	// query text writes its own `limit`, the smaller of the two applies. Zero leaves the query's own
+	// limit, if any, as it is. RunQueryResponse.total says how many rows the limit left out.
 	Limit int32 `protobuf:"varint,9,opt,name=limit,proto3" json:"limit,omitempty"`
-	// witnesses asks for how each row was derived (agni issue 794): QueryRow.witnesses then holds, per
-	// goal literal, the fact or rule that proved it. Off by default, because the engine keeps a
-	// derivation per derived tuple only when asked, and a query that wants answers alone pays nothing.
-	// An aggregate row has none, since a group merges many derivations.
+	// witnesses asks how each row was derived (agni issue 794). QueryRow.witnesses then holds the fact
+	// or rule that proved each goal literal. Off by default. The engine keeps a derivation per derived
+	// tuple only when asked, so a query that wants answers alone costs nothing extra. An aggregate row
+	// has no witnesses, since a group merges many derivations.
 	Witnesses     bool `protobuf:"varint,11,opt,name=witnesses,proto3" json:"witnesses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -142,42 +143,40 @@ func (x *RunQueryRequest) GetWitnesses() bool {
 	return false
 }
 
-// QueryRow is one answer: cells aligns positionally with RunQueryResponse.columns. Its provenance
-// (the citations of the base facts that produced it) and each entity cell's location are kept once
-// on the response and pointed to from here (agni issue 916), so a value shared by many rows is sent
-// once.
+// QueryRow is one answer, and cells aligns positionally with RunQueryResponse.columns. The row's
+// provenance is the citations of the base facts that produced it. The response keeps that
+// provenance and each entity cell's location once, and the row points to them (agni issue 916). So
+// a value shared by many rows is sent once.
 type QueryRow struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Cells []string               `protobuf:"bytes,1,rep,name=cells,proto3" json:"cells,omitempty"`
 	// cell_kinds aligns positionally with cells and OVERRIDES column_kinds for this row (agni issue
-	// 338), set only where a column's kind cannot be a column property at all.
+	// 338). It is set only where a column's kind cannot be a column property at all.
 	//
 	// Kind is normally fixed per column, because a variable binds at the same relation position in
-	// every row. `entity(?name, ?kind)` breaks that: it enumerates what exists, so one answer set
-	// holds a component, a net and a bus, and the kind of the `name` cell is whatever that row's
-	// `kind` cell says. Without this the name column types as a scalar and a search result is the one
-	// answer a reader cannot click.
+	// every row. `entity(?name, ?kind)` breaks that. It enumerates what exists, so one answer set holds
+	// a component, a net and a bus. The kind of each `name` cell is whatever that row's `kind` cell
+	// says. Without cell_kinds, the name column would type as a scalar, and a reader could not click a
+	// search result, though every other answer is clickable.
 	//
-	// Empty for every ordinary query, and "" for every non-polymorphic cell within a row that has
-	// one, so a client reads `cell_kinds[i] || column_kinds[i]` and column_kinds keeps meaning what it
-	// has always meant.
+	// Empty for every ordinary query. In a row that has a polymorphic cell, every other cell is "".
+	// So a client reads `cell_kinds[i] || column_kinds[i]`, and column_kinds means what it always has.
 	CellKinds []string `protobuf:"bytes,5,rep,name=cell_kinds,json=cellKinds,proto3" json:"cell_kinds,omitempty"`
-	// cell_refs aligns positionally with cells and carries the OTHER HALF of a cell's identity, set
-	// only where one cell cannot name the entity by itself (agni issue 259 follow-up).
+	// cell_refs aligns positionally with cells and holds the OTHER HALF of a cell's identity. It is
+	// set only where one cell cannot name the entity by itself (agni issue 259 follow-up).
 	//
-	// A pin is the case. Its identity is two fields, the component and the designator, so the cell
-	// holding "5" names nothing until you know it means U7's pin 5. That is why a pin column typed as
-	// a scalar for so long: not because a pin is unlocatable, but because a table cell is one string
-	// and a pin is two.
+	// A pin needs it. A pin's identity is two fields, the component and the designator. A cell holding
+	// "5" names nothing until you know it means U7's pin 5. A table cell is one string and a pin is
+	// two. So a pin column typed as a scalar for a long time, though a pin can be located.
 	//
-	// This is a sibling of cell_kinds rather than the same mechanism. A pin column's KIND is fixed
-	// (every row is a pin, so column_kinds says "pin"); what varies per row is the ref, which may come
-	// from a sibling column, from a constant in the query, or from a variable the projection dropped.
-	// Empty for every column that is not a pin column.
+	// This is a sibling of cell_kinds, not the same mechanism. A pin column's KIND is fixed, since
+	// every row is a pin and column_kinds says "pin". The ref varies per row. It may come from a
+	// sibling column, from a constant in the query, or from a variable the projection dropped. Empty
+	// for every column that is not a pin column.
 	CellRefs []string `protobuf:"bytes,6,rep,name=cell_refs,json=cellRefs,proto3" json:"cell_refs,omitempty"`
-	// cell_entity aligns with cells: for an entity cell, 1 + its index in RunQueryResponse.entities,
-	// where its sheets and locate reason are kept once for every row naming it; 0 for a scalar cell
-	// (agni issue 916). Empty when the answer has no entity column.
+	// cell_entity aligns with cells (agni issue 916). An entity cell holds 1 + its index in
+	// RunQueryResponse.entities. That entry keeps the entity's sheets and locate reason once for every
+	// row naming it. A scalar cell holds 0. Empty when the answer has no entity column.
 	CellEntity []int32 `protobuf:"varint,7,rep,packed,name=cell_entity,json=cellEntity,proto3" json:"cell_entity,omitempty"`
 	// cite_index is the row's citations as indices into RunQueryResponse.sources, in cites' order, so
 	// a source cited by every row is one string on the response rather than one per row (agni 916).
@@ -185,9 +184,9 @@ type QueryRow struct {
 	// cell_why aligns with cells and says why an aggregate cell is absent, such as a sum over numbers in
 	// different units; "" for every other cell. Empty when no cell in the row has a reason.
 	CellWhy []string `protobuf:"bytes,9,rep,name=cell_why,json=cellWhy,proto3" json:"cell_why,omitempty"`
-	// witnesses say how the row holds, one per literal of the goal that proves something, in the order
-	// the goal is written (agni issue 794). Filled only when the request asked for witnesses, and empty
-	// for an aggregate row.
+	// witnesses say how the row holds (agni issue 794). There is one per goal literal that proves
+	// something, in the goal's written order. Filled only when the request asked for witnesses, and
+	// empty for an aggregate row.
 	Witnesses     []*QueryWitness `protobuf:"bytes,10,rep,name=witnesses,proto3" json:"witnesses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -272,11 +271,11 @@ func (x *QueryRow) GetWitnesses() []*QueryWitness {
 	return nil
 }
 
-// QueryWitness is how one fact behind an answer row holds (agni issue 794). A leaf is a fact the
-// design's relations gave, with its citations. A derived node names the rule that derived it and
-// holds that rule's body witnesses as children, in the order the rule is written, so a row over a
-// library member reads as the member's definition with each body fact filled in. A `not` that held
-// is a negated leaf, which proves an absence and so has no citations and no children.
+// QueryWitness is how one fact behind an answer row holds (agni issue 794). A leaf is a fact from
+// the design's relations, with its citations. A derived node names the rule that derived it. Its
+// children are that rule's body witnesses, in the rule's written order. So a row over a library
+// member reads as the member's definition with each body fact filled in. A `not` that held becomes
+// a negated leaf. It proves an absence, so it has no citations and no children.
 type QueryWitness struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// relation is the relation proved, as the query or library names it.
@@ -284,16 +283,16 @@ type QueryWitness struct {
 	// values are the proved tuple's values, spelled as cells are. On a negated leaf, an argument the
 	// negation left unbound is "".
 	Values []string `protobuf:"bytes,2,rep,name=values,proto3" json:"values,omitempty"`
-	// value_entity aligns with values as QueryRow.cell_entity aligns with cells: 1 + the index in
-	// RunQueryResponse.entities of the entity a value names, typed from the relation's signature, and 0
-	// for a scalar. Empty when no value names an entity.
+	// value_entity aligns with values, as QueryRow.cell_entity aligns with cells. A value that names
+	// an entity holds 1 + that entity's index in RunQueryResponse.entities. The relation's signature
+	// decides whether a value names an entity. A scalar holds 0. Empty when no value names an entity.
 	ValueEntity []int32 `protobuf:"varint,3,rep,packed,name=value_entity,json=valueEntity,proto3" json:"value_entity,omitempty"`
 	// rule is the rule that derived a derived node, as written. Empty on a leaf.
 	Rule string `protobuf:"bytes,4,opt,name=rule,proto3" json:"rule,omitempty"`
 	// negated marks a `not` literal that held.
 	Negated bool `protobuf:"varint,5,opt,name=negated,proto3" json:"negated,omitempty"`
-	// cite_index is a leaf's citations as indices into RunQueryResponse.sources, the table the rows'
-	// own citations point into, so a source is sent once however many witnesses cite it.
+	// cite_index is a leaf's citations as indices into RunQueryResponse.sources. The rows' own
+	// citations point into the same table. So a source is sent once, however many witnesses cite it.
 	CiteIndex []int32 `protobuf:"varint,6,rep,packed,name=cite_index,json=citeIndex,proto3" json:"cite_index,omitempty"`
 	// children are a derived node's body witnesses, in the rule's written order.
 	Children      []*QueryWitness `protobuf:"bytes,7,rep,name=children,proto3" json:"children,omitempty"`
@@ -380,16 +379,16 @@ func (x *QueryWitness) GetChildren() []*QueryWitness {
 	return nil
 }
 
-// AnswerEntity is one entity an answer's cells name, with where it is drawn, kept once on the
-// response however many rows name it (agni issue 916). kind is net, component or pin; ref is the
-// net or ref_des, and for a pin the component; pin is the pin's name, empty otherwise.
+// AnswerEntity is one entity that an answer's cells name, with where it is drawn (agni issue 916).
+// The response keeps it once, however many rows name it. kind is net, component or pin. ref is the
+// net or ref_des, and for a pin it is the component. pin is the pin's name, and empty otherwise.
 type AnswerEntity struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Kind  string                 `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
 	Ref   string                 `protobuf:"bytes,2,opt,name=ref,proto3" json:"ref,omitempty"`
 	Pin   string                 `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
-	// The sheet ids this entity is drawn on, for the client to resolve to names. Empty when the answer omitted
-	// locations or the entity is drawn nowhere, which reason then says.
+	// The sheet ids this entity is drawn on, for the client to resolve to names. Empty when the
+	// answer omitted locations or the entity is drawn nowhere. reason then says which.
 	SheetIds      []string            `protobuf:"bytes,4,rep,name=sheet_ids,json=sheetIds,proto3" json:"sheet_ids,omitempty"`
 	Reason        checks.LocateReason `protobuf:"varint,5,opt,name=reason,proto3,enum=agni.v1.checks.LocateReason" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -463,46 +462,47 @@ func (x *AnswerEntity) GetReason() checks.LocateReason {
 
 type RunQueryResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// columns are the projected answer columns (the query's Select, or its goal variables in
-	// first-seen order), naming each cell position in every row.
+	// columns are the projected answer columns, and they name each cell position in every row. They
+	// come from the query's Select, or else from its goal variables in first-seen order.
 	Columns []string    `protobuf:"bytes,1,rep,name=columns,proto3" json:"columns,omitempty"`
 	Rows    []*QueryRow `protobuf:"bytes,2,rep,name=rows,proto3" json:"rows,omitempty"`
-	// column_kinds aligns positionally with columns (WS9-038): the entity kind of each column,
-	// derived from the arg-label of the relation position its variable was bound from — "component"
-	// (a ref_des), "net", or "" for a scalar or unresolved column. It drives which cells the panel
-	// renders as clickable-to-locate. Empty (or all "") when no column resolves to an entity.
+	// column_kinds aligns positionally with columns (WS9-038) and gives each column's entity kind.
+	// Each column's variable was bound at some relation position. That position's arg-label
+	// decides the kind: "component" (a ref_des), "net", or "" for a scalar or unresolved column. The
+	// panel renders a cell as clickable-to-locate according to this kind. Empty, or all "", when no
+	// column resolves to an entity.
 	ColumnKinds []string `protobuf:"bytes,3,rep,name=column_kinds,json=columnKinds,proto3" json:"column_kinds,omitempty"`
-	// query and source echo the request's identifying inputs, so an ANSWER says which question
+	// query and source echo the request's identifying inputs. So an ANSWER says which question
 	// produced it and which design it was asked of.
 	//
-	// Added when the CLI's `--format json` moved onto this message. The CLI had been emitting a
-	// hand-rolled shape that carried both, and dropping them to adopt the wire form would have made
-	// the machine-readable format the only one that cannot say what it is an answer to, which is
-	// backwards: markdown and html carry them precisely so a saved view states its own question.
+	// They were added when the CLI's `--format json` moved onto this message. The CLI's earlier
+	// hand-rolled shape had both. Without them, the machine-readable format would have been the only
+	// one unable to say what it answers. markdown and html include both, so that a saved view states
+	// its own question, and JSON should do no less.
 	//
-	// The panel ignores them, since it sent the request and already knows. That is the ordinary cost
-	// of a self-describing response and it is one string each.
+	// The panel ignores them, since it sent the request and already knows. Any self-describing
+	// response costs this much, and here it is one string each.
 	Query  string `protobuf:"bytes,4,opt,name=query,proto3" json:"query,omitempty"`
 	Source string `protobuf:"bytes,5,opt,name=source,proto3" json:"source,omitempty"`
-	// work is what answering this query cost, in the units a work budget counts, so a deployment can
-	// see which queries are expensive and choose a budget from evidence (agni issue 792). It is what
-	// THIS request spent: a server keeps a design's fact base between requests (agni issue 895), and
-	// a derived relation an earlier query already worked out is reused rather than derived again
-	// (panyam/jaala#140), so the same query can cost less on a warm server than on a cold read. A
-	// cold read costs at least this much.
+	// work is what answering this query cost, in the units a work budget counts (agni issue 792). A
+	// deployment can see which queries are expensive and choose a budget from evidence. It counts
+	// what THIS request spent. A server keeps a design's fact base between requests (agni issue 895).
+	// When an earlier query already derived a relation, the server reuses it rather than deriving it
+	// again (panyam/jaala#140). So the same query can cost less on a warm server than on a cold read.
+	// A cold read costs at least this much.
 	Work int64 `protobuf:"varint,6,opt,name=work,proto3" json:"work,omitempty"`
 	// bindings echo the request's, so an answer to a parameterized query still states the whole
 	// question it answers.
 	Bindings map[string]*QueryValue `protobuf:"bytes,7,rep,name=bindings,proto3" json:"bindings,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// entities is every distinct entity the answer's cells name, which QueryRow.cell_entity points
-	// into (agni issue 916). With omit_locations their sheet_ids and reason are empty.
+	// entities lists every distinct entity that the answer's cells name (agni issue 916).
+	// QueryRow.cell_entity points into it. With omit_locations, their sheet_ids and reason are empty.
 	Entities []*AnswerEntity `protobuf:"bytes,8,rep,name=entities,proto3" json:"entities,omitempty"`
-	// sources is every distinct citation the answer's rows carry, which QueryRow.cite_index points
-	// into (agni issue 916).
+	// sources lists every distinct citation in the answer's rows (agni issue 916).
+	// QueryRow.cite_index points into it.
 	Sources []string `protobuf:"bytes,9,rep,name=sources,proto3" json:"sources,omitempty"`
-	// total is how many rows the answer has before any offset and limit, the query's own or the
-	// request's (agni issue 896), so a caller showing the first rows can say how many it left out.
-	// It is filled only when a limit or offset applied, and zero otherwise, since without one every
+	// total is how many rows the answer has before any offset and limit, from the query or the
+	// request (agni issue 896). A caller showing the first rows can then say how many it left out.
+	// It is filled only when a limit or offset applied, and zero otherwise. Without either, every
 	// row is in rows.
 	Total         int32 `protobuf:"varint,10,opt,name=total,proto3" json:"total,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -609,17 +609,17 @@ func (x *RunQueryResponse) GetTotal() int32 {
 	return 0
 }
 
-// QueryValue is a value bound to a query variable. Where the schema types the variable's position,
-// the engine reads the value as that type whichever field carries it (panyam/jaala#65): text that
-// parses binds a number in a number position, text that does not is refused, and a number in a name
-// position matches by its text. Where nothing types the variable, this field decides, as `3.3`
-// versus `"3.3"` written into the query would.
+// QueryValue is a value bound to a query variable. The schema may type the variable's position.
+// Then the engine reads the value as that type, whichever field holds it (panyam/jaala#65). Text
+// that parses binds a number in a number position. Text that does not parse is refused. A number
+// in a name position matches by its text. When nothing types the variable, the field decides,
+// just as writing `3.3` or `"3.3"` into the query would.
 //
-// A list binds the variable to each of its values, and the goal answers for every one of them, as if
-// it were joined with a relation holding exactly those values (agni issue 1121): `?net` bound to
-// [I2C_SDA, I2C_SCL] answers both nets in one answer, an aggregate reduces across all of them, and an
-// empty list matches nothing. Its values are text or numbers; a list inside a list is refused as an
-// invalid argument.
+// A list binds the variable to each of its values, and the goal answers for every one (agni issue
+// 1121). It behaves as a join with a relation holding exactly those values. `?net` bound to
+// [I2C_SDA, I2C_SCL] answers both nets in one answer. An aggregate reduces across all of them. An
+// empty list matches nothing. A list's values are text or numbers. A list inside a list is refused
+// as an invalid argument.
 type QueryValue struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Types that are valid to be assigned to Kind:
@@ -765,17 +765,17 @@ func (x *QueryValueList) GetValues() []*QueryValue {
 
 type ListRelationsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// snapshot, "snapshots/{snapshot}", names the design whose config decides the vocabulary, its
-	// project's library and its own included (agni issue 1061). Empty lists the shipped vocabulary.
+	// snapshot names a design, "snapshots/{snapshot}" (agni issue 1061). That design's config decides
+	// the vocabulary, including its project's library and its own. Empty lists the shipped vocabulary.
 	Snapshot string `protobuf:"bytes,4,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	// overlay adds a config's libraries to the shipped vocabulary when no snapshot is named, which is
-	// how `agni query --relations --lib <dir>` lists a library's members before any design is read.
-	// With a snapshot it is refused, since the snapshot's config is already the vocabulary.
+	// overlay adds a config's libraries to the shipped vocabulary when no snapshot is named.
+	// `agni query --relations --lib <dir>` uses it to list a library's members before any design is
+	// read. With a snapshot, overlay is refused, since the snapshot's config is already the vocabulary.
 	Overlay *OverlayConfig `protobuf:"bytes,3,opt,name=overlay,proto3" json:"overlay,omitempty"`
-	// path names a place in the namespace tree to describe in `entry`: "net" a module,
+	// path names a place in the namespace tree for `entry` to describe. "net" names a module,
 	// "net.has_test_point" a member, and "." the root module. Empty asks for the flat catalog, as
-	// before, which is why the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT,
-	// with the suggestion a query would get.
+	// before. So the root needs a spelling of its own. An unknown path is INVALID_ARGUMENT, with the
+	// same suggestion a query would get.
 	Path          string `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -832,9 +832,9 @@ func (x *ListRelationsRequest) GetPath() string {
 	return ""
 }
 
-// RelationInfo is the discovery metadata for one relation or predicate: `name` as queries write it,
-// `args` the labels a template inserts as `?arg` (so `component.net` inserts
-// `component.net(?ref_des, ?net)`), `summary` a one-liner, and `kind` the grouping bucket
+// RelationInfo is the discovery metadata for one relation or predicate. `name` is spelled as queries
+// write it. `args` are the labels a template inserts as `?arg`, so `component.net` inserts
+// `component.net(?ref_des, ?net)`. `summary` is a one-liner. `kind` is the grouping bucket
 // ("netlist" | "board" | "datasheet" | "derived" | "predicate" | "extension").
 type RelationInfo struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
@@ -842,9 +842,10 @@ type RelationInfo struct {
 	Args    []string               `protobuf:"bytes,2,rep,name=args,proto3" json:"args,omitempty"`
 	Summary string                 `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
 	Kind    string                 `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
-	// detail is the relation's rich reference markdown from check/facts/docs/<name>.md (WS14-005),
-	// or "" when the relation has no doc yet. summary is the one-liner for the picker chip; detail is
-	// the deep-dive the panel renders on demand, the same markdown pipeline rule Detail uses.
+	// detail is the relation's reference markdown from stdlib/relations/facts/docs/<name>.md
+	// (WS14-005), or "" when the relation has no doc yet. summary is the one-liner for the picker
+	// chip. detail is the full reference, and the panel renders it on demand through the same
+	// markdown pipeline as a rule's Detail.
 	Detail string `protobuf:"bytes,5,opt,name=detail,proto3" json:"detail,omitempty"`
 	// signature renders the member as a rule head declaring its argument types, such as
 	// `component.two_terminal(r: component, a: net, b: net)`.
@@ -952,15 +953,15 @@ type RelationEntry struct {
 	Module string `protobuf:"bytes,6,opt,name=module,proto3" json:"module,omitempty"`
 	// definition is a derived relation's clauses, one per clause.
 	Definition []string `protobuf:"bytes,7,rep,name=definition,proto3" json:"definition,omitempty"`
-	// inferred names the arguments whose types the engine worked out from the rules rather than
-	// reading from a declaration, so a reader can tell which types the author stated.
+	// inferred names the arguments whose types the engine worked out from the rules. The other
+	// arguments' types come from a declaration. So a reader can tell which types the author stated.
 	Inferred []string `protobuf:"bytes,8,rep,name=inferred,proto3" json:"inferred,omitempty"`
-	// members are a module's direct children, each a member or a nested module, described one level
-	// deep (their own members are not filled).
+	// members are a module's direct children, each a member or a nested module. Each is described
+	// one level deep, and its own members are not filled.
 	Members []*RelationEntry `protobuf:"bytes,9,rep,name=members,proto3" json:"members,omitempty"`
-	// args are a member's argument names in order, as RelationInfo.args, so a client inserting a
-	// template (`net.rail(?net)`) reads them rather than parsing the signature (agni issue 774). Empty
-	// for a module.
+	// args are a member's argument names in order, as in RelationInfo.args (agni issue 774). A client
+	// inserting a template (`net.rail(?net)`) reads them instead of parsing the signature. Empty for a
+	// module.
 	Args          []string `protobuf:"bytes,10,rep,name=args,proto3" json:"args,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1066,9 +1067,9 @@ func (x *RelationEntry) GetArgs() []string {
 	return nil
 }
 
-// ExampleQuery is one runnable teaching query (WS14-002): a plain-language `label`, the datalog
-// `query` a click fills and runs, and the one `teaches` concept it introduces. The panel and the CLI
-// `--examples` read the same catalog, so they never drift.
+// ExampleQuery is one runnable teaching query (WS14-002). `label` is plain language. `query` is the
+// datalog that a click fills in and runs. `teaches` is the one concept it introduces. The panel and
+// the CLI's `--examples` read the same catalog, so they never drift.
 type ExampleQuery struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Label         string                 `protobuf:"bytes,1,opt,name=label,proto3" json:"label,omitempty"`
@@ -1129,26 +1130,27 @@ func (x *ExampleQuery) GetTeaches() string {
 	return ""
 }
 
-// EntityQuery is one question a viewer offers about a selected entity: the datalog that asks
-// something about a pin, a component, a net or a bus. A kind has several, which the viewer lists
-// as the Properties panel's Ask rows, each opening a query tab of its own (agni issue 902).
+// EntityQuery is one question a viewer offers about a selected entity. It is the datalog that asks
+// something about a pin, a component, a net or a bus. Each kind has several. The viewer lists them
+// as the Properties panel's Ask rows, and each row opens a query tab of its own (agni issue 902).
 //
-// It is served rather than held in the browser because every preset names relations defined on this
-// side. A client-held template would be the one caller nothing checks — renaming a relation would go
-// red in the example tests while every click in the viewer started producing a query that errors.
-// Here it inherits the same parse and evaluate guards the examples have.
+// The server serves these, and the browser does not hold them. Every preset names relations defined
+// on the server side. Nothing would check a client-held template. Imagine someone renames a
+// relation. The example tests go red, while every click in the viewer starts producing a query that
+// errors. Served from here, the presets get the same parse and evaluate guards as the examples.
 type EntityQuery struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// kind is the picked entity's kind: "pin", "component", "net" or "bus".
 	Kind string `protobuf:"bytes,1,opt,name=kind,proto3" json:"kind,omitempty"`
-	// query is the same text for every click: the picked entity reaches it through binds.
+	// query is the same text for every click. The picked entity reaches it through binds.
 	Query string `protobuf:"bytes,2,opt,name=query,proto3" json:"query,omitempty"`
 	// teaches is the one concept this preset introduces, so a click that answers a question also
 	// shows the reader a piece of the language.
 	Teaches string `protobuf:"bytes,3,opt,name=teaches,proto3" json:"teaches,omitempty"`
-	// binds names the variables the client binds from the picked selection (agni issue 793), each
-	// also the selection field that fills it: ref, pin, net or bus. It is explicit because one
-	// preset's input is another's output (the pin preset answers ?net, the net preset asks about one).
+	// binds names the variables the client binds from the picked selection (agni issue 793). Each
+	// name is also the selection field that fills it: ref, pin, net or bus. The list is explicit,
+	// because one preset's input is another's output. The pin preset answers ?net, and the net preset
+	// asks about one.
 	Binds []string `protobuf:"bytes,4,rep,name=binds,proto3" json:"binds,omitempty"`
 	// label is the question as an Ask row words it ("Which test points reach its nets?"), unique
 	// within its kind. The first question of a kind is its default.
@@ -1222,18 +1224,18 @@ func (x *EntityQuery) GetLabel() string {
 	return ""
 }
 
-// SearchQuery is the query the panel's search mode runs: find a design's entities by name (agni
-// issue 338). The client binds the variable `bind` names to `pattern` with {term} replaced by the
-// reader's escaped text (agni issue 793), so the query text never changes and the (?i) that makes
-// the search case-insensitive is written here, once.
+// SearchQuery is the query the panel's search mode runs to find a design's entities by name (agni
+// issue 338). `bind` names a variable. The client takes `pattern`, replaces {term} with the
+// reader's escaped text, and binds the variable to the result (agni issue 793). So the query text
+// never changes. The (?i) flag makes the search case-insensitive, and it is written here, once.
 //
-// It is served for the same reason the entity presets are. It names `entity` and `str.match`, both
-// defined on this side, and a client-held copy would be the one caller nothing checks.
+// The server serves it for the same reason it serves the entity presets. It names `entity` and
+// `str.match`, both defined on the server side, and nothing would check a client-held copy.
 type SearchQuery struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Query string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
-	// teaches is the concept a search leaves behind, since what the reader gets back is an editable
-	// datalog query rather than a search box's opinion.
+	// teaches is the concept a search leaves behind. The reader gets back an editable datalog query,
+	// not a search box's opinion.
 	Teaches string `protobuf:"bytes,2,opt,name=teaches,proto3" json:"teaches,omitempty"`
 	// bind names the variable the client binds, without its `?`.
 	Bind string `protobuf:"bytes,3,opt,name=bind,proto3" json:"bind,omitempty"`
@@ -1313,8 +1315,8 @@ type ListRelationsResponse struct {
 	EntityQueries []*EntityQuery `protobuf:"bytes,3,rep,name=entity_queries,json=entityQueries,proto3" json:"entity_queries,omitempty"`
 	// search_query is the find-by-name template the panel's search mode fills (agni issue 338).
 	SearchQuery *SearchQuery `protobuf:"bytes,4,opt,name=search_query,json=searchQuery,proto3" json:"search_query,omitempty"`
-	// entry answers a request naming a path. When it is set the other fields are empty, since a
-	// drill-down asks about one place rather than for the whole picker.
+	// entry answers a request naming a path. When it is set, the other fields are empty. A drill-down
+	// asks about one place, not for the whole picker.
 	Entry         *RelationEntry `protobuf:"bytes,5,opt,name=entry,proto3" json:"entry,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1386,13 +1388,13 @@ func (x *ListRelationsResponse) GetEntry() *RelationEntry {
 }
 
 // QuerySet is a named list of queries sharing a preamble of derived relations. It travels as values
-// rather than as YAML (C22); `agni query --set` reads the YAML file and sends this.
+// rather than as YAML (C22). `agni query --set` reads the YAML file and sends this.
 type QuerySet struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// title names the set for a rendered report.
 	Title string `protobuf:"bytes,1,opt,name=title,proto3" json:"title,omitempty"`
-	// preamble holds rules (clauses with `:-`) every query may use. Rules only: each query brings its
-	// own goal.
+	// preamble holds rules (clauses with `:-`), and every query may use them. It holds no goal, since
+	// each query brings its own.
 	Preamble      string        `protobuf:"bytes,2,opt,name=preamble,proto3" json:"preamble,omitempty"`
 	Queries       []*NamedQuery `protobuf:"bytes,3,rep,name=queries,proto3" json:"queries,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -1528,10 +1530,11 @@ type RunQueriesRequest struct {
 	// snapshot names the design to query, "snapshots/{snapshot}" (agni issue 1061).
 	Snapshot string    `protobuf:"bytes,8,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	Set      *QuerySet `protobuf:"bytes,1,opt,name=set,proto3" json:"set,omitempty"`
-	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-	// a fact base counts, candidate comparisons, each row a generator emits and the connections a
-	// circuit walk examines. It can only LOWER the
-	// deployment's own budget, never raise it, and zero leaves that budget as it is. Each query in the set has the whole budget; one past it reports that in its own result.
+	// work_budget caps the work each query in this request may do (agni issue 792). Work counts
+	// candidate comparisons, each row a generator emits, and each connection a circuit walk
+	// examines, in the units a fact base counts. It can only LOWER the deployment's own budget,
+	// never raise it, and zero leaves that budget as it is. Each query in the set gets the whole
+	// budget. A query that goes past it reports that in its own result.
 	WorkBudget int64 `protobuf:"varint,6,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
 	// omit_locations is RunQueryRequest's, for every query in the set.
 	OmitLocations bool `protobuf:"varint,7,opt,name=omit_locations,json=omitLocations,proto3" json:"omit_locations,omitempty"`
@@ -1683,12 +1686,12 @@ type NamedQueryResult struct {
 	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Description string                 `protobuf:"bytes,2,opt,name=description,proto3" json:"description,omitempty"`
 	Result      *RunQueryResponse      `protobuf:"bytes,3,opt,name=result,proto3" json:"result,omitempty"`
-	// error says why this query could not be answered: it would not parse, or it named something the
-	// design's relations do not have. The query's text is in the request.
+	// error says why this query has no answer. Either it would not parse, or it named something
+	// missing from the design's relations. The query's text is in the request.
 	Error string `protobuf:"bytes,4,opt,name=error,proto3" json:"error,omitempty"`
-	// error_at is where in the query's own text a query that would not parse stopped, so a reader can
-	// be pointed at it. Unset for an error with no place in the text, such as a relation the design's
-	// vocabulary lacks.
+	// error_at is where the parser stopped in the query's own text, so a reader can be pointed at it.
+	// Unset for an error with no place in the text, such as a relation missing from the design's
+	// vocabulary.
 	ErrorAt       *TextPosition `protobuf:"bytes,5,opt,name=error_at,json=errorAt,proto3" json:"error_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1759,9 +1762,9 @@ func (x *NamedQueryResult) GetErrorAt() *TextPosition {
 	return nil
 }
 
-// TextPosition is where in a query's text a syntax error points. A RunQuery whose query would not
-// parse fails with invalid_argument carrying one as an error detail, and a set's query carries one
-// in NamedQueryResult.error_at.
+// TextPosition is where in a query's text a syntax error points. When a RunQuery's query does not
+// parse, the call fails with invalid_argument and attaches one as an error detail. A set's query
+// reports one in NamedQueryResult.error_at.
 type TextPosition struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// offset is in bytes from the start of the text.
@@ -1770,9 +1773,9 @@ type TextPosition struct {
 	Line int32 `protobuf:"varint,2,opt,name=line,proto3" json:"line,omitempty"`
 	// column counts characters, not bytes, from 1, as an editor does.
 	Column int32 `protobuf:"varint,3,opt,name=column,proto3" json:"column,omitempty"`
-	// caret is the line of the query's text the position is on, a newline, and a caret under the
-	// column, as the engine draws it, so the CLI and the viewer show the same picture without either
-	// drawing it again (agni issue 1045). Empty when the position is not inside the text.
+	// caret holds the line of query text with the position, a newline, and a caret under the column
+	// (agni issue 1045). The engine draws it. So the CLI and the viewer show the same picture, and
+	// neither draws it again. Empty when the position is not inside the text.
 	Caret         string `protobuf:"bytes,4,opt,name=caret,proto3" json:"caret,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1935,8 +1938,8 @@ func (x *ListQuerySetsResponse) GetQuerySets() []*NamedQuerySet {
 	return nil
 }
 
-// NamedQuerySet is one query set a project keeps. name is its file's stem, which is what a viewer
-// lists, and source the file it was read from, for a reader asking where it lives.
+// NamedQuerySet is one query set a project keeps. name is its file's stem, and a viewer lists it by
+// that name. source is the file it was read from, for a reader asking where it lives.
 type NamedQuerySet struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`

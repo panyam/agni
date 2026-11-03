@@ -24,19 +24,20 @@ var (
 	agniBuildErr  error
 )
 
-// AgniRun transcludes a captured command output into a page, from a declaration beside it, so the
-// output has one source the way `includeCard` gives the rule catalog one (#238). Hand-pasted output
-// rotted twice before this existed.
+// AgniRun transcludes a captured command output into a page. A declaration beside the page names
+// the command, so the output has one source, as `includeCard` gives the rule catalog one source
+// (#238). Hand-pasted output rotted twice before this existed.
 //
-// Three files:
+// Three files take part.
 //
 //	09-read-the-verdicts.md      {{ agniRun "runs/coverage.yaml" }}   never rewritten
 //	runs/coverage.yaml           what to run, and in which fixture     hand-authored
 //	runs/coverage.yaml.output    what it printed                       generated, COMMITTED
 //
-// The page is never written, and the output only when stale, so a rebuild converges. The output is
-// committed so a regression shows as a reviewable diff, and so a docs build with fresh outputs needs
-// no `agni` binary and no fixture. Authoring rules are in docsite/README.md#generated-command-output.
+// The build never writes the page, and it writes the output only when stale, so a rebuild
+// converges. The output is committed so a regression shows as a reviewable diff, and so a docs
+// build with fresh outputs needs no `agni` binary and no fixture. Authoring rules are in
+// docsite/README.md#generated-command-output.
 func AgniRun(relativePath string) string {
 	out, err := renderRun(relativePath)
 	if err != nil {
@@ -97,8 +98,8 @@ func block(shown, body string) string {
 	return b.String()
 }
 
-// isContinued reports whether a line runs on into the next one, which it does when it ends in an ODD
-// number of backslashes. A trailing `\\` is an escaped backslash and ends the command.
+// isContinued reports whether a line runs on into the next one. A line runs on when it ends in an
+// ODD number of backslashes. A trailing `\\` is an escaped backslash and ends the command.
 func isContinued(line string) bool {
 	n := 0
 	for i := len(line) - 1; i >= 0 && line[i] == '\\'; i-- {
@@ -115,19 +116,20 @@ type runSpec struct {
 	Fixture string `yaml:"fixture"`
 	// FromRoot runs the script at the scratch ROOT with the fixture at its full relative path, so
 	// commands read as typed from a clone. The learn course wants this, since a chapter picks whichever
-	// fixture fits; the tutorials default to running inside the fixture, matching their one
+	// fixture fits. The tutorials default to running inside the fixture, matching their one
 	// `cd examples/tutorial-project` (#434).
 	//
-	// A mode rather than a `show` override, so the displayed path is the one that ran. Output is the
-	// same either way, because provenance is reported relative to the design's project.
+	// It is a mode rather than a `show` override, so the block displays the path that ran. Output
+	// is the same either way, because provenance is reported relative to the design's project.
 	FromRoot bool `yaml:"from_root"`
 	// Script is the shell to run. A shell rather than an argv because a step may be several commands
 	// or a pipe.
 	Script string `yaml:"script"`
-	// Capture selects which stream the block shows: "stdout" (default), "stderr", "both", or "none"
-	// for a lesson that is only about the exit code, which then needs Exit when the step fails. A step
-	// that exits non-zero and captures nothing is an error unless Exit is set (agni issue 825). A field rather than a shell redirect, since
-	// resolution notes and a gate's message share stderr (#241).
+	// Capture selects which stream the block shows. It is "stdout" (default), "stderr", "both", or
+	// "none". "none" is for a lesson that is only about the exit code, and that lesson needs Exit
+	// when the step fails. A step that exits non-zero and captures nothing is an error unless Exit
+	// is set (agni issue 825). Capture is a field rather than a shell redirect, since resolution
+	// notes and a gate's message share stderr (#241).
 	Capture string `yaml:"capture"`
 	// Exit appends "exit N" to the block, for the rungs whose lesson IS the exit code. Use it rather
 	// than `echo $?` in the script (#241).
@@ -144,19 +146,19 @@ type runSpec struct {
 	// point, so each renders as its own block (#525). Boundaries are DECLARED, because neither
 	// splitting a heredoc-bearing script nor mapping output onto `show` can infer them.
 	//
-	// Each step is its own shell in the SAME scratch directory, so files carry across and shell
-	// variables do not. Script and Steps are mutually exclusive. Capture and Match apply to every
-	// step, Exit to the last.
+	// Each step is its own shell in the SAME scratch directory, so files persist from one step to
+	// the next and shell variables do not. Script and Steps are mutually exclusive. Capture and
+	// Match apply to every step, Exit to the last.
 	Steps []runStep `yaml:"steps"`
-	// Fetched names a board under tools/samples to copy INTO the fixture copy at FetchedInto, so a
-	// committed project can teach over a board that is someone else's and so is fetched rather than
-	// committed (the Jetson tutorial project, agni issue 564). Nothing the project tracks is replaced,
-	// and the stamp covers the samples pin as well as the project.
+	// Fetched names a board under tools/samples, and the runner copies it INTO the fixture copy at
+	// FetchedInto. A committed project can then teach over someone else's board, which is fetched
+	// rather than committed (the Jetson tutorial project, agni issue 564). Nothing the project
+	// tracks is replaced, and the stamp covers the samples pin as well as the project.
 	Fetched     string `yaml:"fetched"`
 	FetchedInto string `yaml:"fetched_into"`
 }
 
-// runStep is one command and the output it produced, which the page renders as its own block.
+// runStep is one command and the output it produced. The page renders each one as its own block.
 type runStep struct {
 	// Script is the shell to run, Show what the reader should see, defaulting to Script, as on runSpec.
 	Script string `yaml:"script"`
@@ -164,7 +166,7 @@ type runStep struct {
 }
 
 // steps normalizes a spec to the list the runner and the renderer both walk. A bare `script` is the
-// one-step case (80 of 96 specs when #525 landed) and captures byte-identically to before.
+// one-step case (80 of 96 specs when #525 merged) and captures byte-identically to before.
 func (s runSpec) steps() []runStep {
 	if len(s.Steps) > 0 {
 		return s.Steps
@@ -172,7 +174,8 @@ func (s runSpec) steps() []runStep {
 	return []runStep{{Script: s.Script, Show: s.Show}}
 }
 
-// shown is what the block prints as the command, which is Show when the step hides plumbing.
+// shown returns the command the block prints. It is Show when the step hides plumbing, and Script
+// otherwise.
 func (st runStep) shown() string {
 	if strings.TrimSpace(st.Show) != "" {
 		return st.Show
@@ -181,9 +184,9 @@ func (st runStep) shown() string {
 }
 
 // runsModeEnv set to "stored" serves every capture as written, whatever its stamp, and never runs
-// or writes one (agni issue 1149). The browser suite's docsite server sets it, since it renders every
-// page at startup and a stale capture would otherwise be regenerated into the working tree, which is
-// how a local browser run left tracked captures modified and once hid stale ones from
+// or writes one (agni issue 1149). The browser suite's docsite server sets it, since that server
+// renders every page at startup. Without it a stale capture would be regenerated into the working
+// tree. A local browser run left tracked captures modified this way, and it once hid stale ones from
 // tutorial-runs-check. Authoring and `make tutorial-runs` leave it unset and regenerate as before.
 const runsModeEnv = "AGNI_DOCS_RUNS"
 
@@ -201,9 +204,9 @@ const stepDelim = "#agni-step\n"
 
 // runOrLoad returns the spec's output, reusing the committed capture when it is current.
 //
-// Freshness is a HASH of the inputs, never mtime, which a git checkout makes arbitrary. The hash
-// covers the spec and the fixture, NOT the engine build, so an engine change regenerates nothing on
-// its own and only `tutorial-runs-check` catches it. See
+// Freshness is a HASH of the inputs, never mtime, because a git checkout makes mtime arbitrary. The
+// hash covers the spec and the fixture, NOT the engine build, so an engine change regenerates
+// nothing on its own and only `tutorial-runs-check` catches it. See
 // docsite/content/build/the-gate.md#generated-captures-are-checked-by-regenerating-them.
 func runOrLoad(relativePath string) (runSpec, []string, error) {
 	var spec runSpec
@@ -233,8 +236,8 @@ func runOrLoad(relativePath string) (runSpec, []string, error) {
 		}
 		return spec, bodies, nil
 	}
-	// A capture whose section count does not match the step count is stale whatever its stamp says,
-	// since that is what a hand-edited capture looks like.
+	// Imagine a capture's section count does not match the step count. It is stale whatever its
+	// stamp says, because a hand-edited capture looks like that.
 	if bodies, stamp, err := readOutput(outPath); err == nil && stamp == want && len(bodies) == len(spec.steps()) {
 		return spec, bodies, nil
 	}
@@ -322,8 +325,8 @@ func copyFetched(board, dir string) error {
 // regenerates and nothing else in a working tree can move it. The stamp is itself committed, so a
 // working-tree hash would be right for one machine only (agni issue 357).
 //
-// A FETCHED fixture has nothing tracked, so its stamp covers hack/samples.pin instead, which changes
-// exactly when the corpus does and needs no corpus on disk to check (agni issue 682).
+// A FETCHED fixture has nothing tracked, so its stamp covers hack/samples.pin instead. That pin
+// changes exactly when the corpus does, and checking it needs no corpus on disk (agni issue 682).
 func inputHash(spec []byte, fixture string) (string, error) {
 	h := sha256.New()
 	h.Write(spec)
@@ -375,8 +378,9 @@ func inputHash(spec []byte, fixture string) (string, error) {
 // is gitignored, because the boards are other people's and carry their own licences.
 const fetchedRoot = "tools/samples"
 
-// samplesPin is the tracked file a fetched fixture's stamp covers in place of its content, relative
-// to the repo root. A variable so a test can point it at an absolute path it is free to edit.
+// samplesPin is the tracked file that a fetched fixture's stamp covers in place of the fixture's
+// content, relative to the repo root. It is a variable so a test can point it at an absolute path
+// the test is free to edit.
 var samplesPin = "hack/samples.pin"
 
 func isFetched(fixture string) bool {
@@ -385,7 +389,7 @@ func isFetched(fixture string) bool {
 }
 
 // untrackedFixtureFiles lists the files under fixture that git neither tracks nor ignores. Such a
-// file is outside the hash, so the local gate passes and CI fails once it is committed; inputHash
+// file is outside the hash, so the local gate passes and CI fails once it is committed. inputHash
 // refuses instead (agni issue 588). Ignored files are not listed, since counting them was agni
 // issue 357.
 func untrackedFixtureFiles(fixture string) ([]string, error) {
@@ -406,8 +410,8 @@ func untrackedFixtureFiles(fixture string) ([]string, error) {
 }
 
 // trackedFiles lists a fixture's git-tracked files, repo-root-relative and in git's sorted order so
-// the hash is deterministic. It REFUSES rather than falling back to walking the directory, which
-// would silently make the stamp depend on the working tree again, and an empty listing is an error.
+// the hash is deterministic. It REFUSES rather than falling back to walking the directory. A walk
+// would silently make the stamp depend on the working tree again. An empty listing is an error too.
 func trackedFiles(fixture string) ([]string, error) {
 	cmd := exec.Command("git", "ls-files", "-z", "--", fixture)
 	cmd.Dir = ".." // specs name their fixture relative to the repo root, as the rest of this file does
@@ -443,9 +447,9 @@ func execute(spec runSpec) ([]string, error) {
 	defer os.RemoveAll(dir)
 	work := dir
 	if spec.Fixture != "" {
-		// Where the copy LANDS decides how paths read in the block. Under from_root it keeps its full
-		// relative path and the script runs at the scratch root; otherwise it lands as a bare basename
-		// and the script runs inside it.
+		// The copy's location decides how paths read in the block. Under from_root it keeps its
+		// full relative path, and the script runs at the scratch root. Otherwise the copy goes in
+		// as a bare basename and the script runs inside it.
 		dest := filepath.Join(dir, filepath.Base(spec.Fixture))
 		if spec.FromRoot {
 			dest = filepath.Join(dir, spec.Fixture)
@@ -488,7 +492,7 @@ func execute(spec runSpec) ([]string, error) {
 }
 
 // runOne executes a single step and returns the text its block will show. Every step shares the
-// scratch directory, so what one writes the next can read.
+// scratch directory, so the next step can read what one step writes.
 func runOne(spec runSpec, step runStep, work, dir, bin string, last bool) (string, error) {
 	// A shell, because a step may itself be several commands (rung 11 moves a directory first). The
 	// script is checked-in yaml from this repo's content tree, so there is no injection boundary.
@@ -516,10 +520,10 @@ func runOne(spec runSpec, step runStep, work, dir, bin string, last bool) (strin
 	default:
 		return "", fmt.Errorf("unknown capture %q (want stdout, stderr or both)", spec.Capture)
 	}
-	// A step that FAILED and captured nothing would render as an empty block, and regenerating it
-	// reproduces the emptiness, so the gate stays green over a page teaching from a blank space. Rung 7
-	// shipped two that way (agni issue 825). A spec whose lesson is the exit status says so with
-	// `exit: true`, which only the last step can carry.
+	// Imagine a step FAILED and captured nothing. It would render as an empty block. Regenerating it
+	// reproduces the emptiness, so the gate is still green over a page teaching from a blank space.
+	// Rung 7 shipped two that way (agni issue 825). A spec whose lesson is the exit status says so
+	// with `exit: true`, and only the last step can set it.
 	if code := exitStatus(runErr); code != 0 && strings.TrimSpace(body) == "" && !(spec.Exit && last) {
 		said := strings.TrimSpace(stderr.String())
 		if lines := strings.SplitN(said, "\n", 4); len(lines) > 3 {
@@ -560,7 +564,7 @@ func runOne(spec runSpec, step runStep, work, dir, bin string, last bool) (strin
 	if strings.Contains(body, os.TempDir()) || strings.Contains(body, "/var/folders/") || strings.Contains(body, "/private") {
 		return "", fmt.Errorf("capture still contains a scratch path: it would churn on every run and put a host path in the repo. The command prints an absolute path this runner cannot rewrite")
 	}
-	// Exit belongs to the run as a whole, so it lands on the last step's block.
+	// Exit belongs to the run as a whole, so it goes on the last step's block.
 	if spec.Exit && last {
 		body = strings.TrimRight(body, "\n")
 		if body != "" {
@@ -612,7 +616,7 @@ func buildAgni() (string, error) {
 	return agniBuildPath, agniBuildErr
 }
 
-// captureEnv is the environment a captured run sees, built rather than inherited, because a
+// captureEnv builds the environment a captured run sees, rather than inheriting it, because a
 // committed capture must not depend on the operator's machine. HOME and XDG_CONFIG_HOME reach
 // agni.yaml, which adds a mount note naming a home path. AGNI_SYMBOL_PATH changes what a read
 // RESOLVES, so a local capture would disagree with CI's and both would look correct.

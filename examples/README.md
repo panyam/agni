@@ -20,7 +20,7 @@ first six end to end in one tour.
 | 3 | [checks/](checks/) | Run structural rule checks (`check.RunDesign`) over one design and narrate the findings. The walkthrough form of `agni check`. | ready |
 | 4 | [diff/](diff/) | Semantic diff of two revisions (`diff.Designs`): renamed / hard / soft / new / deleted. The walkthrough form of `agni diff`. | ready |
 | 5 | [convert/](convert/) | Read any of three formats into the IR and emit IPC-2581 (`N -> IR -> N`); proves the semantic round-trip. The walkthrough form of `agni emit`. | ready |
-| 6 | [render-schematic/](render-schematic/) | Read schematic geometry (`.eds`) into the sidecar and render one sheet two ways: SVG (offline) and the tier-2 pack the `web/` WebGL2 viewer loads. | ready |
+| 6 | [render-schematic/](render-schematic/) | Read schematic geometry (`.eds`) into the sidecar and render one sheet two ways: SVG (offline) and the tier-2 pack for the `web/` WebGL2 viewer. | ready |
 | 6b | [render-board/](render-board/) | Read a KiCad board (`.kicad_pcb`) into the board geometry sidecar and render the physical board (outline, per-layer copper, pads, vias, zones) plus a net-highlight overlay. The walkthrough form of `agni render <file>.kicad_pcb`. | ready |
 | 7 | [render-highlight/](render-highlight/) | Run the rule catalog, then bake each finding's subject into one rendered SVG so a report finding becomes a picture of the real design. The walkthrough form of `agni render --highlight`. | ready |
 | 8 | [validate/](validate/) | Run the reader-health invariants (`validate.Design` / `validate.Geometry`) over a design and read the problem lists. The walkthrough form of `agni validate`. | ready |
@@ -41,9 +41,9 @@ on each step.
 
 [`tutorial-project/`](tutorial-project/) is a different kind of artifact and does not belong in the
 table above. The examples are Go programs that narrate one engine capability. That folder is a
-worked *review project*, meaning a synthetic board plus the checklist, conventions, interface
-profiles, datasheet parameters, and design intent a team wraps around one. It is what the docs site tutorials
-run against, and it is a copyable starting point for your own project.
+worked *review project*. It holds a synthetic board, and around it the checklist, conventions,
+interface profiles, datasheet parameters, and design intent a team would write for one. The docs
+site tutorials run against it, and you can copy it as a starting point for your own project.
 
 It is not a Go module and has no `main.go`. Drive it with `make review` from inside the folder.
 
@@ -53,13 +53,13 @@ These are scripts over the Python client (`clients/python`) rather than Go walkt
 point is that agni answers and a short script lays the answers out.
 
 - [`revision_audit.py`](../clients/python/examples/revision_audit.py) writes one workbook comparing
-  the tutorial gateway's two revisions and auditing the newer one: the diff, the audit tables
-  [`revision_audit.yaml`](../clients/python/examples/revision_audit.yaml) asks (including one from
-  the project's own library), the project's review checklist, and the check run's findings, skipped
-  rules and verdicts. Every judgement lives in that YAML, the project, or the engine, and the script
-  stays near a hundred lines. Its summary of every tab is committed as
-  [`revision_audit.summary.md`](../clients/python/examples/revision_audit.summary.md) and compared
-  on every run. `make exercise-revision-audit` runs it.
+  the tutorial gateway's two revisions and auditing the newer one. It holds the diff, the audit
+  tables, the project's review checklist, and the check run's findings, skipped rules and verdicts.
+  [`revision_audit.yaml`](../clients/python/examples/revision_audit.yaml) asks for the audit tables,
+  and one of them comes from the project's own library. Every judgement lives in that YAML, the
+  project, or the engine, so the script is still near a hundred lines. Its summary of every tab is
+  committed as [`revision_audit.summary.md`](../clients/python/examples/revision_audit.summary.md)
+  and compared on every run. `make exercise-revision-audit` runs it.
 - [`audit_workbook.py`](../clients/python/examples/audit_workbook.py) is the smaller one-design form.
 
 ## The extension modules, also off the ladder

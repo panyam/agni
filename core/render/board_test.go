@@ -34,9 +34,9 @@ func TestBoardSVGGolden(t *testing.T) {
 	goldenCompare(t, "board-fixture.svg", BoardSVG(boardFixtureGeometry(t)))
 }
 
-// TestBoardSVGStrata: the document is stratified into the classed groups the layer
-// visibility CSS keys on, copper draws back before front (B.Cu group precedes F.Cu), and
-// the strata carry the expected content: named copper layers, a via ring with a page-color
+// TestBoardSVGStrata checks that the document is stratified into classed groups, which the layer
+// visibility CSS keys on. Copper draws back before front, so the B.Cu group precedes F.Cu. The
+// strata hold the expected content, namely named copper layers, a via ring with a page-color
 // drill, an outline polyline, and every ref-des label.
 func TestBoardSVGStrata(t *testing.T) {
 	b := boardFixtureGeometry(t)
@@ -62,7 +62,7 @@ func TestBoardSVGStrata(t *testing.T) {
 	}
 }
 
-// TestBoardSVGEmpty: a board with no geometry still frames a sane document.
+// TestBoardSVGEmpty checks that a board with no geometry still frames a sane document.
 func TestBoardSVGEmpty(t *testing.T) {
 	got := BoardSVG(&geom.BoardGeometry{})
 	if !strings.HasPrefix(got, "<svg") || !strings.Contains(got, "</svg>") {
@@ -70,10 +70,10 @@ func TestBoardSVGEmpty(t *testing.T) {
 	}
 }
 
-// TestBoardCopperTrueWidth: copper renders at true width proportional to the real trace, not
-// clamped to a fixed output-pixel floor. On a board large enough that both traces are
-// sub-pixel, a 2x-wider trace must render a ~2x-wider stroke; the old fixed 0.8px floor
-// clamped every sub-pixel trace to the same width (ratio 1), merging dense copper into a blob.
+// TestBoardCopperTrueWidth checks that copper renders at true width proportional to the real
+// trace, not clamped to a fixed output-pixel floor. On a board large enough that both traces are
+// sub-pixel, a 2x-wider trace must render a ~2x-wider stroke. The old fixed 0.8px floor clamped
+// every sub-pixel trace to the same width (ratio 1), merging dense copper into a blob.
 func TestBoardCopperTrueWidth(t *testing.T) {
 	const span = 400_000_000 // 400mm: scales fine copper well below the old 0.8px floor
 	b := &geom.BoardGeometry{
@@ -126,7 +126,7 @@ func copperStrokeWidths(svg string) []float64 {
 	return out
 }
 
-// TestHighlightBoardSVG: the board face of the highlight contract. A net spec re-strokes
+// TestHighlightBoardSVG covers the board face of the highlight contract. A net spec re-strokes
 // its copper and rings its connected pads and vias; a component spec rings all of its pads;
 // a pin spec rings exactly the (ref_des, pad number) land. The overlay is transparent (no
 // background rect) and framed like BoardSVG.
@@ -175,10 +175,10 @@ func TestHighlightBoardSVG(t *testing.T) {
 	}
 }
 
-// TestPackBoard: the packed board reuses the PackedSheet envelope, with triangle-kind records
-// for areas (copper quads, via disks, pads), line strips for the outline, keys joining
-// copper to nets and pads to (ref_des, number, net), and group colors indexed by the board
-// group constants from Style.
+// TestPackBoard checks that the packed board reuses the PackedSheet envelope. Areas (copper
+// quads, via disks, pads) pack as triangle-kind records and the outline as line strips. Keys join
+// copper to nets and pads to (ref_des, number, net). Group colors come from Style, indexed by the
+// board group constants.
 func TestPackBoard(t *testing.T) {
 	b := boardFixtureGeometry(t)
 	ps := PackBoard(b)
@@ -228,8 +228,8 @@ func TestPackBoard(t *testing.T) {
 	if len(hl.GetGroups()) != 1 || len(hl.GetGroups()[0].GetPrimitives()) < 3 {
 		t.Errorf("HighlightPacked over board keys: %+v", hl.GetGroups())
 	}
-	// Silk labels are the authored ref-des AND value of each real placement (the REF**
-	// placeholder and the Reference-less logo are skipped upstream): R1/10k and J1/CONN.
+	// Silk labels are the authored ref-des AND value of each real placement, R1/10k and J1/CONN.
+	// The REF** placeholder and the Reference-less logo are skipped upstream.
 	labelText := map[string]bool{}
 	for _, l := range ps.GetLabels() {
 		labelText[l.GetText()] = true
@@ -244,9 +244,9 @@ func TestPackBoard(t *testing.T) {
 	}
 }
 
-// TestBoardDesignatorsWhenTheBoardDrawsNone labels each part of a board that carries no text and no
-// silkscreen, which is what KiCad's ODB++ export of a board without silkscreen is, and adds nothing
-// to one whose silkscreen draws its own (agni issue 1263).
+// TestBoardDesignatorsWhenTheBoardDrawsNone labels each part of a board that has no text and no
+// silkscreen. KiCad's ODB++ export of a board without silkscreen has that shape. The test adds
+// nothing to a board whose silkscreen draws its own designators (agni issue 1263).
 func TestBoardDesignatorsWhenTheBoardDrawsNone(t *testing.T) {
 	bare := &geom.BoardGeometry{UnitNm: 1, Placements: []*geom.ComponentPlacement{
 		{RefDes: "R7", At: &geom.Point{X: 5_000_000, Y: 5_000_000}, Layer: "F.Cu", Pads: []*geom.Pad{

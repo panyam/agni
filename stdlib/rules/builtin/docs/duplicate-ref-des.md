@@ -22,10 +22,10 @@ InputDiagnostics.RefDesCollisions; this rule only reports it (architecture/rules
 
 ### What it means when this rule does not run
 
-A rule that only reports a reader's verdict has nothing to say when the reader never reached one, and
-"nothing to say" is what a clean design also looks like. So a reader states whether it computed the
-diagnostic (InputDiagnostics.supplied), and this rule is gated to **not-applicable** where it did
-not, rather than reporting a pass nobody earned (agni issue 309).
+This rule only reports a reader's verdict. When the reader never reached one, the rule has nothing
+to say, and a clean design also gives it nothing to say. So a reader states whether it computed the
+diagnostic (InputDiagnostics.supplied). Where the reader did not, this rule is gated to
+**not-applicable**, rather than reporting a pass that nobody earned (agni issue 309).
 
 | Format | Detects | Rule reads |
 |---|---|---|

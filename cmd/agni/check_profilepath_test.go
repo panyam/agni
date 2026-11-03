@@ -12,8 +12,8 @@ import (
 // TestCheckProfilePathFlag checks that --profile-path compiles an overlay YAML interface profile
 // into the catalog for one run (the open-core "author a proprietary interface as config" path). The
 // custom TESTBUS profile's signal-dangling requirement fires on the fixture's single-pin BUS_TBB
-// net, proving a profile authored entirely in YAML, with no Go and no recompile, checks a real
-// design.
+// net. That proves a profile authored entirely in YAML checks a real design, with no Go and no
+// recompile.
 func TestCheckProfilePathFlag(t *testing.T) {
 	dir := t.TempDir()
 	yaml := `
@@ -70,11 +70,12 @@ func TestCheckProfilePathBadYAMLErrors(t *testing.T) {
 // made overlay composition EXTEND the service's catalog instead of rebuilding it.
 //
 // The CLI composes a convention twice for two different jobs. The service composes the authoritative
-// catalog from the request, and the CLI needs a local name space to resolve `--rule <config>/<rule>`
-// against before it calls. While composing rebuilt the catalog from scratch, doing both was harmless.
-// Once it extends the base, handing the service a catalog that ALREADY carries the convention asks it
-// to add a source that is present, a duplicate-source error that made the flag unusable. Nothing
-// covered this path, so the naive fix broke a shipped flag silently until it was run by hand.
+// catalog from the request. Before it calls, the CLI needs a local name space to resolve
+// `--rule <config>/<rule>` against. While composing rebuilt the catalog from scratch, doing both was
+// harmless. Then composing began to extend the base. The CLI handed the service a catalog that
+// ALREADY had the convention, and the service was asked to add a source that was present. That
+// duplicate-source error made the flag unusable. Nothing covered this path, so the naive fix broke a
+// shipped flag silently until someone ran it by hand.
 func TestCheckConventionsComposeOncePerRun(t *testing.T) {
 	got := runCLI(t, checkCmd(),
 		"--conventions", "testdata/review/conventions.yaml",
@@ -179,10 +180,10 @@ requirements:
 	}
 }
 
-// TestProfilePathNamingTheProjectsOwnIsRefused exists because pointing the flag at the directory
-// the design's project already composes loaded the same profiles twice under two source names, so
-// every profile finding was reported twice and the coverage line counted each subject again (agni
-// issue 450).
+// TestProfilePathNamingTheProjectsOwnIsRefused exists because of agni issue 450. The flag was pointed
+// at a directory that the design's project already composes. That loaded the same profiles twice
+// under two source names. Every profile finding was reported twice, and the coverage line counted
+// each subject again.
 func TestProfilePathNamingTheProjectsOwnIsRefused(t *testing.T) {
 	proj := t.TempDir()
 	writeTutorialLikeProject(t, proj)
@@ -241,9 +242,9 @@ func TestProfilePathWithNoProjectIsUnaffected(t *testing.T) {
 	}
 }
 
-// writeTutorialLikeProject builds the smallest project that reproduces agni issue 450: a project.yaml
-// so the design resolves to a project, a profiles/ directory the project therefore composes by
-// default, and a design under designs/.
+// writeTutorialLikeProject builds the smallest project that reproduces agni issue 450. It writes a
+// project.yaml, so the design resolves to a project. It writes a profiles/ directory, which the
+// project therefore composes by default. It puts a design under designs/.
 func writeTutorialLikeProject(t *testing.T, root string) {
 	t.Helper()
 	mk := func(rel, body string) {

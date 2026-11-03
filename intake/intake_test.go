@@ -60,10 +60,10 @@ func TestBuildRailNominals(t *testing.T) {
 }
 
 // A SIGNAL net whose name encodes a level must not be summarized as a rail voltage (agni issue
-// 194). Skeleton.RailNominals reads net.nominal_voltage, which used to project any net whose name
-// token-scanned to a voltage, so a house convention naming signals `<from>_<to>_<level>` inflated
-// the rail set of the sanitized summary. This is the intake-side consequence of that overload, and
-// it is the one that reached a published artifact rather than only a query.
+// 194). Skeleton.RailNominals reads net.nominal_voltage. That relation used to project any net
+// whose name token-scanned to a voltage, so a house convention naming signals
+// `<from>_<to>_<level>` inflated the rail set of the sanitized summary. This test covers the intake
+// side of that overload. That side reached a published artifact rather than only a query.
 func TestSignalLevelIsNotSummarizedAsARail(t *testing.T) {
 	d := fixtureDesign()
 	d.Nets = append(d.Nets, &ir.Net{
@@ -84,8 +84,9 @@ func TestSignalLevelIsNotSummarizedAsARail(t *testing.T) {
 }
 
 // TestSanitizationNoNetNames is the core guarantee (WS3-091). A distinctive rail NET NAME in the
-// design must never appear in EITHER rendered form, while its nominal (3.3) must, which proves the
-// Skeleton carries the voltage, not the name. Guards against a future field that would leak topology.
+// design must never appear in EITHER rendered form, and its nominal (3.3) must appear. That proves
+// the Skeleton holds the voltage and not the name. It guards against a future field that would leak
+// topology.
 func TestSanitizationNoNetNames(t *testing.T) {
 	s := Build(check.NewModel(fixtureDesign()))
 	js, err := json.Marshal(s)
@@ -119,8 +120,8 @@ func TestMarkdownAnomalies(t *testing.T) {
 }
 
 // TestBuildPartTypes checks that the BOM collapses per-component rows by (mpn, mfr, value, class),
-// and that a manufacturer spelling variant ("Murata" vs "MURATA") stays a SEPARATE row, since that
-// is the AVL-hygiene signal.
+// and that a manufacturer spelling variant ("Murata" vs "MURATA") is still a SEPARATE row, since the
+// split is the AVL-hygiene signal.
 func TestBuildPartTypes(t *testing.T) {
 	cap := func(ref, mfr string) *ir.Component {
 		return &ir.Component{RefDes: ref, Attributes: map[string]string{"Manufacturer": mfr}, Prov: &ir.Provenance{SourceFile: "t"}}
@@ -140,7 +141,7 @@ func TestBuildPartTypes(t *testing.T) {
 	}
 }
 
-// mpnDesign carries the same MPN on several components, which is the shape the gap queue got wrong.
+// mpnDesign carries the same MPN on several components. The gap queue got this shape wrong.
 // Seeding is per part number, so two placements of one jellybean are one piece of work.
 func mpnDesign() *ir.Design {
 	comp := func(ref, mpn string) *ir.Component {
@@ -182,9 +183,9 @@ func TestDatasheetGapsAreStablyOrdered(t *testing.T) {
 	}
 }
 
-// TestGapSectionDistinguishesEmptyFromAbsent exists because a corpus that seeds everything and no
-// corpus at all both used to render as no section, so a run that forgot the corpus looked like a
-// fully seeded board.
+// TestGapSectionDistinguishesEmptyFromAbsent covers two cases that used to render alike. A corpus
+// that seeds everything and no corpus at all both rendered as no section, so a run that forgot the
+// corpus looked like a fully seeded board.
 func TestGapSectionDistinguishesEmptyFromAbsent(t *testing.T) {
 	seeded := param.ProviderFunc(func(mpn string) *parampb.PartSpec { return &parampb.PartSpec{Mpn: mpn} })
 	withCorpus := Markdown(Build(check.NewModel(mpnDesign(), check.WithParamProvider(seeded))), false)

@@ -9,14 +9,14 @@ import (
 
 // ReadProject reads a KiCad project as one IR by combining the schematic (logical
 // structure: part types, components with unit sections, sheets) with the board
-// (connectivity: nets, plus the footprints components are placed as). Either reader may be
+// (connectivity: nets, and the footprint each component is placed as). Either reader may be
 // nil, and with only one present its output is returned unchanged. The sources are recorded
 // in provenance only, and the caller owns file I/O (CONSTRAINTS C1). open resolves each
 // sub-sheet's (relative) Sheetfile reference for the hierarchy walk (WS1-018), and may be
 // nil to read the root sheet alone.
 //
-// The join key is the reference designator, which a schematic component and its board
-// footprint share. The schematic is authoritative for logical fields; the board supplies
+// The join key is the reference designator. A schematic component and its board footprint
+// share it. The schematic is authoritative for logical fields; the board supplies
 // connectivity, footprints, each component's footprint_ref, and any board-only components
 // (mounting holes, test points) that have no schematic symbol.
 func ReadProject(schematic, board io.Reader, schematicSrc, boardSrc string, open func(relPath string) ([]byte, error)) (*ir.Design, error) {
@@ -49,7 +49,7 @@ func ReadProjectWithSymbols(schematic, board io.Reader, schematicSrc, boardSrc s
 	// The project file is the completeness witness (WS1-017). When the hierarchy walk
 	// covered every sheet, the external markings are stale and resolve to global
 	// (netgraph.ResolveExternal). That holds trivially for a sheetless root, and for a
-	// walked tree whose every Sheetfile opened. A partial walk (a missing sub-sheet file)
+	// walked tree in which every Sheetfile opened. A partial walk (a missing sub-sheet file)
 	// keeps them, since those nets may continue into the unread sheets. A bare .kicad_sch
 	// read never resolves, because it may be one sheet of a larger design.
 	if sch != nil && schComplete {

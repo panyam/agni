@@ -18,12 +18,12 @@ import (
 // Every duplicate agni 698 found had the same history. One package needed what another had, the
 // function was copied because importing it was inconvenient, and the two agreed until someone edited
 // one. The net-class cascade was written twice and agreed by luck; model.RenderRoute and
-// isRegulatorInternal each did the same before they were caught. This test fires at the COPY, which is
-// the one moment the duplicate is exact. It cannot see two copies that have since diverged, which is
-// what a review is for.
+// isRegulatorInternal each did the same before they were caught. This test fires at the COPY. The
+// duplicate is exact only at that moment. The test cannot see two copies that have since diverged,
+// and a review has to catch those.
 //
-// Six lines is where a body stops being an idiom anyone would retype and starts being logic somebody
-// wrote once. The allowlist records a duplicate that is COINCIDENCE, with the reason, and an entry
+// At six lines a body stops being an idiom anyone would retype and starts being logic somebody wrote
+// once. The allowlist records a duplicate that is COINCIDENCE, with the reason, and an entry
 // matching nothing fails, so the list cannot outlive what it excuses.
 var allowedDuplicateBodies = map[string]string{
 	"readers/edif/writer.go:sortedKeys + stdlib/rules/intent/strapgroups.go:sortedKeys": "the " +

@@ -9,10 +9,11 @@ import (
 	"github.com/panyam/agni/core/check"
 )
 
-// A reused sheet's two hierarchical labels, each on its own wire, are not rival labels when the
-// parent straps both to GND, which is how a parent configures one instance of a sheet (agni issue
-// 1249, Glasgow's INA233 address straps). Two local labels on one wire in the child still are, on
-// both instances. strapped_root.kicad_sch is checked against kicad-cli: GND carries R101 pins 1 and 2.
+// Take a reused sheet with two hierarchical labels, each on its own wire. When the parent straps
+// both to GND, they are not rival labels. A parent configures one instance of a sheet that way (agni
+// issue 1249, Glasgow's INA233 address straps). Two local labels on one wire in the child are still
+// rival labels, on both instances. strapped_root.kicad_sch is checked against kicad-cli, where GND
+// carries R101 pins 1 and 2.
 func TestPortsStrappedByTheParentAreNotRivalLabels(t *testing.T) {
 	var rule []*check.Rule
 	for _, r := range check.BuiltinRules() {

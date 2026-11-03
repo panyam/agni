@@ -13,8 +13,8 @@ import (
 )
 
 // The pin-mux path (agni issue 667). A pin-mux table says which peripheral functions each pin
-// can be switched to, and it adds PinAlternates to the spec's pins: to a pin a pin table already
-// emitted when one is the same terminal, and to a pin it creates otherwise.
+// can be switched to, and the path adds PinAlternates to the spec's pins. When a pin table already
+// emitted the same terminal, the alternates go on that pin. Otherwise the path creates a pin.
 //
 // The table has no shared header vocabulary across vendors, so the recipe names every column
 // (derive.proto, MuxTableRule). The two layouts are each one vendor's, and the fixtures under
@@ -70,14 +70,14 @@ func classifyMux(title string, rules []compiledMuxRule) (compiledMuxRule, bool) 
 	return compiledMuxRule{}, false
 }
 
-// muxState carries the last pin a mux table wrote across tables, because a table broken over a
+// muxState keeps the last pin a mux table wrote, from one table to the next. A table broken over a
 // page continues its last pin at the top of the next page with no name and no designator.
 type muxState struct {
 	last *parampb.Pin
 }
 
-// muxHeaderKey is a mux header compared the way the recipe names it: lowercased, whitespace
-// collapsed, and every trailing footnote marker removed ("SIGNAL NAME (1) (2)").
+// muxHeaderKey puts a mux header in the form a recipe names it in. It lowercases the header,
+// collapses whitespace, and removes every trailing footnote marker ("SIGNAL NAME (1) (2)").
 func muxHeaderKey(s string) string {
 	s = strings.ToLower(strings.Join(strings.Fields(s), " "))
 	for {
@@ -89,8 +89,8 @@ func muxHeaderKey(s string) string {
 	}
 }
 
-// trailingParen is a note after a function name, a footnote marker ("OA0- (6)", "CAN0_TX [1]")
-// or a reset-default marker ("P1.2 (RD)"), none of which is part of the name.
+// trailingParen matches a note after a function name. The note is a footnote marker ("OA0- (6)",
+// "CAN0_TX [1]") or a reset-default marker ("P1.2 (RD)"), and neither is part of the name.
 var trailingParen = regexp.MustCompile(`\s*(\([^()]*\)|\[[^\[\]]*\])\s*$`)
 
 func cleanFunction(s string) string {
@@ -170,8 +170,9 @@ func findMuxColumns(t *docpb.Table, r *derivepb.MuxTableRule) (muxColumns, []str
 	return cols, missing
 }
 
-// tableGrid answers what text covers a cell position, honouring spans, and which cells START at
-// one, which is how a designator is attributed to the pin whose rows it starts in.
+// tableGrid answers two questions about a cell position, honouring spans. It says what text covers
+// the position, and which cells START at it. The second answer attributes a designator to the pin
+// whose rows it starts in.
 type tableGrid struct{ t *docpb.Table }
 
 func (g tableGrid) text(row int32, col int) string {
@@ -376,7 +377,7 @@ func rowPerFunctionGroups(t *docpb.Table, g tableGrid, cols muxColumns) []muxGro
 }
 
 // startsPin reports whether a row's start-column cell is filled. Only dashes mean "not this
-// pin's first row" ("- -" is two of them a producer merged); "N/A" is a value, and TI prints it
+// pin's first row", and "- -" is two dashes that a producer merged. "N/A" is a value. TI prints it
 // as the reset state of a supply pin.
 func startsPin(g tableGrid, row int32, col int) bool {
 	return strings.Trim(g.startingAt(row, col), "-—– ") != ""
@@ -389,9 +390,9 @@ func firstOr(s []string, def string) string {
 	return def
 }
 
-// muxTerminal finds the pin already in the spec that a mux row describes: one sharing a
-// (package, designator) pair, or, when the row has no designators, one whose name matches under
-// ident.PinName. Nil means the row is a pin the spec does not have yet.
+// muxTerminal finds the spec pin that a mux row describes. It matches a pin sharing a (package,
+// designator) pair. When the row has no designators, it matches a pin by name under ident.PinName.
+// Nil means the row is a pin the spec does not have yet.
 func muxTerminal(spec *parampb.PartSpec, grp muxGroup) *parampb.Pin {
 	for _, p := range spec.Pins {
 		for _, a := range p.Numbers {
@@ -442,8 +443,8 @@ func repeatedPackages(nums []*parampb.PinNumber) []string {
 	return out
 }
 
-// unclaimed drops the designators another pin already holds, gapping each, since a designator
-// belongs to one pin in a package and a mux row that collides with a pin table has misread one
+// unclaimed drops the designators another pin already holds, and gaps each one. A designator
+// belongs to one pin in a package, so a mux row that collides with a pin table has misread one
 // of the two.
 func unclaimed(spec *parampb.PartSpec, pin *parampb.Pin, nums []*parampb.PinNumber, manifest *derivepb.RunManifest, region string) []*parampb.PinNumber {
 	var out []*parampb.PinNumber

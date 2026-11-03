@@ -1,12 +1,14 @@
 # embed-viewer
 
 A parent page that frames the agni viewer and moves it over postMessage, through the
-`ViewerPageService` contract the viewer page answers itself (agni issues 1150, 1152).
+`ViewerPageService` contract. The viewer page answers that contract itself (agni issues 1150,
+1152).
 
 ## Run it
 
-From the repo root, after `make ui`, start a viewer that takes requests from the origin you will
-serve this folder from, then serve the folder and open the page with the viewer's design URL:
+From the repo root, after `make ui`, start a viewer. Its `--embed-origin` names the origin that
+will serve this folder, and the viewer takes requests from it. Then serve the folder and open the
+page with the viewer's design URL:
 
 ```bash
 go run ./cmd/agni serve --addr 127.0.0.1:8080 --web-dir web --mount kicad=readers/kicad/testdata --embed-origin http://127.0.0.1:9000
@@ -15,7 +17,7 @@ open "http://127.0.0.1:9000/parent.html?viewer=http://127.0.0.1:8080/designs/kic
 ```
 
 Press Get location, paste a sheet id into the sheet box, and press Show sheet. The viewer moves
-without reloading, and the reply shows where it landed.
+without reloading, and the reply shows its new location.
 
 ## A report beside the viewer
 
@@ -27,9 +29,9 @@ go run ./cmd/agni check readers/kicad/testdata/hier_numeric_root.kicad_sch --mou
 open "http://127.0.0.1:9000/two-pane.html?viewer=http://127.0.0.1:8080/designs/kicad/hier_numeric_root.kicad_sch/view&report=report.html"
 ```
 
-Clicking a subject in the report moves the viewer beside it without reloading it, since the viewer's
-frame is named `agni-viewer`, the window every report link targets. Delete `report.html` afterwards,
-since a report written from your own design is that design's data.
+Clicking a subject in the report moves the viewer beside it without reloading it. The viewer's frame
+is named `agni-viewer`, and every report link targets a window of that name. Delete `report.html`
+afterwards, since a report written from your own design is that design's data.
 
 ## An agent driving the tabs you have open
 
@@ -49,11 +51,11 @@ Then walk it in this order:
 2. Tick the switch in the second tab only.
 3. Ask the agent to show the gateway's board sheet. It calls `viewer_show_sheet` with
    `design: tut/designs/gateway`, and the second tab opens the Board sheet without reloading. The
-   first tab stays where it was.
+   first tab does not move.
 4. Ask it where the viewer is. `viewer_get_location` answers with the second tab's design and sheet.
-5. Ask it to run the checks and show you a net with a copper clearance error. It calls `check`, which
-   names `CAN1_CANL` among others, then `viewer_locate_entity` with `kind: net` and that net as
-   `subject`, and the tab lights the net.
+5. Ask it to run the checks and show you a net with a copper clearance error. It calls `check`, and
+   the answer names `CAN1_CANL` among others. Then it calls `viewer_locate_entity` with `kind: net`
+   and that net as `subject`, and the tab lights the net.
 6. Tell the agent to wait for your question in the viewer. It calls `next_request` with
    `design: tut/designs/gateway`. Click a net in the second tab, type "what else is on this net?" into
    the Ask box beside the switch, and press Ask. The agent hears the question with the tab's sheet and
@@ -68,7 +70,7 @@ wires, and checks that a second page on the server's origin with a genuine token
 
 ## How it is built
 
-`parent.html` is the whole client: it waits for the viewer's `ready` message, then posts
+`parent.html` is the whole client. It waits for the viewer's `ready` message, then posts
 `{ agni: "agni-viewer/v1", id, method, body }` and matches each reply by its `id`. The protocol is
 described in `docsite/content/build/embedding-the-viewer.md`, and `web/browser/embed.spec.ts` drives
 this page across two origins in the browser suite.

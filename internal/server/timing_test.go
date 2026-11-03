@@ -29,8 +29,8 @@ func slowCall(t *testing.T, tm Timing) {
 }
 
 // TestASlowRequestIsLoggedWithWhatTookTheTime holds --slow-request to one line naming the stage that
-// dominated, which tier answered each read, and the slowest rules: the issue's two motivating causes
-// were a stage that dominates and a cache layer missing on every request (agni issue 914).
+// dominated, which tier answered each read, and the slowest rules. The issue had two motivating
+// causes, a stage that dominates and a cache layer missing on every request (agni issue 914).
 func TestASlowRequestIsLoggedWithWhatTookTheTime(t *testing.T) {
 	var lines []string
 	log := func(format string, args ...any) {

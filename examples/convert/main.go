@@ -2,11 +2,11 @@
 // format into the neutral IR and emits it back out, so a conversion is A -> IR -> B. The only
 // writer it offers is IPC-2581, and it re-reads the output to check the round trip.
 //
-// The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only binds
-// the steps that run engine code.
+// The narration is in the sidecar walkthrough.md (demokit FromMarkdown). This file only binds the
+// steps that run engine code.
 //
-// Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
-// `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
+// The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
+// `make runquiet` takes non-interactive defaults (CI-safe), and `make doc` renders to markdown.
 package main
 
 import (
@@ -24,7 +24,7 @@ import (
 var walkthroughMD []byte
 
 func main() {
-	// chosen and format carry the picks to the emit step. Their defaults must match the markdown
+	// chosen and format pass the picks to the emit step. Their defaults must match the markdown
 	// inputs' defaults, or a non-interactive run reads one design and reports another.
 	chosen := "demo-board.kicad_pcb"
 	format := "ipc-2581"

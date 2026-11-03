@@ -2,8 +2,8 @@
 
 ### What it means
 
-A pin whose electrical type is NO_CONNECT (the symbol author's "leave this
-alone") sits on a net that connects it to at least one other pin.
+A pin's electrical type is NO_CONNECT, the symbol author's "leave this alone",
+and the pin sits on a net that connects it to at least one other pin.
 
 ### Why engineers want it
 

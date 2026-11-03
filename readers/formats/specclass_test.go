@@ -7,14 +7,14 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestReadDesignStampsDatasheetClasses is the wiring half of agni issue 710. A Loader carrying a
-// datasheet corpus stamps the classes only that corpus can establish, so the design every consumer
-// receives already knows what its parts are. Before this the enrichment lived inside check.Model, so
-// a drawing built from the same design disagreed with a query over it.
+// TestReadDesignStampsDatasheetClasses covers the wiring half of agni issue 710. A Loader with a
+// datasheet corpus stamps the classes only that corpus can establish. So every consumer receives a
+// design that already knows what its parts are. Before this the enrichment lived inside
+// check.Model. A drawing built from the same design then disagreed with a query over it.
 //
-// It reads through ReadDesign rather than calling the pass, because the ORDER is the part that can
-// break. The join key is the MPN a previous pass fills, and the convention stamp REPLACES the set, so
-// either one running after this would silently undo it.
+// It reads through ReadDesign rather than calling the pass, because the ORDER can break. The join
+// key is the MPN, and a previous pass fills it. The convention stamp REPLACES the set. If either ran
+// after this pass, it would silently undo it.
 func TestReadDesignStampsDatasheetClasses(t *testing.T) {
 	const design = "../../cmd/agni/testdata/classproject/designs/clocks/clocks.edn"
 	l := &Loader{DeviceClassFor: func(mpn string) string {
@@ -49,8 +49,8 @@ func TestReadDesignStampsDatasheetClasses(t *testing.T) {
 	}
 }
 
-// TestReadDesignWithoutACorpusIsUnchanged is the positive control for the test above. Without it a
-// pass that never fired would read as a pass that had nothing to add, and the assertions would hold
+// TestReadDesignWithoutACorpusIsUnchanged is the positive control for the test above. Without it, a
+// pass that never fired would look like a pass with nothing to add. The assertions would then hold
 // for the wrong reason.
 func TestReadDesignWithoutACorpusIsUnchanged(t *testing.T) {
 	const design = "../../cmd/agni/testdata/classproject/designs/clocks/clocks.edn"

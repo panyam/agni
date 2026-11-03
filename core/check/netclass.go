@@ -12,9 +12,9 @@ import (
 // NetClassCascade resolves what a project DECLARED for a net from its net-class definitions, the way
 // KiCad composes an effective netclass, which is PER FIELD rather than per class. A net's classes are
 // sorted by priority ascending, the Default class pinned last and applying to every net including
-// unclassed ones, and each field comes from the first class that states it. So a net in a
-// high-priority class declaring only a clearance still takes its track width from the next class
-// down, and there is no single winning class to pick.
+// unclassed ones, and each field comes from the first class that states it. Imagine a net in a
+// high-priority class that declares only a clearance. The net still takes its track width from the
+// next class down, and there is no single winning class to pick.
 //
 // The net.declared_* relations and the netclass-conformance rules both resolve through it (agni 698).
 type NetClassCascade struct {
@@ -38,8 +38,9 @@ func NewNetClassCascade(defs []*ir.Constraint) *NetClassCascade {
 // Declared resolves one numeric field for a net belonging to classes. It returns the value from the
 // first class in cascade order that states it, and that class's name, so a finding can say whose
 // limit it is.
-// ok is false when no class states the field, which is a net the project did not constrain rather
-// than one that passes. A class the net names but the project never defined states nothing.
+// ok is false when no class states the field. Then the project did not constrain the net, and
+// that differs from the net passing. A class the net names but the project never defined states
+// nothing.
 func (c *NetClassCascade) Declared(classes []string, param string) (value float64, class string, ok bool) {
 	for _, cls := range c.order(classes) {
 		s := c.byName[cls].GetParams()[param]

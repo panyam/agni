@@ -19,8 +19,8 @@ type fakeCorpus struct {
 	batchCalls int
 	genCalls   int
 	asked      []string
-	// moveOnBatch bumps the generation the first time BatchGet answers, as a publish landing between
-	// the generation check and the fetch would.
+	// moveOnBatch bumps the generation the first time BatchGet answers. A publish between the
+	// generation check and the fetch would do the same.
 	moveOnBatch bool
 }
 
@@ -65,7 +65,7 @@ func remoteAt(f Fetcher, maxAge time.Duration) (*Remote, *time.Time) {
 }
 
 // After a Prefetch, Lookup answers seeded parts, misses unseeded ones, and matches case-insensitively,
-// with one batch for the whole design and nothing fetched again while the generation holds.
+// with one batch for the whole design and nothing fetched again while the generation is unchanged.
 func TestRemoteAnswersFromOneBatch(t *testing.T) {
 	f := corpusOf("LM1117", "TXB0104")
 	r, _ := remoteAt(f, time.Minute)
@@ -115,8 +115,8 @@ func TestRemoteRefetchesWhenTheGenerationMoves(t *testing.T) {
 	}
 }
 
-// A publish landing between the generation check and the fetch must not leave the cache holding
-// answers from two generations.
+// A publish between the generation check and the fetch must not leave the cache holding answers
+// from two generations.
 func TestRemoteRefetchesWhatTheMovedGenerationInvalidated(t *testing.T) {
 	f := corpusOf("LM1117", "TXB0104")
 	r, _ := remoteAt(f, time.Minute)

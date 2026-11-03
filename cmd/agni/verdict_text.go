@@ -16,12 +16,12 @@ const textWrapWidth = 96
 // writeVerdictText renders the run for a terminal, grouped by rule.
 //
 // GROUPED RATHER THAN COLUMNED (agni issue 402), so three rules reaching three conclusions about one
-// subject stay distinguishable. A rule column does not fit, because the longest rule name is 31
-// characters, which with the outcome and subject columns leaves about 21 for the proof on an 80-column
-// terminal, and the proofs run 40 to 90. Under a heading the rule is stated once and the sentence keeps
-// the width.
+// subject remain distinguishable. A rule column does not fit. The longest rule name is 31 characters.
+// With the outcome and subject columns, that leaves about 21 for the proof on an 80-column terminal,
+// and the proofs run 40 to 90. Under a heading the rule is stated once and the sentence gets the
+// width.
 //
-// IT RENDERS THE SAME report.Report THE HTML FORM DOES, so the two cannot disagree about what a run
+// IT RENDERS THE SAME report.Report AS THE HTML FORM, so the two cannot disagree about what a run
 // contained or its order (agni issue 380).
 //
 // Rules with something to act on come first, and within a rule the failures precede the passes. On the
@@ -33,7 +33,7 @@ func writeVerdictText(w io.Writer, rep rpt.Report) {
 	}
 	// Outcome width is measured across the WHOLE report rather than per rule, so the columns line up
 	// when a reader scans past a heading. A run with nothing undecided therefore spends four columns
-	// on it rather than the fourteen "not-considered" would reserve.
+	// on it rather than reserving fourteen for "not-considered".
 	outcomeWidth := 0
 	for _, r := range rep.Rules {
 		for _, row := range r.Rows {
@@ -48,7 +48,7 @@ func writeVerdictText(w io.Writer, rep rpt.Report) {
 		}
 		fmt.Fprintf(w, "%s  %s\n", r.Name, ruleTally(r))
 		if !r.StatesConsideredSet {
-			// The same sentence the HTML report carries. These rows are what the rule FOUND, not what
+			// The HTML report prints the same sentence. These rows are what the rule FOUND, not what
 			// it checked, and a reader scanning a column of outcomes reads them as coverage unless told.
 			fmt.Fprintln(w, "  (reports violations only; absence here is not evidence of correctness)")
 		}
@@ -112,7 +112,7 @@ func writeVerdictText(w io.Writer, rep rpt.Report) {
 // issue 644).
 const verdictQuietRowLimit = 20
 
-// quietOutcome reports an outcome nobody has to act on, which is what makes a row safe to elide.
+// quietOutcome reports an outcome nobody has to act on. A row with such an outcome is safe to elide.
 func quietOutcome(o check.Outcome) bool {
 	switch o {
 	case check.Fail, check.Inconclusive:
@@ -121,8 +121,8 @@ func quietOutcome(o check.Outcome) bool {
 	return true
 }
 
-// ruleTally is the heading's right-hand side, what this rule concluded, worst first, so the number a
-// reader acts on is the one they meet.
+// ruleTally is the heading's right-hand side, what this rule concluded, worst first. A reader meets
+// the number to act on before the others.
 func ruleTally(r rpt.RuleReport) string {
 	var parts []string
 	for _, o := range []check.Outcome{check.Fail, check.Inconclusive, check.NoLimit, check.NotConsidered, check.Pass} {
@@ -133,8 +133,8 @@ func ruleTally(r rpt.RuleReport) string {
 	return strings.Join(parts, ", ")
 }
 
-// outcomeWord is the vocabulary word for an outcome, which is the Go constant's own value
-// (check.Outcome is the word the csv and the wire spell), so there is no second spelling to keep.
+// outcomeWord is the vocabulary word for an outcome. That word is the Go constant's own value, and
+// the csv and the wire spell check.Outcome the same way, so there is no second spelling to keep.
 func outcomeWord(o check.Outcome) string {
 	if o == "" {
 		return "unspecified"
@@ -142,9 +142,9 @@ func outcomeWord(o check.Outcome) string {
 	return string(o)
 }
 
-// wrapText folds a sentence at width, indenting every line after the first so it stays inside the
-// detail column. A width at or below zero, a subject so long there is no column left, returns the
-// sentence unfolded rather than truncating away the numbers.
+// wrapText folds a sentence at width, indenting every line after the first to keep it inside the
+// detail column. A subject so long that no column is left gives a width at or below zero. wrapText
+// then returns the sentence unfolded rather than truncating away the numbers.
 func wrapText(s string, width, indent int) string {
 	if width <= 0 || len(s) <= width {
 		return s

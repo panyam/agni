@@ -29,8 +29,8 @@ func (w *Workspace) Mounts() []service.MountInfo {
 }
 
 // ListDir resolves the URI and reads one directory level. The service maps an error wrapping
-// service.ErrInvalidPath to InvalidArgument and any other, including an unknown mount or a missing
-// directory, to NotFound.
+// service.ErrInvalidPath to InvalidArgument. It maps any other error to NotFound, including an
+// unknown mount or a missing directory.
 func (w *Workspace) ListDir(_ context.Context, uri artifact.URI) ([]service.DirEntry, error) {
 	abs, err := Resolve(w.ms, uri)
 	if err != nil {

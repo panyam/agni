@@ -2,10 +2,10 @@
 
 ### What it is
 
-`netclass.via_drill(class, mm)` yields the via drill diameter a net class DECLARES its nets should route
-at, held in metres and shown in mm, one row per class that states one. A class that states no via drill diameter
-yields no row, which is a meaningful fact rather than a gap, because that field then cascades to a
-lower-priority class.
+`netclass.via_drill(class, mm)` yields one row for each net class that DECLARES a via drill diameter
+for its nets. The value is held in metres and shown in mm. A class that states no via drill diameter
+yields no row. That absence is a meaningful fact rather than a gap, because the field then cascades
+to a lower-priority class.
 
 This is the DECLARED side. `board.via_drill(net, mm)` is the ACTUAL side, in the same units, so the
 two join without conversion.
@@ -13,9 +13,9 @@ two join without conversion.
 ### For hardware engineers
 
 This is the number you typed into Board Setup for that class, read back. Query it to confirm the
-engine sees the constraints you set, and to check the project against itself, since the declared
-drill is what you intended and the routed drill is what happened, and a review that compares them
-contains no number the tool invented.
+engine sees the constraints you set, and to check the project against itself. The declared drill
+records what you intended, and the routed drill records what happened. A review that compares the
+two contains no number the tool invented.
 
 ### For software engineers
 
@@ -35,9 +35,9 @@ nodes of kind `netclass`, and parses the `via_drill` param. Populated in the I/O
 
 Only a KiCad project read populates this. An EDIF netlist, an IPC-2581 board, a bare `.kicad_sch`,
 and a KiCad project that defines no classes all leave it empty, and a rule scoped by it would find
-nothing and read clean. `design.has_netclass_defs` is the marker that separates those cases, and it is
-deliberately distinct from `design.has_netclass`, because membership and definitions are independent blocks of
-`net_settings`, so a project can assign nets to a class it never defined.
+nothing and read clean. `design.has_netclass_defs` separates those cases. It is deliberately
+distinct from `design.has_netclass`, because membership and definitions are independent blocks of
+`net_settings`. So a project can assign nets to a class it never defined.
 
 ### Datalog
 

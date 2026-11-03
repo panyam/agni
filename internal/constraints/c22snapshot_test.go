@@ -9,9 +9,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// C22, as amended by agni issue 1061: a question about a design names a snapshot of it, never the
-// design's files or the config it is read under, since the snapshot resolved both once when it was
-// ingested. A request carrying its own uri or overlay beside a snapshot would let one question read
+// C22, as amended by agni issue 1061. A question about a design names a snapshot of it. It never
+// names the design's files or the config the design is read under, since the snapshot resolved both
+// once at ingest. A request with its own uri or overlay beside a snapshot would let one question read
 // the design a second way.
 //
 // The analysis services are swept by descriptor. The exempt methods ask about something other than a

@@ -10,7 +10,7 @@ model reads back.
   `diff`, `design`, `review` and the rest) over stdio, the way Claude Code starts it.
 - An answer that opens with the question that produced it, carries each row's provenance, and says
   why it has no viewer link when the server has no viewer to link to.
-- The order a model usually asks in: find the design, look up a relation, ask, follow a signal,
+- The usual order of a model's questions: find the design, look up a relation, ask, follow a signal,
   compare two revisions.
 
 ## Run it
@@ -23,12 +23,13 @@ make runquiet        # non-interactive defaults (CI-safe)
 
 ## The mission's exercise
 
-`ask-over-mcp exercise <spec>` asks the questions a spec under `exercise/` lists, starting
-`agni serve --mcp` on a free port, and checks each reply. It must state its question, carry links
-that open in the viewer, hold the rows the CLI answers to the same request (both written through one
-csv encoder), and contain the rows the spec pins. It prints a table with one row per call.
-`make exercise-mcp-ask` at the repo root runs it over the Jetson baseboard, and
-`WALK_DESIGN=gateway` over the tutorial board, which `go test` here runs over stdio too.
+`ask-over-mcp exercise <spec>` starts `agni serve --mcp` on a free port, asks the questions that a
+spec under `exercise/` lists, and checks each reply. A reply must state its question, carry links
+that open in the viewer, hold the same rows the CLI answers for the same request (both written
+through one csv encoder), and contain the rows the spec pins. It prints a table with one row per
+call. `make exercise-mcp-ask` at the repo root runs it over the Jetson baseboard, and
+`WALK_DESIGN=gateway` runs it over the tutorial board. `go test` here runs that board over stdio
+too.
 
 `AGNI_BIN` names another agni to run. The default folder is `../tutorial-project`; give the first
 step another folder, or a design file, to ask about your own.

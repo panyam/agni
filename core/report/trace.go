@@ -9,7 +9,7 @@ import (
 )
 
 // WriteTraceText renders a trace for a person: the route as one line to copy, then the same route
-// expanded with what sits on each net, then what the answer rests on.
+// expanded with what sits on each net, then the evidence behind the answer.
 func WriteTraceText(w io.Writer, t check.Trace) {
 	switch t.Outcome {
 	case check.TraceNoRoute:

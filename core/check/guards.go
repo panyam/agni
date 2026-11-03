@@ -14,9 +14,9 @@ import (
 	"github.com/panyam/agni/internal/netgraph"
 )
 
-// This file holds the guard vocabulary that BOTH the built-in rules and the Spec FFI builtins
-// (spec_funcs.go) use, so it stays in the framework rather than in a rule_*.go (issue #4): name
-// heuristics, protection and reach walks, and the scope and citation helpers.
+// This file holds the guard vocabulary. BOTH the built-in rules and the Spec FFI builtins
+// (spec_funcs.go) use it, so it lives in the framework rather than in a rule_*.go (issue #4). It
+// covers name heuristics, protection and reach walks, and the scope and citation helpers.
 
 // Citation renders the datasheet side of a finding's provenance as a message string, naming the
 // document revision, page, table and extraction method the limit came from. The design side is
@@ -62,8 +62,8 @@ func documentRef(spec *parampb.PartSpec, docRef string) string {
 
 // DiffConventionPresent reports whether the design uses differential-pair naming at all, meaning at
 // least one net has its expected complement (a complete X_P/X_N pair). Orphan reporting is gated on
-// it, so a design with no differential pairs stays silent even when names happen to end in _P, _DP
-// or +.
+// it, so a design with no differential pairs reports nothing even when names happen to end in _P,
+// _DP or +.
 func DiffConventionPresent(m Model) bool {
 	for _, n := range m.Nets() {
 		if neg, ok := m.DiffNegative(n.Name); ok && m.HasNetName(neg) {
@@ -137,18 +137,18 @@ func DeliberatelyOpen(m Model, n *ir.Net) bool {
 	return len(n.Connections) == 1 && IntentionallyUnconnected(m, n)
 }
 
-// DeliberatelyOpenReason is the reason a rule gives a net DeliberatelyOpen holds for.
+// DeliberatelyOpenReason is the reason a rule gives when DeliberatelyOpen holds for a net.
 const DeliberatelyOpenReason = "the design marks the net's only pin as deliberately unconnected, so there is nothing on it to judge"
 
-// ToolNetNamePattern matches the names a tool gives a net no designer named: an EDIF or synthetic
-// "N$1", "$N1", and KiCad's "Net-(R1-Pad2)" and "unconnected-(J1A-MID0-PadK40)". A KiCad name is
-// built from a pin's own name, so a rule that reads meaning from a net's name must skip these, or the
-// pin name inside reads as the designer's (agni issue 1019).
+// ToolNetNamePattern matches the names a tool makes up when no designer named a net. Examples are an
+// EDIF or synthetic "N$1", "$N1", and KiCad's "Net-(R1-Pad2)" and "unconnected-(J1A-MID0-PadK40)".
+// KiCad builds such a name from a pin's own name. So a rule that reads meaning from a net's name must
+// skip these, or the pin name inside reads as the designer's (agni issue 1019).
 const ToolNetNamePattern = `^(N\$|unconnected-\(|Net-\(|\$)`
 
 var toolNetName = regexp.MustCompile(ToolNetNamePattern)
 
-// IsToolNetName reports whether a net's name is one a tool made up rather than one a designer gave it.
+// IsToolNetName reports whether a tool made up a net's name, rather than a designer giving it one.
 func IsToolNetName(name string) bool { return toolNetName.MatchString(name) }
 
 // IsGroundName matches the ground-rail naming conventions (GND and variants, VSS, EARTH). Ground pins
@@ -165,10 +165,10 @@ func IsGroundName(name string) bool { return classify.ActiveRoleVocab().IsGround
 func IsPowerRailName(name string) bool { return classify.ActiveRoleVocab().IsRail(name) }
 
 // Unpopulated reports whether every part on a net is marked do-not-populate, so the assembled board
-// carries the copper and nothing on it (agni issue 961). Power flags and power symbols count for
-// neither side, and a net with no real part on it is not unpopulated. A rule that would demand
-// something of the net, a capacitor or a clamp, leaves such a net out, since crediting no unfitted part
-// while still judging the unfitted circuit reports a fault on hardware that is never built.
+// has the copper and no parts on it (agni issue 961). Power flags and power symbols count for neither
+// side, and a net with no real part on it is not unpopulated. Some rules demand a capacitor or a clamp
+// of a net, and such a rule leaves an unpopulated net out. The rule credits no unfitted part, so
+// judging the unfitted circuit anyway would report a fault on hardware that is never built.
 func Unpopulated(m Model, n *ir.Net) bool {
 	real := false
 	for _, c := range n.Connections {
@@ -231,10 +231,10 @@ func ReachableOfClass(m Model, n *ir.Net, class ComponentClass) string {
 	return ""
 }
 
-// ExternalSignalNet reports the scope the ESD rules share, a connector-facing SIGNAL net that is not
-// a rail or ground (by name or by fact), not a deliberately unconnected pad, and not on a power path
-// (input-protection's, WS3-011). esd-protection and esd-clamp-not-tvs split these nets by what
-// protects them (nothing, or a Zener clamp).
+// ExternalSignalNet reports whether a net is a connector-facing SIGNAL net, the scope both ESD rules
+// share. Such a net is not a rail or ground (by name or by fact), not a deliberately unconnected pad,
+// and not on a power path (input-protection's, WS3-011). esd-protection and esd-clamp-not-tvs split
+// these nets by what protects them (nothing, or a Zener clamp).
 //
 // The net.connector_signal query relation projects it too, so a datalog ESD check scopes itself
 // exactly as the Go rules do (WS3-061). It cannot be composed in datalog because its guards read net
@@ -322,7 +322,7 @@ func railOrGround(m Model, n *ir.Net) (rail, ground bool) {
 	return m.IsPowerRail(n.GetName()), false
 }
 
-// ACCoupled reports whether a SERIES capacitor carries the net, the structural signature of AC
+// ACCoupled reports whether the net passes through a SERIES capacitor, the structural signature of AC
 // coupling (WS3-088). It tells a coupling cap from a decoupling one by the far side. A decoupling
 // cap returns to ground or a rail, while a coupling cap's far side is another signal.
 func ACCoupled(m Model, n *ir.Net) bool {
@@ -362,9 +362,9 @@ func connects(n *ir.Net, refDes string) bool {
 	})
 }
 
-// UnprotectedPowerReach reports whether SOME power input the connector net reaches is unprotected.
-// It is the bool the spec FFI and the declarative twin need, and PowerPathProtection is the same
-// walk with the evidence kept.
+// UnprotectedPowerReach reports whether the connector net reaches SOME power input that is
+// unprotected. The spec FFI and the declarative twin need this bool. PowerPathProtection runs the
+// same walk and keeps the evidence.
 func UnprotectedPowerReach(m Model, n *ir.Net) bool {
 	return PowerPathProtection(m, n).Unprotected != ""
 }
@@ -375,8 +375,8 @@ func UnprotectedPowerReach(m Model, n *ir.Net) bool {
 // entry and for a USB data pair that reaches no supply pin at all. The first is a pass, and the second
 // is not a subject of a power-entry rule.
 type PowerPathReport struct {
-	// Loads counts the reached nets carrying a real power-input pin, which is how many power entries
-	// this connector net feeds. Zero means the walk found no power path.
+	// Loads counts the reached nets that have a real power-input pin. Each one is a power entry this
+	// connector net feeds. Zero means the walk found no power path.
 	Loads int
 	// Unprotected names the first reached load with neither a fuse crossed on the way nor a
 	// protector on any net along that path, "" when every load is protected.
@@ -387,8 +387,8 @@ type PowerPathReport struct {
 	// ProtectorWitness is the datasheet evidence when Protector is a current-limiting switch rather
 	// than a fuse or TVS (CurrentLimitCredit), nil otherwise.
 	ProtectorWitness *Witness
-	// Unread names an IC at the Unprotected entry the run has no datasheet for, which may be a
-	// current-limiting switch (UnreadIC), "" when there is none.
+	// Unread names an IC at the Unprotected entry when the run has no datasheet for it. That IC may be
+	// a current-limiting switch (UnreadIC). Unread is "" when there is none.
 	Unread string
 }
 
@@ -434,8 +434,8 @@ func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 				}
 			}
 		}
-		// A current-limiting switch that is the entry's only load is its overcurrent protection,
-		// which only its datasheet can say (agni issue 1248).
+		// Suppose a current-limiting switch is the entry's only load. Then the switch is the entry's
+		// overcurrent protection, and only its datasheet can say so (agni issue 1248).
 		var credit *Witness
 		if protector == "" {
 			protector, credit = CurrentLimitCredit(m, target)
@@ -456,15 +456,15 @@ func PowerPathProtection(m Model, n *ir.Net) PowerPathReport {
 // does not count it, and esd-clamp-not-tvs (WS3-078) reports it separately for the review to weigh.
 func ZenerReachable(m Model, n *ir.Net) bool { return ReachableOfClass(m, n, ClassZener) != "" }
 
-// PullUpReachHops is the DEFAULT bound on the walk from an I2C bus to the rail its pull-up returns it
-// to. Like the hop constants in reach.go it is ELECTRICAL, not a search budget. A pull-up behind a
+// PullUpReachHops is the DEFAULT bound on the walk from an I2C bus to its pull-up's rail. Like the
+// hop constants in reach.go it is ELECTRICAL, not a search budget. A pull-up behind a
 // series isolation resistor is an ordinary two hops, and past three the series resistance is
 // comparable to the pull-up, so the bus no longer returns high in time. Widening it for every design
 // passes buses that are electrically unheld.
 //
 // A design may declare a different reach for one net (`pull_up_reach_hops` in its intent, agni issue
-// 820), which is the designer saying that bus's series network is sized for it. The walks read the
-// limit through Model.PullUpReachLimit, never this constant. See
+// 820). The designer is then saying that bus's series network is sized for that reach. The walks
+// read the limit through Model.PullUpReachLimit, never this constant. See
 // docsite/content/architecture/net-solving.md#how-far-a-walk-crosses-series-parts.
 const PullUpReachHops = 3
 
@@ -479,10 +479,10 @@ const PullUpReachHops = 3
 // the strength of a filter. Ground is never crossed, since a resistor to ground is a pull-DOWN and
 // ground is a plane that would make everything reachable.
 //
-// It is the boolean projection of PullUpPathToRail, where the walk lives.
+// It is the boolean projection of PullUpPathToRail, which runs the walk.
 //
-// A pin whose part's datasheet binds an internal pull-up to it counts as pulled up too
-// (IntegratedPullUpCredit, agni issue 1298), which PullUpVerdict passes on the same evidence, so the
+// Sometimes a part's datasheet binds an internal pull-up to a pin. That pin counts as pulled up too
+// (IntegratedPullUpCredit, agni issue 1298). PullUpVerdict passes it on the same evidence, so the
 // spec twins and the coverage panel agree with the rules.
 func PullUpReachesRail(m Model, n *ir.Net) bool {
 	if PullUpPathToRail(m, n) != nil {
@@ -492,9 +492,9 @@ func PullUpReachesRail(m Model, n *ir.Net) bool {
 	return ref != ""
 }
 
-// PullUpHop is one leg of the walk from an I2C net to a rail, the resistor crossed and the net it
-// landed on. It names the resistor rather than the pin because a reader locating the pull-up wants
-// the part.
+// PullUpHop is one leg of the walk from an I2C net to a rail. It holds the resistor crossed and the
+// net on its far side. It names the resistor rather than the pin because a reader locating the
+// pull-up wants the part.
 type PullUpHop struct {
 	Resistor string // ref-des of the resistor crossed
 	Net      string // the net reached by crossing it
@@ -503,7 +503,7 @@ type PullUpHop struct {
 // PullUpPathToRail returns the hops from n to the first rail reachable under PullUpReachesRail's
 // rules, and nil when none is. The last hop's Net is the rail.
 //
-// The path is the proof a passing bus carries, so a reviewer can ask "show me the pull-up" (#387).
+// A passing bus keeps the path as its proof, so a reviewer can ask "show me the pull-up" (#387).
 func PullUpPathToRail(m Model, n *ir.Net) []PullUpHop {
 	if n == nil {
 		return nil
@@ -566,8 +566,8 @@ func PullUpPathToRail(m Model, n *ir.Net) []PullUpHop {
 	return nil
 }
 
-// PullUpTermination is one resistor that takes a net to a rail, with the rail it landed on and the
-// hops it took to get there.
+// PullUpTermination is one resistor that takes a net to a rail, with the rail it reaches and the
+// hops to that rail.
 type PullUpTermination struct {
 	Resistor string      // the resistor whose far side is the rail
 	Rail     string      // the rail it landed on
@@ -575,9 +575,9 @@ type PullUpTermination struct {
 }
 
 // AllPullUpPathsToRail returns every DISTINCT resistor that takes n to a rail, with the rail each
-// landed on. PullUpPathToRail answers whether there is one, and this answers how many, which is where
-// a second pull-up shows up (agni issue 516). Two 2.2k in parallel are an effective 1.1k, so the bus
-// sinks about twice the current it was sized for, and reachability alone cannot see it.
+// reaches. PullUpPathToRail answers whether there is one. This answers how many, and a second
+// pull-up shows up in that count (agni issue 516). Two 2.2k in parallel are an effective 1.1k, so the
+// bus sinks about twice the current it was sized for, and reachability alone cannot see it.
 //
 // DISTINCT BY RESISTOR, not by path and not by rail. Two routes through one resistor are one
 // pull-up, and one resistor reaching two rails is still one part to remove.
@@ -653,13 +653,12 @@ func AllPullUpPathsToRail(m Model, n *ir.Net) []PullUpTermination {
 // CompareToBound does for a limit, so a Pass always carries the path that justifies it.
 //
 // A FAIL carries a witness too, stating the hop limit in effect for the net (its declared reach, else
-// PullUpReachHops), since a bus whose pull-up sits four hops away is a different situation from one
-// with no pull-up at all.
+// PullUpReachHops). A pull-up four hops away and no pull-up at all are different situations.
 //
 // A PASS carries every distinct path to a rail within that limit (agni issue 821), one per
 // terminating resistor as AllPullUpPathsToRail finds them, in SortPullUpTerminations' order, with the
-// proof PullUpEvidence builds. A net with one path carries exactly what it did before more than one
-// was listed.
+// proof PullUpEvidence builds. A net with one path gets exactly the witness it got before PASS listed
+// more than one.
 //
 // The statement names a one-hop path by its resistor and spells a longer one as RenderRoute does,
 // with every net it crosses, so the reason column of an exported verdict table reads as the route
@@ -670,8 +669,8 @@ func PullUpVerdict(m Model, n *ir.Net) (Outcome, *Witness, []ContextSubject) {
 	}
 	paths := AllPullUpPathsToRail(m, n)
 	if len(paths) == 0 {
-		// A part whose datasheet binds an internal pull-up to its pin on n pulls n up with nothing on
-		// the board, as a level translator's ports do (agni issue 1298).
+		// Sometimes a part's datasheet binds an internal pull-up to its pin on n. That part pulls n up
+		// with nothing on the board, as a level translator's ports do (agni issue 1298).
 		if ref, w := IntegratedPullUpCredit(m, n); ref != "" {
 			return Pass, w, []ContextSubject{{Entity: Entity{Kind: KindComponent, Ref: ref}, Role: "integrated pull-up"}}
 		}
@@ -718,13 +717,14 @@ func SortPullUpTerminations(paths []PullUpTermination) {
 	})
 }
 
-// PullUpEvidence is the proof every pull-up rule attaches for the paths it found from net, in the
-// order given, so i2c-pull-up and the two count rules show a bus the same way (agni issues 821, 1165).
+// PullUpEvidence builds the proof for the paths found from net, in the order given. Every pull-up
+// rule attaches it, so i2c-pull-up and the two count rules show a bus the same way (agni issues 821,
+// 1165).
 //
-// The hops go in as CONTEXT, since every hop is an entity a reader can be sent to and carries the Kind
-// a highlight joins on. The subject net is left out as it is already the verdict's subject. Paths can
-// share a segment or a rail, so an entity already listed is not listed again, which keeps the context
-// a flat set of things to light up.
+// The hops go in as CONTEXT, since every hop is an entity. A reader can be sent to it, and a
+// highlight joins on its Kind. The subject net is left out as it is already the verdict's subject.
+// Paths can share a segment or a rail, so an entity already listed is not listed again. The context
+// is then a flat set of things to light up.
 //
 // One path is fully stated by its context, so it returns NO terms, since a term would duplicate an
 // entity already there. Several paths need the grouping the flat context loses, so each becomes a

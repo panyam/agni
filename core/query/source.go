@@ -10,14 +10,15 @@ import (
 	"github.com/panyam/jaala/ns"
 )
 
-// modelSource is the engine's view of one design, the rows a facts.Registry projects from a
-// check.Model served as positional tuples. Below it everything is a facts.Row with named slots, and
-// above it everything is a Datalog tuple.
+// modelSource is the engine's view of one design. A facts.Registry projects rows from a
+// check.Model, and modelSource serves them as positional tuples. Below it everything is a facts.Row
+// with named slots, and above it everything is a Datalog tuple.
 //
-// What each relation IS (its arity, labels and types) is the registry's vocabulary, so Schema reads it
-// from there and this type only serves rows. env carries the design to the generators registered in
-// the fact layer (facts.EnvOf); its Model is nil for a spec-library base and a validation base, which
-// have no design, so the circuit walks read nothing through it.
+// The registry's vocabulary defines what each relation IS, meaning its arity, labels and types. So
+// Schema reads that from the vocabulary, and this type only serves rows. env passes the design to
+// the generators registered in the fact layer (facts.EnvOf). A spec-library base and a validation
+// base have no design, so env's Model is nil for them, and the circuit walks read nothing through
+// it.
 type modelSource struct {
 	reg   *facts.Registry
 	vocab *ns.Vocabulary
@@ -54,15 +55,15 @@ func (s *modelSource) Tuples(rel string) []ns.Tuple {
 }
 
 // Relations implements ns.Source with the vocabulary's base relations, in the order a did-you-mean
-// hint breaks ties in.
+// hint uses to break ties.
 func (s *modelSource) Relations() []string { return s.vocab.BaseRelations() }
 
-// FactsEnv implements facts.EnvSource, which is how a generator registered in the fact layer reaches
-// the design.
+// FactsEnv implements facts.EnvSource. A generator registered in the fact layer reaches the design
+// through it.
 func (s *modelSource) FactsEnv() *facts.Env { return s.env }
 
 // fieldValue reads one fact Row field as a query Value (string + optional number). The numeric
-// field carries both so a bound term serves equality and comparison alike.
+// field holds both, so a bound term serves equality and comparison alike.
 func fieldValue(f facts.Row, fld facts.Field) Value {
 	switch fld {
 	case facts.FieldSubject:
@@ -91,9 +92,10 @@ func fieldValue(f facts.Row, fld facts.Field) Value {
 
 func ftoa(f float64) string { return strconv.FormatFloat(f, 'g', -1, 64) }
 
-// Work is what evaluation over b has cost in the units a work budget charges: the engine's own
-// count (Base.Work) plus what the circuit walks charged for their own steps (facts.Env.Spend), which
-// the engine counts against a budget but reports apart from its work.
+// Work reports the cost of evaluation over b, in the units a work budget charges. It adds the
+// engine's own count (Base.Work) to what the circuit walks charged for their own steps
+// (facts.Env.Spend). The engine counts the walks' charge against a budget, but it reports that
+// charge apart from its work.
 func Work(b *Base) int64 {
 	w := b.Work()
 	if env := facts.EnvOf(b.Source()); env != nil {
@@ -137,17 +139,17 @@ func NewSpecLibBaseFrom(reg *facts.Registry, fs param.FactSource) *Base {
 }
 
 // mustBase pairs the registry's vocabulary with s. The engine refuses a Source that does not serve
-// every base relation of the vocabulary, and both halves here come from one registry, so a refusal
-// is a programming error in this file.
+// every base relation of the vocabulary. Both halves here come from one registry, so a refusal
+// means a programming error in this file.
 func mustBase(s *modelSource) *Base { return datalog.MustBase(s.vocab, s) }
 
 // Validate reports why a query cannot run, reading only the query and the relation vocabulary it
 // would run against. No design, no rows.
 //
-// Without it a rule compiled from a query fails only when it runs, where the failure is swallowed into
-// a clean pass (agni issue 540). A registry with no relation installed still validates everything that
-// needs no vocabulary, because stdlib/profiles compiles its built-in profiles in an init() that runs
-// before any relation catalog has registered.
+// Without it, a rule compiled from a query fails only when it runs, and the run swallows the
+// failure into a clean pass (agni issue 540). A registry with no relation installed still validates
+// everything that needs no vocabulary. stdlib/profiles needs that, because it compiles its built-in
+// profiles in an init() that runs before any relation catalog has registered.
 func Validate(q Query, reg *facts.Registry) error {
 	return datalog.Validate(q, reg.Vocabulary())
 }
@@ -164,8 +166,9 @@ func ReadsFrom(reg *facts.Registry, q Query) []string {
 // ColumnKind says what one answer column denotes. See the engine's documentation.
 type ColumnKind = datalog.ColumnKind
 
-// ColumnKinds reports what each answer column of q denotes over the process-default vocabulary, read
-// from the signatures its relations and predicates declare and inferred through the query's rules.
+// ColumnKinds reports what each answer column of q denotes over the process-default vocabulary. It
+// reads the signatures declared by q's relations and predicates, and infers kinds through the
+// query's rules.
 func ColumnKinds(q Query) ([]ColumnKind, error) {
 	return ColumnKindsFrom(facts.DefaultRegistry(), q)
 }

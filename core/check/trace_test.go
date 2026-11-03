@@ -127,8 +127,8 @@ func TestTraceEndsOnARailThatReachRefuses(t *testing.T) {
 	if last.Name != "VCC" || !last.BusLike {
 		t.Errorf("last net = %+v, want VCC marked bus-like", last)
 	}
-	// Positive control: the plain walk must not reach VCC at all, so the terminus admission is
-	// what produced the route above rather than the rail having stopped being bus-like.
+	// Positive control: the plain walk must not reach VCC at all. So the terminus admission
+	// produced the route above, and the rail did not stop being bus-like.
 	var start *ir.Net
 	for _, n := range m.Nets() {
 		if n.Name == "SDA_RAW" {
@@ -162,8 +162,8 @@ func TestTraceWillNotTransitARail(t *testing.T) {
 	}
 }
 
-// The positive control for the whole command is a topology that must NOT route. A capacitor is a DC
-// block, so two pins either side of one are not connected however short the path looks.
+// This topology must NOT route, and it is the positive control for the whole command. A capacitor is
+// a DC block, so two pins either side of one are not connected however short the path looks.
 func TestTraceDoesNotCrossACapacitor(t *testing.T) {
 	tr := TracePins(traceModel(), Endpoint{"U8", "1"}, Endpoint{"U9", "1"}, DefaultTraceHops)
 	if tr.Outcome != TraceNoRoute {
@@ -253,7 +253,7 @@ func TestTraceStubCapIsCounted(t *testing.T) {
 	}
 }
 
-// The walk records the crossed element's pin on each side, which is what makes a step renderable.
+// The walk records the crossed element's pin on each side, so a step can be rendered.
 func TestReachStepCarriesPinsOnBothSides(t *testing.T) {
 	m := traceModel()
 	var start, target *ir.Net
@@ -275,7 +275,7 @@ func TestReachStepCarriesPinsOnBothSides(t *testing.T) {
 }
 
 // pullupFixture pulls SDA to +3V3 through TWO resistors, SCL through one, and ADDR through two that
-// land on DIFFERENT rails. R_GND is a pull-DOWN and must never count, and R_FAR sits four hops out.
+// end on DIFFERENT rails. R_GND is a pull-DOWN and must never count, and R_FAR sits four hops out.
 func pullupFixture() *ir.Design {
 	comp := func(ref string) *ir.Component {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "t"}}
@@ -364,7 +364,7 @@ func TestOnePartIsOneTerminationEvenTouchingTwoRails(t *testing.T) {
 	}
 }
 
-// Ground is never CROSSED, and that is what the guard is for. A resistor to ground is a pull-down and
+// The guard keeps the walk from ever CROSSING ground. A resistor to ground is a pull-down and
 // terminates on nothing, since IsRailNet is false for a ground, so the guard's real job is stopping
 // the walk from entering the ground plane and reaching everything on it. R_VIA takes ground to a
 // rail, so a walk that crossed ground would report a third pull-up on SDA that no reader would

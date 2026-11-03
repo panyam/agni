@@ -9,11 +9,11 @@ import (
 	"testing"
 )
 
-// The regression WS3-056 exists for. A naming map that re-binds SOME roles and leaves others at core
-// naming used to leave the CORE profile still anchored (the anchor suffix `_CS` was not re-bound) and
-// still past its two-signal in-use gate, so it reported every re-bound role as a missing signal at
-// severity error while the overlay read the same design clean. Six findings, four of them false, on a
-// design that is correct under its own convention.
+// The regression WS3-056 exists for. Imagine a naming map that re-binds SOME roles and leaves others
+// at core naming. The anchor suffix `_CS` was not re-bound, so the CORE profile was still anchored.
+// It was also still past its two-signal in-use gate. So it reported every re-bound role as a missing
+// signal at severity error, while the overlay read the same design clean. That came to six findings,
+// four of them false, on a design that is correct under its own convention.
 //
 // The asymmetry is worth remembering. Re-binding the ANCHOR role hides the effect entirely,
 // because the core profile then fails to anchor and goes quiet. So the CLOSER a house convention sits
@@ -89,8 +89,8 @@ func TestCheckReportsSupersededRules(t *testing.T) {
 	}
 }
 
-// The note is a run diagnostic, not a finding, so it must stay out of the serialized findings
-// stream that --format json produces, the same posture warnOverBroadProfiles has.
+// The note is a run diagnostic, not a finding. So it must not enter the serialized findings stream
+// that --format json produces. warnOverBroadProfiles takes the same posture.
 func TestSupersessionNoteIsNotAFinding(t *testing.T) {
 	dir := t.TempDir()
 	if err := os.WriteFile(filepath.Join(dir, "housespi.yaml"),
@@ -111,9 +111,9 @@ func TestSupersessionNoteIsNotAFinding(t *testing.T) {
 	}
 }
 
-// A PROJECT's own profiles supersede built-ins too, and that went unreported because the note was
-// taken from the catalog the FLAGS built, before withProjectRules composed the project's rules onto
-// it (agni issue 450).
+// A PROJECT's own profiles supersede built-ins too, and that went unreported (agni issue 450). The
+// note was taken from the catalog that the FLAGS built, before withProjectRules composed the
+// project's rules onto it.
 //
 // Silence here is the expensive kind. Supersession works by REMOVING rules, and a removed rule
 // produces no output, so a report whose built-in CAN rules were dropped read exactly like one where
@@ -146,14 +146,14 @@ func TestCheckReportsAProjectsOwnSupersessions(t *testing.T) {
 	}
 }
 
-// TestReviewReportsAProjectsOwnSupersessions is the twin of the test above, for the command that kept
-// the defect after PR 467 fixed check. `agni review` took its note from the catalog the FLAGS built,
-// which is composed before any project is resolved, so a project whose own profiles dropped built-in
-// rules reported nothing at all.
+// TestReviewReportsAProjectsOwnSupersessions is the twin of the test above. PR 467 fixed check, and
+// `agni review` kept the defect. review took its note from the catalog that the FLAGS built. That
+// catalog is composed before any project is resolved. So when a project's own profiles dropped
+// built-in rules, review reported nothing at all.
 //
 // It matters more on review than on check, because a checklist ITEM bound to a superseded rule still
 // scores. The item reads pass or not-applicable on the strength of a rule that was removed from the
-// run, and the one line that would have said so was the note.
+// run, and only the note would have said so.
 func TestReviewReportsAProjectsOwnSupersessions(t *testing.T) {
 	proj := t.TempDir()
 	writeTutorialLikeProject(t, proj)
@@ -183,10 +183,10 @@ func TestReviewReportsAProjectsOwnSupersessions(t *testing.T) {
 	}
 }
 
-// TestReviewSupersessionNoteIsNotRepeatedPerDesign guards the per-design loop the note moved into,
-// which is the only scope where a project has been resolved. Two designs in one project supersede
-// identically, so an un-deduped loop says the same line twice and a rollup over a dozen designs is
-// a wall.
+// TestReviewSupersessionNoteIsNotRepeatedPerDesign guards the per-design loop. The note moved into
+// that loop, since a project is resolved only there. Two designs in one project supersede
+// identically. So an un-deduped loop says the same line twice, and a rollup over a dozen designs
+// becomes a wall of repeats.
 func TestReviewSupersessionNoteIsNotRepeatedPerDesign(t *testing.T) {
 	proj := t.TempDir()
 	writeTutorialLikeProject(t, proj)

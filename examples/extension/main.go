@@ -1,5 +1,5 @@
-// Command agni-extension is the reference open-core extension skeleton (WS12-001): a binary in a
-// SEPARATE Go module that depends on the public engine and adds a private format reader and a
+// Command agni-extension is the reference open-core extension skeleton (WS12-001). It is a binary
+// in a SEPARATE Go module. It depends on the public engine and adds a private format reader and a
 // private rule suite through the engine's public extension points, without forking it.
 //
 // The composition is two blank imports for the extension's own packages, plus agni.New for the

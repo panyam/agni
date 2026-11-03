@@ -48,7 +48,7 @@ func TestObservedFalseWarnings(t *testing.T) {
 	}
 }
 
-// The defence everyone writes for invisible characters, and why it does not work. That tool
+// Everyone writes the same defence for invisible characters, and it does not work. That tool
 // normalized with `\s+` removal and `.upper()`, which reads like it handles this. U+200B is a FORMAT
 // character rather than whitespace, so `\s` walks straight past it, and Go's `\s` is ASCII-only so
 // it is narrower still.
@@ -69,8 +69,8 @@ func TestWhitespaceStrippingDoesNotCatchFormatCharacters(t *testing.T) {
 }
 
 // One canonical output, and it drops leading zeros rather than padding to a width. That tool carried
-// two normalizers with opposite conventions on this exact field, which worked only because each ran
-// on its own side of a comparison.
+// two normalizers with opposite conventions on this exact field. The pair worked only because each
+// ran on its own side of a comparison.
 func TestCanonicalIsOneFormAndGuessesNoWidth(t *testing.T) {
 	for _, c := range [][2]string{
 		{"PTE07", "PTE7"},
@@ -102,9 +102,9 @@ func TestCanonicalLeavesABusRangeAlone(t *testing.T) {
 	}
 }
 
-// A pin name may legitimately contain a separator. R/W is read/write, and a splitter that returned
-// only the halves would lose the name that was actually written and match R against a table on its
-// own. Keeping the whole cell as the first alternative is what makes both readings available.
+// A pin name may legitimately contain a separator. R/W is read/write. If a splitter returned only the
+// halves, it would lose the name that was actually written and match R against a table on its own.
+// Keeping the whole cell as the first alternative makes both readings available.
 func TestAlternativesKeepsAWholeNameThatContainsASeparator(t *testing.T) {
 	alts := Alternatives("R/W")
 	if len(alts) == 0 || alts[0] != "R/W" {
@@ -113,7 +113,7 @@ func TestAlternativesKeepsAWholeNameThatContainsASeparator(t *testing.T) {
 	if Compare("R/W", "R/W").Match != Exact {
 		t.Error("R/W does not match itself exactly")
 	}
-	// The halves stay available, and a match on one is REPORTED as such rather than passing as
+	// The halves are still available, and a match on one is REPORTED as such rather than passing as
 	// though the whole name matched.
 	got := Compare("R/W", "W")
 	if got.Match != Exact || !strings.Contains(got.Note, "of \"R/W\"") {
@@ -122,8 +122,8 @@ func TestAlternativesKeepsAWholeNameThatContainsASeparator(t *testing.T) {
 }
 
 // Both sides are split by the same rule. That tool looked for a separator in the AVAILABLE name and
-// never in the SELECTED one, which was the largest single class of false warning in the run we
-// measured, so the asymmetric case is asserted in both directions here.
+// never in the SELECTED one. That asymmetry was the largest single class of false warning in the run
+// we measured, so the asymmetric case is asserted in both directions here.
 func TestBothSidesAreSplit(t *testing.T) {
 	if got := Compare("GPIO[34] / WKPU[8]", "WKPU[8]"); got.Match == None {
 		t.Error("a multi-valued cell on the LEFT did not match a single name on the right")
@@ -135,8 +135,8 @@ func TestBothSidesAreSplit(t *testing.T) {
 
 // Fuzzy matching allows an inserted MIDDLE token and nothing else, because the first token says
 // which peripheral instance this is and the last says which signal and bit. Both cases below are
-// genuine subsequences, so the anchor is the only thing rejecting them, which is what makes this a
-// test of the anchor rather than of the subsequence walk.
+// genuine subsequences, and only the anchor rejects them. So this tests the anchor rather than the
+// subsequence walk.
 //
 // Written that way after a red-check. The obvious cases (a bare suffix, a differing last token)
 // are rejected by the single-token rule and by the subsequence walk before the anchor is ever
@@ -200,7 +200,7 @@ func TestPinNameFoldsTheSubscriptAndKeepsTheBank(t *testing.T) {
 		{"\uff56\uff44\uff44", "VDD"}, // fullwidth vdd lifted out of a PDF
 		{"IO0_1", "IO01"},
 		{"IO1", "IO1"},
-		// agni issue 1160: a subscript as KiCad markup or a pin table's parentheses.
+		// A subscript as KiCad markup or a pin table's parentheses (agni issue 1160).
 		{"VCC_{A}", "VCCA"},
 		{"VCC(A)", "VCCA"},
 		{"VCC(B)", "VCCB"},
@@ -217,7 +217,7 @@ func TestPinNameFoldsTheSubscriptAndKeepsTheBank(t *testing.T) {
 	}
 }
 
-// A designator keeps its leading zeros, which only the index rewrite would drop, and still sheds
+// A designator keeps its leading zeros, since only the index rewrite would drop them. It still sheds
 // what a PDF paste adds.
 func TestPinNumberKeepsZerosAndDropsPasteArtifacts(t *testing.T) {
 	for _, c := range [][2]string{

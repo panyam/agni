@@ -15,8 +15,8 @@ import (
 // reads the same as one where they ran and found nothing.
 //
 // It writes to stderr and never fails the command. This describes how the run was CONFIGURED, not
-// something found on the board, so it stays out of the findings stream that --format json and
-// --results-out serialize.
+// something found on the board, so it is kept out of the findings stream. --format json and
+// --results-out serialize that stream.
 func noteSupersededRules(w io.Writer, c *check.Catalog) {
 	for _, s := range c.Superseded() {
 		fmt.Fprintf(w, "note: %s supersedes %d rule(s): %s\n", s.By, len(s.Rules), strings.Join(s.Rules, ", "))
@@ -42,7 +42,7 @@ func warnOverBroadProfiles(w io.Writer, path string, ps []profiles.Profile) {
 		return
 	}
 	// Projected inline because C19's ratchet flags a helper taking *ir.Design. There is no net-name
-	// index to read, and this function is the consumer that did the read.
+	// index to read, and this function did the read itself.
 	names := make([]string, 0, len(d.GetNets()))
 	for _, n := range d.GetNets() {
 		names = append(names, n.GetName())

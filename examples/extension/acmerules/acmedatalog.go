@@ -17,7 +17,7 @@ import (
 // THE IMPORT THAT IS EASY TO MISS. A datalog rule evaluates against the fact base that
 // stdlib/relations' init installs. A binary that does not blank-import that package gets an EMPTY
 // fact base, so this rule matches nothing and reports clean with no error or warning. main.go
-// carries the import, and agni.New refuses an empty fact base.
+// has the import, and agni.New refuses an empty fact base.
 
 // experimentalOnPowerNet is a house rule with no counterpart in the core catalog. An experimental
 // (X-prefixed) part must not share a net with a production part's power pin. It encodes a policy
@@ -26,12 +26,12 @@ import (
 // The query joins a NET-level relation with two PIN relations. It finds an experimental part and a
 // net it sits on, then asks whether some other part's declared POWER pin is on that same net.
 //
-// The body leads with the experimental part, which binds ?net from the most selective set on the board
-// (a handful of X-prefixed parts). agni's evaluator (query.Default) plans each body, so the order is
-// for the reader rather than for speed: it starts from the most bound literal whatever is written
-// first. Under the engine's reference evaluator, Naive, which runs literals as written, opening with
-// pin.role would scan every power pin in the design first, which is how a shipped profile rule once
-// made `agni check` non-terminating (WS3-114).
+// The body leads with the experimental part. That binds ?net from the most selective set on the
+// board, a handful of X-prefixed parts. agni's evaluator (query.Default) plans each body and starts
+// from the most bound literal, whatever is written first. So the order is for the reader rather
+// than for speed. The engine's reference evaluator, Naive, runs literals as written. Under Naive, a
+// body opening with pin.role would scan every power pin in the design first. A shipped profile rule
+// once made `agni check` non-terminating that way (WS3-114).
 //
 // `str.prefix` is one of the standard string predicates every vocabulary holds, so the extension
 // registers no relation or predicate of its own.

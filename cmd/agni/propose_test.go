@@ -12,8 +12,8 @@ import (
 )
 
 // TestProposeReadsAZipAsTheFolderItWasMadeFrom zips the tutorial gateway's files without its
-// design.yaml and asks the CLI for a proposal, which must name the entry the tutorial declares, and
-// whose json must be the rpc's message.
+// design.yaml and asks the CLI for a proposal. The proposal must name the tutorial's declared entry,
+// and its json must be the rpc's message.
 func TestProposeReadsAZipAsTheFolderItWasMadeFrom(t *testing.T) {
 	home := t.TempDir()
 	t.Setenv("HOME", home)

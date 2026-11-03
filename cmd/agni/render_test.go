@@ -200,7 +200,7 @@ func TestWriteReport(t *testing.T) {
 	if err := writeReport(&b, fixture, symbolsGlyph, nil, "json"); err != nil {
 		t.Fatalf("writeReport json: %v", err)
 	}
-	// protojson of the WIRE message now (C31), the same ConversionReport GetLayoutReport returns, so
+	// protojson of the WIRE message now (C31). GetLayoutReport returns the same ConversionReport, so
 	// this decodes the proto rather than a shape only this command spoke.
 	var rep webapi.ConversionReport
 	if err := protojson.Unmarshal(b.Bytes(), &rep); err != nil {
@@ -223,9 +223,9 @@ func TestWriteReport(t *testing.T) {
 // TestRenderResolvesDeclaredGeometryCompanion checks that pointing render at a DESIGN draws the
 // schematic the design declares, rather than trying to open the folder as a file.
 //
-// It failed with `no reader for "" files` before, which is what a directory path looks like to the
-// format registry. The information was never missing. `agni stats` on the same folder already
-// reported "sheets from gateway.kicad_sch", because it resolves the descriptor and render did not.
+// It failed with `no reader for "" files` before. A directory path looks like that to the format
+// registry. The information was never missing. `agni stats` on the same folder already reported
+// "sheets from gateway.kicad_sch", because it resolves the descriptor and render did not.
 func TestRenderResolvesDeclaredGeometryCompanion(t *testing.T) {
 	const design = "../../examples/tutorial-project/designs/gateway"
 	got, note := renderSource(design)
@@ -239,8 +239,8 @@ func TestRenderResolvesDeclaredGeometryCompanion(t *testing.T) {
 	}
 }
 
-// TestRenderCmdDrawsADesignFolder is the end-to-end half, and it is the one that matters. The helper
-// test above passes on a build where renderCmd never calls renderSource at all, which is the bug
+// TestRenderCmdDrawsADesignFolder is the end-to-end half, and the more important one. The helper
+// test above passes on a build where renderCmd never calls renderSource at all, and that was the bug
 // being fixed. The resolution existed elsewhere in the CLI and this command did not reach for it.
 func TestRenderCmdDrawsADesignFolder(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "sheet.svg")

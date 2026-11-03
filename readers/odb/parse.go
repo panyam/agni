@@ -7,8 +7,8 @@ import (
 	"strings"
 )
 
-// parsedJob is everything both reads share: the job, its eda/data, and the components of each side
-// in file order, which is the numbering eda/data's TOP subnets use.
+// parsedJob holds everything both reads share. That is the job, its eda/data, and the components of
+// each side in file order. eda/data's TOP subnets number components in that order.
 type parsedJob struct {
 	*job
 	eda     *eda
@@ -68,9 +68,9 @@ func (p *parsedJob) allComponents() []*component {
 	return out
 }
 
-// jobName is the job's name as misc/info states it, or, for a job with no misc/info (Altium writes
-// none), the name of the folder or archive it came in: `boards/master-odb/matrix/matrix` and
-// `master.odb.zip` are both "master".
+// jobName returns the job's name as misc/info states it. Altium writes no misc/info. For a job
+// without one, jobName returns the name of the folder or archive the job came in. So
+// `boards/master-odb/matrix/matrix` and `master.odb.zip` are both "master".
 func (p *parsedJob) jobName(src string) string {
 	if n := p.info["JOB_NAME"]; n != "" {
 		return n

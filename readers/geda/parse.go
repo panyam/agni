@@ -5,16 +5,17 @@ import (
 	"strings"
 )
 
-// gEDA gschem is line-oriented. Most objects are one line; a text (T) or path (H) object is a
-// header line whose last field is a line count followed by that many content lines; and any
-// object may be followed by a "{ ... }" attribute block whose contents are T objects. These
-// helpers read those two shapes.
+// gEDA gschem is line-oriented, and most objects are one line. A text (T) or path (H) object is
+// a header line followed by content lines, and the header's last field is the line count. Any
+// object may be followed by a "{ ... }" attribute block, which holds T objects. These helpers
+// read those two shapes.
 
-// readAttrBlock reads a "{ ... }" attribute block if one begins at lines[start], returning the
-// key/value attributes from the T objects inside, EVERY net= value in source order (a component
-// carries one net= per hidden pin tap, e.g. net=jtag_power:14 and net=GND:7, which the single-valued
-// map would collapse), and the index just past the block. If lines[start] is not "{", it returns
-// empties and start unchanged.
+// readAttrBlock reads a "{ ... }" attribute block if one begins at lines[start]. It returns three
+// things. The first is the key/value attributes from the T objects inside. The second is EVERY
+// net= value in source order. A component has one net= per hidden pin tap, e.g.
+// net=jtag_power:14 and net=GND:7, and the single-valued map would collapse them. The third is
+// the index just past the block. If lines[start] is not "{", it returns empties and start
+// unchanged.
 func readAttrBlock(lines []string, start int) (attrs map[string]string, nets []string, next int) {
 	attrs = map[string]string{}
 	if start >= len(lines) || strings.TrimSpace(lines[start]) != "{" {

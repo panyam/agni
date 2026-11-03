@@ -64,10 +64,9 @@ func assertSameFindings(t *testing.T, name string, want, got *check.Rule, models
 //
 // Every shipped Spec is encoded, marshalled to bytes, read back, compiled, and run against every
 // conformance fixture; the findings must match exactly. It compares FINDINGS rather than the
-// decoded AST because two Specs can differ structurally and behave identically, and, far more
-// importantly, they can look identical and behave differently. A literal decoded as the wrong
-// numeric type silently makes every ordering comparison false, which no structural equality check
-// would notice.
+// decoded AST. Two Specs can differ structurally and behave identically. More importantly, they can
+// look identical and behave differently. A literal decoded as the wrong numeric type silently makes
+// every ordering comparison false, and no structural equality check would notice.
 //
 // The baseline is the spec bound through Spec.Rule, NOT the shipped built-in of the same name. Most
 // built-ins are Go-authored with hand-written Reads and Primitives, and their Spec is a declarative
@@ -112,10 +111,10 @@ func TestSpecRulesRoundTripThroughTheDefinitionContract(t *testing.T) {
 	}
 }
 
-// assertMetaSurvives pins the fields a compiled rule needs to behave the same in a catalog: identity,
-// severity, the declared gates, and the derived reads. Reads and Primitives are NOT serialized (the
-// compiler derives them from the body), so their surviving the trip is evidence that the body
-// itself came through intact.
+// assertMetaSurvives pins the fields that a compiled rule needs to behave the same in a catalog.
+// They are identity, severity, the declared gates, and the derived reads. Reads and Primitives are
+// NOT serialized, because the compiler derives them from the body. So if they survive the trip, the
+// body itself came through intact.
 func assertMetaSurvives(t *testing.T, want, got *check.Rule) {
 	t.Helper()
 	if got.Name != want.Name || got.Severity != want.Severity || got.Summary != want.Summary {
@@ -140,8 +139,8 @@ func assertMetaSurvives(t *testing.T, want, got *check.Rule) {
 
 // TestDatalogRulesRoundTripThroughTheDefinitionContract is the same acceptance test over the
 // datalog-authored rules. It carries the AST rather than the query text, so this also pins that the
-// AST survives. A program whose negation, aggregate, or numeric constant were dropped would
-// still parse and still run, and would simply report less.
+// AST survives. Suppose a program's negation, aggregate or numeric constant were dropped. The
+// program would still parse and still run, and would simply report less.
 func TestDatalogRulesRoundTripThroughTheDefinitionContract(t *testing.T) {
 	models := conformanceModels(t)
 	queries := datalog.Queries()
@@ -171,7 +170,7 @@ func TestDatalogRulesRoundTripThroughTheDefinitionContract(t *testing.T) {
 	}
 }
 
-// TestProfilesRoundTripThroughTheDefinitionContract covers the third source. A profile is the one
+// TestProfilesRoundTripThroughTheDefinitionContract covers the third source. A profile is the only
 // definition that compiles to MORE than one rule, so this asserts the rule SET matches by name before
 // comparing each rule's findings. A trip that silently dropped a requirement would otherwise look
 // clean, and a dropped requirement is a check that no longer exists.

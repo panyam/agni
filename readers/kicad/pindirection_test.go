@@ -6,8 +6,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// A tri-state, open-collector or open-emitter pin keeps the type its symbol declares rather than
-// reading as untyped (agni issue 1082). KiCad's own unspecified stays unspecified.
+// A tri-state, open-collector or open-emitter pin keeps its symbol's declared type and does not read
+// as untyped (agni issue 1082). A pin KiCad itself calls unspecified still reads as unspecified.
 func TestKiCadOutputKindsKeepTheirTypes(t *testing.T) {
 	for raw, want := range map[string]ir.PinDirection{
 		"tri_state":      ir.PinDirection_PIN_DIRECTION_TRISTATE,

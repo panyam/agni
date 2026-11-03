@@ -13,7 +13,7 @@ import (
 )
 
 // SheetSVG renders one schematic sheet to a standalone SVG document, resolving each
-// placement against the design's symbol library. It and the WebGL2 path (WS7-001) are both
+// placement against the design's symbol library. SheetSVG and the WebGL2 path (WS7-001) are both
 // backends over the same render layer, so nothing here is WebGL- or format-bound. Coordinates
 // are framed by frameSheet, which normalizes them to pixels and flips Y.
 func SheetSVG(g *geom.SchematicGeometry, sheet *geom.SheetGeometry, opts ...Option) string {
@@ -58,8 +58,8 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 			if style.PickTargets {
 				// A 0.8px fill:none stroke hit-tests only ON the stroke, and in a real browser a
 				// probe at a wire's own midpoint, rounded to whole pixels, hits the page rect. So
-				// the viewer gets an invisible wide companion. It stays in the wire pass, under the
-				// symbols, so a wire crossing beneath a part still loses to the part. See
+				// the viewer gets an invisible wide companion. It is drawn in the wire pass, under
+				// the symbols, so a wire crossing beneath a part still loses to the part. See
 				// docsite/content/architecture/web-picking.md.
 				c.El("polyline", append([]svg.Attr{svg.A("fill", "none"), svg.A("stroke", "none"),
 					svg.F("stroke-width", wirePickWidthPx), svg.A("pointer-events", "stroke"),
@@ -157,18 +157,19 @@ func drawSheetContent(c *svg.Canvas, g *geom.SchematicGeometry, sheet *geom.Shee
 }
 
 // SVG pixel-space constants shared by the sheet document and any overlay drawn above it
-// (HighlightSVG): both must size and stroke from the same numbers to composite exactly.
+// (HighlightSVG). Both must size and stroke from the same numbers to composite exactly.
 const (
 	sheetMaxPx    = 1600.0          // longest side of the drawing, pre-margin
 	sheetMarginPx = sheetMaxPx / 40 // whitespace around the drawing
 	strokePx      = 0.8             // geometry stroke width
 	busStrokePx   = strokePx * 3   // bus trunk/entry stroke: a fixed-visual-width line, thicker than a wire (WS7-042)
 	pinRPx        = 2.5             // pin connect-dot radius
-	// pinPickRPx is the invisible pick target's radius (WithPickTargets): wider than the dot,
-	// because it exists to be HIT rather than seen, and a pin at a normal zoom is a few pixels.
+	// pinPickRPx is the invisible pick target's radius (WithPickTargets). It is wider than the
+	// dot because it exists to be HIT rather than seen, and a pin at a normal zoom is a few pixels.
 	pinPickRPx = 6.0
-	// wirePickWidthPx is the invisible companion stroke's width: wide enough that a click near a
-	// wire lands on it, narrow enough that two parallel wires a few pixels apart stay distinct.
+	// wirePickWidthPx is the invisible companion stroke's width. It is wide enough that a click
+	// near a wire hits it, and narrow enough that two parallel wires a few pixels apart remain
+	// distinct.
 	wirePickWidthPx = 7.0
 	lineHeight    = 1.2            // multiplier on font size for stacking multi-line text
 	// glyphAdvanceEm is the average horizontal advance of one glyph as a fraction of the font
@@ -184,14 +185,14 @@ const (
 	// printed frame of a tool this engine reads (a 21.9pt label in a 396pt row).
 	zoneLabelFrac = 0.055
 	// minStrokeNm is the minimum copper trace width in BOARD space (nanometers), not output
-	// pixels, so a dense board's fine traces stay proportional. ~25um is below any real trace.
+	// pixels, so a dense board's fine traces remain proportional. ~25um is below any real trace.
 	// See docsite/content/architecture/geometry-and-rendering.md#board-geometry-sidecar.
 	minStrokeNm = 25_000.0
 )
 
-// sheetFrame is the world-to-pixel mapping of one sheet's SVG document: the tx/ty coordinate
-// maps (Y-flipping, margin-inset), the scale, and the document size. frameSheet computes it
-// once per sheet and every SVG projection of that sheet shares it, so overlays line up.
+// sheetFrame is the world-to-pixel mapping of one sheet's SVG document. It holds the tx/ty
+// coordinate maps (Y-flipping, margin-inset), the scale, and the document size. frameSheet
+// computes it once per sheet and every SVG projection of that sheet shares it, so overlays line up.
 type sheetFrame struct {
 	tx, ty func(int64) float64
 	scale  float64
@@ -201,7 +202,7 @@ type sheetFrame struct {
 
 // frameSheet frames one sheet: bounds over page size, placed shapes, pins, annotations,
 // wires, labels, free shapes, placement fields, and images, normalized into a small pixel
-// space (longest side ~sheetMaxPx) so viewBox values stay in a range rasterizers render
+// space (longest side ~sheetMaxPx) so viewBox values remain in a range that rasterizers render
 // precisely. Geometry is Y-up while SVG is Y-down, so ty flips Y.
 func frameSheet(sheet *geom.SheetGeometry, syms map[string]*geom.SymbolDef) sheetFrame {
 	var b geomath.Bounds
@@ -314,11 +315,12 @@ func drawImage(c *svg.Canvas, im *geom.Image, tx, ty func(int64) float64) {
 	c.El("image", attrs...)
 }
 
-// wireKeys, symbolKeys and pinKeys build the data-* attributes a rendered element carries, so
-// the SVG document is its own pick index and a saved or embedded sheet keeps that identity.
+// wireKeys, symbolKeys and pinKeys build the data-* attributes of a rendered element, so the SVG
+// document is its own pick index. A saved or embedded sheet keeps that identity.
 //
 // Values come from the design, so they go through svg.AEsc. A net named with a quote would
-// otherwise close the attribute and inject markup into a document the viewer mounts with innerHTML.
+// otherwise close the attribute and inject markup into the document, and the viewer mounts that
+// document with innerHTML.
 func wireKeys(w *geom.WireGeometry) []svg.Attr {
 	keys := []svg.Attr{svg.AEsc("data-kind", "net"), svg.AEsc("data-net", w.GetNet())}
 	if id := w.GetNetId(); id != "" {
@@ -336,7 +338,7 @@ func wireKeys(w *geom.WireGeometry) []svg.Attr {
 
 // symbolKeys identify a placed symbol's graphics as the NET it names when it is an anchor (a
 // ground or rail glyph), and as a component otherwise. An anchor keyed by ref_des would offer a
-// component nothing can join. See
+// component that nothing can join. See
 // docsite/content/architecture/geometry-and-rendering.md#symbols-that-name-a-net.
 func symbolKeys(pl *geom.SymbolPlacement) []svg.Attr {
 	if net := pl.GetNetAnchor(); net != "" {
@@ -351,8 +353,9 @@ func pinKeys(pl *geom.SymbolPlacement, portRef string) []svg.Attr {
 	return []svg.Attr{svg.AEsc("data-kind", "pin"), svg.AEsc("data-ref", pl.GetRefDes()), svg.AEsc("data-pin", portRef)}
 }
 
-// writeShape draws one shape. keys carries the entity attributes the CALLER knows (a symbol's
-// keys, nothing for free sheet graphics), stamped onto every element the shape emits.
+// writeShape draws one shape. keys holds the entity attributes that the CALLER knows, such as a
+// symbol's keys, or nothing for free sheet graphics. writeShape stamps them onto every element
+// the shape emits.
 func writeShape(c *svg.Canvas, s *geom.Shape, tx, ty func(int64) float64, scale, stroke float64, style Style, strokeColor string, keys ...svg.Attr) {
 	el := func(tag string, attrs ...svg.Attr) { c.El(tag, append(attrs, keys...)...) }
 	fill := shapeFill(s, style, strokeColor)
@@ -533,9 +536,10 @@ const (
 )
 
 // labelFont maps a source text height to an output font size in pixels, clamped to the
-// minFontFrac/maxFontFrac bounds. It honors the source height, so text a format draws tiny (KiCad's
-// footprint field at 0.254mm) stays tiny (WS7-020). A source that states no height falls back to
-// def, the sheet's median text height (defaultTextHeight), the same default the WebGL path uses.
+// minFontFrac/maxFontFrac bounds. It honors the source height, so a format's tiny text, such as
+// KiCad's footprint field at 0.254mm, is drawn tiny too (WS7-020). A source that states no height
+// falls back to def, the sheet's median text height (defaultTextHeight). The WebGL path uses the
+// same default.
 func labelFont(h int64, def int64, scale float64) float64 {
 	if h <= 0 {
 		h = def
@@ -544,11 +548,11 @@ func labelFont(h int64, def int64, scale float64) float64 {
 	return math.Max(sheetMaxPx*minFontFrac, math.Min(px, sheetMaxPx*maxFontFrac))
 }
 
-// drawText emits one text run at pixel (x,y), stacking lines when content carries newlines
-// (EDIF %10% escapes decode to real newlines) around the anchor blockTop picks. rotDeg is a CCW
-// Y-up angle and equals the SVG rotate() angle, because the Y-flip and the handedness swap it
-// induces cancel. Callers pass a placement's rotation combined with the text's own angle, and a
-// zero angle emits no transform.
+// drawText emits one text run at pixel (x,y). When content has newlines, drawText stacks the
+// lines around the anchor that blockTop picks. EDIF %10% escapes decode to real newlines. rotDeg
+// is a CCW Y-up angle and equals the SVG rotate() angle, because the Y-flip and the handedness
+// swap it induces cancel. Callers pass a placement's rotation combined with the text's own angle,
+// and a zero angle emits no transform.
 func drawText(c *svg.Canvas, content string, x, y, fontPx float64, justify string, rotDeg int32, fill string, maxWidthPx float64) {
 	if i := strings.IndexByte(content, '\n'); i >= 0 {
 		lines := strings.Split(content, "\n")
@@ -599,9 +603,10 @@ func drawTextLine(c *svg.Canvas, content string, x, y, fontPx float64, justify s
 	if maxWidthPx > 0 && naturalTextWidthPx(content, fontPx) > maxWidthPx {
 		attrs = append(attrs, svg.F("textLength", maxWidthPx), svg.A("lengthAdjust", "spacingAndGlyphs"))
 	}
-	// The pivot prints at the anchor's own one decimal, so it names the point x and y name. At full
-	// precision its last digits differ between arm64 and amd64, which fuse a multiply-add the other
-	// rounds twice, and a committed docsite image then reads as stale on one of them (agni 453).
+	// The pivot prints at one decimal, as the anchor does, so the pivot and x,y name the same
+	// point. At full precision the pivot's last digits differ between arm64 and amd64. arm64 fuses
+	// a multiply-add, and amd64 rounds the same operation twice. A committed docsite image then
+	// reads as stale on one of them (agni 453).
 	if a := normDeg(rotDeg); a != 0 {
 		attrs = append(attrs, svg.A("transform", fmt.Sprintf("rotate(%g %.1f %.1f)", a, x, y)))
 	}

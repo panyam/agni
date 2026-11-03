@@ -6,23 +6,24 @@ import (
 )
 
 // fullSpec is a VALID spec that uses every Term and Expr node in the closed vocabulary, and sets
-// every field on each. Validity is a constraint here rather than an inconvenience, because
-// SpecFromProto validates what it decodes, so a fixture using a fact or an FFI name this build does
-// not know would fail on validation and never reach the comparison the test exists to make.
+// every field on each. Validity is a constraint here rather than an inconvenience. SpecFromProto
+// validates what it decodes. A fixture that used a fact or an FFI name unknown to this build would
+// fail on validation, and the test would never reach its comparison.
 //
 // Every node appears because the guard is only as wide as its fixture. A node type is protected by
 // the panic in termProto/exprProto, which fires the first time anything encodes an unhandled node. A
-// FIELD on an existing node has no such protection, and that is what this covers.
+// FIELD on an existing node has no such protection, and this fixture covers the fields.
 func fullSpec() Spec {
 	return Spec{
 		Over:    "nets",
 		Message: "every node, once",
-		// Scope must be a DISTINGUISHABLE non-zero value, not a copy of Where. A fixture whose two
-		// expression fields are equal round-trips cleanly through a converter that assigns one to
-		// the other, which is the drift this guard exists to catch (C26's note on sparse fixtures).
+		// Scope must be a DISTINGUISHABLE non-zero value, not a copy of Where. Suppose a converter
+		// assigns one expression field to the other. A fixture whose two fields are equal
+		// round-trips through it cleanly. This guard exists to catch that drift (C26's note on
+		// sparse fixtures).
 		Scope: IsTrue{T: Fact{Name: "net.attr.global"}},
 		Let: map[string]Term{
-			// CountOf: both fields, and a nested Expr to prove the recursion carries.
+			// CountOf with both fields, and a nested Expr to prove the recursion works.
 			"caps": CountOf{
 				Over:  "net.connections",
 				Where: Cmp{L: Fact{Name: "component.class"}, Op: "==", R: Lit{V: "capacitor"}},
@@ -48,9 +49,9 @@ func fullSpec() Spec {
 //
 // The node vocabulary was already protected, because termProto and exprProto panic on a type they
 // have no case for, so adding a node and forgetting its wire form fails loudly the first time it is
-// encoded. A FIELD added to an existing node is the gap, because a field the converter does not
-// copy simply is not copied and nothing complains. That is how Profile.HostClass was lost, and this
-// is the same guard applied here before it happens rather than after.
+// encoded. A FIELD added to an existing node is the gap. If the converter does not copy a field,
+// nothing complains. Profile.HostClass was lost that way, and this test applies the same guard here
+// before it happens rather than after.
 func TestSpecProtoRoundTrip(t *testing.T) {
 	want := fullSpec()
 	got, err := SpecFromProto(SpecProto(want))
@@ -63,15 +64,15 @@ func TestSpecProtoRoundTrip(t *testing.T) {
 }
 
 // TestRuleMetaProtoRoundTrip is the same C26 field-drift guard for the OTHER converter pair in this
-// file. RuleMetaProto/RuleMetaFromProto had none, which is the asymmetry C26 exists to close. A
-// rule's prose and gates cross stdlib/ruledef through these two functions, and a field the
-// converter never learned is absent from both sides of any assertion made on the proto. That is how
-// Profile.HostClass was lost.
+// file. RuleMetaProto/RuleMetaFromProto had none, and C26 exists to close that asymmetry. A rule's
+// prose and gates cross stdlib/ruledef through these two functions. If the converter never learned a
+// field, the field is absent from both sides of any assertion made on the proto. Profile.HostClass
+// was lost that way.
 //
 // The fixture sets every carried field to a distinguishable non-zero value, because a field left at
 // its zero value round-trips cleanly through a conversion that drops it entirely. Reads and
 // Primitives are deliberately absent from the wire form (they are derived from a definition's body
-// by its compiler), so they stay zero on both sides here.
+// by its compiler), so they are zero on both sides here.
 func TestRuleMetaProtoRoundTrip(t *testing.T) {
 	want := Rule{
 		Name:               "every-field-set",
@@ -90,15 +91,14 @@ func TestRuleMetaProtoRoundTrip(t *testing.T) {
 	}
 }
 
-// TestSpecLitIntNormalizes documents an ASYMMETRY that is deliberate, so nobody "fixes" it into a
-// bug. litProto encodes both int and int64, because a hand-written Go spec may carry either, while
+// TestSpecLitIntNormalizes documents a deliberate ASYMMETRY, so nobody "fixes" it into a bug.
+// litProto encodes both int and int64, because a hand-written Go spec may carry either, while
 // litFromProto always decodes to int. The evaluator speaks int and nothing else in this package
-// handles int64 (`case int64` appears only in specproto.go), so decoding to int is decoding to the
-// type the rest of the engine can actually evaluate.
+// handles int64 (`case int64` appears only in specproto.go). So decoding to int gives the type that
+// the rest of the engine can actually evaluate.
 //
-// An int64 literal does NOT survive a round trip unchanged. It comes back as int. That is a
-// narrowing on paper and a correction in practice, which is why the guard above uses int, the type
-// every real spec uses.
+// An int64 literal does NOT survive a round trip unchanged. It comes back as int. On paper that is a
+// narrowing, and in practice a correction. So the guard above uses int, as every real spec does.
 func TestSpecLitIntNormalizes(t *testing.T) {
 	s := Spec{Over: "nets", Where: Cmp{L: Fact{Name: "net.pin_count"}, Op: ">", R: Lit{V: int64(3)}}}
 	got, err := SpecFromProto(SpecProto(s))
@@ -114,12 +114,13 @@ func TestSpecLitIntNormalizes(t *testing.T) {
 	}
 }
 
-// TestScopeContributesDerivedReads pins an invariant that is easy to break and silent when broken:
-// moving a clause from Where to Scope must not change what the rule DECLARES it reads.
+// TestScopeContributesDerivedReads pins an invariant. Moving a clause from Where to Scope must not
+// change what the rule DECLARES it reads. The invariant is easy to break and silent when broken.
 //
 // DerivedReads feeds check.Available, which gates a rule to not-applicable when a tier it reads is
-// absent. A fact consulted only in Scope and missing from Reads would leave a rule claiming not to
-// need a tier it does need, so it would run against a design that cannot answer it. Scope is a
+// absent. Suppose a rule consults a fact only in Scope, and the fact is missing from Reads. The rule
+// would then claim not to need a tier it does need, and it would run against a design that cannot
+// answer it. Scope is a
 // relabelling of clauses, not a change to a rule's dependencies.
 func TestScopeContributesDerivedReads(t *testing.T) {
 	scoped := Spec{

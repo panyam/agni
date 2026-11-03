@@ -9,13 +9,13 @@ import (
 	"testing"
 )
 
-// A glossary is only useful while it is complete and every tag resolves, and neither survives on
-// discipline. A tag naming a term that does not exist renders as a visible marker rather than as
-// prose, but only on the page nobody previewed; a term nothing references is dead weight nobody
-// notices; and an index that goes short in silence is the same failure learn_levels_test.go exists
-// to prevent one section over.
+// A glossary is only useful while it is complete and every tag resolves, and discipline alone keeps
+// neither true. A tag naming a missing term renders as a visible marker rather than as prose, but
+// only on the page nobody previewed. A term that nothing references is dead weight, and nobody
+// notices it. An index can also go short in silence. learn_levels_test.go exists to prevent that
+// same failure one section over.
 //
-// These tests read the same files the site generator reads, so a missing edit fails the gate rather
+// These tests read the same files as the site generator, so a missing edit fails the gate rather
 // than shipping.
 
 const termsIndex = "content/reference/terms/index.md"
@@ -64,9 +64,9 @@ func TestEveryTagResolvesToATerm(t *testing.T) {
 	}
 }
 
-// TestEveryTermIsUsed fails on a term nothing references. A glossary entry reachable only by
-// browsing the glossary is a page that had no caller, and the useful signal is whether the prose it
-// was written for ever adopted it.
+// TestEveryTermIsUsed fails on a term that nothing references. If a reader can reach a glossary
+// entry only by browsing the glossary, the page has no caller. The useful signal is whether the
+// prose it was written for ever adopted it.
 func TestEveryTermIsUsed(t *testing.T) {
 	used := contentTags(t)
 	for _, id := range TermIDs() {
@@ -78,16 +78,16 @@ func TestEveryTermIsUsed(t *testing.T) {
 
 // TestATermIsTaggedAtMostOncePerPage fails when one page tags the same term more than once.
 //
-// The tag is a reading affordance, and a page that tags every occurrence spends it. `pull-up` appears
-// twenty times in prose outside `learn/`, and twenty dotted underlines in one tutorial reads as damage
-// rather than as help. One tag per term per page is what a reader needs, because the popover is
-// available from that one and the glossary is a click away after it.
+// The tag is a reading aid, and a page that tags every occurrence wastes it. `pull-up` appears
+// twenty times in prose outside `learn/`, and twenty dotted underlines in one tutorial reads as
+// damage rather than as help. A reader needs one tag per term per page. That one tag opens the
+// popover, and after it the glossary is a click away.
 //
-// This checks the COUNT, which is reliable. The other half of the convention, that the tagged
-// mention should be the FIRST one, is documented in docsite/README.md and deliberately not tested,
-// because deciding whether an earlier plain-text occurrence "counts" means matching an inflected
-// label through code spans, headings and link text, and a check that fires wrongly on an author
-// costs more than the convention is worth.
+// This checks the COUNT, which is reliable. The convention also says the tagged mention should be
+// the FIRST one. docsite/README.md documents that half, and it is deliberately not tested. Deciding
+// whether an earlier plain-text occurrence "counts" means matching an inflected label through code
+// spans, headings and link text. A check that fires wrongly on an author costs more than the
+// convention is worth.
 func TestATermIsTaggedAtMostOncePerPage(t *testing.T) {
 	perFile := map[string]map[string]int{}
 	for id, files := range contentTags(t) {
@@ -117,9 +117,9 @@ func TestATermIsTaggedAtMostOncePerPage(t *testing.T) {
 	}
 }
 
-// TestEveryTermDeclaresItsFields fails on a term missing the fields the tag and the fallback need.
-// A term with no label renders an empty anchor, and one with no summary loses the no-JavaScript
-// hover entirely, both of which look like working links.
+// TestEveryTermDeclaresItsFields fails when a term lacks a field that the tag or the fallback
+// needs. A term with no label renders an empty anchor. A term with no summary loses the
+// no-JavaScript hover entirely. Both look like working links.
 func TestEveryTermDeclaresItsFields(t *testing.T) {
 	terms, err := LoadTerms()
 	if err != nil {
@@ -139,9 +139,8 @@ func TestEveryTermDeclaresItsFields(t *testing.T) {
 }
 
 // TestGlossaryIndexListsEveryTerm fails when a term exists but the glossary does not link it. The
-// index is hand-maintained on purpose, the same as learn/levels.md. Generating it would mean a
-// second build step for a file that changes once per term, and this test is the cheaper half of that
-// trade.
+// index is hand-maintained on purpose, as learn/levels.md is. Generating it would mean a second
+// build step for a file that changes once per term, and this test costs less.
 func TestGlossaryIndexListsEveryTerm(t *testing.T) {
 	index := read(t, termsIndex)
 	var missing []string
@@ -157,9 +156,9 @@ func TestGlossaryIndexListsEveryTerm(t *testing.T) {
 }
 
 // TestTermPagesAreExemptFromNavWiring pins the reason adding a term is ONE file rather than four.
-// nav_test.go's reachability check reads files directly under a section and skips subdirectories,
-// which is what lets the generated catalogs and this glossary live without a nav entry each. If that
-// ever changes, every term page becomes unreachable-by-nav and this says so first.
+// nav_test.go's reachability check reads files directly under a section and skips subdirectories.
+// So the generated catalogs and this glossary need no nav entry each. If that ever changes, every
+// term page becomes unreachable-by-nav, and this test says so first.
 func TestTermPagesAreExemptFromNavWiring(t *testing.T) {
 	for _, slug := range sectionPages(t, "reference") {
 		if slug == "terms" {

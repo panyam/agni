@@ -29,24 +29,26 @@ ESD-specific checklist item may accept it or require a TVS; a load-dump item may
 
 This rule and `esd-protection` partition the same external-signal nets (connector member, no power
 pins, no rail facts, no ground / power-rail name, and not on a power path; see `esd-protection` for
-the shared definition). A net with **no** protection in reach is `esd-protection`; a net whose only
-protection in reach is a **Zener clamp** (no TVS, no IC ESD rating) is this rule. The two are mutually
+the shared definition). A net with **no** protection in reach belongs to `esd-protection`. A net
+belongs to this rule when its only protection in reach is a **Zener clamp**, with no TVS and no IC
+ESD rating. The two are mutually
 exclusive on any one net, so moving a net here removes it from the `esd-protection` count without
 hiding it. A TVS or a datasheet IC-ESD rating in reach satisfies both rules (neither fires).
 
-The Zener is recognized by classification, since a part whose `Description` (or other part text)
-carries a `zener` token classifies as the `zener` device class (distinct from `tvs`), the same
-netlist-derived, config-extensible class lexicon that recognizes a TVS. As with the TVS check, the
+The Zener is recognized by classification. When a part's `Description` or other part text carries
+a `zener` token, the part classifies as the `zener` device class, which is distinct from `tvs`. The
+same netlist-derived, config-extensible class lexicon recognizes a TVS. As with the TVS check, the
 clamp may sit one series hop away (the reach walk is 2-hop), so a series resistor between the
 connector and the clamp does not hide it.
 
 ### For software readers
 
 A Zener clamp is a slower, higher-energy pressure-relief valve than a TVS. Both sit *beside* the
-signal path and shunt overvoltage to ground; the TVS is the one rated for the fast ESD spike. This
-rule is a **classifier** rather than a gate, re-labelling a subset of what `esd-protection` would
-otherwise call "unprotected" as "protected by the wrong class," so a downstream policy (a review
-manifest) can route it to pass or fail without the engine hard-coding that judgment.
+signal path and shunt overvoltage to ground; only the TVS is rated for the fast ESD spike. This
+rule is a **classifier** rather than a gate. Without it, `esd-protection` would call some of these
+nets "unprotected". This rule re-labels them as "protected by the wrong class," so a downstream
+policy (a review manifest) can route them to pass or fail without the engine hard-coding that
+judgment.
 
 ### Query structure
 

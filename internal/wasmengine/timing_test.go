@@ -13,8 +13,8 @@ import (
 	"google.golang.org/protobuf/encoding/protojson"
 )
 
-// timedCheck runs CheckDesign on the gateway's snapshot snap asking for its timing (agni issue 914),
-// and returns the breakdown the engine sent back with the response's two timing headers.
+// timedCheck runs CheckDesign on the gateway's snapshot snap and asks for its timing (agni issue
+// 914). It returns the breakdown from the response's two timing headers.
 func timedCheck(t *testing.T, eng *Engine, snap string, ask bool) (*webapi.RequestTiming, string) {
 	t.Helper()
 	srv := httptest.NewServer(eng.Handler)
@@ -38,8 +38,8 @@ func timedCheck(t *testing.T, eng *Engine, snap string, ask bool) (*webapi.Reque
 	return &rt, resp.Header().Get("Server-Timing")
 }
 
-// timedIngest ingests the gateway on eng asking for its timing, and returns the snapshot's name and the
-// breakdown the engine sent back.
+// timedIngest ingests the gateway on eng and asks for its timing. It returns the snapshot's name and
+// the engine's breakdown.
 func timedIngest(t *testing.T, eng *Engine) (string, *webapi.RequestTiming) {
 	t.Helper()
 	srv := httptest.NewServer(eng.Handler)
@@ -66,9 +66,9 @@ func lookup(rt *webapi.RequestTiming, layer string) string {
 	return ""
 }
 
-// TestARequestThatAsksIsToldWhereItsTimeWent holds the browser engine to the breakdown agni serve
-// gives: the stages, each rule, and which tier answered each read, so a design read in the page can be
-// diagnosed as one read by a server can.
+// TestARequestThatAsksIsToldWhereItsTimeWent holds the browser engine to the same breakdown as agni
+// serve. The breakdown names the stages, each rule, and which tier answered each read. A design read
+// in the page can then be diagnosed as one read by a server can.
 func TestARequestThatAsksIsToldWhereItsTimeWent(t *testing.T) {
 	store := &wasmhost.MemCache{}
 	eng := gatewayEngine(t, store, "v1", nil)
@@ -149,9 +149,9 @@ func stageCount(rt *webapi.RequestTiming, name string) int {
 	return n
 }
 
-// TestCoverageReadsTheModelsFactBase holds interface coverage to the fact base the model keeps, built
-// once for every profile and kept for the next request. Building one per profile was a third of
-// Jetson's Run checks (agni issue 985).
+// TestCoverageReadsTheModelsFactBase checks that interface coverage reads the model's fact base. The
+// model builds that fact base once for every profile and keeps it for the next request. Building one
+// per profile took a third of Jetson's Run checks (agni issue 985).
 func TestCoverageReadsTheModelsFactBase(t *testing.T) {
 	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
 	srv := httptest.NewServer(eng.Handler)
@@ -165,9 +165,9 @@ func TestCoverageReadsTheModelsFactBase(t *testing.T) {
 	}
 }
 
-// TestCoverageAfterAChecksRunBuildsNoSecondModel holds the board-less coverage request to the model a
-// check run already kept with the board, which answers it as well, so a server that has run checks
-// builds no second model for the coverage panel (agni issue 987).
+// TestCoverageAfterAChecksRunBuildsNoSecondModel covers a board-less coverage request after a check
+// run. The check run kept a model with the board, and that model answers coverage as well. So a
+// server that has run checks builds no second model for the coverage panel (agni issue 987).
 func TestCoverageAfterAChecksRunBuildsNoSecondModel(t *testing.T) {
 	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
 	snap := ingestEngine(t, eng, &webapi.IngestRequest{Snapshot: &webapi.Snapshot{Uri: "mount://m"}}).GetName()
@@ -185,9 +185,9 @@ func TestCoverageAfterAChecksRunBuildsNoSecondModel(t *testing.T) {
 	}
 }
 
-// TestCoverageIsToldWhereItsTimeWent holds GetInterfaceCoverage to a breakdown naming its time per
-// interface profile, since on a large board it is a third of Run checks and its stages said nothing
-// (agni issue 968).
+// TestCoverageIsToldWhereItsTimeWent checks that GetInterfaceCoverage's breakdown names its time per
+// interface profile. On a large board coverage takes a third of Run checks, and its stages used to
+// say nothing (agni issue 968).
 func TestCoverageIsToldWhereItsTimeWent(t *testing.T) {
 	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
 	srv := httptest.NewServer(eng.Handler)
@@ -218,7 +218,7 @@ func TestCoverageIsToldWhereItsTimeWent(t *testing.T) {
 }
 
 // TestARequestAskingForMemoryIsToldEachStagesMemory covers the header's "memory" value (agni issue
-// 994): each stage carries the memory as it ended, and a request asking only for timing gets none.
+// 994). Each stage reports the memory as it ended, and a request asking only for timing gets none.
 func TestARequestAskingForMemoryIsToldEachStagesMemory(t *testing.T) {
 	eng := gatewayEngine(t, &wasmhost.MemCache{}, "v1", nil)
 	srv := httptest.NewServer(eng.Handler)

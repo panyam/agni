@@ -13,11 +13,11 @@ This page teaches at [EE6](../levels/#systems-ee6), and the [levels page](../lev
 
 "This board has CAN on it" sounds like a statement about two wires. It is closer to a statement about a specification, and the specification requires things.
 
-CAN needs a {{ explainable "differential-pair" }}, {{ explainable "termination" }} at each end of the bus, a {{ explainable "transceiver" }} between the bus and the processor, and {{ explainable "port-protection" }} on anything leaving the board through a connector. [Chapter 1](../01-what-a-board-is-made-of/) taught all four as jobs a part does. What is new here is that CAN *requires* them, and requires them together.
+CAN needs a {{ explainable "differential-pair" }}, {{ explainable "termination" }} at each end of the bus, a {{ explainable "transceiver" }} between the bus and the processor, and {{ explainable "port-protection" }} on anything leaving the board through a connector. [Chapter 1](../01-what-a-board-is-made-of/) taught all four as jobs a part does. This chapter adds that CAN *requires* them, and requires them together.
 
 {{ includeFile "figures/can-interface-contract.svg" }}
 
-None of that is visible in a netlist as a requirement. A board with CAN wired wrongly is a perfectly valid netlist. (This is the chapter where the tool stops being able to work anything out for itself, and it has been heading that way since chapter 8.) So, exactly as in the last two chapters, somebody has to declare what the interface is and what it demands.
+None of that is visible in a netlist as a requirement. A board with CAN wired wrongly is a perfectly valid netlist. (In this chapter the tool stops being able to work anything out for itself, and it has been heading that way since chapter 8.) So somebody has to declare what the interface is and what it demands, exactly as in the last two chapters.
 
 ## Declared once, checked everywhere (EE6)
 
@@ -40,7 +40,7 @@ requirements:
   - {type: esd}
 ```
 
-`host` is how a part gets recognised as a CAN device. [Chapter 1](../01-what-a-board-is-made-of/) noted that the tool could not tell what kind of chip `U4` was. The design answers that by carrying an `interface: CAN` attribute on `U4`, and the profile says that attribute is what makes something a host.
+`host` is how a part gets recognised as a CAN device. [Chapter 1](../01-what-a-board-is-made-of/) noted that the tool could not tell what kind of chip `U4` was. The design answers that by carrying an `interface: CAN` attribute on `U4`, and the profile says any part carrying that attribute is a host.
 
 Run it against the board:
 
@@ -50,33 +50,33 @@ Run it against the board:
 
 The ESD finding is the other kind, a genuine requirement of anything with a connector on it. Both CAN nets reach the outside world through `J1` with no clamp in reach.
 
-That assumes `J1` faces the outside world, and the tool cannot know. If this board plugged into a carrier through `J1`, the CAN pins would meet the carrier's copper inside the enclosure and the carrier's own connector would be the one a cable touches. The same connector part can be either, so the design says which in its intent, `components: {J1: {exposure: internal}}`, and the exposure rules then leave nets that reach only `J1` alone (see [Design intent](../../guide/design-intent/)).
+That assumes `J1` faces the outside world, and the tool cannot know. If this board plugged into a carrier through `J1`, the CAN pins would meet the carrier's copper inside the enclosure, and a cable would touch the carrier's own connector instead. The same connector part can be either, so the design says which in its intent with `components: {J1: {exposure: internal}}`. The exposure rules then leave alone any net that reaches only `J1` (see [Design intent](../../guide/design-intent/)).
 
 ## The trap in that file (EE6)
 
 This one costs real boards.
 
-This project's profile is named `CAN`, and so is the built-in one. Sharing the name is what makes the project's version **supersede** the built-in rather than run alongside it. That is deliberate and it is what lets a house add its STB requirement.
+This project's profile is named `CAN`, and so is the built-in one. Because the names match, the project's version **supersedes** the built-in rather than running alongside it. That is deliberate, and it lets a house add its STB requirement.
 
-It also means that **anything the built-in checked and this file omits stops being checked, silently**. The file's own comment says so, which is why its `signals` and `requirements` lists repeat the built-in set rather than listing only the delta. A profile that listed just the STB addition would have quietly switched off termination, ESD and everything else.
+It also means that **anything the built-in checked and this file omits stops being checked, silently**. The file's own comment says so. For that reason its `signals` and `requirements` lists repeat the built-in set rather than listing only the delta. If a profile listed just the STB addition, it would have quietly switched off termination, ESD and everything else.
 
 That shape recurs anywhere configuration replaces rather than merges, and in every case the run gets quieter and nothing says why.
 
 ## What a satisfied requirement says (EE6)
 
-Look at the profile's `termination` requirement, then look at what the board has. [Chapter 1](../01-what-a-board-is-made-of/) opened the course by reading three resistors off a query, and the first of them was `R1`, a 120 Ω part bridging `CAN1_CANH` and `CAN1_CANL`. That is what the requirement asks for.
+Look at the profile's `termination` requirement, then look at what the board has. [Chapter 1](../01-what-a-board-is-made-of/) opened the course by reading three resistors off a query, and the first of them was `R1`, a 120 Ω part bridging `CAN1_CANH` and `CAN1_CANL`. The requirement asks for exactly that part.
 
 {{ agniRun "content/learn/runs/termination-witnessed.yaml" }}
 
 R1 is there, the requirement is satisfied, and the rule **says so, naming the net and why**.
 
-For most of this tool's life that last part did not happen. Profile rules are compiled from datalog queries, and a datalog goal yields the rows that *satisfy* it. `unterminated(?h)` produces unterminated buses; there is no complement that falls out of the same query and produces "the buses that were fine". So the rule reported the violations and claimed nothing about anything else.
+For most of this tool's life that last part did not happen. Profile rules are compiled from datalog queries, and a datalog goal yields the rows that *satisfy* it. `unterminated(?h)` produces unterminated buses; the same query has no complement that produces "the buses that were fine". So the rule reported the violations and claimed nothing about anything else.
 
-**A clean result from such a rule and a board with no CAN on it produce identical output.** Delete R1 and the termination rule fires. Delete the entire CAN bus and it says nothing, which is what it says about a correctly terminated one. Silence cannot tell those apart, so a reader cannot either.
+**Such a rule produces identical output for a correctly terminated bus and for a board with no CAN on it.** Delete R1 and the termination rule fires. Delete the entire CAN bus and it says nothing. It says the same nothing about a correctly terminated bus. Silence cannot tell those apart, so a reader cannot either.
 
-The fix leaves the query alone. The rule now declares the set it examined, separately from the answer it reached, and the tool reports the difference. Nothing infers the scope from the goal, because for these rules the scope is not recoverable from the goal: `signal-missing` carries two negated conditions and only one of them is the test, and `signal-dangling` ends in a comparison with no negation at all. An author knows which half is which. A derivation would guess, and guessing wrong reports the failures as the coverage.
+The fix leaves the query alone. The rule now declares the set it examined, separately from the answer it reached, and the tool reports the difference. Nothing infers the scope from the goal, because for these rules the goal does not hold enough to recover it. `signal-missing` carries two negated conditions and only one of them is the test, and `signal-dangling` ends in a comparison with no negation at all. An author knows which half is which. A derivation would guess, and guessing wrong reports the failures as the coverage.
 
-Everything in this tool that looked fussy earlier is downstream of the same idea. [Chapter 5's](../05-who-drives-this-net/#two-nets-opposite-problems-ee3) insistence that a pass is a pass about one question, the `not-considered` verdicts in [chapters 4](../04-pull-ups-and-undefined-states/) and [8](../08-the-power-tree/), and the summary line that counts what a run considered, all come from the rule that a report is only worth something if you can tell what it looked at.
+Several things in this tool looked fussy earlier, and they all come from the same idea. [Chapter 5](../05-who-drives-this-net/#two-nets-opposite-problems-ee3) insisted that a pass is a pass about one question. [Chapters 4](../04-pull-ups-and-undefined-states/) and [8](../08-the-power-tree/) showed `not-considered` verdicts. The summary line counts what a run considered. Each follows from one rule, that a report is only worth something if you can tell what it looked at.
 
 Try it on the interface as a whole, and note that a house requirement and a protocol one are answered in the same voice:
 
@@ -84,7 +84,7 @@ Try it on the interface as a whole, and note that a house requirement and a prot
 agni check --verdicts --rule gateway-profiles/can-host-incomplete designs/gateway/gateway.edn
 ```
 
-`U4` gets one verdict per required signal rather than one verdict as a part, because a host wired to four of its five lines is four right answers and one wrong one. Each is addressable on its own, and `gateway-profiles/can-host-incomplete:(component:U4,signal:STB)` is a question you can type before running anything. That is the same pair-shaped subject [chapter 9](../09-sequencing-and-straps/) used for strap collisions, for the same reason: the answer belongs to a relation rather than to either thing in it.
+`U4` gets one verdict per required signal rather than one verdict as a part, because a host wired to four of its five lines is four right answers and one wrong one. Each is addressable on its own, and `gateway-profiles/can-host-incomplete:(component:U4,signal:STB)` is a question you can type before running anything. [Chapter 9](../09-sequencing-and-straps/) used the same pair-shaped subject for strap collisions, for the same reason. The answer belongs to a relation rather than to either thing in it.
 
 ## What you can now answer
 
@@ -105,6 +105,6 @@ agni check --verdicts --rule gateway-profiles/can-host-incomplete designs/gatewa
 | [`profile/signal-dangling`](../../reference/rules/profile-signal-dangling/) | warning | an interface net reaching fewer than two connections |
 | [`profile/missing-pullup`](../../reference/rules/profile-missing-pullup/) | warning | an interface signal needing a pull-up and reaching no rail |
 
-A project's own profile compiles these under its own name, which is why the board above reports `gateway-profiles/can-esd-missing` rather than `profile/esd`.
+A project's own profile compiles these under its own name. So the board above reports `gateway-profiles/can-esd-missing` rather than `profile/esd`.
 
 The next chapter, [crystals and oscillators](../11-crystals-and-oscillators/), is a short one on the part whose value matters as much as its presence.

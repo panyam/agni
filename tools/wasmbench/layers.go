@@ -28,19 +28,19 @@ import (
 type Layer struct {
 	Name string `json:"name"`
 	MS   int64  `json:"ms"`
-	// RetainedMB is how much the live heap grew for this layer, which is what keeping it costs.
+	// RetainedMB is how much the live heap grew for this layer. Keeping the layer costs that much.
 	RetainedMB float64 `json:"retained_mb"`
 	// AllocatedMB is everything allocated while building it, garbage included. Wasm memory never
 	// shrinks, so a worker's size follows the largest of these more than the live heap.
 	AllocatedMB float64 `json:"allocated_mb"`
-	// HeapMB is the live heap once this layer is held, and SysMB what the runtime has obtained from
+	// HeapMB is the live heap once this layer is held. SysMB is what the runtime has obtained from
 	// the system by then, the native counterpart of a worker's linear memory.
 	HeapMB float64 `json:"heap_mb"`
 	SysMB  float64 `json:"sys_mb"`
 }
 
 // LayersResult is the layer split of one board, from a fresh read and from a restore out of the
-// persistent tier, which is how a returning visitor's worker gets the design.
+// persistent tier. A returning visitor's worker gets the design through such a restore.
 type LayersResult struct {
 	Host     string  `json:"host"`
 	Design   string  `json:"design"`
@@ -50,10 +50,11 @@ type LayersResult struct {
 	RestoredReads int64 `json:"restored_reads"`
 }
 
-// Layers builds a design's layers in the order a Run checks needs them, as the worker composes them:
-// through a CachingLoader over the folder held in memory, with the design's project overlay and its
-// declared tiers. The first pass reads and persists; the second starts from an empty in-memory cache
-// over the same store, so its design, drawing and board are restored rather than parsed.
+// Layers builds a design's layers in the order a Run checks needs them. It composes them as the
+// worker does, through a CachingLoader over the folder held in memory, with the design's project
+// overlay and its declared tiers. The first pass reads and persists. The second starts from an empty
+// in-memory cache over the same store, so its design, drawing and board are restored rather than
+// parsed.
 func Layers(dir, design string) (LayersResult, error) {
 	res := LayersResult{Host: runtime.GOOS + "/" + runtime.GOARCH, Design: design}
 	before := heap()
@@ -78,8 +79,8 @@ func Layers(dir, design string) (LayersResult, error) {
 }
 
 // layerPass composes what wasmengine.NewWith does, less the transport, and builds each layer in turn.
-// Everything it built stays reachable until the pass ends, as it would in a worker. It returns how
-// many reads the persistent tier answered.
+// Everything it built is still reachable until the pass ends, as it would be in a worker. It
+// returns how many reads the persistent tier answered.
 func layerPass(mfs fs.FS, store service.BlobStore, design string) ([]Layer, int64, error) {
 	ctx := context.Background()
 	mount := fshost.Mount{Name: "bench", FS: mfs}
@@ -153,8 +154,8 @@ func layerPass(mfs fs.FS, store service.BlobStore, design string) ([]Layer, int6
 	}{
 		{"design", func() (err error) { d, err = loader.Design(ctx, nu, opts...); return }},
 		{"schematic geometry", func() error { sg = service.BuildGeometry(ctx, loader, gu, opts...); return nil }},
-		// A probe, dropped once measured: the model as a design whose board is never read would hold
-		// it, which is what reading the board lazily would leave a query-only worker holding.
+		// A probe, dropped once measured. It builds the model as a design would hold it if its board
+		// is never read. Reading the board lazily would leave a query-only worker holding that model.
 		{"check model without the board (probe, dropped)", func() (err error) {
 			probe, err = service.BuildModel(ctx, noBoard{loader}, nu, artifact.URI{}, ov.SpecsOver(nil), opts...)
 			return

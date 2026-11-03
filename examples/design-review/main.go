@@ -3,14 +3,14 @@
 // ones nothing can answer.
 //
 // It COMPOSES the other walks, since a checklist item binds to a rule (rung 3), to a query over the
-// fact relations (rung 11), or to nothing at all. The last step lists the unanswered items, because a
+// fact relations (rung 11), or to nothing at all. The last step lists the unanswered items. A
 // report showing only what it could answer looks the same as one that asked less.
 //
-// The narration lives in the sidecar walkthrough.md (demokit FromMarkdown); this file only binds the
+// The narration is in the sidecar walkthrough.md (demokit FromMarkdown). This file only binds the
 // steps that run engine code.
 //
-// Run modes (see the Makefile): `make run` (plain text), `make demo` (TUI boxes),
-// `make runquiet` (non-interactive defaults, CI-safe), `make doc` (render to markdown).
+// The Makefile has four run modes. `make run` prints plain text, `make demo` draws TUI boxes,
+// `make runquiet` takes non-interactive defaults (CI-safe), and `make doc` renders to markdown.
 package main
 
 import (
@@ -120,8 +120,9 @@ func main() {
 		if err != nil {
 			return demokit.Errf("%v", err)
 		}
-		// Three reasons an item is unanswered, and only one is a gap in the tool. Folding them into
-		// "not passing" would report a missing rule and a missing declaration the same way.
+		// An item can be unanswered for three reasons, and only one is a gap in the tool. Folding
+		// them into "not passing" would report a missing rule and a missing declaration the same
+		// way.
 		for _, it := range items(rep) {
 			switch it.Outcome {
 			case review.NotApplicable:
@@ -152,18 +153,18 @@ func run(design, checklist *common.PathInput) (review.Report, error) {
 	if err != nil {
 		return review.Report{}, fmt.Errorf("checklist %s: %w", checklist.Path(), err)
 	}
-	// Load checks structure; Validate compiles the inline queries against the vocabulary the run uses,
+	// Load checks structure. Validate compiles the inline queries against the run's vocabulary,
 	// here the shipped one, so a broken query is an error rather than an undecided item.
 	if err := review.Validate(man); err != nil {
 		return review.Report{}, fmt.Errorf("checklist %s: %w", checklist.Path(), err)
 	}
-	// No provider: component.mpn reads the MPN every model joins from the design, and only the
-	// datasheet relations need specs.
+	// No provider is needed. Every model joins the MPN from the design, and component.mpn reads it
+	// there. Only the datasheet relations need specs.
 	//
-	// The BUILT-IN catalog, with no project overlay. A project's own interface profiles, design
-	// intent and naming conventions answer items this cannot, so the covered count here is lower
-	// than the CLI reports on the same two files (123 of 302 against 76, on one real board).
-	// Composing an overlay takes a project descriptor and is the CLI's job.
+	// This uses the BUILT-IN catalog, with no project overlay. A project's own interface profiles,
+	// design intent and naming conventions answer items this run cannot. So the covered count here
+	// is lower than the CLI's on the same two files. On one real board it was 76 here against the
+	// CLI's 123 of 302. Composing an overlay takes a project descriptor and is the CLI's job.
 	return review.Run(context.Background(), review.RunParams{
 		Model:    check.NewModel(d),
 		Catalog:  check.DefaultCatalog(),
@@ -172,8 +173,8 @@ func run(design, checklist *common.PathInput) (review.Report, error) {
 	})
 }
 
-// manifestText prefers the file the reader named and falls back to the bundled copy, the same
-// disk-first rule PathInput.Load applies to a design. Any read error, not only a missing file, falls
+// manifestText prefers the reader's named file and falls back to the bundled copy. PathInput.Load
+// applies the same disk-first rule to a design. Any read error, not only a missing file, falls
 // back.
 func manifestText(checklist *common.PathInput) string {
 	if b, err := os.ReadFile(checklist.Path()); err == nil {

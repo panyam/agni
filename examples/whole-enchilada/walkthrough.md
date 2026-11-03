@@ -12,7 +12,7 @@ actors:
 
 Agni reads many source formats into one neutral IR, and every tool runs over that IR, so it never matters which format you started from. This walkthrough runs the engine end to end on bundled synthetic designs: convergence across formats, structural checks, semantic diff, cross-format emit, and both renderers.
 
-The copy/paste block under each step is the same thing at the CLI. They assume `agni` is on your PATH (`make install` from the repo root) and that you run them **from the repo root**, where `examples/common/designs/` holds the bundled fixtures. The `render` commands write their SVG into the current directory.
+Under each step, a copy/paste block does the same thing at the CLI. The blocks assume `agni` is on your PATH (`make install` from the repo root) and that you run them **from the repo root**, where `examples/common/designs/` holds the bundled fixtures. The `render` commands write their SVG into the current directory.
 
 ## Three formats, one netlist {#converge}
 

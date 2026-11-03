@@ -5,13 +5,13 @@ description: "A map from circuit concepts to software ones, for engineers coming
 
 A design is a program. The symbol library is its imports. The BOM is its lockfile.
 Datasheets are vendor documentation, and the parameter layer turns those docs into type
-definitions a linter can check. This page expands that mapping one concept at a time, with what
+definitions that a linter can check. This page expands that mapping one concept at a time, with what
 each thing means in an actual circuit and where it lives in the schemas. The architecture pages
-carry the design rationale. This page is for orientation.
+hold the design rationale. This page is for orientation.
 
 It maps STRUCTURE and deliberately says nothing about engineering judgement, so it will tell you a
-`Net` is a shared channel but not why an engineer put a resistor on one. For that, [learn the domain](../../learn/)
-is the companion section.
+`Net` is a shared channel but not why an engineer put a resistor on one. For that, read the companion
+section, [learn the domain](../../learn/).
 
 The master table:
 
@@ -90,7 +90,7 @@ callee, no direction on the edge itself.
 On a circuit, the +5V {{ explainable "rail" }} is a net, where the regulator's output pin, the MCU's VDD pin
 and a {{ explainable "decoupling-capacitor" "decoupling cap" }} are all tied together.
 Directionality lives on the pins. The regulator's pin is `power_out`, the MCU's is `power_in`.
-Those are the type annotations the connectivity rules dispatch on, and a missing direction means
+Those are type annotations. The connectivity rules dispatch on them, and a missing direction means
 skip rather than guess.
 
 In the schema, it is an `ir.Net` with `Connections` (component ref + pin ref). Pin directions come
@@ -100,10 +100,10 @@ from the `PartType`.
 
 ## Net solving as name resolution
 
-In software, net solving is compilation's front half. The source (wires, labels, junctions, geometry) contains
-only implicit references, and the solver builds the symbol table of which tokens denote the same
-thing. Two labels "+5V" on different wires are two mentions of one symbol. The solver unifies
-them, exactly like a linker unifying external symbols by name.
+In software, net solving is compilation's front half. The source contains only implicit references,
+in wires, labels, junctions and geometry. The solver builds the symbol table of which tokens denote
+the same thing. Two labels "+5V" on different wires are two mentions of one symbol. The solver
+unifies them, exactly like a linker unifying external symbols by name.
 
 On a circuit, KiCad stores no {{ explainable "netlist" }}. Connectivity is the drawing. A wire
 endpoint on a pin's connect point binds. A label names the node. Same-named power symbols merge
@@ -116,9 +116,9 @@ conformance suite. The full binding rules are in
 
 In software, some questions are not about one node but about a path. Is there an auth middleware
 anywhere between the public handler and the database call? Neither endpoint can answer that. You
-walk the call graph between them. `Reach` is that walk. A two-terminal series part (a resistor,
-inductor, {{ explainable "ferrite-bead" }}, or fuse) is inline middleware. It splits one logical
-channel into two named nets, so a per-net rule is blind across it.
+walk the call graph between them. `Reach` is that walk. A two-terminal series part is inline
+middleware, such as a resistor, inductor, {{ explainable "ferrite-bead" }}, or fuse. It splits one
+logical channel into two named nets, so a per-net rule is blind across it.
 
 `Reach(start, hops)` is a bounded BFS over the pass-element adjacency, and the helpers read the
 result like a stack trace. `PathTo` is the path, `ThroughOnPath` is the middleware crossed in order,
@@ -131,17 +131,17 @@ Two edges of the model carry the electrical meaning. A **series capacitor is a D
 insulator between two plates, so it is a non-edge and the walk never crosses it (a decoupling cap
 to ground is a different role entirely).
 
-A **rail is a global singleton**. Ground, the design-wide `global` fact, or any net with bus-scale
-fan-out (more than 16 pins) is a stop, because following a {{ explainable "pull-up" }} onto `VCC`
-would make the whole design reachable. That is the graph equivalent of chasing an `import` into a
-global and treating everything it touches as local.
+A **rail is a global singleton**. The walk stops at ground, at a net marked with the design-wide
+`global` fact, and at any net with bus-scale fan-out (more than 16 pins). Without those stops,
+following a {{ explainable "pull-up" }} onto `VCC` would make the whole design reachable. In code,
+the same mistake chases an `import` into a global and treats everything it touches as local.
 
 </details>
 
 On a circuit, protection and presence rules are reachability questions. A fuse sits somewhere
 between the connector and the regulator. An ESD clamp hangs off a net on the power-entry path.
-The series element that splits the net is exactly what a per-net check cannot see past, which is
-why the walk exists.
+The series element splits the net in two, and a per-net check cannot see past it. The walk exists
+to see past it.
 
 In the schema, the walk is `check.Model.Reach`/`Between` over the netlist IR. The crossable classes are
 resistor, inductor, ferrite, and fuse. The stops are {{ explainable "ground" }}, global, and high
@@ -154,8 +154,8 @@ fan-out.
 In software, real templates (C++ or generics) specialize at compile time, and each
 instantiation is a new type. The hardware analog is not the parameterized part. A `Device:R`
 with `Value: 10k` is just a constructor argument, and no specialization happens. The true
-template is the **reused hierarchical sheet**. One `amp.kicad_sch` source instantiated twice
-produces two complete copies of everything inside, with per-instance qualified names (`/amp1/IN`,
+template is the **reused hierarchical sheet**. Instantiate one `amp.kicad_sch` source twice and you
+get two complete copies of everything inside, with per-instance qualified names (`/amp1/IN`,
 `/amp2/IN`). That is name mangling, letter for letter.
 
 On a circuit, it is a stereo preamp drawn once and instantiated per channel, or a motor driver
@@ -171,8 +171,8 @@ KiCad's own convention so they match board-file names.
 
 In software, your code says `import leftpad`. The lockfile says `leftpad@1.3.0, sha512-...`.
 The MPN is that exact pinned artifact. "BSS138" names one orderable product with one datasheet,
-not "some N-FET". `BomLine` (or the MPN attribute on a component) is the lockfile entry binding
-your variable to it.
+not "some N-FET". `BomLine` is the lockfile entry binding your variable to it, and the MPN
+attribute on a component can serve as that entry.
 
 On a circuit, the BOM says R1 will be built as Yageo RC0603FR-0710KL. Two designs can place
 identical schematics and ship different physical parts, and only the BOM knows. This is also the
@@ -189,8 +189,8 @@ says otherwise.
 In software terms, the dependency is closed-source (you will never see the die), and the vendor
 publishes prose documentation. A `PartSpec` is the `.d.ts` stub someone wrote for it. It carries
 machine-readable claims about the artifact's limits and behavior, written against one pinned doc
-revision (`SourceDoc`), with every claim linking back to the prose it came from (page, table,
-extraction method, confidence). Like DefinitelyTyped, stubs start hand-written (the fixtures) and
+revision (`SourceDoc`). Every claim links back to its source in the prose by page, table,
+extraction method and confidence. Like DefinitelyTyped, stubs start hand-written (the fixtures) and
 graduate to generated (derive). A stub no one has verified is not trusted, because it can look
 authoritative without being so.
 
@@ -199,9 +199,10 @@ Ratings, TA = 25 °C)." A parameter is never a bare scalar. It is a min/typ/max 
 at a stated limit kind.
 
 In the schema, the stub is `param.PartSpec` / `Parameter` / `Condition` / `ParamProvenance` (see the
-[datasheet layer](../../architecture/datasheet-layer/)). The predicates that say how far to trust a
-spec are part of the contract. `UnderSpecified` means the conditions are not trustworthy, so skip. `MachineComparable`
-means a text-only condition should go to a human rather than an automatic comparison.
+[datasheet layer](../../architecture/datasheet-layer/)). The contract includes predicates that say
+how far to trust a spec. `UnderSpecified` means the conditions are not trustworthy, so skip.
+`MachineComparable` means a text-only condition should go to a human rather than an automatic
+comparison.
 
 ## `LimitKind` and contract tiers
 
@@ -221,14 +222,14 @@ max), expect ~1.2 V dropout at 800 mA and 25 °C (characteristic).
 
 ## The validation join as a type checker
 
-In software terms, with stubs (PartSpecs), a lockfile (BOM/MPN), and call sites (Components), checking
-becomes linting. Resolve each call site through the lockfile to its stub and verify usage against
-the declared types. If a dependency has no stub, the check is skipped rather than silently
-passed. A missing stub means the usage is unchecked, not that it is correct.
+In software terms, checking becomes linting once there are stubs (PartSpecs), a lockfile (BOM/MPN)
+and call sites (Components). Resolve each call site through the lockfile to its stub and verify
+usage against the declared types. If a dependency has no stub, the check is skipped rather than
+silently passed. A missing stub means the usage is unchecked, not that it is correct.
 
-On a circuit, consider `supply-exceeds-abs-max`. A power-input pin on a rail whose name says
-"+5V", joined to a part whose stub says absolute-max supply is 4.6 V, is a finding that cites
-both ends, the schematic location and the datasheet page.
+On a circuit, consider `supply-exceeds-abs-max`. A power-input pin sits on a rail whose name says
+"+5V". The pin's part has a stub that says its absolute-max supply is 4.6 V. Joining the two gives
+a finding that cites both ends, the schematic location and the datasheet page.
 
 In the schema, the join is the check Model's params tier (`check.WithParamProvider`, `Model.PartSpec`), the
 supply-symbol alias map (vendor spellings live in the model layer, never in rule text), and the
@@ -250,9 +251,9 @@ In software terms, generating stubs from vendor docs is a compiler pipeline with
   absolute-max"), data in git, reviewed like code.
 - **patches** are pinned human overrides that survive regeneration, the fix you commit so the
   generator's known mistake on one exact input can never come back.
-- **the RunManifest** is the generator's lockfile plus its warnings. Inputs are pinned, and every
-  gap (what it saw and did not extract) is enumerated, so a gap is recorded rather than passing
-  as coverage.
+- **the RunManifest** is the generator's lockfile plus its warnings. Inputs are pinned. Every gap
+  is enumerated, each thing the generator saw and did not extract, so a gap is recorded rather
+  than passing as coverage.
 
 On a circuit, take a real run. Docling parsed the BSS138 sheet and derive emitted 30 parameters with
 page citations. On the LM1117 sheet the parser mis-placed one value into the wrong column, and a
@@ -263,13 +264,13 @@ two-patch pair (clear plus insert) corrects it permanently.
 ## Geometry and provenance as source maps and blame
 
 In software terms, the geometry sidecar is a source map. It maps the same program to where things are
-drawn, kept out of the semantic schema and joined by keys. The renderer consumes it and the
+drawn. It sits outside the semantic schema and joins to it by keys. The renderer consumes it and the
 analyzers never do. Provenance is blame and debug symbols. Every IR node, finding, and extracted
 parameter can answer which file and line (or page and table) it came from, and that answer makes a
 finding verifiable rather than asserted.
 
-On a circuit, clicking a finding lands on the exact wire in the schematic, and clicking a
-datasheet-backed limit lands on the exact table in the PDF.
+On a circuit, clicking a finding opens the schematic at the exact wire, and clicking a
+datasheet-backed limit opens the PDF at the exact table.
 
 In the schema, the sidecar is `geom.SchematicGeometry` joined by ref_des/net/provenance keys (see
 [Geometry and rendering](../../architecture/geometry-and-rendering/)). `ir.Provenance` and
@@ -280,14 +281,15 @@ In the schema, the sidecar is `geom.SchematicGeometry` joined by ref_des/net/pro
 ## Where the analogy breaks (on purpose)
 
 - **No dynamic dispatch, no open world.** Every connection is resolved at design time, and the
-  whole program is one closed compilation unit. That is why exhaustive static checking works at
-  all, and why "the design" can be diffed as a value.
+  whole program is one closed compilation unit. So exhaustive static checking can work at all,
+  and "the design" can be diffed as a value.
 - **Nets are symmetric.** There is no caller. Electrically everyone on the net calls everyone.
   Direction is a property of pins, not edges, so pin directions do the type-annotation work and
   their absence means skip.
 - **Runtime is physics.** There is no sandbox. Running the program means powering a board, so the
-  linting tier (checks against stubs) carries weight software linters do not. It is the cheap
+  linting tier (checks against stubs) matters more than a software linter does. It is the cheap
   static end of a ramp whose expensive end is simulation.
 - **Instances are atoms.** Two "identical" resistors are still two physical objects with
-  tolerances, and the stub describes a population, not your unit. That is what tolerance analysis
-  exists to reason about, and why characteristics carry min/typ/max rather than one number.
+  tolerances, and the stub describes a population, not your unit. Tolerance analysis exists to
+  reason about that population. For the same reason, characteristics carry min/typ/max rather
+  than one number.

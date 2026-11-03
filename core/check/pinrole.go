@@ -54,9 +54,9 @@ func ConnDir(m Model, c *ir.Connection) ir.PinDirection {
 
 // IsVirtualRef reports whether a connection's component is a virtual connectivity symbol
 // (a KiCad #PWR/#FLG), which contributes power evidence but is not a physical part.
-// Consumer-intent guards (a decoupling rule asking "does a real part draw from this
-// rail") must not count it, while driver/ERC semantics (power-input-not-driven, the
-// driver conflict) must.
+// Consumer-intent guards must not count it, such as a decoupling rule asking "does a real
+// part draw from this rail". Driver/ERC semantics must count it (power-input-not-driven,
+// the driver conflict).
 func IsVirtualRef(ref string) bool {
 	return strings.HasPrefix(ref, "#")
 }
@@ -87,9 +87,10 @@ func IsPassiveClass(c ComponentClass) bool {
 // formatTypesPowerOut reports whether a source format's reader classifies power-OUTPUT pins. EDIF
 // carries only INPUT/OUTPUT/INOUT (no power_out) and IPC-2581 is a board format with no pin electrical
 // types; every other reader (KiCad, gEDA, xschem) types power outputs. power-input-not-driven gates
-// on it, because that rule infers "unpowered" from the absence of a typed driver, and on a format that types no power outputs a rail's driver reads as a plain input, so the absence is
-// meaningless. Prefix-matched because SourceFormat carries a version ("edif-2.0.0"). WS3-072 PR2 stamps
-// the power_IN side; the symmetric power_out stamp (PR3) lifts this gate.
+// on it. That rule infers "unpowered" from the absence of a typed driver. On a format that types no
+// power outputs, a rail's driver reads as a plain input, so the absence is meaningless.
+// Prefix-matched because SourceFormat includes a version ("edif-2.0.0"). WS3-072 PR2 stamps the
+// power_IN side; the symmetric power_out stamp (PR3) lifts this gate.
 func formatTypesPowerOut(sourceFormat string) bool {
 	return !strings.HasPrefix(sourceFormat, "edif") && !strings.HasPrefix(sourceFormat, "ipc")
 }

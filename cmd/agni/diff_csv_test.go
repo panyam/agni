@@ -56,8 +56,8 @@ func TestDiffCSVOneTablePerChange(t *testing.T) {
 	}
 }
 
-// TestDiffCSVProvenanceIsPerSide checks the two source-file columns carry the asymmetry that makes
-// them worth having, since a new net exists only on the right and a deleted one only on the left.
+// TestDiffCSVProvenanceIsPerSide checks the two source-file columns. A new net exists only on the
+// right and a deleted one only on the left, and the columns exist to show that asymmetry.
 func TestDiffCSVProvenanceIsPerSide(t *testing.T) {
 	recs, _ := runDiffCSV(t)
 	byClass := map[string][]string{}
@@ -118,9 +118,9 @@ func TestDiffRejectsUnknownFormat(t *testing.T) {
 	}
 }
 
-// TestDiffRenameApproxIsOptIn drives the near-match pass through the CLI, which is the boundary the
-// flag actually crosses. The engine's default is disabled, so a missing flag here would silently
-// produce today's output and every unit test in core/diff would still pass.
+// TestDiffRenameApproxIsOptIn drives the near-match pass through the CLI, since the flag crosses
+// that boundary. The engine's default is disabled, so a missing flag here would silently produce
+// today's output and every unit test in core/diff would still pass.
 func TestDiffRenameApproxIsOptIn(t *testing.T) {
 	run := func(args ...string) string {
 		var out bytes.Buffer
@@ -149,8 +149,8 @@ func TestDiffRenameApproxIsOptIn(t *testing.T) {
 	if strings.Contains(on, "[deleted] CLK") || strings.Contains(on, "[new]     OSC") {
 		t.Errorf("a recovered pairing must not ALSO report as new and deleted:\n%s", on)
 	}
-	// The exact pass is unaffected either way, which is what keeps a recovered fact from being
-	// downgraded to a guess when the flag is on.
+	// The exact pass is unaffected either way. So a recovered fact is not downgraded to a guess
+	// when the flag is on.
 	for _, out := range []string{off, on} {
 		if !strings.Contains(out, "[renamed] SIG -> DATA") {
 			t.Errorf("the exact rename survives in both modes:\n%s", out)
@@ -158,9 +158,9 @@ func TestDiffRenameApproxIsOptIn(t *testing.T) {
 	}
 }
 
-// TestDiffCSVCarriesRenameEvidence exists because the spreadsheet is where a reviewer triages a
-// near match, so the numbers that decided it have to be in columns rather than only in the text
-// form's prose.
+// TestDiffCSVCarriesRenameEvidence holds the rename evidence in columns. A reviewer triages a near
+// match in the spreadsheet, so the numbers that decided the match have to be in columns rather than
+// only in the text form's prose.
 func TestDiffCSVCarriesRenameEvidence(t *testing.T) {
 	var out bytes.Buffer
 	cmd := diffCmd()

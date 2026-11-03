@@ -13,7 +13,7 @@ walkthrough form of the descriptors behind `agni check <design-folder>` and
   service over a filesystem-backed store pointed at the bundled fixture; a server builds the
   same service over its mounts. Every client asks the service, so none of them can disagree
   about which companion supplies the board.
-- A file belonging to no design being a miss, not an error, because that is the ordinary
+- A file that belongs to no design is a miss, not an error, because that is the ordinary
   state of a mounted folder.
 - Why the fix is a declaration rather than a warning, since reading the companion and reading
   the entry produce two answers and neither carries any trace of which file it came from.

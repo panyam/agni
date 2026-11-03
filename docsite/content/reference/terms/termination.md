@@ -9,8 +9,8 @@ A bus long enough to matter is a transmission line, and a signal reaching the en
 line does not simply stop. It reflects, travels back down the line, and collides with whatever is
 following it.
 
-A terminator is a resistor across the line at that end, sized to the line's characteristic impedance,
-which absorbs the signal instead.
+A terminator is a resistor across the line at that end. It is sized to the line's characteristic
+impedance, and it absorbs the signal instead.
 
 ```mermaid
 flowchart TB
@@ -25,7 +25,7 @@ flowchart TB
     U ~~~ T
 ```
 
-The value is the impedance the bus standard specifies, which is why CAN
+The bus standard specifies the impedance, and the resistor matches it. So CAN
 terminators are 120Ω on every board that has ever carried CAN. On a
 [differential pair](../differential-pair/) the resistor bridges the two halves; on a single-ended bus
 it goes to ground.

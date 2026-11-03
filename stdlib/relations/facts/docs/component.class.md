@@ -22,12 +22,12 @@ having to enumerate every subtype.
 ### For software engineers
 
 Think of the class set as an interface hierarchy flattened onto each node, where the part carries both
-its concrete type and every base type it satisfies. That is why the relation is 1:many with a
+its concrete type and every base type it satisfies. So the relation is 1:many with a
 component. Joining on the specific tag (`component.class(?r, "tvs")`) is `instanceof TVS`;
 joining on a family tag (`component.class(?r, "diode")`) is `instanceof Diode` and matches every
 subtype. The set is stamped at the read edge, so the relation is a projection over a precomputed
-field, not a re-derivation per query. Empty rows for a component mean the classifier had no
-evidence, distinct from "classified as none".
+field, not a re-derivation per query. When a component has no rows, the classifier had no
+evidence. That is distinct from "classified as none".
 
 ### Go projector
 

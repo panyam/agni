@@ -14,16 +14,16 @@ import (
 	"github.com/panyam/jaala/frontends/mcp"
 )
 
-// answering is one call to a jaala tool over a design. It keeps the read the program was evaluated
-// over, so the answer is presented from the same facts, and presents each page once for both its
-// text and its structured content.
+// answering is one call to a jaala tool over a design. jaala evaluates the program over a read, and
+// answering keeps that read, so the answer is presented from the same facts. It presents each page
+// once, for both its text and its structured content.
 type answering struct {
 	s      *srv
 	design artifact.URI
 	snap   *webapi.Snapshot
 
-	// ctx is the call's, kept from baseFor for presenting, since jaala hands Format and Data the
-	// answer alone.
+	// ctx is the call's context. baseFor keeps it for presenting, since jaala hands Format and Data
+	// only the answer.
 	ctx  context.Context
 	read *service.QueryRead
 	q    query.Query
@@ -65,8 +65,8 @@ func (a *answering) baseFor(ctx context.Context, q datalog.Query) (*datalog.Base
 	return a.read.Base(), nil
 }
 
-// present is the page as agni answers it: RunQuery's projection of its rows, TableService's tables of
-// them, and a link that asks the question again in the viewer.
+// present builds the page as agni answers it. The page holds RunQuery's projection of its rows,
+// TableService's tables of them, and a link that asks the question again in the viewer.
 func (a *answering) present(page mcp.Answer) (*shown, error) {
 	if a.shown != nil || a.err != nil {
 		return a.shown, a.err
@@ -107,8 +107,8 @@ func (a *answering) presentOnce(page mcp.Answer) (*shown, error) {
 	return sh, nil
 }
 
-// format is the page as text an agent reads: the question, the rows with what they rest on, how much
-// of the answer this is, and the link.
+// format renders the page as text for an agent. The text holds the question, the rows with their
+// witnesses, how much of the answer this is, and the link.
 func (a *answering) format(page mcp.Answer) string {
 	sh, err := a.present(page)
 	if err != nil {
@@ -142,8 +142,8 @@ func (a *answering) data(page mcp.Answer) (any, error) {
 	return a.present(page)
 }
 
-// linkMeta is where the viewer shows snap's design, and why there is no link when it can't: the
-// design's declared entry within its mount (C32), on the server this one serves beside.
+// linkMeta says where the viewer shows snap's design, or why there is no link when it can't. The
+// place is the design's declared entry within its mount (C32), on the server this one serves beside.
 func (s *srv) linkMeta(snap *webapi.Snapshot) (rpt.Report, string) {
 	if s.o.URLBase == "" {
 		why := s.o.NoLinks

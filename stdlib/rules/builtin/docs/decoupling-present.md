@@ -26,17 +26,17 @@ check value, count-per-pin, or placement distance, since proximity is a board-ti
 value/impedance version is a datasheet-joined rule (Tier X). Ground-named nets (GND/VSS/...) are
 skipped even though their pins are power_in too, because decoupling is a supply-rail concept and the
 same capacitor already sits on the ground side. Cross-sheet rails are skipped (the cap may live on a
-sheet we did not read). Capacitor identity is the shared component.class fact. A supply pin the
-schematic marks no-connect, alone on its net, is not considered, since an unused supply pin draws
-nothing to decouple (agni issue 1244).
+sheet we did not read). Capacitor identity is the shared component.class fact. The schematic may mark
+a supply pin no-connect and leave it alone on its net. Such a pin is not considered, since an unused
+supply pin draws nothing to decouple (agni issue 1244).
 
 A capacitor across a fitted zero-ohm link counts as on the rail, because the link joins two names
 for one rail (agni issue 1015). A converter's output node and the rail it feeds are often split by a
 0 Ohm resistor that sizes the current path or lets a bench measure it, and the capacitors sit on the
-converter's side. A link counts when its value is zero ohms, including a value a library wrote as its part
-name, such as `R_0R_22.4A_0603`, which ingestion reads as 0 Ohm (agni issue 1115). The walk
-never crosses into a ground, and a series resistor of any other value still ends the rail. A pass
-names the link beside the capacitor.
+converter's side. A link counts when its value is zero ohms. That includes a value written as a
+library's part name, such as `R_0R_22.4A_0603`, which ingestion reads as 0 Ohm (agni issue 1115).
+The walk never crosses into a ground, and a series resistor of any other value still ends the rail.
+A pass names the link beside the capacitor.
 
 ### Two nets that declare a supply pin and are not rails
 
@@ -58,22 +58,22 @@ The inductor only disqualifies alongside a transistor. On its own it is an LC or
 a filtered supply is a rail that genuinely wants decoupling on the far side.
 
 Two more shapes carry a power-input pin and draw no supply, and this rule and power-input-not-driven
-both leave them alone (agni issue 935). An **exposed thermal pad left unconnected** (a pin named `EP`,
-`EPAD`, `PAD` or `THERMAL_PAD` alone on its net) is allowed to float by many parts' datasheets, and
-vendor symbols type it power_in. Only the pad's name exempts it, because a VDD pin left unwired is the
-forgotten connection these rules exist for. A **divider tap into a sense pin**, a net of resistors
-whose legs run to a supply and to ground beside a power_in pin, is a measurement (a USB hub's
-VBUS-detect input), not a supply. A supply fed through a single series resistor or a 0 Ohm link
+both leave them alone (agni issue 935). Many parts' datasheets allow an **exposed thermal pad left
+unconnected** to float. Such a pad is a pin named `EP`, `EPAD`, `PAD` or `THERMAL_PAD` alone on its
+net, and vendor symbols type it power_in. Only the pad's name exempts it, because these rules exist
+to find a VDD pin left unwired. A **divider tap into a sense pin** is a measurement, not a supply. It
+is a net of resistors whose legs run to a supply and to ground beside a power_in pin, such as a USB
+hub's VBUS-detect input. A supply fed through a single series resistor or a 0 Ohm link
 still wants its decoupling, so a divider needs both legs.
 
-A **connector's own pin** does not make a net a subject. A receptacle's symbol types VBUS power_in, and
-a net whose only supply pin is on a connector is where power leaves the board, so it has no load to
-decouple here (agni issue 1254).
+A **connector's own pin** does not make a net a subject. A receptacle's symbol types VBUS power_in.
+When a net's only supply pin is on a connector, power leaves the board there, so the net has no load
+to decouple here (agni issue 1254).
 
 Both are proxies for a question this rule cannot ask yet. "The switching node of a buck converter"
-is a topology question, an inductor between a switch node and an output with the capacitor beyond
-it, which is the topology pattern work in agni issue 374. Expect these class checks to be replaced
-by a pattern that states it properly.
+is a topology question. It asks for an inductor between a switch node and an output, with the
+capacitor beyond it. Agni issue 374 covers that topology pattern work. Expect a pattern that states
+the question properly to replace these class checks.
 
 ### Query structure
 
@@ -88,7 +88,7 @@ select power nets that are plausibly rails and carry no capacitor member.
 Reads: component.class, net.attributes (external), net.names (the ground-name skip), on_net,
 pin.electrical_type. Tier R.
 
-The gate guard also consults pin.role, which the declared read set does not list, because that field
-is validated against the declarative twin, and the twin carries the comparison without the scope
+The gate guard also consults pin.role. The declared read set does not list it, because that field
+is validated against the declarative twin, and the twin holds the comparison without the scope
 guards. The omission is safe in the direction that matters, since a format carrying no pin data
 yields RoleUnknown and the guard does not fire there.

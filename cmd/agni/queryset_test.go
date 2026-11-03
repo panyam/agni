@@ -82,8 +82,8 @@ func TestQuerySetDocumentsCarryEverySection(t *testing.T) {
 	}
 }
 
-// Both refusals come before the design is read, which a nonexistent design proves, since the error
-// has to be about the flags, not the file.
+// Both refusals come before the design is read. A nonexistent design proves it, since the error has
+// to be about the flags, not the file.
 func TestQuerySetRefusesCSVAndSpecLibBeforeReading(t *testing.T) {
 	set := writeSet(t, goodSet)
 	if _, err := runSet(t, "no/such/design.edn", "--set", set, "--format", "csv"); err == nil || !strings.Contains(err.Error(), "csv") {
@@ -137,8 +137,9 @@ func TestQuerySetReadsStdin(t *testing.T) {
 	}
 }
 
-// --set also takes the name of a set the design's project keeps in queries/ (agni issue 745), read
-// through ListQuerySets as the viewer reads it, and a name the project does not keep says which it does.
+// --set also takes the name of a set that the design's project keeps in queries/ (agni issue 745).
+// The CLI reads the set through ListQuerySets, as the viewer does. A name the project does not keep
+// gets an error that lists the sets it does keep.
 func TestQuerySetTakesAProjectSetByName(t *testing.T) {
 	freshWorkspace(t)
 	design := filepath.Join("..", "..", "examples", "tutorial-project", "designs", "gateway")

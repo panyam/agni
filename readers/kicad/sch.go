@@ -10,15 +10,16 @@ import (
 	"github.com/panyam/agni/internal/refdes"
 )
 
-// partIdentityProps are the KiCad properties both readers carry into a component's attributes:
-// Value, the part-identity pair (MPN, Manufacturer, the WS10-003 join key when no BomLine exists),
-// and Footprint/Datasheet (footprint-consistency rules plus the WS10 datasheet join, WS1-037). Every
-// other property rides the SECTION alone (sectionProps), where the lexicon's attribute keys read it
-// and classification, which tokenizes every component attribute, does not (agni issue 1285).
+// partIdentityProps lists the KiCad properties that both readers copy into a component's
+// attributes. They are Value, the part-identity pair (MPN, Manufacturer, the WS10-003 join key when
+// no BomLine exists), and Footprint/Datasheet (footprint-consistency rules plus the WS10 datasheet
+// join, WS1-037). Every other property goes on the SECTION alone (sectionProps). The lexicon's
+// attribute keys read it there, and classification, which tokenizes every component attribute, does
+// not (agni issue 1285).
 //
-// It is one list shared by both readers because per-reader copies drift. A board read that
-// carried Value alone left component.mpn empty, so the datasheet tier reported clean over a
-// file stating an MPN on every footprint (agni issue 570).
+// Both readers share this one list, because per-reader copies drift. When the board read copied
+// Value alone, component.mpn was empty, so the datasheet tier reported clean over a file that
+// stated an MPN on every footprint (agni issue 570).
 var partIdentityProps = []string{"Value", "MPN", "Manufacturer", "Footprint", "Datasheet"}
 
 // ReadSchematic parses a KiCad .kicad_sch schematic into an ir.Design.
@@ -36,9 +37,10 @@ func ReadSchematic(r io.Reader, sourceFile string) (*ir.Design, error) {
 
 // ReadSchematicWithSymbols is ReadSchematic plus external symbol-library resolution
 // (WS1-016). openSym fetches a library's .kicad_sym bytes by nickname for lib_id
-// references the schematic does not embed. Embedded lib_symbols always win; a library
-// that resolves nowhere degrades to placeholder artwork and no typed pins. nil openSym resolves nothing. The caller owns file I/O (C1); formats
-// builds the opener from the project's sym-lib-table and the --symbol-path dirs.
+// references that the schematic does not embed. Embedded lib_symbols always win; a library
+// that resolves nowhere degrades to placeholder artwork and no typed pins. nil openSym
+// resolves nothing. The caller owns file I/O (C1); formats builds the opener from the
+// project's sym-lib-table and the --symbol-path dirs.
 func ReadSchematicWithSymbols(r io.Reader, sourceFile string, openSym func(lib string) ([]byte, error)) (*ir.Design, error) {
 	root, err := parse(r)
 	if err != nil {
@@ -77,16 +79,16 @@ func extractSch(root *node, src string, syms *symLibCache) *ir.Design {
 	// The same geometry pass surfaces dangling wire endpoints (connections drawn but not completed).
 	nets, dangles, noJunction, joinedTaps := schNets(root, src, syms)
 	d.Nets = nets
-	// Unlike the board readers, this one KEEPS a placeholder-designated symbol, since those are
-	// real circuitry somebody has not named yet and dropping them would make the design read
-	// short. That makes the diagnostic this reader's job, because the parts are drawn and
-	// connected and nothing downstream can tell that their names are missing.
+	// Unlike the board readers, this one KEEPS a placeholder-designated symbol. Such a symbol is
+	// real circuitry that somebody has not named yet, and dropping it would make the design read
+	// short. So the diagnostic is this reader's job. The parts are drawn and connected, and
+	// nothing downstream can tell that their names are missing.
 	d.InputDiagnostics = &ir.InputDiagnostics{
 		DanglingEndpoints: dangles,
 		RefDesCollisions:  collisions,
-		// Declared even when the slice is empty, because this reader looked, so an empty list
-		// means "no collisions" here, where on a reader that cannot look it would mean "nobody
-		// asked" (agni issue 309).
+		// Declared even when the slice is empty, because this reader looked. Here an empty list
+		// means "no collisions". On a reader that cannot look it would mean "nobody asked" (agni
+		// issue 309).
 		Supplied:              []string{"ref_des_collisions", "resolved_symbols", "junction_taps", "range_labels"},
 		NoJunctionEndpoints:   noJunction,
 		JoinedTaps:            joinedTaps,
@@ -116,10 +118,10 @@ type libAccum struct {
 	byName   map[string]*ir.PartLibrary
 	order    []string
 	partSeen map[string]bool
-	// resolved is every symbol definition this accumulator took in, embedded or external, with the
-	// pins it carried (agni issue 418). Kept beside the failure list because a rule holding only the
-	// failures can report only failures, and a schematic whose symbols all loaded then looks exactly
-	// like one the reader never opened.
+	// resolved lists every symbol definition that this accumulator took in, embedded or external,
+	// with its pins (agni issue 418). It is kept beside the failure list, because a rule holding only
+	// the failures can report only failures. A schematic whose symbols all loaded would then look
+	// exactly like one the reader never opened.
 	resolved []*ir.ResolvedSymbol
 }
 
@@ -143,7 +145,8 @@ func (a *libAccum) collect(root *node, src string) {
 			Prov:             &ir.Provenance{SourceFile: src},
 		}
 		// An embedded definition cannot fail to resolve, and it still belongs in the considered
-		// set. A schematic that carries all its own symbols is the ordinary case, and leaving it out would leave that run with nothing to say about the references it read fine.
+		// set. A schematic that carries all its own symbols is the ordinary case. Leaving it out
+		// would leave that run with nothing to say about the references it read fine.
 		a.resolved = append(a.resolved, &ir.ResolvedSymbol{Symref: id, Kind: "kicad_sym_embedded", PinCount: num.Int32(len(pt.Pins))})
 		prefix := libPrefix(id)
 		lib := a.byName[prefix]
@@ -160,11 +163,12 @@ func (a *libAccum) collect(root *node, src string) {
 // the embedded libraries, resolved through the external symbol cache (WS1-016). Embedded
 // parts always win.
 //
-// A ref that resolves nowhere is REPORTED (WS1-052) rather than left absent: the part keeps its
-// section but gains no pins, and a component with no pins has no connections, so the design reads
-// clean and emptier than it is. Returned per lib_id with the placements that lost pins, in
-// first-appearance order. A nil cache (no opener supplied) reports nothing, since that is the
-// caller choosing to read without symbols rather than a resolution failure.
+// A ref that resolves nowhere is REPORTED (WS1-052) rather than left absent. The part keeps its
+// section but gains no pins. A component with no pins has no connections, so without the report
+// the design reads clean and emptier than it is. The result is grouped per lib_id with the
+// placements that lost pins, in first-appearance order. A nil cache (no opener supplied) reports
+// nothing, since that is the caller choosing to read without symbols rather than a resolution
+// failure.
 func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src string) []*ir.UnresolvedSymbol {
 	if syms == nil {
 		return nil
@@ -214,10 +218,10 @@ func (a *libAccum) resolveExternal(comps []*ir.Component, syms *symLibCache, src
 	return out
 }
 
-// resolvedSymbols returns every symbol definition the accumulator took in, in first-seen order.
+// resolvedSymbols returns every symbol definition that the accumulator took in, in first-seen order.
 //
 // The KIND separates the two ways a KiCad reference resolves. An embedded definition comes out of the
-// schematic's own lib_symbols block and is the ordinary case; an external one came off --symbol-path
+// schematic's own lib_symbols block and is the ordinary case; an external one came from --symbol-path
 // and is the case that can go wrong on a different machine. A reader chasing a lost connection wants
 // to know which of the two answered.
 func (a *libAccum) resolvedSymbols() []*ir.ResolvedSymbol { return a.resolved }
@@ -241,7 +245,7 @@ type compAccum struct {
 
 func newCompAccum() *compAccum { return &compAccum{byRef: map[string]*ir.Component{}} }
 
-// symbolKey is the name a placed symbol's definition is filed under in lib_symbols. KiCad writes a
+// symbolKey returns the name under which lib_symbols files a placed symbol's definition. KiCad writes a
 // lib_name when the embedded copy differs from the library's, as with "GND_3" beside lib_id
 // "power:GND", and the definition is then keyed on it rather than on lib_id.
 func symbolKey(ps *node) string {
@@ -282,10 +286,10 @@ func (a *compAccum) collect(root *node, src, instPath string) {
 		}
 		sectionProps(ps, sec.Attributes)
 		// dnp/in_bom/on_board are symbol-instance TOKENS ((dnp yes)), not properties. They are
-		// the populated-vs-not fabrication flags a check or a diff needs (WS1-037). A DNP part
-		// counts as unpopulated; in_bom/on_board scope it out of BOM/assembly. Faithful to
+		// the populated-vs-not fabrication flags that a check or a diff needs (WS1-037). A DNP
+		// part counts as unpopulated; in_bom/on_board scope it out of BOM/assembly. Faithful to
 		// the source spelling ("yes"/"no"); the concept generalizes across formats so it
-		// rides the open attributes map, not a new semantic field (C9).
+		// goes in the open attributes map, not a new semantic field (C9).
 		for _, tok := range []string{"dnp", "in_bom", "on_board"} {
 			if v := atomOf(ps.Child(tok).Arg(1)); v != "" {
 				sec.Attributes[tok] = v
@@ -323,8 +327,8 @@ func symbolRef(ps *node) string { return symbolRefAt(ps, "") }
 // save and honors it on load), so it beats the Reference property. That property is the
 // symbol's authoring-time value, which files edited across projects may leave stale or as
 // an unannotated placeholder (WS1-020). instPath is the instance's KiCad path (the
-// "/<root uuid>/<sheet uuid>..." chain the hierarchy walk tracks). A reused sheet file
-// carries one instances entry PER placement, and the matching path's reference is this
+// "/<root uuid>/<sheet uuid>..." chain that the hierarchy walk tracks). A reused sheet file
+// has one instances entry PER placement, and the matching path's reference is this
 // instance's identity (RV201 in one amplifier, RV301 in the other). An empty instPath
 // (single-file read) or an unmatched path falls back to the first non-placeholder entry,
 // then to the Reference property.
@@ -364,9 +368,9 @@ func symbolRefAt(ps *node, instPath string) string {
 func refDesCollision(c *ir.Component) *ir.RefDesCollision {
 	// A placeholder is not a claimed designator, so two unannotated resistors are two parts with
 	// no name rather than two parts fighting over one, and unannotated-components already
-	// reports them. Judging them a collision states something false (duplicate-ref-des is an
-	// error, and its remedy is to rename one of them) about a sheet that is merely unfinished,
-	// and reports the same placements twice.
+	// reports them. Judging them a collision would state something false about a sheet that is
+	// merely unfinished. duplicate-ref-des is an error, and its remedy is to rename one of them.
+	// It would also report the same placements twice.
 	if refdes.IsPlaceholder(c.GetRefDes()) {
 		return nil
 	}

@@ -3,7 +3,7 @@ title: "5. Who drives this net?"
 description: "Every net needs exactly one thing deciding its voltage. What happens when two do, when none does, and why a pass on one rule proves nothing about the others."
 ---
 
-[Chapter 4](../04-pull-ups-and-undefined-states/) was about a net with nothing driving it. This one is about the other end of the same question, a net with two things driving it, and it ends on what a passing rule does and does not tell you.
+[Chapter 4](../04-pull-ups-and-undefined-states/) was about a net with nothing driving it. This one is about the other end of the same question, a net with two things driving it. It ends on what a passing rule does and does not tell you.
 
 Read [chapter 4](../04-pull-ups-and-undefined-states/) first, particularly the open-drain section.
 
@@ -11,15 +11,15 @@ This page teaches at [EE3](../levels/#roles-ee3) and [EE4](../levels/#failure-mo
 
 ## One net, one decider (EE3)
 
-A net's voltage has to be decided by something. An output pin decides it by connecting the wire either to the supply rail or to ground, through a transistor, and whichever it picks the rest of the net follows.
+A net's voltage has to be decided by something. An output pin decides it through a transistor, by connecting the wire either to the supply rail or to ground. The rest of the net follows whichever one it picks.
 
 That works cleanly while exactly one pin is doing the deciding. Put two outputs on one net and let them disagree, and you have a problem with a mechanism rather than a vague badness. One output has connected the net to the rail. The other has connected the same net to ground. The only thing between the rail and ground is now two transistors in series, and a transistor that is fully on is a small resistance rather than a wire, typically tens of ohms.
 
 {{ includeFile "figures/output-contention.svg" }}
 
-So the current is whatever the rail divided by that resistance comes to, which lands in the tens to hundreds of milliamps. Output pins are usually rated for a few milliamps. (If you have ever touched a chip on a prototype and found it uncomfortably hot with nothing obviously wrong, this is one of the two or three things worth suspecting.) Both parts heat, both are operating far outside their ratings, and if the condition persists one of them eventually stops working.
+So the current is the rail voltage divided by that resistance, which comes to tens to hundreds of milliamps. Output pins are usually rated for a few milliamps. (If you have ever touched a chip on a prototype and found it uncomfortably hot with nothing obviously wrong, this is one of the two or three things worth suspecting.) Both parts heat, both are operating far outside their ratings, and if the condition persists one of them eventually stops working.
 
-This is where [chapter 4's](../04-pull-ups-and-undefined-states/) open-drain outputs earn their keep. An open-drain pin can only ever pull the net toward ground, so two of them can share a wire and never fight: both pulling low at once is simply low. Buses that let several devices talk are built on that idea, or on the alternative, an output that can be switched into a third state where it drives nothing at all and lets someone else decide.
+[Chapter 4's](../04-pull-ups-and-undefined-states/) open-drain outputs solve this. An open-drain pin can only ever pull the net toward ground, so two of them can share a wire and never fight: both pulling low at once is simply low. Buses that let several devices talk are built on that idea, or on the alternative, an output that can be switched into a third state where it drives nothing at all and lets someone else decide.
 
 ## Two nets, opposite problems (EE3)
 
@@ -39,7 +39,7 @@ Here is a fixture with one of each, run through three rules at once:
 
 So one net collects a pass, a pass, and a fail from three rules, and every one of those correctly answers the question that rule asks. A pass means "this specific thing is fine here". It does not mean the net is fine, and no rule in the catalog claims otherwise.
 
-That is worth internalising early, because it is how the whole tool behaves and it separates reading a report from trusting one. A green run tells you the questions that were asked came back clean. Which questions those were is the [considered set](../../tutorials/09-read-the-verdicts/), and the number of rules that had nothing to say about your board is usually larger than the number that did.
+It is worth internalising early. The whole tool behaves this way, and knowing it separates reading a report from trusting one. A green run tells you the questions that were asked came back clean. The [considered set](../../tutorials/09-read-the-verdicts/) says which questions those were, and usually more rules had nothing to say about your board than had something to say.
 
 ## The same fault on a rail (EE4)
 
@@ -47,19 +47,19 @@ Signals are not the only place this happens. Two supplies feeding one rail is th
 
 {{ agniRun "content/learn/runs/power-contention.yaml" }}
 
-Note that it is an `error` here for the same reason [chapter 4's](../04-pull-ups-and-undefined-states/) I2C rule was. Two regulators with slightly different output voltages on one net do not average out. The higher one supplies the rail and pushes current backwards into the lower one, which is not a thing regulators are built to accept.
+Note that it is an `error` here for the same reason [chapter 4's](../04-pull-ups-and-undefined-states/) I2C rule was. Two regulators with slightly different output voltages on one net do not average out. The higher one supplies the rail and pushes current backwards into the lower one. Regulators are not built to accept that.
 
-This arrangement is sometimes deliberate, and the deliberate version combines the supplies through diodes or a dedicated OR-ing controller, so the higher one wins and nothing flows backwards. A design doing that on purpose has the parts to show for it. A design that simply wired two outputs together does not, and this rule is what tells them apart.
+This arrangement is sometimes deliberate, and the deliberate version combines the supplies through diodes or a dedicated OR-ing controller, so the higher one wins and nothing flows backwards. A design doing that on purpose has the parts to show for it. A design that simply wired two outputs together does not, and this rule tells them apart.
 
 ## Pins the designer said to leave alone (EE3)
 
-One more way a net can be wrong, and it is the only one in this chapter the tool could not possibly work out for itself.
+There is one more way a net can be wrong. Unlike the others in this chapter, the tool could not possibly work this one out for itself.
 
-A pin marked **no-connect** is one the designer annotated as intentionally unused. The annotation changes what other checks mean, since an unconnected pin is normally worth flagging and a no-connect one is not, and the annotation exists to remove that ambiguity.
+A designer marks a pin **no-connect** to annotate it as intentionally unused. An unconnected pin is normally worth flagging and a no-connect one is not, so the annotation changes what other checks mean. The annotation exists to remove that ambiguity.
 
 Wiring something to a pin marked no-connect is therefore an error, and a slightly unusual one, because the design is contradicting itself. Somebody wrote down that the pin should be left alone and somebody wired it up. Whichever is right, both statements are in the file and they disagree.
 
-The tool can only see this because a human annotated it, which is [chapter 1's](../01-what-a-board-is-made-of/) pattern of declaring what a netlist cannot infer. The same goes for pin direction itself. Whether a pin is an input, an output or a supply comes from the symbol, and a symbol that never says leaves the whole of this chapter unanswerable for that pin, which `unspecified-pin-with-driver` reports rather than guessing. `dl/power-pin-mistyped` catches a related slip, a pin named like a supply that the symbol never typed as one, sitting on a net of its own.
+The tool can only see this because a human annotated it. That follows [chapter 1's](../01-what-a-board-is-made-of/) pattern of declaring what a netlist cannot infer. The same goes for pin direction itself. The symbol says whether a pin is an input, an output or a supply. If a symbol never says, none of this chapter's questions can be answered for that pin, and `unspecified-pin-with-driver` reports that rather than guessing. `dl/power-pin-mistyped` catches a related slip. A pin is named like a supply, the symbol never typed it as one, and it sits on a net of its own.
 
 ## What you can now answer
 

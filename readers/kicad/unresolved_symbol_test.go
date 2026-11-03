@@ -7,8 +7,8 @@ import (
 	"testing"
 )
 
-// TestUnresolvedSymbolReported (WS1-052) checks that a lib_id the schematic does not embed AND
-// whose external library fails to open is recorded, with every placement it cost pins.
+// TestUnresolvedSymbolReported (WS1-052) covers a lib_id that the schematic does not embed AND whose
+// external library fails to open. The reader records it, with every placement it cost pins.
 // extlib.kicad_sch has an empty (lib_symbols) block, so both its parts depend entirely on the
 // external "ext" library.
 func TestUnresolvedSymbolReported(t *testing.T) {
@@ -62,8 +62,8 @@ func TestUnresolvedSymbolSilentWithoutOpener(t *testing.T) {
 	}
 }
 
-// TestUnresolvedSymbolGroupsPlacements checks that one missing library that several parts share is
-// ONE record carrying both designators, not one record per part. The grouping is what keeps a
+// TestUnresolvedSymbolGroupsPlacements covers several parts that share one missing library. The
+// reader writes ONE record holding both designators, not one record per part. Grouping keeps a
 // single missing file from reading as N separate problems.
 func TestUnresolvedSymbolGroupsPlacements(t *testing.T) {
 	failing := func(string) ([]byte, error) { return nil, fmt.Errorf("missing") }
@@ -83,7 +83,7 @@ func TestUnresolvedSymbolGroupsPlacements(t *testing.T) {
 // with the kind that separates them, because only an external library can go missing on somebody
 // else's machine.
 //
-// The PIN COUNT is the part that matters. A stale library entry resolves as successfully as the real
+// The PIN COUNT matters most. A stale library entry resolves as successfully as the real
 // symbol and answers with no pins, which costs the netlist exactly what a missing file does, and a
 // record that said only "resolved" could not tell the two apart.
 func TestResolvedSymbolsRecorded(t *testing.T) {
@@ -112,9 +112,9 @@ func TestResolvedSymbolsRecorded(t *testing.T) {
 }
 
 // TestResolvedSymbolsRecordEmbedded covers a schematic that carries its own symbols. That is the
-// ordinary case and is the one that would otherwise have nothing to say. Leaving it out would mean
-// a KiCad file with no external dependency produced an empty considered set, which reads as "nobody
-// looked".
+// ordinary case, and without this record the reader would say nothing about it. Leaving it out would
+// mean a KiCad file with no external dependency produced an empty considered set, which reads as
+// "nobody looked".
 func TestResolvedSymbolsRecordEmbedded(t *testing.T) {
 	d, err := ReadSchematic(bytes.NewReader(readFixture(t, "sch.kicad_sch")), "sch.kicad_sch")
 	if err != nil {

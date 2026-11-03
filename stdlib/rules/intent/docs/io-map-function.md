@@ -15,23 +15,23 @@ one the datasheet lists for that pin.
 
 A microcontroller pin can carry several peripherals, and a mux setting picks one. The datasheet's
 pin-mux table lists which ones each pin offers. On the NXP KW47, pin PTB3 can be `ADC0_B13`, `PTB3`,
-`LPSPI1_SOUT`, `LPUART1_RX`, `TPM1_CH3` or `FLEXIO0_D29`, and nothing else. A map row putting
-`LPI2C1_SDA` on PTB3 describes a configuration the part cannot be set to, since that function lives on
+`LPSPI1_SOUT`, `LPUART1_RX`, `TPM1_CH3` or `FLEXIO0_D29`, and nothing else. Imagine a map row that
+puts `LPI2C1_SDA` on PTB3. The part cannot be set to that configuration, since that function is on
 PTB4.
 
 The netlist cannot catch this, because the copper is fine. It surfaces when the firmware's pin-mux
 code is written, or at bring-up as a peripheral that never sees the pin.
 
 A pass names the function it matched and cites the datasheet page the table came from. A failure
-lists every function the datasheet does give the pin, which is usually enough to spot the intended
-one (the same peripheral under another instance number, or the neighbouring pin).
+lists every function the datasheet does give the pin. That list is usually enough to spot the
+intended one (the same peripheral under another instance number, or the neighbouring pin).
 
 ### How names are compared
 
-Through `core/ident`, the same comparison the pin lookup uses. A vendor's table spells its own
-functions inconsistently, and one slot can name two signals (`ADC0_A10/CMP0_IN0`), so each side is
-split and canonicalized before comparing. A match that needed a token dropped passes with a note
-saying so, rather than passing silently.
+Names are compared through `core/ident`, the same comparison the pin lookup uses. A vendor's table
+spells its own functions inconsistently, and one slot can name two signals (`ADC0_A10/CMP0_IN0`), so
+each side is split and canonicalized before comparing. A match that needed a token dropped passes
+with a note saying so, rather than passing silently.
 
 ### When it cannot decide
 
@@ -44,8 +44,8 @@ Each of these reports the row `not-considered`, with the reason, and never as a 
   document.
 
 The last is common. The alternate-function table comes from a recipe that reads the vendor's pin-mux
-table (see the datasheet layer's architecture page), and a part whose document has no recipe yet has
-pins without functions.
+table (see the datasheet layer's architecture page). If a part's document has no recipe yet, the
+part has pins without functions.
 
 ### Fixing a finding
 

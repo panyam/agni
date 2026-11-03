@@ -2,27 +2,27 @@ package classify
 
 import ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 
-// MPNAliases are the built-in attribute keys a source spells a manufacturer part number with, in
-// preference order, and the default of the lexicon's attribute.mpn. A project adds its own there.
+// MPNAliases lists the built-in attribute keys for a manufacturer part number, in preference order.
+// It is the default of the lexicon's attribute.mpn, and a project adds its own keys there.
 //
-// Exported because a reader needs the same spellings to find the fact in its own grammar (EDIF scans
-// cell `property` nodes by name), while deciding where the fact lands is this pass's job. A reader
+// It is exported because a reader needs the same spellings to find the fact in its own grammar (EDIF
+// scans cell `property` nodes by name). This pass decides which field the fact goes into. A reader
 // reads no configuration, so a project's own keys never reach that scan.
 //
-// These are read-only. Nothing writes a canonical MPN attribute; the answer is the typed
-// ir.Component.mpn field, and these are the raw keys it is derived FROM. KiCad's "Part Number" field
-// is here since public boards (HackRF One, Cynthion) carry their part numbers in it (agni 1285).
+// These are read-only. Nothing writes a canonical MPN attribute. The answer goes in the typed
+// ir.Component.mpn field, and the pass derives it FROM these raw keys. KiCad's "Part Number" field is
+// here since public boards (HackRF One, Cynthion) put their part numbers in it (agni 1285).
 var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn", "Part Number"}
 
 // StampMPN fills ir.Component.mpn once at ingestion, for every format. It is a
-// DERIVED-NORMALIZATION pass under C9: no reader populates the field, and a design built without the
-// pass leaves it empty, which consumers read as "no part number stated".
+// DERIVED-NORMALIZATION pass under C9. No reader populates the field. A design built without the pass
+// leaves it empty, and consumers read that as "no part number stated".
 //
-// It is a shared pass rather than reader work (agni issue 519), because a reader promoting the
-// number privately leaves every other format with an empty component.mpn and a silently disabled
-// parameter tier. See docsite/content/build/format-reader.md#getting-the-part-number-wrong-fails-quietly.
+// It is a shared pass rather than reader work (agni issue 519). If one reader promoted the number
+// privately, every other format would have an empty component.mpn and a silently disabled parameter
+// tier. See docsite/content/build/format-reader.md#getting-the-part-number-wrong-fails-quietly.
 //
-// Three sources, most specific first, and it stops at the first that answers:
+// It tries three sources, most specific first, and stops at the first that answers.
 //
 //  1. THE COMPONENT'S OWN ATTRIBUTES, under any alias. The usual case, since a part number is stated per
 //     placement and a library symbol is coarser than an orderable product.
@@ -30,11 +30,11 @@ var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn", "P
 //  3. ITS PART TYPE's attributes, under any alias, for a reader that has not been converted to the
 //     typed field.
 //
-// It resolves the part through PartIndex/FirstPart, the same resolution Stamp and check.NewModel use,
+// It resolves the part through PartIndex/FirstPart. Stamp and check.NewModel resolve it the same way,
 // so a component's class and its part number cannot disagree about which part type it has.
 //
-// Idempotent, since a component that already has one is skipped. The keys come from the read's
-// lexicon (attribute.mpn), which is why the pass runs in DeriveDesign rather than with the parse.
+// It is idempotent, since it skips a component that already has an MPN. The keys come from the read's
+// lexicon (attribute.mpn), so the pass runs in DeriveDesign rather than with the parse.
 func (l *Lexicon) StampMPN(d *ir.Design) {
 	v := l.role()
 	index := PartIndex(d)

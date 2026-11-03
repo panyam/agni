@@ -9,8 +9,8 @@ Put a series capacitor in the net, sized for the lowest frequency the link has t
 
 ### What it checks
 
-A net the design intent declares as AC-coupled must actually be carried by a **series capacitor**. If
-no series capacitor is on it, the net is DC-connected and the declaration is unmet.
+When the design intent declares a net AC-coupled, a **series capacitor** must actually carry the net.
+If no series capacitor is on it, the net is DC-connected and the declaration is unmet.
 
 ### For hardware engineers
 
@@ -20,13 +20,13 @@ two ends often sit at different common-mode voltages by design. The transmitter 
 the receiver expects another, and the capacitor lets each keep its own without fighting.
 
 Leave it out and the two ends are tied together at DC. The receiver's input sits wherever the
-transmitter's output holds it rather than at its own bias point, which shows up as a link that either
+transmitter's output holds it rather than at its own bias point. That shows up as a link that either
 does not train or trains and then errors under load. It is also a part-count-of-one omission, easy to
 lose in a respin.
 
 ### How the check tells a coupling cap from a decoupling cap
 
-Both are "a capacitor on the net", and the difference is what the far side connects to.
+Both are "a capacitor on the net", and they differ in what the far side connects to.
 
 - A **decoupling** cap's far side is ground (or a rail). It shunts noise, and the signal does not pass
   through it.
@@ -51,8 +51,9 @@ intent:
     PCIE_TX0_P: {ac_coupled: true}
 ```
 
-No level to state, since the fact is the whole assertion. A net you do not declare is not checked, because the rule
-iterates the declaration, never the design, so it has no opinion about nets your intent is silent on.
+No level to state, since the fact is the whole assertion. The rule does not check a net you do not
+declare. It iterates the declaration, never the design, so it has no opinion where your intent is
+silent.
 
 ### Fixing a finding
 

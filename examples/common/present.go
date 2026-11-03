@@ -9,8 +9,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// StatsLines renders the summary agni's `stats` command prints, as a string an example hands
-// to a demokit step. It splits the counts into two groups so a reader can see at a glance what
+// StatsLines renders the summary that agni's `stats` command prints, as a string for an example to
+// hand to a demokit step. It splits the counts into two groups so a reader can see at a glance what
 // is format-neutral and what is not:
 //
 //   - "netlist": components and nets, the format-neutral identity. These are the same for the
@@ -41,12 +41,12 @@ func StatsLines(d *ir.Design) string {
 		return fmt.Sprintf("  %-16s %d\n", l, n)
 	}
 
-	// Netlist identity: always shown, always the same for a given board across formats.
+	// Netlist identity is always shown and is the same for a given board across formats.
 	b.WriteString("\nnetlist:\n")
 	b.WriteString(row("components", len(d.Components), "(unique ref_des)"))
 	b.WriteString(row("nets", len(d.Nets), ""))
 
-	// Format detail: shown only for the counts this reader actually populated.
+	// Format detail is shown only for the counts this reader actually populated.
 	type entry struct {
 		label, note string
 		n           int
@@ -96,9 +96,10 @@ func NetLines(d *ir.Design, limit int) string {
 }
 
 // FindingsLines renders check.Run's output the way agni's `check` command does, as a string
-// an example hands to a demokit step: a per-rule count summary, then each finding as
-// "[severity] rule: subject (message)". Returns "no findings" for an empty slice. Findings
-// keep check.Run's order (sorted by rule then subject), and the summary is sorted by rule name.
+// for an example to hand to a demokit step. The string holds a per-rule count summary, then each
+// finding as "[severity] rule: subject (message)". Returns "no findings" for an empty slice.
+// Findings keep check.Run's order (sorted by rule then subject), and the summary is sorted by rule
+// name.
 func FindingsLines(fs []check.Finding) string {
 	if len(fs) == 0 {
 		return "no findings"

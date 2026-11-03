@@ -40,7 +40,7 @@ func pinMuxDesign(t *testing.T, spec []byte) string {
 
 // A mux table kept as its own file (agni issue 1200) reaches io-map-function once it is merged into the
 // published spec. Before the merge the spec's pins list no alternates, so every declared function on
-// U1 is not-considered; after it, the rows are the ones the hand-written spec gives.
+// U1 is not-considered. After it, the rows match what the hand-written spec gives.
 func TestAMergedPinMuxReachesIOMapFunction(t *testing.T) {
 	freshWorkspace(t)
 	baseText, err := os.ReadFile(filepath.Join(pinMuxFixture, "kw47.textproto"))

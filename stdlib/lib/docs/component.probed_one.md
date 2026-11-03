@@ -9,8 +9,8 @@ point on exactly one of its two nets, naming the net that has one and then the n
 
 These are the cheapest coverage to win back. In-circuit test needs both of a part's nodes, and these
 parts already have one, so a single test point on `unprobed` makes the part measurable. When several
-parts share the same unprobed net, one test point there recovers all of them, which is the reason to
-group by that column.
+parts share the same unprobed net, one test point there recovers all of them, so group by that
+column.
 
 ### For software engineers
 

@@ -32,14 +32,14 @@ func TestReadDesignIPCSniff(t *testing.T) {
 	}
 }
 
-// TestReadCarriesTheIngestionPasses is the guard this package did not have, and the reason it needed
-// one is that its absence is silent.
+// TestReadCarriesTheIngestionPasses checks that both reads in this package run the ingestion
+// passes. The package had no such guard, and skipping the passes fails silently.
 //
-// Both readers here used to dispatch straight to edif.Read and friends, skipping formats.Loader,
-// which is where the format-neutral passes run. classify.StampMPN is one of them, so every example
-// read a design whose components carried NO part number. Nothing errored, the counts were right, and
-// every datasheet-tier question answered "none" rather than failing. A query for uncovered parts
-// grouped by MPN reported that the board was clean.
+// Both readers here used to dispatch straight to edif.Read and friends and skip formats.Loader.
+// The format-neutral passes run in the Loader, and classify.StampMPN is one of them. So every
+// example read a design whose components had NO part number. Nothing errored, the counts were
+// right, and every datasheet-tier question answered "none" rather than failing. A query for
+// uncovered parts grouped by MPN reported that the board was clean.
 //
 // Asserted on BOTH paths, because they are separate calls and a fix to one would look complete.
 func TestReadCarriesTheIngestionPasses(t *testing.T) {

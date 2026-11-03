@@ -16,22 +16,22 @@ import (
 	"github.com/panyam/agni/internal/symread"
 )
 
-// Faithful schematic geometry is the drawing itself (symbol artwork + wires + labels) for the
-// WebGL/SVG renderers, as opposed to the netlist (read.go). A .sym's drawing primitives
-// (L/B/A/P) become geom.Shapes; component instances become placements carrying the transform
-// the renderer applies to the symbol-local shapes. Resolving symbols needs the .sym library,
-// same opener as the netlist; an unresolved symbol falls back to a placeholder box so the sheet
-// still renders.
+// This file reads faithful schematic geometry, the drawing itself (symbol artwork, wires and
+// labels), for the WebGL/SVG renderers. read.go reads the netlist. A .sym's drawing primitives
+// (L/B/A/P) become geom.Shapes. Each component instance becomes a placement with a transform,
+// and the renderer applies that transform to the symbol-local shapes. Resolving symbols needs
+// the .sym library through the same opener as the netlist. An unresolved symbol falls back to
+// a placeholder box so the sheet still renders.
 //
-// Coordinates: xschem is Y-down (a smaller/more-negative y is higher on the page), while geom
-// is Y-up, so every xschem coordinate is negated in Y (and scaled) on the way in. The placement
-// transform follows from that. An xschem flip is a y-axis mirror, and an xschem rotation r (CCW
-// in xschem's frame) becomes a (360-90*r)-degree geom rotation because negating Y reverses the
-// sense of rotation. See xschemTransform.
+// xschem is Y-down, so a smaller or more negative y is higher on the page. geom is Y-up, so
+// every xschem coordinate is scaled and negated in Y on the way in. The placement transform
+// follows from that. An xschem flip is a y-axis mirror. An xschem rotation r is CCW in
+// xschem's frame, and negating Y reverses the sense of rotation, so r becomes a
+// (360-90*r)-degree geom rotation. See xschemTransform.
 
 // geomScale converts xschem source units to geom units. xschem uses a half-integer grid, so a
-// factor of 10 keeps that (and arc sampling) integer-precise; the renderer fits to the viewport,
-// so the absolute magnitude is irrelevant.
+// factor of 10 keeps the grid and arc sampling integer-precise. The renderer fits to the
+// viewport, so the absolute magnitude is irrelevant.
 const geomScale = 10
 
 // gx / gy convert an xschem coordinate to a geom coordinate (scaled; y negated for Y-up).
@@ -93,10 +93,11 @@ func extractGeometry(objs []object, src string, open SymbolOpener) *geom.Schemat
 			y2, _ := atoi(o.word(3))
 			lab := props(lastBrace(o))["lab"]
 			if netgraph.IsBusName(lab) {
-				// An xschem bus is an `N` wire whose lab is a range name (WS7-042); draw it as a
-				// KIND_BUS wire named by that lab (the same name the netlist reader flags as the finding
-				// subject), so it styles as a bus and a bus-not-modeled finding highlights it (WS7-042b).
-				// Emitted directly, not coalesced into the plain-net pool.
+				// An xschem bus is an `N` wire whose lab is a range name (WS7-042). Draw it as a
+				// KIND_BUS wire named by that lab. The netlist reader flags the same name as the
+				// finding subject, so the wire styles as a bus and a bus-not-modeled finding
+				// highlights it (WS7-042b). It is emitted directly and not coalesced into the
+				// plain-net pool.
 				sheet.Wires = append(sheet.Wires, &geom.WireGeometry{
 					Kind: geom.WireGeometry_KIND_BUS, Net: lab,
 					Polylines: []*geom.Polyline{{Points: []*geom.Point{gpt(x1, y1), gpt(x2, y2)}}},
@@ -170,8 +171,8 @@ func extractGeometry(objs []object, src string, open SymbolOpener) *geom.Schemat
 // xschemTransform maps an xschem instance (origin x,y; rotation rot 0-3; flip 0/1) onto the geom
 // Transform contract (scale, mirror, rotate-CCW, translate, in Y-up coordinates). Because Y is
 // negated for Y-up, an xschem flip becomes a y-axis mirror and an xschem CCW rotation r becomes a
-// (360-90*r)-degree geom rotation. On transform's verified res.sym example the pin lands at geom
-// (1200,4600) = xschem (120,-460), on its wire.
+// (360-90*r)-degree geom rotation. transform in netlist.go has a verified res.sym example, and
+// there the pin sits at geom (1200,4600) = xschem (120,-460), on its wire.
 func xschemTransform(x, y float64, rot, flip int) *geom.Transform {
 	return &geom.Transform{
 		Origin:      gpt(x, y),
@@ -180,16 +181,17 @@ func xschemTransform(x, y float64, rot, flip int) *geom.Transform {
 	}
 }
 
-// loadedSym is a resolved symbol: its drawing (SymbolDef) plus the field-text templates read
-// from the .sym, kept so each placement can position its ref-des/value where the symbol says.
+// loadedSym is a resolved symbol. It holds the drawing (SymbolDef) and the .sym's field-text
+// templates, so each placement can position its ref-des and value where the symbol says.
 type loadedSym struct {
 	def        *geom.SymbolDef
 	templates  []fieldTemplate
 	annotTexts []annotText // every text object, for the annotation symbols we render (WS7-037)
 }
 
-// annotText is a raw text object of a rendered annotation symbol (title/code/code_shown), holding
-// its template string (which may embed @attr references and span lines) at a symbol-local point.
+// annotText is a raw text object of a rendered annotation symbol (title/code/code_shown). It
+// holds the template string at a symbol-local point. The template may embed @attr references
+// and span several lines.
 type annotText struct {
 	text   string
 	x, y   float64
@@ -257,10 +259,10 @@ func symbolAnnotTexts(objs []object) []annotText {
 var atToken = regexp.MustCompile(`@[A-Za-z_][A-Za-z0-9_.]*`)
 
 // annotationFields renders a rendered-annotation symbol's text. Each template's @attr references
-// are substituted from the instance props (or a derived value), and the result is emitted as one
-// or more stacked geom.Fields at the transformed position. Static text passes through; global/
-// derived @attrs not resolved here (e.g. @time_last_modified) become empty. Multi-line values
-// stack downward, matching xschem's Y-down layout.
+// are substituted from the instance props or a derived value. The result is emitted as one or
+// more stacked geom.Fields at the transformed position. Static text passes through. A global or
+// derived @attr that this function does not resolve (e.g. @time_last_modified) becomes empty.
+// Multi-line values stack downward, matching xschem's Y-down layout.
 func annotationFields(texts []annotText, p map[string]string, src string, x, y float64, rot, flip int) []*geom.Field {
 	var fields []*geom.Field
 	for _, t := range texts {
@@ -299,10 +301,10 @@ func annotAttr(key, src string, p map[string]string) string {
 	}
 }
 
-// symbolTemplates extracts the drawn field placeholders from a .sym, the text objects whose text is
-// exactly "@name" or "@value" (the reference designator and value that xschem draws by default),
-// with their symbol-local position and size. Other "@..." templates (pin numbers, spice
-// annotations) are not treated as fields.
+// symbolTemplates extracts the drawn field placeholders from a .sym, with their symbol-local
+// position and size. A placeholder is a text object whose text is exactly "@name" or "@value".
+// xschem draws the reference designator and value there by default. Other "@..." templates,
+// such as pin numbers and spice annotations, are not treated as fields.
 func symbolTemplates(objs []object) []fieldTemplate {
 	var out []fieldTemplate
 	for _, o := range objs {
@@ -338,7 +340,7 @@ func templateFields(templates []fieldTemplate, p map[string]string, x, y float64
 		}
 		// A multi-line value (an embedded SPICE-code block, WS7-037) draws one line per row,
 		// stacked downward from the anchor. xschem is Y-down, so each successive line sits at a
-		// larger symbol-local y; the transform + Y-flip carry that to the right geom position.
+		// larger symbol-local y, and the transform and Y-flip map that to the right geom position.
 		lines := strings.Split(strings.TrimRight(val, "\n"), "\n")
 		for i, line := range lines {
 			if line == "" {
@@ -359,8 +361,8 @@ func templateFields(templates []fieldTemplate, p map[string]string, x, y float64
 	return fields
 }
 
-// textLineStep is the symbol-local line pitch for a multi-line field: the geom text height
-// (height * xschemTextScale) mapped back through geomScale so successive lines are one line
+// textLineStep is the symbol-local line pitch for a multi-line field. It maps the geom text
+// height (height * xschemTextScale) back through geomScale, so successive lines are one line
 // tall on the page.
 const textLineStep = xschemTextScale / geomScale
 
@@ -381,8 +383,8 @@ func fieldName(key string) string {
 }
 
 // symbolShapes turns a .sym's drawing objects into geom Shapes. L (line) and P (polygon) become
-// polylines, B (box) becomes a rect unless it is a pin box (a pin's connection marker, captured
-// as a PinPoint instead), and A (arc) becomes a 3-point arc.
+// polylines, and A (arc) becomes a 3-point arc. B (box) becomes a rect unless it is a pin box. A
+// pin box marks a pin's connection, so it is captured as a PinPoint instead.
 func symbolShapes(objs []object) []*geom.Shape {
 	var shapes []*geom.Shape
 	for _, o := range objs {
@@ -448,8 +450,8 @@ func textHeight(o object) int64 {
 	return 5 * geomScale
 }
 
-// sheetBounds is the extent of everything drawn on the sheet, used as the page size when the
-// format carries no explicit one.
+// sheetBounds is the extent of everything drawn on the sheet. It is the page size when the
+// format gives no explicit one.
 func sheetBounds(sheet *geom.SheetGeometry, syms []*geom.SymbolDef) *geom.BBox {
 	var b geomath.Bounds
 	for _, w := range sheet.Wires {

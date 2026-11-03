@@ -130,8 +130,8 @@ func equalSet(a, b []string) bool {
 }
 
 // TestDanglingEndpoints (WS1-013) checks that a wire drawn to nothing surfaces as a dangling
-// endpoint. gEDA's netgraph grid is native (round only), so it IS the geometry frame and
-// needs no unquant, unlike xschem. Emission is gated on full symbol resolution.
+// endpoint. gEDA's netgraph grid is native and only rounds, so it IS the geometry frame and,
+// unlike xschem, needs no unquant. Emission is gated on full symbol resolution.
 func TestDanglingEndpoints(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "dangle.sch")), "dangle.sch", testOpener(t))
 	if err != nil {
@@ -192,7 +192,7 @@ func TestPinDirectionsAndExternal(t *testing.T) {
 	if dirs["2"] != ir.PinDirection_PIN_DIRECTION_INPUT {
 		t.Errorf("pin 2 (pintype=in) dir = %v, want INPUT", dirs["2"])
 	}
-	// The untapped VCC net carries the two power_in pins and is NOT external.
+	// The untapped VCC net holds the two power_in pins and is NOT external.
 	for _, n := range d.Nets {
 		if n.Name == "VCC" && n.Attributes["external"] == "true" {
 			t.Error("untapped VCC must not be external (no power symbol)")
@@ -219,8 +219,8 @@ func TestPinDirectionsAndExternal(t *testing.T) {
 }
 
 // TestNetTaps (WS1-032) checks that a component's net=NAME:pin attributes connect those pins to the
-// named net with no drawn wire. U1 carries TWO net= lines (net=GND:2 and net=PWR:1, the
-// map-collapse case), and U1 + U2 both tap GND, so GND unites their pin 2s across the design
+// named net with no drawn wire. U1 has TWO net= lines (net=GND:2 and net=PWR:1), which is the
+// map-collapse case. U1 and U2 both tap GND, so GND unites their pin 2s across the design
 // without a wire.
 func TestNetTaps(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "nettap.sch")), "nettap.sch", testOpener(t))
@@ -235,9 +235,10 @@ func TestNetTaps(t *testing.T) {
 	}
 }
 
-// TestVoltageRailSymbol (WS1-032) checks that a voltage-rail symbol outside the conventional
-// gnd/vcc/vdd/vss set (here 3.3V-plus-1.sym) is recognized as a power symbol, so it is not dropped
-// for lacking a ref-des; its symbol-level net= names the rail and the tap marks it External.
+// TestVoltageRailSymbol (WS1-032) checks that a voltage-rail symbol is recognized as a power
+// symbol even outside the conventional gnd/vcc/vdd/vss set. The fixture uses 3.3V-plus-1.sym. As
+// a power symbol it is not dropped for lacking a ref-des. Its symbol-level net= names the rail,
+// and the tap marks it External.
 func TestVoltageRailSymbol(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "rail.sch")), "rail.sch", testOpener(t))
 	if err != nil {
@@ -260,11 +261,11 @@ func TestVoltageRailSymbol(t *testing.T) {
 	}
 }
 
-// TestSlotting (WS1-032) checks that a multi-gate package (numslots=2, slotdef rows) placed twice
-// with a shared refdes and slot=1/slot=2 folds into ONE Component with a section per gate, and each
-// gate's drawn pins remap to that slot's physical package pins. Without the remap both gates
-// resolve slot-1's drawn numbers (1,2), so slot-2's terminals mis-key onto U1.1/U1.2 (the
-// pin-net-conflict that fired on gTAG's U20).
+// TestSlotting (WS1-032) covers a multi-gate package (numslots=2, slotdef rows) placed twice with
+// a shared refdes and slot=1/slot=2. It checks that the two placements fold into ONE Component
+// with a section per gate. It also checks that each gate's drawn pins remap to that slot's
+// physical package pins. Without the remap both gates resolve slot-1's drawn numbers (1,2), so
+// slot-2's terminals mis-key onto U1.1/U1.2. That mis-key fired pin-net-conflict on gTAG's U20.
 func TestSlotting(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "slotted.sch")), "slotted.sch", testOpener(t))
 	if err != nil {
@@ -289,16 +290,16 @@ func TestSlotting(t *testing.T) {
 	}
 }
 
-// TestUnannotatedComponents (agni issue 311) exists because gEDA keeps a placeholder-designated
-// part, so it is the layer that has to report one. `<prefix>?` is gEDA's own convention (the symbol
-// libraries in this testdata ship `refdes=R?` and `refdes=U?` as their template value), and the
-// reader kept those silently.
+// TestUnannotatedComponents (agni issue 311) covers gEDA keeping a placeholder-designated part.
+// The reader keeps it, so the reader has to report it. `<prefix>?` is gEDA's own convention. The
+// symbol libraries in this testdata ship `refdes=R?` and `refdes=U?` as their template value,
+// and the reader used to keep those silently.
 //
 // The fixture covers both halves of this reader's grouping fork, because they arrive at the entry
-// differently. Two unslotted `R?` symbols become two ir.Components sharing a designator; two
-// slotted `U?` gates fold into one Component with two sections. Either way the diagnostic is one
-// entry per PLACEHOLDER carrying every placement, which is what makes "2 parts are still called R?"
-// the reviewable fact rather than a number that depends on how the source spelled it.
+// differently. Two unslotted `R?` symbols become two ir.Components sharing a designator. Two
+// slotted `U?` gates fold into one Component with two sections. Either way the diagnostic has one
+// entry per PLACEHOLDER, and the entry lists every placement. So the reviewable fact is "2 parts
+// are still called R?", and the count does not depend on how the source spelled it.
 func TestUnannotatedComponents(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "unannotated.sch")), "unannotated.sch", testOpener(t))
 	if err != nil {
@@ -324,8 +325,8 @@ func TestUnannotatedComponents(t *testing.T) {
 }
 
 // TestUnannotatedWithoutSymbols pins the wiring on the OTHER entry path. Plain Read takes no symbol
-// opener, and on that path this reader leaves InputDiagnostics nil unless the sheet has a bus, so a
-// signal attached inside the resolving branch would be silently absent for every caller who does
+// opener. On that path this reader leaves InputDiagnostics nil unless the sheet has a bus. A signal
+// attached inside the resolving branch would then be silently absent for every caller who does
 // not supply a library.
 func TestUnannotatedWithoutSymbols(t *testing.T) {
 	d, err := Read(bytes.NewReader(readFixture(t, "unannotated.sch")), "unannotated.sch")
@@ -337,13 +338,13 @@ func TestUnannotatedWithoutSymbols(t *testing.T) {
 	}
 }
 
-// TestRefDesCollisions (agni issue 309) exists because gEDA states the gate, so it can tell a
-// duplicated designator from the legitimate multi-gate case, and it now says so. Before this the
-// reader emitted no collision at all and `duplicate-ref-des` read as a clean pass on every gEDA
-// design.
+// TestRefDesCollisions (agni issue 309) covers duplicate detection. gEDA states the gate, so the
+// reader can tell a duplicated designator from the legitimate multi-gate case, and it now reports
+// the difference. Before this the reader emitted no collision at all, and `duplicate-ref-des` read
+// as a clean pass on every gEDA design.
 //
-// The fixture carries both duplicate shapes and both innocent ones, because the rule is only
-// meaningful if it separates them:
+// The fixture holds both duplicate shapes and both innocent ones. The rule means something only if
+// it separates them.
 //
 //	R1   twice, unslotted        -> duplicate (two separate parts wearing one name)
 //	U2   twice, both slot=1      -> duplicate (one gate claimed twice)
@@ -370,15 +371,15 @@ func TestRefDesCollisions(t *testing.T) {
 		}
 	}
 
-	// The declaration is the other half of the fix, and it is what a clean design carries too. It
-	// says the reader LOOKED, so an empty list means "none" rather than "nobody asked".
+	// The declaration is the other half of the fix, and a clean design has it too. It says the
+	// reader LOOKED, so an empty list means "none" rather than "nobody asked".
 	if !slices.Contains(d.GetInputDiagnostics().GetSupplied(), "ref_des_collisions") {
 		t.Error("supplied does not name ref_des_collisions, so the rule gates itself off on gEDA")
 	}
 }
 
-// A design with no duplicates still declares that it was checked. This is the assertion that would
-// have caught the original bug, since without it "no collisions" and "never looked" are the same value.
+// A design with no duplicates still declares that it was checked. This assertion would have caught
+// the original bug. Without it, "no collisions" and "never looked" are the same value.
 func TestRefDesCollisionsDeclaredOnCleanRead(t *testing.T) {
 	d, err := ReadWithSymbols(bytes.NewReader(readFixture(t, "divider.sch")), "divider.sch", testOpener(t))
 	if err != nil {

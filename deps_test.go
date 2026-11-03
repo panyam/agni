@@ -23,9 +23,9 @@ var embeddingSurface = []string{
 // document.
 //
 // PR #543 moved the service tier out of internal/ and left the check behind as a `go list` line in
-// CONSTRAINTS.md. C29's own Verify was written that way and went stale within three PRs, because
-// nothing ran it, which is what #542 fixed by turning it into core/facts/deps_test.go. Repeating the
-// mistake in the PR that cites it would be a poor showing.
+// CONSTRAINTS.md. C29's own Verify was written that way. Nothing ran it, and it went stale within
+// three PRs. #542 fixed that by turning it into core/facts/deps_test.go. Repeating the mistake in the
+// PR that cites it would be a poor showing.
 //
 // The failure this catches is quiet in a specific way. Moving one of these back under internal/
 // breaks no build in this repo, since every package here is allowed to import it, and every example
@@ -60,10 +60,10 @@ var authoringShapes = []string{
 //
 // C29 says the fact layer is the primitive and no query engine owns it. The same holds one layer
 // over, where check.Rule is the rule primitive, and Go, datalog, an interface profile and an intent
-// declaration are four ways of AUTHORING one. They meet the catalog at check.RuleSource, which is
-// why adding an interface is a data value rather than new code.
+// declaration are four ways of AUTHORING one. They meet the catalog at check.RuleSource, so adding
+// an interface is a data value rather than new code.
 //
-// The direction is what matters, and only one way round is checkable. An authoring shape depending
+// The direction matters, and only one way round is checkable. An authoring shape depending
 // on core/check is correct and every one of them does. core/check depending on an authoring shape is
 // the violation, and a quiet one, since it compiles, it passes, and it makes that shape's
 // limits everyone's limits. Datalog cannot express a path question at all (#374, #518), so a catalog
@@ -81,7 +81,7 @@ func TestRulePrimitiveNamesNoAuthoringShape(t *testing.T) {
 
 // TestAuthoringShapesReachTheCatalogAsRuleSources is the positive half. A shape that stopped
 // compiling to rules would not fail the test above, since that one only watches the arrow's
-// direction, and an authoring shape that reached the catalog some other way is how the boundary erodes.
+// direction. An authoring shape reaching the catalog some other way would erode the boundary.
 func TestAuthoringShapesReachTheCatalogAsRuleSources(t *testing.T) {
 	for _, shape := range authoringShapes {
 		if shape == queryEngine {
@@ -139,10 +139,10 @@ var aboveTheReaderTier = []string{
 // TestReaderTierDependsDownwardOnly is C17, and it absorbs the retired C15.
 //
 // A stray import from a reader up into internal/server would pull servicekit and connect into every
-// consumer of the reader tier and foreclose extracting it as its own module, so the check is over
-// the transitive graph rather than over anyone's import block. core/render and core/svg are two of
-// the seven paths, which is what makes C15 (readers never import the presentation tier) a strict
-// subset of this one.
+// consumer of the reader tier. It would also foreclose extracting the tier as its own module. So the
+// check is over the transitive graph rather than over anyone's import block. core/render and
+// core/svg are two of the seven paths. So C15 (readers never import the presentation tier) is a
+// strict subset of this one.
 func TestReaderTierDependsDownwardOnly(t *testing.T) {
 	for _, dep := range depsOfTier(t, readerTier, "github.com/panyam/agni/readers/") {
 		for _, above := range aboveTheReaderTier {
@@ -154,9 +154,9 @@ func TestReaderTierDependsDownwardOnly(t *testing.T) {
 	}
 }
 
-// TestContractImportsNoFirstPartyPackage is C17's other half. The generated contract is what a
-// consumer can take on its own, so anything under gen/ importing back into agni would make it carry
-// the tree.
+// TestContractImportsNoFirstPartyPackage is C17's other half. A consumer can take the generated
+// contract on its own. A package under gen/ importing back into agni would make the contract pull in
+// the whole tree.
 func TestContractImportsNoFirstPartyPackage(t *testing.T) {
 	const self = "github.com/panyam/agni/"
 	for _, dep := range depsOfTier(t, contract, "github.com/panyam/agni/gen/") {
@@ -168,14 +168,14 @@ func TestContractImportsNoFirstPartyPackage(t *testing.T) {
 
 // TestEngineModuleRequiresNoExtension is C18, under which dependencies point extension -> engine.
 //
-// The graph half of that rule cannot fail, which is why it is not tested. examples/extension is its
+// The graph half of that rule cannot fail, so it is not tested. examples/extension is its
 // own module, so `go list -deps ./...` from the engine can never name it whatever anyone writes in
 // an engine package; an import would fail to compile first. That command sat in CONSTRAINTS.md as
 // C18's headline Verify, reading as enforcement while proving nothing.
 //
-// go.mod is where the arrow could actually reverse, so go.mod is what this reads. A `replace`
-// counts as much as a `require`, because it is the edit that makes a local extension resolvable,
-// and it is the one somebody adds while debugging and forgets to remove.
+// The arrow could actually reverse only in go.mod, so this test reads go.mod. A `replace` counts as
+// much as a `require`. A `replace` makes a local extension resolvable, and somebody adds one while
+// debugging and forgets to remove it.
 func TestEngineModuleRequiresNoExtension(t *testing.T) {
 	b, err := os.ReadFile("go.mod")
 	if err != nil {
@@ -193,8 +193,8 @@ func TestEngineModuleRequiresNoExtension(t *testing.T) {
 }
 
 // depsOfTier is deps over a PATTERN, with the positive control a pattern needs. A result naming no
-// package under want fails rather than reading as clean, because a mistyped pattern, or one the
-// tier was renamed out from under, would make a graph check vacuous.
+// package under want fails rather than reading as clean. A mistyped pattern would make a graph check
+// vacuous, and so would a pattern left behind when the tier was renamed.
 func depsOfTier(t *testing.T, pattern, want string) []string {
 	t.Helper()
 	got := deps(t, pattern)
@@ -206,9 +206,10 @@ func depsOfTier(t *testing.T, pattern, want string) []string {
 
 // C34: the engine depends on the datasheet tier through its CONTRACT (core/param and
 // param.proto) and never through the extraction pipeline, which is one producer of PartSpecs among
-// several. Since agni issue 744 the producer is its own module, datasheet/, downstream of this one,
-// so most of the rule is structural: a root package cannot import a module go.mod does not require,
-// and TestEngineModuleRequiresNoExtension (C18) fails if go.mod ever names one in this repo.
+// several. Since agni issue 744 the producer is its own module, datasheet/, downstream of this one.
+// So most of the rule is structural. A root package cannot import a module that go.mod does not
+// require, and TestEngineModuleRequiresNoExtension (C18) fails if go.mod ever names one in this
+// repo.
 const self = "github.com/panyam/agni/"
 
 // datasheetModule is the producer's module, and datasheetProducer its pipeline packages: a PDF's
@@ -232,13 +233,13 @@ var datasheetProducerProtos = []string{
 	datasheetModule + "/gen/go/agni/v1/dsapi/dsapiconnect",
 }
 
-// producerProtoNames are the producer's proto packages by their last path element, which is what
-// a copy generated back into this module's gen/ would be called.
+// producerProtoNames are the producer's proto packages by their last path element. A copy generated
+// back into this module's gen/ would have these names.
 var producerProtoNames = []string{"doc", "derive", "candidate", "dsapi"}
 
-// TestDatasheetIsItsOwnModule is C34's structural half: datasheet/ declares the producer's module,
-// and no package of this module lives under it, so nothing here can import the pipeline without a
-// require line C18 refuses.
+// TestDatasheetIsItsOwnModule is C34's structural half. datasheet/ declares the producer's module,
+// and no package of this module lives under it. So nothing here can import the pipeline without a
+// require line, and C18 refuses that line.
 func TestDatasheetIsItsOwnModule(t *testing.T) {
 	b, err := os.ReadFile("datasheet/go.mod")
 	if err != nil {
@@ -296,8 +297,8 @@ func TestEngineImportsNoProducerProto(t *testing.T) {
 }
 
 // TestDatasheetProducerIsVisibleFromItsHost is the positive control for both. Inside the datasheet
-// module agnids must depend on the pipeline and on a producer proto, which proves the names the two
-// checks look for are real rather than paths nothing could import anyway.
+// module agnids must depend on the pipeline and on a producer proto. That proves the two checks look
+// for real names, and not for paths nothing could import anyway.
 func TestDatasheetProducerIsVisibleFromItsHost(t *testing.T) {
 	cmd := exec.Command("go", "list", "-deps", "./cmd/agnids")
 	cmd.Dir = "datasheet"

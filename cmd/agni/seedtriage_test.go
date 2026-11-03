@@ -15,21 +15,20 @@ import (
 	yaml "gopkg.in/yaml.v3"
 )
 
-// The public demo's seeded boards are the first thing anyone judges, so every finding the full
-// catalog makes on them carries a recorded verdict (agni issue 857). hack/seed-triage holds one
-// record per seeded design, and TestSeedTriage holds the engine to it in both directions: a finding
-// nobody has judged fails, and so does a judged finding that stopped firing. An engine change that
-// moves a seed's findings therefore shows up as a diff to that record in review.
+// Anyone looking at the public demo judges its seeded boards first. So the full catalog runs on them,
+// and every finding it makes has a recorded verdict (agni issue 857). hack/seed-triage holds one
+// record per seeded design, and TestSeedTriage holds the engine to it in both directions. A finding
+// nobody has judged fails, and so does a judged finding that stopped firing. So an engine change that
+// moves a seed's findings shows up in review as a diff to that record.
 //
-// AGNI_SEED_TRIAGE_UPDATE=1 (make seed-triage) rewrites the records: vanished subjects are dropped
-// and new findings land in an `untriaged` group per rule, which still fails until someone classifies
-// it.
+// AGNI_SEED_TRIAGE_UPDATE=1 (make seed-triage) rewrites the records. It drops vanished subjects and
+// puts new findings in an `untriaged` group per rule. That group still fails until someone
+// classifies it.
 
 const seedTriageDir = "../../hack/seed-triage"
 
-// triageClasses are the verdicts a group can carry. needs-intent is a finding that exists because a
-// fact about the board has not been declared, which is neither a defect nor a choice the designer
-// made.
+// triageClasses are the verdicts a group can have. A needs-intent finding exists because nobody has
+// declared some fact about the board. It is neither a defect nor a choice the designer made.
 var triageClasses = map[string]bool{
 	"defect":         true,
 	"design-choice":  true,
@@ -62,8 +61,8 @@ type triageRecord struct {
 	KicadOnly map[string][]triageGroup `yaml:"kicad_only,omitempty"`
 }
 
-// seedDesignDirs are the designs the demo seeds, keyed by the name each one's design.yaml declares,
-// read from the Makefile's DEMO_SEEDS so a new seed without a record fails here.
+// seedDesignDirs lists the designs the demo seeds. Each is keyed by the name its design.yaml
+// declares. The list comes from the Makefile's DEMO_SEEDS, so a new seed without a record fails here.
 func seedDesignDirs(t *testing.T) map[string]string {
 	t.Helper()
 	mk, err := os.ReadFile("../../Makefile")
@@ -241,8 +240,8 @@ func checkTriage(t *testing.T, rec *triageRecord, got map[seedFinding]bool) {
 }
 
 // writeTriage rewrites a record against what the engine found. Recorded groups keep their order and
-// judgement and lose the subjects that stopped firing; what is new goes into an untriaged group per
-// rule and outcome.
+// judgement, and they lose the subjects that stopped firing. New findings go into an untriaged group
+// per rule and outcome.
 func writeTriage(t *testing.T, path string, rec *triageRecord, got map[seedFinding]bool) {
 	t.Helper()
 	if rec.Findings == nil {

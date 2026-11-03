@@ -14,10 +14,10 @@ import (
 	"github.com/panyam/agni/web"
 )
 
-// viewerBundle supplies the viewer when nothing names a web dir and there is no ./web, which is how
-// an installed binary runs (agni WS16-003). A release binary writes out the bundle it carries, and a
-// `go install` binary downloads its release's. A variable so a test stands in for the cache and the
-// network.
+// viewerBundle supplies the viewer when nothing names a web dir and there is no ./web. An installed
+// binary runs that way (agni WS16-003). A release binary writes out the bundle it carries, and a
+// `go install` binary downloads its release's. It is a variable so a test can stand in for the cache
+// and the network.
 var viewerBundle = func() (dir, how string, err error) {
 	cache, err := os.UserCacheDir()
 	if err != nil {

@@ -1,6 +1,6 @@
 // package check_test (black-box) imports check the way an out-of-module overlay does, so it
-// proves the WS12-004 acceptance. An external caller registers a Go rule suite and it flows
-// into the catalog the CLI and serve wire (DefaultCatalog / CatalogWith), namespaced and
+// proves the WS12-004 acceptance. An external caller registers a Go rule suite, and the suite
+// reaches the catalog that the CLI and serve wire (DefaultCatalog / CatalogWith), namespaced and
 // runnable.
 package check_test
 
@@ -33,7 +33,7 @@ func widgetRule() *check.Rule {
 }
 
 // TestExternalRuleRegistrationEndToEnd registers a source from outside the package and asserts
-// it reaches the catalog the engine surfaces wire (DefaultCatalog and CatalogWith), namespaced
+// it reaches the catalog that the engine surfaces wire (DefaultCatalog and CatalogWith), namespaced
 // with its source tag, and actually runs to produce a finding.
 func TestExternalRuleRegistrationEndToEnd(t *testing.T) {
 	if check.DefaultCatalog().Lookup("acme/widget-present") != nil {
@@ -52,7 +52,7 @@ func TestExternalRuleRegistrationEndToEnd(t *testing.T) {
 		}
 	}
 
-	// End-to-end eval: the registered rule runs over a design and produces its finding.
+	// End-to-end eval. The registered rule runs over a design and produces its finding.
 	d := &ir.Design{Components: []*ir.Component{{RefDes: "U1"}}}
 	rules := check.DefaultCatalog().Filter(check.Facets{Names: []string{"acme/widget-present"}})
 	if len(rules) != 1 {
@@ -64,8 +64,8 @@ func TestExternalRuleRegistrationEndToEnd(t *testing.T) {
 	}
 }
 
-// TestRegisterSourceRejectsBadSources pins the RegisterSource contract: nil, anonymous, a
-// bad-grammar name, and a duplicate all panic (programming errors at startup).
+// TestRegisterSourceRejectsBadSources pins the RegisterSource contract. A nil source, an anonymous
+// one, a bad-grammar name, and a duplicate all panic, as programming errors at startup.
 func TestRegisterSourceRejectsBadSources(t *testing.T) {
 	check.RegisterSource(check.NewSource("dup-guard", nil)) // claim a name to test the duplicate case
 

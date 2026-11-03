@@ -13,20 +13,18 @@ import (
 	"github.com/panyam/agni/readers/edif"
 )
 
-// emitCases is one design per reader that produces connectivity, which is the axis agni issue 563
-// went unnoticed along. The EDIF writer was only ever exercised on EDIF input, so a fallback that
-// dropped every anchor was invisible for every other format. Adding a row is how a new reader
-// inherits the guarantee.
+// emitCases holds one design per reader that produces connectivity. Agni issue 563 went unnoticed
+// because the EDIF writer was only ever exercised on EDIF input. A fallback dropped every anchor, and
+// nothing showed it for any other format. A new reader inherits the guarantee by adding a row.
 //
-// The counts are the SOURCE design's, so a row states what the fixture holds as well as what
-// survives, and a reader change that moves either shows up here rather than silently rebasing.
+// The counts are the SOURCE design's. So a row states what the fixture holds as well as what
+// survives. A reader change that moves either shows up here rather than silently rebasing.
 var emitCases = []struct {
 	name, path           string
 	wantComps, wantConns int
-	// unanchored is the number of connections naming a component the design does not carry, such as
-	// a KiCad power symbol or PWR_FLAG, which the reader records on "#PWR01" while keeping the
-	// component list physical. EDIF has no instance for one, so those alone come back as no-ref
-	// connections.
+	// unanchored counts the connections that name a component the design does not have. A KiCad
+	// power symbol or PWR_FLAG is one. The reader records it on "#PWR01" and keeps the component list
+	// physical. EDIF has no instance for one, so only those come back as no-ref connections.
 	unanchored int
 }{
 	{name: "kicad-sch", path: "../../examples/tutorial-project/designs/gateway/gateway.kicad_sch", wantComps: 19, wantConns: 56},
@@ -41,14 +39,15 @@ var emitCases = []struct {
 	{name: "xschem", path: "../xschem/testdata/divider.sch", wantComps: 2, wantConns: 4},
 }
 
-// TestEmitEDIFKeepsConnectivity is the guard agni issue 563 needed and did not have. Read a design in
-// each format, emit an EDIF netlist, read that back, and require every pin-to-part link to survive.
+// TestEmitEDIFKeepsConnectivity adds the guard agni issue 563 needed and did not have. It reads a
+// design in each format, emits an EDIF netlist, reads that back, and requires every pin-to-part link
+// to survive.
 //
-// It asserts the PAIRS rather than a count, because a count is the thing the bug already satisfied.
-// The broken writer emitted one (portRef ...) per connection and the re-read produced one
-// connection per portRef, so connection totals matched exactly while every one of them had lost its
-// component. The failing report on a real board was 1123 components and 1387 nets, all correct, and
-// 1123 unconnected components.
+// It asserts the PAIRS rather than a count, because the bug already satisfied a count. The broken
+// writer emitted one (portRef ...) per connection, and the re-read produced one connection per
+// portRef. So connection totals matched exactly, and every connection had lost its component. On a
+// real board the failing report showed 1123 components and 1387 nets, all correct, and 1123
+// unconnected components.
 func TestEmitEDIFKeepsConnectivity(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -94,15 +93,15 @@ func TestEmitEDIFKeepsConnectivity(t *testing.T) {
 	}
 }
 
-// TestEmitEDIFNamesEveryInstanceOnce is the property the anchors rest on. An (instanceRef ...) is a
-// lookup by name, so two instances written under one name make one of them unreachable and silently
-// move its pins onto the other.
+// TestEmitEDIFNamesEveryInstanceOnce pins unique instance names, and the anchors depend on them. An
+// (instanceRef ...) is a lookup by name. If two instances are written under one name, one of them is
+// unreachable and its pins silently move onto the other.
 //
-// Nothing in the IR supplies a unique name on its own. A section's native id is absent for two of
-// these formats and repeats in a third (one KiCad symbol placed on two sheets of a hierarchy carries
-// the same id under two ref-des), and a ref-des repeats for every multi-gate part and every genuine
-// duplicate. Before the table that breaks these collisions, a .tel design emitted thirteen instances
-// all called I0.
+// Nothing in the IR supplies a unique name on its own. Two of these formats give a section no native
+// id. A third repeats it, since one KiCad symbol placed on two sheets of a hierarchy has the same id
+// under two ref-des. A ref-des repeats for every multi-gate part and every genuine duplicate. The
+// writer now breaks these collisions with a table. Before that, a .tel design emitted thirteen
+// instances all called I0.
 func TestEmitEDIFNamesEveryInstanceOnce(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -154,8 +153,8 @@ func roundTripEDIF(t *testing.T, d *ir.Design, path string) *ir.Design {
 }
 
 // anchoredPairs lists every "net/refdes.pin" a design states, and separately counts the connections
-// that name no component of it. The pair is what a consumer of a netlist reads; the net name is part
-// of the key because a link surviving onto the WRONG net is not a link that survived.
+// that name no component of it. A consumer of a netlist reads the pair. The net name is part of the
+// key, because a link that survives onto the WRONG net has not survived.
 func anchoredPairs(d *ir.Design) ([]string, int) {
 	have := map[string]bool{}
 	for _, c := range d.GetComponents() {
@@ -175,20 +174,20 @@ func anchoredPairs(d *ir.Design) ([]string, int) {
 	return pairs, unanchored
 }
 
-// emittedInstanceIDs pulls the identifier an (instance ...) is written under, in either name form.
-// The identifier is what an (instanceRef ...) looks up, so it is the string that has to be unique.
+// emittedInstanceIDs pulls out the identifier of each (instance ...), in either name form. An
+// (instanceRef ...) looks up that identifier, so it has to be unique.
 var emittedInstanceIDs = regexp.MustCompile(`\(instance (?:\(rename ([^\s()]+) "[^"]*"\)|([^\s()]+)) `)
 
 // TestEmitEDIFKeepsPartIdentity requires a part number stated by the source to survive an export.
 //
-// The datasheet tier joins on component.mpn, so an export that drops it hands the recipient a
-// netlist that looks complete and silently fails a BOM join. The writer carries a SECTION's
-// attributes into the instance's properties, which is why a reader that records the part number
-// only on the component exports nothing, since the value is in the IR and not in the half the
-// writer reads (agni issue 584).
+// The datasheet tier joins on component.mpn. An export that drops it hands the recipient a netlist
+// that looks complete and silently fails a BOM join. The writer copies a SECTION's attributes into
+// the instance's properties. Suppose a reader records the part number only on the component. The
+// value is then in the IR but not in the half the writer reads, so the export has none (agni issue
+// 584).
 //
-// Rows with no MPN in the source are skipped rather than asserted at zero, because most fixtures here
-// state none and a design that carries no part number legitimately exports none.
+// A row with no MPN in the source is skipped rather than asserted at zero. Most fixtures here state
+// none, and a design with no part number legitimately exports none.
 func TestEmitEDIFKeepsPartIdentity(t *testing.T) {
 	for _, tc := range emitCases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -203,8 +202,8 @@ func TestEmitEDIFKeepsPartIdentity(t *testing.T) {
 				t.Skip("source states no part number")
 			}
 			// The re-read goes through edif.Read rather than the Loader, so the format-neutral
-			// ingestion passes have not run on it. Stamping here is what makes the two sides
-			// comparable; without it the assertion fails for every format on an empty right-hand side.
+			// ingestion passes have not run on it. Stamping here makes the two sides comparable.
+			// Without it the assertion fails for every format on an empty right-hand side.
 			out := roundTripEDIF(t, src, tc.path)
 			classify.StampMPN(out)
 			got := map[string]string{}

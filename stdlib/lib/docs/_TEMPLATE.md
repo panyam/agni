@@ -15,8 +15,8 @@ the registered module, so the page cannot drift from the definition. The one-lin
 
 ### What it is
 
-What one row says, and what each argument is. Name the edge cases the definition includes or
-leaves out, since a reader cannot see them from the name.
+What one row says, and what each argument is. Name the edge cases that the definition includes
+or leaves out, since a reader cannot see them from the name.
 
 ### For hardware engineers
 

@@ -2,8 +2,8 @@ package check
 
 import "testing"
 
-// The id is what makes a CLI row addressable, so what it is INSENSITIVE to matters as much as what
-// it is built from.
+// The id makes a CLI row addressable. So the things it is INSENSITIVE to matter as much as the
+// things it is built from.
 func TestVerdictIDShape(t *testing.T) {
 	for _, c := range []struct {
 		name, want string
@@ -24,9 +24,9 @@ func TestVerdictIDShape(t *testing.T) {
 	}
 }
 
-// THE PROPERTY THE LINK RESTS ON. A verdict id must not move when the ANSWER moves, or a link filed
-// against a passing check breaks the moment it starts failing, which is exactly when someone wants
-// to follow it.
+// EVERY LINK DEPENDS ON THIS PROPERTY. A verdict id must not move when the ANSWER moves. Otherwise a
+// link filed against a passing check breaks the moment the check starts failing, and that is exactly
+// when someone wants to follow it.
 func TestVerdictIDIgnoresTheOutcome(t *testing.T) {
 	base := Verdict{Subjects: []Entity{{Kind: KindPin, Ref: "U12", Pin: "7"}}, Rule: "pin-exceeds-abs-max"}
 
@@ -69,7 +69,7 @@ func TestVerdictIDSeparatesRulesAndSubjects(t *testing.T) {
 		{Subjects: []Entity{{Kind: KindPin, Ref: "U12", Pin: "7"}}, Rule: "pin-exceeds-abs-max"},
 		{Subjects: []Entity{{Kind: KindPin, Ref: "U12", Pin: "7"}}, Rule: "pin-out-of-recommended"},
 		{Subjects: []Entity{{Kind: KindPin, Ref: "U12", Pin: "14"}}, Rule: "pin-exceeds-abs-max"},
-		// A net and a component may legitimately share a name, which is why Kind stays in the key.
+		// A net and a component may legitimately share a name, so Kind is part of the key.
 		{Subjects: []Entity{{Kind: KindNet, Ref: "U3"}}, Rule: "r"},
 		{Subjects: []Entity{{Kind: KindComponent, Ref: "U3"}}, Rule: "r"},
 	} {

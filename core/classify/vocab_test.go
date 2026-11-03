@@ -10,7 +10,7 @@ import (
 )
 
 // TestDefaultClassVocab pins the built-in classification vocabulary. The historical tokens still
-// map to their class, and matching stays whole-token (a token containing "esd" as a substring does
+// map to their class, and matching is still whole-token (a token containing "esd" as a substring does
 // not match).
 func TestDefaultClassVocab(t *testing.T) {
 	v := DefaultClassVocab()
@@ -28,9 +28,9 @@ func TestDefaultClassVocab(t *testing.T) {
 }
 
 // TestClassVocabConfigExtendsClassification checks that a project pattern added to the tvs class
-// lets an ESD-array MPN family classify as TVS, where the default (no tvs/esd word, and a family the
-// built-in list does not know) leaves it a plain diode. The family is made up, since PESD became a
-// built-in one (agni issue 934).
+// lets an ESD-array MPN family classify as TVS. Under the default the part is a plain diode, since it
+// has no tvs/esd word and the built-in list does not know its family. The family is made up, since
+// PESD became a built-in one (agni issue 934).
 func TestClassVocabConfigExtendsClassification(t *testing.T) {
 	defer SetActiveClassVocab(nil)
 	part := &ir.Component{RefDes: "D5", Attributes: map[string]string{"Part Name": "QZSD2ETH1GT"}}

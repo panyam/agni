@@ -41,8 +41,8 @@ import (
 
 // serveCmd hosts the web viewer over HTTP for local development. One listener serves the
 // server-rendered pages (goapplib/templar) at `/`, the esbuild bundle under `/static/`, and the
-// WS9 web API as Connect handlers under their proto service paths. The browser tooling stays npm;
-// only serving is the Go binary.
+// WS9 web API as Connect handlers under their proto service paths. The browser tooling is still
+// npm, and only the serving runs in the Go binary.
 //
 // Routing is server-owned (CONSTRAINTS C11) and the API is proto-defined over Connect (C2), so
 // one contract drives the Go server and the TS client.
@@ -171,7 +171,7 @@ type viewerOpts struct {
 	// `open` uses it to serve the mount it minted for the design named on the command line.
 	extraMounts []mounts.Mount
 	// banner replaces the default "serving ... at ..." line when non-nil. `open` prints the design's
-	// own URL instead, so it lands on the design rather than a browse tree.
+	// own URL instead, so the link opens the design rather than a browse tree.
 	banner func(urls []string, mountCount int)
 
 	// requireViewer refuses to start without the viewer's assets, for `open`, which exists to show a
@@ -189,18 +189,18 @@ type viewerOpts struct {
 	// embedOrigins are the origins besides the viewer's own whose pages may drive it over
 	// postMessage (--embed-origin, agni issue 1152).
 	embedOrigins []string
-	// designCache is how many reads (a parse, a derived design, a drawing, a board, a built model) the server keeps
-	// between requests (agni issue 895). 0 keeps none.
+	// designCache is how many reads the server keeps between requests (agni issue 895). A read is a
+	// parse, a derived design, a drawing, a board or a built model. 0 keeps none.
 	designCache int
-	// uploadMaxBytes is how much of the designs clients send as files the server keeps (agni issue
-	// 1061). 0 takes none.
+	// uploadMaxBytes caps how many bytes of uploaded designs the server keeps. A client uploads a
+	// design by sending its files (agni issue 1061). 0 takes none.
 	uploadMaxBytes int64
 
 	// mcp serves the services over the Model Context Protocol as well (agni issue 910): mcpHTTP at
 	// /mcp beside the Connect API, or mcpStdio on stdin and stdout in place of the listener.
 	mcp string
-	// mcpLinks is the viewer an answer over stdio links to, a running `agni serve`; empty withholds
-	// links. Over HTTP the server links to itself.
+	// mcpLinks names a running `agni serve`, and an answer over stdio links to that viewer. Empty
+	// withholds links. Over HTTP the server links to itself.
 	mcpLinks string
 	// viewerRooms serves a relay at /relay/ and the room bridge's tools on /mcp, so an agent can drive
 	// the viewer tabs open on this server (--viewer-rooms, agni issue 1154). It needs mcpHTTP and the
@@ -226,8 +226,8 @@ const (
 // size; an EDIF netlist of the same byte count may cost more.
 const defaultWasmMaxBytes = 128 << 20
 
-// defaultDesignCache keeps two or three large designs warm with each one's drawing and model, which is
-// what a person moving between a few boards in the viewer asks for (agni issue 895).
+// defaultDesignCache keeps two or three large designs in memory, each with its drawing and model. A
+// person moving between a few boards in the viewer needs about that many (agni issue 895).
 const defaultDesignCache = 15
 
 // runViewer builds and runs the viewer server for both `serve` and `open`.
@@ -262,9 +262,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 	}
 	dir, source := assets.dir, assets.source
-	// Narrated only for the ENVIRONMENT. applyEnvConfig already names the agni.yaml it read and the
-	// serving line prints the directory, but nothing else reports an AGNI_WEB_DIR exported into a
-	// shell months ago.
+	// Only a value from the ENVIRONMENT is narrated here. applyEnvConfig already names the agni.yaml
+	// it read, and the serving line prints the directory. Nothing else reports an AGNI_WEB_DIR that
+	// someone exported into a shell months ago.
 	if source == envWebDir {
 		fmt.Fprintf(cmd.ErrOrStderr(), "note: serving web assets from %s (%s).\n", dir, source)
 	}
@@ -315,8 +315,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// page catches the rest at "/". The services are the transport-neutral service package
 	// implementations, which internal/server wraps for Connect (C13).
 	loader := service.NewCachingLoader(&osLoader{mounts: mounts, loader: newLoader()}, service.NewDesignCache(o.designCache))
-	// Tier-1 fallback, as in resolveWebDir. The flag wins OUTRIGHT, so an operator who named the
-	// renderers answers for the whole set and agni.yaml cannot widen it.
+	// Tier-1 fallback, as in resolveWebDir. The flag wins OUTRIGHT. If an operator names renderers
+	// with it, those are the whole set, and agni.yaml cannot widen it.
 	if len(nativeTools) == 0 {
 		nativeTools = envConfigNativeTools
 	}
@@ -329,8 +329,8 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 	// needs no flag. A mount with no descriptors resolves to nothing, so one project's config never
 	// reaches another project's design.
 	//
-	// Each mount becomes one tree in the filesystem-backed store. This is the ONLY place the serve
-	// wiring knows projects live in directories, so swapping in another service.ProjectStore is
+	// Each mount becomes one tree in the filesystem-backed store. Only this line of the serve wiring
+	// knows that projects live in directories, so swapping in another service.ProjectStore changes
 	// this line alone.
 	projectStore := projects.NewFSStore(projectTrees(mounts)...)
 	// One resolver for every rule-running surface. Per-design config reaches a run through this,
@@ -354,9 +354,9 @@ func runViewer(cmd *cobra.Command, o viewerOpts) error {
 		}
 		conventionCfg = cfg
 	}
-	// --review-store is the writable volume stored runs live in, separate from the read-only design
-	// mounts. Absent, the review resource methods report that they are not configured rather than
-	// discarding runs.
+	// --review-store names the writable volume that holds stored runs. It is separate from the
+	// read-only design mounts. Without it, the review resource methods report that they are not
+	// configured rather than discarding runs.
 	var reviewStore service.ReviewStore
 	if reviewStorePath != "" {
 		st, err := newOSReviewStore(reviewStorePath)
@@ -496,21 +496,21 @@ func projectTrees(ms []mounts.Mount) []projects.Tree {
 	return out
 }
 
-// serveLoader is what the two rule-running services need between them. The intersection is named
-// once, by the engine facade, because an embedder building the same pair needs it too.
+// serveLoader is the intersection of what the two rule-running services need. The engine facade
+// names it once, because an embedder building the same pair needs it too.
 type serveLoader = agni.RuleLoader
 
 // serveRuleServices builds the two services that RUN rules from one composed catalog: the
 // CheckService behind the check panel and ListRules, and the ReviewService behind the review resources.
 //
-// Both come from one catalog because every overlay knob is config for the whole server, and a rule
-// missing from the check panel's catalog looks the same as a rule that ran and found nothing
-// (WS3-109). Returning the services rather than the catalog means a caller never holds the catalog,
-// so it cannot hand the two surfaces different ones.
+// Both come from one catalog because every overlay knob is config for the whole server. If a rule
+// were missing from the check panel's catalog, it would look like a rule that ran and found nothing
+// (WS3-109). The function returns the services rather than the catalog. A caller never holds the
+// catalog, so it cannot hand the two surfaces different ones.
 //
-// conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here,
-// since that is a process-global install done once at startup, and doing it in a function tests call
-// would leak one test's vocabulary into the next.
+// conventions may be the zero Config, which contributes nothing. Its lexicon is NOT applied here.
+// Installing a lexicon is process-global and happens once at startup. Tests call this function, so
+// installing it here would leak one test's vocabulary into the next.
 func serveRuleServices(loader serveLoader, store service.ReviewStore, specs param.ParamProvider, profilePath string, conventions *configpb.NamingConvention, projects *service.ProjectResolver, notes io.Writer) (*service.CheckService, *service.ReviewService, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
 	if err != nil {
@@ -547,7 +547,7 @@ func serveRuleServices(loader serveLoader, store service.ReviewStore, specs para
 // print as "http://:8080/", which no browser opens.
 //
 // An empty, "0.0.0.0", or "::" host is the WILDCARD, reachable on every interface. The first entry
-// returned is the one to click on this machine, and any others are the LAN addresses. Those are
+// returned is the address to click on this machine, and any others are LAN addresses. Those are
 // printed because this server has no authentication, so a wildcard bind exposes the mounted design
 // folders to anything that can route here. Bind 127.0.0.1 to remove that.
 //
@@ -639,8 +639,9 @@ func healthHandler() http.Handler {
 	})
 }
 
-// webAssets is what a resolved --web-dir can serve: the viewer's pages, or nothing at all. The
-// datasheets workbench is not here; it is the datasheet module's agnids (agni issue 744).
+// webAssets describes what a resolved --web-dir can serve. That is the viewer's pages or nothing at
+// all. The datasheets workbench is not here, because the datasheet module's agnids serves it (agni
+// issue 744).
 type webAssets struct {
 	dir    string
 	source string // where dir came from, as resolveWebDir reports it
@@ -675,11 +676,12 @@ func resolveWebAssets(flag string, getenv func(string) string) (dir, source stri
 	return dir, source, nil
 }
 
-// resolveServeAssets is `serve`'s version of resolveWebAssets, which also admits no viewer at all.
-// When NOTHING named a web dir (no flag, no agni.yaml, no environment) and the default ./web does not
-// exist, serve takes the viewer an installed binary carries or downloads, and runs the API alone
-// when there is none. Every other failure still fails, because a wrong named directory is a typo and
-// a ./web without its bundle is a checkout that forgot `make ui` (agni issue 735).
+// resolveServeAssets is `serve`'s version of resolveWebAssets, and it also admits no viewer at all.
+// Suppose NOTHING named a web dir, through a flag, agni.yaml or the environment, and the default
+// ./web does not exist. Then serve takes the viewer that an installed binary carries or downloads.
+// If there is none, serve runs the API alone. Every other failure still fails. A wrong named
+// directory is a typo, and a ./web without its bundle is a checkout that forgot `make ui` (agni
+// issue 735).
 //
 // `open` and `--server self` call resolveWebAssets instead, since for them no viewer is an error.
 func resolveServeAssets(flag string, getenv func(string) string) (webAssets, error) {
@@ -711,8 +713,8 @@ func checkWebAssets(dir string) error {
 	if _, err := os.Stat(filepath.Join(dir, "static", "app.js")); err != nil {
 		return fmt.Errorf("%q has no static/app.js: build the frontend bundle first with `cd %s && pnpm build`", dir, dir)
 	}
-	// The design browser (WS9-049) is the second server-rendered page with its own bundle. It is
-	// also what "/" serves, so a missing browse asset breaks the landing page, not a side route.
+	// The design browser (WS9-049) is the second server-rendered page with its own bundle. "/" also
+	// serves it, so a missing browse asset breaks the landing page, not a side route.
 	if _, err := os.Stat(filepath.Join(dir, "templates", "BrowsePage.html")); err != nil {
 		return fmt.Errorf("%q has no templates/BrowsePage.html (the design browse page)", dir)
 	}
@@ -722,10 +724,9 @@ func checkWebAssets(dir string) error {
 	return nil
 }
 
-// apiOnlyHandler answers every page URL when serve runs without a viewer. "/" gets a 200 so a probe or
-// a person checking the server sees it is up; any other page path is a 404. Both bodies say what the
-// server does serve and how to get the viewer, since the person reading it is the one who expected a
-// page.
+// apiOnlyHandler answers every page URL when serve runs without a viewer. "/" gets a 200, so a probe
+// or a person checking the server sees it is up. Any other page path is a 404. Whoever reads either
+// body expected a page, so both bodies say what the server does serve and how to get the viewer.
 func apiOnlyHandler(services []string) http.Handler {
 	var b strings.Builder
 	b.WriteString("agni serve is running WITHOUT the viewer: no web dir was named and there is no ./web here.\n\n")
@@ -811,19 +812,19 @@ func osWorkspace(ms []mounts.Mount) service.Workspace { return mounts.NewWorkspa
 // osFiles reads files inside the mounts, for ListDesignFiles.
 func osFiles(ms []mounts.Mount) service.FileReader { return mounts.NewWorkspace(ms) }
 
-// uploadedHost reads a design a client sent as files (agni issue 1061): its files as the one mount
-// they name, through the same in-memory host the browser engine reads its files through, with the
-// projects they declare.
+// uploadedHost reads a design that a client sent as files (agni issue 1061). It serves the files as
+// the one mount they name, with the projects they declare. The browser engine reads its own files
+// through the same in-memory host.
 func uploadedHost(mount string, files map[string][]byte) (service.CacheableLoader, *service.ProjectResolver) {
 	fsys := fshost.MemFS(files)
 	ms := []fshost.Mount{{Name: mount, FS: fsys}}
 	return fshost.New(ms...), &service.ProjectResolver{Store: projects.NewFSStore(projects.Tree{Mount: mount, FS: fsys}), Config: &fshost.ConfigResolver{Mounts: ms}}
 }
 
-// bindFreePort binds addr when it asks for port 0, the kernel's choice of a free port, so the banner,
-// the links and the MCP server name the port it got rather than 0, which a script starting a server
-// for itself reads off the first line (agni issue 1121). Any other addr is left for the serve to bind,
-// and nil is returned.
+// bindFreePort binds addr when it asks for port 0, so the kernel picks a free port. The banner, the
+// links and the MCP server then name the port it got rather than 0. A script that starts a server
+// for itself reads that port off the first line (agni issue 1121). For any other addr it returns nil
+// and leaves the bind to the serve.
 func bindFreePort(addr string) (net.Listener, error) {
 	if _, port, err := net.SplitHostPort(addr); err != nil || port != "0" {
 		return nil, nil

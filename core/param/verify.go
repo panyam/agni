@@ -4,8 +4,8 @@ import (
 	parampb "github.com/panyam/agni/gen/go/agni/v1/param"
 )
 
-// Verification state: whether a person has stood behind a value, and whether that still means
-// anything given the document may have moved on.
+// Verification state records whether a person has confirmed a value, and whether that still means
+// anything now that the document may have moved on.
 //
 // "Nobody checked" and "someone checked a revision we no longer have" need different next steps. A
 // boolean collapses them, and so does reading confidence == 1.0 as verified, since a float cannot say
@@ -16,17 +16,17 @@ import (
 type VerificationState string
 
 const (
-	// Unverified: no one has confirmed this value. The ordinary state of anything an extractor
-	// produced.
+	// Unverified means no one has confirmed this value. It is the ordinary state of anything an
+	// extractor produced.
 	Unverified VerificationState = "unverified"
-	// Verified: a person confirmed it against the revision in hand.
+	// Verified means a person confirmed it against the revision in hand.
 	Verified VerificationState = "verified"
-	// Stale: a person confirmed it against a DIFFERENT revision of the document. The vendor may have
-	// changed the table it was read from, so it needs re-confirming.
+	// Stale means a person confirmed it against a DIFFERENT revision of the document. The vendor may
+	// have changed the table it was read from, so it needs re-confirming.
 	Stale VerificationState = "stale"
-	// Unknown: a verification exists but no current revision was supplied, so drift cannot be ruled
-	// out. NOT folded into Verified, because a caller that cannot check must not be told the answer
-	// is fine, as with a check that could not run.
+	// Unknown means a verification exists but no current revision was supplied, so drift cannot be
+	// ruled out. It is NOT folded into Verified. A caller that cannot check must not be told the
+	// answer is fine, as with a check that could not run.
 	Unknown VerificationState = "unknown"
 )
 
@@ -72,8 +72,9 @@ func SourceDocOf(spec *parampb.PartSpec, docRef string) *parampb.SourceDoc {
 	return nil
 }
 
-// DocContentHash resolves a doc_ref to the content hash of the revision the spec describes; "" when
-// the id names no doc or the corpus recorded none, which every caller must read as unknown.
+// DocContentHash resolves a doc_ref to the content hash of the revision the spec describes. It
+// returns "" when the id names no doc or the corpus recorded no hash, and every caller must read ""
+// as unknown.
 func DocContentHash(spec *parampb.PartSpec, docRef string) string {
 	return SourceDocOf(spec, docRef).GetContentHash()
 }
@@ -85,7 +86,7 @@ func DocContentHash(spec *parampb.PartSpec, docRef string) string {
 // beside another's name, and the record would go stale correctly and then name the wrong revision.
 //
 // It also raises provenance confidence to 1.0, since across this layer only a human verification
-// earns 1.0 and consumers already read it that way. Nothing lowers it again, so anything deciding
+// gets 1.0 and consumers already read it that way. Nothing lowers it again, so anything deciding
 // whether to TRUST a value reads VerificationOfIn and not the float (see DECISIONS.md, "A stale
 // verification is untrustworthy data").
 //
@@ -113,15 +114,15 @@ func MarkVerified(p *parampb.Parameter, by string, doc *parampb.SourceDoc, at, n
 // parameter's own provenance doc_ref. This is the form a portal wants, since a person confirms a
 // value against the document it cites and neither the hash nor the revision is the caller's to supply.
 //
-// Refused when the doc_ref names no document in the spec, since a value citing a document the corpus
-// does not have is not something anyone can have checked.
+// It refuses a doc_ref that names no document in the spec. Nobody can have checked a value against a
+// document that the corpus does not have.
 func MarkVerifiedIn(spec *parampb.PartSpec, p *parampb.Parameter, by, at, note string) bool {
 	return MarkVerified(p, by, SourceDocOf(spec, p.GetProv().GetDocRef()), at, note)
 }
 
-// StaleVerifications lists the parameters of a spec whose verification was performed against a
-// different revision than the one the spec now describes, so a portal can offer "re-confirm these"
-// after a document updates rather than waiting for someone to notice.
+// StaleVerifications lists the parameters of a spec that were verified against a different revision
+// than the one the spec now describes. A portal can then offer "re-confirm these" after a document
+// updates rather than waiting for someone to notice.
 //
 // Each parameter is compared against the document IT cites, not against one hash for the whole spec.
 // A spec routinely carries a datasheet and an app note, and one hash would report every value citing

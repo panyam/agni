@@ -18,7 +18,7 @@ type component struct {
 	back   bool // read from the bottom components layer
 }
 
-// toeprint is one TOP record: where a pin lands on the board, and the net number it is on.
+// toeprint is one TOP record. It says where a pin sits on the board, and which net number it is on.
 type toeprint struct {
 	num  int
 	at   pt
@@ -86,8 +86,8 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 			if t.net, err = atoi(w[6]); err != nil {
 				return fmt.Errorf("line %d: %w", n, err)
 			}
-			// Altium names a toeprint for its part as well as its pin (J500-1 for pin 1 of J500), where
-			// the netlist and the schematic it is checked against name the pin alone.
+			// Altium names a toeprint for its part as well as its pin, as J500-1 for pin 1 of J500.
+			// The netlist names the pin alone, and so does the schematic it is checked against.
 			t.name = strings.TrimPrefix(w[8], cur.ref+"-")
 			cur.pins = append(cur.pins, t)
 		}
@@ -100,8 +100,9 @@ func parseComponents(b []byte, back bool) ([]component, error) {
 }
 
 // componentLayers lists the matrix's component layers, front first, and says which side each is.
-// A COMPONENT layer above the first copper layer is the top, below the last the bottom; a job
-// whose matrix leaves that unclear falls back to the name (comp_+_top / comp_+_bot).
+// A COMPONENT layer above the first copper layer is the top. One below the last copper layer is the
+// bottom. If a job's matrix leaves that unclear, the side falls back to the name (comp_+_top /
+// comp_+_bot).
 func (m *matrix) componentLayers() (names []string, back []bool) {
 	first, last := -1, -1
 	for _, l := range m.layers {

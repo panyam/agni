@@ -60,59 +60,62 @@ const (
 
 // CheckServiceClient is a client for the agni.v1.webapi.CheckService service.
 type CheckServiceClient interface {
-	// ListRules returns the rule catalog a check of the snapshot runs: one RuleInfo per rule, with its
-	// tags (open classification the client groups and filters by) and whether it runs on the design.
-	// A rule is available exactly when a whole CheckDesign of the same snapshot would not report it in
-	// skipped (agni issue 950). The netlist is read to decide that and the board is not. A CheckDesign
-	// call names the subset to actually run.
+	// ListRules returns the rule catalog that a check of the snapshot runs. Each rule gets one
+	// RuleInfo, with its tags and whether it runs on the design. The tags are an open classification,
+	// and the client groups and filters by them. A rule is available exactly when a whole CheckDesign
+	// of the same snapshot would not report it in skipped (agni issue 950). Deciding that reads the
+	// netlist and not the board. A CheckDesign call names the subset to actually run.
 	ListRules(context.Context, *connect.Request[webapi.ListRulesRequest]) (*connect.Response[webapi.ListRulesResponse], error)
 	// CheckDesign runs the rule checks over a loaded design and returns the findings. Checks
-	// are a run-on-demand action, potentially slower than a metadata fetch, so loading a design
-	// and validating it stay independent. request.rules selects the subset to run (empty = all).
-	// Each finding's subject (kind + ref) is the join key the viewer uses to highlight the
-	// offending element (it matches PackedSheet primitive keys).
+	// run on demand and can be slower than a metadata fetch, so loading a design and validating it
+	// are separate calls. request.rules selects the subset to run (empty = all). The viewer joins
+	// on each finding's subject (kind + ref) to highlight the offending element, since the subject
+	// matches PackedSheet primitive keys.
 	CheckDesign(context.Context, *connect.Request[webapi.CheckDesignRequest]) (*connect.Response[webapi.CheckDesignResponse], error)
 	// GetExpectations returns a design's expected findings from its `<design>.expect.yaml` sidecar
-	// (WS6-006), if one sits beside the file. Expectations are static per design and independent of
-	// which rule subset a CheckDesign run uses, so they are their own resource: the viewer fetches
-	// them once and reconciles them client-side against the CheckDesign findings, showing each
-	// expected rule as matched / missing (not yet implemented) / pending. A design with no sidecar
-	// returns an empty list (not an error), so the panel degrades gracefully.
+	// (WS6-006), if one sits beside the file. Expectations are static per design. They do not depend
+	// on the rule subset a CheckDesign run uses, so they are their own resource. The viewer fetches
+	// them once and reconciles them client-side against the CheckDesign findings. It shows each
+	// expected rule as matched, missing (not yet implemented) or pending. A design with no sidecar
+	// returns an empty list rather than an error, so the panel degrades gracefully.
 	GetExpectations(context.Context, *connect.Request[webapi.GetExpectationsRequest]) (*connect.Response[webapi.GetExpectationsResponse], error)
-	// GetCheckReport runs the same checks CheckDesign runs and returns the severity-organized
-	// report (WS3-022): sections worst-severity first, findings grouped by rule with the catalog
-	// summary baked in. The report is its own message (not a client-side pivot of CheckDesign)
-	// so the CLI's markdown/report formats and the web report panel render one canonical shape.
+	// GetCheckReport runs the same checks as CheckDesign and returns the severity-organized report
+	// (WS3-022). Sections come worst-severity first. Findings are grouped by rule, and each group
+	// includes the catalog summary. The report is its own message rather than a client-side pivot
+	// of CheckDesign. So the CLI's markdown/report formats and the web report panel render one
+	// canonical shape.
 	GetCheckReport(context.Context, *connect.Request[webapi.GetCheckReportRequest]) (*connect.Response[webapi.GetCheckReportResponse], error)
-	// RenderCheckReport writes a check run the caller already holds as a file to keep (agni issue
-	// 127): the CheckResults document `agni check --results-out` writes, or the verdict report
-	// `agni check --verdicts --format html` writes. It runs no rules. The engine renders the bytes, so a
-	// report saved from the viewer and one written by the CLI are the same file apart from their
-	// timestamps, and no second renderer exists to drift from this one.
+	// RenderCheckReport writes a check run as a file to keep (agni issue 127). The caller already
+	// holds the run. The file is either the CheckResults document from `agni check --results-out` or
+	// the verdict report from `agni check --verdicts --format html`. It runs no rules. The engine
+	// renders the bytes. So a report saved from the viewer and one written by the CLI are the same
+	// file apart from their timestamps, and no second renderer exists to drift from this one.
 	RenderCheckReport(context.Context, *connect.Request[webapi.RenderCheckReportRequest]) (*connect.Response[webapi.RenderCheckReportResponse], error)
 	// GetInterfaceCoverage projects the interface-profile mechanism (WS3-034) into a per-interface
-	// coverage matrix (WS9-041): for every DETECTED interface profile (its in-use confidence gate
-	// holds — two of its signals are present, or a host declares it), each required signal with its
-	// matched net and state (present / missing / dangling / pullup_missing). It reuses the same
-	// datalog the profile rules compile to, so the panel and the findings cannot disagree. A design
-	// with no detected interface returns an empty list (not an error) — silent by construction, like
-	// the rules themselves.
+	// coverage matrix (WS9-041). A profile is DETECTED when its in-use confidence gate holds, so two
+	// of its signals are present or a host declares it. For every detected profile, the matrix lists
+	// each required signal with its matched net and its state (present, missing, dangling or
+	// pullup_missing). It reuses the datalog that the profile rules compile to, so the panel and the
+	// findings cannot disagree. A design with no detected interface returns an empty list rather than
+	// an error. It is silent by construction, like the rules themselves.
 	GetInterfaceCoverage(context.Context, *connect.Request[webapi.GetInterfaceCoverageRequest]) (*connect.Response[webapi.GetInterfaceCoverageResponse], error)
-	// GetComponentParams surfaces the datasheet join (WS10-003) read-only, per design: every component
-	// whose MPN resolves to a seeded PartSpec, with that spec's parameters. It is the "what does the
-	// engine know about my parts" browse surface (WS9-035) — the same join the datasheet rules consume,
-	// exposed for a UI tree rather than re-queried. A design with no joined specs (or a serve started
-	// without --params) returns an empty list (not an error), so the panel degrades gracefully.
+	// GetComponentParams shows the datasheet join (WS10-003) read-only, per design. It lists every
+	// component whose MPN resolves to a seeded PartSpec, with that spec's parameters. It is the browse
+	// surface for "what does the engine know about my parts" (WS9-035). The datasheet rules read the
+	// same join, and this rpc exposes it for a UI tree rather than querying it again. An empty list
+	// comes back, rather than an error, for a design with no joined specs or a serve started without
+	// --params. So the panel degrades gracefully.
 	GetComponentParams(context.Context, *connect.Request[webapi.GetComponentParamsRequest]) (*connect.Response[webapi.GetComponentParamsResponse], error)
-	// GetNamingConvention resolves a stored convention config into the VALUE an OverlayConfig carries
-	// (WS9-128). It parses and validates, so a client learns its config is malformed once, here, rather
-	// than on every run that carries it.
+	// GetNamingConvention resolves a stored convention config into a VALUE for an OverlayConfig
+	// (WS9-128). It parses and validates, so a client learns once, here, that its config is malformed,
+	// rather than on every run that sends it.
 	//
-	// It exists for the same reason GetReviewManifest does. OverlayConfig deliberately carries values
-	// rather than paths (C22), so a service composing one needs no filesystem — but a browser holds a
-	// ref and no filesystem either, and something has to bridge the two. Making that bridge its own rpc
-	// keeps the read named in the contract instead of hidden inside a check run, and a caller that
-	// already holds a convention (the CLI reads the YAML the user named) never calls it.
+	// It exists for the same reason as GetReviewManifest. OverlayConfig deliberately holds values
+	// rather than paths (C22), so a service composing one needs no filesystem. A browser, though,
+	// holds a ref and has no filesystem either, and something has to bridge the two. As its own rpc,
+	// the bridge keeps the read named in the contract instead of hidden inside a check run. A caller
+	// that already holds a convention never calls it. The CLI is one, since it reads the YAML the user
+	// named.
 	GetNamingConvention(context.Context, *connect.Request[webapi.GetNamingConventionRequest]) (*connect.Response[webapi.GetNamingConventionResponse], error)
 }
 
@@ -232,59 +235,62 @@ func (c *checkServiceClient) GetNamingConvention(ctx context.Context, req *conne
 
 // CheckServiceHandler is an implementation of the agni.v1.webapi.CheckService service.
 type CheckServiceHandler interface {
-	// ListRules returns the rule catalog a check of the snapshot runs: one RuleInfo per rule, with its
-	// tags (open classification the client groups and filters by) and whether it runs on the design.
-	// A rule is available exactly when a whole CheckDesign of the same snapshot would not report it in
-	// skipped (agni issue 950). The netlist is read to decide that and the board is not. A CheckDesign
-	// call names the subset to actually run.
+	// ListRules returns the rule catalog that a check of the snapshot runs. Each rule gets one
+	// RuleInfo, with its tags and whether it runs on the design. The tags are an open classification,
+	// and the client groups and filters by them. A rule is available exactly when a whole CheckDesign
+	// of the same snapshot would not report it in skipped (agni issue 950). Deciding that reads the
+	// netlist and not the board. A CheckDesign call names the subset to actually run.
 	ListRules(context.Context, *connect.Request[webapi.ListRulesRequest]) (*connect.Response[webapi.ListRulesResponse], error)
 	// CheckDesign runs the rule checks over a loaded design and returns the findings. Checks
-	// are a run-on-demand action, potentially slower than a metadata fetch, so loading a design
-	// and validating it stay independent. request.rules selects the subset to run (empty = all).
-	// Each finding's subject (kind + ref) is the join key the viewer uses to highlight the
-	// offending element (it matches PackedSheet primitive keys).
+	// run on demand and can be slower than a metadata fetch, so loading a design and validating it
+	// are separate calls. request.rules selects the subset to run (empty = all). The viewer joins
+	// on each finding's subject (kind + ref) to highlight the offending element, since the subject
+	// matches PackedSheet primitive keys.
 	CheckDesign(context.Context, *connect.Request[webapi.CheckDesignRequest]) (*connect.Response[webapi.CheckDesignResponse], error)
 	// GetExpectations returns a design's expected findings from its `<design>.expect.yaml` sidecar
-	// (WS6-006), if one sits beside the file. Expectations are static per design and independent of
-	// which rule subset a CheckDesign run uses, so they are their own resource: the viewer fetches
-	// them once and reconciles them client-side against the CheckDesign findings, showing each
-	// expected rule as matched / missing (not yet implemented) / pending. A design with no sidecar
-	// returns an empty list (not an error), so the panel degrades gracefully.
+	// (WS6-006), if one sits beside the file. Expectations are static per design. They do not depend
+	// on the rule subset a CheckDesign run uses, so they are their own resource. The viewer fetches
+	// them once and reconciles them client-side against the CheckDesign findings. It shows each
+	// expected rule as matched, missing (not yet implemented) or pending. A design with no sidecar
+	// returns an empty list rather than an error, so the panel degrades gracefully.
 	GetExpectations(context.Context, *connect.Request[webapi.GetExpectationsRequest]) (*connect.Response[webapi.GetExpectationsResponse], error)
-	// GetCheckReport runs the same checks CheckDesign runs and returns the severity-organized
-	// report (WS3-022): sections worst-severity first, findings grouped by rule with the catalog
-	// summary baked in. The report is its own message (not a client-side pivot of CheckDesign)
-	// so the CLI's markdown/report formats and the web report panel render one canonical shape.
+	// GetCheckReport runs the same checks as CheckDesign and returns the severity-organized report
+	// (WS3-022). Sections come worst-severity first. Findings are grouped by rule, and each group
+	// includes the catalog summary. The report is its own message rather than a client-side pivot
+	// of CheckDesign. So the CLI's markdown/report formats and the web report panel render one
+	// canonical shape.
 	GetCheckReport(context.Context, *connect.Request[webapi.GetCheckReportRequest]) (*connect.Response[webapi.GetCheckReportResponse], error)
-	// RenderCheckReport writes a check run the caller already holds as a file to keep (agni issue
-	// 127): the CheckResults document `agni check --results-out` writes, or the verdict report
-	// `agni check --verdicts --format html` writes. It runs no rules. The engine renders the bytes, so a
-	// report saved from the viewer and one written by the CLI are the same file apart from their
-	// timestamps, and no second renderer exists to drift from this one.
+	// RenderCheckReport writes a check run as a file to keep (agni issue 127). The caller already
+	// holds the run. The file is either the CheckResults document from `agni check --results-out` or
+	// the verdict report from `agni check --verdicts --format html`. It runs no rules. The engine
+	// renders the bytes. So a report saved from the viewer and one written by the CLI are the same
+	// file apart from their timestamps, and no second renderer exists to drift from this one.
 	RenderCheckReport(context.Context, *connect.Request[webapi.RenderCheckReportRequest]) (*connect.Response[webapi.RenderCheckReportResponse], error)
 	// GetInterfaceCoverage projects the interface-profile mechanism (WS3-034) into a per-interface
-	// coverage matrix (WS9-041): for every DETECTED interface profile (its in-use confidence gate
-	// holds — two of its signals are present, or a host declares it), each required signal with its
-	// matched net and state (present / missing / dangling / pullup_missing). It reuses the same
-	// datalog the profile rules compile to, so the panel and the findings cannot disagree. A design
-	// with no detected interface returns an empty list (not an error) — silent by construction, like
-	// the rules themselves.
+	// coverage matrix (WS9-041). A profile is DETECTED when its in-use confidence gate holds, so two
+	// of its signals are present or a host declares it. For every detected profile, the matrix lists
+	// each required signal with its matched net and its state (present, missing, dangling or
+	// pullup_missing). It reuses the datalog that the profile rules compile to, so the panel and the
+	// findings cannot disagree. A design with no detected interface returns an empty list rather than
+	// an error. It is silent by construction, like the rules themselves.
 	GetInterfaceCoverage(context.Context, *connect.Request[webapi.GetInterfaceCoverageRequest]) (*connect.Response[webapi.GetInterfaceCoverageResponse], error)
-	// GetComponentParams surfaces the datasheet join (WS10-003) read-only, per design: every component
-	// whose MPN resolves to a seeded PartSpec, with that spec's parameters. It is the "what does the
-	// engine know about my parts" browse surface (WS9-035) — the same join the datasheet rules consume,
-	// exposed for a UI tree rather than re-queried. A design with no joined specs (or a serve started
-	// without --params) returns an empty list (not an error), so the panel degrades gracefully.
+	// GetComponentParams shows the datasheet join (WS10-003) read-only, per design. It lists every
+	// component whose MPN resolves to a seeded PartSpec, with that spec's parameters. It is the browse
+	// surface for "what does the engine know about my parts" (WS9-035). The datasheet rules read the
+	// same join, and this rpc exposes it for a UI tree rather than querying it again. An empty list
+	// comes back, rather than an error, for a design with no joined specs or a serve started without
+	// --params. So the panel degrades gracefully.
 	GetComponentParams(context.Context, *connect.Request[webapi.GetComponentParamsRequest]) (*connect.Response[webapi.GetComponentParamsResponse], error)
-	// GetNamingConvention resolves a stored convention config into the VALUE an OverlayConfig carries
-	// (WS9-128). It parses and validates, so a client learns its config is malformed once, here, rather
-	// than on every run that carries it.
+	// GetNamingConvention resolves a stored convention config into a VALUE for an OverlayConfig
+	// (WS9-128). It parses and validates, so a client learns once, here, that its config is malformed,
+	// rather than on every run that sends it.
 	//
-	// It exists for the same reason GetReviewManifest does. OverlayConfig deliberately carries values
-	// rather than paths (C22), so a service composing one needs no filesystem — but a browser holds a
-	// ref and no filesystem either, and something has to bridge the two. Making that bridge its own rpc
-	// keeps the read named in the contract instead of hidden inside a check run, and a caller that
-	// already holds a convention (the CLI reads the YAML the user named) never calls it.
+	// It exists for the same reason as GetReviewManifest. OverlayConfig deliberately holds values
+	// rather than paths (C22), so a service composing one needs no filesystem. A browser, though,
+	// holds a ref and has no filesystem either, and something has to bridge the two. As its own rpc,
+	// the bridge keeps the read named in the contract instead of hidden inside a check run. A caller
+	// that already holds a convention never calls it. The CLI is one, since it reads the YAML the user
+	// named.
 	GetNamingConvention(context.Context, *connect.Request[webapi.GetNamingConventionRequest]) (*connect.Response[webapi.GetNamingConventionResponse], error)
 }
 

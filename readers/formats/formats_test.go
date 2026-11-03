@@ -12,8 +12,8 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// TestSymbolOpenerRecursive checks that a --symbol-path pointed at a library ROOT resolves a symbol
-// that lives in a subdirectory (gEDA/Lepton libs categorize symbols into analog/, power/, ...), and
+// TestSymbolOpenerRecursive points a --symbol-path at a library ROOT. gEDA/Lepton libs sort symbols
+// into analog/, power/, and so on. The test checks that a symbol in a subdirectory resolves, and that
 // a top-level file in an earlier dir still wins over a subtree match.
 func TestSymbolOpenerRecursive(t *testing.T) {
 	root := t.TempDir()
@@ -45,9 +45,9 @@ func TestSymbolOpenerRecursive(t *testing.T) {
 }
 
 // TestEDIFExtensionsRegistered pins that all three conventional EDIF-netlist suffixes resolve
-// to the EDIF reader. Our fixtures use .edn, but real exports (and the corpus) use .edf/.edif;
-// matching is case-insensitive, so .EDF resolves too. Regression guard for the corpus being
-// invisible in the tree/CLI because only .edn was wired.
+// to the EDIF reader. Our fixtures use .edn, and real exports and the corpus use .edf/.edif.
+// Matching is case-insensitive, so .EDF resolves too. Once only .edn was wired, and the corpus was
+// invisible in the tree and the CLI. This test guards against that regression.
 func TestEDIFExtensionsRegistered(t *testing.T) {
 	for _, name := range []string{"x.edn", "x.edf", "x.edif", "x.EDF"} {
 		f := ByExt(name)
@@ -57,9 +57,9 @@ func TestEDIFExtensionsRegistered(t *testing.T) {
 	}
 }
 
-// TestRegistryConsistency guards the one-entry-per-format invariant: every entry has a
-// label and at least one reader, and the derived capability sets stay in sync with the
-// dispatch (an extension is readable iff the registry says so).
+// TestRegistryConsistency guards the one-entry-per-format invariant. Every entry has a label and at
+// least one reader. The derived capability sets agree with the dispatch, so an extension is readable
+// iff the registry says so.
 func TestRegistryConsistency(t *testing.T) {
 	if len(byExt) == 0 {
 		t.Fatal("empty format registry")
@@ -81,9 +81,9 @@ func TestRegistryConsistency(t *testing.T) {
 }
 
 // TestKicadProjectNetClass covers WS1-037. Net-class membership lives only in the .kicad_pro
-// net_settings (not the sch/pcb), so a project read stamps ir.Net.net_classes. It also covers the
-// WS1-050 cardinality end to end: SIG is named by an explicit assignment AND matched by two
-// patterns, and all three memberships must survive the loader, not just whichever resolved first.
+// net_settings and not in the sch/pcb, so a project read stamps ir.Net.net_classes. It also covers
+// the WS1-050 cardinality end to end. An explicit assignment names SIG, AND two patterns match it.
+// All three memberships must survive the loader, not just whichever resolved first.
 // wirenet.kicad_sch yields a net named "/SIG", KiCad's name for a root-sheet label.
 func TestKicadProjectNetClass(t *testing.T) {
 	sch, err := os.ReadFile("../kicad/testdata/wirenet.kicad_sch")
@@ -129,8 +129,8 @@ func TestUnknownExtensionErrorListsAll(t *testing.T) {
 	if err == nil {
 		t.Fatal("want an error for an unknown extension")
 	}
-	// The exact generated list, because substring checks would pass ".sch" via ".kicad_sch",
-	// which is the drift the old hand-written message had.
+	// The exact generated list, because a substring check would pass ".sch" via ".kicad_sch". The
+	// old hand-written message had exactly that drift.
 	want := "(have: " + strings.Join(NetlistExts(), ", ") + ")"
 	if !strings.Contains(err.Error(), want) || !strings.Contains(want, ", .sch,") {
 		t.Errorf("unknown-extension error = %v, want it to carry %q including a bare .sch entry", err, want)
@@ -183,10 +183,10 @@ func TestResolveGeometryRouting(t *testing.T) {
 	}
 }
 
-// An EDIF schematic (.eds) is dual-capability. Its schematic view carries explicit netlist
-// connectivity, so ReadDesign yields a netlist (queryable/checkable/diffable) AND the same file
-// renders faithfully. That is the "query any format that carries a netlist" property, wired in the
-// registry rather than gated by extension.
+// An EDIF schematic (.eds) is dual-capability. Its schematic view states explicit netlist
+// connectivity. So ReadDesign yields a netlist you can query, check and diff, AND the same file
+// renders faithfully. The registry wires this "query any format that has a netlist" property,
+// rather than gating it by extension.
 func TestEdsIsDualCapability(t *testing.T) {
 	l := &Loader{}
 	d, err := l.ReadDesign("../edif/testdata/sample.eds")
@@ -219,9 +219,9 @@ func TestResolveGeometryFaithfulSymbols(t *testing.T) {
 		t.Error("faithful symbols: expected the design's own library symbol in the layout, got only synthetic")
 	}
 
-	// A netlist-only format has no symbols to be faithful to; faithful GRACEFULLY FALLS BACK to
-	// glyphs rather than erroring, so a viewer that still has faithful selected from a previous
-	// file draws the netlist graph instead of failing the request.
+	// A netlist-only format has no symbols to be faithful to. Faithful then GRACEFULLY FALLS BACK
+	// to glyphs rather than erroring. Say a viewer still has faithful selected from a previous file.
+	// It draws the netlist graph instead of failing the request.
 	g2, err := l.ResolveGeometry("../edif/testdata/basic.edn", "grid", nil, SymbolsFaithful)
 	if err != nil {
 		t.Fatalf("faithful on .edn should fall back to glyphs, not error: %v", err)
@@ -240,11 +240,11 @@ func sheetCount(g *geom.SchematicGeometry) int {
 	return len(g.Sheets)
 }
 
-// TestIPCDeclaredNetRoleEndToEnd covers WS1-051 through the whole ingestion path: the ipc2581
-// reader translates LogicalNet/@netClass into the role vocabulary, the loader's shared
-// StampNetRoles pass unions it with the naming lexicon, and the result reaches ir.Net.roles,
-// which every ground/rail-scoped rule reads. N$17 is the case that only works because the
-// source declared it, since no naming convention can recover a role from that name.
+// TestIPCDeclaredNetRoleEndToEnd covers WS1-051 through the whole ingestion path. The ipc2581
+// reader translates LogicalNet/@netClass into the role vocabulary. The loader's shared
+// StampNetRoles pass unions that with the naming lexicon. The result reaches ir.Net.roles, and every
+// ground/rail-scoped rule reads that field. No naming convention can recover a role from the name
+// N$17, so N$17 gets its role only because the source declared it.
 func TestIPCDeclaredNetRoleEndToEnd(t *testing.T) {
 	d, err := (&Loader{}).ReadDesign("../ipc2581/testdata/board.xml")
 	if err != nil {

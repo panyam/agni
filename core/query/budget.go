@@ -6,20 +6,21 @@ import (
 	"github.com/panyam/jaala/datalog"
 )
 
-// BudgetExceeded is the error an evaluation stops with once its work passes its budget. A host tells
-// it apart from a query that is wrong with errors.As, since running out of budget says the question
-// was too expensive here, not that it was badly asked.
+// BudgetExceeded is returned when an evaluation's work passes its budget. A host uses
+// errors.As to tell it apart from a wrong query. Running out of budget means the question was too
+// expensive here, not that it was badly asked.
 type BudgetExceeded = datalog.BudgetExceeded
 
 type budgetKey struct{}
 
-// WithBudget returns ctx carrying a work budget for every query evaluated under it (agni issue 792):
-// a served query's own, and each query a check or review's query-backed rules evaluate. Work is what
-// query.Work counts, candidate comparisons, each row a generator emits, and the connections a circuit
-// walk examines. Zero or less carries no budget, so an unbudgeted context stays unbudgeted.
+// WithBudget returns ctx with a work budget for every query evaluated under it (agni issue 792).
+// That covers a served query, and each query that a check's or review's query-backed rules
+// evaluate. query.Work counts the work as candidate comparisons, each row emitted by a generator,
+// and each connection examined by a circuit walk. A budget of zero or less adds none, so an
+// unbudgeted context is still unbudgeted.
 //
-// A budget applies per evaluation, so each query in a set, and each rule in a run, has the whole of
-// it rather than sharing one.
+// A budget applies per evaluation. Each query in a set gets the whole budget, and so does each rule
+// in a run. They don't share one.
 func WithBudget(ctx context.Context, work int64) context.Context {
 	if work <= 0 {
 		return ctx
@@ -33,9 +34,9 @@ func BudgetOf(ctx context.Context) int64 {
 	return n
 }
 
-// NarrowBudget returns ctx with its budget lowered to work when work is smaller, or set to work when
-// ctx carries none. It never raises a budget, which is what lets a request ask for less than a
-// deployment allows and never more. Zero or less leaves ctx as it is.
+// NarrowBudget returns ctx with its budget lowered to work when work is smaller, or set to work
+// when ctx carries none. It never raises a budget. So a request can ask for less than a deployment
+// allows, and never more. Zero or less leaves ctx as it is.
 func NarrowBudget(ctx context.Context, work int64) context.Context {
 	if work <= 0 {
 		return ctx
@@ -46,8 +47,9 @@ func NarrowBudget(ctx context.Context, work int64) context.Context {
 	return context.WithValue(ctx, budgetKey{}, work)
 }
 
-// EvalOptions are the engine options the context asks for: its budget, when it carries one. Every
-// evaluation agni runs for a caller passes them, so a budget set once on the context reaches each.
+// EvalOptions turns the context's budget, when it carries one, into engine options. agni passes
+// them to every evaluation it runs for a caller, so a budget set once on the context reaches each
+// one.
 func EvalOptions(ctx context.Context) []datalog.Option {
 	if n := BudgetOf(ctx); n > 0 {
 		return []datalog.Option{datalog.Budget(n)}
@@ -55,25 +57,27 @@ func EvalOptions(ctx context.Context) []datalog.Option {
 	return nil
 }
 
-// ExplainReport is what an evaluation asked to explain itself fills: the plan each rule body ran
-// in, where its work went, and how each relation was read (jaala's Explain, panyam/jaala#147).
+// ExplainReport holds an evaluation's account of itself, filled when the evaluation is asked to
+// explain. It records the plan of each rule body, where its work went, and how each relation was
+// read (jaala's Explain, panyam/jaala#147).
 type ExplainReport = datalog.Report
 
-// Explain asks an evaluation to fill r with its plan. It costs time in proportion to the rules and
-// literals a query runs, not its tuples, so `agni query --explain` and a timed request can afford it.
+// Explain asks an evaluation to fill r with its plan. Its cost grows with the rules and literals in
+// a query, not with its tuples, so `agni query --explain` and a timed request can afford it.
 func Explain(r *ExplainReport) datalog.Option { return datalog.Explain(r) }
 
-// Total asks an evaluation to set *n to how many rows its answer has before any offset and limit, so
-// a caller showing the first rows can say how many it left out (agni issue 896). A limit with no
-// order by then solves the whole goal, since counting needs every row, though it still keeps only the
-// rows it returns.
+// Total asks an evaluation to set *n to its answer's row count before any offset and limit. A
+// caller showing the first rows can then say how many it left out (agni issue 896). Counting needs
+// every row, so a limit with no order by then solves the whole goal. It still keeps only the rows
+// it returns.
 func Total(n *int) datalog.Option { return datalog.Total(n) }
 
-// Witness is how one fact of an answer holds: a leaf the fact base gave, with its citations, or the
-// rule that derived it with that rule's body witnesses in written order (jaala's Witness).
+// Witness records how one fact of an answer holds. It is either a leaf from the fact base, with its
+// citations, or the rule that derived the fact, with that rule's body witnesses in written order
+// (jaala's Witness).
 type Witness = datalog.Witness
 
 // Witnesses asks an evaluation to record how each answer row was derived, in Table.Witness (agni
-// issue 794). The engine keeps a derivation only when asked, so an evaluation without it costs what
-// it always did.
+// issue 794). The engine keeps a derivation only when asked, so an evaluation that does not ask
+// costs no more than before.
 func Witnesses() datalog.Option { return datalog.Witnesses() }

@@ -4,13 +4,14 @@ package agni.v1.webapi;
 
 option go_package = "github.com/panyam/agni/gen/go/agni/v1/webapi";
 
-// This file: where one request's time went (agni issue 914).
+// This file records where one request's time went (agni issue 914).
 //
-// A timed request carries it back in its `Agni-Timing` response header as this message in protojson,
-// beside a `Server-Timing` header a browser's network panel shows. A client asks for it with an
-// `Agni-Timing` request header, and the CLI's --timing reads the same record in-process. It travels in
-// a header rather than a response field, because a timing that varied on every run inside a response
-// would make every saved answer and `--format json` output differ run to run.
+// A client asks for the record with an `Agni-Timing` request header. The answer comes back with
+// this message, as protojson, in its `Agni-Timing` response header. A `Server-Timing` header sits
+// beside it, and a browser's network panel shows that one. The CLI's --timing reads the same record
+// in-process. The record goes in a header rather than a response field. A timing varies on every
+// run, so inside a response it would make every saved answer and `--format json` output differ run
+// to run.
 
 // RequestTiming is one request's breakdown.
 message RequestTiming {
@@ -23,12 +24,14 @@ message RequestTiming {
   repeated TimedStage stages = 3;
   // lookups say which tier answered each cached read, in the order the reads happened.
   repeated CacheLookup lookups = 4;
-  // rules are the rule evaluations, slowest first, capped at the slowest twenty with every rule's
-  // time still counted in rules_micros.
+  // rules are the rule evaluations, slowest first. The list stops at the slowest twenty. When
+  // allocation was recorded, it also holds the twenty that allocated most, since the rule raising a
+  // worker's memory is often not among the slowest (agni issue 994).
   repeated RuleTiming rules = 5;
-  // rules_evaluated is how many rules ran, of which `rules` lists the slowest.
+  // rules_evaluated is how many rules ran. `rules` lists the slowest of them.
   int32 rules_evaluated = 6;
-  // plans are the query plans the request's evaluations ran, when it asked for them.
+  // plans holds the plan of each query evaluation in the request. It is set only when the request
+  // asked for plans.
   repeated QueryPlan plans = 7;
 }
 
@@ -36,11 +39,11 @@ message TimedStage {
   string name = 1;
   int64 start_micros = 2;
   int64 micros = 3;
-  // sys_bytes and heap_bytes are the process's memory as the stage ended (runtime.MemStats' Sys and
-  // HeapAlloc), set only when the request asked for memory (an Agni-Timing value containing
-  // "memory", agni issue 994). In the browser engine Sys is the wasm memory's size, which never
-  // shrinks, so the first stage ending with a higher figure is the one that raised the peak.
-  // heap_bytes counts garbage not yet collected.
+  // sys_bytes and heap_bytes are the process's memory as the stage ended, read from
+  // runtime.MemStats' Sys and HeapAlloc. They are set only when the request asked for memory, with an
+  // Agni-Timing value containing "memory" (agni issue 994). In the browser engine Sys is the wasm
+  // memory's size, and that size never shrinks. So when a stage ends with a higher figure than every
+  // stage before it, that stage raised the peak. heap_bytes counts garbage not yet collected.
   int64 sys_bytes = 4;
   int64 heap_bytes = 5;
 }

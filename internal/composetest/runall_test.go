@@ -13,8 +13,8 @@ import (
 
 // RunAll evaluates each rule once (agni issue 810) and must return exactly what Run and RunVerdicts
 // return over the same rules, separately. Checked over the whole composed catalog on the tutorial's
-// small board and on the real 1123-component sample board, whose catalog run is what the change
-// exists to make cheaper. Each side gets its own model, so a value one side cached cannot help the
+// small board and on the real 1123-component sample board. The change exists to make that board's
+// catalog run cheaper. Each side gets its own model, so a value one side cached cannot help the
 // other agree.
 func TestRunAllMatchesRunAndRunVerdicts(t *testing.T) {
 	e, err := agni.New()
@@ -28,7 +28,7 @@ func TestRunAllMatchesRunAndRunVerdicts(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			if _, err := os.Stat(path); err != nil {
-				// Fatal rather than skipped: a missing corpus must not read as a pass.
+				// Fatal rather than skipped, because a missing corpus must not read as a pass.
 				t.Fatalf("%s missing (run `make samples` for the sample board): %v", path, err)
 			}
 			d, err := (&formats.Loader{}).ReadDesign(path)

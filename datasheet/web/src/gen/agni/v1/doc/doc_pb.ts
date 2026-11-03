@@ -13,15 +13,15 @@ export const file_agni_v1_doc_doc: GenFile = /*@__PURE__*/
   fileDesc("ChVhZ25pL3YxL2RvYy9kb2MucHJvdG8SC2FnbmkudjEuZG9jIvwBCghEb2N1bWVudBIUCgxjb250ZW50X2hhc2gYASABKAkSFQoNc291cmNlX2Zvcm1hdBgCIAEoCRINCgV0aXRsZRgDIAEoCRIQCghwcm9kdWNlchgEIAEoCRISCgpwYWdlX2NvdW50GAUgASgFEiAKBXBhZ2VzGAYgAygLMhEuYWduaS52MS5kb2MuUGFnZRI5CgphdHRyaWJ1dGVzGA4gAygLMiUuYWduaS52MS5kb2MuRG9jdW1lbnQuQXR0cmlidXRlc0VudHJ5GjEKD0F0dHJpYnV0ZXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBIqwBCgRQYWdlEg4KBm51bWJlchgBIAEoBRINCgV3aWR0aBgCIAEoARIOCgZoZWlnaHQYAyABKAESKwoLdGV4dF9ibG9ja3MYBCADKAsyFi5hZ25pLnYxLmRvYy5UZXh0QmxvY2sSIgoGdGFibGVzGAUgAygLMhIuYWduaS52MS5kb2MuVGFibGUSJAoHZmlndXJlcxgGIAMoCzITLmFnbmkudjEuZG9jLkZpZ3VyZSI7CgRCQm94EgkKAXgYASABKAESCQoBeRgCIAEoARINCgV3aWR0aBgDIAEoARIOCgZoZWlnaHQYBCABKAEiVAoJVGV4dEJsb2NrEgoKAmlkGAEgASgJEgwKBHRleHQYAiABKAkSHwoEYmJveBgDIAEoCzIRLmFnbmkudjEuZG9jLkJCb3gSDAoEa2luZBgEIAEoCSLPAQoFVGFibGUSCgoCaWQYASABKAkSDQoFdGl0bGUYAiABKAkSDwoHc2VjdGlvbhgDIAEoCRIfCgRiYm94GAQgASgLMhEuYWduaS52MS5kb2MuQkJveBIMCgRyb3dzGAUgASgFEgwKBGNvbHMYBiABKAUSIAoFY2VsbHMYByADKAsyES5hZ25pLnYxLmRvYy5DZWxsEhEKCWZvb3Rub3RlcxgIIAMoCRISCgpjb25maWRlbmNlGAkgASgBEhQKDGNvbnRlbnRfaGFzaBgKIAEoCSKGAQoEQ2VsbBILCgNyb3cYASABKAUSCwoDY29sGAIgASgFEhAKCHJvd19zcGFuGAMgASgFEhAKCGNvbF9zcGFuGAQgASgFEgwKBHRleHQYBSABKAkSHwoEYmJveBgGIAEoCzIRLmFnbmkudjEuZG9jLkJCb3gSEQoJaXNfaGVhZGVyGAcgASgIInAKBkZpZ3VyZRIKCgJpZBgBIAEoCRIPCgdjYXB0aW9uGAIgASgJEh8KBGJib3gYAyABKAsyES5hZ25pLnYxLmRvYy5CQm94EhIKCmNvbmZpZGVuY2UYBCABKAESFAoMY29udGVudF9oYXNoGAUgASgJQjVaM2dpdGh1Yi5jb20vcGFueWFtL2FnbmkvZGF0YXNoZWV0L2dlbi9nby9hZ25pL3YxL2RvY2IGcHJvdG8z");
 
 /**
- * Document is the root: one source document, decomposed. One doc-IR per
- * (source content hash, producer) pair; derived artifacts are immutable.
+ * Document is the root, one source document decomposed. There is one doc-IR per
+ * (source content hash, producer) pair, and derived artifacts are immutable.
  *
  * @generated from message agni.v1.doc.Document
  */
 export type Document = Message<"agni.v1.doc.Document"> & {
   /**
    * Hash of the source document bytes, prefixed with the algorithm ("sha256:...").
-   * The primary key of the derivation layer: revision changes change it.
+   * It is the primary key of the derivation layer, and a revision change changes it.
    *
    * @generated from field: string content_hash = 1;
    */
@@ -37,20 +37,21 @@ export type Document = Message<"agni.v1.doc.Document"> & {
   /**
    * Document-declared title when the source carries one; empty otherwise.
    *
-   * NOT the document's IDENTITY. Producers fill this with whatever the source declares about
-   * itself, which for a vendor datasheet is the PART number ("LM1117"), not the document number
-   * and revision ("SNOS412Q - REVISED JANUARY 2023"). Do not assign it to
-   * agni.v1.param.SourceDoc.title, which is specified as the latter: the two fields share a name
-   * and answer different questions, and conflating them produced citations that could not say
-   * which revision they cited and read identically before and after a reissue (agni issue 290).
-   * Selecting a derive recipe by this value IS a correct use: a recipe understands a part.
+   * It is NOT the document's IDENTITY. Producers fill this with whatever the source declares
+   * about itself. For a vendor datasheet that is the PART number ("LM1117"), not the document
+   * number and revision ("SNOS412Q - REVISED JANUARY 2023"). Do not assign it to
+   * agni.v1.param.SourceDoc.title, which is specified as the document number and revision. The
+   * two fields share a name and answer different questions. Conflating them produced citations
+   * that could not say which revision they cited, and that read the same before and after a
+   * reissue (agni issue 290). Selecting a derive recipe by this value IS a correct use, because
+   * a recipe understands a part.
    *
    * @generated from field: string title = 3;
    */
   title: string;
 
   /**
-   * Producer toolchain identity + version, e.g. "docling/2.5.1" or "hand". The
+   * Producer toolchain identity + version, e.g. "docling/2.5.1" or "hand". It is the
    * run-manifest key that says which toolchain derived this artifact.
    *
    * @generated from field: string producer = 4;
@@ -63,8 +64,8 @@ export type Document = Message<"agni.v1.doc.Document"> & {
   pageCount: number;
 
   /**
-   * Pages actually decomposed. May be a subset of page_count (a partial derivation
-   * targets the tables a consumer needs); page numbers say which.
+   * Pages actually decomposed. They may be a subset of page_count, because a partial
+   * derivation targets the tables a consumer needs. Page numbers say which.
    *
    * @generated from field: repeated agni.v1.doc.Page pages = 6;
    */
@@ -168,10 +169,10 @@ export const BBoxSchema: GenMessage<BBox> = /*@__PURE__*/
   messageDesc(file_agni_v1_doc_doc, 2);
 
 /**
- * TextBlock is a run of page text outside tables and figures. Kept in doc-IR so a
- * full-text index can be built from doc-IR alone, without re-parsing the source, and
- * so recipes and LLM stages can fetch a region's textual neighborhood (headings,
- * footnotes) as prompt context.
+ * TextBlock is a run of page text outside tables and figures. doc-IR keeps it so a
+ * full-text index can be built from doc-IR alone, without re-parsing the source. Recipes
+ * and LLM stages can also fetch a region's textual neighborhood (headings, footnotes)
+ * as prompt context.
  *
  * @generated from message agni.v1.doc.TextBlock
  */
@@ -195,7 +196,7 @@ export type TextBlock = Message<"agni.v1.doc.TextBlock"> & {
 
   /**
    * Producer's classification as free text ("heading", "paragraph", "footnote").
-   * Free-form on purpose: producers disagree on taxonomies, and no consumer may
+   * It is free-form on purpose. Producers disagree on taxonomies, and no consumer may
    * dispatch on values a second producer would not emit.
    *
    * @generated from field: string kind = 4;
@@ -211,8 +212,8 @@ export const TextBlockSchema: GenMessage<TextBlock> = /*@__PURE__*/
   messageDesc(file_agni_v1_doc_doc, 3);
 
 /**
- * Table is one detected table: a sparse cell grid with merged-cell spans. Cells are
- * listed explicitly with row/col coordinates; absent cells are genuinely empty.
+ * Table is one detected table, a sparse cell grid with merged-cell spans. Cells are
+ * listed explicitly with row/col coordinates, and absent cells are genuinely empty.
  *
  * @generated from message agni.v1.doc.Table
  */
@@ -225,8 +226,8 @@ export type Table = Message<"agni.v1.doc.Table"> & {
   id: string;
 
   /**
-   * The table's title/caption as printed. This is what parameter provenance
-   * (param.ParamProvenance.table_or_figure) resolves against.
+   * The table's title/caption as printed. Parameter provenance
+   * (param.ParamProvenance.table_or_figure) resolves against it.
    *
    * @generated from field: string title = 2;
    */
@@ -263,8 +264,8 @@ export type Table = Message<"agni.v1.doc.Table"> & {
 
   /**
    * Footnote texts the producer attached to this table (table-note markers,
-   * "unless otherwise noted" headers). Attachment quality varies by producer;
-   * unattached footnotes remain TextBlocks.
+   * "unless otherwise noted" headers). Attachment quality varies by producer, and
+   * unattached footnotes are still TextBlocks.
    *
    * @generated from field: repeated string footnotes = 8;
    */
@@ -279,8 +280,8 @@ export type Table = Message<"agni.v1.doc.Table"> & {
 
   /**
    * Hash of the normalized structure + cell text (doc.TableHash), independent of
-   * bboxes and ids. The cross-toolchain-version identity used by revision diffing:
-   * same hash means same table content, no re-extraction needed.
+   * bboxes and ids. Revision diffing uses it as the cross-toolchain-version identity.
+   * The same hash means the same table content, so no re-extraction is needed.
    *
    * @generated from field: string content_hash = 10;
    */
@@ -295,9 +296,9 @@ export const TableSchema: GenMessage<Table> = /*@__PURE__*/
   messageDesc(file_agni_v1_doc_doc, 4);
 
 /**
- * Cell is one table cell. row/col are 0-based grid coordinates; row_span/col_span
- * are 1 for a plain cell (0 is normalized to 1 by consumers) and >1 for merged cells,
- * which appear once at their top-left position.
+ * Cell is one table cell. row/col are 0-based grid coordinates. row_span/col_span are
+ * 1 for a plain cell, and consumers normalize 0 to 1. They are >1 for a merged cell,
+ * which appears once at its top-left position.
  *
  * @generated from message agni.v1.doc.Cell
  */
@@ -323,7 +324,7 @@ export type Cell = Message<"agni.v1.doc.Cell"> & {
   colSpan: number;
 
   /**
-   * Text as printed; no unit or symbol parsing here (that is the recipe layer).
+   * Text as printed. There is no unit or symbol parsing here; the recipe layer does that.
    *
    * @generated from field: string text = 5;
    */
@@ -351,8 +352,9 @@ export const CellSchema: GenMessage<Cell> = /*@__PURE__*/
 
 /**
  * Figure is one detected figure/graph region. Doc-IR records its location and
- * caption so provenance can point at it and a human can jump to it; curve data
- * extraction is out of scope by design (see docs/21).
+ * caption so provenance can point at it and a human can jump to it. Curve data
+ * extraction is out of scope by design (see the docsite's
+ * architecture/datasheet-layer.md).
  *
  * @generated from message agni.v1.doc.Figure
  */
@@ -366,7 +368,7 @@ export type Figure = Message<"agni.v1.doc.Figure"> & {
 
   /**
    * Caption as printed ("Figure 3. On-Resistance Variation with Temperature.").
-   * What param.ParamProvenance.table_or_figure resolves against for figures.
+   * param.ParamProvenance.table_or_figure resolves against it for figures.
    *
    * @generated from field: string caption = 2;
    */

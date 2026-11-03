@@ -21,10 +21,9 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// BoardGeometry is the root: one message per board, the layout analogue of
-// SchematicGeometry. Coordinates are Points in raw source units (unit_nm nanometers per
-// unit); the KiCad reader emits unit_nm=1 (plain nanometers), Y-up like the schematic
-// contract.
+// BoardGeometry is the root, with one message per board. It is the layout analogue of
+// SchematicGeometry. Coordinates are Points in raw source units, unit_nm nanometers per unit.
+// The KiCad reader emits unit_nm=1 (plain nanometers), Y-up like the schematic contract.
 type BoardGeometry struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	DesignRef     string                 `protobuf:"bytes,1,opt,name=design_ref,json=designRef,proto3" json:"design_ref,omitempty"` // joins to ir.Design.name (may be empty, like the IR)
@@ -141,14 +140,14 @@ func (x *BoardGeometry) GetProv() *Provenance {
 	return nil
 }
 
-// BoardText is one placed text string on the board: a footprint's silkscreen ref-des or
-// value, footprint user text, or free graphic text (KiCad gr_text, including the title
-// block). Text is universal across board formats (IPC-2581 legend, ODB++, Gerber), so it
-// belongs in the shared contract (C9), not in a single reader. Footprint-owned text is
-// pre-composed to BOARD coordinates by the reader (placement transform applied to the
-// text's footprint-local offset), so every entry here is already board-frame Y-up and a
-// consumer draws it without re-deriving the placement -- the same way gr_text is authored
-// absolute. Hidden source text is dropped, not carried (mirrors the no-ref placement skip).
+// BoardText is one placed text string on the board. It may be a footprint's silkscreen ref-des
+// or value, footprint user text, or free graphic text (KiCad gr_text, including the title
+// block). Every board format has text (IPC-2581 legend, ODB++, Gerber). So it belongs in the
+// shared contract (C9), not in a single reader. The reader composes footprint-owned text into
+// BOARD coordinates in advance. It applies the placement transform to the text's
+// footprint-local offset. So every entry here is already board-frame Y-up. A consumer draws it
+// without deriving the placement again, just as gr_text is authored absolute. Hidden source
+// text is dropped, as a placement with no ref is skipped.
 type BoardText struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Text          string                 `protobuf:"bytes,1,opt,name=text,proto3" json:"text,omitempty"`                                    // the string as authored; may contain newlines
@@ -257,15 +256,16 @@ func (x *BoardText) GetKind() string {
 	return ""
 }
 
-// BoardGraphic is one piece of non-copper board artwork: a footprint's silkscreen or fab
-// body outline / courtyard / polarity mark, or a free graphic line (KiCad `gr_*` that is not
-// the board edge). Like BoardText it is a universal board concept (IPC-2581 legend, ODB++,
-// Gerber silk are all line/arc/region artwork), so it lives in the shared contract (C9), and
-// footprint-owned graphics are pre-composed to BOARD coordinates by the reader (each point
-// through the placement transform, the same `geomath.ComposePlacement` pads and text use),
-// so a consumer draws it as-is. The board EDGE (KiCad Edge.Cuts) is NOT carried here — it is
-// BoardOutline; graphics are the silk/fab layers. Reuses geom.Shape for the geometry itself
-// (POLYLINE / RECT / CIRCLE / ARC, with Fill for filled bodies) so no primitive is duplicated.
+// BoardGraphic is one piece of non-copper board artwork. It may be a footprint's silkscreen or
+// fab body outline, courtyard, or polarity mark. It may also be a free graphic line, a KiCad
+// `gr_*` that is not the board edge. Like BoardText, every board format has it. IPC-2581
+// legend, ODB++ and Gerber silk are all line, arc and region artwork. So it is in the shared
+// contract (C9). The reader composes footprint-owned graphics into BOARD coordinates in advance.
+// It passes each point through the placement transform, the same `geomath.ComposePlacement`
+// that pads and text use. So a consumer draws it as-is. The board EDGE (KiCad Edge.Cuts) is NOT
+// here. It is BoardOutline, and graphics are the silk and fab layers. The geometry itself is a
+// geom.Shape (POLYLINE / RECT / CIRCLE / ARC, with Fill for filled bodies), so no primitive is
+// duplicated.
 type BoardGraphic struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Shape         *Shape                 `protobuf:"bytes,1,opt,name=shape,proto3" json:"shape,omitempty"`                 // the geometry, board-frame Y-up (footprint graphics pre-composed)
@@ -334,10 +334,10 @@ func (x *BoardGraphic) GetWidth() int64 {
 	return 0
 }
 
-// BoardLayer is one row of the board's layer table, as the source declares it: the
-// numeric id copper references resolve through, the name ("F.Cu", "In1.Cu"), and the
-// source's kind word ("signal", "power", "user") kept verbatim rather than mapped to an
-// enum a second format might not share.
+// BoardLayer is one row of the board's layer table, as the source declares it. number is the
+// numeric id, and copper references resolve through it. name is the layer name ("F.Cu",
+// "In1.Cu"). kind is the source's kind word ("signal", "power", "user"), kept verbatim. An enum
+// could hold values a second format does not share.
 type BoardLayer struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Number        int32                  `protobuf:"varint,1,opt,name=number,proto3" json:"number,omitempty"`
@@ -398,10 +398,10 @@ func (x *BoardLayer) GetKind() string {
 	return ""
 }
 
-// BoardOutline is the board edge: the closed (or to-be-closed) paths of the outline
-// layer. Paths are as authored — consumers wanting a closed polygon must stitch
-// segments, since sources commonly draw the edge as disconnected lines and arcs
-// (arcs are approximated as polylines by the reader, per the C6 bound).
+// BoardOutline is the board edge, as the closed or to-be-closed paths of the outline layer.
+// Paths are as authored. Sources commonly draw the edge as disconnected lines and arcs. So a
+// consumer that wants a closed polygon must stitch segments. The reader approximates arcs as
+// polylines, per the C6 bound.
 type BoardOutline struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Paths         []*Polyline            `protobuf:"bytes,1,rep,name=paths,proto3" json:"paths,omitempty"`
@@ -446,23 +446,24 @@ func (x *BoardOutline) GetPaths() []*Polyline {
 	return nil
 }
 
-// ComponentPlacement is one placed physical component: where it sits, which side, and
-// its copper lands. ref_des is the join key to ir.Component; a placement whose source
-// footprint has no reference is not emitted (mirrors the netlist reader's skip).
+// ComponentPlacement is one placed physical component. It gives where the component sits, which
+// side it is on, and its copper pads. ref_des is the join key to ir.Component. If the source
+// footprint has no reference, the placement is not emitted, as the netlist reader skips it too.
 type ComponentPlacement struct {
 	state       protoimpl.MessageState `protogen:"open.v1"`
 	RefDes      string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
 	At          *Point                 `protobuf:"bytes,2,opt,name=at,proto3" json:"at,omitempty"`                                        // board-frame origin of the footprint
 	RotationDeg float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // degrees CCW in the canonical Y-up geom frame (WS1-030). Each
-	// reader converts its native frame here: a Y-down source (KiCad)
-	// negates its rotation as it Y-flips coordinates; a Y-up source
-	// (IPC-2581) carries the source angle verbatim. The renderer is a
+	// reader converts its native frame here. KiCad's angle is CCW as
+	// drawn, so a front footprint's angle carries over unchanged and a
+	// back one's is negated (agni 1261). A Y-up source (IPC-2581)
+	// carries the source angle verbatim. The renderer is a
 	// pure composer: world = at + M(R(rotation_deg) * pad_offset),
 	// where M mirrors X iff `mirror`.
 	Layer  string `protobuf:"bytes,4,opt,name=layer,proto3" json:"layer,omitempty"` // the side it is placed on ("F.Cu" / "B.Cu" for KiCad)
 	Pads   []*Pad `protobuf:"bytes,5,rep,name=pads,proto3" json:"pads,omitempty"`
 	Mirror bool   `protobuf:"varint,6,opt,name=mirror,proto3" json:"mirror,omitempty"` // component is on the back: mirror the footprint across X (after
-	// rotation) so its pads land on the mirrored copper. Set by the
+	// rotation) so its pads sit on the mirrored copper. Set by the
 	// reader from the placed side; the renderer applies it.
 	Prov          *Provenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -548,17 +549,17 @@ func (x *ComponentPlacement) GetProv() *Provenance {
 	return nil
 }
 
-// Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL
-// (relative to ComponentPlacement.at before its rotation is applied), matching how
-// sources author them and keeping identical footprints comparable across placements;
-// a consumer composes placement transform x pad offset for board coordinates. number
-// matches ir.Connection.pin_ref, so (ref_des, number) joins a pad to the netlist pin.
-// net is the connected net's name, "" for an unconnected pad.
+// Pad is one copper land of a placement. Positions and rotation are FOOTPRINT-LOCAL. They are
+// relative to ComponentPlacement.at, before its rotation is applied. Sources author them that
+// way, and identical footprints then compare across placements. For board coordinates, a
+// consumer composes the placement transform with the pad offset. number matches
+// ir.Connection.pin_ref, so (ref_des, number) joins a pad to the netlist pin. net is the
+// connected net's name, "" for an unconnected pad.
 type Pad struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Number        string                 `protobuf:"bytes,1,opt,name=number,proto3" json:"number,omitempty"`
 	At            *Point                 `protobuf:"bytes,2,opt,name=at,proto3" json:"at,omitempty"`
-	RotationDeg   float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // as printed; same verbatim rule as ComponentPlacement
+	RotationDeg   float64                `protobuf:"fixed64,3,opt,name=rotation_deg,json=rotationDeg,proto3" json:"rotation_deg,omitempty"` // degrees CCW in the footprint's own frame
 	Size          *Point                 `protobuf:"bytes,4,opt,name=size,proto3" json:"size,omitempty"`                                    // bounding extents (x = width, y = height)
 	Shape         string                 `protobuf:"bytes,5,opt,name=shape,proto3" json:"shape,omitempty"`                                  // source word, verbatim: "rect", "roundrect", "circle", "oval", ...
 	Layers        []string               `protobuf:"bytes,6,rep,name=layers,proto3" json:"layers,omitempty"`                                // layer names, wildcards as printed ("*.Cu")
@@ -654,9 +655,9 @@ func (x *Pad) GetNet() string {
 	return ""
 }
 
-// NetCopper is the routed copper of one net: its track segments and vias, grouped so a
-// consumer joins per-net geometry by name (the same key WireGeometry uses on the
-// schematic side).
+// NetCopper is the routed copper of one net, with its track segments and vias. They are grouped
+// so a consumer joins per-net geometry by name. WireGeometry uses the same key on the schematic
+// side.
 type NetCopper struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Net           string                 `protobuf:"bytes,1,opt,name=net,proto3" json:"net,omitempty"` // joins to ir.Net.name
@@ -786,8 +787,8 @@ func (x *TrackSegment) GetLayer() string {
 	return ""
 }
 
-// Via is one drilled inter-layer connection. layer_from/layer_to bound the span
-// ("F.Cu".."B.Cu" for a through via); blind/buried vias narrow the pair.
+// Via is one drilled inter-layer connection. layer_from and layer_to bound the span, and a
+// through via spans "F.Cu".."B.Cu". Blind and buried vias narrow the pair.
 type Via struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	At            *Point                 `protobuf:"bytes,1,opt,name=at,proto3" json:"at,omitempty"`
@@ -864,9 +865,9 @@ func (x *Via) GetLayerTo() string {
 	return ""
 }
 
-// Zone is one copper pour: its net, layer, and AUTHORED outline (the polygon the
-// designer drew, not the computed fill — fills are derived data a consumer regenerates
-// or a later tier carries; the C6 bound above).
+// Zone is one copper pour, with its net, its layer, and its AUTHORED outline. The outline is the
+// polygon the designer drew, not the computed fill. A fill is derived data. A consumer computes
+// it again, or a later tier will hold it, per the C6 bound above.
 type Zone struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Net           string                 `protobuf:"bytes,1,opt,name=net,proto3" json:"net,omitempty"`

@@ -1,11 +1,12 @@
 // Package odb reads an ODB++ job into the neutral IR (agni.v1.ir) and the board-geometry sidecar
-// (agni.v1.geom). It is core, runtime-agnostic Go (CONSTRAINTS C1): a job is a directory tree,
-// so the reader takes an fs.FS rooted at the job and opens nothing itself. FromArchive gives a
-// .tgz or .zip the same shape.
+// (agni.v1.geom). It is core, runtime-agnostic Go (CONSTRAINTS C1). A job is a directory tree, so
+// the reader takes an fs.FS rooted at the job and opens nothing itself. FromArchive gives a .tgz or
+// .zip the same shape.
 //
-// ODB++ is a manufacturing hand-off, so like IPC-2581 it carries the netlist (components, their
-// pins and the net each pin is on) and the physical board (layers, copper, outline, placements),
-// and no schematic. The grammar is line records in plain text files:
+// ODB++ is a manufacturing hand-off. Like IPC-2581 it holds the netlist and the physical board, and
+// no schematic. The netlist is the components, their pins and the net each pin is on. The board is
+// the layers, copper, outline and placements. The grammar is line records in plain text files, laid
+// out as below.
 //
 //	matrix/matrix                         the layer stack and the steps
 //	steps/<step>/eda/data                 nets, packages and which copper feature is on which net
@@ -28,17 +29,18 @@ import (
 	"strings"
 )
 
-// job is one opened ODB++ job: the file system it lives in, the step being read, and the parsed
-// matrix. Every file is opened through open, which tries the spelling the matrix gives and then
-// the lower-case one the spec requires on disk.
+// job is one opened ODB++ job. It holds the file system the job lives in, the step being read, and
+// the parsed matrix. Every file is opened through open. open tries the spelling the matrix gives
+// first, and then the lower-case one the spec requires on disk.
 type job struct {
 	fsys   fs.FS
 	step   string
 	matrix *matrix
 }
 
-// openJob reads the matrix and picks the step to read: the one named "pcb" when the job has it,
-// as KiCad, Altium and Xpedition all name the board step, and otherwise the first the matrix lists.
+// openJob reads the matrix and picks the step to read. KiCad, Altium and Xpedition all name the
+// board step "pcb", so openJob picks that step when the job has it. Otherwise it picks the first
+// step the matrix lists.
 func openJob(fsys fs.FS) (*job, error) {
 	j := &job{fsys: fsys}
 	b, err := j.read("matrix/matrix")
@@ -73,8 +75,9 @@ func (j *job) layerFile(layer, file string) string {
 	return j.stepFile(path.Join("layers", strings.ToLower(layer), file))
 }
 
-// read returns a file's bytes. A member the producer compressed (`features.z`, the Unix compress
-// format Valor-lineage tools write) is decompressed, and a gzipped one (`.gz`) too.
+// read returns a file's bytes. It decompresses a member the producer compressed, such as
+// `features.z` in the Unix compress format Valor-lineage tools write. It also decompresses a gzipped
+// member (`.gz`).
 func (j *job) read(name string) ([]byte, error) {
 	for _, cand := range []string{name, strings.ToLower(name)} {
 		b, err := fs.ReadFile(j.fsys, cand)
@@ -104,7 +107,8 @@ func (j *job) read(name string) ([]byte, error) {
 	return nil, fmt.Errorf("%s: %w", name, fs.ErrNotExist)
 }
 
-// readOptional is read for a file a job may leave out, which answers nil rather than an error.
+// readOptional is read for a file a job may leave out. A missing file answers nil rather than an
+// error.
 func (j *job) readOptional(name string) ([]byte, error) {
 	b, err := j.read(name)
 	if errors.Is(err, fs.ErrNotExist) {
@@ -113,9 +117,9 @@ func (j *job) readOptional(name string) ([]byte, error) {
 	return b, err
 }
 
-// FindRoot returns the directory inside fsys that holds an ODB++ job, the one with a
-// matrix/matrix file, searching the top level and then each directory below it. An archive
-// usually wraps the job in a folder named for it, and sometimes in two.
+// FindRoot returns the directory inside fsys that holds an ODB++ job, the one with a matrix/matrix
+// file. It searches the top level and then each directory below it. An archive usually wraps the
+// job in a folder named for it, and sometimes in two.
 func FindRoot(fsys fs.FS) (string, error) {
 	var found []string
 	err := fs.WalkDir(fsys, ".", func(p string, d fs.DirEntry, err error) error {
@@ -143,8 +147,8 @@ func FindRoot(fsys fs.FS) (string, error) {
 	return found[0], nil
 }
 
-// IsMatrixPath reports whether a path names an ODB++ job's matrix file, `<job>/matrix/matrix`,
-// which is the file a job is entered by since a job is a directory.
+// IsMatrixPath reports whether a path names an ODB++ job's matrix file, `<job>/matrix/matrix`. A job
+// is a directory, and a reader enters it by that file.
 func IsMatrixPath(p string) bool {
 	p = strings.ReplaceAll(p, "\\", "/")
 	return strings.EqualFold(path.Base(p), "matrix") && strings.EqualFold(path.Base(path.Dir(p)), "matrix")

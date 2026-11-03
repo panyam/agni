@@ -2,9 +2,9 @@ package report
 
 import "strings"
 
-// Witness is how one fact behind an answer row holds (agni issue 794), as a document renders it: a
-// leaf the design's relations gave, with its citations, or a derived fact with the rule that derived
-// it and that rule's body witnesses in the order the rule is written. A `not` that held is a negated
+// Witness says how one fact behind an answer row holds (agni issue 794), in the form a document
+// renders. It is either a leaf from the design's relations, with its citations, or a derived fact
+// with the rule that derived it and that rule's body witnesses, in the order the rule is written. A `not` that held is a negated
 // leaf, which proves an absence and so cites nothing.
 type Witness struct {
 	Relation string

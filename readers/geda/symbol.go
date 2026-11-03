@@ -2,8 +2,8 @@ package geda
 
 import "strings"
 
-// Symbol (.sym) geometry is the pins of a gEDA symbol, needed to place a component's terminals on
-// the schematic grid for netlisting. A gEDA pin is a P object:
+// This file reads symbol (.sym) geometry, the pins of a gEDA symbol. Netlisting needs them to
+// place a component's terminals on the schematic grid. A gEDA pin is a P object.
 //
 //	P x1 y1 x2 y2 color pintype whichend
 //	{ T ... pinnumber=N ... }
@@ -48,12 +48,12 @@ func symbolPins(lines []string) []symbolPin {
 	return pins
 }
 
-// symbolSlots reads a gEDA symbol's slot table, the slotdef=SLOT:pin,pin,... lines that map,
-// for each slot, the symbol's drawn pins (in pinseq order) onto the physical package pins. A
-// multi-gate package (numslots>1) draws one gate and carries a slotdef row per gate, so slot
-// K's pin with pinseq i takes the K-th row's i-th number. Returns slot number -> ordered
-// physical pin numbers; empty for an unslotted symbol (no slotdef), which the caller reads
-// with the drawn pin numbers unchanged.
+// symbolSlots reads a gEDA symbol's slot table, the slotdef=SLOT:pin,pin,... lines. For each
+// slot, a line maps the symbol's drawn pins (in pinseq order) onto the physical package pins. A
+// multi-gate package (numslots>1) draws one gate and has a slotdef row per gate, so slot K's pin
+// with pinseq i takes the K-th row's i-th number. Returns slot number -> ordered physical pin
+// numbers. The map is empty for an unslotted symbol (no slotdef), and the caller then uses the
+// drawn pin numbers unchanged.
 func symbolSlots(lines []string) map[string][]string {
 	slots := map[string][]string{}
 	for _, ln := range lines {
@@ -89,7 +89,7 @@ func field(f []string, i int) string {
 
 // symbolNet returns the net name a power/ground symbol names via its symbol-level net=
 // attribute ("net=GND:1" -> "GND"), or "" if the symbol has none. The attribute is a text
-// content line; pin attribute blocks never carry net=, so a plain scan is safe.
+// content line. Pin attribute blocks never hold net=, so a plain scan is safe.
 func symbolNet(lines []string) string {
 	for _, ln := range lines {
 		ln = strings.TrimSpace(ln)

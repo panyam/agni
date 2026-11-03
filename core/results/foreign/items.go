@@ -14,8 +14,9 @@ import (
 // violation to an innocent part. See
 // docsite/content/architecture/checks-contract.md#importing-another-tools-results.
 
-// itemRef is what a description yielded. Any field may be empty; RefDes and Net both empty means no
-// joinable entity, a normal outcome (a wire's description carries only orientation and length).
+// itemRef is what a description yielded. Any field may be empty. When RefDes and Net are both empty
+// there is no joinable entity. That is a normal outcome, since a wire's description holds only
+// orientation and length.
 type itemRef struct {
 	RefDes string
 	Pin    string
@@ -24,8 +25,8 @@ type itemRef struct {
 
 func (r itemRef) empty() bool { return r.RefDes == "" && r.Net == "" }
 
-// itemPattern is one description shape. The named capture groups are the join keys; a group the shape
-// does not have is simply absent.
+// itemPattern is one description shape. The named capture groups are the join keys, and a shape may
+// lack some of the groups.
 type itemPattern struct {
 	name string
 	re   *regexp.Regexp
@@ -43,8 +44,8 @@ var itemPatterns = []itemPattern{
 	{"pad", regexp.MustCompile(`^(?:PTH|NPTH|SMD) pad (?P<pin>\S+) \[(?P<net>[^\]]*)\] of (?P<ref>\S+)`)},
 	// An unplated hole has no pin number and no net, so KiCad names only its part (agni issue 1023).
 	{"pad", regexp.MustCompile(`^NPTH pad of (?P<ref>\S+)`)},
-	// Board: copper carrying a net but belonging to no part. A curved track is "Track (arc) [...]",
-	// which was 71 of the 85 items left unjoined on Jetson's DRC report (agni issue 1023).
+	// Board: copper carrying a net but belonging to no part. A curved track is "Track (arc) [...]".
+	// That shape was 71 of the 85 items left unjoined on Jetson's DRC report (agni issue 1023).
 	{"track", regexp.MustCompile(`^(?:Track(?: \(arc\))?|Arc) \[(?P<net>[^\]]*)\] on `)},
 	{"via", regexp.MustCompile(`^Via \[(?P<net>[^\]]*)\]`)},
 	{"zone", regexp.MustCompile(`^Zone \[(?P<net>[^\]]*)\]`)},
@@ -53,14 +54,14 @@ var itemPatterns = []itemPattern{
 	{"symbol-pin", regexp.MustCompile(`^Symbol (?P<ref>\S+) Pin (?P<pin>\S+) \[`)},
 	{"symbol", regexp.MustCompile(`^Symbol (?P<ref>\S+) \[`)},
 	{"label", regexp.MustCompile(`^(?:Local |Global |Hierarchical )?Label '(?P<net>[^']+)'`)},
-	// Fields and footprint graphics both name their owning part; they are last so the shapes above
-	// that carry a pin or a net are preferred.
+	// Fields and footprint graphics both name their owning part. They come last, so a shape above
+	// that names a pin or a net matches first.
 	{"field", regexp.MustCompile(`^\S+ field of (?P<ref>\S+)$`)},
 	{"graphic", regexp.MustCompile(`^\S+ of (?P<ref>\S+) on `)},
 }
 
 // parseItem extracts the join keys from one item description, returning an empty ref when no shape
-// matches. The caller reports what it could not parse; this never guesses.
+// matches. The caller reports what it could not parse, and parseItem never guesses.
 func parseItem(desc string) itemRef {
 	for _, p := range itemPatterns {
 		m := p.re.FindStringSubmatch(desc)

@@ -16,9 +16,9 @@ import (
 
 // This runs under Node (`make wasm-test`), as the browser's worker does: the tutorial project goes in
 // through globalThis.agni.add and a check report comes out of globalThis.agni.http, both Promises.
-// What the report SAYS is held to the server's by TestWasmEngineAnswersAsTheServerDoes in cmd/agni,
-// natively. This is the part that needs a JavaScript host: that the exports exist under agni's
-// namespace, take bytes, and answer without deadlocking.
+// TestWasmEngineAnswersAsTheServerDoes in cmd/agni holds what the report SAYS to the server's
+// answer, natively. This test checks only what needs a JavaScript host. The exports exist under
+// agni's namespace, take bytes, and answer without deadlocking.
 
 // await blocks the test until p settles. The test body is not a js.FuncOf callback, so blocking here
 // lets the event loop run the Promise's work.

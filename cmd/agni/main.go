@@ -106,8 +106,8 @@ func rootCmd() *cobra.Command {
 var symbolPaths []string
 
 // envConfigWebDir holds the web_dir an agni.yaml named, "" when no file named one. applyEnvConfig
-// fills it and resolveWebDir consults it. A package var for the same reason as cliMountSpecs, since
-// the file is read once in PersistentPreRunE before any command knows it needs the value.
+// fills it and resolveWebDir consults it. The file is read once in PersistentPreRunE, before any
+// command knows it needs the value, so this is a package var, as cliMountSpecs is.
 var envConfigWebDir string
 
 // envConfigNativeTools holds the native_tools an agni.yaml named, the same way as envConfigWebDir.
@@ -127,9 +127,9 @@ const envSymbolPath = "AGNI_SYMBOL_PATH"
 // envWebDir names the environment variable that supplies --web-dir when neither the flag nor an
 // agni.yaml names one.
 //
-// It serves an INSTALLED binary run from wherever the design lives, whose assets sit at a fixed
-// absolute path. From a checkout the relative default already resolves, so two checkouts each serve
-// their own assets. Precedence is the flag, then agni.yaml, then this.
+// It serves an INSTALLED binary run from wherever the design lives. That binary's assets sit at a
+// fixed absolute path. From a checkout the relative default already resolves, so two checkouts each
+// serve their own assets. Precedence is the flag, then agni.yaml, then this.
 const envWebDir = "AGNI_WEB_DIR"
 
 // defaultWebDir is where the viewer's assets live relative to a repo checkout. `make serve`,
@@ -235,10 +235,10 @@ func readDesign(path string) (*ir.Design, error) {
 	return d, err
 }
 
-// readDesignWithConfig is readDesign plus the resolved overlay, for a command that needs a config
-// tier the READ itself does not consume, such as the datasheet corpus a project declares (agni issue
-// 474). Take the tier from here rather than resolving the project again in the caller, because a
-// second resolution can disagree with the one the design was read under.
+// readDesignWithConfig is readDesign plus the resolved overlay. Some commands need a config tier that
+// the READ itself does not consume, such as a project's datasheet corpus (agni issue 474). Take the
+// tier from here rather than resolving the project again in the caller. A second resolution can
+// disagree with the one the design was read under.
 func readDesignWithConfig(path string) (*ir.Design, service.Overlay, error) {
 	ctx := context.Background()
 	ws, err := workspace()
@@ -250,8 +250,8 @@ func readDesignWithConfig(path string) (*ir.Design, service.Overlay, error) {
 		return nil, service.Overlay{}, err
 	}
 	noteSource(os.Stderr, src)
-	// The design's PROJECT config reaches the read here for every command no service mediates
-	// (stats, diff, emit, render, intake, profilediag). Net roles are resolved at ingestion, so
+	// The design's PROJECT config reaches the read here for every command that runs without a
+	// service (stats, diff, emit, render, intake, profilediag). Net roles are resolved at ingestion, so
 	// without it the tutorial project reads one rail where its own vocabulary sees four (agni issue
 	// 228). A descriptor that does not parse is fatal and a design with none reads under the
 	// defaults (see cliResolveProject).
@@ -268,8 +268,8 @@ func readDesignWithConfig(path string) (*ir.Design, service.Overlay, error) {
 	return d, ov, nil
 }
 
-// designReadOptions composes the per-read config a design's project supplies, which is its naming
-// vocabulary and the symbol libraries it declares.
+// designReadOptions composes the per-read config from a design's project. That config is the
+// project's naming vocabulary and the symbol libraries it declares.
 //
 // A design in NO project returns no options and no error, which is the ordinary case for a loose
 // file. A descriptor that exists and does not PARSE is an error, since reading under the defaults
@@ -282,8 +282,8 @@ func designReadOptions(ctx context.Context, path string) ([]service.ReadOption, 
 	return ov.ReadOptions(), nil
 }
 
-// designOverlay resolves the whole overlay a design's project supplies, of which the read consumes
-// only part. Same contract as designReadOptions above.
+// designOverlay resolves the whole overlay from a design's project. The read consumes only part of
+// it. The contract is the same as designReadOptions above.
 func designOverlay(ctx context.Context, path string) (service.Overlay, error) {
 	ws, err := workspace()
 	if err != nil {
@@ -329,8 +329,8 @@ func readModel(path string) (check.Model, error) {
 //
 // The netlist and board tiers come from the design descriptor (designResolver.Resolve), so they can
 // be DIFFERENT files, with a declared board companion supplying the copper (C21). check, query and review
-// build their models through the services' BuildModel instead, which is where --board-path (WS3-089)
-// applies.
+// build their models through the services' BuildModel instead, and --board-path (WS3-089) applies
+// there.
 func readModelWithParams(path, paramsDir string) (check.Model, error) {
 	ws, err := workspace()
 	if err != nil {
@@ -395,8 +395,8 @@ func statsCmd() *cobra.Command {
 					multi++
 				}
 			}
-			// Through the command's writer rather than os.Stdout, or a test's cmd.SetOut buffer stays
-			// empty while the text still reaches the process stdout.
+			// Write through the command's writer rather than os.Stdout. Otherwise a test's cmd.SetOut
+			// buffer is empty while the text still reaches the process stdout.
 			w := cmd.OutOrStdout()
 			fmt.Fprintf(w, "design:              %s\n", d.Name)
 			if d.SourceFormat != "" {
@@ -585,8 +585,8 @@ func checkCmd() *cobra.Command {
 				warnOverBroadProfiles(cmd.ErrOrStderr(), args[0], ps)
 				extra = append(extra, profiles.Source("profile-overlay", ps))
 			}
-			// --intent-path rides the request as a VALUE, as the design's own intent: section does, so the
-			// model sees which connectors it declares internal and a design that already declares
+			// --intent-path travels on the request as a VALUE, as the design's own intent: section does.
+			// So the model sees which connectors it declares internal, and a design that already declares
 			// intent has it replaced rather than compiled twice (agni issue 831).
 			if intentPath != "" {
 				di, err := intent.LoadFileProto(intentPath)
@@ -601,10 +601,10 @@ func checkCmd() *cobra.Command {
 			if len(extra) > 0 {
 				catalog = check.CatalogWith(extra...)
 			}
-			// Resolve the --rule/--tag facets to rule NAMES against the catalog the RUN will use, which
-			// adds the request's convention and the project's own rules. CheckDesign and GetCheckReport
-			// select by name, so without the project's rules `--rule gateway/signal-net-naming` would
-			// report "no rules selected" for a rule that runs.
+			// Resolve the --rule/--tag facets to rule NAMES against the RUN's catalog. That catalog adds
+			// the request's convention and the project's own rules. CheckDesign and GetCheckReport select
+			// by name, so without the project's rules `--rule gateway/signal-net-naming` would report "no
+			// rules selected" for a rule that runs.
 			resolveAgainst, _, err := withProjectRules(cmd.Context(), catalog, args[0], overlay)
 			// Noted against the run's catalog rather than the flag-built one, so a project's own
 			// supersessions are reported too (C25, agni issue 450).
@@ -627,10 +627,10 @@ func checkCmd() *cobra.Command {
 				names[i] = r.Name
 			}
 			// Thin client of the in-process CheckService, the same service the web check panel runs
-			// (WS9-048). The catalog and datasheet corpus are injected, while --conventions rides the
-			// request so its lexicon reaches the design read without touching process state.
-			// The local loader stays even under --remote, because a viewer link hashes the bytes on
-			// this machine (designContentHash).
+			// (WS9-048). The catalog and datasheet corpus are injected. --conventions travels on the
+			// request, so its lexicon reaches the design read without touching process state.
+			// The CLI keeps the local loader even under --remote, because a viewer link hashes the bytes
+			// on this machine (designContentHash).
 			ll := &localLoader{loader: newLoader()}
 			// --remote sends the same requests to a running server (agni issue 998). The rule names
 			// are still resolved here, against the catalog this design's project composes.
@@ -686,9 +686,9 @@ func checkCmd() *cobra.Command {
 					return rpcFailed(err)
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
-				// The document is the one the viewer saves (agni issue 127): the service writes it from
-				// this run, with provenance off the composed overlay and the deployment flags the env
-				// carries, and the terminal output is rendered back from the same bytes.
+				// The viewer saves the same document (agni issue 127). The service writes it from this
+				// run, with provenance off the composed overlay and the deployment flags in the env. The
+				// terminal output is rendered back from the same bytes.
 				rendered, err := svc.RenderCheckReport(ctx, &webapi.RenderCheckReportRequest{
 					Snapshot: snap, Rules: names, Run: resp,
 					Format: webapi.CheckReportFormat_CHECK_REPORT_FORMAT_RESULTS_JSON,
@@ -739,9 +739,9 @@ func checkCmd() *cobra.Command {
 				}
 				noteNoBoard(cmd.ErrOrStderr(), args[0], resp.GetSkipped())
 				noteDesignWide(cmd.ErrOrStderr(), resp.GetSkipped())
-				// --verdicts selects the CONSIDERED SET instead of the violations, which is what each
-				// rule concluded about every subject it looked at, passes included. --fail-on still reads
-				// the findings, since a pass is not a gate condition.
+				// --verdicts selects the CONSIDERED SET instead of the violations. The considered set holds
+				// what each rule concluded about every subject it looked at, passes included. --fail-on
+				// still reads the findings, since a pass is not a gate condition.
 				if verdicts {
 					// viewerLinkMeta decides whether rows carry a viewer link, and emits none rather
 					// than a guessed one (issue 392). Both halves of a link name the ENTRY rather than
@@ -847,8 +847,8 @@ func checkCmd() *cobra.Command {
 // use --format markdown/report/json).
 //
 // It closes with a COVERAGE line by default, since a findings list cannot say what was examined. The
-// per-subject rows stay behind --verdicts, being six times the volume here and far more on a real
-// board.
+// per-subject rows print only under --verdicts. They are six times the volume here and far more on a
+// real board.
 func writeCheckText(w io.Writer, fs []check.Finding, rulesRun int, cov *rpt.Totals) {
 	if len(fs) == 0 {
 		fmt.Fprintf(w, "no findings (%d rule(s) run)\n", rulesRun)
@@ -998,12 +998,12 @@ func reviewCmd() *cobra.Command {
 				}
 				overlay.Config.Conventions = cfg
 			}
-			// --lib rides the request as values, as it does for `query` (agni issues 779, 788), so an
-			// inline checklist query can name its members.
+			// --lib travels on the request as values, as it does for `query` (agni issues 779, 788), so
+			// an inline checklist query can name its members.
 			if err := addLibraries(overlay.Config, reviewLibs); err != nil {
 				return err
 			}
-			// --intent-path rides the request as a value, as it does for `check` (agni issue 831).
+			// --intent-path travels on the request as a value, as it does for `check` (agni issue 831).
 			if intentPath != "" {
 				di, err := intent.LoadFileProto(intentPath)
 				if err != nil {
@@ -1073,8 +1073,8 @@ func reviewCmd() *cobra.Command {
 				if err != nil {
 					return err
 				}
-				// --conventions rides the snapshot's definition as a value and the service composes it
-				// (WS3-102).
+				// --conventions travels in the snapshot's definition as a value, and the service composes
+				// it (WS3-102).
 				snap, drop, err := ingest(cmd.Context(), snaps, &webapi.Snapshot{Uri: designURI, BoardUri: boardURI, AsNamed: readAsNamed, Overlay: overlay})
 				if err != nil {
 					return rpcFailed(err)
@@ -1100,7 +1100,7 @@ func reviewCmd() *cobra.Command {
 			// reportFromWire.
 			reports := reportsFromDocs(docs)
 			// --render bakes each design's findings into annotated schematic SVGs (WS7-043). The summary
-			// goes to stderr so stdout stays a clean report.
+			// goes to stderr so stdout holds only the report.
 			if renderDir != "" {
 				summary, err := renderReviewImages(reports, designSourcesOf(docs), renderDir, companion)
 				if err != nil {
@@ -1143,8 +1143,8 @@ func reviewCmd() *cobra.Command {
 					return writeTableCSV(cmd.OutOrStdout(), service.ReviewTables(reviews[0])[0], orderBy)
 				case format == "html":
 					// The checklist page, items in the manifest's order with one row per question and
-					// every finding per item (markdown caps the Detail cell at three). It is rendered
-					// by the rpc the viewer's Save report calls, so the two pages match (agni 1030).
+					// every finding per item (markdown caps the Detail cell at three). The viewer's Save
+					// report renders through the same rpc, so the two pages match (agni 1030).
 					links, err := checklistLinks(cmd, ll, args[0], srvSpec)
 					if err != nil {
 						return err
@@ -1245,7 +1245,7 @@ func gateReview(cmd *cobra.Command, g reviewGate, reports []review.Report) error
 
 // composeReviewInputs builds the design-INDEPENDENT review inputs shared by the CLI (reviewCmd) and
 // the served ReviewService. That is the rule catalog with the profiles at profilePath spliced in, and
-// the by-Name profile index the presence check reads. Intent is per design, so it arrives on the
+// the by-Name profile index for the presence check. Intent is per design, so it arrives on the
 // request rather than here.
 func composeReviewInputs(profilePath string) (*check.Catalog, map[string][]profiles.Profile, error) {
 	overlay, err := loadOverlayProfiles(profilePath)
@@ -1315,8 +1315,8 @@ func diffCmd() *cobra.Command {
 			if err := runDiff(cmd, args[0], args[1], format, orderBy, renameApprox, includeEqual); err != nil {
 				return err
 			}
-			// The link goes to stderr for every format, as trace's does, so stdout stays the diff a
-			// script parses and the json stays the wire message (C31, agni issue 1126).
+			// The link goes to stderr for every format, as trace's does. So stdout holds only the diff
+			// for a script to parse, and the json is still the wire message (C31, agni issue 1126).
 			if u := diffLink(cmd, srvSpec, args[0], args[1], renameApprox); u != "" {
 				fmt.Fprintf(cmd.ErrOrStderr(), "\nlook at it: %s\n", u)
 			}
@@ -1348,8 +1348,8 @@ func diffCmd() *cobra.Command {
 // runDiff writes the diff of older and newer to stdout in format.
 func runDiff(cmd *cobra.Command, older, newer, format string, orderBy []string, renameApprox, includeEqual bool) error {
 	// json is the message DiffDesigns returns, so it goes through the service (C31, agni
-	// issues 737 and 817): the CLI is a client of the rpc rather than a second composition
-	// of it, and the sheet and placement maps the service fills are in its output too.
+	// issues 737 and 817). The CLI is a client of the rpc rather than a second composition
+	// of it. The service fills the sheet and placement maps, and they are in its output too.
 	if len(orderBy) > 0 && format != "csv" {
 		return fmt.Errorf("--order-by orders a csv table; --format %s has none", format)
 	}
@@ -1386,9 +1386,10 @@ func runDiff(cmd *cobra.Command, older, newer, format string, orderBy []string, 
 
 // diffLink is the link that opens older in the viewer with Compare started against newer, or "" when
 // the run asked for none or none is safe to make (agni issue 1126). Each side goes through
-// viewerLinkMeta, the rule check and trace use, so a side whose mount the server does not serve
-// withholds the link and says why on stderr. Both sides ask one server, so a note that applies to the
-// server (an unreachable one leaves every link unverified) is printed once rather than once a side.
+// viewerLinkMeta, as check and trace links do. If the server does not serve a side's mount, that
+// side withholds the link and says why on stderr. Both sides ask one server, so a note about the
+// server is printed once rather than once a side. An unreachable server is one such note, since it
+// leaves every link unverified.
 func diffLink(cmd *cobra.Command, spec serverSpec, older, newer string, renameApprox bool) string {
 	if !spec.active() {
 		return ""
@@ -1516,7 +1517,7 @@ func sortedKeys(m map[string]int) []string {
 }
 
 // linkURI addresses the design a report links to as one artifact URI (C22), from the mount path the
-// CLI's link resolution produced. Empty stays empty, which emits no links.
+// CLI's link resolution produced. An empty path gives an empty URI, and that emits no links.
 func linkURI(mountPath string) string {
 	if mountPath == "" {
 		return ""
@@ -1524,9 +1525,9 @@ func linkURI(mountPath string) string {
 	return "mount://" + mountPath
 }
 
-// answerQuerySets asks every query set the snapshot's project keeps, over the snapshot the run read,
-// for the check report to carry. A project keeping none is said on stderr and adds nothing, since the
-// checks alone are still the report the user asked for.
+// answerQuerySets runs every query set of the snapshot's project over the run's snapshot, and
+// the check report carries the answers. A project with no sets gets a note on stderr and adds
+// nothing, since the checks alone are still the report the user asked for.
 func answerQuerySets(ctx context.Context, stderr io.Writer, queries queryAPI, snap string) ([]*webapi.RunQueriesResponse, error) {
 	sets, err := queries.ListQuerySets(ctx, &webapi.ListQuerySetsRequest{Snapshot: snap})
 	if err != nil {
@@ -1542,7 +1543,7 @@ func answerQuerySets(ctx context.Context, stderr io.Writer, queries queryAPI, sn
 		if err != nil {
 			return nil, err
 		}
-		// A set file need not title itself, and its name is what the project calls it.
+		// A set file need not title itself, so the set takes its name in the project as its title.
 		if resp.GetTitle() == "" {
 			resp.Title = s.GetName()
 		}

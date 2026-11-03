@@ -1,8 +1,8 @@
-// Package validate holds the reader-health invariants behind `agni validate` (WS6-007), which
+// Package validate holds the reader-health invariants behind `agni validate` (WS6-007). They
 // are structural sanity checks over what a reader produced. They catch "parsed but empty" and
 // "placements that resolve to nothing" regressions that per-fixture unit tests miss on real
 // files. Design-rule checking is core/check. These are pure functions over parsed structures,
-// and file I/O and format dispatch stay in the CLI (CONSTRAINTS C1).
+// and file I/O and format dispatch are left to the CLI (CONSTRAINTS C1).
 package validate
 
 import (
@@ -19,9 +19,8 @@ import (
 // not 1.0 because real libraries occasionally carry a definition-less decorative instance.
 const MinResolutionRate = 0.99
 
-// Design returns the netlist-tier problems with a parsed design, empty when it passes. A
-// design that parsed but carries no components or no nets is the usual silent reader
-// regression.
+// Design returns the netlist-tier problems with a parsed design, empty when it passes. The
+// usual silent reader regression is a design that parsed but has no components or no nets.
 func Design(d *ir.Design) []string {
 	if d == nil {
 		return []string{"no design produced"}

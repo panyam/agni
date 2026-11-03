@@ -2,9 +2,9 @@ package foreign
 
 import "testing"
 
-// TestParseItemFormMatrix is the form-matrix oracle for the description grammar, the same discipline
-// the EDIF name grammar earned. Every shape the import claims to understand is a row here, so adding a
-// shape means adding a row and a missing shape fails a test rather than a corpus file.
+// TestParseItemFormMatrix is the form-matrix oracle for the description grammar. The EDIF name
+// grammar follows the same discipline. Each shape that the import claims to understand has a row here,
+// so adding a shape means adding a row. A missing shape then fails a test rather than a corpus file.
 //
 // Every input is a VERBATIM description captured from kicad-cli output over this repo's board and
 // schematic fixtures. They are UI strings with no stability guarantee, so evidence is the only reliable
@@ -51,7 +51,7 @@ func TestParseItemFormMatrix(t *testing.T) {
 	}
 }
 
-// TestParseItemPrefersTheMoreSpecificShape pins the ordering the table depends on. "Symbol U1 Pin 1"
+// TestParseItemPrefersTheMoreSpecificShape pins the table's ordering. "Symbol U1 Pin 1"
 // must not fall through to the bare-symbol pattern, because losing the pin silently widens a
 // pin-scoped violation to the whole part.
 func TestParseItemPrefersTheMoreSpecificShape(t *testing.T) {
@@ -73,7 +73,7 @@ func TestNoNetIsNotANetName(t *testing.T) {
 }
 
 // TestResidueClassSeparatesBenignFromInteresting pins that the residue is bucketed by KIND. A summary
-// saying "20 not attached" is useless; one saying they were all wires tells a reader the import is
+// saying "20 not attached" is useless. One saying they were all wires tells a reader the import is
 // working, and one naming an unrecognized shape tells them it is not.
 func TestResidueClassSeparatesBenignFromInteresting(t *testing.T) {
 	wire := residueClass("Horizontal Wire, length 0.1500 mm")

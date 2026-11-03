@@ -13,10 +13,10 @@
 //	pending:                  # rules staged before they exist: rendered, never asserted
 //	  net-naming-convention: [BAD_NAME]
 //
-// `fires` is a hard expectation in both directions, so a listed rule must fire those subjects and no
-// others. `pending` stages an expectation ahead of its rule. A consumer may show it, but the harness
-// neither requires nor forbids it, so it lands without breaking CI. Move the entry to `fires` once the
-// rule is implemented.
+// `fires` is a hard expectation in both directions, so a listed rule must fire those subjects and
+// no others. `pending` stages an expectation ahead of its rule. A consumer may show it, but the
+// harness neither requires nor forbids it, so it merges without breaking CI. Move the entry to
+// `fires` once the rule is implemented.
 package expect
 
 import (
@@ -27,8 +27,8 @@ import (
 )
 
 // Entry is one expected rule, the exact subjects it must fire on plus an optional Why. Why is the
-// fixture's own narration of what is wrong and what the control case is, shown with a red
-// expectation in a harness failure or a viewer panel.
+// fixture's own narration of what is wrong and what the control case is. A harness failure or a
+// viewer panel shows it beside a red expectation.
 type Entry struct {
 	Subjects []string
 	Why      string

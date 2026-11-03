@@ -34,29 +34,29 @@ rules:
 ## Run it
 
 Compose the file into a run with `--conventions`. On a board whose names all conform, the rule runs
-and stays quiet:
+and reports nothing:
 
 {{ agniRun "content/guide/runs/conventions-quiet.yaml" }}
 
 Read the second line as well as the first. It says the rule looked at six names and had nothing to
-report, which is a different statement from a rule that ran over nothing.
+report. A rule that ran over nothing would say something different.
 
 Point the same convention at a board that does not follow it and the non-conforming names surface:
 
 {{ agniRun "content/guide/runs/conventions-findings.yaml" }}
 
 Both flagged names carry a trailing character the `allow` pattern does not cover. Neither is exempt
-either, because `^\+` exempts a name that *starts* with `+`, which neither of these does.
+either. `^\+` exempts a name that *starts* with `+`, and neither of these starts with `+`.
 Tightening `allow`, or narrowing `exempt`, surfaces more names the same way.
 
 ## In a project
 
 A project writes the same content as the `conventions:` section of its `project.yaml`, and every run
 on one of its designs composes it with no flag. A team sharing one vocabulary across projects puts it
-in a project of its own, which the others name with `extends`. See
+in a project of its own, and the other projects name that project with `extends`. See
 [Projects and designs](../../architecture/projects-and-designs/). A `--conventions` file still works
-on a project's design, and replaces the project's section for that run in the way the next section
-describes.
+on a project's design. For that run it replaces the project's section, and the next section
+describes how.
 
 ## Tool-generated names are exempt by default
 
@@ -74,8 +74,8 @@ encoding the hierarchy into the pattern.
 ## A server default, and how a request replaces it
 
 `agni serve --conventions house.yaml` makes that config the deployment's default. Its rules join the
-catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary, so
-everyone asking that server questions gets the house answer without doing anything.
+catalog, and every surface that runs rules reads that catalog. Its lexicon becomes the default naming
+vocabulary. So everyone asking that server questions gets the house answer without doing anything.
 
 A request may carry its own convention instead, and when it does it **replaces** the server's for
 that request. Both halves go together, so the request's rules replace the server's rules and its
@@ -89,10 +89,11 @@ sent to a server whose default is also named `house` simply replaces it. (Before
 that combination failed outright with a duplicate-source error.)
 
 **Replacing is not the same as adding.** If your project wants the house rules *plus* its own, the
-config it sends has to contain both. That is deliberate, because a request asking "what does this board look
-like under MY vocabulary" should get exactly that, and a caller who could not turn the deployment's
-rules off could not ask the question. It does mean that a finding which disappeared after switching
-conventions may have disappeared because the rule stopped running, not because the design improved.
+config it sends has to contain both. That is deliberate. Picture a request asking "what does this
+board look like under MY vocabulary". It should get exactly that answer. If the caller could not
+turn the deployment's rules off, it could not ask the question. It also means a finding can
+disappear after you switch conventions because its rule stopped running, not because the design
+improved.
 
 Only the convention is replaced. The built-in rules, and anything from `--profile-path`, are
 unaffected. A request's `--intent-path` replaces the design's intent the same way.
@@ -111,21 +112,21 @@ rule stopped running (the same caution as above).
 Switching discards the findings already on screen rather than keeping them, since they were computed
 by asking a different question.
 
-The **Lexicon** panel, tabbed beside Rules, lists every vocabulary the run reads names with and where
-each entry came from. It edits a draft of the convention as written, so its rules stay with it. Add an
-entry, take one out, turn a vocabulary off or switch the rail inference, and the list updates. Taking
-a single built-in out writes that vocabulary with `replace: true` and its other entries stated, which
-is the only way a convention can drop one. A built-in ref-des prefix cannot be taken out, since
-`replace` leaves the prefix table alone.
+The **Lexicon** panel sits in a tab beside Rules. It lists each vocabulary the run uses to read
+names, and where each entry came from. It edits a draft of the convention as written, so the draft
+keeps the convention's rules. Add an entry, take one out, turn a vocabulary off or switch the rail
+inference, and the list updates. When you take a single built-in out, the panel writes that
+vocabulary with `replace: true` and states its other entries. A convention has no other way to drop
+a built-in. A built-in ref-des prefix cannot be taken out, since `replace` leaves the prefix table
+alone.
 
-**Try** shows the nets whose roles would change and the findings that would appear or disappear, the
-same rows `agni lexicon --try` prints, and a row selects its net or part. A draft changes nothing on
-the page until **Apply**, which puts it in the vocabulary bar for the rest of the session and reads a
-comparison under it as well. **Save YAML** writes the file, and only the file in your project reaches
-other people and other commands. Until then `--conventions` names it on `check`, `review`, `query`,
-`stats`, `diff` and `render`.
-It works in the browser engine too, so the public demo has it. Net Properties shows why each role
-is there.
+**Try** shows the nets whose roles would change and the findings that would appear or disappear.
+`agni lexicon --try` prints the same rows, and a row selects its net or part. A draft changes
+nothing on the page until you press **Apply**. Apply puts the draft in the vocabulary bar for the
+rest of the session, and a comparison is read under it as well. **Save YAML** writes the file, and
+only the file in your project reaches other people and other commands. Until then `--conventions`
+names it on `check`, `review`, `query`, `stats`, `diff` and `render`. It works in the browser engine
+too, so the public demo has it. Net Properties shows why each role is there.
 
 ## Teach it your vocabulary
 
@@ -133,9 +134,9 @@ The `rules` block above checks names against your policy. The `lexicon` block is
 tells the engine what a name *means*, so the built-in rules reason about your board in your words.
 
 A net can carry several roles at once, and six of them are configurable. Three more net vocabularies
-name the I2C bus lines the pull-up rules judge, a net its designer left open on purpose, and the two
-halves of a differential pair. The pin vocabularies name supply pins, transistor terminals, a package's
-exposed pad, a diode's anode and cathode, and a regulator's feedback and switch pins:
+name the I2C bus lines, a net left open on purpose, and the two halves of a differential pair. The
+pull-up rules judge the I2C lines. The pin vocabularies name supply pins, transistor terminals, a
+package's exposed pad, a diode's anode and cathode, and a regulator's feedback and switch pins:
 
 ```yaml
 lexicon:
@@ -172,15 +173,16 @@ turn a built-in role off entirely. `exclude` takes a name back out even when a p
 since RE2 cannot say "SDA, but not `I2S0_RX_SDA`" in one pattern. Exclusions are added and replaced
 the same way patterns are.
 
-`voltage` reads the voltage a net's name states, which `rail-not-classified`, the absolute-maximum
-rules, `cap-voltage` and `net.nominal_voltage` all use. It works a token at a time, with the name
-split on anything but letters, digits, `.` and `+`, so `VDD_3P3_EN` is read as `VDD`, `3P3` and `EN`.
-Each pattern needs a capture group. The first group holds the whole volts and the first later group
-that matched holds the fraction, so the built-in `^\+?(\d+)V(\d+)?$` reads `3V3` as 3.3 and `12V`
-as 12. A name whose tokens state two different voltages, such as `12V_TO_5V`, reads as none.
+`voltage` reads the voltage stated in a net's name. `rail-not-classified`, the absolute-maximum
+rules, `cap-voltage` and `net.nominal_voltage` all use that voltage. It works a token at a time,
+with the name split on anything but letters, digits, `.` and `+`, so `VDD_3P3_EN` is read as `VDD`,
+`3P3` and `EN`. Each pattern needs a capture group. The first group holds the whole volts and the
+first later group that matched holds the fraction, so the built-in `^\+?(\d+)V(\d+)?$` reads `3V3`
+as 3.3 and `12V` as 12. A name whose tokens state two different voltages, such as `12V_TO_5V`, reads
+as none.
 
 Every role a net carries records why. A role from a pattern names the pattern, and an inferred rail
-names the supply pin it feeds, so a rail you did not expect can be traced to the line that made it
+names the supply pin it feeds. So you can trace an unexpected rail back to the line that made it
 one. The reason travels with the net's roles in the design's IR, so
 `agni stats <design> --format json --mask design.nets` prints it.
 
@@ -190,17 +192,17 @@ A rail named after its consumer, such as `LPC_VCC` or `FAN_VDD`, does not start 
 so the `rail` patterns miss it. With `infer_rail_from_supply_pins` on, which is the default, a net is
 also a rail when a later token of its name matches the `supply` pin vocabulary AND the net feeds a
 `power_in` pin of a fitted part that is not a connector. The role's reason names that pin. Both halves
-are needed. `EN_VCC` feeds no supply pin and stays a signal, a USB receptacle's own VBUS pin marks
+are needed. `EN_VCC` feeds no supply pin and is still a signal, a USB receptacle's own VBUS pin marks
 where a cable delivers power rather than a load, and a supply pin left unwired on its own stub is no
-rail at all. Voltage-named rails such as `CSIA_3V3` are not inferred, which is why
-`rail-not-classified` still reports them and the section below is still how you declare them.
+rail at all. Voltage-named rails such as `CSIA_3V3` are not inferred. `rail-not-classified` still
+reports them, and you still declare them as the section below describes.
 
 ### The four roles that mean "named after a rail, but not a rail"
 
 A regulator's pins are conventionally named for the supply they produce, so a 12V converter's nodes
 are `12V_FB`, `12V_SW`, `12V_MODE1`, `12V_VDRV`. Every one of those matches the `rail` vocabulary on
-its prefix and none of them carries 12V. `feedback`, `switching`, `control` and `gate_drive` are how
-the engine tells them apart, and a net carrying any of them is not treated as a rail:
+its prefix and none of them carries 12V. The engine tells them apart with four
+roles, `feedback`, `switching`, `control` and `gate_drive`. A net carrying any of them is not a rail:
 
 | role | typical suffixes | what it is | safe to probe? |
 |---|---|---|---|
@@ -219,14 +221,14 @@ buck's output reads as an outlet when no net is named for the converter. A house
 `FDBK` adds `^FDBK[0-9]*$` to `pin.feedback`. The net vocabularies of the same names read nets only,
 because a pin name carries no rail prefix for a pattern like `_FB$` to end on.
 
-`pin.anode` and `pin.cathode` apply to the diode family alone, and they match the whole pin name rather
-than its leaf, so a pin named `A/K` stays unread. A `diff_pair` entry names a suffix pair rather than a
-pattern, because a rule has to work out the complement of a name. Its suffixes match at the end of the
-whole net name without regard to case, the longest positive suffix wins, and the complement keeps the
-name's casing, so `usb_p` expects `usb_n`.
+`pin.anode` and `pin.cathode` apply to the diode family alone, and they match the whole pin name
+rather than its leaf, so a pin named `A/K` is not read. A `diff_pair` entry names a suffix pair
+rather than a pattern, because a rule has to work out the complement of a name. Its suffixes match
+at the end of the whole net name without regard to case, the longest positive suffix wins, and the
+complement keeps the name's casing, so `usb_p` expects `usb_n`.
 
-These are the same six vocabularies the engine ships with defaults for, in the same schema. There is
-no separate list of built-ins to consult.
+The engine ships its defaults for these same six vocabularies in this same schema. There is no
+separate list of built-ins to consult.
 
 ### Component classes
 
@@ -234,12 +236,13 @@ A part's class comes from two signals: its ref-des prefix (`R`, `TP`, `RT`) and 
 part name and attributes (`ferrite`, `tvs`, `crystal`). The `class` block extends both, keyed by the
 class it teaches.
 
-A third signal is the part-number family. A part whose part number belongs to a common ESD or TVS
-family (`TPD4E05U06`, `PESD5Z5.0F`, `ESDA25P35`, `USBLC6`, `VBUS54CV`, `SMAJ`, and their neighbours)
-is a `tvs` whether it sits under a diode, an IC or an unknown symbol, because an ESD array is often
-drawn as a `U` part and a TVS diode often carries nothing but its part number. The bare words `tvs`
-and `esd` only refine a diode, since an IC whose description mentions ESD protection is still an IC.
-`families` adds to the built-in list, and `replace: true` replaces it along with the patterns.
+A third signal is the part-number family. Some part numbers belong to a common ESD or TVS family
+(`TPD4E05U06`, `PESD5Z5.0F`, `ESDA25P35`, `USBLC6`, `VBUS54CV`, `SMAJ`, and their neighbours). A
+part with one of those numbers is a `tvs` whether it sits under a diode, an IC or an unknown symbol.
+An ESD array is often drawn as a `U` part, and a TVS diode often carries nothing but its part
+number. The bare words `tvs` and `esd` only refine a diode, since an IC whose description mentions
+ESD protection is still an IC. `families` adds to the built-in list, and `replace: true` replaces it
+along with the patterns.
 
 ```yaml
 lexicon:
@@ -252,21 +255,22 @@ lexicon:
 A board that plugs into another one has connectors facing nothing a user touches, and those are not a
 class. Whether a connector is the module socket or the cable entry depends on the product rather than
 the part, so it is declared per design in the `components` section of its
-[design intent](../design-intent/), which the exposure rules read. A lexicon naming the
-`internal_connector` class it replaced fails to load and says where the declaration goes.
+[design intent](../design-intent/), and the exposure rules read it there. That declaration replaced
+the `internal_connector` class. A lexicon naming that class fails to load and says where the
+declaration goes.
 
 A prefix is the leading run of letters of a ref-des, so `TH` matches `TH12` and a part whose
 library symbol declares `TH?`. Prefixes are matched case-insensitively and are ADDED to the built-in
 table, and a prefix you list wins over a built-in one, so a house that writes `F` for its ferrites
 re-points `F` away from fuse. `replace: true` applies to `patterns` only and leaves prefixes alone,
-so taking a built-in prefix out is what `exclude_prefixes` is for. A house whose `D` parts are
+so use `exclude_prefixes` to take a built-in prefix out. A house whose `D` parts are
 displays rather than diodes writes `diode: { exclude_prefixes: ["D"] }`, and a `D7` is then classed
 by its part name alone.
 
 The family tag follows the class, so a `TH12` answers both `component.class(TH12, "thermistor")`
 and `component.class(TH12, "resistor")`, exactly as an `RT12` does.
 
-Three things fail at load rather than reading as a convention that matched nothing:
+Four things fail at load rather than reading as a convention that matched nothing:
 
 - a class the engine does not ship (`unknown component class "esd_array"`),
 - a prefix holding anything but letters (`T1` can never match, because `T1` is a ref-des),
@@ -303,8 +307,8 @@ lexicon:
     dnp_values: { keys: ["fit-no"] }            # yes, true, 1, y and DNP by default
 ```
 
-Keys match without regard to case and are tried in order, so the first key a part carries with a
-non-empty value answers. Each list is added to the built-ins, after them, unless you say
+Keys match without regard to case and are tried in order. The first key holding a non-empty value
+on the part gives the answer. Each list is added to the built-ins, after them, unless you say
 `replace: true`. A part is not fitted when any of its `dnp` keys holds one of the `dnp_values`, so
 KiCad's own flag set to `no` does not hide a house `DNP` field that says `DNP`.
 
@@ -315,20 +319,21 @@ edge connector" would otherwise turn an M.2 socket into a test connector. An EDI
 on the library cell rather than the placed instance is read with the built-in keys only.
 
 The class must be one the engine already has. A project cannot yet declare a class of its own, such
-as a house `esd_array` refining `diode`, because that opens a vocabulary the engine keeps closed, and
-DECISIONS.md records what would change that. The class names are the ones `component.class`
-answers with, listed in the [relation catalog](../../reference/relations/).
+as a house `esd_array` refining `diode`. Declaring one would open the class vocabulary, and the
+engine keeps that vocabulary closed. DECISIONS.md records what would change that. `component.class`
+answers with these class names, and the [relation catalog](../../reference/relations/) lists them.
 
 ## See how your names were read
 
-`agni lexicon <design>` lists the vocabulary a run reads names with, every pattern under its
-vocabulary with where it came from: built in, or the one convention that won, from the server, the
-project, the design or the request. A built-in a `replace: true` switched off stays in the list,
-marked, so you can see it went.
+`agni lexicon <design>` lists the vocabularies a run uses to read names. Each pattern appears under
+its vocabulary with its source. A source is built in, or the one convention that won, from the
+server, the project, the design or the request. When a `replace: true` switches a built-in off, the
+built-in is still listed and marked, so you can see it went.
 
 `--net` says why one net has its roles, and `--try` reads the design again with a different
-conventions file and says what moves. The design below runs its sensor from its own regulator, whose
-output is `SENSOR_3V3`, and its `design.yaml` adds the rail pattern that name needs. Tried without it,
+conventions file and says what moves. The design below runs its sensor from its own regulator.
+The regulator's output is `SENSOR_3V3`, and the design's `design.yaml` adds a rail pattern to match
+that name. Tried without it,
 the sensor supply stops being a rail, and the I2C pull-ups that go to it stop counting:
 
 {{ agniRun "content/guide/runs/lexicon.yaml" }}

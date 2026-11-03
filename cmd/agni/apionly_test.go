@@ -63,8 +63,8 @@ func TestServeStillRefusesANamedWebDirThatIsWrong(t *testing.T) {
 	}
 }
 
-// A ./web that exists without its bundle is a checkout that forgot `make ui`, which is a mistake to
-// report rather than a reason to drop the viewer silently.
+// A ./web that exists without its bundle is a checkout that forgot `make ui`. That is a mistake to
+// report, not a reason to drop the viewer silently.
 func TestServeStillRefusesAnIncompleteCheckout(t *testing.T) {
 	clearNamedWebDir(t)
 	root := t.TempDir()

@@ -7,9 +7,9 @@ import (
 	"github.com/panyam/agni/core/param"
 )
 
-// A stale citation has to name BOTH revisions, because that is the difference between a report
-// someone can act on and one they cannot. Doc resolves from the CURRENT SourceDoc, so after a re-seed
-// it names the new revision and the checked one survives only in the verification's own snapshot.
+// A stale citation has to name BOTH revisions. Someone can act on a report that names both, and
+// cannot act on one that does not. Doc resolves from the CURRENT SourceDoc, so after a re-seed it
+// names the new revision, and only the verification's own snapshot still holds the checked one.
 func TestStaleCitationNamesBothRevisions(t *testing.T) {
 	spec := &parampb.PartSpec{
 		Mpn:  "ACME-33",
@@ -24,7 +24,7 @@ func TestStaleCitationNamesBothRevisions(t *testing.T) {
 		t.Fatal("verifying against the spec's own document must succeed")
 	}
 
-	// Fresh: the citation reads verified and both sides agree.
+	// Fresh. The citation reads verified and both sides agree.
 	if c := DatasheetCitationOf(spec, p); c.Verification != string(param.Verified) {
 		t.Fatalf("before any revision: verification = %q, want %q", c.Verification, param.Verified)
 	}
@@ -45,8 +45,8 @@ func TestStaleCitationNamesBothRevisions(t *testing.T) {
 	}
 }
 
-// Nothing verified means nothing to snapshot. An empty string here is what keeps the field out of the
-// JSON report and off the wire for the ordinary case, which is every value in a freshly seeded corpus.
+// Nothing verified means nothing to snapshot. An empty string here keeps the field out of the JSON
+// report and off the wire in the ordinary case. Every value in a freshly seeded corpus is that case.
 func TestUnverifiedCitationCarriesNoRevisionSnapshot(t *testing.T) {
 	spec := &parampb.PartSpec{
 		Mpn:  "ACME-33",

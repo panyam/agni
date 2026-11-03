@@ -3,7 +3,7 @@ title: "9. Sequencing and straps"
 description: "Rails have to come up in an order, and parts read their configuration at the instant they do. Both are declared, and both are invisible in a schematic review."
 ---
 
-[Chapter 8](../08-the-power-tree/) was about what the rails are. This one is about **when** they arrive and **what the parts read at the moment they do**, which are two different questions that both turn out to be invisible on a schematic.
+[Chapter 8](../08-the-power-tree/) was about what the rails are. This one is about **when** they arrive and **what the parts read at the moment they do**. Those are two different questions, and both turn out to be invisible on a schematic.
 
 Read [chapter 8](../08-the-power-tree/) first, particularly the part about declarations.
 
@@ -11,7 +11,7 @@ This page teaches at [EE6](../levels/#systems-ee6), and the [levels page](../lev
 
 ## Order matters, and the datasheet says so (EE6)
 
-A chip with more than one supply usually requires them to arrive in a particular order. Bring an I/O rail up while the core is still at zero and current finds its way in through the chip's internal protection structures, which are diodes that were never meant to carry it. At best the part draws current nobody budgeted for and fails to start. At worst it latches up, which is a self-sustaining short inside the die that persists until power is removed and sometimes destroys the part.
+A chip with more than one supply usually requires them to arrive in a particular order. Bring an I/O rail up while the core is still at zero and current finds its way in through the chip's internal protection structures, which are diodes that were never meant to carry it. At best the part draws current nobody budgeted for and fails to start. At worst it latches up. Latch-up is a self-sustaining short inside the die. It persists until power is removed and sometimes destroys the part.
 
 So a datasheet states a required order, and a board has to enforce it. The usual mechanism is a chain: each regulator has a **power-good** output that goes true once its rail is up, and the next regulator has an **enable** input. Wire one to the other and the second rail physically cannot come up before the first.
 
@@ -38,7 +38,7 @@ The subject is a **pair**, `CORE_PG + IO_EN`. A sequencing requirement relates t
 
 Now look at the modem item, which fails: *"both handles are on the design and nothing connects MODEM_PG to MODEM_EN."*
 
-Read that carefully, because it is not quite an accusation. Both handles exist and both land on the MCU, which means that sequence is enforced in **firmware** rather than in copper. The netlist does not connect them, so the finding is true. Whether it is a *defect* depends on whether the software is trusted to do it and whether it does it before the rails are enabled, and no netlist contains either. The rule reports what it can see and stops.
+Read that carefully, because it is not quite an accusation. Both handles exist and both connect to the MCU, so that sequence is enforced in **firmware** rather than in copper. The netlist does not connect them, so the finding is true. The finding may or may not be a *defect*. That depends on whether the software is trusted to do it, and on whether it does it before the rails are enabled. No netlist contains either. The rule reports what it can see and stops.
 
 ## The same board, declared differently (EE6)
 
@@ -60,15 +60,15 @@ Two things make them a distinctive class of bug. The value is latched at power-u
 
 {{ includeFile "figures/strap-bit-order.svg" }}
 
-The number a group of straps encodes is spread across several pins, and the interesting failure is across two parts rather than within one:
+A group of straps encodes one number across several pins, and the interesting failure is across two parts rather than within one:
 
 {{ agniRun "content/learn/runs/straps.yaml" }}
 
 Two PHYs on one MDIO bus, and in the first declaration both strap to address 1. Each is individually correct. Every connectivity check passes, every resistor is present and correctly valued, and the two parts fight over one address the moment either is spoken to. The bus goes unreliable in a way that reads as noise or marginal timing rather than as a wiring fault.
 
-That is the case that most needs a rule rather than a reviewer, because it is invisible on any single schematic page. Nothing on the sheet showing the first PHY says anything about the second.
+This case is invisible on any single schematic page, so of all of them it most needs a rule rather than a reviewer. Nothing on the sheet showing the first PHY says anything about the second.
 
-The second run is the same `.edn` again, declared for a part whose address pins are numbered the other way round, which is a real thing datasheets differ on. The declared net *order* is what states which pin is the high bit, so reading the same three resistors MSB-first instead of LSB-first gives 4 rather than 1, and the two devices no longer clash.
+The second run reads the same `.edn` again. This time the declaration is for a part whose address pins are numbered the other way round, and datasheets really do differ on that. The declared net *order* states which pin is the high bit. So reading the same three resistors MSB-first instead of LSB-first gives 4 rather than 1, and the two devices no longer clash.
 
 Both verdicts name a **pair** of devices for the same reason the sequencing one did. "Do these two collide" is a question about two things.
 
@@ -88,6 +88,6 @@ Both verdicts name a **pair** of devices for the same reason the sequencing one 
 | [`intent/strap-address-collision`](../../reference/rules/intent-strap-address-collision/) | error | two devices on one declared bus strapping to the same address |
 | [`intent/property-strap`](../../reference/rules/intent-property-strap/) | warning | a single strap pin against the level the declaration states |
 
-The sequence rules are named after the sequence you declare, so a design with a "SoC power tree" sequence compiles a rule called `intent/sequence-soc-power-tree`. Each compiled rule is documented by the one family page, `intent/sequence`.
+The sequence rules are named after the sequence you declare, so a design with a "SoC power tree" sequence compiles a rule called `intent/sequence-soc-power-tree`. The one family page, `intent/sequence`, documents every compiled rule.
 
 The next chapter, [interfaces and what they require](../10-interfaces-and-what-they-require/), is the last of the three system chapters.

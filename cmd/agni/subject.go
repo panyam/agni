@@ -11,8 +11,8 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// parseSubjects reads `check --subject` values into the wire subjects a scoped CheckDesign takes
-// (agni issue 897), in check.SubjectParam's spelling, which a verdict link's subject= carries too.
+// parseSubjects reads `check --subject` values into wire subjects for a scoped CheckDesign (agni
+// issue 897). It uses check.SubjectParam's spelling, as a verdict link's subject= does.
 func parseSubjects(args []string) ([]*checkspb.Subject, error) {
 	var out []*checkspb.Subject
 	for _, a := range args {

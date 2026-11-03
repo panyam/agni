@@ -14,8 +14,8 @@ trailing "+" suffix) must have a matching negative half ("_N", "_DN", or trailin
 
 ### Why engineers want it
 
-High-speed signals travel as complementary pairs, and the naming
-convention is how the pair is declared to every downstream tool that must route the two nets
+High-speed signals travel as complementary pairs. The naming
+convention declares the pair to every downstream tool that must route the two nets
 together with matched length. The two halves are authored separately, and nothing but the name
 ties them, so a typo or a deleted net silently breaks the pair.
 
@@ -31,23 +31,23 @@ signals and the link fails signal integrity.
 Detection anchors on the positive member. A lone "_N" suffix
 is ambiguous with active-low signals (RESET_N, WE_N), so treating every "_N" as an orphaned
 pair half would fire on the most common real naming convention. A positive suffix does not
-carry that ambiguity. The cost is that a stray negative with no positive is not reported, which
-is the accepted cost of the positive anchor.
+carry that ambiguity. The cost is that a stray negative with no positive is not reported, and
+the positive anchor accepts that cost.
 
 ### Only when the design uses the convention
 
 The rule fires only on a design that shows it uses differential-pair naming at all, i.e. at
 least one *complete* pair (some `X_P` with a matching `X_N`) exists somewhere. A suffix like
-`_P` is weak evidence on its own: combinational netlists (the LGSynth benchmark family, for
+`_P` is weak evidence on its own. Combinational netlists (the LGSynth benchmark family, for
 example) carry hundreds of `_P`-suffixed signal names that are not differential, and without
 this gate every one of them is a finding. Requiring pair-population evidence takes those
-designs to zero while a real board, which does declare complete pairs, still surfaces its
-broken ones.
+designs to zero. A real board does declare complete pairs, so it still surfaces its broken
+ones.
 
-The cost is a design whose only differential pair is itself broken (one `X_P`, no `X_N`, and nothing
-else paired) reports not-considered rather than a finding. That is the same weak-signal case, so the
-trade is deliberate. An operator who wants a stricter policy can add a naming convention via
-`--conventions`.
+The cost falls on a design with one differential pair that is itself broken (one `X_P`, no `X_N`,
+and nothing else paired). That design reports not-considered rather than a finding. That is the same
+weak-signal case, so the trade is deliberate. An operator who wants a stricter policy can add a
+naming convention via `--conventions`.
 
 For a software reader, this is the difference between "the string ends in `_P`" and "this
 codebase uses a `_P`/`_N` pairing convention that this one member violates." The second is
