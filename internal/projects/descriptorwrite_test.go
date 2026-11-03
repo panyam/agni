@@ -90,3 +90,29 @@ func TestWriteDescriptorRejectsBadIds(t *testing.T) {
 		t.Error("WriteDesign accepted an empty entry; a design with no entry names no analysis source")
 	}
 }
+
+// TestWriteDesignRejectsPathsTheParserRefuses holds the writer to the parser's path rule. An entry
+// or a companion that is absolute or climbs out of the design folder used to be written, and the
+// next read then refused the descriptor it had just written.
+func TestWriteDesignRejectsPathsTheParserRefuses(t *testing.T) {
+	cases := []struct {
+		entry      string
+		companions []string
+	}{
+		{"../other/x.edn", nil},
+		{"/abs/x.edn", nil},
+		{"x.edn", []string{"../x.kicad_pcb"}},
+		{"x.edn", []string{"/abs/x.kicad_pcb"}},
+	}
+	for _, c := range cases {
+		var b bytes.Buffer
+		err := WriteDesign(&b, "", "ok", "T", c.entry, c.companions, Sources{})
+		if err == nil {
+			t.Errorf("WriteDesign(entry %q, companions %q) wrote a descriptor ParseDesign refuses:\n%s", c.entry, c.companions, b.String())
+		}
+	}
+	var b bytes.Buffer
+	if err := WriteDesign(&b, "", "ok", "T", "./x.edn", []string{"sub/x.kicad_pcb"}, Sources{}); err != nil {
+		t.Fatalf("a relative entry and companion inside the folder must be accepted: %v", err)
+	}
+}

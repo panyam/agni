@@ -21,7 +21,8 @@ import (
 // to 0.3x, and only the TOC benefits.
 //
 // The result maps each multi-line free-text label to the shared factor. It is nil when every column
-// fits, for single-line text, on a schematic sheet, or on a sheet with no page. The SVG renderer and
+// fits, for single-line text, on a schematic sheet, on a sheet whose source draws its own frame
+// (SuppressWorksheet), or on a sheet with no page. The SVG renderer and
 // the WebGL overlay key on the same sheet.Labels pointers, so both apply the identical factor.
 func freeTextFit(g *geom.SchematicGeometry, sheet *geom.SheetGeometry) map[*geom.Label]float64 {
 	if len(sheet.GetPlacements()) > 0 {

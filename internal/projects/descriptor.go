@@ -396,8 +396,8 @@ func WriteProject(w io.Writer, header, id, title string, src Sources) error {
 
 // WriteDesign writes a `design.yaml`, the write half of ParseDesign.
 //
-// entry and companions are descriptor-relative names. WriteDesign cleans them as ParseDesign does,
-// so a caller cannot write a descriptor that ParseDesign would reject. src.Extends names the
+// entry and companions are descriptor-relative names. WriteDesign checks and cleans them as
+// ParseDesign does, so a caller cannot write a descriptor that ParseDesign would reject. src.Extends names the
 // design's project, "" for a design in none.
 func WriteDesign(w io.Writer, header, id, title, entry string, companions []string, src Sources) error {
 	if !idPattern.MatchString(id) {
@@ -406,8 +406,14 @@ func WriteDesign(w io.Writer, header, id, title, entry string, companions []stri
 	if entry == "" {
 		return fmt.Errorf("design %q needs an entry", id)
 	}
+	if err := validRel("entry", entry); err != nil {
+		return err
+	}
 	y := descriptorYAML{Name: id, Title: title, Entry: CleanRel(entry)}
 	for _, c := range companions {
+		if err := validRel("companions", c); err != nil {
+			return err
+		}
 		y.Companions = append(y.Companions, CleanRel(c))
 	}
 	y.setSources(src)

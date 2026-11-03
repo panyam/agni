@@ -176,8 +176,9 @@ builder reads `content/`, and a build that wrote back into it would loop. **Use 
 because a positional filter (`sed -n '5p'`) silently shows the wrong line the moment that output
 gains one; `match` selects by shape and matching NOTHING is an error. **Add `show:` only when the
 script carries plumbing a reader should not see**, since it defaults to the script. And **every run
-gets a scratch copy of the fixture**, so a rung that teaches `mv params params-old` cannot rename
-the checked-in one, which it did once, by hand.
+gets a scratch copy of the fixture**, so a rung that edits the fixture (`sed -i.orig '/^params:/d'
+project.yaml`) cannot change the checked-in one. An older rung renamed the checked-in params folder
+once, by hand.
 
 **A step that exits non-zero and captures nothing is a build error**, unless the spec sets `exit:
 true`. That field shows the status as the block's last line, and it is the declared way to make the

@@ -86,7 +86,7 @@ var (
 // set, a nil provider, and a Layered of only those do not fetch. Layered implements Prefetch to
 // forward to its layers, so asking whether a provider is a Prefetcher says nothing about whether it
 // fetches. A cache deciding whether an answer can outlive the request asks Fetches instead (agni
-// issue 895).
+// issue 915).
 func Fetches(p ParamProvider) bool {
 	switch v := p.(type) {
 	case nil:

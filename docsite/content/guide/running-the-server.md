@@ -116,7 +116,7 @@ Without the libraries the design fails quietly. It still reads, but it reads sho
 components, fewer nets, and therefore fewer findings, and no error tells you so. If your component
 or net counts look low, check this first, whether you are running in Docker or not.
 
-The libraries are most of the image's ~310MB. The size is deliberate, because a smaller
+The libraries are most of the image's ~340MB. The size is deliberate, because a smaller
 image that renders your board wrong is the worse default.
 
 ## Running one-shot commands
@@ -237,8 +237,8 @@ volume until you delete runs yourself.
 The datasheets workbench has an image of its own, `ghcr.io/panyam/agnids`, published by every release
 from the same tag as `agni`'s. It carries `agnids`, the workbench, and the docling environment behind
 the "Extract (first pass)" action, with docling's models already inside, so Extract works on a host
-with no outbound network. The docling environment makes the image about 2.6GB, where `agni`'s is
-about 230MB, so the two are separate images.
+with no outbound network. The docling environment makes the image about 3.7GB, where `agni`'s is
+about 340MB, so the two are separate images.
 
 ```
 docker run -p 8090:8090 --user $(id -u):$(id -g) -v ~/datasheets/ti:/datasheets/ti -v ~/corpus:/corpus ghcr.io/panyam/agnids:latest

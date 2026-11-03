@@ -20,9 +20,9 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/ir";
 //   Tier 1 (netlist): Design, PartLibrary, PartType, Pin, Component, ComponentSection,
 //     Net, Connection, Sheet. Exercised by the EDIF netlist reader; names are frozen.
 //   Tier 2 (physical): Footprint, Layer, Stackup, Constraint, BomLine. PROVISIONAL.
-//     No reader populates them yet, so they are designed from the IPC-2581/ODB++ schemas.
-//     The round-trip oracle cannot validate them until the first PCB reader (WS1-002).
-//     Names and shape may change.
+//     They were designed from the IPC-2581/ODB++ schemas. The IPC-2581 reader fills all five,
+//     KiCad fills Footprint and Constraint, and ODB++ fills Layer. Names and shape may still
+//     change.
 //
 // CONSTRAINTS C9 is the promotion rule. A field enters the semantic layer only once a
 // second format's reader would populate it. Until then it lives in `attributes` or the
@@ -437,7 +437,7 @@ message Pin {
 message Component {
   string ref_des = 1;
   repeated ComponentSection sections = 2;
-  string footprint_ref = 3;  // PROVISIONAL: joins to Footprint.name (no reader yet)
+  string footprint_ref = 3;  // PROVISIONAL: joins to Footprint.name (IPC-2581 and KiCad fill it)
   // device_classes is the normalized device-class SET. EACH TAG RECORDS THE EVIDENCE THAT
   // ESTABLISHED IT. Format-neutral passes derive the set, and no single format's reader fills it.
   // It is the first DERIVED-NORMALIZATION field (C9). Every format populates it through the same

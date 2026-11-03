@@ -1985,7 +1985,7 @@ type Component struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	RefDes        string                 `protobuf:"bytes,1,opt,name=ref_des,json=refDes,proto3" json:"ref_des,omitempty"`
 	Sections      []*ComponentSection    `protobuf:"bytes,2,rep,name=sections,proto3" json:"sections,omitempty"`
-	FootprintRef  string                 `protobuf:"bytes,3,opt,name=footprint_ref,json=footprintRef,proto3" json:"footprint_ref,omitempty"` // PROVISIONAL: joins to Footprint.name (no reader yet)
+	FootprintRef  string                 `protobuf:"bytes,3,opt,name=footprint_ref,json=footprintRef,proto3" json:"footprint_ref,omitempty"` // PROVISIONAL: joins to Footprint.name (IPC-2581 and KiCad fill it)
 	DeviceClasses []*ComponentClassTag   `protobuf:"bytes,7,rep,name=device_classes,json=deviceClasses,proto3" json:"device_classes,omitempty"`
 	// value is the component's VALUE as a machine-comparable quantity. The format-neutral value pass
 	// (WS3-118) derives it ONCE at ingestion, from whatever attribute the source spelled it in. It is

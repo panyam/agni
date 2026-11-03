@@ -11,9 +11,9 @@ option go_package = "github.com/panyam/agni/gen/go/agni/v1/param";
 // valid under, a limit kind, and provenance back to the exact page, table or figure. Design
 // rationale and the worked examples are in docsite/content/architecture/datasheet-layer.md.
 //
-// This schema is PROVISIONAL, under the ir.proto tier-2 posture. No extractor populates it
-// yet, and only hand-encoded fixtures (core/param/testdata/) validate the shape. Names and
-// shape may change until WS10-002 ships the first extractor.
+// This schema is PROVISIONAL, under the ir.proto tier-2 posture. The datasheet module's derive
+// pipeline (`agnids derive`) populates it, beside the hand-encoded fixtures in
+// core/param/testdata/. Names and shape may still change.
 //
 // Field discipline mirrors CONSTRAINTS C9, applied to the parameter domain. A field enters
 // this schema only if a second vendor's datasheet could populate it. Vendor extras go in

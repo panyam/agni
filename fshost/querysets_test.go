@@ -76,7 +76,8 @@ func TestConfigResolverReadsASourceNamingOneFile(t *testing.T) {
 	}
 }
 
-// oneFile returns an fs.FS whose root holds the one file. Every tier's loader walks such an FS.
+// TestOneFileIsAnFS checks that oneFile passes fstest.TestFS. oneFile is an fs.FS whose root holds
+// the one file, and every tier's loader walks such an FS.
 func TestOneFileIsAnFS(t *testing.T) {
 	inner := MemFS(map[string][]byte{"dir/x.yaml": []byte("a: 1\n"), "dir/y.yaml": []byte("b: 2\n")})
 	info, err := fs.Stat(inner, "dir/x.yaml")
