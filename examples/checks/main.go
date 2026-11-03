@@ -13,11 +13,11 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/panyam/demokit"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/examples/common"
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the built-in rule catalog (check.RunDesign runs it)
 	"github.com/panyam/agni/stdlib/rules/intent"
-	"github.com/panyam/agni/examples/common"
+	"github.com/panyam/demokit"
 )
 
 //go:embed walkthrough.md

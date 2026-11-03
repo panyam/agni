@@ -4,8 +4,8 @@ import (
 	"context"
 	"testing"
 
-	"github.com/panyam/agni/core/classify"
 	"github.com/panyam/agni/core/check"
+	"github.com/panyam/agni/core/classify"
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 

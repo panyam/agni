@@ -10,9 +10,9 @@ import (
 
 	"bytes"
 
-	"github.com/panyam/agni/readers/edif"
-	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	"github.com/panyam/agni/core/graph"
+	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/edif"
 	"github.com/panyam/agni/readers/kicad"
 )
 

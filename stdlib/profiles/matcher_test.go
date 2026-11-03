@@ -1,8 +1,8 @@
 package profiles
 
 import (
-	"fmt"
 	"context"
+	"fmt"
 	"strings"
 	"testing"
 

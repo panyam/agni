@@ -49,12 +49,12 @@ func railCapacitorWitness(ref string, at check.JoinedNet, label string) (*check.
 		}, compContext(ref, "capacitor on the rail")
 	}
 	return &check.Witness{
-		Statement: "capacitor " + ref + " sits on " + at.Net.GetName() + ", which zero-ohm link " + at.Via + " joins to the rail",
-		Terms:     []check.WitnessTerm{{Label: label, Value: ref}, {Label: "zero-ohm link", Value: at.Via}},
-	}, []check.ContextSubject{
-		{Entity: check.Entity{Kind: check.KindComponent, Ref: ref}, Role: "capacitor on the rail"},
-		{Entity: check.Entity{Kind: check.KindComponent, Ref: at.Via}, Role: "zero-ohm link"},
-	}
+			Statement: "capacitor " + ref + " sits on " + at.Net.GetName() + ", which zero-ohm link " + at.Via + " joins to the rail",
+			Terms:     []check.WitnessTerm{{Label: label, Value: ref}, {Label: "zero-ohm link", Value: at.Via}},
+		}, []check.ContextSubject{
+			{Entity: check.Entity{Kind: check.KindComponent, Ref: ref}, Role: "capacitor on the rail"},
+			{Entity: check.Entity{Kind: check.KindComponent, Ref: at.Via}, Role: "zero-ohm link"},
+		}
 }
 
 // compContext is the one-entity Context a witness attaches when it names a part. Role is the

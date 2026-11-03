@@ -7,9 +7,9 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/panyam/agni/core/svg"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
 	geomath "github.com/panyam/agni/internal/geomath"
-	"github.com/panyam/agni/core/svg"
 )
 
 // SheetSVG renders one schematic sheet to a standalone SVG document, resolving each
@@ -162,7 +162,7 @@ const (
 	sheetMaxPx    = 1600.0          // longest side of the drawing, pre-margin
 	sheetMarginPx = sheetMaxPx / 40 // whitespace around the drawing
 	strokePx      = 0.8             // geometry stroke width
-	busStrokePx   = strokePx * 3   // bus trunk/entry stroke: a fixed-visual-width line, thicker than a wire (WS7-042)
+	busStrokePx   = strokePx * 3    // bus trunk/entry stroke: a fixed-visual-width line, thicker than a wire (WS7-042)
 	pinRPx        = 2.5             // pin connect-dot radius
 	// pinPickRPx is the invisible pick target's radius (WithPickTargets). It is wider than the
 	// dot because it exists to be HIT rather than seen, and a pin at a normal zoom is a few pixels.
@@ -171,7 +171,7 @@ const (
 	// near a wire hits it, and narrow enough that two parallel wires a few pixels apart remain
 	// distinct.
 	wirePickWidthPx = 7.0
-	lineHeight    = 1.2            // multiplier on font size for stacking multi-line text
+	lineHeight      = 1.2 // multiplier on font size for stacking multi-line text
 	// glyphAdvanceEm is the average horizontal advance of one glyph as a fraction of the font
 	// size, the one calibration shared by naturalTextWidthPx and the free-text column fit
 	// (freetext.go). It is an AVERAGE over SchematicFontStack.

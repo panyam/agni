@@ -56,10 +56,31 @@ func TestEmitsCoversCompiler(t *testing.T) {
 			Relation: SequenceEnableGated,
 			Order:    []SequenceStage{{Rail: "VDD_CORE", Good: "PG_CORE"}, {Rail: "VDD_IO", Enable: "EN_IO"}},
 		}},
+		// Two groups on one bus, so the collision rule compiles beside each group's own rule.
+		StrapGroups: []StrapGroup{
+			{Name: "pmic addr", Device: "U1", Nets: []string{"ADDR0", "ADDR1"}, Bus: "I2C0"},
+			{Name: "sensor addr", Device: "U2", Nets: []string{"SA0"}, Bus: "I2C0"},
+		},
+		// A row with a function, so io-map-function compiles beside the four map rules.
+		IOMap:       []IOAssignment{{Net: "UART0_TX", Device: "U1", Pin: "12", Function: "UART0_TXD"}},
+		Exposures:   []Exposure{{Ref: "J1", Exposure: ExposureInternal}},
+		PullUpReach: []PullUpReach{{Net: "SDA", Hops: 4}},
 	}
 	rules := Compile(decl)
 	if len(rules) == 0 {
 		t.Fatal("Compile produced no rules for a full declaration")
+	}
+	// Positive control: every compiler form above must have produced its rule, or a kind missing
+	// from Emits would go untested.
+	got := map[string]bool{}
+	for _, r := range rules {
+		got[r.Name] = true
+	}
+	for _, want := range []string{RuleIOMapFunction, RuleStrapAddressCollision, "strap-group-pmic-addr",
+		RuleExposureDeclared, RulePullUpReachDeclared, RuleLoadSwitchTripBelowBudget, RuleRailCurrentMargin} {
+		if !got[want] {
+			t.Errorf("the declaration should compile %q, so Emits is tested on it; got %v", want, got)
+		}
 	}
 	for _, r := range rules {
 		if !Emits(r.Name) {

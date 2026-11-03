@@ -73,14 +73,18 @@ func TestValidateRejectsUncheckableCandidates(t *testing.T) {
 	}
 }
 
-// Line breaking belongs to the producer, not the claim, so whitespace is normalised. Nothing else
-// is, and a paraphrase is not a quote.
-func TestQuoteMatchingIgnoresOnlyWhitespace(t *testing.T) {
+// Line breaking and letter case belong to the producer, not the claim, so whitespace and case are
+// normalised. Nothing else is, and a paraphrase is not a quote.
+func TestQuoteMatchingIgnoresWhitespaceAndCase(t *testing.T) {
 	c := good()
 	c.Citation.RegionId, c.Citation.Row, c.Citation.Col = "p1.x1", -1, -1
 	c.Citation.Quote = "Recommended   Operating\nConditions"
 	if err := Validate(c, testDoc()); err != nil {
 		t.Errorf("re-wrapped quote must still match: %v", err)
+	}
+	c.Citation.Quote = "RECOMMENDED operating conditions"
+	if err := Validate(c, testDoc()); err != nil {
+		t.Errorf("a quote differing only in case must still match: %v", err)
 	}
 	c.Citation.Quote = "Recommended Operating Settings"
 	if err := Validate(c, testDoc()); !errors.Is(err, ErrQuoteNotFound) {

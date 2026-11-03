@@ -109,8 +109,10 @@ func (w *cliWorkspace) Declared(name string) bool {
 	return ok
 }
 
-// inDeclared addresses an absolute path through a declared mount that contains it. The longest root
-// wins, so nested mounts resolve to the most specific one rather than to whichever was typed first.
+// inDeclared addresses an absolute path through a mount that contains it. It searches w.Mounts(), so
+// a mount this run already minted counts too, and a second argument under it reuses that mount. The
+// longest root wins, so nested mounts resolve to the most specific one rather than to whichever was
+// typed first.
 func (w *cliWorkspace) inDeclared(abs string) (artifact.URI, bool) {
 	var best mounts.Mount
 	var bestRel string

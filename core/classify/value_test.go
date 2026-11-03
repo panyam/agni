@@ -22,19 +22,19 @@ func TestParseQuantitySpellings(t *testing.T) {
 		{"4700", 4700, "", true},
 		{"10", 10, "", true},
 
-		{"4k7", 4700, "", true},         // RKM: the letter IS the decimal point
-		{"4R7", 4.7, UnitOhm, true},     // R marks the point AND names ohms
-		{"0R05", 0.05, UnitOhm, true},   // the sense-resistor case WS3-085 needs
+		{"4k7", 4700, "", true},       // RKM: the letter IS the decimal point
+		{"4R7", 4.7, UnitOhm, true},   // R marks the point AND names ohms
+		{"0R05", 0.05, UnitOhm, true}, // the sense-resistor case WS3-085 needs
 		{"2M2", 2.2e6, "", true},
 		{"10R", 10, UnitOhm, true},
 
-		{"100n", 1e-7, "", true},        // prefix alone: unit-neutral, could be nF or nH
+		{"100n", 1e-7, "", true}, // prefix alone: unit-neutral, could be nF or nH
 		{"100nF", 1e-7, "F", true},
 		{"1u", 1e-6, "", true},
 		{"10k" + UnitOhm, 10000, UnitOhm, true},
 		{"10" + ohmSign, 10, UnitOhm, true}, // the deprecated OHM SIGN codepoint
 
-		{"100 1% 0402", 100, "", true},  // concatenated fields: value is the first token
+		{"100 1% 0402", 100, "", true}, // concatenated fields: value is the first token
 		{"100nF/50V", 1e-7, "F", true},
 
 		{"DNP", 0, "", false},

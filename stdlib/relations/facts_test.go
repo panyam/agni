@@ -880,9 +880,8 @@ func TestParamFactsKeepUnconvertibleRowsWithoutNumbers(t *testing.T) {
 // refusal is a new silent wrong answer. Naming the field BaseUnit discourages it, and this test
 // prevents it, including for a relation added later.
 //
-// The loop still skips "mm" by name. Since agni issue 1035 the board tier publishes metres
-// (unitMetre), so no current relation reaches that branch. The invariant that matters is one
-// spelling per dimension across all relations.
+// Since agni issue 1035 the board tier publishes metres (unitMetre) too, so no relation has an
+// exemption. The invariant that matters is one spelling per dimension across all relations.
 func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 	milli := ldoRecommendedSpec("ACME-33", 3000, 3600)
 	milli.Parameters[0].Unit = "mV"
@@ -893,10 +892,6 @@ func TestRelationBaseUnitsAreCanonical(t *testing.T) {
 		u := f.BaseUnit
 		if u == "" {
 			continue // dimensionless (a count, or a non-numeric relation)
-		}
-		if u == "mm" {
-			seen[u] = f.Relation
-			continue
 		}
 		base, exp, ok := param.BaseUnit(u)
 		if !ok || base != u || exp != 0 {

@@ -6,9 +6,9 @@ import (
 	ir "github.com/panyam/agni/gen/go/agni/v1/ir"
 )
 
-// regulatorPageWithControlsDesign holds one converter's full complement of rail-named nets. One is
-// the output it actually produces. Six are pin functions named after that output, and none of them
-// carries it.
+// regulatorPageWithControlsDesign holds a regulator page's rail-named nets. 12V_OUT is the output
+// one converter actually produces. Six are pin functions named after that output, and none of them
+// carries it. 20V_EN is an enable named after another converter's rail.
 func regulatorPageWithControlsDesign() *ir.Design {
 	return &ir.Design{Nets: []*ir.Net{
 		{Name: "12V_OUT"}, {Name: "12V_FB"}, {Name: "12V_SW"}, {Name: "12V_BOOT"},

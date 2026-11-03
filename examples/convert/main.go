@@ -15,9 +15,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/panyam/demokit"
 	"github.com/panyam/agni/examples/common"
 	"github.com/panyam/agni/readers/ipc2581"
+	"github.com/panyam/demokit"
 )
 
 //go:embed walkthrough.md

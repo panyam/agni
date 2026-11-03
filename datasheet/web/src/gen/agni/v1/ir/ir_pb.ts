@@ -948,7 +948,7 @@ export type Component = Message<"agni.v1.ir.Component"> & {
   sections: ComponentSection[];
 
   /**
-   * PROVISIONAL: joins to Footprint.name (no reader yet)
+   * PROVISIONAL: joins to Footprint.name (IPC-2581 and KiCad fill it)
    *
    * @generated from field: string footprint_ref = 3;
    */

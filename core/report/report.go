@@ -44,7 +44,7 @@ type Report struct {
 	// QuerySets are the answers to the design project's query sets, when the caller ran them, one
 	// Queries section each after the rules (agni issue 1190). Empty leaves the page as it was.
 	QuerySets []TableSet
-	Rules   []RuleReport
+	Rules     []RuleReport
 }
 
 // PinMap is one device's declared pins, in the map's order.

@@ -18,7 +18,7 @@ import (
 // declares its level in its heading, and the index links to it by anchor.
 
 var (
-	chapterFile = regexp.MustCompile(`^\d\d-.*\.md$`)
+	chapterFile  = regexp.MustCompile(`^\d\d-.*\.md$`)
 	levelHeading = regexp.MustCompile(`(?m)^## (.+?) \((EE\d)\)$`)
 )
 

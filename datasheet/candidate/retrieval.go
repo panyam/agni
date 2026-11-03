@@ -1,9 +1,9 @@
 package candidate
 
 import (
+	"github.com/panyam/agni/datasheet/docindex"
 	candpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/candidate"
 	docpb "github.com/panyam/agni/datasheet/gen/go/agni/v1/doc"
-	"github.com/panyam/agni/datasheet/docindex"
 )
 
 // RetrievalSource proposes candidates by SEARCHING the document rather than by reading values out of

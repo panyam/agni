@@ -447,7 +447,6 @@ func (m *irModel) IsPinlessPart(refDes string) bool { return m.pinless[refDes] }
 // IsFitted reports whether a component is assembled onto the board (see model.Model).
 func (m *irModel) IsFitted(refDes string) bool { return !m.unfitted[refDes] }
 
-
 func (m *irModel) PinNetName(refDes, pin string) string { return m.pinNet[refDes+"\x00"+pin] }
 
 func (m *irModel) PinNetConflicts() []PinNetConflict { return m.pinNetDup }

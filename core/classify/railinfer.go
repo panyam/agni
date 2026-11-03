@@ -61,8 +61,9 @@ func laterSupplyToken(v *RoleVocab, name string) string {
 	return ""
 }
 
-// firstSupplyLoad names the first power_in pin on n, in ref-des then pin order, that belongs to a
-// fitted part other than a connector, as "U18 pin 1 (VDD)". "" when there is none.
+// firstSupplyLoad names a power_in pin on n that belongs to a fitted part other than a connector, as
+// "U18 pin 1 (VDD)". It picks the label that sorts first as a string, so U10 comes before U9. ""
+// when there is none.
 func firstSupplyLoad(v *RoleVocab, index map[string]*ir.PartType, comps map[string]*ir.Component, n *ir.Net) string {
 	var loads []string
 	for _, conn := range n.GetConnections() {
@@ -115,7 +116,6 @@ func isConnector(c *ir.Component) bool {
 	}
 	return false
 }
-
 
 // physicalPins counts n's connections to real parts, leaving out a power symbol's virtual pin.
 func physicalPins(n *ir.Net) int {

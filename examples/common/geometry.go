@@ -8,8 +8,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/panyam/agni/readers/edif"
 	geom "github.com/panyam/agni/gen/go/agni/v1/geom"
+	"github.com/panyam/agni/readers/edif"
 )
 
 // LoadSchematic reads a schematic geometry sidecar from arg, a filesystem path or the bare name of

@@ -142,7 +142,6 @@ func (v *ValueVocab) UnitFor(class ComponentClass, prefixed bool) string {
 // wrong alias would read values from the wrong property.
 var valueAttrKeys = []string{"value", "val", "partvalue", "component_value"}
 
-
 // StampValues fills each component's value Quantity from its value attribute, under whatever key its
 // format used (WS3-118). A rule then reads a NUMBER rather than re-parsing text per format. It is
 // idempotent, recomputing and overwriting.

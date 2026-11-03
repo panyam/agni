@@ -19,14 +19,14 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/panyam/demokit"
 	"github.com/panyam/agni/core/check"
 	"github.com/panyam/agni/core/diff"
-	"github.com/panyam/agni/examples/common"
 	"github.com/panyam/agni/core/graph"
-	"github.com/panyam/agni/readers/ipc2581"
 	"github.com/panyam/agni/core/render"
+	"github.com/panyam/agni/examples/common"
+	"github.com/panyam/agni/readers/ipc2581"
 	_ "github.com/panyam/agni/stdlib/rules/builtin" // register the built-in rule catalog (check.RunDesign runs it)
+	"github.com/panyam/demokit"
 )
 
 //go:embed walkthrough.md

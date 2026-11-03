@@ -37,7 +37,7 @@ feedback patterns are naming-lexicon config, and a project extends them (WS3-069
 excluded for the same reason, since a probe there loads the highest dV/dt node in the design, and
 control and gate-drive nets such as a mode strap or an enable are excluded because they are not
 rails (agni 680). Some divider taps feed a sense pin and are named for the rail they sense
-(VBUS_MON_UP). Such a tap is excluded for the same reason (agni 935). Severity is info because DFT
+(VBUS_MON_UP). Such a tap is excluded too, because a sense input is not a rail (agni 935). Severity is info because DFT
 posture is a per-project policy. The reviewer decides, and the rule surfaces the rails.
 
 ### Query structure

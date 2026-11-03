@@ -4,7 +4,7 @@ import "strings"
 
 // Emits reports whether ruleName is a rule the intent compiler can produce from some declaration,
 // either one of the fixed names listed in the switch or a member of the subsystem-, protection-,
-// property- and sequence- families. It accepts a bare Rule.Name or the composed catalog name
+// property-, sequence- and strap-group- families. It accepts a bare Rule.Name or the composed catalog name
 // ("intent/module-missing").
 //
 // A review runner uses it to tell a REAL-but-undeclared intent rule from a NOT-YET-SHIPPED name that
@@ -24,10 +24,13 @@ func Emits(ruleName string) bool {
 		RuleLoadSwitchTripBelowBudget,
 		// The IO-map rules (agni issue 517).
 		RuleIOMapPin, RuleIOMapNetAbsent, RuleIOMapFarEnd, RuleIOMapCoverage,
+		// The pin-function check (agni issue 667) and the strap address collision.
+		RuleIOMapFunction, RuleStrapAddressCollision,
 		// Connector exposure (agni issue 831) and pull-up reach (agni issue 1165).
 		RuleExposureDeclared, RulePullUpReachDeclared:
 		return true
 	}
 	return strings.HasPrefix(name, "subsystem-") || strings.HasPrefix(name, "protection-") ||
-		strings.HasPrefix(name, "property-") || strings.HasPrefix(name, "sequence-")
+		strings.HasPrefix(name, "property-") || strings.HasPrefix(name, "sequence-") ||
+		strings.HasPrefix(name, "strap-group-")
 }

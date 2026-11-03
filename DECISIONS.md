@@ -425,14 +425,15 @@ an ordinary delete did not strand the document.
 
 **The argument for refusing started from a false premise.** It was justified by "an incoherent spec
 on disk breaks `param.LoadSet` for the whole corpus". It cannot, because `LoadSet` reads
-`*.textproto` (`core/param/set.go`) and the workbench writes `<stem>.partspec.json`. A draft cannot
-reach a corpus by sitting on disk, so there was nothing on the other side of the trade. Check the
+`*.textproto` (`core/param/set.go`) and the workbench wrote `<stem>.partspec.json`. Since agni 749 it
+writes `drafts/<MPN>.draft.json`, which `LoadSet` does not read either. A draft cannot reach a corpus
+by sitting on disk, so there was nothing on the other side of the trade. Check the
 premise before designing around it.
 
-**In its place, `SavePartSpecResponse` carries** the problems back, classified as STRUCTURAL (wrong
-now) or COMPLETENESS (merely unfinished, which every draft is). The write always succeeds. The
-client renders them and computes nothing. That also deleted a TypeScript reimplementation of the
-same rules, which the refusing version had needed.
+**In its place, the save response (`SavePartSpecResponse`, now `SaveDraftResponse`) carries** the
+problems back, classified as STRUCTURAL (wrong now) or COMPLETENESS (merely unfinished, which every
+draft is). The write always succeeds. The client renders them and computes nothing. That also
+deleted a TypeScript reimplementation of the same rules, which the refusing version had needed.
 
 **Reopen if** a draft ever becomes something another consumer loads automatically. Today the only
 route from draft to corpus is manual, and that step belongs in issue #209, along with full

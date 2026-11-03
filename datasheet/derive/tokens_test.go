@@ -69,11 +69,11 @@ func TestNormalizeSymbol(t *testing.T) {
 // schema records it as raw-only, so MachineComparable excludes it.
 func TestParseCondition(t *testing.T) {
 	cases := []struct {
-		in             string
-		symbol         string
-		eq, min, max   *float64
-		unit           string
-		structured     bool
+		in           string
+		symbol       string
+		eq, min, max *float64
+		unit         string
+		structured   bool
 	}{
 		{"VGS = 10 V", "VGS", f(10), nil, nil, "V", true},
 		{"ID = 0.22 A", "ID", f(0.22), nil, nil, "A", true},

@@ -74,7 +74,7 @@ func TestPCIe(t *testing.T) {
 	}})
 	fires(t, PCIE, &ir.Design{Components: comps("U1", "U2"), Nets: []*ir.Net{
 		net("X_PETP", "U1.1", "U2.1"), net("X_PETN", "U1.2", "U2.2"),
-		net("X_PERP", "U1.3", "U2.3"), // PERN absent -> missing
+		net("X_PERP", "U1.3", "U2.3"),                              // PERN absent -> missing
 		net("X_REFCLKP", "U1.5", "U2.5"), net("X_REFCLKN", "U1.6"), // dangling
 		net("X_PERST", "U1.7", "U2.7"),
 	}}, "pcie-signal-missing", "pcie-signal-dangling")

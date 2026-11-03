@@ -14,9 +14,9 @@ func TestSheetSVGImage(t *testing.T) {
 		Sheets: []*geom.SheetGeometry{{
 			Size: &geom.BBox{Min: &geom.Point{X: 0, Y: 0}, Max: &geom.Point{X: 1000, Y: 1000}},
 			Images: []*geom.Image{{
-				Bbox: &geom.BBox{Min: &geom.Point{X: 100, Y: 100}, Max: &geom.Point{X: 400, Y: 300}},
-				Mime: "image/png",
-				Data: []byte{0x89, 0x50, 0x4e, 0x47}, // arbitrary non-empty bytes
+				Bbox:  &geom.BBox{Min: &geom.Point{X: 100, Y: 100}, Max: &geom.Point{X: 400, Y: 300}},
+				Mime:  "image/png",
+				Data:  []byte{0x89, 0x50, 0x4e, 0x47}, // arbitrary non-empty bytes
 				Asset: &geom.Asset{Kind: geom.Asset_KIND_IMAGE},
 			}},
 		}},

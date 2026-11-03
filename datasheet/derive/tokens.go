@@ -14,11 +14,11 @@ import (
 func normalizeSymbol(s string) string { return strings.ReplaceAll(s, " ", "") }
 
 var (
-	plusMinus  = regexp.MustCompile(`^(?:\+/-|±)\s*(\d+(?:\.\d+)?)$`)
-	rangeTo    = regexp.MustCompile(`^([+-]?\s*\d+(?:\.\d+)?)\s+to\s+([+-]?\s*\d+(?:\.\d+)?)$`)
-	plainNum   = regexp.MustCompile(`^[+-]?\d+(?:\.\d+)?$`)
-	condEq     = regexp.MustCompile(`^([A-Za-z][A-Za-z0-9 ()_.]*?)\s*=\s*([+-]?\d+(?:\.\d+)?)\s*([A-Za-zµΩ%°]*)$`)
-	condRange  = regexp.MustCompile(`^([+-]?\d+(?:\.\d+)?)\s*(?:<=|≤)\s*([A-Za-z][A-Za-z0-9 ()_.]*?)\s*(?:<=|≤)\s*([+-]?\d+(?:\.\d+)?)\s*([A-Za-zµΩ%°]*)$`)
+	plusMinus = regexp.MustCompile(`^(?:\+/-|±)\s*(\d+(?:\.\d+)?)$`)
+	rangeTo   = regexp.MustCompile(`^([+-]?\s*\d+(?:\.\d+)?)\s+to\s+([+-]?\s*\d+(?:\.\d+)?)$`)
+	plainNum  = regexp.MustCompile(`^[+-]?\d+(?:\.\d+)?$`)
+	condEq    = regexp.MustCompile(`^([A-Za-z][A-Za-z0-9 ()_.]*?)\s*=\s*([+-]?\d+(?:\.\d+)?)\s*([A-Za-zµΩ%°]*)$`)
+	condRange = regexp.MustCompile(`^([+-]?\d+(?:\.\d+)?)\s*(?:<=|≤)\s*([A-Za-z][A-Za-z0-9 ()_.]*?)\s*(?:<=|≤)\s*([+-]?\d+(?:\.\d+)?)\s*([A-Za-zµΩ%°]*)$`)
 )
 
 // parseRatings parses one absolute-maximum-ratings value cell. A plain number is a

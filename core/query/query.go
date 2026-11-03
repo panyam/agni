@@ -99,7 +99,9 @@ func Cmp(l Term, op string, r Term) Literal { return datalog.Cmp(l, op, r) }
 func Def(head Atom, body ...Literal) Rule { return datalog.Def(head, body...) }
 
 // Build assembles a Query from its rules, the goal literals to solve, and the projected answer terms.
-func Build(rules []Rule, goal []Literal, sel ...Term) Query { return datalog.Build(rules, goal, sel...) }
+func Build(rules []Rule, goal []Literal, sel ...Term) Query {
+	return datalog.Build(rules, goal, sel...)
+}
 
 // Parse parses the query text syntax. A query that does not parse fails with a *SyntaxError, which
 // says where in s the parser stopped (ErrorPosition).
