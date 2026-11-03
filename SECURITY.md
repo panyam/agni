@@ -21,8 +21,8 @@ the `datasheet` module (`agnids` and the `ghcr.io/panyam/agnids` image). The exa
 `examples/` are not shipped and are out of scope.
 
 `agni serve` is built to serve designs to the people who can already read them. Exposing it to the
-public internet is not yet supported (agni issue 855). A report that depends on an untrusted
-client reaching a server is still welcome, and is triaged with that in mind.
+public internet is not yet supported (agni issue 855). We still welcome a report that depends on
+an untrusted client reaching a server, and we triage it with that in mind.
 
 ## What runs
 

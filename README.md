@@ -31,21 +31,22 @@ so your design is never uploaded.
   checklist and saves the page, and `agni trace --from U7.3 --to U12.4` follows a signal through
   the series parts between two pins.
 - **Checks against datasheets.** It joins a design against extracted datasheet limits and
-  checks, for example, that a rail stays inside a part's recommended operating range.
+  checks, for example, that a rail is inside a part's recommended operating range.
 - **Diffs revisions over the IR.** It compares two revisions structurally (components, nets,
   connectivity), not as a text diff of the source files, so it survives reformatting and
   rename churn.
 - **Renders to SVG or a WebGL canvas**, drawing either the faithful schematic and board
   geometry or an auto-laid-out netlist graph.
-- **Answers datalog queries.** `agni query` asks arbitrary questions of the design fact base,
-  the same fact base the rules are built on. The engine is
+- **Answers datalog queries.** `agni query` asks arbitrary questions of the design fact base.
+  The rules are built on the same fact base, and the engine is
   [jaala](https://github.com/panyam/jaala).
 - **Reads many formats into one IR.** EDIF netlists and schematics, KiCad schematics and
   boards, IPC-2581, xschem, and gEDA all parse into the same `ir.Design`. Adding a reader is
   one entry in `readers/formats/registry.go`.
-- **Serves the same answers to other tools.** The services the CLI calls are Connect rpcs that
-  `agni serve` exposes, `--remote` sends `query`, `check`, `trace` and `review` to a running server,
-  and [`clients/python`](clients/python) is a typed Python client over the CLI or a server.
+- **Serves the same answers to other tools.** The CLI calls a set of services, and `agni serve`
+  exposes the same services as Connect rpcs. `--remote` sends `query`, `check`, `trace` and `review`
+  to a running server, and [`clients/python`](clients/python) is a typed Python client over the CLI
+  or a server.
 
 ## Try it in 60 seconds
 
@@ -99,9 +100,8 @@ viewer, and a `go install` build downloads it from its release the first time it
 From a checkout, `make agni` builds the same binary into `bin/`, and `make demo` opens both demo
 boards, the clean one and the one with issues. See [demo/README.md](demo/README.md).
 
-To run a release over your own boards, each
-[GitHub release](https://github.com/panyam/agni/releases) attaches a compose bundle pinned to it,
-over the `ghcr.io/panyam/agni` image:
+Each [GitHub release](https://github.com/panyam/agni/releases) attaches a compose bundle pinned to
+it. The bundle runs the `ghcr.io/panyam/agni` image over your own boards:
 
 ```
 AGNI_DESIGNS=./designs docker compose up -d     # the viewer at http://localhost:8080
@@ -111,13 +111,15 @@ docker compose run --rm trial /designs/<board>  # a trial report that holds noth
 ## How it works
 
 Agni normalizes design formats the way a compiler normalizes languages into one AST, so every
-analysis downstream is written once and works on all of them. The protobuf IR (`protos/`, generated into `gen/`) is the one contract in the middle. Readers
-(`readers/edif/`, `readers/kicad/`, `readers/ipc2581/`, and the xschem/gEDA readers) are the only code that knows a
-file format; they produce `ir.Design`. Everything else (`check/`, `diff/`, `render/`, the
-query engine, the web service) consumes the IR and never looks at a source file.
+analysis downstream is written once and works on all of them. The protobuf IR is the one contract
+in the middle. It is defined in `protos/` and generated into `gen/`. Readers are the only code that
+knows a file format, and they produce `ir.Design`. They are `readers/edif/`, `readers/kicad/`,
+`readers/ipc2581/`, and the xschem/gEDA readers. Everything else consumes the IR and never looks
+at a source file. That includes `core/check/`, `core/diff/`, `core/render/`, the query engine and
+the web service.
 
-The same shape repeats at two more contracts: a geometry IR that N producers fill and N
-renderers draw, and a parameter IR that N datasheet extractors fill and the checks read.
+The same shape repeats at two more contracts. N producers fill a geometry IR and N renderers draw
+it. N datasheet extractors fill a parameter IR and the checks read it.
 
 ## Philosophy
 
@@ -138,9 +140,9 @@ renderers draw, and a parameter IR that N datasheet extractors fill and the chec
 - **The core is open, with a clear boundary.** The engine is shareable under Apache-2.0.
   Proprietary formats, house rules, and confidential designs live in a private extension that
   depends on the engine without forking it.
-- **Agni stays legible to software engineers.** EDA carries decades of domain vocabulary. It maps it
-  to concepts software engineers already know (an IR, a linter, a semantic diff, a lockfile),
-  so you can contribute without an EE degree. See
+- **Agni is written to be legible to software engineers.** EDA carries decades of domain
+  vocabulary. Agni maps that vocabulary to concepts software engineers already know (an IR, a
+  linter, a semantic diff, a lockfile), so you can contribute without an EE degree. See
   [the software-analogy map](https://panyam.github.io/agni/reference/analogy/).
 
 ## Formats read today
@@ -154,9 +156,9 @@ renderers draw, and a parameter IR that N datasheet extractors fill and the chec
 | gEDA gschem | `.sch` (sniffed) | yes | schematic |
 | Telesis | `.tel` | yes | none |
 
-A hierarchical EDIF netlist reads its top cell by default and says which blocks it left out.
-`--flatten-hierarchy`, `flatten_hierarchy: true` in a design's `design.yaml`, or the viewer's
-**Read every block** reads every block it places.
+A hierarchical EDIF netlist reads its top cell by default and says which blocks it left out. To
+read every block it places, pass `--flatten-hierarchy`, set `flatten_hierarchy: true` in the
+design's `design.yaml`, or press **Read every block** in the viewer.
 
 ## Documentation
 
