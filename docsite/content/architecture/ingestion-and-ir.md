@@ -3,11 +3,11 @@ title: "Ingestion and the neutral IR"
 description: "How designs in many formats are read into one neutral representation, and what that representation is."
 ---
 
-Hardware design files come in many formats: Altium and Cadence binaries, IPC-2581 and ODB++ interchange files, KiCad s-expressions, netlists, SPICE. Each vendor spells the same ideas differently. Agni's readers (EDIF, KiCad, IPC-2581, xschem, gEDA and Telesis today) normalize them into one neutral intermediate representation (IR), and everything else works from that. This page covers how the reading works and what the IR looks like once a design is in it.
+Hardware design files come in many formats: Altium and Cadence binaries, IPC-2581 and ODB++ interchange files, KiCad s-expressions, netlists, SPICE. Each vendor spells the same ideas differently. Agni has readers for EDIF, KiCad, IPC-2581, ODB++, xschem, gEDA and Telesis today. They normalize these formats into one neutral intermediate representation (IR), and everything else works from that. This page covers how the reading works and what the IR looks like once a design is in it.
 
 ## Many readers, one IR
 
-The architecture is the one a compiler or a document converter uses. A compiler like LLVM has many frontends that all lower into one IR, then many backends that emit from it. Pandoc does the same for documents: every input format parses into one central AST, and every output format writes from that AST. Agni takes that posture for hardware designs. Many **readers** (one per format) normalize into a single **IR**, and writers emit back out of it.
+The architecture is the one a compiler or a document converter uses. A compiler like LLVM has many frontends that all lower into one IR, then many backends that emit from it. Pandoc does the same for documents: every input format parses into one central AST, and every output format writes from that AST. Agni does the same for hardware designs. It has one **reader** per format, each reader normalizes into a single **IR**, and writers emit back out of it.
 
 The reader layer is heterogeneous by necessity, because the formats are. Entries marked (planned) have no reader yet:
 
@@ -18,32 +18,32 @@ The reader layer is heterogeneous by necessity, because the formats are. Entries
 | XML | IPC-2581 | Go's `encoding/xml` |
 | Record/tabular | ODB++ | custom record reader over the job's directory tree |
 
-They all target one IR. Everything downstream (diff, rules, analysis) reads that IR and never touches a format directly. Adding a reader therefore makes every existing analysis work on the new format for free.
+They all target one IR. Diff, rules, analysis and everything else downstream read that IR and never touch a format directly. Adding a reader therefore makes every existing analysis work on the new format for free.
 
 EDIF was the first reader written, but the IR is named for concepts, not for EDIF's spelling of them.
 ## The neutral IR's two layers
 
-The IR is a single neutral model of a design that readers normalize into and writers emit from. It has two layers.
+The IR is a single neutral model of a design. Readers normalize into it and writers emit from it. It has two layers.
 
-- **The semantic layer** holds the normalized messages (`Design`, `PartType`, `Component`, `Net`, and so on), which diff, rules, and analysis consume. It is cross-format, so an Altium net and a Cadence net look identical here. Think of it as the clean domain model the rest of the system programs against.
-- **The fidelity layer** is a `FidelityFragment` list holding the raw source a lossless reader keeps, keyed back to a node by provenance, so a write-back can be byte-for-byte or semantically identical to the input. A reader that is only lossy-bounded (the current EDIF netlist reader, for one) leaves this empty. Every node also carries an `attributes` string map as a fallback for named properties that have not been promoted into first-class fields.
+- **The semantic layer** holds the normalized messages, such as `Design`, `PartType`, `Component` and `Net`. Diff, rules and analysis consume them. It is cross-format, so an Altium net and a Cadence net look identical here. Think of it as the clean domain model the rest of the system programs against.
+- **The fidelity layer** is a `FidelityFragment` list. A lossless reader keeps its raw source there, keyed back to a node by provenance, so a write-back can be byte-for-byte or semantically identical to the input. A reader that is only lossy-bounded leaves this list empty, and the current EDIF netlist reader is one. Every node also carries an `attributes` string map as a fallback for named properties that have not been promoted into first-class fields.
 
 {{ includeFile "figures/ir-two-layers.svg" }}
 
-Provenance links the two layers. This mirrors what programming-language tooling already does with full-fidelity syntax trees (Roslyn's red-green trees, rust-analyzer's `rowan`, tree-sitter CSTs), where a concrete layer retains everything (ordering, trivia, fields not modeled) alongside the clean semantic view used for analysis. The normalized layer abstracts detail away, and the fidelity layer is how that detail is not lost.
+Provenance links the two layers. Programming-language tooling does the same with full-fidelity syntax trees, such as Roslyn's red-green trees, rust-analyzer's `rowan` and tree-sitter CSTs. There a concrete layer retains everything, including ordering, trivia and fields not modeled, beside the clean semantic view that analysis uses. The normalized layer abstracts detail away, and the fidelity layer keeps that detail.
 
-Three things come from provenance spans at once: lossless reconstruction, "this finding maps to exactly this line or figure" for trust, and surgical edits (rewrite only the changed region and leave the rest byte-identical). Carrying unmodeled fields opaquely means write-back never drops a field the reader did not understand, which also lets "lossless" survive the reader's own incomplete coverage.
+Three things come from provenance spans at once: lossless reconstruction, "this finding maps to exactly this line or figure" for trust, and surgical edits (rewrite only the changed region and leave the rest byte-identical). The IR also carries unmodeled fields opaquely. So write-back never drops a field the reader did not understand, and a reader can still be lossless where its own coverage is incomplete.
 
 ## Two tiers of maturity
 
 The schema is split by how well-exercised it is.
 
 - **Tier 1 (netlist) is frozen.** It holds `Design`, `PartLibrary`, `PartType`, `Pin`, `Component`, `ComponentSection`, `Net`, `Connection`, `Sheet`, exercised by the EDIF reader and verified on a real 3980-component board.
-- **Tier 2 (physical) is provisional.** It holds `Footprint`, `Layer`, `Stackup`, `Constraint`, `BomLine`. The IPC-2581 reader fills `Footprint`, `Layer`, `Stackup` and `BomLine`, and the KiCad board reader fills `Footprint` and `Constraint`. They were designed from the published IPC-2581 and ODB++ schemas and stay unvalidated until more than one reader agrees on them. Names and shapes may change. They ship anyway, marked provisional in the proto, so consumers can plan against them.
+- **Tier 2 (physical) is provisional.** It holds `Footprint`, `Layer`, `Stackup`, `Constraint`, `BomLine`. The IPC-2581 reader fills `Footprint`, `Layer`, `Stackup` and `BomLine`, and the KiCad board reader fills `Footprint` and `Constraint`. They were designed from the published IPC-2581 and ODB++ schemas and are unvalidated until more than one reader agrees on them. Names and shapes may change. They ship anyway, marked provisional in the proto, so consumers can plan against them.
 
 ## Neutral vocabulary
 
-The names are grounded in a survey of how EDIF, KiCad, IPC-2581, and ODB++ express the same concepts. Where the IR name differs from EDIF's word, it is because EDIF's word is format-specific:
+The names are grounded in a survey of how EDIF, KiCad, IPC-2581, and ODB++ express the same concepts. Where the IR name differs from EDIF's word, EDIF's word is format-specific:
 
 | IR name | EDIF term | Why not EDIF's word |
 |---|---|---|
@@ -65,7 +65,7 @@ The vocabulary is domain-specific. In terms a programmer already has:
 
 ## The IR as a graph
 
-The IR is a graph. It has a **containment** tree of nodes, plus **cross-references** where one node points at another by a stable key. The cross-references are what make it a {{ explainable "netlist" }} rather than a flat document. The proto is the source of truth for the schema.
+The IR is a graph. It has a **containment** tree of nodes, plus **cross-references** where one node points at another by a stable key. The cross-references make it a {{ explainable "netlist" }} rather than a flat document. The proto is the source of truth for the schema.
 **Containment** (what owns what):
 
 - `Design`
@@ -105,7 +105,7 @@ Solid edges are containment, dashed edges are references by key. The reference k
 | `Connection.pin_ref` | `Pin.designator` (on that component's `PartType`) | which pin |
 | `Component.footprint_ref` | `Footprint.name` | physical package (provisional) |
 
-The [geometry sidecar](../geometry-and-rendering/) joins back into this graph the same way, by the same semantic keys: a placement's `ref_des` joins to `Component.ref_des`, a wire's `net` joins to `Net.name`, a pin point's `port_ref` joins to `Pin.designator`. That is how a renderer attaches drawing coordinates without geometry ever entering the core IR.
+The [geometry sidecar](../geometry-and-rendering/) joins back into this graph the same way, by the same semantic keys: a placement's `ref_des` joins to `Component.ref_des`, a wire's `net` joins to `Net.name`, a pin point's `port_ref` joins to `Pin.designator`. So a renderer attaches drawing coordinates, and geometry never enters the core IR.
 
 ## A voltage divider in the IR
 
@@ -131,7 +131,7 @@ That circuit as an IR instance, the abstract boxes above filled in:
 | `Net` | `MID` | connections: `R1.2`, `R2.1` |
 | `Net` | `GND` | connections: `R2.2` |
 
-Both `Component`s point at the one `PartType` `Device:R`, two instances of the same class. The `Net` `MID` has two `Connection`s, `R1.2` and `R2.1`, and that pair is the junction in the middle of the divider. Follow any `Connection`'s `component_ref` and `pin_ref` and you land on a specific pin of a specific component.
+Both `Component`s point at the one `PartType` `Device:R`, two instances of the same class. The `Net` `MID` has two `Connection`s, `R1.2` and `R2.1`, and that pair is the junction in the middle of the divider. Follow any `Connection`'s `component_ref` and `pin_ref` and you reach a specific pin of a specific component.
 ## One physical part, several sections
 
 Some chips hold several independent circuits in one package. A 74LS00 is a single 14-pin chip containing four separate NAND gates. On the board it is **one** part (`ref_des U1`), but logically it is four gates (units). The IR models it as one `Component` `U1` with **four** `ComponentSection`s:
@@ -144,44 +144,44 @@ Some chips hold several independent circuits in one package. A 74LS00 is a singl
 | `ComponentSection` | `U1` index 2 | gate C |
 | `ComponentSection` | `U1` index 3 | gate D |
 
-A {{ explainable "reference-designator" "ref-des" }} is not unique per section, since all four gates share `U1`. This is why `Component` groups sections rather than the reader emitting `U1` four times. In software terms it is one object, identified once, exposing several independent sub-units that happen to share a package. Sections may reference different `PartType`s (a heterogeneous part). Diff compares the *set* of part references over sections rather than a single value, so a change to one section is reported without false positives from ordering.
+A {{ explainable "reference-designator" "ref-des" }} is not unique per section, since all four gates share `U1`. So `Component` groups the sections, and the reader does not emit `U1` four times. In software terms it is one object, identified once, exposing several independent sub-units that happen to share a package. Sections may reference different `PartType`s (a heterogeneous part). Diff compares the *set* of part references over sections rather than a single value, so a change to one section is reported without false positives from ordering.
 
 ## Provenance and identity
 
 `Provenance{ source_file, Span span, native_id, native_id_kind }` is a neutral locator. `native_id` is a format-native id, and `native_id_kind` names its kind (`edif-rename-id`, `kicad-uuid`, `ipc2581-xpath`, and so on). A native id is **not** assumed stable across exports. EDIF regenerates its `&id` on every export.
 
-The stable key for cross-revision diff and for the IR-to-geometry join is always the semantic key (ref-des, net name, pin designator), never the native id. Matching on a native id would report the entire design as changed on every export. `Span` (byte offset and length, line and column) exists for lossless reconstruction and surgical edits. The EDIF s-expr reader does not populate byte offsets yet.
+The stable key for cross-revision diff and for the IR-to-geometry join is always the semantic key (ref-des, net name, pin designator), never the native id. Matching on a native id would report the entire design as changed on every export. `Span` holds a byte offset and length plus a line and column. It exists for lossless reconstruction and surgical edits. The EDIF s-expr reader does not populate byte offsets yet.
 
 ### Placeholder designators
 
 **A semantic key can be absent while still being present.** Before a designer runs annotation, every unassigned part carries a placeholder designator: `R?`, `C?`, `REF**`, or a partly-assigned `C?1845`. That is annotation *state*, not a name. Every unannotated resistor on the sheet reads `R?`, so the string is a label saying "no identity yet" while occupying the field where an identity goes.
 
-`internal/refdes.IsPlaceholder` is the single definition, and it exists as its own package because the layers that must agree on it cannot import each other (readers take nothing from `core`, and `core` takes nothing from a reader). When those layers disagree about what counts as a designator, nothing fails loudly, and they quietly answer different questions about the same design.
+`internal/refdes.IsPlaceholder` is the single definition. It has its own package because several layers must agree on it and they cannot import each other. Readers take nothing from `core`, and `core` takes nothing from a reader. When those layers disagree about what counts as a designator, nothing fails loudly, and they quietly answer different questions about the same design.
 
-Consumers **decline** rather than merge. A board reader skips a placeholder-referenced {{ explainable "footprint" }}, because a `REF**` on a board is usually a fiducial or a mechanical artifact rather than a part. A schematic reader keeps the part, because those are real circuitry someone has not named yet, and dropping them would make the design read short. The check model declines to assert pin uniqueness over one, because `(R?, 1)` does not name a pin, and on one export 176 distinct resistors shared that key, so the pin index saw a single pin sitting on 129 nets. Reporting that as malformed input says something false about a netlist that is fine.
+Consumers **decline** rather than merge. A board reader skips a placeholder-referenced {{ explainable "footprint" }}, because a `REF**` on a board is usually a fiducial or a mechanical artifact rather than a part. A schematic reader keeps the part, because those parts are real circuitry and nobody has named them yet, and dropping them would make the design read short. The check model declines to assert pin uniqueness over one, because `(R?, 1)` does not name a pin. On one export 176 distinct resistors shared that key, so the pin index saw a single pin sitting on 129 nets. Reporting that as malformed input would say something false, because the netlist is fine.
 
-Declining also means a placeholder is not a *claimed* designator, so two symbols reading `R?` are not two parts fighting over one name and the schematic reader does not report them as a `reader.ref_des_collision`. That finding is an error whose remedy is to rename one of them, and renaming is the wrong instruction for a sheet nobody has annotated yet. It would also report the same two placements a second time under a different heading.
+Declining also means a placeholder is not a *claimed* designator, so two symbols reading `R?` are not two parts fighting over one name and the schematic reader does not report them as a `reader.ref_des_collision`. That finding is an error, and its remedy is to rename one of them. Renaming is the wrong instruction when nobody has annotated the sheet yet. It would also report the same two placements a second time under a different heading.
 
-The other half of that bargain is that a reader which KEEPS unannotated parts has to say so. It is the only layer that ever knew, since the parts are drawn and connected, so by the time the IR reaches a rule they look like ordinary components with odd names. `internal/refdes.Unannotated` builds the diagnostic from the same predicate, so the reader that keeps them cannot group them by a rule of its own.
+In return, a reader that KEEPS unannotated parts has to say so. The parts are drawn and connected, so by the time the IR reaches a rule they look like ordinary components with odd names. The reader is the only layer that ever knew. `internal/refdes.Unannotated` builds the diagnostic from the same predicate, so the reader that keeps them cannot group them by a rule of its own.
 
-Which half a reader is on follows from the format, not from the reader's taste, so the shipped answer is uniform: `kicad` (board), `ipc2581` skip; `edif`, `kicad` (schematic), `geda`, `xschem` keep and report. Asking which one a new reader is on is the first question, because the two halves are mutually exclusive and doing both would report a part the design does not contain.
+The format decides which half a reader is on, not the reader's taste, so the shipped answer is uniform. `kicad` (board), `ipc2581` and `odb` skip, and `edif`, `kicad` (schematic), `geda` and `xschem` keep and report. For a new reader, ask first which half it is on. The two halves are mutually exclusive, and doing both would report a part the design does not contain.
 
 **Do not assume a reader groups by designator, because they disagree and the diagnostic must not.** `internal/refdes.Unannotated` groups by designator *before* it walks sections, so every spelling produces one entry per placeholder carrying every placement, and "2 parts are still called `R?`" means the same thing everywhere.
 
 <details>
 <summary>How far the readers actually diverge, and why repairing the identity is worse</summary>
 
-`kicad` folds every symbol sharing a designator into one component; `geda` folds only when the source says `slot=`, so unslotted duplicates stay separate components with one designator between them; `xschem` does not fold at all. Two unannotated symbols are therefore one component or two depending on the format. A reader deriving its own grouping would reintroduce the divergence the shared predicate exists to remove.
+`kicad` folds every symbol sharing a designator into one component; `geda` folds only when the source says `slot=`, so unslotted duplicates remain separate components with one designator between them; `xschem` does not fold at all. Two unannotated symbols are therefore one component or two depending on the format. The shared predicate exists to remove that divergence, and a reader deriving its own grouping would bring it back.
 
-The temptation is to repair the identity instead, keying those parts on their native id, which really is unique. The identity model forbids that, because the id is regenerated per export, so every unannotated part would read as changed on every revision diff. The part has no identity yet, and `unannotated_components` below records that absence.
+It is tempting to repair the identity instead and key those parts on their native id, which really is unique. The identity model forbids that, because the id is regenerated per export, so every unannotated part would read as changed on every revision diff. The part has no identity yet, and `unannotated_components` below records that absence.
 
 </details>
 
 ## Geometry is a keyed sidecar
 
-Render data (symbol shapes, placements, wire routing, pin coordinates) does not live in the core IR. It lives in a separate artifact that references the core IR by stable keys (`ref_des`, net name, `port_ref`, plus provenance), joined at render time. Diff, rules, and simulation never carry graphics. The renderer loads the core IR plus the geometry sidecar and joins them.
+Render data does not live in the core IR. Render data means symbol shapes, placements, wire routing and pin coordinates. It lives in a separate artifact that references the core IR by stable keys (`ref_des`, net name, `port_ref`, plus provenance), joined at render time. Diff, rules, and simulation never carry graphics. The renderer loads the core IR plus the geometry sidecar and joins them.
 
-Two things follow. Heavy graphics stay off the analysis hot paths, and geometry can come from a different source than connectivity. A design's connectivity can be read from an EDIF `.edn` netlist while its geometry comes from the `.eds` schematic export. The [geometry and rendering](../geometry-and-rendering/) page covers the sidecar in full.
+Two things follow. Heavy graphics are kept off the analysis hot paths, and geometry can come from a different source than connectivity. A design's connectivity can be read from an EDIF `.edn` netlist while its geometry comes from the `.eds` schematic export. The [geometry and rendering](../geometry-and-rendering/) page covers the sidecar in full.
 
 ## Fidelity per reader
 
@@ -189,7 +189,7 @@ Two things follow. Heavy graphics stay off the analysis hot paths, and geometry 
 
 ## Input diagnostics
 
-A read can succeed and still be worth complaining about. `InputDiagnostics` is where a reader records what it saw, so that a condition it noticed does not evaporate the moment the IR is built:
+A read can succeed and still be worth complaining about. A reader records what it saw in `InputDiagnostics`, so a condition it noticed does not vanish once the IR is built:
 
 | Field | What it records |
 |---|---|
@@ -205,47 +205,49 @@ A read can succeed and still be worth complaining about. `InputDiagnostics` is w
 
 They exist so that **silence does not read as coverage.** Every one of these makes the design report *less* rather than reporting an error. An unresolved symbol yields a smaller netlist, and connectivity rules then pass cleanly over the gap. An unexpanded bus leaves members merged or off-net. Un-annotated parts are fully drawn and connected, so nothing looks wrong at all. In each case a clean run is indistinguishable from a design that genuinely had none of the problem, and the reader is the only layer that ever knew the difference.
 
-Recording is therefore separate from judging. The reader states what it observed; a thin rule in the catalog turns each into a finding with severity and remedy. That split is why the diagnostics are per-reader without being per-reader *policy*, because a format that cannot detect a condition contributes nothing, and the rule stays silent for a knowable reason rather than an accidental one.
+Recording is therefore separate from judging. The reader states what it observed; a thin rule in the catalog turns each into a finding with severity and remedy. With that split, the diagnostics are per-reader without being per-reader *policy*. A format that cannot detect a condition contributes nothing, and the rule is then silent for a knowable reason rather than an accidental one.
 
-Two consequences follow. A field is not populated by every reader, and an empty one means "this reader does not detect this", not "the design is clean". EDIF contributes no `ref_des_collisions` on purpose, because it represents a multi-gate part as several instances sharing a designator and carries nothing to tell that legitimate grouping from a duplicate. And a reader must build the struct **once**: assigning a fresh `InputDiagnostics` per signal silently drops whatever was recorded before it, which is a bug that only appears when the second signal is added.
+Two consequences follow. A field is not populated by every reader, and an empty one means "this reader does not detect this", not "the design is clean". EDIF contributes no `ref_des_collisions` on purpose, because it represents a multi-gate part as several instances sharing a designator and carries nothing to tell that legitimate grouping from a duplicate. And a reader must build the struct **once**. Assigning a fresh `InputDiagnostics` per signal silently drops whatever was recorded before it, and the bug only appears when the second signal is added.
 
-That first consequence was stated here and enforced nowhere, so `duplicate-ref-des` read as a clean pass on every EDIF, IPC-2581, gEDA and xschem design, because only the KiCad reader populated the field (agni issue 309). So a reader now DECLARES what it computed, in `supplied`, whether or not it found any:
+This page stated that first consequence and nothing enforced it. Only the KiCad reader populated the field, so `duplicate-ref-des` read as a clean pass on every EDIF, IPC-2581, gEDA and xschem design (agni issue 309). So a reader now DECLARES what it computed, in `supplied`, whether or not it found any:
 
 ```
 InputDiagnostics{ RefDesCollisions: nil, Supplied: []string{"ref_des_collisions"} }   // looked, found none
 InputDiagnostics{ RefDesCollisions: nil }                                             // never looked
 ```
 
-A rule whose whole subject is a diagnostic gates on the declaration (`check.CapRefDesCollisions`), so the second case reports **not-applicable with a reason** instead of a pass. Declaring is unconditional, because a reader that only recorded it when it found something would be back to the same ambiguity on the clean read, and the clean read is the common case.
+Some rules have a diagnostic as their whole subject. Such a rule gates on the declaration (`check.CapRefDesCollisions`), so the second case reports **not-applicable with a reason** instead of a pass. Declaring is unconditional. Suppose a reader declared only when it found something. The clean read would then be ambiguous again, and the clean read is the common case.
 
 When you write a new reader, detect what your format can express, declare what you detected, and leave out what your format cannot tell apart. EDIF leaves this one out and the report says so.
 
 ### A diagnostic that is not a finding
 
-`unexpanded_hierarchy` is the one field no rule turns into a finding (agni issue 707). A design being hierarchical is not a defect, so a verdict would state something false about it. The field records a limit of the READ, because the EDIF reader scopes extraction to the top cell (WS1-004), so every count and every rule covers the top level alone. Every surface states it in one sentence, `report.HierarchyNote` in `core/report` (agni issue 717). The CLI prints it as a note on stderr and `agni stats` adds a count line. A check run carries the list on `CheckDesignResponse.unexpanded_hierarchy` and a results or review document on `DesignRef.unexpanded_hierarchy`, so the check report and the checklist page put the sentence in their header without reading the design again. `GetDesignResponse` carries the list and the sentence (`hierarchy_note`), which the viewer shows as a strip over the canvas, and its Properties panel lists the skipped cells at the design level. It is in the same register as the note naming a companion a read pulled in.
+No rule turns `unexpanded_hierarchy` into a finding (agni issue 707), and it is the only field in the table with no rule. A design being hierarchical is not a defect, so a verdict would state something false about it. The field records a limit of the READ, because the EDIF reader scopes extraction to the top cell (WS1-004), so every count and every rule covers the top level alone. Every surface states it in one sentence, `report.HierarchyNote` in `core/report` (agni issue 717). The CLI prints it as a note on stderr and `agni stats` adds a count line. A check run carries the list on `CheckDesignResponse.unexpanded_hierarchy` and a results or review document on `DesignRef.unexpanded_hierarchy`, so the check report and the checklist page put the sentence in their header without reading the design again. `GetDesignResponse` carries the list and the sentence (`hierarchy_note`). The viewer shows the sentence as a strip over the canvas, and its Properties panel lists the skipped cells at the design level. It is in the same register as the note that names a companion when a read pulls one in.
 
-A snapshot can ask for the blocks instead (`Snapshot.flatten_hierarchy`, `--flatten-hierarchy` on the CLI, agni issue 718). The EDIF reader then walks from the top cell into every block it places, a block being a cell whose contents hold instances. A net naming a block's own port and the parent's net naming that port on the block's instance are one net, named by its shallowest piece. A net inside a block that reaches no port keeps its own name when no other net in the design carries it and its block is placed once, and is otherwise qualified by the block's instance path (`/A1/MID`), because sheets reuse local and generated names and joining them by name would merge two nets. A part keeps the designator the file states, and parts sharing one are sections of one component wherever they sit, since a multi-gate part split across sheets is one part. A part reached through a block the design places more than once carries its path in its ref-des (`B2/R1`) and in its locator, so two placements are two sets of parts. A file with no designators names each part by its instance name, which is unique only within its cell, so a name used in more than one cell instance is qualified by its block's path in each block (`SA/R1`), the top cell keeping its own (agni issue 1105). A multi-gate part split across sheets then reads as two parts, which shows, where merging two blocks' `R1` would hide one. Blocks are not part types. A flattened read lists only the blocks a cycle kept it out of. The choice changes what the design contains, so it rides the overlay into `ReadOptions` and the overlay's identity, and the parse cache keys on it too, which `TestFlattenedSnapshotIsOneModelAcrossServices` holds over one cache serving both reads. A design declares it once with `flatten_hierarchy: true` in its `design.yaml`, which every surface honours, and the viewer asks for one page with `?flatten=1`, which the strip's **Read every block** button adds (agni issue 1102). Each listed block carries a `reason`, `NOT_WALKED` on a top-level read and `CYCLE` on a flattened read a block placing itself stopped, and `report.HierarchyNote` says a different sentence for each, since "only its top cell was read" is false after a walk.
+A snapshot can ask for the blocks instead (`Snapshot.flatten_hierarchy`, `--flatten-hierarchy` on the CLI, agni issue 718). A block is a cell whose contents hold instances. The EDIF reader then walks from the top cell into every block it places. Inside a block, a net can name one of the block's own ports, and in the parent another net names that port on the block's instance. The two are one net, named by its shallowest piece. Some nets inside a block reach no port. Such a net keeps its own name when no other net in the design carries that name and its block is placed once. Otherwise it is qualified by the block's instance path (`/A1/MID`). Sheets reuse local and generated names, and joining them by name would merge two nets. A part keeps its designator from the file. Parts sharing a designator are sections of one component wherever they sit, since a multi-gate part split across sheets is one part. Sometimes the design places a block more than once. A part reached through that block carries its path in its ref-des (`B2/R1`) and in its locator, so two placements are two sets of parts. A file with no designators names each part by its instance name, and that name is unique only within its cell. So a name used in more than one cell instance is qualified by its block's path in each block (`SA/R1`), and the top cell keeps its own name (agni issue 1105). A multi-gate part split across sheets then reads as two parts. A reader can see that error, while merging two blocks' `R1` would hide one part.
 
-The instance count makes it actionable. "This design is hierarchical" says nothing about how much is missing; "SUB holds 212 instances and none were read" does. A reader that learns to descend into a block stops listing it, so the list shrinking is the hierarchy walk landing. The xschem and gEDA readers skip `type=subcircuit` and `source=` in the same way (agni issue 134), and the field is shaped so they can populate it too.
+Blocks are not part types. A flattened read lists a block only when a cycle kept the walk out of it. The choice changes what the design contains. So it travels on the overlay into `ReadOptions` and into the overlay's identity, and the parse cache keys on it too. `TestFlattenedSnapshotIsOneModelAcrossServices` holds this over one cache serving both reads. A design declares it once with `flatten_hierarchy: true` in its `design.yaml`, and every surface honours that. The viewer asks for one page with `?flatten=1`, and the strip's **Read every block** button adds it (agni issue 1102). Each listed block carries a `reason`. It is `NOT_WALKED` on a top-level read, and `CYCLE` when a block placing itself stopped a flattened read. `report.HierarchyNote` says a different sentence for each, since "only its top cell was read" is false after a walk.
+
+The instance count makes it actionable. "This design is hierarchical" says nothing about how much is missing; "SUB holds 212 instances and none were read" does. Once a reader learns to descend into a block, it stops listing that block, so a shrinking list shows the hierarchy walk working. The xschem and gEDA readers skip `type=subcircuit` and `source=` in the same way (agni issue 134), and the field is shaped so they can populate it too.
 
 ### Record what went right, not only what went wrong
 
-Most of the table above names a failure, and a rule reading a failure list can only ever report failures. Its silence on a clean design is then indistinguishable from its silence on a design nobody looked at, which is the same ambiguity `supplied` closes one level up. `unmodeled_buses` is the field that never had the problem, because it holds every {{ explainable "bus" }} construct the reader saw and the rule partitions it, so a bus whose members are already nets is a countable pass.
+Most of the table above names a failure, and a rule reading a failure list can only ever report failures. Its silence on a clean design is then indistinguishable from its silence on a design nobody looked at. `supplied` closes the same ambiguity one level up. `unmodeled_buses` never had the problem. It holds every {{ explainable "bus" }} construct the reader saw, and the rule partitions that list, so a bus whose members are already nets is a countable pass.
 
-`resolved_symbols` is `unresolved_symbols` given the same shape (agni issue 418). The resolve walk already decided per reference and threw the successes away; keeping them is what lets `symbol-unresolved` state a considered set. The **pin count** is what tells the two cases apart, because "the symbol resolved" reads identically on a 100-pin FPGA and on a stale library entry that answered with an empty stub, and the second costs the netlist exactly what a missing file does. A count moves when the library does.
+`resolved_symbols` is `unresolved_symbols` given the same shape (agni issue 418). The resolve walk already decided per reference and threw the successes away. Keeping them lets `symbol-unresolved` state a considered set. The **pin count** tells the two cases apart. "The symbol resolved" reads identically on a 100-pin FPGA and on a stale library entry that answered with an empty stub. The second costs the netlist exactly what a missing file does. A count moves when the library does.
 
-`joined_taps` is the same move applied to the T-tap diagnostic (agni issue 420), and it is the case where the silence cost most.
+`joined_taps` is the same move applied to the T-tap diagnostic (agni issue 420). There the silence cost most.
 
 <details>
 <summary>Why a T-tap is the worst of these silences, and what recovers the set</summary>
 
-A T-tap with no junction dot is drawn as a connection the netlist does not have, so the author, the reviewer and the plot all agree while the board ships with the connection missing. Before this, a sheet whose every tap carried its dot reported what a sheet with no tap in it reported, and what a format that cannot see wire geometry reported.
+A T-tap with no junction dot is drawn as a connection, but the netlist does not have it. So the author, the reviewer and the plot all agree while the board ships with the connection missing. Before this, a sheet whose every tap carried its dot reported the same as a sheet with no tap in it. A format that cannot see wire geometry reported the same again.
 
-The reader had the answer: `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass, so a joined tap is an endpoint of both wires by the time anything looks. Running the same detection once more before the split recovers the set.
+The reader had the answer. `splitWiresAt` runs at every junction dot and mid-span label BEFORE the detection pass, so a joined tap is an endpoint of both wires by the time anything looks. Running the same detection once more before the split recovers the set.
 
 </details>
 
-Copy two things when adding a reader. Declare `resolved_symbols` in `supplied` only on the branch that actually opened a symbol, because xschem and gEDA have a no-opener path where the caller deliberately asked for a symbol-free read, and declaring there would turn "we did not look" into "we looked and found nothing missing". And keep the two lists a partition, since a reference on both would let a rule report one subject as passed and failed at once. `readers/formats` holds the guard that a reader recording unresolved symbols also declares the resolved set.
+Copy two things when adding a reader. Declare `resolved_symbols` in `supplied` only on the branch that actually opened a symbol, because xschem and gEDA have a no-opener path where the caller deliberately asked for a symbol-free read, and declaring there would turn "we did not look" into "we looked and found nothing missing". And keep the two lists a partition, since a reference on both would let a rule report one subject as passed and failed at once. A guard in `readers/formats` checks that a reader recording unresolved symbols also declares the resolved set.
 
 ## Tiered writers
 
@@ -259,16 +261,16 @@ Like Pandoc, the set of writers is broad, and it does not promise every possible
 
 ## Round-trip as a test oracle
 
-For unchanged input, `parse then emit` should be the identity function. Running the whole real-file corpus through read-then-write and asserting byte-identical (or semantically identical) output is property-based and differential testing applied to the reader layer. It catches parser regressions and silent breakage from format churn automatically, rather than when a customer file fails to load.
+For unchanged input, `parse then emit` should be the identity function. Run the whole real-file corpus through read-then-write and assert byte-identical, or semantically identical, output. That is property-based and differential testing applied to the reader layer. It catches parser regressions and silent breakage from format churn automatically, rather than when a customer file fails to load.
 
 ## Two nuances about "lossless"
 
-1. **"Lossless" is relative to the ingestion source, not the native file.** An extractor or export (ODB++, an extractor's output) has already dropped information the native binary held. A reader can be perfectly lossless with respect to the interchange format it reads while still lacking native-only detail. Lossless-to-ODB++ is achievable. Lossless-to-Altium-native is not unless the native file is read directly.
+1. **"Lossless" is relative to the ingestion source, not the native file.** ODB++ and an extractor's output are both exports, and each has already dropped some of the native binary's information. A reader can be perfectly lossless with respect to the interchange format it reads while still lacking native-only detail. Lossless-to-ODB++ is achievable. Lossless-to-Altium-native is not, unless the native file is read directly.
 2. **Write-back into a native tool goes through interchange or the API, never by emitting the vendor's binary.** The way back is IR to open interchange to tool (the tool imports the emitted ODB++ or IPC-2581), or the IR drives the tool's automation API, with provenance carrying surgical fidelity. This is still lossless along the path under Agni's control.
 
 ## How formats get ingested
 
-Reading a proprietary binary directly, by reverse-engineering it, sits low on the priority list, mostly for legal reasons.
+Agni puts reading a proprietary binary directly, by reverse-engineering it, low on the priority list, mostly for legal reasons.
 
 <details>
 <summary>The four reasons, none of which is legal advice</summary>
@@ -295,61 +297,62 @@ The technical argument points the same way. Ingesting via a documented export or
 Two mechanisms keep the schema from drifting toward whatever format is read most.
 
 1. **The promotion rule** admits a field to the semantic layer only once a *second* format's reader would populate it. Until then it lives in the `attributes` map or the fidelity layer. This blocks both EDIF-shaped fields and speculative ones, and keeps the IR format-neutral, since no reader adds a field another format could not fill.
-2. **Reader reconciliation** means every new reader reconciles its concepts against the cross-format map before adding fields. A concept the map missed updates the map. A key that recurs in `attributes` across two readers becomes a promotion candidate. A first-class rename updates the proto and the map together. This is how new concepts introduced by new formats get absorbed over time instead of accreting as one-off fields.
+2. **Reader reconciliation** means every new reader reconciles its concepts against the cross-format map before adding fields. A concept the map missed updates the map. A key that recurs in `attributes` across two readers becomes a promotion candidate. A first-class rename updates the proto and the map together. So when a new format brings a new concept, the IR absorbs it over time rather than accreting a one-off field.
 
 ## Derived fields, and the tiers that fill them
 
-Some fields no reader populates. A net's role (a {{ explainable "rail" }}, a ground, and the four that
-mean "named after a rail without being one"; see [naming conventions](../../guide/naming-conventions/))
-and a component's device class are *derived* from the already-read IR by a shared, format-neutral pass,
-so every format gets them the same way rather than each reader inventing its own answer.
+Some fields no reader populates. Two examples are a net's role and a component's device class. Roles
+include a {{ explainable "rail" }}, a ground, and the four that mean "named after a rail without being
+one" (see [naming conventions](../../guide/naming-conventions/)). A shared, format-neutral pass
+*derives* these fields from the already-read IR, so every format gets them the same way rather than
+each reader inventing its own answer.
 
-The roles themselves are the `ir.Role` enum, so the vocabulary is generated for Go and TypeScript from
-one definition rather than being a list each language keeps its own copy of.
+The roles themselves are the `ir.Role` enum, so Go and TypeScript both generate the vocabulary from
+one definition, and neither language keeps its own copy of the list.
 
 Those passes originally all ran at ingestion, and the rule was one shared pass per field. That
-assumed everything a derived field needs is available at read time. It stopped being true when the
-datasheet tier arrived, because seeded parameters attach at model construction, *after* the read, so a field
-derivable from a vendor's pin table cannot be filled by an ingestion pass at all.
+assumed a derived field could find all its inputs at read time. The assumption broke when the
+datasheet tier arrived. Seeded parameters attach at model construction, *after* the read. So an
+ingestion pass cannot fill a field derivable from a vendor's pin table at all.
 
 So a derived field is now filled by **one pass per evidence tier**, under two conditions that keep
 the original guarantees intact.
 
 **The field records which tier established each value.** `ir.Net.roles` is the worked example: each
-role carries a `RoleSource`, so a role read off a naming convention is distinguishable from one the
-source format declared and from one a datasheet's pin function established. Without that the tiers
-union into a flat set and "how do we know this" stops being answerable at the point of use, which is
-what made a naming convention and a vendor fact look identical for as long as they did.
-`ir.Component.device_classes` followed, each tag carrying a `ClassSource`. It had to, because without
-somewhere to write its evidence the datasheet tier had nowhere to write at all, since it enriched the check
-model privately and the IR never carried its answer, so a query said a part was a `tvs` while a
-drawing of the same design called it a diode.
+role carries a `RoleSource`. So a consumer can tell whether a role came from a naming convention, from
+the source format's own declaration, or from a datasheet's pin function. Without that, the tiers union
+into a flat set, and nobody at the point of use can answer "how do we know this". For as long as that
+was true, a naming convention and a vendor fact looked identical.
+`ir.Component.device_classes` followed, each tag carrying a `ClassSource`. It had to. The datasheet
+tier used to enrich the check model privately, and the IR never carried its answer. So a query said
+a part was a `tvs` while a drawing of the same design called it a diode. Without a field for its
+evidence, the datasheet tier had nowhere to write at all.
 
-**A later tier may only add, never remove or downgrade.** That makes admitting a tier safe,
-because switching one on can reveal more, and can never cost a value an earlier tier would have found. So a
-design read without the datasheet tier classifies exactly as it did before that tier existed, and no
-tier's absence can silently narrow an answer.
+**A later tier may only add, never remove or downgrade.** So admitting a tier is safe. Switching
+one on can reveal more, and every value an earlier tier found survives it. So a design read without
+the datasheet tier classifies exactly as it did before that tier existed, and no tier's absence can
+silently narrow an answer.
 
 {{ includeFile "figures/derived-role-tiers.svg" }}
 
 The two instances today are `classify.StampClassesFromSpecs` (a datasheet's declared device class)
-and `enrichRolesFromParams` (a datasheet's pin functions establishing rail and ground). The rule they
-share, including what a duplicate means, has one home each in `classify.AddClassTag` and
+and `enrichRolesFromParams` (a datasheet's pin functions establishing rail and ground). They share one
+rule, including what a duplicate means, and it has one home each in `classify.AddClassTag` and
 `classify.AddNetRole`.
 
-The class pass runs wherever a corpus is present rather than only at model construction: the Loader
+The class pass runs wherever a corpus is present rather than only at model construction. The Loader
 runs it when the read carries one, and `check.Model` runs the same pass again when it is handed a
 corpus the read did not have. Running it twice is free, since it adds and never replaces. In exchange
 the design itself carries the answer, so a drawing, a query and a rule are reading one
-set rather than three derivations of it. The classes at stake are the ones nothing else can reach: a
-bare crystal against a ceramic resonator, which the keyword path refuses to guess because vendor part
-text is unreliable for exactly that split, and an ideal-diode controller, which is a FET plus a bias
-network that no netlist labels.
+set rather than three derivations of it. Nothing else can reach the classes at stake. One is a bare
+crystal against a ceramic resonator. The keyword path refuses to guess between them, because vendor
+part text is unreliable for exactly that split. The other is an ideal-diode controller, which is a FET
+plus a bias network that no netlist labels.
 
-There is a constraint on the order, and it is the kind that fails silently. The convention pass
-REPLACES the set it writes, so it has to run first; the datasheet pass joins on the MPN another pass
-fills, so it has to run after that one. `formats.DeriveDesign`, the configured half of
-`Loader.ReadDesign`, is where that order lives.
+The two passes must run in order, and getting the order wrong fails silently. The convention pass
+REPLACES the set it writes, so it has to run first. The datasheet pass joins on the MPN, and another
+pass fills the MPN, so the datasheet pass has to run after that one. The order is set in
+`formats.DeriveDesign`, the configured half of `Loader.ReadDesign`.
 
 Before the datasheet tier, a net was a rail because of its NAME, and the built-in vocabulary is
 start-anchored, so a project naming rails function-first had to declare its own lexicon or the engine
@@ -358,7 +361,7 @@ with no error and no warning. A vendor pin table settles it without consulting a
 
 ## Versioning
 
-`Design.ir_version` and `Design.source_format` are stamped on every document. Proto3 retains unknown fields on parse, which together with the `attributes` map and the fidelity fragments gives forward-compatible carry-through across schema changes.
+`Design.ir_version` and `Design.source_format` are stamped on every document. Proto3 retains unknown fields on parse. Together with the `attributes` map and the fidelity fragments, that gives forward-compatible carry-through across schema changes.
 
 ## Caveats
 
@@ -368,4 +371,4 @@ with no error and no warning. A vendor pin table settles it without consulting a
 - **The physical tier is provisional.** `Footprint`, `Layer`, `Stackup`, and `BomLine` are filled by the IPC-2581 reader, and `Footprint` by the KiCad board reader too, but the shapes may still change. Treat them as a sketch until a second PCB-fabrication reader agrees on them.
 - **"Same net name" is ambiguous in a diff.** A net that keeps its connectivity but changes name is a *rename*. A net that keeps its name but changes connectivity is a *rewire*. A [semantic diff](../semantic-diff/) has to tell those apart, because they are very different edits.
 
-A lossless IR with provenance is what enables surgical write-back, automated fixes, and transformations rather than read-only review. Everything else (diff, rules, analysis, the corpus) sits on this one representation.
+A lossless IR with provenance enables surgical write-back, automated fixes and transformations, beyond read-only review. Diff, rules, analysis, the corpus and everything else build on this one representation.

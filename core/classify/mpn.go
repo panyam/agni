@@ -20,7 +20,7 @@ var MPNAliases = []string{"MPN", "Manufacturer_PN", "Manufacturer PN", "mpn", "P
 //
 // It is a shared pass rather than reader work (agni issue 519), because a reader promoting the
 // number privately leaves every other format with an empty component.mpn and a silently disabled
-// parameter tier. See docsite/content/build/format-reader.md#the-part-number-is-the-one-to-get-wrong-quietly.
+// parameter tier. See docsite/content/build/format-reader.md#getting-the-part-number-wrong-fails-quietly.
 //
 // Three sources, most specific first, and it stops at the first that answers:
 //

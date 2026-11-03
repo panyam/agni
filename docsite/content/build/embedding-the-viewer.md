@@ -10,22 +10,23 @@ page beside the viewer and reloading the viewer throws away the reader's place.
 
 The contract is `ViewerPageService` in `protos/agni/v1/viewer/page.proto`. The viewer page answers it
 itself. No server does. Its location message is the viewer's URL state field for field, so a link
-and a call land the same way, on the same sheet with the same highlight, and
-`web/src/navparity.test.ts` holds the viewer to that.
+and a call open the same sheet with the same highlight. `web/src/navparity.test.ts` holds the viewer
+to that.
 
 ## Allowing your page
 
 The viewer takes requests from its own origin and from origins its server names, and refuses every
 other with `permission_denied`. Start the server with one `--embed-origin` per parent origin, such as
-`agni serve --mount demo=./designs --embed-origin https://portal.example`. A value has to be an origin
-exactly, scheme and host and an optional port with no path, because the viewer compares it with the
-sender's origin as a string, so `serve` refuses `https://portal.example/` rather than starting a
+`agni serve --mount demo=./designs --embed-origin https://portal.example`. A value has to be exactly
+an origin, meaning a scheme, a host and an optional port, with no path. The viewer compares it with
+the sender's origin as a string, so `serve` refuses `https://portal.example/` rather than starting a
 viewer that ignores its parent.
 
-One request needs no allowing. `ApplyLocation` carrying a `url` and nothing else is taken from any
-page, a report opened from disk included, because loading that link in the viewer's window does the
-same thing and any page holding the window can already do that. Its reply says only whether it
-worked, with no location, so a page that was not allowed learns nothing about the design.
+One request needs no allowing. The viewer takes an `ApplyLocation` from any page, including a report
+opened from disk, when the request carries a `url` and nothing else. Loading that link in the
+viewer's window does the same thing, and any page holding the window can already do that. The reply
+says only whether it worked, with no location, so a page that was not allowed learns nothing about
+the design.
 
 ## The envelope
 
@@ -53,26 +54,27 @@ guessing when the viewer has booted. Requests are answered one at a time, in the
 
 ## The calls
 
-Every response carries the page's location after the call, which tells a caller where the viewer
-landed without asking again.
+Every response carries the page's location after the call, so a caller learns where the viewer
+ended up without asking again.
 
 - `GetLocation` reads where the page is and changes nothing.
 - `ApplyLocation` moves the page to a location as following a link to it would. A location naming
-  another design opens it. One naming the open design, or none, applies to the page as it stands,
-  and an empty field leaves its part alone, so a caller sends only what it wants changed. It takes
-  a `url` instead of a location too, any link the server minted, and applies the fields that link
-  sets.
-- `LocateVerdict` focuses one verdict and draws its proof, opening a sheet it is drawn on. With a
-  `rule` hint a verdict the page has not answered yet is asked first, one rule about the given
-  subjects, as a link carrying the same hints is.
+  another design opens it. A location naming the open design applies to the page as it stands, and
+  so does a location naming no design. An empty field leaves its part alone, so a caller sends only
+  what it wants changed. The call also takes a `url` in place of a location. The `url` can be any
+  link the server minted, and the call applies the fields that link sets.
+- `LocateVerdict` focuses one verdict and draws its proof, opening a sheet it is drawn on. The page
+  may not have answered the verdict yet. Given a `rule` hint, it then asks that one rule about the
+  given subjects first, as it does for a link carrying the same hints.
 - `SelectFinding` focuses a finding of the last run, as clicking its row does, except that selecting
   the focused finding again keeps it rather than clearing it.
 - `LocateEntity` highlights a net, part or pin, as clicking a query result does.
 - `ShowSheet` opens a sheet by its id.
 
-A call that names something the page does not have (an unknown verdict, a finding the run lacks)
-answers `resolved: false` or `selected: false` and leaves the page alone, because a stale link should
-not clear what the reader was looking at. A sheet the design lacks is `invalid_argument`.
+A call can name something the page does not have, such as an unknown verdict or a finding the run
+lacks. That call answers `resolved: false` or `selected: false` and leaves the page alone, because a
+stale link should not clear what the reader was looking at. A sheet the design lacks is
+`invalid_argument`.
 
 ## A parent page
 
@@ -81,8 +83,8 @@ your origin and open `parent.html?viewer=<a viewer design URL>`. Its `agniCall(m
 whole client, about twenty lines, and `web/browser/embed.spec.ts` drives it across two origins in the
 browser suite.
 
-A parent written in TypeScript can use the generated Connect client instead, through the `fetch`
-that `web/src/embedclient.ts` builds over postMessage.
+A parent written in TypeScript can use the generated Connect client instead.
+`web/src/embedclient.ts` builds a `fetch` over postMessage for it to use.
 
 ```ts
 const transport = createConnectTransport({ baseUrl: "https://viewer.invalid", fetch: frameFetch(frame.contentWindow, viewerOrigin, window) });
@@ -96,10 +98,11 @@ Every link in a check or checklist report (`--format html`) opens in the window 
 With scripts off, clicking one loads it in that window, so a reader working through a report keeps
 one viewer tab rather than gaining one per click. With scripts on, the report's own script looks for
 that window first, and when it already shows a viewer it sends `ApplyLocation` with the link instead
-of loading it, so the viewer keeps the reader's place. A viewer that does not answer within two
-seconds, or answers that it could not, gets the link loaded as before. The script makes no request
-of its own, and only a report that links into a viewer (one written with `--server`) carries it, so
-a report written with no viewer to link to is still a plain page with no script at all.
+of loading it, so the viewer keeps the reader's place. If the viewer does not answer within two
+seconds, or answers that it could not apply the link, the script loads the link as before. The
+script makes no request of its own. A report links into a viewer only when it was written with
+`--server`, and only such a report carries the script. A report written with no viewer to link to
+is still a plain page with no script at all.
 
 `examples/embed-viewer/two-pane.html` puts a report beside the viewer it links into, in a frame named
 `agni-viewer`, and `web/browser/embed.spec.ts` checks that a click there moves the viewer without

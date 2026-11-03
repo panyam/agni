@@ -19,8 +19,8 @@ a running server; [Calling agni from another language](../other-languages/) cove
 Two example modules back this guide, both in the engine repo under `examples/`:
 
 - `extension-template` is a bare scaffold to copy.
-- `extension` is a fuller worked example, a `.acme` reader and a rule that fires, to read when you
-  want to see a real one.
+- `extension` is a fuller worked example, with a `.acme` reader and a rule that fires. Read it when
+  you want to see a real one.
 
 ## Prerequisites
 
@@ -119,8 +119,8 @@ catalog's own concern.
 
 ## Go is one of four ways to write a rule
 
-Go is the shape with the fewest limits, so it is the one this page starts with, and it is often not
-the one you want. `check.Rule` is the primitive, and three other shapes compile to it. Your extension
+Go is the shape with the fewest limits, so this page starts with it. It is often not the shape you
+want. `check.Rule` is the primitive, and three other shapes compile to it. Your extension
 can register any of them, because all four reach the catalog as a `check.RuleSource` and nothing
 downstream can tell them apart.
 
@@ -138,7 +138,7 @@ Reach for a profile when the thing you are describing is a bus and the knowledge
 architect rather than a programmer, since adding an interface is then a data value and needs no
 rebuild. Reach for an intent declaration when the fact lives outside the design entirely, like a
 rail's current budget, which no netlist carries. Reach for Go when the question needs a traversal or
-a pairwise join the query vocabulary does not express.
+a pairwise join, and the query vocabulary does not express it.
 
 [How a rule gets written](../../architecture/rules-and-checks/#how-a-rule-gets-written) has the axis
 in full, including why no shape is allowed to own the primitive.
@@ -153,34 +153,34 @@ check.NewSupersedingSource("myco", rules,
     check.Facets{Names: []string{"decoupling-missing"}})
 ```
 
-Each `Facets` selects what to drop, using the same grammar `Filter` uses for selection. `Names`
+Each `Facets` selects what to drop, with the same grammar that `Filter` uses for selection. `Names`
 replaces individual rules, and `Tags` replaces a family. A source's declaration never applies to its
 own rules, so a replacement cannot delete itself.
 
 Interface profiles do this for you. A profile that carries a built-in's name supersedes that
-built-in's rules, so a naming map that re-binds `SPI_NOR` to your own net-name suffixes replaces the
-engine's reading of that interface rather than running beside it. [Interface
+built-in's rules. Say a naming map re-binds `SPI_NOR` to your own net-name suffixes. That map then
+replaces the engine's reading of the interface rather than running beside it. [Interface
 profiles](../../guide/interface-profiles/) covers the YAML these are written in.
 
-Running both invents failures. A naming map that re-binds some roles and leaves others at the
-engine's naming lets the built-in profile still anchor and still clear its in-use gate, so it
-reports each re-bound role as a missing signal while your profile reads the same board clean. The
-effect is invisible when you re-bind the anchor role, because the built-in profile then has nothing
-to anchor on, so a convention CLOSER to the engine's produced more spurious failures than one
-further from it.
+Running both invents failures. Imagine a naming map that re-binds some roles and leaves the others
+at the engine's naming. The built-in profile still anchors and still clears its in-use gate. It then
+reports each re-bound role as a missing signal, while your profile reads the same board clean. When
+you re-bind the anchor role, the built-in profile has nothing to anchor on, and the effect is
+invisible. So a convention CLOSER to the engine's produced more spurious failures than one further
+from it.
 
 Because supersession works by removing rules, the CLI prints a `note:` to stderr naming what was
-dropped and which source dropped it. A rule that was taken away produces no output, and without the
-note a report whose rules were removed looks exactly like one where they ran and found nothing.
+dropped and which source dropped it. A rule that was taken away produces no output. Without the
+note, a report with removed rules looks exactly like a report where they ran and found nothing.
 
 If you need to drop rules without owning a source, `Catalog.Without(Facets)` is the same exclusion as
 a standalone operation.
 
 ## Compose in main
 
-An extension reaches the engine through the same public registration points the standard library
-uses, so the shape is the one [Stack and platform](../../architecture/stack/) draws, with your
-module as the fourth source:
+An extension reaches the engine through the public registration points that the standard library
+uses. [Stack and platform](../../architecture/stack/) draws the shape, and your module is the
+fourth source:
 
 {{ includeFile "figures/engine-layers.svg" }}
 
@@ -226,16 +226,16 @@ func main() {
 
 **Compose through `agni.New` rather than reaching for `check.DefaultCatalog` directly.** Those four
 blank imports are four independent registration points, and three of them fail SILENTLY when a
-binary misses one: no built-in rules, or an empty fact base, and every design reports clean with
-nothing saying why. `New` refuses both rather than running.
+binary misses one. The binary gets no built-in rules, or an empty fact base, and every design reports
+clean with nothing saying why. `New` refuses both rather than running.
 
 That failure is not hypothetical. The extension example in this repo imported `stdlib/relations` and
 never `stdlib/rules/builtin`, so it ran with zero built-in rules and reported only its own two
 findings while two real defects on its own fixture went unreported. Nobody noticed until `New`
 started refusing it.
 
-Shipping without the datalog rule suite or without an inline-query compiler is a legitimate choice,
-so those are `Warnings()` rather than errors. `agni.WithoutDatalogRules()` says the first is
+A binary may legitimately ship without the datalog rule suite or without an inline-query compiler,
+so those absences are `Warnings()` rather than errors. `agni.WithoutDatalogRules()` says the first is
 deliberate.
 
 Config reaches `New` as a VALUE, never as a path, because reading files is the caller's business:
@@ -249,14 +249,15 @@ engine, err := agni.New(
 )
 ```
 
-A design's intent is not an engine option, because it belongs to one board and the model reads part of
-it as well as the catalog (which connectors are internal, agni issue 831). A design declares it in the
-`intent:` section of its `design.yaml`, which the project store reads, and a caller holding a
-declaration of its own sends it on the request as `AnalysisConfig.intent`, where it replaces the
-design's for that run. `intent.LoadFileProto` reads one from a file.
+A design's intent is not an engine option, because it belongs to one board. It reaches the catalog,
+and the model also reads part of it to learn which connectors are internal (agni issue 831). A
+design declares its intent in the `intent:` section of its `design.yaml`, and the project store
+reads that section. A caller holding a declaration of its own sends it on the request as
+`AnalysisConfig.intent`, and it replaces the design's intent for that run. `intent.LoadFileProto`
+reads one from a file.
 
-`WithFSProjectStore` is how the shipped directory-walking project store reaches you without the
-package implementing it becoming public API. A deployment that outgrows the directory shape
+`WithFSProjectStore` hands you the shipped directory-walking project store. The package that
+implements the store does not become public API. A deployment that outgrows the directory shape
 implements `service.ProjectStore` and passes `WithProjectStore` instead.
 
 ## Registering from init or from main
@@ -280,10 +281,10 @@ Add a smoke test that your reader loads a fixture and your rule fires. The templ
 
 ## Serve your own catalog with the service tier
 
-Registering a reader and a rule suite gets your extensions into a catalog. Running the engine's
-application layer over that catalog is the `service` package, which is public for this
-reason (C13). The service impls are transport-neutral, so they carry plain protobuf signatures and
-take every I/O concern as an injected port:
+Registering a reader and a rule suite gets your extensions into a catalog. The `service` package
+runs the engine's application layer over that catalog, and it is public for this reason (C13). The
+service impls are transport-neutral, so they carry plain protobuf signatures and take every I/O
+concern as an injected port:
 
 ```go
 checkSvc, reviewSvc := engine.RuleServices(agni.RuleServiceDeps{
@@ -296,15 +297,15 @@ resp, err := checkSvc.ListRules(ctx, &webapi.ListRulesRequest{})
 
 The two come back TOGETHER and the catalog is not a parameter, so you cannot hand one surface the
 composed catalog and the other something else. The shape exists because an extension profile flag
-once reached the check surface and the review surface differently, and a rule missing from a catalog
-is indistinguishable from a rule that ran and found nothing.
+once reached the check surface and the review surface differently. A rule missing from a catalog is
+indistinguishable from a rule that ran and found nothing.
 
 Two ports are worth knowing by name. `service.ProjectStore` answers what projects and designs exist
 and which design an artifact belongs to, so a deployment backed by a PLM system or an index
 implements it instead of walking directories. `service.ConfigResolver` resolves what a project's
 analysis config points at, returning a `service.ResolvedConfig` carrying rule sources, a parameter
 provider, and symbol paths. `ProjectStore` speaks `artifact.URI`, the `mount://` name for a file,
-which is why that package is public too.
+so the `artifact` package is public too.
 
 Your rules reach the web console through the same path with no extra work. `CheckService.ListRules`
 maps whatever catalog it was built over to the wire, and the client resolves its filter bundles
@@ -312,8 +313,8 @@ against that response, so there is no static rule table anywhere to also update.
 
 ## The CLI is not yet reusable
 
-The service tier above is reusable; the command line over it is not yet. Reusing the engine's whole
-CLI, so `my-extension serve` and `my-extension check` inherit your reader and rules with their flags
-intact, needs the engine to export a reusable command root, which it does not do yet. `cmd/agni` is
-`package main`. Until then, compose the library and the services as above, or run the stock `agni`
-and register your extensions into a binary you build.
+The service tier above is reusable; the command line over it is not yet. You may want
+`my-extension serve` and `my-extension check` to inherit your reader and rules with their flags
+intact. That needs the engine to export a reusable command root, and it does not export one yet.
+`cmd/agni` is `package main`. Until then, compose the library and the services as above, or run the
+stock `agni` and register your extensions into a binary you build.
