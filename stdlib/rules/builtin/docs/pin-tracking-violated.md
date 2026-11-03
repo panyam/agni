@@ -2,8 +2,9 @@
 
 ### What it means
 
-A component joined to a seeded datasheet spec has two pins whose difference breaks a tracking bound
-the datasheet **requires** between them, stated with a modal verb like "shall never exceed".
+A component is joined to a seeded datasheet spec. The datasheet **requires** a tracking bound
+between two of its pins, stated with a modal verb like "shall never exceed". The difference between
+those two pins breaks the bound.
 
 ### Why engineers want it
 
@@ -20,21 +21,21 @@ which are the majority of the real ones.
 
 ### The difference is signed
 
-The bound is on `subject - reference`, so the order the datasheet states matters and swapping
-the two says the opposite thing. The finding prints the subtraction in that order.
+The bound is on `subject - reference`, so the datasheet's order matters and swapping the two says
+the opposite thing. The finding prints the subtraction in that order.
 
 ### Two tiers of evidence, and why connectivity goes first
 
 When **both pins sit on one net**, their difference is exactly zero, from connectivity alone, with
-no net name read. This is the stronger tier and it is decisive in both directions: a `max 0` bound
-is *satisfied* by tying the terminals, and a `min 1` bound is *violated* by tying them. It works on
-a design whose nets are not named for their voltages at all.
+no net name read. This is the stronger tier, and it is decisive in both directions. Tying the
+terminals *satisfies* a `max 0` bound and *violates* a `min 1` bound. It works on a design whose
+nets are not named for their voltages at all.
 
 When **the pins sit on different nets**, the rule falls back to comparing the two rails'
-name-declared nominals, which is a naming convention rather than measured evidence. Both nets must
-carry the rail role before either name is read, because a voltage token anywhere in a name parses as
-a nominal, and a signal net whose name encodes a signalling level would otherwise be compared as
-though it were a supply.
+name-declared nominals. Those nominals come from a naming convention rather than measured evidence.
+Both nets must carry the rail role before either name is read. A voltage token anywhere in a name
+parses as a nominal, so a signal net whose name encodes a signalling level would otherwise be
+compared as though it were a supply.
 
 ### Relationship to pin-tracking-advisory
 
@@ -43,28 +44,28 @@ advisory rule takes those it merely **recommends**, at warning severity. The spl
 "shall never exceed" and "should, for best operation" are different claims, and reporting both at one
 severity misstates one of them.
 
-A relation whose modality was never recorded is taken by *this* rule and reported inconclusive rather
-than as an error, so an incomplete spec cannot pass in silence.
+When a relation's modality was never recorded, *this* rule takes it and reports it inconclusive
+rather than as an error, so an incomplete spec cannot pass in silence.
 
 ### What it skips rather than guesses
 
 Every input that cannot be trusted is a skip, never a guess:
 - no MPN, unseeded MPN, or a spec with no pins or no relations -> silent;
-- a spec pin that does not map onto exactly one design terminal -> skipped, on the same
-  refuse-rather-than-guess resolution the per-pin limit rules use;
+- a spec pin that does not map onto exactly one design terminal -> skipped, by the same
+  refuse-rather-than-guess resolution that the per-pin limit rules use;
 - a terminal on no net, or claimed by several nets (malformed input) -> skipped;
 - on the name tier, a net that is not a rail, or a rail name with no parseable nominal -> skipped;
 - a bound stated in a unit other than volts -> skipped.
 
 Two cases are reported **inconclusive** rather than as violations, and only when the numbers actually
-breach the bound. A bound the datasheet scopes to a regime this check cannot evaluate ("transient
-only, not for DC") is one; a relation with no recorded modality is the other. Where the numbers are
-within the bound, both pass.
+breach the bound. The first is a bound the datasheet scopes to a regime that this check cannot
+evaluate ("transient only, not for DC"). The second is a relation with no recorded modality. Where
+the numbers are within the bound, both pass.
 
 ### Query structure
 
 join components to specs by MPN, map each relation's two spec pins back onto design terminals, and
-compare the difference the design puts between them against the bound.
+compare the difference between those terminals against the bound.
 
     select C in components where spec(C) has pins and relations
       for R in tracking relations of spec(C) where required(R)

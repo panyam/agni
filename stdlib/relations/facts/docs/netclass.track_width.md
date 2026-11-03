@@ -2,8 +2,8 @@
 
 ### What it is
 
-`netclass.track_width(class, mm)` yields the track width a net class DECLARES its nets should route
-at, held in metres and shown in mm, one row per class that states one. A class that states no track width yields no
+`netclass.track_width(class, mm)` yields one row per net class that DECLARES a track width for its
+nets. The width is held in metres and shown in mm. A class that states no track width yields no
 row, which is a meaningful fact rather than a gap, because that field then cascades to a
 lower-priority class.
 
@@ -13,8 +13,8 @@ two join without conversion.
 ### For hardware engineers
 
 This is the number you typed into Board Setup for that class, read back. Query it to confirm the
-engine sees the constraints you set, and to check the project against itself, since the declared
-width is what you intended and the routed width is what happened, and a review that compares them
+engine sees the constraints you set, and to check the project against itself. The declared width
+records what you intended and the routed width records what happened. A review that compares them
 contains no number the tool invented.
 
 ### For software engineers
@@ -35,9 +35,9 @@ nodes of kind `netclass`, and parses the `track_width` param. Populated in the I
 
 Only a KiCad project read populates this. An EDIF netlist, an IPC-2581 board, a bare `.kicad_sch`,
 and a KiCad project that defines no classes all leave it empty, and a rule scoped by it would find
-nothing and read clean. `design.has_netclass_defs` is the marker that separates those cases, and it is
-deliberately distinct from `design.has_netclass`, because membership and definitions are independent blocks of
-`net_settings`, so a project can assign nets to a class it never defined.
+nothing and read clean. `design.has_netclass_defs` separates those cases. It is
+deliberately distinct from `design.has_netclass`, because membership and definitions are independent
+blocks of `net_settings`, so a project can assign nets to a class without defining it.
 
 ### Datalog
 

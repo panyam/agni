@@ -3,9 +3,9 @@ title: "Glossary"
 description: "The terms a page can use without re-teaching. Each one hovers as a popover wherever it appears in the docsite."
 ---
 
-Every entry here is a term the rest of the docsite can USE rather than re-explain. A page writes
+The rest of the docsite can USE every term here rather than re-explain it. A page writes
 `{{ "{{" }} explainable "termination" {{ "}}" }}` and the reader gets a hoverable link carrying the
-whole definition, so the sentence stays short and nobody has to remember what they read four pages
+whole definition, so the sentence can be short and nobody has to remember what they read four pages
 ago.
 
 A `learn/` chapter still teaches a term in full the first time it introduces it. Every later mention,
@@ -16,22 +16,22 @@ For authors, [the docsite README](https://github.com/panyam/agni/blob/main/docsi
 mechanics, and `terms_test.go` fails the build on a tag naming a term that does not exist, a term
 missing from this index, or a term nothing references.
 
-The levels below are the ones [the course](../../../learn/levels/) defines, so a term sits at the
-level whose question it helps answer.
+[The course](../../../learn/levels/) defines the levels below. Each term sits at the level whose
+question it helps answer.
 
 ## Parts (EE1)
 
 - [Reference designator](./reference-designator/), the `R5` or `U1` label, and the name every tool
   uses for that component
-- [Footprint](./footprint/), the copper pads one part solders onto, as against the designator that
-  names it
+- [Footprint](./footprint/), the copper pads that one part solders onto, as against the designator
+  that names it
 
 ## Nets (EE2)
 
-- [Netlist](./netlist/), the list of nets a board is built from, carrying none of the drawing
+- [Netlist](./netlist/), the list of nets that make up a board, carrying none of the drawing
 - [Rail](./rail/), a net whose job is to carry a supply voltage rather than information
 - [Ground](./ground/), the net every other voltage is measured against, and the return path
-- [Bus](./bus/), nets several parts share, whose requirements come from a standard
+- [Bus](./bus/), nets that several parts share, with requirements set by a standard
 - [Differential pair](./differential-pair/), two wires carrying one signal in opposite senses
 
 ## Roles (EE3)
@@ -51,7 +51,7 @@ level whose question it helps answer.
 ## Numbers (EE5)
 
 - [Absolute maximum rating](./absolute-maximum-rating/), the damage threshold, as against the
-  recommended operating condition it gets confused with
+  recommended operating condition, which is often confused with it
 - [Derating](./derating/), running below a limit on purpose, so tolerance and temperature still
   leave margin
 

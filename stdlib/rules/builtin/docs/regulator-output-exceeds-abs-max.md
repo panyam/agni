@@ -11,18 +11,18 @@ the net joining them. Every datasheet rule before it read one spec against one r
 ### For hardware engineers
 
 A regulator makes a rail. Everything on that rail is exposed to whatever the regulator puts out. If a
-3.3V part sits on a rail a 5V regulator drives, the part is outside its absolute maximum from the
-moment power comes up, which is outside the envelope the vendor will stand behind rather than merely
+5V regulator drives a rail and a 3.3V part sits on it, the part is outside its absolute maximum from
+the moment power comes up. That is outside the envelope the vendor will stand behind, not merely
 marginal.
 
 Absolute maximum is a stress limit, not an operating range. Exceeding it can destroy the part
 immediately, or damage it enough to fail months later in the field, and the second costs far more.
 
 The check follows the supply one series element out, so a ferrite bead or a series resistor between
-the regulator and its load does not hide the connection. It deliberately does not follow further,
-because unlike a surge, voltage does not fall off along a supply path, so a wider walk would make
-every part on the board look connected to every regulator and the rule would start pairing parts
-that share no supply at all.
+the regulator and its load does not hide the connection. It deliberately goes no further. Unlike a
+surge, voltage does not fall off along a supply path, so a wider walk would make every part on the
+board look connected to every regulator. The rule would then start pairing parts that share no
+supply at all.
 
 ### Why it is not the same as supply-exceeds-abs-max
 
@@ -34,23 +34,23 @@ A rail named `VOUT_A` carries no voltage in its name at all, and a rail named `+
 This rule reads the number off the regulator's own datasheet instead, asking the same question on
 evidence rather than convention.
 
-Neither replaces the other. A rail fed by something with no seeded datasheet, a connector or an
-unseeded module, still has only its name to go on, so the older rule keeps its job.
+Neither replaces the other. A connector or an unseeded module can feed a rail, and neither has a
+seeded datasheet. That rail still has only its name to go on, so the older rule keeps its job.
 
 ### For software engineers
 
-The rule joins two projections that were previously read independently, the part's supply-limit rows
-(`SupplyAbsMaxLimits`) and the driving part's output rows (`OutputVoltageLimits`), connected by net
-membership within `check.SupplyPathReachHops`.
+The rule joins two projections, and before it each was read on its own. One is the part's
+supply-limit rows (`SupplyAbsMaxLimits`). The other is the driving part's output rows
+(`OutputVoltageLimits`). Net membership within `check.SupplyPathReachHops` connects them.
 
 Where several rows are comparable the rule picks the extreme in the endangering direction, meaning the
 **highest** output the source can present, against the **lowest** absolute maximum the load declares.
 An adjustable regulator endangers its load at the top of its range, and a part is endangered at its
 weakest rating, so any other pairing would under-report.
 
-The finding carries **both** citations, and `Finding.DatasheetProv` is a slice because the review's
-data-trust gate rates a finding by its weakest citation, and with a single slot a conclusion resting
-half on a low-confidence extraction would still have counted as a hard Fail.
+The finding carries **both** citations, so `Finding.DatasheetProv` is a slice. The review's
+data-trust gate rates a finding by its weakest citation. With a single slot, a conclusion drawn half
+from a low-confidence extraction would still have counted as a hard Fail.
 
 ### When it does not compare
 
@@ -59,12 +59,12 @@ half on a low-confidence extraction would still have counted as a hard Fail.
 - **Both parts need a seeded spec.** A load with no spec, or with no absolute-maximum supply row, is
   reported not-considered with the reason. A regulator with no spec is not treated as a source.
 - **Under-specified rows are not compared.** A parameter with text-only conditions or no max bound is
-  skipped rather than coerced (see `architecture/datasheet-layer.md`). A row printed in a prefixed unit
-  (mV, kV) is not in that category since agni issue 148, because the parameter layer reduces it
-  to volts through its one conversion table, and only a unit that table does not recognize is skipped.
+  skipped rather than coerced (see `architecture/datasheet-layer.md`). Since agni issue 148, a row
+  printed in a prefixed unit (mV, kV) is not in that category. The parameter layer reduces it to
+  volts through its one conversion table, and only a unit that table does not recognize is skipped.
 
 ### Fixing a finding
 
 Either the wrong regulator is feeding the rail, or the wrong part is on it. Check which of the two the
-design intended before changing a value: the rule reports the load as the subject because that is the
-part at risk, but the defect is as often the supply.
+design intended before changing a value. The rule reports the load as the subject because the load is
+at risk, but the defect is as often the supply.

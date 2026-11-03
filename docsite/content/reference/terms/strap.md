@@ -6,8 +6,8 @@ level: EE6
 ---
 
 A configuration pin a part reads once, at the instant reset releases, and then never reads again. A
-resistor ties it to a rail or to ground, and the level it sits at in that instant selects which address
-the part answers to on a shared bus, which source it boots from, how wide its memory interface is, or
+resistor ties it to a rail or to ground. The pin's level at that instant selects which address the
+part answers to on a shared bus, which source it boots from, how wide its memory interface is, or
 whatever else the vendor chose to make settable without a register write.
 
 ```mermaid
@@ -19,21 +19,21 @@ flowchart TB
     D --> E["the device answers to address 1<br/>on the MDIO bus"]
 ```
 
-Straps usually come in groups that read together as one binary number. Which pin carries the high bit
-is the datasheet's decision and datasheets differ on it, so the same three resistors encode 1 on one
+Straps usually come in groups that read together as one binary number. The datasheet decides which
+pin carries the high bit, and datasheets differ on it, so the same three resistors encode 1 on one
 part and 4 on another.
 
 Two properties put strap mistakes in a class of their own. The value is latched and never re-read, so nothing
 observable at runtime reports what was sampled, and a part configured wrongly simply behaves as a
-different part. And a strap is a resistor to a rail, which on a schematic is indistinguishable from a
-[pull-up](../pull-up/) that exists to hold a line at a defined level. Nothing in the drawing says
+different part. And a strap is a resistor to a rail. On a schematic it is indistinguishable from a
+[pull-up](../pull-up/), which exists to hold a line at a defined level. Nothing in the drawing says
 which of the two you are looking at.
 
-The failure that most needs a rule is the one that spans two parts. Two PHYs on one MDIO bus, each
-strapped to address 1, are individually correct on their own sheet. Every connectivity check passes,
-every resistor is present and correctly valued, and the bus goes unreliable in a way that reads as
-noise or marginal timing rather than as a wiring fault. Nothing on the page showing the first PHY says
-anything about the second.
+A failure that spans two parts needs a rule most. Imagine two PHYs on one MDIO bus, each strapped
+to address 1. Each PHY is correct on its own sheet. Every connectivity check passes, every resistor
+is present and correctly valued, and the bus goes unreliable in a way that reads as noise or
+marginal timing rather than as a wiring fault. The page showing the first PHY says nothing about the
+second.
 
 Three rules read it. [`intent-property-strap`](../../rules/intent-property-strap/) catches one net
 biased to the opposite level from the one it is declared to latch.

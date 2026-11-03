@@ -1,7 +1,7 @@
 # lexicon
 
-See the naming vocabulary a design is read with, why one net has its roles, and what a different
-convention would change. It is the walkthrough form of `agni lexicon`.
+See the naming vocabulary that agni reads a design with, why one net has its roles, and what a
+different convention would change. It is the walkthrough form of `agni lexicon`.
 
 ## What it shows
 

@@ -12,9 +12,9 @@ that parameter's SI base unit** (volts, amps, ohms) whatever the vendor printed,
 written against it means the same thing across vendors. Join `param.unit` for the printed spelling.
 Each row also carries the rendered value range and its test conditions, plus a citation back to
 the datasheet page and table. One MPN can be shared by several components, so the projector
-dedupes by MPN and emits each parameter once. A parameter whose unit has no known scale still appears
-here with its NUMBER absent, and an ordering comparison refuses to bind an absent number against a
-present one rather than answering by string order (agni issue 165).
+dedupes by MPN and emits each parameter once. If a parameter's unit has no known scale, the
+parameter still appears here with its NUMBER absent. An ordering comparison then refuses to bind an
+absent number against a present one rather than answering by string order (agni issue 165).
 
 This is the datasheet tier of the query surface. It is EMPTY unless `agni` is run with
 `--params <dir>` pointing at a seeded `PartSpec` corpus. With no datasheet corpus
@@ -25,31 +25,31 @@ reads it reports not-applicable rather than a false pass.
 
 A row is one line off a part's datasheet: an absolute-maximum, a recommended-operating limit, a
 rated value, under the test conditions the datasheet stated. The `max` value is presented, not
-silently compared. A parameter whose conditions survive only as free text (not structured as
-`eq`/`min`/`max`) is not machine-comparable, so the tool shows it to you beside its citation
-rather than auto-checking a design value against it. You query `param.max` during a review to see
-what the datasheet actually claims for a part before trusting a rule that leans on it, or to spot
-which parts have no extracted spec at all (they simply do not appear).
+silently compared. Some parameters keep their conditions only as free text, not structured as
+`eq`/`min`/`max`. Such a parameter is not machine-comparable, so the tool shows it to you beside its
+citation rather than auto-checking a design value against it. You query `param.max` during a review
+to see what the datasheet actually claims for a part before trusting a rule that reads it, or to
+spot which parts have no extracted spec at all (they simply do not appear).
 
 ### For software engineers
 
-A `PartSpec` is the `.d.ts` type stub for a closed-source dependency, holding machine-readable claims
-about a part you cannot see inside, each written against one pinned doc revision and linking back
-to the prose it came from. `param.max` projects those claims into query rows. The design-side
-identity is `component.mpn(ref_des, mpn)`; `param.max` is keyed by the same `mpn`, so the two relations
-join on it. That join is how a rule crosses from "this net in
-the design drives R1's VIN" to "R1's MPN has an absolute-maximum VIN of 20 V". Rows are 1:many
-with a part (one per parameter). Absent means the datasheet corpus was not loaded, or the part
-has no spec in it, never that the part is fine.
+A `PartSpec` is the `.d.ts` type stub for a closed-source dependency. It holds machine-readable
+claims about a part whose inside you cannot see. Each claim is written against one pinned doc
+revision and links back to the prose it came from. `param.max` projects those claims into query
+rows. The design-side identity is `component.mpn(ref_des, mpn)`; `param.max` is keyed by the same
+`mpn`, so the two relations join on it. Through that join a rule crosses from "this net in the
+design drives R1's VIN" to "R1's MPN has an absolute-maximum VIN of 20 V". Rows are 1:many with a
+part (one per parameter). Absent means the datasheet corpus was not loaded, or the part has no spec
+in it, never that the part is fine.
 
-An empty join is not a clean result. `component.mpn ⋈ param` is an inner join, so a component whose
-part has no seeded row for the symbol is silently dropped, and the query returns zero rows for the
-same reason a genuinely-clean design does. Reading that as pass is the SQL bug of treating a
-`LEFT JOIN` with a NULL right side as a validated row. A datasheet-backed review item therefore
-checks whether the symbol is seeded at all and reports `needs-data` (closer to HTTP 424 Failed
-Dependency than 404, since the check exists and only its input is missing) rather than pass.
+An empty join is not a clean result. `component.mpn ⋈ param` is an inner join. If a component's part
+has no seeded row for the symbol, the join silently drops the component, and the query returns zero
+rows for the same reason a genuinely-clean design does. Reading that as pass is the SQL bug of
+treating a `LEFT JOIN` with a NULL right side as a validated row. A datasheet-backed review item
+therefore checks whether the symbol is seeded at all and reports `needs-data` (closer to HTTP 424
+Failed Dependency than 404, since the check exists and only its input is missing) rather than pass.
 `needs-data` still counts as covered, because the mechanism is wired and only the value is absent,
-and that lets an overlay bind a datasheet check before its seed lands and watch it flip to a real
+and that lets an overlay bind a datasheet check before its seed exists and watch it flip to a real
 verdict once the value arrives (WS3-097). The size of the corpus changes only how many rows the
 table has, because the relation is the union of every seeded spec, keyed by MPN, so more seeds mean
 fewer `needs-data` items, never a different answer.
@@ -73,9 +73,9 @@ Both queries need `--params`. List every part that has an extracted parameter:
 param.max(?mpn, ?sym, ?max) => ?mpn
 ```
 
-Join to the design-side part identity to name the components a datasheet parameter applies to
-(the bridge a rule like `supply-exceeds-abs-max` walks to compare a design rail against a
-datasheet absolute-maximum):
+Join to the design-side part identity, and the query names the components behind each datasheet
+parameter. A rule like `supply-exceeds-abs-max` walks this bridge to compare a design rail against a
+datasheet absolute-maximum:
 
 ```
 component.mpn(?ref, ?mpn), param.max(?mpn, ?sym, ?max) => ?ref

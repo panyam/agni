@@ -1,8 +1,8 @@
 # validate
 
-Runs the `validate` package's reader-health invariants (the engine behind `agni validate`)
-over a bundled design, covering the netlist tier (components and nets exist) and the drawing
-tier (sheets/placements/wires exist and placements resolve to symbols), and shows what a
+Runs the `validate` package's reader-health invariants over a bundled design. The package is the
+engine behind `agni validate`. The run covers the netlist tier (components and nets exist) and the
+drawing tier (sheets/placements/wires exist and placements resolve to symbols), and shows what a
 failure reads like.
 
 ## Run it

@@ -9,12 +9,12 @@ corrupt export rather than a design error a person drew.
 
 ### Why engineers want it
 
-They should rarely see it. It exists as the integrity tripwire
-behind every per-pin net question the engine answers (pin.role consumers, diff keys,
-viewer highlights), and when the invariant breaks it fires instead of every downstream
+They should rarely see it. It is an integrity tripwire. The engine answers per-pin net
+questions for pin.role consumers, diff keys and viewer highlights, and this rule sits behind
+every one of them. When the invariant breaks, the rule fires, instead of every downstream
 answer silently becoming arbitrary. PinNetName documents that it reports the first net in
-design order; this rule is why that arbitrary pick is safe. A firing points at the READ,
-not the design, and its first corpus run surfaced two reader gaps (unannotated placeholder
+design order, and this rule makes that arbitrary pick safe. A firing points at the READ,
+not the design. The rule's first corpus run surfaced two reader gaps (unannotated placeholder
 refs merged, WS1-024; duplicate port designators collapsed, WS1-025).
 
 ### Impact
@@ -35,15 +35,15 @@ Raising it is a job for severity configuration (WS3-006).
 ### Two deliberate suppressions
 
 A duplicated ref-des produces this state mechanically, since
-each colliding placement brings its own copper, so their shared (ref, pin) key lands in
+each colliding placement brings its own copper, so their shared (ref, pin) key ends up in
 several nets. That root cause is duplicate-ref-des's finding; pins of collided ref-des
 are skipped here so one authoring slip yields one finding, not two. (The
 sheetnav conformance fixture showed this the first time the rule ran.)
 
 The second is an UNANNOTATED ref-des: `R?`, `C?`, `REF**`, or a partly-assigned
-`C?1845`. This rule asserts something about a PIN, and `(R?, 1)` does not name one, and on one
-export 176 distinct un-annotated resistors shared that key, so the index saw a single pin
-sitting on 129 nets and 77% of this rule's findings on that design described a netlist that
+`C?1845`. This rule asserts something about a PIN, and `(R?, 1)` does not name one. On one
+export, 176 distinct un-annotated resistors shared that key. So the index saw a single pin
+sitting on 129 nets, and 77% of this rule's findings on that design described a netlist that
 was fine. The design is not malformed, because a placeholder is not a key. The un-annotated
 parts are reported by `unannotated-components` instead, so nothing is hidden.
 

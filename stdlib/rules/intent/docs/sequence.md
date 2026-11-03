@@ -7,8 +7,8 @@ power-good/enable chain. This is the family doc for every `intent/sequence-<name
 sequence compiles to its own rule, so a SoC's power tree and a modem's rails bind and report
 independently, and each judges the adjacent links its declaration names.
 
-For each adjacent pair of stages, the earlier stage's `good` net and the later stage's `enable` net are
-the assertion. The rule fires three ways:
+For each adjacent pair of stages, the rule asserts on the earlier stage's `good` net and the later
+stage's `enable` net. It fires three ways:
 
 - a declared gating net is not on the design, so the chain is not there to enforce anything;
 - the two nets are not connected, so nothing holds the later stage off;
@@ -34,10 +34,10 @@ A board enforces it one of three ways, and only one of them is visible in a netl
 
 **A pass does not prove the power-up order.** A netlist carries connectivity, not time. The only
 trace an order leaves in connectivity is the gating chain, so a silent rule means the declared links
-exist in the design. It does not mean the board is proven to power up in the declared order, because
-the delay between one rail being good and the next being enabled, and any minimum hold time, are
-timing questions no netlist answers. Those stay a human or a simulation ask, and binding them here
-would over-claim.
+exist in the design. It does not prove the board powers up in the declared order. That also depends
+on the delay between one rail being good and the next being enabled, and on any minimum hold time.
+Those are timing questions, and no netlist answers them. They are still a human or a simulation ask,
+and binding them here would over-claim.
 
 **A board sequenced by a PMIC or by firmware cannot declare a sequence, deliberately.** There are no
 gating nets to name, so a sequence declared without a gating pair fails the whole declaration at
@@ -48,12 +48,12 @@ evidence for it. Inventing net names to satisfy the schema would convert a real 
 tick.
 
 **A link through a controller does not count.** The rule credits a gating link when the two nets are
-one net, or when a single SMALL part sits on both, such as a series resistor (so the divider that
-drops an open-drain power-good to an enable threshold still counts), a buffer, a comparator, a load
-switch or a discrete FET. A part touching more than sixteen nets is not credited, because a
-power-good landing on an MCU that also drives the enable means the order lives in firmware, and
-firmware is not in the netlist. Crediting that path would let any board whose supervisory signals
-converge on one processor read as correctly sequenced.
+one net, or when a single SMALL part sits on both. A series resistor, a buffer, a comparator, a
+load switch and a discrete FET each count, so the divider that drops an open-drain power-good to an
+enable threshold still counts. A part touching more than sixteen nets is not credited. Imagine a
+power-good wired to an MCU that also drives the enable. The order then lives in firmware, and
+firmware is not in the netlist. Crediting that path would let a board read as correctly sequenced
+whenever its supervisory signals converge on one processor.
 
 **Where the evidence is ambiguous the rule credits the link.** A single small part on both nets counts
 even though nothing proves it gates the enable. The limit runs the other way for a chain through two
@@ -73,12 +73,13 @@ sequences:
 
 `order` is earliest first and needs at least two stages. `rail` names the stage; `good` and `enable`
 are the handles the check reads, so a stage that gates nothing after it needs no `good` and the first
-stage needs no `enable`. Declaring both on a middle stage is what lets the rule report a chain wired
+stage needs no `enable`. Declare both on a middle stage, and the rule can report a chain wired
 backwards rather than merely absent.
 
-`relation` is required, and `enable-gated` is the only value, because it is the one ordering a netlist
-evidences. A different structure (a sequencer part owning both rails, an explicit delay element) is a
-different query and would arrive as a second relation, not as a looser reading of this one.
+`relation` is required, and `enable-gated` is the only value, because a netlist gives evidence for
+that ordering and no other. A sequencer part owning both rails, or an explicit delay element, is a
+different structure and a different query. It would arrive as a second relation, not as a looser
+reading of this one.
 
 The sequence name slugifies into the rule name, so `SoC power tree` is `intent/sequence-soc-power-tree`
 and names must slugify uniquely within a declaration.
@@ -87,6 +88,6 @@ and names must slugify uniquely within a declaration.
 
 For a missing link, either the chain was never wired and the enable needs to come from the previous
 stage's power-good, or the board really does sequence some other way and the sequence should not be
-declared. For a reversed chain, the two ends are swapped in the schematic, and this rule is most
-worth having for that defect, because it looks correct on the page and is wrong in the way that
-damages parts.
+declared. For a reversed chain, the two ends are swapped in the schematic. This rule matters most
+for that defect. A reversed chain looks correct on the page, and it is wrong in the way that damages
+parts.

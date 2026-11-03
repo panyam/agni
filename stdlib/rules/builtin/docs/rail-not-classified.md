@@ -2,9 +2,9 @@
 
 ### What it means
 
-A net whose **name declares a voltage** also **feeds at least one supply pin**, yet does not carry
-the rail role. Two independent channels say "rail" and the engine's classification says otherwise,
-so every rail-quantified rule skips it.
+A net's **name declares a voltage** and the net **feeds at least one supply pin**, yet it does not
+carry the rail role. Two independent channels say "rail" and the engine's classification says
+otherwise, so every rail-quantified rule skips it.
 
 This is a read-health tripwire, not a design defect. Nothing here says the board is wrong.
 
@@ -15,9 +15,9 @@ That role is stamped at ingestion from a naming lexicon, and the built-in vocabu
 start-anchored: `VCC`, `VDD`, `+3V3`. A great many house conventions are not. A board that names
 rails function-first, as `PMIC_CORE_3V3` or `SENSOR_5V0`, matches none of the built-in patterns.
 
-The failure that follows is a quiet one. Fewer nets are rails, so fewer rail rules have
-anything to quantify over, so the report comes back clean because the rules could not see the rails
-rather than because the board is right.
+The failure that follows is a quiet one. Fewer nets are rails, so fewer rail rules have anything
+to quantify over. The report then comes back clean because the rules could not see the rails, not
+because the board is right.
 
 Measured on a real 1700-net board, supplying the project's rail patterns moved the rail count from
 13 to 91. Roughly seven eighths of that board's rails were invisible to every rail rule, with no
@@ -30,26 +30,27 @@ comment above its `conventions:` section explains why.
 ### Why it needs more than the name
 
 A net named `..._3V3` is genuinely ambiguous. It may be a 3.3 V rail, or a signal that *swings* at
-3.3 V, and no naming grammar separates the two, because both are legitimately named that way. That
-ambiguity is the same one `net.signal_level` exists to represent, seen from the other side.
+3.3 V, and no naming grammar separates the two, because both are legitimately named that way.
+`net.signal_level` exists to represent the same ambiguity, seen from the other side.
 
 So firing on every voltage-named net that is not a rail would be noise. This rule requires a
-**second, independent channel**, meaning the net must also feed at least one pin the design types
-as a power input. Those two channels agreeing is real evidence in a way either alone is not.
+**second, independent channel**, meaning the net must also feed at least one pin that the design
+types as a power input. When the two channels agree, that is real evidence, and either alone is
+not.
 
 On the two real boards available, that discriminates cleanly: 45 nets on the board with an
-undeclared lexicon, 5 on the board whose rails the built-in vocabulary already matches.
+undeclared lexicon, 5 on the board where the built-in vocabulary already matches the rails.
 
 ### What it skips rather than guesses
 
-- A net carrying the rail role passes. Once the lexicon is declared, the nets this rule was
+- A net carrying the rail role passes. Once the lexicon is declared, the nets that this rule was
   reporting pass, and that is the intended end state.
 - **Ground is excluded.** A ground net carries a role of its own and is never what this is about.
 - A net whose name carries no parseable voltage token is not reported, however rail-like it looks.
   The rule reports a classification gap it can evidence, not every rail it suspects.
 - A net with no power-input pin never fails, even if its name declares a voltage. It is reported
-  not-considered with the missing channel named, which on a format that cannot type power pins is
-  every candidate net.
+  not-considered with the missing channel named. On a format that cannot type power pins, every
+  candidate net reads this way.
 
 ### Query structure
 

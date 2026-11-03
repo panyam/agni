@@ -16,7 +16,7 @@ arriving exactly when the chip is busiest and gone again in nanoseconds.
 
 {{ includeFile "figures/decoupling-capacitor.svg" }}
 
-The failure this prevents is a quiet one, which is why
+The failure this prevents is a quiet one, so
 [`decoupling-present`](../../rules/decoupling-present/) is a warning rather than an error. A rail with
 no decoupling powers up, runs, and passes bring-up. It fails later and intermittently, as a
 spontaneous reset, a corrupted register read, an ADC noisier than it should be, or a link that drops
@@ -35,9 +35,10 @@ than a guideline. Ceramic capacitors fail short, so an overstressed decoupling c
 short from the rail to ground. [`cap-voltage`](../../rules/cap-voltage/) checks it with a derating
 factor and cites the datasheet row it compared against.
 
-A netlist check can prove the capacitor is present. Only geometry can say whether it is close, and a
-capacitor on the correct net placed 20mm away does not decouple anything, because the loop it forms
-with the chip has enough inductance to defeat it at the frequencies it was fitted for.
+A netlist check can prove the capacitor is present. Only geometry can say whether it is close.
+Imagine a capacitor on the correct net, placed 20mm away. It does not decouple anything. The
+capacitor and the chip form a loop, and that loop has enough inductance to defeat the capacitor at
+the frequencies it was fitted for.
 
 The course teaches it across the whole of
 [chapter 3](../../../learn/03-why-every-chip-needs-capacitors/), from

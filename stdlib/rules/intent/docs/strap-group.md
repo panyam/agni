@@ -3,12 +3,12 @@
 ### What it checks
 
 It reads several strap nets together as one binary number, MSB-first, and compares it against the
-value the design intent declares, such as a device's address on a shared bus, its boot source or its
+design intent's declared value, such as a device's address on a shared bus, its boot source or its
 bus width.
 
 `property-strap` asks whether one pin latches the intended level. This asks whether the pins
-*together* encode the intended number, which a per-net declaration has no vocabulary for, since
-nothing ties `PHYAD2/1/0` together as one value, and nothing says which device they belong to.
+*together* encode the intended number. A per-net declaration has no vocabulary for that. Nothing
+ties `PHYAD2/1/0` together as one value, and nothing says which device they belong to.
 
 ### For hardware engineers
 
@@ -28,8 +28,8 @@ only one or two bits, and that is a correctly built board.
 Those unbiased pins are not unknown to you. They sit at the part's internal default. But the netlist
 does not record that, so the engine cannot read it.
 
-**Declare `default` and the group decodes.** It states the level an unbiased pin in this group takes,
-the one fact the netlist is missing.
+**Declare `default` and the group decodes.** It states which level an unbiased pin in this group
+takes. That is the one fact the netlist is missing.
 
 **Without it, the group reads `inconclusive`**, naming the pins it could not read. It is not decoded
 with the missing bits assumed zero, because that would invent an address, and an invented address can
@@ -48,16 +48,16 @@ strap_groups:
 ```
 
 `nets` is **MSB-first**, and the order is the declaration's job, because nothing in a netlist states
-which pin is the high bit. A rule that inferred bit order from names would be a naming heuristic,
-the kind this codebase moved out of rule literals.
+which pin is the high bit. A rule could infer bit order from names, but that would be a naming
+heuristic, and this codebase moved those out of rule literals.
 
-`value` must fit in the declared bits. A value the group could never encode is rejected at load, since
-it would fail on every design including a correct one.
+`value` must fit in the declared bits. If the group could never encode a value, the value is
+rejected at load, since it would fail on every design including a correct one.
 
 `bus` scopes collision detection. Omit it for a group that is not an address on anything shared.
 
 ### Absence is not a pass
 
-A declared net missing from the design is left to the presence forms, and the group reads
-`not-considered` here, naming the net. A group whose
-value cannot be read reads inconclusive, which counts as covered and never as passing.
+If a declared net is missing from the design, the presence forms handle it, and the group reads
+`not-considered` here, naming the net. If the group's value cannot be read, the group reads
+inconclusive, which counts as covered and never as passing.

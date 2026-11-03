@@ -24,8 +24,8 @@ engine recognises your ground naming, and you subtract it from `net.rail` to rea
 ### For software engineers
 
 `net.ground` is a filtered projection over `Nets()`, the same shape as `net.rail`. Rows are 1:1 with
-ground nets. An empty result means the read found no ground at all, which on a real design usually
-points at a naming convention the lexicon does not yet cover rather than a board with no ground.
+ground nets. An empty result means the read found no ground at all. On a real design that usually
+points at a naming convention the lexicon does not yet cover, rather than a board with no ground.
 
 **A net is ground by NAME or by DECLARATION, whichever the source supports.** Most formats carry only
 the name, and the naming lexicon exists to read it. IPC-2581 states it outright on
@@ -36,11 +36,12 @@ costs you a role the name would have found.
 ### Go projector
 
 `netGroundFacts` in `stdlib/relations/facts.go` walks `Model.Nets()` and emits a row for each net
-where `Model.IsGroundNet` holds. That goes through `check.NetHasRole`, which prefers the role SET
-stamped at ingestion (`ir.Net.roles`, filled by `classify.StampNetRoles`) and falls back to matching
-the name when a net carries no roles at all. The naming lexicon's `IsGround` matches `GND`, `EARTH`,
-or a `VSS` prefix on the hierarchy leaf, case-insensitive; the stamped set additionally carries any
-role the source declared. One row per ground net; empty when neither source finds one.
+where `Model.IsGroundNet` holds. That goes through `check.NetHasRole`. It prefers the role SET
+stamped at ingestion (`ir.Net.roles`, filled by `classify.StampNetRoles`), and it falls back to
+matching the name when a net carries no roles at all. The naming lexicon's `IsGround` matches
+`GND`, `EARTH`, or a `VSS` prefix on the hierarchy leaf, case-insensitive; the stamped set
+additionally carries any role the source declared. One row per ground net; empty when neither
+source finds one.
 
 ### Datalog
 

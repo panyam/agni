@@ -9,9 +9,9 @@ Fit the termination the bus calls for across the pair, at the physical end of th
 
 ### What it means
 
-A profile whose bus needs termination (a differential pair like CAN's CANH/CANL, or RS-485) is in
-use, but nothing bridges its two designated signal nets through series passives, so the terminating
-resistor is missing.
+A profile's bus needs termination, as a differential pair like CAN's CANH/CANL or RS-485 does. The
+profile is in use, but nothing bridges its two designated signal nets through series passives, so
+the terminating resistor is missing.
 
 ### Why engineers want it
 
@@ -25,8 +25,8 @@ dead link. Termination is easy to forget precisely because its absence is not im
 `terminated(?h)` is derived when a high-suffix net (e.g. `_CANH`) `net.reaches` a low-suffix net
 (`_CANL`) through the series-passive walk. That walk crosses only 2-net R/L/ferrite/fuse elements,
 so it finds the terminating resistor across the pair but does NOT cross the multi-pin transceiver
-that legitimately drives both lines, and because it is transitive it also accepts a split
-termination (two 60Ω resistors with a midpoint). When the interface is in use (the confidence gate
+that legitimately drives both lines. The walk is transitive, so it also accepts a split termination
+(two 60Ω resistors with a midpoint). When the interface is in use (the confidence gate
 holds) and nothing terminates the pair, the high net is reported as unterminated. The terminated
 fact is board-wide, so a board with two buses and one terminator reports both as terminated. The two
 suffixes are the requirement's `high`/`low` params, so the same compiler serves any differential bus

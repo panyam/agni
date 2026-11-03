@@ -1,7 +1,7 @@
 ---
 title: "Netlist"
 label: "netlist"
-summary: "The list of nets a CAD tool exports, each naming the pins that share it. It is what the board gets built from, and it carries none of the drawing."
+summary: "The list of nets a CAD tool exports, each naming the pins that share it. The board gets built from it, and it carries none of the drawing."
 level: EE2
 ---
 
@@ -11,16 +11,16 @@ everything about how the schematic looked is not.
 
 {{ includeFile "figures/netlist.svg" }}
 
-That gap is the whole reason a tool reading the netlist is worth having. The picture on screen is one
-rendering of this list, drawn by a human for other humans, and the two can disagree. A junction dot
-missing where a wire taps another leaves two separate nets that every reviewer read as one, and by the
-time the design is a netlist the dot has done its work and vanished, so the netlist cannot tell you it
-was absent. Two separate nets look exactly like two separate nets.
+A tool reading the netlist is worth having because of that gap. The picture on screen is one
+rendering of this list, drawn by a human for other humans, and the two can disagree. Imagine a wire
+that taps another with no junction dot. That leaves two separate nets, and every reviewer read them
+as one. By the time the design is a netlist the dot has done its work and vanished, so the netlist
+cannot tell you it was absent. Two separate nets look exactly like two separate nets.
 
-That is why a handful of checks run inside the reader rather than over the netlist.
+So a handful of checks run inside the reader rather than over the netlist.
 [`wire-no-junction`](../../rules/wire-no-junction/) and
-[`dangling-endpoint`](../../rules/dangling-endpoint/) name a coordinate on a sheet, because the thing
-they found does not survive into the list of nets and has nothing else to be called.
+[`dangling-endpoint`](../../rules/dangling-endpoint/) name a coordinate on a sheet. What they found
+does not survive into the list of nets, so it has nothing else to be called.
 [`duplicate-net-name`](../../rules/duplicate-net-name/) and
 [`single-pin-net`](../../rules/single-pin-net/) work the other way round, reading the netlist for the
 shapes a drawing error leaves behind in it.

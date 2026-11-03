@@ -10,8 +10,8 @@ tier-2 packer that feeds the WebGL2 viewer in `web/`. It is the walkthrough form
 - `common.LoadSchematic` → `geom.SchematicGeometry`, which holds a symbol library plus sheets
   of placements, wires, and labels, keyed to the netlist IR but separate from it (CONSTRAINTS C21).
 - `render.SheetSVG`, the offline backend, which writes a `render.svg` you can open in any viewer.
-- `render.PackSheet`, the tier-2 columnar projection (int32 vertices + primitive records)
-  the browser uploads once.
+- `render.PackSheet`, the tier-2 columnar projection (int32 vertices + primitive records),
+  which the browser uploads once.
 - One geometry, two backends over the same render layer.
 
 This example reads EDIF `.eds` only, because `common.LoadSchematic` does. KiCad, xschem and

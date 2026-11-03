@@ -21,8 +21,8 @@ The last step goes past what a coverage report can ask.
 
 > The bundled fixture is `../common/designs/probe-coverage.edn`, a small board built so each coverage
 > case occurs once. Point this at any design you can read. Setting `AGNI_EXAMPLE_DESIGN` changes the
-> default, so a walkthrough can be driven over a board this repo does not carry without that path
-> being typed or committed.
+> default. A walkthrough can then run over a board this repo does not carry, and nobody types or
+> commits that board's path.
 
 ## What is on the board {#inventory}
 
@@ -31,32 +31,34 @@ The last step goes past what a coverage report can ask.
 
 ## Which nets a probe can reach {#probed}
 
-> `net.has_test_point` answers it, a derived relation from the shipped library that pairs each test
-> point with the net it sits on. Negated over every net, it lists the nets a probe cannot reach. An
-> unprobed rail is the one that costs you at bring-up, because the alternative is holding a probe
-> against a component lead.
+> `net.has_test_point` answers it. It is a derived relation from the shipped library, and it pairs
+> each test point with the net it sits on. Negated over every net, it lists the nets a probe cannot
+> reach. An unprobed rail costs you the most at bring-up, because you have to hold a probe against a
+> component lead instead.
 
 ## Which parts a tester can measure {#passives}
 
 > Measuring a two-terminal part needs BOTH ends reachable, so one end covered measures nothing. The
 > library has the first two buckets as members, `component.probed_both` and `component.probed_one`,
 > and the walk only adds what it means by a passive. The third bucket negates `net.has_test_point` on
-> both nets `component.two_terminal` binds, so neither negated atom has an unbound variable, which
-> would be unsafe and return nothing rather than an error. `agni query --relations
+> both nets, and `component.two_terminal` binds those nets first. So neither negated atom has an
+> unbound variable. An unbound variable there would be unsafe, and the query would return nothing
+> rather than an error. `agni query --relations
 > component.probed_one` prints any of them with its definition.
 
 ## How one row holds {#why}
 
 > A bucket names the parts and not the reason. `--witnesses` asks the engine to keep how each row was
-> derived: the walk's own `passive` rule, the library member `component.probed_one` with each of its
-> body facts filled in, and the `not net.has_test_point` that held, shown as an absence. A fact the
-> design gave cites where it came from, so the tree ends in the netlist. In the viewer, opening a row
-> of the query panel shows the same tree, each net and part in it a link to the drawing.
+> derived. The tree shows the walk's own `passive` rule, then the library member
+> `component.probed_one` with each of its body facts filled in, then the `not net.has_test_point`
+> that held, shown as an absence. Each fact from the design cites its source, so the tree ends in the
+> netlist. In the viewer, open a row of the query panel to see the same tree. Each net and part in it
+> links to the drawing.
 
 ## The parts nobody can measure, by part number {#by-mpn}
 
-> One uncovered part is an oversight. Several of one part number is a placement habit, and that is the
-> difference between a list to work through and a thing to fix once.
+> One uncovered part is an oversight. Several of one part number is a placement habit. You work
+> through a list of oversights one at a time, and you fix a habit once.
 
 ## What a coverage report cannot say {#beyond}
 

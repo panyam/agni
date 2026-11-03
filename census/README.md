@@ -9,12 +9,12 @@ ticket.
 ## Two tiers
 
 - **The CI gate** is `census_test.go`, which walks the committed `*/testdata` fixtures and fails if
-  a construct is not classified. A new fixture that introduces an unclassified element forces a human
-  to decide (consume it or mark it a known drop) instead of dropping it silently. It runs in
-  `make test` and `make testall`.
-- **The corpus report** is `agni census <dir>`, which runs the same audit over a local corpus that
-  CI cannot see, and a workspace Makefile can wrap it to sweep your own corpus directories. A clean
-  run means every real-world construct is classified. It reports and never fails the gate.
+  a construct is not classified. Imagine a new fixture that introduces an unclassified element. The
+  test fails, and a human has to decide whether to consume it or mark it a known drop, instead of
+  dropping it silently. It runs in `make test` and `make testall`.
+- **The corpus report** is `agni census <dir>`. It runs the same audit over a local corpus that CI
+  cannot see. A workspace Makefile can wrap it to sweep your own corpus directories. A clean run
+  means every real-world construct is classified. It reports and never fails the gate.
 
 Both tiers read the same manifest, and it is the one reviewed record of what each reader drops.
 

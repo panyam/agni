@@ -15,9 +15,9 @@ placed, so the two wires are electrically separate despite touching on screen.
 
 ### Why engineers want it
 
-This is the sibling of dangling-endpoint with the opposite
-disguise, because a dangling end is visibly incomplete if you look closely while an undotted T-tap
-looks EXACTLY like a connected one. The mistake survives visual review by construction and
+This is the sibling of dangling-endpoint, with the opposite
+disguise. A dangling end is visibly incomplete if you look closely, while an undotted T-tap looks
+EXACTLY like a connected one. The mistake survives visual review by construction and
 surfaces at bring-up as a missing connection between two otherwise-healthy nets.
 
 ### Impact
@@ -30,8 +30,8 @@ drawing shows the wires joined.
 
 ### Scope
 
-Endpoint-on-body only. Two wires that merely CROSS (no endpoint at the meet)
-never flag, because KiCad does not connect crossings and the drawing shows them unjoined. A
+Endpoint-on-body only. If two wires merely CROSS, with no endpoint at the meet,
+they never flag, because KiCad does not connect crossings and the drawing shows them unjoined. A
 label at the touch point joins the wires by name (both attach to it) and the reader has
 already split the segment there, so labeled taps do not flag either. Only the KiCad
 reader supplies the diagnostic, so on every other format the rule reports not-applicable rather
@@ -51,9 +51,9 @@ Reads: wire.endpoint, wire.junction. Tier P.
 KiCad stores no connection list; connectivity is GEOMETRIC, so things connect where their
 coordinates coincide, the way whitespace-significant syntax gives meaning to layout. Two
 touching wires join only at endpoints or where the author placed a junction dot (the
-explicit "yes, these join" marker). A wire ENDING on the MIDDLE of another wire, with no
-dot, is a file that LOOKS imported because it sits in the right directory but was never
-added to the build, so every human reads it as connected while the toolchain disagrees, and both
-halves are individually healthy so nothing else can reveal the gap.
+explicit "yes, these join" marker). Picture a wire ENDING on the MIDDLE of another wire, with no
+dot. It is like a file that LOOKS imported because it sits in the right directory but was never
+added to the build. Every human reads it as connected while the toolchain disagrees. Both halves
+are individually healthy, so nothing else can reveal the gap.
 
 ![t-tap cases]({{.Site.PathPrefix}}/static/images/catalog/rules/tjunc-cases.png)

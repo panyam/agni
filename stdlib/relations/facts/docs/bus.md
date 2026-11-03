@@ -12,10 +12,10 @@ This is a detect-and-flag relation, not a defect report. The reader saw a bus an
 that silence would not read as "no bus here". A row means the construct is not fully modeled yet,
 not that the design is wrong.
 
-Distinct from `net.bus_like(net)`, which reports a *solved* net whose electrical role is
-shared-distribution (a ground plane, a global rail, or rail-scale fan-out). `bus` is about a
-source-file token the reader has not expanded; `net.bus_like` is about a net that already exists
-and passed a fan-out/role predicate.
+`bus` is distinct from `net.bus_like(net)`. That relation reports a *solved* net whose electrical
+role is shared-distribution, such as a ground plane, a global rail, or rail-scale fan-out. `bus` is
+about a source-file token the reader has not expanded; `net.bus_like` is about a net that already
+exists and passed a fan-out/role predicate.
 
 ### For hardware engineers
 
@@ -28,20 +28,21 @@ correct on the sheet and simply not expanded in the read yet.
 
 ### For software engineers
 
-This is a syntactic marker the parser emitted for a construct it recognised but did not fully lower
-into the connectivity graph. Think of it as a TODO the front end records when it encounters syntax
-it can tokenize but not yet desugar, so the omission is visible instead of silent. It is a
+The parser emits this syntactic marker when it recognises a construct but does not fully lower it
+into the connectivity graph. Think of it as a TODO. The front end records one when it encounters
+syntax it can tokenize but not yet desugar, so the omission is visible instead of silent. It is a
 projection over `Model.UnmodeledBuses()`, so rows are 1:1 with detected bus constructs. An empty
 result means the read found no bus notation (or a later phase has modeled every one), not that the
 design has no shared-distribution nets. For those, query `net.bus_like`.
 
 ### Go projector
 
-`busFacts` in `stdlib/relations/facts.go` iterates `Model.UnmodeledBuses()` (which returns the
-reader-emitted `ir.BusNotModeled` list off `InputDiagnostics`) and emits one `bus(label, kind)` row
-per entry, with the construct's provenance as the citation. One row per detected bus construct;
-empty for a design whose read detected no bus notation. Every reader that recognizes bus notation
-(KiCad, EDIF, xschem, gEDA) populates the same channel, so the relation is format-neutral.
+`busFacts` in `stdlib/relations/facts.go` iterates `Model.UnmodeledBuses()` and emits one
+`bus(label, kind)` row per entry, with the construct's provenance as the citation.
+`Model.UnmodeledBuses()` returns the `ir.BusNotModeled` list the reader emits on
+`InputDiagnostics`. One row per detected bus construct; empty for a design whose read detected no
+bus notation. Every reader that recognizes bus notation (KiCad, EDIF, xschem, gEDA) populates the
+same channel, so the relation is format-neutral.
 
 ### Datalog
 

@@ -15,9 +15,9 @@ that did not record one. Every row carries a citation back to the page and table
 so a query that swaps the two columns reads the opposite requirement. They occupy two distinct slots
 for that reason.
 
-Only tracking relations are projected. `PinRelationKind` has one member today and the proto's own
-comment says a second arrives only once a second vendor can populate it, so the kind is not spent on
-a column; a second kind has to revisit this projection.
+Only tracking relations are projected. `PinRelationKind` has one member today. The proto's own
+comment says a second arrives only once a second vendor can populate it, so the kind gets no column.
+A second kind has to revisit this projection.
 
 ### For hardware engineers
 
@@ -41,12 +41,14 @@ This borrows `param.pin_range`'s field layout for a different fact. There, Objec
 and a symbol; here they are two pin ids, and `Min`/`Num` bound the difference between them rather
 than one terminal's own quantity.
 
-The pin ids join to `param.pin`, and that join turns them into the names a datasheet prints. Resolving
-a *design* terminal onto one of these ids is `param.ResolvePin`'s job and deliberately not a datalog
-join, because it can refuse (an ambiguous name, a name and number that disagree) and a join cannot.
+The pin ids join to `param.pin`, and that join turns them into the names a datasheet prints.
+`param.ResolvePin` resolves a *design* terminal onto one of these ids. It is deliberately not a
+datalog join, because it can refuse and a join cannot. It refuses an ambiguous name, or a name and
+number that disagree.
 
-A relation whose unit has no known scale keeps its pins, modality and citation with both bounds
-absent, as the sibling projections do, because an unmeasurable bound must not become orderable.
+Suppose a relation's unit has no known scale. The row keeps its pins, modality and citation with
+both bounds absent, as the sibling projections do, because an unmeasurable bound must not become
+orderable.
 
 ### Go projector
 
@@ -67,7 +69,7 @@ param.pin(?mpn, ?s, ?sname, ?sfn), param.pin(?mpn, ?r, ?rname, ?rfn)
   => ?mpn, ?sname, ?rname, ?mod, ?min, ?max
 ```
 
-The requirements alone, which is what a CI gate usually checks:
+The requirements alone. A CI gate usually checks these:
 
 ```
 param.pin_relation(?mpn, ?s, ?r, "required", ?min, ?max) => ?mpn, ?s, ?r, ?min, ?max

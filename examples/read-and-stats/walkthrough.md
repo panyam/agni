@@ -16,11 +16,11 @@ Diff and checks run on that IR, so they never care which format you started from
 
 ## Pick a design {#pick}
 
-> Give a path to any design (relative to this example folder), or your own file. The bundled designs live in ../common/designs: two-resistors.edn (a bare netlist), demo-board.kicad_pcb, and demo-board.ipc2581.xml (both carry a physical tier, so the stats gain footprint and layer rows). No real boards ship in this repo.
+> Give a path to any design (relative to this example folder), or your own file. The bundled designs live in ../common/designs: two-resistors.edn (a bare netlist), demo-board.kicad_pcb, and demo-board.ipc2581.xml. The last two carry a physical tier, so their stats gain footprint and layer rows. No real boards ship in this repo.
 
 ## Read it into the IR {#read}
 
-> Load picks a reader by extension: .edn goes to EDIF, .kicad_pcb to KiCad, .xml to IPC-2581. That is the same dispatch agni's CLI does at its I/O edge. File paths stay at the edge; the core readers only ever see an io.Reader (CONSTRAINTS C1).
+> Load picks a reader by extension: .edn goes to EDIF, .kicad_pcb to KiCad, .xml to IPC-2581. agni's CLI dispatches the same way at its I/O edge. File paths are handled only at the edge, and the core readers only ever see an io.Reader (CONSTRAINTS C1).
 
 ```mermaid
 sequenceDiagram
@@ -30,7 +30,7 @@ Agni -->> You: *ir.Design
 
 ## Look at the nets {#nets}
 
-> A net is a set of connected pins. The (ref_des, pin) pair is the stable key that diff and checks match on across revisions and formats. A format-native id is regenerated per export, so it is never used as the key.
+> A net is a set of connected pins. The (ref_des, pin) pair is the stable key. Diff and checks match on it across revisions and formats. A format-native id is regenerated per export, so it is never used as the key.
 
 ## Same thing from the CLI
 

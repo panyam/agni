@@ -3,13 +3,13 @@ title: "EDIF schematic primer"
 description: "The .eds schematic export: geometry, symbols, orientation, and the keys that join it back to the netlist IR."
 ---
 
-Companion to the [EDIF netlist primer](../edif-primer/) (which covers the `.edn` netlist) and to
-the geometry sidecar work. This page studies the `.eds` SCHEMATIC export the way the netlist
+This page goes with the [EDIF netlist primer](../edif-primer/), which covers the `.edn` netlist,
+and with the geometry sidecar work. It studies the `.eds` SCHEMATIC export the way the netlist
 primer studied the `.edn`, so the geometry sidecar proto and reader can be designed against
 ground truth.
 
-The source file is a 62MB real-world `.eds` SCHEMATIC export (proprietary, kept outside the repo),
-`edifVersion 2 0 0`, `edifLevel 0`, exported by Siemens xDX Designer.
+The source file is a real-world `.eds` SCHEMATIC export of 62MB. It is proprietary and kept outside
+the repo. Siemens xDX Designer exported it, with `edifVersion 2 0 0` and `edifLevel 0`.
 
 ## 1. What a schematic is (the concepts)
 
@@ -72,9 +72,9 @@ re-derived from the `.eds`. The two are joined by key at render time.
 
 **The renderer cannot upload these coordinates as `float32`.** `float32` represents integers exactly only up to
 2^24 = 16,777,216, and coordinates here reach ~8.6e7. Uploading raw units as `float32` GPU
-attributes loses precision and misaligns wires. Keep int32 through storage, where the full range
-fits comfortably (~8.6e7 against a limit of ~2.1e9), and either use integer vertex attributes
-converted in-shader or rebase per sheet, subtracting the sheet origin, before converting to float.
+attributes loses precision and misaligns wires. Keep int32 through storage. The full range fits
+there, since ~8.6e7 is far below int32's limit of ~2.1e9. Then either use integer vertex attributes
+converted in-shader, or rebase per sheet by subtracting the sheet origin before converting to float.
 
 <details>
 <summary>Why integers rather than floats</summary>
@@ -82,8 +82,9 @@ converted in-shader or rebase per sheet, subtracting the sheet origin, before co
 The EDIF spec stores geometry as integer counts of a database unit plus a scale, and so do GDSII,
 Gerber, ODB++ and KiCad. The reason is exactness on a manufacturing grid. Two wire endpoints, or a
 pin and a wire, must be the *same* point to be electrically connected. Integers give bit-exact
-equality where floats give near-misses (`0.1 + 0.2 != 0.3`) and ambiguous serialization, which
-fights round-trip fidelity (see [Ingestion and IR](../../architecture/ingestion-and-ir/)).
+equality. Floats give near-misses (`0.1 + 0.2 != 0.3`) and ambiguous serialization, and ambiguous
+serialization breaks round-trip fidelity
+(see [Ingestion and IR](../../architecture/ingestion-and-ir/)).
 Integers are kept end to end.
 
 </details>
@@ -121,7 +122,7 @@ that sheet.
 
 ## 5. The geometry we extract (the render subset)
 
-This is what the sidecar proto models. Everything else (section 6) is dropped or kept opaque.
+The sidecar proto models this subset. The reader drops everything in section 6 or keeps it opaque.
 
 ### 5a. Symbol definition (drawn once per part type)
 
@@ -140,11 +141,11 @@ This is what the sidecar proto models. Everything else (section 6) is dropped or
 
 - Shapes come from `(figure GROUP <shape>)`. The `GROUP` (BOX, PIN, NET, LINE, ...) is a style
   hint that maps to the technology palette (color/width).
-- **Pin coordinates** are the `connectLocation` `(dot (pt X Y))`, in symbol-local units. This is
-  where a wire attaches. The `figure PIN` path is just the little stub line drawn from the body
-  to the pin end.
+- **Pin coordinates** are the `connectLocation` `(dot (pt X Y))`, in symbol-local units. A wire
+  attaches there. The `figure PIN` path is just the little stub line drawn from the body to the
+  pin end.
 - `name &1` is the port internal id. `keywordDisplay`/`propertyDisplay` say where the pin number
-  and part attributes render (label placement can be deferred initially).
+  and part attributes render. A first render can leave label placement out.
 
 ### 5b. Shape kinds observed
 
@@ -170,8 +171,8 @@ This is what the sidecar proto models. Everything else (section 6) is dropped or
   atom or a `(name X (display ...))` form. Handle both.
 - `transform` is `(origin (pt X Y))` plus an `(orientation ...)` (section 7). Rare
   `(scaleX ...)`/`(scaleY ...)` also appear (7 each in this file).
-- `(designator (stringDisplay "J1900" ...))` is the ref-des. Unlike the netlist, it wraps a
-  `stringDisplay` (it carries its own on-sheet label position).
+- `(designator (stringDisplay "J1900" ...))` is the ref-des. Unlike the netlist's, it wraps a
+  `stringDisplay`, which carries its own on-sheet label position.
 
 ### 5d. Wire routing (per net, per sheet)
 
@@ -207,35 +208,36 @@ back to the IR net.
 
 ## 6. Everything else in the file (beyond geometry)
 
-The `.eds` carries a lot that does **not** go in the geometry sidecar. It is cataloged here so the
-deliberate drops are known, since fidelity is lossy-bounded to a render subset.
+The `.eds` carries a lot that does **not** go in the geometry sidecar. This section catalogs it so
+the deliberate drops are known. Fidelity is lossy-bounded to a render subset.
 
 | Category | Constructs | Why we drop / defer it |
 |---|---|---|
 | **Connectivity** | `net`, `joined`, `portRef`, `instanceRef`, `globalPortRef`, `offPageConnector` | Already in the core IR from the `.edn`. We take only the wire polylines, not the logical graph. (Off-page connectors are a candidate to keep later for cross-sheet navigation.) |
 | **Attributes** | `property` (`string`/`integer`/`boolean`), `owner` | Belong in the core IR (component attributes), not geometry. |
-| **Display metadata** | `display`, `figureGroupOverride`, `visible`, `justify`, `orientation`, `textHeight`, `keywordDisplay`, `propertyDisplay` | Controls where each attribute label prints. We can render a subset (net names, ref-des, values) later, not needed for a first faithful render. |
+| **Display metadata** | `display`, `figureGroupOverride`, `visible`, `justify`, `orientation`, `textHeight`, `keywordDisplay`, `propertyDisplay` | Controls where each attribute label prints. We can render a subset (net names, ref-des, values) later. A first faithful render does not need them. |
 | **Style palette** | `technology`, `figureGroup`, `color`, `pathWidth`, `borderPattern`, `gridMap` | Drawing style. We can carry `figure_group` as a style hint and resolve colors in the renderer, and the full palette is optional. |
 | **Header / status** | `status`, `written`, `timestamp`, `author`, `program`, `keywordMap` | Provenance only. |
 | **Back-annotation** | `viewMap`, `instanceBackAnnotate`, `portBackAnnotate` | Data pushed back from other tools (print order, sheet totals, pin types). Not render geometry, with one exception below. |
 | **Opaque extras** | `userData` | Vendor-specific flags (e.g. `visibleName`). Keep opaque if at all. |
 
-The exception is the designator an `instanceBackAnnotate` gives a top-level instance. An export can
-renumber parts after layout and push the new ref-des there while the page instance keeps its old
-inline `(designator "R4")`, or carries none, and the netlist names the part `R1001`. Both readers
-take the back-annotated designator over the inline one (agni issue 1228), so a placement is keyed
-by the ref-des every rule and query uses and a `.eds` read as a netlist agrees with its own
-geometry. Its label is drawn where the inline designator placed it, and a ref-des known only from
+Back-annotation has one exception. Imagine an export that renumbers parts after layout. It pushes
+the new ref-des into the `instanceBackAnnotate` of a top-level instance. The page instance keeps its
+old inline `(designator "R4")`, or carries none, and the netlist names the part `R1001`. Both readers
+take the back-annotated designator over the inline one (agni issue 1228). So a placement is keyed by
+the ref-des that every rule and query uses, and a `.eds` read as a netlist agrees with its own
+geometry. The label is drawn where the inline designator placed it. A ref-des known only from
 back-annotation is keyed without a label, since the page gives it no position. An instance inside a
-block (a nested `instanceRef`) and an id annotated with two different designators keep the inline
-one. The geometry lists every placement back-annotation relabelled (`SchematicGeometry.back_annotated`,
-agni issue 1230), and `render` and every command reading the schematic print it on stderr, so an
-export's renumbering can be checked against the drawing.
+block keeps the inline designator. A nested `instanceRef` names such an instance. An id annotated
+with two different designators also keeps the inline one. The geometry lists in
+`SchematicGeometry.back_annotated` every placement that back-annotation relabelled (agni issue
+1230). `render` and every command reading the schematic print that list on stderr, so an export's
+renumbering can be checked against the drawing.
 
 Connectivity in the `.eds` is present and consistent with the `.edn`, so in
-principle the schematic alone could feed both the IR and the geometry. We keep the split
-(connectivity from `.edn`, geometry from `.eds`) because the `.edn` is 6x smaller and the netlist
-reader already parses it, and because the sidecar architecture wants geometry to be independently
+principle the schematic alone could feed both the IR and the geometry. We still take connectivity
+from the `.edn` and geometry from the `.eds`, for two reasons. The `.edn` is 6x smaller and the
+netlist reader already parses it. And the sidecar architecture wants geometry to be independently
 sourced (see [Ingestion and IR](../../architecture/ingestion-and-ir/)).
 
 ## 7. Orientation semantics
@@ -264,8 +266,8 @@ MXR90 = R90 * MX         MYR90 = R90 * MY
 ```
 
 Pins transform the same way, so a pin's absolute position is
-`transform(orientation) * connectLocation + origin`. This is how wire endpoints line up with pins
-at render time.
+`transform(orientation) * connectLocation + origin`. At render time, wire endpoints line up with
+pins through this transform.
 
 ## 8. The join contract (keys back to the core IR)
 
@@ -279,26 +281,27 @@ The sidecar never contains the IR. It references the IR by stable keys, resolved
 | `WireGeometry` | `net` name | `Net.name` |
 | `PinPoint` | `port_ref` | `Port.designator` / net `PortRef.port_ref` |
 
-`source_id` (the EDIF `&id`) is the crux. It is identical across `.edn` and `.eds`, so it is the
-unambiguous join even where display names collide.
+The join depends most on `source_id`, the EDIF `&id`. It is identical across `.edn` and `.eds`,
+so it joins unambiguously even where display names collide.
 
 **The symbol join needs a third key beyond cell and library.** A placement references a cell by
-display name *or* internal `&id`, a library likewise (`(rename Ferrite_Bead "Ferrite Bead")`), and
-a **view** by id (`(viewRef &..._D... (cellRef (name &cellid) ...))`). A multi-section cell, say a
-connector with A/B/C/D banks, defines one SCHEMATIC view per bank and each bank is its own symbol.
-So the reader emits one `SymbolDef` per view, keyed by `(cell_ref, library_ref, view_ref)`, and
-normalizes every reference to the display name.
+display name *or* internal `&id`. It references a library the same way
+(`(rename Ferrite_Bead "Ferrite Bead")`), and a **view** by id
+(`(viewRef &..._D... (cellRef (name &cellid) ...))`). Take a multi-section cell, such as a connector
+with A/B/C/D banks. It defines one SCHEMATIC view per bank, and each bank is its own symbol. So the
+reader emits one `SymbolDef` per view, keyed by `(cell_ref, library_ref, view_ref)`, and normalizes
+every reference to the display name.
 
 Builtin GRAPHIC cells (GND, no-connect, off-page) are the exception. They keep their geometry
 under `(view (contents (figure ...)))` with no `(symbol ...)` node at all. Pin-number labels come
-from each `portImplementation`'s `(name X (display (origin ...)))`, and off-page connector net
-names from a page-level `(portImplementation (name X (display ...)))`.
+from each `portImplementation`'s `(name X (display (origin ...)))`. Off-page connector net names
+come from a page-level `(portImplementation (name X (display ...)))`.
 
 ## 9. Grammar sketch (the schematic subset we read)
 
 The grammar is EBNF-ish and restricted to the render subset. `ID` is an identifier or
-`(rename &id "disp")`, `INT` an integer, and `STR` a quoted string. Constructs not listed are
-skipped by the reader.
+`(rename &id "disp")`, `INT` an integer, and `STR` a quoted string. The reader skips any construct
+not listed.
 
 ```
 schematic     = "(edif" NAME header library+ design ")"
@@ -356,7 +359,7 @@ offPage       = "(offPageConnector" ID ")"
 | Gotcha | What it means |
 |---|---|
 | **Symbol vs placement split** | Shapes and pin coordinates live once in the cell's `(symbol ...)`, in symbol-local coordinates. A placement is only a transform plus a `cellRef`, so you must join placement to symbol to draw anything. |
-| **Nets nest** | The outer `(net NAME (joined ...))` is the logical signal. The wires live in inner `(net (rename ...) (joined ...) (figure NET ...))` groups. Collect wires from the inner nets, and take the join key, the net name, from the outer one. |
+| **Nets nest** | The outer `(net NAME (joined ...))` is the logical signal. The wires live in inner `(net (rename ...) (joined ...) (figure NET ...))` groups. Collect wires from the inner nets, and take the net name from the outer one. The net name is the join key. |
 | **`cellRef` is polymorphic** | It can be a bare atom or `(name X (display ...))`. |
 | **`designator` wraps `stringDisplay` here** | Not a bare string, as it is in the netlist. |
 | **Pins need the transform** | A wire endpoint only matches a pin after you apply the placement orientation and origin to the symbol-local `connectLocation`. |

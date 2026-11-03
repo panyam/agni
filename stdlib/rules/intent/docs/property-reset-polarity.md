@@ -2,9 +2,9 @@
 
 ### What it checks
 
-A net the design intent declares as an active-low (or active-high) reset must not be **biased to its
-asserted level**. Declared active-low with a pull-down, or active-high with a pull-up, is a
-contradiction between what the design says it wants and what it actually does.
+Suppose the design intent declares a net as an active-low (or active-high) reset. That net must not
+be **biased to its asserted level**. If a declared active-low reset has a pull-down, or a declared
+active-high reset has a pull-up, the design does the opposite of what it says it wants.
 
 ### What it does when it cannot tell
 
@@ -12,21 +12,21 @@ contradiction between what the design says it wants and what it actually does.
 of correct designs carry none, because a supervisor or PMIC with an internal pull-up drives the
 reset line by itself and the schematic shows a bare net.
 
-The rule now **says so** rather than staying quiet. A declared reset with no bias reports an
+The rule now **says so** rather than saying nothing. A declared reset with no bias reports an
 INCONCLUSIVE finding, and a review item bound to it reads `inconclusive`, never `pass`. The message
 names what could not be resolved and what to check by hand.
 
-This used to be silence, and a passing item then meant only "no contradiction found" rather than
-"polarity confirmed", a distinction that had to be carried in prose here, in the declaration comment
-and in a test name, and that anyone reading a green report would never see. It is now in the report
-itself.
+The rule used to say nothing here. A passing item then meant only "no contradiction found" rather
+than "polarity confirmed". That distinction had to be written in prose here, in the declaration
+comment and in a test name, and nobody reading a green report would ever see it. It is now in the
+report itself.
 
-A **divider** reports inconclusive too, with a different message, because two resistors hold the
-line at an intermediate level rather than at either rail, so which level the receiver reads depends
-on the ratio against its input thresholds. Telling you "no bias" on a board that visibly has two
-resistors would send you looking for the wrong thing.
+A **divider** reports inconclusive too, with a different message. Two resistors hold the line at an
+intermediate level rather than at either rail. The level the receiver reads then depends on the
+ratio against its input thresholds. If the rule said "no bias" on a board that visibly has two
+resistors, you would go looking for the wrong thing.
 
-Its sibling `property-ac-coupled` is decidable by looking and carries no inconclusive case.
+Its sibling `property-ac-coupled` is decidable by looking and has no inconclusive case.
 
 ### For hardware engineers
 
@@ -35,18 +35,18 @@ line is LOW and lets it run when the line is HIGH. So the resting state must be 
 pull-up to the rail provides it.
 
 Put a pull-down on that line instead and the part is held in reset from the moment power comes up.
-The board looks dead, and the cause is one resistor to the wrong net, a bring-up failure that reads
-as a broken part or bad firmware for as long as it takes someone to meter the reset pin.
+The board looks dead, and the cause is one resistor to the wrong net. At bring-up the failure reads
+as a broken part or bad firmware until someone meters the reset pin.
 
 Active-high is the mirror image, resting low, so a pull-up holds it permanently asserted.
 
 ### What counts as bias
 
-A resistor on the declared net whose other end reaches a power rail (pull-up) or a ground net
-(pull-down).
+A resistor on the declared net counts as bias when its other end reaches a power rail (pull-up) or
+a ground net (pull-down).
 
-A net with **both**, a divider, counts as neither direction and reports inconclusive, as above. A
-divider sets an intermediate level, so it does not hold the line at either rail, and calling it a
+A net with **both** is a divider. It counts as neither direction and reports inconclusive, as above.
+A divider sets an intermediate level, so it does not hold the line at either rail, and calling it a
 contradiction would be wrong.
 
 ### Declaring it
@@ -58,12 +58,12 @@ intent:
     PHY_ENABLE:  {reset: high}
 ```
 
-The level is the assertion, and it is required, because without it the rule has nothing to
-contradict, so an omitted or misspelled level is rejected at load rather than becoming a rule that
+The level is the assertion, and it is required. Without it the rule has nothing to contradict,
+so an omitted or misspelled level is rejected at load rather than becoming a rule that
 silently never fires.
 
 ### Fixing a finding
 
 The bias resistor goes to the wrong net, or the declared polarity is wrong. Check the part's datasheet
-before moving the resistor, because if the declaration is what is wrong, moving the resistor would create the
-bug the rule was reporting.
+before moving the resistor. If the declaration is wrong, moving the resistor would make the board
+match it, and the board would then have the bug the rule was reporting.

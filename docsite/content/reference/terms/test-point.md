@@ -17,11 +17,11 @@ flowchart TB
     TP -.->|"a probe, or a<br/>bed-of-nails pin"| M["is this rail<br/>actually at 3.3V?"]
 ```
 
-The question it answers is the first one anybody asks of a board that does not work, which is which
-rails came up. Without a reachable point, answering that means finding a component leg to balance a probe on,
-which is slow on a bench and impossible on a production fixture.
+When a board does not work, the first question anybody asks is which rails came up. A test point
+answers it. Without a reachable point, you have to find a component leg to balance a probe on. That
+is slow on a bench and impossible on a production fixture.
 
-That is why [`test-point-coverage`](../../rules/test-point-coverage/) asks whether every rail carries
+So [`test-point-coverage`](../../rules/test-point-coverage/) asks whether every rail carries
 one. The rule only fires on a board that places test points **somewhere**, since a design with no
 test-point convention is not wrong, it just has a different one.
 

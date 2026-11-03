@@ -1,9 +1,9 @@
 # xschem grammar (ingested subset)
 
 What the `xschem` package parses out of xschem `.sch`/`.sym` files and how each construct maps
-to the neutral IR (`agni.v1.ir`). This is the subset we read, not the full format. Same
-posture as the KiCad grammar and the EDIF primers, which document the contract between the
-format and the reader.
+to the neutral IR (`agni.v1.ir`). This is the subset we read, not the full format. The KiCad
+grammar and the EDIF primers take the same approach, and each documents the contract between
+the format and the reader.
 
 ## 1. Object stream (parse.go)
 
@@ -87,26 +87,26 @@ box so the sheet still draws.
 
 ## 6. Dangling-endpoint diagnostics (WS1-013)
 
-The reader surfaces wire endpoints that terminate on nothing (no pin, anchor, or other
-wire endpoint) as `ir.InputDiagnostics.dangling_endpoints`, in the geometry frame the
-viewer draws. xschem's netgraph grid is scaled by 2, and dangles are un-scaled back to native
+A wire endpoint can terminate on nothing, meaning no pin, anchor, or other wire endpoint.
+The reader reports each one as `ir.InputDiagnostics.dangling_endpoints`, in the geometry frame
+the viewer draws. xschem's netgraph grid is scaled by 2, and dangles are un-scaled back to native
 geometry coords on emission. Emission is GATED on full symbol resolution. An unresolved
-external `.sym` drops its pins, so a wire end meant to land on one would read as a phantom
-dangle, and one unresolved placement therefore suppresses the whole design's dangles (the
-conservative zero-false-positive gate). Wires carry no per-wire id, so the endpoint location is the finding's
-subject.
+external `.sym` drops its pins, so a wire end meant to meet one would read as a phantom
+dangle. One unresolved placement therefore suppresses the whole design's dangles. The gate is
+conservative and aims for zero false positives. Wires carry no per-wire id, so the endpoint
+location is the finding's subject.
 
-The endpoint-on-BODY diagnostic (`no_junction_endpoints`, the missing-junction T-tap) is
-**KiCad-only**. xschem auto-connects a mid-span touch, so there is no missing junction to flag,
-and running that detection here would flag legal connections.
+The endpoint-on-BODY diagnostic is **KiCad-only**. It is `no_junction_endpoints`, the
+missing-junction T-tap. xschem auto-connects a mid-span touch, so there is no missing junction to
+flag, and running that detection here would flag legal connections.
 
 ## 7. Pin directions and external nets (WS1-021)
 
 A symbol pin's `dir` attribute maps `in`/`out`/`inout` to the neutral input/output/inout
-directions. xschem has no power-pin concept, so `power-input-not-driven` stays N/A
+directions. xschem has no power-pin concept, so `power-input-not-driven` is always N/A
 on xschem, and the enrichment reaches floating-input and output-output-conflict instead.
 
 The supply symbols `gnd`/`vdd`/`vss` and the hierarchy ports `ipin`/`opin`/`iopin` mark
 their net `External`. A supply rail's source or a port's continuation lies outside the
 single-sheet read, so the power and absence rules should not treat the net as fully seen.
-Plain net labels (`lab_pin`/`lab_wire`) are sheet-local and stay unmarked.
+Plain net labels (`lab_pin`/`lab_wire`) are sheet-local and are left unmarked.

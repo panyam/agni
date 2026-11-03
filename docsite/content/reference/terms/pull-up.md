@@ -20,12 +20,13 @@ flowchart TB
 
 A floating input is the failure this prevents. A CMOS input left undriven does not read a sensible
 default; it drifts, picks up noise, and can switch fast enough to draw real current. Anything that is
-undriven some of the time needs a defined level, which covers a reset line before the driver comes up,
-an open-drain bus, and an input to a chip that has not been fitted.
+undriven some of the time needs a defined level. That includes a reset line before the driver comes
+up, an open-drain bus, and an input to a chip that has not been fitted.
 
 Two rules read this shape. [`floating-input`](../../rules/floating-input/) looks for inputs with no
-defined level, and [`i2c-pull-up`](../../rules/i2c-pull-up/) checks the pair an I2C bus requires,
-because I2C drivers can only pull DOWN and the bus cannot return high without them.
+defined level, and [`i2c-pull-up`](../../rules/i2c-pull-up/) checks for the pair of pull-ups that
+an I2C bus requires. I2C drivers can only pull DOWN, and the bus cannot return high without the
+pull-ups.
 
 The value is a compromise rather than a constant. Lower means a faster return to high and more current
 wasted while the line is held low. `i2c-pull-up` names no resistance for that reason, and says to size

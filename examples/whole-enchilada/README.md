@@ -1,6 +1,6 @@
 # whole-enchilada
 
-The capstone example, which runs the whole engine end to end over bundled synthetic designs.
+This is the capstone example. It runs the whole engine end to end over bundled synthetic designs.
 One walkthrough shows the main steps at once.
 
 1. **Converge** three reads of the `mixer` board (EDIF, KiCad, and IPC-2581) and diff them to prove the netlists agree.
@@ -24,7 +24,7 @@ make doc        # render the walkthrough to markdown
 
 ## How it is built
 
-The narration lives in [`walkthrough.md`](walkthrough.md), loaded by demokit's
-`FromMarkdown`. `main.go` binds the six steps that run engine code (`converge`, `check`, `diff`,
+The narration lives in [`walkthrough.md`](walkthrough.md), and demokit's `FromMarkdown`
+loads it. `main.go` binds the six steps that run engine code (`converge`, `check`, `diff`,
 `emit`, `schematic`, `graph`) and wires the renderer. See [`../CONVENTIONS.md`](../CONVENTIONS.md)
 for the layout every example follows.

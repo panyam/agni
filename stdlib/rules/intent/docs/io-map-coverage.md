@@ -10,13 +10,13 @@ the board. The rule exists so the count of such nets is visible rather than abse
 
 ### Why coverage is the number that matters here
 
-A design with sixteen hundred nets and a map declaring two hundred of them has two hundred checked
-and fourteen hundred **unexamined**, which is not the same as clean. Report only the two hundred and
-the result is green about a fraction of the board, with the size of that fraction nowhere in the
-output.
+Imagine a design with sixteen hundred nets and a map declaring two hundred of them. Two hundred nets
+are checked and fourteen hundred are **unexamined**. Unexamined is not the same as clean. If the rule
+reported only the two hundred, the result would be green about a fraction of the board, and the
+output would not say how large that fraction is.
 
-This is the other half of a pair, and the two get confused constantly because they look alike and are
-opposite defects:
+This rule is the other half of a pair. The two look alike and report opposite defects, so they get
+confused constantly.
 
 | | usually means | reported by |
 |---|---|---|
@@ -28,10 +28,10 @@ opposite defects:
 A pin map does not usually name `GND` or a supply rail, and on a real board those are a large share
 of the nets. They are still counted in the denominator, and their verdict says which they are.
 
-Carving them out would be the tool deciding which absences are acceptable, and that judgment
-lets a real gap hide. A map that forgot an entire peripheral bank would read as well-covered if
-the arithmetic quietly excused a third of the board. Naming them in the reason gives a reader the
-discrimination without the tool making the call.
+Carving them out would mean the tool decides which absences are acceptable, and that judgment
+lets a real gap hide. Imagine a map that forgot an entire peripheral bank. It would read as
+well-covered if the arithmetic quietly excused a third of the board. So the rule names them in the
+reason instead. A reader can then tell them apart, and the tool makes no call.
 
 ### Reading the result
 

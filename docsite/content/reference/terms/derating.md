@@ -5,8 +5,8 @@ summary: "Deliberately running a part below its stated limit by a factor the des
 level: EE5
 ---
 
-Running a part below the limit its datasheet states, by a factor the design picks rather than one the
-vendor prints. A 10 V rail with a 1.25 derate factor asks for a capacitor rated 12.5 V, not 10 V.
+Running a part below its datasheet limit, by a factor that the design picks. The vendor does not
+print the factor. A 10 V rail with a 1.25 derate factor asks for a capacitor rated 12.5 V, not 10 V.
 
 {{ includeFile "figures/derating.svg" }}
 
@@ -23,7 +23,7 @@ differently and both be right.
 
 The factor also depends on what is being derated. Around 20% is the common convention for a ceramic
 capacitor's voltage. Sizing that same capacitor for stable capacitance under DC bias usually wants 2x
-or more, which is a different concern with the same shape, and one no rule in this catalog checks yet.
+or more. That is a different concern with the same shape, and no rule in this catalog checks it yet.
 
 Four rules read it. [`cap-voltage`](../../rules/cap-voltage/) compares a capacitor's rated voltage
 against its worst rail times a fixed 1.25, and states the arithmetic in the finding so the factor is
@@ -34,10 +34,11 @@ cannot meet the peak at all is one defect rather than two.
 [`fet-vdss-below-switched-rail`](../../rules/fet-vdss-below-switched-rail/) covers the transient case,
 where inductive kick and hot-plug push a drain well above the nominal rail.
 
-Derating only makes sense against a limit the vendor actually stated, so a rule derates from a
+Derating only makes sense against a limit that the vendor actually stated, so a rule derates from a
 transcribed parameter with its citation attached, never from a number somebody remembered.
 
 The course teaches it in
 [The numbers](../../../learn/03-why-every-chip-needs-capacitors/#the-numbers-ee5) in chapter 3, which
 introduces the derate factor on a capacitor's voltage rating, and in
-[chapter 7](../../../learn/07-reading-a-datasheet/), the datasheet contract a factor is applied to.
+[chapter 7](../../../learn/07-reading-a-datasheet/), which covers the datasheet contract that a factor
+applies to.

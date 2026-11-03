@@ -34,9 +34,9 @@ question is answerable on this design before trusting the answer.
 
 ### Absence is not a pass
 
-It is the queryable half of the gate; the rule half is the
-capability a declared-vs-actual rule declares, so `check.Available` reports not-applicable with a
-reason instead of letting the rule find nothing and read clean.
+It is the queryable half of the gate. A declared-vs-actual rule declares a capability, and that
+capability is the rule half. So `check.Available` reports not-applicable with a reason instead of
+letting the rule find nothing and read clean.
 
 ### Datalog
 

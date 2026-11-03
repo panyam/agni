@@ -8,7 +8,7 @@ name declares a different nominal than the domain does (a rail on the wrong doma
 
 ### Why engineers want it
 
-The power tree is where a wrong assumption is most expensive. A rail wired to the wrong domain, or a
+A wrong assumption costs the most in the power tree. A rail wired to the wrong domain, or a
 domain rail that never got routed, can put an over-voltage on a part or leave a block unpowered. The
 declaration states the intended domains so the check flags a rail that drifted off its declared
 voltage.
@@ -23,8 +23,8 @@ supply pin.
 
 ### Scope note
 
-A present rail whose name carries no parseable voltage token (e.g. `VDD_CORE`) reads
-`not-considered`, because the name-derived nominal is the only voltage evidence a netlist carries,
-and refusing to guess is the contract. So the rule verifies presence for every declared rail and
-voltage only for those whose name encodes one. The domains come from the declaration, never derived
-from the netlist.
+Suppose a rail is present but its name carries no parseable voltage token, such as `VDD_CORE`. That
+rail reads `not-considered`, because the name-derived nominal is the only voltage evidence that a
+netlist carries, and refusing to guess is the contract. So the rule verifies presence for every
+declared rail and voltage only for those whose name encodes one. The domains come from the
+declaration and are never derived from the netlist.

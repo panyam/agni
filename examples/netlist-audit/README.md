@@ -9,7 +9,7 @@ queries in one file and answers them over one read of the design.
 
 | table | what it lists |
 |---|---|
-| Parts on nets | every part and the nets it lands on |
+| Parts on nets | every part and the nets it connects to |
 | Part numbers | every part's MPN |
 | Net count | how many nets the design has |
 | Test points per net | nets carrying a test point, and which |

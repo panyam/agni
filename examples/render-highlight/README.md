@@ -9,11 +9,11 @@ walkthrough form of `agni render --highlight`.
 
 - `check.RunDesign` → `[]check.Finding`, which runs the built-in rules over the netlist model.
   Each finding names a subject (net, ref-des, or pin).
-- `specsForFindings` maps each finding subject to a `geom.HighlightSpec` in the same net/component/pin
-  vocabulary the web click-to-locate builds. Findings computed on the netlist locate on the geometry
-  by name/ref-des, never merged as a second component source (CONSTRAINTS C21).
-- `render.SheetSVGHighlighted` draws the base sheet and composites the highlights onto ONE canvas,
-  the same projection the server serves as a separate overlay, so the CLI static picture and the
+- `specsForFindings` maps each finding subject to a `geom.HighlightSpec`. It uses the same
+  net/component/pin vocabulary as the web click-to-locate. Findings computed on the netlist locate
+  on the geometry by name/ref-des, never merged as a second component source (CONSTRAINTS C21).
+- `render.SheetSVGHighlighted` draws the base sheet and composites the highlights onto ONE canvas.
+  The server serves the same projection as a separate overlay, so the CLI static picture and the
   live viewer share one code path.
 - The bundled default (`duplicate-refdes.kicad_sch`) flags U1 as a duplicate ref-des, so both
   offending symbols are framed on the faithful KiCad render.

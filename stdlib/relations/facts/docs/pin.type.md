@@ -2,29 +2,31 @@
 
 ### What it is
 
-`pin.type(ref_des, pin, etype)` yields a pin's electrical type, where `etype` is the direction
-string the symbol declares: `input`, `output`, `inout`, `tri_state`, `open_collector`,
-`open_emitter`, `power_in`, `power_out`, `passive`, `no_connect`, or `unspecified`. The three output
-kinds that cannot drive both ways on their own (a tri-state, open-collector or open-emitter pin) keep
-their own types since agni issue 1082, read from KiCad and gEDA. Unlike `pin.role`, a row is emitted for every pin; a direction the
-tool has no mapping for reads as `unspecified` rather than being dropped.
+`pin.type(ref_des, pin, etype)` yields a pin's electrical type. The symbol declares `etype` as one
+of the direction strings `input`, `output`, `inout`, `tri_state`, `open_collector`,
+`open_emitter`, `power_in`, `power_out`, `passive`, `no_connect`, or `unspecified`. Three output
+kinds cannot drive both ways on their own, a tri-state, an open-collector and an open-emitter pin.
+Since agni issue 1082 each keeps its own type, read from KiCad and gEDA. Unlike `pin.role`, a row
+is emitted for every pin. If the tool has no mapping for a direction, it reads as `unspecified`
+rather than being dropped.
 
 ### For hardware engineers
 
-This is the pin's declared electrical type from the symbol, the same annotation ERC uses to decide
+This is the pin's declared electrical type from the symbol. ERC uses the same annotation to decide
 what may connect to what. A regulator's supply pin is `power_out`, an MCU's `power_in`, a
-resistor's terminals `passive`. `unspecified` means the author declared nothing, which the
-connectivity rules read as "skip, never guess" rather than a fault. You query it to audit
+resistor's terminals `passive`. `unspecified` means the author declared nothing. The connectivity
+rules read that as "skip, never guess" rather than a fault. You query it to audit
 directions on a rail (which parts source it, which sink it) or to find pins the design left
 untyped.
 
 ### For software engineers
 
-`pin.type` is the **type annotation** on the pin member
-([the analogy guide](../../../../docsite/content/reference/analogy.md) calls pin directions the type
-annotations the connectivity rules dispatch on). Rows are 1:1 with pins, one direction each. An
-`unspecified` value is a real annotation rather than a missing row, and it distinguishes "declared as
-untyped" from "no such pin," and rules that key on it treat it as "the author annotated nothing."
+`pin.type` is the **type annotation** on the pin member.
+[The analogy guide](../../../../docsite/content/reference/analogy.md) calls pin directions type
+annotations, and the connectivity rules dispatch on them. Rows are 1:1 with pins, one direction
+each. An `unspecified` value is a real annotation rather than a missing row. It distinguishes
+"declared as untyped" from "no such pin," and rules that key on it treat it as "the author
+annotated nothing."
 An empty result means the design carries no part-pin data.
 
 ### Go projector

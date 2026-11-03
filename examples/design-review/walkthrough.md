@@ -25,13 +25,13 @@ This walks a checklist and reports every item's outcome, including the ones noth
 ## How much of the list can be answered {#coverage}
 
 > Covered counts the items a mechanism exists for. Answered counts the ones this run actually
-> decided, which is the stricter number, since an item whose rule exists but whose inputs are missing is
-> covered and unanswered. Neither is a pass rate.
+> decided, and it is the stricter number. Take an item whose rule exists but whose inputs are
+> missing. That item is covered and unanswered. Neither is a pass rate.
 
 ## What a failing item rests on {#drill}
 
 > An item names a rule, and the rule states what it examined. A finding says what is wrong; a verdict
-> says what was asked, which is the half a checklist needs to claim coverage of a question.
+> says what was asked. A checklist needs that half to claim coverage of a question.
 
 ## An item nobody wrote a rule for {#house}
 

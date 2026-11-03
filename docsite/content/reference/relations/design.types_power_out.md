@@ -8,27 +8,27 @@ description: "one row when the source format classifies power-output pins (EDIF/
 `design.types_power_out(present)` yields exactly one row, with the value `true`, when the design's source
 format classifies power-OUTPUT pins, and zero rows otherwise. Like `design.has_nc_channel`, it is a
 design-capability flag rather than a per-entity relation, so there is never more than one row and its
-presence or absence is the whole signal. A KiCad, gEDA or xschem design (whose readers type a regulator output
-`POWER_OUT` and a power flag) makes the row appear; an EDIF netlist or an IPC-2581 board (whose grammars
-carry no power-output type) produces no row.
+presence or absence is the whole signal. The KiCad, gEDA and xschem readers type a regulator output
+`POWER_OUT` and a power flag, so a design in those formats makes the row appear. The EDIF and IPC-2581
+grammars carry no power-output type, so an EDIF netlist or an IPC-2581 board produces no row.
 
 ### For hardware engineers
 
 Some formats let you mark a pin as a power SOURCE (a regulator's output, a power flag), so the tool can
 tell a rail that has a source from one that does not. EDIF and IPC do not, so a regulator's output pin
 reads as a plain input there, indistinguishable from the loads it feeds. This flag says which kind of
-format you have. It matters because "this power rail has no source" is only a real finding when the format could
-have named a source; on EDIF that same net looks sourceless for every switched or derived rail, which
-is a false alarm, not a defect.
+format you have. It matters because "this power rail has no source" is only a real finding when the
+format could have named a source. On EDIF every switched or derived rail looks sourceless, and
+reporting it would be a false alarm, not a defect.
 
 ### For software engineers
 
-This is a capability probe over the whole design, closer to a feature flag than a row set. Because a
-rule reads it as `design.types_power_out(?_)`, an absent row makes the enclosing conjunction yield nothing, so
-the guard fails closed, and on a format that cannot type power outputs a driver-absence rule produces no
-findings by construction. `power-input-not-driven` gates on it (WS3-072) because the
-POWER_IN pin stamp makes supply *inputs* visible on EDIF while the source side stays under-typed, so
-inferring "unpowered" from the absence of a typed driver would false-fire on every switched rail.
+This is a capability probe over the whole design, closer to a feature flag than a row set. A rule
+reads it as `design.types_power_out(?_)`. An absent row makes the enclosing conjunction yield nothing,
+so the guard fails closed. On a format that cannot type power outputs, a driver-absence rule then
+produces no findings by construction. `power-input-not-driven` gates on it (WS3-072). The POWER_IN pin
+stamp makes supply *inputs* visible on EDIF, but the source side is still under-typed. So inferring
+"unpowered" from the absence of a typed driver would false-fire on every switched rail.
 Absent means "the format cannot say," treated as "do not fire," never as "the rail is unpowered." The
 gate reads the same capability through the `design.types_power_out` spec fact; this relation is its
 queryable twin, so you can ask "is a driver-absence check even sound on this design" before trusting one.
@@ -38,8 +38,8 @@ queryable twin, so you can ask "is a driver-absence check even sound on this des
 `typesPowerOutFacts` in `stdlib/relations/facts.go` calls `Model.FormatTypesPowerOut()`. When it is true the
 projector returns a single row (subject `true`); when false it returns nil, so the relation is one row
 or none, never more. The capability is derived from `SourceFormat` (false for an `edif`/`ipc` prefix),
-so it needs no precomputed state. Zero rows is the meaningful state, and it is what a gated rule fails
-closed on.
+so it needs no precomputed state. Zero rows is the meaningful state, and a gated rule fails closed on
+it.
 
 ### Datalog
 

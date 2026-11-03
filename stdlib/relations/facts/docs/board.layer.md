@@ -2,18 +2,19 @@
 
 ### What it is
 
-`board.layer(net, layer)` yields one row per copper layer a net's routed tracks occupy. `net` is the
-net name (the join key to `ir.Net.name`); `layer` is the layer word the board reader carried
-through, in the KiCad copper vocabulary (`F.Cu`, `B.Cu`, ...) that the IPC-2581 reader maps onto. A
+`board.layer(net, layer)` yields one row for each copper layer that a net's routed tracks occupy.
+`net` is the net name (the join key to `ir.Net.name`). `layer` is the layer word that the board
+reader carried through. It uses the KiCad copper vocabulary (`F.Cu`, `B.Cu`, ...), and the IPC-2581
+reader maps onto that vocabulary. A
 net routed on the top and bottom copper of a two-layer board yields two rows; a net kept on one
 layer yields one.
 
 ### For hardware engineers
 
-This tells you where a net's copper actually runs. During a review you query it to confirm a net
-stayed where you intended: a signal you expected to keep on an inner layer showing up on `F.Cu`,
-or a rail you meant to plane on one layer appearing on several. Only layers carrying at least one
-track segment for the net appear, so a net that is only a pad or a via with no routed track
+This tells you where a net's copper actually runs. During a review you query it to confirm that a
+net is routed where you intended. A signal you expected on an inner layer may show up on `F.Cu`, or
+a rail you meant to plane on one layer may appear on several. A layer appears only if it carries at
+least one track segment for the net. So a net that is only a pad, or a via with no routed track,
 contributes no layer row.
 
 ### For software engineers
@@ -35,9 +36,8 @@ layer)` row per layer.
 The board tier is EMPTY on a netlist-only design. `Model.BoardNets()` returns nothing unless the
 design was loaded with board geometry (`check.WithBoard`, fed a `.kicad_pcb` or IPC-2581 board
 sidecar). For a query this is silent by construction, so `board.layer` yields zero rows on any design
-without board geometry, the same posture the datasheet tier takes without `--params`. A query
-returning nothing does not mean a net has no layers; it can mean the design carries no board at
-all.
+without board geometry. The datasheet tier behaves the same way without `--params`. An empty answer
+does not mean a net has no layers. It can mean the design carries no board at all.
 
 ### Datalog
 

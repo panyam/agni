@@ -2,9 +2,9 @@
 
 ### What it means
 
-A component joined to a seeded datasheet spec has a supply pin on a rail whose name states a
-nominal voltage outside **that pin's own** recommended operating range, above its maximum or below
-its minimum.
+A component is joined to a seeded datasheet spec. One of its supply pins is on a rail, and the
+rail's name states a nominal voltage outside **that pin's own** recommended operating range, above
+its maximum or below its minimum.
 
 ### Why engineers want it
 
@@ -30,7 +30,7 @@ Every input that cannot be trusted is a skip, never a guess:
   the alias path answers instead;
 - a design pin that does not resolve to exactly one spec pin -> skipped, for the reasons on
   `pin-exceeds-abs-max`;
-- a supply pin on no net, or one the datasheet binds no comparable row to -> skipped;
+- a supply pin on no net, or one with no comparable row bound to it by the datasheet -> skipped;
 - limit rows that are under-specified or carry text-only conditions are not compared;
 - a bound the datasheet did not state is not invented, so a row with only a maximum is checked only
   above, and a row with only a minimum only below;

@@ -2,8 +2,8 @@
 
 ### What it means
 
-A net that carries one or more input pins and nothing else that could set its
-level: no driver, no pull resistor, no rail. The input is left floating.
+The rule flags a net that carries one or more input pins and nothing else that
+could set its level: no driver, no pull resistor, no rail. The input is left floating.
 
 ### Why engineers want it
 
@@ -15,7 +15,7 @@ with temperature and a fingertip.
 ### Impact
 
 Non-deterministic logic and excess current. It is a real defect, but the check must be
-conservative to stay quiet on legitimate nets.
+conservative so it does not fire on legitimate nets.
 
 ![Input-only net is flagged as floating; the same input pulled to a rail is fine](images/floating-input.svg)
 
@@ -23,29 +23,29 @@ conservative to stay quiet on legitimate nets.
 
 Fires only when every pin on the net is an input (or an
 explicit no-connect), so the moment a driver, a passive (a pull), or a power pin is present the net
-is considered set and the rule stays quiet. A net with any un-typed (UNSPECIFIED) pin counts as not
+is considered set and the rule does not fire. A net with any un-typed (UNSPECIFIED) pin counts as not
 input-only and passes, although the reader could not classify that pin. This trades recall for
 near-zero false positives.
 
 ### A passive member exempts the net
 
-A resistor on the net is the classic pull (the net
-is set); a cap or ferrite means a path this netlist-local rule cannot follow. Claiming
+A resistor on the net is the classic pull, so the net
+is set. A cap or ferrite means a path that this netlist-local rule cannot follow. Claiming
 "floating" past a passive is guesswork, so ANY passive-class member (resistor, capacitor,
-inductor, ferrite, fuse, test point) silences the rule for that net, which also absorbs
-libraries that type passive pins INPUT (the Mentor EDIF corpus does for capacitors, which
-made cap-plus-input nets read as all-input the moment pin keys joined correctly, WS1-025).
+inductor, ferrite, fuse, test point) silences the rule for that net. The exemption also absorbs
+libraries that type passive pins INPUT. The Mentor EDIF corpus does that for capacitors, so once
+pin keys joined correctly, its cap-plus-input nets read as all-input (WS1-025).
 
 ### A diode terminal is not a logic input
 
 Some libraries type a diode/LED/TVS terminal (an anode or cathode) INPUT, the same way they type
-passive pins. But a diode-only node's level is set by the diode network (a clamp, a steering pair, a
-diode-OR), so the node is not an undriven logic input. A diode-family pin is therefore excluded from
+passive pins. But the diode network (a clamp, a steering pair, a diode-OR) sets a diode-only node's
+level, so the node is not an undriven logic input. A diode-family pin is therefore excluded from
 the "is there a logic input" count. The exclusion is PER-PIN, not per-net, so a real IC input that
-merely carries a clamp diode still fires (the input is genuinely floating), while only a net whose
-input pins are all diode terminals goes quiet. (Without this, a pair of steering-diode cathodes tied
-together read as an all-input net and false-fired; on one real industrial netlist that was 36
-findings, every one a diode network.)
+merely carries a clamp diode still fires (the input is genuinely floating). The rule skips only a net
+whose input pins are all diode terminals. Without this exclusion, a pair of steering-diode cathodes
+tied together read as an all-input net and false-fired. On one real industrial netlist that was 36
+findings, and every one was a diode network.
 
 ### Query structure
 

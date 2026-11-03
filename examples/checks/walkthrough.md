@@ -30,31 +30,31 @@ Agni -->> You: []Finding (severity, rule, subject, message)
 
 ## What is not flagged
 
-Two nets in i2c-sensor look wrong but are not. SDA is an I2C net, but it has a pull-up resistor (R1), so the i2c-pull-up rule stays quiet. NC_SPARE has a single pin, but its name marks it as an intentional no-connect, so single-pin-net skips it.
+Two nets in i2c-sensor look wrong but are not. SDA is an I2C net, but it has a pull-up resistor (R1), so the i2c-pull-up rule reports nothing. NC_SPARE has a single pin, but its name marks it as an intentional no-connect, so single-pin-net skips it.
 
-No-connect awareness keeps the checks from drowning a real design in false positives (WS3-002). A rule that fires on every deliberate stub is a rule engineers turn off.
+No-connect awareness keeps the checks from drowning a real design in false positives (WS3-002). Engineers turn off a rule that fires on every deliberate stub.
 
 ## Wires drawn to nothing
 
 Run the checks on dangling-wire.kicad_sch to see the dangling-endpoint rule. A .kicad_sch stores connectivity as geometry, so things connect only where their points coincide. A wire dropped a hair short of a pin looks connected but is not, and it never becomes a net, so no net-level rule can see it. The rule reports each such endpoint by its location.
 
-The same fixture also shows what is not flagged: a wire ending on a junction dot, on a label, or meeting a second wire is connected, not dangling. Only the ends that touch nothing are reported.
+The same fixture also shows what is not flagged. A wire is connected, not dangling, when it ends on a junction dot or a label, or meets a second wire. Only the ends that touch nothing are reported.
 
 ## Pins that fight or float
 
-Run the checks on driver-conflict.edn to see the pin-direction rules. output-output-conflict flags a net with two driving pins (two outputs, or two power sources) fighting each other; floating-input flags a net whose only pins are inputs, so nothing sets their level. Both read the pins' electrical direction, so they run on any reader that types its pins (EDIF here, KiCad schematics too).
+Run the checks on driver-conflict.edn to see the pin-direction rules. output-output-conflict flags a net where two driving pins fight each other, such as two outputs or two power sources. floating-input flags a net whose only pins are inputs, so nothing sets their level. Both read the pins' electrical direction, so they run on any reader that types its pins, EDIF here and KiCad schematics too.
 
-These rules are deliberately conservative to stay quiet on real designs, so a bidirectional bus is not an output-output conflict and an input with a pull resistor or a driver is not floating. The related power-input-not-driven rule (a power pin with no source) is KiCad-specific, since it needs the power-in / power-out distinction EDIF does not carry.
+These rules are deliberately conservative, so they avoid false findings on real designs. A bidirectional bus is not an output-output conflict, and an input with a pull resistor or a driver is not floating. The related power-input-not-driven rule flags a power pin with no source. It is KiCad-specific, since it needs the power-in / power-out distinction, and EDIF does not carry that.
 
 ## A check the reader catches, not the analysis
 
-Run the checks on duplicate-refdes.kicad_sch to see duplicate-ref-des, which fires because two symbols both labelled U1 (unit 1) are a genuine duplicate. Notice where this one is decided. The IR keys components by ref-des and folds a multi-unit part into one component with sections, so by the time the netlist exists a duplicate is indistinguishable from a legitimate multi-gate part. Only the reader, mid-parse, can tell them apart (in KiCad, the same unit claimed twice), so it records the collision as an input diagnostic and this rule just reports it. It is a "rule" in the catalog like any other, but its implementation site is the reader, not the analysis engine (see docsite/content/architecture/ingestion-and-ir.md).
+Run the checks on duplicate-refdes.kicad_sch to see duplicate-ref-des. It fires because two symbols are both labelled U1 (unit 1), and that is a genuine duplicate. Notice where this one is decided. The IR keys components by ref-des and folds a multi-unit part into one component with sections. So once the netlist exists, a duplicate is indistinguishable from a legitimate multi-gate part. Only the reader can tell them apart, while it parses. In KiCad a duplicate is the same unit claimed twice. The reader records the collision as an input diagnostic, and this rule just reports it. It is a "rule" in the catalog like any other, but the reader implements it, not the analysis engine (see docsite/content/architecture/ingestion-and-ir.md).
 
 ## A pull-up further out {#reach}
 
-> pullup-reach.edn has two I2C lines. SDA_MAIN reaches its pull-up through four series resistors, and SCL_MAIN has two pull-ups, one direct and one behind a series resistor. At the default reach of 3, SDA_MAIN fails and the witness names the limit. pullup-reach.intent.yaml declares pull_up_reach_hops 4 for SDA_MAIN alone, which is the designer saying that bus's series network is sized for the deeper reach, and the same board then passes. SCL_MAIN keeps the default either way, and its pass lists both paths.
+> pullup-reach.edn has two I2C lines. SDA_MAIN reaches its pull-up through four series resistors, and SCL_MAIN has two pull-ups, one direct and one behind a series resistor. At the default reach of 3, SDA_MAIN fails and the witness names the limit. pullup-reach.intent.yaml declares pull_up_reach_hops 4 for SDA_MAIN alone. With that line the designer says the bus's series network is sized for the deeper reach, and the same board then passes. SCL_MAIN keeps the default either way, and its pass lists both paths.
 
-i2c-pull-up looks for a rail within three series resistors, because past three the series resistance is usually comparable to the pull-up and the bus no longer returns high in time. That is a default rather than a law. A design states a different reach for one net in its intent, and the model built with that intent (check.WithIntent) answers every pull-up walk from that net at the declared reach. The CLI form is agni check --verdicts --rule i2c-pull-up pullup-reach.edn --intent-path pullup-reach.intent.yaml.
+i2c-pull-up looks for a rail within three series resistors, because past three the series resistance is usually comparable to the pull-up and the bus no longer returns high in time. That is a default rather than a law. A design states a different reach for one net in its intent. check.WithIntent builds the model with that intent, and the model answers every pull-up walk from that net at the declared reach. The CLI form is agni check --verdicts --rule i2c-pull-up pullup-reach.edn --intent-path pullup-reach.intent.yaml.
 
 ## Same thing from the CLI
 

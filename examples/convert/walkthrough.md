@@ -26,7 +26,7 @@ Every reader normalizes its source format into the same neutral IR, and a writer
 
 ## Read it into the IR {#to-ir}
 
-> The reader is chosen by extension (EDIF / KiCad / IPC-2581), the same dispatch agni's CLI does at its edge. Whatever the input, the result is one *ir.Design, so the stats below have the same shape regardless of source format.
+> The reader is chosen by extension (EDIF / KiCad / IPC-2581), as agni's CLI dispatches at its edge. Whatever the input, the result is one *ir.Design, so the stats below have the same shape regardless of source format.
 
 ```mermaid
 sequenceDiagram
@@ -36,7 +36,7 @@ Agni -->> You: *ir.Design
 
 ## Choose an output format {#pick-format}
 
-> The IR can be emitted back to a format. Two writers exist, IPC-2581 and the EDIF netlist, and more slot in here as they land. Choosing IPC-2581 makes this an A -> IR -> IPC-2581 conversion, for example KiCad or EDIF into IPC-2581.
+> The IR can be emitted back to a format. Two writers exist, IPC-2581 and the EDIF netlist, and more slot in here as they are added. Choosing IPC-2581 makes this an A -> IR -> IPC-2581 conversion, for example KiCad or EDIF into IPC-2581.
 
 ```inputs
 - name: format
@@ -48,7 +48,7 @@ Agni -->> You: *ir.Design
 
 ## Emit, and prove the round-trip {#emit}
 
-> Write the IR to the chosen format, then read the emitted document straight back. The re-read IR matches the input's on every modeled field, so the netlist and physical tier survive the round-trip. Geometry lives in a separate sidecar (WS1-006) that this round-trip does not carry, so this is a semantic round-trip, not byte-for-byte.
+> Write the IR to the chosen format, then read the emitted document straight back. The re-read IR matches the input's on every modeled field, so the netlist and physical tier survive the round-trip. Geometry lives in a separate sidecar (WS1-006), and this round-trip does not carry it, so this is a semantic round-trip, not byte-for-byte.
 
 ```mermaid
 sequenceDiagram
@@ -65,4 +65,4 @@ This walkthrough is the narrated form of one command:
     agni emit demo-board.kicad_pcb             # IPC-2581 to stdout
     agni emit demo-board.kicad_pcb out.xml     # ... or to a file
 
-So any format agni reads can be emitted as IPC-2581: KiCad -> IPC-2581, EDIF -> IPC-2581, or IPC-2581 -> IPC-2581 (the round-trip). The same pivot runs the other way through the EDIF netlist writer, which is what `agni emit board.kicad_sch board.edn` does.
+So any format agni reads can be emitted as IPC-2581: KiCad -> IPC-2581, EDIF -> IPC-2581, or IPC-2581 -> IPC-2581 (the round-trip). `agni emit board.kicad_sch board.edn` runs the same pivot the other way, through the EDIF netlist writer.

@@ -9,36 +9,34 @@ only its smallest drill, not every via.
 
 ### For hardware engineers
 
-The smallest drill on a net is the one most likely to be below a fab's minimum drill capability
-or to carry too little copper for the current through it, so that is the number a review checks.
+On a net, the smallest drill is the most likely to fall below a fab's minimum drill capability or
+to carry too little copper for the current through it. A review checks that number.
 Query this to find nets with vias drilled under a house minimum, or to confirm a high-current net
 does not route through an undersized via. The value is the physical drill diameter, so the
 threshold you compare against is a real length, written with its unit.
 
 ### For software engineers
 
-The routed net carries a set of vias, each with a drill diameter. `board.via_drill` is an
-aggregate projection over that set, reducing it to the minimum drill keyed by net. Reporting the
-minimum (the safety-relevant extreme) rather than one row per via keeps the relation a compact
-per-net answer rather than a full via dump. Rows are 1:1 with nets that have at least one via; a
-net with tracks but no vias contributes no row. The stored unit is nanometres. The projector
-converts to metres, the SI base the engine folds a query literal to, and a cell is
-shown in millimetres.
+The routed net carries a set of vias, each with a drill diameter. `board.via_drill` is an aggregate
+projection over that set, reducing it to the minimum drill keyed by net. The relation reports the
+minimum, the safety-relevant extreme, rather than one row per via. That keeps it a compact per-net
+answer rather than a full via dump. Rows are 1:1 with nets that have at least one via; a net with
+tracks but no vias contributes no row. The stored unit is nanometres. The projector converts to
+metres. The engine folds a query literal to the same SI base, and a cell is shown in millimetres.
 
 ### Go projector
 
 `boardFacts` in `stdlib/relations/facts.go` walks `Model.BoardNets()` and, for each net, calls the
-helper `minViaDrillNm(bn.Vias)`, which returns the smallest `Drill` across the net's vias (and a
-false ok when the net has no vias, in which case no row is emitted). The nanometre minimum is
+helper `minViaDrillNm(bn.Vias)`, which returns the smallest `Drill` across the net's vias. It
+returns a false ok when the net has no vias, and then no row is emitted. The nanometre minimum is
 converted with `nmToMM`, shown as millimetres, and emitted as `board.via_drill(net, mm)` with the
 numeric value populated in metres for comparison.
 
 The board tier is EMPTY on a netlist-only design. `Model.BoardNets()` returns nothing unless the
 design was loaded with board geometry (`check.WithBoard`, fed a `.kicad_pcb` or IPC-2581 board
 sidecar). For a query this is silent by construction, so `board.via_drill` yields zero rows on any
-design without board geometry, the same posture the datasheet tier takes without `--params`. A
-query returning nothing does not mean every via is large; it can mean the design carries no board
-at all.
+design without board geometry. The datasheet tier behaves the same way without `--params`. An
+empty answer does not mean every via is large. It can mean the design carries no board at all.
 
 ### Datalog
 
