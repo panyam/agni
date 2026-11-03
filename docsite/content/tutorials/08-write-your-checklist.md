@@ -4,14 +4,14 @@ description: "The questions your team asks of every board, bound to the engine s
 ---
 
 Most teams already have a review checklist. It is usually a spreadsheet, and going through it is
-usually somebody's afternoon. Much of it is mechanical, asking questions whose definite answer is
-already sitting in the design file.
+usually somebody's afternoon. Much of it is mechanical. It asks questions, and the design file
+already holds the definite answer to each one.
 
-The `review` checklist in the Jetson project's `project.yaml` is that checklist, written so the mechanical
-items answer themselves and the rest stay visible as work for a human.
+The Jetson project's `project.yaml` holds that checklist as its `review` checklist. It is written so
+the mechanical items answer themselves and the rest are still visible as work for a human.
 
 `agni check` answers "what is wrong with this board".
-`agni review` answers "which of our questions did we actually answer", which is a different question
+`agni review` answers "which of our questions did we actually answer". That is a different question,
 and a more useful one when you are deciding whether a board is ready.
 
 ## The shape
@@ -33,7 +33,8 @@ checklists:
 project's default.
 
 Areas group items the way your existing checklist groups them. Each item keeps its own `id`, so an
-item that has been "P1" in your process for years stays P1 here and nobody has to relearn numbering.
+item that has been "P1" in your process for years is still P1 here and nobody has to relearn
+numbering.
 
 ## Four ways to bind an item
 
@@ -65,11 +66,11 @@ requires, and reads as unevaluated rather than passed when the interface is abse
     message: '{r} probes {n}, a net nobody named'
 ```
 
-KiCad names a net nobody labelled after one of its pins, `Net-(J18-PadH01)`. A bring-up engineer
-holding a probe and a schematic cannot find that net by name, so this team asks that every test point
-land on a net someone named.
+When nobody labels a net, KiCad names it after one of its pins, as in `Net-(J18-PadH01)`. A bring-up
+engineer holding a probe and a schematic cannot find that net by name, so this team asks that every
+test point sit on a net someone named.
 
-**`note:`** is for a question nothing automated can answer. The item stays on the checklist and
+**`note:`** is for a question nothing automated can answer. The item is still on the checklist and
 reports that no automated check answered it.
 
 ```yaml
@@ -98,8 +99,8 @@ item just looks like a finding you have not got round to.
 
 ## Running it
 
-Naming the design is the whole command. Every input a review needs is something this project
-already declares: `project.yaml` carries its checklists and its naming vocabulary, `profiles/` its
+Naming the design is the whole command. This project already declares every input a review needs.
+`project.yaml` carries its checklists and its naming vocabulary, `profiles/` its
 interfaces, `params/` its part limits, and `designs/jetson/design.yaml` names the schematic to read,
 the board beside it and the board's intent.
 
@@ -111,12 +112,12 @@ tier you added appears in it. P4 passes on the transcribed NTS0102, I1 on the pr
 H1 fails on the naming rule, and A1 and A2 pass on the declared intent. I2 reads `not-applicable`,
 because this board carries no CAN transceiver and an absent interface is not a passed one.
 
-It says which checklist it picked, on stderr:
+On stderr it says which checklist it picked:
 
 {{ agniRun "content/tutorials/runs/08-review-note.yaml" }}
 
-Which checklist scored a run is not recoverable from the outcomes it produced, so a checklist you
-did not type has to announce itself. `--checklist <name>` runs another one the project declares, and a
+A run's outcomes do not say which checklist scored them, so a checklist you did not type has to
+announce itself. `--checklist <name>` runs another one the project declares, and a
 value ending in `.yaml` is read as a manifest file instead, for a checklist that lives outside the
 project.
 
@@ -135,9 +136,9 @@ links to its proof, so clicking the net opens the board with the checks run and 
 
 `--server self` starts the viewer over this run's own mount table and blocks until Ctrl-C, so the
 links cannot point somewhere the report was not read from. It needs the viewer's assets the way
-`agni open` does in [rung 3](../03-see-it/). Naming a server someone else is running works too, and
-then the link half needs the same two things `check --server <url>` needs, a viewer address and a
-mount you DECLARED, and it prints the reason when it withholds one.
+`agni open` does in [rung 3](../03-see-it/). You can also name a server someone else is running.
+Then the links need the same two things `check --server <url>` needs, a viewer address and a mount
+you DECLARED. When the command withholds a link, it prints the reason.
 
 ## Items about the board, not the netlist
 
@@ -155,10 +156,10 @@ and the run reads both. To see what the item does with no copper, read the schem
 
 Nothing about the item changed. Only its input changed. `--board-path` does the same job for a board
 that is *not* a declared companion: a fab's returned file, or a layout under review that has not
-landed in the design yet.
+been added to the design yet.
 
 The `n/a` is not hiding a failure and it is not standing in for a pass. The question had nothing to
-evaluate, and the only way to find out which it would have been was to supply the copper. An item
+evaluate. Only supplying the copper would show which one it would have been. An item
 that scored `pass` on the schematic alone would have been wrong, and nobody would ever have checked it
 again.
 
@@ -174,5 +175,5 @@ parallel without conflicting.
 
 ## Next
 
-[Read the verdicts](../09-read-the-verdicts/), which is about why "7 fail" is a much better number
-than it looks.
+[Read the verdicts](../09-read-the-verdicts/) explains why "7 fail" is a much better number than it
+looks.

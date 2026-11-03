@@ -25,12 +25,13 @@ findings list cannot tell you that apart from four healthy links.
 
 ## Absence is not a pass
 
-That silence is the more important half, before adding anything. The profile tier gates on presence:
-a profile is in use only when its anchor signal, the one whose presence means the bus exists at all,
-is on the board. An interface whose anchor is nowhere is reported as unevaluated rather than passed,
-and the review layer in rung 9 keeps that apart from `pass`.
+Before adding anything, look at that silence, because it is the more important half. The profile
+tier gates on presence. Each profile has an anchor signal, and the anchor's presence means the bus
+exists at all. A profile is in use only when its anchor signal is on the board. If an interface's
+anchor is nowhere, the interface is reported as unevaluated rather than passed, and the review layer
+in rung 9 keeps that apart from `pass`.
 
-So the question a silent profile raises is never "is the bus fine". It is "did the profile recognize
+So a silent profile never raises the question "is the bus fine". It raises "did the profile recognize
 the bus", and on this board the answer is no.
 
 ## Adding your own
@@ -55,9 +56,9 @@ requirements:
 ```
 
 A signal says how a net is recognized as playing that role. A `suffix` is the readable default, and a
-`regex` is the escape hatch for naming a suffix cannot express, such as a bus member whose role sits
-after a dot. `(^|/)` lets the member carry the sheet path KiCad puts in front of a name drawn on a
-sub-sheet. `anchor: true` marks the signal whose presence means the bus exists.
+`regex` handles naming that a suffix cannot express, such as a bus member whose role comes after a
+dot. KiCad puts a sheet path in front of a name drawn on a sub-sheet, and `(^|/)` lets the member
+carry that path. `anchor: true` marks the signal whose presence means the bus exists.
 
 There is no flag. The project names its own `profiles/` directory, so agni composes it for every
 design under `designs/`, the same way it composes `params/` and the `conventions:` section of
@@ -92,27 +93,27 @@ alongside it. Every rule the built-in PCIe profile contributed is gone, and only
 declares is checked. Supersession is per interface, not per run, so the shipped CAN and eMMC
 profiles are untouched.
 
-Two profiles both claiming to be PCIe, both firing on the same nets, would double-report everything,
-and there would be no way to say your naming differs from the built-in assumption.
+Picture two profiles that both claim to be PCIe and both fire on the same nets. They would
+double-report everything, and there would be no way to say your naming differs from the built-in
+assumption.
 
-But it means an omission is silent. Your file lists three requirements, and the built-in declared
-four. `host-incomplete` asks whether a component DECLARED as a PCIe host carries every signal, and this
-board declares no host, so the file leaves it out on purpose. Had it left out `esd` by accident, ESD
-on PCIe would simply stop being checked on every board this project reviews, and nothing would say so.
-The run would look healthier, because there would be fewer findings.
+But supersession means an omission is silent. Your file lists three requirements, and the built-in
+declared four. `host-incomplete` asks whether a component DECLARED as a PCIe host carries every
+signal, and this board declares no host, so the file leaves it out on purpose. Had it left out `esd`
+by accident, ESD on PCIe would simply stop being checked on every board this project reviews, and
+nothing would say so. The run would look healthier, because there would be fewer findings.
 
 So write the file as the whole declaration rather than the delta, and read the supersession note
 whenever you add one. It names every rule your file replaced.
 
-## What the rung bought you
+## What the rung gave you
 
 Compare the last lines of the two runs on this page. The findings are the same and the considered
 count rose by about a hundred subjects, with two more rules having an opinion about this board. Those
-are the PCIe signals, which before this file nothing looked at.
+are the PCIe signals, and nothing looked at them before this file.
 
-The second number is the one worth watching as you add tiers. Findings tell you what is wrong today,
-and the considered count tells you how much of the board anything is looking at, which is what
-declaring an interface buys you.
+Watch the second number as you add tiers. Findings tell you what is wrong today. The considered count
+tells you how much of the board anything is looking at, and declaring an interface raises it.
 
 ## Next
 

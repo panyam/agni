@@ -3,9 +3,9 @@ title: "1. What a board is made of, and why"
 description: "A board is a few kinds of part doing about twenty jobs. How to tell which job, from the schematic alone."
 ---
 
-Open an unfamiliar schematic and it looks like several hundred arbitrary components. It is not, and the gap between those two impressions is most of what separates someone who can read a board from someone who cannot.
+Open an unfamiliar schematic and it looks like several hundred arbitrary components. It is not. Seeing that it is not is most of what separates someone who can read a board from someone who cannot.
 
-Two facts close it. A board is made of **very few kinds of thing**. And each of those things is doing one of a **small number of recurring jobs**, which you can usually identify from what it connects to.
+Two facts close it. A board is made of **very few kinds of thing**. And each of those things is doing one of a **small number of recurring jobs**. You can usually identify the job from what the part connects to.
 
 Read [EE1](../levels/#parts-ee1) first, which assumes you know that a resistor resists, a capacitor stores charge, and a chip does something complicated in the middle.
 
@@ -17,7 +17,7 @@ Here is the board the rest of this chapter asks questions about. You are not mea
 
 ![The tutorial gateway board, drawn from its declared schematic companion]({{.Site.PathPrefix}}/static/images/learn/gateway.svg)
 
-That drawing came from `agni render examples/tutorial-project/designs/gateway`. Pointing the tool at a design rather than at a file lets it use whichever artifact answers the question, and for a picture that is the schematic the design declares.
+That drawing came from `agni render examples/tutorial-project/designs/gateway`. When you point the tool at a design rather than at a file, it can use whichever artifact answers the question. For a picture, it uses the schematic the design declares.
 
 Now ask what is actually on it:
 
@@ -27,13 +27,13 @@ Twenty-two rows covering **nineteen parts**, and only nine distinct kinds: capac
 
 Three details in that output are worth noticing now.
 
-**There are more rows than parts.** `D1` appears twice, as `diode` and as `tvs`, and `U1` and `U2` each appear as `ic` and as `regulator`. Class is a family tag rather than a single label, because a TVS diode genuinely is a diode and rules want to reason at both levels, so a rule about reverse current cares that it is a diode and a rule about ESD protection cares that it is specifically a TVS.
+**There are more rows than parts.** `D1` appears twice, as `diode` and as `tvs`, and `U1` and `U2` each appear as `ic` and as `regulator`. Class is a family tag rather than a single label. A TVS diode genuinely is a diode, and rules want to reason at both levels. A rule about reverse current cares that it is a diode, and a rule about ESD protection cares that it is specifically a TVS.
 
-**`U3`, `U4` and `U5` are only `ic`, with no second tag.** The tool cannot tell what kind of chip they are, and that is correct behaviour rather than a bug. Their part numbers say exactly what they are (`ACME-MCU-G1`, `ACME-CAN-XCVR`, `ACME-EEPROM-4K`), so a processor, a CAN transceiver and a memory. But that identity lives in the part number and the datasheet, not in the connections, and a netlist reader that guessed "MCU" from a string would be wrong the first time it met a part named differently.
+**`U3`, `U4` and `U5` are only `ic`, with no second tag.** The tool cannot tell what kind of chip they are, and that is correct behaviour rather than a bug. Their part numbers say exactly what they are (`ACME-MCU-G1`, `ACME-CAN-XCVR`, `ACME-EEPROM-4K`), so a processor, a CAN transceiver and a memory. But that identity lives in the part number and the datasheet, not in the connections. Imagine a netlist reader that guessed "MCU" from a string. It would be wrong the first time it met a part named differently.
 
-This is the first thing you will meet that a netlist genuinely cannot answer, and the tool answers it the way it answers all of them, by having the information *declared* rather than inferred. `U4` is known to be a CAN device because the design carries an `interface: CAN` property on it, which the board's interface profile then checks against what CAN requires. That is chapter 10.
+Here, for the first time, a netlist genuinely cannot answer the question. The tool answers it the way it answers all such questions, by having the information *declared* rather than inferred. The tool knows `U4` is a CAN device because the design carries an `interface: CAN` property on it. The board's interface profile then checks `U4` against what CAN requires, and chapter 10 covers that.
 
-**Half the board is capacitors and resistors.** Nine of the nineteen parts, and that is low only because this is a small teaching fixture. On a real board the passives are usually eighty to ninety percent of the part count, and they are exactly the parts that look arbitrary. The rest of this chapter is about them.
+**Half the board is capacitors and resistors.** They are nine of the nineteen parts, and that share is low only because this is a small teaching fixture. On a real board the passives are usually eighty to ninety percent of the part count, and they are exactly the parts that look arbitrary. The rest of this chapter is about them.
 
 ## The same part, different jobs (EE2)
 
@@ -43,7 +43,7 @@ Here is where the instinct starts. Ask for every resistor with its part number a
 
 Three resistors. **Two of them are the same value**, `10k`. All three are doing different jobs, and you can work out each one from that table alone, without opening the schematic.
 
-**R1 (120Ω) sits between `CAN1_CANH` and `CAN1_CANL`.** Those two nets are the two halves of a differential pair, and a resistor bridging a pair is a **termination**. A CAN bus is a transmission line, and a signal reaching the far end of an unterminated line reflects back down it and collides with what follows. The terminator absorbs it. 120Ω is the characteristic impedance the CAN standard specifies, and the board's CAN profile declares the requirement (`{type: termination, params: {high: _CANH, low: _CANL}}`).
+**R1 (120Ω) sits between `CAN1_CANH` and `CAN1_CANL`.** Those two nets are the two halves of a differential pair, and a resistor bridging a pair is a **termination**. A CAN bus is a transmission line, and a signal reaching the far end of an unterminated line reflects back down it and collides with what follows. The terminator absorbs it. The CAN standard specifies a characteristic impedance of 120Ω, and the board's CAN profile declares the requirement (`{type: termination, params: {high: _CANH, low: _CANL}}`).
 
 **R2 (10k) sits between `PMIC_EN` and `PMIC_MAIN_12V0`.** One end is an *enable pin*, one end is a *rail*. A resistor from a signal to a rail is a **pull-up**, which holds the signal high when nothing else is driving it. Here that means the power management chip is enabled by default at power-on, rather than waiting for someone to assert it.
 
@@ -53,7 +53,7 @@ Same class, two of them the same value, three jobs. **The value tells you almost
 
 ## The decision procedure (EE3)
 
-That is generalisable, and it is the single most useful habit at this level. For a two-terminal part, look at what is on each end:
+That reading generalises, and it is the single most useful habit at this level. For a two-terminal part, look at what is on each end:
 
 | One end | Other end | It is probably a | Why |
 |---|---|---|---|
@@ -66,31 +66,31 @@ That is generalisable, and it is the single most useful habit at this level. For
 | signal | ground, and it is a cap | **filter** | shunts high-frequency noise away |
 | pin of a crystal | ground | **load capacitor** | sets the oscillator's operating point |
 
-Two things make this work. Net names carry intent, because engineers name nets after what they are for, which is why the tool has a whole [naming conventions](../../guide/naming-conventions/) layer. And a part's *class* plus its *topology* is nearly always enough, which is why so many rules in the catalog are shaped as "a part of class X on a net of kind Y".
+Two things make this work. Net names carry intent, because engineers name nets after what they are for. The tool has a whole [naming conventions](../../guide/naming-conventions/) layer for that reason. And a part's *class* plus its *topology* is nearly always enough, so many rules in the catalog are shaped as "a part of class X on a net of kind Y".
 
-When the procedure does not settle it, that is information too. A resistor between two signals could be damping a fast edge, limiting current into a protection diode, or a footprint nobody stuffed. A netlist cannot tell those apart, and the rules in this catalog say so rather than guessing. That is what a `not-considered` verdict is.
+When the procedure does not settle it, that is information too. A resistor between two signals could be damping a fast edge, limiting current into a protection diode, or a footprint nobody stuffed. A netlist cannot tell those apart, and the rules in this catalog say so rather than guessing. A `not-considered` verdict is a rule saying so.
 
 ## The recurring jobs (EE3)
 
 The full working list. You do not need to memorise it; you need to know it is short and finite, so that an unfamiliar part is a lookup rather than a mystery.
 
-A pull-up or pull-down is **holding a line at a known level**, because a line that nothing drives has no defined voltage, which is a genuinely surprising fact and is chapter 4's subject. → `floating-input`, `i2c-pull-up`, `profile/missing-pullup`
+A pull-up or pull-down is **holding a line at a known level**, because a line that nothing drives has no defined voltage. That fact is genuinely surprising, and it is chapter 4's subject. → `floating-input`, `i2c-pull-up`, `profile/missing-pullup`
 
 A decoupling capacitor at each supply pin and a bulk capacitor per rail are **supplying charge locally**. → `decoupling-present`, `bulk-cap` ([chapter 3](../03-why-every-chip-needs-capacitors/))
 
-A voltage divider (two resistors, tap in the middle), a current limit (in series with an LED or an input) and a level shift between two logic voltages are all **making a signal the right size**. → `led-polarity`
+Three things are **making a signal the right size**: a voltage divider (two resistors, tap in the middle), a current limit (in series with an LED or an input) and a level shift between two logic voltages. → `led-polarity`
 
-A series damping resistor, a ferrite bead between a noisy domain and a quiet one, and a snubber across a switch are **taming an edge**, and all of them exist because a fast edge is also a radio transmitter.
+Three things are **taming an edge**: a series damping resistor, a ferrite bead between a noisy domain and a quiet one, and a snubber across a switch. All of them exist because a fast edge is also a radio transmitter.
 
-A termination across a differential pair, or to ground at the end of a bus, is **ending a transmission line**. → `profile/termination`
+A termination is **ending a transmission line**, whether it sits across a differential pair or goes to ground at the end of a bus. → `profile/termination`
 
-Strap resistors that encode a number the chip latches at reset, and zero-ohm links that make an option selectable at build time, are **configuring at boot**. → the design-intent strap rules, `intent/strap-address-collision` (chapter 9)
+Two things are **configuring at boot**. Strap resistors encode a number the chip latches at reset, and zero-ohm links make an option selectable at build time. → the design-intent strap rules, `intent/strap-address-collision` (chapter 9)
 
-A TVS or ESD clamp on anything reaching a connector that faces the outside of the product, reverse-polarity protection on the input, and a fuse are **surviving the outside world**. → `profile/esd`, `esd-protection`
+Three things are **surviving the outside world**: a TVS or ESD clamp on anything reaching a connector that faces the outside of the product, reverse-polarity protection on the input, and a fuse. → `profile/esd`, `esd-protection`
 
-A shunt resistor turning a current into a voltage you can read, or a divider scaling a voltage into an ADC's range, is **measuring**.
+Two things are **measuring**: a shunt resistor turning a current into a voltage you can read, and a divider scaling a voltage into an ADC's range.
 
-A crystal plus two load capacitors, or an oscillator that packages both, is **keeping time**. → `crystal-load-caps`, `resonator-redundant-load-caps` (chapter 11)
+A crystal plus two load capacitors is **keeping time**, and so is an oscillator that packages both. → `crystal-load-caps`, `resonator-redundant-load-caps` (chapter 11)
 
 The inductor in a switching regulator is **moving energy**, storing and releasing it every cycle. This is the one job where the part is the point of the circuit rather than incidental to it.
 
@@ -98,7 +98,7 @@ That is about twenty, depending how you count, and it covers the overwhelming ma
 
 ## What the chips are doing
 
-The list above is about the small parts, because they are the ones that look arbitrary. The chips are usually self-evident from their part number, and fall into a few roles: a **processor** or controller that runs the software, **regulators** that make the rails, **transceivers** that convert between a chip's logic levels and a bus's electrical standard, **memory**, **sensors**, and **connectors** as the boundary with everything off-board.
+The list above is about the small parts, because they look arbitrary. The chips are usually self-evident from their part number, and fall into a few roles: a **processor** or controller that runs the software, **regulators** that make the rails, **transceivers** that convert between a chip's logic levels and a bus's electrical standard, **memory**, **sensors**, and **connectors** as the boundary with everything off-board.
 
 The useful instinct here is that the small parts exist to serve the chips. Every resistor and capacitor on a board is there because some chip's datasheet asked for it, or because a signal between two chips needed conditioning. When you cannot work out why a passive is present, ask "which chip needed this, and what for".
 
@@ -111,6 +111,6 @@ The useful instinct here is that the small parts exist to serve the chips. Every
 
 ## The rules this page explains
 
-None on its own, which a chapter 1 has no business claiming. It supplies the vocabulary the rest of the catalog is written in. Run the two queries above against any board you are handed, in that order, as the fastest way to orient yourself in an unfamiliar design.
+None on its own, and a chapter 1 has no business claiming any. It supplies the vocabulary for the rest of the catalog. Run the two queries above against any board you are handed, in that order, as the fastest way to orient yourself in an unfamiliar design.
 
 The next chapter, [The drawing is not the circuit](../02-the-drawing-is-not-the-circuit/), covers the ways a schematic can show a connection that does not exist and hide one that does.

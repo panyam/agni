@@ -1,16 +1,16 @@
 ---
 title: "CLI reference"
-description: "The commands and flags a user reaches for, with a pointer to per-command help."
+description: "The commonly used commands and flags, with a pointer to per-command help."
 ---
 
-This page lists the commands and flags a user reaches for. `agni <command> --help` always
+This page lists the commands and flags you are most likely to use. `agni <command> --help` always
 prints the authoritative, up-to-date detail. The reader for a file is chosen by
 its extension, so you pass the design file directly and never name a format.
 
 Where a `<file>` is expected you may also name a **design folder**, one holding a `design.yaml`
-that declares which file is the design's entry. Agni then reads that entry and picks up the
-companion views the descriptor lists, so a {{ explainable "netlist" }}'s connectivity rules and a
-board's copper rules run from one argument. See
+that declares which file is the design's entry. Agni then reads that entry. The descriptor also
+lists companion views, and Agni reads those too, so a {{ explainable "netlist" }}'s connectivity
+rules and a board's copper rules run from one argument. See
 [Projects and designs](../../architecture/projects-and-designs/).
 
 The commands fall into four groups by what each one takes as its argument.
@@ -36,15 +36,15 @@ not extracted:       7 sub-cells holding 74 instances (counts above are the top 
 
 | flag | what it does |
 |---|---|
-| `--format <fmt>` | `text` (the counts above, the default) or `json`, the `GetDesignResponse` the `GetDesign` rpc returns |
+| `--format <fmt>` | `text` (the counts above, the default) or `json`, the `GetDesign` rpc's `GetDesignResponse` |
 | `--mask <paths>` | with `json`, which fields to carry, over `GetDesignResponse`: `design` is the design's whole IR, `design.nets` or `design.components.mpn` parts of it (a path through a list applies to every element), `*` everything. Unset is the summary alone. Repeatable or comma-separated; an unknown path is an error |
 | `--net <name>` | with a mask selecting `design`, keep only this net in `design.nets` (repeatable) |
 | `--ref <ref_des>` | with a mask selecting `design`, keep only this component in `design.components` (repeatable) |
 
-The IR is what every analysis reads, after the project's configuration and the ingestion passes
-(part numbers promoted, classes stamped), so a script prototyping its own analysis reads it here
-rather than parsing the netlist again. A mask entirely under `design` reads the netlist and skips
-the drawing.
+Every analysis reads the IR. By then the project's configuration has applied and the ingestion
+passes have run, which promote part numbers and stamp classes. A script prototyping its own analysis
+can read the IR here rather than parse the netlist again. A mask entirely under `design` reads the
+netlist and skips the drawing.
 
 {{ agniRun "content/guide/runs/stats-ir.yaml" }}
 
@@ -57,15 +57,15 @@ Run the rule catalog and report findings. See
 |---|---|
 | `--rule <name>` | run only this rule (repeatable) |
 | `--tag <key>=<value>` | run only rules with this tag, e.g. `--tag category=power` (repeatable) |
-| `--subject <kind>:<ref>` | answer for this net, component or pin alone, spelled `net:SDA0`, `component:U7` or `pin:U7.3` (repeatable). Each rule reports exactly what a full run reports about it, and a component covers its own pins, so `--verdicts --subject net:SDA0` lists every rule's conclusion about that net with its evidence. A rule whose subject is a symbol file, a drawn bus or a wire end has no answer for one net or part, so it is not run and the output lists it as skipped. `text`, `json` and `csv` only, since a report or `--results-out` reads as the whole design's run |
+| `--subject <kind>:<ref>` | answer for this net, component or pin alone, spelled `net:SDA0`, `component:U7` or `pin:U7.3` (repeatable). Each rule reports exactly what a full run reports about it, and a component covers its own pins, so `--verdicts --subject net:SDA0` lists every rule's conclusion about that net with its evidence. Some rules take a symbol file, a drawn bus or a wire end as their subject. Those have no answer for one net or part, so they are not run and the output lists them as skipped. `text`, `json` and `csv` only, since a report or `--results-out` reads as the whole design's run |
 | `--format <fmt>` | `text` (default), `markdown`, `json`, `csv`, `report`, or `html`. `csv` emits one row per finding with a stable header, for a spreadsheet-driven review. `html` is the verdict report as a self-contained page and turns `--verdicts` on by itself |
-| `--verdicts` | report the CONSIDERED SET instead of the violations: what each rule concluded about every subject it looked at, with the evidence for a pass. A separate table, so plain `--format csv` is unchanged. Honours `--format text/csv/json/html`, and with `json` it prints the whole CheckDesign response, findings and verdicts both, as a server returns it. Only rules that state one contribute, and a rule absent from the output is declining to say rather than reporting that it considered nothing |
-| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=rule,-subject`. A column sorts by its type, so a net or part column puts R2 before R10. csv only, and the order is the one the `Tabulate` rpc applies, so the csv and a workbook built from the same answer agree |
+| `--verdicts` | report the CONSIDERED SET instead of the violations. Each rule looks at a set of subjects, and this reports its conclusion about each one, with the evidence for a pass. The verdicts are a separate table, so plain `--format csv` is unchanged. Honours `--format text/csv/json/html`, and with `json` it prints the whole CheckDesign response, findings and verdicts both, as a server returns it. Only rules that state a considered set contribute. A rule absent from the output declines to say, and is not reporting that it considered nothing |
+| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=rule,-subject`. A column sorts by its type, so a net or part column puts R2 before R10. csv only. The `Tabulate` rpc applies the same order, so the csv and a workbook built from the same answer agree |
 | `--query-sets` | with `--format html`, answer every query set the design's project keeps and add each as a Queries section after the rules, so one file carries the checks and the queries (agni issue 1190). Any other format is refused |
-| `--table <name>` | with `--verdicts --format csv`, write this one of the run's tables instead of the verdicts: `pin_map` (a design's IO map one row per declared pin, beside the netlist and the datasheet), `verdicts_by_rule` or `skipped`, the tables the `Tabulate` rpc returns for the run. A name the run has no table for is refused with the ones it has |
-| `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots |
-| `--remote <url>` | send this command's request to a running `agni serve` instead of reading the design here, so a server that already holds the design answers from what it kept (a repeated `check` on the Jetson board takes 0.18 s against 1.39 s run locally). The output is byte for byte what the local command prints. The design's files go with the request, only those the server does not already hold, so the server needs no copy of them and no mount over the path (agni issue 1061), and a design whose files cannot be listed here is an error before anything is sent. Flags that configure the engine in this process rather than riding the request (`--params`, `--profile-path`) are refused, since the server answers with what it was started with, and so is `--timing`, which would time this process rather than the server. `--server` still builds its links from this machine's mount table |
-| `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
+| `--table <name>` | with `--verdicts --format csv`, write one of the run's tables instead of the verdicts. The `Tabulate` rpc returns the same tables for the run: `pin_map` (a design's IO map one row per declared pin, beside the netlist and the datasheet), `verdicts_by_rule` and `skipped`. A name with no table in the run is refused, and the error lists the tables the run has |
+| `--server <where>` | where this run's links should point. Empty, the default, mints none, so a pipeline gets no links. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else runs, and the CLI asks that server whether it serves the same mounts from the same roots |
+| `--remote <url>` | send this command's request to a running `agni serve` instead of reading the design here, and if the server already holds the design, it answers from what it kept (a repeated `check` on the Jetson board takes 0.18 s against 1.39 s run locally). The output is byte for byte what the local command prints. The request carries the design's files, but only the ones the server does not already hold, so the server needs no copy of them and no mount over the path (agni issue 1061). If the design's files cannot be listed here, the command fails before anything is sent. Some flags configure the engine in this process rather than travel with the request. Those (`--params`, `--profile-path`) are refused, since the server answers with what it was started with. `--timing` is refused too, because it would time this process rather than the server. `--server` still builds its links from this machine's mount table |
+| `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`. This flag writes what you would have redirected, and `--results-out` writes a check-result DOCUMENT, which `agni results` re-renders. The written-file note goes to stderr |
 | `--fail-on <sev>` | exit non-zero when a finding sits at or above `error` / `warning` / `info`. This is the **severity** axis. For the coverage axis, see `review --fail-on-outcome` and `--min-answered` below |
 | `--conventions <file>` | compose a naming-convention config into the run (see [Naming conventions](../naming-conventions/)) |
 | `--profile-path <dir>` | compose a directory of YAML interface-profile declarations into the catalog, namespaced `profile-overlay/` (see [Interface profiles](../interface-profiles/)) |
@@ -82,7 +82,7 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 
 | flag | what it does |
 |---|---|
-| `--checklist <name-or-file>` | which checklist to run. A value ending in `.yaml` or `.yml` is a review manifest file read from outside the project, and `-` reads one from stdin; any other value names one of the checklists the design's project declares under `checklists:` in `project.yaml`. Optional when the design belongs to a project that declares one, since the project's first checklist is its default |
+| `--checklist <name-or-file>` | which checklist to run. A value ending in `.yaml` or `.yml` is a review manifest file read from outside the project, and `-` reads one from stdin; any other value names a checklist declared under `checklists:` in the design's `project.yaml`. Optional when the design belongs to a project that declares one, since the project's first checklist is its default |
 | `--conventions <file>` | a naming-convention config, whose rules join the catalog and whose lexicon reaches the design read |
 | `--profile-path <dir>` | interface-profile declarations added to the catalog |
 | `--params <dir>` | a datasheet parameter set, enabling datasheet-backed items |
@@ -92,14 +92,16 @@ Its outcome vocabulary distinguishes a check that passed from one that never ran
 | `--ratified-floor <n>` | datasheet-confidence floor below which a fail reports as `provisional` (default 0.9) |
 | `--fail-on-outcome <list>` | exit non-zero when any item sits at one of these outcomes, e.g. `fail` or `fail,provisional`. Off by default |
 | `--min-answered <n>` | exit non-zero when fewer than `n` items produced an answer. Off by default |
-| `--format <fmt>` | `markdown` (default), `json`, `csv`, or `html`. `csv` is one row per checklist item (area, id, title, outcome, note, findings, unmet), the table the `Tabulate` rpc projects, for one design. `html` is the checklist as a self-contained page: areas and items in the manifest's order, every finding per item rather than the markdown cell's first three, and one link per finding when `--server` is given. One design at a time, since a page's title, hash and links all name one design. `json` is protojson of the `Review` the `CreateReview` rpc returns, every finding per item and a `summary` holding the counts `--fail-on-outcome` and `--min-answered` gate on; several designs give a `ListReviewsResponse` with one `Review` each. A CLI run is stored nowhere, so its `name` is empty |
+| `--format <fmt>` | `markdown` (default), `json`, `csv`, or `html`. `csv` writes one row per checklist item (area, id, title, outcome, note, findings, unmet) for one design, as the `Tabulate` rpc projects it. `html` is the checklist as a self-contained page: areas and items in the manifest's order, every finding per item rather than the markdown cell's first three, and one link per finding when `--server` is given. One design at a time, since a page's title, hash and links all name one design. `json` is protojson of the `CreateReview` rpc's `Review`, with every finding per item and a `summary`, and the `--fail-on-outcome` and `--min-answered` gates read their counts from that summary; several designs give a `ListReviewsResponse` with one `Review` each. A CLI run is stored nowhere, so its `name` is empty |
 | `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=outcome,id`. csv only |
-| `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots |
-| `--remote <url>` | send this command's request to a running `agni serve` instead of reading the design here, so a server that already holds the design answers from what it kept (a repeated `check` on the Jetson board takes 0.18 s against 1.39 s run locally). The output is byte for byte what the local command prints. The design's files go with the request, only those the server does not already hold, so the server needs no copy of them and no mount over the path (agni issue 1061), and a design whose files cannot be listed here is an error before anything is sent. Flags that configure the engine in this process rather than riding the request (`--params`, `--profile-path`) are refused, since the server answers with what it was started with, and so is `--timing`, which would time this process rather than the server. `--server` still builds its links from this machine's mount table |
+| `--server <where>` | where this run's links should point. Empty, the default, mints none, so a pipeline gets no links. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else runs, and the CLI asks that server whether it serves the same mounts from the same roots |
+| `--remote <url>` | send this command's request to a running `agni serve` instead of reading the design here, and if the server already holds the design, it answers from what it kept (a repeated `check` on the Jetson board takes 0.18 s against 1.39 s run locally). The output is byte for byte what the local command prints. The request carries the design's files, but only the ones the server does not already hold, so the server needs no copy of them and no mount over the path (agni issue 1061). If the design's files cannot be listed here, the command fails before anything is sent. Some flags configure the engine in this process rather than travel with the request. Those (`--params`, `--profile-path`) are refused, since the server answers with what it was started with. `--timing` is refused too, because it would time this process rather than the server. `--server` still builds its links from this machine's mount table |
 | `--results-out <file>` | also write the run as a self-contained check-result document |
-| `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
+| `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`. This flag writes what you would have redirected, and `--results-out` writes a check-result DOCUMENT, which `agni results` re-renders. The written-file note goes to stderr |
 | `--render <dir>` | also write an annotated schematic SVG per design, each finding highlighted in place |
 | `--companion <file>` | a geometry file to draw `--render` images on, joined to netlist findings by net name |
+| `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
+| `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 
 #### Gating a pipeline on a review
 
@@ -110,19 +112,20 @@ was answered at all. A checklist can stop answering four of its items with its f
 at zero, and no severity predicate can see that.
 
 `--min-answered` counts the items that produced an answer: `pass`, `fail`, `provisional`, and
-`computed-n/a`. It is deliberately stricter than the covered count the report also shows.
+`computed-n/a`. The report also shows a covered count, and `--min-answered` is deliberately stricter
+than that.
 
 <details>
 <summary>Why answered is stricter than covered</summary>
 
 Covered subtracts only `not-automated`, which moves when a rule leaves the catalog. It does not move
-when a rule is present and its inputs are gone. A datasheet-backed item whose corpus moved reads
-`not-applicable`, which still counts as covered and does not count as answered. That gap is the
-regression worth gating on.
+when a rule is present and its inputs are gone. Suppose the corpus behind a datasheet-backed item
+moves. The item then reads `not-applicable`, which still counts as covered but does not count as
+answered. That gap is the regression worth gating on.
 
 </details>
 
-A `provisional` does not trip `--fail-on-outcome fail`. It is a failure resting on mock or
+A `provisional` does not trip `--fail-on-outcome fail`. It is a failure based on mock or
 below-floor datasheet data, so gating on it by default fails a pipeline on data quality rather than on
 design quality. Name it explicitly when you want it: `--fail-on-outcome fail,provisional`.
 
@@ -134,8 +137,6 @@ run. Exit codes:
 | `0` | the run completed and no gate tripped |
 | `2` | a gate tripped |
 | `1` | the run itself failed: an unreadable design, an invalid manifest, an unknown outcome name |
-| `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
-| `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 
 `check --fail-on` uses the same codes, so one CI script can treat every gate in this CLI alike, reading
 `2` as problems in the design and `1` as the tool failing to do its job.
@@ -158,8 +159,8 @@ native_tools:
   - kicad-cli
 ```
 
-Paths are resolved against the directory you ran from, and a mount naming a directory that is not
-there is an error, so a file meant to serve every working directory wants absolute paths.
+Paths are resolved against the directory you ran from. A mount is an error when it names a
+directory that is not there, so a file meant to serve every working directory wants absolute paths.
 
 A run says which file it took config from, on stderr. An explicit `--mount`, `--symbol-path`,
 `--web-dir` or `--enable-native` wins outright rather than merging, because naming a mount table
@@ -167,11 +168,12 @@ answers for the whole table.
 
 `web_dir` is where the viewer's own assets are. It belongs to this tier because it locates bytes and
 cannot change what a run concludes, and a wrong value fails at startup rather than quietly. A repo
-checkout needs nothing here, since the default `web` already resolves per-directory; an installed
-binary run from a design folder has no relative answer and needs this key or `AGNI_WEB_DIR`.
+checkout needs nothing here, since the default `web` already resolves per-directory. An installed
+binary has no relative answer when it runs from a design folder, so it needs this key or
+`AGNI_WEB_DIR`.
 
-`native_tools` is the file form of `serve --enable-native`, and belongs here on the same test, because
-it says which golden renderers EXIST, and naming one that is not installed fails at the point of use
+`native_tools` is the file form of `serve --enable-native`. It belongs here by the same test, because
+it says which golden renderers EXIST. Naming one that is not installed fails at the point of use,
 with the tool's own name in the error. Only `serve` consumes it, though every command reports having
 read it, because the note says what the file supplied rather than what the command went on to use.
 
@@ -183,34 +185,35 @@ instead. See [Projects and designs](../../architecture/projects-and-designs/).
 <summary>Why analysis config cannot live here</summary>
 
 Those five decide *what a design is checked against*, so they belong where they are scoped to the
-designs that declared them. A machine-wide conventions file applying to every design a CLI opened is
-the bug per-design config fixed. Unknown keys are rejected, so a `conventions:` key here is an
-error rather than a silent global analysis tier.
+designs that declared them. Picture a machine-wide conventions file applied to every design opened
+with the CLI. That was a bug, and per-design config fixed it. Unknown keys are rejected, so a
+`conventions:` key here is an error rather than a silent global analysis tier.
 
 </details>
 
 ### `checklists <design>`
 
-List the review checklists a design's project declares, in the order the project writes them, with
-the checklists it inherits through `extends` first. The first is the one `agni review` runs when no
+List the review checklists declared by a design's project, in the order the project writes them,
+with the checklists it inherits through `extends` first. `agni review` runs the first one when no
 `--checklist` is named, and the viewer's picker offers the same list. A design in no project, and a
 project that declares none, each say so, since the fix differs.
 
 | flag | what it does |
 |---|---|
-| `--format <fmt>` | `text` (one checklist per line, the default marked) or `json` (the `ListChecklistsResponse` the `ListChecklists` rpc returns, each checklist carrying its manifest) |
+| `--format <fmt>` | `text` (one checklist per line, the default marked) or `json` (the `ListChecklists` rpc's `ListChecklistsResponse`, each checklist carrying its manifest) |
 
 ### `propose <folder|file.zip>`
 
 Group the files under a folder, or inside a `.zip`, into the designs they make, and print the
-`design.yaml` that would declare each, then every file no design reads and why. It's what the
-viewer shows when files are dropped on it, from the same code, so the two agree. A folder already
-holding a `design.yaml` is reported as declared rather than guessed over.
+`design.yaml` that would declare each, then each unread file and why no design reads it. The viewer
+shows the same proposal when files are dropped on it, from the same code, so the two agree. A folder
+already holding a `design.yaml` is reported as declared rather than guessed over.
 
 The rules, briefly. A netlist claims the `.eds`, `.kicad_sch` and `.kicad_pcb` of its own name as its
 companions, and netlists sharing a first word (`board.edn`, `board-rev-b.edn`) are one design's
-revisions, never merged. A `.kicad_pro`, or a `.kicad_sch` no other sheet names as a child, makes a
-KiCad design with its child sheets and the board of its name. A `.kicad_pcb` that matches nothing is
+revisions, never merged. A `.kicad_pro` makes a KiCad design with its child sheets and the board of
+its name. So does a `.kicad_sch` when no other sheet names it as a child. A `.kicad_pcb` that matches
+nothing is
 left unread with that reason. Write a printed proposal into the folder as its `design.yaml` to
 declare it.
 
@@ -282,7 +285,7 @@ connection, so it is safe to hand to someone who should not see the design itsel
 
 | flag | what it does |
 |---|---|
-| `--params <dir>` | a parameter set, which populates the MPN and datasheet-gap columns. A design inside a project reads the `params/` that project declares and needs no flag; this names a corpus for a design that belongs to none |
+| `--params <dir>` | a parameter set, which populates the MPN and datasheet-gap columns. A design inside a project reads the `params/` declared by its project and needs no flag; this names a corpus for a design that belongs to none |
 | `--parts <view>` | `types` (BOM by distinct part type, default) or `full` (per-component AVL) |
 | `--format <fmt>` | `md` (default) or `json` |
 
@@ -290,15 +293,15 @@ connection, so it is safe to hand to someone who should not see the design itsel
 
 Walk a design through what a reviewer does with it (read, run every rule, score the project's
 checklists, answer its query sets, trace a signal through a resistor, save the check report) and
-report how each step went. The report holds counts, timings and the names of rules agni ships, and
+report how each step went. The report holds counts, timings and the names of shipped rules, and
 no net name, reference designator, part number, design name or path, because its type has no field
 for one. A rule a project wrote is counted without its name. It prints a link that opens the report
 as a GitHub issue to read before submitting. The compose bundle runs it as its `trial` service; see
 [Trying agni on your own boards](../trying-agni/). On a hierarchical netlist pass
 `--flatten-hierarchy`, or the report counts the top cell alone and says how many blocks it did not
-read. A flattened report says so on its design line. A design declaring an IO map also gets its pin
-map counted, per check and per reason a declared function went unchecked, with no row's pin, net or
-function kept (agni issue 1196).
+read. A flattened report says so on its design line. When a design declares an IO map, the report
+also counts its pin map, per check and per reason a declared function went unchecked. It keeps no
+row's pin, net or function (agni issue 1196).
 
 | flag | what it does |
 |---|---|
@@ -312,15 +315,17 @@ bounds, test conditions and citation, the pins the datasheet declares, and any c
 them.
 
 This is the record behind a query answer. The datalog relations carry what a query can bind
-(`param.max`, `param.range`, `param.typ`, `param.pin`); the conditions a value is valid under, the pin
-bindings, the full provenance and the verification state live here.
+(`param.max`, `param.range`, `param.typ`, `param.pin`). This record also holds what a query cannot
+reach: the conditions under which a value is valid, the pin bindings, the full provenance and the
+verification state.
 
 It needs no design, because a spec library is not a design. Name a corpus with `--params`, or name a
-design with `--design` so the project that design belongs to supplies its own `params/`.
+design with `--design` so the design's project supplies its `params/`.
 
-A parameter someone has verified reports whether that verification still holds. When the corpus has moved
-to a later revision of the document, the row reads `stale` and names BOTH revisions: the one that was
-checked, and the one held now. Those two revisions tell you what to re-confirm, which a pair of content hashes would not.
+When someone has verified a parameter, the record reports whether that verification still holds.
+When the corpus has moved to a later revision of the document, the row reads `stale` and names BOTH
+revisions: the one that was checked, and the one held now. Those two revisions tell you what to
+re-confirm. A pair of content hashes would not.
 
 | flag | what it does |
 |---|---|
@@ -357,19 +362,19 @@ Search the design as data with an ad-hoc datalog query. Each answer prints with 
 | flag | what it does |
 |---|---|
 | `--params <dir>` | a parameter set, to query datasheet facts (`param.max(...)`) |
-| `--conventions <file>` | apply a naming convention's LEXICON to the read, so `net.rail`/`net.feedback`/`pin.type` answer under your project's vocabulary (see [Naming conventions](../naming-conventions/)). The rules half is unused here: a query runs no rules |
+| `--conventions <file>` | apply a naming convention's LEXICON to the read, so `net.rail`/`net.feedback`/`pin.type` answer under your project's vocabulary (see [Naming conventions](../naming-conventions/)). The rules half is unused here, since a query runs no rules |
 | `--board-path <file>` | attach a separate board export so the `board.*` relations have facts; without it they are empty |
-| `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (protojson of the `RunQueryResponse` the `RunQuery` rpc returns, so a script and a client parse one shape; it carries the column kinds, and echoes the query and the design so an answer names its own question), `markdown` or `html` (a view: the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
-| `--set <file or name>` | answer a query set instead of one query: named queries sharing a `preamble` of rules, all over ONE read of the design (see [Ask many questions at once](../querying/#ask-many-questions-at-once-query-sets)). Takes the design alone, no query argument; `-` reads the set from stdin, a value ending `.yaml` or `.yml` is a file, and any other value names a set the design's project keeps in `queries/`. `json` is the `RunQueriesResponse`, `markdown`/`html`/`text` one document with a section per query, and `csv` is refused. Every answer is written, then the command exits non-zero if any query could not be answered |
-| `--remote <url>` | send this command's request to a running `agni serve` instead of reading the design here, so a server that already holds the design answers from what it kept (a repeated `check` on the Jetson board takes 0.18 s against 1.39 s run locally). The output is byte for byte what the local command prints. The design's files go with the request, only those the server does not already hold, so the server needs no copy of them and no mount over the path (agni issue 1061), and a design whose files cannot be listed here is an error before anything is sent. Flags that configure the engine in this process rather than riding the request (`--params`, `--profile-path`) are refused, since the server answers with what it was started with, and so is `--timing`, which would time this process rather than the server. `--server` still builds its links from this machine's mount table |
-| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=rule,-subject`. A column sorts by its type, so a net or part column puts R2 before R10. csv only, and the order is the one the `Tabulate` rpc applies, so the csv and a workbook built from the same answer agree |
+| `--format <fmt>` | `text` (default aligned table), `csv` (spreadsheet-safe, header row, table only), `json` (protojson of the `RunQuery` rpc's `RunQueryResponse`, so a script and a client parse one shape; it carries the column kinds, and echoes the query and the design so an answer names its own question), `markdown` or `html` (a view, with the question above its answer). See [Taking a view out of the tool](../querying/#taking-a-view-out-of-the-tool) |
+| `--set <file or name>` | answer a query set instead of one query. A set is named queries sharing a `preamble` of rules, all answered over ONE read of the design (see [Ask many questions at once](../querying/#ask-many-questions-at-once-query-sets)). Takes the design alone, no query argument; `-` reads the set from stdin, a value ending `.yaml` or `.yml` is a file, and any other value names a set kept in the design's project under `queries/`. `json` is the `RunQueriesResponse`, `markdown`/`html`/`text` one document with a section per query, and `csv` is refused. Every answer is written, then the command exits non-zero if any query could not be answered |
+| `--remote <url>` | send this command's request to a running `agni serve` instead of reading the design here, and if the server already holds the design, it answers from what it kept (a repeated `check` on the Jetson board takes 0.18 s against 1.39 s run locally). The output is byte for byte what the local command prints. The request carries the design's files, but only the ones the server does not already hold, so the server needs no copy of them and no mount over the path (agni issue 1061). If the design's files cannot be listed here, the command fails before anything is sent. Some flags configure the engine in this process rather than travel with the request. Those (`--params`, `--profile-path`) are refused, since the server answers with what it was started with. `--timing` is refused too, because it would time this process rather than the server. `--server` still builds its links from this machine's mount table |
+| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=rule,-subject`. A column sorts by its type, so a net or part column puts R2 before R10. csv only. The `Tabulate` rpc applies the same order, so the csv and a workbook built from the same answer agree |
 | `--title <name>` | name the view (or replace a set's title), used as the heading in `--format markdown` and `html` |
-| `--lib <dir>` | a directory of derived-relation modules laid out as a project's `lib/` (`<module.path>.dl`, optional `docs/<member.path>.md`), sent with the query beside any library the design's project carries (see [Adding a library member](../../build/library-member/#sending-a-library-with-a-request)). Repeatable. Also read by `--relations`, so the catalog lists the modules' members |
-| `--bind <name>=<value>` | bind a query variable to a value, repeatable: `--bind ref=U1` asks with `?ref` bound to U1, exactly as if `"U1"` were written in its place. A value is read as the type its position declares, so a count or a voltage takes `3` or `"3"` alike and refuses `abc`; where nothing types the variable, a value that parses as a number binds a number and a quoted one (`--bind 'n="3"'`) binds text. Naming a variable twice binds it to both values, and the query answers for each (`--bind n=I2C_SDA --bind n=I2C_SCL`). A name the query does not use is an error. Refused with `--set`, whose queries carry their own `bind:` (see [Querying](../querying/#ask-the-same-question-about-different-things-bindings)) |
+| `--lib <dir>` | a directory of derived-relation modules laid out as a project's `lib/` (`<module.path>.dl`, optional `docs/<member.path>.md`), sent with the query beside any library in the design's project (see [Adding a library member](../../build/library-member/#sending-a-library-with-a-request)). Repeatable. Also read by `--relations`, so the catalog lists the modules' members |
+| `--bind <name>=<value>` | bind a query variable to a value, repeatable: `--bind ref=U1` asks with `?ref` bound to U1, exactly as if `"U1"` were written in its place. A value is read as the type declared for its position, so a count or a voltage takes `3` or `"3"` alike and refuses `abc`; where nothing types the variable, a value that parses as a number binds a number and a quoted one (`--bind 'n="3"'`) binds text. Naming a variable twice binds it to both values, and the query answers for each (`--bind n=I2C_SDA --bind n=I2C_SCL`). Binding a variable the query never uses is an error. Refused with `--set`, whose queries carry their own `bind:` (see [Querying](../querying/#ask-the-same-question-about-different-things-bindings)) |
 | `--limit <n>` | answer only the first `n` rows, and say how many the limit left out (`total` in `--format json`). Where the query writes its own `limit`, the smaller applies. Refused with `--set`, whose queries write their own (see [Sort and page an answer](../querying/#sort-and-page-an-answer-order-by-limit)) |
 | `--witnesses` | print how each row was derived: under each row, the fact or rule behind every clause of the query, a library member's rule with its body facts filled in, and a `not` that held as `not ... (absent)`. `text` and `html` put the tree under its row, `markdown` after the table, and `json` in each row's `witnesses`; `csv` refuses it. Off by default, and a query without it costs what it always did (see [Querying](../querying/#see-how-a-row-was-derived-witnesses)) |
 | `--omit-locations` | leave out where each answer entity is drawn (its `sheetIds` and `reason` in `--format json`'s `entities`) and skip loading the drawing, for a script that draws nothing |
-| `--budget <work>` | stop a query once it has done this much work and report it as over budget rather than answer late. 0, the default, sets none. `--format json` reports the work an answer cost as `work`, which is how to choose one (see [Running the server](../running-the-server/#a-work-budget-for-served-queries)) |
+| `--budget <work>` | stop a query once it has done this much work and report it as over budget rather than answer late. 0, the default, sets none. `--format json` reports as `work` how much work an answer cost, so choose a budget from that number (see [Running the server](../running-the-server/#a-work-budget-for-served-queries)) |
 | `--server <url>\|self` | print a link that asks the query again in the viewer's query panel, with its `--bind` values and `--title`, or for a project set's query, by the set's name and the query's (see [Querying](../querying/#taking-a-view-out-of-the-tool)). `self` serves the design from this process until Ctrl-C. Refused with `--speclib`, `--relations` and `--examples`, which read no design |
 | `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default). A view is a thing to hand to someone, so it wants a filename rather than a redirect. The written-file note goes to stderr |
 | `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
@@ -382,27 +387,28 @@ Follow a signal from one pin to another and print what it goes through. See
 [Following a signal](../querying/#following-a-signal-across-the-parts-in-the-way).
 
 The walk crosses series pass elements (resistors, inductors, ferrites, fuses), because those split a
-net without breaking the path. A capacitor is a DC block and is never crossed. A rail or a plane may
-be where a route ENDS and is never passed through, so a trace onto a supply reports the supply and
-stops there.
+net without breaking the path. A capacitor is a DC block and is never crossed. A route may END on a
+rail or a plane but never passes through one, so a trace onto a supply reports the supply and stops
+there.
 
 Both endpoints are pins, named `<ref-des>.<pin>`, where the pin is its package designator (`U2.1`) or
-the functional name the part type gives it (`U2.MDIO`), the two spellings an IO map accepts (agni
-issue 1193). A name several pins carry (`U2.GND`) is refused with their designators, and so is one a
-pin matches only after dropping tokens, since a route from a guessed pin is about the wrong node. An
-endpoint that names nothing the design has is an error and exits non-zero, because a pin spelled
-wrong in a declaration is not the same answer as two pins that are not connected.
+its functional name from the part type (`U2.MDIO`). An IO map accepts the same two spellings (agni
+issue 1193). If several pins carry a name (`U2.GND`), it is refused, and the error lists their
+designators. So is a name that matches a pin only after dropping tokens, since a route from a guessed
+pin is about the wrong node. If an endpoint names nothing in the design, the command fails and exits
+non-zero. A pin spelled wrong in a declaration is a different answer from two pins that are not
+connected.
 
 | flag | what it does |
 |---|---|
 | `--from <ref.pin>` | the pin to start at, e.g. `U7.3` or `U7.SDA` |
 | `--to <ref.pin>` | the pin to end at |
-| `--hops <n>` | how many series crossings to search through (default 6). Unlike the protection radii this is a search budget rather than an electrical claim, and every answer states the value it rests on, so a no-route can be re-asked wider |
-| `--format <fmt>` | `text` (default), or `json`, which emits the same `Trace` message the `TraceDesign` rpc returns, in protojson, so a script reading the CLI and a client reading the API parse one shape |
-| `--server <where>` | where the links this run mints should point. Empty (the default) mints none, which is what a pipeline wants. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else is running, which is asked whether it serves the same mounts from the same roots |
-| `--remote <url>` | send this command's request to a running `agni serve` instead of reading the design here, so a server that already holds the design answers from what it kept (a repeated `check` on the Jetson board takes 0.18 s against 1.39 s run locally). The output is byte for byte what the local command prints. The design's files go with the request, only those the server does not already hold, so the server needs no copy of them and no mount over the path (agni issue 1061), and a design whose files cannot be listed here is an error before anything is sent. Flags that configure the engine in this process rather than riding the request (`--params`, `--profile-path`) are refused, since the server answers with what it was started with, and so is `--timing`, which would time this process rather than the server. `--server` still builds its links from this machine's mount table |
-| `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`: this writes what you would have redirected, that writes the check-result DOCUMENT `agni results` re-renders. The written-file note goes to stderr |
-| `--render <file.svg>` | also draw the answer: the route's nets and the parts crossed, on the design's own schematic where it has one and on an auto-layout of its netlist where it does not, which it says so you never take the second for the first. A no-route draws too, marking the two nets that fail to join |
+| `--hops <n>` | how many series crossings to search through (default 6). Unlike the protection radii this is a search budget rather than an electrical claim, and every answer states the value it used, so a no-route can be re-asked wider |
+| `--format <fmt>` | `text` (default), or `json`, which emits the `TraceDesign` rpc's `Trace` message in protojson, so a script reading the CLI and a client reading the API parse one shape |
+| `--server <where>` | where this run's links should point. Empty, the default, mints none, so a pipeline gets no links. `self` starts a viewer on a free port, serves THIS run's mount table, and blocks until Ctrl-C, so a link cannot disagree with what was read and a mount minted for the run is linkable like any other. `self:PORT` does the same on that port and fails if it is taken. A URL names a server someone else runs, and the CLI asks that server whether it serves the same mounts from the same roots |
+| `--remote <url>` | send this command's request to a running `agni serve` instead of reading the design here, and if the server already holds the design, it answers from what it kept (a repeated `check` on the Jetson board takes 0.18 s against 1.39 s run locally). The output is byte for byte what the local command prints. The request carries the design's files, but only the ones the server does not already hold, so the server needs no copy of them and no mount over the path (agni issue 1061). If the design's files cannot be listed here, the command fails before anything is sent. Some flags configure the engine in this process rather than travel with the request. Those (`--params`, `--profile-path`) are refused, since the server answers with what it was started with. `--timing` is refused too, because it would time this process rather than the server. `--server` still builds its links from this machine's mount table |
+| `-o, --out <file>` | write the `--format` output to this file, `-` for stdout (the default), so a report needs no shell redirect and composes with a pipe. Distinct from `--results-out`. This flag writes what you would have redirected, and `--results-out` writes a check-result DOCUMENT, which `agni results` re-renders. The written-file note goes to stderr |
+| `--render <file.svg>` | also draw the answer: the route's nets and the parts crossed, on the design's own schematic where it has one and on an auto-layout of its netlist where it does not. The output says which, so you never take the second for the first. A no-route draws too, marking the two nets that fail to join |
 | `--timing` | print where the run's time went to stderr: each stage (resolving the project, reading each tier, building the model, the rules, locating), which cache tier answered each read, and the slowest rules, so the answer on stdout is unchanged. A served request reports the same breakdown when asked (see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 | `--timing-memory` | `--timing`, plus the process's memory as each stage ended (Sys and the heap) and what each rule allocated, to find which stage raised the peak |
 
@@ -412,8 +418,8 @@ Draft a pin map for one device from the netlist (agni issue 1238). It lists ever
 with the net it sits on, and walks from each signal pin through series parts, as `trace` does, to the
 pins of other ICs and connectors it reaches. A pin reaching exactly one gets it as the row's far end,
 and one reaching several lists them in a comment. A pin on ground or a supply rail is not walked,
-since every part reaches it. The output is an intent file whose `io_map` `check --intent-path` reads,
-so the run lays the map out a pin at a time (see
+since every part reaches it. The output is an intent file with an `io_map`. `check --intent-path`
+reads it, and the run then lays the map out a pin at a time (see
 [Reading the map one pin at a time](../design-intent/#reading-the-map-one-pin-at-a-time)).
 
 The draft agrees with the netlist it was read from, so a check against it passes by construction.
@@ -432,19 +438,20 @@ revisions against the reviewed map.
 Show the naming vocabulary a design is read with (agni issue 1266). Every pattern, exclusion, ref-des
 prefix and part-number family is listed under its vocabulary (`net.rail`, `pin.supply`, `class.tvs`)
 with where it came from: `built-in`, or the convention that won, from the server's `--conventions`,
-the project, the design's own `design.yaml`, or the request. A built-in a convention switched off with
-`replace: true` is still listed, marked `replaced`.
+the project, the design's own `design.yaml`, or the request. When a convention switches a built-in
+off with `replace: true`, the built-in is still listed, marked `replaced`.
 
 `--net <name>` explains one net instead. It prints the net's roles, each with its source and reason,
-then every net-name pattern its name matches with where that pattern came from. A matching `exclude`
-is listed too, since that is what kept a name out of a vocabulary. A name no net carries exactly is
-looked up by its hierarchy leaf, so `SCL` finds `/SCL` when only one net ends that way.
+then every net-name pattern that matches its name, with where that pattern came from. A matching
+`exclude` is listed too, because an `exclude` kept the name out of a vocabulary. When no net carries
+a name exactly, the name is looked up by its hierarchy leaf, so `SCL` finds `/SCL` when only one net
+ends that way.
 
 `--try <conventions.yaml>` reads the design again with that file in place of the convention it uses,
 rules and lexicon both, runs the checks under both reads, and lists the nets whose roles change and
 the findings that appear or disappear. A file stating no `lexicon:` reads names with the built-ins
-alone. Each role is written with its evidence, as `rail (convention)`, so a rail that a datasheet
-also backs does not change when its name pattern goes.
+alone. Each role is written with its evidence, as `rail (convention)`, so a rail backed by a
+datasheet as well does not change when its name pattern goes.
 
 | flag | what it does |
 |---|---|
@@ -456,11 +463,11 @@ also backs does not change when its name pattern goes.
 
 ### `tabulate <request.json|->`
 
-Project an answer into the tables every csv and workbook of it carries. The input is a
-`TabulateRequest` as protojson, holding the answer an analysis command printed with `--format json`
-(a check run, a query, a query set, a diff, a review) and optionally `order_by` and `column_types`. The output is the
-`TabulateResponse` the `Tabulate` rpc returns. It reads no design, and it exists so a client on the
-CLI transport gets the engine's rows rather than deriving its own (agni issue 862).
+Project an answer into tables. Every csv and workbook of that answer holds the same tables. The
+input is a `TabulateRequest` as protojson. It holds an analysis command's `--format json` output (a
+check run, a query, a query set, a diff, a review) and optionally `order_by` and `column_types`. The
+output is the `Tabulate` rpc's `TabulateResponse`. It reads no design, and it exists so a client on
+the CLI transport gets the engine's rows rather than deriving its own (agni issue 862).
 
 | flag | what it does |
 |---|---|
@@ -476,8 +483,8 @@ Structural diff between two revisions, over the IR. See
 | `--format <fmt>` | `text` (default human summary), `json`, or `csv` (one row per change, with a `change_class` column naming which kind it is) |
 | `--rename-approx` | also pair a net renamed AND changed slightly with its old self, as `renamed-approx` with the evidence (see [Comparing revisions](../comparing-revisions/)) |
 | `--include-equal` | also report the nets that did not change: kind `equal` in `json`, `net-equal` rows in `csv`, and a count in `text`. Off by default, since most diffs are about what changed |
-| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=change_class,subject`. csv only, and the order the `Tabulate` rpc applies |
-| `--server <where>` | print a `look at it:` link to stderr that opens `<old>` in the viewer with Compare started against `<new>` (`?against=<mount>/<path>`), in every format, so stdout stays the diff. Takes the same values as `check --server`, and a link is printed only when both revisions can be linked there (agni issue 1126) |
+| `--order-by <cols>` | order the csv rows by these columns, comma-separated, a leading `-` for descending: `--order-by=change_class,subject`. csv only. The `Tabulate` rpc applies the same order |
+| `--server <where>` | print a `look at it:` link to stderr that opens `<old>` in the viewer with Compare started against `<new>` (`?against=<mount>/<path>`), in every format, so stdout holds only the diff. Takes the same values as `check --server`, and a link is printed only when both revisions can be linked there (agni issue 1126) |
 
 ### `render <file>`
 
@@ -517,10 +524,10 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--mount <name>=<path>` | expose a design folder in the file browser (repeatable) |
 | `--mount-root <dir>` | expose every subdirectory of this one as a mount named after it, so folders can be bind-mounted in without a `--mount` each; an explicit `--mount` of the same name wins, and a missing root yields no mounts rather than an error |
 | `--engine <server\|wasm>` | which engine the viewer analyses a design on: `server` (the default) or `wasm`, which runs it in the visitor's browser over the design's files and needs `make wasm`; a page's `?engine=` overrides it (see [Analysing in the visitor's browser](../running-the-server/#analysing-in-the-visitors-browser)) |
-| `--wasm-max-bytes <n>` | on the `wasm` engine, the largest design, in bytes of its files, the page analyses in the browser (default 128 MB); a bigger one goes to the server engine and the page says so. A page's `?wasm-max-bytes=` overrides it |
+| `--wasm-max-bytes <n>` | on the `wasm` engine, the size limit, in bytes of a design's files, for analysing it in the browser (default 128 MB); a bigger one goes to the server engine and the page says so. A page's `?wasm-max-bytes=` overrides it |
 | `--theme <name>` | render palette: `default` or `dark` |
 | `--conventions <file>` | a naming-convention config (YAML) used as this server's default: its rules join the catalog every rule-running surface uses, and its lexicon becomes the default naming vocabulary. A request carrying its own convention replaces this one for that request (see [Naming conventions](../naming-conventions/)) |
-| `--params <dir>` | a directory of published PartSpecs every design is checked against, unless its project has its own `params/` |
+| `--params <dir>` | a directory of published PartSpecs. Every design is checked against them unless its project has its own `params/` |
 | `--params-url <url>` | read published PartSpecs from a datasheet service instead, such as `agnids serve --corpus` (see [Datasheets](../datasheets/#serving-a-shared-corpus)); not with `--params` |
 | `--profile-path <dir>` | compose interface profiles into the catalog every rule-running surface uses, the check panel included (see [Interface profiles](../interface-profiles/)) |
 | `--datasheets-url <url>` | where the datasheets workbench is served, such as `http://host:8090` for a running `agnids serve`; the landing page links its Datasheets card there, and hides it when this is empty |
@@ -528,21 +535,21 @@ Host the browser viewer and the web API on one port. Build the web bundle first.
 | `--query-budget <work>` | the most work any one query may do, over the query, check and review rpcs alike; a request may ask for less and never more. 0, the default, enforces none (see [A work budget for served queries](../running-the-server/#a-work-budget-for-served-queries)) |
 | `--query-budget-warn <work>` | log every served query that costs more than this, with the query and a suggested budget (default 10,000,000; 0 logs none) |
 | `--design-cache <n>` | how many reads the server keeps between requests (a parse, a derived design, a drawing, a board or a built model, each counting once), each checked against its files on every use (default 15; 0 keeps none; see [Kept reads](../running-the-server/#kept-reads)) |
-| `--upload-max-bytes <n>` | how much of the designs clients send as files (`--remote`) the server keeps, the least recently used dropped past it; a client sends a file again when an ingest asks for it (default 1 GB; 0 takes no files) |
+| `--upload-max-bytes <n>` | the most bytes the server keeps of the design files sent by clients (`--remote`). Past it the least recently used are dropped, and a client sends a file again when an ingest asks for it (default 1 GB; 0 takes no files) |
 | `--slow-request <duration>` | log every request that takes longer than this, such as `2s`, naming the stage that took the most, which cache tier answered each read, the slowest rules, and the query plan when evaluating was the slowest stage (0, the default, logs none; see [Where a request's time goes](../running-the-server/#where-a-requests-time-goes)) |
 | `--mcp` | also serve the analysis over the Model Context Protocol at `/mcp` (streamable HTTP, localhost origins only), for an LLM client such as Claude Code; every answer links to this server's viewer (see [Asking through an LLM](../asking-with-an-llm/)) |
 | `--viewer-rooms` | with `--mcp`, let an agent move the viewer tabs open on this server: each tab offers `viewer_show_sheet`, `viewer_locate_verdict` and the rest of the page's methods as tools through a relay at `/relay/`, and takes calls only once its reader turns on "Let agents drive this tab" (see [Moving a viewer tab you have open](../asking-with-an-llm/#moving-a-viewer-tab-you-have-open)) |
 
 ### `mcp`
 
-Serve the same MCP tools as `serve --mcp` on stdin and stdout, for a client that starts the server itself. It reads the mounts as `serve` does, and takes `--params`, `--params-url`, `--profile-path`, `--conventions` and `--query-budget` as `serve` does. `--server <url>` names a running `agni serve` that mounts the same names, for each answer to link to; without it every answer says why it carries no link (see [Asking through an LLM](../asking-with-an-llm/)).
+Serve the same MCP tools as `serve --mcp` on stdin and stdout, for a client that starts the server itself. It reads the mounts as `serve` does, and takes `--params`, `--params-url`, `--profile-path`, `--conventions` and `--query-budget` as `serve` does. `--server <url>` names a running `agni serve` that mounts the same names, so each answer can link there; without it every answer says why it carries no link (see [Asking through an LLM](../asking-with-an-llm/)).
 
 ### `healthcheck`
 
-GET `/healthz` on a running server and exit 0 only on a 200. It is what the container image's
-`HEALTHCHECK` runs, so the image needs no `curl` or `wget`, neither of which the debian-slim runtime
-ships. Pulling one in to make a single HTTP request would add a package to every deployment for
-the sake of a probe the binary can make itself. [Running the server](../running-the-server/) covers
+GET `/healthz` on a running server and exit 0 only on a 200. The container image's `HEALTHCHECK`
+runs it, so the image needs no `curl` or `wget`. The debian-slim runtime ships neither. Pulling one
+in for a single HTTP request would add a package to every deployment, and the binary can make the
+probe itself. [Running the server](../running-the-server/) covers
 where it fits in a container.
 
 | flag | what it does |
@@ -572,41 +579,44 @@ rather than what the source file held. The EDIF writer emits the netlist tier on
 design writes out FLAT. Read without `--flatten-hierarchy` that is its top cell alone, since the
 reader drops every sub-cell's contents before the writer sees it; read with it, the file is the
 whole schematic in one cell, with each block's parts and nets under their path names. Array bus
-declarations are not written because
-the diagnostic they reach the IR as does not record which port declared them.
+declarations are not written. They reach the IR as a diagnostic, and the diagnostic does not record
+which port declared them.
 
 An EDIF instance needs a name, because a net anchors each of its pins with an `instanceRef` naming
-one. The writer prefers the id the source used, falls back to the ref-des (with the section index
+one. The writer prefers the source's own id, falls back to the ref-des (with the section index
 appended for a multi-gate part), and breaks a collision by suffixing, so the names are unique across
-the file and stable between two exports of the same design. Neither seed is unique by itself, because two of
-the readers record no instance id at all, and a KiCad symbol placed on two sheets of one hierarchy
-carries the same id under two ref-des.
+the file and stable between two exports of the same design. Neither seed is unique by itself,
+because two of the readers record no instance id at all, and a KiCad symbol placed on two sheets of
+one hierarchy carries the same id under two ref-des.
 
 One connection shape has no instance to name. A KiCad power symbol or `PWR_FLAG` reaches the IR as a
-connection on `#PWR01` while the component list stays physical, so there is nothing in the contents
-to anchor it to and minting one would invent a component the source never had. Those are written as
-bare `portRef`s and read back as connections with no component, as an EDIF no-ref
+connection on `#PWR01` while the component list holds only physical parts, so there is nothing in
+the contents to anchor it to and minting one would invent a component the source never had. Those
+are written as bare `portRef`s and read back as connections with no component, as an EDIF no-ref
 connection always has. Every other connection is anchored.
 
-The output is written to be read by tools other than this one, which is a stricter target than
-round-tripping through agni's own reader and was not always met. Three things follow from it. The
-libraries come first and the design node last, so a reader that resolves a reference the moment it
-meets one is never asked to follow a forward reference. A `portRef` names the cell's PORT rather than
-the pin's physical designator, with the mapping between them carried per instance in a `portInstance`
-table, which is the construct EDIF has for it. And an identifier holds no character a reader rejects,
-with anything richer moved into the quoted display half of a `(rename ...)`. Raw KiCad UUIDs open with a digit and carry hyphens, and a third-party reader skipped all 1123 instances named by them before the writer renamed them (agni issue 582).
+The output is written for tools other than this one to read. That is a stricter target than
+round-tripping through agni's own reader, and the writer did not always meet it. Three things
+follow. The libraries come first and the design node last, so a reader that resolves a reference the
+moment it meets one is never asked to follow a forward reference. A `portRef` names the cell's PORT
+rather than the pin's physical designator. Each instance carries the mapping between them in a
+`portInstance` table, EDIF's construct for it. And an identifier holds no character a reader
+rejects, with anything richer moved into the quoted display half of a `(rename ...)`. Raw KiCad
+UUIDs open with a digit and carry hyphens, and a third-party reader skipped all 1123 instances named
+by them before the writer renamed them (agni issue 582).
 
 Anything the file references, it also declares. Where a part type declares fewer pins than the
 netlist connects, the cell's interface is completed from the connections; where no part type exists
 at all, the cell is declared too, and so is the top cell the contents live in. A board file is the
 case that needs all three, because copper carries footprints, pads and nets and never says what the
-part is. This states what the `cellRef`s and `portRef`s in the same file already name rather than
-inventing a part, and it is bounded the way a netlist is: a pin on no net is invisible, so a cell
-completed this way carries the pins the design uses and not the pins the part has.
+part is. The `cellRef`s and `portRef`s in the same file already name these cells and pins, so
+declaring them invents no part. The declaration is bounded the way a netlist is. A pin on no net is
+invisible, so a cell completed this way carries the pins the design uses and not the pins the part
+has.
 
 A part named `gateway:CONN4` inside a library called `gateway` is written as cell `CONN4`, since
 EDIF's own library scoping already carries the qualification and a reader that treats the qualified
-form as one name rejects the colon in it. The prefix stays in the IR, where it selects the symbol
+form as one name rejects the colon in it. The IR keeps the prefix, where it selects which symbol
 file an external reference resolves from, so this is an encoding choice in the writer and not a
 rename. A design taken out through EDIF and read back therefore names that part `CONN4` in library
 `gateway`.
@@ -620,8 +630,8 @@ the netlist writer alone would produce a file claiming to carry a drawing that c
 Print this build's identity: the version, the commit it was built from, and the Go toolchain and
 platform. `agni --version` prints just the first line.
 
-This is the same string a results document records as its producer, so a report archived months
-ago and the build in front of you can be compared directly. Worth capturing alongside any report
+A results document records the same string as its producer, so a report archived months ago and
+the build in front of you can be compared directly. Worth capturing alongside any report
 you keep.
 
 ```
@@ -638,9 +648,9 @@ A build from a source clone reports the commit rather than a release (`b020fea02
 
 | flag | what it does |
 |---|---|
-| `--symbol-path <dir>` | directory to search for symbol files (`.sym` for xschem/gEDA, `.kicad_sym` for KiCad) so schematics that name rather than embed their symbols resolve to pin-level nets and faithful artwork. Repeatable, searched recursively, and the schematic's own directory is always searched. Defaults to `AGNI_SYMBOL_PATH` (colon-separated) when the flag is absent, which is how the container image supplies its bundled libraries to every subcommand. |
+| `--symbol-path <dir>` | directory to search for symbol files (`.sym` for xschem/gEDA, `.kicad_sym` for KiCad) so schematics that name rather than embed their symbols resolve to pin-level nets and faithful artwork. Repeatable, searched recursively, and the schematic's own directory is always searched. Defaults to `AGNI_SYMBOL_PATH` (colon-separated) when the flag is absent. The container image supplies its bundled libraries to every subcommand this way. |
 | `--mount <name>=<path>` | expose a folder as a named mount (repeatable). Every command takes it, not just `serve`. An artifact is addressed as `mount://<mount>/<path>`, and with a matching `--mount` the CLI and a server produce **identical URIs for the same design**, so a review created either way records the same design and the two are directly comparable. Without it the CLI mints a mount per argument, rooted at the enclosing project when there is one, so `agni check some/board.edn` still works with no configuration. You may also pass a full `mount://...` URI in place of a path. |
-| `--flatten-hierarchy` | read a hierarchical netlist as its whole schematic, walking into every block cell the top cell places. A net crossing a block's port is one net with its parent's and keeps the parent's name, a net inside a block keeps its name when it is unique and is otherwise named by the block's path (`/A1/MID`), and a part inside a block placed more than once carries the path in its ref-des (`B2/R1`). Parts sharing a designator are sections of one component wherever they sit. A flat netlist reads the same either way, and only EDIF has blocks to walk today. Over `--remote` it rides the snapshot (`Snapshot.flatten_hierarchy`). A design can declare it once with `flatten_hierarchy: true` in its `design.yaml`, and the viewer's hierarchy strip offers **Read every block**, which adds `?flatten=1` to the page. |
+| `--flatten-hierarchy` | read a hierarchical netlist as its whole schematic, walking into every block cell the top cell places. A net crossing a block's port is one net with its parent's and keeps the parent's name, a net inside a block keeps its name when it is unique and is otherwise named by the block's path (`/A1/MID`), and a part inside a block placed more than once carries the path in its ref-des (`B2/R1`). Parts sharing a designator are sections of one component wherever they sit. A flat netlist reads the same either way, and only EDIF has blocks to walk today. Over `--remote` it travels in the snapshot (`Snapshot.flatten_hierarchy`). A design can declare it once with `flatten_hierarchy: true` in its `design.yaml`, and the viewer's hierarchy strip offers **Read every block**, which adds `?flatten=1` to the page. |
 | `--as-named` | read exactly the file named, even when its `design.yaml` declares it a companion view of a different entry. Without it, analysing a declared companion (a schematic export, a board) reads the design's entry instead, because a companion is a view of the design rather than a second source of it. Reach for this when reading a view as a netlist is the point, such as checking that two views of one design still agree. |
 | `--version` | print the build version and exit. |
 
@@ -653,18 +663,18 @@ on stderr. A query that does not parse carries where it stopped:
 {"code":"invalid_argument","message":"invalid argument: query: variable ?r ?n: ...","details":[{"type":"agni.v1.webapi.TextPosition","value":"CA4QARgP","debug":{"offset":14,"line":1,"column":15}}]}
 ```
 
-A mistake in the command's own flags is text on stderr alone, since no request was made, and a query
-set that wrote its answers before exiting non-zero writes no error document after them.
+A mistake in the command's own flags is text on stderr alone, since no request was made. A query set
+writes its answers before exiting non-zero, and writes no error document after them.
 
 ## Advanced and developer commands
 
 `agni` also has `native` (render/open with the design's own EDA tool), `validate`
-(reader-health smoke over many files) and `census`. Datasheet derivation is `agnids derive`, and
-publishing a workbench draft is [`agnids publish`](../datasheets/#publishing-a-workbench-draft), and
-merging a pin-mux table into a published spec is
-[`agnids merge-mux`](../datasheets/#merging-a-pin-mux-table), all in the datasheets service, a separate binary built from the `datasheet/` module. `validate` is
-worth knowing as a user, because pointed at a folder of exports it reports which of them this tool can
-actually read. The rest sit closer to the engine and are covered in the developer docs.
+(reader-health smoke over many files) and `census`. The datasheets service is a separate binary,
+`agnids`, built from the `datasheet/` module. It derives datasheets (`agnids derive`), publishes a
+workbench draft ([`agnids publish`](../datasheets/#publishing-a-workbench-draft)), and merges a
+pin-mux table into a published spec ([`agnids merge-mux`](../datasheets/#merging-a-pin-mux-table)).
+`validate` is worth knowing as a user. Point it at a folder of exports and it reports which of them
+this tool can actually read. The rest sit closer to the engine and are covered in the developer docs.
 
 ## Which formats are read
 
@@ -674,7 +684,7 @@ netlists (`.tel`, netlist only, no geometry), and `.sch` (xschem / gEDA / legacy
 header).
 
 An ODB++ job is a directory rather than a file, so it is named by its folder, or by a `.tgz` or
-`.zip` of it, and the folder's `matrix/matrix` file is what enters it (`agni check board-odb/`,
+`.zip` of it, and agni enters it through the folder's `matrix/matrix` file (`agni check board-odb/`,
 `agni check board-odb.tgz`). It reads as a netlist and as a board, as IPC-2581 does, so
 `agni diff schematic.edn board-odb/` checks a layout against the schematic it was drawn from. ODB++
 allows no spaces in a name, so a net the schematic calls `/USB Hub/VBUS` arrives as `/USB_Hub/VBUS`
