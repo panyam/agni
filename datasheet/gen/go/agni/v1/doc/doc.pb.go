@@ -21,31 +21,32 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// Document is the root: one source document, decomposed. One doc-IR per
-// (source content hash, producer) pair; derived artifacts are immutable.
+// Document is the root, one source document decomposed. There is one doc-IR per
+// (source content hash, producer) pair, and derived artifacts are immutable.
 type Document struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Hash of the source document bytes, prefixed with the algorithm ("sha256:...").
-	// The primary key of the derivation layer: revision changes change it.
+	// It is the primary key of the derivation layer, and a revision change changes it.
 	ContentHash string `protobuf:"bytes,1,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
 	// Source container format, e.g. "pdf".
 	SourceFormat string `protobuf:"bytes,2,opt,name=source_format,json=sourceFormat,proto3" json:"source_format,omitempty"`
 	// Document-declared title when the source carries one; empty otherwise.
 	//
-	// NOT the document's IDENTITY. Producers fill this with whatever the source declares about
-	// itself, which for a vendor datasheet is the PART number ("LM1117"), not the document number
-	// and revision ("SNOS412Q - REVISED JANUARY 2023"). Do not assign it to
-	// agni.v1.param.SourceDoc.title, which is specified as the latter: the two fields share a name
-	// and answer different questions, and conflating them produced citations that could not say
-	// which revision they cited and read identically before and after a reissue (agni issue 290).
-	// Selecting a derive recipe by this value IS a correct use: a recipe understands a part.
+	// It is NOT the document's IDENTITY. Producers fill this with whatever the source declares
+	// about itself. For a vendor datasheet that is the PART number ("LM1117"), not the document
+	// number and revision ("SNOS412Q - REVISED JANUARY 2023"). Do not assign it to
+	// agni.v1.param.SourceDoc.title, which is specified as the document number and revision. The
+	// two fields share a name and answer different questions. Conflating them produced citations
+	// that could not say which revision they cited, and that read the same before and after a
+	// reissue (agni issue 290). Selecting a derive recipe by this value IS a correct use, because
+	// a recipe understands a part.
 	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
-	// Producer toolchain identity + version, e.g. "docling/2.5.1" or "hand". The
+	// Producer toolchain identity + version, e.g. "docling/2.5.1" or "hand". It is the
 	// run-manifest key that says which toolchain derived this artifact.
 	Producer  string `protobuf:"bytes,4,opt,name=producer,proto3" json:"producer,omitempty"`
 	PageCount int32  `protobuf:"varint,5,opt,name=page_count,json=pageCount,proto3" json:"page_count,omitempty"`
-	// Pages actually decomposed. May be a subset of page_count (a partial derivation
-	// targets the tables a consumer needs); page numbers say which.
+	// Pages actually decomposed. They may be a subset of page_count, because a partial
+	// derivation targets the tables a consumer needs. Page numbers say which.
 	Pages         []*Page           `protobuf:"bytes,6,rep,name=pages,proto3" json:"pages,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
@@ -289,10 +290,10 @@ func (x *BBox) GetHeight() float64 {
 	return 0
 }
 
-// TextBlock is a run of page text outside tables and figures. Kept in doc-IR so a
-// full-text index can be built from doc-IR alone, without re-parsing the source, and
-// so recipes and LLM stages can fetch a region's textual neighborhood (headings,
-// footnotes) as prompt context.
+// TextBlock is a run of page text outside tables and figures. doc-IR keeps it so a
+// full-text index can be built from doc-IR alone, without re-parsing the source. Recipes
+// and LLM stages can also fetch a region's textual neighborhood (headings, footnotes)
+// as prompt context.
 type TextBlock struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Deterministic within this derivation, e.g. "p2.x3".
@@ -300,7 +301,7 @@ type TextBlock struct {
 	Text string `protobuf:"bytes,2,opt,name=text,proto3" json:"text,omitempty"`
 	Bbox *BBox  `protobuf:"bytes,3,opt,name=bbox,proto3" json:"bbox,omitempty"`
 	// Producer's classification as free text ("heading", "paragraph", "footnote").
-	// Free-form on purpose: producers disagree on taxonomies, and no consumer may
+	// It is free-form on purpose. Producers disagree on taxonomies, and no consumer may
 	// dispatch on values a second producer would not emit.
 	Kind          string `protobuf:"bytes,4,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -365,14 +366,14 @@ func (x *TextBlock) GetKind() string {
 	return ""
 }
 
-// Table is one detected table: a sparse cell grid with merged-cell spans. Cells are
-// listed explicitly with row/col coordinates; absent cells are genuinely empty.
+// Table is one detected table, a sparse cell grid with merged-cell spans. Cells are
+// listed explicitly with row/col coordinates, and absent cells are genuinely empty.
 type Table struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Deterministic within this derivation, e.g. "p2.t1".
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// The table's title/caption as printed. This is what parameter provenance
-	// (param.ParamProvenance.table_or_figure) resolves against.
+	// The table's title/caption as printed. Parameter provenance
+	// (param.ParamProvenance.table_or_figure) resolves against it.
 	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	// Nearest section heading when the producer attaches one; empty otherwise.
 	Section string `protobuf:"bytes,3,opt,name=section,proto3" json:"section,omitempty"`
@@ -382,14 +383,14 @@ type Table struct {
 	Cols  int32   `protobuf:"varint,6,opt,name=cols,proto3" json:"cols,omitempty"`
 	Cells []*Cell `protobuf:"bytes,7,rep,name=cells,proto3" json:"cells,omitempty"`
 	// Footnote texts the producer attached to this table (table-note markers,
-	// "unless otherwise noted" headers). Attachment quality varies by producer;
-	// unattached footnotes remain TextBlocks.
+	// "unless otherwise noted" headers). Attachment quality varies by producer, and
+	// unattached footnotes are still TextBlocks.
 	Footnotes []string `protobuf:"bytes,8,rep,name=footnotes,proto3" json:"footnotes,omitempty"`
 	// Detection confidence in (0, 1]; 1.0 for hand-authored fixtures.
 	Confidence float64 `protobuf:"fixed64,9,opt,name=confidence,proto3" json:"confidence,omitempty"`
 	// Hash of the normalized structure + cell text (doc.TableHash), independent of
-	// bboxes and ids. The cross-toolchain-version identity used by revision diffing:
-	// same hash means same table content, no re-extraction needed.
+	// bboxes and ids. Revision diffing uses it as the cross-toolchain-version identity.
+	// The same hash means the same table content, so no re-extraction is needed.
 	ContentHash   string `protobuf:"bytes,10,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -495,16 +496,16 @@ func (x *Table) GetContentHash() string {
 	return ""
 }
 
-// Cell is one table cell. row/col are 0-based grid coordinates; row_span/col_span
-// are 1 for a plain cell (0 is normalized to 1 by consumers) and >1 for merged cells,
-// which appear once at their top-left position.
+// Cell is one table cell. row/col are 0-based grid coordinates. row_span/col_span are
+// 1 for a plain cell, and consumers normalize 0 to 1. They are >1 for a merged cell,
+// which appears once at its top-left position.
 type Cell struct {
 	state   protoimpl.MessageState `protogen:"open.v1"`
 	Row     int32                  `protobuf:"varint,1,opt,name=row,proto3" json:"row,omitempty"`
 	Col     int32                  `protobuf:"varint,2,opt,name=col,proto3" json:"col,omitempty"`
 	RowSpan int32                  `protobuf:"varint,3,opt,name=row_span,json=rowSpan,proto3" json:"row_span,omitempty"`
 	ColSpan int32                  `protobuf:"varint,4,opt,name=col_span,json=colSpan,proto3" json:"col_span,omitempty"`
-	// Text as printed; no unit or symbol parsing here (that is the recipe layer).
+	// Text as printed. There is no unit or symbol parsing here; the recipe layer does that.
 	Text string `protobuf:"bytes,5,opt,name=text,proto3" json:"text,omitempty"`
 	Bbox *BBox  `protobuf:"bytes,6,opt,name=bbox,proto3" json:"bbox,omitempty"`
 	// Producer marked this cell as a header (column or row label).
@@ -593,14 +594,15 @@ func (x *Cell) GetIsHeader() bool {
 }
 
 // Figure is one detected figure/graph region. Doc-IR records its location and
-// caption so provenance can point at it and a human can jump to it; curve data
-// extraction is out of scope by design (see docs/21).
+// caption so provenance can point at it and a human can jump to it. Curve data
+// extraction is out of scope by design (see the docsite's
+// architecture/datasheet-layer.md).
 type Figure struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Deterministic within this derivation, e.g. "p3.f1".
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Caption as printed ("Figure 3. On-Resistance Variation with Temperature.").
-	// What param.ParamProvenance.table_or_figure resolves against for figures.
+	// param.ParamProvenance.table_or_figure resolves against it for figures.
 	Caption string `protobuf:"bytes,2,opt,name=caption,proto3" json:"caption,omitempty"`
 	Bbox    *BBox  `protobuf:"bytes,3,opt,name=bbox,proto3" json:"bbox,omitempty"`
 	// Detection confidence in (0, 1].

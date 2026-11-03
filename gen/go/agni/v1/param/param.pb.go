@@ -21,16 +21,16 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// PinFunction is the pin-table "Type"/"I/O" column as a closed vocabulary. It is admitted
-// as an enum rather than free text (the field-discipline rule in the header) because every
-// vendor's pin function table prints this same small set -- I, O, I/O, P, G, NC -- so it
-// is a RECORDED fact, not a normalization this layer invented. The printed spelling is
-// kept in Pin.attributes["function_raw"], mirroring ir.Pin's "direction_raw".
+// PinFunction is the pin-table "Type"/"I/O" column as a closed vocabulary. Every vendor's
+// pin function table prints the same small set (I, O, I/O, P, G, NC). So the enum records
+// a fact, and this layer invents no normalization. That satisfies the field-discipline rule
+// in the header, and it admits an enum rather than free text. Pin.attributes["function_raw"]
+// keeps the printed spelling, mirroring ir.Pin's "direction_raw".
 //
-// Unlike LimitKind, UNSPECIFIED is LEGAL and does not fail validation: a document may give
-// a pin table with no type column at all, and a pin whose name and number are known is
-// still worth recording. "We do not know this pin's function" is honest; refusing the pin
-// would lose its numbering.
+// Unlike LimitKind, UNSPECIFIED is LEGAL and does not fail validation. A document may give
+// a pin table with no type column at all. A pin whose name and number are known is still
+// worth recording. "We do not know this pin's function" is a true answer, and refusing the
+// pin would lose its numbering.
 type PinFunction int32
 
 const (
@@ -98,13 +98,13 @@ func (PinFunction) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{0}
 }
 
-// PinRelationKind is what a relation asserts. One member today, deliberately: the
-// field-discipline rule in the header wants a second vendor able to populate a shape
-// before it exists, and a read of 62 datasheets plus three vendors' documents found
-// exactly one form clearing that bar. Common-net (NXP only) and mutual same-state (one
-// second-source document lineage) are recorded in issue #191 and are NOT enum members
-// yet, because an unpopulated member reads to a consumer as a form that never occurs
-// rather than one nobody has evidence for.
+// PinRelationKind is what a relation asserts. It has one member today, on purpose. The
+// field-discipline rule in the header admits a shape only once a second vendor could
+// populate it. A read of 62 datasheets plus three vendors' documents found exactly one form
+// that clears that bar. Issue #191 records two more forms, common-net (NXP only) and mutual
+// same-state (one second-source document lineage). They are NOT enum members yet. A
+// consumer would read an unpopulated member as a form that never occurs, when in fact
+// nobody has evidence for it.
 type PinRelationKind int32
 
 const (
@@ -155,10 +155,10 @@ func (PinRelationKind) EnumDescriptor() ([]byte, []int) {
 }
 
 // Modality is whether the document REQUIRES the relation or merely RECOMMENDS it, taken
-// from the vendor's own modal verb. It is recorded because "shall never exceed" and
-// "should be at least 1 V higher for best translator operation" are different claims
-// about the same kind of relation, and a consumer that sees only the numbers cannot tell
-// a violation from a suboptimality. The printed wording survives in PinRelation.raw.
+// from the vendor's own modal verb. "Shall never exceed" and "should be at least 1 V higher
+// for best translator operation" make different claims about the same kind of relation. A
+// consumer that sees only the numbers cannot tell a violation from a suboptimality, so the
+// modality is recorded. PinRelation.raw keeps the printed wording.
 type Modality int32
 
 const (
@@ -210,9 +210,9 @@ func (Modality) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{2}
 }
 
-// LimitKind is the first-class distinction that makes static checks safe: an
-// absolute-max rating, a recommended-operating bound, and a measured characteristic
-// mean different things to a rule, and free text cannot be dispatched on.
+// LimitKind separates three kinds of limit as a first-class field, so static checks can
+// trust them. An absolute-max rating, a recommended-operating bound, and a measured
+// characteristic mean different things to a rule. A rule cannot dispatch on free text.
 type LimitKind int32
 
 const (
@@ -271,10 +271,10 @@ func (LimitKind) EnumDescriptor() ([]byte, []int) {
 	return file_agni_v1_param_param_proto_rawDescGZIP(), []int{3}
 }
 
-// ConditionCoverage states, explicitly, how complete a parameter's condition list
-// is. This is what keeps a conditions-stripped value from silently becoming a
-// scalar: consumers (the WS10-003 join) must treat anything other than COMPLETE or
-// UNCONDITIONAL as under-specified and skip or flag, never trust.
+// ConditionCoverage states explicitly how complete a parameter's condition list is. It
+// stops a value with its conditions stripped from silently becoming a scalar. A consumer,
+// such as the WS10-003 join, must treat anything other than COMPLETE or UNCONDITIONAL as
+// under-specified. It skips or flags such a value, and never trusts it.
 type ConditionCoverage int32
 
 const (
@@ -347,15 +347,15 @@ type PartSpec struct {
 	DeviceClass string       `protobuf:"bytes,3,opt,name=device_class,json=deviceClass,proto3" json:"device_class,omitempty"`
 	Docs        []*SourceDoc `protobuf:"bytes,4,rep,name=docs,proto3" json:"docs,omitempty"`
 	Parameters  []*Parameter `protobuf:"bytes,5,rep,name=parameters,proto3" json:"parameters,omitempty"`
-	// The package options this document covers, and the part's pins. Both are OPTIONAL and
-	// empty on every spec seeded before pin binding existed: a consumer that finds no pins
+	// The package options this document covers, and the part's pins. Both are OPTIONAL. Every
+	// spec seeded before pin binding existed leaves them empty. A consumer that finds no pins
 	// behaves exactly as it did then (CONSTRAINTS C9, degrade-safe), so an unseeded or
-	// pin-less corpus is not a silent behavior change.
+	// pin-less corpus does not change behavior silently.
 	Packages []*Package `protobuf:"bytes,6,rep,name=packages,proto3" json:"packages,omitempty"`
 	Pins     []*Pin     `protobuf:"bytes,7,rep,name=pins,proto3" json:"pins,omitempty"`
-	// Constraints that hold BETWEEN two of this part's pins. OPTIONAL and empty on every
-	// spec seeded before they existed, under the same degrade-safe rule as packages/pins:
-	// a consumer that finds none behaves exactly as it did before.
+	// Constraints that hold BETWEEN two of this part's pins. OPTIONAL. Every spec seeded
+	// before they existed leaves this empty. The degrade-safe rule for packages and pins
+	// applies here too, so a consumer that finds none behaves exactly as it did before.
 	Relations     []*PinRelation    `protobuf:"bytes,8,rep,name=relations,proto3" json:"relations,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
@@ -455,22 +455,22 @@ func (x *PartSpec) GetAttributes() map[string]string {
 	return nil
 }
 
-// Package is one physical body this part ships in (a TSSOP-14, a UQFN-12, a DSBGA). It
-// exists because a PIN NUMBER IS A FACT ABOUT A PACKAGE, NOT ABOUT THE DIE: the same
-// silicon wired into a different body gets different terminal numbering, so a number is
-// meaningless without saying which body it belongs to. On the real TXB0104, number 11 is
-// the data I/O "B3" in the TSSOP-14 and the "VCCB" supply in the UQFN-12.
+// Package is one physical body this part ships in (a TSSOP-14, a UQFN-12, a DSBGA). A PIN
+// NUMBER IS A FACT ABOUT A PACKAGE, NOT ABOUT THE DIE. The same silicon wired into a
+// different body gets different terminal numbering. So a number means nothing until it says
+// which body it belongs to. On the real TXB0104, number 11 is the data I/O "B3" in the
+// TSSOP-14 and the "VCCB" supply in the UQFN-12.
 type Package struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Local key within this PartSpec, referenced by PinNumber.package_ref.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// Package as the document names it, e.g. "PW (TSSOP-14)". As printed; no canonical
-	// package taxonomy is assigned here (that is WS10-004's problem, if ever).
+	// Package as the document names it, e.g. "PW (TSSOP-14)". As printed. This field assigns
+	// no canonical package taxonomy. WS10-004 would own one, if it ever exists.
 	Name string `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	// The orderable-MPN suffix that selects this package ("PW", "RGY"), when the vendor
-	// uses one. Empty when the document does not state it. This is a HINT for narrowing a
-	// design's MPN to one package, never a parser input: a suffix that does not match is
-	// "package unknown", not "package absent".
+	// uses one. Empty when the document does not state it. It is a HINT for narrowing a
+	// design's MPN to one package, and never a parser input. A suffix that does not match
+	// means "package unknown", not "package absent".
 	MpnSuffix     string            `protobuf:"bytes,3,opt,name=mpn_suffix,json=mpnSuffix,proto3" json:"mpn_suffix,omitempty"`
 	Attributes    map[string]string `protobuf:"bytes,4,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	unknownFields protoimpl.UnknownFields
@@ -535,11 +535,10 @@ func (x *Package) GetAttributes() map[string]string {
 	return nil
 }
 
-// PinNumber is one package's designator for a pin: a STRING, because ball-grid packages
-// number in row-column form ("B2", "A3") and a numeric field would force those through a
-// lossy encoding. Sparse on purpose -- a pin present in one package and absent in another
-// (a no-connect that only the 14-pin body has) simply carries no PinNumber for the body it
-// is missing from, rather than a sentinel.
+// PinNumber is one package's designator for a pin. It is a STRING. Ball-grid packages
+// number in row-column form ("B2", "A3"), and a numeric field would force those through a
+// lossy encoding. The list is sparse on purpose. Take a no-connect that only the 14-pin body
+// has. That pin has no PinNumber for the other body, and no sentinel stands in for one.
 type PinNumber struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Package.id within the enclosing PartSpec.
@@ -594,49 +593,48 @@ func (x *PinNumber) GetNumber() string {
 	return ""
 }
 
-// Pin is one terminal of the DIE, with the numbers each package assigns it. It is the
-// binding target for Parameter.pin_refs.
+// Pin is one terminal of the DIE, with the numbers each package assigns it.
+// Parameter.pin_refs binds to it.
 //
 // A PIN IS A PROPERTY OF THE PART TYPE, NEVER OF A PLACEMENT. One PartSpec describes one
-// MPN, and a design may place fifty instances of it; nothing here may be per-instance. In
-// particular NO REFERENCE DESIGNATOR EVER APPEARS IN THIS CONTRACT and `id` must not encode
-// one. A rule fans a type-level pin fact out across instances (each landing on its own
-// net); the fan-out is the rule's job, and admitting an instance key here would rot the
-// contract the first time two instances disagreed.
+// MPN, and a design may place fifty instances of it, so nothing here may be per-instance.
+// NO REFERENCE DESIGNATOR EVER APPEARS IN THIS CONTRACT, and `id` must not encode one. A
+// rule fans a type-level pin fact out across instances, and each instance sits on its own
+// net. The fan-out is the rule's job. Suppose this contract admitted an instance key. The
+// first time two instances disagreed, the contract would hold two answers for one pin.
 type Pin struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Spec-local key, unique within this PartSpec, and the ONLY thing Parameter.pin_refs
-	// points at. Neither the name nor a number is the binding key: the name is not unique
-	// (see below) and a number is package-relative, so binding to either would make a
-	// parameter's target ambiguous in exactly the cases pin binding exists to serve. An
-	// opaque local id is unique by construction, which is what lets param.Validate reject an
-	// incoherent binding instead of having to resolve one.
+	// Spec-local key, unique within this PartSpec. Parameter.pin_refs points at this and
+	// nothing else. The name is not unique (see below), and a number is package-relative.
+	// Binding to either would make a parameter's target ambiguous in exactly the cases pin
+	// binding exists to serve. An opaque local id is unique by construction. So
+	// param.Validate can reject an incoherent binding instead of having to resolve one.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Pin name as printed in the pin function table ("VCCA", "GND", "NC").
 	//
-	// NOT UNIQUE, and that is the whole reason this message exists. A part routinely prints
-	// one name across several terminals -- the TXB0104 prints "NC" on two -- and a large IC
-	// printing "VDD" on three pins with different limits is the multi-supply collapse this
-	// contract is here to fix. Consumers resolving a design pin by name must handle several
-	// hits (see the resolution note on Parameter.pin_refs).
+	// NOT UNIQUE, and this message exists because of that. A part routinely prints one name
+	// across several terminals. The TXB0104 prints "NC" on two. A large IC may print "VDD" on
+	// three pins with different limits. That is the multi-supply collapse this contract
+	// exists to fix. A consumer resolving a design pin by name must handle several hits (see
+	// the resolution note on Parameter.pin_refs).
 	Name     string      `protobuf:"bytes,2,opt,name=name,proto3" json:"name,omitempty"`
 	Function PinFunction `protobuf:"varint,3,opt,name=function,proto3,enum=agni.v1.param.PinFunction" json:"function,omitempty"`
 	// The pin's description column as printed ("A-port supply voltage 1.2V <= VCCA <= 3.6V").
-	// Retained verbatim: pin-to-pin constraints live in this prose today and have no
-	// structured shape yet, so discarding it would discard the only record of them.
+	// Kept verbatim. Some pin-to-pin constraints exist only in this prose and have no
+	// structured shape yet. Discarding the text would discard the only record of them.
 	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
 	// This pin's designator in each package that has it. Empty when the document gives a
-	// function table but no package pinout, which is a real and usable state: the NAME
+	// function table but no package pinout. That state is real and usable, because the NAME
 	// channel still resolves.
 	Numbers []*PinNumber `protobuf:"bytes,5,rep,name=numbers,proto3" json:"numbers,omitempty"`
-	// Every function the part's pin-mux table says this pin can be switched to, the plain GPIO
-	// included, in the document's order (agni issue 667). Empty when no alternate-function
-	// table was read, which a consumer reads as "unknown" and never as "no functions".
+	// Every function the part's pin-mux table says this pin can switch to, in the document's
+	// order, plain GPIO included (agni issue 667). Empty when no alternate-function table was
+	// read. A consumer reads empty as "unknown" and never as "no functions".
 	Alternates []*PinAlternate   `protobuf:"bytes,6,rep,name=alternates,proto3" json:"alternates,omitempty"`
 	Attributes map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Provenance, required by param.Validate exactly as it is on a Parameter. A pin function
-	// is an extracted claim like any other, and an extracted claim nobody can verify against
-	// a page is a liability.
+	// Provenance. param.Validate requires it here exactly as it does on a Parameter. A pin
+	// function is an extracted claim like any other. Nobody can verify a claim without a page
+	// to check it against, and an unverifiable claim is a liability.
 	Prov          *ParamProvenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -730,15 +728,15 @@ func (x *Pin) GetProv() *ParamProvenance {
 
 // PinAlternate is one function a pin can be muxed to, as the pin-mux table prints it
 // ("LPUART1_RX", or "ADC0_A10/CMP0_IN0" where one slot names two signals). A consumer
-// comparing against it splits and canonicalizes through core/ident; the text stays as
-// printed so it can be checked against the page.
+// comparing against it splits and canonicalizes through core/ident. The text is kept as
+// printed, so a reader can check it against the page.
 //
 // It holds a name and no selector, although both vendors read so far print one. NXP prints
-// a mux slot per function ("ALT3 - LPUART1_RX"), and TI selects a function with PxSEL bits,
+// a mux slot per function ("ALT3 - LPUART1_RX"). TI selects a function with PxSEL bits,
 // sometimes together with the pin's direction (SMCLK on P1.0 is P1SEL 10 with P1DIR 1). The
-// two forms do not share a shape, and a legality check compares names only. The selector
-// is left out until a consumer needs it and a shape fits both forms; it is a message rather
-// than a string so adding one later breaks nothing.
+// two forms do not share a shape, and a legality check compares names only. So the selector
+// is left out until a consumer needs it and one shape fits both forms. It is a message
+// rather than a string, so adding a selector later breaks nothing.
 type PinAlternate struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Name          string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
@@ -783,58 +781,59 @@ func (x *PinAlternate) GetName() string {
 	return ""
 }
 
-// PinRelation is a constraint between two pins of one part, the shape `Parameter` cannot
-// carry: a Parameter states a value ABOUT ONE QUANTITY, and its `pin_refs` already means
-// "this row applies to these terminals", so expressing a relation there would make
-// pin_refs mean two different things depending on kind.
+// PinRelation is a constraint between two pins of one part. A `Parameter` cannot hold
+// one. A Parameter states a value ABOUT ONE QUANTITY, and its `pin_refs` already means
+// "this row applies to these terminals". A relation there would make pin_refs mean two
+// different things depending on kind.
 //
-// THE BOUND IS A VALUE, NOT A COMPARISON OPERATOR, which is the whole reason this message
-// looks the way it does. The obvious shape for "VCC(A) must be less than or equal to
-// VCC(B)" is {subject, op, reference}, and it cannot express three of the five instances
-// found across four vendors: a 0.5 V allowance, a 1 V allowance, and a 100 mV one. So the
-// bound is on the DIFFERENCE and reuses RangeValue unchanged. Less-than-or-equal is a max
-// of 0; a symmetric "within 0.3 V of" is min -0.3 and max +0.3. See DECISIONS.md,
-// "A pin-to-pin bound is a value with a modality, not a comparison operator".
+// THE BOUND IS A VALUE, NOT A COMPARISON OPERATOR, and this message is shaped by that. The
+// obvious shape for "VCC(A) must be less than or equal to VCC(B)" is {subject, op,
+// reference}. Five instances turned up across four vendors, and that shape cannot express
+// three of them: a 0.5 V allowance, a 1 V allowance, and a 100 mV one. So the bound is on
+// the DIFFERENCE and reuses RangeValue unchanged. Less-than-or-equal is a max of 0. A
+// symmetric "within 0.3 V of" is min -0.3 and max +0.3. See DECISIONS.md, "A pin-to-pin
+// bound is a value with a modality, not a comparison operator".
 //
-// It lives on PartSpec rather than on Pin because a relation is BETWEEN two terminals and
-// is not owned by either. Hanging it off the subject would imply an asymmetry that a
-// symmetric tolerance does not have.
+// It sits on PartSpec rather than on Pin. A relation is BETWEEN two terminals, and neither
+// owns it. Hanging it off the subject would imply an asymmetry, and a symmetric tolerance
+// has none.
 type PinRelation struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Pin.id values within the enclosing PartSpec. Both required, and they must differ: a
-	// pin cannot track itself, and a spec saying so is incoherent rather than merely
+	// Pin.id values within the enclosing PartSpec. Both are required, and they must differ.
+	// A pin cannot track itself. A spec saying so is incoherent rather than merely
 	// unfinished, so param.Validate rejects it structurally.
 	//
-	// The bound below is on subject MINUS reference, so the order is load-bearing and
-	// swapping them inverts the meaning.
+	// The bound below is on subject MINUS reference. So the order matters, and swapping the
+	// two inverts the meaning.
 	SubjectPinRef   string          `protobuf:"bytes,1,opt,name=subject_pin_ref,json=subjectPinRef,proto3" json:"subject_pin_ref,omitempty"`
 	ReferencePinRef string          `protobuf:"bytes,2,opt,name=reference_pin_ref,json=referencePinRef,proto3" json:"reference_pin_ref,omitempty"`
 	Kind            PinRelationKind `protobuf:"varint,3,opt,name=kind,proto3,enum=agni.v1.param.PinRelationKind" json:"kind,omitempty"`
 	// Bound on (subject - reference), in `unit`. An absent bound on a side means unbounded
-	// there, exactly as it does on a Parameter's value, so a one-sided requirement needs no
-	// sentinel. A relation with NEITHER bound set says nothing; that is a completeness
-	// problem (a draft mid-authoring) rather than a structural one, matching the workbench
-	// decision that saving records and judging is separate.
+	// on that side, exactly as on a Parameter's value, so a one-sided requirement needs no
+	// sentinel. A relation with NEITHER bound set says nothing. That is a completeness
+	// problem, such as a draft mid-authoring, and not a structural one. This matches the
+	// workbench decision to keep saving a record separate from judging it.
 	Difference *RangeValue `protobuf:"bytes,4,opt,name=difference,proto3" json:"difference,omitempty"`
 	// Unit as printed; normalization is WS10-004, as everywhere else in this contract.
 	Unit     string   `protobuf:"bytes,5,opt,name=unit,proto3" json:"unit,omitempty"`
 	Modality Modality `protobuf:"varint,6,opt,name=modality,proto3,enum=agni.v1.param.Modality" json:"modality,omitempty"`
-	// The REGIME the bound holds in, when the document scopes it. Reuses Condition rather
-	// than inventing a regime enum, because "transient only, not for DC" and "applies to
+	// The REGIME the bound holds in, when the document scopes it. This reuses Condition
+	// instead of inventing a regime enum. "Transient only, not for DC" and "applies to
 	// power-up, power-down and normal operation" are test conditions in exactly the sense
 	// Condition already models, down to its `raw` escape hatch. Two of the five instances
-	// carry one, and a bound recorded without its regime is wrong in both directions: it
-	// over-applies a transient allowance to DC, and under-applies an operating limit that
-	// the vendor extended across power-up.
+	// have a regime. A bound recorded without its regime is wrong in both directions. It
+	// over-applies a transient allowance to DC. It also under-applies an operating limit
+	// that the vendor extended across power-up.
 	Conditions []*Condition `protobuf:"bytes,7,rep,name=conditions,proto3" json:"conditions,omitempty"`
 	// The sentence as printed, always. Pin-to-pin constraints are prose, and the structured
-	// fields deliberately do not model every instance: one document states its bound by
-	// reference to another table instead of printing a number, which stays in `raw` until a
-	// second producer does the same.
+	// fields do not model every instance, on purpose. One document states its bound by
+	// pointing at another table instead of printing a number. That bound is kept only in
+	// `raw` until a second producer does the same.
 	Raw        string            `protobuf:"bytes,8,opt,name=raw,proto3" json:"raw,omitempty"`
 	Attributes map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
-	// Provenance, required by param.Validate exactly as on a Parameter and a Pin. An
-	// extracted claim nobody can verify against a page is a liability.
+	// Provenance. param.Validate requires it here exactly as on a Parameter and a Pin.
+	// Nobody can verify a claim without a page to check it against, and an unverifiable claim
+	// is a liability.
 	Prov          *ParamProvenance `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -940,38 +939,38 @@ func (x *PinRelation) GetProv() *ParamProvenance {
 	return nil
 }
 
-// SourceDoc is one source document (a datasheet, an app note). Parameters reference
-// it via ParamProvenance.doc_ref so the document identity (vendor doc number +
-// revision) is stated once, not repeated per parameter.
+// SourceDoc is one source document (a datasheet, an app note). Parameters reference it
+// through ParamProvenance.doc_ref. So the document's vendor number and revision are stated
+// once and not repeated per parameter.
 type SourceDoc struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// Local key within this PartSpec, referenced by ParamProvenance.doc_ref.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// Vendor document number and revision as printed, e.g.
-	// "SNOS412Q - FEBRUARY 2000 - REVISED JANUARY 2023". This is the citation an
-	// engineer verifies against, so it must identify the exact revision.
+	// "SNOS412Q - FEBRUARY 2000 - REVISED JANUARY 2023". An engineer verifies against this
+	// citation, so it must identify the exact revision.
 	Title  string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
 	Vendor string `protobuf:"bytes,3,opt,name=vendor,proto3" json:"vendor,omitempty"`
-	// Where this corpus keeps the document (path or URL). Corpus-local by design: the
-	// internal-seed posture (WS10-002) means documents never leave the customer
-	// boundary, so this locator is meaningful only inside one deployment.
+	// Where this corpus keeps the document (path or URL). It is corpus-local by design.
+	// Under the internal-seed posture (WS10-002), documents never leave the customer
+	// boundary. So this locator means something only inside one deployment.
 	Locator string `protobuf:"bytes,4,opt,name=locator,proto3" json:"locator,omitempty"`
-	// The doc-IR Document.content_hash of the revision this spec currently describes, as
-	// held by the corpus. This is the OTHER HALF of Verification: a verification records
-	// the hash it was performed against, and staleness is that hash disagreeing with this
-	// one. Without it a reader holding only a PartSpec has nothing to compare against and
-	// can never conclude anything but "unknown".
+	// The doc-IR Document.content_hash of the revision this spec currently describes, as the
+	// corpus holds it. Verification needs this field as its OTHER HALF. A verification
+	// records the hash it was performed against. A fact is stale when that hash disagrees with
+	// this one. Without this field, a reader holding only a PartSpec has nothing to compare
+	// against, and can never conclude anything but "unknown".
 	//
-	// It lives here rather than being resolved from `locator` on demand because a check
-	// must not do I/O to learn whether its evidence is current (C22: configuration travels
-	// as a value, never as a locator the callee resolves), and because the engine runs in
+	// The hash is stored here, not resolved from `locator` on demand, for two reasons. A
+	// check must not do I/O to learn whether its evidence is current. C22 says configuration
+	// travels as a value, never as a locator the callee resolves. And the engine runs in
 	// hosts with no filesystem at all.
 	//
-	// A re-seed from a new vendor revision REWRITES this, which is what makes staleness
-	// happen to a fact rather than being remembered about it: every Verification pinned to
-	// the old hash stops matching in the same instant, exactly as a derive.Patch stops
-	// applying. Empty when the corpus never recorded one, which reads as unknown and
-	// never as current.
+	// Imagine a re-seed from a new vendor revision. It REWRITES this field. At that instant
+	// every Verification pinned to the old hash stops matching, exactly as a derive.Patch
+	// stops applying. So staleness happens to a fact, and nobody has to remember it. Empty
+	// when the corpus never recorded a hash. A reader takes empty as unknown, never as
+	// current.
 	ContentHash   string `protobuf:"bytes,5,opt,name=content_hash,json=contentHash,proto3" json:"content_hash,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1113,10 +1112,10 @@ type Condition struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// The conditioned quantity's symbol as printed ("VGS", "IOUT", "TJ").
 	Symbol string `protobuf:"bytes,1,opt,name=symbol,proto3" json:"symbol,omitempty"`
-	// Exactly one of eq, or min/max (either or both), is set for a structured
-	// condition; all absent means the condition was captured only as text (`raw`),
-	// which is still a captured condition -- coverage stays COMPLETE if nothing is
-	// missing, it is just not machine-comparable yet.
+	// A structured condition sets either eq, or one or both of min and max. When all three
+	// are absent, the condition was captured only as text (`raw`). That still counts as a
+	// captured condition. Coverage is still COMPLETE if nothing is missing. The condition
+	// just cannot be compared by machine yet.
 	Eq  *float64 `protobuf:"fixed64,2,opt,name=eq,proto3,oneof" json:"eq,omitempty"`
 	Min *float64 `protobuf:"fixed64,3,opt,name=min,proto3,oneof" json:"min,omitempty"`
 	Max *float64 `protobuf:"fixed64,4,opt,name=max,proto3,oneof" json:"max,omitempty"`
@@ -1224,41 +1223,42 @@ type Parameter struct {
 	// an industrial grade). Empty when the row covers every variant the document
 	// covers.
 	AppliesTo string `protobuf:"bytes,9,opt,name=applies_to,json=appliesTo,proto3" json:"applies_to,omitempty"`
-	// The pins this row applies to, as Pin.id values. EMPTY MEANS THE PART AS A WHOLE
-	// (a junction-temperature rating, a storage range), which is also what every spec
-	// seeded before pin binding existed says, so empty must keep meaning exactly what it
-	// meant then. Several ids express a row stated once for a GROUP of terminals: the
-	// TXB0104 gives one output-voltage range for all four A-port I/Os and a different one
-	// for the four B-port I/Os.
+	// The pins this row applies to, as Pin.id values. EMPTY MEANS THE PART AS A WHOLE, such
+	// as a junction-temperature rating or a storage range. Every spec seeded before pin
+	// binding existed is empty here and means the same thing. So empty must keep that exact
+	// meaning. Several ids express a row stated once for a GROUP of terminals. The TXB0104
+	// gives one output-voltage range for all four A-port I/Os and a different one for the
+	// four B-port I/Os.
 	//
-	// ORTHOGONAL TO applies_to, not a second spelling of it. `applies_to` narrows WHICH
-	// VARIANT of the part the row covers; this narrows WHICH TERMINAL. A row carrying both
-	// is the conjunction: on this variant, for this pin.
+	// This field is ORTHOGONAL TO applies_to, not a second spelling of it. `applies_to`
+	// narrows WHICH VARIANT of the part the row covers, and this field narrows WHICH
+	// TERMINAL. A row with both set is the conjunction, on this variant, for this pin.
 	//
-	// HOW A DESIGN PIN RESOLVES TO ONE OF THESE (settled here; consumed by the query
-	// relations and the pin-rating rule). The design side reaches a terminal as
-	// Connection{component_ref, pin_ref} -> the section's PartType -> ir.Pin, which carries
-	// BOTH a `name` and a package-relative `designator`. The datasheet side offers the same
-	// two channels. The precedence is:
+	// HOW A DESIGN PIN RESOLVES TO ONE OF THESE. This comment settles it, and the query
+	// relations and the pin-rating rule follow it. The design side reaches a terminal through
+	// Connection{component_ref, pin_ref}, then the section's PartType, then ir.Pin. An ir.Pin
+	// has BOTH a `name` and a package-relative `designator`. The datasheet side offers the
+	// same two channels. The precedence is:
 	//
 	//  1. MATCH ON NAME. Both sides copy it off the same pin function table, so it is
 	//     die-relative and survives repackaging.
-	//  2. USE THE NUMBER ONLY AS A TIE-BREAKER, when a name hits several pins, and only
+	//  2. USE THE NUMBER ONLY AS A TIE-BREAKER, when a name hits several pins. Use it only
 	//     inside a package the design is known to place and this spec declares.
-	//  3. REFUSE when the two channels DISAGREE, and refuse when a name is ambiguous and no
-	//     package is identified. Skip-not-false-pass: a wrong terminal evaluates cleanly and
-	//     reports about the wrong thing, which is worse than reporting nothing.
+	//  3. REFUSE when the two channels DISAGREE. Also refuse when a name is ambiguous and no
+	//     package is identified. Skip rather than false-pass. A wrong terminal evaluates
+	//     cleanly and reports about the wrong thing, and that is worse than reporting nothing.
 	//
-	// The number is deliberately NOT the primary key even though it looks like the precise
-	// one. It is precise about a PACKAGE; a parameter is a fact about a DIE. Leading with it
-	// silently misreports a part seeded from one body and placed in another -- on the real
-	// TXB0104, number 11 is a data I/O in the TSSOP-14 and the B-side supply in the UQFN-12,
-	// so the comparison would run against the wrong terminal and look fine doing it.
+	// The number looks like the precise key, and it is deliberately NOT the primary one. It
+	// is precise about a PACKAGE, while a parameter is a fact about a DIE. Imagine a part
+	// seeded from one body and placed in another. Leading with the number would misreport it
+	// silently. On the real TXB0104, number 11 is a data I/O in the TSSOP-14 and the B-side
+	// supply in the UQFN-12. The comparison would run against the wrong terminal and look
+	// fine doing it.
 	PinRefs    []string          `protobuf:"bytes,10,rep,name=pin_refs,json=pinRefs,proto3" json:"pin_refs,omitempty"`
 	Attributes map[string]string `protobuf:"bytes,14,rep,name=attributes,proto3" json:"attributes,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
 	Prov       *ParamProvenance  `protobuf:"bytes,16,opt,name=prov,proto3" json:"prov,omitempty"`
 	// Who checked this value against the document, and against WHICH REVISION. Absent means nobody
-	// has; see Verification for why absence and staleness are different answers.
+	// has. Verification explains why absence and staleness are different answers.
 	Verification  *Verification `protobuf:"bytes,17,opt,name=verification,proto3" json:"verification,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1385,49 +1385,51 @@ func (x *Parameter) GetVerification() *Verification {
 	return nil
 }
 
-// Verification records that a PERSON checked a value against the document, and is deliberately
-// separate from ParamProvenance: provenance says how a value was PRODUCED, this says whether anyone
-// has since stood behind it. An extractor writes the first and can never write the second.
+// Verification records that a PERSON checked a value against the document. It is kept
+// separate from ParamProvenance on purpose. Provenance says how a value was PRODUCED. A
+// verification says whether anyone has since stood behind it. An extractor writes provenance
+// and can never write a verification.
 //
-// IT IS KEYED TO THE DOCUMENT REVISION, which is the whole reason it is a message rather than a
-// boolean. A value checked against SCES650K Rev K is not thereby true of Rev L, and a verification
-// that survives a revision is worse than no verification: an unverified fact is honest, while a
-// stale-verified one is a confident wrong answer carrying a human's name.
+// IT IS KEYED TO THE DOCUMENT REVISION, so it is a message rather than a boolean. A value
+// checked against SCES650K Rev K is not thereby true of Rev L. A verification that survives a
+// revision is worse than none. An unverified fact admits what it is. A stale-verified fact is a
+// confident wrong answer with a human's name on it.
 //
 // Patch already solved this shape one layer over. It is keyed by content hash, so a revision
-// invalidates it BY CONSTRUCTION -- it stops matching and the manifest reports it unapplied. Nothing
-// decays silently because the key stops resolving. This does the same for facts.
+// invalidates it BY CONSTRUCTION. The patch stops matching, and the manifest reports it
+// unapplied. Nothing decays silently, because the key stops resolving. Verification does the
+// same for facts.
 type Verification struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// Who verified it, as an author identity the deployment recognises. Required: an anonymous
-	// verification cannot be questioned, and the point of the record is that someone answers for it.
+	// Who verified it, as an author identity the deployment recognises. Required. Nobody can
+	// question an anonymous verification, and the record exists so that someone answers for it.
 	By string `protobuf:"bytes,1,opt,name=by,proto3" json:"by,omitempty"`
-	// The doc-IR content_hash of the document revision this was checked against. Required, and the
-	// field that makes staleness derivable rather than remembered.
+	// The doc-IR content_hash of the document revision this was checked against. Required. With
+	// this field, staleness is derived rather than remembered.
 	DocContentHash string `protobuf:"bytes,2,opt,name=doc_content_hash,json=docContentHash,proto3" json:"doc_content_hash,omitempty"`
-	// When, as an ISO-8601 date. Free text rather than a timestamp because it is read by people and
-	// never computed on.
+	// When, as an ISO-8601 date. Free text rather than a timestamp, because people read it and
+	// nothing computes on it.
 	At string `protobuf:"bytes,3,opt,name=at,proto3" json:"at,omitempty"`
 	// What the verifier wants the next reader to know ("value is per-channel, not total").
 	Note string `protobuf:"bytes,4,opt,name=note,proto3" json:"note,omitempty"`
-	// The document's identity AS PRINTED when the verification was performed, snapshotted from the
-	// SourceDoc.title of the moment ("SCES650K - JUNE 2005 - REVISED JANUARY 2023"). It is a whole
-	// as-printed document identity rather than a bare revision letter, because that is what vendors
-	// print and what SourceDoc.title is already required to carry.
+	// The document's identity AS PRINTED when the verification was performed. It is a snapshot
+	// of SourceDoc.title at that moment ("SCES650K - JUNE 2005 - REVISED JANUARY 2023"). It holds
+	// the whole as-printed identity rather than a bare revision letter. Vendors print the whole
+	// identity, and SourceDoc.title is already required to hold it.
 	//
-	// DISPLAY ONLY. NEVER A COMPARISON INPUT. Staleness is decided by doc_content_hash and nothing
-	// else. Vendors reissue documents silently without moving the printed revision, and move the
-	// printed revision without changing content, so two files both stamped "Rev K" may differ and two
-	// differing strings may describe identical bytes. Comparing on this field would reintroduce
-	// exactly the silent staleness the hash exists to prevent, with a more convincing cover story. It
-	// is also NOT ORDERABLE: vendors use K/L/M, 1.0/1.1, A/B, bare dates and "Rev K.1", so "how many
-	// revisions behind" has no general answer.
+	// DISPLAY ONLY. NEVER A COMPARISON INPUT. doc_content_hash decides staleness, and nothing
+	// else does. Vendors reissue documents silently without moving the printed revision. They
+	// also move the printed revision without changing content. So two files both stamped "Rev K"
+	// may differ, and two differing strings may describe identical bytes. The hash exists to
+	// prevent silent staleness. Comparing on this field would bring it back, and make it look
+	// more convincing. The field is also NOT ORDERABLE. Vendors use K/L/M, 1.0/1.1, A/B, bare dates
+	// and "Rev K.1", so "how many revisions behind" has no general answer.
 	//
-	// It lives here rather than on SourceDoc because SourceDoc is REWRITTEN by a re-seed, which is
-	// what makes staleness happen at all. A revision recorded there would be overwritten by the very
-	// event that makes it interesting. Frozen beside the hash it was taken with, it survives, which is
-	// what lets a stale fact say "verified against Rev K, corpus now holds Rev L" instead of quoting
-	// two hashes at a person who has to act on it.
+	// It sits here rather than on SourceDoc. A re-seed REWRITES SourceDoc, and that rewrite is
+	// how a fact becomes stale. A revision recorded on SourceDoc would be overwritten by the
+	// same event that makes it interesting. Here it is frozen beside the hash it was taken with,
+	// so it survives. A stale fact can then say "verified against Rev K, corpus now holds
+	// Rev L", instead of quoting two hashes at a person who has to act on it.
 	DocRevision   string `protobuf:"bytes,5,opt,name=doc_revision,json=docRevision,proto3" json:"doc_revision,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1498,12 +1500,11 @@ func (x *Verification) GetDocRevision() string {
 	return ""
 }
 
-// ParamProvenance locates a parameter in its source document: the parameter-domain
-// analogue of ir.Provenance (which locates by file/span; here the addressable unit
-// is page + table/figure). Every Parameter carries one -- the same
-// provenance-on-every-finding discipline the check/ package enforces -- because an
-// extracted value an engineer cannot one-click verify is a liability, not a feature
-// (docs/20, and the moat framing it references).
+// ParamProvenance locates a parameter in its source document. It is the parameter-domain
+// analogue of ir.Provenance. ir.Provenance locates by file and span, and here the
+// addressable unit is a page plus a table or figure. Every Parameter has one. The check/
+// package enforces the same discipline of provenance on every finding. An engineer must be
+// able to verify an extracted value in one click, or the value is a liability.
 type ParamProvenance struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// SourceDoc.id within the enclosing PartSpec.
@@ -1513,11 +1514,11 @@ type ParamProvenance struct {
 	// The table or figure as titled in the source ("Absolute Maximum Ratings",
 	// "7.5 LM1117 Electrical Characteristics", "Figure 4").
 	TableOrFigure string `protobuf:"bytes,3,opt,name=table_or_figure,json=tableOrFigure,proto3" json:"table_or_figure,omitempty"`
-	// How the value was extracted: "hand" for hand-encoded fixtures, extractor names
-	// ("vlm", "table-parse") once WS10-002 lands.
+	// How the value was extracted. "hand" for hand-encoded fixtures, and an extractor name
+	// ("vlm", "table-parse") once WS10-002 ships.
 	Method string `protobuf:"bytes,4,opt,name=method,proto3" json:"method,omitempty"`
-	// Extraction confidence in (0, 1]; 1.0 for hand-encoded. Zero is invalid: a value
-	// nobody stands behind must not be emitted.
+	// Extraction confidence in (0, 1], and 1.0 for hand-encoded. Zero is invalid, because
+	// nobody may emit a value that nobody stands behind.
 	Confidence    float64 `protobuf:"fixed64,5,opt,name=confidence,proto3" json:"confidence,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

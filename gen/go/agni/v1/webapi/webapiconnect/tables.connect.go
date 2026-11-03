@@ -41,16 +41,16 @@ const (
 
 // TableServiceClient is a client for the agni.v1.webapi.TableService service.
 type TableServiceClient interface {
-	// Tabulate returns the answer's tables. A check run gives its findings and, when the response
-	// carries them, its verdicts and a count of them per rule. A diff gives one table, a row per change.
-	// A review gives its items and its summary. A query answer gives one table, and a query set one per
-	// answered query; a set with a query that failed is an invalid argument naming
-	// it, since a missing table reads as a question that matched nothing.
+	// Tabulate returns the answer's tables. A check run gives its findings. When the response includes
+	// verdicts, it also gives the verdicts and a count of them per rule. A diff gives one table, a row
+	// per change. A review gives its items and its summary. A query answer gives one table, and a query
+	// set gives one per answered query. A set with a failed query is an invalid argument naming that
+	// query, since a missing table would read as a question that matched nothing.
 	Tabulate(context.Context, *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error)
-	// Encode writes tables as files, for a caller that wants the bytes `--format csv` writes without
-	// an encoder of its own, such as the viewer saving a table (agni issue 956). It is the encoder the
-	// CLI uses, so a cell a spreadsheet would read as a formula is guarded the same way everywhere. It
-	// encodes the tables as sent, in their order, and reads no design.
+	// Encode writes tables as files. It serves a caller that has no encoder of its own and wants the
+	// bytes `--format csv` writes, such as the viewer saving a table (agni issue 956). The CLI uses the
+	// same encoder, so a cell that a spreadsheet would read as a formula is guarded the same way
+	// everywhere. Encode writes the tables as sent, in their order, and reads no design.
 	Encode(context.Context, *connect.Request[webapi.EncodeTablesRequest]) (*connect.Response[webapi.EncodeTablesResponse], error)
 }
 
@@ -98,16 +98,16 @@ func (c *tableServiceClient) Encode(ctx context.Context, req *connect.Request[we
 
 // TableServiceHandler is an implementation of the agni.v1.webapi.TableService service.
 type TableServiceHandler interface {
-	// Tabulate returns the answer's tables. A check run gives its findings and, when the response
-	// carries them, its verdicts and a count of them per rule. A diff gives one table, a row per change.
-	// A review gives its items and its summary. A query answer gives one table, and a query set one per
-	// answered query; a set with a query that failed is an invalid argument naming
-	// it, since a missing table reads as a question that matched nothing.
+	// Tabulate returns the answer's tables. A check run gives its findings. When the response includes
+	// verdicts, it also gives the verdicts and a count of them per rule. A diff gives one table, a row
+	// per change. A review gives its items and its summary. A query answer gives one table, and a query
+	// set gives one per answered query. A set with a failed query is an invalid argument naming that
+	// query, since a missing table would read as a question that matched nothing.
 	Tabulate(context.Context, *connect.Request[webapi.TabulateRequest]) (*connect.Response[webapi.TabulateResponse], error)
-	// Encode writes tables as files, for a caller that wants the bytes `--format csv` writes without
-	// an encoder of its own, such as the viewer saving a table (agni issue 956). It is the encoder the
-	// CLI uses, so a cell a spreadsheet would read as a formula is guarded the same way everywhere. It
-	// encodes the tables as sent, in their order, and reads no design.
+	// Encode writes tables as files. It serves a caller that has no encoder of its own and wants the
+	// bytes `--format csv` writes, such as the viewer saving a table (agni issue 956). The CLI uses the
+	// same encoder, so a cell that a spreadsheet would read as a formula is guarded the same way
+	// everywhere. Encode writes the tables as sent, in their order, and reads no design.
 	Encode(context.Context, *connect.Request[webapi.EncodeTablesRequest]) (*connect.Response[webapi.EncodeTablesResponse], error)
 }
 

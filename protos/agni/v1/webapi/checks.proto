@@ -12,100 +12,107 @@ import "agni/v1/webapi/config.proto";
 import "agni/v1/webapi/query.proto";
 import "agni/v1/param/param.proto";
 
-// This file: CheckService, the rule checks over a loaded design (WS9-026 extracted it from
-// DesignService: checks are their own concern, run-on-demand and independent of rendering).
+// This file defines CheckService, the rule checks over a loaded design. WS9-026 moved it out of
+// DesignService, because checks are their own concern. They run on demand and do not depend on
+// rendering.
 //
-// The Finding/Subject/DatasheetCitation/CheckReport shapes it serves are NOT declared here: they
-// live in agni.v1.checks, the transport-neutral checks contract (WS3-103), and this file references
-// them. They were always the canonical forms — the CLI's `check --format json|report` emits the same
-// ones — but declaring them inside the web API made "canonical" a convention rather than a fact, and
-// left a written results document with nowhere to be defined but a package full of mount/path
-// request types. What remains here is genuinely transport: the request/response envelopes, the
-// per-request overlay configuration, and the catalog-listing shape.
+// This file does NOT declare the Finding, Subject, DatasheetCitation and CheckReport shapes that
+// it serves. They are in agni.v1.checks, the transport-neutral checks contract (WS3-103), and this
+// file references them. They were always the canonical forms, and the CLI's
+// `check --format json|report` emits the same ones. Declared inside the web API, though, they were
+// canonical only by convention. A written results document then had nowhere to be defined except a
+// package full of mount/path request types. The rest of this file is transport alone: the
+// request/response envelopes, the per-request overlay configuration, and the catalog-listing
+// shape.
 
-// CheckService runs the rule catalog (the check/ library) over a design's netlist IR and
+// CheckService runs the rule catalog (the check/ library) over a design's netlist IR. It also
 // serves the catalog itself. A geometry-only file with no netlist is an invalid argument.
 service CheckService {
-  // ListRules returns the rule catalog a check of the snapshot runs: one RuleInfo per rule, with its
-  // tags (open classification the client groups and filters by) and whether it runs on the design.
-  // A rule is available exactly when a whole CheckDesign of the same snapshot would not report it in
-  // skipped (agni issue 950). The netlist is read to decide that and the board is not. A CheckDesign
-  // call names the subset to actually run.
+  // ListRules returns the rule catalog that a check of the snapshot runs. Each rule gets one
+  // RuleInfo, with its tags and whether it runs on the design. The tags are an open classification,
+  // and the client groups and filters by them. A rule is available exactly when a whole CheckDesign
+  // of the same snapshot would not report it in skipped (agni issue 950). Deciding that reads the
+  // netlist and not the board. A CheckDesign call names the subset to actually run.
   rpc ListRules(ListRulesRequest) returns (ListRulesResponse);
 
   // CheckDesign runs the rule checks over a loaded design and returns the findings. Checks
-  // are a run-on-demand action, potentially slower than a metadata fetch, so loading a design
-  // and validating it stay independent. request.rules selects the subset to run (empty = all).
-  // Each finding's subject (kind + ref) is the join key the viewer uses to highlight the
-  // offending element (it matches PackedSheet primitive keys).
+  // run on demand and can be slower than a metadata fetch, so loading a design and validating it
+  // are separate calls. request.rules selects the subset to run (empty = all). The viewer joins
+  // on each finding's subject (kind + ref) to highlight the offending element, since the subject
+  // matches PackedSheet primitive keys.
   rpc CheckDesign(CheckDesignRequest) returns (CheckDesignResponse);
 
   // GetExpectations returns a design's expected findings from its `<design>.expect.yaml` sidecar
-  // (WS6-006), if one sits beside the file. Expectations are static per design and independent of
-  // which rule subset a CheckDesign run uses, so they are their own resource: the viewer fetches
-  // them once and reconciles them client-side against the CheckDesign findings, showing each
-  // expected rule as matched / missing (not yet implemented) / pending. A design with no sidecar
-  // returns an empty list (not an error), so the panel degrades gracefully.
+  // (WS6-006), if one sits beside the file. Expectations are static per design. They do not depend
+  // on the rule subset a CheckDesign run uses, so they are their own resource. The viewer fetches
+  // them once and reconciles them client-side against the CheckDesign findings. It shows each
+  // expected rule as matched, missing (not yet implemented) or pending. A design with no sidecar
+  // returns an empty list rather than an error, so the panel degrades gracefully.
   rpc GetExpectations(GetExpectationsRequest) returns (GetExpectationsResponse);
 
-  // GetCheckReport runs the same checks CheckDesign runs and returns the severity-organized
-  // report (WS3-022): sections worst-severity first, findings grouped by rule with the catalog
-  // summary baked in. The report is its own message (not a client-side pivot of CheckDesign)
-  // so the CLI's markdown/report formats and the web report panel render one canonical shape.
+  // GetCheckReport runs the same checks as CheckDesign and returns the severity-organized report
+  // (WS3-022). Sections come worst-severity first. Findings are grouped by rule, and each group
+  // includes the catalog summary. The report is its own message rather than a client-side pivot
+  // of CheckDesign. So the CLI's markdown/report formats and the web report panel render one
+  // canonical shape.
   rpc GetCheckReport(GetCheckReportRequest) returns (GetCheckReportResponse);
 
-  // RenderCheckReport writes a check run the caller already holds as a file to keep (agni issue
-  // 127): the CheckResults document `agni check --results-out` writes, or the verdict report
-  // `agni check --verdicts --format html` writes. It runs no rules. The engine renders the bytes, so a
-  // report saved from the viewer and one written by the CLI are the same file apart from their
-  // timestamps, and no second renderer exists to drift from this one.
+  // RenderCheckReport writes a check run as a file to keep (agni issue 127). The caller already
+  // holds the run. The file is either the CheckResults document from `agni check --results-out` or
+  // the verdict report from `agni check --verdicts --format html`. It runs no rules. The engine
+  // renders the bytes. So a report saved from the viewer and one written by the CLI are the same
+  // file apart from their timestamps, and no second renderer exists to drift from this one.
   rpc RenderCheckReport(RenderCheckReportRequest) returns (RenderCheckReportResponse);
 
   // GetInterfaceCoverage projects the interface-profile mechanism (WS3-034) into a per-interface
-  // coverage matrix (WS9-041): for every DETECTED interface profile (its in-use confidence gate
-  // holds — two of its signals are present, or a host declares it), each required signal with its
-  // matched net and state (present / missing / dangling / pullup_missing). It reuses the same
-  // datalog the profile rules compile to, so the panel and the findings cannot disagree. A design
-  // with no detected interface returns an empty list (not an error) — silent by construction, like
-  // the rules themselves.
+  // coverage matrix (WS9-041). A profile is DETECTED when its in-use confidence gate holds, so two
+  // of its signals are present or a host declares it. For every detected profile, the matrix lists
+  // each required signal with its matched net and its state (present, missing, dangling or
+  // pullup_missing). It reuses the datalog that the profile rules compile to, so the panel and the
+  // findings cannot disagree. A design with no detected interface returns an empty list rather than
+  // an error. It is silent by construction, like the rules themselves.
   rpc GetInterfaceCoverage(GetInterfaceCoverageRequest) returns (GetInterfaceCoverageResponse);
 
-  // GetComponentParams surfaces the datasheet join (WS10-003) read-only, per design: every component
-  // whose MPN resolves to a seeded PartSpec, with that spec's parameters. It is the "what does the
-  // engine know about my parts" browse surface (WS9-035) — the same join the datasheet rules consume,
-  // exposed for a UI tree rather than re-queried. A design with no joined specs (or a serve started
-  // without --params) returns an empty list (not an error), so the panel degrades gracefully.
+  // GetComponentParams shows the datasheet join (WS10-003) read-only, per design. It lists every
+  // component whose MPN resolves to a seeded PartSpec, with that spec's parameters. It is the browse
+  // surface for "what does the engine know about my parts" (WS9-035). The datasheet rules read the
+  // same join, and this rpc exposes it for a UI tree rather than querying it again. An empty list
+  // comes back, rather than an error, for a design with no joined specs or a serve started without
+  // --params. So the panel degrades gracefully.
   rpc GetComponentParams(GetComponentParamsRequest) returns (GetComponentParamsResponse);
 
-  // GetNamingConvention resolves a stored convention config into the VALUE an OverlayConfig carries
-  // (WS9-128). It parses and validates, so a client learns its config is malformed once, here, rather
-  // than on every run that carries it.
+  // GetNamingConvention resolves a stored convention config into a VALUE for an OverlayConfig
+  // (WS9-128). It parses and validates, so a client learns once, here, that its config is malformed,
+  // rather than on every run that sends it.
   //
-  // It exists for the same reason GetReviewManifest does. OverlayConfig deliberately carries values
-  // rather than paths (C22), so a service composing one needs no filesystem — but a browser holds a
-  // ref and no filesystem either, and something has to bridge the two. Making that bridge its own rpc
-  // keeps the read named in the contract instead of hidden inside a check run, and a caller that
-  // already holds a convention (the CLI reads the YAML the user named) never calls it.
+  // It exists for the same reason as GetReviewManifest. OverlayConfig deliberately holds values
+  // rather than paths (C22), so a service composing one needs no filesystem. A browser, though,
+  // holds a ref and has no filesystem either, and something has to bridge the two. As its own rpc,
+  // the bridge keeps the read named in the contract instead of hidden inside a check run. A caller
+  // that already holds a convention never calls it. The CLI is one, since it reads the YAML the user
+  // named.
   rpc GetNamingConvention(GetNamingConventionRequest) returns (GetNamingConventionResponse);
 }
 
 message CheckDesignRequest {
   // snapshot names the design to check, "snapshots/{snapshot}" (agni issue 1061).
   string snapshot = 7;
-  // rules names the subset of rules to run (by RuleInfo.name); empty runs the full catalog, so an
-  // existing caller is unchanged. A selection lets the client run only what it wants to see (and
-  // avoid running expensive rules it did not select).
+  // rules names the subset of rules to run, by RuleInfo.name. Empty runs the full catalog, so an
+  // existing caller is unchanged. A selection lets the client run only what it wants to see, and it
+  // skips expensive rules the client did not select.
   repeated string rules = 1;
-  // work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-  // a fact base counts, candidate comparisons, each row a generator emits and the connections a
-  // circuit walk examines. It can only LOWER the
-  // deployment's own budget, never raise it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself inconclusive, naming the budget, and the other rules still answer.
+  // work_budget caps the work of each query that this request evaluates (agni issue 792). The work
+  // counts a fact base's units, candidate comparisons, each row a generator emits, and each
+  // connection a circuit walk examines. It can only LOWER the deployment's own budget, never raise
+  // it, and zero leaves that budget as it is. A query-backed rule past its budget reports itself
+  // inconclusive, naming the budget, and the other rules still answer.
   int64 work_budget = 6;
   // subjects narrows the run to these nets, components and pins (agni issue 897). Each rule answers
-  // for them alone: the findings and verdicts are the ones a full run reports with one of them as a
-  // subject, and a component covers its own pins. Empty checks the whole design. A rule that
-  // concludes about the design as a whole has no answer for a subset, so it is not run and is named
-  // in `skipped`. A net matches by net_id when both sides carry one, and by name otherwise.
+  // for them alone. The run returns each finding and verdict that a full run reports with one of
+  // them as a subject, and a component covers its own pins. Empty checks the whole design. Some
+  // rules conclude about the design as a whole and have no answer for a subset. Such a rule is not
+  // run, and `skipped` names it. A net matches by net_id when both sides have one, and by name
+  // otherwise.
   repeated agni.v1.checks.Subject subjects = 8;
   reserved 2, 3, 4, 5;
   reserved "overlay", "uri", "board_uri", "as_named";
@@ -116,39 +123,39 @@ message CheckDesignResponse {
   repeated agni.v1.checks.Finding findings = 1;
   // skipped names the selected rules that could NOT run on this design, and why.
   //
-  // It exists because silence reads as coverage. A rule whose fact tier this design lacks — a board
-  // rule on a netlist, a datasheet rule with no corpus — is gated off before it evaluates, so it
-  // contributes no findings, and a findings list has no way to say the difference between "checked
-  // and clean" and "never ran". On the viewer's default-open panel that is the whole failure: tick a
-  // rule the design cannot support and the result is indistinguishable from a healthy board.
+  // It exists because silence reads as coverage. Imagine a rule that needs a fact tier this design
+  // lacks, such as a board rule on a netlist or a datasheet rule with no corpus. The rule is gated
+  // off before it evaluates, so it contributes no findings. A findings list cannot tell "checked and
+  // clean" from "never ran". On the viewer's default-open panel, a reader ticks a rule the design
+  // cannot support, and the result looks exactly like a healthy board.
   //
-  // The review layer answers this with a per-item outcome vocabulary (not-applicable, needs-data and
-  // the rest). This is the same honesty at the finding tier, and deliberately NOT that vocabulary: a
-  // flat rule sweep has no checklist item to score, so it reports which rules were gated and the
-  // reason check.Available gave, and nothing more.
+  // The review layer handles this with a per-item outcome vocabulary (not-applicable, needs-data and
+  // the rest). This field does the same job at the finding tier, and deliberately NOT with that
+  // vocabulary. A flat rule sweep has no checklist item to score. So it reports which rules were
+  // gated and the reason check.Available gave, and nothing more.
   repeated SkippedRule skipped = 2;
-  // verdicts is the CONSIDERED SET: what each rule concluded about every subject it was applied to,
-  // including the passes and the subjects it could not judge. `findings` above stays exactly what it
-  // was, the violations, so a consumer that wants defects is unaffected.
+  // verdicts is the CONSIDERED SET. It says what each rule concluded about every subject the rule
+  // was applied to, including the passes and the subjects it could not judge. `findings` above still
+  // holds the violations alone, so a consumer that wants defects is unaffected.
   //
-  // Only rules that STATE a considered set contribute. A rule absent from here is declining to state
-  // one rather than reporting that it considered nothing, and a consumer must not read the two the
-  // same way. That is the same distinction `skipped` draws one level up.
+  // Only rules that STATE a considered set contribute. When a rule is absent from here, it declined
+  // to state one. It did not report that it considered nothing, and a consumer must not read the two
+  // the same way. `skipped` draws the same distinction one level up.
   repeated agni.v1.checks.Verdict verdicts = 3;
-  // unexpanded_hierarchy lists the hierarchical blocks whose contents the read this run scored left
-  // out, the reader's InputDiagnostics field carried as is (agni issues 707, 717). Non-empty means
-  // every finding and verdict above covers the top level alone.
+  // unexpanded_hierarchy lists the hierarchical blocks that this run's read left out. It copies the
+  // reader's InputDiagnostics field as is (agni issues 707, 717). Non-empty means every finding and
+  // verdict above covers the top level alone.
   //
-  // It rides on the run, rather than being read again where a report is rendered, because
-  // RenderCheckReport writes from the run the caller holds and reads no design (C19). A report saved
-  // from this run states it in its header.
+  // It is part of the run rather than read again where a report is rendered. RenderCheckReport
+  // writes from the run the caller holds and reads no design (C19). A report saved from this run
+  // states the list in its header.
   repeated agni.v1.ir.UnexpandedHierarchy unexpanded_hierarchy = 4;
-  // io_map is the design intent's IO map this run checked, in declared order, set when the run
-  // included an IO-map rule and the design declares a map (agni issue 1188). The verdicts answer
-  // each rule separately, and a reader signing off a pin map wants one row per declared pin with
-  // the declared function, which no verdict carries on a row a rule could not judge. So the run
-  // carries the rows themselves, and Tabulate's "pin_map" table and the HTML report lay them out
-  // joined to their verdicts without reading the design again.
+  // io_map is the IO map from the design intent that this run checked, in declared order. It is set
+  // when the run included an IO-map rule and the design declares a map (agni issue 1188). The
+  // verdicts answer each rule separately. A reader signing off a pin map wants one row per declared
+  // pin, with the declared function. When a rule could not judge a row, no verdict holds that
+  // function. So the run includes the rows themselves. Tabulate's "pin_map" table and the HTML
+  // report join them to their verdicts without reading the design again.
   repeated agni.v1.config.PinAssignment io_map = 5;
 }
 
@@ -157,13 +164,13 @@ message SkippedRule {
   // name is the catalog rule name, as ListRules reports it.
   string name = 1;
   // reason is check.Available's own explanation ("design carries no board geometry"), not a
-  // reconstruction. The rule decides why it cannot run; a second sentence written here would be a
+  // reconstruction. The rule decides why it cannot run. A second sentence written here would be a
   // second opinion that drifts.
   string reason = 2;
-  // design_wide is set when the rule was left out only because the request named subjects and the
-  // rule concludes about the design as a whole (agni issue 897), so it would run on an unscoped
-  // request. A client tells the rules a scope left out from the rules this design cannot run at all
-  // by this field, never by the reason's text.
+  // design_wide is set when the rule was left out only because the request named subjects, and the
+  // rule concludes about the design as a whole (agni issue 897). The rule would run on an unscoped
+  // request. Some rules are left out by a scope, and others cannot run on this design at all. A
+  // client tells them apart by this field, never by the reason's text.
   bool design_wide = 3;
 }
 
@@ -183,12 +190,12 @@ message GetCheckReportResponse {
 // CheckReportFormat names the file RenderCheckReport writes.
 enum CheckReportFormat {
   CHECK_REPORT_FORMAT_UNSPECIFIED = 0;
-  // The CheckResults document, as results.Marshal writes it: findings, skipped rules, the catalog
-  // snapshot, the run's provenance, the producer version and the design's content hash. The durable,
-  // machine-readable record of a run, and what `agni results` re-renders.
+  // The CheckResults document, as results.Marshal writes it. It holds the findings, skipped rules,
+  // the catalog snapshot, the run's provenance, the producer version and the design's content hash.
+  // It is the durable, machine-readable record of a run, and `agni results` re-renders it.
   CHECK_REPORT_FORMAT_RESULTS_JSON = 1;
-  // The self-contained verdict report page: every rule's considered set, passes included. A
-  // CheckResults document cannot carry it, because it holds findings and not verdicts.
+  // The self-contained verdict report page, with every rule's considered set, passes included. A
+  // CheckResults document cannot hold it, because that document holds findings and not verdicts.
   CHECK_REPORT_FORMAT_HTML = 2;
 }
 
@@ -201,13 +208,14 @@ message ReportLinks {
   // design_uri is the design as that viewer addresses it, "mount://<mount>/<path>". Empty emits no
   // links.
   string design_uri = 2;
-  // withheld is why links were asked for and refused, carried into the page because whoever opens the
-  // saved file later never saw the reason (agni issue 626).
+  // withheld says why links were asked for and refused. The page includes it, because whoever opens
+  // the saved file later never saw the reason (agni issue 626).
   string withheld = 3;
 }
 
 message RenderCheckReportRequest {
-  // snapshot names the design the run read. It decides the project whose catalog the report describes and the netlist whose content hash it records, "snapshots/{snapshot}" (agni issue 1061).
+  // snapshot names the design the run read, "snapshots/{snapshot}" (agni issue 1061). It decides
+  // which project's catalog the report describes, and which netlist's content hash it records.
   string snapshot = 9;
   // rules is the selection the run used, empty meaning the whole catalog, as CheckDesignRequest.rules.
   repeated string rules = 3;
@@ -216,10 +224,10 @@ message RenderCheckReportRequest {
   CheckReportFormat format = 5;
   // links applies to CHECK_REPORT_FORMAT_HTML only.
   ReportLinks links = 6;
-  // query_sets are the design project's query sets the caller answered, each the RunQueries answer
-  // it holds, rendered as Queries sections after the rules so one HTML file carries the checks and
-  // the queries (agni issue 1190). Values the caller ran, never re-run here. HTML only; empty leaves
-  // the page as it was.
+  // query_sets are the caller's answers to the design project's query sets. Each is a RunQueries
+  // answer that the caller holds. They render as Queries sections after the rules, so one HTML file
+  // holds the checks and the queries (agni issue 1190). The caller ran them, and nothing re-runs them
+  // here. HTML only. Empty leaves the page as it was.
   repeated RunQueriesResponse query_sets = 10;
   reserved 1, 2, 7, 8;
   reserved "uri", "overlay", "board_uri", "as_named";
@@ -249,14 +257,15 @@ message GetExpectationsRequest {
   reserved "uri";
 }
 
-// RuleExpectation is one expected-findings entry from a design's sidecar: a rule that should fire
-// and the exact subjects it should fire on. `pending` marks a staged expectation -- a rule not yet
-// implemented, kept so the viewer can show it red without the harness asserting it (WS6-006).
+// RuleExpectation is one expected-findings entry from a design's sidecar. It names a rule that
+// should fire and the exact subjects it should fire on. `pending` marks a staged expectation, for a
+// rule not yet implemented. It is kept so the viewer can show it red without the harness asserting
+// it (WS6-006).
 message RuleExpectation {
   string rule = 1;
   repeated string subjects = 2;
   bool pending = 3;
-  // The sidecar's optional narration for this expectation (WS6-008): what is wrong in the
+  // The sidecar's optional narration for this expectation (WS6-008). It says what is wrong in the
   // fixture and what the control case is. Empty for short-form entries.
   string why = 4;
 }
@@ -265,49 +274,53 @@ message GetExpectationsResponse {
   // The `fires` entries (pending=false) then the `pending` entries. The viewer reconciles these
   // against the CheckDesign findings.
   repeated RuleExpectation expectations = 1;
-  // whether a sidecar was found at all, so the viewer tells "no expectations file" (nothing to
-  // check against) from "a sidecar that expects nothing" (both have an empty expectations list).
+  // whether a sidecar was found at all. Both "no expectations file" and "a sidecar that expects
+  // nothing" have an empty expectations list, and the viewer tells them apart by this field.
   bool has_sidecar = 2;
 }
 
 // ListRulesRequest names the design whose catalog and availability are reported.
 message ListRulesRequest {
-  // snapshot names the design whose config and availability decide the listed catalog, so it is the one a check of that snapshot runs, "snapshots/{snapshot}" (agni issue 1061). Empty lists the server's own catalog, where only a missing datasheet parameter set makes a rule unavailable. A snapshot whose netlist cannot be read is listed the same way, since a run of it fails rather than skipping rules.
+  // snapshot names the design, "snapshots/{snapshot}" (agni issue 1061). Its config and
+  // availability decide the listed catalog, so the list matches what a check of that snapshot runs.
+  // Empty lists the server's own catalog. There, only a missing datasheet parameter set makes a rule
+  // unavailable. A snapshot whose netlist cannot be read is listed the same way, since a run of it
+  // fails rather than skipping rules.
   string snapshot = 3;
   reserved 1, 2;
   reserved "overlay", "uri";
 }
 
-// RuleInfo is the catalog entry for one rule: its identity, its prose (one-line summary, impact,
-// long-form detail), the facts it reads, its open classification tags, and whether it can run now.
-// The full catalog is small (tens of rules, prose included), so the list carries the detail
-// markdown inline rather than behind a per-rule RPC (WS9-020).
+// RuleInfo is the catalog entry for one rule. It gives the rule's identity, its prose (one-line
+// summary, impact, long-form detail), the facts it reads, its open classification tags, and whether
+// it can run now. The full catalog is small, tens of rules with prose included. So the list sends
+// the detail markdown inline rather than behind a per-rule RPC (WS9-020).
 message RuleInfo {
   string name = 1;
   string severity = 2; // "error" | "warning" | "info"
   string summary = 3;
-  repeated string reads = 4;      // facts the rule reads (docs/15 vocabulary)
+  repeated string reads = 4;      // facts the rule reads
   map<string, string> tags = 5;   // open classification: category, tier, distribution, provider keys
   bool available = 6;             // a whole CheckDesign of this snapshot runs the rule rather than skipping it
   string unavailable_reason = 7;  // why not, when available is false (e.g. "needs the datasheet parameter layer")
   string impact = 8;              // what goes wrong when the rule is violated (check.Rule.Impact)
   string detail = 9;              // long-form markdown: meaning, rationale, query structure (check.Rule.Detail)
   string remedy = 10;             // what to do about a violation, in the imperative (check.Rule.Remedy)
-  // shipped is whether agni itself ships this rule, rather than a project, a convention or an
-  // overlay composing it. A report that crosses the confidentiality boundary may name a shipped rule
-  // and never another, since a project's rule is namespaced by the project's own name (agni issue
-  // 1057).
+  // shipped says whether agni itself ships this rule. The alternative is a project, a convention or
+  // an overlay composing it. A report that crosses the confidentiality boundary may name a shipped
+  // rule and never another, since a project's rule is namespaced by the project's own name (agni
+  // issue 1057).
   bool shipped = 11;
-  // doc_url is the published reference page that explains the rule, empty when no page does, as for a
-  // project's own rule or a profile requirement type that has none. Several rules can share one page,
-  // since every intent/subsystem-<slug> rule is explained on intent-subsystem.
+  // doc_url is the published reference page that explains the rule. It is empty when no page does,
+  // as for a project's own rule or a profile requirement type with no page. Several rules can share
+  // one page. For example, the intent-subsystem page explains every intent/subsystem-<slug> rule.
   string doc_url = 12;
 }
 
 message ListRulesResponse {
   repeated RuleInfo rules = 1;
-  // engine_version is the build answering, for a report a client prefills (agni issue 1057). Empty
-  // when the deployment did not say.
+  // engine_version names the build that answered, so a client can prefill a report (agni issue
+  // 1057). Empty when the deployment did not say.
   string engine_version = 2;
 }
 
@@ -319,8 +332,8 @@ message GetInterfaceCoverageRequest {
 }
 
 // SignalCoverage is one required interface signal's state (WS9-041). net is the matched net name,
-// "" when the signal is missing. state is "present" | "missing" | "dangling" | "pullup_missing" —
-// the same conditions the profile rules fire on, so a coverage cell and a finding agree.
+// "" when the signal is missing. state is "present" | "missing" | "dangling" | "pullup_missing".
+// The profile rules fire on the same conditions, so a coverage cell and a finding agree.
 message SignalCoverage {
   string name = 1;  // the signal's role name, e.g. "IO2"
   string net = 2;   // matched net name; "" when missing
@@ -328,8 +341,8 @@ message SignalCoverage {
 }
 
 // InterfaceCoverage is one DETECTED interface profile's coverage matrix. profile is the interface
-// name (e.g. "SPI_NOR"); anchor_net is the net the interface is anchored at (for context/locate);
-// signals lists every required signal in profile order.
+// name (e.g. "SPI_NOR"). anchor_net is the net where the interface is anchored, for context and
+// locate. signals lists every required signal in profile order.
 message InterfaceCoverage {
   string profile = 1;
   string anchor_net = 2;
@@ -341,15 +354,16 @@ message GetInterfaceCoverageResponse {
 }
 
 message GetComponentParamsRequest {
-  // snapshot names the design whose components to join against the datasheet corpus, "snapshots/{snapshot}" (agni issue 1061).
+  // snapshot names the design, "snapshots/{snapshot}" (agni issue 1061). Its components are joined
+  // against the datasheet corpus.
   string snapshot = 2;
   reserved 1;
   reserved "uri";
 }
 
-// ComponentParams is one design component joined to its datasheet spec: the ref_des the viewer
-// highlights, the resolved MPN, and the full PartSpec (its parameters, limit kinds, conditions, and
-// per-parameter provenance) for the tree the panel renders.
+// ComponentParams is one design component joined to its datasheet spec. It gives the ref_des for
+// the viewer to highlight and the resolved MPN. It also gives the full PartSpec for the panel's
+// tree, with its parameters, limit kinds, conditions and per-parameter provenance.
 message ComponentParams {
   string ref_des = 1;
   string mpn = 2;
@@ -361,7 +375,8 @@ message ComponentParams {
 message GetComponentParamsResponse {
   repeated ComponentParams components = 1;
   // corpus_connected says whether any datasheet corpus was consulted, the project's or the server's.
-  // Without it an empty components list means two things a reader must not confuse: nothing was
-  // asked (no corpus), or the corpus was asked and holds no spec for these parts.
+  // Without it, an empty components list could mean either of two things. Maybe nothing was asked,
+  // because there is no corpus. Or the corpus was asked and holds no spec for these parts. A reader
+  // must not confuse the two.
   bool corpus_connected = 2;
 }

@@ -55,12 +55,12 @@ const (
 
 // ViewerPageServiceClient is a client for the agni.v1.viewer.ViewerPageService service.
 type ViewerPageServiceClient interface {
-	// GetLocation returns where the page is now. It changes nothing, which NO_SIDE_EFFECTS records so
+	// GetLocation returns where the page is now. It changes nothing. NO_SIDE_EFFECTS records that, so
 	// an agent holding only read access may call it (agni issue 1154).
 	GetLocation(context.Context, *connect.Request[viewer.GetLocationRequest]) (*connect.Response[viewer.GetLocationResponse], error)
 	// ApplyLocation moves the open page to a location, as following a link to it would. A location
-	// naming a different design (or a different flatten) opens it, which is the cold path; one naming
-	// the open design, or no design, applies to the page as it stands.
+	// naming a different design, or a different flatten, opens that design. That is the cold path. A
+	// location naming the open design, or no design, applies to the page as it stands.
 	ApplyLocation(context.Context, *connect.Request[viewer.ApplyLocationRequest]) (*connect.Response[viewer.ApplyLocationResponse], error)
 	// LocateVerdict focuses one verdict and draws its proof on a sheet it is drawn on.
 	LocateVerdict(context.Context, *connect.Request[viewer.LocateVerdictRequest]) (*connect.Response[viewer.LocateVerdictResponse], error)
@@ -165,12 +165,12 @@ func (c *viewerPageServiceClient) ShowSheet(ctx context.Context, req *connect.Re
 
 // ViewerPageServiceHandler is an implementation of the agni.v1.viewer.ViewerPageService service.
 type ViewerPageServiceHandler interface {
-	// GetLocation returns where the page is now. It changes nothing, which NO_SIDE_EFFECTS records so
+	// GetLocation returns where the page is now. It changes nothing. NO_SIDE_EFFECTS records that, so
 	// an agent holding only read access may call it (agni issue 1154).
 	GetLocation(context.Context, *connect.Request[viewer.GetLocationRequest]) (*connect.Response[viewer.GetLocationResponse], error)
 	// ApplyLocation moves the open page to a location, as following a link to it would. A location
-	// naming a different design (or a different flatten) opens it, which is the cold path; one naming
-	// the open design, or no design, applies to the page as it stands.
+	// naming a different design, or a different flatten, opens that design. That is the cold path. A
+	// location naming the open design, or no design, applies to the page as it stands.
 	ApplyLocation(context.Context, *connect.Request[viewer.ApplyLocationRequest]) (*connect.Response[viewer.ApplyLocationResponse], error)
 	// LocateVerdict focuses one verdict and draws its proof on a sheet it is drawn on.
 	LocateVerdict(context.Context, *connect.Request[viewer.LocateVerdictRequest]) (*connect.Response[viewer.LocateVerdictResponse], error)

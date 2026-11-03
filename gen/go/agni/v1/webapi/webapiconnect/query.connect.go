@@ -50,39 +50,41 @@ const (
 
 // QueryServiceClient is a client for the agni.v1.webapi.QueryService service.
 type QueryServiceClient interface {
-	// RunQuery parses and evaluates the query text over the loaded design and returns the projected
-	// columns and answer rows, each row carrying the provenance of the facts that produced it. The
-	// relation vocabulary is the same the CLI documents (net.max_voltage, component.mpn,
-	// component.net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
-	// relation is empty because the server wires no params dir and datasheet data is deployment-bound
-	// (C16), so a query over `param` returns no rows rather than an error.
+	// RunQuery parses and evaluates the query text over the loaded design. It returns the projected
+	// columns and the answer rows, and each row has the provenance of the facts that produced it.
+	// The relation vocabulary matches what the CLI documents (net.max_voltage, component.mpn,
+	// component.net, reaches). The `param` (datasheet) relations read the server's corpus
+	// (`--params` or `--params-url`), with the project's own `params/` layered over it per MPN.
+	// Datasheet data is deployment-bound (C16), so with no corpus a query over `param` returns no
+	// rows rather than an error.
 	RunQuery(context.Context, *connect.Request[webapi.RunQueryRequest]) (*connect.Response[webapi.RunQueryResponse], error)
 	// RunQueries answers a named list of queries over ONE read of the design (agni issue 729). An
-	// audit is usually a workbook rather than a question, and asking each table through RunQuery would
-	// read and project the design once per table. Every result has exactly the shape RunQuery returns
-	// for that query alone. A query that fails is reported against its name and the others still
-	// answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
-	// goal) and a design that cannot be read are errors for the call.
+	// audit is usually a workbook rather than a question. Asking each table through RunQuery would
+	// read and project the design once per table. Every result has exactly the shape RunQuery would
+	// return for that query alone. When a query fails, its error is reported against its name, and
+	// the other queries still answer. Two cases fail the whole call. One is a set that is unusable
+	// as a whole, with no queries, a repeated name, or a preamble holding a goal. The other is a
+	// design that cannot be read.
 	RunQueries(context.Context, *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error)
-	// ListRelations returns the queryable relation catalog (WS9-037): the built-in relations, the
-	// derived relations the shipped library defines, the predicates, and any overlay-registered
-	// relations, each with its argument labels, a one-line summary, and a kind for grouping. The
-	// catalog is static per service build (it does not depend on a loaded design), so the client
-	// fetches it once to populate the panel's relation picker.
+	// ListRelations returns the queryable relation catalog (WS9-037). The catalog holds the built-in
+	// relations, the shipped library's derived relations, the predicates, and any relations an
+	// overlay registers. Each entry has its argument labels, a one-line summary, and a kind for
+	// grouping. The catalog is static per service build and does not depend on a loaded design. So
+	// the client fetches it once to fill the panel's relation picker.
 	//
-	// With a path set it answers one place in the namespace tree instead (agni issue 751): a module
-	// and its members, or one member with its signature and, for a derived relation, its definition.
-	// `agni query --relations <path>` prints the same answer.
+	// With a path set, it answers one place in the namespace tree instead (agni issue 751). That
+	// place is a module and its members, or one member with its signature. A derived member also
+	// gets its definition. `agni query --relations <path>` prints the same answer.
 	ListRelations(context.Context, *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error)
 	// ListQuerySets returns the query sets a design's project keeps (agni issue 745), inherited ones
-	// first, each parsed and named by its file, so a viewer can open one as a tab per query and run
-	// it through RunQueries. A design in no project has none, and that is not an error.
+	// first. Each set is parsed and named by its file. A viewer can open a set as one tab per query
+	// and run it through RunQueries. A design in no project has no sets, and that is not an error.
 	ListQuerySets(context.Context, *connect.Request[webapi.ListQuerySetsRequest]) (*connect.Response[webapi.ListQuerySetsResponse], error)
-	// ParseQuerySet reads a query set file's text into the QuerySet RunQueries takes, for a caller
-	// holding the text and no parser, such as a browser given a file the reader picked. It checks
-	// what `agni query --set` checks: an unknown key, no queries, a repeated name, a preamble that
-	// holds a goal. A config value a client does not hold comes from its own rpc (C22), so RunQueries
-	// itself never takes YAML.
+	// ParseQuerySet reads a query set file's text into a QuerySet, which RunQueries takes. It serves
+	// a caller that holds the text and has no parser, such as a browser after the reader picks a
+	// file. It checks the same things `agni query --set` checks: an unknown key, no queries, a
+	// repeated name, and a preamble that holds a goal. Under C22, a client gets a config value it
+	// does not hold from that value's own rpc. So RunQueries itself never takes YAML.
 	ParseQuerySet(context.Context, *connect.Request[webapi.ParseQuerySetRequest]) (*connect.Response[webapi.ParseQuerySetResponse], error)
 }
 
@@ -166,39 +168,41 @@ func (c *queryServiceClient) ParseQuerySet(ctx context.Context, req *connect.Req
 
 // QueryServiceHandler is an implementation of the agni.v1.webapi.QueryService service.
 type QueryServiceHandler interface {
-	// RunQuery parses and evaluates the query text over the loaded design and returns the projected
-	// columns and answer rows, each row carrying the provenance of the facts that produced it. The
-	// relation vocabulary is the same the CLI documents (net.max_voltage, component.mpn,
-	// component.net, reaches). v1 evaluates the netlist fact base only: the `param` (datasheet)
-	// relation is empty because the server wires no params dir and datasheet data is deployment-bound
-	// (C16), so a query over `param` returns no rows rather than an error.
+	// RunQuery parses and evaluates the query text over the loaded design. It returns the projected
+	// columns and the answer rows, and each row has the provenance of the facts that produced it.
+	// The relation vocabulary matches what the CLI documents (net.max_voltage, component.mpn,
+	// component.net, reaches). The `param` (datasheet) relations read the server's corpus
+	// (`--params` or `--params-url`), with the project's own `params/` layered over it per MPN.
+	// Datasheet data is deployment-bound (C16), so with no corpus a query over `param` returns no
+	// rows rather than an error.
 	RunQuery(context.Context, *connect.Request[webapi.RunQueryRequest]) (*connect.Response[webapi.RunQueryResponse], error)
 	// RunQueries answers a named list of queries over ONE read of the design (agni issue 729). An
-	// audit is usually a workbook rather than a question, and asking each table through RunQuery would
-	// read and project the design once per table. Every result has exactly the shape RunQuery returns
-	// for that query alone. A query that fails is reported against its name and the others still
-	// answer; a set that is unusable as a whole (no queries, a repeated name, a preamble holding a
-	// goal) and a design that cannot be read are errors for the call.
+	// audit is usually a workbook rather than a question. Asking each table through RunQuery would
+	// read and project the design once per table. Every result has exactly the shape RunQuery would
+	// return for that query alone. When a query fails, its error is reported against its name, and
+	// the other queries still answer. Two cases fail the whole call. One is a set that is unusable
+	// as a whole, with no queries, a repeated name, or a preamble holding a goal. The other is a
+	// design that cannot be read.
 	RunQueries(context.Context, *connect.Request[webapi.RunQueriesRequest]) (*connect.Response[webapi.RunQueriesResponse], error)
-	// ListRelations returns the queryable relation catalog (WS9-037): the built-in relations, the
-	// derived relations the shipped library defines, the predicates, and any overlay-registered
-	// relations, each with its argument labels, a one-line summary, and a kind for grouping. The
-	// catalog is static per service build (it does not depend on a loaded design), so the client
-	// fetches it once to populate the panel's relation picker.
+	// ListRelations returns the queryable relation catalog (WS9-037). The catalog holds the built-in
+	// relations, the shipped library's derived relations, the predicates, and any relations an
+	// overlay registers. Each entry has its argument labels, a one-line summary, and a kind for
+	// grouping. The catalog is static per service build and does not depend on a loaded design. So
+	// the client fetches it once to fill the panel's relation picker.
 	//
-	// With a path set it answers one place in the namespace tree instead (agni issue 751): a module
-	// and its members, or one member with its signature and, for a derived relation, its definition.
-	// `agni query --relations <path>` prints the same answer.
+	// With a path set, it answers one place in the namespace tree instead (agni issue 751). That
+	// place is a module and its members, or one member with its signature. A derived member also
+	// gets its definition. `agni query --relations <path>` prints the same answer.
 	ListRelations(context.Context, *connect.Request[webapi.ListRelationsRequest]) (*connect.Response[webapi.ListRelationsResponse], error)
 	// ListQuerySets returns the query sets a design's project keeps (agni issue 745), inherited ones
-	// first, each parsed and named by its file, so a viewer can open one as a tab per query and run
-	// it through RunQueries. A design in no project has none, and that is not an error.
+	// first. Each set is parsed and named by its file. A viewer can open a set as one tab per query
+	// and run it through RunQueries. A design in no project has no sets, and that is not an error.
 	ListQuerySets(context.Context, *connect.Request[webapi.ListQuerySetsRequest]) (*connect.Response[webapi.ListQuerySetsResponse], error)
-	// ParseQuerySet reads a query set file's text into the QuerySet RunQueries takes, for a caller
-	// holding the text and no parser, such as a browser given a file the reader picked. It checks
-	// what `agni query --set` checks: an unknown key, no queries, a repeated name, a preamble that
-	// holds a goal. A config value a client does not hold comes from its own rpc (C22), so RunQueries
-	// itself never takes YAML.
+	// ParseQuerySet reads a query set file's text into a QuerySet, which RunQueries takes. It serves
+	// a caller that holds the text and has no parser, such as a browser after the reader picks a
+	// file. It checks the same things `agni query --set` checks: an unknown key, no queries, a
+	// repeated name, and a preamble that holds a goal. Under C22, a client gets a config value it
+	// does not hold from that value's own rpc. So RunQueries itself never takes YAML.
 	ParseQuerySet(context.Context, *connect.Request[webapi.ParseQuerySetRequest]) (*connect.Response[webapi.ParseQuerySetResponse], error)
 }
 

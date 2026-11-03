@@ -50,38 +50,38 @@ const (
 
 // DesignServiceClient is a client for the agni.v1.webapi.DesignService service.
 type DesignServiceClient interface {
-	// GetDesign loads a file and returns its summary plus the list of drawable sheets (the
-	// sheet navigator's source). It resolves the render mode per file (faithful for geometry,
-	// else an auto-layout).
+	// GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+	// navigator reads that list. It resolves the render mode per file, faithful for geometry and
+	// an auto-layout otherwise.
 	GetDesign(context.Context, *connect.Request[webapi.GetDesignRequest]) (*connect.Response[webapi.GetDesignResponse], error)
-	// GetSheet returns one rendered sheet. The `format` selects the renderer: PACKED (the
-	// tier-2 geometry for the WebGL viewer, C8), SVG (the render.SheetSVG verification
-	// backend), or NATIVE (the format's own tool, a golden reference; not yet implemented).
-	// `sheet` selects by id, name, or 0-based index (as the CLI does).
+	// GetSheet returns one rendered sheet. The `format` selects the renderer. PACKED is the
+	// tier-2 geometry for the WebGL viewer (C8). SVG is the render.SheetSVG verification
+	// backend. NATIVE is the format's own tool as a golden reference, and is not yet
+	// implemented. `sheet` selects by id, name, or 0-based index, as the CLI does.
 	GetSheet(context.Context, *connect.Request[webapi.GetSheetRequest]) (*connect.Response[webapi.GetSheetResponse], error)
-	// HighlightSheet resolves highlight specs ("these components, nets, and pins, in this
-	// color/alpha") against one rendered sheet and returns a drawable overlay layer, decoupled
-	// from the base render: PACKED yields primitive-index groups that join the GetSheet
-	// PackedSheet by index (the WebGL viewer redraws just those primitives), SVG yields a
-	// transparent overlay document with the same viewBox as the GetSheet SVG (the client
-	// stacks or composites it above the sheet). NATIVE has no overlay and is rejected. The
-	// request's sheet/layout/symbols must match the GetSheet call that produced the base
-	// render, so the two layers describe the same geometry.
+	// HighlightSheet resolves highlight specs against one rendered sheet. A spec says "these
+	// components, nets, and pins, in this color/alpha". It returns a drawable overlay layer,
+	// separate from the base render. PACKED yields primitive-index groups. They join the GetSheet
+	// PackedSheet by index, and the WebGL viewer redraws just those primitives. SVG yields a
+	// transparent overlay document with the same viewBox as the GetSheet SVG. The client stacks
+	// or composites it above the sheet. NATIVE has no overlay and is rejected. The request's
+	// sheet/layout/symbols must match the GetSheet call that produced the base render. Then the
+	// two layers describe the same geometry.
 	HighlightSheet(context.Context, *connect.Request[webapi.HighlightSheetRequest]) (*connect.Response[webapi.HighlightSheetResponse], error)
-	// GetLayoutReport explains how an auto-layout maps each component to a drawn node (device class,
-	// and whether it drew a glyph, the generic box, the design's own symbol, or an unresolved
-	// fallback). It uses the same symbol source as the render, so it describes what the viewer
-	// shows and points at --symbol-path when provided symbols do not resolve.
+	// GetLayoutReport explains how an auto-layout maps each component to a drawn node. It gives the
+	// device class, and says whether the node is a glyph, the generic box, the design's own symbol,
+	// or an unresolved fallback. It uses the same symbol source as the render, so it describes what
+	// the viewer shows. It points at --symbol-path when provided symbols do not resolve.
 	GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error)
-	// TraceDesign walks from one pin to another through the series parts between them and returns the
-	// route: each part crossed with its own pin on both sides, each net passed through, and what else
-	// sits on those nets. It is the same answer `agni trace` prints, so a route read in a terminal and
-	// a route drawn on the canvas cannot disagree.
+	// TraceDesign walks from one pin to another through the series parts between them, and returns
+	// the route. The route lists each part crossed with its own pin on both sides, each net passed
+	// through, and the other parts on those nets. `agni trace` prints the same answer. So a route read
+	// in a terminal and a route drawn on the canvas cannot disagree.
 	//
-	// Verb-shaped (C23): a route does not exist after the call, so it is derived rather than a
-	// resource. The three outcomes stay apart on the wire for the reason they stay apart everywhere
-	// else — an endpoint naming nothing the design has is a failed QUESTION, and a client that
-	// rendered it as "not connected" would send its reader to look at the board instead of at what
+	// It is verb-shaped (C23). A route does not exist after the call, so it is derived rather than a
+	// resource. The wire keeps the three outcomes apart, as every other surface does. Imagine an
+	// endpoint that names nothing the design has. That is a failed QUESTION. A client that rendered
+	// it as "not connected" would send its reader to look at the board, when the mistake is in what
 	// they typed.
 	TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error)
 }
@@ -166,38 +166,38 @@ func (c *designServiceClient) TraceDesign(ctx context.Context, req *connect.Requ
 
 // DesignServiceHandler is an implementation of the agni.v1.webapi.DesignService service.
 type DesignServiceHandler interface {
-	// GetDesign loads a file and returns its summary plus the list of drawable sheets (the
-	// sheet navigator's source). It resolves the render mode per file (faithful for geometry,
-	// else an auto-layout).
+	// GetDesign loads a file and returns its summary plus the list of drawable sheets. The sheet
+	// navigator reads that list. It resolves the render mode per file, faithful for geometry and
+	// an auto-layout otherwise.
 	GetDesign(context.Context, *connect.Request[webapi.GetDesignRequest]) (*connect.Response[webapi.GetDesignResponse], error)
-	// GetSheet returns one rendered sheet. The `format` selects the renderer: PACKED (the
-	// tier-2 geometry for the WebGL viewer, C8), SVG (the render.SheetSVG verification
-	// backend), or NATIVE (the format's own tool, a golden reference; not yet implemented).
-	// `sheet` selects by id, name, or 0-based index (as the CLI does).
+	// GetSheet returns one rendered sheet. The `format` selects the renderer. PACKED is the
+	// tier-2 geometry for the WebGL viewer (C8). SVG is the render.SheetSVG verification
+	// backend. NATIVE is the format's own tool as a golden reference, and is not yet
+	// implemented. `sheet` selects by id, name, or 0-based index, as the CLI does.
 	GetSheet(context.Context, *connect.Request[webapi.GetSheetRequest]) (*connect.Response[webapi.GetSheetResponse], error)
-	// HighlightSheet resolves highlight specs ("these components, nets, and pins, in this
-	// color/alpha") against one rendered sheet and returns a drawable overlay layer, decoupled
-	// from the base render: PACKED yields primitive-index groups that join the GetSheet
-	// PackedSheet by index (the WebGL viewer redraws just those primitives), SVG yields a
-	// transparent overlay document with the same viewBox as the GetSheet SVG (the client
-	// stacks or composites it above the sheet). NATIVE has no overlay and is rejected. The
-	// request's sheet/layout/symbols must match the GetSheet call that produced the base
-	// render, so the two layers describe the same geometry.
+	// HighlightSheet resolves highlight specs against one rendered sheet. A spec says "these
+	// components, nets, and pins, in this color/alpha". It returns a drawable overlay layer,
+	// separate from the base render. PACKED yields primitive-index groups. They join the GetSheet
+	// PackedSheet by index, and the WebGL viewer redraws just those primitives. SVG yields a
+	// transparent overlay document with the same viewBox as the GetSheet SVG. The client stacks
+	// or composites it above the sheet. NATIVE has no overlay and is rejected. The request's
+	// sheet/layout/symbols must match the GetSheet call that produced the base render. Then the
+	// two layers describe the same geometry.
 	HighlightSheet(context.Context, *connect.Request[webapi.HighlightSheetRequest]) (*connect.Response[webapi.HighlightSheetResponse], error)
-	// GetLayoutReport explains how an auto-layout maps each component to a drawn node (device class,
-	// and whether it drew a glyph, the generic box, the design's own symbol, or an unresolved
-	// fallback). It uses the same symbol source as the render, so it describes what the viewer
-	// shows and points at --symbol-path when provided symbols do not resolve.
+	// GetLayoutReport explains how an auto-layout maps each component to a drawn node. It gives the
+	// device class, and says whether the node is a glyph, the generic box, the design's own symbol,
+	// or an unresolved fallback. It uses the same symbol source as the render, so it describes what
+	// the viewer shows. It points at --symbol-path when provided symbols do not resolve.
 	GetLayoutReport(context.Context, *connect.Request[webapi.GetLayoutReportRequest]) (*connect.Response[webapi.GetLayoutReportResponse], error)
-	// TraceDesign walks from one pin to another through the series parts between them and returns the
-	// route: each part crossed with its own pin on both sides, each net passed through, and what else
-	// sits on those nets. It is the same answer `agni trace` prints, so a route read in a terminal and
-	// a route drawn on the canvas cannot disagree.
+	// TraceDesign walks from one pin to another through the series parts between them, and returns
+	// the route. The route lists each part crossed with its own pin on both sides, each net passed
+	// through, and the other parts on those nets. `agni trace` prints the same answer. So a route read
+	// in a terminal and a route drawn on the canvas cannot disagree.
 	//
-	// Verb-shaped (C23): a route does not exist after the call, so it is derived rather than a
-	// resource. The three outcomes stay apart on the wire for the reason they stay apart everywhere
-	// else — an endpoint naming nothing the design has is a failed QUESTION, and a client that
-	// rendered it as "not connected" would send its reader to look at the board instead of at what
+	// It is verb-shaped (C23). A route does not exist after the call, so it is derived rather than a
+	// resource. The wire keeps the three outcomes apart, as every other surface does. Imagine an
+	// endpoint that names nothing the design has. That is a failed QUESTION. A client that rendered
+	// it as "not connected" would send its reader to look at the board, when the mistake is in what
 	// they typed.
 	TraceDesign(context.Context, *connect.Request[webapi.TraceDesignRequest]) (*connect.Response[webapi.TraceDesignResponse], error)
 }

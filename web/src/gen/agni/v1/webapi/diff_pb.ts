@@ -15,8 +15,8 @@ export const file_agni_v1_webapi_diff: GenFile = /*@__PURE__*/
   fileDesc("ChlhZ25pL3YxL3dlYmFwaS9kaWZmLnByb3RvEg5hZ25pLnYxLndlYmFwaSKmAQoSRGlmZkRlc2lnbnNSZXF1ZXN0EhIKCmFfc25hcHNob3QYBSABKAkSEgoKYl9zbmFwc2hvdBgGIAEoCRI3CgxuZWFyX3JlbmFtZXMYAyABKAsyIS5hZ25pLnYxLndlYmFwaS5OZWFyUmVuYW1lT3B0aW9ucxIVCg1pbmNsdWRlX2VxdWFsGAQgASgISgQIARACSgQIAhADUgVhX3VyaVIFYl91cmkiwgMKEU5lYXJSZW5hbWVPcHRpb25zEh0KEG1pbl9vbGRfY292ZXJhZ2UYASABKAFIAIgBARIpChxtaW5fb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50GAIgASgBSAGIAQESHQoQbWluX25ld19jb3ZlcmFnZRgDIAEoAUgCiAEBEikKHG1pbl9uZXdfY292ZXJhZ2Vfc2lnbmlmaWNhbnQYBCABKAFIA4gBARIoChttYXhfYWRkZWRfc2lnbmlmaWNhbnRfZmxvb3IYBSABKAVIBIgBARImChltaW5fc2lnbmlmaWNhbnRfZW5kcG9pbnRzGAYgASgFSAWIAQESHQoVaW5zaWduaWZpY2FudF9jbGFzc2VzGAcgAygJQhMKEV9taW5fb2xkX2NvdmVyYWdlQh8KHV9taW5fb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50QhMKEV9taW5fbmV3X2NvdmVyYWdlQh8KHV9taW5fbmV3X2NvdmVyYWdlX3NpZ25pZmljYW50Qh4KHF9tYXhfYWRkZWRfc2lnbmlmaWNhbnRfZmxvb3JCHAoaX21pbl9zaWduaWZpY2FudF9lbmRwb2ludHMi8QUKCkRpZmZSZXBvcnQSGAoQY29tcG9uZW50c19hZGRlZBgBIAMoCRIaChJjb21wb25lbnRzX3JlbW92ZWQYAiADKAkSRgoSY29tcG9uZW50c19jaGFuZ2VkGAMgAygLMiouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydC5Db21wb25lbnRDaGFuZ2USMgoEbmV0cxgEIAMoCzIkLmFnbmkudjEud2ViYXBpLkRpZmZSZXBvcnQuTmV0Q2hhbmdlGksKD0NvbXBvbmVudENoYW5nZRIPCgdyZWZfZGVzGAEgASgJEg0KBWZpZWxkGAIgASgJEgsKA29sZBgDIAEoCRILCgNuZXcYBCABKAka6AEKCU5ldENoYW5nZRIMCgRraW5kGAEgASgJEgwKBG5hbWUYAiABKAkSEAoIb2xkX25hbWUYAyABKAkSDQoFYWRkZWQYBCADKAkSDwoHcmVtb3ZlZBgFIAMoCRIoCghvbGRfcHJvdhgGIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRIoCghuZXdfcHJvdhgHIAEoCzIWLmFnbmkudjEuaXIuUHJvdmVuYW5jZRI5CgZhcHByb3gYCCABKAsyKS5hZ25pLnYxLndlYmFwaS5EaWZmUmVwb3J0LlJlbmFtZUV2aWRlbmNlGvgBCg5SZW5hbWVFdmlkZW5jZRIUCgxvbGRfY292ZXJhZ2UYASABKAESIAoYb2xkX2NvdmVyYWdlX3NpZ25pZmljYW50GAIgASgBEiAKGG5ld19jb3ZlcmFnZV9zaWduaWZpY2FudBgDIAEoARIPCgdvdmVybGFwGAQgASgFEhsKE292ZXJsYXBfc2lnbmlmaWNhbnQYBSABKAUSFQoNb2xkX2VuZHBvaW50cxgGIAEoBRIVCg1uZXdfZW5kcG9pbnRzGAcgASgFEhcKD29sZF9zaWduaWZpY2FudBgIIAEoBRIXCg9uZXdfc2lnbmlmaWNhbnQYCSABKAUi6gsKE0RpZmZEZXNpZ25zUmVzcG9uc2USKgoGcmVwb3J0GAEgASgLMhouYWduaS52MS53ZWJhcGkuRGlmZlJlcG9ydBJSChBjb21wb25lbnRfc3RhdHVzGAIgAygLMjguYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5Db21wb25lbnRTdGF0dXNFbnRyeRJGCgpuZXRfc3RhdHVzGAMgAygLMjIuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5OZXRTdGF0dXNFbnRyeRJVChJjb21wb25lbnRfc2hlZXRzX2EYBCADKAsyOS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFNoZWV0c0FFbnRyeRJVChJjb21wb25lbnRfc2hlZXRzX2IYBSADKAsyOS5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLkNvbXBvbmVudFNoZWV0c0JFbnRyeRJJCgxuZXRfc2hlZXRzX2EYBiADKAsyMy5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFNoZWV0c0FFbnRyeRJJCgxuZXRfc2hlZXRzX2IYByADKAsyMy5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLk5ldFNoZWV0c0JFbnRyeRJXChNzaGFyZWRfcGxhY2VtZW50c19hGAggAygLMjouYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGFyZWRQbGFjZW1lbnRzQUVudHJ5ElcKE3NoYXJlZF9wbGFjZW1lbnRzX2IYCSADKAsyOi5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoYXJlZFBsYWNlbWVudHNCRW50cnkaNgoUQ29tcG9uZW50U3RhdHVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ARowCg5OZXRTdGF0dXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBGhcKCFNoZWV0SWRzEgsKA2lkcxgBIAMoCRplChVDb21wb25lbnRTaGVldHNBRW50cnkSCwoDa2V5GAEgASgJEjsKBXZhbHVlGAIgASgLMiwuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGVldElkczoCOAEaZQoVQ29tcG9uZW50U2hlZXRzQkVudHJ5EgsKA2tleRgBIAEoCRI7CgV2YWx1ZRgCIAEoCzIsLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuU2hlZXRJZHM6AjgBGl8KD05ldFNoZWV0c0FFbnRyeRILCgNrZXkYASABKAkSOwoFdmFsdWUYAiABKAsyLC5hZ25pLnYxLndlYmFwaS5EaWZmRGVzaWduc1Jlc3BvbnNlLlNoZWV0SWRzOgI4ARpfCg9OZXRTaGVldHNCRW50cnkSCwoDa2V5GAEgASgJEjsKBXZhbHVlGAIgASgLMiwuYWduaS52MS53ZWJhcGkuRGlmZkRlc2lnbnNSZXNwb25zZS5TaGVldElkczoCOAEaMAoJUGxhY2VtZW50Eg0KBXNoZWV0GAEgASgJEgkKAXgYAiABKAESCQoBeRgDIAEoARpnChZTaGFyZWRQbGFjZW1lbnRzQUVudHJ5EgsKA2tleRgBIAEoCRI8CgV2YWx1ZRgCIAEoCzItLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuUGxhY2VtZW50OgI4ARpnChZTaGFyZWRQbGFjZW1lbnRzQkVudHJ5EgsKA2tleRgBIAEoCRI8CgV2YWx1ZRgCIAEoCzItLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2UuUGxhY2VtZW50OgI4ATJlCgtEaWZmU2VydmljZRJWCgtEaWZmRGVzaWducxIiLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVxdWVzdBojLmFnbmkudjEud2ViYXBpLkRpZmZEZXNpZ25zUmVzcG9uc2VCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_ir_ir]);
 
 /**
- * DiffDesignsRequest names the two designs: a is the old revision, b the new, each as a
- * artifact URI like every other file-addressing request.
+ * DiffDesignsRequest names the two designs. a is the old revision and b the new, each as a
+ * snapshot.
  *
  * @generated from message agni.v1.webapi.DiffDesignsRequest
  */
@@ -37,10 +37,10 @@ export type DiffDesignsRequest = Message<"agni.v1.webapi.DiffDesignsRequest"> & 
 
   /**
    * near_renames, when set, also pairs a net that was renamed AND changed slightly with its old
-   * self, reported as renamed-approx with the evidence behind each pairing (agni issue 817). Unset
-   * is off, as `agni diff` is without --rename-approx: the pass ASSIGNS a best match among
-   * candidates rather than recovering a fact, so a consumer opts in. An empty message runs it with
-   * the calibrated thresholds; a field that is set overrides that one threshold.
+   * self. The pair is reported as renamed-approx, with the evidence behind it (agni issue 817).
+   * Unset is off, as `agni diff` is without --rename-approx. The pass ASSIGNS a best match among
+   * candidates rather than recovering a fact, so a consumer opts in. An empty message runs the pass
+   * with the calibrated thresholds. A field that is set overrides that one threshold.
    *
    * @generated from field: agni.v1.webapi.NearRenameOptions near_renames = 3;
    */
@@ -48,9 +48,10 @@ export type DiffDesignsRequest = Message<"agni.v1.webapi.DiffDesignsRequest"> & 
 
   /**
    * include_equal also reports every net that did not change, as kind "equal" after the changes,
-   * with its provenance on both sides (agni issue 818). Off by default, because most callers want
-   * what changed and a large board has thousands of unchanged nets. The status maps the viewer tints
-   * by are unaffected. A net's connections are in the design itself (GetDesign's read_mask).
+   * with its provenance on both sides (agni issue 818). It is off by default. Most callers want what
+   * changed, and a large board has thousands of unchanged nets. It does not affect the status maps,
+   * which the viewer tints by. A net's connections are in the design itself (GetDesign's
+   * read_mask).
    *
    * @generated from field: bool include_equal = 4;
    */
@@ -65,12 +66,13 @@ export const DiffDesignsRequestSchema: GenMessage<DiffDesignsRequest> = /*@__PUR
   messageDesc(file_agni_v1_webapi_diff, 0);
 
 /**
- * NearRenameOptions tunes the near-rename pass. It matches nets by CONNECTIVITY, never by name: an
- * old net and a new one pair when enough of their endpoints ("refdes.pin") coincide, and the best
- * pairs are taken first, one-to-one. A "significant" endpoint is one whose component is not of an
- * insignificant class, so adding or removing probes cannot make or break a match. The evidence on
- * each renamed-approx entry is in the same units, so a pairing shows what it scored against these.
- * Unset fields keep diff.DefaultRenameOptions, which were calibrated against real revision pairs.
+ * NearRenameOptions tunes the near-rename pass. The pass matches nets by CONNECTIVITY, never by
+ * name. An old net and a new one pair when enough of their endpoints ("refdes.pin") coincide. The
+ * best pairs are taken first, one-to-one. An endpoint is "significant" when its component is not of
+ * an insignificant class, so adding or removing probes cannot make or break a match. The evidence on
+ * each renamed-approx entry uses the same units, so a pairing shows its scores against these
+ * thresholds. Unset fields keep diff.DefaultRenameOptions, which were calibrated against real
+ * revision pairs.
  *
  * @generated from message agni.v1.webapi.NearRenameOptions
  */
@@ -90,8 +92,8 @@ export type NearRenameOptions = Message<"agni.v1.webapi.NearRenameOptions"> & {
   minOldCoverageSignificant?: number | undefined;
 
   /**
-   * min_new_coverage is the fraction of the new net made up of old endpoints, so a large net that
-   * merely contains a small one is not its rename.
+   * min_new_coverage is the fraction of the new net made up of old endpoints. It stops a large net
+   * from counting as the rename of a small net that it merely contains.
    *
    * @generated from field: optional double min_new_coverage = 3;
    */
@@ -105,8 +107,8 @@ export type NearRenameOptions = Message<"agni.v1.webapi.NearRenameOptions"> & {
   minNewCoverageSignificant?: number | undefined;
 
   /**
-   * max_added_significant_floor is how many significant endpoints a net may gain and still pair,
-   * when half its old significant count is smaller.
+   * max_added_significant_floor is how many significant endpoints a net may gain and still pair. It
+   * applies when half the net's old significant count is smaller than this floor.
    *
    * @generated from field: optional int32 max_added_significant_floor = 5;
    */
@@ -136,10 +138,11 @@ export const NearRenameOptionsSchema: GenMessage<NearRenameOptions> = /*@__PURE_
   messageDesc(file_agni_v1_webapi_diff, 1);
 
 /**
- * DiffReport is the wire form of diff.Report: the classified component and net changes
- * between the old (a) and new (b) design. Equal entities are not reported. Lists arrive in
- * the diff's canonical order (components sorted by ref_des, nets new/deleted/renamed/hard/soft
- * grouped in classification order).
+ * DiffReport is the wire form of diff.Report. It holds the classified component and net changes
+ * between the old (a) and new (b) design. Equal components are never reported, and equal nets
+ * only when the request set include_equal. Lists arrive in the diff's canonical order. Components
+ * are sorted by ref_des, and nets are grouped new/deleted/renamed/hard/soft in classification
+ * order.
  *
  * @generated from message agni.v1.webapi.DiffReport
  */
@@ -214,14 +217,18 @@ export const DiffReport_ComponentChangeSchema: GenMessage<DiffReport_ComponentCh
   messageDesc(file_agni_v1_webapi_diff, 2, 0);
 
 /**
- * NetChange is one classified net change, kinds exactly diff.NetChangeKind: "new",
- * "deleted", "renamed" (same connection signature, different name), "renamed-approx" (a
- * near match the engine ASSIGNED rather than recovered, see approx below), "hard" (pin
- * membership changed), "soft" (attribute-only), and "equal" (unchanged, only when the request set
- * include_equal). name is the net's name where it exists (the
- * new name for a rename); old_name is set on both rename kinds. added/removed are
- * "refdes.pin" connection deltas, set on hard changes and on renamed-approx. old_prov/new_prov
- * locate the net in each revision's source, unset on the side where the net does not exist.
+ * NetChange is one classified net change. Its kinds are exactly diff.NetChangeKind.
+ *   "new"
+ *   "deleted"
+ *   "renamed"         same connection signature, different name
+ *   "renamed-approx"  a near match the engine ASSIGNED rather than recovered (see approx below)
+ *   "hard"            pin membership changed
+ *   "soft"            attribute-only
+ *   "equal"           unchanged, only when the request set include_equal
+ * name is the net's name where it exists, and the new name for a rename. old_name is set on both
+ * rename kinds. added and removed are "refdes.pin" connection deltas, set on hard changes and on
+ * renamed-approx. old_prov and new_prov locate the net in each revision's source. Each is unset on
+ * the side where the net does not exist.
  *
  * @generated from message agni.v1.webapi.DiffReport.NetChange
  */
@@ -264,10 +271,10 @@ export type DiffReport_NetChange = Message<"agni.v1.webapi.DiffReport.NetChange"
   /**
    * approx is why the near-match pass paired these two nets, set only on "renamed-approx".
    *
-   * It travels with the change rather than being recomputed, because a consumer cannot
-   * rebuild it: the fractions are taken against the endpoint sets as they were BEFORE the
-   * assignment consumed them, and significance depends on the device classes of components
-   * in both revisions. A viewer that wanted to show its work would otherwise need both
+   * It is sent with the change rather than recomputed, because a consumer cannot rebuild it.
+   * The fractions are taken against the endpoint sets as they were BEFORE the assignment
+   * consumed them. Significance depends on the device classes of components in both
+   * revisions. Without this field, a viewer that wanted to show its work would need both
    * designs in hand.
    *
    * @generated from field: agni.v1.webapi.DiffReport.RenameEvidence approx = 8;
@@ -286,10 +293,10 @@ export const DiffReport_NetChangeSchema: GenMessage<DiffReport_NetChange> = /*@_
  * RenameEvidence is the arithmetic behind one "renamed-approx" pairing.
  *
  * It exists so a reader can DISAGREE with the engine. An approximate rename is a judgement
- * among candidates rather than a fact about the two revisions, so a consumer that showed only
- * the conclusion would be asking to be trusted. The *_significant figures exclude endpoint
- * classes the run treats as churn (test points by default), which is why they can differ
- * sharply from their all-endpoint counterparts on a heavily probed board.
+ * among candidates rather than a fact about the two revisions. A consumer that showed only the
+ * conclusion would be asking to be trusted. The *_significant figures leave out endpoint
+ * classes that the run treats as churn, test points by default. So on a heavily probed board
+ * they can differ sharply from their all-endpoint counterparts.
  *
  * @generated from message agni.v1.webapi.DiffReport.RenameEvidence
  */
@@ -366,15 +373,15 @@ export const DiffReport_RenameEvidenceSchema: GenMessage<DiffReport_RenameEviden
   messageDesc(file_agni_v1_webapi_diff, 2, 2);
 
 /**
- * DiffDesignsResponse carries the full report plus the compact highlight maps a viewer joins
- * to geometry keys without re-deriving the diff (WS9-004): component_status maps ref_des ->
- * "added" | "removed" | "changed"; net_status maps net name -> "new" | "deleted" | "renamed" |
- * "renamed-approx" | "hard" | "soft". A renamed net of either kind appears under BOTH its old and
- * new name (both carrying that net's own kind),
- * so each side of a visual diff joins by the name its own geometry carries; the by-name match
- * in diff.Designs guarantees one name never carries two different statuses. A consumer filters
- * by side: the old design draws removed/deleted/renamed/renamed-approx/hard/soft, the new one
- * added/new/renamed/renamed-approx/hard/soft.
+ * DiffDesignsResponse holds the full report and two compact highlight maps (WS9-004). A viewer
+ * joins the maps to geometry keys without re-deriving the diff.
+ *   component_status  ref_des -> "added" | "removed" | "changed"
+ *   net_status        net name -> "new" | "deleted" | "renamed" | "renamed-approx" | "hard" | "soft"
+ * A renamed net of either kind appears under BOTH its old and its new name, each with that net's
+ * own kind. So each side of a visual diff joins by the name in its own geometry. The by-name match
+ * in diff.Designs guarantees that one name never has two different statuses. A consumer filters
+ * by side. The old design draws removed/deleted/renamed/renamed-approx/hard/soft, and the new one
+ * draws added/new/renamed/renamed-approx/hard/soft.
  *
  * @generated from message agni.v1.webapi.DiffDesignsResponse
  */
@@ -433,18 +440,18 @@ export const DiffDesignsResponseSchema: GenMessage<DiffDesignsResponse> = /*@__P
   messageDesc(file_agni_v1_webapi_diff, 3);
 
 /**
- * Sheet membership for the CHANGED entities only, keyed BY the entity: in
- * component_sheets_a/b the key is a changed ref_des and the value lists the ids of the
- * SHEETS that component appears on in that revision (component_sheets_a["R3"] = ["root",
- * "power"] reads "changed component R3 is placed on sheets root and power in revision
- * a"); net_sheets_a/b likewise by net name. The ids are exactly the SheetRef.id values
- * GetDesign returns for that side, in the design's sheet order — never entity ids. One
- * map per side because each revision has its own geometry and sheet ids (WS9-006): a
- * changed component may live on different sheets in a and b, and a renamed net keys
- * under its OLD name in a's map and its NEW name in b's. Derived from each side's
- * default-layout geometry the same way finding sheets are (WS9-024); a side with no
- * geometry (or a format whose wires carry no net names, e.g. KiCad until WS1-022) simply
- * has no entry for the affected keys, which a viewer treats as "no navigation target".
+ * These maps give sheet membership for the CHANGED entities only, keyed BY the entity. In
+ * component_sheets_a/b the key is a changed ref_des. The value lists the ids of the SHEETS
+ * where that component appears in that revision. So component_sheets_a["R3"] = ["root",
+ * "power"] reads "changed component R3 is placed on sheets root and power in revision a".
+ * net_sheets_a/b work the same way, keyed by net name. The ids are exactly the SheetRef.id
+ * values GetDesign returns for that side, in the design's sheet order, and never entity ids.
+ * Each revision has its own geometry and sheet ids, so each side gets its own map (WS9-006).
+ * A changed component may sit on different sheets in a and b. A renamed net keys under its
+ * OLD name in a's map and its NEW name in b's. The maps are derived from each side's
+ * default-layout geometry, the same way finding sheets are (WS9-024). A side with no
+ * geometry has no entry for the affected keys, and neither does a format whose wires name
+ * no nets (KiCad until WS1-022). A viewer treats a missing entry as "no navigation target".
  *
  * @generated from message agni.v1.webapi.DiffDesignsResponse.SheetIds
  */
@@ -463,13 +470,14 @@ export const DiffDesignsResponse_SheetIdsSchema: GenMessage<DiffDesignsResponse_
   messageDesc(file_agni_v1_webapi_diff, 3, 0);
 
 /**
- * A deterministic sample of placements for components present in BOTH designs (sorted
- * ref_des, capped — see the service), one entry per side, for the overlay-mode alignment
- * check (WS9-007): the viewer compares shared positions per sheet pair to decide whether
- * superimposing the two revisions on one canvas would be truthful. Positions are the
- * placement origin in that side's sheet frame. UNCHANGED components are deliberately
- * included — they are the alignment evidence; changed ones move for real reasons. Empty
- * when a side has no geometry (the viewer then falls back to frame-size evidence alone).
+ * These maps hold a deterministic sample of placements for components present in BOTH
+ * designs, one entry per side. The sample is in sorted ref_des order and capped (see the
+ * service). It serves the overlay-mode alignment check (WS9-007). The viewer compares shared
+ * positions per sheet pair to decide whether superimposing the two revisions on one canvas
+ * would be truthful. Positions are the placement origin in that side's sheet frame. The
+ * sample deliberately includes UNCHANGED components, because they are the alignment
+ * evidence. Changed ones move for real reasons. A map is empty when its side has no
+ * geometry, and the viewer then falls back to frame-size evidence alone.
  *
  * @generated from message agni.v1.webapi.DiffDesignsResponse.Placement
  */
@@ -499,17 +507,18 @@ export const DiffDesignsResponse_PlacementSchema: GenMessage<DiffDesignsResponse
 
 /**
  * DiffService computes the semantic diff between two designs' netlist IR (diff.Designs,
- * docs/18-semantic-diff.md): components matched by ref_des, nets by name with signature-based
- * rename recovery. The diff core stays presentation-free; this service owns the wire form,
- * shared with `agni diff --format json` so the CLI and the viewer parse one message (WS9-004).
+ * docsite/content/architecture/semantic-diff.md). It matches components by ref_des and nets by
+ * name, and it recovers renames by connection signature. The diff core has no presentation code.
+ * This service owns the wire form, and `agni diff --format json` emits the same form, so the CLI
+ * and the viewer parse one message (WS9-004).
  *
  * @generated from service agni.v1.webapi.DiffService
  */
 export const DiffService: GenService<{
   /**
-   * DiffDesigns loads both files' netlist IR and returns the classified report plus the
-   * highlight maps the viewer joins to geometry. Either file failing to load (unknown mount,
-   * escaping path, no netlist reader) fails the call; there is no partial diff.
+   * DiffDesigns loads both snapshots' netlist IR. It returns the classified report and the
+   * highlight maps, and the viewer joins those maps to geometry. If either side fails to load
+   * (unknown mount, escaping path, no netlist reader), the call fails. There is no partial diff.
    *
    * @generated from rpc agni.v1.webapi.DiffService.DiffDesigns
    */

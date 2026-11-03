@@ -25,8 +25,8 @@ export const file_agni_v1_webapi_lexicon: GenFile = /*@__PURE__*/
  */
 export type LexiconEntry = Message<"agni.v1.webapi.LexiconEntry"> & {
   /**
-   * vocabulary names the list the entry sits in, as the conventions YAML spells its path: "net.rail",
-   * "net.i2c", "pin.supply", "class.tvs".
+   * vocabulary names the list that holds the entry. It is spelled as the conventions YAML spells the
+   * path, such as "net.rail", "net.i2c", "pin.supply", "class.tvs".
    *
    * @generated from field: string vocabulary = 1;
    */
@@ -40,8 +40,8 @@ export type LexiconEntry = Message<"agni.v1.webapi.LexiconEntry"> & {
   kind: string;
 
   /**
-   * value is the pattern as written, a ref-des prefix, a suffix pair as positive=negative ("_P=_N"), or
-   * for a switch its name and setting ("infer_rail_from_supply_pins=true").
+   * value is the pattern as written, a ref-des prefix, or a suffix pair as positive=negative
+   * ("_P=_N"). For a switch it is the name and setting ("infer_rail_from_supply_pins=true").
    *
    * @generated from field: string value = 3;
    */
@@ -60,8 +60,8 @@ export type LexiconEntry = Message<"agni.v1.webapi.LexiconEntry"> & {
   convention: string;
 
   /**
-   * replaced is set on a built-in entry a convention's `replace: true` took out, which the run no
-   * longer matches. It is listed so switching a built-in off can be seen.
+   * replaced is set on a built-in entry that a convention's `replace: true` took out. The run no
+   * longer matches it. It is still listed, so a reader can see a built-in switched off.
    *
    * @generated from field: bool replaced = 6;
    */
@@ -87,7 +87,7 @@ export type GetLexiconRequest = Message<"agni.v1.webapi.GetLexiconRequest"> & {
   snapshot: string;
 
   /**
-   * candidate lists this convention in place of the snapshot's, its entries' source being REQUEST.
+   * candidate lists this convention in place of the snapshot's. Its entries have source REQUEST.
    * It reads nothing of the design.
    *
    * @generated from field: agni.v1.config.NamingConvention candidate = 2;
@@ -107,25 +107,26 @@ export const GetLexiconRequestSchema: GenMessage<GetLexiconRequest> = /*@__PURE_
  */
 export type GetLexiconResponse = Message<"agni.v1.webapi.GetLexiconResponse"> & {
   /**
-   * entries are in vocabulary order (net, then pin, then class), each list's built-in entries first.
+   * entries are in vocabulary order (net, then pin, then class). Each list has its built-in entries
+   * first.
    *
    * @generated from field: repeated agni.v1.webapi.LexiconEntry entries = 1;
    */
   entries: LexiconEntry[];
 
   /**
-   * effective is the whole lexicon as a convention would state it, every list written out with
-   * `replace: true`, so a file carrying it reads the design exactly as this run did.
+   * effective is the whole lexicon as a convention would state it. Every list is written out with
+   * `replace: true`. So a file holding it reads the design exactly as this run did.
    *
    * @generated from field: agni.v1.config.NamingLexicon effective = 2;
    */
   effective?: NamingLexicon | undefined;
 
   /**
-   * convention is the convention as written, rules included: the candidate when one was sent, else
-   * the one the snapshot was read with. Absent when the design reads the built-ins alone. It is what
-   * an editor starts from, because CompareLexicons replaces rules as well as the lexicon, so a
-   * candidate built from `effective` would stop the convention's rules running.
+   * convention is the convention as written, rules included. It is the candidate when one was sent,
+   * and otherwise the snapshot's own. Absent when the design reads the built-ins alone. An editor
+   * starts from this field. CompareLexicons replaces rules as well as the lexicon. A candidate built
+   * from `effective` would have no rules, and the convention's rules would stop running.
    *
    * @generated from field: agni.v1.config.NamingConvention convention = 3;
    */
@@ -149,8 +150,9 @@ export type ExplainNetRequest = Message<"agni.v1.webapi.ExplainNetRequest"> & {
   snapshot: string;
 
   /**
-   * net is the net's name as the design carries it. A name matching no net exactly is matched on its
-   * hierarchy leaf when exactly one net has that leaf, so a KiCad root net can be asked as SCL for /SCL.
+   * net is the net's name as the design spells it. A name may match no net exactly. Then it matches
+   * on its hierarchy leaf, if exactly one net has that leaf. So a client can ask for a KiCad root net
+   * /SCL as SCL.
    *
    * @generated from field: string net = 2;
    */
@@ -183,8 +185,8 @@ export type ExplainNetResponse = Message<"agni.v1.webapi.ExplainNetResponse"> & 
   roles: NetRole[];
 
   /**
-   * matches are the net-name entries of the effective lexicon the name's hierarchy leaf matches, in
-   * GetLexicon's order. A matching `exclude` is what kept the name out of its vocabulary.
+   * matches are the effective lexicon's net-name entries that match the name's hierarchy leaf, in
+   * GetLexicon's order. A matching `exclude` kept the name out of its vocabulary.
    *
    * @generated from field: repeated agni.v1.webapi.LexiconEntry matches = 3;
    */
@@ -208,9 +210,9 @@ export type CompareLexiconsRequest = Message<"agni.v1.webapi.CompareLexiconsRequ
   snapshot: string;
 
   /**
-   * conventions is the candidate. It replaces the convention the snapshot was read with, rules and
-   * lexicon both, as a request's own convention does. A candidate stating no lexicon reads names with
-   * the built-in vocabularies alone.
+   * conventions is the candidate. It replaces the snapshot's convention, rules and lexicon both, as a
+   * request's own convention does. If the candidate states no lexicon, names are read with the
+   * built-in vocabularies alone.
    *
    * @generated from field: agni.v1.config.NamingConvention conventions = 2;
    */
@@ -229,10 +231,10 @@ export const CompareLexiconsRequestSchema: GenMessage<CompareLexiconsRequest> = 
  */
 export type CompareLexiconsResponse = Message<"agni.v1.webapi.CompareLexiconsResponse"> & {
   /**
-   * tables are "role_changes" (net, roles_before, roles_after), one row per net whose roles or their
-   * evidence differ, each role written with its source as "rail (convention)",
-   * and "finding_changes" (change, rule, subject_kind, subject, message), one row per finding present
-   * under one lexicon and not the other, change being "appeared" or "gone".
+   * tables holds two tables. "role_changes" (net, roles_before, roles_after) has one row per net
+   * whose roles or their evidence differ. Each role is written with its source, as
+   * "rail (convention)". "finding_changes" (change, rule, subject_kind, subject, message) has one row
+   * per finding present under one lexicon and not the other. change is "appeared" or "gone".
    *
    * @generated from field: repeated agni.v1.webapi.Table tables = 1;
    */
@@ -334,7 +336,7 @@ export enum LexiconSource {
   DESIGN = 4,
 
   /**
-   * The request, which is where the CLI's --conventions file travels.
+   * The request. The CLI sends its --conventions file this way.
    *
    * @generated from enum value: LEXICON_SOURCE_REQUEST = 5;
    */
@@ -354,10 +356,10 @@ export const LexiconSourceSchema: GenEnum<LexiconSource> = /*@__PURE__*/
  */
 export const LexiconService: GenService<{
   /**
-   * GetLexicon returns every pattern of the snapshot's effective lexicon with where it came from, or
-   * of a candidate convention laid over the built-ins, so a client editing one lists what it would
-   * read with and never merges a convention itself. A pattern that will not compile is
-   * INVALID_ARGUMENT.
+   * GetLexicon returns every pattern of the snapshot's effective lexicon, with where it came from.
+   * Given a candidate convention, it lays that over the built-ins instead. So a client editing a
+   * convention lists what a read would use, and never merges a convention itself. A pattern that
+   * will not compile is INVALID_ARGUMENT.
    *
    * @generated from rpc agni.v1.webapi.LexiconService.GetLexicon
    */
@@ -367,9 +369,9 @@ export const LexiconService: GenService<{
     output: typeof GetLexiconResponseSchema;
   },
   /**
-   * ExplainNet returns one net's roles with their reasons, and every pattern of the effective lexicon
-   * its name matches, exclusions included, so a name that missed a vocabulary shows what stopped it.
-   * A name the design does not carry is NOT_FOUND.
+   * ExplainNet returns one net's roles with their reasons. It also returns every pattern of the
+   * effective lexicon that the net's name matches, exclusions included. So a name that missed a
+   * vocabulary shows what stopped it. A name missing from the design is NOT_FOUND.
    *
    * @generated from rpc agni.v1.webapi.LexiconService.ExplainNet
    */
@@ -379,8 +381,8 @@ export const LexiconService: GenService<{
     output: typeof ExplainNetResponseSchema;
   },
   /**
-   * CompareLexicons reads the snapshot again with a candidate convention in place of the one it was
-   * read with, runs the rule catalog over both, and returns the nets whose roles change and the
+   * CompareLexicons reads the snapshot again, with a candidate convention replacing the original
+   * one. It runs the rule catalog over both reads. It returns the nets whose roles change, and the
    * findings that appear or disappear.
    *
    * @generated from rpc agni.v1.webapi.LexiconService.CompareLexicons
@@ -391,8 +393,8 @@ export const LexiconService: GenService<{
     output: typeof CompareLexiconsResponseSchema;
   },
   /**
-   * RenderConvention writes a convention as the YAML file a project carries, which naming.Parse reads
-   * back to the same message. It asks nothing about a design, so it names no snapshot.
+   * RenderConvention writes a convention as a project's YAML file. naming.Parse reads that file back
+   * to the same message. It asks nothing about a design, so it names no snapshot.
    *
    * @generated from rpc agni.v1.webapi.LexiconService.RenderConvention
    */

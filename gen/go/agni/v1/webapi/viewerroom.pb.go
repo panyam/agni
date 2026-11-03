@@ -70,19 +70,21 @@ func (x *JoinViewerRoomRequest) GetDesign() string {
 
 type JoinViewerRoomResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// room is "design:<mount>/<entry>", the design's declared entry whatever the request named, so
-	// tabs opened on the folder and on the entry share one room, and an agent naming either reaches
-	// them.
+	// room is "design:<mount>/<entry>". It names the design's declared entry whatever the request
+	// named. So tabs opened on the folder and on the entry share one room, and an agent naming either
+	// reaches them.
 	Room string `protobuf:"bytes,1,opt,name=room,proto3" json:"room,omitempty"`
 	// relay_url is where the relay is served, relative to the server ("/relay/").
 	RelayUrl string `protobuf:"bytes,2,opt,name=relay_url,json=relayUrl,proto3" json:"relay_url,omitempty"`
 	// token is the relay token the page joins with, admitting it to `room` alone.
 	Token string `protobuf:"bytes,3,opt,name=token,proto3" json:"token,omitempty"`
-	// expire_time is when the token stops admitting a new join. A page already in the room stays.
+	// expire_time is when the token stops admitting a new join. A page already in the room is not
+	// removed.
 	ExpireTime *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=expire_time,json=expireTime,proto3" json:"expire_time,omitempty"`
-	// bridge_subjects are the relay subjects the server's room bridges join as. The page answers only
-	// peers the relay admitted under one of them, so a page holding a token for the room cannot call
-	// the other tabs in it directly, past the bridge's agreement check (agni issue 1173).
+	// bridge_subjects are the relay subjects that the server's room bridges join as. The page answers
+	// only peers that the relay admitted under one of them. So a page holding a token for the room
+	// cannot call the other tabs in it directly and skip the bridge's agreement check (agni issue
+	// 1173).
 	BridgeSubjects []string `protobuf:"bytes,5,rep,name=bridge_subjects,json=bridgeSubjects,proto3" json:"bridge_subjects,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache

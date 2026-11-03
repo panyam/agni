@@ -76,48 +76,51 @@ func (SnapshotUnavailable_Reason) EnumDescriptor() ([]byte, []int) {
 // Ingest and changes with UpdateSnapshot. The rest are output only.
 type Snapshot struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// name is "snapshots/{snapshot}". The id is assigned by the host unless Ingest names one.
+	// name is "snapshots/{snapshot}". The host assigns the id unless Ingest names one.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// revision_id names this definition over the netlist as it was read, a hash of the definition, the
-	// tiers it resolved to and the netlist entry's content, so two hosts that ingested one definition
-	// over the same netlist report the same one. It moves on an UpdateSnapshot that changed any of
-	// them. A change to another tier's file is caught as stale rather than by the revision, since
-	// hashing a large board on every ingest cost about a second in a browser worker.
+	// revision_id names this definition over the netlist as it was read. It hashes the definition, the
+	// tiers the definition resolved to and the netlist entry's content. So two hosts that ingested one
+	// definition over the same netlist report the same revision_id. It moves on an UpdateSnapshot that
+	// changed any of those three. A change to another tier's file is caught as stale rather than by the
+	// revision, since hashing a large board on every ingest cost about a second in a browser worker.
 	RevisionId string `protobuf:"bytes,2,opt,name=revision_id,json=revisionId,proto3" json:"revision_id,omitempty"`
 	// uri names the design, a key the Loader resolves and never a host path. The entry, its folder and
 	// a declared companion all name one design and resolve to the same tiers (C32).
 	Uri string `protobuf:"bytes,3,opt,name=uri,proto3" json:"uri,omitempty"`
-	// board_uri attaches a board-geometry export other than the one the design declares, such as a
+	// board_uri attaches a different board-geometry export from the one the design declares, such as a
 	// fab's returned file or a layout under review. Empty uses the design's own.
 	BoardUri string `protobuf:"bytes,4,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
-	// geometry_uri draws the design from a schematic other than the one the design declares. Empty
+	// geometry_uri draws the design from a different schematic from the one the design declares. Empty
 	// uses the design's own.
 	GeometryUri string `protobuf:"bytes,5,opt,name=geometry_uri,json=geometryUri,proto3" json:"geometry_uri,omitempty"`
-	// as_named reads exactly the artifact uri names, even when the design declares it a companion of a
-	// different entry. Reading a companion as a netlist is how two views of one design are compared.
+	// as_named reads exactly the artifact that uri names, even when the design declares that artifact
+	// a companion of a different entry. Two views of one design are compared by reading a companion as
+	// a netlist.
 	AsNamed bool `protobuf:"varint,6,opt,name=as_named,json=asNamed,proto3" json:"as_named,omitempty"`
-	// overlay is the config every question about this snapshot is answered under: conventions,
-	// profiles, intent, parameters, libraries and query sets, the request's own or the project's.
+	// overlay is the config for every question about this snapshot. It holds conventions, profiles,
+	// intent, parameters, libraries and query sets, from the request or from the project.
 	Overlay *OverlayConfig `protobuf:"bytes,7,opt,name=overlay,proto3" json:"overlay,omitempty"`
 	// tiers are the artifacts the definition resolved to. Output only.
 	Tiers *SnapshotTiers `protobuf:"bytes,8,opt,name=tiers,proto3" json:"tiers,omitempty"`
-	// consistency compares the tiers that have been read with each other, so a board updated on its own
-	// that no longer matches its netlist says so. Absent until two tiers have been read. Output only.
+	// consistency compares the tiers that have been read with each other. Imagine a board updated on
+	// its own, so it no longer matches its netlist. consistency then reports the difference. It is
+	// absent until two tiers have been read. Output only.
 	Consistency *SnapshotConsistency `protobuf:"bytes,9,opt,name=consistency,proto3" json:"consistency,omitempty"`
 	// project is the project the design belongs to, "projects/{project}", empty for none. Output only.
 	Project string `protobuf:"bytes,10,opt,name=project,proto3" json:"project,omitempty"`
-	// files is the design's files when the client sends them rather than naming files the host
-	// serves: each file's path within uri's mount, its SHA-256 and its size. With files set, uri's
-	// mount is read from these files alone, so a design, its companions, its project's descriptor and
-	// config directories all have to be listed; ListDesignFiles names that set. Its contents are sent
-	// with UploadBlobs. Paths are the client's own, so every locator an answer records reads as it
-	// would on the client (C28). Part of the definition.
+	// files lists the design's files when the client sends them, instead of naming files the host
+	// serves. Each entry gives a path within uri's mount, a SHA-256 and a size. With files set, uri's
+	// mount is read from these files alone. So the list must hold the design, its companions, and its
+	// project's descriptor and config directories. ListDesignFiles names that set. The contents go up
+	// with UploadBlobs. Paths are the client's own, so every locator in an answer reads as it would on
+	// the client (C28). Part of the definition.
 	Files []*SnapshotFile `protobuf:"bytes,11,rep,name=files,proto3" json:"files,omitempty"`
-	// flatten_hierarchy reads a hierarchical netlist as its whole schematic, walking into every block
-	// cell its top cell places, rather than as its top cell alone (agni issue 718). A net crossing a
-	// block's port joins its parent's, a net inside a block keeps its name when no other net carries
-	// it and is otherwise named by the block's instance path ("/A1/MID"), and a part inside a block placed more than once carries that path ("B2/R1"). A flat
-	// netlist reads the same either way. Only EDIF has blocks to walk today. Part of the definition.
+	// flatten_hierarchy reads a hierarchical netlist as its whole schematic rather than as its top cell
+	// alone (agni issue 718). The read walks into every block cell that the top cell places. A net
+	// crossing a block's port joins its parent's net. A net inside a block keeps its name when no other
+	// net has that name. Otherwise the block's instance path names it ("/A1/MID"). When a block is
+	// placed more than once, a part inside it takes that path too ("B2/R1"). A flat netlist reads the
+	// same either way. Only EDIF has blocks to walk today. Part of the definition.
 	FlattenHierarchy bool `protobuf:"varint,12,opt,name=flatten_hierarchy,json=flattenHierarchy,proto3" json:"flatten_hierarchy,omitempty"`
 	unknownFields    protoimpl.UnknownFields
 	sizeCache        protoimpl.SizeCache
@@ -237,7 +240,7 @@ func (x *Snapshot) GetFlattenHierarchy() bool {
 	return false
 }
 
-// SnapshotFile is one file of a design a client sends, named within its mount.
+// SnapshotFile is one file of a design that a client sends, named within its mount.
 type SnapshotFile struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Path  string                 `protobuf:"bytes,1,opt,name=path,proto3" json:"path,omitempty"`
@@ -299,7 +302,7 @@ func (x *SnapshotFile) GetSize() int64 {
 	return 0
 }
 
-// SnapshotTiers are the artifacts a snapshot's definition resolved to (C32's ResolveSources).
+// SnapshotTiers are the artifacts that a snapshot's definition resolved to (C32's ResolveSources).
 type SnapshotTiers struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// netlist_uri is what analysis reads.
@@ -308,9 +311,9 @@ type SnapshotTiers struct {
 	BoardUri string `protobuf:"bytes,2,opt,name=board_uri,json=boardUri,proto3" json:"board_uri,omitempty"`
 	// geometry_uri is what its sheets are drawn from.
 	GeometryUri string `protobuf:"bytes,3,opt,name=geometry_uri,json=geometryUri,proto3" json:"geometry_uri,omitempty"`
-	// board_read is whether this host has read the board for this snapshot, and board_persisted
-	// whether that board is in the host's persistent store, so another process restores it rather
-	// than parsing it. Both are false on a host that has not read the board yet.
+	// board_read says whether this host has read the board for this snapshot. board_persisted says
+	// whether that board is in the host's persistent store. If it is, another process restores the
+	// board rather than parsing it. Both are false on a host that has not read the board yet.
 	BoardRead      bool `protobuf:"varint,4,opt,name=board_read,json=boardRead,proto3" json:"board_read,omitempty"`
 	BoardPersisted bool `protobuf:"varint,5,opt,name=board_persisted,json=boardPersisted,proto3" json:"board_persisted,omitempty"`
 	unknownFields  protoimpl.UnknownFields
@@ -383,12 +386,12 @@ func (x *SnapshotTiers) GetBoardPersisted() bool {
 }
 
 // SnapshotConsistency compares a snapshot's tiers by reference designator. A difference is reported
-// rather than refused, because a board part on its way into the netlist is an ordinary state of a
-// design being edited, and the cross-view rules say what each difference means.
+// rather than refused. A board part that is not yet in the netlist is an ordinary state of a design
+// being edited, and the cross-view rules say what each difference means.
 type SnapshotConsistency struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// board_only and netlist_only are the reference designators found in one tier and not the other,
-	// sorted, at most 20 each; the counts are the full numbers.
+	// board_only and netlist_only are the reference designators found in one tier and not the other.
+	// Each list is sorted and holds at most 20. The counts are the full numbers.
 	BoardOnly        []string `protobuf:"bytes,1,rep,name=board_only,json=boardOnly,proto3" json:"board_only,omitempty"`
 	BoardOnlyCount   int32    `protobuf:"varint,2,opt,name=board_only_count,json=boardOnlyCount,proto3" json:"board_only_count,omitempty"`
 	NetlistOnly      []string `protobuf:"bytes,3,rep,name=netlist_only,json=netlistOnly,proto3" json:"netlist_only,omitempty"`
@@ -459,15 +462,15 @@ type IngestRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// snapshot is the definition to ingest. Its name, revision_id and output fields are ignored.
 	Snapshot *Snapshot `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	// snapshot_id names the new snapshot, "snapshots/{snapshot_id}", instead of one the host assigns.
-	// A browser page passes the id it holds to each worker it asks, since every worker keeps its own
-	// snapshots. An id already in use with the same definition returns that snapshot, after reading
-	// what read_board asks, so a client can send its ingest again without asking first whether the
-	// host still holds it. The same id with a different definition is ALREADY_EXISTS.
+	// snapshot_id names the new snapshot, "snapshots/{snapshot_id}", instead of letting the host
+	// assign one. Every browser worker keeps its own snapshots, so a page passes its id to each worker
+	// it asks. An id already in use with the same definition returns that snapshot, after reading
+	// whatever read_board asks for. So a client can send its ingest again without first asking whether
+	// the host still holds it. The same id with a different definition is ALREADY_EXISTS.
 	SnapshotId string `protobuf:"bytes,2,opt,name=snapshot_id,json=snapshotId,proto3" json:"snapshot_id,omitempty"`
 	// read_board reads the board now, so a later question finds it parsed (agni issue 1061). The
-	// browser's prepare lane sends this from a worker that ends when it answers, leaving the board in
-	// the store for the worker that runs the checks.
+	// browser's prepare lane sends this from a worker that ends when it answers. The board is left in
+	// the store, and the worker that runs the checks restores it from there.
 	ReadBoard     bool `protobuf:"varint,3,opt,name=read_board,json=readBoard,proto3" json:"read_board,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -572,8 +575,8 @@ type ListSnapshotsRequest struct {
 	state     protoimpl.MessageState `protogen:"open.v1"`
 	PageSize  int32                  `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	PageToken string                 `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	// filter narrows the listing (AIP-160). Only `uri` is supported, `uri="mount://m/board"`, which
-	// matches a snapshot's definition exactly. Anything else is an error.
+	// filter narrows the listing (AIP-160). Only `uri` is supported, as in `uri="mount://m/board"`, and
+	// it matches a snapshot's definition exactly. Anything else is an error.
 	Filter        string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -685,11 +688,11 @@ func (x *ListSnapshotsResponse) GetNextPageToken() string {
 
 type UpdateSnapshotRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// snapshot carries the new definition and names the snapshot to update.
+	// snapshot holds the new definition and names the snapshot to update.
 	Snapshot *Snapshot `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// update_mask names the definition fields to replace (uri, board_uri, geometry_uri, as_named,
-	// overlay, files). Empty replaces the whole definition, and the same definition again reads the files
-	// again, which is how a stale snapshot is refreshed.
+	// overlay, files). Empty replaces the whole definition. Sending the same definition again reads the
+	// files again, and that refreshes a stale snapshot.
 	UpdateMask *fieldmaskpb.FieldMask `protobuf:"bytes,2,opt,name=update_mask,json=updateMask,proto3" json:"update_mask,omitempty"`
 	// read_board is as on IngestRequest.
 	ReadBoard     bool `protobuf:"varint,3,opt,name=read_board,json=readBoard,proto3" json:"read_board,omitempty"`
@@ -792,9 +795,9 @@ func (x *DeleteSnapshotRequest) GetName() string {
 	return ""
 }
 
-// BlobsMissing is the detail on an Ingest or UpdateSnapshot that names files whose contents the host
-// does not hold (FAILED_PRECONDITION): their hashes, which the client sends with UploadBlobs before
-// asking again.
+// BlobsMissing is the error detail when an Ingest or UpdateSnapshot names files whose contents the
+// host does not hold (FAILED_PRECONDITION). It lists their hashes. The client sends those contents
+// with UploadBlobs and then asks again.
 type BlobsMissing struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Sha256        []string               `protobuf:"bytes,1,rep,name=sha256,proto3" json:"sha256,omitempty"`
@@ -928,19 +931,19 @@ func (x *UploadBlobsResponse) GetSha256() []string {
 	return nil
 }
 
-// SnapshotUnavailable is the detail on an error from a question whose snapshot cannot answer it: one
-// the host does not hold (NOT_FOUND) or one whose files changed since they were read
-// (FAILED_PRECONDITION). It is how a client tells these apart from a design file that is missing,
-// which no ingest would fix: on MISSING it ingests the snapshot again under the same name, and on
-// STALE it updates it, then asks again.
+// SnapshotUnavailable is the error detail when a question's snapshot cannot answer it. Either the
+// host does not hold the snapshot (NOT_FOUND), or the snapshot's files changed since they were read
+// (FAILED_PRECONDITION). A client uses this detail to tell both cases from a missing design file, and
+// no ingest would fix a missing file. On MISSING the client ingests the snapshot again under the same
+// name, and on STALE it updates the snapshot. Then it asks again.
 type SnapshotUnavailable struct {
 	state  protoimpl.MessageState     `protogen:"open.v1"`
 	Name   string                     `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Reason SnapshotUnavailable_Reason `protobuf:"varint,2,opt,name=reason,proto3,enum=agni.v1.webapi.SnapshotUnavailable_Reason" json:"reason,omitempty"`
-	// changed names, for a STALE snapshot, the netlist tier when its entry file no longer reads as it
-	// did, and every tier otherwise, since the file that moved may be any tier's or one a tier read
-	// beneath its entry (a sub-sheet, a symbol library). They are artifact URIs, never the host's own
-	// paths.
+	// changed is set for a STALE snapshot. It names the netlist tier when the netlist's entry file no
+	// longer reads as it did. Otherwise it names every tier, since the file that moved may belong to
+	// any tier, or a tier may have read it beneath its entry (a sub-sheet, a symbol library). The names
+	// are artifact URIs, never the host's own paths.
 	Changed       []string `protobuf:"bytes,3,rep,name=changed,proto3" json:"changed,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

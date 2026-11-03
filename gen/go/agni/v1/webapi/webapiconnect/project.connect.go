@@ -57,22 +57,22 @@ type ProjectServiceClient interface {
 	// ListProjects returns the projects visible across the server's mounts.
 	ListProjects(context.Context, *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error)
 	// GetDesign returns one design by resource name. The rpc shares its name with
-	// DesignService.GetDesign and answers a different question: that one loads a design's CONTENT from a
-	// (mount, path) pair, this one returns a design's IDENTITY and which of the files around it is
-	// which. They are distinct rpcs on distinct services, and their request messages are named apart
-	// because one proto package cannot hold two GetDesignRequest.
+	// DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
+	// design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
+	// the files around it is which. They are distinct rpcs on distinct services. Their request messages
+	// have different names because one proto package cannot hold two GetDesignRequest.
 	GetDesign(context.Context, *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error)
 	// ListDesigns returns the designs belonging to one project.
 	ListDesigns(context.Context, *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error)
-	// ResolveDesign answers the question a viewer has when it opens a file: is this file part of a
-	// declared design, and if so which. It is the seam that keeps resolution an INTERFACE rather than a
-	// path convention — a file-backed store walks the tree for descriptors, another may consult an
-	// index, and a caller cannot tell which it is talking to.
+	// ResolveDesign answers a viewer's question when it opens a file. Is this file part of a declared
+	// design, and if so which one? This rpc keeps resolution an INTERFACE rather than a path
+	// convention. A file-backed store walks the tree for descriptors, and another store may consult an
+	// index. A caller cannot tell which one it is talking to.
 	//
-	// Resolving to nothing is a normal answer, not an error: a mounted folder with no descriptors is
-	// the ordinary case, and it is what makes the project surfaces impossible to misapply. A file that
-	// resolves to no design gets the plain viewer and the built-in catalog, so it cannot be checked
-	// against some other project's rules — a structural guarantee rather than a discouraged practice.
+	// Resolving to nothing is a normal answer, not an error. A mounted folder with no descriptors is
+	// the ordinary case. A file that resolves to no design gets the plain viewer and the built-in
+	// catalog, so it cannot be checked against some other project's rules. So the project surfaces
+	// cannot be misapplied, by structure rather than by convention.
 	ResolveDesign(context.Context, *connect.Request[webapi.ResolveDesignRequest]) (*connect.Response[webapi.ResolveDesignResponse], error)
 }
 
@@ -161,22 +161,22 @@ type ProjectServiceHandler interface {
 	// ListProjects returns the projects visible across the server's mounts.
 	ListProjects(context.Context, *connect.Request[webapi.ListProjectsRequest]) (*connect.Response[webapi.ListProjectsResponse], error)
 	// GetDesign returns one design by resource name. The rpc shares its name with
-	// DesignService.GetDesign and answers a different question: that one loads a design's CONTENT from a
-	// (mount, path) pair, this one returns a design's IDENTITY and which of the files around it is
-	// which. They are distinct rpcs on distinct services, and their request messages are named apart
-	// because one proto package cannot hold two GetDesignRequest.
+	// DesignService.GetDesign and answers a different question. DesignService.GetDesign loads a
+	// design's CONTENT from a (mount, path) pair. This one returns a design's IDENTITY and which of
+	// the files around it is which. They are distinct rpcs on distinct services. Their request messages
+	// have different names because one proto package cannot hold two GetDesignRequest.
 	GetDesign(context.Context, *connect.Request[webapi.GetProjectDesignRequest]) (*connect.Response[webapi.Design], error)
 	// ListDesigns returns the designs belonging to one project.
 	ListDesigns(context.Context, *connect.Request[webapi.ListProjectDesignsRequest]) (*connect.Response[webapi.ListProjectDesignsResponse], error)
-	// ResolveDesign answers the question a viewer has when it opens a file: is this file part of a
-	// declared design, and if so which. It is the seam that keeps resolution an INTERFACE rather than a
-	// path convention — a file-backed store walks the tree for descriptors, another may consult an
-	// index, and a caller cannot tell which it is talking to.
+	// ResolveDesign answers a viewer's question when it opens a file. Is this file part of a declared
+	// design, and if so which one? This rpc keeps resolution an INTERFACE rather than a path
+	// convention. A file-backed store walks the tree for descriptors, and another store may consult an
+	// index. A caller cannot tell which one it is talking to.
 	//
-	// Resolving to nothing is a normal answer, not an error: a mounted folder with no descriptors is
-	// the ordinary case, and it is what makes the project surfaces impossible to misapply. A file that
-	// resolves to no design gets the plain viewer and the built-in catalog, so it cannot be checked
-	// against some other project's rules — a structural guarantee rather than a discouraged practice.
+	// Resolving to nothing is a normal answer, not an error. A mounted folder with no descriptors is
+	// the ordinary case. A file that resolves to no design gets the plain viewer and the built-in
+	// catalog, so it cannot be checked against some other project's rules. So the project surfaces
+	// cannot be misapplied, by structure rather than by convention.
 	ResolveDesign(context.Context, *connect.Request[webapi.ResolveDesignRequest]) (*connect.Response[webapi.ResolveDesignResponse], error)
 }
 

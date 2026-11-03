@@ -19,16 +19,17 @@ export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
   fileDesc("ChthZ25pL3YxL3dlYmFwaS9jb25maWcucHJvdG8SDmFnbmkudjEud2ViYXBpIp0ECg5BbmFseXNpc0NvbmZpZxI1Cgtjb252ZW50aW9ucxgBIAEoCzIgLmFnbmkudjEuY29uZmlnLk5hbWluZ0NvbnZlbnRpb24SFAoMcHJvZmlsZV91cmlzGAMgAygJEhIKCnBhcmFtX3VyaXMYBCADKAkSMgoKY2hlY2tsaXN0cxgMIAMoCzIeLmFnbmkudjEud2ViYXBpLk5hbWVkQ2hlY2tsaXN0EiwKBmludGVudBgNIAEoCzIcLmFnbmkudjEuY29uZmlnLkRlc2lnbkludGVudBIPCgdleHRlbmRzGAcgASgJEhgKEHN5bWJvbF9wYXRoX3VyaXMYCCADKAkSFAoMbGlicmFyeV91cmlzGAkgAygJEhYKDnF1ZXJ5X3NldF91cmlzGA4gAygJEjYKD2xpYnJhcnlfbW9kdWxlcxgKIAMoCzIdLmFnbmkudjEud2ViYXBpLkxpYnJhcnlNb2R1bGUSRQoMbGlicmFyeV9kb2NzGAsgAygLMi8uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcuTGlicmFyeURvY3NFbnRyeRoyChBMaWJyYXJ5RG9jc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAFKBAgCEANKBAgFEAZKBAgGEAdSD2NvbnZlbnRpb25zX3VyaVINY2hlY2tsaXN0X3VyaVIKaW50ZW50X3VyaSJQCg5OYW1lZENoZWNrbGlzdBIMCgRuYW1lGAEgASgJEjAKCG1hbmlmZXN0GAIgASgLMh4uYWduaS52MS5jaGVja3MuUmV2aWV3TWFuaWZlc3QiTQoNTGlicmFyeU1vZHVsZRIMCgRwYXRoGAEgASgJEhAKCGxhbmd1YWdlGAIgASgJEgwKBHRleHQYAyABKAkSDgoGc291cmNlGAQgASgJImMKDU92ZXJsYXlDb25maWcSLgoGY29uZmlnGAQgASgLMh4uYWduaS52MS53ZWJhcGkuQW5hbHlzaXNDb25maWcSFgoOaWdub3JlX3Byb2plY3QYAyABKAhKBAgBEAJKBAgCEANCLlosZ2l0aHViLmNvbS9wYW55YW0vYWduaS9nZW4vZ28vYWduaS92MS93ZWJhcGliBnByb3RvMw", [file_agni_v1_checks_checks, file_agni_v1_config_intent, file_agni_v1_config_naming]);
 
 /**
- * This file: AnalysisConfig, the one shape for config that decides WHAT a design is checked against.
+ * This file defines AnalysisConfig. It is the one shape for the config that decides WHAT a design is
+ * checked against.
  *
- * It exists because that config reached a run through three unrelated mechanisms and was spelled
- * differently by each: a project declared it as five loose fields, a request could carry exactly one
- * of the five, and `agni serve` took the rest as startup flags. Adding a tier meant adding it in every
- * one of those places, and the request tier's inability to carry four of them is why a browser could
- * be handed one fifth of the configuration the CLI could (agni issue 224).
+ * Before AnalysisConfig, that config reached a run through three unrelated mechanisms, and each
+ * spelled it differently. A project declared it as five loose fields. A request could send exactly
+ * one of the five. `agni serve` took the rest as startup flags. So adding a tier meant adding it in
+ * all three places. The request could not send four of the five, so a browser got one fifth of the
+ * configuration that the CLI got (agni issue 224).
  *
- * The tier this message names is deliberately narrow. Config splits three ways, and only the middle
- * one belongs here:
+ * This message names a deliberately narrow tier. Config splits three ways, and only the middle one
+ * belongs here.
  *
  *   environment  where bytes are and what tools exist: mounts, symbol search paths, the review store,
  *                a native tool's availability. Facts about a machine, not about a design.
@@ -37,9 +38,9 @@ export const file_agni_v1_webapi_config: GenFile = /*@__PURE__*/
  *   invocation   this run's question and output: which rules, which format, which gate. Arguments,
  *                not configuration.
  *
- * The test that assigns a field: does it change WHAT is checked, or only WHERE bytes are found? Only
- * the first belongs here. A field that merely locates input can live in environment config without
- * any of the isolation this tier needs.
+ * To place a field, ask whether it changes WHAT is checked or only WHERE bytes are found. Only a
+ * field that changes what is checked belongs here. A field that merely locates input can live in
+ * environment config, which needs none of the isolation this tier needs.
  *
  * @generated from message agni.v1.webapi.AnalysisConfig
  */
@@ -47,11 +48,11 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
   /**
    * conventions is the naming policy, RESOLVED. Absent means the engine defaults.
    *
-   * It is a value where its neighbours are URIs, and that asymmetry is CONSTRAINTS C22 rather than an
-   * oversight. A convention is small, so a service composes it with no I/O and a filesystem-free host
-   * can honour one that arrived on a request. Profiles and parameters are directories of many files,
-   * so they arrive as refs the injected port loads — the same reason a design is a ref rather than an
-   * inlined megabyte.
+   * It is a value, while its neighbours are URIs. That asymmetry follows from CONSTRAINTS C22 and is
+   * not an oversight. A convention is small, so a service composes it with no I/O, and a
+   * filesystem-free host can honour one that arrived on a request. Profiles and parameters are
+   * directories of many files, so they arrive as refs, and the injected port loads them. A design is
+   * a ref rather than an inlined megabyte for the same reason.
    *
    * @generated from field: agni.v1.config.NamingConvention conventions = 1;
    */
@@ -65,20 +66,19 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
   profileUris: string[];
 
   /**
-   * param_uris are the seeded datasheet parameter sets part limits are checked against.
+   * param_uris are the seeded datasheet parameter sets. A run checks part limits against them.
    *
    * @generated from field: repeated string param_uris = 4;
    */
   paramUris: string[];
 
   /**
-   * checklists are the review manifests a project declares, by name, in the order project.yaml writes
-   * them (agni issue 828). The first is the project's default, the one a review runs when no
-   * checklist is named. They are VALUES, as conventions is, because a review run takes its manifest
-   * as a value (C22), so a client holding the project's config can run any of them with no further
-   * read.
+   * checklists are the project's review manifests by name, in the order project.yaml writes them
+   * (agni issue 828). The first is the project's default, and a review runs it when no checklist is
+   * named. They are VALUES like conventions, because a review run takes its manifest as a value
+   * (C22). So a client holding the project's config can run any of them with no further read.
    *
-   * A project that extends another inherits its checklists, and one of the same name replaces the
+   * A project that extends another inherits its checklists. A checklist of the same name replaces the
    * inherited one in place.
    *
    * @generated from field: repeated agni.v1.webapi.NamedChecklist checklists = 12;
@@ -86,98 +86,102 @@ export type AnalysisConfig = Message<"agni.v1.webapi.AnalysisConfig"> & {
   checklists: NamedChecklist[];
 
   /**
-   * intent is a design's declared architecture (agni issue 824): its modules, what each named net is,
-   * power sequences, strap groups and pin map. It is usually declared per DESIGN, since each board has
-   * its own intended architecture, and a project shared by a family of boards may declare it once. The
-   * nearer declaration replaces the further one, as the convention does.
+   * intent is a design's declared architecture (agni issue 824). It covers the modules, what each
+   * named net is, the power sequences, the strap groups and the pin map. It is usually declared per
+   * DESIGN, since each board has its own intended architecture. A project shared by a family of
+   * boards may declare it once. The nearer declaration replaces the further one, as with the
+   * convention.
    *
-   * A value, so it compiles into rules with no I/O, on any host, whether a project store supplied it
-   * or a request carried it.
+   * It is a value, so it compiles into rules with no I/O on any host, whether a project store
+   * supplied it or a request sent it.
    *
    * @generated from field: agni.v1.config.DesignIntent intent = 13;
    */
   intent?: DesignIntent | undefined;
 
   /**
-   * extends names another PROJECT whose config this one layers on top of, "projects/{project}", empty
-   * when it inherits nothing.
+   * extends names another PROJECT as "projects/{project}". This project's config layers on top of
+   * that project's config. It is empty when the project inherits nothing.
    *
-   * A descriptor names it by where that project's descriptor is, a relative path or a mount:// URI
-   * (agni issue 1136), and the project store answers with the project's resource name, so nothing
-   * above the store walks a path. A design's extends names its project the same way.
+   * A descriptor names the other project by the location of its descriptor, as a relative path or a
+   * mount:// URI (agni issue 1136). The project store answers with the project's resource name, so
+   * nothing above the store walks a path. A design's extends names its project the same way.
    *
-   * It is a project resource name rather than a file URI because a shared config IS a project: one
-   * with config and no designs. That reuses the store, the descriptor format and the id rules already
-   * in place instead of inventing a second kind of config document, and it means shared config is
-   * discoverable by the same ListProjects a viewer already calls.
+   * It is a project resource name rather than a file URI, because a shared config IS a project. It
+   * has config and no designs. Treating it as a project reuses the store, the descriptor format and
+   * the id rules already in place, instead of inventing a second kind of config document. It also
+   * makes shared config discoverable by ListProjects, which a viewer already calls.
    *
-   * Inheritance is DECLARED, never ambient, and that is the whole safety property. A deployment
-   * default that applied unless overridden is precisely the bug per-design config fixed — one team's
-   * profiles reaching every board on the server. An extends is visible in the descriptor, scoped to
-   * the project that wrote it, and reaches no design that did not ask for it.
+   * Inheritance is DECLARED, never ambient, and that is the whole safety property. Imagine a
+   * deployment default that applied unless overridden. One team's profiles would reach every board on
+   * the server, and per-design config fixed exactly that bug. An extends is visible in the descriptor
+   * and scoped to the project that wrote it. It reaches no design that did not ask for it.
    *
-   * The chain layers root-most FIRST, so a project overrides what it inherits. It is bounded and
-   * cycle-checked: a cycle is an error naming the loop, because a config that silently stopped
-   * resolving partway would compose a subset of what the operator declared.
+   * The chain layers root-most FIRST, so a project overrides what it inherits. The chain is bounded
+   * and cycle-checked, and a cycle is an error naming the loop. A config that silently stopped
+   * resolving partway would compose only a subset of what the operator declared.
    *
    * @generated from field: string extends = 7;
    */
   extends: string;
 
   /**
-   * symbol_path_uris are directories of symbol files a schematic's external library references need
-   * (xschem/gEDA `.sym`, KiCad `.kicad_sym`). Each is searched with its whole subtree, so one entry
-   * can be a library root.
+   * symbol_path_uris are directories of symbol files (xschem/gEDA `.sym`, KiCad `.kicad_sym`). A
+   * schematic's external library references resolve against them. Each is searched with its whole
+   * subtree, so one entry can be a library root.
    *
-   * It is here rather than in environment config even though it only LOCATES bytes, and the reason is
-   * its failure mode. A schematic naming a library nothing resolves reads SHORT: the components it
-   * could not resolve are simply absent, every rule then evaluates cleanly over the shortened read,
-   * and the run reports fewer findings with no error to explain them. A tier whose absence changes
-   * the answer belongs with the config that changes the answer.
+   * It only LOCATES bytes, yet it sits here rather than in environment config, because of how it
+   * fails. Imagine a schematic naming a library that no entry resolves. The read comes back SHORT.
+   * The components it could not resolve are simply absent. Every rule then evaluates cleanly over the
+   * shortened read, and the run reports fewer findings with no error to explain them. When a tier's
+   * absence changes the answer, the tier belongs with the config that changes the answer.
    *
-   * A design's own symbol library and a team's shared one are both ordinary cases, so a Project and a
-   * Design may each declare some and they accumulate rather than replace.
+   * A design may have its own symbol library and a team may share one, and both cases are ordinary.
+   * So a Project and a Design may each declare some, and the two lists accumulate rather than
+   * replace.
    *
    * @generated from field: repeated string symbol_path_uris = 8;
    */
   symbolPathUris: string[];
 
   /**
-   * library_uris are files or directories of the project's own derived relations (agni issue 773), one
-   * Datalog module per `<module.path>.dl` file, with optional pages in `docs/<member.path>.md`. A
-   * query run under this config can call them beside the shipped library, so `lib/net.dl` adds
-   * members to `net` and `lib/house.dl` starts a `house` module. A member colliding with a shipped
-   * path, or reading a relation nothing registers, fails the read rather than answering nothing.
-   * A review manifest's inline queries read them too (agni issue 779).
+   * library_uris are files or directories of the project's own derived relations (agni issue 773).
+   * Each `<module.path>.dl` file is one Datalog module, with optional pages in
+   * `docs/<member.path>.md`. A query run under this config can call them beside the shipped library,
+   * so `lib/net.dl` adds members to `net` and `lib/house.dl` starts a `house` module. The read fails,
+   * rather than answering nothing, when a member collides with a shipped path or reads a relation
+   * nothing registers. A review manifest's inline queries read them too (agni issue 779).
    *
    * @generated from field: repeated string library_uris = 9;
    */
   libraryUris: string[];
 
   /**
-   * query_set_uris are files or directories of the project's query sets (agni issue 745), one set per
-   * `<name>.yaml` file in the shape `agni query --set` reads. QueryService.ListQuerySets lists them
-   * by name for a viewer to open, and nothing else reads them, so no run answers differently for
-   * having them. A file that does not parse fails the listing rather than leaving a set out.
+   * query_set_uris are files or directories of the project's query sets (agni issue 745). Each
+   * `<name>.yaml` file is one set, in the shape that `agni query --set` reads.
+   * QueryService.ListQuerySets lists them by name for a viewer to open. Nothing else reads them, so
+   * no run answers differently for having them. A file that does not parse fails the listing rather
+   * than leaving a set out.
    *
    * @generated from field: repeated string query_set_uris = 14;
    */
   querySetUris: string[];
 
   /**
-   * library_modules are derived-relation modules carried as VALUES (agni issue 788), for a caller
-   * whose modules live with it rather than on the server: a script calling a shared server, a
-   * generated client's CLI transport, the viewer trying a module, an embedder. They compose exactly
-   * as a library directory's do, accumulating with the design's project library, and a member path
-   * defined twice is refused naming each module's source. Being values, they need no ConfigResolver.
+   * library_modules are derived-relation modules sent as VALUES (agni issue 788). They serve a
+   * caller whose modules live with it rather than on the server, such as a script calling a shared
+   * server, a generated client's CLI transport, the viewer trying a module, or an embedder. They
+   * compose exactly as a library directory's modules do, and they accumulate with the design's
+   * project library. A member path defined twice is refused, and the error names each module's
+   * source. As values, they need no ConfigResolver.
    *
    * @generated from field: repeated agni.v1.webapi.LibraryModule library_modules = 10;
    */
   libraryModules: LibraryModule[];
 
   /**
-   * library_docs are optional reference pages for library members, keyed by member path, as a
-   * library directory's docs/<member.path>.md are. A page for a member nothing defines is refused.
+   * library_docs are optional reference pages for library members, keyed by member path, like a
+   * library directory's docs/<member.path>.md. A page for an undefined member is refused.
    *
    * @generated from field: map<string, string> library_docs = 11;
    */
@@ -192,13 +196,14 @@ export const AnalysisConfigSchema: GenMessage<AnalysisConfig> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_config, 0);
 
 /**
- * NamedChecklist is one review manifest a project declares, under the name a run picks it by.
+ * NamedChecklist is one of a project's review manifests, with its name. A run picks a checklist by
+ * that name.
  *
  * @generated from message agni.v1.webapi.NamedChecklist
  */
 export type NamedChecklist = Message<"agni.v1.webapi.NamedChecklist"> & {
   /**
-   * name is the key it is written under in project.yaml, such as "review" or "house".
+   * name is the checklist's key in project.yaml, such as "review" or "house".
    *
    * @generated from field: string name = 1;
    */
@@ -224,8 +229,8 @@ export const NamedChecklistSchema: GenMessage<NamedChecklist> = /*@__PURE__*/
  */
 export type LibraryModule = Message<"agni.v1.webapi.LibraryModule"> & {
   /**
-   * path is the module path its members register under, as a library file's name gives it: "house"
-   * defines house.<member>, "net" adds members to net.
+   * path is the module path, and the module's members register under it. A library file's name gives
+   * the same path. "house" defines house.<member>, and "net" adds members to net.
    *
    * @generated from field: string path = 1;
    */
@@ -262,27 +267,27 @@ export const LibraryModuleSchema: GenMessage<LibraryModule> = /*@__PURE__*/
   messageDesc(file_agni_v1_webapi_config, 2);
 
 /**
- * OverlayConfig is the per-request configuration that extends what a run can check: rules the shipped
- * catalog does not carry, and vocabulary the engine cannot guess (WS3-102). It exists so a surface does
- * not hand-wire each input separately — that hand-wiring is why --conventions reached `agni check` but
- * never `agni review`, leaving any review item bound to a naming rule reading not-automated forever
- * with no error to explain it.
+ * OverlayConfig is the per-request configuration that extends what a run can check (WS3-102). It adds
+ * rules the shipped catalog lacks and vocabulary the engine cannot guess. It exists so a surface does
+ * not hand-wire each input separately. Hand-wiring let --conventions reach `agni check` but never
+ * `agni review`. A review item bound to a naming rule then read not-automated forever, with no error
+ * to explain it.
  *
- * It carries VALUES, not file paths. Where the config came from is the caller's business: `agni check`
- * reads a YAML file the user named, a web client may build one from a form, and a future deployment may
- * resolve one from a shared registry by id. None of that belongs in the API contract, and a service that
+ * It holds VALUES, not file paths. The caller decides where the config comes from. `agni check` reads
+ * a YAML file the user named, a web client may build one from a form, and a future deployment may
+ * resolve one from a shared registry by id. None of that belongs in the API contract. A service that
  * took a path would have to own file I/O to do its job.
  *
- * The config it carries is an AnalysisConfig, the same message a Project declares, so a tier added
- * there is a tier a request can carry without a second edit here (agni issue 224). Whether a given
- * host can RESOLVE the ref-shaped fields of a request-supplied config is a property of that
- * deployment, not of this schema.
+ * Its config is an AnalysisConfig, the same message a Project declares. So when a tier is added
+ * there, a request can send it with no second edit here (agni issue 224). Each deployment decides
+ * whether its host can RESOLVE the ref-shaped fields of a config a request supplied. This schema
+ * does not decide that.
  *
  * @generated from message agni.v1.webapi.OverlayConfig
  */
 export type OverlayConfig = Message<"agni.v1.webapi.OverlayConfig"> & {
   /**
-   * config is what this request wants the design checked against, layered over whatever the design's
+   * config is what this request checks the design against. It layers over whatever the design's
    * project declares.
    *
    * @generated from field: agni.v1.webapi.AnalysisConfig config = 4;
@@ -291,15 +296,16 @@ export type OverlayConfig = Message<"agni.v1.webapi.OverlayConfig"> & {
 
   /**
    * ignore_project runs the design against the BUILT-IN catalog only, as though it belonged to no
-   * project: no project conventions, profiles, parameters, or intent.
+   * project. No project conventions, profiles, parameters or intent apply.
    *
-   * It exists because per-design config (agni issue 173) made "whose rules produced this finding" a
-   * real question a reviewer will ask, and a findings list cannot answer it. Toggling this and
-   * re-running answers it by subtraction: what remains is the engine's opinion, and what disappeared
-   * was the project's. Without it the only way to see the built-in catalog would be to move the
-   * design out of its project, which nobody is going to do to answer a question.
+   * Per-design config (agni issue 173) made "whose rules produced this finding" a real question for
+   * a reviewer, and a findings list cannot answer it. Toggling this flag and re-running answers it
+   * by subtraction. The findings that remain are the engine's opinion, and the ones that
+   * disappeared were the project's. Without the flag, the only way to see the built-in catalog
+   * would be to move the design out of its project, and nobody is going to do that to answer a
+   * question.
    *
-   * It does NOT disable a convention the request itself carries. Those are different acts: one says
+   * It does NOT disable a convention sent in the request itself. The two are different acts. One says
    * "ignore what my project declares", the other says "use this instead", and a caller doing both
    * means both.
    *

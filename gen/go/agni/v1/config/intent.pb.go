@@ -21,16 +21,17 @@ const (
 	_ = protoimpl.EnforceVersion(protoimpl.MaxVersion - 20)
 )
 
-// This file: a design's declared intent, as the ONE schema the authoring YAML and any wire form share
-// (CONSTRAINTS C26, agni issue 824).
+// This file defines a design's declared intent. The authoring YAML and any wire form share this ONE
+// schema (CONSTRAINTS C26, agni issue 824).
 //
-// A design writes it under `intent:` in its design.yaml. YAML is the syntax and this message is the
-// schema, so the loader binds the section to DesignIntent and compiles that, and a field added here is
-// a field every surface carries. The compiled form the rules read (stdlib/rules/intent.Declaration) is
-// derived from this message in one direction, since it deals each net's facts out into per-kind lists.
+// A design writes its intent under `intent:` in its design.yaml. YAML is the syntax and this
+// message is the schema. The loader binds the section to DesignIntent and compiles that, so a field
+// added here reaches every surface. The rules read a compiled form,
+// stdlib/rules/intent.Declaration. That form is derived from this message in one direction only,
+// because it splits each net's facts into per-kind lists.
 //
 // Every field is checked at load for something it can evaluate, and the error names the offending
-// entry. The rule each field compiles to is in the guide's "Design intent" page.
+// entry. The guide's "Design intent" page lists which rule each field compiles to.
 type DesignIntent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// modules are the blocks the board must contain. A module with no nets is checked by class or MPN
@@ -43,10 +44,11 @@ type DesignIntent struct {
 	Sequences []*PowerSequence `protobuf:"bytes,3,rep,name=sequences,proto3" json:"sequences,omitempty"`
 	// strap_groups are several strap nets read together as one binary number.
 	StrapGroups []*StrapGroup `protobuf:"bytes,4,rep,name=strap_groups,json=strapGroups,proto3" json:"strap_groups,omitempty"`
-	// io_map says which net lands on which pin of which device.
+	// io_map says which net connects to which pin of which device.
 	IoMap []*PinAssignment `protobuf:"bytes,5,rep,name=io_map,json=ioMap,proto3" json:"io_map,omitempty"`
 	// margin_factor is the headroom every supply must have over the peaks declared on its rails. Zero
-	// means none was declared, which leaves the margin rule uncompiled. A declared factor must exceed 1.
+	// means none was declared, and then the margin rule does not compile. A declared factor must
+	// exceed 1.
 	MarginFactor float64 `protobuf:"fixed64,6,opt,name=margin_factor,json=marginFactor,proto3" json:"margin_factor,omitempty"`
 	// components holds what each named component is, keyed by its ref-des as the design spells it.
 	Components    map[string]*ComponentIntent `protobuf:"bytes,7,rep,name=components,proto3" json:"components,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"bytes,2,opt,name=value"`
@@ -133,14 +135,15 @@ func (x *DesignIntent) GetComponents() map[string]*ComponentIntent {
 	return nil
 }
 
-// ComponentIntent is everything declared about one component. It exists for what a part number cannot
-// say, because the same part is used differently on different boards.
+// ComponentIntent is everything declared about one component. It records what a part number cannot
+// say, since the same part is used differently on different boards.
 type ComponentIntent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// exposure says whether a connector faces the outside of the product: "internal" for one that joins
-	// this board to another inside the same enclosure (a module socket, a mezzanine), or "external".
-	// An undeclared connector is external, so the exposure rules (esd-protection, esd-clamp-not-tvs,
-	// input-protection, reverse-blocking-absent) check every connector nobody declared internal.
+	// exposure says whether a connector faces the outside of the product. "internal" marks a connector
+	// that joins this board to another inside the same enclosure, such as a module socket or a
+	// mezzanine. The other value is "external". An undeclared connector is external, so the exposure
+	// rules check every connector not declared internal. Those rules are esd-protection,
+	// esd-clamp-not-tvs, input-protection and reverse-blocking-absent.
 	Exposure      string `protobuf:"bytes,1,opt,name=exposure,proto3" json:"exposure,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -272,22 +275,23 @@ type NetIntent struct {
 	Domain string `protobuf:"bytes,2,opt,name=domain,proto3" json:"domain,omitempty"`
 	// peak is the rail's peak draw, in amps.
 	Peak *float64 `protobuf:"fixed64,3,opt,name=peak,proto3,oneof" json:"peak,omitempty"`
-	// protect lists the protection the rail must carry: "ovp" or "discharge".
+	// protect lists the protections the rail requires, each "ovp" or "discharge".
 	Protect []string `protobuf:"bytes,4,rep,name=protect,proto3" json:"protect,omitempty"`
 	// reset is the level that asserts this reset net: "low" or "high".
 	Reset_ string `protobuf:"bytes,5,opt,name=reset,proto3" json:"reset,omitempty"`
-	// strap is the level this strap net must latch: "low" or "high".
+	// strap is the level that this strap net must latch, "low" or "high".
 	Strap string `protobuf:"bytes,6,opt,name=strap,proto3" json:"strap,omitempty"`
 	// min_ohms and max_ohms bound the strap resistor, either side optional. Only a strap takes them.
 	MinOhms float64 `protobuf:"fixed64,7,opt,name=min_ohms,json=minOhms,proto3" json:"min_ohms,omitempty"`
 	MaxOhms float64 `protobuf:"fixed64,8,opt,name=max_ohms,json=maxOhms,proto3" json:"max_ohms,omitempty"`
 	// ac_coupled says the net must carry a series capacitor.
 	AcCoupled bool `protobuf:"varint,9,opt,name=ac_coupled,json=acCoupled,proto3" json:"ac_coupled,omitempty"`
-	// pull_up_reach_hops is how many series resistors the pull-up walk from this net may cross before it
-	// must land on a rail, for a bus whose series network is sized for a deeper reach than the default.
-	// Zero or absent keeps the default of 3 (check.PullUpReachHops), and a negative value is a load
-	// error. It compiles to no rule. The model reads it, so every rule that walks to a pull-up
-	// (i2c-pull-up, the redundant and split-rail counts, a profile's missing-pullup) asks at this limit.
+	// pull_up_reach_hops limits the pull-up walk from this net. The walk may cross this many series
+	// resistors before it must reach a rail. A bus sets it when its series network is sized for a
+	// deeper reach than the default. Zero or absent keeps the default of 3 (check.PullUpReachHops), and
+	// a negative value is a load error. It compiles to no rule. The model reads it, so every rule that
+	// walks to a pull-up asks at this limit. Those rules are i2c-pull-up, the redundant and split-rail
+	// counts, and a profile's missing-pullup.
 	PullUpReachHops int32 `protobuf:"varint,10,opt,name=pull_up_reach_hops,json=pullUpReachHops,proto3" json:"pull_up_reach_hops,omitempty"`
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
@@ -529,7 +533,8 @@ type StrapGroup struct {
 	Value int32 `protobuf:"varint,4,opt,name=value,proto3" json:"value,omitempty"`
 	// bus names the shared bus whose devices must not collide on an address.
 	Bus string `protobuf:"bytes,5,opt,name=bus,proto3" json:"bus,omitempty"`
-	// default is the level a bit with no strap resistor reads at: "low", "high", or empty.
+	// default is the level that a bit reads at when it has no strap resistor. It is "low", "high", or
+	// empty.
 	Default       string `protobuf:"bytes,6,opt,name=default,proto3" json:"default,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -613,8 +618,8 @@ type PinAssignment struct {
 	Device string                 `protobuf:"bytes,2,opt,name=device,proto3" json:"device,omitempty"`
 	// pin is the package designator or the datasheet's functional name. Both resolve.
 	Pin string `protobuf:"bytes,3,opt,name=pin,proto3" json:"pin,omitempty"`
-	// function is the peripheral function selected on the pin, which io-map-function checks against
-	// the alternate functions the part's datasheet lists (agni issue 667).
+	// function is the peripheral function selected on the pin. io-map-function checks it against the
+	// pin's alternate functions in the part's datasheet (agni issue 667).
 	Function string `protobuf:"bytes,4,opt,name=function,proto3" json:"function,omitempty"`
 	// to is the optional far end, which needs both a device and a pin.
 	To            *PinEndpoint `protobuf:"bytes,5,opt,name=to,proto3" json:"to,omitempty"`

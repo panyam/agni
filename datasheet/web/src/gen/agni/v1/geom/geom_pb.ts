@@ -14,7 +14,7 @@ export const file_agni_v1_geom_geom: GenFile = /*@__PURE__*/
 
 /**
  * Provenance links a geometry node back to its source (schematic file + EDIF internal
- * id). source_id (the EDIF rename &id) is the robust join key to the IR, since it is
+ * id). source_id is the EDIF rename &id. It is the robust join key to the IR, since it is
  * identical across the .edn netlist and the .eds schematic.
  *
  * @generated from message agni.v1.geom.Provenance
@@ -87,10 +87,10 @@ export const BBoxSchema: GenMessage<BBox> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom, 2);
 
 /**
- * Transform places a symbol on a sheet. Format-neutral: origin + rotation + mirror +
- * optional scale, so readers for formats with arbitrary angles/scales (KiCad, Altium,
- * OrCAD, ...) map onto it, not just EDIF's fixed orientation codes. Application order is
- * mirror, then rotate, then translate by origin. The EDIF 8 codes map exactly:
+ * Transform places a symbol on a sheet. It is format-neutral, with origin + rotation +
+ * mirror + optional scale. So readers for formats with arbitrary angles and scales (KiCad,
+ * Altium, OrCAD, ...) map onto it, as well as EDIF's fixed orientation codes. Application
+ * order is mirror, then rotate, then translate by origin. The EDIF 8 codes map exactly.
  * R0/R90/R180/R270 = rotation only; MX = mirror_x; MY = mirror_y; MXR90 = mirror_x +
  * rotation 90; MYR90 = mirror_y + rotation 90. EDIF scaleX/scaleY map to scale_x/scale_y.
  *
@@ -248,9 +248,9 @@ export const Shape_KindSchema: GenEnum<Shape_Kind> = /*@__PURE__*/
 
 /**
  * Fill style of a closed shape. Formats distinguish how a body is filled, so this is not
- * a bool: OUTLINE fills with the outline/stroke color, BACKGROUND with the symbol body
- * color, COLOR with an explicit fill_color. UNSPECIFIED is an unfilled outline (the
- * default). Set where the format expresses it (KiCad fill types; EDIF fill, if any).
+ * a bool. OUTLINE fills with the outline/stroke color, BACKGROUND with the symbol body
+ * color, and COLOR with an explicit fill_color. UNSPECIFIED, the default, is an unfilled
+ * outline. Set where the format expresses it (KiCad fill types; EDIF fill, if any).
  *
  * @generated from enum agni.v1.geom.Shape.Fill
  */
@@ -339,21 +339,21 @@ export type PinPoint = Message<"agni.v1.geom.PinPoint"> & {
   name: string;
 
   /**
-   * Glyph height of the pin's label text, in source units, same meaning as Label.height. Zero
-   * when the source states none, which is the signal for a renderer to use its own default.
-   * Without it both backends sized pin text from a constant while every other run scaled with
-   * the sheet, so pin labels were the one kind of text that ignored the drawing.
+   * Glyph height of the pin's label text, in source units, with the same meaning as
+   * Label.height. Zero when the source states none, and a renderer then uses its own default.
+   * Before this field, both backends sized pin text from a constant while every other text run
+   * scaled with the sheet. So pin labels were the only text that ignored the drawing.
    *
    * @generated from field: int64 height = 7;
    */
   height: bigint;
 
   /**
-   * Where the pin NUMBER goes, when the source places it apart from the name — EDIF gives a pin
-   * two independent text positions, the name on (name X (display ...)) and the number on
-   * (keywordDisplay designator (display ...)). Nil means the source placed only one, and a
-   * renderer should fall back to offsetting the number off label_origin so the two do not
-   * overlap. Roughly half the pins in a real export carry this.
+   * Where the pin NUMBER goes, when the source places it apart from the name. EDIF gives a pin
+   * two independent text positions. The name is on (name X (display ...)) and the number is on
+   * (keywordDisplay designator (display ...)). Nil means the source placed only one. A renderer
+   * should then offset the number from label_origin so the two do not overlap. Roughly half
+   * the pins in a real export set this.
    *
    * @generated from field: agni.v1.geom.Point number_origin = 8;
    */
@@ -377,10 +377,10 @@ export const PinPointSchema: GenMessage<PinPoint> = /*@__PURE__*/
 /**
  * Asset marks a geom object that was loaded as a self-contained unit from an external source
  * (a symbol file, an embedded/external image, an imported group) rather than drawn inline. It
- * carries the origin so attribution, licensing (symbol/image libraries are often GPL), and
- * round-tripping are traceable, and a kind so consumers can iterate symbols, images, and
- * generic groups uniformly. Inline hand-drawn primitives carry no Asset; its presence is the
- * signal that this content came from somewhere as a unit.
+ * records the origin, so attribution, licensing (symbol/image libraries are often GPL), and
+ * round-tripping are traceable. It also has a kind, so consumers can iterate symbols, images,
+ * and generic groups uniformly. Inline hand-drawn primitives have no Asset. An Asset's
+ * presence signals that this content came from somewhere as a unit.
  *
  * @generated from message agni.v1.geom.Asset
  */
@@ -460,10 +460,10 @@ export const Asset_KindSchema: GenEnum<Asset_Kind> = /*@__PURE__*/
 
 /**
  * Image is a raster bitmap placed on a sheet or baked into a symbol (a logo, a title-block
- * graphic, an embedded photo). The bytes are carried inline (decoded from the source's base64),
- * drawn into bbox with the given rotation/mirror. bbox is in the coordinate space of its owner:
- * sheet coordinates for SheetGeometry.images, symbol-local for SymbolDef.images (then
- * transformed by each placement). Always an Asset (kind KIND_IMAGE).
+ * graphic, an embedded photo). The bytes are inline, decoded from the source's base64, and are
+ * drawn into bbox with the given rotation/mirror. bbox is in its owner's coordinate space. That
+ * is sheet coordinates for SheetGeometry.images, and symbol-local for SymbolDef.images, which
+ * each placement then transforms. Always an Asset (kind KIND_IMAGE).
  *
  * @generated from message agni.v1.geom.Image
  */
@@ -516,7 +516,7 @@ export const ImageSchema: GenMessage<Image> = /*@__PURE__*/
 
 /**
  * SymbolDef is the reusable graphic for a part type (an EDIF cell view symbol),
- * drawn once and placed many times. Keyed by (cell_ref, library_ref, view_ref): a
+ * drawn once and placed many times. It is keyed by (cell_ref, library_ref, view_ref). A
  * multi-section cell (e.g. a connector with A/B/C/D banks) defines several views, each a
  * distinct symbol, and a placement selects one by view_ref.
  *
@@ -568,8 +568,8 @@ export type SymbolDef = Message<"agni.v1.geom.SymbolDef"> & {
   annotations: Label[];
 
   /**
-   * asset marks a symbol loaded from a .sym/library (kind KIND_SYMBOL) and carries its origin;
-   * prov (16) is retained for the EDIF/KiCad readers that already set it.
+   * asset marks a symbol loaded from a .sym/library (kind KIND_SYMBOL) and records its origin.
+   * prov (16) is kept for the EDIF/KiCad readers that already set it.
    *
    * @generated from field: agni.v1.geom.Asset asset = 8;
    */
@@ -596,12 +596,11 @@ export const SymbolDefSchema: GenMessage<SymbolDef> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom, 8);
 
 /**
- * SymbolPlacement is one placed component on a sheet: a symbol plus a transform.
- * Field is a placed text field on a symbol instance (Reference, Value, or a custom field):
- * its displayed value and where the format placed it. Structured (not a loose sheet Label)
- * so consumers know which text is which field, and whether it is shown, e.g. for the visual
- * diff and interaction (a Value change highlights the right label). ref_des stays the join
- * key; the Reference field is its drawn form.
+ * Field is a placed text field on a symbol instance (Reference, Value, or a custom field). It
+ * holds the displayed value and where the format placed it. It is structured rather than a loose
+ * sheet Label, so consumers know which text is which field and whether it is shown. The visual
+ * diff and interaction use that, so a Value change highlights the right label. ref_des is still
+ * the join key, and the Reference field is its drawn form.
  *
  * @generated from message agni.v1.geom.Field
  */
@@ -664,6 +663,8 @@ export const FieldSchema: GenMessage<Field> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom, 9);
 
 /**
+ * SymbolPlacement is one placed component on a sheet, a symbol plus a transform.
+ *
  * @generated from message agni.v1.geom.SymbolPlacement
  */
 export type SymbolPlacement = Message<"agni.v1.geom.SymbolPlacement"> & {
@@ -706,21 +707,21 @@ export type SymbolPlacement = Message<"agni.v1.geom.SymbolPlacement"> & {
   fields: Field[];
 
   /**
-   * net_anchor is the net this placement NAMES rather than joins: a ground or rail symbol is drawn
+   * net_anchor is the net this placement NAMES rather than joins. A ground or rail symbol is drawn
    * like a part but is not one, and its whole job is to give the net at its pin a name. Empty for an
    * ordinary component placement.
    *
-   * Every schematic format has this construct and each spells it differently — KiCad a `#PWR`
-   * virtual with the name in its Value, xschem a gnd/vdd label symbol with a `lab` property, gEDA a
-   * power symbol with a `net=` attribute — so each reader translates its own spelling into this one
-   * neutral field (CONSTRAINTS C1) and no consumer has to know any of them.
+   * Every schematic format has this construct, and each spells it differently. KiCad uses a `#PWR`
+   * virtual with the name in its Value. xschem uses a gnd/vdd label symbol with a `lab` property.
+   * gEDA uses a power symbol with a `net=` attribute. Each reader translates its own spelling into
+   * this one neutral field (CONSTRAINTS C1), so no consumer has to know any of them.
    *
-   * It exists because these symbols were unaddressable. KiCad's reader blanked the ref_des (the
-   * reference is hidden, and hiding it was conflated with dropping the identity) so the glyph drew
-   * with nothing to key; xschem kept a ref_des that joins to no component, so a viewer could select
-   * it and then ask a question about a part that does not exist. On a schematic the thing that NAMES
-   * a rail is often the only thing on the sheet a reader wants to click, and it was the one thing
-   * they could not.
+   * Before this field, these symbols could not be addressed. The KiCad reference is hidden, and
+   * KiCad's reader treated hiding it as dropping the identity. So it blanked the ref_des, and the
+   * glyph drew with nothing to key. xschem kept a ref_des that joins to no component. A viewer could
+   * select it and then ask a question about a part that does not exist. On a schematic, a reader
+   * often wants to click only the symbol that NAMES a rail, and that was the one symbol they could
+   * not click.
    *
    * @generated from field: string net_anchor = 7;
    */
@@ -774,7 +775,7 @@ export type WireGeometry = Message<"agni.v1.geom.WireGeometry"> & {
   net: string;
 
   /**
-   * net_id joins to ir.Net.id — the deterministic per-instance net identity, so a highlight can
+   * net_id joins to ir.Net.id, the deterministic per-instance net identity. A highlight can then
    * target one of two nets that share a name (see ir.Net.id). Empty for a wire on a pinless net
    * or a format whose solve produced no id; consumers fall back to net.
    *
@@ -808,8 +809,9 @@ export const WireGeometrySchema: GenMessage<WireGeometry> = /*@__PURE__*/
 /**
  * Kind distinguishes a plain net wire from a bus construct, so the renderers style a bus
  * trunk/entry differently (thicker, distinct color) from a wire. Unset renders as a wire, so
- * existing readers and goldens are unaffected until a reader sets it. Format-neutral: KiCad
- * sets BUS/BUS_ENTRY today; gEDA/xschem when their geometry readers emit bus segments.
+ * existing readers and goldens are unaffected until a reader sets it. It is format-neutral.
+ * KiCad sets BUS/BUS_ENTRY today, and gEDA/xschem will once their geometry readers emit bus
+ * segments.
  *
  * @generated from enum agni.v1.geom.WireGeometry.Kind
  */
@@ -873,9 +875,10 @@ export type Label = Message<"agni.v1.geom.Label"> & {
   height: bigint;
 
   /**
-   * Alignment of the text relative to origin, canonical "<h> <v>": h in {left,center,right},
-   * v in {top,middle,bottom}; either token may be omitted (defaults to centered). Each reader
-   * maps its native codes onto this (EDIF LOWERLEFT -> "left bottom"; KiCad "left bottom").
+   * Alignment of the text relative to origin, in the canonical form "<h> <v>", with h in
+   * {left,center,right} and v in {top,middle,bottom}. Either token may be omitted, and then
+   * defaults to centered. Each reader maps its native codes onto this (EDIF LOWERLEFT ->
+   * "left bottom"; KiCad "left bottom").
    *
    * @generated from field: string justify = 4;
    */
@@ -918,10 +921,10 @@ export type SheetGeometry = Message<"agni.v1.geom.SheetGeometry"> & {
 
   /**
    * parent_id is the id of the sheet this one nests under, or empty for a top-level sheet.
-   * A design may have several top-level sheets (a forest). Populated by readers with a sheet
-   * hierarchy (KiCad hierarchical schematics); flat formats (EDIF pages) leave it empty. This
-   * is the rendering-side hierarchy (the geometry sidecar); the neutral IR does not model it
-   * yet (CONSTRAINTS C9 — only one format has it so far).
+   * A design may have several top-level sheets (a forest). Readers with a sheet hierarchy
+   * (KiCad hierarchical schematics) fill it, and flat formats (EDIF pages) leave it empty.
+   * This is the rendering-side hierarchy in the geometry sidecar. The neutral IR does not
+   * model it yet, because only one format has it so far (CONSTRAINTS C9).
    *
    * @generated from field: string parent_id = 8;
    */
@@ -950,10 +953,10 @@ export type SheetGeometry = Message<"agni.v1.geom.SheetGeometry"> & {
   labels: Label[];
 
   /**
-   * Free graphics on the sheet that are not owned by a placed symbol: junction dots,
-   * no-connect markers, and stand-alone drawing primitives (notes, lines, boxes). Populated
-   * by any reader that has them (KiCad junctions/no-connects/graphics, EDIF commentGraphics
-   * figures). Symbol graphics stay in SymbolDef.shapes; these are sheet-level.
+   * Free graphics on the sheet that no placed symbol owns, such as junction dots,
+   * no-connect markers, and stand-alone drawing primitives (notes, lines, boxes). Any reader
+   * that has them fills this (KiCad junctions/no-connects/graphics, EDIF commentGraphics
+   * figures). Symbol graphics are in SymbolDef.shapes, and these are sheet-level.
    *
    * @generated from field: repeated agni.v1.geom.Shape shapes = 7;
    */
@@ -975,11 +978,11 @@ export type SheetGeometry = Message<"agni.v1.geom.SheetGeometry"> & {
 
   /**
    * suppress_worksheet tells the renderer NOT to synthesize its KiCad-style drawing sheet
-   * (frame + ruler + title block) for this sheet, because the source format carries its own
+   * (frame + ruler + title block) for this sheet, because the source format has its own
    * (xschem title.sym, gEDA title-*.sym). Default false, so KiCad and EDIF still get the
-   * synthetic worksheet; xschem/gEDA readers set it true. (WS7-036: the format's own title
-   * block/annotations are rendered faithfully in a follow-up; until then such a sheet draws
-   * without a title block rather than with a wrong synthetic one.)
+   * synthetic worksheet. xschem/gEDA readers set it true. A follow-up renders the format's own
+   * title block and annotations faithfully (WS7-036). Until then such a sheet draws without a
+   * title block rather than with a wrong synthetic one.
    *
    * @generated from field: bool suppress_worksheet = 11;
    */
@@ -1000,9 +1003,9 @@ export const SheetGeometrySchema: GenMessage<SheetGeometry> = /*@__PURE__*/
 
 /**
  * TitleBlock holds the drawing-sheet title-block fields (the bottom-right info table). The
- * worksheet frame/border/zone-ruler is standard furniture the renderer synthesizes from the
- * page size; only these text fields carry per-design/sheet content. Cross-format: KiCad
- * (title_block ...), EDIF title-block annotations. Any field may be empty.
+ * renderer synthesizes the worksheet frame/border/zone-ruler from the page size, as standard
+ * furniture. Only these text fields hold per-design or per-sheet content. KiCad (title_block
+ * ...) and EDIF title-block annotations both fill it. Any field may be empty.
  *
  * @generated from message agni.v1.geom.TitleBlock
  */
@@ -1035,10 +1038,10 @@ export type TitleBlock = Message<"agni.v1.geom.TitleBlock"> & {
   comments: string[];
 
   /**
-   * Title-block fields a format carries that have no typed slot here (e.g. EDIF's Drawing,
-   * Designer, Prototype, DV/PV/Checked signatures). Ordered as the source lists them and
-   * deduped by key, so consumers keep the key/value split a "Key: Value" comment would lose.
-   * Kept generic (not typed fields) because so far only some formats populate these.
+   * Title-block fields with no typed slot here (e.g. EDIF's Drawing, Designer, Prototype,
+   * DV/PV/Checked signatures). They are in source order and deduped by key. Consumers keep the
+   * key/value split, which a "Key: Value" comment would lose. They are generic rather than
+   * typed fields, because so far only some formats populate them.
    *
    * @generated from field: repeated agni.v1.geom.KeyValue extra_fields = 6;
    */
@@ -1053,7 +1056,7 @@ export const TitleBlockSchema: GenMessage<TitleBlock> = /*@__PURE__*/
   messageDesc(file_agni_v1_geom_geom, 15);
 
 /**
- * KeyValue is a preserved-order named string, used where a format carries a field the shared
+ * KeyValue is a preserved-order named string. A format uses it for a field that the shared
  * geometry schema does not promote to a typed slot. Order is the producer's; keys are unique
  * within one list. Prefer this over map<string,string> when order matters or output must be
  * byte-stable (proto map iteration is unordered).
@@ -1116,28 +1119,29 @@ export type SchematicGeometry = Message<"agni.v1.geom.SchematicGeometry"> & {
    * `symbols` resolves for them (agni issue 354).
    *
    * A render that loses a symbol does not look broken. The placement contributes no shapes, so it
-   * vanishes along with the entity keys that make it pickable, while the annotation pass still draws
-   * its reference designator. The sheet then shows every ref des, every wire and the title block, and
+   * vanishes along with the entity keys that make it pickable. The annotation pass still draws its
+   * reference designator. The sheet then shows every ref des, every wire and the title block, and
    * every component on it is silently unclickable. A reader sees `C1` printed, clicks it, gets
    * nothing, and reasonably concludes the tool knows nothing about C1.
    *
-   * It rides the GEOMETRY rather than a response field so every consumer reads one answer: `agni
-   * render` prints it, the viewer banners it, and an embedder gets it without recomputing a join that
-   * could disagree with the renderer's. It is filled where geometry is produced, using the same
-   * resolution geomath.SymbolFor performs, so "did not draw" cannot drift from what did not draw.
+   * The list is on the GEOMETRY rather than a response field, so every consumer reads one answer.
+   * `agni render` prints it, the viewer shows it in a banner, and an embedder gets it without
+   * recomputing a join that could disagree with the renderer's. The producer of the geometry fills
+   * it with the same resolution geomath.SymbolFor performs. So the list cannot drift from what
+   * actually did not draw.
    *
    * Empty means every placement resolved, which is the normal case. A geometry with no placements at
-   * all is also empty here: absence of drawing is not the same as failure to draw.
+   * all also leaves it empty, because drawing nothing is not the same as failing to draw.
    *
    * @generated from field: repeated agni.v1.geom.UndrawnPlacement undrawn = 5;
    */
   undrawn: UndrawnPlacement[];
 
   /**
-   * back_annotated are the placements named by the designator the design back-annotates rather than
-   * the one drawn on their page (agni issues 1228, 1230). An export can renumber parts after layout
-   * and record the new designator apart from the page, and every read keys the part by the new one,
-   * so this is how a reader audits which labels the drawing replaced. Empty when the file
+   * back_annotated lists the placements whose name comes from the design's back-annotation rather
+   * than from their page (agni issues 1228, 1230). An export can renumber parts after layout and
+   * record the new designator apart from the page. Every read keys the part by the new designator.
+   * A reader uses this list to audit which drawn labels were replaced. Empty when the file
    * back-annotates nothing, or nothing it back-annotates differs from the page.
    *
    * @generated from field: repeated agni.v1.geom.BackAnnotatedPlacement back_annotated = 6;
@@ -1158,9 +1162,9 @@ export const SchematicGeometrySchema: GenMessage<SchematicGeometry> = /*@__PURE_
   messageDesc(file_agni_v1_geom_geom, 17);
 
 /**
- * BackAnnotatedPlacement is one placement whose page designator back-annotation replaced. ref_des is
- * the designator every read uses, drawn_ref_des the one the page carries (empty when it carries
- * none), and sheet_id the sheet it is drawn on.
+ * BackAnnotatedPlacement is one placement whose page designator was replaced by back-annotation.
+ * ref_des is the designator every read uses. drawn_ref_des is the one on the page, empty when the
+ * page has none. sheet_id is the sheet the placement is drawn on.
  *
  * @generated from message agni.v1.geom.BackAnnotatedPlacement
  */
@@ -1192,14 +1196,14 @@ export const BackAnnotatedPlacementSchema: GenMessage<BackAnnotatedPlacement> = 
  * UndrawnPlacement is one placement no symbol resolved for, with enough identity to act on it.
  *
  * ref_des is what the reader SEES on the sheet, so a message can name the part they are looking at.
- * cell_ref and library_ref are what the placement asked for and nothing supplied, which is what a
- * reader pastes into a --symbol-path search or checks against their library table. sheet_id says
- * where to look.
+ * cell_ref and library_ref are what the placement asked for and nothing supplied. A reader pastes
+ * them into a --symbol-path search or checks them against their library table. sheet_id says where
+ * to look.
  *
- * Keyed per PLACEMENT rather than per missing library, unlike ir.UnresolvedSymbol. That message
- * answers "which reference failed to resolve" for the netlist read, where one missing file affecting
- * forty parts is one fact. This answers "what is missing from this drawing", where the forty
- * unclickable parts are the thing the reader is looking at.
+ * It is keyed per PLACEMENT rather than per missing library, unlike ir.UnresolvedSymbol. That
+ * message answers "which reference failed to resolve" for the netlist read, where one missing file
+ * affecting forty parts is one fact. This message answers "what is missing from this drawing". There
+ * the reader is looking at the forty unclickable parts.
  *
  * @generated from message agni.v1.geom.UndrawnPlacement
  */

@@ -36,7 +36,7 @@ const (
 	LexiconSource_LEXICON_SOURCE_PROJECT LexiconSource = 3
 	// The design's own design.yaml.
 	LexiconSource_LEXICON_SOURCE_DESIGN LexiconSource = 4
-	// The request, which is where the CLI's --conventions file travels.
+	// The request. The CLI sends its --conventions file this way.
 	LexiconSource_LEXICON_SOURCE_REQUEST LexiconSource = 5
 )
 
@@ -90,19 +90,19 @@ func (LexiconSource) EnumDescriptor() ([]byte, []int) {
 // LexiconEntry is one pattern, exclusion, prefix, family or switch of the effective lexicon.
 type LexiconEntry struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// vocabulary names the list the entry sits in, as the conventions YAML spells its path: "net.rail",
-	// "net.i2c", "pin.supply", "class.tvs".
+	// vocabulary names the list that holds the entry. It is spelled as the conventions YAML spells the
+	// path, such as "net.rail", "net.i2c", "pin.supply", "class.tvs".
 	Vocabulary string `protobuf:"bytes,1,opt,name=vocabulary,proto3" json:"vocabulary,omitempty"`
 	// kind is "pattern", "exclude", "prefix", "family", "pair" or "switch".
 	Kind string `protobuf:"bytes,2,opt,name=kind,proto3" json:"kind,omitempty"`
-	// value is the pattern as written, a ref-des prefix, a suffix pair as positive=negative ("_P=_N"), or
-	// for a switch its name and setting ("infer_rail_from_supply_pins=true").
+	// value is the pattern as written, a ref-des prefix, or a suffix pair as positive=negative
+	// ("_P=_N"). For a switch it is the name and setting ("infer_rail_from_supply_pins=true").
 	Value  string        `protobuf:"bytes,3,opt,name=value,proto3" json:"value,omitempty"`
 	Source LexiconSource `protobuf:"varint,4,opt,name=source,proto3,enum=agni.v1.webapi.LexiconSource" json:"source,omitempty"`
 	// convention is the name of the convention a non-built-in entry came from.
 	Convention string `protobuf:"bytes,5,opt,name=convention,proto3" json:"convention,omitempty"`
-	// replaced is set on a built-in entry a convention's `replace: true` took out, which the run no
-	// longer matches. It is listed so switching a built-in off can be seen.
+	// replaced is set on a built-in entry that a convention's `replace: true` took out. The run no
+	// longer matches it. It is still listed, so a reader can see a built-in switched off.
 	Replaced      bool `protobuf:"varint,6,opt,name=replaced,proto3" json:"replaced,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -184,7 +184,7 @@ type GetLexiconRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// snapshot names the design and the config it was read with, "snapshots/{snapshot}".
 	Snapshot string `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	// candidate lists this convention in place of the snapshot's, its entries' source being REQUEST.
+	// candidate lists this convention in place of the snapshot's. Its entries have source REQUEST.
 	// It reads nothing of the design.
 	Candidate     *config.NamingConvention `protobuf:"bytes,2,opt,name=candidate,proto3" json:"candidate,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -237,15 +237,16 @@ func (x *GetLexiconRequest) GetCandidate() *config.NamingConvention {
 
 type GetLexiconResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// entries are in vocabulary order (net, then pin, then class), each list's built-in entries first.
+	// entries are in vocabulary order (net, then pin, then class). Each list has its built-in entries
+	// first.
 	Entries []*LexiconEntry `protobuf:"bytes,1,rep,name=entries,proto3" json:"entries,omitempty"`
-	// effective is the whole lexicon as a convention would state it, every list written out with
-	// `replace: true`, so a file carrying it reads the design exactly as this run did.
+	// effective is the whole lexicon as a convention would state it. Every list is written out with
+	// `replace: true`. So a file holding it reads the design exactly as this run did.
 	Effective *config.NamingLexicon `protobuf:"bytes,2,opt,name=effective,proto3" json:"effective,omitempty"`
-	// convention is the convention as written, rules included: the candidate when one was sent, else
-	// the one the snapshot was read with. Absent when the design reads the built-ins alone. It is what
-	// an editor starts from, because CompareLexicons replaces rules as well as the lexicon, so a
-	// candidate built from `effective` would stop the convention's rules running.
+	// convention is the convention as written, rules included. It is the candidate when one was sent,
+	// and otherwise the snapshot's own. Absent when the design reads the built-ins alone. An editor
+	// starts from this field. CompareLexicons replaces rules as well as the lexicon. A candidate built
+	// from `effective` would have no rules, and the convention's rules would stop running.
 	Convention    *config.NamingConvention `protobuf:"bytes,3,opt,name=convention,proto3" json:"convention,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -305,8 +306,9 @@ func (x *GetLexiconResponse) GetConvention() *config.NamingConvention {
 type ExplainNetRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Snapshot string                 `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	// net is the net's name as the design carries it. A name matching no net exactly is matched on its
-	// hierarchy leaf when exactly one net has that leaf, so a KiCad root net can be asked as SCL for /SCL.
+	// net is the net's name as the design spells it. A name may match no net exactly. Then it matches
+	// on its hierarchy leaf, if exactly one net has that leaf. So a client can ask for a KiCad root net
+	// /SCL as SCL.
 	Net           string `protobuf:"bytes,2,opt,name=net,proto3" json:"net,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -362,8 +364,8 @@ type ExplainNetResponse struct {
 	Net string `protobuf:"bytes,1,opt,name=net,proto3" json:"net,omitempty"`
 	// roles are the net's roles as the read stamped them, each with its source and reason.
 	Roles []*ir.NetRole `protobuf:"bytes,2,rep,name=roles,proto3" json:"roles,omitempty"`
-	// matches are the net-name entries of the effective lexicon the name's hierarchy leaf matches, in
-	// GetLexicon's order. A matching `exclude` is what kept the name out of its vocabulary.
+	// matches are the effective lexicon's net-name entries that match the name's hierarchy leaf, in
+	// GetLexicon's order. A matching `exclude` kept the name out of its vocabulary.
 	Matches       []*LexiconEntry `protobuf:"bytes,3,rep,name=matches,proto3" json:"matches,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -423,9 +425,9 @@ func (x *ExplainNetResponse) GetMatches() []*LexiconEntry {
 type CompareLexiconsRequest struct {
 	state    protoimpl.MessageState `protogen:"open.v1"`
 	Snapshot string                 `protobuf:"bytes,1,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
-	// conventions is the candidate. It replaces the convention the snapshot was read with, rules and
-	// lexicon both, as a request's own convention does. A candidate stating no lexicon reads names with
-	// the built-in vocabularies alone.
+	// conventions is the candidate. It replaces the snapshot's convention, rules and lexicon both, as a
+	// request's own convention does. If the candidate states no lexicon, names are read with the
+	// built-in vocabularies alone.
 	Conventions   *config.NamingConvention `protobuf:"bytes,2,opt,name=conventions,proto3" json:"conventions,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -477,10 +479,10 @@ func (x *CompareLexiconsRequest) GetConventions() *config.NamingConvention {
 
 type CompareLexiconsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// tables are "role_changes" (net, roles_before, roles_after), one row per net whose roles or their
-	// evidence differ, each role written with its source as "rail (convention)",
-	// and "finding_changes" (change, rule, subject_kind, subject, message), one row per finding present
-	// under one lexicon and not the other, change being "appeared" or "gone".
+	// tables holds two tables. "role_changes" (net, roles_before, roles_after) has one row per net
+	// whose roles or their evidence differ. Each role is written with its source, as
+	// "rail (convention)". "finding_changes" (change, rule, subject_kind, subject, message) has one row
+	// per finding present under one lexicon and not the other. change is "appeared" or "gone".
 	Tables        []*Table `protobuf:"bytes,1,rep,name=tables,proto3" json:"tables,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -33,12 +33,14 @@ type RequestTiming struct {
 	Stages []*TimedStage `protobuf:"bytes,3,rep,name=stages,proto3" json:"stages,omitempty"`
 	// lookups say which tier answered each cached read, in the order the reads happened.
 	Lookups []*CacheLookup `protobuf:"bytes,4,rep,name=lookups,proto3" json:"lookups,omitempty"`
-	// rules are the rule evaluations, slowest first, capped at the slowest twenty with every rule's
-	// time still counted in rules_micros.
+	// rules are the rule evaluations, slowest first. The list stops at the slowest twenty. When
+	// allocation was recorded, it also holds the twenty that allocated most, since the rule raising a
+	// worker's memory is often not among the slowest (agni issue 994).
 	Rules []*RuleTiming `protobuf:"bytes,5,rep,name=rules,proto3" json:"rules,omitempty"`
-	// rules_evaluated is how many rules ran, of which `rules` lists the slowest.
+	// rules_evaluated is how many rules ran. `rules` lists the slowest of them.
 	RulesEvaluated int32 `protobuf:"varint,6,opt,name=rules_evaluated,json=rulesEvaluated,proto3" json:"rules_evaluated,omitempty"`
-	// plans are the query plans the request's evaluations ran, when it asked for them.
+	// plans holds the plan of each query evaluation in the request. It is set only when the request
+	// asked for plans.
 	Plans         []*QueryPlan `protobuf:"bytes,7,rep,name=plans,proto3" json:"plans,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -128,11 +130,11 @@ type TimedStage struct {
 	Name        string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	StartMicros int64                  `protobuf:"varint,2,opt,name=start_micros,json=startMicros,proto3" json:"start_micros,omitempty"`
 	Micros      int64                  `protobuf:"varint,3,opt,name=micros,proto3" json:"micros,omitempty"`
-	// sys_bytes and heap_bytes are the process's memory as the stage ended (runtime.MemStats' Sys and
-	// HeapAlloc), set only when the request asked for memory (an Agni-Timing value containing
-	// "memory", agni issue 994). In the browser engine Sys is the wasm memory's size, which never
-	// shrinks, so the first stage ending with a higher figure is the one that raised the peak.
-	// heap_bytes counts garbage not yet collected.
+	// sys_bytes and heap_bytes are the process's memory as the stage ended, read from
+	// runtime.MemStats' Sys and HeapAlloc. They are set only when the request asked for memory, with an
+	// Agni-Timing value containing "memory" (agni issue 994). In the browser engine Sys is the wasm
+	// memory's size, and that size never shrinks. So when a stage ends with a higher figure than every
+	// stage before it, that stage raised the peak. heap_bytes counts garbage not yet collected.
 	SysBytes      int64 `protobuf:"varint,4,opt,name=sys_bytes,json=sysBytes,proto3" json:"sys_bytes,omitempty"`
 	HeapBytes     int64 `protobuf:"varint,5,opt,name=heap_bytes,json=heapBytes,proto3" json:"heap_bytes,omitempty"`
 	unknownFields protoimpl.UnknownFields

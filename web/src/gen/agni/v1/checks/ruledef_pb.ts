@@ -13,13 +13,14 @@ export const file_agni_v1_checks_ruledef: GenFile = /*@__PURE__*/
   fileDesc("ChxhZ25pL3YxL2NoZWNrcy9ydWxlZGVmLnByb3RvEg5hZ25pLnYxLmNoZWNrcyJQCghSdWxlRGVjaxIMCgRuYW1lGAEgASgJEg4KBnNvdXJjZRgCIAEoCRImCgVydWxlcxgDIAMoCzIXLmFnbmkudjEuY2hlY2tzLlJ1bGVEZWYilgEKB1J1bGVEZWYSKAoEc3BlYxgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNSdWxlSAASKgoFcXVlcnkYAiABKAsyGS5hZ25pLnYxLmNoZWNrcy5RdWVyeVJ1bGVIABItCgdwcm9maWxlGAMgASgLMhouYWduaS52MS5jaGVja3MuUHJvZmlsZURlZkgAQgYKBGJvZHki/wEKCFJ1bGVNZXRhEgwKBG5hbWUYASABKAkSEAoIc2V2ZXJpdHkYAiABKAkSDwoHc3VtbWFyeRgDIAEoCRIOCgZpbXBhY3QYBCABKAkSDgoGZGV0YWlsGAUgASgJEjAKBHRhZ3MYBiADKAsyIi5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YS5UYWdzRW50cnkSFgoOb3B0aW9uYWxfcmVhZHMYByADKAkSGwoTcmVxdWlyZXNfY2FwYWJpbGl0eRgIIAMoCRIOCgZyZW1lZHkYCSABKAkaKwoJVGFnc0VudHJ5EgsKA2tleRgBIAEoCRINCgV2YWx1ZRgCIAEoCToCOAEiWgoIU3BlY1J1bGUSJgoEbWV0YRgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlJ1bGVNZXRhEiYKBGJvZHkYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keSLxAQoIU3BlY0JvZHkSDAoEb3ZlchgBIAEoCRIuCgNsZXQYAiADKAsyIS5hZ25pLnYxLmNoZWNrcy5TcGVjQm9keS5MZXRFbnRyeRInCgV3aGVyZRgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByEg8KB21lc3NhZ2UYBCABKAkSJwoFc2NvcGUYBSABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwchpECghMZXRFbnRyeRILCgNrZXkYASABKAkSJwoFdmFsdWUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybToCOAEitAEKCFNwZWNUZXJtEiYKA2xpdBgBIAEoCzIXLmFnbmkudjEuY2hlY2tzLlNwZWNMaXRIABIOCgRmYWN0GAIgASgJSAASDQoDdmFyGAMgASgJSAASKAoEY2FsbBgEIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNDYWxsSAASLwoIY291bnRfb2YYBSABKAsyGy5hZ25pLnYxLmNoZWNrcy5TcGVjQ291bnRPZkgAQgYKBHRlcm0iOQoHU3BlY0xpdBILCgFzGAEgASgJSAASCwoBaRgCIAEoA0gAEgsKAWIYAyABKAhIAEIHCgV2YWx1ZSI+CghTcGVjQ2FsbBIKCgJmbhgBIAEoCRImCgRhcmdzGAIgAygLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm0iRAoLU3BlY0NvdW50T2YSDAoEb3ZlchgBIAEoCRInCgV3aGVyZRgCIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIu4CCghTcGVjRXhwchIrCgNhbmQYASABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwckxpc3RIABIqCgJvchgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByTGlzdEgAEicKA25vdBgDIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHBySAASJgoDY21wGAQgASgLMhcuYWduaS52MS5jaGVja3MuU3BlY0NtcEgAEiQKAmluGAUgASgLMhYuYWduaS52MS5jaGVja3MuU3BlY0luSAASKgoFbWF0Y2gYBiABKAsyGS5hZ25pLnYxLmNoZWNrcy5TcGVjTWF0Y2hIABIxCglleGlzdHNfaW4YByABKAsyHC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhpc3RzSW5IABIrCgdpc190cnVlGAggASgLMhguYWduaS52MS5jaGVja3MuU3BlY1Rlcm1IAEIGCgRleHByIjQKDFNwZWNFeHByTGlzdBIkCgJ4cxgBIAMoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNFeHByIl8KB1NwZWNDbXASIwoBbBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgoKAm9wGAIgASgJEiMKAXIYAyABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjVGVybSI6CgZTcGVjSW4SIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEgsKA3NldBgCIAMoCSJBCglTcGVjTWF0Y2gSIwoBdBgBIAEoCzIYLmFnbmkudjEuY2hlY2tzLlNwZWNUZXJtEg8KB3BhdHRlcm4YAiABKAkiRQoMU3BlY0V4aXN0c0luEgwKBG92ZXIYASABKAkSJwoFd2hlcmUYAiABKAsyGC5hZ25pLnYxLmNoZWNrcy5TcGVjRXhwciLtAQoJUXVlcnlSdWxlEiYKBG1ldGEYASABKAsyGC5hZ25pLnYxLmNoZWNrcy5SdWxlTWV0YRIrCgVxdWVyeRgCIAEoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dRdWVyeRIMCgRraW5kGAMgASgJEhMKC3N1YmplY3RfdmFyGAQgASgJEg8KB3Bpbl92YXIYBSABKAkSDwoHbWVzc2FnZRgGIAEoCRIUCgxwYXJhbV9zeW1ib2wYByABKAkSMAoMY29udGV4dF92YXJzGAggAygLMhouYWduaS52MS5jaGVja3MuQ29udGV4dFZhciI1CgpDb250ZXh0VmFyEgsKA3ZhchgBIAEoCRIMCgRraW5kGAIgASgJEgwKBHJvbGUYAyABKAkivgIKDERhdGFsb2dRdWVyeRIqCgVydWxlcxgBIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dSdWxlEikKBGdvYWwYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQm9keRIrCgZzZWxlY3QYAyADKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIuCgZoYXZpbmcYBCADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZRIuCghvcmRlcl9ieRgFIAMoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dPcmRlchIrCgVhZnRlchgGIAMoCzIcLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dWYWx1ZRINCgVsaW1pdBgHIAEoBRIOCgZvZmZzZXQYCCABKAUiRwoMRGF0YWxvZ09yZGVyEikKBHRlcm0YASABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nVGVybRIMCgRkZXNjGAIgASgIIqUBCgtEYXRhbG9nUnVsZRIpCgRoZWFkGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b20SKQoEYm9keRgCIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dCb2R5EgwKBGhvcHMYAyABKAUSMgoKaGVhZF90eXBlcxgEIAMoCzIeLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dBcmdUeXBlImwKDkRhdGFsb2dBcmdUeXBlEgwKBGtpbmQYASABKAkSEQoJa2luZF9mcm9tGAIgASgJEg0KBW93bmVyGAMgASgJEgwKBHR5cGUYBCABKAkSDAoEdW5pdBgFIAEoCRIOCgZkb21haW4YBiADKAkiPwoLRGF0YWxvZ0JvZHkSMAoIbGl0ZXJhbHMYASADKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nTGl0ZXJhbCKHAgoORGF0YWxvZ0xpdGVyYWwSKgoDcG9zGAEgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0F0b21IABIqCgNuZWcYAiABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQXRvbUgAEjEKB2NvbXBhcmUYAyABKAsyHi5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nQ29tcGFyZUgAEjMKA2FnZxgEIAEoCzIkLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dCb2R5QWdncmVnYXRlSAASKgoDb3B0GAUgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0JvZHlIAEIJCgdsaXRlcmFsIoABChREYXRhbG9nQm9keUFnZ3JlZ2F0ZRIOCgZyZXN1bHQYASABKAkSLQoDYWdnGAIgASgLMiAuYWduaS52MS5jaGVja3MuRGF0YWxvZ0FnZ3JlZ2F0ZRIpCgRib2R5GAMgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ0JvZHkiWAoLRGF0YWxvZ0F0b20SEAoIcmVsYXRpb24YASABKAkSKQoEYXJncxgCIAMoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dUZXJtEgwKBGZhY3QYAyABKAkicwoORGF0YWxvZ0NvbXBhcmUSKQoEbGVmdBgBIAEoCzIbLmFnbmkudjEuY2hlY2tzLkRhdGFsb2dUZXJtEgoKAm9wGAIgASgJEioKBXJpZ2h0GAMgASgLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ1Rlcm0itAEKC0RhdGFsb2dUZXJtEg0KA3ZhchgBIAEoCUgAEjAKCGNvbnN0YW50GAIgASgLMhwuYWduaS52MS5jaGVja3MuRGF0YWxvZ1ZhbHVlSAASLwoDYWdnGAMgASgLMiAuYWduaS52MS5jaGVja3MuRGF0YWxvZ0FnZ3JlZ2F0ZUgAEisKBGV4cHIYBCABKAsyGy5hZ25pLnYxLmNoZWNrcy5EYXRhbG9nRXhwckgAQgYKBHRlcm0iUgoLRGF0YWxvZ0V4cHISCgoCb3AYASABKAkSDAoEZnVuYxgCIAEoCRIpCgRhcmdzGAMgAygLMhsuYWduaS52MS5jaGVja3MuRGF0YWxvZ1Rlcm0iVgoMRGF0YWxvZ1ZhbHVlEgkKAXMYASABKAkSEAoDbnVtGAIgASgBSACIAQESDgoGYWJzZW50GAMgASgIEhEKCWJhc2VfdW5pdBgEIAEoCUIGCgRfbnVtIj8KEERhdGFsb2dBZ2dyZWdhdGUSDAoEZnVuYxgBIAEoCRILCgN2YXIYAiABKAkSEAoIZGlzdGluY3QYAyABKAgirgIKClByb2ZpbGVEZWYSDAoEbmFtZRgBIAEoCRIuCgdzaWduYWxzGAIgAygLMh0uYWduaS52MS5jaGVja3MuUHJvZmlsZVNpZ25hbBI4CgxyZXF1aXJlbWVudHMYBSADKAsyIi5hZ25pLnYxLmNoZWNrcy5Qcm9maWxlUmVxdWlyZW1lbnQSKQoEaG9zdBgHIAEoCzIbLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVIb3N0EhAKCGluc3RhbmNlGAggASgJEi8KCGV4Y2x1ZGVzGAkgAygLMh0uYWduaS52MS5jaGVja3MuUHJvZmlsZVNpZ25hbEoECAMQBEoECAQQBUoECAYQB1INaG9zdF9hdHRyX2tleVINaG9zdF9hdHRyX3ZhbFIKaG9zdF9jbGFzcyI5CgtQcm9maWxlSG9zdBIMCgRhdHRyGAEgASgJEg0KBXZhbHVlGAIgASgJEg0KBWNsYXNzGAMgASgJIpcBChBQcm9maWxlTmFtaW5nTWFwEhAKCG92ZXJyaWRlGAEgASgJEkAKCHN1ZmZpeGVzGAIgAygLMi4uYWduaS52MS5jaGVja3MuUHJvZmlsZU5hbWluZ01hcC5TdWZmaXhlc0VudHJ5Gi8KDVN1ZmZpeGVzRW50cnkSCwoDa2V5GAEgASgJEg0KBXZhbHVlGAIgASgJOgI4ASJ6Cg1Qcm9maWxlU2lnbmFsEgwKBG5hbWUYASABKAkSDgoGcHJlZml4GAIgASgJEg4KBnN1ZmZpeBgDIAEoCRIMCgRnbG9iGAQgASgJEg0KBXJlZ2V4GAUgASgJEg4KBnB1bGx1cBgGIAEoCBIOCgZhbmNob3IYByABKAgikQEKElByb2ZpbGVSZXF1aXJlbWVudBIMCgR0eXBlGAEgASgJEj4KBnBhcmFtcxgCIAMoCzIuLmFnbmkudjEuY2hlY2tzLlByb2ZpbGVSZXF1aXJlbWVudC5QYXJhbXNFbnRyeRotCgtQYXJhbXNFbnRyeRILCgNrZXkYASABKAkSDQoFdmFsdWUYAiABKAk6AjgBQi5aLGdpdGh1Yi5jb20vcGFueWFtL2FnbmkvZ2VuL2dvL2FnbmkvdjEvY2hlY2tzYgZwcm90bzM");
 
 /**
- * PROVISIONAL: nothing consumes this schema yet, so names and shape may change until a front-end or a
- * deck-loading surface arrives to exercise it. See the file header.
+ * PROVISIONAL. Nothing consumes this schema yet, so names and shape may change until a front-end or
+ * a deck-loading surface arrives to exercise it. See the file header.
  *
- * RuleDeck is a set of rule definitions from one source: a shipped catalog exported for inspection, a
- * customer's house rules, or a foreign rule file translated by a front-end. The deck is the unit a
- * front-end emits and a catalog source consumes, which is what makes profile YAML, datalog text, a
- * future DSL, and a vendor rule deck four front-ends onto one form rather than four parallel paths.
+ * RuleDeck is a set of rule definitions from one source. The source can be a shipped catalog
+ * exported for inspection, a customer's house rules, or a foreign rule file translated by a
+ * front-end. A front-end emits a deck, and a catalog source consumes one. So profile YAML, datalog
+ * text, a future DSL, and a vendor rule deck are four front-ends onto one form rather than four
+ * parallel paths.
  *
  * @generated from message agni.v1.checks.RuleDeck
  */
@@ -32,8 +33,9 @@ export type RuleDeck = Message<"agni.v1.checks.RuleDeck"> & {
   name: string;
 
   /**
-   * source names where the deck came from, for provenance in an error or a listing. Free text: a file
-   * name, a vendor tool, an exporting build. It is descriptive, never resolved or opened.
+   * source names where the deck came from, for provenance in an error or a listing. It is free text,
+   * such as a file name, a vendor tool or an exporting build. It is descriptive, never resolved or
+   * opened.
    *
    * @generated from field: string source = 2;
    */
@@ -53,10 +55,10 @@ export const RuleDeckSchema: GenMessage<RuleDeck> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 0);
 
 /**
- * RuleDef is one declaration. It compiles to one OR MORE rules: a spec and a query each yield one, an
- * interface profile yields one per requirement. That asymmetry is the point of a profile rather than a
- * wart — one declaration standing in for a family of near-identical checks is the whole mechanism —
- * so the shape says so instead of pretending every definition is a single rule.
+ * RuleDef is one declaration. It compiles to one OR MORE rules. A spec and a query each yield one,
+ * and an interface profile yields one per requirement. That asymmetry is the purpose of a profile,
+ * not a wart, because one declaration stands in for a family of near-identical checks. So the shape
+ * says so instead of pretending every definition is a single rule.
  *
  * @generated from message agni.v1.checks.RuleDef
  */
@@ -93,10 +95,10 @@ export const RuleDefSchema: GenMessage<RuleDef> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 1);
 
 /**
- * RuleMeta is the identity and prose a compiled rule carries. Reads and Primitives are absent on
- * purpose: both are DERIVED from a definition's body by its compiler, and serializing a derived value
- * invites a document whose declared reads disagree with what the rule actually does. What IS here is
- * what a body cannot imply — the declared gates.
+ * RuleMeta is the identity and prose of a compiled rule. Reads and Primitives are absent on purpose.
+ * A definition's compiler DERIVES both from its body. Serializing a derived value invites a document
+ * whose declared reads disagree with what the rule actually does. This message holds what a body
+ * cannot imply, the declared gates.
  *
  * @generated from message agni.v1.checks.RuleMeta
  */
@@ -143,9 +145,9 @@ export type RuleMeta = Message<"agni.v1.checks.RuleMeta"> & {
 
   /**
    * optional_reads is the subset of reads a rule consults opportunistically. Their absence must not
-   * make the rule inapplicable, which is a claim only the author can make: a netlist rule that merely
-   * EXEMPTS findings using a datasheet fact would otherwise read not-applicable wherever no datasheet
-   * corpus is attached, and report nothing at all.
+   * make the rule inapplicable, and only the author can make that claim. Imagine a netlist rule that
+   * merely EXEMPTS findings using a datasheet fact. Without this field it would read not-applicable
+   * wherever no datasheet corpus is attached, and report nothing at all.
    *
    * @generated from field: repeated string optional_reads = 7;
    */
@@ -153,8 +155,9 @@ export type RuleMeta = Message<"agni.v1.checks.RuleMeta"> & {
 
   /**
    * requires_capability lists source-format capabilities the rule needs to evaluate SOUNDLY. A rule
-   * inferring a defect from the ABSENCE of a construct the format cannot express produces no findings,
-   * which is indistinguishable from a clean pass, so it must be gated to not-applicable instead.
+   * may infer a defect from the ABSENCE of a construct. If the format cannot express that construct,
+   * the rule produces no findings, and that looks the same as a clean pass. So such a rule must be
+   * gated to not-applicable instead.
    *
    * @generated from field: repeated string requires_capability = 8;
    */
@@ -202,8 +205,8 @@ export const SpecRuleSchema: GenMessage<SpecRule> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 3);
 
 /**
- * SpecBody mirrors check.Spec. over names the entity set (nets, components, pins, ...); let names
- * intermediate terms usable in both the predicate and the message; message is a template where
+ * SpecBody mirrors check.Spec. over names the entity set (nets, components, pins, ...). let names
+ * intermediate terms usable in both the predicate and the message. message is a template, where
  * "{name}" interpolates a let binding or a fact and "{name:q}" quotes it. An absent where selects
  * every entity.
  *
@@ -232,9 +235,9 @@ export type SpecBody = Message<"agni.v1.checks.SpecBody"> & {
 
   /**
    * scope is which elements of over the rule JUDGES; absent judges all of them. It is separate from
-   * where because falling out of each means something different: out of scope produces no verdict at
-   * all, while failing where produces a PASS. With one predicate a subject the rule was never about
-   * is indistinguishable from one it checked and cleared.
+   * where because the two exclusions mean different things. An element out of scope produces no
+   * verdict at all, while an element failing where produces a PASS. With one predicate, a subject
+   * the rule was never about would look the same as one it checked and cleared.
    *
    * @generated from field: agni.v1.checks.SpecExpr scope = 5;
    */
@@ -249,8 +252,8 @@ export const SpecBodySchema: GenMessage<SpecBody> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 4);
 
 /**
- * SpecTerm produces a value for one entity. The set is closed, which is what keeps the rule layer
- * datalog-class rather than Turing-complete, and what makes a generated rule cheap to validate.
+ * SpecTerm produces a value for one entity. The set is closed. That keeps the rule layer
+ * datalog-class rather than Turing-complete, and it makes a generated rule cheap to validate.
  *
  * @generated from message agni.v1.checks.SpecTerm
  */
@@ -340,9 +343,9 @@ export const SpecLitSchema: GenMessage<SpecLit> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 6);
 
 /**
- * SpecCall invokes a registered function by NAME with evaluated arguments — the Go escape hatch for
- * multi-clause logic the AST should not express. The name is the entire serialized form: an
- * unregistered name is rejected when a definition is read, not discovered when a rule runs.
+ * SpecCall invokes a registered function by NAME with evaluated arguments. It is the Go escape hatch
+ * for multi-clause logic the AST should not express. The name is the entire serialized form.
+ * Reading a definition rejects an unregistered name, so a rule run never discovers one.
  *
  * @generated from message agni.v1.checks.SpecCall
  */
@@ -583,8 +586,8 @@ export const SpecExistsInSchema: GenMessage<SpecExistsIn> = /*@__PURE__*/
 
 /**
  * QueryRule is a rule whose body is a datalog program plus the mapping from an answer row to a
- * finding. Rules and search share one vocabulary here: a rule asserts a property over the fact
- * relations, a search is an arbitrary query over the same ones.
+ * finding. Rules and search share one vocabulary here. A rule asserts a property over the fact
+ * relations, and a search is an arbitrary query over the same relations.
  *
  * @generated from message agni.v1.checks.QueryRule
  */
@@ -628,22 +631,22 @@ export type QueryRule = Message<"agni.v1.checks.QueryRule"> & {
   message: string;
 
   /**
-   * param_symbol, on a component-subject datasheet rule, names the datasheet symbol the rule checks.
-   * The compiler resolves that parameter's citation from the subject's seeded spec, so a
-   * datalog-authored datasheet finding carries the same doc/page/section/confidence a built-in one
-   * does. Empty means the rule is not datasheet-backed.
+   * param_symbol names the datasheet symbol that a component-subject datasheet rule checks. The
+   * compiler resolves that parameter's citation from the subject's seeded spec. So a
+   * datalog-authored datasheet finding has the same doc/page/section/confidence as a built-in one.
+   * Empty means the rule is not datasheet-backed.
    *
    * @generated from field: string param_symbol = 7;
    */
   paramSymbol: string;
 
   /**
-   * context_vars are further projected variables to carry as the finding's context entities: the
-   * entities the message NAMES but is not ABOUT (agni issue 349). Empty for a rule whose message
-   * names only its subject.
+   * context_vars are further projected variables, emitted as the finding's context entities. The
+   * message NAMES these entities but is not ABOUT them (agni issue 349). Empty for a rule whose
+   * message names only its subject.
    *
    * subject_var already proves this authoring surface can say which projected variable plays which
-   * part. This generalizes it from one variable to a list, which is all the field is.
+   * part. This field generalizes it from one variable to a list, and does nothing more.
    *
    * @generated from field: repeated agni.v1.checks.ContextVar context_vars = 8;
    */
@@ -691,9 +694,9 @@ export const ContextVarSchema: GenMessage<ContextVar> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 16);
 
 /**
- * DatalogQuery mirrors query.Query: rules define derived relations and goal is the conjunction to
- * solve, with select naming the answer columns. Every field of the engine's query is carried, and
- * TestQueryProtoCarriesEveryField fails when the engine grows one this message does not.
+ * DatalogQuery mirrors query.Query. rules define derived relations, goal is the conjunction to
+ * solve, and select names the answer columns. This message has every field of the engine's query, and
+ * TestQueryProtoKnowsEveryEngineField fails when the engine adds a field this message lacks.
  *
  * @generated from message agni.v1.checks.DatalogQuery
  */
@@ -714,7 +717,7 @@ export type DatalogQuery = Message<"agni.v1.checks.DatalogQuery"> & {
   select: DatalogTerm[];
 
   /**
-   * having filters the GROUPS the select's aggregates form, after the reduce. Each is a
+   * having filters the GROUPS that the select's aggregates form, after the reduce. Each is a
    * DatalogCompare whose left term is an aggregate.
    *
    * @generated from field: repeated agni.v1.checks.DatalogCompare having = 4;
@@ -783,7 +786,7 @@ export const DatalogOrderSchema: GenMessage<DatalogOrder> = /*@__PURE__*/
 
 /**
  * DatalogRule derives its head for every binding satisfying its body. Disjunction is several rules
- * sharing one head relation rather than an OR node, which is what keeps a program stratifiable.
+ * sharing one head relation rather than an OR node. That keeps a program stratifiable.
  *
  * @generated from message agni.v1.checks.DatalogRule
  */
@@ -822,9 +825,10 @@ export const DatalogRuleSchema: GenMessage<DatalogRule> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 19);
 
 /**
- * DatalogArgType is a declared argument type: an entity kind (kind, or kind_from naming the head
- * variable that carries each row's kind, with owner naming the variable that locates it), or a
- * scalar type with its unit. domain lists the values the argument may take, when it is closed.
+ * DatalogArgType is a declared argument type, either an entity kind or a scalar type with its unit.
+ * kind gives the entity kind directly. kind_from instead names the head variable that holds each
+ * row's kind, and owner names the variable that locates that entity. domain lists the values the
+ * argument may take, when that set is closed.
  *
  * @generated from message agni.v1.checks.DatalogArgType
  */
@@ -922,8 +926,8 @@ export type DatalogLiteral = Message<"agni.v1.checks.DatalogLiteral"> & {
     case: "agg";
   } | {
     /**
-     * opt is `optional { body }`, a left outer join: the clause's row holds whether body matches or
-     * not, and a variable only body binds is absent when it does not.
+     * opt is `optional { body }`, a left outer join. The clause's row holds whether body matches or
+     * not, and a variable that only body binds is absent when body does not match.
      *
      * @generated from field: agni.v1.checks.DatalogBody opt = 5;
      */
@@ -940,9 +944,10 @@ export const DatalogLiteralSchema: GenMessage<DatalogLiteral> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 22);
 
 /**
- * DatalogBodyAggregate binds result to an aggregate over the bindings of body, reduced once per value
- * of the variables body shares with the rest of the clause: `part(?r), ?c = count(?n) : { pin(?r, ?n,
- * _) }` counts each part's pins, and a part with no pins counts 0.
+ * DatalogBodyAggregate binds result to an aggregate over the bindings of body. The aggregate is
+ * reduced once per value of the variables that body shares with the rest of the clause. For example,
+ * `part(?r), ?c = count(?n) : { pin(?r, ?n, _) }` counts each part's pins, and a part with no pins
+ * counts 0.
  *
  * @generated from message agni.v1.checks.DatalogBodyAggregate
  */
@@ -990,9 +995,9 @@ export type DatalogAtom = Message<"agni.v1.checks.DatalogAtom"> & {
   args: DatalogTerm[];
 
   /**
-   * fact is the variable `edge(?a, ?b) as ?r` binds to the fact the atom matched, without its leading
-   * "?" (panyam/jaala#279). Empty when the atom binds none. Only a positive atom over a fact relation
-   * may set it, and the engine refuses it anywhere else.
+   * fact names the variable bound to the fact the atom matched, as ?r is in `edge(?a, ?b) as ?r`,
+   * without its leading "?" (panyam/jaala#279). Empty when the atom binds none. Only a positive atom
+   * over a fact relation may set it, and the engine refuses it anywhere else.
    *
    * @generated from field: string fact = 3;
    */
@@ -1007,8 +1012,8 @@ export const DatalogAtomSchema: GenMessage<DatalogAtom> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 24);
 
 /**
- * DatalogCompare is a built-in predicate over two terms, evaluated once both are bound. Numeric when
- * both bound values carry a number, string otherwise.
+ * DatalogCompare is a built-in predicate over two terms, evaluated once both are bound. It compares
+ * numerically when both bound values have a number, and as strings otherwise.
  *
  * @generated from message agni.v1.checks.DatalogCompare
  */
@@ -1039,8 +1044,9 @@ export const DatalogCompareSchema: GenMessage<DatalogCompare> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 25);
 
 /**
- * DatalogTerm is a variable, a constant, an aggregate over the group formed by the projection's
- * plain-variable columns, or an expression, which only a comparison's operand may hold.
+ * DatalogTerm is a variable, a constant, an aggregate, or an expression. An aggregate reduces over
+ * the group that the projection's plain-variable columns form. Only a comparison's operand may hold
+ * an expression.
  *
  * @generated from message agni.v1.checks.DatalogTerm
  */
@@ -1121,8 +1127,8 @@ export const DatalogExprSchema: GenMessage<DatalogExpr> = /*@__PURE__*/
   messageDesc(file_agni_v1_checks_ruledef, 27);
 
 /**
- * DatalogValue is a scalar fact value. A fact carries a string and, when numeric, a number, so a bound
- * term keeps both and neither string equality nor numeric comparison needs a re-parse.
+ * DatalogValue is a scalar fact value. A fact has a string and, when numeric, a number. A bound term
+ * keeps both, so neither string equality nor numeric comparison needs a re-parse.
  *
  * @generated from message agni.v1.checks.DatalogValue
  */
@@ -1138,11 +1144,11 @@ export type DatalogValue = Message<"agni.v1.checks.DatalogValue"> & {
   num?: number | undefined;
 
   /**
-   * absent marks a field the source did not state at all, which is NOT the same as an empty string
+   * absent marks a field the source did not state at all. That is NOT the same as an empty string,
    * and not the same as zero. A datasheet row stating only a maximum leaves its minimum absent, and
-   * a parameter whose unit has no known scale has no number to publish. Before this was
-   * representable, such a field bound to the empty string and an ordering comparison fell through to
-   * string order, where "" precedes every string and therefore "passed" every upper-bound test.
+   * a parameter whose unit has no known scale has no number to publish. Before this flag existed,
+   * such a field bound to the empty string. An ordering comparison then fell back to string order,
+   * where "" precedes every string, so the field "passed" every upper-bound test.
    *
    * @generated from field: bool absent = 3;
    */
@@ -1150,12 +1156,12 @@ export type DatalogValue = Message<"agni.v1.checks.DatalogValue"> & {
 
   /**
    * base_unit is the SI BASE symbol the number is expressed in ("V", "A", "\u03a9"), or empty for a
-   * dimensionless value. NEVER a prefixed spelling: scale normalization happens once, far upstream
-   * (param.InBaseUnit, CONSTRAINTS C24), so a millivolt row arrives here already reduced to volts.
-   * The query layer checks DIMENSION (is this volts or amps) and never converts SCALE.
+   * dimensionless value. It is NEVER a prefixed spelling. Scale normalization happens once, far
+   * upstream (param.InBaseUnit, CONSTRAINTS C24), so a millivolt row arrives here already reduced to
+   * volts. The query layer checks DIMENSION (is this volts or amps) and never converts SCALE.
    *
-   * Distinct from the `param.unit` RELATION, which reports the unit as the vendor PRINTED it ("mV")
-   * for a human checking a citation. This says what the number is in, for a machine comparing it.
+   * The `param.unit` RELATION is different. It reports the unit as the vendor PRINTED it ("mV"), for
+   * a human checking a citation. base_unit says what the number is in, for a machine comparing it.
    *
    * @generated from field: string base_unit = 4;
    */
@@ -1176,7 +1182,7 @@ export const DatalogValueSchema: GenMessage<DatalogValue> = /*@__PURE__*/
  */
 export type DatalogAggregate = Message<"agni.v1.checks.DatalogAggregate"> & {
   /**
-   * count | min | max | sum | list
+   * count | min | max | sum | avg | list
    *
    * @generated from field: string func = 1;
    */
@@ -1203,12 +1209,12 @@ export const DatalogAggregateSchema: GenMessage<DatalogAggregate> = /*@__PURE__*
   messageDesc(file_agni_v1_checks_ruledef, 29);
 
 /**
- * ProfileDef is one interface definition (SPI-NOR, eMMC, CAN, ...): its required signals, an optional
- * declared-host binding, and the checks it declares. It compiles to one rule per requirement, which is
- * why adding an interface is a data value rather than new code.
+ * ProfileDef is one interface definition (SPI-NOR, eMMC, CAN, ...). It holds the required signals,
+ * an optional declared-host binding, and the checks the interface declares. It compiles to one rule
+ * per requirement, so adding an interface is a data value rather than new code.
  *
- * It carries no RuleMeta: each generated rule names itself from the profile and the requirement, so a
- * single meta block here would have to be either ignored or applied to rules it does not describe.
+ * It has no RuleMeta. Each generated rule names itself from the profile and the requirement. A
+ * single meta block here would either be ignored or be applied to rules it does not describe.
  *
  * @generated from message agni.v1.checks.ProfileDef
  */
@@ -1231,30 +1237,31 @@ export type ProfileDef = Message<"agni.v1.checks.ProfileDef"> & {
   /**
    * host binds the interface to the component that carries it. Absent means no host binding.
    *
-   * It replaced three flat fields (agni issue 827) when this message became the schema for the
-   * authoring file as well as the wire, because the file has always nested them under host:. A
-   * reader of an older encoding sees no host, so a deck written before the change must be rewritten.
+   * This message became the schema for the authoring file as well as the wire (agni issue 827). The
+   * file has always nested these fields under host:, so host replaced three flat fields. A reader of
+   * an older encoding sees no host, so a deck written before the change must be rewritten.
    *
    * @generated from field: agni.v1.checks.ProfileHost host = 7;
    */
   host?: ProfileHost | undefined;
 
   /**
-   * instance says how the naming convention tells one bus from another on a board that carries
-   * several, or one bus from a different interface that shares its suffixes. Empty treats every
-   * matching net on the design as one interface. "anchor_stem" makes each net the anchor signal
-   * matches its own bus, keyed on the anchor's name less its suffix (SD2_CMD is bus SD2), and a
-   * signal belongs to that bus only when its net is named from the same stem (agni issue 1246).
+   * instance says how the naming convention tells one bus from another on a board with several, or
+   * one bus from a different interface that shares its suffixes. Empty treats every matching net on
+   * the design as one interface. "anchor_stem" gives each net that the anchor signal matches its own
+   * bus, keyed on the anchor's name less its suffix (SD2_CMD is bus SD2). A signal then belongs to
+   * that bus only when its net is named from the same stem (agni issue 1246).
    *
    * @generated from field: string instance = 8;
    */
   instance: string;
 
   /**
-   * excludes are signals whose presence on a bus says it is a different interface, such as the card
-   * detect line of a removable SD card on a bus the eMMC profile would otherwise read. A bus carrying
-   * one is not in use, so nothing on it is required or judged. They need an instance key, since such
-   * a line rules out only the bus it belongs to, and they take no pullup or anchor.
+   * excludes are signals whose presence on a bus says it is a different interface. One example is
+   * the card detect line of a removable SD card, on a bus the eMMC profile would otherwise read. A
+   * bus with one of these signals is not in use, so nothing on it is required or judged. Excludes
+   * need an instance key, since such a line rules out only its own bus, and they take no pullup or
+   * anchor.
    *
    * @generated from field: repeated agni.v1.checks.ProfileSignal excludes = 9;
    */
@@ -1271,14 +1278,14 @@ export const ProfileDefSchema: GenMessage<ProfileDef> = /*@__PURE__*/
 /**
  * ProfileHost binds an interface to its host component, by a declared attribute (interface=SPI_NOR),
  * by the datasheet's device class (WS3-044), or both. A declared host gives a precise anchor and can
- * flag a wholly-absent bus, which the naming-convention path cannot. A profile declaring both forms
- * binds a host matching either.
+ * flag a wholly-absent bus. The naming-convention path cannot flag one. A profile declaring both
+ * forms binds a host matching either.
  *
  * @generated from message agni.v1.checks.ProfileHost
  */
 export type ProfileHost = Message<"agni.v1.checks.ProfileHost"> & {
   /**
-   * attr and value are the attribute form: the component carries attribute attr set to value.
+   * attr and value are the attribute form. The component has attribute attr set to value.
    *
    * @generated from field: string attr = 1;
    */
@@ -1291,8 +1298,8 @@ export type ProfileHost = Message<"agni.v1.checks.ProfileHost"> & {
 
   /**
    * class is the device-class form, matched against component.device_class. A class-only binding
-   * was once dropped crossing this contract, and TestProfileProtoRoundTrip is what makes that class
-   * of omission fail now.
+   * was once dropped on its way across this contract. TestProfileProtoRoundTrip now fails on that
+   * class of omission.
    *
    * @generated from field: string class = 3;
    */
@@ -1308,8 +1315,8 @@ export const ProfileHostSchema: GenMessage<ProfileHost> = /*@__PURE__*/
 
 /**
  * ProfileNamingMap re-binds a built-in profile's signals to a project's net-name suffixes without
- * re-authoring the profile (WS3-054). It is the other shape a profile file takes: a file whose top
- * level carries override is a naming map, and one carrying name is a full ProfileDef.
+ * re-authoring the profile (WS3-054). It is the other shape a profile file takes. A file with
+ * override at its top level is a naming map, and one with name is a full ProfileDef.
  *
  * @generated from message agni.v1.checks.ProfileNamingMap
  */
@@ -1338,10 +1345,10 @@ export const ProfileNamingMapSchema: GenMessage<ProfileNamingMap> = /*@__PURE__*
   messageDesc(file_agni_v1_checks_ruledef, 32);
 
 /**
- * ProfileSignal is one line of the interface, matched against net names by exactly ONE matcher form:
- * affix (suffix, optionally narrowed by prefix), glob (whole-name), or regex (unanchored RE2). Zero
- * forms, several forms, or a form matching the empty string are rejected when the definition is read —
- * an over-broad matcher would silently claim foreign nets rather than fail.
+ * ProfileSignal is one line of the interface. Exactly ONE matcher form matches it against net names.
+ * The forms are affix (suffix, optionally narrowed by prefix), glob (whole-name), and regex
+ * (unanchored RE2). Reading the definition rejects zero forms, several forms, or a form matching the
+ * empty string. An over-broad matcher would silently claim foreign nets rather than fail.
  *
  * @generated from message agni.v1.checks.ProfileSignal
  */
@@ -1381,9 +1388,10 @@ export type ProfileSignal = Message<"agni.v1.checks.ProfileSignal"> & {
   pullup: boolean;
 
   /**
-   * anchor marks the always-present signal the naming-convention completeness check hangs on. At most
-   * one, and a profile declaring a completeness requirement must declare it: without an anchor that
-   * requirement compiles to nothing, and a check that silently does not exist scores as a pass.
+   * anchor marks the always-present signal. The naming-convention completeness check starts from
+   * it. A profile has at most one. A profile declaring a completeness requirement must declare an
+   * anchor, because without one that requirement compiles to nothing, and a check that silently does
+   * not exist scores as a pass.
    *
    * @generated from field: bool anchor = 7;
    */
@@ -1399,8 +1407,8 @@ export const ProfileSignalSchema: GenMessage<ProfileSignal> = /*@__PURE__*/
 
 /**
  * ProfileRequirement is one declared check: a registered requirement-type name plus its parameters.
- * Making the composition data rather than a hardcoded compile step is what lets a new interface, or a
- * new requirement type, be a declaration instead of engine code.
+ * The composition is data rather than a hardcoded compile step. So a new interface, or a new
+ * requirement type, can be a declaration instead of engine code.
  *
  * @generated from message agni.v1.checks.ProfileRequirement
  */

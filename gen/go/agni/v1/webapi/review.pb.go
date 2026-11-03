@@ -141,38 +141,35 @@ func (x *RenderReviewReportResponse) GetFilename() string {
 
 // Review is one stored review run.
 //
-// The resource is little more than a name plus the document, and that is the point: the document was
-// already designed to be self-contained, so making runs addressable needed an identity and a store,
-// not a new payload. Anything a consumer needs to render, diff, or archive this run is inside
-// `results`.
+// The resource is little more than a name plus the document, on purpose. The document was already
+// self-contained. So making runs addressable needed an identity and a store, and no new payload.
+// `results` holds anything a consumer needs to render, diff, or archive this run.
 type Review struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// name is the resource name. A run whose design belongs to a project is
-	// "projects/{project}/reviews/{review}"; one whose design belongs to none is "reviews/{review}".
-	// The id is server-assigned, opaque, and time-sortable, so a listing is chronological without
-	// opening every document.
+	// name is the resource name. If the run's design belongs to a project, the name is
+	// "projects/{project}/reviews/{review}". If it belongs to none, the name is "reviews/{review}".
+	// The server assigns the id, which is opaque and time-sortable. So a listing is chronological
+	// without opening every document.
 	//
 	// The two shapes are deliberate, and the second is not a degenerate case of the first. A project
-	// genuinely OWNS the runs made under it: the checklist, the rule catalog, and the vocabulary a run
-	// scored against are all the project's, so nesting states a real relationship. A design that
-	// resolves to no project is the ORDINARY state of a mounted folder, and its runs have no such
-	// owner — giving them a synthetic parent would assert exactly the ownership this message once
-	// refused to assert about mounts, where nesting under a location would have broken the moment a
-	// design moved.
+	// really OWNS the runs made under it. The checklist, the rule catalog, and the vocabulary a run
+	// scored against all belong to the project, so nesting states a real relationship. A design in a
+	// mounted folder ORDINARILY resolves to no project, and its runs have no such owner. A synthetic
+	// parent would assert ownership that does not exist. This message once refused the same claim
+	// about mounts. Nesting under a location would have broken the moment a design moved.
 	//
-	// Listing is unified even though naming is not: ListReviews takes an OPTIONAL parent, so a client
-	// that wants everything asks once. Which design a run was about is recorded where it belongs, in
-	// results.design.
+	// Naming has two shapes, and listing has one. ListReviews takes an OPTIONAL parent, so a client
+	// that wants everything asks once. results.design records which design a run was about.
 	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
-	// results is the self-contained document: meta (producer, created_at), the design ref and its
-	// content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the per-area
-	// item outcomes.
+	// results is the self-contained document. It holds meta (producer, created_at), the design ref
+	// and its content hash, the run config, the rule catalog snapshot, the checklist snapshot, and the
+	// per-area item outcomes.
 	Results *checks.CheckResults `protobuf:"bytes,2,opt,name=results,proto3" json:"results,omitempty"`
-	// summary is the counts a pipeline gates on, computed from results.areas each time a review is
-	// returned and never stored, so a document stored before the field existed still answers with one
-	// (agni issue 734). It carries exactly the inputs of the two gates `agni review` exposes
-	// (--fail-on-outcome and --min-answered), so a consumer reads the numbers the exit code came from
-	// rather than recomputing them and disagreeing.
+	// summary holds the counts a pipeline gates on (agni issue 734). The server computes it from
+	// results.areas each time it returns a review, and never stores it. So a document stored before
+	// the field existed still answers with one. It holds exactly the inputs of the two gates `agni
+	// review` exposes, --fail-on-outcome and --min-answered. So a consumer reads the same numbers the
+	// exit code came from, instead of computing them again and disagreeing.
 	Summary       *ReviewSummary `protobuf:"bytes,3,opt,name=summary,proto3" json:"summary,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -229,11 +226,11 @@ func (x *Review) GetSummary() *ReviewSummary {
 	return nil
 }
 
-// ReviewSummary counts a run's checklist items. covered is every item a mechanism exists for (all
-// but not-automated); answered is the stricter count of items the run produced an answer for (pass,
-// fail, provisional, and computed not-applicable), which is what --min-answered gates on.
-// provisional is a fail resting on unratified datasheet data, broken out because gating on it is a
-// per-team choice.
+// ReviewSummary counts a run's checklist items. covered counts every item that has a mechanism,
+// which is all but not-automated. answered is stricter. It counts the items the run produced an
+// answer for: pass, fail, provisional, and computed not-applicable. --min-answered gates on
+// answered. provisional counts each fail that depends on unratified datasheet data. It is broken
+// out because each team chooses whether to gate on it.
 type ReviewSummary struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Total         int32                  `protobuf:"varint,1,opt,name=total,proto3" json:"total,omitempty"`
@@ -323,26 +320,30 @@ type CreateReviewRequest struct {
 	// snapshot names the design this run is about, "snapshots/{snapshot}" (agni issue 1061).
 	Snapshot string `protobuf:"bytes,10,opt,name=snapshot,proto3" json:"snapshot,omitempty"`
 	// parent is the project the run belongs to, "projects/{project}", empty when the design resolves
-	// to none. It is the CALLER's answer rather than something derived here, because the caller has
-	// already resolved the design to decide which config to send and re-deriving it in the service
-	// would be a second resolution that could disagree with the first.
+	// to none. The CALLER supplies it, and the service does not derive it. The caller has already
+	// resolved the design to decide which config to send. Deriving it again in the service would be
+	// a second resolution, and the two could disagree.
 	Parent string `protobuf:"bytes,6,opt,name=parent,proto3" json:"parent,omitempty"`
-	// ratified_floor is the datasheet-confidence floor below which a failing item's data is unratified
-	// (WS10-014): a fail whose findings are all mock or below this is provisional. 0 uses the default.
+	// ratified_floor is a datasheet-confidence floor (WS10-014). A failing item's data below it is
+	// unratified. If all of a fail's findings are mock or below this floor, the fail is provisional.
+	// 0 uses the default.
 	RatifiedFloor float64 `protobuf:"fixed64,3,opt,name=ratified_floor,json=ratifiedFloor,proto3" json:"ratified_floor,omitempty"`
-	// manifest is the checklist this run scores, required. It is validated on arrival, so a manifest
-	// that never passed through the YAML loader (one a browser form built, one a test wrote inline) is
-	// held to exactly the same rules as one read from a file. It is also stored with the run, so the
-	// archived document scores against the checklist it actually saw.
+	// manifest is the checklist this run scores, and it is required. The server validates it on
+	// arrival. Some manifests never pass through the YAML loader, such as one a browser form built or
+	// one a test wrote inline. Those meet exactly the same rules as one read from a file. The
+	// manifest is also stored with the run, so the archived document scores against the checklist
+	// it actually saw.
 	Manifest *checks.ReviewManifest `protobuf:"bytes,5,opt,name=manifest,proto3" json:"manifest,omitempty"`
-	// work_budget caps the work each query this request evaluates may do (agni issue 792): the units
-	// a fact base counts, candidate comparisons, each row a generator emits and the connections a
-	// circuit walk examines. It can only LOWER the
-	// deployment's own budget, never raise it, and zero leaves that budget as it is. A checklist item whose query passes its budget reads inconclusive, naming the budget, and the other items still answer.
+	// work_budget caps the work each query in this request may do (agni issue 792). Work counts
+	// candidate comparisons, each row a generator emits, and each connection a circuit walk
+	// examines, in the units a fact base counts. It can only LOWER the deployment's own budget,
+	// never raise it, and zero leaves that budget as it is. If a checklist item's query goes past
+	// its budget, the item reads inconclusive and names the budget. The other items still answer.
 	WorkBudget int64 `protobuf:"varint,8,opt,name=work_budget,json=workBudget,proto3" json:"work_budget,omitempty"`
-	// validate_only scores the run and returns it without storing it (AIP-163), so the Review comes back
-	// with no name and its document with no created_at. It needs no review store, which is how the CLI
-	// asks a server for a review (`agni review --remote`) without leaving a run in that server's list.
+	// validate_only scores the run and returns it without storing it (AIP-163). The Review then comes
+	// back with no name, and its document with no created_at. It needs no review store. The CLI uses
+	// it to ask a server for a review (`agni review --remote`) without leaving a run in that server's
+	// list.
 	ValidateOnly  bool `protobuf:"varint,9,opt,name=validate_only,json=validateOnly,proto3" json:"validate_only,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -466,19 +467,19 @@ func (x *GetReviewRequest) GetName() string {
 
 type ListReviewsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// parent narrows the listing to one project's runs, "projects/{project}". EMPTY lists every run the
-	// server holds, parented or not, which is what makes the two name shapes cost a client nothing: it
-	// asks once and gets everything, and only narrows when it has a project in mind.
+	// parent narrows the listing to one project's runs, "projects/{project}". EMPTY lists every run
+	// the server holds, parented or not. So the two name shapes cost a client nothing. It asks once and
+	// gets everything, and narrows only when it has a project in mind.
 	Parent string `protobuf:"bytes,4,opt,name=parent,proto3" json:"parent,omitempty"`
-	// page_size is the maximum number of reviews to return. 0 uses the server default; the server may
+	// page_size is the maximum number of reviews to return. 0 uses the server default. The server may
 	// return fewer.
 	PageSize int32 `protobuf:"varint,1,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token continues a previous call. An empty token starts at the newest run.
 	PageToken string `protobuf:"bytes,2,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	// filter narrows the listing (AIP-160). Only `design` is supported: `design="proj/board.kicad_sch"`
-	// matches results.design.source exactly. An unsupported filter is an error rather than a silently
-	// ignored argument, because a client that believed it had filtered and did not would read another
-	// board's verdicts as its own.
+	// filter narrows the listing (AIP-160). Only `design` is supported, and
+	// `design="proj/board.kicad_sch"` matches results.design.source exactly. An unsupported filter is
+	// an error, and is never silently ignored. Imagine a client that believes it filtered and did not.
+	// It would read another board's verdicts as its own.
 	Filter        string `protobuf:"bytes,3,opt,name=filter,proto3" json:"filter,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

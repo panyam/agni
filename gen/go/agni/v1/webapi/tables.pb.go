@@ -27,8 +27,8 @@ type TableEncoding int32
 const (
 	// Unspecified is refused, so a caller always says which file it wants.
 	TableEncoding_TABLE_ENCODING_UNSPECIFIED TableEncoding = 0
-	// CSV is RFC 4180 with the header row first and nothing before it, each cell guarded against
-	// spreadsheet formula execution as `agni check --format csv` guards it.
+	// CSV is RFC 4180 with the header row first and nothing before it. Each cell is guarded against
+	// spreadsheet formula execution, as `agni check --format csv` guards it.
 	TableEncoding_TABLE_ENCODING_CSV TableEncoding = 1
 )
 
@@ -312,8 +312,8 @@ type TableColumn struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Name  string                 `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
 	Type  ColumnType             `protobuf:"varint,2,opt,name=type,proto3,enum=agni.v1.webapi.ColumnType" json:"type,omitempty"`
-	// kind is the entity kind every cell of the column names ("net", "component"), empty when the
-	// column names no entity or names different kinds on different rows.
+	// kind is the entity kind that every cell of the column names, such as "net" or "component". It is
+	// empty when the column names no entity or names different kinds on different rows.
 	Kind          string `protobuf:"bytes,3,opt,name=kind,proto3" json:"kind,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -373,14 +373,15 @@ func (x *TableColumn) GetKind() string {
 type TableRow struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	Cells []string               `protobuf:"bytes,1,rep,name=cells,proto3" json:"cells,omitempty"`
-	// cell_why aligns with cells and says why an empty cell is absent, such as a sum over numbers in
-	// different units, and "" for every other cell. Empty when no cell in the row has a reason. The cell
-	// itself stays empty, so a csv encoder writes it raw.
+	// cell_why aligns with cells. For an empty cell it says why the value is absent, such as a sum over
+	// numbers in different units. Every other cell gets "". cell_why is empty when no cell in the row
+	// has a reason. The cell itself is still empty, so a csv encoder writes it raw.
 	CellWhy []string `protobuf:"bytes,2,rep,name=cell_why,json=cellWhy,proto3" json:"cell_why,omitempty"`
-	// cell_kinds aligns with cells and names the entity kind of a cell whose column names different kinds
-	// on different rows ("net", "component"), such as a diff's subject, which is a part on one row and a
-	// net on the next (agni issue 898). "" for a cell its column's kind already types, or that names no
-	// entity. Empty when no cell in the row needs one. A viewer locates a cell by it; an encoder ignores it.
+	// cell_kinds aligns with cells. Some columns name different kinds on different rows. A diff's
+	// subject is one, since it is a part on one row and a net on the next (agni issue 898). For a cell
+	// in such a column, cell_kinds names the cell's entity kind ("net", "component"). It is "" for a
+	// cell whose column's kind already types it, or a cell that names no entity. cell_kinds is empty
+	// when no cell in the row needs one. A viewer locates a cell by it, and an encoder ignores it.
 	CellKinds     []string `protobuf:"bytes,3,rep,name=cell_kinds,json=cellKinds,proto3" json:"cell_kinds,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -512,13 +513,13 @@ type TabulateRequest struct {
 	//	*TabulateRequest_Diff
 	//	*TabulateRequest_Review
 	Answer isTabulateRequest_Answer `protobuf_oneof:"answer"`
-	// order_by sorts each table by these columns, in priority order. A name sorts ascending and a name
-	// with a leading "-" descending: ["rule", "-outcome", "subjects"]. The sort is stable and empty
-	// cells sort last. A table lacking a named column ignores that entry, and a name no table carries
-	// is an invalid argument. Empty keeps the order the answer arrived in.
+	// order_by sorts each table by these columns, in priority order. A plain name sorts ascending, and
+	// a name with a leading "-" sorts descending, as in ["rule", "-outcome", "subjects"]. The sort is
+	// stable and empty cells sort last. A table lacking a named column ignores that entry. A name that
+	// no table has is an invalid argument. Empty keeps the answer's own order.
 	OrderBy []string `protobuf:"bytes,4,rep,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
-	// column_types overrides how a named column orders, for a column the projection could not type,
-	// such as a query's count.
+	// column_types overrides how a named column orders. It is for a column that the projection could
+	// not type, such as a query's count.
 	ColumnTypes   map[string]ColumnType `protobuf:"bytes,5,rep,name=column_types,json=columnTypes,proto3" json:"column_types,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value,enum=agni.v1.webapi.ColumnType"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -625,9 +626,10 @@ type isTabulateRequest_Answer interface {
 }
 
 type TabulateRequest_Check struct {
-	// check gives the "findings" table and, when verdicts are present, the "verdicts" table and the
-	// "verdicts_by_rule" count of each outcome per rule, and "pin_map" when the run carries an IO map
-	// (one row per declared pin joined to its IO-map verdicts, agni issue 1188).
+	// check gives the "findings" table. When verdicts are present it also gives the "verdicts" table
+	// and "verdicts_by_rule", a count of each outcome per rule. When verdicts are present and the run
+	// includes an IO map, it gives "pin_map" too, with one row per declared pin joined to its IO-map
+	// verdicts (agni issue 1188). It always gives "skipped", the rules the run did not evaluate.
 	Check *CheckDesignResponse `protobuf:"bytes,1,opt,name=check,proto3,oneof"`
 }
 
@@ -640,8 +642,9 @@ type TabulateRequest_QuerySet struct {
 }
 
 type TabulateRequest_Diff struct {
-	// diff gives the "diff" table, one row per change with change_class naming its kind, components
-	// first, then nets by kind and name, then the unchanged nets when the diff asked for them.
+	// diff gives the "diff" table, one row per change, and change_class names the change's kind.
+	// Components come first, then nets by kind and name, then the unchanged nets when the diff asked
+	// for them.
 	Diff *DiffDesignsResponse `protobuf:"bytes,6,opt,name=diff,proto3,oneof"`
 }
 
