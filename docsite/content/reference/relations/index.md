@@ -116,6 +116,7 @@ Defined in Datalog over the relations above rather than projected from the desig
 | `str.concat(head, tail, text)` | text is head followed by tail, run from any two of the three; cutting a head or tail off holds for none when text lacks it |
 | `str.contains(string, substring)` | reports whether a string contains a substring |
 | `str.distance(string, other, distance)` | binds the edit (Levenshtein) distance between two strings, in characters; both strings must be bound |
+| `str.find(string, regex, index, match)` | binds each non-empty match of an unanchored regular expression with its index from 0; given an index, binds that match alone, a negative index counting from the end |
 | `str.glob(string, pattern)` | reports whether the whole string matches a SQLite-style glob (`*` any run, `?` one character, `[a-z]` or `[^a-z]` one of a class, `[[]` a literal `[`) |
 | `str.lower(string, lower)` | binds the string in lower case |
 | `str.match(string, regex)` | reports whether the string matches an unanchored regular expression |
