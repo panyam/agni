@@ -15,23 +15,24 @@ import (
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// WithEnv sets the deployment provenance a written document records: the producer version, and
-// whether profiles and intent were composed into the catalog. It is the same ReviewEnv a review run
-// records, so a check document and a review document from one deployment state the same build.
+// WithEnv sets the deployment provenance that a written document records. That is the producer
+// version, and whether profiles and intent were composed into the catalog. A review run records the
+// same ReviewEnv, so a check document and a review document from one deployment state the same
+// build.
 func (s *CheckService) WithEnv(env ReviewEnv) *CheckService {
 	s.env = env
 	return s
 }
 
 // RenderCheckReport writes a run the caller already holds as a file to keep (agni issue 127). It runs
-// no rules. The JSON form is the CheckResults document `agni check --results-out` writes, and the
-// HTML form is the page `agni check --verdicts --format html` writes, with a Queries section per
-// query set the caller answered and sent (agni issue 1190), and both CLI paths call this,
-// so a report saved from the viewer and one the CLI wrote differ only in their timestamps.
+// no rules. The JSON form is a CheckResults document, the same one `agni check --results-out`
+// writes. The HTML form is the page that `agni check --verdicts --format html` writes. It has a
+// Queries section per query set the caller answered and sent (agni issue 1190). Both CLI paths call
+// this, so a report saved from the viewer and one the CLI wrote differ only in their timestamps.
 //
-// The request's snapshot and rules have to be the ones the run used. They decide the catalog the
-// report describes and the netlist tier whose content hash it records, and nothing here can check
-// them against the run.
+// The request has to name the snapshot and rules the run used. They decide which catalog the report
+// describes and which netlist tier's content hash it records. Nothing here can check them against
+// the run.
 func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.RenderCheckReportRequest) (*webapi.RenderCheckReportResponse, error) {
 	if req.GetRun() == nil {
 		return nil, fmt.Errorf("%w: RenderCheckReport needs the run to write", ErrInvalidArgument)
@@ -66,7 +67,7 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 				CoverageAxis: true,
 			},
 			Design: &checkspb.DesignRef{Source: u.String(), ContentHash: hash, UnexpandedHierarchy: run.GetUnexpandedHierarchy()},
-			// Provenance comes off the resolved overlay the run used, as a review's does. See
+			// Provenance is read off the run's resolved overlay, as a review's is. See
 			// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 			Run: RunConfigProto(ov.Provenance(RunProvenance{
 				Params:      s.specs != nil,
@@ -96,13 +97,13 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 			URLBase:       strings.TrimSuffix(links.GetUrlBase(), "/"),
 			MountPath:     mountPath,
 			LinksWithheld: links.GetWithheld(),
-			// The run's own record of what its read left out, in the sentence the CLI prints (agni
-			// issue 717).
+			// This is the run's own record of what its read left out, in the sentence the CLI prints
+			// (agni issue 717).
 			HierarchyNote: report.HierarchyNote(u.String(), run.GetUnexpandedHierarchy()),
 		}
 		var buf bytes.Buffer
-		// The composed catalog, not the selection, so a rule an overlay added carries its prose like a
-		// built-in does (agni issue 411).
+		// This is the composed catalog, not the selection, so a rule an overlay added has its prose as
+		// a built-in does (agni issue 411).
 		page := VerdictReport(run, cat.Rules(), meta)
 		for _, qs := range req.GetQuerySets() {
 			page.QuerySets = append(page.QuerySets, QuerySetTable(qs, nil))
@@ -116,9 +117,9 @@ func (s *CheckService) RenderCheckReport(ctx context.Context, req *webapi.Render
 	}
 }
 
-// VerdictReport aggregates one run into the report model the HTML page and the CLI's verdict text
-// both render, so the two cannot disagree about what the run held or in what order (agni issue 380).
-// rules is the composed catalog the run read, overlay rules included.
+// VerdictReport aggregates one run into a report model. The HTML page and the CLI's verdict text
+// both render that model, so the two cannot disagree about what the run held or in what order (agni
+// issue 380). rules is the composed catalog the run read, overlay rules included.
 func VerdictReport(run *webapi.CheckDesignResponse, rules []*check.Rule, meta report.Report) report.Report {
 	verdicts := make([]check.Verdict, 0, len(run.GetVerdicts()))
 	for _, v := range run.GetVerdicts() {
@@ -141,8 +142,8 @@ func SkippedRuleDocs(in []*webapi.SkippedRule) []*checkspb.SkippedRule {
 	return out
 }
 
-// reportBaseName names a saved report after the design: its file without the extension, or its
-// folder when the uri names one.
+// reportBaseName names a saved report after the design. It uses the design's file without the
+// extension, or its folder when the uri names one.
 func reportBaseName(p string) string {
 	b := path.Base(strings.TrimSuffix(p, "/"))
 	if b == "." || b == "/" || b == "" {

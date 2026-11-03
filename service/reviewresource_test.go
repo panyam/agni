@@ -19,8 +19,8 @@ import (
 )
 
 // dirReviewLoader reads its checklist from a real directory, so a test can EDIT the manifest
-// between a create and a get. That is the only way to exercise what the snapshot exists for, since
-// with a manifest value alone there is no file to go stale.
+// between a create and a get. Editing the file is the only way to exercise the snapshot's purpose.
+// With a manifest value alone there is no file to go stale.
 type dirReviewLoader struct{ dir string }
 
 func (l dirReviewLoader) Design(context.Context, artifact.URI, ...ReadOption) (*ir.Design, error) {
@@ -119,11 +119,10 @@ areas:
 	}
 }
 
-// TestCreateReviewRecordsProvenance checks that a stored run carries what a reader needs to trust
-// it later, and each field here is one a consumer would otherwise have to guess. The design hash is
-// the revision identity a later diff joins on; the catalog snapshot is the difference between a
-// clean design and a run that checked nothing; RunConfig.params says whether a datasheet-backed
-// item COULD have resolved.
+// TestCreateReviewRecordsProvenance checks that a stored run holds what a reader needs to trust it
+// later. A consumer would otherwise have to guess each field here. The design hash is the revision
+// identity, and a later diff joins on it. The catalog snapshot tells a clean design apart from a run
+// that checked nothing. RunConfig.params says whether a datasheet-backed item COULD have resolved.
 func TestCreateReviewRecordsProvenance(t *testing.T) {
 	svc, dir := dirReviewSvc(t, NewMemReviewStore())
 	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
@@ -154,8 +153,8 @@ func TestCreateReviewRecordsProvenance(t *testing.T) {
 	}
 }
 
-// TestReviewResourceLifecycle walks create, get, list, delete over one service, which is the sequence
-// a client actually performs.
+// TestReviewResourceLifecycle walks create, get, list and delete over one service, in the order a
+// client actually performs them.
 func TestReviewResourceLifecycle(t *testing.T) {
 	svc, dir := dirReviewSvc(t, NewMemReviewStore())
 	writeManifest(t, dir, "m.yaml", "name: t\nareas: [{name: A, items: [{id: i, rule: bulk-cap}]}]\n")
@@ -176,7 +175,7 @@ func TestReviewResourceLifecycle(t *testing.T) {
 	second := create("b.edn")
 	third := create("a.edn")
 
-	// Newest first, so the most recent run is what a client sees without paging.
+	// Newest first, so a client sees the most recent run without paging.
 	list, err := svc.ListReviews(ctx, &webapi.ListReviewsRequest{})
 	if err != nil {
 		t.Fatalf("ListReviews: %v", err)
@@ -327,8 +326,8 @@ func TestReviewNameRoundTrip(t *testing.T) {
 	if parent, id, ok := SplitReviewName(ReviewName("", "abc")); !ok || id != "abc" || parent != "" {
 		t.Errorf("unparented round trip = %q/%q,%v", parent, id, ok)
 	}
-	// A parented run round-trips through both halves, which is what lets a store key by (project, id)
-	// without re-deriving the shape.
+	// A parented run round-trips through both halves, so a store can key by (project, id) without
+	// re-deriving the shape.
 	if parent, id, ok := SplitReviewName(ReviewName("projects/gateway", "abc")); !ok || id != "abc" || parent != "projects/gateway" {
 		t.Errorf("parented round trip = %q/%q,%v", parent, id, ok)
 	}
@@ -385,8 +384,8 @@ func TestRunsNestUnderTheirProject(t *testing.T) {
 		t.Errorf("listing projects/gateway = %v, want just its own run", got)
 	}
 
-	// Empty parent lists EVERYTHING, which is what keeps the two name shapes from costing a client an
-	// extra call. A viewer asking "what runs exist" asks once.
+	// Empty parent lists EVERYTHING, so the two name shapes never cost a client an extra call. A
+	// viewer asking "what runs exist" asks once.
 	_, all, _, err := st.List(ctx, "", 0, "", "")
 	if err != nil {
 		t.Fatal(err)
@@ -415,9 +414,9 @@ func nestDoc(design string) *checkspb.CheckResults {
 	}
 }
 
-// TestValidateOnlyScoresWithoutStoring holds `agni review --remote` to what the local CLI does: the
-// run is scored and returned, nothing lands in the server's list, and a server with no review store
-// still answers.
+// TestValidateOnlyScoresWithoutStoring holds `agni review --remote` to what the local CLI does. The
+// run is scored and returned, nothing is added to the server's list, and a server with no review
+// store still answers.
 func TestValidateOnlyScoresWithoutStoring(t *testing.T) {
 	ctx := context.Background()
 	m, err := review.Load(strings.NewReader("name: dry run\nareas:\n  - name: Power\n    items:\n      - {id: P1, title: every rail carries a bulk capacitor, rule: bulk-cap}\n"))

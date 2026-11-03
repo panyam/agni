@@ -65,8 +65,8 @@ func TestAQueryPastItsBudgetIsResourceExhausted(t *testing.T) {
 	}
 }
 
-// TestEachQueryInASetHasItsOwnBudget: a set's budget applies to each query rather than to the set,
-// so a query past it is reported against its name and a cheaper one still answers.
+// TestEachQueryInASetHasItsOwnBudget checks that a set's budget applies to each query rather than to
+// the set. A query past it is reported against its name, and a cheaper one still answers.
 func TestEachQueryInASetHasItsOwnBudget(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	const cheap = "component.net(?r, ?n) => ?r"
@@ -100,8 +100,8 @@ func TestEachQueryInASetHasItsOwnBudget(t *testing.T) {
 	}
 }
 
-// TestARequestCannotRaiseTheBudget: the deployment's budget rides the context (agni serve's
-// interceptor sets it), and a request asking for more still gets the deployment's.
+// TestARequestCannotRaiseTheBudget checks that a request asking for more still gets the deployment's
+// budget. agni serve's interceptor puts the deployment's budget on the context.
 func TestARequestCannotRaiseTheBudget(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	_, err := svc.RunQuery(query.WithBudget(context.Background(), 5), &webapi.RunQueryRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/x.edn"), Query: joinQuery, WorkBudget: 10_000_000})
@@ -110,8 +110,9 @@ func TestARequestCannotRaiseTheBudget(t *testing.T) {
 	}
 }
 
-// TestAChecklistItemPastItsBudgetIsInconclusive: a review runs every item under the budget, and an
-// item whose query passes it reads inconclusive, naming the budget, while the other items answer.
+// TestAChecklistItemPastItsBudgetIsInconclusive checks that a review runs every item under the
+// budget. An item whose query exceeds it reads inconclusive and names the budget, while the other
+// items answer.
 func TestAChecklistItemPastItsBudgetIsInconclusive(t *testing.T) {
 	man := review.Manifest{Name: "t", Areas: []review.Area{{Name: "A", Items: []review.Item{
 		{ID: "q", Title: "shared nets", Binding: review.Binding{Query: &review.QueryBinding{Match: joinQuery, Subject: "r", Message: "{r} shares a net with {r2}"}}},
@@ -142,9 +143,9 @@ func TestAChecklistItemPastItsBudgetIsInconclusive(t *testing.T) {
 	}
 }
 
-// TestACheckRulePastItsBudgetIsInconclusive: CheckDesign runs its query-backed rules under the
-// request's budget, and a rule whose query passes it reports one inconclusive finding naming the
-// budget rather than failing the whole check.
+// TestACheckRulePastItsBudgetIsInconclusive checks that CheckDesign runs its query-backed rules under
+// the request's budget. A rule whose query exceeds it reports one inconclusive finding naming the
+// budget, rather than failing the whole check.
 func TestACheckRulePastItsBudgetIsInconclusive(t *testing.T) {
 	q, err := query.Parse(joinQuery)
 	if err != nil {

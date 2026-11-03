@@ -10,7 +10,8 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// linkNames is what a report's caller can name a design by, and the viewer path its links must open.
+// linkNames lists the names a report's caller can give a design, each with the viewer path that its
+// links must open.
 // The folder and a declared companion both resolve to the entry; an undeclared sibling is read as
 // named, so its links keep its own path (agni issue 1120).
 var linkNames = []struct {

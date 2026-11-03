@@ -36,9 +36,9 @@ func TimingProto(procedure string, s timing.Snapshot) *webapi.RequestTiming {
 	return out
 }
 
-// listedRules is the slowest timedRules of rules (which arrive slowest first), and, when allocation was
-// recorded, the timedRules that allocated most as well, since the rule raising a worker's memory is
-// often not among the slowest (agni issue 994).
+// listedRules returns the slowest timedRules of rules, which arrive slowest first. When allocation
+// was recorded it also returns the timedRules that allocated most, since the rule raising a worker's
+// memory is often not among the slowest (agni issue 994).
 func listedRules(rules []timing.RuleTime) []timing.RuleTime {
 	out := rules[:min(timedRules, len(rules))]
 	byAlloc := append([]timing.RuleTime(nil), rules...)
@@ -56,9 +56,9 @@ func listedRules(rules []timing.RuleTime) []timing.RuleTime {
 	return out
 }
 
-// ServerTiming renders a snapshot as a Server-Timing header value, which a browser's network panel
-// draws: the total, then each stage once, summed when it ran more than once, in the order it first
-// started.
+// ServerTiming renders a snapshot as a Server-Timing header value for a browser's network panel to
+// draw. The value lists the total first. Then it lists each stage once, in the order the stage first
+// started, summed when it ran more than once.
 func ServerTiming(s timing.Snapshot) string {
 	parts := []string{fmt.Sprintf("total;dur=%s", ms(s.Total))}
 	sums := map[string]time.Duration{}

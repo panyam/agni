@@ -10,8 +10,8 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// boardOnlyAt answers a board for one URI alone, as a loader reading exactly what it is handed does:
-// the folder and the netlist entry carry none, and the declared companion does.
+// boardOnlyAt answers a board for one URI alone, as a loader reading exactly what it is handed does.
+// The folder and the netlist entry yield no board, and the declared companion yields one.
 type boardOnlyAt struct {
 	fakeLoader
 	at    string

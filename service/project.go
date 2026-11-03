@@ -13,8 +13,8 @@ import (
 )
 
 // ProjectStore resolves the projects and designs a deployment declares (agni issue 170). Like
-// PartSpecStore, AnnotationStore and ReviewStore, the interface lives here and an implementation
-// lives behind it.
+// ReviewStore here, and DraftStore and AnnotationStore in datasheet/dsservice, the interface is a
+// port and an implementation lives behind it.
 //
 // Nothing in these signatures names a file, a path or a walk. The shipped implementation
 // (`internal/projects`) walks a directory tree for descriptors, and a database-backed store with
@@ -44,8 +44,8 @@ type ProjectStore interface {
 	ResolveDesign(ctx context.Context, uri artifact.URI) (*webapi.Design, *webapi.Project, error)
 }
 
-// Resource-name prefixes and separators, written once so a store dealing in ids and an API dealing
-// in names do not each spell the boundary by hand and end up storing a name as an id.
+// Resource-name prefixes and separators, written once. A store deals in ids and an API deals in
+// names. If each spelled the boundary by hand, one would end up storing a name as an id.
 const (
 	projectNamePrefix = "projects/"
 	designNameInfix   = "/designs/"
@@ -89,19 +89,19 @@ func validResourceID(id string) bool {
 	return id != "" && id != "." && id != ".." && !strings.ContainsAny(id, "/\\")
 }
 
-// DesignSources is which artifact each tier of a read comes from, once a design's declaration has
-// had its say. They are URIs the injected Loader resolves, and no caller above the Loader may treat
-// one as a host path (CONSTRAINTS C22).
+// DesignSources names the artifact each tier of a read comes from, after the design's declaration
+// is applied. They are URIs, the injected Loader resolves them, and no caller above the Loader may
+// treat one as a host path (CONSTRAINTS C22).
 type DesignSources struct {
-	// NetlistURI is the artifact component and connectivity ANALYSIS reads, the netlist the design
-	// team produces (C21).
+	// NetlistURI names the netlist the design team produces (C21). Component and connectivity
+	// ANALYSIS reads it.
 	NetlistURI string
-	// BoardURI is where the board tier's copper comes from. Often the same artifact, and different
-	// when a design declares a separate board companion.
+	// BoardURI is where the board tier's copper comes from. It is often the same artifact, and it
+	// differs when a design declares a separate board companion.
 	BoardURI string
-	// GeometryURI is where schematic sheets are rendered and findings located from. A netlist entry
-	// carries none of its own, so a design declaring a schematic companion locates on that
-	// companion's sheets (C21, a companion is a canvas and not a source).
+	// GeometryURI names the artifact that schematic sheets are rendered from and findings are located
+	// on. A netlist entry has no geometry of its own, so a design declaring a schematic companion
+	// locates on that companion's sheets. Under C21 a companion is a canvas and not a source.
 	GeometryURI string
 }
 
@@ -137,10 +137,10 @@ func SourcesFor(d *webapi.Design, named string) DesignSources {
 }
 
 // ResolveSources decides which artifact each tier reads, for a ref that has already been resolved to
-// a design. It is the DECISION half of resolution and does no I/O. The caller finds the design (the
-// CLI over a store rooted at its argument's mount, a server over the store it was built with) and
-// this says what to open. CLI and server both call it, so one design cannot read two ways (agni
-// issue 656, constraint C32).
+// a design. It is the DECISION half of resolution and does no I/O. The caller finds the design, and
+// this says what to open. The CLI finds it over a store rooted at its argument's mount, and a server
+// over the store it was built with. CLI and server both call it, so one design cannot read two ways
+// (agni issue 656, constraint C32).
 //
 // The four cases:
 //
@@ -188,12 +188,12 @@ func ResolveSources(d *webapi.Design, ref string, isDir, asNamed bool) Resolutio
 	return r
 }
 
-// Resolution is what a ref resolved to, meaning the artifact each tier reads and how that was
-// arrived at.
+// Resolution records what a ref resolved to. It names the artifact each tier reads and how the
+// resolver chose it.
 //
-// The flags are carried so a caller does not recompute them. Re-deriving "was this the entry" against
-// the path it typed instead of the ref it resolved compares unlike with unlike and narrates the wrong
-// thing. The CLI's stderr note is written from these.
+// The struct holds the flags so a caller does not recompute them. Imagine a caller re-deriving "was
+// this the entry" against the path it typed instead of the ref it resolved. It compares unlike with
+// unlike and narrates the wrong thing. The CLI's stderr note is written from these flags.
 type Resolution struct {
 	DesignSources
 	// NamedIsTheDesign is set when the ref named the design itself, which is a folder.
@@ -201,9 +201,9 @@ type Resolution struct {
 	// NamedIsTheEntry is set when the ref named the design's declared entry file.
 	NamedIsTheEntry bool
 	// FromDeclaration is set when the tiers came from the design's declaration rather than from the
-	// ref alone. It does not mean a tier moved. Naming the entry of a design that declares no
-	// companion applies the declaration and changes nothing, which a caller narrating what it read
-	// distinguishes from a ref that was never resolved.
+	// ref alone. It does not mean a tier moved. Imagine a ref naming the entry of a design that
+	// declares no companion. The declaration applies and changes nothing. A caller narrating what it
+	// read still tells that case apart from a ref that was never resolved.
 	FromDeclaration bool
 }
 

@@ -130,8 +130,9 @@ func TestProposeReportsADeclaredFolderRatherThanGuessing(t *testing.T) {
 	}
 }
 
-// The files a project names are support, and a folder it does not name is not, since nothing is read
-// for its folder's name (agni issue 1136). A design proposed under the project extends it.
+// A project names some files, and those files are support. An unnamed folder is not support, since
+// nothing is read for its folder's name (agni issue 1136). A design proposed under the project
+// extends it.
 func TestProposeCountsAProjectsConfigAsSupport(t *testing.T) {
 	r := propose(t, map[string]string{
 		"project.yaml":      "name: p\nprofiles: [profiles/can.yaml]\nparams: [params]\n",
@@ -202,8 +203,8 @@ func (w withoutDescriptors) ReadDir(name string) ([]fs.DirEntry, error) {
 
 // TestProposeARealKicadBoard runs the rules over a fetched sample board with a hierarchy of sheets in
 // a subfolder, so the sheet walk meets a real file rather than a fixture written for it. The corpus
-// declares the board since agni-samples v0.1.2, and its descriptors are hidden here because the
-// proposal rules are what a visitor's dropped copy of the folder meets.
+// declares the board since agni-samples v0.1.2. This test hides its descriptors, because a visitor's
+// dropped copy of the folder meets the proposal rules.
 func TestProposeARealKicadBoard(t *testing.T) {
 	dir := filepath.Join("..", "tools", "samples", "boards", "royalblue54L-feather")
 	if _, err := os.Stat(dir); err != nil {

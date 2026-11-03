@@ -25,9 +25,9 @@ func namedChecklist(name, title string) *webapi.NamedChecklist {
 	return &webapi.NamedChecklist{Name: name, Manifest: &checkspb.ReviewManifest{Name: title}}
 }
 
-// A design declares any section its project can (agni issue 1136), and its own layer goes on top: its
-// convention replaces its project's, as a nearer link of an extends chain does, and a checklist of a
-// name the project declares replaces that one in place while a new name is added after.
+// A design declares any section its project can (agni issue 1136), and its own layer goes on top. Its
+// convention replaces its project's, as a nearer link of an extends chain does. A checklist with a
+// name the project declares replaces that one in place, and a new name is added after.
 func TestADesignLayersItsOwnConfigOverItsProject(t *testing.T) {
 	store := layeredStore{
 		project: &webapi.Project{Name: "projects/team", Config: &webapi.AnalysisConfig{

@@ -16,7 +16,7 @@ func houseModule(text string) []LibraryModule {
 const housePMIC = `pmic_rail(?n: net) :- net.rail(?n), str.prefix(?n, "PMIC_");`
 
 // TestAnOverlayWithoutALibraryUsesTheShippedVocabulary pins that nothing changes for a project that
-// declares no library: the vocabulary is the process default itself, not a copy of it.
+// declares no library. The vocabulary is the process default itself, not a copy of it.
 func TestAnOverlayWithoutALibraryUsesTheShippedVocabulary(t *testing.T) {
 	reg, err := Overlay{}.Registry()
 	if err != nil || reg != facts.DefaultRegistry() {
@@ -24,9 +24,9 @@ func TestAnOverlayWithoutALibraryUsesTheShippedVocabulary(t *testing.T) {
 	}
 }
 
-// TestALibraryIsComposedOncePerContent is what keeps a server answering many queries over one
-// project from composing and checking its library per query, and what makes an edited library
-// compose again.
+// TestALibraryIsComposedOncePerContent guards two behaviours. A server answering many queries over
+// one project composes and checks its library once, not per query. An edited library composes
+// again.
 func TestALibraryIsComposedOncePerContent(t *testing.T) {
 	a, err := Overlay{Library: houseModule(housePMIC)}.Registry()
 	if err != nil {
@@ -51,8 +51,8 @@ func TestALibraryIsComposedOncePerContent(t *testing.T) {
 	}
 }
 
-// TestALibraryPageIsServedAndAStrayPageIsRefused covers the optional lib/docs pages: one for a
-// member reaches Registry.Doc, and one for a member nothing defines fails composition.
+// TestALibraryPageIsServedAndAStrayPageIsRefused covers the optional lib/docs pages. A page for a
+// defined member reaches Registry.Doc. A page for a member that nothing defines fails composition.
 func TestALibraryPageIsServedAndAStrayPageIsRefused(t *testing.T) {
 	page := "## house.pmic_rail\n\nThe PMIC's rails.\n"
 	reg, err := Overlay{Library: houseModule(housePMIC), LibraryDocs: map[string]string{"house.pmic_rail": page}}.Registry()
@@ -72,7 +72,7 @@ func inlineReq(mods ...*webapi.LibraryModule) *webapi.OverlayConfig {
 	return &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{LibraryModules: mods}}
 }
 
-// TestAnInlineLibraryJoinsTheVocabulary covers agni issue 788 below the wire: modules sent as values
+// TestAnInlineLibraryJoinsTheVocabulary covers agni issue 788 below the wire. Modules sent as values
 // compose with no resolver, so a host with none (the engine in WASM) still honours them.
 func TestAnInlineLibraryJoinsTheVocabulary(t *testing.T) {
 	o, err := OverlayFor(context.Background(), nil, nil, nil, nil, inlineReq(&webapi.LibraryModule{Path: "house", Text: housePMIC}), "")
@@ -95,8 +95,8 @@ func TestAnInlineLibraryJoinsTheVocabulary(t *testing.T) {
 	}
 }
 
-// TestModuleTextMovesTheIdentity is the cache half: two requests differing only in a module's text
-// must not share a cached result.
+// TestModuleTextMovesTheIdentity covers the cache half. Two requests differing only in a module's
+// text must not share a cached result.
 func TestModuleTextMovesTheIdentity(t *testing.T) {
 	a, okA := idFor(t, project("projects/p"), nil, inlineReq(&webapi.LibraryModule{Path: "house", Text: housePMIC}), nil, "")
 	b, okB := idFor(t, project("projects/p"), nil, inlineReq(&webapi.LibraryModule{Path: "house", Text: housePMIC + "\nx(?n: net) :- pmic_rail(?n);"}), nil, "")
@@ -108,8 +108,9 @@ func TestModuleTextMovesTheIdentity(t *testing.T) {
 	}
 }
 
-// TestTwoModulesDefiningOneMemberNameBothSources refuses a member path two library modules define,
-// naming both, since the vocabulary's own message names neither.
+// TestTwoModulesDefiningOneMemberNameBothSources checks the case where two library modules define
+// one member path. Composition refuses it and names both modules, since the vocabulary's own
+// message names neither.
 func TestTwoModulesDefiningOneMemberNameBothSources(t *testing.T) {
 	_, err := Overlay{Library: []LibraryModule{
 		{Path: "house", Language: "datalog", Text: housePMIC, Source: "mount://p/lib/house.dl"},
@@ -132,8 +133,8 @@ func TestTheSameModuleTwiceIsOneModule(t *testing.T) {
 	}
 }
 
-// TestListRelationsDescribesAnInlineModule: the catalog reads the overlay a request carries, so a
-// module sent with it lists and describes as a query over it would read it.
+// TestListRelationsDescribesAnInlineModule checks that the catalog reads the overlay a request
+// carries. So a module sent with the request lists and describes as a query over it would read it.
 func TestListRelationsDescribesAnInlineModule(t *testing.T) {
 	svc := NewQueryService(fakeLoader{}, nil, nil)
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{

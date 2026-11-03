@@ -7,10 +7,10 @@ import (
 	"github.com/panyam/agni/core/review"
 )
 
-// fullManifest exercises EVERY field of review.Manifest and its Binding, including the ones no single
-// realistic checklist sets together (an item carries at most one selector at a time, so the selectors
-// are spread across items). It is the fixture the round-trip guards, so a field added to the Go struct
-// without a matching proto field fails here rather than silently dropping off the wire.
+// fullManifest exercises EVERY field of review.Manifest and its Binding. No single realistic
+// checklist sets some of those fields together. An item carries at most one selector at a time, so
+// the selectors are spread across items. The round-trip guards this fixture, so a field added to the
+// Go struct without a matching proto field fails here rather than silently dropping off the wire.
 func fullManifest() review.Manifest {
 	return review.Manifest{
 		Name: "gateway review",
@@ -54,8 +54,8 @@ func fullManifest() review.Manifest {
 
 // TestManifestProtoRoundTrip is the field-drift guard. Going Go -> proto -> Go and requiring deep
 // equality means a conversion that forgets a field cannot pass, because the returned struct would
-// differ from the one that went in. Asserting on the proto instead would not catch it, since a
-// field the conversion never writes is simply absent from both sides of that comparison.
+// differ from the one that went in. Asserting on the proto instead would not catch it. The
+// conversion never writes such a field, so it is simply absent from both sides of that comparison.
 func TestManifestProtoRoundTrip(t *testing.T) {
 	want := fullManifest()
 	got := ManifestFromProto(ManifestProto(want))

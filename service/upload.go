@@ -14,18 +14,19 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// A design a client sends as files rather than naming files the host serves (agni issue 1061, step
-// 4b). The snapshot's definition lists them as a manifest, each path within the design's mount with
-// its hash, and the contents travel apart, as blobs keyed by hash, so a client sends only what the
-// host does not already hold. Each manifest is read through a host of its own, over those files
-// alone, with a cache of its own: the files keep the client's own paths and mount name, which may be
-// one this host also serves, and a cache keys a read on its URI.
+// A client can send a design as files rather than naming files the host serves (agni issue 1061,
+// step 4b). The snapshot's definition lists the files as a manifest, giving each file's path within
+// the design's mount and its hash. The contents are sent separately, as blobs keyed by hash, so a
+// client sends only what the host does not already hold. Each manifest is read through a host of its
+// own, over those files alone, with a cache of its own. The files keep the client's own paths and
+// mount name, and this host may also serve a mount of that name. A cache keys a read on its URI, so a
+// shared cache would serve one upload's reads for another.
 
-// ErrBlobsMissing is an Ingest naming files whose contents the host does not hold. The error is a
-// *BlobsMissingError, which names them.
+// ErrBlobsMissing reports an Ingest naming files whose contents the host does not hold. The error
+// is a *BlobsMissingError, which names them.
 var ErrBlobsMissing = errors.New("blobs missing")
 
-// BlobsMissingError names the contents an Ingest needs sent, which a transport carries as a
+// BlobsMissingError names the contents an Ingest needs sent. A transport sends it as a
 // webapi.BlobsMissing detail.
 type BlobsMissingError struct{ Hashes []string }
 
@@ -40,10 +41,10 @@ func (e *BlobsMissingError) Detail() *webapi.BlobsMissing {
 	return &webapi.BlobsMissing{Sha256: e.Hashes}
 }
 
-// FilesWithheldError is a question that read a file whose contents its host was not given, which the
-// browser engine does with a design's board until a question needs it (agni issue 992). Hashes are
-// the withheld files' content hashes, and a transport carries them as a webapi.BlobsMissing detail,
-// the same shape an Ingest naming unsent files answers with, so a client sends those files and asks
+// FilesWithheldError reports a question that read a file whose contents its host was not given. The
+// browser engine withholds a design's board until a question needs it (agni issue 992). Hashes are
+// the withheld files' content hashes. A transport sends them as a webapi.BlobsMissing detail, the
+// same shape an Ingest naming unsent files answers with, so a client sends those files and asks
 // again.
 type FilesWithheldError struct{ Hashes []string }
 
@@ -56,17 +57,17 @@ func (e *FilesWithheldError) Detail() *webapi.BlobsMissing {
 	return &webapi.BlobsMissing{Sha256: e.Hashes}
 }
 
-// An UploadHost is what a host reads a client's files through: a loader over files, keyed by their
-// path within the one mount named mount, and a resolver over the projects those files declare. It
-// is the host's to build, since only a host can make a file system (C13); a nil UploadHost is a host
-// that takes no files from its clients.
+// A host reads a client's files through an UploadHost. It returns a loader over the files, keyed by
+// their path within the one mount named mount, and a resolver over the projects those files declare.
+// Only a host can make a file system (C13), so the host builds it. A nil UploadHost means the host
+// takes no files from its clients.
 type UploadHost func(mount string, files map[string][]byte) (CacheableLoader, *ProjectResolver)
 
 // defaultUploadBytes is how much uploaded content a host keeps when UploadMaxBytes is unset.
 const defaultUploadBytes = 1 << 30
 
-// uploadCacheEntries is how many reads each upload's own cache keeps: one design, its drawing, its
-// board and a model or two, as the browser engine's cache holds for one design.
+// uploadCacheEntries caps the reads each upload's own cache keeps. That is one design, its drawing,
+// its board and a model or two, as the browser engine's cache holds for one design.
 const uploadCacheEntries = 10
 
 // uploadHosts is how many manifests' hosts are kept for a later ingest of the same files. A snapshot
@@ -81,8 +82,8 @@ type uploadHost struct {
 	used     uint64
 }
 
-// uploads is a host's blobs and the hosts built over them, held on the ProjectResolver its services
-// share, as its snapshots are.
+// uploads holds a host's blobs and the hosts built over them. The ProjectResolver that the host's
+// services share holds it, as it holds the snapshots.
 type uploads struct {
 	mu    sync.Mutex
 	blobs map[string][]byte
@@ -141,9 +142,9 @@ func (u *uploads) put(b []byte) (string, error) {
 	return h, nil
 }
 
-// uploaded is the host for a manifest of files in mount, built over the blobs the first time it is
-// asked for and kept for the next ingest of the same files. A manifest naming contents the host does
-// not hold is a *BlobsMissingError.
+// uploaded returns the host for a manifest of files in mount. It builds the host over the blobs the
+// first time it is asked, and keeps it for the next ingest of the same files. A manifest naming
+// contents the host does not hold is a *BlobsMissingError.
 func (r *ProjectResolver) uploaded(mount string, files []*webapi.SnapshotFile) (*uploadHost, error) {
 	if r.Uploads == nil {
 		return nil, fmt.Errorf("%w: this host takes no files from its clients; name a design it serves", ErrInvalidArgument)
@@ -151,7 +152,7 @@ func (r *ProjectResolver) uploaded(mount string, files []*webapi.SnapshotFile) (
 	var total int64
 	seen := map[string]bool{}
 	for _, f := range files {
-		// A path is taken as the client wrote it only when it is already clean and stays in the
+		// A path is taken as the client wrote it only when it is already clean and does not leave the
 		// mount, so two spellings of one file cannot both be listed.
 		if a, err := artifact.New(mount, f.GetPath()); err != nil || a.Path != f.GetPath() || f.GetPath() == "" {
 			return nil, fmt.Errorf("%w: %q is not a clean path within a mount", ErrInvalidPath, f.GetPath())

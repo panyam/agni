@@ -40,8 +40,8 @@ func runProbed(t *testing.T, witnesses bool) *webapi.RunQueryResponse {
 	return resp
 }
 
-// A row over a library member is witnessed by the member's own rule, with its body facts in the order
-// the rule is written, and the `not` that held is a negated leaf (agni issue 794's acceptance).
+// A row over a library member is witnessed by the member's own rule. The rule's body facts appear in
+// the rule's written order, and the `not` that held is a negated leaf (agni issue 794's acceptance).
 func TestRunQueryWitnessesALibraryMember(t *testing.T) {
 	resp := runProbed(t, true)
 	row := resp.GetRows()[0]
@@ -92,7 +92,7 @@ func TestRunQueryWitnessesALibraryMember(t *testing.T) {
 			t.Errorf("cite_index %d does not point at a source of the response (%v)", i, resp.GetSources())
 		}
 	}
-	// A value naming an entity points at the entity a cell naming it points at.
+	// A value naming an entity points at the same entity as a cell that names it.
 	if ve := top.GetValueEntity(); len(ve) != 3 || ve[0] == 0 || ve[1] == 0 || ve[0] != row.GetCellEntity()[0] || ve[2] != row.GetCellEntity()[1] {
 		t.Fatalf("value_entity %v, want R1 and SENSE at the cells' entities %v, and VBUS typed", ve, row.GetCellEntity())
 	}
@@ -104,8 +104,8 @@ func TestRunQueryWitnessesALibraryMember(t *testing.T) {
 	}
 }
 
-// Witnesses cost nothing unasked: an answer without them carries none, and its work is what the same
-// evaluation costs with no witness option at all.
+// Witnesses cost nothing when nobody asks for them. An answer without them carries none, and its
+// work equals the work of the same evaluation with no witness option at all.
 func TestRunQueryWithoutWitnessesCostsWhatItDid(t *testing.T) {
 	resp := runProbed(t, false)
 	for _, r := range resp.GetRows() {
@@ -137,8 +137,8 @@ func TestRunQueryWithoutWitnessesCostsWhatItDid(t *testing.T) {
 	if resp.GetWork() <= 0 || resp.GetWork() != plain {
 		t.Errorf("work without witnesses = %d, want %d, what the evaluation costs with no witness option", resp.GetWork(), plain)
 	}
-	// The positive control: recording witnesses does change the work here, so equal work above means
-	// none were recorded.
+	// This is the positive control. Recording witnesses does change the work here, so equal work above
+	// means none were recorded.
 	if w := runProbed(t, true).GetWork(); w == plain {
 		t.Errorf("work with witnesses = %d, the same as without, so the comparison above proves nothing", w)
 	}

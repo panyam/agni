@@ -69,9 +69,9 @@ func TestBackAnnotatedPartsLocateOnTheirSheet(t *testing.T) {
 	}
 }
 
-// The same fixture through a check run. Its one finding, i2c-pull-up on I2C_SCL, carries the net's
-// id, which the loader stamps and the EDIF geometry's wires never carry, so it was badged with no
-// sheet while a query located the net on both pages (agni issue 1230).
+// The same fixture through a check run. Its one finding, i2c-pull-up on I2C_SCL, holds the net's
+// id. The loader stamps that id, and the EDIF geometry's wires never have one. So the finding was
+// badged with no sheet while a query located the net on both pages (agni issue 1230).
 func TestACheckRunLocatesAnEDIFNetFinding(t *testing.T) {
 	dir := filepath.Join("..", "cmd", "agni", "testdata", "github-issues", "backannotate-locate")
 	read := func(name string) *os.File {
@@ -111,9 +111,9 @@ func TestACheckRunLocatesAnEDIFNetFinding(t *testing.T) {
 	}
 }
 
-// A schematic that cannot be read used to leave every subject reading as drawn nowhere, the answer
-// for a part the schematic genuinely leaves out, with nothing saying the file had failed (agni issue
-// 1230). A run says the schematic was unreadable instead, and still runs.
+// An unreadable schematic used to leave every subject reading as drawn nowhere. That is the answer
+// for a part the schematic genuinely leaves out, and nothing said the file had failed (agni issue
+// 1230). A run now says the schematic was unreadable instead, and still runs.
 func TestAnUnreadableSchematicIsNotDrawnNowhere(t *testing.T) {
 	f, err := os.Open(filepath.Join("..", "cmd", "agni", "testdata", "github-issues", "backannotate-locate", "demo_netlist.edn"))
 	if err != nil {

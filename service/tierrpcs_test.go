@@ -11,8 +11,8 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// uriLoader records the artifact each read was asked of, which is what an rpc that skips TierURIs
-// gets wrong: it hands the loader the request's spelling rather than the tier it should read.
+// uriLoader records the artifact each read asks for. An rpc that skips TierURIs hands the loader the
+// request's spelling, when it should hand it the tier to read.
 type uriLoader struct {
 	*recordingLoader
 	design, report []string
@@ -32,8 +32,8 @@ func (l *uriLoader) Report(ctx context.Context, u artifact.URI, faithful bool, o
 	return l.recordingLoader.Report(ctx, u, faithful, opts...)
 }
 
-// Both rpcs passed the request URI straight to the loader, so naming the design folder read nothing:
-// the layout report came back empty and the viewer's parts panel got invalid_argument on every open
+// Both rpcs passed the request URI straight to the loader, so naming the design folder read nothing.
+// The layout report came back empty, and the viewer's parts panel got invalid_argument on every open
 // (agni issue 736). Every spelling of one design has to read the same tier.
 func TestLayoutReportAndComponentParamsReadTheDesignsTiers(t *testing.T) {
 	spellings := []string{"mount://m/d", "mount://m/d/board.edn", "mount://m/d/board.eds"}
@@ -43,7 +43,7 @@ func TestLayoutReportAndComponentParamsReadTheDesignsTiers(t *testing.T) {
 			l := &uriLoader{recordingLoader: newRecordingLoader()}
 			ds := NewDesignService(l, noNative{}, render.DefaultStyle, projects)
 			snap := snapOf(t, ds.Snapshots(), spelling)
-			l.design = nil // the ingest's own read, so what is counted below is GetComponentParams'
+			l.design = nil // forget the ingest's read, so l.design holds GetComponentParams' alone
 			if _, err := ds.GetLayoutReport(context.Background(), &webapi.GetLayoutReportRequest{Snapshot: snap}); err != nil {
 				t.Fatalf("GetLayoutReport: %v", err)
 			}

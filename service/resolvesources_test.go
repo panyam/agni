@@ -8,9 +8,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// declaringStore resolves every ref to one design, a netlist entry with a schematic companion,
-// which is the shape that broke. A nil design models a ref belonging to no declared design, which
-// is the ordinary case for a mounted folder and must read exactly what it names.
+// declaringStore resolves every ref to one design, a netlist entry with a schematic companion. That
+// shape broke. A nil design models a ref belonging to no declared design. That is the ordinary case
+// for a mounted folder, and such a ref must read exactly what it names.
 type declaringStore struct {
 	ProjectStore
 	design *webapi.Design
@@ -59,9 +59,9 @@ func TestSourcesAgreeAcrossEverySpelling(t *testing.T) {
 	}
 }
 
-// THE POSITIVE CONTROL. Both surfaces resolving nothing is the failure mode this guards, so
-// an assertion that only checks agreement passes on a design where nothing is attached. This pins
-// the other direction. With no design, every tier is the ref, and the test above would fail here.
+// THE POSITIVE CONTROL. This guards against both surfaces resolving nothing. An assertion that only
+// checks agreement passes on a design where nothing is attached. This pins the other direction.
+// With no design, every tier is the ref, and the test above would fail here.
 func TestSourcesLeaveAnUndeclaredRefAlone(t *testing.T) {
 	r := &ProjectResolver{Store: declaringStore{design: nil}}
 	ref := "mount://m/loose/board.edn"
@@ -84,8 +84,8 @@ func TestSourcesLeaveAnUndeclaredRefAlone(t *testing.T) {
 }
 
 // as_named is the CLI's opt-out and has to survive the wire, because the CLI is itself a client of
-// these services. Resolving unconditionally here silently overrode it, which TestCheckBoardPath
-// caught by finding board rules firing on a netlist read as-named.
+// these services. Resolving unconditionally here once silently overrode it. TestCheckBoardPath
+// caught that by finding board rules firing on a netlist read as-named.
 func TestSourcesHonourAsNamed(t *testing.T) {
 	r := &ProjectResolver{Store: declaringStore{design: withCompanion()}}
 	ref := "mount://m/d/board.eds"
@@ -151,8 +151,8 @@ func TestARevisionReadsItsOwnCompanions(t *testing.T) {
 	}
 }
 
-// A file the descriptor lists nowhere is still read exactly as named, the rule agni 528 set and 848
-// keeps: revisions are declared, never discovered.
+// A file the descriptor lists nowhere is still read exactly as named. Agni 528 set that rule and 848
+// keeps it. Revisions are declared, never discovered.
 func TestAnUndeclaredRevisionStillReadsAsNamed(t *testing.T) {
 	ref := "mount://m/d/board-rev-d.edn"
 	got := ResolveSources(withRevisions(), ref, false, false)

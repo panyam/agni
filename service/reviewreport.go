@@ -88,7 +88,7 @@ func ChecklistOf(doc *checkspb.CheckResults, meta report.Checklist) report.Check
 
 // evidenceOf turns an item's findings into rows, each linked to the verdict the finding was
 // projected from (agni issue 485). A finding names its verdicts in verdict_ids, and the row links the
-// first; a finding from a check run carries exactly one. A finding with none, from a rule that states
+// first. A finding from a check run names exactly one. A finding with none, from a rule that states
 // no considered set, gets no link, since there is no verdict for a viewer to open.
 func evidenceOf(it *checkspb.ReviewItem, meta report.Checklist) []report.ChecklistEvidence {
 	if len(it.GetFindings()) == 0 {

@@ -14,12 +14,13 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// ProjectResolver is the two ports a rule-running surface needs to answer "whose config applies to
-// this design", the store that maps an artifact to its project and the loader that turns that
-// project's config into engine inputs.
+// ProjectResolver holds the two ports a rule-running surface needs to answer "whose config applies
+// to this design". The store maps an artifact to its project, and the loader turns that project's
+// config into engine inputs.
 //
-// Every surface that runs rules needs both or neither, so they are one constructor parameter. Wired
-// per surface, --conventions once reached `agni check` and not `agni review` (WS3-102, WS3-109).
+// Every surface that runs rules needs both or neither, so they are one constructor parameter. When
+// each surface wired them itself, --conventions once reached `agni check` and not `agni review`
+// (WS3-102, WS3-109).
 //
 // A nil resolver means this deployment resolves no projects, and every design runs as one in no
 // project, as on a server started with no descriptors.
@@ -29,11 +30,11 @@ type ProjectResolver struct {
 	// SnapshotLimit is how many snapshots the resolver holds before evicting the least recently asked
 	// (agni issue 1061). Zero means defaultSnapshots.
 	SnapshotLimit int
-	// Uploads builds what a design a client sends as files is read through (see UploadHost). Nil
-	// means this host takes no files, and an ingest of one is refused.
+	// Uploads builds the host for reading a design that a client sends as files (see UploadHost).
+	// Nil means this host takes no files, and an ingest of one is refused.
 	Uploads UploadHost
-	// UploadMaxBytes is how much uploaded content the host keeps, the least recently used dropped
-	// past it. Zero means defaultUploadBytes.
+	// UploadMaxBytes caps the uploaded content the host keeps. Past the cap the host drops the least
+	// recently used. Zero means defaultUploadBytes.
 	UploadMaxBytes int64
 
 	snapMu sync.Mutex
@@ -42,15 +43,15 @@ type ProjectResolver struct {
 }
 
 // Overlay composes the config for one design, its project's where it has one, and the request's own
-// on top. A design in no project gets the request's config alone. The serve flags reach it another
-// way, through the catalog and the datasheet provider the services hold and the process lexicon, so
-// an overlay never carries them (agni issue 755).
+// on top. A design in no project gets the request's config alone. The serve flags reach a run
+// another way. The services hold the catalog and the datasheet provider, and the process holds the
+// lexicon, so an overlay never holds the flags (agni issue 755).
 //
 // Finding NO descriptor is not an error, since a loose file belongs to no project, and neither is an
 // unknown mount. A descriptor that EXISTS and does not parse is
-// returned as an error, as ResolveDesign reports it. Swallowing it ran the design against the
-// built-in vocabulary, which on one folder gave 40 findings the project's lexicon would not have
-// raised and missed 95 it would have (#307). A malformed descriptor for an UNRELATED design still
+// returned as an error, as ResolveDesign reports it. Swallowing it once ran the design against the
+// built-in vocabulary. On one folder that gave 40 findings the project's lexicon would not have
+// raised, and missed 95 it would have (#307). A malformed descriptor for an UNRELATED design still
 // does not surface here. See docsite/content/architecture/projects-and-designs.md#resolution-is-an-interface-not-a-path-convention.
 func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *webapi.OverlayConfig, baseConvention string) (Overlay, error) {
 	defer timing.Begin(ctx, "resolve.overlay")()
@@ -84,17 +85,17 @@ func (r *ProjectResolver) Overlay(ctx context.Context, uri artifact.URI, req *we
 	if err != nil {
 		return Overlay{}, err
 	}
-	// A design that declares its netlist be read whole is read whole by every surface, the browser
+	// If a design declares that its netlist is read whole, every surface reads it whole, the browser
 	// included, with no flag (agni issue 1102).
 	return ov.WithFlattenHierarchy(d.GetFlattenHierarchy()), nil
 }
 
-// Checklists returns the checklists a design reads, its project's and its own, inherited ones first in
-// the order ResolveExtends composes them, and the project's name. A design in no project still has the
-// checklists it declares itself. A design resolving nothing, or a deployment that resolves none,
-// returns (nil, "", nil), and a project whose chain declares none returns (nil, name, nil), so a caller
-// can tell an operator which fix applies. A descriptor that exists and does not parse is an error, as
-// for Overlay.
+// Checklists returns the checklists a design reads and the project's name. The checklists are its
+// project's and its own, with inherited ones first in the order ResolveExtends composes them. A
+// design in no project still has the checklists it declares itself. A design resolving nothing
+// returns (nil, "", nil), and so does a deployment that resolves none. A project whose chain declares
+// none returns (nil, name, nil). A caller can then tell an operator which fix applies. A descriptor
+// that exists and does not parse is an error, as for Overlay.
 func (r *ProjectResolver) Checklists(ctx context.Context, uri artifact.URI) ([]*webapi.NamedChecklist, string, error) {
 	cfg, project, err := r.designConfig(ctx, uri)
 	if err != nil || cfg == nil {
@@ -103,11 +104,11 @@ func (r *ProjectResolver) Checklists(ctx context.Context, uri artifact.URI) ([]*
 	return cfg.GetChecklists(), project, nil
 }
 
-// QuerySets returns the query sets a design keeps, its project's and its own, inherited ones first,
-// and the project's name, answering an absent project and an empty one as Checklists does. Only the
-// query-set tier is resolved, so a listing reads no profile, corpus or library and a broken one cannot
-// fail it. A set file that does not parse fails the listing, since leaving it out would read as the
-// design having no such set.
+// QuerySets returns the query sets a design keeps and the project's name. The sets are its project's
+// and its own, inherited ones first. An absent project and an empty one answer as they do for
+// Checklists. Only the query-set tier is resolved, so a listing reads no profile, corpus or library,
+// and a broken one cannot fail it. A set file that does not parse fails the listing, since leaving it
+// out would read as the design having no such set.
 func (r *ProjectResolver) QuerySets(ctx context.Context, uri artifact.URI) ([]NamedQuerySet, string, error) {
 	cfg, project, err := r.designConfig(ctx, uri)
 	if err != nil || cfg == nil {
@@ -127,9 +128,9 @@ func (r *ProjectResolver) QuerySets(ctx context.Context, uri artifact.URI) ([]Na
 	return res.QuerySets, project, nil
 }
 
-// designConfig is the config a design composes, its project's chain with the design's own descriptor
-// layered on top, as OverlayFor composes it, and the project's name. A uri naming no design returns a
-// nil config.
+// designConfig returns the config a design composes and the project's name. The config is its
+// project's chain with the design's own descriptor layered on top, as OverlayFor composes it. A uri
+// naming no design returns a nil config.
 func (r *ProjectResolver) designConfig(ctx context.Context, uri artifact.URI) (*webapi.AnalysisConfig, string, error) {
 	if r == nil || r.Store == nil {
 		return nil, "", nil
@@ -174,8 +175,8 @@ func DeclaredChecklists(lists []*webapi.NamedChecklist) string {
 	return "which declares " + strings.Join(names, ", ")
 }
 
-// RunProvenance is which config tiers a run actually had attached, the value a results document's
-// RunConfig records.
+// RunProvenance records which config tiers a run actually had attached. A results document's
+// RunConfig records the same value.
 //
 // The answer has two sources. A deployment composes its startup flags into the service's own catalog
 // and specs, and a project composes its own onto the request. A document built from only the first
@@ -219,12 +220,12 @@ func RunConfigProto(p RunProvenance, ratifiedFloor float64) *checkspb.RunConfig 
 	}
 }
 
-// SpecsOver returns the datasheet corpus this run should use: the project's own layered over the
-// shared one (--params or --params-url) per MPN, so the project decides every part it seeds and the
-// shared corpus answers for the rest (agni issue 749). Each citation names the corpus it came from,
-// because a limit transcribed outside the project now decides some of its verdicts, and a reader has
-// to be able to see which. DECISIONS.md records the reversal from the project replacing the shared
-// corpus outright. nil when neither exists.
+// SpecsOver returns the datasheet corpus this run should use. It layers the project's own corpus over
+// the shared one (--params or --params-url) per MPN, so the project decides every part it seeds and
+// the shared corpus answers for the rest (agni issue 749). Each citation names its corpus. A limit
+// transcribed outside the project now decides some of the project's verdicts, and a reader has to be
+// able to see which. DECISIONS.md records the reversal from the project replacing the shared corpus
+// outright. It returns nil when neither exists.
 func (o Overlay) SpecsOver(shared param.ParamProvider) param.ParamProvider {
 	if o.Specs == nil && shared == nil {
 		return nil
@@ -242,8 +243,8 @@ func (o Overlay) SpecsOver(shared param.ParamProvider) param.ParamProvider {
 // A nil resolver, a resolver with no store, and a ref belonging to no declared design all yield the
 // ref in every tier. That is the ordinary case for a mounted folder, not an error.
 //
-// isDir is derived rather than stat'ed (C13), because a design's URI IS its directory (`fsstore`
-// sets it from the descriptor's folder), so only a ref equal to it names the design.
+// isDir is derived rather than stat'ed (C13). A design's URI IS its directory, since `fsstore` sets
+// it from the descriptor's folder, so only a ref equal to it names the design.
 //
 // asNamed comes off the request, because the CLI is a client of these services and its --as-named
 // asks for the file it named.
@@ -260,7 +261,7 @@ func (r *ProjectResolver) Sources(ctx context.Context, uri artifact.URI, asNamed
 	return ResolveSources(d, ref, d != nil && ref == d.GetUri(), asNamed), nil
 }
 
-// TierURIs is Sources with the refs parsed back into artifact URIs, which is what every read takes.
+// TierURIs returns Sources with the refs parsed back into artifact URIs, the form every read takes.
 //
 // It is the one call a service makes to learn which artifact each tier should open. Resolving here
 // rather than in the loader keeps the loader a reader of what it is handed, so a caller can read a
@@ -282,8 +283,8 @@ func (r *ProjectResolver) TierURIs(ctx context.Context, u artifact.URI, boardOve
 	}
 	board = boardOverride
 	if board.IsZero() && src.BoardURI != src.NetlistURI {
-		// Only when the design declared a SEPARATE board. Otherwise stay zero so BuildModel reads
-		// the netlist artifact for copper when it carries any and errors on a non-board override.
+		// Only when the design declared a SEPARATE board. Otherwise leave it zero, so BuildModel reads
+		// the netlist artifact for copper when it has any, and errors on a non-board override.
 		if board, err = ParseArtifactURI(src.BoardURI); err != nil {
 			return u, boardOverride, u, err
 		}

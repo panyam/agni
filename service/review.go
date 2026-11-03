@@ -25,8 +25,8 @@ import (
 
 // ErrReviewStoreNotConfigured is returned by every review resource method when the server was started
 // without a review store. It is its own sentinel, like ErrNativeNotEnabled and ErrExtractNotEnabled,
-// so the transport maps it to failed-precondition rather than invalid-argument, since the request was
-// fine and the deployment is what is missing.
+// so the transport maps it to failed-precondition rather than invalid-argument. The request was
+// fine, and the deployment lacks the store.
 var ErrReviewStoreNotConfigured = errors.New("no review store configured")
 
 // ReviewLoader is the narrow file surface ReviewService needs, defined at the point of use as a
@@ -40,17 +40,17 @@ type ReviewLoader interface {
 	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
 	Board(ctx context.Context, uri artifact.URI) (*geom.BoardGeometry, error)
 	Manifest(ctx context.Context, uri artifact.URI) (review.Manifest, error)
-	// DesignHash returns "sha256:<hex>" over the design's bytes, the revision identity a stored run
-	// records so a document is never re-read against a design that has since changed. It is on the
-	// loader because hashing reads bytes and this package does no I/O (C13/C22).
+	// DesignHash returns "sha256:<hex>" over the design's bytes. That hash is the revision identity.
+	// A stored run records it so a document is never re-read against a design that has since
+	// changed. It is on the loader because hashing reads bytes and this package does no I/O (C13/C22).
 	//
 	// An unreadable design is NOT an error, since the run already succeeded. Return ("", nil), which
 	// DesignRef.content_hash allows.
 	DesignHash(ctx context.Context, uri artifact.URI) (string, error)
 }
 
-// ReviewEnv is the deployment-level provenance a stored run records, naming which overlay tiers were
-// composed into the catalog this service holds and what build produced the document.
+// ReviewEnv holds the deployment-level provenance of a stored run. It names which overlay tiers were
+// composed into this service's catalog, and which build produced the document.
 //
 // It is injected rather than derived because a composed catalog cannot answer "were profiles
 // attached", since an overlay profile is just another rule in it. See
@@ -76,7 +76,8 @@ type ReviewService struct {
 	// byName is every profile (built-in + overlay) keyed by Name, for the interface-absence check that
 	// marks a profile item not-applicable when its interface is absent from the design.
 	byName map[string][]profiles.Profile
-	// specs is the datasheet knowledge base the params join reads (WS10-003), nil without --params.
+	// specs is the datasheet knowledge base. The params join reads it (WS10-003). It is nil without
+	// --params.
 	specs param.ParamProvider
 	// store persists runs (WS9-053). Nil makes the four resource methods refuse up front, rather than
 	// a create running the full sweep and dropping the result.
@@ -114,8 +115,9 @@ func (s *ReviewService) reviewStore() (ReviewStore, error) {
 // that never passed through review.Load has had no parser enforce its rules, and an item carrying two
 // mutually-exclusive bindings would otherwise score a check its author did not ask for.
 //
-// The stored document is the same self-contained CheckResults `agni review --results-out` writes,
-// carrying the checklist SNAPSHOT rather than its name (docsite/content/architecture/web-services.md).
+// The stored document is a self-contained CheckResults, the same one `agni review --results-out`
+// writes. It holds the checklist SNAPSHOT rather than its name
+// (docsite/content/architecture/web-services.md).
 func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateReviewRequest) (*webapi.Review, error) {
 	parent, err := reviewParent(req.GetParent())
 	if err != nil {
@@ -147,9 +149,9 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	// The snapshot's overlay was composed when it was ingested, before the design was read, because
 	// net roles are resolved at ingestion and its lexicon has to reach the read (WS3-102).
 	ov := snap.Overlay
-	// The manifest's inline queries compile against the vocabulary the review runs with, the design's
-	// project library and any library sent with the request included (agni issues 779, 788), so a query
-	// naming a house member validates here exactly as it will run.
+	// The manifest's inline queries compile against the review's own vocabulary. That vocabulary
+	// includes the design's project library and any library sent with the request (agni issues 779,
+	// 788). So a query naming a house member validates here exactly as it will run.
 	vocab, err := ov.Registry()
 	if err != nil {
 		return nil, err
@@ -157,11 +159,11 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 	if err := review.Validate(man, review.WithVocabulary(vocab)); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
-	// The snapshot's tiers, the ones CheckDesign reads, so a review in the browser scores against the
-	// board the design declares, as the CLI's does (agni issues 646, 656; C32).
+	// The review reads the snapshot's tiers, as CheckDesign does. So a review in the browser scores
+	// against the board the design declares, as the CLI's does (agni issues 646, 656; C32).
 	netlistURI, boardURI := snap.Netlist, snap.Board
-	// The budget reaches every checklist query through ctx (agni issue 792); an item past it reads
-	// inconclusive, naming the budget, and the others still answer.
+	// The budget reaches every checklist query through ctx (agni issue 792). An item past it reads
+	// inconclusive and names the budget, and the others still answer.
 	loader := LoaderOr(snap, s.loader)
 	rep, cat, m, err := s.runOne(query.NarrowBudget(ctx, req.GetWorkBudget()), loader, netlistURI, boardURI, man, req.GetRatifiedFloor(), ov)
 	if err != nil {
@@ -190,11 +192,11 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			// docsite/content/architecture/checks-contract.md#the-outcome-vocabulary-names-every-way-a-question-went-unanswered.
 			CoverageAxis: true,
 		},
-		// What the read left out is recorded with the design it describes, so the checklist page
-		// rendered from this document says so (agni issue 717).
+		// The design records what the read left out, so the checklist page rendered from this
+		// document says so (agni issue 717).
 		Design: &checkspb.DesignRef{Source: designURI.String(), ContentHash: hash, UnexpandedHierarchy: unexpanded},
-		// Provenance comes off the RESOLVED overlay the run used, not this service's startup config,
-		// which describes the deployment rather than the run. See
+		// Provenance is read off this run's RESOLVED overlay, not this service's startup config. The
+		// startup config describes the deployment rather than the run. See
 		// docsite/content/architecture/checks-contract.md#provenance-is-read-off-the-resolved-overlay.
 		Run: RunConfigProto(ov.Provenance(RunProvenance{
 			Params:      s.specs != nil,
@@ -202,7 +204,7 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 			Intent:      s.env.Intent,
 			Conventions: snap.Config.GetConfig().GetConventions().GetName(),
 		}), req.GetRatifiedFloor()),
-		// The catalog snapshot is the one composed for THIS run, overlay included, not the service's base.
+		// This catalog snapshot was composed for THIS run, overlay included, not the service's base.
 		Catalog:          results.RuleRecords(cat.Rules()),
 		Manifest:         man.Name,
 		ManifestSnapshot: req.GetManifest(),
@@ -220,9 +222,9 @@ func (s *ReviewService) CreateReview(ctx context.Context, req *webapi.CreateRevi
 }
 
 // ListChecklists answers which checklists the design's project declares, inherited ones included (agni
-// issue 859). It reads the project through the resolver CreateReview's overlay uses and opens no file,
-// so it serves a host with no filesystem as CreateReview does. See ProjectResolver.Checklists for what
-// an absent project and an empty one each answer.
+// issue 859). It reads the project through the same resolver as CreateReview's overlay, and it opens
+// no file. So it serves a host with no filesystem, as CreateReview does. See
+// ProjectResolver.Checklists for what an absent project and an empty one each answer.
 func (s *ReviewService) ListChecklists(ctx context.Context, req *webapi.ListChecklistsRequest) (*webapi.ListChecklistsResponse, error) {
 	ctx, snap, err := s.projects.Snapshot(ctx, req.GetSnapshot())
 	if err != nil {
@@ -332,9 +334,9 @@ func parseReviewFilter(filter string) (string, error) {
 	return value, nil
 }
 
-// GetReviewManifest resolves a stored checklist into the value CreateReview takes. It is the one
-// place in this service that reads a file, so a caller already holding a manifest never triggers it
-// and a host with no filesystem need not serve it.
+// GetReviewManifest resolves a stored checklist into the value CreateReview takes. No other method
+// in this service reads a file. So a caller already holding a manifest never triggers it, and a host
+// with no filesystem need not serve it.
 //
 // It validates before returning, so a malformed checklist is reported here with the item that is
 // wrong rather than at scoring time.
@@ -350,8 +352,9 @@ func (s *ReviewService) GetReviewManifest(ctx context.Context, req *webapi.GetRe
 	if err != nil {
 		return nil, ClassifyLoadErr(err)
 	}
-	// Structure only: a stored manifest is described with no design in view, so there is no run
-	// vocabulary to compile its queries against. CreateReview compiles them against the one it runs with.
+	// This checks structure only. A stored manifest is described with no design in view, so there is
+	// no run vocabulary to compile its queries against. CreateReview compiles them against its own
+	// run's vocabulary.
 	if err := review.ValidateStructure(man); err != nil {
 		return nil, fmt.Errorf("%w: %s", ErrInvalidArgument, err)
 	}
@@ -377,8 +380,8 @@ func (s *ReviewService) runOne(ctx context.Context, loader ReviewLoader, designU
 	if err != nil {
 		return review.Report{}, nil, nil, err
 	}
-	// The run's own profiles, so a project profile re-binding a built-in's signals is the one the
-	// presence gate asks about (agni issue 833).
+	// The gate reads the run's own profiles. So when a project profile re-binds a built-in's signals,
+	// the presence gate asks about the project's profile (agni issue 833).
 	present, scope, compScope := reviewClosures(m, ov.ProfileIndex(s.byName))
 	rep, err := review.Run(ctx, review.RunParams{
 		Model: m, Catalog: cat, Manifest: man, Design: designURI.String(),
@@ -406,7 +409,7 @@ func reviewClosures(m check.Model, byName map[string][]profiles.Profile) (review
 			return review.IfaceAbsent, false // unknown interface, so leave the item running
 		}
 		// The interface evaluates when a component declares its host, or when its signal convention is
-		// in use AND the completeness rule can anchor, the same preconditions the profile's rules apply
+		// in use AND the completeness rule can anchor. The profile's rules apply the same preconditions
 		// (WS3-090, WS3-099). The host path needs no anchor because hostIncompleteRule anchors on the
 		// declared component.
 		for _, p := range ps {
@@ -421,9 +424,10 @@ func reviewClosures(m check.Model, byName map[string][]profiles.Profile) (review
 				return review.IfaceConventionUnmatched, true
 			}
 		}
-		// Not strictly evaluable. A host-bound interface that IS named on the board but whose host is
-		// annotated nowhere is host-unsatisfied, which reads not-automated. With no such evidence it is
-		// absent (not-applicable); an absent host-bound interface must NOT read not-automated.
+		// Not strictly evaluable. Imagine a host-bound interface that IS named on the board, with its
+		// host annotated nowhere. That interface is host-unsatisfied, which reads not-automated. With no
+		// such evidence it is absent (not-applicable), and an absent host-bound interface must NOT read
+		// not-automated.
 		for _, p := range ps {
 			if p.HasHost() && profiles.Named(m, p) {
 				return review.IfaceHostUnsatisfied, true
@@ -500,8 +504,8 @@ func reviewParent(parent string) (string, error) {
 	return parent, nil
 }
 
-// unmetProtos carries a needs-data item's unmet dependencies onto the wire. It preserves the order
-// UnseededSymbols sorted them into, which the results document's byte-for-byte re-render relies on.
+// unmetProtos carries a needs-data item's unmet dependencies onto the wire. UnseededSymbols sorted
+// them, and this keeps that order. The results document's byte-for-byte re-render relies on it.
 func unmetProtos(deps []check.UnmetDependency) []*checkspb.UnmetDependency {
 	if len(deps) == 0 {
 		return nil

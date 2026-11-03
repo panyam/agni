@@ -13,8 +13,8 @@ import (
 type maskTree map[string]maskTree
 
 // parseMask turns field-mask paths into a tree, checking each path against the message it applies
-// to. A path may pass through a repeated or map field, and then applies to every element, which is
-// what makes `design.components.mpn` mean "every component's part number" (agni issue 836).
+// to. A path may pass through a repeated or map field and then applies to every element. So
+// `design.components.mpn` means "every component's part number" (agni issue 836).
 func parseMask(md protoreflect.MessageDescriptor, paths []string) (maskTree, error) {
 	tree := maskTree{}
 	for _, p := range paths {
@@ -63,7 +63,7 @@ func checkPath(md protoreflect.MessageDescriptor, segs []string) error {
 	return checkPath(sub, segs[1:])
 }
 
-// prune clears every field of m the tree does not keep, recursing into kept fields that name
+// prune clears each field of m that the tree does not keep, recursing into kept fields that name
 // sub-fields. Elements of a repeated or map field are pruned one by one.
 func prune(m protoreflect.Message, tree maskTree) {
 	if len(tree) == 0 {

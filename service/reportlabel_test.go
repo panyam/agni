@@ -6,9 +6,9 @@ import (
 	"github.com/panyam/agni/core/graph"
 )
 
-// TestTheConversionReportCarriesTheEngineLabel: the wire report names each component's summary group
-// as graph.ComponentReport.Label decides it, so the viewer groups by the field rather than re-deriving
-// the rule (agni issue 1045).
+// TestTheConversionReportCarriesTheEngineLabel checks that the wire report names each component's
+// summary group as graph.ComponentReport.Label decides it. So the viewer groups by the field rather
+// than re-deriving the rule (agni issue 1045).
 func TestTheConversionReportCarriesTheEngineLabel(t *testing.T) {
 	r := &graph.ConversionReport{Components: []graph.ComponentReport{
 		{RefDes: "R1", Kind: graph.KindGlyph, Class: "resistor"},

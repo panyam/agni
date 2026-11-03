@@ -77,8 +77,8 @@ type fakeLoader struct {
 	err     error
 	geomErr error
 	// hash is the canned DesignHash, and hashErr fails it alone. Zero-valued they give the
-	// unhashable case, and that is the DEFAULT because a loader that says nothing about the
-	// revision is what every test not exercising the link check should present.
+	// unhashable case. That is the DEFAULT, because every test not exercising the link check
+	// should get a loader that says nothing about the revision.
 	hash    string
 	hashErr error
 }
@@ -135,7 +135,7 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 		t.Errorf("want an i2c-pull-up finding on SDA, got %+v", resp.GetFindings())
 	}
 
-	// A loader ErrNotFound (unknown mount) stays classified as not-found for the transport.
+	// A loader ErrNotFound for an unknown mount is still classified as not-found for the transport.
 	bad := NewCheckService(fakeLoader{err: fmt.Errorf("no such mount: %w", ErrNotFound)}, check.DefaultCatalog(), nil, "", nil, nil)
 	if _, err := bad.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, bad.Snapshots(), "mount://no/x")}); !errors.Is(err, ErrNotFound) {
 		t.Fatalf("want ErrNotFound, got %v", err)
@@ -143,8 +143,8 @@ func TestCheckDesignOverFakeLoader(t *testing.T) {
 }
 
 // TestGetInterfaceCoverage exercises the coverage RPC end to end (handler + adapter path is the
-// server's). An SPI-NOR bus with IO2 absent, IO3 single-pin, and CS unpulled yields the matrix the
-// coverage panel renders, one entry per detected interface.
+// server's). An SPI-NOR bus with IO2 absent, IO3 single-pin, and CS unpulled yields the coverage
+// panel's matrix, one entry per detected interface.
 func TestGetInterfaceCoverage(t *testing.T) {
 	conn := func(ref, pin string) *ir.Connection { return &ir.Connection{ComponentRef: ref, PinRef: pin} }
 	d := &ir.Design{Nets: []*ir.Net{
@@ -175,8 +175,8 @@ func TestGetInterfaceCoverage(t *testing.T) {
 }
 
 // TestGetInterfaceCoverageFindsADeclaredHost covers the one path that asks the fact base: an interface
-// with no signal present, detected because a component declares it. That base is the model's kept one
-// since agni issue 985, where each profile used to project its own.
+// with no signal present, detected because a component declares it. Since agni issue 985 the model
+// keeps that fact base. Before, each profile projected its own.
 func TestGetInterfaceCoverageFindsADeclaredHost(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "U2", Attributes: map[string]string{"interface": "CAN"}}},
@@ -209,9 +209,9 @@ func TestGetInterfaceCoverageFindsADeclaredHost(t *testing.T) {
 // TestListRules maps the injected catalog to RuleInfo: every rule reports its tags, the facts it
 // reads, and its availability (the built-ins are topology rules, so all available).
 func TestListRules(t *testing.T) {
-	// The catalog is the built-ins plus every RegisterSource'd suite (the interface profiles register
-	// via profiles.init(), pulled in by this package's coverage handler), so assert against the
-	// catalog's own count, not the built-in slice.
+	// The catalog is the built-ins plus every RegisterSource'd suite, so assert against the
+	// catalog's own count, not the built-in slice. The interface profiles register via
+	// profiles.init(), and this package's coverage handler pulls that in.
 	catalog := check.DefaultCatalog()
 	svc := NewCheckService(fakeLoader{}, catalog, nil, "", nil, nil)
 	resp, err := svc.ListRules(context.Background(), &webapi.ListRulesRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d.pdf")})
@@ -238,8 +238,8 @@ func TestListRules(t *testing.T) {
 	if !spn.GetAvailable() {
 		t.Errorf("single-pin-net should be available (topology), reason %q", spn.GetUnavailableReason())
 	}
-	// The catalog carries the full prose (WS9-020): summary, impact, and the long-form detail
-	// markdown, so the viewer renders rule explanations without a second fetch.
+	// The catalog holds the full prose (WS9-020), meaning the summary, the impact and the long-form
+	// detail markdown. The viewer then renders rule explanations without a second fetch.
 	if spn.GetSummary() == "" || spn.GetImpact() == "" {
 		t.Errorf("single-pin-net prose incomplete: summary %q, impact %q", spn.GetSummary(), spn.GetImpact())
 	}
@@ -295,9 +295,10 @@ func TestCheckDesignSubsetAndSubject(t *testing.T) {
 	}
 }
 
-// TestCheckDesignSheets pins the WS9-024 join. Each finding carries the sheet ids where its
-// subject appears in the geometry (a component's from its placements, a net's from its wires
-// on every sheet it spans), so the viewer can navigate to the right sheet before highlighting.
+// TestCheckDesignSheets pins the WS9-024 join. Each finding lists the sheet ids where its
+// subject appears in the geometry, so the viewer can navigate to the right sheet before
+// highlighting. A component's sheets come from its placements, and a net's from its wires on
+// every sheet it spans.
 // A design whose geometry cannot be resolved degrades to findings with no sheets, never an error.
 func TestCheckDesignSheets(t *testing.T) {
 	// R9 (on no net) trips unconnected-component; SDA trips i2c-pull-up.
@@ -375,9 +376,9 @@ func TestCheckDesignSheets(t *testing.T) {
 	}
 }
 
-// TestCheckDesignNetSheetsFromAttribute pins the WS9-028 net-membership channel. A net that
-// carries AttrSheets (the hierarchy walk's authoritative membership) badges its finding from
-// that attribute, NOT from wire geometry. This is the case WS9-024's wire join could not reach.
+// TestCheckDesignNetSheetsFromAttribute pins the WS9-028 net-membership channel. A net carrying
+// AttrSheets badges its finding from that attribute, NOT from wire geometry. AttrSheets is the
+// hierarchy walk's authoritative membership. WS9-024's wire join could not reach this case.
 // A wireless sub-sheet net has no wire naming it, so the geometry tally leaves it badge-less. The
 // attribute also OVERRIDES the geometry tally when both exist, so the authoritative membership
 // wins over a partial wire picture.
@@ -669,8 +670,8 @@ func TestHighlightSheetBoard(t *testing.T) {
 	}
 }
 
-// TestBoardSheetAbsent checks that a loader without board geometry (nil, nil, since absence is
-// normal) lists no board sheet, and that asking for one is ErrNotFound.
+// TestBoardSheetAbsent checks that a loader without board geometry lists no board sheet, and that
+// asking for one is ErrNotFound. Such a loader returns (nil, nil), since absence is normal.
 func TestBoardSheetAbsent(t *testing.T) {
 	ld := fakeLoader{geom: &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{Id: "graph"}}}}
 	svc := NewDesignService(ld, noNative{}, render.DefaultStyle, nil)
@@ -686,10 +687,10 @@ func TestBoardSheetAbsent(t *testing.T) {
 	}
 }
 
-// TestHighlightSheetCompanionNameJoin checks that on a NAME-ONLY canvas (a companion .eds, whose
-// wires are named by net with no per-instance net_id), an id-only net spec (as the web builds for a
-// netlist finding) is resolved to its net NAME via the netlist and matches by name. Without the
-// resolution the id-only spec would paint nothing on such a canvas.
+// TestHighlightSheetCompanionNameJoin covers a NAME-ONLY canvas, such as a companion .eds, whose
+// wires are named by net with no per-instance net_id. The web builds an id-only net spec for a
+// netlist finding. On such a canvas that spec is resolved to its net NAME via the netlist and
+// matches by name. Without the resolution the id-only spec would paint nothing.
 func TestHighlightSheetCompanionNameJoin(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{{
 		Id:    "P1",
@@ -740,7 +741,7 @@ func uriStr(mount, p string) string {
 }
 
 // TestGetDesignReportsUndrawnPlacements exists because a viewer cannot tell a complete sheet from a
-// bodyless one by looking at it, because a render that lost its symbols still draws every reference
+// bodyless one by looking at it. A render that lost its symbols still draws every reference
 // designator, every wire and the title block. The shortfall has to arrive as data (agni issue 354).
 func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 	g := twoSheetGeom()
@@ -757,7 +758,8 @@ func TestGetDesignReportsUndrawnPlacements(t *testing.T) {
 		t.Errorf("undrawn = %+v, want the placement and the symbol it wanted", u)
 	}
 
-	// The common case, and the one that keeps a banner worth reading.
+	// This is the common case. A clean design must report nothing, so a banner is worth reading
+	// when it appears.
 	clean := NewDesignService(fakeLoader{geom: twoSheetGeom()}, noNative{}, render.Style{}, nil)
 	got, err := clean.GetDesign(context.Background(), &webapi.GetDesignRequest{Snapshot: snapOf(t, clean.Snapshots(), "mount://m/x.eds")})
 	if err != nil {
@@ -816,8 +818,8 @@ func fullConversionReport() *graph.ConversionReport {
 }
 
 // C26's guard for the pair. The CLI's --report-format json and GetLayoutReport now publish this one
-// message, so a field the converter never learned would be absent from both sides of every assertion
-// made on the proto, which is how a silently dropped field ships.
+// message. Imagine the converter never learned a field. That field would be absent from both sides
+// of every assertion made on the proto, and a silently dropped field would ship that way.
 func TestConversionReportProtoRoundTrip(t *testing.T) {
 	want := fullConversionReport()
 	if got := ReportFromProto(ReportProto(want)); !reflect.DeepEqual(got, want) {
@@ -841,8 +843,9 @@ func TestConversionReportFieldCensus(t *testing.T) {
 	}
 }
 
-// TestListRulesSaysWhichRulesShip: a report leaving the machine may name a rule agni ships and no
-// other (agni issue 1057), so the catalog says which, and names the build answering.
+// TestListRulesSaysWhichRulesShip holds that the catalog says which rules agni ships, and names the
+// build answering. A report leaving the machine may name a shipped rule and no other (agni issue
+// 1057).
 func TestListRulesSaysWhichRulesShip(t *testing.T) {
 	project := check.NewSource("acme-profiles", []*check.Rule{{Name: "can-esd-missing", Severity: "warning", Eval: func(context.Context, check.Model) []check.Verdict { return nil }}})
 	catalog, err := check.DefaultCatalog().With(project)

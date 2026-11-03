@@ -14,8 +14,8 @@ import (
 // A nil base is supported (see formats.Loader's own nil handling) and is never dereferenced. The copy
 // then starts from a zero loader carrying only the read's options.
 //
-// Every loader adapter calls this, the CLI's, the server's and the in-memory one the wasm engine
-// uses, so a read option reaches the read the same way whichever host made it.
+// Every loader adapter calls this. That covers the CLI's, the server's, and the in-memory one that
+// the wasm engine uses. So a read option reaches the read the same way whichever host made it.
 func LoaderFor(base *formats.Loader, opts ...ReadOption) *formats.Loader {
 	o := ReadOpts(opts...)
 	if o.Lexicon == nil && len(o.SymbolPaths) == 0 && o.DeviceClassFor == nil && !o.parseOnly && !o.FlattenHierarchy {
@@ -29,14 +29,15 @@ func LoaderFor(base *formats.Loader, opts ...ReadOption) *formats.Loader {
 		cp.Lexicon = o.Lexicon
 	}
 	// ADDED to whatever the loader was built with rather than replacing it, so an operator's
-	// --symbol-path and a project's declared library both resolve. The flag stays the escape hatch for
-	// a library the project does not know about.
+	// --symbol-path and a project's declared library both resolve. The flag is still the escape
+	// hatch for a library the project does not know about.
 	if len(o.SymbolPaths) > 0 {
 		cp.SymbolPaths = append(append([]string{}, cp.SymbolPaths...), o.SymbolPaths...)
 	}
-	// The read's datasheet corpus, so the classes only a spec can establish are stamped into the IR
-	// the DRAWING is built from and not only into a check model (agni issue 710). It replaces rather
-	// than composes, since two corpora for one read would give two answers to one question.
+	// This is the read's datasheet corpus. Only a spec can establish some classes. The corpus stamps
+	// them into the IR that the DRAWING is built from, not only into a check model (agni issue 710).
+	// It replaces rather than composes, since two corpora for one read would give two answers to one
+	// question.
 	if o.DeviceClassFor != nil {
 		cp.DeviceClassFor = o.DeviceClassFor
 	}
@@ -61,7 +62,7 @@ func touchedFrom(ctx context.Context) *formats.Touched {
 }
 
 // LoaderIn is LoaderFor for a read made on behalf of ctx. When a DesignCache is building an entry,
-// ctx carries the recorder the read's files go into, and this hands it to the Loader. A host's
+// ctx carries a recorder for the read's files, and this hands it to the Loader. A host's
 // Design, Geometry, Report and Board reads go through this, and a read that does not is simply never
 // cached.
 func LoaderIn(ctx context.Context, base *formats.Loader, opts ...ReadOption) *formats.Loader {

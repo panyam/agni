@@ -24,10 +24,10 @@ type ReadOptions struct {
 	// same additive, idempotent pass, so a corpus arriving after the read still gets the class, but
 	// only a class stamped here reaches the DRAWING (agni issue 710).
 	DeviceClassFor func(mpn string) string
-	// Intent is the design's declared intent, for the MODEL built from this read rather than for the
-	// read itself: BuildModel hands it to check.WithIntent so the exposure rules know which connectors
-	// the design declares internal (agni issue 831). It rides the read options because every surface
-	// that builds a model already passes Overlay.ReadOptions, so none can miss it.
+	// Intent is the design's declared intent. It is for the MODEL built from this read rather than for
+	// the read itself. BuildModel hands it to check.WithIntent, so the exposure rules know which
+	// connectors the design declares internal (agni issue 831). It travels in the read options because
+	// every surface that builds a model already passes Overlay.ReadOptions, so none can miss it.
 	Intent *configpb.DesignIntent
 	// Identity names everything the options above were composed from, so a cache can key a read on
 	// it (agni issue 895). Set by WithIdentity, which Overlay.ReadOptions appends when its overlay
@@ -42,17 +42,17 @@ type ReadOptions struct {
 	// formats.Loader.ParseOnly). Only CachingLoader sets it, for the parse level it keeps.
 	parseOnly bool
 
-	// fields counts the options above that were applied, and identityCovers how many of them the
-	// identity was computed over. A caller that adds an option the identity does not know about
-	// leaves the two unequal, so the identity no longer describes the read.
+	// fields counts the options above that were applied. identityCovers counts how many of them the
+	// identity was computed over. If a caller adds an option the identity does not know about, the
+	// two counts differ, and the identity no longer describes the read.
 	fields, identityCovers int
 }
 
 // ReadOption configures one read.
 type ReadOption func(*ReadOptions)
 
-// WithIdentity names the options before it: covers is how many options the identity describes, which
-// must be every one the read applies or the identity is not used (see ReadOptions.Identity).
+// WithIdentity names the options before it. covers is how many options the identity describes. It
+// must cover every option the read applies, or the identity is not used (see ReadOptions.Identity).
 func WithIdentity(id string, covers int) ReadOption {
 	return func(o *ReadOptions) { o.Identity, o.identityCovers = id, covers }
 }
@@ -75,7 +75,7 @@ func WithDeviceClasses(f func(mpn string) string) ReadOption {
 	return func(o *ReadOptions) { o.DeviceClassFor = f; o.fields++ }
 }
 
-// WithDesignIntent carries a design's declared intent to the model BuildModel builds (see
+// WithDesignIntent passes a design's declared intent to the model that BuildModel builds (see
 // ReadOptions.Intent).
 func WithDesignIntent(di *configpb.DesignIntent) ReadOption {
 	return func(o *ReadOptions) { o.Intent = di; o.fields++ }

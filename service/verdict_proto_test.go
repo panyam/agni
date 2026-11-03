@@ -11,7 +11,7 @@ import (
 // fullVerdict is the C26 fixture, with EVERY wire-carried field set to a distinguishable non-zero
 // value.
 //
-// The fixture is the part of the guard that does the work. A field left at its zero value round-trips
+// The fixture does the guard's work. A field left at its zero value round-trips
 // cleanly through a conversion that drops it, because zero in is zero out, so a sparse fixture
 // reports success while covering nothing.
 func fullVerdict() check.Verdict {
@@ -59,8 +59,8 @@ func TestEveryOutcomeRoundTrips(t *testing.T) {
 }
 
 // The id is DERIVED, so an inbound one is not authority. Trusting it would let a producer rename a
-// verdict by asserting a different name, and deriving it is what lets two sides compute
-// the same name without negotiating.
+// verdict by asserting a different name. Deriving it lets two sides compute the same name without
+// negotiating.
 func TestVerdictIDIsDerivedNotTrusted(t *testing.T) {
 	p := VerdictProto(fullVerdict())
 	if p.GetId() != check.VerdictID(fullVerdict()) {
@@ -73,12 +73,12 @@ func TestVerdictIDIsDerivedNotTrusted(t *testing.T) {
 }
 
 // THE GUARD C26 ACTUALLY ASKS FOR, since the round trip above can only test fields it knows about.
-// A new field on check.Verdict that the converter never learned is absent from both sides of every
-// assertion made on the proto, which is how naming.Lexicon and Profile.HostClass each shipped
-// a silently dropped field. This fails when the struct grows, so the next person has to SAY whether
-// the field belongs on the wire.
+// Imagine the converter never learned a new field on check.Verdict. That field is absent from both
+// sides of every assertion made on the proto. naming.Lexicon and Profile.HostClass each shipped a
+// silently dropped field that way. This fails when the struct grows, so the next person has to SAY
+// whether the field belongs on the wire.
 func TestVerdictFieldCensus(t *testing.T) {
-	// Finding is knowingly absent from the wire, because a failing verdict's finding travels in
+	// Finding is knowingly absent from the wire, because a failing verdict's finding is sent in
 	// CheckDesignResponse.findings, and sending it here too would put one defect on the wire twice.
 	wire := []string{"Context", "Outcome", "Reason", "Rule", "Subjects", "Witness"}
 	goOnly := []string{"Finding"}

@@ -69,8 +69,8 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 	})
 
 	// Containment is enforced when the URI is PARSED, not when the adapter joins it, so an escaping
-	// ref classifies as an invalid argument. The value is sent raw because building it through the
-	// URI constructor is precisely what is now impossible.
+	// ref classifies as an invalid argument. The value is sent raw, because the URI constructor can no
+	// longer build it.
 	t.Run("containment is enforced at the parse", func(t *testing.T) {
 		_, err := svc.ListDir(context.Background(), &webapi.ListDirRequest{Uri: "mount://m/../x"})
 		if !errors.Is(err, ErrInvalidArgument) {
@@ -85,16 +85,17 @@ func TestWorkspaceServiceListDirOverMemPort(t *testing.T) {
 	})
 }
 
-// A browser can only ever show a folder holding nothing it opens as empty, so Opens leaves it out.
-// "Empty" is measured over the whole subtree, not one level, because a folder of folders of library
-// files is as useless to open as a folder with nothing in it. And it is measured against the
-// CALLER's kinds, which is why the same fixture prunes differently for the two trees below.
+// Imagine a folder holding nothing a browser opens. The browser can only ever show it as empty, so
+// Opens leaves it out. "Empty" is measured over the whole subtree, not one level, because a folder
+// of folders of library files is as useless to open as a folder with nothing in it. It is also
+// measured against the CALLER's kinds, so the same fixture prunes differently for the two trees
+// below.
 func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 	svc := NewWorkspaceService(&memWorkspace{
 		mounts: []MountInfo{{Name: "m", Root: "/x"}},
 		entries: map[string][]DirEntry{
 			"m\x00": {
-				{Name: "boards", IsDir: true}, // design lives two levels down
+				{Name: "boards", IsDir: true}, // design sits two levels down
 				{Name: "docs", IsDir: true},   // a datasheet, which no design reader opens
 				{Name: "empty", IsDir: true},  // nothing at all
 				{Name: "libs", IsDir: true},   // files, but none a reader opens
@@ -126,7 +127,7 @@ func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 		}
 	})
 
-	// "Empty" is per-client, which is what Opens states. The datasheets tree opens the PDF under
+	// "Empty" is per-client, as Opens states. The datasheets tree opens the PDF under
 	// docs/, so for THAT client docs/ is the folder with something in it and boards/ is the empty
 	// one. Same tree, same walk, opposite answer.
 	t.Run("prunes by the caller's kinds, not by design format", func(t *testing.T) {
@@ -149,7 +150,7 @@ func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 	})
 
 	// UNSPECIFIED is not a kind a client can open. Honouring it would make every folder of lock
-	// files look openable, which is the opposite of what asking to prune means.
+	// files look openable, and asking to prune means the opposite.
 	t.Run("an unspecified kind prunes nothing rather than everything", func(t *testing.T) {
 		if got := names(webapi.FileKind_FILE_KIND_UNSPECIFIED); len(got) != 4 {
 			t.Fatalf("entries = %v, want all 4 dirs", got)
@@ -159,7 +160,7 @@ func TestWorkspaceServiceListDirPrunesEmptyDirs(t *testing.T) {
 
 // A subtree the walk cannot settle keeps its folder, because a folder wrongly shown costs a click, one
 // wrongly hidden costs a design. Here the design sits below the depth bound, so the walk runs out
-// before finding it and the folder stays.
+// before finding it and the folder is kept.
 func TestWorkspaceServiceListDirKeepsDirsBeyondPruneDepth(t *testing.T) {
 	entries := map[string][]DirEntry{"m\x00": {{Name: "deep", IsDir: true}}}
 	path := "deep"
@@ -180,9 +181,9 @@ func TestWorkspaceServiceListDirKeepsDirsBeyondPruneDepth(t *testing.T) {
 	}
 }
 
-// A mount is a root the same rule applies to. One serving only datasheets or only library files is
-// somewhere the design tree can never show anything, so PruneEmptyMounts leaves it out. The count
-// comes back so the sidebar can account for the absence instead of quietly being shorter.
+// The same rule applies to a mount, since a mount is a root. The design tree can never show anything
+// from a mount serving only datasheets or only library files, so PruneEmptyMounts leaves it out. The
+// count comes back so the sidebar can account for the absence instead of quietly being shorter.
 func TestListMountsPrunesEmptyMounts(t *testing.T) {
 	svc := NewWorkspaceService(&memWorkspace{
 		mounts: []MountInfo{{Name: "boards", Root: "/boards"}, {Name: "ds", Root: "/ds"}, {Name: "empty", Root: "/empty"}},
@@ -209,7 +210,7 @@ func TestListMountsPrunesEmptyMounts(t *testing.T) {
 	})
 
 	// The mirror. The datasheets tree asks the same question about the same mounts and gets the
-	// other answer, which is why the kinds are in the request.
+	// other answer. So the kinds have to be in the request.
 	t.Run("a datasheets client keeps the mount of PDFs and prunes the boards", func(t *testing.T) {
 		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{
 			Opens: []webapi.FileKind{webapi.FileKind_FILE_KIND_DATASHEET},
@@ -223,8 +224,8 @@ func TestListMountsPrunesEmptyMounts(t *testing.T) {
 		}
 	})
 
-	// A client that declares nothing gets everything, which is what any caller written before this
-	// field existed does.
+	// A client that declares nothing gets everything. Any caller written before this field existed
+	// declares nothing.
 	t.Run("prunes nothing when the caller declares nothing", func(t *testing.T) {
 		resp, err := svc.ListMounts(context.Background(), &webapi.ListMountsRequest{})
 		if err != nil {

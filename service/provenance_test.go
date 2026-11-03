@@ -2,9 +2,9 @@ package service
 
 import "testing"
 
-// TestOverlayProvenanceUnionsBothSources is the fix for the bug this replaced. A results document's
-// RunConfig was built from the SERVICE's startup config while the run had used the resolved overlay, so
-// a design in a project declaring params/, profiles/ and conventions.yaml scored against all three and
+// TestOverlayProvenanceUnionsBothSources covers a fix. A results document's RunConfig was built from
+// the SERVICE's startup config, while the run had used the resolved overlay. Imagine a design in a
+// project that declares params/, profiles/ and conventions.yaml. It scored against all three and
 // recorded none of them.
 //
 // Union rather than override, because a deployment's --profile-path and a project's own profiles both
@@ -32,9 +32,9 @@ func TestOverlayProvenanceUnionsBothSources(t *testing.T) {
 			want:       RunProvenance{Params: true, Profiles: true},
 		},
 		"neither": {},
-		// The convention is the one tier that does NOT union, because a request-supplied one already
-		// REPLACED whatever was in place by the time this is called (WS3-124). The deployment's name is
-		// only the answer when nothing replaced it.
+		// The convention tier alone does NOT union. By the time this is called, a request-supplied
+		// convention has already REPLACED whatever was in place (WS3-124). The deployment's name is
+		// the answer only when nothing replaced it.
 		"project convention wins over the deployment default": {
 			overlay:    Overlay{conventionName: "gateway"},
 			deployment: RunProvenance{Conventions: "house"},

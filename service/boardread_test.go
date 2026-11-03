@@ -46,8 +46,8 @@ func runOn(t *testing.T, l boardCountingLoader, q string, overlay *webapi.Overla
 	return resp
 }
 
-// A query that asks nothing of the copper is answered without reading the board, which is most of
-// what a large design's model holds (agni issue 987).
+// A query that asks nothing of the copper is answered without reading the board. On a large design
+// the board is most of what the model holds (agni issue 987).
 func TestAQueryNamingNoBoardRelationReadsNoBoard(t *testing.T) {
 	l, boards := routedDesign()
 	resp := runOn(t, l, "component.net(?r, ?n) => ?r, ?n", nil)
@@ -135,8 +135,8 @@ func TestCoverageAndPartParametersReadNoBoard(t *testing.T) {
 
 // ListRules says a board-tier rule will run on a design whose board tier is a board format without
 // reading the board, since it answers on every open (agni issues 943, 950). The run that follows reads
-// the board and runs the rule, which is the agreement the listing promises and the counter's positive
-// control.
+// the board and runs the rule. That run keeps the listing's promise, and it is also the counter's
+// positive control.
 func TestListRulesReadsNoBoardAndListsTheBoardRules(t *testing.T) {
 	l, boards := routedDesign()
 	svc := NewCheckService(l, check.DefaultCatalog(), nil, "", nil, nil)

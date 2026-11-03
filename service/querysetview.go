@@ -8,9 +8,10 @@ import (
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// QueryResultTable is one query's answer as the report model renders it, the projection `query
-// --format html|markdown` writes and the check report's Queries sections reuse. Per-cell sheet badges
-// and locate reasons are panel navigation and mean nothing in a file, so they stop here.
+// QueryResultTable lays out one query's answer as the report model renders it. `query --format
+// html|markdown` writes this projection, and the check report's Queries sections reuse it. Per-cell
+// sheet badges and locate reasons are panel navigation and mean nothing in a file, so they are
+// dropped here.
 //
 // source is the design's URI, never a host path, since a saved view gets committed and pasted into
 // tickets (agni issue 501).
@@ -24,8 +25,8 @@ func QueryResultTable(resp *webapi.RunQueryResponse, title, queryText, source st
 }
 
 // QuerySetTable is a query set's answers as one report table set, a section per query in the set's
-// order. failed gives the text and bindings of a query that has no result, which the response does
-// not echo; nil leaves a failed section with its error alone.
+// order. failed gives the text and bindings of a query that has no result, since the response does
+// not echo them. A nil failed leaves a failed section with its error alone.
 func QuerySetTable(resp *webapi.RunQueriesResponse, failed func(i int) rpt.Table) rpt.TableSet {
 	ts := rpt.TableSet{Title: resp.GetTitle(), Source: resp.GetSource(), Preamble: resp.GetPreamble()}
 	for i, r := range resp.GetResults() {

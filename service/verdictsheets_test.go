@@ -22,9 +22,9 @@ func twoSheetGeometry() *geom.SchematicGeometry {
 	}}
 }
 
-// A verdict carries the sheets its subjects are drawn on, as a finding does, so the viewer can open
-// one before drawing the proof (agni issue 1151). A passing verdict has no finding to borrow them
-// from, which is the case this exists for.
+// A verdict lists the sheets that draw its subjects, as a finding does, so the viewer can open one
+// before drawing the proof (agni issue 1151). This test exists for a passing verdict, since it has no
+// finding to borrow the sheets from.
 func TestCheckDesignVerdictSheets(t *testing.T) {
 	d := &ir.Design{
 		Components: []*ir.Component{{RefDes: "R9"}},
@@ -57,8 +57,8 @@ func TestCheckDesignVerdictSheets(t *testing.T) {
 	}
 }
 
-// A verdict about a tuple lists each subject's sheets in the tuple's order, so the first subject's
-// sheet is the one a viewer opens.
+// A verdict about a tuple lists each subject's sheets in the tuple's order, and a viewer opens the
+// first subject's sheet.
 func TestAnnotateRunSheetsFollowsTupleOrder(t *testing.T) {
 	d := &ir.Design{Nets: []*ir.Net{{Name: "SDA"}}, Components: []*ir.Component{{RefDes: "R9"}}}
 	tuple := &checkspb.Verdict{Subjects: []*checkspb.Subject{{Kind: check.KindComponent, Ref: "R9"}, {Kind: check.KindNet, Ref: "SDA"}}}

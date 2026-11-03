@@ -7,11 +7,11 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// houseLexiconYAML declares a house spelling for one NET vocabulary and all four PIN vocabularies,
-// each pattern chosen so the BUILT-IN vocabulary does not already match it (the defaults are
-// ^G$/^GATE$ for gate, ^S$/^SOURCE$/^SRC$ for source, ^D$/^DRAIN$/^DRN$ for drain). A vocabulary
-// that fails to travel therefore reads as "not recognized" rather than being masked by a default
-// that happens to cover the same name.
+// houseLexiconYAML declares a house spelling for one NET vocabulary and all four PIN vocabularies.
+// The BUILT-IN vocabulary matches none of the patterns. Its defaults are ^G$/^GATE$ for gate,
+// ^S$/^SOURCE$/^SRC$ for source, and ^D$/^DRAIN$/^DRN$ for drain. So if a vocabulary fails to
+// travel, the name reads as "not recognized", and no default covering the same name can mask the
+// failure.
 const houseLexiconYAML = `
 name: house
 lexicon:
@@ -29,13 +29,13 @@ lexicon:
       patterns: ["^DRNE$"]
 `
 
-// TestConventionLexiconSurvivesOverlay pins that a vocabulary an operator writes in
-// conventions.yaml reaches the lexicon the design is READ with, which every path except serve's
-// startup install depends on. `agni check`, `agni review` and `agni query` all compose their
-// convention through naming.Parse -> AnalysisConfig -> ComposeOverlay, and a project's own
-// conventions.yaml takes the same route via internal/projects. Anything the wire form cannot carry
-// is dropped silently on all of them, and BuildRoleVocab then falls back to the built-in names, so
-// an operator who asked for their vocabulary reads a report written against the defaults.
+// TestConventionLexiconSurvivesOverlay pins one path. An operator writes a vocabulary in
+// conventions.yaml, and it must reach the lexicon that the design is READ with. Every path except
+// serve's startup install depends on this. `agni check`, `agni review` and `agni query` all compose
+// their convention through naming.Parse -> AnalysisConfig -> ComposeOverlay, and a project's own
+// conventions.yaml takes the same route via internal/projects. All of them silently drop anything
+// the wire form cannot carry. BuildRoleVocab then falls back to the built-in names, and the operator
+// who asked for their vocabulary reads a report written against the defaults.
 //
 // The assertion is behavioural (does the vocabulary classify the name) rather than
 // structural (does the proto have the field), so it keeps its meaning if the config schema is

@@ -12,13 +12,13 @@ import (
 	webapi "github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// fullTrace sets EVERY field to a distinguishable non-zero value, which is the half of a round-trip
-// guard that does the work. A field left at its zero value round-trips cleanly through a conversion
+// fullTrace sets EVERY field to a distinguishable non-zero value. That fixture does half of a
+// round-trip guard's work. A field left at its zero value round-trips cleanly through a conversion
 // that drops it, so a sparse fixture reports success while covering nothing.
 //
-// Every repeated field carries TWO elements for the same reason one level in. A converter that drops
-// everything past the first element round-trips a one-element slice perfectly, over the bug
-// the guard exists to catch.
+// Every repeated field holds TWO elements, for the same reason one level in. A converter that drops
+// everything past the first element round-trips a one-element slice perfectly, so a one-element
+// fixture would hide the bug.
 func fullTrace() check.Trace {
 	return check.Trace{
 		From:    check.TraceEnd{Endpoint: check.Endpoint{RefDes: "U1", Pin: "3"}, PinName: "SDA", Net: "I2C_SDA"},
@@ -54,9 +54,9 @@ func TestTraceProtoRoundTrip(t *testing.T) {
 	}
 }
 
-// Every outcome must survive the enum crossing, and an unknown one must land on UNSPECIFIED rather
-// than on ROUTED. A mapping bug then reads as "we cannot say" instead of as a connection the engine
-// never found, which is the direction that cannot mislead.
+// Every outcome must survive the enum crossing, and an unknown one must map to UNSPECIFIED rather
+// than to ROUTED. A mapping bug then reads as "we cannot say", which cannot mislead. It never reads
+// as a connection the engine never found.
 func TestEveryTraceOutcomeRoundTrips(t *testing.T) {
 	for _, o := range []check.TraceOutcome{check.TraceRouted, check.TraceNoRoute, check.TraceUnresolved} {
 		tr := fullTrace()
@@ -72,10 +72,10 @@ func TestEveryTraceOutcomeRoundTrips(t *testing.T) {
 	}
 }
 
-// THE GUARD C26 ACTUALLY ASKS FOR. The round trip above can only test fields it knows about, so a
-// new field on check.Trace that the converter never learned is absent from both sides of every
-// assertion made on the proto. This fails when the struct grows, so the next person has to SAY
-// whether the field belongs on the wire.
+// THE GUARD C26 ACTUALLY ASKS FOR. The round trip above can only test fields it knows about.
+// Imagine the converter never learned a new field on check.Trace. That field is absent from both
+// sides of every assertion made on the proto. This fails when the struct grows, so the next person
+// has to SAY whether the field belongs on the wire.
 func TestTraceFieldCensus(t *testing.T) {
 	census := func(v any, wire, goOnly []string, what string) {
 		t.Helper()
@@ -146,8 +146,8 @@ func TestTraceDesignServesTheSameAnswerAsTheWalk(t *testing.T) {
 	}
 }
 
-// traceServiceFixture is U1.1 -> R1 -> U2.1, one series crossing, which is enough for the served
-// answer and the walk's own answer to be compared field by field.
+// traceServiceFixture is U1.1 -> R1 -> U2.1, one series crossing. That is enough to compare the
+// served answer and the walk's own answer field by field.
 func traceServiceFixture() *ir.Design {
 	net := func(name string, conns ...[2]string) *ir.Net {
 		n := &ir.Net{Name: name, Prov: &ir.Provenance{SourceFile: "t"}}

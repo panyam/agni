@@ -99,8 +99,8 @@ func TestRunQueryColumnKinds(t *testing.T) {
 }
 
 // searchDesign holds one of each kind of named thing (a component, a net, an unmodeled bus), so
-// entity(?name, ?kind) yields an answer set whose rows are NOT all the same kind. That is the
-// difficulty a search result poses, and no other fixture here has it.
+// entity(?name, ?kind) yields an answer set whose rows are NOT all the same kind. A search result
+// poses that difficulty, and no other fixture here has it.
 func searchDesign() *ir.Design {
 	return &ir.Design{
 		Components: []*ir.Component{{RefDes: "U1", Prov: &ir.Provenance{SourceFile: "x.edn", NativeId: "U1"}}},
@@ -118,7 +118,7 @@ func searchDesign() *ir.Design {
 // A search result is polymorphic. One answer set holds a component, a net and a bus, so the kind of
 // the `name` cell is whatever THAT ROW says (agni issue 338). The name column therefore types as a
 // scalar (column_kinds is the wrong place to say it) and each row carries its own cell_kinds.
-// Without this the one answer a reader most wants to click is the one they cannot.
+// Without this, a reader cannot click the answer they most want to click.
 func TestRunQueryPolymorphicCellKinds(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
@@ -152,9 +152,9 @@ func TestRunQueryPolymorphicCellKinds(t *testing.T) {
 
 // A per-row kind is a value out of the FACT BASE, not out of the query, so it is checked against
 // the vocabulary a client can act on rather than forwarded. Nothing in the shipped catalog can emit
-// another value today, which is why this is a unit test. The guard exists for the relation
-// somebody adds later, and an end-to-end test of it would have to fake a fact base that cannot
-// occur. Handing the viewer a kind it has no highlighter for makes every click do nothing.
+// another value today, so this is a unit test. The guard exists for a relation somebody adds later.
+// An end-to-end test of it would have to fake a fact base that cannot occur. If the viewer gets a
+// kind it has no highlighter for, every click does nothing.
 func TestEntityKindRejectsUnknownKinds(t *testing.T) {
 	for _, k := range []string{"component", "net", "bus"} {
 		if entityKind(k) != k {
@@ -172,7 +172,7 @@ func TestEntityKindRejectsUnknownKinds(t *testing.T) {
 
 // A CONSTANT kind argument types the column statically after all, because every row then answers
 // the same way. This is the common search ("find a net whose name contains CAN"), and it should
-// come back as a plain net column rather than paying for the per-row machinery.
+// come back as a plain net column without running the per-row machinery.
 func TestRunQueryConstantKindTypesTheColumn(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
@@ -191,8 +191,8 @@ func TestRunQueryConstantKindTypesTheColumn(t *testing.T) {
 	}
 }
 
-// An ordinary query pays nothing for the polymorphic path. No row carries cell_kinds, so the wire
-// stays as wide as it was and column_kinds keeps meaning what it has always meant.
+// An ordinary query does no extra work for the polymorphic path. No row carries cell_kinds, so the
+// wire is as wide as before and column_kinds means what it always meant.
 func TestRunQueryOrdinaryQueryCarriesNoCellKinds(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
@@ -209,7 +209,7 @@ func TestRunQueryOrdinaryQueryCarriesNoCellKinds(t *testing.T) {
 }
 
 // A search hit is only half-clickable without its sheet badge and its locate reason, and both of
-// those hang off the same kind. A bus is the one that would quietly break. It is neither a
+// those hang off the same kind. A bus would break quietly. It is neither a
 // placement nor a named wire, so the drawn-component and drawn-net sets cannot speak for it, and
 // the real test is whether it resolved to a sheet at all (the rule AnnotateSheets already uses).
 func TestRunQueryPerRowKindDrivesSheetsAndReasons(t *testing.T) {
@@ -243,8 +243,8 @@ func TestRunQueryPerRowKindDrivesSheetsAndReasons(t *testing.T) {
 }
 
 // A relation carrying a `kind` that is not an ENTITY kind must not be dragged into the polymorphic
-// path. bus(label, kind) and param.range(mpn, symbol, kind, ...) both have one, and the pairing
-// with a `name` argument is the whole of what keeps them out.
+// path. bus(label, kind) and param.range(mpn, symbol, kind, ...) both have one. Only the pairing
+// with a `name` argument keeps them out.
 func TestRunQueryKindArgWithoutNameStaysScalar(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
@@ -267,9 +267,9 @@ func TestRunQueryKindArgWithoutNameStaysScalar(t *testing.T) {
 	}
 }
 
-// pinDesign declares a part with pins and places two instances of it, which is what it takes for
-// pin.net to have any facts. Pins live on a PartType, not on a Component, so a design that lists
-// components without a library has no pins at all.
+// pinDesign declares a part with pins and places two instances of it. pin.net has no facts without
+// both. Pins live on a PartType, not on a Component, so a design that lists components without a
+// library has no pins at all.
 func pinDesign() *ir.Design {
 	mcu := &ir.PartType{Name: "MCU", Pins: []*ir.Pin{
 		{Name: "VDD", Designator: "1", Direction: ir.PinDirection_PIN_DIRECTION_POWER_IN},
@@ -279,8 +279,8 @@ func pinDesign() *ir.Design {
 		return &ir.Component{RefDes: ref, Prov: &ir.Provenance{SourceFile: "x.edn"},
 			Sections: []*ir.ComponentSection{{PartRef: "MCU", LibraryRef: "lib"}}}
 	}
-	// #PWR01 is a virtual power-port symbol, never placed and never drawable. Its pins are the case
-	// that separates "explain a pin through its component" from "call it NO_GEOMETRY and move on".
+	// #PWR01 is a virtual power-port symbol, never placed and never drawable. Its pins separate
+	// "explain a pin through its component" from "call it NO_GEOMETRY and move on".
 	return &ir.Design{
 		Libraries:  []*ir.PartLibrary{{Name: "lib", Parts: []*ir.PartType{mcu}}},
 		Components: []*ir.Component{comp("U1"), comp("U2"), comp("#PWR01")},
@@ -297,7 +297,7 @@ func pinDesign() *ir.Design {
 }
 
 // A pin is two fields, so a table cell cannot name one on its own. The server types the pin column
-// and carries the row's ref beside it, which is what makes a pin result clickable at all.
+// and sends the row's ref beside it. Without that ref a pin result is not clickable at all.
 func TestRunQueryPinColumnCarriesItsRef(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: pinDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
@@ -351,7 +351,7 @@ func TestRunQueryPinRefFromAConstant(t *testing.T) {
 
 // The trap this rule has to avoid. param.pin's `pin` is a datasheet pin of a part TYPE, keyed by
 // mpn, and there is nothing on a canvas to highlight for it. The pairing with ref_des is the whole
-// test, so a relation that pairs `pin` with `mpn` must stay scalar.
+// test, so a relation that pairs `pin` with `mpn` must type as a scalar.
 func TestRunQueryDatasheetPinIsNotADesignPin(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: searchDesign()}, nil, nil)
 	resp, err := svc.RunQuery(context.Background(), &webapi.RunQueryRequest{
@@ -380,8 +380,8 @@ func TestRunQueryPinResolvesThroughItsComponent(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// U1 is placed and U2 is not, which is what makes this a test of "its OWN component" rather
-	// than "some component", since a pin resolving through the wrong ref would answer s1 for both.
+	// U1 is placed and U2 is not. So this tests "its OWN component" rather than "some component",
+	// since a pin resolving through the wrong ref would answer s1 for both.
 	sheets := map[string][]string{}
 	reasons := map[string]checkspb.LocateReason{}
 	for _, row := range resp.GetRows() {
@@ -407,8 +407,8 @@ func TestRunQueryPinResolvesThroughItsComponent(t *testing.T) {
 	}
 }
 
-// A component cell's sheet membership comes from the schematic geometry placements (WS9-038), the
-// same source the finding sheet badges use, so a component cell can navigate to its sheet.
+// A component cell's sheet membership comes from the schematic geometry placements (WS9-038). The
+// finding sheet badges use the same source. So a component cell can navigate to its sheet.
 func TestRunQueryComponentCellSheetsFromGeometry(t *testing.T) {
 	g := &geom.SchematicGeometry{Sheets: []*geom.SheetGeometry{
 		{Id: "s1"},
@@ -580,9 +580,9 @@ func TestListRelationsReturnsCatalog(t *testing.T) {
 	if byName["net.reaches"] == nil || byName["net.reaches"].GetKind() != "predicate" {
 		t.Errorf("reaches should be catalogued as a predicate")
 	}
-	// route rides the same generic path and needs no proto of its own. RelationInfo is populated by
-	// iterating query.Catalog(), and column_kinds is a repeated string rather than an enum, so a new
-	// predicate reaches a client without a schema change. This is the assertion that says so.
+	// route goes through the same generic path and needs no proto of its own. RelationInfo is
+	// populated by iterating query.Catalog(), and column_kinds is a repeated string rather than an
+	// enum, so a new predicate reaches a client without a schema change. This assertion checks that.
 	if rt := byName["net.route"]; rt == nil || rt.GetKind() != "predicate" {
 		t.Errorf("route should be catalogued as a predicate")
 	} else if got := rt.GetArgs(); len(got) != 3 || got[0] != "from" || got[2] != "path" {
@@ -590,15 +590,15 @@ func TestListRelationsReturnsCatalog(t *testing.T) {
 	} else if !strings.HasPrefix(rt.GetDetail(), "## net.route") {
 		t.Errorf("route Detail should be its reference doc, got %.40q", rt.GetDetail())
 	}
-	// Detail (WS14-005) rides the catalog. A documented relation carries its reference markdown, an
-	// undocumented one carries "" (so the panel falls back to the summary).
+	// The catalog includes Detail (WS14-005). A documented relation has its reference markdown. An
+	// undocumented one has "", so the panel falls back to the summary.
 	if bl := byName["net.bus_like"]; bl == nil || !strings.HasPrefix(bl.GetDetail(), "## net.bus_like") {
 		t.Errorf("net.bus_like Detail should be its reference doc, got %q", bl.GetDetail())
 	}
 }
 
-// TestListRelationsCarriesTheLibrary pins that a derived member lists beside the base relations, with
-// the typed signature and the definition a reader drills into (agni issue 751).
+// TestListRelationsCarriesTheLibrary pins that a derived member lists beside the base relations. It
+// comes with its typed signature and its definition, which a reader drills into (agni issue 751).
 func TestListRelationsCarriesTheLibrary(t *testing.T) {
 	svc := NewQueryService(fakeLoader{}, nil, nil)
 	resp, err := svc.ListRelations(context.Background(), &webapi.ListRelationsRequest{})
@@ -737,11 +737,11 @@ func TestExamplesEvaluate(t *testing.T) {
 }
 
 // The click-to-ask presets get the same guard as the examples, and need it more, because nobody
-// reads a preset before it runs. A reader clicks a pin and whatever the server handed the browser
-// is what executes, so a relation renamed out from under a preset has to fail here rather than in
-// someone's viewer. Binding a real entity from the fixture is what makes this an EVALUATION rather
-// than a second parse check. Each answer is also compared with the same query with the values
-// written in as constants, which is what a binding promises to mean (agni issue 793).
+// reads a preset before it runs. A reader clicks a pin and the browser executes whatever the server
+// handed it. So a relation renamed out from under a preset has to fail here rather than in
+// someone's viewer. Binding a real entity from the fixture makes this an EVALUATION rather than a
+// second parse check. Each answer is also compared with the same query with the values written in
+// as constants, since a binding promises to mean exactly that (agni issue 793).
 func TestEntityQueriesEvaluate(t *testing.T) {
 	// The project's corpus, so the datasheet question has a spec to answer from.
 	project := filepath.Join("..", "examples", "tutorial-project")
@@ -757,8 +757,9 @@ func TestEntityQueriesEvaluate(t *testing.T) {
 	if len(resp.GetEntityQueries()) == 0 {
 		t.Fatal("no entity presets served, so a click in the viewer would do nothing")
 	}
-	// Values from the tutorial board: a part, one of its pins, and the net that pin sits on, which
-	// carries a test point. The board has no bus, so the bus presets are evaluated and answer nothing.
+	// These values come from the tutorial board. They are a part, one of its pins, and that pin's
+	// net, which has a test point. The board has no bus, so the bus presets are evaluated and answer
+	// nothing.
 	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")
 	values := map[string]string{"ref": "U1", "pin": "2", "net": "PMIC_CORE_3V3", "bus": "DATA"}
 	for _, e := range resp.GetEntityQueries() {
@@ -849,17 +850,16 @@ func queryColumn(t *testing.T, resp *webapi.RunQueryResponse) []string {
 	return out
 }
 
-// TestRunQueryHonorsTheRequestLexicon is the gap this feature closes, using the issue's own example.
+// TestRunQueryHonorsTheRequestLexicon covers the gap this feature closes, using the issue's own
+// example.
 //
-// `net.rail(?n)` is not a relation a convention ADDS. It is a relation whose ANSWER a convention changes,
-// because net roles are resolved once at the design read and the lexicon decides which names carry
-// which role. Without the project's vocabulary the engine reports one rail on a board with more,
-// which is a correct answer to a question the project did not ask, and there was previously no way to
-// ask theirs.
+// A convention does not ADD `net.rail(?n)`. A convention changes that relation's ANSWER. Net roles
+// are resolved once at the design read, and the lexicon decides which names have which role.
+// Without the project's vocabulary the engine reports one rail on a board with more. That answer is
+// correct for a question the project did not ask, and there was previously no way to ask theirs.
 //
-// This is also why `query` needed it more than a missing flag usually warrants. Authoring a lexicon
-// is a loop of writing a pattern and asking which nets are rails now, and query is the tool for that
-// loop.
+// So `query` needed the flag more than a missing flag usually does. Authoring a lexicon is a loop of
+// writing a pattern and asking which nets are rails now, and query is the tool for that loop.
 func TestRunQueryHonorsTheRequestLexicon(t *testing.T) {
 	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "cmd", "agni", "testdata")}, nil, nil)
 	ask := func(ov *webapi.OverlayConfig) []string {
@@ -908,12 +908,12 @@ func TestRunQueryIgnoresTheConventionsRulesHalf(t *testing.T) {
 	}
 }
 
-// TestPortableCites is the fix for a cite that named a host directory.
+// TestPortableCites covers the fix for a cite that named a host directory.
 //
 // A reader stamps provenance with the path it was handed, and the loader hands it an ABSOLUTE host
-// path, so query was the one surface where "/Users/someone/work/..." escaped into output a user
-// pastes into issues and commits into reports. It is also the only surface that did, since `review`
-// prints the design as given and a finding's source_file is relative.
+// path. So "/Users/someone/work/..." escaped into query's output, and a user pastes that output
+// into issues and commits it into reports. No other surface leaked the path, since `review` prints
+// the design as given and a finding's source_file is relative.
 func TestPortableCites(t *testing.T) {
 	const design = "designs/gateway/gateway.edn"
 	for name, tc := range map[string]struct{ in, want string }{
@@ -939,9 +939,9 @@ func TestPortableCites(t *testing.T) {
 	}
 }
 
-// TestQueryServiceUsesItsResolver guards a bug the type system could not. NewQueryService took a
-// *ProjectResolver and never assigned it, so s.projects was always nil and every query silently ran
-// against the built-in vocabulary.
+// TestQueryServiceUsesItsResolver guards against a bug the type system could not catch.
+// NewQueryService took a *ProjectResolver and never assigned it, so s.projects was always nil and
+// every query silently ran against the built-in vocabulary.
 //
 // Nothing caught it. It compiles, because an unused parameter is legal. It passes every service test,
 // because those construct the service and assert on what they pass IN the request. And it fails
@@ -958,8 +958,8 @@ func TestQueryServiceUsesItsResolver(t *testing.T) {
 	}
 }
 
-// kindsOf parses a query and reports the entity kind of each answer column, which is what the web
-// panel uses to decide whether a result cell can be clicked.
+// kindsOf parses a query and reports the entity kind of each answer column. The web panel uses
+// those kinds to decide whether a result cell can be clicked.
 func kindsOf(t *testing.T, src string) []string {
 	t.Helper()
 	q, err := query.Parse(src)
@@ -975,8 +975,8 @@ func kindsOf(t *testing.T, src string) []string {
 // describe a user rule, so the lookup missed and the column fell back to scalar even though the
 // rule's own body had bound the variable from a relation that declares one.
 //
-// It bit the queries most worth clicking. Derived relations are the idiom the querying guide teaches
-// for anything past one clause, and negation REQUIRES a unary helper rule.
+// It broke the queries most worth clicking. The querying guide teaches derived relations as the
+// idiom for anything past one clause, and negation REQUIRES a unary helper rule.
 func TestColumnKindsFollowDerivedRelations(t *testing.T) {
 	for _, tc := range []struct {
 		name, query, want string
@@ -990,13 +990,13 @@ func TestColumnKindsFollowDerivedRelations(t *testing.T) {
 			`ferr(?p) :- component.class(?p,"ferrite"); ferr(?p) => ?p`, "component",
 		},
 		{
-			// A rule defined in terms of another rule is ordinary. Stopping at the first hop would be
-			// a silent partial answer, which is the shape of the bug rather than a smaller version.
+			// A rule defined in terms of another rule is ordinary. Stopping at the first hop would give
+			// a silent partial answer. That answer is the bug itself, not a smaller version of it.
 			"two hops",
 			`a(?p) :- component.class(?p,"ferrite"); b(?p) :- a(?p); b(?p) => ?p`, "component",
 		},
 		{
-			// The shape this matters for is a bucket built with negation, which needs a unary helper.
+			// This matters most for a bucket built with negation, which needs a unary helper.
 			"a bucket through negation",
 			`p(?c) :- component.class(?c,"capacitor"); cov(?c) :- p(?c), component.net(?c,?n); ` +
 				`nocov(?c) :- p(?c), not cov(?c); nocov(?c) => ?c`, "component",
@@ -1044,9 +1044,9 @@ func TestColumnKindsSurvivesARecursiveRule(t *testing.T) {
 }
 
 // TestACancelledQueryStopsAsCancelled covers cancellation reaching a query (jaala v0.1.9 passes the
-// context through Eval and into the walks). A query whose caller has gone stops, and says so: it is
-// not the caller's mistake, so it must not come back as ErrInvalidArgument, and a set stops at it
-// rather than recording the same cancellation against every query left.
+// context through Eval and into the walks). When a query's caller has gone, the query stops and
+// says so. The stop is not the caller's mistake, so it must not come back as ErrInvalidArgument. A
+// set stops at it rather than recording the same cancellation against every query left.
 func TestACancelledQueryStopsAsCancelled(t *testing.T) {
 	svc := NewQueryService(fakeLoader{design: queryDesign()}, nil, nil)
 	snap := snapOf(t, svc.Snapshots(), "mount://m/x.edn")
@@ -1068,9 +1068,9 @@ func TestACancelledQueryStopsAsCancelled(t *testing.T) {
 	}
 }
 
-// agni issue 904: an area's questions bind every member at once and answer in one evaluation. On the
-// gateway U1 with its two capacitors reaches five nets, each with pins outside the three, which is
-// the block's interface.
+// An area's questions bind every member at once and answer in one evaluation (agni issue 904). On
+// the gateway, U1 with its two capacitors reaches five nets. Each of them has pins outside the
+// three parts, and those five nets are the block's interface.
 func TestAreaQuestionsAnswerForTheWholeSet(t *testing.T) {
 	svc := NewQueryService(fsQueryLoader{base: filepath.Join("..", "examples", "tutorial-project")}, nil, nil)
 	snap := snapOf(t, svc.Snapshots(), "mount://m/designs/gateway/gateway.edn")

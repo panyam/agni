@@ -9,7 +9,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// The tests here cover agni issue 956: Encode writes a table as the csv `--format csv` writes.
+// The tests here cover agni issue 956. Encode writes a table in the same csv as `--format csv`.
 
 func TestEncodeGuardsAFormulaCell(t *testing.T) {
 	var ts TableService

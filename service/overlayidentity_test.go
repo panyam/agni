@@ -7,9 +7,9 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// digestResolver resolves config and reports a digest for what it read, which is what a resolver has
-// to do for an overlay built on it to be identifiable. digest is the value it reports; empty models
-// a resolver that does not report one.
+// digestResolver resolves config and reports a digest for what it read. A resolver must do that for
+// an overlay built on it to be identifiable. digest is the value it reports, and empty models a
+// resolver that does not report one.
 type digestResolver struct{ digest string }
 
 func (r digestResolver) ResolveConfig(context.Context, *webapi.AnalysisConfig, string) (ResolvedConfig, error) {
@@ -45,8 +45,8 @@ func TestOverlayIdentityIsStableForEqualInputs(t *testing.T) {
 	}
 }
 
-// Every input has to move it. An input that does not is an input a cache would ignore, which is how
-// a run configured one way gets answered with work done under another.
+// Every input has to move it. A cache would ignore an input that does not, and a run configured one
+// way would then be answered with work done under another.
 func TestEveryOverlayInputMovesTheIdentity(t *testing.T) {
 	baseline, ok := idFor(t, project("projects/p"), &webapi.Design{Name: "d"},
 		&webapi.OverlayConfig{}, digestResolver{digest: "sha256:cfg"}, "house")
@@ -75,7 +75,7 @@ func TestEveryOverlayInputMovesTheIdentity(t *testing.T) {
 				digestResolver{digest: "sha256:cfg"}, "house")
 		}},
 		// The one that is not a proto. Config a resolver READ changes the run without changing any
-		// message the request or the descriptor carries, and a digest is what makes it visible.
+		// message the request or the descriptor carries, and a digest makes it visible.
 		{"the bytes the resolver read", func() (string, bool) {
 			return idFor(t, project("projects/p"), &webapi.Design{Name: "d"},
 				&webapi.OverlayConfig{}, digestResolver{digest: "sha256:DIFFERENT"}, "house")
@@ -106,8 +106,8 @@ func TestOverlayWithoutAConfigDigestRefusesToIdentify(t *testing.T) {
 	}
 }
 
-// An overlay nobody composed carries no inputs to hash. A hand-built one is the shape an embedder
-// passes as a deployment default, and it must not answer as though it were identified.
+// An overlay nobody composed has no inputs to hash. An embedder passes a hand-built one as a
+// deployment default, and it must not answer as though it were identified.
 func TestHandBuiltOverlayRefusesToIdentify(t *testing.T) {
 	if got, ok := (Overlay{}).Identity(); ok {
 		t.Errorf("a hand-built overlay identified as %q, want a refusal", got)

@@ -35,8 +35,8 @@ func proj(name, extends string, cfg *webapi.AnalysisConfig) *webapi.Project {
 	return &webapi.Project{Name: name, Config: cfg}
 }
 
-// TestExtendsLayersRootFirst checks that a project overrides what it inherits, which is the direction
-// every other layer here runs (request over project, project over deployment default).
+// TestExtendsLayersRootFirst checks that a project overrides what it inherits. Every other layer
+// here runs in the same direction (request over project, project over deployment default).
 func TestExtendsLayersRootFirst(t *testing.T) {
 	store := projectTable{
 		"projects/base": proj("projects/base", "", &webapi.AnalysisConfig{
@@ -76,7 +76,7 @@ func TestExtendsLayersRootFirst(t *testing.T) {
 }
 
 // TestExtendsInheritsWhatTheLeafOmits checks that a project that declares only `extends` gets the
-// whole parent config, which is the case shared config exists for.
+// whole parent config. Shared config exists for that case.
 func TestExtendsInheritsWhatTheLeafOmits(t *testing.T) {
 	store := projectTable{
 		"projects/house": proj("projects/house", "", &webapi.AnalysisConfig{
@@ -93,8 +93,9 @@ func TestExtendsInheritsWhatTheLeafOmits(t *testing.T) {
 	}
 }
 
-// TestExtendsRefusesACycle. A config that silently stopped resolving partway would compose a subset
-// of what the operator declared, and the run would look clean for a reason nobody could see.
+// TestExtendsRefusesACycle refuses a cyclic chain. A config that silently stopped resolving partway
+// would compose a subset of what the operator declared, and the run would look clean for a reason
+// nobody could see.
 func TestExtendsRefusesACycle(t *testing.T) {
 	store := projectTable{
 		"projects/a": proj("projects/a", "projects/b", nil),
@@ -109,8 +110,8 @@ func TestExtendsRefusesACycle(t *testing.T) {
 	}
 }
 
-// TestExtendsRefusesSelfReference is the one-node cycle, which a naive visited-set that only recorded
-// the PARENT would miss.
+// TestExtendsRefusesSelfReference covers the one-node cycle. A naive visited-set that only recorded
+// the PARENT would miss it.
 func TestExtendsRefusesSelfReference(t *testing.T) {
 	me := proj("projects/me", "projects/me", nil)
 	_, err := ResolveExtends(context.Background(), projectTable{"projects/me": me}, me)
@@ -119,8 +120,8 @@ func TestExtendsRefusesSelfReference(t *testing.T) {
 	}
 }
 
-// TestExtendsBoundsDepth exists because a legitimately deep chain is also a smell. Config a reader
-// has to open six files to understand is config nobody will reason about correctly.
+// TestExtendsBoundsDepth exists because a legitimately deep chain is also a smell. If a reader has
+// to open six files to understand a config, nobody will reason about it correctly.
 func TestExtendsBoundsDepth(t *testing.T) {
 	store := projectTable{}
 	for i := range 8 {
@@ -134,8 +135,8 @@ func TestExtendsBoundsDepth(t *testing.T) {
 	}
 }
 
-// TestExtendsRefusesAnAbsentParent and a store that cannot answer at all. Both resolve to "the config
-// the operator declared is not what would run", which has to be loud.
+// TestExtendsRefusesWhatItCannotReach covers an absent parent and a store that cannot answer at
+// all. Both mean "the config the operator declared is not what would run", and that has to be loud.
 func TestExtendsRefusesWhatItCannotReach(t *testing.T) {
 	leaf := proj("projects/leaf", "projects/missing", nil)
 	if _, err := ResolveExtends(context.Background(), projectTable{}, leaf); err == nil ||
@@ -146,8 +147,7 @@ func TestExtendsRefusesWhatItCannotReach(t *testing.T) {
 		!strings.Contains(err.Error(), "no project store") {
 		t.Errorf("a host with no store must refuse a declared extends, got %v", err)
 	}
-	// A project that extends NOTHING is unaffected by either, which is why a nil store is not fatal
-	// on its own.
+	// A project that extends NOTHING is unaffected by either. So a nil store is not fatal on its own.
 	if _, err := ResolveExtends(context.Background(), nil, proj("projects/solo", "", nil)); err != nil {
 		t.Errorf("a project that inherits nothing should not need a store: %v", err)
 	}

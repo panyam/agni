@@ -30,8 +30,8 @@ func someSpecs() param.ParamProvider {
 	return param.ProviderFunc(func(string) *parampb.PartSpec { return nil })
 }
 
-// TestBuildModelAttachesTiers checks that BuildModel attaches BOTH the board and params tiers, the
-// drift WS9-048 closes (services were building plain netlist models that dropped them).
+// TestBuildModelAttachesTiers checks that BuildModel attaches BOTH the board and params tiers.
+// Services were building plain netlist models that dropped both, and WS9-048 closed that drift.
 func TestBuildModelAttachesTiers(t *testing.T) {
 	m, err := BuildModel(context.Background(), fakeLoader{design: &ir.Design{}, board: thinBoard()}, testURI(t, "m", "d"), artifact.URI{}, someSpecs())
 	if err != nil {
@@ -57,9 +57,8 @@ func TestBuildModelBoardPathNonBoard(t *testing.T) {
 }
 
 // TestBuildGeometryBestEffort checks that BuildGeometry passes a loaded geometry through and returns
-// nil (not an error) when the load fails. That is the best-effort contract that lets a caller degrade
-// to "no sheet badges" rather than fail. This is why geometry is a separate helper, not a BuildModel
-// tier.
+// nil (not an error) when the load fails. This best-effort contract lets a caller degrade to "no
+// sheet badges" rather than fail. So geometry is a separate helper, not a BuildModel tier.
 func TestBuildGeometryBestEffort(t *testing.T) {
 	g := &geom.SchematicGeometry{}
 	if got := BuildGeometry(context.Background(), fakeLoader{geom: g}, testURI(t, "m", "d")); got != g {
@@ -71,8 +70,8 @@ func TestBuildGeometryBestEffort(t *testing.T) {
 }
 
 // TestCheckDesignRunsBoardRules checks that served CheckDesign fires a board-DRC rule when the design
-// carries board geometry, the observable bug WS9-048 fixes (CheckDesign built check.NewModel(d), so
-// check.Available gated every board.* rule to not-applicable and the panel showed nothing).
+// has board geometry. WS9-048 fixed this observable bug. CheckDesign built check.NewModel(d), so
+// check.Available gated every board.* rule to not-applicable and the panel showed nothing.
 func TestCheckDesignRunsBoardRules(t *testing.T) {
 	svc := NewCheckService(fakeLoader{design: &ir.Design{}, board: thinBoard()}, check.DefaultCatalog(), nil, "", nil, nil)
 	resp, err := svc.CheckDesign(context.Background(), &webapi.CheckDesignRequest{Snapshot: snapOf(t, svc.Snapshots(), "mount://m/d"), Rules: []string{"track-width"}})

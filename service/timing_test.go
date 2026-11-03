@@ -7,9 +7,9 @@ import (
 	"github.com/panyam/agni/core/timing"
 )
 
-// TestARequestListsTheRulesThatAllocateMost covers the timing a memory-asking request returns (agni
-// issue 994): beside the slowest rules, the ones that allocated most, since the rule raising a
-// worker's memory is often fast.
+// TestARequestListsTheRulesThatAllocateMost covers agni issue 994. A request that asks for memory
+// gets the rules that allocated most, beside the slowest rules. The rule raising a worker's memory
+// is often fast.
 func TestARequestListsTheRulesThatAllocateMost(t *testing.T) {
 	var rules []timing.RuleTime
 	for i := 0; i < timedRules+5; i++ {

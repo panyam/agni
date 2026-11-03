@@ -19,13 +19,14 @@ func (r symbolResolver) ResolveConfig(_ context.Context, cfg *webapi.AnalysisCon
 	return out, nil
 }
 
-// TestSymbolPathsReachTheRead is why symbol libraries go in analysis config. They have
+// TestSymbolPathsReachTheRead shows why symbol libraries go in analysis config. They have
 // to arrive BEFORE the design is parsed, because an unresolved symbol changes what the design
 // contains rather than what is checked about it.
 //
-// A schematic naming a library nothing resolves reads SHORT. The components it could not resolve are
-// simply absent, every rule then evaluates cleanly over the shortened read, and the run reports fewer
-// findings with no error to explain them. That is why this tier is worth carrying at all.
+// Imagine a schematic naming a library that nothing resolves. The read comes back SHORT, because the
+// components it could not resolve are simply absent. Every rule then evaluates cleanly over the
+// shortened read, and the run reports fewer findings with no error to explain them. This tier exists
+// to prevent that.
 func TestSymbolPathsReachTheRead(t *testing.T) {
 	project := &webapi.Project{
 		Name:   "projects/p",
@@ -41,9 +42,9 @@ func TestSymbolPathsReachTheRead(t *testing.T) {
 	}
 }
 
-// TestSymbolPathsAccumulate checks that a request naming a library adds somewhere to look, not
-// replacing where the project already looks. A design that resolved half its symbols would read
-// short in the silent way this tier exists to prevent.
+// TestSymbolPathsAccumulate checks that a request naming a library adds a place to look. It must not
+// replace the places the project already looks. A design that resolved half its symbols would read
+// short with no error, and this tier exists to prevent that.
 func TestSymbolPathsAccumulate(t *testing.T) {
 	project := &webapi.Project{
 		Name:   "projects/p",
@@ -59,9 +60,9 @@ func TestSymbolPathsAccumulate(t *testing.T) {
 	}
 }
 
-// TestSymbolPathsNeedAResolver covers naming a directory, which is a ref, so it falls under the
-// same refusal every other ref tier does. Silently reading without the library is the failure this
-// must not have.
+// TestSymbolPathsNeedAResolver covers a request naming a directory. A directory is a ref, so the
+// request gets the same refusal as every other ref tier. The run must never read on silently without
+// the library.
 func TestSymbolPathsNeedAResolver(t *testing.T) {
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{SymbolPathUris: []string{"mount://m/symbols"}}}
 	if _, err := OverlayFor(context.Background(), nil, nil, nil, nil, req, ""); err == nil {
@@ -69,7 +70,7 @@ func TestSymbolPathsNeedAResolver(t *testing.T) {
 	}
 }
 
-// TestADesignInNoProjectKeepsItsOwnConfig is agni issue 887: a design.yaml with no project.yaml
+// TestADesignInNoProjectKeepsItsOwnConfig covers agni issue 887. A design.yaml with no project.yaml
 // above it still declares its symbol library and its intent, and both must reach the run. Before, a
 // projectless design composed nothing of its own, so it drew with its externally-symboled parts
 // missing and its intent rules never ran, with no error to say so.

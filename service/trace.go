@@ -10,9 +10,9 @@ import (
 
 // TraceProto and TraceFromProto convert a trace between its Go form and its wire form.
 //
-// The twin is hand-written because check.Trace is a domain value the engine returns with its
-// evidence attached, and its outcome is a Go string type the wire spells as an enum. Per C26 the pair
-// has a round-trip guard (TestTraceProtoRoundTrip) and a field census, so a field added to
+// The twin is hand-written because check.Trace is a domain value. The engine returns it with its
+// evidence attached, and its outcome is a Go string type that the wire spells as an enum. Per C26
+// the pair has a round-trip guard (TestTraceProtoRoundTrip) and a field census. So a new field on
 // check.Trace has to be placed on the wire or excluded explicitly.
 func TraceProto(t check.Trace) *webapi.Trace {
 	p := &webapi.Trace{
@@ -81,7 +81,7 @@ func traceEndFromProto(p *webapi.TraceEnd) check.TraceEnd {
 
 // traceOutcomeProto maps the Go outcome onto the wire enum. An unknown value maps to UNSPECIFIED
 // rather than ROUTED, so a mapping bug reads as "we cannot say" rather than as a connection the engine
-// never found. VerdictProto's default arm leans the same way.
+// never found. VerdictProto's default arm does the same.
 func traceOutcomeProto(o check.TraceOutcome) webapi.TraceOutcome {
 	switch o {
 	case check.TraceRouted:
@@ -128,8 +128,8 @@ func (s *DesignService) TraceDesign(ctx context.Context, req *webapi.TraceDesign
 	m := check.NewModel(d)
 	t := check.TracePins(m, from, to, int(req.GetHops()))
 	p := TraceProto(t)
-	// Where each net of the answer is drawn, so the panel can badge it and both renderers can open
-	// the sheet the route is actually on rather than the design's first (agni issue 657).
+	// Record where each net of the answer is drawn, so the panel can badge it. Both renderers can then
+	// open the sheet the route is actually on, rather than the design's first (agni issue 657).
 	AnnotateTraceSheets(p, BuildGeometry(ctx, LoaderOr(snap, s.loader), gu, opts...), m)
 	return &webapi.TraceDesignResponse{Trace: p}, nil
 }

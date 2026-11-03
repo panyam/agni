@@ -61,11 +61,12 @@ func (s *WorkspaceService) ProposeDesigns(ctx context.Context, req *webapi.Propo
 //     the `.kicad_pcb` of its stem as the board companion.
 //   - A `.kicad_sch` that no other sheet names as a child is a root, and makes a design the same way.
 //   - In each folder, netlists whose names share a first word (board.edn, board-rev-b.edn) are ONE
-//     design's revisions, never merged: the entry is the first with a `.eds` of its stem (else the
-//     first), each `.eds` of a netlist's stem is that netlist's schematic companion, and every other
-//     netlist is a revision. A netlist's companions are the `.eds`, `.kicad_sch` and `.kicad_pcb` of
-//     its own stem. Netlists with different first words are separate designs. Inferring this is safe
-//     here, where it is not on a server (agni 528), because the visitor sees it and edits it first.
+//     design's revisions, never merged. The entry is the first with a `.eds` of its stem, or else
+//     the first. Each `.eds` of a netlist's stem is that netlist's schematic companion, and every
+//     other netlist is a revision. A netlist's companions are the `.eds`, `.kicad_sch` and
+//     `.kicad_pcb` of its own stem. Netlists with different first words are separate designs.
+//     Inferring this is safe here because the visitor sees the proposal and edits it first. On a
+//     server it is not safe (agni 528).
 //   - A `.eds` with no netlist of its stem is a design of its own, with a note, since a drawing's
 //     counts are not a netlist's.
 //   - Any other file a reader opens is a design of its own. KiCad libraries belong to the KiCad
@@ -158,9 +159,10 @@ func (p *proposer) declared() {
 	}
 }
 
-// projectSources is the part of a project descriptor propose reads: the files it names, which are
-// support files rather than designs or unread ones. internal/projects owns the descriptor's schema and
-// checks it strictly; this reads it loosely, since a proposal only sorts files.
+// projectSources is the part of a project descriptor that propose reads, which is the files the
+// descriptor names. Those are support files rather than designs or unread ones. internal/projects
+// owns the descriptor's schema and checks it strictly. This reads it loosely, since a proposal only
+// sorts files.
 type projectSources struct {
 	Profiles []string `yaml:"profiles"`
 	Params   []string `yaml:"params"`
@@ -198,9 +200,9 @@ func (p *proposer) projects() {
 	}
 }
 
-// extendsFor is the `extends` a proposal in folder writes: the nearest project descriptor at or above
-// it, relative to the folder, or "" when no project encloses it. A design is never found under its
-// project by where it sits, so a proposal names it.
+// extendsFor returns the `extends` value that a proposal in folder writes. The value names the
+// nearest project descriptor at or above folder, relative to folder, or is "" when no project
+// encloses it. A design is never found under its project by where it sits, so a proposal names it.
 func (p *proposer) extendsFor(folder string) string {
 	best := ""
 	found := false
@@ -259,7 +261,7 @@ func (p *proposer) kicad() {
 			p.kicadDesign(entry, []string{f})
 		}
 	}
-	// Roots among the sheets left: a sheet no other free sheet names as a child.
+	// A root among the sheets left is a sheet that no other free sheet names as a child.
 	children := map[string]bool{}
 	var sheets []string
 	for _, f := range p.files {
@@ -320,8 +322,8 @@ func (p *proposer) edif() {
 	}
 	for _, k := range keys {
 		nets := groups[k]
-		// A netlist's companions are the views of the same name beside it: a schematic export, a
-		// KiCad schematic (with its child sheets, read through it) and a KiCad board.
+		// A netlist's companions are the views of the same name beside it. They are a schematic
+		// export, a KiCad schematic (with its child sheets, read through it) and a KiCad board.
 		companionOf := func(n string) []string {
 			var out []string
 			for _, e := range []string{".eds", ".kicad_sch", ".kicad_pcb"} {
@@ -398,8 +400,9 @@ func (p *proposer) edif() {
 	}
 }
 
-// odbJobs makes a design of each ODB++ job, a directory entered by its matrix/matrix file, which
-// takes every file under the job (agni issue 1250). The design sits beside the job, named for it.
+// odbJobs makes a design of each ODB++ job. A job is a directory entered by its matrix/matrix file,
+// and its design takes every file under the job (agni issue 1250). The design sits beside the job,
+// named for it.
 func (p *proposer) odbJobs() {
 	for _, f := range p.files {
 		if !p.free(f) || formats.DesignRoot(f) == "" {
@@ -424,9 +427,9 @@ func (p *proposer) odbJobs() {
 	}
 }
 
-// loose makes a design of each remaining file a reader opens, other than a board, which needs a
-// schematic or netlist to belong to. An archive is a design only when it holds an ODB++ job, since
-// .zip and .tgz are registered for that alone and most archives are something else.
+// loose makes a design of each remaining file a reader opens. A board is the exception, since it
+// needs a schematic or netlist to belong to. An archive is a design only when it holds an ODB++
+// job, since .zip and .tgz are registered for that alone and most archives are something else.
 func (p *proposer) loose() {
 	for _, f := range p.files {
 		if !p.free(f) || ext(f) == ".kicad_pcb" || formats.ByExt(f) == nil {
@@ -452,8 +455,8 @@ func dedupe(fs []string) []string {
 	return out
 }
 
-// firstWord is a file stem up to its first separator, lowercased, which is what two revisions of one
-// board share in practice (board.edn, board-rev-b.edn, board_v2.edn).
+// firstWord is a file stem up to its first separator, lowercased. In practice two revisions of one
+// board share it (board.edn, board-rev-b.edn, board_v2.edn).
 func firstWord(stem string) string {
 	stem = strings.ToLower(stem)
 	if i := strings.IndexAny(stem, "-_. "); i > 0 {
@@ -535,7 +538,7 @@ func (p *proposer) add(entry string, companions []string, revisions []*webapi.De
 	return p.addIn(dirOf(entry), designID(stemOf(entry)), entry, companions, revisions, files, note)
 }
 
-// addIn is add for a design whose folder and name are not the entry's own, an ODB++ job's.
+// addIn is add for a design whose folder and name differ from the entry's own, as an ODB++ job's do.
 func (p *proposer) addIn(folder, name, entry string, companions []string, revisions []*webapi.DesignRevision, files []string, note string) *webapi.ProposedDesign {
 	d := &webapi.Design{Name: name, Uri: p.uri(folder), EntryUri: p.uri(entry), Revisions: revisions}
 	for _, c := range companions {

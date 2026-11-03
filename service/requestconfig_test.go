@@ -44,13 +44,12 @@ type fakeErr struct{}
 
 func (*fakeErr) Error() string { return "fake resolve failure" }
 
-// TestRequestConfigResolvesRefTiers covers the capability this schema exists for, which is that a
-// caller that is not the CLI can hand the engine profiles, parameters and intent, not only a naming
-// convention.
+// TestRequestConfigResolvesRefTiers covers the purpose of this schema. A caller other than the CLI
+// can hand the engine profiles, parameters and intent, not only a naming convention.
 //
-// Before this, OverlayConfig could carry exactly one of five config tiers, so a browser could be given
-// a fifth of the configuration a command line could, and the gap was invisible, because a run against
-// less config produces fewer findings and fewer findings is what a clean board looks like.
+// Before this, OverlayConfig could hold exactly one of five config tiers, so a browser could be given
+// a fifth of the configuration a command line could. Nobody could see the gap. A run against less
+// config produces fewer findings, and so does a clean board.
 func TestRequestConfigResolvesRefTiers(t *testing.T) {
 	res := &recordingResolver{specs: someSpecs()}
 	req := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{
@@ -71,8 +70,8 @@ func TestRequestConfigResolvesRefTiers(t *testing.T) {
 	if got := sourceNames(ov); len(got) != 2 {
 		t.Errorf("request profiles and intent should both compose, got %v", got)
 	}
-	// The namespace is what keeps a request's profiles from colliding with a project's, and it is
-	// visibly not a resource name so a catalog snapshot says where the rule came from.
+	// The namespace keeps a request's profiles from colliding with a project's. It is visibly not a
+	// resource name, so a catalog snapshot says where the rule came from.
 	if len(res.asked) != 1 || !strings.HasPrefix(res.asked[0], requestNamespace+" ") {
 		t.Errorf("request config should resolve under the request namespace, got %v", res.asked)
 	}
@@ -105,9 +104,9 @@ func TestRequestConfigLayersOverTheProject(t *testing.T) {
 	}
 }
 
-// TestRequestCorpusWinsOverTheProject is the one place a corpus still replaces rather than layers: the
-// caller named a corpus for this run, which is choosing it outright (DECISIONS.md, "A project's
-// datasheet corpus is layered over a shared one per MPN").
+// TestRequestCorpusWinsOverTheProject covers the one place a corpus still replaces rather than
+// layers. The caller named a corpus for this run, and so chose it outright (DECISIONS.md, "A
+// project's datasheet corpus is layered over a shared one per MPN").
 func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 	res := &recordingResolver{specs: someSpecs()}
 	project := &webapi.Project{Name: "projects/acme", Config: &webapi.AnalysisConfig{}}
@@ -124,11 +123,11 @@ func TestRequestCorpusWinsOverTheProject(t *testing.T) {
 // TestHostWithoutResolverRefusesRefs is the refusing half of the capability, and the reason this is a
 // deployment property rather than a schema one.
 //
-// A host with no resolver (the engine in WASM, a service constructed without one) can still honour a
-// config carrying a RESOLVED convention, because that composes with no I/O, the property
-// C22 protects and this change had to preserve. A config naming a directory is a different request,
-// and answering it by silently dropping the tier would report a clean run against config that never
-// loaded. So it errors, and the error says what it could not resolve.
+// A host with no resolver can still honour a config carrying a RESOLVED convention, because that
+// composes with no I/O. The engine in WASM is such a host, and so is a service constructed without
+// one. C22 protects that no-I/O property, and this change had to preserve it. A config naming a
+// directory is a different request. Answering it by silently dropping the tier would report a clean
+// run against config that never loaded. So it errors, and the error says what it could not resolve.
 func TestHostWithoutResolverRefusesRefs(t *testing.T) {
 	ctx := context.Background()
 	refs := &webapi.OverlayConfig{Config: &webapi.AnalysisConfig{ProfileUris: []string{"mount://m/profiles"}}}
@@ -188,7 +187,7 @@ func TestMergeConfigLayersFieldWise(t *testing.T) {
 }
 
 // A checklist inherited through extends is replaced IN PLACE by one of the same name, so the
-// inherited default stays first, and a new name follows the inherited ones.
+// inherited default is still first, and a new name follows the inherited ones.
 func TestMergeChecklistsByName(t *testing.T) {
 	parent := []*webapi.NamedChecklist{{Name: "review", Manifest: &checkspb.ReviewManifest{Name: "shared"}}, {Name: "dft"}}
 	child := []*webapi.NamedChecklist{{Name: "house"}, {Name: "review", Manifest: &checkspb.ReviewManifest{Name: "ours"}}}
@@ -229,8 +228,8 @@ func TestIntentValueComposesWithoutAResolver(t *testing.T) {
 	}
 }
 
-// A design's intent reaches the MODEL as well as the catalog, because which connectors are internal
-// is read by the exposure rules through the model (agni issue 831). A request carrying intent
+// A design's intent reaches the MODEL as well as the catalog, because the exposure rules read which
+// connectors are internal through the model (agni issue 831). A request carrying intent
 // REPLACES the design's, as a convention does, rather than compiling a second source named intent,
 // which the catalog refuses.
 func TestRequestIntentReplacesTheDesignsAndReachesTheModel(t *testing.T) {

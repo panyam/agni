@@ -14,9 +14,9 @@ import (
 	"github.com/panyam/agni/readers/formats"
 )
 
-// FileReader reads one file inside a mount. It is the port ListDesignFiles sizes and hashes files
-// through, separate from Workspace so the hosts that only browse (the datasheet service) need not
-// read.
+// FileReader reads one file inside a mount. ListDesignFiles sizes and hashes files through this
+// port. It is separate from Workspace, so the hosts that only browse (the datasheet service) need
+// not read.
 type FileReader interface {
 	ReadFile(ctx context.Context, uri artifact.URI) ([]byte, error)
 }
@@ -43,11 +43,12 @@ func (s *WorkspaceService) WithDesignFiles(projects *ProjectResolver, files File
 	return s
 }
 
-// ListDesignFiles lists every file a design's analysis reads (agni issue 853): the design's folder,
-// recursively, which holds its entry, companions, revisions and descriptor; every file or directory
-// its descriptor names; and, for each project up its extends chain, that project's descriptor and
-// what it names (profiles, params, symbols, lib, queries). It is what a host that analyses the design
-// somewhere else, the in-browser engine first, fetches.
+// ListDesignFiles lists every file a design's analysis reads (agni issue 853). The list covers the
+// design's folder, recursively, which holds its entry, companions, revisions and descriptor. It
+// covers every file or directory the descriptor names. For each project up the extends chain, it
+// covers that project's descriptor and what it names (profiles, params, symbols, lib, queries). A
+// host that analyses the design somewhere else fetches this list, and the in-browser engine is the
+// first such host.
 //
 // Every listed path is in the design's own mount. A config URI naming another mount is refused,
 // since a client mounting the files under one name would resolve it to nothing and analyse the
@@ -161,9 +162,9 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 		}
 		b, err := s.files.ReadFile(ctx, fu)
 		if err != nil {
-			// A descriptor or config directory the project names but the tree lacks is the project's
-			// error, and the analysis reports it when it composes. Listing what exists keeps the two
-			// hosts failing the same way.
+			// The project may name a descriptor or config directory that the tree lacks. That is the
+			// project's error, and the analysis reports it when it composes. Listing what exists keeps
+			// the two hosts failing the same way.
 			continue
 		}
 		resp.TotalSize += int64(len(b))
@@ -176,8 +177,9 @@ func (s *WorkspaceService) ListDesignFiles(ctx context.Context, req *webapi.List
 	return resp, nil
 }
 
-// boardFile is the path within u's mount of the design's board tier, as Ingest resolves it, when the
-// board is a file of its own that neither the netlist nor the drawing is read from, and "" otherwise.
+// boardFile returns the path of the design's board tier within u's mount, as Ingest resolves it. It
+// returns that path only when the board is a file of its own, with neither the netlist nor the
+// drawing read from it, and "" otherwise.
 // The browser engine holds that file back from a worker until a question there reads the board (agni
 // issue 992).
 func (s *WorkspaceService) boardFile(ctx context.Context, u artifact.URI) string {
@@ -225,7 +227,7 @@ func (s *WorkspaceService) walkFiles(ctx context.Context, mount, dir string, add
 	}
 	entries, err := s.ws.ListDir(ctx, du)
 	if err != nil {
-		// A config directory the project names but the tree lacks; see ListDesignFiles.
+		// The project names a config directory that the tree lacks. See ListDesignFiles.
 		return nil
 	}
 	for _, e := range entries {

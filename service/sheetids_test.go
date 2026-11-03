@@ -9,8 +9,8 @@ import (
 	"github.com/panyam/agni/readers/edif"
 )
 
-// agni issue 1140: with every block's page named &1, a finding on BlockB's C1 was badged with an id
-// four sheets shared, so opening it could land on any of them.
+// Agni issue 1140 had every block's page named &1. A finding on BlockB's C1 was then badged with an
+// id that four sheets shared, so opening it could open any of them.
 func TestAFindingInARepeatedPageBlockNamesItsOwnSheet(t *testing.T) {
 	f, err := os.Open("../readers/edif/testdata/aggregator_dup_pages.eds")
 	if err != nil {

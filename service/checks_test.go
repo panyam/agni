@@ -51,12 +51,13 @@ func TestFindingProtoCarriesDatasheet(t *testing.T) {
 	}
 }
 
-// TestPartitionAvailableReportsWhatCouldNotRun is the silence-reads-as-coverage failure at the
+// TestPartitionAvailableReportsWhatCouldNotRun covers the silence-reads-as-coverage failure at the
 // finding tier.
 //
 // A board rule on a NETLIST cannot evaluate. check.Available gates it, it contributes no findings, and
 // a findings list has no way to distinguish "checked and clean" from "never ran". On the viewer's
-// default-open panel that reads as a healthy board, which is the bug this reports its way out of.
+// default-open panel that reads as a healthy board. The fix reports the gated rules, and this test
+// holds it.
 func TestPartitionAvailableReportsWhatCouldNotRun(t *testing.T) {
 	// A netlist-only model: no board tier, no datasheet corpus.
 	m := check.NewModel(&ir.Design{})
@@ -74,8 +75,8 @@ func TestPartitionAvailableReportsWhatCouldNotRun(t *testing.T) {
 		if sk.GetName() == "" {
 			t.Error("a skipped rule must be named, or the panel cannot say which question went unanswered")
 		}
-		// The reason is check.Available's own words. A rule decides why it cannot run; a sentence
-		// reconstructed here would be a second opinion that drifts from the gate itself.
+		// The reason is check.Available's own words. A rule decides why it cannot run. If this code
+		// rebuilt the sentence, it would be a second opinion that drifts from the gate itself.
 		if sk.GetReason() == "" {
 			t.Errorf("%s was skipped with no reason", sk.GetName())
 		}
@@ -109,10 +110,10 @@ func TestPartitionAvailableChangesNoFindings(t *testing.T) {
 // subject carries that entity to the client as structured data (agni issue 349), so the panel can
 // render it as its own clickable chip instead of the reader parsing it out of the sentence.
 //
-// The order assertion is the one that matters. Order is the rule author's and matches the order the
-// message names them, so a panel rendering chips left to right reads in the same order as the
-// sentence above it. A conversion that sorted or bucketed would silently break that, and nothing
-// else in the pipeline would notice.
+// The order assertion matters most. The rule author sets the order, and it matches the order in
+// which the message names the entities. So a panel rendering chips left to right reads in the same
+// order as the sentence above it. A conversion that sorted or bucketed would silently break that,
+// and nothing else in the pipeline would notice.
 func TestFindingProtoCarriesContext(t *testing.T) {
 	f := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindComponent, Ref: "Q1"}, Rule: "load-switch-trip-current", Context: []check.ContextSubject{
 		{Entity: check.Entity{Kind: check.KindComponent, Ref: "U3"}, Role: "controller"},
@@ -132,7 +133,8 @@ func TestFindingProtoCarriesContext(t *testing.T) {
 		t.Errorf("context kind = %q, want %q", got[0].GetSubject().GetKind(), check.KindComponent)
 	}
 
-	// The common case, and always will be: a message naming only its subject carries no context.
+	// A message naming only its subject carries no context. That is the common case, and always
+	// will be.
 	plain := FindingProto(check.Finding{Subject: check.Entity{Kind: check.KindNet, Ref: "SIG"}, Rule: "single-pin-net"})
 	if len(plain.GetContext()) != 0 {
 		t.Errorf("a finding naming only its subject must carry no context, got %d", len(plain.GetContext()))

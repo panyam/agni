@@ -13,7 +13,7 @@ import (
 	"github.com/panyam/agni/gen/go/agni/v1/webapi"
 )
 
-// These moved from cmd/agni with the page they describe (agni issue 1030): the checklist page is
+// These moved from cmd/agni with the page they describe (agni issue 1030). The checklist page is
 // built here, from the review's document, for the CLI and the viewer alike.
 
 func reviewItem(id, title, outcome string, fs ...*checkspb.Finding) *checkspb.ReviewItem {
@@ -48,8 +48,8 @@ func twoAreas() *checkspb.CheckResults {
 
 // TestChecklistKeepsTheManifestOrder guards the checklist's order. The check report sorts rules
 // worst-first because nobody authored that order, but a checklist's order is the team's. An item
-// that has been P1 in their process for years has to stay first, and an area must not move because
-// the board got worse this week.
+// that has been P1 in their process for years has to remain first, and an area must not move
+// because the board got worse this week.
 func TestChecklistKeepsTheManifestOrder(t *testing.T) {
 	c := ChecklistOf(twoAreas(), report.Checklist{})
 	if len(c.Areas) != 2 {
@@ -68,9 +68,9 @@ func TestChecklistKeepsTheManifestOrder(t *testing.T) {
 }
 
 // TestChecklistCarriesEveryFinding exists because the markdown Detail cell caps at three, and its
-// comment says ItemResult.Findings keeps the full list. A broad rule fires on hundreds of nets, and
-// a page that silently shows three of them is the same false-coverage failure the review layer
-// exists to remove.
+// comment says ItemResult.Findings keeps the full list. A broad rule fires on hundreds of nets. If a
+// page silently shows three of them, that is the same false-coverage failure the review layer exists
+// to remove.
 func TestChecklistCarriesEveryFinding(t *testing.T) {
 	var fs []*checkspb.Finding
 	for _, n := range []string{"A", "B", "C", "D", "E", "F", "G"} {
@@ -87,8 +87,8 @@ func TestChecklistCarriesEveryFinding(t *testing.T) {
 }
 
 // TestChecklistPromisesNoLinkWithoutAMount applies the same rule as `check --server`. A base
-// address alone is half the pair, and a link built from the other half missing resolves on nobody's
-// server.
+// address alone is half the pair. If the other half is missing, a link built from the base address
+// resolves on nobody's server.
 func TestChecklistPromisesNoLinkWithoutAMount(t *testing.T) {
 	c := ChecklistOf(twoAreas(), report.Checklist{URLBase: "http://localhost:8080"})
 	rows := 0
@@ -124,8 +124,9 @@ func renderReview(t *testing.T, links *webapi.ReportLinks) *webapi.RenderReviewR
 	return resp
 }
 
-// The page a review renders to names every item in the manifest's order, with its findings, and is
-// named for the design. It needs no store, so an unstored run renders as a stored one does.
+// A review renders to a page. That page names every item in the manifest's order, with its
+// findings, and is named for the design. It needs no store, so an unstored run renders as a stored
+// one does.
 func TestRenderReviewReportWritesTheChecklistPage(t *testing.T) {
 	resp := renderReview(t, nil)
 	page := string(resp.GetContent())
@@ -144,7 +145,7 @@ func TestRenderReviewReportWritesTheChecklistPage(t *testing.T) {
 	}
 }
 
-// Links point at the viewer the caller names, and a reason links were refused is carried into the
+// Links point at the viewer the caller names. When links are refused, the reason is written into the
 // page, since whoever opens the file later never saw it (agni issue 626).
 func TestRenderReviewReportLinksOrSaysWhyNot(t *testing.T) {
 	page := string(renderReview(t, &webapi.ReportLinks{UrlBase: "http://localhost:8080/", DesignUri: "mount://gw/board.edn"}).GetContent())
@@ -164,9 +165,9 @@ func TestRenderReviewReportNeedsAReview(t *testing.T) {
 	}
 }
 
-// TestChecklistLinksTheFindingsOwnVerdict guards agni issue 485. The link names the verdict id the
-// finding carries, which for a tuple-keyed rule is not what its subject alone would spell, and a
-// finding that carries no id, from a rule that states no considered set, gets no link at all.
+// TestChecklistLinksTheFindingsOwnVerdict guards agni issue 485. The link names the finding's own
+// verdict id. For a tuple-keyed rule that id differs from what the subject alone would spell. A
+// finding that has no id, from a rule that states no considered set, gets no link at all.
 func TestChecklistLinksTheFindingsOwnVerdict(t *testing.T) {
 	tuple := netFinding("copper-clearance", "CAN1_CANH", "too close to I2C_SCL")
 	tuple.VerdictIds = []string{"copper-clearance:(net:CAN1_CANH,net:I2C_SCL)", "copper-clearance:(net:CAN1_CANH,net:I2C_SDA)"}

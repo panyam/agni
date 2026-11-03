@@ -29,9 +29,9 @@ import (
 // resolves a companion, a project or a convention again.
 //
 // Snapshots are held on the ProjectResolver the services share, so a host that composes its services
-// over one resolver has one set of snapshots. Each holds a recorder of every file its questions read,
-// and a question asked after one of them changed is refused as stale rather than answered from files
-// the snapshot never read.
+// over one resolver has one set of snapshots. Each holds a recorder of every file its questions
+// read. If one of those files changes, a later question is refused as stale. It is not answered from
+// files the snapshot never read.
 
 var (
 	// ErrStale is a snapshot whose files changed since they were read. UpdateSnapshot reads it again.
@@ -72,10 +72,10 @@ func (e *SnapshotError) Detail() *webapi.SnapshotUnavailable {
 	return d
 }
 
-// Snap is a snapshot as a service reads it: what its definition resolved to.
+// Snap is a snapshot as a service reads it. It holds what its definition resolved to.
 type Snap struct {
 	Name string
-	// Design is the design as the definition names it, which a service still needs for what sits
+	// Design is the design as the definition names it. A service still needs it to find the files
 	// beside it (an expectation sidecar, a project's checklists and query sets).
 	Design                   artifact.URI
 	Netlist, Board, Geometry artifact.URI
@@ -84,15 +84,16 @@ type Snap struct {
 	// Config is the overlay config the definition carried, before it was composed with the project's.
 	Config   *webapi.OverlayConfig
 	Revision string
-	// Loader and Projects are what a snapshot of files the client sent reads through, and nil for one
-	// of files the host serves, which reads through the service's own (agni issue 1061). They are
-	// apart from the host's because a cache keys a read on its URI, and an upload names its files
-	// with the client's own mount, which may be one the host also serves.
+	// Imagine a client sends a design's files. A snapshot of those files reads through Loader and
+	// Projects. A snapshot of files the host serves has both nil, and it reads through the service's
+	// own (agni issue 1061). They are kept apart from the host's because a cache keys a read on its
+	// URI. An upload names its files with the client's own mount, and the host may serve that mount
+	// too.
 	Loader   *CachingLoader
 	Projects *ProjectResolver
 }
 
-// LoaderOr is the loader to read s through: its upload's, or the service's l.
+// LoaderOr returns the loader to read s through. That is its upload's, or else the service's l.
 func LoaderOr[L any](s Snap, l L) L {
 	if s.Loader != nil {
 		if v, ok := any(s.Loader).(L); ok {
@@ -102,7 +103,7 @@ func LoaderOr[L any](s Snap, l L) L {
 	return l
 }
 
-// ProjectsOr is the resolver for s's project: its upload's, or the service's r.
+// ProjectsOr returns the resolver for s's project. That is its upload's, or else the service's r.
 func (s Snap) ProjectsOr(r *ProjectResolver) *ProjectResolver {
 	if s.Projects != nil {
 		return s.Projects
@@ -110,8 +111,8 @@ func (s Snap) ProjectsOr(r *ProjectResolver) *ProjectResolver {
 	return r
 }
 
-// BoardRead is the artifact the board is read from: the board tier, or the netlist's own artifact for
-// a format that carries its copper itself.
+// BoardRead returns the artifact to read the board from. That is the board tier, or the netlist's
+// own artifact for a format that holds its own copper.
 func (s Snap) BoardRead() artifact.URI { return boardReadURI(s.Netlist, s.Board) }
 
 type snapshotEntry struct {
@@ -119,18 +120,19 @@ type snapshotEntry struct {
 	// def is the definition and its output fields, handed out as a copy.
 	mu  sync.Mutex
 	def *webapi.Snapshot
-	// touched is every file a question about this snapshot read, as it stamped when first read.
+	// touched records every file that a question about this snapshot read, each with the stamp of
+	// its first read.
 	touched *formats.Touched
 	// upload is the host of the files a client sent, nil for a snapshot of the host's own files. A
-	// snapshot holds its upload, so it stays readable however many uploads come after it.
+	// snapshot holds its upload, so it is still readable however many uploads come after it.
 	upload *uploadHost
 	// changedTiers names the tiers whose entry file no longer hashes as it did, for a stale error. It
-	// names tiers rather than the files touched recorded, which on a server are host paths (C28).
+	// names tiers rather than the files in touched, since on a server those are host paths (C28).
 	changedTiers func(ctx context.Context) []string
 	used         uint64
 }
 
-// snapshotRegistry holds a host's snapshots, the least recently asked evicted past max.
+// snapshotRegistry holds a host's snapshots. Past max it evicts the least recently asked.
 type snapshotRegistry struct {
 	mu   sync.Mutex
 	m    map[string]*snapshotEntry
@@ -194,9 +196,9 @@ func (g *snapshotRegistry) put(name string, e *snapshotEntry) {
 	}
 }
 
-// Snapshot returns the snapshot a question names, and the context to answer it under, which records
-// every file the answer reads onto the snapshot. A name the host does not hold, or a snapshot whose
-// files changed since they were read, is a *SnapshotError.
+// Snapshot returns the snapshot a question names and a context to answer it under. That context
+// records onto the snapshot every file the answer reads. A name the host does not hold is a
+// *SnapshotError, and so is a snapshot whose files changed since they were read.
 func (r *ProjectResolver) Snapshot(ctx context.Context, name string) (context.Context, Snap, error) {
 	if name == "" {
 		return ctx, Snap{}, fmt.Errorf("%w: no snapshot named; ingest the design first", ErrInvalidArgument)
@@ -232,9 +234,9 @@ type SnapshotService struct {
 	baseConvention string
 }
 
-// SnapshotLoader is what ingesting reads through: the netlist always, and with read_board the model and
-// its board, which needs a ModelLoader. Every service's loader satisfies it, so a test can ingest
-// through whichever loader the service under test holds.
+// SnapshotLoader is the loader that ingesting reads through. Ingest always reads the netlist. With
+// read_board it also reads the model and its board, which needs a ModelLoader. Every service's
+// loader satisfies it, so a test can ingest through whichever loader the service under test holds.
 type SnapshotLoader interface {
 	Design(ctx context.Context, uri artifact.URI, opts ...ReadOption) (*ir.Design, error)
 }
@@ -246,9 +248,10 @@ func NewSnapshotService(loader SnapshotLoader, projects *ProjectResolver, specs 
 }
 
 // Ingest creates a snapshot from its definition and reads its netlist, and its board when read_board
-// asks. Naming an id already in use with the same definition is not a second snapshot: it reads what
-// read_board asks and returns that one, so a client may send its ingest again, to a host that may or
-// may not hold it, without first asking. The same id with a different definition is ErrAlreadyExists.
+// asks. An ingest may name an id already in use with the same definition. That makes no second
+// snapshot. Ingest reads what read_board asks and returns the existing one. So a client may send its
+// ingest again without first asking, to a host that may or may not hold it. The same id with a
+// different definition is ErrAlreadyExists.
 func (s *SnapshotService) Ingest(ctx context.Context, req *webapi.IngestRequest) (*webapi.Snapshot, error) {
 	def := definitionOf(req.GetSnapshot())
 	name := ""
@@ -371,7 +374,7 @@ func (s *SnapshotService) UpdateSnapshot(ctx context.Context, req *webapi.Update
 	return e.out(), nil
 }
 
-// DeleteSnapshot forgets a snapshot. What it read stays in the DesignCache for another to use.
+// DeleteSnapshot forgets a snapshot. The DesignCache keeps what it read for another snapshot to use.
 func (s *SnapshotService) DeleteSnapshot(ctx context.Context, req *webapi.DeleteSnapshotRequest) (*emptypb.Empty, error) {
 	g := s.projects.registry()
 	g.mu.Lock()
@@ -440,11 +443,11 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 			out.Project = p.GetName()
 		}
 	}
-	// Without read_board nothing is read: opening a KiCad design draws from its schematic's geometry
-	// and parses its netlist only for the first check or query, so reading the netlist here added a
+	// Without read_board nothing is read. Opening a KiCad design draws from its schematic's geometry,
+	// and it parses the netlist only for the first check or query. Reading the netlist here added a
 	// second of parsing to Jetson's open in the browser. A design that cannot be read fails at its
-	// first question, as it did before snapshots. With read_board, the model a check would build is
-	// built and kept, board included (agni issue 1061).
+	// first question, as it did before snapshots. With read_board, Ingest builds and keeps the model a
+	// check would build, board included (agni issue 1061).
 	if !readBoard {
 	} else if ml, ok := ld.(ModelLoader); !ok {
 		return nil, fmt.Errorf("%w: this host reads no boards, so read_board cannot be honoured", ErrInvalidArgument)
@@ -459,8 +462,9 @@ func (s *SnapshotService) load(ctx context.Context, name string, def *webapi.Sna
 			out.Consistency = consistency(b.model.Components(), bg)
 		}
 	}
-	// Only the netlist's entry is hashed, which an open hashes anyway for its verdict links. Hashing
-	// every tier hashed Jetson's 81 MB board on every ingest, about a second in wasm on each worker.
+	// Only the netlist's entry is hashed. An open hashes that file anyway for its verdict links.
+	// Hashing every tier hashed Jetson's 81 MB board on every ingest, about a second in wasm on each
+	// worker.
 	tiers := []artifact.URI{nu, bu, gu}
 	hash := tierHash(rctx, ld, nu)
 	e.snap.Revision = revisionOf(def, tiers, hash)

@@ -14,7 +14,7 @@ import (
 // perArtifactHash answers a distinct digest per artifact, as a real loader does, so two
 // different files hash to two different values. fakeLoader's canned hash is the same string whatever
 // it is asked about, so under it a caller hashing the WRONG artifact is indistinguishable from one
-// hashing the right artifact. That is why this bug survived a suite that already had a hash fixture.
+// hashing the right artifact. So this bug survived a suite that already had a hash fixture.
 type perArtifactHash struct{ fakeLoader }
 
 func (perArtifactHash) DesignHash(_ context.Context, u artifact.URI) (string, error) {
@@ -25,10 +25,11 @@ func (perArtifactHash) DesignHash(_ context.Context, u artifact.URI) (string, er
 // resolve to one set of tiers (agni issue 656, constraint C32), since they analyse the same bytes.
 //
 // TestSourcesAgreeAcrossEverySpelling is the tier half of this and the hash half was left behind.
-// GetDesign resolves the netlist tier and then hands DesignHash the REQUEST instead, so asking by
-// companion reports the companion's digest while a link the CLI minted carries the entry's. The
-// viewer compares the two and draws a stale-link note on a design that is perfectly in sync, which is
-// the failure localLoader.DesignHash's own doc says it fixed on the CLI side and nobody fixed here.
+// GetDesign resolved the netlist tier and then handed DesignHash the REQUEST instead. Asking by
+// companion then reported the companion's digest, while a link the CLI minted holds the entry's. The
+// viewer compared the two and drew a stale-link note on a design that was perfectly in sync.
+// localLoader.DesignHash's own doc says it fixed that failure on the CLI side, and nobody had fixed
+// it here.
 func TestRevisionIdentityAgreesAcrossEverySpelling(t *testing.T) {
 	ld := perArtifactHash{fakeLoader{geom: twoSheetGeom()}}
 	svc := NewDesignService(ld, noNative{}, render.Style{}, &ProjectResolver{Store: declaringStore{design: withCompanion()}})
@@ -41,8 +42,8 @@ func TestRevisionIdentityAgreesAcrossEverySpelling(t *testing.T) {
 		}
 		got[spelling] = resp.GetContentHash()
 	}
-	// The declared ENTRY is the artifact a read of this design actually opens, so it is the one whose
-	// bytes the revision identity names.
+	// A read of this design actually opens the declared ENTRY, so the revision identity names the
+	// entry's bytes.
 	const want = "sha256:d/board.edn"
 	for spelling, h := range got {
 		if h != want {
@@ -69,15 +70,15 @@ func (l *hashRecordingLoader) DesignHash(_ context.Context, u artifact.URI) (str
 // A review's revision identity is PERSISTED, so getting it wrong outlives the request. CreateReview
 // resolves the netlist tier, scores against it, and then hashed the request instead, so a review
 // created by naming the design folder recorded the folder as the thing it analysed. A folder does not
-// hash at all in production, which turns the stored provenance into the empty third state on a run
-// that read perfectly good bytes.
+// hash at all in production, so the stored provenance fell into the empty third state on a run that
+// read perfectly good bytes.
 func TestReviewRecordsTheEntrysRevision(t *testing.T) {
 	l := &hashRecordingLoader{boardRecordingLoader: &boardRecordingLoader{board: "mount://m/d/board.kicad_pcb"}}
 	svc := NewReviewService(l, NewMemReviewStore(), check.DefaultCatalog(), nil, nil, testReviewEnv, "",
 		&ProjectResolver{Store: declaringStore{design: withBoardCompanion()}})
 	snap := snapOf(t, svc.Snapshots(), "mount://m/d")
-	// Ingesting names the snapshot's own revision from every tier it resolved; what the review
-	// records is asked afterwards.
+	// Ingesting names the snapshot's own revision from every tier it resolved. The test asks what the
+	// review records afterwards.
 	l.mu.Lock()
 	l.hashed = nil
 	l.mu.Unlock()
